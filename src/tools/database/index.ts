@@ -8972,6 +8972,8 @@ export class DatabaseTool implements BlockTool {
       event.preventDefault();
       // Core opens its block menu on a right-click; this menu replaces it.
       event.stopPropagation();
+      // notion-motion.md Round 13: a board card's right-click drops every pick and opens that card's own menu.
+      if (rowEl.matches('[data-blok-database-board] [data-blok-database-card]')) this.clearRowSelection();
       // findings-listgallery L16: a list row's menu opens at the pointer.
       const anchor = rowEl.matches('[data-blok-database-list-row]') ? pointerAnchor(rowEl, event) : rowEl;
 

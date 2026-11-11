@@ -196,6 +196,29 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     expect(document.querySelector('[data-blok-database-menu-point]')).toBeNull();
   });
 
+  // notion-motion.md Round 13: a right-click opens the one-card menu and drops every pick.
+  it.each([{ picked: ['a', 'b'] }, { picked: ['a'] }])('a right-click on board card b with $picked picked opens b\'s own menu and drops the picks', ({ picked }) => {
+    const doc = makeDoc([fakeRow('a', 'db', { title: 'Alpha', status: 'o1' }, 'a0'), fakeRow('b', 'db', { title: 'Beta', status: 'o1' }, 'a1')]);
+    const { el } = buildTool(doc, { comments: { open: vi.fn() } }, viewData('board'));
+    const card = (id: string): HTMLElement => {
+      const found = el.querySelector<HTMLElement>(`[data-blok-database-card][data-row-id="${id}"]`);
+
+      if (found === null) throw new Error(`no card ${id}`);
+
+      return found;
+    };
+
+    picked.forEach((id) => card(id).dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true })));
+    expect(el.querySelectorAll('[data-blok-database-row-selected]')).toHaveLength(picked.length);
+
+    const event = rightClick(card('b'));
+
+    expect(el.querySelectorAll('[data-blok-database-row-selected]')).toHaveLength(0);
+    expect(document.querySelector('[data-blok-database-table-selection-bar]')).toBeNull();
+    expect(menuOutline()).toEqual(WITH_VIEW_SETTINGS);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
   it.each(['board', 'gallery', 'list'] as const)('read-only: a right-click on a %s row offers only what does not edit the row', (type) => {
     const { el } = buildTool(oneRow(), { comments: { open: vi.fn() } }, viewData(type), true);
 

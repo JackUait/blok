@@ -1159,6 +1159,18 @@ describe('BlockSelection', () => {
       expect(preventDefault).toHaveBeenCalled();
     });
 
+    it('leaves a second press from a select-all owner alone once every block is selected', () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
+      const event = { target: ownerTarget(blocks[0].holder, 'select-all'), preventDefault: vi.fn() } as unknown as KeyboardEvent;
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      handler.handleCommandA(event);
+      handler.handleCommandA(event);
+
+      expect(selectAllSpy).toHaveBeenCalledTimes(1);
+    });
+
     it('keeps the text stage for a text field inside a select-all owner, and for a plain owner', () => {
       const { blockSelection, blocks } = createBlockSelection();
       const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');

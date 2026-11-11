@@ -917,7 +917,8 @@ export class DatabaseTableGrid {
       return;
     }
     // notion-motion.md Round 13: Blok then selects every page block, and the cell ring goes.
-    if (mod && event.key.toLowerCase() === 'a' && !event.shiftKey && !event.altKey && selection?.kind === 'cell') {
+    // Rows go too, so the bulk bar never shows beside the block selection.
+    if (mod && event.key.toLowerCase() === 'a' && !event.shiftKey && !event.altKey && selection !== null) {
       this.state.selection = null;
       this.paint();
 

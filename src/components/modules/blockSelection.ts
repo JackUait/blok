@@ -1593,6 +1593,9 @@ export class BlockSelection extends Module {
 
     if (this.ownerWantsAllBlocks(event.target)) {
       event.preventDefault();
+      if (this.allBlocksSelected) {
+        return;
+      }
       this.selectAllBlocks();
       this.needToSelectAll = false;
       this.readyToBlockSelection = false;

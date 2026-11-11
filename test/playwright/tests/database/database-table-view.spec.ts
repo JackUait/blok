@@ -726,5 +726,24 @@ test.describe('select all from a cell', () => {
     await expect(anchor(page)).toHaveCount(0);
     await expect(page.locator('[data-blok-database-table-cell][aria-selected="true"]')).toHaveCount(0);
     expect(await page.evaluate(() => String(window.getSelection()))).toBe('');
+
+    await page.keyboard.press('ControlOrMeta+a');
+    await expect(page.locator('[data-blok-id="p-after"]')).toHaveAttribute('data-blok-selected', 'true');
+  });
+
+  test('⌘A on selected rows hands over to the block selection and drops the rows', async ({ page }) => {
+    await mount(page, [
+      { id: 'p-before', type: 'paragraph', data: { text: 'Before' } },
+      ...blocks(),
+    ]);
+    await cell(page, 'r2', 'p-notes').click();
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await expect(row(page, 'r2')).toHaveAttribute('aria-selected', 'true');
+
+    await page.keyboard.press('ControlOrMeta+a');
+
+    await expect(page.locator('[data-blok-id="p-before"]')).toHaveAttribute('data-blok-selected', 'true');
+    await expect(page.locator('[data-blok-database-table-row][aria-selected="true"]')).toHaveCount(0);
   });
 });

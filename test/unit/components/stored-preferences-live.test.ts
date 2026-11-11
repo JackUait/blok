@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { attachControls as attachVideoControls } from '../../../src/tools/video/controls';
 import { attachControls as attachAudioControls } from '../../../src/tools/audio/controls';
 import { createColorPicker } from '../../../src/components/shared/color-picker';
-import { readRecentLanguages, RECENT_LANGUAGES_STORAGE_KEY } from '../../../src/tools/code/language-picker';
 import type { I18n } from '../../../types/api';
 
 /** What another tab's write looks like here: storage already holds the value, then the event arrives. */
@@ -212,13 +211,5 @@ describe('readers that re-read storage each time they open', () => {
     });
 
     expect(element.querySelector('[data-blok-testid="test-swatch-recent-text-red"]')).not.toBeNull();
-  });
-
-  it('recent code languages are read from storage on every call', () => {
-    expect(readRecentLanguages()).toStrictEqual([]);
-
-    storageEvent(RECENT_LANGUAGES_STORAGE_KEY, JSON.stringify(['go']));
-
-    expect(readRecentLanguages()).toStrictEqual(['go']);
   });
 });

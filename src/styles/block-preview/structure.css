@@ -68,7 +68,7 @@
   display: flex;
   align-items: center;
   gap: var(--blok-preview-space-6);
-  margin-bottom: -1px;
+  margin-bottom: calc(-1 * var(--blok-border-width-hairline));
   padding: var(--blok-preview-space-6) var(--blok-preview-space-12);
   border: 1px solid var(--blok-border-secondary);
   border-bottom: 0;

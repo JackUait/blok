@@ -1569,7 +1569,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Round 9 lane mselect: multi-select editor radii and Create row, group header, row drag, view settings.
     const DATABASE_MSELECT_BYTES = 1658;
     // block-preview/structure.css: the code preview draws the block's folder tab on the card, not a header bar.
-    const CODE_PREVIEW_TAB_BYTES = 335;
+    // Its 1px overlap onto the card reads the hairline token (css-vars R2).
+    const CODE_PREVIEW_TAB_BYTES = 375;
     // database.css: the tab bar "+" is round, header-icon ink, a 200ms fade, and shows on keyboard focus,
     // plus 124 for the 19.2px header glyphs in an 18px slot and the dark timeline panel shadow and header ink,
     // plus 233 for the right-aligned calculations and the 26px "Calculate" box that fades in on its own cell.

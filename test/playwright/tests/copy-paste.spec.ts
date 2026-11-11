@@ -1489,6 +1489,30 @@ test.describe('copy and paste', () => {
     });
   });
 
+  test.describe('a divider pasted from plain text only', () => {
+    test('comes back as a divider between its paragraphs', async ({ page }) => {
+      await createBlok(page, { data: { blocks: [
+        { id: 'bef', type: 'paragraph', data: { text: 'Before' } },
+        { id: 'dv', type: 'divider', data: {} },
+        { id: 'aft', type: 'paragraph', data: { text: 'After' } },
+      ] } });
+      await page.locator('[data-blok-id="bef"] [contenteditable="true"]').click();
+      await page.locator('[data-blok-id="aft"] [contenteditable="true"]').click({ modifiers: ['Shift'] });
+      await expect(page.locator('[data-blok-id="aft"][data-blok-selected="true"]')).toBeVisible();
+
+      const clipboard = await withClipboardEvent(page.locator('[data-blok-id="bef"]'), 'copy');
+
+      await createBlok(page, { data: { blocks: [{ id: 'tgt', type: 'paragraph', data: { text: '' } }] } });
+      await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), { 'text/plain': clipboard['text/plain'] ?? '' });
+
+      const shape = async (): Promise<string[]> =>
+        (await saveBlok(page)).blocks.map((block) => `${block.type} ${typeof block.data.text === 'string' ? block.data.text : ''}`.trim());
+
+      await expect.poll(shape).toEqual(['paragraph Before', 'divider', 'paragraph After']);
+    });
+  });
+
   test.describe('media blocks pasted from html only', () => {
     const VIDEO = 'http://localhost:4444/public/samples/big-buck-bunny.mp4';
     const FILE = 'http://localhost:4444/public/samples/release-notes.txt';

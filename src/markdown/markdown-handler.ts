@@ -45,6 +45,10 @@ const MARKDOWN_SIGNALS: RegExp[] = [
   /^[ \t]*[-*+][ \t]+\S/m,         // Unordered list item: - / * / + marker + content
   /^[ \t]*\d{1,9}[.)][ \t]+\S/m,  // Ordered list item: 1. / 1) marker + content
   /^ {0,3}> \S/m,                  // Blockquote: `> text` (a space then content, so `->`/`=>`/`>>>` never match)
+  // Thematic break (`---`, `***`, `___`), counted only between blank lines or
+  // the string edges. A dash line right under text is a setext heading, and
+  // plain prose underlined that way must not turn into Markdown.
+  /(?:^|\r?\n[ \t]*\r?\n) {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*(?:\r?\n[ \t]*(?:\r?\n|$)|$)/,
   // Link text excludes `[`/`]` and the URL excludes `[` so neither scan can
   // run past the next candidate start: `/\[.+?\]\(.+?\)/` retried from every
   // `[` and froze the tab on hostile paste. Costs link text containing

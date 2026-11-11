@@ -9819,6 +9819,10 @@ export class DatabaseTool implements BlockTool {
           this.cardDrawer?.syncOpenRow(this.rowOrTemplate(rowId));
         },
         onEditViewDefault: (anchor) => this.controls.openSettingsPage('layout', anchor),
+        // A `#rowId?full` link opens the row's page on load (openLinkedRow). A template has no such link.
+        rowLink: (rowId) => (this.model.getRow(rowId) === undefined
+          ? undefined
+          : `${window.location.href.split('#')[0]}#${encodeURIComponent(rowId)}?full`),
         pageFooter: (rowId) => rowMenuFooter({
           row: this.model.getRow(rowId),
           titlePropertyId: this.titlePropertyId(),

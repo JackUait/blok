@@ -330,6 +330,8 @@ export interface CardDrawerOptions {
   viewRows?: () => DatabaseRow[];
   /** "Edit view default" in the mode menu: the view's Layout settings. Without it there is no such item. */
   onEditViewDefault?: (anchor: HTMLElement) => void;
+  /** A link that opens the row's page, for "Open in new tab" in the mode menu. Without one there is no such item. */
+  rowLink?: (rowId: string) => string | undefined;
   /** The expand button. True when the host took the page (its full page); else the drawer goes full. */
   onExpand?: (rowId: string) => boolean;
   /**
@@ -504,6 +506,7 @@ export class DatabaseCardDrawer {
   /** The side peek sliding out before it turns into a full page. Close drops it with the drawer; a new row cancels it. */
   private expanding: HTMLElement | null = null;
   private readonly onEditViewDefault: CardDrawerOptions['onEditViewDefault'];
+  private readonly rowLink: CardDrawerOptions['rowLink'];
   private readonly onExpand: CardDrawerOptions['onExpand'];
   private readonly onIconChange: CardDrawerOptions['onIconChange'];
   private readonly backlinks: CardDrawerOptions['backlinks'];
@@ -625,6 +628,7 @@ export class DatabaseCardDrawer {
     this.adjacentRow = options.adjacentRow;
     this.viewRows = options.viewRows;
     this.onEditViewDefault = options.onEditViewDefault;
+    this.rowLink = options.rowLink;
     this.onExpand = options.onExpand;
     this.onIconChange = options.onIconChange;
     this.backlinks = options.backlinks;
@@ -1855,7 +1859,8 @@ export class DatabaseCardDrawer {
   private openModeMenu(anchor: HTMLElement): void {
     this.closeModeMenu();
     const editDefault = this.onEditViewDefault;
-    const items: PopoverItemParams[] = (['side', 'center', 'full'] as const).map((mode) => ({
+    const link = this.openRowId === null ? undefined : this.rowLink?.(this.openRowId);
+    const modes: PopoverItemParams[] = (['side', 'center', 'full'] as const).map((mode) => ({
       type: PopoverItemType.Default,
       title: this.label(`tools.database.openPages${({ side: 'Side', center: 'Center', full: 'Full' } as const)[mode]}`),
       icon: PEEK_MODE_ICONS[mode],
@@ -1864,6 +1869,15 @@ export class DatabaseCardDrawer {
       // A full page goes to the host's page when it has one, as the expand button does.
       onActivate: () => (mode === 'full' ? this.expand() : this.switchMode(mode)),
     }));
+    // notion-spec-2 §12: Notion's fifth row is "New tab". The label reuses "Open in new tab".
+    const items: PopoverItemParams[] = link === undefined ? modes : [...modes, {
+      type: PopoverItemType.Default,
+      name: 'row-page-mode-new-tab',
+      title: this.label('tools.file.previewOpenInNewTab'),
+      icon: IconArrowDiagonal,
+      closeOnActivate: true,
+      onActivate: () => { window.open(link, '_blank', 'noopener'); },
+    }];
     const menu = new PopoverDesktop({
       // Notion's 28px rows.
       class: DATABASE_HEADER_MENU_CLASS,

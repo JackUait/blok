@@ -454,6 +454,26 @@ describe('DatabaseCardDrawer shell', () => {
       expect(mode?.getAttribute('aria-expanded')).toBe('false');
     });
 
+    // notion-spec-2 §12 (S2:160): Switch peek mode lists Side peek, Center peek, Full page, New tab.
+    it('opens the row\'s link in a new tab from the mode menu, and has no such row for a row with no link', () => {
+      const open = vi.spyOn(window, 'open').mockReturnValue(null);
+      const drawer = new DatabaseCardDrawer(createOptions({ rowLink: (rowId) => `https://x.io/#${rowId}?full` }));
+
+      drawer.open(ROW, 'side');
+      q('[data-blok-database-peek-mode]')?.click();
+      document.querySelector<HTMLElement>('[data-blok-item-name="row-page-mode-new-tab"]')?.click();
+
+      expect(open).toHaveBeenCalledExactlyOnceWith('https://x.io/#row-1?full', '_blank', 'noopener');
+      drawer.destroy();
+
+      const bare = new DatabaseCardDrawer(createOptions({ rowLink: () => undefined }));
+
+      bare.open(ROW, 'side');
+      q('[data-blok-database-peek-mode]')?.click();
+      expect(document.querySelector('[data-blok-item-name="row-page-mode-new-tab"]')).toBeNull();
+      bare.destroy();
+    });
+
     it('copies the row link from the bar, and has no Copy link without row actions', () => {
       const drawer = new DatabaseCardDrawer(createOptions({ rowActions: () => actions }));
 

@@ -1348,6 +1348,117 @@ test.describe('copy and paste', () => {
     });
   });
 
+  test.describe('dividers and containers pasted from html only', () => {
+    type Blocks = OutputData['blocks'];
+    const around = (inner: Blocks): Blocks => [
+      { id: 'bef', type: 'paragraph', data: { text: 'Before' } },
+      ...inner,
+      { id: 'aft', type: 'paragraph', data: { text: 'After' } },
+    ];
+
+    /** Copy Before..After, then paste only the html and plain flavours into a fresh editor. */
+    const roundTrip = async (page: Page, inner: Blocks): Promise<void> => {
+      await createBlok(page, { data: { blocks: around(inner) } });
+      await page.locator('[data-blok-id="bef"] [contenteditable="true"]').click();
+      await page.locator('[data-blok-id="aft"] [contenteditable="true"]').click({ modifiers: ['Shift'] });
+      await expect(page.locator('[data-blok-id="aft"][data-blok-selected="true"]')).toBeVisible();
+
+      const clipboard = await withClipboardEvent(page.locator('[data-blok-id="bef"]'), 'copy');
+
+      await createBlok(page, { data: { blocks: [{ id: 'tgt', type: 'paragraph', data: { text: '' } }] } });
+      await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), { 'text/html': clipboard['text/html'] ?? '', 'text/plain': clipboard['text/plain'] ?? '' });
+    };
+
+    /** Each saved block as `type text < parent`. */
+    const shape = async (page: Page): Promise<string[]> => {
+      const { blocks } = await saveBlok(page);
+      const label = (id: string | undefined): string => {
+        const block = blocks.find((candidate) => candidate.id === id);
+
+        if (block === undefined) {
+          return '-';
+        }
+        const flag = block.data.isToggleable === true ? '(toggleable)' : '';
+        const text = typeof block.data.text === 'string' ? block.data.text : '';
+
+        return `${block.type}${flag} ${text}`.trim();
+      };
+
+      return blocks.map((block) => `${label(block.id)} < ${label(block.parent)}`);
+    };
+
+    test('a divider comes back as a divider', async ({ page }) => {
+      await roundTrip(page, [
+        { id: 'dv1', type: 'divider', data: {} },
+        { id: 'dv2', type: 'divider', data: {} },
+      ]);
+      await expect.poll(async () => shape(page)).toEqual(['paragraph Before < -', 'divider < -', 'divider < -', 'paragraph After < -']);
+    });
+
+    test('a toggle comes back with its child inside it', async ({ page }) => {
+      await roundTrip(page, [
+        { id: 'tog', type: 'toggle', data: { text: 'Toggle' }, content: ['tc'] },
+        { id: 'tc', type: 'paragraph', data: { text: 'Child' }, parent: 'tog' },
+      ]);
+      await expect.poll(async () => shape(page)).toEqual(['paragraph Before < -', 'toggle Toggle < -', 'paragraph Child < toggle Toggle', 'paragraph After < -']);
+    });
+
+    test('a toggle heading comes back toggleable with its child inside it', async ({ page }) => {
+      await roundTrip(page, [
+        { id: 'th', type: 'header', data: { text: 'Heading', level: 2, isToggleable: true }, content: ['thc'] },
+        { id: 'thc', type: 'paragraph', data: { text: 'Under' }, parent: 'th' },
+      ]);
+      await expect.poll(async () => shape(page)).toEqual([
+        'paragraph Before < -',
+        'header(toggleable) Heading < -',
+        'paragraph Under < header(toggleable) Heading',
+        'paragraph After < -',
+      ]);
+    });
+
+    test('a callout comes back with its child inside it and no emoji paragraph', async ({ page }) => {
+      await roundTrip(page, [
+        { id: 'cal', type: 'callout', data: { emoji: '💡' }, content: ['cc'] },
+        { id: 'cc', type: 'paragraph', data: { text: 'Inside' }, parent: 'cal' },
+      ]);
+      await expect.poll(async () => shape(page)).toEqual(['paragraph Before < -', 'callout < -', 'paragraph Inside < callout', 'paragraph After < -']);
+    });
+
+    test('a toggle in a callout keeps its own child', async ({ page }) => {
+      await roundTrip(page, [
+        { id: 'cal', type: 'callout', data: { emoji: '💡' }, content: ['tog'] },
+        { id: 'tog', type: 'toggle', data: { text: 'Toggle' }, parent: 'cal', content: ['tc'] },
+        { id: 'tc', type: 'paragraph', data: { text: 'Deep' }, parent: 'tog' },
+      ]);
+      await expect.poll(async () => shape(page)).toEqual([
+        'paragraph Before < -',
+        'callout < -',
+        'toggle Toggle < callout',
+        'paragraph Deep < toggle Toggle',
+        'paragraph After < -',
+      ]);
+    });
+
+    test('tab titles come back as text before their bodies', async ({ page }) => {
+      await roundTrip(page, [
+        { id: 'tb', type: 'tabs', data: {}, content: ['t1', 't2'] },
+        { id: 't1', type: 'tab', data: { title: 'Alpha' }, parent: 'tb', content: ['t1p'] },
+        { id: 't1p', type: 'paragraph', data: { text: 'Alpha body' }, parent: 't1' },
+        { id: 't2', type: 'tab', data: { title: 'Beta', icon: '🍎' }, parent: 'tb', content: ['t2p'] },
+        { id: 't2p', type: 'paragraph', data: { text: 'Beta body' }, parent: 't2' },
+      ]);
+      await expect.poll(async () => shape(page)).toEqual([
+        'paragraph Before < -',
+        'paragraph <strong>Alpha</strong> < -',
+        'paragraph Alpha body < -',
+        'paragraph <strong>🍎 Beta</strong> < -',
+        'paragraph Beta body < -',
+        'paragraph After < -',
+      ]);
+    });
+  });
+
   test.describe('list items copied without their parent list item', () => {
     const LI = (id: string, text: string, depth: number, extra: Partial<OutputData['blocks'][number]> = {}): OutputData['blocks'][number] =>
       ({ id, type: 'list', data: { text, style: 'unordered', depth }, ...extra });

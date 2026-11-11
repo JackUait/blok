@@ -7,6 +7,12 @@ import { Header } from '../../../../src/tools/header';
 import { Quote } from '../../../../src/tools/quote';
 import { CodeTool } from '../../../../src/tools/code';
 import { ImageTool } from '../../../../src/tools/image';
+import { DividerTool } from '../../../../src/tools/divider';
+import { ToggleItem } from '../../../../src/tools/toggle';
+import { CalloutTool } from '../../../../src/tools/callout';
+import { TabsTool } from '../../../../src/tools/tabs';
+import { TabTool } from '../../../../src/tools/tab';
+import { ListItem } from '../../../../src/tools/list';
 import type { OutputBlockData } from '../../../../types';
 import type { Block } from '../../../../src/components/block';
 import type { CrossBlockSubRange } from '../../../../src/components/selection/cross-block-range';
@@ -29,7 +35,19 @@ let holder: HTMLDivElement | undefined;
 const createEditor = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
   const instance = new Blok({
     holder,
-    tools: { paragraph: Paragraph, header: Header, quote: Quote, code: CodeTool, image: ImageTool },
+    tools: {
+      paragraph: Paragraph,
+      header: Header,
+      quote: Quote,
+      code: CodeTool,
+      image: ImageTool,
+      divider: DividerTool,
+      toggle: ToggleItem,
+      callout: CalloutTool,
+      tabs: TabsTool,
+      tab: TabTool,
+      list: ListItem,
+    },
     data: { blocks },
   }) as unknown as TestEditor;
 
@@ -182,3 +200,95 @@ describe('copy of an image block as text/html', () => {
   });
 });
 
+
+describe('copy of dividers and containers as text/html', () => {
+  const shape = (html: string): string[] =>
+    Array.from(parse(html).children).map((node) => node.outerHTML);
+
+  it('writes a divider as an hr', async () => {
+    const instance = await createEditor([
+      { id: 'a', type: 'paragraph', data: { text: 'Before' } },
+      { id: 'd', type: 'divider', data: {} },
+      { id: 'b', type: 'paragraph', data: { text: 'After' } },
+    ]);
+
+    expect(await copyAllAsHtml(instance)).toBe('<p>Before</p><hr><p>After</p>');
+  });
+
+  it('writes a toggle as details, with its children inside it', async () => {
+    const instance = await createEditor([
+      { id: 't', type: 'toggle', data: { text: 'Title <strong>x</strong>' }, content: ['c'] },
+      { id: 'c', type: 'paragraph', data: { text: 'Child' }, parent: 't' },
+      { id: 'z', type: 'paragraph', data: { text: 'After' } },
+    ]);
+
+    const root = parse(await copyAllAsHtml(instance));
+
+    expect(root.querySelector(':scope > details > summary')?.innerHTML).toBe('Title <strong>x</strong>');
+    expect(Array.from(root.querySelectorAll(':scope > details > p')).map((p) => p.textContent)).toEqual(['Child']);
+    expect(Array.from(root.querySelectorAll(':scope > p')).map((p) => p.textContent)).toEqual(['After']);
+  });
+
+  it('writes a toggle heading as details holding its heading in the summary', async () => {
+    const instance = await createEditor([
+      { id: 'h', type: 'header', data: { text: 'Head', level: 2, isToggleable: true }, content: ['c'] },
+      { id: 'c', type: 'paragraph', data: { text: 'Under' }, parent: 'h' },
+    ]);
+
+    expect(shape(await copyAllAsHtml(instance))).toEqual([
+      '<details><summary><h2>Head</h2></summary><p>Under</p></details>',
+    ]);
+  });
+
+  it('writes a callout as an aside around its children, without its emoji', async () => {
+    const instance = await createEditor([
+      { id: 'k', type: 'callout', data: { emoji: '💡' }, content: ['c'] },
+      { id: 'c', type: 'paragraph', data: { text: 'Inside' }, parent: 'k' },
+    ]);
+
+    expect(shape(await copyAllAsHtml(instance))).toEqual(['<aside><p>Inside</p></aside>']);
+  });
+
+  it('writes a toggle inside a callout inside the aside', async () => {
+    const instance = await createEditor([
+      { id: 'k', type: 'callout', data: { emoji: '💡' }, content: ['t'] },
+      { id: 't', type: 'toggle', data: { text: 'T' }, parent: 'k', content: ['c'] },
+      { id: 'c', type: 'paragraph', data: { text: 'Deep' }, parent: 't' },
+    ]);
+
+    expect(shape(await copyAllAsHtml(instance))).toEqual([
+      '<aside><details><summary>T</summary><p>Deep</p></details></aside>',
+    ]);
+  });
+
+  it('does not merge list items inside a toggle with the list items around it', async () => {
+    const instance = await createEditor([
+      { id: 'l1', type: 'list', data: { text: 'one', style: 'unordered' } },
+      { id: 't', type: 'toggle', data: { text: 'T' }, content: ['l2'] },
+      { id: 'l2', type: 'list', data: { text: 'two', style: 'unordered' }, parent: 't' },
+      { id: 'l3', type: 'list', data: { text: 'three', style: 'unordered' } },
+    ]);
+
+    const root = parse(await copyAllAsHtml(instance));
+
+    expect(Array.from(root.children).map((node) => node.tagName)).toEqual(['UL', 'DETAILS', 'UL']);
+    expect(root.querySelector(':scope > details > ul')?.textContent).toBe('two');
+  });
+
+  it('writes each tab title before its body', async () => {
+    const instance = await createEditor([
+      { id: 'tb', type: 'tabs', data: {}, content: ['t1', 't2'] },
+      { id: 't1', type: 'tab', data: { title: 'Alpha' }, parent: 'tb', content: ['p1'] },
+      { id: 'p1', type: 'paragraph', data: { text: 'Alpha body' }, parent: 't1' },
+      { id: 't2', type: 'tab', data: { title: 'Beta', icon: '🍎' }, parent: 'tb', content: ['p2'] },
+      { id: 'p2', type: 'paragraph', data: { text: 'Beta body' }, parent: 't2' },
+    ]);
+
+    expect(shape(await copyAllAsHtml(instance))).toEqual([
+      '<p><strong>Alpha</strong></p>',
+      '<p>Alpha body</p>',
+      '<p><strong>🍎 Beta</strong></p>',
+      '<p>Beta body</p>',
+    ]);
+  });
+});

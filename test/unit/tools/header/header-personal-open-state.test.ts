@@ -205,4 +205,19 @@ describe('Toggle heading personal open state', () => {
 
     expect(openAttr(element)).toBe('true');
   });
+
+  it('stays toggleable when a heading is pasted into it', () => {
+    const tool = createHeading({ text: '' });
+    const element = tool.render();
+    const pasted = document.createElement('h3');
+
+    document.body.appendChild(element);
+    tool.rendered();
+    pasted.textContent = 'Pasted';
+    tool.onPaste({ detail: { data: pasted } } as never);
+
+    expect(tool.save(element)).toMatchObject({ level: 3, text: 'Pasted', isToggleable: true });
+    expect(openAttr(element)).not.toBeNull();
+    element.remove();
+  });
 });

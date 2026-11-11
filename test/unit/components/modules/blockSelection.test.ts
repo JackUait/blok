@@ -776,7 +776,7 @@ describe('BlockSelection', () => {
           '<div data-blok-toggle-children></div>';
         childHolder.innerHTML = '<div>KIDTEXT</div>';
         toggleHolder.querySelector('[data-blok-toggle-children]')?.appendChild(childHolder);
-        Object.assign(toggle, { id: 'toggle', name: 'toggle', contentIds: ['kid'] });
+        Object.assign(toggle, { id: 'toggle', name: 'toggle', contentIds: ['kid'], preservedData: { text: 'TOGTITLE' } });
         Object.assign(child, { id: 'kid', parentId: 'toggle' });
       };
 
@@ -799,9 +799,10 @@ describe('BlockSelection', () => {
         expect(html.indexOf('TOGTITLE')).toBeLessThan(html.indexOf('KIDTEXT'));
         // Title and child stay separate paragraphs, not one run-on line.
         expect(html).not.toContain('TOGTITLEKIDTEXT');
+        expect(html).toBe('<details><summary>TOGTITLE</summary><p>KIDTEXT</p></details>');
       });
 
-      it('writes a selected callout\'s emoji and its child once each', async () => {
+      it('writes a selected callout as an aside around its child, without its emoji', async () => {
         const { blockSelection, blocks } = createBlockSelection();
         const clipboardData = { setData: vi.fn() };
         const [callout, child] = blocks;
@@ -823,7 +824,7 @@ describe('BlockSelection', () => {
         const html = htmlOf(clipboardData.setData);
 
         expect(count(html, 'INCALLOUT')).toBe(1);
-        expect(count(html, '💡')).toBe(1);
+        expect(html).toBe('<aside><p>INCALLOUT</p></aside>');
       });
 
       it('still writes an unselected child of a selected collapsed toggle', async () => {

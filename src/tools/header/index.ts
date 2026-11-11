@@ -1452,6 +1452,8 @@ export class Header implements BlockTool {
       level,
       text: content.innerHTML,
       ...(anchor !== undefined ? { anchor } : {}),
+      // A toggle heading is created toggleable before onPaste (pasted <details><summary><hN>).
+      ...(this._data.isToggleable === true ? { isToggleable: true } : {}),
     };
   }
 

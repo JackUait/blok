@@ -17,6 +17,7 @@ import { BasePasteHandler } from './base';
 import { parseUntrustedHtml } from '../../../utils/inert-html';
 import { PAGE_REFERENCE_ATTR, preservePageReferenceAnchor } from '../../../../shared/page-reference';
 
+const HEADER_TOOL_NAME = 'header';
 
 /**
  * A node queued for block mapping, optionally expanded out of a container
@@ -136,39 +137,7 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
         continue;
       }
 
-      const isDetailsElement =
-        node.nodeType === Node.ELEMENT_NODE &&
-        (node as HTMLElement).tagName === 'DETAILS';
-      const isAsideElement =
-        node.nodeType === Node.ELEMENT_NODE &&
-        (node as HTMLElement).tagName === 'ASIDE';
-
-      if (!isDetailsElement && !isAsideElement) {
-        expandedNodes.push({ node });
-        continue;
-      }
-
-      const parentExpandedIndex = expandedNodes.length;
-
-      expandedNodes.push({ node });
-
-      // ASIDE: loose inline runs become paragraphs (split at <br>), so text
-      // nodes and marks are not dropped or turned into blocks of their own.
-      if (isAsideElement) {
-        expandedNodes.push(...this.collectCellContentEntries(node as HTMLElement)
-          .map((entry) => ({ ...entry, parentExpandedIndex })));
-        continue;
-      }
-
-      // Only direct children are extracted (not deeply nested structures), which
-      // is correct for Google Docs DETAILS format where children are flat siblings.
-      const childElements = Array.from((node as HTMLElement).children).filter(
-        (child) => child.tagName !== 'SUMMARY'
-      );
-
-      for (const child of childElements) {
-        expandedNodes.push({ node: child, parentExpandedIndex });
-      }
+      this.expandContainer({ node }, expandedNodes);
     }
 
     // Map expanded nodes to intermediate results, preserving original index.
@@ -252,6 +221,7 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
           tool: tool.name,
           event,
           parentPasteIndex: parentExpandedIndex,
+          ...(toolData !== undefined && { toolData }),
         },
         originalIndex,
       };
@@ -393,6 +363,61 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
         expandedNodes.push({ ...entry, parentExpandedIndex: columnIndex });
       }
     }
+  }
+
+  /**
+   * Queue an entry, and when it is a DETAILS or an ASIDE, queue its children
+   * after it as its children. A nested DETAILS or ASIDE is expanded the same
+   * way, so its own children are kept. Parents are queued before their
+   * children, so every parentExpandedIndex points backwards.
+   */
+  private expandContainer(entry: ExpandedNodeEntry, expandedNodes: ExpandedNodeEntry[]): void {
+    const { node } = entry;
+    const tag = node.nodeType === Node.ELEMENT_NODE ? (node as HTMLElement).tagName : '';
+
+    if (tag !== 'DETAILS' && tag !== 'ASIDE') {
+      expandedNodes.push(entry);
+
+      return;
+    }
+
+    const parentExpandedIndex = expandedNodes.length;
+    const heading = tag === 'DETAILS' ? this.toggleHeadingOf(node as HTMLElement) : null;
+
+    expandedNodes.push(heading === null
+      ? entry
+      // The header tool ignores data without `text`; onPaste fills it in.
+      : { node: heading, parentExpandedIndex: entry.parentExpandedIndex, toolData: { text: '', isToggleable: true } });
+
+    // ASIDE: loose inline runs become paragraphs (split at <br>), so text
+    // nodes and marks are not dropped or turned into blocks of their own.
+    const children: ExpandedNodeEntry[] = tag === 'ASIDE'
+      ? this.collectCellContentEntries(node as HTMLElement)
+      : Array.from((node as HTMLElement).children)
+        .filter((child) => child.tagName !== 'SUMMARY')
+        .map((child) => ({ node: child }));
+
+    children.forEach((child) => this.expandContainer({ ...child, parentExpandedIndex }, expandedNodes));
+  }
+
+  /**
+   * The heading of a `<details><summary><hN>` (Blok's copy of a toggle
+   * heading), when the header tool takes that tag. Otherwise null, and the
+   * DETAILS stays a toggle.
+   */
+  private toggleHeadingOf(details: HTMLElement): HTMLElement | null {
+    const summary = Array.from(details.children).find((child) => child.tagName === 'SUMMARY');
+    const heading = summary?.firstElementChild;
+
+    if (summary === undefined || !(heading instanceof HTMLElement) || summary.children.length !== 1) {
+      return null;
+    }
+
+    const isOnlyText = (summary.textContent ?? '').trim() === (heading.textContent ?? '').trim();
+    const takesHeading = /^H[1-6]$/.test(heading.tagName)
+      && this.toolRegistry.findToolForTag(heading.tagName)?.tool.name === HEADER_TOOL_NAME;
+
+    return isOnlyText && takesHeading ? heading : null;
   }
 
   /**

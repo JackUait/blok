@@ -181,3 +181,75 @@ describe('HtmlHandler — DETAILS treated as atomic block', () => {
     expect(toggleBlocks[0].content.textContent).toContain('toggle list');
   });
 });
+
+describe('HtmlHandler — containers copied from Blok', () => {
+  let inserted: Array<{ tool: string; content: HTMLElement; toolData: unknown }>;
+
+  beforeEach(() => {
+    inserted = [];
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => vi.restoreAllMocks());
+
+  const setup = () => {
+    const tools = [
+      makeToolStub('paragraph', ['P']),
+      makeToolStub('toggle', ['DETAILS']),
+      makeToolStub('callout', ['ASIDE']),
+      makeToolStub('header', ['H1', 'H2', 'H3', 'H4', 'H5', 'H6']),
+    ];
+    const setBlockParent = vi.fn();
+    const blok = {
+      Tools: { defaultTool: tools[0], blockTools: new Map(tools.map((t) => [t.name, t])) },
+      BlockManager: {
+        currentBlock: null,
+        paste: vi.fn(async (toolName: string, event: CustomEvent, _replace: boolean, toolData: unknown) => {
+          inserted.push({ tool: toolName, content: event.detail.data as HTMLElement, toolData });
+
+          return { id: `block-${inserted.length}`, parentId: null };
+        }),
+        setBlockParent,
+      },
+      Caret: { setToBlock: vi.fn(), positions: { END: 'end' } },
+      YjsManager: { stopCapturing: vi.fn() },
+    } as unknown as BlokModules;
+
+    return { handler: new HtmlHandler(blok, makeRegistry(tools), makeSanitizerBuilder()), setBlockParent };
+  };
+
+  const parentOf = (setBlockParent: ReturnType<typeof vi.fn>, id: string): unknown =>
+    setBlockParent.mock.calls.find(([block]) => (block as { id: string }).id === id)?.[1];
+
+  it('keeps the children of a toggle inside a callout', async () => {
+    const { handler, setBlockParent } = setup();
+
+    await handler.handle('<aside><details><summary>T</summary><p>Deep</p></details></aside>', { canReplaceCurrentBlock: false });
+
+    expect(inserted.map((b) => b.tool)).toEqual(['callout', 'toggle', 'paragraph']);
+    expect(inserted[2].content.textContent).toBe('Deep');
+    expect(parentOf(setBlockParent, 'block-2')).toBe('block-1');
+    expect(parentOf(setBlockParent, 'block-3')).toBe('block-2');
+  });
+
+  it('keeps the children of a toggle inside a toggle', async () => {
+    const { handler, setBlockParent } = setup();
+
+    await handler.handle('<details><summary>A</summary><details><summary>B</summary><p>Deep</p></details></details>', { canReplaceCurrentBlock: false });
+
+    expect(inserted.map((b) => b.tool)).toEqual(['toggle', 'toggle', 'paragraph']);
+    expect(parentOf(setBlockParent, 'block-2')).toBe('block-1');
+    expect(parentOf(setBlockParent, 'block-3')).toBe('block-2');
+  });
+
+  it('pastes a details whose summary holds a heading as a toggle heading', async () => {
+    const { handler, setBlockParent } = setup();
+
+    await handler.handle('<details><summary><h2>Head</h2></summary><p>Under</p></details>', { canReplaceCurrentBlock: false });
+
+    expect(inserted.map((b) => b.tool)).toEqual(['header', 'paragraph']);
+    expect(inserted[0].content.tagName).toBe('H2');
+    expect(inserted[0].toolData).toEqual({ text: '', isToggleable: true });
+    expect(parentOf(setBlockParent, 'block-2')).toBe('block-1');
+  });
+});

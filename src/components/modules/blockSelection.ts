@@ -25,6 +25,8 @@ import { convertStringToBlockData } from '../utils/blocks';
 import { TOOL_NAME as LIST_TOOL_NAME } from '../../tools/list/constants';
 import { buildSemanticListHtml, type SemanticListItem } from '../../tools/list/dom-builder';
 import { TOOL_NAME as CODE_TOOL_NAME } from '../../tools/code/constants';
+import { TOOL_NAME as TOGGLE_TOOL_NAME } from '../../tools/toggle/constants';
+import { TOOL_NAME as CALLOUT_TOOL_NAME } from '../../tools/callout/constants';
 import { INLINE_TEXT_SANITIZE } from '../shared/inline-content-sanitize';
 import { resolvePresetColors } from '../shared/resolve-preset-colors';
 import { parseUntrustedHtml } from '../utils/inert-html';
@@ -70,6 +72,10 @@ interface ClipboardEntry {
 const NAVIGATION_ANNOUNCE_THROTTLE_MS = 300;
 
 const BLOCK_HOLDER_SELECTOR = `[${DATA_ATTR.element}]`;
+
+const HEADER_TOOL_NAME = 'header';
+const DIVIDER_TOOL_NAME = 'divider';
+const TAB_TOOL_NAME = 'tab';
 
 /** Top-level tags that already make their own block in the copied HTML. */
 const CLIPBOARD_BLOCK_TAGS = new Set(['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'PRE', 'UL', 'OL', 'TABLE']);
@@ -553,34 +559,44 @@ export class BlockSelection extends Module {
      * SEMANTIC `<ul>`/`<ol>` instead, grouping consecutive selected list blocks into
      * a single nested list per depth. Non-list blocks keep the sanitize path.
      */
-    const segments = this.groupBlocksForClipboard(this.withoutTableCellBlocks(copiedBlocks));
+    const htmlBlocks = this.withoutTableCellBlocks(copiedBlocks);
+    // Each copied toggle, toggle heading and callout writes its children inside its own element.
+    const containerOf = this.clipboardContainerResolver(htmlBlocks.filter((block) => !links.has(block)));
+    const segments = this.groupBlocksForClipboard(htmlBlocks, (a, b) => containerOf(a) === containerOf(b));
+    const bodies = new Map<string, HTMLElement>();
+    const targetOf = (block: Block): HTMLElement => bodies.get(containerOf(block) ?? '') ?? fakeClipboard;
     // A row's holder renders nothing; its title stands for it.
     const rowTitles = new Map(linkedData.flatMap((entry) => (entry.title === undefined ? [] : [[entry.id, entry.title] as const])));
 
     segments.forEach((segment) => {
+      const target = targetOf(segment.type === 'list' ? segment.items[0] : segment.block);
       const link = segment.type === 'other' ? links.get(segment.block) : undefined;
 
       if (link !== undefined) {
         const paragraph = $.make('p');
 
         paragraph.innerHTML = linkToHtml(link);
-        fakeClipboard.appendChild(paragraph);
+        target.appendChild(paragraph);
       } else if (segment.type === 'other' && isPagePointer(segment.block.name, segment.block.preservedData)) {
         const paragraph = $.make('p');
 
         paragraph.appendChild(this.pageReferenceAnchor(segment.block));
-        fakeClipboard.appendChild(paragraph);
+        target.appendChild(paragraph);
       } else if (segment.type === 'list') {
-        this.appendSemanticList(segment.items, fakeClipboard);
+        this.appendSemanticList(segment.items, target);
       } else if (rowTitles.has(segment.block.id)) {
         const paragraph = $.make('p');
 
         paragraph.textContent = rowTitles.get(segment.block.id) ?? '';
         if (paragraph.textContent !== '') {
-          fakeClipboard.appendChild(paragraph);
+          target.appendChild(paragraph);
         }
+      } else if (this.isClipboardContainer(segment.block)) {
+        bodies.set(segment.block.id, this.appendClipboardContainer(segment.block, target));
+      } else if (segment.block.name === TAB_TOOL_NAME) {
+        this.appendTabTitle(segment.block, target);
       } else {
-        this.appendNonListBlock(segment.block, fakeClipboard);
+        this.appendNonListBlock(segment.block, target);
       }
     });
 
@@ -792,14 +808,15 @@ export class BlockSelection extends Module {
    * Partition selected blocks into runs of consecutive list blocks (grouped into
    * a single semantic list) and standalone non-list blocks.
    * @param blocks - the selected blocks in document order
+   * @param sameRun - whether two list blocks may share one list
    * @returns the ordered clipboard segments
    */
-  private groupBlocksForClipboard(blocks: Block[]): ClipboardSegment[] {
+  private groupBlocksForClipboard(blocks: Block[], sameRun: (a: Block, b: Block) => boolean = () => true): ClipboardSegment[] {
     return blocks.reduce<ClipboardSegment[]>((segments, block) => {
       const last = segments[segments.length - 1];
       const isList = block.name === LIST_TOOL_NAME;
 
-      if (isList && last?.type === 'list') {
+      if (isList && last?.type === 'list' && sameRun(last.items[0], block)) {
         last.items.push(block);
       } else if (isList) {
         segments.push({ type: 'list', items: [block] });
@@ -840,6 +857,13 @@ export class BlockSelection extends Module {
       return;
     }
 
+    // The sanitizer keeps no <hr>, and a run with no text is dropped.
+    if (block.name === DIVIDER_TOOL_NAME) {
+      fakeClipboard.appendChild($.make('hr'));
+
+      return;
+    }
+
     const wrapper = $.make('div');
 
     wrapper.innerHTML = clean(ownClone(block.holder).innerHTML, this.sanitizerConfig);
@@ -867,6 +891,91 @@ export class BlockSelection extends Module {
     }, []);
 
     flushRun(run);
+  }
+
+  /**
+   * Whether a block writes its children inside an element of its own in the copied html.
+   * @param block - a copied block
+   */
+  private isClipboardContainer(block: Block): boolean {
+    return block.name === TOGGLE_TOOL_NAME
+      || block.name === CALLOUT_TOOL_NAME
+      || (block.name === HEADER_TOOL_NAME && block.preservedData.isToggleable === true);
+  }
+
+  /**
+   * Map each copied block to the copied container that holds it in the html,
+   * or to `undefined` when it sits at the top. A copied block that is no
+   * container (a column, a list item) passes its children to its own container.
+   * @param blocks - the blocks written to the html, in document order
+   */
+  private clipboardContainerResolver(blocks: Block[]): (block: Block) => string | undefined {
+    const byId = new Map(blocks.map((block) => [block.id, block]));
+    const resolve = (block: Block): string | undefined => {
+      const parent = block.parentId === null ? undefined : byId.get(block.parentId);
+
+      if (parent === undefined) {
+        return undefined;
+      }
+
+      return this.isClipboardContainer(parent) ? parent.id : resolve(parent);
+    };
+
+    return resolve;
+  }
+
+  /**
+   * Write a toggle or toggle heading as `<details>` and a callout as `<aside>`.
+   * The callout's emoji is left out: the html has no place for it.
+   * @param block - the container block
+   * @param target - the element receiving it
+   * @returns the element its children go into
+   */
+  private appendClipboardContainer(block: Block, target: HTMLElement): HTMLElement {
+    if (block.name === CALLOUT_TOOL_NAME) {
+      return target.appendChild($.make('aside'));
+    }
+
+    const data = block.preservedData;
+    const details = $.make('details');
+    const summary = $.make('summary');
+    const text = clean(typeof data.text === 'string' ? data.text : '', this.sanitizerConfig);
+    const level = typeof data.level === 'number' && data.level >= 1 && data.level <= 6 ? data.level : 2;
+    const title = block.name === HEADER_TOOL_NAME ? $.make(`h${level}`) : summary;
+
+    if (this.Blok.ViewStateAPI.methods.get(block.id, 'open') === true) {
+      details.setAttribute('open', '');
+    }
+
+    title.innerHTML = text;
+    if (title !== summary) {
+      summary.appendChild(title);
+    }
+    details.appendChild(summary);
+
+    return target.appendChild(details);
+  }
+
+  /**
+   * A tab's title is drawn by its tabs block, outside the tab, so it is
+   * written from the tab's data. Same text as the Markdown flavour.
+   * @param block - the tab block
+   * @param target - the element receiving the title
+   */
+  private appendTabTitle(block: Block, target: HTMLElement): void {
+    const { icon, title } = block.preservedData;
+    const label = [icon, title].filter((part): part is string => typeof part === 'string' && part !== '').join(' ');
+
+    if (label === '') {
+      return;
+    }
+
+    const paragraph = $.make('p');
+    const strong = $.make('strong');
+
+    strong.textContent = label;
+    paragraph.appendChild(strong);
+    target.appendChild(paragraph);
   }
 
   /**

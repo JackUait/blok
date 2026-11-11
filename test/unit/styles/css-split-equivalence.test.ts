@@ -1597,6 +1597,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_MENUS2_BYTES = 486;
     // notifier-card.css: the compact "Moved to Trash" toast, 198x43, 28px up (research/36 §6).
     const DATABASE_TMPLTOAST_BYTES = 1_424;
+    // Round V1 lane fullpage: a full-page database's View settings docks as a full-height side panel (research/35 §2.3).
+    const DATABASE_FULLPAGE_BYTES = 629;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2056,7 +2058,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_FILLS_BYTES
       + DATABASE_SORTFILT_BYTES
       + DATABASE_MENUS2_BYTES
-      + DATABASE_TMPLTOAST_BYTES;
+      + DATABASE_TMPLTOAST_BYTES
+      + DATABASE_FULLPAGE_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

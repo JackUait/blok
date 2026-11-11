@@ -906,5 +906,22 @@ describe('cell editor CSS', () => {
       expect(declared(`${MENU} [data-blok-testid='popover-item-trailing-icon']`, 'margin-inline-end')).toEqual(['calc(-1 * var(--blok-space-1))']);
     });
   });
-});
 
+  // research/35 §2.3 (dark), research/27 18.png: a full-page database's View settings is a side panel, not a card.
+  describe('View settings docked on a full-page database', () => {
+    const BOX = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-docked-page'] > [data-blok-popover-container]";
+
+    // database-panel.ts sets the panel's height from the toolbar row's bottom.
+    it('lifts the height caps so the panel can reach the window bottom', () => {
+      expect(declared(BOX, '--max-height')).toEqual(['none']);
+      expect(declared("[data-blok-popover-custom-class~='blok-database-docked-page'] [data-blok-database-panel]", 'max-height')).toEqual(['none']);
+    });
+
+    it('has the page background, a 1px start border, no shadow and square corners', () => {
+      expect(declared(BOX, 'background-color')).toEqual(['var(--blok-bg-primary)']);
+      expect(declared(BOX, 'border-inline-start')).toEqual(['1px solid var(--blok-database-drawer-border)']);
+      expect(declared(BOX, '--blok-popover-box-shadow')).toEqual(['none']);
+      expect(declared(BOX, 'border-radius')).toEqual(['0']);
+    });
+  });
+});

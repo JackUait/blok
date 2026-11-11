@@ -38,6 +38,14 @@ export interface DatabasePanelOptions {
   onClose?: (escape: boolean) => void;
 }
 
+/** A full-page database docks as a side panel under its toolbar row (research/35 §2.3); any other as a floating card. */
+const dockOf = (anchor: HTMLElement): { docked: true } | { docked: 'page'; dockRow: HTMLElement } => {
+  const wrapper = anchor.closest('[data-blok-database-wrapper]');
+  const row = anchor.closest<HTMLElement>('[data-blok-database-title-row], [data-blok-database-view-bar]');
+
+  return wrapper?.hasAttribute('data-blok-database-page') === true && row !== null ? { docked: 'page', dockRow: row } : { docked: true };
+};
+
 const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex="0"]';
 
 /**
@@ -60,12 +68,16 @@ export class DatabasePanel {
     this.element.setAttribute('data-blok-testid', options.testId);
     this.element.style.width = `${options.width}px`;
     if (options.docked === true) this.element.setAttribute('data-docked', '');
+    const dock = options.docked === true ? dockOf(options.anchor) : undefined;
+
+    // The page dock runs to the window bottom; database.css lifts the usual height cap.
+    if (dock?.docked === 'page') this.element.style.height = `calc(100dvh - ${dock.dockRow.getBoundingClientRect().bottom}px)`;
     this.element.addEventListener('keydown', this.handleKeydown);
     this.popover = new CellPopover({
       anchor: options.anchor,
       content: this.element,
       panel: true,
-      ...(options.docked === true ? { docked: true } : {}),
+      ...(dock ?? {}),
       ...(options.gap !== undefined ? { gap: options.gap } : {}),
       onEscape: () => this.back(true),
       onDismiss: () => this.finish(),

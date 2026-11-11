@@ -11960,7 +11960,7 @@ input[data-blok-database-picker-search]:focus {
 [data-blok-database-view-name-row] {
   display: flex;
   align-items: center;
-  gap: var(--blok-space-1-5);
+  gap: var(--blok-space-2);
   padding-block: var(--blok-space-1);
   padding-inline: var(--blok-space-2);
 }

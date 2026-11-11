@@ -22,6 +22,11 @@ describe('database property picker css', () => {
     expect(rulesFor('[data-blok-database-panel-input]')).toContain('flex-shrink: 0');
   });
 
+  // notion-motion.md Round 14: in a 290px View settings the name field is 230 wide, 48px in. After the 28px glyph that leaves an 8px gap.
+  it('the view name field sits 8px after the layout glyph', () => {
+    expect(rulesFor('[data-blok-database-view-name-row]')).toContain('gap: var(--blok-space-2)');
+  });
+
   it('only the property list scrolls, so the search and the footer stay in view', () => {
     const list = rulesFor('[data-blok-database-picker-list]');
 

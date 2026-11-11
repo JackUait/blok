@@ -117,7 +117,23 @@ export function bindTitleDateMention(
     }
   };
   const onKeydown = (event: KeyboardEvent): void => {
-    if (options.getDate() && event.key === 'End' && title.querySelector('[data-desktop-title-date-token]')) {
+    const token = title.querySelector('[data-desktop-title-date-token]');
+    const selection = window.getSelection();
+    if (token && selection?.isCollapsed && (event.key === 'Backspace' || event.key === 'Delete')) {
+      const beforeOrAfterToken = selection.anchorNode === title && selection.anchorOffset <= 1;
+      const atStartOfSuffix = selection.anchorNode === token.nextSibling && selection.anchorOffset === 0;
+      if ((event.key === 'Backspace' && (beforeOrAfterToken || atStartOfSuffix)) ||
+        (event.key === 'Delete' && selection.anchorNode === title && selection.anchorOffset === 0)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const suffix = (title.textContent ?? '').slice((token.textContent ?? '').length).trimStart();
+        title.replaceChildren(...(suffix ? [document.createTextNode(suffix)] : []));
+        selection.setPosition(title, 0);
+        title.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: event.key === 'Delete' ? 'deleteContentForward' : 'deleteContentBackward' }));
+        return;
+      }
+    }
+    if (options.getDate() && event.key === 'End' && token) {
       event.preventDefault();
       window.getSelection()?.setPosition(title, title.childNodes.length);
       return;
@@ -139,6 +155,13 @@ export function bindTitleDateMention(
     if (event.target instanceof Node && !title.contains(event.target) && !menu?.contains(event.target)) close();
   };
   const onFocusOut = (): void => { close(); };
+  const onFocusIn = (event: FocusEvent): void => {
+    if (event.target !== title || !title.querySelector('[data-desktop-title-date-token]')) return;
+    const selection = window.getSelection();
+    if (selection && selection.isCollapsed && (selection.anchorNode === title || selection.anchorNode === null) && selection.anchorOffset === 0) {
+      selection.setPosition(title, title.childNodes.length);
+    }
+  };
   const openDatePicker = async (): Promise<void> => {
     if (dateEditor?.isOpen || !options.getDate()) return;
     const [{ openDateEditor }] = await Promise.all([import('@blok/date-editor'), loadSheet('database')]);
@@ -171,6 +194,7 @@ export function bindTitleDateMention(
   title.addEventListener('input', onInput);
   title.addEventListener('keydown', onKeydown, true);
   title.addEventListener('focusout', onFocusOut);
+  title.addEventListener('focusin', onFocusIn);
   title.addEventListener('click', onClick);
   document.addEventListener('pointerdown', onPointerDown, true);
   window.addEventListener('resize', position);
@@ -183,6 +207,7 @@ export function bindTitleDateMention(
       title.removeEventListener('input', onInput);
       title.removeEventListener('keydown', onKeydown, true);
       title.removeEventListener('focusout', onFocusOut);
+      title.removeEventListener('focusin', onFocusIn);
       title.removeEventListener('click', onClick);
       document.removeEventListener('pointerdown', onPointerDown, true);
       window.removeEventListener('resize', position);

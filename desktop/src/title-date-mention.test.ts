@@ -78,6 +78,27 @@ describe('date mentions in page titles', () => {
     binding.destroy();
   });
 
+  it('deletes the whole mention when Backspace starts before its token', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 10, 11, 17));
+    const title = document.createElement('h1');
+    title.textContent = '@Aujourd’hui';
+    document.body.append(title);
+    const binding = bindTitleDateMention(title, {
+      getDate: () => '2026-11-11', getDisplay: () => ({}), setDate: vi.fn(), setDisplay: vi.fn(), i18n: { t: (key) => key },
+    });
+    const input = vi.fn();
+    title.addEventListener('input', input);
+    title.focus();
+    window.getSelection()?.setPosition(title, 0);
+    const backspace = new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true });
+    title.dispatchEvent(backspace);
+    expect(backspace.defaultPrevented).toBe(true);
+    expect(title.textContent).toBe('');
+    expect(input).toHaveBeenCalledOnce();
+    binding.destroy();
+  });
+
   it('restores the date token when the relative label changes overnight', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 10, 11, 17));

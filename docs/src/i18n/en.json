@@ -2368,6 +2368,7 @@
       "strikethrough": "Strikethrough",
       "inlineCode": "Inline Code",
       "equation": "Equation",
+      "annotation": "Hint",
       "clearFormat": "Clear Format",
       "supSub": "Superscript & Subscript"
     },
@@ -2717,6 +2718,14 @@
       },
       "equation": {
         "description": "Renders inline math (LaTeX) with KaTeX. Press Cmd/Ctrl+Shift+E to activate it. It wraps the selected text, or a formula typed into the popover input, in a `<span data-latex=\"...\">`.\n\nThe `data-latex` attribute is the formula. The KaTeX markup is derived from it, is stripped on save, and is regenerated whenever the block renders (load, paste, undo).\n\nRead-only surfaces that never mount an editor, `blocksToHtml` and `<BlokView>`, display the source instead. Pass an `inlineRenderers` entry to render the math there too."
+      },
+      "annotation": {
+        "description": "Adds a note to a phrase. A reader sees a dotted underline, and a card with the note opens on hover.\n\nThe writer selects text and presses Hint in the inline toolbar. A small card opens and they type the note. The note is plain text, and line breaks are allowed. A Subtitle toggle adds a quieter second line under the note, for example who said a quote. There is no keyboard shortcut.\n\nFour things save the note.\n\n- The Done button.\n- Cmd/Ctrl+Enter.\n- Escape.\n- A click elsewhere.\n\nAn empty note removes the hint, and so does the remove button. Clicking an existing hint in an editable editor opens the card to edit it.\n\nThe reader card opens half a second after the pointer rests on the phrase. A click pins it. Escape or a click elsewhere closes it. In read-only mode the phrase is focusable, and Enter or Space toggles the card.\n\nThe reader card works in every editor, even one that did not register the tool. Only writing and editing need the tool.\n\nThe tool is opt-in. It is not in `defaultInlineTools` or `allTools`, so register it explicitly under the `annotation` key.\n\nCopying and pasting text between blocks keeps the hint. Find in page and plain-text copy see only the phrase, not the note.\n\nMarkdown export writes each hint as a footnote. The phrase gets a `[^1]` reference, and the note and subtitle go into a `[^1]:` line at the end. Markdown import does not turn footnotes back into hints.",
+        "options": {
+          "defaultSubtitle": {
+            "description": "Pre-fills the subtitle line when the writer turns the Subtitle toggle on and the line is empty. The config type is `AnnotationConfig`."
+          }
+        }
       },
       "clearFormat": {
         "description": "Removes inline formatting (bold, italic, underline, strikethrough, inline code, highlight) from the selected text. Links stay intact. Apply it by clicking the Tx button in the inline toolbar."

@@ -573,6 +573,12 @@ const TOOL_COPY: Record<string, Copy> = {
       'Write inline math with LaTeX syntax, and how equations are stored and sanitized inside a block.',
     h1: 'Equation tool: inline LaTeX math',
   },
+  annotation: {
+    title: 'Hint Inline Tool — Notes on a Phrase',
+    description:
+      'Attach a note and an optional subtitle to a phrase, show them in a card on hover, and see the mark Blok stores in block text.',
+    h1: 'Hint: a note on a phrase',
+  },
   clearFormat: {
     title: 'Clear Format Tool — Strip Inline Styling',
     description:

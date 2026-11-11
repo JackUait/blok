@@ -16,12 +16,16 @@
     "date": "2026-11-10"
   },
   "/docs": {
-    "hash": "2102de653dd3ed07",
+    "hash": "de31fa97c0f562bb",
     "date": "2026-11-11"
   },
   "/docs/agent-api": {
     "hash": "232f1d198bf38dcc",
     "date": "2026-11-07"
+  },
+  "/docs/annotation": {
+    "hash": "1484ce05cc3105cc",
+    "date": "2026-11-11"
   },
   "/docs/audio": {
     "hash": "cc8c5686bf579790",
@@ -352,12 +356,16 @@
     "date": "2026-11-10"
   },
   "/ru/docs": {
-    "hash": "d57cefb6da1bd1de",
+    "hash": "b6278f62f661391f",
     "date": "2026-11-11"
   },
   "/ru/docs/agent-api": {
     "hash": "e1bfdb20e56be28d",
     "date": "2026-11-07"
+  },
+  "/ru/docs/annotation": {
+    "hash": "05f6763bd66ebfba",
+    "date": "2026-11-11"
   },
   "/ru/docs/audio": {
     "hash": "bea4094f245f3561",

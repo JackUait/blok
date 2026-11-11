@@ -1870,6 +1870,63 @@ const editor = new Blok({
 });`,
   },
   {
+    id: 'annotation',
+    exportName: 'Annotation',
+    type: 'inline',
+    title: 'Hint',
+    description:
+      'Adds a note to a phrase. A reader sees a dotted underline, and a card with the note opens on hover.\n\nThe writer selects text and presses Hint in the inline toolbar. A small card opens and they type the note. The note is plain text, and line breaks are allowed. A Subtitle toggle adds a quieter second line under the note, for example who said a quote. There is no keyboard shortcut.\n\nFour things save the note.\n\n- The Done button.\n- Cmd/Ctrl+Enter.\n- Escape.\n- A click elsewhere.\n\nAn empty note removes the hint, and so does the remove button. Clicking an existing hint in an editable editor opens the card to edit it.\n\nThe reader card opens half a second after the pointer rests on the phrase. A click pins it. Escape or a click elsewhere closes it. In read-only mode the phrase is focusable, and Enter or Space toggles the card.\n\nThe reader card works in every editor, even one that did not register the tool. Only writing and editing need the tool.\n\nThe tool is opt-in. It is not in `defaultInlineTools` or `allTools`, so register it explicitly under the `annotation` key.\n\nCopying and pasting text between blocks keeps the hint. Find in page and plain-text copy see only the phrase, not the note.\n\nMarkdown export writes each hint as a footnote. The phrase gets a `[^1]` reference, and the note and subtitle go into a `[^1]:` line at the end. Markdown import does not turn footnotes back into hints.',
+    importExample: `import { Annotation } from '@bloklabs/core/tools';`,
+    configOptions: [
+      {
+        option: 'defaultSubtitle',
+        type: 'string',
+        default: 'undefined',
+        description:
+          'Pre-fills the subtitle line when the writer turns the Subtitle toggle on and the line is empty. The config type is `AnnotationConfig`.',
+      },
+    ],
+    saveDataShape: `// A mark on a run of the block's text field. Both values are plain text,
+// and subtitle is optional.
+// { "text": "phrase", "marks": { "annotation": { "text": "Note", "subtitle": "Subtitle" } } }
+//
+// The same run as HTML:
+// <span data-blok-annotation="Note" data-blok-annotation-subtitle="Subtitle">phrase</span>
+//
+// Markdown export writes a footnote:
+// phrase[^1]
+//
+// [^1]: Note — Subtitle`,
+    saveDataExample: `{
+  "type": "paragraph",
+  "data": {
+    "text": [
+      { "text": "The launch slipped because of " },
+      {
+        "text": "the audit",
+        "marks": { "annotation": { "text": "The security review took two extra weeks.", "subtitle": "From the team interview" } }
+      }
+    ]
+  }
+}`,
+    usageExample: `import { Blok } from '@bloklabs/core';
+import { Annotation, Paragraph } from '@bloklabs/core/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    // Paragraph is the default block and is not bundled with the core —
+    // without it the editor starts with an "unsupported block" stub.
+    paragraph: Paragraph,
+    // Hint is opt-in: it is not in defaultInlineTools or allTools.
+    annotation: {
+      class: Annotation,
+      config: { defaultSubtitle: 'From the team interview' },
+    },
+  },
+});`,
+  },
+  {
     id: 'clearFormat',
     exportName: 'ClearFormat',
     type: 'inline',

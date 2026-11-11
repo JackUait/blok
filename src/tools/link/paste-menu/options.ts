@@ -5,8 +5,13 @@ import { isHttpUrl, matchEmbedService } from '../registry';
 /** The four outputs Notion offers for a pasted URL. */
 export type PasteMenuActionType = 'embed' | 'bookmark' | 'mention' | 'plain';
 
+/** A media block a pasted URL can become, named by the media tool's paste pattern key. */
+export type PasteMenuMedia = 'image' | 'video' | 'audio';
+
 export interface PasteMenuOption {
   type: PasteMenuActionType;
+  /** On `embed`: the media block it inserts in place of a frame. */
+  media?: PasteMenuMedia;
 }
 
 export interface PasteMenuContext {
@@ -25,6 +30,8 @@ export interface PasteMenuContext {
   ownHosts?: readonly string[];
   /** The page the URL links to, when the page tool recognizes it. */
   pageId?: string;
+  /** The media block the URL can become, when a media tool's pattern matches it. */
+  media?: PasteMenuMedia;
 }
 
 /** Whether `url` points at one of `ownHosts`. The port is ignored. */
@@ -53,8 +60,8 @@ const canEmbedGeneric = (url: string, context: PasteMenuContext): boolean =>
  * Decides which paste-menu options apply to a pasted URL.
  *
  * - With a text selection, Notion simply hyperlinks it — only `plain`.
- * - `embed` for a registered provider, or a URL that passes `canEmbedGeneric`
- *   (most specific, listed first).
+ * - `embed` for a media URL (inserts the media block), a registered provider,
+ *   or a URL that passes `canEmbedGeneric` (most specific, listed first).
  * - `bookmark` for any safe http(s) URL outside `ownHosts`.
  * - `mention` for any safe http(s) URL.
  * - `plain` is always available (dismiss / keep as link).
@@ -75,7 +82,9 @@ export function buildPasteMenuOptions(
 
   const options: PasteMenuOption[] = [];
 
-  if (matchEmbedService(url) || canEmbedGeneric(url, context)) {
+  if (context.media !== undefined) {
+    options.push({ type: 'embed', media: context.media });
+  } else if (matchEmbedService(url) || canEmbedGeneric(url, context)) {
     options.push({ type: 'embed' });
   }
 

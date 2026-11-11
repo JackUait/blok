@@ -37,6 +37,8 @@ interface Case {
   allowSplit?: boolean;
   /** Skip the clipboard-text == selection-text guard (KaTeX copies its MathML text too). */
   looseCopyCheck?: boolean;
+  /** A pasted bare URL lands as a link to itself, with the paste menu open. */
+  urlBecomesLink?: boolean;
 }
 
 interface Result {
@@ -487,6 +489,11 @@ const roundTrip = async (page: Page, c: Case): Promise<Result> => {
   } else if (tgtValue.kind === 'plain') {
     insert = Array.from(plainOf(insert)).map(ch => (ch === '\n' ? '⏎' : ch));
   }
+  if (c.urlBecomesLink === true) {
+    const url = plainOf(insert);
+
+    insert = insert.map(ch => `${ch} <a[href=${url} rel=nofollow target=_blank]>`);
+  }
   const expected = [ ...tgtChars.slice(0, insertAt), ...insert, ...tgtChars.slice(insertAt + removeCount) ];
 
   const beforeJson = JSON.stringify(beforePaste);
@@ -720,8 +727,8 @@ test.describe('text-inline round trips', () => {
       await run(page, { blocks: [ p('src', '# not a heading **not bold**'), EMPTY() ], src: { id: 'src' }, sel: 'all', tgt: { id: 'tgt' }, at: 'start' });
     });
     test('a URL as plain text -> mid paragraph', async ({ page }) => {
-      test.fixme(true, 'text-inline-text-features-url: a pasted URL becomes a link and opens the paste menu; awaits a product decision');
-      await run(page, { blocks: [ p('src', 'https://example.com/path'), TARGET() ], src: { id: 'src' }, sel: 'all', tgt: { id: 'tgt' }, at: { before: 'text here' } });
+      await run(page, { blocks: [ p('src', 'https://example.com/path'), TARGET() ], src: { id: 'src' }, sel: 'all', tgt: { id: 'tgt' }, at: { before: 'text here' }, urlBecomesLink: true });
+      await expect(page.locator('[data-blok-item-name="paste-menu-bookmark"]')).toBeVisible();
     });
   });
 

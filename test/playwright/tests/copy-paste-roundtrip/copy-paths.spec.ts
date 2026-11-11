@@ -995,46 +995,60 @@ test.describe('new copy paths', () => {
     }
   });
 
+  /** Copies a media block's URL from its menu and pastes it as plain text into the empty `tgt`. */
+  const pasteCopiedUrl = async (page: Page, item: string, block: OutputBlockData): Promise<string> => {
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.route(/example\.com/, route => route.fulfill({ status: 200, contentType: 'application/pdf', body: 'x' }));
+    await createMediaEditor(page, [
+      block,
+      { id: 'tgt', type: 'paragraph', data: { text: '' } },
+      { id: 'tail', type: 'paragraph', data: { text: 'Tail' } },
+    ] as OutputBlockData[]);
+    await page.evaluate(() => navigator.clipboard.writeText('EMPTY'));
+    await page.locator('[data-blok-id="m"]').hover({ position: { x: 40, y: 10 } });
+    await page.getByTestId('settings-toggler').first().click();
+    await page.locator(`[data-blok-item-name="${item}"]`).first().click({ timeout: 5000 });
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- clipboard write is async
+    await page.waitForTimeout(300);
+    const text = await page.evaluate(async () => navigator.clipboard.readText());
+
+    await page.keyboard.press('Escape');
+    await ed(page, 'tgt').click();
+    await paste(page, { 'text/plain': text });
+
+    return text;
+  };
+
   for (const [tool, item, block] of [
     ['video', 'video-copy-url', { id: 'm', type: 'video', data: { url: 'http://127.0.0.1:4444/test/playwright/fixtures/video/clip.webm', caption: 'Vid' } }],
-    ['file', 'file-copy-url', { id: 'm', type: 'file', data: { url: 'https://example.com/report.pdf', name: 'report.pdf', size: 1234 } }],
     ['image', 'image-copy-url', { id: 'm', type: 'image', data: { url: 'http://127.0.0.1:4444/test/playwright/fixtures/image/shot.png', caption: 'Cap' } }],
   ] as const) {
     test(`critic-media-copy-url: ${tool} menu Copy URL, paste into an empty paragraph`, async ({ page }) => {
-      test.fixme(tool !== 'file', 'critic-media-copy-url: a pasted image or video URL becomes a link, not a media block; awaits a product decision');
-      await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
-      await page.route(/example\.com/, route => route.fulfill({ status: 200, contentType: 'application/pdf', body: 'x' }));
-      await createMediaEditor(page, [
-        block,
-        { id: 'tgt', type: 'paragraph', data: { text: '' } },
-        { id: 'tail', type: 'paragraph', data: { text: 'Tail' } },
-      ] as OutputBlockData[]);
-      await page.evaluate(() => navigator.clipboard.writeText('EMPTY'));
-      await page.locator('[data-blok-id="m"]').hover({ position: { x: 40, y: 10 } });
-      await page.getByTestId('settings-toggler').first().click();
-      const itemLoc = page.locator(`[data-blok-item-name="${item}"]`);
-
-      await itemLoc.first().click({ timeout: 5000 });
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- clipboard write is async
-      await page.waitForTimeout(300);
-      const text = await page.evaluate(async () => navigator.clipboard.readText());
-
-      await page.keyboard.press('Escape');
-      await ed(page, 'tgt').click();
-      await paste(page, { 'text/plain': text });
-      const after = await settle(page);
-
       const { url } = block.data;
+      const text = await pasteCopiedUrl(page, item, block);
 
       expect.soft(text, 'copied the block URL').toBe(url);
-      // The file tool has no URL paste pattern, so a linked paragraph is the closest result.
-      const cameBack = tool === 'file'
-        ? after.some(b => b.type === 'paragraph' && JSON.stringify(b.data).includes(url))
-        : after.filter(b => b.type === tool).length === 2;
+      // A pasted URL stays a link; the menu offers the media block.
+      expect.soft(JSON.stringify(await settle(page)), 'the pasted URL is a link first').toContain(`"href":"${url}"`);
+      const embed = page.locator('[data-blok-item-name="paste-menu-embed"]');
 
-      expect.soft(cameBack, tool === 'file' ? 'the pasted URL is kept as a link' : `a ${tool} block comes back`).toBe(true);
+      await expect(embed).toContainText('from 127.0.0.1');
+      await embed.click();
+      const after = await settle(page);
+
+      expect.soft(after.filter(b => b.type === tool).length, `a ${tool} block comes back`).toBe(2);
+      expect.soft(JSON.stringify(after), 'the link is gone').not.toContain(`"href":"${url}"`);
     });
   }
+
+  test('critic-media-copy-url: file menu Copy URL, paste into an empty paragraph', async ({ page }) => {
+    const url = 'https://example.com/report.pdf';
+    const text = await pasteCopiedUrl(page, 'file-copy-url', { id: 'm', type: 'file', data: { url, name: 'report.pdf', size: 1234 } });
+
+    expect.soft(text, 'copied the block URL').toBe(url);
+    // The file tool has no URL paste pattern, so the pasted URL is kept as a link.
+    expect.soft(JSON.stringify(await settle(page)), 'the pasted URL is kept as a link').toContain(`"href":"${url}"`);
+  });
 
   test('database-other-untested: cell hover Copy button (text, number, date, url), paste into the same column of another row', async ({ page }) => {
     await page.setViewportSize({ width: 1400, height: 900 });

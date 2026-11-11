@@ -568,6 +568,29 @@ test.describe('Link paste', () => {
     expect((saved.blocks[0].data as { text: string }).text).toContain('https://example.com/article');
   });
 
+  test('a media URL pasted into text stays a link, and Embed adds the media block after it', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [{ type: 'paragraph', data: { text: 'Listen ' } }],
+    });
+
+    const editable = firstEditable(page);
+    const url = 'https://example.com/song.mp3';
+
+    await editable.click();
+    await page.keyboard.press('End');
+    await pasteText(editable, url);
+
+    await expect(page.getByRole('link', { name: url, exact: true })).toHaveCount(1);
+    await expect(page.locator('[data-blok-item-name="paste-menu-embed"]')).toHaveText('Embed audio from example.com');
+    await pickMenu(page, 'embed');
+
+    await expect.poll(async () => (await saveRaw(page)).blocks.map((block) => block.type)).toEqual(['paragraph', 'audio']);
+    const saved = await saveBlok(page);
+
+    expect((saved.blocks[0].data as { text: string }).text).toBe('Listen ');
+    expect((saved.blocks[1].data as { url?: string }).url).toBe(url);
+  });
+
   test('choosing Bookmark from a block with text keeps the text and adds the card as a new block', async ({ page }) => {
     // Non-destructive bookmark: the surrounding text stays in its paragraph and
     // the bookmark card is appended as a NEW block, with the inline link dropped.

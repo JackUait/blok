@@ -260,6 +260,50 @@ describe('PatternHandler — link paste menu gating', () => {
     expect(menuOpen?.blockedEmbedOrigins).toEqual(['evil.example']);
   });
 
+  describe('media URL', () => {
+    const imageUrl = 'https://example.com/shot.png';
+    const registryFor = (key: string, name: string, settings: Record<string, unknown> = {}): ToolRegistry =>
+      ({
+        findToolForPattern: vi.fn().mockReturnValue({ key, pattern: /x/, tool: { name, settings } }),
+      }) as unknown as ToolRegistry;
+    const handlerFor = (registry: ToolRegistry, config: BlokConfig = {}): PatternHandler =>
+      new PatternHandler(createBlok(), registry, sanitizerBuilder, config, fakeMenu);
+
+    it('keeps the link and offers the media block in the menu', async () => {
+      await handlerFor(registryFor('image', 'image')).handle(imageUrl, context);
+
+      expect(insertMock).toHaveBeenCalledTimes(1);
+      expect(pasteMock).not.toHaveBeenCalled();
+      expect(menuOpen?.media).toBe('image');
+    });
+
+    it('inserts the media tool under its registered name when embed is picked', async () => {
+      const checkEmbed = vi.fn().mockResolvedValue({ verdict: 'blocked' });
+
+      await handlerFor(registryFor('video', 'clip'), { linkPaste: { checkEmbed } }).handle('https://example.com/a.webm', context);
+      menuOpen?.onSelect('embed');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(pasteMock).toHaveBeenCalledTimes(1);
+      expect(pasteMock.mock.calls[0][0]).toBe('clip');
+      expect((pasteMock.mock.calls[0][1] as CustomEvent<{ key: string; data: string }>).detail).toEqual({ key: 'video', data: 'https://example.com/a.webm' });
+      // A media block is no frame, so the frame check does not apply.
+      expect(checkEmbed).not.toHaveBeenCalled();
+    });
+
+    it('offers no media block when the tool takes uploads only', async () => {
+      await handlerFor(registryFor('image', 'image', { sources: 'upload' })).handle(imageUrl, context);
+
+      expect(menuOpen?.media).toBeUndefined();
+    });
+
+    it('offers no media block for a non-media pattern', async () => {
+      await handlerFor(registryFor('bookmark', 'bookmark')).handle(imageUrl, context);
+
+      expect(menuOpen?.media).toBeUndefined();
+    });
+  });
+
   describe('link to the editor\'s own host', () => {
     // jsdom serves the page from localhost.
     const ownUrl = `${window.location.origin}/doc/1`;

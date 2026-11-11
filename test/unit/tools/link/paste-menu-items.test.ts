@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import georgianDictionary from '../../../../src/components/i18n/locales/ka.json';
 import { buildPasteMenuItems, type PasteMenuI18n } from '../../../../src/tools/link/paste-menu/items';
 import type { PasteMenuOption } from '../../../../src/tools/link/paste-menu/options';
+import { IconImage, IconMusic, IconVideo } from '../../../../src/components/icons';
 import type { PopoverItemParams } from '../../../../types/utils/popover/popover-item';
 
 const identityI18n: PasteMenuI18n = { t: (key: string): string => key };
@@ -366,5 +367,29 @@ describe('buildPasteMenuItems brand marks', () => {
     const [item] = buildPasteMenuItems(embedOnly, identityI18n, vi.fn(), 'https://www.desmos.com/calculator/abc123');
 
     expect(typeof (item as { icon?: unknown }).icon).toBe('string');
+  });
+});
+
+describe('buildPasteMenuItems — media embed', () => {
+  it.each([
+    ['image', 'tools.linkPaste.embedImage'],
+    ['video', 'tools.linkPaste.embedVideo'],
+    ['audio', 'tools.linkPaste.embedAudio'],
+  ] as const)('titles a %s embed with its kind and the link host', (media, key) => {
+    const i18n: PasteMenuI18n = { t: (k: string): string => (k === key ? 'Embed from {provider}' : k) };
+    const [item] = buildPasteMenuItems([{ type: 'embed', media }], i18n, vi.fn(), 'https://cdn.example.com/a/file.x');
+
+    expect(asDefaultItem(item).name).toBe('paste-menu-embed');
+    expect(asDefaultItem(item).title).toBe('Embed from cdn.example.com');
+  });
+
+  it.each([
+    ['image', IconImage],
+    ['video', IconVideo],
+    ['audio', IconMusic],
+  ] as const)('shows the %s icon', (media, icon) => {
+    const [item] = buildPasteMenuItems([{ type: 'embed', media }], identityI18n, vi.fn(), 'https://example.com/a');
+
+    expect(asDefaultItem(item).icon).toBe(icon);
   });
 });

@@ -172,3 +172,26 @@ describe('buildPasteMenuOptions — safe generic embed', () => {
     expect(offersEmbed('https://www.youtube.com/watch?v=dQw4w9WgXcQ', { ownHosts: ['www.youtube.com'] })).toBe(true);
   });
 });
+
+describe('buildPasteMenuOptions — media URL', () => {
+  it('offers embed as the media block, listed first', () => {
+    const result = buildPasteMenuOptions('https://example.com/shot.png', { hasSelection: false, media: 'image' });
+
+    expect(result[0]).toEqual({ type: 'embed', media: 'image' });
+    expect(result.map((o) => o.type)).toEqual(['embed', 'bookmark', 'mention', 'plain']);
+  });
+
+  it('offers the media block for a link to the own site, which gets no bookmark', () => {
+    const result = buildLivePasteMenuOptions('https://example.com/clip.webm', {
+      hasSelection: false,
+      media: 'video',
+      ownHosts: ['example.com'],
+    });
+
+    expect(result).toEqual([{ type: 'embed', media: 'video' }, { type: 'plain' }]);
+  });
+
+  it('offers only plain over a selection', () => {
+    expect(buildPasteMenuOptions('https://example.com/a.mp3', { hasSelection: true, media: 'audio' })).toEqual([{ type: 'plain' }]);
+  });
+});

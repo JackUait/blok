@@ -6,7 +6,7 @@ import {
   buildLivePasteMenuOptions,
   type LinkPasteMenu,
 } from '../../../../tools/link/paste-menu/controller';
-import { isOwnHostLink, type PasteMenuActionType } from '../../../../tools/link/paste-menu/options';
+import { isOwnHostLink, type PasteMenuActionType, type PasteMenuMedia } from '../../../../tools/link/paste-menu/options';
 import { genericEmbedPolicy } from '../../../../tools/link/generic-embed-policy';
 import type { PageConfig } from '../../../../tools/page/types';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../../../shared/page-reference';
@@ -22,6 +22,14 @@ import { BasePasteHandler } from './base';
 
 /** The block a URL paste landed on, captured before the menu steals focus. */
 type TargetBlock = BlokModules['BlockManager']['currentBlock'] | null;
+
+/** A media tool whose paste pattern matches the URL: its registered name and pattern key. */
+interface MediaTarget {
+  tool: string;
+  key: PasteMenuMedia;
+}
+
+const MEDIA_KEYS: ReadonlySet<string> = new Set<PasteMenuMedia>(['image', 'video', 'audio']);
 
 /**
  * Pattern Handler Priority.
@@ -230,7 +238,9 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     const ownHosts = policy.ownHosts;
     const pageId = this.pageIdFor(url);
     const page = pageId === undefined ? {} : { pageId };
-    const gate = { hasSelection, allowGenericEmbed, allowedEmbedOrigins, blockedEmbedOrigins, ownHosts, ...page };
+    const mediaTarget = this.mediaTargetFor(url);
+    const media = mediaTarget === undefined ? {} : { media: mediaTarget.key };
+    const gate = { hasSelection, allowGenericEmbed, allowedEmbedOrigins, blockedEmbedOrigins, ownHosts, ...page, ...media };
 
     // The link is already in; a menu offering only "keep it" is noise.
     if (buildLivePasteMenuOptions(url, gate).every((o) => o.type === 'plain')) {
@@ -244,12 +254,32 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
       ...(linkBlock?.holder ? { trigger: linkBlock.holder } : {}),
       ...(this.config?.i18n?.direction ? { direction: this.config.i18n.direction } : {}),
       onSelect: (type: PasteMenuActionType): void => {
-        void this.applyMenuAction(type, url, linkBlock, canReplace, pageId);
+        void this.applyMenuAction(type, url, linkBlock, canReplace, pageId, mediaTarget);
       },
       onDismiss: (): void => {
         // The link is already inserted; dismissing simply keeps it as-is.
       },
     });
+  }
+
+  /**
+   * The media tool that can take `url`, unless that tool takes uploads only:
+   * it would drop the URL and leave an empty block.
+   */
+  private mediaTargetFor(url: string): MediaTarget | undefined {
+    const pattern = this.toolRegistry.findToolForPattern(url);
+
+    if (pattern === undefined || !MEDIA_KEYS.has(pattern.key)) {
+      return undefined;
+    }
+
+    const settings = pattern.tool.settings as { sources?: unknown } | undefined;
+
+    if (settings?.sources === 'upload') {
+      return undefined;
+    }
+
+    return { tool: pattern.tool.name, key: pattern.key as PasteMenuMedia };
   }
 
   /**
@@ -311,9 +341,11 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     url: string,
     linkBlock: TargetBlock,
     canReplace: boolean,
-    pageId?: string
+    pageId?: string,
+    media?: MediaTarget
   ): Promise<void> {
-    if (type === 'embed' && matchEmbedService(url) === null && this.config?.linkPaste?.checkEmbed !== undefined) {
+    // A media block is no frame, so the frame check does not apply to it.
+    if (type === 'embed' && media === undefined && matchEmbedService(url) === null && this.config?.linkPaste?.checkEmbed !== undefined) {
       const refused = await embedCheckRefuses(this.config.linkPaste.checkEmbed, url);
 
       // The wait can outlast the link: the user may have undone, deleted or
@@ -330,6 +362,9 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
       }
     }
 
+    // The embed pick inserts the media tool when the URL is a media file.
+    const target = type === 'embed' && media !== undefined ? media : { tool: type, key: type };
+
     switch (type) {
       case 'bookmark':
       case 'embed':
@@ -337,7 +372,7 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
 
         if (canReplace) {
           // Empty block: the link IS the block — swap it for the rich view.
-          await this.insertForcedPatternBlock(type, url, true);
+          await this.insertForcedPatternBlock(target, url, true);
         } else {
           // Block has other content: drop the inline link and append the rich
           // view as a NEW block, leaving the surrounding text untouched. One
@@ -347,7 +382,7 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
             // Reported now: its DOM record would land inside the insert's
             // structural window and be written as an untracked echo.
             linkBlock?.dispatchChange();
-            await this.insertForcedPatternBlock(type, url, false);
+            await this.insertForcedPatternBlock(target, url, false);
           });
         }
         break;
@@ -424,10 +459,10 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     this.findInsertedAnchor(block, url)?.remove();
   }
 
-  private async insertForcedPatternBlock(tool: string, url: string, canReplace: boolean): Promise<void> {
-    const event = this.composePasteEvent('pattern', { key: tool, data: url });
+  private async insertForcedPatternBlock({ tool, key }: { tool: string; key: string }, url: string, canReplace: boolean): Promise<void> {
+    const event = this.composePasteEvent('pattern', { key, data: url });
 
-    await this.insertPatternBlock({ key: tool, data: url, tool, event }, canReplace);
+    await this.insertPatternBlock({ key, data: url, tool, event }, canReplace);
   }
 
   private insertPlainLink(url: string, targetBlock: TargetBlock): TargetBlock {

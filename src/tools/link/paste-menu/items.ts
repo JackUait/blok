@@ -91,6 +91,14 @@ const presentationFor = (type: PasteMenuActionType): PasteMenuItemPresentation =
   }
 };
 
+const hostOf = (url: string): string | null => {
+  try {
+    return new URL(url).hostname || null;
+  } catch {
+    return null;
+  }
+};
+
 /**
  * Maps paste-menu options to Popover item params, preserving order.
  * Each item closes the popover on activation and reports its type to `onSelect`.
@@ -98,7 +106,8 @@ const presentationFor = (type: PasteMenuActionType): PasteMenuItemPresentation =
  * When `url` matches a registered embed provider, the embed item is titled with
  * the provider's link-type action template (e.g. "Embed a video from YouTube") and
  * shows the provider's brand mark (link-type icon until it loads, or when none
- * is bundled) instead of the generic globe.
+ * is bundled) instead of the generic globe. A media embed is titled the same
+ * way, with the link's host as the provider.
  */
 export function buildPasteMenuItems(
   options: PasteMenuOption[],
@@ -106,13 +115,13 @@ export function buildPasteMenuItems(
   onSelect: PasteMenuSelectHandler,
   url?: string
 ): PopoverItemParams[] {
-  return options.map(({ type }) => {
+  return options.map(({ type, media }) => {
     const { labelKey, icon } = presentationFor(type);
-    const embedMatch = type === 'embed' && url !== undefined ? matchEmbedService(url) : null;
-    const typed = embedMatch ? EMBED_TYPE_PRESENTATION[embedMatch.type] : null;
+    const embedMatch = type === 'embed' && media === undefined && url !== undefined ? matchEmbedService(url) : null;
+    const typed = media !== undefined ? EMBED_TYPE_PRESENTATION[media] : embedMatch && EMBED_TYPE_PRESENTATION[embedMatch.type];
     const providerTitle = embedMatch
       ? resolveEmbedServiceTitle(EMBED_SERVICES[embedMatch.service], i18n.getLocale?.())
-      : null;
+      : media !== undefined && url !== undefined && hostOf(url);
 
     return {
       name: `paste-menu-${type}`,
@@ -121,7 +130,7 @@ export function buildPasteMenuItems(
         : i18n.t(labelKey),
       icon: typed && embedMatch
         ? brandMarkElement(embedMatch.service, typed.icon) ?? typed.icon
-        : icon,
+        : typed?.icon ?? icon,
       closeOnActivate: true,
       onActivate: (): void => {
         onSelect(type);

@@ -7,6 +7,7 @@ import { stampPastedTableDirection } from './table-direction-preprocessor';
 import { preprocessExcelClassStyles } from './excel-class-styles-preprocessor';
 import { preprocessWordLists } from './word-list-preprocessor';
 import { preprocessTableCellFormatting } from './table-cell-format-preprocessor';
+import { restorePresetMarkColors } from './preset-mark-colors-preprocessor';
 import { protectPastedCellBlocks } from '../../../tools/table/table-cell-paste';
 
 /**
@@ -21,6 +22,7 @@ export const preprocessPastedHtml = (html: string, options: { keepTables?: boole
   // After preprocessDivLines: it turns a <pre>'s line divs into the <br>s protectPastedCellBlocks reads.
   // stampPastedTableDirection first: the passes after it drop <body dir>.
   // Excel and Word passes before the Docs pass: it turns cell <p>s into <br> lines.
-  protectPastedCellBlocks(preprocessDivLines(recoverGfmToggles(preprocessNotionHtml(preprocessAiChatHtml(
+  // restorePresetMarkColors last: it must also see the marks the Docs pass makes.
+  restorePresetMarkColors(protectPastedCellBlocks(preprocessDivLines(recoverGfmToggles(preprocessNotionHtml(preprocessAiChatHtml(
     preprocessGoogleDocsHtml(preprocessTableCellFormatting(preprocessWordLists(preprocessExcelClassStyles(stampPastedTableDirection(html)))), options)
-  )))));
+  ))))));

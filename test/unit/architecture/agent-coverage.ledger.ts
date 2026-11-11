@@ -212,6 +212,7 @@ const REVIEW_ROWS: Record<CapabilityId, Coverage> = {
   'paste:html/excel-class-styles-preprocessor': cmd('html.insert'),
   'paste:html/word-list-preprocessor': cmd('html.insert'),
   'paste:html/table-cell-format-preprocessor': cmd('html.insert'),
+  'paste:html/preset-mark-colors-preprocessor': cmd('html.insert'),
   'paste:html/table-cell-paste': cmd('html.insert'),
   'paste:csv-database-offer': cmds(['database.create', 'database.addProperty', 'database.addRow'], 'Pasted CSV text offers to become a database; an agent makes it, its properties and rows itself.'),
   'paste:menu/embed': cmd('embed.create'),

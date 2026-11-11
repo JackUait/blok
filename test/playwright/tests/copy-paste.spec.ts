@@ -897,6 +897,27 @@ test.describe('copy and paste', () => {
       await expect.poll(() => outline(page)).toEqual(['header:Head <strong>B</strong> text', 'paragraph:Target Head <strong>B</strong> texttext here']);
     });
 
+    test('a preset colour mark copies as its literal and pastes back as its token', async ({ page }) => {
+      await createBlokWithElements(page, [
+        { id: 's', type: 'paragraph', data: { text: 'aa <mark style="background-color: var(--blok-color-yellow-bg);">hl</mark> <mark style="color: var(--blok-color-red-text); background-color: transparent;">red</mark> zz' } },
+        { id: 't', type: 'paragraph', data: { text: 'Target text here' } },
+      ]);
+      await selectIn(page, '[data-blok-id="s"] [contenteditable="true"]', 'hl', 'red');
+
+      const clipboard = await copyFromElement(page.locator('[data-blok-id="s"] [contenteditable="true"]'));
+
+      expect(clipboard['text/html']).toContain('#fbf3db');
+
+      await caretBefore(page, 't', 'text here');
+      await paste(page, page.locator(':focus'), clipboard);
+
+      // The pasted marks save exactly as the source's marks do.
+      await expect.poll(() => outline(page)).toEqual([
+        'paragraph:aa <mark style="background-color: var(--blok-color-yellow-bg);">hl</mark> <mark style="color: var(--blok-color-red-text);">red</mark> zz',
+        'paragraph:Target <mark style="background-color: var(--blok-color-yellow-bg);">hl</mark> <mark style="color: var(--blok-color-red-text);">red</mark>text here',
+      ]);
+    });
+
     test('code lines copy with their line break and without highlight markup', async ({ page }) => {
       await createBlokWithElements(page, [
         { id: 'c', type: 'code', data: { code: 'const a = 1;\nconst b = 2;', language: 'javascript' } },

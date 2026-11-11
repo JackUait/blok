@@ -244,7 +244,7 @@ describe('the table selection bar hides Filter, Sort and Automations', () => {
 // until the pointer is over the view. Keyboard focus and an open menu keep an icon shown.
 describe('full-page database: the toolbar icons show on hover', () => {
   const hover = database.slice(database.indexOf('@media (hover: hover) { [data-blok-database-page]'));
-  const HIDE = '[data-blok-database-page]:not(:hover) > :is([data-blok-database-view-bar], [data-blok-database-title-row]) > [data-blok-database-view-toolbar]:not(:focus-within) > [data-blok-database-toolbar-foldable]:not([data-popover-open])';
+  const HIDE = '[data-blok-database-page]:not(:hover) > :is([data-blok-database-view-bar], [data-blok-database-title-row]) > [data-blok-database-view-toolbar]:not(:has(:focus-visible)) > [data-blok-database-toolbar-foldable]:not([data-popover-open])';
 
   it('hides Filter, Sort, Automations, AI Autofill and search while the pointer is away, on pointer devices only', () => {
     expect(hover.startsWith('@media (hover: hover)')).toBe(true);

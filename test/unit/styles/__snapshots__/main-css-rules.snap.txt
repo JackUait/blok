@@ -13514,7 +13514,7 @@ button[data-blok-database-table-group-count]:hover {
   height: 20px;
 }
 
-[@media (hover: hover)] [data-blok-database-page]:not(:hover) > :is([data-blok-database-view-bar], [data-blok-database-title-row]) > [data-blok-database-view-toolbar]:not(:focus-within) > [data-blok-database-toolbar-foldable]:not([data-popover-open]) {
+[@media (hover: hover)] [data-blok-database-page]:not(:hover) > :is([data-blok-database-view-bar], [data-blok-database-title-row]) > [data-blok-database-view-toolbar]:not(:has(:focus-visible)) > [data-blok-database-toolbar-foldable]:not([data-popover-open]) {
   opacity: 0;
 }
 

@@ -547,6 +547,18 @@ describe('row page peek modes', () => {
     expect(document.querySelector('[data-blok-database-property-type-popover]')).toBeNull();
   });
 
+  // S2:644: the page's add-property menu heads with AI Autofill when the host has it.
+  it('"+ Add a property" on the page lists AI Autofill above the types when the host has autofill', async () => {
+    await make(doc(), { ai: { autofill: vi.fn(() => Promise.resolve(undefined)) } });
+    await openRow('r1');
+    await click(q('[data-blok-database-drawer-add-prop]'));
+    const menu = document.querySelector('[data-blok-database-property-type-popover]');
+    const options = [...(menu?.querySelectorAll('[data-blok-database-property-autofill-option]') ?? [])];
+
+    expect(options.map((option) => option.getAttribute('data-blok-database-property-autofill-option'))).toStrictEqual(['summary', 'translate']);
+    expect(menu?.querySelector('[data-blok-database-property-type-grid]')?.compareDocumentPosition(options[0])).toBe(Node.DOCUMENT_POSITION_PRECEDING);
+  });
+
   it.each([
     ['table', {}, '[data-row-id="r1"] [role="gridcell"]'],
     ['board', { type: 'board', groupBy: 's' }, '[data-blok-database-card][data-row-id="r1"]'],

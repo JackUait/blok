@@ -667,6 +667,9 @@ describe('DatabaseViewControls', () => {
 
       expect((q('database-filter-direction') as HTMLSelectElement).value).toBe('this');
       expect((q('database-filter-unit') as HTMLSelectElement).value).toBe('week');
+      // notion-motion.md Round 13: Past / Next / This, then day / week / month / year.
+      expect([...(q('database-filter-direction') as HTMLSelectElement).options].map((o) => o.value)).toEqual(['past', 'next', 'this']);
+      expect([...(q('database-filter-unit') as HTMLSelectElement).options].map((o) => o.value)).toEqual(['day', 'week', 'month', 'year']);
       expect(q('database-filter-count')).toBeNull();
       expect(document.querySelectorAll('[data-blok-database-chip-day][data-in-window]')).toHaveLength(7);
       expect(text(document.querySelector('[data-blok-database-chip-note]'))).toBe('tools.database.filterUpdatesWithDate');

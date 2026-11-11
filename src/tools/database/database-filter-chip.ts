@@ -451,7 +451,7 @@ class FilterChipPages {
     row.append(select(
       'database-filter-direction',
       this.t('filterDirection'),
-      (['this', 'past', 'next'] as const).map((direction) => [direction, this.t(`filterDirection${capital(direction)}`)]),
+      (['past', 'next', 'this'] as const).map((direction) => [direction, this.t(`filterDirection${capital(direction)}`)]),
       span.direction,
       (direction) => this.update(spanFilter({ ...span, direction: direction as RelativeSpan['direction'] }))
     ));

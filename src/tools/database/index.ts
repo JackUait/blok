@@ -1825,9 +1825,9 @@ export class DatabaseTool implements BlockTool {
 
     this.api.blocks.getById(databaseId)?.call('readViews', { receive: (views: DatabaseViewConfig[]) => live.push(views) });
 
-    const preserved = (this.api.blocks.getById(databaseId)?.preservedData as Partial<DatabaseData> | undefined)?.views ?? [];
+    const views: DatabaseViewConfig[] = live[0] ?? (this.api.blocks.getById(databaseId)?.preservedData)?.views ?? [];
 
-    return live[0] ?? tabViews(preserved);
+    return tabViews(views);
   }
 
   private linkedFirstView(databaseId: string): DatabaseViewConfig {

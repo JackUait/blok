@@ -3983,6 +3983,10 @@
                       "summary": "Read the document as an outline, a subtree, or chosen blocks in full. A full read adds meta: when the block was last edited and by whom, as the block menu shows; a person has a name only when the host's user directory knows them."
                     },
                     {
+                      "name": "doc.setCover",
+                      "summary": "Set this document's cover, the wide image above the title. null removes it. A gallery cover is one of Blok's built-in fills: red, orange, yellow, green, blue, purple, pink, gray. position is the image's vertical position in percent, 0 (top) to 100 (bottom), default 50."
+                    },
+                    {
                       "name": "doc.setIcon",
                       "summary": "Set this document's icon. null clears it."
                     },

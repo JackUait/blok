@@ -689,7 +689,7 @@ test.describe('Ask AI live edits', () => {
     await expect.poll(() => requests.length).toBeGreaterThan(0);
   });
 
-  test('a Markdown data: image streams as the real image block, alt text as its caption, and hands off without a jump', async ({ page }) => {
+  test('a Markdown data: image streams as the real image block with its alt text, and hands off without a jump', async ({ page }) => {
     // Only a data: raster draws in the preview: it reaches no server.
     const url = await page.evaluate(() => {
       const canvas = document.createElement('canvas');

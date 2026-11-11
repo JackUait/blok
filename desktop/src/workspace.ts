@@ -8,6 +8,7 @@ import { mountAgentAssistant, type AgentAssistantHandle } from '../../src/shell/
 import { bindAssistantButton, createAssistantButton, inspectNativeProvider, nativeAgentModel, selectedProvider } from './assistant';
 import { createPageToolbar, type PageBreadcrumbChoice, type PageBreadcrumbItem, type PageToolbar } from './page-toolbar';
 import { bindTitleDateMention, titleDateLabel, type TitleDateMentionBinding } from './title-date-mention';
+import { createFloatingToc, type FloatingToc } from './floating-toc';
 import type { DateDisplayChange } from '@blok/date-editor';
 
 const desktopTools = {
@@ -51,6 +52,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   let footer: HTMLElement;
   let pageToolbar: PageToolbar | null = null;
   let titleDateMention: TitleDateMentionBinding | null = null;
+  let floatingToc: FloatingToc | null = null;
   let currentId = '';
   let generation = 0;
   let dateTimer: number | null = null;
@@ -214,6 +216,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     coverRowObserver?.disconnect();
     coverRowObserver = null;
     pageToolbar?.destroy();
+    floatingToc?.destroy();
+    floatingToc = null;
     titleDateMention?.destroy();
     titleDateMention = null;
     editor?.destroy();
@@ -321,6 +325,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     instance.width.set(page.fullWidth === true ? 'full' : 'narrow');
     void instance.isReady.then(() => {
       if (generation !== turn) return;
+      const redactor = holder.querySelector<HTMLElement>('[data-blok-redactor]');
+      if (redactor) floatingToc = createFloatingToc(pageCanvas, redactor);
       attachCoverAction();
       if (!instance.title.get() || page.titleDate) instance.title.set(page.title, { record: false });
       const title = holder.querySelector<HTMLElement>('[data-blok-page-title]');

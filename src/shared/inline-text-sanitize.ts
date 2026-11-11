@@ -103,6 +103,28 @@ export const preserveInlineSpan = (node: Element): { [attr: string]: boolean | s
 };
 
 /**
+ * A `span` rule for a pipeline that does not use {@link INLINE_TEXT_SANITIZE}
+ * (the paste passes): an annotation span is kept whatever the tools say, and
+ * any other span follows the rule the tools gave.
+ * @param ordinaryRule - the span rule the pipeline would otherwise apply
+ */
+export const protectAnnotationSpan = (
+  ordinaryRule: SanitizerConfig[string] | undefined
+): ((node: Element) => { [attr: string]: boolean | string } | boolean | string) => (node) => {
+  const text = node.getAttribute(ANNOTATION_ATTR);
+
+  if (text !== null && text !== '') {
+    return preserveInlineSpan(node);
+  }
+
+  if (typeof ordinaryRule === 'function') {
+    return ordinaryRule(node);
+  }
+
+  return ordinaryRule ?? false;
+};
+
+/**
  * Tag → rule map for inline formatting that text-bearing block tools allow in
  * their `text` field. Spread this into a tool's `text` sanitize config so the
  * marks produced by the inline tools (bold, italic, underline, strikethrough,

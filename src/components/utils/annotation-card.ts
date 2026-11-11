@@ -311,8 +311,6 @@ export class AnnotationCard {
 
     wrapper.className = twJoin(
       'fixed z-overlay top-0 left-0',
-      // px, not rem: the card must not resize with the host's root font-size.
-      'w-[340px] max-w-[calc(100vw-8px)] box-border',
       'bg-popover-bg rounded-(--blok-radius-surface) shadow-(--blok-popover-box-shadow)',
       'text-[14px] leading-[1.5] text-text-primary text-left',
       'opacity-0 translate-y-px transition-[opacity,transform] duration-150 ease-out',
@@ -320,6 +318,10 @@ export class AnnotationCard {
       'motion-reduce:transition-none'
     );
     // Inline, not utilities: the top-layer reset in isolation.css zeroes padding on the promoted element.
+    // As wide as the text, up to 340px. px, not rem: the host's root font-size must not resize it.
+    wrapper.style.boxSizing = 'border-box';
+    wrapper.style.width = 'max-content';
+    wrapper.style.maxWidth = 'min(340px, calc(100vw - 8px))';
     wrapper.style.paddingTop = 'var(--blok-space-3)';
     wrapper.style.paddingBottom = 'var(--blok-space-3)';
     wrapper.style.paddingLeft = '14px';

@@ -1,6 +1,7 @@
 import type { PasteEvent, PasteEventDetail } from '../../../../../types';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import { protectPageReferenceAnchor } from '../../../../shared/page-reference';
+import { protectAnnotationSpan } from '../../../../shared/inline-text-sanitize';
 import { getRestrictedTools } from '../../../../tools/table/table-restrictions';
 import { Dom } from '../../../dom';
 import { SelectionUtils } from '../../../selection/index';
@@ -197,6 +198,7 @@ export abstract class BasePasteHandler implements PasteHandler {
     Caret.insertContentAtCaretPosition(clean(html, {
       ...baseConfig,
       a: protectPageReferenceAnchor(ordinaryAnchorRule),
+      span: protectAnnotationSpan(baseConfig.span),
       br: {},
     }));
   }

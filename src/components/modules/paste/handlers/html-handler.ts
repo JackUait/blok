@@ -16,6 +16,7 @@ import type { PasteHandler } from './base';
 import { BasePasteHandler } from './base';
 import { parseUntrustedHtml } from '../../../utils/inert-html';
 import { PAGE_REFERENCE_ATTR, preservePageReferenceAnchor } from '../../../../shared/page-reference';
+import { protectAnnotationSpan } from '../../../../shared/inline-text-sanitize';
 import { extractDepthFromPastedContent } from '../../../../tools/list/paste-handler';
 import { listParentIndices } from '../list-nesting';
 
@@ -206,7 +207,7 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
       const toolTags = this.buildToolTags(tool);
 
       const structuralSanitizeConfig = this.sanitizerBuilder.getStructuralTagsConfig(content);
-      const customConfig: SanitizerConfig = { a: preservePageReferenceAnchor, ...structuralSanitizeConfig, ...toolTags, ...tool.baseSanitizeConfig, br: {} };
+      const customConfig: SanitizerConfig = { a: preservePageReferenceAnchor, ...structuralSanitizeConfig, ...toolTags, ...tool.baseSanitizeConfig, span: protectAnnotationSpan(tool.baseSanitizeConfig.span), br: {} };
       const sanitizedContent = this.sanitizeContent(content, customConfig);
 
       if (!sanitizedContent) {

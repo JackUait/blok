@@ -6,6 +6,7 @@ import { Dom as dom$ } from '../../dom';
 import { composeSanitizerConfig, clean } from '../../utils/sanitizer';
 import { normalizeInlineMarkupHtml } from '../../utils/inline-normalization';
 import { preservePageReferenceAnchor } from '../../../shared/page-reference';
+import { protectAnnotationSpan } from '../../../shared/inline-text-sanitize';
 
 import { BLOK_MIME_TYPE, NEXT_SPACE_MIMES, NOTION_BLOCKS_V3_MIME, SAFE_STRUCTURAL_TAGS, STRUCTURAL_TAG_ATTRIBUTES } from './constants';
 import { preprocessPastedHtml } from './preprocess-pasted-html';
@@ -369,7 +370,8 @@ export class PasteEngine {
       structuralTagsConfig,
       toolsTags,
       inlineSanitizeConfig,
-      { a: preservePageReferenceAnchor, br: {} },
+      // The tools' span rule is the equation's alone, which would strip a pasted hint.
+      { a: preservePageReferenceAnchor, br: {}, span: protectAnnotationSpan(inlineSanitizeConfig.span) },
       this.config.sanitizer as SanitizerConfig
     );
 

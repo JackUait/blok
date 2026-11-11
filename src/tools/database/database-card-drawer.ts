@@ -28,7 +28,7 @@ import { fileChipIcon } from './page-icon';
 import { openCoverPicker, validateCoverFile } from '../audio/cover-picker';
 import { loadSheet } from '../../components/utils/lazy-styles';
 import type { CoverPickerHandle } from '../audio/cover-picker';
-import { safeImageSrc } from '../../components/utils/sanitize-url';
+import { safeHref, safeImageSrc } from '../../components/utils/sanitize-url';
 import { isEscapeConsumed, markEscapeConsumed } from '../../components/utils/consumed-escape';
 import { getElementDirection, logicalArrow } from '../../components/utils/direction';
 import { ScrollLocker } from '../../components/utils/scroll-locker';
@@ -1876,7 +1876,11 @@ export class DatabaseCardDrawer {
       title: this.label('tools.file.previewOpenInNewTab'),
       icon: IconArrowDiagonal,
       closeOnActivate: true,
-      onActivate: () => { window.open(link, '_blank', 'noopener'); },
+      onActivate: () => {
+        const href = safeHref(link);
+
+        if (href !== null) window.open(href, '_blank', 'noopener');
+      },
     }];
     const menu = new PopoverDesktop({
       // Notion's 28px rows.

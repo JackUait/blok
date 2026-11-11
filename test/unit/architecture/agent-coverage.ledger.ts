@@ -449,6 +449,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/row-tab-customize-layout': cmds(['database.updateProperty'], PAGE_LAYOUT),
   'menu:database/row-page-customize-layout': cmds(['database.updateProperty'], PAGE_LAYOUT),
   'menu:database/row-page-edit-view-default': cmds(['database.updateView'], 'Edit view default writes the view\'s openPagesIn.'),
+  'menu:database/row-page-mode-new-tab': exempt('view-only', 'Opens the row page in a new browser tab; the document does not change.'),
   'menu:database/row-tab-copy-link-to-view': exempt('view-only', 'Copies a link to the row page with this view tab selected; the document does not change.'),
   'menu:database/backlink-*': exempt('view-only', 'Goes to a page that mentions the row; the document does not change.'),
   'menu:database/preview-*': exempt('view-only', 'Picks which row page the layout builder previews; nothing is saved.'),

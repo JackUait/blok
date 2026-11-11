@@ -12,12 +12,12 @@ import { VIEW_ICONS } from '../../../../src/tools/database/database-tab-bar';
 const source = (file: string): string => readFileSync(resolve(__dirname, '../../../../src/tools/database', file), 'utf8');
 
 describe('List layout glyph', () => {
-  it('draws the List tab, linked picker and toolbox entry with the bulleted-list glyph', () => {
+  // The Add view tile reads VIEW_ICONS too (database-view-popover.test.ts).
+  it('draws the List tab, Add view tile, linked picker and toolbox entry with the bulleted-list glyph', () => {
     expect(VIEW_ICONS.list).toBe(IconListBulleted);
   });
 
   it.each([
-    ['database-view-popover.ts', /type: 'list', icon: IconListBulleted/],
     ['database-starter-modal.ts', /list: IconListBulleted/],
     ['preview.ts', /tab\(IconListBulleted, 'List view'/],
   ])('%s draws List with the bulleted-list glyph', (file, pattern) => {

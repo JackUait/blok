@@ -15,6 +15,7 @@ const glyphs = {
   IconViewCalendar: icons.IconViewCalendar,
   IconViewTimeline: icons.IconViewTimeline,
   IconViewForm: icons.IconViewForm,
+  IconForm: icons.IconForm,
   IconDatabaseInline: icons.IconDatabaseInline,
   IconDatabaseLinked: icons.IconDatabaseLinked,
   IconFolderQuestion: icons.IconFolderQuestion,
@@ -85,6 +86,27 @@ describe('database creation glyphs drawn after Notion (findings-creation N02, N0
     // One stroke width of clear space between the second line and the box.
     expect(Number(box?.getAttribute('y')) - 9 - 1.25).toBeGreaterThanOrEqual(1.25);
     expect(box?.getAttribute('rx')).toBe('1');
+  });
+
+  // r9-addview-menu.png, 81-scratch-form.png (Notion "form"): a sheet, two lines, a pencil over its right edge.
+  it('draws the form pencil as IconPencilLine\'s body, clear of the sheet\'s cut right edge', () => {
+    const [sheet = '', lines = '', pencil = ''] = paths(icons.IconForm);
+    /** Each vertex's offset from the first, so a moved copy compares equal. */
+    const offsets = (d: string): number[] => {
+      const nums = (d.match(/-?\d+(\.\d+)?/g) ?? []).map(Number);
+
+      return nums.map((value, index) => value - (nums[index % 2] ?? 0));
+    };
+    const lineBody = paths(icons.IconPencilLine)[0] ?? '';
+
+    expect(offsets(pencil)).toEqual(offsets(lineBody));
+    expect(lines).toBe('M7 6.5h5M7 9.5h3');
+    // The sheet's right edge (x 15) is open where the pencil crosses it, with at least
+    // one and a half stroke widths of air to the pencil's edges (x + y = 23.25 and 26.75).
+    expect(sheet.startsWith('M15 6.5V5')).toBe(true);
+    expect(sheet.endsWith('v-1.5')).toBe(true);
+    expect((23.25 - (15 + 6.5)) / Math.SQRT2).toBeGreaterThanOrEqual(1.2);
+    expect(((15 + 13.5) - 26.75) / Math.SQRT2).toBeGreaterThanOrEqual(1.2);
   });
 
   it('draws the timeline as two staggered bars in the shared panel', () => {

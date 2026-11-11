@@ -275,6 +275,17 @@ describe('DatabaseViewPopover', () => {
       expect(option('timeline').querySelector('[data-blok-database-view-option-icon]')?.innerHTML).toBe(tab.innerHTML);
     });
 
+    // notion-motion Round 9 (r9-addview-svgs.raw), research/07:50, 81-scratch-form.png:
+    // Notion draws one glyph per layout in the tile and in the tab.
+    it.each(['table', 'board', 'gallery', 'list', 'chart', 'timeline', 'feed', 'map', 'calendar', 'form'])('draws the %s tile with its tab\'s icon', (type) => {
+      popover.open(anchor);
+
+      const tab = document.createElement('span');
+
+      tab.innerHTML = VIEW_ICONS[type];
+      expect(option(type).querySelector('[data-blok-database-view-option-icon]')?.innerHTML).toBe(tab.innerHTML);
+    });
+
     // motion-addview.json: "+" ends at y 252 and the card starts at y 256.
     it('opens 4px below the "+"', () => {
       popover.open(anchor);

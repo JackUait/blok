@@ -1,4 +1,5 @@
-import { IconViewBoard, IconCalendar, IconChart, IconGallery, IconListBulleted, IconMessage, IconTable, IconViewTimeline, IconListChecklist, IconMap, IconDatabase } from '../../components/icons';
+import { IconDatabase } from '../../components/icons';
+import { VIEW_ICONS } from './database-tab-bar';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
@@ -8,23 +9,25 @@ import type { ViewType } from './types';
 
 interface ViewTypeOption {
   type: ViewType;
-  icon: string;
   labelKey: string;
 }
 
-/** Notion's add-view order (research/08:113). */
+/**
+ * Notion's add-view order (research/08:113). Tiles draw the tab glyphs
+ * (VIEW_ICONS): Notion uses one glyph per layout in both places.
+ */
 const VIEW_TYPES: ViewTypeOption[] = [
-  { type: 'table', icon: IconTable, labelKey: 'tools.database.viewTypeTable' },
-  { type: 'board', icon: IconViewBoard, labelKey: 'tools.database.viewTypeBoard' },
-  { type: 'gallery', icon: IconGallery, labelKey: 'tools.database.viewTypeGallery' },
-  { type: 'list', icon: IconListBulleted, labelKey: 'tools.database.viewTypeList' },
-  { type: 'chart', icon: IconChart, labelKey: 'tools.database.viewTypeChart' },
-  { type: 'timeline', icon: IconViewTimeline, labelKey: 'tools.database.viewTypeTimeline' },
-  { type: 'feed', icon: IconMessage, labelKey: 'tools.database.viewTypeFeed' },
+  { type: 'table', labelKey: 'tools.database.viewTypeTable' },
+  { type: 'board', labelKey: 'tools.database.viewTypeBoard' },
+  { type: 'gallery', labelKey: 'tools.database.viewTypeGallery' },
+  { type: 'list', labelKey: 'tools.database.viewTypeList' },
+  { type: 'chart', labelKey: 'tools.database.viewTypeChart' },
+  { type: 'timeline', labelKey: 'tools.database.viewTypeTimeline' },
+  { type: 'feed', labelKey: 'tools.database.viewTypeFeed' },
   // Form and map are Tier 3 (D6). Dashboard, after Chart in Notion, is a data slot only, so it is not offered.
-  { type: 'map', icon: IconMap, labelKey: 'tools.database.viewTypeMap' },
-  { type: 'calendar', icon: IconCalendar, labelKey: 'tools.database.viewTypeCalendar' },
-  { type: 'form', icon: IconListChecklist, labelKey: 'tools.database.viewTypeForm' },
+  { type: 'map', labelKey: 'tools.database.viewTypeMap' },
+  { type: 'calendar', labelKey: 'tools.database.viewTypeCalendar' },
+  { type: 'form', labelKey: 'tools.database.viewTypeForm' },
 ];
 
 export interface ViewPopoverOptions {
@@ -122,7 +125,7 @@ export class DatabaseViewPopover {
     item.type = 'button';
     item.setAttribute('data-blok-database-view-option', option.type);
     iconEl.setAttribute('data-blok-database-view-option-icon', '');
-    iconEl.innerHTML = option.icon;
+    iconEl.innerHTML = VIEW_ICONS[option.type] ?? '';
     labelEl.setAttribute('data-blok-database-view-option-label', '');
     labelEl.textContent = this.translate(option.labelKey, '');
     item.append(iconEl, labelEl);

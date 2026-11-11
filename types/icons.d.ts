@@ -137,6 +137,7 @@ export declare const IconViewFeed: string;
 export declare const IconViewCalendar: string;
 export declare const IconViewTimeline: string;
 export declare const IconViewForm: string;
+export declare const IconForm: string;
 export declare const IconDatabaseInline: string;
 export declare const IconDatabaseLinked: string;
 export declare const IconFolderQuestion: string;

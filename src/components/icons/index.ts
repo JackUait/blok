@@ -1088,6 +1088,17 @@ export const IconViewForm = `
 </svg>
 `;
 
+// Form view: a sheet with two lines and a pencil across its right edge (Notion "form").
+// No path data was saved; the shape follows r9-addview-menu.png and 81-scratch-form.png.
+// The pencil body is IconPencilLine's, moved; the sheet's right edge stops clear of it.
+export const IconForm = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M15 6.5V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7 6.5h5M7 9.5h3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M9.5 15.5 10.25 13 16.5 6.75 18.25 8.5 12 14.75Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Database - Inline: a table framed by corner brackets (Notion "databaseEmbed").
 export const IconDatabaseInline = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

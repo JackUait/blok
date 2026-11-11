@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Blok } from '../../../../src/blok';
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
+import { VIEW_ICONS } from '../../../../src/tools/database/database-tab-bar';
+import { IconChevronRight, IconTable } from '../../../../src/components/icons';
 import type { DatabaseData, DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
 import type { Blok as PublicBlok, OutputBlockData, OutputData } from '../../../../types';
 
@@ -99,6 +101,19 @@ describe('form view auto-create prompt (research/19 §3a)', () => {
     expect(prompt()?.textContent).toContain('Only supported property types will create new questions.');
     expect(action('confirm').textContent).toBe('Create 4 questions');
     expect(action('cancel').textContent).toBe('Start from scratch');
+  });
+
+  // research/19 §3a: the art reads viewTable → form, the Form tab's own glyph.
+  it('draws the table, an arrow and the Form tab\'s glyph above the question', async () => {
+    await mount(blocksFor(measured));
+    addForm();
+
+    await vi.waitFor(() => expect(prompt()).not.toBeNull());
+    const art = prompt()?.querySelector('[data-blok-database-confirm-art]');
+    const expected = document.createElement('div');
+
+    expected.innerHTML = [IconTable, IconChevronRight, VIEW_ICONS.form].join('');
+    expect(art?.innerHTML).toBe(expected.innerHTML);
   });
 
   it('"Create 4 questions" keeps Name, Pick, Who, Doc and Link in property order; Stage gets none', async () => {

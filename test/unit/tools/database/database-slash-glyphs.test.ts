@@ -31,6 +31,12 @@ describe('"/" Database section glyphs drawn after Notion (findings-creation N02)
     expect(VIEW_ICONS.feed).toBe(icons.IconViewFeed);
     expect(VIEW_ICONS.calendar).toBe(icons.IconViewCalendar);
     expect(VIEW_ICONS.timeline).toBe(icons.IconViewTimeline);
-    expect(VIEW_ICONS.form).toBe(icons.IconViewForm);
+    expect(VIEW_ICONS.form).toBe(icons.IconForm);
+  });
+
+  // Notion's Form tab and Add view tile draw `form` (81-scratch-form.png, r9-addview-menu.png);
+  // the "/" Form entry draws inlineBlockDouble (research/28:43).
+  it('gives the Form tab a page-and-pencil glyph, apart from the "/" Form entry', () => {
+    expect(icons.IconForm).not.toBe(icons.IconViewForm);
   });
 });

@@ -136,7 +136,7 @@ import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar, VIEW_ICONS } from './database-tab-bar';
 import { foldTitleRow } from './database-view-bar-fold';
-import { IconArrowDiagonal, IconCalendar, IconReplace, IconCreditCard, IconCurrency, IconDatabase, IconDatabaseInline, IconDatabaseLinked, IconFolderQuestion, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
+import { IconArrowDiagonal, IconCalendar, IconReplace, IconCreditCard, IconCurrency, IconDatabase, IconDatabaseInline, IconDatabaseLinked, IconFolderQuestion, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconDownload, IconImage, IconForm, IconViewForm, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -2140,8 +2140,8 @@ export class DatabaseTool implements BlockTool {
    */
   static get toolbox(): ToolboxConfig {
     // titleKey and descriptionKey stay literals: the i18n lifecycle test reads them from source.
-    const view = (entry: { name: string; aloneSkipsPanel?: true; titleKey: string; layout: ViewType; searchTerms: string[]; render: () => HTMLElement; descriptionKey: string }): ToolboxConfigEntry => ({
-      icon: VIEW_ICONS[entry.layout],
+    const view = (entry: { name: string; aloneSkipsPanel?: true; titleKey: string; layout: ViewType; searchTerms: string[]; render: () => HTMLElement; descriptionKey: string; icon?: string }): ToolboxConfigEntry => ({
+      icon: entry.icon ?? VIEW_ICONS[entry.layout],
       titleKey: entry.titleKey,
       name: entry.name,
       searchTerms: entry.searchTerms,
@@ -2160,7 +2160,8 @@ export class DatabaseTool implements BlockTool {
       view({ name: 'timelineView', titleKey: 'timelineView', layout: 'timeline', searchTerms: ['timeline view', 'timeline', 'gantt', 'database', 'view'], render: renderTimelineViewPreview, descriptionKey: 'toolbox.preview.timelineView' }),
       view({ name: 'mapView', titleKey: 'mapView', layout: 'map', searchTerms: ['map view', 'map', 'place', 'location', 'database', 'view'], render: renderMapViewPreview, descriptionKey: 'toolbox.preview.mapView' }),
       // No "New database" panel (§3): the form opens on its builder.
-      view({ name: 'databaseForm', titleKey: 'tools.database.viewTypeForm', layout: 'form', searchTerms: ['form', 'survey', 'database'], render: renderFormPreview, descriptionKey: 'toolbox.preview.form' }),
+      // research/28:43: the "/" Form entry draws inlineBlockDouble, not the Form tab's glyph.
+      view({ name: 'databaseForm', icon: IconViewForm, titleKey: 'tools.database.viewTypeForm', layout: 'form', searchTerms: ['form', 'survey', 'database'], render: renderFormPreview, descriptionKey: 'toolbox.preview.form' }),
       {
         icon: IconDatabaseInline,
         titleKey: 'databaseInline',
@@ -4718,7 +4719,7 @@ export class DatabaseTool implements BlockTool {
       role: 'dialog',
       primary: true,
       dismissAs: true,
-      art: [IconTable, IconChevronRight, IconListChecklist],
+      art: [IconTable, IconChevronRight, IconForm],
       directionSource: this.element,
       signal: abort.signal,
     }).then((create) => {

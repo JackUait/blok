@@ -540,8 +540,9 @@ export class BlockEvents extends Module {
      */
 
     /**
-     * Notion parity: "/" opens the toolbox regardless of caret position or
-     * block emptiness. On an empty (or slash-only) block the chosen tool
+     * Notion parity: "/" opens the toolbox in empty and non-empty blocks,
+     * unless it comes right after a letter (see above). On an empty (or
+     * slash-only) block the chosen tool
      * replaces the block in place; on a non-empty block it inserts a NEW block
      * after the current one and strips the typed "/query" (handled by the
      * Toolbox). Both flows just need the "/" inserted at the caret and the

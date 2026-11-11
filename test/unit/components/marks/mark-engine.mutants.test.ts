@@ -622,6 +622,21 @@ describe('mark-engine mutants', () => {
       expect(selection.focusOffset).toBe(1);
     });
 
+    it('keeps a backward selection backward after marking across hosts', () => {
+      const wrap = mount('<div contenteditable="true">abc</div>GAP<div contenteditable="true">def</div>', false);
+      const hosts = wrap.querySelectorAll('div');
+
+      liveSelection().setBaseAndExtent(firstText(hosts[1]), 2, firstText(hosts[0]), 1);
+
+      applyMark(colorSpec, 'blue', liveSelection().getRangeAt(0));
+
+      const selection = liveSelection();
+
+      expect([selection.anchorNode, selection.anchorOffset, selection.focusNode, selection.focusOffset])
+        .toStrictEqual([hosts[1], 1, hosts[0], 1]);
+      expect(selection.toString()).toBe('bcGAPde');
+    });
+
     it('unmarks each host share and re-selects from the live slices', () => {
       const wrap = mount(
         '<div contenteditable="true">a<mark style="color: red">bc</mark></div>' +

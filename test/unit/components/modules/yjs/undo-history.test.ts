@@ -994,6 +994,90 @@ describe('UndoHistory', () => {
       second.remove();
     });
 
+    it('records a backward range that ends in another block from its start, marked backward', () => {
+      const first = document.createElement('div');
+      const second = document.createElement('div');
+
+      first.textContent = 'Alpha one';
+      second.textContent = 'Beta two';
+      document.body.append(first, second);
+      const b1 = { id: 'b1', inputs: [first], currentInputIndex: 0, currentInput: first };
+      const b2 = { id: 'b2', inputs: [second], currentInputIndex: 0, currentInput: second };
+
+      (blok.BlockManager as unknown as { getBlockByChildNode: ReturnType<typeof vi.fn> }).getBlockByChildNode
+        .mockImplementation((node: Node) => (second.contains(node) ? b2 : b1));
+      window.getSelection()?.setBaseAndExtent(second.firstChild as Text, 3, first.firstChild as Text, 0);
+
+      expect(history.captureCaretSnapshot()).toEqual({
+        blockId: 'b1',
+        inputIndex: 0,
+        offset: 0,
+        endIn: { blockId: 'b2', inputIndex: 0, offset: 3 },
+        backward: true,
+      });
+      first.remove();
+      second.remove();
+    });
+
+    it('re-selects a backward range across blocks with its anchor at the end', () => {
+      const first = document.createElement('div');
+      const second = document.createElement('div');
+
+      first.textContent = 'Alpha one';
+      second.textContent = 'Beta two';
+      document.body.append(first, second);
+      const blocks: Record<string, unknown> = {
+        b1: { id: 'b1', inputs: [first], parentId: null },
+        b2: { id: 'b2', inputs: [second], parentId: null },
+      };
+
+      (blok.BlockManager as unknown as { getBlockById: typeof vi.fn }).getBlockById = vi.fn().mockImplementation((id: string) => blocks[id]);
+      (history as unknown as { caretUndoStack: CaretHistoryEntry[] }).caretUndoStack.push({
+        before: { blockId: 'b1', inputIndex: 0, offset: 0, endIn: { blockId: 'b2', inputIndex: 0, offset: 3 }, backward: true },
+        after: null,
+      });
+
+      history.undo();
+
+      const selection = window.getSelection();
+
+      expect([
+        selection?.anchorNode === second.firstChild,
+        selection?.anchorOffset,
+        selection?.focusNode === first.firstChild,
+        selection?.focusOffset,
+      ]).toEqual([true, 3, true, 0]);
+      first.remove();
+      second.remove();
+    });
+
+    it('records and re-selects a backward range inside one input', () => {
+      const input = document.createElement('div');
+
+      input.textContent = 'hello world';
+      document.body.appendChild(input);
+      const block = { id: 'b1', inputs: [input], currentInputIndex: 0, currentInput: input, parentId: null };
+      const text = input.firstChild as Text;
+
+      (blok.BlockManager as unknown as { getBlockByChildNode: ReturnType<typeof vi.fn> }).getBlockByChildNode.mockReturnValue(block);
+      window.getSelection()?.setBaseAndExtent(text, 11, text, 6);
+
+      const snapshot = history.captureCaretSnapshot();
+
+      expect(snapshot).toEqual({ blockId: 'b1', inputIndex: 0, offset: 6, end: 11, backward: true });
+
+      (blok.BlockManager as unknown as { getBlockById: typeof vi.fn }).getBlockById = vi.fn().mockReturnValue(block);
+      window.getSelection()?.removeAllRanges();
+      (history as unknown as { caretUndoStack: CaretHistoryEntry[] }).caretUndoStack.push({ before: snapshot, after: null });
+
+      history.undo();
+
+      const selection = window.getSelection();
+
+      expect([selection?.anchorOffset, selection?.focusOffset]).toEqual([11, 6]);
+      input.remove();
+    });
+
     it('records nothing extra for a collapsed caret', () => {
       const input = document.createElement('div');
 

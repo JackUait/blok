@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Block } from '../../../../src/components/block';
 import {
+  applyDirectedSpanningSelection,
   applySpanningSelection,
   blocksBetween,
   caretPointFromCoords,
@@ -822,6 +823,39 @@ describe('cross-block-range (mutants)', () => {
         { node: textNodeOf(fixture.hosts[1]),
           offset: 1 }
       )).toBeNull();
+    });
+  });
+
+  describe('applyDirectedSpanningSelection', () => {
+    it('keeps a backward gesture backward: the anchor stays at the end', () => {
+      applyDirectedSpanningSelection(
+        { node: textNodeOf(fixture.hosts[2]), offset: 5 },
+        { node: textNodeOf(fixture.hosts[0]), offset: 6 }
+      );
+
+      const selection = window.getSelection();
+
+      expect([selection?.anchorNode, selection?.anchorOffset, selection?.focusNode, selection?.focusOffset])
+        .toEqual([textNodeOf(fixture.hosts[2]), 5, textNodeOf(fixture.hosts[0]), 6]);
+    });
+
+    it('falls back to the forward range when the engine clamps the backward one', () => {
+      const selection = window.getSelection();
+
+      if (selection === null) {
+        throw new Error('no selection');
+      }
+      vi.spyOn(selection, 'setBaseAndExtent').mockImplementation((node: Node, offset: number) => {
+        selection.collapse(node, offset);
+      });
+
+      applyDirectedSpanningSelection(
+        { node: textNodeOf(fixture.hosts[2]), offset: 5 },
+        { node: textNodeOf(fixture.hosts[0]), offset: 6 }
+      );
+
+      expect([selection.anchorNode, selection.anchorOffset, selection.focusNode, selection.focusOffset])
+        .toEqual([textNodeOf(fixture.hosts[0]), 6, textNodeOf(fixture.hosts[2]), 5]);
     });
   });
 

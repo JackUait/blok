@@ -365,6 +365,42 @@ export const applySpanningSelection = (
 };
 
 /**
+ * Same as {@link applySpanningSelection}, but a backward gesture keeps its
+ * anchor at the end. Where the engine clamps that (WebKit), the forward range stays.
+ * @param anchor - where the gesture started
+ * @param focus - where the gesture currently points
+ * @returns the applied range, or null when the two points cannot form one
+ */
+export const applyDirectedSpanningSelection = (
+  anchor: { node: Node; offset: number },
+  focus: { node: Node; offset: number }
+): Range | null => {
+  const range = applySpanningSelection(anchor, focus);
+  const selection = anchor.node.ownerDocument?.defaultView?.getSelection() ?? null;
+  const forward = range !== null && range.startContainer === anchor.node && range.startOffset === anchor.offset;
+
+  if (range === null || selection === null || forward) {
+    return range;
+  }
+
+  try {
+    selection.setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset);
+  } catch {
+    // The forward range is restored below.
+  }
+
+  const kept = selection.anchorNode === anchor.node && selection.anchorOffset === anchor.offset &&
+    selection.focusNode === focus.node && selection.focusOffset === focus.offset;
+
+  if (!kept) {
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  return range;
+};
+
+/**
  * The caret position under a viewport point, or null when there is none.
  *
  * `caretPositionFromPoint` is the standard; `caretRangeFromPoint` is the older

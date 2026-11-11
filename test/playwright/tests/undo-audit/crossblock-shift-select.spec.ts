@@ -106,6 +106,11 @@ const SETUP: OutputData['blocks'] = [
   { id: 'b2', type: 'header', data: { text: 'Beta two', level: 2 } },
 ];
 
+const SETUP_UP: OutputData['blocks'] = [
+  ...SETUP,
+  { id: 'b3', type: 'paragraph', data: { text: 'Gamma three' } },
+];
+
 test.beforeAll(() => {
   ensureBlokBundleBuilt();
 });
@@ -168,5 +173,72 @@ test.describe('undo audit: keyboard cross-block text selection (U072)', () => {
 
     expect(column).toBeGreaterThan(0);
     expect(await selection(page)).toBe(`b1@3 -> b2@${column}`);
+  });
+
+  test('Shift+ArrowUp then Shift+Home from mid-text selects to the start of the previous block, and undo and redo keep it backward', async ({ page }) => {
+    await mount(page, SETUP_UP);
+    await editable(page, 'b3').click();
+    await page.keyboard.press('Home');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    expect(await selection(page)).toBe('b3@3 -> b3@3');
+
+    const column = await nearestColumn(page, 'b3', 3, 'b2');
+
+    await page.keyboard.down('Shift');
+    await page.keyboard.press('ArrowUp');
+    expect(await selection(page)).toBe(`b3@3 -> b2@${column}`);
+    await page.keyboard.press('Home');
+    await page.keyboard.up('Shift');
+
+    expect(await selection(page)).toBe('b3@3 -> b2@0');
+    await expect(page.locator('[data-blok-selected="true"]')).toHaveCount(0);
+
+    await page.keyboard.press(`${MOD}+b`);
+    await pause(page, 1000);
+
+    const bold = ['b1:Alpha one', 'b2:<strong>Beta two</strong>', 'b3:<strong>Gam</strong>ma three'];
+
+    expect(await savedText(page)).toEqual(bold);
+    expect(await selection(page)).toBe('b3@3 -> b2@0');
+
+    await page.keyboard.press(`${MOD}+z`);
+    await pause(page, 300);
+
+    expect(await savedText(page)).toEqual(['b1:Alpha one', 'b2:Beta two', 'b3:Gamma three']);
+    expect(await canUndo(page)).toBe(false);
+    expect(await selection(page)).toBe('b3@3 -> b2@0');
+
+    await page.keyboard.press(`${MOD}+Shift+z`);
+    await pause(page, 300);
+
+    expect(await savedText(page)).toEqual(bold);
+    expect(await selection(page)).toBe('b3@3 -> b2@0');
+  });
+
+  test('Shift+ArrowUp from a backward text selection keeps the focus column in the previous block', async ({ page }) => {
+    await mount(page, SETUP_UP);
+    await editable(page, 'b3').click();
+    await page.keyboard.press('Home');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+
+    await page.keyboard.down('Shift');
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('ArrowLeft');
+    expect(await selection(page)).toBe('b3@6 -> b3@3');
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.up('Shift');
+
+    const column = await nearestColumn(page, 'b3', 3, 'b2');
+
+    expect(column).toBeGreaterThan(0);
+    expect(await selection(page)).toBe(`b3@6 -> b2@${column}`);
   });
 });

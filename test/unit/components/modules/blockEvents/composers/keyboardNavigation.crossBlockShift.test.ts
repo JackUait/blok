@@ -48,13 +48,14 @@ interface Setup {
   first: Line;
   second: Line;
   navigateVerticalNext: ReturnType<typeof vi.fn>;
+  navigateVerticalPrevious: ReturnType<typeof vi.fn>;
 }
 
 /**
  * Two text blocks. `navigateVerticalNext` moves a collapsed caret into the second
  * block at offset 4, the way the real Caret module does on the last line.
  */
-const setup = (options: { insideTableCell?: boolean; next?: boolean; selectableAcross?: boolean } = {}): Setup => {
+const setup = (options: { insideTableCell?: boolean; next?: boolean; previous?: boolean; selectableAcross?: boolean } = {}): Setup => {
   const first = line('b1', 'Alpha one');
   const second = line('b2', 'Beta two');
 
@@ -69,20 +70,32 @@ const setup = (options: { insideTableCell?: boolean; next?: boolean; selectableA
   const blockManager = {
     currentBlock: first.block,
     nextVisibleBlock: options.next === false ? null : second.block,
+    previousVisibleBlock: options.previous === false ? null : first.block,
     setCurrentBlockByChildNode: vi.fn((node: Node) => {
       blockManager.currentBlock = second.input.contains(node) ? second.block : first.block;
     }),
-    getBlockByChildNode: (node: Node): Block => (second.input.contains(node) ? second.block : first.block),
+    getBlockByChildNode: (node: Node): Block | undefined => {
+      if (second.input.contains(node)) {
+        return second.block;
+      }
+
+      return first.input.contains(node) ? first.block : undefined;
+    },
   };
   const navigateVerticalNext = vi.fn(() => {
     collapseAt(second.text, 4);
 
     return true;
   });
+  const navigateVerticalPrevious = vi.fn(() => {
+    collapseAt(first.text, 4);
+
+    return true;
+  });
 
   const blok = {
     BlockManager: blockManager,
-    Caret: { navigateVerticalNext, navigateNext: vi.fn(() => false), resetGoalColumn: vi.fn() },
+    Caret: { navigateVerticalNext, navigateVerticalPrevious, navigatePrevious: vi.fn(() => false), navigateNext: vi.fn(() => false), resetGoalColumn: vi.fn() },
     Toolbar: { close: vi.fn(), moveAndOpen: vi.fn(), hideBlockActions: vi.fn() },
     InlineToolbar: { close: vi.fn(), tryToShow: vi.fn(() => Promise.resolve()) },
     UI: { someToolbarOpened: false, nodes: {} },
@@ -93,12 +106,19 @@ const setup = (options: { insideTableCell?: boolean; next?: boolean; selectableA
     },
   } as unknown as BlokModules;
 
-  return { nav: new KeyboardNavigation(blok), first, second, navigateVerticalNext };
+  return { nav: new KeyboardNavigation(blok), first, second, navigateVerticalNext, navigateVerticalPrevious };
 };
 
 const shiftDown = (): KeyboardEvent => new KeyboardEvent('keydown', {
   key: 'ArrowDown',
   keyCode: keyCodes.DOWN,
+  shiftKey: true,
+  cancelable: true,
+});
+
+const shiftUp = (): KeyboardEvent => new KeyboardEvent('keydown', {
+  key: 'ArrowUp',
+  keyCode: keyCodes.UP,
   shiftKey: true,
   cancelable: true,
 });
@@ -217,6 +237,114 @@ describe('Shift+ArrowDown from inside a block\'s text', () => {
   });
 });
 
+describe('Shift+ArrowUp from inside a block\'s text', () => {
+  it('keeps the anchor and moves the focus into the previous block', () => {
+    const { nav, second, first } = setup();
+
+    collapseAt(second.text, 3);
+    vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
+
+    const event = shiftUp();
+
+    nav.handleArrowLeftAndUp(event);
+
+    expect(selectionPoints()).toEqual({
+      anchor: [second.text, 3],
+      focus: [first.text, 4],
+    });
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('moves from the focus end of a selection, not from its anchor', () => {
+    const { nav, first, second, navigateVerticalPrevious } = setup();
+
+    document.getSelection()?.setBaseAndExtent(second.text, 6, second.text, 2);
+    navigateVerticalPrevious.mockImplementation(() => {
+      const selection = document.getSelection();
+
+      expect([selection?.isCollapsed, selection?.focusNode, selection?.focusOffset]).toEqual([true, second.text, 2]);
+      collapseAt(first.text, 4);
+
+      return true;
+    });
+    vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
+
+    nav.handleArrowLeftAndUp(shiftUp());
+
+    expect(selectionPoints()).toEqual({
+      anchor: [second.text, 6],
+      focus: [first.text, 4],
+    });
+  });
+
+  it('leaves a backward selection to the browser when the focus is not on the first line', () => {
+    const { nav, second, navigateVerticalPrevious } = setup();
+
+    document.getSelection()?.setBaseAndExtent(second.text, 6, second.text, 2);
+    navigateVerticalPrevious.mockReturnValue(false);
+    vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
+
+    const event = shiftUp();
+
+    nav.handleArrowLeftAndUp(event);
+
+    expect(selectionPoints()).toEqual({
+      anchor: [second.text, 6],
+      focus: [second.text, 2],
+    });
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('only moves the caret when the previous block is in another container', () => {
+    const { nav, first, second } = setup({ selectableAcross: false });
+
+    collapseAt(second.text, 3);
+    vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
+
+    nav.handleArrowLeftAndUp(shiftUp());
+
+    expect(selectionPoints()).toEqual({
+      anchor: [first.text, 4],
+      focus: [first.text, 4],
+    });
+  });
+
+  it('does not move at all when no block comes before', () => {
+    const { nav, second, navigateVerticalPrevious } = setup({ previous: false });
+
+    collapseAt(second.text, 3);
+    vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
+
+    nav.handleArrowLeftAndUp(shiftUp());
+
+    expect(navigateVerticalPrevious).not.toHaveBeenCalled();
+    expect(selectionPoints().focus).toEqual([second.text, 3]);
+  });
+
+  it('keeps the selection when the move lands outside any block, like the page title', () => {
+    const { nav, second, navigateVerticalPrevious } = setup();
+    const title = document.createElement('div');
+
+    title.setAttribute('contenteditable', 'true');
+    title.textContent = 'Title';
+    document.body.prepend(title);
+    navigateVerticalPrevious.mockImplementation(() => {
+      collapseAt(title.firstChild as Text, 2);
+
+      return true;
+    });
+    collapseAt(second.text, 3);
+    vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
+
+    nav.handleArrowLeftAndUp(shiftUp());
+
+    expect(selectionPoints()).toEqual({
+      anchor: [second.text, 3],
+      focus: [second.text, 3],
+    });
+  });
+});
+
 describe('Shift+End over a selection that spans two blocks', () => {
   const shiftEnd = (): KeyboardEvent => new KeyboardEvent('keydown', { key: 'End', shiftKey: true, cancelable: true });
 
@@ -253,7 +381,7 @@ describe('Shift+End over a selection that spans two blocks', () => {
 
     const event = shiftEnd();
 
-    nav.handleShiftEnd(event);
+    nav.handleShiftLineBoundary(event);
 
     expect(selectionPoints()).toEqual({
       anchor: [first.text, 6],
@@ -270,7 +398,67 @@ describe('Shift+End over a selection that spans two blocks', () => {
 
     const event = shiftEnd();
 
-    nav.handleShiftEnd(event);
+    nav.handleShiftLineBoundary(event);
+
+    expect(selectionPoints().focus).toEqual([first.text, 4]);
+    expect(event.defaultPrevented).toBe(false);
+  });
+});
+
+describe('Shift+Home over a selection that spans two blocks', () => {
+  const shiftHome = (): KeyboardEvent => new KeyboardEvent('keydown', { key: 'Home', shiftKey: true, cancelable: true });
+
+  /** jsdom has no Selection.modify; this one moves a caret to the start of its text node, like a one-line block. */
+  const stubLineStartMove = (): void => {
+    const selection = document.getSelection();
+
+    if (selection === null) {
+      throw new Error('no selection');
+    }
+    Object.defineProperty(selection, 'modify', {
+      configurable: true,
+      value: (alter: string, direction: string, granularity: string): void => {
+        if (alter === 'move' && direction === 'backward' && granularity === 'lineboundary' && selection.focusNode !== null) {
+          selection.collapse(selection.focusNode, 0);
+        }
+      },
+    });
+  };
+
+  afterEach(() => {
+    const selection = document.getSelection();
+
+    if (selection !== null) {
+      Reflect.deleteProperty(selection, 'modify');
+    }
+  });
+
+  it('moves the focus to the start of its line and keeps the anchor in the other block', () => {
+    const { nav, first, second } = setup();
+
+    stubLineStartMove();
+    document.getSelection()?.setBaseAndExtent(second.text, 3, first.text, 4);
+
+    const event = shiftHome();
+
+    nav.handleShiftLineBoundary(event);
+
+    expect(selectionPoints()).toEqual({
+      anchor: [second.text, 3],
+      focus: [first.text, 0],
+    });
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('leaves a selection inside one block to the browser', () => {
+    const { nav, first } = setup();
+
+    stubLineStartMove();
+    document.getSelection()?.setBaseAndExtent(first.text, 6, first.text, 4);
+
+    const event = shiftHome();
+
+    nav.handleShiftLineBoundary(event);
 
     expect(selectionPoints().focus).toEqual([first.text, 4]);
     expect(event.defaultPrevented).toBe(false);

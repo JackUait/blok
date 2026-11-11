@@ -5,12 +5,12 @@ import { Flipper } from '../../../flipper';
 import { SelectionUtils } from '../../../selection';
 import { keyCodes, delay, isIosDevice } from '../../../utils';
 import { areBlocksMergeable } from '../../../utils/blocks';
-import { findNbspAfterEmptyInline, focus, isCaretAtEndOfInput, isCaretAtLastLine, isCaretAtStartOfInput } from '../../../utils/caret/index';
+import { findNbspAfterEmptyInline, focus, isCaretAtEndOfInput, isCaretAtFirstLine, isCaretAtLastLine, isCaretAtStartOfInput } from '../../../utils/caret/index';
 import { EDITABLE_INPUT_SELECTOR, HEADER_TOOL_NAME, LIST_TOOL_NAME, QUOTE_TOOL_NAME } from '../constants';
 import { deliverOnSubmit } from '../../../utils/on-submit';
 import { horizontalArrowIntent, keyCodeFromEvent } from '../utils/keyboard';
 import { findAllOwn, findOwn } from '../../../utils/own-element';
-import { applySpanningSelection, getEditingHost } from '../../../selection/cross-block-range';
+import { applyDirectedSpanningSelection, getEditingHost } from '../../../selection/cross-block-range';
 
 import { BlockEventComposer } from './__base';
 import { canOutdent, getAdoptedSiblings, getIndentTarget } from './structural-siblings';
@@ -1452,12 +1452,15 @@ export class KeyboardNavigation extends BlockEventComposer {
   }
 
   /**
-   * Shift+End when the selection spans two blocks. The browser clamps the
-   * extend to the anchor's block, so move the focus to its line end here.
+   * Shift+Home and Shift+End when the selection spans two blocks. The browser
+   * clamps the extend to the anchor's block, so move the focus to its line
+   * start or end here.
    * @param event - keydown
    */
-  public handleShiftEnd(event: KeyboardEvent): void {
-    if (event.key !== 'End' || !event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) {
+  public handleShiftLineBoundary(event: KeyboardEvent): void {
+    const isLineKey = event.key === 'Home' || event.key === 'End';
+
+    if (!isLineKey || !event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) {
       return;
     }
 
@@ -1475,13 +1478,13 @@ export class KeyboardNavigation extends BlockEventComposer {
     }
 
     selection.collapse(selection.focusNode, selection.focusOffset);
-    selection.modify('move', 'forward', 'lineboundary');
+    selection.modify('move', event.key === 'End' ? 'forward' : 'backward', 'lineboundary');
 
     if (selection.focusNode === null) {
       return;
     }
 
-    applySpanningSelection(anchor, { node: selection.focusNode, offset: selection.focusOffset });
+    applyDirectedSpanningSelection(anchor, { node: selection.focusNode, offset: selection.focusOffset });
     event.preventDefault();
   }
 
@@ -1528,7 +1531,7 @@ export class KeyboardNavigation extends BlockEventComposer {
       if (getEditingHost(anchor.node) === getEditingHost(focus.node)) {
         selection.setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset);
       } else {
-        applySpanningSelection(anchor, focus);
+        applyDirectedSpanningSelection(anchor, focus);
       }
 
       return false;
@@ -1553,7 +1556,80 @@ export class KeyboardNavigation extends BlockEventComposer {
       return true;
     }
 
-    applySpanningSelection(anchor, { node: moved.focusNode, offset: moved.focusOffset });
+    applyDirectedSpanningSelection(anchor, { node: moved.focusNode, offset: moved.focusOffset });
+
+    return true;
+  }
+
+  /**
+   * Shift+ArrowUp on the first line of a block: keep the anchor and move the
+   * focus to the same column in the previous block. Mirrors
+   * {@link extendTextSelectionDown}.
+   * @returns true when the focus moved into another block
+   */
+  private extendTextSelectionUp(): boolean {
+    const { BlockManager, Caret } = this.Blok;
+    const selection = SelectionUtils.get();
+
+    if (!selection?.anchorNode || !selection.focusNode) {
+      return false;
+    }
+
+    const anchor = { node: selection.anchorNode, offset: selection.anchorOffset };
+    const focus = { node: selection.focusNode, offset: selection.focusOffset };
+
+    BlockManager.setCurrentBlockByChildNode(focus.node);
+
+    if (BlockManager.previousVisibleBlock === null) {
+      return false;
+    }
+
+    /** Caret helpers read a collapsed caret, so navigate from the focus alone. */
+    selection.collapse(focus.node, focus.offset);
+
+    const focusHost = getEditingHost(focus.node);
+
+    /** An open inline toolbar can cover the previous block and break the column lookup. */
+    if (this.Blok.InlineToolbar.opened && focusHost !== null && isCaretAtFirstLine(focusHost)) {
+      this.Blok.InlineToolbar.close(false);
+    }
+
+    const restore = (): void => {
+      applyDirectedSpanningSelection(anchor, focus);
+    };
+
+    if (!Caret.navigateVerticalPrevious()) {
+      restore();
+
+      return false;
+    }
+
+    const moved = SelectionUtils.get();
+
+    if (this.Blok.BlockSelection.anyBlockSelected || !moved?.focusNode) {
+      return true;
+    }
+
+    const anchorBlock = BlockManager.getBlockByChildNode(anchor.node);
+    const targetBlock = BlockManager.getBlockByChildNode(moved.focusNode);
+
+    /** The move can land in the page title, which a text range must not reach. */
+    if (targetBlock === undefined) {
+      restore();
+
+      return false;
+    }
+
+    /** Same rule as a mouse drag: no text range out of a container. The caret just moves. */
+    if (
+      anchorBlock !== undefined &&
+      anchorBlock !== targetBlock &&
+      !this.Blok.CrossBlockSelection.canSelectTextAcross(anchorBlock, targetBlock)
+    ) {
+      return true;
+    }
+
+    applyDirectedSpanningSelection(anchor, { node: moved.focusNode, offset: moved.focusOffset });
 
     return true;
   }
@@ -1649,6 +1725,14 @@ export class KeyboardNavigation extends BlockEventComposer {
 
     if (isShiftUpKey) {
       void this.Blok.InlineToolbar.tryToShow();
+    }
+
+    if (isShiftUpKey && !this.shouldDeferSelectionToTableCell) {
+      if (this.extendTextSelectionUp()) {
+        event.preventDefault();
+      }
+
+      return;
     }
 
     /**

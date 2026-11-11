@@ -2,7 +2,7 @@ import * as Y from 'yjs';
 
 import { getCaretOffset } from '../../../components/utils/caret/index';
 import { resolveCaretRange } from '../collaboration/caret-position';
-import { applySpanningSelection } from '../../selection/cross-block-range';
+import { applyDirectedSpanningSelection } from '../../selection/cross-block-range';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { hiddenAncestors } from '../blockManager/new-block-placement';
 import { carriesReadOnly, isBlockReadOnly } from '../../utils/read-only-blocks';
@@ -3396,9 +3396,14 @@ export class UndoHistory {
     // Fall back to currentBlock when there is no in-block selection (e.g. focus
     // is on a toolbar control, or selectionchange hasn't set it yet for nested
     // blocks like table cell paragraphs).
-    const anchorNode = window.getSelection()?.anchorNode ?? null;
-    const selectionBlock = anchorNode !== null
-      ? BlockManager.getBlockByChildNode(anchorNode)
+    // The range start, not the anchor: a backward range is recorded from its
+    // start and marked `backward`, so offset/end/endIn mean the same both ways.
+    const liveSelection = window.getSelection();
+    const startNode = liveSelection !== null && liveSelection.rangeCount > 0
+      ? liveSelection.getRangeAt(0).startContainer
+      : liveSelection?.anchorNode ?? null;
+    const selectionBlock = startNode !== null
+      ? BlockManager.getBlockByChildNode(startNode)
       : undefined;
 
     const currentBlock = selectionBlock ?? BlockManager.currentBlock;
@@ -3411,9 +3416,9 @@ export class UndoHistory {
     // from that same selection so the inputIndex/offset stay consistent with the
     // block id (a multi-input block records the input the caret is actually in).
     // Otherwise fall back to the block's tracked current input.
-    const selectedIndex = selectionBlock !== undefined && anchorNode !== null
+    const selectedIndex = selectionBlock !== undefined && startNode !== null
       ? currentBlock.inputs.findIndex(
-        candidate => candidate === anchorNode || candidate.contains(anchorNode)
+        candidate => candidate === startNode || candidate.contains(startNode)
       )
       : -1;
 
@@ -3429,6 +3434,7 @@ export class UndoHistory {
     const offset = input !== undefined ? getCaretOffset(input) : 0;
     const end = input !== undefined ? UndoHistory.selectionEndIn(input) : null;
     const endIn = input !== undefined && end === null ? this.selectionEndInOtherBlock(input) : null;
+    const backward = (end !== null || endIn !== null) && UndoHistory.isBackward(liveSelection);
 
     return {
       blockId: currentBlock.id,
@@ -3436,7 +3442,18 @@ export class UndoHistory {
       offset,
       ...(end === null ? {} : { end }),
       ...(endIn === null ? {} : { endIn }),
+      ...(backward ? { backward: true as const } : {}),
     };
+  }
+
+  /** Whether a selection's anchor sits at its range's end. */
+  private static isBackward(selection: Selection | null): boolean {
+    if (selection === null || selection.rangeCount === 0 || selection.isCollapsed) {
+      return false;
+    }
+    const range = selection.getRangeAt(0);
+
+    return selection.anchorNode === range.endContainer && selection.anchorOffset === range.endOffset;
   }
 
   /** The caret in the page title, or null when it is elsewhere. */
@@ -3737,7 +3754,9 @@ export class UndoHistory {
     const end = resolveCaretRange(input, snapshot.end);
 
     if (start !== null && end !== null) {
-      window.getSelection()?.setBaseAndExtent(start.startContainer, start.startOffset, end.startContainer, end.startOffset);
+      const [base, extent] = snapshot.backward === true ? [end, start] : [start, end];
+
+      window.getSelection()?.setBaseAndExtent(base.startContainer, base.startOffset, extent.startContainer, extent.startOffset);
       this.showToolbarForRange();
     }
   }
@@ -3808,10 +3827,14 @@ export class UndoHistory {
     const end = resolveCaretRange(endInput, endIn.offset);
 
     if (start !== null && end !== null) {
-      applySpanningSelection(
-        { node: start.startContainer, offset: start.startOffset },
-        { node: end.startContainer, offset: end.startOffset }
-      );
+      const from = { node: start.startContainer, offset: start.startOffset };
+      const to = { node: end.startContainer, offset: end.startOffset };
+
+      if (snapshot.backward === true) {
+        applyDirectedSpanningSelection(to, from);
+      } else {
+        applyDirectedSpanningSelection(from, to);
+      }
       this.showToolbarForRange();
     }
   }

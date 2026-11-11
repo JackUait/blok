@@ -272,7 +272,7 @@ export class BlockEvents extends Module {
       this.Blok.Caret.resetGoalColumn();
     }
 
-    this.keyboardNavigation.handleShiftEnd(event);
+    this.keyboardNavigation.handleShiftLineBoundary(event);
 
     /**
      * We check for "key" here since on different keyboard layouts "/" can be typed as "Shift + 7" etc

@@ -300,8 +300,8 @@ test('the Timezone submenu has the date editor\'s search and groups', async ({ p
   await expect(page.getByText('Select a timezone', { exact: true })).toBeVisible();
 });
 
-// research/35 §1.8 (r35:150): template rows are 28px with the "…" 2px below the row top; other rows keep their height.
-test('the templates menu rows are 28px, and the "…" submenu rows are not', async ({ page }) => {
+// research/35 §1.8 (r35:150-161): template rows are 28px with the "…" 2px below the row top; the 250x152 "…" submenu has 28px rows too.
+test('the templates menu rows and its "…" submenu rows are 28px', async ({ page }) => {
   await mount(page);
   await page.getByTestId('database-toolbar-new-menu').click();
 
@@ -317,7 +317,7 @@ test('the templates menu rows are 28px, and the "…" submenu rows are not', asy
   await row.getByTestId('popover-item-more').click();
   const edit = await page.getByRole('menuitem', { name: 'Edit', exact: true }).evaluate((el) => (el instanceof HTMLElement ? el.offsetHeight : 0));
 
-  expect(edit).toBe(36);
+  expect(edit).toBe(28);
 });
 
 // A submenu is open when Escape is pressed: the question still draws above it.

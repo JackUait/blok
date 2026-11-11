@@ -32,6 +32,8 @@ export interface DatabasePanelOptions {
   docked?: boolean;
   /** With `docked`: every sub-page header ends in a × with this name (findings V25). */
   closeLabel?: string;
+  /** Space under the anchor; the popover's usual gap when unset. */
+  gap?: number;
   /** `escape` is true when Escape closed the first page. */
   onClose?: (escape: boolean) => void;
 }
@@ -64,6 +66,7 @@ export class DatabasePanel {
       content: this.element,
       panel: true,
       ...(options.docked === true ? { docked: true } : {}),
+      ...(options.gap !== undefined ? { gap: options.gap } : {}),
       onEscape: () => this.back(true),
       onDismiss: () => this.finish(),
     });
@@ -81,6 +84,11 @@ export class DatabasePanel {
     this.render();
     this.popover.show();
     this.focusFirst();
+  }
+
+  /** Keeps this panel open under a panel it opens; outside presses, focus and Escape go there until the release. */
+  hold(): () => void {
+    return this.popover.hold();
   }
 
   push(page: PanelPage): void {

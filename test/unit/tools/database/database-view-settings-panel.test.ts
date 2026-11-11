@@ -608,6 +608,14 @@ describe('view settings panel', () => {
     expect(document.querySelector<HTMLButtonElement>('[data-blok-testid="database-gallery-fit-image"]')?.disabled).toBe(true);
   });
 
+  // notion-motion.md Round 9 (r9-vs-layout.raw): database.css holds the Layout page's measured row box by this name.
+  it('names the Layout page "layout"', () => {
+    harness().open();
+    click('database-settings-layout');
+
+    expect(document.querySelector('[data-blok-testid="database-view-settings"]')?.getAttribute('data-blok-database-panel-page')).toBe('layout');
+  });
+
   it('marks the layout\'s default open mode with "Default for <layout>", under that mode only', () => {
     const h = harness();
 

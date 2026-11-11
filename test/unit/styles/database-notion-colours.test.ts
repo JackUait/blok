@@ -482,7 +482,7 @@ describe('pass 2: research/33 §4 colour dump', () => {
   it('card layout: the picked tile has an ink ring, not blue, and an ink label', () => {
     const picked = ruleBody('[data-blok-database-card-layout-tile][aria-pressed="true"] [data-blok-database-card-layout-drawing]');
 
-    expect(picked).toContain('box-shadow: 0 0 0 1px var(--blok-database-ink)');
+    expect(picked).toContain('outline: 2px solid var(--blok-database-ink)');
     expect(picked).not.toMatch(/39, 131, 222|35, 131, 226|focus-ring/);
     expect(ruleBody('[data-blok-database-card-layout-tile][aria-pressed="true"]')).toContain('color: var(--blok-database-ink)');
   });

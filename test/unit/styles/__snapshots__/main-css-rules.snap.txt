@@ -14412,7 +14412,8 @@ button[data-blok-database-table-group-count]:hover {
 
 [data-blok-database-card-layout-tiles] {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, 109px);
+  justify-content: center;
   gap: var(--blok-space-2);
 }
 
@@ -14440,11 +14441,11 @@ button[data-blok-database-table-group-count]:hover {
   align-content: flex-start;
   gap: var(--blok-space-1);
   box-sizing: border-box;
-  inline-size: 100%;
-  block-size: 72px;
+  inline-size: 109px;
+  block-size: 82px;
   padding: var(--blok-space-3) var(--blok-space-2-5);
-  border: 1px solid var(--blok-database-tpl-border);
-  border-radius: var(--blok-radius-control);
+  border-radius: var(--blok-radius-surface);
+  outline: 1px solid var(--blok-database-tpl-border);
   background: var(--blok-database-card-bg);
 }
 
@@ -14477,8 +14478,7 @@ button[data-blok-database-table-group-count]:hover {
 }
 
 [data-blok-database-card-layout-tile][aria-pressed="true"] [data-blok-database-card-layout-drawing] {
-  border-color: var(--blok-database-ink);
-  box-shadow: 0 0 0 1px var(--blok-database-ink);
+  outline: 2px solid var(--blok-database-ink);
 }
 
 [data-blok-database-starter-preview-hidden] {
@@ -15096,6 +15096,15 @@ input[data-blok-database-picker-search]:focus {
   height: 20px;
 }
 
+[data-blok-database-panel-page="layout"] [data-blok-database-panel-row] {
+  inline-size: auto;
+  margin-inline: var(--blok-space-1);
+}
+
+[data-blok-database-panel-page="layout"] [data-blok-database-panel-row] + [data-blok-database-panel-row] {
+  margin-block-start: var(--blok-space-0-25);
+}
+
 [data-blok-database-panel-page="group"] > [data-blok-database-panel-header] + [data-blok-database-panel-row] {
   margin-block-start: var(--blok-space-1-75);
 }
@@ -15339,6 +15348,17 @@ input[data-blok-database-picker-search]:focus {
 
 [data-blok-database-sort-row] {
   gap: var(--blok-space-2);
+}
+
+[data-blok-database-panel-page="sort"] {
+  padding-block-end: var(--blok-space-1-25);
+}
+
+[data-blok-database-panel-page="sort"] > [data-blok-database-panel-list] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-2);
+  margin-block: var(--blok-space-1) var(--blok-space-1-5);
 }
 
 [data-blok-database-sort-row] > [data-blok-database-panel-row] {

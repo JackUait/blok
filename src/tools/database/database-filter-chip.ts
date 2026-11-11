@@ -9,7 +9,7 @@ import { addFilterRule, emptyFilterTree, withEntryIds } from './filter-tree';
 import { RELATIVE_DATE_UNITS, RELATIVE_DATE_VALUES, formatRelativeSpan, parseRelativeSpan, relativeWindow, toLocalDay } from './relative-dates';
 import type { RelativeDateUnit, RelativeSpan } from './relative-dates';
 import { optionColorOf, shownStatusOption } from './cells/option-colors';
-import type { FilterConfig, PropertyDefinition, SelectOption } from './types';
+import type { FilterConfig, PropertyDefinition, PropertyType, SelectOption } from './types';
 
 type Filter = FilterConfig & { id: string };
 
@@ -546,13 +546,26 @@ export const dateRuleControls = (
   update: (patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>) => void
 ): HTMLElement[] | undefined => new FilterChipPages(ctx, '', update).dateRuleControls(filter.operator, filter.value);
 
-/** Opens a filter chip's popover under the chip: 260 wide (findings V17). */
+/**
+ * research/08:232 and shots-08/67-filter-number.png: the popover with a value
+ * field is 220 wide. Notion's widths for the editors with lists (options,
+ * people, relations, dates, checkbox) are unmeasured, so they keep 260.
+ */
+const VALUE_FIELD_FILTER_WIDTH = 220;
+const LIST_FILTER_WIDTH = 260;
+const LIST_FILTER_TYPES: readonly PropertyType[] = [
+  'select', 'multiSelect', 'status', 'checkbox', 'person', 'createdBy', 'lastEditedBy', 'relation', 'date', 'createdTime', 'lastEditedTime',
+];
+
+/** Opens a filter chip's popover under the chip. */
 export const openFilterChip = (anchor: HTMLElement, ctx: ViewSettingsContext, filterId: string, onClose?: () => void): DatabasePanel => {
+  const filter = withEntryIds(ctx.view().filters).find((f) => f.id === filterId);
+  const type = ctx.schema().find((p) => p.id === filter?.propertyId)?.type;
   const panel = new DatabasePanel({
     anchor,
     root: new FilterChipPages(ctx, filterId).root(),
     testId: 'database-filter-popover',
-    width: 260,
+    width: type !== undefined && LIST_FILTER_TYPES.includes(type) ? LIST_FILTER_WIDTH : VALUE_FIELD_FILTER_WIDTH,
     backLabel: ctx.i18n.t('tools.database.settingsBack'),
     ...(onClose !== undefined ? { onClose } : {}),
   });

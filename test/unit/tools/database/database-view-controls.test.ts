@@ -539,6 +539,18 @@ describe('DatabaseViewControls', () => {
       return env;
     };
 
+    // research/08:232 and shots-08/67-filter-number.png: a value-field filter popover is 220 wide. The option
+    // token field's width was never measured, so it keeps 260.
+    it('opens a value-field filter 220 wide', () => {
+      const env = setup();
+
+      env.saved.view = { ...env.saved.view, filters: [{ id: 'f2', propertyId: 'title', operator: 'contains', value: '' }] };
+      env.controls.refresh();
+      click('database-filter-pill-f2');
+
+      expect(q('database-filter-popover')?.style.width).toBe('220px');
+    });
+
     it('heads the popover with "Name operator" and a "…" button, 260 wide', () => {
       open();
       const popover = q('database-filter-popover');
@@ -701,14 +713,52 @@ describe('DatabaseViewControls', () => {
       expect(controls.effective(saved.view).sorts[0]).toMatchObject({ propertyId: 'num', direction: 'desc' });
     });
 
-    // notion-motion.md Round 10 "Add sort picker": the already-sorted property is left out.
-    it('leaves the sorted property out of "Add sort"', () => {
+    // notion-motion.md Rounds 10-11 "Add sort picker": a separate picker under the row, its search focused,
+    // the already-sorted property left out, the sort panel still open under it.
+    it('opens "Add sort" as a separate picker over the open sort panel, search focused', () => {
       withSort();
       click('database-sort-pill');
       click('database-sort-add');
+      const picker = q('database-sort-add-picker');
 
-      expect(q('database-pick-property-num')).toBeNull();
-      expect(q('database-pick-property-title')).not.toBeNull();
+      expect(picker).not.toBeNull();
+      expect(q('database-sort-panel')?.isConnected).toBe(true);
+      expect(q('database-sort-panel')?.contains(picker)).toBe(false);
+      expect(q('database-sort-add')).not.toBeNull();
+      expect(q('database-sort-add-picker-search')).toHaveFocus();
+      expect(picker?.style.width).toBe('280px');
+      expect(picker?.querySelector('[data-blok-testid="database-pick-property-num"]')).toBeNull();
+      expect(picker?.querySelector('[data-blok-testid="database-pick-property-title"]')).not.toBeNull();
+    });
+
+    it('adds the picked property, closes only the picker and redraws the panel with the new rule', () => {
+      const { controls, saved } = withSort();
+
+      click('database-sort-pill');
+      click('database-sort-add');
+      click('database-pick-property-title');
+
+      expect(controls.effective(saved.view).sorts.map((sort) => sort.propertyId)).toEqual(['num', 'title']);
+      expect(q('database-sort-add-picker')).toBeNull();
+      expect(q('database-sort-panel')?.querySelectorAll('[data-blok-database-sort-row]')).toHaveLength(2);
+    });
+
+    it('Escape closes only the picker and puts focus back on "Add sort"', () => {
+      withSort();
+      click('database-sort-pill');
+      click('database-sort-add');
+      document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(q('database-sort-add-picker')).toBeNull();
+      expect(q('database-sort-panel')).not.toBeNull();
+      expect(q('database-sort-add')).toHaveFocus();
+    });
+
+    it('names the panel page "sort" for its measured rule spacing', () => {
+      withSort();
+      click('database-sort-pill');
+
+      expect(q('database-sort-panel')?.getAttribute('data-blok-database-panel-page')).toBe('sort');
     });
 
     it('still lists every property when an existing sort changes its property', () => {

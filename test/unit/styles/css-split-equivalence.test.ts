@@ -1591,6 +1591,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_CALCSUB_BYTES = 644;
     // Round V1 lane fills: the group caret and peek label hover fills fade in over 20ms ease-in; the filtered-empty pair stays in the visible column; the table bar hides Filter, Sort and Automations; a full-page toolbar shows its icons on hover.
     const DATABASE_FILLS_BYTES = 271 + 541 + 265 + 489 + 16;
+    // Lane sortfilt: sort rules 40 apart, Layout rows 274 at x+8, Card layout tiles 109x82 r10 with a 2px picked outline.
+    const DATABASE_SORTFILT_BYTES = 849;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2047,7 +2049,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_AGGR_BYTES
       + DATABASE_CALCMENU_BYTES
       + DATABASE_CALCSUB_BYTES
-      + DATABASE_FILLS_BYTES;
+      + DATABASE_FILLS_BYTES
+      + DATABASE_SORTFILT_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

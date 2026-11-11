@@ -29,6 +29,10 @@ import type {
   ViewType,
 } from './types';
 
+/** notion-motion.md Round 10: the "Add sort" picker box. */
+const ADD_SORT_PICKER_WIDTH = 280;
+const ADD_SORT_PICKER_HEIGHT = 287;
+
 /** Notion's sort list adds files and ID to the groupable types (findings V20, shot 19). */
 const SORTABLE_TYPES: readonly PropertyType[] = [...GROUPABLE_TYPES, 'files', 'uniqueId'];
 
@@ -657,7 +661,13 @@ export class DatabaseViewControls {
     testId: string,
     types: readonly PropertyType[],
     onPick: (property: PropertyDefinition) => void,
-    options: { placeholder: string; footer?: (close: () => void) => HTMLElement; used?: string[] }
+    options: {
+      placeholder: string;
+      footer?: (close: () => void) => HTMLElement;
+      used?: string[];
+      /** Opens over the open panel, which stays; gets the close instead of panelClosed. */
+      over?: { width: number; maxHeight: number; onClose: (escape: boolean) => void };
+    }
   ): void {
     const state = { query: '', active: 0 };
     const list = document.createElement('div');
@@ -733,11 +743,18 @@ export class DatabaseViewControls {
         },
       },
       testId,
-      width: 290,
+      width: options.over?.width ?? 290,
       backLabel: this.t('settingsBack'),
-      onClose: (escape) => this.panelClosed(anchor, escape),
+      ...(options.over !== undefined ? { gap: 0 } : {}),
+      onClose: options.over?.onClose ?? ((escape) => this.panelClosed(anchor, escape)),
     });
 
+    if (options.over !== undefined) {
+      panel.root.style.maxHeight = `${options.over.maxHeight}px`;
+      panel.open();
+
+      return;
+    }
     anchor.setAttribute('data-popover-open', '');
     this.showPanel(panel);
   }
@@ -773,10 +790,10 @@ export class DatabaseViewControls {
 
       return row;
     };
-    const propertyPage = (title: string, onPick: (property: PropertyDefinition) => void, used: string[] = []): PanelPage => ({
+    const propertyPage = (title: string, onPick: (property: PropertyDefinition) => void): PanelPage => ({
       title,
       build: () => {
-        const shown = this.host.schema().filter((p) => SORTABLE_TYPES.includes(p.type) && !used.includes(p.id));
+        const shown = this.host.schema().filter((p) => SORTABLE_TYPES.includes(p.type));
 
         return [...shown.filter((p) => p.type === 'title'), ...shown.filter((p) => p.type !== 'title').sort((a, b) => a.name.localeCompare(b.name))]
           .map((property) => panelRow({
@@ -802,6 +819,8 @@ export class DatabaseViewControls {
     const panel = new DatabasePanel({
       anchor,
       root: {
+        // database.css: the measured rule spacing (r35:497-509).
+        name: 'sort',
         build: (current) => {
           const schema = this.host.schema();
           const all = sorts();
@@ -856,16 +875,12 @@ export class DatabaseViewControls {
                 if (moving !== undefined) write([...rest.slice(0, at), moving, ...rest.slice(at)]);
               },
             }),
-            // notion-motion.md Round 10 "Add sort picker": a property already sorted is left out.
             panelRow({
               label: this.t('sortAdd'),
               testId: 'database-sort-add',
               muted: true,
               icon: IconPlus,
-              onClick: () => current.push(propertyPage(this.t('sortAdd'), (property) => {
-                write([...sorts(), { id: nanoid(), propertyId: property.id, direction: 'asc' }]);
-                current.back();
-              }, sorts().map((sort) => sort.propertyId))),
+              onClick: () => this.openAddSortPicker(current),
             }),
             panelRow({
               label: this.t('sortDeleteAll'),
@@ -890,6 +905,34 @@ export class DatabaseViewControls {
     panel.root.style.width = 'max-content';
     anchor.setAttribute('data-popover-open', '');
     this.showPanel(panel);
+  }
+
+  /**
+   * notion-motion.md Rounds 10-11: "Add sort" opens a 280x287 picker of its
+   * own, flush under the row and left-aligned to it, with its search focused.
+   * The sort panel stays open under it; a property already sorted is left out.
+   */
+  private openAddSortPicker(sortPanel: DatabasePanel): void {
+    const row = sortPanel.root.querySelector<HTMLElement>('[data-blok-testid="database-sort-add"]');
+
+    if (row === null) return;
+    const release = sortPanel.hold();
+    const sorts = withEntryIds(this.view()?.sorts ?? []);
+
+    this.openPropertyPicker(row, 'database-sort-add-picker', SORTABLE_TYPES, (property) => {
+      this.updatePersonal({ sorts: [...withEntryIds(this.view()?.sorts ?? []), { id: nanoid(), propertyId: property.id, direction: 'asc' }] });
+    }, {
+      placeholder: this.t('settingsSearchProperty'),
+      used: sorts.map((sort) => sort.propertyId),
+      over: {
+        width: ADD_SORT_PICKER_WIDTH,
+        maxHeight: ADD_SORT_PICKER_HEIGHT,
+        onClose: () => {
+          release();
+          sortPanel.root.querySelector<HTMLElement>('[data-blok-testid="database-sort-add"]')?.focus();
+        },
+      },
+    });
   }
 
   private showSearch(): void {

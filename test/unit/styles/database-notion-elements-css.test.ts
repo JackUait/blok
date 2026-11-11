@@ -170,3 +170,55 @@ describe('Edit property "Options" heading and status group names (notion-spec-2 
     expect(body).toContain('color: var(--blok-database-ink-secondary)');
   });
 });
+
+// research/33 §3.2 (cardlay.sh reads `outline` on a 109x82 button beside its label): 1px gray, 2px when picked.
+describe('board Card layout tiles (research/33 §3.2)', () => {
+  const DRAWING = '[data-blok-database-card-layout-drawing]';
+  const PICKED = '[data-blok-database-card-layout-tile][aria-pressed="true"] [data-blok-database-card-layout-drawing]';
+
+  it('are 109x82 with a 10px radius and a 1px outline outside the box', () => {
+    const body = ruleBody(DRAWING);
+
+    expect(body).toContain('inline-size: 109px');
+    expect(body).toContain('block-size: 82px');
+    expect(body).toContain('border-radius: var(--blok-radius-surface)');
+    expect(body).toContain('outline: 1px solid var(--blok-database-tpl-border)');
+    expect(body).not.toContain('border:');
+  });
+
+  it('draw the picked tile with a 2px outline in ink', () => {
+    const body = ruleBody(PICKED);
+
+    expect(body).toContain('outline: 2px solid var(--blok-database-ink)');
+    expect(body).not.toContain('box-shadow');
+  });
+});
+
+// notion-motion.md Round 9 (r9-vs-layout.raw): Layout rows are 274x28 at x+8, 29 apart; the switch ends 8px in.
+describe('View settings Layout page rows (notion-motion Round 9)', () => {
+  const ROW = '[data-blok-database-panel-page="layout"] [data-blok-database-panel-row]';
+  const NEXT = '[data-blok-database-panel-page="layout"] [data-blok-database-panel-row] + [data-blok-database-panel-row]';
+
+  it('inset rows 8px each side, so they are 274 wide in the 290 panel', () => {
+    const body = ruleBody(ROW);
+
+    expect(body).toContain('inline-size: auto');
+    expect(body).toContain('margin-inline: var(--blok-space-1)');
+  });
+
+  it('put 1px between rows, a 29px pitch', () => {
+    expect(ruleBody(NEXT)).toContain('margin-block-start: var(--blok-space-0-25)');
+  });
+});
+
+// r35:497-509 (two rules 32 tall at y 133 and 173) and r10-sort-popover.png (box top 305, rule 313, Add sort 351, bottom 412).
+describe('sort panel rule list (r35:497-509, r10-sort-popover.png)', () => {
+  it('puts rules 40px apart: a 32px row and an 8px gap', () => {
+    expect(ruleBody('[data-blok-database-panel-page="sort"] > [data-blok-database-panel-list]')).toContain('gap: var(--blok-space-2)');
+  });
+
+  it('starts the first rule 8px down and Add sort 6px under the last rule, 107 tall with one rule', () => {
+    expect(ruleBody('[data-blok-database-panel-page="sort"] > [data-blok-database-panel-list]')).toContain('margin-block: var(--blok-space-1) var(--blok-space-1-5)');
+    expect(ruleBody('[data-blok-database-panel-page="sort"]')).toContain('padding-block-end: var(--blok-space-1-25)');
+  });
+});

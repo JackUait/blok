@@ -909,6 +909,8 @@ export class ViewSettingsPages {
   layout(): PanelPage {
     return {
       title: this.t('settingsLayout'),
+      // database.css: the measured row box (notion-motion.md Round 9).
+      name: 'layout',
       build: (panel) => {
         const view = this.ctx.view();
         const tiles = this.layoutTiles(panel, view.type);

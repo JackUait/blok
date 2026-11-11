@@ -15,6 +15,8 @@ export interface CellPopoverOptions {
   docked?: boolean;
   /** A menu-like panel (DatabasePanel), not a cell editor: Notion's menu corner (database.css). */
   panel?: boolean;
+  /** Space under the anchor, PANEL_GAP when unset. */
+  gap?: number;
   /** Escape pressed while open. The owner decides: close, or step back a panel. */
   onEscape: () => void;
   /** The popover closed itself: an outside press, or focus moved away. */
@@ -66,13 +68,13 @@ const PANEL_GAP = 8;
  * panel that would run past the window slides up to stay inside it, as view
  * settings does (side-by-side-v1.md "Filter / Sort popovers").
  */
-const fitPlacement = (anchor: HTMLElement): Pick<PopoverParams, 'cover' | 'viewportMargin'> & { position: DOMRect; positionContext: HTMLElement } => {
+const fitPlacement = (anchor: HTMLElement, gap = PANEL_GAP): Pick<PopoverParams, 'cover' | 'viewportMargin'> & { position: DOMRect; positionContext: HTMLElement } => {
   const rect = anchor.getBoundingClientRect();
 
   return {
     cover: true,
     viewportMargin: COVER_VIEWPORT_MARGIN,
-    position: new DOMRect(rect.x, rect.bottom + PANEL_GAP, rect.width, 0),
+    position: new DOMRect(rect.x, rect.bottom + gap, rect.width, 0),
     positionContext: anchor,
   };
 };
@@ -140,7 +142,7 @@ export class CellPopover {
       class: [CELL_EDITOR_CLASS, ...(panel === true ? [PANEL_CLASS] : []), ...(docked === true ? [DOCKED_CLASS] : []), ...(cover === 'value' ? [VALUE_EDITOR_CLASS] : []), ...(cover === true ? [TABLE_EDITOR_CLASS] : [])].join(' '),
       ...(this.options.minWidth !== undefined ? { minWidth: this.options.minWidth } : {}),
     };
-    const coverOrFit = cover === true || cover === 'value' ? coverPlacement(anchor, cover === 'value', cover === true && this.options.below === true) : fitPlacement(anchor);
+    const coverOrFit = cover === true || cover === 'value' ? coverPlacement(anchor, cover === 'value', cover === true && this.options.below === true) : fitPlacement(anchor, this.options.gap);
     const placement = docked === true ? dockPlacement(anchor) : coverOrFit;
     const popover = new PopoverDesktop({ ...base, ...placement });
 

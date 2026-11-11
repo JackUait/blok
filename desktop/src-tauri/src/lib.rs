@@ -37,11 +37,32 @@ fn load_workspace_file(app: tauri::AppHandle, name: String) -> Result<Option<Str
 }
 
 #[tauri::command]
-fn save_workspace_file(app: tauri::AppHandle, name: String, data: String) -> Result<(), String> {
+fn save_workspace_file(
+    app: tauri::AppHandle,
+    name: String,
+    data: String,
+    expected: Option<String>,
+) -> Result<(), String> {
     let path = workspace_file(&app, &name)?;
+    // `expected` is the fingerprint the window saw when it read the file. When it no
+    // longer matches, something else wrote in between — an agent over MCP, another
+    // window, a sync tool — and overwriting would destroy that work without a word.
+    if let Some(expected) = expected {
+        let current = std::fs::read_to_string(&path).unwrap_or_default();
+        if sha256_hex(current.as_bytes()) != expected {
+            return Err("stale workspace file".into());
+        }
+    }
     let temp = path.with_extension("json.tmp");
     std::fs::write(&temp, data).map_err(|error| error.to_string())?;
     std::fs::rename(temp, path).map_err(|error| error.to_string())
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    hasher.finalize().iter().map(|b| format!("{b:02x}")).collect()
 }
 
 #[tauri::command]

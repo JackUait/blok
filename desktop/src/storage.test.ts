@@ -27,7 +27,13 @@ describe('workspace storage', () => {
     expect(await dataDirectory()).toContain('Application Support/dev.notiooon.blok/workspace');
     expect(await readFile('index')).toBeNull();
     await writeFile('index', '{}');
-    expect(invoke).toHaveBeenCalledWith('save_workspace_file', { name: 'index', data: '{}' });
+    // The save carries the fingerprint of what readFile saw, so it cannot clobber
+    // a file something else wrote in between. See storage-guard.test.ts.
+    expect(invoke).toHaveBeenCalledWith('save_workspace_file', {
+      name: 'index',
+      data: '{}',
+      expected: expect.stringMatching(/^[0-9a-f]{64}$/),
+    });
   });
 
   it('restores each page’s full-width setting independently', async () => {

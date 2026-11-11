@@ -21,37 +21,15 @@ export const css = {
   // Popover overlay
   popoverOverlay: 'hidden bg-dark',
 
-  // `relative` makes the container the offsetParent of its items so the reel
-  // distortion can read item offsetTop values in container coordinates.
+  // `relative` makes the container the offsetParent of its items, so item
+  // offsetTop (nested popover placement) is in container coordinates.
   // pt/pb put the before-first and after-last gaps inside the scroll area so
-  // they scroll with the list and sit within the reel clip (the outer container has none).
+  // they scroll with the list (the outer container has none).
   // flex-auto (basis auto), NOT flex-1 (basis 0%): WebKit resolves a 0% basis inside an
   // auto-height absolutely-positioned container against the containing block's definite
   // height, collapsing nested popovers (e.g. the marker color picker inside the inline
   // toolbar, whose root has an explicit ~38px height) to their padding.
   items: 'relative flex-auto min-h-0 overflow-y-auto overscroll-contain pt-(--blok-space-1) pb-(--blok-space-1)',
-};
-
-/**
- * Reel-like edge distortion applied to popover items as they scroll past the
- * viewport edges (instead of a gradient haze). Values are the maximum effect
- * reached when an item is fully clipped past an edge.
- */
-export const REEL_DISTORTION = {
-  /** Maximum vertical squash (scaleY shrinks to 1 - maxSquashY) */
-  maxSquashY: 0.4,
-
-  /** Maximum horizontal pinch (scaleX shrinks to 1 - maxSquashX) */
-  maxSquashX: 0.1,
-
-  /** Maximum opacity dim (opacity falls to 1 - maxDim) */
-  maxDim: 0.5,
-
-  /** Maximum rotateX tilt in degrees — curls the item over the reel edge */
-  maxTiltDeg: 25,
-
-  /** Perspective depth in px applied per item for the rotateX tilt */
-  perspective: 800,
 };
 
 /**

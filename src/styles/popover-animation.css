@@ -181,12 +181,6 @@
       line-height: 16px;
     }
 
-    /* Keep metadata legible despite the inline scroll-reel distortion. */
-    > [data-blok-item-name='edit-metadata']:not([data-blok-hidden]) {
-      transform: none !important;
-      opacity: 1 !important;
-    }
-
     > [data-blok-item-name='edit-metadata'] > div {
       padding: var(--blok-space-0-5) var(--blok-space-2);
       font-size: 11px;

@@ -68,8 +68,6 @@ for (const width of [1280, 390]) {
         await expect(menu.getByRole('menuitem', { name, exact: true })).toBeVisible();
       }
       await expect(menu.getByRole('tab', { includeHidden: true })).toHaveCount(0);
-      // Layout boxes, not getBoundingClientRect: rows near the scroll edge
-      // carry the reel tilt transform, which shifts their painted box.
       const rows = await menu.locator('[data-blok-convert-item]').evaluateAll(elements => elements.map(element => {
         if (!(element instanceof HTMLElement)) {
           throw new Error('conversion row is not an HTML element');

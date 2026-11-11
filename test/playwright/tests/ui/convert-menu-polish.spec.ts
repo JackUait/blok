@@ -93,7 +93,6 @@ for (const surface of ['settings', 'inline'] as const) {
         await expect.poll(() => rows.evaluateAll(elements => elements.map(element => element.getAttribute('aria-label') ?? element.textContent?.trim())))
           .toEqual(LIST_ORDER);
 
-        // Layout boxes, not client rects: the mobile scroll reel scales rows near the edge.
         const measurements = await rows.evaluateAll(elements => elements.map(element => {
           if (!(element instanceof HTMLElement)) {
             throw new Error('Row is not an HTML element');

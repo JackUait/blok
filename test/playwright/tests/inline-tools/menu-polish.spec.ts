@@ -72,8 +72,6 @@ for (const width of [1280, 390]) {
         await expect(conversion.getByRole('separator', { includeHidden: true })).toHaveCount(0);
         await expect(conversion.getByRole('tab', { includeHidden: true })).toHaveCount(0);
         await expect(conversion.getByRole('tablist', { includeHidden: true })).toHaveCount(0);
-        // Layout boxes, not getBoundingClientRect: rows near the scroll edge
-        // carry the reel tilt transform, which shifts their painted box.
         const rows = await conversion.locator('[data-blok-convert-item]:visible').evaluateAll(elements => elements.map(element => {
           if (!(element instanceof HTMLElement)) {
             throw new Error('conversion row is not an HTML element');

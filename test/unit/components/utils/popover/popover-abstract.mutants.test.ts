@@ -9,7 +9,7 @@ import {
 import { PopoverItemHtml } from '../../../../../src/components/utils/popover/components/popover-item/popover-item-html/popover-item-html';
 import type { SearchInput } from '../../../../../src/components/utils/popover/components/search-input';
 import { PopoverAbstract } from '../../../../../src/components/utils/popover/popover-abstract';
-import { css, REEL_DISTORTION } from '../../../../../src/components/utils/popover/popover.const';
+import { css } from '../../../../../src/components/utils/popover/popover.const';
 import { PopoverRegistry } from '../../../../../src/components/utils/popover/popover-registry';
 
 import type { PopoverNodes, PopoverParams } from '@/types/utils/popover/popover';
@@ -972,7 +972,7 @@ describe('PopoverAbstract', () => {
       expect(strayItem.getAttribute(DATA_ATTR.hidden)).toBe('true');
     });
 
-    it('re-measures the scrollbar and the reel after a tab change', () => {
+    it('re-measures the scrollbar after a tab change', () => {
       const tabs = makeTabs('heading', 'toggle-heading');
       const popover = makePopover({ items: tabbedItems(tabs) });
       const { items, scrollbarThumb } = popover.testNodes;
@@ -995,14 +995,6 @@ describe('PopoverAbstract', () => {
 
       expect(scrollbarThumb.hidden).toBe(false);
       expect(scrollbarThumb.style.height).toBe('33px');
-
-      const clipped = items.children[2];
-
-      expect(clipped).toBeInstanceOf(HTMLElement);
-      if (!(clipped instanceof HTMLElement)) {
-        throw new Error('Expected an element child');
-      }
-      expect(clipped.style.transform).toContain('rotateX(-12.50deg)');
     });
 
     it('leaves every item visible when the popover has no tablist', () => {
@@ -1196,78 +1188,6 @@ describe('PopoverAbstract', () => {
       scrollbarThumb.dispatchEvent(pointer('pointermove', 200));
 
       expect(items.scrollTop).toBe(5);
-    });
-  });
-
-  describe('scroll reel distortion', () => {
-    it('curls an item clipped by the top edge back over the reel', () => {
-      const popover = makePopover({
-        items: [{ onActivate: noop, title: 'A' }, { onActivate: noop, title: 'B' }],
-      });
-      const { items } = popover.testNodes;
-      const first = rootOf(popover.testItems[0]);
-      const second = rootOf(popover.testItems[1]);
-
-      stubMetrics(items, { clientHeight: 100,
-        scrollHeight: 300 });
-      stubMetrics(first, { offsetTop: 0,
-        offsetHeight: 40 });
-      stubMetrics(second, { offsetTop: 40,
-        offsetHeight: 40 });
-      items.scrollTop = 20;
-      items.dispatchEvent(new Event('scroll'));
-
-      const overhang = 0.5;
-
-      expect(first.style.transform).toBe(
-        `perspective(${REEL_DISTORTION.perspective}px) rotateX(${(REEL_DISTORTION.maxTiltDeg * overhang).toFixed(2)}deg) `
-        + `scaleX(${(1 - REEL_DISTORTION.maxSquashX * overhang).toFixed(3)}) `
-        + `scaleY(${(1 - REEL_DISTORTION.maxSquashY * overhang).toFixed(3)})`
-      );
-      expect(first.style.transformOrigin).toBe('center bottom');
-      expect(first.style.opacity).toBe('0.75');
-      expect(second.style.transform).toBe('');
-    });
-
-    it('curls an item clipped by the bottom edge the other way', () => {
-      const popover = makePopover({
-        items: [{ onActivate: noop, title: 'A' }, { onActivate: noop, title: 'B' }],
-      });
-      const { items } = popover.testNodes;
-      const second = rootOf(popover.testItems[1]);
-
-      stubMetrics(items, { clientHeight: 100,
-        scrollHeight: 300 });
-      stubMetrics(rootOf(popover.testItems[0]), { offsetTop: 0,
-        offsetHeight: 40 });
-      stubMetrics(second, { offsetTop: 80,
-        offsetHeight: 40 });
-      items.scrollTop = 0;
-      items.dispatchEvent(new Event('scroll'));
-
-      expect(second.style.transform).toContain(`rotateX(${(-REEL_DISTORTION.maxTiltDeg * 0.5).toFixed(2)}deg)`);
-      expect(second.style.transformOrigin).toBe('center top');
-    });
-
-    it('clears the distortion from every item when the popover closes', () => {
-      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
-      const { items } = popover.testNodes;
-      const first = rootOf(popover.testItems[0]);
-
-      stubMetrics(items, { clientHeight: 100,
-        scrollHeight: 300 });
-      stubMetrics(first, { offsetTop: 0,
-        offsetHeight: 40 });
-      items.scrollTop = 20;
-      items.dispatchEvent(new Event('scroll'));
-
-      expect(first.style.transform).not.toBe('');
-
-      popover.hide();
-
-      expect(first.style.transform).toBe('');
-      expect(first.style.transformOrigin).toBe('');
-      expect(first.style.opacity).toBe('');
     });
   });
 

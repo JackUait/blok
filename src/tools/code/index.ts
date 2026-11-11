@@ -875,8 +875,6 @@ export class CodeTool implements BlockTool {
       leftAlignElement,
       searchable: true,
       width: '240px',
-      // Sticky family labels sit at the top edge; a reel would squash the rows under them.
-      scrollReel: false,
       messages: {
         search: this.api.i18n.t(SEARCH_LANGUAGE_KEY),
         nothingFound: this.api.i18n.t('popover.nothingFound'),

@@ -2939,7 +2939,7 @@ describe('PopoverDesktop', () => {
 
       // Both the before-first-element gap and the after-last-element gap live on the
       // scrollable items container (not the popover container), so they scroll with the
-      // list and sit inside the reel clip. The outer container carries no top padding.
+      // list. The outer container carries no top padding.
       expect(instance.nodes.items.className).toContain('pt-(--blok-space-1)');
       expect(instance.nodes.items.className).toContain('pb-(--blok-space-1)');
       expect(instance.nodes.popoverContainer.className).not.toContain('pt-(--blok-space-1)');

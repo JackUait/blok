@@ -132,7 +132,7 @@ const isActiveItem = (item: PopoverItem): boolean =>
 
 /**
  * Stamps layout metrics jsdom never computes. Sizes are asymmetric on purpose:
- * equal viewport/content sizes collapse the scrollbar and reel arithmetic onto
+ * equal viewport/content sizes collapse the scrollbar arithmetic onto
  * the same result whatever the operators are.
  * @param el - element to stamp
  * @param metrics - layout numbers to expose
@@ -1032,87 +1032,6 @@ describe('PopoverAbstract — mutation coverage', () => {
       thumb.dispatchEvent(pointer('pointermove', 150));
 
       expect(items.scrollTop).toBe(200);
-    });
-  });
-
-  describe('scroll reel distortion', () => {
-    const reelFixture = (): { popover: TestPopover; items: HTMLElement; children: HTMLElement[] } => {
-      const popover = makePopover({
-        items: [
-          { title: 'One',
-            name: 'one',
-            onActivate: vi.fn() },
-          { title: 'Two',
-            name: 'two',
-            onActivate: vi.fn() },
-          { title: 'Three',
-            name: 'three',
-            onActivate: vi.fn() },
-        ],
-      });
-      const items = popover.testNodes.items;
-      const children = popover.testItems.map(rootOf);
-
-      setMetrics(items, { clientHeight: 100,
-        scrollHeight: 300 });
-      children.forEach((child, index) => {
-        setMetrics(child, { offsetTop: index * 40,
-          offsetHeight: 40 });
-      });
-
-      return { popover,
-        items,
-        children };
-    };
-
-    it('leaves an unmeasured item undistorted', () => {
-      const { items, children } = reelFixture();
-
-      setMetrics(children[0], { offsetHeight: 0 });
-      scroll(items, 20);
-
-      // Height 0 divides by zero and pins the item at full distortion.
-      expect(children[0].style.transformOrigin).toBe('');
-      expect(children[0].style.opacity).toBe('');
-    });
-
-    it('clears the distortion once the list stops overflowing', () => {
-      const { items, children } = reelFixture();
-
-      scroll(items, 20);
-      expect(children[0].style.transformOrigin).toBe('center bottom');
-
-      setMetrics(items, { scrollHeight: 100 });
-      scroll(items, 0);
-
-      expect(children[0].style.transform).toBe('');
-      expect(children[0].style.transformOrigin).toBe('');
-      expect(children[0].style.opacity).toBe('');
-    });
-
-    it('clears the distortion on hide', () => {
-      const { popover, items, children } = reelFixture();
-
-      scroll(items, 20);
-      popover.hide();
-
-      expect(children[0].style.transform).toBe('');
-      expect(children[0].style.transformOrigin).toBe('');
-      expect(children[0].style.opacity).toBe('');
-    });
-
-    it('leaves a non-HTML child of the items container alone', () => {
-      const { popover, items } = reelFixture();
-      const foreign = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-
-      items.appendChild(foreign);
-      foreign.style.opacity = '0.4';
-
-      scroll(items, 20);
-      expect(foreign.style.transformOrigin).toBe('');
-
-      popover.hide();
-      expect(foreign.style.opacity).toBe('0.4');
     });
   });
 

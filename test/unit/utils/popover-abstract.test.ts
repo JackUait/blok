@@ -39,7 +39,6 @@ import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import type { SearchInput } from '../../../src/components/utils/popover/components/search-input';
 import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 import { PopoverRegistry } from '../../../src/components/utils/popover/popover-registry';
-import { REEL_DISTORTION } from '../../../src/components/utils/popover/popover.const';
 import { leanPreview } from '../../../src/components/utils/media-preview-3d';
 
 /**
@@ -1100,56 +1099,8 @@ describe('PopoverAbstract', () => {
     });
   });
 
-  describe('scroll reel distortion', () => {
-    /**
-     * Mocks the scroll metrics of the items container
-     * @param items - the popover items container
-     * @param metrics - scrollHeight / clientHeight / scrollTop to report
-     */
-    const setContainerMetrics = (
-      items: HTMLElement,
-      metrics: { scrollHeight?: number; clientHeight?: number; scrollTop?: number } = {}
-    ): void => {
-      Object.defineProperty(items, 'scrollHeight', { value: metrics.scrollHeight ?? 500, configurable: true });
-      Object.defineProperty(items, 'clientHeight', { value: metrics.clientHeight ?? 200, configurable: true });
-      Object.defineProperty(items, 'scrollTop', { value: metrics.scrollTop ?? 0, configurable: true, writable: true });
-    };
-
-    /**
-     * Mocks layout metrics of a single popover item element
-     * @param el - the item element
-     * @param top - offsetTop within the items container
-     * @param height - offsetHeight of the item
-     */
-    const setItemMetrics = (el: HTMLElement, top: number, height: number): void => {
-      Object.defineProperty(el, 'offsetTop', { value: top, configurable: true });
-      Object.defineProperty(el, 'offsetHeight', { value: height, configurable: true });
-    };
-
-    /**
-     * Expected transform string for a given clipped fraction
-     * @param overhang - fraction of the item clipped past the viewport edge (0..1)
-     * @param edge - which viewport edge clips the item
-     */
-    const expectedTransform = (overhang: number, edge: 'top' | 'bottom'): string => {
-      const tilt = (REEL_DISTORTION.maxTiltDeg * overhang * (edge === 'top' ? 1 : -1)).toFixed(2);
-      const scaleX = (1 - REEL_DISTORTION.maxSquashX * overhang).toFixed(3);
-      const scaleY = (1 - REEL_DISTORTION.maxSquashY * overhang).toFixed(3);
-
-      return `perspective(${REEL_DISTORTION.perspective}px) rotateX(${tilt}deg) scaleX(${scaleX}) scaleY(${scaleY})`;
-    };
-
-    it('keeps the distortion strengths within realistic reel bounds', () => {
-      // A real picker reel bends items subtly — extreme values read as a glitch.
-      expect(REEL_DISTORTION.maxTiltDeg).toBeLessThanOrEqual(30);
-      expect(REEL_DISTORTION.maxSquashY).toBeLessThanOrEqual(0.5);
-      expect(REEL_DISTORTION.maxSquashX).toBeLessThanOrEqual(0.15);
-      expect(REEL_DISTORTION.maxDim).toBeLessThanOrEqual(0.55);
-      // Shallow perspective exaggerates the tilt; keep the camera far enough away
-      expect(REEL_DISTORTION.perspective).toBeGreaterThanOrEqual(600);
-    });
-
-    it('does not render gradient haze overlays anymore', () => {
+  describe('scrolling', () => {
+    it('does not render gradient haze overlays', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();
 
@@ -1160,187 +1111,31 @@ describe('PopoverAbstract', () => {
       expect(overlays).toHaveLength(0);
     });
 
-    it('leaves items fully inside the viewport undistorted', () => {
-      const popover = createPopover();
-      const nodes = popover.getNodesForTests();
-      const first = nodes.items.children[0] as HTMLElement;
-
-      setContainerMetrics(nodes.items, { scrollTop: 100 });
-      setItemMetrics(first, 150, 40);
-
-      popover.show();
-
-      expect(first.style.transform).toBe('');
-      expect(first.style.opacity).toBe('');
-    });
-
-    it('squashes an item clipped by the top edge toward its bottom edge', () => {
-      const popover = createPopover();
-      const nodes = popover.getNodesForTests();
-      const first = nodes.items.children[0] as HTMLElement;
-
-      setContainerMetrics(nodes.items, { scrollTop: 100 });
-      // Item spans 80..120 while viewport starts at 100 → half clipped above
-      setItemMetrics(first, 80, 40);
-
-      popover.show();
-
-      expect(first.style.transform).toBe(expectedTransform(0.5, 'top'));
-      expect(first.style.transformOrigin).toBe('center bottom');
-      expect(Number(first.style.opacity)).toBeCloseTo(1 - REEL_DISTORTION.maxDim * 0.5, 3);
-    });
-
-    it('squashes an item clipped by the bottom edge toward its top edge', () => {
-      const popover = createPopover();
-      const nodes = popover.getNodesForTests();
-      const second = nodes.items.children[1] as HTMLElement;
-
-      setContainerMetrics(nodes.items, { scrollTop: 0 });
-      // Viewport ends at 200; item spans 180..220 → half clipped below
-      setItemMetrics(second, 180, 40);
-
-      popover.show();
-
-      expect(second.style.transform).toBe(expectedTransform(0.5, 'bottom'));
-      expect(second.style.transformOrigin).toBe('center top');
-    });
-
-    it('distorts more the deeper an item slides past the edge', () => {
+    it('leaves rows clipped by either edge flat as the list scrolls', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();
       const first = nodes.items.children[0] as HTMLElement;
       const second = nodes.items.children[1] as HTMLElement;
-
-      setContainerMetrics(nodes.items, { scrollTop: 100 });
-      // First is 75% clipped above, second only 25%
-      setItemMetrics(first, 70, 40);
-      setItemMetrics(second, 90, 40);
-
-      popover.show();
-
-      expect(first.style.transform).toBe(expectedTransform(0.75, 'top'));
-      expect(second.style.transform).toBe(expectedTransform(0.25, 'top'));
-    });
-
-    it('leaves an item taller than the viewport undistorted at every scroll position', () => {
-      const popover = createPopover();
-      const nodes = popover.getNodesForTests();
-      const first = nodes.items.children[0] as HTMLElement;
       let scrollTopValue = 0;
 
       Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
       Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
       Object.defineProperty(nodes.items, 'scrollTop', { get: () => scrollTopValue, configurable: true });
-      // One item holds a whole list, like the page picker's listbox
-      setItemMetrics(first, 0, 480);
+      Object.defineProperty(first, 'offsetTop', { value: 0, configurable: true });
+      Object.defineProperty(first, 'offsetHeight', { value: 40, configurable: true });
+      Object.defineProperty(second, 'offsetTop', { value: 180, configurable: true });
+      Object.defineProperty(second, 'offsetHeight', { value: 40, configurable: true });
 
       popover.show();
-
-      for (const top of [0, 60, 140, 280]) {
-        scrollTopValue = top;
-        nodes.items.dispatchEvent(new Event('scroll'));
-
-        expect(first.style.transform).toBe('');
-        expect(first.style.opacity).toBe('');
-      }
-    });
-
-    it('applies no distortion to any item when the popover turns the reel off', () => {
-      const popover = createPopover({ scrollReel: false });
-      const nodes = popover.getNodesForTests();
-      const first = nodes.items.children[0] as HTMLElement;
-
-      setContainerMetrics(nodes.items, { scrollTop: 100 });
-      setItemMetrics(first, 80, 40);
-
-      popover.show();
-
-      expect(first.style.transform).toBe('');
-      expect(first.style.opacity).toBe('');
-    });
-
-    it('never distorts a sticky item, which stays pinned at the edge on purpose', () => {
-      const label = document.createElement('div');
-      const popover = createPopover({
-        items: [{ type: PopoverItemType.Html, element: label, isSticky: true }, ...createDefaultItems()],
-      });
-      const nodes = popover.getNodesForTests();
-      const sticky = nodes.items.children[0] as HTMLElement;
-
-      setContainerMetrics(nodes.items, { scrollTop: 100 });
-      setItemMetrics(sticky, 80, 40);
-
-      popover.show();
-
-      expect(sticky.style.transform).toBe('');
-      expect(sticky.style.opacity).toBe('');
-    });
-
-    it('applies no distortion when items do not overflow', () => {
-      const popover = createPopover();
-      const nodes = popover.getNodesForTests();
-      const first = nodes.items.children[0] as HTMLElement;
-
-      setContainerMetrics(nodes.items, { scrollHeight: 200, clientHeight: 200, scrollTop: 0 });
-      setItemMetrics(first, -20, 40);
-
-      popover.show();
-
-      expect(first.style.transform).toBe('');
-    });
-
-    it('updates the distortion on scroll events', () => {
-      const popover = createPopover();
-      const nodes = popover.getNodesForTests();
-      const first = nodes.items.children[0] as HTMLElement;
-
-      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
-      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
-
-      let scrollTopValue = 0;
-
-      Object.defineProperty(nodes.items, 'scrollTop', {
-        get: () => scrollTopValue,
-        configurable: true,
-      });
-
-      setItemMetrics(first, 0, 40);
-
-      popover.show();
-
-      // At the top the first item is fully visible
-      expect(first.style.transform).toBe('');
-
-      // Scrolling 20px clips half of the first item above the edge
+      // First row half above the top edge, second half below the bottom edge.
       scrollTopValue = 20;
       nodes.items.dispatchEvent(new Event('scroll'));
 
-      expect(first.style.transform).toBe(expectedTransform(0.5, 'top'));
-      expect(first.style.transformOrigin).toBe('center bottom');
-
-      // Scrolling back restores the item
-      scrollTopValue = 0;
-      nodes.items.dispatchEvent(new Event('scroll'));
-
-      expect(first.style.transform).toBe('');
-    });
-
-    it('clears the distortion on hide', () => {
-      const popover = createPopover();
-      const nodes = popover.getNodesForTests();
-      const first = nodes.items.children[0] as HTMLElement;
-
-      setContainerMetrics(nodes.items, { scrollTop: 100 });
-      setItemMetrics(first, 80, 40);
-
-      popover.show();
-
-      expect(first.style.transform).not.toBe('');
-
-      popover.hide();
-
-      expect(first.style.transform).toBe('');
-      expect(first.style.opacity).toBe('');
+      for (const row of [first, second]) {
+        expect(row.style.transform).toBe('');
+        expect(row.style.transformOrigin).toBe('');
+        expect(row.style.opacity).toBe('');
+      }
     });
   });
 

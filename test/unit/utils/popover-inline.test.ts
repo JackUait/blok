@@ -864,7 +864,7 @@ describe('PopoverInline', () => {
       expect(nestedContainer?.className).not.toContain('p-1.5');
 
       // The 6px before-first-element gap lives on the scrollable items list instead, so it
-      // sits above "Heading 1" and scrolls with the list inside the reel clip.
+      // sits above "Heading 1" and scrolls with the list.
       expect(nestedItems?.className).toContain('pt-(--blok-space-1)');
     });
   });

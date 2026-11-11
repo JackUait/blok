@@ -15,7 +15,7 @@ import { leanPreview } from '../media-preview-3d';
 import type { SearchInput } from './components/search-input';
 import { PopoverRegistry } from './popover-registry';
 import { ScrollLocker } from '../scroll-locker';
-import { css, REEL_DISTORTION } from './popover.const';
+import { css } from './popover.const';
 
 import type { PopoverEventMap, PopoverMessages, PopoverParams, PopoverNodes } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -133,11 +133,9 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       });
     }
 
-    // Scroll listener on the items container drives the edge reel distortion
-    // and the scroll-activity marker that reveals the auto-hidden scrollbar.
+    // Scroll moves the custom scrollbar and marks activity to reveal it.
     if (this.nodes.items) {
       this.listeners.on(this.nodes.items, 'scroll', () => {
-        this.updateScrollReel();
         this.updateScrollbar();
         this.markScrollActivity();
       });
@@ -257,12 +255,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       this.search.focus();
     }
 
-    /**
-     * Apply the edge reel distortion and size the custom scrollbar for the
-     * initial scroll position (deferred a frame so layout has settled and the
-     * items container reports its real height).
-     */
-    this.updateScrollReel();
+    // Measure again next frame, once the items container reports its real height.
     this.updateScrollbar();
     requestAnimationFrame(() => this.updateScrollbar());
 
@@ -346,8 +339,6 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     }
 
     this.itemsDefault.forEach(item => item.reset());
-
-    this.resetScrollReel();
 
     if (this.search !== undefined) {
       this.search.clear();
@@ -459,8 +450,8 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * Subclass hook invoked by {@link hide} after the base close sequence and
    * before the registry unregister + Closed emit. Base implementation is a
    * no-op. Subclasses override this instead of re-implementing hide(), so the
-   * base cleanup (removing the opened attribute, resetting the reel, clearing
-   * search) is never forgotten (template-method pattern).
+   * base cleanup (removing the opened attribute, clearing search) is never
+   * forgotten (template-method pattern).
    */
   protected onHide(): void {
     // No-op in base class.
@@ -663,7 +654,6 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     }
 
     this.nodes.items.scrollTop = 0;
-    this.updateScrollReel();
     this.updateScrollbar();
   }
 
@@ -1213,82 +1203,6 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   };
 
   /**
-   * Applies a reel-like distortion to items near the scroll viewport edges:
-   * the clipped part of an item squashes it toward its in-view edge (like a
-   * picker wheel rolling over a cylinder) instead of hiding behind a gradient
-   * haze. Fully visible items are left untouched.
-   */
-  protected updateScrollReel(): void {
-    const { items } = this.nodes;
-
-    const isReelOn = this.params.scrollReel !== false;
-    // A sticky row sits at the edge on purpose; its offsetTop is its place in the flow, not on screen.
-    const pinned = new Set(this.items.flatMap((item) => (item instanceof PopoverItemHtml && item.sticky ? [item.getElement()] : [])));
-    const hasOverflow = items.scrollHeight > items.clientHeight;
-    const viewTop = items.scrollTop;
-    const viewBottom = viewTop + items.clientHeight;
-
-    for (const child of Array.from(items.children)) {
-      if (!(child instanceof HTMLElement)) {
-        continue;
-      }
-
-      const height = child.offsetHeight;
-
-      // An item that cannot fit in view is a whole list (the page picker's
-      // listbox), not a row; curling it bends and jumps the entire menu.
-      if (!isReelOn || pinned.has(child) || !hasOverflow || height === 0 || height >= items.clientHeight) {
-        this.clearReelDistortion(child);
-        continue;
-      }
-
-      const top = child.offsetTop;
-      const clippedByTop = Math.min(Math.max((viewTop - top) / height, 0), 1);
-      const clippedByBottom = Math.min(Math.max((top + height - viewBottom) / height, 0), 1);
-      const overhang = Math.max(clippedByTop, clippedByBottom);
-
-      if (overhang === 0) {
-        this.clearReelDistortion(child);
-        continue;
-      }
-
-      const clippedAtTop = clippedByTop >= clippedByBottom;
-      // Positive rotateX tips the top of the item away from the viewer; the
-      // sign flips at the bottom edge so both edges curl backward over the reel
-      const tilt = (REEL_DISTORTION.maxTiltDeg * overhang * (clippedAtTop ? 1 : -1)).toFixed(2);
-      const scaleX = (1 - REEL_DISTORTION.maxSquashX * overhang).toFixed(3);
-      const scaleY = (1 - REEL_DISTORTION.maxSquashY * overhang).toFixed(3);
-
-      child.style.transform = `perspective(${REEL_DISTORTION.perspective}px) rotateX(${tilt}deg) scaleX(${scaleX}) scaleY(${scaleY})`;
-      // Anchor the distortion to the edge still in view so the item appears to
-      // curl over the viewport edge rather than shrink in place
-      child.style.transformOrigin = clippedAtTop ? 'center bottom' : 'center top';
-      child.style.opacity = (1 - REEL_DISTORTION.maxDim * overhang).toFixed(3);
-    }
-  }
-
-  /**
-   * Removes the reel distortion from every item (used on hide)
-   */
-  private resetScrollReel(): void {
-    for (const child of Array.from(this.nodes.items.children)) {
-      if (child instanceof HTMLElement) {
-        this.clearReelDistortion(child);
-      }
-    }
-  }
-
-  /**
-   * Removes the reel distortion styles from a single item element
-   * @param el - item element to restore
-   */
-  private clearReelDistortion(el: HTMLElement): void {
-    el.style.removeProperty('transform');
-    el.style.removeProperty('transform-origin');
-    el.style.removeProperty('opacity');
-  }
-
-  /**
    * Checks if popover contains the node
    * @param node - node to check
    */
@@ -1454,8 +1368,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       : undefined;
 
     // Custom, engine-independent scrollbar thumb. Lives in the (non-scrolling)
-    // container — not inside `items`, whose children scroll and are reel-distorted
-    // — and is positioned in JS from the items' scroll metrics (updateScrollbar).
+    // container, not inside the scrolling `items`, and is positioned in JS from the items' scroll metrics (updateScrollbar).
     // Hidden until the list overflows.
     const scrollbarThumb = document.createElement('div');
 

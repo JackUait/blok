@@ -2566,7 +2566,6 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     this.toggleNothingFoundMessage(isNothingFound);
-    this.updateScrollReel();
     // Filtering changes the list height, hence whether/where the thumb sits.
     this.updateScrollbar();
 

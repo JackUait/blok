@@ -16,12 +16,20 @@ export const numberToLowerAlpha = (num: number): string => {
   return convertRecursive(num);
 };
 
+const MAX_ROMAN = 3999;
+
 /**
  * Convert a number to lowercase roman numerals (i, ii, iii, iv, ...)
  * @param num - The number to convert
  * @returns The roman numeral representation
  */
 export const numberToLowerRoman = (num: number): string => {
+  // CSS lower-roman covers 1-3999 only. Past that the recursion grows with num,
+  // and a pasted start number can be huge.
+  if (num > MAX_ROMAN) {
+    return String(num);
+  }
+
   const romanNumerals: [number, string][] = [
     [1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'],
     [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'],

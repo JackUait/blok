@@ -50,6 +50,15 @@ describe('list/utils', () => {
   });
 
   describe('numberToLowerRoman', () => {
+    it('writes numbers past 3999 in decimal, as CSS lower-roman does', () => {
+      expect(numberToLowerRoman(4000)).toBe('4000');
+      expect(numberToLowerRoman(1_000_000_000)).toBe('1000000000');
+    });
+
+    it('still writes 3999 in roman', () => {
+      expect(numberToLowerRoman(3999)).toBe('mmmcmxcix');
+    });
+
     it('converts basic roman numerals', () => {
       expect(numberToLowerRoman(1)).toBe('i');
       expect(numberToLowerRoman(5)).toBe('v');

@@ -132,7 +132,7 @@ test.describe('layout', () => {
     await expect(page.getByRole('columnheader').first()).toHaveAttribute('data-property-id', 'p-title');
     expect((await page.locator('[data-blok-database-table-header]').boundingBox())?.height).toBe(36);
     expect((await row(page, 'r3').boundingBox())?.height).toBe(37);
-    await expect(page.locator('[data-blok-database-table-grid]')).toHaveAttribute('data-blok-keyboard-owner', '');
+    await expect(page.locator('[data-blok-database-table-grid]')).toHaveAttribute('data-blok-keyboard-owner', 'select-all');
   });
 });
 
@@ -704,5 +704,27 @@ test.describe('read-only', () => {
     await expect(page.locator('[data-blok-database-table-add-row]')).toHaveCount(0);
     await cell(page, 'r1', 'p-notes').click();
     await expect(editor(page)).toHaveCount(0);
+  });
+});
+
+test.describe('select all from a cell', () => {
+  test('⌘A on one selected cell selects every page block, not cells (notion-motion.md Round 13)', async ({ page }) => {
+    await mount(page, [
+      { id: 'p-before', type: 'paragraph', data: { text: 'Before' } },
+      ...blocks(),
+      { id: 'p-after', type: 'paragraph', data: { text: 'After' } },
+    ]);
+    await cell(page, 'r3', 'p-amount').click();
+    await page.keyboard.press('Escape');
+    await expect(anchor(page)).toHaveCount(1);
+
+    await page.keyboard.press('ControlOrMeta+a');
+
+    for (const id of ['p-before', 'db-1', 'p-after']) {
+      await expect(page.locator(`[data-blok-id="${id}"]`)).toHaveAttribute('data-blok-selected', 'true');
+    }
+    await expect(anchor(page)).toHaveCount(0);
+    await expect(page.locator('[data-blok-database-table-cell][aria-selected="true"]')).toHaveCount(0);
+    expect(await page.evaluate(() => String(window.getSelection()))).toBe('');
   });
 });

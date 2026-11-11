@@ -916,6 +916,13 @@ export class DatabaseTableGrid {
 
       return;
     }
+    // notion-motion.md Round 13: Blok then selects every page block, and the cell ring goes.
+    if (mod && event.key.toLowerCase() === 'a' && !event.shiftKey && !event.altKey && selection?.kind === 'cell') {
+      this.state.selection = null;
+      this.paint();
+
+      return;
+    }
     if (mod && selection?.kind === 'cell' && !this.readOnly && this.fillKey(event)) {
       return;
     }

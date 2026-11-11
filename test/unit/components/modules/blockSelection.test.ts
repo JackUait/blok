@@ -1136,6 +1136,40 @@ describe('BlockSelection', () => {
   });
 
   describe('handleCommandA', () => {
+    const ownerTarget = (holder: HTMLElement, value: string, tag = 'div'): HTMLElement => {
+      const owner = document.createElement('div');
+      const target = document.createElement(tag);
+
+      owner.setAttribute('data-blok-keyboard-owner', value);
+      owner.appendChild(target);
+      holder.appendChild(owner);
+
+      return target;
+    };
+
+    it('selects every block on the first press from a non-text target in a select-all keyboard owner', () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
+      const preventDefault = vi.fn();
+      const event = { target: ownerTarget(blocks[0].holder, 'select-all'), preventDefault } as unknown as KeyboardEvent;
+
+      (blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void }).handleCommandA(event);
+
+      expect(selectAllSpy).toHaveBeenCalledTimes(1);
+      expect(preventDefault).toHaveBeenCalled();
+    });
+
+    it('keeps the text stage for a text field inside a select-all owner, and for a plain owner', () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      handler.handleCommandA({ target: ownerTarget(blocks[0].holder, 'select-all', 'input'), preventDefault: vi.fn() } as unknown as KeyboardEvent);
+      handler.handleCommandA({ target: ownerTarget(blocks[1].holder, ''), preventDefault: vi.fn() } as unknown as KeyboardEvent);
+
+      expect(selectAllSpy).not.toHaveBeenCalled();
+    });
+
     it('does not jump straight to all-blocks on the second Cmd+A for single-input tools', () => {
       const { blockSelection, blocks } = createBlockSelection();
       const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');

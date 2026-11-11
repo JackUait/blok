@@ -8,6 +8,7 @@ import type { SanitizerConfig } from '../../../types/configs';
 import { Module } from '../__module';
 import type { Block } from '../block';
 import { DATA_ATTR } from '../constants';
+import { KEYBOARD_OWNER_SELECT_ALL } from '../constants/data-attributes';
 import { Dom as $ } from '../dom';
 import { blocksToMarkdown } from '../../markdown/blocks-to-markdown';
 import type { CrossBlockSubRange, CrossBlockTextSelection } from '../selection/cross-block-range';
@@ -1590,6 +1591,17 @@ export class BlockSelection extends Module {
   private handleCommandA(event: KeyboardEvent): void {
     this.Blok.RectangleSelection.clearSelection();
 
+    if (this.ownerWantsAllBlocks(event.target)) {
+      event.preventDefault();
+      this.selectAllBlocks();
+      this.needToSelectAll = false;
+      this.readyToBlockSelection = false;
+      this.containerBlocksSelected = false;
+      this.subtreeBlocksSelected = false;
+
+      return;
+    }
+
     /** allow default selection on native inputs */
     if ($.isNativeInput(event.target) && !this.readyToBlockSelection) {
       this.readyToBlockSelection = true;
@@ -1844,6 +1856,19 @@ export class BlockSelection extends Module {
     }
 
     announce(this.Blok.I18n.t('a11y.blocksSelected', { count }), { politeness: 'polite' });
+  }
+
+  /**
+   * A keyboard owner marked KEYBOARD_OWNER_SELECT_ALL (a database table with a
+   * cell picked) has no text for the first press to select.
+   * @param target - the keydown target
+   */
+  private ownerWantsAllBlocks(target: EventTarget | null): boolean {
+    if (!(target instanceof HTMLElement) || target.isContentEditable || $.isNativeInput(target)) {
+      return false;
+    }
+
+    return target.closest(`[${DATA_ATTR.keyboardOwner}="${KEYBOARD_OWNER_SELECT_ALL}"]`) !== null;
   }
 
   private selectAllBlocks(): void {

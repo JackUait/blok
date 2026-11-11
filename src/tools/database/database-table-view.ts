@@ -1,5 +1,5 @@
 import type { I18n } from '../../../types';
-import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { DATA_ATTR, KEYBOARD_OWNER_SELECT_ALL } from '../../components/constants/data-attributes';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import type { DatabaseRow, DatabaseViewConfig, DateReminderOffset, NumberDisplay, OpenPagesIn, PropertyDefinition, PropertyValue, SelectOption, CalculationFn } from './types';
 import type { ViewChanges } from './database-model';
@@ -432,7 +432,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
     gridEl.setAttribute('role', 'grid');
     gridEl.setAttribute('data-blok-database-table-grid', '');
-    gridEl.setAttribute('data-blok-keyboard-owner', '');
+    // Cmd+A here goes to Blok's block selection (blockSelection.ts).
+    gridEl.setAttribute(DATA_ATTR.keyboardOwner, KEYBOARD_OWNER_SELECT_ALL);
     gridEl.setAttribute('aria-label', this.t('tools.database.tableLabel'));
     gridEl.setAttribute('aria-rowcount', String(this.allRows().length + Math.max(1, this.options.groups?.length ?? 0)));
     gridEl.setAttribute('aria-colcount', String(this.columns.length));

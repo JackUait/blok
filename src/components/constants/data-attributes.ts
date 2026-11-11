@@ -433,6 +433,8 @@ export const DATA_ATTR = {
    *  Ctrl+Y elsewhere) still reach the
    *  editor's history after the event bubbles. Call preventDefault to keep
    *  them. Text inputs and contenteditables inside keep their native undo.
+   *  With the value KEYBOARD_OWNER_SELECT_ALL, Cmd/Ctrl+A on a target that is
+   *  not a text field selects every block at once.
    *  Public authoring hook. */
   keyboardOwner: 'data-blok-keyboard-owner',
   /** Marks a subtree whose right-click belongs to the tool: Blok's block
@@ -551,6 +553,9 @@ export const DATA_ATTR = {
 /**
  * Type for DATA_ATTR keys
  */
+/** `data-blok-keyboard-owner` value: Cmd/Ctrl+A there skips the text stage and selects every block. */
+export const KEYBOARD_OWNER_SELECT_ALL = 'select-all';
+
 export type DataAttrKey = keyof typeof DATA_ATTR;
 
 /**

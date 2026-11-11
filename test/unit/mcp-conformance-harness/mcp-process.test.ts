@@ -5,7 +5,7 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { caseEnv, startHttp } from './mcp-process';
+import { caseEnv, startHttp } from '../mcp-conformance/mcp-process';
 
 // Rust's eprintln! writes each format piece with its own write(2):
 // "...listening on ", the URL, then "/mcp\n".

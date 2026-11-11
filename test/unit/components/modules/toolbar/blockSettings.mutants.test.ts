@@ -740,15 +740,21 @@ describe('BlockSettings — mutation coverage', () => {
       const restore = vi.spyOn(SelectionUtils.prototype, 'restore').mockImplementation(() => undefined);
       const isAtBlok = vi.spyOn(SelectionUtils, 'isAtBlok', 'get');
 
+      // close() reads a detached holder as a deleted block and skips restore.
+      const live = createBlockStub();
+
+      document.body.appendChild(live.holder);
+
       isAtBlok.mockReturnValue(true);
-      await openSingle(createBlockStub());
+      await openSingle(live);
       settings.close();
 
       expect(restore).not.toHaveBeenCalled();
 
       isAtBlok.mockReturnValue(false);
-      await openSingle(createBlockStub());
+      await openSingle(live);
       settings.close();
+      live.holder.remove();
 
       expect(restore).toHaveBeenCalledTimes(1);
     });

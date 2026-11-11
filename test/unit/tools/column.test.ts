@@ -369,7 +369,8 @@ describe('Column tool', () => {
     // regardless of how many ticks the defer + awaits add.
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(remove).toHaveBeenCalledWith(1); // column_list index
+    // false: a layout cleanup must not move the caret (Notion U142).
+    expect(remove).toHaveBeenCalledWith(1, false); // column_list index
   });
 
   describe('click on the empty space below the column content', () => {

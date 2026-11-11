@@ -171,6 +171,18 @@ describe('HtmlHandler — nested HTML list paste preserves depth (M-18 live-edit
     expect(detectStyleFromPastedContent(listBlocks[0].content, 'unordered')).toBe('ordered');
     expect(detectStyleFromPastedContent(listBlocks[1].content, 'unordered')).toBe('ordered');
   });
+  it('stamps an <ol> start number on its first item only', async () => {
+    const list = makeToolStub('list', ['LI']);
+    const paragraph = makeToolStub('paragraph', ['P']);
+    const registry = makeRegistry([list, paragraph]);
+    const blok = makeBlok([list, paragraph]);
+    const handler = new HtmlHandler(blok, registry, makeSanitizerBuilder());
+
+    await handler.handle('<ol start="5"><li>five<ol start="3"><li>c</li></ol></li><li>six</li></ol><ol start="1"><li>one</li></ol>', { canReplaceCurrentBlock: false });
+
+    expect(insertedBlocks.map((b) => b.content.getAttribute('data-list-start'))).toEqual(['5', '3', null, null]);
+  });
+
   it('nests each pasted list item under the item it sat in', async () => {
     const list = makeToolStub('list', ['LI']);
     const paragraph = makeToolStub('paragraph', ['P']);

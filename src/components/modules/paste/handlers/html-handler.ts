@@ -598,6 +598,13 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
       if (nearestList?.tagName === 'OL' && !li.hasAttribute('data-list-style') && !hasExplicitListStyleType) {
         li.setAttribute('data-list-style', 'ordered');
       }
+
+      const start = Number(nearestList?.getAttribute('start'));
+
+      // Only the first item carries it: the list tool reads a group's start from its first item.
+      if (nearestList?.tagName === 'OL' && nearestList.querySelector(':scope > li') === li && Number.isInteger(start) && start > 1) {
+        li.setAttribute('data-list-start', String(start));
+      }
     }
 
     // Hoist every list that is a direct child of an `<li>` out to become the

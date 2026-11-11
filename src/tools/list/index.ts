@@ -41,7 +41,7 @@ import { handleEnter, handleBackspace, handleIndent, handleOutdent, toggleCheckl
 import { renderListItem } from './list-lifecycle';
 import { ListMarkerCalculator } from './marker-calculator';
 import { OrderedMarkerManager } from './ordered-marker-manager';
-import { isPasteEventHTMLElement, detectStyleFromPastedContent, extractPastedContent, extractDepthFromPastedContent } from './paste-handler';
+import { isPasteEventHTMLElement, detectStyleFromPastedContent, extractPastedContent, extractDepthFromPastedContent, extractStartFromPastedContent } from './paste-handler';
 import { getListSanitizeConfig, getListPasteConfig, getListConversionConfig } from './static-configs';
 import { STYLE_CONFIGS, getToolboxConfig } from './style-config';
 import type { ListItemStyle, ListItemConfig, StyleConfig, ListItemData } from './types';
@@ -800,12 +800,14 @@ export class ListItem implements BlockTool {
 
     const { text, checked } = extractPastedContent(data);
     const depth = extractDepthFromPastedContent(data);
+    const start = extractStartFromPastedContent(data);
 
     this._data = {
       text,
       style: detectStyleFromPastedContent(data, this._data.style),
       checked,
       depth,
+      ...(start === undefined ? {} : { start }),
     };
 
     this.syncMarkerManager();

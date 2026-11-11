@@ -221,3 +221,14 @@ const countAncestorListElements = (content: HTMLElement): number => {
 
   return (isList ? 1 : 0) + countAncestorListElements(parent);
 };
+
+/**
+ * Read the `<ol start>` number the html paste pre-pass stamps on a list's first item.
+ * @param content - the pasted list item
+ * @returns the start number, or undefined when the list starts at 1
+ */
+export const extractStartFromPastedContent = (content: HTMLElement): number | undefined => {
+  const start = Number(content.getAttribute('data-list-start'));
+
+  return Number.isInteger(start) && start > 1 ? start : undefined;
+};

@@ -328,6 +328,8 @@ export interface SemanticListItem {
   checked?: boolean;
   /** Nesting depth level (0 = root, 1 = first indent, …) */
   depth?: number;
+  /** First number of an ordered list; written only on the item that opens an `<ol>` */
+  start?: number;
 }
 
 /**
@@ -397,6 +399,10 @@ export const buildSemanticListHtml = (items: SemanticListItem[]): HTMLElement =>
     }
 
     const listEl = makeListElement(item.style);
+
+    if (item.style === 'ordered' && item.start !== undefined && item.start !== 1) {
+      listEl.setAttribute('start', String(item.start));
+    }
 
     if (depth === 0) {
       container.appendChild(listEl);

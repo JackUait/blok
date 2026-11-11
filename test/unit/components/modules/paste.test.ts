@@ -2855,8 +2855,8 @@ describe('Paste module', () => {
       // STRUCTURAL_TAG_ATTRIBUTES.
       expect(result).toEqual({
         'ul': {},
-        'li': { style: true, 'aria-level': true, 'data-list-style': true },
-        'ol': {},
+        'li': { style: true, 'aria-level': true, 'data-list-style': true, 'data-list-start': true },
+        'ol': { start: true },
       });
     });
 
@@ -2888,7 +2888,7 @@ describe('Paste module', () => {
         'tr': {},
         'td': {},
         'ul': {},
-        'li': { style: true, 'aria-level': true, 'data-list-style': true },
+        'li': { style: true, 'aria-level': true, 'data-list-style': true, 'data-list-start': true },
       });
     });
 

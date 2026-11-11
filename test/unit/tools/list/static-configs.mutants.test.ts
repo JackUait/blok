@@ -8,7 +8,7 @@ describe('list paste config mutants', () => {
   it('whitelists exactly the tags and attributes the paste handler reads', () => {
     expect(getListPasteConfig()).toStrictEqual({
       tags: [
-        { li: { 'style': true, 'aria-level': true, 'data-list-style': true } },
+        { li: { 'style': true, 'aria-level': true, 'data-list-style': true, 'data-list-start': true } },
         { input: { type: true, checked: true } },
       ],
     });

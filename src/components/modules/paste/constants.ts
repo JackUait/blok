@@ -51,12 +51,18 @@ export const COLUMNS_CANDIDATE_ATTR = 'data-blok-columns-candidate';
  * (list-style-type). Stripping these silently flattens pasted lists wherever
  * a tool's own pasteConfig doesn't re-whitelist `li` (e.g. lists inside
  * table cells), so the structural sanitize config must keep them.
+ * `data-list-start` carries an `<ol start>` on the list's first item.
  */
 export const STRUCTURAL_TAG_ATTRIBUTES: Record<string, Record<string, boolean>> = {
   li: {
     style: true,
     'aria-level': true,
     'data-list-style': true,
+    'data-list-start': true,
+  },
+  // The html paste pre-pass reads `start` after the whole-document pass.
+  ol: {
+    start: true,
   },
 };
 

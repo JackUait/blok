@@ -2519,6 +2519,44 @@ test.describe('copy and paste', () => {
     });
   });
 
+  test('selected list blocks paste back from html with their start number and checked state', async ({ page }) => {
+    await createBlokWithElements(page, [
+      { id: 'five', type: 'list', data: { text: 'Five', style: 'ordered', start: 5 } },
+      { id: 'six', type: 'list', data: { text: 'Six', style: 'ordered' } },
+      { id: 'done', type: 'list', data: { text: 'Done', style: 'checklist', checked: true } },
+      { id: 'open', type: 'list', data: { text: 'Open', style: 'checklist', checked: false } },
+      { id: 'tgt', type: 'paragraph', data: { text: '' } },
+    ]);
+
+    await page.locator('[data-blok-id="five"] [contenteditable="true"]').click();
+    await page.locator('[data-blok-id="open"] [contenteditable="true"]').click({ modifiers: ['Shift'] });
+    await expect(page.locator('[data-blok-id="open"][data-blok-selected="true"]')).toBeVisible();
+
+    const clipboard = await copyFromElement(page.locator('[data-blok-id="five"]'));
+
+    expect(clipboard['text/html']).toContain('<ol start="5"><li>Five</li><li>Six</li></ol>');
+    expect(clipboard['text/html']).toContain('<input type="checkbox" checked="">');
+
+    await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+    await paste(page, page.locator(':focus'), {
+      'text/html': clipboard['text/html'],
+      'text/plain': clipboard['text/plain'],
+    });
+
+    await expect.poll(async () => {
+      const { blocks } = await saveBlok(page);
+
+      return blocks
+        .filter((block) => !['five', 'six', 'done', 'open', 'tgt'].includes(block.id ?? ''))
+        .map((block) => [block.data.text, block.data.style, block.data.start ?? 1, block.data.checked ?? false]);
+    }).toEqual([
+      ['Five', 'ordered', 5, false],
+      ['Six', 'ordered', 1, false],
+      ['Done', 'checklist', 1, true],
+      ['Open', 'checklist', 1, false],
+    ]);
+  });
+
   test.describe('pasting over a block selection', () => {
     const doc: OutputData['blocks'] = [
       { id: 'a', type: 'paragraph', data: { text: 'First' } },

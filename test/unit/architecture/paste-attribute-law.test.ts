@@ -47,7 +47,7 @@ import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { SanitizerConfigBuilder } from '../../../src/components/modules/paste/sanitizer-config';
-import { CODE_FILENAME_ATTR, CODE_LANGUAGE_ATTR } from '../../../src/components/modules/paste/constants';
+import { CODE_FILENAME_ATTR, CODE_LANGUAGE_ATTR, STRUCTURAL_TAG_ATTRIBUTES } from '../../../src/components/modules/paste/constants';
 import type { BlockToolAdapter } from '../../../src/components/tools/block';
 import type { ToolsCollection } from '../../../src/components/tools/collection';
 import { AudioTool } from '../../../src/tools/audio';
@@ -345,9 +345,11 @@ const whitelistedAttrs = (pasteConfig: PasteConfig | false | undefined): Set<str
   );
 };
 
+// The whole-document pass keeps STRUCTURAL_TAG_ATTRIBUTES, so pipeline pre-passes may read them.
 const UNION_WHITELIST = new Set([
   ...TOOL_REGISTRY.flatMap((entry) => [...whitelistedAttrs(entry.pasteConfig)]),
   ...INLINE_LINK_ATTRS,
+  ...Object.values(STRUCTURAL_TAG_ATTRIBUTES).flatMap((attrs) => Object.keys(attrs)),
 ]);
 
 /* ------------------------------------------------------------------ */

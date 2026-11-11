@@ -36,6 +36,8 @@ export const getListPasteConfig = (): PasteConfig => ({
         'aria-level': true,
         // Allow data-list-style so a detached <li> keeps its ordered/unordered context
         'data-list-style': true,
+        // Allow data-list-start so a detached first <li> keeps its <ol start>
+        'data-list-start': true,
       },
     },
     {

@@ -1064,6 +1064,7 @@ export class BlockSelection extends Module {
       style,
       checked: Boolean(data.checked),
       depth: typeof data.depth === 'number' ? data.depth : 0,
+      ...(typeof data.start === 'number' && data.start !== 1 ? { start: data.start } : {}),
     };
   }
 

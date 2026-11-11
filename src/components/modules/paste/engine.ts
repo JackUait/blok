@@ -7,7 +7,7 @@ import { composeSanitizerConfig, clean } from '../../utils/sanitizer';
 import { normalizeInlineMarkupHtml } from '../../utils/inline-normalization';
 import { preservePageReferenceAnchor } from '../../../shared/page-reference';
 
-import { BLOK_MIME_TYPE, NEXT_SPACE_MIMES, NOTION_BLOCKS_V3_MIME, SAFE_STRUCTURAL_TAGS } from './constants';
+import { BLOK_MIME_TYPE, NEXT_SPACE_MIMES, NOTION_BLOCKS_V3_MIME, SAFE_STRUCTURAL_TAGS, STRUCTURAL_TAG_ATTRIBUTES } from './constants';
 import { preprocessPastedHtml } from './preprocess-pasted-html';
 import { parseNotionBlocksV3 } from './notion-blocks-v3';
 import { parseNextSpaceBlocks } from './next-space-blocks';
@@ -347,7 +347,7 @@ export class PasteEngine {
     const toolsTags = this.sanitizerBuilder.buildToolsTagsConfig(this.toolRegistry.toolsTags);
     const inlineSanitizeConfig = this.Blok.Tools.getAllInlineToolsSanitizeConfig();
     const structuralTagsConfig = Object.fromEntries(
-      [...SAFE_STRUCTURAL_TAGS].map((tag) => [tag, {}])
+      [...SAFE_STRUCTURAL_TAGS].map((tag) => [tag, STRUCTURAL_TAG_ATTRIBUTES[tag] ?? {}])
     );
     /**
      * The whole-document first pass must always keep structural tags and tool

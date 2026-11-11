@@ -547,6 +547,24 @@ describe('dom-builder', () => {
       expect(Array.from(checkboxes, (box) => box.checked)).toStrictEqual([ true, false ]);
     });
 
+    it('writes an ordered list\'s start number on its <ol>', () => {
+      const container = buildSemanticListHtml([
+        { text: 'Five', style: 'ordered', start: 5 },
+        { text: 'Six', style: 'ordered' },
+        { text: 'a', style: 'ordered', depth: 1, start: 3 },
+      ]);
+
+      expect(container.innerHTML).toBe('<ol start="5"><li>Five</li><li>Six<ol start="3"><li>a</li></ol></li></ol>');
+    });
+
+    it('writes no start on an <ol> that starts at 1', () => {
+      const container = buildSemanticListHtml([
+        { text: 'One', style: 'ordered' },
+      ]);
+
+      expect(container.innerHTML).toBe('<ol><li>One</li></ol>');
+    });
+
     it('nests deeper items inside the parent <li> as a child list', () => {
       const container = buildSemanticListHtml([
         { text: 'a', style: 'unordered', depth: 0 },

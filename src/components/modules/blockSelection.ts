@@ -1858,7 +1858,10 @@ export class BlockSelection extends Module {
 
     /**
      * First Cmd+A: allow the native selection of the Block's content (text).
-     * The next press escalates to block-level selection (see below).
+     * The next press escalates to block-level selection. This mirrors Notion's
+     * three-stage Cmd+A — text → this block → all blocks — for both single-input
+     * and multi-input tools (single-input tools previously skipped the per-block
+     * stage and jumped straight to all-blocks).
      */
     if (!this.readyToBlockSelection) {
       /**
@@ -1937,15 +1940,6 @@ export class BlockSelection extends Module {
      * prevent default selection when we use custom selection
      */
     event.preventDefault();
-
-    // Notion U119, U120: from a top-level text block the press after the text stage selects every block.
-    // Nested blocks, blocks with children and multi-input tools keep the block stage (not measured).
-    if (workingBlock.parentId === null && workingBlock.contentIds.length === 0 && workingBlock.inputs.length <= 1) {
-      this.selectAllBlocks();
-      this.readyToBlockSelection = false;
-
-      return;
-    }
 
     /**
      * select working Block

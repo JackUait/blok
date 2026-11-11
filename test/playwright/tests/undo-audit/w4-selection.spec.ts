@@ -102,7 +102,7 @@ const redo = async (page: Page): Promise<void> => {
 
 const editable = (page: Page, id: string): Locator => page.locator(`[data-blok-id="${id}"] [contenteditable="true"]`).first();
 
-/** Cmd+A escalates text → all blocks; the third press is a no-op. */
+/** Cmd+A escalates text → block → all blocks. */
 const selectAllBlocks = async (page: Page, id: string): Promise<void> => {
   await editable(page, id).click();
   await page.keyboard.press(`${MOD}+a`);
@@ -195,7 +195,9 @@ test.describe('undo audit: selection-driven edits', () => {
   // Same for blocks copied from Blok (application/x-blok).
   test('W4S-1b: one undo after pasting copied blocks over a cross-block text selection restores the original blocks', async ({ page }) => {
     await mount(page, [...THREE, P('d', 'Delta four')]);
-    await rectSelect(page, 'd', 'd');
+    await editable(page, 'd').click();
+    await page.keyboard.press(`${MOD}+a`);
+    await page.keyboard.press(`${MOD}+a`);
     const copied = await clip(page, 'copy');
 
     await gap(page);
@@ -539,7 +541,9 @@ test.describe('undo audit: selection-driven edits', () => {
 
   test('W4S-C10: cut then paste (a move) is two clean undo steps with exact redo', async ({ page }) => {
     await mount(page, [...THREE, P('d', 'Delta four')]);
-    await rectSelect(page, 'a', 'a');
+    await editable(page, 'a').click();
+    await page.keyboard.press(`${MOD}+a`);
+    await page.keyboard.press(`${MOD}+a`);
     const cut = await clip(page, 'cut');
 
     await gap(page);

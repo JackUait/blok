@@ -1046,20 +1046,20 @@ describe('BlockSelection — surviving mutants', () => {
       expect(blocks[0].selected).toBe(false);
     });
 
-    it('needs two more presses to select every Block again after the all-Blocks stage', () => {
+    it('needs two more presses to re-select a Block after the all-Blocks stage', () => {
       const { blockSelection, blocks, pressCmdA } = createSetup();
 
+      pressCmdA(blocks[0].holder);
       pressCmdA(blocks[0].holder);
       pressCmdA(blocks[0].holder);
       blockSelection.unselectBlock(blocks[0]);
 
       pressCmdA(blocks[0].holder);
-      expect(blocks[0].selected).toBe(false);
-
       vi.mocked(announce).mockClear();
       pressCmdA(blocks[0].holder);
 
-      expect(announcements().some((message) => message.startsWith('a11y.allBlocksSelected'))).toBe(true);
+      expect(announcements().some((message) => message.startsWith('a11y.allBlocksSelected'))).toBe(false);
+      expect(blocks[0].selected).toBe(true);
     });
 
     it('runs the container stage again after the all-Blocks stage', () => {
@@ -1326,6 +1326,7 @@ describe('BlockSelection — surviving mutants', () => {
       const save = vi.spyOn(SelectionUtils.prototype, 'save');
 
       pressCmdA(blocks[0].holder);
+      pressCmdA(blocks[0].holder);
       save.mockClear();
 
       pressCmdA(blocks[0].holder);
@@ -1336,6 +1337,7 @@ describe('BlockSelection — surviving mutants', () => {
     it('closes the inline toolbar and opens the multi-Block toolbar', () => {
       const { blocks, modules, pressCmdA } = createSetup();
 
+      pressCmdA(blocks[0].holder);
       pressCmdA(blocks[0].holder);
       vi.mocked(modules.InlineToolbar.close).mockClear();
       vi.mocked(modules.Toolbar.moveAndOpenForMultipleBlocks).mockClear();

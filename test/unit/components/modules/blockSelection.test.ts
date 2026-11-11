@@ -1229,8 +1229,30 @@ describe('BlockSelection', () => {
       expect(selectAllSpy).not.toHaveBeenCalled();
     });
 
-    // Notion U119 and U120: text first, then every block, whatever the pause between presses.
-    it('selects every block on the second Cmd+A from a top-level text block', () => {
+    it('does not jump straight to all-blocks on the second Cmd+A for single-input tools', () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
+      const event = {
+        target: blocks[0].holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+
+      (blockSelection as unknown as { selection: SelectionUtils }).selection = {
+        save: vi.fn(),
+        restore: vi.fn(),
+        clearSaved: vi.fn(),
+      } as unknown as SelectionUtils;
+
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      handler.handleCommandA(event);
+      handler.handleCommandA(event);
+
+      // The second press selects the block, not all blocks (Notion's intermediate stage).
+      expect(selectAllSpy).not.toHaveBeenCalled();
+    });
+
+    it('selects the current block on second Cmd+A, then all blocks on third, for single-input tools', () => {
       const { blockSelection, blocks } = createBlockSelection();
       const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
       const selectBlockSpy = vi.spyOn(blockSelection, 'selectBlock');
@@ -1247,33 +1269,19 @@ describe('BlockSelection', () => {
 
       const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
 
+      // 1st press: native text selection only — no block-level selection yet.
       handler.handleCommandA(event);
+      expect(selectBlockSpy).not.toHaveBeenCalled();
       expect(selectAllSpy).not.toHaveBeenCalled();
 
+      // 2nd press: select just this block (the stage Notion has that Blok was skipping).
+      handler.handleCommandA(event);
+      expect(selectBlockSpy).toHaveBeenCalledWith(blocks[0]);
+      expect(selectAllSpy).not.toHaveBeenCalled();
+
+      // 3rd press: escalate to all blocks.
       handler.handleCommandA(event);
       expect(selectAllSpy).toHaveBeenCalledTimes(1);
-      expect(selectBlockSpy).not.toHaveBeenCalled();
-    });
-
-    it('keeps the block stage on the second Cmd+A for a block inside a container', () => {
-      const { blockSelection } = createBlockSelection();
-      const nested = createBlockStub({ parentId: 'parent' });
-      const blockManager = (blockSelection as unknown as { Blok: BlokModules }).Blok.BlockManager;
-
-      vi.spyOn(blockManager, 'getBlock').mockReturnValue(nested);
-      const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
-      const selectBlockSpy = vi.spyOn(blockSelection, 'selectBlock');
-      const event = {
-        target: nested.holder,
-        preventDefault: vi.fn(),
-      } as unknown as KeyboardEvent;
-      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
-
-      handler.handleCommandA(event);
-      handler.handleCommandA(event);
-
-      expect(selectBlockSpy).toHaveBeenCalledWith(nested);
-      expect(selectAllSpy).not.toHaveBeenCalled();
     });
 
     it('reaches all-blocks in two presses for an empty block (no native text to select)', () => {
@@ -2358,6 +2366,7 @@ describe('BlockSelection', () => {
       const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
 
       handler.handleCommandA(event); // text
+      handler.handleCommandA(event); // this block
       (announce as ReturnType<typeof vi.fn>).mockClear();
 
       handler.handleCommandA(event); // all blocks

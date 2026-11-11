@@ -34,12 +34,6 @@ const create = async (page: Page, blocks: OutputData['blocks']): Promise<void> =
 
 const editableOf = (page: Page, id: string): Locator => page.locator(`[data-blok-id="${id}"] [contenteditable="true"]`).first();
 
-const selectedIds = async (page: Page): Promise<string[]> => page.evaluate(() =>
-  Array.from(document.querySelectorAll('[data-blok-selected="true"]')).map((el) => el.getAttribute('data-blok-id') ?? ''));
-
-const savedTexts = async (page: Page): Promise<unknown[]> => page.evaluate(async () =>
-  ((await window.blokInstance?.save())?.blocks ?? []).map((b) => b.data.text));
-
 /** Caret offset in the code text, or -1 when the caret is not in the code. */
 const codeCaret = async (page: Page): Promise<number> => page.getByTestId('code-content').evaluate((code) => {
   const selection = window.getSelection();
@@ -67,36 +61,6 @@ test.describe('undo audit — measured Notion gaps', () => {
   test.beforeEach(async ({ page }) => {
     await gotoTestPage(page);
   });
-
-  // Notion U119 (presses ~5 ms apart) and U120 (~260 ms apart): two presses select every block.
-  for (const gap of [15, 300]) {
-    test(`Meta+a twice ${gap} ms apart selects every block, and Backspace deletes them in one undo step`, async ({ page }) => {
-      await create(page, [
-        { id: 'b1', type: 'paragraph', data: { text: 'one' } },
-        { id: 'b2', type: 'paragraph', data: { text: 'two' } },
-        { id: 'b3', type: 'paragraph', data: { text: 'three' } },
-      ]);
-      await editableOf(page, 'b1').click();
-      await page.keyboard.press('End');
-
-      await page.keyboard.press('ControlOrMeta+a');
-      // The pause between presses is what this test varies.
-      // eslint-disable-next-line playwright/no-wait-for-timeout
-      await page.waitForTimeout(gap);
-      await page.keyboard.press('ControlOrMeta+a');
-
-      await expect.poll(() => selectedIds(page)).toEqual(['b1', 'b2', 'b3']);
-
-      await page.keyboard.press('Backspace');
-      await expect(page.locator('[data-blok-id="b2"]')).toHaveCount(0);
-      await expect(page.locator('[data-blok-id="b3"]')).toHaveCount(0);
-
-      await page.keyboard.press(UNDO);
-      await expect.poll(() => savedTexts(page)).toHaveLength(3);
-      await page.keyboard.press(REDO);
-      await expect(page.locator('[data-blok-id="b3"]')).toHaveCount(0);
-    });
-  }
 
   // Notion U060 ("Beta/") and U173 ("x/"): "/" right after a letter is plain text.
   test('"/" typed right after a letter stays a literal character and opens no menu', async ({ page }) => {

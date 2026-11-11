@@ -1737,7 +1737,7 @@ describe('KeyboardController — mutation coverage', () => {
 
       harness.press(harness.inside, { key: 'z', ctrlKey: true });
 
-      expect(vi.mocked(announce)).toHaveBeenCalledWith('a11y.nothingToUndo');
+      expect(vi.mocked(announce)).toHaveBeenCalledWith('a11y.nothingToUndo', { group: 'history' });
     });
 
     it('says nothing for an empty undo with the caret outside the editor', () => {

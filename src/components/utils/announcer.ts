@@ -43,12 +43,15 @@ interface AnnouncerConfig {
   politeness?: Politeness;
   /** Clear announcement after this many milliseconds (default: 1000) */
   clearAfter?: number;
+  /** A new text drops the still-queued texts of its group, so a burst ends on the latest one */
+  group?: string;
 }
 
 interface QueuedAnnouncement {
   message: string;
   politeness: Politeness;
   clearAfter: number;
+  group?: string;
 }
 
 /**
@@ -175,12 +178,17 @@ class Announcer {
    * @param config - Configuration options
    */
   public announce(message: string, config: AnnouncerConfig = {}): void {
-    const { politeness = 'polite', clearAfter = 1000 } = config;
+    const { politeness = 'polite', clearAfter = 1000, group } = config;
+
+    if (group !== undefined) {
+      this.queue = this.queue.filter((item) => item.group !== group);
+    }
 
     this.queue.push({
       message,
       politeness,
       clearAfter,
+      group,
     });
 
     this.processQueue();

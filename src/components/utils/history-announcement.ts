@@ -12,10 +12,13 @@ export const announceHistoryPress = (
   direction: 'undo' | 'redo',
   applied: boolean
 ): void => {
+  // One group: in a burst of presses only the newest history text waits in the queue.
+  const config = { group: 'history' };
+
   if (applied) {
-    announce(direction === 'undo' ? t('a11y.undone') : t('a11y.redone'));
+    announce(direction === 'undo' ? t('a11y.undone') : t('a11y.redone'), config);
 
     return;
   }
-  announce(direction === 'undo' ? t('a11y.nothingToUndo') : t('a11y.nothingToRedo'));
+  announce(direction === 'undo' ? t('a11y.nothingToUndo') : t('a11y.nothingToRedo'), config);
 };

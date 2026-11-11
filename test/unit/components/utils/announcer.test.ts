@@ -133,6 +133,42 @@ describe('Announcer', () => {
     expect(written.indexOf('second')).toBeLessThan(written.indexOf('third'));
   });
 
+  it('drops queued texts of the same group when a newer one comes, and keeps the rest', async () => {
+    const { registerAnnouncer, announce } = await loadAnnouncer();
+
+    registerAnnouncer();
+
+    const written: string[] = [];
+    const polite = document.getElementById(POLITE_REGION_ID);
+
+    if (polite === null) {
+      throw new Error('expected polite region');
+    }
+
+    let stored = '';
+
+    Object.defineProperty(polite, 'textContent', {
+      configurable: true,
+      get: (): string => stored,
+      set: (value: string): void => {
+        stored = value;
+
+        if (value !== '') {
+          written.push(value);
+        }
+      },
+    });
+
+    announce('H1', { group: 'history' });
+    announce('N', {});
+    announce('H2', { group: 'history' });
+    announce('H3', { group: 'history' });
+
+    vi.advanceTimersByTime(5000);
+
+    expect(written).toEqual(['H1', 'N', 'H3']);
+  });
+
   it('clamps the reference count so extra destroy calls do not underflow', async () => {
     const { registerAnnouncer, destroyAnnouncer } = await loadAnnouncer();
 

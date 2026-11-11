@@ -173,6 +173,36 @@ describe('html', () => {
       expect(order(parent)).toBe('cab');
     });
 
+    // Notion U113: a redo moves a block after its caret is restored; the caret must survive the move.
+    it('keeps a selection that sits inside the moved node', () => {
+      const { parent, a, c } = setup();
+      const text = document.createTextNode('three');
+
+      c.appendChild(text);
+      window.getSelection()?.setBaseAndExtent(text, 5, text, 5);
+
+      moveElementBefore(c, a);
+
+      const selection = window.getSelection();
+
+      expect(order(parent)).toBe('cab');
+      expect([selection?.anchorNode, selection?.anchorOffset, selection?.focusOffset]).toEqual([text, 5, 5]);
+    });
+
+    it('leaves a selection outside the moved node alone', () => {
+      const { a, b, c } = setup();
+      const text = document.createTextNode('two');
+
+      b.appendChild(text);
+      window.getSelection()?.setBaseAndExtent(text, 1, text, 3);
+
+      moveElementBefore(c, a);
+
+      const selection = window.getSelection();
+
+      expect([selection?.anchorNode, selection?.anchorOffset, selection?.focusOffset]).toEqual([text, 1, 3]);
+    });
+
     it('is a no-op when the reference is the node itself', () => {
       const moveBefore = vi.fn();
 

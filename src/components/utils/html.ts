@@ -65,6 +65,18 @@ const statefulMove = (parent: StatefulMoveParent, node: Node, reference: Node | 
     return;
   }
 
+  // Neither move keeps a caret inside the node: insertBefore detaches it, and
+  // Chrome's moveBefore moves the caret too (a move redo lost U113's caret).
+  const keep = selectionInside(node);
+
+  moveNode(parent, node, reference);
+
+  if (keep !== null) {
+    window.getSelection()?.setBaseAndExtent(keep.anchorNode, keep.anchorOffset, keep.focusNode, keep.focusOffset);
+  }
+};
+
+const moveNode = (parent: StatefulMoveParent, node: Node, reference: Node | null): void => {
   if (typeof parent.moveBefore === 'function' && node.isConnected && parent.isConnected) {
     try {
       parent.moveBefore(node, reference);
@@ -77,6 +89,22 @@ const statefulMove = (parent: StatefulMoveParent, node: Node, reference: Node | 
   }
 
   parent.insertBefore(node, reference);
+};
+
+/**
+ * The live selection when both its ends sit inside `node`, else null.
+ * @param node - the node about to move
+ */
+const selectionInside = (node: Node): { anchorNode: Node; anchorOffset: number; focusNode: Node; focusOffset: number } | null => {
+  const selection = typeof window === 'undefined' ? null : window.getSelection();
+  const anchorNode = selection?.anchorNode ?? null;
+  const focusNode = selection?.focusNode ?? null;
+
+  if (selection === null || selection.rangeCount === 0 || anchorNode === null || focusNode === null || !node.contains(anchorNode) || !node.contains(focusNode)) {
+    return null;
+  }
+
+  return { anchorNode, anchorOffset: selection.anchorOffset, focusNode, focusOffset: selection.focusOffset };
 };
 
 /**

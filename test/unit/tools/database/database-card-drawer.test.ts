@@ -213,7 +213,18 @@ describe('DatabaseCardDrawer', () => {
     });
   });
 
-  describe('side peek narrows the page beside it', () => {
+  /**
+   * The side peek floats over the page instead of pushing it aside.
+   *
+   * Pushing it used a padding on the editor, so opening a peek reflowed the whole
+   * document: on a 1440px window the peek could claim 960px, leaving the page a
+   * ~220px column once the host app's sidebar was out. The drawer is already
+   * `position: fixed` with its own z-index, so it covers the page on its own.
+   *
+   * This departs from upstream, which narrowed the page deliberately — see the
+   * Notion reference captures named in database.css.
+   */
+  describe('side peek floats over the page', () => {
     const openWithHost = (hostRect: { left: number; right: number }): { host: HTMLElement; drawer: DatabaseCardDrawer; options: CardDrawerOptions } => {
       vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
         cb(0);
@@ -243,14 +254,14 @@ describe('DatabaseCardDrawer', () => {
       document.body.innerHTML = '';
     });
 
-    it('ends the page at the 756px drawer and keeps the toolbar 24px clear of it', () => {
+    it('leaves the page where it is, however much the drawer covers', () => {
       const { host, drawer } = openWithHost({ left: 100, right: 1412 });
 
-      // The drawer covers x 756..1512; the page reaches 1412, so it gives up its last 656px.
+      // The drawer covers x 756..1512 and the page reaches 1412, so the old
+      // behaviour took 656px off it. Nothing moves now.
       expect(host.hasAttribute('data-blok-database-peek')).toBe(true);
-      expect(inset(host)).toBe('656px');
-      expect(gap(host)).toBe('24px');
-      expect(document.querySelector('[data-blok-database-peek-scrollbar]')).toBeNull();
+      expect(inset(host)).toBe('');
+      expect(gap(host)).toBe('');
 
       drawer.destroy();
     });
@@ -258,32 +269,29 @@ describe('DatabaseCardDrawer', () => {
     it('leaves a page that ends before the drawer as it is', () => {
       const { host, drawer } = openWithHost({ left: 0, right: 200 });
 
-      expect(inset(host)).toBe('0px');
-      expect(gap(host)).toBe('0px');
+      expect(inset(host)).toBe('');
+      expect(gap(host)).toBe('');
 
       drawer.destroy();
     });
 
-    it('measures from the left edge in RTL, where the drawer sits on the left', () => {
+    it('leaves the page alone in RTL too, where the drawer sits on the left', () => {
       const { host, drawer, options } = openWithHost({ left: 100, right: 900 });
 
       drawer.close();
       options.wrapper.setAttribute('dir', 'rtl');
       drawer.open(makeRow());
 
-      // The drawer covers x 0..756; the page starts at 100, so 656px is under it.
-      expect(inset(host)).toBe('656px');
+      expect(inset(host)).toBe('');
 
       drawer.destroy();
     });
 
-    it('widens the page back as the drawer slides out, then drops its marks', () => {
+    it('drops its mark once the drawer has slid out', () => {
       const { host, drawer, options } = openWithHost({ left: 100, right: 900 });
 
       drawer.close();
 
-      expect(inset(host)).toBe('0px');
-      expect(gap(host)).toBe('0px');
       expect(host.hasAttribute('data-blok-database-peek')).toBe(true);
 
       options.wrapper.querySelector('[data-blok-database-drawer]')?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));

@@ -94,8 +94,6 @@ const PEEK_MODE_ICONS: Record<OpenPagesIn, string> = { side: IconPeekSide, cente
 const openPeek: { drawer: DatabaseCardDrawer | null } = { drawer: null };
 /** The drawer whose inset a page shows; a peek still sliding out must not undo a newer one's. */
 const peekHostOwners = new WeakMap<HTMLElement, DatabaseCardDrawer>();
-/** Notion's New ends 24px before the side peek: last blue px at x 731, peek at 756 (notion-live-8/62-close-hover.png). */
-const PEEK_TOOLBAR_GAP = 24;
 
 /**
  * Runs `done` once, when the drawer's slide ends. Reduced motion turns that
@@ -1047,8 +1045,6 @@ export class DatabaseCardDrawer {
 
       this.drawer = null;
       drawer.removeAttribute('data-open');
-      this.peekHost?.style.setProperty('--_blok-peek-inset', '0px');
-      this.peekHost?.style.setProperty('--_blok-peek-gap', '0px');
       afterSlide(drawer, () => {
         this.releaseLeavingBody();
         drawer.remove();
@@ -1269,17 +1265,13 @@ export class DatabaseCardDrawer {
     if (host === null) {
       return;
     }
-    const width = Math.min(this.peekWidth, peekMaxWidth());
-    // Padding leaves the border box alone, so a resize drag re-measures the same rect.
-    const rect = host.getBoundingClientRect();
-    const covered = getElementDirection(this.wrapper) === 'rtl' ? width - rect.left : rect.right - (window.innerWidth - width);
-    const inset = Math.max(0, Math.round(covered));
-
+    // The drawer is `position: fixed` with its own z-index, so it covers the page
+    // on its own. Pushing the page aside with a padding reflowed the whole document
+    // every time a row was opened — on a 1440px window the peek could claim 960px,
+    // leaving a ~220px column once the host app's sidebar was out.
     this.peekHost = host;
     peekHostOwners.set(host, this);
     host.setAttribute('data-blok-database-peek', '');
-    host.style.setProperty('--_blok-peek-inset', `${inset}px`);
-    host.style.setProperty('--_blok-peek-gap', `${inset > 0 ? PEEK_TOOLBAR_GAP : 0}px`);
   }
 
   private releasePeekHost(): void {
@@ -1290,8 +1282,6 @@ export class DatabaseCardDrawer {
     }
     this.peekHost?.removeAttribute('data-blok-database-peek');
     this.peekHost?.removeAttribute('data-blok-database-peek-resizing');
-    this.peekHost?.style.removeProperty('--_blok-peek-inset');
-    this.peekHost?.style.removeProperty('--_blok-peek-gap');
     this.peekHost = null;
   }
 
@@ -1841,8 +1831,6 @@ export class DatabaseCardDrawer {
     }
     this.expanding = drawer;
     drawer.removeAttribute('data-open');
-    this.peekHost?.style.setProperty('--_blok-peek-inset', '0px');
-    this.peekHost?.style.setProperty('--_blok-peek-gap', '0px');
     afterSlide(drawer, () => {
       if (this.expanding !== drawer || this.drawer !== drawer) {
         return;

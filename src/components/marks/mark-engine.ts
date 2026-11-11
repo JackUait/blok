@@ -801,6 +801,22 @@ const isSelectionBackwardOver = (range: Range): boolean => {
 };
 
 /**
+ * Turn the live selection backward again: the within-host surgery re-selects
+ * its result forward.
+ * @param backward - the selection was backward before the surgery
+ */
+const restoreBackwardWithinHost = (backward: boolean): void => {
+  const selection = window.getSelection();
+
+  if (!backward || selection === null || selection.rangeCount === 0 || selection.isCollapsed) {
+    return;
+  }
+  const range = selection.getRangeAt(0);
+
+  selection.setBaseAndExtent(range.endContainer, range.endOffset, range.startContainer, range.startOffset);
+};
+
+/**
  * Whether every part of the range carries the mark.
  *
  * `every`, not `some`, so a cross-block selection that is only PARTLY marked
@@ -824,12 +840,16 @@ export const hasMark = <State>(spec: MarkSpec<State>, range: Range): boolean => 
  */
 export const applyMark = <State>(spec: MarkSpec<State>, state: State | undefined, range: Range): HTMLElement[] => {
   const slices = hostSlicesOf(range);
+  const backward = isSelectionBackwardOver(range);
 
   if (slices === null) {
-    return applyMarkWithinHost(spec, state, range);
+    const changed = applyMarkWithinHost(spec, state, range);
+
+    restoreBackwardWithinHost(backward);
+
+    return changed;
   }
 
-  const backward = isSelectionBackwardOver(range);
   const applied = slices.flatMap((slice) => applyMarkWithinHost(spec, state, slice));
 
   reselectAcrossHosts(slices, backward);
@@ -844,12 +864,16 @@ export const applyMark = <State>(spec: MarkSpec<State>, state: State | undefined
  */
 export const removeMark = <State>(spec: MarkSpec<State>, range: Range): HTMLElement[] => {
   const slices = hostSlicesOf(range);
+  const backward = isSelectionBackwardOver(range);
 
   if (slices === null) {
-    return removeMarkWithinHost(spec, range);
+    const changed = removeMarkWithinHost(spec, range);
+
+    restoreBackwardWithinHost(backward);
+
+    return changed;
   }
 
-  const backward = isSelectionBackwardOver(range);
   const removed = slices.flatMap((slice) => removeMarkWithinHost(spec, slice));
 
   reselectAcrossHosts(slices, backward);

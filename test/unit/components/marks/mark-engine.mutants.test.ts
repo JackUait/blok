@@ -567,6 +567,41 @@ describe('mark-engine mutants', () => {
     });
   });
 
+  describe('a backward selection inside one host', () => {
+    it('stays backward after marking', () => {
+      const host = mount('abcdef');
+      const text = firstText(host);
+
+      liveSelection().setBaseAndExtent(text, 4, text, 1);
+
+      applyMark(colorSpec, 'blue', liveSelection().getRangeAt(0));
+
+      const selection = liveSelection();
+      const range = selection.getRangeAt(0);
+
+      expect(selection.toString()).toBe('bcd');
+      expect([selection.anchorNode, selection.anchorOffset]).toStrictEqual([range.endContainer, range.endOffset]);
+    });
+
+    it('stays backward after unmarking', () => {
+      const host = mount('a<mark style="color: blue">bcd</mark>ef');
+      const marked = host.querySelector('mark');
+
+      if (marked === null) {
+        throw new Error('no mark');
+      }
+      liveSelection().setBaseAndExtent(firstText(marked), 3, firstText(marked), 0);
+
+      removeMark(colorSpec, liveSelection().getRangeAt(0));
+
+      const selection = liveSelection();
+      const range = selection.getRangeAt(0);
+
+      expect(selection.toString()).toBe('bcd');
+      expect([selection.anchorNode, selection.anchorOffset]).toStrictEqual([range.endContainer, range.endOffset]);
+    });
+  });
+
   describe('ranges spanning two editing hosts', () => {
     const markedPair = (): HTMLElement => {
       return mount(

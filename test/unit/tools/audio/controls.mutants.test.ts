@@ -101,6 +101,7 @@ interface Mounted {
   root: HTMLElement;
   play: HTMLButtonElement;
   time: HTMLElement;
+  seek: HTMLInputElement;
   mute: HTMLButtonElement;
   volume: HTMLInputElement;
   volumeWrap: HTMLElement;
@@ -140,6 +141,7 @@ const mount = (options: MountOptions): Mounted => {
     root,
     play: must<HTMLButtonElement>(root, '[data-role="audio-play"]'),
     time: must<HTMLElement>(root, '[data-role="audio-time"]'),
+    seek: must<HTMLInputElement>(root, '[data-role="audio-seek"]'),
     mute: must<HTMLButtonElement>(root, '[data-role="audio-mute"]'),
     volume: must<HTMLInputElement>(root, '[data-role="audio-volume"]'),
     volumeWrap: must<HTMLElement>(root, '.blok-audio-controls__volume-wrap'),
@@ -232,7 +234,7 @@ describe('attachControls — rendered contract', () => {
 
     expect(ui.root.className).toBe('blok-audio-controls');
     expect(ui.root.getAttribute('data-role')).toBe('audio-controls');
-    expect([...ui.root.children]).toStrictEqual([ui.play, ui.time, ui.volumeWrap, ui.speedWrap, ui.loop]);
+    expect([...ui.root.children]).toStrictEqual([ui.play, ui.time, ui.seek, ui.volumeWrap, ui.speedWrap, ui.loop]);
     ui.handle.destroy();
   });
 

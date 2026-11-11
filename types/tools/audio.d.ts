@@ -23,6 +23,8 @@ export interface AudioData extends BlockToolData {
   artist?: string;
   coverUrl?: string;
   loop?: boolean;
+  /** Compact player: the ridgeline is hidden. Off when absent. */
+  compact?: boolean;
   width?: number;
   alignment?: AudioAlignment;
   fileName?: string;

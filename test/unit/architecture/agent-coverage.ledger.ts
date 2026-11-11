@@ -297,6 +297,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   // menu — tool popover items (named in Task 2)
   'menu:audio/audio-alignment-*': fld('audio.alignment'),
   'menu:audio/audio-caption': fld('audio.captionVisible'),
+  'menu:audio/audio-compact': fld('audio.compact'),
   'menu:audio/audio-loop': fld('audio.loop'),
   'menu:audio/audio-replace': cmd('audio.setSource'),
   'menu:audio/audio-cover-set': cmd('audio.setCover'),

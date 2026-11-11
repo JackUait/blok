@@ -2,10 +2,11 @@
 /* =================================================
    Audio block tool — "Now Playing" card
 
-   Full-bleed media player: the card always spans the editor column. A tall
-   rounded cover panel anchors the left; the right column stacks title, artist,
-   a hero waveform scrubber and a slim transport bar. The caption spans the
-   full width beneath, separated by a hairline. Airbnb-neutral surfaces, black
+   Full-bleed media player: the card always spans the editor column. A small
+   cover sits beside the title and artist; under them the ridgeline draws the
+   track as a landscape, then a transport bar with the seek slider. Compact
+   mode (data-compact="on") drops the ridgeline. The caption spans the full
+   width beneath, separated by a hairline. Airbnb-neutral surfaces, black
    active states, restrained shadows — palette mirrors the image/video tools.
    ================================================= */
 
@@ -15,10 +16,12 @@
    set inline by waveform.ts; the declarations here supply non-zero defaults
    that read correctly before JS runs. */
 [data-blok-tool="audio"] {
-  --blok-audio-cover-size: 104px;
+  --blok-audio-cover-size: 44px;
   --blok-audio-gap: var(--blok-space-3-5);
   --blok-audio-pad: var(--blok-space-3-5);
-  --blok-audio-wave-height: 56px;
+  --blok-audio-wave-height: 120px;
+  /* each ridge is filled with the card colour to hide the rows behind it */
+  --blok-audio-ridge-fill: var(--blok-bg-primary);
   --blok-audio-bar-height: 4px;
   /* bar height of the dead waveform on the error card */
   --blok-audio-flatline: 2px;
@@ -41,7 +44,7 @@
      vinyl, not a grey CD; grooves + sheen are white at low alpha, the label is
      a cream-white puck, the spindle is a crisp dark dot. A fixed specular sits
      above the disc (placeholder::after) so grooves shimmer *under* it as it spins. */
-  --blok-audio-disc-size: 92px;
+  --blok-audio-disc-size: 38px;
   --blok-audio-groove-w: 0.75px;
   --blok-audio-groove-gap: 2px;
   --blok-audio-cover-glow: color-mix(in srgb, var(--blok-bg-primary) 55%, transparent);
@@ -94,15 +97,14 @@
 [data-blok-tool="audio"][data-align="right"]  { text-align: right; }
 
 /* ----- card wrapper (figure) -------------------------------
-   CSS grid: cover + body share row 1; the caption spans both columns on
-   row 2. The <audio> media element is laid out via display:none so it never
-   claims a grid cell. */
+   CSS grid. Rows: 1 title, 2 artist (the cover spans both), 3 ridgeline,
+   4 controls, 5 caption. The body is display:contents, so its children are
+   the grid items. The <audio> media element is display:none and claims no cell. */
 [data-blok-tool="audio"] .blok-audio-inner {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: stretch;
-  column-gap: var(--blok-audio-gap);
-  row-gap: var(--blok-space-2-5);
+  column-gap: var(--blok-space-3);
   width: 100%;
   padding: var(--blok-audio-pad);
   background: var(--blok-bg-primary);
@@ -135,14 +137,14 @@
 }
 
 
-/* ----- cover art — tall rounded panel on the left --------- */
+/* ----- cover art — thumbnail beside the title and artist -- */
 [data-blok-tool="audio"] .blok-audio-cover {
   position: relative;
   grid-column: 1;
-  grid-row: 1;
-  align-self: stretch;
+  grid-row: 1 / span 2;
+  align-self: center;
   width: var(--blok-audio-cover-size);
-  min-height: var(--blok-audio-cover-size);
+  height: var(--blok-audio-cover-size);
   border-radius: var(--blok-radius-block);
   overflow: hidden;
   background: var(--blok-bg-secondary);
@@ -426,19 +428,17 @@
   box-shadow: inset 0 1px 1px var(--blok-audio-spindle-catch);
 }
 
-/* ----- right column (title + artist + waveform + controls) - */
+/* ----- body: its children sit straight on the card grid ---- */
 [data-blok-tool="audio"] .blok-audio-body {
-  grid-column: 2;
-  grid-row: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: var(--blok-space-1-5);
+  display: contents;
 }
 
 /* ----- title ----------------------------------------------- */
 [data-blok-tool="audio"] .blok-audio-title {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  min-width: 0;
   font-size: var(--blok-font-size-body);
   font-weight: var(--blok-font-weight-semibold);
   color: var(--blok-text-primary);
@@ -459,6 +459,10 @@
 
 /* ----- artist ---------------------------------------------- */
 [data-blok-tool="audio"] .blok-audio-artist {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
+  min-width: 0;
   font-size: var(--blok-font-size-ui-label);
   font-weight: var(--blok-font-weight-regular);
   color: var(--blok-text-secondary);
@@ -474,13 +478,20 @@
   pointer-events: none;
 }
 
-/* ----- waveform canvas (hero scrubber) -------------------- */
+/* ----- ridgeline canvas (click or drag to seek) ----------- */
 [data-blok-tool="audio"] .blok-audio-waveform {
   position: relative;
+  grid-column: 1 / -1;
+  grid-row: 3;
   width: 100%;
   height: var(--blok-audio-wave-height);
   margin-top: var(--blok-space-1);
   cursor: pointer;
+}
+/* no peaks to draw, or compact mode: the row closes up */
+[data-blok-tool="audio"] .blok-audio-waveform:empty,
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-waveform {
+  display: none;
 }
 [data-blok-tool="audio"] .blok-audio-waveform__canvas {
   display: block;
@@ -493,10 +504,13 @@
   --blok-audio-seek-pct: 0%;
   --blok-audio-vol-pct: 100%;
   --blok-audio-speed-pct: 50%;
+  grid-column: 1 / -1;
+  grid-row: 4;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--blok-space-2-5);
-  margin-top: var(--blok-space-1);
+  gap: var(--blok-space-1) var(--blok-space-2-5);
+  margin-top: var(--blok-space-2);
 }
 
 /* generic control button — scoped to <button> so the volume <input> and the
@@ -564,6 +578,42 @@
   user-select: none;
 }
 
+/* seek slider — its own full-width line above the buttons, so a narrow card
+   never squeezes it; a tall hit area around a slim painted track */
+[data-blok-tool="audio"] .blok-audio-controls__seek {
+  order: -1;
+  flex: 0 0 100%;
+  min-width: 0;
+  height: 16px;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background:
+    linear-gradient(
+      to right,
+      var(--blok-audio-bar-played) var(--blok-audio-seek-pct),
+      var(--blok-audio-bar) var(--blok-audio-seek-pct)
+    )
+    center / 100% var(--blok-audio-bar-height) no-repeat;
+  cursor: pointer;
+}
+[data-blok-tool="audio"] .blok-audio-controls__seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-text-primary);
+  box-shadow: var(--blok-audio-thumb-shadow);
+}
+[data-blok-tool="audio"] .blok-audio-controls__seek::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-text-primary);
+  box-shadow: var(--blok-audio-thumb-shadow);
+}
 /* volume cluster */
 [data-blok-tool="audio"] .blok-audio-controls__volume-wrap {
   flex-shrink: 0;
@@ -763,7 +813,8 @@
    caption child below so they're clipped too. */
 [data-blok-tool="audio"] .blok-audio-caption-row {
   grid-column: 1 / -1;
-  grid-row: 2;
+  grid-row: 5;
+  margin-top: var(--blok-space-2-5);
   overflow: hidden;
 }
 [data-blok-tool="audio"] .blok-audio-caption-row__inner {
@@ -808,6 +859,9 @@
    glitch where the sound should be. */
 [data-blok-tool="audio"] .blok-audio-error-state {
   --blok-audio-error-ink: var(--blok-color-danger);
+  /* The error card keeps the big record; its crack is drawn for a 92px disc. */
+  --blok-audio-cover-size: 104px;
+  --blok-audio-disc-size: 92px;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   column-gap: var(--blok-audio-gap);

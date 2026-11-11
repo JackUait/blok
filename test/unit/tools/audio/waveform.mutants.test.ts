@@ -7,7 +7,25 @@ import {
   ratioFromPointer,
   type WaveformHandle,
 } from '../../../../src/tools/audio/waveform';
-import { entranceEase, headColorBlend, liveAmplitude } from '../../../../src/tools/audio/liveliness';
+import type * as Ridgeline from '../../../../src/tools/audio/ridgeline';
+
+type PaintRidgesOptions = Ridgeline.PaintRidgesOptions;
+
+/** Every options object the canvas handed to paintRidges, in order. */
+const painted = vi.hoisted(() => ({ frames: [] as PaintRidgesOptions[] }));
+
+// Passes through to the real painter, so the fake context still sees the calls.
+vi.mock('../../../../src/tools/audio/ridgeline', async (importOriginal) => {
+  const actual = await importOriginal<typeof Ridgeline>();
+
+  return {
+    ...actual,
+    paintRidges: (ctx: CanvasRenderingContext2D, opts: PaintRidgesOptions): void => {
+      painted.frames.push(opts);
+      actual.paintRidges(ctx, opts);
+    },
+  };
+});
 
 /**
  * Fixture rules this file depends on — change one and the arithmetic mutants
@@ -17,10 +35,13 @@ import { entranceEase, headColorBlend, liveAmplitude } from '../../../../src/too
  *    are visible.
  *  - LEFT is non-zero, so `clientX - rect.left` differs from `clientX + rect.left`.
  *  - DPR is 2, so `rect.width * dpr` differs from `rect.width / dpr`.
- *  - DURATION/CURRENT put the playhead exactly on bar 3, so `<` and `<=` split
- *    the played/unplayed colours differently.
+ *  - WIDTH and HEIGHT differ, and DURATION differs from PEAKS.length, so a
+ *    swapped box side or a playhead left in seconds shows up.
+ *  - PEAKS has one beat, on its last bucket, so a playhead resting on bucket 3
+ *    never kicks by accident.
  */
 const PEAKS = [0.125, 0.5, 1, 0.25, 0.75, 0.375, 0.625];
+const BEATS = [{ index: 6, strength: 1 }];
 const WIDTH = 70;
 const HEIGHT = 40;
 const LEFT = 12;
@@ -28,94 +49,55 @@ const DPR = 2;
 const DURATION = 70;
 const CURRENT = 30;
 const PLAYHEAD = 3;
-const SLOT = 10;
-const BAR_W = 8;
-const RADIUS = 2;
 const SETTLE_MS = 420;
-const ENTRANCE_MS = 650;
-const PLAYED = '#0a0b0c';
-const BASE = '#f1f2f3';
-const HEAD = '#445566';
-
-interface Paint {
-  shape: 'roundRect' | 'fillRect';
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  radius: number | null;
-  fillStyle: string;
-  alpha: number;
-}
+const INK = '#0a0b0c';
+const FILL = '#f1f2f3';
 
 interface Recorder {
   ctx: CanvasRenderingContext2D;
-  paints: Paint[];
-  calls: string[];
+  /** strokeStyle at each stroke() and fillStyle at each fill(). */
+  strokes: string[];
+  fills: string[];
   transforms: number[][];
   clears: number[][];
 }
 
 interface FakeContext {
   fillStyle: string;
+  strokeStyle: string;
   globalAlpha: number;
+  lineJoin: string;
+  lineWidth: number;
   setTransform: (...args: number[]) => void;
   clearRect: (...args: number[]) => void;
   beginPath: () => void;
+  moveTo: () => void;
+  lineTo: () => void;
   fill: () => void;
-  save: () => void;
-  restore: () => void;
-  fillRect: (x: number, y: number, w: number, h: number) => void;
-  roundRect?: (x: number, y: number, w: number, h: number, radius: number) => void;
+  stroke: () => void;
 }
 
-/**
- * save()/restore() model a real stack: a dropped restore leaks the head tint's
- * alpha into the next bar's record, which is what makes the missing-restore
- * mutant visible as data rather than as a "was called" spy.
- */
-const createRecorder = (withRoundRect: boolean): Recorder => {
-  const paints: Paint[] = [];
-  const calls: string[] = [];
+const createRecorder = (): Recorder => {
+  const strokes: string[] = [];
+  const fills: string[] = [];
   const transforms: number[][] = [];
   const clears: number[][] = [];
-  const stack: Array<{ fillStyle: string; alpha: number }> = [];
-  const state = { fillStyle: '', alpha: 1 };
-  const record = (shape: Paint['shape'], x: number, y: number, w: number, h: number, radius: number | null): void => {
-    paints.push({ shape, x, y, w, h, radius, fillStyle: state.fillStyle, alpha: state.alpha });
-  };
   const impl: FakeContext = {
-    get fillStyle(): string { return state.fillStyle; },
-    set fillStyle(value: string) { state.fillStyle = value; },
-    get globalAlpha(): number { return state.alpha; },
-    set globalAlpha(value: number) { state.alpha = value; },
-    setTransform: (...args: number[]): void => { calls.push('setTransform'); transforms.push(args); },
-    clearRect: (...args: number[]): void => { calls.push('clearRect'); clears.push(args); },
-    beginPath: (): void => { calls.push('beginPath'); },
-    fill: (): void => { calls.push('fill'); },
-    save: (): void => { calls.push('save'); stack.push({ ...state }); },
-    restore: (): void => {
-      calls.push('restore');
-      const previous = stack.pop();
-      if (previous !== undefined) {
-        state.fillStyle = previous.fillStyle;
-        state.alpha = previous.alpha;
-      }
-    },
-    fillRect: (x: number, y: number, w: number, h: number): void => {
-      calls.push('fillRect');
-      record('fillRect', x, y, w, h, null);
-    },
-    roundRect: (x: number, y: number, w: number, h: number, radius: number): void => {
-      calls.push('roundRect');
-      record('roundRect', x, y, w, h, radius);
-    },
+    fillStyle: '',
+    strokeStyle: '',
+    globalAlpha: 1,
+    lineJoin: '',
+    lineWidth: 1,
+    setTransform: (...args: number[]): void => { transforms.push(args); },
+    clearRect: (...args: number[]): void => { clears.push(args); },
+    beginPath: (): void => undefined,
+    moveTo: (): void => undefined,
+    lineTo: (): void => undefined,
+    fill: (): void => { fills.push(impl.fillStyle); },
+    stroke: (): void => { strokes.push(impl.strokeStyle); },
   };
-  if (!withRoundRect) {
-    delete impl.roundRect;
-  }
 
-  return { ctx: impl as unknown as CanvasRenderingContext2D, paints, calls, transforms, clears };
+  return { ctx: impl as unknown as CanvasRenderingContext2D, strokes, fills, transforms, clears };
 };
 
 const makeRect = (width: number, height: number, left = LEFT): DOMRect => ({
@@ -198,53 +180,20 @@ const attach = (options: { peaks?: number[]; duration?: number; currentTime?: nu
   return { mount, media, handle, canvas };
 };
 
-/** The bar the waveform paints when nothing is animating: the raw cached peak. */
-const staticBar = (peak: number, index: number, playhead = PLAYHEAD): Paint => {
-  const h = Math.max(2, peak * HEIGHT * 0.92);
-
-  return {
-    shape: 'roundRect',
-    x: index * SLOT,
-    y: (HEIGHT - h) / 2,
-    w: BAR_W,
-    h,
-    radius: RADIUS,
-    fillStyle: index < playhead ? PLAYED : BASE,
-    alpha: 1,
-  };
-};
-
-const staticFrame = (playhead = PLAYHEAD): Paint[] => PEAKS.map((peak, index) => staticBar(peak, index, playhead));
-
-/**
- * The exact paint sequence for an animating frame. It calls the liveliness
- * functions with the arguments waveform.ts is supposed to pass, so a mutant
- * that passes the wrong index, playhead, time, energy or entrance shows up as
- * a different height or a different head-tint alpha.
- */
-const liveFrame = (options: { now: number; entranceStart: number; energy: number; playhead?: number }): Paint[] => {
-  const playhead = options.playhead ?? PLAYHEAD;
-  const timeSeconds = options.now / 1000;
-  const entrance = entranceEase((options.now - options.entranceStart) / ENTRANCE_MS);
-  const out: Paint[] = [];
-  PEAKS.forEach((peak, index) => {
-    const amp = liveAmplitude({
-      basePeak: peak,
-      index,
-      playheadIndex: playhead,
-      timeSeconds,
-      reduced: false,
-      energy: options.energy,
-    });
-    const h = Math.max(2, amp * HEIGHT * 0.92);
-    const geometry = { shape: 'roundRect' as const, x: index * SLOT, y: (HEIGHT - h) / 2, w: BAR_W, h, radius: RADIUS };
-    out.push({ ...geometry, fillStyle: index < playhead ? PLAYED : BASE, alpha: 1 });
-    const blend = headColorBlend({ distance: index - playhead, energy: options.energy, entrance });
-    if (blend > 0.001) out.push({ ...geometry, fillStyle: HEAD, alpha: Math.min(1, blend) });
-  });
-
-  return out;
-};
+/** What a resting canvas hands the painter; `over` names what a test expects to differ. */
+const frame = (over: Partial<PaintRidgesOptions> = {}): PaintRidgesOptions => ({
+  width: WIDTH,
+  height: HEIGHT,
+  peaks: PEAKS,
+  beats: BEATS,
+  playhead: PLAYHEAD,
+  ink: INK,
+  fill: FILL,
+  energy: 0,
+  kick: 0,
+  timeSeconds: 0,
+  ...over,
+});
 
 const pointer = (type: string, clientX: number): MouseEvent =>
   new MouseEvent(type, { clientX, bubbles: true });
@@ -262,11 +211,11 @@ beforeEach(() => {
   handles = [];
   contextAvailable = true;
   rect = makeRect(WIDTH, HEIGHT);
-  recorder = createRecorder(true);
+  recorder = createRecorder();
+  painted.frames.length = 0;
   cssVars = {
-    '--blok-audio-bar-played': `  ${PLAYED}  `,
-    '--blok-audio-bar': `  ${BASE}  `,
-    '--blok-audio-bar-head': `  ${HEAD}  `,
+    '--blok-audio-bar-played': `  ${INK}  `,
+    '--blok-audio-ridge-fill': `  ${FILL}  `,
   };
 
   vi.stubGlobal('devicePixelRatio', DPR);
@@ -441,28 +390,10 @@ describe('attachWaveform mounting', () => {
 });
 
 describe('attachWaveform first paint', () => {
-  it('paints every bar at its own slot, split at the playhead', () => {
+  it('hands the painter the box in CSS pixels, the peaks, their beats and the playhead bucket', () => {
     attach({ duration: DURATION, currentTime: CURRENT });
 
-    expect(recorder.paints).toEqual(staticFrame());
-  });
-
-  it('draws rounded bars: one path per bar, filled once', () => {
-    attach({ duration: DURATION, currentTime: CURRENT });
-
-    expect(recorder.calls.filter((call) => call === 'beginPath')).toHaveLength(PEAKS.length);
-    expect(recorder.calls.filter((call) => call === 'roundRect')).toHaveLength(PEAKS.length);
-    expect(recorder.calls.filter((call) => call === 'fill')).toHaveLength(PEAKS.length);
-    expect(recorder.calls).not.toContain('fillRect');
-  });
-
-  it('falls back to square bars when the context has no roundRect', () => {
-    recorder = createRecorder(false);
-
-    attach({ duration: DURATION, currentTime: CURRENT });
-
-    expect(recorder.paints).toEqual(staticFrame().map((paint) => ({ ...paint, shape: 'fillRect' as const, radius: null })));
-    expect(recorder.calls).not.toContain('beginPath');
+    expect(painted.frames).toEqual([frame()]);
   });
 
   it('scales the transform and clears the whole box in CSS pixels', () => {
@@ -483,61 +414,50 @@ describe('attachWaveform first paint', () => {
     rect = makeRect(0, HEIGHT);
     attach({ duration: DURATION, currentTime: CURRENT });
 
-    expect(recorder.paints).toEqual([]);
+    expect(painted.frames).toEqual([]);
   });
 
   it('paints nothing while the canvas box has no height', () => {
     rect = makeRect(WIDTH, 0);
     attach({ duration: DURATION, currentTime: CURRENT });
 
-    expect(recorder.paints).toEqual([]);
+    expect(painted.frames).toEqual([]);
   });
 
   it('survives a canvas that hands back no 2d context', () => {
     contextAvailable = false;
 
     expect(() => attach({ duration: DURATION, currentTime: CURRENT })).not.toThrow();
-    expect(recorder.paints).toEqual([]);
+    expect(painted.frames).toEqual([]);
   });
 
   it('treats a media element with no duration as unplayed', () => {
     attach({});
 
-    expect(recorder.paints).toEqual(staticFrame(0));
+    expect(painted.frames).toEqual([frame({ playhead: 0 })]);
   });
 
-  it('reads the bar colours from custom properties, trimmed', () => {
+  it('strokes in the played ink and fills in the ridge fill, both trimmed', () => {
     cssVars = {
       '--blok-audio-bar-played': ' rgb(1, 2, 3) ',
-      '--blok-audio-bar': ' rgb(4, 5, 6) ',
+      '--blok-audio-ridge-fill': ' rgb(4, 5, 6) ',
+      '--blok-audio-bar': ' rgb(7, 8, 9) ',
       '--blok-audio-bar-head': ' rgb(7, 8, 9) ',
     };
     attach({ duration: DURATION, currentTime: CURRENT });
 
-    expect(recorder.paints.map((paint) => paint.fillStyle))
-      .toEqual(['rgb(1, 2, 3)', 'rgb(1, 2, 3)', 'rgb(1, 2, 3)', 'rgb(4, 5, 6)', 'rgb(4, 5, 6)', 'rgb(4, 5, 6)', 'rgb(4, 5, 6)']);
+    expect(recorder.strokes.length).toBeGreaterThan(0);
+    expect(new Set(recorder.strokes)).toEqual(new Set(['rgb(1, 2, 3)']));
+    expect(new Set(recorder.fills)).toEqual(new Set(['rgb(4, 5, 6)']));
   });
 
-  it('falls back to built-in greys when the custom properties are unset', () => {
+  it('falls back to dark ink on a white fill when the custom properties are unset', () => {
     cssVars = {};
     attach({ duration: DURATION, currentTime: CURRENT });
 
-    expect(recorder.paints.map((paint) => paint.fillStyle))
-      .toEqual(['#222', '#222', '#222', '#ccc', '#ccc', '#ccc', '#ccc']);
-  });
-
-  it('narrow slots shrink the gap and the corner radius with the bar', () => {
-    // A slot under ~5.9px puts `slot * 0.34` below the 2px gap cap and pulls
-    // barW / 2 below the 2px radius cap, so both caps stop hiding the maths.
-    rect = makeRect(60, HEIGHT);
-    const narrowPeaks = Array.from({ length: 24 }, (_, index) => (index + 1) / 24);
-    attach({ peaks: narrowPeaks, duration: DURATION, currentTime: CURRENT });
-
-    const slot = 60 / 24;
-    expect(recorder.paints).toHaveLength(24);
-    expect(recorder.paints[0].w).toBeCloseTo(slot - slot * 0.34, 10);
-    expect(recorder.paints[0].radius ?? 0).toBeCloseTo((slot - slot * 0.34) / 2, 10);
-    expect(recorder.paints[5].x).toBeCloseTo(5 * slot, 10);
+    expect(recorder.strokes.length).toBeGreaterThan(0);
+    expect(new Set(recorder.strokes)).toEqual(new Set(['#222']));
+    expect(new Set(recorder.fills)).toEqual(new Set(['#fff']));
   });
 });
 
@@ -595,13 +515,13 @@ describe('attachWaveform seeking', () => {
 
   it('publishes the seek percentage on the host and repaints', () => {
     const { mount, media, canvas } = attach({ duration: DURATION, currentTime: CURRENT });
-    recorder.paints.length = 0;
+    painted.frames.length = 0;
 
     canvas.dispatchEvent(pointer('pointerdown', LEFT + WIDTH / 2));
 
     expect(mount.style.getPropertyValue('--blok-audio-seek-pct')).toBe('50');
     expect(media.currentTime).toBe(DURATION / 2);
-    expect(recorder.paints).toEqual(staticFrame(PEAKS.length / 2));
+    expect(painted.frames).toEqual([frame({ playhead: PEAKS.length / 2 })]);
   });
 
   it('keeps seeking while the pointer is down and stops after it is released', () => {
@@ -648,22 +568,22 @@ describe('attachWaveform seeking', () => {
     // reports, so the guard has to cover it too: with nothing to seek to there
     // is no position to publish and no frame to repaint.
     const { mount, canvas } = attach({ duration: 0, currentTime: 0 });
-    recorder.paints.length = 0;
+    painted.frames.length = 0;
 
     canvas.dispatchEvent(pointer('pointerdown', LEFT + WIDTH / 2));
 
     expect(mount.style.getPropertyValue('--blok-audio-seek-pct')).toBe('');
-    expect(recorder.paints).toEqual([]);
+    expect(painted.frames).toEqual([]);
   });
 
   it('does not repaint on a seek while the animation loop is already running', () => {
     const { media, canvas } = attach({ duration: DURATION, currentTime: CURRENT });
     media.dispatchEvent(new Event('play'));
-    recorder.paints.length = 0;
+    painted.frames.length = 0;
 
     canvas.dispatchEvent(pointer('pointerdown', LEFT + WIDTH / 2));
 
-    expect(recorder.paints).toEqual([]);
+    expect(painted.frames).toEqual([]);
   });
 });
 
@@ -671,33 +591,33 @@ describe('attachWaveform media events', () => {
   it('timeupdate republishes the seek percentage and repaints while paused', () => {
     const { mount, media } = attach({ duration: DURATION, currentTime: 0 });
     media.currentTime = CURRENT;
-    recorder.paints.length = 0;
+    painted.frames.length = 0;
 
     media.dispatchEvent(new Event('timeupdate'));
 
     expect(mount.style.getPropertyValue('--blok-audio-seek-pct')).toBe(String((CURRENT / DURATION) * 100));
-    expect(recorder.paints).toEqual(staticFrame());
+    expect(painted.frames).toEqual([frame()]);
   });
 
   it('loadedmetadata refreshes the same way', () => {
     const { mount, media } = attach({ duration: DURATION, currentTime: 0 });
     media.currentTime = CURRENT;
-    recorder.paints.length = 0;
+    painted.frames.length = 0;
 
     media.dispatchEvent(new Event('loadedmetadata'));
 
     expect(mount.style.getPropertyValue('--blok-audio-seek-pct')).toBe(String((CURRENT / DURATION) * 100));
-    expect(recorder.paints).toEqual(staticFrame());
+    expect(painted.frames).toEqual([frame()]);
   });
 
   it('does not repaint on timeupdate while the loop already owns the frame', () => {
     const { media } = attach({ duration: DURATION, currentTime: CURRENT });
     media.dispatchEvent(new Event('play'));
-    recorder.paints.length = 0;
+    painted.frames.length = 0;
 
     media.dispatchEvent(new Event('timeupdate'));
 
-    expect(recorder.paints).toEqual([]);
+    expect(painted.frames).toEqual([]);
   });
 
   it('play publishes the seek percentage and starts one loop', () => {
@@ -709,54 +629,29 @@ describe('attachWaveform media events', () => {
     expect(scheduled).toBe(1);
   });
 
-  it('a playing frame boosts every bar and blooms the head tint in', () => {
+  it('a playing frame paints at full energy, stamped with the frame time', () => {
     clock = 1000;
     const { media } = attach({ duration: DURATION, currentTime: CURRENT });
     media.dispatchEvent(new Event('play'));
-    recorder.paints.length = 0;
+    painted.frames.length = 0;
 
     flush(1325);
 
-    expect(recorder.paints).toEqual(liveFrame({ now: 1325, entranceStart: 1000, energy: 1 }));
+    expect(painted.frames).toEqual([frame({ energy: 1, timeSeconds: 1.325 })]);
     expect(scheduled).toBe(2);
   });
 
-  it('a head blend that lands exactly on the 0.001 threshold paints no tint', () => {
-    // The tint is gated on `blend > 0.001`, and the blend is
-    // `headFocus(distance) * energy * entrance`. These three numbers put the
-    // product on the threshold exactly (a single bar 0.619 behind the playhead,
-    // playing, with 0.4337ms of the entrance ramp elapsed), so the bar is the
-    // one case where the strictness of the comparison decides the paint.
-    const played = 0.6189999999557707;
-    const now = 0.4336780805117677;
-    const { media } = attach({ peaks: [0.5], duration: 1, currentTime: played });
+  it('a beat the playhead crosses kicks the ridges on that frame', () => {
+    clock = 1000;
+    const { media } = attach({ duration: DURATION, currentTime: 55 });
     media.dispatchEvent(new Event('play'));
-    recorder.paints.length = 0;
+    flush(1000);
+    expect(painted.frames.at(-1)?.kick).toBe(0);
 
-    flush(now);
+    media.currentTime = 65;
+    flush(1016);
 
-    const amp = liveAmplitude({
-      basePeak: 0.5,
-      index: 0,
-      playheadIndex: played,
-      timeSeconds: now / 1000,
-      reduced: false,
-      energy: 1,
-    });
-    const height = Math.max(2, amp * HEIGHT * 0.92);
-    expect(recorder.paints).toEqual([
-      {
-        shape: 'roundRect',
-        x: 0,
-        y: (HEIGHT - height) / 2,
-        w: WIDTH - 2,
-        h: height,
-        radius: 2,
-        fillStyle: PLAYED,
-        alpha: 1,
-      },
-    ]);
-    expect(headColorBlend({ distance: -played, energy: 1, entrance: entranceEase(now / ENTRANCE_MS) })).toBe(0.001);
+    expect(painted.frames.at(-1)).toEqual(frame({ playhead: 6.5, energy: 1, kick: 1, timeSeconds: 1.016 }));
   });
 
   it('pause ramps the boost down over the settle window and then stops the loop', () => {
@@ -765,18 +660,18 @@ describe('attachWaveform media events', () => {
     media.dispatchEvent(new Event('play'));
     flush(1000);
     media.dispatchEvent(new Event('pause'));
-    recorder.paints.length = 0;
+    painted.frames.length = 0;
 
     // Half way through the settle: the boost is at half energy and the loop
     // still has a reason to keep running.
     flush(1000 + SETTLE_MS / 2);
-    expect(recorder.paints).toEqual(liveFrame({ now: 1000 + SETTLE_MS / 2, entranceStart: 1000, energy: 0.5 }));
+    expect(painted.frames).toEqual([frame({ energy: 0.5, timeSeconds: (1000 + SETTLE_MS / 2) / 1000 })]);
 
     // Past the settle: the boost is gone and no further frame is asked for.
-    recorder.paints.length = 0;
+    painted.frames.length = 0;
     const before = scheduled;
     flush(1000 + SETTLE_MS * 2);
-    expect(recorder.paints).toEqual(staticFrame());
+    expect(painted.frames).toEqual([frame({ timeSeconds: (1000 + SETTLE_MS * 2) / 1000 })]);
     expect(scheduled).toBe(before);
   });
 
@@ -786,11 +681,11 @@ describe('attachWaveform media events', () => {
     media.dispatchEvent(new Event('play'));
     flush(1000);
     media.dispatchEvent(new Event('ended'));
-    recorder.paints.length = 0;
+    painted.frames.length = 0;
 
     flush(1000 + SETTLE_MS / 2);
 
-    expect(recorder.paints).toEqual(liveFrame({ now: 1000 + SETTLE_MS / 2, entranceStart: 1000, energy: 0.5 }));
+    expect(painted.frames).toEqual([frame({ energy: 0.5, timeSeconds: (1000 + SETTLE_MS / 2) / 1000 })]);
   });
 
   it('the wound-down loop hands the frame back and disarms the settle', () => {
@@ -800,13 +695,13 @@ describe('attachWaveform media events', () => {
     flush(1000);
     media.dispatchEvent(new Event('pause'));
     flush(1000 + SETTLE_MS * 2);
-    recorder.paints.length = 0;
+    painted.frames.length = 0;
 
     // The loop released the frame, so a timeupdate owns the repaint again, and
-    // what it repaints is the resting waveform rather than a settle left armed.
+    // what it repaints is the resting landscape rather than a settle left armed.
     media.dispatchEvent(new Event('timeupdate'));
 
-    expect(recorder.paints).toEqual(staticFrame());
+    expect(painted.frames).toEqual([frame()]);
   });
 
   it('a stop after the loop has already wound down does not restart it', () => {
@@ -826,12 +721,12 @@ describe('attachWaveform media events', () => {
 
   it('a stop with no frame in flight cancels nothing and still repaints', () => {
     const { media } = attach({ duration: DURATION, currentTime: CURRENT });
-    recorder.paints.length = 0;
+    painted.frames.length = 0;
 
     media.dispatchEvent(new Event('pause'));
 
     expect(cancelled).toEqual([]);
-    expect(recorder.paints).toEqual(staticFrame());
+    expect(painted.frames).toEqual([frame()]);
   });
 
   it('reduced motion keeps play from starting a loop at all', () => {
@@ -843,26 +738,37 @@ describe('attachWaveform media events', () => {
     expect(scheduled).toBe(0);
   });
 
+  it('reduced motion paints at rest even while the track plays', () => {
+    reduced = true;
+    const { media } = attach({ duration: DURATION, currentTime: CURRENT });
+    media.dispatchEvent(new Event('play'));
+    painted.frames.length = 0;
+
+    media.dispatchEvent(new Event('timeupdate'));
+
+    expect(painted.frames).toEqual([frame()]);
+  });
+
   it('reduced motion turned on mid-playback makes the next stop cancel the frame outright', () => {
     clock = 1000;
     const { media } = attach({ duration: DURATION, currentTime: CURRENT });
     media.dispatchEvent(new Event('play'));
     expect(scheduled).toBe(1);
     reduced = true;
-    recorder.paints.length = 0;
+    painted.frames.length = 0;
 
     media.dispatchEvent(new Event('pause'));
 
     expect(cancelled).toEqual([1]);
     expect(scheduled).toBe(1);
-    expect(recorder.paints).toEqual(staticFrame());
+    expect(painted.frames).toEqual([frame()]);
   });
 
   it('works when the environment has no matchMedia', () => {
     vi.stubGlobal('matchMedia', undefined);
 
     const { media } = attach({ duration: DURATION, currentTime: CURRENT });
-    expect(recorder.paints).toEqual(staticFrame());
+    expect(painted.frames).toEqual([frame()]);
 
     media.dispatchEvent(new Event('play'));
     expect(scheduled).toBe(1);
@@ -903,27 +809,27 @@ describe('attachWaveform resize', () => {
   it('paints as soon as the canvas gains a box, with no media event', () => {
     rect = makeRect(0, 0);
     const { canvas } = attach({ duration: DURATION, currentTime: CURRENT });
-    expect(recorder.paints).toEqual([]);
+    expect(painted.frames).toEqual([]);
 
     rect = makeRect(WIDTH, HEIGHT);
     observerFor(canvas).cb([], {} as ResizeObserver);
 
-    expect(recorder.paints).toEqual(staticFrame());
+    expect(painted.frames).toEqual([frame()]);
   });
 
   it('does not double-paint on a resize while the loop is running', () => {
     const { media, canvas } = attach({ duration: DURATION, currentTime: CURRENT });
     media.dispatchEvent(new Event('play'));
-    recorder.paints.length = 0;
+    painted.frames.length = 0;
 
     observerFor(canvas).cb([], {} as ResizeObserver);
 
-    expect(recorder.paints).toEqual([]);
+    expect(painted.frames).toEqual([]);
   });
 
   it('stamps the resize repaint with the current clock', () => {
     // Reduced motion at play time leaves `playing` set with no loop running, so
-    // the resize repaint is the one that draws the animating frame — and the
+    // the resize repaint is the one that draws the live frame — and the
     // frame it draws must be the one for *now*, not for time zero.
     reduced = true;
     clock = 1000;
@@ -931,11 +837,11 @@ describe('attachWaveform resize', () => {
     media.dispatchEvent(new Event('play'));
     reduced = false;
     clock = 1325;
-    recorder.paints.length = 0;
+    painted.frames.length = 0;
 
     observerFor(canvas).cb([], {} as ResizeObserver);
 
-    expect(recorder.paints).toEqual(liveFrame({ now: 1325, entranceStart: 1000, energy: 1 }));
+    expect(painted.frames).toEqual([frame({ energy: 1, timeSeconds: 1.325 })]);
   });
 
   it.each([
@@ -949,7 +855,7 @@ describe('attachWaveform resize', () => {
 
     observerFor(canvas).cb([], {} as ResizeObserver);
 
-    expect(recorder.paints).toEqual(staticFrame());
+    expect(painted.frames).toEqual([frame()]);
   });
 
   it('runs without a ResizeObserver in the environment', () => {
@@ -990,7 +896,7 @@ describe('attachWaveform destroy', () => {
     mount.style.removeProperty('--blok-audio-seek-pct');
 
     handle.destroy();
-    recorder.paints.length = 0;
+    painted.frames.length = 0;
     scheduled = 0;
 
     canvas.dispatchEvent(pointer('pointerdown', LEFT));
@@ -1005,7 +911,7 @@ describe('attachWaveform destroy', () => {
     media.dispatchEvent(new Event('timeupdate'));
     media.dispatchEvent(new Event('loadedmetadata'));
 
-    expect(recorder.paints).toEqual([]);
+    expect(painted.frames).toEqual([]);
     expect(mount.style.getPropertyValue('--blok-audio-seek-pct')).toBe('');
   });
 
@@ -1031,18 +937,18 @@ describe('attachWaveform destroy', () => {
     // A frame the browser already dequeued cannot be cancelled; destroy has to
     // make the loop a dead end on its own. The timestamp is inside the settle
     // window, so a leftover `playing` or `settling` flag would still have
-    // energy and would both boost the bars and ask for another frame.
+    // energy and would both boost the ridges and ask for another frame.
     cancelDequeues = false;
     clock = 1000;
     const { media, handle } = attach({ duration: DURATION, currentTime: CURRENT });
     media.dispatchEvent(new Event('play'));
     handle.destroy();
     const before = scheduled;
-    recorder.paints.length = 0;
+    painted.frames.length = 0;
 
     flush(SETTLE_MS - 120);
 
     expect(scheduled).toBe(before);
-    expect(recorder.paints).toEqual(staticFrame());
+    expect(painted.frames).toEqual([frame({ timeSeconds: (SETTLE_MS - 120) / 1000 })]);
   });
 });

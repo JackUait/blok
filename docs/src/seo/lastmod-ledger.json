@@ -16,16 +16,16 @@
     "date": "2026-11-10"
   },
   "/docs": {
-    "hash": "40bfac5b60fa63f9",
-    "date": "2026-11-03"
+    "hash": "2102de653dd3ed07",
+    "date": "2026-11-11"
   },
   "/docs/agent-api": {
     "hash": "232f1d198bf38dcc",
     "date": "2026-11-07"
   },
   "/docs/audio": {
-    "hash": "b24af5f207524c40",
-    "date": "2026-09-28"
+    "hash": "cc8c5686bf579790",
+    "date": "2026-11-11"
   },
   "/docs/block-api": {
     "hash": "b7c15f10571578ef",
@@ -352,16 +352,16 @@
     "date": "2026-11-10"
   },
   "/ru/docs": {
-    "hash": "338c12e0be76ca1a",
-    "date": "2026-11-03"
+    "hash": "d57cefb6da1bd1de",
+    "date": "2026-11-11"
   },
   "/ru/docs/agent-api": {
     "hash": "e1bfdb20e56be28d",
     "date": "2026-11-07"
   },
   "/ru/docs/audio": {
-    "hash": "6e78dc793dd15388",
-    "date": "2026-09-28"
+    "hash": "bea4094f245f3561",
+    "date": "2026-11-11"
   },
   "/ru/docs/block-api": {
     "hash": "1ceadae05e4475f6",

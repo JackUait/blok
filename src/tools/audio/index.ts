@@ -22,6 +22,7 @@ import {
   IconAlignLeft,
   IconAlignRight,
   IconCaption,
+  IconCollapseFullscreen,
   IconCopy,
   IconDownload,
   IconImage,
@@ -133,6 +134,7 @@ export class AudioTool implements BlockTool {
     if (typeof this.data.artist === 'string') out.artist = this.data.artist;
     if (this.data.coverUrl !== undefined) out.coverUrl = this.data.coverUrl;
     if (this.data.loop) out.loop = true;
+    if (this.data.compact) out.compact = true;
     if (this.data.width !== undefined) out.width = this.data.width;
     if (this.data.alignment !== undefined) out.alignment = this.data.alignment;
     if (this.data.fileName !== undefined) out.fileName = this.data.fileName;
@@ -249,6 +251,14 @@ export class AudioTool implements BlockTool {
         isActive: captionVisible,
         closeOnActivate: true,
         onActivate: (): void => this.toggleCaption(),
+      },
+      {
+        icon: IconCollapseFullscreen,
+        title: tr(i18n, 'tools.audio.compact', 'Compact'),
+        name: 'audio-compact',
+        isActive: this.data.compact === true,
+        closeOnActivate: true,
+        onActivate: (): void => this.toggleCompact(),
       },
       {
         icon: IconPlayerLoop,
@@ -572,6 +582,7 @@ export class AudioTool implements BlockTool {
     r.setAttribute('data-state', this.state.toLowerCase());
     r.setAttribute('data-align', this.data.alignment ?? 'center');
     r.setAttribute('data-caption', this.isCaptionVisible() ? 'on' : 'off');
+    r.setAttribute('data-compact', this.data.compact ? 'on' : 'off');
   }
 
   private renderState(): void {
@@ -669,10 +680,7 @@ export class AudioTool implements BlockTool {
       audio.preload = 'metadata';
     });
 
-    // Waveform (if peaks are available)
-    if (this.data.peaks?.length) {
-      this.waveformHandle = attachWaveform({ mount: waveformMount, media: audio, peaks: this.data.peaks, stage: figure });
-    }
+    this.mountRidgeline(figure, audio, waveformMount);
 
     // Transport controls — appended into the right-column body (under waveform)
     this.controlsHandle = attachControls({
@@ -808,6 +816,27 @@ export class AudioTool implements BlockTool {
     row.addEventListener('transitionend', onEnd);
     // Fallback in case transitionend never fires (display:none, interrupted, etc.).
     this.captionExitTimer = setTimeout(finish, 360);
+  }
+
+  /** Draw the ridgeline when there are peaks to draw and the player is not compact. */
+  private mountRidgeline(figure: HTMLElement, audio: HTMLAudioElement, mount: HTMLElement): void {
+    if (this.data.compact || !this.data.peaks?.length) return;
+    this.waveformHandle = attachWaveform({ mount, media: audio, peaks: this.data.peaks, stage: figure });
+  }
+
+  /** Swaps the ridgeline in place: a re-render would rebuild the <audio> and stop a playing track. */
+  private toggleCompact(): void {
+    this.data.compact = this.data.compact ? undefined : true;
+    this.block.dispatchChange();
+    this.syncRootAttributes();
+    this.waveformHandle?.destroy();
+    this.waveformHandle = null;
+
+    const figure = this.root?.querySelector<HTMLElement>('[data-role="audio-figure"]');
+    const audio = figure?.querySelector<HTMLAudioElement>('[data-role="audio-media"]');
+    const mount = figure?.querySelector<HTMLElement>('[data-role="audio-waveform"]');
+
+    if (figure && audio && mount) this.mountRidgeline(figure, audio, mount);
   }
 
   private toggleLoop(): void {

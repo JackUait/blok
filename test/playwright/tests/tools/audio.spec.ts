@@ -424,3 +424,38 @@ test('user can remove a cover and the vinyl disc returns', async ({ page }) => {
   await expect(page.locator(`${AUDIO_BLOCK_SELECTOR} [data-role="audio-cover"] img`)).toHaveCount(0);
   await expect(page.locator(`${AUDIO_BLOCK_SELECTOR} [data-role="audio-cover-disc"]`)).toBeVisible();
 });
+
+test('the Compact setting hides the ridgeline and brings it back', async ({ page }) => {
+  await createBlok(page);
+  await insertAudioBlock(page);
+
+  const audioBlock = page.locator(AUDIO_BLOCK_SELECTOR);
+  const ridgeline = audioBlock.locator('[data-role="audio-waveform-canvas"]');
+  const compactItem = page.locator('[data-blok-item-name="audio-compact"]');
+  const openSettings = async (): Promise<void> => {
+    await audioBlock.hover();
+    await page.locator(SETTINGS_BUTTON_SELECTOR).click();
+    await expect(compactItem).toBeVisible();
+  };
+
+  await audioBlock.getByTestId('file-input').setInputFiles(FIXTURE_PATH);
+  await expect(ridgeline).toBeVisible();
+
+  await openSettings();
+  await compactItem.click();
+
+  await expect(ridgeline).toHaveCount(0);
+  await expect(audioBlock).toHaveAttribute('data-compact', 'on');
+  await expect(audioBlock.locator('[data-role="audio-seek"]')).toBeVisible();
+  await expect.poll(async () => {
+    const saved = await page.evaluate(async () => window.blokInstance?.save());
+
+    return saved?.blocks.find((block) => block.type === 'audio')?.data.compact;
+  }).toBe(true);
+
+  await openSettings();
+  await compactItem.click();
+
+  await expect(ridgeline).toBeVisible();
+  await expect(audioBlock).toHaveAttribute('data-compact', 'off');
+});

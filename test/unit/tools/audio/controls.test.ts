@@ -233,4 +233,78 @@ describe('attachControls', () => {
     expect(h.element.querySelector('[data-role="audio-loop"]')!.getAttribute('aria-pressed')).toBe('false');
     h.destroy();
   });
+
+  describe('seek slider', () => {
+    const seekOf = (el: HTMLElement): HTMLInputElement => {
+      const seek = el.querySelector('[data-role="audio-seek"]');
+
+      if (!(seek instanceof HTMLInputElement)) throw new Error('no seek slider');
+
+      return seek;
+    };
+
+    it('is a labelled range that starts at the beginning', () => {
+      const h = attachControls({ media: makeMedia(), figure: document.createElement('figure'), data: { url: 'u' } });
+      const seek = seekOf(h.element);
+
+      expect(seek.type).toBe('range');
+      expect(seek.getAttribute('aria-label')).toBe('Seek');
+      expect(seek.value).toBe('0');
+      h.destroy();
+    });
+
+    it('moves the track to the dragged position', () => {
+      const media = makeMedia();
+      const h = attachControls({ media, figure: document.createElement('figure'), data: { url: 'u' } });
+      const seek = seekOf(h.element);
+
+      seek.value = '0.25';
+      seek.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(media.currentTime).toBeCloseTo(50, 5);
+      expect(seek.style.getPropertyValue('--blok-audio-seek-pct')).toBe('25%');
+      h.destroy();
+    });
+
+    it('follows the track as it plays and reads the position out as a time', () => {
+      const media = makeMedia();
+      const h = attachControls({ media, figure: document.createElement('figure'), data: { url: 'u' } });
+      const seek = seekOf(h.element);
+
+      media.currentTime = 100;
+      media.dispatchEvent(new Event('timeupdate'));
+
+      expect(Number(seek.value)).toBeCloseTo(0.5, 5);
+      expect(seek.style.getPropertyValue('--blok-audio-seek-pct')).toBe('50%');
+      expect(seek.getAttribute('aria-valuetext')).toBe('01:40 / 03:20');
+      h.destroy();
+    });
+
+    it('stays at the start and does not seek while the track has no length', () => {
+      const media = makeMedia();
+
+      Object.defineProperty(media, 'duration', { value: NaN, configurable: true });
+      const h = attachControls({ media, figure: document.createElement('figure'), data: { url: 'u' } });
+      const seek = seekOf(h.element);
+
+      seek.value = '0.5';
+      seek.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(media.currentTime).toBe(0);
+      expect(seek.value).toBe('0');
+      h.destroy();
+    });
+
+    it('stops seeking after destroy', () => {
+      const media = makeMedia();
+      const h = attachControls({ media, figure: document.createElement('figure'), data: { url: 'u' } });
+      const seek = seekOf(h.element);
+
+      h.destroy();
+      seek.value = '0.5';
+      seek.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(media.currentTime).toBe(0);
+    });
+  });
 });

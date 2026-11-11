@@ -283,7 +283,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2082 + 142 + 531 + 5 closure for all 2760 keys', () => {
+  it('rebuilds a disjoint 2083 + 143 + 531 + 5 closure for all 2762 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -297,7 +297,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2760);
+    expect(lifecycle.size).toBe(2762);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -515,7 +515,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: tools.database.openPagesNewTab labels the peek mode menu's new-tab row by literal.
       // +5: the code language picker's family labels (tools.code.family*), by literal.
       // -1: tools.code.suggested left the literal calls when the picker dropped Suggested (now catalog-only).
-      'executable-literal': 2082,
+      // +1: the audio block's Compact setting calls tools.audio.compact by literal.
+      'executable-literal': 2083,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -530,7 +531,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: the picker's tools.page.moreResults_one/_other, a plural of one literal call.
       // +2: a11y.blocksConvertedTo_one/_other, a plural of the multi-block Turn into call.
       // +2: a11y.blocksDeleted_one/_other, a plural of the selected-block delete call.
-      'finite-dynamic': 142,
+      // +1: the audio seek slider's tools.audio.seek, built by i18nLabel like play and volume.
+      'finite-dynamic': 143,
       // 12 of the 20 image darkroom keys are called by literal. The 8 filter
       // names stay here: filter-strip.ts builds them from the preset name.
       // +9: the markup tool names; markup-panel.ts builds them from a short key.

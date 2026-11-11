@@ -42,7 +42,7 @@ describe('attachWaveform', () => {
   it('paints once the canvas gains a box, even with no media events', () => {
     // The canvas is always detached (zero-sized) when attachWaveform runs — the
     // figure is only appended to the block afterwards — so the attach-time paint
-    // is a no-op. Nothing else must be required to get the bars on screen.
+    // is a no-op. Nothing else must be required to get the ridges on screen.
     const observers: Array<{ cb: ResizeObserverCallback; targets: Element[] }> = [];
     class StubResizeObserver {
       private entry: { cb: ResizeObserverCallback; targets: Element[] };
@@ -146,13 +146,16 @@ describe('attachWaveform', () => {
     });
   });
 
-  it('glows the playhead in played ink, never the accent-mixed head tint', () => {
-    const glows: string[] = [];
-    const ctx = new Proxy({}, {
-      get: (_t, key) => (key === 'roundRect' ? undefined : () => undefined),
-      set: (_t, key, value) => {
-        if (key === 'shadowColor' && value) glows.push(String(value));
-        return true;
+  it('draws the ridges in played ink over the ridge fill, never the old bar colours', () => {
+    const strokes: string[] = [];
+    const fills: string[] = [];
+    const state: Record<string, unknown> = {};
+    const ctx = new Proxy(state, {
+      get: (target, key) => {
+        if (key === 'stroke') return () => { strokes.push(String(target.strokeStyle)); };
+        if (key === 'fill') return () => { fills.push(String(target.fillStyle)); };
+
+        return () => undefined;
       },
     });
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
@@ -167,6 +170,8 @@ describe('attachWaveform', () => {
     const canvas = mount.querySelector<HTMLCanvasElement>('[data-role="audio-waveform-canvas"]');
     if (!canvas) throw new Error('canvas was not mounted');
     canvas.style.setProperty('--blok-audio-bar-played', 'rgb(1, 2, 3)');
+    canvas.style.setProperty('--blok-audio-ridge-fill', 'rgb(4, 5, 6)');
+    canvas.style.setProperty('--blok-audio-bar', 'rgb(255, 0, 0)');
     canvas.style.setProperty('--blok-audio-bar-head', 'rgb(0, 0, 255)');
     canvas.getBoundingClientRect = (): DOMRect =>
       ({ left: 0, width: 200, top: 0, height: 40, right: 200, bottom: 40, x: 0, y: 0, toJSON: () => ({}) });
@@ -175,8 +180,9 @@ describe('attachWaveform', () => {
     media.dispatchEvent(new Event('play'));
     [700, 716, 732].forEach((ms) => frames.splice(0).forEach((cb) => cb(t0 + ms)));
 
-    expect(glows.length).toBeGreaterThan(0);
-    expect(new Set(glows)).toEqual(new Set(['rgb(1, 2, 3)']));
+    expect(strokes.length).toBeGreaterThan(0);
+    expect(new Set(strokes)).toEqual(new Set(['rgb(1, 2, 3)']));
+    expect(new Set(fills)).toEqual(new Set(['rgb(4, 5, 6)']));
     handle.destroy();
     vi.unstubAllGlobals();
   });

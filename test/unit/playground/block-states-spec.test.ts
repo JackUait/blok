@@ -395,7 +395,7 @@ describe('block states gallery covers every state a block can show', () => {
     ['table_of_contents', [ 'Colored text', 'Deep outline' ]],
     ['image', [ 'Uploading', 'Too large', 'Right aligned', 'Size preset', 'Border frame', 'Shadow frame', 'Square corners', 'Caption hidden', 'Circle crop', 'Rotated', 'Filter', 'Markup', 'Read-only' ]],
     ['video', [ 'Uploading', 'Failed to load', 'Right aligned', 'No controls', 'Read-only', 'Read-only failed' ]],
-    ['audio', [ 'Uploading', 'Upload failed', 'With caption', 'Untitled · no waveform', 'Read-only' ]],
+    ['audio', [ 'Uploading', 'Upload failed', 'With caption', 'Compact', 'Untitled · no waveform', 'Read-only' ]],
     ['file', [ 'Upload failed', 'Too large', 'Image' ]],
     ['bookmark', [ 'Failed cover', 'Long text (clamped)' ]],
     ['embed', [ 'Right aligned', 'Caption (empty)', 'Google Docs (fixed height)', 'TikTok (fixed width)', 'Telegram (script)', 'Threads (script)', 'Read-only' ]],

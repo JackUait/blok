@@ -4854,6 +4854,14 @@
             caption: 'Live session take',
             captionVisible: true,
           } }] },
+          { label: 'Compact', blocks: [{ id: 'au-compact', type: 'audio', data: {
+            url: '/samples/soundhelix-song-1.mp3',
+            title: 'SoundHelix Song 1',
+            artist: 'SoundHelix',
+            duration: 90,
+            peaks: Array.from({ length: 300 }, (_, i) => Number((i < 47 ? 0.05 + i * 0.005 : 0.7 + 0.3 * Math.abs(Math.sin(i * 1.7))).toFixed(2))),
+            compact: true,
+          } }] },
           { label: 'Untitled · no waveform', blocks: [{ id: 'au-bare', type: 'audio', data: { url: '/samples/soundhelix-song-1.mp3' } }] },
           { label: 'Read-only', readOnly: true, blocks: [{ id: 'au-readonly', type: 'audio', data: {
             url: '/samples/soundhelix-song-1.mp3',

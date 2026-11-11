@@ -2,9 +2,9 @@
  * Beat ripples and loudness level for the "now playing" waveform.
  *
  * Beats come from the cached peaks: a bar that jumps well above the bars just
- * before it. When the playhead crosses one, a ripple starts there and a crest
- * runs outward both ways. The same beats kick the record, and the smoothed peak
- * under the playhead drives the glow behind the cover. All pure.
+ * before it. When the playhead crosses one, a ripple starts there. Fresh ripples
+ * kick the record and the front ridges, and the smoothed peak under the playhead
+ * drives the glow behind the cover. All pure.
  */
 
 export interface Beat {
@@ -21,16 +21,10 @@ export interface Ripple {
   age: number;
 }
 
-/** Bars per second the crest travels. */
-export const RIPPLE_SPEED = 80;
 /** Seconds until a ripple is gone. */
 export const RIPPLE_LIFE = 0.9;
 /** Oldest ripples are dropped past this, so a dense passage stays readable. */
 export const MAX_RIPPLES = 4;
-/** Crest half-width in bars. */
-const RIPPLE_WIDTH = 3.5;
-/** Height a full-strength crest adds, as a fraction of the bar box. */
-const RIPPLE_LIFT = 0.38;
 
 /** Bars of lead-in averaged to judge a jump. */
 const BEAT_WINDOW = 6;
@@ -80,22 +74,6 @@ export function findBeats(peaks: number[]): Beat[] {
 export function beatsCrossed(beats: Beat[], from: number, to: number): Beat[] {
   if (to <= from || to - from > MAX_CROSS_STEP) return [];
   return beats.filter((b) => b.index > from && b.index <= to);
-}
-
-/** Lift a ripple adds to a bar `distance` bars from its origin, `age` seconds in. */
-export function rippleLift(distance: number, age: number, strength = 1): number {
-  if (age < 0 || age >= RIPPLE_LIFE) return 0;
-  const offset = (Math.abs(distance) - RIPPLE_SPEED * age) / RIPPLE_WIDTH;
-  const fade = 1 - age / RIPPLE_LIFE;
-  return RIPPLE_LIFT * strength * fade * fade * Math.exp(-offset * offset);
-}
-
-/**
- * 0..1 ink for a bar a crest is lifting. Loud tracks leave bars no headroom to
- * grow, so on the unplayed side the crest also darkens toward the played ink.
- */
-export function rippleInk(lift: number): number {
-  return Math.min(1, Math.max(0, lift / RIPPLE_LIFT));
 }
 
 /** Seconds for the level to close ~63% of the gap going up / going down. */

@@ -63,8 +63,7 @@ function button(role: string, label: string, icon: string): HTMLButtonElement {
 
 /**
  * Build a custom transport control bar for an `<audio>` element and wire it
- * to the media. The waveform (Task 6) serves as the scrubber — this bar does
- * NOT render its own seek track.
+ * to the media: play, time, a seek slider, volume, speed and loop.
  *
  * Returns `{ element, destroy }`. Call `destroy()` to remove every listener
  * and clear all timers.
@@ -138,6 +137,38 @@ export function attachControls({
 
   const renderTime = (): void => {
     timeEl.textContent = `${formatTime(media.currentTime)} / ${formatTime(media.duration)}`;
+  };
+
+  // ----- seek -----
+  const seekInput = document.createElement('input');
+  seekInput.type = 'range';
+  // Native ranges reverse in RTL; the fill gradient runs LTR.
+  seekInput.dir = 'ltr';
+  seekInput.min = '0';
+  seekInput.max = '1';
+  seekInput.step = '0.001';
+  seekInput.value = '0';
+  seekInput.className = 'blok-audio-controls__seek';
+  seekInput.setAttribute('data-role', 'audio-seek');
+  seekInput.setAttribute('aria-label', i18nLabel('seek', 'Seek'));
+
+  const trackLength = (): number => (Number.isFinite(media.duration) && media.duration > 0 ? media.duration : 0);
+
+  const syncSeek = (): void => {
+    const length = trackLength();
+    const ratio = length ? Math.min(1, media.currentTime / length) : 0;
+
+    seekInput.value = String(ratio);
+    seekInput.style.setProperty('--blok-audio-seek-pct', `${Number((ratio * 100).toFixed(2))}%`);
+    seekInput.setAttribute('aria-valuetext', timeEl.textContent ?? '');
+  };
+
+  const onSeekInput = (): void => {
+    const length = trackLength();
+
+    if (length) media.currentTime = Number(seekInput.value) * length;
+    renderTime();
+    syncSeek();
   };
 
   // ----- volume + mute -----
@@ -376,7 +407,7 @@ export function attachControls({
   volumeWrap.className = 'blok-audio-controls__volume-wrap';
   volumeWrap.append(muteToggle, volumeInput);
 
-  root.append(playToggle, timeEl, volumeWrap, speedWrap, loopBtn);
+  root.append(playToggle, timeEl, seekInput, volumeWrap, speedWrap, loopBtn);
 
   // ----- intent handlers -----
   const togglePlay = (): void => {
@@ -410,11 +441,13 @@ export function attachControls({
   const onPause = (): void => setPlaying(false);
   const onTimeUpdate = (): void => {
     renderTime();
+    syncSeek();
     persistPosition();
   };
   const onLoadedMetadata = (): void => {
     renderTime();
     restorePosition();
+    syncSeek();
   };
   const onVolumeChange = (): void => syncMuteUI();
 
@@ -472,6 +505,7 @@ export function attachControls({
   playToggle.addEventListener('click', togglePlay);
   muteToggle.addEventListener('click', onMuteClick);
   volumeInput.addEventListener('input', onVolumeInput);
+  seekInput.addEventListener('input', onSeekInput);
   loopBtn.addEventListener('click', onLoopClick);
 
   media.addEventListener('play', onPlay);
@@ -490,6 +524,7 @@ export function attachControls({
     playToggle.removeEventListener('click', togglePlay);
     muteToggle.removeEventListener('click', onMuteClick);
     volumeInput.removeEventListener('input', onVolumeInput);
+    seekInput.removeEventListener('input', onSeekInput);
     loopBtn.removeEventListener('click', onLoopClick);
     gearBtn.removeEventListener('click', onGearClick);
     speedSlider.removeEventListener('input', onSpeedSliderInput);

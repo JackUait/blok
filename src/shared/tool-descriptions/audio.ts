@@ -14,6 +14,7 @@ export const AUDIO_DATA = {
     artist: { type: 'string' },
     coverUrl: { type: 'string' },
     loop: { type: 'boolean' },
+    compact: { type: 'boolean', description: 'Hide the ridgeline drawing and show a smaller player.' },
     width: { type: 'number', minimum: 10, maximum: 100 },
     alignment: { type: 'string', enum: ALIGNMENT },
     fileName: { type: 'string' },

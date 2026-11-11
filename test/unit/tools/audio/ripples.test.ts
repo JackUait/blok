@@ -2,12 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   findBeats,
   beatsCrossed,
-  rippleLift,
   smoothLevel,
   kickAt,
-  rippleInk,
-  RIPPLE_LIFE,
-  RIPPLE_SPEED,
 } from '../../../../src/tools/audio/ripples';
 
 describe('findBeats', () => {
@@ -72,33 +68,6 @@ describe('beatsCrossed', () => {
   });
 });
 
-describe('rippleLift', () => {
-  it('puts the crest where the ripple has travelled to', () => {
-    const age = 0.2;
-    const crest = RIPPLE_SPEED * age;
-
-    expect(rippleLift(crest, age)).toBeGreaterThan(rippleLift(crest - 4, age));
-    expect(rippleLift(crest, age)).toBeGreaterThan(rippleLift(crest + 4, age));
-  });
-
-  it('travels both ways from the origin', () => {
-    expect(rippleLift(-5, 0.15)).toBeCloseTo(rippleLift(5, 0.15), 10);
-  });
-
-  it('fades as it ages and is gone after its life', () => {
-    const early = rippleLift(RIPPLE_SPEED * 0.1, 0.1);
-    const late = rippleLift(RIPPLE_SPEED * 0.5, 0.5);
-
-    expect(late).toBeLessThan(early);
-    expect(rippleLift(RIPPLE_SPEED * RIPPLE_LIFE, RIPPLE_LIFE)).toBe(0);
-    expect(rippleLift(0, -0.01)).toBe(0);
-  });
-
-  it('scales with strength', () => {
-    expect(rippleLift(0, 0, 0.5)).toBeCloseTo(rippleLift(0, 0, 1) / 2, 10);
-  });
-});
-
 describe('smoothLevel', () => {
   it('rises faster than it falls', () => {
     const up = smoothLevel(0, 1, 1 / 60);
@@ -132,23 +101,5 @@ describe('kickAt', () => {
 
   it('never exceeds 1 when ripples overlap', () => {
     expect(kickAt([{ age: 0, strength: 1 }, { age: 0, strength: 1 }])).toBe(1);
-  });
-});
-
-describe('rippleInk', () => {
-  it('inks a full-strength crest fully and leaves untouched bars alone', () => {
-    expect(rippleInk(rippleLift(0, 0, 1))).toBe(1);
-    expect(rippleInk(0)).toBe(0);
-  });
-
-  it('never goes past full ink when crests overlap', () => {
-    expect(rippleInk(rippleLift(0, 0, 1) * 3)).toBe(1);
-  });
-
-  it('inks a weak ripple partly', () => {
-    const ink = rippleInk(rippleLift(0, 0, 0.4));
-
-    expect(ink).toBeGreaterThan(0);
-    expect(ink).toBeLessThan(1);
   });
 });

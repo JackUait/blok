@@ -1409,7 +1409,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Audio',
     description:
-      'A music-player style audio block. It renders an uploaded or linked audio file with a custom control bar. The bar has play/pause, a waveform scrubber, volume, playback speed and loop.\n\nThe block also takes optional cover art and title/artist metadata. An optional caption is switched on from the block settings menu (`captionVisible`). Waveform peaks and duration are decoded once and cached in the saved data, so playback renders instantly on reload.\n\nAudio is sent through a consumer-supplied uploader. When none is provided, the tool falls back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl).\n\nShare links from Dropbox, GitHub, GitLab, Hugging Face, Google Cloud Storage, and the Internet Archive are rewritten to their direct-content form automatically. Google Drive and OneDrive links also need an `uploadByUrl` backend, because those hosts block anonymous browser hotlinking.\n\nAn optional MIME allowlist and max size gate what is accepted.',
+      'A music-player style audio block. It renders an uploaded or linked audio file with a custom control bar. The bar has play/pause, a seek slider, time, volume, playback speed and loop.\n\nAbove the bar the player draws a ridgeline: the track as a landscape of ridges that rolls toward you while it plays. Click or drag on it to seek. The Compact item in the block settings menu hides the ridgeline (`compact`).\n\nThe block also takes optional cover art and title/artist metadata. The cover is a small thumbnail beside the title and artist. Without a cover the block shows a small vinyl record. An optional caption is switched on from the block settings menu (`captionVisible`).\n\nPeaks and duration are decoded once and cached in the saved data, so the player renders instantly on reload.\n\nAudio is sent through a consumer-supplied uploader. When none is provided, the tool falls back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl).\n\nShare links from Dropbox, GitHub, GitLab, Hugging Face, Google Cloud Storage, and the Internet Archive are rewritten to their direct-content form automatically. Google Drive and OneDrive links also need an `uploadByUrl` backend, because those hosts block anonymous browser hotlinking.\n\nAn optional MIME allowlist and max size gate what is accepted.',
     importExample: `import { Audio } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -1461,12 +1461,13 @@ const editor = new Blok({
   artist?: string;         // Track artist
   coverUrl?: string;       // Cover art image URL
   loop?: boolean;          // Loop playback
+  compact?: boolean;       // Compact player: the ridgeline is hidden. Off when absent
   width?: number;          // Pass-through width value; not currently surfaced in the audio UI
   alignment?: 'left' | 'center' | 'right';
   fileName?: string;       // Original filename, when known
   mimeType?: string;       // MIME type
   duration?: number;       // Decoded duration in seconds (cached)
-  peaks?: number[];        // Cached waveform peaks for the scrubber
+  peaks?: number[];        // Cached peaks the ridgeline is drawn from
 }`,
     saveDataExample: `{
   "id": "aud001",

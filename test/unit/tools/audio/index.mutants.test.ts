@@ -8,6 +8,7 @@ import {
   IconAlignLeft,
   IconAlignRight,
   IconCaption,
+  IconCollapseFullscreen,
   IconCopy,
   IconDownload,
   IconImage,
@@ -404,6 +405,7 @@ describe('AudioTool — settings menu', () => {
     'tools.audio.alignmentCenter': 'Mitte',
     'tools.audio.alignmentRight': 'Rechts',
     'tools.audio.caption': 'Beschriftung',
+    'tools.audio.compact': 'Kompakt',
     'tools.audio.loop': 'Schleife',
     'tools.audio.replace': 'Audio ersetzen',
     'tools.audio.coverSet': 'Cover setzen',
@@ -419,6 +421,7 @@ describe('AudioTool — settings menu', () => {
     expect(items.map((entry) => entry.name)).toStrictEqual([
       'audio-alignment',
       'audio-caption',
+      'audio-compact',
       'audio-loop',
       'audio-replace',
       'audio-cover-set',
@@ -428,6 +431,7 @@ describe('AudioTool — settings menu', () => {
     expect(items.map((entry) => entry.title)).toStrictEqual([
       'Alignment',
       'Caption',
+      'Compact',
       'Loop',
       'Replace audio',
       'Set cover image',
@@ -437,6 +441,7 @@ describe('AudioTool — settings menu', () => {
     expect(items.map((entry) => entry.icon)).toStrictEqual([
       IconAlignCenter,
       IconCaption,
+      IconCollapseFullscreen,
       IconPlayerLoop,
       IconReplace,
       IconImage,
@@ -445,6 +450,7 @@ describe('AudioTool — settings menu', () => {
     ]);
     expect(items.map((entry) => entry.closeOnActivate)).toStrictEqual([
       undefined,
+      true,
       true,
       true,
       true,
@@ -461,6 +467,7 @@ describe('AudioTool — settings menu', () => {
     expect(items.map((entry) => entry.title)).toStrictEqual([
       'Ausrichtung',
       'Beschriftung',
+      'Kompakt',
       'Schleife',
       'Audio ersetzen',
       'Cover setzen',
@@ -535,6 +542,7 @@ describe('AudioTool — settings menu', () => {
     expect(menuItems(withCover.tool.renderSettings()).map((entry) => entry.name)).toStrictEqual([
       'audio-alignment',
       'audio-caption',
+      'audio-compact',
       'audio-loop',
       'audio-replace',
       'audio-cover-set',

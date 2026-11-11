@@ -104,6 +104,18 @@ describe('tools documentation coverage', () => {
     expect(audio!.default).toBe(video!.default);
   });
 
+  it('audio data listing names every saved field of AudioData', () => {
+    const typeSrc = readSource('types/tools/audio.d.ts');
+    const body = typeSrc.match(/export interface AudioData[^{]*\{([\s\S]*?)\n\}/)?.[1] ?? '';
+    const fields = Array.from(body.matchAll(/^ {2}(\w+)\??:/gm), (m) => m[1]);
+    const shape = TOOL_SECTIONS.find((s) => s.id === 'audio')?.saveDataShape ?? '';
+
+    expect(fields).toContain('compact');
+    for (const field of fields) {
+      expect(shape, `audio saveDataShape misses "${field}"`).toMatch(new RegExp(`\\b${field}\\??:`));
+    }
+  });
+
   const uploaderCases = [
     { toolId: 'audio', dts: 'types/tools/audio.d.ts' },
     { toolId: 'video', dts: 'types/tools/video.d.ts' },

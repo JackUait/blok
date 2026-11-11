@@ -964,3 +964,82 @@ describe('AudioTool — editor teardown', () => {
     expect(waveform?.destroy).toHaveBeenCalled();
   });
 });
+
+describe('AudioTool — compact mode', () => {
+  const PEAKS = [0.2, 0.8, 0.4];
+  const waveformMock = async (): Promise<ReturnType<typeof vi.fn>> => {
+    const mod = await import('../../../../src/tools/audio/waveform');
+
+    return vi.mocked(mod.attachWaveform);
+  };
+  const compactItem = (tool: AudioTool): { isActive?: boolean; onActivate?: () => void } => {
+    const settings = tool.renderSettings();
+    const item = (Array.isArray(settings) ? settings : [settings])
+      .find((it) => (it as { name?: string }).name === 'audio-compact');
+
+    if (!item) throw new Error('no audio-compact setting');
+
+    return item as { isActive?: boolean; onActivate?: () => void };
+  };
+
+  it('saves the flag only when it is on', () => {
+    expect(new AudioTool(opts({ url: 'https://x/y.mp3', compact: true })).save().compact).toBe(true);
+    expect(new AudioTool(opts({ url: 'https://x/y.mp3' })).save()).not.toHaveProperty('compact');
+  });
+
+  it('draws no ridgeline for a compact player', async () => {
+    const attach = await waveformMock();
+    const root = new AudioTool(opts({ url: 'https://x/y.mp3', peaks: PEAKS, compact: true })).render();
+
+    expect(attach).not.toHaveBeenCalled();
+    expect(root.getAttribute('data-compact')).toBe('on');
+  });
+
+  it('draws the ridgeline for a full player', async () => {
+    const attach = await waveformMock();
+    const root = new AudioTool(opts({ url: 'https://x/y.mp3', peaks: PEAKS })).render();
+
+    expect(attach).toHaveBeenCalledTimes(1);
+    expect(root.getAttribute('data-compact')).toBe('off');
+  });
+
+  it('offers the setting in the block menu and marks it when on', () => {
+    expect(compactItem(new AudioTool(opts({ url: 'https://x/y.mp3' }))).isActive).toBe(false);
+    expect(compactItem(new AudioTool(opts({ url: 'https://x/y.mp3', compact: true }))).isActive).toBe(true);
+  });
+
+  it('switching to compact removes the ridgeline without rebuilding the player', async () => {
+    const attach = await waveformMock();
+    const block = createMockBlock();
+    const tool = new AudioTool(opts({ url: 'https://x/y.mp3', peaks: PEAKS }, {}, block));
+    const root = tool.render();
+    const media = root.querySelector('[data-role="audio-media"]');
+    const handle = attach.mock.results[0]?.value as { destroy: ReturnType<typeof vi.fn> };
+
+    compactItem(tool).onActivate?.();
+
+    expect(handle.destroy).toHaveBeenCalledTimes(1);
+    expect(root.getAttribute('data-compact')).toBe('on');
+    expect(tool.save().compact).toBe(true);
+    expect(block.dispatchChange).toHaveBeenCalledTimes(1);
+    // A rebuilt <audio> would stop a playing track.
+    expect(root.querySelector('[data-role="audio-media"]')).toBe(media);
+  });
+
+  it('switching back draws the ridgeline again on the same player', async () => {
+    const attach = await waveformMock();
+    const tool = new AudioTool(opts({ url: 'https://x/y.mp3', peaks: PEAKS, compact: true }));
+    const root = tool.render();
+
+    compactItem(tool).onActivate?.();
+
+    expect(attach).toHaveBeenCalledTimes(1);
+    expect(attach.mock.calls[0]?.[0]).toMatchObject({
+      mount: root.querySelector('[data-role="audio-waveform"]'),
+      media: root.querySelector('[data-role="audio-media"]'),
+      peaks: PEAKS,
+    });
+    expect(root.getAttribute('data-compact')).toBe('off');
+    expect(tool.save()).not.toHaveProperty('compact');
+  });
+});

@@ -716,6 +716,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const AUDIO_ERROR_PLAYER_BYTES = 5_014;
     // Audio beat motion: the turning label print, beat ring, halo and art punch.
     const AUDIO_BEAT_MOTION_BYTES = 2_576;
+    // Audio ridgeline: the seek slider, the ridge fill token and the compact row. Measured audio.css growth.
+    const AUDIO_RIDGELINE_BYTES = 1_842;
     // Embed empty state: the window above the URL bar that draws the typed link's kind.
     const EMBED_LIVING_WINDOW_BYTES = 10_195;
     // Video error screen: static, the colour-bar tear, the glass card and its tokens.
@@ -1677,6 +1679,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + IMAGE_CHROME_PAPER_GRAPHITE_BYTES
       + AUDIO_ERROR_PLAYER_BYTES
       + AUDIO_BEAT_MOTION_BYTES
+      + AUDIO_RIDGELINE_BYTES
       + EMBED_LIVING_WINDOW_BYTES
       + VIDEO_NO_SIGNAL_BYTES
       + VIDEO_ISLAND_BYTES

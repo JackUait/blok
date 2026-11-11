@@ -57,6 +57,16 @@ const queryByData = (container: HTMLElement, attr: string, value: string | RegEx
   return all.length > 0 ? all[0] : null;
 };
 
+/** "+ New group", then a name and Enter in its popover. */
+const addGroup = (element: HTMLElement, name = 'New'): void => {
+  queryByData(element, 'data-blok-database-add-column')?.click();
+  const input = document.querySelector<HTMLInputElement>('[data-blok-database-new-group] input');
+
+  if (input === null) throw new Error('no New group field');
+  input.value = name;
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+};
+
 // ---------------------------------------------------------------------------
 // Mock PopoverDesktop so JSDOM does not blow up. When show() is called the
 // mock appends a container with clickable action items so tests can trigger
@@ -1013,11 +1023,9 @@ describe('DatabaseTool', () => {
 
       expect(initialColumns).toHaveLength(4);
 
-      const addColBtn = queryByData(element, 'data-blok-database-add-column')!;
+      expect(queryByData(element, 'data-blok-database-add-column')).not.toBeNull();
 
-      expect(addColBtn).not.toBeNull();
-
-      addColBtn.click();
+      addGroup(element);
 
       const columns = queryAllByData(element, 'data-blok-database-column');
 
@@ -1133,7 +1141,7 @@ describe('DatabaseTool', () => {
   });
 
   describe('add column uses correct i18n key', () => {
-    it('clicking add-column button uses columnTitlePlaceholder i18n key', () => {
+    it('names the New group field and its Done button from the i18n keys, and the column from the typed name', () => {
       const mockI18n = vi.fn((key: string) => key);
       const mockApi = {
         styles: {
@@ -1178,11 +1186,13 @@ describe('DatabaseTool', () => {
 
       mockI18n.mockClear();
 
-      const addColBtn = queryByData(element, 'data-blok-database-add-column')!;
+      queryByData(element, 'data-blok-database-add-column')?.click();
 
-      addColBtn.click();
+      expect(document.querySelector<HTMLInputElement>('[data-blok-database-new-group] input')?.placeholder).toBe('tools.database.newGroup');
+      expect(document.querySelector('[data-blok-database-new-group-done]')?.textContent).toBe('tools.database.layoutSectionDone');
 
-      expect(mockI18n).toHaveBeenCalledWith('tools.database.columnTitlePlaceholder');
+      addGroup(element, 'Review');
+      expect(tool.save(document.createElement('div')).schema.find((p) => p.type === 'select')?.config?.options.map((o) => o.label)).toContain('Review');
     });
   });
 
@@ -3689,7 +3699,7 @@ describe('DatabaseTool', () => {
 
       const before = readOptions(tool);
 
-      queryByData(element, 'data-blok-database-add-column')!.click();
+      addGroup(element);
 
       const after = readOptions(tool);
       const added = after.filter((o) => !before.some((b) => b.id === o.id));
@@ -3716,7 +3726,7 @@ describe('DatabaseTool', () => {
       document.body.appendChild(container);
 
       dropColumn(tool, { optionId: 'opt-done', beforeOptionId: 'opt-todo', afterOptionId: null });
-      queryByData(element, 'data-blok-database-add-column')!.click();
+      addGroup(element);
 
       // DOM order is now: done, todo, doing, <new>. Dragging `done` between the
       // last two DOM neighbours must not produce after > before.
@@ -3862,9 +3872,7 @@ describe('DatabaseTool', () => {
 
     it('places a group added from "New group" after the no-value column, and keeps it there', () => {
       const { tool, element } = renderBoard([]);
-      const addColumn = queryByData(element, 'data-blok-database-add-column');
-
-      addColumn?.click();
+      addGroup(element);
 
       const ids = columnIds(element);
 

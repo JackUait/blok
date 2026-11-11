@@ -280,7 +280,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2078 + 142 + 526 + 4 closure for all 2750 keys', () => {
+  it('rebuilds a disjoint 2077 + 142 + 527 + 4 closure for all 2750 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -508,7 +508,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: an empty undo press announces a11y.nothingToUndo by literal.
       // +2: the emoji picker's empty stage, tools.callout.noIconYet and pickIconYouLike, by literal.
       // +5: the table footer's Unique, Empty, Not empty, Earliest and Latest labels (tools.database.calcFooter*), by literal.
-      'executable-literal': 2078,
+      // -1: tools.database.columnTitlePlaceholder left the literal calls when "+ New group" began asking for the name.
+      'executable-literal': 2077,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -592,7 +593,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: View settings' settingsEditProperties and settingsNewProperty, via the panel's t().
       // +1: the empty Sort page's sortNew title, via the panel's t().
       // -1: the New menu's "Empty" row reads cellEmpty; templateEmptyPage is gone.
-      'registered-namespace-compatible': 526,
+      // +1: tools.database.columnTitlePlaceholder, no longer called by literal; still shipped.
+      'registered-namespace-compatible': 527,
       'catalog-only': 4,
     });
     expect(

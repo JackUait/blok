@@ -310,6 +310,8 @@ const tabMenu = async (page: Page, viewId: string, item: string): Promise<void> 
 const GESTURES: Gesture[] = [
   { id: 'W4D-C1', name: 'adding a board column', run: async (page) => {
     await page.locator('[data-blok-database-add-column]').click();
+    await page.getByPlaceholder('New group').fill('Review');
+    await page.getByPlaceholder('New group').press('Enter');
   } },
   { id: 'W4D-C2', name: 'renaming a board column', run: async (page) => {
     await page.locator('[data-blok-database-column][data-option-id="opt-todo"] [data-blok-database-column-title]').click();

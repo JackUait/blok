@@ -374,6 +374,12 @@ describe('New data source: every layout on a second source', () => {
     const api = await make(doc('vb', {}, { type: 'board', groupBy: 'stage' }));
 
     await click(layoutRoot('[data-blok-database-board]').querySelector('[data-blok-database-add-column]'));
+    // "+ New group" asks for the name first.
+    const name = document.querySelector<HTMLInputElement>('[data-blok-database-new-group] input');
+
+    if (name === null) throw new Error('no New group field');
+    name.value = 'Review';
+    await click(document.querySelector('[data-blok-database-new-group-done]'));
     const stage = (await dataOf(api, 'src-b'))?.schema.find((p) => p.id === 'stage');
 
     expect(stage?.config?.options).toHaveLength(3);

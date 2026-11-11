@@ -8882,8 +8882,8 @@ export class DatabaseTool implements BlockTool {
 
       const addColumnBtn = target.closest('[data-blok-database-add-column]');
 
-      if (addColumnBtn !== null) {
-        this.handleAddColumn(boardEl);
+      if (addColumnBtn instanceof HTMLElement) {
+        this.handleAddColumn(boardEl, addColumnBtn);
 
         return;
       }
@@ -9464,7 +9464,49 @@ export class DatabaseTool implements BlockTool {
     if (!this.openIfFiltered(rowData.id)) editNewCard();
   }
 
-  private handleAddColumn(boardEl: HTMLDivElement): void {
+  /**
+   * "+ New group" asks for the name first (research/08:139, shots-08/61-board-new-group.png):
+   * a "New group" field and "Done". Enter or Done adds the column; an empty name,
+   * Escape or a click outside adds nothing.
+   */
+  private handleAddColumn(boardEl: HTMLDivElement, anchor: HTMLElement): void {
+    if (this.shownView()?.groupBy === undefined || this.structureLocked()) {
+      return;
+    }
+    const wrap = document.createElement('div');
+    const input = document.createElement('input');
+    const done = document.createElement('button');
+    const name = this.api.i18n.t('tools.database.newGroup');
+    const commit = (): void => {
+      const label = input.value.trim();
+
+      this.groupMenuPopover?.hide();
+      if (label === '' || this.destroyed || this.readOnly) return;
+      this.addGroupColumn(boardEl, label);
+    };
+
+    // The section rename's look: a bare field and a 28px "Done".
+    wrap.setAttribute('data-blok-database-layout-section-rename', '');
+    wrap.setAttribute('data-blok-database-new-group', '');
+    input.type = 'text';
+    input.placeholder = name;
+    input.setAttribute('aria-label', name);
+    input.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || event.isComposing) return;
+      event.preventDefault();
+      commit();
+    });
+    done.type = 'button';
+    done.setAttribute('data-blok-database-layout-section-done', '');
+    done.setAttribute('data-blok-database-new-group-done', '');
+    done.textContent = this.api.i18n.t('tools.database.layoutSectionDone');
+    done.addEventListener('click', commit);
+    wrap.append(input, done);
+    this.showGroupPopover(anchor, [{ type: PopoverItemType.Html, element: wrap, name: 'new-group' }], anchor);
+    input.focus();
+  }
+
+  private addGroupColumn(boardEl: HTMLDivElement, label: string): void {
     const viewConfig = this.shownView();
     const groupByPropId = viewConfig?.groupBy;
 
@@ -9491,7 +9533,7 @@ export class DatabaseTool implements BlockTool {
 
     const newOption: SelectOption = {
       id: nanoid(),
-      label: this.api.i18n.t('tools.database.columnTitlePlaceholder'),
+      label,
       position: DatabaseModel.positionBetween(noValuePos !== null && (lastPos === null || noValuePos > lastPos) ? noValuePos : lastPos, null),
     };
 

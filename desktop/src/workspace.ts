@@ -3,7 +3,7 @@ import { Database, DatabaseComment, DatabaseRow, Page, Table, type PageConfig } 
 import { createPageFrame, type PageFrame, type ShellPage, type SidebarAction } from '@blok/sidebar';
 import { loadIndex, readFile, writeFile, type DesktopPage, type WorkspaceIndex } from './storage';
 import { createDesktopFooter, readAppearance } from './settings';
-import { createAddCoverButton, createPageCover, isCoverId, type CoverId } from './cover';
+import { createAddCoverButton, createPageCover, isCoverId, trackPageHeaderHover, type CoverId } from './cover';
 import { mountAgentAssistant, type AgentAssistantHandle } from '../../src/shell/agent-assistant';
 import { bindAssistantButton, createAssistantButton, inspectNativeProvider, nativeAgentModel, selectedProvider } from './assistant';
 import { createPageToolbar, type PageBreadcrumbChoice, type PageBreadcrumbItem, type PageToolbar } from './page-toolbar';
@@ -25,6 +25,9 @@ export interface Workspace {
 }
 
 export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (id: string, icon: string) => void): Workspace {
+  // The add-cover button is re-appended whenever the core rebuilds the icon row, and
+  // WebKit keeps `:hover` latched on a node moved under the cursor. See trackPageHeaderHover.
+  trackPageHeaderHover(document);
   let index: WorkspaceIndex | null = null;
   let editor: Blok | null = null;
   let frame: PageFrame;

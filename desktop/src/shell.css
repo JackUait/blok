@@ -197,7 +197,7 @@ body[data-blok-theme="light"] [data-desktop-settings-overlay] {
   font: inherit; font-size: 14px; line-height: 20px; cursor: pointer;
   opacity: 0; transition: opacity 160ms ease, background-color 120ms ease, color 120ms ease;
 }
-[data-blok-page-header]:hover [data-desktop-add-cover],
+[data-blok-page-header][data-desktop-header-hover] [data-desktop-add-cover],
 :where(:root:not([data-blok-modality="pointer"])) [data-desktop-add-cover]:focus-visible { opacity: 1; }
 [data-desktop-add-cover]:hover,
 :where(:root:not([data-blok-modality="pointer"])) [data-desktop-add-cover]:focus-visible { background: var(--desktop-hover); color: var(--desktop-ink); }

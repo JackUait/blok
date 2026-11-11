@@ -58,6 +58,42 @@ export const COVER_PRESETS = COVER_GROUPS.flatMap((group) => [...group.items]);
 export type CoverId = typeof COVER_PRESETS[number]['id'];
 export const isCoverId = (value: unknown): value is CoverId => COVER_PRESETS.some((item) => item.id === value);
 
+/**
+ * Paints the page header's hover state as an attribute instead of leaning on CSS
+ * `:hover`.
+ *
+ * workspace.ts re-appends the add-cover button whenever the core rebuilds the icon
+ * row. WebKit — the engine behind the packaged Tauri window — never delivers the
+ * matching `mouseleave` for a node moved under the cursor, so `:hover` on the header
+ * latched and the button never left. The core's add-icon button is never moved, so
+ * only this one stuck. Delegation reads the pointer's live target, so a replaced node
+ * changes nothing.
+ */
+export function trackPageHeaderHover(root: Document): () => void {
+  const HEADER = '[data-blok-page-header]';
+  const FLAG = 'data-desktop-header-hover';
+  const clear = (): void => {
+    for (const header of root.querySelectorAll(HEADER)) header.removeAttribute(FLAG);
+  };
+  const over = (event: Event): void => {
+    const target = event.target instanceof Element ? event.target.closest(HEADER) : null;
+    clear();
+    target?.setAttribute(FLAG, '');
+  };
+  const out = (event: Event): void => {
+    const to = event instanceof MouseEvent && event.relatedTarget instanceof Element ? event.relatedTarget : null;
+    if (to?.closest(HEADER)) return;
+    clear();
+  };
+  root.addEventListener('pointerover', over, true);
+  root.addEventListener('pointerout', out, true);
+  return () => {
+    root.removeEventListener('pointerover', over, true);
+    root.removeEventListener('pointerout', out, true);
+    clear();
+  };
+}
+
 export function createAddCoverButton(onChange: (cover: CoverId) => void): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';

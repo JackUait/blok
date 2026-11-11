@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { describe, expect, it, vi } from 'vitest';
-import { createAddCoverButton, createPageCover, isCoverId } from './cover';
+import { createAddCoverButton, createPageCover, isCoverId, trackPageHeaderHover } from './cover';
 
 describe('desktop page cover', () => {
   it('offers a cover, allows replacing it, and allows removing it', () => {
@@ -43,5 +43,42 @@ describe('desktop page cover', () => {
 
     expect(reveal).toMatch(/:root:not\(\[data-blok-modality="pointer"\]\)/);
     expect(fill).toMatch(/:root:not\(\[data-blok-modality="pointer"\]\)/);
+  });
+
+  /**
+   * The desktop re-appends its button whenever the core rebuilds the icon row
+   * (workspace.ts watches it with a MutationObserver). WebKit — the engine behind
+   * the packaged Tauri window — never delivers the matching `mouseleave` for a node
+   * moved under the cursor, so a CSS `:hover` on the header stayed latched and
+   * "Ajouter une couverture" never left. The core's own add-icon button is never
+   * moved, which is why only the cover one stuck. Delegation on the document
+   * survives the node being replaced; `:hover` does not.
+   */
+  it('drops the header hover flag even when the button is re-inserted under the cursor', () => {
+    const header = document.createElement('div');
+    header.setAttribute('data-blok-page-header', '');
+    const row = document.createElement('div');
+    header.append(row);
+    document.body.append(header);
+    const stop = trackPageHeaderHover(document);
+
+    let button = createAddCoverButton(() => {});
+    row.append(button);
+    button.dispatchEvent(new MouseEvent('pointerover', { bubbles: true }));
+    expect(header.hasAttribute('data-desktop-header-hover')).toBe(true);
+
+    // The core rebuilds the row; workspace.ts re-appends the button.
+    button.remove();
+    button = createAddCoverButton(() => {});
+    row.append(button);
+
+    const outside = document.createElement('p');
+    document.body.append(outside);
+    button.dispatchEvent(new MouseEvent('pointerout', { bubbles: true, relatedTarget: outside }));
+    expect(header.hasAttribute('data-desktop-header-hover')).toBe(false);
+
+    stop();
+    header.remove();
+    outside.remove();
   });
 });

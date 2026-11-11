@@ -582,19 +582,36 @@
 }
 
 /* bottom scrim + bar */
+/* island — the bar floats as one glass capsule, so the picture stays clean edge
+   to edge. The fill and blur live on the bar itself: the gear menu is anchored
+   on the figure, not inside the bar, so this blur never clips it. */
 [data-blok-tool="video"] .blok-video-controls__bar {
   position: absolute;
-  left: 0; right: 0; bottom: 0;
+  left: var(--blok-space-3-5);
+  right: var(--blok-space-3-5);
+  bottom: var(--blok-space-3-5);
   display: flex;
   align-items: center;
-  gap: var(--blok-space-2-5);
-  padding: var(--blok-space-5) var(--blok-space-3) var(--blok-space-2-5);
-  background: linear-gradient(to top, var(--blok-video-scrim-strong) 0%, var(--blok-video-scrim-mid) 55%, transparent 100%);
+  gap: var(--blok-space-1-5);
+  padding: var(--blok-space-1-5) var(--blok-space-2);
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-video-island-bg);
+  -webkit-backdrop-filter: blur(22px) saturate(1.9);
+  backdrop-filter: blur(22px) saturate(1.9);
+  box-shadow: var(--blok-video-island-shadow);
   pointer-events: auto;
   opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 160ms ease, transform 160ms ease;
+  transform: translateY(18px) scale(0.94);
+  transform-origin: 50% 100%;
+  transition: opacity 180ms ease, transform 420ms var(--blok-ease-spring-island);
 }
+[data-blok-tool="video"] .blok-video-controls__bar .blok-video-controls__seek-wrap { margin-inline: var(--blok-space-1-5); }
+[data-blok-tool="video"] .blok-video-controls__btn[data-action="play-toggle"] {
+  width: 36px; height: 36px;
+  background: var(--blok-video-island-play-bg);
+  color: var(--blok-video-island-play-fg);
+}
+[data-blok-tool="video"] .blok-video-controls__btn[data-action="play-toggle"]:hover { background: var(--blok-video-island-play-bg-hover); }
 [data-blok-tool="video"] .blok-video-inner:hover .blok-video-controls__bar,
 [data-blok-tool="video"] .blok-video-controls:has(:focus-visible) .blok-video-controls__bar,
 [data-blok-tool="video"] .blok-video-inner:not([data-playing="true"]) .blok-video-controls__bar {
@@ -733,8 +750,13 @@
   border-radius: var(--blok-radius-pill);
   background: var(--blok-video-thumb);
   box-shadow: var(--blok-video-thumb-shadow);
+  transform: scale(0);
   transition: transform 120ms ease;
 }
+/* the knob shows only while the scrubber is in use */
+[data-blok-tool="video"] .blok-video-controls__seek-wrap:hover .blok-video-controls__seek::-webkit-slider-thumb,
+[data-blok-tool="video"] .blok-video-controls__seek:focus-visible::-webkit-slider-thumb,
+[data-blok-tool="video"] .blok-video-controls__seek:active::-webkit-slider-thumb { transform: scale(1); }
 [data-blok-tool="video"] .blok-video-controls__seek:hover::-webkit-slider-thumb { transform: scale(1.2); }
 [data-blok-tool="video"] .blok-video-controls__seek::-moz-range-thumb {
   width: 13px; height: 13px;
@@ -1324,14 +1346,16 @@
   place-items: center;
   border: 0;
   border-radius: var(--blok-radius-pill);
-  background: var(--blok-video-burst-bg);
+  background: var(--blok-video-island-bg);
   color: var(--blok-video-burst-fg);
-  box-shadow: var(--blok-video-burst-shadow);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  box-shadow: var(--blok-video-island-shadow);
+  -webkit-backdrop-filter: blur(18px) saturate(1.8);
+  backdrop-filter: blur(18px) saturate(1.8);
   cursor: pointer;
   pointer-events: auto;
+  transition: transform 320ms var(--blok-ease-spring-island);
 }
+[data-blok-tool="video"] .blok-video-controls__center:hover { transform: translate(-50%, -50%) scale(1.06); }
 [data-blok-tool="video"] .blok-video-controls__center[hidden] { display: none; }
 [data-blok-tool="video"] .blok-video-controls__center svg { width: 30px; height: 30px; }
 
@@ -1356,7 +1380,7 @@
 /* idle auto-hide — fade the bar + hide the cursor during playback */
 [data-blok-tool="video"] .blok-video-inner[data-controls-hidden="true"] .blok-video-controls__bar {
   opacity: 0;
-  transform: translateY(6px);
+  transform: translateY(18px) scale(0.94);
   pointer-events: none;
 }
 [data-blok-tool="video"] .blok-video-inner[data-controls-hidden="true"] video { cursor: none; }

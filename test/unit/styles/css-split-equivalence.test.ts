@@ -720,6 +720,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const EMBED_LIVING_WINDOW_BYTES = 10_195;
     // Video error screen: static, the colour-bar tear, the glass card and its tokens.
     const VIDEO_NO_SIGNAL_BYTES = 8_421;
+    // Video island controls: the floating glass bar, the light play disc, the glass centre disc and their tokens.
+    const VIDEO_ISLAND_BYTES = 2_067;
     // Image upload resend: the card's lift, progress hairline, attempt pill and the failed send's fall back.
     const IMAGE_RESEND_BYTES = 5_150;
     // Notifier card stack: the peeking edges of waiting cards, their tokens, the unfold and the dust mask.
@@ -1675,6 +1677,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + AUDIO_BEAT_MOTION_BYTES
       + EMBED_LIVING_WINDOW_BYTES
       + VIDEO_NO_SIGNAL_BYTES
+      + VIDEO_ISLAND_BYTES
       + IMAGE_RESEND_BYTES
       + TABS_TOOLBOX_PREVIEW_BYTES
       + TABS_BLOCK_BYTES

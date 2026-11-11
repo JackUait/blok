@@ -171,4 +171,43 @@ describe('HtmlHandler — nested HTML list paste preserves depth (M-18 live-edit
     expect(detectStyleFromPastedContent(listBlocks[0].content, 'unordered')).toBe('ordered');
     expect(detectStyleFromPastedContent(listBlocks[1].content, 'unordered')).toBe('ordered');
   });
+  it('nests each pasted list item under the item it sat in', async () => {
+    const list = makeToolStub('list', ['LI']);
+    const paragraph = makeToolStub('paragraph', ['P']);
+    const registry = makeRegistry([list, paragraph]);
+    const blok = makeBlok([list, paragraph]);
+    const handler = new HtmlHandler(blok, registry, makeSanitizerBuilder());
+
+    await handler.handle('<ul><li>a<ul><li>b<ul><li>c</li></ul></li></ul></li><li>d</li></ul>', { canReplaceCurrentBlock: false });
+
+    expect(vi.mocked(blok.BlockManager.setBlockParent).mock.calls).toEqual([
+      [expect.objectContaining({ id: 'block-2' }), 'block-1'],
+      [expect.objectContaining({ id: 'block-3' }), 'block-2'],
+    ]);
+    expect(insertedBlocks.map((b) => b.content.textContent?.trim())).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('leaves a list item flat when its level skips one', async () => {
+    const list = makeToolStub('list', ['LI']);
+    const paragraph = makeToolStub('paragraph', ['P']);
+    const registry = makeRegistry([list, paragraph]);
+    const blok = makeBlok([list, paragraph]);
+    const handler = new HtmlHandler(blok, registry, makeSanitizerBuilder());
+
+    await handler.handle('<ul><li aria-level="1">a</li><li aria-level="3">b</li><li aria-level="4">c</li></ul>', { canReplaceCurrentBlock: false });
+
+    expect(blok.BlockManager.setBlockParent).not.toHaveBeenCalled();
+  });
+
+  it('does not nest a list item under one that a paragraph cut off', async () => {
+    const list = makeToolStub('list', ['LI']);
+    const paragraph = makeToolStub('paragraph', ['P']);
+    const registry = makeRegistry([list, paragraph]);
+    const blok = makeBlok([list, paragraph]);
+    const handler = new HtmlHandler(blok, registry, makeSanitizerBuilder());
+
+    await handler.handle('<ul><li aria-level="1">a</li></ul><p>x</p><ul><li aria-level="2">b</li></ul>', { canReplaceCurrentBlock: false });
+
+    expect(blok.BlockManager.setBlockParent).not.toHaveBeenCalled();
+  });
 });

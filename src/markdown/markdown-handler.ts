@@ -12,6 +12,26 @@ import { enclosingCellTable } from '../components/utils/enclosing-cell-table';
 import { subtreeEndIndex } from '../components/utils/blocks-tree';
 import { parseUntrustedHtml } from '../components/utils/inert-html';
 import type { InternalMarkdownImportConfig } from './types';
+import { listParentIndices } from '../components/modules/paste/list-nesting';
+
+/**
+ * Hang each list item under the item it was indented under. markdownToBlocks
+ * is published and keeps its flat lists, so the paste does this on its own.
+ * Only `parent` is set: insertMany fills each parent's content from it.
+ * @param blocks - the converted batch, in flat document order
+ */
+const nestListItemsByDepth = (blocks: OutputBlockData[]): OutputBlockData[] => {
+  const parents = listParentIndices(blocks.map((block) => ({
+    depth: block.type === 'list' ? Number((block.data as { depth?: number }).depth ?? 0) : null,
+    scope: block.parent,
+  })));
+
+  return blocks.map((block, index) => {
+    const parentIndex = parents[index];
+
+    return parentIndex === undefined ? block : { ...block, parent: blocks[parentIndex].id };
+  });
+};
 
 /**
  * Patterns that indicate text is likely Markdown rather than plain text.
@@ -156,7 +176,7 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
     const contextParentId = redirectTable !== undefined ? redirectTable.parentId : caretParentId;
 
     // Compose Block instances from OutputBlockData
-    const composed = outputBlocks.map(({ id, type, data: blockData, parent }) => ({
+    const composed = nestListItemsByDepth(outputBlocks).map(({ id, type, data: blockData, parent }) => ({
       block: BlockManager.composeBlock({
         id,
         tool: type,

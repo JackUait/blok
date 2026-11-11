@@ -127,6 +127,15 @@ describe('MarkdownHandler', () => {
     }
   });
 
+  it('nests each pasted list item under the item it was indented under', async () => {
+    await handler.handle('- a\n    - b\n        - c\n- d', { canReplaceCurrentBlock: false });
+
+    const composed = mockComposeBlock.mock.calls.map((args) => args[0] as { id: string; parentId?: string; data: { text: string } });
+
+    expect(composed.map(({ parentId }) => parentId)).toEqual([undefined, composed[0].id, composed[1].id, undefined]);
+    expect(composed.map(({ data }) => data.text)).toEqual(['a', 'b', 'c', 'd']);
+  });
+
   it('normalizes flat-array table children even if markdownToBlocks emits children without parent', async () => {
     // Defense-in-depth: if mdast-to-blocks ever regresses to emitting the
     // dodopizza shape (table cells reference children by id but the children

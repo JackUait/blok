@@ -16,8 +16,11 @@ import type { PasteHandler } from './base';
 import { BasePasteHandler } from './base';
 import { parseUntrustedHtml } from '../../../utils/inert-html';
 import { PAGE_REFERENCE_ATTR, preservePageReferenceAnchor } from '../../../../shared/page-reference';
+import { extractDepthFromPastedContent } from '../../../../tools/list/paste-handler';
+import { listParentIndices } from '../list-nesting';
 
 const HEADER_TOOL_NAME = 'header';
+const LIST_TOOL_NAME = 'list';
 
 /**
  * A node queued for block mapping, optionally expanded out of a container
@@ -256,6 +259,19 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
         item.parentPasteIndex = oldToNewIndex.get(item.parentPasteIndex);
       }
     }
+
+    // preprocessNestedLists hoisted every nested list flat, so the nesting
+    // is left only in each item's aria-level.
+    const listParents = listParentIndices(filtered.map((item) => ({
+      depth: item.tool === LIST_TOOL_NAME && item.content.tagName === 'LI' ? extractDepthFromPastedContent(item.content) : null,
+      scope: item.parentPasteIndex,
+    })));
+
+    listParents.forEach((parentIndex, index) => {
+      if (parentIndex !== undefined) {
+        filtered[index].parentPasteIndex = parentIndex;
+      }
+    });
 
     return filtered;
   }

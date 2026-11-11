@@ -272,7 +272,7 @@ describe('HtmlHandler — containers copied from Blok', () => {
       'list:Four',
     ]);
     expect(inserted[2].content.getAttribute('aria-level')).toBe('2');
-    expect(['block-2', 'block-3'].map((id) => parentOf(setBlockParent, id))).toEqual(['block-1', 'block-1']);
+    expect(['block-2', 'block-3'].map((id) => parentOf(setBlockParent, id))).toEqual(['block-1', 'block-2']);
     expect(['block-5', 'block-6'].map((id) => parentOf(setBlockParent, id))).toEqual(['block-4', 'block-4']);
   });
 });

@@ -1461,7 +1461,8 @@ test.describe('copy and paste', () => {
         'paragraph Before < -',
         'toggle Toggle < -',
         'list One < toggle Toggle',
-        'list Two < toggle Toggle',
+        // html cannot tell a flat depth from nesting, so the item nests under One.
+        'list Two < list One',
         'callout < -',
         'list Three < callout',
         'list Four < callout',
@@ -1652,6 +1653,63 @@ test.describe('copy and paste', () => {
           .evaluate((el) => (el instanceof HTMLElement ? el.style.marginInlineStart : ''));
 
         expect(indent).toBe('');
+      });
+    }
+  });
+
+  test.describe('nested list items pasted without the Blok clipboard', () => {
+    const LI = (id: string, text: string, depth: number, extra: Partial<OutputData['blocks'][number]> = {}): OutputData['blocks'][number] =>
+      ({ id, type: 'list', data: { text, style: 'unordered', depth }, ...extra });
+    const doc: OutputData['blocks'] = [
+      LI('u1', 'Bullet one', 0, { content: ['u2'] }),
+      LI('u2', 'Bullet two', 1, { parent: 'u1', content: ['u3'] }),
+      LI('u3', 'Bullet three', 2, { parent: 'u2', content: ['u4'] }),
+      LI('u4', 'Bullet four', 3, { parent: 'u3' }),
+    ];
+
+    for (const keep of [['text/html', 'text/plain'], ['text/plain']]) {
+      test(`keep their nesting with only ${keep.join(' and ')}`, async ({ page }) => {
+        await createBlok(page, { data: { blocks: doc }, dataModel: 'hierarchical' });
+
+        await page.locator('[data-blok-id="u1"] [contenteditable="true"]').first().click();
+        await page.keyboard.press('ControlOrMeta+a');
+        await page.keyboard.press('ControlOrMeta+a');
+        await expect(page.locator('[data-blok-id="u1"][data-blok-selected="true"]')).toBeVisible();
+
+        const copied = await copyFromElement(page.locator('[data-blok-id="u1"]'));
+        const degraded = Object.fromEntries(Object.entries(copied).filter(([mime]) => keep.includes(mime)));
+
+        await createBlok(page, { data: { blocks: [{ id: 'target', type: 'paragraph', data: { text: '' } }] }, dataModel: 'hierarchical' });
+        await page.locator('[data-blok-id="target"] [contenteditable="true"]').click();
+        await paste(page, page.locator(':focus'), degraded);
+
+        const tree = async (): Promise<Array<{ text: unknown; parent: unknown; content: unknown }>> => {
+          const { blocks } = await saveBlok(page);
+          const textOf = (id: unknown): unknown => blocks.find((b) => b.id === id)?.data.text;
+
+          return blocks.map((b) => ({
+            text: b.data.text,
+            parent: textOf(b.parent),
+            content: b.content?.map(textOf),
+          }));
+        };
+
+        await expect.poll(tree).toEqual([
+          { text: 'Bullet one', parent: undefined, content: ['Bullet two'] },
+          { text: 'Bullet two', parent: 'Bullet one', content: ['Bullet three'] },
+          { text: 'Bullet three', parent: 'Bullet two', content: ['Bullet four'] },
+          { text: 'Bullet four', parent: 'Bullet three', content: undefined },
+        ]);
+
+        const { blocks } = await saveBlok(page);
+        const firstId = blocks[0].id ?? '';
+
+        await page.locator(`[data-blok-id="${firstId}"] [contenteditable="true"]`).first().click();
+        await page.keyboard.press('ControlOrMeta+a');
+        await page.keyboard.press('ControlOrMeta+a');
+        const recopied = await copyFromElement(page.locator(`[data-blok-id="${firstId}"]`));
+
+        expect((JSON.parse(recopied['application/x-blok']) as unknown[]).length).toBe(4);
       });
     }
   });

@@ -520,6 +520,8 @@ test.describe('CSV', () => {
       element.dispatchEvent(event);
     }, 'Task\tNote\nShip\t<b>bold</b> & co\nRest\tx');
 
+    // A tab-separated paste lands as a table first; the offer swaps that table.
+    await expect.poll(async () => (await saved(page)).filter((block) => block.type === 'table').length).toBe(1);
     await page.getByRole('button', { name: 'Convert to database' }).click();
 
     await expect.poll(async () => (await saved(page)).filter((block) => block.type === 'database').length).toBe(1);
@@ -532,5 +534,6 @@ test.describe('CSV', () => {
     expect(schema.map((p) => [p.name, p.type])).toEqual([['Task', 'title'], ['Note', 'text']]);
     expect(rows.map((row) => (row.data.properties as Record<string, unknown>)[note])).toEqual(['<b>bold</b> & co', 'x']);
     expect(all.filter((block) => block.type === 'paragraph' && JSON.stringify(block.data).includes('Ship'))).toHaveLength(0);
+    expect(all.filter((block) => block.type === 'table')).toHaveLength(0);
   });
 });

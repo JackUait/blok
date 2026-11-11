@@ -659,7 +659,6 @@ test.describe('table round trips', () => {
   });
 
   test('O9 range degraded plain only (TSV) → top level', async ({ page }) => {
-    test.fixme(true, 'table-O9-range-outside-plain-tsv: plain TSV pasted outside a table lands as paragraphs');
     const { after, pasted } = await rangeOutside(page, 0, 0, 2, 2, [para('tgt', '')], 'tgt', plainOnly);
 
     expect.soft(integrityProblems(after)).toEqual([]);
@@ -672,12 +671,21 @@ test.describe('table round trips', () => {
   });
 
   test('O9b rows 0-1 range (selection grows to the rowspan footprint) plain only (TSV) → top level, offer toast check', async ({ page }) => {
-    test.fixme(true, 'table-O9-range-outside-plain-tsv: plain TSV pasted outside a table lands as paragraphs');
     const { pasted } = await rangeOutside(page, 0, 0, 1, 2, [para('tgt', '')], 'tgt', plainOnly);
     // eslint-disable-next-line playwright/no-wait-for-timeout -- paste and save settle with no event to wait on
     await page.waitForTimeout(500);
 
     expect(pasted, 'TSV grid comes back as a table').toBeTruthy();
+  });
+
+  test('O9c range plain TSV with an html flavour → top level follows the html, not the TSV', async ({ page }) => {
+    const { after } = await rangeOutside(page, 0, 0, 1, 1, [para('tgt', '')], 'tgt', clip => ({
+      'text/html': '<p>A\tB</p><p>1\t2</p>',
+      'text/plain': clip['text/plain'] === undefined ? '' : 'A\tB\n1\t2',
+    }));
+
+    expect(tables(after)).toHaveLength(1);
+    expect(JSON.stringify(after.filter(b => b.type === 'paragraph'))).toContain('A');
   });
 
   test('O10 range with merged cell (rowspan) only → outside keeps merge', async ({ page }) => {

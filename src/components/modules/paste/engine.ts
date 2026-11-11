@@ -17,6 +17,7 @@ import { FilesHandler } from './handlers/files-handler';
 import { HtmlHandler } from './handlers/html-handler';
 import { MarkdownHandler } from '../../../markdown/markdown-handler';
 import { PatternHandler } from './handlers/pattern-handler';
+import { PlainGridHandler } from './handlers/plain-grid-handler';
 import { TableCellsHandler } from './handlers/table-cells-handler';
 import { TextHandler } from './handlers/text-handler';
 import { SanitizerConfigBuilder } from './sanitizer-config';
@@ -52,6 +53,7 @@ export class PasteEngine {
       new FilesHandler(Blok, toolRegistry, this.sanitizerBuilder),
       new PatternHandler(Blok, toolRegistry, this.sanitizerBuilder, config),
       new HtmlHandler(Blok, toolRegistry, this.sanitizerBuilder, config),
+      new PlainGridHandler(Blok, toolRegistry, this.sanitizerBuilder),
       new MarkdownHandler(Blok, toolRegistry, this.sanitizerBuilder),
       new TextHandler(Blok, toolRegistry, this.sanitizerBuilder, config),
     ];
@@ -293,6 +295,11 @@ export class PasteEngine {
 
     if (handler instanceof PatternHandler) {
       return plainData;
+    }
+
+    // Matches the paste inside a table: a grid only when the clipboard has no HTML.
+    if (handler instanceof PlainGridHandler) {
+      return rawHtmlData === '' ? plainData : undefined;
     }
 
     if (handler instanceof MarkdownHandler) {

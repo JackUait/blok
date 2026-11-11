@@ -45,14 +45,15 @@ const convert = async (table: string[][], addedIds: string[], deps: CsvOfferDeps
 };
 
 /**
- * After plain text that reads as a CSV or TSV table lands as paragraphs,
- * offers to turn those paragraphs into a database. Unverified in Notion
+ * After plain text that reads as a CSV or TSV table lands as paragraphs or
+ * as a table, offers to turn those blocks into a database. Unverified in Notion
  * (research/05 U4). Offered only when every line became a new block: a line
- * merged into the block at the caret could not be taken back.
+ * merged into the block at the caret could not be taken back. A paste that
+ * became one table block passes `asOneBlock`.
  */
-export const offerCsvDatabase = (text: string, addedIds: string[], deps: CsvOfferDeps): boolean => {
+export const offerCsvDatabase = (text: string, addedIds: string[], deps: CsvOfferDeps, asOneBlock = false): boolean => {
   const table = pastedTable(text);
-  const lines = text.split(/\r?\n/).filter((line) => line.trim() !== '').length;
+  const lines = asOneBlock ? 1 : text.split(/\r?\n/).filter((line) => line.trim() !== '').length;
 
   if (table === null || addedIds.length !== lines) return false;
   // The toast button does not disable itself, and the first click waits for a chunk.

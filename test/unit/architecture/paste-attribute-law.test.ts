@@ -132,6 +132,7 @@ const PIPELINE_FILES: string[] = [
   'src/components/modules/paste/handlers/files-handler.ts',
   'src/components/modules/paste/handlers/html-handler.ts',
   'src/components/modules/paste/handlers/pattern-handler.ts',
+  'src/components/modules/paste/handlers/plain-grid-handler.ts',
   'src/components/modules/paste/handlers/table-cells-handler.ts',
   'src/components/modules/paste/handlers/text-handler.ts',
   'src/components/utils/apply-link-config.ts',

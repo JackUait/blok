@@ -202,6 +202,7 @@ const REVIEW_ROWS: Record<CapabilityId, Coverage> = {
   'paste:handler/PatternHandler': cmds(['embed.create', 'bookmark.create'], 'A pasted URL that a tool claims by pattern becomes that block.'),
   'paste:handler/TableCellsHandler': cmds(['table.insertRows', 'table.insertColumns', 'block.insert'], 'Pasted cells grow the grid as needed; each cell body is child blocks of the cell.'),
   'paste:handler/HtmlHandler': cmd('html.insert'),
+  'paste:handler/PlainGridHandler': cmd('block.insert'),
   'paste:handler/FilesHandler': cmds(['image.uploadFile', 'video.uploadFile', 'audio.uploadFile', 'file.uploadFile'], 'A pasted or dropped file goes through the host uploader. Agents get it where the host gives them a file uploader (MCP uploads).'),
   'paste:html/google-docs-preprocessor': cmd('html.insert'),
   'paste:html/notion-preprocessor': cmd('html.insert'),

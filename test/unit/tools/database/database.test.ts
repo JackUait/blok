@@ -6022,6 +6022,18 @@ describe('DatabaseTool', () => {
         tool.destroy();
       });
 
+      // research/36 §6, research/37 §4.3: one line with no close button, gone 5.05s after it shows.
+      it('shows the toast compact, for Notion\'s 5.05s', () => {
+        const { tool, element, show } = trashTool();
+
+        select(element, ['row-1']);
+        pressDelete('Delete');
+
+        expect(trashToast(show)).toEqual(expect.objectContaining({ compact: true, time: 5050 }));
+
+        tool.destroy();
+      });
+
       it('Restore never falls back to a plain undo when the delete left no step of its own', () => {
         const { tool, element, show, history } = trashTool();
 

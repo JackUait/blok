@@ -297,7 +297,7 @@ const drawSpinner = (): HTMLElement => {
  * @param options - the toast options
  */
 const drawCard = (notify: HTMLElement, messageWrapper: HTMLElement, options: NotifierOptions): void => {
-  notify.setAttribute('data-blok-toast', 'card');
+  notify.setAttribute('data-blok-toast', options.compact === true ? 'compact' : 'card');
   messageWrapper.setAttribute('data-blok-toast-part', 'body');
 
   if (options.thumbnails !== undefined && options.thumbnails.length > 0) {
@@ -341,7 +341,9 @@ const drawCard = (notify: HTMLElement, messageWrapper: HTMLElement, options: Not
     actions.appendChild(button);
   });
   notify.appendChild(actions);
-  notify.appendChild(createDismissButton(() => toastDismissers.get(notify)?.(), options.dismissText ?? 'Close'));
+  if (options.compact !== true) {
+    notify.appendChild(createDismissButton(() => toastDismissers.get(notify)?.(), options.dismissText ?? 'Close'));
+  }
 };
 
 /**

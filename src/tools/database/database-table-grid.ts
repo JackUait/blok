@@ -61,7 +61,8 @@ export interface GridCallbacks {
   commitReminder?: (rowId: string, propertyId: string, reminder: DateReminderOffset | null) => void;
   editEnded: () => void;
   /** `byKey`: Delete or Backspace on selected rows, which shows the Trash toast. */
-  deleteRows: (rowIds: string[], byKey?: boolean) => void;
+  /** `toast`: show "Moved to Trash" with Restore. */
+  deleteRows: (rowIds: string[], toast?: boolean) => void;
   duplicateRows: (rowIds: string[]) => void;
   optionsChange?: (propertyId: string, options: SelectOption[]) => void;
   /** A cell editor's "Edit property" footer. */

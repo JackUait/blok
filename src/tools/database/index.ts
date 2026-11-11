@@ -7558,9 +7558,9 @@ export class DatabaseTool implements BlockTool {
         addGroupPage: (groupKey: string) => { if (writable()) this.addGroupPage(groupKey); },
         groupCalculationMenu: (anchor: HTMLElement, header: HTMLElement) => { if (writable()) this.openGroupCalculationMenu(anchor, header); },
       } : {}),
-      deleteRows: (rowIds, byKey) => {
+      deleteRows: (rowIds, toast) => {
         if (!writable()) return;
-        if (byKey === true) this.trashWithToast(() => this.deleteTableRows(rowIds), rowIds.length);
+        if (toast === true) this.trashWithToast(() => this.deleteTableRows(rowIds), rowIds.length);
         else this.deleteTableRows(rowIds);
       },
       duplicateRow: (rowId) => { if (writable()) this.duplicateTableRow(rowId); },
@@ -10770,8 +10770,11 @@ export class DatabaseTool implements BlockTool {
     // Only the delete's own step: the toast stays open, so a later edit may sit on top by then.
     const step = after !== before ? after : undefined;
 
+    // research/36 §6, research/37 §4.3: one line, no close button, 5.05s; hover holds it.
     this.api.notifier.show({
       message: this.api.i18n.t('tools.database.movedToTrash'),
+      compact: true,
+      time: 5050,
       announce: this.api.i18n.t('tools.database.blocksDeleted', { count }),
       actions: [{
         label: this.api.i18n.t('tools.database.restore'),

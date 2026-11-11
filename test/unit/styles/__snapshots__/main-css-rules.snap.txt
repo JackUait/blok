@@ -32738,6 +32738,45 @@ textarea[data-blok-field] {
   transition: none;
 }
 
+[data-blok-interface='notifier'] [data-blok-toast='compact'] {
+  --blok-toast-compact-bg: rgb(44 44 43);
+  --blok-toast-compact-ink: rgb(240 239 237);
+  --blok-toast-compact-shadow: rgb(25 25 25 / 0.05) 0 20px 24px 0, rgb(25 25 25 / 0.027) 0 5px 8px 0, rgb(42 28 0 / 0.07) 0 0 0 1px;
+  --blok-toast-compact-action-hover: rgb(33 27 23 / 0.051);
+  --blok-toast-compact-action-pad: 0 8px;
+  margin-bottom: 8px;
+  padding: 11px 16px;
+  border: none;
+  border-radius: var(--blok-radius-control-lg);
+  background-color: var(--blok-toast-compact-bg);
+  color: var(--blok-toast-compact-ink);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 21px;
+  letter-spacing: normal;
+  box-shadow: var(--blok-toast-compact-shadow);
+}
+
+[data-blok-toast='compact'] [data-blok-toast-part='actions'] {
+  display: flex;
+}
+
+[data-blok-toast='compact'] [data-blok-toast-part='action'] {
+  padding: var(--blok-toast-compact-action-pad);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background-color: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+  line-height: 17px;
+  cursor: pointer;
+}
+
+[data-blok-toast='compact'] [data-blok-toast-part='action']:hover {
+  background-color: var(--blok-toast-compact-action-hover);
+}
+
 [data-blok-spotlight] {
   --blok-spotlight-tint: transparent;
   --blok-spotlight-flash: color-mix(in srgb, var(--blok-color-yellow-text) 14%, transparent);

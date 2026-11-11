@@ -38,8 +38,9 @@ const dropped = new WeakSet<NotifierOptions>();
 /** Cards drawn behind the front one. More waiting cards do not add depth. */
 const MAX_BEHIND = 2;
 
+// A compact toast is not a card: it replaces the toast on screen as a plain one does.
 const isCard = (options: NotifierOptions): boolean =>
-  options.type !== 'confirm' && options.type !== 'prompt' && options.actions !== undefined && options.actions.length > 0;
+  options.type !== 'confirm' && options.type !== 'prompt' && options.actions !== undefined && options.actions.length > 0 && options.compact !== true;
 
 const frontCard = (): HTMLElement | null =>
   document.querySelector<HTMLElement>('[data-blok-testid="notifier-container"] > [data-blok-toast="card"][data-state="open"]');
@@ -256,9 +257,10 @@ interface PausableTimer {
  * called for the first time.
  * @param {number} durationMs - total time before expiry
  * @param {() => void} onExpire - invoked once when the countdown reaches zero
+ * @param {boolean} restart - a resume after a pause counts the full time again
  * @returns {PausableTimer}
  */
-const createPausableTimer = (durationMs: number, onExpire: () => void): PausableTimer => {
+const createPausableTimer = (durationMs: number, onExpire: () => void, restart = false): PausableTimer => {
   const state = { remaining: durationMs, deadline: 0, handle: null as number | null };
 
   const resume = (): void => {
@@ -281,7 +283,7 @@ const createPausableTimer = (durationMs: number, onExpire: () => void): Pausable
 
     window.clearTimeout(state.handle);
     state.handle = null;
-    state.remaining = Math.max(0, state.deadline - Date.now());
+    state.remaining = restart ? durationMs : Math.max(0, state.deadline - Date.now());
   };
 
   const clear = (): void => {
@@ -502,7 +504,8 @@ const startToastLifecycle = (wrapper: HTMLElement, notify: HTMLElement, position
   // setTimeout treats delays above 2^31-1 ms as ~1 ms.
   const timer: PausableTimer = sticky
     ? { pause: () => undefined, resume: () => undefined, clear: () => undefined }
-    : createPausableTimer(time, dismiss);
+    // research/37 §4.3: Notion's compact toast starts its full time again when the pointer leaves.
+    : createPausableTimer(time, dismiss, notify.getAttribute('data-blok-toast') === 'compact');
 
   const unregisterLayer = registerLayer({
     element: notify,
@@ -588,7 +591,7 @@ export const show = (
   const wrapper = prepare_(position);
   const time = options.time || DEFAULT_TIME;
   const autoDismiss = options.type !== 'confirm' && options.type !== 'prompt';
-  const sticky = options.actions !== undefined && options.actions.length > 0;
+  const sticky = options.actions !== undefined && options.actions.length > 0 && options.compact !== true;
 
   // The wrapper is shared by every editor on the page, so each toast carries its own direction.
   const buildNotify = (): HTMLElement => {

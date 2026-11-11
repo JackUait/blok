@@ -1813,6 +1813,16 @@ describe('DatabaseTableView', () => {
       expect(menu?.querySelector('[data-blok-database-row-menu-footer]')).not.toBeNull();
     });
 
+    // research/36 §6: Notion's row handle › Move to Trash shows the "Moved to Trash" toast.
+    it('the row menu\'s Move to Trash asks for the toast', () => {
+      const { root, handlers } = mount();
+
+      root.querySelector<HTMLElement>('[data-row-id="r1"] [data-blok-database-table-row-handle]')?.click();
+      document.querySelector<HTMLElement>('[data-blok-popover-custom-class~="blok-database-row-menu"] [data-blok-item-name="database-row-delete"]')?.click();
+
+      expect(handlers.deleteRows).toHaveBeenCalledWith(['r1'], true);
+    });
+
     it('drops a row between two others and ignores the click on release', () => {
       const { root, handlers } = mount();
       const rowEls = [...root.querySelectorAll<HTMLElement>('[data-blok-database-table-row]')];

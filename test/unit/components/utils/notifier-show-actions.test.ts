@@ -63,6 +63,45 @@ describe('Notifier toast with actions', () => {
     expect(isClosed(options)).toBe(true);
   });
 
+  // research/36 §6, research/37 §4.3: Notion's "Moved to Trash" toast has no ×, lives 5.05s,
+  // hover holds it, and leaving starts the full time again.
+  describe('compact', () => {
+    const compact = { message: 'Moved to Trash', compact: true, time: 5050, actions: [ { label: 'Restore', onClick: (): void => undefined } ] };
+    const state = (): string => toast()?.getAttribute('data-state') ?? 'closed';
+
+    it('has no close button and expires after its time', () => {
+      show(compact);
+
+      expect(document.querySelector('[data-blok-testid="notification-dismiss"]')).toBeNull();
+      expect(toast()?.getAttribute('data-blok-toast')).toBe('compact');
+      vi.advanceTimersByTime(5049);
+      expect(state()).toBe('open');
+      vi.advanceTimersByTime(1);
+      expect(state()).toBe('closed');
+    });
+
+    it('does not wait behind a card that is up', () => {
+      show({ message: 'failed', actions: [ { label: 'Retry', onClick: (): void => undefined } ] });
+      show(compact);
+      vi.advanceTimersByTime(1000);
+
+      expect(document.querySelector('[data-blok-toast="compact"]')).not.toBeNull();
+    });
+
+    it('stays while hovered, and leaving starts the full time again', () => {
+      show(compact);
+      vi.advanceTimersByTime(4000);
+      toast()?.dispatchEvent(new Event('pointerenter'));
+      vi.advanceTimersByTime(20_000);
+      expect(state()).toBe('open');
+      toast()?.dispatchEvent(new Event('pointerleave'));
+      vi.advanceTimersByTime(5049);
+      expect(state()).toBe('open');
+      vi.advanceTimersByTime(1);
+      expect(state()).toBe('closed');
+    });
+  });
+
   it('isClosed is false for options never drawn', () => {
     expect(isClosed({ message: 'never shown' })).toBe(false);
   });

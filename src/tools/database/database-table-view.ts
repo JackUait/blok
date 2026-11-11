@@ -93,7 +93,8 @@ export interface TableHandlers {
   /** Adds a row to a group ('' or null when ungrouped), after `afterRowId` when given. Returns its id. */
   addRow: (groupKey: string | null, afterRowId?: string) => string | null;
   /** `byKey`: Delete or Backspace on selected rows, which shows the Trash toast. */
-  deleteRows: (rowIds: string[], byKey?: boolean) => void;
+  /** `toast`: show "Moved to Trash" with Restore. */
+  deleteRows: (rowIds: string[], toast?: boolean) => void;
   duplicateRow: (rowId: string) => void;
   /** Opens a row page, in `mode` when the row menu's "Open in" names one. */
   openRow: (rowId: string, mode?: OpenPagesIn) => void;
@@ -2017,9 +2018,10 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         i18n: this.options.i18n,
       }),
       ...(this.options.comment !== undefined ? { onComment: () => this.options.comment?.(rowId, undefined, anchor) } : {}),
+      // research/36 §6: Notion's row handle › Move to Trash shows the toast.
       onDelete: () => {
         this.state.selection = null;
-        handlers.deleteRows([rowId]);
+        handlers.deleteRows([rowId], true);
       },
     }), { searchable: true, searchPlaceholder: this.t('tools.database.searchActions'), kind: 'row' });
   }

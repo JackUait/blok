@@ -1295,6 +1295,7 @@
   "tools.database.filterValue": "Значение",
   "tools.database.filterValuePlaceholder": "Введите значение…",
   "tools.database.filterExactDate": "Точная дата",
+  "tools.database.filterDateCustom": "Своя дата",
   "tools.database.filterChecked": "Отмечено",
   "tools.database.filterUnchecked": "Не отмечено",
   "tools.database.filterCount": "Число",

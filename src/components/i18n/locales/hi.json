@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "मान",
   "tools.database.filterValuePlaceholder": "कोई मान लिखें…",
   "tools.database.filterExactDate": "सटीक तिथि",
+  "tools.database.filterDateCustom": "कस्टम तिथि",
   "tools.database.filterChecked": "चेक किया गया",
   "tools.database.filterUnchecked": "चेक नहीं किया गया",
   "tools.database.filterCount": "संख्या",

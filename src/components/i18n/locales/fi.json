@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "Arvo",
   "tools.database.filterValuePlaceholder": "Kirjoita arvo…",
   "tools.database.filterExactDate": "Tarkka päivämäärä",
+  "tools.database.filterDateCustom": "Mukautettu päivämäärä",
   "tools.database.filterChecked": "Valittu",
   "tools.database.filterUnchecked": "Ei valittu",
   "tools.database.filterCount": "Määrä",

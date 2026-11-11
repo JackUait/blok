@@ -1290,6 +1290,7 @@
   "tools.database.filterValue": "Vrijednost",
   "tools.database.filterValuePlaceholder": "Unesite vrijednost…",
   "tools.database.filterExactDate": "Tačan datum",
+  "tools.database.filterDateCustom": "Prilagođeni datum",
   "tools.database.filterChecked": "Označeno",
   "tools.database.filterUnchecked": "Neoznačeno",
   "tools.database.filterCount": "Broj",

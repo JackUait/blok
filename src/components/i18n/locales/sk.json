@@ -1295,6 +1295,7 @@
   "tools.database.filterValue": "Hodnota",
   "tools.database.filterValuePlaceholder": "Zadajte hodnotu…",
   "tools.database.filterExactDate": "Presný dátum",
+  "tools.database.filterDateCustom": "Vlastný dátum",
   "tools.database.filterChecked": "Začiarknuté",
   "tools.database.filterUnchecked": "Nezačiarknuté",
   "tools.database.filterCount": "Počet",

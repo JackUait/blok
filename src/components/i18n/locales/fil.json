@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "Halaga",
   "tools.database.filterValuePlaceholder": "Mag-type ng halaga…",
   "tools.database.filterExactDate": "Eksaktong petsa",
+  "tools.database.filterDateCustom": "Pasadyang petsa",
   "tools.database.filterChecked": "Naka-check",
   "tools.database.filterUnchecked": "Hindi naka-check",
   "tools.database.filterCount": "Bilang",

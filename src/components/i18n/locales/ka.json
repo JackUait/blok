@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "მნიშვნელობა",
   "tools.database.filterValuePlaceholder": "აკრიფეთ მნიშვნელობა…",
   "tools.database.filterExactDate": "ზუსტი თარიღი",
+  "tools.database.filterDateCustom": "მორგებული თარიღი",
   "tools.database.filterChecked": "მონიშნული",
   "tools.database.filterUnchecked": "მოუნიშნავი",
   "tools.database.filterCount": "რაოდენობა",

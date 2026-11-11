@@ -1305,6 +1305,7 @@
   "tools.database.filterValue": "القيمة",
   "tools.database.filterValuePlaceholder": "اكتب قيمة…",
   "tools.database.filterExactDate": "تاريخ محدد",
+  "tools.database.filterDateCustom": "تاريخ مخصص",
   "tools.database.filterChecked": "محدد",
   "tools.database.filterUnchecked": "غير محدد",
   "tools.database.filterCount": "العدد",

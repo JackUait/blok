@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "ಮೌಲ್ಯ",
   "tools.database.filterValuePlaceholder": "ಮೌಲ್ಯವನ್ನು ಟೈಪ್ ಮಾಡಿ…",
   "tools.database.filterExactDate": "ನಿಖರ ದಿನಾಂಕ",
+  "tools.database.filterDateCustom": "ಕಸ್ಟಮ್ ದಿನಾಂಕ",
   "tools.database.filterChecked": "ಗುರುತಿಸಲಾಗಿದೆ",
   "tools.database.filterUnchecked": "ಗುರುತಿಸಲಾಗಿಲ್ಲ",
   "tools.database.filterCount": "ಸಂಖ್ಯೆ",

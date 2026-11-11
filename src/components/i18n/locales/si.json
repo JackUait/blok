@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "අගය",
   "tools.database.filterValuePlaceholder": "අගයක් ටයිප් කරන්න…",
   "tools.database.filterExactDate": "නිශ්චිත දිනය",
+  "tools.database.filterDateCustom": "අභිරුචි දිනය",
   "tools.database.filterChecked": "සලකුණු කර ඇත",
   "tools.database.filterUnchecked": "සලකුණු කර නැත",
   "tools.database.filterCount": "ගණන",

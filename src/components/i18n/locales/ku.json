@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "بەها",
   "tools.database.filterValuePlaceholder": "بەهایەک بنووسە…",
   "tools.database.filterExactDate": "بەرواری ورد",
+  "tools.database.filterDateCustom": "بەرواری تایبەت",
   "tools.database.filterChecked": "هەڵبژێردراو",
   "tools.database.filterUnchecked": "هەڵنەبژێردراو",
   "tools.database.filterCount": "ژمارە",

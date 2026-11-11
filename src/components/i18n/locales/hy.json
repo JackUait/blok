@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "Արժեք",
   "tools.database.filterValuePlaceholder": "Մուտքագրեք արժեք…",
   "tools.database.filterExactDate": "Ճշգրիտ ամսաթիվ",
+  "tools.database.filterDateCustom": "Անհատական ամսաթիվ",
   "tools.database.filterChecked": "Նշված",
   "tools.database.filterUnchecked": "Չնշված",
   "tools.database.filterCount": "Քանակ",

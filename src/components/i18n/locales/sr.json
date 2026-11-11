@@ -1290,6 +1290,7 @@
   "tools.database.filterValue": "Вредност",
   "tools.database.filterValuePlaceholder": "Унесите вредност…",
   "tools.database.filterExactDate": "Тачан датум",
+  "tools.database.filterDateCustom": "Прилагођени датум",
   "tools.database.filterChecked": "Означено",
   "tools.database.filterUnchecked": "Није означено",
   "tools.database.filterCount": "Број",

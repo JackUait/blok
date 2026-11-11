@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "મૂલ્ય",
   "tools.database.filterValuePlaceholder": "મૂલ્ય ટાઇપ કરો…",
   "tools.database.filterExactDate": "ચોક્કસ તારીખ",
+  "tools.database.filterDateCustom": "કસ્ટમ તારીખ",
   "tools.database.filterChecked": "ચેક કરેલું",
   "tools.database.filterUnchecked": "ચેક ન કરેલું",
   "tools.database.filterCount": "સંખ્યા",

@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "እሴት",
   "tools.database.filterValuePlaceholder": "እሴት ይተይቡ…",
   "tools.database.filterExactDate": "ትክክለኛ ቀን",
+  "tools.database.filterDateCustom": "ብጁ ቀን",
   "tools.database.filterChecked": "የተመረጠ",
   "tools.database.filterUnchecked": "ያልተመረጠ",
   "tools.database.filterCount": "ብዛት",

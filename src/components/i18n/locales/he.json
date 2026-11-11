@@ -1290,6 +1290,7 @@
   "tools.database.filterValue": "ערך",
   "tools.database.filterValuePlaceholder": "הקלד ערך…",
   "tools.database.filterExactDate": "תאריך מדויק",
+  "tools.database.filterDateCustom": "תאריך מותאם אישית",
   "tools.database.filterChecked": "מסומן",
   "tools.database.filterUnchecked": "לא מסומן",
   "tools.database.filterCount": "מספר",

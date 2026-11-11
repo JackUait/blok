@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "മൂല്യം",
   "tools.database.filterValuePlaceholder": "ഒരു മൂല്യം ടൈപ്പ് ചെയ്യുക…",
   "tools.database.filterExactDate": "കൃത്യമായ തീയതി",
+  "tools.database.filterDateCustom": "ഇഷ്‌ടാനുസൃത തീയതി",
   "tools.database.filterChecked": "പരിശോധിച്ചത്",
   "tools.database.filterUnchecked": "പരിശോധിക്കാത്തത്",
   "tools.database.filterCount": "എണ്ണം",

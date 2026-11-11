@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "Waarde",
   "tools.database.filterValuePlaceholder": "Typ een waarde…",
   "tools.database.filterExactDate": "Exacte datum",
+  "tools.database.filterDateCustom": "Aangepaste datum",
   "tools.database.filterChecked": "Aangevinkt",
   "tools.database.filterUnchecked": "Niet aangevinkt",
   "tools.database.filterCount": "Aantal",

@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "मान",
   "tools.database.filterValuePlaceholder": "मान टाइप गर्नुहोस्…",
   "tools.database.filterExactDate": "ठ्याक्कै मिति",
+  "tools.database.filterDateCustom": "अनुकूलित मिति",
   "tools.database.filterChecked": "जाँच गरिएको",
   "tools.database.filterUnchecked": "जाँच गरिएको छैन",
   "tools.database.filterCount": "संख्या",

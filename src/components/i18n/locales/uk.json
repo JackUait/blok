@@ -1295,6 +1295,7 @@
   "tools.database.filterValue": "Значення",
   "tools.database.filterValuePlaceholder": "Введіть значення…",
   "tools.database.filterExactDate": "Точна дата",
+  "tools.database.filterDateCustom": "Власна дата",
   "tools.database.filterChecked": "Позначено",
   "tools.database.filterUnchecked": "Не позначено",
   "tools.database.filterCount": "Число",

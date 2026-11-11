@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "Değer",
   "tools.database.filterValuePlaceholder": "Bir değer yazın…",
   "tools.database.filterExactDate": "Kesin tarih",
+  "tools.database.filterDateCustom": "Özel tarih",
   "tools.database.filterChecked": "İşaretli",
   "tools.database.filterUnchecked": "İşaretsiz",
   "tools.database.filterCount": "Sayı",

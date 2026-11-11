@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "Value",
   "tools.database.filterValuePlaceholder": "Type a value…",
   "tools.database.filterExactDate": "Exact date",
+  "tools.database.filterDateCustom": "Custom date",
   "tools.database.filterChecked": "Checked",
   "tools.database.filterUnchecked": "Unchecked",
   "tools.database.filterCount": "Count",

@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "Värde",
   "tools.database.filterValuePlaceholder": "Skriv ett värde…",
   "tools.database.filterExactDate": "Exakt datum",
+  "tools.database.filterDateCustom": "Anpassat datum",
   "tools.database.filterChecked": "Markerad",
   "tools.database.filterUnchecked": "Omarkerad",
   "tools.database.filterCount": "Antal",

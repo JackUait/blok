@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "مقدار",
   "tools.database.filterValuePlaceholder": "یک مقدار تایپ کنید…",
   "tools.database.filterExactDate": "تاریخ دقیق",
+  "tools.database.filterDateCustom": "تاریخ سفارشی",
   "tools.database.filterChecked": "علامت‌خورده",
   "tools.database.filterUnchecked": "بدون علامت",
   "tools.database.filterCount": "تعداد",

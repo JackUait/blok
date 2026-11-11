@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "قدر",
   "tools.database.filterValuePlaceholder": "ڪو قدر ٽائيپ ڪريو…",
   "tools.database.filterExactDate": "مخصوص تاريخ",
+  "tools.database.filterDateCustom": "پنهنجي مرضي جي تاريخ",
   "tools.database.filterChecked": "نشان لڳل",
   "tools.database.filterUnchecked": "نشان نه لڳل",
   "tools.database.filterCount": "تعداد",

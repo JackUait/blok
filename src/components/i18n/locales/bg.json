@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "Стойност",
   "tools.database.filterValuePlaceholder": "Въведете стойност…",
   "tools.database.filterExactDate": "Точна дата",
+  "tools.database.filterDateCustom": "Персонализирана дата",
   "tools.database.filterChecked": "Отметнато",
   "tools.database.filterUnchecked": "Без отметка",
   "tools.database.filterCount": "Брой",

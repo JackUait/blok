@@ -1290,6 +1290,7 @@
   "tools.database.filterValue": "Valoare",
   "tools.database.filterValuePlaceholder": "Tastați o valoare…",
   "tools.database.filterExactDate": "Dată exactă",
+  "tools.database.filterDateCustom": "Dată personalizată",
   "tools.database.filterChecked": "Bifat",
   "tools.database.filterUnchecked": "Nebifat",
   "tools.database.filterCount": "Număr",

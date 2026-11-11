@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "တန်ဖိုး",
   "tools.database.filterValuePlaceholder": "တန်ဖိုးတစ်ခု ရိုက်ပါ…",
   "tools.database.filterExactDate": "တိကျသော ရက်စွဲ",
+  "tools.database.filterDateCustom": "စိတ်ကြိုက် ရက်စွဲ",
   "tools.database.filterChecked": "အမှန်ခြစ်ထားသည်",
   "tools.database.filterUnchecked": "အမှန်ခြစ်မထားပါ",
   "tools.database.filterCount": "အရေအတွက်",

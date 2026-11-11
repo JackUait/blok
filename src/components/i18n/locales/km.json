@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "តម្លៃ",
   "tools.database.filterValuePlaceholder": "វាយតម្លៃ…",
   "tools.database.filterExactDate": "កាលបរិច្ឆេទជាក់លាក់",
+  "tools.database.filterDateCustom": "កាលបរិច្ឆេទផ្ទាល់ខ្លួន",
   "tools.database.filterChecked": "បានធីក",
   "tools.database.filterUnchecked": "មិនបានធីក",
   "tools.database.filterCount": "ចំនួន",

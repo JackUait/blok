@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "قدر",
   "tools.database.filterValuePlaceholder": "کوئی قدر ٹائپ کریں…",
   "tools.database.filterExactDate": "مخصوص تاریخ",
+  "tools.database.filterDateCustom": "حسب ضرورت تاریخ",
   "tools.database.filterChecked": "نشان زد",
   "tools.database.filterUnchecked": "غیر نشان زد",
   "tools.database.filterCount": "تعداد",

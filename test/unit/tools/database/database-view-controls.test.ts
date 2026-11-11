@@ -680,6 +680,26 @@ describe('DatabaseViewControls', () => {
       expect(controls.effective(saved.view).filters[0]).toMatchObject({ operator: 'relative_to_today', value: 'this:1:month' });
     });
 
+    it('ends the "Is" presets with Custom date, checked while no preset is picked (notion-motion.md Round 13)', () => {
+      open({ operator: 'equals', value: null });
+
+      const presets = [...document.querySelectorAll('[data-blok-testid^="database-filter-date-"]')].map((el) => el.getAttribute('data-blok-testid'));
+
+      expect(presets.at(-1)).toBe('database-filter-date-custom');
+      expect(text(q('database-filter-date-custom'))).toBe('tools.database.filterDateCustom');
+      expect(q('database-filter-date-custom')?.getAttribute('aria-checked')).toBe('true');
+
+      click('database-filter-date-custom');
+
+      expect(document.activeElement).toBe(q('database-filter-value'));
+    });
+
+    it('leaves Custom date unchecked on a preset', () => {
+      open({ operator: 'equals', value: 'today' });
+
+      expect(q('database-filter-date-custom')?.getAttribute('aria-checked')).toBe('false');
+    });
+
     it('opens an old "past month" filter as Past 1 month and writes nothing until a change', () => {
       const { controls, saved } = open({ operator: 'past_month', value: null });
 

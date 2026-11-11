@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "值",
   "tools.database.filterValuePlaceholder": "輸入值…",
   "tools.database.filterExactDate": "確切日期",
+  "tools.database.filterDateCustom": "自訂日期",
   "tools.database.filterChecked": "已勾選",
   "tools.database.filterUnchecked": "未勾選",
   "tools.database.filterCount": "數量",

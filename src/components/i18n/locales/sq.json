@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "Vlera",
   "tools.database.filterValuePlaceholder": "Shkruaj një vlerë…",
   "tools.database.filterExactDate": "Data e saktë",
+  "tools.database.filterDateCustom": "Data e personalizuar",
   "tools.database.filterChecked": "E zgjedhur",
   "tools.database.filterUnchecked": "E pazgjedhur",
   "tools.database.filterCount": "Numri",

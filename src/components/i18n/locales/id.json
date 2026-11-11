@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "Nilai",
   "tools.database.filterValuePlaceholder": "Ketik nilai…",
   "tools.database.filterExactDate": "Tanggal persis",
+  "tools.database.filterDateCustom": "Tanggal kustom",
   "tools.database.filterChecked": "Dicentang",
   "tools.database.filterUnchecked": "Tidak dicentang",
   "tools.database.filterCount": "Jumlah",

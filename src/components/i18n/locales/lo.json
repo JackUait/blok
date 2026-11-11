@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "ຄ່າ",
   "tools.database.filterValuePlaceholder": "ພິມຄ່າ…",
   "tools.database.filterExactDate": "ວັນທີທີ່ລະບຸ",
+  "tools.database.filterDateCustom": "ວັນທີກຳນົດເອງ",
   "tools.database.filterChecked": "ໝາຍແລ້ວ",
   "tools.database.filterUnchecked": "ຍັງບໍ່ໝາຍ",
   "tools.database.filterCount": "ຈຳນວນ",

@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "ค่า",
   "tools.database.filterValuePlaceholder": "พิมพ์ค่า…",
   "tools.database.filterExactDate": "วันที่ที่ระบุ",
+  "tools.database.filterDateCustom": "วันที่กำหนดเอง",
   "tools.database.filterChecked": "เลือกแล้ว",
   "tools.database.filterUnchecked": "ยังไม่ได้เลือก",
   "tools.database.filterCount": "จำนวน",

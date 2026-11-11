@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "Утга",
   "tools.database.filterValuePlaceholder": "Утга оруулна уу…",
   "tools.database.filterExactDate": "Тодорхой огноо",
+  "tools.database.filterDateCustom": "Өөрийн огноо",
   "tools.database.filterChecked": "Тэмдэглэсэн",
   "tools.database.filterUnchecked": "Тэмдэглээгүй",
   "tools.database.filterCount": "Тоо",

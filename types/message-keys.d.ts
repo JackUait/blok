@@ -899,6 +899,7 @@ export type BlokMessageKey =
   | 'tools.database.filterByPlaceholder'
   | 'tools.database.filterChecked'
   | 'tools.database.filterCount'
+  | 'tools.database.filterDateCustom'
   | 'tools.database.filterDateNextMonth'
   | 'tools.database.filterDateNextWeek'
   | 'tools.database.filterDateNextYear'

@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "Nilai",
   "tools.database.filterValuePlaceholder": "Taip nilai…",
   "tools.database.filterExactDate": "Tarikh tepat",
+  "tools.database.filterDateCustom": "Tarikh tersuai",
   "tools.database.filterChecked": "Ditandai",
   "tools.database.filterUnchecked": "Tidak ditandai",
   "tools.database.filterCount": "Bilangan",

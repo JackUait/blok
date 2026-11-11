@@ -280,7 +280,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2077 + 142 + 530 + 4 closure for all 2753 keys', () => {
+  it('rebuilds a disjoint 2077 + 142 + 531 + 4 closure for all 2754 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -294,7 +294,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2753);
+    expect(lifecycle.size).toBe(2754);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -595,7 +595,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -1: the New menu's "Empty" row reads cellEmpty; templateEmptyPage is gone.
       // +1: tools.database.columnTitlePlaceholder, no longer called by literal; still shipped.
       // +3: the row-page "Updating layout for all pages" dialog's saveForAll* keys, via the controls' t().
-      'registered-namespace-compatible': 530,
+      // +1: the date filter's "Custom date" row, tools.database.filterDateCustom (chip t() prefixes the namespace).
+      'registered-namespace-compatible': 531,
       'catalog-only': 4,
     });
     expect(

@@ -1295,6 +1295,7 @@
   "tools.database.filterValue": "Wartość",
   "tools.database.filterValuePlaceholder": "Wpisz wartość…",
   "tools.database.filterExactDate": "Dokładna data",
+  "tools.database.filterDateCustom": "Własna data",
   "tools.database.filterChecked": "Zaznaczone",
   "tools.database.filterUnchecked": "Niezaznaczone",
   "tools.database.filterCount": "Liczba",

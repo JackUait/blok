@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "Værdi",
   "tools.database.filterValuePlaceholder": "Skriv en værdi…",
   "tools.database.filterExactDate": "Præcis dato",
+  "tools.database.filterDateCustom": "Tilpasset dato",
   "tools.database.filterChecked": "Markeret",
   "tools.database.filterUnchecked": "Ikke markeret",
   "tools.database.filterCount": "Antal",

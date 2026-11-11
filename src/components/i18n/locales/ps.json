@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "ارزښت",
   "tools.database.filterValuePlaceholder": "یو ارزښت ولیکئ…",
   "tools.database.filterExactDate": "دقیقه نېټه",
+  "tools.database.filterDateCustom": "ځانګړې نېټه",
   "tools.database.filterChecked": "نښه شوی",
   "tools.database.filterUnchecked": "نه نښه شوی",
   "tools.database.filterCount": "شمېر",

@@ -378,6 +378,17 @@ class FilterChipPages {
   private dateControls(operator: string, value: FilterConfig['value']): HTMLElement[] {
     if (operator === 'is_between') return this.betweenControls(value);
 
+    const exact = panelInput({
+      value: typeof value === 'string' && DAY.test(value) ? value : '',
+      placeholder: 'YYYY-MM-DD',
+      label: this.t('filterExactDate'),
+      testId: 'database-filter-value',
+      onInput: (text) => {
+        if (DAY.test(text)) this.update({ value: text });
+      },
+    });
+    const isPreset = (RELATIVE_DATE_VALUES as readonly unknown[]).includes(value);
+
     return [
       ...RELATIVE_DATE_VALUES.map((relative) => panelRow({
         label: this.ctx.i18n.t(relativeValueLabelKey(relative)),
@@ -385,15 +396,14 @@ class FilterChipPages {
         checked: value === relative,
         onClick: () => this.update({ value: relative }),
       })),
-      panelInput({
-        value: typeof value === 'string' && DAY.test(value) ? value : '',
-        placeholder: 'YYYY-MM-DD',
-        label: this.t('filterExactDate'),
-        testId: 'database-filter-value',
-        onInput: (text) => {
-          if (DAY.test(text)) this.update({ value: text });
-        },
+      // notion-motion.md Round 13: Notion's preset list ends with "Custom date". Its click is unmeasured; here it focuses the date field.
+      panelRow({
+        label: this.t('filterDateCustom'),
+        testId: 'database-filter-date-custom',
+        checked: !isPreset,
+        onClick: () => exact.focus(),
       }),
+      exact,
     ];
   }
 

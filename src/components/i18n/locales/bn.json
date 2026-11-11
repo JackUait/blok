@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "মান",
   "tools.database.filterValuePlaceholder": "একটি মান টাইপ করুন…",
   "tools.database.filterExactDate": "নির্দিষ্ট তারিখ",
+  "tools.database.filterDateCustom": "নিজস্ব তারিখ",
   "tools.database.filterChecked": "টিক দেওয়া আছে",
   "tools.database.filterUnchecked": "টিক দেওয়া নেই",
   "tools.database.filterCount": "সংখ্যা",

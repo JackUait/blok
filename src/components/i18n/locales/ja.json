@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "値",
   "tools.database.filterValuePlaceholder": "値を入力…",
   "tools.database.filterExactDate": "特定の日付",
+  "tools.database.filterDateCustom": "カスタム日付",
   "tools.database.filterChecked": "チェック済み",
   "tools.database.filterUnchecked": "未チェック",
   "tools.database.filterCount": "数",

@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "Giá trị",
   "tools.database.filterValuePlaceholder": "Nhập một giá trị…",
   "tools.database.filterExactDate": "Ngày cụ thể",
+  "tools.database.filterDateCustom": "Ngày tùy chỉnh",
   "tools.database.filterChecked": "Đã chọn",
   "tools.database.filterUnchecked": "Chưa chọn",
   "tools.database.filterCount": "Số lượng",

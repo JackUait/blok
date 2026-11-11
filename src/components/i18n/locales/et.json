@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "Väärtus",
   "tools.database.filterValuePlaceholder": "Sisesta väärtus…",
   "tools.database.filterExactDate": "Täpne kuupäev",
+  "tools.database.filterDateCustom": "Kohandatud kuupäev",
   "tools.database.filterChecked": "Märgitud",
   "tools.database.filterUnchecked": "Märkimata",
   "tools.database.filterCount": "Arv",

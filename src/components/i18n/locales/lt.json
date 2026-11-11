@@ -1295,6 +1295,7 @@
   "tools.database.filterValue": "Reikšmė",
   "tools.database.filterValuePlaceholder": "Įveskite reikšmę…",
   "tools.database.filterExactDate": "Tiksli data",
+  "tools.database.filterDateCustom": "Pasirinktinė data",
   "tools.database.filterChecked": "Pažymėta",
   "tools.database.filterUnchecked": "Nepažymėta",
   "tools.database.filterCount": "Skaičius",

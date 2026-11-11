@@ -1290,6 +1290,7 @@
   "tools.database.filterValue": "Vērtība",
   "tools.database.filterValuePlaceholder": "Ierakstiet vērtību…",
   "tools.database.filterExactDate": "Precīzs datums",
+  "tools.database.filterDateCustom": "Pielāgots datums",
   "tools.database.filterChecked": "Atzīmēta",
   "tools.database.filterUnchecked": "Neatzīmēta",
   "tools.database.filterCount": "Skaits",

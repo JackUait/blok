@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "Thamani",
   "tools.database.filterValuePlaceholder": "Andika thamani…",
   "tools.database.filterExactDate": "Tarehe kamili",
+  "tools.database.filterDateCustom": "Tarehe maalum",
   "tools.database.filterChecked": "Kimewekewa tiki",
   "tools.database.filterUnchecked": "Hakijawekewa tiki",
   "tools.database.filterCount": "Idadi",

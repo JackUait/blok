@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "मूल्य",
   "tools.database.filterValuePlaceholder": "मूल्य टाइप करा…",
   "tools.database.filterExactDate": "अचूक तारीख",
+  "tools.database.filterDateCustom": "सानुकूल तारीख",
   "tools.database.filterChecked": "तपासले",
   "tools.database.filterUnchecked": "तपासले नाही",
   "tools.database.filterCount": "संख्या",

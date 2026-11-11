@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "విలువ",
   "tools.database.filterValuePlaceholder": "విలువను టైప్ చేయండి…",
   "tools.database.filterExactDate": "ఖచ్చితమైన తేదీ",
+  "tools.database.filterDateCustom": "అనుకూల తేదీ",
   "tools.database.filterChecked": "ఎంపిక చేయబడింది",
   "tools.database.filterUnchecked": "ఎంపిక చేయబడలేదు",
   "tools.database.filterCount": "సంఖ్య",

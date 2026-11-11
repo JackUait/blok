@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "Érték",
   "tools.database.filterValuePlaceholder": "Adjon meg egy értéket…",
   "tools.database.filterExactDate": "Pontos dátum",
+  "tools.database.filterDateCustom": "Egyéni dátum",
   "tools.database.filterChecked": "Bejelölve",
   "tools.database.filterUnchecked": "Nincs bejelölve",
   "tools.database.filterCount": "Darabszám",

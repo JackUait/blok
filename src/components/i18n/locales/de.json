@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "Wert",
   "tools.database.filterValuePlaceholder": "Wert eingeben…",
   "tools.database.filterExactDate": "Genaues Datum",
+  "tools.database.filterDateCustom": "Benutzerdefiniertes Datum",
   "tools.database.filterChecked": "Aktiviert",
   "tools.database.filterUnchecked": "Deaktiviert",
   "tools.database.filterCount": "Anzahl",

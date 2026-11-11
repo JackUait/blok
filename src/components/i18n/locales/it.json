@@ -1290,6 +1290,7 @@
   "tools.database.filterValue": "Valore",
   "tools.database.filterValuePlaceholder": "Digita un valore…",
   "tools.database.filterExactDate": "Data esatta",
+  "tools.database.filterDateCustom": "Data personalizzata",
   "tools.database.filterChecked": "Selezionata",
   "tools.database.filterUnchecked": "Non selezionata",
   "tools.database.filterCount": "Quantità",

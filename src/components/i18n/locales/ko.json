@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "값",
   "tools.database.filterValuePlaceholder": "값 입력…",
   "tools.database.filterExactDate": "정확한 날짜",
+  "tools.database.filterDateCustom": "맞춤 날짜",
   "tools.database.filterChecked": "선택됨",
   "tools.database.filterUnchecked": "선택 안 됨",
   "tools.database.filterCount": "수",

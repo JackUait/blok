@@ -1295,6 +1295,7 @@
   "tools.database.filterValue": "Vrednost",
   "tools.database.filterValuePlaceholder": "Vnesite vrednost…",
   "tools.database.filterExactDate": "Točen datum",
+  "tools.database.filterDateCustom": "Datum po meri",
   "tools.database.filterChecked": "Označeno",
   "tools.database.filterUnchecked": "Neoznačeno",
   "tools.database.filterCount": "Število",

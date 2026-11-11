@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "Verdi",
   "tools.database.filterValuePlaceholder": "Skriv inn en verdi…",
   "tools.database.filterExactDate": "Nøyaktig dato",
+  "tools.database.filterDateCustom": "Egendefinert dato",
   "tools.database.filterChecked": "Avmerket",
   "tools.database.filterUnchecked": "Ikke avmerket",
   "tools.database.filterCount": "Antall",

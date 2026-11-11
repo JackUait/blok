@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "ווערט",
   "tools.database.filterValuePlaceholder": "טיפּ אַ ווערט…",
   "tools.database.filterExactDate": "פּינקטלעכע דאטום",
+  "tools.database.filterDateCustom": "אייגענע דאטום",
   "tools.database.filterChecked": "אָפּגעצייכנט",
   "tools.database.filterUnchecked": "ניט אָפּגעצייכנט",
   "tools.database.filterCount": "צאָל",

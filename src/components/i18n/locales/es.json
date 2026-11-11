@@ -1290,6 +1290,7 @@
   "tools.database.filterValue": "Valor",
   "tools.database.filterValuePlaceholder": "Escribe un valor…",
   "tools.database.filterExactDate": "Fecha exacta",
+  "tools.database.filterDateCustom": "Fecha personalizada",
   "tools.database.filterChecked": "Marcado",
   "tools.database.filterUnchecked": "Sin marcar",
   "tools.database.filterCount": "Cantidad",

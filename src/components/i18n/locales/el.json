@@ -1285,6 +1285,7 @@
   "tools.database.filterValue": "Τιμή",
   "tools.database.filterValuePlaceholder": "Πληκτρολογήστε μια τιμή…",
   "tools.database.filterExactDate": "Ακριβής ημερομηνία",
+  "tools.database.filterDateCustom": "Προσαρμοσμένη ημερομηνία",
   "tools.database.filterChecked": "Επιλεγμένο",
   "tools.database.filterUnchecked": "Μη επιλεγμένο",
   "tools.database.filterCount": "Πλήθος",

@@ -88,6 +88,40 @@ describe('bindTitleKeyboard', () => {
     expect(host.commit).toHaveBeenCalled();
   });
 
+  const pasteFlavors = (title: HTMLElement, flavors: Record<string, string>): void => {
+    const event = new Event('paste', { bubbles: true, cancelable: true });
+
+    Object.defineProperty(event, 'clipboardData', { value: { getData: (type: string) => flavors[type] ?? '' } });
+    title.dispatchEvent(event);
+  };
+
+  it('paste of copied Blok blocks inserts their text, not the Markdown in text/plain', () => {
+    const { title, host } = setup('T', 1);
+
+    pasteFlavors(title, {
+      'application/x-blok': JSON.stringify([
+        { id: 'h', tool: 'header', data: { text: 'Head', level: 2 }, tunes: {}, parentId: null, indent: 0 },
+        { id: 'd', tool: 'delimiter', data: {}, tunes: {}, parentId: null, indent: 0 },
+        { id: 'e', tool: 'paragraph', data: { text: '' }, tunes: {}, parentId: null, indent: 0 },
+        { id: 'p', tool: 'paragraph', data: { text: '<b>Pa</b>ra &amp; more' }, tunes: {}, parentId: null, indent: 0 },
+      ]),
+      'text/plain': '## Head\n\n---\n\n**Pa**ra & more',
+    });
+
+    expect(title.textContent).toBe('THead Para & more');
+    expect(host.commit).toHaveBeenCalled();
+  });
+
+  it('paste of external plain text that looks like Markdown goes in as is', () => {
+    const { title } = setup('', 0);
+
+    title.textContent = 'T';
+    window.getSelection()?.setPosition(title.firstChild, 1);
+    pasteFlavors(title, { 'text/plain': '## Head' });
+
+    expect(title.textContent).toBe('T## Head');
+  });
+
   it('read-only: Enter does not split', () => {
     const { title, host } = setup('Hello', 2);
 

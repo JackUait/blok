@@ -21,7 +21,7 @@ internal static partial class RichText
   /// <summary>MARK_ORDER in html-to-segments.ts. The order is the canonical key order.</summary>
   private static readonly string[] MarkOrder =
   [
-      "link", "color", "background", "highlight", "bold", "italic", "underline",
+      "annotation", "link", "color", "background", "highlight", "bold", "italic", "underline",
       "strikethrough", "code", "sup", "sub",
   ];
 
@@ -509,6 +509,27 @@ internal static partial class RichText
       if (link.TryGet("rel", out var rel) && rel is string)
       {
         canonical.Add("rel", rel);
+      }
+
+      value = canonical;
+
+      return true;
+    }
+
+    if (key == "annotation")
+    {
+      if (raw is not AnyObject annotation || !annotation.TryGet("text", out var text) || text is not string { Length: > 0 })
+      {
+        return false;
+      }
+
+      var canonical = new AnyObject();
+
+      canonical.Add("text", text);
+
+      if (annotation.TryGet("subtitle", out var subtitle) && subtitle is string { Length: > 0 })
+      {
+        canonical.Add("subtitle", subtitle);
       }
 
       value = canonical;

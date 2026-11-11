@@ -43,13 +43,13 @@ describe.each(SANITIZERS)('annotation span in the %s sanitizer', (_name, run) =>
   });
 
   it('drops an empty subtitle', () => {
-    const result = run('<span data-blok-annotation="A quote" data-blok-annotation-subtitle="  ">phrase</span>');
+    const result = run('<span data-blok-annotation="A quote" data-blok-annotation-subtitle="">phrase</span>');
 
     expect(result).toBe('<span data-blok-annotation="A quote">phrase</span>');
   });
 
-  it('unwraps a span whose annotation text is blank', () => {
-    const result = run('a <span data-blok-annotation="   " data-blok-annotation-subtitle="Anna">phrase</span> b');
+  it('unwraps a span whose annotation text is empty', () => {
+    const result = run('a <span data-blok-annotation="" data-blok-annotation-subtitle="Anna">phrase</span> b');
 
     expect(result).toBe('a phrase b');
   });

@@ -5,7 +5,7 @@ import { isRichText, readRichTextLeniently } from '../../shared/rich-text/guards
 import { logLabeled } from '../utils';
 
 // Keep in step with the wrappers in segments-to-html.ts: it drops any other key silently.
-const KNOWN_MARKS = new Set(['link', 'color', 'background', 'highlight', 'bold', 'italic', 'underline', 'strikethrough', 'code', 'sup', 'sub']);
+const KNOWN_MARKS = new Set(['annotation', 'link', 'color', 'background', 'highlight', 'bold', 'italic', 'underline', 'strikethrough', 'code', 'sup', 'sub']);
 
 // Same test segments-to-html.ts applies before writing a tag name raw.
 const SAFE_TAG_NAME = /^[a-z][a-z0-9-]*$/i;

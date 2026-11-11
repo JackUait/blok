@@ -51,7 +51,16 @@
     { "name": "malformed-page-array-id-dropped", "input": [{"embed":{"page":{"id":["p"]}}},{"text":"b"}] },
     { "name": "malformed-extra-segment-keys-dropped", "input": [{"text":"a","checked":true},{"embed":{"html":"h"},"glow":1}] },
     { "name": "malformed-string-marks-dropped", "input": [{"text":"a","marks":"bold"}] },
-    { "name": "malformed-three-valid-embeds-kept", "input": [{"embed":{"equation":{"expression":"e"}}},{"embed":{"page":{"id":"p"}}},{"embed":{"html":"<b>h</b>"}}] }
+    { "name": "malformed-three-valid-embeds-kept", "input": [{"embed":{"equation":{"expression":"e"}}},{"embed":{"page":{"id":"p"}}},{"embed":{"html":"<b>h</b>"}}] },
+    { "name": "annotation-is-first-and-text-leads", "input": [{"text":"x","marks":{"bold":true,"link":{"href":"h"},"annotation":{"subtitle":"Anna","text":"A quote"}}}] },
+    { "name": "annotation-drops-empty-subtitle-and-unknown-keys", "input": [{"text":"x","marks":{"annotation":{"text":"A quote","subtitle":"","extra":"y"}}}] },
+    { "name": "annotation-drops-non-string-subtitle", "input": [{"text":"x","marks":{"annotation":{"text":"A quote","subtitle":5}}}] },
+    { "name": "annotation-keeps-whitespace-text", "input": [{"text":"x","marks":{"annotation":{"text":" "}}}] },
+    { "name": "annotation-empty-text-is-absent", "input": [{"text":"x","marks":{"annotation":{"text":"","subtitle":"Anna"}}}] },
+    { "name": "annotation-non-string-text-is-absent", "input": [{"text":"x","marks":{"annotation":{"text":5}}}] },
+    { "name": "annotation-non-object-is-absent", "input": [{"text":"x","marks":{"annotation":"A quote"}}] },
+    { "name": "annotation-null-is-absent", "input": [{"text":"x","marks":{"annotation":null}}] },
+    { "name": "annotation-equal-values-merge-across-key-order", "input": [{"text":"a","marks":{"annotation":{"text":"A quote","subtitle":"Anna"}}},{"text":"b","marks":{"annotation":{"subtitle":"Anna","text":"A quote"}}}] }
   ],
   "deltas": [
     { "name": "string-runs-with-equal-marks-merge", "input": [{ "insert": "ab", "attributes": { "bold": true } }, { "insert": "c", "attributes": { "bold": true } }, { "insert": "d" }] },
@@ -60,6 +69,8 @@
     { "name": "empty-attributes-is-unmarked", "input": [{ "insert": "a", "attributes": {} }, { "insert": "b" }] },
     { "name": "stored-sorted-link-reads-canonical", "input": [{ "insert": "a", "attributes": { "link": { "href": "h", "rel": "r", "target": "t" } } }] },
     { "name": "foreign-false-mark-reads-absent", "input": [{ "insert": "a", "attributes": { "bold": false } }, { "insert": "b" }] },
-    { "name": "malformed-embeds-and-marks-read-as-the-valid-segments", "input": [{"insert":"a","attributes":{"tag:b":{"x":1,"y":"1"},"color":{}}},{"insert":{"equation":{"expression":5}}},{"insert":{"page":null}},{"insert":{"html":"<i>h</i>"}},{"insert":"b"}] }
+    { "name": "malformed-embeds-and-marks-read-as-the-valid-segments", "input": [{"insert":"a","attributes":{"tag:b":{"x":1,"y":"1"},"color":{}}},{"insert":{"equation":{"expression":5}}},{"insert":{"page":null}},{"insert":{"html":"<i>h</i>"}},{"insert":"b"}] },
+    { "name": "annotation-stored-sorted-reads-canonical", "input": [{"insert":"a","attributes":{"annotation":{"subtitle":"Anna","text":"A quote"},"bold":true}},{"insert":"b"}] },
+    { "name": "annotation-null-attribute-is-absent", "input": [{"insert":"a","attributes":{"annotation":null}}] }
   ]
 }

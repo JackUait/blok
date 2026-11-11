@@ -462,7 +462,7 @@ func loadRichFields(t *testing.T) {
 
 // Rich text, as C# RichText.IsRichText and Canonicalize.
 
-var markOrder = []string{"link", "color", "background", "highlight", "bold", "italic", "underline", "strikethrough", "code", "sup", "sub"}
+var markOrder = []string{"annotation", "link", "color", "background", "highlight", "bold", "italic", "underline", "strikethrough", "code", "sup", "sub"}
 
 var booleanMarks = map[string]bool{"highlight": true, "bold": true, "italic": true, "underline": true, "strikethrough": true, "code": true, "sup": true, "sub": true}
 
@@ -622,6 +622,17 @@ func markValue(key string, raw *jsjson.Node) *jsjson.Node {
 			setMember(link, "rel", str(rel))
 		}
 		return link
+	}
+	if key == "annotation" {
+		text, ok := stringOf(lookup(raw, "text"))
+		if raw.Kind != jsjson.KindObject || !ok || text == "" {
+			return nil
+		}
+		annotation := jsjson.NewObject(jsjson.NewMember("text", str(text)))
+		if subtitle, ok := stringOf(lookup(raw, "subtitle")); ok && subtitle != "" {
+			setMember(annotation, "subtitle", str(subtitle))
+		}
+		return annotation
 	}
 	if booleanMarks[key] {
 		if raw.Kind == jsjson.KindTrue {

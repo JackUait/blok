@@ -536,7 +536,8 @@ fn rich_fields() -> &'static BTreeMap<String, HashSet<String>> {
 
 // Rich text, as C# RichText.IsRichText and Canonicalize.
 
-const MARK_ORDER: [&str; 11] = [
+const MARK_ORDER: [&str; 12] = [
+    "annotation",
     "link",
     "color",
     "background",
@@ -709,6 +710,19 @@ fn mark_value(key: &str, raw: &Node) -> Option<Node> {
             set_member(&mut link, "rel", str_node(&rel));
         }
         return Some(link);
+    }
+    if key == "annotation" {
+        let text = string_of(lookup(Some(raw), "text")).filter(|text| !text.is_empty())?;
+        if raw.kind != Kind::Object {
+            return None;
+        }
+        let mut annotation = new_object(vec![new_member("text", str_node(&text))]);
+        if let Some(subtitle) =
+            string_of(lookup(Some(raw), "subtitle")).filter(|subtitle| !subtitle.is_empty())
+        {
+            set_member(&mut annotation, "subtitle", str_node(&subtitle));
+        }
+        return Some(annotation);
     }
     if BOOLEAN_MARKS.contains(&key) {
         return (raw.kind == Kind::True).then(|| new_bool(true));

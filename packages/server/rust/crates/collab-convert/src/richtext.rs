@@ -8,6 +8,7 @@ use blok_yjs::{Delta, Out};
 use crate::export::DataError;
 
 const MARK_ORDER: &[&str] = &[
+    "annotation",
     "link",
     "color",
     "background",
@@ -424,6 +425,19 @@ fn mark_value(key: &[u16], raw: &Value) -> Option<Value> {
         }
         return Some(Value::Object(canonical));
     }
+    if is(key, "annotation") {
+        let Value::Object(annotation) = raw else {
+            return None;
+        };
+        let text = lookup(annotation, "text").filter(|value| is_filled_text(value))?;
+        let mut canonical = Object::new();
+        put(&mut canonical, "text", text.clone());
+        if let Some(subtitle) = lookup(annotation, "subtitle").filter(|value| is_filled_text(value))
+        {
+            put(&mut canonical, "subtitle", subtitle.clone());
+        }
+        return Some(Value::Object(canonical));
+    }
     if is_one_of(key, BOOLEAN_MARKS) {
         return matches!(raw, Value::Bool(true)).then_some(Value::Bool(true));
     }
@@ -452,6 +466,11 @@ fn mark_value(key: &[u16], raw: &Value) -> Option<Value> {
         ));
     }
     Some(raw.clone())
+}
+
+/// The client's test for an annotation's text and subtitle: a non-empty string.
+fn is_filled_text(value: &Value) -> bool {
+    matches!(value, Value::String(text) if !text.is_empty())
 }
 
 fn same_marks(left: &Object, right: &Object) -> bool {

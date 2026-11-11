@@ -39,6 +39,7 @@ const knownMarkKeys: { [Key in Exclude<keyof RichTextMarks, `tag:${string}`>]: t
   color: true,
   background: true,
   link: true,
+  annotation: true,
 };
 
 beforeEach(() => {

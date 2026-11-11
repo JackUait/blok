@@ -31,6 +31,13 @@ export const RICH_TEXT_MARKS = {
       additionalProperties: false,
       properties: { href: { type: 'string' }, target: { type: 'string' }, rel: { type: 'string' } },
     },
+    annotation: {
+      type: 'object',
+      description: 'A hint on the run: a dotted underline, and a card with this text on hover or click. Plain text only.',
+      required: ['text'],
+      additionalProperties: false,
+      properties: { text: { type: 'string' }, subtitle: { type: 'string', description: 'A quieter second line, e.g. who said it.' } },
+    },
   },
   patternProperties: { '^tag:': { type: 'object', additionalProperties: { type: 'string' } } },
 } as const;

@@ -1,10 +1,11 @@
 import { COLOR_PRESETS } from '../color-presets';
 import { PAGE_REFERENCE_ATTR } from '../page-reference';
 import { EQUATION_SOURCE_ATTR } from '../equation-mark';
+import { ANNOTATION_ATTR, ANNOTATION_SUBTITLE_ATTR } from '../annotation-mark';
 import type { InlineNode } from './inline-tree';
 import { readEmbed } from './guards';
 import { hasUnsafeUrlProtocol } from '../url-policy';
-import type { RichText, RichTextLink, RichTextMarks, RichTextSegment, RichTextTextSegment } from '../../../types/rich-text';
+import type { RichText, RichTextAnnotation, RichTextLink, RichTextMarks, RichTextSegment, RichTextTextSegment } from '../../../types/rich-text';
 
 const SIMPLE_MARKS: Record<string, keyof RichTextMarks> = {
   strong: 'bold', b: 'bold', em: 'italic', i: 'italic', u: 'underline',
@@ -27,7 +28,7 @@ const PRESET_NAMES = new Set(COLOR_PRESETS.map(preset => preset.name));
 
 /** Fixed key order: it keeps saved output stable, and the echo check compares it. */
 const MARK_ORDER: Array<keyof RichTextMarks> = [
-  'link', 'color', 'background', 'highlight', 'bold', 'italic', 'underline', 'strikethrough', 'code', 'sup', 'sub',
+  'annotation', 'link', 'color', 'background', 'highlight', 'bold', 'italic', 'underline', 'strikethrough', 'code', 'sup', 'sub',
 ];
 
 const readColor = (value: string | undefined, mode: 'text' | 'bg'): string | undefined => {
@@ -72,6 +73,20 @@ const canonicalLink = (link: unknown): RichTextLink | undefined => {
   };
 };
 
+const isFilled = (value: unknown): value is string => typeof value === 'string' && value !== '';
+
+/** `{ text, subtitle }` in that order. An annotation without a non-empty text is dropped. */
+const canonicalAnnotation = (annotation: unknown): RichTextAnnotation | undefined => {
+  if (!isRecord(annotation) || !isFilled(annotation.text)) {
+    return undefined;
+  }
+
+  return {
+    text: annotation.text,
+    ...(isFilled(annotation.subtitle) ? { subtitle: annotation.subtitle } : {}),
+  };
+};
+
 const stringEntries = (record: Record<string, unknown>): Record<string, string> =>
   Object.fromEntries(Object.entries(record).filter((entry): entry is [string, string] => typeof entry[1] === 'string'));
 
@@ -79,6 +94,9 @@ const stringEntries = (record: Record<string, unknown>): Record<string, string> 
 const markValue = (key: string, value: unknown): unknown => {
   if (key === 'link') {
     return canonicalLink(value);
+  }
+  if (key === 'annotation') {
+    return canonicalAnnotation(value);
   }
   if (BOOLEAN_MARKS.has(key as keyof RichTextMarks)) {
     // A host may write `bold: false`; only `true` is a mark.
@@ -167,6 +185,8 @@ const walk = (nodes: InlineNode[], marks: RichTextMarks, out: RichTextSegment[])
     } else if (tag === 'a') {
       // No usable href (the sanitizer's policy strips an unsafe one): keep the text, not a junk `tag:a` mark.
       walk(node.children, marks, out);
+    } else if (tag === 'span' && isFilled(attrs[ANNOTATION_ATTR])) {
+      walk(node.children, { ...marks, annotation: { text: attrs[ANNOTATION_ATTR], subtitle: attrs[ANNOTATION_SUBTITLE_ATTR] } }, out);
     } else if (tag === 'span' && attrs[EQUATION_SOURCE_ATTR] !== undefined) {
       out.push(withMarks({ embed: { equation: { expression: attrs[EQUATION_SOURCE_ATTR] } } }, marks));
     } else if (tag === 'mark') {

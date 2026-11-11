@@ -469,6 +469,82 @@
           "html": "<b>h</b>"
         }
       }
+    ],
+    "annotation-is-first-and-text-leads": [
+      {
+        "text": "x",
+        "marks": {
+          "annotation": {
+            "text": "A quote",
+            "subtitle": "Anna"
+          },
+          "link": {
+            "href": "h"
+          },
+          "bold": true
+        }
+      }
+    ],
+    "annotation-drops-empty-subtitle-and-unknown-keys": [
+      {
+        "text": "x",
+        "marks": {
+          "annotation": {
+            "text": "A quote"
+          }
+        }
+      }
+    ],
+    "annotation-drops-non-string-subtitle": [
+      {
+        "text": "x",
+        "marks": {
+          "annotation": {
+            "text": "A quote"
+          }
+        }
+      }
+    ],
+    "annotation-keeps-whitespace-text": [
+      {
+        "text": "x",
+        "marks": {
+          "annotation": {
+            "text": " "
+          }
+        }
+      }
+    ],
+    "annotation-empty-text-is-absent": [
+      {
+        "text": "x"
+      }
+    ],
+    "annotation-non-string-text-is-absent": [
+      {
+        "text": "x"
+      }
+    ],
+    "annotation-non-object-is-absent": [
+      {
+        "text": "x"
+      }
+    ],
+    "annotation-null-is-absent": [
+      {
+        "text": "x"
+      }
+    ],
+    "annotation-equal-values-merge-across-key-order": [
+      {
+        "text": "ab",
+        "marks": {
+          "annotation": {
+            "text": "A quote",
+            "subtitle": "Anna"
+          }
+        }
+      }
     ]
   },
   "deltas": {
@@ -544,6 +620,26 @@
       },
       {
         "text": "b"
+      }
+    ],
+    "annotation-stored-sorted-reads-canonical": [
+      {
+        "text": "a",
+        "marks": {
+          "annotation": {
+            "text": "A quote",
+            "subtitle": "Anna"
+          },
+          "bold": true
+        }
+      },
+      {
+        "text": "b"
+      }
+    ],
+    "annotation-null-attribute-is-absent": [
+      {
+        "text": "a"
       }
     ]
   }

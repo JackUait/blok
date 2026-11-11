@@ -14,7 +14,7 @@ import (
 // the echo check and the edit no-op check compare this form as JSON text.
 
 var markOrder = []string{
-	"link", "color", "background", "highlight", "bold", "italic", "underline",
+	"annotation", "link", "color", "background", "highlight", "bold", "italic", "underline",
 	"strikethrough", "code", "sup", "sub",
 }
 
@@ -461,6 +461,22 @@ func markValue(key jsjson.Str, raw any) (any, bool) {
 		}
 		return canonical, true
 	}
+	if name == "annotation" {
+		annotation, ok := raw.(*jsjson.Object)
+		if !ok {
+			return nil, false
+		}
+		text, ok := lookup(annotation, "text")
+		if !isFilledText(text) || !ok {
+			return nil, false
+		}
+		canonical := &jsjson.Object{}
+		put(canonical, "text", text)
+		if subtitle, ok := lookup(annotation, "subtitle"); ok && isFilledText(subtitle) {
+			put(canonical, "subtitle", subtitle)
+		}
+		return canonical, true
+	}
 	if slices.Contains(booleanMarks, name) {
 		return true, raw == true
 	}
@@ -491,6 +507,12 @@ func markValue(key jsjson.Str, raw any) (any, bool) {
 		return sorted, true
 	}
 	return raw, true
+}
+
+// isFilledText is the client's test for an annotation's text and subtitle: a non-empty string.
+func isFilledText(value any) bool {
+	text, ok := value.(jsjson.Str)
+	return ok && len(text) > 0
 }
 
 func sameMarks(left, right *jsjson.Object) bool {

@@ -10,6 +10,14 @@ export interface RichTextLink {
  * are stored as `"tag:<tagname>": { <attribute>: <value> }`. Any other key
  * is dropped on input with one console warning per key.
  */
+/** A hint attached to a run of text. Both values are plain text. */
+export interface RichTextAnnotation {
+  /** Never empty: an empty text means no annotation. */
+  text: string;
+  /** A quieter second line under the text. */
+  subtitle?: string;
+}
+
 export interface RichTextMarks {
   bold?: true;
   italic?: true;
@@ -33,6 +41,8 @@ export interface RichTextMarks {
   /** Same values as `color`. An agent command also drops a white or dark-grey page background. */
   background?: string;
   link?: RichTextLink;
+  /** A hint on the run: readers see a dotted underline and a card with this text. */
+  annotation?: RichTextAnnotation;
   [customMark: `tag:${string}`]: Record<string, string>;
 }
 

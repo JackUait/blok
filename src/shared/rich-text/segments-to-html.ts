@@ -1,6 +1,7 @@
 import { COLOR_PRESETS, colorVarName } from '../color-presets';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../page-reference';
 import { EQUATION_SOURCE_ATTR } from '../equation-mark';
+import { ANNOTATION_ATTR, ANNOTATION_SUBTITLE_ATTR } from '../annotation-mark';
 import { canonicalizeSegments, isTextSegment } from './html-to-segments';
 import type { RichText, RichTextMarks, RichTextSegment } from '../../../types/rich-text';
 
@@ -39,6 +40,16 @@ const simple = (key: keyof RichTextMarks, tag: string): Wrapper => ({
 
 /** Outermost first. The order is part of the canonical HTML: changing it changes saved output. */
 const FIXED_WRAPPERS: Wrapper[] = [
+  {
+    // First, so a link or bold inside a hint never splits it into several spans.
+    read: marks => marks.annotation,
+    open: value => {
+      const annotation = value as NonNullable<RichTextMarks['annotation']>;
+
+      return `<span${attrs({ [ANNOTATION_ATTR]: annotation.text, [ANNOTATION_SUBTITLE_ATTR]: annotation.subtitle })}>`;
+    },
+    close: '</span>',
+  },
   {
     read: marks => marks.link,
     open: value => {

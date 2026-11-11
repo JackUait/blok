@@ -5,7 +5,7 @@ import { findTextMatches } from '../text-match';
 import { failure } from './errors';
 
 export const KNOWN_MARKS: ReadonlySet<string> = new Set<keyof RichTextMarks>([
-  'bold', 'italic', 'underline', 'strikethrough', 'code', 'sup', 'sub', 'highlight', 'color', 'background', 'link',
+  'bold', 'italic', 'underline', 'strikethrough', 'code', 'sup', 'sub', 'highlight', 'color', 'background', 'link', 'annotation',
 ]);
 
 const EMBED_CHAR = '￼';

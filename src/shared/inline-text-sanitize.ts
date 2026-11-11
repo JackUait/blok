@@ -90,13 +90,14 @@ export const preserveEquationSpan = (node: Element): { [attr: string]: boolean |
 export const preserveInlineSpan = (node: Element): { [attr: string]: boolean | string } | false => {
   const text = node.getAttribute(ANNOTATION_ATTR);
 
-  if (text === null || text.trim() === '') {
+  // Empty, not blank: the servers apply the same test and have no JS trim().
+  if (text === null || text === '') {
     return preserveEquationSpan(node);
   }
 
   const subtitle = node.getAttribute(ANNOTATION_SUBTITLE_ATTR);
 
-  return subtitle !== null && subtitle.trim() !== ''
+  return subtitle !== null && subtitle !== ''
     ? { [ANNOTATION_ATTR]: true, [ANNOTATION_SUBTITLE_ATTR]: true }
     : { [ANNOTATION_ATTR]: true };
 };

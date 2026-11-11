@@ -4,7 +4,7 @@
  * editor that never registered the annotation tool.
  */
 
-/** Attribute holding the hint text. A span without a non-blank value is not an annotation. */
+/** Attribute holding the hint text. A span without a non-empty value is not an annotation. */
 export const ANNOTATION_ATTR = 'data-blok-annotation';
 
 /** Attribute holding the optional subtitle. */

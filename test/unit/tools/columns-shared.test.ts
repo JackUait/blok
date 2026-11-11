@@ -50,8 +50,9 @@ describe('unwrapColumnListIfCollapsed', () => {
     expect(setBlockParent).toHaveBeenCalledTimes(2);
     // both wrappers deleted by id-resolved index, column FIRST then list (order
     // matters: deleting the column shifts the list's index, which is re-read)
-    expect(remove).toHaveBeenNthCalledWith(1, 8);
-    expect(remove).toHaveBeenNthCalledWith(2, 7);
+    // and without moving the caret (Notion U142: no caret after the unwrap)
+    expect(remove).toHaveBeenNthCalledWith(1, 8, false);
+    expect(remove).toHaveBeenNthCalledWith(2, 7, false);
   });
 
   it('promotes survivors into the ENCLOSING column when the collapsing list is nested', async () => {
@@ -101,8 +102,8 @@ describe('unwrapColumnListIfCollapsed', () => {
 
     await unwrapColumnListIfCollapsed(api, 'cl-1');
 
-    expect(remove).toHaveBeenNthCalledWith(1, 8);
-    expect(remove).toHaveBeenNthCalledWith(2, 6);
+    expect(remove).toHaveBeenNthCalledWith(1, 8, false);
+    expect(remove).toHaveBeenNthCalledWith(2, 6, false);
   });
 
   it('excludes the being-removed block from the column count (excludeId)', async () => {

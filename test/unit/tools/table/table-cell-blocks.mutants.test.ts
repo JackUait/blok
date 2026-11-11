@@ -33,6 +33,7 @@ interface Store {
   insertCalls: InsertCall[];
   parentCalls: Array<{ id: string; parentId: string | null }>;
   deleteCalls: number[];
+  deleteMovesCaret: Array<boolean | undefined>;
   caretCalls: Array<{ id: string; position: string }>;
   transactCalls: number;
   unavailableTools: Set<string>;
@@ -67,6 +68,7 @@ const createStore = (): Store => {
   const insertCalls: InsertCall[] = [];
   const parentCalls: Array<{ id: string; parentId: string | null }> = [];
   const deleteCalls: number[] = [];
+  const deleteMovesCaret: Array<boolean | undefined> = [];
   const caretCalls: Array<{ id: string; position: string }> = [];
   const unavailableTools = new Set<string>();
   const hiddenFromIndex = new Set<string>();
@@ -181,8 +183,9 @@ const createStore = (): Store => {
 
         return created;
       },
-      delete: (index: number): Promise<void> => {
+      delete: (index: number, setCaret?: boolean): Promise<void> => {
         deleteCalls.push(index);
+        deleteMovesCaret.push(setCaret);
         blocks.splice(index, 1);
 
         return Promise.resolve();
@@ -242,6 +245,7 @@ const createStore = (): Store => {
     insertCalls,
     parentCalls,
     deleteCalls,
+    deleteMovesCaret,
     caretCalls,
     unavailableTools,
     hiddenFromIndex,
@@ -2117,6 +2121,8 @@ describe('TableCellBlocks — blank space clicks, deletion and teardown', () => 
     fixture.instance.deleteAllBlocks();
 
     expect(fixture.store.deleteCalls).toEqual([2, 1]);
+    // Notion U163: deleting a table leaves no caret in the block above.
+    expect(fixture.store.deleteMovesCaret).toEqual([false, false]);
 
     await flushMicrotasks();
   });

@@ -394,7 +394,8 @@ const deleteById = async (api: API, blockId: string): Promise<void> => {
   const index = api.blocks.getBlockIndex(blockId);
 
   if (index !== undefined) {
-    await api.blocks.delete(index);
+    // A layout cleanup must not move the user's caret (Notion U142).
+    await api.blocks.delete(index, false);
   }
 };
 

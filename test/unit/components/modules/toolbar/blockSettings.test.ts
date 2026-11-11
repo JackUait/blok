@@ -830,6 +830,30 @@ describe('BlockSettings', () => {
     selectionAtBlokSpy.mockRestore();
   });
 
+  // Notion U104, U163: a menu Delete leaves no caret, not even the one from before the menu.
+  it('does not restore the saved caret when the menu\'s blocks were removed', () => {
+    blockSettings.make();
+
+    const block = createBlock();
+    const selectionStub = { save: vi.fn(), restore: vi.fn(), clearSaved: vi.fn() };
+
+    blokMock.BlockManager.currentBlock = block;
+    (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
+    Object.assign(blockSettings as unknown as { opened: boolean; popover: null; menuBlocks: Block[] }, {
+      opened: true,
+      popover: null,
+      menuBlocks: [block],
+    });
+    const selectionAtBlokSpy = vi.spyOn(SelectionUtils, 'isAtBlok', 'get').mockReturnValue(false);
+
+    blockSettings.close();
+
+    expect(selectionStub.restore).not.toHaveBeenCalled();
+    expect(selectionStub.clearSaved).toHaveBeenCalledTimes(1);
+
+    selectionAtBlokSpy.mockRestore();
+  });
+
   it('does not try to restore selection when caret is already inside blok UI', () => {
     blockSettings.make();
 

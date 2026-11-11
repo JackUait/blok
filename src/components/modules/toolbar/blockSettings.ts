@@ -455,6 +455,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     this.isOpening = false; // Clear isOpening flag when closing
     this.stopClickWatch();
 
+    // Read before keepActedSelection: a menu Delete leaves no caret (Notion U104, U163).
+    const menuBlocksRemoved = this.menuBlocks.length > 0 && this.menuBlocks.every((block) => !block.holder.isConnected);
     const kept = this.keepActedSelection();
 
     this.closeKeptSelection = kept;
@@ -466,7 +468,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
      *
      * So, we need to restore selection back to Block after closing the Block Settings
      */
-    if (!kept && !SelectionUtils.isAtBlok) {
+    if (!kept && !menuBlocksRemoved && !SelectionUtils.isAtBlok) {
       this.selection.restore();
     }
 

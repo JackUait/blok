@@ -55,9 +55,11 @@ export class DeleteTune implements BlockTune {
    * Delete block conditions passed
    */
   public async handleClick(): Promise<void> {
-    const id = this.api.blocks.getBlockByIndex(this.api.blocks.getCurrentBlockIndex())?.id;
+    const index = this.api.blocks.getCurrentBlockIndex();
+    const id = this.api.blocks.getBlockByIndex(index)?.id;
 
-    await this.api.blocks.delete();
+    // Notion leaves no caret after a menu Delete (U104).
+    await this.api.blocks.delete(index, false);
 
     if (id !== undefined) {
       announceDeletedRoots(this.api.i18n, [{ id, parentId: null }], (blockId) => this.api.blocks.getById(blockId) !== null);

@@ -374,7 +374,7 @@ describe('unwrapColumnListIfCollapsed delete resolution', () => {
 
     await unwrapColumnListIfCollapsed(api, 'cl-1');
 
-    expect(remove.mock.calls).toStrictEqual([ [ 7 ] ]);
+    expect(remove.mock.calls).toStrictEqual([ [ 7, false ] ]);
   });
 
   it('promotes survivors to root when the column_list itself no longer resolves', async () => {

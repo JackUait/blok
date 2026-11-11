@@ -21,7 +21,7 @@ vi.mock('../../../../src/components/utils/string', async (importOriginal) => {
 });
 
 type BlocksMocks = {
-  delete: Mock<() => Promise<void>>;
+  delete: Mock<(index?: number, setCaret?: boolean) => Promise<void>>;
   getCurrentBlockIndex: Mock<() => number>;
   getBlockByIndex: Mock<(index: number) => { id: string } | undefined>;
   getById: Mock<(id: string) => { id: string } | null>;
@@ -92,14 +92,16 @@ describe('DeleteTune', () => {
     expect(config.secondaryLabel).toBe('Del');
   });
 
-  it('deletes current block when handler is triggered', async () => {
+  // Notion U104: the block above gets no caret after a menu Delete.
+  it('deletes the current block without moving the caret', async () => {
     const { api, blocks } = createApiMocks();
+
+    blocks.getCurrentBlockIndex.mockReturnValue(2);
     const tune = new DeleteTune({ api });
 
     await tune.handleClick();
 
-    // Verify the blocks.delete method was called with no arguments
-    expect(blocks.delete).toHaveBeenCalledWith();
+    expect(blocks.delete).toHaveBeenCalledWith(2, false);
   });
 
   // Notion U104: Delete from the block menu says 1 block deleted.

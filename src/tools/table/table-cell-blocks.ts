@@ -2637,7 +2637,8 @@ export class TableCellBlocks {
     const allCells = this.gridElement.querySelectorAll(`[${CELL_ATTR}]`);
     const blockIds = this.getBlockIdsFromCells(allCells);
 
-    this.deleteBlocks(blockIds);
+    // The table is going, so no cell is left to put a caret in (Notion U163).
+    this.deleteBlocks(blockIds, false);
   }
 
   /**

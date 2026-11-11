@@ -19,6 +19,7 @@ import { destroyAnnouncer, registerAnnouncer } from '../utils/announcer';
 import { buildFontSizeVarLines } from '../utils/font-size-tokens';
 import { withHighlightFallback } from '../utils/highlight-inheritance';
 import { mountStyles } from '../utils/lazy-styles';
+import { AnnotationCard } from '../utils/annotation-card';
 import { LinkHoverCard } from '../utils/link-hover-card';
 import { resolveLoaderConfig } from '../utils/loader-config';
 import { LoadingController } from '../utils/loading-controller';
@@ -36,6 +37,7 @@ import { SelectionController } from './uiControllers/controllers/selection';
 import { createDocumentClickedHandler } from './uiControllers/handlers/click';
 import { createRedactorTouchHandler } from './uiControllers/handlers/touch';
 import { ToggleShortcuts } from '../../tools/toggle/toggle-shortcuts';
+import { ANNOTATION_ATTR } from '../../shared/annotation-mark';
 import { EQUATION_SOURCE_ATTR } from '../../shared/equation-mark';
 
 /**
@@ -117,6 +119,12 @@ export class UI extends Module<UINodes> {
    * {@link readOnlyMutableListeners}).
    */
   private linkHoverCard: LinkHoverCard | null = null;
+
+  /**
+   * The card a reader gets for an annotated phrase. Core, not part of the
+   * annotation tool: a hint can arrive in an editor that never registered it.
+   */
+  private annotationCard: AnnotationCard | null = null;
 
   private loading: LoadingController | null = null;
 
@@ -633,6 +641,8 @@ export class UI extends Module<UINodes> {
 
     this.linkHoverCard?.destroy();
     this.linkHoverCard = null;
+    this.annotationCard?.destroy();
+    this.annotationCard = null;
 
     // Remove the per-instance font style tag to prevent leaks in SPAs
     if (this.fontStyleTagId !== null) {
@@ -678,12 +688,14 @@ export class UI extends Module<UINodes> {
   private anchorMouseMoveListener = (event: Event): void => {
     if (event instanceof MouseEvent) {
       this.handleAnchorMouseMove(event);
+      this.handleAnnotationMouseMove(event);
     }
   };
 
   private anchorMouseOutListener = (event: Event): void => {
     if (event instanceof MouseEvent) {
       this.handleAnchorMouseOut(event);
+      this.handleAnnotationMouseOut(event);
     }
   };
 
@@ -697,6 +709,22 @@ export class UI extends Module<UINodes> {
     if (event instanceof MouseEvent) {
       this.redactorClicked(event);
     }
+  };
+
+  /** A reader opens a hint from the keyboard; in edit mode the keys type. */
+  private annotationKeydownListener = (event: Event): void => {
+    if (!(event instanceof KeyboardEvent) || !this.Blok.ReadOnly.isEnabled || (event.key !== 'Enter' && event.key !== ' ')) {
+      return;
+    }
+
+    const hint = this.annotationOf(event.target);
+
+    if (hint === null || event.target !== hint) {
+      return;
+    }
+
+    event.preventDefault();
+    this.ensureAnnotationCard().toggle(hint);
   };
 
   private redactorContextMenu = (event: Event): void => {
@@ -1201,6 +1229,7 @@ export class UI extends Module<UINodes> {
     this.listeners.on(this.nodes.redactor, 'mouseout', this.anchorMouseOutListener);
 
     this.listeners.on(this.nodes.redactor, 'click', this.redactorClickListener);
+    this.listeners.on(this.nodes.redactor, 'keydown', this.annotationKeydownListener);
   }
 
   /**
@@ -1214,6 +1243,7 @@ export class UI extends Module<UINodes> {
     this.listeners.off(this.nodes.redactor, 'mousemove', this.anchorMouseMoveListener);
     this.listeners.off(this.nodes.redactor, 'mouseout', this.anchorMouseOutListener);
     this.listeners.off(this.nodes.redactor, 'click', this.redactorClickListener);
+    this.listeners.off(this.nodes.redactor, 'keydown', this.annotationKeydownListener);
 
     /**
      * Disable selection controller
@@ -1295,6 +1325,7 @@ export class UI extends Module<UINodes> {
      * read-only-insensitive), so the card still appears in read-only mode.
      */
     this.linkHoverCard?.hide();
+    this.annotationCard?.hide();
 
     /**
      * Disable keyboard controller
@@ -1450,6 +1481,14 @@ export class UI extends Module<UINodes> {
     }
 
     const anchor = target?.closest?.('a');
+    const hint = this.annotationOf(target);
+
+    // A link inside a hint keeps its click; anywhere else on the hint pins the card.
+    if (hint !== null && event.button === 0 && Selection.isCollapsed && !(anchor instanceof HTMLAnchorElement && hint.contains(anchor))) {
+      this.ensureAnnotationCard().toggle(hint);
+
+      return;
+    }
 
     if (!(anchor instanceof HTMLAnchorElement) || !this.nodes.redactor.contains(anchor)) {
       return;
@@ -1619,6 +1658,61 @@ export class UI extends Module<UINodes> {
     }
 
     return this.linkHoverCard;
+  }
+
+  private ensureAnnotationCard(): AnnotationCard {
+    if (this.annotationCard === null) {
+      this.annotationCard = new AnnotationCard({ label: this.Blok.I18n.t('toolNames.annotation') });
+    }
+
+    return this.annotationCard;
+  }
+
+  /**
+   * The annotated phrase an event landed on, if it is inside this editor.
+   * @param target - the event target
+   */
+  private annotationOf(target: EventTarget | null): HTMLElement | null {
+    const hint = target instanceof Element ? target.closest(`span[${ANNOTATION_ATTR}]`) : null;
+
+    return hint instanceof HTMLElement && this.nodes.redactor.contains(hint) ? hint : null;
+  }
+
+  /**
+   * Hover a hint: show its card after the hint delay. mousemove, not mouseover,
+   * for the same reason as the link card.
+   * @param event - mousemove event delegated from the redactor
+   */
+  private handleAnnotationMouseMove(event: MouseEvent): void {
+    const hint = this.annotationOf(event.target);
+
+    if (hint === null) {
+      return;
+    }
+
+    const card = this.ensureAnnotationCard();
+
+    if (card.anchor === hint) {
+      card.cancelHide();
+
+      return;
+    }
+
+    card.show(hint);
+  }
+
+  /**
+   * @param event - mouseout event delegated from the redactor
+   */
+  private handleAnnotationMouseOut(event: MouseEvent): void {
+    const hint = this.annotationOf(event.target);
+    const related = event.relatedTarget;
+
+    if (hint === null || (related instanceof Node && hint.contains(related))) {
+      return;
+    }
+
+    this.annotationCard?.scheduleHide();
   }
 
   /**

@@ -105,6 +105,9 @@ const FOCUSABLE_SEPARATOR_ATTRS = [
  * supplies the name, so a reviewer can re-verify it without re-deriving it.
  */
 const INDIRECTLY_NAMED: Record<string, string> = {
+  'components/utils/annotation-focus.ts » hint » button':
+    'DELIBERATE — the hint is an inline span the block already rendered; its name is the ' +
+    'annotated phrase it contains, which this helper never creates',
   'playground/history-drawer.ts » tab » tab':
     'DELIBERATE — tabPair() passes its label to element(), which sets node.textContent ' +
     'before returning the tab',

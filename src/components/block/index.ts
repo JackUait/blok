@@ -21,6 +21,7 @@ import type { BlockToolAdapter } from '../tools/block';
 import type { ToolsCollection } from '../tools/collection';
 import type { BlockTuneAdapter } from '../tools/tune';
 import { generateBlockId, isFunction, log } from '../utils';
+import { syncAnnotationFocus } from '../utils/annotation-focus';
 import { isSameBlockData } from '../utils/blocks';
 import { EventsDispatcher } from '../utils/events';
 import { hasContentMatching, isContentEmpty } from '../utils/own-element';
@@ -501,6 +502,8 @@ export class Block extends EventsDispatcher<BlockEvents> {
       return;
     }
 
+    syncAnnotationFocus(root, this.readOnly);
+
     for (const inlineTool of this.tool.inlineTools.values()) {
       const hydrate = inlineTool.hydrate;
 
@@ -817,10 +820,19 @@ export class Block extends EventsDispatcher<BlockEvents> {
 
     this.readOnly = state;
 
+    const root = this.toolRenderer.toolRenderedElement;
+
     if (state) {
       this.inputManager.removeInputEvents();
       this.mutationHandler.unwatch();
-    } else {
+    }
+
+    // While nothing watches: the attribute writes must not read as an edit.
+    if (root !== null) {
+      syncAnnotationFocus(root, state);
+    }
+
+    if (!state) {
       this.inputManager.addInputEvents();
       this.mutationHandler.watch();
     }

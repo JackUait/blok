@@ -95,6 +95,7 @@ const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
   'components/utils/caret/boundaries.ts': 'Synchronous hidden text-measurement node removed before control returns.',
   'components/modules/paste/html-import.ts': 'Hidden scratch editor holder for html.insert, placed off-screen by inline styles and removed when the paste is saved; no anchor or coordinates.',
   'components/utils/leave-banner.ts': 'Modal banner pinned to the top centre of the viewport by fixed CSS classes; no live element anchor, JS coordinates or collision calculation.',
+  'components/utils/annotation-card.ts': 'Tracked fixed root surface registered in ROOT_SURFACE_CONTRACTS.',
   'components/utils/link-hover-card.ts': 'Tracked fixed root surface registered in ROOT_SURFACE_CONTRACTS.',
   'components/utils/notifier/index.ts': 'Viewport toast region with no live element anchor or collision calculation.',
   'components/utils/overflow-list.ts': 'Shared anchored "N more…" list registered in ROOT_SURFACE_CONTRACTS.',
@@ -224,6 +225,7 @@ const CAPTURE_SCROLL_CLASSIFICATIONS: Record<string, string> = {
 type SurfaceContract = 'shared' | 'popover-core' | 'tracked-manual' | 'dismiss-on-scroll';
 
 const ROOT_SURFACE_CONTRACTS: Record<string, SurfaceContract> = {
+  'components/utils/annotation-card.ts': 'tracked-manual',
   'components/utils/link-hover-card.ts': 'tracked-manual',
   'components/utils/overflow-list.ts': 'shared',
   'components/utils/popover/popover-desktop.ts': 'popover-core',

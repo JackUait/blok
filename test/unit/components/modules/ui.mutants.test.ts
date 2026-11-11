@@ -54,6 +54,7 @@ const I18N_LABELS: Record<string, string> = {
   'tools.link.edit': 'STUB_EDIT_LABEL',
   'tools.link.urlCopied': 'STUB_COPIED_MSG',
   'tools.link.copyFailed': 'STUB_FAILED_MSG',
+  'toolNames.annotation': 'STUB_HINT_NAME',
 };
 
 const createBlokStub = () => {
@@ -2192,6 +2193,174 @@ describe('UI module — mutants', () => {
 
       expect(event.defaultPrevented).toBe(true);
       expect(lateListener).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('annotation card', () => {
+    const CARD = '[data-blok-testid="annotation-card"]';
+
+    const createHintUI = (): Harness => {
+      const harness = createMadeUI();
+
+      (harness.ui as unknown as { bindReadOnlyInsensitiveListeners: () => void })
+        .bindReadOnlyInsensitiveListeners();
+
+      return harness;
+    };
+
+    const addHint = (redactor: HTMLElement, text: string, inner = 'hint-phrase'): HTMLElement => {
+      const hint = document.createElement('span');
+
+      hint.setAttribute('data-blok-annotation', text);
+      hint.innerHTML = inner;
+      redactor.appendChild(hint);
+
+      return hint;
+    };
+
+    const cardOf = (ui: UI): { anchor: unknown; pinned: boolean } | null =>
+      (priv(ui).annotationCard as { anchor: unknown; pinned: boolean } | null);
+
+    const click = (target: Element): void => {
+      target.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }));
+    };
+
+    it('shows the card over a hint only after the full hint delay', () => {
+      vi.useFakeTimers();
+
+      const { ui, redactor } = createHintUI();
+      const hint = addHint(redactor, 'A quote');
+
+      hint.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+      vi.advanceTimersByTime(499);
+
+      expect(cardOf(ui)?.anchor).toBeNull();
+
+      vi.advanceTimersByTime(1);
+
+      expect(cardOf(ui)?.anchor).toBe(hint);
+      expect(document.body.querySelector(CARD)?.textContent).toBe('A quote');
+    });
+
+    it('names the card from i18n', () => {
+      const { redactor } = createHintUI();
+
+      click(addHint(redactor, 'A quote'));
+
+      expect(document.body.querySelector(CARD)?.getAttribute('aria-label')).toBe('STUB_HINT_NAME');
+    });
+
+    it('hides the card after the pointer leaves the hint', () => {
+      vi.useFakeTimers();
+
+      const { ui, redactor } = createHintUI();
+      const hint = addHint(redactor, 'A quote');
+
+      hint.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+      vi.advanceTimersByTime(500);
+      hint.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: redactor }));
+      vi.advanceTimersByTime(250);
+
+      expect(cardOf(ui)?.anchor).toBeNull();
+    });
+
+    it('keeps the card while the pointer moves inside the hint', () => {
+      vi.useFakeTimers();
+
+      const { ui, redactor } = createHintUI();
+      const hint = addHint(redactor, 'A quote', 'a <b>bold</b> phrase');
+      const bold = hint.querySelector('b') as HTMLElement;
+
+      hint.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+      vi.advanceTimersByTime(500);
+      hint.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: bold }));
+      vi.advanceTimersByTime(1000);
+
+      expect(cardOf(ui)?.anchor).toBe(hint);
+    });
+
+    it('pins the card at once on a click, and closes it on a second click', () => {
+      const { ui, redactor, blok } = createHintUI();
+      const hint = addHint(redactor, 'A quote');
+
+      blok.ReadOnly.isEnabled = true;
+      click(hint);
+
+      expect(cardOf(ui)?.anchor).toBe(hint);
+      expect(cardOf(ui)?.pinned).toBe(true);
+
+      click(hint);
+
+      expect(cardOf(ui)?.anchor).toBeNull();
+    });
+
+    it('leaves a click on a link inside a hint to the link', () => {
+      const { ui, redactor } = createHintUI();
+      const hint = addHint(redactor, 'A quote', 'see <a href="https://example.com/in-hint">the report</a>');
+
+      vi.spyOn(window, 'open').mockImplementation(() => null);
+      click(hint.querySelector('a') as HTMLElement);
+
+      expect(cardOf(ui)?.anchor ?? null).toBeNull();
+    });
+
+    it('does not pin while text is being selected', () => {
+      const { ui, redactor } = createHintUI();
+      const hint = addHint(redactor, 'A quote');
+
+      vi.spyOn(SelectionUtils, 'isCollapsed', 'get').mockReturnValue(false);
+      click(hint);
+
+      expect(cardOf(ui)?.anchor ?? null).toBeNull();
+    });
+
+    it('ignores a hint outside the editor', () => {
+      const { ui } = createHintUI();
+      const outside = addHint(document.body, 'A quote');
+
+      click(outside);
+
+      expect(cardOf(ui)?.anchor ?? null).toBeNull();
+    });
+
+    it.each([ 'Enter', ' ' ])('toggles the card with %j on a focused hint in read-only mode', (key) => {
+      const { ui, redactor, blok } = createHintUI();
+      const hint = addHint(redactor, 'A quote');
+
+      blok.ReadOnly.isEnabled = true;
+
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+
+      hint.dispatchEvent(event);
+
+      expect(cardOf(ui)?.anchor).toBe(hint);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('leaves Enter alone on a hint in edit mode', () => {
+      const { ui, redactor } = createHintUI();
+      const hint = addHint(redactor, 'A quote');
+      const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+
+      hint.dispatchEvent(event);
+
+      expect(cardOf(ui)?.anchor ?? null).toBeNull();
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('closes the card when the mode changes and on destroy', () => {
+      const { ui, redactor } = createHintUI();
+      const hint = addHint(redactor, 'A quote');
+
+      click(hint);
+      (ui as unknown as { unbindReadOnlySensitiveListeners: () => void }).unbindReadOnlySensitiveListeners();
+
+      expect(cardOf(ui)?.anchor).toBeNull();
+
+      click(hint);
+      ui.destroy();
+
+      expect(document.body.querySelector(CARD)).toBeNull();
     });
   });
 

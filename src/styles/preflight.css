@@ -134,6 +134,30 @@
     background-color: var(--blok-selection-inline);
   }
 
+  /* An annotated phrase ("Hint"): dotted underline; its card opens on hover or click. */
+  :where([data-blok-interface]) span[data-blok-annotation] {
+    text-decoration: underline dotted var(--blok-text-secondary);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 4px;
+    border-radius: var(--blok-radius-mark);
+    transition: background-color 120ms ease-out;
+  }
+
+  :where([data-blok-interface]) span[data-blok-annotation]:hover,
+  :where([data-blok-interface]) span[data-blok-annotation][data-blok-annotation-editing] {
+    background-color: var(--blok-item-hover-bg);
+  }
+
+  :where([data-blok-interface][data-blok-readonly]) span[data-blok-annotation] {
+    cursor: help;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :where([data-blok-interface]) span[data-blok-annotation] {
+      transition: none;
+    }
+  }
+
   :where([data-blok-interface], [data-blok-popover]) code:not(pre code),
   :where([data-blok-interface]) span[data-latex][data-blok-equation-editing] {
     border-radius: var(--blok-radius-mark);

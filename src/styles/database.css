@@ -17268,6 +17268,8 @@ button[data-blok-database-feed-reaction]:hover,
   flex-direction: column;
   gap: var(--blok-space-3);
   padding-block: var(--blok-space-3);
+  /* The widgets start under the title and end under ⚙, as the tab bar does. */
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
 
 [data-blok-database-dashboard-row] {

@@ -1615,7 +1615,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Round 14 lane r14tabs: the side peek takes at most two thirds of the window; the view name field 8px after its glyph; the confirm dialog's reverse close and 406px Delete property box; view tabs that slide aside while one is dragged.
     const DATABASE_R14TABS_BYTES = 901;
     // Dashboard widgets: the grid gaps, the widget card, its fixed header and ⋯ over a scrolling view, Add widget, the empty state, the drop line; and the hidden New button.
-    const DATABASE_DASHBOARD_BYTES = 3_356;
+    const DATABASE_DASHBOARD_BYTES = 3_548;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

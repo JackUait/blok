@@ -81,4 +81,21 @@ describe('desktop page cover', () => {
     header.remove();
     outside.remove();
   });
+
+  /**
+   * WKWebView — the engine behind the packaged Tauri window — left the button's
+   * pixels on screen after its opacity reached 0: the computed style read
+   * `opacity: 0` while the button was still painted, so no amount of fixing the
+   * style helped. `visibility` moves the element out of the painted tree instead
+   * of merely making it transparent, which forces the repaint; it also stops a
+   * fully transparent button from swallowing clicks.
+   */
+  it('hides the add-cover button from the painted tree, not just by opacity', () => {
+    const css = readFileSync(join(process.cwd(), 'src/shell.css'), 'utf8');
+    const base = css.match(/\[data-desktop-add-cover\]\s*\{[^}]*\}/)?.[0] ?? '';
+    const shown = css.match(/^[^\n]*\[data-desktop-header-hover\][^{]*\{[^}]*\}/m)?.[0] ?? '';
+
+    expect(base).toMatch(/visibility:\s*hidden/);
+    expect(shown).toMatch(/visibility:\s*visible/);
+  });
 });

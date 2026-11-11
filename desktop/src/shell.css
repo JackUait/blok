@@ -195,13 +195,16 @@ body[data-blok-theme="light"] [data-desktop-settings-overlay] {
   min-height: 28px; margin-inline-start: 6px; padding: 4px 8px;
   border: 0; border-radius: 5px; background: transparent; color: var(--desktop-muted);
   font: inherit; font-size: 14px; line-height: 20px; cursor: pointer;
-  opacity: 0; transition: opacity 160ms ease, background-color 120ms ease, color 120ms ease;
+  opacity: 0; visibility: hidden;
+  /* WKWebView kept painting the button after its opacity reached 0; visibility takes it
+     out of the painted tree, and delaying it past the fade keeps the fade visible. */
+  transition: opacity 160ms ease, visibility 0s linear 160ms, background-color 120ms ease, color 120ms ease;
 }
 [data-blok-page-header][data-desktop-header-hover] [data-desktop-add-cover],
-:where(:root:not([data-blok-modality="pointer"])) [data-desktop-add-cover]:focus-visible { opacity: 1; }
+:where(:root:not([data-blok-modality="pointer"])) [data-desktop-add-cover]:focus-visible { opacity: 1; visibility: visible; transition-delay: 0s; }
 [data-desktop-add-cover]:hover,
 :where(:root:not([data-blok-modality="pointer"])) [data-desktop-add-cover]:focus-visible { background: var(--desktop-hover); color: var(--desktop-ink); }
-@media (hover: none) { [data-desktop-add-cover] { opacity: 1; } }
+@media (hover: none) { [data-desktop-add-cover] { opacity: 1; visibility: visible; transition-delay: 0s; } }
 [data-desktop-cover] { position: relative; height: 220px; }
 [data-desktop-cover-image] { width: 100%; height: 100%; background-size: cover; }
 [data-desktop-cover-actions] {

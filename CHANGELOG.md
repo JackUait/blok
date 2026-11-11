@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 
 ### Features
 
+- **Open as full page** — An inline database has a ⤢ button between Search and Settings, and an "Open as full page" row in its view tab menu.
+  - A click fills the editor with the database and a 32px title. The URL gets `#<databaseId>?full`, so Back returns and a reload opens it again.
+  - Nothing in the document changes: no undo step, no save, nothing for peers.
+  - A host with its own routing can pass `openFullPage({ databaseId, viewId })` in the database config. Blok then calls it instead.
 - **MCP tools on your own MCP server** — Serve Blok's `blok_*` tools and prompts on an MCP server you build, next to your own tools.
   - Node `createBlok`, C# `WithBlok`, Go `blokmcp.Embed` and Rust `BlokTools`. Your server keeps its name, instructions, transport and sign-in.
   - It needs a per-document check (`authorize`), as over HTTP. Anonymous callers are refused unless you name an anonymous principal.

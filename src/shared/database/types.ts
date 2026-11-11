@@ -1639,4 +1639,10 @@ export interface DatabaseConfig {
   calendar?: DatabaseCalendar;
   /** "Learn about reminders" and "Learn about imports". */
   helpLinks?: DatabaseHelpLinks;
+  /**
+   * ⤢ "Open as full page" on an inline database: show it on the host's own
+   * page. Without it, the database takes over the editor and the URL gets
+   * `#<databaseId>?full`, so Back returns and a reload reopens it.
+   */
+  openFullPage?(input: { databaseId: string; viewId: string }): void;
 }

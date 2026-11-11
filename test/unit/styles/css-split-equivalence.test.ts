@@ -1618,6 +1618,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_AGGR_BYTES = 941;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
     const DATABASE_PEEK_PAGE_HEAD_HOVER_BYTES = 433;
+    // Lane fullopen: ⤢ "Open as full page" looks like the toolbar icons and folds with New; the database opened full hides the blocks around it and shows a 32px bold title.
+    const DATABASE_FULLOPEN_BYTES = 1_471;
     // emoji-picker.css: the Spotlight + Showcase picker's named chips, 9-column grid, bottom stage and skin-tone dial.
     const EMOJI_PICKER_SPOTLIGHT_SHOWCASE_BYTES = 4_813;
     // emoji-picker.css: skin-tone segments get a popover-coloured rim, a pointer cursor and a hover that keeps their colours.
@@ -2032,6 +2034,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_FULL_PAGE_INSET_BYTES
       + DATABASE_TITLE_ROW_FOLD_BYTES
       + DATABASE_PEEK_PAGE_HEAD_HOVER_BYTES
+      + DATABASE_FULLOPEN_BYTES
       + EMOJI_PICKER_SPOTLIGHT_SHOWCASE_BYTES
       + EMOJI_SKIN_TONE_RIM_BYTES
       + EMOJI_STAGE_FLOOR_BYTES

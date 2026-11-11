@@ -1,4 +1,4 @@
-import { IconChevronDown, IconViewBoard, IconChart, IconGallery, IconListBulleted, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconForm, IconViewTimeline, IconLink, IconDotsHorizontal, IconPageLayout, IconEyeSlash } from '../../components/icons';
+import { IconChevronDown, IconViewBoard, IconChart, IconGallery, IconListBulleted, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconForm, IconViewTimeline, IconLink, IconDotsHorizontal, IconPageLayout, IconEyeSlash, IconExpandDiagonal } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
 import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
@@ -67,6 +67,8 @@ export interface TabBarOptions {
   onRenameView?: (viewId: string, anchor: HTMLElement) => void;
   /** "Copy link to view". */
   onCopyLink?: (viewId: string) => void;
+  /** "Open as full page": read when the menu opens; undefined leaves the row out. */
+  openFullPage?: () => ((viewId: string) => void) | undefined;
   /** "Edit title" in the title row's "…". */
   onEditTitle?: () => void;
   /** "Edit layout" in the title row's "…": Customize layout on a row page. */
@@ -462,6 +464,9 @@ export class DatabaseTabBar {
 
     const onEditView = this.options.onEditView;
     const onCopyLink = this.options.onCopyLink;
+    const onOpenFullPage = this.options.openFullPage?.();
+    // Notion's dashboard tab has no "Open as full page" (notion-motion.md Round 15 A).
+    const dashboard = this.options.views.find((view) => view.id === viewId)?.type === 'dashboard';
     // Notion's order (feel/findings-toolbar V07).
     const editItems: PopoverItemParams[] = [
       {
@@ -489,6 +494,13 @@ export class DatabaseTabBar {
         title: t('tools.database.layoutCopyLinkToView', 'Copy link to view'),
         closeOnActivate: true,
         onActivate: () => onCopyLink(viewId),
+      }]),
+      ...(onOpenFullPage === undefined || dashboard ? [] : [{
+        icon: IconExpandDiagonal,
+        name: 'database-view-full-page',
+        title: t('tools.database.peekExpand', 'Open as full page'),
+        closeOnActivate: true,
+        onActivate: () => onOpenFullPage(viewId),
       }]),
       ...(menu.withDisplay ? this.dataSourceTitleItems() : []),
     ];

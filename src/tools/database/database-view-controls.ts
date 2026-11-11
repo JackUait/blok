@@ -1,6 +1,6 @@
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { nanoid } from 'nanoid';
-import { IconSearch, IconSliders, IconLock, IconPlus, IconChevronDown, IconFilter, IconSort, IconPreview, IconBolt, IconWand, IconArrowUp, IconCross, IconTrash, IconChevronDoubleRight, IconPageLayout } from '../../components/icons';
+import { IconSearch, IconSliders, IconLock, IconPlus, IconChevronDown, IconFilter, IconSort, IconPreview, IconBolt, IconWand, IconArrowUp, IconCross, IconTrash, IconChevronDoubleRight, IconPageLayout, IconExpandDiagonal } from '../../components/icons';
 import { openDatabaseConfirm } from './database-confirm-dialog';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { propertyTypeMeta } from './database-property-types';
@@ -106,6 +106,8 @@ export interface ViewControlsHost {
   shareForm?: (anchor: HTMLElement) => void;
   /** A form view's "Preview": the form as a respondent sees it (research/36 §13). */
   previewForm?: () => void;
+  /** ⤢ "Open as full page": undefined hides it. */
+  openFullPage?: () => (() => void) | undefined;
 }
 
 const part = (attribute: string, content: { icon?: string; text?: string }): HTMLElement => {
@@ -202,6 +204,8 @@ export class DatabaseViewControls {
   /** Notion's clear ×: shown only while there is a query. */
   private readonly searchClear: HTMLButtonElement;
   private readonly settingsButton: HTMLButtonElement;
+  /** Notion's ⤢ is a link (notion-motion.md Round 15 B), with no href: it opens in place. */
+  private readonly fullPageLink: HTMLAnchorElement;
   private readonly lockBadge: HTMLElement;
   private readonly shareFormButton: HTMLButtonElement;
   private readonly previewFormButton: HTMLButtonElement;
@@ -250,6 +254,7 @@ export class DatabaseViewControls {
     this.searchButton = iconButton('database-toolbar-search', this.t('searchLabel'), IconSearch);
     this.settingsButton = iconButton('database-toolbar-settings', this.t('settingsTitle'), IconSliders);
     this.settingsButton.setAttribute('data-blok-database-toolbar-settings', '');
+    this.fullPageLink = this.createFullPageLink();
     // A narrow view bar hides these together (notion-spec-2 §26.1, database-tab-bar.ts).
     for (const icon of [this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton]) {
       icon.setAttribute('data-blok-database-toolbar-foldable', '');
@@ -326,7 +331,7 @@ export class DatabaseViewControls {
     // "Preview" reuses the file tool's word: the same in every locale.
     this.previewFormButton = iconButton('database-toolbar-preview-form', this.host.i18n.t('tools.file.preview'), IconPreview);
     this.previewFormButton.addEventListener('click', () => this.host.previewForm?.());
-    this.toolbar.append(this.lockBadge, this.minimizeButton, this.noDateButton, this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton, this.expandButton, this.settingsButton, this.previewFormButton, this.shareFormButton);
+    this.toolbar.append(this.lockBadge, this.minimizeButton, this.noDateButton, this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton, this.expandButton, this.fullPageLink, this.settingsButton, this.previewFormButton, this.shareFormButton);
     if (host.newRow !== undefined) {
       this.toolbar.append(this.newSplitButton(host.newRow, host.openNewMenu));
     }
@@ -334,6 +339,32 @@ export class DatabaseViewControls {
     this.filterBar = document.createElement('div');
     this.filterBar.setAttribute('data-blok-database-filter-bar', '');
     this.refresh();
+  }
+
+  private createFullPageLink(): HTMLAnchorElement {
+    const link = document.createElement('a');
+    const label = this.host.i18n.t('tools.database.peekExpand');
+    const open = (): void => this.host.openFullPage?.()?.();
+
+    link.setAttribute('role', 'link');
+    link.tabIndex = 0;
+    link.setAttribute('data-blok-testid', 'database-toolbar-full-page');
+    link.setAttribute('data-blok-database-toolbar-icon', '');
+    link.setAttribute('data-blok-database-toolbar-full-page', '');
+    link.setAttribute('aria-label', label);
+    link.innerHTML = IconExpandDiagonal;
+    onHover(link, label);
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      open();
+    });
+    link.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      open();
+    });
+
+    return link;
   }
 
   /** Notion's "New" split button (research/08): the main part adds a row, the chevron lists templates. */
@@ -388,6 +419,11 @@ export class DatabaseViewControls {
     this.refresh();
   }
 
+  /** Shows ⤢ only where it can open. Touches the toolbar alone: a filter bar redraw is a block change. */
+  syncFullPage(): void {
+    this.fullPageLink.hidden = this.host.openFullPage?.() === undefined;
+  }
+
   /** Syncs the toolbar and filter bar to the active view, and the open panel. */
   refresh(): void {
     const saved = this.host.savedView();
@@ -403,6 +439,7 @@ export class DatabaseViewControls {
     const view = this.effective(saved);
 
     this.lockBadge.hidden = !this.host.locked();
+    this.syncFullPage();
     this.shareFormButton.hidden = this.host.shareForm === undefined || saved.type !== 'form' || this.host.locked();
     this.previewFormButton.hidden = this.host.previewForm === undefined || this.shareFormButton.hidden;
     this.filterButton.toggleAttribute('data-active', view.filters.length + countFilterRules(view.filterTree) > 0);

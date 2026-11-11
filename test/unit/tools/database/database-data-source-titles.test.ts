@@ -93,7 +93,7 @@ describe('DatabaseTool — "Hide data source titles" (research/23 §10)', () => 
   });
 
   // research/35 §15: a plain row of the tab's view menu, just before Duplicate.
-  it('sits in the tab\'s view menu after Copy link to view, in the group before Duplicate (feel/findings-toolbar V07)', () => {
+  it('sits in the tab\'s view menu after Copy link to view and Open as full page, in the group before Duplicate (feel/findings-toolbar V07)', () => {
     const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }]);
     const { el } = buildDatabase(doc, 'db', data());
 
@@ -102,7 +102,9 @@ describe('DatabaseTool — "Hide data source titles" (research/23 §10)', () => 
     const names = popovers.items.flat().filter(isMenuItem).map((item) => item.name).filter((name) => name !== undefined);
     const at = names.indexOf('database-view-data-source-titles');
 
-    expect(names[at - 1]).toBe('database-view-copy-link');
+    // notion-motion.md Round 14: Copy link to view, then Open as full page, then this row.
+    expect(names[at - 2]).toBe('database-view-copy-link');
+    expect(names[at - 1]).toBe('database-view-full-page');
     expect(names[at + 1]).toBe('database-view-duplicate');
   });
 

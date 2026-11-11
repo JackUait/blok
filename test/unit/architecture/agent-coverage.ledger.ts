@@ -420,6 +420,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/database-view-data-source-titles': fld('database.hideDataSourceTitles'),
   'menu:database/database-tab-display-*': exempt('chrome', 'Display as (text, icon or both) is a per-person tab bar preference; the document does not change.'),
   'menu:database/database-view-copy-link': exempt('chrome', 'Copies a link to the view to the clipboard; the document does not change.'),
+  'menu:database/database-view-full-page': exempt('view-only', 'Opens the database as a full page in the editor, or calls the host openFullPage hook; the document does not change.'),
   'menu:database/database-title-copy-link': exempt('chrome', 'Copies a link to the view to the clipboard; the document does not change.'),
   'menu:database/database-title-duplicate': cmd('database.duplicateView'),
   'menu:database/database-title-edit': exempt('chrome', 'Puts the caret in the database title; the title edit itself is ui-file:src/tools/database/index.ts (block.update).'),

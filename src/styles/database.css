@@ -1704,6 +1704,19 @@
   display: none;
 }
 
+/* ⤢ on an inline database (row-page-takeover.ts): blocks off its path and the end-of-page area hide; its rows stay. */
+[data-blok-database-full-open] [data-blok-element]:not([data-blok-database-full-open-path], [data-blok-database-full-open-target] [data-blok-element]),
+[data-blok-database-full-open] > [data-blok-bottom-zone] {
+  display: none;
+}
+
+/* notion-motion.md Round 15 B: the full page's title is 32px bold. The tool sets its size inline. */
+[data-blok-database-full-open-target] [data-blok-database-title]:not([data-blok-database-drawer] *) {
+  font-size: 32px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+}
+
 /* Full page: the row page takes the database's place in the editor. */
 [data-blok-database-drawer][data-peek-mode="full"] {
   position: static;
@@ -3213,6 +3226,12 @@ button[data-blok-database-column-count]:hover {
 
 [data-blok-database-view-bar][data-blok-database-fold-new] > [data-blok-database-view-toolbar] > [data-blok-database-new],
 [data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-new] > [data-blok-database-new] {
+  display: none;
+}
+
+/* ⤢ folds with New (notion-motion.md Round 7 "⤢ fold point"). */
+[data-blok-database-view-bar][data-blok-database-fold-new] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-full-page],
+[data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-new] > [data-blok-database-toolbar-full-page] {
   display: none;
 }
 
@@ -10351,6 +10370,7 @@ button[data-blok-database-table-group-count]:hover {
 }
 
 [data-blok-database-view-toolbar] > button,
+[data-blok-database-view-toolbar] > [data-blok-database-toolbar-full-page],
 [data-blok-database-lock-badge] {
   display: inline-flex;
   align-items: center;
@@ -10391,11 +10411,13 @@ button[data-blok-database-table-group-count]:hover {
 }
 
 [data-blok-database-view-toolbar] > button:hover,
+[data-blok-database-view-toolbar] > [data-blok-database-toolbar-full-page]:hover,
 [data-blok-database-view-toolbar] > button[data-popover-open] {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
-[data-blok-database-view-toolbar] > button:active {
+[data-blok-database-view-toolbar] > button:active,
+[data-blok-database-view-toolbar] > [data-blok-database-toolbar-full-page]:active {
   background-color: var(--blok-database-pressed-bg);
 }
 
@@ -10417,6 +10439,11 @@ button[data-blok-database-table-group-count]:hover {
 
 [data-blok-database-lock-badge] {
   cursor: default;
+}
+
+/* Notion's ⤢ points up-right and down-left (notion-motion.md Round 15 B); IconExpandDiagonal points the other way. */
+[data-blok-database-toolbar-full-page] svg {
+  transform: scaleX(-1);
 }
 
 /* Notion's search: borderless, no fill, after the magnifier; it grows open and fades in over 0.2s (findings V21, notion-motion.md "Search"). */

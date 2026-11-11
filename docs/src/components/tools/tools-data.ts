@@ -441,6 +441,13 @@ const editor = new Blok({
         description:
           'Optional backend sync adapter for persisting schema, row, and view changes to an external data source.',
       },
+      {
+        option: 'openFullPage',
+        type: '(input: { databaseId: string; viewId: string }) => void',
+        default: 'undefined',
+        description:
+          'Runs when someone clicks ⤢ "Open as full page" on an inline database. Use it to show the database on its own page in your app. Without it, the database fills the editor and the URL gets `#<databaseId>?full`. Back returns, and a reload opens it again. Nothing in the document changes.',
+      },
     ],
     saveDataShape: `interface DatabaseData {
   title?: string;                      // Database title

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { RowPageTakeover, readRowPageHash } from '../../../../src/tools/database/row-page-takeover';
+import { DatabasePageTakeover, RowPageTakeover, readRowPageHash } from '../../../../src/tools/database/row-page-takeover';
 
 /** Editor 0 holds paragraph A and the database; its page header is mounted outside it, like a host title. */
 const buildPage = (): { wrapper: HTMLElement; editor: HTMLElement; header: HTMLElement; other: HTMLElement; holder: HTMLElement } => {
@@ -116,5 +116,55 @@ describe('RowPageTakeover — a full row page takes over its editor', () => {
     expect(readRowPageHash()).toEqual({ rowId: 'r1', full: false, tabId: 't1' });
     history.replaceState(null, '', '/editor#view-v1');
     expect(readRowPageHash()?.full).toBe(false);
+  });
+});
+
+describe('DatabasePageTakeover — an inline database opened as a full page', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    history.replaceState(null, '', '/editor');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+    history.replaceState(null, '', '/editor');
+  });
+
+  it('marks the editor and the database holder with its own marks, and names the database in the URL', () => {
+    const { wrapper, editor, header, other, holder } = buildPage();
+    const takeover = new DatabasePageTakeover(wrapper);
+
+    takeover.enter('db 1');
+
+    expect(editor.hasAttribute('data-blok-database-full-open')).toBe(true);
+    expect(holder.hasAttribute('data-blok-database-full-open-path')).toBe(true);
+    expect(holder.hasAttribute('data-blok-database-full-open-target')).toBe(true);
+    expect(holder.hasAttribute('data-blok-no-controls')).toBe(true);
+    expect(other.hasAttribute('data-blok-database-full-open-path')).toBe(false);
+    expect(editor.hasAttribute('data-blok-database-row-page')).toBe(false);
+    expect(header.hidden).toBe(true);
+    expect(window.location.hash).toBe('#db%201?full');
+    expect(takeover.isOpen).toBe(true);
+  });
+
+  it('keeps its marks when a row page opened on top of it closes', () => {
+    const { wrapper, editor, header, holder } = buildPage();
+    const database = new DatabasePageTakeover(wrapper);
+    const row = new RowPageTakeover(wrapper);
+
+    database.enter('db');
+    row.enter('r1');
+    row.release();
+
+    expect(editor.hasAttribute('data-blok-database-full-open')).toBe(true);
+    expect(holder.hasAttribute('data-blok-no-controls')).toBe(true);
+    expect(header.hidden).toBe(true);
+
+    database.release();
+
+    expect(holder.hasAttribute('data-blok-no-controls')).toBe(false);
+    expect(header.hidden).toBe(false);
+    expect(database.isOpen).toBe(false);
   });
 });

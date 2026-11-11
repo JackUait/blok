@@ -130,7 +130,7 @@ import { DatabaseColumnControls } from './database-column-controls';
 import { DatabaseListRowDrag } from './database-list-row-drag';
 import type { ListRowDragResult } from './database-list-row-drag';
 import { DatabaseCardDrawer } from './database-card-drawer';
-import { readRowPageHash } from './row-page-takeover';
+import { DatabasePageTakeover, readRowPageHash } from './row-page-takeover';
 import type { DrawerBacklink, LayoutTab, LayoutTabsDraft, LayoutTabsHost } from './database-card-drawer';
 import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
@@ -698,6 +698,8 @@ export class DatabaseTool implements BlockTool {
   private columnControls: DatabaseColumnControls | null = null;
   private listRowDrag: DatabaseListRowDrag | null = null;
   private cardDrawer: DatabaseCardDrawer | null = null;
+  /** ⤢ with no host hook: this database takes over its editor. */
+  private fullOpen: DatabasePageTakeover | null = null;
   private cardDrawerSession: { origin: DrawerAuthority | undefined; readOnly: boolean } | null = null;
   private propertyMenu: DatabasePropertyMenu | null = null;
   /** The linked or dashboard view whose column header the property menu opened from. */
@@ -2511,7 +2513,9 @@ export class DatabaseTool implements BlockTool {
     this.dueWatching = true;
     document.addEventListener('visibilitychange', this.handleDueVisibility);
     window.addEventListener('popstate', this.followRowPageHistory);
+    window.addEventListener('popstate', this.followFullPageHistory);
     this.offerDue();
+    this.followFullPageHistory();
     this.openLinkedRow();
     if (this.sampleCardsPending) {
       this.sampleCardsPending = false;
@@ -2703,6 +2707,9 @@ export class DatabaseTool implements BlockTool {
     this.scheduleDue();
     document.removeEventListener('visibilitychange', this.handleDueVisibility);
     window.removeEventListener('popstate', this.followRowPageHistory);
+    window.removeEventListener('popstate', this.followFullPageHistory);
+    // Torn down, not closed: the URL still names this database, so the next render reopens it.
+    this.fullOpen?.release();
     this.api.events.off(DATABASE_RENDERED_EVENT, this.handleDatabaseRendered);
     this.api.events.off('collaboration:status', this.handleCollaborationStatus);
     if (this.draftGraceTimer !== null) clearTimeout(this.draftGraceTimer);
@@ -5014,6 +5021,7 @@ export class DatabaseTool implements BlockTool {
       onEditView: (viewId, anchor) => this.editView(viewId, anchor),
       onRenameView: (viewId, anchor) => this.editView(viewId, anchor, 'rename'),
       onCopyLink: (viewId) => this.copyViewLink(viewId),
+      openFullPage: () => (this.fullPageOpener() === undefined ? undefined : (viewId) => this.openFullPage(viewId)),
       onEditTitle: () => this.focusTitle(),
       ...this.editLayoutOption(),
       display: this.tabDisplay.get(),
@@ -6674,6 +6682,8 @@ export class DatabaseTool implements BlockTool {
         void this.requestDeleteView(this.activeViewId);
       },
       copyViewLink: () => this.copyViewLink(),
+      // A dashboard widget's toolbar has no ⤢: it is part of its database's page.
+      ...(context === undefined ? { openFullPage: () => this.fullPageOpener() } : {}),
       ...this.calendarLever(owner.dataId, context?.viewId ?? this.activeViewId),
       ...(context === undefined ? {
         shareForm: (anchor: HTMLElement) => {
@@ -8558,6 +8568,62 @@ export class DatabaseTool implements BlockTool {
     this.offerDueReminders();
     this.scheduleDue();
   }
+
+  /**
+   * ⤢ is offered on an inline database of its own (notion-motion.md Round 15 B):
+   * not on a full-page database, a linked view, a database in a database or its
+   * row pages, and not while it is open full.
+   */
+  private fullPageOpener(): (() => void) | undefined {
+    if (this.linked || this.fullPage || this.fullOpen?.isOpen === true || this.insideDatabasePage()) return undefined;
+
+    return () => this.openFullPage(this.activeViewId);
+  }
+
+  private insideDatabasePage(parentId: string | null | undefined = this.block.parentId): boolean {
+    const parent = parentId === null || parentId === undefined ? undefined : this.api.blocks.getById(parentId);
+
+    if (parent === undefined || parent === null) return false;
+
+    return parent.name === this.block.name || parent.name === 'database-row' || this.insideDatabasePage(parent.parentId);
+  }
+
+  /** A view change only: nothing in the document moves, so there is no undo step and peers see nothing. */
+  private openFullPage(viewId: string): void {
+    const navigate = this.config.openFullPage;
+
+    if (navigate !== undefined) {
+      navigate({ databaseId: this.dataId, viewId });
+
+      return;
+    }
+    if (viewId !== this.activeViewId) this.switchView(viewId);
+    this.enterFullPage();
+  }
+
+  private enterFullPage(): void {
+    if (this.element === null) return;
+    this.fullOpen ??= new DatabasePageTakeover(this.element);
+    this.fullOpen.enter(this.block.id);
+    this.viewControls?.syncFullPage();
+  }
+
+  /** Back leaves the full page; Forward, a reload or a typed `#<id>?full` opens it. */
+  private readonly followFullPageHistory = (): void => {
+    if (this.destroyed) return;
+    const link = readRowPageHash();
+    const wanted = link?.full === true && link.rowId === this.block.id && this.config.openFullPage === undefined;
+    const open = this.fullOpen?.isOpen === true;
+
+    if (wanted === open) return;
+    if (wanted) {
+      if (this.fullPageOpener() !== undefined) this.enterFullPage();
+
+      return;
+    }
+    this.fullOpen?.leave();
+    this.viewControls?.syncFullPage();
+  };
 
   /** Back closes a full row page; Forward (or a typed `#rowId?full`) opens it again. */
   private readonly followRowPageHistory = (): void => {

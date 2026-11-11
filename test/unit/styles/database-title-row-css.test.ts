@@ -206,6 +206,20 @@ describe('a narrow view bar folds like Notion (notion-spec-2 §26.1)', () => {
     expect(rule('[data-blok-database-view-bar][data-blok-database-fold-new] > [data-blok-database-view-toolbar] > [data-blok-database-new], [data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-new] > [data-blok-database-new]')).toMatch(/display: none/);
   });
 
+  // notion-motion.md, Round 7 "⤢ fold point": ⤢ goes with New ⌄, in the view bar and in a one-view title row.
+  it('folds ⤢ with New', () => {
+    expect(rule('[data-blok-database-view-bar][data-blok-database-fold-new] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-full-page], [data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-new] > [data-blok-database-toolbar-full-page]')).toMatch(/display: none/);
+  });
+
+  // notion-motion.md Round 15 B: the database opened full hides the blocks around it, and its title is 32px bold.
+  it('a database opened as a full page hides the blocks off its path and shows a 32px bold title', () => {
+    expect(rule('[data-blok-database-full-open] [data-blok-element]:not([data-blok-database-full-open-path], [data-blok-database-full-open-target] [data-blok-element]), [data-blok-database-full-open] > [data-blok-bottom-zone]')).toMatch(/display: none/);
+    const title = rule('[data-blok-database-full-open-target] [data-blok-database-title]:not([data-blok-database-drawer] *)');
+
+    expect(title).toMatch(/font-size: 32px !important/);
+    expect(title).toMatch(/font-weight: 700 !important/);
+  });
+
   // notion-motion.md, Round 7 "⤢ fold point": » goes with New ⌄.
   it('a one-view title row folds » with New', () => {
     expect(rule('[data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-new] > [data-blok-database-toolbar-minimize]')).toMatch(/display: none/);

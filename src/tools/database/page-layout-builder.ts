@@ -11,7 +11,7 @@ import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import type { PopoverItemParams } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
-import { DATABASE_MENU_CLASS } from './database-group-menu';
+import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
 import { DatabaseDropLine } from './database-drop-line';
 import { openDatabaseConfirm } from './database-confirm-dialog';
 import { DatabasePanel, panelInput, panelLabel, panelRow, panelSeparator, panelSwitch } from './database-panel';
@@ -1611,6 +1611,7 @@ export class PageLayoutBuilder {
       }
     });
     this.menu = menu;
+    this.menu.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
     menu.show();
   }
 

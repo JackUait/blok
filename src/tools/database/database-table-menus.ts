@@ -1,7 +1,7 @@
 import type { I18n } from '../../../types';
 import type { PopoverItemDefaultBaseParams, PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
-import { DATABASE_MENU_CLASS } from './database-group-menu';
+import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import {
@@ -243,6 +243,7 @@ export const openMenu = (
   if (options.kind === 'calc') {
     popover.escapeClosesSubmenuFirst = true;
   }
+  popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
 
   const state = { closed: false };
 

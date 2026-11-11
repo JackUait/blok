@@ -1,6 +1,6 @@
 import { IconChevronDown, IconViewBoard, IconChart, IconGallery, IconListBulleted, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconForm, IconViewTimeline, IconLink, IconDotsHorizontal, IconPageLayout, IconEyeSlash } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
-import { DATABASE_MENU_CLASS } from './database-group-menu';
+import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { OverflowList } from '../../components/utils/overflow-list';
@@ -534,6 +534,7 @@ export class DatabaseTabBar {
       }
     });
 
+    this.contextPopover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
     this.contextPopover.show();
   }
 

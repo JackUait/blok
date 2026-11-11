@@ -10,6 +10,13 @@ import { OPTION_COLORS, optionColorLabelKey, optionSwatch, type OptionColor } fr
  */
 export const DATABASE_MENU_CLASS = 'blok-database-menu';
 
+/**
+ * How long a database menu waits on a hovered row before it opens the row's
+ * submenu. Notion waits about 130ms (notion-spec-2 §17); Blok spends about 6ms
+ * between the hover and the timer. Editor menus keep their own 100ms.
+ */
+export const DATABASE_SUBMENU_OPEN_DELAY_MS = 125;
+
 /** The board column's group menu: the header menu's 28px rows plus its own icon and text offsets (database.css). */
 export const DATABASE_GROUP_MENU_CLASS = `${DATABASE_MENU_CLASS} blok-database-header-menu blok-database-group-menu`;
 

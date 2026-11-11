@@ -17,6 +17,7 @@ import { buttonEditItems } from './database-button-menu';
 import { createOptionsEditor } from './cells/options-editor';
 import { offersAutofill } from './database-autofill-setup';
 import { DATABASE_HEADER_MENU_CLASS, SHOW_PAGE_ICON_ITEM } from './database-table-menus';
+import { DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
 import { reminderLabel, remindersFor } from './reminders';
 import { DATE_FORMATS, HOUR_CYCLES, TIME_FORMATS, resolveHourCycle, resolveLocale, timeZones } from './cells/date-format';
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
@@ -622,8 +623,7 @@ export class DatabasePropertyMenu {
     // research/27 §7: Escape closes the Edit property submenu only; a second Escape closes the menu.
     popover.escapeClosesSubmenuFirst = true;
     // notion-motion.md Round 10: Notion mounts the Edit property flyout about 130ms after the row lights.
-    // Blok spends about 6ms more between the hover and the timer.
-    popover.nestedOpenDelay = 125;
+    popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
     this.popover = popover;
     popover.on(PopoverEvent.Closed, () => {
       if (this.popover === popover) {

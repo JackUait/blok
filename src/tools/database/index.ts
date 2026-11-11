@@ -64,7 +64,7 @@ import { UNORDERED_VIEW_TYPES } from '../../shared/database/row-order';
 import { openDatabaseChoice, openDatabaseConfirm } from './database-confirm-dialog';
 import { draftOf, openAutofillSetup, presetDraft } from './database-autofill-setup';
 import type { AutofillDraft } from './database-autofill-setup';
-import { DATABASE_GROUP_MENU_CLASS, DATABASE_MENU_CLASS, groupMenuItems } from './database-group-menu';
+import { DATABASE_GROUP_MENU_CLASS, DATABASE_MENU_CLASS, DATABASE_SUBMENU_OPEN_DELAY_MS, groupMenuItems } from './database-group-menu';
 import { groupCalculationHint, groupCalculationItems, groupCalculationText } from './database-board-calculation';
 import { optionColorOf, type OptionColor } from './cells/option-colors';
 import { DatabaseBoardView } from './database-board-view';
@@ -9175,6 +9175,7 @@ export class DatabaseTool implements BlockTool {
 
     // Escape closes only the open submenu, as measured on Notion's other menus (research/23:33, 26:78, 27:299, 35:418).
     popover.escapeClosesSubmenuFirst = true;
+    popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
     owner?.setAttribute('data-popover-open', '');
     popover.on(PopoverEvent.Closed, () => {
       owner?.removeAttribute('data-popover-open');
@@ -12115,6 +12116,7 @@ export class DatabaseTool implements BlockTool {
     });
 
     popover.getElement().setAttribute('data-blok-database-related-to', '');
+    popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
     const closed = { done: false };
 
     // destroy() hides, and a hide emits Closed again: without the flag this re-queues itself forever.

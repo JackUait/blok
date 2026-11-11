@@ -6,6 +6,7 @@ import { PopoverEvent } from '../../../types/utils/popover/popover-event';
 import type { I18n } from '../../../types';
 import { propertyTypeMeta } from './database-property-types';
 import { DATABASE_HEADER_MENU_CLASS } from './database-table-menus';
+import { DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
 import { ROLLUP_FUNCTIONS, rollupFunctionPatch, rollupFunctionsFor, rollupSettingsOf, rollupTargetPatch } from './rollup';
 import type { PropertyDefinition, PropertySettingsV2, RollupFunction } from './types';
 
@@ -173,6 +174,7 @@ export const openRollupSetup = (cell: HTMLElement, property: PropertyDefinition,
   });
   const state = { closed: false };
 
+  popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
   popover.on(PopoverEvent.Closed, () => {
     if (state.closed) return;
     state.closed = true;

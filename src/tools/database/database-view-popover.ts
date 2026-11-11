@@ -1,6 +1,6 @@
 import { IconDatabase } from '../../components/icons';
 import { VIEW_ICONS } from './database-tab-bar';
-import { DATABASE_MENU_CLASS } from './database-group-menu';
+import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -113,6 +113,7 @@ export class DatabaseViewPopover {
       }
     });
 
+    this.popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
     this.popover.show();
   }
 

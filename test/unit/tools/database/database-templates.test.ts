@@ -16,13 +16,15 @@ vi.mock('../../../../src/blok', () => ({
 
 interface MockItem { name?: string; element?: HTMLElement; onActivate?: () => void }
 
-const popovers = vi.hoisted(() => ({ items: [] as MockItem[][], made: [] as Array<{ escapeClosesSubmenuFirst: boolean; arrowLeftClosesSubmenu: boolean; getElement: () => HTMLElement }> }));
+const popovers = vi.hoisted(() => ({ items: [] as MockItem[][], made: [] as Array<{ escapeClosesSubmenuFirst: boolean; arrowLeftClosesSubmenu: boolean; nestedOpenDelay: number; getElement: () => HTMLElement }> }));
 
 vi.mock('../../../../src/components/utils/popover', () => {
   class MockPopoverDesktop {
     escapeClosesSubmenuFirst = false;
 
     arrowLeftClosesSubmenu = true;
+
+    nestedOpenDelay = 100;
 
     constructor(params?: { items?: MockItem[] }) {
       popovers.items.push(params?.items ?? []);
@@ -263,6 +265,16 @@ describe('DatabaseTool — templates', () => {
     el.querySelector<HTMLButtonElement>('[data-blok-testid="database-toolbar-new-menu"]')?.click();
 
     expect(popovers.made.at(-1)?.escapeClosesSubmenuFirst).toBe(true);
+  });
+
+  // notion-spec-2 §17: a group row inside a Notion menu opens its submenu about 130ms after hover.
+  it('the New menu opens its submenus after the database menu delay', () => {
+    const { el } = buildDatabase(seed(), 'db', data(), { people });
+
+    popovers.made.length = 0;
+    el.querySelector<HTMLButtonElement>('[data-blok-testid="database-toolbar-new-menu"]')?.click();
+
+    expect(popovers.made.at(-1)?.nestedOpenDelay).toBe(125);
   });
 
   // research/35 §1.8 (r35:150): the templates menu's rows are 28px; its own attribute scopes that to this menu.

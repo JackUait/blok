@@ -6807,6 +6807,7 @@ button[data-blok-database-column-count]:hover {
 
 [data-blok-database-tab-bar][data-dragging] [data-blok-database-tab] {
   cursor: grabbing;
+  transition: background-color 100ms ease-in-out, transform 200ms ease;
 }
 
 [data-blok-database-tab] svg {
@@ -7395,13 +7396,10 @@ button[data-blok-database-column-count]:hover {
   width: 80px;
 }
 
-[data-blok-database-tab-ghost] {
-  box-shadow: none;
-  background: var(--blok-database-tab-bg-active);
-}
-
-[data-blok-database-tab][data-blok-database-tab-drag-source] {
-  display: none;
+[data-blok-database-tab-bar][data-dragging] [data-blok-database-tab][data-blok-database-tab-drag-source] {
+  position: relative;
+  z-index: 1;
+  transition: background-color 100ms ease-in-out;
 }
 
 [data-blok-database-board-container] {
@@ -10131,7 +10129,7 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   animation: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-database-drawer], [data-blok-database-drop-line], [data-blok-database-column-actions], [data-blok-database-list-group-toggle] svg, [data-blok-database-list-row], [data-blok-database-list-row-gutter], [data-blok-database-column-reordering] [data-blok-database-column-header], [data-blok-database-tab], [data-blok-database-card-actions], [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-container], [data-blok-popover][data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container], [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-item] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-drawer], [data-blok-database-drop-line], [data-blok-database-column-actions], [data-blok-database-list-group-toggle] svg, [data-blok-database-list-row], [data-blok-database-list-row-gutter], [data-blok-database-column-reordering] [data-blok-database-column-header], [data-blok-database-tab], [data-blok-database-tab-bar][data-dragging] [data-blok-database-tab], [data-blok-database-tab-bar][data-dragging] [data-blok-database-tab][data-blok-database-tab-drag-source], [data-blok-database-card-actions], [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-container], [data-blok-popover][data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container], [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-item] {
   transition: none;
 }
 

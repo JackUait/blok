@@ -167,6 +167,23 @@ describe('view tab switch', () => {
   });
 });
 
+// notion-motion.md Round 14: the tabs a dragged tab passes slide with translateX over 200ms ease; the dragged one follows the pointer.
+describe('view tab drag', () => {
+  it('slides the other tabs over 200ms ease and keeps the dragged one on the pointer', () => {
+    expect(body(outsideReducedMotion, '[data-blok-database-tab-bar][data-dragging] [data-blok-database-tab]')).toContain('transform 200ms ease');
+    // As specific as the rule above, or the dragged tab lags 200ms behind the pointer.
+    const dragged = body(outsideReducedMotion, '[data-blok-database-tab-bar][data-dragging] [data-blok-database-tab][data-blok-database-tab-drag-source]');
+
+    expect(dragged).toContain('transition: background-color 100ms ease-in-out');
+    expect(dragged).not.toContain('transform');
+    expect(body(outsideReducedMotion, '[data-blok-database-tab][data-blok-database-tab-drag-source]')).toBe('');
+  });
+
+  it('does not slide under reduced motion', () => {
+    expect(body(reducedMotion, '[data-blok-database-tab-bar][data-dragging] [data-blok-database-tab]')).toContain('transition: none');
+  });
+});
+
 describe('side peek', () => {
   it('takes the width the drawer sets, 756px by default, and slides in from a window width away over 200ms ease', () => {
     const drawer = body(outsideReducedMotion, '[data-blok-database-drawer]');

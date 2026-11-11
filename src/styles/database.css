@@ -2808,6 +2808,7 @@ button[data-blok-database-column-count]:hover {
 
 [data-blok-database-tab-bar][data-dragging] [data-blok-database-tab] {
   cursor: grabbing;
+  transition: background-color 100ms ease-in-out, transform 200ms ease;
 }
 
 [data-blok-database-tab] svg {
@@ -3490,15 +3491,11 @@ button[data-blok-database-column-count]:hover {
   width: 80px;
 }
 
-/* Tab ghost during drag */
-/* Notion's ghost is a plain translucent tab; the source slot closes (feel/findings-toolbar V27). */
-[data-blok-database-tab-ghost] {
-  box-shadow: none;
-  background: var(--blok-database-tab-bg-active);
-}
-
-[data-blok-database-tab][data-blok-database-tab-drag-source] {
-  display: none;
+/* The dragged tab itself follows the pointer, over the tabs it passes (notion-motion.md Round 14). */
+[data-blok-database-tab-bar][data-dragging] [data-blok-database-tab][data-blok-database-tab-drag-source] {
+  position: relative;
+  z-index: 1;
+  transition: background-color 100ms ease-in-out;
 }
 
 /* Board container for slide transitions */
@@ -6550,6 +6547,8 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   [data-blok-database-list-row-gutter],
   [data-blok-database-column-reordering] [data-blok-database-column-header],
   [data-blok-database-tab],
+  [data-blok-database-tab-bar][data-dragging] [data-blok-database-tab],
+  [data-blok-database-tab-bar][data-dragging] [data-blok-database-tab][data-blok-database-tab-drag-source],
   [data-blok-database-card-actions],
   [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-container],
   [data-blok-popover][data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container],

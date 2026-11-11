@@ -261,22 +261,6 @@ const uncaughtDuring = (run: () => void): string[] => {
   return seen;
 };
 
-const hideComputedShorthand = (): void => {
-  const real = window.getComputedStyle.bind(window);
-
-  // Model an engine that does not serialize the computed border-radius shorthand.
-  vi.spyOn(window, 'getComputedStyle').mockImplementation((element, pseudo) => new Proxy(real(element, pseudo), {
-    get: (target, key) => (key === 'borderRadius' ? '' : Reflect.get(target, key, target) as unknown),
-  }));
-};
-
-const corners = (element: HTMLElement | null | undefined): string[] => [
-  element?.style.borderTopLeftRadius ?? '',
-  element?.style.borderTopRightRadius ?? '',
-  element?.style.borderBottomRightRadius ?? '',
-  element?.style.borderBottomLeftRadius ?? '',
-];
-
 describe('DatabaseTabBar — surviving-mutant coverage', () => {
   let onTabClick: ReturnType<typeof vi.fn<(viewId: string) => void>>;
   let onAddView: ReturnType<typeof vi.fn<(type: ViewType) => void>>;
@@ -1343,17 +1327,15 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
 
     const ghost = (): HTMLElement | null => document.body.querySelector('[data-blok-database-tab-ghost]');
 
-    it('starts the drag at exactly the threshold and builds one ghost', () => {
+    it('starts the drag at exactly the threshold, moving the tab itself', () => {
       const { el } = mount(threeViews(), 'v1');
 
       dragFrom(el, 'v1', 50);
       document.dispatchEvent(pointer('pointermove', 60));
 
-      expect(ghost()).not.toBeNull();
-
-      document.dispatchEvent(pointer('pointermove', 200));
-
-      expect(document.body.querySelectorAll('[data-blok-database-tab-ghost]').length).toBe(1);
+      expect(el.getAttribute('data-dragging')).toBe('');
+      expect(tabOf(el, 'v1').style.transform).toBe('translateX(10px)');
+      expect(ghost()).toBeNull();
     });
 
     it('does not start the drag below the threshold', () => {
@@ -1366,30 +1348,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(el.hasAttribute('data-dragging')).toBe(false);
     });
 
-    it('describes the ghost so it floats over the bar at the tab it came from', () => {
-      const { el } = mount(threeViews(), 'v1');
-
-      dragFrom(el, 'v1', 50);
-      document.dispatchEvent(pointer('pointermove', 200));
-
-      const floating = ghost();
-
-      if (floating === null) {
-        throw new Error('no ghost was built');
-      }
-
-      expect(el.getAttribute('data-dragging')).toBe('');
-      expect(floating.getAttribute('data-blok-database-tab-ghost')).toBe('');
-      expect(floating.style.position).toBe('fixed');
-      expect(floating.style.pointerEvents).toBe('none');
-      expect(floating.style.zIndex).toBe('50');
-      expect(floating.style.opacity).toBe('0.7');
-      expect(floating.style.top).toBe('40px');
-      expect(floating.style.width).toBe('100px');
-      expect(floating.style.left).toBe('150px');
-    });
-
-    it('closes the source slot while dragging, so the other tabs reflow (feel/findings-toolbar V27)', () => {
+    it('marks the dragged tab while the drag runs', () => {
       const { el } = mount(threeViews(), 'v1');
 
       dragFrom(el, 'v1', 50);
@@ -1400,26 +1359,6 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(tabOf(el, 'v1').hasAttribute('data-blok-database-tab-drag-source')).toBe(false);
     });
 
-    it('keeps the radius of the tab it came from', () => {
-      const sheet = document.createElement('style');
-
-      // Longhands: jsdom does not expand a stylesheet shorthand into computed longhands.
-      sheet.textContent = '[data-blok-database-tab] { border-top-left-radius: 1px; border-top-right-radius: 2px; border-bottom-right-radius: 3px; border-bottom-left-radius: 4px; }';
-      document.head.appendChild(sheet);
-
-      try {
-        const { el } = mount(threeViews(), 'v1');
-
-        hideComputedShorthand();
-        dragFrom(el, 'v1', 50);
-        document.dispatchEvent(pointer('pointermove', 200));
-
-        expect(corners(ghost())).toEqual(['1px', '2px', '3px', '4px']);
-      } finally {
-        sheet.remove();
-      }
-    });
-
     it('tracks the pointer while the drag continues', () => {
       const { el } = mount(threeViews(), 'v1');
 
@@ -1427,13 +1366,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       document.dispatchEvent(pointer('pointermove', 200));
       document.dispatchEvent(pointer('pointermove', 260));
 
-      const floating = ghost();
-
-      if (floating === null) {
-        throw new Error('no ghost was built');
-      }
-
-      expect(floating.style.left).toBe('210px');
+      expect(tabOf(el, 'v1').style.transform).toBe('translateX(210px)');
     });
 
     it('survives the dragged tab disappearing mid-gesture', () => {
@@ -1643,7 +1576,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       document.dispatchEvent(pointer('pointermove', 220));
       document.dispatchEvent(key('a'));
 
-      expect(ghost()).not.toBeNull();
+      expect(el.getAttribute('data-dragging')).toBe('');
     });
 
     it('stops listening once the drag is cancelled', () => {

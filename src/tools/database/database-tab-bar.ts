@@ -13,7 +13,6 @@ import { rovingRadioGroup, type RovingRadioGroup } from '../../components/utils/
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import type { API } from '../../../types';
 import type { DatabaseTabDisplay, DatabaseViewConfig, ViewType } from './types';
-import { copyGhostRadius, mountGhost } from './copy-ghost-radius';
 import { isHistoryKey } from './database-keyboard';
 import { positionBetween } from '../../shared/database/positions';
 
@@ -111,7 +110,11 @@ export class DatabaseTabBar {
   private dragEnded = false;
   private dragViewId = '';
   private dragStartX = 0;
-  private ghostEl: HTMLElement | null = null;
+  /** The shown tabs and their centres at pickup: the slots the drop and the slides read, untouched by the transforms. */
+  private dragSlots: Array<{ tab: HTMLElement; center: number }> = [];
+  /** The dragged tab's own slot among them, and how far a passed tab slides: its width and the bar's gap. */
+  private dragHome = 0;
+  private dragStep = 0;
   private readonly boundDragMove: (e: PointerEvent) => void;
   private readonly boundDragUp: (e: PointerEvent) => void;
   private readonly boundDragCancel: () => void;
@@ -818,32 +821,62 @@ export class DatabaseTabBar {
     list?.close();
   }
 
+  private dragSource(): HTMLElement | null {
+    return this.element?.querySelector<HTMLElement>(`[data-view-id="${this.dragViewId}"]`) ?? null;
+  }
+
+  /** Where a drop at `x` lands among the shown tabs other than the dragged one. */
+  private dropSlot(x: number): number {
+    const index = this.dragSlots.findIndex((slot) => x < slot.center);
+
+    return index === -1 ? this.dragSlots.length : index;
+  }
+
+  /**
+   * Notion (notion-motion.md Round 14): no ghost and no drop line. The pressed
+   * tab follows the pointer; each tab it passes slides by its width over
+   * database.css's 200ms ease.
+   */
   private handleDragMove(e: PointerEvent): void {
-    const dx = Math.abs(e.clientX - this.dragStartX);
-    if (!this.isDragging && dx < DRAG_THRESHOLD) return;
+    const dx = e.clientX - this.dragStartX;
+    if (!this.isDragging && Math.abs(dx) < DRAG_THRESHOLD) return;
+    const sourceTab = this.dragSource();
+
     if (!this.isDragging) {
       this.isDragging = true;
       this.element?.setAttribute('data-dragging', '');
-      const sourceTab = this.element?.querySelector(`[data-view-id="${this.dragViewId}"]`) as HTMLElement | null;
-      if (sourceTab !== null) {
-        this.ghostEl = sourceTab.cloneNode(true) as HTMLElement;
-        this.ghostEl.setAttribute('data-blok-database-tab-ghost', '');
-        this.ghostEl.style.position = 'fixed';
-        this.ghostEl.style.pointerEvents = 'none';
-        this.ghostEl.style.zIndex = '50';
-        this.ghostEl.style.opacity = '0.7';
-        copyGhostRadius(sourceTab, this.ghostEl);
-        const rect = sourceTab.getBoundingClientRect();
-        this.ghostEl.style.top = `${rect.top}px`;
-        this.ghostEl.style.width = `${rect.width}px`;
-        mountGhost(sourceTab, this.ghostEl);
-        // Its slot closes and the other tabs reflow under the pointer (feel/findings-toolbar V27).
-        sourceTab.setAttribute('data-blok-database-tab-drag-source', '');
-      }
+      sourceTab?.setAttribute('data-blok-database-tab-drag-source', '');
+      this.dragSlots = Array.from(this.element?.querySelectorAll<HTMLElement>('[data-blok-database-tab]') ?? [])
+        .filter((tab) => tab !== sourceTab && tab.style.display !== 'none')
+        .map((tab) => {
+          const rect = tab.getBoundingClientRect();
+
+          return { tab, center: (rect.left + rect.right) / 2 };
+        });
+      const source = sourceTab?.getBoundingClientRect();
+      const sourceCenter = source === undefined ? 0 : (source.left + source.right) / 2;
+
+      this.dragHome = this.dragSlots.filter((slot) => slot.center < sourceCenter).length;
+      this.dragStep = (source?.width ?? 0) + this.tabGap();
     }
-    if (this.ghostEl !== null) {
-      this.ghostEl.style.left = `${e.clientX - 50}px`;
-    }
+    if (sourceTab === null) return;
+    sourceTab.style.transform = `translateX(${dx}px)`;
+
+    const { dragHome: home, dragStep: step } = this;
+    const drop = this.dropSlot(e.clientX);
+
+    this.dragSlots.forEach(({ tab }, index) => {
+      const right = index < home && index >= drop;
+      const left = index >= home && index < drop;
+
+      Object.assign(tab.style, { transform: right || left ? `translateX(${right ? step : -step}px)` : '' });
+    });
+  }
+
+  private tabGap(): number {
+    const bar = this.element;
+
+    return bar === null ? 0 : Number.parseFloat(getComputedStyle(bar).columnGap) || 0;
   }
 
   private handleDragUp(e: PointerEvent): void {
@@ -858,11 +891,9 @@ export class DatabaseTabBar {
     // Folded tabs can sit between shown ones (the current view stays shown):
     // a drop between shown tabs lands right after the one on its left; past
     // the row it goes after every view.
-    const shown = tabs.filter((t) => t.style.display !== 'none');
-    const dropIndex = shown.findIndex((t) => {
-      const rect = t.getBoundingClientRect();
-      return e.clientX < (rect.left + rect.right) / 2;
-    });
+    const shown = this.dragSlots.map((slot) => slot.tab);
+    const slot = this.dropSlot(e.clientX);
+    const dropIndex = slot === shown.length ? -1 : slot;
     const afterTab = dropIndex === -1 ? tabs.at(-1) : shown[dropIndex - 1];
     const nextIndex = afterTab === undefined ? 0 : tabs.indexOf(afterTab) + 1;
     const beforeTab = dropIndex === -1 ? undefined : tabs[nextIndex];
@@ -877,13 +908,13 @@ export class DatabaseTabBar {
   }
 
   private cleanupDrag(): void {
-    if (this.ghostEl !== null) {
-      this.ghostEl.remove();
-      this.ghostEl = null;
-    }
+    // The flag goes first: without it the tabs jump back instead of sliding.
     this.element?.removeAttribute('data-dragging');
-    const sourceTab = this.element?.querySelector(`[data-view-id="${this.dragViewId}"]`) as HTMLElement | null;
+    const sourceTab = this.dragSource();
     sourceTab?.removeAttribute('data-blok-database-tab-drag-source');
+    if (sourceTab !== null) sourceTab.style.transform = '';
+    this.dragSlots.forEach(({ tab }) => Object.assign(tab.style, { transform: '' }));
+    this.dragSlots = [];
     this.isDragging = false;
     this.removeDragListeners();
   }

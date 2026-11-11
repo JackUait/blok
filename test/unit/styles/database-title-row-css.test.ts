@@ -188,13 +188,11 @@ describe('vertical offsets match Notion', () => {
   });
 });
 
-describe('dragging a tab (V27)', () => {
-  it('the source tab leaves the row, so the others reflow live', () => {
-    expect(rule('[data-blok-database-tab][data-blok-database-tab-drag-source]')).toMatch(/display: none/);
-  });
-
-  it('the ghost has no black shadow', () => {
-    expect(rule('[data-blok-database-tab-ghost]')).toMatch(/box-shadow: none/);
+// notion-motion.md Round 14: the dragged tab stays in the row and moves itself; there is no ghost.
+describe('dragging a tab', () => {
+  it('keeps the dragged tab in the row, drawn over the tabs it passes', () => {
+    expect(rule('[data-blok-database-tab-bar][data-dragging] [data-blok-database-tab][data-blok-database-tab-drag-source]')).toMatch(/z-index: 1/);
+    expect(database).not.toContain('[data-blok-database-tab-ghost]');
   });
 });
 

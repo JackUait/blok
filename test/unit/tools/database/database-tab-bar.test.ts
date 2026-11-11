@@ -709,6 +709,53 @@ describe('DatabaseTabBar', () => {
       expect(undo.defaultPrevented).toBe(true);
     });
 
+    // notion-motion.md Round 14: no ghost and no drop line; the pressed tab moves, the others slide aside.
+    it('moves the pressed tab itself with the pointer, with no ghost', () => {
+      const views = [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a1' }), makeView({ id: 'v3', position: 'a2' })];
+      const { bar, el } = createBarWithLayout(views, 'v1');
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+
+      tab.dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, clientY: 15, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 15 }));
+
+      expect(tab.style.transform).toBe('translateX(150px)');
+      expect(document.querySelector('[data-blok-database-tab-ghost]')).toBeNull();
+      bar.destroy();
+      el.remove();
+    });
+
+    it('slides each tab the pressed one passes aside by its width', () => {
+      const views = [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a1' }), makeView({ id: 'v3', position: 'a2' })];
+      const { bar, el } = createBarWithLayout(views, 'v1');
+      const tab = (id: string): HTMLElement => el.querySelector(`[data-view-id="${id}"]`) as HTMLElement;
+
+      tab('v1').dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, clientY: 15, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 15 }));
+      expect(tab('v2').style.transform).toBe('translateX(-100px)');
+      expect(tab('v3').style.transform).toBe('');
+
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 60, clientY: 15 }));
+      expect(tab('v2').style.transform).toBe('');
+      bar.destroy();
+      el.remove();
+    });
+
+    it('puts every tab back at once when the drag ends', () => {
+      const views = [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a1' })];
+      const { bar, el } = createBarWithLayout(views, 'v1');
+      const tab = (id: string): HTMLElement => el.querySelector(`[data-view-id="${id}"]`) as HTMLElement;
+
+      tab('v1').dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, clientY: 15, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 15 }));
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+      expect(el.hasAttribute('data-dragging')).toBe(false);
+      expect(tab('v1').style.transform).toBe('');
+      expect(tab('v2').style.transform).toBe('');
+      bar.destroy();
+      el.remove();
+    });
+
     it('cancels drag on Escape key', () => {
       const views = [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a1' })];
       const { bar, el } = createBarWithLayout(views, 'v1');

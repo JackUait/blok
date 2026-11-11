@@ -349,7 +349,7 @@ describe('DatabaseCardDrawer shell', () => {
       first.destroy();
     });
 
-    it('keeps the page narrowed for the new peek when the old one finishes sliding out', () => {
+    it('keeps the page marked for the new peek when the old one finishes sliding out', () => {
       const { host, options } = shareHost();
       const firstOptions = options();
       const first = new DatabaseCardDrawer(firstOptions);
@@ -359,8 +359,10 @@ describe('DatabaseCardDrawer shell', () => {
       second.open({ ...ROW, id: 'row-2' }, 'side');
       firstOptions.wrapper.querySelector('[data-blok-database-drawer]')?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
 
+      // The mark stays with the live peek; the page itself never moves, since the
+      // drawer floats over it. See "side peek floats over the page".
       expect(host.hasAttribute('data-blok-database-peek')).toBe(true);
-      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('656px');
+      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('');
       second.destroy();
       first.destroy();
     });

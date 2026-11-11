@@ -61,35 +61,20 @@ test.describe('code language picker', () => {
     await gotoTestPage(page);
   });
 
-  test('recolors the code as the hovered language without saving or reporting anything', async ({ page }) => {
+  test('hovering a language leaves the code as it is; only a pick recolors it', async ({ page }) => {
     await createBlok(page, [{ type: 'code', data: { code: CODE, language: 'plain text' } }]);
     await openPicker(page);
-    await page.evaluate(() => {
-      window.codeChanges = 0;
-    });
-
-    const layer = page.getByTestId('code-language-preview');
-
-    await expect(layer).toBeHidden();
 
     await page.getByRole('menuitemradio', { name: /Python/ }).hover();
+    await page.keyboard.press('ArrowDown');
 
-    await expect(layer).toBeVisible();
+    expect(await page.getByTestId('code-language-preview').count()).toBe(0);
     // Prism's own markup; there is no role or test id to read a token by.
-    await expect.poll(() => layer.evaluate((el) => el.querySelector('[class~="keyword"]')?.textContent)).toBe('def');
-    await expect(layer).toHaveText(CODE);
-    // The editable code stays plain: the preview is a layer, not an edit.
-    expect(await page.getByTestId('code-content').evaluate((el) => el.querySelectorAll('[class~="token"]').length)).toBe(0);
+    expect(await page.getByTestId('code-card').evaluate((el) => el.querySelectorAll('[class~="token"]').length)).toBe(0);
     expect(await savedCode(page)).toMatchObject({ language: 'plain text', code: CODE });
-    expect(await page.evaluate(() => window.codeChanges)).toBe(0);
-
-    await page.keyboard.press('Escape');
-
-    await expect(layer).toBeHidden();
-    expect(await savedCode(page)).toMatchObject({ language: 'plain text' });
   });
 
-  test('keeps the language picked with the keyboard and clears the preview', async ({ page }) => {
+  test('keeps the language picked with the keyboard', async ({ page }) => {
     await createBlok(page, [{ type: 'code', data: { code: CODE, language: 'plain text' } }]);
     await openPicker(page);
 
@@ -98,7 +83,6 @@ test.describe('code language picker', () => {
     await page.keyboard.press('Enter');
 
     await expect(page.getByTestId('code-language-name')).toHaveText('Python');
-    await expect(page.getByTestId('code-language-preview')).toBeHidden();
     expect(await savedCode(page)).toMatchObject({ language: 'python' });
   });
 

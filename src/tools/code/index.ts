@@ -54,7 +54,7 @@ import type { CodeViewMode } from './constants';
 import { renderLatex } from '../../shared/katex';
 import { renderMermaid } from './mermaid-loader';
 import { tokenizePrism, isHighlightable } from './prism-loader';
-import { applyPrismHighlight, disposePrismStyles, ensurePrismStyles } from './prism-applier';
+import { applyPrismHighlight, disposePrismStyles } from './prism-applier';
 import {
   buildLanguagePickerItems as buildPickerItems,
   loadLanguageLogos,
@@ -136,7 +136,6 @@ export class CodeTool implements BlockTool {
   private _geometryRafId: number | null = null;
   private _pasteRafId: number | null = null;
   private _endFilenameEdit: (() => void) | null = null;
-  private _previewRequest = 0;
   private _resizeObserver: ResizeObserver | null = null;
   private _copiedTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private readonly onSelectionChange = (): void => this.updateActiveLine();
@@ -892,10 +891,6 @@ export class CodeTool implements BlockTool {
     // outside click, Escape, and picking a language.
     picker.on(PopoverEvent.Closed, () => {
       this.setLanguagePickerExpanded(false);
-      void this.previewLanguage(null);
-    });
-    picker.onCurrentItemChange((current) => {
-      void this.previewLanguage(current?.name ?? null);
     });
 
     if (loadedLanguageLogos() === null) {
@@ -908,47 +903,6 @@ export class CodeTool implements BlockTool {
     this.setLanguagePickerExpanded(false);
 
     return picker;
-  }
-
-  /**
-   * Recolor the code as `id` would, on the overlay layer only. `null`, the
-   * current language, or a hidden code area clears it. A newer call wins over
-   * a tokenize still in flight.
-   */
-  private async previewLanguage(id: string | null): Promise<void> {
-    const layer = this._dom?.previewLayer;
-
-    if (!layer || !this._dom) {
-      return;
-    }
-
-    const request = ++this._previewRequest;
-    const code = this._dom.codeElement.textContent ?? '';
-
-    if (id === null || id === this._data.language || this._dom.preElement.hidden || code === '') {
-      layer.hidden = true;
-      layer.textContent = '';
-
-      return;
-    }
-
-    const html = isHighlightable(id) ? await tokenizePrism(code, id) : null;
-
-    if (request !== this._previewRequest || !this._dom) {
-      return;
-    }
-
-    ensurePrismStyles();
-    layer.className = layer.className.replace(/\s?(blok-code|lang-\S+)/g, '');
-    layer.classList.add('blok-code', `lang-${id.replace(/\s+/g, '-')}`);
-
-    if (html === null) {
-      layer.textContent = code;
-    } else {
-      layer.innerHTML = html;
-    }
-
-    layer.hidden = false;
   }
 
   /**

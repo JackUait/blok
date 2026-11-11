@@ -286,15 +286,37 @@ test.describe('code block chrome', () => {
     await expect(crumb).toBeHidden();
   });
 
-  test('editing the filename in the tab keeps the field wide enough to read', async ({ page }) => {
-    await createBlok(page, [{ type: 'code', data: { code: 'x', language: 'javascript' } }], 600);
+  for (const filename of ['', 'src/app.js']) {
+    test(`clicking the filename ${filename === '' ? 'placeholder' : 'label'} edits it in place, with no jump`, async ({ page }) => {
+      await createBlok(page, [{ type: 'code', data: { code: 'x', language: 'javascript', ...(filename ? { filename } : {}) } }], 600);
 
-    await page.getByTestId('code-card').hover();
-    await page.getByRole('button', { name: 'File name' }).click();
+      await page.getByTestId('code-card').hover();
 
-    const input = page.getByTestId('code-filename-input');
+      const label = page.getByTestId('code-filename');
+      const look = (selector: string): Promise<{ x: number; width: number; height: number; font: string }> =>
+        page.locator(selector).evaluate((el) => {
+          const box = el.getBoundingClientRect();
+          const style = getComputedStyle(el);
 
-    await expect(input).toBeFocused();
-    expect((await input.boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(90);
-  });
+          return { x: box.x, width: box.width, height: box.height, font: style.fontFamily };
+        });
+
+      await label.hover();
+
+      const atRest = await look('[data-blok-testid="code-filename"]');
+
+      await label.click();
+
+      const input = page.getByTestId('code-filename-input');
+
+      await expect(input).toBeFocused();
+
+      const editing = await look('[data-blok-testid="code-filename-input"]');
+
+      expect(editing.font).toBe(atRest.font);
+      expect(Math.abs(editing.x - atRest.x)).toBeLessThan(1);
+      expect(Math.abs(editing.height - atRest.height)).toBeLessThan(1);
+      expect(Math.abs(editing.width - atRest.width)).toBeLessThan(2);
+    });
+  }
 });

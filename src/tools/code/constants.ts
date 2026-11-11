@@ -138,16 +138,17 @@ export const LANGUAGE_BUTTON_STYLES = 'inline-flex min-w-0 items-center gap-1.5 
 /** Read-only has no picker to open — the language label is plain, unfocusable text there. */
 export const LANGUAGE_LABEL_STYLES = 'inline-flex min-w-0 items-center gap-1.5 px-1.5 py-0.5 bg-transparent border-0 text-xs text-gray-text font-medium';
 export const LANGUAGE_DOT_STYLES = 'size-2 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)]';
-const FILENAME_TEXT_STYLES = 'min-w-0 truncate font-mono text-xs text-text-primary';
+/** The label and its edit field share one box and font, so clicking in only adds a caret. */
+const FILENAME_TEXT_STYLES = 'min-w-0 max-w-64 truncate px-1.5 py-0.5 font-mono text-xs text-text-primary';
 export const FILENAME_BUTTON_STYLES = [
   FILENAME_TEXT_STYLES,
-  'text-start px-1.5 py-0.5 select-none rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-text bg-transparent border-0 transition-colors can-hover:hover:bg-item-hover-bg',
-  'data-[empty=true]:text-gray-text data-[empty=true]:font-sans',
+  'text-start select-none rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-text bg-transparent border-0 transition-colors can-hover:hover:bg-item-hover-bg',
+  'data-[empty=true]:text-gray-text',
 ].join(' ');
-export const FILENAME_LABEL_STYLES = [FILENAME_TEXT_STYLES, 'px-1.5 py-0.5'].join(' ');
+export const FILENAME_LABEL_STYLES = FILENAME_TEXT_STYLES;
 export const FILENAME_INPUT_STYLES = [
   FILENAME_TEXT_STYLES,
-  '[field-sizing:content] min-w-24 max-w-64 px-1.5 py-0.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) bg-item-hover-bg border-0 outline-hidden placeholder:text-gray-text placeholder:font-sans',
+  '[field-sizing:content] rounded-(--blok-radius-inner,var(--blok-radius-control)) bg-item-hover-bg border-0 outline-hidden placeholder:text-gray-text',
 ].join(' ');
 export const HEADER_CONTROLS_STYLES = 'ms-auto pb-0.5 flex shrink-0 items-center gap-1 opacity-0 group-hover/code:opacity-100 group-focus-within/code:opacity-100 transition-opacity';
 /**

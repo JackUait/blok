@@ -15,17 +15,18 @@ const views = (): DatabaseViewConfig[] => [
   view('chart', { type: 'chart', dashboardViewId: 'dash' }),
   view('stale', { dashboardViewId: 'gone' }),
   view('wrong', { dashboardViewId: 'table' }),
+  view('orphan', { type: 'chart', dashboardViewId: 'dash' }),
 ];
 
 describe('dashboard widget views', () => {
   it('counts a view as a widget only when it names a dashboard of the same database', () => {
     const all = views();
 
-    expect(all.map((entry) => isWidgetView(entry, all))).toEqual([false, false, true, false, false]);
+    expect(all.map((entry) => isWidgetView(entry, all))).toEqual([false, false, true, false, false, false]);
   });
 
-  it('keeps stale and mispointed widget views as tabs, so nothing disappears', () => {
-    expect(tabViews(views()).map((entry) => entry.id)).toEqual(['table', 'dash', 'stale', 'wrong']);
+  it('keeps stale, mispointed and out-of-layout widget views as tabs, so nothing disappears', () => {
+    expect(tabViews(views()).map((entry) => entry.id)).toEqual(['table', 'dash', 'stale', 'wrong', 'orphan']);
   });
 
   it('a pasted copy points its widget views at the copied dashboard, not the original', () => {

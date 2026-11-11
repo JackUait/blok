@@ -314,6 +314,16 @@ describe('DatabaseTool — dashboard editing', () => {
 
       expect(ids).toEqual(['table', 'stale']);
     });
+
+    // The block's history keeps one entry per dispatched change, so one dispatch is one undo step.
+    it('is one change: the dashboard and its widget views go in a single dispatch', () => {
+      const { tool } = mount(withWidgets());
+      const dispatch = (tool as unknown as { block: { dispatchChange: ReturnType<typeof vi.fn> } }).block.dispatchChange;
+
+      dispatch.mockClear();
+      tool.deleteView('dash');
+      expect(dispatch).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('duplicating the dashboard', () => {

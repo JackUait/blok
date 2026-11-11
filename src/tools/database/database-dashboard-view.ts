@@ -1,4 +1,5 @@
 import { IconPlus, IconDotsHorizontal } from '../../components/icons';
+import { onHover } from '../../components/utils/tooltip';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import type { DashboardRow, DashboardWidget, DatabaseRow } from './types';
 
@@ -83,7 +84,7 @@ export class DatabaseDashboardView implements DatabaseViewRenderer {
     if (chrome.edit !== undefined) {
       const menu = document.createElement('button');
 
-      header.setAttribute('title', chrome.edit.drag);
+      onHover(header, chrome.edit.drag);
       menu.type = 'button';
       menu.setAttribute('data-blok-database-dashboard-widget-menu', '');
       menu.setAttribute('data-blok-testid', 'database-dashboard-widget-menu');
@@ -103,7 +104,8 @@ export class DatabaseDashboardView implements DatabaseViewRenderer {
     host.setAttribute('data-blok-database-dashboard-widget', widget.id);
     host.style.gridColumn = `span ${widget.width}`;
     host.style.minWidth = '0';
-    if (this.options.single !== true) host.style.overflow = 'auto';
+    // With a header, the view scrolls under it (database.css), not the whole widget.
+    if (this.options.single !== true && chrome === undefined) host.style.overflow = 'auto';
     if (chrome !== undefined) host.appendChild(this.createHeader(widget, chrome));
     const mount = this.options.mount(widget, host);
 

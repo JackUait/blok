@@ -19972,6 +19972,18 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   border-radius: var(--blok-radius-block);
 }
 
+[data-blok-database-dashboard-widget]:has(> [data-blok-database-dashboard-widget-header]) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+[data-blok-database-dashboard-widget-header] ~ * {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
 [data-blok-database-dashboard-widget][data-dragging] {
   opacity: 0.5;
 }

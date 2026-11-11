@@ -5,20 +5,21 @@ const jsonCopy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 /**
  * A view is a dashboard widget only when its `dashboardViewId` names a
- * dashboard view of the same database. A stale or mispointed id keeps the
- * view a tab, so it never vanishes.
+ * dashboard view of the same database whose layout shows it. A stale id, or
+ * a widget left out of the layout, keeps the view a tab, so it never vanishes.
  */
 export const isWidgetView = (view: DatabaseViewConfig, views: readonly DatabaseViewConfig[]): boolean =>
   view.dashboardViewId !== undefined
-  && views.some((other) => other.id === view.dashboardViewId && other.type === 'dashboard');
+  && views.some((other) => other.id === view.dashboardViewId && other.type === 'dashboard'
+    && (other.dashboard?.rows ?? []).some((row) => row.widgets.some((widget) => widget.viewId === view.id && widget.databaseId === undefined)));
 
 /** The views that get a tab: every view but the dashboard widgets. */
 export const tabViews = <T extends DatabaseViewConfig>(views: readonly T[]): T[] =>
   views.filter((view) => !isWidgetView(view, views));
 
-/** The widget views a dashboard owns. Legacy widgets that point at a tab view are not owned. */
+/** The widget views a dashboard owns. A legacy widget's tab view, or a view out of its layout, is a tab and not owned. */
 export const ownedWidgetViews = <T extends DatabaseViewConfig>(views: readonly T[], dashboardId: string): T[] =>
-  views.filter((view) => view.dashboardViewId === dashboardId && view.id !== dashboardId);
+  views.filter((view) => view.dashboardViewId === dashboardId && view.id !== dashboardId && isWidgetView(view, views));
 
 /** The documented limit of {@link DashboardRow.widgets}. */
 export const MAX_WIDGETS_PER_ROW = 4;

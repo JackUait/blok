@@ -1654,6 +1654,15 @@ describe('table-cell-clipboard', () => {
       expect(grid?.cells[1][2].blocks.map(block => block.data.text)).toEqual(['F']);
       expect(grid?.cells[1][1].blocks.map(block => block.data.text)).not.toContain('F');
     });
+
+    it('keeps markup in plain text as text, so a tab paste gives no image or bold', () => {
+      const grid = parsePlainTextGrid('<img src=x onerror=alert(1)>\t<b>x</b> & y\n1\t2');
+
+      expect(grid?.cells[0].map(cell => cell.blocks)).toEqual([
+        [{ tool: 'paragraph', data: { text: '&lt;img src=x onerror=alert(1)&gt;' } }],
+        [{ tool: 'paragraph', data: { text: '&lt;b&gt;x&lt;/b&gt; &amp; y' } }],
+      ]);
+    });
   });
 
   // ---------------------------------------------------------------------------

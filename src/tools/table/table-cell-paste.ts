@@ -157,6 +157,9 @@ export const protectPastedCellBlocks = (html: string): string => {
 const isCodeElement = (node: Node): node is HTMLElement =>
   node instanceof HTMLElement && (node.tagName === 'PRE' || node.tagName === CELL_CODE_TAG.toUpperCase());
 
+const escapeText = (value: string): string =>
+  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
 const nodesToInserts = (nodes: Node[]): CellBlockInsert[] => {
   const inserts: CellBlockInsert[] = [];
   const inlineParts: string[] = [];
@@ -183,7 +186,8 @@ const nodesToInserts = (nodes: Node[]): CellBlockInsert[] => {
       flushInline();
       ownPastedRows(node).flatMap(ownPastedCells).forEach(cell => inserts.push(...nodesToInserts(Array.from(cell.childNodes))));
     } else {
-      inlineParts.push(node instanceof HTMLElement ? node.outerHTML : (node.textContent ?? ''));
+      // inlineParts is HTML: a text node's `<` must stay text, not turn into a tag.
+      inlineParts.push(node instanceof HTMLElement ? node.outerHTML : escapeText(node.textContent ?? ''));
     }
   }
 

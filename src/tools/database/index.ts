@@ -6635,6 +6635,14 @@ export class DatabaseTool implements BlockTool {
       people: () => this.people ?? [],
       relatedRows: (property) => data().relationCandidates(property),
       thisPageDatabase: () => (this.thisPage === null ? null : this.api.blocks.getById(this.thisPage)?.parentId ?? null),
+      rowPageDatabaseName: () => {
+        const database = this.thisPage === null ? undefined : this.api.blocks.getById(this.thisPage)?.parentId;
+
+        if (database === undefined || database === null) return null;
+        const title = this.databaseTitleOf(database)?.trim() ?? '';
+
+        return title === '' ? this.api.i18n.t('tools.database.relationUntitledDatabase') : title;
+      },
       updateView: (changes) => this.updateActiveView(changes, context),
       setLayout: (type) => this.setActiveLayout(type),
       setLocked: (locked) => this.setDatabaseLocked(locked),

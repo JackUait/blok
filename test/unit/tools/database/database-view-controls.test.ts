@@ -353,6 +353,55 @@ describe('DatabaseViewControls', () => {
     expect(q('database-view-save')).toBeNull();
   });
 
+  // research/11 §4 (35-filter-saved.png): on a row page, Save for everyone asks first.
+  describe('Save for everyone on a row page', () => {
+    const rowPage = (): ReturnType<typeof setup> => setup({ levers: {
+      i18n: { t: (key: string, vars?: Record<string, string | number>) => (vars?.name === undefined ? key : `${key} ${String(vars.name)}`) },
+      rowPageDatabaseName: () => 'Measure DB 3',
+    } });
+    const dialog = (): HTMLElement | null => document.querySelector('[data-blok-database-confirm-dialog]');
+    const action = (name: string): HTMLElement | null => dialog()?.querySelector(`[data-blok-database-confirm-action="${name}"]`) ?? null;
+
+    afterEach(() => {
+      document.querySelectorAll('[data-blok-database-confirm]').forEach((el) => el.remove());
+    });
+
+    it('asks "Updating layout for all pages…" before it saves, and saves on "Save for all pages"', async () => {
+      const { controls, host } = rowPage();
+
+      controls.filterBy('num', document.body);
+      click('database-view-save');
+
+      expect(host.updateView).not.toHaveBeenCalled();
+      expect(dialog()?.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('tools.database.saveForAllTitle');
+      const description = dialog()?.querySelector('[data-blok-database-confirm-description]');
+
+      expect(description?.textContent).toBe('tools.database.saveForAllDescription Measure DB 3');
+      expect(description?.querySelector('strong')?.textContent).toBe('Measure DB 3');
+      expect(action('confirm')?.textContent).toBe('tools.database.saveForAllConfirm');
+      expect(action('confirm')?.hasAttribute('data-primary')).toBe(true);
+      expect(action('cancel')?.textContent).toBe('tools.database.layoutCancel');
+      expect(action('cancel')?.hasAttribute('data-quiet')).toBe(false);
+      expect(action('confirm')).toHaveFocus();
+
+      action('confirm')?.click();
+      await vi.waitFor(() => expect(host.updateView).toHaveBeenCalledWith({ filters: [expect.objectContaining({ propertyId: 'num' })] }));
+      expect(controls.hasPersonalEdits('v1')).toBe(false);
+    });
+
+    it('keeps the draft on Cancel', async () => {
+      const { controls, host } = rowPage();
+
+      controls.filterBy('num', document.body);
+      click('database-view-save');
+      action('cancel')?.click();
+      await vi.waitFor(() => expect(dialog()).toBeNull());
+
+      expect(host.updateView).not.toHaveBeenCalled();
+      expect(controls.hasPersonalEdits('v1')).toBe(true);
+    });
+  });
+
   it('standalone Save for everyone keeps authorized combined personal filters and sorts', () => {
     const { controls, host, saved } = setup();
     const anchor = document.createElement('button');

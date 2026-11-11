@@ -1521,6 +1521,48 @@ describe('row page layout through the database tool', () => {
         expect(drawer()?.querySelector('[data-blok-database-drawer-tab-panel]')?.textContent).toContain('Measure A: This page');
       });
 
+      // research/11 §4 (35-filter-saved.png): the tab's view is shared by every row page, so its Save asks first.
+      it('asks "Updating layout for all pages…" naming this database before Save for everyone writes a row page tab\'s filter', async () => {
+        await make(relatedDoc());
+        await openRow('r1');
+        await click(q('[data-blok-database-drawer-customize]'));
+        await openAddTab();
+        await click(testId('database-layout-related-rel'));
+        await click(b('[data-blok-database-layout-apply]'));
+
+        const panel = (): HTMLElement | null => drawer()?.querySelector<HTMLElement>('[data-blok-database-drawer-tab-panel]') ?? null;
+        const linkedFilters = async (): Promise<unknown[] | undefined> => {
+          const linked = (await savedBlocks()).find((block) => block.type === 'database' && (block.data as { source?: { databaseId?: string } }).source?.databaseId === 'dbb');
+
+          return (linked?.data as { views: Array<{ filters: unknown[] }> } | undefined)?.views[0]?.filters;
+        };
+
+        // The tab's view already filters by "This page", so its filter bar is open: add a rule there.
+        await click(panel()?.querySelector('[data-blok-testid="database-filter-bar-add"]') ?? null);
+        await click(document.querySelector('[data-blok-testid="database-pick-property-bt"]'));
+        const input = document.querySelector<HTMLInputElement>('[data-blok-testid="database-filter-value"]');
+
+        if (input === null) throw new Error('no filter value field');
+        input.value = 'Uno';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        await quiet();
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        await quiet();
+        const before = await linkedFilters();
+
+        await click(panel()?.querySelector('[data-blok-testid="database-view-save"]') ?? null);
+        const dialog = document.querySelector('[data-blok-database-confirm-dialog]');
+
+        expect(dialog?.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('Updating layout for all pages in this database');
+        expect(dialog?.querySelector('[data-blok-database-confirm-description]')?.textContent).toBe('Changes to filter and sort will apply to all pages in Measure A');
+        expect(dialog?.querySelector('[data-blok-database-confirm-description] strong')?.textContent).toBe('Measure A');
+        expect(await linkedFilters()).toEqual(before);
+
+        await click(dialog?.querySelector('[data-blok-database-confirm-action="confirm"]') ?? null);
+
+        expect(await linkedFilters()).toEqual(expect.arrayContaining([expect.objectContaining({ propertyId: 'bt' })]));
+      });
+
       describe('a relation to this same database (research/36 §12)', () => {
         /**
          * R14 relates one-way to itself through "Related R14". F2 (r2) → F3, T4.

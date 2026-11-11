@@ -1,6 +1,7 @@
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { nanoid } from 'nanoid';
-import { IconSearch, IconSliders, IconLock, IconPlus, IconChevronDown, IconFilter, IconSort, IconPreview, IconBolt, IconWand, IconArrowUp, IconCross, IconTrash, IconChevronDoubleRight } from '../../components/icons';
+import { IconSearch, IconSliders, IconLock, IconPlus, IconChevronDown, IconFilter, IconSort, IconPreview, IconBolt, IconWand, IconArrowUp, IconCross, IconTrash, IconChevronDoubleRight, IconPageLayout } from '../../components/icons';
+import { openDatabaseConfirm } from './database-confirm-dialog';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { propertyTypeMeta } from './database-property-types';
 import type { I18n } from '../../../types';
@@ -60,6 +61,8 @@ export interface ViewControlsHost {
   relatedRows?: (property: PropertyDefinition) => Array<{ id: string; title: string }>;
   /** The database whose row page shows this view, or null: a relation to it can name "This page". */
   thisPageDatabase?: () => string | null;
+  /** On a row page, the name of the database whose pages share this view; else null. */
+  rowPageDatabaseName?: () => string | null;
   /** A shared write to the active view. The tool refuses it while locked. */
   updateView: (changes: ViewChanges) => void;
   setLayout: (type: ViewType) => void;
@@ -519,9 +522,36 @@ export class DatabaseViewControls {
     const view = this.host.savedView();
 
     if (view === undefined || this.host.locked() || this.host.readOnly()) return;
-    const patch = this.personal.get(view.id);
+    const name = this.host.rowPageDatabaseName?.() ?? null;
 
-    this.personal.clear(view.id);
+    if (name === null) {
+      this.writeDraft(view.id);
+
+      return;
+    }
+    // research/11 §4 (35-filter-saved.png): every page of the database shares this view, so ask first.
+    void openDatabaseConfirm({
+      art: [IconPageLayout],
+      title: this.t('saveForAllTitle'),
+      description: this.t('saveForAllDescription', { name }),
+      emphasis: name,
+      confirmLabel: this.t('saveForAllConfirm'),
+      cancelLabel: this.t('layoutCancel'),
+      primary: true,
+      borderedCancel: true,
+      focusConfirm: true,
+      directionSource: this.toolbar,
+    }).then((save) => {
+      // A peer may have saved, reset or locked it while the dialog was open.
+      if (!save || this.host.savedView()?.id !== view.id || this.host.locked() || this.host.readOnly() || !this.hasPersonalEdits(view.id)) return;
+      this.writeDraft(view.id);
+    });
+  }
+
+  private writeDraft(viewId: string): void {
+    const patch = this.personal.get(viewId);
+
+    this.personal.clear(viewId);
     this.host.updateView(patch);
     this.refresh();
   }

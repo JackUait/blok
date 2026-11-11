@@ -6,6 +6,8 @@ export interface DatabaseConfirmOptions {
   title: string;
   /** A line under the title, read as the dialog's description. */
   description?: string;
+  /** Text in `description` drawn bold, as the database name in Notion's "Updating layout…" (research/11 §4). */
+  emphasis?: string;
   confirmLabel: string;
   cancelLabel: string;
   /** Paints the confirm button red, as Notion does for Remove, Delete and Move to Trash. */
@@ -24,6 +26,8 @@ export interface DatabaseConfirmOptions {
   signal?: AbortSignal;
   /** A blue confirm and a borderless cancel, as Notion's form auto-create prompt (research/19 §3a). */
   primary?: boolean;
+  /** With `primary`: keep Cancel's border, as Notion's "Updating layout…" (35-filter-saved.png). */
+  borderedCancel?: boolean;
   /** Icon SVG constants drawn in a row above the title. */
   art?: string[];
   /** What Escape, a press outside and an abort resolve to. Defaults to false. */
@@ -108,7 +112,17 @@ const buildConfirm = (options: DatabaseConfirmOptions, choices: DatabaseChoice[]
   if (description !== null) {
     description.setAttribute('data-blok-database-confirm-description', '');
     description.id = `blok-database-confirm-description-${counter.next}`;
-    description.textContent = options.description ?? '';
+    const text = options.description ?? '';
+    const at = options.emphasis === undefined || options.emphasis === '' ? -1 : text.indexOf(options.emphasis);
+
+    if (at < 0) {
+      description.textContent = text;
+    } else {
+      const strong = document.createElement('strong');
+
+      strong.textContent = options.emphasis ?? '';
+      description.append(text.slice(0, at), strong, text.slice(at + strong.textContent.length));
+    }
     panel.appendChild(description);
   }
 
@@ -175,7 +189,7 @@ const buildConfirm = (options: DatabaseConfirmOptions, choices: DatabaseChoice[]
   if (options.primary === true) {
     confirmButton.setAttribute('data-primary', '');
   }
-  if (options.primary === true || options.quietCancel === true) {
+  if ((options.primary === true && options.borderedCancel !== true) || options.quietCancel === true) {
     cancelButton.setAttribute('data-quiet', '');
   }
   backdrop.appendChild(panel);

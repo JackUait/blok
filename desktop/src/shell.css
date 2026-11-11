@@ -383,3 +383,23 @@ body[data-blok-theme="light"] [data-desktop-settings-overlay] {
 [data-desktop-status] { position: absolute; top: 44px; left: 50%; padding: 12px; color: var(--desktop-muted); }
 [data-desktop-status]:empty { display: none; }
 [data-desktop-status][data-error] { color: #ff9c91; }
+
+/* The tab strip's own context menu. Without it a right-click fell through to
+   WKWebView's default menu, which offers Reload and nothing else. */
+[data-desktop-tab-menu] {
+  position: fixed; z-index: 70; min-width: 220px; padding: 4px;
+  display: flex; flex-direction: column;
+  border-radius: 8px; border: 1px solid var(--desktop-border);
+  background: var(--desktop-surface); box-shadow: 0 12px 32px rgb(0 0 0 / 38%);
+}
+[data-desktop-tab-menu] button {
+  appearance: none; border: 0; background: transparent; color: var(--desktop-ink);
+  font: inherit; font-size: 14px; line-height: 20px; text-align: start;
+  padding: 6px 10px; border-radius: 5px; cursor: pointer;
+}
+[data-desktop-tab-menu] button:hover:not(:disabled) { background: var(--desktop-hover); }
+[data-desktop-tab-menu] button:disabled { color: var(--desktop-muted); cursor: default; }
+[data-desktop-tab-menu] button[data-desktop-menu-group] { margin-top: 5px; }
+[data-desktop-tab-menu] button[data-desktop-menu-group]::before {
+  content: ''; display: block; margin: 0 -10px 5px; border-top: 1px solid var(--desktop-border);
+}

@@ -1,6 +1,8 @@
 import { createWorkspace, type Workspace } from './workspace';
 import { applyAppearance, readAppearance, watchSystemAppearance } from './settings';
 
+import { buildTabMenuItems, pageLinkFor, type TabMenuAction } from './tab-menu';
+
 const KEY = 'blok:window-tabs:v1';
 const MAX_TABS = 20;
 const MAX_HISTORY = 100;
@@ -69,6 +71,7 @@ export function mountDesktop(root: HTMLElement): void {
   }, syncPageIcon);
   root.replaceChildren(strip(), box.workspace.element);
   root.addEventListener('click', onClick);
+  root.addEventListener('contextmenu', onContextMenu);
   slot.record = record;
   slot.syncTitle = syncTitle;
   slot.onKey = onKey;
@@ -478,6 +481,90 @@ function bracket(event: KeyboardEvent): 'left' | 'right' | null {
   if (event.code === 'BracketLeft' || event.key === '[' || event.key === '{') return 'left';
   if (event.code === 'BracketRight' || event.key === ']' || event.key === '}') return 'right';
   return null;
+}
+
+function tabIds(): string[] {
+  return box.session.tabs.map((tab) => tab.id);
+}
+
+function closeMany(ids: string[]): void {
+  for (const id of ids) closeTab(id);
+}
+
+function duplicateTab(id: string): void {
+  const source = box.session.tabs.find((tab) => tab.id === id);
+  if (!source || !allowed() || box.session.tabs.length >= MAX_TABS) return;
+  const current = active();
+  const saved = current ? snapshot(current) : null;
+  const copy = freshTab(source.href, source.title);
+  const tabs = box.session.tabs.map((item) => (saved && item.id === saved.id ? saved : item));
+  box.session = { tabs: [...tabs, copy], activeId: copy.id };
+  reveal(copy);
+  persist();
+  paint();
+  box.workspace?.onRoute();
+}
+
+function runTabMenuAction(action: TabMenuAction, id: string): void {
+  const ids = tabIds();
+  const index = ids.indexOf(id);
+  if (action === 'copy-link') {
+    const tab = box.session.tabs.find((item) => item.id === id);
+    const link = tab ? pageLinkFor(tab.href) : null;
+    if (link) void navigator.clipboard?.writeText(link);
+    return;
+  }
+  if (action === 'reload') { moveTo(id, false); box.workspace?.onRoute(); return; }
+  if (action === 'duplicate') { duplicateTab(id); return; }
+  if (action === 'close') { closeTab(id); return; }
+  if (action === 'close-others') { closeMany(ids.filter((other) => other !== id)); return; }
+  if (action === 'close-left') { closeMany(ids.slice(0, Math.max(0, index))); return; }
+  if (action === 'close-right') { closeMany(ids.slice(index + 1)); }
+}
+
+function closeTabMenu(): void {
+  box.root?.querySelector('[data-desktop-tab-menu]')?.remove();
+}
+
+function openTabMenu(id: string, x: number, y: number): void {
+  closeTabMenu();
+  const tab = box.session.tabs.find((item) => item.id === id);
+  if (!tab || !box.root) return;
+  const menu = document.createElement('div');
+  menu.setAttribute('data-desktop-tab-menu', '');
+  menu.setAttribute('role', 'menu');
+  menu.style.left = `${x}px`;
+  menu.style.top = `${y}px`;
+  for (const item of buildTabMenuItems({ tabId: id, tabIds: tabIds(), href: tab.href })) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.setAttribute('role', 'menuitem');
+    button.textContent = item.label;
+    button.disabled = item.disabled;
+    if (item.separated) button.setAttribute('data-desktop-menu-group', '');
+    button.addEventListener('click', () => { closeTabMenu(); runTabMenuAction(item.action, id); });
+    menu.append(button);
+  }
+  box.root.append(menu);
+  const box_ = menu.getBoundingClientRect();
+  if (box_.right > window.innerWidth) menu.style.left = `${Math.max(0, window.innerWidth - box_.width - 8)}px`;
+  if (box_.bottom > window.innerHeight) menu.style.top = `${Math.max(0, window.innerHeight - box_.height - 8)}px`;
+  const dismiss = (event: Event): void => {
+    if (event.target instanceof Node && menu.contains(event.target)) return;
+    closeTabMenu();
+    document.removeEventListener('pointerdown', dismiss, true);
+  };
+  document.addEventListener('pointerdown', dismiss, true);
+}
+
+function onContextMenu(event: MouseEvent): void {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const tab = target.closest('[data-desktop-tab]');
+  const id = tab instanceof HTMLElement ? (tab.dataset.desktopTab ?? '') : '';
+  if (!id) return;
+  event.preventDefault();
+  openTabMenu(id, event.clientX, event.clientY);
 }
 
 function onClick(event: Event): void {

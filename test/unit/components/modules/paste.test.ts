@@ -970,6 +970,55 @@ describe('Paste module', () => {
       expect(mocks.Caret.insertContentAtCaretPosition).not.toHaveBeenCalled();
     });
 
+    it('pastes a Blok block copy into a plaintext-only host as the blocks\' text, not the Markdown fence', async () => {
+      const { paste, mocks } = createPaste();
+
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+      await paste.prepare();
+
+      const codeEl = document.createElement('code');
+
+      codeEl.setAttribute('contenteditable', 'plaintext-only');
+      codeEl.textContent = 'outer\nend';
+      mocks.holder.appendChild(codeEl);
+      // A selection only holds a range inside the document.
+      document.body.appendChild(mocks.holder);
+
+      const range = document.createRange();
+
+      range.setStart(codeEl.firstChild ?? codeEl, 5);
+      range.collapse(true);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+
+      mocks.BlockManager.setCurrentBlockByChildNode.mockReturnValue({ name: 'code', tool: { isDefault: false }, isEmpty: false });
+      paste.toggleReadOnly(false);
+
+      const event = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent;
+      const blok = JSON.stringify([
+        { id: 'a', tool: 'code', data: { code: '  inner()\n\tx', language: 'javascript' } },
+        { id: 'b', tool: 'paragraph', data: { text: 'and <b>bold</b>' } },
+      ]);
+      const clipboardData = new MockDataTransfer(
+        { 'application/x-blok': blok, 'text/plain': '```javascript\n  inner()\n\tx\n```\n\nand **bold**' },
+        {} as FileList,
+        ['application/x-blok', 'text/plain']
+      );
+
+      Object.defineProperty(event, 'clipboardData', { value: clipboardData });
+
+      try {
+        codeEl.dispatchEvent(event);
+        await new Promise(resolve => setTimeout(resolve, 10));
+      } finally {
+        mocks.holder.remove();
+      }
+
+      expect(codeEl.textContent).toBe('outer  inner()\n\tx\nand bold\nend');
+      expect(event.defaultPrevented).toBe(true);
+      expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
+    });
+
     it('skips processing when event.defaultPrevented is true', async () => {
       const { paste, mocks } = createPaste();
 

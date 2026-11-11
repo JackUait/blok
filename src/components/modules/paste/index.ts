@@ -9,6 +9,7 @@ import { rangeAtTextOffsets, textOffsetOf } from '../../utils/caret/selection';
 
 import { BLOK_MIME_TYPE, NEXT_SPACE_MIMES, NOTION_BLOCKS_V3_MIME } from './constants';
 import { ToolRegistry } from './tool-registry';
+import { blokClipboardText } from './blok-clipboard-text';
 // Type only: the pipeline loads on the first paste.
 import type { PasteEngine } from './engine';
 import type { Block } from '../../block';
@@ -633,10 +634,13 @@ export class Paste extends Module {
     const currentBlock = (replacedTextSelection ? BlockManager.currentBlock : undefined) ??
       BlockManager.setCurrentBlockByChildNode(event.target as HTMLElement);
 
-    if (
-      !currentBlock ||
-      (event.target && this.isNativeBehaviour(event.target) && clipboard && !clipboard.types.includes('Files'))
-    ) {
+    if (!currentBlock) {
+      return;
+    }
+
+    if (event.target && this.isNativeBehaviour(event.target) && clipboard && !clipboard.types.includes('Files')) {
+      this.pasteBlokTextIntoPlainHost(event, clipboard);
+
       return;
     }
 
@@ -662,6 +666,36 @@ export class Paste extends Module {
 
     Toolbar.moveAndOpen();
   };
+
+  /**
+   * A plain-text host (code) takes the browser's own paste, but Blok's text/plain
+   * is Markdown, so a Blok block copy would land as a fenced block. Insert its
+   * blocks' text instead. Native inputs keep the browser paste.
+   */
+  private pasteBlokTextIntoPlainHost(event: ClipboardEvent, clipboard: DataTransfer): void {
+    const blok = clipboard.getData(BLOK_MIME_TYPE);
+    const text = blok === '' || dom$.isNativeInput(event.target) ? null : blokClipboardText(blok);
+    const range = window.getSelection()?.rangeCount ? window.getSelection()?.getRangeAt(0) : undefined;
+
+    if (text === null || text === '' || range === undefined) {
+      return;
+    }
+    event.preventDefault();
+
+    // insertText fires the input events the host refreshes on, and joins native undo. jsdom has no execCommand.
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- no other API inserts text as a user edit
+    if (typeof document.execCommand === 'function' && document.execCommand('insertText', false, text)) {
+      return;
+    }
+    const node = document.createTextNode(text);
+
+    range.deleteContents();
+    range.insertNode(node);
+    range.setStartAfter(node);
+    range.collapse(true);
+    window.getSelection()?.removeAllRanges();
+    window.getSelection()?.addRange(range);
+  }
 
   /**
    * A paste over selected blocks replaces them, like typing over them: they

@@ -962,6 +962,47 @@ test.describe('copy and paste', () => {
       await expect.poll(() => outline(page)).toEqual(['code:const a = 1;\nconst b = 2;', 'code:let x;const a = 1;\nconst b = 2;']);
     });
 
+    test('a code block copied as a block and pasted with real keys into code text adds its code, not a Markdown fence', async ({ page, browserName }) => {
+      // eslint-disable-next-line playwright/no-skipped-test -- needs real clipboard permissions
+      test.skip(browserName !== 'chromium', 'Firefox and WebKit reject the clipboard-read/clipboard-write permissions a real paste needs');
+      await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+      await createBlokWithElements(page, [
+        { id: 'a', type: 'paragraph', data: { text: 'Anchor' } },
+        { id: 'c', type: 'code', data: { code: 'inner()\n\tx', language: 'javascript' } },
+        { id: 'd', type: 'code', data: { code: 'outer\nend', language: 'javascript' } },
+      ]);
+      await page.locator('[data-blok-id="a"] [contenteditable="true"]').click();
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('ArrowDown');
+      await expect(page.locator('[data-blok-id="c"]')).toHaveAttribute('data-blok-selected', 'true');
+
+      const clipboard = await copyFromElement(page.locator('[data-blok-id="c"]'));
+
+      expect(clipboard['text/plain']).toContain('```');
+
+      // A real copy puts the Blok flavours on the system clipboard, so a real paste runs the browser's default.
+      await page.evaluate((flavours) => {
+        const onCopy = (event: ClipboardEvent): void => {
+          Object.entries(flavours).forEach(([type, value]) => event.clipboardData?.setData(type, value));
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        };
+
+        window.addEventListener('copy', onCopy, { capture: true, once: true });
+      }, clipboard);
+      await page.keyboard.press('ControlOrMeta+C');
+
+      await selectIn(page, '[data-blok-id="d"] [contenteditable]', 'outer', 'outer');
+      await page.evaluate(() => window.getSelection()?.collapseToEnd());
+      await page.keyboard.press('ControlOrMeta+V');
+
+      await expect.poll(() => outline(page)).toEqual(['paragraph:Anchor', 'code:inner()\n\tx', 'code:outerinner()\n\tx\nend']);
+      await expect.poll(() => page.locator('[data-blok-id="d"]').getByTestId('code-gutter').evaluate((gutter) => gutter.childElementCount)).toBe(3);
+
+      await page.keyboard.press((await historyKeys(page)).undo);
+      await expect.poll(() => outline(page)).toEqual(['paragraph:Anchor', 'code:inner()\n\tx', 'code:outer\nend']);
+    });
+
     test('the page title copies as its plain text and pastes inline', async ({ page }) => {
       await createBlok(page, {
         pageTitle: true,

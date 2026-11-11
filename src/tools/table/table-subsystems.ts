@@ -2,10 +2,7 @@ import type { API, BlockAPI, SanitizerConfig } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { getElementDirection } from '../../components/utils/direction';
 import type { TextDirection } from '../../components/utils/direction';
-import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
-import { clean } from '../../components/utils/sanitizer';
 import { parseUntrustedDocument, parseUntrustedHtml } from '../../components/utils/inert-html';
-import { PAGE_REFERENCE_ATTR } from '../../shared/page-reference';
 
 import { TableAddControls } from './table-add-controls';
 import type { TableCellBlocks } from './table-cell-blocks';
@@ -19,6 +16,7 @@ import {
   parseGenericHtmlTable,
   parsePlainTextGrid,
   pastedContentOutsideTable,
+  withPlainPageReferences,
 } from './table-cell-clipboard';
 import type { CellColorMode } from './table-cell-color-picker';
 import { TableCellSelection } from './table-cell-selection';
@@ -1289,22 +1287,10 @@ export class TableSubsystems {
    * Heading flags travel only when the range holds the heading row/column.
    */
   private buildCellClipboardPayload(cells: HTMLElement[]): TableCellsClipboard | null {
-    const sanitizeReference = (block: ClipboardBlockData): ClipboardBlockData => {
-      const text = block.data.text;
-
-      return {
-        ...block,
-        data: typeof text === 'string' && text.includes(PAGE_REFERENCE_ATTR)
-          ? { ...block.data, text: clean(text, INLINE_TEXT_SANITIZE) }
-          : block.data,
-        ...(block.children === undefined ? {} : { children: block.children.map(sanitizeReference) }),
-      };
-    };
-
     // Copy reads preservedData before save; leave that live object untouched.
     const entries = this.collectCellBlockData(cells).map(entry => ({
       ...entry,
-      blocks: entry.blocks.map(sanitizeReference),
+      blocks: entry.blocks.map(withPlainPageReferences),
     }));
 
     if (entries.length === 0) {

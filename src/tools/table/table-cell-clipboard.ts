@@ -23,6 +23,7 @@ import { resolvePresetColorVars, resolvePresetColors } from '../../components/sh
 import { parseUntrustedDocument, parseUntrustedHtml } from '../../components/utils/inert-html';
 import { trimTrailingBreaks } from '../../components/utils/trailing-breaks';
 import type { TextDirection } from '../../components/utils/direction';
+import { isCellWithBlocks, type TableData } from '../../shared/table/types';
 
 /** Attribute name used to embed clipboard data on the HTML table element. */
 const DATA_ATTR = 'data-blok-table-cells';
@@ -373,6 +374,79 @@ function resolveCellContentColors(html: string): string {
   const wrapper = parseUntrustedHtml(html);
 
   resolvePresetColors(wrapper);
+
+  return wrapper.innerHTML;
+}
+
+/**
+ * A cell block whose page references become plain links: a pasted copy must
+ * not claim the page again.
+ * @param block - a cell block as the clipboard carries it
+ */
+export const withPlainPageReferences = (block: ClipboardBlockData): ClipboardBlockData => {
+  const text = block.data.text;
+
+  return {
+    ...block,
+    data: typeof text === 'string' && text.includes(PAGE_REFERENCE_ATTR)
+      ? { ...block.data, text: clean(text, INLINE_TEXT_SANITIZE) }
+      : block.data,
+    ...(block.children === undefined ? {} : { children: block.children.map(withPlainPageReferences) }),
+  };
+};
+
+/**
+ * The html a copy of a whole table block writes: the same table a copy of
+ * all its cells writes, so cell lists and merges survive. It has no cell
+ * payload: a paste in a cell would then take the cells, not the block copy.
+ * @param data - the table block's saved data
+ * @param cellBlocks - a cell's blocks by id, each with its children inside it
+ * @param direction - the table's text direction
+ */
+export function tableClipboardHtml(
+  data: TableData,
+  cellBlocks: (ids: string[]) => ClipboardBlockData[],
+  direction: TextDirection = 'ltr'
+): string {
+  const entries = (Array.isArray(data.content) ? data.content : []).flatMap((row, rowIndex) =>
+    row.flatMap((cell, colIndex): CellEntry[] => {
+      if (!isCellWithBlocks(cell)) {
+        return [{ row: rowIndex, col: colIndex, blocks: [{ tool: 'paragraph', data: { text: cell } }] }];
+      }
+
+      if (cell.mergedInto !== undefined) {
+        return [];
+      }
+
+      return [{
+        row: rowIndex,
+        col: colIndex,
+        blocks: cellBlocks(cell.blocks).map(withPlainPageReferences),
+        ...(cell.color !== undefined ? { color: cell.color } : {}),
+        ...(cell.textColor !== undefined ? { textColor: cell.textColor } : {}),
+        ...(cell.placement !== undefined ? { placement: cell.placement } : {}),
+        ...((cell.colspan ?? 1) > 1 ? { colspan: cell.colspan } : {}),
+        ...((cell.rowspan ?? 1) > 1 ? { rowspan: cell.rowspan } : {}),
+      }];
+    })
+  );
+  const payload = serializeCellsToClipboard(entries);
+
+  if (data.withHeadings) {
+    payload.withHeadings = true;
+  }
+
+  if (data.withHeadingColumn) {
+    payload.withHeadingColumn = true;
+  }
+
+  if (data.colWidths?.length === payload.cols) {
+    payload.colWidths = [...data.colWidths];
+  }
+
+  const wrapper = parseUntrustedHtml(buildClipboardHtml(payload, direction));
+
+  wrapper.querySelector('table')?.removeAttribute(DATA_ATTR);
 
   return wrapper.innerHTML;
 }

@@ -20,6 +20,7 @@ import { SpacerTool } from '../../../../src/tools/spacer';
 import { TableOfContentsTool } from '../../../../src/tools/table-of-contents';
 import { Embed } from '../../../../src/tools/link/embed';
 import { Bookmark } from '../../../../src/tools/link/bookmark';
+import { Table } from '../../../../src/tools/table';
 import type { OutputBlockData } from '../../../../types';
 import type { Block } from '../../../../src/components/block';
 import type { CrossBlockSubRange } from '../../../../src/components/selection/cross-block-range';
@@ -61,6 +62,7 @@ const createEditor = async (blocks: OutputBlockData[], extraTools: Record<string
       table_of_contents: TableOfContentsTool,
       embed: Embed,
       bookmark: Bookmark,
+      table: Table,
       ...extraTools,
     },
     data: { blocks },
@@ -464,5 +466,48 @@ describe('a tool\'s clipboardHtml hook', () => {
     });
 
     expect(await copyAllAsHtml(instance)).toBe('<p><a href="https://x/page">Page</a></p>');
+  });
+});
+
+describe('copy of a whole table as text/html', () => {
+  const table = (): OutputBlockData[] => [
+    { id: 't', type: 'table', data: { withHeadings: false, content: [
+      [{ blocks: ['l1', 'l2'], color: 'red' }, { blocks: ['p1'] }],
+      [{ blocks: ['p2'], colspan: 2 }, { blocks: [], mergedInto: [1, 0] }],
+    ] } },
+    { id: 'l1', type: 'list', data: { text: 'one', style: 'unordered' }, parent: 't' },
+    { id: 'l2', type: 'list', data: { text: 'two', style: 'unordered' }, parent: 't' },
+    { id: 'p1', type: 'paragraph', data: { text: 'plain' }, parent: 't' },
+    { id: 'p2', type: 'paragraph', data: { text: 'wide' }, parent: 't' },
+  ];
+
+  it('keeps a list in a cell as a list', async () => {
+    const instance = await createEditor(table());
+    const root = parse(await copyAllAsHtml(instance));
+
+    expect(Array.from(root.querySelectorAll('table td:first-child > ul > li')).map((li) => li.textContent)).toEqual(['one', 'two']);
+  });
+
+  it('writes one cell per merge, with its span', async () => {
+    const instance = await createEditor(table());
+    const root = parse(await copyAllAsHtml(instance));
+    const rows = Array.from(root.querySelectorAll('table tr'));
+
+    expect(rows.map((row) => Array.from(row.querySelectorAll('td')).map((cell) => cell.textContent))).toEqual([['onetwo', 'plain'], ['wide']]);
+    expect(rows[1].querySelector('td')?.getAttribute('colspan')).toBe('2');
+  });
+
+  it('leaves the cell payload out, so a paste in a cell takes the block copy', async () => {
+    const instance = await createEditor(table());
+    const root = parse(await copyAllAsHtml(instance));
+
+    expect(root.querySelector('table')?.hasAttribute('data-blok-table-cells')).toBe(false);
+  });
+
+  it('writes the cell color', async () => {
+    const instance = await createEditor(table());
+    const root = parse(await copyAllAsHtml(instance));
+
+    expect(root.querySelector('td')?.getAttribute('style')).toContain('background-color');
   });
 });

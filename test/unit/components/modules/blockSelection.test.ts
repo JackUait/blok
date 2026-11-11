@@ -737,12 +737,15 @@ describe('BlockSelection', () => {
         clipboardData,
       } as unknown as ClipboardEvent;
 
-      const table = blocks[0];
+      const [table, cellBlock] = blocks;
 
-      table.holder.innerHTML = '<table><tbody><tr><td colspan="2"><p>a</p></td><td><p>b</p></td></tr><tr><td><p>c</p></td><td><p>d</p></td></tr></tbody></table>';
       (table as unknown as { id: string }).id = 'block-table';
       (table as unknown as { name: string }).name = 'table';
-      (table as unknown as { preservedData: unknown }).preservedData = { withHeadings: true, content: [] };
+      (table as unknown as { preservedData: unknown }).preservedData = {
+        withHeadings: false,
+        content: [[{ blocks: ['cell-a'], colspan: 2 }, { blocks: [], mergedInto: [0, 0] }], ['c', 'd']],
+      };
+      Object.assign(cellBlock, { id: 'cell-a', parentId: 'block-table', preservedData: { text: 'a' } });
       table.selected = true;
 
       await blockSelection.copySelectedBlocks(clipboardEvent);
@@ -851,8 +854,8 @@ describe('BlockSelection', () => {
           '<table><tbody><tr><td><div data-blok-table-cell-blocks data-blok-nested-blocks></div></td></tr></tbody></table>';
         cellBlock.holder.innerHTML = '<div>CELLTEXT</div>';
         table.holder.querySelector('[data-blok-table-cell-blocks]')?.appendChild(cellBlock.holder);
-        Object.assign(table, { id: 'table', name: 'table', contentIds: ['cell'] });
-        Object.assign(cellBlock, { id: 'cell', parentId: 'table' });
+        Object.assign(table, { id: 'table', name: 'table', contentIds: ['cell'], preservedData: { withHeadings: false, content: [[{ blocks: ['cell'] }]] } });
+        Object.assign(cellBlock, { id: 'cell', parentId: 'table', preservedData: { text: 'CELLTEXT' } });
         table.selected = true;
         cellBlock.selected = true;
 

@@ -34,6 +34,10 @@ import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../shared/page-
 import { isPagePointer } from '../../shared/page-pointer';
 import { databaseRowTitle, titlePropertyIdOf } from '../../shared/database-rows';
 import type { ListItemStyle } from '../../tools/list/types';
+import { tableClipboardHtml } from '../../tools/table/table-cell-clipboard';
+import type { ClipboardBlockData } from '../../tools/table/types';
+import type { TableData } from '../../shared/table/types';
+import { getElementDirection } from '../utils/direction';
 import { isInAnnotation } from './blockManager/new-block-placement';
 
 /**
@@ -93,6 +97,7 @@ const rangeToPlainText = (range: Range): string => {
   return fragment.textContent ?? '';
 };
 const TABLE_CELL_BLOCKS_SELECTOR = '[data-blok-table-cell-blocks]';
+const TABLE_TOOL_NAME = 'table';
 
 /**
  *
@@ -864,6 +869,23 @@ export class BlockSelection extends Module {
       return;
     }
 
+    // The table's own cell copy writes this html raw too. The copy sanitizer
+    // would drop its payload, cell colors and the block boundaries in a cell.
+    if (block.name === TABLE_TOOL_NAME) {
+      fakeClipboard.insertAdjacentHTML('beforeend', tableClipboardHtml(
+        block.preservedData as TableData,
+        (ids) => ids.flatMap((id) => {
+          const cellBlock = this.Blok.BlockManager.getBlockById(id);
+
+          // A block nested under another cell block travels in its children.
+          return cellBlock?.parentId === block.id ? [this.cellClipboardBlock(cellBlock)] : [];
+        }),
+        getElementDirection(block.holder)
+      ));
+
+      return;
+    }
+
     const wrapper = $.make('div');
     const own = (block.tool as Block['tool'] | undefined)?.clipboardHtml(block.preservedData);
 
@@ -892,6 +914,25 @@ export class BlockSelection extends Module {
     }, []);
 
     flushRun(run);
+  }
+
+  /**
+   * A table cell block with its children, as the table's clipboard carries it.
+   * @param block - a block in a table cell
+   */
+  private cellClipboardBlock(block: Block): ClipboardBlockData {
+    const children = block.contentIds.flatMap((id) => {
+      const child = this.Blok.BlockManager.getBlockById(id);
+
+      return child === undefined ? [] : [this.cellClipboardBlock(child)];
+    });
+
+    return {
+      tool: block.name,
+      data: block.preservedData,
+      ...(Object.keys(block.preservedTunes).length > 0 ? { tunes: block.preservedTunes } : {}),
+      ...(children.length > 0 ? { children } : {}),
+    };
   }
 
   /**

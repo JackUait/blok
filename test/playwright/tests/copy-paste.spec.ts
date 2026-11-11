@@ -1528,6 +1528,39 @@ test.describe('copy and paste', () => {
     });
   });
 
+  test.describe('a whole table pasted from html only', () => {
+    test('keeps a list in a cell as list blocks', async ({ page }) => {
+      await createBlok(page, { data: { blocks: [
+        { id: 'bef', type: 'paragraph', data: { text: 'Before' } },
+        { id: 'tbl', type: 'table', data: { withHeadings: false, content: [
+          [{ blocks: ['l1', 'l2'] }, { blocks: ['p1'] }],
+        ] } },
+        { id: 'l1', type: 'list', data: { text: 'one', style: 'unordered' }, parent: 'tbl' },
+        { id: 'l2', type: 'list', data: { text: 'two', style: 'unordered' }, parent: 'tbl' },
+        { id: 'p1', type: 'paragraph', data: { text: 'plain' }, parent: 'tbl' },
+        { id: 'aft', type: 'paragraph', data: { text: 'After' } },
+      ] } });
+      await page.locator('[data-blok-id="bef"] [contenteditable="true"]').click();
+      await page.locator('[data-blok-id="aft"] [contenteditable="true"]').click({ modifiers: ['Shift'] });
+      await expect(page.locator('[data-blok-id="aft"][data-blok-selected="true"]')).toBeVisible();
+
+      const clipboard = await withClipboardEvent(page.locator('[data-blok-id="bef"]'), 'copy');
+
+      await createBlok(page, { data: { blocks: [{ id: 'tgt', type: 'paragraph', data: { text: '' } }] } });
+      await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), { 'text/html': clipboard['text/html'] ?? '', 'text/plain': clipboard['text/plain'] ?? '' });
+
+      await expect.poll(async () => {
+        const { blocks } = await saveBlok(page);
+        const table = blocks.find((block) => block.type === 'table');
+
+        return blocks
+          .filter((block) => block.parent === table?.id && table !== undefined)
+          .map((block) => `${block.type} ${String(block.data.text)}`);
+      }).toEqual(['list one', 'list two', 'paragraph plain']);
+    });
+  });
+
   test.describe('list items copied without their parent list item', () => {
     const LI = (id: string, text: string, depth: number, extra: Partial<OutputData['blocks'][number]> = {}): OutputData['blocks'][number] =>
       ({ id, type: 'list', data: { text, style: 'unordered', depth }, ...extra });

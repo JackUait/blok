@@ -1389,6 +1389,18 @@ describe('KeyboardController — mutation coverage', () => {
       expect(PopoverRegistry.instance.hasOpenPopovers()).toBe(true);
     });
 
+    // Every editor on the page listens on document: a menu's submenu must not close with its menu.
+    it('two editors on one page close one popover per Escape', () => {
+      enabledHarness();
+      const second = enabledHarness();
+      const closeTopmost = vi.spyOn(PopoverRegistry.instance, 'closeTopmost').mockImplementation(() => true);
+
+      vi.spyOn(PopoverRegistry.instance, 'hasOpenPopovers').mockReturnValue(true);
+      second.press(second.outside, { key: 'Escape' });
+
+      expect(closeTopmost).toHaveBeenCalledTimes(1);
+    });
+
     it('closing a popover over a modal layer keeps the layer: one Escape peels one layer', () => {
       const harness = enabledHarness();
       const closeTopmost = vi.spyOn(PopoverRegistry.instance, 'closeTopmost').mockImplementation(() => true);

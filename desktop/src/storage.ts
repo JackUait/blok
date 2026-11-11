@@ -1,7 +1,8 @@
 import type { ShellPage } from '@blok/sidebar';
 import type { CoverId } from './cover';
+import type { DateDisplay } from '@blok/date-editor';
 
-export type DesktopPage = ShellPage & { cover?: CoverId; coverPosition?: number; fullWidth?: boolean; titleDate?: string };
+export type DesktopPage = ShellPage & { cover?: CoverId; coverPosition?: number; fullWidth?: boolean; titleDate?: string; titleDateDisplay?: DateDisplay };
 
 export interface WorkspaceIndex {
   pages: DesktopPage[];

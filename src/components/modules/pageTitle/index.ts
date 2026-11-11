@@ -179,10 +179,11 @@ export class PageTitle extends Module {
     // On the text node: renderText reads the anchor offset as a character offset.
     const text = title.firstChild;
 
-    if (text === null) {
-      window.getSelection()?.setPosition(title, 0);
-    } else {
+    if (text instanceof Text) {
       window.getSelection()?.setPosition(text, position === 'start' ? 0 : (text.textContent ?? '').length);
+    } else {
+      // An atomic mention in the title is one child, not a text offset.
+      window.getSelection()?.setPosition(title, position === 'start' ? 0 : title.childNodes.length);
     }
   }
 
@@ -201,7 +202,12 @@ export class PageTitle extends Module {
     const length = text?.textContent?.length ?? 0;
     const at = (value: number): number => Math.min(Math.max(value, 0), length);
 
-    window.getSelection()?.setBaseAndExtent(text ?? title, at(offset), text ?? title, at(end ?? offset));
+    if (text instanceof Text) {
+      window.getSelection()?.setBaseAndExtent(text, at(offset), text, at(end ?? offset));
+    } else {
+      const edge = (value: number): number => value <= 0 ? 0 : title.childNodes.length;
+      window.getSelection()?.setBaseAndExtent(title, edge(offset), title, edge(end ?? offset));
+    }
 
     return true;
   }

@@ -48,8 +48,8 @@ describe('workspace storage', () => {
 
   it('keeps the fixed date behind a date title after reopening', async () => {
     const first = await loadIndex();
-    const dated = { ...first.pages[0]!, title: 'Aujourd’hui', titleDate: '2026-11-11' };
+    const dated = { ...first.pages[0]!, title: 'Aujourd’hui', titleDate: '2026-11-11', titleDateDisplay: { dateFormat: 'relative' } };
     await writeFile('index', JSON.stringify({ pages: [dated], activeId: dated.id, trash: [] }));
-    expect((await loadIndex()).pages[0]).toMatchObject({ title: 'Aujourd’hui', titleDate: '2026-11-11' });
+    expect((await loadIndex()).pages[0]).toMatchObject({ title: 'Aujourd’hui', titleDate: '2026-11-11', titleDateDisplay: { dateFormat: 'relative' } });
   });
 });

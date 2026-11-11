@@ -7,7 +7,8 @@ import { createAddCoverButton, createPageCover, isCoverId, trackPageHeaderHover,
 import { mountAgentAssistant, type AgentAssistantHandle } from '../../src/shell/agent-assistant';
 import { bindAssistantButton, createAssistantButton, inspectNativeProvider, nativeAgentModel, selectedProvider } from './assistant';
 import { createPageToolbar, type PageBreadcrumbChoice, type PageBreadcrumbItem, type PageToolbar } from './page-toolbar';
-import { bindTitleDateMention, titleDateLabel } from './title-date-mention';
+import { bindTitleDateMention, titleDateLabel, type TitleDateMentionBinding } from './title-date-mention';
+import type { DateDisplayChange } from '@blok/date-editor';
 
 const desktopTools = {
   ...defaultTools,
@@ -49,7 +50,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   let pageCanvas: HTMLElement;
   let footer: HTMLElement;
   let pageToolbar: PageToolbar | null = null;
-  let unbindTitleDateMention: (() => void) | null = null;
+  let titleDateMention: TitleDateMentionBinding | null = null;
   let currentId = '';
   let generation = 0;
   let dateTimer: number | null = null;
@@ -78,7 +79,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     let changed = false;
     for (const page of index.pages) {
       if (!page.titleDate) continue;
-      const label = titleDateLabel(page.titleDate);
+      const display = titleDateLabel(page.titleDate, new Date(), page.titleDateDisplay);
+      const label = display === null ? null : `@${display}`;
       if (label === null || label === page.title) continue;
       page.title = label;
       changed = true;
@@ -90,6 +92,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     const active = index.pages.find((page) => page.id === currentId);
     if (active?.titleDate && editor) {
       editor.title.set(active.title, { record: false });
+      titleDateMention?.refresh();
       document.title = active.title;
     }
     saveManifest();
@@ -211,8 +214,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     coverRowObserver?.disconnect();
     coverRowObserver = null;
     pageToolbar?.destroy();
-    unbindTitleDateMention?.();
-    unbindTitleDateMention = null;
+    titleDateMention?.destroy();
+    titleDateMention = null;
     editor?.destroy();
     editor = null;
     status.textContent = 'Ouverture de la page…';
@@ -285,7 +288,10 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         onChange(title) {
           if (generation !== turn || !index) return;
           const next = title.trim() || 'Nouvelle page';
-          if (page.titleDate && next !== titleDateLabel(page.titleDate)) page.titleDate = undefined;
+          if (page.titleDate && next !== `@${titleDateLabel(page.titleDate, new Date(), page.titleDateDisplay)}`) {
+            page.titleDate = undefined;
+            page.titleDateDisplay = undefined;
+          }
           page.title = next;
           holder.querySelector<HTMLElement>('[data-blok-page-title]')?.toggleAttribute('data-desktop-title-date', !!page.titleDate);
           toolbar.setBreadcrumbs(breadcrumbs(id));
@@ -318,17 +324,38 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       attachCoverAction();
       if (!instance.title.get() || page.titleDate) instance.title.set(page.title, { record: false });
       const title = holder.querySelector<HTMLElement>('[data-blok-page-title]');
-      if (title) unbindTitleDateMention = bindTitleDateMention(title, {
-        getDate: () => page.titleDate,
-        chooseDate: (iso, label) => {
-          page.titleDate = iso;
-          page.title = label;
-          instance.title.set(label);
-          title.setAttribute('data-desktop-title-date', iso);
+      if (title) {
+        const updateDateTitle = (): void => {
+          const label = page.titleDate ? titleDateLabel(page.titleDate, new Date(), page.titleDateDisplay) : null;
+          const next = label === null ? 'Nouvelle page' : `@${label}`;
+          page.title = next;
+          instance.title.set(next);
+          if (page.titleDate) title.setAttribute('data-desktop-title-date', page.titleDate);
+          else title.removeAttribute('data-desktop-title-date');
           saveManifest();
-          instance.title.focus('end');
-        },
-      });
+        };
+        titleDateMention = bindTitleDateMention(title, {
+          getDate: () => page.titleDate,
+          getDisplay: () => page.titleDateDisplay ?? {},
+          setDate: (value) => {
+            page.titleDate = value ?? undefined;
+            if (value === null) page.titleDateDisplay = undefined;
+            updateDateTitle();
+          },
+          setDisplay: (change: DateDisplayChange) => {
+            const display = { ...page.titleDateDisplay };
+            if ('dateFormat' in change) display.dateFormat = change.dateFormat;
+            if ('timeFormat' in change) display.timeFormat = change.timeFormat;
+            if ('timeZone' in change) {
+              if (change.timeZone === null) delete display.timeZone;
+              else display.timeZone = change.timeZone;
+            }
+            page.titleDateDisplay = display;
+            updateDateTitle();
+          },
+          i18n: instance.i18n,
+        });
+      }
       syncPageIcon(page, instance.title.icon.get());
       toolbar.setBreadcrumbs(breadcrumbs(id));
       document.title = page.title;
@@ -343,11 +370,12 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     if (command.type === 'rename') {
       page.title = command.title;
       page.titleDate = undefined;
+      page.titleDateDisplay = undefined;
       notifyPage(page.id);
       if (currentId === page.id) editor?.title.set(command.title);
       else pageToolbar?.setBreadcrumbs(breadcrumbs(currentId));
     } else if (command.type === 'duplicate') {
-      const copy: DesktopPage = { ...page, id: crypto.randomUUID(), title: `${page.title} (copie)`, titleDate: undefined };
+      const copy: DesktopPage = { ...page, id: crypto.randomUUID(), title: `${page.title} (copie)`, titleDate: undefined, titleDateDisplay: undefined };
       index.pages.push(copy);
       saveManifest();
       void readFile(page.id).then(async (raw) => {

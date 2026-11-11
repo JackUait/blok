@@ -14,7 +14,8 @@
     "paths": {
       "@bloklabs/core/full": ["../types/full.d.ts"],
       "@bloklabs/core/tools": ["../types/tools-entry.d.ts"],
-      "@blok/sidebar": ["./src/sidebar-contract.d.ts"]
+      "@blok/sidebar": ["./src/sidebar-contract.d.ts"],
+      "@blok/date-editor": ["./src/date-editor-contract.d.ts"]
     }
   },
   "include": ["src"]

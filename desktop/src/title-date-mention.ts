@@ -1,14 +1,30 @@
-import { dateMentionLabel, localDateIso, readDateMention } from '../../src/shared/date-mention';
+import { localDateIso } from '../../src/shared/date-mention';
+import { parseDateValue } from '../../src/shared/database/date-value';
+import { formatDateDisplay } from '../../src/tools/database/cells/date-format';
+import { loadSheet } from '../../src/components/utils/lazy-styles';
+import type { DateDisplay, DateDisplayChange, DateEditorHandle } from '@blok/date-editor';
 
-export const titleDateLabel = (iso: string, now = new Date()): string | null =>
-  dateMentionLabel(iso, now, 'fr');
+export const titleDateLabel = (value: string, now = new Date(), display: DateDisplay = {}): string | null =>
+  formatDateDisplay(value, 'fr', { dateFormat: 'relative', ...display }, now);
+
+export interface TitleDateMentionBinding {
+  refresh(): void;
+  destroy(): void;
+}
 
 /** Offers a fixed date mention when the whole page title starts with @today. */
 export function bindTitleDateMention(
   title: HTMLElement,
-  options: { getDate(): string | undefined; chooseDate(iso: string, label: string): void },
-): () => void {
+  options: {
+    getDate(): string | undefined;
+    getDisplay(): DateDisplay;
+    setDate(value: string | null): void;
+    setDisplay(change: DateDisplayChange): void;
+    i18n: { t(key: string): string };
+  },
+): TitleDateMentionBinding {
   let menu: HTMLElement | null = null;
+  let dateEditor: DateEditorHandle | null = null;
   const listId = `desktop-title-date-${crypto.randomUUID()}`;
 
   const close = (): void => {
@@ -20,8 +36,25 @@ export function bindTitleDateMention(
   };
   const refresh = (): void => {
     const date = options.getDate();
-    if (date !== undefined && readDateMention(date) !== null) {
+    if (date !== undefined && parseDateValue(date) !== null) {
       title.setAttribute('data-desktop-title-date', date);
+      const label = titleDateLabel(date, new Date(), options.getDisplay());
+      if (label !== null && title.textContent === `@${label}` &&
+        title.querySelector('[data-desktop-title-date-token]') === null) {
+        const token = document.createElement('span');
+        const at = document.createElement('span');
+        const text = document.createElement('span');
+        token.setAttribute('data-desktop-title-date-token', '');
+        token.setAttribute('contenteditable', 'false');
+        token.setAttribute('role', 'button');
+        token.setAttribute('aria-label', `Modifier la date : ${label}`);
+        token.tabIndex = 0;
+        at.setAttribute('data-desktop-title-date-at', '');
+        at.textContent = '@';
+        text.textContent = label;
+        token.append(at, text);
+        title.replaceChildren(token);
+      }
     } else {
       title.removeAttribute('data-desktop-title-date');
     }
@@ -38,7 +71,8 @@ export function bindTitleDateMention(
     close();
     const now = new Date();
     const iso = localDateIso(now);
-    options.chooseDate(iso, titleDateLabel(iso, now) ?? 'Aujourd’hui');
+    options.setDate(iso);
+    refresh();
   };
   const open = (): void => {
     if (menu) return;
@@ -79,6 +113,12 @@ export function bindTitleDateMention(
     }
   };
   const onKeydown = (event: KeyboardEvent): void => {
+    if (!menu && options.getDate() && event.key === 'Enter') {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      void openDatePicker();
+      return;
+    }
     if (!menu || !['Enter', 'Escape', 'ArrowDown', 'ArrowUp'].includes(event.key)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -89,22 +129,54 @@ export function bindTitleDateMention(
     if (event.target instanceof Node && !title.contains(event.target) && !menu?.contains(event.target)) close();
   };
   const onFocusOut = (): void => { close(); };
+  const openDatePicker = async (): Promise<void> => {
+    if (dateEditor?.isOpen || !options.getDate()) return;
+    const [{ openDateEditor }] = await Promise.all([import('@blok/date-editor'), loadSheet('database')]);
+    const value = options.getDate();
+    if (!title.isConnected || !value) return;
+    dateEditor = openDateEditor(
+      { id: 'page-title-date', name: 'Date', type: 'date', position: '0', date: { dateFormat: 'relative', ...options.getDisplay() } },
+      value,
+      title,
+      {
+        i18n: options.i18n,
+        locale: 'fr',
+        readOnly: false,
+        onCommit: (next) => { options.setDate(typeof next === 'string' ? next : null); refresh(); },
+        onDateDisplayChange: (change) => { options.setDisplay(change); refresh(); },
+        onClose: () => { dateEditor = null; },
+      },
+    );
+    document.querySelector('[data-blok-database-date-editor][aria-label="Date"]')
+      ?.closest('[data-blok-popover]')?.setAttribute('data-desktop-title-date-picker', '');
+  };
+  const onClick = (event: MouseEvent): void => {
+    if (options.getDate() && event.target instanceof Element && event.target.closest('[data-desktop-title-date-token]')) {
+      void openDatePicker();
+    }
+  };
 
   if (document.activeElement === title) onInput();
   else refresh();
   title.addEventListener('input', onInput);
   title.addEventListener('keydown', onKeydown, true);
   title.addEventListener('focusout', onFocusOut);
+  title.addEventListener('click', onClick);
   document.addEventListener('pointerdown', onPointerDown, true);
   window.addEventListener('resize', position);
   document.addEventListener('scroll', position, true);
-  return () => {
-    close();
-    title.removeEventListener('input', onInput);
-    title.removeEventListener('keydown', onKeydown, true);
-    title.removeEventListener('focusout', onFocusOut);
-    document.removeEventListener('pointerdown', onPointerDown, true);
-    window.removeEventListener('resize', position);
-    document.removeEventListener('scroll', position, true);
+  return {
+    refresh,
+    destroy: () => {
+      close();
+      dateEditor?.close();
+      title.removeEventListener('input', onInput);
+      title.removeEventListener('keydown', onKeydown, true);
+      title.removeEventListener('focusout', onFocusOut);
+      title.removeEventListener('click', onClick);
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      window.removeEventListener('resize', position);
+      document.removeEventListener('scroll', position, true);
+    },
   };
 }

@@ -297,6 +297,12 @@ describe('PatternHandler — link paste menu gating', () => {
       expect(menuOpen?.media).toBeUndefined();
     });
 
+    it('keeps the provider embed for a provider URL that ends like a media file', async () => {
+      await handlerFor(registryFor('image', 'image')).handle('https://media.giphy.com/media/abc/giphy.gif', context);
+
+      expect(menuOpen?.media).toBeUndefined();
+    });
+
     it('offers no media block for a non-media pattern', async () => {
       await handlerFor(registryFor('bookmark', 'bookmark')).handle(imageUrl, context);
 

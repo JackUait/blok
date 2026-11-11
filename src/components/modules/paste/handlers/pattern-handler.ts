@@ -264,12 +264,13 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
 
   /**
    * The media tool that can take `url`, unless that tool takes uploads only:
-   * it would drop the URL and leave an empty block.
+   * it would drop the URL and leave an empty block. A provider URL (a Giphy
+   * .gif) keeps its provider embed.
    */
   private mediaTargetFor(url: string): MediaTarget | undefined {
     const pattern = this.toolRegistry.findToolForPattern(url);
 
-    if (pattern === undefined || !MEDIA_KEYS.has(pattern.key)) {
+    if (pattern === undefined || !MEDIA_KEYS.has(pattern.key) || matchEmbedService(url) !== null) {
       return undefined;
     }
 

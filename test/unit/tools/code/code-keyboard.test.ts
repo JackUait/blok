@@ -96,7 +96,8 @@ describe('handleCodeKeydown', () => {
     expect(codeElement.textContent).toContain('\n');
   });
 
-  it('inserts a tab (2 spaces) for Tab and returns true', async () => {
+  // Notion U154: Tab writes one tab character.
+  it('inserts a tab character for Tab and returns true', async () => {
     const { handleCodeKeydown } = await import('../../../../src/tools/code/code-keyboard');
     const codeElement = setupCodeElement('hello', 5);
     const onExit = vi.fn();
@@ -105,7 +106,17 @@ describe('handleCodeKeydown', () => {
     const handled = handleCodeKeydown(event, codeElement, onExit);
 
     expect(handled).toBe(true);
-    expect(codeElement.textContent).toBe('hello' + TAB_STRING);
+    expect(codeElement.textContent).toBe('hello\t');
+  });
+
+  it('removes one leading tab character for Shift+Tab', async () => {
+    const { handleCodeKeydown } = await import('../../../../src/tools/code/code-keyboard');
+    const codeElement = setupCodeElement('\t\thello', 2);
+    const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true });
+
+    handleCodeKeydown(event, codeElement, vi.fn());
+
+    expect(codeElement.textContent).toBe('\thello');
   });
 
   it('removes leading spaces for Shift+Tab and returns true', async () => {
@@ -153,7 +164,7 @@ describe('handleCodeKeydown', () => {
 
     handleCodeKeydown(event, codeElement, onExit);
 
-    expect(codeElement.textContent).toBe('a' + TAB_STRING + 'b');
+    expect(codeElement.textContent).toBe('a\tb');
   });
 
   it('Enter inserts newline at caret position', async () => {

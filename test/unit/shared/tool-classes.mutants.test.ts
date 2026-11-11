@@ -87,6 +87,7 @@ describe('shared tool classes mutants', () => {
         'text-[length:var(--blok-code-font-size,0.875rem)]',
         'leading-relaxed',
         'whitespace-pre-wrap',
+        '[tab-size:2]',
         'overflow-x-auto',
         'min-h-[1.5em]',
       ]);

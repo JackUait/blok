@@ -124,7 +124,8 @@ function insertTab(): void {
   const range = selection.getRangeAt(0);
   range.deleteContents();
 
-  const tab = document.createTextNode(TAB_STRING);
+  // Notion writes a tab character; Enter's auto-indent still uses TAB_STRING.
+  const tab = document.createTextNode('\t');
   range.insertNode(tab);
   range.setStartAfter(tab);
   range.collapse(true);
@@ -134,9 +135,13 @@ function insertTab(): void {
 }
 
 /**
- * Count leading spaces on the line (up to TAB_STRING length).
+ * How many leading characters one outdent removes: a tab, or up to TAB_STRING's spaces.
  */
 function countLeadingSpaces(lineContent: string): number {
+  if (lineContent.startsWith('\t')) {
+    return 1;
+  }
+
   const limit = Math.min(TAB_STRING.length, lineContent.length);
   const match = lineContent.substring(0, limit).match(/^ */);
 

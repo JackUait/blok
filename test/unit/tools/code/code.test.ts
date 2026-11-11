@@ -1588,7 +1588,7 @@ describe('CodeTool', () => {
       codeEl.dispatchEvent(event);
 
       expect(event.defaultPrevented).toBe(true);
-      expect(codeEl.textContent).toBe('x  ');
+      expect(codeEl.textContent).toBe('x\t');
       tool.removed();
     });
 
@@ -1606,7 +1606,7 @@ describe('CodeTool', () => {
       caretAtEnd(codeEl);
       simulateKeydown(codeEl, 'Tab', { cancelable: true });
 
-      expect(codeEl.textContent).toBe('x  ');
+      expect(codeEl.textContent).toBe('x\t');
       tool.removed();
     });
 

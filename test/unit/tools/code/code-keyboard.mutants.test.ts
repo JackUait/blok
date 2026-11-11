@@ -207,16 +207,16 @@ describe('code keyboard mutants', () => {
       selectIn(el, 1, 4);
       press(el, 'Tab');
 
-      expect(el.textContent).toBe('h  o');
+      expect(el.textContent).toBe('h\to');
     });
 
-    it('leaves the caret after the inserted spaces', () => {
+    it('leaves the caret after the inserted tab', () => {
       const el = makeCode('hello', 2);
 
       press(el, 'Tab');
 
-      expect(el.textContent).toBe('he  llo');
-      expect(caretIn(el)).toBe(4);
+      expect(el.textContent).toBe('he\tllo');
+      expect(caretIn(el)).toBe(3);
     });
   });
 

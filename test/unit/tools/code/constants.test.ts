@@ -154,6 +154,10 @@ describe('Code Block Constants', () => {
       expect(CODE_AREA_STYLES).toContain('leading-relaxed');
     });
 
+    it('CODE_AREA_STYLES shows a tab two columns wide, as wide as an indent step', () => {
+      expect(CODE_AREA_STYLES.split(' ')).toContain('[tab-size:2]');
+    });
+
     it('CODE_AREA_STYLES pins caret color so it does not take on syntax token colors', () => {
       expect(CODE_AREA_STYLES).toContain('caret-text-primary');
     });

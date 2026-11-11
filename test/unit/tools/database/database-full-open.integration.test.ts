@@ -246,6 +246,16 @@ describe('Open as full page (⤢) on an inline database', () => {
     expect(editorRoot().hasAttribute('data-blok-database-full-open')).toBe(true);
   });
 
+  it('is only in the shown tab\'s menu: opening another view would save the switch', async () => {
+    await make(doc());
+    holderOf('db').querySelector<HTMLElement>('[data-blok-database-tab][data-view-id="v2"]')
+      ?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect(menuItems()).toContain('database-view-copy-link');
+    expect(menuItems()).not.toContain('database-view-full-page');
+  });
+
   it('is not in a dashboard tab\'s menu (notion-motion.md Round 15 A)', async () => {
     await make(doc({
       views: [table('v1', 'a0'), { ...table('dash', 'a1'), type: 'dashboard', name: 'Dashboard', dashboard: { rows: [] } }],

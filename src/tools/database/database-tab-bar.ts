@@ -464,7 +464,8 @@ export class DatabaseTabBar {
 
     const onEditView = this.options.onEditView;
     const onCopyLink = this.options.onCopyLink;
-    const onOpenFullPage = this.options.openFullPage?.();
+    // The page opens on the shown view: switching first would save the switch, and opening changes nothing.
+    const onOpenFullPage = viewId === this.options.activeViewId ? this.options.openFullPage?.() : undefined;
     // Notion's dashboard tab has no "Open as full page" (notion-motion.md Round 15 A).
     const dashboard = this.options.views.find((view) => view.id === viewId)?.type === 'dashboard';
     // Notion's order (feel/findings-toolbar V07).

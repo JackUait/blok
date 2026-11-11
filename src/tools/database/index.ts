@@ -8597,7 +8597,6 @@ export class DatabaseTool implements BlockTool {
 
       return;
     }
-    if (viewId !== this.activeViewId) this.switchView(viewId);
     this.enterFullPage();
   }
 

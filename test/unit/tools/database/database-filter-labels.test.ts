@@ -50,6 +50,11 @@ describe('database filter labels', () => {
     expect(typeof defaultFilterFor(prop('text')).id).toBe('string');
   });
 
+  it('starts a Created time filter at "is" with no value (notion-motion.md Round 13, r13-filter-ops-created.png)', () => {
+    expect(defaultFilterFor(prop('createdTime'))).toMatchObject({ operator: 'equals', value: null });
+    expect(filterPillLabel({ operator: 'equals', value: null }, prop('createdTime'), t)).toBe('Due');
+  });
+
   it('names a pill by its property alone until it has a value', () => {
     expect(filterPillLabel({ operator: 'contains', value: '' }, prop('text'), t)).toBe('Due');
     expect(filterPillLabel({ operator: 'contains', value: 'abc' }, prop('text'), t)).toBe('Due: abc');

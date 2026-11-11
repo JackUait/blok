@@ -666,6 +666,13 @@ describe('database-query — Phase 2 types in Phase 3 filters', () => {
     expect(ids(queryRows({ schema: people, rows, me: null }, { view: not }).rows)).toEqual(['mine', 'theirs']);
   });
 
+  it('hides nothing with a Created time "is" filter that has no date yet', () => {
+    const created: PropertyDefinition[] = [{ id: 'ct', name: 'Created time', type: 'createdTime', position: 'a0' }];
+    const v = view({ filters: [{ propertyId: 'ct', operator: 'equals', value: null }] });
+
+    expect(ids(queryRows({ schema: created, rows }, { view: v }).rows)).toEqual(['mine', 'theirs']);
+  });
+
   it('searches email text', () => {
     expect(ids(queryRows({ schema: people, rows }, { view: view(), search: '@x.io' }).rows)).toEqual(['mine']);
   });

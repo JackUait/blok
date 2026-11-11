@@ -146,7 +146,9 @@ describe('database filter labels', () => {
       expect(quantifierChoices().map((c) => c.labelKey)).toEqual([
         'tools.database.filterOperator.any', 'tools.database.filterOperator.none', 'tools.database.filterOperator.every',
       ]);
-      expect(operatorChoicesFor(names).map((c) => c.operator)).toEqual(operatorChoices('url').map((c) => c.operator));
+      expect(operatorChoicesFor(names, 'any:contains').map((c) => c.operator)).toEqual(operatorChoices('url').map((c) => c.operator));
+      // A filter saved before the text quantifiers keeps the id quantifiers.
+      expect(operatorChoicesFor(names, 'any').map((c) => c.operator)).toEqual(['any', 'none', 'every', 'is_empty', 'is_not_empty']);
     });
 
     it('starts at any + contains with no text', () => {
@@ -166,7 +168,7 @@ describe('database filter labels', () => {
     it('keeps the id quantifiers on other rollup lists, in Notion\'s order', () => {
       const tags = prop('multiSelect', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'tags', function: 'show_original' } });
 
-      expect(operatorChoicesFor(tags).map((c) => c.operator)).toEqual(['any', 'none', 'every', 'is_empty', 'is_not_empty']);
+      expect(operatorChoicesFor(tags, 'any').map((c) => c.operator)).toEqual(['any', 'none', 'every', 'is_empty', 'is_not_empty']);
       expect(defaultFilterFor(tags)).toMatchObject({ operator: 'any', value: [] });
     });
   });

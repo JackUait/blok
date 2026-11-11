@@ -13,12 +13,12 @@ import {
 } from './database-panel';
 import type { PanelPage } from './database-panel';
 import { propertyTypeMeta } from './database-property-types';
-import { isPageListRollup } from '../../shared/database/value-helpers';
 import {
   FILTERABLE_TYPES,
   WITHIN_OPERATORS,
   defaultFilterFor,
   filterPillLabel,
+  isQuantifiedText,
   joinOperator,
   keepLead,
   menuOperatorOf,
@@ -1668,7 +1668,7 @@ export class ViewSettingsPages {
               })),
             }),
           })] : []),
-          ...(isPageListRollup(property) ? [panelRow({
+          ...(isQuantifiedText(property, current.operator) ? [panelRow({
             label: this.ctx.i18n.t(`tools.database.filterOperator.${lead ?? 'any'}`),
             testId: 'database-filter-quantifier',
             opensPage: true,
@@ -1729,7 +1729,7 @@ export class ViewSettingsPages {
   private operators(property: PropertyDefinition, current: string, onPick: (operator: string) => void): PanelPage {
     return {
       title: property.name,
-      build: () => operatorChoicesFor(property).map((choice) => panelRow({
+      build: () => operatorChoicesFor(property, current).map((choice) => panelRow({
         label: this.ctx.i18n.t(choice.labelKey),
         testId: `database-filter-op-${choice.operator}`,
         checked: menuOperatorOf(current) === choice.operator,
@@ -1760,7 +1760,7 @@ export class ViewSettingsPages {
     }
     if (!operatorNeedsValue(operator)) return [];
     if (operator === 'relative_to_today') return this.relativeControls(value, update);
-    if (isPageListRollup(property)) {
+    if (isQuantifiedText(property, filter.operator)) {
       return [panelInput({
         value: typeof value === 'string' ? value : '',
         placeholder: this.t('filterValuePlaceholder'),

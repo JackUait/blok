@@ -5,6 +5,7 @@ import type { PanelPage } from './database-panel';
 import type { ViewSettingsContext } from './database-view-settings-panel';
 import { ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from './database-query';
 import {
+  isQuantifiedText,
   joinOperator,
   keepLead,
   menuOperatorOf,
@@ -15,7 +16,6 @@ import {
   relativeValueLabelKey,
   splitOperator,
 } from './database-filter-labels';
-import { isPageListRollup } from '../../shared/database/value-helpers';
 import { addFilterRule, emptyFilterTree, withEntryIds } from './filter-tree';
 import { RELATIVE_DATE_UNITS, RELATIVE_DATE_VALUES, formatRelativeSpan, parseRelativeSpan, relativeWindow, toLocalDay } from './relative-dates';
 import type { RelativeDateUnit, RelativeSpan } from './relative-dates';
@@ -185,7 +185,7 @@ class FilterChipPages {
         this.headerButton('database-filter-side', this.t(part === 'end' ? 'dateEnd' : 'dateStart'), () => panel.push(this.sides())),
         this.headerButton('database-filter-operator', opLabel, openOperators)
       );
-    } else if (isPageListRollup(property)) {
+    } else if (isQuantifiedText(property, filter.operator)) {
       lead.append(
         property.name,
         ' ',
@@ -252,7 +252,7 @@ class FilterChipPages {
       build: (panel) => {
         const current = this.current()?.operator ?? '';
 
-        return operatorChoicesFor(property).map((choice) => panelRow({
+        return operatorChoicesFor(property, current).map((choice) => panelRow({
           label: this.ctx.i18n.t(choice.labelKey),
           testId: `database-filter-op-${choice.operator}`,
           checked: menuOperatorOf(current) === choice.operator,
@@ -305,7 +305,7 @@ class FilterChipPages {
 
     if (isDate && spanOf(operator, value) !== undefined) return this.relativeEditor(spanOf(operator, value) ?? DEFAULT_SPAN);
     if (!operatorNeedsValue(operator)) return [];
-    if (isPageListRollup(property)) return [this.valueInput(typeof value === 'string' ? value : '', (text) => this.update({ value: text }))];
+    if (isQuantifiedText(property, filter.operator)) return [this.valueInput(typeof value === 'string' ? value : '', (text) => this.update({ value: text }))];
 
     switch (property.type) {
       case 'select':
@@ -669,7 +669,7 @@ export const openFilterChip = (anchor: HTMLElement, ctx: ViewSettingsContext, fi
   const filter = withEntryIds(ctx.view().filters).find((f) => f.id === filterId);
   const property = ctx.schema().find((p) => p.id === filter?.propertyId);
   // A rollup of the Name has a text field, as Notion's 220-wide popover shows (r13-filter-ops-rollup.png).
-  const listed = property !== undefined && LIST_FILTER_TYPES.includes(property.type) && !isPageListRollup(property);
+  const listed = property !== undefined && filter !== undefined && LIST_FILTER_TYPES.includes(property.type) && !isQuantifiedText(property, filter.operator);
   const panel = new DatabasePanel({
     anchor,
     root: new FilterChipPages(ctx, filterId).root(),

@@ -717,6 +717,28 @@ describe('DatabaseViewControls', () => {
       expect(controls.effective(saved.view).filters[0]).toMatchObject({ operator: 'every:starts_with', value: 'x' });
     });
 
+    // Saved before the text quantifiers: a bare "any" with related row ids keeps the row picker and its pill text.
+    it('keeps an older "any" + row ids filter on the related-row picker', () => {
+      const env = setup({ schema: () => [...schema, names], levers: { relatedRows: () => [{ id: 'r1', title: 'Beta' }] } });
+
+      env.saved.view = { ...env.saved.view, filters: [{ id: 'f1', propertyId: 'names', operator: 'any', value: ['r1'] }] };
+      env.controls.refresh();
+
+      expect(text(q('database-filter-pill-f1'))).toBe('Names: Beta');
+      expect(q('database-filter-pill-f1')?.hasAttribute('data-active')).toBe(true);
+
+      click('database-filter-pill-f1');
+
+      expect(q('database-filter-quantifier')).toBeNull();
+      expect(q('database-filter-value')).toBeNull();
+      expect(q('database-filter-related-r1')?.getAttribute('aria-checked')).toBe('true');
+
+      click('database-filter-operator');
+      const ops = [...document.querySelectorAll('[data-blok-testid^="database-filter-op-"]')].map((el) => el.getAttribute('data-blok-testid')?.replace('database-filter-op-', ''));
+
+      expect(ops).toEqual(['any', 'none', 'every', 'is_empty', 'is_not_empty']);
+    });
+
     it('writes the typed text', () => {
       const { controls, saved } = open({ operator: 'any:contains', value: '' });
       const input = q('database-filter-value') as HTMLInputElement;

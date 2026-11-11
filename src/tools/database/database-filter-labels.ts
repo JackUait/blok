@@ -113,6 +113,16 @@ export const splitOperator = (operator: string): { lead?: string; operator: stri
 
 export const joinOperator = (lead: string | undefined, operator: string): string => (lead === undefined ? operator : `${lead}:${operator}`);
 
+/**
+ * A Name rollup filter in Notion's form: a quantifier, then a text operator. Filters saved
+ * before it (a bare `any` with row ids, a plain text operator) keep the row picker.
+ */
+export const isQuantifiedText = (property: PropertyDefinition, operator: string): boolean => {
+  const { lead } = splitOperator(operator);
+
+  return isPageListRollup(property) && lead !== undefined && lead !== 'end';
+};
+
 /** `next` with the lead part `current` carries, unless `next` brings its own. */
 export const keepLead = (current: string, next: string): string =>
   (splitOperator(next).lead === undefined ? joinOperator(splitOperator(current).lead, next) : next);
@@ -127,8 +137,8 @@ export const isRollupList = (property: Pick<PropertyDefinition, 'type' | 'rollup
  * Operators for a property as its value shows: a rollup list gets any / every / none.
  * A rollup of the Name picks its quantifier apart, then a text operator.
  */
-export const operatorChoicesFor = (property: PropertyDefinition): OperatorChoice[] => {
-  if (isPageListRollup(property)) return TEXT;
+export const operatorChoicesFor = (property: PropertyDefinition, operator: string): OperatorChoice[] => {
+  if (isQuantifiedText(property, operator)) return TEXT;
 
   return isRollupList(property) ? QUANTIFIED : OPERATORS[property.type];
 };
@@ -283,7 +293,7 @@ export const filterValueText = (
   if (property.type === 'person' || property.type === 'createdBy' || property.type === 'lastEditedBy') {
     return idsOf(value).map((id) => (id === ME_FILTER_VALUE ? t('tools.database.filterMe') : personName(id) ?? '')).filter((name) => name !== '').join(', ');
   }
-  if (isPageListRollup(property)) return typeof value === 'string' ? value : '';
+  if (isQuantifiedText(property, filter.operator)) return typeof value === 'string' ? value : '';
   if (property.type === 'relation') {
     return idsOf(value).map((id) => (id === THIS_PAGE_FILTER_VALUE ? t('tools.database.filterThisPage') : rowTitle(id) ?? '')).filter((name) => name !== '').join(', ');
   }

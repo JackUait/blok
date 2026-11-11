@@ -322,17 +322,35 @@ export const slotPoint = async (page: Page, tableId: string, row: number, col: n
 
 /** Drag a cell range the way a user does (pointer from slot centre to slot centre). */
 export const selectCellRange = async (page: Page, tableId: string, r0: number, c0: number, r1: number, c1: number): Promise<void> => {
+  if (r0 === r1 && c0 === c1) {
+    await clickCellPadding(page, tableId, r0, c0);
+
+    return;
+  }
+
   const a = await slotPoint(page, tableId, r0, c0);
   const b = await slotPoint(page, tableId, r1, c1);
 
   await page.mouse.move(a.x, a.y);
   await page.mouse.down();
-  // One cell is selected by a plain click. A tiny drag over the cell text
-  // selects letters instead, and the copy then carries only those letters.
-  if (r0 !== r1 || c0 !== c1) {
-    await page.mouse.move(b.x, b.y, { steps: 12 });
-  }
+  await page.mouse.move(b.x, b.y, { steps: 12 });
   await page.mouse.up();
+};
+
+/**
+ * Select one cell with a click on its bottom padding. The centre is unsafe:
+ * a tiny drag there selects letters, and a click on an image opens its preview.
+ * The side edges hold the column resize handles, which ignore the press.
+ */
+const clickCellPadding = async (page: Page, tableId: string, row: number, col: number): Promise<void> => {
+  const cell = page.locator(`[data-blok-id="${tableId}"] [data-blok-table-cell][data-blok-table-cell-row="${row}"][data-blok-table-cell-col="${col}"]`).first();
+  const box = await cell.boundingBox();
+
+  if (!box) {
+    throw new Error(`no cell box ${row},${col}`);
+  }
+
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height - 3);
 };
 
 /** Rectangle-select a top-level block by dragging from the left page margin over it. */

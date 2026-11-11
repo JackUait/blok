@@ -1589,8 +1589,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_CALCMENU_BYTES = 800;
     // Round 12 lane calcsub: the table's 99+ row 72.4 tall like the board's, and an 8px divider under it.
     const DATABASE_CALCSUB_BYTES = 644;
-    // Round V1 lane fills: the group caret and peek label hover fills fade in over 20ms ease-in; the filtered-empty pair stays in the visible column.
-    const DATABASE_FILLS_BYTES = 271 + 541;
+    // Round V1 lane fills: the group caret and peek label hover fills fade in over 20ms ease-in; the filtered-empty pair stays in the visible column; the table bar hides Filter, Sort and Automations.
+    const DATABASE_FILLS_BYTES = 271 + 541 + 265;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

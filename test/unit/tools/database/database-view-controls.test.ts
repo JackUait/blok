@@ -110,6 +110,18 @@ describe('DatabaseViewControls', () => {
     expect(q('database-toolbar-settings')?.hasAttribute('data-blok-database-toolbar-foldable')).toBe(false);
   });
 
+  // notion-live/rowdrag-mid.png: with rows picked, Notion's bar drops Filter, Sort and Automations; ✨, search, settings and New stay.
+  it('marks Filter, Sort and Automations as the icons the table selection bar hides', () => {
+    setup({ levers: {
+      automations: { read: () => undefined, schema: () => schema, views: () => [], writable: () => true, write: () => true },
+      autofill: { properties: () => schema, writable: () => true, open: vi.fn() },
+    } });
+    const hidden = [...document.querySelectorAll<HTMLElement>('[data-blok-database-toolbar-selection-hides]')]
+      .map((el) => el.getAttribute('data-blok-testid'));
+
+    expect(hidden).toEqual(['database-toolbar-filter', 'database-toolbar-sort', 'database-toolbar-automations']);
+  });
+
   describe('"No date (N)" for a calendar or timeline (findings C03/C04)', () => {
     it('shows the view\'s count left of Filter and opens the view\'s popover from itself', () => {
       const open = vi.fn();

@@ -10170,6 +10170,11 @@ button[data-blok-database-table-group-count]:hover {
   margin-block: auto;
 }
 
+/* notion-live/rowdrag-mid.png: the bar replaces Filter, Sort and Automations; the other icons and New stay put. */
+[data-blok-database-selecting="table"] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-selection-hides] {
+  visibility: hidden;
+}
+
 /* research/26 §3b, §4a: segments sit 1px apart; a shadow on the end side divides them. */
 [data-blok-database-table-selection-bar] > :not(:last-child) {
   box-shadow: var(--blok-database-table-border) 1px 0 0 0;

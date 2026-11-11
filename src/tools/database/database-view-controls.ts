@@ -245,6 +245,9 @@ export class DatabaseViewControls {
     for (const icon of [this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton]) {
       icon.setAttribute('data-blok-database-toolbar-foldable', '');
     }
+    for (const icon of [this.filterButton, this.sortButton, this.automationsButton]) {
+      icon.setAttribute('data-blok-database-toolbar-selection-hides', '');
+    }
     this.searchInput = document.createElement('input');
     this.searchInput.type = 'search';
     this.searchInput.hidden = true;

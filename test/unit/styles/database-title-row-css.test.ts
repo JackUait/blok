@@ -230,3 +230,12 @@ describe('a narrow view bar folds like Notion (notion-spec-2 §26.1)', () => {
     expect(body).toMatch(/border-radius: var\(--blok-radius-pill\)/);
   });
 });
+
+// notion-live/rowdrag-mid.png, research/08:28-31: the table bar replaces Filter, Sort and Automations,
+// in the view bar and in the title row of a one-view database.
+describe('the table selection bar hides Filter, Sort and Automations', () => {
+  it('hides them while rows are picked, and only then', () => {
+    expect(rule('[data-blok-database-selecting="table"] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-selection-hides]'))
+      .toMatch(/visibility: hidden/);
+  });
+});

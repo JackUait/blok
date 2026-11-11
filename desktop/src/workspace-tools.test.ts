@@ -16,7 +16,7 @@ import { describe, expect, it } from 'vitest';
 describe('desktop tool registry', () => {
   const source = readFileSync(join(process.cwd(), 'src/workspace.ts'), 'utf8');
 
-  it.each(['code', 'callout', 'toggle', 'quote', 'divider'])('registers the %s block', (tool) => {
+  it.each(['code', 'callout', 'toggle', 'quote', 'divider', 'image', 'table_of_contents'])('registers the %s block', (tool) => {
     expect(source).toMatch(new RegExp(`\\b${tool}:\\s*\\{\\s*class:`, 'i'));
   });
 

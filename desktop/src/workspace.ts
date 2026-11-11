@@ -1,5 +1,5 @@
 import { Blok, defaultTools, type OutputData } from '@bloklabs/core/full';
-import { Callout, Code, Database, DatabaseComment, DatabaseRow, Divider, Page, Quote, Table, Toggle, type PageConfig } from '@bloklabs/core/tools';
+import { Callout, Code, Database, DatabaseComment, DatabaseRow, Divider, Image, Page, Quote, Table, TableOfContents, Toggle, type PageConfig } from '@bloklabs/core/tools';
 import { createPageFrame, type PageFrame, type ShellPage, type SidebarAction } from '@blok/sidebar';
 import { loadIndex, readFile, writeFile, type DesktopPage, type WorkspaceIndex } from './storage';
 import { createDesktopFooter, readAppearance } from './settings';
@@ -22,6 +22,10 @@ const desktopTools = {
   toggle: { class: Toggle },
   quote: { class: Quote },
   divider: { class: Divider },
+  // A page about a UI needs to show it; an explanation long enough to scroll needs
+  // its own map. Both ship in the core and were simply never named here.
+  image: { class: Image },
+  table_of_contents: { class: TableOfContents },
 };
 
 export interface Workspace {

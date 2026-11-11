@@ -605,7 +605,7 @@ test.describe('blok i18n', () => {
 
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();
 
-      // Open "Convert to" menu
+      // Open "Turn into" menu
       const convertToButton = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-blok-item-name="convert-to"]`);
 
       await expect(convertToButton).toBeVisible();
@@ -700,7 +700,7 @@ test.describe('blok i18n', () => {
   });
 
   test.describe('ui inline toolbar converter', () => {
-    test('should translate "Convert to" label in inline toolbar', async ({ page }) => {
+    test('should translate "Turn into" label in inline toolbar', async ({ page }) => {
       const translatedConvertTo = 'Конвертировать в';
 
       // Create a simple header tool in the browser context
@@ -809,7 +809,7 @@ test.describe('blok i18n', () => {
 
       const inlinePopover = await openInlineToolbarPopover(page);
 
-      // Look for "Convert to" button/item in inline toolbar
+      // Look for "Turn into" button/item in inline toolbar
       const convertToButton = inlinePopover.locator('[data-blok-item-name="convert-to"]');
 
       await expect(convertToButton).toHaveCount(1);
@@ -824,7 +824,7 @@ test.describe('blok i18n', () => {
 
       // Verify the nested popover contains conversion options (translation is applied via i18n API)
       // The hint tooltip cannot be verified here because tooltips are suppressed when popovers are open
-      // The "Convert to" translation is verified indirectly - if the i18n config is applied correctly,
+      // The "Turn into" translation is verified indirectly - if the i18n config is applied correctly,
       // the nested popover will open and show the conversion options
       const headerOption = nestedPopover.locator('[data-blok-item-name="header"]');
 
@@ -1000,7 +1000,7 @@ test.describe('blok i18n', () => {
 
       const inlinePopover = await openInlineToolbarPopover(page);
 
-      // Open "Convert to" menu
+      // Open "Turn into" menu
       const convertToButton = inlinePopover.locator('[data-blok-item-name="convert-to"]');
 
       await expect(convertToButton).toBeVisible();

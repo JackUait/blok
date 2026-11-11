@@ -171,6 +171,16 @@ describe('block settings "Turn into" announces the conversion', () => {
     vi.restoreAllMocks();
   });
 
+  it('names the conversion item "Turn into", like Notion', async () => {
+    const { settings, block } = buildSettings();
+
+    await settings.open(block);
+
+    const item = document.querySelector<HTMLElement>('[data-blok-item-name="convert-to"]');
+
+    expect(item?.textContent?.trim()).toBe('Turn into');
+  });
+
   it('says Converted to Heading for one block', async () => {
     const { settings, block, convert } = buildSettings();
 

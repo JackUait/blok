@@ -63,7 +63,7 @@ for (const width of [1280, 390]) {
 
         await expect.poll(() => color.evaluate(element => element.previousElementSibling?.getAttribute('role'))).toBe('separator');
         await expect(settings.getByRole('separator')).toHaveCount(4);
-        await settings.getByRole('menuitem', { name: 'Convert to', exact: true }).click();
+        await settings.getByRole('menuitem', { name: 'Turn into', exact: true }).click();
         const conversion = page.getByTestId('popover-container').filter({
           has: page.locator('[data-blok-convert-item]'),
         }).last();
@@ -98,7 +98,7 @@ for (const width of [1280, 390]) {
 
           expect(headings).toHaveLength(6);
           expect(Math.min(...headings)).toBeGreaterThanOrEqual(44);
-          await settings.getByRole('menuitem', { name: 'Convert to', exact: true }).click();
+          await settings.getByRole('menuitem', { name: 'Turn into', exact: true }).click();
           const conversion = page.getByTestId('popover-container').filter({
             has: page.locator('[data-blok-convert-item]'),
           }).last();
@@ -145,7 +145,7 @@ for (const width of [1280, 390]) {
             await page.getByTestId('block-wrapper').filter({ has: heading }).evaluate((wrapper, point) => {
               wrapper.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2, ...point }));
             }, { clientX: headingBox.x + headingBox.width - 30, clientY: headingBox.y + 10 });
-            await page.getByTestId('block-tunes-popover').getByRole('menuitem', { name: 'Convert to', exact: true }).click();
+            await page.getByTestId('block-tunes-popover').getByRole('menuitem', { name: 'Turn into', exact: true }).click();
             const conversion = page.getByTestId('popover-container').filter({
               has: page.locator('[data-blok-convert-item]'),
             }).last();
@@ -170,13 +170,13 @@ for (const width of [1280, 390]) {
 
           await page.getByText('A better way to work', { exact: true }).click({ button: 'right' });
           expect(await contextMenuPrevented).toBe(false);
-          await expect(page.getByTestId('block-tunes-popover').getByRole('menuitem', { name: 'Convert to', exact: true })).toBeHidden();
+          await expect(page.getByTestId('block-tunes-popover').getByRole('menuitem', { name: 'Turn into', exact: true })).toBeHidden();
         });
 
         test('search narrows the conversion list without adding dividers and clearing restores it', async ({ page }) => {
           const settings = page.getByTestId('block-tunes-popover');
 
-          await settings.getByRole('menuitem', { name: 'Convert to', exact: true }).click();
+          await settings.getByRole('menuitem', { name: 'Turn into', exact: true }).click();
           const conversion = page.getByTestId('popover-container').filter({
             has: page.locator('[data-blok-convert-item]'),
           }).last();
@@ -218,7 +218,7 @@ for (const width of [1280, 390]) {
       test('conversion labels fit and choices stay keyboard actionable', async ({ page }) => {
         const settings = page.getByTestId('block-tunes-popover');
 
-        await settings.getByRole('menuitem', { name: 'Convert to', exact: true }).click();
+        await settings.getByRole('menuitem', { name: 'Turn into', exact: true }).click();
         const conversion = page.getByTestId('popover-container').filter({
           has: page.locator('[data-blok-convert-item]'),
         }).last();
@@ -240,7 +240,7 @@ for (const width of [1280, 390]) {
         expect(rect?.x).toBeGreaterThanOrEqual(0);
         expect((rect?.x ?? 0) + (rect?.width ?? 0)).toBeLessThanOrEqual(width);
         const keyboardTarget = width < 650
-          ? conversion.getByRole('menu', { name: 'Convert to', exact: true })
+          ? conversion.getByRole('menu', { name: 'Turn into', exact: true })
           : conversion.getByRole('combobox');
         const order = ['Text', 'Heading 1', 'Heading 2', 'Heading 3'];
 

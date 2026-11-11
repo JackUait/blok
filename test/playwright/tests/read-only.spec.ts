@@ -590,7 +590,7 @@ test.describe('read-only mode', () => {
     await expect(popover.getByText('Delete')).toHaveCount(0);
     await expect(popover.getByText('Move up')).toHaveCount(0);
     await expect(popover.getByText('Move down')).toHaveCount(0);
-    await expect(popover.getByText('Convert to')).toHaveCount(0);
+    await expect(popover.getByText('Turn into')).toHaveCount(0);
   });
 
   test('clicking copy-link in read-only mode writes URL to clipboard and shows success notifier', async ({ page, context }) => {

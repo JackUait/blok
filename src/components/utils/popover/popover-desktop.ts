@@ -195,7 +195,7 @@ export class PopoverDesktop extends PopoverAbstract {
    * after the popover enters the CSS Top Layer (via `showPopover()`).
    * Without this guard, the layout-triggered hover would open whatever
    * nested submenu happens to sit under the pointer the moment the parent
-   * popover appears (e.g. "Convert to" auto-expands the moment block
+   * popover appears (e.g. "Turn into" auto-expands the moment block
    * settings opens).
    *
    * The synthesized hit test fires at the same screen coordinates where
@@ -2278,7 +2278,7 @@ export class PopoverDesktop extends PopoverAbstract {
   /**
    * Filters out top-level items whose title duplicates a promoted item's title.
    * Prevents the same entry from appearing both at the top level and under a group
-   * like "Convert to" during search.
+   * like "Turn into" during search.
    * @param topLevel - top-level items matching the search query
    * @param promoted - promoted items from nested children
    */

@@ -1358,10 +1358,10 @@ test.describe('api.blocks', () => {
       // Check if delete tune is visible (debug)
       await expect(page.locator(`${BLOCK_TUNES_SELECTOR} [data-blok-item-name="delete"]`)).toBeVisible();
 
-      // Check that "Convert to" menu item is visible
+      // Check that "Turn into" menu item is visible
       await expect(page.locator(CONVERT_TO_SELECTOR)).toBeVisible();
 
-      // Open "Convert to" submenu
+      // Open "Turn into" submenu
       const convertToMenu = await openConvertToMenu(page);
 
       // Check that both header and quote tools are available
@@ -1460,7 +1460,7 @@ test.describe('api.blocks', () => {
 
       await openBlockSettings(page);
 
-      // Check that "Convert to" menu item is NOT visible (block has no export config)
+      // Check that "Turn into" menu item is NOT visible (block has no export config)
       await expect(page.locator(CONVERT_TO_SELECTOR)).toBeHidden();
     });
 

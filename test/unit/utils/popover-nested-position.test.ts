@@ -25,7 +25,7 @@ describe('resolveNestedPopoverSide', () => {
   });
 
   it('flips to the right when parent is clamped to the left edge (placeLeftOfAnchor regression)', () => {
-    // Regression guard for the "Convert to" bug: BlockSettings opens with
+    // Regression guard for the "Turn into" bug: BlockSettings opens with
     // placeLeftOfAnchor on the leftmost block, which clamps its left edge to 0.
     // The nested submenu must NOT render at negative x.
     const { openLeft } = resolveNestedPopoverSide({

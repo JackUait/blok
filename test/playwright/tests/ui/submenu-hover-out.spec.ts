@@ -39,7 +39,7 @@ test.beforeEach(async ({ page }) => {
   await page.getByTestId('settings-toggler').click();
 });
 
-for (const [name, keyboardFirst] of [['Convert to', false], ['Color', false], ['Color', true]] as const) {
+for (const [name, keyboardFirst] of [['Turn into', false], ['Color', false], ['Color', true]] as const) {
   test(`"${name}" submenu closes and its row clears when the pointer leaves the menu${keyboardFirst ? ' (after a key press)' : ''}`, async ({ page }) => {
     const menu = page.getByTestId('block-tunes-popover');
     const row = menu.getByRole('menuitem', { name, exact: true });
@@ -71,7 +71,7 @@ for (const [name, keyboardFirst] of [['Convert to', false], ['Color', false], ['
 
 test('resting on a plain row closes the open submenu and lights that row', async ({ page }) => {
   const menu = page.getByTestId('block-tunes-popover');
-  const convert = menu.getByRole('menuitem', { name: 'Convert to', exact: true });
+  const convert = menu.getByRole('menuitem', { name: 'Turn into', exact: true });
   const remove = menu.getByRole('menuitem', { name: 'Delete', exact: true });
 
   await hoverRow(page, convert);

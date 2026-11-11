@@ -394,7 +394,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const convertToOption = page.getByTestId('popover-item').filter({ hasText: 'Convert to' });
+      const convertToOption = page.getByTestId('popover-item').filter({ hasText: 'Turn into' });
 
       await expect(convertToOption).toBeVisible();
     });
@@ -406,7 +406,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const convertToOption = page.getByTestId('popover-item').filter({ hasText: 'Convert to' });
+      const convertToOption = page.getByTestId('popover-item').filter({ hasText: 'Turn into' });
 
       await convertToOption.dispatchEvent('mouseover');
 

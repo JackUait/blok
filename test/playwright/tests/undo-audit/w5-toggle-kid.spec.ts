@@ -123,7 +123,7 @@ test.describe('toggle to text keeps its kids nested on screen', () => {
     await page.locator('[data-blok-id="b1"]').hover({ position: { x: 10, y: 10 } });
     await page.locator(SETTINGS_BUTTON).click();
     await expect(page.locator(TUNES_POPOVER)).toBeVisible();
-    await page.getByRole('menuitem', { name: 'Convert to', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Turn into', exact: true }).click();
     await page.locator('[data-blok-nested="true"]').getByRole('menuitem', { name: 'Text', exact: true }).click();
     await page.keyboard.press('Escape');
     await gap(page);

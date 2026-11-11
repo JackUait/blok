@@ -721,7 +721,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     /**
      * For a multi-block selection, "Turn into columns" belongs in the same
-     * "Convert to" submenu as the other tool conversions. The selected ids are
+     * "Turn into" submenu as the other tool conversions. The selected ids are
      * captured HERE, at build time — reading BlockSelection.selectedBlocks
      * inside onActivate returns an empty list, because the document mousedown
      * that fires when the popover item is clicked clears the block selection

@@ -221,7 +221,7 @@ test.describe('Toggle heading conversion adopts its section (Notion parity)', ()
     // Open block settings on the selection and convert via the real menu.
     await page.locator('[data-blok-id="c"] [contenteditable]').hover();
     await page.locator('[data-blok-testid="settings-toggler"]').click();
-    await page.getByRole('menuitem', { name: 'Convert to', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Turn into', exact: true }).click();
     await page.locator('[data-blok-nested="true"]').getByRole('menuitem', { name: 'Toggle heading 1', exact: true }).click();
 
     // Every original block became a root-level toggle heading; none swallowed

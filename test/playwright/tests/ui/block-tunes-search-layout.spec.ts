@@ -68,7 +68,7 @@ test('block menu keeps its size and search field while results come and go', asy
   const search = popover.getByRole('combobox');
   const idle = await measure(popover);
 
-  // "a" and "head" pull in Convert to entries; "aa" and "dup" do not.
+  // "a" and "head" pull in Turn into entries; "aa" and "dup" do not.
   for (const [query, convertMatches] of [['a', 1], ['aa', 0], ['a', 1], ['head', 1], ['dup', 0]] as const) {
     await search.fill(query);
     await expect(popover.getByRole('menuitem', { name: 'Heading 1', exact: true })).toHaveCount(convertMatches);
@@ -77,7 +77,7 @@ test('block menu keeps its size and search field while results come and go', asy
   }
 });
 
-test('block menu search focuses the first result when Convert to entries match', async ({ page }) => {
+test('block menu search focuses the first result when Turn into entries match', async ({ page }) => {
   await openBlockTunes(page);
   const popover = page.getByTestId('block-tunes-popover');
 
@@ -95,7 +95,7 @@ for (const surface of ['settings', 'inline'] as const) {
       await page.getByTestId('inline-toolbar').getByRole('menuitem', { name: 'Text', exact: true }).click();
     } else {
       await openBlockTunes(page);
-      await page.getByRole('menuitem', { name: 'Convert to', exact: true }).click();
+      await page.getByRole('menuitem', { name: 'Turn into', exact: true }).click();
     }
 
     const heading = page.getByRole('menuitem', { name: 'Heading 1', exact: true });

@@ -113,7 +113,7 @@ test('inline toolbar submenu stays beside its trigger when the page scrolls', as
 test('block settings submenu paints above a fixed host header', async ({ page }) => {
   await page.getByText(TEXT, { exact: true }).click();
   await page.getByTestId('settings-toggler').click();
-  await page.getByRole('menuitem', { name: 'Convert to', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Turn into', exact: true }).click();
   const search = conversionMenu(page).getByTestId('popover-search-field');
 
   await expect(search).toBeVisible();

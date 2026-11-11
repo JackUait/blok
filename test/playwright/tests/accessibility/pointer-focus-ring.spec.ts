@@ -261,7 +261,7 @@ test.describe('Focus-Visible Law — a mouse gesture never paints a focus afford
     await page.locator(CONVERT_TO_SELECTOR).click();
     await expect(page.locator('[data-blok-nested="true"] [data-blok-testid="popover-container"]')).toBeVisible();
 
-    await expectNoFocusAffordance(page, 'click the Convert to item');
+    await expectNoFocusAffordance(page, 'click the Turn into item');
   });
 
   test('closing a menu by clicking outside leaves no ring or cursor', async ({ page }) => {
@@ -332,7 +332,7 @@ test.describe('Focus-Visible Law — a mouse gesture never paints a focus afford
 
     await inlineToolbar.locator(`${POPOVER_ITEM_SELECTOR}[data-blok-item-name="bold"]`).click();
 
-    await expectNoFocusAffordance(page, 'click Bold while the Convert to submenu is open');
+    await expectNoFocusAffordance(page, 'click Bold while the Turn into submenu is open');
   });
 
   test('toggling an inline submenu shut with a second click leaves no cursor on the trigger', async ({ page }) => {
@@ -350,7 +350,7 @@ test.describe('Focus-Visible Law — a mouse gesture never paints a focus afford
     await convertTo.click();
     await expect(page.locator(NESTED_POPOVER_SELECTOR)).toBeHidden();
 
-    await expectNoFocusAffordance(page, 'click the Convert to trigger a second time to close it');
+    await expectNoFocusAffordance(page, 'click the Turn into trigger a second time to close it');
   });
 
   /**

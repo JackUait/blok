@@ -166,7 +166,7 @@ describe('PopoverItemDefault — construction', () => {
 
   it('adds has-children marker, aria-expanded and a chevron for items with children', () => {
     const item = makeItem({
-      title: 'Convert to',
+      title: 'Turn into',
       children: { items: [{ title: 'Child A', onActivate: () => {} }] },
     });
     const root = getElement(item);

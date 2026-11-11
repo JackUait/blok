@@ -325,7 +325,7 @@ test.describe('paragraph tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const convertToOption = page.getByTestId('popover-item').filter({ hasText: 'Convert to' });
+      const convertToOption = page.getByTestId('popover-item').filter({ hasText: 'Turn into' });
 
       await expect(convertToOption).toBeVisible();
     });
@@ -349,7 +349,7 @@ test.describe('paragraph tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const convertToOption = page.getByTestId('popover-item').filter({ hasText: 'Convert to' });
+      const convertToOption = page.getByTestId('popover-item').filter({ hasText: 'Turn into' });
 
       // dispatchEvent instead of hover() because the nested popover opens on
       // hover and overlaps the trigger item, failing Playwright's intercept check

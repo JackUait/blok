@@ -106,7 +106,7 @@ test.describe('toggle heading turn-into releases children', () => {
 
     await expect(page.locator(NESTED_POPOVER)).toBeVisible();
 
-    // Paragraph entry in the "Convert to" submenu (toolbox title "Text").
+    // Paragraph entry in the "Turn into" submenu (toolbox title "Text").
     const paragraphEntry = page
       .locator(`${NESTED_POPOVER} [data-blok-testid="popover-item"]`)
       .filter({ hasText: 'Text' })

@@ -71,7 +71,7 @@ test.describe('turn selection into columns', () => {
     await page.setViewportSize({ width: 1024, height: 800 });
   });
 
-  test('"Turn into columns" lives inside the "Convert to" submenu, not at top level', async ({ page }) => {
+  test('"Turn into columns" lives inside the "Turn into" submenu, not at top level', async ({ page }) => {
     await createBlok(page, {
       blocks: [
         { id: 'a', type: 'paragraph', data: { text: 'Alpha' } },
@@ -82,7 +82,7 @@ test.describe('turn selection into columns', () => {
     await selectBlocksByIndex(page, [0, 1]);
     await openSettingsFor(page, 'Beta');
 
-    // It must live under "Convert to"
+    // It must live under "Turn into"
     const convertTo = page.locator(CONVERT_TO_OPTION);
 
     await expect(convertTo).toBeVisible();
@@ -91,7 +91,7 @@ test.describe('turn selection into columns', () => {
     await expect(page.locator(NESTED_POPOVER)).toBeVisible();
     await expect(page.locator(NESTED_TURN_INTO_COLUMNS)).toBeVisible();
 
-    // Inside "Convert to" it reads as the plain tool name, like every other entry.
+    // Inside "Turn into" it reads as the plain tool name, like every other entry.
     await expect(page.locator(NESTED_TURN_INTO_COLUMNS)).toHaveText('Columns');
 
     // The ONLY "turn-into-columns" entry is the nested one — never top-level.
@@ -99,7 +99,7 @@ test.describe('turn selection into columns', () => {
     await expect(page.locator(NESTED_TURN_INTO_COLUMNS)).toHaveCount(1);
   });
 
-  test('choosing "Convert to → Turn into columns" wraps the selection one-per-column', async ({ page }) => {
+  test('choosing "Turn into → Columns" wraps the selection one-per-column', async ({ page }) => {
     await createBlok(page, {
       blocks: [
         { id: 'a', type: 'paragraph', data: { text: 'Alpha' } },

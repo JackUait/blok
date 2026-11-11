@@ -86,7 +86,7 @@ test.describe('Block settings active state', () => {
 
     /**
      * No items in the block tunes popover should have the active attribute.
-     * The 'Convert to' and 'Delete' items should not display as selected
+     * The 'Turn into' and 'Delete' items should not display as selected
      * when they are not actually in an active state.
      */
     const activeItems = page.locator(`${POPOVER_CONTAINER_SELECTOR} [data-blok-popover-item-active]`);
@@ -98,7 +98,7 @@ test.describe('Block settings active state', () => {
     await openBlockSettings(page);
 
     /**
-     * Hover the 'Convert to' item to open the nested popover
+     * Hover the 'Turn into' item to open the nested popover
      */
     const convertToItem = page.locator(CONVERT_TO_OPTION_SELECTOR);
 

@@ -412,7 +412,7 @@ test.describe('ui.block-tunes', () => {
 
       const convertToOption = page
         .getByTestId('popover-item')
-        .filter({ hasText: 'Convert to' });
+        .filter({ hasText: 'Turn into' });
 
       await expect(convertToOption).toBeVisible();
 
@@ -659,7 +659,7 @@ test.describe('ui.block-tunes', () => {
 
       const convertToOption = page
         .getByTestId('popover-item')
-        .filter({ hasText: 'Convert to' });
+        .filter({ hasText: 'Turn into' });
 
       await convertToOption.dispatchEvent('mouseover');
 
@@ -744,7 +744,7 @@ test.describe('ui.block-tunes', () => {
 
       const convertToOption = page
         .getByTestId('popover-item')
-        .filter({ hasText: 'Convert to' });
+        .filter({ hasText: 'Turn into' });
 
       // dispatchEvent instead of hover() because the nested popover that opens
       // overlaps the trigger item and fails Playwright's actionability check
@@ -786,7 +786,7 @@ test.describe('ui.block-tunes', () => {
 
       const convertToOption = page
         .getByTestId('popover-item')
-        .filter({ hasText: 'Convert to' });
+        .filter({ hasText: 'Turn into' });
 
       // dispatchEvent instead of hover() because the nested popover that opens
       // overlaps the trigger item and fails Playwright's actionability check

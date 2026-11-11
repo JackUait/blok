@@ -28,7 +28,7 @@ describe('filterItems with promoted items', () => {
         createItemParams({ title: 'Paragraph', name: 'paragraph' }),
         createItemParams({ title: 'Heading', name: 'heading' }),
         {
-          title: 'Convert to',
+          title: 'Turn into',
           icon: '<svg></svg>',
           name: 'convert-to',
           children: {
@@ -57,7 +57,7 @@ describe('filterItems with promoted items', () => {
 
     // Group separator should exist
     const separator = itemsContainer?.querySelector('[data-blok-promoted-group-label]');
-    expect(separator?.textContent).toBe('Convert to');
+    expect(separator?.textContent).toBe('Turn into');
     expect(separator?.getAttribute('role')).toBe('separator');
   });
 
@@ -66,7 +66,7 @@ describe('filterItems with promoted items', () => {
       items: [
         createItemParams({ title: 'Paragraph', name: 'paragraph' }),
         {
-          title: 'Convert to',
+          title: 'Turn into',
           icon: '<svg></svg>',
           name: 'convert-to',
           children: {
@@ -85,7 +85,7 @@ describe('filterItems with promoted items', () => {
     const promotedGroupLabel = itemsContainer?.querySelector('[data-blok-promoted-group-label]');
 
     expect(promotedGroupLabel).not.toBeNull();
-    expect(promotedGroupLabel?.textContent).toBe('Convert to');
+    expect(promotedGroupLabel?.textContent).toBe('Turn into');
     // Sentence case, not all-caps
     expect(promotedGroupLabel?.classList.contains('uppercase')).toBe(false);
   });
@@ -173,7 +173,7 @@ describe('filterItems with promoted items', () => {
       items: [
         createItemParams({ title: 'Paragraph', name: 'paragraph' }),
         {
-          title: 'Convert to',
+          title: 'Turn into',
           icon: '<svg></svg>',
           name: 'convert-to',
           children: {
@@ -200,7 +200,7 @@ describe('filterItems with promoted items', () => {
     const popover = new PopoverDesktop({
       items: [
         {
-          title: 'Convert to',
+          title: 'Turn into',
           icon: '<svg></svg>',
           name: 'convert-to',
           children: {
@@ -227,7 +227,7 @@ describe('filterItems with promoted items', () => {
       items: [
         createItemParams({ title: 'Heading', name: 'heading' }),
         {
-          title: 'Convert to',
+          title: 'Turn into',
           icon: '<svg></svg>',
           name: 'convert-to',
           children: {
@@ -250,9 +250,9 @@ describe('filterItems with promoted items', () => {
     // Only the promoted "Heading" should be visible (top-level duplicate is hidden)
     expect(visibleHeadings.length).toBe(1);
 
-    // The promoted item should be under the "Convert to" group
+    // The promoted item should be under the "Turn into" group
     const separator = itemsContainer?.querySelector('[data-blok-promoted-group-label]');
-    expect(separator?.textContent).toBe('Convert to');
+    expect(separator?.textContent).toBe('Turn into');
   });
 
   it('should keep top-level items that do not duplicate any promoted item', () => {
@@ -262,7 +262,7 @@ describe('filterItems with promoted items', () => {
         createItemParams({ title: 'Heading 2', name: 'heading-2' }),
         createItemParams({ title: 'Heading 3', name: 'heading-3' }),
         {
-          title: 'Convert to',
+          title: 'Turn into',
           icon: '<svg></svg>',
           name: 'convert-to',
           children: {
@@ -284,7 +284,7 @@ describe('filterItems with promoted items', () => {
     // Heading 1 has no promoted duplicate — stays visible at top level
     expect(visibleTitles).toContain('Heading 1');
 
-    // Heading 2 and Heading 3 appear under "Convert to" only (top-level duplicates hidden)
+    // Heading 2 and Heading 3 appear under "Turn into" only (top-level duplicates hidden)
     const topLevelHeading2 = visibleItems.filter(el =>
       el.querySelector('[data-blok-popover-item-title]')?.textContent === 'Heading 2'
     );
@@ -297,7 +297,7 @@ describe('filterItems with promoted items', () => {
 
     // Group separator should be present
     const separator = itemsContainer?.querySelector('[data-blok-promoted-group-label]');
-    expect(separator?.textContent).toBe('Convert to');
+    expect(separator?.textContent).toBe('Turn into');
   });
 
   it('should render group separator with empty label when parent has no title or name', () => {
@@ -329,7 +329,7 @@ describe('cleanupPromotedItems', () => {
     const popover = new PopoverDesktop({
       items: [
         {
-          title: 'Convert to',
+          title: 'Turn into',
           icon: '<svg></svg>',
           name: 'convert-to',
           children: {
@@ -355,7 +355,7 @@ describe('cleanupPromotedItems', () => {
     const popover = new PopoverDesktop({
       items: [
         {
-          title: 'Convert to',
+          title: 'Turn into',
           icon: '<svg></svg>',
           name: 'convert-to',
           children: {
@@ -378,7 +378,7 @@ describe('cleanupPromotedItems', () => {
     const popover = new PopoverDesktop({
       items: [
         {
-          title: 'Convert to',
+          title: 'Turn into',
           icon: '<svg></svg>',
           name: 'convert-to',
           children: {
@@ -405,7 +405,7 @@ describe('cleanupPromotedItems', () => {
     const popover = new PopoverDesktop({
       items: [
         {
-          title: 'Convert to',
+          title: 'Turn into',
           icon: '<svg></svg>',
           name: 'convert-to',
           children: {
@@ -430,7 +430,7 @@ describe('click handling for promoted items', () => {
     const popover = new PopoverDesktop({
       items: [
         {
-          title: 'Convert to',
+          title: 'Turn into',
           icon: '<svg></svg>',
           name: 'convert-to',
           children: {
@@ -468,7 +468,7 @@ describe('SearchInput path (searchable popover)', () => {
       items: [
         createItemParams({ title: 'Paragraph', name: 'paragraph' }),
         {
-          title: 'Convert to',
+          title: 'Turn into',
           icon: '<svg></svg>',
           name: 'convert-to',
           children: {
@@ -492,7 +492,7 @@ describe('SearchInput path (searchable popover)', () => {
 
     const itemsContainer = popover.getElement().querySelector('[data-blok-popover-items]');
     const separator = itemsContainer?.querySelector('[data-blok-promoted-group-label]');
-    expect(separator?.textContent).toBe('Convert to');
+    expect(separator?.textContent).toBe('Turn into');
   });
 
   it('should deduplicate top-level items against promoted items via SearchInput', () => {
@@ -502,7 +502,7 @@ describe('SearchInput path (searchable popover)', () => {
         createItemParams({ title: 'Heading 1', name: 'heading-1' }),
         createItemParams({ title: 'Heading 2', name: 'heading-2' }),
         {
-          title: 'Convert to',
+          title: 'Turn into',
           icon: '<svg></svg>',
           name: 'convert-to',
           children: {
@@ -529,7 +529,7 @@ describe('SearchInput path (searchable popover)', () => {
     // Heading 1 stays at top level (no promoted duplicate)
     expect(visibleTitles).toContain('Heading 1');
 
-    // Heading 2 appears only once under "Convert to"
+    // Heading 2 appears only once under "Turn into"
     const heading2Items = visibleItems.filter(el =>
       el.querySelector('[data-blok-popover-item-title]')?.textContent === 'Heading 2'
     );
@@ -541,7 +541,7 @@ describe('SearchInput path (searchable popover)', () => {
       searchable: true,
       items: [
         {
-          title: 'Convert to',
+          title: 'Turn into',
           icon: '<svg></svg>',
           name: 'convert-to',
           children: {

@@ -88,7 +88,7 @@ test.describe('runtime direction flip with editor chrome open', () => {
 
     await createBlok(page, 'ltr');
     await openBlockSettings(page);
-    await page.getByRole('menuitem', { name: 'Convert to', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Turn into', exact: true }).click();
     await expect(openPopovers(page)).toHaveCount(2);
 
     await flip(page, 'rtl');
@@ -121,7 +121,7 @@ test.describe('runtime direction flip with editor chrome open', () => {
     test(`an update to ${name} keeps an open submenu`, async ({ page }) => {
       await createBlok(page, 'ltr');
       await openBlockSettings(page);
-      await page.getByRole('menuitem', { name: 'Convert to', exact: true }).click();
+      await page.getByRole('menuitem', { name: 'Turn into', exact: true }).click();
       await expect(openPopovers(page)).toHaveCount(2);
 
       await page.evaluate(async (update) => {

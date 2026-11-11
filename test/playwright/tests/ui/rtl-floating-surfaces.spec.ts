@@ -87,7 +87,7 @@ for (const direction of DIRECTIONS) {
       await createBlok(page, direction, [paragraph('Submenu side')]);
       await page.getByText('Submenu side', { exact: true }).hover();
       await page.getByTestId('settings-toggler').click();
-      const convert = page.getByRole('menuitem', { name: 'Convert to', exact: true });
+      const convert = page.getByRole('menuitem', { name: 'Turn into', exact: true });
       const parent = page.getByTestId('popover-container').filter({ has: convert });
 
       await expect(convert).toBeVisible();
@@ -116,7 +116,7 @@ for (const direction of DIRECTIONS) {
       await createBlok(page, direction, [paragraph('Submenu keys')]);
       await page.getByText('Submenu keys', { exact: true }).hover();
       await page.getByTestId('settings-toggler').click();
-      const convert = page.getByRole('menuitem', { name: 'Convert to', exact: true });
+      const convert = page.getByRole('menuitem', { name: 'Turn into', exact: true });
 
       await expect(convert).toBeVisible();
 

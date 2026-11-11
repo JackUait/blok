@@ -40,7 +40,7 @@ const openSettingsFor = async (page: Page, hasText: string): Promise<void> => {
   await expect(page.locator(POPOVER_CONTAINER).first()).toBeVisible();
 };
 
-test.describe('Convert to with a columns block in the selection', () => {
+test.describe('Turn into with a columns block in the selection', () => {
   test.beforeAll(() => ensureBlokBundleBuilt());
 
   test.beforeEach(async ({ page }) => {

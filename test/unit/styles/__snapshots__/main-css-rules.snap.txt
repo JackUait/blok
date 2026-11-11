@@ -13406,6 +13406,14 @@ button[data-blok-database-table-group-count]:hover {
   margin-block: auto;
 }
 
+[data-blok-database-selecting="table"] > [data-blok-database-table-selection-bar], [data-blok-database-table] > [data-blok-database-table-selection-bar] {
+  animation: blok-database-confirm-fade 200ms ease both;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-selecting="table"] > [data-blok-database-table-selection-bar], [data-blok-database-table] > [data-blok-database-table-selection-bar] {
+  animation: none;
+}
+
 [data-blok-database-selecting="table"] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-selection-hides] {
   visibility: hidden;
 }

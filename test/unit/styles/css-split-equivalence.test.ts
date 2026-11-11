@@ -1599,6 +1599,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_TMPLTOAST_BYTES = 1_424;
     // Round V1 lane fullpage: a full-page database's View settings docks as a full-height side panel (research/35 §2.3).
     const DATABASE_FULLPAGE_BYTES = 629;
+    // Round 14 lane r14rows: the table selection bar fades in (notion-motion.md Round 14).
+    const DATABASE_R14ROWS_BYTES = 541;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2059,7 +2061,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_SORTFILT_BYTES
       + DATABASE_MENUS2_BYTES
       + DATABASE_TMPLTOAST_BYTES
-      + DATABASE_FULLPAGE_BYTES;
+      + DATABASE_FULLPAGE_BYTES
+      + DATABASE_R14ROWS_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

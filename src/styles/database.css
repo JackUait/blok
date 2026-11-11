@@ -10193,6 +10193,19 @@ button[data-blok-database-table-group-count]:hover {
   margin-block: auto;
 }
 
+/* notion-motion.md Round 14: the table bar fades in. The board and list bars are unmeasured. */
+[data-blok-database-selecting="table"] > [data-blok-database-table-selection-bar],
+[data-blok-database-table] > [data-blok-database-table-selection-bar] {
+  animation: blok-database-confirm-fade 200ms ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-database-selecting="table"] > [data-blok-database-table-selection-bar],
+  [data-blok-database-table] > [data-blok-database-table-selection-bar] {
+    animation: none;
+  }
+}
+
 /* notion-live/rowdrag-mid.png: the bar replaces Filter, Sort and Automations; the other icons and New stay put. */
 [data-blok-database-selecting="table"] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-selection-hides] {
   visibility: hidden;

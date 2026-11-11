@@ -53,6 +53,27 @@ describe('selection bar dividers (research/26 §3b, §4a)', () => {
   });
 });
 
+describe('table selection bar fade (notion-motion.md Round 14, row checkbox)', () => {
+  const TABLE_BARS = [
+    '[data-blok-database-selecting="table"] > [data-blok-database-table-selection-bar]',
+    '[data-blok-database-table] > [data-blok-database-table-selection-bar]',
+  ];
+
+  it('fades in over 200ms ease when the first row is picked', () => {
+    for (const selector of TABLE_BARS) {
+      expect(ruleBody(selector)).toContain('animation: blok-database-confirm-fade 200ms ease both');
+    }
+  });
+
+  it('appears at once under reduced motion', () => {
+    const reduced = [ ...database.matchAll(/@media \(prefers-reduced-motion: reduce\) \{((?:[^{}]*\{[^{}]*\})*)[^{}]*\}/g) ]
+      .map((m) => m[1])
+      .filter((block) => TABLE_BARS.every((selector) => block.includes(selector)));
+
+    expect(reduced.join(' ')).toContain('animation: none');
+  });
+});
+
 describe('property menu "Change icon" button (research/26 §3c, §4a)', () => {
   it('is bordered with no fill and hovers to the measured fill', () => {
     const body = ruleBody('[data-blok-database-property-menu-icon]');

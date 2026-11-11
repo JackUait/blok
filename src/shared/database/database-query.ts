@@ -251,34 +251,41 @@ const matchCheckbox = (value: PropertyValue | undefined, operator: string, targe
   return undefined;
 };
 
-/** A range matches when any of its days does; a single day is a range of one. */
-const matchDate = (value: PropertyValue | undefined, operator: string, target: PropertyValue, now: Date): boolean | undefined => {
+/** A range's first day (Notion's Start date); a single day is its own start. */
+const startDayOf = (value: PropertyValue | undefined): string | null => parseDateValue(value)?.start ?? null;
+
+/** A range's last day; a single day is its own end. What Notion's End date reads on a single day is unmeasured. */
+const endDayOf = (value: PropertyValue | undefined): string | null => {
   const parsed = parseDateValue(value);
 
-  if (operator === 'is_empty') return parsed === null;
-  if (operator === 'is_not_empty') return parsed !== null;
+  return parsed === null ? null : parsed.end ?? parsed.start;
+};
+
+/** Compares one day. A range is read by one side first: its start (Start date) or its end (End date). */
+const matchDate = (value: string | null, operator: string, target: PropertyValue, now: Date): boolean | undefined => {
+  if (operator === 'is_empty') return value === null;
+  if (operator === 'is_not_empty') return value !== null;
 
   const range = relativeWindow(operator, target, now);
   const t = range === undefined ? resolveDay(target, now) : undefined;
 
   if (range === undefined && t === undefined) return undefined;
-  if (parsed === null) return false;
+  if (value === null) return false;
 
-  const first = parsed.start.slice(0, 10);
-  const last = (parsed.end ?? parsed.start).slice(0, 10);
+  const day = value.slice(0, 10);
 
   if (range !== undefined) {
-    return first <= range.to && last >= range.from;
+    return range.from <= day && day <= range.to;
   }
   if (t === undefined) return undefined;
 
   switch (operator) {
-    case 'equals': return first <= t && t <= last;
-    case 'does_not_equal': return !(first <= t && t <= last);
-    case 'before': return first < t;
-    case 'after': return last > t;
-    case 'on_or_before': return first <= t;
-    case 'on_or_after': return last >= t;
+    case 'equals': return day === t;
+    case 'does_not_equal': return day !== t;
+    case 'before': return day < t;
+    case 'after': return day > t;
+    case 'on_or_before': return day <= t;
+    case 'on_or_after': return day >= t;
     default: return undefined;
   }
 };
@@ -326,7 +333,7 @@ const MATCHERS: Record<PropertyType, Matcher> = {
   lastEditedBy: matchMultiSelect,
   files: matchFiles,
   checkbox: matchCheckbox,
-  date: (value, operator, target, _property, now) => matchDate(value, operator, target, now),
+  date: (value, operator, target, _property, now) => matchDate(startDayOf(value), operator, target, now),
   createdTime: (value, operator, target, _property, now) => matchTimestamp(value, operator, target, now),
   lastEditedTime: (value, operator, target, _property, now) => matchTimestamp(value, operator, target, now),
   relation: matchMultiSelect,
@@ -398,13 +405,6 @@ const matchQuantifiedText = (value: PropertyValue | undefined, quantifier: strin
   if (quantifier === 'none') return !hits.some(Boolean);
 
   return hits.length > 0 && hits.every(Boolean);
-};
-
-/** A range's last day; a single day is its own end. What Notion's End date reads on a single day is unmeasured. */
-const endDayOf = (value: PropertyValue | undefined): string | null => {
-  const parsed = parseDateValue(value);
-
-  return parsed === null ? null : parsed.end ?? parsed.start;
 };
 
 const PERSON_TYPES: readonly PropertyType[] = ['person', 'createdBy', 'lastEditedBy'];

@@ -275,10 +275,10 @@ describe('cross-block-range (mutants)', () => {
       expect(slices[0].range.toString()).toBe('First block text');
     });
 
-    it('counts a host as partial when the range starts inside its text node at offset 0', () => {
+    it('counts a host as wholly covered when the range starts inside its text node at offset 0', () => {
       const slices = splitRangeByEditingHost(rangeAcross(fixture.hosts[0], 0, fixture.hosts[1], 3), fixture.root);
 
-      expect(slices[0].coversWholeInput).toBe(false);
+      expect(slices[0].coversWholeInput).toBe(true);
       expect(slices[0].range.toString()).toBe('First block text');
     });
 
@@ -300,10 +300,10 @@ describe('cross-block-range (mutants)', () => {
       expect(slices[1].range.toString()).toBe('Second block text');
     });
 
-    it('counts a host as partial when the range ends inside its text node at its full length', () => {
+    it('counts a host as wholly covered when the range ends inside its text node at its full length', () => {
       const slices = splitRangeByEditingHost(rangeAcross(fixture.hosts[0], 3, fixture.hosts[1], 17), fixture.root);
 
-      expect(slices[1].coversWholeInput).toBe(false);
+      expect(slices[1].coversWholeInput).toBe(true);
       expect(slices[1].range.toString()).toBe('Second block text');
     });
 

@@ -532,6 +532,21 @@ describe('dom-builder', () => {
       expect((checkboxes[1] as HTMLInputElement).checked).toBe(false);
     });
 
+    it('writes the checked state into the serialized html, so a paste reads it back', () => {
+      const container = buildSemanticListHtml([
+        { text: 'Done', style: 'checklist', checked: true },
+        { text: 'Open', style: 'checklist', checked: false },
+      ]);
+
+      const reparsed = document.createElement('div');
+
+      reparsed.innerHTML = container.innerHTML;
+
+      const checkboxes = reparsed.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
+
+      expect(Array.from(checkboxes, (box) => box.checked)).toStrictEqual([ true, false ]);
+    });
+
     it('nests deeper items inside the parent <li> as a child list', () => {
       const container = buildSemanticListHtml([
         { text: 'a', style: 'unordered', depth: 0 },

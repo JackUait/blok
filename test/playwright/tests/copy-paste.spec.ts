@@ -2392,6 +2392,51 @@ test.describe('copy and paste', () => {
     ]);
   });
 
+  test.describe('a text range dragged across list items', () => {
+    test('copies them as lists and pastes them back from html with their depth and checked state', async ({ page }) => {
+      await createBlokWithElements(page, [
+        { id: 'one', type: 'list', data: { text: 'one', style: 'unordered', depth: 0 } },
+        { id: 'nested', type: 'list', data: { text: 'nested', style: 'unordered', depth: 1 } },
+        { id: 'done', type: 'list', data: { text: 'done', style: 'checklist', checked: true, depth: 0 } },
+        { id: 'tgt', type: 'paragraph', data: { text: '' } },
+      ]);
+
+      const one = await page.locator('[data-blok-id="one"]').getByText('one', { exact: true }).boundingBox();
+      const done = await page.locator('[data-blok-id="done"]').getByText('done', { exact: true }).boundingBox();
+
+      if (one === null || done === null) {
+        throw new Error('list items have no box');
+      }
+
+      await page.mouse.move(one.x + 1, one.y + one.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(done.x + done.width + 20, done.y + done.height / 2, { steps: 10 });
+      await page.mouse.up();
+
+      const clipboard = await copyFromElement(page.locator(':focus'));
+
+      expect(clipboard['text/html']).toBe(
+        '<ul><li>one<ul><li>nested</li></ul></li></ul><ul><li><label><input type="checkbox" checked=""><span>done</span></label></li></ul>'
+      );
+
+      await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), {
+        'text/html': clipboard['text/html'],
+        'text/plain': clipboard['text/plain'],
+      });
+
+      await expect.poll(async () => {
+        const { blocks } = await saveBlok(page);
+
+        return blocks.slice(3).map((block) => [block.type, block.data.text, block.data.style, block.data.depth ?? 0, block.data.checked ?? false]);
+      }).toEqual([
+        ['list', 'one', 'unordered', 0, false],
+        ['list', 'nested', 'unordered', 1, false],
+        ['list', 'done', 'checklist', 0, true],
+      ]);
+    });
+  });
+
   test.describe('pasting over a block selection', () => {
     const doc: OutputData['blocks'] = [
       { id: 'a', type: 'paragraph', data: { text: 'First' } },

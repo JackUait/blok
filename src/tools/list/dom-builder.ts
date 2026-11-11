@@ -362,6 +362,11 @@ export const buildSemanticListHtml = (items: SemanticListItem[]): HTMLElement =>
       checkbox.type = 'checkbox';
       checkbox.checked = Boolean(item.checked);
 
+      // innerHTML writes the attribute, not the property; a paste reads it.
+      if (item.checked === true) {
+        checkbox.setAttribute('checked', '');
+      }
+
       const text = document.createElement('span');
 
       text.innerHTML = item.text;

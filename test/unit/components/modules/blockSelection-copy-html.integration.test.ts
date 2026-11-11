@@ -24,6 +24,7 @@ import { Table } from '../../../../src/tools/table';
 import type { OutputBlockData } from '../../../../types';
 import type { Block } from '../../../../src/components/block';
 import type { CrossBlockSubRange } from '../../../../src/components/selection/cross-block-range';
+import { collectCrossBlockSubRanges } from '../../../../src/components/selection/cross-block-range';
 
 /**
  * What a copy of whole blocks puts on the clipboard for OTHER apps (Word,
@@ -212,6 +213,66 @@ describe('copy of a text selection across blocks as text/plain', () => {
     });
 
     expect(written.get('text/plain')).toBe('line1\nline2\n\nnext');
+  });
+});
+
+describe('copy of a text selection across list items as text/html', () => {
+  /**
+   * A mouse drag over every character puts the range ends inside the first
+   * and last text nodes, not on the editing hosts.
+   */
+  it('keeps list items, their depth and the checked state when every character is selected', async () => {
+    const instance = await createEditor([
+      { id: 'one', type: 'list', data: { text: 'one', style: 'unordered', depth: 0 } },
+      { id: 'nested', type: 'list', data: { text: 'nested', style: 'unordered', depth: 1 } },
+      { id: 'done', type: 'list', data: { text: 'done', style: 'checklist', checked: true, depth: 0 } },
+    ]);
+    const { blocks } = instance.module.blockManager;
+    /**
+     * jsdom does not reflect the contentEditable property as an attribute, so
+     * the item's text element is marked as its editing host here.
+     */
+    const textOf = (block: Block): Text => {
+      const walker = document.createTreeWalker(block.holder, NodeFilter.SHOW_TEXT);
+      let node = walker.nextNode();
+
+      while (node !== null && node.textContent !== block.id) {
+        node = walker.nextNode();
+      }
+
+      if (!(node instanceof Text) || node.parentElement === null) {
+        throw new Error(`No text in ${block.id}`);
+      }
+
+      node.parentElement.setAttribute('contenteditable', 'true');
+
+      return node;
+    };
+    const [first, , last] = blocks.map(textOf);
+    const range = document.createRange();
+
+    range.setStart(first, 0);
+    range.setEnd(last, last.length);
+
+    if (holder === undefined) {
+      throw new Error('No holder');
+    }
+
+    const subRanges = collectCrossBlockSubRanges(range, holder, (node) => blocks.find((block) => block.holder.contains(node)));
+    const written = new Map<string, string>();
+
+    instance.module.blockSelection.copyCrossBlockTextSelection(recordingEvent(written), {
+      range,
+      subRanges,
+      startBlock: blocks[0],
+      endBlock: blocks[2],
+    });
+
+    const root = parse(written.get('text/html') ?? '');
+
+    expect(root.querySelector(':scope > p')).toBeNull();
+    expect(root.querySelector(':scope > ul > li > ul > li')?.textContent).toBe('nested');
+    expect(root.querySelector<HTMLInputElement>('input[type="checkbox"]')?.checked).toBe(true);
   });
 });
 

@@ -174,10 +174,20 @@ export const splitRangeByEditingHost = (range: Range, root?: Element): HostSubRa
       return accumulator;
     }
 
+    /**
+     * Whole means no text is left out, not that the ends sit on the host: a
+     * mouse drag puts them inside the first and last text nodes.
+     */
+    const before = whole.cloneRange();
+    const after = whole.cloneRange();
+
+    before.setEnd(sub.startContainer, sub.startOffset);
+    after.setStart(sub.endContainer, sub.endOffset);
+
     return [...accumulator, {
       input,
       range: sub,
-      coversWholeInput: !startsInsideHost && !endsInsideHost,
+      coversWholeInput: before.toString() === '' && after.toString() === '',
     }];
   }, []);
 };

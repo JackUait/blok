@@ -139,6 +139,16 @@ describe('cross-block-range', () => {
       expect(slices.map((slice) => slice.input)).toStrictEqual(fixture.hosts);
       expect(slices[2].range.toString()).toBe('');
     });
+
+    /**
+     * A mouse drag or Shift+arrow in Chromium puts the ends inside the text
+     * nodes, not on the host itself. Every character is still selected.
+     */
+    it('marks a host as whole when the range covers all of its text from inside its text nodes', () => {
+      const slices = splitRangeByEditingHost(rangeAcross(fixture.hosts[0], 0, fixture.hosts[2], 'Third block text'.length));
+
+      expect(slices.map((slice) => slice.coversWholeInput)).toStrictEqual([ true, true, true ]);
+    });
   });
 
   describe('resolveCrossBlockTextSelection', () => {

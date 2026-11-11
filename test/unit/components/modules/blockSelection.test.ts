@@ -479,6 +479,7 @@ describe('BlockSelection', () => {
           defaultTool: paragraph,
           blockTools: new Map([['paragraph', paragraph]]),
         } as unknown as BlokModules['Tools'],
+        PageReferences: { shownLink: () => undefined } as unknown as BlokModules['PageReferences'],
       });
 
       setup.blocks.splice(0, setup.blocks.length, page, child);

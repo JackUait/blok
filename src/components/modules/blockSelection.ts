@@ -10,7 +10,9 @@ import type { Block } from '../block';
 import { DATA_ATTR } from '../constants';
 import { KEYBOARD_OWNER_SELECT_ALL } from '../constants/data-attributes';
 import { Dom as $ } from '../dom';
-import { blocksToMarkdown } from '../../markdown/blocks-to-markdown';
+import { blocksToMarkdown, type MarkdownPageOptions } from '../../markdown/blocks-to-markdown';
+import { safeHref } from '../utils/sanitize-url';
+import type { PageConfig } from '../../tools/page/types';
 import type { CrossBlockSubRange, CrossBlockTextSelection } from '../selection/cross-block-range';
 import { SelectionUtils } from '../selection/index';
 import { clean, composeSanitizerConfig } from '../utils/sanitizer';
@@ -614,7 +616,10 @@ export class BlockSelection extends Module {
      * ({@link copySelectedBlocksAsMarkdown}, bound to Cmd/Ctrl+Shift+C) emits the
      * same Markdown but writes it via navigator.clipboard.writeText.
      */
-    const textPlain = blocksToMarkdown(linkedData.map((entry) => (entry.title === undefined ? entry : { ...entry, data: { ...entry.data, title: entry.title } })));
+    const textPlain = blocksToMarkdown(
+      linkedData.map((entry) => (entry.title === undefined ? entry : { ...entry, data: { ...entry.data, title: entry.title } })),
+      this.shownPages(copiedBlocks)
+    );
 
     resolvePresetColors(fakeClipboard);
 
@@ -800,7 +805,8 @@ export class BlockSelection extends Module {
 
     const collected = this.collectBlocksForClipboard(blocks);
     const links = this.copyLinksOf(collected);
-    const markdown = blocksToMarkdown(this.serializeBlocksForClipboard(this.withoutLinkedDescendants(collected, links), links));
+    const copied = this.withoutLinkedDescendants(collected, links);
+    const markdown = blocksToMarkdown(this.serializeBlocksForClipboard(copied, links), this.shownPages(copied));
 
     const { clipboard } = navigator;
 
@@ -1088,6 +1094,50 @@ export class BlockSelection extends Module {
       }, false);
 
     return changed ? { ...data, text: wrapper.innerHTML } : data;
+  }
+
+  /**
+   * The page titles and links the copied blocks show now. Only what the host
+   * resolved and allows: saved data may hold a stale or restricted title.
+   * @param blocks - the copied blocks
+   */
+  private shownPages(blocks: Block[]): MarkdownPageOptions {
+    const shown = (pageId: string): { title?: string; href: string | null } | undefined => {
+      const titles: string[] = [];
+
+      // Answers only while the block shows a resolved, allowed title.
+      blocks.find((block) => block.name === 'page-link' && block.preservedData.pageId === pageId)
+        ?.call('readPageTitle', { pageId, receive: (title: string) => titles.push(title) });
+
+      if (titles.length === 0) {
+        return this.Blok.PageReferences.shownLink(pageId);
+      }
+
+      const href = (this.Blok.Tools.blockTools.get('page-link')?.settings as PageConfig | undefined)?.href;
+
+      return { title: titles[0], href: this.safePageHref(href, pageId) };
+    };
+
+    return {
+      pageInfo: (pageId) => {
+        const page = shown(pageId);
+
+        return page === undefined ? undefined : { title: page.title };
+      },
+      pageHref: (pageId) => {
+        const href = shown(pageId)?.href;
+
+        return href === null || href === undefined ? '' : new URL(href, document.baseURI).href;
+      },
+    };
+  }
+
+  private safePageHref(href: PageConfig['href'], pageId: string): string | null {
+    try {
+      return href === undefined ? null : safeHref(href(pageId));
+    } catch {
+      return null;
+    }
   }
 
   private pageReferenceAnchor(block: Block): HTMLAnchorElement {

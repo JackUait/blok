@@ -218,10 +218,8 @@ const FIXTURES: Array<{ name: string; document: OutputData }> = [
     document: doc([{ id: 'r1', type: 'page-link', data: { pageId: 'p1' } }]),
   },
   /**
-   * Saved inline refs are sanitized to the label `Page`, which the DOM backend
-   * reads as text and the view backend writes as its fallback. Page titles and
-   * links come only from `pageInfo`/`pageHref`, which only the view takes: the
-   * editor's clipboard has no host metadata to pass.
+   * Saved inline refs carry only the label `Page`. Titles and links come only
+   * from `pageInfo`/`pageHref`; the case below passes them to both backends.
    */
   {
     name: 'an owning page block and an inline page reference',
@@ -251,6 +249,23 @@ describe('blocksToMarkdown backend parity', () => {
 
   it.each(FIXTURES)('DOM and parse5 agree on $name', ({ document: fixture }) => {
     expect(viewBlocksToMarkdown(fixture)).toBe(domBlocksToMarkdown(toSerializable(fixture)));
+  });
+
+  it('DOM and parse5 agree on page titles and links from pageInfo and pageHref', () => {
+    const fixture = doc([
+      { id: 'pl', type: 'page-link', data: { pageId: 'p1' } },
+      { type: 'paragraph', data: { text: 'See <a data-blok-page-id="p2">Page</a>, <a data-blok-page-id="gone">Page</a> and <a data-blok-page-id="secret">Page</a>.' } },
+    ]);
+    const pages = {
+      pageInfo: (pageId: string) => ({ p1: { title: 'Plans *1*' }, p2: { title: 'Road[map]' }, secret: { title: 'Hidden', access: 'none' as const } })[pageId],
+      pageHref: (pageId: string) => `https://workspace.test/pages/${pageId}`,
+    };
+
+    const markdown = domBlocksToMarkdown(toSerializable(fixture), pages);
+
+    expect(markdown).toBe(viewBlocksToMarkdown(fixture, pages));
+    expect(markdown).toContain('(https://workspace.test/pages/p2)');
+    expect(markdown).not.toContain('Hidden');
   });
 
   it('covers every tool that has a dedicated serialization case', () => {

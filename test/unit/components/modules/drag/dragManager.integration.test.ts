@@ -3893,5 +3893,39 @@ describe("DragManager - Component Integration", () => {
       expect(clearSelection).toHaveBeenCalledTimes(1);
       field.remove();
     });
+
+    it("stops watching focus once the controller is destroyed", () => {
+      const apiBlocks = {
+        insertAt: vi.fn((type: string) => ({ id: `${type}-new`, holder: document.createElement("div") })),
+        setBlockParent: vi.fn(),
+        getById: vi.fn((id: string) => ({ id, parentId: null })),
+        getBlockIndex: vi.fn(() => 0),
+        getChildren: vi.fn(() => []),
+        transact: vi.fn((fn: () => void) => fn()),
+      };
+      const clearSelection = vi.fn();
+      const { dragManager, blocks } = createDragManager({
+        API: { methods: { blocks: apiBlocks } } as unknown as BlokModules["API"],
+        BlockSelection: {
+          selectedBlocks: [],
+          clearSelection,
+          selectBlock: vi.fn((block: Block) => Object.assign(block, { selected: true })),
+        } as unknown as BlokModules["BlockSelection"],
+      });
+      const [target, source] = blocks;
+      const field = document.createElement("input");
+
+      document.body.appendChild(field);
+      (dragManager as unknown as {
+        handleColumnDrop: (sourceBlock: Block, sourceBlocks: Block[], targetBlock: Block, edge: "left" | "right", targetParentId: string | null) => void;
+      }).handleColumnDrop(source, [source], target, "right", null);
+      dragManager.destroy();
+      clearSelection.mockClear();
+
+      field.focus();
+
+      expect(clearSelection).not.toHaveBeenCalled();
+      field.remove();
+    });
   });
 });

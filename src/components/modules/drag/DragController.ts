@@ -377,6 +377,7 @@ export class DragController extends Module {
   }
 
   private startActualDrag(blockCount: number): void {
+    this.stopDropFocusWatch();
     // A previous drop's motion may still be in flight; finish it instantly so
     // this drag measures settled rects, not mid-animation ones.
     finishColumnDropAnimations();
@@ -945,15 +946,23 @@ export class DragController extends Module {
 
     // Focus landing anywhere means the user moved on. clearSelection, not
     // unselectBlock: selectBlock primed Cmd+A to select every block.
+    this.stopDropFocusWatch();
     const letGo = (): void => {
-      document.removeEventListener('focusin', letGo, true);
+      this.stopDropFocusWatch();
       if (ids.some((id) => BlockManager.getBlockById(id)?.selected === true)) {
         BlockSelection.clearSelection();
       }
     };
 
     document.addEventListener('focusin', letGo, true);
+    this.stopDropFocusWatch = (): void => {
+      document.removeEventListener('focusin', letGo, true);
+      this.stopDropFocusWatch = (): void => undefined;
+    };
   }
+
+  /** Disarms the focus watch a column drop left; a new drag or destroy() ends it. */
+  private stopDropFocusWatch: () => void = () => undefined;
 
   /**
    * Fly the drag preview to the first dropped block's landed position instead
@@ -1932,6 +1941,7 @@ export class DragController extends Module {
     // A settling ghost / row interpolation is detached from the preview's
     // lifecycle; finish it now so nothing outlives the editor instance.
     finishColumnDropAnimations();
+    this.stopDropFocusWatch();
     this.cleanup();
   }
 }

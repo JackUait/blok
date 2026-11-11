@@ -106,6 +106,30 @@ describe('HtmlHandler — nbsp-only paragraphs', () => {
     expect(insertedBlocks.map((b) => b.content.textContent)).toEqual(['one', 'two']);
   });
 
+  it('keeps the nbsp spans Chrome writes at the edges of a copied range, as spaces', async () => {
+    await makeHandler().handle('<span>&nbsp;</span><strong>bb</strong><span>&nbsp;</span>', { canReplaceCurrentBlock: false });
+
+    expect(insertedBlocks.map((b) => b.content.textContent)).toEqual([' bb ']);
+  });
+
+  it('keeps bare nbsp text around an inline run, as spaces', async () => {
+    await makeHandler().handle('&nbsp;<strong>bb</strong>&nbsp;', { canReplaceCurrentBlock: false });
+
+    expect(insertedBlocks.map((b) => b.content.textContent)).toEqual([' bb ']);
+  });
+
+  it('keeps an nbsp that sits next to other text as an nbsp', async () => {
+    await makeHandler().handle('<strong>bb</strong>&nbsp;z', { canReplaceCurrentBlock: false });
+
+    expect(insertedBlocks.map((b) => b.content.textContent)).toEqual(['bb z']);
+  });
+
+  it('adds no blank block for a stray nbsp between two paragraphs', async () => {
+    await makeHandler().handle('<p>a</p>&nbsp;<p>b</p>', { canReplaceCurrentBlock: false });
+
+    expect(insertedBlocks.map((b) => b.content.textContent)).toEqual(['a', 'b']);
+  });
+
   it('keeps a paragraph that only holds an image', async () => {
     await makeHandler().handle('<p>one</p><p><img src="photo.png"></p>', { canReplaceCurrentBlock: false });
 

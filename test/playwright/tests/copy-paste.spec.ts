@@ -1012,6 +1012,17 @@ test.describe('copy and paste', () => {
       await expect.poll(async () => (await outline(page)).map((line) => line.replace(/&nbsp;/g, '\u00A0'))).toEqual(['paragraph:Target a\u00A0b\u00A0\u00A0c dtext here']);
     });
 
+    test('the nbsp spans a browser writes at the edges of a copied range paste as spaces', async ({ page }) => {
+      await createBlokWithElements(page, [{ id: 't', type: 'paragraph', data: { text: 'Target text here' } }]);
+      await caretBefore(page, 't', 'text here');
+      await paste(page, page.locator(':focus'), {
+        'text/html': '<meta charset="utf-8"><span><span>&nbsp;</span></span><strong>bb</strong><span>&nbsp;</span>',
+        'text/plain': ' bb ',
+      });
+
+      await expect.poll(() => outline(page)).toEqual(['paragraph:Target  <strong>bb</strong> text here']);
+    });
+
     test('cutting part of a heading removes it, pastes it inline, and undo brings it back', async ({ page }) => {
       await createBlokWithElements(page, [
         { id: 'h', type: 'header', data: { text: 'Head <b>B</b> text', level: 2 } },

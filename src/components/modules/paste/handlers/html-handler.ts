@@ -260,13 +260,17 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
     // Filter, tracking the mapping from original (expandedNodes) index → final index.
     const oldToNewIndex = new Map<number, number>();
     const filtered: PasteData[] = [];
+    const hasSeveralEntries = mapped.filter(Boolean).length > 1;
 
     for (const entry of mapped) {
       if (!entry) {
         continue;
       }
       const { data, originalIndex, keepEmpty } = entry;
-      const isContentEmpty = dom$.isEmpty(data.content);
+      // Whitespace between pasted blocks (`<p>a</p>&nbsp;<p>b</p>`) is not a
+      // line of its own. A lone whitespace run still pastes inline.
+      const isStrayWhitespace = hasSeveralEntries && !data.isBlock && dom$.isEmpty(data.content, '\\s');
+      const isContentEmpty = isStrayWhitespace || dom$.isEmpty(data.content);
       const isSingleTag = dom$.isSingleTag(data.content);
 
       if (!isContentEmpty || isSingleTag || keepEmpty === true) {
@@ -678,11 +682,21 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
     const children = Array.from(wrapper.childNodes);
 
     const reducer = (nodes: Node[], node: Node): Node[] => {
-      // U+00A0 counts as empty here: Word and Summernote write `<p>&nbsp;</p>`
-      // as a visual spacer, and without it every such spacer pastes as a blank
-      // block. Single tags (`<img>`, `<hr>`) are never empty, so media survives.
-      if (dom$.isEmpty(node, '\u00A0') && !dom$.isSingleTag(node as HTMLElement)) {
+      const isSingleTag = dom$.isSingleTag(node as HTMLElement);
+      const isNbspOnly = dom$.isEmpty(node, '\u00A0') && !isSingleTag;
+      const isInline = this.isInlineNode(node);
+
+      // U+00A0 counts as empty only for blocks: Word and Summernote write
+      // `<p>&nbsp;</p>` as a spacer. Inline nbsp stays, because Chrome writes
+      // the edge spaces of a copied range as `<span>&nbsp;</span>`.
+      // Single tags (`<img>`, `<hr>`) are never empty, so media survives.
+      if (isInline ? dom$.isEmpty(node) && !isSingleTag : isNbspOnly) {
         return nodes;
+      }
+
+      // An nbsp-only inline run held a plain space in the source.
+      if (isInline && isNbspOnly) {
+        this.nbspToSpace(node);
       }
 
       const lastNode = nodes[nodes.length - 1];
@@ -719,5 +733,36 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
     };
 
     return children.reduce(reducer, []);
+  }
+
+  /**
+   * A text node, or an element that is neither a block, a structural tag nor a tool's tag.
+   */
+  private isInlineNode(node: Node): boolean {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return true;
+    }
+
+    if (!dom$.isElement(node)) {
+      return false;
+    }
+
+    const tagName = node.tagName.toLowerCase();
+
+    return !dom$.blockElements.includes(tagName) &&
+      !SAFE_STRUCTURAL_TAGS.has(tagName) &&
+      !this.toolRegistry.findToolForTag(node.tagName);
+  }
+
+  private nbspToSpace(node: Node): void {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node as Text;
+
+      text.data = text.data.replace(/\u00A0/g, ' ');
+
+      return;
+    }
+
+    node.childNodes.forEach((child) => this.nbspToSpace(child));
   }
 }

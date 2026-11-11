@@ -1,5 +1,6 @@
 import type { BlockOrigin } from '../../../../types';
 import type { AgentActor, Edit, PlannedBlock } from '../../../../types/agent';
+import { isPageCover } from '../../../shared/page-cover';
 import { AgentFailure, failure } from '../../../shared/agent/errors';
 import type { AgentApplier, HistoryBound, StepUnlocks } from '../../../shared/agent/executor';
 import type { ShareStep } from '../../../shared/agent/approval';
@@ -752,8 +753,10 @@ export class EditorApplier implements AgentApplier {
       case 'setPageField':
         if (edit.key === 'title') {
           this.Blok.PageTitle.setText(typeof edit.value === 'string' ? edit.value : '', 'api');
+        } else if (edit.key === 'cover') {
+          this.Blok.PageTitle.setCover(isPageCover(edit.value) ? edit.value : null, 'api');
         } else {
-          this.Blok.PageTitle.setIcon(typeof edit.value === 'string' ? null : edit.value, 'api');
+          this.Blok.PageTitle.setIcon(typeof edit.value === 'string' || edit.value?.type === 'gallery' ? null : edit.value, 'api');
         }
         break;
     }

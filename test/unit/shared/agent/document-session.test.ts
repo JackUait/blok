@@ -402,6 +402,18 @@ describe('stored document session', () => {
     });
   });
 
+  it('a stored batch writes the page cover and doc.read shows it', async () => {
+    const session = track(open());
+    const cover = { type: 'image', url: 'https://example.test/c.png', position: 70 } as const;
+    const result = await session.execute({ commands: [
+      { name: 'doc.setCover', args: { cover } },
+      { name: 'doc.read', args: {} },
+    ] });
+
+    expect(result).toMatchObject({ ok: true, results: [{}, { page: { cover } }] });
+    expect(session.output().cover).toEqual(cover);
+  });
+
   it('clears lastEdits after a refused batch without returning earlier or partial writes', async () => {
     const session = track(open());
 

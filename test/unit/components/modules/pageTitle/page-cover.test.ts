@@ -13,7 +13,7 @@ const create = (config: Partial<BlokConfig>): PublicBlok =>
 
 const DOC: OutputData = { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'hi' } }] };
 const IMAGE: PageCover = { type: 'image', url: 'https://example.com/cover.png', position: 30 };
-const GALLERY: PageCover = { type: 'gallery', id: 'dusk' };
+const GALLERY: PageCover = { type: 'gallery', id: 'blue' };
 
 describe('page cover field', () => {
   let holder: HTMLDivElement;
@@ -90,6 +90,22 @@ describe('page cover field', () => {
     await blok.isReady;
 
     expect(blok.title.cover.get()).toEqual(GALLERY);
+  });
+
+  it('an agent turn that sets the cover saves it and tells the host', async () => {
+    const onCoverChange = vi.fn();
+
+    blok = create({ holder, pageTitle: { cover: true, onCoverChange }, data: DOC });
+    await blok.isReady;
+    const turn = blok.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const result = await turn.execute({ commands: [{ name: 'doc.setCover', args: { cover: GALLERY } }] });
+    const read = await turn.execute({ commands: [{ name: 'doc.read', args: {} }] });
+
+    turn.end();
+    expect(result.ok).toBe(true);
+    expect(blok.title.cover.get()).toEqual(GALLERY);
+    expect(onCoverChange).toHaveBeenCalledWith(GALLERY, { source: 'api' });
+    expect(read.ok && read.results[0]).toMatchObject({ page: { cover: GALLERY } });
   });
 
   it('render swaps the cover with the document', async () => {

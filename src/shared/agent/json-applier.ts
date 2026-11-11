@@ -1,3 +1,5 @@
+import { isPageCover } from '../page-cover';
+
 import type { Edit, PlannedBlock } from '../../../types/agent';
 import type { DocSnapshot, SnapBlock } from './snapshot';
 
@@ -217,13 +219,17 @@ const replaceType = (snap: DocSnapshot, edit: Extract<Edit, { op: 'replaceType' 
 const setPageField = (snap: DocSnapshot, edit: Extract<Edit, { op: 'setPageField' }>): void => {
   if (edit.key === 'title') {
     Object.assign(snap, { title: typeof edit.value === 'string' && edit.value !== '' ? edit.value : undefined });
+  } else if (edit.key === 'cover') {
+    Object.assign(snap, { cover: isPageCover(edit.value) ? copyRecord({ ...edit.value }) : undefined });
   } else if (edit.value !== null && typeof edit.value === 'object') {
-    const fields = copyRecord({ ...edit.value });
-    const icon: DocSnapshot['icon'] = edit.value.type === 'emoji'
-      ? { ...fields, type: edit.value.type, value: edit.value.value }
-      : { ...fields, type: edit.value.type, url: edit.value.url };
+    const value = edit.value;
+    const fields = copyRecord({ ...value });
 
-    Object.assign(snap, { icon });
+    if (value.type === 'emoji') {
+      Object.assign(snap, { icon: { ...fields, type: value.type, value: value.value } });
+    } else if (value.type === 'image') {
+      Object.assign(snap, { icon: { ...fields, type: value.type, url: value.url } });
+    }
   } else {
     Object.assign(snap, { icon: undefined });
   }

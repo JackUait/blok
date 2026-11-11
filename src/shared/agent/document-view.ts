@@ -337,8 +337,12 @@ export const buildDocumentView = (
   return {
     revision,
     rootId,
-    ...((snap.title !== undefined || snap.icon !== undefined) && {
-      page: { ...(snap.title !== undefined && { title: snap.title }), ...(snap.icon !== undefined && { icon: snap.icon }) },
+    ...((snap.title !== undefined || snap.icon !== undefined || snap.cover !== undefined) && {
+      page: {
+        ...(snap.title !== undefined && { title: snap.title }),
+        ...(snap.icon !== undefined && { icon: snap.icon }),
+        ...(snap.cover !== undefined && { cover: snap.cover }),
+      },
     }),
     blocks,
     ...(next !== undefined && { next: `c:${next.id}` }),

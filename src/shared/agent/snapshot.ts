@@ -1,7 +1,7 @@
 import { failure } from './errors';
 
 import type { OutputBlockData, OutputData } from '../../../types/data-formats/output-data';
-import type { PageIcon } from '../../../types/tools/page';
+import type { PageCover, PageIcon } from '../../../types/tools/page';
 
 export interface SnapBlock {
   id: string;
@@ -47,6 +47,14 @@ const copyIcon = (icon: PageIcon): PageIcon => {
     : { ...fields, type: icon.type, url: icon.url };
 };
 
+const copyCover = (cover: PageCover): PageCover => {
+  const fields = copyRecord({ ...cover });
+
+  return cover.type === 'gallery'
+    ? { ...fields, type: cover.type, id: cover.id }
+    : { ...fields, type: cover.type, url: cover.url };
+};
+
 const cellPosition = (rows: unknown, member: string): { row: number; col: number } | null => {
   const grid = isArray(rows) ? rows : [];
 
@@ -67,6 +75,7 @@ const cellPosition = (rows: unknown, member: string): { row: number; col: number
 export class DocSnapshot {
   public title?: string;
   public icon?: PageIcon;
+  public cover?: PageCover;
 
   private constructor(
     private readonly blocks: Map<string, SnapBlock>,
@@ -160,6 +169,7 @@ export class DocSnapshot {
     delete head.blocks;
     delete head.title;
     delete head.icon;
+    delete head.cover;
 
     const snapshot = new DocSnapshot(blocks, root, copyRecord(head));
 
@@ -168,6 +178,9 @@ export class DocSnapshot {
     }
     if (doc.icon !== undefined) {
       snapshot.icon = copyIcon(doc.icon);
+    }
+    if (doc.cover !== undefined) {
+      snapshot.cover = copyCover(doc.cover);
     }
 
     return snapshot;
@@ -196,6 +209,7 @@ export class DocSnapshot {
       ...copyRecord(this.head),
       ...(this.title !== undefined && { title: this.title }),
       ...(this.icon !== undefined && { icon: copyIcon(this.icon) }),
+      ...(this.cover !== undefined && { cover: copyCover(this.cover) }),
       blocks,
     };
   }
@@ -217,6 +231,7 @@ export class DocSnapshot {
 
     snapshot.title = this.title;
     snapshot.icon = this.icon === undefined ? undefined : copyIcon(this.icon);
+    snapshot.cover = this.cover === undefined ? undefined : copyCover(this.cover);
 
     return snapshot;
   }

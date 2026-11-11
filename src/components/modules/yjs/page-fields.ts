@@ -1,4 +1,5 @@
 import { cleanPageField } from '../../../shared/page-title-icon';
+import { isPageCover } from '../../../shared/page-cover';
 
 import type * as Y from 'yjs';
 import type { PageCover, PageIcon } from '../../../../types/tools/page';
@@ -26,24 +27,6 @@ const isPageIcon = (value: unknown): value is PageIcon => {
   }
 
   return icon.type === 'image' && typeof icon.url === 'string';
-};
-
-/** Position is a whole percent: fractions are where the three servers' number output can differ. */
-export const isPageCover = (value: unknown): value is PageCover => {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-  const cover = value as Record<string, unknown>;
-  const position = cover.position;
-
-  if (position !== undefined && !(Number.isInteger(position) && (position as number) >= 0 && (position as number) <= 100)) {
-    return false;
-  }
-  if (cover.type === 'gallery') {
-    return typeof cover.id === 'string' && cover.id !== '';
-  }
-
-  return cover.type === 'image' && typeof cover.url === 'string' && cover.url !== '';
 };
 
 /** Absent and malformed both read as "none", so a bad peer write never reaches the DOM. */

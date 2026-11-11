@@ -174,9 +174,9 @@ describe('agent warnings', () => {
 });
 
 describe('command names', () => {
-  it('lists exactly the 24 core commands', () => {
+  it('lists exactly the 25 core commands', () => {
     const expected = [
-      'doc.read', 'doc.find', 'doc.setTitle', 'doc.setIcon',
+      'doc.read', 'doc.find', 'doc.setTitle', 'doc.setIcon', 'doc.setCover',
       'block.insert', 'block.update', 'block.delete', 'block.move', 'block.convert', 'block.duplicate',
       'text.insert', 'text.delete', 'text.replace', 'text.format',
       'markdown.insert', 'markdown.export', 'html.insert',

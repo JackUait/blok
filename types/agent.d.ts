@@ -3,10 +3,10 @@ import type { OutputBlockData, OutputData } from './data-formats/output-data';
 import type { RichText, RichTextMarks } from './rich-text';
 import type { AgentContract, BlockToolManifestEntry, CommandEntry, InlineToolManifestEntry } from './tool-manifest';
 import type { FormSubmissionAccess } from './tools/database';
-import type { PageIcon } from './tools/page';
+import type { PageCover, PageIcon } from './tools/page';
 
 export type CoreCommandName =
-  | 'doc.read' | 'doc.find' | 'doc.setTitle' | 'doc.setIcon'
+  | 'doc.read' | 'doc.find' | 'doc.setTitle' | 'doc.setIcon' | 'doc.setCover'
   | 'block.insert' | 'block.update' | 'block.delete' | 'block.move'
   | 'block.convert' | 'block.duplicate'
   | 'text.insert' | 'text.delete' | 'text.replace' | 'text.format'
@@ -154,7 +154,7 @@ export type Edit =
   | { op: 'setRichText'; id: string; field: string; value: RichText }
   | { op: 'setTunes'; id: string; tunes: Record<string, unknown> }
   | { op: 'replaceType'; id: string; type: string; data: Record<string, unknown> }
-  | { op: 'setPageField'; key: 'title' | 'icon'; value: string | PageIcon | null };
+  | { op: 'setPageField'; key: 'title' | 'icon' | 'cover'; value: string | PageIcon | PageCover | null };
 
 export interface ViewArgs {
   rootId?: string | null;
@@ -230,7 +230,7 @@ export interface ViewComment {
 export interface DocumentView {
   revision: string;
   rootId: string | null;
-  page?: { title?: string; icon?: PageIcon };
+  page?: { title?: string; icon?: PageIcon; cover?: PageCover };
   blocks: ViewBlock[];
   next?: string;
   /** Editor only. */

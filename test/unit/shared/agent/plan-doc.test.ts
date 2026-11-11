@@ -301,6 +301,43 @@ describe('document field planning', () => {
   });
 });
 
+describe('doc.setCover', () => {
+  it('sets an image cover, keeps title and icon, and emits one page-field edit', () => {
+    const cover = { type: 'image', url: 'https://example.test/c.png', position: 30 } as const;
+    const { plan, draft } = planOn(doc, [{ name: 'doc.setCover', args: { cover } }]);
+    const output = draft.toOutput();
+
+    expect(plan.edits).toEqual([{ op: 'setPageField', key: 'cover', value: cover }]);
+    expect(output.cover).toEqual(cover);
+    expect(output.title).toBe('Old');
+    expect(output.icon).toEqual({ type: 'emoji', value: 'A' });
+    expect(plan.results).toEqual([{}]);
+  });
+
+  it('sets a built-in gallery cover by id', () => {
+    const { draft } = planOn(doc, [{ name: 'doc.setCover', args: { cover: { type: 'gallery', id: 'blue' } } }]);
+
+    expect(draft.toOutput().cover).toEqual({ type: 'gallery', id: 'blue' });
+  });
+
+  it('clears the cover with null', () => {
+    const { plan, draft } = planOn({ ...doc, cover: { type: 'gallery', id: 'blue' } }, [{ name: 'doc.setCover', args: { cover: null } }]);
+
+    expect(draft.toOutput()).not.toHaveProperty('cover');
+    expect(plan.edits).toEqual([{ op: 'setPageField', key: 'cover', value: null }]);
+  });
+
+  it.each([
+    { label: 'an unknown gallery id', cover: { type: 'gallery', id: 'nope' }, path: '/commands/0/args/cover/id' },
+    { label: 'a fractional position', cover: { type: 'gallery', id: 'blue', position: 12.5 }, path: '/commands/0/args/cover' },
+    { label: 'a position past 100', cover: { type: 'image', url: 'https://example.test/c.png', position: 101 }, path: '/commands/0/args/cover' },
+    { label: 'an unsafe url', cover: { type: 'image', url: 'javascript:alert(1)' }, path: '/commands/0/args/cover/url' },
+  ])('refuses $label', ({ cover, path }) => {
+    expect(failOf(() => planOn(doc, [{ name: 'doc.setCover', args: { cover } }])))
+      .toMatchObject({ code: 'INVALID_ARGS', commandIndex: 0, path });
+  });
+});
+
 describe('Markdown insertion planning', () => {
   it('adds a fresh-ID forest in canonical content order and preserves stored data and tunes', () => {
     const source = structuredClone(doc);

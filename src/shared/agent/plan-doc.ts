@@ -1,4 +1,5 @@
 import { cleanPageField } from '../page-title-icon';
+import { COVER_GALLERY, isGalleryCoverId, isPageCover } from '../page-cover';
 import { isSafeImageUrl } from '../url-policy';
 import { buildDocumentView, findBlocks } from './document-view';
 import { buildPlannedBlock } from './plan-block';
@@ -136,6 +137,23 @@ export const planSetIcon = (state: PlanState, args: Record<string, unknown>): un
     state.fail('INVALID_ARGS', 'Pass an http(s), relative, raster data: or SVG data: image URL.', '/icon/url');
   }
   state.emit({ op: 'setPageField', key: 'icon', value: icon === null ? null : cleanPageField(icon) });
+
+  return {};
+};
+
+export const planSetCover = (state: PlanState, args: Record<string, unknown>): unknown => {
+  const cover = args.cover;
+
+  if (cover !== null && !isPageCover(cover)) {
+    state.fail('INVALID_ARGS', 'Expected a PageCover with a whole-number position from 0 to 100, or null to remove it.', '/cover');
+  }
+  if (cover?.type === 'image' && !isSafeImageUrl(cover.url)) {
+    state.fail('INVALID_ARGS', 'Pass an http(s), relative, raster data: or SVG data: image URL.', '/cover/url');
+  }
+  if (cover?.type === 'gallery' && !isGalleryCoverId(cover.id)) {
+    state.fail('INVALID_ARGS', `Pick a gallery cover id: ${COVER_GALLERY.join(', ')}.`, '/cover/id');
+  }
+  state.emit({ op: 'setPageField', key: 'cover', value: cover === null ? null : cleanPageField(cover) });
 
   return {};
 };

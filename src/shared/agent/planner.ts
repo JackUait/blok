@@ -1,6 +1,6 @@
 import { AgentFailure, failure } from './errors';
 import { planConvert, planDelete, planDuplicate, planInsert, planMove, planUpdate, reserveBatchInsertIds } from './plan-block';
-import { planFind, planHtmlInsert, planMarkdownExport, planMarkdownInsert, planRead, planSetIcon, planSetTitle } from './plan-doc';
+import { planFind, planHtmlInsert, planMarkdownExport, planMarkdownInsert, planRead, planSetCover, planSetIcon, planSetTitle } from './plan-doc';
 import { insertSpecIds, PlanState } from './plan-state';
 import { planTextDelete, planTextFormat, planTextInsert, planTextReplace } from './plan-text';
 import { COMMENT_COMMANDS } from '../tool-descriptions/database-comments';
@@ -43,6 +43,7 @@ export const HANDLERS: Record<string, CommandHandler> = {
   'doc.find': planFind,
   'doc.setTitle': planSetTitle,
   'doc.setIcon': planSetIcon,
+  'doc.setCover': planSetCover,
   'markdown.insert': planMarkdownInsert,
   'html.insert': planHtmlInsert,
   'markdown.export': planMarkdownExport,

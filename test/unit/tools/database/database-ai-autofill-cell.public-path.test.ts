@@ -232,7 +232,9 @@ describe('AI Autofill cell button', () => {
     if (holder === undefined) throw new Error('Missing editor holder');
     fireEvent.click(await findByRole(holder, 'columnheader', { name: /Notes/ }));
     fireEvent.click(await findByRole(document.body, 'menuitem', { name: 'Delete property' }));
-    fireEvent.click(await findByRole(document.body, 'menuitem', { name: 'Delete this property?' }));
+    const confirm = await findByRole(document.body, 'alertdialog', { name: 'Delete this property?' });
+
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
     await quiet();
     await vi.waitFor(async () => expect((await saved())?.schema.some((property) => property.id === 'notes')).toBe(false));
     // A restore must bring the watch back whole, so a plain delete leaves it.

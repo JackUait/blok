@@ -12236,9 +12236,9 @@ export class DatabaseTool implements BlockTool {
 
     this.propertyMenu = null;
     previous?.destroy();
-    const writable = (): boolean => this.propertyMenu === menu
-      && !this.destroyed && !this.readOnly && !this.structureLocked()
+    const editable = (): boolean => !this.destroyed && !this.readOnly && !this.structureLocked()
       && (context === undefined || context.writable());
+    const writable = (): boolean => this.propertyMenu === menu && editable();
     const parentWritable = (): boolean => writable() && menu.isOpen;
     const iconWritable = (): boolean => writable() && menu.isIconPickerOpen;
     const menu = new DatabasePropertyMenu({
@@ -12262,7 +12262,8 @@ export class DatabaseTool implements BlockTool {
       onIconUpdate: (id, patch) => { if (iconWritable()) this.updatePropertySettings(id, patch); },
       onChangeType: (id, type) => { if (parentWritable()) this.changePropertyType(id, type); },
       onDuplicate: (id) => { if (parentWritable()) this.duplicateProperty(id, context); },
-      onDelete: (id) => { if (parentWritable()) this.deleteProperty(id); },
+      // Answered in a dialog after the menu has closed, so it cannot ask for an open menu.
+      onDelete: (id) => { if (editable()) this.deleteProperty(id); },
       onOptionsChange: (id, options) => {
         if (!parentWritable()) return;
         this.handleTableOptionsChange(id, options);

@@ -13,16 +13,21 @@ import {
 } from './database-panel';
 import type { PanelPage } from './database-panel';
 import { propertyTypeMeta } from './database-property-types';
+import { isPageListRollup } from '../../shared/database/value-helpers';
 import {
   FILTERABLE_TYPES,
   WITHIN_OPERATORS,
   defaultFilterFor,
   filterPillLabel,
+  joinOperator,
+  keepLead,
   menuOperatorOf,
   operatorChoicesFor,
   operatorLabelKey,
   operatorNeedsValue,
+  quantifierChoices,
   relativeValueLabelKey,
+  splitOperator,
   sortDirectionLabelKey,
   withinLabelKey,
 } from './database-filter-labels';
@@ -1643,7 +1648,39 @@ export class ViewSettingsPages {
           return [panelText(this.t('filterGone'))];
         }
         const opKey = operatorLabelKey(property.type, current.operator);
+        const { lead, operator: inner } = splitOperator(current.operator);
+        const writeLead = (next: string | undefined): void => {
+          rule.update({ operator: joinOperator(next, inner) });
+          panel.back();
+        };
         const rows: HTMLElement[] = [
+          // notion-motion.md Round 13: a Date filter's Start date / End date, a Name rollup's Any / None / Every.
+          ...(property.type === 'date' ? [panelRow({
+            label: this.t(lead === 'end' ? 'dateEnd' : 'dateStart'),
+            testId: 'database-filter-side',
+            opensPage: true,
+            onClick: () => panel.push({
+              build: () => (['start', 'end'] as const).map((side) => panelRow({
+                label: this.t(side === 'end' ? 'dateEnd' : 'dateStart'),
+                testId: `database-filter-side-${side}`,
+                checked: (lead === 'end') === (side === 'end'),
+                onClick: () => writeLead(side === 'end' ? 'end' : undefined),
+              })),
+            }),
+          })] : []),
+          ...(isPageListRollup(property) ? [panelRow({
+            label: this.ctx.i18n.t(`tools.database.filterOperator.${lead ?? 'any'}`),
+            testId: 'database-filter-quantifier',
+            opensPage: true,
+            onClick: () => panel.push({
+              build: () => quantifierChoices().map((choice) => panelRow({
+                label: this.ctx.i18n.t(choice.labelKey),
+                testId: `database-filter-quantifier-${choice.operator}`,
+                checked: (lead ?? 'any') === choice.operator,
+                onClick: () => writeLead(choice.operator),
+              })),
+            }),
+          })] : []),
           panelRow({
             label: property.name,
             testId: 'database-filter-operator',
@@ -1655,7 +1692,7 @@ export class ViewSettingsPages {
             })),
           }),
           ...this.valueControls(property, current, (patch) => {
-            rule.update(patch);
+            rule.update(patch.operator === undefined ? patch : { ...patch, operator: keepLead(current.operator, patch.operator) });
             panel.refresh();
           }, rule.noThisPage !== true),
           panelSeparator(),
@@ -1707,7 +1744,8 @@ export class ViewSettingsPages {
     update: (patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>) => void,
     thisPage = true
   ): HTMLElement[] {
-    const { operator, value } = filter;
+    const { value } = filter;
+    const operator = splitOperator(filter.operator).operator;
     // filter-sort's relative and "Is between" editors (findings V18), shared with the chip.
     const dates = DATE_LIKE_TYPES.includes(property.type) ? dateRuleControls(this.ctx, filter, update) : undefined;
 
@@ -1722,6 +1760,15 @@ export class ViewSettingsPages {
     }
     if (!operatorNeedsValue(operator)) return [];
     if (operator === 'relative_to_today') return this.relativeControls(value, update);
+    if (isPageListRollup(property)) {
+      return [panelInput({
+        value: typeof value === 'string' ? value : '',
+        placeholder: this.t('filterValuePlaceholder'),
+        label: this.t('filterValue'),
+        testId: 'database-filter-value',
+        onInput: (text) => update({ value: text }),
+      })];
+    }
 
     switch (property.type) {
       case 'select':

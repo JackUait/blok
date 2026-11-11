@@ -4,6 +4,7 @@ import type { ViewControlsHost } from '../../../../src/tools/database/database-v
 import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { hover, shownHint } from './hint-harness';
+import { PAGE_LIST_ROLLUP } from '../../../../src/shared/database/value-helpers';
 
 const schema: PropertyDefinition[] = [
   { id: 'title', name: 'Name', type: 'title', position: 'a0' },
@@ -642,6 +643,91 @@ describe('DatabaseViewControls', () => {
       expect(controls.effective(saved.view).filters).toEqual([]);
     });
   });
+  // notion-motion.md Round 13 (r13-filter-ops-id.raw): ID lists =, ≠, >, <, ≥, ≤, Is empty, Is not empty.
+  it('lists Is empty and Is not empty on an ID filter, and hides the value field for them', () => {
+    const env = setup({ schema: () => [...schema, { id: 'uid', name: 'ID', type: 'uniqueId', position: 'a3' }] });
+
+    env.saved.view = { ...env.saved.view, filters: [{ id: 'f1', propertyId: 'uid', operator: 'equals', value: null }] };
+    env.controls.refresh();
+    click('database-filter-pill-f1');
+    click('database-filter-operator');
+    const ops = [...document.querySelectorAll('[data-blok-testid^="database-filter-op-"]')].map((el) => el.getAttribute('data-blok-testid')?.replace('database-filter-op-', ''));
+
+    expect(ops).toEqual(['equals', 'does_not_equal', 'greater_than', 'less_than', 'greater_than_or_equal_to', 'less_than_or_equal_to', 'is_empty', 'is_not_empty']);
+
+    click('database-filter-op-is_empty');
+
+    expect(env.controls.effective(env.saved.view).filters[0]).toMatchObject({ operator: 'is_empty', value: null });
+    expect(q('database-filter-value')).toBeNull();
+  });
+
+  // notion-motion.md Round 13 (r13-filter-ops-rollup.png, -rollup.raw, -rollup-op.raw): "Rollup any ⌄ contains ⌄",
+  // the first menu Any / None / Every, the second the URL list, and a text field.
+  describe('rollup of the Name chip', () => {
+    const names = Object.assign(
+      { id: 'names', name: 'Names', type: 'relation', position: 'a3', rollup: { relationPropertyId: 'rel', targetPropertyId: 'title', function: 'show_original' } } as PropertyDefinition,
+      { [PAGE_LIST_ROLLUP]: true }
+    );
+
+    const open = (filter: { operator: string; value: unknown }): ReturnType<typeof setup> => {
+      const env = setup({ schema: () => [...schema, names] });
+
+      env.saved.view = { ...env.saved.view, filters: [{ id: 'f1', propertyId: 'names', ...filter } as DatabaseViewConfig['filters'][number]] };
+      env.controls.refresh();
+      click('database-filter-pill-f1');
+
+      return env;
+    };
+
+    it('heads the popover "Names any ⌄ contains ⌄", 220 wide, with the text field focused', () => {
+      open({ operator: 'any:contains', value: '' });
+
+      expect(q('database-filter-popover')?.style.width).toBe('220px');
+      expect(text(q('database-filter-quantifier'))).toBe('tools.database.filteroperator.any');
+      expect(text(q('database-filter-operator'))).toBe('tools.database.filteroperator.contains');
+      expect(text(q('database-filter-quantifier')?.parentElement)).toBe('Names tools.database.filteroperator.any tools.database.filteroperator.contains');
+      expect(q('database-filter-value')).toHaveFocus();
+    });
+
+    it('picks None from Any / None / Every and keeps the text operator', () => {
+      const { controls, saved } = open({ operator: 'any:contains', value: 'x' });
+
+      click('database-filter-quantifier');
+      const rows = [...document.querySelectorAll('[data-blok-testid^="database-filter-quantifier-"]')].map((el) => el.getAttribute('data-blok-testid'));
+
+      expect(rows).toEqual(['database-filter-quantifier-any', 'database-filter-quantifier-none', 'database-filter-quantifier-every']);
+      expect(q('database-filter-quantifier-any')?.getAttribute('aria-checked')).toBe('true');
+
+      click('database-filter-quantifier-none');
+
+      expect(controls.effective(saved.view).filters[0]).toMatchObject({ operator: 'none:contains', value: 'x' });
+    });
+
+    it('lists the text operators second and keeps the quantifier', () => {
+      const { controls, saved } = open({ operator: 'every:contains', value: 'x' });
+
+      click('database-filter-operator');
+      const ops = [...document.querySelectorAll('[data-blok-testid^="database-filter-op-"]')].map((el) => el.getAttribute('data-blok-testid')?.replace('database-filter-op-', ''));
+
+      expect(ops).toEqual(['equals', 'does_not_equal', 'contains', 'does_not_contain', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty']);
+      expect(q('database-filter-op-contains')?.getAttribute('aria-checked')).toBe('true');
+
+      click('database-filter-op-starts_with');
+
+      expect(controls.effective(saved.view).filters[0]).toMatchObject({ operator: 'every:starts_with', value: 'x' });
+    });
+
+    it('writes the typed text', () => {
+      const { controls, saved } = open({ operator: 'any:contains', value: '' });
+      const input = q('database-filter-value') as HTMLInputElement;
+
+      input.value = 'des';
+      input.dispatchEvent(new Event('input'));
+
+      expect(controls.effective(saved.view).filters[0]).toMatchObject({ operator: 'any:contains', value: 'des' });
+    });
+  });
+
   describe('date chip (Notion: operator list and relative-date editor)', () => {
     const date: PropertyDefinition = { id: 'due', name: 'Due', type: 'date', position: 'a3' };
 
@@ -661,6 +747,55 @@ describe('DatabaseViewControls', () => {
       select.value = value;
       select.dispatchEvent(new Event('change'));
     };
+
+    // notion-motion.md Round 13 (r13-filter-date.png, r13-filter-ops-date.raw): "Start date ⌄ is relative to today ⌄",
+    // the first button choosing Start date / End date.
+    it('heads a date filter with the Start date / End date chooser in place of the name', () => {
+      const { controls, saved } = open({ operator: 'this_week', value: null });
+
+      expect(text(q('database-filter-side'))).toBe('tools.database.dateStart');
+      expect(text(q('database-filter-operator'))).toBe('tools.database.filteroperator.isrelativetotoday');
+      expect(text(q('database-filter-side')?.parentElement)).toBe('tools.database.dateStart tools.database.filteroperator.isrelativetotoday');
+
+      click('database-filter-side');
+      const rows = [...document.querySelectorAll('[data-blok-testid^="database-filter-side-"]')].map((el) => el.getAttribute('data-blok-testid'));
+
+      expect(rows).toEqual(['database-filter-side-start', 'database-filter-side-end']);
+      expect(text(q('database-filter-side-end'))).toBe('tools.database.dateEnd');
+      expect(q('database-filter-side-start')?.getAttribute('aria-checked')).toBe('true');
+
+      click('database-filter-side-end');
+
+      expect(controls.effective(saved.view).filters[0]).toMatchObject({ operator: 'end:this_week', value: null });
+      expect(text(q('database-filter-side'))).toBe('tools.database.dateEnd');
+    });
+
+    it('keeps End date through the relative editor and an operator pick, and goes back to Start date', () => {
+      const { controls, saved } = open({ operator: 'end:this_week', value: null });
+
+      pick('database-filter-unit', 'month');
+      expect(controls.effective(saved.view).filters[0]).toMatchObject({ operator: 'end:relative_to_today', value: 'this:1:month' });
+
+      click('database-filter-operator');
+      expect(q('database-filter-op-relative_to_today')?.getAttribute('aria-checked')).toBe('true');
+      click('database-filter-op-before');
+      expect(controls.effective(saved.view).filters[0]).toMatchObject({ operator: 'end:before' });
+
+      click('database-filter-side');
+      click('database-filter-side-start');
+      expect(controls.effective(saved.view).filters[0]).toMatchObject({ operator: 'before' });
+    });
+
+    it('has no Start date / End date chooser on Created time', () => {
+      const env = setup({ schema: () => [...schema, { id: 'ct', name: 'Created', type: 'createdTime', position: 'a3' }] });
+
+      env.saved.view = { ...env.saved.view, filters: [{ id: 'f1', propertyId: 'ct', operator: 'equals', value: null }] };
+      env.controls.refresh();
+      click('database-filter-pill-f1');
+
+      expect(q('database-filter-side')).toBeNull();
+      expect(text(q('database-filter-operator'))).toBe('Created tools.database.filteroperator.is');
+    });
 
     it('edits "This week" with This / unit selects, a calendar and the moving-date note', () => {
       const { controls, saved, host } = open({ operator: 'this_week', value: null });
@@ -713,7 +848,7 @@ describe('DatabaseViewControls', () => {
     it('opens an old "is not" filter with its name and value, and lists Notion\'s operators', () => {
       const { controls } = open({ operator: 'does_not_equal', value: 'today' });
 
-      expect(text(q('database-filter-operator'))).toBe('Due tools.database.filteroperator.isnot');
+      expect(text(q('database-filter-operator'))).toBe('tools.database.filteroperator.isnot');
       expect(q('database-filter-date-today')?.getAttribute('aria-checked')).toBe('true');
       expect(controls.hasPersonalEdits('v1')).toBe(false);
 

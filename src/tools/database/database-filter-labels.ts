@@ -2,6 +2,7 @@ import { nanoid } from 'nanoid';
 import { RELATIVE_DATE_OPERATORS, RELATIVE_DATE_VALUES, parseRelativeSpan } from './relative-dates';
 import type { RelativeDateUnit } from './relative-dates';
 import { ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from './database-query';
+import { isPageListRollup } from '../../shared/database/value-helpers';
 import type { FilterConfig, PropertyDefinition, PropertyType, SortConfig } from './types';
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
@@ -61,7 +62,7 @@ const OPERATORS: Record<PropertyType, OperatorChoice[]> = {
   phone: TEXT,
   richText: EMPTY,
   number: [...COMPARE, ...EMPTY],
-  uniqueId: COMPARE,
+  uniqueId: [...COMPARE, ...EMPTY],
   select: [op('equals', 'is'), op('does_not_equal', 'isNot'), ...EMPTY],
   status: [op('equals', 'is'), op('does_not_equal', 'isNot')],
   multiSelect: LIST,
@@ -90,8 +91,31 @@ const OPERATORS: Record<PropertyType, OperatorChoice[]> = {
 export const FILTERABLE_TYPES: readonly PropertyType[] = (Object.keys(OPERATORS) as PropertyType[])
   .filter((type) => type !== 'richText' && OPERATORS[type].length > 0);
 
+/** Notion's first rollup menu, in its order (notion-motion.md Round 13, r13-filter-ops-rollup.raw). */
+const QUANTIFIERS = [op('any', 'any'), op('none', 'none'), op('every', 'every')];
+
 /** A rollup that shows a list: Notion's API filters it with any / every / none. */
-const QUANTIFIED = [op('any', 'any'), op('every', 'every'), op('none', 'none'), ...EMPTY];
+const QUANTIFIED = [...QUANTIFIERS, ...EMPTY];
+
+export const quantifierChoices = (): OperatorChoice[] => QUANTIFIERS;
+
+/**
+ * A saved operator may lead with a part: a Name rollup's quantifier
+ * (`any:contains`) or a date's End date side (`end:before`).
+ */
+const LEAD = /^(any|none|every|end):(.+)$/;
+
+export const splitOperator = (operator: string): { lead?: string; operator: string } => {
+  const match = LEAD.exec(operator);
+
+  return match === null ? { operator } : { lead: match[1], operator: match[2] };
+};
+
+export const joinOperator = (lead: string | undefined, operator: string): string => (lead === undefined ? operator : `${lead}:${operator}`);
+
+/** `next` with the lead part `current` carries, unless `next` brings its own. */
+export const keepLead = (current: string, next: string): string =>
+  (splitOperator(next).lead === undefined ? joinOperator(splitOperator(current).lead, next) : next);
 
 const LIST_SHAPES: readonly PropertyType[] = ['multiSelect', 'person', 'relation', 'files'];
 
@@ -99,9 +123,15 @@ const LIST_SHAPES: readonly PropertyType[] = ['multiSelect', 'person', 'relation
 export const isRollupList = (property: Pick<PropertyDefinition, 'type' | 'rollup'>): boolean =>
   property.rollup !== undefined && LIST_SHAPES.includes(property.type);
 
-/** Operators for a property as its value shows: a rollup list gets any / every / none. */
-export const operatorChoicesFor = (property: Pick<PropertyDefinition, 'type' | 'rollup'>): OperatorChoice[] =>
-  isRollupList(property) ? QUANTIFIED : OPERATORS[property.type];
+/**
+ * Operators for a property as its value shows: a rollup list gets any / every / none.
+ * A rollup of the Name picks its quantifier apart, then a text operator.
+ */
+export const operatorChoicesFor = (property: PropertyDefinition): OperatorChoice[] => {
+  if (isPageListRollup(property)) return TEXT;
+
+  return isRollupList(property) ? QUANTIFIED : OPERATORS[property.type];
+};
 
 export const operatorChoices = (type: PropertyType): OperatorChoice[] => OPERATORS[type];
 
@@ -136,19 +166,28 @@ const isWithin = (operator: string): operator is typeof WITHIN_OPERATORS[number]
   (WITHIN_OPERATORS as readonly string[]).includes(operator);
 
 /** The menu operator a saved one belongs to: every window shows as "Is relative to today". */
-export const menuOperatorOf = (operator: string): string => (isWithin(operator) ? 'relative_to_today' : operator);
+export const menuOperatorOf = (operator: string): string => {
+  const inner = splitOperator(operator).operator;
+
+  return isWithin(inner) ? 'relative_to_today' : inner;
+};
 
 const isDateType = (type: PropertyType): boolean => type === 'date' || type === 'createdTime' || type === 'lastEditedTime';
 
-export const operatorLabelKey = (type: PropertyType, operator: string): string | undefined =>
-  [...OPERATORS[type], ...QUANTIFIED, ...(isDateType(type) ? LEGACY_DATE : [])]
-    .find((choice) => choice.operator === menuOperatorOf(operator) || choice.operator === operator)?.labelKey;
+export const operatorLabelKey = (type: PropertyType, operator: string): string | undefined => {
+  const inner = splitOperator(operator).operator;
+
+  return [...OPERATORS[type], ...TEXT, ...QUANTIFIED, ...(isDateType(type) ? LEGACY_DATE : [])]
+    .find((choice) => choice.operator === menuOperatorOf(inner) || choice.operator === inner)?.labelKey;
+};
 
 /** Whether an operator takes a value from the person. */
 export const operatorNeedsValue = (operator: string): boolean => {
-  if (operator === 'relative_to_today' || operator === 'is_between') return true;
+  const inner = splitOperator(operator).operator;
 
-  return operator !== 'is_empty' && operator !== 'is_not_empty' && !(RELATIVE_DATE_OPERATORS as readonly string[]).includes(operator);
+  if (inner === 'relative_to_today' || inner === 'is_between') return true;
+
+  return inner !== 'is_empty' && inner !== 'is_not_empty' && !(RELATIVE_DATE_OPERATORS as readonly string[]).includes(inner);
 };
 
 const idsOf = (value: unknown): string[] => {
@@ -161,6 +200,8 @@ const idsOf = (value: unknown): string[] => {
 export const defaultFilterFor = (property: PropertyDefinition): FilterConfig & { id: string } => {
   const base = { id: nanoid(), propertyId: property.id };
 
+  // notion-motion.md Round 13: a rollup filter opens on "any" + "contains".
+  if (isPageListRollup(property)) return { ...base, operator: 'any:contains', value: '' };
   if (isRollupList(property)) return { ...base, operator: 'any', value: [] };
 
   switch (property.type) {
@@ -218,7 +259,8 @@ export const filterValueText = (
   personName: (id: string) => string | undefined = () => undefined,
   rowTitle: (id: string) => string | undefined = () => undefined
 ): string => {
-  const { operator, value } = filter;
+  const { value } = filter;
+  const operator = splitOperator(filter.operator).operator;
 
   if (operator === 'is_empty' || operator === 'is_not_empty') {
     return t(operator === 'is_empty' ? 'tools.database.filterOperator.isEmpty' : 'tools.database.filterOperator.isNotEmpty');
@@ -241,6 +283,7 @@ export const filterValueText = (
   if (property.type === 'person' || property.type === 'createdBy' || property.type === 'lastEditedBy') {
     return idsOf(value).map((id) => (id === ME_FILTER_VALUE ? t('tools.database.filterMe') : personName(id) ?? '')).filter((name) => name !== '').join(', ');
   }
+  if (isPageListRollup(property)) return typeof value === 'string' ? value : '';
   if (property.type === 'relation') {
     return idsOf(value).map((id) => (id === THIS_PAGE_FILTER_VALUE ? t('tools.database.filterThisPage') : rowTitle(id) ?? '')).filter((name) => name !== '').join(', ');
   }

@@ -241,6 +241,36 @@ describe('DatabaseTool — computed properties', () => {
     expect(chips.map((c) => c.textContent)).toEqual(['Bravo, Jr', 'tools.database.relationUntitled']);
   });
 
+  // notion-motion.md Round 13: a Name rollup filters with Any / None / Every over the titles.
+  it('filters a Name rollup with none + contains and reads its text on the pill', () => {
+    const names: PropertyDefinition = { id: 'names', name: 'Names', type: 'rollup', position: 'a7', rollup: { relationPropertyId: 'related', targetPropertyId: 'title', function: 'show_original' } };
+    const doc = makeDoc([
+      fakeRow('a', 'db', { title: 'Alpha', related: [{ id: 'b' }] }, 'a0'),
+      fakeRow('b', 'db', { title: 'Bravo', related: [{ id: 'c' }] }, 'a1'),
+      fakeRow('c', 'db', { title: 'Charlie' }, 'a2'),
+    ]);
+    const tool = new DatabaseTool({
+      data: {
+        ...data,
+        schema: [...schema, names],
+        views: [{ ...data.views[0], visibleProperties: ['related', 'names'], filters: [{ id: 'f1', propertyId: 'names', operator: 'none:contains', value: 'charl' }] }],
+      },
+      config: {}, api: doc.api, readOnly: false, block: { id: 'db', dispatchChange: vi.fn() } as never,
+    });
+    const el = tool.render();
+
+    document.body.appendChild(el);
+    tool.rendered();
+
+    const shown = [...el.querySelectorAll('[data-blok-database-table-row]')].map((r) => r.getAttribute('data-row-id'));
+
+    // A self relation also lists the rows pointing in, so b's names are Charlie and Alpha.
+    expect(shown).toEqual(['a', 'c']);
+
+    // The pill reads the typed text only when the chip's schema still marks the rollup as a page list.
+    expect(el.querySelector('[data-blok-testid="database-filter-pill-f1"]')?.textContent?.replace(/\s+/g, ' ').trim()).toContain('charl');
+  });
+
   it('takes a deleted row out of the relations that point at it, in the same step', () => {
     const doc = makeDoc([
       fakeRow('a', 'db', { title: 'Alpha', related: [{ id: 'b' }], next: [{ id: 'b' }] }, 'a0'),

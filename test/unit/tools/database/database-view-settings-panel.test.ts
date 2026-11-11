@@ -6,6 +6,7 @@ import type { DatabasePanel } from '../../../../src/tools/database/database-pane
 import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
 import { IconTable, IconViewBoard } from '../../../../src/components/icons';
 import { PopoverItemType } from '../../../../src/components/utils/popover/components/popover-item';
+import { PAGE_LIST_ROLLUP } from '../../../../src/shared/database/value-helpers';
 
 const schema: PropertyDefinition[] = [
   { id: 'title', name: 'Name', type: 'title', position: 'a0' },
@@ -400,6 +401,66 @@ describe('view settings panel', () => {
 
       expect(h.state.view.groupBy).toBe('stage');
       expect(exists('database-group-by')).toBe(true);
+    });
+  });
+
+  // notion-motion.md Round 13: the rule editor picks a date's Start date / End date and a Name rollup's Any / None / Every too.
+  describe('rule editor lead parts', () => {
+    const ops = (): Array<string | undefined> => [...document.querySelectorAll('[data-blok-testid^="database-filter-op-"]')]
+      .map((el) => el.getAttribute('data-blok-testid')?.replace('database-filter-op-', ''));
+
+    it('keeps End date through the date editor and an operator pick, and goes back to Start date', () => {
+      const h = harness({ filters: [{ id: 'f1', propertyId: 'due', operator: 'end:this_week', value: null }] });
+
+      h.open('filter');
+      click('database-filter-row-f1');
+      expect(document.querySelector('[data-blok-testid="database-filter-side"]')?.textContent).toContain('tools.database.dateEnd');
+
+      const unit = document.querySelector<HTMLSelectElement>('[data-blok-testid="database-filter-unit"]');
+
+      if (unit === null) throw new Error('no unit');
+      unit.value = 'month';
+      unit.dispatchEvent(new Event('change'));
+      expect(h.state.view.filters[0]).toMatchObject({ operator: 'end:relative_to_today', value: 'this:1:month' });
+
+      click('database-filter-operator');
+      click('database-filter-op-before');
+      expect(h.state.view.filters[0]).toMatchObject({ operator: 'end:before' });
+
+      click('database-filter-side');
+      expect(document.querySelector('[data-blok-testid="database-filter-side-end"]')?.getAttribute('aria-checked')).toBe('true');
+      click('database-filter-side-start');
+      expect(h.state.view.filters[0]).toMatchObject({ operator: 'before' });
+    });
+
+    it('edits a Name rollup rule with Any / None / Every, the text operators and a text field', () => {
+      const names = Object.assign(
+        { id: 'names', name: 'Names', type: 'relation', position: 'a6', rollup: { relationPropertyId: 'rel', targetPropertyId: 'title', function: 'show_original' } } as PropertyDefinition,
+        { [PAGE_LIST_ROLLUP]: true }
+      );
+      const h = harness({ filters: [{ id: 'f1', propertyId: 'names', operator: 'any:contains', value: '' }] });
+
+      h.ctx.schema = () => [...schema, names];
+      h.open('filter');
+      click('database-filter-row-f1');
+
+      click('database-filter-quantifier');
+      expect([...document.querySelectorAll('[data-blok-testid^="database-filter-quantifier-"]')].map((el) => el.getAttribute('data-blok-testid')))
+        .toEqual(['database-filter-quantifier-any', 'database-filter-quantifier-none', 'database-filter-quantifier-every']);
+      click('database-filter-quantifier-none');
+      expect(h.state.view.filters[0]).toMatchObject({ operator: 'none:contains' });
+
+      click('database-filter-operator');
+      expect(ops()).toEqual(['equals', 'does_not_equal', 'contains', 'does_not_contain', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty']);
+      click('database-filter-op-starts_with');
+      expect(h.state.view.filters[0]).toMatchObject({ operator: 'none:starts_with' });
+
+      const input = document.querySelector<HTMLInputElement>('[data-blok-testid="database-filter-value"]');
+
+      if (input === null) throw new Error('no value field');
+      input.value = 'x';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      expect(h.state.view.filters[0]).toMatchObject({ operator: 'none:starts_with', value: 'x' });
     });
   });
 

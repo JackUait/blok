@@ -4,9 +4,13 @@ import {
   filterPillLabel,
   menuOperatorOf,
   operatorChoices,
+  operatorChoicesFor,
   operatorLabelKey,
+  operatorNeedsValue,
+  quantifierChoices,
   sortDirectionLabelKey,
 } from '../../../../src/tools/database/database-filter-labels';
+import { PAGE_LIST_ROLLUP } from '../../../../src/shared/database/value-helpers';
 import type { PropertyDefinition } from '../../../../src/tools/database/types';
 
 /** Echoes the key and its vars, so a test reads which key a label used. */
@@ -76,8 +80,9 @@ describe('database filter labels', () => {
     expect(operatorChoices('createdBy').map((c) => c.operator)).toEqual(['contains', 'does_not_contain', 'is_empty', 'is_not_empty']);
     expect(operatorChoices('files').map((c) => c.operator)).toEqual(['is_empty', 'is_not_empty']);
     expect(operatorChoices('email').map((c) => c.operator)).toEqual(operatorChoices('text').map((c) => c.operator));
+    // notion-motion.md Round 13 (r13-filter-ops-id.raw): =, ≠, >, <, ≥, ≤, Is empty, Is not empty.
     expect(operatorChoices('uniqueId').map((c) => c.operator)).toEqual([
-      'equals', 'does_not_equal', 'greater_than', 'less_than', 'greater_than_or_equal_to', 'less_than_or_equal_to',
+      'equals', 'does_not_equal', 'greater_than', 'less_than', 'greater_than_or_equal_to', 'less_than_or_equal_to', 'is_empty', 'is_not_empty',
     ]);
     expect(operatorChoices('createdTime')).toEqual(operatorChoices('date'));
     expect(defaultFilterFor(prop('person'))).toMatchObject({ operator: 'contains', value: [] });
@@ -130,5 +135,49 @@ describe('database filter labels', () => {
     expect(filterPillLabel({ operator: 'relative_to_today', value: 'this:1:day' }, prop('date'), t)).toBe('Due: tools.database.filterDateToday');
     expect(filterPillLabel({ operator: 'is_between', value: '2026-10-01/2026-10-07' }, prop('date'), t)).toBe('Due: 2026-10-01 → 2026-10-07');
     expect(filterPillLabel({ operator: 'is_between', value: null }, prop('date'), t)).toBe('Due');
+  });
+
+  // notion-motion.md Round 13 (r13-filter-ops-rollup*.raw, r13-filter-ops-rollup.png): Any / None / Every, then the URL list.
+  describe('a rollup of the Name', () => {
+    const names = Object.assign(prop('relation', { name: 'Names', rollup: { relationPropertyId: 'rel', targetPropertyId: 't', function: 'show_original' } }), { [PAGE_LIST_ROLLUP]: true });
+
+    it('lists Any, None, Every, then the text operators', () => {
+      expect(quantifierChoices().map((c) => c.operator)).toEqual(['any', 'none', 'every']);
+      expect(quantifierChoices().map((c) => c.labelKey)).toEqual([
+        'tools.database.filterOperator.any', 'tools.database.filterOperator.none', 'tools.database.filterOperator.every',
+      ]);
+      expect(operatorChoicesFor(names).map((c) => c.operator)).toEqual(operatorChoices('url').map((c) => c.operator));
+    });
+
+    it('starts at any + contains with no text', () => {
+      expect(defaultFilterFor(names)).toMatchObject({ operator: 'any:contains', value: '' });
+    });
+
+    it('names the text operator and shows the typed text on the pill', () => {
+      expect(operatorLabelKey('relation', 'none:starts_with')).toBe('tools.database.filterOperator.startsWith');
+      expect(menuOperatorOf('every:contains')).toBe('contains');
+      expect(operatorNeedsValue('any:is_empty')).toBe(false);
+      expect(operatorNeedsValue('any:contains')).toBe(true);
+      expect(filterPillLabel({ operator: 'any:contains', value: 'des' }, names, t)).toBe('Names: des');
+      expect(filterPillLabel({ operator: 'any:contains', value: '' }, names, t)).toBe('Names');
+      expect(filterPillLabel({ operator: 'none:is_empty', value: null }, names, t)).toBe('Names: tools.database.filterOperator.isEmpty');
+    });
+
+    it('keeps the id quantifiers on other rollup lists, in Notion\'s order', () => {
+      const tags = prop('multiSelect', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'tags', function: 'show_original' } });
+
+      expect(operatorChoicesFor(tags).map((c) => c.operator)).toEqual(['any', 'none', 'every', 'is_empty', 'is_not_empty']);
+      expect(defaultFilterFor(tags)).toMatchObject({ operator: 'any', value: [] });
+    });
+  });
+
+  // notion-motion.md Round 13 (r13-filter-ops-date.raw): a Date filter's End date side.
+  it('reads an End date filter by its operator', () => {
+    expect(operatorLabelKey('date', 'end:past_month')).toBe('tools.database.filterOperator.isRelativeToToday');
+    expect(menuOperatorOf('end:this_week')).toBe('relative_to_today');
+    expect(operatorNeedsValue('end:is_between')).toBe(true);
+    expect(operatorNeedsValue('end:is_empty')).toBe(false);
+    expect(filterPillLabel({ operator: 'end:this_week', value: null }, prop('date'), t)).toBe('Due: tools.database.filterDateThisWeek');
+    expect(filterPillLabel({ operator: 'end:equals', value: 'today' }, prop('date'), t)).toBe('Due: tools.database.filterDateToday');
   });
 });

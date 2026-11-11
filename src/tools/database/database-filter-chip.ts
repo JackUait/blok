@@ -4,7 +4,18 @@ import { DatabasePanel, panelInput, panelRow, panelText } from './database-panel
 import type { PanelPage } from './database-panel';
 import type { ViewSettingsContext } from './database-view-settings-panel';
 import { ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from './database-query';
-import { menuOperatorOf, operatorChoicesFor, operatorLabelKey, operatorNeedsValue, relativeValueLabelKey } from './database-filter-labels';
+import {
+  joinOperator,
+  keepLead,
+  menuOperatorOf,
+  operatorChoicesFor,
+  operatorLabelKey,
+  operatorNeedsValue,
+  quantifierChoices,
+  relativeValueLabelKey,
+  splitOperator,
+} from './database-filter-labels';
+import { isPageListRollup } from '../../shared/database/value-helpers';
 import { addFilterRule, emptyFilterTree, withEntryIds } from './filter-tree';
 import { RELATIVE_DATE_UNITS, RELATIVE_DATE_VALUES, formatRelativeSpan, parseRelativeSpan, relativeWindow, toLocalDay } from './relative-dates';
 import type { RelativeDateUnit, RelativeSpan } from './relative-dates';
@@ -34,7 +45,9 @@ const valueFor = (property: PropertyDefinition, operator: string, value: FilterC
 const DEFAULT_SPAN: RelativeSpan = { direction: 'this', count: 1, unit: 'week' };
 
 /** A window operator as Notion's relative editor reads it: `past_month` is Past 1 month. */
-const spanOf = (operator: string, value: FilterConfig['value']): RelativeSpan | undefined => {
+const spanOf = (saved: string, value: FilterConfig['value']): RelativeSpan | undefined => {
+  const operator = splitOperator(saved).operator;
+
   if (operator === 'relative_to_today') return parseRelativeSpan(value) ?? DEFAULT_SPAN;
   if (operator === 'this_week') return DEFAULT_SPAN;
   const [direction, unit] = operator.split('_');
@@ -119,35 +132,69 @@ class FilterChipPages {
     this.ctx.updatePersonal({ filters: next(withEntryIds(this.ctx.view().filters)) });
   }
 
-  private update(patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>): void {
+  /** An operator in `patch` keeps the saved lead part (quantifier, End date) unless `lead` is false. */
+  private update(patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>, lead = true): void {
     if (this.writer !== undefined) {
       this.writer(patch);
 
       return;
     }
-    this.write((filters) => filters.map((f) => (f.id === this.filterId ? { ...f, ...patch } : f)));
+    this.write((filters) => filters.map((f) => {
+      if (f.id !== this.filterId) return f;
+
+      return { ...f, ...patch, ...(patch.operator !== undefined && lead ? { operator: keepLead(f.operator, patch.operator) } : {}) };
+    }));
   }
 
-  private header(panel: DatabasePanel, filter: Filter, property: PropertyDefinition): HTMLElement {
-    const header = document.createElement('div');
-    const operator = document.createElement('button');
-    const name = document.createElement('span');
-    const opText = document.createElement('span');
+  /** A header button: an optional plain lead text, a medium-weight label, a chevron. */
+  private headerButton(testId: string, label: string, onClick: () => void, name?: string): HTMLButtonElement {
+    const button = document.createElement('button');
+    const text = document.createElement('span');
     const chevron = document.createElement('span');
-    const more = document.createElement('button');
-    const opKey = operatorLabelKey(property.type, filter.operator);
 
-    header.setAttribute('data-blok-database-chip-header', '');
-    operator.type = 'button';
-    operator.setAttribute('data-blok-database-chip-operator', '');
-    operator.setAttribute('data-blok-testid', 'database-filter-operator');
-    name.textContent = property.name;
-    opText.setAttribute('data-blok-database-chip-operator-label', '');
-    opText.textContent = (opKey === undefined ? filter.operator : this.ctx.i18n.t(opKey)).toLocaleLowerCase();
+    button.type = 'button';
+    button.setAttribute('data-blok-database-chip-operator', '');
+    button.setAttribute('data-blok-testid', testId);
+    text.setAttribute('data-blok-database-chip-operator-label', '');
+    text.textContent = label;
     chevron.setAttribute('aria-hidden', 'true');
     chevron.innerHTML = IconChevronDown;
-    operator.append(name, ' ', opText, chevron);
-    operator.addEventListener('click', () => panel.push(this.operators(property)));
+    if (name !== undefined) button.append(name, ' ');
+    button.append(text, chevron);
+    button.addEventListener('click', onClick);
+
+    return button;
+  }
+
+  /**
+   * notion-motion.md Round 13: a Date filter heads "Start date ⌄ operator ⌄" (no name), a
+   * rollup of the Name "Name any ⌄ operator ⌄" (r13-filter-date.png, r13-filter-ops-rollup.png).
+   */
+  private header(panel: DatabasePanel, filter: Filter, property: PropertyDefinition): HTMLElement {
+    const header = document.createElement('div');
+    const lead = document.createElement('span');
+    const more = document.createElement('button');
+    const opKey = operatorLabelKey(property.type, filter.operator);
+    const { lead: part } = splitOperator(filter.operator);
+    const opLabel = (opKey === undefined ? filter.operator : this.ctx.i18n.t(opKey)).toLocaleLowerCase();
+    const openOperators = (): void => panel.push(this.operators(property));
+
+    header.setAttribute('data-blok-database-chip-header', '');
+    if (property.type === 'date') {
+      lead.append(
+        this.headerButton('database-filter-side', this.t(part === 'end' ? 'dateEnd' : 'dateStart'), () => panel.push(this.sides())),
+        this.headerButton('database-filter-operator', opLabel, openOperators)
+      );
+    } else if (isPageListRollup(property)) {
+      lead.append(
+        property.name,
+        ' ',
+        this.headerButton('database-filter-quantifier', this.ctx.i18n.t(`tools.database.filterOperator.${part ?? 'any'}`).toLocaleLowerCase(), () => panel.push(this.quantifiers())),
+        this.headerButton('database-filter-operator', opLabel, openOperators)
+      );
+    } else {
+      lead.append(this.headerButton('database-filter-operator', opLabel, openOperators, property.name));
+    }
 
     more.type = 'button';
     more.setAttribute('data-blok-database-chip-more', '');
@@ -155,9 +202,48 @@ class FilterChipPages {
     more.setAttribute('aria-label', this.t('tableMoreActions'));
     more.innerHTML = IconDotsHorizontal;
     more.addEventListener('click', () => panel.push(this.moreMenu()));
-    header.append(operator, more);
+    header.append(lead, more);
 
     return header;
+  }
+
+  /** Notion's Start date / End date menu (r13-filter-ops-date.raw). Start date is the plain operator. */
+  private sides(): PanelPage {
+    return {
+      build: (panel) => {
+        const current = this.current()?.operator ?? '';
+        const { lead, operator } = splitOperator(current);
+
+        return (['start', 'end'] as const).map((side) => panelRow({
+          label: this.t(side === 'end' ? 'dateEnd' : 'dateStart'),
+          testId: `database-filter-side-${side}`,
+          checked: (lead === 'end') === (side === 'end'),
+          onClick: () => {
+            this.update({ operator: joinOperator(side === 'end' ? 'end' : undefined, operator) }, false);
+            panel.back();
+          },
+        }));
+      },
+    };
+  }
+
+  /** Notion's Any / None / Every menu (r13-filter-ops-rollup.raw). */
+  private quantifiers(): PanelPage {
+    return {
+      build: (panel) => {
+        const { lead, operator } = splitOperator(this.current()?.operator ?? '');
+
+        return quantifierChoices().map((choice) => panelRow({
+          label: this.ctx.i18n.t(choice.labelKey),
+          testId: `database-filter-quantifier-${choice.operator}`,
+          checked: (lead ?? 'any') === choice.operator,
+          onClick: () => {
+            this.update({ operator: joinOperator(choice.operator, operator) }, false);
+            panel.back();
+          },
+        }));
+      },
+    };
   }
 
   private operators(property: PropertyDefinition): PanelPage {
@@ -212,12 +298,14 @@ class FilterChipPages {
   }
 
   private valueControls(filter: Filter, property: PropertyDefinition): HTMLElement[] {
-    const { operator, value } = filter;
+    const { value } = filter;
+    const operator = splitOperator(filter.operator).operator;
 
     const isDate = property.type === 'date' || property.type === 'createdTime' || property.type === 'lastEditedTime';
 
     if (isDate && spanOf(operator, value) !== undefined) return this.relativeEditor(spanOf(operator, value) ?? DEFAULT_SPAN);
     if (!operatorNeedsValue(operator)) return [];
+    if (isPageListRollup(property)) return [this.valueInput(typeof value === 'string' ? value : '', (text) => this.update({ value: text }))];
 
     switch (property.type) {
       case 'select':
@@ -540,21 +628,30 @@ class FilterChipPages {
   }
 }
 
-/** The operator and value an operator pick makes: a relative pick starts a span, "Is between" an empty range. */
+/**
+ * The operator and value an operator pick makes: a relative pick starts a span, "Is between" an empty range.
+ * The saved lead part (a quantifier, End date) stays.
+ */
 export const operatorPick = (
   property: PropertyDefinition,
   operator: string,
   current: Pick<FilterConfig, 'operator' | 'value'>
-): Pick<FilterConfig, 'operator' | 'value'> => (operator === 'relative_to_today'
-  ? spanFilter(spanOf(current.operator, current.value) ?? DEFAULT_SPAN)
-  : { operator, value: valueFor(property, operator, current.value) });
+): Pick<FilterConfig, 'operator' | 'value'> => {
+  const picked = operator === 'relative_to_today'
+    ? spanFilter(spanOf(current.operator, current.value) ?? DEFAULT_SPAN)
+    : { operator, value: valueFor(property, operator, current.value) };
+
+  return { ...picked, operator: keepLead(current.operator, picked.operator) };
+};
 
 /** The chip's date editors for another rule editor (view settings), which owns the writes. */
 export const dateRuleControls = (
   ctx: ViewSettingsContext,
   filter: Pick<FilterConfig, 'operator' | 'value'>,
   update: (patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>) => void
-): HTMLElement[] | undefined => new FilterChipPages(ctx, '', update).dateRuleControls(filter.operator, filter.value);
+): HTMLElement[] | undefined => new FilterChipPages(ctx, '', (patch) => update(patch.operator === undefined
+  ? patch
+  : { ...patch, operator: keepLead(filter.operator, patch.operator) })).dateRuleControls(filter.operator, filter.value);
 
 /**
  * research/08:232 and shots-08/67-filter-number.png: the popover with a value
@@ -570,12 +667,14 @@ const LIST_FILTER_TYPES: readonly PropertyType[] = [
 /** Opens a filter chip's popover under the chip. */
 export const openFilterChip = (anchor: HTMLElement, ctx: ViewSettingsContext, filterId: string, onClose?: () => void): DatabasePanel => {
   const filter = withEntryIds(ctx.view().filters).find((f) => f.id === filterId);
-  const type = ctx.schema().find((p) => p.id === filter?.propertyId)?.type;
+  const property = ctx.schema().find((p) => p.id === filter?.propertyId);
+  // A rollup of the Name has a text field, as Notion's 220-wide popover shows (r13-filter-ops-rollup.png).
+  const listed = property !== undefined && LIST_FILTER_TYPES.includes(property.type) && !isPageListRollup(property);
   const panel = new DatabasePanel({
     anchor,
     root: new FilterChipPages(ctx, filterId).root(),
     testId: 'database-filter-popover',
-    width: type !== undefined && LIST_FILTER_TYPES.includes(type) ? LIST_FILTER_WIDTH : VALUE_FIELD_FILTER_WIDTH,
+    width: listed ? LIST_FILTER_WIDTH : VALUE_FIELD_FILTER_WIDTH,
     backLabel: ctx.i18n.t('tools.database.settingsBack'),
     ...(onClose !== undefined ? { onClose } : {}),
   });

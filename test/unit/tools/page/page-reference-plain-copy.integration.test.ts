@@ -81,6 +81,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   editor?.destroy();
   editor = undefined;
   holder?.remove();
@@ -93,6 +94,25 @@ describe('copied page pointers in text/plain', () => {
     await vi.waitFor(() => expect(holder?.textContent).toContain('Title p1'));
 
     expect(await copyPlain(instance, 'src')).toBe(`[Title p1](${pageUrl('p1')})`);
+  });
+
+  it('Copy as Markdown writes a resolved page-link as a Markdown link with its title', async () => {
+    const instance = await createEditor([{ id: 'src', type: 'page-link', data: { pageId: 'p1' } }]);
+    const writeText = vi.fn((_text: string) => Promise.resolve());
+
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+    await vi.waitFor(() => expect(holder?.textContent).toContain('Title p1'));
+
+    const { blockSelection, blockManager } = instance.module;
+    const block = blockManager.blocks.find((candidate) => candidate.id === 'src');
+
+    if (block === undefined) {
+      throw new Error('no block src');
+    }
+    blockSelection.selectBlock(block);
+    await blockSelection.copySelectedBlocksAsMarkdown();
+
+    expect(writeText).toHaveBeenCalledWith(`[Title p1](${pageUrl('p1')})`);
   });
 
   it('a resolved inline mention copies as a Markdown link with its title', async () => {

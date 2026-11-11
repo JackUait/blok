@@ -7,7 +7,6 @@
 const MAX_LABEL = 32;
 const FUNCTION_NAME = /^(?:(?:export|pub|async|static|private|public|protected)\s+)*(?:function\*?|def|fn|func)\s+([\w$]+)/;
 const CLOSER = /^\s*[}\])]/;
-const HEADER_TAIL = /\s*(?:=>\s*)?[{:(]\s*$/;
 
 interface Outline {
   lines: string[];
@@ -39,10 +38,20 @@ const outlineOf = (text: string): Outline => {
 
 const isHeader = (o: Outline, i: number): boolean => !o.blank[i] && o.below[i] !== -1 && o.indent[o.below[i]] > o.indent[i];
 
+/**
+ * Drop a trailing `{`, `:` or `(`, and an `=>` before it. String checks, not a
+ * regex: an unanchored `\s*...$` retries at every space of a long run.
+ */
+const withoutHeaderTail = (text: string): string => {
+  const opener = '{:('.includes(text.slice(-1)) ? text.slice(0, -1).trimEnd() : text;
+
+  return opener.endsWith('=>') ? opener.slice(0, -2).trimEnd() : opener;
+};
+
 const labelOf = (line: string): string => {
   const text = line.trim();
   const fn = FUNCTION_NAME.exec(text);
-  const label = fn ? `${fn[1]}()` : text.replace(HEADER_TAIL, '');
+  const label = fn ? `${fn[1]}()` : withoutHeaderTail(text);
 
   return label.length > MAX_LABEL ? `${label.slice(0, MAX_LABEL - 1)}…` : label;
 };

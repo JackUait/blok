@@ -80,4 +80,16 @@ describe('codeBreadcrumb', () => {
     expect(codeBreadcrumb(JS, 99)).toEqual([]);
     expect(codeBreadcrumb('', 0)).toEqual([]);
   });
+  it('stays fast on a header line with a huge run of spaces', () => {
+    const code = `if (a${' '.repeat(200_000)}b) x\n  y();`;
+    const start = performance.now();
+    const [label] = codeBreadcrumb(code, 1);
+
+    expect(performance.now() - start).toBeLessThan(1000);
+    expect(label.startsWith('if (a')).toBe(true);
+  });
+
+  it('drops an arrow before the opening brace', () => {
+    expect(codeBreadcrumb('const run = () => {\n  go();\n}', 1)).toEqual(['const run = ()']);
+  });
 });

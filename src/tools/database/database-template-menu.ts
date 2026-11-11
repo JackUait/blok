@@ -26,6 +26,10 @@ export interface TemplateMenuHost {
   setDefault: (templateId: string | null) => void;
   duplicate: (templateId: string) => void;
   remove: (templateId: string) => void;
+  /** The "Duplicate every…" row's host. Without it the row is left out. */
+  repeatHost?: (templateId: string) => TemplateRepeatHost;
+  /** Opens a repeating template's schedule. */
+  openRepeat?: (templateId: string) => void;
 }
 
 /** What the template banner's "Duplicate every…" menu asks of the database tool. */
@@ -674,6 +678,27 @@ const defaultTitle = (titleEl: HTMLElement | undefined, title: string, label: st
 export const templateMenuItems = (host: TemplateMenuHost): PopoverItemParams[] => {
   const t = translator(host.i18n);
   const current = host.defaultTemplateId();
+  // research/35 §13: "Duplicate every… Off" drops the presets in a 180 wide list; research/30:420: a weekly one reads "Week".
+  const repeatRow = (id: string): PopoverItemParams[] => {
+    const repeatHost = host.repeatHost?.(id);
+
+    if (repeatHost === undefined) return [];
+    const repeat = host.repeatOf(id);
+    const base = { name: `template-${id}-repeat`, title: t('templateRepeatSummaryNone'), icon: IconPlayerLoop };
+
+    if (repeat === undefined) {
+      return [{ ...base, valueLabel: t('chartLegendOff'), children: { placement: 'dropdown', width: '180px', items: templateRepeatItems(repeatHost) } }];
+    }
+    const preset = PRESETS.find((p) => p.frequency === repeat.frequency && p.interval === (repeat.interval ?? 1)
+      && (p.weekdays === undefined || isWorkweek(repeat) === (p.weekdays === WORKWEEK)));
+
+    return [{
+      ...base,
+      ...(preset === undefined ? {} : { valueLabel: t(preset.key) }),
+      closeOnActivate: true,
+      onActivate: () => host.openRepeat?.(id),
+    }];
+  };
   const entry = (id: string, title: string): PopoverItemParams => {
     const repeat = host.repeatOf(id);
     const shown = title === '' ? t('templateUntitled') : title;
@@ -688,12 +713,15 @@ export const templateMenuItems = (host: TemplateMenuHost): PopoverItemParams[] =
       // research/33 §3.8: a click makes a row; research/30 X1: "…" opens the rest on click.
       closeOnActivate: true,
       onActivate: () => host.newFromTemplate(id),
+      // research/35 §1.8: 250 wide, with the header menu's 28px rows. No New page row: the row makes one.
       children: {
         moreButton: { label: t('templateMore') },
+        width: '250px',
+        class: 'blok-database-header-menu',
         items: [
-          { name: `template-${id}-use`, title: t('templateUse'), icon: IconPlus, closeOnActivate: true, onActivate: () => host.newFromTemplate(id) },
-          { name: `template-${id}-edit`, title: t('templateEdit'), icon: IconPencil, closeOnActivate: true, onActivate: () => host.editTemplate(id) },
+          ...repeatRow(id),
           { name: `template-${id}-default`, title: t('templateSetDefault'), isActive: current === id, closeOnActivate: true, onActivate: () => host.setDefault(id) },
+          { name: `template-${id}-edit`, title: t('templateEdit'), icon: IconPencil, closeOnActivate: true, onActivate: () => host.editTemplate(id) },
           { name: `template-${id}-duplicate`, title: t('templateDuplicate'), icon: IconCopy, closeOnActivate: true, onActivate: () => host.duplicate(id) },
           { name: `template-${id}-delete`, title: t('templateDelete'), icon: IconTrash, isDestructive: true, closeOnActivate: true, onActivate: () => host.remove(id) },
         ],

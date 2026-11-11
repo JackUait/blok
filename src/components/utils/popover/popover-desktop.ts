@@ -1954,7 +1954,9 @@ export class PopoverDesktop extends PopoverAbstract {
     const leftSideLeft = parentRect.left + overlap - nestedWidth;
     const fits = (left: number): boolean => left >= NESTED_POPOVER_VIEWPORT_MARGIN
       && left + nestedWidth <= window.innerWidth - NESTED_POPOVER_VIEWPORT_MARGIN;
-    const endLeft = isRtl ? leftSideLeft : rightSideLeft;
+    // research/35 §1.8: on the end side a "…" submenu starts 4px past the menu's edge instead.
+    const endShift = moreTop === undefined ? 0 : 2 * overlap;
+    const endLeft = isRtl ? leftSideLeft - endShift : rightSideLeft + endShift;
     const coveringLeft = isRtl
       ? (chevronRect?.right ?? 0) + flipGap
       : (chevronRect?.left ?? 0) - flipGap - nestedWidth;

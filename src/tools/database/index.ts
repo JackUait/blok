@@ -6753,6 +6753,9 @@ export class DatabaseTool implements BlockTool {
       setDefault: (id) => this.setDefaultTemplate(id),
       duplicate: (id) => this.duplicateTemplate(id),
       remove: (id) => this.deleteTemplate(id),
+      repeatHost: (id) => this.templateRepeatHost(id, anchor),
+      // After the New menu has closed: it is still being activated now.
+      openRepeat: (id) => queueMicrotask(() => this.showGroupPopover(anchor, templateRepeatItems(this.templateRepeatHost(id, anchor)), anchor)),
     }), anchor, {
       // Notion's panel is 360 wide and ends at the chevron: bounding it by the view bar flips it to end-align.
       minWidth: '360px',
@@ -8399,21 +8402,24 @@ export class DatabaseTool implements BlockTool {
       ...(this.readOnly ? {} : {
         repeat: {
           label: templateRepeatSummary(this.api.i18n, repeat),
-          open: (anchor: HTMLElement) => {
-            const host: TemplateRepeatHost = {
-              i18n: this.api.i18n,
-              repeat: () => this.templateRepeat(this.api.blocks.getChildren(this.dataId).find((child) => child.id === templateId)),
-              setRepeat: (next) => this.setTemplateRepeat(templateId, next),
-              // After the preset list has closed: it is still being activated now.
-              editCadence: (draft) => queueMicrotask(() => this.showGroupPopover(anchor, templateRepeatItems(host, draft), anchor)),
-              close: () => this.groupMenuPopover?.hide(),
-            };
-
-            this.showGroupPopover(anchor, templateRepeatItems(host), anchor);
-          },
+          open: (anchor: HTMLElement) => this.showGroupPopover(anchor, templateRepeatItems(this.templateRepeatHost(templateId, anchor)), anchor),
         },
       }),
     });
+  }
+
+  /** "Duplicate every…" for one template; its menus open on `anchor`. */
+  private templateRepeatHost(templateId: string, anchor: HTMLElement): TemplateRepeatHost {
+    const host: TemplateRepeatHost = {
+      i18n: this.api.i18n,
+      repeat: () => this.templateRepeat(this.api.blocks.getChildren(this.dataId).find((child) => child.id === templateId)),
+      setRepeat: (next) => this.setTemplateRepeat(templateId, next),
+      // After the preset list has closed: it is still being activated now.
+      editCadence: (draft) => queueMicrotask(() => this.showGroupPopover(anchor, templateRepeatItems(host, draft), anchor)),
+      close: () => this.groupMenuPopover?.hide(),
+    };
+
+    return host;
   }
 
   setDefaultTemplate(templateId: string | null): void {

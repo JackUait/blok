@@ -3050,6 +3050,21 @@ describe('PopoverDesktop — nested beside placement geometry', () => {
     }
   });
 
+  // research/35 §1.8: Notion's template "…" submenu starts 4px past its menu's right edge (1231 → 1235).
+  it('opens a "…" submenu 4px past its menu\'s edge, not over it', () => {
+    const sizeSpy = vi.spyOn(PopoverDesktop.prototype, 'size', 'get')
+      .mockReturnValue({ width: 320, height: 80 });
+
+    try {
+      const { nested, rootLeft } = showWideSubmenu({ left: 400, right: 600 }, false, false, true);
+
+      expect(asInternal(nested).nodes.popoverContainer.style.left).toBe(`${604 - rootLeft}px`);
+      expect(nested.getElement().getAttribute('data-side')).toBe('right');
+    } finally {
+      sizeSpy.mockRestore();
+    }
+  });
+
   // research/35 §1.8, research/30 X1: the submenu's top is level with the "…", on either side.
   it.each([
     ['right', { left: 400, right: 600 }],

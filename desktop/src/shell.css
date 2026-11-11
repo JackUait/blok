@@ -390,7 +390,7 @@ body[data-blok-theme="light"] [data-desktop-settings-overlay] {
   position: fixed; z-index: 70; min-width: 220px; padding: 4px;
   display: flex; flex-direction: column;
   border-radius: 8px; border: 1px solid var(--desktop-border);
-  background: var(--desktop-surface); box-shadow: 0 12px 32px rgb(0 0 0 / 38%);
+  background: var(--desktop-strip); box-shadow: 0 12px 32px rgb(0 0 0 / 38%);
 }
 [data-desktop-tab-menu] button {
   appearance: none; border: 0; background: transparent; color: var(--desktop-ink);

@@ -1598,7 +1598,7 @@
   top: 0;
   inset-inline-end: 0;
   height: 100%;
-  width: min(var(--_blok-peek-width, 756px), 100vw);
+  width: min(var(--_blok-peek-width, 756px), calc(100vw * 2 / 3));
   z-index: var(--blok-z-drawer);
   overflow: hidden;
   display: flex;
@@ -1677,7 +1677,7 @@
   inset-inline-start: auto;
   inset-inline-end: 0;
   height: 100%;
-  width: min(var(--_blok-peek-width, 756px), 100vw);
+  width: min(var(--_blok-peek-width, 756px), calc(100vw * 2 / 3));
   overflow: hidden;
   color: inherit;
 }

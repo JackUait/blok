@@ -315,10 +315,10 @@ describe('DatabaseCardDrawer shell', () => {
 
         return 0;
       });
-      vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1000);
+      vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1512);
       const host = document.createElement('div');
 
-      vi.spyOn(host, 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 0, 800, 800));
+      vi.spyOn(host, 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 0, 1312, 800));
       document.body.appendChild(host);
 
       return {

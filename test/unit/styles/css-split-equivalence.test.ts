@@ -1601,6 +1601,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_FULLPAGE_BYTES = 629;
     // Round 14 lane r14rows: the table selection bar fades in (notion-motion.md Round 14).
     const DATABASE_R14ROWS_BYTES = 541;
+    // Round 14 lane r14tabs: the side peek takes at most two thirds of the window.
+    const DATABASE_R14TABS_BYTES = 28;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2062,7 +2064,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_MENUS2_BYTES
       + DATABASE_TMPLTOAST_BYTES
       + DATABASE_FULLPAGE_BYTES
-      + DATABASE_R14ROWS_BYTES;
+      + DATABASE_R14ROWS_BYTES
+      + DATABASE_R14TABS_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

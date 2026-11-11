@@ -321,6 +321,8 @@ describe('DatabaseCardDrawer — page layout', () => {
   // research/22 §10: opening the panel widens the side peek by 280px up to 1008; closing takes 280px back, down to 564.
   it('widens the side peek by the 280px panel while it is open', () => {
     window.localStorage.removeItem('blok:database-peek-width');
+    // research/22 §10 measured these widths in a 1512px window.
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1512);
     const options = createOptions({ schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'panel' }] }) });
     const drawer = new DatabaseCardDrawer(options);
     const width = (): string => q('[data-blok-database-drawer]')?.style.getPropertyValue('--_blok-peek-width') ?? '';
@@ -349,6 +351,8 @@ describe('DatabaseCardDrawer — page layout', () => {
 
   it('gives the 280px back when another page opens with the panel closed', () => {
     window.localStorage.removeItem('blok:database-peek-width');
+    // research/22 §10 measured these widths in a 1512px window.
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1512);
     const options = createOptions({ schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'panel' }] }) });
     const drawer = new DatabaseCardDrawer(options);
     const width = (): string => q('[data-blok-database-drawer]')?.style.getPropertyValue('--_blok-peek-width') ?? '';

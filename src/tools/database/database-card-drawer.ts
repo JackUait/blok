@@ -406,12 +406,18 @@ const readStorage = (key: string | null): string | null => {
   }
 };
 
-const clampPeekWidth = (width: number): number => Math.round(Math.min(PEEK_MAX_WIDTH, Math.max(PEEK_MIN_WIDTH, width)));
+/**
+ * Notion's peek is at most two thirds of the window: 1008 at 1512 (research/22 §10), 600 at 900 (Round 14).
+ * Below 846px that cap is under the min; it wins there, unmeasured.
+ */
+const peekMaxWidth = (): number => Math.min(PEEK_MAX_WIDTH, Math.round(window.innerWidth * 2 / 3));
+
+const clampPeekWidth = (width: number): number => Math.round(Math.min(peekMaxWidth(), Math.max(PEEK_MIN_WIDTH, width)));
 
 const storedPeekWidth = (): number => {
   const stored = Number.parseFloat(readStorage(PEEK_WIDTH_KEY) ?? '');
 
-  return Number.isFinite(stored) ? clampPeekWidth(stored) : PEEK_WIDTH;
+  return clampPeekWidth(Number.isFinite(stored) ? stored : PEEK_WIDTH);
 };
 
 const isEmptyValue = (value: PropertyValue): boolean =>
@@ -1117,12 +1123,12 @@ export class DatabaseCardDrawer {
     // A window splitter is named after the pane it sizes (WAI-ARIA APG).
     handle.setAttribute('aria-label', this.label('tools.database.openPagesSide'));
     handle.setAttribute('aria-valuemin', String(PEEK_MIN_WIDTH));
-    handle.setAttribute('aria-valuemax', String(PEEK_MAX_WIDTH));
+    handle.setAttribute('aria-valuemax', String(peekMaxWidth()));
     handle.tabIndex = 0;
 
     handle.addEventListener('keydown', (event) => {
       const arrow = logicalArrow(event.key, getElementDirection(drawer));
-      const next = ({ Home: PEEK_MIN_WIDTH, End: PEEK_MAX_WIDTH } as Record<string, number | undefined>)[event.key]
+      const next = ({ Home: PEEK_MIN_WIDTH, End: peekMaxWidth() } as Record<string, number | undefined>)[event.key]
         ?? (arrow === null ? null : this.peekWidth + (arrow === 'backward' ? PEEK_RESIZE_STEP : -PEEK_RESIZE_STEP));
 
       if (next === null) {
@@ -1261,7 +1267,7 @@ export class DatabaseCardDrawer {
     if (host === null) {
       return;
     }
-    const width = Math.min(this.peekWidth, window.innerWidth);
+    const width = Math.min(this.peekWidth, peekMaxWidth());
     // Padding leaves the border box alone, so a resize drag re-measures the same rect.
     const rect = host.getBoundingClientRect();
     const covered = getElementDirection(this.wrapper) === 'rtl' ? width - rect.left : rect.right - (window.innerWidth - width);

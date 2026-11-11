@@ -41,7 +41,9 @@ export interface DatabasePanelOptions {
 /** A full-page database docks as a side panel under its toolbar row (research/35 §2.3); any other as a floating card. */
 const dockOf = (anchor: HTMLElement): { docked: true } | { docked: 'page'; dockRow: HTMLElement } => {
   const wrapper = anchor.closest('[data-blok-database-wrapper]');
-  const row = anchor.closest<HTMLElement>('[data-blok-database-title-row], [data-blok-database-view-bar]');
+  // A column header or filter pill opens it too; the panel still starts under the toolbar's row.
+  const row = anchor.closest<HTMLElement>('[data-blok-database-title-row], [data-blok-database-view-bar]')
+    ?? wrapper?.querySelector('[data-blok-database-view-toolbar]')?.parentElement ?? null;
 
   return wrapper?.hasAttribute('data-blok-database-page') === true && row !== null ? { docked: 'page', dockRow: row } : { docked: true };
 };

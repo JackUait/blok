@@ -174,6 +174,31 @@ describe('DatabasePanel', () => {
       panel.close();
     });
 
+    it('on a full-page database docks under the toolbar row when a column header opened it', () => {
+      const wrapper = document.createElement('div');
+      const row = document.createElement('div');
+      const toolbar = document.createElement('div');
+      const header = document.createElement('div');
+
+      wrapper.setAttribute('data-blok-database-wrapper', '');
+      wrapper.setAttribute('data-blok-database-page', '');
+      row.setAttribute('data-blok-database-title-row', '');
+      toolbar.setAttribute('data-blok-database-view-toolbar', '');
+      row.appendChild(toolbar);
+      header.appendChild(anchor);
+      wrapper.append(row, header);
+      document.body.appendChild(wrapper);
+      vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(new DOMRect(400, 180, 200, 36));
+      vi.spyOn(row, 'getBoundingClientRect').mockReturnValue(new DOMRect(56, 130, 1456, 40));
+      const panel = new DatabasePanel({ anchor, root: { build: () => [] }, testId: 'panel', width: 290, backLabel: 'Back', docked: true });
+
+      panel.open();
+
+      expect(popoverOf()?.getAttribute('data-blok-popover-custom-class')).toContain('blok-database-docked-page');
+      expect(popoverOf()?.style.top).toBe('170px');
+      panel.close();
+    });
+
     it('keeps the floating dock on an inline database', () => {
       vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(new DOMRect(40, 300, 28, 28));
       const panel = new DatabasePanel({ anchor, root: { build: () => [] }, testId: 'panel', width: 290, backLabel: 'Back', docked: true });

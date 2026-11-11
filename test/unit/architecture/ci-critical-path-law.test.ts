@@ -158,9 +158,10 @@ const e2eMatrix: MatrixEntry[] = [
   { project: 'webkit', browser: 'webkit', shard: '1/2' },
   { project: 'webkit', browser: 'webkit', shard: '2/2' },
   { project: 'chromium-logic', browser: 'chromium', shard: '1/1' },
-  { project: 'chromium-default', browser: 'chromium', shard: '1/3' },
-  { project: 'chromium-default', browser: 'chromium', shard: '2/3' },
-  { project: 'chromium-default', browser: 'chromium', shard: '3/3' },
+  { project: 'chromium-default', browser: 'chromium', shard: '1/4' },
+  { project: 'chromium-default', browser: 'chromium', shard: '2/4' },
+  { project: 'chromium-default', browser: 'chromium', shard: '3/4' },
+  { project: 'chromium-default', browser: 'chromium', shard: '4/4' },
   { project: 'chromium-undo', browser: 'chromium', shard: '1/2' },
   { project: 'chromium-undo', browser: 'chromium', shard: '2/2' },
 ];

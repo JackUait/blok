@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
@@ -32,6 +32,8 @@ const create = async (page: Page, blocks: OutputData['blocks']): Promise<void> =
   }, { holder: HOLDER_ID, initial: blocks });
 };
 
+const editableOf = (page: Page, id: string): Locator => page.locator(`[data-blok-id="${id}"] [contenteditable="true"]`).first();
+
 /** Caret offset in the code text, or -1 when the caret is not in the code. */
 const codeCaret = async (page: Page): Promise<number> => page.getByTestId('code-content').evaluate((code) => {
   const selection = window.getSelection();
@@ -58,6 +60,33 @@ test.describe('undo audit — measured Notion gaps', () => {
 
   test.beforeEach(async ({ page }) => {
     await gotoTestPage(page);
+  });
+
+  // Notion U060 ("Beta/") and U173 ("x/"): "/" right after a letter is plain text.
+  test('"/" typed right after a letter stays a literal character and opens no menu', async ({ page }) => {
+    await create(page, [{ id: 'b1', type: 'paragraph', data: { text: 'Beta' } }]);
+    await editableOf(page, 'b1').click();
+    await page.keyboard.press('End');
+
+    await page.keyboard.type('/');
+
+    await expect(editableOf(page, 'b1')).toHaveText('Beta/');
+    // Two frames: the menu would have opened by now.
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await expect(page.locator(`#${HOLDER_ID} [data-blok-toolbox-opened="true"]`)).toHaveCount(0);
+
+    await page.keyboard.press(UNDO);
+    await expect(editableOf(page, 'b1')).toHaveText('Beta');
+  });
+
+  test('"/" after a space still opens the menu', async ({ page }) => {
+    await create(page, [{ id: 'b1', type: 'paragraph', data: { text: 'Beta' } }]);
+    await editableOf(page, 'b1').click();
+    await page.keyboard.press('End');
+
+    await page.keyboard.type(' /');
+
+    await expect(page.locator(`#${HOLDER_ID} [data-blok-toolbox-opened="true"]`)).toHaveCount(1);
   });
 
   // Notion U154: Tab inserts one tab character, one undo step.

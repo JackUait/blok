@@ -137,7 +137,8 @@ test.describe('slash search in a block that has text', () => {
 
   test('wraps only the "/" when it is typed after the text', async ({ page }) => {
     await placeCaret(page, 'Hello world'.length);
-    await page.keyboard.type('/');
+    // A space first: "/" right after a letter stays plain text.
+    await page.keyboard.type(' /');
 
     await expect(page.locator(PILL_SELECTOR)).toHaveText('/');
     await expect(page.locator(CONTENT_EDITABLE_SELECTOR)).not.toHaveAttribute('data-blok-slash-search');

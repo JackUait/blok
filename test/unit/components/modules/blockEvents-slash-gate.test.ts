@@ -100,6 +100,7 @@ const createBlock = (flags: ToolFlags): Block => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  window.getSelection()?.removeAllRanges();
 });
 
 afterEach(() => {
@@ -172,5 +173,75 @@ describe('BlockEvents slash gate (Notion parity)', () => {
     expect(event.preventDefault).toHaveBeenCalledTimes(1);
     expect(insertContentAtCaretPosition).toHaveBeenCalledWith('/');
     expect(toolboxOpen).toHaveBeenCalledTimes(1);
+  });
+
+  // Notion U060 ("Beta/") and U173 ("x/"): "/" right after a letter stays plain text.
+  describe('the character before the caret', () => {
+    const setupWithText = (html: string): ReturnType<typeof setup> & { input: HTMLElement } => {
+      const block = createBlock({ isDefault: true, isLineBreaksEnabled: false, enabledInlineTools: true });
+      const result = setup(block);
+      const input = result.event.target as HTMLElement;
+
+      input.setAttribute('contenteditable', 'true');
+      input.innerHTML = html;
+
+      const range = document.createRange();
+
+      range.selectNodeContents(input);
+      range.collapse(false);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+
+      return { ...result, input };
+    };
+
+    it('types "/" as text after a letter, without opening the toolbox', () => {
+      const { blockEvents, event, insertContentAtCaretPosition, toolboxOpen } = setupWithText('Beta');
+
+      blockEvents.keydown(event);
+
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(insertContentAtCaretPosition).not.toHaveBeenCalled();
+      expect(toolboxOpen).not.toHaveBeenCalled();
+    });
+
+    it('sees a letter at the end of a bold run before the caret', () => {
+      const { blockEvents, event, toolboxOpen } = setupWithText('Al<b>pha</b>');
+
+      blockEvents.keydown(event);
+
+      expect(toolboxOpen).not.toHaveBeenCalled();
+    });
+
+    it('sees a non-Latin letter', () => {
+      const { blockEvents, event, toolboxOpen } = setupWithText('Бета');
+
+      blockEvents.keydown(event);
+
+      expect(toolboxOpen).not.toHaveBeenCalled();
+    });
+
+    it('still opens the toolbox after a space', () => {
+      const { blockEvents, event, toolboxOpen } = setupWithText('Beta ');
+
+      blockEvents.keydown(event);
+
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(toolboxOpen).toHaveBeenCalledTimes(1);
+    });
+
+    it('still opens the toolbox at the start of the text', () => {
+      const { blockEvents, event, input, toolboxOpen } = setupWithText('Beta');
+      const range = document.createRange();
+
+      range.setStart(input, 0);
+      range.collapse(true);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+
+      blockEvents.keydown(event);
+
+      expect(toolboxOpen).toHaveBeenCalledTimes(1);
+    });
   });
 });

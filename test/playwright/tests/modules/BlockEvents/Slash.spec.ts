@@ -129,21 +129,23 @@ test.describe('slash keydown', () => {
     });
   }
 
-  test('should open Toolbox in non-empty block and append slash character (Notion parity)', async ({ page }) => {
+  // A "/" right after a letter stays plain text (Notion U060, U173), so these type a space first.
+  test('should open Toolbox in non-empty block and append slash character after a space', async ({ page }) => {
     await createParagraphBlok(page, [ 'Hello' ]);
 
     const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
-    // Caret to end of "Hello", then type "/"
+    // Caret to end of "Hello", then type " /"
     await paragraph.click();
     await page.keyboard.press('End');
-    await paragraph.type('/');
+    await paragraph.type(' /');
 
     await expect(page.locator(TOOLBOX_CONTAINER_SELECTOR)).toBeVisible();
 
     const textContent = await getTextContent(paragraph);
 
-    expect(textContent).toBe('Hello/');
+    // The browser may type the space as a no-break space.
+    expect(textContent.replace(/\u00a0/g, ' ')).toBe('Hello /');
   });
 
   test('selecting a tool on a non-empty block converts it in place and strips the "/query" (Notion parity M-1)', async ({ page }) => {
@@ -153,7 +155,7 @@ test.describe('slash keydown', () => {
 
     await paragraph.click();
     await page.keyboard.press('End');
-    await paragraph.type('/head');
+    await paragraph.type(' /head');
 
     await expect(page.locator(TOOLBOX_CONTAINER_SELECTOR)).toBeVisible();
 
@@ -169,7 +171,7 @@ test.describe('slash keydown', () => {
 
     const headingText = await getTextContent(page.locator(headingSelector).first());
 
-    expect(headingText).toBe('Hello');
+    expect(headingText.replace(/\u00a0/g, ' ')).toBe('Hello ');
 
     // The serialized output is a SINGLE heading carrying the leading text.
     const types = await page.evaluate(async () => {
@@ -192,7 +194,7 @@ test.describe('slash keydown', () => {
     for (let i = 0; i < 5; i++) {
       await page.keyboard.press('ArrowRight');
     }
-    await page.keyboard.type('/head');
+    await page.keyboard.type(' /head');
 
     await expect(page.locator(TOOLBOX_CONTAINER_SELECTOR)).toBeVisible();
 
@@ -243,7 +245,7 @@ test.describe('slash keydown', () => {
 
     await paragraph.click();
     await page.keyboard.press('End');
-    await paragraph.type('/red background');
+    await paragraph.type(' /red background');
 
     await expect(page.locator(TOOLBOX_CONTAINER_SELECTOR)).toBeVisible();
 
@@ -255,7 +257,7 @@ test.describe('slash keydown', () => {
     // carries backgroundColor: 'red'.
     const paragraphText = await getTextContent(page.locator(PARAGRAPH_SELECTOR).first());
 
-    expect(paragraphText).toBe('Color me');
+    expect(paragraphText.replace(/\u00a0/g, ' ')).toBe('Color me ');
 
     const result = await page.evaluate(async () => {
       const data = await window.blokInstance?.save();

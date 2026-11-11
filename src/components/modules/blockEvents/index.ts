@@ -530,6 +530,11 @@ export class BlockEvents extends Module {
       return;
     }
 
+    // Notion U060, U173: "/" right after a letter is plain text.
+    if (this.isCaretRightAfterLetter()) {
+      return;
+    }
+
     /**
      * @todo Handle case when slash pressed when several blocks are selected
      */
@@ -562,6 +567,33 @@ export class BlockEvents extends Module {
     this.Blok.Toolbar.discardPlusContext();
 
     this.activateToolbox();
+  }
+
+  /**
+   * Whether the text just before the caret, in an editable inside this editor, ends with a letter.
+   */
+  private isCaretRightAfterLetter(): boolean {
+    const selection = window.getSelection();
+
+    if (selection === null || selection.rangeCount === 0) {
+      return false;
+    }
+
+    const range = selection.getRangeAt(0);
+    const node = range.startContainer;
+    const element = node instanceof Element ? node : node.parentElement;
+    const input = element?.closest('[contenteditable="true"]');
+
+    if (!input || !this.Blok.UI.nodes.wrapper.contains(input)) {
+      return false;
+    }
+
+    const before = document.createRange();
+
+    before.selectNodeContents(input);
+    before.setEnd(node, range.startOffset);
+
+    return /\p{L}$/u.test(before.toString());
   }
 
   /**

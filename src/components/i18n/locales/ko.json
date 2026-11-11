@@ -2170,7 +2170,6 @@
   "tools.database.templateRepeatDayOfMonth": "일",
   "tools.database.templateDuplicate": "복제",
   "tools.database.templateDelete": "삭제",
-  "tools.database.templateEmptyPage": "빈 페이지",
   "tools.database.templateNew": "새 템플릿",
   "tools.database.subItemsNew": "새 하위 항목",
   "tools.database.subItemsExpand": "하위 항목 표시",

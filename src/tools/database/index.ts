@@ -8276,7 +8276,7 @@ export class DatabaseTool implements BlockTool {
     return this.makeOpenedRow(undefined);
   }
 
-  /** "Empty page" in the "New" dropdown: a row that skips the default template. */
+  /** "Empty" in the "New" dropdown: a row that skips the default template. */
   private newEmptyRow(): void {
     this.makeOpenedRow(null);
   }

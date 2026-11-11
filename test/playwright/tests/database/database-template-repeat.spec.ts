@@ -150,12 +150,12 @@ test('at the window\'s right edge the ↻ hint shows, and "…" opens the submen
   await mount(page, { frequency: 'weekly', interval: 2, start: '2026-10-05T07:30:00.000Z', timeZone: 'Europe/Berlin' });
   await page.getByTestId('database-toolbar-new-menu').click();
 
-  const containerRect = (name: string) => page.getByRole('menuitem', { name, exact: true }).evaluate((item) => {
+  const containerRect = (name: RegExp) => page.getByRole('menuitem', { name }).evaluate((item) => {
     const rect = item.closest('[data-blok-popover-container]')?.getBoundingClientRect();
 
     return { left: rect?.left ?? Number.NaN, right: rect?.right ?? Number.NaN };
   });
-  const list = await containerRect('Empty page');
+  const list = await containerRect(/^Empty/);
 
   // No room for a submenu on the right.
   expect(1400 - list.right).toBeLessThan(250);
@@ -176,8 +176,8 @@ test('at the window\'s right edge the ↻ hint shows, and "…" opens the submen
 
   // Over the list, ending 12px before the "…". Polled: the first frames of
   // the open motion can read a few px off the resting spot.
-  await expect.poll(async () => Math.abs((await containerRect('Edit')).right - (more - 12))).toBeLessThanOrEqual(1);
-  const submenu = await containerRect('Edit');
+  await expect.poll(async () => Math.abs((await containerRect(/^Edit$/)).right - (more - 12))).toBeLessThanOrEqual(1);
+  const submenu = await containerRect(/^Edit$/);
 
   expect(submenu.left).toBeGreaterThan(list.left);
 

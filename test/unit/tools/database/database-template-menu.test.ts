@@ -48,15 +48,29 @@ describe('template menu', () => {
     vi.restoreAllMocks();
   });
 
-  it('heads the menu with "Templates for <database>" and a description, then the templates, an empty page and "New template"', () => {
+  // research/33 §3.8, research/30 X1 (31-tpl-list.png): with templates, no description line and no rule under the header.
+  it('heads the menu with "Templates for <database>", then the templates, "Empty" and "New template"', () => {
     const items = templateMenuItems(host({ databaseName: () => 'Tasks' })) as Item[];
 
     expect(items.map((item) => item.name ?? '—')).toEqual([
-      'template-header', 'template-description', '—', 'template-t1', 'template-t2', 'template-empty', '—', 'template-add',
+      'template-header', 'template-t1', 'template-t2', 'template-empty', '—', 'template-add',
     ]);
     expect(find(items, 'template-header')?.element?.textContent).toBe('tools.database.templatesFor');
-    expect(find(items, 'template-description')?.element?.textContent).toBe('tools.database.templatesDescription');
     expect(find(items, 'template-t2')?.title).toBe('tools.database.templateUntitled');
+  });
+
+  it('names the empty row "Empty", as Notion does (research/33 §3.8)', () => {
+    expect(find(templateMenuItems(host({ i18n: english })) as Item[], 'template-empty')?.title).toBe('Empty');
+  });
+
+  // research/30 X1: with no default template, "Empty" carries the grey "Default" tag.
+  it('tags "Empty" "Default" when no template is the default', () => {
+    const tag = (items: Item[]): string | null | undefined =>
+      find(items, 'template-empty')?.titleEl?.querySelector('[data-blok-database-template-default]')?.textContent;
+
+    expect(tag(templateMenuItems(host({ i18n: english, defaultTemplateId: () => undefined })) as Item[])).toBe('Default');
+    expect(find(templateMenuItems(host({ i18n: english, defaultTemplateId: () => undefined })) as Item[], 'template-empty')?.titleEl?.textContent).toBe('Empty Default');
+    expect(tag(templateMenuItems(host({ i18n: english })) as Item[])).toBeUndefined();
   });
 
   it('makes a row from the template it is picked from', () => {
@@ -743,9 +757,11 @@ describe('template menu', () => {
     expect(find(items, 'template-header')?.element?.textContent).toBe('Templates for Tasks');
   });
 
-  it('offers no "Empty page" row when there are no templates (Notion, findings V23)', () => {
+  // research/27:118: with no template, the description shows.
+  it('offers no "Empty" row but the description when there are no templates (Notion, findings V23)', () => {
     const items = templateMenuItems(host({ templates: () => [] })) as Item[];
 
     expect(items.map((item) => item.name ?? '—')).toEqual(['template-header', 'template-description', '—', 'template-add']);
+    expect(find(items, 'template-description')?.element?.textContent).toBe('tools.database.templatesDescription');
   });
 });

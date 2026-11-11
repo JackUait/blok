@@ -280,7 +280,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2078 + 142 + 527 + 4 closure for all 2751 keys', () => {
+  it('rebuilds a disjoint 2078 + 142 + 526 + 4 closure for all 2750 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -294,7 +294,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2751);
+    expect(lifecycle.size).toBe(2750);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -591,7 +591,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +3: the Filter / Sort pickers' filterByPlaceholder, sortByPlaceholder and filterAddAdvanced, via the tools.database t().
       // +2: View settings' settingsEditProperties and settingsNewProperty, via the panel's t().
       // +1: the empty Sort page's sortNew title, via the panel's t().
-      'registered-namespace-compatible': 527,
+      // -1: the New menu's "Empty" row reads cellEmpty; templateEmptyPage is gone.
+      'registered-namespace-compatible': 526,
       'catalog-only': 4,
     });
     expect(

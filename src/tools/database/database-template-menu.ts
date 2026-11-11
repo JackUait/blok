@@ -709,10 +709,14 @@ export const templateMenuItems = (host: TemplateMenuHost): PopoverItemParams[] =
     return el;
   };
   const templates = host.templates();
-  // Notion heads the panel and lists "Empty page" only beside real templates (findings V23).
+  // Notion heads the panel and lists "Empty" only beside real templates (findings V23).
+  const emptyTitle = t('cellEmpty');
+  // research/30 X1: with no default template, "Empty" is the default and says so.
+  const emptyMarked = current === undefined ? defaultTitle(undefined, emptyTitle, t('templateDefault')) : undefined;
   const empty: PopoverItemParams[] = templates.length === 0 ? [] : [{
       name: 'template-empty',
-      title: t('templateEmptyPage'),
+      title: emptyTitle,
+      ...(emptyMarked === undefined ? {} : { titleEl: emptyMarked }),
       icon: IconPage,
       closeOnActivate: true,
       onActivate: () => host.newEmpty(),
@@ -726,10 +730,15 @@ export const templateMenuItems = (host: TemplateMenuHost): PopoverItemParams[] =
       },
     }];
 
-  return [
-    { type: PopoverItemType.Html, name: 'template-header', element: line('data-blok-database-template-header', t('templatesFor', { name: host.databaseName?.() ?? '' })) },
+  // research/27:118 vs research/30 X1: the description and its rule show only with no template.
+  const intro: PopoverItemParams[] = templates.length > 0 ? [] : [
     { type: PopoverItemType.Html, name: 'template-description', element: line('data-blok-database-template-description', t('templatesDescription')) },
     { type: PopoverItemType.Separator },
+  ];
+
+  return [
+    { type: PopoverItemType.Html, name: 'template-header', element: line('data-blok-database-template-header', t('templatesFor', { name: host.databaseName?.() ?? '' })) },
+    ...intro,
     ...templates.map((template) => entry(template.id, template.title)),
     ...empty,
     ...(templates.length === 0 ? [] : [{ type: PopoverItemType.Separator } as const]),

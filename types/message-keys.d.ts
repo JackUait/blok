@@ -2230,7 +2230,6 @@ export type BlokMessageKey =
   | 'tools.database.templateDelete'
   | 'tools.database.templateDuplicate'
   | 'tools.database.templateEdit'
-  | 'tools.database.templateEmptyPage'
   | 'tools.database.templateMenuLabel'
   | 'tools.database.templateMore'
   | 'tools.database.templateNew'

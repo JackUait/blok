@@ -777,7 +777,7 @@ export class DatabaseTool implements BlockTool {
   /** A row "+ New" just made, with the values it was born with. Escape deletes it while it stays so. */
   private freshRow: { id: string; properties: string } | null = null;
 
-  constructor({ data: given, config, api, block, readOnly, origin }: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>) {
+  constructor({ data: given, config, api, block, readOnly, origin, replaySource }: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>) {
     const data = seedWins(given);
 
     this.api = api;
@@ -805,7 +805,11 @@ export class DatabaseTool implements BlockTool {
     this.stubDeleted = structuredClone(data?.deletedProperties);
     this.linkPicker = this.source === undefined && (data as Record<string, unknown> | undefined)?.[LINK_PICKER_KEY] === true;
     // Only a user's insert: a load, undo, redo or a peer's insert never opens it. Form opens none (research/28 §3).
-    this.offerNewDatabasePanel = origin === 'user' && this.seeded && !this.linkPicker && initialView !== 'form';
+    // A full-page database is born in its page's document, so opening that page is its insert (research/35 §2.3).
+    // The seed is replaced on first render, so a later open finds none.
+    const pageOpened = this.fullPage && (origin === 'load' || (origin === 'replay' && replaySource === 'remote'));
+
+    this.offerNewDatabasePanel = (origin === 'user' || pageOpened) && this.seeded && !this.linkPicker && initialView !== 'form';
     this.aloneSkipsPanel = (data as Record<string, unknown> | undefined)?.[ALONE_SKIPS_PANEL_KEY] === true;
     // research/28 §3: written once, by the inserting client only, so peers never add a second set.
     this.sampleCardsPending = origin === 'user' && initialView === 'timeline';

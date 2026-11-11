@@ -176,6 +176,64 @@ describe('"New database" panel with the AI prompt (research/26 §2, research/20 
     expect(panel()).toBeUndefined();
   });
 
+  describe('a new full-page database opened on its page (research/35 §2.3)', () => {
+    const fullPageSeed = { initialView: 'table', fullPage: true } as unknown as DatabaseData;
+
+    const openPage = async (data: DatabaseData, origin: BlockOrigin, replaySource?: 'history' | 'remote', readOnly = false): Promise<void> => {
+      const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }]);
+      const tool = new DatabaseTool({
+        data,
+        config: {},
+        api: doc.api,
+        readOnly,
+        origin,
+        ...(replaySource !== undefined ? { replaySource } : {}),
+        block: { id: 'db', name: 'database', dispatchChange: vi.fn() } as never,
+      });
+
+      doc.tools.set('db', tool);
+      document.body.appendChild(tool.render());
+      tool.rendered();
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    };
+
+    it('opens the panel when the page loads the seed', async () => {
+      await openPage(fullPageSeed, 'load');
+
+      expect(panel()).toBeDefined();
+    });
+
+    it('opens the panel when a collaborator\'s sync brings the seed', async () => {
+      await openPage(fullPageSeed, 'replay', 'remote');
+
+      expect(panel()).toBeDefined();
+    });
+
+    it('opens nothing when the page loads a database that was already set up', async () => {
+      await openPage({ fullPage: true, schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0' }], views: [] } as unknown as DatabaseData, 'load');
+
+      expect(panel()).toBeUndefined();
+    });
+
+    it.each(['api', 'paste', 'convert', 'probe'] as const)('opens nothing for a %s origin', async (origin) => {
+      await openPage(fullPageSeed, origin);
+
+      expect(panel()).toBeUndefined();
+    });
+
+    it('opens nothing on undo or redo', async () => {
+      await openPage(fullPageSeed, 'replay', 'history');
+
+      expect(panel()).toBeUndefined();
+    });
+
+    it('opens nothing in read-only mode', async () => {
+      await openPage(fullPageSeed, 'load', undefined, true);
+
+      expect(panel()).toBeUndefined();
+    });
+  });
+
   it('submit turns on with text and stays off for spaces only', async () => {
     const setup = vi.fn(async () => null);
 

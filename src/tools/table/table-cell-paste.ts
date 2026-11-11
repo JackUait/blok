@@ -27,10 +27,70 @@ export type CellBlockInsert =
 
 export { CELL_BLOCK_TAGS_SANITIZE } from '../../shared/table/cell-sanitize';
 
-const BR_SPLIT_RE = /<br\s*\/?>/i;
+const BR_AT_START_RE = /^<br\s*\/?>/i;
 
-const splitInlineSegments = (html: string): string[] =>
-  html.split(BR_SPLIT_RE).map(segment => segment.trim()).filter(Boolean);
+/** Longest `<br ... />` the split looks for; a `<br>` with more padding than this is left alone. */
+const BR_LOOKAHEAD = 16;
+
+/**
+ * Index just past the tag that opens at `from`. A `>` inside a quoted
+ * attribute value does not end the tag.
+ * @param html - the markup
+ * @param from - index of the tag's `<`
+ */
+const endOfTag = (html: string, from: number): number => {
+  const scan = /[>"']/g;
+
+  scan.lastIndex = from + 1;
+
+  const state = { match: scan.exec(html) };
+
+  while (state.match !== null) {
+    if (state.match[0] === '>') {
+      return state.match.index + 1;
+    }
+
+    const closingQuote = html.indexOf(state.match[0], state.match.index + 1);
+
+    if (closingQuote === -1) {
+      return html.length;
+    }
+
+    scan.lastIndex = closingQuote + 1;
+    state.match = scan.exec(html);
+  }
+
+  return html.length;
+};
+
+/**
+ * Split inline markup on its `<br>` tags. A plain `split(/<br>/)` also cuts a
+ * `<br>` written INSIDE an attribute value (a hint's text is one), which tears
+ * the element in two; this walks tag by tag instead.
+ * @param html - inline markup
+ */
+const splitInlineSegments = (html: string): string[] => {
+  const segments: string[] = [];
+  const cursor = { start: 0, index: html.indexOf('<') };
+
+  while (cursor.index !== -1) {
+    const lineBreak = BR_AT_START_RE.exec(html.slice(cursor.index, cursor.index + BR_LOOKAHEAD));
+
+    if (lineBreak === null) {
+      cursor.index = html.indexOf('<', endOfTag(html, cursor.index));
+
+      continue;
+    }
+
+    segments.push(html.slice(cursor.start, cursor.index));
+    cursor.start = cursor.index + lineBreak[0].length;
+    cursor.index = html.indexOf('<', cursor.start);
+  }
+
+  segments.push(html.slice(cursor.start));
+
+  return segments.map(segment => segment.trim()).filter(Boolean);
+};
 
 const imageData = (url: string, alt: string | null): { url: string; alt?: string } =>
   alt !== null && alt !== '' ? { url, alt } : { url };

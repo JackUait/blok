@@ -168,6 +168,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   /** Blocks the open menu acts on. */
   private menuBlocks: Block[] = [];
 
+  /** True during an Escape press, so its close keeps the block selected (Notion U109). */
+  private escapePressed = false;
+
   /** True while a click inside the open menu is being handled. */
   private clickInMenu = false;
 
@@ -282,6 +285,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
        * For multiple blocks, they should already be selected
        */
       if (!hasMultipleBlocksSelected) {
+        // A block an earlier Escape left selected gives way, like Notion.
+        selectedBlocks.filter((selected) => selected !== block).forEach((selected) => this.Blok.BlockSelection.unselectBlock(selected));
         this.Blok.BlockSelection.selectBlock(block);
         this.Blok.BlockSelection.clearCache();
       }
@@ -389,6 +394,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       this.settingsTrigger = trigger ?? null;
 
       this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
+      this.popover.escapeClosesSubmenuFirst = true;
+      // Window capture runs before the popover registry's document capture.
+      window.addEventListener('keydown', this.noteEscape, true);
 
       this.attachDeleteKeyListener(items);
 
@@ -454,6 +462,12 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     this.opened = false;
     this.isOpening = false; // Clear isOpening flag when closing
     this.stopClickWatch();
+    window.removeEventListener('keydown', this.noteEscape, true);
+
+    if (this.escapePressed && this.actedBlocks === null) {
+      this.actedBlocks = this.menuBlocks;
+    }
+    this.escapePressed = false;
 
     // Read before keepActedSelection: a menu Delete leaves no caret (Notion U104, U163).
     const menuBlocksRemoved = this.menuBlocks.length > 0 && this.menuBlocks.every((block) => !block.holder.isConnected);
@@ -508,6 +522,17 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     this.close();
   }
+
+  private readonly noteEscape = (event: KeyboardEvent): void => {
+    if (event.key !== 'Escape') {
+      return;
+    }
+    this.escapePressed = true;
+    // An Escape that closes only a submenu leaves the menu open: forget it after the press.
+    window.setTimeout(() => {
+      this.escapePressed = false;
+    }, 0);
+  };
 
   /**
    * Notes clicks inside the open menu, for {@link closeByTool}.
@@ -1035,7 +1060,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     // Some UIs open a modal a frame after the tune ran.
     requestAnimationFrame(() => {
-      if (document.activeElement === document.body && !isModalOpen(blocks)) {
+      const active = document.activeElement;
+
+      if ((active === document.body || (active !== null && active === this.settingsTrigger)) && !isModalOpen(blocks)) {
         return;
       }
 
@@ -1066,7 +1093,12 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   private letGoOnFocus(blocks: Block[]): void {
     this.stopFocusWatch();
 
-    const onFocus = (): void => {
+    const onFocus = (event: FocusEvent): void => {
+      // The popover registry gives focus back to the menu button after a close.
+      // Keys typed there type no text, so the selection stays (keyboard users keep their place).
+      if (this.settingsTrigger !== null && event.target === this.settingsTrigger) {
+        return;
+      }
       this.stopFocusWatch();
       blocks.filter((block) => block.selected).forEach((block) => this.Blok.BlockSelection.unselectBlock(block));
     };

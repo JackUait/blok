@@ -1205,6 +1205,58 @@ describe('BlockSettings', () => {
       expect(blokMock.BlockSelection.unselectBlock).toHaveBeenCalledWith(block);
     });
 
+    it('lets go of another block left selected when the menu opens for this one', async () => {
+      const other = createBlock();
+
+      blokMock.BlockSelection.selectedBlocks = [other];
+      const { block } = await openWithTune(vi.fn());
+
+      expect(blokMock.BlockSelection.unselectBlock).toHaveBeenCalledWith(other);
+      expect(blokMock.BlockSelection.unselectBlock).not.toHaveBeenCalledWith(block);
+    });
+
+    it('leaves the block selected when Escape dismisses the menu (Notion U109)', async () => {
+      const { block } = await openWithTune(vi.fn());
+
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      (blockSettings as unknown as { onPopoverClose: () => void }).onPopoverClose();
+
+      expect(blokMock.BlockSelection.unselectBlock).not.toHaveBeenCalled();
+      expect(blokMock.BlockSelection.selectBlock).toHaveBeenCalledWith(block);
+    });
+
+    it('keeps the Escape selection when focus then returns to the menu button', async () => {
+      const { block, trigger } = await openWithTune(vi.fn());
+
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      (blockSettings as unknown as { onPopoverClose: () => void }).onPopoverClose();
+      trigger.focus();
+
+      expect(blokMock.BlockSelection.unselectBlock).not.toHaveBeenCalledWith(block);
+      expect(trigger).toHaveFocus();
+    });
+
+    it('treats a close after an Escape that closed only a submenu as a plain dismissal', async () => {
+      vi.useFakeTimers();
+      try {
+        const { block } = await openWithTune(vi.fn());
+
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        vi.runAllTimers();
+        (blockSettings as unknown as { onPopoverClose: () => void }).onPopoverClose();
+
+        expect(blokMock.BlockSelection.unselectBlock).toHaveBeenCalledWith(block);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('lets Escape close an open submenu before the menu', async () => {
+      await openWithTune(vi.fn());
+
+      expect((getLastPopover() as unknown as { escapeClosesSubmenuFirst?: boolean }).escapeClosesSubmenuFirst).toBe(true);
+    });
+
     it('still clears the selection when the menu is dismissed', async () => {
       const { block } = await openWithTune(vi.fn());
 

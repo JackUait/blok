@@ -10,6 +10,7 @@ import { BlokDataHandler } from '../../../../src/components/modules/paste/handle
 import { FilesHandler } from '../../../../src/components/modules/paste/handlers/files-handler';
 import { HtmlHandler } from '../../../../src/components/modules/paste/handlers/html-handler';
 import { PatternHandler } from '../../../../src/components/modules/paste/handlers/pattern-handler';
+import { PlainGridHandler } from '../../../../src/components/modules/paste/handlers/plain-grid-handler';
 import { TableCellsHandler } from '../../../../src/components/modules/paste/handlers/table-cells-handler';
 import { TextHandler } from '../../../../src/components/modules/paste/handlers/text-handler';
 import { MarkdownHandler } from '../../../../src/markdown/markdown-handler';
@@ -2383,6 +2384,10 @@ describe('Paste module', () => {
       const htmlHandler = handlers.find((h): h is HtmlHandler => h instanceof HtmlHandler);
       expect(htmlHandler).toBeDefined();
 
+      // PlainGridHandler runs before Markdown, so a `#` in a cell stays text
+      const plainGridHandler = handlers.find((h): h is PlainGridHandler => h instanceof PlainGridHandler);
+      expect(plainGridHandler).toBeDefined();
+
       // TextHandler should have lowest priority (10)
       const textHandler = handlers.find((h): h is TextHandler => h instanceof TextHandler);
       expect(textHandler).toBeDefined();
@@ -2393,8 +2398,9 @@ describe('Paste module', () => {
       expect(handlers[2]).toBe(filesHandler);
       expect(handlers[3]).toBe(patternHandler);
       expect(handlers[4]).toBe(htmlHandler);
-      expect(handlers[5]).toBe(markdownHandler);
-      expect(handlers[6]).toBe(textHandler);
+      expect(handlers[5]).toBe(plainGridHandler);
+      expect(handlers[6]).toBe(markdownHandler);
+      expect(handlers[7]).toBe(textHandler);
     });
 
     it('prefers HtmlHandler over MarkdownHandler when paste carries both rich HTML and markdown-like text (Notion paste)', async () => {

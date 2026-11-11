@@ -40,6 +40,8 @@ export interface DatabaseConfirmOptions {
   closeLabel?: string;
   /** A 300px box with a 22px × and a 32px icon, as Notion's Reset (research/36 §8.2). */
   small?: boolean;
+  /** A 406px box, as Notion's Delete property (notion-motion.md Round 14). */
+  roomy?: boolean;
   /** Focuses the confirm button on open, as Notion's "Undo Task Database?" (research/35 §1.7). */
   focusConfirm?: boolean;
 }
@@ -84,6 +86,9 @@ const buildConfirm = (options: DatabaseConfirmOptions, choices: DatabaseChoice[]
   }
   if (options.small === true) {
     panel.setAttribute('data-small', '');
+  }
+  if (options.roomy === true) {
+    panel.setAttribute('data-roomy', '');
   }
   const close = options.closeLabel === undefined ? null : document.createElement('button');
 
@@ -204,17 +209,19 @@ const buildConfirm = (options: DatabaseConfirmOptions, choices: DatabaseChoice[]
     directionSource: options.directionSource ?? null,
     ...(options.container === undefined ? {} : { container: options.container, topLayer: options.topLayer ?? false }),
     onDismiss: () => finish(options.dismissAs ?? false),
+    // After focus goes back, so what the caller focuses next keeps it.
+    onClose: () => resolve(settled.answer),
   });
 
-  const settled = { done: false };
+  const settled = { done: false, answer: false };
 
   function finish(answer: boolean): void {
     if (settled.done) {
       return;
     }
     settled.done = true;
-    handle.close();
-    resolve(answer);
+    settled.answer = answer;
+    handle.closeAnimated();
   }
 
   options.signal?.addEventListener('abort', () => finish(options.dismissAs ?? false), { once: true });

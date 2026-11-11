@@ -193,9 +193,19 @@
   to { opacity: 1 }
 }
 
+@keyframes blok-database-confirm-fade-out {
+  from { opacity: 1 }
+  to { opacity: 0 }
+}
+
 @keyframes blok-database-confirm-in {
-  from { opacity: 0; transform: scale(0.97) }
-  to { opacity: 1; transform: none }
+  from { transform: scale(0.97) }
+  to { transform: none }
+}
+
+@keyframes blok-database-confirm-out {
+  from { transform: none }
+  to { transform: scale(0.97) }
 }
 
 @keyframes blok-dice-impact {

@@ -23,6 +23,30 @@ describe('openDatabaseConfirm', () => {
     vi.restoreAllMocks();
   });
 
+  // notion-motion.md Round 14: the close is the open in reverse, 200ms; nothing stays in the DOM after it.
+  // The answer waits for the close: focus goes back first, so what the caller focuses next stays focused.
+  it('plays its close before it leaves, then answers', async () => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Macintosh) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+    const answered = vi.fn();
+    const answer = open().then(answered);
+    const panel = dialog();
+    const backdrop = document.querySelector('[data-blok-database-confirm]');
+    const probe = document.createElement('div');
+
+    probe.style.animationName = 'blok-database-confirm-out';
+    vi.spyOn(window, 'getComputedStyle').mockReturnValue(probe.style);
+    action('cancel')?.click();
+    await Promise.resolve();
+
+    expect(backdrop?.isConnected).toBe(true);
+    expect(backdrop?.getAttribute('data-blok-closing')).toBe('true');
+    expect(answered).not.toHaveBeenCalled();
+    panel?.dispatchEvent(new Event('animationend', { bubbles: true }));
+    await answer;
+    expect(backdrop?.isConnected).toBe(false);
+    expect(answered).toHaveBeenCalledWith(false);
+  });
+
   it('shows the question with the confirm button above the cancel button', () => {
     void open();
 

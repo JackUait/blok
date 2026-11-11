@@ -5646,8 +5646,7 @@ button[data-blok-database-layout-pin-name]:focus-visible {
 
 /**
  * Confirm dialog, measured in research/08 ("Would you like to remove sorting?");
- * title weight and body size from research/33 §3.10.
- * The close is instant: Notion's close motion was not measured.
+ * title weight and body size from research/33 §3.10. The close is the open reversed (Round 14).
  */
 [data-blok-database-confirm] {
   position: fixed;
@@ -5708,6 +5707,15 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   background-color: var(--blok-database-confirm-bg);
   box-shadow: var(--blok-database-confirm-shadow);
   animation: blok-database-confirm-in 200ms ease both;
+}
+
+[data-blok-database-confirm][data-blok-closing] {
+  pointer-events: none;
+  animation: blok-database-confirm-fade-out 200ms ease both;
+}
+
+[data-blok-database-confirm][data-blok-closing] > [data-blok-database-confirm-dialog] {
+  animation: blok-database-confirm-out 200ms ease both;
 }
 
 [data-blok-database-confirm-close] {
@@ -5872,6 +5880,10 @@ button[data-blok-database-layout-pin-name]:focus-visible {
 [data-blok-database-confirm-dialog][data-wide] [data-blok-database-confirm-art] svg {
   inline-size: 32px;
   block-size: 32px;
+}
+
+[data-blok-database-confirm-dialog][data-roomy] {
+  width: 406px;
 }
 
 /* research/36 §8.2: Reset, 300x226. */
@@ -6524,7 +6536,9 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   }
 
   [data-blok-database-confirm],
-  [data-blok-database-confirm-dialog] {
+  [data-blok-database-confirm-dialog],
+  [data-blok-database-confirm][data-blok-closing],
+  [data-blok-database-confirm][data-blok-closing] > [data-blok-database-confirm-dialog] {
     animation: none;
   }
 

@@ -23,6 +23,7 @@ import { DATE_FORMATS, HOUR_CYCLES, TIME_FORMATS, resolveHourCycle, resolveLocal
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
 import { hide as hideHint, onHover, type HintOptions } from '../../components/utils/tooltip';
 import { getElementDirection } from '../../components/utils/direction';
+import { openDatabaseConfirm } from './database-confirm-dialog';
 import type {
   DateDisplay,
   DateReminderOffset,
@@ -309,6 +310,20 @@ export class DatabasePropertyMenu {
 
   private t(key: string): string {
     return this.options.i18n.t(key);
+  }
+
+  /** Notion asks in a modal (notion-motion.md Round 14), not in the menu. */
+  private confirmDelete(id: string): void {
+    void openDatabaseConfirm({
+      title: this.t('tools.database.deletePropertyConfirm'),
+      confirmLabel: this.t('blockSettings.delete'),
+      cancelLabel: this.t('tools.database.layoutCancel'),
+      destructive: true,
+      focusConfirm: true,
+      roomy: true,
+    }).then((confirmed) => {
+      if (confirmed) this.options.onDelete(id);
+    });
   }
 
   /**
@@ -927,14 +942,8 @@ export class DatabasePropertyMenu {
           title: this.t('tools.database.deleteProperty'),
           icon: IconTrash,
           isDestructive: true,
-          confirmation: {
-            name: entry,
-            title: this.t('tools.database.deletePropertyConfirm'),
-            icon: IconTrash,
-            isDestructive: true,
-            closeOnActivate: true,
-            onActivate: () => this.options.onDelete(id),
-          },
+          closeOnActivate: true,
+          onActivate: () => this.confirmDelete(id),
         };
     }
   }

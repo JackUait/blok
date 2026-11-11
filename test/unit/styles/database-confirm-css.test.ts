@@ -41,9 +41,26 @@ describe('database confirm dialog css', () => {
       .toBe('rgba(25, 25, 25, 0.24) 0 24px 48px, rgba(25, 25, 25, 0.14) 0 4px 12px, rgba(42, 28, 0, 0.07) 0 0 0 1px');
   });
 
-  it('enters with scale .97 to 1 and opacity over 200ms ease', () => {
+  // notion-motion.md Round 14: the wrapper alone fades, so the panel only scales; its own fade would square the backdrop's.
+  it('enters with scale .97 to 1 over 200ms ease, under the backdrop\'s fade', () => {
+    expect(ruleBody(database, '[data-blok-database-confirm]')).toContain('animation: blok-database-confirm-fade 200ms ease both');
     expect(ruleBody(database, '[data-blok-database-confirm-dialog]')).toContain('animation: blok-database-confirm-in 200ms ease both');
-    expect(keyframes).toMatch(/@keyframes blok-database-confirm-in \{ from \{ opacity: 0; transform: scale\(0\.97\); \} to \{ opacity: 1; transform: none; \} \}/);
+    expect(keyframes).toMatch(/@keyframes blok-database-confirm-in \{ from \{ transform: scale\(0\.97\); \} to \{ transform: none; \} \}/);
+  });
+
+  it('closes as the exact reverse, and lets clicks through while it goes', () => {
+    const backdrop = ruleBody(database, '[data-blok-database-confirm][data-blok-closing]');
+
+    expect(backdrop).toContain('animation: blok-database-confirm-fade-out 200ms ease both');
+    expect(backdrop).toContain('pointer-events: none');
+    expect(ruleBody(database, '[data-blok-database-confirm][data-blok-closing] > [data-blok-database-confirm-dialog]'))
+      .toContain('animation: blok-database-confirm-out 200ms ease both');
+    expect(keyframes).toMatch(/@keyframes blok-database-confirm-fade-out \{ from \{ opacity: 1; \} to \{ opacity: 0; \} \}/);
+    expect(keyframes).toMatch(/@keyframes blok-database-confirm-out \{ from \{ transform: none; \} to \{ transform: scale\(0\.97\); \} \}/);
+  });
+
+  it('draws a 406px panel on a dialog marked roomy, as Notion\'s Delete property (Round 14)', () => {
+    expect(ruleBody(database, '[data-blok-database-confirm-dialog][data-roomy]')).toContain('width: 406px');
   });
 
   // research/33 §3.10 and 26 §5a read weight 500 (the older 08 and 10 read 600).

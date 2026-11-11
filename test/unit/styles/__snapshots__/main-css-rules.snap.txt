@@ -9357,6 +9357,15 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   animation: blok-database-confirm-in 200ms ease both;
 }
 
+[data-blok-database-confirm][data-blok-closing] {
+  pointer-events: none;
+  animation: blok-database-confirm-fade-out 200ms ease both;
+}
+
+[data-blok-database-confirm][data-blok-closing] > [data-blok-database-confirm-dialog] {
+  animation: blok-database-confirm-out 200ms ease both;
+}
+
 [data-blok-database-confirm-close] {
   position: absolute;
   inset-block-start: var(--blok-space-3);
@@ -9507,6 +9516,10 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 [data-blok-database-confirm-dialog][data-wide] [data-blok-database-confirm-art] svg {
   inline-size: 32px;
   block-size: 32px;
+}
+
+[data-blok-database-confirm-dialog][data-roomy] {
+  width: 406px;
 }
 
 [data-blok-database-confirm-dialog][data-small] {
@@ -10114,7 +10127,7 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   transition: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-database-confirm], [data-blok-database-confirm-dialog] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-confirm], [data-blok-database-confirm-dialog], [data-blok-database-confirm][data-blok-closing], [data-blok-database-confirm][data-blok-closing] > [data-blok-database-confirm-dialog] {
   animation: none;
 }
 

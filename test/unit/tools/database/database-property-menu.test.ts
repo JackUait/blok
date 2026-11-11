@@ -426,15 +426,43 @@ describe('DatabasePropertyMenu', () => {
     expect((byName(lastItems(), 'changeType').children?.items ?? []).map((t) => t.name)).toContain('type-person');
   });
 
-  it('asks before deleting', () => {
+  // notion-motion.md Round 14: Delete property asks in Notion's 406px confirm dialog, focus on a red Delete.
+  it('asks in a dialog before deleting, with focus on Delete', async () => {
     const cb = open(prop('text'));
     const del = byName(lastItems(), 'delete');
 
-    expect(del.onActivate).toBeUndefined();
     expect(del.isDestructive).toBe(true);
-    del.confirmation?.onActivate(del);
+    expect(del.closeOnActivate).toBe(true);
+    expect(del.confirmation).toBeUndefined();
+    del.onActivate?.(del);
 
-    expect(cb.onDelete).toHaveBeenCalledWith('p');
+    const dialog = document.querySelector<HTMLElement>('[data-blok-database-confirm-dialog]');
+    const confirm = document.querySelector<HTMLButtonElement>('[data-blok-database-confirm-action="confirm"]');
+
+    expect(dialog?.getAttribute('role')).toBe('alertdialog');
+    expect(dialog?.hasAttribute('data-roomy')).toBe(true);
+    expect(document.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('tools.database.deletePropertyConfirm');
+    expect(confirm?.textContent).toBe('blockSettings.delete');
+    expect(confirm?.hasAttribute('data-destructive')).toBe(true);
+    expect(confirm).toHaveFocus();
+    expect(cb.onDelete).not.toHaveBeenCalled();
+
+    confirm?.click();
+    await vi.waitFor(() => expect(cb.onDelete).toHaveBeenCalledWith('p'));
+  });
+
+  it('keeps the property when the dialog is cancelled', async () => {
+    const cb = open(prop('text'));
+    const del = byName(lastItems(), 'delete');
+
+    del.onActivate?.(del);
+    expect(document.querySelector('[data-blok-database-confirm-dialog]')).not.toBeNull();
+    document.querySelector<HTMLButtonElement>('[data-blok-database-confirm-action="cancel"]')?.click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(document.querySelector('[data-blok-database-confirm-dialog]')).toBeNull();
+    expect(cb.onDelete).not.toHaveBeenCalled();
   });
 
   it('duplicates', () => {

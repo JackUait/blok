@@ -442,8 +442,8 @@ const KNOWN_RED: Record<string, string> = {
   'page-block full': 'cross-context-full-page-block: by design a page block pastes as a page reference',
   'page-block html': 'atomic-html-page-and-page-link: a page block pastes back as a link (format limit)',
   'page-block plain': 'atomic-html-page-and-page-link: a page block pastes back as a link (format limit)',
-  'nested-lists html': 'degraded-list-paste-flat-depth: a nested item pasted from html is saved under its parent item, but its holder stays at the root',
-  'nested-lists plain': 'degraded-list-paste-flat-depth: a nested item pasted from plain text is saved under its parent item, but its holder stays at the root',
+  'nested-lists html': 'degraded-list-paste-flat-depth: a nested item pasted from html is saved under its parent item, but its holder stays at the root (possible regression from eb4f6f0b, not bisected)',
+  'nested-lists plain': 'degraded-list-paste-flat-depth: a nested item pasted from plain text is saved under its parent item, but its holder stays at the root (possible regression from eb4f6f0b, not bisected)',
 };
 
 const MATRIX: Array<{ name: string; blocks: Blocks }> = [

@@ -721,7 +721,7 @@ test.describe('table round trips', () => {
   });
 
   test('N2 native text selection of list items in one cell (real Cmd+C/Cmd+V) → another cell', async ({ page }) => {
-    test.fixme(true, 'table-N2-native-cross-block-in-cell: the pasted nested list item is saved under its list parent but its holder sits in the table');
+    test.fixme(true, 'table-N2-native-cross-block-in-cell: the pasted nested list item is saved under its list parent but its holder sits in the table (possible regression from eb4f6f0b, not bisected)');
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
     await createEditor(page, richTable('t1'));
     // Drag a text selection across the three list items in cell (1,0).

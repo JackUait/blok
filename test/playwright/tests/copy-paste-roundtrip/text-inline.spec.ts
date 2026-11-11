@@ -631,8 +631,8 @@ test.describe('text-inline round trips', () => {
     ];
 
     const knownRed: Record<string, string> = {
-      'link with target/rel': 'text-inline-marks-each: a copy inside one block drops the link target and rel',
-      'selection inside one bold run': 'text-inline-marks-each: a copy inside one bold run drops the bold around it',
+      'link with target/rel': 'text-inline-marks-each: a copy inside one block drops the link target and rel (possible regression from 2216d7bd, not bisected)',
+      'selection inside one bold run': 'text-inline-marks-each: a copy inside one bold run drops the bold around it (possible regression from 2216d7bd, not bisected)',
     };
 
     for (const [ name, text, sel ] of marks) {

@@ -113,6 +113,8 @@ enum Read {
     Request {
         id: String,
         call: Option<Value>,
+        /// Node answers it with no I/O, before it reads the next line.
+        at_once: bool,
     },
     Cancelled {
         id: String,
@@ -138,6 +140,13 @@ fn rmcp_reads(line: &str) -> Read {
     match message {
         JsonRpcMessage::Request(request) => Read::Request {
             id: id_text(&request.id),
+            at_once: matches!(
+                request.request,
+                ClientRequest::PingRequest(_)
+                    | ClientRequest::ListToolsRequest(_)
+                    | ClientRequest::ListPromptsRequest(_)
+                    | ClientRequest::GetPromptRequest(_)
+            ),
             call: match request.request {
                 ClientRequest::CallToolRequest(call) => Some(
                     call.params
@@ -184,6 +193,9 @@ fn has_unsafe_id(line: &str) -> bool {
 /// Node's STOP_DRAIN_MS: shutdown waits this long for work in flight.
 pub const DRAIN_LIMIT: Duration = Duration::from_secs(45);
 
+/// Caps how long an answer that never comes holds the next line.
+const AT_ONCE_LIMIT: Duration = Duration::from_secs(10);
+
 /// Sees each tools/call as it is read, in order, and each request's end.
 /// `id` is the JSON text of rmcp's request id.
 pub trait Requests: Send + Sync {
@@ -198,6 +210,7 @@ pub trait Requests: Send + Sync {
 pub struct Pending {
     state: std::sync::Mutex<Sent>,
     requests: Option<Arc<dyn Requests>>,
+    answered_at_once: tokio::sync::Notify,
 }
 
 #[derive(Default)]
@@ -214,6 +227,11 @@ struct Sent {
     abandoned: HashSet<String>,
     /// Requests in a 2026 session with no envelope key at all.
     bare: HashSet<String>,
+    /// Requests Node answers before it reads the next line. rmcp runs each
+    /// request in its own task, so nothing else orders their answers.
+    at_once: HashSet<String>,
+    /// The client's output is gone: no answer will be written.
+    output_closed: bool,
 }
 
 /// Puts `id` in place of the message's id, or of a cancel's requestId.
@@ -232,6 +250,7 @@ impl Pending {
         Pending {
             state: std::sync::Mutex::default(),
             requests: Some(requests),
+            answered_at_once: tokio::sync::Notify::new(),
         }
     }
 
@@ -244,7 +263,7 @@ impl Pending {
     /// so it stops counting.
     fn sent(&self, line: &str) -> String {
         match rmcp_reads(line) {
-            Read::Request { id, call } => {
+            Read::Request { id, call, at_once } => {
                 let (id, line) = {
                     let mut state = self.state();
                     let (id, line) = if state.ids.contains(&id) {
@@ -262,6 +281,9 @@ impl Pending {
                     };
                     if call.is_some() {
                         state.calls.insert(id.clone());
+                    }
+                    if at_once {
+                        state.at_once.insert(id.clone());
                     }
                     (id, line)
                 };
@@ -282,12 +304,14 @@ impl Pending {
                             let value = serde_json::from_str(&alias).unwrap_or(Value::Null);
                             state.ids.remove(&alias);
                             state.calls.remove(&alias);
+                            state.at_once.remove(&alias);
                             let line = with_id(line, "/params/requestId", value);
                             (alias, line)
                         }
                         None => {
                             state.ids.remove(&id);
                             state.calls.remove(&id);
+                            state.at_once.remove(&id);
                             (id, line.to_owned())
                         }
                     }
@@ -402,12 +426,42 @@ impl Pending {
                 state.calls.remove(&id);
                 state.abandoned.remove(&id);
                 state.bare.remove(&id);
+                state.at_once.remove(&id);
                 state.aliases.retain(|(alias, _)| *alias != id);
             }
+            self.answered_at_once.notify_waiters();
             if let Some(requests) = &self.requests {
                 requests.ended(&id);
             }
         }
+    }
+
+    /// Holds the next line until the at-once answers are written, or
+    /// AT_ONCE_LIMIT passes.
+    async fn wait_at_once(&self) {
+        let _ = tokio::time::timeout(AT_ONCE_LIMIT, async {
+            loop {
+                // Registered before the check, so an answer between the two still wakes it.
+                let answered = self.answered_at_once.notified();
+                tokio::pin!(answered);
+                answered.as_mut().enable();
+                {
+                    let state = self.state();
+                    if state.at_once.is_empty() || state.output_closed {
+                        return;
+                    }
+                }
+                answered.await;
+            }
+        })
+        .await;
+        self.state().at_once.clear();
+    }
+
+    /// Nothing more reaches the client, so no line waits for an answer.
+    fn output_closed(&self) {
+        self.state().output_closed = true;
+        self.answered_at_once.notify_waiters();
     }
 
     /// Waits until every request is answered, or `limit` passes.
@@ -519,6 +573,7 @@ where
                 if sent.is_err() {
                     break;
                 }
+                pending.wait_at_once().await;
             }
             pending.abandon_in_flight();
             pending.drained(DRAIN_LIMIT).await;
@@ -544,6 +599,7 @@ where
                     break;
                 }
             }
+            pending.output_closed();
         })
     };
     serve(server_read, server_write).await;
@@ -1033,6 +1089,80 @@ mod tests {
         assert!(started.elapsed() < Duration::from_secs(1));
         // The id is free again: it goes through as sent.
         assert_eq!(pending.sent(first), first);
+    }
+
+    /// Answers id 7 late and every other request at once, as rmcp's
+    /// per-request tasks can.
+    async fn id_7_answers_late(
+        read: tokio::io::ReadHalf<tokio::io::DuplexStream>,
+        write: tokio::io::WriteHalf<tokio::io::DuplexStream>,
+    ) {
+        let write = Arc::new(Mutex::new(write));
+        let mut lines = BufReader::new(read).lines();
+        while let Ok(Some(line)) = lines.next_line().await {
+            let message = serde_json::from_str::<Value>(&line).unwrap();
+            let Some(id) = message.get("id").cloned() else {
+                continue;
+            };
+            let write = write.clone();
+            tokio::spawn(async move {
+                if id == json!(7) {
+                    tokio::time::sleep(Duration::from_millis(150)).await;
+                }
+                let answer = json!({ "jsonrpc": "2.0", "id": id, "result": {} });
+                let _ = write_line(&write, &answer.to_string()).await;
+            });
+        }
+    }
+
+    async fn answer_ids(requests: &[&str]) -> Vec<Value> {
+        let (mut client_in, input) = tokio::io::duplex(1 << 16);
+        let (out, client_out) = tokio::io::duplex(1 << 16);
+        let served = tokio::spawn(proxy(input, out, Arc::default(), id_7_answers_late));
+        for request in requests {
+            client_in
+                .write_all(format!("{request}\n").as_bytes())
+                .await
+                .unwrap();
+        }
+        let mut lines = BufReader::new(client_out).lines();
+        let mut ids = Vec::new();
+        for _ in requests {
+            let line = tokio::time::timeout(Duration::from_secs(5), lines.next_line())
+                .await
+                .unwrap()
+                .unwrap()
+                .unwrap();
+            ids.push(serde_json::from_str::<Value>(&line).unwrap()["id"].clone());
+        }
+        drop(client_in);
+        let _ = served.await;
+        ids
+    }
+
+    // Node answers ping, tools/list, prompts/list and prompts/get with no
+    // I/O, so each is answered before it reads the next line.
+    #[tokio::test]
+    async fn a_ping_is_answered_before_the_next_line_is_read() {
+        let ids = answer_ids(&[
+            r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"c","version":"1"}}}"#,
+            r#"{"jsonrpc":"2.0","id":7,"method":"ping"}"#,
+            r#"{"jsonrpc":"2.0","id":8,"method":"ping"}"#,
+        ])
+        .await;
+        assert_eq!(ids, vec![json!(0), json!(7), json!(8)]);
+    }
+
+    // A tool call does real work in Node too: a later ping goes first.
+    #[tokio::test]
+    async fn a_tool_call_does_not_hold_the_next_line() {
+        let ids = answer_ids(&[
+            r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"c","version":"1"}}}"#,
+            r#"{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"blok_read","arguments":{}}}"#,
+            r#"{"jsonrpc":"2.0","id":8,"method":"ping"}"#,
+        ])
+        .await;
+        assert_eq!(ids, vec![json!(0), json!(8), json!(7)]);
     }
 
     #[test]

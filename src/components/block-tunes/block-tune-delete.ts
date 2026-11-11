@@ -45,9 +45,8 @@ export class DeleteTune implements BlockTune {
       name: 'delete',
       isDestructive: true,
       secondaryLabel: beautifyShortcut('DELETE'),
-      onActivate: (): void => {
-        void this.handleClick();
-      },
+      // Returns the delete's promise, so the block menu can wait for it (Trash toast).
+      onActivate: (): Promise<void> => this.handleClick(),
     };
   }
 

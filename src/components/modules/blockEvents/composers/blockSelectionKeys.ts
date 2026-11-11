@@ -12,6 +12,7 @@ import { BlockEventComposer } from './__base';
 import { canOutdent, getAdoptedSiblings, getIndentTarget } from './structural-siblings';
 import { isChildToolAllowed } from '../../../utils/child-tools';
 import { carriesReadOnly } from '../../../utils/read-only-blocks';
+import { deleteWithTrashToast } from '../../../utils/trash-toast';
 
 const EDITING_HOST_SELECTOR = '[contenteditable]:not([contenteditable="false"])';
 
@@ -492,7 +493,7 @@ export class BlockSelectionKeys extends BlockEventComposer {
     const nestedContainer = findCommonNestedContainer(selected);
     const roots = selectionRoots(selected);
 
-    const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
+    const insertedBlock = deleteWithTrashToast(this.Blok, roots, () => BlockManager.deleteSelectedBlocksAndInsertReplacement());
 
     announceDeletedRoots(this.Blok.I18n, roots, (id) => BlockManager.getBlockById(id) !== undefined);
 

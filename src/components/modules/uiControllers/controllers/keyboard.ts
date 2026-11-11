@@ -10,6 +10,7 @@ import { hasEscapeLayer } from '../../../utils/dismissable-layer';
 import { announceHistoryPress } from '../../../utils/history-announcement';
 import { historyKeyOf, type HistoryKey } from '../../../utils/history-keys';
 import { announceDeletedRoots, selectionRoots } from '../../../utils/selection-roots';
+import { deleteWithTrashToast } from '../../../utils/trash-toast';
 import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../../utils/nested-container-caret';
 import { PopoverRegistry } from '../../../utils/popover/popover-registry';
 import { HEADER_TOOL_NAME, LIST_TOOL_NAME } from '../../blockEvents/constants';
@@ -801,7 +802,7 @@ export class KeyboardController extends Controller {
     const nestedContainer = findCommonNestedContainer(selected);
     const roots = selectionRoots(selected);
 
-    const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
+    const insertedBlock = deleteWithTrashToast(this.Blok, roots, () => BlockManager.deleteSelectedBlocksAndInsertReplacement());
 
     announceDeletedRoots(this.Blok.I18n, roots, (id) => BlockManager.getBlockById(id) !== undefined);
 

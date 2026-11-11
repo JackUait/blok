@@ -263,6 +263,47 @@ describe('BlockSelectionKeys', () => {
     });
   });
 
+  describe('a deleted sub-page block (Notion U108)', () => {
+    const run = (trash: boolean): { show: ReturnType<typeof vi.fn> } => {
+      const page = createBlock({ id: 'pg', selected: true, parentId: null, tool: { blockMenu: { titled: true, trash, lead: [] } } as unknown as Block['tool'] });
+      const state = { blocks: [page], steps: [undefined, {}] as Array<Record<string, unknown> | undefined> };
+      const show = vi.fn();
+      const blok = createBlokModules({
+        BlockSelection: { anyBlockSelected: true } as unknown as BlokModules['BlockSelection'],
+        BlockManager: {
+          get blocks() {
+            return state.blocks;
+          },
+          getBlockById: vi.fn((id: string) => state.blocks.find((block) => block.id === id)),
+          deleteSelectedBlocksAndInsertReplacement: vi.fn(() => {
+            state.blocks = [];
+
+            return undefined;
+          }),
+        } as unknown as BlokModules['BlockManager'],
+        HistoryAPI: { latestStep: vi.fn(() => state.steps.shift()), undoStep: vi.fn() } as unknown as BlokModules['HistoryAPI'],
+        NotifierAPI: { show, dismiss: vi.fn() } as unknown as BlokModules['NotifierAPI'],
+        I18n: { t: (key: string) => key } as unknown as BlokModules['I18n'],
+      });
+
+      new BlockSelectionKeys(blok).handleDeletion(createKeyboardEvent({ key: 'Backspace' }));
+
+      return { show };
+    };
+
+    it('shows the "Moved to Trash" toast', () => {
+      const { show } = run(true);
+
+      expect(show).toHaveBeenCalledWith(expect.objectContaining({ message: 'tools.database.movedToTrash' }));
+    });
+
+    it('shows no toast for a block that is not trashed', () => {
+      const { show } = run(false);
+
+      expect(show).not.toHaveBeenCalled();
+    });
+  });
+
   describe('handleCopy', () => {
     it('does nothing when no blocks are selected', () => {
       const copySelectedBlocks = vi.fn();

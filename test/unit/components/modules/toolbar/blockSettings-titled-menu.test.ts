@@ -228,6 +228,31 @@ describe('BlockSettings — a tool that declares a titled block menu', () => {
     expect(remove?.title).toBe('blockSettings.moveToTrash');
   });
 
+  it('shows the "Moved to Trash" toast once Move to Trash removed the block (Notion U108)', async () => {
+    getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
+    const block = createBlock({ titled: true, trash: true });
+    const show = vi.fn();
+    const steps: Array<Record<string, unknown> | undefined> = [undefined, {}];
+    const blok = createBlokMock();
+
+    Object.assign(blok, {
+      HistoryAPI: { latestStep: vi.fn(() => steps.shift()), undoStep: vi.fn() },
+      NotifierAPI: { show, dismiss: vi.fn() },
+    });
+    Object.assign(blok.BlockManager as Record<string, unknown>, { getBlockById: vi.fn(() => undefined) });
+    blockSettings.state = blok as unknown as BlokModules;
+    const removeBlock = vi.fn(async () => undefined);
+    const tunes: MenuConfigItem[] = [{ name: 'delete', title: 'blockSettings.delete', onActivate: removeBlock }];
+    const items = await (blockSettings as unknown as {
+      getTunesItems: (b: Block, common: MenuConfigItem[], tool: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+    }).getTunesItems(block, tunes, toolTunes());
+    const remove = (items as Array<Named & { onActivate: (item: PopoverItemParams) => void }>).find((item) => item.name === 'delete');
+
+    remove?.onActivate(remove);
+    await vi.waitFor(() => expect(show).toHaveBeenCalledWith(expect.objectContaining({ message: 'tools.database.movedToTrash' })));
+    expect(removeBlock).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps one boundary when there is nothing to turn into', async () => {
     getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
 

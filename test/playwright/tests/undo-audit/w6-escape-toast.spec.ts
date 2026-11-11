@@ -1,6 +1,7 @@
 /**
  * Escape from the block menu keeps the block selected, like Notion (U109,
- * U142, U161).
+ * U142, U161). Deleting a sub-page block shows a "Moved to Trash" toast whose
+ * Restore undoes the delete (U108, U109).
  */
 import type { Locator, Page } from '@playwright/test';
 
@@ -10,6 +11,7 @@ import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 const HOLDER_ID = 'blok';
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
+const REDO = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
 const CAPTURE_GAP = 800;
 const HANDLE = '[data-blok-interface=blok] [data-blok-testid="settings-toggler"]';
 const TUNES_POPOVER = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
@@ -60,6 +62,14 @@ const ids = async (page: Page): Promise<string[]> => page.evaluate(async () => {
   return (await window.blokInstance.save()).blocks.filter((block) => block.parent === undefined).map((block) => block.id ?? '');
 });
 
+const savedBlock = async (page: Page, id: string): Promise<SavedBlock | undefined> => page.evaluate(async (blockId) => {
+  if (!window.blokInstance) {
+    throw new Error('no blok');
+  }
+
+  return (await window.blokInstance.save()).blocks.find((block) => block.id === blockId);
+}, id);
+
 const selectedIds = async (page: Page): Promise<string[]> => page.evaluate(() =>
   Array.from(document.querySelectorAll('[data-blok-testid="block-wrapper"][data-blok-selected="true"]'))
     .map(el => el.getAttribute('data-blok-id') ?? ''));
@@ -106,6 +116,8 @@ const openTunes = async (page: Page, id: string): Promise<void> => {
 const tune = (page: Page, name: string): Locator =>
   page.locator(`${TUNES_POPOVER} [data-blok-testid="popover-item"][data-blok-item-name="${name}"]`);
 
+const trashToast = (page: Page): Locator => page.getByTestId('notification').filter({ hasText: 'Moved to Trash' });
+
 const P = (id: string, text: string): SavedBlock => ({ id, type: 'paragraph', data: { text } });
 
 const BASE = [P('p1', 'Alpha'), P('p2', 'Beta'), P('p3', 'Gamma')];
@@ -127,6 +139,8 @@ const tableBlocks = (): SavedBlock[] => {
     ...kids,
   ];
 };
+
+const PAGE_BLOCKS: SavedBlock[] = [P('p1', 'Alpha'), { id: 'sub', type: 'page', data: { pageId: 'child-page' } }, P('p3', 'Gamma')];
 
 test.describe('Escape from the block menu keeps the block selected (V3)', () => {
   test.describe.configure({ timeout: 30_000 });
@@ -199,5 +213,67 @@ test.describe('Escape from the block menu keeps the block selected (V3)', () => 
     await expect(page.locator(TUNES_POPOVER)).toBeHidden();
     await gap(page, 300);
     expect(await selectedIds(page)).toEqual([]);
+  });
+});
+
+test.describe('deleting a sub-page block shows a Trash toast (V14)', () => {
+  test.describe.configure({ timeout: 30_000 });
+  test.beforeAll(ensureBlokBundleBuilt);
+
+  test.beforeEach(async ({ page }) => {
+    await gotoTestPage(page);
+  });
+
+  test('U108: Backspace on a selected page block shows "Moved to Trash"; Restore brings it back with its id and data', async ({ page }) => {
+    await createBlok(page, PAGE_BLOCKS);
+    const before = await savedBlock(page, 'sub');
+
+    await editable(page, 'p1').click();
+    await gap(page);
+    await openTunes(page, 'sub');
+    await page.keyboard.press('Escape');
+    await gap(page, 300);
+    expect(await selectedIds(page)).toEqual(['sub']);
+
+    await page.keyboard.press('Backspace');
+    await expect.poll(() => ids(page)).toEqual(['p1', 'p3']);
+    const toast = trashToast(page);
+
+    await expect(toast).toBeVisible();
+    await toast.getByRole('button', { name: 'Restore' }).click();
+
+    await expect.poll(() => ids(page)).toEqual(['p1', 'sub', 'p3']);
+    expect(await savedBlock(page, 'sub')).toEqual(before);
+    await expect(toast).toBeHidden();
+    await gap(page, 300);
+
+    // Restore is an undo: redo trashes it again.
+    await page.keyboard.press(REDO);
+    await expect.poll(() => ids(page)).toEqual(['p1', 'p3']);
+  });
+
+  test('Move to Trash in the page block menu shows the toast too', async ({ page }) => {
+    await createBlok(page, PAGE_BLOCKS);
+    await editable(page, 'p1').click();
+    await gap(page);
+    await openTunes(page, 'sub');
+    await tune(page, 'delete').click();
+    await expect.poll(() => ids(page)).toEqual(['p1', 'p3']);
+    const toast = trashToast(page);
+
+    await expect(toast).toBeVisible();
+    await toast.getByRole('button', { name: 'Restore' }).click();
+    await expect.poll(() => ids(page)).toEqual(['p1', 'sub', 'p3']);
+  });
+
+  test('deleting a paragraph shows no Trash toast', async ({ page }) => {
+    await createBlok(page, PAGE_BLOCKS);
+    await editable(page, 'p3').click();
+    await gap(page);
+    await openTunes(page, 'p3');
+    await tune(page, 'delete').click();
+    await expect.poll(() => ids(page)).toEqual(['p1', 'sub']);
+    await gap(page, 500);
+    await expect(trashToast(page)).toHaveCount(0);
   });
 });

@@ -26,6 +26,7 @@ import { css as popoverItemCls } from '../../utils/popover/components/popover-it
 import { isToolConvertable, translateToolTitle } from '../../utils/tools';
 import { prepareImportString } from '../blockManager/block-mutation';
 import { isBlockReadOnly } from '../../utils/read-only-blocks';
+import { deleteWithTrashToast, showTrashToast } from '../../utils/trash-toast';
 
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { DATA_ATTR } from '../../constants';
@@ -535,6 +536,32 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   };
 
   /**
+   * Makes the menu's Move to Trash show the Trash toast once the block is gone.
+   * @param tune - the delete tune, renamed Move to Trash
+   * @param block - the block it trashes
+   */
+  private withTrashToast(tune: MenuConfigItem, block: Block): MenuConfigItem {
+    if (!('onActivate' in tune) || typeof tune.onActivate !== 'function') {
+      return tune;
+    }
+    const run = tune.onActivate;
+
+    return {
+      ...tune,
+      onActivate: (item: PopoverItemParams, event?: PointerEvent): void => {
+        const stepBefore = this.Blok.HistoryAPI.latestStep();
+
+        // DeleteTune returns its delete's promise; the block is gone once it settles.
+        void Promise.resolve(run(item, event)).then(() => {
+          if (this.Blok.BlockManager.getBlockById(block.id) === undefined) {
+            showTrashToast(this.Blok, stepBefore);
+          }
+        });
+      },
+    };
+  }
+
+  /**
    * Notes clicks inside the open menu, for {@link closeByTool}.
    */
   private watchMenuClicks(): void {
@@ -829,7 +856,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         items.push(
           ...actionTunes.filter((_tune, index) => index !== deleteIndex),
           duplicateItem,
-          { ...actionTunes[deleteIndex], title: this.Blok.I18n.t('blockSettings.moveToTrash') } as MenuConfigItem
+          this.withTrashToast({ ...actionTunes[deleteIndex], title: this.Blok.I18n.t('blockSettings.moveToTrash') } as MenuConfigItem, currentBlock)
         );
       } else {
         items.push(
@@ -855,7 +882,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
           const nestedContainer = findCommonNestedContainer(selected);
           const roots = selectionRoots(selected);
 
-          const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
+          const insertedBlock = deleteWithTrashToast(this.Blok, roots, () => BlockManager.deleteSelectedBlocksAndInsertReplacement());
 
           announceDeletedRoots(this.Blok.I18n, roots, (id) => BlockManager.getBlockById(id) !== undefined);
 

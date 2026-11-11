@@ -1494,6 +1494,11 @@ test.describe('copy and paste', () => {
     const ARTICLE = 'https://example.com/article';
     const YOUTUBE = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
 
+    // The shared page keeps routes across the tests of this file.
+    test.afterEach(async ({ page }) => {
+      await page.unrouteAll({ behavior: 'ignoreErrors' });
+    });
+
     test('come back as links, with no player, size or placeholder text', async ({ page }) => {
       await page.route(/youtube\.com|ytimg|example\.com/, (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<html></html>' }));
       await createBlok(page, { data: { blocks: [

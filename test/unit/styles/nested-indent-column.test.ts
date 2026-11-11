@@ -1,8 +1,7 @@
 /**
  * A nested block's depth margin narrows its holder. A centred or right-aligned
- * content column is placed inside that holder, so without a rule of its own it
- * moved half a step (centred) or not at all (right). The column must be sized
- * from the un-indented width so the text moves one full step.
+ * column placed in that holder would move half a step or not at all, so it is
+ * sized from the un-indented width. Pixels: undo-audit/w5-toggle-kid.spec.ts.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -39,13 +38,14 @@ describe('nested indent in a centred or right-aligned column', () => {
     );
   });
 
-  it('leaves full width and stretched blocks alone', () => {
+  it('matches only nested holders, and never full width or stretched blocks', () => {
     const selectors = rules.filter(({ body }) => body.includes('--_blok-indent:')).map(({ selector }) => selector);
 
     expect(selectors.length).toBeGreaterThan(0);
     for (const selector of selectors) {
       expect(selector).toContain(':not([data-blok-width="full"])');
       expect(selector).toContain(':not([data-blok-stretched="true"])');
+      expect(selector).toContain('[data-blok-depth]:not([data-blok-depth="0"])');
     }
   });
 });

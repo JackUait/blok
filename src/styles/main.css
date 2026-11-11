@@ -406,24 +406,25 @@
 
 /*
  * A nested holder's depth margin makes it narrower. Centred in that holder, the
- * column moved half a step; right-aligned, not at all. Size the column from the
- * un-indented width instead: the text moves one full step and keeps its end edge.
+ * column would move only half a step; right-aligned, not at all. So the column
+ * is sized from the un-indented width: one full step, same end edge.
  * The indent repeats the holder margin terms in [data-blok-element] below.
+ * Only nested holders match, so a top-level block keeps the layered utilities.
  * Full width and stretched blocks fill the holder, so the margin already shows.
  */
-[data-blok-content-align="center"]:not([data-blok-width="full"]) [data-blok-element]:not([data-blok-stretched="true"]) > [data-blok-element-content],
-[data-blok-content-align="right"]:not([data-blok-width="full"]) [data-blok-element]:not([data-blok-stretched="true"]) > [data-blok-element-content] {
+[data-blok-content-align="center"]:not([data-blok-width="full"]) [data-blok-element][data-blok-depth]:not([data-blok-depth="0"]):not([data-blok-stretched="true"]) > [data-blok-element-content],
+[data-blok-content-align="right"]:not([data-blok-width="full"]) [data-blok-element][data-blok-depth]:not([data-blok-depth="0"]):not([data-blok-stretched="true"]) > [data-blok-element-content] {
   --_blok-indent: calc(var(--_blok-block-depth, 0) * var(--blok-block-indent-step, 24px) + var(--_blok-slot-depth, 0) * var(--_blok-slot-indent-step, 0px));
   max-width: calc(min(var(--blok-content-max-width, var(--max-width-content)), 100% + var(--_blok-indent)) - var(--_blok-indent));
 }
 
-[data-blok-content-align="center"]:not([data-blok-width="full"]) [data-blok-element]:not([data-blok-stretched="true"]) > [data-blok-element-content] {
+[data-blok-content-align="center"]:not([data-blok-width="full"]) [data-blok-element][data-blok-depth]:not([data-blok-depth="0"]):not([data-blok-stretched="true"]) > [data-blok-element-content] {
   margin-left: max(0px, (100% + var(--_blok-indent) - var(--blok-content-max-width, var(--max-width-content))) / 2);
   margin-right: auto;
 }
 
 /* Physical sides, keyed on the editor: a block's content may carry its own dir. */
-[data-blok-rtl="true"][data-blok-content-align="center"]:not([data-blok-width="full"]) [data-blok-element]:not([data-blok-stretched="true"]) > [data-blok-element-content] {
+[data-blok-rtl="true"][data-blok-content-align="center"]:not([data-blok-width="full"]) [data-blok-element][data-blok-depth]:not([data-blok-depth="0"]):not([data-blok-stretched="true"]) > [data-blok-element-content] {
   margin-left: auto;
   margin-right: max(0px, (100% + var(--_blok-indent) - var(--blok-content-max-width, var(--max-width-content))) / 2);
 }

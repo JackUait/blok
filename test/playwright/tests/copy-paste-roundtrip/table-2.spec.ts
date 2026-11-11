@@ -399,3 +399,88 @@ test.describe('blocks pasted at a caret inside a cell paragraph', () => {
     expect(await firstCell(page)).toEqual(['c:HelloWorld']);
   });
 });
+
+test.describe('a copied cell pasted at a caret inside a cell paragraph', () => {
+  test.beforeAll(() => {
+    ensureBlokBundleBuilt();
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await gotoTestPage(page);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+  });
+
+  const doc = (source: SavedBlock[]): SavedBlock[] => [
+    {
+      id: 't1', type: 'table',
+      data: { withHeadings: false, withHeadingColumn: false, content: [[{ blocks: source.map(b => b.id ?? '') }]] },
+      content: source.map(b => b.id ?? ''),
+    },
+    ...source,
+    {
+      id: 't2', type: 'table',
+      data: { withHeadings: false, withHeadingColumn: false, content: [[{ blocks: ['c'] }]] },
+      content: ['c'],
+    },
+    para('c', 'HelloWorld', 't2'),
+  ];
+  const textRun: SavedBlock[] = [
+    para('s1', 'First', 't1'),
+    { id: 's2', type: 'list', data: { text: 'mid', style: 'unordered' }, parent: 't1' },
+    para('s3', 'Second', 't1'),
+  ];
+
+  const copyAndPasteAtFive = async (page: Page, source: SavedBlock[]): Promise<void> => {
+    await createEditor(page, doc(source));
+    await selectCellRange(page, 't1', 0, 0, 0, 0);
+    const clip = await fireClipboard(page, 'copy');
+    const editable = page.locator('[data-blok-id="c"] [contenteditable="true"]');
+
+    await editable.click();
+    await editable.evaluate((el) => {
+      const text = el.firstChild;
+      const selection = window.getSelection();
+
+      if (!text || !selection) {
+        throw new Error('no text node to place the caret in');
+      }
+      selection.collapse(text, 5);
+    });
+    await firePaste(page, clip);
+  };
+
+  /** The target cell's blocks as `type:text`, with `c:` marking the block that was there. */
+  const targetCell = async (page: Page): Promise<string[]> => {
+    const saved = blocksAsHtml(await saveRaw(page));
+    const table = saved.find(b => b.id === 't2');
+    const ids = (table?.data as { content: Array<Array<{ blocks: string[] }>> }).content[0][0].blocks;
+
+    return ids.map((id) => {
+      const block = saved.find(b => b.id === id);
+
+      return `${id === 'c' ? 'c:' : ''}${block?.type ?? 'MISSING'}:${String((block?.data as { text?: unknown } | undefined)?.text)}`;
+    });
+  };
+
+  test('a run that starts and ends with text splits the paragraph at the caret', async ({ page }) => {
+    await copyAndPasteAtFive(page, textRun);
+
+    await expect.poll(() => targetCell(page)).toEqual(['c:paragraph:HelloFirst', 'list:mid', 'paragraph:SecondWorld']);
+    expect.soft(integrityProblems(await saveRaw(page))).toEqual([]);
+  });
+
+  test('the split undoes in one step', async ({ page }) => {
+    await copyAndPasteAtFive(page, textRun);
+    await expect.poll(() => targetCell(page)).toEqual(['c:paragraph:HelloFirst', 'list:mid', 'paragraph:SecondWorld']);
+
+    await page.keyboard.press('ControlOrMeta+z');
+
+    await expect.poll(() => targetCell(page)).toEqual(['c:paragraph:HelloWorld']);
+  });
+
+  test('a run that ends with a list still lands after the caret paragraph', async ({ page }) => {
+    await copyAndPasteAtFive(page, textRun.slice(0, 2));
+
+    await expect.poll(() => targetCell(page)).toEqual(['c:paragraph:HelloWorld', 'paragraph:First', 'list:mid']);
+  });
+});

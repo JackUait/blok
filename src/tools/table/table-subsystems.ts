@@ -1854,7 +1854,9 @@ export class TableSubsystems {
       if (isTextOnlySingleCell) {
         this.insertSingleCellPayloadInline(payload.cells[0][0]);
       } else if (caretBlockId !== null) {
-        this.insertCellPayloadAfter(targetCell, targetRowIndex, targetColIndex, caretBlockId, payload.cells[0][0]);
+        const rest = this.splitCaretParagraph(caretBlockId, payload.cells[0][0]) ?? payload.cells[0][0];
+
+        this.insertCellPayloadAfter(targetCell, targetRowIndex, targetColIndex, caretBlockId, rest);
       } else {
         this.pastePayloadIntoCells(gridEl, payload, targetRowIndex, targetColIndex);
       }
@@ -2038,6 +2040,55 @@ export class TableSubsystems {
     }
 
     return id;
+  }
+
+  /**
+   * Split the caret paragraph for a run of blocks that starts and ends with
+   * plain paragraphs, as a block paste outside a table does: the first block's
+   * text goes in at the caret and the text after the caret rides on the last.
+   * Returns the blocks still to insert after the paragraph, or null when the
+   * run does not split.
+   */
+  private splitCaretParagraph(caretBlockId: string, payloadCell: { blocks: ClipboardBlockData[] }): { blocks: ClipboardBlockData[] } | null {
+    const { blocks } = payloadCell;
+    const first = blocks[0];
+    const last = blocks[blocks.length - 1];
+    const isPlainParagraph = (block: ClipboardBlockData | undefined): block is ClipboardBlockData =>
+      block?.tool === 'paragraph' && isTextSerializable(block);
+    const caretBlock = this.host.api.blocks.getById(caretBlockId);
+    const selection = window.getSelection();
+    const range = selection !== null && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+    const input = range === null || caretBlock === null ? null : findOwn(caretBlock.holder, '[contenteditable="true"]');
+
+    if (
+      blocks.length < 2 || !isPlainParagraph(first) || !isPlainParagraph(last) ||
+      caretBlock?.name !== 'paragraph' || caretBlock.isEmpty ||
+      range === null || !range.collapsed || input === null || !input.contains(range.startContainer)
+    ) {
+      return null;
+    }
+
+    const tailRange = range.cloneRange();
+
+    tailRange.setEnd(input, input.childNodes.length);
+    const tail = document.createElement('div');
+
+    tail.append(tailRange.extractContents());
+
+    // Any page can write this payload. parseClipboardHtml already cleaned the
+    // text with the paragraph rules, and the target is a paragraph too.
+    const head = parseUntrustedHtml(String(first.data.text));
+    const fragment = document.createDocumentFragment();
+
+    fragment.append(...Array.from(head.childNodes));
+    range.insertNode(fragment);
+
+    return {
+      blocks: [
+        ...blocks.slice(1, -1),
+        { ...last, data: { ...last.data, text: `${String(last.data.text)}${tail.innerHTML}` } },
+      ],
+    };
   }
 
   /**

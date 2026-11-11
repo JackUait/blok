@@ -1310,8 +1310,11 @@ export class KeyboardNavigation extends BlockEventComposer {
       (caretAtEnd || this.Blok.BlockSelection.anyBlockSelected) && !this.shouldDeferSelectionToTableCell;
 
     const isShiftDownKey = event.shiftKey && keyCode === keyCodes.DOWN;
+    /** caretAtEnd reads the anchor's block, so it is wrong for a range that already spans blocks. */
+    const spansBlocks = selection !== null && selection.anchorNode !== null && selection.focusNode !== null &&
+      getEditingHost(selection.anchorNode) !== getEditingHost(selection.focusNode);
 
-    if (isShiftDownKey && shouldEnableCBS) {
+    if (isShiftDownKey && shouldEnableCBS && !spansBlocks) {
       this.Blok.CrossBlockSelection.toggleBlockSelectedState();
 
       return;
@@ -1492,7 +1495,9 @@ export class KeyboardNavigation extends BlockEventComposer {
    * Shift+ArrowDown on the last line of a block: keep the anchor and move the
    * focus to the same column in the next block, as Notion does. Each block is
    * its own editing host, so the browser cannot extend across on its own.
-   * @returns true when the focus moved into another block
+   * A range that already spans two blocks also moves its focus down a line
+   * inside its own block here, since the browser would clamp that extend.
+   * @returns true when this handled the key
    */
   private extendTextSelectionDown(): boolean {
     const { BlockManager, Caret } = this.Blok;
@@ -1507,15 +1512,28 @@ export class KeyboardNavigation extends BlockEventComposer {
 
     BlockManager.setCurrentBlockByChildNode(focus.node);
 
+    const focusHost = getEditingHost(focus.node);
+    const spansBlocks = focusHost !== getEditingHost(anchor.node);
+
+    /** The browser clamps an extend across blocks, so move the focus one line down by hand. */
+    const moveFocusDownOneLine = (): boolean => {
+      selection.collapse(focus.node, focus.offset);
+      selection.modify('move', 'forward', 'line');
+
+      const lineDown = selection.focusNode === null ? focus : { node: selection.focusNode, offset: selection.focusOffset };
+
+      applyDirectedSpanningSelection(anchor, lineDown);
+
+      return true;
+    };
+
     /** No block below: navigation could insert one, and Shift must never add a block. */
     if (BlockManager.nextVisibleBlock === null) {
-      return false;
+      return spansBlocks && moveFocusDownOneLine();
     }
 
     /** Caret helpers read a collapsed caret, so navigate from the focus alone. */
     selection.collapse(focus.node, focus.offset);
-
-    const focusHost = getEditingHost(focus.node);
 
     /**
      * An open inline toolbar can cover the next block, and the column lookup
@@ -1527,12 +1545,11 @@ export class KeyboardNavigation extends BlockEventComposer {
 
     /** Shift only selects: it must never append a block, so no undo step appears. */
     if (!Caret.navigateVerticalNext(false, false)) {
-      /** setBaseAndExtent keeps a backward selection backward; it only clamps across hosts. */
-      if (getEditingHost(anchor.node) === getEditingHost(focus.node)) {
-        selection.setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset);
-      } else {
-        applyDirectedSpanningSelection(anchor, focus);
+      if (spansBlocks) {
+        return moveFocusDownOneLine();
       }
+      /** setBaseAndExtent keeps a backward selection backward. */
+      selection.setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset);
 
       return false;
     }

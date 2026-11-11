@@ -315,4 +315,65 @@ test.describe('undo audit: keyboard cross-block text selection (U072)', () => {
 
     expect(await selection(page)).toBe('b2@3 -> b1@0');
   });
+  test('a second Shift+ArrowDown keeps extending the text range into the block after', async ({ page }) => {
+    await mount(page, SETUP_UP);
+    await editable(page, 'b1').click();
+    await page.keyboard.press('Home');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+
+    await page.keyboard.down('Shift');
+    await page.keyboard.press('ArrowDown');
+    expect(await selection(page)).toMatch(/^b1@3 -> b2@/);
+    await page.keyboard.press('ArrowDown');
+    expect(await selection(page)).toMatch(/^b1@3 -> b3@/);
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.up('Shift');
+
+    expect(await selection(page)).toBe('b1@3 -> b3@11');
+    await expect(page.locator('[data-blok-selected="true"]')).toHaveCount(0);
+  });
+
+  test('Shift+ArrowDown backs a backward range down through a wrapped block one line at a time', async ({ page }) => {
+    await mount(page, SETUP_WRAPPED);
+    await page.evaluate(() => {
+      const holder = document.getElementById('blok');
+
+      if (holder !== null) {
+        holder.style.width = '420px';
+      }
+    });
+    await editable(page, 'b3').click();
+    await editable(page, 'b3').evaluate((host) => {
+      const text = host.firstChild;
+
+      if (text !== null) {
+        document.getSelection()?.collapse(text, 3);
+      }
+    });
+
+    await page.keyboard.down('Shift');
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('ArrowUp');
+
+    const [anchor, upTwo] = (await selection(page)).split(' -> ');
+
+    expect(anchor).toBe('b3@3');
+    expect(upTwo).toMatch(/^b2@/);
+
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('ArrowDown');
+
+    expect(await selection(page)).toBe(`b3@3 -> ${upTwo}`);
+
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.up('Shift');
+
+    const [kept, downOne] = (await selection(page)).split(' -> ');
+
+    expect(kept).toBe('b3@3');
+    expect(downOne).toMatch(/^b2@/);
+    expect(offsetOf(downOne)).toBeGreaterThan(offsetOf(upTwo));
+  });
 });

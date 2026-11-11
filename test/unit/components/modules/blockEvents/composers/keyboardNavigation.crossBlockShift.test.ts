@@ -410,6 +410,94 @@ describe('Shift+ArrowUp when the range already spans two blocks', () => {
   });
 });
 
+describe('Shift+ArrowDown when the range already spans two blocks', () => {
+  /** jsdom has no Selection.modify; this one moves a caret down a line to `offset` of its text node. */
+  const stubLineDownMove = (offset: number): void => {
+    const selection = document.getSelection();
+
+    if (selection === null) {
+      throw new Error('no selection');
+    }
+    Object.defineProperty(selection, 'modify', {
+      configurable: true,
+      value: (alter: string, direction: string, granularity: string): void => {
+        if (alter === 'move' && direction === 'forward' && granularity === 'line' && selection.focusNode !== null) {
+          selection.collapse(selection.focusNode, offset);
+        }
+      },
+    });
+  };
+
+  afterEach(() => {
+    const selection = document.getSelection();
+
+    if (selection !== null) {
+      Reflect.deleteProperty(selection, 'modify');
+    }
+  });
+
+  it('keeps extending the text range instead of selecting blocks', () => {
+    const { nav, first, second, navigateVerticalNext } = setup();
+    const third = line('b3', 'Gamma three');
+
+    document.getSelection()?.setBaseAndExtent(first.text, 3, second.text, 2);
+    navigateVerticalNext.mockImplementation(() => {
+      collapseAt(third.text, 2);
+
+      return true;
+    });
+    vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+    const event = shiftDown();
+
+    nav.handleArrowRightAndDown(event);
+
+    expect(selectionPoints()).toEqual({
+      anchor: [first.text, 3],
+      focus: [third.text, 2],
+    });
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('moves the focus down a line inside its block and keeps the anchor in the other block', () => {
+    const { nav, first, second, navigateVerticalNext } = setup();
+
+    stubLineDownMove(6);
+    document.getSelection()?.setBaseAndExtent(second.text, 3, first.text, 2);
+    navigateVerticalNext.mockReturnValue(false);
+    vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(false);
+
+    const event = shiftDown();
+
+    nav.handleArrowRightAndDown(event);
+
+    expect(selectionPoints()).toEqual({
+      anchor: [second.text, 3],
+      focus: [first.text, 6],
+    });
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('moves the focus to the end of the last block and keeps the anchor in the other block', () => {
+    const { nav, first, second, navigateVerticalNext } = setup({ next: false });
+
+    stubLineDownMove(8);
+    document.getSelection()?.setBaseAndExtent(first.text, 3, second.text, 2);
+    vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(false);
+
+    const event = shiftDown();
+
+    nav.handleArrowRightAndDown(event);
+
+    expect(navigateVerticalNext).not.toHaveBeenCalled();
+    expect(selectionPoints()).toEqual({
+      anchor: [first.text, 3],
+      focus: [second.text, 8],
+    });
+    expect(event.defaultPrevented).toBe(true);
+  });
+});
+
 describe('Shift+End over a selection that spans two blocks', () => {
   const shiftEnd = (): KeyboardEvent => new KeyboardEvent('keydown', { key: 'End', shiftKey: true, cancelable: true });
 

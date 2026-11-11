@@ -295,7 +295,7 @@ describe('mdastToBlocks', () => {
         { type: 'text', value: ' b' },
       ]))).toEqual([
         { type: 'paragraph', data: { text: 'a ' }, parent: true },
-        { type: 'image', data: { url: 'https://example.com/a.png', caption: 'cap', alt: 'cap' }, parent: true },
+        { type: 'image', data: { url: 'https://example.com/a.png', alt: 'cap' }, parent: true },
         { type: 'paragraph', data: { text: ' b' }, parent: true },
       ]);
     });
@@ -392,10 +392,10 @@ describe('mdastToBlocks', () => {
 
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('image');
-      expect(blocks[0].data).toEqual({ url: 'https://img.com/pic.png', caption: 'pic', alt: 'pic' });
+      expect(blocks[0].data).toEqual({ url: 'https://img.com/pic.png', alt: 'pic' });
     });
 
-    it('stores the alt text verbatim — the caption field is plain text, not HTML', () => {
+    it('stores the alt text verbatim — the alt field is plain text, not HTML', () => {
       const tree: Root = {
         type: 'root',
         children: [{ type: 'paragraph', children: [{ type: 'image', url: 'https://img.com/pic.png', title: null, alt: 'a & b <c>' }] }],
@@ -403,10 +403,10 @@ describe('mdastToBlocks', () => {
 
       const blocks = mdastToBlocks(tree);
 
-      expect(blocks[0].data).toEqual({ url: 'https://img.com/pic.png', caption: 'a & b <c>', alt: 'a & b <c>' });
+      expect(blocks[0].data).toEqual({ url: 'https://img.com/pic.png', alt: 'a & b <c>' });
     });
 
-    it('omits caption and alt for an image with no alt text', () => {
+    it('omits alt for an image with no alt text', () => {
       const tree: Root = {
         type: 'root',
         children: [{ type: 'paragraph', children: [{ type: 'image', url: 'https://img.com/pic.png', title: null, alt: '' }] }],
@@ -486,7 +486,7 @@ describe('mdastToBlocks', () => {
 
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('image');
-      expect(blocks[0].data).toEqual({ url: 'https://img.com/pic.png', caption: 'pic', alt: 'pic' });
+      expect(blocks[0].data).toEqual({ url: 'https://img.com/pic.png', alt: 'pic' });
     });
 
     it('keeps a paragraph for a standalone imageReference with no definition', () => {

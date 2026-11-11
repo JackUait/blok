@@ -185,13 +185,13 @@ $$e^{i\\pi} + 1 = 0$$`;
 
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('image');
-      expect(blocks[0].data).toEqual({ url: 'https://img.com/pic.png', caption: 'a picture', alt: 'a picture' });
+      expect(blocks[0].data).toEqual({ url: 'https://img.com/pic.png', alt: 'a picture' });
     });
 
-    it('keeps Markdown-decoded characters verbatim in the caption', async () => {
+    it('keeps Markdown-decoded characters verbatim in the alt', async () => {
       const blocks = await markdownToBlocks('![a &amp; b](https://img.com/pic.png)');
 
-      expect(blocks[0].data).toEqual({ url: 'https://img.com/pic.png', caption: 'a & b', alt: 'a & b' });
+      expect(blocks[0].data).toEqual({ url: 'https://img.com/pic.png', alt: 'a & b' });
     });
 
     it('leaves an image mixed with text as a paragraph', async () => {
@@ -209,7 +209,7 @@ $$e^{i\\pi} + 1 = 0$$`;
 
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('image');
-      expect(blocks[0].data).toEqual({ url: 'https://img.com/pic.png', caption: 'a picture', alt: 'a picture' });
+      expect(blocks[0].data).toEqual({ url: 'https://img.com/pic.png', alt: 'a picture' });
     });
   });
 
@@ -621,5 +621,23 @@ describe('SVG data: images', () => {
 
     expect(warnings).toEqual([]);
     expect(JSON.stringify(blocks)).toContain(url);
+  });
+});
+
+describe('image round trip through Markdown', () => {
+  /** The `![…]` slot is alt text, so it must not come back as a visible caption. */
+  it('brings an alt-only image back with no caption', async () => {
+    const markdown = blocksToMarkdown({ blocks: [{ type: 'image', data: { url: 'https://img.com/pic.png', alt: 'A cat' } }] });
+    const blocks = await markdownToBlocks(markdown);
+
+    expect(blocks[0].data).toEqual({ url: 'https://img.com/pic.png', alt: 'A cat' });
+  });
+
+  it('does not turn the alt into the caption of an image that had another caption', async () => {
+    const markdown = blocksToMarkdown({ blocks: [{ type: 'image', data: { url: 'https://img.com/pic.png', alt: 'A cat', caption: 'My cat' } }] });
+    const blocks = await markdownToBlocks(markdown);
+
+    expect(blocks[0].data).not.toHaveProperty('caption');
+    expect(blocks[0].data).toMatchObject({ alt: 'A cat' });
   });
 });

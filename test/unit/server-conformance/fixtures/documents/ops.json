@@ -479,7 +479,7 @@
     "op": "markdownToBlocks",
     "input": "{\"markdown\":\"![A tabby asleep](https://cdn/x.png)\\n\\n[Blok](https://blokeditor.com)\\n\\nbad [ok](https://ok.test)\"}",
     "normalizeIds": true,
-    "output": "{\"blocks\":[{\"id\":\"md-X-0\",\"type\":\"image\",\"data\":{\"url\":\"https://cdn/x.png\",\"caption\":\"A tabby asleep\",\"alt\":\"A tabby asleep\"}},{\"id\":\"md-X-1\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Blok\",\"marks\":{\"link\":{\"href\":\"https://blokeditor.com\",\"target\":\"_blank\",\"rel\":\"noopener noreferrer nofollow\"}}}]}},{\"id\":\"md-X-2\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"bad \"},{\"text\":\"ok\",\"marks\":{\"link\":{\"href\":\"https://ok.test\",\"target\":\"_blank\",\"rel\":\"noopener noreferrer nofollow\"}}}]}}],\"warnings\":[]}"
+    "output": "{\"blocks\":[{\"id\":\"md-X-0\",\"type\":\"image\",\"data\":{\"url\":\"https://cdn/x.png\",\"alt\":\"A tabby asleep\"}},{\"id\":\"md-X-1\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Blok\",\"marks\":{\"link\":{\"href\":\"https://blokeditor.com\",\"target\":\"_blank\",\"rel\":\"noopener noreferrer nofollow\"}}}]}},{\"id\":\"md-X-2\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"bad \"},{\"text\":\"ok\",\"marks\":{\"link\":{\"href\":\"https://ok.test\",\"target\":\"_blank\",\"rel\":\"noopener noreferrer nofollow\"}}}]}}],\"warnings\":[]}"
   },
   {
     "name": "pageDoc.markdown",

@@ -323,10 +323,10 @@ function imageOf(node: PhrasingContent, definitions: DefinitionMap): StandaloneI
 /**
  * Image block for a paragraph that holds nothing but an image.
  *
- * The alt text lands in `caption` because the export direction writes `caption`
- * into the Markdown alt slot, and in `alt` because that is the field the
- * rendered `<img alt>` reads. Both hold plain text — the caption editor writes
- * it via `textContent` and the view emitter escapes it on output.
+ * The `![…]` slot is alt text, so it lands in `alt` only. The export writes
+ * `data.alt` there, never the caption; copying it into `caption` would show
+ * the alt as a visible caption the author never wrote. Plain text: the view
+ * emitter escapes it on output.
  *
  * @param image - the resolved source and alt text
  * @param generateId - block id generator
@@ -335,7 +335,6 @@ function makeImage(image: StandaloneImage, generateId: () => string): OutputBloc
   const data: Record<string, unknown> = { url: image.url };
 
   if (image.alt !== '') {
-    data.caption = image.alt;
     data.alt = image.alt;
   }
 

@@ -1436,10 +1436,8 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
     case 'delimiter':
       return `${flatIndent}---`;
     /**
-     * `![…]` is the ALT slot, so it carries `data.alt` and nothing else. It used
-     * to carry the caption, which both hid the author's alt text and handed the
-     * importer an alt they never wrote (`mdast-to-blocks.ts` reads that slot
-     * back into `alt` AND `caption`).
+     * `![…]` is the ALT slot, so it carries `data.alt` and nothing else.
+     * `mdast-to-blocks.ts` reads that slot back into `alt` only.
      */
     case 'image': {
       const alt = asString(data.alt);

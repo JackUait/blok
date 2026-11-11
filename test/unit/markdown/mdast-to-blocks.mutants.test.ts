@@ -200,7 +200,7 @@ describe('mdastToBlocks — raw html', () => {
 });
 
 describe('mdastToBlocks — standalone images', () => {
-  it('writes the alt text into caption and alt', () => {
+  it('writes the alt text into alt only, never into caption', () => {
     const tree: Root = {
       type: 'root',
       children: [{
@@ -212,11 +212,11 @@ describe('mdastToBlocks — standalone images', () => {
     expect(mdastToBlocks(tree)[0]).toStrictEqual({
       id: expect.any(String),
       type: 'image',
-      data: { url: 'https://example.com/pic-one.png', caption: 'A blue square', alt: 'A blue square' },
+      data: { url: 'https://example.com/pic-one.png', alt: 'A blue square' },
     });
   });
 
-  it('omits caption and alt when the image carries no alt text', () => {
+  it('omits alt when the image carries no alt text', () => {
     const tree: Root = {
       type: 'root',
       children: [{
@@ -231,7 +231,7 @@ describe('mdastToBlocks — standalone images', () => {
     expect(blocks[0].data).toStrictEqual({ url: 'https://example.com/pic-two.png' });
   });
 
-  it('omits caption and alt when the alt text is null', () => {
+  it('omits alt when the alt text is null', () => {
     const tree = looseRoot({
       type: 'paragraph',
       children: [{ type: 'image', url: 'https://example.com/pic-three.png', title: null, alt: null }],
@@ -274,7 +274,7 @@ describe('mdastToBlocks — standalone images', () => {
     expect(mdastToBlocks(tree)[0]).toStrictEqual({
       id: expect.any(String),
       type: 'image',
-      data: { url: 'https://example.com/badge.svg', caption: 'Badge art', alt: 'Badge art' },
+      data: { url: 'https://example.com/badge.svg', alt: 'Badge art' },
     });
   });
 

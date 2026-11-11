@@ -1,4 +1,6 @@
+import type { AutoScroll } from '../../components/modules/drag/utils/AutoScroll';
 import { copyGhostContext, mountGhost } from './copy-ghost-radius';
+import { createDatabaseAutoScroll, rowAutoScrollSpeed } from './database-auto-scroll';
 import type { TableState } from './database-table-grid';
 
 const THRESHOLD = 5;
@@ -37,6 +39,8 @@ export class DatabaseTableRowDrag {
   private ghost: HTMLElement | null = null;
   private line: HTMLElement | null = null;
   private target: { before: HTMLElement | null; after: HTMLElement | null; groupKey: string } | null = null;
+  private autoScroll: AutoScroll | null = null;
+  private lastY = 0;
 
   constructor(options: TableRowDragOptions) {
     this.grid = options.grid;
@@ -88,7 +92,9 @@ export class DatabaseTableRowDrag {
       this.ghost.style.left = `${event.clientX - press.offsetX}px`;
       this.ghost.style.top = `${event.clientY - press.offsetY}px`;
     }
+    this.lastY = event.clientY;
     this.track(event.clientY);
+    this.autoScroll?.start(event.clientY);
   };
 
   private start(rowEl: HTMLElement): void {
@@ -115,6 +121,7 @@ export class DatabaseTableRowDrag {
     this.line = line;
     this.state.busy = true;
     rowEl.setAttribute('data-dragging', '');
+    this.autoScroll = createDatabaseAutoScroll(this.grid, 'y', rowAutoScrollSpeed, () => this.track(this.lastY));
   }
 
   private rowEls(): HTMLElement[] {
@@ -195,6 +202,8 @@ export class DatabaseTableRowDrag {
     document.removeEventListener('pointerup', this.handleUp);
     document.removeEventListener('pointercancel', this.handleCancel);
     document.removeEventListener('keydown', this.handleKey, true);
+    this.autoScroll?.destroy();
+    this.autoScroll = null;
     this.press?.rowEl.removeAttribute('data-dragging');
     this.ghost?.remove();
     this.line?.remove();

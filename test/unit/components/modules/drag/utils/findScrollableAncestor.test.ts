@@ -18,6 +18,25 @@ describe('findScrollableAncestor', () => {
     document.body.removeChild(container);
   });
 
+  it('finds the sideways scroller on the x axis, skipping one that only scrolls down', () => {
+    const tall = document.createElement('div');
+    const wide = document.createElement('div');
+    const child = document.createElement('div');
+
+    tall.style.overflowY = 'auto';
+    Object.defineProperty(tall, 'scrollHeight', { value: 500 });
+    Object.defineProperty(tall, 'clientHeight', { value: 200 });
+    wide.style.overflowX = 'auto';
+    Object.defineProperty(wide, 'scrollWidth', { value: 900 });
+    Object.defineProperty(wide, 'clientWidth', { value: 600 });
+    wide.appendChild(child);
+    tall.appendChild(wide);
+    container.appendChild(tall);
+
+    expect(findScrollableAncestor(child, 'x')).toBe(wide);
+    expect(findScrollableAncestor(child)).toBe(tall);
+  });
+
   it('should return null when element is null', () => {
     expect(findScrollableAncestor(null)).toBeNull();
   });

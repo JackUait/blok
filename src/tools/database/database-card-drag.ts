@@ -1,4 +1,6 @@
+import type { AutoScroll } from '../../components/modules/drag/utils/AutoScroll';
 import { copyGhostContext, copyGhostRadius, mountGhost } from './copy-ghost-radius';
+import { cardAutoScrollSpeed, createDatabaseAutoScroll } from './database-auto-scroll';
 import { DatabaseDropLine } from './database-drop-line';
 
 const DRAG_THRESHOLD = 10;
@@ -44,6 +46,8 @@ export class DatabaseCardDrag {
   /** Where the card sat when the drag began, as a drop would describe it. */
   private origin: Omit<CardDragResult, 'rowId'> | null = null;
   private readonly dropLine: DatabaseDropLine;
+  private autoScroll: AutoScroll | null = null;
+  private lastPointer: PointerEvent | null = null;
 
   private readonly boundPointerMove: (e: PointerEvent) => void;
   private readonly boundPointerUp: (e: PointerEvent) => void;
@@ -85,6 +89,10 @@ export class DatabaseCardDrag {
     document.removeEventListener('pointercancel', this.boundPointerCancel);
     document.removeEventListener('keydown', this.boundKeyDown);
 
+    this.autoScroll?.destroy();
+    this.autoScroll = null;
+    this.lastPointer = null;
+
     this.ghostEl?.remove();
     this.ghostEl = null;
 
@@ -123,8 +131,10 @@ export class DatabaseCardDrag {
     }
 
     if (this.isDragging) {
+      this.lastPointer = e;
       this.updateGhostPosition(e);
       this.updateDropIndicator(e);
+      this.autoScroll?.start(e.clientX);
     }
   }
 
@@ -161,6 +171,11 @@ export class DatabaseCardDrag {
 
     this.wrapper.setAttribute('data-blok-database-dragging', '');
     this.createGhost(e);
+    this.autoScroll = createDatabaseAutoScroll(this.sourceCard ?? this.wrapper, 'x', cardAutoScrollSpeed, () => {
+      if (this.lastPointer !== null) {
+        this.updateDropIndicator(this.lastPointer);
+      }
+    });
   }
 
   private createGhost(e: PointerEvent): void {

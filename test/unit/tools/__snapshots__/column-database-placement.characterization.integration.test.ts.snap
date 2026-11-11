@@ -3241,7 +3241,7 @@ exports[`column and database placement — characterization > appends a paragrap
       "q:[]",
       "z:[]",
     ],
-    "current": 2,
+    "current": 5,
     "doc": [
       {
         "content": undefined,
@@ -3892,7 +3892,7 @@ exports[`column and database placement — characterization > seeds a three-colu
       "n7:[]",
       "b:[]",
     ],
-    "current": 1,
+    "current": 3,
     "doc": [
       {
         "content": undefined,

@@ -351,6 +351,8 @@ export class CrossBlockSelection extends Module {
       return false;
     }
 
+    this.anchorOnSelection();
+
     const targetBlock = BlockManager.resolveToSelectableBlock(clickedBlock);
 
     const anchorCandidate = this.firstSelectedBlock ?? BlockManager.currentBlock ?? null;
@@ -666,6 +668,23 @@ export class CrossBlockSelection extends Module {
   }
 
   /**
+   * A plain click sets the anchors, and a later menu selection leaves them.
+   * Growing a range from them would select blocks the user never picked, and
+   * the next Backspace would delete them. So the selection becomes the anchor.
+   */
+  private anchorOnSelection(): void {
+    const selected = this.Blok.BlockSelection.selectedBlocks;
+
+    const stale = this.firstSelectedBlock !== null && !this.firstSelectedBlock.selected
+      && (this.lastSelectedBlock === null || !this.lastSelectedBlock.selected);
+
+    if (selected.length > 0 && stale) {
+      this.firstSelectedBlock = selected[0];
+      this.lastSelectedBlock = selected[selected.length - 1];
+    }
+  }
+
+  /**
    * Return boolean is cross block selection started:
    * there should be at least 2 selected blocks
    */
@@ -679,16 +698,9 @@ export class CrossBlockSelection extends Module {
    * @param {boolean} next - if true, toggle next block. Previous otherwise
    */
   public toggleBlockSelectedState(next = true): void {
-    const { BlockManager, BlockSelection } = this.Blok;
-    const selected = BlockSelection.selectedBlocks;
+    const { BlockManager } = this.Blok;
 
-    // A plain click sets the anchors, and a later menu selection leaves them.
-    // Growing from them would select blocks the user never picked, and the
-    // next Backspace would delete them.
-    if (selected.length > 0 && this.firstSelectedBlock?.selected !== true && this.lastSelectedBlock?.selected !== true) {
-      this.firstSelectedBlock = selected[0];
-      this.lastSelectedBlock = selected[selected.length - 1];
-    }
+    this.anchorOnSelection();
 
     const anchorCandidate = this.lastSelectedBlock ?? BlockManager.currentBlock;
 

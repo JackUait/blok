@@ -542,6 +542,23 @@ describe('CrossBlockSelection', () => {
       expect(accessPrivate<Block>(crossBlockSelection, 'lastSelectedBlock')).toBe(blocks[2]);
     });
 
+    it('grows from a block the menu selected, not from the block a click left as anchor', () => {
+      // A click in blocks[0] set the anchors; the block menu then selected blocks[2].
+      setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
+      setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[0]);
+      blocks[2].selected = true;
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: true,
+        target: blocks[3].holder,
+        preventDefault: vi.fn(),
+      } as unknown as MouseEvent;
+
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      expect(blocks.map((block) => block.selected)).toEqual([false, false, true, true]);
+    });
+
     it('selects the inclusive range upward when the anchor is below the clicked block', () => {
       const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
 

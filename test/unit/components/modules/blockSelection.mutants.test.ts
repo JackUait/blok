@@ -234,8 +234,6 @@ const setDataCalls = (clipboardData: ClipboardDataStub, type: string): string[] 
 
 const htmlWritten = (clipboardData: ClipboardDataStub): string => setDataCalls(clipboardData, 'text/html')[0] ?? '';
 
-const plainWritten = (clipboardData: ClipboardDataStub): string => setDataCalls(clipboardData, 'text/plain')[0] ?? '';
-
 const announcements = (): string[] => vi.mocked(announce).mock.calls.map((call) => String(call[0]));
 
 const positionAnnouncements = (): string[] =>
@@ -872,120 +870,6 @@ describe('BlockSelection — surviving mutants', () => {
 
       expect(() => blockSelection.copyCrossBlockTextSelection(event, selection)).not.toThrow();
       expect(preventDefault).toHaveBeenCalledTimes(1);
-    });
-
-    it('emits one semantic list for two wholly covered list Blocks', () => {
-      const first = createHostedBlock({ id: 'l1',
-        name: LIST_TOOL_NAME,
-        hostHtml: 'Alpha',
-        preservedData: { text: 'Alpha',
-          style: 'unordered' } });
-      const second = createHostedBlock({ id: 'l2',
-        name: LIST_TOOL_NAME,
-        hostHtml: 'Beta',
-        preservedData: { text: 'Beta',
-          style: 'unordered' } });
-      const { blockSelection } = createSetup({ blocks: [ first, second ] });
-      const clipboardData: ClipboardDataStub = { setData: vi.fn() };
-      const { event } = createClipboardEvent(clipboardData);
-      const selection = makeCrossBlockSelection([
-        makeSubRange(first, { coversWholeInput: true }),
-        makeSubRange(second, { coversWholeInput: true }),
-      ]);
-
-      blockSelection.copyCrossBlockTextSelection(event, selection);
-
-      expect(htmlWritten(clipboardData)).toBe('<ul><li>Alpha</li><li>Beta</li></ul>');
-      expect(plainWritten(clipboardData)).toBe('Alpha\n\nBeta');
-    });
-
-    it('keeps a wholly covered non-list Block as itself', () => {
-      const heading = createHostedBlock({ id: 'h',
-        name: 'header',
-        html: '<h2>Title</h2>',
-        hostHtml: 'Title' });
-      const { blockSelection } = createSetup({ blocks: [ heading ] });
-      const clipboardData: ClipboardDataStub = { setData: vi.fn() };
-      const { event } = createClipboardEvent(clipboardData);
-      const selection = makeCrossBlockSelection([ makeSubRange(heading, { coversWholeInput: true }) ]);
-
-      blockSelection.copyCrossBlockTextSelection(event, selection);
-
-      expect(htmlWritten(clipboardData)).toBe('<h2>Title</h2>');
-    });
-
-    it('emits a paragraph for a partially covered Block', () => {
-      const block = createHostedBlock({ id: 'p',
-        html: '<h2>Title</h2>',
-        hostHtml: 'Partial' });
-      const { blockSelection } = createSetup({ blocks: [ block ] });
-      const clipboardData: ClipboardDataStub = { setData: vi.fn() };
-      const { event } = createClipboardEvent(clipboardData);
-      const selection = makeCrossBlockSelection([ makeSubRange(block, { coversWholeInput: false }) ]);
-
-      blockSelection.copyCrossBlockTextSelection(event, selection);
-
-      expect(htmlWritten(clipboardData)).toBe('<p>Partial</p>');
-    });
-
-    it('keeps both a partial end and the whole Block that follows it', () => {
-      const partial = createHostedBlock({ id: 'p',
-        html: '<h2>Head</h2>',
-        hostHtml: 'Partial' });
-      const whole = createHostedBlock({ id: 'w',
-        html: '<h3>Whole</h3>',
-        hostHtml: 'Whole' });
-      const { blockSelection } = createSetup({ blocks: [ partial, whole ] });
-      const clipboardData: ClipboardDataStub = { setData: vi.fn() };
-      const { event } = createClipboardEvent(clipboardData);
-      const selection = makeCrossBlockSelection([
-        makeSubRange(partial, { coversWholeInput: false }),
-        makeSubRange(whole, { coversWholeInput: true }),
-      ]);
-
-      blockSelection.copyCrossBlockTextSelection(event, selection);
-
-      expect(htmlWritten(clipboardData)).toBe('<p>Partial</p><h3>Whole</h3>');
-    });
-
-    it('treats a multi-input Block as partial even when its host is wholly covered', () => {
-      const extraInput = document.createElement('div');
-      const block = createHostedBlock({ id: 'multi',
-        html: '<h2>Title</h2>',
-        hostHtml: 'Cell' });
-
-      block.inputs.push(extraInput);
-
-      const { blockSelection } = createSetup({ blocks: [ block ] });
-      const clipboardData: ClipboardDataStub = { setData: vi.fn() };
-      const { event } = createClipboardEvent(clipboardData);
-      const selection = makeCrossBlockSelection([ makeSubRange(block, { coversWholeInput: true }) ]);
-
-      blockSelection.copyCrossBlockTextSelection(event, selection);
-
-      expect(htmlWritten(clipboardData)).toBe('<p>Cell</p>');
-    });
-
-    it('drops a host the selection only touches', () => {
-      const first = createHostedBlock({ id: 'a',
-        html: '<h2>Alpha</h2>',
-        hostHtml: 'Alpha' });
-      const empty = createHostedBlock({ id: 'b',
-        html: '<h3>Beta</h3>',
-        hostHtml: 'Beta' });
-      const { blockSelection } = createSetup({ blocks: [ first, empty ] });
-      const clipboardData: ClipboardDataStub = { setData: vi.fn() };
-      const { event } = createClipboardEvent(clipboardData);
-      const selection = makeCrossBlockSelection([
-        makeSubRange(first, { coversWholeInput: true }),
-        makeSubRange(empty, { coversWholeInput: true,
-          collapsed: true }),
-      ]);
-
-      blockSelection.copyCrossBlockTextSelection(event, selection);
-
-      expect(htmlWritten(clipboardData)).toBe('<h2>Alpha</h2>');
-      expect(plainWritten(clipboardData)).toBe('Alpha');
     });
   });
 

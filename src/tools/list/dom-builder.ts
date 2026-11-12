@@ -422,10 +422,13 @@ export const buildSemanticListHtml = (items: SemanticListItem[]): HTMLElement =>
     return level;
   };
 
+  // A run copied from inside a list starts below depth 0.
+  const base = Math.min(...items.map((item) => Math.max(0, item.depth ?? 0)));
+
   for (const item of items) {
     // Clamp so an item can be at most one level deeper than the deepest open
     // list — a jump from depth 0 to 2 would otherwise leave an orphan level.
-    const depth = Math.min(Math.max(0, item.depth ?? 0), stack.length);
+    const depth = Math.min(Math.max(0, (item.depth ?? 0) - base), stack.length);
 
     // Close any levels deeper than this item's depth.
     while (stack.length > depth + 1) {

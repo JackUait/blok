@@ -547,6 +547,18 @@ describe('dom-builder', () => {
       expect(Array.from(checkboxes, (box) => box.checked)).toStrictEqual([ true, false ]);
     });
 
+    it('nests items relative to the shallowest one, so a run copied from inside a list keeps its shape', () => {
+      const container = buildSemanticListHtml([
+        { text: 'first', style: 'ordered', depth: 1 },
+        { text: 'nested', style: 'ordered', depth: 2 },
+        { text: 'done', style: 'checklist', checked: true, depth: 1 },
+      ]);
+
+      expect(container.innerHTML).toBe(
+        '<ol><li>first<ol><li>nested</li></ol></li></ol><ul><li><label><input type="checkbox" checked=""><span>done</span></label></li></ul>'
+      );
+    });
+
     it('writes an ordered list\'s start number on its <ol>', () => {
       const container = buildSemanticListHtml([
         { text: 'Five', style: 'ordered', start: 5 },

@@ -2829,6 +2829,77 @@ test.describe('copy and paste', () => {
         ['list', 'done', 'checklist', 0, true],
       ]);
     });
+
+    test('keeps partly selected first and last items as list items with only the selected text', async ({ page }) => {
+      await createBlokWithElements(page, [
+        { id: 'top', type: 'list', data: { text: 'top item', style: 'unordered', depth: 0 } },
+        { id: 'one', type: 'list', data: { text: 'first item', style: 'ordered', depth: 1 } },
+        { id: 'nested', type: 'list', data: { text: 'nested item', style: 'ordered', depth: 2 } },
+        { id: 'done', type: 'list', data: { text: 'done item', style: 'checklist', checked: true, depth: 1 } },
+        { id: 'tgt', type: 'paragraph', data: { text: '' } },
+      ]);
+
+      // The middle of one character, so the drag starts and ends inside the text.
+      const charCenter = (id: string, text: string, index: number): Promise<{ x: number; y: number }> => page.evaluate(({ blockId, needle, at }) => {
+        const holder = document.querySelector(`[data-blok-id="${blockId}"]`) as Node;
+        const walker = document.createTreeWalker(holder, NodeFilter.SHOW_TEXT);
+
+        for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+          const offset = (node.textContent ?? '').indexOf(needle);
+
+          if (offset !== -1) {
+            const range = document.createRange();
+
+            range.setStart(node, offset + at);
+            range.setEnd(node, offset + at + 1);
+
+            const box = range.getBoundingClientRect();
+
+            return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+          }
+        }
+        throw new Error(`no "${needle}" in ${blockId}`);
+      }, { blockId: id, needle: text, at: index });
+
+      // From inside "first" in the first item to inside "done" in the last.
+      const from = await charCenter('one', 'first item', 2);
+      const to = await charCenter('done', 'done item', 2);
+
+      await page.mouse.move(from.x, from.y);
+      await page.mouse.down();
+      await page.mouse.move(to.x, to.y, { steps: 10 });
+      await page.mouse.up();
+
+      const clipboard = await copyFromElement(page.locator(':focus'));
+      const html = clipboard['text/html'];
+
+      expect(html).toMatch(/^<ol><li>r?st item<ol><li>nested item<\/li><\/ol><\/li><\/ol><ul><li><label><input type="checkbox" checked=""><span>don?<\/span><\/label><\/li><\/ul>$/);
+      expect(clipboard['text/plain']).toMatch(/^1\. r?st item\n {4}1\. nested item\n- \[x\] don?$/);
+
+      const entries = JSON.parse(clipboard['application/x-blok'] ?? '[]') as Array<{ tool: string; data: Record<string, unknown> }>;
+
+      expect(entries.map(({ tool, data }) => [tool, data.style, data.depth ?? 0])).toEqual([
+        ['list', 'ordered', 0],
+        ['list', 'ordered', 1],
+        ['list', 'checklist', 0],
+      ]);
+
+      for (const flavors of [['text/html', 'text/plain'], ['application/x-blok', 'text/html', 'text/plain']]) {
+        await createBlokWithElements(page, [{ id: 'tgt', type: 'paragraph', data: { text: '' } }]);
+        await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+        await paste(page, page.locator(':focus'), Object.fromEntries(flavors.map((flavor) => [flavor, clipboard[flavor]])));
+
+        await expect.poll(async () => {
+          const { blocks } = await saveBlok(page);
+
+          return blocks.map((block) => [block.type, block.data.style, block.data.depth ?? 0, block.data.checked ?? false]);
+        }, { message: flavors.join(' ') }).toEqual([
+          ['list', 'ordered', 0, false],
+          ['list', 'ordered', 1, false],
+          ['list', 'checklist', 0, true],
+        ]);
+      }
+    });
   });
 
   test('selected list blocks paste back from html with their start number and checked state', async ({ page }) => {

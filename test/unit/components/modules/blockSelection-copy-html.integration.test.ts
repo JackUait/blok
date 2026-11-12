@@ -23,7 +23,6 @@ import { Bookmark } from '../../../../src/tools/link/bookmark';
 import { Table } from '../../../../src/tools/table';
 import type { OutputBlockData } from '../../../../types';
 import type { Block } from '../../../../src/components/block';
-import type { CrossBlockSubRange } from '../../../../src/components/selection/cross-block-range';
 import { collectCrossBlockSubRanges } from '../../../../src/components/selection/cross-block-range';
 
 /**
@@ -187,32 +186,93 @@ describe('copy of whole blocks as text/html', () => {
   });
 });
 
+/**
+ * Copy the text from `start.text` in one block to the end of `end.text` in
+ * another. jsdom does not reflect contentEditable as an attribute, so
+ * each item's text element is marked as its editing host here.
+ */
+const copyBetween = (instance: TestEditor, start: { id: string; text: string }, end: { id: string; text: string }): Map<string, string> => {
+  const { blocks } = instance.module.blockManager;
+  const pointOf = (id: string, text: string, atEnd: boolean): [Text, number] => {
+    const block = blocks.find((candidate) => candidate.id === id);
+    const walker = block === undefined ? null : document.createTreeWalker(block.holder, NodeFilter.SHOW_TEXT);
+
+    for (let node = walker?.nextNode() ?? null; node !== null; node = walker?.nextNode() ?? null) {
+      const at = (node.textContent ?? '').indexOf(text);
+
+      if (at !== -1 && node instanceof Text) {
+        return [node, atEnd ? at + text.length : at];
+      }
+    }
+    throw new Error(`No "${text}" in ${id}`);
+  };
+
+  blocks.forEach((block) => {
+    Array.from(block.holder.querySelectorAll('*'))
+      .filter((element) => element.innerHTML === block.preservedData.text)
+      .forEach((element) => element.setAttribute('contenteditable', 'true'));
+  });
+
+  const range = document.createRange();
+
+  range.setStart(...pointOf(start.id, start.text, false));
+  range.setEnd(...pointOf(end.id, end.text, true));
+
+  if (holder === undefined) {
+    throw new Error('No holder');
+  }
+
+  const subRanges = collectCrossBlockSubRanges(range, holder, (node) => blocks.find((block) => block.holder.contains(node)));
+  const written = new Map<string, string>();
+
+  instance.module.blockSelection.copyCrossBlockTextSelection(recordingEvent(written), {
+    range,
+    subRanges,
+    startBlock: subRanges[0].block,
+    endBlock: subRanges[subRanges.length - 1].block,
+  });
+
+  return written;
+};
+
+const entriesOf = (written: Map<string, string>): Array<{ tool: string; data: Record<string, unknown> }> =>
+  JSON.parse(written.get('application/x-blok') ?? '[]') as Array<{ tool: string; data: Record<string, unknown> }>;
+
 describe('copy of a text selection across blocks as text/plain', () => {
-  it('turns a <br> line break into a newline', async () => {
+  it('writes a <br> line break as a Markdown hard break', async () => {
     const instance = await createEditor([
       { id: 'a', type: 'paragraph', data: { text: 'line1<br>line2' } },
       { id: 'b', type: 'paragraph', data: { text: 'next' } },
     ]);
-    const [first, second] = instance.module.blockManager.blocks;
-    const subRange = (block: Block): CrossBlockSubRange => {
-      const input = block.holder.querySelector<HTMLElement>('[contenteditable]') ?? block.holder;
-      const range = document.createRange();
 
-      range.selectNodeContents(input);
+    const written = copyBetween(instance, { id: 'a', text: 'line1' }, { id: 'b', text: 'next' });
 
-      return { block, input, range, coversWholeInput: false };
-    };
-    const subRanges = [subRange(first), subRange(second)];
-    const written = new Map<string, string>();
+    expect(written.get('text/plain')).toBe('line1  \nline2\n\nnext');
+  });
 
-    instance.module.blockSelection.copyCrossBlockTextSelection(recordingEvent(written), {
-      range: subRanges[0].range,
-      subRanges,
-      startBlock: first,
-      endBlock: second,
-    });
+  it('leaves out a block the selection only touches', async () => {
+    const instance = await createEditor([
+      { id: 'a', type: 'paragraph', data: { text: 'Alpha' } },
+      { id: 'b', type: 'paragraph', data: { text: 'Beta' } },
+    ]);
 
-    expect(written.get('text/plain')).toBe('line1\nline2\n\nnext');
+    const written = copyBetween(instance, { id: 'a', text: 'Alpha' }, { id: 'b', text: '' });
+
+    expect(written.get('text/html')).toBe('<p>Alpha</p>');
+    expect(written.get('text/plain')).toBe('Alpha');
+    expect(entriesOf(written).map(({ data }) => data.text)).toEqual(['Alpha']);
+  });
+
+  it('keeps a partly selected heading as a heading with only its selected text', async () => {
+    const instance = await createEditor([
+      { id: 'h', type: 'header', data: { text: 'Head line', level: 2 } },
+      { id: 'p', type: 'paragraph', data: { text: 'tail text' } },
+    ]);
+
+    const written = copyBetween(instance, { id: 'h', text: 'line' }, { id: 'p', text: 'tail' });
+
+    expect(written.get('text/html')).toBe('<h2>line</h2><p>tail</p>');
+    expect(written.get('text/plain')).toBe('## line\n\ntail');
   });
 });
 
@@ -273,6 +333,62 @@ describe('copy of a text selection across list items as text/html', () => {
     expect(root.querySelector(':scope > p')).toBeNull();
     expect(root.querySelector(':scope > ul > li > ul > li')?.textContent).toBe('nested');
     expect(root.querySelector<HTMLInputElement>('input[type="checkbox"]')?.checked).toBe(true);
+  });
+});
+
+describe('copy of a text selection that starts and ends inside list items', () => {
+  it('keeps a partly selected first and last item as list items with their style and only the selected text', async () => {
+    const instance = await createEditor([
+      { id: 'one', type: 'list', data: { text: 'first item', style: 'ordered', depth: 0 } },
+      { id: 'nested', type: 'list', data: { text: 'nested item', style: 'ordered', depth: 1 } },
+      { id: 'done', type: 'list', data: { text: 'done item', style: 'checklist', checked: true, depth: 0 } },
+    ]);
+
+    const written = copyBetween(instance, { id: 'one', text: 'item' }, { id: 'done', text: 'done' });
+
+    expect(written.get('text/html')).toBe(
+      '<ol><li>item<ol><li>nested item</li></ol></li></ol><ul><li><label><input type="checkbox" checked=""><span>done</span></label></li></ul>'
+    );
+    expect(entriesOf(written).map(({ tool, data }) => [tool, data.text, data.style, data.depth ?? 0, data.checked ?? false])).toEqual([
+      ['list', 'item', 'ordered', 0, false],
+      ['list', 'nested item', 'ordered', 1, false],
+      ['list', 'done', 'checklist', 0, true],
+    ]);
+    expect(written.get('text/plain')).toBe('1. item\n    1. nested item\n- [x] done');
+  });
+
+  it('writes the depth of the items relative to the first selected item', async () => {
+    const instance = await createEditor([
+      { id: 'top', type: 'list', data: { text: 'top item', style: 'unordered', depth: 0 } },
+      { id: 'mid', type: 'list', data: { text: 'middle item', style: 'unordered', depth: 1 } },
+      { id: 'deep', type: 'list', data: { text: 'deep item', style: 'unordered', depth: 2 } },
+    ]);
+
+    const written = copyBetween(instance, { id: 'mid', text: 'item' }, { id: 'deep', text: 'deep' });
+
+    expect(written.get('text/html')).toBe('<ul><li>item<ul><li>deep</li></ul></li></ul>');
+    expect(written.get('text/plain')).toBe('- item\n    - deep');
+    expect(entriesOf(written).map(({ data }) => [data.text, data.depth])).toEqual([
+      ['item', 0],
+      ['deep', 1],
+    ]);
+  });
+
+  it('writes nested child items relative to the first selected item too', async () => {
+    const instance = await createEditor([
+      { id: 'top', type: 'list', data: { text: 'top item', style: 'unordered' }, content: ['mid'] },
+      { id: 'mid', type: 'list', data: { text: 'middle item', style: 'unordered', depth: 1 }, parent: 'top', content: ['deep'] },
+      { id: 'deep', type: 'list', data: { text: 'deep item', style: 'unordered', depth: 2 }, parent: 'mid' },
+    ]);
+
+    const written = copyBetween(instance, { id: 'mid', text: 'item' }, { id: 'deep', text: 'deep' });
+
+    expect(written.get('text/html')).toBe('<ul><li>item<ul><li>deep</li></ul></li></ul>');
+    expect(written.get('text/plain')).toBe('- item\n    - deep');
+    expect(JSON.parse(written.get('application/x-blok') ?? '[]')).toMatchObject([
+      { id: 'mid', parentId: 'top', indent: 0, data: { text: 'item', depth: 0 } },
+      { id: 'deep', parentId: 'mid', indent: 1, data: { text: 'deep', depth: 1 } },
+    ]);
   });
 });
 

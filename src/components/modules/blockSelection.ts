@@ -13,7 +13,7 @@ import { Dom as $ } from '../dom';
 import { blocksToMarkdown, type MarkdownPageOptions } from '../../markdown/blocks-to-markdown';
 import { safeHref } from '../utils/sanitize-url';
 import type { PageConfig } from '../../tools/page/types';
-import type { CrossBlockSubRange, CrossBlockTextSelection } from '../selection/cross-block-range';
+import type { CrossBlockTextSelection } from '../selection/cross-block-range';
 import { SelectionUtils } from '../selection/index';
 import { clean, composeSanitizerConfig } from '../utils/sanitizer';
 import { prefersReducedMotion } from '../utils/reduced-motion';
@@ -114,6 +114,58 @@ const rangeToPlainText = (range: Range): string => {
 
   return fragment.textContent ?? '';
 };
+/**
+ * Put a text selection's copy at depth 0: each block whose parent was left
+ * out loses its parent's depth, and so does its subtree. A run of list items
+ * keeps the depths of its items relative to its shallowest item.
+ * @param entries - the copied blocks, parents first
+ */
+const rebaseToSelection = (entries: ClipboardEntry[]): ClipboardEntry[] => {
+  const byId = new Map(entries.map((entry) => [entry.id, entry]));
+  const rootOf = (entry: ClipboardEntry): ClipboardEntry => {
+    const parent = entry.parentId === null ? undefined : byId.get(entry.parentId);
+
+    return parent === undefined ? entry : rootOf(parent);
+  };
+  // A list item saved at depth 0 has no depth key.
+  const depthOf = (entry: ClipboardEntry): number | undefined => {
+    if (entry.tool !== LIST_TOOL_NAME) {
+      return undefined;
+    }
+
+    return typeof entry.data.depth === 'number' ? entry.data.depth : 0;
+  };
+  const runs: ClipboardEntry[][] = [];
+
+  for (const entry of entries.filter((candidate) => rootOf(candidate) === candidate)) {
+    const run = runs[runs.length - 1];
+    const last = run?.[run.length - 1];
+
+    if (last !== undefined && depthOf(last) !== undefined && depthOf(entry) !== undefined && last.parentId === entry.parentId) {
+      run.push(entry);
+    } else {
+      runs.push([entry]);
+    }
+  }
+
+  const baseOf = new Map(runs.flatMap((run) => {
+    const base = Math.min(...run.map((entry) => depthOf(entry) ?? 0));
+
+    return run.map((entry) => [entry, base] as const);
+  }));
+
+  return entries.map((entry) => {
+    const root = rootOf(entry);
+    const depth = entry.data.depth;
+
+    return {
+      ...entry,
+      indent: Math.max(entry.indent - root.indent, 0),
+      ...(depthOf(entry) === undefined || typeof depth !== 'number' ? {} : { data: { ...entry.data, depth: Math.max(depth - (baseOf.get(root) ?? 0), 0) } }),
+    };
+  });
+};
+
 const TABLE_CELL_BLOCKS_SELECTOR = '[data-blok-table-cell-blocks]';
 const TABLE_TOOL_NAME = 'table';
 
@@ -682,46 +734,15 @@ export class BlockSelection extends Module {
    * @param selection - the cross-block text selection to serialize
    */
   public copyCrossBlockTextSelection(event: ClipboardEvent, selection: CrossBlockTextSelection): void {
-    event.preventDefault();
+    // A host the range only touches contributes no characters to copy.
+    const blocks = selection.subRanges
+      .filter((sub) => sub.range.toString().length > 0)
+      .map((sub) => sub.block)
+      .filter((block, index, all) => all.indexOf(block) === index);
 
-    const clipboardData = event.clipboardData;
-
-    if (!clipboardData) {
-      return;
-    }
-
-    const fakeClipboard = $.make('div');
-
-    /** A host the range only touches contributes no characters to copy. */
-    const written = selection.subRanges.filter((sub) => sub.range.toString().length > 0);
-
-    /**
-     * A block whose content is selected IN FULL is serialized as that block, so
-     * a fully-covered heading stays a heading and a run of fully-covered list
-     * items stays one semantic list (the same treatment whole-block copy gives
-     * them). Only the partially-covered ends fall back to a paragraph — there is
-     * no half a heading.
-     */
-    this.groupCrossBlockSegments(written).forEach((segment) => {
-      if (segment.type === 'partial') {
-        this.appendPartialRange(segment.range, fakeClipboard);
-
-        return;
-      }
-
-      this.groupBlocksForClipboard(segment.blocks).forEach((blockSegment) => {
-        if (blockSegment.type === 'list') {
-          this.appendSemanticList(blockSegment.items, fakeClipboard);
-        } else {
-          this.appendNonListBlock(blockSegment.block, fakeClipboard);
-        }
-      });
-    });
-
-    resolvePresetColors(fakeClipboard);
-
-    clipboardData.setData('text/plain', written.map((sub) => rangeToPlainText(sub.range)).join('\n\n'));
-    clipboardData.setData('text/html', fakeClipboard.innerHTML);
+    // Each block keeps its type, cut to the selected text. handleCut deletes
+    // right after this call, so the copy must stay synchronous up to setData.
+    void this.copySelectedBlocks(event, { blocks, range: selection.range });
   }
 
   /**
@@ -759,57 +780,6 @@ export class BlockSelection extends Module {
 
     clipboardData.setData('text/plain', plainText);
     clipboardData.setData('text/html', markup.innerHTML);
-  }
-
-  /**
-   * Fold per-host sub-ranges into clipboard segments, coalescing consecutive
-   * fully-covered blocks into one run so list grouping can see them together.
-   * @param subRanges - the selection's per-host sub-ranges, in DOM order
-   */
-  private groupCrossBlockSegments(
-    subRanges: CrossBlockSubRange[]
-  ): Array<{ type: 'whole'; blocks: Block[] } | { type: 'partial'; range: Range }> {
-    return subRanges.reduce<Array<{ type: 'whole'; blocks: Block[] } | { type: 'partial'; range: Range }>>(
-      (segments, sub) => {
-        /**
-         * A multi-input block (a table) is never "wholly" covered by one of its
-         * hosts, so it stays on the partial path.
-         */
-        if (!sub.coversWholeInput || sub.block.inputs.length > 1) {
-          return [...segments, { type: 'partial',
-            range: sub.range }];
-        }
-
-        const last = segments[segments.length - 1];
-
-        if (last?.type === 'whole') {
-          last.blocks.push(sub.block);
-
-          return segments;
-        }
-
-        return [...segments, { type: 'whole',
-          blocks: [sub.block] }];
-      },
-      []
-    );
-  }
-
-  /**
-   * Append a partially-selected block's content as a paragraph, preserving the
-   * inline markup inside the range.
-   * @param range - the sub-range covering part of one editing host
-   * @param fakeClipboard - the container receiving the paragraph
-   */
-  private appendPartialRange(range: Range, fakeClipboard: HTMLElement): void {
-    const holder = $.make('div');
-
-    holder.appendChild(range.cloneContents());
-
-    const paragraph = $.make('p');
-
-    paragraph.innerHTML = clean(holder.innerHTML, this.sanitizerConfig);
-    fakeClipboard.appendChild(paragraph);
   }
 
   /**
@@ -1195,7 +1165,7 @@ export class BlockSelection extends Module {
   private serializeBlocksForClipboard(blocks: Block[], links: Map<Block, CopyLink>, cut?: string | null, parts?: BlockParts): ClipboardEntry[] {
     const copiedIds = new Set(blocks.map((block) => block.id));
 
-    return blocks.map((block): ClipboardEntry | null => {
+    const entries = blocks.map((block): ClipboardEntry | null => {
       const link = links.get(block);
       const isPage = isPagePointer(block.name, block.preservedData);
       const shape = {
@@ -1248,6 +1218,8 @@ export class BlockSelection extends Module {
         ...this.loneRowTitle(block, copiedIds),
       };
     }).filter((entry): entry is ClipboardEntry => entry !== null);
+
+    return parts === undefined ? entries : rebaseToSelection(entries);
   }
 
   /**

@@ -210,3 +210,72 @@ describe('resolveCover (embedded ID3 artwork)', () => {
     expect(uploader.uploadByFile).not.toHaveBeenCalled();
   });
 });
+
+describe('changing the cover keeps the player', () => {
+  it('swaps in the picked cover without rebuilding the player', async () => {
+    const { root, tool } = renderTool(createUploaderApi());
+    const figure = root.querySelector('[data-role="audio-figure"]');
+    const audio = root.querySelector('[data-role="audio-media"]');
+
+    openPicker(root);
+    coverPickerCalls[0].onFile(new File(['x'], 'cover.png', { type: 'image/png' }));
+
+    await vi.waitFor(() => {
+      expect(tool.save().coverUrl).toBe('https://cdn/cover.png');
+    });
+    expect(root.querySelector('[data-role="audio-figure"]')).toBe(figure);
+    expect(root.querySelector('[data-role="audio-media"]')).toBe(audio);
+    const cover = root.querySelector('[data-role="audio-cover"]');
+
+    expect(cover?.querySelector('img')?.getAttribute('src')).toBe('https://cdn/cover.png');
+    expect(cover?.querySelector('[data-role="audio-cover-ink"]')).toBeNull();
+    expect(cover?.querySelector('[data-role="audio-cover-change"]')).not.toBeNull();
+    expect(cover?.classList.contains('is-fresh')).toBe(true);
+  });
+
+  it('swaps a second picked cover over the first one', async () => {
+    const { root, tool } = renderTool(createUploaderApi());
+
+    openPicker(root);
+    coverPickerCalls[0].onFile(new File(['x'], 'one.png', { type: 'image/png' }));
+    await vi.waitFor(() => {
+      expect(tool.save().coverUrl).toBe('https://cdn/one.png');
+    });
+    openPicker(root);
+    coverPickerCalls[1].onFile(new File(['x'], 'two.png', { type: 'image/png' }));
+    await vi.waitFor(() => {
+      expect(tool.save().coverUrl).toBe('https://cdn/two.png');
+    });
+
+    const imgs = root.querySelectorAll('[data-role="audio-cover"] img');
+
+    expect(imgs).toHaveLength(1);
+    expect(imgs[0].getAttribute('src')).toBe('https://cdn/two.png');
+  });
+
+  it('brings the ink drop back on remove without rebuilding the player', async () => {
+    const { root, tool } = renderTool(createUploaderApi());
+
+    openPicker(root);
+    coverPickerCalls[0].onFile(new File(['x'], 'cover.png', { type: 'image/png' }));
+    await vi.waitFor(() => {
+      expect(tool.save().coverUrl).toBe('https://cdn/cover.png');
+    });
+    const figure = root.querySelector('[data-role="audio-figure"]');
+    const settings = tool.renderSettings();
+    const items = Array.isArray(settings) ? settings : [settings];
+    const remove = items.find((i) => 'name' in i && i.name === 'audio-cover-remove');
+
+    if (!remove || !('onActivate' in remove) || !remove.onActivate) throw new Error('no remove item');
+    remove.onActivate(remove);
+
+    expect(tool.save().coverUrl).toBeUndefined();
+    expect(root.querySelector('[data-role="audio-figure"]')).toBe(figure);
+    const cover = root.querySelector('[data-role="audio-cover"]');
+
+    expect(cover?.querySelector('img')).toBeNull();
+    expect(cover?.querySelector('[data-role="audio-cover-ink"]')).not.toBeNull();
+    // Left on, the next picked cover would not replay its reveal.
+    expect(cover?.classList.contains('is-fresh')).toBe(false);
+  });
+});

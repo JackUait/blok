@@ -36,7 +36,7 @@ import { deliverToRebuiltBlock, putBackOnRebuiltBlock, releaseObjectUrl } from '
 import { DEFAULT_CAPTION_PLACEHOLDER, DEFAULT_MIME_TYPES, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { tr } from './i18n';
-import { renderCaptionRow, renderErrorState, renderNowPlaying, type ErrorService } from './ui';
+import { renderCaptionRow, renderCoverArt, renderErrorState, renderNowPlaying, type ErrorService } from './ui';
 import { openCoverPicker, validateCoverFile, type CoverPickerHandle } from './cover-picker';
 import { attachControls, type ControlsHandle } from './controls';
 import { attachInkCover, type InkCoverHandle } from './cover-ink';
@@ -987,7 +987,7 @@ export class AudioTool implements BlockTool {
     const prev = this.data.coverUrl;
     if (prev && prev !== url && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
     this.data.coverUrl = url;
-    this.renderState();
+    this.swapCoverArt();
     this.block.dispatchChange();
   }
 
@@ -995,8 +995,36 @@ export class AudioTool implements BlockTool {
     const prev = this.data.coverUrl;
     if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
     this.data.coverUrl = undefined;
-    this.renderState();
+    this.swapCoverArt();
     this.block.dispatchChange();
+  }
+
+  /**
+   * Replaces only the art inside the cover. A full re-render would rebuild the
+   * <audio> element and stop playback.
+   */
+  private swapCoverArt(): void {
+    const cover = this.root?.querySelector<HTMLElement>('[data-role="audio-cover"]');
+    const audio = this.root?.querySelector<HTMLAudioElement>('[data-role="audio-media"]');
+
+    if (this.state !== 'RENDERED' || !cover || !audio) {
+      this.renderState();
+
+      return;
+    }
+    this.inkHandle?.destroy();
+    this.inkHandle = null;
+    // Drop the reveal and flush styles, so the next picked cover replays it.
+    cover.classList.remove('is-fresh');
+    cover.getBoundingClientRect();
+    cover.querySelectorAll(':scope > img, :scope > [data-role="audio-cover-ink"]').forEach((el) => el.remove());
+
+    const art = renderCoverArt(this.data.coverUrl);
+
+    cover.prepend(art);
+    if (art instanceof HTMLCanvasElement) {
+      this.inkHandle = attachInkCover({ canvas: art, media: audio, motion: this.data.motion, peaks: this.data.peaks });
+    }
   }
 }
 

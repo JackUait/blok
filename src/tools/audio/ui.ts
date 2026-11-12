@@ -31,6 +31,24 @@ function editableLine(role: string, value: string | undefined, editable: boolean
   return el;
 }
 
+/** The cover's art: the picture, or with no picture an ink drop drawn and moved by cover-ink.ts. */
+export function renderCoverArt(coverUrl: string | undefined): HTMLImageElement | HTMLCanvasElement {
+  if (coverUrl) {
+    const img = document.createElement('img');
+    img.setAttribute('loading', 'lazy');
+    img.src = coverUrl;
+    img.alt = '';
+
+    return img;
+  }
+  const ink = document.createElement('canvas');
+  ink.className = 'blok-audio-cover__ink';
+  ink.setAttribute('data-role', 'audio-cover-ink');
+  ink.setAttribute('aria-hidden', 'true');
+
+  return ink;
+}
+
 export function renderNowPlaying(data: AudioData, opts: NowPlayingOptions): NowPlayingElements {
   const figure = document.createElement('figure');
   figure.className = 'blok-audio-inner';
@@ -49,22 +67,10 @@ export function renderNowPlaying(data: AudioData, opts: NowPlayingOptions): NowP
   const cover = document.createElement('div');
   cover.className = 'blok-audio-cover';
   cover.setAttribute('data-role', 'audio-cover');
-  // No artwork: an ink drop, drawn and moved by cover-ink.ts.
-  const ink = data.coverUrl ? undefined : document.createElement('canvas');
+  const art = renderCoverArt(data.coverUrl);
+  const ink = art instanceof HTMLCanvasElement ? art : undefined;
 
-  if (data.coverUrl) {
-    const img = document.createElement('img');
-    img.setAttribute('loading', 'lazy');
-    img.src = data.coverUrl;
-    img.alt = '';
-    cover.appendChild(img);
-  }
-  if (ink) {
-    ink.className = 'blok-audio-cover__ink';
-    ink.setAttribute('data-role', 'audio-cover-ink');
-    ink.setAttribute('aria-hidden', 'true');
-    cover.appendChild(ink);
-  }
+  cover.appendChild(art);
 
   const coverButton = ((): HTMLButtonElement | undefined => {
     if (!opts.editable) {

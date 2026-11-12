@@ -21,17 +21,17 @@ const PROPERTY_FLYOUT_WIDTH = 280;
 const DIRECTION_FLYOUT_WIDTH = 180;
 
 /**
- * A list under a sort rule's button, its top on the button's bottom
- * (Round 17 §5). The rule panel stays open under it and closes it when it
+ * A list under a rule's button, its top on the button's bottom (Round 17 §5,
+ * Round 18 §2). The rule panel stays open under it and closes it when it
  * closes. A write redraws the rule panel, so focus goes back by test id.
  */
-const openFlyout = (anchor: HTMLElement, host: DatabasePanel, testId: string, width: number, rows: (pick: (write: () => void) => void) => HTMLElement[]): DatabasePanel => {
+export const openFlyout = (anchor: HTMLElement, host: DatabasePanel, testId: string, width: number, rows: (pick: (write: () => void) => void) => HTMLElement[]): DatabasePanel => {
   const release = host.hold();
   const focusKey = anchor.getAttribute('data-blok-testid') ?? '';
   const flyout: DatabasePanel = new DatabasePanel({
     anchor,
     root: {
-      // database.css: the measured row pitch.
+      // database.css: the measured row pitch, the same for sort and filter lists.
       name: 'sort-flyout',
       build: () => rows((write) => {
         flyout.close();

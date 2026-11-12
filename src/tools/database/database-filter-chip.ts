@@ -16,6 +16,7 @@ import {
   relativeValueLabelKey,
   splitOperator,
 } from './database-filter-labels';
+import { openFlyout } from './database-sort-flyouts';
 import { addFilterRule, emptyFilterTree, withEntryIds } from './filter-tree';
 import { RELATIVE_DATE_UNITS, RELATIVE_DATE_VALUES, formatRelativeSpan, parseRelativeSpan, relativeWindow, toLocalDay } from './relative-dates';
 import type { RelativeDateUnit, RelativeSpan } from './relative-dates';
@@ -23,6 +24,9 @@ import { optionColorOf, shownStatusOption } from './cells/option-colors';
 import type { FilterConfig, PropertyDefinition, PropertyType, SelectOption } from './types';
 
 type Filter = FilterConfig & { id: string };
+
+/** notion-motion.md Round 18 §2 (r18-filter-op-open.raw): rows 182x28 in a 190-wide list. */
+const OPERATOR_FLYOUT_WIDTH = 190;
 
 const idList = (value: FilterConfig['value']): string[] => {
   if (Array.isArray(value)) return value.filter((id): id is string => typeof id === 'string');
@@ -147,7 +151,7 @@ class FilterChipPages {
   }
 
   /** A header button: an optional plain lead text, a medium-weight label, a chevron. */
-  private headerButton(testId: string, label: string, onClick: () => void, name?: string): HTMLButtonElement {
+  private headerButton(testId: string, label: string, onClick: (button: HTMLButtonElement) => void, name?: string): HTMLButtonElement {
     const button = document.createElement('button');
     const text = document.createElement('span');
     const chevron = document.createElement('span');
@@ -161,7 +165,7 @@ class FilterChipPages {
     chevron.innerHTML = IconChevronDown;
     if (name !== undefined) button.append(name, ' ');
     button.append(text, chevron);
-    button.addEventListener('click', onClick);
+    button.addEventListener('click', () => onClick(button));
 
     return button;
   }
@@ -177,7 +181,9 @@ class FilterChipPages {
     const opKey = operatorLabelKey(property.type, filter.operator);
     const { lead: part } = splitOperator(filter.operator);
     const opLabel = (opKey === undefined ? filter.operator : this.ctx.i18n.t(opKey)).toLocaleLowerCase();
-    const openOperators = (): void => panel.push(this.operators(property));
+    const openOperators = (button: HTMLElement): void => {
+      this.operatorFlyout(button, panel, property);
+    };
 
     header.setAttribute('data-blok-database-chip-header', '');
     if (property.type === 'date') {
@@ -246,23 +252,19 @@ class FilterChipPages {
     };
   }
 
-  private operators(property: PropertyDefinition): PanelPage {
-    return {
-      title: property.name,
-      build: (panel) => {
-        const current = this.current()?.operator ?? '';
+  /** notion-motion.md Round 18 §2: a 190-wide list under the button. Blok keeps its checkmark on the current one. */
+  private operatorFlyout(button: HTMLElement, panel: DatabasePanel, property: PropertyDefinition): void {
+    const current = this.current()?.operator ?? '';
 
-        return operatorChoicesFor(property, current).map((choice) => panelRow({
-          label: this.ctx.i18n.t(choice.labelKey),
-          testId: `database-filter-op-${choice.operator}`,
-          checked: menuOperatorOf(current) === choice.operator,
-          onClick: () => {
-            this.update(operatorPick(property, choice.operator, { operator: this.current()?.operator ?? '', value: this.current()?.value ?? null }));
-            panel.back();
-          },
-        }));
-      },
-    };
+    openFlyout(button, panel, 'database-filter-operator-picker', OPERATOR_FLYOUT_WIDTH, (pick) => operatorChoicesFor(property, current).map((choice) => panelRow({
+      label: this.ctx.i18n.t(choice.labelKey),
+      testId: `database-filter-op-${choice.operator}`,
+      checked: menuOperatorOf(current) === choice.operator,
+      onClick: () => pick(() => {
+        this.update(operatorPick(property, choice.operator, { operator: this.current()?.operator ?? '', value: this.current()?.value ?? null }));
+        panel.refresh();
+      }),
+    })));
   }
 
   private moreMenu(): PanelPage {

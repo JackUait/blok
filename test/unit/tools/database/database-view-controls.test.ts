@@ -672,6 +672,51 @@ describe('DatabaseViewControls', () => {
     expect(q('database-filter-value')).toBeNull();
   });
 
+  // notion-motion.md Round 18 §2 (r18-filter-op-open.raw): the operator list is a 190-wide flyout under its button; the popover stays.
+  describe('filter operator flyout', () => {
+    const open = (): ReturnType<typeof setup> => {
+      const env = setup();
+
+      env.saved.view = { ...env.saved.view, filters: [{ id: 'f1', propertyId: 'title', operator: 'contains', value: 'a' }] };
+      env.controls.refresh();
+      click('database-filter-pill-f1');
+      click('database-filter-operator');
+
+      return env;
+    };
+
+    it('opens beside the rule popover, 190 wide, in the flyout layout, the current operator checked', () => {
+      open();
+      const flyout = q('database-filter-operator-picker');
+
+      expect(flyout?.style.width).toBe('190px');
+      expect(flyout?.getAttribute('data-blok-database-panel-page')).toBe('sort-flyout');
+      expect(q('database-filter-popover')?.contains(flyout)).toBe(false);
+      expect(q('database-filter-popover')?.querySelector('[data-blok-testid="database-filter-operator"]')).not.toBeNull();
+      expect(q('database-filter-op-contains')?.getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('a pick writes the operator, closes the flyout and relabels the open popover', () => {
+      const { controls, saved } = open();
+
+      click('database-filter-op-starts_with');
+
+      expect(controls.effective(saved.view).filters[0]).toMatchObject({ operator: 'starts_with', value: 'a' });
+      expect(q('database-filter-operator-picker')).toBeNull();
+      expect(q('database-filter-popover')?.isConnected).toBe(true);
+      expect(text(q('database-filter-operator'))).toBe('Name tools.database.filteroperator.startswith');
+    });
+
+    it('Escape closes only the flyout', () => {
+      open();
+      document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(q('database-filter-operator-picker')).toBeNull();
+      expect(q('database-filter-popover')).not.toBeNull();
+      expect(q('database-filter-operator')).toHaveFocus();
+    });
+  });
+
   // notion-motion.md Round 13 (r13-filter-ops-rollup.png, -rollup.raw, -rollup-op.raw): "Rollup any ⌄ contains ⌄",
   // the first menu Any / None / Every, the second the URL list, and a text field.
   describe('rollup of the Name chip', () => {

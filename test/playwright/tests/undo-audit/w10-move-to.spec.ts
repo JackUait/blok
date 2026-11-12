@@ -32,8 +32,11 @@ const database = (rows: string[]): SavedBlock => ({
   type: 'database',
   data: {
     title: 'Tasks',
-    schema: [{ id: 'prop-title', name: 'Title', type: 'title', position: 'a0' }],
-    views: [{ id: 'view-1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: ['prop-title'] }],
+    schema: [
+      { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
+      { id: 'prop-status', name: 'Status', type: 'select', position: 'a1', config: { options: [{ id: 'opt-todo', label: 'Todo', color: 'gray', position: 'a0' }] } },
+    ],
+    views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: ['prop-title'] }],
     activeViewId: 'view-1',
   },
   content: rows,
@@ -41,17 +44,17 @@ const database = (rows: string[]): SavedBlock => ({
 
 const DOC: SavedBlock[] = [
   { id: 'p-before', type: 'paragraph', data: { text: 'before' } },
-  { id: 'tg', type: 'toggle', data: { text: 'Move me', isOpen: true }, content: ['tg-kid'] },
+  { id: 'tg', type: 'toggle', data: { text: 'Move me' }, content: ['tg-kid'] },
   { id: 'tg-kid', type: 'paragraph', parent: 'tg', data: { text: 'kid' } },
   { id: 'p-a', type: 'paragraph', data: { text: 'alpha' } },
   { id: 'p-b', type: 'paragraph', data: { text: 'beta' } },
   { id: 'p-after', type: 'paragraph', data: { text: 'after' } },
   database(['row-1', 'row-2', 'row-far']),
-  { id: 'row-1', type: 'database-row', parent: 'db-1', data: { position: 'a0', title: 'Card one', properties: { 'prop-title': 'Card one' } }, content: ['row-1-body'] },
+  { id: 'row-1', type: 'database-row', parent: 'db-1', data: { position: 'a0', title: 'Card one', properties: { 'prop-title': 'Card one', 'prop-status': 'opt-todo' } }, content: ['row-1-body'] },
   { id: 'row-1-body', type: 'paragraph', parent: 'row-1', data: { text: 'Body text' } },
-  { id: 'row-2', type: 'database-row', parent: 'db-1', data: { position: 'a1', title: 'Card two', properties: { 'prop-title': 'Card two' } } },
+  { id: 'row-2', type: 'database-row', parent: 'db-1', data: { position: 'a1', title: 'Card two', properties: { 'prop-title': 'Card two', 'prop-status': 'opt-todo' } } },
   // Its page body lives in another document, which this editor cannot write.
-  { id: 'row-far', type: 'database-row', parent: 'db-1', data: { position: 'a2', title: 'Card far', pageId: 'page-far', properties: { 'prop-title': 'Card far' } } },
+  { id: 'row-far', type: 'database-row', parent: 'db-1', data: { position: 'a2', title: 'Card far', pageId: 'page-far', properties: { 'prop-title': 'Card far', 'prop-status': 'opt-todo' } } },
 ];
 
 const createBlok = async (page: Page, blocks: SavedBlock[]): Promise<void> => {
@@ -131,6 +134,20 @@ const moveToItem = (page: Page): Locator =>
 
 const pickerRows = (page: Page): Locator => page.getByRole('listbox', { name: 'Move to' }).getByRole('option');
 
+const DRAWER_EDITOR = '[data-blok-database-drawer-editor]';
+
+/** Opens a row's page in the side drawer. */
+const openCard = async (page: Page, rowId: string): Promise<void> => {
+  await page.locator(`[data-blok-database-card][data-row-id="${rowId}"] [data-blok-database-card-title]`).click();
+  await expect(page.locator('[data-blok-database-drawer]')).toBeVisible();
+  await gap(page, 1200);
+};
+
+const closeCard = async (page: Page): Promise<void> => {
+  await page.locator('[data-blok-database-drawer-close]').click();
+  await gap(page, 1200);
+};
+
 const contentOf = (blocks: SavedBlock[], id: string): string[] | undefined => blocks.find(block => block.id === id)?.content;
 
 test.describe.configure({ retries: 0 });
@@ -167,13 +184,22 @@ test.describe('W10 Move to', () => {
     expect(contentOf(after, 'row-2')).toEqual(['tg']);
     expect(after.map(block => block.id).sort()).toEqual(before.map(block => block.id).sort());
     expect(await domParents(page)).toMatchObject(savedParents(after));
-    await expect(page.getByText('Move me', { exact: true })).toBeHidden();
+    await expect(page.locator(`[data-blok-id="tg"]`)).toBeHidden();
+    // The moved blocks show on the row's page.
+    await openCard(page, 'row-2');
+    await expect(page.locator(DRAWER_EDITOR).getByText('Move me', { exact: true })).toBeVisible();
+    // A toggle opens closed, so its child is there but folded.
+    await expect(page.locator(`${DRAWER_EDITOR} [data-blok-id="tg"] [data-blok-id="tg-kid"]`)).toHaveText('kid');
+    await closeCard(page);
 
     await editable(page, 'p-after').click();
     await undo(page);
     expect(await save(page)).toEqual(before);
     expect(await domParents(page)).toMatchObject(savedParents(before));
-    await expect(page.getByText('Move me', { exact: true })).toBeVisible();
+    await expect(page.locator(`[data-blok-id="tg"]`)).toBeVisible();
+    await openCard(page, 'row-2');
+    await expect(page.locator(DRAWER_EDITOR).getByText('Move me', { exact: true })).toHaveCount(0);
+    await closeCard(page);
 
     await redo(page);
     expect(await save(page)).toEqual(after);

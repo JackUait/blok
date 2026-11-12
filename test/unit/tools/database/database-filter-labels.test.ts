@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   defaultFilterFor,
   filterPillLabel,
+  filterPillParts,
   menuOperatorOf,
   operatorChoices,
   operatorChoicesFor,
@@ -59,9 +60,20 @@ describe('database filter labels', () => {
     expect(filterPillLabel({ operator: 'equals', value: null }, prop('createdTime'), t)).toBe('Due');
   });
 
+  it('writes the operator into a text or number pill: "Name: Contains a", "Number = 5" (notion-motion.md Round 18 §2)', () => {
+    const en = (key: string): string => ({ 'tools.database.filterOperator.contains': 'Contains', 'tools.database.filterOperator.numberEquals': '=', 'tools.database.filterOperator.greaterThan': '>' }[key] ?? key);
+
+    expect(filterPillLabel({ operator: 'contains', value: 'a' }, prop('title', { name: 'Name' }), en)).toBe('Name: Contains a');
+    expect(filterPillLabel({ operator: 'equals', value: 5 }, prop('number', { name: 'Number' }), en)).toBe('Number = 5');
+    expect(filterPillLabel({ operator: 'greater_than', value: 5 }, prop('number', { name: 'Number' }), en)).toBe('Number > 5');
+    expect(filterPillParts({ operator: 'contains', value: 'a' }, prop('title', { name: 'Name' }), en)).toEqual({ name: 'Name:', value: 'Contains a' });
+    expect(filterPillParts({ operator: 'equals', value: 5 }, prop('number', { name: 'Number' }), en)).toEqual({ name: 'Number', value: '= 5' });
+    expect(filterPillParts({ operator: 'contains', value: '' }, prop('title', { name: 'Name' }), en)).toEqual({ name: 'Name', value: '' });
+  });
+
   it('names a pill by its property alone until it has a value', () => {
     expect(filterPillLabel({ operator: 'contains', value: '' }, prop('text'), t)).toBe('Due');
-    expect(filterPillLabel({ operator: 'contains', value: 'abc' }, prop('text'), t)).toBe('Due: abc');
+    expect(filterPillLabel({ operator: 'contains', value: 'abc' }, prop('text'), t)).toBe('Due: tools.database.filterOperator.contains abc');
     expect(filterPillLabel({ operator: 'is_not_empty', value: null }, prop('text'), t)).toBe('Due: tools.database.filterOperator.isNotEmpty');
     expect(filterPillLabel({ operator: 'this_week', value: null }, prop('date'), t)).toBe('Due: tools.database.filterDateThisWeek');
     expect(filterPillLabel({ operator: 'equals', value: 'tomorrow' }, prop('date'), t)).toBe('Due: tools.database.filterDateTomorrow');

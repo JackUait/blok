@@ -537,6 +537,17 @@ describe('DatabaseViewControls', () => {
       expect(chip?.getAttribute('aria-label')).toBe('Select: Red');
     });
 
+    it('writes the operator after the name, as Notion\'s "Name: Contains a" and "Number = 5" (Round 18 §2)', () => {
+      const { controls, saved } = setup();
+
+      saved.view = { ...saved.view, filters: [{ id: 'f1', propertyId: 'num', operator: 'equals', value: 5 }] };
+      controls.refresh();
+      const chip = q('database-filter-pill-f1');
+
+      expect(chip?.querySelector('[data-blok-database-chip-name]')?.textContent).toBe('Amount');
+      expect(chip?.querySelector('[data-blok-database-chip-value]')?.textContent).toBe('tools.database.filterOperator.numberEquals 5');
+    });
+
     it('shows only the name, without a colon, while the filter has no value', () => {
       const { controls, saved } = setup({ schema: () => [...schema, select] });
 

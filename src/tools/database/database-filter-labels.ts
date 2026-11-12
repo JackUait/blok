@@ -308,7 +308,35 @@ export const filterValueText = (
   return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
 };
 
-/** "Due: This week" with a value, or just "Due" (research/08 pills). */
+/** Types whose pill names the operator too (notion-motion.md Round 18 §2). Other types are unread. */
+const PILL_OPERATOR_TYPES: ReadonlySet<PropertyType> = new Set(['title', 'text', 'url', 'email', 'phone', 'number', 'uniqueId']);
+
+/**
+ * A pill's two parts: "Name:" + "Contains a", "Number" + "= 5" (Round 18 §2,
+ * no colon before a symbol), "Due:" + "This week" (research/08), or "Due" + "".
+ */
+export const filterPillParts = (
+  filter: Pick<FilterConfig, 'operator' | 'value'>,
+  property: PropertyDefinition,
+  t: Translate,
+  personName?: (id: string) => string | undefined,
+  rowTitle?: (id: string) => string | undefined
+): { name: string; value: string } => {
+  const value = filterValueText(filter, property, t, personName, rowTitle);
+
+  if (value === '') return { name: property.name, value };
+  const { lead, operator } = splitOperator(filter.operator);
+  const key = lead === undefined && PILL_OPERATOR_TYPES.has(property.type) && operatorNeedsValue(operator)
+    ? operatorLabelKey(property.type, operator)
+    : undefined;
+
+  if (key === undefined) return { name: `${property.name}:`, value };
+  const symbol = property.type === 'number' || property.type === 'uniqueId';
+
+  return { name: symbol ? property.name : `${property.name}:`, value: `${t(key)} ${value}` };
+};
+
+/** The whole pill as one line, for its label. */
 export const filterPillLabel = (
   filter: Pick<FilterConfig, 'operator' | 'value'>,
   property: PropertyDefinition,
@@ -316,9 +344,9 @@ export const filterPillLabel = (
   personName?: (id: string) => string | undefined,
   rowTitle?: (id: string) => string | undefined
 ): string => {
-  const value = filterValueText(filter, property, t, personName, rowTitle);
+  const { name, value } = filterPillParts(filter, property, t, personName, rowTitle);
 
-  return value === '' ? property.name : `${property.name}: ${value}`;
+  return value === '' ? name : `${name} ${value}`;
 };
 
 /** Per-type sort labels from the header menu (research/08). */

@@ -8,7 +8,7 @@ import type { I18n } from '../../../types';
 import { DatabasePanel, panelInput, panelReorderList, panelRow, panelSeparator } from './database-panel';
 import { PersonalViewEdits } from './database-view-state';
 import type { ViewStateFallback } from './database-view-state';
-import { FILTERABLE_TYPES, defaultFilterFor, filterPillLabel, filterValueText, sortDirectionLabelKey } from './database-filter-labels';
+import { FILTERABLE_TYPES, defaultFilterFor, filterPillLabel, filterPillParts, sortDirectionLabelKey } from './database-filter-labels';
 import { countFilterRules, withEntryIds } from './filter-tree';
 import { openAdvancedFilter, openViewSettings } from './database-view-settings-panel';
 import { openFilterChip } from './database-filter-chip';
@@ -130,11 +130,8 @@ const chip = (testId: string, label: string, parts: { glyph: string; name: strin
 
   el.setAttribute('data-blok-database-filter-pill', '');
   el.append(part('data-blok-database-chip-glyph', { icon: parts.glyph }));
-  if (parts.value === undefined || parts.value === '') {
-    el.append(part('data-blok-database-chip-name', { text: parts.name }));
-  } else {
-    el.append(part('data-blok-database-chip-name', { text: `${parts.name}:` }), ' ', part('data-blok-database-chip-value', { text: parts.value }));
-  }
+  el.append(part('data-blok-database-chip-name', { text: parts.name }));
+  if (parts.value !== undefined && parts.value !== '') el.append(' ', part('data-blok-database-chip-value', { text: parts.value }));
   el.append(part('data-blok-database-chip-chevron', { icon: IconChevronDown }));
 
   return el;
@@ -1144,8 +1141,8 @@ export class DatabaseViewControls {
       const personName = (id: string): string | undefined => this.host.people?.().find((person) => person.id === id)?.name;
       const rowTitle = (id: string): string | undefined => this.host.relatedRows?.(property).find((row) => row.id === id)?.title;
       const label = filterPillLabel(filter, property, t, personName, rowTitle);
-      const value = filterValueText(filter, property, t, personName, rowTitle);
-      const pill = chip(`database-filter-pill-${filter.id}`, label, { glyph: propertyTypeMeta(property.type).icon, name: property.name, value });
+      const { name, value } = filterPillParts(filter, property, t, personName, rowTitle);
+      const pill = chip(`database-filter-pill-${filter.id}`, label, { glyph: propertyTypeMeta(property.type).icon, name, value });
 
       pill.setAttribute('data-filter-id', filter.id);
       pill.toggleAttribute('data-active', value !== '');

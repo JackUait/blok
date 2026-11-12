@@ -180,3 +180,7 @@ Les secrets ne sont jamais renvoyés au navigateur ni conservés dans son localS
 Dans l’app macOS, un espace en ligne utilise le même compte et les mêmes règles que le navigateur. Un espace local utilise une clé personnelle distincte dans le trousseau du Mac. Codex et Claude Code restent disponibles via leur connexion CLI sur le Mac. Les clés du trousseau ne sont pas dans la sauvegarde serveur.
 
 La demande et le contexte de page explicitement activé sont envoyés à OpenAI via le serveur (ou directement depuis la partie native pour un espace local), avec `store: false`. Les appels sont facturés par OpenAI au titulaire de la clé utilisée. Les tests automatisés simulent OpenAI et ne nécessitent aucune clé réelle.
+
+### React Grab dans la démo locale
+
+La cible web accepte l’argument de build `VITE_REACT_GRAB=true`. Il est activé dans `compose.demo.yaml` et désactivé par défaut pour le serveur. Dans les réglages de la démo, « Sélectionner un élément » lance React Grab ; le raccourci est `⌘/Ctrl + Maj + G`. Collez ensuite le contexte dans le chat. La télémétrie de React Grab est désactivée. Les réglages étant écrits en DOM, le contexte inclut leur fichier source et le HTML sélectionné, sans inventer de pile de composants React.

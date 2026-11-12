@@ -553,3 +553,28 @@ div[data-desktop-menu-account], div[data-desktop-menu-account]:hover { cursor: d
   [data-desktop-account-actions] { align-items: flex-start; flex-direction: column; }
   [data-desktop-account] [data-desktop-settings-row-title] { flex-basis: 110px; }
 }
+
+/* Settings navigation: fixed search and feedback, scrollable sections. */
+[data-desktop-settings-dialog] [data-desktop-settings-nav] { display:flex; flex-direction:column; gap:12px; padding:16px 10px; overflow:hidden; }
+[data-desktop-settings-nav] > [data-blok-field=search] { flex:none; width:100%; min-width:0; }
+[data-desktop-settings-nav-list] { min-height:0; overflow:auto; flex:1; }
+[data-desktop-settings-nav-item][hidden], [data-desktop-settings-nav-heading][hidden], [data-desktop-settings-no-results][hidden] { display:none; }
+[data-desktop-settings-no-results] { margin:0 8px; color:var(--desktop-muted); font-size:12px; line-height:1.5; }
+[data-desktop-settings-feedback] { flex:none; padding-top:12px; border-top:1px solid var(--desktop-border); }
+[data-desktop-settings-grab] { display:flex; align-items:center; gap:8px; width:100%; min-height:32px; padding:6px 8px; border:0; border-radius:6px; background:transparent; color:var(--desktop-muted); text-align:left; font:inherit; font-size:12px; cursor:pointer; }
+[data-desktop-settings-grab] svg { flex:none; width:16px; height:16px; }
+[data-desktop-settings-grab]:hover { color:var(--desktop-ink); background:var(--desktop-hover); }
+[data-desktop-settings-grab-hint] { display:block; padding:4px 8px 0; color:var(--desktop-muted); font-size:10px; line-height:1.5; }
+[data-desktop-settings-nav-item]:focus-visible, [data-desktop-settings-grab]:focus-visible { outline:2px solid var(--blok-focus-ring,#2383e2); outline-offset:-2px; }
+[data-desktop-connections-accounts] { display:flex; align-items:center; justify-content:space-between; gap:24px; padding:0 0 28px; margin-bottom:30px; border-bottom:1px solid var(--desktop-border); }
+[data-desktop-connections-accounts] [data-desktop-settings-copy] { margin-top:0; }
+[data-desktop-connections-accounts] [data-desktop-settings-row-help] { line-height:1.5; }
+[data-desktop-settings-main] { scrollbar-gutter:stable; }
+@media (max-width:700px) {
+  [data-desktop-settings-main] { padding:44px 24px 28px; }
+  [data-desktop-connections-accounts] { align-items:flex-start; flex-direction:column; gap:14px; }
+}
+@media (max-width:520px) {
+  [data-desktop-settings-dialog] [data-desktop-settings-nav] { flex:0 0 210px; }
+  [data-desktop-settings-feedback] { display:none; }
+}

@@ -4,9 +4,9 @@ import './mcp-settings.css';
 
 interface McpToken { id: string; label: string; createdAt: string; expiresAt: string; lastUsedAt: string | null }
 
-export function mountMcpSettings(content: HTMLElement, client: CloudClient): void {
+export function mountMcpSettings(content: HTMLElement, client: CloudClient, options: {embedded?: boolean} = {}): void {
   const panel = document.createElement('section'); panel.setAttribute('data-desktop-mcp-panel', '');
-  const heading = document.createElement('h1'); heading.setAttribute('data-desktop-settings-title', ''); heading.textContent = 'Accès MCP';
+  const heading = document.createElement(options.embedded ? 'h2' : 'h1'); heading.setAttribute(options.embedded ? 'data-desktop-settings-section' : 'data-desktop-settings-title', ''); heading.textContent = 'Accès MCP';
   const help = document.createElement('p'); help.setAttribute('data-desktop-settings-intro', '');
   help.textContent = 'Connectez Codex ou un autre client MCP à vos espaces avec vos propres droits. Le jeton est affiché une seule fois et expire après 90 jours.';
   const endpoint = document.createElement('div'); endpoint.setAttribute('data-desktop-mcp-endpoint', '');

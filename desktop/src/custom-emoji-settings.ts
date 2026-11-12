@@ -69,7 +69,7 @@ export function mountCustomEmojiSettings(container:HTMLElement, ref:WorkspaceRef
     if(uploadDialog||!alive)return;
     let selected:File|null=null;let previewUrl:string|null=null;let saving=false;let opened=true;
     const overlay=el('div');overlay.setAttribute('data-custom-emoji-overlay','');
-    const surface=el('section');surface.setAttribute('data-custom-emoji-dialog','');
+    const surface=el('section');surface.setAttribute('data-custom-emoji-dialog','');surface.dataset.settingsSource='desktop/src/custom-emoji-settings.ts';
     const header=el('header');const title=el('h2','Ajouter un émoji');
     const close=button('×');close.setAttribute('data-custom-emoji-close','');close.setAttribute('aria-label','Fermer');
     header.append(title,close);

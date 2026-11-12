@@ -1,4 +1,4 @@
-import { createChoice, styleTextField } from './ui/controls';
+import { createChoice, styleTextField, wrapSearchField } from './ui/controls';
 import { openModalDialog, type ModalDialogHandle } from '@blok/modal-dialog';
 import { CloudClient } from './cloud/client';
 import { nativeSessionAdapter } from './native-session';
@@ -10,6 +10,7 @@ import appPackage from '../package.json';
 import { mountAiSettings } from './ai-settings';
 import { mountCustomEmojiSettings } from './custom-emoji-settings';
 import { mountMcpSettings } from './mcp-settings';
+import {loadReactGrab, reactGrabAvailable} from './react-grab';
 
 export type Appearance = 'dark' | 'light' | 'auto';
 
@@ -216,20 +217,65 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   dialog.setAttribute('aria-label', 'Réglages');
   dialog.tabIndex = -1;
   const nav = el('aside', 'data-desktop-settings-nav');
-  nav.append(el('div', 'data-desktop-settings-nav-heading', 'Compte'));
+  nav.setAttribute('aria-label', 'Rubriques des réglages');
+  const search = el('input', 'data-desktop-settings-search');
+  search.type = 'search'; search.placeholder = 'Rechercher…';
+  search.setAttribute('aria-label', 'Rechercher dans les réglages');
+  const searchBox = wrapSearchField(search);
+  const navList = el('div', 'data-desktop-settings-nav-list');
+  const noResults = el('p', 'data-desktop-settings-no-results', 'Aucune rubrique trouvée.');
+  noResults.hidden = true; noResults.setAttribute('role', 'status');
+  nav.append(searchBox, navList, noResults);
+  navList.append(el('div', 'data-desktop-settings-nav-heading', 'Compte'));
   const accountTab = actionButton('data-desktop-settings-nav-item', currentWorkspace.kind === 'remote' ? currentWorkspace.userName ?? 'Mon compte' : 'Profil local', 'profile');
   const connectionsTab = actionButton('data-desktop-settings-nav-item', 'Connexions', 'connections');
-  nav.append(accountTab);
-  if (client) nav.append(connectionsTab);
-  nav.append(el('div', 'data-desktop-settings-nav-heading', 'Application'));
+  navList.append(accountTab);
+  navList.append(connectionsTab);
+  navList.append(el('div', 'data-desktop-settings-nav-heading', 'Application'));
   const prefsTab = actionButton('data-desktop-settings-nav-item', 'Préférences', 'settings');
   const aiTab = actionButton('data-desktop-settings-nav-item', 'Assistant IA', 'ai');
-  nav.append(prefsTab, aiTab);
+  navList.append(prefsTab, aiTab);
   const generalTab = actionButton('data-desktop-settings-nav-item', 'Général', 'storage');
   const emojiTab = actionButton('data-desktop-settings-nav-item', 'Émojis', 'emoji');
   const membersTab = actionButton('data-desktop-settings-nav-item', 'Membres', 'profile');
-  nav.append(el('div', 'data-desktop-settings-nav-heading', 'Espace'), generalTab, emojiTab);
-  if (admin) nav.append(membersTab);
+  navList.append(el('div', 'data-desktop-settings-nav-heading', 'Espace'), generalTab, emojiTab);
+  if (admin) navList.append(membersTab);
+  const navEntries = [
+    [accountTab, 'compte profil identité email'], [connectionsTab, 'connexion mcp jeton compte serveur espace'],
+    [prefsTab, 'préférences apparence thème clair sombre'], [aiTab, 'assistant ia openai modèle clé api'],
+    [generalTab, 'général espace nom stockage'], [emojiTab, 'émoji emoji image icône logo'], [membersTab, 'membres invitations accès rôles'],
+  ] as const;
+  const normalize = (value: string): string => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase();
+  const filterNav = (): void => {
+    const query = normalize(search.value.trim());
+    for (const [button, keywords] of navEntries) button.hidden = !normalize(`${button.textContent} ${keywords}`).includes(query);
+    for (const heading of navList.querySelectorAll<HTMLElement>('[data-desktop-settings-nav-heading]')) {
+      let sibling = heading.nextElementSibling;
+      let visible = false;
+      while (sibling && !sibling.hasAttribute('data-desktop-settings-nav-heading')) {
+        if (sibling instanceof HTMLButtonElement && !sibling.hidden) visible = true;
+        sibling = sibling.nextElementSibling;
+      }
+      heading.hidden = !visible;
+    }
+    noResults.hidden = Boolean(navList.querySelector('[data-desktop-settings-nav-item]:not([hidden])'));
+  };
+  search.addEventListener('input', filterNav);
+  search.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') { event.preventDefault(); navList.querySelector<HTMLButtonElement>('button:not([hidden])')?.click(); }
+  });
+  if (reactGrabAvailable) {
+    const feedback = el('div', 'data-desktop-settings-feedback');
+    feedback.setAttribute('data-react-grab-ignore', '');
+    const grab = actionButton('data-desktop-settings-grab', 'Sélectionner un élément', 'connections');
+    const hint = el('small', 'data-desktop-settings-grab-hint', 'React Grab · ⌘/Ctrl + ⇧ + G');
+    grab.addEventListener('click', () => {
+      grab.disabled = true;
+      void loadReactGrab().then((api) => { api.activate(); hint.textContent = 'Sélectionnez un élément, puis collez-le dans le chat.'; })
+        .catch(() => { hint.textContent = 'Chargement impossible. Réessayez.'; }).finally(() => { grab.disabled = false; });
+    });
+    feedback.append(grab, hint); nav.append(feedback);
+  }
   const main = el('main', 'data-desktop-settings-main');
   const close = el('button', 'data-desktop-settings-close', '×');
   close.type = 'button';
@@ -292,9 +338,19 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
     ++panelGeneration;
     main.querySelector('[data-desktop-settings-content]')?.remove();
     const content = el('div', 'data-desktop-settings-content');
-    if (panel === 'connections' && client) {
+    const panelSource = panel === 'emojis' ? 'custom-emoji-settings.ts' : panel === 'connections' ? 'mcp-settings.ts' : panel === 'ai' ? 'ai-settings.ts' : panel === 'members' ? 'cloud/workspace-settings.ts' : 'settings.ts';
+    content.dataset.settingsSource = `desktop/src/${panelSource}`;
+    nav.dataset.settingsSource = 'desktop/src/settings.ts';
+    if (panel === 'connections') {
+      content.append(el('h1', 'data-desktop-settings-title', 'Connexions'), el('p', 'data-desktop-settings-intro', 'Gérez vos comptes et connectez vos outils à Blok.'));
+      const accounts = el('section', 'data-desktop-connections-accounts');
+      const labels = el('div', 'data-desktop-settings-row-labels');
+      labels.append(el('strong', 'data-desktop-settings-row-title', 'Comptes et espaces'), el('span', 'data-desktop-settings-row-help', 'Ouvrez un autre espace ou connectez-vous avec une autre adresse.'));
+      const manage = actionButton('data-desktop-settings-copy', client ? 'Gérer les comptes' : 'Se connecter', 'profile');
+      manage.addEventListener('click', () => { closeSettings(); emitCloud('account'); });
+      accounts.append(labels, manage); content.append(accounts);
       main.append(content);
-      mountMcpSettings(content, client);
+      if (client) mountMcpSettings(content, client, {embedded: true});
       return;
     }
     if (panel === 'emojis') {
@@ -408,12 +464,16 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   membersTab.addEventListener('click', () => { if (admin) showPanel('members'); });
   const openSettings = (panel: SettingsPanel): void => {
     closeMenu();
+    search.value = ''; filterNav();
     showPanel(panel);
     switcher.focus();
     overlay.hidden = false;
     modal = openModalDialog({
       content: overlay, surface: dialog, label: 'Paramètres', initialFocus: () => dialog,
-      onDismiss: () => closeSettings(),
+      onDismiss: (reason) => {
+        if (reason === 'escape' && document.activeElement === search && search.value) { search.value = ''; filterNav(); return; }
+        closeSettings();
+      },
       onClose: () => { overlay.hidden = true; ++panelGeneration; choices.splice(0).forEach((choice) => choice.destroy()); members?.destroy(); members = null; modal = null; },
     });
   };

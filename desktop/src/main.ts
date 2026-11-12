@@ -6,7 +6,9 @@ import { nativeSessionAdapter } from './native-session';
 import { applyAppearance, readAppearance } from './settings';
 import { CloudClient, mountCloudGateway } from './cloud';
 
-if (import.meta.env.DEV) void import('react-grab');
+import {loadReactGrab, reactGrabAvailable} from './react-grab';
+
+if (reactGrabAvailable) void loadReactGrab().catch(() => { /* Settings lets the user retry loading. */ });
 
 const root = document.querySelector('#app');
 const native = '__TAURI_INTERNALS__' in window;

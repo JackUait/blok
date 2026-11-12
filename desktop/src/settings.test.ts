@@ -153,3 +153,36 @@ describe('workspace menu hierarchy',()=>{
     expect(document.querySelector('details [data-desktop-settings-path]')).not.toBeNull();
   });
 });
+
+describe('settings discovery', () => {
+  it('finds connections by MCP and opens account sign-in from a local workspace', () => {
+    const footer = createDesktopFooter(() => undefined); document.body.append(footer);
+    footer.querySelector<HTMLButtonElement>('[data-desktop-switcher]')!.click();
+    [...footer.querySelectorAll<HTMLButtonElement>('[role=menuitem]')].find(node => node.textContent === 'Paramètres')!.click();
+    const search = document.querySelector<HTMLInputElement>('[data-desktop-settings-search]')!;
+    search.value = 'MCP'; search.dispatchEvent(new Event('input'));
+    const visible = [...document.querySelectorAll<HTMLButtonElement>('[data-desktop-settings-nav-item]')].filter(node => !node.hidden);
+    expect(visible.map(node => node.textContent)).toEqual(['Connexions']);
+    search.dispatchEvent(new KeyboardEvent('keydown', {key:'Enter'}));
+    expect(document.querySelector('[data-desktop-settings-title]')?.textContent).toBe('Connexions');
+    const connect = vi.fn(); footer.addEventListener('blok:desktop-connect-cloud', connect);
+    [...document.querySelectorAll<HTMLButtonElement>('[data-desktop-connections-accounts] button')].find(node => node.textContent === 'Se connecter')!.click();
+    expect(connect).toHaveBeenCalledOnce();
+  });
+  it('clears a search with Escape without closing settings and resets it on reopen', () => {
+    const footer = createDesktopFooter(() => undefined); document.body.append(footer);
+    footer.querySelector<HTMLButtonElement>('[data-desktop-switcher]')!.click();
+    const open = [...footer.querySelectorAll<HTMLButtonElement>('[role=menuitem]')].find(node => node.textContent === 'Paramètres')!;
+    open.click();
+    const search = document.querySelector<HTMLInputElement>('[data-desktop-settings-search]')!;
+    search.value = 'introuvable'; search.dispatchEvent(new Event('input'));
+    expect(document.querySelector<HTMLElement>('[data-desktop-settings-no-results]')!.hidden).toBe(false);
+    search.focus();
+    search.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape',bubbles:true}));
+    expect(search.value).toBe('');
+    expect(document.querySelector<HTMLElement>('[data-desktop-settings-overlay]')!.hidden).toBe(false);
+    document.querySelector<HTMLButtonElement>('[data-desktop-settings-close]')!.click();
+    open.click();
+    expect(document.querySelector<HTMLElement>('[data-desktop-settings-no-results]')!.hidden).toBe(true);
+  });
+});

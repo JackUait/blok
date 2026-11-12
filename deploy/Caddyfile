@@ -9,6 +9,8 @@
   handle {
     root * /srv
     try_files {path} /index.html
+    @html path /index.html
+    header @html Cache-Control "no-cache"
     file_server
   }
   header {

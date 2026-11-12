@@ -13,7 +13,8 @@ RUN npm install --global corepack@0.35.0 && corepack enable && yarn install --im
 COPY desktop/package.json desktop/package-lock.json desktop/.npmrc desktop/
 RUN npm ci --prefix desktop
 COPY . .
-RUN npm run build --prefix desktop
+ARG VITE_REACT_GRAB=false
+RUN VITE_REACT_GRAB=$VITE_REACT_GRAB npm run build --prefix desktop
 
 FROM --platform=$BUILDPLATFORM golang:1.27.4-alpine AS service-build
 ARG TARGETOS

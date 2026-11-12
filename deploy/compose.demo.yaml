@@ -53,6 +53,8 @@ services:
       context: ..
       dockerfile: deploy/Dockerfile
       target: web
+      args:
+        VITE_REACT_GRAB: "true"
     restart: unless-stopped
     environment:
       DOMAIN: ':80'

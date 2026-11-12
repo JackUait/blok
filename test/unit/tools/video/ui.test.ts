@@ -156,7 +156,7 @@ describe('renderVideo with stale variants', () => {
 
 describe('renderErrorState', () => {
   const base = {
-    message: 'Upload failed',
+    title: 'Upload failed',
     replace: { label: 'Replace', onReplace: (): void => {} },
   };
 
@@ -169,20 +169,36 @@ describe('renderErrorState', () => {
     expect(replace?.textContent).toBe('Replace');
   });
 
-  it('announces the message politely and hides the static from screen readers', () => {
+  it('announces the message politely and hides the picture from screen readers', () => {
     const el = renderErrorState(base);
     const message = el.querySelector('[data-role="video-error-message"]');
     expect(message?.textContent).toBe('Upload failed');
-    expect(message?.getAttribute('role')).toBe('status');
+    expect(message?.closest('[role="status"]')).not.toBeNull();
     const screen = el.querySelector('[data-role="video-error-screen"]');
     expect(screen?.getAttribute('aria-hidden')).toBe('true');
     expect(screen?.contains(message ?? null)).toBe(false);
   });
 
-  it('draws the tear as colour bars inside the static', () => {
+  it('draws the picture on one canvas inside the screen', () => {
     const el = renderErrorState(base);
-    const bars = el.querySelectorAll('[data-role="video-error-screen"] .blok-video-error-state__tear span');
-    expect(bars.length).toBe(7);
+    const screen = el.querySelector('[data-role="video-error-screen"]');
+    expect(screen?.querySelectorAll('canvas')).toHaveLength(1);
+    expect(screen?.children).toHaveLength(1);
+  });
+
+  it('reads the detail out together with the title, as a second line', () => {
+    const el = renderErrorState({ ...base, detail: 'Check your connection and try again.' });
+    const detail = el.querySelector('[data-role="video-error-detail"]');
+    const title = el.querySelector('[data-role="video-error-message"]');
+
+    expect(detail?.textContent).toBe('Check your connection and try again.');
+    expect(detail?.closest('[role="status"]')).toBe(title?.closest('[role="status"]'));
+    expect(title?.compareDocumentPosition(detail ?? title)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it('draws no second line without a detail', () => {
+    expect(renderErrorState(base).querySelector('[data-role="video-error-detail"]')).toBeNull();
+    expect(renderErrorState({ ...base, detail: '' }).querySelector('[data-role="video-error-detail"]')).toBeNull();
   });
 
   it('replaces the video when Replace is pressed', () => {
@@ -193,7 +209,7 @@ describe('renderErrorState', () => {
   });
 
   it('offers no Replace unless asked', () => {
-    const el = renderErrorState({ message: 'Upload failed' });
+    const el = renderErrorState({ title: 'Upload failed' });
     expect(el.querySelector('[data-action="replace"]')).toBeNull();
   });
 

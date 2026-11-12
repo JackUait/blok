@@ -46,7 +46,8 @@ import { produceVideoVariant } from '../../components/media-variants/video-varia
 import { renderCaptionRow, renderErrorState, renderVideo } from './ui';
 import { attachControls, type ControlsHandle } from './controls';
 import { Uploader, VideoUploadError, type UploadResult } from './uploader';
-import { uploadErrorMessage } from '../../components/utils/upload-error-message';
+import { parseTooLargeDetail, uploadErrorMessage } from '../../components/utils/upload-error-message';
+import { formatBytes } from '../../components/utils/format-bytes';
 import { resolveUploadError } from '../../components/utils/media-upload-error';
 import { pickDisplayMaxSize } from '../../components/utils/max-size';
 import { safeDownloadHref } from '../../components/utils/sanitize-url';
@@ -98,7 +99,7 @@ export class VideoTool implements BlockTool {
   private state: ToolState;
   private uploadingEl: UploadingStateElement | null = null;
   private lastFileName: string | null = null;
-  private errorMessage: string | null = null;
+  private errorText: { title: string; detail?: string } | null = null;
   private lastSource: { kind: 'file'; file: File } | { kind: 'url'; url: string } | null = null;
   private resizeDetach: (() => void)[] = [];
   private controlsHandle: ControlsHandle | null = null;
@@ -636,25 +637,58 @@ export class VideoTool implements BlockTool {
       fileName: result.fileName ?? this.lastFileName ?? this.data.fileName,
       mimeType: mimeType || this.data.mimeType,
     };
-    this.errorMessage = null;
+    this.errorText = null;
     this.state = 'RENDERED';
     this.renderState();
   }
 
   private applyError(err: unknown, source: { file?: File; url?: string }): void {
     const own = err instanceof VideoUploadError ? err : null;
+    const message = this.uploadErrorText(own);
     const outcome = resolveUploadError({
       tool: 'video',
       error: own,
       cause: err,
-      message: this.uploadErrorText(own),
+      message,
       source,
       onUploadError: this.config.onUploadError,
     });
 
-    this.errorMessage = outcome.kind === 'message' ? outcome.message : null;
+    this.errorText = outcome.kind === 'message' ? this.errorLines(own, message, outcome.message) : null;
     this.state = outcome.kind === 'message' ? 'ERROR' : 'EMPTY';
     this.renderState();
+  }
+
+  /**
+   * The error card's two lines. `uploadErrorText` is the same failure as one
+   * sentence, which is what `onUploadError` receives.
+   */
+  private errorLines(err: VideoUploadError | null, own: string, shown: string): { title: string; detail?: string } {
+    const i18n = this.api.i18n;
+    const title = tr(i18n, 'tools.video.errorUploadFailed', 'Upload failed');
+
+    if (shown !== own) return { title, detail: shown };
+
+    if (err?.code === 'NOT_MEDIA_URL') {
+      return { title: tr(i18n, 'tools.video.errorNotMediaUrlTitle', 'This link isn’t a video file'), detail: own };
+    }
+
+    const sizes = err?.code === 'FILE_TOO_LARGE' ? parseTooLargeDetail(err.detail) : null;
+
+    if (sizes) {
+      return {
+        title: tr(i18n, 'tools.video.errorFileTooLargeTitle', 'Video is too large'),
+        detail: tr(i18n, 'tools.video.errorFileTooLargeDetail', '{size} exceeds the {max} limit.', {
+          size: formatBytes(sizes.size),
+          max: formatBytes(sizes.max),
+        }),
+      };
+    }
+
+    // Our own refusals (wrong type, bad link) are not the network's fault.
+    return err
+      ? { title }
+      : { title, detail: tr(i18n, 'tools.video.errorUploadFailedDetail', 'Check your connection and try again.') };
   }
 
   private uploadErrorText(err: VideoUploadError | null): string {
@@ -682,7 +716,10 @@ export class VideoTool implements BlockTool {
    * stay recoverable rather than silently losing its content.
    */
   private applyMediaError(): void {
-    this.errorMessage = tr(this.api.i18n, 'tools.video.errorUnplayable', 'This video can\'t be played');
+    this.errorText = {
+      title: tr(this.api.i18n, 'tools.video.errorUnplayable', 'This video can\'t be played'),
+      detail: tr(this.api.i18n, 'tools.video.errorUnplayableDetail', 'The file may be damaged, or in a format this browser can’t play.'),
+    };
     this.state = 'ERROR';
     this.renderState();
   }
@@ -761,7 +798,8 @@ export class VideoTool implements BlockTool {
     // Viewers cannot replace the source — offering either button would only dead-end.
     const canUpload = !this.readOnly && this.config.sources !== 'url';
     this.root.appendChild(renderErrorState({
-      message: this.errorMessage ?? tr(this.api.i18n, 'tools.video.errorUploadFailed', 'Upload failed'),
+      title: this.errorText?.title ?? tr(this.api.i18n, 'tools.video.errorUploadFailed', 'Upload failed'),
+      ...(this.errorText?.detail ? { detail: this.errorText.detail } : {}),
       width: this.data.width,
       ...(this.readOnly
         ? {}

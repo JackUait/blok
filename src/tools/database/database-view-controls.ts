@@ -1111,6 +1111,17 @@ export class DatabaseViewControls {
       pill.addEventListener('click', () => this.openSortPanel(pill));
       pills.push(pill, chipPart('data-blok-database-chip-divider', {}));
     }
+    // notion-motion.md Round 18 §2 (r18-adv-bar.raw): the advanced chip goes before the simple ones.
+    const rules = countFilterRules(view.filterTree);
+
+    if (rules > 0) {
+      const label = this.t('filterRuleCount', { count: rules });
+      const pill = filterChip('database-advanced-pill', label, { glyph: IconFilter, name: label });
+
+      pill.setAttribute('data-active', '');
+      pill.addEventListener('click', () => this.openSettings(pill, 'filter'));
+      pills.push(pill);
+    }
     for (const filter of withEntryIds(view.filters)) {
       const property = schema.find((p) => p.id === filter.propertyId);
 
@@ -1126,17 +1137,6 @@ export class DatabaseViewControls {
       pill.addEventListener('click', () => this.openPill(filter.id, pill));
       pills.push(pill);
     }
-    const rules = countFilterRules(view.filterTree);
-
-    if (rules > 0) {
-      const label = this.t('filterRuleCount', { count: rules });
-      const pill = filterChip('database-advanced-pill', label, { glyph: IconFilter, name: label });
-
-      pill.setAttribute('data-active', '');
-      pill.addEventListener('click', () => this.openSettings(pill, 'filter'));
-      pills.push(pill);
-    }
-
     const personal = this.personal.has(view.id);
 
     if (this.barViewId !== view.id) {

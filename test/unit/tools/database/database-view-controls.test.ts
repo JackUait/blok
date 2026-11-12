@@ -305,6 +305,21 @@ describe('DatabaseViewControls', () => {
     expect(q('database-advanced-pill')).not.toBeNull();
   });
 
+  // notion-motion.md Round 18 §2 (r18-adv-bar.raw): the advanced chip goes first, before the simple chips.
+  it('puts the advanced filter chip before the simple filter chips', () => {
+    const { controls, saved } = setup();
+
+    saved.view = {
+      ...saved.view,
+      filters: [{ id: 'f1', propertyId: 'title', operator: 'contains', value: 'a' }],
+      filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'a', propertyId: 'num', operator: 'is_empty', value: null }] },
+    };
+    controls.refresh();
+    const order = [...document.querySelectorAll('[data-blok-database-filter-pills] > [data-blok-database-filter-pill]')].map((el) => el.getAttribute('data-blok-testid'));
+
+    expect(order).toEqual(['database-advanced-pill', 'database-filter-pill-f1']);
+  });
+
   it('gives "+ Sort" no advanced footer', () => {
     setup();
     click('database-toolbar-sort');

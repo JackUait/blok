@@ -2377,7 +2377,7 @@ export class DatabaseTool implements BlockTool {
     return (element.textContent ?? '').trim() === '' ? '' : element.innerHTML;
   }
 
-  /** Draws the field after the title row. `withCaret`: a new empty line the person asked for. */
+  /** Draws the field before the title row. `withCaret`: a new empty line the person asked for. */
   private showDescription(withCaret: boolean): void {
     const titleRow = this.titleRowElement;
 
@@ -2413,7 +2413,8 @@ export class DatabaseTool implements BlockTool {
         this.removeDescription();
       }
     });
-    titleRow.after(element);
+    // Before the title row, which on a full page holds only the add-view "+": Notion puts the description right under the page title, above the views.
+    titleRow.before(element);
     this.descriptionElement = element;
     if (withCaret) {
       element.focus();

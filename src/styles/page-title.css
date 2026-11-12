@@ -265,8 +265,11 @@
   pointer-events: none;
 }
 
-/* Cover picker. Notion: 540 wide, radius 10, fades in over 200ms. */
-[data-blok-page-cover-picker] {
+/* Cover picker. Notion: 540 wide, radius 10, fades in over 200ms. The second
+   selector outranks main.css's [data-blok-top-layer][popover] reset, which sets
+   width, max sizes and overflow back to auto. */
+[data-blok-page-cover-picker],
+[data-blok-page-cover-picker][data-blok-top-layer][popover] {
   box-sizing: border-box;
   z-index: 10000;
   inline-size: 540px;

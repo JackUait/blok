@@ -38,13 +38,13 @@ describe('DatabaseTool — description on a full-page database', () => {
     document.body.innerHTML = '';
   });
 
-  it('draws a saved description right after the title row, before the tabs', () => {
+  it('draws a saved description first, above the title row and the tabs', () => {
     const { el } = open({ fullPage: true, description: 'Sprint <b>goals</b>' });
     const description = field(el);
 
     expect(description?.innerHTML).toBe('Sprint <b>goals</b>');
     expect(description?.getAttribute('contenteditable')).toBe('true');
-    expect(description?.previousElementSibling?.hasAttribute('data-blok-database-title-row')).toBe(true);
+    expect(description?.nextElementSibling?.hasAttribute('data-blok-database-title-row')).toBe(true);
     expect(description?.getAttribute('data-placeholder')).toBe('tools.database.descriptionPlaceholder');
   });
 

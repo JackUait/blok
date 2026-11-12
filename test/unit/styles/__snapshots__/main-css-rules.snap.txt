@@ -26312,7 +26312,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   pointer-events: none;
 }
 
-[data-blok-page-cover-picker] {
+[data-blok-page-cover-picker], [data-blok-page-cover-picker][data-blok-top-layer][popover] {
   box-sizing: border-box;
   z-index: 10000;
   inline-size: 540px;

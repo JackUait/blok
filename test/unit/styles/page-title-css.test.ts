@@ -50,8 +50,8 @@ describe('page title css', () => {
     });
 
     it('opens the picker 540 wide with a 200ms fade', () => {
-      expect(rule('[data-blok-page-cover-picker]')).toMatch(/inline-size:\s*540px/);
-      expect(rule('[data-blok-page-cover-picker]')).toMatch(/animation:\s*blok-page-cover-picker-in 200ms ease/);
+      expect(css).toMatch(/\[data-blok-page-cover-picker\]\[data-blok-top-layer\]\[popover\]\s*\{[^}]*inline-size:\s*540px/);
+      expect(rule('[data-blok-page-cover-picker][data-blok-top-layer][popover]')).toMatch(/animation:\s*blok-page-cover-picker-in 200ms ease/);
     });
   });
 });

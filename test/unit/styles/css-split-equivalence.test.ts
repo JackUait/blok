@@ -752,7 +752,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // header buttons beside Add icon, and the gallery, shadow and hint tokens on the strip
     // and picker (kept out of colors.css, which view.css copies under its own budget);
     // and a full-page database's description line in database.css.
-    const PAGE_COVER_BYTES = 8_981;
+    const PAGE_COVER_BYTES = 9_181;
     const AGENT_MARKER_BYTES = 633;
     // find.css: the field's grid-column pin and its comment (read-only find field gap).
     const FIND_FIELD_COLUMN_BYTES = 140;

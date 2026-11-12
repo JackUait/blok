@@ -717,6 +717,49 @@ describe('DatabaseViewControls', () => {
     });
   });
 
+  // notion-motion.md Round 18 §2 (r18-filter-more.raw): the rule ⋯ is a 240-wide flyout beside its button.
+  describe('filter rule ⋯ flyout', () => {
+    const open = (): ReturnType<typeof setup> => {
+      const env = setup();
+
+      env.saved.view = { ...env.saved.view, filters: [{ id: 'f1', propertyId: 'title', operator: 'contains', value: 'a' }] };
+      env.controls.refresh();
+      click('database-filter-pill-f1');
+      click('database-filter-more');
+
+      return env;
+    };
+
+    it('opens beside the rule popover, 240 wide, with Delete filter and Add to advanced filter', () => {
+      open();
+      const flyout = q('database-filter-more-menu');
+
+      expect(flyout?.style.width).toBe('240px');
+      expect(q('database-filter-popover')?.contains(flyout)).toBe(false);
+      expect(q('database-filter-popover')?.querySelector('[data-blok-testid="database-filter-operator"]')).not.toBeNull();
+      expect(flyout?.querySelector('[data-blok-testid="database-filter-delete"]')).not.toBeNull();
+      expect(flyout?.querySelector('[data-blok-testid="database-filter-to-advanced"]')).not.toBeNull();
+    });
+
+    it('Delete filter removes the rule and closes the flyout and the popover', () => {
+      const { controls, saved } = open();
+
+      click('database-filter-delete');
+
+      expect(controls.effective(saved.view).filters).toEqual([]);
+      expect(q('database-filter-more-menu')).toBeNull();
+      expect(q('database-filter-popover')).toBeNull();
+    });
+
+    it('Escape closes only the flyout', () => {
+      open();
+      document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(q('database-filter-more-menu')).toBeNull();
+      expect(q('database-filter-popover')).not.toBeNull();
+    });
+  });
+
   // notion-motion.md Round 13 (r13-filter-ops-rollup.png, -rollup.raw, -rollup-op.raw): "Rollup any ⌄ contains ⌄",
   // the first menu Any / None / Every, the second the URL list, and a text field.
   describe('rollup of the Name chip', () => {

@@ -27,6 +27,9 @@ type Filter = FilterConfig & { id: string };
 
 /** notion-motion.md Round 18 §2 (r18-filter-op-open.raw): rows 182x28 in a 190-wide list. */
 const OPERATOR_FLYOUT_WIDTH = 190;
+/** notion-motion.md Round 18 §2 (r18-filter-more.raw): the rule ⋯ list. */
+const MORE_FLYOUT_WIDTH = 240;
+const MORE_FLYOUT_GAP = 2;
 
 const idList = (value: FilterConfig['value']): string[] => {
   if (Array.isArray(value)) return value.filter((id): id is string => typeof id === 'string');
@@ -207,7 +210,7 @@ class FilterChipPages {
     more.setAttribute('data-blok-testid', 'database-filter-more');
     more.setAttribute('aria-label', this.t('tableMoreActions'));
     more.innerHTML = IconDotsHorizontal;
-    more.addEventListener('click', () => panel.push(this.moreMenu()));
+    more.addEventListener('click', () => this.moreFlyout(more, panel));
     header.append(lead, more);
 
     return header;
@@ -267,36 +270,35 @@ class FilterChipPages {
     })));
   }
 
-  private moreMenu(): PanelPage {
-    return {
-      build: (panel) => [
-        panelRow({
-          label: this.t('filterDelete'),
-          testId: 'database-filter-delete',
-          icon: IconTrash,
-          onClick: () => {
-            this.write((filters) => filters.filter((f) => f.id !== this.filterId));
-            panel.close();
-          },
+  /** notion-motion.md Round 18 §2 (r18-filter-more.raw): 240x65, left on the button's right + 2, top on its top. */
+  private moreFlyout(button: HTMLElement, panel: DatabasePanel): void {
+    openFlyout(button, panel, 'database-filter-more-menu', MORE_FLYOUT_WIDTH, (pick) => [
+      panelRow({
+        label: this.t('filterDelete'),
+        testId: 'database-filter-delete',
+        icon: IconTrash,
+        onClick: () => pick(() => {
+          this.write((filters) => filters.filter((f) => f.id !== this.filterId));
+          panel.close();
         }),
-        panelRow({
-          label: this.t('filterAddToAdvanced'),
-          testId: 'database-filter-to-advanced',
-          onClick: () => {
-            const filter = this.current();
+      }),
+      panelRow({
+        label: this.t('filterAddToAdvanced'),
+        testId: 'database-filter-to-advanced',
+        onClick: () => pick(() => {
+          const filter = this.current();
 
-            if (filter === undefined) return;
-            const tree = this.ctx.view().filterTree ?? emptyFilterTree();
+          if (filter === undefined) return;
+          const tree = this.ctx.view().filterTree ?? emptyFilterTree();
 
-            this.ctx.updatePersonal({
-              filters: withEntryIds(this.ctx.view().filters).filter((f) => f.id !== this.filterId),
-              filterTree: addFilterRule(tree, tree.id, { id: nanoid(), propertyId: filter.propertyId, operator: filter.operator, value: filter.value }),
-            });
-            panel.close();
-          },
+          this.ctx.updatePersonal({
+            filters: withEntryIds(this.ctx.view().filters).filter((f) => f.id !== this.filterId),
+            filterTree: addFilterRule(tree, tree.id, { id: nanoid(), propertyId: filter.propertyId, operator: filter.operator, value: filter.value }),
+          });
+          panel.close();
         }),
-      ],
-    };
+      }),
+    ], { beside: MORE_FLYOUT_GAP });
   }
 
   private valueControls(filter: Filter, property: PropertyDefinition): HTMLElement[] {

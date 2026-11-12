@@ -25,7 +25,14 @@ const DIRECTION_FLYOUT_WIDTH = 180;
  * Round 18 §2). The rule panel stays open under it and closes it when it
  * closes. A write redraws the rule panel, so focus goes back by test id.
  */
-export const openFlyout = (anchor: HTMLElement, host: DatabasePanel, testId: string, width: number, rows: (pick: (write: () => void) => void) => HTMLElement[]): DatabasePanel => {
+export const openFlyout = (
+  anchor: HTMLElement,
+  host: DatabasePanel,
+  testId: string,
+  width: number,
+  rows: (pick: (write: () => void) => void) => HTMLElement[],
+  place: { beside?: number } = {}
+): DatabasePanel => {
   const release = host.hold();
   const focusKey = anchor.getAttribute('data-blok-testid') ?? '';
   const flyout: DatabasePanel = new DatabasePanel({
@@ -43,6 +50,7 @@ export const openFlyout = (anchor: HTMLElement, host: DatabasePanel, testId: str
     width,
     backLabel: '',
     gap: 0,
+    ...(place.beside !== undefined ? { beside: place.beside } : {}),
     onClose: (escape) => {
       release();
       if (escape) anchor.focus();

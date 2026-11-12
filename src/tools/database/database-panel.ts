@@ -34,6 +34,8 @@ export interface DatabasePanelOptions {
   closeLabel?: string;
   /** Space under the anchor; the popover's usual gap when unset. */
   gap?: number;
+  /** Opens beside the anchor, this far right of it, top level with it. */
+  beside?: number;
   /** `escape` is true when Escape closed the first page. */
   onClose?: (escape: boolean) => void;
 }
@@ -83,6 +85,7 @@ export class DatabasePanel {
       panel: true,
       ...(dock ?? {}),
       ...(options.gap !== undefined ? { gap: options.gap } : {}),
+      ...(options.beside !== undefined ? { beside: options.beside } : {}),
       onEscape: () => this.back(true),
       onDismiss: () => this.finish(),
     });

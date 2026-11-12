@@ -22,6 +22,8 @@ export interface CellPopoverOptions {
   panel?: boolean;
   /** Space under the anchor, PANEL_GAP when unset. */
   gap?: number;
+  /** Opens beside the anchor instead: this far right of it, top level with it. */
+  beside?: number;
   /** Escape pressed while open. The owner decides: close, or step back a panel. */
   onEscape: () => void;
   /** The popover closed itself: an outside press, or focus moved away. */
@@ -80,6 +82,18 @@ const fitPlacement = (anchor: HTMLElement, gap = PANEL_GAP): Pick<PopoverParams,
     cover: true,
     viewportMargin: COVER_VIEWPORT_MARGIN,
     position: new DOMRect(rect.x, rect.bottom + gap, rect.width, 0),
+    positionContext: anchor,
+  };
+};
+
+/** Beside the anchor, top level with it, through the same clamp (notion-motion.md Round 18 §2, the rule ⋯ menu). */
+const besidePlacement = (anchor: HTMLElement, gap: number): Pick<PopoverParams, 'cover' | 'viewportMargin'> & { position: DOMRect; positionContext: HTMLElement } => {
+  const rect = anchor.getBoundingClientRect();
+
+  return {
+    cover: true,
+    viewportMargin: COVER_VIEWPORT_MARGIN,
+    position: new DOMRect(rect.right + gap, rect.top, 0, 0),
     positionContext: anchor,
   };
 };
@@ -148,7 +162,8 @@ export class CellPopover {
       class: [CELL_EDITOR_CLASS, ...(panel === true ? [PANEL_CLASS] : []), ...(docked !== undefined && docked !== false ? [DOCKED_CLASS] : []), ...(docked === 'page' ? [DOCKED_PAGE_CLASS] : []), ...(cover === 'value' ? [VALUE_EDITOR_CLASS] : []), ...(cover === true ? [TABLE_EDITOR_CLASS] : [])].join(' '),
       ...(this.options.minWidth !== undefined ? { minWidth: this.options.minWidth } : {}),
     };
-    const coverOrFit = cover === true || cover === 'value' ? coverPlacement(anchor, cover === 'value', cover === true && this.options.below === true) : fitPlacement(anchor, this.options.gap);
+    const fit = this.options.beside !== undefined ? besidePlacement(anchor, this.options.beside) : fitPlacement(anchor, this.options.gap);
+    const coverOrFit = cover === true || cover === 'value' ? coverPlacement(anchor, cover === 'value', cover === true && this.options.below === true) : fit;
     const docks = {
       page: () => dockPlacement(anchor, (this.options.dockRow ?? anchor).getBoundingClientRect().bottom, 0),
       card: () => dockPlacement(anchor, anchor.getBoundingClientRect().top, DOCK_VIEWPORT_MARGIN),

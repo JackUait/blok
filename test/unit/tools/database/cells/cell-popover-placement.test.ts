@@ -60,4 +60,18 @@ describe('CellPopover placement', () => {
     expect(params.position?.width).toBe(28);
     popover.close();
   });
+
+  // notion-motion.md Round 18 §2 (r18-filter-more.raw): the rule ⋯ menu's left is the button's right + 2, its top the button's top.
+  it('opens beside its button when asked: left on the button\'s right plus the gap, top on the button\'s top', () => {
+    const anchor = anchorAt(new DOMRect(727, 313, 20, 20));
+    const popover = new CellPopover({ anchor, content: document.createElement('div'), beside: 2, onEscape: vi.fn(), onDismiss: vi.fn() });
+
+    popover.show();
+
+    const params = seen[0];
+
+    expect(params.position?.x).toBe(749);
+    expect(params.position?.y).toBe(313);
+    popover.close();
+  });
 });

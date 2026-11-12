@@ -170,6 +170,26 @@ test.describe('annotation (Hint) inline tool', () => {
     expect(await height()).toBeCloseTo(lineHeight, 0);
   });
 
+  test('the card starts narrow and widens with its text, up to 340px', async ({ page }) => {
+    await createBlok(page, [ PLAIN ], { withTool: true });
+    await selectText(page, page.locator(PARAGRAPH_SELECTOR).first(), 'kitchen layout');
+    await page.locator(HINT_BUTTON_SELECTOR).click();
+
+    const text = page.getByTestId('inline-annotation-text');
+    const card = page.getByTestId('inline-annotation');
+    // The card scales while it opens, so read the layout width, not the painted box.
+    const width = (): Promise<number> => card.evaluate(el => el.clientWidth);
+
+    await expect(text).toBeFocused();
+    expect(await width()).toBe(240);
+
+    await text.fill('The step that limits the whole chain, from the first order to the last delivery.');
+    expect(await width()).toBe(340);
+
+    await text.fill('Short');
+    expect(await width()).toBe(240);
+  });
+
   test('a hint shows a hand cursor while the editor is editable', async ({ page }) => {
     await createBlok(page, [ WITH_HINT ]);
 

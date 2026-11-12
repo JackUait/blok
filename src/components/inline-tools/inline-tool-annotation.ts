@@ -20,6 +20,8 @@ const ANNOTATION_MARK: MarkSpec<string> = {
 
 interface AnnotationNodes {
   wrapper: HTMLElement;
+  /** Invisible copy of the text; it gives the card its width. */
+  sizer: HTMLElement;
   text: HTMLTextAreaElement;
   subtitle: HTMLInputElement;
   remove: HTMLButtonElement;
@@ -249,6 +251,8 @@ export class AnnotationInlineTool implements InlineTool {
 
   /** The text field grows with its content instead of scrolling. */
   private fitText(): void {
+    // Width first: the height depends on where the lines wrap.
+    this.nodes.sizer.textContent = this.nodes.text.value === '' ? this.nodes.text.placeholder : this.nodes.text.value;
     this.nodes.text.style.height = 'auto';
     this.nodes.text.style.height = `${this.nodes.text.scrollHeight}px`;
   }
@@ -276,8 +280,10 @@ export class AnnotationInlineTool implements InlineTool {
   private createUi(): AnnotationNodes {
     const wrapper = document.createElement('div');
 
-    wrapper.className = 'flex flex-col w-[340px] max-w-full';
+    // As wide as the text, between 240 and 340px.
+    wrapper.className = 'flex flex-col w-max min-w-[240px] max-w-[min(340px,100%)]';
     wrapper.setAttribute('data-blok-annotation-tool', '');
+    wrapper.setAttribute('data-blok-testid', 'inline-annotation');
 
     const body = document.createElement('div');
 
@@ -288,7 +294,7 @@ export class AnnotationInlineTool implements InlineTool {
     text.rows = 1;
     text.placeholder = this.i18n.t('tools.annotation.placeholder');
     text.setAttribute('aria-label', this.i18n.t('toolNames.annotation'));
-    text.className = 'block w-full m-0 p-0 resize-none overflow-hidden bg-transparent border-0 outline-hidden appearance-none font-[inherit] text-[15px] leading-[22px] text-text-primary placeholder:text-gray-text';
+    text.className = 'block w-0 min-w-full m-0 p-0 resize-none overflow-hidden bg-transparent border-0 outline-hidden appearance-none font-[inherit] text-[15px] leading-[22px] text-text-primary placeholder:text-gray-text';
     text.setAttribute('data-blok-testid', 'inline-annotation-text');
     text.addEventListener('input', () => this.fitText());
     text.addEventListener('keydown', (event: KeyboardEvent) => {
@@ -318,9 +324,17 @@ export class AnnotationInlineTool implements InlineTool {
     const subtitleRow = document.createElement('div');
 
     subtitleRow.className = 'flex items-center gap-2 text-gray-text before:content-[""] before:shrink-0 before:w-[14px] before:h-px before:bg-current';
-    subtitle.classList.add('flex-1', 'min-w-0');
+    // w-0: a native input is ~20 characters wide and would set the card's width.
+    subtitle.classList.remove('w-full');
+    subtitle.classList.add('flex-1', 'w-0', 'min-w-0');
+
+    const sizer = document.createElement('div');
+
+    // Zero height, real width. MUST keep the text field's font size, or the two wrap differently.
+    sizer.className = 'h-0 overflow-hidden invisible whitespace-pre-wrap break-words text-[15px] leading-[22px]';
+    sizer.setAttribute('aria-hidden', 'true');
     subtitleRow.append(subtitle);
-    body.append(text, subtitleRow);
+    body.append(sizer, text, subtitleRow);
 
     const footer = document.createElement('div');
 
@@ -358,6 +372,6 @@ export class AnnotationInlineTool implements InlineTool {
     footer.append(remove, spacer, done);
     wrapper.append(body, footer);
 
-    return { wrapper, text, subtitle, remove };
+    return { wrapper, sizer, text, subtitle, remove };
   }
 }

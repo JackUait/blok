@@ -380,6 +380,8 @@
   --blok-radius-dialog: var(--blok-radius-12);
   --blok-radius-surface: var(--blok-radius-10);
   --blok-radius-block: var(--blok-radius-10);
+  /* the video frame: a touch rounder than other media, to suit the floating island */
+  --blok-radius-player: var(--blok-radius-16);
   --blok-radius-field: var(--blok-radius-8);
   --blok-radius-control-lg: var(--blok-radius-8);
   --blok-radius-control: var(--blok-radius-6);

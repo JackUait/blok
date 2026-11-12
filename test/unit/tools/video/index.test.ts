@@ -289,6 +289,10 @@ describe('VideoTool — statics', () => {
     expect(VideoTool.isReadOnlySupported).toBe(true);
   });
 
+  it('the selection tint follows the player frame radius', () => {
+    expect(VideoTool.frameRadius).toBe('var(--blok-radius-player)');
+  });
+
   it('pasteConfig accepts video/* files and a URL pattern', () => {
     const { pasteConfig } = VideoTool;
     if (pasteConfig === false) throw new Error('pasteConfig is false');

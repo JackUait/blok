@@ -1916,6 +1916,7 @@
   text-underline-offset: 4px;
   border-radius: var(--blok-radius-mark);
   transition: background-color 120ms ease-out;
+  cursor: pointer;
 }
 
 [@layer base] :where([data-blok-interface]) span[data-blok-annotation]:hover {

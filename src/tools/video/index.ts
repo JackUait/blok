@@ -184,7 +184,7 @@ export class VideoTool implements BlockTool {
   }
 
   public static get frameRadius(): string {
-    return 'var(--blok-radius-block)';
+    return 'var(--blok-radius-player)';
   }
 
   public static get assetKind(): AssetKind {

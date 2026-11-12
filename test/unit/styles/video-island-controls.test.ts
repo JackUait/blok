@@ -64,4 +64,28 @@ describe('video island controls', () => {
     ['--blok-video-island-bg', '--blok-video-island-play-bg', '--blok-video-island-play-fg', '--blok-video-island-shadow', '--blok-ease-spring-island']
       .forEach((token) => expect(colors).toMatch(new RegExp(`${token}:`)));
   });
+
+  it('keeps the island out of a resting player: only hover or keyboard focus shows it', () => {
+    const shown = css.match(/([^{}]+)\{\s*opacity: 1;\s*transform: none;\s*\}/g) ?? [];
+    const barShowRules = shown.filter((rule) => rule.includes('.blok-video-controls__bar'));
+
+    expect(barShowRules.length).toBeGreaterThan(0);
+    barShowRules.forEach((rule) => expect(rule).not.toContain('data-playing'));
+  });
+
+  it('plays the play/pause burst without a rippling ring', () => {
+    expect(css).not.toContain('.blok-video-controls__burst::after');
+    expect(css).not.toMatch(/@keyframes blok-video-burst-ring\b/);
+  });
+
+  it('hides the island while the theater card morphs, with no fade to catch it mid-shrink', () => {
+    const rule = block(`${T} .blok-video-inner[data-theater-morphing="true"] .blok-video-controls__bar`);
+
+    expect(rule).toContain('opacity: 0');
+    expect(rule).toContain('transition: none');
+  });
+
+  it('rounds the player frame with its own radius role', () => {
+    expect(colors).toMatch(/--blok-radius-player: var\(--blok-radius-16\);/);
+  });
 });

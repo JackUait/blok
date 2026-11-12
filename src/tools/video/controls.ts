@@ -1094,8 +1094,11 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   // to that main-thread jank, which is what made the opening read laggy/stepped.
   const canAnimate = typeof figure.animate === 'function';
   const flip = { anim: null as Animation | null };
+  // The bar is laid out at the card's final size and scaled with it, so mid-morph
+  // the island reads as a squashed strip. CSS hides it while this mark is up.
   const cancelFlip = (): void => {
     if (flip.anim) { flip.anim.cancel(); flip.anim = null; }
+    figure.removeAttribute('data-theater-morphing');
   };
   const collapsed = (from: DOMRect, to: DOMRect): string =>
     `translate(${to.left - from.left}px, ${to.top - from.top}px) scale(${to.width / from.width}, ${to.height / from.height})`;
@@ -1113,8 +1116,12 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
       { duration: opts.duration, easing: opts.easing, fill: opts.fill ?? 'none' },
     );
     flip.anim = anim;
+    figure.setAttribute('data-theater-morphing', 'true');
     anim.onfinish = (): void => {
-      if (flip.anim === anim) flip.anim = null;
+      if (flip.anim === anim) {
+        flip.anim = null;
+        figure.removeAttribute('data-theater-morphing');
+      }
       // Run teardown FIRST (it swaps the figure back to its inline flow position),
       // THEN cancel so the fill:'forwards' transform is dropped in the same frame —
       // no flash to centre, and no collapsed transform left stuck on the figure

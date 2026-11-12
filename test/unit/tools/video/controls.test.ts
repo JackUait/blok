@@ -1675,6 +1675,23 @@ describe('video controls — theater entrance/exit (FLIP via Web Animations)', (
     expect(h.figure.style.transition).toBe('');
   });
 
+  it('marks the figure while the theater card morphs, so the island hides instead of shrinking with it', () => {
+    enter();
+    expect(h.figure.getAttribute('data-theater-morphing')).toBe('true');
+    finishMorph();
+    expect(h.figure.hasAttribute('data-theater-morphing')).toBe(false);
+    q(h.controls, '[data-action="theater"]').click();
+    expect(h.figure.getAttribute('data-theater-morphing')).toBe('true');
+    finishMorph();
+    expect(h.figure.hasAttribute('data-theater-morphing')).toBe(false);
+  });
+
+  it('drops the morphing mark when the player is destroyed mid-morph', () => {
+    enter();
+    h.destroy();
+    expect(h.figure.hasAttribute('data-theater-morphing')).toBe(false);
+  });
+
   it('reverse-morphs on exit: shrinks centre→inline, holds, then tears down on finish', () => {
     enter();
     finishMorph(); // settle the entrance

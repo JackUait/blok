@@ -933,9 +933,9 @@ describe('video controls — burst and seek-flash animations', () => {
   });
 
   it('keeps the burst alive when a different animation on it ends', () => {
-    // The radiating ring finishes separately and must not cut the disc short.
+    // The glyph's own pop bubbles up from the svg and must not cut the disc short.
     h.video.click();
-    animationEnd(burst(), 'blok-video-burst-ring');
+    animationEnd(burst(), 'blok-video-burst-glyph');
     expect(burst().classList.contains('is-active')).toBe(true);
   });
 

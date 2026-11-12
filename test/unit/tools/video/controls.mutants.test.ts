@@ -1138,6 +1138,23 @@ describe('video controls — settings menu behaviour', () => {
     expect(menu().style.bottom).toBe('28px');
   });
 
+  it('clears the whole control bar, not just the gear inside it', () => {
+    stubRects(500, 380, 600, 400);
+    // The bar's padding puts its top edge 6px above the gear's.
+    setProp(q(h.figure, '.blok-video-controls__bar'), 'getBoundingClientRect', () => rect({ top: 374, bottom: 392, height: 18 }));
+    gear().click();
+
+    expect(menu().style.bottom).toBe('34px');
+  });
+
+  it('falls back to the gear when the bar has no box', () => {
+    stubRects(500, 380, 600, 400);
+    setProp(q(h.figure, '.blok-video-controls__bar'), 'getBoundingClientRect', () => rect({ top: 0, height: 0 }));
+    gear().click();
+
+    expect(menu().style.bottom).toBe('28px');
+  });
+
   it('anchors the card to the gear\'s left edge in RTL, growing toward the inline start', () => {
     h.figure.setAttribute('dir', 'rtl');
     setProp(gear(), 'getBoundingClientRect', () => rect({ left: 40, right: 70, top: 380 }));

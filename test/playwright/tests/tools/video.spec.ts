@@ -199,6 +199,17 @@ test('the speed submenu: drag the bead, land on a peg, use a preset, step, and g
   await expect(menu).toHaveCSS('border-radius', '14px');
   await expect(menu.getByRole('button', { name: 'Playback speed Normal', exact: true })).toHaveCSS('border-radius', '9px');
 
+  // The card sits clear of the whole control bar: 8px above it, and the bar's
+  // edge is itself 6px above the gear.
+  await menu.evaluate(async (element) => {
+    await Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished.catch(() => undefined)));
+  });
+  const cardBox = await menu.boundingBox();
+  const gearBox = await block.locator('[data-action="gear"]').boundingBox();
+
+  if (!cardBox || !gearBox) throw new Error('the card or the gear has no box');
+  expect(gearBox.y - (cardBox.y + cardBox.height)).toBeGreaterThanOrEqual(13);
+
   // A longer translated label keeps to one line: the card widens, the row stays one row tall.
   const speedRow = menu.locator('[data-action="open-speed"]');
   const rowHeight = (): Promise<number> => speedRow.evaluate((element) => (element as HTMLElement).offsetHeight);

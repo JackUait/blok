@@ -958,7 +958,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   const positionMenu = (): void => {
     const g = gear.getBoundingClientRect();
     const f = figure.getBoundingClientRect();
-    // The card's inline-end edge tracks the gear's; bottom sits MENU_GAP above the gear,
+    // The card's inline-end edge tracks the gear's; bottom sits MENU_GAP above the bar,
     // so the card grows upward — out of the player when there isn't room below the bar.
     if (getElementDirection(figure) === 'rtl') {
       menu.style.right = '';
@@ -967,7 +967,10 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
       menu.style.left = '';
       menu.style.right = `${f.right - g.right}px`;
     }
-    menu.style.bottom = `${f.bottom - g.top + MENU_GAP}px`;
+    // Clear the bar, not just the gear: the bar's padding puts its edge above the gear's.
+    const b = bar.getBoundingClientRect();
+    const top = b.height ? Math.min(g.top, b.top) : g.top;
+    menu.style.bottom = `${f.bottom - top + MENU_GAP}px`;
   };
 
   const onMenuOutside = (event: MouseEvent): void => {

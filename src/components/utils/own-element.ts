@@ -5,6 +5,8 @@ const BLOCK_HOLDER_SELECTOR = '[data-blok-element]';
 const TABLE_CELL_BLOCKS_SELECTOR = '[data-blok-table-cell-blocks]';
 /** Tool UI that is always in the DOM next to the user's content: a toggle's arrow and body placeholder, a list marker, a checkbox, a code block's header and line numbers. */
 const CHROME_SELECTOR = `[${DATA_ATTR.chrome}]`;
+/** The block toolbar moves into the hovered block's holder. Kept in a copy, it strips the block's trailing space. */
+const TOOLBAR_SELECTOR = `[${DATA_ATTR.toolbar}]`;
 
 /**
  * Whether `element` belongs to the block whose holder is `holder`, not to a
@@ -60,7 +62,7 @@ export const findAllOwn = (holder: Element, selector: string): Element[] =>
 export const ownClone = (root: HTMLElement): HTMLElement => {
   const clone = root.cloneNode(true) as HTMLElement;
 
-  clone.querySelectorAll(CHROME_SELECTOR).forEach((chrome) => chrome.remove());
+  clone.querySelectorAll(`${CHROME_SELECTOR}, ${TOOLBAR_SELECTOR}`).forEach((chrome) => chrome.remove());
   clone.querySelectorAll(BLOCK_HOLDER_SELECTOR).forEach((nested) => {
     const cell = nested.closest(TABLE_CELL_BLOCKS_SELECTOR);
 

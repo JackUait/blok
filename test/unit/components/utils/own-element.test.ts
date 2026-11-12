@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { findAllOwn, findOwn } from '../../../../src/components/utils/own-element';
+import { findAllOwn, findOwn, ownClone } from '../../../../src/components/utils/own-element';
 
 const makeHolder = (): HTMLElement => {
   const holder = document.createElement('div');
@@ -109,5 +109,28 @@ describe('findAllOwn', () => {
     callout.append(second);
 
     expect(findAllOwn(callout, '[contenteditable="true"]')).toEqual([first, second]);
+  });
+});
+
+describe('ownClone', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('leaves out the block toolbar that sits in the hovered holder', () => {
+    const holder = makeHolder();
+    const content = document.createElement('div');
+    const toolbar = document.createElement('div');
+
+    content.innerHTML = '<div contenteditable="true">See <b>it</b> </div>';
+    toolbar.setAttribute('data-blok-toolbar', '');
+    toolbar.innerHTML = '<div role="button" aria-label="Insert block"></div>';
+    holder.append(content, toolbar);
+
+    expect(ownClone(holder).innerHTML).toBe('<div><div contenteditable="true">See <b>it</b> </div></div>');
   });
 });

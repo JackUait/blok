@@ -4081,6 +4081,13 @@ interface OutputData {
           "The page icon: `{ type: 'emoji', value }` or `{ type: 'image', url }`. It is absent when there is none. In the loose input shape, `null` means no icon.",
       },
       {
+        option: "cover",
+        type: "PageCover (optional)",
+        default: "—",
+        description:
+          "The page cover: `{ type: 'image', url, position? }` or `{ type: 'gallery', id, position? }`. It is absent when there is none. Blok saves it even when `pageTitle.cover` is off. In the loose input shape, `null` means no cover. A Blok version older than the cover drops it when it saves.",
+      },
+      {
         option: "blocks",
         type: "OutputBlockData[]",
         default: "—",

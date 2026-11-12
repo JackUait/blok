@@ -1238,7 +1238,21 @@ export class DragController extends Module {
       this.a11y.announceDropComplete(movedBlock, sourceBlocks, isMultiBlockDrag);
     }
 
+    this.dropCaret();
     this.Blok.Toolbar.moveAndOpen(sourceBlock);
+  }
+
+  /**
+   * A drop leaves the moved blocks selected with no caret and focus out of the editor, as in Notion (U112).
+   */
+  private dropCaret(): void {
+    const active = document.activeElement;
+
+    window.getSelection()?.removeAllRanges();
+
+    if (active instanceof HTMLElement && this.Blok.UI.nodes.wrapper.contains(active)) {
+      active.blur();
+    }
   }
 
   /**

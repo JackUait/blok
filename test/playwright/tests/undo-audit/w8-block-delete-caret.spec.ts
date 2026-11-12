@@ -434,6 +434,25 @@ test.describe('two drags undo one at a time (U112)', () => {
     await gotoTestPage(page);
   });
 
+  // Notion U112: after each drag the moved block is selected, with no caret, even when it held the caret.
+  test('a drag leaves the moved block selected with no caret, also when it held the caret', async ({ page }) => {
+    await createBlok(page, [P('b1', 'one'), P('b2', 'two'), P('b3', 'three')]);
+    await caretAtEnd(page, 'b1');
+
+    await dragTo(page, 'b3', 'b1', 'top');
+    await expect.poll(() => ids(page)).toEqual(['b3', 'b1', 'b2']);
+    await expect.poll(() => selectedIds(page)).toEqual(['b3']);
+    expect(await hasCaret(page)).toBe(false);
+    await gap(page);
+
+    await editable(page, 'b1').click();
+    await gap(page);
+    await dragTo(page, 'b1', 'b2', 'bottom');
+    await expect.poll(() => ids(page)).toEqual(['b3', 'b2', 'b1']);
+    await expect.poll(() => selectedIds(page)).toEqual(['b1']);
+    expect(await hasCaret(page)).toBe(false);
+  });
+
   // Notion's order: drag 1 puts "three" first, drag 2 moves "one" to the bottom.
   test('drag "three" above "one", drag "one" to the bottom, undo twice, redo twice', async ({ page }) => {
     await createBlok(page, [P('b1', 'one'), P('b2', 'two'), P('b3', 'three')]);

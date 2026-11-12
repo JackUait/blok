@@ -29,7 +29,7 @@ interface AnnotationNodes {
 }
 
 /**
- * Annotation ("Hint") Inline Tool
+ * Annotation ("Note") Inline Tool
  * Attaches a plain-text note, and an optional subtitle, to the selected text.
  * Readers see a dotted underline and a card; that part is core
  * (`annotation-card.ts`), so this tool only writes and edits the mark.
@@ -43,7 +43,7 @@ export class AnnotationInlineTool implements InlineTool {
   /**
    * Title for the Inline Tool
    */
-  public static title = 'Hint';
+  public static title = 'Note';
 
   /**
    * Translation key for i18n

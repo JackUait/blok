@@ -574,10 +574,10 @@ const TOOL_COPY: Record<string, Copy> = {
     h1: 'Equation tool: inline LaTeX math',
   },
   annotation: {
-    title: 'Hint Inline Tool — Notes on a Phrase',
+    title: 'Note Inline Tool — A Remark on a Phrase',
     description:
-      'Attach a note and an optional subtitle to a phrase, show them in a card on hover, and see the mark Blok stores in block text.',
-    h1: 'Hint: a note on a phrase',
+      'Attach a note and an optional caption to a phrase, show them in a card on hover, and see the mark Blok stores in block text.',
+    h1: 'Note: a remark on a phrase',
   },
   clearFormat: {
     title: 'Clear Format Tool — Strip Inline Styling',

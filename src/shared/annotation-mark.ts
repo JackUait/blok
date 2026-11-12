@@ -1,5 +1,5 @@
 /**
- * The inline annotation ("Hint") mark: a phrase that carries a plain-text note
+ * The inline annotation ("Note") mark: a phrase that carries a plain-text note
  * and an optional subtitle. The data layer is core, so a hint survives in an
  * editor that never registered the annotation tool.
  */

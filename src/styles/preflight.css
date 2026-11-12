@@ -134,7 +134,7 @@
     background-color: var(--blok-selection-inline);
   }
 
-  /* An annotated phrase ("Hint"): dotted underline; its card opens on hover or click. */
+  /* An annotated phrase ("Note"): dotted underline; its card opens on hover or click. */
   :where([data-blok-interface]) span[data-blok-annotation] {
     text-decoration: underline dotted var(--blok-text-secondary);
     text-decoration-thickness: 1.5px;

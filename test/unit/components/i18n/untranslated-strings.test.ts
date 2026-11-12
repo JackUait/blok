@@ -255,6 +255,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'notifier.ok',
   ]),
   fr: new Set([
+    // "Note" is the native French noun for a written remark.
+    'toolNames.annotation',
     // "Web" is a dictionary-listed noun; see the ledger's retention row.
     'tools.code.familyWeb',
     // "Suggestions" is the native French plural noun.

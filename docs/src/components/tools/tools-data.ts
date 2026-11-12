@@ -1875,9 +1875,9 @@ const editor = new Blok({
     id: 'annotation',
     exportName: 'Annotation',
     type: 'inline',
-    title: 'Hint',
+    title: 'Note',
     description:
-      'Adds a note to a phrase. A reader sees a dotted underline, and a card with the note opens on hover.\n\nThe writer selects text and presses Hint in the inline toolbar. A small card opens and they type the note. The note is plain text, and line breaks are allowed. Under the note there is an optional subtitle line, quieter than the note, for example who said a quote. There is no keyboard shortcut.\n\nFour things save the note.\n\n- The Done button.\n- Cmd/Ctrl+Enter.\n- Escape.\n- A click elsewhere.\n\nAn empty note removes the hint, and so does the remove button. Clicking an existing hint in an editable editor opens the card to edit it, and the phrase shows a hand cursor.\n\nThe reader card opens half a second after the pointer rests on the phrase. A click pins it. Escape or a click elsewhere closes it. In read-only mode the phrase is focusable, and Enter or Space toggles the card.\n\nThe reader card works in every editor, even one that did not register the tool. Only writing and editing need the tool.\n\nThe tool is opt-in. It is not in `defaultInlineTools` or `allTools`, so register it explicitly under the `annotation` key.\n\nCopying and pasting text between blocks keeps the hint. Find in page and plain-text copy see only the phrase, not the note.\n\nMarkdown export writes each hint as a footnote. The phrase gets a `[^1]` reference, and the note and subtitle go into a `[^1]:` line at the end. Markdown import does not turn footnotes back into hints.',
+      'Adds a note to a phrase. A reader sees a dotted underline, and a card with the note opens on hover.\n\nThe writer selects text and presses Note in the inline toolbar. A small card opens and they type the note. The note is plain text, and line breaks are allowed. Under the note there is an optional caption line, quieter than the note, for example who said a quote. There is no keyboard shortcut.\n\nFour things save the note.\n\n- The Done button.\n- Cmd/Ctrl+Enter.\n- Escape.\n- A click elsewhere.\n\nClearing the text removes the note, and so does the remove button. Clicking an existing note in an editable editor opens the card to edit it, and the phrase shows a hand cursor.\n\nThe reader card opens half a second after the pointer rests on the phrase. A click pins it. Escape or a click elsewhere closes it. In read-only mode the phrase is focusable, and Enter or Space toggles the card.\n\nThe reader card works in every editor, even one that did not register the tool. Only writing and editing need the tool.\n\nThe tool is opt-in. It is not in `defaultInlineTools` or `allTools`, so register it explicitly under the `annotation` key.\n\nCopying and pasting text between blocks keeps the note. Find in page and plain-text copy see only the phrase, not the note.\n\nMarkdown export writes each note as a footnote. The phrase gets a `[^1]` reference, and the text and caption go into a `[^1]:` line at the end. Markdown import does not turn footnotes back into notes.',
     importExample: `import { Annotation } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -1885,7 +1885,7 @@ const editor = new Blok({
         type: 'string',
         default: 'undefined',
         description:
-          'Pre-fills the subtitle line of a new hint. The writer can change or clear it. The config type is `AnnotationConfig`.',
+          'Pre-fills the caption line of a new note. The writer can change or clear it. The config type is `AnnotationConfig`.',
       },
     ],
     saveDataShape: `// A mark on a run of the block's text field. Both values are plain text,
@@ -1920,7 +1920,7 @@ const editor = new Blok({
     // Paragraph is the default block and is not bundled with the core —
     // without it the editor starts with an "unsupported block" stub.
     paragraph: Paragraph,
-    // Hint is opt-in: it is not in defaultInlineTools or allTools.
+    // Note is opt-in: it is not in defaultInlineTools or allTools.
     annotation: {
       class: Annotation,
       config: { defaultSubtitle: 'From the team interview' },

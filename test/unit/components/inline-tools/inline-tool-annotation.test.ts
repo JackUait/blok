@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { IconAnnotation } from '../../../../src/components/icons';
 import { AnnotationInlineTool } from '../../../../src/components/inline-tools/inline-tool-annotation';
+import en from '../../../../src/components/i18n/locales/en.json';
 import { PopoverItemType } from '../../../../src/components/utils/popover';
 import type { PopoverItemHtmlParams } from '../../../../types/utils/popover';
 
@@ -104,9 +105,16 @@ describe('AnnotationInlineTool', () => {
     document.body.innerHTML = '';
   });
 
-  it('is an inline tool named Hint that opens its own menu', () => {
+  it('speaks of a note with a caption, not of a hint with a subtitle', () => {
+    expect(en['toolNames.annotation']).toBe('Note');
+    expect(en['tools.annotation.placeholder']).toBe('Add a note…');
+    expect(en['tools.annotation.subtitle']).toBe('Add a caption…');
+    expect(en['tools.annotation.remove']).toBe('Remove note');
+  });
+
+  it('is an inline tool named Note that opens its own menu', () => {
     expect(AnnotationInlineTool.isInline).toBe(true);
-    expect(AnnotationInlineTool.title).toBe('Hint');
+    expect(AnnotationInlineTool.title).toBe('Note');
     expect(AnnotationInlineTool.titleKey).toBe('annotation');
     expect(AnnotationInlineTool.replacesToolbar).toBe(true);
   });

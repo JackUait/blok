@@ -280,7 +280,7 @@ export const Underline: InlineToolConstructable;
 export const InlineCode: InlineToolConstructable;
 export const Equation: InlineToolConstructable;
 /**
- * The "Hint" inline tool: attaches a plain-text note and an optional subtitle
+ * The "Note" inline tool: attaches a plain-text note and an optional subtitle
  * to a phrase. Opt-in — register it as `annotation`; it is not in
  * `defaultInlineTools`.
  */

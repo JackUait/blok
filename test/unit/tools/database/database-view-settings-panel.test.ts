@@ -1056,6 +1056,24 @@ describe('view settings panel', () => {
     });
   });
 
+  // notion-motion.md Round 18 §2 (r18-settings-filterrow-*.raw): one filter reads as its property's name.
+  describe('Filter row value', () => {
+    const valueOf = (): string | null | undefined =>
+      document.querySelector('[data-blok-testid="database-settings-filter"] [data-blok-database-panel-value]')?.textContent;
+
+    it('names the filtered property when there is one filter', () => {
+      harness({ filters: [{ id: 'f1', propertyId: 'num', operator: 'equals', value: 5 }] }).open();
+
+      expect(valueOf()).toBe('Amount');
+    });
+
+    it('keeps the count with two filters', () => {
+      harness({ filters: [{ id: 'f1', propertyId: 'num', operator: 'equals', value: 5 }, { id: 'f2', propertyId: 'due', operator: 'is_empty', value: null }] }).open();
+
+      expect(valueOf()).toBe('2');
+    });
+  });
+
   // notion-motion.md Round 17 §5: "Add sort" goes away once every property is sorted.
   it('hides "Add sort" when every property is sorted', () => {
     const h = harness({ sorts: [{ id: 's1', propertyId: 'title', direction: 'asc' }] });

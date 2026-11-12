@@ -298,6 +298,14 @@ const sortValue = (sorts: SortConfig[], schema: PropertyDefinition[]): { value?:
   return property === undefined ? countValue(sorts.length) : nameValue(property);
 };
 
+/** notion-motion.md Round 18 §2: one filter reads as its property's name; two or more, or an advanced rule, give the count. */
+const filterValue = (view: DatabaseViewConfig, schema: PropertyDefinition[]): { value?: string } => {
+  const rules = countFilterRules(view.filterTree);
+  const property = view.filters.length === 1 && rules === 0 ? schema.find((p) => p.id === view.filters[0]?.propertyId) : undefined;
+
+  return property === undefined ? countValue(view.filters.length + rules) : nameValue(property);
+};
+
 const capital = (word: string): string => `${word.charAt(0).toUpperCase()}${word.slice(1)}`;
 
 /** Builds the pages. One instance per open panel; every page reads `ctx` afresh on refresh. */
@@ -349,7 +357,7 @@ export class ViewSettingsPages {
           label: this.t('settingsFilter'),
           testId: 'database-settings-filter',
             icon: IconFilter,
-          ...countValue(view.filters.length + countFilterRules(view.filterTree)),
+          ...filterValue(view, this.ctx.schema()),
           opensPage: true,
           onClick: () => panel.push(this.filters()),
         });

@@ -49,6 +49,18 @@ interface UploadContext {
   variant?: { mimeType: string; role: 'original' | 'variant' };
 }
 
+/** What Blok tells the host when it asks whether to upload a pasted URL. */
+interface UrlUploadDecisionContext {
+  /** Kind of asset the URL points to. */
+  kind: AssetKind;
+  /** Name of the block tool that asks, when known. */
+  tool?: string;
+  /** How the URL came in: an `<img>` in pasted HTML, or a bare pasted URL. */
+  source: 'html' | 'url';
+  /** The pasted `<img>` carried Blok's copy mark. Any page can forge it, so it is a hint only. */
+  copiedFromBlok: boolean;
+}
+
 /**
  * Describes a single deletion request.
  *
@@ -71,6 +83,8 @@ interface BlokUploader {
   uploadByFile?(file: File, ctx: UploadContext): Promise<UploadedAsset>;
   /** Re-host an asset the user supplied by URL, and return the stored URL. */
   uploadByUrl?(url: string, ctx: UploadContext): Promise<UploadedAsset>;
+  /** Whether a pasted image URL is uploaded (`true`) or kept as it is (`false`). */
+  shouldUploadUrl?(url: string, ctx: UrlUploadDecisionContext): boolean | Promise<boolean>;
   /** Delete a stored asset by the URL this uploader returned for it. */
   delete?(url: string, ctx: DeleteContext): Promise<void>;
 }

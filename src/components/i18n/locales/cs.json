@@ -966,8 +966,6 @@
   "tools.audio.coverUrlPlaceholder": "Vložte URL obrázku…",
   "tools.audio.coverUrlAria": "URL obrázku",
   "tools.audio.coverSourceAria": "Zdroj obalu",
-  "tools.audio.coverWellTitle": "Dejte kapce obrázek",
-  "tools.audio.coverWellHint": "Přetáhněte na ni obrázek, nebo vyberte soubor.",
   "tools.audio.coverWellLink": "nebo vložte odkaz",
   "a11y.allBlocksSelected": "Vybrány všechny bloky. Celkem: {count}",
   "a11y.blocksSelected": "Počet vybraných bloků: {count}",

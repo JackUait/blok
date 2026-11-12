@@ -984,8 +984,6 @@
   "tools.audio.coverUrlPlaceholder": "प्रतिमा URL पेस्ट करा…",
   "tools.audio.coverUrlAria": "प्रतिमा URL",
   "tools.audio.coverSourceAria": "कव्हर प्रतिमेचा स्रोत",
-  "tools.audio.coverWellTitle": "थेंबाला एक प्रतिमा द्या",
-  "tools.audio.coverWellHint": "त्यावर प्रतिमा ड्रॉप करा, किंवा एक निवडा.",
   "tools.audio.coverWellLink": "किंवा दुवा पेस्ट करा",
   "a11y.back": "मागे",
   "notifier.dismiss": "बंद करा",

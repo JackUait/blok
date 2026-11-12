@@ -964,8 +964,6 @@
   "tools.audio.coverUrlPlaceholder": "ჩასვით სურათის URL…",
   "tools.audio.coverUrlAria": "სურათის URL",
   "tools.audio.coverSourceAria": "გარეკნის წყარო",
-  "tools.audio.coverWellTitle": "მიეცით წვეთს სურათი",
-  "tools.audio.coverWellHint": "ჩააგდეთ სურათი მასზე ან აირჩიეთ ფაილი.",
   "tools.audio.coverWellLink": "ან ჩასვით ბმული",
   "a11y.allBlocksSelected": "არჩეულია ყველა ბლოკი. სულ: {count}.",
   "a11y.blocksSelected": "არჩეულია {count} ბლოკი",

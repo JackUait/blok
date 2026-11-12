@@ -984,8 +984,6 @@
   "tools.audio.coverUrlPlaceholder": "ວາງ URL ຮູບ…",
   "tools.audio.coverUrlAria": "URL ຮູບ",
   "tools.audio.coverSourceAria": "ແຫຼ່ງຮູບປົກ",
-  "tools.audio.coverWellTitle": "ໃສ່ຮູບໃຫ້ຢົດໝຶກ",
-  "tools.audio.coverWellHint": "ປ່ອຍຮູບໃສ່ມັນ ຫຼື ເລືອກຮູບ.",
   "tools.audio.coverWellLink": "ຫຼື ວາງລິ້ງ",
   "a11y.back": "ກັບຄືນ",
   "notifier.dismiss": "ປິດ",

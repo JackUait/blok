@@ -964,8 +964,6 @@
   "tools.audio.coverUrlPlaceholder": "Bild-URL einfügen…",
   "tools.audio.coverUrlAria": "Bild-URL",
   "tools.audio.coverSourceAria": "Quelle des Coverbilds",
-  "tools.audio.coverWellTitle": "Geben Sie dem Tropfen ein Bild",
-  "tools.audio.coverWellHint": "Legen Sie ein Bild darauf ab oder wählen Sie eines aus.",
   "tools.audio.coverWellLink": "oder Link einfügen",
   "a11y.allBlocksSelected": "Alle Blöcke ausgewählt. Insgesamt: {count}",
   "a11y.blocksSelected": "{count} Blöcke ausgewählt",

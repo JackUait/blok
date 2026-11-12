@@ -964,8 +964,6 @@
   "tools.audio.coverUrlPlaceholder": "رەسىم URL سىنى چاپلاڭ…",
   "tools.audio.coverUrlAria": "رەسىم URL",
   "tools.audio.coverSourceAria": "مۇقاۋا مەنبەسى",
-  "tools.audio.coverWellTitle": "تامچىغا رەسىم بېرىڭ",
-  "tools.audio.coverWellHint": "ئۈستىگە رەسىم تاشلاڭ ياكى بىرنى تاللاڭ.",
   "tools.audio.coverWellLink": "ياكى ئۇلانما چاپلاڭ",
   "a11y.allBlocksSelected": "بارلىق بۆلەكلەر تاللاندى، {count} بۆلەك",
   "a11y.blocksSelected": "{count} بۆلەك تاللاندى",

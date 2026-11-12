@@ -964,8 +964,6 @@
   "tools.audio.coverUrlPlaceholder": "የምስል URL ለጥፍ…",
   "tools.audio.coverUrlAria": "የምስል URL",
   "tools.audio.coverSourceAria": "የሽፋን ምንጭ",
-  "tools.audio.coverWellTitle": "ለጠብታው ምስል ይስጡት",
-  "tools.audio.coverWellHint": "ምስል በላዩ ላይ ይጣሉ ወይም አንዱን ይምረጡ።",
   "tools.audio.coverWellLink": "ወይም አገናኝ ለጥፍ",
   "a11y.allBlocksSelected": "ሁሉም ብሎኮች ተመርጠዋል። ጠቅላላ፦ {count}",
   "a11y.blocksSelected": "{count} ብሎኮች ተመርጠዋል",

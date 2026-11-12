@@ -962,8 +962,6 @@
   "tools.audio.coverUrlPlaceholder": "छवि URL चिपकाएं…",
   "tools.audio.coverUrlAria": "छवि URL",
   "tools.audio.coverSourceAria": "कवर छवि का स्रोत",
-  "tools.audio.coverWellTitle": "बूंद को एक छवि दें",
-  "tools.audio.coverWellHint": "इस पर छवि छोड़ें, या कोई चुनें।",
   "tools.audio.coverWellLink": "या लिंक चिपकाएं",
   "toolNames.video": "वीडियो",
   "toolNames.audio": "ऑडियो",

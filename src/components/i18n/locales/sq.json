@@ -964,8 +964,6 @@
   "tools.audio.coverUrlPlaceholder": "Ngjit një URL imazhi…",
   "tools.audio.coverUrlAria": "URL e imazhit",
   "tools.audio.coverSourceAria": "Burimi i imazhit",
-  "tools.audio.coverWellTitle": "Jepi pikës një imazh",
-  "tools.audio.coverWellHint": "Lësho një imazh mbi të, ose zgjidh një.",
   "tools.audio.coverWellLink": "ose ngjit një lidhje",
   "a11y.allBlocksSelected": "Të gjitha blloqet janë zgjedhur. Gjithsej: {count}",
   "a11y.blocksSelected": "Blloqe të zgjedhura: {count}",

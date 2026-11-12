@@ -964,8 +964,6 @@
   "tools.audio.coverUrlPlaceholder": "Şəkil URL-ini yapışdırın…",
   "tools.audio.coverUrlAria": "Şəkil URL-i",
   "tools.audio.coverSourceAria": "Üz qabığının mənbəyi",
-  "tools.audio.coverWellTitle": "Damlaya şəkil verin",
-  "tools.audio.coverWellHint": "Şəkli üzərinə dartıb buraxın və ya birini seçin.",
   "tools.audio.coverWellLink": "və ya keçid yapışdırın",
   "a11y.allBlocksSelected": "Bütün bloklar seçildi. Cəmi: {count}.",
   "a11y.blocksSelected": "{count} blok seçildi",

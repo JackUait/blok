@@ -964,8 +964,6 @@
   "tools.audio.coverUrlPlaceholder": "បិទភ្ជាប់ URL រូបភាព…",
   "tools.audio.coverUrlAria": "URL រូបភាព",
   "tools.audio.coverSourceAria": "ប្រភពរូបភាព",
-  "tools.audio.coverWellTitle": "ផ្តល់រូបភាពឱ្យតំណក់",
-  "tools.audio.coverWellHint": "ទម្លាក់រូបភាពលើវា ឬជ្រើសមួយ។",
   "tools.audio.coverWellLink": "ឬបិទភ្ជាប់តំណ",
   "a11y.allBlocksSelected": "បានជ្រើសរើសប្លុកទាំងអស់។ សរុប៖ {count}",
   "a11y.blocksSelected": "បានជ្រើសរើសប្លុក {count}",

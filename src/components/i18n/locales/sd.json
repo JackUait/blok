@@ -964,8 +964,6 @@
   "tools.audio.coverUrlPlaceholder": "تصوير جو URL پيسٽ ڪريو…",
   "tools.audio.coverUrlAria": "تصوير جو URL",
   "tools.audio.coverSourceAria": "تصوير جو ذريعو",
-  "tools.audio.coverWellTitle": "ڦڙي کي هڪ تصوير ڏيو",
-  "tools.audio.coverWellHint": "ان تي تصوير ڇڏيو، يا هڪ چونڊيو.",
   "tools.audio.coverWellLink": "يا لنڪ پيسٽ ڪريو",
   "a11y.allBlocksSelected": "سڀ بلاڪ چونڊيا ويا، {count} بلاڪ",
   "a11y.blocksSelected": "{count} بلاڪ چونڊيا ويا",

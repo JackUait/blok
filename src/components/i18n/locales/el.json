@@ -964,8 +964,6 @@
   "tools.audio.coverUrlPlaceholder": "Επικολλήστε URL εικόνας…",
   "tools.audio.coverUrlAria": "URL εικόνας",
   "tools.audio.coverSourceAria": "Πηγή εξωφύλλου",
-  "tools.audio.coverWellTitle": "Δώστε στη σταγόνα μια εικόνα",
-  "tools.audio.coverWellHint": "Σύρετε μια εικόνα πάνω της ή επιλέξτε μία.",
   "tools.audio.coverWellLink": "ή επικολλήστε σύνδεσμο",
   "a11y.allBlocksSelected": "Επιλέχθηκαν όλα τα μπλοκ. Σύνολο: {count}",
   "a11y.blocksSelected": "Επιλεγμένα μπλοκ: {count}",

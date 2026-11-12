@@ -984,8 +984,6 @@
   "tools.audio.coverUrlPlaceholder": "तस्बिरको URL टाँस्नुहोस्…",
   "tools.audio.coverUrlAria": "तस्बिरको URL",
   "tools.audio.coverSourceAria": "कभरको स्रोत",
-  "tools.audio.coverWellTitle": "थोपालाई एउटा तस्बिर दिनुहोस्",
-  "tools.audio.coverWellHint": "यसमाथि तस्बिर छोड्नुहोस्, वा एउटा छान्नुहोस्।",
   "tools.audio.coverWellLink": "वा लिङ्क टाँस्नुहोस्",
   "a11y.back": "पछाडि",
   "notifier.dismiss": "बन्द गर्नुहोस्",

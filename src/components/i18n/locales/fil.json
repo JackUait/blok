@@ -962,8 +962,6 @@
   "tools.audio.coverUrlPlaceholder": "I-paste ang URL ng larawan…",
   "tools.audio.coverUrlAria": "URL ng larawan",
   "tools.audio.coverSourceAria": "Pinagmulan ng larawan",
-  "tools.audio.coverWellTitle": "Bigyan ng larawan ang patak",
-  "tools.audio.coverWellHint": "Ilagay ang larawan sa ibabaw nito, o pumili ng isa.",
   "tools.audio.coverWellLink": "o mag-paste ng link",
   "toolNames.video": "Video",
   "toolNames.audio": "Audio",

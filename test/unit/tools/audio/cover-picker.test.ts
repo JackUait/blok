@@ -370,9 +370,27 @@ describe('openCoverPicker — ink well surface', () => {
     expect(dialog.getAttribute('data-surface')).toBe('ink-well');
     expect(dialog.querySelector('[data-role="ink-well"]')).not.toBeNull();
     expect(dialog.querySelector('[data-tab]')).toBeNull();
-    expect(dialog.querySelector('[data-role="ink-well-title"]')?.textContent).toBe('Give the drop a picture');
-    expect(dialog.querySelector('[data-role="ink-well-hint"]')?.textContent).toBe('Drop an image on it, or pick one.');
+    // Plain words: the heading says what the picker does, not what the drop wants.
+    expect(dialog.querySelector('[data-role="ink-well-title"]')?.textContent).toBe('Add a cover');
+    expect(dialog.querySelector('[data-role="ink-well-hint"]')?.textContent).toBe('or drop an image here');
     expect(dialog.querySelector<HTMLInputElement>('[data-role="ink-well-link"]')?.placeholder).toBe('or paste a link');
+    handle.close();
+  });
+
+  it('says Change cover when the track already has one', () => {
+    const { dialog, handle } = open({ current: 'https://cdn/old.png' });
+
+    expect(dialog.querySelector('[data-role="ink-well-title"]')?.textContent).toBe('Change cover');
+    handle.close();
+  });
+
+  it('puts the drop hint right under the button it continues', () => {
+    const { dialog, handle } = open();
+    const roles = Array.from(dialog.querySelectorAll('[data-role="ink-well-side"] > [data-role]'))
+      .map((el) => el.getAttribute('data-role'))
+      .filter((role) => role !== 'ink-well-file');
+
+    expect(roles).toEqual(['ink-well-title', 'ink-well-choose', 'ink-well-hint', 'ink-well-link-form', 'ink-well-error']);
     handle.close();
   });
 
@@ -380,8 +398,8 @@ describe('openCoverPicker — ink well surface', () => {
     const i18n = { t: (key: string) => `[${key}]`, has: () => true } as unknown as NonNullable<Parameters<typeof openCoverPicker>[0]['i18n']>;
     const { dialog, handle } = open({ i18n });
 
-    expect(dialog.querySelector('[data-role="ink-well-title"]')?.textContent).toBe('[tools.audio.coverWellTitle]');
-    expect(dialog.querySelector('[data-role="ink-well-hint"]')?.textContent).toBe('[tools.audio.coverWellHint]');
+    expect(dialog.querySelector('[data-role="ink-well-title"]')?.textContent).toBe('[tools.audio.coverAdd]');
+    expect(dialog.querySelector('[data-role="ink-well-hint"]')?.textContent).toBe('[tools.audio.coverOrDropHere]');
     expect(dialog.querySelector<HTMLInputElement>('[data-role="ink-well-link"]')?.placeholder).toBe('[tools.audio.coverWellLink]');
     handle.close();
   });

@@ -964,8 +964,6 @@
   "tools.audio.coverUrlPlaceholder": "Lim inn en bilde-URL…",
   "tools.audio.coverUrlAria": "Bilde-URL",
   "tools.audio.coverSourceAria": "Kilde til omslagsbilde",
-  "tools.audio.coverWellTitle": "Gi dråpen et bilde",
-  "tools.audio.coverWellHint": "Slipp et bilde på den, eller velg et.",
   "tools.audio.coverWellLink": "eller lim inn en lenke",
   "a11y.allBlocksSelected": "Alle blokker er valgt. Totalt: {count}",
   "a11y.blocksSelected": "{count} blokker valgt",

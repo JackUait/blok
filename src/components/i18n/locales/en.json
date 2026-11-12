@@ -804,8 +804,6 @@
   "tools.audio.coverUrlPlaceholder": "Paste an image URL…",
   "tools.audio.coverUrlAria": "Image URL",
   "tools.audio.coverSourceAria": "Cover source",
-  "tools.audio.coverWellTitle": "Give the drop a picture",
-  "tools.audio.coverWellHint": "Drop an image on it, or pick one.",
   "tools.audio.coverWellLink": "or paste a link",
   "tools.database.titlePlaceholder": "New database",
   "tools.database.renameView": "Rename",

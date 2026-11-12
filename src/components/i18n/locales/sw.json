@@ -964,8 +964,6 @@
   "tools.audio.coverUrlPlaceholder": "Bandika URL ya picha…",
   "tools.audio.coverUrlAria": "URL ya picha",
   "tools.audio.coverSourceAria": "Chanzo cha jalada",
-  "tools.audio.coverWellTitle": "Lipe tone picha",
-  "tools.audio.coverWellHint": "Dondosha picha juu yake, au chagua moja.",
   "tools.audio.coverWellLink": "au bandika kiungo",
   "a11y.allBlocksSelected": "Vizuizi vyote vimechaguliwa. Jumla: {count}",
   "a11y.blocksSelected": "Idadi ya vizuizi vilivyochaguliwa: {count}",

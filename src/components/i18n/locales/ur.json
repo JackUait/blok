@@ -964,8 +964,6 @@
   "tools.audio.coverUrlPlaceholder": "تصویر کا URL پیسٹ کریں…",
   "tools.audio.coverUrlAria": "تصویر کا URL",
   "tools.audio.coverSourceAria": "کور کا ذریعہ",
-  "tools.audio.coverWellTitle": "قطرے کو ایک تصویر دیں",
-  "tools.audio.coverWellHint": "اس پر تصویر ڈراپ کریں، یا کوئی منتخب کریں۔",
   "tools.audio.coverWellLink": "یا لنک پیسٹ کریں",
   "a11y.allBlocksSelected": "تمام بلاکس منتخب ہو گئے۔ کل: {count}",
   "a11y.blocksSelected": "{count} بلاکس منتخب ہوئے",

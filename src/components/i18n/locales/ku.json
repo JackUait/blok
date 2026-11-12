@@ -984,8 +984,6 @@
   "tools.audio.coverUrlPlaceholder": "URLی وێنە بلکێنە…",
   "tools.audio.coverUrlAria": "URLی وێنە",
   "tools.audio.coverSourceAria": "سەرچاوەی بەرگ",
-  "tools.audio.coverWellTitle": "وێنەیەک بدە بە دڵۆپەکە",
-  "tools.audio.coverWellHint": "وێنەیەکی لەسەر دابنێ، یان دانەیەک هەڵبژێرە.",
   "tools.audio.coverWellLink": "یان بەستەرێک بلکێنە",
   "a11y.back": "گەڕانەوە",
   "notifier.dismiss": "داخستن",

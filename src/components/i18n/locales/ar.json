@@ -968,8 +968,6 @@
   "tools.audio.coverUrlPlaceholder": "الصق رابط صورة…",
   "tools.audio.coverUrlAria": "رابط الصورة",
   "tools.audio.coverSourceAria": "مصدر صورة الغلاف",
-  "tools.audio.coverWellTitle": "امنح القطرة صورة",
-  "tools.audio.coverWellHint": "أفلت صورة عليها، أو اختر واحدة.",
   "tools.audio.coverWellLink": "أو الصق رابطًا",
   "a11y.allBlocksSelected": "تم تحديد كل الكتل. العدد الإجمالي: {count}",
   "a11y.blocksSelected": "عدد الكتل المحددة: {count}",

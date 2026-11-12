@@ -984,8 +984,6 @@
   "tools.audio.coverUrlPlaceholder": "Tampal URL imej…",
   "tools.audio.coverUrlAria": "URL imej",
   "tools.audio.coverSourceAria": "Sumber imej kulit album",
-  "tools.audio.coverWellTitle": "Beri titisan ini imej",
-  "tools.audio.coverWellHint": "Lepaskan imej padanya, atau pilih satu.",
   "tools.audio.coverWellLink": "atau tampal pautan",
   "a11y.back": "Kembali",
   "notifier.dismiss": "Ketepikan",

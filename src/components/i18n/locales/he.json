@@ -963,8 +963,6 @@
   "tools.audio.coverUrlPlaceholder": "הדבק כתובת תמונה…",
   "tools.audio.coverUrlAria": "כתובת תמונה",
   "tools.audio.coverSourceAria": "מקור העטיפה",
-  "tools.audio.coverWellTitle": "תן לטיפה תמונה",
-  "tools.audio.coverWellHint": "גרור אליה תמונה, או בחר אחת.",
   "tools.audio.coverWellLink": "או הדבק קישור",
   "toolNames.video": "וידאו",
   "toolNames.audio": "שמע",

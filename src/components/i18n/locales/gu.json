@@ -962,8 +962,6 @@
   "tools.audio.coverUrlPlaceholder": "છબીનું URL પેસ્ટ કરો…",
   "tools.audio.coverUrlAria": "છબી URL",
   "tools.audio.coverSourceAria": "કવર છબીનો સ્રોત",
-  "tools.audio.coverWellTitle": "ટીપાને એક છબી આપો",
-  "tools.audio.coverWellHint": "તેના પર છબી ડ્રૉપ કરો, અથવા એક પસંદ કરો.",
   "tools.audio.coverWellLink": "અથવા લિંક પેસ્ટ કરો",
   "toolNames.video": "વિડિઓ",
   "toolNames.audio": "ઓડિઓ",

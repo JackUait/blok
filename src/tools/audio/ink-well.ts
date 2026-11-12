@@ -306,7 +306,8 @@ export function renderInkWell(opts: InkWellOptions): InkWellElement {
   error.hidden = true;
 
   const side = make('div', 'blok-ink-well__side', 'ink-well-side');
-  side.append(title, hint, choose, fileInput, form, error);
+  // The hint continues the button: "Choose file", "or drop an image here".
+  side.append(title, choose, fileInput, hint, form, error);
   root.append(well, side);
 
   const motion = createWellMotion();

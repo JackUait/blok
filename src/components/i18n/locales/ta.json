@@ -964,8 +964,6 @@
   "tools.audio.coverUrlPlaceholder": "பட URL ஐ ஒட்டவும்…",
   "tools.audio.coverUrlAria": "பட URL",
   "tools.audio.coverSourceAria": "அட்டைப்பட மூலம்",
-  "tools.audio.coverWellTitle": "துளிக்கு ஒரு படம் கொடுங்கள்",
-  "tools.audio.coverWellHint": "அதன் மீது படத்தை விடவும், அல்லது ஒன்றைத் தேர்ந்தெடுக்கவும்.",
   "tools.audio.coverWellLink": "அல்லது இணைப்பை ஒட்டவும்",
   "a11y.allBlocksSelected": "அனைத்துத் தொகுதிகளும் தேர்ந்தெடுக்கப்பட்டன. மொத்தம்: {count}",
   "a11y.blocksSelected": "தேர்ந்தெடுக்கப்பட்ட தொகுதிகள்: {count}",

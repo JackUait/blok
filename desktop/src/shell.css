@@ -296,9 +296,10 @@ body[data-blok-theme="light"] [data-desktop-floating-toc] {
 [data-desktop-cover-gallery-head] { display: flex; align-items: center; justify-content: space-between; height: 42px; padding: 0 14px; border-bottom: 1px solid var(--desktop-border); font-size: 13px; }
 [data-desktop-cover-gallery-head] button { border: 0; border-radius: 4px; padding: 5px 8px; background: transparent; color: var(--desktop-muted); font: inherit; cursor: pointer; }
 [data-desktop-cover-gallery-head] button:hover { background: var(--desktop-hover); color: var(--desktop-ink); }
-[data-desktop-cover-gallery-viewport] { position: relative; }
+[data-desktop-cover-content] { height: 350px; overflow-y: auto; overscroll-behavior: contain; }
+[data-desktop-cover-gallery-viewport] { position: relative; height: 100%; }
 [data-desktop-cover-gallery-scroll] {
-  max-height: 400px; overflow-y: auto; padding: 14px;
+  box-sizing: border-box; height: 100%; overflow-y: auto; padding: 14px;
   scrollbar-width: none;
 }
 [data-desktop-cover-gallery-scroll]::-webkit-scrollbar { display: none; }

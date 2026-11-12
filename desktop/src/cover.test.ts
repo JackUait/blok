@@ -40,6 +40,27 @@ describe('desktop page cover', () => {
     tabs[2].dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true}));
     expect(tabs[0].getAttribute('aria-selected')).toBe('true');
   });
+  it('keeps the same picker and form values through repeated tab clicks', () => {
+    const root = createPageCover('dusk', 50, vi.fn(), vi.fn());
+    document.body.append(root);
+    const trigger = root.querySelector<HTMLButtonElement>('[aria-haspopup="dialog"]')!;
+    trigger.click();
+    const gallery = root.querySelector<HTMLElement>('[data-desktop-cover-gallery]')!;
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+    const input = root.querySelector<HTMLInputElement>('input[type="url"]')!;
+    input.value = 'https://example.test/cover.png';
+    for (const index of [1, 2, 0, 2, 1, 0]) {
+      tabs[index].focus();
+      tabs[index].click();
+      tabs[index].click();
+      expect(gallery.hidden).toBe(false);
+      expect(root.querySelector('[data-desktop-cover-gallery]')).toBe(gallery);
+      expect(input.value).toBe('https://example.test/cover.png');
+      expect(document.activeElement).toBe(tabs[index]);
+    }
+    root.remove();
+  });
+
   it('reads image uploads and rejects unsupported or oversized files', async () => {
     await expect(readCoverFile(new File(['a'], 'cover.png', {type: 'image/png'}))).resolves.toBe('data:image/png;base64,YQ==');
     await expect(readCoverFile(new File(['a'], 'cover.svg', {type: 'image/svg+xml'}))).rejects.toThrow('PNG');

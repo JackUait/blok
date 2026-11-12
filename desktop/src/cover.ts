@@ -299,7 +299,10 @@ export function createPageCover(
     if (!/^https?:\/\//i.test(url) || !isPageCover(url)) { linkStatus.textContent = 'Saisissez une adresse HTTP ou HTTPS valide.'; return; }
     onChange(new URL(url).href);
   });
-  gallery.append(uploadPanel, linkPanel);
+  const content = document.createElement('div');
+  content.setAttribute('data-desktop-cover-content', '');
+  content.append(scrollFrame, uploadPanel, linkPanel);
+  gallery.append(content);
   const panels = [scrollFrame, uploadPanel, linkPanel];
   const tabButtons: HTMLButtonElement[] = [];
   const selectTab = (index: number): void => {
@@ -366,7 +369,7 @@ export function createPageCover(
   change.addEventListener('click', () => {
     if (gallery.hidden) {
       gallery.hidden = false;
-      scroll.style.maxHeight = `${Math.max(0, Math.min(350, window.innerHeight - gallery.getBoundingClientRect().top - 100))}px`;
+      content.style.height = `${Math.max(0, Math.min(350, window.innerHeight - gallery.getBoundingClientRect().top - 100))}px`;
       updateScrollbar();
       change.setAttribute('aria-expanded', 'true');
       actions.setAttribute('data-open', '');

@@ -305,6 +305,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     const holder = document.createElement('div');
     article.append(holder);
     let coverNode: HTMLElement | null = null;
+    let renderedCover: PageCover | undefined;
+    let renderedCoverPosition: number | undefined;
     let coverButton: HTMLButtonElement | null = null;
     function changeCover(cover: PageCover | undefined): void {
       if (viewer) return;
@@ -333,9 +335,14 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         coverButton?.remove();
         const position = typeof page.coverPosition === 'number' && Number.isFinite(page.coverPosition)
           ? Math.max(0, Math.min(100, page.coverPosition)) : 50;
+        // Background metadata refreshes must preserve the open picker and its focus.
+        if (coverNode && renderedCover === page.cover && renderedCoverPosition === position) return;
+        renderedCover = page.cover;
+        renderedCoverPosition = position;
         const next = createPageCover(page.cover, position, changeCover, (value) => {
           if (viewer) return;
           page.coverPosition = value;
+          renderedCoverPosition = value;
           saveManifest();
         }, { upload: repository.uploadImage, resolveUrl: repository.assetUrl, readOnly: viewer });
         if (coverNode) coverNode.replaceWith(next);

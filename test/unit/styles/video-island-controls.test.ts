@@ -100,6 +100,18 @@ describe('video island controls', () => {
   });
 
   it('rounds the player frame with its own radius role', () => {
-    expect(colors).toMatch(/--blok-radius-player: var\(--blok-radius-16\);/);
+    expect(colors).toMatch(/--blok-radius-player: var\(--blok-radius-20\);/);
+  });
+
+  it('never shows the thin progress line when the island hides', () => {
+    expect(block(`${T} .blok-video-controls__mini`)).toContain('display: none');
+    expect(css).not.toMatch(/\.blok-video-controls__mini\s*\{\s*opacity: 1/);
+  });
+
+  // Chrome clips the video layer and the box behind it separately, so a dark
+  // box behind the picture bleeds through as a dark rim on the rounded corners.
+  it('rounds the picture itself, with no dark box behind it to bleed at the corners', () => {
+    expect(block(`${T} .blok-video-media video`)).toContain('border-radius: inherit');
+    expect(block(`${T} .blok-video-media`)).not.toContain('background:');
   });
 });

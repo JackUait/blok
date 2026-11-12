@@ -36,12 +36,13 @@ const toPx = (value: string): number => {
   return value === '0' ? 0 : Number.NaN;
 };
 
-const PRIMITIVES = ['0', '2', '4', '6', '8', '10', '12', '16'];
+const PRIMITIVES = ['0', '2', '4', '6', '8', '10', '12', '16', '20'];
 
 const ROLES: Record<string, string> = {
   dialog: '12',
   surface: '10',
   block: '10',
+  player: '20',
   field: '8',
   'control-lg': '8',
   control: '6',

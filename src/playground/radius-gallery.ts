@@ -10,7 +10,7 @@ export interface RadiusToken {
 }
 
 export const RADIUS_PRIMITIVES: RadiusToken[] = [
-  '0', '2', '4', '6', '8', '10', '12', '16', 'full',
+  '0', '2', '4', '6', '8', '10', '12', '16', '20', 'full',
 ].map((step) => ({ token: `--blok-radius-${step}` }));
 
 type Specimen = 'dialog' | 'popover' | 'callout' | 'field' | 'button' | 'mark' | 'pill' | 'caret' | 'floor' | 'table';

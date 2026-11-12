@@ -30,7 +30,6 @@
   position: relative;
   border-radius: var(--blok-radius-player);
   overflow: hidden;
-  background: var(--blok-video-stage);
   box-shadow: var(--blok-image-shadow-resting);
   transition: box-shadow 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -42,10 +41,13 @@
     0 0 0 2px var(--blok-color-accent),
     0 0 0 4px color-mix(in srgb, var(--blok-color-accent) 20%, transparent);
 }
+/* the frame's clip and the video's own layer are drawn apart, so a stage fill
+   on the frame would leak a dark rim around the curve; the video carries it */
 [data-blok-tool="video"] .blok-video-media video {
   display: block;
   width: 100%;
   height: auto;
+  border-radius: inherit;
   background: var(--blok-video-stage);
   outline: none;
 }
@@ -1434,28 +1436,13 @@
 }
 [data-blok-tool="video"] .blok-video-controls__stats[hidden] { display: none; }
 
-/* bottom mini progress — revealed by CSS only while the control bar is hidden
-   (the auto-hide bucket sets data-controls-hidden on the figure) */
-[data-blok-tool="video"] .blok-video-controls__mini {
-  position: absolute;
-  left: 0; bottom: 0;
-  height: 3px;
-  width: var(--blok-seek-pct, 0%);
-  background: var(--blok-video-accent);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 160ms ease;
-}
-[data-blok-tool="video"] .blok-video-inner[data-controls-hidden="true"] .blok-video-controls__mini { opacity: 1; }
-/* In fullscreen the bottom edge-line is redundant — the full scrubber is one
-   mouse-move away — and reads as a stray hairline across the immersive frame. */
-[data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-controls__mini { display: none; }
+/* the hidden island leaves a clean picture; the element stays for markup compatibility */
+[data-blok-tool="video"] .blok-video-controls__mini { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   [data-blok-tool="video"] .blok-video-controls__bar,
   [data-blok-tool="video"] .blok-video-controls__title,
   [data-blok-tool="video"] .blok-video-controls__volume,
-  [data-blok-tool="video"] .blok-video-controls__mini,
   [data-blok-tool="video"] .blok-video-controls__seek-tooltip,
   [data-blok-tool="video"] .blok-video-controls__seek-wrap::before,
   [data-blok-tool="video"] .blok-video-controls__buffered,

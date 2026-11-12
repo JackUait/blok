@@ -24,13 +24,16 @@ describe('built-in block frames', () => {
     ['code', CodeTool],
     ['stub', Stub],
     ['image', ImageTool],
-    ['video', VideoTool],
     ['audio', AudioTool],
     ['file', FileTool],
     ['embed', Embed],
     ['bookmark', Bookmark],
   ])('%s declares the block frame radius', (_name, tool) => {
     expect(readFrame(tool)).toBe('var(--blok-radius-block)');
+  });
+
+  it('video declares its own, rounder player frame radius', () => {
+    expect(readFrame(VideoTool)).toBe('var(--blok-radius-player)');
   });
 
   it('a square text block declares no frame', () => {

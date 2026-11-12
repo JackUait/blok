@@ -371,6 +371,7 @@
   --blok-radius-10: 0.625rem;
   --blok-radius-12: 0.75rem;
   --blok-radius-16: 1rem;
+  --blok-radius-20: 1.25rem;
   --blok-radius-full: 9999px;
 
   /* Radius roles. Controls follow height: up to 20px → sm, 24–32px → control,
@@ -381,7 +382,7 @@
   --blok-radius-surface: var(--blok-radius-10);
   --blok-radius-block: var(--blok-radius-10);
   /* the video frame: a touch rounder than other media, to suit the floating island */
-  --blok-radius-player: var(--blok-radius-16);
+  --blok-radius-player: var(--blok-radius-20);
   --blok-radius-field: var(--blok-radius-8);
   --blok-radius-control-lg: var(--blok-radius-8);
   --blok-radius-control: var(--blok-radius-6);

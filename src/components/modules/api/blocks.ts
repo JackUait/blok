@@ -26,7 +26,7 @@ import { LEGACY_BODY_TYPES, LEGACY_ITEM_TYPES } from '../../../shared/rich-text/
 import { htmlToSegmentsDom } from '../../utils/rich-text-dom';
 import { resolveHashTarget } from '../../utils/hash-target';
 import { highlightBlockArrival } from '../../utils/highlight-block-arrival';
-import { assertCanMoveUnder, BlockPlacementError, findBlock, isUnder, resolvePlacement, type BlockTree } from './block-placement';
+import { BlockPlacementError, findBlock, resolveMoveTo, resolvePlacement, type BlockTree } from './block-placement';
 
 import { logLabeled } from './../../utils';
 
@@ -712,41 +712,10 @@ export class BlocksAPI extends Module {
    * @param target - new parent and position
    */
   public moveTo(id: string, target: MoveToTarget): void {
-    const { BlockManager } = this.Blok;
     const block = findBlock(this.tree, id);
-    const { position } = target;
+    const placement = resolveMoveTo(this.tree, block, target);
 
-    const refId = ((): string | undefined => {
-      if (typeof position !== 'object') {
-        return undefined;
-      }
-
-      return 'before' in position ? position.before : position.after;
-    })();
-
-    if (refId === id) {
-      throw new BlockPlacementError(`cannot place "${id}" relative to itself`);
-    }
-
-    const placement = resolvePlacement(this.tree, target.parentId, position);
-
-    assertCanMoveUnder(this.tree, block, placement.parentId, refId);
-
-    const descendants = BlockManager.blocks.filter(candidate => isUnder(this.tree, candidate, block.id));
-    const from = BlockManager.getBlockIndex(block);
-    const end = from + descendants.length;
-    // A slot inside or right after its own subtree needs no flat move.
-    const movesFlat = placement.index <= from || placement.index > end + 1;
-    const toIndex = from < placement.index ? placement.index - 1 : placement.index;
-
-    // move() silently refuses a restricted tool whose slot neighbour is a
-    // table cell block, even for the slot right after a table. Drop this when
-    // the pin "blocks.move puts a header right after a table" passes.
-    if (movesFlat && isRestrictedInTableCell(block.name) && isInsideTableCell(BlockManager.getBlockByIndex(toIndex))) {
-      throw new BlockPlacementError(`cannot move "${block.name}" to a slot next to a table cell block`);
-    }
-
-    BlockManager.moveTo(block, { parentId: placement.parentId, afterId: placement.afterId });
+    this.Blok.BlockManager.moveTo(block, { parentId: placement.parentId, afterId: placement.afterId });
   }
 
   /**

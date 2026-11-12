@@ -27,7 +27,7 @@ import { isToolConvertable, translateToolTitle } from '../../utils/tools';
 import { prepareImportString } from '../blockManager/block-mutation';
 import { isBlockReadOnly } from '../../utils/read-only-blocks';
 import { deleteWithTrashToast, showTrashToast } from '../../utils/trash-toast';
-import { assertCanMoveUnder, type BlockTree } from '../api/block-placement';
+import { resolveMoveTo, type BlockTree } from '../api/block-placement';
 import { PagePicker } from '../../../tools/page/page-picker';
 import { filterMoveTargets, listMoveTargets } from './move-to';
 
@@ -941,7 +941,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     const tree: BlockTree = { blocks: BlockManager.blocks, getBlockById: (id) => BlockManager.getBlockById(id) };
     const canMoveInto = (root: Block, rowId: string): boolean => {
       try {
-        assertCanMoveUnder(tree, root, rowId);
+        // The same target moveInto passes to blocks.moveTo, so a pick never throws.
+        resolveMoveTo(tree, root, { parentId: rowId, position: 'end' });
 
         return true;
       } catch {

@@ -162,6 +162,9 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('W10 Move to', () => {
+  // W10-1 opens the row page twice; each drawer open and close waits 1.2s.
+  test.describe.configure({ timeout: 30_000 });
+
   test('W10-1: moves a toggle with its child into a row page; one undo brings both back, redo moves them again', async ({ page }) => {
     await createBlok(page, DOC);
     await gap(page);
@@ -247,6 +250,30 @@ test.describe('W10 Move to', () => {
     await expect(page.getByTestId('page-picker-search-input')).toHaveCount(0);
     expect(await save(page)).toEqual(before);
     expect(await page.evaluate(() => window.blokInstance?.history.canUndo() ?? false)).toBe(false);
+  });
+
+  test('W10-5: a heading is not offered a page whose body ends in a table, so a pick never fails', async ({ page }) => {
+    const errors: string[] = [];
+
+    page.on('pageerror', error => errors.push(error.message));
+    await createBlok(page, [
+      { id: 'h', type: 'header', data: { text: 'Head', level: 2 } },
+      ...DOC.filter(block => block.id !== 'row-1-body').map(block => (block.id === 'row-1' ? { ...block, content: ['t1'] } : block)),
+      { id: 't1', type: 'table', parent: 'row-1', data: { withHeadings: false, content: [['a', 'b']] } },
+    ]);
+    await gap(page);
+    const before = await save(page);
+
+    await openTunes(page, 'h');
+    await moveToItem(page).click();
+    await expect(pickerRows(page)).toHaveText([/Card two/]);
+    await page.keyboard.press('Enter');
+    await gap(page);
+
+    expect(errors).toEqual([]);
+    expect((await save(page)).find(block => block.id === 'h')?.parent).toBe('row-2');
+    await undo(page);
+    expect(await save(page)).toEqual(before);
   });
 
   test('W10-4: no row this editor can write means no Move to item', async ({ page }) => {

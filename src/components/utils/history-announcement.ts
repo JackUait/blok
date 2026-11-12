@@ -1,8 +1,9 @@
 import { announce } from './announcer';
 
 /**
- * Says what an undo or redo key press did, like Notion. Only key presses call
- * this: a host's blok.history.undo() is its own button, and it says what it wants.
+ * Says what an undo or redo key press did, like Notion. Key presses and Blok's
+ * own Trash toast Restore call this. A host's blok.history.undo() is the host's
+ * button, and the host says what it wants.
  * @param t - translates a message key
  * @param direction - which key was pressed
  * @param applied - whether the press applied a step

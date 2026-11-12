@@ -664,8 +664,8 @@ test.describe('image clipboard', () => {
 
 test.describe('other selection gestures', () => {
   for (const source of ['callout', 'tabs'] as const) {
-    test(`containers-other-selection-gestures: drag-handle click on ${source}, Escape the menu, copy, paste top`, async ({ page }) => {
-      test.fixme(true, 'containers-other-selection-gestures: Escape on the block menu clears the selection; awaits a product decision');
+    // Like Notion, Escape closes the block menu and keeps the block selected.
+    test(`containers-other-selection-gestures: drag-handle click on ${source}, Escape the menu keeps the selection, Cmd+C copies it, paste top`, async ({ page }) => {
       await runRoundTrip(page, {
         name: `critic handle ${source}`,
         doc: docFor(SOURCES[source].blocks),
@@ -674,9 +674,36 @@ test.describe('other selection gestures', () => {
 
           await p.locator(`[data-blok-id="${root}"]`).first().hover({ position: { x: 40, y: 10 } });
           await p.getByTestId('settings-toggler').first().click();
-           
-          await p.waitForTimeout(300);
+          await expect(p.getByTestId('block-tunes-popover').getByTestId('popover-container')).toBeVisible();
           await p.keyboard.press('Escape');
+          await expect(p.getByTestId('block-tunes-popover').getByTestId('popover-container')).toBeHidden();
+
+          expect(await selectedIds(p), 'block still selected after Escape').toContain(root);
+
+          await p.evaluate(() => {
+            const w = window as unknown as { __copied: Record<string, string> | null };
+
+            w.__copied = null;
+            document.addEventListener('copy', (e) => {
+              const dt = e.clipboardData;
+
+              if (dt === null) {
+                return;
+              }
+              const store: Record<string, string> = {};
+              const original = dt.setData.bind(dt);
+
+              w.__copied = store;
+              dt.setData = (f: string, d: string): void => {
+                store[f] = d;
+                original(f, d);
+              };
+            }, { capture: true, once: true });
+          });
+          await p.keyboard.press('ControlOrMeta+C');
+          await expect.poll(() => p.evaluate(() => (window as unknown as { __copied: Record<string, string> | null }).__copied?.['application/x-blok'] ?? ''), { message: 'Cmd+C wrote the selected blocks' })
+            .toContain(`"${SOURCES[source].blocks[0].type}"`);
+          expect(await selectedIds(p), 'block still selected after Cmd+C').toContain(root);
         },
         expectRoots: [SOURCES[source].root],
         target: 'tgt-top',

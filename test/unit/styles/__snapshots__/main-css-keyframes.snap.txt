@@ -1062,12 +1062,6 @@
   100% { transform: scale(1) }
 }
 
-@keyframes blok-video-burst-ring {
-  0% { opacity: 0.7; transform: scale(0.85) }
-  60% { opacity: 0.28 }
-  100% { opacity: 0; transform: scale(1.75) }
-}
-
 @keyframes blok-video-loop-spin {
   from { transform: rotate(0deg) }
   to { transform: rotate(360deg) }

@@ -2346,6 +2346,7 @@
   --blok-radius-dialog: var(--blok-radius-12);
   --blok-radius-surface: var(--blok-radius-10);
   --blok-radius-block: var(--blok-radius-10);
+  --blok-radius-player: var(--blok-radius-16);
   --blok-radius-field: var(--blok-radius-8);
   --blok-radius-control-lg: var(--blok-radius-8);
   --blok-radius-control: var(--blok-radius-6);
@@ -22508,7 +22509,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-tool="video"] .blok-video-media {
   position: relative;
-  border-radius: var(--blok-radius-block);
+  border-radius: var(--blok-radius-player);
   overflow: hidden;
   background: var(--blok-video-stage);
   box-shadow: var(--blok-image-shadow-resting);
@@ -22671,7 +22672,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   width: 100%;
   max-width: 100%;
   vertical-align: top;
-  border-radius: var(--blok-radius-block);
+  border-radius: var(--blok-radius-player);
   background: var(--blok-video-stage);
   box-shadow: var(--blok-image-shadow-resting);
   font-family: var(--blok-font-family, var(--blok-font-sans));
@@ -22893,15 +22894,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   z-index: 1;
 }
 
-[data-blok-tool="video"] .blok-video-controls__burst::after {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: var(--blok-radius-pill);
-  border: 2px solid var(--blok-video-burst-ring);
-  opacity: 0;
-}
-
 [data-blok-tool="video"] .blok-video-controls__burst svg {
   width: 34px;
   height: 34px;
@@ -22914,10 +22906,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-tool="video"] .blok-video-controls__burst.is-active {
   animation: blok-video-burst 560ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-[data-blok-tool="video"] .blok-video-controls__burst.is-active::after {
-  animation: blok-video-burst-ring 540ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 [data-blok-tool="video"] .blok-video-controls__burst.is-active svg {
@@ -23050,9 +23038,14 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   background: var(--blok-video-island-play-bg-hover);
 }
 
-[data-blok-tool="video"] .blok-video-inner:hover .blok-video-controls__bar, [data-blok-tool="video"] .blok-video-controls:has(:focus-visible) .blok-video-controls__bar, [data-blok-tool="video"] .blok-video-inner:not([data-playing="true"]) .blok-video-controls__bar {
+[data-blok-tool="video"] .blok-video-inner:hover .blok-video-controls__bar, [data-blok-tool="video"] .blok-video-controls:has(:focus-visible) .blok-video-controls__bar, [data-blok-tool="video"] .blok-video-controls__bar:has([aria-expanded="true"]) {
   opacity: 1;
-  transform: translateY(0);
+  transform: none;
+}
+
+[data-blok-tool="video"] .blok-video-inner[data-theater-morphing="true"] .blok-video-controls__bar {
+  opacity: 0;
+  transition: none;
 }
 
 [data-blok-tool="video"] .blok-video-controls__btn {
@@ -23775,7 +23768,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-tool="video"] .blok-video-inner[data-theater="true"] .blok-video-media video {
   transform: translateZ(0);
-  border-radius: var(--blok-radius-block);
+  border-radius: var(--blok-radius-player);
 }
 
 [data-blok-tool="video"] .blok-video-inner[data-theater="true"] [data-role="resize-handle"], [data-blok-tool="video"] .blok-video-inner[data-theater="true"] .blok-video-controls__ambient {
@@ -23948,7 +23941,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   animation: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-tool="video"] .blok-video-controls__burst.is-active, [data-blok-tool="video"] .blok-video-controls__burst.is-active::after, [data-blok-tool="video"] .blok-video-controls__burst.is-active svg {
+[@media (prefers-reduced-motion: reduce)] [data-blok-tool="video"] .blok-video-controls__burst.is-active, [data-blok-tool="video"] .blok-video-controls__burst.is-active svg {
   animation: none;
   opacity: 0;
 }

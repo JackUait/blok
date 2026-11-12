@@ -7,7 +7,7 @@ import type { I18n, InlineToolbar } from '../../../types/api';
 import type { MarkSpec } from '../../../types/api/marks';
 import type { MenuConfig } from '../../../types/tools';
 import { ANNOTATION_ATTR, ANNOTATION_SUBTITLE_ATTR } from '../../shared/annotation-mark';
-import { IconAnnotation, IconTrash } from '../icons';
+import { IconAnnotation, IconCheck, IconTrash } from '../icons';
 import { applyMark, removeMark } from '../marks/mark-engine';
 import { SelectionUtils } from '../selection/index';
 import { PopoverItemType } from '../utils/popover';
@@ -281,14 +281,14 @@ export class AnnotationInlineTool implements InlineTool {
 
     const body = document.createElement('div');
 
-    body.className = 'flex flex-col gap-2 px-3 pt-2.5 pb-2.5';
+    body.className = 'flex flex-col gap-2 px-2.5 pt-2 pb-1';
 
     const text = document.createElement('textarea');
 
     text.rows = 1;
     text.placeholder = this.i18n.t('tools.annotation.placeholder');
     text.setAttribute('aria-label', this.i18n.t('toolNames.annotation'));
-    text.className = 'block w-full m-0 p-0 resize-none overflow-hidden bg-transparent border-0 outline-hidden appearance-none font-[inherit] text-[14px] leading-[1.5] text-text-primary placeholder:text-gray-text';
+    text.className = 'block w-full m-0 p-0 resize-none overflow-hidden bg-transparent border-0 outline-hidden appearance-none font-[inherit] text-[15px] leading-[22px] text-text-primary placeholder:text-gray-text';
     text.setAttribute('data-blok-testid', 'inline-annotation-text');
     text.addEventListener('input', () => this.fitText());
     text.addEventListener('keydown', (event: KeyboardEvent) => {
@@ -314,13 +314,19 @@ export class AnnotationInlineTool implements InlineTool {
       }
     });
 
-    body.append(text, subtitle);
+    // Same short rule the reader's card draws before the subtitle.
+    const subtitleRow = document.createElement('div');
+
+    subtitleRow.className = 'flex items-center gap-2 text-gray-text before:content-[""] before:shrink-0 before:w-[14px] before:h-px before:bg-current';
+    subtitle.classList.add('flex-1', 'min-w-0');
+    subtitleRow.append(subtitle);
+    body.append(text, subtitleRow);
 
     const footer = document.createElement('div');
 
-    footer.className = 'flex items-center gap-1 px-1.5 py-1.5 border-0 border-t border-solid border-popover-border';
+    footer.className = 'flex items-center gap-1 px-1 pt-1.5 pb-0.5';
 
-    const button = 'shrink-0 inline-flex items-center justify-center h-7 m-0 rounded-(--blok-radius-control) border-0 font-[inherit] text-[13px] font-medium cursor-pointer outline-hidden transition-colors';
+    const button = 'shrink-0 inline-flex items-center justify-center size-7 p-0 m-0 rounded-full border-0 font-[inherit] text-[13px] font-medium cursor-pointer outline-hidden transition-colors';
     const quiet = 'bg-transparent text-gray-text can-hover:hover:bg-item-hover-bg can-hover:hover:text-text-primary focus-visible:bg-item-hover-bg';
     // Focus stays in the field, so the popover and the saved selection survive the click.
     const keepFocus = (event: Event): void => event.preventDefault();
@@ -328,7 +334,7 @@ export class AnnotationInlineTool implements InlineTool {
     const remove = document.createElement('button');
 
     remove.type = 'button';
-    remove.className = `${button} ${quiet} w-7 p-0 [&_svg]:size-4 can-hover:hover:text-item-destructive-text`;
+    remove.className = `${button} ${quiet} [&_svg]:size-4 can-hover:hover:text-item-destructive-text`;
     remove.innerHTML = IconTrash;
     remove.setAttribute('aria-label', this.i18n.t('tools.annotation.remove'));
     remove.setAttribute('data-blok-testid', 'inline-annotation-remove');
@@ -342,8 +348,9 @@ export class AnnotationInlineTool implements InlineTool {
     const done = document.createElement('button');
 
     done.type = 'button';
-    done.className = `${button} px-2.5 text-popover-bg bg-text-primary can-hover:hover:opacity-85 focus-visible:opacity-85 transition-opacity`;
-    done.textContent = this.i18n.t('tools.annotation.done');
+    done.className = `${button} [&_svg]:size-4 text-popover-bg bg-text-primary can-hover:hover:scale-108 focus-visible:scale-108 transition-[scale] motion-reduce:transition-none`;
+    done.innerHTML = IconCheck;
+    done.setAttribute('aria-label', this.i18n.t('tools.annotation.done'));
     done.setAttribute('data-blok-testid', 'inline-annotation-done');
     done.addEventListener('mousedown', keepFocus);
     done.addEventListener('click', () => this.confirm());

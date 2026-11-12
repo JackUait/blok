@@ -222,6 +222,15 @@ describe('AnnotationInlineTool', () => {
     });
   });
 
+  it('has a round check button named Done instead of a text button', () => {
+    const { ui } = create();
+    const done = part(ui, 'done');
+
+    expect(done.getAttribute('aria-label')).toBe('tools.annotation.done');
+    expect(done.querySelector('svg')).not.toBeNull();
+    expect(done.textContent?.trim()).toBe('');
+  });
+
   describe('the subtitle', () => {
     it('is always shown, with no button to switch it', () => {
       const { menu, ui } = create();

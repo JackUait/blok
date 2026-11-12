@@ -229,17 +229,56 @@ describe('AnnotationCard', () => {
       expect(getCard()?.getAttribute('data-blok-interface')).toBe('annotation-card');
     });
 
-    it('sits above the phrase with an 8px gap', () => {
+    it('sits below the phrase with an 11px gap for the stem', () => {
       card.pin(createAnchor('A quote', undefined, 300));
 
-      expect(getCard()?.style.top).toBe('292px');
+      expect(getCard()?.style.top).toBe('331px');
+      expect(getCard()?.getAttribute('data-side')).toBe('bottom');
     });
 
-    it('drops below the phrase when there is no room above', () => {
+    it('rises above the phrase when there is no room below', () => {
       vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(120);
-      card.pin(createAnchor('A quote', undefined, 40));
+      card.pin(createAnchor('A quote', undefined, window.innerHeight - 60));
 
-      expect(getCard()?.style.top).toBe('68px');
+      expect(getCard()?.style.top).toBe(`${window.innerHeight - 60 - 11 - 120}px`);
+      expect(getCard()?.getAttribute('data-side')).toBe('top');
+    });
+
+    it('points its stem at the centre of the phrase', () => {
+      vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(340);
+      card.pin(createAnchor('A quote'));
+
+      // The card is clamped to left=4, so the phrase centre (x=150) is 146px into it.
+      expect(getCard()?.style.getPropertyValue('--blok-annotation-stem-x')).toBe('146px');
+    });
+
+    it('draws a stem between the phrase and the card', () => {
+      card.pin(createAnchor('A quote'));
+
+      expect(getCard()?.querySelector('[data-blok-testid="annotation-card-stem"]')).not.toBeNull();
+    });
+
+    it('keeps the phrase lit while its card is open', () => {
+      const highlights = new Map<string, unknown>();
+
+      vi.stubGlobal('CSS', { highlights });
+      vi.stubGlobal('Highlight', class {
+        public readonly ranges: Range[];
+
+        constructor(...ranges: Range[]) {
+          this.ranges = ranges;
+        }
+      });
+
+      const anchor = createAnchor('A quote');
+
+      card.pin(anchor);
+      expect(highlights.has('blok-annotation-open')).toBe(true);
+
+      card.hide();
+      expect(highlights.has('blok-annotation-open')).toBe(false);
+
+      vi.unstubAllGlobals();
     });
 
     it('centres on the phrase and stays inside the viewport', () => {

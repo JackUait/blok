@@ -9,12 +9,18 @@ import { twJoin } from './tw';
 /** Time the pointer has to travel from the phrase onto the card (WCAG 1.4.13). */
 const GRACE_HIDE_DURATION = 250;
 
-/** Gap between the phrase and the card. */
-const GAP = 8;
+/** Gap between the phrase and the card. MUST match the stem's `h-[11px]`. */
+const GAP = 11;
+
+/** Keeps the stem off the card's rounded corners. */
+const STEM_INSET = 12;
+
+/** Must match the `::highlight()` rule in main.css. */
+const OPEN_HIGHLIGHT = 'blok-annotation-open';
 
 const VIEWPORT_MARGIN = 4;
 
-/** MUST match the `duration-150` transition on the wrapper, or the fade-out is clipped. */
+/** MUST cover the longest closing transition in build(), or the fade-out is clipped. */
 const ANIMATION_DURATION = 150;
 
 interface AnnotationCardOptions {
@@ -148,6 +154,7 @@ export class AnnotationCard {
     this.shown = false;
     this.setPinned(false);
     this.currentAnchor = null;
+    this.lightPhrase(null);
     this.nodes.wrapper.inert = true;
     this.positionTracker?.detach();
     this.positionTracker = null;
@@ -171,6 +178,7 @@ export class AnnotationCard {
     removeFromTopLayer(this.nodes.wrapper);
     this.nodes.wrapper.remove();
     this.currentAnchor = null;
+    this.lightPhrase(null);
     this.shown = false;
   }
 
@@ -200,6 +208,7 @@ export class AnnotationCard {
 
     this.shown = true;
     this.setPinned(pinned);
+    this.lightPhrase(anchor);
     syncPortalDirection(this.nodes.wrapper, { source: anchor });
     promoteToTopLayer(this.nodes.wrapper);
     this.position(anchor);
@@ -258,8 +267,30 @@ export class AnnotationCard {
   };
 
   /**
-   * Above the phrase, centred on its first line; below its last line when there
-   * is no room above. The card floats, so the text never moves.
+   * Paints the open phrase with a CSS highlight. An attribute on the phrase
+   * would be a content mutation: a change event, and an undo step.
+   * @param anchor - the phrase to light, or null to clear
+   */
+  private lightPhrase(anchor: HTMLElement | null): void {
+    if (typeof CSS === 'undefined' || CSS.highlights === undefined || typeof Highlight !== 'function') {
+      return;
+    }
+
+    if (anchor === null) {
+      CSS.highlights.delete(OPEN_HIGHLIGHT);
+
+      return;
+    }
+
+    const range = document.createRange();
+
+    range.selectNodeContents(anchor);
+    CSS.highlights.set(OPEN_HIGHLIGHT, new Highlight(range));
+  }
+
+  /**
+   * Below the phrase, centred on its last line; above its first line when
+   * there is no room below. The card floats, so the text never moves.
    * @param anchor - the annotated phrase
    */
   private position(anchor: HTMLElement): void {
@@ -273,15 +304,20 @@ export class AnnotationCard {
 
     const width = this.nodes.wrapper.offsetWidth;
     const height = this.nodes.wrapper.offsetHeight;
+    const below = last.bottom + GAP;
     const above = first.top - GAP - height;
-    const desiredTop = above < VIEWPORT_MARGIN ? last.bottom + GAP : above;
+    const isBelow = below + height <= window.innerHeight - VIEWPORT_MARGIN || above < VIEWPORT_MARGIN;
+    const line = isBelow ? last : first;
     const maxTop = Math.max(VIEWPORT_MARGIN, window.innerHeight - height - VIEWPORT_MARGIN);
-    const top = Math.max(VIEWPORT_MARGIN, Math.min(desiredTop, maxTop));
-    const centred = first.left + first.width / 2 - width / 2;
-    const left = Math.max(VIEWPORT_MARGIN, Math.min(centred, window.innerWidth - width - VIEWPORT_MARGIN));
+    const top = Math.max(VIEWPORT_MARGIN, Math.min(isBelow ? below : above, maxTop));
+    const centre = line.left + line.width / 2;
+    const left = Math.max(VIEWPORT_MARGIN, Math.min(centre - width / 2, window.innerWidth - width - VIEWPORT_MARGIN));
+    const stemX = Math.max(STEM_INSET, Math.min(centre - left, width - STEM_INSET));
 
     this.nodes.wrapper.style.left = `${left}px`;
     this.nodes.wrapper.style.top = `${top}px`;
+    this.nodes.wrapper.style.setProperty('--blok-annotation-stem-x', `${stemX}px`);
+    this.nodes.wrapper.setAttribute('data-side', isBelow ? 'bottom' : 'top');
   }
 
   private cancelShow(): void {
@@ -309,24 +345,19 @@ export class AnnotationCard {
   private build(label: string): AnnotationCard['nodes'] {
     const wrapper = document.createElement('div');
 
+    // The wrapper only places the card; the surface below carries the look.
     wrapper.className = twJoin(
-      'fixed z-overlay top-0 left-0',
-      'bg-popover-bg rounded-(--blok-radius-surface) shadow-(--blok-popover-box-shadow)',
-      'text-[14px] leading-[1.5] text-text-primary text-left',
-      'opacity-0 translate-y-px transition-[opacity,transform] duration-150 ease-out',
-      'data-[state=open]:opacity-100 data-[state=open]:translate-y-0',
-      'motion-reduce:transition-none'
+      'group fixed z-overlay top-0 left-0',
+      'text-[15px] leading-[1.5] text-text-primary text-left'
     );
     // Inline, not utilities: the top-layer reset in isolation.css zeroes padding on the promoted element.
     // As wide as the text, up to 340px. px, not rem: the host's root font-size must not resize it.
     wrapper.style.boxSizing = 'border-box';
     wrapper.style.width = 'max-content';
     wrapper.style.maxWidth = 'min(340px, calc(100vw - 8px))';
-    wrapper.style.paddingTop = 'var(--blok-space-3)';
-    wrapper.style.paddingBottom = 'var(--blok-space-3)';
-    wrapper.style.paddingLeft = '14px';
-    wrapper.style.paddingRight = '14px';
+    wrapper.style.padding = '0';
     wrapper.setAttribute('data-state', 'closed');
+    wrapper.setAttribute('data-side', 'bottom');
     wrapper.setAttribute('data-blok-testid', 'annotation-card');
     wrapper.setAttribute('role', 'note');
     wrapper.setAttribute('aria-label', label);
@@ -334,17 +365,57 @@ export class AnnotationCard {
     // Body-mounted: without this scope every utility above is dead in a consumer app (body-mount-scope-law).
     wrapper.setAttribute('data-blok-interface', 'annotation-card');
 
+    const stem = document.createElement('div');
+
+    // Grows from the phrase toward the card, on whichever side the card sits.
+    stem.className = twJoin(
+      'absolute w-[1.5px] h-[11px] -ml-[0.75px] left-(--blok-annotation-stem-x) bg-text-primary',
+      'top-[-11px] origin-top group-data-[side=top]:top-auto group-data-[side=top]:bottom-[-11px] group-data-[side=top]:origin-bottom',
+      'scale-y-0 transition-[scale] duration-[110ms] ease-in',
+      'group-data-[state=open]:scale-y-100 group-data-[state=open]:ease-out',
+      'motion-reduce:transition-none'
+    );
+    stem.setAttribute('data-blok-testid', 'annotation-card-stem');
+    stem.setAttribute('aria-hidden', 'true');
+
+    const surface = document.createElement('div');
+
+    // Springs out of the stem's end; the open delay lets the stem land first.
+    surface.className = twJoin(
+      'py-[14px] px-[16px] bg-popover-bg rounded-(--blok-radius-surface) shadow-(--blok-popover-box-shadow)',
+      'origin-[var(--blok-annotation-stem-x)_0] group-data-[side=top]:origin-[var(--blok-annotation-stem-x)_100%]',
+      'opacity-0 scale-[0.55] transition-[opacity,scale] duration-[140ms] ease-in',
+      'group-data-[state=open]:opacity-100 group-data-[state=open]:scale-100',
+      'group-data-[state=open]:duration-[380ms] group-data-[state=open]:delay-[90ms] group-data-[state=open]:ease-[cubic-bezier(0.2,1.45,0.35,1)]',
+      'motion-reduce:transition-none motion-reduce:scale-100'
+    );
+
+    const body = document.createElement('div');
+
+    // The words come into focus after the card has landed.
+    body.className = twJoin(
+      'opacity-0 blur-[5px] translate-y-[5px] transition-[opacity,filter,translate] duration-[120ms] ease-out',
+      'group-data-[state=open]:opacity-100 group-data-[state=open]:blur-[0px] group-data-[state=open]:translate-y-0',
+      'group-data-[state=open]:duration-[260ms] group-data-[state=open]:delay-[190ms]',
+      'motion-reduce:transition-none motion-reduce:blur-[0px] motion-reduce:translate-y-0'
+    );
+
     const text = document.createElement('div');
 
-    text.className = 'block whitespace-pre-wrap break-words select-text';
+    text.className = 'block leading-[22px] whitespace-pre-wrap break-words select-text';
     text.setAttribute('data-blok-testid', 'annotation-card-text');
 
     const subtitle = document.createElement('div');
 
-    subtitle.className = 'block mt-2 text-[12px] text-gray-text whitespace-pre-wrap break-words select-text';
+    subtitle.className = twJoin(
+      'block mt-[8px] text-[12px] text-gray-text whitespace-pre-wrap break-words select-text',
+      'before:content-[""] before:inline-block before:w-[14px] before:h-px before:mr-[8px] before:align-middle before:bg-current'
+    );
     subtitle.setAttribute('data-blok-testid', 'annotation-card-subtitle');
 
-    wrapper.append(text, subtitle);
+    body.append(text, subtitle);
+    surface.append(body);
+    wrapper.append(stem, surface);
     wrapper.addEventListener('mouseenter', () => this.cancelHide());
     wrapper.addEventListener('mouseleave', () => this.scheduleHide());
 

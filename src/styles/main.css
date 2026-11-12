@@ -457,6 +457,11 @@
   background-color: var(--blok-selection-inactive);
 }
 
+/* The phrase whose hint card is open; annotation-card.ts registers it. */
+[data-blok-interface]::highlight(blok-annotation-open) {
+  background-color: var(--blok-item-hover-bg);
+}
+
 /**
  * Content width mode
  * 'full' (data-blok-width="full" on the editor wrapper) removes the

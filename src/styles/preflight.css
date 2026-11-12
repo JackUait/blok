@@ -140,13 +140,15 @@
     text-decoration-thickness: 1.5px;
     text-underline-offset: 4px;
     border-radius: var(--blok-radius-mark);
-    transition: background-color 120ms ease-out;
+    transition: background-color 120ms ease-out, text-decoration-color 120ms ease-out;
     /* A click opens the hint. */
     cursor: pointer;
   }
 
   :where([data-blok-interface]) span[data-blok-annotation]:hover {
     background-color: var(--blok-item-hover-bg);
+    text-decoration-style: solid;
+    text-decoration-color: var(--blok-text-primary);
   }
 
   :where([data-blok-interface][data-blok-readonly]) span[data-blok-annotation] {

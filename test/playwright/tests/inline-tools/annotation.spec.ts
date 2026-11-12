@@ -221,6 +221,40 @@ test.describe('annotation (Hint) inline tool', () => {
     await expect(card).not.toHaveAttribute('data-state', 'open');
   });
 
+  test('the card hangs under the phrase on a stem, and the phrase stays lit while it is open', async ({ page }) => {
+    await createBlok(page, [ WITH_HINT ], { readOnly: true });
+
+    const hint = page.locator(HINT_SELECTOR);
+    const card = page.getByTestId('annotation-card');
+    const stem = page.getByTestId('annotation-card-stem');
+
+    await hint.click();
+    await expect(card).toHaveAttribute('data-state', 'open');
+    await expect(card).toHaveAttribute('data-side', 'bottom');
+    await expect(page.getByTestId('annotation-card-text')).toBeVisible();
+
+    // The spring overshoots, so read the boxes once it has settled.
+    await expect.poll(async () => (await stem.boundingBox())?.height).toBe(11);
+
+    const phrase = await hint.boundingBox();
+    const stemBox = await stem.boundingBox();
+    const cardBox = await card.boundingBox();
+
+    if (phrase === null || stemBox === null || cardBox === null) {
+      throw new Error('a box is missing');
+    }
+
+    expect(Math.abs(stemBox.y - (phrase.y + phrase.height))).toBeLessThanOrEqual(1);
+    expect(Math.abs(stemBox.y + stemBox.height - cardBox.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(stemBox.x + stemBox.width / 2 - (phrase.x + phrase.width / 2))).toBeLessThanOrEqual(1);
+
+    expect(await page.evaluate(() => CSS.highlights.has('blok-annotation-open'))).toBe(true);
+
+    await page.keyboard.press('Escape');
+    await expect(card).not.toHaveAttribute('data-state', 'open');
+    expect(await page.evaluate(() => CSS.highlights.has('blok-annotation-open'))).toBe(false);
+  });
+
   test('clicking a hint edits it, Escape saves, and one undo brings the old text back', async ({ page }) => {
     await createBlok(page, [ WITH_HINT ]);
 

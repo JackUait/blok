@@ -23,6 +23,10 @@
   background-color: var(--blok-selection-inactive);
 }
 
+[data-blok-interface] ::highlight(blok-annotation-open) {
+  background-color: var(--blok-item-hover-bg);
+}
+
 :where(:root) ::highlight(blok-page-mention-query) {
   background-color: var(--blok-item-hover-bg);
 }

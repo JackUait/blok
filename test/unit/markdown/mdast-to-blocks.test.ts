@@ -662,7 +662,7 @@ describe('mdastToBlocks', () => {
   });
 
   describe('list item with nested block content', () => {
-    it('emits a fenced code block nested in a list item as a sibling code block', () => {
+    it('hangs a fenced code block in a list item under the item', () => {
       const tree: Root = {
         type: 'root',
         children: [{
@@ -682,11 +682,13 @@ describe('mdastToBlocks', () => {
 
       const blocks = mdastToBlocks(tree);
 
+      expect(blocks[1].parent).toBe(blocks[0].id);
+      expect(blocks[0].content).toEqual([blocks[1].id]);
       expect(blocks.map(b => b.type)).toEqual(['list', 'code']);
       expect(blocks[1].data).toMatchObject({ code: 'npm i thing', language: 'bash' });
     });
 
-    it('emits a second paragraph in a list item as a sibling paragraph', () => {
+    it('hangs a second paragraph in a list item under the item', () => {
       const tree: Root = {
         type: 'root',
         children: [{
@@ -706,12 +708,14 @@ describe('mdastToBlocks', () => {
 
       const blocks = mdastToBlocks(tree);
 
+      expect(blocks[1].parent).toBe(blocks[0].id);
+      expect(blocks[0].content).toEqual([blocks[1].id]);
       expect(blocks.map(b => b.type)).toEqual(['list', 'paragraph']);
       expect(blocks[0].data.text).toBe('First');
       expect(blocks[1].data.text).toBe('Second');
     });
 
-    it('emits a blockquote nested in a list item as a sibling quote block', () => {
+    it('hangs a blockquote in a list item under the item', () => {
       const tree: Root = {
         type: 'root',
         children: [{
@@ -734,6 +738,8 @@ describe('mdastToBlocks', () => {
 
       const blocks = mdastToBlocks(tree);
 
+      expect(blocks[1].parent).toBe(blocks[0].id);
+      expect(blocks[0].content).toEqual([blocks[1].id]);
       expect(blocks.map(b => b.type)).toEqual(['list', 'quote']);
       expect(blocks[1].data.text).toBe('Careful');
     });

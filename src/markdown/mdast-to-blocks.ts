@@ -236,7 +236,7 @@ function handleBuiltInNode(
   }
 
   if (node.type === 'blockquote') {
-    return handleBlockquote(node, ctx);
+    return handleBlockquote(node, ctx, listDepth);
   }
 
   if (node.type === 'table') {
@@ -521,17 +521,29 @@ function handleListItem(
     data.start = startValue;
   }
 
-  blocks.push(makeBlock('list', data, ctx.generateId));
+  const listItem = makeBlock('list', data, ctx.generateId);
 
-  // Everything else in the item becomes sibling blocks in document order.
+  blocks.push(listItem);
+
+  // Everything else in the item hangs under it, in document order.
   // Skipped by identity, not by type: a SECOND paragraph is real content.
-  // listDepth is depth + 1 so a nested list keeps indenting.
+  // depth + 1 must match the parent chain, or the list tool moves the indent.
   for (const child of item.children) {
     if (child === paragraphChild) {
       continue;
     }
 
     pushAll(blocks, convertNode(child, ctx, depth + 1) ?? []);
+  }
+
+  // Blocks that already have a parent (a callout body, table cells) keep it.
+  const own = blocks.slice(1).filter((block) => block.parent === undefined);
+
+  if (own.length > 0) {
+    own.forEach((block) => {
+      block.parent = listItem.id;
+    });
+    listItem.content = own.map((block) => block.id).filter((id): id is string => id !== undefined);
   }
 
   return blocks;
@@ -543,7 +555,7 @@ function handleListItem(
  * other child (code, list, nested quote) becomes its own block in place,
  * splitting the quote around it, so nothing is dropped.
  */
-function handleBlockquote(bq: Blockquote, ctx: ConvertContext): OutputBlockData[] {
+function handleBlockquote(bq: Blockquote, ctx: ConvertContext, listDepth: number): OutputBlockData[] {
   const alert = matchAlert(bq);
 
   if (alert !== null) {
@@ -566,7 +578,8 @@ function handleBlockquote(bq: Blockquote, ctx: ConvertContext): OutputBlockData[
     }
 
     flush();
-    pushAll(blocks, convertNode(child, ctx, 0) ?? []);
+    // A list in a quote in a list item still hangs under that item.
+    pushAll(blocks, convertNode(child, ctx, listDepth) ?? []);
   }
 
   // An empty `>` still makes a quote.

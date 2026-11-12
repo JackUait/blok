@@ -694,3 +694,56 @@ describe('markdownToBlocks with pageIdFromHref', () => {
     ]);
   });
 });
+
+describe('markdownToBlocks — nested lists are a tree', () => {
+  const shape = (blocks: OutputBlockData[]): Array<{ text: unknown; parent?: string; content?: string[] }> => {
+    const index = new Map(blocks.map((block, i) => [block.id, i]));
+
+    return blocks.map((block) => ({
+      text: block.data.text ?? block.data.code,
+      ...(block.parent !== undefined && { parent: `#${index.get(block.parent)}` }),
+      ...(block.content !== undefined && { content: block.content.map((id) => `#${index.get(id)}`) }),
+    }));
+  };
+
+  it('hangs each nested item under its parent item, and the parent lists it in content', async () => {
+    const blocks = await markdownToBlocks('- a\n  - b\n    - c\n  - d\n- e');
+
+    expect(shape(blocks)).toStrictEqual([
+      { text: 'a', content: ['#1', '#3'] },
+      { text: 'b', parent: '#0', content: ['#2'] },
+      { text: 'c', parent: '#1' },
+      { text: 'd', parent: '#0' },
+      { text: 'e' },
+    ]);
+    expect(blocks.map((block) => block.data.depth)).toStrictEqual([0, 1, 2, 1, 0]);
+  });
+
+  it('hangs a code block and a second paragraph in an item under that item, before its nested list', async () => {
+    const blocks = await markdownToBlocks('- a\n\n  more\n\n  ```\n  x\n  ```\n\n  - b');
+
+    expect(shape(blocks)).toStrictEqual([
+      { text: 'a', content: ['#1', '#2', '#3'] },
+      { text: 'more', parent: '#0' },
+      { text: 'x', parent: '#0' },
+      { text: 'b', parent: '#0' },
+    ]);
+  });
+
+  it('keeps a callout body under the callout when the callout sits in an item', async () => {
+    const blocks = await markdownToBlocks('- a\n\n  > [!NOTE]\n  > inside');
+
+    expect(blocks.map((block) => block.type)).toStrictEqual(['list', 'callout', 'paragraph']);
+    expect(blocks[1].parent).toBe(blocks[0].id);
+    expect(blocks[0].content).toStrictEqual([blocks[1].id]);
+    expect(blocks[2].parent).toBe(blocks[1].id);
+  });
+
+  it('gives a list inside a quote inside an item the depth of its place in the tree', async () => {
+    const blocks = await markdownToBlocks('- a\n\n  > q\n  >\n  > - b');
+    const b = blocks.find((block) => block.data.text === 'b');
+
+    expect(b?.parent).toBe(blocks[0].id);
+    expect(b?.data.depth).toBe(1);
+  });
+});

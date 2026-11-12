@@ -1931,6 +1931,59 @@ test.describe('copy and paste', () => {
     }
   });
 
+  test.describe('Markdown with blocks inside a list item', () => {
+    const tree = async (page: Page): Promise<Array<{ text: unknown; parent: unknown; content: unknown }>> => {
+      const { blocks } = await saveBlok(page);
+      const textOf = (id: unknown): unknown => {
+        const block = blocks.find((b) => b.id === id);
+
+        return block?.data.text ?? block?.data.code ?? block?.type;
+      };
+
+      return blocks.map((b) => ({ text: textOf(b.id), parent: textOf(b.parent), content: b.content?.map(textOf) }));
+    };
+
+    test('pasted at the top level hangs the code block and the nested item under the item', async ({ page }) => {
+      await createBlok(page, { data: { blocks: [{ id: 'target', type: 'paragraph', data: { text: '' } }] }, dataModel: 'hierarchical' });
+      await page.locator('[data-blok-id="target"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), { 'text/plain': '- Item\n\n  ```\n  code\n  ```\n\n  - Child' });
+
+      await expect.poll(() => tree(page)).toEqual([
+        { text: 'Item', parent: undefined, content: ['code', 'Child'] },
+        { text: 'code', parent: 'Item', content: undefined },
+        { text: 'Child', parent: 'Item', content: undefined },
+      ]);
+    });
+
+    test('pasted into a table cell keeps the nested item under its item, inside the cell', async ({ page }) => {
+      await createBlok(page, {
+        data: { blocks: [
+          { id: 't', type: 'table', data: { withHeadings: false, withHeadingColumn: false, content: [[{ blocks: ['c0'] }, { blocks: ['c1'] }]] }, content: ['c0', 'c1'] },
+          { id: 'c0', type: 'paragraph', parent: 't', data: { text: '' } },
+          { id: 'c1', type: 'paragraph', parent: 't', data: { text: '' } },
+        ] },
+        dataModel: 'hierarchical',
+      });
+      await page.locator('[data-blok-id="c0"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), { 'text/plain': '- One\n  - Two' });
+
+      const shape = async (): Promise<{ two: unknown; outsideTable: string[] }> => {
+        const { blocks } = await saveBlok(page);
+        const one = blocks.find((b) => b.data.text === 'One');
+        const two = blocks.find((b) => b.data.text === 'Two');
+        const outsideTable = await page.evaluate((ids) => ids.filter((id) => {
+          const holder = document.querySelector(`[data-blok-id="${id}"]`);
+
+          return holder === null || holder.closest('[data-blok-id="t"]') === null;
+        }), [one?.id ?? 'missing', two?.id ?? 'missing']);
+
+        return { two: two === undefined ? undefined : { parentIsOne: two.parent === one?.id, depth: two.data.depth }, outsideTable };
+      };
+
+      await expect.poll(shape).toEqual({ two: { parentIsOne: true, depth: 1 }, outsideTable: [] });
+    });
+  });
+
   test.describe('list items placed under a table or container', () => {
     const LI = (id: string, text: string, depth: number, parent?: string): OutputData['blocks'][number] =>
       ({ id, type: 'list', data: { text, style: 'unordered', depth }, ...(parent === undefined ? {} : { parent }) });

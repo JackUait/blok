@@ -9,6 +9,12 @@ import type { PageIcon } from './tools/page';
  * @param config - Optional configuration for tool mapping and GFM
  * @returns Blocks ready for `blok.blocks.render()` or `blok.blocks.insertMany()`
  *
+ * A nested list comes back as a tree: a nested item's `parent` is the item
+ * above it, and that item lists it in `content`. Other blocks inside an item
+ * (a code block, a second paragraph) hang under the item too. Each item keeps
+ * `data.depth`. To place the result under a parent of your own, set `parent`
+ * only on blocks that have none.
+ *
  * NOTE: this signature is hand-authored to mirror the implementation in
  * `src/markdown/index.ts`. It must stay self-contained — do NOT re-export from
  * `../src/...` (that drags raw implementation source into every consumer's

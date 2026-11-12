@@ -1051,7 +1051,8 @@ describe('UndoHistory', () => {
       second.remove();
     });
 
-    it('records and re-selects a backward range inside one input', () => {
+    // Notion U038: a one-block range made backward comes back forward.
+    it('re-selects a backward range inside one input forward', () => {
       const input = document.createElement('div');
 
       input.textContent = 'hello world';
@@ -1064,7 +1065,7 @@ describe('UndoHistory', () => {
 
       const snapshot = history.captureCaretSnapshot();
 
-      expect(snapshot).toEqual({ blockId: 'b1', inputIndex: 0, offset: 6, end: 11, backward: true });
+      expect(snapshot).toEqual({ blockId: 'b1', inputIndex: 0, offset: 6, end: 11 });
 
       (blok.BlockManager as unknown as { getBlockById: typeof vi.fn }).getBlockById = vi.fn().mockReturnValue(block);
       window.getSelection()?.removeAllRanges();
@@ -1074,7 +1075,7 @@ describe('UndoHistory', () => {
 
       const selection = window.getSelection();
 
-      expect([selection?.anchorOffset, selection?.focusOffset]).toEqual([11, 6]);
+      expect([selection?.anchorOffset, selection?.focusOffset]).toEqual([6, 11]);
       input.remove();
     });
 

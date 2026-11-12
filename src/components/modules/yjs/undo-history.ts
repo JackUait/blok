@@ -3467,7 +3467,9 @@ export class UndoHistory {
     const offset = input !== undefined ? getCaretOffset(input) : 0;
     const end = input !== undefined ? UndoHistory.selectionEndIn(input) : null;
     const endIn = input !== undefined && end === null ? this.selectionEndInOtherBlock(input) : null;
-    const backward = (end !== null || endIn !== null) && UndoHistory.isBackward(liveSelection);
+    // Only a range across blocks keeps its direction: Notion re-selects a
+    // one-block range forward (U038). Cross-block is unmeasured there.
+    const backward = endIn !== null && UndoHistory.isBackward(liveSelection);
 
     return {
       blockId: currentBlock.id,
@@ -3787,9 +3789,7 @@ export class UndoHistory {
     const end = resolveCaretRange(input, snapshot.end);
 
     if (start !== null && end !== null) {
-      const [base, extent] = snapshot.backward === true ? [end, start] : [start, end];
-
-      window.getSelection()?.setBaseAndExtent(base.startContainer, base.startOffset, extent.startContainer, extent.startOffset);
+      window.getSelection()?.setBaseAndExtent(start.startContainer, start.startOffset, end.startContainer, end.startOffset);
       this.showToolbarForRange();
     }
   }

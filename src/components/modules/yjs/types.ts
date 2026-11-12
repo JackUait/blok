@@ -136,7 +136,7 @@ export interface CaretSnapshot {
    * apart from `end` because a peer rewrite rebases `end` by this block's text.
    */
   endIn?: { blockId: string; inputIndex: number; offset: number };
-  /** The range's anchor was at its end (Shift+ArrowUp), so restore keeps it there. */
+  /** A range across blocks had its anchor at its end (Shift+ArrowUp), so restore keeps it there. */
   backward?: true;
   /** The caret was in the page title. `blockId` is then empty. */
   title?: true;

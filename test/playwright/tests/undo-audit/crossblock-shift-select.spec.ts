@@ -376,4 +376,59 @@ test.describe('undo audit: keyboard cross-block text selection (U072)', () => {
     expect(downOne).toMatch(/^b2@/);
     expect(offsetOf(downOne)).toBeGreaterThan(offsetOf(upTwo));
   });
+
+  test('U038: undo of Backspace over a backward selection in one block re-selects it forward, like Notion', async ({ page }) => {
+    await mount(page, [{ id: 'b1', type: 'paragraph', data: { text: 'Hello brave world' } }]);
+    await editable(page, 'b1').click();
+    await page.keyboard.press('End');
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press('ArrowLeft');
+    }
+    await page.keyboard.down('Shift');
+    for (let i = 0; i < 5; i++) {
+      await page.keyboard.press('ArrowLeft');
+    }
+    await page.keyboard.up('Shift');
+    expect(await selection(page)).toBe('b1@11 -> b1@6');
+
+    await page.keyboard.press('Backspace');
+    await pause(page, 1000);
+    // The browser keeps the doubled space visible with a no-break space.
+    expect((await savedText(page)).map((text) => text.replace(/\u00a0|&nbsp;/g, ' '))).toEqual(['b1:Hello  world']);
+
+    await page.keyboard.press(`${MOD}+z`);
+    await pause(page, 300);
+
+    expect(await selection(page)).toBe('b1@6 -> b1@11');
+    expect(await savedText(page)).toEqual(['b1:Hello brave world']);
+  });
+
+  test('undo and redo of Cmd+B on a backward selection in one block re-select it forward', async ({ page }) => {
+    await mount(page, [{ id: 'b1', type: 'paragraph', data: { text: 'Hello brave world' } }]);
+    await editable(page, 'b1').click();
+    await page.keyboard.press('End');
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press('ArrowLeft');
+    }
+    await page.keyboard.down('Shift');
+    for (let i = 0; i < 5; i++) {
+      await page.keyboard.press('ArrowLeft');
+    }
+    await page.keyboard.up('Shift');
+
+    await page.keyboard.press(`${MOD}+b`);
+    await pause(page, 1000);
+    expect(await savedText(page)).toEqual(['b1:Hello <strong>brave</strong> world']);
+
+    await page.keyboard.press(`${MOD}+z`);
+    await pause(page, 300);
+    expect(await savedText(page)).toEqual(['b1:Hello brave world']);
+    expect(await selection(page)).toBe('b1@6 -> b1@11');
+
+    await page.keyboard.press(`${MOD}+Shift+z`);
+    await pause(page, 300);
+    expect(await savedText(page)).toEqual(['b1:Hello <strong>brave</strong> world']);
+    expect(await selection(page)).toBe('b1@6 -> b1@11');
+  });
 });
+

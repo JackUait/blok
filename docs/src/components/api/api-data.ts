@@ -5230,7 +5230,7 @@ if (transportBytes > 500 * 1024) {
         name: "blocksToMarkdown(data, options?)",
         returnType: "string",
         description:
-          "Serialize a saved document to Markdown. It is synchronous and DOM-free, the outbound twin of markdownToBlocks. Headings become #, lists -/1., to-dos - [x], and tables GFM pipe grids.\n\nMarkdown has no callout, toggle, column or spacer. So a callout becomes a blockquote carrying its emoji, a toggle becomes a bold summary followed by its body, columns flatten into reading order, and a spacer is dropped.\n\nReturns '' for empty or malformed documents.\n\nThe second argument takes `pageInfo`, `pageHref` and `title` from the blocksToHtml options. `title: true` writes the page title first, as a `#` heading led by an emoji icon.",
+          "Serialize a saved document to Markdown. It is synchronous and DOM-free, the outbound twin of markdownToBlocks. Headings become #, lists -/1., to-dos - [x], and tables GFM pipe grids.\n\nMarkdown has no callout, toggle, column, database or spacer, so each is written in a form Markdown has.\n\n- A callout becomes a GitHub alert, with its child blocks inside.\n- A callout styled like a GitHub alert keeps that alert: `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` or `[!CAUTION]`.\n- Any other callout becomes `[!CALLOUT]`, which markdownToBlocks reads back as the default callout. Its own emoji and colours are lost.\n- A toggle becomes a bold summary followed by its body.\n- Columns flatten into reading order.\n- A database becomes its bold title and a GFM table. The table has the row title and one column per property. Each row's page body follows the table, under the row's bold title.\n- A spacer is dropped.\n\nReturns '' for empty or malformed documents.\n\nThe second argument takes `pageInfo`, `pageHref` and `title` from the blocksToHtml options. `title: true` writes the page title first, as a `#` heading led by an emoji icon.",
         example: `import { blocksToMarkdown } from '@bloklabs/core/view';
 
 // Feed an article to an LLM, or write it to a .md file
@@ -5258,7 +5258,7 @@ const markdown = blocksToMarkdown(savedData);`,
         example: `import { blocksToMarkdownWithReport } from '@bloklabs/core/view';
 
 const { markdown, warnings } = blocksToMarkdownWithReport(savedData);
-// warnings: [{ construct: 'callout', action: 'degraded', detail: 'callout is rendered as a blockquote; …' }]`,
+// warnings: [{ construct: 'callout', action: 'degraded', detail: 'callout is written as a [!CALLOUT] alert; its emoji is lost' }]`,
         params: [
           {
             name: "data",

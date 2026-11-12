@@ -1,21 +1,35 @@
 import type { Blockquote, PhrasingContent, RootContent } from '../../types/data-formats/markdown-tree';
 
-/** GitHub alert markers: `> [!NOTE]`, `[!WARNING]`, etc. */
-export const ALERT_KINDS = ['note', 'tip', 'important', 'warning', 'caution'] as const;
+/**
+ * GitHub alert markers: `> [!NOTE]`, `[!WARNING]`, etc. `[!CALLOUT]` is Blok's
+ * own: the export writes it for a callout no GitHub kind matches, so the
+ * default callout comes back unchanged. GitHub shows it as a plain quote.
+ */
+export const ALERT_KINDS = ['note', 'tip', 'important', 'warning', 'caution', 'callout'] as const;
 
 export type AlertKind = typeof ALERT_KINDS[number];
 
 /** Case-sensitive, as GitHub reads it: `[!note]` stays a quote. */
-export const ALERT_MARKER = /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/;
+export const ALERT_MARKER = /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION|CALLOUT)\]\s*/;
 
 /** The callout an alert becomes. */
-export const ALERT_STYLE: Record<AlertKind, { emoji: string; backgroundColor: string }> = {
+export const ALERT_STYLE: Record<AlertKind, { emoji: string; backgroundColor: string | null }> = {
   note: { emoji: 'ℹ️', backgroundColor: 'blue' },
   tip: { emoji: '💡', backgroundColor: 'green' },
   important: { emoji: '❗', backgroundColor: 'purple' },
   warning: { emoji: '⚠️', backgroundColor: 'orange' },
   caution: { emoji: '🛑', backgroundColor: 'red' },
+  // The callout tool's defaults: DEFAULT_EMOJI and no background.
+  callout: { emoji: '💡', backgroundColor: null },
 };
+
+/**
+ * The alert a callout exports as: the kind whose style it has, else `callout`.
+ * @param emoji - the callout's emoji
+ * @param backgroundColor - its background preset, or null
+ */
+export const alertKindFor = (emoji: string, backgroundColor: string | null): AlertKind =>
+  ALERT_KINDS.find((kind) => ALERT_STYLE[kind].emoji === emoji && ALERT_STYLE[kind].backgroundColor === backgroundColor) ?? 'callout';
 
 /**
  * Detect a GitHub alert blockquote (`> [!NOTE]` on the first line) and return

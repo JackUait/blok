@@ -47,7 +47,7 @@ const article = { blocks: [
   { id: 'p1', type: 'paragraph', data: { text: 'Ships <b>today</b> — see <a href="https://x.com">details</a>.' } },
 ] };
 const callout = { blocks: [
-  { id: 'c1', type: 'callout', data: { emoji: '💡' } },
+  { id: 'c1', type: 'callout', data: { emoji: '🔥' } },
   { id: 'p1', type: 'paragraph', data: { text: 'Mind the gap' }, parent: 'c1' },
   { id: 's1', type: 'spacer', data: {} },
 ] };

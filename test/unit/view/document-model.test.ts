@@ -97,7 +97,7 @@ describe('buildDocumentModel resolves containment from a container `content[]`',
       ],
     };
 
-    expect(blocksToMarkdown(contentOnly)).toBe('> 💡 inside');
+    expect(blocksToMarkdown(contentOnly)).toBe('> [!CALLOUT]\n> \n> inside');
     expect(blocksToMarkdown(contentOnly)).toBe(blocksToMarkdown(bothSides));
   });
 });

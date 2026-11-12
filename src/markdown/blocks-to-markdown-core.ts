@@ -17,6 +17,9 @@ import type { BlockToolData } from '../../types';
 import type { PageInfo } from '../../types/tools/page';
 import { orderByContent } from '../shared/content-order';
 import { databaseRowTitle, inRowOrder, isTemplateRow, titlePropertyIdOf } from '../shared/database-rows';
+import { placeText, verificationStatus } from '../shared/database/tier3-values';
+import type { PropertyValue } from '../shared/database/types';
+import { ALERT_STYLE, alertKindFor } from './alerts';
 import { claimedCellTexts, leadingCellText, repairedTableRows } from '../shared/table-grid';
 import { isPagePointer } from '../shared/page-pointer';
 import { hasUnsafeUrlProtocol } from '../shared/url-policy';
@@ -1122,6 +1125,136 @@ const databaseRowToMarkdown = (row: SerializableBlock, context: SerializationCon
 };
 
 /**
+ * A callout as a GitHub alert. The marker line and a blank quote line come
+ * first, so a first child that cannot interrupt a paragraph (a list, a table)
+ * is not read as part of the marker's line.
+ * @param block - the callout block
+ * @param context - the serialization context
+ */
+const calloutToMarkdown = (block: SerializableBlock, context: SerializationContext): string => {
+  // The callout tool loads a missing emoji as its default and a missing colour as none.
+  const emoji = typeof block.data.emoji === 'string' ? block.data.emoji : ALERT_STYLE.callout.emoji;
+  const backgroundColor = typeof block.data.backgroundColor === 'string' ? block.data.backgroundColor : null;
+  const kind = alertKindFor(emoji, backgroundColor);
+  const losses = [
+    ...(ALERT_STYLE[kind].emoji === emoji ? [] : ['emoji']),
+    ...(ALERT_STYLE[kind].backgroundColor === backgroundColor ? [] : ['background colour']),
+    ...(typeof block.data.textColor === 'string' && block.data.textColor !== '' ? ['text colour'] : []),
+  ];
+
+  if (losses.length > 0) {
+    warn(context, block.tool, 'degraded', `callout is written as a [!${kind.toUpperCase()}] alert; its ${joinLosses(losses)} ${losses.length > 1 ? 'are' : 'is'} lost`);
+  }
+
+  const body = childrenToMarkdown(block, context);
+
+  return prefixLines(body === '' ? `[!${kind.toUpperCase()}]` : `[!${kind.toUpperCase()}]\n\n${body}`, '> ');
+};
+
+const isRecordValue = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/**
+ * One database cell as Markdown table text, the way the grid shows it.
+ * @param property - the schema property
+ * @param value - the row's stored value
+ * @param context - the serialization context (resolves relation titles)
+ */
+const databaseCellMarkdown = (property: Record<string, unknown>, value: unknown, context: SerializationContext): string => {
+  const options = isRecordValue(property.config) && Array.isArray(property.config.options) ? property.config.options.filter(isRecordValue) : [];
+  const labelOf = (id: string): string => asString(options.find((option) => option.id === id)?.label);
+  const ids = (Array.isArray(value) ? value : [value]).flatMap((item: unknown) => {
+    const id = isRecordValue(item) ? item.id : item;
+
+    return typeof id === 'string' && id !== '' ? [id] : [];
+  });
+  const plain = (text: string): string => escapePlainText(text);
+
+  switch (property.type) {
+    case 'checkbox':
+      return value === true ? 'Yes' : 'No';
+    case 'select':
+    case 'status':
+    case 'multiSelect':
+      return plain(ids.map(labelOf).filter((label) => label !== '').join(', '));
+    case 'person':
+    case 'createdBy':
+    case 'lastEditedBy':
+      return plain(ids.join(', '));
+    case 'relation':
+      return plain(ids.map((id) => {
+        const row = context.byId.get(id);
+        const database = typeof row?.parentId === 'string' ? context.byId.get(row.parentId) : undefined;
+        const title = row === undefined ? '' : databaseRowTitle(row, database === undefined ? undefined : titlePropertyIdOf(database.data));
+
+        return title === '' ? id : title;
+      }).join(', '));
+    case 'files':
+      return plain(Array.isArray(value) ? value.flatMap((file: unknown) => (isRecordValue(file) && typeof file.url === 'string' ? [file.url] : [])).join(', ') : '');
+    case 'richText':
+      // A legacy rich text value is a small document: its blocks' inline text, one per line.
+      return isRecordValue(value) && Array.isArray(value.blocks)
+        ? value.blocks.filter(isRecordValue).map((inner) => inlineMarkdown(context, asString(isRecordValue(inner.data) ? inner.data.text : ''))).filter((line) => line !== '').join(HARD_BREAK)
+        : plain(asString(value));
+    case 'place':
+      return plain(placeText(value as PropertyValue));
+    case 'verification':
+      return value === undefined || value === null ? '' : verificationStatus(value);
+    default:
+      return typeof value === 'string' || typeof value === 'number' ? plain(String(value)) : '';
+  }
+};
+
+/**
+ * A database as its bold title, then a GFM table: the row title, then every
+ * schema property in order. Each row's page body follows the table under the
+ * row's bold title. The table pastes back as a table, not a database.
+ * @param block - the database block
+ * @param context - the serialization context
+ */
+const databaseToMarkdown = (block: SerializableBlock, context: SerializationContext): string => {
+  const { data } = block;
+  const children = context.childrenOf.get(block.id ?? '') ?? [];
+  const titleId = titlePropertyIdOf(data);
+  const rows = inRowOrder(children.filter((child) => child.tool === 'database-row' && !isTemplateRow(child)));
+  const schema = (Array.isArray(data.schema) ? data.schema.filter(isRecordValue) : [])
+    .map((property, index) => ({ property, index }))
+    .sort((a, b) => {
+      const pa = asString(a.property.position);
+      const pb = asString(b.property.position);
+
+      if (pa === pb) {
+        return a.index - b.index;
+      }
+
+      return pa < pb ? -1 : 1;
+    })
+    .map(({ property }) => property);
+  const titleProperty = schema.find((property) => property.type === 'title');
+  const columns = schema.filter((property) => property !== titleProperty);
+  const cell = (text: string): string => escapeTableCell(text, () => undefined).trim();
+  const header = [asString(titleProperty?.name) || 'Name', ...columns.map((property) => asString(property.name))].map((name) => cell(escapePlainText(name)));
+  const lines = rows.map((row) => {
+    const properties = isRecordValue(row.data.properties) ? row.data.properties : {};
+
+    return [
+      cell(escapePlainText(databaseRowTitle(row, titleId))),
+      ...columns.map((property) => cell(databaseCellMarkdown(property, properties[asString(property.id)], context))),
+    ];
+  });
+  const table = [header, header.map(() => '---'), ...lines].map((line) => `| ${line.join(' | ')} |`).join('\n');
+  const bodies = rows.map((row) => {
+    const body = childrenToMarkdown(row, context);
+    const title = databaseRowTitle(row, titleId);
+
+    return body === '' || title === '' ? body : `**${escapePlainText(title)}**\n\n${body}`;
+  });
+  const title = asString(data.title);
+
+  return [title === '' ? '' : `**${escapePlainText(title)}**`, table, ...bodies].filter((part) => part !== '').join('\n\n');
+};
+
+/**
  * Whether a block sits inside a list item. Four leading spaces continue a list
  * item, but outside one they are an indented code block — so a non-list block
  * only carries a flat indent when a list actually owns it.
@@ -1315,20 +1448,12 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
       return `${indent}- ${text}`;
     }
     /**
-     * A callout carries no `data.text` of its own — its content is child
-     * blocks — so without this case it serialized to an EMPTY line while its
-     * children escaped as loose siblings, indented four spaces into a code
-     * block. Rendered as a blockquote: the emoji leads the body; type and
-     * colours are lost.
+     * A callout carries no `data.text` of its own: its content is child
+     * blocks. It is written as a GitHub alert, the marker on its own line and
+     * the children below it, so the importer makes them separate child blocks.
      */
-    case 'callout': {
-      warn(context, block.tool, 'degraded', 'callout is rendered as a blockquote; its emoji styling, colours and type are lost');
-
-      const emoji = asString(data.emoji);
-      const body = childrenToMarkdown(block, context);
-
-      return prefixLines([emoji, body].filter((part) => part !== '').join(' '), '> ');
-    }
+    case 'callout':
+      return calloutToMarkdown(block, context);
     /**
      * Markdown has no collapsible section, so the summary becomes a bold line
      * and the body follows it as ordinary blocks.
@@ -1365,15 +1490,8 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
       }
 
       return childrenToMarkdown(block, context);
-    case 'database': {
-      const children = context.childrenOf.get(block.id ?? '') ?? [];
-      const titleId = titlePropertyIdOf(data);
-      const rows = inRowOrder(children.filter((child) => child.tool === 'database-row' && !isTemplateRow(child)))
-        .map((row) => databaseRowToMarkdown(row, context, databaseRowTitle(row, titleId)));
-      const title = asString(data.title);
-
-      return [title === '' ? '' : `**${escapePlainText(title)}**`, ...rows].filter((part) => part !== '').join('\n\n');
-    }
+    case 'database':
+      return databaseToMarkdown(block, context);
     case 'database-row':
       return databaseRowToMarkdown(block, context, databaseRowTitle(block, undefined));
     case 'tab': {

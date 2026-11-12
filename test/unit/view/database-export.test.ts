@@ -44,8 +44,8 @@ describe('database export', () => {
     );
   });
 
-  it('writes Markdown with each row title before its body', () => {
-    expect(blocksToMarkdown(doc)).toBe('**Tasks**\n\n**First**\n\nfirst body\n\n**Second**');
+  it('writes Markdown as a table of rows, then each row title before its body', () => {
+    expect(blocksToMarkdown(doc)).toBe('**Tasks**\n\n| Name |\n| --- |\n| First |\n| Second |\n\n**First**\n\nfirst body');
   });
 
   it('leaves page templates out of every export', () => {

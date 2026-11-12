@@ -446,13 +446,13 @@ describe('blocksToMarkdown (view)', () => {
   });
 
   describe('containers that own their children', () => {
-    it('renders a callout as a blockquote carrying its emoji and its children', () => {
+    it('renders a default callout as a [!CALLOUT] alert holding its children', () => {
       const md = blocksToMarkdown(doc([
         { id: 'cal1', type: 'callout', data: { emoji: '💡' } },
         { id: 'p1', type: 'paragraph', data: { text: 'Note body' }, parent: 'cal1' },
       ]));
 
-      expect(md).toBe('> 💡 Note body');
+      expect(md).toBe('> [!CALLOUT]\n> \n> Note body');
     });
 
     it('keeps every callout child inside the quote, exactly once', () => {
@@ -462,7 +462,7 @@ describe('blocksToMarkdown (view)', () => {
         { id: 'p2', type: 'paragraph', data: { text: 'Second' }, parent: 'cal1' },
       ]));
 
-      expect(md).toBe('> 💡 First\n> \n> Second');
+      expect(md).toBe('> [!CALLOUT]\n> \n> First\n> \n> Second');
     });
 
     it('renders a toggle as a bold summary followed by its body', () => {
@@ -496,7 +496,7 @@ describe('blocksToMarkdown (view)', () => {
         { id: 'p1', type: 'paragraph', data: { text: 'Deep' }, parent: 'tg' },
       ]));
 
-      expect(md).toBe('> 💡 **More**\n> \n> Deep');
+      expect(md).toBe('> [!CALLOUT]\n> \n> **More**\n> \n> Deep');
     });
 
     it('flattens columns into their blocks in reading order', () => {
@@ -582,7 +582,7 @@ describe('blocksToMarkdown (view)', () => {
         { type: 'paragraph', data: { text: 'After' } },
       ]));
 
-      expect(md).toBe('Before\n\n> 💡 Inside\n\nAfter');
+      expect(md).toBe('Before\n\n> [!CALLOUT]\n> \n> Inside\n\nAfter');
     });
   });
 
@@ -693,14 +693,14 @@ describe('blocksToMarkdown (view)', () => {
       ]);
     });
 
-    it('reports a callout as degraded', () => {
+    it('reports a callout whose emoji no alert carries as degraded', () => {
       const { warnings } = blocksToMarkdownWithReport(doc([
-        { id: 'cal1', type: 'callout', data: { emoji: '💡' } },
+        { id: 'cal1', type: 'callout', data: { emoji: '🔥' } },
         { id: 'p1', type: 'paragraph', data: { text: 'Body' }, parent: 'cal1' },
       ]));
 
       expect(warnings).toEqual([
-        { construct: 'callout', action: 'degraded', detail: expect.stringContaining('blockquote') },
+        { construct: 'callout', action: 'degraded', detail: expect.stringContaining('emoji') },
       ]);
     });
 

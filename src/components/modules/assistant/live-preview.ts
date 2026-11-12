@@ -459,7 +459,7 @@ const calloutAt = (raw: string[], index: number, lineDone: LineDone): Parsed | n
 
   return {
     spec: {
-      ...BASE, kind: 'callout', text: '', complete: lineDone(stop - 1), emoji: style.emoji, background: style.backgroundColor,
+      ...BASE, kind: 'callout', text: '', complete: lineDone(stop - 1), emoji: style.emoji, background: style.backgroundColor ?? undefined,
       children: parseLines(body, (at) => lineDone(index + skip + at)),
     },
     next: stop,

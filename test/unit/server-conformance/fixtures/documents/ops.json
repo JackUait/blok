@@ -136,118 +136,118 @@
   {
     "name": "callout.markdown",
     "op": "blocksToMarkdown",
-    "input": "{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}",
-    "output": "{\"markdown\":\"> 💡 Mind the gap\",\"warnings\":[{\"construct\":\"callout\",\"action\":\"degraded\",\"detail\":\"callout is rendered as a blockquote; its emoji styling, colours and type are lost\"},{\"construct\":\"spacer\",\"action\":\"dropped\",\"detail\":\"spacer is purely visual and has no Markdown equivalent\"}]}"
+    "input": "{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}",
+    "output": "{\"markdown\":\"> [!CALLOUT]\\n> \\n> Mind the gap\",\"warnings\":[{\"construct\":\"callout\",\"action\":\"degraded\",\"detail\":\"callout is written as a [!CALLOUT] alert; its emoji is lost\"},{\"construct\":\"spacer\",\"action\":\"dropped\",\"detail\":\"spacer is purely visual and has no Markdown equivalent\"}]}"
   },
   {
     "name": "callout.html",
     "op": "blocksToHtml",
-    "input": "{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}",
-    "output": "<aside><span>💡</span><p>Mind the gap</p></aside><div aria-hidden=\"true\"></div>"
+    "input": "{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}",
+    "output": "<aside><span>🔥</span><p>Mind the gap</p></aside><div aria-hidden=\"true\"></div>"
   },
   {
     "name": "callout.text",
     "op": "blocksToPlainText",
-    "input": "{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}",
+    "input": "{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}",
     "output": "Mind the gap"
   },
   {
     "name": "callout.text.hidden",
     "op": "blocksToPlainText",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeHiddenText\":true}",
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeHiddenText\":true}",
     "output": "Mind the gap"
   },
   {
     "name": "callout.report",
     "op": "blocksToPlainTextWithReport",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeHiddenText\":false}",
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeHiddenText\":false}",
     "output": "{\"text\":\"Mind the gap\",\"warnings\":[]}"
   },
   {
     "name": "callout.inspect",
     "op": "inspect",
-    "input": "{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}",
+    "input": "{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}",
     "output": "{\"blockCount\":3,\"malformedBlockCount\":0,\"isEmpty\":false,\"unrecognizedBlockTypes\":[]}"
   },
   {
     "name": "callout.extract",
     "op": "extractTexts",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeCode\":false}",
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeCode\":false}",
     "output": "[\"Mind the gap\"]"
   },
   {
     "name": "callout.extract.code",
     "op": "extractTexts",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeCode\":true}",
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeCode\":true}",
     "output": "[\"Mind the gap\"]"
   },
   {
     "name": "callout.pageIndex",
     "op": "pageIndex",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}}",
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}}",
     "output": "{\"owners\":[],\"text\":[{\"blockId\":\"c1\",\"order\":0,\"text\":\"\"},{\"blockId\":\"p1\",\"order\":1,\"text\":\"Mind the gap\"},{\"blockId\":\"s1\",\"order\":2,\"text\":\"\"}],\"references\":[]}"
   },
   {
     "name": "callout.markdown.title",
     "op": "blocksToMarkdown",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"title\":true}",
-    "output": "{\"markdown\":\"> 💡 Mind the gap\",\"warnings\":[{\"construct\":\"callout\",\"action\":\"degraded\",\"detail\":\"callout is rendered as a blockquote; its emoji styling, colours and type are lost\"},{\"construct\":\"spacer\",\"action\":\"dropped\",\"detail\":\"spacer is purely visual and has no Markdown equivalent\"}]}"
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"title\":true}",
+    "output": "{\"markdown\":\"> [!CALLOUT]\\n> \\n> Mind the gap\",\"warnings\":[{\"construct\":\"callout\",\"action\":\"degraded\",\"detail\":\"callout is written as a [!CALLOUT] alert; its emoji is lost\"},{\"construct\":\"spacer\",\"action\":\"dropped\",\"detail\":\"spacer is purely visual and has no Markdown equivalent\"}]}"
   },
   {
     "name": "callout.html.title",
     "op": "blocksToHtml",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"title\":true}",
-    "output": "<aside><span>💡</span><p>Mind the gap</p></aside><div aria-hidden=\"true\"></div>"
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"title\":true}",
+    "output": "<aside><span>🔥</span><p>Mind the gap</p></aside><div aria-hidden=\"true\"></div>"
   },
   {
     "name": "callout.text.title",
     "op": "blocksToPlainText",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeHiddenText\":false,\"title\":true}",
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeHiddenText\":false,\"title\":true}",
     "output": "Mind the gap"
   },
   {
     "name": "callout.html.pages",
     "op": "blocksToHtmlWithPages",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"pages\":{\"pg-ref\":{\"title\":\"Specs\",\"icon\":{\"type\":\"emoji\",\"value\":\"📐\"},\"href\":\"/p/pg-ref\"},\"pg-elsewhere\":{\"access\":\"none\"},\"pg-child-a\":null,\"pg-cap\":{\"title\":\"Bad\",\"href\":\"javascript:alert(1)\"},\"pg-child-b\":{\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/b.png\"},\"title\":\"\"},\"toString\":{\"title\":\"prototype key\"}}}",
-    "output": "<aside><span>💡</span><p>Mind the gap</p></aside><div aria-hidden=\"true\"></div>"
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"pages\":{\"pg-ref\":{\"title\":\"Specs\",\"icon\":{\"type\":\"emoji\",\"value\":\"📐\"},\"href\":\"/p/pg-ref\"},\"pg-elsewhere\":{\"access\":\"none\"},\"pg-child-a\":null,\"pg-cap\":{\"title\":\"Bad\",\"href\":\"javascript:alert(1)\"},\"pg-child-b\":{\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/b.png\"},\"title\":\"\"},\"toString\":{\"title\":\"prototype key\"}}}",
+    "output": "<aside><span>🔥</span><p>Mind the gap</p></aside><div aria-hidden=\"true\"></div>"
   },
   {
     "name": "callout.markdown.pages.title",
     "op": "blocksToMarkdownWithPages",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"pages\":{\"pg-ref\":{\"title\":\"Specs\",\"icon\":{\"type\":\"emoji\",\"value\":\"📐\"},\"href\":\"/p/pg-ref\"},\"pg-elsewhere\":{\"access\":\"none\"},\"pg-child-a\":null,\"pg-cap\":{\"title\":\"Bad\",\"href\":\"javascript:alert(1)\"},\"pg-child-b\":{\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/b.png\"},\"title\":\"\"},\"toString\":{\"title\":\"prototype key\"}},\"title\":true}",
-    "output": "{\"markdown\":\"> 💡 Mind the gap\",\"warnings\":[{\"construct\":\"callout\",\"action\":\"degraded\",\"detail\":\"callout is rendered as a blockquote; its emoji styling, colours and type are lost\"},{\"construct\":\"spacer\",\"action\":\"dropped\",\"detail\":\"spacer is purely visual and has no Markdown equivalent\"}]}"
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"pages\":{\"pg-ref\":{\"title\":\"Specs\",\"icon\":{\"type\":\"emoji\",\"value\":\"📐\"},\"href\":\"/p/pg-ref\"},\"pg-elsewhere\":{\"access\":\"none\"},\"pg-child-a\":null,\"pg-cap\":{\"title\":\"Bad\",\"href\":\"javascript:alert(1)\"},\"pg-child-b\":{\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/b.png\"},\"title\":\"\"},\"toString\":{\"title\":\"prototype key\"}},\"title\":true}",
+    "output": "{\"markdown\":\"> [!CALLOUT]\\n> \\n> Mind the gap\",\"warnings\":[{\"construct\":\"callout\",\"action\":\"degraded\",\"detail\":\"callout is written as a [!CALLOUT] alert; its emoji is lost\"},{\"construct\":\"spacer\",\"action\":\"dropped\",\"detail\":\"spacer is purely visual and has no Markdown equivalent\"}]}"
   },
   {
     "name": "callout.inject",
     "op": "injectTexts",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeCode\":true,\"texts\":[\"«Mind the gap»\"]}",
-    "output": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"«Mind the gap»\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}}"
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeCode\":true,\"texts\":[\"«Mind the gap»\"]}",
+    "output": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"«Mind the gap»\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}}"
   },
   {
     "name": "callout.inject.same",
     "op": "injectTexts",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeCode\":false,\"texts\":[\"Mind the gap\"]}",
-    "output": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}}"
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeCode\":false,\"texts\":[\"Mind the gap\"]}",
+    "output": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}}"
   },
   {
     "name": "callout.remap",
     "op": "remapPageDocument",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"blockIds\":{\"c1\":\"N-c1\",\"p1\":\"N-p1\",\"s1\":\"N-s1\"},\"pageIds\":{}}",
-    "output": "{\"document\":{\"blocks\":[{\"id\":\"N-c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"N-p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"N-c1\"},{\"id\":\"N-s1\",\"type\":\"spacer\",\"data\":{}}]}}"
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"blockIds\":{\"c1\":\"N-c1\",\"p1\":\"N-p1\",\"s1\":\"N-s1\"},\"pageIds\":{}}",
+    "output": "{\"document\":{\"blocks\":[{\"id\":\"N-c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"N-p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"N-c1\"},{\"id\":\"N-s1\",\"type\":\"spacer\",\"data\":{}}]}}"
   },
   {
     "name": "callout.html.reimport",
     "op": "htmlToBlocks",
-    "input": "{\"html\":\"<aside><span>💡</span><p>Mind the gap</p></aside><div aria-hidden=\\\"true\\\"></div>\"}",
+    "input": "{\"html\":\"<aside><span>🔥</span><p>Mind the gap</p></aside><div aria-hidden=\\\"true\\\"></div>\"}",
     "normalizeIds": true,
-    "output": "{\"blocks\":[{\"id\":\"html-X-0\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"💡\"}]}},{\"id\":\"html-X-1\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Mind the gap\"}]}}],\"warnings\":[{\"construct\":\"aside\",\"action\":\"degraded\",\"detail\":\"<aside> becomes plain blocks; Blok's callout is not inferred from markup\"}]}"
+    "output": "{\"blocks\":[{\"id\":\"html-X-0\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"🔥\"}]}},{\"id\":\"html-X-1\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Mind the gap\"}]}}],\"warnings\":[{\"construct\":\"aside\",\"action\":\"degraded\",\"detail\":\"<aside> becomes plain blocks; Blok's callout is not inferred from markup\"}]}"
   },
   {
     "name": "callout.markdown.reimport",
     "op": "markdownToBlocks",
-    "input": "{\"markdown\":\"> 💡 Mind the gap\"}",
+    "input": "{\"markdown\":\"> [!CALLOUT]\\n> \\n> Mind the gap\"}",
     "normalizeIds": true,
-    "output": "{\"blocks\":[{\"id\":\"md-X-0\",\"type\":\"quote\",\"data\":{\"text\":[{\"text\":\"💡 Mind the gap\"}],\"size\":\"default\"}}],\"warnings\":[]}"
+    "output": "{\"blocks\":[{\"id\":\"md-X-0\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\",\"backgroundColor\":null,\"textColor\":null},\"content\":[\"md-X-1\"]},{\"id\":\"md-X-1\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Mind the gap\"}]},\"parent\":\"md-X-0\"}],\"warnings\":[]}"
   },
   {
     "name": "toc.markdown",
@@ -1296,234 +1296,234 @@
   {
     "name": "imageTitled.markdown",
     "op": "blocksToMarkdown",
-    "input": "{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}",
-    "output": "{\"markdown\":\"> 💡 Mind the gap\",\"warnings\":[{\"construct\":\"callout\",\"action\":\"degraded\",\"detail\":\"callout is rendered as a blockquote; its emoji styling, colours and type are lost\"},{\"construct\":\"spacer\",\"action\":\"dropped\",\"detail\":\"spacer is purely visual and has no Markdown equivalent\"}]}"
+    "input": "{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}",
+    "output": "{\"markdown\":\"> [!CALLOUT]\\n> \\n> Mind the gap\",\"warnings\":[{\"construct\":\"callout\",\"action\":\"degraded\",\"detail\":\"callout is written as a [!CALLOUT] alert; its emoji is lost\"},{\"construct\":\"spacer\",\"action\":\"dropped\",\"detail\":\"spacer is purely visual and has no Markdown equivalent\"}]}"
   },
   {
     "name": "imageTitled.html",
     "op": "blocksToHtml",
-    "input": "{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}",
-    "output": "<aside><span>💡</span><p>Mind the gap</p></aside><div aria-hidden=\"true\"></div>"
+    "input": "{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}",
+    "output": "<aside><span>🔥</span><p>Mind the gap</p></aside><div aria-hidden=\"true\"></div>"
   },
   {
     "name": "imageTitled.text",
     "op": "blocksToPlainText",
-    "input": "{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}",
+    "input": "{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}",
     "output": "Mind the gap"
   },
   {
     "name": "imageTitled.text.hidden",
     "op": "blocksToPlainText",
-    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeHiddenText\":true}",
+    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeHiddenText\":true}",
     "output": "Mind the gap"
   },
   {
     "name": "imageTitled.report",
     "op": "blocksToPlainTextWithReport",
-    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeHiddenText\":false}",
+    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeHiddenText\":false}",
     "output": "{\"text\":\"Mind the gap\",\"warnings\":[]}"
   },
   {
     "name": "imageTitled.inspect",
     "op": "inspect",
-    "input": "{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}",
+    "input": "{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}",
     "output": "{\"blockCount\":3,\"malformedBlockCount\":0,\"isEmpty\":false,\"unrecognizedBlockTypes\":[]}"
   },
   {
     "name": "imageTitled.extract",
     "op": "extractTexts",
-    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeCode\":false}",
+    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeCode\":false}",
     "output": "[\"Mind the gap\"]"
   },
   {
     "name": "imageTitled.extract.code",
     "op": "extractTexts",
-    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeCode\":true}",
+    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeCode\":true}",
     "output": "[\"Mind the gap\"]"
   },
   {
     "name": "imageTitled.pageIndex",
     "op": "pageIndex",
-    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}}",
+    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}}",
     "output": "{\"owners\":[],\"text\":[{\"blockId\":\"c1\",\"order\":0,\"text\":\"\"},{\"blockId\":\"p1\",\"order\":1,\"text\":\"Mind the gap\"},{\"blockId\":\"s1\",\"order\":2,\"text\":\"\"}],\"references\":[]}"
   },
   {
     "name": "imageTitled.markdown.title",
     "op": "blocksToMarkdown",
-    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"title\":true}",
-    "output": "{\"markdown\":\"# Pictured \\\\<b>\\n\\n> 💡 Mind the gap\",\"warnings\":[{\"construct\":\"callout\",\"action\":\"degraded\",\"detail\":\"callout is rendered as a blockquote; its emoji styling, colours and type are lost\"},{\"construct\":\"spacer\",\"action\":\"dropped\",\"detail\":\"spacer is purely visual and has no Markdown equivalent\"}]}"
+    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"title\":true}",
+    "output": "{\"markdown\":\"# Pictured \\\\<b>\\n\\n> [!CALLOUT]\\n> \\n> Mind the gap\",\"warnings\":[{\"construct\":\"callout\",\"action\":\"degraded\",\"detail\":\"callout is written as a [!CALLOUT] alert; its emoji is lost\"},{\"construct\":\"spacer\",\"action\":\"dropped\",\"detail\":\"spacer is purely visual and has no Markdown equivalent\"}]}"
   },
   {
     "name": "imageTitled.html.title",
     "op": "blocksToHtml",
-    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"title\":true}",
-    "output": "<h1><img alt=\"\" src=\"https://cdn/i.png\"> Pictured &lt;b&gt;</h1><aside><span>💡</span><p>Mind the gap</p></aside><div aria-hidden=\"true\"></div>"
+    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"title\":true}",
+    "output": "<h1><img alt=\"\" src=\"https://cdn/i.png\"> Pictured &lt;b&gt;</h1><aside><span>🔥</span><p>Mind the gap</p></aside><div aria-hidden=\"true\"></div>"
   },
   {
     "name": "imageTitled.text.title",
     "op": "blocksToPlainText",
-    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeHiddenText\":false,\"title\":true}",
+    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeHiddenText\":false,\"title\":true}",
     "output": "Pictured <b>\n\nMind the gap"
   },
   {
     "name": "imageTitled.html.pages",
     "op": "blocksToHtmlWithPages",
-    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"pages\":{\"pg-ref\":{\"title\":\"Specs\",\"icon\":{\"type\":\"emoji\",\"value\":\"📐\"},\"href\":\"/p/pg-ref\"},\"pg-elsewhere\":{\"access\":\"none\"},\"pg-child-a\":null,\"pg-cap\":{\"title\":\"Bad\",\"href\":\"javascript:alert(1)\"},\"pg-child-b\":{\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/b.png\"},\"title\":\"\"},\"toString\":{\"title\":\"prototype key\"}}}",
-    "output": "<aside><span>💡</span><p>Mind the gap</p></aside><div aria-hidden=\"true\"></div>"
+    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"pages\":{\"pg-ref\":{\"title\":\"Specs\",\"icon\":{\"type\":\"emoji\",\"value\":\"📐\"},\"href\":\"/p/pg-ref\"},\"pg-elsewhere\":{\"access\":\"none\"},\"pg-child-a\":null,\"pg-cap\":{\"title\":\"Bad\",\"href\":\"javascript:alert(1)\"},\"pg-child-b\":{\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/b.png\"},\"title\":\"\"},\"toString\":{\"title\":\"prototype key\"}}}",
+    "output": "<aside><span>🔥</span><p>Mind the gap</p></aside><div aria-hidden=\"true\"></div>"
   },
   {
     "name": "imageTitled.markdown.pages.title",
     "op": "blocksToMarkdownWithPages",
-    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"pages\":{\"pg-ref\":{\"title\":\"Specs\",\"icon\":{\"type\":\"emoji\",\"value\":\"📐\"},\"href\":\"/p/pg-ref\"},\"pg-elsewhere\":{\"access\":\"none\"},\"pg-child-a\":null,\"pg-cap\":{\"title\":\"Bad\",\"href\":\"javascript:alert(1)\"},\"pg-child-b\":{\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/b.png\"},\"title\":\"\"},\"toString\":{\"title\":\"prototype key\"}},\"title\":true}",
-    "output": "{\"markdown\":\"# Pictured \\\\<b>\\n\\n> 💡 Mind the gap\",\"warnings\":[{\"construct\":\"callout\",\"action\":\"degraded\",\"detail\":\"callout is rendered as a blockquote; its emoji styling, colours and type are lost\"},{\"construct\":\"spacer\",\"action\":\"dropped\",\"detail\":\"spacer is purely visual and has no Markdown equivalent\"}]}"
+    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"pages\":{\"pg-ref\":{\"title\":\"Specs\",\"icon\":{\"type\":\"emoji\",\"value\":\"📐\"},\"href\":\"/p/pg-ref\"},\"pg-elsewhere\":{\"access\":\"none\"},\"pg-child-a\":null,\"pg-cap\":{\"title\":\"Bad\",\"href\":\"javascript:alert(1)\"},\"pg-child-b\":{\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/b.png\"},\"title\":\"\"},\"toString\":{\"title\":\"prototype key\"}},\"title\":true}",
+    "output": "{\"markdown\":\"# Pictured \\\\<b>\\n\\n> [!CALLOUT]\\n> \\n> Mind the gap\",\"warnings\":[{\"construct\":\"callout\",\"action\":\"degraded\",\"detail\":\"callout is written as a [!CALLOUT] alert; its emoji is lost\"},{\"construct\":\"spacer\",\"action\":\"dropped\",\"detail\":\"spacer is purely visual and has no Markdown equivalent\"}]}"
   },
   {
     "name": "imageTitled.inject",
     "op": "injectTexts",
-    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeCode\":true,\"texts\":[\"«Mind the gap»\"]}",
-    "output": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"«Mind the gap»\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}}"
+    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeCode\":true,\"texts\":[\"«Mind the gap»\"]}",
+    "output": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"«Mind the gap»\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}}"
   },
   {
     "name": "imageTitled.inject.same",
     "op": "injectTexts",
-    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeCode\":false,\"texts\":[\"Mind the gap\"]}",
-    "output": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}}"
+    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"includeCode\":false,\"texts\":[\"Mind the gap\"]}",
+    "output": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]}}"
   },
   {
     "name": "imageTitled.remap",
     "op": "remapPageDocument",
-    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"blockIds\":{\"c1\":\"N-c1\",\"p1\":\"N-p1\",\"s1\":\"N-s1\"},\"pageIds\":{}}",
-    "output": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"N-c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"N-p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"N-c1\"},{\"id\":\"N-s1\",\"type\":\"spacer\",\"data\":{}}]}}"
+    "input": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}}]},\"blockIds\":{\"c1\":\"N-c1\",\"p1\":\"N-p1\",\"s1\":\"N-s1\"},\"pageIds\":{}}",
+    "output": "{\"document\":{\"title\":\"Pictured <b>\",\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/i.png\"},\"blocks\":[{\"id\":\"N-c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"N-p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"N-c1\"},{\"id\":\"N-s1\",\"type\":\"spacer\",\"data\":{}}]}}"
   },
   {
     "name": "imageTitled.html.reimport",
     "op": "htmlToBlocks",
-    "input": "{\"html\":\"<aside><span>💡</span><p>Mind the gap</p></aside><div aria-hidden=\\\"true\\\"></div>\"}",
+    "input": "{\"html\":\"<aside><span>🔥</span><p>Mind the gap</p></aside><div aria-hidden=\\\"true\\\"></div>\"}",
     "normalizeIds": true,
-    "output": "{\"blocks\":[{\"id\":\"html-X-0\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"💡\"}]}},{\"id\":\"html-X-1\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Mind the gap\"}]}}],\"warnings\":[{\"construct\":\"aside\",\"action\":\"degraded\",\"detail\":\"<aside> becomes plain blocks; Blok's callout is not inferred from markup\"}]}"
+    "output": "{\"blocks\":[{\"id\":\"html-X-0\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"🔥\"}]}},{\"id\":\"html-X-1\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Mind the gap\"}]}}],\"warnings\":[{\"construct\":\"aside\",\"action\":\"degraded\",\"detail\":\"<aside> becomes plain blocks; Blok's callout is not inferred from markup\"}]}"
   },
   {
     "name": "imageTitled.markdown.reimport",
     "op": "markdownToBlocks",
-    "input": "{\"markdown\":\"> 💡 Mind the gap\"}",
+    "input": "{\"markdown\":\"> [!CALLOUT]\\n> \\n> Mind the gap\"}",
     "normalizeIds": true,
-    "output": "{\"blocks\":[{\"id\":\"md-X-0\",\"type\":\"quote\",\"data\":{\"text\":[{\"text\":\"💡 Mind the gap\"}],\"size\":\"default\"}}],\"warnings\":[]}"
+    "output": "{\"blocks\":[{\"id\":\"md-X-0\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\",\"backgroundColor\":null,\"textColor\":null},\"content\":[\"md-X-1\"]},{\"id\":\"md-X-1\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Mind the gap\"}]},\"parent\":\"md-X-0\"}],\"warnings\":[]}"
   },
   {
     "name": "unknownBlocks.markdown",
     "op": "blocksToMarkdown",
-    "input": "{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]}",
-    "output": "{\"markdown\":\"> 💡 Mind the gap\\n\\n---\\n\\nhidden\",\"warnings\":[{\"construct\":\"callout\",\"action\":\"degraded\",\"detail\":\"callout is rendered as a blockquote; its emoji styling, colours and type are lost\"},{\"construct\":\"spacer\",\"action\":\"dropped\",\"detail\":\"spacer is purely visual and has no Markdown equivalent\"},{\"construct\":\"custom-tool\",\"action\":\"dropped\",\"detail\":\"`custom-tool` has no Markdown representation and carries no inline text\"}]}"
+    "input": "{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]}",
+    "output": "{\"markdown\":\"> [!CALLOUT]\\n> \\n> Mind the gap\\n\\n---\\n\\nhidden\",\"warnings\":[{\"construct\":\"callout\",\"action\":\"degraded\",\"detail\":\"callout is written as a [!CALLOUT] alert; its emoji is lost\"},{\"construct\":\"spacer\",\"action\":\"dropped\",\"detail\":\"spacer is purely visual and has no Markdown equivalent\"},{\"construct\":\"custom-tool\",\"action\":\"dropped\",\"detail\":\"`custom-tool` has no Markdown representation and carries no inline text\"}]}"
   },
   {
     "name": "unknownBlocks.html",
     "op": "blocksToHtml",
-    "input": "{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]}",
-    "output": "<aside><span>💡</span><p>Mind the gap</p></aside><div aria-hidden=\"true\"></div><hr>"
+    "input": "{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]}",
+    "output": "<aside><span>🔥</span><p>Mind the gap</p></aside><div aria-hidden=\"true\"></div><hr>"
   },
   {
     "name": "unknownBlocks.text",
     "op": "blocksToPlainText",
-    "input": "{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]}",
+    "input": "{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]}",
     "output": "Mind the gap"
   },
   {
     "name": "unknownBlocks.text.hidden",
     "op": "blocksToPlainText",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"includeHiddenText\":true}",
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"includeHiddenText\":true}",
     "output": "Mind the gap"
   },
   {
     "name": "unknownBlocks.report",
     "op": "blocksToPlainTextWithReport",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"includeHiddenText\":false}",
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"includeHiddenText\":false}",
     "output": "{\"text\":\"Mind the gap\",\"warnings\":[{\"construct\":\"custom-tool\",\"action\":\"dropped\",\"detail\":\"`custom-tool` is not a block type this reader knows, so none of its own text was read\"},{\"construct\":\"org-chart\",\"action\":\"dropped\",\"detail\":\"`org-chart` is not a block type this reader knows, so none of its own text was read\"}]}"
   },
   {
     "name": "unknownBlocks.inspect",
     "op": "inspect",
-    "input": "{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]}",
+    "input": "{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]}",
     "output": "{\"blockCount\":6,\"malformedBlockCount\":0,\"isEmpty\":false,\"unrecognizedBlockTypes\":[\"custom-tool\",\"org-chart\"]}"
   },
   {
     "name": "unknownBlocks.extract",
     "op": "extractTexts",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"includeCode\":false}",
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"includeCode\":false}",
     "output": "[\"Mind the gap\",\"hidden\"]"
   },
   {
     "name": "unknownBlocks.extract.code",
     "op": "extractTexts",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"includeCode\":true}",
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"includeCode\":true}",
     "output": "[\"Mind the gap\",\"hidden\"]"
   },
   {
     "name": "unknownBlocks.pageIndex",
     "op": "pageIndex",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]}}",
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]}}",
     "output": "{\"owners\":[],\"text\":[{\"blockId\":\"c1\",\"order\":0,\"text\":\"\"},{\"blockId\":\"p1\",\"order\":1,\"text\":\"Mind the gap\"},{\"blockId\":\"s1\",\"order\":2,\"text\":\"\"},{\"blockId\":\"x\",\"order\":3,\"text\":\"\"},{\"blockId\":\"d\",\"order\":4,\"text\":\"\"},{\"blockId\":\"o\",\"order\":5,\"text\":\"\"}],\"references\":[]}"
   },
   {
     "name": "unknownBlocks.markdown.title",
     "op": "blocksToMarkdown",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"title\":true}",
-    "output": "{\"markdown\":\"> 💡 Mind the gap\\n\\n---\\n\\nhidden\",\"warnings\":[{\"construct\":\"callout\",\"action\":\"degraded\",\"detail\":\"callout is rendered as a blockquote; its emoji styling, colours and type are lost\"},{\"construct\":\"spacer\",\"action\":\"dropped\",\"detail\":\"spacer is purely visual and has no Markdown equivalent\"},{\"construct\":\"custom-tool\",\"action\":\"dropped\",\"detail\":\"`custom-tool` has no Markdown representation and carries no inline text\"}]}"
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"title\":true}",
+    "output": "{\"markdown\":\"> [!CALLOUT]\\n> \\n> Mind the gap\\n\\n---\\n\\nhidden\",\"warnings\":[{\"construct\":\"callout\",\"action\":\"degraded\",\"detail\":\"callout is written as a [!CALLOUT] alert; its emoji is lost\"},{\"construct\":\"spacer\",\"action\":\"dropped\",\"detail\":\"spacer is purely visual and has no Markdown equivalent\"},{\"construct\":\"custom-tool\",\"action\":\"dropped\",\"detail\":\"`custom-tool` has no Markdown representation and carries no inline text\"}]}"
   },
   {
     "name": "unknownBlocks.html.title",
     "op": "blocksToHtml",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"title\":true}",
-    "output": "<aside><span>💡</span><p>Mind the gap</p></aside><div aria-hidden=\"true\"></div><hr>"
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"title\":true}",
+    "output": "<aside><span>🔥</span><p>Mind the gap</p></aside><div aria-hidden=\"true\"></div><hr>"
   },
   {
     "name": "unknownBlocks.text.title",
     "op": "blocksToPlainText",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"includeHiddenText\":false,\"title\":true}",
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"includeHiddenText\":false,\"title\":true}",
     "output": "Mind the gap"
   },
   {
     "name": "unknownBlocks.html.pages",
     "op": "blocksToHtmlWithPages",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"pages\":{\"pg-ref\":{\"title\":\"Specs\",\"icon\":{\"type\":\"emoji\",\"value\":\"📐\"},\"href\":\"/p/pg-ref\"},\"pg-elsewhere\":{\"access\":\"none\"},\"pg-child-a\":null,\"pg-cap\":{\"title\":\"Bad\",\"href\":\"javascript:alert(1)\"},\"pg-child-b\":{\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/b.png\"},\"title\":\"\"},\"toString\":{\"title\":\"prototype key\"}}}",
-    "output": "<aside><span>💡</span><p>Mind the gap</p></aside><div aria-hidden=\"true\"></div><hr>"
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"pages\":{\"pg-ref\":{\"title\":\"Specs\",\"icon\":{\"type\":\"emoji\",\"value\":\"📐\"},\"href\":\"/p/pg-ref\"},\"pg-elsewhere\":{\"access\":\"none\"},\"pg-child-a\":null,\"pg-cap\":{\"title\":\"Bad\",\"href\":\"javascript:alert(1)\"},\"pg-child-b\":{\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/b.png\"},\"title\":\"\"},\"toString\":{\"title\":\"prototype key\"}}}",
+    "output": "<aside><span>🔥</span><p>Mind the gap</p></aside><div aria-hidden=\"true\"></div><hr>"
   },
   {
     "name": "unknownBlocks.markdown.pages.title",
     "op": "blocksToMarkdownWithPages",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"pages\":{\"pg-ref\":{\"title\":\"Specs\",\"icon\":{\"type\":\"emoji\",\"value\":\"📐\"},\"href\":\"/p/pg-ref\"},\"pg-elsewhere\":{\"access\":\"none\"},\"pg-child-a\":null,\"pg-cap\":{\"title\":\"Bad\",\"href\":\"javascript:alert(1)\"},\"pg-child-b\":{\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/b.png\"},\"title\":\"\"},\"toString\":{\"title\":\"prototype key\"}},\"title\":true}",
-    "output": "{\"markdown\":\"> 💡 Mind the gap\\n\\n---\\n\\nhidden\",\"warnings\":[{\"construct\":\"callout\",\"action\":\"degraded\",\"detail\":\"callout is rendered as a blockquote; its emoji styling, colours and type are lost\"},{\"construct\":\"spacer\",\"action\":\"dropped\",\"detail\":\"spacer is purely visual and has no Markdown equivalent\"},{\"construct\":\"custom-tool\",\"action\":\"dropped\",\"detail\":\"`custom-tool` has no Markdown representation and carries no inline text\"}]}"
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"pages\":{\"pg-ref\":{\"title\":\"Specs\",\"icon\":{\"type\":\"emoji\",\"value\":\"📐\"},\"href\":\"/p/pg-ref\"},\"pg-elsewhere\":{\"access\":\"none\"},\"pg-child-a\":null,\"pg-cap\":{\"title\":\"Bad\",\"href\":\"javascript:alert(1)\"},\"pg-child-b\":{\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/b.png\"},\"title\":\"\"},\"toString\":{\"title\":\"prototype key\"}},\"title\":true}",
+    "output": "{\"markdown\":\"> [!CALLOUT]\\n> \\n> Mind the gap\\n\\n---\\n\\nhidden\",\"warnings\":[{\"construct\":\"callout\",\"action\":\"degraded\",\"detail\":\"callout is written as a [!CALLOUT] alert; its emoji is lost\"},{\"construct\":\"spacer\",\"action\":\"dropped\",\"detail\":\"spacer is purely visual and has no Markdown equivalent\"},{\"construct\":\"custom-tool\",\"action\":\"dropped\",\"detail\":\"`custom-tool` has no Markdown representation and carries no inline text\"}]}"
   },
   {
     "name": "unknownBlocks.inject",
     "op": "injectTexts",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"includeCode\":true,\"texts\":[\"«Mind the gap»\",\"«hidden»\"]}",
-    "output": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"«Mind the gap»\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"«hidden»\"}}]}}"
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"includeCode\":true,\"texts\":[\"«Mind the gap»\",\"«hidden»\"]}",
+    "output": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"«Mind the gap»\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"«hidden»\"}}]}}"
   },
   {
     "name": "unknownBlocks.inject.same",
     "op": "injectTexts",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"includeCode\":false,\"texts\":[\"Mind the gap\",\"hidden\"]}",
-    "output": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]}}"
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"includeCode\":false,\"texts\":[\"Mind the gap\",\"hidden\"]}",
+    "output": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]}}"
   },
   {
     "name": "unknownBlocks.remap",
     "op": "remapPageDocument",
-    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"blockIds\":{\"c1\":\"N-c1\",\"p1\":\"N-p1\",\"s1\":\"N-s1\",\"x\":\"N-x\",\"d\":\"N-d\",\"o\":\"N-o\"},\"pageIds\":{}}",
-    "output": "{\"document\":{\"blocks\":[{\"id\":\"N-c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\"}},{\"id\":\"N-p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"N-c1\"},{\"id\":\"N-s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"N-x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"N-d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"N-o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]}}"
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"c1\"},{\"id\":\"s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]},\"blockIds\":{\"c1\":\"N-c1\",\"p1\":\"N-p1\",\"s1\":\"N-s1\",\"x\":\"N-x\",\"d\":\"N-d\",\"o\":\"N-o\"},\"pageIds\":{}}",
+    "output": "{\"document\":{\"blocks\":[{\"id\":\"N-c1\",\"type\":\"callout\",\"data\":{\"emoji\":\"🔥\"}},{\"id\":\"N-p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Mind the gap\"},\"parent\":\"N-c1\"},{\"id\":\"N-s1\",\"type\":\"spacer\",\"data\":{}},{\"id\":\"N-x\",\"type\":\"custom-tool\",\"data\":{}},{\"id\":\"N-d\",\"type\":\"divider\",\"data\":{}},{\"id\":\"N-o\",\"type\":\"org-chart\",\"data\":{\"text\":\"hidden\"}}]}}"
   },
   {
     "name": "unknownBlocks.html.reimport",
     "op": "htmlToBlocks",
-    "input": "{\"html\":\"<aside><span>💡</span><p>Mind the gap</p></aside><div aria-hidden=\\\"true\\\"></div><hr>\"}",
+    "input": "{\"html\":\"<aside><span>🔥</span><p>Mind the gap</p></aside><div aria-hidden=\\\"true\\\"></div><hr>\"}",
     "normalizeIds": true,
-    "output": "{\"blocks\":[{\"id\":\"html-X-0\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"💡\"}]}},{\"id\":\"html-X-1\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Mind the gap\"}]}},{\"id\":\"html-X-2\",\"type\":\"divider\",\"data\":{}}],\"warnings\":[{\"construct\":\"aside\",\"action\":\"degraded\",\"detail\":\"<aside> becomes plain blocks; Blok's callout is not inferred from markup\"}]}"
+    "output": "{\"blocks\":[{\"id\":\"html-X-0\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"🔥\"}]}},{\"id\":\"html-X-1\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Mind the gap\"}]}},{\"id\":\"html-X-2\",\"type\":\"divider\",\"data\":{}}],\"warnings\":[{\"construct\":\"aside\",\"action\":\"degraded\",\"detail\":\"<aside> becomes plain blocks; Blok's callout is not inferred from markup\"}]}"
   },
   {
     "name": "unknownBlocks.markdown.reimport",
     "op": "markdownToBlocks",
-    "input": "{\"markdown\":\"> 💡 Mind the gap\\n\\n---\\n\\nhidden\"}",
+    "input": "{\"markdown\":\"> [!CALLOUT]\\n> \\n> Mind the gap\\n\\n---\\n\\nhidden\"}",
     "normalizeIds": true,
-    "output": "{\"blocks\":[{\"id\":\"md-X-0\",\"type\":\"quote\",\"data\":{\"text\":[{\"text\":\"💡 Mind the gap\"}],\"size\":\"default\"}},{\"id\":\"md-X-1\",\"type\":\"divider\",\"data\":{}},{\"id\":\"md-X-2\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"hidden\"}]}}],\"warnings\":[]}"
+    "output": "{\"blocks\":[{\"id\":\"md-X-0\",\"type\":\"callout\",\"data\":{\"emoji\":\"💡\",\"backgroundColor\":null,\"textColor\":null},\"content\":[\"md-X-1\"]},{\"id\":\"md-X-1\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Mind the gap\"}]},\"parent\":\"md-X-0\"},{\"id\":\"md-X-2\",\"type\":\"divider\",\"data\":{}},{\"id\":\"md-X-3\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"hidden\"}]}}],\"warnings\":[]}"
   },
   {
     "name": "parentAlias.markdown",

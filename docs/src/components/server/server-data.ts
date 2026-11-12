@@ -198,7 +198,7 @@ public sealed class ArticleExport(IBlokDocumentConverter blok)
 
     foreach (var warning in conversion.Warnings)
     {
-      // e.g. construct "callout", action "degraded", detail "rendered as a blockquote…"
+      // e.g. construct "callout", action "degraded", detail "callout is written as a [!CALLOUT] alert; its emoji is lost"
       logger.LogInformation("{Construct} {Action}: {Detail}", warning.Construct, warning.Action, warning.Detail);
     }
 

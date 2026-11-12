@@ -103,7 +103,7 @@ describe('legacy nested documents', () => {
     it.each([
       ['a list whose items live in data.items', legacyList, '- first item\n    - nested item\n- second item'],
       /** The editor gives a legacy callout the default 💡 when it names no emoji. */
-      ['a callout whose body lives in data.body.blocks', legacyCallout, '> 💡 Watch out\n> \n> the floor is wet'],
+      ['a callout whose body lives in data.body.blocks', legacyCallout, '> [!CALLOUT]\n> \n> Watch out\n> \n> the floor is wet'],
       /**
        * `toggleList` is the legacy name of `toggle`, so it renders identically:
        * bold summary, then body. Not a blockquote — that is the callout.
@@ -211,7 +211,7 @@ describe('legacy blocks read like their migration result', () => {
     });
 
     expect(legacy.html).toBe('<aside><span>⚠️</span><p>L1<br><b>bold</b></p><p>M <i>it</i></p></aside>');
-    expect(legacy.markdown).toBe('> ⚠️ L1  \n> **bold**\n> \n> M *it*');
+    expect(legacy.markdown).toBe('> [!WARNING]\n> \n> L1  \n> **bold**\n> \n> M *it*');
     expect(legacy.text).toBe('L1\nbold\n\nM it');
   });
 

@@ -203,20 +203,20 @@ public sealed class BlokDocumentConverterTests
 
     var conversion = await converter.ToMarkdownAsync("""
         {"blocks":[
-          {"id":"c1","type":"callout","data":{"emoji":"💡"}},
+          {"id":"c1","type":"callout","data":{"emoji":"🔥"}},
           {"id":"p1","type":"paragraph","data":{"text":"Mind the gap"},"parent":"c1"},
           {"id":"s1","type":"spacer","data":{}}
         ]}
         """);
 
-    Assert.Equal("> 💡 Mind the gap", conversion.Markdown);
+    Assert.Equal("> [!CALLOUT]\n> \n> Mind the gap", conversion.Markdown);
     Assert.Collection(
         conversion.Warnings,
         warning =>
         {
           Assert.Equal("callout", warning.Construct);
           Assert.Equal("degraded", warning.Action);
-          Assert.Contains("blockquote", warning.Detail);
+          Assert.Contains("emoji", warning.Detail);
         },
         warning =>
         {
@@ -577,7 +577,7 @@ public sealed class BlokDocumentConverterTests
 
     var conversion = await converter.ToMarkdownAsync("""
         {"blocks":[
-          {"id":"c1","type":"callout","data":{"emoji":"💡"}},
+          {"id":"c1","type":"callout","data":{"emoji":"🔥"}},
           {"id":"p1","type":"paragraph","data":{"text":"Mind the gap"},"parent":"c1"},
           {"id":"s1","type":"spacer","data":{}}
         ]}

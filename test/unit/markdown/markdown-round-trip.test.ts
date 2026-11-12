@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { blocksToMarkdown, type SerializableBlock } from '../../../src/markdown/blocks-to-markdown';
+import { blocksToMarkdown, blocksToMarkdownWithReport, type SerializableBlock } from '../../../src/markdown/blocks-to-markdown';
 import { blocksToMarkdown as viewBlocksToMarkdown } from '../../../src/view/blocks-to-markdown';
 import { markdownToBlocks as markdownToSegmentBlocks, markdownToBlocksWithReport } from '../../../src/markdown/index';
 import type { MarkdownImportConfig } from '../../../src/markdown/index';
@@ -488,5 +488,146 @@ describe('markdown round trip: literal text is escaped', () => {
 
     expect(texts.join('|')).toContain('costs $5-$10 or $3');
     expect(blocks.some((block) => block.data.code === 'x')).toBe(true);
+  });
+});
+
+describe('markdown round trip: a callout is a GitHub alert', () => {
+  const callout = (data: Record<string, unknown>, children: SerializableBlock[]): SerializableBlock[] => [
+    { id: 'cal', tool: 'callout', data, contentIds: children.map((child) => child.id ?? '') },
+    ...children.map((child) => ({ ...child, parentId: 'cal' })),
+  ];
+
+  /** Type, text and parent tool of every block, the shape a round trip must keep. */
+  const shape = (blocks: OutputBlockData[]): string[] => blocks.map((block) => {
+    const parent = blocks.find((other) => other.id === block.parent);
+
+    return `${block.type}:${typeof block.data.text === 'string' ? block.data.text : ''}<${parent?.type ?? '-'}`;
+  });
+
+  it('writes a default callout as an alert marker line, then its children as separate blocks', async () => {
+    const markdown = exportBoth(callout({ emoji: '💡', textColor: null, backgroundColor: null }, [
+      { id: 'p', tool: 'paragraph', data: { text: 'Body' } },
+      { id: 'l', tool: 'list', data: { text: 'Item', style: 'unordered' } },
+    ]));
+
+    expect(markdown).toBe('> [!CALLOUT]\n> \n> Body\n> \n> - Item');
+
+    const { blocks, warnings } = await reimport(markdown);
+
+    expect(blocks[0].data).toEqual({ emoji: '💡', textColor: null, backgroundColor: null });
+    expect(shape(blocks)).toEqual(['callout:<-', 'paragraph:Body<callout', 'list:Item<callout']);
+    expect(warnings).toEqual([]);
+  });
+
+  it.each([
+    ['NOTE', 'ℹ️', 'blue'],
+    ['TIP', '💡', 'green'],
+    ['IMPORTANT', '❗', 'purple'],
+    ['WARNING', '⚠️', 'orange'],
+    ['CAUTION', '🛑', 'red'],
+  ])('writes a callout styled like a GitHub [!%s] as that alert, and it comes back the same', async (kind, emoji, backgroundColor) => {
+    const markdown = exportBoth(callout({ emoji, textColor: null, backgroundColor }, [{ id: 'p', tool: 'paragraph', data: { text: 'Body' } }]));
+
+    expect(markdown).toBe(`> [!${kind}]\n> \n> Body`);
+    expect((await reimport(markdown)).blocks[0].data).toEqual({ emoji, textColor: null, backgroundColor });
+  });
+
+  it.each<[string, SerializableBlock[], string[]]>([
+    ['a paragraph', [{ id: 'c', tool: 'paragraph', data: { text: 'Para' } }], ['paragraph:Para<callout']],
+    ['a list', [{ id: 'c', tool: 'list', data: { text: 'One', style: 'unordered' } }], ['list:One<callout']],
+    ['a code block', [{ id: 'c', tool: 'code', data: { code: 'x = 1', language: 'plain text' } }], ['code:<callout']],
+    ['a heading', [{ id: 'c', tool: 'header', data: { text: 'Head', level: 2 } }], ['header:Head<callout']],
+    ['a quote', [{ id: 'c', tool: 'quote', data: { text: 'Said', size: 'default' } }], ['quote:Said<callout']],
+    ['nothing', [], ['paragraph:<callout']],
+  ])('keeps %s as the first child inside the callout', async (_name, children, expected) => {
+    const { blocks } = await reimport(exportBoth(callout({ emoji: '💡' }, children)));
+
+    expect(shape(blocks)).toEqual(['callout:<-', ...expected]);
+  });
+
+  it('keeps a table as a child of the callout', async () => {
+    const markdown = exportBoth(callout({ emoji: '💡' }, [
+      { id: 't', tool: 'table', data: { withHeadings: true, content: [['A', 'B'], ['1', '2']] } },
+    ]));
+    const { blocks } = await reimport(markdown);
+
+    expect(blocks.find((block) => block.type === 'table')?.parent).toBe(blocks[0].id);
+  });
+
+  it('keeps a callout inside a callout', async () => {
+    const markdown = exportBoth([
+      { id: 'outer', tool: 'callout', data: { emoji: '💡' }, contentIds: ['inner'] },
+      { id: 'inner', tool: 'callout', data: { emoji: '⚠️', backgroundColor: 'orange' }, parentId: 'outer', contentIds: ['p'] },
+      { id: 'p', tool: 'paragraph', data: { text: 'Deep' }, parentId: 'inner' },
+    ]);
+    const { blocks } = await reimport(markdown);
+
+    expect(shape(blocks)).toEqual(['callout:<-', 'callout:<callout', 'paragraph:Deep<callout']);
+    expect(blocks[1].data).toMatchObject({ emoji: '⚠️', backgroundColor: 'orange' });
+  });
+
+  it('reports the emoji and colours a custom callout loses', () => {
+    const { markdown, warnings } = blocksToMarkdownWithReport(callout({ emoji: '🔥', textColor: 'red', backgroundColor: 'red' }, [
+      { id: 'p', tool: 'paragraph', data: { text: 'Hot' } },
+    ]));
+
+    expect(markdown).toBe('> [!CALLOUT]\n> \n> Hot');
+    expect(warnings).toEqual([{ construct: 'callout', action: 'degraded', detail: expect.stringContaining('emoji') }]);
+  });
+
+  it('reports nothing for a callout that comes back the same', () => {
+    expect(blocksToMarkdownWithReport(callout({ emoji: '💡' }, [{ id: 'p', tool: 'paragraph', data: { text: 'x' } }])).warnings).toEqual([]);
+    expect(blocksToMarkdownWithReport(callout({ emoji: '⚠️', backgroundColor: 'orange' }, [{ id: 'p', tool: 'paragraph', data: { text: 'x' } }])).warnings).toEqual([]);
+  });
+
+  it('still reads a real GitHub [!TIP] as the green tip callout', async () => {
+    expect((await reimport('> [!TIP]\n> Use it')).blocks[0].data).toEqual({ emoji: '💡', textColor: null, backgroundColor: 'green' });
+  });
+});
+
+describe('markdown export: a database is a GFM table', () => {
+  const schema = [
+    { id: 'name', name: 'Name', type: 'title', position: 'a0' },
+    { id: 'status', name: 'Status', type: 'select', position: 'a1', config: { options: [{ id: 'o1', label: 'Doing', position: 'a0' }] } },
+    { id: 'tags', name: 'Tags', type: 'multiSelect', position: 'a2', config: { options: [{ id: 't1', label: 'red', position: 'a0' }, { id: 't2', label: 'a|b', position: 'a1' }] } },
+    { id: 'points', name: 'Points', type: 'number', position: 'a3' },
+    { id: 'done', name: 'Done', type: 'checkbox', position: 'a4' },
+    { id: 'due', name: 'Due', type: 'date', position: 'a5' },
+    { id: 'note', name: 'Note', type: 'text', position: 'a6' },
+    { id: 'link', name: 'Link', type: 'relation', position: 'a7' },
+  ];
+  const database: SerializableBlock[] = [
+    { id: 'db', tool: 'database', data: { title: 'Tasks', schema }, contentIds: ['r1', 'r2'] },
+    {
+      id: 'r1', tool: 'database-row', parentId: 'db', contentIds: ['body'],
+      data: { position: 'a0', title: 'First', properties: { status: 'o1', tags: ['t1', 't2'], points: 3, done: true, due: '2026-01-02', note: 'a *b*' } },
+    },
+    { id: 'r2', tool: 'database-row', parentId: 'db', data: { position: 'a1', properties: { name: 'Second', link: [{ id: 'r1' }, { id: 'gone' }] } } },
+    { id: 'body', tool: 'paragraph', parentId: 'r1', data: { text: 'Row body' } },
+  ];
+
+  it('writes the title, a table of row titles and property values, then each row body', () => {
+    expect(exportBoth(database)).toBe([
+      '**Tasks**',
+      '',
+      '| Name | Status | Tags | Points | Done | Due | Note | Link |',
+      '| --- | --- | --- | --- | --- | --- | --- | --- |',
+      '| First | Doing | red, a\\|b | 3 | Yes | 2026-01-02 | a \\*b\\* |  |',
+      '| Second |  |  |  | No |  |  | First, gone |',
+      '',
+      '**First**',
+      '',
+      'Row body',
+    ].join('\n'));
+  });
+
+  it('pastes back as a table carrying every value', async () => {
+    const { blocks } = await reimport(exportBoth(database));
+    const table = blocks.find((block) => block.type === 'table');
+    const texts = blocks.filter((block) => block.parent === table?.id).map((block) => String(block.data.text));
+
+    expect(table?.data.withHeadings).toBe(true);
+    expect(texts).toEqual(expect.arrayContaining(['Name', 'Status', 'First', 'Doing', 'red, a|b', '3', 'Yes', '2026-01-02', 'a *b*', 'Second', 'No']));
+    expect(blocks.some((block) => block.data.text === 'Row body' && block.parent === undefined)).toBe(true);
   });
 });

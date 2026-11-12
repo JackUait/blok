@@ -41,7 +41,7 @@ impl Runtime for Fixed {
 
 const CALLOUT_AND_SPACER: &str = r#"
         {"blocks":[
-          {"id":"c1","type":"callout","data":{"emoji":"💡"}},
+          {"id":"c1","type":"callout","data":{"emoji":"🔥"}},
           {"id":"p1","type":"paragraph","data":{"text":"Mind the gap"},"parent":"c1"},
           {"id":"s1","type":"spacer","data":{}}
         ]}
@@ -187,11 +187,11 @@ async fn reports_constructs_that_could_not_survive_markdown() {
         .to_markdown(CALLOUT_AND_SPACER)
         .await
         .expect("markdown");
-    assert_eq!(conversion.markdown, "> 💡 Mind the gap");
+    assert_eq!(conversion.markdown, "> [!CALLOUT]\n> \n> Mind the gap");
     assert_eq!(conversion.warnings.len(), 2);
     assert_eq!(conversion.warnings[0].construct, "callout");
     assert_eq!(conversion.warnings[0].action, "degraded");
-    assert!(conversion.warnings[0].detail.contains("blockquote"));
+    assert!(conversion.warnings[0].detail.contains("emoji"));
     assert_eq!(conversion.warnings[1].construct, "spacer");
     assert_eq!(conversion.warnings[1].action, "dropped");
 }

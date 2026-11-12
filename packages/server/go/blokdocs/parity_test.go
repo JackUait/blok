@@ -69,7 +69,7 @@ func TestReportsUnreadableInputTheSameWayOnTheTranslationPath(t *testing.T) {
 
 func TestNamesTheTwoDegradationOutcomesItReports(t *testing.T) {
 	conversion, err := sharedConverter(t).ToMarkdown(context.Background(), `{"blocks":[
-  {"id":"c1","type":"callout","data":{"emoji":"💡"}},
+  {"id":"c1","type":"callout","data":{"emoji":"🔥"}},
   {"id":"p1","type":"paragraph","data":{"text":"Mind the gap"},"parent":"c1"},
   {"id":"s1","type":"spacer","data":{}}
 ]}`)

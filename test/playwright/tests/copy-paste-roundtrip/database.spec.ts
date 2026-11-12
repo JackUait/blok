@@ -547,11 +547,14 @@ test.describe('whole database block', () => {
     await pasteAtBlock(page, 'target', pick(formats, ['text/plain']));
     const after = await settle(page);
     const added = after.filter((b) => !before.some((old) => old.id === b.id));
+    const table = added.find((b) => b.type === 'table');
+    // Saved text is a list of rich-text segments.
+    const plainText = (text: unknown): string => (Array.isArray(text) ? text.map((segment: { text?: string }) => segment.text ?? '').join('') : String(text));
+    const cellTexts = added.filter((b) => table !== undefined && b.parent === table.id).map((b) => plainText((b.data as { text?: unknown }).text));
 
-    const addedText = JSON.stringify(added);
-
-    for (const title of ['Alpha', 'Bravo', 'Charlie']) {
-      expect.soft(addedText, `row title ${title} survives`).toContain(title);
-    }
+    // Markdown has no database, so its rows come back as a table that keeps every property value.
+    expect.soft(formats['text/plain'] ?? '').toContain('| Name | Notes | Amount | Stage |');
+    expect.soft(cellTexts).toEqual(expect.arrayContaining(['Name', 'Notes', 'Amount', 'Stage', 'Next', 'Alpha', 'first', '1', 'Idea', 'Bravo', 'Build', 'Charlie', '4']));
+    expect.soft(JSON.stringify(added), 'row body survives').toContain('Alpha second');
   });
 });

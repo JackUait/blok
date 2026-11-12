@@ -1191,13 +1191,17 @@ describe('KeyboardController — mutation coverage', () => {
 
       harness.state.anyBlockSelected = true;
       noNativeSelection();
+      vi.mocked(harness.blok.BlockManager.deleteSelectedBlocksAndInsertReplacement).mockReturnValue(makeBlock('replacement'));
 
       harness.press(document.body, { key: 'Delete' });
 
       const { disableNavigationMode, clearSelection } = harness.blok.BlockSelection;
+      const exitOrder = vi.mocked(disableNavigationMode).mock.invocationCallOrder[0];
 
+      // Caret.setToBlock clears the selection too, which would say the exit.
       expect(disableNavigationMode).toHaveBeenCalledWith(false, false);
-      expect(vi.mocked(disableNavigationMode).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(clearSelection).mock.invocationCallOrder[0]);
+      expect(exitOrder).toBeLessThan(vi.mocked(harness.blok.Caret.setToBlock).mock.invocationCallOrder[0]);
+      expect(exitOrder).toBeLessThan(vi.mocked(clearSelection).mock.invocationCallOrder[0]);
     });
 
     it('says nothing when Backspace deleted none of the selected blocks', () => {

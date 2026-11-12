@@ -137,6 +137,42 @@ test.describe('undo audit — a block delete never says Exited navigation mode',
     expect(await heard()).toEqual(['2 blocks deleted']);
   });
 
+  // Deleting every block inserts an empty paragraph and moves the caret into it.
+  test('Escape then Backspace on the only block says only 1 block deleted', async ({ page }) => {
+    await createWith(page, [P('a', 'Alpha')]);
+    await escapeSelect(page, 'a');
+    const heard = await listen(page);
+
+    await page.keyboard.press('Backspace');
+    // save() skips the empty paragraph left in its place.
+    await expect.poll(() => savedIds(page)).toEqual([]);
+    await expect(page.locator('[data-blok-id]')).toHaveCount(1);
+    await settle(page);
+
+    expect(await heard()).toEqual(['1 block deleted']);
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect.poll(() => savedIds(page)).toEqual(['a']);
+  });
+
+  test('Escape, Shift+ArrowDown twice, then Delete on every block says only 3 blocks deleted', async ({ page }) => {
+    await createWith(page, [P('a', 'Alpha'), P('b', 'Beta'), P('c', 'Gamma')]);
+    await escapeSelect(page, 'a');
+    await page.keyboard.press('Shift+ArrowDown');
+    await page.keyboard.press('Shift+ArrowDown');
+    await expect(page.locator('[data-blok-id="c"]')).toHaveAttribute('data-blok-selected', 'true');
+    await settle(page);
+    const heard = await listen(page);
+
+    await page.keyboard.press('Delete');
+    await expect.poll(() => savedIds(page)).toEqual([]);
+    await expect(page.locator('[data-blok-id]')).toHaveCount(1);
+    await settle(page);
+
+    expect(await heard()).toEqual(['3 blocks deleted']);
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect.poll(() => savedIds(page)).toEqual(['a', 'b', 'c']);
+  });
+
   // Notion U104: caret in the block, handle click, block menu Delete.
   test('block menu Delete says only 1 block deleted', async ({ page }) => {
     await createWith(page, [P('a', 'Alpha'), P('b', 'Beta'), P('c', 'Gamma')]);

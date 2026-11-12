@@ -280,7 +280,11 @@ describe('BlockSelectionKeys', () => {
 
       new BlockSelectionKeys(blok).handleDeletion(createKeyboardEvent({ key: 'Delete' }));
 
+      // Caret.setToBlock clears the selection too, which would say the exit.
+      const setToBlock = vi.mocked(blok.Caret.setToBlock);
+
       expect(disableNavigationMode).toHaveBeenCalledWith(false, false);
+      expect(disableNavigationMode.mock.invocationCallOrder[0]).toBeLessThan(setToBlock.mock.invocationCallOrder[0]);
       expect(disableNavigationMode.mock.invocationCallOrder[0]).toBeLessThan(clearSelection.mock.invocationCallOrder[0]);
     });
   });

@@ -804,6 +804,10 @@ export class KeyboardController extends Controller {
 
     const insertedBlock = deleteWithTrashToast(this.Blok, roots, () => BlockManager.deleteSelectedBlocksAndInsertReplacement());
 
+    // Only the count is said, so leave navigation mode quietly. After the delete,
+    // which reads the selection; before setToBlock, whose clearSelection would say the exit.
+    BlockSelection.disableNavigationMode(false, false);
+
     announceDeletedRoots(this.Blok.I18n, roots, (id) => BlockManager.getBlockById(id) !== undefined);
 
     if (insertedBlock) {
@@ -820,8 +824,6 @@ export class KeyboardController extends Controller {
       });
     }
 
-    // Only the delete count is announced, as in Notion (USER 2026-11-12, A4-3).
-    BlockSelection.disableNavigationMode(false, false);
     BlockSelection.clearSelection(event);
 
     /**

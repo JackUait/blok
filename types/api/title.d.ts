@@ -51,10 +51,19 @@ export interface Title {
     /** One undo step, unless `record` is false. Fires `onIconChange` with source `api`. */
     set(icon: PageIcon | null, options?: TitleSetOptions): void;
   };
-  /** The page cover. Works with `TitleConfig.cover` off too; the flag only draws it. */
-  readonly cover: {
-    get(): PageCover | null;
-    /** One undo step, unless `record` is false. Fires `onCoverChange` with source `api`. */
-    set(cover: PageCover | null, options?: TitleSetOptions): void;
-  };
+  /**
+   * The page cover. Works with `TitleConfig.cover` off too; the flag only draws it.
+   * Optional so a Title written before covers still compiles. `blok.title` always has it.
+   */
+  readonly cover?: TitleCover;
 }
+
+/** Read and write the page cover. */
+export interface TitleCover {
+  get(): PageCover | null;
+  /** One undo step, unless `record` is false. Fires `onCoverChange` with source `api`. */
+  set(cover: PageCover | null, options?: TitleSetOptions): void;
+}
+
+/** The title API Blok hands out: `cover` is always there. */
+export type BlokTitle = Title & { readonly cover: TitleCover };

@@ -48,9 +48,20 @@ export function createPageToolbar(
   breadcrumbs: PageBreadcrumbItem[],
   fullWidth: boolean,
   onFullWidthChange: (value: boolean) => void,
+  onToggleSidebar?: () => void,
 ): PageToolbar {
   const toolbar = document.createElement('div');
   toolbar.setAttribute('data-desktop-page-toolbar', '');
+  if (onToggleSidebar) {
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.setAttribute('data-desktop-sidebar-toggle', '');
+    toggle.setAttribute('aria-label', 'Afficher ou masquer la barre latérale');
+    toggle.title = 'Afficher ou masquer la barre latérale';
+    toggle.append(glyph(['M2 2.5h12v11H2z', 'M6 2.5v11']));
+    toggle.addEventListener('click', onToggleSidebar);
+    toolbar.append(toggle);
+  }
   const identity = document.createElement('div');
   identity.setAttribute('data-desktop-page-identity', '');
   const trail = document.createElement('nav');

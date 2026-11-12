@@ -295,6 +295,9 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       page.fullWidth = enabled;
       applyFullWidth();
       saveManifest();
+    }, '__TAURI_INTERNALS__' in window ? undefined : () => {
+      frame.toggleSidebar();
+      onLayout(sidebar.getBoundingClientRect().width);
     });
     if (ref.kind === 'remote') {
       const origin = toolbar.element.querySelector<HTMLElement>('[data-desktop-page-local]');
@@ -527,8 +530,14 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       removed.forEach(notifyPage);
       if (removed.has(currentId)) navigate(index.pages[0]!.id, true);
     } else if (command.type === 'open-tab') {
-      window.dispatchEvent(new Event('blok:desktop-new-tab'));
-      navigate(page.id, true);
+      if ('__TAURI_INTERNALS__' in window) {
+        window.dispatchEvent(new Event('blok:desktop-new-tab'));
+        navigate(page.id, true);
+      } else {
+        const url = new URL(location.href);
+        url.searchParams.set('page', page.id);
+        window.open(url.href, '_blank', 'noopener,noreferrer');
+      }
       return;
     } else {
       return;

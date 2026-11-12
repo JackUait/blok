@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { mountDesktop, setCanLeave } from './shell';
 
+let routeCalls = 0;
 let reportPageIcon: (id: string, icon: string) => void = () => undefined;
 
 vi.mock('./workspace', () => ({
@@ -16,7 +17,7 @@ vi.mock('./workspace', () => ({
     return {
       element,
       start: async () => undefined,
-      onRoute: () => undefined,
+      onRoute: () => { routeCalls++; },
       toggleSidebar: () => undefined,
       createPage: () => history.pushState(null, '', `/?page=${crypto.randomUUID()}`),
     };
@@ -67,7 +68,9 @@ function readSession(): StoredSession {
   return { tabs, activeId: parsed.activeId };
 }
 
-function mount(): HTMLElement {
+function mount(native = true): HTMLElement {
+  if (native && !('__TAURI_INTERNALS__' in window)) Reflect.set(window, '__TAURI_INTERNALS__', { invoke: vi.fn(() => Promise.resolve()) });
+  if (!native) Reflect.deleteProperty(window, '__TAURI_INTERNALS__');
   const root = document.createElement('div');
   document.body.append(root);
   mountDesktop(root);
@@ -160,18 +163,32 @@ describe('desktop tab strip', () => {
     expect(button(root, 'Nouvel onglet').getAttribute('title')).toBe('Nouvel onglet (⌘T)');
   });
 
-  it('sizes the traffic-light spacer and the sidebar cluster for the browser', () => {
-    const root = mount();
-    const traffic = root.querySelector('[data-desktop-traffic]');
-    const leading = root.querySelector('[data-desktop-leading]');
-    expect(traffic).toBeInstanceOf(HTMLElement);
-    expect(leading).toBeInstanceOf(HTMLElement);
-    if (!(traffic instanceof HTMLElement) || !(leading instanceof HTMLElement)) return;
-    expect(traffic.style.width).toBe('11px');
-    expect(root.style.getPropertyValue('--desktop-sidebar-width')).toBe('260px');
-    expect(traffic.getAttribute('data-tauri-drag-region')).not.toBeNull();
-    expect(root.querySelector('[data-desktop-leading-drag]')?.getAttribute('data-tauri-drag-region')).not.toBeNull();
-    expect(root.querySelector('[data-desktop-trailing-drag]')?.getAttribute('data-tauri-drag-region')).not.toBeNull();
+  it('shows only the workspace on the web without restoring native tabs', () => {
+    sessionStorage.setItem(KEY, 'old native session');
+    history.replaceState(null, '', '/?page=requested');
+    const root = mount(false);
+    expect(root.querySelector('[data-desktop-tabstrip]')).toBeNull();
+    expect(root.querySelector('[data-tauri-drag-region]')).toBeNull();
+    expect(root.hasAttribute('data-tauri')).toBe(false);
+    expect(root.querySelector('[data-blok-sidebar]')).not.toBeNull();
+    expect(location.search).toBe('?page=requested');
+    expect(sessionStorage.getItem(KEY)).toBe('old native session');
+  });
+
+  it('preserves browser history and renders routes on back and forward', async () => {
+    mount(false);
+    const length = history.length;
+    history.pushState(null, '', '/?page=alpha');
+    history.pushState(null, '', '/?page=beta');
+    expect(history.length).toBe(length + 2);
+    const calls = routeCalls;
+    history.back();
+    await vi.waitFor(() => expect(location.search).toBe('?page=alpha'));
+    expect(routeCalls).toBe(calls + 1);
+    history.forward();
+    await vi.waitFor(() => expect(location.search).toBe('?page=beta'));
+    expect(routeCalls).toBe(calls + 2);
+    expect(sessionStorage.getItem(KEY)).toBeNull();
   });
 
   it('widens the cluster for Tauri and tracks a sidebar that is already wider', () => {
@@ -299,16 +316,22 @@ describe('desktop tab strip', () => {
     expect(tauriInvoke).not.toHaveBeenCalled();
   });
 
-  it('lets the browser own new and close shortcuts, and leaves them to Tauri', () => {
-    const root = mount();
-    key({ key: 't', metaKey: true });
-    expect(root.querySelectorAll('[role="tab"]')).toHaveLength(2);
-    key({ key: 'w', metaKey: true });
-    expect(root.querySelectorAll('[role="tab"]')).toHaveLength(1);
-    Reflect.set(window, '__TAURI_INTERNALS__', { invoke: vi.fn(() => Promise.resolve()) });
-    key({ key: 't', ctrlKey: true });
-    key({ key: 'T', metaKey: true });
-    expect(root.querySelectorAll('[role="tab"]')).toHaveLength(1);
+  it('leaves browser tab and history shortcuts untouched', () => {
+    const root = mount(false);
+    for (const init of [
+      { key: 't', metaKey: true }, { key: 'w', metaKey: true },
+      { key: 't', ctrlKey: true }, { key: 'w', ctrlKey: true },
+      { key: 'Tab', ctrlKey: true }, { key: '1', metaKey: true },
+      { key: 'ArrowLeft', altKey: true }, { key: '[', metaKey: true },
+    ]) {
+      const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
+      window.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+    }
+    window.dispatchEvent(new Event('blok:desktop-new-tab'));
+    window.dispatchEvent(new Event('blok:desktop-close-tab'));
+    expect(root.querySelectorAll('[role="tab"]')).toHaveLength(0);
+    expect(sessionStorage.getItem(KEY)).toBeNull();
   });
 
   it('walks history and tabs from the keyboard', () => {

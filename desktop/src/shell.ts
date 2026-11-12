@@ -25,7 +25,8 @@ interface Session {
   activeId: string;
 }
 
-const natives: { replace: History['replaceState'] } = {
+const natives = {
+  push: History.prototype.pushState,
   replace: History.prototype.replaceState,
 };
 
@@ -65,15 +66,15 @@ export function mountDesktop(root: HTMLElement): void {
   root.setAttribute('data-desktop-shell', '');
   applyAppearance(root, readAppearance());
   watchSystemAppearance(root);
-  if (isTauri()) root.setAttribute('data-tauri', '');
-  box.session = boot();
+  root.toggleAttribute('data-tauri', isTauri());
+  box.session = isTauri() ? boot() : { tabs: [], activeId: '' };
   const current = active();
   if (current && current.href !== location.href) nativeReplace(current.href);
   if (current && document.title !== current.title) document.title = current.title;
   box.workspace = createWorkspace((width) => {
     root.style.setProperty('--desktop-sidebar-width', `${Math.max(isTauri() ? 156 : 84, width)}px`);
   }, syncPageIcon);
-  root.replaceChildren(strip(), box.workspace.element);
+  root.replaceChildren(...(isTauri() ? [strip(), box.workspace.element] : [box.workspace.element]));
   root.addEventListener('click', onClick);
   root.addEventListener('contextmenu', onContextMenu);
   slot.record = record;
@@ -89,22 +90,26 @@ export function mountDesktop(root: HTMLElement): void {
 }
 
 function install(): void {
-  installHistory();
-  installTitle();
   installKeys();
-  installMenu();
+  if (isTauri()) {
+    installHistory();
+    installTitle();
+    installMenu();
+  }
 }
 
 function installHistory(): void {
   if (installed.history) return;
   installed.history = true;
   const pushState: History['pushState'] = function pushState(this: History, data, unused, url) {
+    if (!isTauri()) return natives.push.call(this, data, unused, url);
     void unused;
     const href = resolveHref(url);
     natives.replace.call(this, data, '', url);
     slot.record('push', href);
   };
   const replaceState: History['replaceState'] = function replaceState(this: History, data, unused, url) {
+    if (!isTauri()) return natives.replace.call(this, data, unused, url);
     void unused;
     const href = resolveHref(url);
     natives.replace.call(this, data, '', url);
@@ -149,10 +154,10 @@ function installMenu(): void {
   if (installed.menu) return;
   installed.menu = true;
   window.addEventListener('blok:desktop-new-tab', () => {
-    createTab();
+    if (isTauri()) createTab();
   });
   window.addEventListener('blok:desktop-close-tab', () => {
-    closeActive();
+    if (isTauri()) closeActive();
   });
 }
 
@@ -421,6 +426,10 @@ function syncPageIcon(pageId: string, icon: string): void {
 }
 
 function onPop(): void {
+  if (!isTauri()) {
+    box.workspace?.onRoute();
+    return;
+  }
   const tab = active();
   if (!tab) return;
   const href = location.href;
@@ -456,6 +465,7 @@ function activateNumber(digit: number): void {
 }
 
 function onKey(event: KeyboardEvent): void {
+  if (!isTauri()) return;
   if (event.altKey && !isMod(event) && event.key === 'ArrowLeft') {
     event.preventDefault();
     step(-1);
@@ -488,16 +498,7 @@ function onKey(event: KeyboardEvent): void {
     activateNumber(Number(event.key));
     return;
   }
-  if (isTauri() || event.shiftKey) return;
-  if (event.key === 't' || event.key === 'T') {
-    event.preventDefault();
-    createTab();
-    return;
-  }
-  if (event.key === 'w' || event.key === 'W') {
-    event.preventDefault();
-    closeActive();
-  }
+
 }
 
 function isMod(event: KeyboardEvent): boolean {
@@ -611,6 +612,7 @@ function onClick(event: Event): void {
 }
 
 function persist(): void {
+  if (!isTauri()) return;
   sessionStorage.setItem(tabKey(), JSON.stringify(box.session));
 }
 

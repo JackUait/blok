@@ -13938,6 +13938,10 @@ button[data-blok-database-table-group-count]:hover {
   cursor: pointer;
 }
 
+[data-blok-database-chip-operator] {
+  height: 18px;
+}
+
 [data-blok-database-chip-operator]:hover, [data-blok-database-chip-more]:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }

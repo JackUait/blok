@@ -486,13 +486,7 @@ describe('Table onPaste metadata reset', () => {
     pastedElement.parentNode?.removeChild(pastedElement);
   });
 
-  // ---------------------------------------------------------------------------
-  // Notion parity: a pasted multi-row table treats its first row as a header by
-  // default, even when the source markup carries no <thead> / <th>. A single-row
-  // paste has no body to head, so it stays headerless.
-  // ---------------------------------------------------------------------------
-
-  it('defaults the first row to a header for a multi-row plain-<td> paste', () => {
+  it('keeps a multi-row plain-<td> paste headerless', () => {
     const options = createTableOptions({
       withHeadings: false,
       content: [['A', 'B'], ['C', 'D']],
@@ -515,7 +509,7 @@ describe('Table onPaste metadata reset', () => {
 
     const saved = table.save(pastedElement);
 
-    expect(saved.withHeadings).toBe(true);
+    expect(saved.withHeadings).toBe(false);
 
     element.parentNode?.removeChild(element);
     pastedElement.parentNode?.removeChild(pastedElement);
@@ -678,9 +672,91 @@ describe('Table onPaste of a table Blok copied', () => {
     }
   });
 
-  it('still heads the first row of a multi-row table with no marker', () => {
+  it('gives a multi-row table with no marker and no heading markup no heading row', () => {
     const saved = pasteAndSave(sanitizedPasteTable('', TWO_ROWS));
 
+    expect(saved.withHeadings).toBe(false);
+  });
+});
+
+describe('Table onPaste heading row from html markup', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const pasteHtml = (attributes: string, rowsHtml: string): TableData => {
+    const builder = new SanitizerConfigBuilder({} as unknown as ToolsCollection<BlockToolAdapter>, {});
+    const config = builder.buildToolConfig({ pasteConfig: Table.pasteConfig } as unknown as BlockToolAdapter);
+    const source = document.createElement('div');
+
+    source.innerHTML = `<table ${attributes}>${rowsHtml}</table>`;
+
+    const firstTable = source.querySelector('table');
+    // The html handler adds the structural tags (thead, th…) it finds to the tool's tags.
+    const sanitized = firstTable === null
+      ? null
+      : builder.sanitizeTable(firstTable, { ...builder.getStructuralTagsConfig(firstTable), ...config });
+
+    if (sanitized === null) {
+      throw new Error('sanitizer dropped the table');
+    }
+
+    const table = new Table(createTableOptions({ content: [['', ''], ['', '']] }));
+    const before = table.render();
+
+    document.body.appendChild(before);
+    table.rendered();
+    firePasteEvent(table, sanitized);
+
+    const after = table.render();
+
+    table.rendered();
+
+    const saved = table.save(after);
+
+    before.remove();
+    after.remove();
+
+    return saved;
+  };
+
+  const BODY = '<tbody><tr><td>a</td><td>b</td></tr></tbody>';
+
+  it('gives a table with a thead of th a heading row', () => {
+    const saved = pasteHtml('', `<thead><tr><th>H1</th><th>H2</th></tr></thead>${BODY}`);
+
     expect(saved.withHeadings).toBe(true);
+    expect(saved.withHeadingColumn).toBe(false);
+  });
+
+  it('gives a table with a thead of td a heading row', () => {
+    const saved = pasteHtml('', `<thead><tr><td>H1</td><td>H2</td></tr></thead>${BODY}`);
+
+    expect(saved.withHeadings).toBe(true);
+  });
+
+  it('gives a table whose first row is all th a heading row', () => {
+    const saved = pasteHtml('', `<tbody><tr><th>H1</th><th>H2</th></tr><tr><td>a</td><td>b</td></tr></tbody>`);
+
+    expect(saved.withHeadings).toBe(true);
+  });
+
+  it('gives a heading column but no heading row when only the first cell of each row is th', () => {
+    const saved = pasteHtml('', '<tbody><tr><th>R1</th><td>a</td></tr><tr><th>R2</th><td>b</td></tr></tbody>');
+
+    expect(saved.withHeadings).toBe(false);
+    expect(saved.withHeadingColumn).toBe(true);
+  });
+
+  it('gives no heading row when the first row mixes th and td', () => {
+    const saved = pasteHtml('', '<tbody><tr><td>a</td><th>H</th></tr><tr><td>b</td><td>c</td></tr></tbody>');
+
+    expect(saved.withHeadings).toBe(false);
+  });
+
+  it('lets the Blok mark win over thead markup', () => {
+    const saved = pasteHtml('data-blok-table-headings="none"', `<thead><tr><th>H1</th><th>H2</th></tr></thead>${BODY}`);
+
+    expect(saved.withHeadings).toBe(false);
   });
 });

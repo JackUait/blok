@@ -703,6 +703,26 @@ test.describe('table round trips', () => {
     expect(JSON.stringify(canonDoc(after).slice(1))).toContain('"bold":true');
   });
 
+  const HEADING_MARKUP: Array<[string, string, boolean]> = [
+    [ 'td rows only', '<table><tr><td>A</td><td>B</td></tr><tr><td>C</td><td>D</td></tr></table>', false ],
+    [ 'a thead', '<table><thead><tr><td>A</td><td>B</td></tr></thead><tbody><tr><td>C</td><td>D</td></tr></tbody></table>', true ],
+    [ 'a first row of th', '<table><tr><th>A</th><th>B</th></tr><tr><td>C</td><td>D</td></tr></table>', true ],
+    [ 'a heading column only', '<table><tr><th>A</th><td>B</td></tr><tr><th>C</th><td>D</td></tr></table>', false ],
+  ];
+
+  for (const [ name, html, heading ] of HEADING_MARKUP) {
+    test(`O12 foreign html table with ${name} → heading row ${heading ? 'on' : 'off'}`, async ({ page }) => {
+      await createEditor(page, [para('tgt', '')]);
+      await focusEditable(page.locator('[data-blok-id="tgt"]'));
+      await firePaste(page, { 'text/html': html, 'text/plain': 'A\tB\nC\tD' });
+
+      const pasted = tables(await saveRaw(page))[0];
+
+      expect(pasted, 'the html comes back as a table').toBeTruthy();
+      expect((pasted?.data)?.withHeadings).toBe(heading);
+    });
+  }
+
   /* --------------------- native text selection inside a cell --------------------- */
 
   test('N1 native text selection in one cell (real Cmd+C/Cmd+V) → another cell', async ({ page }) => {

@@ -1527,14 +1527,12 @@ export class Table implements BlockTool {
 
     const isTh = (cell: Element | undefined): boolean => cell?.tagName === 'TH';
     const hasTheadHeadings = rows.some(row => row.parentElement?.tagName === 'THEAD');
-    const hasThHeadings = rows[0] !== undefined && ownPastedCells(rows[0]).some(isTh);
+    const firstRowCells = rows[0] === undefined ? [] : ownPastedCells(rows[0]);
     // A th opening every row is a heading column. One row is a header row instead.
     const withHeadingColumn = rows.length >= 2 && rows.every(row => isTh(ownPastedCells(row)[0]));
-    // Notion parity: pasted spreadsheet/HTML data treats its first row as the
-    // header by default. Explicit thead/th force it on; otherwise any multi-row
-    // paste heads its first row. A single-row paste has no body to head, so it
-    // stays plain (matches the "paste over a fully configured table" contract).
-    const withHeadings = hasTheadHeadings || hasThHeadings || rows.length >= 2;
+    // Only the markup heads a row, never the row count: a heading column alone
+    // puts a th in the first row too, so the whole row must be th.
+    const withHeadings = hasTheadHeadings || (firstRowCells.length > 0 && firstRowCells.every(isTh));
     // A table Blok copied says its own layout, so nothing is guessed for it.
     const copied = readCopiedTableLayout(content, tableContent[0]?.length ?? 0);
 

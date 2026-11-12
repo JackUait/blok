@@ -191,7 +191,8 @@ interface CellSelectionOptions {
    */
   onSelectionActiveChange?: (hasSelection: boolean, isMultiCell: boolean) => void;
   onSelectionRangeChange?: (range: SelectionRange) => void;
-  onClearContent?: (cells: HTMLElement[]) => void;
+  /** `keepRange`: the range stays selected and no cell gets the caret (a Delete, Notion U162). */
+  onClearContent?: (cells: HTMLElement[], options?: { keepRange: true }) => void;
   onCopy?: (cells: HTMLElement[], clipboardData: DataTransfer) => void;
   onCut?: (cells: HTMLElement[], clipboardData: DataTransfer) => void;
   onCopyViaButton?: (cells: HTMLElement[]) => void;
@@ -227,7 +228,7 @@ export class TableCellSelection {
   private grid: HTMLElement;
   private rectangleSelection?: { cancelActiveSelection: () => void };
   private onSelectionActiveChange: ((hasSelection: boolean, isMultiCell: boolean) => void) | undefined;
-  private onClearContent: ((cells: HTMLElement[]) => void) | undefined;
+  private onClearContent: ((cells: HTMLElement[], options?: { keepRange: true }) => void) | undefined;
   private i18n: I18n;
   private anchorCell: CellCoord | null = null;
   private extentCell: CellCoord | null = null;
@@ -785,9 +786,18 @@ export class TableCellSelection {
     // Prevent default behavior
     e.preventDefault();
 
-    // Clear content and dismiss selection
-    this.onClearContent?.([...this.selectedCells]);
-    this.clearSelection();
+    const range = this.lastPaintedRange;
+
+    this.onClearContent?.([...this.selectedCells], { keepRange: true });
+
+    if (range === null) {
+      this.clearSelection();
+
+      return;
+    }
+
+    // Notion U162: the emptied range stays selected, with no caret.
+    this.selectRange(range);
   }
 
   /**
@@ -1122,6 +1132,7 @@ export class TableCellSelection {
   private restoreModifiedCells(): void {
     this.destroyPillPopover();
     this.disconnectResizeObserver();
+    this.grid.removeAttribute(DATA_ATTR.toolSelection);
 
     this.selectedCells.forEach(cell => {
       cell.removeAttribute(SELECTED_ATTR);
@@ -1266,6 +1277,12 @@ export class TableCellSelection {
     this.selectedCells.forEach(cell => {
       cell.setAttribute(SELECTED_ATTR, '');
     });
+
+    if (this.selectedCells.length > 1) {
+      this.grid.setAttribute(DATA_ATTR.toolSelection, JSON.stringify(this.lastPaintedRange));
+    } else {
+      this.grid.removeAttribute(DATA_ATTR.toolSelection);
+    }
 
     // Calculate overlay position from bounding rects of corner cells.
     // Try coordinate-based lookup first (works with merged cells),

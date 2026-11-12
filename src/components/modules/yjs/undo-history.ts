@@ -2352,13 +2352,32 @@ export class UndoHistory {
   }
 
   /**
+   * A tool's own selection comes back on undo only when the step kept it
+   * (a cell-range Delete, Notion U162). A step that ended it (a merge) puts
+   * the caret back instead.
+   * @param entry - the step being undone
+   */
+  private static toolSelectionKept(entry: CaretHistoryEntry): CaretSnapshot | null {
+    const { before, after } = entry;
+
+    if (before?.toolSelection === undefined || after?.toolSelection !== undefined) {
+      return before;
+    }
+
+    const { toolSelection: _ended, ...caret } = before;
+
+    return caret;
+  }
+
+  /**
    * Where undo puts the selection. An undo that puts back a one-block range's
    * text re-selects it forward (Notion U038). A step that left that same range
    * selected only changed its marks, so its direction stays (Notion RM2 item 5).
    * @param entry - the step being undone
    */
   private static undoSelection(entry: CaretHistoryEntry): CaretSnapshot | null {
-    const { before, after } = entry;
+    const { after } = entry;
+    const before = UndoHistory.toolSelectionKept(entry);
 
     if (before === null || before.backward !== true || before.end === undefined) {
       return before ?? after;
@@ -3442,6 +3461,18 @@ export class UndoHistory {
       return titleCaret;
     }
 
+    const toolSelection = this.liveToolSelection();
+    const caret = this.liveCaretOrCurrentBlock();
+
+    if (toolSelection === null) {
+      return caret;
+    }
+
+    return { ...(caret ?? { blockId: toolSelection.blockId, inputIndex: 0, offset: 0 }), toolSelection };
+  }
+
+  /** The caret half of {@link captureCaretSnapshot}. */
+  private liveCaretOrCurrentBlock(): CaretSnapshot | null {
     const { BlockManager } = this.blok;
 
     // Prefer the block the caret is *actually* in (the live DOM selection) over
@@ -3509,6 +3540,38 @@ export class UndoHistory {
       ...(endIn === null ? {} : { endIn }),
       ...(backward ? { backward: true as const } : {}),
     };
+  }
+
+  /** A selection one of this editor's tools holds itself, read from its `toolSelection` mark. */
+  private liveToolSelection(): NonNullable<CaretSnapshot['toolSelection']> | null {
+    const root: ParentNode = this.blok.UI?.nodes?.redactor ?? document;
+
+    for (const element of Array.from(root.querySelectorAll(`[${DATA_ATTR.toolSelection}]`))) {
+      const block = this.blok.BlockManager.getBlockByChildNode(element);
+
+      if (block === undefined) {
+        continue;
+      }
+
+      const state = UndoHistory.parseToolSelection(element.getAttribute(DATA_ATTR.toolSelection));
+
+      if (state !== null) {
+        return { blockId: block.id, state };
+      }
+    }
+
+    return null;
+  }
+
+  /** @param value - a `toolSelection` mark's JSON */
+  private static parseToolSelection(value: string | null): Record<string, unknown> | null {
+    try {
+      const state: unknown = JSON.parse(value ?? '');
+
+      return typeof state === 'object' && state !== null && !Array.isArray(state) ? state as Record<string, unknown> : null;
+    } catch {
+      return null;
+    }
   }
 
   /** Whether a selection's anchor sits at its range's end. */
@@ -3686,6 +3749,10 @@ export class UndoHistory {
       return this.selectBlocks(snapshot.blocks);
     }
 
+    if (snapshot.toolSelection !== undefined) {
+      return this.restoreToolSelection(snapshot.toolSelection.blockId, snapshot.toolSelection.state);
+    }
+
     if (snapshot.title === true) {
       return this.blok.PageTitle.focusAt(snapshot.offset, snapshot.end);
     }
@@ -3795,6 +3862,31 @@ export class UndoHistory {
       active.blur();
     }
     BlockSelection.adoptSelectionIntoNavigationMode();
+
+    return true;
+  }
+
+  /**
+   * Hand a recorded tool selection back to its block, with no caret and no
+   * block selection (Notion U162).
+   * @param blockId - the tool's block
+   * @param state - the selection it recorded
+   */
+  private restoreToolSelection(blockId: string, state: Record<string, unknown>): boolean {
+    const block = this.blok.BlockManager.getBlockById(blockId);
+
+    if (block === undefined) {
+      return false;
+    }
+
+    this.blok.BlockSelection.clearSelection();
+    const active = document.activeElement;
+
+    if (active instanceof HTMLElement && active !== document.body) {
+      active.blur();
+    }
+    window.getSelection()?.removeAllRanges();
+    block.call('restoreHistorySelection', state);
 
     return true;
   }

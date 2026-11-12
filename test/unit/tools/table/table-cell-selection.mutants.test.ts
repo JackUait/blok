@@ -1271,7 +1271,8 @@ describe('TableCellSelection — mutation gaps', () => {
       onClearContent = vi.fn<(cells: HTMLElement[]) => void>();
     });
 
-    it('clears the whole rectangle and dismisses the selection', () => {
+    // Notion U162: the emptied rectangle stays selected.
+    it('clears the whole rectangle and keeps it selected', () => {
       grid = createGrid(2, 2);
       selection = makeSelection({ onClearContent });
       selection.selectRange({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 });
@@ -1281,7 +1282,7 @@ describe('TableCellSelection — mutation gaps', () => {
       expect(onClearContent).toHaveBeenCalledTimes(1);
       expect(onClearContent.mock.calls[0][0]).toHaveLength(2);
       expect(event.defaultPrevented).toBe(true);
-      expect(selection.getSelectedRange()).toBeNull();
+      expect(selection.getSelectedRange()).toEqual({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 });
     });
 
     it('treats Backspace the same way', () => {
@@ -4166,14 +4167,15 @@ describe('TableCellSelection — mutation gaps', () => {
    * ---------------------------------------------------------------- */
 
   describe('missing optional callbacks', () => {
-    it('deletes a rectangle with no clear-content handler', () => {
+    it('keeps a rectangle selected on Delete with no clear-content handler', () => {
       grid = createGrid(2, 2);
       selection = makeSelection();
       selection.selectRange({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 });
 
-      pressKey({ key: 'Delete' });
+      const event = pressKey({ key: 'Delete' });
 
-      expect(selection.getSelectedRange()).toBeNull();
+      expect(event.defaultPrevented).toBe(true);
+      expect(selection.getSelectedRange()).toEqual({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 });
     });
 
     it('bulk-formats a rectangle with no format handler', () => {

@@ -288,10 +288,9 @@ test.describe('table cell selection — delete key', () => {
     await expect(getCellEditable(page, 0, 2)).toHaveText('C1');
   });
 
-  test('multi-cell delete keeps focus inside the anchor cell', async ({ page }) => {
+  test('multi-cell delete keeps the range selected with no caret, like Notion (U162)', async ({ page }) => {
     // A 2x2 table where the selection spans every cell: deleting clears all of
-    // the table's blocks, so the editor has no sibling to move the caret to.
-    // Regression: focus fell onto <body> instead of staying in the table.
+    // the table's blocks. The emptied range stays selected for the next key.
     await createBlok(page, {
       tools: defaultTools,
       data: {
@@ -324,17 +323,8 @@ test.describe('table cell selection — delete key', () => {
     // Content is cleared
     await expect(getCellEditable(page, 0, 0)).toHaveText('');
 
-    // Focus lands in the top-left anchor cell, not <body>.
-    await expect
-      .poll(async () =>
-        page.evaluate(() => {
-          const cell = document.activeElement?.closest('[data-blok-table-cell]');
-
-          return cell?.getAttribute('data-blok-table-cell-row') === '0'
-            && cell?.getAttribute('data-blok-table-cell-col') === '0';
-        })
-      )
-      .toBe(true);
+    await expect(selected).toHaveCount(4);
+    expect(await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.isContentEditable)).toBe(false);
   });
 
   test('deleting a block-selected line inside a cell keeps focus in that cell', async ({ page }) => {

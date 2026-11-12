@@ -415,6 +415,10 @@ export const DATA_ATTR: {
    *  `detail.rect` is null once the band grows past the block again.
    *  Public authoring hook. */
   readonly selectionOwner: 'data-blok-selection-owner';
+  /** On a tool's own element while it holds a selection of its own with no
+   *  caret (a table cell range). The value is that selection as JSON; undo
+   *  and redo hand it back to the tool's `restoreHistorySelection`. */
+  readonly toolSelection: 'data-blok-tool-selection';
 
   // Navigation
 

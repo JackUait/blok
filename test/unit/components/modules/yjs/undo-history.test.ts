@@ -1102,6 +1102,76 @@ describe('UndoHistory', () => {
       input.remove();
     });
 
+    // Notion U162: a table cell range outlives Delete, undo and redo, with no caret.
+    it('records a tool selection over the caret left in one of its cells', () => {
+      const holder = document.createElement('div');
+      const grid = document.createElement('div');
+      const input = document.createElement('div');
+
+      input.textContent = 'A1';
+      grid.setAttribute('data-blok-tool-selection', JSON.stringify({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 }));
+      grid.appendChild(input);
+      holder.appendChild(grid);
+      document.body.appendChild(holder);
+      const table = { id: 'tbl', holder, inputs: [], currentInputIndex: 0, currentInput: undefined };
+      const cell = { id: 'c00', holder: input, inputs: [input], currentInputIndex: 0, currentInput: input };
+
+      (blok.BlockManager as unknown as { getBlockByChildNode: ReturnType<typeof vi.fn> }).getBlockByChildNode
+        .mockImplementation((node: Node) => (node === grid || node === holder ? table : cell));
+      window.getSelection()?.collapse(input.firstChild, 2);
+
+      expect(history.captureCaretSnapshot()).toEqual({
+        blockId: 'c00',
+        inputIndex: 0,
+        offset: 2,
+        toolSelection: { blockId: 'tbl', state: { minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 } },
+      });
+      holder.remove();
+    });
+
+    const undoToolSelectionStep = (after: CaretHistoryEntry['after']): { call: ReturnType<typeof vi.fn>; input: HTMLElement } => {
+      const input = document.createElement('div');
+
+      input.contentEditable = 'true';
+      input.textContent = 'A1';
+      document.body.appendChild(input);
+      input.focus();
+      window.getSelection()?.collapse(input.firstChild, 1);
+      const call = vi.fn();
+      const table = { id: 'tbl', holder: document.createElement('div'), inputs: [], parentId: null, call };
+      const cell = { id: 'c00', holder: input, inputs: [input], parentId: 'tbl', call: vi.fn() };
+
+      (blok.BlockManager as unknown as { getBlockById: typeof vi.fn }).getBlockById = vi.fn()
+        .mockImplementation((id: string) => (id === 'tbl' ? table : cell));
+      (history as unknown as { caretUndoStack: CaretHistoryEntry[] }).caretUndoStack.push({
+        before: { blockId: 'c00', inputIndex: 0, offset: 2, toolSelection: { blockId: 'tbl', state: { minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 } } },
+        after,
+      });
+
+      history.undo();
+
+      return { call, input };
+    };
+
+    it('hands a cell range the step kept back to its table and leaves no caret', () => {
+      const { call, input } = undoToolSelectionStep({
+        blockId: 'tbl', inputIndex: 0, offset: 0, toolSelection: { blockId: 'tbl', state: { minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 } },
+      });
+
+      expect(call).toHaveBeenCalledWith('restoreHistorySelection', { minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 });
+      expect(window.getSelection()?.rangeCount).toBe(0);
+      expect(input).not.toHaveFocus();
+      input.remove();
+    });
+
+    it('puts the caret back instead when the step ended the cell range (a merge)', () => {
+      const { call, input } = undoToolSelectionStep({ blockId: 'c00', inputIndex: 0, offset: 2 });
+
+      expect(call).not.toHaveBeenCalled();
+      expect(blok.Caret.setToInput).toHaveBeenCalledWith(input, expect.anything(), 2);
+      input.remove();
+    });
+
     it('records nothing extra for a collapsed caret', () => {
       const input = document.createElement('div');
 

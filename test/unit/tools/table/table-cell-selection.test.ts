@@ -1236,7 +1236,7 @@ describe('TableCellSelection', () => {
   });
 
   describe('keyboard handling', () => {
-    it('clears selected cells on Delete key', () => {
+    it('clears selected cells on Delete key and keeps the range selected', () => {
       const onClearContent = vi.fn();
       const onSelectionActiveChange = vi.fn();
 
@@ -1264,15 +1264,18 @@ describe('TableCellSelection', () => {
       // Verify onClearContent called with array of 3 cells
       expect(onClearContent).toHaveBeenCalledTimes(1);
       expect(onClearContent.mock.calls[0][0]).toHaveLength(3);
+      expect(onClearContent.mock.calls[0][1]).toEqual({ keepRange: true });
 
-      // Verify onSelectionActiveChange called with false (selection dismissed)
-      expect(onSelectionActiveChange).toHaveBeenCalledWith(false, false);
+      // Notion U162: the range stays selected, and undo history can read it.
+      expect(selection.getSelectedRange()).toEqual({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 2 });
+      expect(JSON.parse(grid.getAttribute('data-blok-tool-selection') ?? 'null')).toEqual({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 2 });
+      expect(onSelectionActiveChange).not.toHaveBeenLastCalledWith(false, false);
 
       // Verify preventDefault called
       expect(preventDefaultSpy).toHaveBeenCalled();
     });
 
-    it('clears selected cells on Backspace key', () => {
+    it('clears selected cells on Backspace key and keeps the range selected', () => {
       const onClearContent = vi.fn();
       const onSelectionActiveChange = vi.fn();
 
@@ -1300,9 +1303,12 @@ describe('TableCellSelection', () => {
       // Verify onClearContent called with array of 3 cells
       expect(onClearContent).toHaveBeenCalledTimes(1);
       expect(onClearContent.mock.calls[0][0]).toHaveLength(3);
+      expect(onClearContent.mock.calls[0][1]).toEqual({ keepRange: true });
 
-      // Verify onSelectionActiveChange called with false (selection dismissed)
-      expect(onSelectionActiveChange).toHaveBeenCalledWith(false, false);
+      // Notion U162: the range stays selected, and undo history can read it.
+      expect(selection.getSelectedRange()).toEqual({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 2 });
+      expect(JSON.parse(grid.getAttribute('data-blok-tool-selection') ?? 'null')).toEqual({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 2 });
+      expect(onSelectionActiveChange).not.toHaveBeenLastCalledWith(false, false);
 
       // Verify preventDefault called
       expect(preventDefaultSpy).toHaveBeenCalled();

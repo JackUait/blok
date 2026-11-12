@@ -1032,7 +1032,11 @@ export class TableSubsystems {
    * leaves them in place, and so does this. (There is no "clear formatting"
    * action; if one is ever added it must be its own explicitly-named operation.)
    */
-  private clearCellsContent(cells: HTMLElement[]): void {
+  /**
+   * @param cells - the cells to empty
+   * @param focus - put the caret in the first cell; a cell-range Delete keeps the range instead (Notion U162)
+   */
+  private clearCellsContent(cells: HTMLElement[], focus = true): void {
     const cellBlocks = this.host.cellBlocks;
 
     if (!cellBlocks || cells.length === 0) {
@@ -1048,10 +1052,27 @@ export class TableSubsystems {
     // the model's cell entries here would leave that handler with nothing to
     // repair and the non-anchor cells with no editable at all.
     this.host.runTransactedStructuralOp(() => {
-      cellBlocks.deleteBlocks(cellBlocks.getBlockIdsFromCells(cells));
+      cellBlocks.deleteBlocks(cellBlocks.getBlockIdsFromCells(cells), focus);
     });
 
-    cellBlocks.focusClearedCell(anchorCell);
+    if (focus) {
+      cellBlocks.focusClearedCell(anchorCell);
+
+      return;
+    }
+
+    const grid = this.host.gridElement;
+    const active = document.activeElement;
+    const selection = window.getSelection();
+    const anchor = selection?.anchorNode ?? null;
+
+    if (active instanceof HTMLElement && grid?.contains(active) === true) {
+      active.blur();
+    }
+    // The deleted cell block may have held the caret, so a detached anchor counts as ours.
+    if (anchor !== null && (grid?.contains(anchor) === true || !anchor.isConnected)) {
+      selection?.removeAllRanges();
+    }
   }
 
   private handleRowColAction(gridEl: HTMLElement, action: RowColAction): void {
@@ -1673,8 +1694,8 @@ export class TableSubsystems {
         // Selection finalized — restore grips so hover works normally
         this.rowColControls?.setGripsDisplay(true);
       },
-      onClearContent: (cells) => {
-        this.clearCellsContent(cells);
+      onClearContent: (cells, options) => {
+        this.clearCellsContent(cells, options?.keepRange !== true);
       },
       onCopy: (cells, clipboardData) => {
         this.handleCellCopy(cells, clipboardData);

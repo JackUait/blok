@@ -346,4 +346,28 @@ describe('Table block settings menu', () => {
       expect(firstCell?.hasAttribute('data-blok-table-heading-col')).toBe(true);
     });
   });
+
+  // Notion U162: undo and redo hand a cell range back with no caret.
+  describe('restoreHistorySelection', () => {
+    it('selects the recorded cell range', () => {
+      const { tool, element } = mountTable({ content: [['A', 'B'], ['C', 'D']] });
+
+      tool.restoreHistorySelection({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 });
+
+      expect(Array.from(element.querySelectorAll('[data-blok-table-cell-selected]'))
+        .map(cell => `${cell.getAttribute('data-blok-table-cell-row') ?? ''},${cell.getAttribute('data-blok-table-cell-col') ?? ''}`))
+        .toEqual(['0,0', '0,1']);
+    });
+
+    it.each([
+      ['a range outside the grid', { minRow: 0, maxRow: 5, minCol: 0, maxCol: 1 }],
+      ['a malformed range', { minRow: 'x' }],
+    ])('ignores %s', (_name, state) => {
+      const { tool, element } = mountTable({ content: [['A', 'B'], ['C', 'D']] });
+
+      tool.restoreHistorySelection(state);
+
+      expect(element.querySelectorAll('[data-blok-table-cell-selected]')).toHaveLength(0);
+    });
+  });
 });

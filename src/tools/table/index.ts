@@ -1641,6 +1641,23 @@ export class Table implements BlockTool {
     });
   }
 
+  /**
+   * Undo and redo hand back the cell range this table marked with
+   * `data-blok-tool-selection` (Notion U162).
+   * @param state - the recorded `{ minRow, maxRow, minCol, maxCol }`
+   */
+  public restoreHistorySelection(state: Record<string, unknown>): void {
+    const { minRow, maxRow, minCol, maxCol } = state;
+    const isIndex = (value: unknown, size: number): value is number =>
+      typeof value === 'number' && Number.isInteger(value) && value >= 0 && value < size;
+
+    if (!isIndex(minRow, this.model.rows) || !isIndex(maxRow, this.model.rows) || !isIndex(minCol, this.model.cols) || !isIndex(maxCol, this.model.cols)) {
+      return;
+    }
+
+    this.subsystems.cellSelectionSubsystem?.selectRange({ minRow, maxRow, minCol, maxCol });
+  }
+
   public getBlockIdsInRow(rowIndex: number): string[] {
     return getBlockIdsInRow(this.element, this.cellBlocks, rowIndex);
   }

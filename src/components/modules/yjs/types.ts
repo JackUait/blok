@@ -142,6 +142,8 @@ export interface CaretSnapshot {
   title?: true;
   /** Block-selected ids, with no caret. `blockId` is then the first of them. */
   blocks?: string[];
+  /** A selection a tool held itself (a table cell range). It wins over the caret fields. */
+  toolSelection?: { blockId: string; state: Record<string, unknown> };
 }
 
 /**

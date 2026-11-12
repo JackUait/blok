@@ -218,7 +218,7 @@ interface CellSelectionOptions {
   onPointerDragActiveChange: (active: boolean) => void;
   onSelectionActiveChange: (hasSelection: boolean, isMultiCell: boolean) => void;
   onSelectionRangeChange: (range: SelectionRange) => void;
-  onClearContent: (cells: HTMLElement[]) => void;
+  onClearContent: (cells: HTMLElement[], options?: { keepRange: true }) => void;
   onCopy: (cells: HTMLElement[], clipboardData: DataTransfer) => void;
   onCut: (cells: HTMLElement[], clipboardData: DataTransfer) => void;
   onCopyViaButton: (cells: HTMLElement[]) => void;
@@ -2732,6 +2732,16 @@ describe('cell-selection wiring', () => {
     expect(harness.idsOf(0, 0)).toEqual([]);
     expect(harness.idsOf(1, 1)).toEqual([]);
     expect(harness.focusClearedCell).toHaveBeenCalledWith(harness.cellOf(0, 0));
+  });
+
+  // Notion U162: a Delete keeps the range selected, so no cell gets the caret.
+  it('puts no caret in the cells when the range stays selected', () => {
+    const harness = createHarness();
+
+    cellSelectionOptions().onClearContent([harness.cellOf(0, 0), harness.cellOf(1, 1)], { keepRange: true });
+
+    expect(harness.idsOf(0, 0)).toEqual([]);
+    expect(harness.focusClearedCell).not.toHaveBeenCalled();
   });
 
   it('reads cell metadata straight off the model', () => {

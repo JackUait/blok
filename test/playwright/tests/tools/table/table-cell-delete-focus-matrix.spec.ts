@@ -220,13 +220,15 @@ test.describe('table cell delete-focus matrix', () => {
     await expectFocusInCell(page, 0, 0);
   });
 
-  test('multi-cell selection + Delete keeps focus in the anchor cell', async ({ page }) => {
+  // Notion U162: the emptied range stays selected, and no cell has the caret.
+  test('multi-cell selection + Delete keeps the range selected with no caret', async ({ page }) => {
     await selectAllFourCells(page);
 
     await page.keyboard.press('Delete');
 
     await expect(getCellEditable(page, 0, 0)).toHaveText('');
-    await expectFocusInCell(page, 0, 0);
+    await expect(page.locator('[data-blok-table-cell-selected]')).toHaveCount(4);
+    expect(await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.isContentEditable)).toBe(false);
   });
 
   test('multi-cell selection + Cut keeps focus in the anchor cell', async ({ page }) => {

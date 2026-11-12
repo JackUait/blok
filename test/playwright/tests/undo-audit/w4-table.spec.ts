@@ -650,3 +650,57 @@ test.describe('W4B structure', () => {
   });
 
 });
+
+/**
+ * Notion U162: Delete on a cell range empties the cells and keeps the range
+ * selected, with no caret. Undo and redo select the same range again, with
+ * no caret and no block selection on the table.
+ */
+test.describe('W7 cell-range Delete keeps the range (U162)', () => {
+  test.beforeAll(ensureBlokBundleBuilt);
+
+  test.beforeEach(async ({ page }) => {
+    await gotoTestPage(page);
+  });
+
+  /** The selected cells as `row,col`, the caret's block id or `none`, and the block-selected ids. */
+  const state = async (page: Page): Promise<{ cells: string[]; caret: string; blocks: string[] }> => page.evaluate(() => {
+    const selection = window.getSelection();
+    const node = selection !== null && selection.rangeCount > 0 ? selection.anchorNode : null;
+    const element = node instanceof Element ? node : node?.parentElement ?? null;
+    const active = document.activeElement;
+    const inEditable = element?.closest('[contenteditable="true"]') != null || (active instanceof HTMLElement && active.isContentEditable);
+
+    return {
+      cells: Array.from(document.querySelectorAll('[data-blok-table-cell-selected]'))
+        .map(c => `${c.getAttribute('data-blok-table-cell-row') ?? ''},${c.getAttribute('data-blok-table-cell-col') ?? ''}`),
+      caret: inEditable ? element?.closest('[data-blok-id]')?.getAttribute('data-blok-id') ?? 'unknown' : 'none',
+      blocks: Array.from(document.querySelectorAll('[data-blok-testid="block-wrapper"][data-blok-selected="true"]'))
+        .map(el => el.getAttribute('data-blok-id') ?? ''),
+    };
+  });
+
+  for (const key of ['Delete', 'Backspace']) {
+    test(`${key} on a 2x1 range, undo, redo: the range stays selected with no caret`, async ({ page }) => {
+      await createBlok(page, DOC_3x3());
+      await selectCells(page, 0, 0, 0, 1);
+      expect((await state(page)).cells).toEqual(['0,0', '0,1']);
+      await gap(page);
+
+      await page.keyboard.press(key);
+      await expect.poll(() => grid(page)).toEqual([['', '', 'C1'], ['A2', 'B2', 'C2'], ['A3', 'B3', 'C3']]);
+      await expect.poll(() => state(page)).toEqual({ cells: ['0,0', '0,1'], caret: 'none', blocks: [] });
+      await gap(page);
+
+      await page.keyboard.press(UNDO);
+      await expect.poll(() => grid(page)).toEqual([['A1', 'B1', 'C1'], ['A2', 'B2', 'C2'], ['A3', 'B3', 'C3']]);
+      await expect.poll(() => state(page)).toEqual({ cells: ['0,0', '0,1'], caret: 'none', blocks: [] });
+      expect((await save(page)).filter(b => b.parent === 'tbl').map(b => b.id).sort()).toContain('c00');
+      await gap(page, 500);
+
+      await page.keyboard.press(REDO);
+      await expect.poll(() => grid(page)).toEqual([['', '', 'C1'], ['A2', 'B2', 'C2'], ['A3', 'B3', 'C3']]);
+      await expect.poll(() => state(page)).toEqual({ cells: ['0,0', '0,1'], caret: 'none', blocks: [] });
+    });
+  }
+});

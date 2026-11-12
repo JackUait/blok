@@ -22942,10 +22942,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   font-family: var(--blok-font-family, var(--blok-font-sans));
 }
 
-[data-blok-tool="video"] .blok-video-media video {
-  cursor: pointer;
-}
-
 [data-blok-tool="video"] .blok-video-controls__burst {
   position: absolute;
   top: 50%;

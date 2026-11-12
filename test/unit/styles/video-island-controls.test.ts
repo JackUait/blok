@@ -85,6 +85,10 @@ describe('video island controls', () => {
     expect(rule).toContain('transition: none');
   });
 
+  it('shows the hand cursor only over controls, not over the picture', () => {
+    expect(css).not.toMatch(/\.blok-video-media video\s*\{[^}]*cursor: pointer/);
+  });
+
   it('rounds the player frame with its own radius role', () => {
     expect(colors).toMatch(/--blok-radius-player: var\(--blok-radius-16\);/);
   });

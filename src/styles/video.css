@@ -406,9 +406,6 @@
   font-family: var(--blok-font-family, var(--blok-font-sans));
 }
 
-/* the media reads as a play/pause surface */
-[data-blok-tool="video"] .blok-video-media video { cursor: pointer; }
-
 /* centre burst — a frosted disc that snaps the just-taken action's glyph into
    the middle of the player and drifts out, echoing the tactile feedback of
    native players. Inert by default; the .is-active class

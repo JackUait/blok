@@ -118,7 +118,7 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
   private async insertCheckedBlocks(entries: BlokClipboardBlock[], canReplace: boolean): Promise<void> {
     // Resolved first: a stub can wrap a page link.
     const resolved = entries.map(entry => this.withResolvedTool(entry));
-    const pageIds = pastedPageIds(resolved, this.Blok.Tools.stubTool);
+    const pageIds = pastedPageIds(resolved, this.Blok.Tools.stubTool, this.rulesFor);
 
     if (pageIds.size === 0) {
       this.insertBlokBlocks(resolved, canReplace, pageIds);
@@ -136,6 +136,8 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
 
   /** Set when the editor goes; a paste still waiting on the host then drops. */
   private destroyed = false;
+
+  private readonly rulesFor = (tool: string): SanitizerConfig | undefined => this.Blok.Tools.blockTools.get(tool)?.sanitizeConfig;
 
   destroy(): void {
     this.destroyed = true;
@@ -163,7 +165,7 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
         };
       }
 
-      return { ...entry, data: dataWithoutUnconfirmedPages(entry.data, confirmed) };
+      return { ...entry, data: dataWithoutUnconfirmedPages(entry.data, this.rulesFor(entry.tool), confirmed) };
     });
   }
 

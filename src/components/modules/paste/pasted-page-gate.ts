@@ -4,6 +4,7 @@ import type { ClipboardBlockData } from '../../../shared/table/types';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK, mayHoldPageReference } from '../../../shared/page-reference';
 import { parseUntrustedDocument, parseUntrustedHtml } from '../../utils/inert-html';
+import { isPlaintextRule, isRule, type DeepSanitizerRule } from '../../../shared/sanitize-walk';
 
 /**
  * Pasted content can be forged by any page, so a page id read from it is only
@@ -23,6 +24,20 @@ const segmentPageId = (value: Record<string, unknown>): string | undefined => {
 
   return typeof page?.id === 'string' && page.id !== '' ? page.id : undefined;
 };
+
+/**
+ * A field's sanitize rule, found the way the sanitizer walk finds it.
+ * @param rules - the rule at the parent
+ * @param field - the field name
+ */
+const fieldRule = (rules: DeepSanitizerRule, field: string): DeepSanitizerRule => {
+  const own = isRecord(rules) && Object.hasOwn(rules, field) ? (rules as Record<string, DeepSanitizerRule>)[field] : undefined;
+
+  return own !== undefined && isRule(own) ? own : rules;
+};
+
+/** Each tool's sanitize rules. A PLAINTEXT field is literal text, never a mention. */
+export type RulesFor = (tool: string) => DeepSanitizerRule | undefined;
 
 const referenceAnchors = (root: ParentNode): Element[] =>
   Array.from(root.querySelectorAll(`a[${PAGE_REFERENCE_ATTR}]`)).filter((anchor) => anchor.getAttribute(PAGE_REFERENCE_ATTR));
@@ -44,18 +59,19 @@ export const unlinkPageReference = (anchor: Element): void => {
  * Every page id named in a value: mention anchors in html strings, mention
  * segments, and the `pageId` of a page or page link block.
  * @param value - block data, at any depth
+ * @param rules - the sanitize rule at this depth
  * @param ids - where the ids are added
  */
-const collectIds = (value: unknown, ids: Set<string>): void => {
+const collectIds = (value: unknown, rules: DeepSanitizerRule, ids: Set<string>): void => {
   if (typeof value === 'string') {
-    if (mayHoldPageReference(value)) {
+    if (!isPlaintextRule(rules) && mayHoldPageReference(value)) {
       referenceAnchors(parseUntrustedHtml(value)).forEach((anchor) => ids.add(anchor.getAttribute(PAGE_REFERENCE_ATTR) ?? ''));
     }
 
     return;
   }
   if (Array.isArray(value)) {
-    value.forEach((item) => collectIds(item, ids));
+    value.forEach((item) => collectIds(item, rules, ids));
 
     return;
   }
@@ -68,17 +84,18 @@ const collectIds = (value: unknown, ids: Set<string>): void => {
   if (segmentId !== undefined) {
     ids.add(segmentId);
   }
-  Object.values(value).forEach((item) => collectIds(item, ids));
+  Object.entries(value).forEach(([field, item]) => collectIds(item, fieldRule(rules, field), ids));
 };
 
 /**
  * The value with every page mention the host did not confirm turned into text.
  * @param value - block data, at any depth
+ * @param rules - the sanitize rule at this depth
  * @param confirmed - the page ids that may stay
  */
-const withoutUnconfirmed = (value: unknown, confirmed: ReadonlySet<string>): unknown => {
+const withoutUnconfirmed = (value: unknown, rules: DeepSanitizerRule, confirmed: ReadonlySet<string>): unknown => {
   if (typeof value === 'string') {
-    if (!mayHoldPageReference(value)) {
+    if (isPlaintextRule(rules) || !mayHoldPageReference(value)) {
       return value;
     }
     const wrapper = parseUntrustedHtml(value);
@@ -92,7 +109,7 @@ const withoutUnconfirmed = (value: unknown, confirmed: ReadonlySet<string>): unk
     return wrapper.innerHTML;
   }
   if (Array.isArray(value)) {
-    return value.map((item) => withoutUnconfirmed(item, confirmed));
+    return value.map((item) => withoutUnconfirmed(item, rules, confirmed));
   }
   if (!isRecord(value)) {
     return value;
@@ -106,7 +123,7 @@ const withoutUnconfirmed = (value: unknown, confirmed: ReadonlySet<string>): unk
     return { ...marks, text: PAGE_REFERENCE_FALLBACK };
   }
 
-  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, withoutUnconfirmed(item, confirmed)]));
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, withoutUnconfirmed(item, fieldRule(rules, key), confirmed)]));
 };
 
 /** A pasted block, as the clipboard and the converters shape it. */
@@ -133,8 +150,9 @@ export const pastedPointerId = (block: PastedBlockShape, stubTool: string): stri
  * Every page id named by pasted blocks.
  * @param blocks - the pasted blocks
  * @param stubTool - the name of the stub tool
+ * @param rulesFor - each tool's sanitize rules
  */
-export const pastedPageIds = (blocks: readonly PastedBlockShape[], stubTool: string): Set<string> => {
+export const pastedPageIds = (blocks: readonly PastedBlockShape[], stubTool: string, rulesFor: RulesFor): Set<string> => {
   const ids = new Set<string>();
 
   blocks.forEach((block) => {
@@ -143,7 +161,7 @@ export const pastedPageIds = (blocks: readonly PastedBlockShape[], stubTool: str
     if (pointer !== undefined) {
       ids.add(pointer);
     }
-    collectIds(block.data, ids);
+    collectIds(block.data, rulesFor(block.tool) ?? {}, ids);
   });
   ids.delete('');
 
@@ -153,10 +171,11 @@ export const pastedPageIds = (blocks: readonly PastedBlockShape[], stubTool: str
 /**
  * Pasted block data with every page mention the host did not confirm turned into text.
  * @param data - the block data
+ * @param rules - the block tool's sanitize rules
  * @param confirmed - the page ids that may stay
  */
-export const dataWithoutUnconfirmedPages = (data: BlockToolData, confirmed: ReadonlySet<string>): BlockToolData =>
-  withoutUnconfirmed(data, confirmed) as BlockToolData;
+export const dataWithoutUnconfirmedPages = (data: BlockToolData, rules: DeepSanitizerRule | undefined, confirmed: ReadonlySet<string>): BlockToolData =>
+  withoutUnconfirmed(data, rules ?? {}, confirmed) as BlockToolData;
 
 /**
  * Page ids pasted html names in mention anchors.
@@ -230,8 +249,14 @@ export const withChildren = (blocks: readonly ClipboardBlockData[]): ClipboardBl
  * @param block - a clipboard cell block
  * @param confirmed - the page ids that may stay
  * @param stubTool - the name of the stub tool
+ * @param rulesFor - each tool's sanitize rules
  */
-export const cellBlockWithoutUnconfirmedPages = (block: ClipboardBlockData, confirmed: ReadonlySet<string>, stubTool: string): ClipboardBlockData => {
+export const cellBlockWithoutUnconfirmedPages = (
+  block: ClipboardBlockData,
+  confirmed: ReadonlySet<string>,
+  stubTool: string,
+  rulesFor: RulesFor
+): ClipboardBlockData => {
   const pointer = pastedPointerId(block, stubTool);
 
   if (pointer !== undefined && !confirmed.has(pointer)) {
@@ -240,8 +265,8 @@ export const cellBlockWithoutUnconfirmedPages = (block: ClipboardBlockData, conf
 
   return {
     ...block,
-    data: dataWithoutUnconfirmedPages(block.data, confirmed),
-    ...(block.children === undefined ? {} : { children: block.children.map((child) => cellBlockWithoutUnconfirmedPages(child, confirmed, stubTool)) }),
+    data: dataWithoutUnconfirmedPages(block.data, rulesFor(block.tool), confirmed),
+    ...(block.children === undefined ? {} : { children: block.children.map((child) => cellBlockWithoutUnconfirmedPages(child, confirmed, stubTool, rulesFor)) }),
   };
 };
 

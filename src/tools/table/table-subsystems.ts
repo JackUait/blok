@@ -1901,7 +1901,7 @@ export class TableSubsystems {
       ? this.caretBlockToPasteAfter(targetCell, activeElement)
       : null;
 
-    const pageIds = pastedPageIds(payload.cells.flat().flatMap(cell => withChildren(cell.blocks)), STUB_TOOL);
+    const pageIds = pastedPageIds(payload.cells.flat().flatMap(cell => withChildren(cell.blocks)), STUB_TOOL, tool => this.toolSanitizeConfig(tool));
 
     if (pageIds.size === 0) {
       this.landGridPaste(payload, { targetCell, targetRowIndex, targetColIndex, isTextOnlySingleCell, caretBlockId, contentOutsideTable }, gridEl);
@@ -1909,48 +1909,51 @@ export class TableSubsystems {
       return;
     }
 
-    void this.confirmPastedPages(gridEl, payload, pageIds).then((confirmed) => {
+    void this.confirmPastedPages(gridEl, payload, pageIds).then(() => {
       // The table can be gone while the host resolves.
-      if (confirmed && gridEl.isConnected && targetCell.isConnected) {
+      if (gridEl.isConnected && targetCell.isConnected) {
         this.landGridPaste(payload, { targetCell, targetRowIndex, targetColIndex, isTextOnlySingleCell, caretBlockId, contentOutsideTable }, gridEl);
       }
+    }).catch((error: unknown) => {
+      logLabeled('Table: could not paste the cells', 'warn', error);
     });
   }
 
   /**
    * Turns every page in the payload the host did not confirm into text. A
    * pasted page id is a claim: it stays only when the page is already in this
-   * editor, or the page tool's `resolve` finds it and grants access.
-   * @returns false when the host could not be asked at all
+   * editor, or the page tool's `resolve` finds it and grants access. When
+   * the check itself fails, every page becomes text.
    */
-  private async confirmPastedPages(gridEl: HTMLElement, payload: TableCellsClipboard, pageIds: ReadonlySet<string>): Promise<boolean> {
-    try {
-      const page = this.host.api.tools?.getBlockTools().find(tool => tool.name === 'page')?.settings as PageConfig | undefined;
-      const editor = gridEl.closest(`[${DATA_ATTR.editor}]`) ?? gridEl;
-      const live = pageReferenceIds(editor);
-      const { blocks } = this.host.api;
-
-      Array.from({ length: blocks.getBlocksCount() }, (_, index) => blocks.getBlockByIndex(index)).forEach((block) => {
-        const pageId: unknown = block !== undefined && (block.name === 'page' || block.name === 'page-link') ? block.preservedData.pageId : undefined;
-
-        if (typeof pageId === 'string') {
-          live.add(pageId);
-        }
-      });
-
-      const confirmed = await confirmPageIds(page, live, pageIds);
-
-      payload.cells.flat().forEach((cell) => {
-        // eslint-disable-next-line no-param-reassign -- the payload was parsed for this paste
-        cell.blocks = cell.blocks.map(block => cellBlockWithoutUnconfirmedPages(block, confirmed, STUB_TOOL));
-      });
-
-      return true;
-    } catch (error) {
+  private async confirmPastedPages(gridEl: HTMLElement, payload: TableCellsClipboard, pageIds: ReadonlySet<string>): Promise<void> {
+    const confirmed = await this.pastedPagesHere(gridEl, pageIds).catch((error: unknown) => {
       logLabeled('Table: could not check the pasted page links', 'warn', error);
 
-      return false;
-    }
+      return new Set<string>();
+    });
+
+    payload.cells.flat().forEach((cell) => {
+      // eslint-disable-next-line no-param-reassign -- the payload was parsed for this paste
+      cell.blocks = cell.blocks.map(block => cellBlockWithoutUnconfirmedPages(block, confirmed, STUB_TOOL, tool => this.toolSanitizeConfig(tool)));
+    });
+  }
+
+  /** The pasted page ids already in this editor or granted by the page tool's `resolve`. */
+  private async pastedPagesHere(gridEl: HTMLElement, pageIds: ReadonlySet<string>): Promise<Set<string>> {
+    const page = this.host.api.tools?.getBlockTools().find(tool => tool.name === 'page')?.settings as PageConfig | undefined;
+    const editor = gridEl.closest(`[${DATA_ATTR.editor}]`) ?? gridEl;
+    const live = pageReferenceIds(editor);
+    const { blocks } = this.host.api;
+
+    Array.from({ length: blocks.getBlocksCount() }, (_, index) => blocks.getBlockByIndex(index)).forEach((block) => {
+      const pageId: unknown = block !== undefined && (block.name === 'page' || block.name === 'page-link') ? block.preservedData.pageId : undefined;
+
+      if (typeof pageId === 'string') {
+        live.add(pageId);
+      }
+    });
+
+    return confirmPageIds(page, live, pageIds);
   }
 
   private landGridPaste(

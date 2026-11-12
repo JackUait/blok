@@ -1,4 +1,5 @@
 import type { BlokModules } from '../../../../types-internal/blok-modules';
+import type { SanitizerConfig } from '../../../../../types/configs/sanitizer-config';
 import { isTextSerializable, parseClipboardHtml } from '../../../../tools/table/table-cell-clipboard';
 import { serializeCellBlocksToHtml } from '../../../../tools/table/table-cell-paste';
 import type { CellContent, LegacyCellContent, TableCellsClipboard, TableClipboardCell } from '../../../../tools/table/types';
@@ -216,7 +217,8 @@ export class TableCellsHandler extends BasePasteHandler implements PasteHandler 
     }
 
     const blocks = payload.cells.flat().flatMap(cell => withChildren(cell.blocks));
-    const pageIds = pastedPageIds(blocks, this.Blok.Tools.stubTool);
+    const rulesFor = (tool: string): SanitizerConfig | undefined => this.Blok.Tools.blockTools.get(tool)?.sanitizeConfig;
+    const pageIds = pastedPageIds(blocks, this.Blok.Tools.stubTool, rulesFor);
 
     if (pageIds.size > 0) {
       const confirmed = await confirmPastedPageIds(this.Blok, pageIds);
@@ -227,7 +229,7 @@ export class TableCellsHandler extends BasePasteHandler implements PasteHandler 
       }
       payload.cells.flat().forEach((cell) => {
         // eslint-disable-next-line no-param-reassign -- the payload was parsed for this paste
-        cell.blocks = cell.blocks.map(block => cellBlockWithoutUnconfirmedPages(block, confirmed, this.Blok.Tools.stubTool));
+        cell.blocks = cell.blocks.map(block => cellBlockWithoutUnconfirmedPages(block, confirmed, this.Blok.Tools.stubTool, rulesFor));
       });
     }
 

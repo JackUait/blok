@@ -209,6 +209,18 @@ describe('a page id read from Blok clipboard data', () => {
     expect(pageIdsIn(output)).toEqual(['roadmap']);
   });
 
+  it('asks the host once when the html flavour names the same page', async () => {
+    const counted = vi.fn(resolve);
+
+    await pasteInto({
+      'application/x-blok': JSON.stringify([{ id: 'a', tool: 'paragraph', data: { text: 'Go <a data-blok-page-id="evil">Page</a>' } }]),
+      'text/html': '<p>Go <a data-blok-page-id="evil">Plans</a></p>',
+      'text/plain': 'Go Plans',
+    }, { resolve: counted });
+
+    expect(counted.mock.calls.filter(([pageId]) => pageId === 'evil')).toHaveLength(1);
+  });
+
   it('turns a page link to an unknown page into plain text', async () => {
     const output = await pasteInto(blok([{ id: 'a', tool: 'page-link', data: { pageId: 'evil' } }]));
 
@@ -344,5 +356,80 @@ describe('a page id attribute written in another case', () => {
     const output = await pasteInto({ 'text/html': html, 'text/plain': 'Go Page\tB' });
 
     expect(pageIdsIn(output)).toEqual([]);
+  });
+});
+
+describe('a paste waiting on the host to confirm a page', () => {
+  /** Pastes `data` while resolve hangs, destroys the editor, then lets resolve answer. */
+  const pasteThenDestroy = async (data: Record<string, string>, into: 'paragraph' | 'cell'): Promise<void> => {
+    const pending: { settle: () => void } = { settle: () => undefined };
+    const slowResolve = (): Promise<{ title: string }> => new Promise((done) => {
+      pending.settle = () => done({ title: 'Roadmap' });
+    });
+    const config = { resolve: slowResolve };
+    const instance = new Blok({
+      holder,
+      tools: { paragraph: Paragraph, table: Table, page: { class: PageTool, config }, 'page-link': { class: PageLink, config } },
+      data: {
+        blocks: into === 'cell'
+          ? [{ id: 'tb', type: 'table', data: { withHeadings: false, content: [['A', 'B'], ['C', 'D']] } }]
+          : [{ id: 'before', type: 'paragraph', data: { text: 'See ' } }],
+      },
+    }) as unknown as TestEditor;
+
+    await instance.isReady;
+    await new Promise<void>((done) => { setTimeout(done, 50); });
+    const target = into === 'cell'
+      ? holder?.querySelector<HTMLElement>('[data-blok-table-cell] [data-blok-element-content] > *')
+      : Array.from(holder?.querySelectorAll<HTMLElement>('[data-blok-id="before"] *') ?? []).find((element) => element.contentEditable === 'true');
+
+    if (target === null || target === undefined) {
+      throw new Error('no paste target');
+    }
+    target.tabIndex = 0;
+    target.focus();
+    if (into === 'paragraph') {
+      instance.caret.setToBlock('before', 'end');
+    }
+    await loadPasteEngine();
+    const errors = vi.spyOn(console, 'error');
+
+    target.dispatchEvent(Object.assign(new Event('paste', { bubbles: true, cancelable: true }), {
+      clipboardData: { getData: (type: string): string => data[type] ?? '', types: Object.keys(data) },
+    }));
+    await new Promise<void>((done) => { setTimeout(done, 50); });
+    const tablesBefore = holder?.querySelectorAll('[data-blok-tool="table"]').length ?? 0;
+
+    instance.destroy();
+    pending.settle();
+    await new Promise<void>((done) => { setTimeout(done, 50); });
+
+    expect(holder?.querySelector('[data-blok-page-id]')).toBeNull();
+    expect(holder?.querySelectorAll('[data-blok-tool="table"]').length ?? 0).toBeLessThanOrEqual(tablesBefore);
+    expect(errors).not.toHaveBeenCalled();
+  };
+
+  it('drops pasted html if the editor goes first', async () => {
+    await pasteThenDestroy({ 'text/html': '<a data-blok-page-id="roadmap">Roadmap</a>', 'text/plain': 'Roadmap' }, 'paragraph');
+  });
+
+  it('drops pasted Blok data if the editor goes first', async () => {
+    await pasteThenDestroy({ 'application/x-blok': JSON.stringify([{ id: 'a', tool: 'page-link', data: { pageId: 'roadmap' } }]), 'text/plain': 'x' }, 'paragraph');
+  });
+
+  it('drops a pasted table cell payload if the editor goes first', async () => {
+    const payload = { rows: 1, cols: 1, cells: [[{ blocks: [{ tool: 'paragraph', data: { text: '<a data-blok-page-id="roadmap">Page</a>' } }] }]] };
+
+    await pasteThenDestroy({ 'text/html': `<table data-blok-table-cells='${JSON.stringify(payload)}'><tr><td>Page</td></tr></table>`, 'text/plain': 'Page' }, 'paragraph');
+  });
+
+  it('drops pasted html that waits in the engine if the editor goes first', async () => {
+    const payload = { rows: 1, cols: 1, cells: [[{ blocks: [{ tool: 'paragraph', data: { text: 'B' } }] }]] };
+
+    await pasteThenDestroy({ 'text/html': `<table data-blok-table-cells='${JSON.stringify(payload)}'><tr><td><a data-blok-page-id="roadmap">B</a></td></tr></table>`, 'text/plain': 'B' }, 'paragraph');
+  });
+
+  it('drops cells pasted into a table if the editor goes first', async () => {
+    await pasteThenDestroy({ 'text/html': '<table><tr><td><a data-blok-page-id="roadmap">Roadmap</a></td><td>B</td></tr></table>', 'text/plain': 'x' }, 'cell');
   });
 });

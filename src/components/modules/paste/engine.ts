@@ -126,16 +126,6 @@ export class PasteEngine {
     const hookedHtml = clipboardHtml && this.config.onBeforePaste
       ? this.config.onBeforePaste(clipboardHtml) ?? ''
       : clipboardHtml;
-    // Awaited only for a mention, so other pastes keep their timing.
-    const rawHtmlData = mayHoldPageReference(hookedHtml)
-      ? await htmlWithConfirmedPageReferences(this.Blok, hookedHtml)
-      : hookedHtml;
-
-    // The host's resolve may be slow: the editor can be gone by now.
-    if (this.destroyed) {
-      return;
-    }
-
     // Native Blok clipboard data always wins. When absent, fall back to the
     // lossless proprietary flavours of other editors (web→web paste): they
     // carry full block state (checked, language, nesting, colour…) that the
@@ -146,6 +136,17 @@ export class PasteEngine {
       nativeBlokData ||
       this.readNotionBlocksV3(dataTransfer) ||
       this.readNextSpaceBlocks(dataTransfer);
+
+    // Awaited only for a mention the paste will use: block data wins over the
+    // html, and BlokDataHandler checks its own pages.
+    const rawHtmlData = mayHoldPageReference(hookedHtml) && !isBlockList(blokData)
+      ? await htmlWithConfirmedPageReferences(this.Blok, hookedHtml)
+      : hookedHtml;
+
+    // The host's resolve may be slow: the editor can be gone by now.
+    if (this.destroyed) {
+      return;
+    }
 
     // Route to handlers based on data type
     const handled = await this.routeToHandlers(dataTransfer, plainData, rawHtmlData, blokData, pasteTarget, nativeBlokData !== '');
@@ -404,6 +405,21 @@ export class PasteEngine {
     return normalizeInlineMarkupHtml(clean(preprocessed, customConfig));
   }
 }
+
+/**
+ * Whether block data parses to a block list, so BlokDataHandler takes the paste.
+ * @param data - the block data flavour
+ */
+const isBlockList = (data: string): boolean => {
+  if (data === '') {
+    return false;
+  }
+  try {
+    return Array.isArray(JSON.parse(data));
+  } catch {
+    return false;
+  }
+};
 
 /** Every clipboard flavour of one paste. */
 interface ClipboardFlavours {

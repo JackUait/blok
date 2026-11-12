@@ -10,7 +10,7 @@ if [[ ! -f .env ]]; then
     sed "s/^${key}=.*/${key}=${value}/" .env > .env.new
     mv .env.new .env
   done
-  echo 'Created deploy/.env with generated secrets. Set BOOTSTRAP_ADMIN_EMAIL, MAIL_FROM and RESEND_API_KEY, then run install.sh again.'
+  echo 'Created deploy/.env with generated secrets. Set DOMAIN, BOOTSTRAP_ADMIN_EMAIL and MAILER_* for SMTP (or optional Resend), then run install.sh again.'
   exit 0
 fi
 ./stack.sh config --quiet

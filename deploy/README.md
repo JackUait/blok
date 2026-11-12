@@ -14,9 +14,25 @@ Connecte-toi avec `admin@example.test` pour administrer, `membre@example.test` p
 Chaque connexion envoie un code neuf dans cette boîte locale. Aucun e-mail réel n'est envoyé. Utilise deux fenêtres privées/profils de navigateur pour comparer les rôles en même temps.
 
 `./deploy/demo.sh stop` arrête la démo sans effacer les données ; `./deploy/demo.sh status` affiche les conteneurs.
-Cette pile distincte (`blok-local`) est limitée à l'ordinateur via `127.0.0.1`. La boîte mail donne accès aux codes : elle est uniquement destinée à la démonstration locale. Le déploiement public ci-dessous utilise Resend et ne contient pas ce service.
+Cette pile distincte (`blok-local`) est limitée à l'ordinateur via `127.0.0.1`. La boîte mail donne accès aux codes : elle est uniquement destinée à la démonstration locale. Le déploiement public ci-dessous utilise ton relais SMTP et ne contient pas ce service.
 
-## Installation sur ton VPS
+## Utiliser des images préconstruites
+
+`compose.images.yaml` lance les mêmes trois services sans aucune compilation et sans checkout du code. Charge d’abord les images Blok adaptées à l’architecture du VPS avec `docker load`, puis utilise ce fichier comme `compose.yaml`. Renseigne `APP_IMAGE` et `WEB_IMAGE` avec les tags chargés dans `.env` ; les deux services utilisent `pull_policy: never`. PostgreSQL utilise toujours l’image officielle.
+
+Le paquet exporté pour `debian@sandbox-tousamba-cloud` est en **linux/amd64 (x86_64)**. Il contient `images.tar`, `compose.yaml`, `.env.example`, `prepare.sh` et les scripts de sauvegarde/restauration. Après extraction :
+
+```sh
+cd blok-vps-amd64
+./prepare.sh
+nano .env
+sudo docker load -i images.tar
+sudo docker compose up -d --wait --wait-timeout 180
+```
+
+Le script `prepare.sh` crée les secrets, sans démarrer les conteneurs. Renseigne ton adresse administrateur et l’authentification du relais SMTP avant le lancement. Les données ne font pas partie de l’archive d’images : les volumes sont créés au premier démarrage. Docker Engine avec Compose v2 est nécessaire ; [installation officielle sur Debian](https://docs.docker.com/engine/install/debian/).
+
+## Construire les images sur ton VPS
 
 Prérequis : Git, Docker avec Compose v2, OpenSSL, accès aux ports TCP 80/443 (UDP 443 facultatif).
 Fais pointer le DNS A de `blok.tousamba.cloud` vers le VPS choisi ; retire un éventuel AAAA qui pointe ailleurs.
@@ -34,16 +50,22 @@ Le premier lancement crée `deploy/.env` et trois secrets aléatoires, puis s'ar
 ```dotenv
 DOMAIN=blok.tousamba.cloud
 BOOTSTRAP_ADMIN_EMAIL=ton-adresse@example.com
-MAIL_FROM=Blok <connexion@tousamba.cloud>
-RESEND_API_KEY=ta-cle-resend
+MAILER_HOST=smtprelay.nexenture.fr
+MAILER_PORT=465
+MAILER_USER=
+MAILER_PASSWORD=
+MAILER_FROM_EMAIL=blok@nexenture.fr
+MAILER_FROM_NAME=blok
 ```
 
 Ne remplace pas les trois secrets générés. Le mot de passe PostgreSQL doit rester hexadécimal pour son utilisation dans l'URL de connexion.
 Le fichier `.env` est ignoré par Git. Garde-en une copie privée hors du VPS.
 
-Dans Resend, ajoute et vérifie le domaine d'expédition, puis utilise une clé permettant l'envoi.
-Les enregistrements DNS exacts sont indiqués dans leur interface : [domaines vérifiés Resend](https://resend.com/docs/dashboard/domains/introduction).
-L'adresse `MAIL_FROM` doit appartenir au domaine vérifié. Aucune clé Resend n'entre dans le frontend.
+Le port **465** utilise TLS dès la connexion, avec validation du certificat. Renseigne `MAILER_USER` et `MAILER_PASSWORD` si ton relais exige une authentification ; laisse les deux vides uniquement si le relais autorise ton serveur sans identifiants. L’expéditeur `blok@nexenture.fr` doit être autorisé par le relais. Aucun envoi réel n’est effectué par le script d’installation : la première demande de connexion permet de vérifier la livraison.
+
+Dans `.env`, une ligne par variable, **sans antislash final**. Un mot de passe contenant `$` ou `#` doit être entouré d’apostrophes pour rester littéral, par exemple `MAILER_PASSWORD='valeur-à-remplacer'`. Ne publie pas ce fichier.
+
+Dans Compose, les valeurs `MAILER_*` non vides sont prioritaires ; les anciens noms `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` et `SMTP_FROM` restent acceptés. Quand un hôte SMTP est configuré, SMTP est utilisé. Sans hôte SMTP, `RESEND_API_KEY` et `MAIL_FROM` permettent encore d’utiliser Resend.
 
 ```sh
 ./deploy/install.sh

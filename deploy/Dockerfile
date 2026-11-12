@@ -1,4 +1,4 @@
-FROM node:26-bookworm-slim AS web-build
+FROM --platform=$BUILDPLATFORM node:26-bookworm-slim AS web-build
 WORKDIR /build
 COPY package.json yarn.lock .yarnrc.yml ./
 COPY .yarn/patches .yarn/patches
@@ -15,12 +15,14 @@ RUN npm ci --prefix desktop
 COPY . .
 RUN npm run build --prefix desktop
 
-FROM golang:1.27.4-alpine AS service-build
+FROM --platform=$BUILDPLATFORM golang:1.27.4-alpine AS service-build
+ARG TARGETOS
+ARG TARGETARCH
 WORKDIR /build
 COPY packages/server/go packages/server/go
 COPY apps/service apps/service
 WORKDIR /build/apps/service
-RUN go mod download && CGO_ENABLED=0 go build -trimpath -o /out/blok-cloud ./cmd/server
+RUN go mod download && CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -o /out/blok-cloud ./cmd/server
 
 FROM alpine:3.22 AS service
 RUN apk add --no-cache ca-certificates wget && addgroup -g 65532 app && adduser -D -u 65532 -G app app && mkdir /data && chown app:app /data

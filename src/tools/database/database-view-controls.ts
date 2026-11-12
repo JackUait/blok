@@ -1010,7 +1010,9 @@ export class DatabaseViewControls {
     if (row === null) return;
     const release = sortPanel.hold();
     const sorts = withEntryIds(this.view()?.sorts ?? []);
-    const focusAdd = (): void => sortPanel.root.querySelector<HTMLElement>('[data-blok-testid="database-sort-add"]')?.focus();
+    // "Add sort" goes once every property is sorted; "Delete sort" takes its place.
+    const focusAdd = (): void => (sortPanel.root.querySelector<HTMLElement>('[data-blok-testid="database-sort-add"]')
+      ?? sortPanel.root.querySelector<HTMLElement>('[data-blok-testid="database-sort-delete-all"]'))?.focus();
 
     this.addSortPicker = this.openPropertyPicker(row, 'database-sort-add-picker', SORTABLE_TYPES, (property) => {
       this.updatePersonal({ sorts: [...withEntryIds(this.view()?.sorts ?? []), { id: nanoid(), propertyId: property.id, direction: 'asc' }] });

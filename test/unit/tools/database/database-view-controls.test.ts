@@ -1069,6 +1069,16 @@ describe('DatabaseViewControls', () => {
       expect(q('database-sort-panel')?.querySelectorAll('[data-blok-database-sort-row]')).toHaveLength(2);
     });
 
+    it('moves focus to "Delete sort" when the last unsorted property is added', () => {
+      withSort();
+      click('database-sort-pill');
+      click('database-sort-add');
+      click('database-pick-property-title');
+
+      expect(q('database-sort-add')).toBeNull();
+      expect(q('database-sort-delete-all')).toHaveFocus();
+    });
+
     it('Escape closes only the picker and puts focus back on "Add sort"', () => {
       withSort();
       click('database-sort-pill');

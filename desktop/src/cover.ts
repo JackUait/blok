@@ -1,3 +1,43 @@
+import expansionCover0 from './assets/covers/polyhaven_dark_wood.jpg';
+import expansionCover1 from './assets/covers/polyhaven_plywood.jpg';
+import expansionCover2 from './assets/covers/polyhaven_rosewood_veneer1.jpg';
+import expansionCover3 from './assets/covers/polyhaven_wood_table.jpg';
+import expansionCover4 from './assets/covers/polyhaven_brown_leather.jpg';
+import expansionCover5 from './assets/covers/polyhaven_fabric_pattern_05.jpg';
+import expansionCover6 from './assets/covers/polyhaven_fabric_pattern_07.jpg';
+import expansionCover7 from './assets/covers/polyhaven_quatrefoil_jacquard_fabric.jpg';
+import expansionCover8 from './assets/covers/polyhaven_aerial_sand.jpg';
+import expansionCover9 from './assets/covers/polyhaven_coast_sand_01.jpg';
+import expansionCover10 from './assets/covers/polyhaven_damp_beach_sand.jpg';
+import expansionCover11 from './assets/covers/polyhaven_dense_sand.jpg';
+import expansionCover12 from './assets/covers/polyhaven_dark_rock.jpg';
+import expansionCover13 from './assets/covers/polyhaven_coral_gravel.jpg';
+import expansionCover14 from './assets/covers/polyhaven_cobblestone_color.jpg';
+import expansionCover15 from './assets/covers/polyhaven_moss_wood.jpg';
+import expansionCover16 from './assets/covers/polyhaven_white_plaster_02.jpg';
+import expansionCover17 from './assets/covers/polyhaven_blue_plaster_weathered.jpg';
+import expansionCover18 from './assets/covers/polyhaven_painted_plaster_wall.jpg';
+import expansionCover19 from './assets/covers/polyhaven_rusty_metal.jpg';
+import expansionCover20 from './assets/covers/polyhaven_metal_plate.jpg';
+import expansionCover21 from './assets/covers/polyhaven_rough_concrete.jpg';
+import expansionCover22 from './assets/covers/polyhaven_plastered_wall.jpg';
+import expansionCover23 from './assets/covers/polyhaven_red_brick_plaster_patch_02.jpg';
+import expansionCover24 from './assets/covers/cma_152006.jpg';
+import expansionCover25 from './assets/covers/cma_151298.jpg';
+import expansionCover26 from './assets/covers/cma_171296.jpg';
+import expansionCover27 from './assets/covers/cma_139454.jpg';
+import expansionCover28 from './assets/covers/cma_148739.jpg';
+import expansionCover29 from './assets/covers/cma_79932.jpg';
+import expansionCover30 from './assets/covers/cma_125873.jpg';
+import expansionCover31 from './assets/covers/cma_143234.jpg';
+import expansionCover32 from './assets/covers/cma_143602.jpg';
+import expansionCover33 from './assets/covers/cma_83635.jpg';
+import expansionCover34 from './assets/covers/cma_159501.jpg';
+import expansionCover35 from './assets/covers/cma_149417.jpg';
+import expansionCover36 from './assets/covers/cma_112586.jpg';
+import expansionCover37 from './assets/covers/cma_141639.jpg';
+import expansionCover38 from './assets/covers/cma_159769.jpg';
+import expansionCover39 from './assets/covers/cma_150176.jpg';
 import extraCover0 from './assets/covers/polyhaven_blue_plaster_wall.jpg';
 import extraCover1 from './assets/covers/polyhaven_blue_metal_plate.jpg';
 import extraCover2 from './assets/covers/polyhaven_green_metal_rust.jpg';
@@ -85,6 +125,54 @@ export const COVER_GROUPS = [
     { id: "met-437881", label: "La Femme à l’aiguière · Johannes Vermeer", background: `url("${extraCover17}")` },
     { id: "met-436529", label: "L’Arlésienne · Vincent van Gogh", background: `url("${extraCover18}")` },
     { id: "met-436532", label: "Autoportrait au chapeau de paille · Vincent van Gogh", background: `url("${extraCover19}")` },
+  ] },
+  { label: "Bois et tissus · Poly Haven", items: [
+    { id: "texture-dark-wood", label: "Bois sombre", background: `url("${expansionCover0}")` },
+    { id: "texture-plywood", label: "Contreplaqué", background: `url("${expansionCover1}")` },
+    { id: "texture-rosewood-veneer1", label: "Palissandre", background: `url("${expansionCover2}")` },
+    { id: "texture-wood-table", label: "Bois de table", background: `url("${expansionCover3}")` },
+    { id: "texture-brown-leather", label: "Cuir brun", background: `url("${expansionCover4}")` },
+    { id: "texture-fabric-pattern-05", label: "Tissu à motifs", background: `url("${expansionCover5}")` },
+    { id: "texture-fabric-pattern-07", label: "Étoffe tissée", background: `url("${expansionCover6}")` },
+    { id: "texture-quatrefoil-jacquard-fabric", label: "Jacquard", background: `url("${expansionCover7}")` },
+  ] },
+  { label: "Sable et pierre · Poly Haven", items: [
+    { id: "texture-aerial-sand", label: "Sable vu du ciel", background: `url("${expansionCover8}")` },
+    { id: "texture-coast-sand-01", label: "Sable côtier", background: `url("${expansionCover9}")` },
+    { id: "texture-damp-beach-sand", label: "Sable de plage", background: `url("${expansionCover10}")` },
+    { id: "texture-dense-sand", label: "Sable dense", background: `url("${expansionCover11}")` },
+    { id: "texture-dark-rock", label: "Roche sombre", background: `url("${expansionCover12}")` },
+    { id: "texture-coral-gravel", label: "Gravier corallien", background: `url("${expansionCover13}")` },
+    { id: "texture-cobblestone-color", label: "Pavés colorés", background: `url("${expansionCover14}")` },
+    { id: "texture-moss-wood", label: "Bois et mousse", background: `url("${expansionCover15}")` },
+  ] },
+  { label: "Matières · Poly Haven", items: [
+    { id: "texture-white-plaster-02", label: "Enduit blanc", background: `url("${expansionCover16}")` },
+    { id: "texture-blue-plaster-weathered", label: "Enduit bleu patiné", background: `url("${expansionCover17}")` },
+    { id: "texture-painted-plaster-wall", label: "Mur peint", background: `url("${expansionCover18}")` },
+    { id: "texture-rusty-metal", label: "Métal rouillé", background: `url("${expansionCover19}")` },
+    { id: "texture-metal-plate", label: "Plaque de métal", background: `url("${expansionCover20}")` },
+    { id: "texture-rough-concrete", label: "Béton brut", background: `url("${expansionCover21}")` },
+    { id: "texture-plastered-wall", label: "Mur enduit", background: `url("${expansionCover22}")` },
+    { id: "texture-red-brick-plaster-patch-02", label: "Briques et enduit", background: `url("${expansionCover23}")` },
+  ] },
+  { label: "Paysages · Cleveland Museum of Art", items: [
+    { id: "cma-152006", label: "Rocky, Wooded Landscape with a Dell and Weir", background: `url("${expansionCover24}")` },
+    { id: "cma-151298", label: "Prater Landscape", background: `url("${expansionCover25}")` },
+    { id: "cma-171296", label: "Vale of Kashmir", background: `url("${expansionCover26}")` },
+    { id: "cma-139454", label: "Landscape", background: `url("${expansionCover27}")` },
+    { id: "cma-148739", label: "Landscape with Large Trees", background: `url("${expansionCover28}")` },
+    { id: "cma-79932", label: "Landscape with Fishermen", background: `url("${expansionCover29}")` },
+    { id: "cma-125873", label: "Shepherds in a Landscape", background: `url("${expansionCover30}")` },
+    { id: "cma-143234", label: "Landscape with a Windmill", background: `url("${expansionCover31}")` },
+    { id: "cma-143602", label: "Low Waterfall in a Wooded Landscape with a Dead Beech Tree", background: `url("${expansionCover32}")` },
+    { id: "cma-83635", label: "Breton Landscape", background: `url("${expansionCover33}")` },
+    { id: "cma-159501", label: "Landscape with Peasants Dancing", background: `url("${expansionCover34}")` },
+    { id: "cma-149417", label: "Landscape with Gentle Peaks", background: `url("${expansionCover35}")` },
+    { id: "cma-112586", label: "Venus Reclining in a Landscape", background: `url("${expansionCover36}")` },
+    { id: "cma-141639", label: "Twilight in the Wilderness", background: `url("${expansionCover37}")` },
+    { id: "cma-159769", label: "Italian Landscape", background: `url("${expansionCover38}")` },
+    { id: "cma-150176", label: "Classical Landscape", background: `url("${expansionCover39}")` },
   ] },
   { label: 'Images spatiales', items: [
     { id: 'earth', label: 'La Terre', background: `url("${earth}")` },

@@ -198,5 +198,405 @@
     "license": "CC0-1.0",
     "group": "Peintures · The Met",
     "original": "https://images.metmuseum.org/CRDImages/ep/original/DT1502_cropped2.jpg"
+  },
+  {
+    "id": "texture-dark-wood",
+    "file": "polyhaven_dark_wood.jpg",
+    "label": "Bois sombre",
+    "source": "https://polyhaven.com/a/dark_wood",
+    "author": "Dario Barresi, Dimitrios Savva, Rico Cilliers",
+    "license": "CC0-1.0",
+    "group": "Bois et tissus · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/dark_wood/dark_wood_diff_2k.jpg"
+  },
+  {
+    "id": "texture-plywood",
+    "file": "polyhaven_plywood.jpg",
+    "label": "Contreplaqué",
+    "source": "https://polyhaven.com/a/plywood",
+    "author": "Rob Tuytel",
+    "license": "CC0-1.0",
+    "group": "Bois et tissus · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/plywood/plywood_diff_2k.jpg"
+  },
+  {
+    "id": "texture-rosewood-veneer1",
+    "file": "polyhaven_rosewood_veneer1.jpg",
+    "label": "Palissandre",
+    "source": "https://polyhaven.com/a/rosewood_veneer1",
+    "author": "Jenelle van Heerden",
+    "license": "CC0-1.0",
+    "group": "Bois et tissus · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rosewood_veneer1/rosewood_veneer1_diff_2k.jpg"
+  },
+  {
+    "id": "texture-wood-table",
+    "file": "polyhaven_wood_table.jpg",
+    "label": "Bois de table",
+    "source": "https://polyhaven.com/a/wood_table",
+    "author": "Dimitrios Savva",
+    "license": "CC0-1.0",
+    "group": "Bois et tissus · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/wood_table/wood_table_diff_2k.jpg"
+  },
+  {
+    "id": "texture-brown-leather",
+    "file": "polyhaven_brown_leather.jpg",
+    "label": "Cuir brun",
+    "source": "https://polyhaven.com/a/brown_leather",
+    "author": "Rob Tuytel",
+    "license": "CC0-1.0",
+    "group": "Bois et tissus · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/brown_leather/brown_leather_albedo_2k.jpg"
+  },
+  {
+    "id": "texture-fabric-pattern-05",
+    "file": "polyhaven_fabric_pattern_05.jpg",
+    "label": "Tissu à motifs",
+    "source": "https://polyhaven.com/a/fabric_pattern_05",
+    "author": "Rob Tuytel",
+    "license": "CC0-1.0",
+    "group": "Bois et tissus · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/png/2k/fabric_pattern_05/fabric_pattern_05_col_01_2k.png"
+  },
+  {
+    "id": "texture-fabric-pattern-07",
+    "file": "polyhaven_fabric_pattern_07.jpg",
+    "label": "Étoffe tissée",
+    "source": "https://polyhaven.com/a/fabric_pattern_07",
+    "author": "Rob Tuytel",
+    "license": "CC0-1.0",
+    "group": "Bois et tissus · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/png/2k/fabric_pattern_07/fabric_pattern_07_col_1_2k.png"
+  },
+  {
+    "id": "texture-quatrefoil-jacquard-fabric",
+    "file": "polyhaven_quatrefoil_jacquard_fabric.jpg",
+    "label": "Jacquard",
+    "source": "https://polyhaven.com/a/quatrefoil_jacquard_fabric",
+    "author": "colormass, Rico Cilliers",
+    "license": "CC0-1.0",
+    "group": "Bois et tissus · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/quatrefoil_jacquard_fabric/quatrefoil_jacquard_fabric_diff_2k.jpg"
+  },
+  {
+    "id": "texture-aerial-sand",
+    "file": "polyhaven_aerial_sand.jpg",
+    "label": "Sable vu du ciel",
+    "source": "https://polyhaven.com/a/aerial_sand",
+    "author": "Rob Tuytel",
+    "license": "CC0-1.0",
+    "group": "Sable et pierre · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/aerial_sand/aerial_sand_diff_2k.jpg"
+  },
+  {
+    "id": "texture-coast-sand-01",
+    "file": "polyhaven_coast_sand_01.jpg",
+    "label": "Sable côtier",
+    "source": "https://polyhaven.com/a/coast_sand_01",
+    "author": "Rob Tuytel",
+    "license": "CC0-1.0",
+    "group": "Sable et pierre · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/coast_sand_01/coast_sand_01_diff_2k.jpg"
+  },
+  {
+    "id": "texture-damp-beach-sand",
+    "file": "polyhaven_damp_beach_sand.jpg",
+    "label": "Sable de plage",
+    "source": "https://polyhaven.com/a/damp_beach_sand",
+    "author": "Dimitrios Savva",
+    "license": "CC0-1.0",
+    "group": "Sable et pierre · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/damp_beach_sand/damp_beach_sand_diff_2k.jpg"
+  },
+  {
+    "id": "texture-dense-sand",
+    "file": "polyhaven_dense_sand.jpg",
+    "label": "Sable dense",
+    "source": "https://polyhaven.com/a/dense_sand",
+    "author": "Dimitrios Savva",
+    "license": "CC0-1.0",
+    "group": "Sable et pierre · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/dense_sand/dense_sand_diff_2k.jpg"
+  },
+  {
+    "id": "texture-dark-rock",
+    "file": "polyhaven_dark_rock.jpg",
+    "label": "Roche sombre",
+    "source": "https://polyhaven.com/a/dark_rock",
+    "author": "Amal Kumar",
+    "license": "CC0-1.0",
+    "group": "Sable et pierre · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/dark_rock/dark_rock_diff_2k.jpg"
+  },
+  {
+    "id": "texture-coral-gravel",
+    "file": "polyhaven_coral_gravel.jpg",
+    "label": "Gravier corallien",
+    "source": "https://polyhaven.com/a/coral_gravel",
+    "author": "Rob Tuytel",
+    "license": "CC0-1.0",
+    "group": "Sable et pierre · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/coral_gravel/coral_gravel_diff_2k.jpg"
+  },
+  {
+    "id": "texture-cobblestone-color",
+    "file": "polyhaven_cobblestone_color.jpg",
+    "label": "Pavés colorés",
+    "source": "https://polyhaven.com/a/cobblestone_color",
+    "author": "Rob Tuytel",
+    "license": "CC0-1.0",
+    "group": "Sable et pierre · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/cobblestone_color/cobblestone_color_diff_2k.jpg"
+  },
+  {
+    "id": "texture-moss-wood",
+    "file": "polyhaven_moss_wood.jpg",
+    "label": "Bois et mousse",
+    "source": "https://polyhaven.com/a/moss_wood",
+    "author": "Rob Tuytel",
+    "license": "CC0-1.0",
+    "group": "Sable et pierre · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/moss_wood/moss_wood_diff_2k.jpg"
+  },
+  {
+    "id": "texture-white-plaster-02",
+    "file": "polyhaven_white_plaster_02.jpg",
+    "label": "Enduit blanc",
+    "source": "https://polyhaven.com/a/white_plaster_02",
+    "author": "Rob Tuytel",
+    "license": "CC0-1.0",
+    "group": "Matières · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/white_plaster_02/white_plaster_02_diff_2k.jpg"
+  },
+  {
+    "id": "texture-blue-plaster-weathered",
+    "file": "polyhaven_blue_plaster_weathered.jpg",
+    "label": "Enduit bleu patiné",
+    "source": "https://polyhaven.com/a/blue_plaster_weathered",
+    "author": "Amal Kumar",
+    "license": "CC0-1.0",
+    "group": "Matières · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/blue_plaster_weathered/blue_plaster_weathered_diff_2k.jpg"
+  },
+  {
+    "id": "texture-painted-plaster-wall",
+    "file": "polyhaven_painted_plaster_wall.jpg",
+    "label": "Mur peint",
+    "source": "https://polyhaven.com/a/painted_plaster_wall",
+    "author": "Amal Kumar",
+    "license": "CC0-1.0",
+    "group": "Matières · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/painted_plaster_wall/painted_plaster_wall_diff_2k.jpg"
+  },
+  {
+    "id": "texture-rusty-metal",
+    "file": "polyhaven_rusty_metal.jpg",
+    "label": "Métal rouillé",
+    "source": "https://polyhaven.com/a/rusty_metal",
+    "author": "Rob Tuytel",
+    "license": "CC0-1.0",
+    "group": "Matières · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusty_metal/rusty_metal_diff_2k.jpg"
+  },
+  {
+    "id": "texture-metal-plate",
+    "file": "polyhaven_metal_plate.jpg",
+    "label": "Plaque de métal",
+    "source": "https://polyhaven.com/a/metal_plate",
+    "author": "Rob Tuytel",
+    "license": "CC0-1.0",
+    "group": "Matières · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/metal_plate/metal_plate_diff_2k.jpg"
+  },
+  {
+    "id": "texture-rough-concrete",
+    "file": "polyhaven_rough_concrete.jpg",
+    "label": "Béton brut",
+    "source": "https://polyhaven.com/a/rough_concrete",
+    "author": "Dimitrios Savva",
+    "license": "CC0-1.0",
+    "group": "Matières · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rough_concrete/rough_concrete_diff_2k.jpg"
+  },
+  {
+    "id": "texture-plastered-wall",
+    "file": "polyhaven_plastered_wall.jpg",
+    "label": "Mur enduit",
+    "source": "https://polyhaven.com/a/plastered_wall",
+    "author": "Amal Kumar",
+    "license": "CC0-1.0",
+    "group": "Matières · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/plastered_wall/plastered_wall_diff_2k.jpg"
+  },
+  {
+    "id": "texture-red-brick-plaster-patch-02",
+    "file": "polyhaven_red_brick_plaster_patch_02.jpg",
+    "label": "Briques et enduit",
+    "source": "https://polyhaven.com/a/red_brick_plaster_patch_02",
+    "author": "Rob Tuytel",
+    "license": "CC0-1.0",
+    "group": "Matières · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/red_brick_plaster_patch_02/red_brick_plaster_patch_02_diff_2k.jpg"
+  },
+  {
+    "id": "cma-152006",
+    "file": "cma_152006.jpg",
+    "label": "Rocky, Wooded Landscape with a Dell and Weir",
+    "source": "https://clevelandart.org/art/1984.59",
+    "author": "Thomas Gainsborough (British, 1727–1788)",
+    "license": "CC0-1.0",
+    "group": "Paysages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1984.59/1984.59_print.jpg"
+  },
+  {
+    "id": "cma-151298",
+    "file": "cma_151298.jpg",
+    "label": "Prater Landscape",
+    "source": "https://clevelandart.org/art/1983.155",
+    "author": "Ferdinand Georg Waldmüller (Austrian, 1793–1865)",
+    "license": "CC0-1.0",
+    "group": "Paysages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1983.155/1983.155_print.jpg"
+  },
+  {
+    "id": "cma-171296",
+    "file": "cma_171296.jpg",
+    "label": "Vale of Kashmir",
+    "source": "https://clevelandart.org/art/2014.12",
+    "author": "Robert S. Duncanson (American, 1821–1872)",
+    "license": "CC0-1.0",
+    "group": "Paysages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/2014.12/2014.12_print.jpg"
+  },
+  {
+    "id": "cma-139454",
+    "file": "cma_139454.jpg",
+    "label": "Landscape",
+    "source": "https://clevelandart.org/art/1963.262",
+    "author": "Sōami (Japanese, d. 1525)",
+    "license": "CC0-1.0",
+    "group": "Paysages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1963.262/1963.262_print.jpg"
+  },
+  {
+    "id": "cma-148739",
+    "file": "cma_148739.jpg",
+    "label": "Landscape with Large Trees",
+    "source": "https://clevelandart.org/art/1976.18",
+    "author": "Gustave Courbet (French, 1819–1877)",
+    "license": "CC0-1.0",
+    "group": "Paysages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1976.18/1976.18_print.jpg"
+  },
+  {
+    "id": "cma-79932",
+    "file": "cma_79932.jpg",
+    "label": "Landscape with Fishermen",
+    "source": "https://clevelandart.org/art/2015.516",
+    "author": "Yi Bul-hae (Korean, active 1500s)",
+    "license": "CC0-1.0",
+    "group": "Paysages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/2015.516/2015.516_print.jpg"
+  },
+  {
+    "id": "cma-125873",
+    "file": "cma_125873.jpg",
+    "label": "Shepherds in a Landscape",
+    "source": "https://clevelandart.org/art/1948.12",
+    "author": "Giulio Campagnola (Italian, 1482–1515), Domenico Campagnola (Italian, 1500–1564)",
+    "license": "CC0-1.0",
+    "group": "Paysages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1948.12/1948.12_print.jpg"
+  },
+  {
+    "id": "cma-143234",
+    "file": "cma_143234.jpg",
+    "label": "Landscape with a Windmill",
+    "source": "https://clevelandart.org/art/1967.19",
+    "author": "Jacob van Ruisdael (Dutch, 1628/29–1682)",
+    "license": "CC0-1.0",
+    "group": "Paysages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1967.19/1967.19_print.jpg"
+  },
+  {
+    "id": "cma-143602",
+    "file": "cma_143602.jpg",
+    "label": "Low Waterfall in a Wooded Landscape with a Dead Beech Tree",
+    "source": "https://clevelandart.org/art/1967.63",
+    "author": "Jacob van Ruisdael (Dutch, 1628/29–1682)",
+    "license": "CC0-1.0",
+    "group": "Paysages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1967.63/1967.63_print.jpg"
+  },
+  {
+    "id": "cma-83635",
+    "file": "cma_83635.jpg",
+    "label": "Breton Landscape",
+    "source": "https://clevelandart.org/art/2020.117",
+    "author": "Jan Verkade (Dutch, 1868–1946)",
+    "license": "CC0-1.0",
+    "group": "Paysages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/2020.117/2020.117_print.jpg"
+  },
+  {
+    "id": "cma-159501",
+    "file": "cma_159501.jpg",
+    "label": "Landscape with Peasants Dancing",
+    "source": "https://clevelandart.org/art/1996.271",
+    "author": "David Teniers (Flemish, 1610–1690)",
+    "license": "CC0-1.0",
+    "group": "Paysages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1996.271/1996.271_print.jpg"
+  },
+  {
+    "id": "cma-149417",
+    "file": "cma_149417.jpg",
+    "label": "Landscape with Gentle Peaks",
+    "source": "https://clevelandart.org/art/1978.7",
+    "author": "Kan Tenju (Japanese, 1727–1795)",
+    "license": "CC0-1.0",
+    "group": "Paysages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1978.7/1978.7_print.jpg"
+  },
+  {
+    "id": "cma-112586",
+    "file": "cma_112586.jpg",
+    "label": "Venus Reclining in a Landscape",
+    "source": "https://clevelandart.org/art/1931.205",
+    "author": "Giulio Campagnola (Italian, 1482–1515)",
+    "license": "CC0-1.0",
+    "group": "Paysages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1931.205/1931.205_print.jpg"
+  },
+  {
+    "id": "cma-141639",
+    "file": "cma_141639.jpg",
+    "label": "Twilight in the Wilderness",
+    "source": "https://clevelandart.org/art/1965.233",
+    "author": "Frederic Edwin Church (American, 1826–1900)",
+    "license": "CC0-1.0",
+    "group": "Paysages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1965.233/1965.233_print.jpg"
+  },
+  {
+    "id": "cma-159769",
+    "file": "cma_159769.jpg",
+    "label": "Italian Landscape",
+    "source": "https://clevelandart.org/art/1997.137",
+    "author": "John Robert Cozens (British, 1752–1797)",
+    "license": "CC0-1.0",
+    "group": "Paysages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1997.137/1997.137_print.jpg"
+  },
+  {
+    "id": "cma-150176",
+    "file": "cma_150176.jpg",
+    "label": "Classical Landscape",
+    "source": "https://clevelandart.org/art/1980.91",
+    "author": "Pierre Henri de Valenciennes (French, 1750–1819)",
+    "license": "CC0-1.0",
+    "group": "Paysages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1980.91/1980.91_print.jpg"
   }
 ]

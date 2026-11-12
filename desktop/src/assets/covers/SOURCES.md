@@ -45,3 +45,50 @@ Les textures Poly Haven sont sous [CC0](https://polyhaven.com/license). Seule le
 | `met_437881.jpg` | Johannes Vermeer | https://www.metmuseum.org/art/collection/search/437881 | CC0-1.0 |
 | `met_436529.jpg` | Vincent van Gogh | https://www.metmuseum.org/art/collection/search/436529 | CC0-1.0 |
 | `met_436532.jpg` | Vincent van Gogh | https://www.metmuseum.org/art/collection/search/436532 | CC0-1.0 |
+
+## Galerie étendue
+
+Textures [Poly Haven CC0](https://polyhaven.com/license) et paysages du [Cleveland Museum of Art Open Access](https://www.clevelandart.org/open-access), vérifiés avec `share_license_status: CC0`. Images réduites à 1 600 px et JPEG qualité 72. Originaux et crédits dans `gallery-sources.json`.
+
+| Fichier | Crédit | Source | Licence |
+| --- | --- | --- | --- |
+| `polyhaven_dark_wood.jpg` | Dario Barresi, Dimitrios Savva, Rico Cilliers | https://polyhaven.com/a/dark_wood | CC0-1.0 |
+| `polyhaven_plywood.jpg` | Rob Tuytel | https://polyhaven.com/a/plywood | CC0-1.0 |
+| `polyhaven_rosewood_veneer1.jpg` | Jenelle van Heerden | https://polyhaven.com/a/rosewood_veneer1 | CC0-1.0 |
+| `polyhaven_wood_table.jpg` | Dimitrios Savva | https://polyhaven.com/a/wood_table | CC0-1.0 |
+| `polyhaven_brown_leather.jpg` | Rob Tuytel | https://polyhaven.com/a/brown_leather | CC0-1.0 |
+| `polyhaven_fabric_pattern_05.jpg` | Rob Tuytel | https://polyhaven.com/a/fabric_pattern_05 | CC0-1.0 |
+| `polyhaven_fabric_pattern_07.jpg` | Rob Tuytel | https://polyhaven.com/a/fabric_pattern_07 | CC0-1.0 |
+| `polyhaven_quatrefoil_jacquard_fabric.jpg` | colormass, Rico Cilliers | https://polyhaven.com/a/quatrefoil_jacquard_fabric | CC0-1.0 |
+| `polyhaven_aerial_sand.jpg` | Rob Tuytel | https://polyhaven.com/a/aerial_sand | CC0-1.0 |
+| `polyhaven_coast_sand_01.jpg` | Rob Tuytel | https://polyhaven.com/a/coast_sand_01 | CC0-1.0 |
+| `polyhaven_damp_beach_sand.jpg` | Dimitrios Savva | https://polyhaven.com/a/damp_beach_sand | CC0-1.0 |
+| `polyhaven_dense_sand.jpg` | Dimitrios Savva | https://polyhaven.com/a/dense_sand | CC0-1.0 |
+| `polyhaven_dark_rock.jpg` | Amal Kumar | https://polyhaven.com/a/dark_rock | CC0-1.0 |
+| `polyhaven_coral_gravel.jpg` | Rob Tuytel | https://polyhaven.com/a/coral_gravel | CC0-1.0 |
+| `polyhaven_cobblestone_color.jpg` | Rob Tuytel | https://polyhaven.com/a/cobblestone_color | CC0-1.0 |
+| `polyhaven_moss_wood.jpg` | Rob Tuytel | https://polyhaven.com/a/moss_wood | CC0-1.0 |
+| `polyhaven_white_plaster_02.jpg` | Rob Tuytel | https://polyhaven.com/a/white_plaster_02 | CC0-1.0 |
+| `polyhaven_blue_plaster_weathered.jpg` | Amal Kumar | https://polyhaven.com/a/blue_plaster_weathered | CC0-1.0 |
+| `polyhaven_painted_plaster_wall.jpg` | Amal Kumar | https://polyhaven.com/a/painted_plaster_wall | CC0-1.0 |
+| `polyhaven_rusty_metal.jpg` | Rob Tuytel | https://polyhaven.com/a/rusty_metal | CC0-1.0 |
+| `polyhaven_metal_plate.jpg` | Rob Tuytel | https://polyhaven.com/a/metal_plate | CC0-1.0 |
+| `polyhaven_rough_concrete.jpg` | Dimitrios Savva | https://polyhaven.com/a/rough_concrete | CC0-1.0 |
+| `polyhaven_plastered_wall.jpg` | Amal Kumar | https://polyhaven.com/a/plastered_wall | CC0-1.0 |
+| `polyhaven_red_brick_plaster_patch_02.jpg` | Rob Tuytel | https://polyhaven.com/a/red_brick_plaster_patch_02 | CC0-1.0 |
+| `cma_152006.jpg` | Thomas Gainsborough (British, 1727–1788) | https://clevelandart.org/art/1984.59 | CC0-1.0 |
+| `cma_151298.jpg` | Ferdinand Georg Waldmüller (Austrian, 1793–1865) | https://clevelandart.org/art/1983.155 | CC0-1.0 |
+| `cma_171296.jpg` | Robert S. Duncanson (American, 1821–1872) | https://clevelandart.org/art/2014.12 | CC0-1.0 |
+| `cma_139454.jpg` | Sōami (Japanese, d. 1525) | https://clevelandart.org/art/1963.262 | CC0-1.0 |
+| `cma_148739.jpg` | Gustave Courbet (French, 1819–1877) | https://clevelandart.org/art/1976.18 | CC0-1.0 |
+| `cma_79932.jpg` | Yi Bul-hae (Korean, active 1500s) | https://clevelandart.org/art/2015.516 | CC0-1.0 |
+| `cma_125873.jpg` | Giulio Campagnola (Italian, 1482–1515), Domenico Campagnola (Italian, 1500–1564) | https://clevelandart.org/art/1948.12 | CC0-1.0 |
+| `cma_143234.jpg` | Jacob van Ruisdael (Dutch, 1628/29–1682) | https://clevelandart.org/art/1967.19 | CC0-1.0 |
+| `cma_143602.jpg` | Jacob van Ruisdael (Dutch, 1628/29–1682) | https://clevelandart.org/art/1967.63 | CC0-1.0 |
+| `cma_83635.jpg` | Jan Verkade (Dutch, 1868–1946) | https://clevelandart.org/art/2020.117 | CC0-1.0 |
+| `cma_159501.jpg` | David Teniers (Flemish, 1610–1690) | https://clevelandart.org/art/1996.271 | CC0-1.0 |
+| `cma_149417.jpg` | Kan Tenju (Japanese, 1727–1795) | https://clevelandart.org/art/1978.7 | CC0-1.0 |
+| `cma_112586.jpg` | Giulio Campagnola (Italian, 1482–1515) | https://clevelandart.org/art/1931.205 | CC0-1.0 |
+| `cma_141639.jpg` | Frederic Edwin Church (American, 1826–1900) | https://clevelandart.org/art/1965.233 | CC0-1.0 |
+| `cma_159769.jpg` | John Robert Cozens (British, 1752–1797) | https://clevelandart.org/art/1997.137 | CC0-1.0 |
+| `cma_150176.jpg` | Pierre Henri de Valenciennes (French, 1750–1819) | https://clevelandart.org/art/1980.91 | CC0-1.0 |

@@ -173,6 +173,40 @@ test('hovering a never-played video shows only the play button, not the control 
   await expect.poll(barOpacity).toBe('1');
 });
 
+test('a paused video always shows a play button at rest, so it never looks like a picture', async ({ page }) => {
+  await createBlok(page, { blocks: [ { type: 'video', data: { url: SAMPLE_VIDEO_URL } } ] });
+
+  const block = page.locator(VIDEO_BLOCK_SELECTOR);
+  const player = block.getByTestId('video-player');
+  const centerPlay = block.locator('[data-role="center-play"]');
+  const opacity = (): Promise<string> => centerPlay.evaluate((element) => getComputedStyle(element).opacity);
+
+  // Never played, pointer elsewhere.
+  await page.mouse.move(0, 0);
+  await expect(centerPlay).toBeVisible();
+
+  // Played into, then paused part-way, pointer elsewhere: the button is back.
+  await centerPlay.click();
+  await expect(centerPlay).toBeHidden();
+  await player.evaluate(async (element) => {
+    const video = element as HTMLVideoElement;
+
+    video.pause();
+    video.currentTime = 3;
+    await new Promise((resolve) => video.addEventListener('seeked', resolve, { once: true }));
+  });
+  await page.mouse.move(0, 0);
+  await expect(centerPlay).toBeVisible();
+  await expect.poll(opacity).toBe('1');
+
+  // Hovering brings the bar up, and the centre button steps aside.
+  await player.hover({ position: { x: 40, y: 40 } });
+  await expect.poll(opacity).toBe('0');
+
+  await page.mouse.move(0, 0);
+  await expect.poll(opacity).toBe('1');
+});
+
 test('the speed submenu: drag the bead, land on a peg, use a preset, step, and go back', async ({ page }) => {
   await createBlok(page, { blocks: [ { type: 'video', data: { url: SAMPLE_VIDEO_URL } } ] });
 

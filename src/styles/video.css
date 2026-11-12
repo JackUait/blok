@@ -1341,9 +1341,15 @@
   backdrop-filter: blur(18px) saturate(1.8);
   cursor: pointer;
   pointer-events: auto;
-  transition: transform 320ms var(--blok-ease-spring-island);
+  transition: transform 320ms var(--blok-ease-spring-island), opacity 160ms ease;
 }
 [data-blok-tool="video"] .blok-video-controls__center:hover { transform: translate(-50%, -50%) scale(1.06); }
+/* It shows whenever the video is paused. Over a played video the bar comes up on
+   hover with its own play button, so this one steps aside and clears the frame. */
+[data-blok-tool="video"] .blok-video-inner[data-played="true"]:hover .blok-video-controls__center:not(:focus-visible) {
+  opacity: 0;
+  pointer-events: none;
+}
 [data-blok-tool="video"] .blok-video-controls__center[hidden] { display: none; }
 [data-blok-tool="video"] .blok-video-controls__center svg { width: 30px; height: 30px; }
 

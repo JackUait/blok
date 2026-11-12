@@ -55,6 +55,15 @@ describe('video island controls', () => {
     expect(center).toContain('box-shadow: var(--blok-video-island-shadow)');
   });
 
+  it('moves the centre play aside while a played video is hovered, since the bar is showing', () => {
+    const aside = block(`${T} .blok-video-inner[data-played="true"]:hover .blok-video-controls__center:not(:focus-visible)`);
+
+    expect(aside).toContain('opacity: 0');
+    expect(aside).toContain('pointer-events: none');
+    // A never-played video keeps it on hover: there the bar stays hidden.
+    expect(css).not.toMatch(/data-played="false"\][^{]*blok-video-controls__center[^{]*\{[^}]*opacity: 0/);
+  });
+
   it('hides the scrubber knob until the scrubber is hovered or focused', () => {
     expect(block(`${T} .blok-video-controls__seek::-webkit-slider-thumb`)).toContain('transform: scale(0)');
     expect(css).toMatch(/\.blok-video-controls__seek-wrap:hover \.blok-video-controls__seek::-webkit-slider-thumb[^{]*\{[^}]*transform: scale\(1\)/);

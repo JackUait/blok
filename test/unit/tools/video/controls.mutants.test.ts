@@ -410,25 +410,29 @@ describe('video controls — centre play, spinner and time readout', () => {
   const centre = (): HTMLElement => q(h.controls, '[data-role="center-play"]');
   const spinner = (): HTMLElement => q(h.controls, '[data-role="buffer-spinner"]');
 
-  it('hides the centre play once the media has been played into, even while paused', () => {
+  // A paused video with no play button looks like a picture.
+  it('keeps the centre play showing while paused part-way through', () => {
     setProp(h.video, 'currentTime', 5);
     h.video.dispatchEvent(new Event('timeupdate'));
-    expect(centre().hidden).toBe(true);
+    expect(centre().hidden).toBe(false);
   });
 
-  it('hides the centre play when the media resumes after a buffering stall', () => {
+  it('keeps the centre play hidden when the media resumes after a buffering stall', () => {
     setProp(h.video, 'currentTime', 5);
+    h.video.dispatchEvent(new Event('play'));
+    h.video.dispatchEvent(new Event('waiting'));
     h.video.dispatchEvent(new Event('playing'));
     expect(centre().hidden).toBe(true);
   });
 
-  it('hides the centre play at mount when the media is already part-way through', () => {
+  it('shows the centre play at mount when the media is already part-way through', () => {
     h.destroy();
     const figure = document.createElement('figure');
     const video = document.createElement('video');
 
     setProp(video, 'play', vi.fn());
     setProp(video, 'pause', vi.fn());
+    // A position restored from the last visit.
     setProp(video, 'currentTime', 12);
     figure.appendChild(video);
     document.body.appendChild(figure);
@@ -436,10 +440,19 @@ describe('video controls — centre play, spinner and time readout', () => {
     const handle = attachControls({ video, figure });
 
     figure.appendChild(handle.element);
-    expect(q(handle.element, '[data-role="center-play"]').hidden).toBe(true);
+    expect(q(handle.element, '[data-role="center-play"]').hidden).toBe(false);
     handle.destroy();
     figure.remove();
     h = mount();
+  });
+
+  it('shows the centre play again after a pause part-way through', () => {
+    h.video.dispatchEvent(new Event('play'));
+    setProp(h.video, 'currentTime', 5);
+    h.video.dispatchEvent(new Event('timeupdate'));
+    expect(centre().hidden).toBe(true);
+    h.video.dispatchEvent(new Event('pause'));
+    expect(centre().hidden).toBe(false);
   });
 
   it('shows the centre play again when playback stops back at the start', () => {

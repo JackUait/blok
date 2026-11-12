@@ -295,6 +295,9 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     const icon = next ? IconPlayerPause : IconPlayerPlay;
     playToggle.innerHTML = icon;
     playToggle.setAttribute('aria-label', next ? i18nLabel('pause', 'Pause') : i18nLabel('play', 'Play'));
+    // Shown whenever paused, at any position: a paused video with no play button
+    // looks like a picture.
+    centerPlay.hidden = next;
   };
   setPlaying(false);
 
@@ -337,7 +340,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
 
   // Centre play visibility + buffering spinner.
   const updateCenter = (): void => {
-    centerPlay.hidden = state.playing || video.currentTime > 0;
+    centerPlay.hidden = state.playing;
   };
   const onWaiting = (): void => spinner.setAttribute('data-active', 'true');
   const onPlayingMedia = (): void => { spinner.setAttribute('data-active', 'false'); updateCenter(); };

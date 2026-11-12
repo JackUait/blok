@@ -32,6 +32,12 @@ export interface AudioData extends BlockToolData {
   mimeType?: string;
   duration?: number;
   peaks?: number[];
+  /**
+   * What the track does over time (hits and loudness), packed as base64. Blok
+   * works it out once from the audio and the cover animation reads it. Opaque:
+   * do not write it by hand.
+   */
+  motion?: string;
 }
 
 export interface AudioUploadContext {

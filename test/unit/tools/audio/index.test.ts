@@ -397,6 +397,26 @@ describe('AudioTool', () => {
     expect(vi.mocked(block.dispatchChange).mock.calls).toEqual([[], [{ derived: true, from: ['fileName'] }]]);
   });
 
+  it('I3m: decoded motion is cached in data and round-trips through save()', async () => {
+    const decodePeaksMock = await getDecodePeaksMock();
+    decodePeaksMock.mockResolvedValueOnce({ peaks: [0.1, 0.5, 1], duration: 8, motion: 'AQAAAAAAAA==' });
+
+    const tool = new AudioTool(opts({ url: '' }, {}, createMockBlock()));
+    tool.render();
+    tool.onPaste({ type: 'file', detail: { file: new File(['x'], 'track.mp3', { type: 'audio/mpeg' }) } } as never);
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(tool.save().motion).toBe('AQAAAAAAAA==');
+  });
+
+  it('I3n: saved motion round-trips, and a non-string motion is dropped', () => {
+    expect(new AudioTool(opts({ url: 'https://x/y.mp3', motion: 'AQAAAAAAAA==' })).save().motion).toBe('AQAAAAAAAA==');
+    expect(new AudioTool(opts({ url: 'https://x/y.mp3', motion: 5 as never })).save()).not.toHaveProperty('motion');
+    expect(new AudioTool(opts({ url: 'https://x/y.mp3' })).save()).not.toHaveProperty('motion');
+  });
+
   it('I3: decoded peaks and duration are cached in data and round-trip through save()', async () => {
     const decodePeaksMock = await getDecodePeaksMock();
     decodePeaksMock.mockResolvedValueOnce({ peaks: [0.1, 0.5, 1], duration: 8 });
@@ -747,7 +767,7 @@ describe('AudioTool', () => {
       expect(block.dispatchChange).not.toHaveBeenCalled();
     });
 
-    it('removeCover reverts to the disc placeholder', () => {
+    it('removeCover reverts to the ink drop', () => {
       const { tool, root, block } = renderTool({ coverUrl: 'https://cdn/cover.png' });
       expect(root.querySelector('[data-role="audio-cover"] img')).not.toBeNull();
 
@@ -756,7 +776,7 @@ describe('AudioTool', () => {
       (remove as { onActivate: () => void }).onActivate();
 
       expect(root.querySelector('[data-role="audio-cover"] img')).toBeNull();
-      expect(root.querySelector('.blok-audio-cover__disc')).not.toBeNull();
+      expect(root.querySelector('[data-role="audio-cover-ink"]')).not.toBeNull();
       expect(block.dispatchChange).toHaveBeenCalled();
     });
 

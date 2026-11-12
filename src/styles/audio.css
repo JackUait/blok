@@ -39,7 +39,12 @@
   --blok-audio-vol-pct: 100%;
   --blok-audio-speed-pct: 50%;
 
-  /* no-cover vinyl placeholder — a glossy black record. The disc body is built
+  /* no-cover ink drop, painted on a canvas by cover-ink.ts. Plain colours only:
+     the canvas reads these as strings. */
+  --blok-audio-ink: var(--blok-text-primary);
+  --blok-audio-ink-sheen: rgba(255, 255, 255, 0.22);
+  --blok-audio-ink-glint: rgba(255, 255, 255, 0.5);
+  /* the error card's record — a glossy black disc. The disc body is built
      from --blok-overlay-dark (near-black in both themes) so it always reads as
      vinyl, not a grey CD; grooves + sheen are white at low alpha, the label is
      a cream-white puck, the spindle is a crisp dark dot. A fixed specular sits
@@ -75,12 +80,10 @@
   --blok-audio-disc-inner-shadow: rgba(0, 0, 0, 0.5);
   --blok-audio-label-shadow: rgba(0, 0, 0, 0.35);
   --blok-audio-spindle-catch: rgba(255, 255, 255, 0.4);
-  /* beat ring, in ink so it stays neutral in both themes.
-     Driven by --blok-audio-level / --blok-audio-kick, which waveform.ts writes
-     on the figure each frame; they stay 0 under reduced motion. */
+  /* waveform.ts writes these on the figure each frame; they stay 0 under
+     reduced motion. */
   --blok-audio-level: 0;
   --blok-audio-kick: 0;
-  --blok-audio-beat-ring: color-mix(in srgb, var(--blok-text-primary) 45%, transparent);
   /* cover overlay button — a semi-transparent dark scrim (same near-black as
      the disc, blended down to ~45% opacity so the art shows through) */
   --blok-audio-cover-scrim: color-mix(in srgb, var(--blok-overlay-dark) 50%, transparent);
@@ -254,7 +257,14 @@
   .blok-audio-cover-picker { animation: none; }
 }
 
-/* ----- no-cover placeholder: a glossy black vinyl record --- */
+/* ----- no-cover ink drop ---------------------------------- */
+[data-blok-tool="audio"] .blok-audio-cover__ink {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ----- the error card's record: a glossy black vinyl ------ */
 [data-blok-tool="audio"] .blok-audio-cover__placeholder {
   position: relative;
   display: flex;
@@ -298,13 +308,9 @@
 }
 
 /* the record body: fine concentric grooves over a near-black radial face,
-   lifted off the panel by an inset rim + soft shadow. Its rotation is driven
-   imperatively by disc.ts (transform: rotate), which spins the platter up on
-   play and lets it coast down on pause — so the disc has real inertia rather
-   than snapping on/off with a CSS animation. */
+   lifted off the panel by an inset rim + soft shadow. */
 [data-blok-tool="audio"] .blok-audio-cover__disc {
   position: relative;
-  will-change: transform;
   width: var(--blok-audio-disc-size);
   height: var(--blok-audio-disc-size);
   border-radius: var(--blok-radius-pill);
@@ -382,31 +388,7 @@
     0 1px 1px var(--blok-audio-label-shadow);
 }
 
-/* beat motion: the record punches out on each beat. No glow: a shadow
-   while playing reads as a hover lift. `scale` is separate from the inline
-   `transform: rotate()` disc.ts writes, so the two never fight. */
-[data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover__disc {
-  scale: calc(1 + var(--blok-audio-kick) * 0.04);
-}
-
-/* beat ring — starts at the disc edge on a hit, then grows and fades as the
-   kick decays (kick 1 → scale 1, full ink; kick 0 → scale 1.3, gone) */
-[data-blok-tool="audio"] .blok-audio-cover__placeholder::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: var(--blok-audio-disc-size);
-  height: var(--blok-audio-disc-size);
-  translate: -50% -50%;
-  border-radius: var(--blok-radius-pill);
-  box-shadow: 0 0 0 1.5px var(--blok-audio-beat-ring);
-  scale: calc(1.3 - var(--blok-audio-kick) * 0.3);
-  opacity: var(--blok-audio-kick);
-  pointer-events: none;
-}
-
-/* with cover art there is no disc: the art itself takes the punch */
+/* cover art punches out on each beat */
 [data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover img {
   scale: calc(1 + var(--blok-audio-kick) * 0.025);
 }
@@ -1047,9 +1029,6 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* The vinyl placeholder's spin is driven by disc.ts (inertial rotation via
-   transform), not a CSS animation — see the .blok-audio-cover__disc rule. */
-
 /* ----- reduced motion ------------------------------------ */
 @media (prefers-reduced-motion: reduce) {
   [data-blok-tool="audio"] .blok-audio-inner,
@@ -1063,7 +1042,6 @@
   [data-blok-tool="audio"][data-state="rendered"] .blok-audio-controls {
     animation: none;
   }
-  /* The record holds still under reduced motion (disc.ts skips the spin loop). */
   /* Caption appears/disappears instantly (JS also takes the instant path). */
   [data-blok-tool="audio"] .blok-audio-caption-row__inner { transition: none; }
   /* Cover overlay button appears instantly — no fade. */

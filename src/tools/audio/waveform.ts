@@ -1,4 +1,5 @@
 import { WAVEFORM_BUCKETS } from './constants';
+import { analyseMotion, encodeMotion } from './motion';
 import { paintRidges } from './ridgeline';
 import { findBeats, beatsCrossed, smoothLevel, kickAt, MAX_RIPPLES, RIPPLE_LIFE, type Ripple } from './ripples';
 
@@ -33,16 +34,31 @@ interface ChannelSource {
   getChannelData(ch: number): Float32Array;
 }
 
-/** Average all channels into one mono track, then reduce to peaks. */
-export function peaksFromAudioBuffer(buffer: ChannelSource, buckets = WAVEFORM_BUCKETS): number[] {
+/** Average all channels into one mono track. */
+function monoOf(buffer: ChannelSource): Float32Array {
   const { numberOfChannels, length } = buffer;
-  if (numberOfChannels <= 1) return computePeaks(buffer.getChannelData(0), buckets);
+  if (numberOfChannels <= 1) return buffer.getChannelData(0);
 
   const mono = new Float32Array(length);
   Array.from({ length: numberOfChannels }, (_, ch) => buffer.getChannelData(ch)).forEach((data) => {
     data.forEach((v, i) => { mono[i] += v / numberOfChannels; });
   });
-  return computePeaks(mono, buckets);
+  return mono;
+}
+
+/** Average all channels into one mono track, then reduce to peaks. */
+export function peaksFromAudioBuffer(buffer: ChannelSource, buckets = WAVEFORM_BUCKETS): number[] {
+  return computePeaks(monoOf(buffer), buckets);
+}
+
+/** The cover animation is a nice-to-have: a failure here must not cost the peaks. */
+function motionOf(mono: Float32Array, sampleRate: number): string | undefined {
+  if (!Number.isFinite(sampleRate) || sampleRate <= 0) return undefined;
+  try {
+    return encodeMotion(analyseMotion(mono, sampleRate));
+  } catch {
+    return undefined;
+  }
 }
 
 export function ratioFromPointer(clientX: number, rect: { left: number; width: number }): number {
@@ -64,6 +80,8 @@ function getAudioContextCtor(): AudioContextCtor | null {
 export interface DecodedAudio {
   peaks: number[];
   duration: number;
+  /** Packed hits and loudness for the cover animation. See motion.ts. */
+  motion?: string;
 }
 
 export async function decodePeaks(file: File): Promise<DecodedAudio | null> {
@@ -73,7 +91,9 @@ export async function decodePeaks(file: File): Promise<DecodedAudio | null> {
     const ctx = new Ctor();
     try {
       const buffer = await ctx.decodeAudioData(await file.arrayBuffer());
-      return { peaks: peaksFromAudioBuffer(buffer), duration: buffer.duration };
+      const mono = monoOf(buffer);
+
+      return { peaks: computePeaks(mono), duration: buffer.duration, motion: motionOf(mono, buffer.sampleRate) };
     } finally {
       void ctx.close();
     }

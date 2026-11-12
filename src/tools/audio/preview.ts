@@ -1,6 +1,7 @@
 import { createPreview, h } from '../../components/utils/block-preview';
 
 import { attachControls } from './controls';
+import { attachInkCover } from './cover-ink';
 import { renderNowPlaying } from './ui';
 import { attachWaveform } from './waveform';
 
@@ -50,10 +51,10 @@ const positionAt = (elapsed: number): number => {
 
 /**
  * The real audio block with no cover art, run by its own waveform, controls and
- * record spin. A stand-in player clock plays a stretch of the track on a loop.
+ * ink drop. A stand-in player clock plays a stretch of the track on a loop.
  */
 export const renderAudioPreview = (): HTMLElement => {
-  const { figure, audio, waveformMount, body } = renderNowPlaying(
+  const { figure, audio, waveformMount, body, ink } = renderNowPlaying(
     { url: '', title: TITLE, artist: ARTIST },
     { editable: false }
   );
@@ -67,6 +68,7 @@ export const renderAudioPreview = (): HTMLElement => {
 
   const waveform = attachWaveform({ mount: waveformMount, media: audio, peaks: PEAKS, stage: figure });
   const controls = attachControls({ media: audio, figure, data: { url: '' }, storage: NO_STORAGE, restoreLoop: false });
+  const cover = ink ? attachInkCover({ canvas: ink, media: audio, peaks: PEAKS }) : null;
 
   body.appendChild(controls.element);
   audio.dispatchEvent(new Event('loadedmetadata'));
@@ -81,6 +83,7 @@ export const renderAudioPreview = (): HTMLElement => {
     if (!block.isConnected || block.closest('[hidden]') !== null) {
       waveform.destroy();
       controls.destroy();
+      cover?.destroy();
 
       return;
     }

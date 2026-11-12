@@ -9,7 +9,6 @@ import {
   IconPlus,
 } from '../../components/icons';
 import { createVolumeIcon } from '../../components/utils/volume-icon';
-import { createPlatterSpin } from './disc';
 import { tr } from './i18n';
 import type { I18nInstance } from '../../components/utils/tools';
 import type { AudioData } from '../../../types/tools/audio';
@@ -115,17 +114,11 @@ export function attachControls({
 
   const state = { playing: false, selectedRate: 1 };
 
-  // Inertial spin for the no-cover vinyl record (no-op when a cover image is
-  // shown — the disc only exists in the placeholder). Spins up on play, coasts
-  // down on pause.
-  const platter = createPlatterSpin(figure);
-
   const setPlaying = (next: boolean): void => {
     state.playing = next;
     figure.setAttribute('data-playing', String(next));
     playToggle.innerHTML = next ? IconPlayerPause : IconPlayerPlay;
     playToggle.setAttribute('aria-label', next ? i18nLabel('pause', 'Pause') : i18nLabel('play', 'Play'));
-    if (next) platter.start(); else platter.stop();
   };
   setPlaying(false);
 
@@ -552,7 +545,6 @@ export function attachControls({
 
   // ----- destroy -----
   const destroy = (): void => {
-    platter.destroy();
     stopSeekFollow();
     closeSpeedMenu();
 

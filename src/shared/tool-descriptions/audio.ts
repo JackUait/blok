@@ -21,6 +21,7 @@ export const AUDIO_DATA = {
     mimeType: { type: 'string' },
     duration: { type: 'number', description: 'Seconds.' },
     peaks: { type: 'array', items: { type: 'number' }, description: 'Precomputed waveform samples.' },
+    motion: { type: 'string', description: 'Precomputed cover animation data, base64. Opaque: copy it, never write it.' },
   },
 };
 

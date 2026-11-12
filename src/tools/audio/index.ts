@@ -39,6 +39,7 @@ import { tr } from './i18n';
 import { renderCaptionRow, renderErrorState, renderNowPlaying, type ErrorService } from './ui';
 import { openCoverPicker, validateCoverFile, type CoverPickerHandle } from './cover-picker';
 import { attachControls, type ControlsHandle } from './controls';
+import { attachInkCover, type InkCoverHandle } from './cover-ink';
 import { attachWaveform, decodePeaks, type WaveformHandle } from './waveform';
 import { readTrackMetadata, resolveCover } from './metadata';
 import { Uploader, AudioUploadError, type UploadResult } from './uploader';
@@ -98,6 +99,7 @@ export class AudioTool implements BlockTool {
   private controlsHandle: ControlsHandle | null = null;
   private stopNearWatch: () => void = () => undefined;
   private waveformHandle: WaveformHandle | null = null;
+  private inkHandle: InkCoverHandle | null = null;
   private destroyed = false;
   private coverPicker: CoverPickerHandle | null = null;
   /** Pending fallback timer for the caption collapse-out animation. */
@@ -141,6 +143,7 @@ export class AudioTool implements BlockTool {
     if (this.data.mimeType !== undefined) out.mimeType = this.data.mimeType;
     if (this.data.duration !== undefined) out.duration = this.data.duration;
     if (this.data.peaks !== undefined) out.peaks = this.data.peaks;
+    if (typeof this.data.motion === 'string') out.motion = this.data.motion;
     return out;
   }
 
@@ -329,6 +332,8 @@ export class AudioTool implements BlockTool {
     this.controlsHandle = null;
     this.waveformHandle?.destroy();
     this.waveformHandle = null;
+    this.inkHandle?.destroy();
+    this.inkHandle = null;
     this.coverPicker?.close();
     this.coverPicker = null;
   }
@@ -528,6 +533,7 @@ export class AudioTool implements BlockTool {
         if (decoded && decoded.peaks.length) {
           this.data.peaks = decoded.peaks;
           this.data.duration = decoded.duration;
+          if (decoded.motion) this.data.motion = decoded.motion;
           this.renderState();
           this.block.dispatchChange({ derived: true, from: ['url'] });
         }
@@ -592,6 +598,8 @@ export class AudioTool implements BlockTool {
     this.controlsHandle = null;
     this.waveformHandle?.destroy();
     this.waveformHandle = null;
+    this.inkHandle?.destroy();
+    this.inkHandle = null;
     this.stopNearWatch();
     this.root.replaceChildren();
     this.uploadingEl = null;
@@ -668,7 +676,7 @@ export class AudioTool implements BlockTool {
     const titlePlaceholder = tr(this.api.i18n, 'tools.audio.titlePlaceholder', 'Title');
     const artistPlaceholder = tr(this.api.i18n, 'tools.audio.artistPlaceholder', 'Author');
 
-    const { figure, audio, waveformMount, title, artist, body, coverButton } = renderNowPlaying(this.data, {
+    const { figure, audio, waveformMount, title, artist, body, coverButton, ink } = renderNowPlaying(this.data, {
       editable: !this.readOnly,
       titlePlaceholder,
       artistPlaceholder,
@@ -681,6 +689,7 @@ export class AudioTool implements BlockTool {
     });
 
     this.mountRidgeline(figure, audio, waveformMount);
+    if (ink) this.inkHandle = attachInkCover({ canvas: ink, media: audio, motion: this.data.motion, peaks: this.data.peaks });
 
     // Transport controls — appended into the right-column body (under waveform)
     this.controlsHandle = attachControls({

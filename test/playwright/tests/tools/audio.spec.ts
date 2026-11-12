@@ -379,9 +379,9 @@ test('cover picker animates in when opened', async ({ page }) => {
 });
 
 // ---------------------------------------------------------------------------
-// 7. Cover — remove via block settings restores the spinning disc
+// 7. Cover — remove via block settings restores the ink drop
 // ---------------------------------------------------------------------------
-test('user can remove a cover and the vinyl disc returns', async ({ page }) => {
+test('user can remove a cover and the ink drop returns', async ({ page }) => {
   await createBlok(page);
   await insertAudioBlock(page);
 
@@ -420,9 +420,9 @@ test('user can remove a cover and the vinyl disc returns', async ({ page }) => {
   await expect(removeItem).toBeVisible();
   await removeItem.click();
 
-  // The img must be gone and the vinyl disc placeholder must return.
+  // The img must be gone and the ink drop must return.
   await expect(page.locator(`${AUDIO_BLOCK_SELECTOR} [data-role="audio-cover"] img`)).toHaveCount(0);
-  await expect(page.locator(`${AUDIO_BLOCK_SELECTOR} [data-role="audio-cover-disc"]`)).toBeVisible();
+  await expect(page.locator(`${AUDIO_BLOCK_SELECTOR} [data-role="audio-cover-ink"]`)).toBeVisible();
 });
 
 test('the Compact setting hides the ridgeline and brings it back', async ({ page }) => {

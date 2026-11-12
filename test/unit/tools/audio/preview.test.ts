@@ -42,7 +42,7 @@ describe('audio toolbox preview', () => {
     const drawing = mountPreview();
     const figure = query(drawing, '[data-blok-tool="audio"] figure.blok-audio-inner');
 
-    expect(query(figure, '[data-role="audio-cover-disc"]')).toBeTruthy();
+    expect(query(figure, '[data-role="audio-cover-ink"]')).toBeTruthy();
     expect(figure.querySelector('img')).toBeNull();
     expect(query(figure, '[data-role="audio-title"]').textContent).toBe('Late Night Drive');
     expect(query(figure, '[data-role="audio-artist"]').textContent).toBe('Nova Lane');

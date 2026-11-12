@@ -18,6 +18,8 @@ export interface NowPlayingElements {
   title: HTMLElement;
   artist: HTMLElement;
   coverButton?: HTMLButtonElement;
+  /** The no-cover ink drop's canvas. Absent when there is artwork. */
+  ink?: HTMLCanvasElement;
 }
 
 function editableLine(role: string, value: string | undefined, editable: boolean, placeholder?: string): HTMLElement {
@@ -47,26 +49,21 @@ export function renderNowPlaying(data: AudioData, opts: NowPlayingOptions): NowP
   const cover = document.createElement('div');
   cover.className = 'blok-audio-cover';
   cover.setAttribute('data-role', 'audio-cover');
+  // No artwork: an ink drop, drawn and moved by cover-ink.ts.
+  const ink = data.coverUrl ? undefined : document.createElement('canvas');
+
   if (data.coverUrl) {
     const img = document.createElement('img');
     img.setAttribute('loading', 'lazy');
     img.src = data.coverUrl;
     img.alt = '';
     cover.appendChild(img);
-  } else {
-    // No artwork: stand a glossy black vinyl record in the panel instead of a
-    // flat "missing image" glyph. The disc (grooves + cream label + spindle, with
-    // a fixed specular it shimmers under) is pure CSS; its rotation is driven by
-    // disc.ts, which spins the platter up when the track plays and lets it coast
-    // down on pause — like a real turntable with mass.
-    const placeholder = document.createElement('span');
-    placeholder.className = 'blok-audio-cover__placeholder';
-    placeholder.setAttribute('aria-hidden', 'true');
-    const disc = document.createElement('span');
-    disc.className = 'blok-audio-cover__disc';
-    disc.setAttribute('data-role', 'audio-cover-disc');
-    placeholder.append(disc);
-    cover.appendChild(placeholder);
+  }
+  if (ink) {
+    ink.className = 'blok-audio-cover__ink';
+    ink.setAttribute('data-role', 'audio-cover-ink');
+    ink.setAttribute('aria-hidden', 'true');
+    cover.appendChild(ink);
   }
 
   const coverButton = ((): HTMLButtonElement | undefined => {
@@ -114,7 +111,7 @@ export function renderNowPlaying(data: AudioData, opts: NowPlayingOptions): NowP
   if (data.loop) audio.loop = true;
 
   figure.append(toolbarAnchor, cover, body, audio);
-  return { figure, audio, cover, body, waveformMount, title, artist, coverButton };
+  return { figure, audio, cover, body, waveformMount, title, artist, coverButton, ink };
 }
 
 export interface CaptionRowOptions {

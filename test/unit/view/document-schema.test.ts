@@ -246,6 +246,7 @@ const savedData: Record<string, Record<string, unknown>> = {
     title: 'Song', artist: 'Someone', coverUrl: 'https://example.com/c.png',
     loop: true, width: 50, alignment: 'left', fileName: 'a.mp3',
     mimeType: 'audio/mpeg', duration: 120, peaks: [0.1, 0.9], compact: true,
+    motion: 'AQAAAAAAAA==',
   })).save(),
 
   video: new Video(options({

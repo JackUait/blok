@@ -76,15 +76,22 @@ describe('audio ui — mutation hardening', () => {
       expect(img?.getAttribute('alt')).toBe('');
     });
 
-    it('falls back to a hidden vinyl disc placeholder without artwork', () => {
-      const { cover } = renderNowPlaying({ url: 'u' }, { editable: true });
-      const disc = requireElement(cover.querySelector('[data-role="audio-cover-disc"]'), 'cover disc');
-      const placeholder = requireElement(disc.parentElement, 'cover placeholder');
+    it('falls back to a hidden ink canvas without artwork', () => {
+      const { cover, ink } = renderNowPlaying({ url: 'u' }, { editable: true });
+      const canvas = requireElement(cover.querySelector('[data-role="audio-cover-ink"]'), 'cover ink');
 
-      expect(disc.className).toBe('blok-audio-cover__disc');
-      expect(placeholder.className).toBe('blok-audio-cover__placeholder');
-      expect(placeholder.getAttribute('aria-hidden')).toBe('true');
-      expect(cover.contains(placeholder)).toBe(true);
+      expect(canvas.tagName).toBe('CANVAS');
+      expect(canvas.className).toBe('blok-audio-cover__ink');
+      expect(canvas.getAttribute('aria-hidden')).toBe('true');
+      expect(ink).toBe(canvas);
+      expect(cover.querySelector('.blok-audio-cover__disc')).toBeNull();
+    });
+
+    it('has no ink canvas when there is artwork', () => {
+      const { cover, ink } = renderNowPlaying({ url: 'u', coverUrl: 'https://cdn/c.png' }, { editable: true });
+
+      expect(ink).toBeUndefined();
+      expect(cover.querySelector('[data-role="audio-cover-ink"]')).toBeNull();
     });
 
     it('types the cover change control as a plain button', () => {

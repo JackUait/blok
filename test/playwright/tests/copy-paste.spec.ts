@@ -1629,6 +1629,48 @@ test.describe('copy and paste', () => {
       ]);
     });
 
+    test('sends a data: url to the host even when it carries the copy mark', async ({ page }) => {
+      const DATA = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
+      await createUploadingBlok(page, [{ id: 'tgt', type: 'paragraph', data: { text: '' } }]);
+      await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+      // A forged mark: a data: url Blok keeps as it is would skip the host's file checks.
+      await paste(page, page.locator(':focus'), { 'text/html': `<p>Look</p><p><img src="${DATA}" data-blok-hosted=""></p>`, 'text/plain': 'Look' });
+
+      await expect.poll(async () => (await saveBlok(page)).blocks.find((block) => block.type === 'image')?.data.url).toBe(`${DATA}?rehosted`);
+      expect(await page.evaluate(() => (window as unknown as { __imageUploads: string[] }).__imageUploads)).toEqual([DATA]);
+    });
+
+    test('asks an editor-level uploader too', async ({ page }) => {
+      await resetBlok(page);
+      await page.evaluate(async ({ holder }) => {
+        const asked: unknown[] = [];
+        const blok = new window.Blok({
+          holder,
+          data: { blocks: [{ id: 'tgt', type: 'paragraph', data: { text: '' } }] },
+          uploader: {
+            uploadByUrl: (url: string) => Promise.resolve({ url: `${url}?rehosted` }),
+            shouldUploadUrl: (url: string, ctx: unknown) => {
+              asked.push({ url, ctx });
+
+              return Promise.resolve(true);
+            },
+          },
+        });
+
+        (window as unknown as { __imageAsked: unknown[] }).__imageAsked = asked;
+        window.blokInstance = blok;
+        await blok.isReady;
+      }, { holder: HOLDER_ID });
+      await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), { 'text/html': `<p>Look</p><p><img src="${IMAGE}"></p>`, 'text/plain': 'Look' });
+
+      await expect.poll(async () => (await saveBlok(page)).blocks.find((block) => block.type === 'image')?.data.url).toBe(`${IMAGE}?rehosted`);
+      expect(await page.evaluate(() => (window as unknown as { __imageAsked: unknown[] }).__imageAsked)).toEqual([
+        { url: IMAGE, ctx: { kind: 'image', tool: 'image', source: 'html', copiedFromBlok: false } },
+      ]);
+    });
+
     test('keeps a bare pasted url embedded from the link menu when the host uploader says keep', async ({ page }) => {
       await createUploadingBlok(page, [{ id: 'tgt', type: 'paragraph', data: { text: '' } }], false);
       await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();

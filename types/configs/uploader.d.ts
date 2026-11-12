@@ -97,7 +97,9 @@ export interface BlokUploader {
    * for a bare pasted URL, and only when this same uploader has `uploadByUrl`.
    *
    * When absent, an image Blok copied is kept and any other pasted `<img>` is
-   * uploaded. A throw or an answer that is not a boolean does the same.
+   * uploaded. When it throws or answers something other than a boolean, an
+   * unmarked `<img>` is uploaded and everything else is kept. A `data:` URL is
+   * never asked about: it always gets the checks a picked file gets.
    */
   shouldUploadUrl?(url: string, ctx: UrlUploadDecisionContext): boolean | Promise<boolean>;
 

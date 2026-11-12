@@ -69,7 +69,7 @@ import { openAltPopover } from './alt-popover';
 import { probeImageDimensions } from './probe-dimensions';
 import { renderUploadingState, type UploadingStateElement } from './uploading-state';
 import { readVariants } from '../../shared/read-variants';
-import { Uploader, type UploadResult } from './uploader';
+import { Uploader, isDataUrl, type UploadResult } from './uploader';
 import { convertGifToWebm } from './gif-to-webm';
 import { downloadImage } from './download';
 import { resolveConvertedUploader } from './converted-uploader';
@@ -318,8 +318,9 @@ export class ImageTool implements BlockTool {
       const upload = this.uploader.decidePastedUrl(src, { source: 'html', copiedFromBlok });
       if (upload !== undefined) {
         this.startUrl(src, upload);
-      } else if (copiedFromBlok) {
-        // Like a paste of Blok's own clipboard: the url is kept as it is.
+      } else if (copiedFromBlok && !isDataUrl(src)) {
+        // Like a paste of Blok's own clipboard: the url is kept as it is. A data:
+        // url still gets the file checks, since the mark proves nothing.
         this.applyResult({ url: src });
       } else {
         this.startUrl(src);

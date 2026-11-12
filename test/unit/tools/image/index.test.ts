@@ -323,6 +323,21 @@ describe('ImageTool — the host uploader decides whether a pasted url is upload
     expect(shouldUploadUrl).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['without a host decision', 'data:image/png;base64,iVBORw0KGgo=', {}],
+    ['with a host decision', 'data:image/png;base64,iVBORw0KGgo=', { shouldUploadUrl: () => false }],
+    ['after a leading space', ' data:image/png;base64,iVBORw0KGgo=', {}],
+  ])('checks a pasted data: url marked as a Blok copy like any other file, %s', async (_label, src, decides) => {
+    const uploadByFile = vi.fn(async () => ({ url: 'https://cdn/file.png' }));
+    const tool = new ImageTool(createOptions({}, { types: ['image/jpeg'], uploader: { uploadByFile, ...decides } }));
+    tool.render();
+    // Any page can write the mark, and a raster data: url survives the paste sanitizer.
+    pasteImg(tool, src, true);
+    await settle();
+    expect(tool.save().url).toBe('');
+    expect(uploadByFile).not.toHaveBeenCalled();
+  });
+
   it('falls back to the marker when the host decision throws', async () => {
     const uploadByUrl = rehost();
     const shouldUploadUrl = (): boolean => {

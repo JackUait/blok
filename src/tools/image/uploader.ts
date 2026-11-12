@@ -10,6 +10,8 @@ import { DEFAULT_MAX_SIZE, DEFAULT_MIME_TYPES } from './constants';
 import { ImageError } from './errors';
 import { localImageUrl } from '../../shared/safe-object-url';
 import { decideAssetUrl } from '../../components/utils/asset-uploader';
+import { stripIgnoredUrlChars } from '../../shared/sanitize-url';
+import { DATA_SCHEME_PATTERN } from '../../shared/url-policy';
 
 export interface UploadResult {
   url: string;
@@ -41,6 +43,14 @@ const DATA_IMAGE_PREFIX = /^data:image\//i;
 
 function isImageDataUrl(raw: string): boolean {
   return DATA_IMAGE_PREFIX.test(raw);
+}
+
+/**
+ * Whether a pasted url is a data: url, read the way a browser reads its scheme.
+ * @param raw - the pasted url
+ */
+export function isDataUrl(raw: string): boolean {
+  return DATA_SCHEME_PATTERN.test(stripIgnoredUrlChars(raw));
 }
 
 function dataUrlToFile(dataUrl: string): File {
@@ -103,7 +113,7 @@ export class Uploader {
    * without one: upload an unmarked `<img>`, keep the rest.
    */
   public decidePastedUrl(raw: string, pasted: PastedUrl): Promise<boolean> | undefined {
-    if (/^data:/i.test(raw)) {
+    if (isDataUrl(raw)) {
       return undefined;
     }
 

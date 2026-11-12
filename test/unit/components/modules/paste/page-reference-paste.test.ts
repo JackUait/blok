@@ -237,6 +237,44 @@ describe('a pasted link to a page this host knows', () => {
     expect(counted).toHaveBeenCalledTimes(1);
   });
 
+  it('pastes nothing into an editor destroyed while the host resolves the title', async () => {
+    const pending: { settle: (info: { title: string }) => void } = { settle: () => undefined };
+    const slowResolve = (): Promise<{ title: string }> => new Promise((resolve) => {
+      pending.settle = resolve;
+    });
+    const instance = new Blok({
+      holder,
+      sanitizer: { a: { href: true } },
+      tools: { paragraph: Paragraph, link: LinkInlineTool, page: { class: PageTool, config: { pageIdFromHref, resolve: slowResolve } } },
+      data: { blocks: [{ id: 'before', type: 'paragraph', data: { text: 'See ' } }] },
+    }) as unknown as TestEditor;
+
+    await instance.isReady;
+    const target = Array.from(holder?.querySelectorAll<HTMLElement>('[data-blok-id="before"] *') ?? [])
+      .find((element) => element.contentEditable === 'true');
+
+    if (target === undefined) {
+      throw new Error('no paragraph input');
+    }
+    target.setAttribute('contenteditable', 'true');
+    target.focus();
+    instance.caret.setToBlock('before', 'end');
+    await loadPasteEngine();
+    const errors = vi.spyOn(console, 'error');
+    const data: Record<string, string> = { 'text/html': '<a href="https://workspace.test/pages/roadmap">Roadmap</a>', 'text/plain': 'Roadmap' };
+
+    target.dispatchEvent(Object.assign(new Event('paste', { bubbles: true, cancelable: true }), {
+      clipboardData: { getData: (type: string): string => data[type] ?? '', types: Object.keys(data) },
+    }));
+    await new Promise<void>((resolve) => { setTimeout(resolve, 50); });
+    instance.destroy();
+    pending.settle({ title: 'Roadmap' });
+    await new Promise<void>((resolve) => { setTimeout(resolve, 50); });
+
+    expect(holder?.querySelector('[data-blok-page-id]')).toBeNull();
+    expect(errors).not.toHaveBeenCalled();
+  });
+
   it('stays a link when the host does not know the page', async () => {
     const output = await pasteInto('See ', { 'text/plain': '[Elsewhere](https://elsewhere.test/pages/roadmap) now' });
 

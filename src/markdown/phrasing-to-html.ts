@@ -137,11 +137,15 @@ function serializeNode(node: PhrasingContent, definitions: DefinitionMap, pageId
 /** Where an imported link opens: same-page anchors stay in the window. */
 export const linkTarget = (url: string): string => (isSamePageLink(url) ? '_self' : '_blank');
 
-/** What a reader sees of inline nodes: marks dropped. */
+/** What a reader sees of inline nodes: marks dropped, a break is a space. */
 function plainText(nodes: PhrasingContent[]): string {
   return nodes.map((node) => {
     if (node.type === 'text' || node.type === 'inlineCode') {
       return node.value;
+    }
+
+    if (node.type === 'break') {
+      return ' ';
     }
 
     return 'children' in node ? plainText(node.children) : '';

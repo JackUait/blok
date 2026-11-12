@@ -69,6 +69,13 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
     return 40;
   }
 
+  /** Set when the editor goes; a paste still waiting on the host then drops. */
+  private destroyed = false;
+
+  destroy(): void {
+    this.destroyed = true;
+  }
+
   async handle(data: unknown, context: HandlerContext): Promise<boolean> {
     if (typeof data !== 'string') {
       return false;
@@ -77,6 +84,12 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
     const wrapper = parseUntrustedHtml(data);
 
     await this.mentionKnownPageLinks(wrapper);
+
+    // The host's resolve may be slow: the editor can be gone by now. Handled,
+    // so no later handler pastes it either.
+    if (this.destroyed) {
+      return true;
+    }
 
     const dataToInsert = this.processHTML(wrapper);
 

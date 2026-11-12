@@ -97,12 +97,25 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
     return hasMarkdownSignals(data) ? 30 : 0;
   }
 
+  /** Set when the editor goes; a paste still waiting on the host then drops. */
+  private destroyed = false;
+
+  destroy(): void {
+    this.destroyed = true;
+  }
+
   async handle(data: unknown, context: HandlerContext): Promise<boolean> {
     if (typeof data !== 'string') {
       return false;
     }
 
     const rawOutputBlocks = await this.convert(data);
+
+    // The host's resolve may be slow: the editor can be gone by now. Handled,
+    // so no later handler pastes it either.
+    if (this.destroyed) {
+      return true;
+    }
 
     if (rawOutputBlocks === null || !rawOutputBlocks.length) {
       return false;

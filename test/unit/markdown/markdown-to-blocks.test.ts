@@ -657,6 +657,23 @@ describe('markdownToBlocks with pageIdFromHref', () => {
     ]);
   });
 
+  it('hands the callback a soft line break in link text as a space', async () => {
+    const seen: string[] = [];
+    const collect: InternalMarkdownImportConfig = {
+      htmlText: true,
+      softBreaks: true,
+      pageIdFromHref: (_url, text) => {
+        seen.push(text);
+
+        return undefined;
+      },
+    };
+
+    await markdownToSegmentBlocks('[Road\nmap](https://workspace.test/pages/roadmap)', collect);
+
+    expect(seen).toEqual(['Road map']);
+  });
+
   it('hands the callback the link\'s plain text, marks dropped', async () => {
     const seen: Array<[string, string]> = [];
 

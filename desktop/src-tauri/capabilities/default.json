@@ -2,7 +2,9 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "core:window:allow-start-dragging",
@@ -11,6 +13,8 @@
     "allow-save-workspace-file",
     "allow-workspace-data-directory",
     "allow-agent-provider-status",
-    "allow-agent-ask"
+    "allow-agent-ask",
+    "allow-load-cloud-session",
+    "allow-save-cloud-session"
   ]
 }

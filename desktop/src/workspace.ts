@@ -1,7 +1,11 @@
+import { createEmptyWorkspaceState } from './workspace-empty';
+import { mountRemoteAssets } from './remote-assets';
 import { Blok, defaultTools, type OutputData } from '@bloklabs/core/full';
-import { Callout, Code, Database, DatabaseComment, DatabaseRow, Divider, Image, Page, Quote, Table, TableOfContents, Toggle, type PageConfig } from '@bloklabs/core/tools';
+import { Audio, Bookmark, File, Video, Callout, Code, Database, DatabaseComment, DatabaseRow, Divider, Image, Page, Quote, Table, TableOfContents, Toggle, type PageConfig } from '@bloklabs/core/tools';
 import { createPageFrame, type PageFrame, type ShellPage, type SidebarAction } from '@blok/sidebar';
-import { loadIndex, readFile, writeFile, type DesktopPage, type WorkspaceIndex } from './storage';
+import { type DesktopPage, type WorkspaceIndex } from './storage';
+import { workspaceRepository } from './workspace-repository';
+import { activeWorkspace, workspaceKey, type WorkspaceRef } from './workspace-registry';
 import { createDesktopFooter, readAppearance } from './settings';
 import { createAddCoverButton, createPageCover, isCoverId, trackPageHeaderHover, type CoverId } from './cover';
 import { mountAgentAssistant, type AgentAssistantHandle } from '../../src/shell/agent-assistant';
@@ -28,35 +32,51 @@ const desktopTools = {
   // A page about a UI needs to show it; an explanation long enough to scroll needs
   // its own map. Both ship in the core and were simply never named here.
   image: { class: Image },
+  bookmark: { class: Bookmark },
+  file: { class: File },
+  audio: { class: Audio },
+  video: { class: Video },
   table_of_contents: { class: TableOfContents },
 };
 
 export interface Workspace {
   element: HTMLElement;
   start(): Promise<void>;
+  flush(): Promise<void>;
   onRoute(): void;
   toggleSidebar(): void;
   createPage(parentId?: string | null): void;
 }
 
-export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (id: string, icon: string) => void): Workspace {
+export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (id: string, icon: string) => void, options: { ref?: WorkspaceRef } = {}): Workspace {
+  const ref = Object.freeze({... (options.ref ?? activeWorkspace())});
+  const repository = workspaceRepository(ref);
+  if (ref.kind === 'remote' && '__TAURI_INTERNALS__' in window) mountRemoteAssets(ref.server, repository.assetUrl);
+  const viewer = ref.kind === 'remote' && ref.role === 'viewer';
   // The add-cover button is re-appended whenever the core rebuilds the icon row, and
   // WebKit keeps `:hover` latched on a node moved under the cursor. See trackPageHeaderHover.
   trackPageHeaderHover(document);
   let index: WorkspaceIndex | null = null;
   let editor: Blok | null = null;
+  let remotePending = false;
+  let selection = 0;
   let frame: PageFrame;
   let coverRowObserver: MutationObserver | null = null;
   let assistant: AgentAssistantHandle;
   let pageCanvas: HTMLElement;
   let footer: HTMLElement;
   let pageToolbar: PageToolbar | null = null;
+  let refreshPagePresentation: (() => void) | null = null;
   let titleDateMention: TitleDateMentionBinding | null = null;
   let floatingToc: FloatingToc | null = null;
   let currentId = '';
   let generation = 0;
   let dateTimer: number | null = null;
   let saveOrder = Promise.resolve();
+  let pendingManifests = 0;
+  let manifestFailed = false;
+  let refreshingManifest = false;
+  let metadataAction = false;
   const pageListeners = new Map<string, Set<() => void>>();
   const status = document.createElement('div');
   status.setAttribute('data-desktop-status', '');
@@ -74,10 +94,40 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   const saveManifest = (): void => {
     if (!index) return;
     const snapshot = JSON.stringify(index);
-    saveOrder = saveOrder.then(() => writeFile('index', snapshot)).catch(showError);
+    pendingManifests++;
+    saveOrder = saveOrder.catch(() => undefined).then(async () => {
+      await repository.saveIndex(JSON.parse(snapshot) as WorkspaceIndex);
+      manifestFailed = false;
+    }).catch((error) => { manifestFailed = true; showError(error); throw error; }).finally(() => { pendingManifests--; });
+    void saveOrder.catch(() => undefined);
+  };
+  const refreshRemoteManifest = async (): Promise<void> => {
+    if (ref.kind !== 'remote' || !index || pendingManifests > 0 || manifestFailed || refreshingManifest || metadataAction) return;
+    refreshingManifest = true;
+    const original = index;
+    try {
+      const updated = await repository.refreshIndex(() => pendingManifests === 0 && !manifestFailed && !metadataAction && index === original);
+      if (!updated) return;
+      updated.activeId = updated.pages.some((page) => page.id === currentId) ? currentId : updated.activeId;
+      // Retain the live page object: title/cover callbacks close over it.
+      const live = original.pages.find((page) => page.id === currentId);
+      const remotePage = updated.pages.find((page) => page.id === currentId);
+      if (live && remotePage) {
+        for (const key of Object.keys(live)) if (!(key in remotePage)) delete (live as unknown as Record<string, unknown>)[key];
+        Object.assign(live, remotePage);
+        updated.pages = updated.pages.map((page) => page.id === currentId ? live : page);
+      }
+      index = updated;
+      frame.setPages(index.pages, index.activeId);
+      pageToolbar?.setBreadcrumbs(breadcrumbs(currentId));
+      for (const id of new Set([...original.pages.map((page) => page.id), ...index.pages.map((page) => page.id)])) notifyPage(id);
+      refreshPagePresentation?.();
+      if (!index.pages.some((page) => page.id === currentId)) onRoute();
+    } catch (error) { showError(error); }
+    finally { refreshingManifest = false; }
   };
   const refreshDateTitles = (): void => {
-    if (!index) return;
+    if (!index || ref.kind === 'remote') return;
     let changed = false;
     for (const page of index.pages) {
       if (!page.titleDate) continue;
@@ -137,7 +187,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     return trail.map((item, position) => ({
       id: item.id, title: item.title, icon: item.icon,
       ...(position < trail.length - 1 ? { onOpen: () => navigate(item.id) } : {}),
-      menuHeading: item.parentId ? byId.get(item.parentId)?.title ?? 'Pages' : 'Pages locales',
+      menuHeading: item.parentId ? byId.get(item.parentId)?.title ?? 'Pages' : ref.kind === 'remote' ? ref.name : 'Pages locales',
       menu: choicesFor(item.parentId, item.id),
     }));
   };
@@ -145,14 +195,14 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     status.textContent = `Enregistrement impossible : ${String(error)}`;
     status.setAttribute('data-error', '');
   };
-  const syncPageIcon = (page: ShellPage, icon: ReturnType<Blok['title']['icon']['get']>): void => {
+  const syncPageIcon = (page: ShellPage, icon: ReturnType<Blok['title']['icon']['get']>, persist = true): void => {
     if (!index) return;
     const next = icon?.type === 'emoji' ? icon.value : undefined;
     if (page.icon !== next) {
       page.icon = next;
       frame.setPages(index.pages, index.activeId);
       pageToolbar?.setBreadcrumbs(breadcrumbs(currentId));
-      saveManifest();
+      if (persist) saveManifest();
       notifyPage(page.id);
     }
     onPageIcon(page.id, next ?? '');
@@ -186,25 +236,29 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     },
     open: (id) => { if (index?.pages.some((page) => page.id === id)) navigate(id); },
     create: async ({ pageId, title, parentId, document: initialDocument }) => {
-      if (!index) throw new Error('Espace local indisponible');
+      if (!index || viewer) throw new Error('Espace indisponible ou en lecture seule');
       if (index.pages.some((page) => page.id === pageId)) throw new Error('Cette page existe déjà');
       const page: DesktopPage = { id: pageId, title: title?.trim() || 'Nouvelle page', parentId: parentId ?? currentId };
-      if (initialDocument) await writeFile(pageId, JSON.stringify(initialDocument));
+      if (initialDocument && ref.kind === 'local') await repository.writePage(pageId, JSON.stringify(initialDocument));
       index.pages.push(page);
       frame.setPages(index.pages, index.activeId);
       saveManifest();
       await saveOrder;
+      if (initialDocument && ref.kind === 'remote') await repository.seedPage(pageId, initialDocument);
       notifyPage(pageId);
     },
   };
-  const select = (id: string): void => {
+  const select = async (id: string): Promise<void> => {
     if (!index) return;
     refreshDateTitles();
     const page = index.pages.find((item) => item.id === id);
     if (!page) return;
     const selectedPage = page;
+    const request = ++selection;
+    if (currentId !== id && editor && ref.kind === 'remote') { await editor.isReady; await editor.saver.flush(); }
+    if (selection !== request) return;
     index.activeId = id;
-    saveManifest();
+    if (ref.kind === 'local') saveManifest();
     frame.setPages(index.pages, id);
     onPageIcon(id, page.icon ?? '');
     if (currentId === id) {
@@ -233,10 +287,15 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       editor?.width.set(enabled ? 'full' : 'narrow');
     };
     const toolbar = createPageToolbar(breadcrumbs(id), page.fullWidth === true, (enabled) => {
+      if (viewer) return;
       page.fullWidth = enabled;
       applyFullWidth();
       saveManifest();
     });
+    if (ref.kind === 'remote') {
+      const origin = toolbar.element.querySelector<HTMLElement>('[data-desktop-page-local]');
+      if (origin) { origin.textContent = `${viewer ? 'Lecture seule · ' : ''}${ref.name}`; origin.title = ref.server; }
+    }
     pageToolbar = toolbar;
     applyFullWidth();
     const holder = document.createElement('div');
@@ -244,12 +303,14 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     let coverNode: HTMLElement | null = null;
     let coverButton: HTMLButtonElement | null = null;
     function changeCover(cover: CoverId | undefined): void {
+      if (viewer) return;
       selectedPage.cover = cover;
       if (cover === undefined) selectedPage.coverPosition = undefined;
       renderCover();
       saveManifest();
     }
     const attachCoverAction = (): void => {
+      if (viewer) return;
       if (isCoverId(page.cover)) return;
       const row = holder.querySelector<HTMLElement>('[data-blok-page-icon-row]');
       if (!row) return;
@@ -269,6 +330,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         const position = typeof page.coverPosition === 'number' && Number.isFinite(page.coverPosition)
           ? Math.max(0, Math.min(100, page.coverPosition)) : 50;
         const next = createPageCover(page.cover, position, changeCover, (value) => {
+          if (viewer) return;
           page.coverPosition = value;
           saveManifest();
         });
@@ -281,10 +343,12 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         attachCoverAction();
       }
     };
+    refreshPagePresentation = () => { applyFullWidth(); renderCover(); titleDateMention?.refresh(); };
     pageCanvas.replaceChildren(toolbar.element, article);
     renderCover();
     const instance = new Blok({
       holder,
+      readOnly: viewer,
       tools: { ...desktopTools, page: { class: Page, config: { ...pageConfig } } },
       theme: readAppearance(),
       pageTitle: {
@@ -309,33 +373,45 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
           notifyPage(id);
           document.title = next;
           frame.setPages(index.pages, id);
-          saveManifest();
+          if (ref.kind === 'local' || change.source !== 'remote') saveManifest();
         },
-        onIconChange(icon) {
+        onIconChange(icon, change) {
           if (generation !== turn || !index) return;
-          syncPageIcon(page, icon);
+          syncPageIcon(page, icon, ref.kind === 'local' || change.source !== 'remote');
         },
       },
-      documentId: id,
-      persistence: {
+      documentId: ref.kind === 'local' && ref.id === 'default' ? id : `${workspaceKey(ref)}:${id}`,
+      ...(ref.kind === 'remote' ? {
+        server: `${ref.server}/api/blok`,
+        ticket: ({ doc }: { doc?: string; forceRefresh?: boolean }) => repository.ticket(doc ?? id),
+        user: { id: ref.accountId },
+        collaboration: { doc: id, user: { name: ref.userName ?? ref.accountId }, offline: false },
+      } : { persistence: {
         async load() {
-          const raw = await readFile(id);
+          const raw = await repository.readPage(id);
           return raw ? JSON.parse(raw) as OutputData : null;
         },
         async save(data) {
-          await writeFile(id, JSON.stringify(data));
+          await repository.writePage(id, JSON.stringify(data));
         },
         onError: showError,
-      },
+      } }),
     });
     editor = instance;
+    remotePending = false;
     instance.width.set(page.fullWidth === true ? 'full' : 'narrow');
     void instance.isReady.then(() => {
       if (generation !== turn) return;
+      instance.on('collaboration:status', (event) => {
+        if (generation !== turn) return;
+        remotePending = (event?.save?.pendingOperations ?? 0) > 0 || (event?.save?.pendingBytes ?? 0) > 0;
+        if (ref.kind === 'remote') { status.textContent = remotePending ? 'Synchronisation…' : event?.status === 'connected' ? 'Synchronisé' : 'Connexion au serveur…'; }
+      });
+
       const redactor = holder.querySelector<HTMLElement>('[data-blok-redactor]');
       if (redactor) floatingToc = createFloatingToc(pageCanvas, redactor);
       attachCoverAction();
-      if (!instance.title.get() || page.titleDate) instance.title.set(page.title, { record: false });
+      if (ref.kind === 'local' && (!instance.title.get() || page.titleDate)) instance.title.set(page.title, { record: false });
       const title = holder.querySelector<HTMLElement>('[data-blok-page-title]');
       if (title) {
         const updateDateTitle = (): void => {
@@ -370,14 +446,23 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
           i18n: instance.i18n,
         });
       }
-      syncPageIcon(page, instance.title.icon.get());
+      syncPageIcon(page, instance.title.icon.get(), ref.kind === 'local');
       toolbar.setBreadcrumbs(breadcrumbs(id));
       document.title = page.title;
-      status.textContent = '';
+      if (ref.kind === 'local') status.textContent = '';
     }).catch(showError);
   };
 
-  const action = (command: SidebarAction): void => {
+  const action = async (command: SidebarAction): Promise<void> => {
+    if (viewer && command.type !== 'open-tab') return;
+    const wasInert = frame.element.inert;
+    if (ref.kind === 'remote') { frame.element.inert = true; metadataAction = true; }
+    try {
+    if (ref.kind === 'remote' && editor && command.type !== 'open-tab') {
+      await editor.isReady;
+      await editor.saver.flush();
+      await saveOrder;
+    }
     if (!index) return;
     const page = index.pages.find((item) => item.id === command.id);
     if (!page) return;
@@ -390,13 +475,23 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       if (currentId === page.id) editor?.title.set(command.title);
       else pageToolbar?.setBreadcrumbs(breadcrumbs(currentId));
     } else if (command.type === 'duplicate') {
+      if (ref.kind === 'remote') {
+        const copy = {id: crypto.randomUUID(), title: `${page.title} (copie)`, parentId: page.parentId};
+        if (editor) { await editor.isReady; await editor.saver.flush(); }
+        await saveOrder;
+        await repository.duplicatePage(page.id, copy);
+        index = await repository.loadIndex();
+        frame.setPages(index.pages, index.activeId);
+        navigate(copy.id);
+        return;
+      }
       const copy: DesktopPage = { ...page, id: crypto.randomUUID(), title: `${page.title} (copie)`, titleDate: undefined, titleDateDisplay: undefined, titleDateSuffix: undefined };
       index.pages.push(copy);
       saveManifest();
-      void readFile(page.id).then(async (raw) => {
+      void repository.readPage(page.id).then(async (raw) => {
         if (raw) {
           const data = JSON.parse(raw) as OutputData;
-          await writeFile(copy.id, JSON.stringify({ ...data, id: copy.id, title: copy.title }));
+          await repository.writePage(copy.id, JSON.stringify({ ...data, id: copy.id, title: copy.title }));
         }
         navigate(copy.id);
       }).catch(showError);
@@ -423,13 +518,14 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     }
     frame.setPages(index.pages, index.activeId);
     saveManifest();
+    } finally { frame.element.inert = wasInert; metadataAction = false; }
   };
 
   frame = createPageFrame({
     pages: [], activeId: '',
     onOpen: (id) => navigate(id),
     onCreate: (parentId) => createPage(parentId),
-    onAction: action,
+    onAction: (command) => { void action(command).catch(showError); },
   });
   frame.element.append(status);
   assistant = mountAgentAssistant({
@@ -454,37 +550,86 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   const observer = new ResizeObserver(() => onLayout(sidebar.getBoundingClientRect().width));
   observer.observe(sidebar);
   frame.element.setAttribute('data-desktop-workspace', '');
+  frame.element.toggleAttribute('data-desktop-read-only', viewer);
+
+  async function showEmptyWorkspace(): Promise<void> {
+    if (editor) {
+      await editor.isReady;
+      if (ref.kind === 'remote') await editor.saver.flush();
+    }
+    if (index?.pages.length) { onRoute(); return; }
+    generation++;
+    selection++;
+    coverRowObserver?.disconnect(); coverRowObserver = null;
+    pageToolbar?.destroy(); pageToolbar = null;
+    floatingToc?.destroy(); floatingToc = null;
+    titleDateMention?.destroy(); titleDateMention = null;
+    refreshPagePresentation = null;
+    editor?.destroy(); editor = null;
+    currentId = '';
+    status.textContent = '';
+    status.removeAttribute('data-error');
+    pageCanvas.replaceChildren(createEmptyWorkspaceState(viewer, () => createPage()));
+    const url = new URL(location.href);
+    if (url.searchParams.has('page')) { url.searchParams.delete('page'); history.replaceState(null, '', url); }
+    document.title = ref.name;
+  }
 
   function onRoute(): void {
     if (!index) return;
+    if (!index.pages.length) { void showEmptyWorkspace().catch(showError); return; }
     const id = pageFromUrl();
     const target = index.pages.find((page) => page.id === id)?.id ?? index.activeId;
     if (id !== target) {
       navigate(target, true);
       return;
     }
-    select(target);
+    void select(target).catch((error) => {
+      if (currentId && pageFromUrl() !== currentId) {
+        const url = new URL(location.href); url.searchParams.set('page', currentId);
+        history.replaceState(null, '', url);
+      }
+      showError(error);
+    });
   }
 
   function createPage(parentId: string | null = null): void {
-    if (!index) return;
+    if (!index || viewer || metadataAction) return;
     const page: ShellPage = { id: crypto.randomUUID(), title: 'Nouvelle page', parentId };
     index.pages.push(page);
     saveManifest();
-    navigate(page.id);
+    void saveOrder.then(() => navigate(page.id)).catch(showError);
   }
 
   return {
     element: frame.element,
     async start() {
       try {
-        index = await loadIndex();
+        index = await repository.loadIndex();
         refreshDateTitles();
         frame.setPages(index.pages, index.activeId);
         onRoute();
         scheduleDateRefresh();
         window.addEventListener('focus', refreshDateTitles);
+        if (ref.kind === 'remote') {
+          window.addEventListener('focus', () => { void refreshRemoteManifest(); });
+          window.setInterval(() => { void refreshRemoteManifest(); }, 15_000);
+          window.addEventListener('beforeunload', (event) => { if (pendingManifests > 0 || manifestFailed) event.preventDefault(); });
+        }
       } catch (error) { showError(error); }
+    },
+    async flush() {
+      const wasInert = frame.element.inert;
+      frame.element.inert = true;
+      try {
+        if (editor) await editor.isReady;
+        if (editor && ref.kind === 'local') {
+          const data = await editor.save();
+          await repository.writePage(currentId, JSON.stringify(data));
+        }
+        if (editor && ref.kind === 'remote') await editor.saver.flush();
+        await saveOrder;
+      } finally { frame.element.inert = wasInert; }
     },
     onRoute,
     toggleSidebar() {

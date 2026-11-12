@@ -452,3 +452,24 @@ describe('Tauri window', () => {
     expect(rust).not.toContain('close_window');
   });
 });
+
+describe('explicit page links at startup',()=>{
+  const savedTab=(id: string): StoredTab=>({id,href:`${location.origin}/?page=${id}`,title:`Saved ${id}`,icon:'',scrollY:0,entries:[`${location.origin}/?page=${id}`],scrollPositions:[0],index:0});
+  it('selects a matching saved tab instead of overriding the requested page',()=>{
+    history.replaceState(null,'','/?page=second');
+    sessionStorage.setItem(KEY,JSON.stringify({tabs:[savedTab('first'),savedTab('second')],activeId:'first'}));
+    const root=mount();
+    expect(new URL(location.href).searchParams.get('page')).toBe('second');
+    expect(readSession().activeId).toBe('second');
+    expect(selected(root).textContent).toContain('Saved second');
+  });
+  it('opens a new explicit page while retaining the other saved tabs',()=>{
+    history.replaceState(null,'','/?page=requested');
+    sessionStorage.setItem(KEY,JSON.stringify({tabs:[savedTab('first')],activeId:'first'}));
+    mount();
+    const session=readSession();
+    expect(new URL(location.href).searchParams.get('page')).toBe('requested');
+    expect(session.tabs).toHaveLength(2);
+    expect(new URL(session.tabs.find(tab=>tab.id===session.activeId)!.href).searchParams.get('page')).toBe('requested');
+  });
+});

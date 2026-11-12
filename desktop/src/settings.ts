@@ -1,3 +1,4 @@
+import { activeWorkspace, listWorkspaces, createLocalWorkspace, workspaceKey, rememberWorkspace } from './workspace-registry';
 import { dataDirectory } from './storage';
 import corePackage from '../../package.json';
 import appPackage from '../package.json';
@@ -94,6 +95,9 @@ function actionButton(attribute: string, label: string, kind: MenuIcon): HTMLBut
 }
 
 export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): HTMLElement {
+  const currentWorkspace = activeWorkspace();
+  const native = '__TAURI_INTERNALS__' in window;
+  const admin = currentWorkspace.kind === 'remote' && currentWorkspace.role === 'admin';
   const footer = el('div', 'data-desktop-footer');
   const switcher = el('button', 'data-desktop-switcher');
   switcher.type = 'button';
@@ -106,18 +110,80 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   const menu = el('div', 'data-desktop-footer-menu');
   menu.setAttribute('role', 'menu');
   menu.hidden = true;
-  const account = el('button', 'data-desktop-menu-account');
-  account.type = 'button';
-  account.setAttribute('role', 'menuitem');
-  account.append(el('span', 'data-desktop-menu-avatar', 'B'));
+  const account = currentWorkspace.kind === 'remote' ? el('div', 'data-desktop-menu-account') : el('button', 'data-desktop-menu-account');
+  if (account instanceof HTMLButtonElement) { account.type = 'button'; account.setAttribute('role', 'menuitem'); }
+  account.append(el('span', 'data-desktop-menu-avatar', currentWorkspace.name.charAt(0).toLocaleUpperCase()));
   const accountText = el('span', 'data-desktop-menu-account-text');
   accountText.append(el('strong', 'data-desktop-menu-title', 'Espace local'), el('small', 'data-desktop-menu-subtitle', 'Données sur cet appareil'));
   account.append(accountText);
-  const preferences = actionButton('data-desktop-menu-item', 'Préférences', 'settings');
+  const preferences = actionButton('data-desktop-menu-item', 'Paramètres', 'settings');
   preferences.setAttribute('role', 'menuitem');
-  const storage = actionButton('data-desktop-menu-item', 'Copier le chemin des données', 'storage');
-  storage.setAttribute('role', 'menuitem');
-  menu.append(account, preferences, storage);
+  const emitCloud = (section: 'settings' | 'invites' | 'account'): void => {
+    closeMenu();
+    footer.dispatchEvent(new CustomEvent('blok:desktop-connect-cloud', {bubbles: true, detail: {section}}));
+  };
+  const connect = actionButton('data-desktop-menu-connect', currentWorkspace.kind === 'remote' ? 'Gérer mon compte' : 'Ajouter un compte', 'profile');
+  connect.setAttribute('data-desktop-menu-item', '');
+  connect.setAttribute('role', 'menuitem');
+  connect.addEventListener('click', () => emitCloud('account'));
+  menu.append(account, preferences);
+  if (admin) {
+    const invite = actionButton('data-desktop-menu-invite', 'Inviter des membres', 'profile');
+    invite.setAttribute('data-desktop-menu-item', '');
+    invite.setAttribute('role', 'menuitem');
+    invite.addEventListener('click', () => emitCloud('invites'));
+    menu.append(invite);
+  }
+  menu.append(connect);
+  const all = listWorkspaces();
+  const remote = all.filter((ref) => ref.kind === 'remote');
+  const groups = new Map<string, typeof remote>();
+  for (const ref of remote) {
+    const email = ref.userName ?? 'Compte en ligne';
+    const members = groups.get(email) ?? [];
+    members.push(ref); groups.set(email, members);
+  }
+  const addChoice = (ref: (typeof all)[number], group: HTMLElement): void => {
+    const choice = actionButton('data-desktop-menu-workspace', ref.name, 'storage');
+    const label = el('span', 'data-desktop-menu-workspace-name', ref.name);
+    choice.replaceChildren(el('span', 'data-desktop-workspace-avatar', ref.name.charAt(0).toLocaleUpperCase()), label);
+    choice.setAttribute('role', 'menuitemradio');
+    choice.setAttribute('data-desktop-menu-item', '');
+    const current = workspaceKey(ref) === workspaceKey(currentWorkspace);
+    choice.setAttribute('aria-checked', String(current));
+    if (current) {
+      choice.setAttribute('aria-current', 'true');
+      const check = el('span', 'data-desktop-menu-check', '✓');
+      check.setAttribute('aria-hidden', 'true'); choice.append(check);
+    }
+    choice.addEventListener('click', () => {
+      closeMenu();
+      if (!current) footer.dispatchEvent(new CustomEvent('blok:desktop-select-workspace', { bubbles: true, detail: ref }));
+    });
+    group.append(choice);
+  };
+  for (const [email, refs] of groups) {
+    const group = el('div', 'data-desktop-menu-group');
+    group.setAttribute('role', 'group'); group.setAttribute('aria-label', email);
+    group.append(el('div', 'data-desktop-menu-group-label', email));
+    for (const ref of refs) addChoice(ref, group);
+    menu.append(group);
+  }
+  if (native) {
+    const group = el('div', 'data-desktop-menu-group');
+    group.setAttribute('role', 'group'); group.setAttribute('aria-label', 'Sur cet appareil');
+    group.append(el('div', 'data-desktop-menu-group-label', 'Sur cet appareil'));
+    for (const ref of all) if (ref.kind === 'local') addChoice(ref, group);
+    const addLocal = actionButton('data-desktop-menu-new-workspace', 'Créer un espace local', 'storage');
+    addLocal.setAttribute('data-desktop-menu-item', ''); addLocal.setAttribute('role', 'menuitem');
+    addLocal.addEventListener('click', () => {
+      const name = window.prompt('Nom du nouvel espace local');
+      if (name === null) return;
+      closeMenu();
+      footer.dispatchEvent(new CustomEvent('blok:desktop-select-workspace', {bubbles: true, detail: createLocalWorkspace(name)}));
+    });
+    group.append(addLocal); menu.append(group);
+  }
   footer.append(menu);
 
   const overlay = el('div', 'data-desktop-settings-overlay');
@@ -129,12 +195,12 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   dialog.tabIndex = -1;
   const nav = el('aside', 'data-desktop-settings-nav');
   nav.append(el('div', 'data-desktop-settings-nav-heading', 'Compte'));
-  const accountTab = actionButton('data-desktop-settings-nav-item', 'Profil local', 'profile');
+  const accountTab = actionButton('data-desktop-settings-nav-item', currentWorkspace.kind === 'remote' ? 'Compte' : 'Profil local', 'profile');
   nav.append(accountTab, el('div', 'data-desktop-settings-nav-heading', 'Application'));
   const prefsTab = actionButton('data-desktop-settings-nav-item', 'Préférences', 'settings');
   const aiTab = actionButton('data-desktop-settings-nav-item', 'Assistant IA', 'ai');
   const dataTab = actionButton('data-desktop-settings-nav-item', 'Données locales', 'storage');
-  nav.append(prefsTab, aiTab, dataTab);
+  nav.append(prefsTab, aiTab);
   const main = el('main', 'data-desktop-settings-main');
   const close = el('button', 'data-desktop-settings-close', '×');
   close.type = 'button';
@@ -145,7 +211,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   document.body.append(overlay);
 
   let directory = 'Chargement…';
-  void dataDirectory().then((value) => {
+  if (native && currentWorkspace.kind === 'local') void dataDirectory().then((value) => {
     directory = value;
     const path = overlay.querySelector('[data-desktop-settings-path]');
     if (path) path.textContent = value;
@@ -165,7 +231,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
     if (event.key === 'Escape') { closeMenu(); switcher.focus(); }
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
-      const items = [preferences, storage];
+      const items = [...menu.querySelectorAll<HTMLButtonElement>('[role=menuitem], [role=menuitemradio]')];
       const current = items.indexOf(document.activeElement as HTMLButtonElement);
       const delta = event.key === 'ArrowDown' ? 1 : -1;
       items[(current + delta + items.length) % items.length]?.focus();
@@ -210,8 +276,8 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
     main.querySelector('[data-desktop-settings-content]')?.remove();
     const content = el('div', 'data-desktop-settings-content');
     if (panel === 'account') {
-      content.append(el('h1', 'data-desktop-settings-title', 'Profil local'));
-      content.append(el('p', 'data-desktop-settings-intro', 'Cet espace appartient à cet appareil. Aucun compte en ligne n’est connecté.'));
+      content.append(el('h1', 'data-desktop-settings-title', currentWorkspace.kind === 'remote' ? 'Compte en ligne' : 'Profil local'));
+      content.append(el('p', 'data-desktop-settings-intro', currentWorkspace.kind === 'remote' ? currentWorkspace.userName ?? 'Compte en ligne' : 'Cet espace appartient à cet appareil.'));
       content.append(el('h2', 'data-desktop-settings-section', 'Identité affichée'));
       const row = el('div', 'data-desktop-settings-row');
       const labels = el('div', 'data-desktop-settings-row-labels');
@@ -219,16 +285,18 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
       const name = el('input', 'data-desktop-settings-name');
       name.type = 'text';
       name.maxLength = 48;
-      name.value = localStorage.getItem('blok:desktop:profile-name') || 'Espace local';
+      name.value = currentWorkspace.kind === 'local' && currentWorkspace.id === 'default' ? localStorage.getItem('blok:desktop:profile-name') || 'Espace local' : currentWorkspace.name;
+      name.disabled = currentWorkspace.kind === 'remote';
       name.setAttribute('aria-label', 'Nom du profil local');
       name.addEventListener('change', () => {
         const next = name.value.trim() || 'Espace local';
-        localStorage.setItem('blok:desktop:profile-name', next);
+        if (currentWorkspace.kind === 'local' && currentWorkspace.id === 'default') localStorage.setItem('blok:desktop:profile-name', next);
+        else rememberWorkspace({...currentWorkspace, name: next});
         switcher.querySelector('[data-desktop-switcher-name]')!.textContent = next;
         account.querySelector('[data-desktop-menu-title]')!.textContent = next;
       });
       row.append(labels, name);
-      content.append(row, el('p', 'data-desktop-settings-explanation', 'Pour partager et modifier des pages à plusieurs via Internet, il faudra connecter l’app à un service avec comptes et droits d’accès. Cette connexion n’est pas encore disponible.'));
+      content.append(row, el('p', 'data-desktop-settings-explanation', 'Pour partager et modifier des pages à plusieurs via Internet, il faudra connecter l’app à un service avec comptes et droits d’accès. Utilisez « Connecter un espace en ligne » dans le menu des espaces.'));
     } else if (panel === 'preferences') {
       content.append(el('h1', 'data-desktop-settings-title', 'Préférences'));
       content.append(el('p', 'data-desktop-settings-intro', 'Personnalisez l’apparence de Blok sur cet appareil.'));
@@ -254,6 +322,14 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
       });
       row.append(labels, select);
       content.append(row);
+      if (native && currentWorkspace.kind === 'local') {
+        const advanced = document.createElement('details');
+        const summary = document.createElement('summary'); summary.textContent = 'Avancé';
+        advanced.append(summary, el('code', 'data-desktop-settings-path', directory));
+        const copy = el('button', 'data-desktop-settings-copy', 'Copier le chemin des données'); copy.type = 'button';
+        copy.addEventListener('click', () => { void navigator.clipboard.writeText(directory).then(() => { copy.textContent = 'Chemin copié'; }); });
+        advanced.append(copy); content.append(advanced);
+      }
     } else if (panel === 'ai') {
       content.append(el('h1', 'data-desktop-settings-title', 'Assistant IA'));
       content.append(el('p', 'data-desktop-settings-intro', 'Utilise les agents installés et connectés sur ce Mac. Les identifiants restent dans leurs outils.'));
@@ -284,8 +360,8 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
       }
       content.append(el('p', 'data-desktop-settings-explanation', 'La demande et, si tu le choisis, le texte de la page sont envoyés à l’agent sélectionné. La connexion de Codex ou Claude Code se fait dans leur CLI.'));
     } else {
-      content.append(el('h1', 'data-desktop-settings-title', 'Données locales'));
-      content.append(el('p', 'data-desktop-settings-intro', 'Les pages sont enregistrées sur cet appareil.'));
+      content.append(el('h1', 'data-desktop-settings-title', currentWorkspace.kind === 'remote' ? 'Données en ligne' : 'Données locales'));
+      content.append(el('p', 'data-desktop-settings-intro', currentWorkspace.kind === 'remote' ? 'Les pages sont enregistrées sur le serveur. Aucun contenu local n’est envoyé automatiquement.' : 'Les pages sont enregistrées sur cet appareil.'));
       const path = el('code', 'data-desktop-settings-path', directory);
       const copy = el('button', 'data-desktop-settings-copy', 'Copier le chemin');
       copy.type = 'button';
@@ -296,7 +372,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
     }
     main.append(content);
   };
-  accountTab.addEventListener('click', () => showPanel('account'));
+  accountTab.addEventListener('click', () => currentWorkspace.kind === 'remote' ? emitCloud('account') : showPanel('account'));
   prefsTab.addEventListener('click', () => showPanel('preferences'));
   aiTab.addEventListener('click', () => showPanel('ai'));
   dataTab.addEventListener('click', () => showPanel('data'));
@@ -309,20 +385,17 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   };
   footer.addEventListener('blok:desktop-open-ai-settings', () => openSettings('ai'));
   preferences.addEventListener('click', () => {
-    openSettings('preferences');
+    if (admin) emitCloud('settings'); else openSettings('preferences');
   });
-  account.addEventListener('click', () => openSettings('account'));
-  storage.addEventListener('click', () => {
-    closeMenu();
-    void navigator.clipboard.writeText(directory).then(() => {
-      storage.textContent = 'Chemin copié';
-      window.setTimeout(() => { storage.replaceChildren(menuIcon('storage'), document.createTextNode('Copier le chemin des données')); }, 1800);
-    });
-  });
-  const profileName = localStorage.getItem('blok:desktop:profile-name');
+  if (account instanceof HTMLButtonElement) account.addEventListener('click', () => openSettings('account'));
+  const profileName = currentWorkspace.kind === 'local' && currentWorkspace.id === 'default' ? localStorage.getItem('blok:desktop:profile-name') : currentWorkspace.name;
   if (profileName) {
     switcher.querySelector('[data-desktop-switcher-name]')!.textContent = profileName;
     account.querySelector('[data-desktop-menu-title]')!.textContent = profileName;
+  }
+  if (currentWorkspace.kind === 'remote') {
+    account.querySelector('[data-desktop-menu-subtitle]')!.textContent = currentWorkspace.userName ?? 'Compte en ligne';
+    switcher.setAttribute('aria-label', 'Espaces et réglages');
   }
   return footer;
 }

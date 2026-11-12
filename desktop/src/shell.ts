@@ -1,9 +1,10 @@
+import { activeWorkspace, workspaceKey } from './workspace-registry';
 import { createWorkspace, type Workspace } from './workspace';
 import { applyAppearance, readAppearance, watchSystemAppearance } from './settings';
 
 import { buildTabMenuItems, pageLinkFor, type TabMenuAction } from './tab-menu';
 
-const KEY = 'blok:window-tabs:v1';
+const tabKey = (): string => workspaceKey(activeWorkspace()) === 'local:default' ? 'blok:window-tabs:v1' : `blok:window-tabs:v1:${workspaceKey(activeWorkspace())}`;
 const MAX_TABS = 20;
 const MAX_HISTORY = 100;
 
@@ -51,6 +52,8 @@ const box: {
   workspace: null,
 };
 
+export async function flushDesktop(): Promise<void> { await box.workspace?.flush(); }
+
 export function setCanLeave(guard: () => boolean): void {
   box.canLeave = guard;
 }
@@ -77,6 +80,10 @@ export function mountDesktop(root: HTMLElement): void {
   slot.onKey = onKey;
   persist();
   paint();
+  root.addEventListener('blok:desktop-select-workspace', (event) => {
+    const ref = (event as CustomEvent).detail;
+    void box.workspace?.flush().then(async () => { const { selectWorkspace } = await import('./workspace-registry'); selectWorkspace(ref); }).catch((error: unknown) => window.alert(String(error)));
+  });
   void box.workspace.start();
 }
 
@@ -149,7 +156,26 @@ function installMenu(): void {
 }
 
 function boot(): Session {
-  return load(sessionStorage.getItem(KEY)) ?? freshSession();
+  const restored = load(sessionStorage.getItem(tabKey()));
+  const requested = new URL(location.href);
+  const page = requested.searchParams.get('page');
+  if (!restored || !page) return restored ?? freshSession();
+  // An explicit page link takes precedence over the previously selected tab.
+  const existing = restored.tabs.find((tab) => {
+    const url = new URL(tab.href);
+    return url.pathname === requested.pathname && url.searchParams.get('page') === page;
+  });
+  if (existing) {
+    existing.href = requested.href;
+    existing.entries[existing.index] = requested.href;
+    restored.activeId = existing.id;
+  } else {
+    const opened = freshTab(requested.href, 'Nouvelle page');
+    restored.tabs.push(opened);
+    restored.tabs = restored.tabs.slice(-MAX_TABS);
+    restored.activeId = opened.id;
+  }
+  return restored;
 }
 
 function freshSession(): Session {
@@ -584,7 +610,7 @@ function onClick(event: Event): void {
 }
 
 function persist(): void {
-  sessionStorage.setItem(KEY, JSON.stringify(box.session));
+  sessionStorage.setItem(tabKey(), JSON.stringify(box.session));
 }
 
 function paint(): void {

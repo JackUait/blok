@@ -470,3 +470,25 @@ body[data-blok-theme="light"] [data-desktop-floating-toc] {
 [data-desktop-tab-menu] button[data-desktop-menu-group]::before {
   content: ''; display: block; margin: 0 -10px 5px; border-top: 1px solid var(--desktop-border);
 }
+
+[data-desktop-workspace][data-desktop-read-only] [data-blok-sidebar-add],
+[data-desktop-workspace][data-desktop-read-only] [data-blok-sidebar-more],
+[data-desktop-workspace][data-desktop-read-only] [data-blok-sidebar-icon][aria-label="Nouvelle page"],
+[data-desktop-workspace][data-desktop-read-only] [data-desktop-page-more],
+[data-desktop-workspace][data-desktop-read-only] [data-desktop-cover-actions] { display: none; }
+
+[data-desktop-footer-menu] { max-height: min(560px, calc(100vh - 88px)); overflow-y: auto; padding: 6px; border-radius: 10px; }
+[data-desktop-menu-account] { border: 0; border-radius: 6px; margin: 0 0 4px; padding: 10px 8px; }
+[data-desktop-menu-account-text] { min-width: 0; }
+[data-desktop-menu-account-text] strong, [data-desktop-menu-account-text] small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-desktop-menu-group] { border-top: 1px solid var(--desktop-border); margin-top: 6px; padding-top: 5px; }
+[data-desktop-menu-group-label] { padding: 6px 10px; color: var(--desktop-muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-desktop-menu-workspace] { height: 36px; gap: 8px; }
+[data-desktop-menu-workspace-name] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-desktop-workspace-avatar] { flex: none; display: grid; place-items: center; width: 21px; height: 21px; border: 1px solid var(--desktop-border); border-radius: 4px; color: var(--desktop-muted); font-size: 12px; font-weight: 600; }
+[data-desktop-menu-check] { margin-left: auto; color: var(--desktop-muted); font-size: 15px; }
+[data-desktop-menu-item]:focus-visible { outline: 2px solid var(--desktop-muted); outline-offset: -2px; }
+[data-desktop-settings-content] details { margin-top: 30px; color: var(--desktop-muted); font-size: 13px; }
+[data-desktop-settings-content] details summary { cursor: pointer; margin-bottom: 12px; }
+
+div[data-desktop-menu-account], div[data-desktop-menu-account]:hover { cursor: default; background: transparent; }

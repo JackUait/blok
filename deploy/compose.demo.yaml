@@ -1,0 +1,95 @@
+name: blok-local
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: blok
+      POSTGRES_USER: blok
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run demo.sh first}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U blok -d blok']
+      interval: 3s
+      timeout: 5s
+      retries: 30
+  app:
+    image: blok-cloud-app:local
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: service
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 90s
+    environment:
+      DATABASE_URL: postgres://blok:${POSTGRES_PASSWORD}@postgres:5432/blok?sslmode=disable
+      PUBLIC_URL: http://localhost:8088
+      INTERNAL_URL: http://127.0.0.1:8080
+      LISTEN_ADDR: ':8080'
+      DATA_DIRECTORY: /data
+      APP_ENV: development
+      DEV_MAIL_DIRECTORY: /data/mail
+      BOOTSTRAP_ADMIN_EMAIL: admin@example.test
+      TICKET_SECRET: ${TICKET_SECRET:?Run demo.sh first}
+      INTERNAL_SECRET: ${INTERNAL_SECRET:?Run demo.sh first}
+      ALLOWED_ORIGINS: tauri://localhost,http://tauri.localhost,https://tauri.localhost
+      TRUSTED_PROXY_CIDRS: 172.30.88.3/32
+    volumes:
+      - state:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1:8080/healthz']
+      interval: 3s
+      timeout: 5s
+      retries: 30
+  web:
+    image: blok-cloud-web:local
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: web
+    restart: unless-stopped
+    environment:
+      DOMAIN: ':80'
+    networks:
+      default:
+        ipv4_address: 172.30.88.3
+    ports:
+      - '127.0.0.1:8088:80'
+    depends_on:
+      app:
+        condition: service_healthy
+  mailbox:
+    image: python:3.13-alpine
+    restart: unless-stopped
+    command: [python, /scripts/local-mailbox.py]
+    environment:
+      MAIL_DIRECTORY: /data/mail
+    volumes:
+      - ./local-mailbox.py:/scripts/local-mailbox.py:ro
+      - state:/data:ro
+    ports:
+      - '127.0.0.1:8089:8025'
+  seed:
+    image: python:3.13-alpine
+    profiles: [tools]
+    command: [python, /scripts/seed-demo.py]
+    environment:
+      API_URL: http://web
+      MAIL_DIRECTORY: /data/mail
+    volumes:
+      - ./seed-demo.py:/scripts/seed-demo.py:ro
+      - state:/data:ro
+volumes:
+  postgres:
+  state:
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.88.0/24
+          ip_range: 172.30.88.128/25

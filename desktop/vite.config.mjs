@@ -18,6 +18,11 @@ export default defineConfig({
   clearScreen: false,
   server: {
     port: 1420,
+    proxy: {
+      '/api': { target: process.env.BLOK_API_URL || 'http://127.0.0.1:8080', changeOrigin: false, ws: true },
+      '/files': { target: process.env.BLOK_API_URL || 'http://127.0.0.1:8080', changeOrigin: false },
+      '/healthz': { target: process.env.BLOK_API_URL || 'http://127.0.0.1:8080', changeOrigin: false },
+    },
     strictPort: true,
     host: host || false,
     hmr: host

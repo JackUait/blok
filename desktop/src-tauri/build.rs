@@ -2,7 +2,7 @@ fn main() {
     tauri_build::try_build(
         tauri_build::Attributes::new()
             .app_manifest(tauri_build::AppManifest::new().commands(&[
-                "close_editor_window", "load_workspace_file", "save_workspace_file", "workspace_data_directory",
+                "close_editor_window", "load_cloud_session", "save_cloud_session", "load_workspace_file", "save_workspace_file", "workspace_data_directory",
                 "agent_provider_status", "agent_ask",
             ])),
     )

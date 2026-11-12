@@ -1,3 +1,4 @@
+import { activeWorkspace, type WorkspaceRef } from './workspace-registry';
 import type { ShellPage } from '@blok/sidebar';
 import type { CoverId } from './cover';
 import type { DateDisplay } from '@blok/date-editor';
@@ -39,41 +40,48 @@ async function fingerprint(text: string): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-export async function readFile(name: string): Promise<string | null> {
+export async function readFile(name: string, workspace: WorkspaceRef = activeWorkspace()): Promise<string | null> {
+  if (workspace.kind !== 'local') throw new Error('Remote documents require collaboration; local storage is forbidden');
+  const scope = workspace.id === 'default' ? {} : { workspace: workspace.id };
+  const key = `${workspace.id}:${name}`;
   const bridge = native();
   if (bridge) {
-    const data = await bridge.invoke('load_workspace_file', { name }) as string | null;
-    seen.set(name, await fingerprint(data ?? ''));
+    const data = await bridge.invoke('load_workspace_file', { name, ...scope }) as string | null;
+    seen.set(key, await fingerprint(data ?? ''));
     return data;
   }
-  return localStorage.getItem(`blok:workspace:${name}`);
+  return localStorage.getItem(workspace.id === 'default' ? `blok:workspace:${name}` : `blok:workspace:${workspace.id}:${name}`);
 }
 
-export async function writeFile(name: string, data: string): Promise<void> {
+export async function writeFile(name: string, data: string, workspace: WorkspaceRef = activeWorkspace()): Promise<void> {
+  if (workspace.kind !== 'local') throw new Error('Remote documents require collaboration; local storage is forbidden');
+  const scope = workspace.id === 'default' ? {} : { workspace: workspace.id };
+  const key = `${workspace.id}:${name}`;
   const bridge = native();
   if (bridge) {
     // A file this window never read carries no fingerprint, so creating one still works.
-    const expected = seen.get(name);
+    const expected = seen.get(key);
     try {
-      await bridge.invoke('save_workspace_file', expected === undefined ? { name, data } : { name, data, expected });
+      await bridge.invoke('save_workspace_file', expected === undefined ? { name, data, ...scope } : { name, data, expected, ...scope });
     } catch (error) {
       if (String((error as Error)?.message ?? error).includes('stale')) throw new StaleFileError(name);
       throw error;
     }
-    seen.set(name, await fingerprint(data));
+    seen.set(key, await fingerprint(data));
     return;
   }
-  localStorage.setItem(`blok:workspace:${name}`, data);
+  localStorage.setItem(workspace.id === 'default' ? `blok:workspace:${name}` : `blok:workspace:${workspace.id}:${name}`, data);
 }
 
-export async function dataDirectory(): Promise<string> {
+export async function dataDirectory(workspace: WorkspaceRef = activeWorkspace()): Promise<string> {
+  if (workspace.kind === 'remote') return `${workspace.server} · ${workspace.name}`;
   const bridge = native();
-  if (bridge) return await bridge.invoke('workspace_data_directory') as string;
+  if (bridge) return await bridge.invoke('workspace_data_directory', workspace.id === 'default' ? undefined : { workspace: workspace.id }) as string;
   return 'Navigateur local (localStorage)';
 }
 
-export async function loadIndex(): Promise<WorkspaceIndex> {
-  const raw = await readFile('index');
+export async function loadIndex(workspace: WorkspaceRef = activeWorkspace()): Promise<WorkspaceIndex> {
+  const raw = await readFile('index', workspace);
   if (raw) {
     try {
       const value: unknown = JSON.parse(raw);
@@ -94,10 +102,10 @@ export async function loadIndex(): Promise<WorkspaceIndex> {
   }
   const id = crypto.randomUUID();
   const index = { pages: [{ id, title: 'Nouvelle page', parentId: null }], activeId: id, trash: [] };
-  await saveIndex(index);
+  await saveIndex(index, workspace);
   return index;
 }
 
-export async function saveIndex(index: WorkspaceIndex): Promise<void> {
-  await writeFile('index', JSON.stringify(index));
+export async function saveIndex(index: WorkspaceIndex, workspace: WorkspaceRef = activeWorkspace()): Promise<void> {
+  await writeFile('index', JSON.stringify(index), workspace);
 }

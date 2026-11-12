@@ -17,18 +17,18 @@ struct AgentRun {
 #[derive(Default)]
 struct AgentRuns(Arc<Mutex<HashMap<String, Arc<AgentRun>>>>);
 
-fn workspace_file(app: &tauri::AppHandle, name: &str) -> Result<PathBuf, String> {
+fn workspace_file(app: &tauri::AppHandle, name: &str, workspace: Option<&str>) -> Result<PathBuf, String> {
     if !name.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '-') || name.is_empty() {
         return Err("Invalid document id".into());
     }
-    let dir = app.path().app_data_dir().map_err(|error| error.to_string())?.join("workspace");
+    let dir = workspace_directory(app, workspace)?;
     std::fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
     Ok(dir.join(format!("{name}.json")))
 }
 
 #[tauri::command]
-fn load_workspace_file(app: tauri::AppHandle, name: String) -> Result<Option<String>, String> {
-    let path = workspace_file(&app, &name)?;
+fn load_workspace_file(app: tauri::AppHandle, name: String, workspace: Option<String>) -> Result<Option<String>, String> {
+    let path = workspace_file(&app, &name, workspace.as_deref())?;
     match std::fs::read_to_string(path) {
         Ok(data) => Ok(Some(data)),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
@@ -36,14 +36,18 @@ fn load_workspace_file(app: tauri::AppHandle, name: String) -> Result<Option<Str
     }
 }
 
+static WORKSPACE_WRITE_LOCK: Mutex<()> = Mutex::new(());
+
 #[tauri::command]
 fn save_workspace_file(
     app: tauri::AppHandle,
     name: String,
     data: String,
     expected: Option<String>,
+    workspace: Option<String>,
 ) -> Result<(), String> {
-    let path = workspace_file(&app, &name)?;
+    let _guard = WORKSPACE_WRITE_LOCK.lock().map_err(|_| "Workspace write lock poisoned")?;
+    let path = workspace_file(&app, &name, workspace.as_deref())?;
     // `expected` is the fingerprint the window saw when it read the file. When it no
     // longer matches, something else wrote in between — an agent over MCP, another
     // window, a sync tool — and overwriting would destroy that work without a word.
@@ -65,11 +69,49 @@ fn sha256_hex(bytes: &[u8]) -> String {
     hasher.finalize().iter().map(|b| format!("{b:02x}")).collect()
 }
 
-#[tauri::command]
-fn workspace_data_directory(app: tauri::AppHandle) -> Result<String, String> {
-    let dir = app.path().app_data_dir().map_err(|error| error.to_string())?.join("workspace");
+fn workspace_directory(app: &tauri::AppHandle, workspace: Option<&str>) -> Result<PathBuf, String> {
+    let base = app.path().app_data_dir().map_err(|error| error.to_string())?;
+    let dir = match workspace {
+        None | Some("default") => base.join("workspace"),
+        Some(id) if !id.is_empty() && id.len() <= 80 && id.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '-') => base.join("workspaces").join(id),
+        _ => return Err("Invalid workspace id".into()),
+    };
     std::fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
-    Ok(dir.to_string_lossy().into_owned())
+    Ok(dir)
+}
+
+#[tauri::command]
+fn workspace_data_directory(app: tauri::AppHandle, workspace: Option<String>) -> Result<String, String> {
+    Ok(workspace_directory(&app, workspace.as_deref())?.to_string_lossy().into_owned())
+}
+
+fn cloud_credential(server: &str) -> Result<keyring::Entry, String> {
+    let url = tauri::Url::parse(server).map_err(|_| "Invalid server")?;
+    if url.origin().ascii_serialization() != server || (url.scheme() != "https" && !(url.scheme() == "http" && matches!(url.host_str(), Some("localhost" | "127.0.0.1")))) {
+        return Err("Invalid server origin".into());
+    }
+    keyring::Entry::new("dev.notiooon.blok.cloud", server).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn load_cloud_session(server: String) -> Result<Option<String>, String> {
+    match cloud_credential(&server)?.get_password() {
+        Ok(token) => Ok(Some(token)),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(error) => Err(error.to_string()),
+    }
+}
+
+#[tauri::command]
+fn save_cloud_session(server: String, token: Option<String>) -> Result<(), String> {
+    let entry = cloud_credential(&server)?;
+    match token {
+        Some(token) => entry.set_password(&token).map_err(|error| error.to_string()),
+        None => match entry.delete_credential() {
+            Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+            Err(error) => Err(error.to_string()),
+        },
+    }
 }
 
 fn agent_binary(provider: &str) -> Result<PathBuf, String> {
@@ -348,7 +390,7 @@ pub fn run() {
                 let _ = window.eval(script);
             }
         })
-        .invoke_handler(tauri::generate_handler![close_editor_window, load_workspace_file, save_workspace_file, workspace_data_directory, agent_provider_status, agent_ask, agent_cancel])
+        .invoke_handler(tauri::generate_handler![close_editor_window, load_cloud_session, save_cloud_session, load_workspace_file, save_workspace_file, workspace_data_directory, agent_provider_status, agent_ask, agent_cancel])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -1,6 +1,8 @@
 .git
 .env
 .env.*
+**/.env
+**/.env.*
 .npmrc
 node_modules
 **/node_modules
@@ -26,3 +28,8 @@ all-blob-reports
 .superpowers
 *.log
 .DS_Store
+**/__pycache__
+desktop/src-tauri/target
+work
+deploy/backups
+deploy/.env

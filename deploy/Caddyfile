@@ -1,0 +1,19 @@
+{$DOMAIN:blok.tousamba.cloud} {
+  encode zstd gzip
+  @private path /internal/*
+  respond @private 404
+  @api path /api/* /files/* /healthz
+  handle @api {
+    reverse_proxy app:8080
+  }
+  handle {
+    root * /srv
+    try_files {path} /index.html
+    file_server
+  }
+  header {
+    X-Content-Type-Options nosniff
+    Referrer-Policy same-origin
+    X-Frame-Options DENY
+  }
+}

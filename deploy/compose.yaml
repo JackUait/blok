@@ -1,0 +1,81 @@
+name: blok-cloud
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: blok
+      POSTGRES_USER: blok
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in deploy/.env}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U blok -d blok']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  app:
+    image: ${APP_IMAGE:-blok-cloud-app:local}
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: service
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 90s
+    environment:
+      DATABASE_URL: postgres://blok:${POSTGRES_PASSWORD}@postgres:5432/blok?sslmode=disable
+      PUBLIC_URL: https://${DOMAIN:-blok.tousamba.cloud}
+      INTERNAL_URL: http://127.0.0.1:8080
+      LISTEN_ADDR: ':8080'
+      DATA_DIRECTORY: /data
+      TICKET_SECRET: ${TICKET_SECRET:?Set TICKET_SECRET}
+      INTERNAL_SECRET: ${INTERNAL_SECRET:?Set INTERNAL_SECRET}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:?Set BOOTSTRAP_ADMIN_EMAIL}
+      RESEND_API_KEY: ${RESEND_API_KEY:?Set RESEND_API_KEY}
+      MAIL_FROM: ${MAIL_FROM:?Set MAIL_FROM}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-tauri://localhost,http://tauri.localhost,https://tauri.localhost}
+      TRUSTED_PROXY_CIDRS: ${CADDY_IP:-172.30.87.3}/32
+    volumes:
+      - state:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1:8080/healthz']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+  web:
+    image: ${WEB_IMAGE:-blok-cloud-web:local}
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: web
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:-blok.tousamba.cloud}
+    networks:
+      default:
+        ipv4_address: ${CADDY_IP:-172.30.87.3}
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+volumes:
+  postgres:
+  state:
+  caddy_data:
+  caddy_config:
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${BLOK_NETWORK_SUBNET:-172.30.87.0/24}
+          ip_range: ${BLOK_NETWORK_DYNAMIC_RANGE:-172.30.87.128/25}

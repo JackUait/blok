@@ -80,7 +80,7 @@ describe('trash toast', () => {
 
     shown[0].actions?.[0].onClick();
 
-    expect(undoStep).toHaveBeenCalledWith(after);
+    expect(undoStep).toHaveBeenCalledWith(after, true);
     expect(dismiss).toHaveBeenCalledWith(shown[0]);
   });
 

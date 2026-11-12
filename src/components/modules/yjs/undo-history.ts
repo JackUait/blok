@@ -1737,10 +1737,14 @@ export class UndoHistory {
     return true;
   }
 
-  public undoStep(token: CaretHistoryEntry): boolean {
+  /**
+   * @param token - the step to undo, only while it is on top
+   * @param userPress - the user's own undo control (the Trash toast's Restore), so its redo treats it like the key
+   */
+  public undoStep(token: CaretHistoryEntry, userPress = false): boolean {
     const wasUndone = this.caretRedoStack.includes(token);
 
-    this.undo(token);
+    this.undo(token, userPress);
 
     return !wasUndone && this.caretRedoStack.includes(token);
   }
@@ -3430,7 +3434,8 @@ export class UndoHistory {
     // is on a toolbar control, or selectionchange hasn't set it yet for nested
     // blocks like table cell paragraphs).
     // The range start, not the anchor: a backward range is recorded from its
-    // start and marked `backward`, so offset/end/endIn mean the same both ways.
+    // start, so offset/end/endIn mean the same both ways. Only a range across
+    // blocks is also marked `backward`.
     const liveSelection = window.getSelection();
     const startNode = liveSelection !== null && liveSelection.rangeCount > 0
       ? liveSelection.getRangeAt(0).startContainer

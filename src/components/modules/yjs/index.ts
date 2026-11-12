@@ -1017,8 +1017,8 @@ export class YjsManager extends Module {
     return this.undoHistory.mergeTopUndoSteps(previous, current, expected);
   }
 
-  public undoStep(token: CaretHistoryEntry): boolean {
-    return this.undoHistory.undoStep(token);
+  public undoStep(token: CaretHistoryEntry, userPress = false): boolean {
+    return this.undoHistory.undoStep(token, userPress);
   }
 
   public redoStep(token: CaretHistoryEntry): boolean {

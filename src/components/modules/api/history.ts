@@ -212,9 +212,10 @@ export class HistoryAPI extends Module {
   /**
    * Undo this step only while it is still the newest. Does nothing while read-only.
    * @param step - a handle from {@link latestStep}
+   * @param userPress - Blok's own undo control pressed it, like the undo key (the public method never passes it)
    * @returns true when the step was undone
    */
-  public undoStep(step: HistoryStep): boolean {
+  public undoStep(step: HistoryStep, userPress = false): boolean {
     const entry = this.entries.get(step);
 
     if (entry === undefined || this.Blok.ReadOnly.isEnabled) {
@@ -224,6 +225,6 @@ export class HistoryAPI extends Module {
     this.commitDrafts('undo');
     this.Blok.YjsManager.flushPendingBlockWrites();
 
-    return this.Blok.YjsManager.undoStep(entry);
+    return this.Blok.YjsManager.undoStep(entry, userPress);
   }
 }

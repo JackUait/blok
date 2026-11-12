@@ -177,6 +177,24 @@ describe('UndoHistory: the selection at the undo press', () => {
     expect(selectBlock).not.toHaveBeenCalled();
   });
 
+  // Notion U109: the Trash toast's Restore is the user's own undo, like the key.
+  it('a redo restores nothing after a step undone by a user press with no selection in the editor', () => {
+    putCaret(blocks[0], 5);
+    history.beginGesture('typing');
+    write('Alpha one');
+    window.getSelection()?.removeAllRanges();
+    const [step] = (history as unknown as { caretUndoStack: unknown[] }).caretUndoStack;
+
+    expect(history.undoStep(step as Parameters<UndoHistory['undoStep']>[0], true)).toBe(true);
+    window.getSelection()?.removeAllRanges();
+    caret.setToInput.mockClear();
+    selectBlock.mockClear();
+    history.redo();
+
+    expect(caret.setToInput).not.toHaveBeenCalled();
+    expect(selectBlock).not.toHaveBeenCalled();
+  });
+
   it('a redo puts the caret at the step end when the undo key press had nothing live but a caret is live at the redo press', () => {
     putCaret(blocks[0], 5);
     history.beginGesture('typing');

@@ -202,8 +202,8 @@ test.describe('a block-selection delete leaves no caret (W1)', () => {
     await gotoTestPage(page);
   });
 
-  const deleteAndRedo = async (page: Page, before: string[], after: string[]): Promise<void> => {
-    await page.keyboard.press('Backspace');
+  const deleteAndRedo = async (page: Page, before: string[], after: string[], key = 'Backspace'): Promise<void> => {
+    await page.keyboard.press(key);
     await expect.poll(() => ids(page)).toEqual(after);
     await gap(page, 300);
     expect(await caretInBlock(page)).toBe(false);
@@ -228,6 +228,17 @@ test.describe('a block-selection delete leaves no caret (W1)', () => {
     expect(await selectedIds(page)).toEqual(['p2']);
 
     await deleteAndRedo(page, ['p1', 'p2', 'p3'], ['p1', 'p3']);
+  });
+
+  test('handle menu, Escape, Delete: no caret after the delete or the redo', async ({ page }) => {
+    await createBlok(page, BASE);
+    await caretAtEnd(page, 'p1');
+    await openTunes(page, 'p2');
+    await page.keyboard.press('Escape');
+    await gap(page, 300);
+    expect(await selectedIds(page)).toEqual(['p2']);
+
+    await deleteAndRedo(page, ['p1', 'p2', 'p3'], ['p1', 'p3'], 'Delete');
   });
 
   test('Escape from a caret, Backspace: no caret after the delete or the redo', async ({ page }) => {
@@ -309,6 +320,13 @@ test.describe('the Trash toast Restore speaks like undo (W8)', () => {
 
     await expect.poll(() => ids(page)).toEqual(['p1', 'sub', 'p3']);
     await expect(page.locator('[data-blok-announcer][role="status"]')).toHaveText('Undone');
+    await gap(page, 300);
+
+    // Notion leaves no caret after the redo either.
+    await page.keyboard.press(REDO);
+    await expect.poll(() => ids(page)).toEqual(['p1', 'p3']);
+    await gap(page, 300);
+    expect(await caretInBlock(page)).toBe(false);
   });
 });
 
@@ -386,6 +404,8 @@ test.describe('two drags undo one at a time (U112)', () => {
 
     await page.keyboard.press(REDO);
     await expect.poll(() => ids(page)).toEqual(['b3', 'b1', 'b2']);
+    // Notion leaves "one" selected here too, not "three", the block drag 1 moved.
+    await expect.poll(() => selectedIds(page)).toEqual(['b1']);
     expect(await hasCaret(page)).toBe(false);
     await gap(page, 300);
 

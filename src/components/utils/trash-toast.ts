@@ -39,7 +39,7 @@ export const showTrashToast = (Blok: Modules, before: HistoryStep | undefined): 
       label: Blok.I18n.t('tools.database.restore'),
       onClick: () => {
         stopWatching();
-        const applied = Blok.HistoryAPI.undoStep(step);
+        const applied = Blok.HistoryAPI.undoStep(step, true);
 
         // Restore is Blok's own undo button: it speaks like Meta+z (Notion U109).
         announceHistoryPress((key) => Blok.I18n.t(key), 'undo', applied);

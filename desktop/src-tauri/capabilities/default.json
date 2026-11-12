@@ -15,6 +15,13 @@
     "allow-agent-provider-status",
     "allow-agent-ask",
     "allow-load-cloud-session",
-    "allow-save-cloud-session"
+    "allow-save-cloud-session",
+    "allow-agent-cancel",
+    "allow-ai-local-status",
+    "allow-ai-local-save",
+    "allow-ai-local-delete",
+    "allow-ai-local-models",
+    "allow-ai-local-respond",
+    "allow-ai-local-cancel"
   ]
 }

@@ -1,3 +1,6 @@
+import { PopoverDesktop } from '../../components/utils/popover';
+import { PopoverEvent } from '../../../types/utils/popover/popover-event';
+import { IconCheck } from '../../components/icons';
 import { chatIcon } from './icons';
 
 export interface ChatProvider {
@@ -24,6 +27,7 @@ export interface ChatComposerHandle {
   setProviders: (providers: readonly ChatProvider[], selectedProvider?: string) => void;
   setText: (text: string) => void;
   focus: () => void;
+  destroy: () => void;
 }
 
 export const createChatComposer = (options: ChatComposerOptions): ChatComposerHandle => {
@@ -32,7 +36,15 @@ export const createChatComposer = (options: ChatComposerOptions): ChatComposerHa
   const controls = document.createElement('div');
   const page = document.createElement('button');
   const providerWrap = document.createElement('span');
-  const provider = document.createElement('select');
+  const provider = document.createElement('button');
+  provider.type = 'button';
+  provider.setAttribute('data-blok-chat-provider-trigger', '');
+  provider.setAttribute('aria-haspopup', 'menu');
+  provider.setAttribute('aria-expanded', 'false');
+  const providerText = document.createElement('span');
+  providerText.id = `blok-chat-model-${crypto.randomUUID()}`;
+  provider.setAttribute('aria-describedby', providerText.id);
+  provider.append(providerText);
   const submit = document.createElement('button');
   const state = { running: false, includePage: options.includePage ?? true };
 
@@ -49,19 +61,52 @@ export const createChatComposer = (options: ChatComposerOptions): ChatComposerHa
   page.append(chatIcon('check', 14), document.createTextNode('Cette page'));
   providerWrap.setAttribute('data-blok-chat-provider', '');
   provider.setAttribute('aria-label', 'Moteur IA');
-  const fillProviders = (providers: readonly ChatProvider[], selected?: string): void => {
-    provider.replaceChildren();
-    providers.forEach((item) => {
-      const choice = document.createElement('option');
-
-      choice.value = item.id;
-      choice.textContent = item.label;
-      provider.append(choice);
-    });
-    if (selected && providers.some((item) => item.id === selected)) provider.value = selected;
-    provider.disabled = providers.length === 0;
+  let providers: readonly ChatProvider[] = [];
+  let providerMenu: PopoverDesktop | null = null;
+  let destroyed = false;
+  const closeProviderMenu = (): void => { providerMenu?.hide(); };
+  const fillProviders = (next: readonly ChatProvider[], selected?: string): void => {
+    closeProviderMenu(); providers = next;
+    provider.value = next.some((item) => item.id === selected) ? selected! : next[0]?.id ?? '';
+    const label = next.find((item) => item.id === provider.value)?.label ?? 'Choisir un modèle';
+    providerText.textContent = label; provider.title = label;
+    provider.disabled = next.length === 0;
   };
-
+  const openProviderMenu = (last = false): void => {
+    if (provider.disabled || destroyed) return;
+    if (providerMenu?.isShown) { closeProviderMenu(); return; }
+    const searchable = providers.length > 8;
+    const menu = new PopoverDesktop({
+      trigger: provider, class:'blok-chat-provider-menu', searchable,
+      messages:{search:'Rechercher un modèle…'}, width:'auto', minWidth:'240px', autoFocusFirstItem:searchable,
+      items:providers.map((item) => ({name:item.id,title:item.label,toggle:providerText.id,
+        isActive:()=>provider.value === item.id,trailingIcon:provider.value === item.id ? IconCheck : undefined,closeOnActivate:true,
+        onActivate:()=>{
+          provider.value=item.id;providerText.textContent=item.label;provider.title=item.label;
+          options.onProviderChange?.(item.id);sync();
+        },
+      })),
+    });
+    providerMenu=menu;
+    const root=menu.getElement(); root.id=`${providerText.id}-menu`;root.setAttribute('data-blok-chat-model-menu','');root.setAttribute('aria-label','Modèles IA');
+    const style=getComputedStyle(provider);
+    for(let index=0;index<style.length;index++) {const token=style.item(index);if(token.startsWith('--blok-'))root.style.setProperty(token,style.getPropertyValue(token));}
+    provider.setAttribute('aria-controls',root.id);provider.setAttribute('aria-expanded','true');
+    let closed=false;
+    menu.on(PopoverEvent.Closed,()=>{
+      if(closed)return;closed=true;
+      if(providerMenu===menu){providerMenu=null;provider.setAttribute('aria-expanded','false');provider.removeAttribute('aria-controls');}
+      if(!destroyed&&provider.isConnected)provider.focus();
+      queueMicrotask(()=>menu.destroy());
+    });
+    menu.show();
+    if(!searchable){const chosen=last?providers.at(-1)?.id:provider.value;if(chosen)menu.focusItemByName(chosen);}
+  };
+  provider.addEventListener('click',()=>openProviderMenu());
+  provider.addEventListener('keydown',(event)=>{
+    if(event.key!=='ArrowDown'&&event.key!=='ArrowUp')return;
+    event.preventDefault();openProviderMenu(event.key==='ArrowUp');
+  });
   fillProviders(options.providers, options.selectedProvider);
   providerWrap.append(provider, chatIcon('chevron', 14));
   submit.type = 'submit';
@@ -94,7 +139,6 @@ export const createChatComposer = (options: ChatComposerOptions): ChatComposerHa
     page.setAttribute('aria-pressed', String(state.includePage));
     options.onContextChange?.(state.includePage);
   });
-  provider.addEventListener('change', () => options.onProviderChange?.(provider.value));
   element.addEventListener('submit', (event) => {
     event.preventDefault();
     if (state.running) {
@@ -133,5 +177,6 @@ export const createChatComposer = (options: ChatComposerOptions): ChatComposerHa
       sync();
     },
     focus: () => field.focus(),
+    destroy: () => { destroyed=true;providerMenu?.destroy();providerMenu=null; },
   };
 };

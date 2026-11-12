@@ -28,6 +28,11 @@ describe('cloud gateway', () => {
     expect(document.querySelector('[role="alert"]')?.textContent).toContain('Connexion au serveur impossible');
     expect(document.querySelector('input[type="email"]')).toBeTruthy();
   });
+  it('keeps email and OTP semantics while using the shared editor fields',async()=>{
+    vi.stubGlobal('fetch',vi.fn(async(url:string)=>url.endsWith('/api/session')?response({error:'Unauthorized'},401):response({ok:true})));
+    await mountCloudGateway(document.body,{onOpenWorkspace:vi.fn()});const email=document.querySelector<HTMLInputElement>('#cloud-email')!;expect(email.type).toBe('email');expect(email.autocomplete).toBe('email');expect(email.getAttribute('data-blok-field')).toBe('text');email.value='alice@example.test';email.form!.dispatchEvent(new Event('submit',{cancelable:true}));await settle();
+    const code=document.querySelector<HTMLInputElement>('#cloud-code')!;expect(code.autocomplete).toBe('one-time-code');expect(code.inputMode).toBe('numeric');expect(code.pattern).toBe('[0-9]{6}');expect(code.getAttribute('data-blok-field')).toBe('text');
+  });
   it('opens the actual workspace only on explicit selection', async () => {
     const open = vi.fn(); vi.stubGlobal('fetch', vi.fn(async (url: string) => response(url.endsWith('/api/session') ? {user,workspaces:[workspace]} : {...workspace,joinStatus:'approved'})));
     await mountCloudGateway(document.body,{onOpenWorkspace:open}); expect(open).not.toHaveBeenCalled();

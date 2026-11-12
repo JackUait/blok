@@ -438,6 +438,9 @@ export const openModalDialog = (options: OpenModalDialogOptions): ModalDialogHan
   const register = (): (() => void) => registerLayer({
     element: surface,
     anchor: options.anchor,
+    // Registered menus are portaled onto body, but remain part of the dialog
+    // that owns their trigger for pointer dismissal as well as focus/Escape.
+    isInside: (target) => ownsMenu(PopoverRegistry.instance.triggerOf(target)),
     escape: options.escape ?? true,
     outside: options.outside ?? true,
     onDismiss: (reason?: ModalDismissReason) => {

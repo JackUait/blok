@@ -47,6 +47,9 @@ export interface DismissableLayerOptions {
    */
   anchor?: HTMLElement;
 
+  /** Portaled child surfaces owned by this layer, such as a menu opened inside a modal. */
+  isInside?: (target: Node) => boolean;
+
   /**
    * Called when the layer should be dismissed. Receives the dismissal reason
    * (`'escape'` or `'outside'`); the argument is optional so zero-arg handlers
@@ -71,6 +74,7 @@ export interface DismissableLayerOptions {
 interface LayerEntry {
   element: HTMLElement;
   anchor: HTMLElement | undefined;
+  isInside: ((target: Node) => boolean) | undefined;
   onDismiss: (reason?: DismissReason) => void;
   escape: boolean;
   outside: boolean;
@@ -126,7 +130,7 @@ const isInsideLayer = (entry: LayerEntry, target: Node): boolean => {
     return true;
   }
 
-  return entry.anchor !== undefined && entry.anchor.contains(target);
+  return (entry.anchor !== undefined && entry.anchor.contains(target)) || entry.isInside?.(target) === true;
 };
 
 /**
@@ -233,6 +237,7 @@ export const registerLayer = (options: DismissableLayerOptions): (() => void) =>
   const entry: LayerEntry = {
     element: options.element,
     anchor: options.anchor,
+    isInside: options.isInside,
     onDismiss: options.onDismiss,
     escape: options.escape ?? true,
     outside: options.outside ?? true,

@@ -21,6 +21,16 @@ describe('dismissable-layer', () => {
     return el;
   };
 
+  it('treats only an explicitly owned portal branch as inside', () => {
+    const element = makeLayerElement(); const portal = makeLayerElement(); const stranger = makeLayerElement();
+    const child = document.createElement('button'); portal.append(child);
+    const onDismiss = vi.fn();
+    const unregister = registerLayer({element, onDismiss, isInside: (target) => portal.contains(target)});
+    child.dispatchEvent(new PointerEvent('pointerdown', {bubbles:true})); expect(onDismiss).not.toHaveBeenCalled();
+    stranger.dispatchEvent(new PointerEvent('pointerdown', {bubbles:true})); expect(onDismiss).toHaveBeenCalledWith('outside');
+    unregister();
+  });
+
   describe('escape dismissal', () => {
     it('dismisses the topmost layer that opted into escape on Escape keydown', () => {
       const element = makeLayerElement();

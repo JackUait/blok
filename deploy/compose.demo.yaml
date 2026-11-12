@@ -29,6 +29,7 @@ services:
       INTERNAL_URL: http://127.0.0.1:8080
       LISTEN_ADDR: ':8080'
       DATA_DIRECTORY: /data
+      AI_ENCRYPTION_KEY: ${AI_ENCRYPTION_KEY:-}
       APP_ENV: development
       DEV_MAIL_DIRECTORY: /data/mail
       BOOTSTRAP_ADMIN_EMAIL: admin@example.test

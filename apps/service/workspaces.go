@@ -133,6 +133,9 @@ func (s *Service) workspaceResource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch resource {
+	case "ai":
+		s.ai(w, r, u, ws, id)
+		return
 	case "index":
 		s.index(w, r, u, ws)
 		return

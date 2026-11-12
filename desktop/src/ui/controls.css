@@ -1,0 +1,27 @@
+@import '../../../src/styles/field.css';
+
+/* Detached application surfaces use the same editor tokens as their content. */
+:is([data-desktop-settings-overlay], [data-cloud-gateway]) {
+  --blok-text-primary: var(--desktop-ink);
+  --blok-text-secondary: var(--desktop-muted);
+  --blok-popover-bg: var(--desktop-canvas);
+  --blok-popover-border: var(--desktop-border);
+  --blok-item-hover-bg: var(--desktop-hover);
+  --blok-icon-active-bg: var(--desktop-hover);
+  --blok-search-input-placeholder: var(--desktop-muted);
+  --blok-focus-ring: #2383e2;
+}
+[data-desktop-choice] {
+  display: inline-flex; align-items: center; justify-content: space-between; gap: var(--blok-space-2,8px);
+  min-height: 28px; padding: 3px 8px; border: 1px solid var(--blok-popover-border);
+  border-radius: var(--blok-radius-field,8px); background: transparent; color: var(--blok-text-primary);
+  font: inherit; font-size: 13px; line-height: 22px; cursor: pointer;
+}
+[data-desktop-choice]:hover, [data-desktop-choice][aria-expanded=true] { background:var(--blok-item-hover-bg); }
+[data-desktop-choice]:focus-visible { outline:2px solid var(--blok-focus-ring); outline-offset:2px; }
+[data-desktop-choice]:disabled { opacity:.45; cursor:default; }
+[data-desktop-choice] svg { display:block; width:16px; height:16px; flex:none; }
+[data-desktop-choice-label] { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+[data-desktop-choice-popover] { font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+[data-desktop-settings-row] > [data-blok-field] { width:220px; max-width:100%; }
+[data-blok-field]:disabled { opacity:.5; cursor:default; }

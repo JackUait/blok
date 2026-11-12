@@ -398,7 +398,7 @@ body[data-blok-theme="light"] [data-desktop-floating-toc] {
 [data-desktop-settings-row-labels] { display: flex; flex-direction: column; gap: 6px; }
 [data-desktop-settings-row-title] { font-size: 14px; }
 [data-desktop-settings-row-help] { color: var(--desktop-muted); font-size: 13px; }
-[data-desktop-settings-theme], [data-desktop-settings-copy], [data-desktop-settings-name] {
+[data-desktop-settings-copy] {
   flex: none; min-height: 32px; padding: 4px 10px; border: 1px solid var(--desktop-border); border-radius: 6px;
   background: var(--desktop-strip); color: var(--desktop-ink); font: inherit; font-size: 14px; cursor: pointer;
 }
@@ -406,7 +406,7 @@ body[data-blok-theme="light"] [data-desktop-floating-toc] {
 [data-desktop-settings-copy] { margin-top: 16px; }
 [data-desktop-settings-version] { margin-top: 44px; color: var(--desktop-muted); font-size: 12px; }
 [data-desktop-settings-explanation] { margin-top: 22px; max-width: 550px; color: var(--desktop-muted); font-size: 13px; line-height: 1.5; }
-[data-desktop-settings-provider] { accent-color: #2e8cff; }
+[data-desktop-settings-provider-status] { color: var(--desktop-muted); font-size: 13px; }
 [data-desktop-ai-button] {
   position: fixed; right: 16px; bottom: 16px; z-index: 29;
   display: grid; place-items: center; width: 40px; height: 40px; padding: 0;
@@ -443,7 +443,7 @@ body[data-blok-theme="light"] [data-desktop-floating-toc] {
   max-height: calc(100dvh - 144px);
 }
 [data-desktop-switcher]:focus-visible, [data-desktop-menu-item]:focus-visible,
-[data-desktop-settings-dialog] button:focus-visible, [data-desktop-settings-theme]:focus-visible {
+[data-desktop-settings-dialog] button:focus-visible {
   outline: 2px solid #2e8cff; outline-offset: 2px;
 }
 @media (max-width: 680px) {
@@ -452,7 +452,7 @@ body[data-blok-theme="light"] [data-desktop-floating-toc] {
   [data-desktop-settings-nav] { flex-basis: 145px; }
   [data-desktop-settings-main] { padding: 48px 20px; }
 }
-[data-desktop-status] { position: absolute; top: 44px; left: 50%; padding: 12px; color: var(--desktop-muted); }
+[data-desktop-status] { position: absolute; bottom: 12px; right: 16px; max-width: min(420px, calc(100% - 32px)); padding: 5px 9px; border-radius: var(--blok-radius-control, 6px); background: var(--desktop-canvas); color: var(--desktop-muted); font-size: 12px; z-index: 1; pointer-events: none; }
 [data-desktop-status]:empty { display: none; }
 [data-desktop-status][data-error] { color: #ff9c91; }
 

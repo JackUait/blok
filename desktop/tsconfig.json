@@ -32,6 +32,12 @@
       ],
       "@blok/modal-dialog": [
         "./src/modal-dialog-contract.d.ts"
+      ],
+      "@blok/popover": [
+        "./src/popover-contract.d.ts"
+      ],
+      "@blok/agent-assistant": [
+        "./src/agent-assistant-contract.d.ts"
       ]
     }
   },

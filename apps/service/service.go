@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"context"
+	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -31,6 +32,10 @@ var schema string
 
 type Service struct {
 	DB           *pgxpool.Pool
+	aiCipher     cipher.AEAD
+	aiClient     *http.Client
+	aiInFlight   map[string]int
+	aiMu         sync.Mutex
 	Config       Config
 	Blok         *blokserver.Server
 	mux          *http.ServeMux
@@ -71,7 +76,7 @@ func New(ctx context.Context, c Config) (*Service, error) {
 	if e != nil {
 		return nil, e
 	}
-	s := &Service{DB: db, Config: c, mux: http.NewServeMux(), observed: map[string]int{}}
+	s := &Service{DB: db, Config: c, mux: http.NewServeMux(), observed: map[string]int{}, aiInFlight: map[string]int{}}
 	var tx pgx.Tx
 	fail := func(e error) (*Service, error) {
 		if tx != nil {
@@ -117,6 +122,22 @@ func New(ctx context.Context, c Config) (*Service, error) {
 	if e = os.MkdirAll(filepath.Join(c.DataDirectory, "uploads"), 0700); e != nil {
 		return fail(e)
 	}
+	if c.AIEncryptionKey == "" {
+		if _, statErr := os.Stat(filepath.Join(c.DataDirectory, "ai-key")); os.IsNotExist(statErr) {
+			var encryptedExists bool
+			if e = s.DB.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM ai_credentials WHERE encrypted_key IS NOT NULL)").Scan(&encryptedExists); e != nil {
+				return fail(e)
+			}
+			if encryptedExists {
+				return fail(errors.New("AI encryption key missing; restore DataDirectory/ai-key from backup"))
+			}
+		}
+	}
+	s.aiCipher, e = loadAIEncryptionKey(c)
+	if e != nil {
+		return fail(e)
+	}
+	s.aiClient = newAIClient(c.AITransport)
 	auth := "ticket"
 	s.Blok, e = blokserver.New(blokserver.Options{Auth: &auth, Secret: c.TicketSecret, PublicURL: strings.TrimRight(c.PublicURL, "/") + "/files", AllowedOrigins: append([]string{c.PublicURL}, c.AllowedOrigins...), StorageDirectory: filepath.Join(c.DataDirectory, "uploads"), CollabEnabled: true, CollabJournal: true, CollabDirectory: filepath.Join(c.DataDirectory, "collab"), DocEndpoint: strings.TrimRight(c.InternalURL, "/") + "/internal/documents", DocEndpointAuth: "Bearer " + c.InternalSecret, Authorization: s, Logger: slog.Default(), RateLimitPerMinute: 600})
 	if e != nil {

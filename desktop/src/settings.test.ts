@@ -42,9 +42,9 @@ describe('desktop sidebar footer', () => {
     preferences.click();
     const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
     expect(dialog.parentElement?.hasAttribute('hidden')).toBe(false);
-    const theme = dialog.querySelector('[data-desktop-settings-theme]') as HTMLSelectElement;
-    theme.value = 'light';
-    theme.dispatchEvent(new Event('change'));
+    const theme = dialog.querySelector('[data-desktop-settings-theme]') as HTMLButtonElement;
+    theme.click();
+    document.querySelector<HTMLElement>('[data-blok-item-name=light]')!.click();
     expect(readAppearance()).toBe('light');
     expect(root.getAttribute('data-blok-theme')).toBe('light');
     expect(document.body.getAttribute('data-blok-theme')).toBe('light');
@@ -70,7 +70,8 @@ describe('desktop sidebar footer', () => {
     expect(footer.querySelector('[data-desktop-switcher-name]')?.textContent).toBe('Mes notes');
     [...dialog.querySelectorAll<HTMLButtonElement>('[data-desktop-settings-nav-item]')]
       .find((item) => item.textContent?.includes('Assistant IA'))!.click();
-    expect(dialog.querySelectorAll('[data-desktop-settings-provider]')).toHaveLength(2);
+    expect(dialog.querySelectorAll('[data-desktop-settings-provider-status]')).toHaveLength(0);
+    expect(dialog.textContent).toContain('Configurez OpenAI');
     expect(dialog.querySelector('[data-desktop-settings-title]')?.textContent).toBe('Assistant IA');
   });
 });

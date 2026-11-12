@@ -1,6 +1,7 @@
+import { isEscapeConsumed } from '../components/utils/consumed-escape';
 /**
  * Host chrome for the assistant: a button that opens a panel. The in-editor
- * Ask AI bar is Blok's. This panel calls the same CLI model and does not run
+ * Ask AI bar is Blok's. This panel calls the host model (a CLI by default) and does not run
  * blok_* tools itself.
  */
 
@@ -13,6 +14,8 @@ import { createCliAgentModel, inspectCli, providerLabel, type CliCommand, type C
 import { readAgentSettings, subscribeAgentSettings } from './agent-settings';
 import './agent-assistant.css';
 
+export interface AgentAssistantProvider { id: string; label: string }
+
 export interface AgentAssistantOptions {
   /** Visible text of the open page, included when "Cette page" is checked. */
   getPageText: () => string;
@@ -21,9 +24,13 @@ export interface AgentAssistantOptions {
   /** Host-specific provider inspection, e.g. Tauri's native CLI bridge. */
   inspectProvider?: (command: CliCommand, signal: AbortSignal) => Promise<CliStatus>;
   /** Host-specific model, leaving the Node CLI adapter as the default. */
-  modelFor?: (command: CliCommand, onProgress: (status: string) => void) => AgentModel;
+  modelFor?(providerId: string, onProgress: (status: string) => void): AgentModel;
   /** Preferred connected provider when this panel opens. */
-  preferredProvider?: () => CliCommand | null;
+  preferredProvider?: () => string | null;
+  /** Host discovery replaces the default CLI list. IDs are opaque to this panel. */
+  listProviders?: (signal: AbortSignal) => Promise<AgentAssistantProvider[]>;
+  /** Persist the user's provider/model choice in the host. */
+  onProviderSelected?: (providerId: string) => void;
 }
 
 export interface AgentAssistantHandle {
@@ -32,6 +39,7 @@ export interface AgentAssistantHandle {
   open: () => void;
   close: () => void;
   destroy: () => void;
+  refreshProviders: () => Promise<void>;
 }
 
 type PanelMode = 'side' | 'floating' | 'full';
@@ -39,7 +47,8 @@ type PanelMode = 'side' | 'floating' | 'full';
 interface Turn {
   question: string;
   sent: string;
-  command: CliCommand;
+  command: string;
+  label: string;
   answer: string;
   pending: boolean;
   error?: boolean;
@@ -113,9 +122,8 @@ const answerOf = (response: AgentModelResponse): string => response.content
   .join('\n')
   .trim();
 
-const runningLabel = (command: CliCommand): string => (
-  command === 'codex' ? 'Codex répond…' : 'Claude Code répond…'
-);
+const runningLabel = (label: string): string => `${label} répond…`;
+const isCliCommand = (id: string): id is CliCommand => id === 'codex' || id === 'claude';
 
 const makeButton = (label: string): HTMLButtonElement => {
   const node = document.createElement('button');
@@ -134,7 +142,7 @@ const iconButton = (node: HTMLButtonElement, label: string, icon: ChatIcon): voi
 
 /**
  * The assistant button and its panel. Modes are remembered. Provider buttons
- * list only CLIs that are enabled, installed, and connected.
+ * use host discovery when provided, otherwise enabled, connected CLIs.
  */
 export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssistantHandle => {
   const titleId = `blok-agent-title-${crypto.randomUUID()}`;
@@ -167,7 +175,9 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     menu: null as 'history' | 'mode' | null,
     conversations: [{ id: crypto.randomUUID(), turns: [] }] as Conversation[],
     active: 0,
-    picked: null as CliCommand | null,
+    picked: null as string | null,
+    providers: [] as AgentAssistantProvider[],
+    destroyed: false,
     statuses: [] as CliStatus[],
     includePage: true,
     run: null as AbortController | null,
@@ -179,12 +189,16 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     includePage: session.includePage,
     sendLabel: 'Envoyer à l\'assistant IA',
     onSend: (message, provider, includePage) => {
-      session.picked = provider === 'claude' ? 'claude' : 'codex';
+      if (!session.providers.some((item) => item.id === provider)) return;
+      session.picked = provider;
       session.includePage = includePage;
       send(message);
     },
     onStop: () => { stopRun(); render(); },
-    onProviderChange: (provider) => { session.picked = provider === 'claude' ? 'claude' : 'codex'; },
+    onProviderChange: (provider) => {
+      if (!session.providers.some((item) => item.id === provider)) return;
+      session.picked = provider; options.onProviderSelected?.(provider);
+    },
     onContextChange: (includePage) => { session.includePage = includePage; },
   });
   const composer = composerHandle.element;
@@ -285,42 +299,48 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     }
   };
 
-  const paintProviders = (usable: CliCommand[]): void => {
-    composerHandle.setProviders(usable.map((command) => ({ id: command, label: providerLabel(command) })), session.picked ?? undefined);
+  const paintProviders = (usable: AgentAssistantProvider[]): void => {
+    session.providers = usable;
+    composerHandle.setProviders(usable, session.picked ?? undefined);
     providerHint.hidden = usable.length > 0;
   };
 
   const refreshProviders = async (): Promise<void> => {
+    if (session.destroyed) return;
     const gate = new AbortController();
-
-    session.inspect?.abort();
-    session.inspect = gate;
-
-    const inspect = options.inspectProvider ?? ((command: CliCommand, signal: AbortSignal) => inspectCli(command, signal, true));
-    const [codex, claude] = await Promise.all([
-      inspect('codex', gate.signal),
-      inspect('claude', gate.signal),
-    ]);
-
-    if (session.inspect !== gate) return;
-
-    session.statuses = [codex, claude];
-
-    const settings = readAgentSettings();
-    const usable = settings.order.filter((command) => {
-      const status = session.statuses.find((item) => item.command === command);
-
-      return status !== undefined && status.installed && status.connected && settings.enabled[command];
-    });
-
-    if (session.picked !== null && !usable.includes(session.picked)) session.picked = null;
-    if (session.picked === null) {
+    session.inspect?.abort(); session.inspect = gate;
+    try {
+      let usable: AgentAssistantProvider[];
+      if (options.listProviders) {
+        const listed = await options.listProviders(gate.signal);
+        const ids = new Set<string>();
+        usable = listed.filter((item) => {
+          if (!item.id || ids.has(item.id)) return false;
+          ids.add(item.id); return true;
+        }).map((item) => ({id:item.id,label:item.label.trim() || item.id}));
+      } else {
+        const inspect = options.inspectProvider ?? ((command: CliCommand, signal: AbortSignal) => inspectCli(command, signal, true));
+        const statuses = await Promise.all([inspect('codex',gate.signal),inspect('claude',gate.signal)]);
+        if (gate.signal.aborted || session.inspect !== gate) return;
+        session.statuses = statuses;
+        const settings = readAgentSettings();
+        usable = settings.order.filter((command) => {
+          const status = statuses.find((item) => item.command === command);
+          return status !== undefined && status.installed && status.connected && settings.enabled[command];
+        }).map((command) => ({id:command,label:providerLabel(command)}));
+      }
+      if (gate.signal.aborted || session.inspect !== gate || session.destroyed) return;
       const preferred = options.preferredProvider?.();
-      session.picked = preferred !== undefined && preferred !== null && usable.includes(preferred)
-        ? preferred : usable[0] ?? null;
+      if (!usable.some((item) => item.id === session.picked)) session.picked = null;
+      if (session.picked === null) session.picked = preferred && usable.some((item) => item.id === preferred) ? preferred : usable[0]?.id ?? null;
+      providerHint.textContent = 'Configurez un modèle dans les paramètres.';
+      paintProviders(usable);
+    } catch (error) {
+      if (gate.signal.aborted || session.inspect !== gate || session.destroyed) return;
+      session.picked = null;
+      providerHint.textContent = error instanceof Error ? error.message : 'Impossible de charger les modèles disponibles.';
+      paintProviders([]);
     }
-
-    paintProviders(usable);
   };
 
   const paintHistory = (): void => {
@@ -393,7 +413,7 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
       article.append(createChatMessage({ kind: 'user', text: turn.question }));
 
       if (turn.pending) {
-        const running = createChatActivity(turn.status ?? runningLabel(turn.command)).element;
+        const running = createChatActivity(turn.status ?? runningLabel(turn.label)).element;
 
         running.setAttribute('data-blok-agent-running', '');
         article.append(running);
@@ -407,7 +427,7 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
         article.append(createChatMessage({
           kind: 'assistant',
           text: turn.answer,
-          provider: providerLabel(turn.command),
+          provider: turn.label,
           onCopy: () => {
             const clipboard = navigator.clipboard;
 
@@ -482,7 +502,8 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     if (text === '' || session.run !== null || command === null || conversation === undefined) return;
 
     const sent = composed(text);
-    const turn: Turn = { question: text, sent, command, answer: '', pending: true, status: runningLabel(command) };
+    const label = session.providers.find((item) => item.id === command)?.label ?? (isCliCommand(command) ? providerLabel(command) : command);
+    const turn: Turn = { question: text, sent, command, label, answer: '', pending: true, status: runningLabel(label) };
     const prior: AgentModelMessage[] = conversation.turns.flatMap((item) => (
       item.pending || item.answer === ''
         ? []
@@ -501,17 +522,15 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     composerHandle.setText('');
     render();
 
-    const model = options.modelFor?.(command, (status) => {
-      if (session.token !== token || !turn.pending || turn.status === status) return;
-
-      turn.status = status;
-      paintMessages();
-    }) ?? createCliAgentModel({ command });
-    void model({
-      system: SYSTEM,
-      messages: [...prior, { role: 'user', content: sent }],
-      tools: [],
-      signal: controller.signal,
+    void Promise.resolve().then(() => {
+      const model = options.modelFor?.(command, (status) => {
+        if (session.token !== token || !turn.pending || turn.status === status) return;
+        turn.status = status; paintMessages();
+      }) ?? (isCliCommand(command) ? createCliAgentModel({command}) : null);
+      if (!model) throw new Error('Ce modèle nécessite un adaptateur fourni par l’application.');
+      return model({
+        system: SYSTEM, messages: [...prior, {role:'user',content:sent}], tools:[], signal:controller.signal,
+      });
     }).then((response) => {
       if (session.token !== token) return;
 
@@ -624,7 +643,7 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
   };
 
   const onKey = (event: KeyboardEvent): void => {
-    if (event.key !== 'Escape' || !session.open) return;
+    if (event.defaultPrevented || isEscapeConsumed(event) || event.key !== 'Escape' || !session.open) return;
 
     event.preventDefault();
     event.stopPropagation();
@@ -642,9 +661,9 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
   document.addEventListener('pointerdown', onPointerAway);
   document.addEventListener('keydown', onKey);
 
-  const unsubscribe = subscribeAgentSettings(() => {
-    void refreshProviders();
-  });
+  const onSettingsChanged = (): void => { void refreshProviders(); };
+  const unsubscribe = subscribeAgentSettings(onSettingsChanged);
+  window.addEventListener('blok:ai-settings-changed', onSettingsChanged);
 
   render();
   void refreshProviders();
@@ -654,10 +673,14 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     editorSlot,
     open,
     close,
+    refreshProviders,
     destroy: () => {
+      session.destroyed = true;
       stopRun();
       session.inspect?.abort();
+      composerHandle.destroy();
       unsubscribe();
+      window.removeEventListener('blok:ai-settings-changed', onSettingsChanged);
       document.removeEventListener('pointerdown', onPointerAway);
       document.removeEventListener('keydown', onKey);
       shell.remove();

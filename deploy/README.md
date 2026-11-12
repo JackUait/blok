@@ -96,8 +96,8 @@ npm run tauri --prefix desktop -- build
 
 | Volume Docker | Contenu |
 | --- | --- |
-| `blok-cloud_postgres` | Utilisateurs, sessions, espaces, rôles, index des pages et projections du contenu |
-| `blok-cloud_state` | Journal durable de collaboration `/data/collab` et fichiers joints `/data/uploads` |
+| `blok-cloud_postgres` | Utilisateurs, sessions, espaces, rôles, index des pages, projections du contenu et clés OpenAI chiffrées |
+| `blok-cloud_state` | Journal durable de collaboration `/data/collab`, fichiers joints `/data/uploads` et clé de chiffrement `/data/ai-key` |
 | `blok-cloud_caddy_data` | Certificats HTTPS |
 
 Les images contiennent le programme. Les volumes contiennent les données et survivent à leur remplacement.
@@ -144,3 +144,16 @@ Les certificats peuvent être réémis par Caddy ; les données locales Tauri d'
 L'API est documentée dans `apps/service/API.md`. Les tests Go avec PostgreSQL et les tests navigateur utilisent uniquement un collecteur local d'e-mails : aucun envoi réel n'est nécessaire.
 Le collecteur exige explicitement `APP_ENV=development` et `DEV_MAIL_DIRECTORY`; il est interdit en production.
 Le scénario navigateur est `desktop/src/cloud/browser-e2e.mjs` (voir ses variables au début du fichier).
+
+
+## Assistant OpenAI
+
+Dans **Paramètres → Assistant IA**, chaque membre peut enregistrer sa clé OpenAI et choisir son modèle. Les administrateurs peuvent aussi configurer une clé et un modèle partagés pour le workspace. La clé personnelle est prioritaire sur la clé partagée ; une erreur de clé personnelle ne déclenche jamais un repli facturé au workspace. Retirer la clé personnelle réactive la clé partagée si elle existe.
+
+Le sélecteur de l’assistant affiche le fournisseur, le modèle et la provenance de la clé. Il permet de choisir un autre modèle de texte accessible à la clé. Aucun appel de génération ne part avant l’envoi d’une demande. Le catalogue vient d’OpenAI ; la présence d’un modèle ne garantit pas sa compatibilité avec toutes les options de Responses.
+
+Les secrets ne sont jamais renvoyés au navigateur ni conservés dans son localStorage. Le serveur chiffre les clés avec AES-GCM. Par défaut, il crée une clé aléatoire dans `/data/ai-key` (permissions 0600), incluse dans `state.tar.gz`. **Conserver ce fichier avec la base est indispensable pour retrouver les clés après restauration ou changement de VPS.** Si `AI_ENCRYPTION_KEY` est défini, il doit contenir 32 octets aléatoires encodés en base64 ; conservez alors cette variable avec les secrets du déploiement. La changer ne rechiffre pas les clés existantes.
+
+Dans l’app macOS, un espace en ligne utilise le même compte et les mêmes règles que le navigateur. Un espace local utilise une clé personnelle distincte dans le trousseau du Mac. Codex et Claude Code restent disponibles via leur connexion CLI sur le Mac. Les clés du trousseau ne sont pas dans la sauvegarde serveur.
+
+La demande et le contexte de page explicitement activé sont envoyés à OpenAI via le serveur (ou directement depuis la partie native pour un espace local), avec `store: false`. Les appels sont facturés par OpenAI au titulaire de la clé utilisée. Les tests automatisés simulent OpenAI et ne nécessitent aucune clé réelle.

@@ -1,3 +1,4 @@
+import { createChoice, styleTextField } from './ui/controls';
 import { openModalDialog, type ModalDialogHandle } from '@blok/modal-dialog';
 import { CloudClient } from './cloud/client';
 import { nativeSessionAdapter } from './native-session';
@@ -6,7 +7,7 @@ import { activeWorkspace, listWorkspaces, createLocalWorkspace, workspaceKey, re
 import { dataDirectory } from './storage';
 import corePackage from '../../package.json';
 import appPackage from '../package.json';
-import { providerStatus, selectedProvider, setProvider, type Provider } from './assistant';
+import { mountAiSettings } from './ai-settings';
 
 export type Appearance = 'dark' | 'light' | 'auto';
 
@@ -105,6 +106,8 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   const client = currentWorkspace.kind === 'remote' ? new CloudClient({origin: currentWorkspace.server, sessionAdapter: native ? nativeSessionAdapter(currentWorkspace.server) : undefined}) : null;
   let members: ReturnType<typeof mountWorkspaceMembers> | null = null;
   let modal: ModalDialogHandle | null = null;
+  let choices: Array<{destroy(): void}> = [];
+  let panelGeneration = 0;
   const openInvitation = (container?: HTMLElement): void => {
     if (!admin || !client || currentWorkspace.kind !== 'remote') return;
     if (!container) switcher.focus();
@@ -274,6 +277,8 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
     generalTab.setAttribute('aria-current', panel === 'general' ? 'page' : 'false');
     membersTab.setAttribute('aria-current', panel === 'members' ? 'page' : 'false');
     members?.destroy(); members = null;
+    choices.splice(0).forEach((choice) => choice.destroy());
+    ++panelGeneration;
     main.querySelector('[data-desktop-settings-content]')?.remove();
     const content = el('div', 'data-desktop-settings-content');
     if (panel === 'members' && admin && client && currentWorkspace.kind === 'remote') {
@@ -304,6 +309,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
       labels.append(el('strong', 'data-desktop-settings-row-title', 'Nom'), el('span', 'data-desktop-settings-row-help', 'Nom local, sans connexion ni partage.'));
       const name = el('input', 'data-desktop-settings-name');
       name.type = 'text';
+      styleTextField(name);
       name.maxLength = 48;
       name.value = currentWorkspace.kind === 'local' && currentWorkspace.id === 'default' ? localStorage.getItem('blok:desktop:profile-name') || 'Espace local' : currentWorkspace.name;
 
@@ -324,23 +330,18 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
       const row = el('div', 'data-desktop-settings-row');
       const labels = el('div', 'data-desktop-settings-row-labels');
       labels.append(el('strong', 'data-desktop-settings-row-title', 'Thème'), el('span', 'data-desktop-settings-row-help', 'Choisissez l’apparence de Blok sur cet appareil.'));
-      const select = el('select', 'data-desktop-settings-theme');
-      select.setAttribute('aria-label', 'Thème');
-      for (const [value, label] of [['dark', 'Sombre'], ['light', 'Clair'], ['auto', 'Système']] as const) {
-        const option = document.createElement('option');
-        option.value = value;
-        option.textContent = label;
-        select.append(option);
-      }
-      select.value = readAppearance();
-      select.addEventListener('change', () => {
-        const mode = select.value as Appearance;
-        localStorage.setItem(KEY, mode);
-        const root = document.querySelector('[data-desktop-shell]');
-        if (root instanceof HTMLElement) applyAppearance(root, mode);
-        onThemeChange(mode);
+      const theme = createChoice<Appearance>({
+        label: 'Thème', value: readAppearance(),
+        options: [{value:'dark',label:'Sombre'},{value:'light',label:'Clair'},{value:'auto',label:'Système'}],
+        onChange(mode) {
+          localStorage.setItem(KEY, mode);
+          const root = document.querySelector('[data-desktop-shell]');
+          if (root instanceof HTMLElement) applyAppearance(root, mode);
+          onThemeChange(mode);
+        },
       });
-      row.append(labels, select);
+      theme.element.setAttribute('data-desktop-settings-theme', ''); choices.push(theme);
+      row.append(labels, theme.element);
       content.append(row);
       if (native && currentWorkspace.kind === 'local') {
         const advanced = document.createElement('details');
@@ -351,34 +352,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
         advanced.append(copy); content.append(advanced);
       }
     } else if (panel === 'ai') {
-      content.append(el('h1', 'data-desktop-settings-title', 'Assistant IA'));
-      content.append(el('p', 'data-desktop-settings-intro', 'Utilise les agents installés et connectés sur ce Mac. Les identifiants restent dans leurs outils.'));
-      content.append(el('h2', 'data-desktop-settings-section', 'Fournisseur'));
-      for (const provider of ['codex', 'claude'] as const) {
-        const row = el('div', 'data-desktop-settings-row');
-        const labels = el('div', 'data-desktop-settings-row-labels');
-        labels.append(el('strong', 'data-desktop-settings-row-title', provider === 'codex' ? 'Codex' : 'Claude Code'));
-        const status = el('span', 'data-desktop-settings-row-help', 'Vérification…');
-        labels.append(status);
-        const radio = el('input', 'data-desktop-settings-provider');
-        radio.type = 'radio';
-        radio.name = 'desktop-ai-provider';
-        radio.value = provider;
-        radio.checked = selectedProvider() === provider;
-        radio.setAttribute('aria-label', `Utiliser ${provider === 'codex' ? 'Codex' : 'Claude Code'}`);
-        radio.addEventListener('change', () => { if (radio.checked) setProvider(provider as Provider); });
-        row.append(labels, radio);
-        content.append(row);
-        void providerStatus(provider).then((result) => {
-          status.textContent = !result.installed ? 'Non installé' : result.connected ? `Connecté · ${result.version}` : `Non connecté · ${result.version}`;
-          radio.disabled = !result.connected;
-          if (!result.connected && radio.checked) {
-            const fallback = content.querySelector<HTMLInputElement>('[data-desktop-settings-provider][value="codex"]');
-            if (fallback && !fallback.disabled) { fallback.checked = true; setProvider('codex'); }
-          }
-        }).catch((error: unknown) => { status.textContent = `État indisponible : ${String(error)}`; radio.disabled = true; });
-      }
-      content.append(el('p', 'data-desktop-settings-explanation', 'La demande et, si tu le choisis, le texte de la page sont envoyés à l’agent sélectionné. La connexion de Codex ou Claude Code se fait dans leur CLI.'));
+      choices.push(mountAiSettings(content, currentWorkspace));
     } else if (panel === 'general') {
       content.append(el('h1', 'data-desktop-settings-title', 'Général'), el('p', 'data-desktop-settings-intro', 'Informations sur votre espace.'));
       const nameRow = el('div', 'data-desktop-settings-row');
@@ -409,7 +383,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
     modal = openModalDialog({
       content: overlay, surface: dialog, label: 'Paramètres', initialFocus: () => dialog,
       onDismiss: () => closeSettings(),
-      onClose: () => { overlay.hidden = true; members?.destroy(); members = null; modal = null; },
+      onClose: () => { overlay.hidden = true; ++panelGeneration; choices.splice(0).forEach((choice) => choice.destroy()); members?.destroy(); members = null; modal = null; },
     });
   };
   footer.addEventListener('blok:desktop-open-ai-settings', () => openSettings('ai'));

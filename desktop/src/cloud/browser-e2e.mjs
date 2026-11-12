@@ -87,7 +87,7 @@ try {
   const applicantRow = admin.locator('[data-cloud-row]').filter({has:admin.getByText(applicantEmail,{exact:true})});
   await expect(applicantRow).toBeVisible();
   await applicantRow.getByRole('button',{name:'Accepter',exact:true}).click();
-  await expect(admin.getByRole('combobox',{name:`Rôle de ${applicantEmail}`,exact:true})).toBeVisible();
+  await expect(admin.getByRole('button',{name:`Rôle de ${applicantEmail}`,exact:true})).toBeVisible();
   console.log('Admin approved applicant through browser UI.');
   await member.getByRole('button',{name:'Actualiser le statut',exact:true}).click();
   await member.getByRole('button',{name:'Ouvrir l’espace',exact:true}).first().click();
@@ -109,7 +109,7 @@ try {
   const paragraph = member.locator('[data-blok-redactor] [contenteditable="true"]').first();
   await expect(paragraph).toBeVisible();
   await paragraph.fill(`Texte partagé : ${text}`);
-  await expect(member.getByText('Synchronisé',{exact:true})).toBeVisible({timeout:20000});
+  await expect(member.locator('[data-desktop-status]')).toHaveAttribute('data-sync-state','connected',{timeout:20000});
   const indexBefore = await json(member,'/api/workspaces/tousambassadeurs/index');
   expect(indexBefore.status).toBe(200);
   await expect.poll(async () => (await json(member,'/api/workspaces/tousambassadeurs/index')).body.pages.some(page => page.title === text),{timeout:15000}).toBe(true);
@@ -151,13 +151,13 @@ try {
   for (const page of [member,peer]) {
     await expect(page.locator('[data-blok-redactor]')).toContainText('Bloc A — contribution membre',{timeout:15000});
     await expect(page.locator('[data-blok-redactor]')).toContainText('Bloc B — contribution pair',{timeout:15000});
-    await expect(page.getByText('Synchronisé',{exact:true})).toBeVisible({timeout:15000});
+    await expect(page.locator('[data-desktop-status]')).toHaveAttribute('data-sync-state','connected',{timeout:15000});
   }
   console.log('Two isolated browser contexts converged after concurrent edits.');
   await memberContext.setOffline(true);
   await expect.poll(() => member.evaluate(() => navigator.onLine)).toBe(false);
   await member.evaluate(() => {for (const socket of window.__cloudE2ESockets) if (socket.url.includes('/api/blok/')) socket.close(4000,'E2E transport interruption');});
-  await expect(member.locator('[data-desktop-status]')).not.toHaveText('Synchronisé',{timeout:15000});
+  await expect(member.locator('[data-desktop-status]')).not.toHaveAttribute('data-sync-state','connected',{timeout:15000});
   await block(member,'Bloc A').fill('Bloc A — contribution membre hors ligne');
   await block(peer,'Bloc B').fill('Bloc B — contribution pair en ligne');
   await expect(peer.locator('[data-blok-redactor]')).not.toContainText('hors ligne');
@@ -165,7 +165,7 @@ try {
   for (const page of [member,peer]) {
     await expect(page.locator('[data-blok-redactor]')).toContainText('contribution membre hors ligne',{timeout:20000});
     await expect(page.locator('[data-blok-redactor]')).toContainText('contribution pair en ligne',{timeout:20000});
-    await expect(page.getByText('Synchronisé',{exact:true})).toBeVisible({timeout:20000});
+    await expect(page.locator('[data-desktop-status]')).toHaveAttribute('data-sync-state','connected',{timeout:20000});
   }
   await Promise.all([member.reload(),peer.reload()]);
   for (const page of [member,peer]) {
@@ -180,8 +180,9 @@ try {
 
   const memberInfo = await json(member,'/api/session');
   const memberId = memberInfo.body.user.id;
-  const role = admin.getByRole('combobox',{name:`Rôle de ${applicantEmail}`,exact:true});
-  await role.selectOption('viewer');
+  const role = admin.getByRole('button',{name:`Rôle de ${applicantEmail}`,exact:true});
+  await role.click();
+  await admin.getByRole('menuitemradio',{name:'Lecture seule',exact:true}).click();
   await expect(admin.getByRole('heading',{name:'Où souhaitez-vous travailler ?'})).toBeVisible();
   await expect.poll(async () => (await json(member,'/api/session')).body.workspaces.find(ws => ws.slug === 'tousambassadeurs')?.role).toBe('viewer');
   expect((await json(member,'/api/workspaces/tousambassadeurs/index',{method:'PUT',data:{...indexBefore.body}})).status).toBe(403);

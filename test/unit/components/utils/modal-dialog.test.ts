@@ -325,6 +325,37 @@ describe('openModalDialog', () => {
       handle.close();
     });
 
+    it('keeps a real portaled menu selection inside its owning dialog on pointerdown, while backdrop still dismisses', () => {
+      const { content, surface, first } = buildDialog();
+      const onDismiss = vi.fn(() => handle.close());
+      const handle = openModalDialog({ content, surface, onDismiss });
+      const selected = vi.fn();
+      const popover = new PopoverDesktop({ trigger: first, items: [{ name: 'choice', title: 'Pick', closeOnActivate: true, onActivate: selected }] });
+      popovers.push(popover); popover.show();
+      const choice = popover.getElement().querySelector<HTMLElement>('[data-blok-item-name="choice"]')!;
+
+      choice.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }));
+      choice.click();
+
+      expect(selected).toHaveBeenCalledOnce();
+      expect(onDismiss).not.toHaveBeenCalled();
+      expect(content.isConnected).toBe(true);
+      content.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }));
+      expect(onDismiss).toHaveBeenCalledWith('outside');
+      expect(content.isConnected).toBe(false);
+    });
+
+    it('does not exempt a portaled menu whose trigger is outside the dialog', () => {
+      const { content, surface } = buildDialog();
+      const onDismiss = vi.fn(() => handle.close());
+      const handle = openModalDialog({ content, surface, onDismiss });
+      const stranger = document.createElement('button'); document.body.append(stranger);
+      const menu = openMenuFrom(stranger);
+      menu.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }));
+      expect(onDismiss).toHaveBeenCalledWith('outside');
+      expect(content.isConnected).toBe(false);
+    });
+
     it('pulls focus back from a menu opened by a trigger outside the dialog', () => {
       const { content, surface, first } = buildDialog();
       const handle = openModalDialog({ content, surface, onDismiss: vi.fn() });

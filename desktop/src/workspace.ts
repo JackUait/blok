@@ -8,8 +8,8 @@ import { workspaceRepository } from './workspace-repository';
 import { activeWorkspace, workspaceKey, type WorkspaceRef } from './workspace-registry';
 import { createDesktopFooter, readAppearance } from './settings';
 import { createAddCoverButton, createPageCover, isCoverId, trackPageHeaderHover, type CoverId } from './cover';
-import { mountAgentAssistant, type AgentAssistantHandle } from '../../src/shell/agent-assistant';
-import { bindAssistantButton, createAssistantButton, inspectNativeProvider, nativeAgentModel, selectedProvider } from './assistant';
+import { mountAgentAssistant, type AgentAssistantHandle } from '@blok/agent-assistant';
+import { bindAssistantButton, createAssistantButton, createWorkspaceAssistant } from './assistant';
 import { createPageToolbar, type PageBreadcrumbChoice, type PageBreadcrumbItem, type PageToolbar } from './page-toolbar';
 import { bindTitleDateMention, titleDateLabel, type TitleDateMentionBinding } from './title-date-mention';
 import { createFloatingToc, type FloatingToc } from './floating-toc';
@@ -194,6 +194,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   const showError = (error: unknown): void => {
     status.textContent = `Enregistrement impossible : ${String(error)}`;
     status.setAttribute('data-error', '');
+    status.setAttribute('data-sync-state', 'error');
   };
   const syncPageIcon = (page: ShellPage, icon: ReturnType<Blok['title']['icon']['get']>, persist = true): void => {
     if (!index) return;
@@ -405,7 +406,12 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       instance.on('collaboration:status', (event) => {
         if (generation !== turn) return;
         remotePending = (event?.save?.pendingOperations ?? 0) > 0 || (event?.save?.pendingBytes ?? 0) > 0;
-        if (ref.kind === 'remote') { status.textContent = remotePending ? 'Synchronisation…' : event?.status === 'connected' ? 'Synchronisé' : 'Connexion au serveur…'; }
+        if (ref.kind === 'remote' && !manifestFailed) {
+          const synced = !remotePending && event?.status === 'connected';
+          status.textContent = synced ? '' : remotePending ? 'Synchronisation…' : 'Connexion au serveur…';
+          status.setAttribute('data-sync-state', synced ? 'connected' : remotePending ? 'pending' : 'connecting');
+          status.removeAttribute('data-error');
+        }
       });
 
       const redactor = holder.querySelector<HTMLElement>('[data-blok-redactor]');
@@ -531,9 +537,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   assistant = mountAgentAssistant({
     getPageText: () => pageCanvas.querySelector('[data-desktop-document]')?.textContent?.slice(0, 100_000) ?? '',
     openSettings: () => footer.dispatchEvent(new Event('blok:desktop-open-ai-settings')),
-    inspectProvider: inspectNativeProvider,
-    modelFor: nativeAgentModel,
-    preferredProvider: selectedProvider,
+    ...createWorkspaceAssistant(ref),
   });
   pageCanvas = assistant.editorSlot;
   frame.canvas.append(assistant.element);

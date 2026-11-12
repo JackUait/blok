@@ -1,0 +1,16 @@
+[data-ai-settings] section { padding:22px 0; border-bottom:1px solid var(--desktop-border); }
+[data-ai-settings] h2 { margin:0 0 10px; font-size:16px; font-weight:600; }
+[data-ai-settings] h3 { margin:0 0 10px; font-size:13px; font-weight:500; }
+[data-ai-settings] section p { margin:8px 0 14px; color:var(--desktop-muted); font-size:13px; line-height:1.6; }
+[data-ai-settings] form { display:grid; gap:10px; }
+[data-ai-settings] [data-blok-field] { width:100%; box-sizing:border-box; }
+[data-ai-actions] { display:flex; gap:8px; flex-wrap:wrap; }
+[data-ai-settings] .blok-button { width:auto; padding:6px 10px; border:1px solid var(--desktop-border); background:transparent; box-shadow:none; color:var(--desktop-ink); font:inherit; font-size:13px; cursor:pointer; }
+[data-ai-settings] .blok-button:disabled { opacity:.45; cursor:default; }
+[data-ai-models] { padding-top:18px; }
+[data-ai-models] > button { margin-right:8px; margin-bottom:8px; max-width:100%; }
+[data-ai-effective] { padding:12px 0; font-size:13px; border-bottom:1px solid var(--desktop-border); }
+[data-ai-settings] [role=status] { color:var(--desktop-muted); font-size:13px; }
+
+[data-ai-settings] .blok-button:hover { background:var(--desktop-hover); }
+[data-ai-settings] .blok-button:focus-visible { outline:2px solid var(--blok-focus-ring); outline-offset:2px; }

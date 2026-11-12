@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"errors"
+	"net/http"
 	"net/netip"
 	"net/url"
 	"os"
@@ -15,6 +16,9 @@ type Config struct {
 	AllowedOrigins                                                                                       []string
 	TrustedProxyCIDRs                                                                                    []string
 	Development                                                                                          bool
+	AIEncryptionKey                                                                                      string
+	// AITransport is an injected transport for tests. Endpoints remain fixed to api.openai.com.
+	AITransport http.RoundTripper
 	// Deliver overrides SMTP for integration tests. Production must configure SMTP.
 	Deliver func(to, subject, body string) error
 }
@@ -26,7 +30,7 @@ func ConfigFromEnv() Config {
 		}
 		return d
 	}
-	return Config{DatabaseURL: os.Getenv("DATABASE_URL"), Listen: get("LISTEN_ADDR", ":8080"), PublicURL: get("PUBLIC_URL", "http://localhost:8080"), InternalURL: get("INTERNAL_URL", "http://127.0.0.1:8080"), DataDirectory: get("DATA_DIRECTORY", "./data"), TicketSecret: os.Getenv("TICKET_SECRET"), InternalSecret: os.Getenv("INTERNAL_SECRET"), AdminEmail: strings.ToLower(strings.TrimSpace(os.Getenv("BOOTSTRAP_ADMIN_EMAIL"))), SMTPHost: os.Getenv("SMTP_HOST"), SMTPPort: get("SMTP_PORT", "587"), SMTPUsername: os.Getenv("SMTP_USERNAME"), SMTPPassword: os.Getenv("SMTP_PASSWORD"), SMTPFrom: os.Getenv("SMTP_FROM"), TrustedProxyCIDRs: strings.FieldsFunc(os.Getenv("TRUSTED_PROXY_CIDRS"), func(r rune) bool { return r == ',' }), AllowedOrigins: strings.FieldsFunc(os.Getenv("ALLOWED_ORIGINS"), func(r rune) bool { return r == ',' }), ResendAPIKey: os.Getenv("RESEND_API_KEY"), MailFrom: os.Getenv("MAIL_FROM"), DevelopmentMailDirectory: os.Getenv("DEV_MAIL_DIRECTORY"), Development: os.Getenv("APP_ENV") == "development"}
+	return Config{AIEncryptionKey: os.Getenv("AI_ENCRYPTION_KEY"), DatabaseURL: os.Getenv("DATABASE_URL"), Listen: get("LISTEN_ADDR", ":8080"), PublicURL: get("PUBLIC_URL", "http://localhost:8080"), InternalURL: get("INTERNAL_URL", "http://127.0.0.1:8080"), DataDirectory: get("DATA_DIRECTORY", "./data"), TicketSecret: os.Getenv("TICKET_SECRET"), InternalSecret: os.Getenv("INTERNAL_SECRET"), AdminEmail: strings.ToLower(strings.TrimSpace(os.Getenv("BOOTSTRAP_ADMIN_EMAIL"))), SMTPHost: os.Getenv("SMTP_HOST"), SMTPPort: get("SMTP_PORT", "587"), SMTPUsername: os.Getenv("SMTP_USERNAME"), SMTPPassword: os.Getenv("SMTP_PASSWORD"), SMTPFrom: os.Getenv("SMTP_FROM"), TrustedProxyCIDRs: strings.FieldsFunc(os.Getenv("TRUSTED_PROXY_CIDRS"), func(r rune) bool { return r == ',' }), AllowedOrigins: strings.FieldsFunc(os.Getenv("ALLOWED_ORIGINS"), func(r rune) bool { return r == ',' }), ResendAPIKey: os.Getenv("RESEND_API_KEY"), MailFrom: os.Getenv("MAIL_FROM"), DevelopmentMailDirectory: os.Getenv("DEV_MAIL_DIRECTORY"), Development: os.Getenv("APP_ENV") == "development"}
 }
 func (c Config) validate() error {
 	for _, raw := range c.TrustedProxyCIDRs {

@@ -27,25 +27,13 @@ project's NASA/Webb cover assets.
 
 ## AI assistant
 
-The round Blok button at the lower right of the page opens the shared shell
-assistant. It has a side panel, floating window and full canvas view, plus suggestions, a per-window
-conversation history and provider selection. **Assistant IA** in settings
-checks whether the Codex or Claude Code CLI is installed and logged in. The
-native Tauri bridge runs the selected CLI in a temporary directory with its
-read-only/no-tools mode. It sends the question and, when checked, up to 100 KB
-of visible page text. No credentials are stored by Blok. The browser preview
-cannot run local CLIs; use the packaged macOS app.
+The Blok button opens the shared assistant panel with conversation history, page context and a provider/model picker. In **Paramètres → Assistant IA**, configure OpenAI with a personal key or (as workspace administrator) a shared key. Personal credentials take priority and never silently fall back after an API error. Keys are masked and never stored in browser localStorage. The selected model and key source appear in the assistant.
+
+For remote workspaces, requests use the authenticated Go service and encrypted credentials in PostgreSQL. Local native workspaces use a separate credential in the operating system keychain and the Rust HTTPS client. Codex and Claude Code remain available in the native app via their existing CLI authentication. The browser cannot inspect or execute tools installed on the Mac.
 
 ## Sharing
 
-This desktop app currently stores pages only on this machine. Opening the same
-page on another computer, inviting a user, and real-time editing are not yet
-implemented. The editor supports collaboration, and `packages/server` has a
-sync service, but a product needs an Internet-facing document API, durable
-storage, user login, per-page authorization, signed collaboration tickets and
-a reverse proxy with TLS. The desktop must then migrate its local documents to
-that service and mount the editor with `server` plus `collaboration` instead of
-`persistence`. A local display name is not an authorization identity.
+Remote workspaces support email login, membership roles, join requests, invitations and durable real-time collaboration. Local workspaces remain separate and stored on this machine. See `../deploy/README.md` for the Docker stack, demo accounts, data volumes and backup/restore workflow. Switching workspaces waits for pending document writes before loading the new context.
 
 The tab strip separately keeps its per-tab history in the webview's
 `sessionStorage` under `blok:window-tabs:v1`; this is window state, not the page

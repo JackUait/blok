@@ -1,4 +1,5 @@
 import './cloud.css';
+import {createChoice, styleTextField, type ChoiceControl} from '../ui/controls';
 import {CloudApiError, CloudClient, type CloudRole, type CloudSession, type CloudSessionAdapter, type CloudWorkspace, type CloudWorkspaceStatus} from './client';
 export * from './client';
 export interface CloudGatewayOptions {
@@ -22,7 +23,7 @@ function node<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, attr
 }
 function button(label: string, action: () => void | Promise<void>, primary = false): HTMLButtonElement {
   const result = node('button', label);
-  result.type = 'button';
+  result.type = 'button'; result.classList.add('blok-button');
   if (primary) result.setAttribute('data-cloud-primary', '');
   result.addEventListener('click', () => { void action(); });
   return result;
@@ -30,27 +31,27 @@ function button(label: string, action: () => void | Promise<void>, primary = fal
 function field(form: HTMLElement, label: string, type: string, name: string, value = ''): HTMLInputElement {
   const id = `cloud-${name}`;
   const title = node('label', label); title.htmlFor = id;
-  const input = node('input'); input.type = type; input.name = name; input.id = id; input.value = value; input.required = true;
+  const input = node('input'); styleTextField(input); input.type = type; input.name = name; input.id = id; input.value = value; input.required = true;
   form.append(title, input);
   return input;
 }
-function roleSelect(value: CloudRole, admin = true): HTMLSelectElement {
-  const select = node('select'); select.setAttribute('aria-label', 'Rôle');
-  for (const [role, label] of [['member', 'Membre'], ['viewer', 'Lecture seule'], ...(admin ? [['admin', 'Administrateur']] : [])]) {
-    const option = node('option', label); option.value = role; option.selected = value === role; select.append(option);
-  }
-  return select;
+function roleSelect(value: CloudRole, admin = true, label = 'Rôle', onChange: (value: CloudRole) => void = () => {}): ChoiceControl<CloudRole> {
+  return createChoice({label,value,options: (admin ? ['member','viewer','admin'] : ['member','viewer']).map(role => ({value:role as CloudRole,label:roleName[role as CloudRole]})),onChange});
 }
 const roleName: Record<CloudRole, string> = {admin:'Administrateur', member:'Membre', viewer:'Lecture seule'};
 export async function mountCloudGateway(root: HTMLElement, options: CloudGatewayOptions): Promise<CloudGateway> {
   const client = new CloudClient({origin:options.apiOrigin, sessionAdapter:options.sessionAdapter});
-  const view = node('div', undefined, 'data-cloud-gateway');
+  const view = node('div', undefined, 'data-cloud-gateway'); view.setAttribute('data-blok-interface','');
+  const choices: ChoiceControl<CloudRole>[] = [];
+  function trackedRole(value: CloudRole, admin = true, label = 'Rôle', onChange?: (value: CloudRole) => void): ChoiceControl<CloudRole> {const choice = roleSelect(value,admin,label,onChange); choices.push(choice); return choice;}
+  function disposeChoices(): void {for (const choice of choices) choice.destroy(); choices.length = 0;}
   root.replaceChildren(view);
   let alive = true;
   let session: CloudSession | null = null;
   let email = '';
   let currentMain: HTMLElement;
   function frame(): HTMLElement {
+    disposeChoices();
     view.replaceChildren();
     const header = node('header');
     const brand = node('div', undefined, 'data-cloud-brand'); brand.append(node('span', 'T', 'data-cloud-mark'), node('span', 'Tousambassadeurs'));
@@ -174,21 +175,20 @@ export async function mountCloudGateway(root: HTMLElement, options: CloudGateway
     if (!pending.length) requestSection.append(node('p', 'Aucune demande en attente.', 'data-cloud-muted'));
     for (const request of pending) {
       const row = node('div', undefined, 'data-cloud-row'); const text = node('div'); text.append(node('strong', request.email)); if (request.message) text.append(node('p', request.message));
-      const actions = node('div', undefined, 'data-cloud-actions'); const role = roleSelect('member', false);
-      actions.append(role, button('Refuser', () => run(async () => {await client.request(`${base}/join-requests/${encodeURIComponent(request.id)}/reject`, {method:'POST', body:'{}'}); await admin(workspace);})), button('Accepter', () => run(async () => {await client.request(`${base}/join-requests/${encodeURIComponent(request.id)}/approve`, {method:'POST', body:JSON.stringify({role:role.value})}); await admin(workspace);}), true)); row.append(text, actions); requestSection.append(row);
+      const actions = node('div', undefined, 'data-cloud-actions'); const role = trackedRole('member', false);
+      actions.append(role.element, button('Refuser', () => run(async () => {await client.request(`${base}/join-requests/${encodeURIComponent(request.id)}/reject`, {method:'POST', body:'{}'}); await admin(workspace);})), button('Accepter', () => run(async () => {await client.request(`${base}/join-requests/${encodeURIComponent(request.id)}/approve`, {method:'POST', body:JSON.stringify({role:role.value})}); await admin(workspace);}), true)); row.append(text, actions); requestSection.append(row);
     }
     main.append(requestSection);
     const memberSection = node('section', undefined, 'data-cloud-section'); memberSection.setAttribute('data-cloud-admin-members', '');
     const membersHeading = node('h2', `Membres · ${members.members.length}`); membersHeading.tabIndex = -1; memberSection.append(membersHeading);
     for (const member of members.members) {
       const row = node('div', undefined, 'data-cloud-row'); const text = node('div'); text.append(node('strong', member.email), node('p', member.id === session?.user.id ? 'Vous' : roleName[member.role]));
-      const roles = roleSelect(member.role); roles.setAttribute('aria-label', `Rôle de ${member.email}`);
-      roles.addEventListener('change', () => {void run(async () => {try {await client.request(`${base}/members/${encodeURIComponent(member.id)}`, {method:'PATCH', body:JSON.stringify({role:roles.value})}); await list();} catch (reason) {roles.value = member.role; throw reason;}});});
-      row.append(text, roles); memberSection.append(row);
+      const roles = trackedRole(member.role, true, `Rôle de ${member.email}`, (value) => {void run(async () => {try {await client.request(`${base}/members/${encodeURIComponent(member.id)}`, {method:'PATCH', body:JSON.stringify({role:value})}); await list();} catch (reason) {roles.setValue(member.role); throw reason;}});});
+      row.append(text, roles.element); memberSection.append(row);
     }
     main.append(memberSection);
     const invitation = node('section', undefined, 'data-cloud-section'); invitation.append(node('h2', 'Inviter une personne'), node('p', 'L’invitation sera associée à son adresse e-mail.', 'data-cloud-muted'));
-    const form = node('form'); const input = field(form, 'Adresse e-mail', 'email', 'invite-email'); const label = node('label', 'Accès'); const role = roleSelect('member', false); label.append(role); form.append(label);
+    const form = node('form'); const input = field(form, 'Adresse e-mail', 'email', 'invite-email'); const label = node('label', 'Accès'); const role = trackedRole('member', false); label.append(role.element); form.append(label);
     const submit = button('Envoyer l’invitation', () => {}, true); submit.type = 'submit'; form.append(submit);
     form.addEventListener('submit', event => {event.preventDefault(); void run(async () => {await client.request(`${base}/invites`, {method:'POST', body:JSON.stringify({email:input.value.trim(), role:role.value})}); await admin(workspace); const status = node('p', 'Invitation envoyée.', 'data-cloud-note'); status.setAttribute('role', 'status'); currentMain.append(status);});}); invitation.append(form);
     for (const invite of invites.invites.filter(item => item.status === 'pending')) {
@@ -207,5 +207,5 @@ export async function mountCloudGateway(root: HTMLElement, options: CloudGateway
     if (reason instanceof CloudApiError && reason.status === 401) login();
     else {login(); error(reason);}
   }
-  return {destroy() {alive = false; view.remove();}, async refresh() {if (alive) {await run(async () => {if (session) await list(); else login();});}}};
+  return {destroy() {alive = false; disposeChoices(); view.remove();}, async refresh() {if (alive) {await run(async () => {if (session) await list(); else login();});}}};
 }

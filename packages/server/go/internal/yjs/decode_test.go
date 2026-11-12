@@ -293,8 +293,8 @@ func collabUpdates(t *testing.T) map[string][]byte {
 		}
 		updates[entry.Name()] = update
 	}
-	if len(updates) != 31 {
-		t.Fatalf("want 31 collab fixtures, got %d", len(updates))
+	if len(updates) != 37 {
+		t.Fatalf("want 37 collab fixtures, got %d", len(updates))
 	}
 	return updates
 }

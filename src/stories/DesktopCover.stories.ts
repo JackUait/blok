@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
-import { createAddCoverButton, createPageCover, type CoverId } from '../../desktop/src/cover';
+import { createAddCoverButton, createPageCover, type CoverId, type PageCover } from '../../desktop/src/cover';
 import '../../desktop/src/shell.css';
 
 function page(initialCover?: CoverId, initialIcon?: string): HTMLElement {
   const canvas = document.createElement('main');
   canvas.setAttribute('data-blok-sidebar-canvas', '');
   canvas.style.minHeight = '680px';
-  let cover = initialCover;
+  let cover: PageCover | undefined = initialCover;
   let position = 50;
   const article = document.createElement('article');
   article.setAttribute('data-desktop-document', '');

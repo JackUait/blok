@@ -77,7 +77,7 @@ export const COVER_GALLERY = COVER_GROUPS.map((group) => ({
   label: group.label,
   items: group.items.map((item) => {
     const image = /^url\("(.*)"\)$/.exec(item.background);
-    if (image) return {label: item.label, url: new URL(image[1], location.href).href};
+    if (image) return {label: item.label, url: image[1]};
     const colors = item.background.match(/#[a-f0-9]{6}/gi) ?? ['#777777'];
     const stops = colors.map((color, index) => `<stop offset="${index / Math.max(1, colors.length - 1) * 100}%" stop-color="${color}"/>`).join('');
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="600"><defs><linearGradient id="g">${stops}</linearGradient></defs><path fill="url(#g)" d="M0 0h1600v600H0z"/></svg>`;

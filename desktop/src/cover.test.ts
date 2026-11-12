@@ -2,9 +2,23 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { describe, expect, it, vi } from 'vitest';
-import { createAddCoverButton, createPageCover, isCoverId, isPageCover, readCoverFile, COVER_PRESETS, trackPageHeaderHover } from './cover';
+import { safeImageSrc } from '../../src/shared/sanitize-url';
+import { createAddCoverButton, createPageCover, isCoverId, isPageCover, readCoverFile, COVER_GALLERY, COVER_PRESETS, trackPageHeaderHover } from './cover';
 
 describe('desktop page cover', () => {
+  it('persists portable gallery assets that both native and web clients can render', () => {
+    const presets = COVER_GALLERY.flatMap((group) => group.items);
+    const images = presets.filter((preset) => !preset.url.startsWith('data:'));
+    expect(images.length).toBeGreaterThan(0);
+    for (const preset of presets) expect(safeImageSrc(preset.url)).toBe(preset.url);
+    for (const image of images) {
+      expect(image.url).toMatch(/^\/(?!\/)/);
+      expect(new URL(image.url, 'https://workspace.example/page').pathname)
+        .toBe(new URL(image.url, 'tauri://localhost/page').pathname);
+      expect(image.url).not.toContain('localhost');
+    }
+  });
+
   it('keeps legacy presets and accepts only persistent image sources', () => {
     expect(COVER_PRESETS.length).toBeGreaterThanOrEqual(35);
     expect(isPageCover('dusk')).toBe(true);

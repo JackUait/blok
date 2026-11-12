@@ -1035,16 +1035,38 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   };
 
   /**
-   * Makes each tune that closes the menu note the blocks it acted on.
+   * Makes each tune that closes the menu note the blocks it acted on, and
+   * each switch that keeps it open take the menu cursor.
    * @param tunes - tunes to wrap
    * @param blocks - blocks the menu acts on
    */
   private noteActions(tunes: MenuConfigItem[], blocks: Block[]): MenuConfigItem[] {
     type ClosingTune = MenuConfigItem & { closeOnActivate: true; onActivate: (item: PopoverItemParams, event?: PointerEvent) => void };
+    type SwitchTune = MenuConfigItem & { name: string; isActive: () => boolean; onActivate: (item: PopoverItemParams, event?: PointerEvent) => void };
     const isClosing = (tune: MenuConfigItem): tune is ClosingTune =>
       'closeOnActivate' in tune && tune.closeOnActivate === true && 'onActivate' in tune && typeof tune.onActivate === 'function';
+    const isSwitch = (tune: MenuConfigItem): tune is SwitchTune =>
+      !isClosing(tune) && 'onActivate' in tune && typeof tune.onActivate === 'function'
+      && 'isActive' in tune && typeof tune.isActive === 'function' && typeof tune.name === 'string';
 
     return tunes.map((tune) => {
+      if (isSwitch(tune)) {
+        const toggle = tune.onActivate;
+
+        return {
+          ...tune,
+          // The press cleared the block selection and left no cursor in the menu.
+          // Notion keeps the block selected and moves focus to the switch (U161).
+          onActivate: (item: PopoverItemParams, event?: PointerEvent): void => {
+            toggle(item, event);
+            blocks.filter((block) => block.holder.isConnected).forEach((block) => this.Blok.BlockSelection.selectBlock(block));
+            if (this.popover instanceof PopoverDesktop) {
+              this.popover.focusItemByName(tune.name);
+            }
+          },
+        };
+      }
+
       if (!isClosing(tune)) {
         return tune;
       }

@@ -288,6 +288,64 @@ test.describe('block menu actions leave a block selection (D3)', () => {
     expect(await hasCaret(page)).toBe(false);
   });
 
+  test('U161: Header row and Header column switch in place, the menu stays open, and Escape, undo and redo keep the table selected', async ({ page }) => {
+    const headers = async (): Promise<string> => page.evaluate(async () => {
+      if (!window.blokInstance) {
+        throw new Error('no blok');
+      }
+      const table = (await window.blokInstance.save()).blocks.find((block) => block.id === 'tbl');
+      const data = (table?.data ?? {}) as { withHeadings?: boolean; withHeadingColumn?: boolean };
+
+      return `row:${String(data.withHeadings)} col:${String(data.withHeadingColumn)}`;
+    });
+    // Menu rows take a virtual cursor; DOM focus stays on the menu.
+    const focusedItem = async (): Promise<string | null> => page.evaluate(() =>
+      document.querySelector('[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-item"][data-blok-focused="true"]')
+        ?.getAttribute('data-blok-item-name') ?? null);
+    const expectTableSelected = async (): Promise<void> => {
+      await expect.poll(() => selectedIds(page)).toEqual(['tbl']);
+      expect(await hasCaret(page)).toBe(false);
+    };
+
+    await createBlok(page, tableBlocks());
+    await editable(page, 'p-before').click();
+    await gap(page);
+
+    await openTunes(page, 'tbl');
+    await tune(page, 'table-heading-row').click();
+    await expect.poll(headers).toBe('row:true col:false');
+    await expect(page.locator(TUNES_POPOVER)).toBeVisible();
+    await expect(tune(page, 'table-heading-row')).toHaveAttribute('data-blok-popover-item-active', 'true');
+    expect(await focusedItem()).toBe('table-heading-row');
+    await expectTableSelected();
+    await gap(page);
+
+    await tune(page, 'table-heading-column').click();
+    await expect.poll(headers).toBe('row:true col:true');
+    await expect(page.locator(TUNES_POPOVER)).toBeVisible();
+    await expect(tune(page, 'table-heading-column')).toHaveAttribute('data-blok-popover-item-active', 'true');
+    expect(await focusedItem()).toBe('table-heading-column');
+    await gap(page);
+
+    await page.keyboard.press('Escape');
+    await expect(page.locator(TUNES_POPOVER)).toBeHidden();
+    await expectTableSelected();
+
+    await page.keyboard.press(UNDO);
+    await expect.poll(headers).toBe('row:true col:false');
+    await expectTableSelected();
+    await gap(page, 300);
+
+    await page.keyboard.press(UNDO);
+    await expect.poll(headers).toBe('row:false col:false');
+    await expectTableSelected();
+    await gap(page, 300);
+
+    await page.keyboard.press(REDO);
+    await expect.poll(headers).toBe('row:true col:false');
+    await expectTableSelected();
+  });
+
   for (const name of ['table-fit-to-page-width', 'table-full-width'] as const) {
     test(`${name} leaves the table selected`, async ({ page }) => {
       await createBlok(page, tableBlocks());

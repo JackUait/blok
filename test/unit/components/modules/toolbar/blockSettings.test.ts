@@ -1007,6 +1007,46 @@ describe('BlockSettings', () => {
     expect(tuneNames).toEqual(['move-up', 'move-down', 'edit-metadata']);
   });
 
+  describe('a switch that keeps the menu open (Notion U161)', () => {
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    it('keeps the block selected and puts the menu cursor on the switch it toggled', async () => {
+      blockSettings.make();
+
+      const block = createBlock();
+      const onActivate = vi.fn();
+
+      document.body.appendChild(block.holder);
+      blokMock.BlockManager.currentBlock = block;
+      (block.getTunes as Mock).mockReturnValue({
+        toolTunes: [{ name: 'table-heading-row', title: 'Header row', isActive: () => true, onActivate }],
+        commonTunes: [],
+      });
+      getConvertibleToolsForBlockMock.mockResolvedValue([]);
+      (blockSettings as unknown as { selection: unknown }).selection = { save: vi.fn(), restore: vi.fn(), clearSaved: vi.fn() };
+
+      const trigger = document.createElement('button');
+
+      document.body.appendChild(trigger);
+      await blockSettings.open(block, trigger);
+
+      const popover = getLastPopover() as PopoverMock & { focusItemByName: Mock<(name: string) => boolean> };
+
+      popover.focusItemByName = vi.fn(() => true);
+      const items = (popover.params as { items: PopoverItemParams[] }).items;
+      const item = items.find((candidate) => 'name' in candidate && candidate.name === 'table-heading-row') as unknown as { onActivate: () => void };
+
+      blokMock.BlockSelection.selectBlock.mockClear();
+      item.onActivate();
+
+      expect(onActivate).toHaveBeenCalledTimes(1);
+      expect(blokMock.BlockSelection.selectBlock).toHaveBeenCalledWith(block);
+      expect(popover.focusItemByName).toHaveBeenCalledWith('table-heading-row');
+    });
+  });
+
   describe('an item that closes the menu (Notion parity)', () => {
     const openWithTune = async (onActivate: () => void): Promise<{ block: Block; trigger: HTMLButtonElement; activate: () => void }> => {
       blockSettings.make();

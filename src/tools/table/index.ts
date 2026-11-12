@@ -762,16 +762,16 @@ export class Table implements BlockTool {
         icon: IconHeaderRow,
         title: i18n.t('tools.table.headerRow'),
         name: 'table-heading-row',
-        isActive: this.model.withHeadings,
-        closeOnActivate: true,
+        // A switch: it toggles in place and the menu stays open (Notion U161).
+        isActive: (): boolean => this.model.withHeadings,
         onActivate: (): void => this.toggleHeadingRow(),
       },
       {
         icon: IconHeaderColumn,
         title: i18n.t('tools.table.headerColumn'),
         name: 'table-heading-column',
-        isActive: this.model.withHeadingColumn,
-        closeOnActivate: true,
+        // A switch: it toggles in place and the menu stays open (Notion U161).
+        isActive: (): boolean => this.model.withHeadingColumn,
         onActivate: (): void => this.toggleHeadingColumn(),
       },
       {

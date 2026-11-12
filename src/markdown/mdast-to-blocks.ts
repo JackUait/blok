@@ -540,9 +540,9 @@ function handleListItem(
   const own = blocks.slice(1).filter((block) => block.parent === undefined);
 
   if (own.length > 0) {
-    own.forEach((block) => {
+    for (const block of own) {
       block.parent = listItem.id;
-    });
+    }
     listItem.content = own.map((block) => block.id).filter((id): id is string => id !== undefined);
   }
 

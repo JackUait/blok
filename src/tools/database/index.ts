@@ -10515,6 +10515,7 @@ export class DatabaseTool implements BlockTool {
         events: this.api.events,
         toolsConfig: this.api.tools.getToolsConfig(),
         rowPages: this.config.rowPages,
+        customEmojis: this.config.customEmojis,
         titlePropertyId: titlePropId,
         descriptionPropertyId: descriptionPropId,
         schema: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
@@ -10680,7 +10681,8 @@ export class DatabaseTool implements BlockTool {
           this.cardDrawer?.syncOpenRow(this.rowOrTemplate(rowId));
           this.rerenderView({ keepDrawer: true });
         },
-        uploadCover: this.coverUploader(),
+        uploadCover: this.config.uploadCover ?? this.coverUploader(),
+        coverGallery: this.config.coverGallery,
         onIconChange: (rowId, icon) => {
           if (!writable()) return;
           const row = this.api.blocks.getChildren(this.dataId).find((child) => child.id === rowId);

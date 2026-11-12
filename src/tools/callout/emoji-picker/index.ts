@@ -1,6 +1,7 @@
 // src/tools/callout/emoji-picker/index.ts
 
 import { loadEmojiData, loadEmojiGrid, groupEmojisByCategory, CURATED_CALLOUT_EMOJIS, type ProcessedEmoji } from '../../../components/utils/emoji/emoji-data';
+import { safeImageSrc } from '../../../components/utils/sanitize-url';
 import { searchEmojisRanked } from '../../../components/utils/emoji/emoji-search-ranked';
 import { loadEmojiLocale, type EmojiLocaleData } from '../../../components/utils/emoji/emoji-locale';
 import { prefetchEmojiPickerData } from '../../../components/utils/emoji/emoji-prefetch';
@@ -72,6 +73,9 @@ interface EmojiPickerOptions {
   startInset?: number;
   /** No Random and no Remove: the pick is the whole job, as for a reaction. */
   pickOnly?: boolean;
+  /** Image emojis scoped to the workspace that owns this picker. */
+  customEmojis?: () => Promise<ReadonlyArray<{id: string; name: string; url: string}>>;
+  onCustomSelect?: (url: string) => void;
   /** The dialog's name. Defaults to "Edit icon". */
   label?: string;
 }
@@ -263,6 +267,10 @@ export class EmojiPicker {
   private _skinToneTimers = new Set<number>();
   /** A chosen tone whose dot and grid repaint waits for the landing circle. */
   private _skinTonePending = false;
+  private readonly customEmojis: EmojiPickerOptions['customEmojis'];
+  private readonly onCustomSelect: EmojiPickerOptions['onCustomSelect'];
+  private customItems: ReadonlyArray<{id: string; name: string; url: string}> = [];
+  private customGeneration = 0;
 
   constructor(options: EmojiPickerOptions) {
     this.onSelect = options.onSelect;
@@ -274,6 +282,8 @@ export class EmojiPicker {
     this._startInset = options.startInset ?? 8;
     this._pickOnly = options.pickOnly ?? false;
     this._label = options.label;
+    this.customEmojis = options.customEmojis;
+    this.onCustomSelect = options.onCustomSelect;
     this._element = this.buildElement();
 
     const body = this._element.querySelector<HTMLElement>('[data-emoji-picker-body]');
@@ -347,6 +357,17 @@ export class EmojiPicker {
     }
 
     this._current = handlers?.current ?? '';
+    const customTurn = ++this.customGeneration;
+    this.customItems = [];
+    this.renderCustomEmojis('');
+    if (this.customEmojis) {
+      void this.customEmojis().then(items => {
+        if (!this._open || customTurn !== this.customGeneration) return;
+        this.customItems = items;
+        this.renderCustomEmojis(this._filterInput.value);
+        this.showStageIdle();
+      }).catch(() => undefined);
+    }
 
     // Focus inside the picker means it is being reopened for another anchor:
     // close() must then fall back to that anchor, not to the hidden picker.
@@ -676,6 +697,11 @@ export class EmojiPicker {
       el.appendChild(header);
     }
 
+    const custom = document.createElement('section');
+    custom.setAttribute('data-emoji-picker-custom', '');
+    custom.hidden = true;
+    el.append(custom);
+
     const body = document.createElement('div');
     body.setAttribute('data-emoji-picker-body', '');
     body.className = 'overflow-y-auto max-h-[260px] px-1.5 pb-2';
@@ -849,6 +875,14 @@ export class EmojiPicker {
 
     if (glyph === '') {
       glyphEl.innerHTML = IconEmojiNavSmile;
+    } else if (/^(https?:|data:image\/|\/files\/)/i.test(glyph) && safeImageSrc(glyph)) {
+      const image = document.createElement('img');
+      image.src = glyph;
+      image.alt = '';
+      image.style.width = '1em';
+      image.style.height = '1em';
+      image.style.objectFit = 'contain';
+      glyphEl.replaceChildren(image);
     } else {
       glyphEl.textContent = glyph;
     }
@@ -889,7 +923,7 @@ export class EmojiPicker {
     this.setStage(
       this._current,
       this.i18n.t(this._current === '' ? NO_ICON_YET_KEY : CURRENT_ICON_KEY),
-      this._current === '' ? this.i18n.t(PICK_ICON_KEY) : this.titleName(emoji)
+      this._current === '' ? this.i18n.t(PICK_ICON_KEY) : this.customItems.find(item => item.url === this._current)?.name ?? this.titleName(emoji)
     );
   }
 
@@ -1727,7 +1761,40 @@ export class EmojiPicker {
     this.handleFilterChange(query);
   }
 
+  private renderCustomEmojis(query: string): void {
+    const section = this._element.querySelector<HTMLElement>('[data-emoji-picker-custom]');
+    if (!section) return;
+    section.replaceChildren();
+    const needle = query.trim().toLocaleLowerCase();
+    const items = this.customItems.filter(item => item.name.toLocaleLowerCase().includes(needle));
+    section.hidden = items.length === 0;
+    if (!items.length) return;
+    const heading = document.createElement('h3');
+    heading.textContent = this._locale.startsWith('fr') ? 'Émojis de l’espace' : 'Workspace emojis';
+    const grid = document.createElement('div');
+    grid.setAttribute('data-emoji-picker-custom-grid', '');
+    for (const item of items) {
+      const src = safeImageSrc(item.url);
+      if (!src) continue;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.setAttribute('aria-label', item.name);
+      button.title = `:${item.name}:`;
+      const image = document.createElement('img');
+      image.src = src;
+      image.alt = '';
+      button.append(image);
+      button.addEventListener('click', () => { this.onCustomSelect?.(item.url); this.close(); });
+      button.addEventListener('mouseenter', () => this.setStage(item.url, heading.textContent ?? '', item.name));
+      button.addEventListener('focus', () => this.setStage(item.url, heading.textContent ?? '', item.name));
+      button.addEventListener('mouseleave', () => this.showStageIdle());
+      grid.append(button);
+    }
+    section.append(heading, grid);
+  }
+
   private handleFilterChange(query: string): void {
+    this.renderCustomEmojis(query);
     hideTooltip();
     this._scrollDestination = null;
     this._clearSearchButton.hidden = query.length === 0;

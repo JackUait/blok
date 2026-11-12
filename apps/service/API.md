@@ -55,3 +55,14 @@ All AI routes require current workspace membership. Personal credentials belong 
 Limits: 32 messages, 16 KiB of instructions, 64 KiB total input text, 4,096 generated tokens (including reasoning), 64 KiB returned text, 60-second response timeout, two simultaneous response requests per account and 30 provider requests per minute per account (model listings included). Rate limits survive login/session changes and restarts. Incomplete generation returns an explicit French error; provider bodies, errors and keys are never echoed or logged. Error codes include 400 invalid input/model, 403 insufficient permissions, 409 no configured key, 422 provider rejection, 429 rate/usage limit, 502 provider/incomplete output and 504 timeout/cancellation.
 
 The host calls only the fixed OpenAI [Responses endpoint](https://developers.openai.com/api/reference/resources/responses/methods/create) with `store:false` and `max_output_tokens`, and the [Models endpoint](https://developers.openai.com/api/reference/resources/models/methods/list). It accepts no provider URL, redirects, arbitrary tools or request parameters from clients. `store:false` controls response storage in that API; this host does not claim it changes all provider retention policies.
+
+## Workspace images and custom emoji
+
+Workspace members can read custom emoji; members and administrators can upload images and add emoji. Viewers cannot change them. Uploaded images live in the existing `DATA_DIRECTORY/uploads` volume, and asset ownership and emoji records persist in PostgreSQL. Files use the same workspace membership checks and session-bound grants as document assets.
+
+- POST `/api/workspaces/:slug/images` `{dataUrl}` → 201 `{url}`. Upload a PNG, JPEG, GIF or WebP image up to 5 MiB for a page cover. The returned `/files/...` URL is persistent; resolve it through `/api/assets/url` for native clients, and never persist the temporary signed grant in page metadata.
+- GET `/api/workspaces/:slug/emojis` → `{emojis:[{id,name,url,createdBy,createdAt}]}` ordered by name.
+- POST `/api/workspaces/:slug/emojis` `{name,dataUrl}` or `{name,url}` → 201 `{id,name,url,createdBy,createdAt}`. Upload limit is 2 MiB; external image URLs must use HTTPS. The host does not fetch external URLs. Names are normalized to lowercase and use 1–64 ASCII letters, digits, underscores or hyphens; the first character must be a letter or digit. Names are unique per workspace; duplicates return 409.
+- DELETE `/api/workspaces/:slug/emojis/:id` → `{ok:true}`. Only the creator or a workspace administrator can remove an emoji. Its uploaded file remains available to existing page icons and document history.
+
+Uploads accept base64 data URLs whose declared type matches the detected PNG/JPEG/GIF/WebP bytes. SVG and other active content are rejected. Both image and emoji routes accept a workspace ID in place of its slug. Page cover metadata can retain a gallery key, an uploaded asset URL, or an HTTPS image URL.

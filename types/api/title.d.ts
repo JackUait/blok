@@ -25,6 +25,8 @@ export interface TitleConfig {
   placeholder?: string;
   /** False hides the icon and "Add icon". Default true. */
   icon?: boolean;
+  /** Workspace image emojis offered alongside Unicode emojis in the page icon picker. */
+  customEmojis?: () => Promise<ReadonlyArray<{id: string; name: string; url: string}>>;
   /** Every change, from any source. Save on `user`, `undo`, `redo` and `api`. */
   onChange?(title: string, change: TitleChange): void;
   /** Every icon change, from any source. `null`: removed. */

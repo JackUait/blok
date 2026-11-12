@@ -100,7 +100,7 @@ export class PageTitle extends Module {
         setIcon: (icon) => this.setIcon(icon, 'user'),
         isReadOnly: () => this.readOnly,
         labels: () => ({ add: I18n.t('title.addIcon'), change: I18n.t('title.changeIcon') }),
-        picker: () => ({ i18n: this.Blok.API.methods.i18n, locale: I18n.getLocale() }),
+        picker: () => ({ i18n: this.Blok.API.methods.i18n, locale: I18n.getLocale(), customEmojis: this.resolved?.customEmojis }),
       }, trailing);
     } else {
       this.dom.iconRow.append(...trailing());

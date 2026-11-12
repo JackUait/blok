@@ -172,6 +172,36 @@ func TestCloudIntegration(t *testing.T) {
 			request("POST", "/api/workspaces/tousambassadeurs/join-requests/"+r["id"].(string)+"/approve", admin, map[string]any{"role": "viewer"}, 200)
 		}
 	}
+	// Workspace images need no page, remain private, and custom emoji follow roles.
+	request("GET", "/api/workspaces/tousambassadeurs/emojis", other, nil, 403)
+	request("POST", "/api/workspaces/tousambassadeurs/emojis", viewer, map[string]any{"name": "nope", "dataUrl": tinyPNG}, 403)
+	request("POST", "/api/workspaces/tousambassadeurs/images", viewer, map[string]any{"dataUrl": tinyPNG}, 403)
+	emoji := request("POST", "/api/workspaces/tousambassadeurs/emojis", applicant, map[string]any{"name": "Party_parrot", "dataUrl": tinyPNG}, 201)
+	if emoji["name"] != "party_parrot" {
+		t.Fatal("emoji name was not normalized")
+	}
+	request("POST", "/api/workspaces/tousambassadeurs/emojis", admin, map[string]any{"name": "party_parrot", "url": "https://example.test/parrot.png"}, 409)
+	request("POST", "/api/workspaces/tousambassadeurs/emojis", admin, map[string]any{"name": "unsafe", "url": "javascript:alert(1)"}, 400)
+	emojis := request("GET", "/api/workspaces/tousambassadeurs/emojis", viewer, nil, 200)["emojis"].([]any)
+	if len(emojis) != 1 {
+		t.Fatalf("expected one custom emoji: %v", emojis)
+	}
+	image := request("POST", "/api/workspaces/tousambassadeurs/images", applicant, map[string]any{"dataUrl": tinyPNG}, 201)
+	request("GET", "/api/assets/url?url="+url.QueryEscape(image["url"].(string)), viewer, nil, 200)
+	request("GET", "/api/assets/url?url="+url.QueryEscape(image["url"].(string)), other, nil, 403)
+	emojiAsset := request("GET", "/api/assets/url?url="+url.QueryEscape(emoji["url"].(string)), viewer, nil, 200)["url"].(string)
+	assetRequest, _ := http.NewRequest("GET", emojiAsset, nil)
+	assetRecorder := httptest.NewRecorder()
+	s.Handler().ServeHTTP(assetRecorder, assetRequest)
+	if assetRecorder.Code != 200 || !bytes.HasPrefix(assetRecorder.Body.Bytes(), []byte("\x89PNG")) {
+		t.Fatalf("uploaded emoji not served: %d %s", assetRecorder.Code, assetRecorder.Body.String())
+	}
+	request("DELETE", "/api/workspaces/tousambassadeurs/emojis/"+emoji["id"].(string), viewer, nil, 403)
+	request("DELETE", "/api/workspaces/tousambassadeurs/emojis/"+emoji["id"].(string), applicant, nil, 200)
+	// Existing page icons keep using the retained file after emoji removal.
+	request("GET", "/api/assets/url?url="+url.QueryEscape(emoji["url"].(string)), viewer, nil, 200)
+	remoteEmoji := request("POST", "/api/workspaces/tousambassadeurs/emojis", applicant, map[string]any{"name": "remote", "url": "https://example.test/remote.png"}, 201)
+	request("DELETE", "/api/workspaces/tousambassadeurs/emojis/"+remoteEmoji["id"].(string), admin, nil, 200)
 	page := map[string]any{"id": "test-page-1", "title": "Title", "parentId": nil, "cover": "ocean", "titleDate": "2026-11-12", "fullWidth": true}
 	index := map[string]any{"pages": []any{page}, "trash": []any{}, "revision": 0}
 	request("PUT", "/api/workspaces/tousambassadeurs/index", viewer, index, 403)

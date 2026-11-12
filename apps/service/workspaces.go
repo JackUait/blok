@@ -133,6 +133,12 @@ func (s *Service) workspaceResource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch resource {
+	case "emojis":
+		s.emojis(w, r, u, ws, id)
+		return
+	case "images":
+		s.workspaceImage(w, r, ws, id)
+		return
 	case "ai":
 		s.ai(w, r, u, ws, id)
 		return

@@ -1,3 +1,4 @@
+import { renderPageIcon } from '../../src/shell/page-icon';
 export interface PageToolbar {
   element: HTMLElement;
   setBreadcrumbs(items: PageBreadcrumbItem[]): void;
@@ -193,7 +194,7 @@ export function createPageToolbar(
         if (choice.current) button.setAttribute('aria-current', 'page');
         iconNode.setAttribute('data-desktop-breadcrumb-menu-icon', '');
         iconNode.setAttribute('aria-hidden', 'true');
-        if (choice.icon) iconNode.textContent = choice.icon;
+        if (choice.icon) renderPageIcon(iconNode, choice.icon);
         else iconNode.append(glyph(['M4 2.5h5.2L12.5 6v7.5H4z', 'M9.2 2.5V6h3.3']));
         titleNode.textContent = choice.title;
         button.append(iconNode, titleNode);
@@ -273,7 +274,7 @@ export function createPageToolbar(
       content.title = item.title;
       iconNode.setAttribute('data-desktop-page-toolbar-icon', '');
       iconNode.setAttribute('aria-hidden', 'true');
-      if (item.icon) iconNode.textContent = item.icon;
+      if (item.icon) renderPageIcon(iconNode, item.icon);
       else iconNode.append(glyph(['M4 2.5h5.2L12.5 6v7.5H4z', 'M9.2 2.5V6h3.3']));
       titleNode.setAttribute('data-desktop-page-toolbar-title', '');
       titleNode.textContent = item.title;

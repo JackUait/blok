@@ -519,3 +519,16 @@ div[data-desktop-menu-account], div[data-desktop-menu-account]:hover { cursor: d
   [data-desktop-settings-overlay],
   [data-desktop-settings-overlay][data-blok-top-layer][popover] { padding: 12px; }
 }
+
+[data-desktop-cover-tabs] { display: flex; gap: 18px; padding: 0 14px; border-bottom: 1px solid var(--desktop-border); }
+[data-desktop-cover-tabs] button { padding: 11px 0 9px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--desktop-muted); font: inherit; font-size: 13px; cursor: pointer; }
+[data-desktop-cover-tabs] button[aria-selected="true"] { border-bottom-color: var(--desktop-ink); color: var(--desktop-ink); }
+[data-desktop-cover-tabs] button:hover { color: var(--desktop-ink); }
+[data-desktop-cover-panel] { padding: 22px 16px; }
+[data-desktop-cover-panel][hidden], [data-desktop-cover-gallery-viewport][hidden] { display: none; }
+[data-desktop-cover-panel] input[type="url"] { width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 9px 10px; border: 1px solid var(--desktop-border); border-radius: 5px; background: var(--desktop-strip); color: var(--desktop-ink); font: inherit; font-size: 13px; }
+[data-desktop-cover-panel] > button { width: 100%; padding: 8px 12px; border: 1px solid var(--desktop-border); border-radius: 5px; background: var(--desktop-hover); color: var(--desktop-ink); font: inherit; font-size: 13px; cursor: pointer; }
+[data-desktop-cover-panel] > button:hover { background: var(--desktop-border); }
+[data-desktop-cover-panel] > button:disabled { opacity: .6; cursor: wait; }
+[data-desktop-cover-panel] p { margin: 12px 0 0; text-align: center; color: var(--desktop-muted); font-size: 12px; line-height: 1.5; }
+[data-desktop-cover-panel] [role="status"]:empty { display: none; }

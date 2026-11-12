@@ -1512,6 +1512,11 @@ export interface DatabaseComments {
 }
 
 export interface DatabaseConfig {
+  /** Host-owned persistent cover presets and upload path for row pages. */
+  coverGallery?: ReadonlyArray<{label: string; items: ReadonlyArray<{label: string; url: string}>}>;
+  uploadCover?: (file: File) => Promise<string>;
+  /** Workspace image emojis offered in row page icon pickers. */
+  customEmojis?: () => Promise<ReadonlyArray<{id: string; name: string; url: string}>>;
   automations?: DatabaseAutomations;
   forms?: DatabaseForms;
   map?: DatabaseMap;

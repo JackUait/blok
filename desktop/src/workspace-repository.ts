@@ -76,6 +76,11 @@ export function workspaceRepository(workspace: WorkspaceRef) {
       if (ref.kind !== 'remote') throw new Error('Remote operation only');
       await request(`${base}/pages/${encodeURIComponent(source)}/duplicate`, {method: 'POST', body: JSON.stringify(page)});
     },
+    async uploadImage(dataUrl: string): Promise<string> {
+      if (ref.kind === 'local') return dataUrl;
+      const image = await request<{url: string}>(`${base}/images`, {method: 'POST', body: JSON.stringify({dataUrl})});
+      return new URL(image.url, ref.server).href;
+    },
     async assetUrl(url: string): Promise<string> {
       if (ref.kind !== 'remote') return url;
       const asset = new URL(url, ref.server);

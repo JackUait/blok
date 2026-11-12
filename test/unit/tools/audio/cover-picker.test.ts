@@ -45,6 +45,32 @@ describe('validateCoverFile', () => {
 });
 
 describe('openCoverPicker', () => {
+  it('offers host gallery presets alongside the existing upload and link panels', () => {
+    const anchor = document.createElement('button');
+    document.body.append(anchor);
+    const onUrl = vi.fn();
+    const handle = openCoverPicker({anchor, onFile: vi.fn(), onUrl, gallery: [{label: 'Landscapes', items: [
+      {label: 'Ocean', url: 'https://example.com/ocean.jpg'},
+      {label: 'Unsafe', url: 'javascript:alert(1)'},
+    ]}]});
+    const dialog = document.querySelector<HTMLElement>('[data-role="audio-cover-picker"]')!;
+    const tabs = dialog.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+    expect(tabs).toHaveLength(3);
+    expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+    expect(dialog.querySelector('.blok-cover-gallery')!.getAttribute('hidden')).toBeNull();
+    expect(dialog.querySelector('[aria-label="Unsafe"]')).toBeNull();
+    dialog.querySelector<HTMLButtonElement>('[aria-label="Ocean"]')!.click();
+    expect(onUrl).toHaveBeenCalledWith('https://example.com/ocean.jpg');
+    tabs[0].dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true}));
+    expect(tabs[1].getAttribute('aria-selected')).toBe('true');
+    expect(dialog.querySelector<HTMLElement>('.blok-cover-gallery')!.hidden).toBe(true);
+    tabs[2].click();
+    expect(dialog.querySelector('input[type="url"]')).not.toBeNull();
+    tabs[2].dispatchEvent(new KeyboardEvent('keydown', {key: 'Home', bubbles: true}));
+    expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+    handle.close();
+  });
+
   it('mounts a dialog and forwards a submitted URL, then closes on demand', () => {
     const anchor = document.createElement('div');
     document.body.appendChild(anchor);

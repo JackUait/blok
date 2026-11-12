@@ -781,3 +781,11 @@
 [data-emoji-picker-body]::-webkit-scrollbar-thumb:hover {
   background: color-mix(in srgb, var(--blok-text-secondary) 50%, transparent);
 }
+
+[data-emoji-picker-custom] { padding: 4px 12px 8px; border-bottom: 1px solid var(--blok-popover-border, #8883); }
+[data-emoji-picker-custom][hidden] { display: none; }
+[data-emoji-picker-custom] h3 { font-size: 11px; color: var(--blok-text-secondary, #888); margin: 0 0 6px; font-weight: 500; }
+[data-emoji-picker-custom-grid] { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; max-height: 112px; overflow-y: auto; }
+[data-emoji-picker-custom-grid] button { border: 0; background: transparent; padding: 5px; border-radius: 5px; cursor: pointer; }
+[data-emoji-picker-custom-grid] button:hover { background: var(--blok-item-hover-bg, #8882); }
+[data-emoji-picker-custom-grid] img { width: 24px; height: 24px; object-fit: contain; }

@@ -6,6 +6,7 @@ export interface ResolvedTitleConfig {
   placeholder: string | null;
   icon: boolean;
   cover: boolean;
+  customEmojis?: TitleConfig['customEmojis'];
   onChange: NonNullable<TitleConfig['onChange']> | null;
   onIconChange: NonNullable<TitleConfig['onIconChange']> | null;
   onCoverChange: NonNullable<TitleConfig['onCoverChange']> | null;
@@ -22,6 +23,7 @@ export const normalizeTitleConfig = (value: BlokConfig['pageTitle']): ResolvedTi
     placeholder: config.placeholder === undefined || config.placeholder === '' ? null : config.placeholder,
     icon: config.icon !== false,
     cover: config.cover === true,
+    ...(config.customEmojis ? {customEmojis: config.customEmojis} : {}),
     onChange: config.onChange ?? null,
     onIconChange: config.onIconChange ?? null,
     onCoverChange: config.onCoverChange ?? null,

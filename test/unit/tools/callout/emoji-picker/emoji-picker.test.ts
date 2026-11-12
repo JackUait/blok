@@ -68,6 +68,25 @@ describe('EmojiPicker', () => {
     document.documentElement.style.overflow = '';
   });
 
+  it('loads scoped workspace emojis, filters their names and selects the canonical image URL', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const onCustomSelect = vi.fn();
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: {t: key => key}, locale: 'en',
+      customEmojis: async () => [{id:'logo',name:'team_logo',url:'https://example.test/files/logo.png'},{id:'bad',name:'unsafe',url:'javascript:alert(1)'}], onCustomSelect });
+    container.append(picker.getElement());
+    const anchor = document.createElement('button');container.append(anchor);
+    await picker.open(anchor);
+    await vi.waitFor(() => expect(picker.getElement().querySelector('[aria-label="team_logo"]')).toBeTruthy());
+    expect(picker.getElement().querySelector('[aria-label="unsafe"]')).toBeNull();
+    const search = picker.getElement().querySelector<HTMLInputElement>('[role=searchbox]')!;
+    search.value = 'missing';simulateInput(search);
+    expect(picker.getElement().querySelector('[data-emoji-picker-custom]')?.hasAttribute('hidden')).toBe(true);
+    search.value = 'logo';simulateInput(search);
+    picker.getElement().querySelector<HTMLButtonElement>('[aria-label="team_logo"]')!.click();
+    expect(onCustomSelect).toHaveBeenCalledWith('https://example.test/files/logo.png');
+    expect(picker.isOpen()).toBe(false);
+  });
+
   it('uses fixed positioning so it stays in place when the page scrolls', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
     const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en' });

@@ -1,3 +1,4 @@
+import { renderPageIcon } from '../../shell/page-icon';
 import { IconPageEmpty } from '../../components/icons';
 
 import type { DatabaseRow, DatabaseViewConfig } from './types';
@@ -15,7 +16,7 @@ export const pageIconElement = (row: Pick<DatabaseRow, 'icon'>): HTMLElement | n
 
   icon.setAttribute('data-blok-database-page-icon', '');
   icon.setAttribute('aria-hidden', 'true');
-  icon.textContent = row.icon;
+  renderPageIcon(icon, row.icon);
 
   return icon;
 };

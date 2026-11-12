@@ -1,3 +1,4 @@
+import { renderPageIcon } from '../../src/shell/page-icon';
 import { activeWorkspace, workspaceKey } from './workspace-registry';
 import { createWorkspace, type Workspace } from './workspace';
 import { applyAppearance, readAppearance, watchSystemAppearance } from './settings';
@@ -715,7 +716,7 @@ function tabIcon(icon: string): HTMLSpanElement {
     return node;
   }
   node.setAttribute('data-desktop-tab-icon', '');
-  node.textContent = icon;
+  renderPageIcon(node, icon);
   return node;
 }
 

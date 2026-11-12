@@ -2,9 +2,58 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { describe, expect, it, vi } from 'vitest';
-import { createAddCoverButton, createPageCover, isCoverId, trackPageHeaderHover } from './cover';
+import { createAddCoverButton, createPageCover, isCoverId, isPageCover, readCoverFile, COVER_PRESETS, trackPageHeaderHover } from './cover';
 
 describe('desktop page cover', () => {
+  it('keeps legacy presets and accepts only persistent image sources', () => {
+    expect(COVER_PRESETS.length).toBeGreaterThanOrEqual(35);
+    expect(isPageCover('dusk')).toBe(true);
+    expect(isPageCover('https://example.com/cover.jpg')).toBe(true);
+    expect(isPageCover('data:image/png;base64,YQ==')).toBe(true);
+    for (const value of ['javascript:alert(1)', 'blob:temporary', 'data:text/html;base64,YQ==', 'unknown']) expect(isPageCover(value)).toBe(false);
+  });
+  it('switches accessible tabs and applies a direct image link', () => {
+    const change = vi.fn();
+    const root = createPageCover('dusk', 50, change, vi.fn());
+    const tabs = root.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+    expect(tabs).toHaveLength(3);
+    tabs[2].click();
+    expect(tabs[2].getAttribute('aria-selected')).toBe('true');
+    expect(root.querySelector<HTMLElement>('[data-desktop-cover-gallery-viewport]')!.hidden).toBe(true);
+    root.querySelector<HTMLInputElement>('input[type="url"]')!.value = 'https://example.com/cover.jpg';
+    root.querySelector('form')!.dispatchEvent(new Event('submit', {bubbles: true, cancelable: true}));
+    expect(change).toHaveBeenCalledWith('https://example.com/cover.jpg');
+    tabs[2].dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true}));
+    expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+  });
+  it('reads image uploads and rejects unsupported or oversized files', async () => {
+    await expect(readCoverFile(new File(['a'], 'cover.png', {type: 'image/png'}))).resolves.toBe('data:image/png;base64,YQ==');
+    await expect(readCoverFile(new File(['a'], 'cover.svg', {type: 'image/svg+xml'}))).rejects.toThrow('PNG');
+    await expect(readCoverFile(new File([new Uint8Array(5 * 1024 * 1024 + 1)], 'cover.png', {type: 'image/png'}))).rejects.toThrow('5 Mo');
+  });
+  it('uploads through the workspace and renders the resolved private URL', async () => {
+    const change = vi.fn();
+    const upload = vi.fn().mockResolvedValue('https://example.com/files/cover.png');
+    const resolveUrl = vi.fn().mockResolvedValue('https://example.com/files/old.png?grant=signed');
+    const root = createPageCover('https://example.com/files/old.png', 30, change, vi.fn(), {upload, resolveUrl});
+    await vi.waitFor(() => expect(root.querySelector<HTMLElement>('[data-desktop-cover-image]')!.style.backgroundImage).toContain('grant=signed'));
+    const input = root.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, 'files', {value: [new File(['a'], 'cover.png', {type: 'image/png'})]});
+    input.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(change).toHaveBeenCalledWith('https://example.com/files/cover.png'));
+    expect(upload).toHaveBeenCalledWith('data:image/png;base64,YQ==');
+  });
+  it('shows upload errors and hides controls from viewers', async () => {
+    const change = vi.fn();
+    const root = createPageCover('dusk', 50, change, vi.fn(), {upload: vi.fn().mockRejectedValue(new Error('Connexion perdue'))});
+    const input = root.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, 'files', {value: [new File(['a'], 'cover.png', {type: 'image/png'})]});
+    input.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(root.textContent).toContain('Connexion perdue'));
+    expect(change).not.toHaveBeenCalled();
+    expect(createPageCover('dusk', 50, change, vi.fn(), {readOnly: true}).querySelector('[data-desktop-cover-actions]')).toBeNull();
+  });
+
   it('offers a cover, allows replacing it, and allows removing it', () => {
     const change = vi.fn();
     const position = vi.fn();

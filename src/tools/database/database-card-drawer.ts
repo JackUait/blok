@@ -26,6 +26,8 @@ import { createHeadingToggle } from '../table/table-heading-toggle';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { EmojiPicker } from '../callout/emoji-picker';
 import { loadEmojiGrid } from '../../components/utils/emoji/emoji-data';
+import { renderPageIcon } from '../../shell/page-icon';
+import type { DatabaseConfig } from './types';
 import { fileChipIcon } from './page-icon';
 import { openCoverPicker, validateCoverFile } from '../audio/cover-picker';
 import { loadSheet } from '../../components/utils/lazy-styles';
@@ -309,12 +311,14 @@ export interface CardDrawerOptions {
   onCoverChange?: (rowId: string, cover: string | null) => void;
   /** Uploads a picked cover file and gives its URL. Without it, a cover comes from a link only. */
   uploadCover?: (file: File) => Promise<string>;
+  coverGallery?: import('../audio/cover-picker').OpenCoverPickerOptions['gallery'];
   /** Escape closed the page of this row. */
   onEscapeClose?: (rowId: string) => void;
   /** "Copy link to view" on a row page's view tab. Without it, the tab menu has no such item. */
   onCopyViewLink?: (rowId: string, tabId: string) => void;
   /** A page icon picked (an emoji) or removed (null). */
   onIconChange?: (rowId: string, icon: string | null) => void;
+  customEmojis?: DatabaseConfig['customEmojis'];
   /**
    * The row actions of the page's "•••" menu (research/09 §1b). Undefined for a
    * page they cannot act on, such as a template.
@@ -521,6 +525,7 @@ export class DatabaseCardDrawer {
   private readonly rowLink: CardDrawerOptions['rowLink'];
   private readonly onExpand: CardDrawerOptions['onExpand'];
   private readonly onIconChange: CardDrawerOptions['onIconChange'];
+  private readonly customEmojis: CardDrawerOptions['customEmojis'];
   private readonly backlinks: CardDrawerOptions['backlinks'];
   private readonly comments: CardDrawerOptions['comments'];
   private readonly onCommentProperty: CardDrawerOptions['onCommentProperty'];
@@ -536,6 +541,7 @@ export class DatabaseCardDrawer {
   private readonly onEscapeClose: CardDrawerOptions['onEscapeClose'];
   private readonly onCoverChange: CardDrawerOptions['onCoverChange'];
   private readonly uploadCover: CardDrawerOptions['uploadCover'];
+  private readonly coverGallery: CardDrawerOptions['coverGallery'];
   private readonly onPageLayoutChange: CardDrawerOptions['onPageLayoutChange'];
   private readonly onPageLayoutBirth: CardDrawerOptions['onPageLayoutBirth'];
   private readonly layoutTabs: CardDrawerOptions['layoutTabs'];
@@ -692,6 +698,7 @@ export class DatabaseCardDrawer {
     this.rowLink = options.rowLink;
     this.onExpand = options.onExpand;
     this.onIconChange = options.onIconChange;
+    this.customEmojis = options.customEmojis;
     this.backlinks = options.backlinks;
     this.comments = options.comments;
     this.onCommentProperty = options.onCommentProperty;
@@ -703,6 +710,7 @@ export class DatabaseCardDrawer {
     this.onEscapeClose = options.onEscapeClose;
     this.onCoverChange = options.onCoverChange;
     this.uploadCover = options.uploadCover;
+    this.coverGallery = options.coverGallery;
     this.onPageLayoutChange = options.onPageLayoutChange;
     this.onPageLayoutBirth = options.onPageLayoutBirth;
     this.layoutTabs = options.layoutTabs;
@@ -1387,7 +1395,7 @@ export class DatabaseCardDrawer {
       icon.type = 'button';
       icon.setAttribute('data-blok-database-drawer-icon', '');
       icon.setAttribute('aria-label', this.label('tools.database.changeIcon'));
-      icon.textContent = row.icon;
+      renderPageIcon(icon, row.icon);
       icon.disabled = this.readOnly;
       icon.addEventListener('click', () => this.openIconPicker(row.id, icon));
       head.appendChild(icon);
@@ -1570,7 +1578,7 @@ export class DatabaseCardDrawer {
     if (item.icon === undefined) {
       page.append(iconNode(IconPageEmpty));
     } else {
-      page.textContent = item.icon;
+      renderPageIcon(page, item.icon);
     }
     icon.append(arrow, page);
 
@@ -1587,6 +1595,7 @@ export class DatabaseCardDrawer {
     this.coverPicker?.close();
     const picker = openCoverPicker({
       anchor,
+      gallery: this.coverGallery,
       ...(this.i18n !== undefined ? { i18n: this.i18n } : {}),
       onUrl: (url) => {
         if (safeImageSrc(url) === null) {
@@ -1676,7 +1685,7 @@ export class DatabaseCardDrawer {
     };
 
     if (this.emojiPicker === null) {
-      this.emojiPicker = new EmojiPicker({ ...handlers, i18n, locale: i18n.getLocale() });
+      this.emojiPicker = new EmojiPicker({ ...handlers, i18n, locale: i18n.getLocale(), curated: false, customEmojis: this.customEmojis, onCustomSelect: url => { if (this.currentRowId) this.onIconChange?.(this.currentRowId, url); } });
     }
     const element = this.emojiPicker.getElement();
 

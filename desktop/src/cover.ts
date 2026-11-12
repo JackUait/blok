@@ -23,7 +23,24 @@ export const COVER_GROUPS = [
     { id: 'forest', label: 'Forêt', background: 'linear-gradient(115deg, #193a34, #4f745e 55%, #a5a979)' },
     { id: 'clay', label: 'Terre', background: 'linear-gradient(110deg, #4e3530, #aa695a 53%, #e2b78c)' },
     { id: 'violet', label: 'Violet', background: 'linear-gradient(115deg, #322450, #654a9a 55%, #b78bb4)' },
+    { id: 'sunrise', label: 'Aurore', background: 'linear-gradient(110deg, #fad0c4, #ffd1ff)' },
+    { id: 'sky', label: 'Ciel', background: 'linear-gradient(110deg, #a1c4fd, #c2e9fb)' },
+    { id: 'mint', label: 'Menthe', background: 'linear-gradient(110deg, #84fab0, #8fd3f4)' },
+    { id: 'sand', label: 'Sable', background: 'linear-gradient(110deg, #e6d9bd, #f5eee0)' },
+    { id: 'rose', label: 'Rose', background: 'linear-gradient(110deg, #e8b5bd, #f8dedb)' },
+    { id: 'midnight', label: 'Minuit', background: 'linear-gradient(110deg, #141e30, #475978)' },
     { id: 'paper', label: 'Papier', background: 'linear-gradient(110deg, #6a695f, #a8a494 52%, #ded9c7)' },
+  ] },
+  { label: 'Couleurs unies', items: [
+    { id: 'solid-cream', label: 'Crème', background: 'linear-gradient(#e8dfcf, #e8dfcf)' },
+    { id: 'solid-stone', label: 'Pierre', background: 'linear-gradient(#b8b5ad, #b8b5ad)' },
+    { id: 'solid-gray', label: 'Gris', background: 'linear-gradient(#727777, #727777)' },
+    { id: 'solid-blue', label: 'Bleu', background: 'linear-gradient(#7d9fb4, #7d9fb4)' },
+    { id: 'solid-green', label: 'Vert', background: 'linear-gradient(#8d9e88, #8d9e88)' },
+    { id: 'solid-yellow', label: 'Jaune', background: 'linear-gradient(#e7c578, #e7c578)' },
+    { id: 'solid-orange', label: 'Orange', background: 'linear-gradient(#d99c76, #d99c76)' },
+    { id: 'solid-red', label: 'Rouge', background: 'linear-gradient(#c57f78, #c57f78)' },
+    { id: 'solid-pink', label: 'Rose poudré', background: 'linear-gradient(#cba3ae, #cba3ae)' },
   ] },
   { label: 'Images spatiales', items: [
     { id: 'earth', label: 'La Terre', background: `url("${earth}")` },
@@ -55,7 +72,41 @@ export const COVER_GROUPS = [
 ] as const;
 
 export const COVER_PRESETS = COVER_GROUPS.flatMap((group) => [...group.items]);
+/** The database row header stores URLs, so encode our built-in gradients as image sources. */
+export const COVER_GALLERY = COVER_GROUPS.map((group) => ({
+  label: group.label,
+  items: group.items.map((item) => {
+    const image = /^url\("(.*)"\)$/.exec(item.background);
+    if (image) return {label: item.label, url: new URL(image[1], location.href).href};
+    const colors = item.background.match(/#[a-f0-9]{6}/gi) ?? ['#777777'];
+    const stops = colors.map((color, index) => `<stop offset="${index / Math.max(1, colors.length - 1) * 100}%" stop-color="${color}"/>`).join('');
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="600"><defs><linearGradient id="g">${stops}</linearGradient></defs><path fill="url(#g)" d="M0 0h1600v600H0z"/></svg>`;
+    return {label: item.label, url: `data:image/svg+xml,${encodeURIComponent(svg)}`};
+  }),
+}));
 export type CoverId = typeof COVER_PRESETS[number]['id'];
+export type PageCover = CoverId | (string & {});
+export function isPageCover(value: unknown): value is PageCover {
+  if (isCoverId(value)) return true;
+  if (typeof value !== 'string') return false;
+  if (/^data:image\/(?:png|jpeg|gif|webp);base64,[a-z0-9+/]+={0,2}$/i.test(value)) return true;
+  try { return ['https:', 'http:'].includes(new URL(value).protocol); } catch { return false; }
+}
+export function readCoverFile(file: File): Promise<string> {
+  if (!['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(file.type)) return Promise.reject(new Error('Choisissez une image PNG, JPEG, GIF ou WebP.'));
+  if (file.size > 5 * 1024 * 1024) return Promise.reject(new Error('L’image doit peser moins de 5 Mo.'));
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error('Impossible de lire cette image.'));
+    reader.readAsDataURL(file);
+  });
+}
+export interface CoverOptions {
+  upload?: (dataUrl: string) => Promise<string>;
+  resolveUrl?: (url: string) => Promise<string>;
+  readOnly?: boolean;
+}
 export const isCoverId = (value: unknown): value is CoverId => COVER_PRESETS.some((item) => item.id === value);
 
 /**
@@ -116,10 +167,11 @@ export function createAddCoverButton(onChange: (cover: CoverId) => void): HTMLBu
 }
 
 export function createPageCover(
-  value: CoverId,
+  value: PageCover,
   position: number,
-  onChange: (cover: CoverId | undefined) => void,
+  onChange: (cover: PageCover | undefined) => void,
   onPositionChange: (position: number) => void,
+  options: CoverOptions = {},
 ): HTMLElement {
   const root = document.createElement('div');
   root.setAttribute('data-desktop-cover', '');
@@ -127,7 +179,11 @@ export function createPageCover(
   image.setAttribute('data-desktop-cover-image', '');
   image.setAttribute('role', 'img');
   image.setAttribute('aria-label', 'Couverture de la page');
-  image.style.backgroundImage = COVER_PRESETS.find((item) => item.id === value)!.background;
+  const preset = COVER_PRESETS.find((item) => item.id === value);
+  image.style.backgroundImage = preset?.background ?? `url(${JSON.stringify(value)})`;
+  if (!preset && options.resolveUrl) void options.resolveUrl(value).then((url) => {
+    image.style.backgroundImage = `url(${JSON.stringify(url)})`;
+  }).catch(() => undefined);
   const applyPosition = (next: number): void => { image.style.backgroundPosition = `center ${next}%`; };
   applyPosition(position);
 
@@ -157,6 +213,11 @@ export function createPageCover(
   remove.addEventListener('click', () => onChange(undefined));
   head.append(title, remove);
   gallery.append(head);
+  const tabs = document.createElement('div');
+  tabs.setAttribute('data-desktop-cover-tabs', '');
+  tabs.setAttribute('role', 'tablist');
+  tabs.setAttribute('aria-label', 'Source de la couverture');
+  gallery.append(tabs);
   const scroll = document.createElement('div');
   scroll.setAttribute('data-desktop-cover-gallery-scroll', '');
   const scrollFrame = document.createElement('div');
@@ -190,6 +251,78 @@ export function createPageCover(
   }
   scrollFrame.append(scroll, scrollbar);
   gallery.append(scrollFrame);
+  const uploadPanel = document.createElement('div');
+  uploadPanel.setAttribute('data-desktop-cover-panel', '');
+  const upload = document.createElement('button');
+  upload.type = 'button';
+  upload.textContent = 'Choisir une image';
+  const file = document.createElement('input');
+  file.type = 'file';
+  file.accept = 'image/png,image/jpeg,image/gif,image/webp';
+  file.hidden = true;
+  const hint = document.createElement('p');
+  hint.textContent = 'PNG, JPEG, GIF ou WebP · 5 Mo maximum';
+  const uploadStatus = document.createElement('p');
+  uploadStatus.setAttribute('role', 'status');
+  upload.addEventListener('click', () => file.click());
+  file.addEventListener('change', () => {
+    const selected = file.files?.[0];
+    if (!selected) return;
+    upload.disabled = true;
+    uploadStatus.textContent = 'Importation…';
+    void readCoverFile(selected).then((data) => options.upload ? options.upload(data) : data).then((url) => {
+      if (!isPageCover(url)) throw new Error('Image invalide.');
+      onChange(url);
+    }).catch((error: unknown) => {
+      uploadStatus.textContent = error instanceof Error ? error.message : 'Impossible d’importer cette image.';
+    }).finally(() => { upload.disabled = false; file.value = ''; });
+  });
+  uploadPanel.append(upload, file, hint, uploadStatus);
+  const linkPanel = document.createElement('form');
+  linkPanel.setAttribute('data-desktop-cover-panel', '');
+  const link = document.createElement('input');
+  link.type = 'url';
+  link.placeholder = 'https://exemple.com/image.jpg';
+  link.setAttribute('aria-label', 'Lien de l’image de couverture');
+  link.required = true;
+  const submit = document.createElement('button');
+  submit.type = 'submit';
+  submit.textContent = 'Appliquer';
+  const linkStatus = document.createElement('p');
+  linkStatus.setAttribute('role', 'status');
+  const linkHint = document.createElement('p');
+  linkHint.textContent = 'Collez le lien direct d’une image.';
+  linkPanel.append(link, submit, linkHint, linkStatus);
+  linkPanel.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const url = link.value.trim();
+    if (!/^https?:\/\//i.test(url) || !isPageCover(url)) { linkStatus.textContent = 'Saisissez une adresse HTTP ou HTTPS valide.'; return; }
+    onChange(new URL(url).href);
+  });
+  gallery.append(uploadPanel, linkPanel);
+  const panels = [scrollFrame, uploadPanel, linkPanel];
+  const tabButtons: HTMLButtonElement[] = [];
+  const selectTab = (index: number): void => {
+    panels.forEach((panel, current) => { panel.hidden = current !== index; });
+    tabButtons.forEach((tab, current) => { tab.setAttribute('aria-selected', String(current === index)); tab.tabIndex = current === index ? 0 : -1; });
+    updateScrollbar();
+  };
+  ['Galerie', 'Importer', 'Lien'].forEach((label, index) => {
+    const tab = document.createElement('button');
+    tab.type = 'button';
+    tab.textContent = label;
+    tab.setAttribute('role', 'tab');
+    tab.addEventListener('click', () => selectTab(index));
+    tab.addEventListener('keydown', (event) => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? 2 : (index + (event.key === 'ArrowRight' ? 1 : 2)) % 3;
+      selectTab(next); tabButtons[next].focus();
+    });
+    tabButtons.push(tab); tabs.append(tab);
+    panels[index].setAttribute('role', 'tabpanel');
+    panels[index].setAttribute('aria-label', label);
+  });
   const updateScrollbar = (): void => {
     const maxScroll = scroll.scrollHeight - scroll.clientHeight;
     scrollbar.hidden = maxScroll <= 1;
@@ -200,6 +333,7 @@ export function createPageCover(
     thumb.style.height = `${thumbHeight}px`;
     thumb.style.transform = `translateY(${travel * scroll.scrollTop / maxScroll}px)`;
   };
+  selectTab(0);
   scroll.addEventListener('scroll', updateScrollbar);
   let dragStart: { y: number; scrollTop: number } | null = null;
   thumb.addEventListener('pointerdown', (event) => {
@@ -232,7 +366,7 @@ export function createPageCover(
   change.addEventListener('click', () => {
     if (gallery.hidden) {
       gallery.hidden = false;
-      scroll.style.maxHeight = `${Math.max(0, Math.min(400, window.innerHeight - gallery.getBoundingClientRect().top - 54))}px`;
+      scroll.style.maxHeight = `${Math.max(0, Math.min(350, window.innerHeight - gallery.getBoundingClientRect().top - 100))}px`;
       updateScrollbar();
       change.setAttribute('aria-expanded', 'true');
       actions.setAttribute('data-open', '');
@@ -304,6 +438,7 @@ export function createPageCover(
     drag.focus();
   });
   actions.append(reposition, change, gallery);
-  root.append(image, drag, actions);
+  root.append(image, drag);
+  if (!options.readOnly) root.append(actions);
   return root;
 }

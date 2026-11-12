@@ -1,3 +1,4 @@
+import { renderPageIcon } from './page-icon';
 /**
  * Host page tree. The editor never owns navigation: a page row opens a
  * document, and the plus button asks the host to create one.
@@ -333,7 +334,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     const glyph = document.createElement('span');
     glyph.setAttribute('data-blok-sidebar-glyph', '');
     glyph.setAttribute('aria-hidden', 'true');
-    if (page.icon) glyph.textContent = page.icon;
+    if (page.icon) renderPageIcon(glyph, page.icon);
     else glyph.append(svg(ICONS.page));
     leading.append(glyph);
     if (canExpand) {

@@ -1,3 +1,4 @@
+import { customEmojiStore } from './custom-emojis';
 import { createEmptyWorkspaceState } from './workspace-empty';
 import { mountRemoteAssets } from './remote-assets';
 import { Blok, defaultTools, type OutputData } from '@bloklabs/core/full';
@@ -7,7 +8,7 @@ import { type DesktopPage, type WorkspaceIndex } from './storage';
 import { workspaceRepository } from './workspace-repository';
 import { activeWorkspace, workspaceKey, type WorkspaceRef } from './workspace-registry';
 import { createDesktopFooter, readAppearance } from './settings';
-import { createAddCoverButton, createPageCover, isCoverId, trackPageHeaderHover, type CoverId } from './cover';
+import { COVER_GALLERY, readCoverFile, createAddCoverButton, createPageCover, isPageCover, trackPageHeaderHover, type PageCover } from './cover';
 import { mountAgentAssistant, type AgentAssistantHandle } from '@blok/agent-assistant';
 import { bindAssistantButton, createAssistantButton, createWorkspaceAssistant } from './assistant';
 import { createPageToolbar, type PageBreadcrumbChoice, type PageBreadcrumbItem, type PageToolbar } from './page-toolbar';
@@ -51,6 +52,8 @@ export interface Workspace {
 export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (id: string, icon: string) => void, options: { ref?: WorkspaceRef } = {}): Workspace {
   const ref = Object.freeze({... (options.ref ?? activeWorkspace())});
   const repository = workspaceRepository(ref);
+  const emojis = customEmojiStore(ref);
+  const pageIcon = (value: string) => /^(https?:|data:image\/|\/files\/)/i.test(value) ? {type: 'image' as const, url: value} : {type: 'emoji' as const, value};
   if (ref.kind === 'remote' && '__TAURI_INTERNALS__' in window) mountRemoteAssets(ref.server, repository.assetUrl);
   const viewer = ref.kind === 'remote' && ref.role === 'viewer';
   // The add-cover button is re-appended whenever the core rebuilds the icon row, and
@@ -198,7 +201,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   };
   const syncPageIcon = (page: ShellPage, icon: ReturnType<Blok['title']['icon']['get']>, persist = true): void => {
     if (!index) return;
-    const next = icon?.type === 'emoji' ? icon.value : undefined;
+    const next = icon?.type === 'emoji' ? icon.value : icon?.type === 'image' ? icon.url : undefined;
     if (page.icon !== next) {
       page.icon = next;
       frame.setPages(index.pages, index.activeId);
@@ -217,11 +220,11 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       const needle = query.trim().toLocaleLowerCase();
       return index.pages.filter((page) => page.title.toLocaleLowerCase().includes(needle)).slice(0, 40)
         .map((page) => ({ pageId: page.id, title: page.title,
-          ...(page.icon ? { icon: { type: 'emoji' as const, value: page.icon } } : {}) }));
+          ...(page.icon ? { icon: pageIcon(page.icon) } : {}) }));
     },
     resolve: (id) => {
       const page = index?.pages.find((item) => item.id === id);
-      return page ? { title: page.title, ...(page.icon ? { icon: { type: 'emoji' as const, value: page.icon } } : {}) } : null;
+      return page ? { title: page.title, ...(page.icon ? { icon: pageIcon(page.icon) } : {}) } : null;
     },
     subscribe: (id, listener) => {
       const listeners = pageListeners.get(id) ?? new Set<() => void>();
@@ -303,16 +306,16 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     article.append(holder);
     let coverNode: HTMLElement | null = null;
     let coverButton: HTMLButtonElement | null = null;
-    function changeCover(cover: CoverId | undefined): void {
+    function changeCover(cover: PageCover | undefined): void {
       if (viewer) return;
       selectedPage.cover = cover;
       if (cover === undefined) selectedPage.coverPosition = undefined;
-      renderCover();
+      if (generation === turn) renderCover();
       saveManifest();
     }
     const attachCoverAction = (): void => {
       if (viewer) return;
-      if (isCoverId(page.cover)) return;
+      if (isPageCover(page.cover)) return;
       const row = holder.querySelector<HTMLElement>('[data-blok-page-icon-row]');
       if (!row) return;
       coverButton ??= createAddCoverButton(changeCover);
@@ -325,8 +328,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       }
     };
     const renderCover = (): void => {
-      article.toggleAttribute('data-has-cover', isCoverId(page.cover));
-      if (isCoverId(page.cover)) {
+      article.toggleAttribute('data-has-cover', isPageCover(page.cover));
+      if (isPageCover(page.cover)) {
         coverButton?.remove();
         const position = typeof page.coverPosition === 'number' && Number.isFinite(page.coverPosition)
           ? Math.max(0, Math.min(100, page.coverPosition)) : 50;
@@ -334,7 +337,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
           if (viewer) return;
           page.coverPosition = value;
           saveManifest();
-        });
+        }, { upload: repository.uploadImage, resolveUrl: repository.assetUrl, readOnly: viewer });
         if (coverNode) coverNode.replaceWith(next);
         else pageCanvas.insertBefore(next, article);
         coverNode = next;
@@ -350,9 +353,10 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     const instance = new Blok({
       holder,
       readOnly: viewer,
-      tools: { ...desktopTools, page: { class: Page, config: { ...pageConfig } } },
+      tools: { ...desktopTools, database: {class: Database, config: {customEmojis: () => emojis.list(), coverGallery: COVER_GALLERY, uploadCover: (file: globalThis.File) => readCoverFile(file).then(repository.uploadImage)}}, page: { class: Page, config: { ...pageConfig } } },
       theme: readAppearance(),
       pageTitle: {
+        customEmojis: () => emojis.list(),
         placeholder: 'Nouvelle page',
         onChange(title, change) {
           if (generation !== turn || !index) return;

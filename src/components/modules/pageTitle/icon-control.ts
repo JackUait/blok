@@ -5,6 +5,7 @@ import { IconEmojiSmile } from '../../icons';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { loadEmojiGrid } from '../../utils/emoji/emoji-data';
 import { pageIconNode } from '../../../tools/page/icon-node';
+import type { TitleConfig } from '../../../../types/api/title';
 import type { PageIcon } from '../../../../types/tools/page';
 
 export interface IconControlHost {
@@ -12,7 +13,7 @@ export interface IconControlHost {
   setIcon(icon: PageIcon | null): void;
   isReadOnly(): boolean;
   labels(): { add: string; change: string };
-  picker(): { i18n: { t(key: string): string }; locale: string };
+  picker(): { i18n: { t(key: string): string }; locale: string; customEmojis?: TitleConfig['customEmojis'] };
 }
 
 interface PickerCode {
@@ -122,7 +123,7 @@ export const createIconControl = (row: HTMLElement, host: IconControlHost, trail
   };
 
   const showPicker = ({ Picker, landings }: PickerCode, anchor: HTMLElement): void => {
-    const { i18n, locale } = host.picker();
+    const { i18n, locale, customEmojis } = host.picker();
 
     const handlers = {
       onSelect: (native: string, origin?: DOMRect): void => {
@@ -146,6 +147,8 @@ export const createIconControl = (row: HTMLElement, host: IconControlHost, trail
         locale,
         curated: false,
         startInset: 0,
+        customEmojis,
+        onCustomSelect: (url: string): void => host.setIcon({type: 'image', url}),
       });
       slot.locale = locale;
     }
@@ -164,7 +167,7 @@ export const createIconControl = (row: HTMLElement, host: IconControlHost, trail
     });
     anchor.setAttribute('aria-expanded', 'true');
     slot.watch.observe(element, { attributes: true, attributeFilter: ['hidden'] });
-    void slot.picker.open(anchor, undefined, { ...handlers, current: icon?.type === 'emoji' ? icon.value : '' });
+    void slot.picker.open(anchor, undefined, { ...handlers, current: icon?.type === 'emoji' ? icon.value : icon?.type === 'image' ? icon.url : '' });
   };
 
   const closePicker = (): void => {

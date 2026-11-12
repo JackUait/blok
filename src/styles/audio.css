@@ -1261,3 +1261,18 @@
   /* Cover overlay button appears instantly — no fade. */
   [data-blok-tool="audio"] .blok-audio-cover__change { transition: none; }
 }
+
+/* Optional host gallery shares the cover popover and its existing media tabs. */
+.blok-cover-gallery { max-height: min(360px, 55vh); overflow-y: auto; padding: var(--blok-space-3); }
+.blok-cover-gallery[hidden] { display: none; }
+.blok-cover-gallery section + section { margin-top: var(--blok-space-4); }
+.blok-cover-gallery h3 { margin: 0 0 var(--blok-space-2); color: var(--blok-text-secondary); font-size: 12px; font-weight: 500; }
+.blok-cover-gallery__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--blok-space-2); }
+.blok-cover-gallery__grid button { height: 62px; padding: 0; border: 2px solid transparent; border-radius: var(--blok-radius-control); overflow: hidden; background: var(--blok-bg-secondary); cursor: pointer; }
+.blok-cover-gallery__grid button:hover, .blok-cover-gallery__grid button:focus-visible { border-color: var(--blok-text-primary); }
+.blok-cover-gallery__grid img { width: 100%; height: 100%; object-fit: cover; }
+
+.blok-cover-gallery-tabs { display: flex; gap: var(--blok-space-4); padding: 0 var(--blok-space-3); border-bottom: 1px solid var(--blok-border-subtle); }
+.blok-cover-gallery-tabs button { padding: var(--blok-space-3) 0; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--blok-text-secondary); font: inherit; font-size: 13px; cursor: pointer; }
+.blok-cover-gallery-tabs button[aria-selected="true"] { color: var(--blok-text-primary); border-bottom-color: var(--blok-text-primary); }
+.blok-audio-cover-picker [role="tabpanel"][hidden] { display: none; }

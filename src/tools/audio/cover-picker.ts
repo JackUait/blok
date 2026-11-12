@@ -4,6 +4,7 @@ import type { I18nInstance } from '../../components/utils/tools';
 import { tr } from './i18n';
 import { COVER_TYPES, COVER_MAX_SIZE } from './constants';
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
+import { safeImageSrc } from '../../shared/sanitize-url';
 import { getTabbables } from '../../components/utils/modal-dialog';
 import { isSheetLoaded, loadSheet } from '../../components/utils/lazy-styles';
 import { registerLayer } from '../../components/utils/dismissable-layer';
@@ -25,7 +26,14 @@ export function validateCoverFile(file: File, i18n?: I18nInstance): string | nul
   return null;
 }
 
+export interface CoverGalleryGroup {
+  label: string;
+  items: ReadonlyArray<{label: string; url: string}>;
+}
+
 export interface OpenCoverPickerOptions {
+  /** Optional host-owned gallery, alongside the existing upload and link paths. */
+  gallery?: ReadonlyArray<CoverGalleryGroup>;
   /** Element the picker is visually anchored to (the cover art). */
   anchor: HTMLElement;
   /**
@@ -104,8 +112,9 @@ function inkWellSurface(opts: OpenCoverPickerOptions): PickerSurface {
   };
 }
 
-function cardSurface(opts: OpenCoverPickerOptions): PickerSurface {
+function cardSurface(opts: OpenCoverPickerOptions, sources?: 'upload' | 'url'): PickerSurface {
   const element = renderMediaEmptyState({
+    ...(sources ? {sources} : {}),
     acceptTypes: [...COVER_TYPES],
     onFile: opts.onFile,
     onUrl: opts.onUrl,
@@ -120,6 +129,65 @@ function cardSurface(opts: OpenCoverPickerOptions): PickerSurface {
   };
 }
 
+/** Gallery composition keeps the uploader and link controls owned by the shared media surface. */
+function gallerySurface(opts: OpenCoverPickerOptions): PickerSurface {
+  const element = document.createElement('div');
+  const tabs = document.createElement('div');
+  tabs.className = 'blok-cover-gallery-tabs';
+  tabs.setAttribute('role', 'tablist');
+  tabs.setAttribute('aria-label', tr(opts.i18n, 'tools.audio.coverSet', 'Set cover image'));
+  const gallery = document.createElement('div');
+  gallery.className = 'blok-cover-gallery';
+  const upload = cardSurface(opts, 'upload');
+  const link = cardSurface(opts, 'url');
+  const panels = [gallery, upload.element, link.element];
+  const buttons: HTMLButtonElement[] = [];
+  const key = Math.random().toString(36).slice(2);
+  const labels = [tr(opts.i18n, 'tools.database.galleryLabel', 'Gallery'),
+    tr(opts.i18n, 'tools.audio.coverUpload', 'Upload'), tr(opts.i18n, 'tools.audio.coverLink', 'Link')];
+  const select = (index: number): void => {
+    panels.forEach((panel, current) => { panel.hidden = current !== index; });
+    buttons.forEach((button, current) => { button.setAttribute('aria-selected', String(current === index)); button.tabIndex = current === index ? 0 : -1; });
+    upload.setError(null); link.setError(null);
+  };
+  labels.forEach((label, index) => {
+    const button = document.createElement('button');
+    button.type = 'button'; button.textContent = label;
+    button.setAttribute('role', 'tab');
+    button.id = `cover-${key}-tab-${index}`;
+    panels[index].id = `cover-${key}-panel-${index}`;
+    panels[index].setAttribute('role', 'tabpanel');
+    panels[index].setAttribute('aria-labelledby', button.id);
+    button.setAttribute('aria-controls', panels[index].id);
+    button.addEventListener('click', () => select(index));
+    button.addEventListener('keydown', (event) => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? 2 : (index + (event.key === 'ArrowRight' ? 1 : 2)) % 3;
+      select(next); buttons[next].focus();
+    });
+    buttons.push(button); tabs.append(button);
+  });
+  for (const group of opts.gallery ?? []) {
+    const section = document.createElement('section');
+    const heading = document.createElement('h3'); heading.textContent = group.label;
+    const grid = document.createElement('div'); grid.className = 'blok-cover-gallery__grid';
+    for (const item of group.items) {
+      const url = safeImageSrc(item.url);
+      if (url === null) continue;
+      const option = document.createElement('button'); option.type = 'button';
+      option.setAttribute('aria-label', item.label); option.title = item.label;
+      const image = document.createElement('img'); image.src = url; image.alt = ''; image.loading = 'lazy';
+      option.append(image); option.addEventListener('click', () => opts.onUrl(item.url)); grid.append(option);
+    }
+    section.append(heading, grid); gallery.append(section);
+  }
+  element.append(tabs, ...panels);
+  select(0);
+  return {element, setError: (message) => {upload.setError(message); link.setError(message);},
+    settle: () => Promise.resolve(), destroy: () => {upload.destroy(); link.destroy();}};
+}
+
 export function openCoverPicker(opts: OpenCoverPickerOptions): CoverPickerHandle {
   const dialog = document.createElement('div');
   dialog.className = 'blok-audio-cover-picker';
@@ -128,7 +196,8 @@ export function openCoverPicker(opts: OpenCoverPickerOptions): CoverPickerHandle
   dialog.setAttribute('aria-label', tr(opts.i18n, 'tools.audio.coverSet', 'Set cover image'));
 
   const kind = opts.surface ?? 'card';
-  const surface = kind === 'ink-well' ? inkWellSurface(opts) : cardSurface(opts);
+  const surface = kind === 'ink-well' ? inkWellSurface(opts)
+    : opts.gallery?.length ? gallerySurface(opts) : cardSurface(opts);
 
   dialog.setAttribute('data-surface', kind);
   dialog.appendChild(surface.element);

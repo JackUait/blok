@@ -8,6 +8,7 @@ import { dataDirectory } from './storage';
 import corePackage from '../../package.json';
 import appPackage from '../package.json';
 import { mountAiSettings } from './ai-settings';
+import { mountCustomEmojiSettings } from './custom-emoji-settings';
 import { mountMcpSettings } from './mcp-settings';
 
 export type Appearance = 'dark' | 'light' | 'auto';
@@ -219,8 +220,9 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   const aiTab = actionButton('data-desktop-settings-nav-item', 'Assistant IA', 'ai');
   nav.append(prefsTab, aiTab);
   const generalTab = actionButton('data-desktop-settings-nav-item', 'Général', 'storage');
+  const emojiTab = actionButton('data-desktop-settings-nav-item', 'Émojis', 'settings');
   const membersTab = actionButton('data-desktop-settings-nav-item', 'Membres', 'profile');
-  nav.append(el('div', 'data-desktop-settings-nav-heading', 'Espace'), generalTab);
+  nav.append(el('div', 'data-desktop-settings-nav-heading', 'Espace'), generalTab, emojiTab);
   if (admin) nav.append(membersTab);
   const main = el('main', 'data-desktop-settings-main');
   const close = el('button', 'data-desktop-settings-close', '×');
@@ -270,18 +272,25 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   const closeSettings = (): void => { modal?.close(); };
   close.addEventListener('click', closeSettings);
 
-  type SettingsPanel = 'account' | 'preferences' | 'ai' | 'general' | 'members';
+  type SettingsPanel = 'account' | 'preferences' | 'ai' | 'general' | 'members' | 'emojis';
   const showPanel = (panel: SettingsPanel): void => {
     accountTab.setAttribute('aria-current', panel === 'account' ? 'page' : 'false');
     prefsTab.setAttribute('aria-current', panel === 'preferences' ? 'page' : 'false');
     aiTab.setAttribute('aria-current', panel === 'ai' ? 'page' : 'false');
     generalTab.setAttribute('aria-current', panel === 'general' ? 'page' : 'false');
+    emojiTab.setAttribute('aria-current', panel === 'emojis' ? 'page' : 'false');
     membersTab.setAttribute('aria-current', panel === 'members' ? 'page' : 'false');
     members?.destroy(); members = null;
     choices.splice(0).forEach((choice) => choice.destroy());
     ++panelGeneration;
     main.querySelector('[data-desktop-settings-content]')?.remove();
     const content = el('div', 'data-desktop-settings-content');
+    if (panel === 'emojis') {
+      content.append(el('h1', 'data-desktop-settings-title', 'Émojis'));
+      choices.push(mountCustomEmojiSettings(content, currentWorkspace));
+      main.append(content);
+      return;
+    }
     if (panel === 'members' && admin && client && currentWorkspace.kind === 'remote') {
       content.append(el('h1', 'data-desktop-settings-title', 'Membres'));
       main.append(content);
@@ -376,6 +385,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   prefsTab.addEventListener('click', () => showPanel('preferences'));
   aiTab.addEventListener('click', () => showPanel('ai'));
   generalTab.addEventListener('click', () => showPanel('general'));
+  emojiTab.addEventListener('click', () => showPanel('emojis'));
   membersTab.addEventListener('click', () => { if (admin) showPanel('members'); });
   const openSettings = (panel: SettingsPanel): void => {
     closeMenu();

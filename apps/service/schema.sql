@@ -18,3 +18,8 @@ CREATE TABLE IF NOT EXISTS schema_migrations(version int PRIMARY KEY,applied_at 
 INSERT INTO schema_migrations(version) VALUES(1) ON CONFLICT DO NOTHING;
 CREATE TABLE IF NOT EXISTS ai_credentials(scope text NOT NULL CHECK(scope IN ('personal','workspace')),owner_id text NOT NULL,encrypted_key bytea,model text NOT NULL DEFAULT '',updated_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(scope,owner_id));
 INSERT INTO schema_migrations(version) VALUES(2) ON CONFLICT DO NOTHING;
+
+-- Workspace images do not require an existing page (emoji and cover uploads).
+ALTER TABLE assets ALTER COLUMN document_id DROP NOT NULL;
+CREATE TABLE IF NOT EXISTS workspace_emojis(id text PRIMARY KEY,workspace_id text NOT NULL REFERENCES workspaces(id),name text NOT NULL,url text NOT NULL,created_by text NOT NULL REFERENCES users(id),created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(workspace_id,name));
+INSERT INTO schema_migrations(version) VALUES(3) ON CONFLICT DO NOTHING;

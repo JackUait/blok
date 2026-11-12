@@ -25,6 +25,12 @@ All paths relative to configured HTTPS API origin. JSON errors `{error:string}`.
 
 Workspace = `{id,slug,name,role}`. Default slug `tousambassadeurs`.
 
+## Hosted MCP
+
+`POST /mcp` is a stateless Streamable HTTP MCP endpoint on the same HTTPS origin. Each caller must send `Authorization: Bearer <personal session token>`; browser cookies and cross-origin browser requests do not authorize MCP calls. A user can obtain a 30-day personal token through the existing email code flow by verifying with `client:"desktop"`. Treat it as a password and reauthenticate when it expires. Logout revokes that session token. The MCP server checks the user's current workspace membership and role on each request and document operation.
+
+Alongside Blok's document editing tools, the host serves `blok_list_workspaces`, `blok_list_pages` (`{workspace:slug}`), and `blok_create_page` (`{workspace:slug,title,parentId?:pageID}`). Creating a page updates its workspace index and creates an empty document atomically. Viewers may list/read but cannot create or edit; nonmembers cannot list pages. The MCP endpoint is served by the existing Go app and reverse proxy, with no additional published port.
+
 - POST `/api/workspaces/:slug/pages/:pageID/seed` `{document:OutputData}` → `{ok:true}`. For new pages after adding metadata to index, before opening collaboration. Requires writer; 409 if content exists or any ticket has been issued. Await seed before opening the page; never fall back to overwriting projected JSON.
 - POST `/api/workspaces/:slug/pages/:pageID/duplicate` `{id:newPageID,title,parentId:null|string}` → `{id,revision}`. Copies the live Blok `/state` snapshot and metadata into a new page atomically; caller reloads index. Does not clone child pages.
 - GET `/api/assets/url?url=<stored asset URL>` → `{url}` private 60-second session-bound asset grant for native image rendering. Web asset URL uses HttpOnly cookie. Every file fetch rechecks session and workspace ACL.

@@ -22,6 +22,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/JackUait/blok/packages/server/go/v2/blokmcp"
 	"github.com/JackUait/blok/packages/server/go/v2/blokserver"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -38,6 +39,8 @@ type Service struct {
 	aiMu         sync.Mutex
 	Config       Config
 	Blok         *blokserver.Server
+	MCP          *blokmcp.Attached
+	mcpHandler   http.Handler
 	mux          *http.ServeMux
 	observed     map[string]int
 	observedMu   sync.Mutex
@@ -143,11 +146,20 @@ func New(ctx context.Context, c Config) (*Service, error) {
 	if e != nil {
 		return fail(e)
 	}
+	if e = s.initMCP(); e != nil {
+		return fail(e)
+	}
 	s.routes()
 	s.startAccessSweep()
 	return s, nil
 }
-func (s *Service) Close() { s.stopAccessSweep(); s.DB.Close() }
+func (s *Service) Close() {
+	s.stopAccessSweep()
+	if s.MCP != nil {
+		s.MCP.Close()
+	}
+	s.DB.Close()
+}
 func (s *Service) Drain(ctx context.Context) error {
 	s.draining.Store(true)
 	s.stopAccessSweep()
@@ -261,6 +273,7 @@ func (s *Service) routes() {
 	blok := s.Blok.Handler("/api/blok")
 	s.mux.Handle("/api/blok/", s.blokHandler(blok))
 	s.mux.HandleFunc("GET /api/assets/url", s.assetURL)
+	s.mux.Handle("/mcp", s.mcpHandler)
 	s.mux.Handle("/files/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { s.file(w, r, blok) }))
 }
 func normalizeEmail(v string) (string, error) {

@@ -352,9 +352,67 @@ func TestCloudIntegration(t *testing.T) {
 	request("GET", "/api/workspaces/tousambassadeurs/pages/test-page-1", admin, nil, 404)
 	request("GET", "/internal/documents/test-page-1", cfg.InternalSecret, nil, 200)
 	request("PUT", "/internal/documents/test-page-1", cfg.InternalSecret, map[string]any{"blocks": []any{}}, 200)
+	// Hosted MCP uses each caller's own bearer session and workspace role.
+	mcpCall := func(token, name string, args map[string]any, status int) map[string]any {
+		t.Helper()
+		payload, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": map[string]any{"name": name, "arguments": args}})
+		req, _ := http.NewRequest("POST", server.URL+"/mcp", bytes.NewReader(payload))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json, text/event-stream")
+		if token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		data, _ := io.ReadAll(resp.Body)
+		if resp.StatusCode != status {
+			t.Fatalf("MCP %s: %d expected %d: %s", name, resp.StatusCode, status, data)
+		}
+		if bytes.HasPrefix(data, []byte("event: message\n")) {
+			line := strings.SplitN(string(data), "data: ", 2)
+			if len(line) != 2 {
+				t.Fatalf("invalid MCP event: %s", data)
+			}
+			data = []byte(strings.SplitN(line[1], "\n", 2)[0])
+		}
+		var out map[string]any
+		if status == 200 && json.Unmarshal(data, &out) != nil {
+			t.Fatalf("invalid MCP response: %s", data)
+		}
+		return out
+	}
+	mcpCall("", "blok_list_workspaces", map[string]any{}, 401)
+	created := mcpCall(admin, "blok_create_page", map[string]any{"workspace": "tousambassadeurs", "title": "Created through MCP"}, 200)
+	if created["error"] != nil || created["result"].(map[string]any)["isError"] == true {
+		t.Fatal("MCP create failed", created)
+	}
+	var pageCreated struct {
+		ID string `json:"id"`
+	}
+	content := created["result"].(map[string]any)["content"].([]any)[0].(map[string]any)["text"].(string)
+	if json.Unmarshal([]byte(content), &pageCreated) != nil || pageCreated.ID == "" {
+		t.Fatal("MCP missing created page", created)
+	}
+	opened := mcpCall(admin, "blok_open", map[string]any{"documentId": pageCreated.ID, "write": true}, 200)
+	if opened["error"] != nil || opened["result"].(map[string]any)["isError"] == true {
+		t.Fatal("MCP could not open created page", opened)
+	}
+	mcpCall(admin, "blok_list_pages", map[string]any{"workspace": "tousambassadeurs"}, 200)
+	denied := mcpCall(other, "blok_create_page", map[string]any{"workspace": "tousambassadeurs", "title": "Forbidden"}, 200)
+	if denied["result"].(map[string]any)["isError"] != true {
+		t.Fatal("MCP non-member created page", denied)
+	}
+	mcpCall(applicant, "blok_list_workspaces", map[string]any{}, 401)
 	// A second service run must not restore an intentionally downgraded bootstrap admin.
 	if _, e = s.DB.Exec(ctx, "UPDATE memberships SET role='viewer' WHERE workspace_id=$1 AND user_id=$2", public["id"], adminID); e != nil {
 		t.Fatal(e)
+	}
+	denied = mcpCall(admin, "blok_create_page", map[string]any{"workspace": "tousambassadeurs", "title": "Viewer cannot write"}, 200)
+	if denied["result"].(map[string]any)["isError"] != true {
+		t.Fatal("MCP viewer created page", denied)
 	}
 	second, e := New(ctx, cfg)
 	if e != nil {

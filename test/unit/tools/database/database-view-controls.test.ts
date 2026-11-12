@@ -415,6 +415,19 @@ describe('DatabaseViewControls', () => {
     expect(q('database-advanced-pill')?.getAttribute('aria-label')).toBe('tools.database.filterRuleCount 3');
   });
 
+  // notion-motion.md Round 19 §1 (r19-adv-chipclick.raw): the "N rules" chip opens the advanced popover under it.
+  it('opens the advanced filter under its chip, not view settings', () => {
+    const { controls, saved } = setup();
+
+    saved.view = { ...saved.view, filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'a', propertyId: 'num', operator: 'is_empty', value: null }] } };
+    controls.refresh();
+    click('database-advanced-pill');
+
+    expect(q('database-view-settings')).toBeNull();
+    expect(q('database-advanced-filter')).not.toBeNull();
+    expect(q('database-advanced-pill')?.hasAttribute('data-popover-open')).toBe(true);
+  });
+
   it('gives "+ Sort" no advanced footer', () => {
     setup();
     click('database-toolbar-sort');

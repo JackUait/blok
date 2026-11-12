@@ -1140,10 +1140,22 @@ describe('view settings panel', () => {
       expect(exists('database-filter-advanced')).toBe(false);
     });
 
-    it('keeps the Advanced filter row when an advanced filter exists', () => {
+    // notion-motion.md Round 19 §1 (r19-settings-filterpage.raw, r19-settings-advchip.raw): the advanced filter is its chip.
+    it('lists the advanced filter as its chip, which opens the advanced popover beside the page', () => {
       withFilter({ filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'a', propertyId: 'num', operator: 'is_empty', value: null }] } });
+      const chip = q('database-filter-advanced-chip');
 
-      expect(exists('database-filter-advanced')).toBe(true);
+      expect(exists('database-filter-advanced')).toBe(false);
+      expect(chip?.hasAttribute('data-blok-database-filter-pill')).toBe(true);
+      expect(settings()?.contains(chip)).toBe(true);
+      expect(exists('database-filters-advanced-handle-advanced')).toBe(true);
+
+      click('database-filter-advanced-chip');
+      const popover = q('database-advanced-filter');
+
+      expect(popover).not.toBeNull();
+      expect(settings()?.contains(popover)).toBe(false);
+      expect(settings()?.querySelector('[data-blok-testid="database-filter-advanced-chip"]')).not.toBeNull();
     });
 
     // notion-motion.md Round 19 §1 (r19-adv-sel-red.raw): the operator has its own button, so the value button reads "Red" alone.
@@ -1427,7 +1439,7 @@ describe('view settings panel', () => {
     });
 
     h.open('filter');
-    click('database-filter-advanced');
+    click('database-filter-advanced-chip');
     click('database-filter-conjunction-root');
     click('database-filter-conjunction-or');
 

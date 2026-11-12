@@ -720,6 +720,8 @@ export class DatabaseViewControls {
     }
     const chip = this.filterBar.querySelector<HTMLElement>('[data-blok-testid="database-advanced-pill"]');
     const anchor = chip !== null && !this.filterBar.hidden ? chip : fallback;
+
+    this.panel?.close();
     const ctx: ViewSettingsContext = {
       ...this.settingsContext(),
       updatePersonal: (patch) => {
@@ -1135,7 +1137,7 @@ export class DatabaseViewControls {
       const pill = filterChip('database-advanced-pill', label, { glyph: IconFilter, name: label });
 
       pill.setAttribute('data-active', '');
-      pill.addEventListener('click', () => this.openSettings(pill, 'filter'));
+      pill.addEventListener('click', () => this.openAdvanced(pill));
       pills.push(pill);
     }
     const locale = editorLocale(this.host.i18n);

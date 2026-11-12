@@ -1644,14 +1644,22 @@ export class ViewSettingsPages {
         );
         const rules = countFilterRules(view.filterTree);
 
-        // Round 18 §2: no Advanced filter row while there is no advanced filter.
+        // notion-motion.md Round 19 §1 (r19-settings-filterpage.raw, r19-settings-advchip.raw): the advanced filter
+        // is its chip; a click opens its popover beside the page, which stays.
         if (rules > 0) {
-          rows.push(panelSeparator(), panelRow({
-            label: this.t('filterAdvanced'),
-            testId: 'database-filter-advanced',
-            value: String(rules),
-            opensPage: true,
-            onClick: () => panel.push(this.advanced()),
+          const label = this.t('filterRuleCount', { count: rules });
+          const chip = filterChip('database-filter-advanced-chip', label, { glyph: IconFilter, name: label });
+
+          chip.setAttribute('data-active', '');
+          chip.addEventListener('click', () => {
+            openAdvancedFilter(chip, this.ctx, () => panel.refresh(), panel);
+          });
+          // Its own list: the ⠿ and the chip's place match the simple chips, and it cannot mix into their order.
+          rows.unshift(panelReorderList({
+            testId: 'database-filters-advanced',
+            handleLabel: this.t('settingsDragToReorder'),
+            items: [{ id: 'advanced', element: chip }],
+            onMove: () => undefined,
           }));
         }
 
@@ -2885,7 +2893,8 @@ export const openFilterList = (anchor: HTMLElement, ctx: ViewSettingsContext, te
 };
 
 /** The advanced filter on its own: "+ Filter"'s "Add advanced filter" footer opens it. */
-export const openAdvancedFilter = (anchor: HTMLElement, ctx: ViewSettingsContext, onClose?: (escape: boolean) => void): DatabasePanel => {
+export const openAdvancedFilter = (anchor: HTMLElement, ctx: ViewSettingsContext, onClose?: (escape: boolean) => void, host?: DatabasePanel): DatabasePanel => {
+  const release = host?.hold();
   const panel = new DatabasePanel({
     anchor,
     root: new ViewSettingsPages(ctx).advanced(false),
@@ -2895,9 +2904,13 @@ export const openAdvancedFilter = (anchor: HTMLElement, ctx: ViewSettingsContext
     // notion-motion.md Round 18 §2 (r18-adv-open.raw): 4px under the "1 rule" chip.
     gap: 4,
     backLabel: ctx.i18n.t('tools.database.settingsBack'),
-    ...(onClose !== undefined ? { onClose } : {}),
+    onClose: (escape) => {
+      release?.();
+      onClose?.(escape);
+    },
   });
 
+  host?.own(panel);
   panel.open();
 
   return panel;

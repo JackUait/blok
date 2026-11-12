@@ -12532,6 +12532,12 @@ input[data-blok-database-picker-search]:focus {
   flex-basis: 60px;
 }
 
+/* The And/Or choice holds the same column, so every rule's property button lines up at +76. */
+[data-blok-database-filter-rule] > [data-blok-database-panel-row]:not([data-blok-database-filter-rule-button]) {
+  flex: 0 0 60px;
+  width: 60px;
+}
+
 [data-blok-database-filter-rule] > [data-blok-database-filter-rule-button] {
   flex: 0 0 auto;
   width: auto;

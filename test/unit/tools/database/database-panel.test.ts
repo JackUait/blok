@@ -381,4 +381,34 @@ describe('DatabasePanel', () => {
       expect(row('b').hasAttribute('data-dragging')).toBe(false);
     });
   });
+
+  // notion-motion.md Round 18 §2 (r18-adv-open.raw): the advanced filter is as wide as its rules.
+  it('grows a fitContent page to its rows over a width floor, and gives the width back on leaving it', () => {
+    const panel = open({ title: 'First', build: () => [] });
+
+    panel.push({ fitContent: true, build: () => [] });
+
+    expect(panel.root.style.width).toBe('max-content');
+    expect(panel.root.style.minWidth).toBe('290px');
+    expect(panel.root.hasAttribute('data-fit-content')).toBe(true);
+
+    panel.back();
+
+    expect(panel.root.style.width).toBe('290px');
+    expect(panel.root.style.minWidth).toBe('');
+    expect(panel.root.hasAttribute('data-fit-content')).toBe(false);
+    panel.close();
+  });
+
+  // The sort panel sets its own max-content width after it is built.
+  it('keeps a width the opener set while its pages redraw', () => {
+    const panel = open({ build: () => [] });
+
+    panel.root.style.width = 'max-content';
+    panel.refresh();
+    panel.push({ build: () => [] });
+
+    expect(panel.root.style.width).toBe('max-content');
+    panel.close();
+  });
 });

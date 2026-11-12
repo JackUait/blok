@@ -24,3 +24,18 @@ describe('filter rule popover header', () => {
     expect(declared('[data-blok-database-chip-more]', 'height').at(-1)).toBe('20px');
   });
 });
+
+describe('advanced filter popover', () => {
+  // Without it the box keeps its open-time width and clips a rule that a new operator widened.
+  it('lets the popover box follow a panel sized to its rows', () => {
+    const box = "[data-blok-popover-custom-class~='blok-database-panel'] [data-blok-popover-container]:has([data-blok-database-panel][data-fit-content])";
+
+    expect(declared(box, 'inline-size')).toEqual(['max-content']);
+    expect(declared(box, 'min-inline-size')).toEqual(['0']);
+  });
+
+  // r18-adv-open.raw: every rule's property button starts 76 from the popover's left, so the And/Or button is a 60 column too.
+  it('gives the And/Or button the same 60px column as "Where"', () => {
+    expect(declared('[data-blok-database-filter-rule] > [data-blok-database-panel-row]:not([data-blok-database-filter-rule-button])', 'flex')).toEqual(['0 0 60px']);
+  });
+});

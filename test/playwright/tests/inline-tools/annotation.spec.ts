@@ -499,6 +499,61 @@ test.describe('annotation (Hint) inline tool', () => {
     await expect(hint).toHaveAttribute('data-blok-annotation', 'The step that limits the whole chain.');
   });
 
+  test('the buttons sit on the subtitle line, so an empty card is two lines tall', async ({ page }) => {
+    await createBlok(page, [ PLAIN ]);
+    await selectText(page, page.locator(PARAGRAPH_SELECTOR).first(), 'kitchen layout');
+    await page.locator(HINT_BUTTON_SELECTOR).click();
+    await expect(page.getByTestId('inline-annotation-text')).toBeFocused();
+
+    // Layout offsets, not painted boxes: the card scales while it opens.
+    const layout = await page.getByTestId('inline-annotation').evaluate((card) => {
+      const top = (el: Element | null): { top: number; height: number } => {
+        if (!(el instanceof HTMLElement)) {
+          throw new Error('part is missing');
+        }
+
+        const box = { top: 0, height: el.offsetHeight };
+
+        for (let node: HTMLElement | null = el; node !== null && node !== card; node = node.offsetParent instanceof HTMLElement ? node.offsetParent : null) {
+          box.top += node.offsetTop;
+        }
+
+        return box;
+      };
+
+      return {
+        card: card.clientHeight,
+        text: top(card.querySelector('[data-blok-testid="inline-annotation-text"]')),
+        subtitle: top(card.querySelector('[data-blok-testid="inline-annotation-subtitle"]')),
+        done: top(card.querySelector('[data-blok-testid="inline-annotation-done"]')),
+      };
+    });
+
+    const centre = (box: { top: number; height: number }): number => box.top + box.height / 2;
+
+    expect(Math.abs(centre(layout.done) - centre(layout.subtitle))).toBeLessThanOrEqual(1);
+    // Text line, gap, subtitle line, and the same 8px above and below.
+    expect(layout.card).toBe(8 + layout.text.height + 8 + layout.subtitle.height + 8);
+  });
+
+  test('the remove button of a saved hint shows only while the pointer is over the card', async ({ page }) => {
+    await createBlok(page, [ WITH_HINT ]);
+    await page.locator(HINT_SELECTOR).click();
+
+    const remove = page.getByTestId('inline-annotation-remove');
+    const opacity = (): Promise<string> => remove.evaluate(el => getComputedStyle(el).opacity);
+
+    await expect(page.getByTestId('inline-annotation-text')).toBeFocused();
+    await page.mouse.move(0, 0);
+    await expect.poll(opacity).toBe('0');
+
+    await page.getByTestId('inline-annotation-subtitle').hover();
+    await expect.poll(opacity).toBe('1');
+
+    await page.mouse.move(0, 0);
+    await expect.poll(opacity).toBe('0');
+  });
+
   test('the remove button takes the hint off the phrase', async ({ page }) => {
     await createBlok(page, [ WITH_HINT ]);
     await page.locator(HINT_SELECTOR).click();

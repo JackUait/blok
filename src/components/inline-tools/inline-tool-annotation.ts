@@ -310,7 +310,7 @@ export class AnnotationInlineTool implements InlineTool {
 
     const body = document.createElement('div');
 
-    body.className = 'flex flex-col gap-2 px-2.5 pt-2 pb-1';
+    body.className = 'flex flex-col gap-2 px-2.5 py-2';
 
     const text = document.createElement('textarea');
 
@@ -359,11 +359,12 @@ export class AnnotationInlineTool implements InlineTool {
     subtitleRow.append(subtitle);
     body.append(sizer, text, subtitleRow);
 
-    const footer = document.createElement('div');
+    // The buttons share the subtitle line. Negative margins keep that line's height.
+    const actions = document.createElement('div');
 
-    footer.className = 'flex items-center gap-1 px-1 pt-1.5 pb-0.5';
+    actions.className = 'shrink-0 flex items-center gap-0.5 -my-[5px] -mr-1.5';
 
-    const button = 'shrink-0 inline-flex items-center justify-center size-7 p-0 m-0 rounded-full border-0 font-[inherit] text-[13px] font-medium cursor-pointer outline-hidden transition-colors';
+    const button = 'shrink-0 inline-flex items-center justify-center size-7 p-0 m-0 rounded-full border-0 font-[inherit] text-[13px] font-medium cursor-pointer outline-hidden';
     const quiet = 'bg-transparent text-gray-text can-hover:hover:bg-item-hover-bg can-hover:hover:text-text-primary focus-visible:bg-item-hover-bg';
     // Focus stays in the field, so the popover and the saved selection survive the click.
     const keepFocus = (event: Event): void => event.preventDefault();
@@ -371,16 +372,15 @@ export class AnnotationInlineTool implements InlineTool {
     const remove = document.createElement('button');
 
     remove.type = 'button';
-    remove.className = `${button} ${quiet} [&_svg]:size-4 can-hover:hover:text-item-destructive-text`;
+    // Shown only under the pointer or on keyboard focus. A touch screen has no hover, so there it always shows.
+    const onHoverOnly = 'can-hover:opacity-0 can-hover:scale-80 can-hover:[[data-blok-popover-container]:hover_&]:opacity-100 can-hover:[[data-blok-popover-container]:hover_&]:scale-100 focus-visible:opacity-100 focus-visible:scale-100 transition-[opacity,scale,background-color,color] duration-150 motion-reduce:transition-none';
+
+    remove.className = `${button} ${quiet} ${onHoverOnly} [&_svg]:size-4 can-hover:hover:text-item-destructive-text`;
     remove.innerHTML = IconTrash;
     remove.setAttribute('aria-label', this.i18n.t('tools.annotation.remove'));
     remove.setAttribute('data-blok-testid', 'inline-annotation-remove');
     remove.addEventListener('mousedown', keepFocus);
     remove.addEventListener('click', () => this.removeHint());
-
-    const spacer = document.createElement('span');
-
-    spacer.className = 'flex-1';
 
     const done = document.createElement('button');
 
@@ -392,8 +392,9 @@ export class AnnotationInlineTool implements InlineTool {
     done.addEventListener('mousedown', keepFocus);
     done.addEventListener('click', () => this.confirm());
 
-    footer.append(remove, spacer, done);
-    wrapper.append(body, footer);
+    actions.append(remove, done);
+    subtitleRow.append(actions);
+    wrapper.append(body);
 
     return { wrapper, sizer, text, subtitle, remove };
   }

@@ -192,6 +192,35 @@ describe('InlineSelectionValidator — mutation coverage', () => {
     expect(validator.canShow()).toEqual({ allowed: false, reason: 'Selection is inside a code block' });
   });
 
+  it('rejects a selection inside a plain-text field', () => {
+    const field = document.createElement('div');
+
+    field.setAttribute('contenteditable', 'true');
+    field.setAttribute('data-blok-plain-text', '');
+    field.textContent = 'Episode 12';
+    document.body.appendChild(field);
+
+    setSelection(makeSelection(field.childNodes[0], field.childNodes[0]));
+    useBlock(makeBlock());
+
+    expect(validator.canShow()).toEqual({ allowed: false, reason: 'Selection is inside a plain-text field' });
+  });
+
+  it('rejects a selection whose focus alone sits in a plain-text field', () => {
+    const prose = mountEditable();
+    const field = document.createElement('div');
+
+    field.setAttribute('contenteditable', 'true');
+    field.setAttribute('data-blok-plain-text', '');
+    field.textContent = 'Episode 12';
+    document.body.appendChild(field);
+
+    setSelection(makeSelection(prose, field.childNodes[0]));
+    useBlock(makeBlock());
+
+    expect(validator.canShow()).toEqual({ allowed: false, reason: 'Selection is inside a plain-text field' });
+  });
+
   it('rejects a selection whose focus alone sits in a code block', () => {
     const editable = document.createElement('div');
 

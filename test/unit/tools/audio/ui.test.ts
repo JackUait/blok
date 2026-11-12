@@ -29,6 +29,14 @@ describe('renderNowPlaying', () => {
     expect(rw.title.getAttribute('contenteditable')).toBe('true');
   });
 
+  // Title and author save as plain text, so formatting would be dropped.
+  it('marks title and author as plain-text fields', () => {
+    const { title, artist } = renderNowPlaying({ url: 'u', title: 't' }, { editable: true });
+
+    expect(title.hasAttribute('data-blok-plain-text')).toBe(true);
+    expect(artist.hasAttribute('data-blok-plain-text')).toBe(true);
+  });
+
   it('shows the cover image when coverUrl is set', () => {
     const { cover } = renderNowPlaying({ url: 'u', coverUrl: 'https://x/c.jpg' }, { editable: true });
     const img = cover.querySelector('img');

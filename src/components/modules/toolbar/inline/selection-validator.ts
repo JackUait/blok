@@ -1,5 +1,6 @@
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import { Dom as $ } from '../../../dom';
+import { isInsidePlainTextField } from '../../../inline-tools/services/inline-tool-event-manager';
 import { SelectionUtils } from '../../../selection/index';
 import type { InlineToolAdapter } from '../../../tools/inline';
 
@@ -80,6 +81,10 @@ export class InlineSelectionValidator {
 
     if (target.closest('pre') !== null || focusElement?.closest('pre')) {
       return { allowed: false, reason: 'Selection is inside a code block' };
+    }
+
+    if (isInsidePlainTextField(target) || isInsidePlainTextField(focusElement)) {
+      return { allowed: false, reason: 'Selection is inside a plain-text field' };
     }
 
     const anchorElement = $.isElement(currentSelection.anchorNode)

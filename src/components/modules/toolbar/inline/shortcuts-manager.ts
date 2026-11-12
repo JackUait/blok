@@ -2,6 +2,7 @@ import type { InlineTool as IInlineTool } from '../../../../../types';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import { CommonInternalSettings } from '../../../tools/base';
 import { Shortcuts } from '../../../utils/shortcuts';
+import { isInsidePlainTextField } from '../../../inline-tools/services/inline-tool-event-manager';
 import { isInsideKeyboardOwner } from '../../blockEvents/utils/keyboard';
 
 /**
@@ -177,6 +178,12 @@ export class InlineShortcutManager {
         const anchorElement = anchor instanceof Element ? anchor : anchor?.parentElement ?? null;
 
         if (isInsideKeyboardOwner(event.target) || isInsideKeyboardOwner(anchorElement)) {
+          return;
+        }
+        // Block the browser's own bold/italic too: the field would drop it on save.
+        if (isInsidePlainTextField(anchorElement)) {
+          event.preventDefault();
+
           return;
         }
         const { BlockManager, Tools } = this.getBlok();

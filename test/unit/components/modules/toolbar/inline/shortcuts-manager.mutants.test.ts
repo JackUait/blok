@@ -658,3 +658,38 @@ describe('InlineShortcutManager — keyboard-owner subtrees', () => {
     expect(onShortcutPressed).not.toHaveBeenCalled();
   });
 });
+
+describe('InlineShortcutManager — plain-text fields', () => {
+  const selectInPlainField = (): HTMLElement => {
+    const field = document.createElement('div');
+
+    field.setAttribute('contenteditable', 'true');
+    field.setAttribute('data-blok-plain-text', '');
+    field.textContent = 'Episode 12';
+    document.body.appendChild(field);
+    const text = field.firstChild;
+
+    if (!(text instanceof Text)) {
+      throw new Error('text node missing');
+    }
+    window.getSelection()?.setBaseAndExtent(text, 0, text, 3);
+
+    return field;
+  };
+
+  it('blocks a format shortcut without running a tool', () => {
+    const host = createHost({
+      inlineTools: new Map([['bold', createAdapter({ name: 'bold',
+        adapterShortcut: 'CMD+B' })]]),
+    });
+
+    createManager(host).tryRegisterShortcuts();
+    const field = selectInPlainField();
+    const event = new KeyboardEvent('keydown', { code: 'KeyB', ctrlKey: true, bubbles: true, cancelable: true });
+
+    field.dispatchEvent(event);
+
+    expect(onShortcutPressed).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(true);
+  });
+});

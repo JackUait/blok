@@ -459,3 +459,28 @@ test('the Compact setting hides the ridgeline and brings it back', async ({ page
   await expect(ridgeline).toBeVisible();
   await expect(audioBlock).toHaveAttribute('data-compact', 'off');
 });
+
+// ---------------------------------------------------------------------------
+// Title and author save as plain text, so the inline toolbar stays away.
+// ---------------------------------------------------------------------------
+test('selecting the title or author opens no inline toolbar', async ({ page }) => {
+  await createBlok(page);
+  await insertAudioBlock(page);
+
+  const audioBlock = page.locator(AUDIO_BLOCK_SELECTOR);
+
+  await audioBlock.getByTestId('file-input').setInputFiles(FIXTURE_PATH);
+
+  const fields = [audioBlock.locator('[data-role="audio-title"]'), audioBlock.locator('[data-role="audio-artist"]')];
+
+  for (const field of fields) {
+    await field.click();
+    await page.keyboard.type('Episode 12');
+    await field.selectText();
+    await page.keyboard.press('ControlOrMeta+b');
+
+    await expect(page.getByTestId('inline-toolbar')).toBeHidden();
+    // No <b>/<strong> wrapper: the markup is the bare text.
+    expect(await field.innerHTML()).toBe('Episode 12');
+  }
+});

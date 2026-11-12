@@ -158,4 +158,47 @@ describe('InlineToolEventManager', () => {
       expect(onSelectionChange).not.toHaveBeenCalled();
     });
   });
+
+  describe('plain-text fields', () => {
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    it('blocks a format shortcut there without running the tool', () => {
+      const field = document.createElement('div');
+
+      field.setAttribute('contenteditable', 'true');
+      field.setAttribute('data-blok-plain-text', '');
+      field.textContent = 'Episode 12';
+      document.body.appendChild(field);
+      window.getSelection()?.selectAllChildren(field);
+
+      const onShortcut = vi.fn();
+
+      InlineToolEventManager.getInstance().register('bold', { shortcut: { key: 'b', meta: true }, onShortcut });
+
+      // Both modifiers, so the shortcut matches on every platform.
+      const press = (target: HTMLElement): KeyboardEvent => {
+        const event = new KeyboardEvent('keydown', { key: 'b', metaKey: true, ctrlKey: true, bubbles: true, cancelable: true });
+
+        target.dispatchEvent(event);
+
+        return event;
+      };
+      const event = press(field);
+
+      expect(onShortcut).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
+
+      const prose = document.createElement('div');
+
+      prose.setAttribute('contenteditable', 'true');
+      prose.textContent = 'Body text';
+      document.body.appendChild(prose);
+      window.getSelection()?.selectAllChildren(prose);
+      press(prose);
+
+      expect(onShortcut).toHaveBeenCalledTimes(1);
+    });
+  });
 });

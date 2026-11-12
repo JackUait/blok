@@ -1,5 +1,6 @@
 import type { AudioData } from '../../../types/tools/audio';
 import { IconImage, IconUpload } from '../../components/icons';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 
 export interface NowPlayingOptions {
   editable: boolean;
@@ -90,8 +91,10 @@ export function renderNowPlaying(data: AudioData, opts: NowPlayingOptions): NowP
 
   const title = editableLine('audio-title', data.title, opts.editable, opts.titlePlaceholder);
   title.className = 'blok-audio-title';
+  title.setAttribute(DATA_ATTR.plainText, '');
   const artist = editableLine('audio-artist', data.artist, opts.editable, opts.artistPlaceholder);
   artist.className = 'blok-audio-artist';
+  artist.setAttribute(DATA_ATTR.plainText, '');
 
   const waveformMount = document.createElement('div');
   waveformMount.className = 'blok-audio-waveform';

@@ -398,6 +398,10 @@ export const DATA_ATTR: {
    *  not a text field selects every block at once.
    *  Public authoring hook. */
   readonly keyboardOwner: 'data-blok-keyboard-owner';
+  /** Marks an editable field that saves plain text, like an audio title.
+   *  The inline toolbar never opens inside it and format shortcuts do
+   *  nothing there. Public authoring hook. */
+  readonly plainText: 'data-blok-plain-text';
   /** Marks a subtree whose right-click belongs to the tool: Blok's block
    *  menu stands down inside it, so a tool's own context menu (a database
    *  view tab's menu) is not replaced by the block menu. Public authoring hook. */

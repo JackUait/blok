@@ -1,3 +1,12 @@
+import { DATA_ATTR } from '../../constants/data-attributes';
+
+const nodeToElement = (node: Node | null): Element | null =>
+  node instanceof Element ? node : node?.parentElement ?? null;
+
+/** A field that saves plain text: formatting there would be lost on save. */
+export const isInsidePlainTextField = (element: Element | null | undefined): boolean =>
+  element?.closest(`[${DATA_ATTR.plainText}]`) != null;
+
 /**
  * Shortcut definition for keyboard shortcuts
  */
@@ -250,6 +259,13 @@ export class InlineToolEventManager {
       }
 
       if (handler.isRelevant && !handler.isRelevant(selection)) {
+        return;
+      }
+
+      // A plain-text field drops formatting on save, so block the browser's too.
+      if (isInsidePlainTextField(nodeToElement(selection.anchorNode))) {
+        event.preventDefault();
+
         return;
       }
 

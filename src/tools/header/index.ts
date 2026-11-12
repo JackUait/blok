@@ -367,7 +367,7 @@ export class Header implements BlockTool {
 
     const normalized: HeaderData = {
       text: data.text || '',
-      level: isValidLevel ? parsedLevel : this.defaultLevel.number,
+      level: isValidLevel ? this.nearestAllowedLevel(parsedLevel) : this.defaultLevel.number,
     };
 
     if (data.isToggleable === true) {
@@ -1325,6 +1325,27 @@ export class Header implements BlockTool {
   }
 
   /**
+   * Map a level the config does not allow to the nearest allowed one, the
+   * way Notion turns pasted h5/h6 into its deepest heading. A tie goes to the
+   * deeper level. Anything outside 1-6 falls to the default level.
+   *
+   * @param level - parsed level number
+   * @returns allowed level number
+   */
+  private nearestAllowedLevel(level: number): number {
+    const allowed = this.levels.map(levelItem => levelItem.number);
+
+    if (level < 1 || level > 6) {
+      return this.defaultLevel.number;
+    }
+
+    // `allowed` is ascending, so `<=` lets the deeper level win a tie.
+    return allowed.reduce<number | undefined>((best, candidate) => {
+      return best === undefined || Math.abs(candidate - level) <= Math.abs(best - level) ? candidate : best;
+    }, undefined) ?? level;
+  }
+
+  /**
    * Get current level
    *
    * @returns Level object
@@ -1432,19 +1453,8 @@ export class Header implements BlockTool {
       H6: 6,
     };
 
-    /**
-     * Define default level value
-     */
-    const parsedLevel = tagToLevel[content.tagName] ?? this.defaultLevel.number;
-
-    /**
-     * If levels are restricted, find the nearest allowed level
-     */
-    const level = this._settings.levels
-      ? this._settings.levels.reduce((prevLevel, currLevel) => {
-        return Math.abs(currLevel - parsedLevel) < Math.abs(prevLevel - parsedLevel) ? currLevel : prevLevel;
-      })
-      : parsedLevel;
+    // The data setter maps a level the config does not allow.
+    const level = tagToLevel[content.tagName] ?? this.defaultLevel.number;
 
     const anchor = normalizeHeadingAnchor(content.getAttribute('id'));
 

@@ -118,7 +118,7 @@ const editor = new Blok({
         option: 'levels',
         type: 'number[]',
         default: '[1,2,3,4,5,6]',
-        description: 'Restrict which heading levels are available.',
+        description: 'Restrict which heading levels are available. A pasted or loaded heading whose level is not in the list takes the nearest allowed level, and the deeper one on a tie. With `[1, 2, 3, 4]`, H5 and H6 become level 4, as in Notion.',
       },
       {
         option: 'defaultLevel',

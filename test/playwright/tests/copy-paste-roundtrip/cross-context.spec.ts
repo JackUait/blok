@@ -32,6 +32,8 @@ interface EditorOptions {
   pageTitle?: boolean;
   /** 'minimal': BlokOriginal with paragraph, header (levels 2,3), list and italic only. */
   preset?: 'default' | 'minimal';
+  /** BlokOriginal with paragraph and a header tool limited to these levels. */
+  headerLevels?: number[];
 }
 
 const resetAll = async (page: Page): Promise<void> => {
@@ -82,7 +84,7 @@ const createEditor = async (page: Page, holderId: string, options: EditorOptions
       config.pageTitle = true;
     }
 
-    const Ctor = opts.preset === 'minimal' ? w.BlokOriginal : w.Blok;
+    const Ctor = opts.preset === 'minimal' || opts.headerLevels ? w.BlokOriginal : w.Blok;
 
     if (opts.preset === 'minimal') {
       config.tools = {
@@ -90,6 +92,12 @@ const createEditor = async (page: Page, holderId: string, options: EditorOptions
         header: { class: w.BlokHeader, config: { levels: [2, 3] }, inlineToolbar: true },
         list: { class: w.BlokList, inlineToolbar: true },
         italic: { class: w.BlokItalic },
+      };
+    }
+    if (opts.headerLevels) {
+      config.tools = {
+        paragraph: { class: w.BlokParagraph, inlineToolbar: true },
+        header: { class: w.BlokHeader, config: { levels: opts.headerLevels }, inlineToolbar: true },
       };
     }
 
@@ -648,7 +656,6 @@ test.describe('cross-context round trips', () => {
   });
 
   test('two instances: B lacks toggle/callout/bold and has header levels 2,3 only; B->A round trip keeps the data', async ({ page }) => {
-    test.fixme(true, 'cross-context-missing-tool-roundtrip-back: B allows header levels 2 and 3, so level 1 comes back as 3; awaits a decision');
     test.setTimeout(60_000);
     const blocks: Blocks = [
       { id: 'h1', type: 'header', data: { text: 'Heading one', level: 1 } },
@@ -679,8 +686,80 @@ test.describe('cross-context round trips', () => {
     await pasteClip(page, 'cc-c', clipB);
     const back = await settledSave(page, 'cc-c');
 
+    // B allows only 2 and 3, so level 1 maps to the nearest allowed level, 2, like Notion clamps h5/h6 to its h4.
+    const atLevel2 = before.blocks.map((b) => (b.type === 'header' ? { ...b, data: { ...b.data, level: 2 } } : b));
+
     expect.soft(inB.blocks.length, 'B keeps every block (stubs for missing tools)').toBe(before.blocks.length);
-    expect(canonical(back.blocks), 'A -> B -> A keeps every block and field').toEqual(canonical(before.blocks));
+    expect.soft(inB.blocks.find((b) => b.type === 'header')?.data, 'level 1 lands as 2 in B').toMatchObject({ level: 2, text: [{ text: 'Heading one' }] });
+    expect(canonical(back.blocks), 'A -> B -> A keeps every block and field').toEqual(canonical(atLevel2));
+  });
+
+  test.describe('pasted header level outside the allowed levels', () => {
+    // Measured in Notion (levels 1-4): h1-h4 keep their level, h5 and h6 become 4.
+    // Blok maps a level the tool does not allow to the nearest allowed one.
+    const NOTION_HTML = '<h1>Head one</h1><h2>Head two</h2><h3>Head three</h3><h4>Head four</h4><h5>Head five</h5><h6>Head six</h6><p>After para</p>';
+    const NOTION_MD = '# MD one\n## MD two\n### MD three\n#### MD four\n##### MD five\n###### MD six\nMD para';
+
+    const headerLevels = (blocks: Blocks): Array<[string, unknown]> =>
+      blocks.filter((b) => b.type === 'header').map((b) => [
+        (b.data.text as Array<{ text: string }>).map((seg) => seg.text).join(''),
+        b.data.level,
+      ]);
+
+    const pasteInto = async (page: Page, levels: number[], clip: Clip): Promise<Blocks> => {
+      await createEditor(page, 'cc-lv', { headerLevels: levels });
+      await focusFirstEditable(page, 'cc-lv');
+      await pasteClip(page, 'cc-lv', clip);
+
+      return (await settledSave(page, 'cc-lv')).blocks;
+    };
+
+    test('html h1-h6 into levels 1-4 maps like Notion', async ({ page }) => {
+      const blocks = await pasteInto(page, [1, 2, 3, 4], { 'text/html': NOTION_HTML, 'text/plain': 'x' });
+
+      expect(headerLevels(blocks)).toEqual([
+        ['Head one', 1], ['Head two', 2], ['Head three', 3], ['Head four', 4], ['Head five', 4], ['Head six', 4],
+      ]);
+    });
+
+    test('markdown h1-h6 into levels 1-4 maps like Notion', async ({ page }) => {
+      const blocks = await pasteInto(page, [1, 2, 3, 4], { 'text/plain': NOTION_MD });
+
+      expect(headerLevels(blocks)).toEqual([
+        ['MD one', 1], ['MD two', 2], ['MD three', 3], ['MD four', 4], ['MD five', 4], ['MD six', 4],
+      ]);
+    });
+
+    test('html h1-h6 into levels 2 and 3 clamps both ends', async ({ page }) => {
+      const blocks = await pasteInto(page, [2, 3], { 'text/html': NOTION_HTML, 'text/plain': 'x' });
+
+      expect(headerLevels(blocks)).toEqual([
+        ['Head one', 2], ['Head two', 2], ['Head three', 3], ['Head four', 3], ['Head five', 3], ['Head six', 3],
+      ]);
+    });
+
+    test('markdown h1-h6 into levels 2 and 3 clamps both ends', async ({ page }) => {
+      const blocks = await pasteInto(page, [2, 3], { 'text/plain': NOTION_MD });
+
+      expect(headerLevels(blocks)).toEqual([
+        ['MD one', 2], ['MD two', 2], ['MD three', 3], ['MD four', 3], ['MD five', 3], ['MD six', 3],
+      ]);
+    });
+
+    test('blok h1-h6 copied from a default editor into levels 2 and 3 clamps both ends', async ({ page }) => {
+      const blocks: Blocks = [1, 2, 3, 4, 5, 6].map((n) => ({ id: `h${n}`, type: 'header', data: { text: `Blok ${n}`, level: n } }));
+
+      await createEditor(page, 'cc-a', { data: { blocks: [...blocks, TAIL] } });
+      await selectAll(page, 'cc-a');
+      const clip = await clipboardEvent(page, 'cc-a', 'copy');
+
+      expect.soft(Object.keys(clip), 'copy carries blok data').toContain('application/x-blok');
+      const after = await pasteInto(page, [2, 3], clip);
+
+      expect(headerLevels(after)).toEqual([
+        ['Blok 1', 2], ['Blok 2', 2], ['Blok 3', 3], ['Blok 4', 3], ['Blok 5', 3], ['Blok 6', 3],
+      ]);
+    });
   });
 
   test('read-only: copy a native selection across blocks and paste into an editable editor', async ({ page }) => {

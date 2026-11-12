@@ -154,4 +154,37 @@ describe('board: "+ New group" name popover', () => {
     expect(await labels()).toEqual(['Todo']);
     await vi.waitFor(() => expect(field()).toBeNull());
   });
+
+  // notion-motion.md Round 16 §3: every exit but Enter or Done with a name closes it and makes nothing.
+  it('closes on Done with an empty name', async () => {
+    await openNewGroup();
+    done()?.click();
+    await quiet();
+
+    await vi.waitFor(() => expect(field()).toBeNull());
+    expect(await labels()).toEqual(['Todo']);
+  });
+
+  it('closes on a click outside with a name typed, and adds nothing', async () => {
+    await openNewGroup();
+    await type('Out1');
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    document.body.click();
+    await quiet();
+
+    await vi.waitFor(() => expect(field()).toBeNull());
+    expect(await labels()).toEqual(['Todo']);
+  });
+
+  // notion-motion.md Round 16 §3: its own popover, opened with no gap under the button; Done ends with "↵".
+  it('opens its own popover class and shows the return mark after "Done"', async () => {
+    await openNewGroup();
+
+    const popover = field()?.closest('[data-blok-popover-custom-class]');
+
+    expect(popover?.getAttribute('data-blok-popover-custom-class')?.split(' ')).toEqual(expect.arrayContaining(['blok-database-menu', 'blok-database-new-group-menu']));
+    expect(done()?.lastElementChild?.matches('[data-blok-database-new-group-enter]')).toBe(true);
+    expect(done()?.querySelector('[data-blok-database-new-group-enter] svg')).not.toBeNull();
+    expect(done()?.textContent?.trim()).toBe('Done');
+  });
 });

@@ -140,7 +140,7 @@ import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar, VIEW_ICONS } from './database-tab-bar';
 import { foldTitleRow } from './database-view-bar-fold';
-import { IconArrowDiagonal, IconCalendar, IconReplace, IconCreditCard, IconCurrency, IconDatabase, IconDatabaseInline, IconDatabaseLinked, IconFolderQuestion, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconDownload, IconImage, IconForm, IconViewForm, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
+import { IconArrowDiagonal, IconCalendar, IconReplace, IconCreditCard, IconCurrency, IconDatabase, IconDatabaseInline, IconDatabaseLinked, IconFolderQuestion, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconDownload, IconImage, IconForm, IconViewForm, IconMergeCells, IconPageLayout, IconReturn, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -9782,6 +9782,7 @@ export class DatabaseTool implements BlockTool {
     const wrap = document.createElement('div');
     const input = document.createElement('input');
     const done = document.createElement('button');
+    const enter = document.createElement('span');
     const name = this.api.i18n.t('tools.database.newGroup');
     const commit = (): void => {
       const label = input.value.trim();
@@ -9806,9 +9807,19 @@ export class DatabaseTool implements BlockTool {
     done.setAttribute('data-blok-database-layout-section-done', '');
     done.setAttribute('data-blok-database-new-group-done', '');
     done.textContent = this.api.i18n.t('tools.database.layoutSectionDone');
+    // notion-motion.md Round 16 §3: a 12x16 "↵" after the label.
+    enter.setAttribute('data-blok-database-new-group-enter', '');
+    enter.setAttribute('aria-hidden', 'true');
+    enter.innerHTML = IconReturn;
+    done.appendChild(enter);
     done.addEventListener('click', commit);
     wrap.append(input, done);
-    this.showGroupPopover(anchor, [{ type: PopoverItemType.Html, element: wrap, name: 'new-group' }], anchor);
+    // Round 16 §3: 300 wide, its left edge on the button's and its top on the button's bottom.
+    this.showGroupPopover(anchor, [{ type: PopoverItemType.Html, element: wrap, name: 'new-group' }], anchor, {
+      class: `${DATABASE_MENU_CLASS} blok-database-new-group-menu`,
+      minWidth: '300px',
+      offset: 0,
+    });
     input.focus();
   }
 

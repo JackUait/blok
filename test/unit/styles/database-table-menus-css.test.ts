@@ -483,3 +483,25 @@ describe('filtered-empty table', () => {
     expect(declared(EMPTY, 'justify-content')).toEqual(['center']);
   });
 });
+
+// notion-motion.md Round 16 §3: the "+ New group" popover is 300x36 with a 6px inset, a 21px field and a 24px Done.
+describe('"+ New group" name popover', () => {
+  const MENU = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-new-group-menu']";
+
+  it('drops the menu padding so the row sets the 36px height', () => {
+    expect(declared(`${MENU} [data-blok-popover-container]`, 'padding')).toEqual(['0']);
+    expect(declared(`${MENU} [data-blok-popover-items]`, 'padding')).toEqual(['0']);
+    expect(declared('[data-blok-database-layout-section-rename][data-blok-database-new-group]', 'padding')).toEqual(['var(--blok-space-1-5)']);
+    expect(declared('[data-blok-database-layout-section-rename][data-blok-database-new-group]', 'gap')).toEqual(['0']);
+  });
+
+  it('draws Done 24px tall, 6px in, with a 12x16 return mark', () => {
+    const done = '[data-blok-database-layout-section-done][data-blok-database-new-group-done]';
+
+    expect(declared(done, 'block-size')).toEqual(['24px']);
+    expect(declared(done, 'padding-inline')).toEqual(['var(--blok-space-1-5)']);
+    expect(declared('[data-blok-database-new-group-enter] svg', 'width')).toEqual(['12px']);
+    expect(declared('[data-blok-database-new-group-enter] svg', 'height')).toEqual(['16px']);
+    expect(declared('[data-blok-database-new-group] input', 'line-height')).toEqual(['21px']);
+  });
+});

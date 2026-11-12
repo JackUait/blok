@@ -4797,6 +4797,39 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   cursor: pointer;
 }
 
+/* notion-motion.md Round 16 §3: "+ New group" is 300x36. A 6px inset, the bare 21px field, then a 24px Done with "↵". */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-new-group-menu'] [data-blok-popover-container],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-new-group-menu'] [data-blok-popover-items] {
+  padding: 0;
+}
+
+[data-blok-database-layout-section-rename][data-blok-database-new-group] {
+  gap: 0;
+  margin-block-start: 0;
+  padding: var(--blok-space-1-5);
+}
+
+[data-blok-database-new-group] input {
+  line-height: 21px;
+}
+
+[data-blok-database-layout-section-done][data-blok-database-new-group-done] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  block-size: 24px;
+  padding-inline: var(--blok-space-1-5);
+}
+
+[data-blok-database-new-group-enter] {
+  display: inline-flex;
+}
+
+[data-blok-database-new-group-enter] svg {
+  width: 12px;
+  height: 16px;
+}
+
 :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-layout-section-row]:focus-visible,
 :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-layout-section-done]:focus-visible,
 :where(:root:not([data-blok-modality="pointer"])) button[data-blok-database-layout-group-name]:focus-visible,

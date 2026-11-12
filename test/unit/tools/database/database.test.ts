@@ -1213,7 +1213,8 @@ describe('DatabaseTool', () => {
       queryByData(element, 'data-blok-database-add-column')?.click();
 
       expect(document.querySelector<HTMLInputElement>('[data-blok-database-new-group] input')?.placeholder).toBe('tools.database.newGroup');
-      expect(document.querySelector('[data-blok-database-new-group-done]')?.textContent).toBe('tools.database.layoutSectionDone');
+      // The rest of Done is its aria-hidden "↵" mark.
+      expect(document.querySelector('[data-blok-database-new-group-done]')?.textContent?.trim()).toBe('tools.database.layoutSectionDone');
 
       addGroup(element, 'Review');
       expect(tool.save(document.createElement('div')).schema.find((p) => p.type === 'select')?.config?.options.map((o) => o.label)).toContain('Review');

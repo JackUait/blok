@@ -1,23 +1,44 @@
-[data-custom-emoji-tools], [data-custom-emoji-form-actions] { display: flex; align-items: center; gap: 10px; }
-[data-custom-emoji-tools] { justify-content: space-between; margin: 24px 0 18px; }
-[data-custom-emoji-tools] [data-blok-field=search] { max-width: 280px; flex: 1; }
-[data-custom-emoji-upload] { padding: 18px; background: var(--blok-item-hover-bg, #8881); border: 1px solid var(--blok-popover-border, #8883); border-radius: 8px; margin-bottom: 18px; }
-[data-custom-emoji-upload][hidden] { display:none; }
-[data-custom-emoji-upload] label { display: grid; gap: 7px; margin: 16px 0 8px; font-size: 13px; }
-[data-custom-emoji-file] { font-size: 12px; color: var(--blok-text-secondary, #888); overflow:hidden; text-overflow:ellipsis; }
-[data-custom-emoji-form-actions]:last-child { justify-content: flex-end; }
-[data-custom-emoji-list] table { width:100%; border-collapse: collapse; font-size:13px; text-align:left; }
-[data-custom-emoji-list] th { font-size:12px; font-weight:500; color: var(--blok-text-secondary, #888); }
-[data-custom-emoji-list] td, [data-custom-emoji-list] th { padding: 11px 8px; border-bottom:1px solid var(--blok-popover-border, #8883); }
-[data-custom-emoji-list] td:first-child { width:65px; }
-[data-custom-emoji-list] td:last-child { width:40px; text-align:right; }
-[data-custom-emoji-list] img { width:28px; height:28px; object-fit:contain; }
+[data-custom-emoji-tools], [data-custom-emoji-toolbar-actions] { display:flex; align-items:center; gap:10px; }
+[data-custom-emoji-tools] { justify-content:space-between; margin:26px 0 12px; }
+[data-custom-emoji-count] { color:var(--desktop-muted); font-size:13px; white-space:nowrap; }
+[data-custom-emoji-toolbar-actions] [data-blok-field=search] { width:168px; }
+[data-custom-emoji-list] table { width:100%; border-collapse:collapse; font-size:13px; text-align:left; }
+[data-custom-emoji-list] th { font-size:12px; font-weight:400; color:var(--desktop-muted); }
+[data-custom-emoji-list] td, [data-custom-emoji-list] th { padding:11px 8px; border-bottom:1px solid var(--desktop-border); }
+[data-custom-emoji-list] td:first-child { width:62px; }
+[data-custom-emoji-list] td:last-child { width:36px; text-align:right; }
+[data-custom-emoji-list] td:nth-child(3) { color:var(--desktop-muted); font-size:12px; }
+[data-custom-emoji-list] img { width:26px; height:26px; object-fit:contain; }
+[data-custom-emoji-list] button { display:grid; place-items:center; padding:5px; border-color:transparent; color:var(--desktop-muted); }
 [data-custom-emoji-list] button svg { width:16px; height:16px; }
-[data-custom-emoji-list] > p { color: var(--blok-text-secondary, #888); font-size:13px; padding:26px 0; }
-
-[data-custom-emoji-previews] { display:flex; gap:10px; margin-top:14px; }
-[data-custom-emoji-previews][hidden] { display:none; }
-[data-emoji-preview-theme] { display:grid; place-items:center; width:76px; height:76px; border:1px solid #8883; border-radius:7px; }
+[data-custom-emoji-empty] { display:flex; flex-direction:column; align-items:center; padding:58px 24px; text-align:center; border-top:1px solid var(--desktop-border); }
+[data-custom-emoji-empty] > span { display:grid; place-items:center; width:42px; height:42px; margin-bottom:14px; color:var(--desktop-muted); background:var(--desktop-hover); border-radius:10px; }
+[data-custom-emoji-empty] svg { width:22px; height:22px; }
+[data-custom-emoji-empty] strong { font-size:14px; font-weight:500; color:var(--desktop-ink); }
+[data-custom-emoji-empty] p { max-width:300px; margin:7px 0 0; color:var(--desktop-muted); font-size:13px; line-height:1.5; }
+[data-custom-emoji-overlay] { position:fixed; inset:0; z-index:250; display:flex; align-items:center; justify-content:center; padding:24px; background:#0005; }
+[data-custom-emoji-dialog] { width:420px; max-width:100%; max-height:calc(100dvh - 48px); overflow:auto; border:1px solid var(--desktop-border); border-radius:12px; background:var(--desktop-canvas); color:var(--desktop-ink); box-shadow:0 20px 80px #0005,0 2px 12px #0002; font:13px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+[data-custom-emoji-dialog] > header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:22px 24px 0; }
+[data-custom-emoji-dialog] h2 { margin:0; font-size:18px; font-weight:600; letter-spacing:-.3px; }
+[data-custom-emoji-dialog] [data-custom-emoji-close] { display:grid; place-items:center; width:26px; min-height:26px; padding:0; font-size:21px; font-weight:300; color:var(--desktop-muted); border-color:transparent; }
+[data-custom-emoji-description] { margin:6px 24px 20px; max-width:330px; color:var(--desktop-muted); font-size:13px; line-height:1.5; }
+[data-custom-emoji-image-area] { margin:0 24px 20px; padding:20px 12px 16px; display:flex; flex-direction:column; align-items:center; border:1px solid var(--desktop-border); border-radius:8px; background:color-mix(in srgb,var(--desktop-hover),transparent 55%); }
+[data-custom-emoji-previews] { display:flex; gap:14px; margin-bottom:15px; }
+[data-custom-emoji-previews] > div { display:flex; flex-direction:column; align-items:center; gap:5px; }
+[data-custom-emoji-previews] > div > span { font-size:10px; color:var(--desktop-muted); }
+[data-emoji-preview-theme] { display:grid; place-items:center; width:70px; height:64px; border:1px solid #8883; border-radius:7px; }
 [data-emoji-preview-theme=light] { background:#fff; }
-[data-emoji-preview-theme=dark] { background:#191919; }
-[data-emoji-preview-theme] img { width:40px; height:40px; object-fit:contain; }
+[data-emoji-preview-theme=dark] { background:#202020; }
+[data-emoji-preview-theme] img { width:34px; height:34px; object-fit:contain; }
+[data-emoji-preview-theme] img[hidden], [data-custom-emoji-placeholder][hidden] { display:none; }
+[data-custom-emoji-placeholder] { display:flex; color:#aaa; }
+[data-custom-emoji-placeholder] svg { width:24px; height:24px; }
+[data-custom-emoji-hint] { margin:7px 24px 0; color:var(--desktop-muted); font-size:11px; line-height:1.5; }
+[data-custom-emoji-image-area] [data-custom-emoji-hint] { margin:8px 0 0; }
+[data-custom-emoji-name-label] { display:flex; flex-direction:column; gap:7px; margin:0 24px; font-size:13px; font-weight:500; }
+[data-custom-emoji-name-label] input { width:100%; font-weight:400; }
+[data-custom-emoji-upload] > [role=alert] { margin:12px 24px 0; }
+[data-custom-emoji-upload] > footer { display:flex; align-items:center; justify-content:flex-end; gap:8px; padding:16px 24px; margin-top:24px; border-top:1px solid var(--desktop-border); }
+[data-custom-emoji-dialog] :disabled { opacity:.5; cursor:default; }
+[data-custom-emoji-dialog] button:focus-visible { outline:2px solid var(--blok-focus-ring); outline-offset:2px; }
+@media(max-width:600px) { [data-custom-emoji-tools] { align-items:flex-start; gap:12px; } [data-custom-emoji-toolbar-actions] { flex-wrap:wrap; justify-content:flex-end; } [data-custom-emoji-toolbar-actions] [data-blok-field=search] { width:140px; } }

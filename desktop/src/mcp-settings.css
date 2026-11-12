@@ -1,0 +1,35 @@
+[data-desktop-mcp-panel] { max-width: 720px; }
+[data-desktop-mcp-panel] [data-desktop-settings-intro] { margin: 0 0 28px; max-width: 590px; color: var(--desktop-muted); font-size: 14px; line-height: 1.6; }
+[data-desktop-mcp-panel] [data-desktop-settings-copy] { margin: 0; font-size: 13px; }
+[data-desktop-mcp-endpoint] { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px 16px; padding: 16px; border: 1px solid var(--desktop-border); border-radius: 8px; background: var(--desktop-strip); }
+[data-desktop-mcp-endpoint] > span { grid-column: 1; color: var(--desktop-muted); font-size: 12px; }
+[data-desktop-mcp-endpoint] code { grid-column: 1; min-width: 0; overflow-wrap: anywhere; color: var(--desktop-ink); font-size: 13px; }
+[data-desktop-mcp-endpoint] button { grid-column: 2; grid-row: 1 / 3; }
+[data-desktop-mcp-create] { display: flex; align-items: flex-end; gap: 12px; margin: 24px 0 0; }
+[data-desktop-mcp-create] label { display: grid; flex: 1; max-width: 320px; min-width: 0; gap: 8px; font-size: 13px; color: var(--desktop-ink); }
+[data-desktop-mcp-create] [data-desktop-mcp-name] { width: 100%; margin: 0; min-height: 34px; }
+[data-desktop-mcp-panel] [data-desktop-mcp-primary] { min-height: 34px; background: var(--blok-color-accent, #2383e2); color: #fff; border-color: transparent; }
+[data-desktop-mcp-panel] [data-desktop-mcp-primary]:hover { filter: brightness(.94); }
+[data-desktop-mcp-panel] button:disabled { cursor: wait; opacity: .55; }
+[data-desktop-mcp-status] { margin: 12px 0 0; color: var(--desktop-muted); font-size: 13px; line-height: 1.5; }
+[data-desktop-mcp-status]:empty { display: none; }
+[data-desktop-mcp-list-heading] { margin: 32px 0 8px; font-size: 14px; font-weight: 600; }
+[data-desktop-mcp-token] { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--desktop-border); }
+[data-desktop-mcp-token-info] { display: grid; min-width: 0; gap: 5px; }
+[data-desktop-mcp-token-info] strong { font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+[data-desktop-mcp-token-info] span { font-size: 12px; color: var(--desktop-muted); }
+[data-desktop-mcp-actions] { flex: none; }
+[data-desktop-mcp-panel] [data-desktop-mcp-revoke] { color: var(--blok-text-danger, #d55a55); }
+[data-desktop-mcp-empty] { padding: 24px 16px; border: 1px dashed var(--desktop-border); border-radius: 8px; text-align: center; }
+[data-desktop-mcp-empty] strong { font-size: 13px; font-weight: 500; }
+[data-desktop-mcp-empty] p { margin: 7px 0 0; color: var(--desktop-muted); font-size: 12px; }
+[data-desktop-mcp-panel] [data-desktop-mcp-secret] { margin: 20px 0 0; padding: 16px; border: 1px solid var(--desktop-border); border-radius: 8px; background: var(--desktop-hover); }
+[data-desktop-mcp-secret] > p { margin: 0 0 12px; font-size: 13px; line-height: 1.5; }
+[data-desktop-mcp-secret] [data-desktop-settings-path] { padding: 10px; max-height: 100px; overflow-y: auto; background: var(--desktop-strip); user-select: all; }
+[data-desktop-mcp-panel] [data-desktop-mcp-secret] button { margin-top: 12px; }
+@media (max-width: 650px) {
+  [data-desktop-mcp-create], [data-desktop-mcp-token] { flex-wrap: wrap; }
+  [data-desktop-mcp-create] label { flex-basis: 100%; max-width: none; }
+  [data-desktop-mcp-endpoint] { grid-template-columns: 1fr; }
+  [data-desktop-mcp-endpoint] button { grid-column: 1; grid-row: auto; justify-self: start; margin-top: 4px; }
+}

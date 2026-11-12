@@ -70,7 +70,7 @@ function chevron(): SVGSVGElement {
   return svg;
 }
 
-type MenuIcon = 'profile' | 'settings' | 'ai' | 'storage';
+type MenuIcon = 'profile' | 'settings' | 'ai' | 'storage' | 'connections' | 'emoji';
 
 function menuIcon(kind: MenuIcon): SVGSVGElement {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -83,6 +83,8 @@ function menuIcon(kind: MenuIcon): SVGSVGElement {
     profile: 'M10 10.2a3.1 3.1 0 1 0 0-6.2 3.1 3.1 0 0 0 0 6.2ZM3.7 16.5c.3-2.8 2.7-4.6 6.3-4.6s6 1.8 6.3 4.6H3.7Z',
     settings: 'M3 5h14M3 10h14M3 15h14M7 3v4M13 8v4M8 13v4',
     ai: 'M10 2.5l1.6 5.1L17 9.2l-5.4 1.6L10 16l-1.6-5.2L3 9.2l5.4-1.6L10 2.5ZM16.5 14.3l.5 1.2 1.2.5-1.2.5-.5 1.2-.5-1.2-1.2-.5 1.2-.5.5-1.2Z',
+    connections: 'M8 12l4-4M7 13l-1 1a3 3 0 0 1-4-4l3-3a3 3 0 0 1 4 0M13 7l1-1a3 3 0 0 1 4 4l-3 3a3 3 0 0 1-4 0',
+    emoji: 'M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0ZM7 8h.01M13 8h.01M7 12c1.5 2 4.5 2 6 0',
     storage: 'M3 5.2h5l1.3 1.5H17v8.1H3V5.2Z',
   };
   path.setAttribute('d', paths[kind]);
@@ -97,7 +99,8 @@ function menuIcon(kind: MenuIcon): SVGSVGElement {
 function actionButton(attribute: string, label: string, kind: MenuIcon): HTMLButtonElement {
   const button = el('button', attribute);
   button.type = 'button';
-  button.append(menuIcon(kind), document.createTextNode(label));
+  button.append(menuIcon(kind), el('span', 'data-desktop-action-label', label));
+  button.title = label;
   return button;
 }
 
@@ -215,12 +218,15 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   const nav = el('aside', 'data-desktop-settings-nav');
   nav.append(el('div', 'data-desktop-settings-nav-heading', 'Compte'));
   const accountTab = actionButton('data-desktop-settings-nav-item', currentWorkspace.kind === 'remote' ? currentWorkspace.userName ?? 'Mon compte' : 'Profil local', 'profile');
-  nav.append(accountTab, el('div', 'data-desktop-settings-nav-heading', 'Application'));
+  const connectionsTab = actionButton('data-desktop-settings-nav-item', 'Connexions', 'connections');
+  nav.append(accountTab);
+  if (client) nav.append(connectionsTab);
+  nav.append(el('div', 'data-desktop-settings-nav-heading', 'Application'));
   const prefsTab = actionButton('data-desktop-settings-nav-item', 'Préférences', 'settings');
   const aiTab = actionButton('data-desktop-settings-nav-item', 'Assistant IA', 'ai');
   nav.append(prefsTab, aiTab);
   const generalTab = actionButton('data-desktop-settings-nav-item', 'Général', 'storage');
-  const emojiTab = actionButton('data-desktop-settings-nav-item', 'Émojis', 'settings');
+  const emojiTab = actionButton('data-desktop-settings-nav-item', 'Émojis', 'emoji');
   const membersTab = actionButton('data-desktop-settings-nav-item', 'Membres', 'profile');
   nav.append(el('div', 'data-desktop-settings-nav-heading', 'Espace'), generalTab, emojiTab);
   if (admin) nav.append(membersTab);
@@ -272,9 +278,10 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   const closeSettings = (): void => { modal?.close(); };
   close.addEventListener('click', closeSettings);
 
-  type SettingsPanel = 'account' | 'preferences' | 'ai' | 'general' | 'members' | 'emojis';
+  type SettingsPanel = 'account' | 'preferences' | 'ai' | 'general' | 'members' | 'emojis' | 'connections';
   const showPanel = (panel: SettingsPanel): void => {
     accountTab.setAttribute('aria-current', panel === 'account' ? 'page' : 'false');
+    connectionsTab.setAttribute('aria-current', panel === 'connections' ? 'page' : 'false');
     prefsTab.setAttribute('aria-current', panel === 'preferences' ? 'page' : 'false');
     aiTab.setAttribute('aria-current', panel === 'ai' ? 'page' : 'false');
     generalTab.setAttribute('aria-current', panel === 'general' ? 'page' : 'false');
@@ -285,6 +292,11 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
     ++panelGeneration;
     main.querySelector('[data-desktop-settings-content]')?.remove();
     const content = el('div', 'data-desktop-settings-content');
+    if (panel === 'connections' && client) {
+      main.append(content);
+      mountMcpSettings(content, client);
+      return;
+    }
     if (panel === 'emojis') {
       content.append(el('h1', 'data-desktop-settings-title', 'Émojis'));
       choices.push(mountCustomEmojiSettings(content, currentWorkspace));
@@ -298,19 +310,25 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
       return;
     }
     if (panel === 'account' && currentWorkspace.kind === 'remote') {
-      content.append(el('h1', 'data-desktop-settings-title', 'Mon compte'), el('p', 'data-desktop-settings-intro', 'Votre compte Blok.'));
+      content.setAttribute('data-desktop-account', '');
+      content.append(el('h1', 'data-desktop-settings-title', 'Mon compte'), el('p', 'data-desktop-settings-intro', 'Votre identité et votre accès à cet espace.'));
+      const identity = el('section', 'data-desktop-account-section');
+      identity.append(el('h2', 'data-desktop-settings-section', 'Identité'));
       const row = el('div', 'data-desktop-settings-row');
       row.append(el('strong', 'data-desktop-settings-row-title', 'Adresse e-mail'), el('span', 'data-desktop-settings-row-value', currentWorkspace.userName ?? 'Compte en ligne'));
-      content.append(row);
+      identity.append(row);
+      const workspace = el('section', 'data-desktop-account-section');
+      workspace.append(el('h2', 'data-desktop-settings-section', 'Espace actuel'));
       const workspaceRow = el('div', 'data-desktop-settings-row');
-      workspaceRow.append(el('strong', 'data-desktop-settings-row-title', 'Espace'), el('span', 'data-desktop-settings-row-value', currentWorkspace.name));
+      workspaceRow.append(el('strong', 'data-desktop-settings-row-title', 'Nom'), el('span', 'data-desktop-settings-row-value', currentWorkspace.name));
       const roleRow = el('div', 'data-desktop-settings-row');
       roleRow.append(el('strong', 'data-desktop-settings-row-title', 'Rôle'), el('span', 'data-desktop-settings-row-value', currentWorkspace.role === 'admin' ? 'Administrateur' : currentWorkspace.role === 'viewer' ? 'Lecture seule' : 'Membre'));
-      content.append(workspaceRow, roleRow);
+      workspace.append(workspaceRow, roleRow);
       const accounts = actionButton('data-desktop-settings-copy', 'Comptes et espaces', 'profile');
       accounts.addEventListener('click', () => { closeSettings(); emitCloud('account'); });
-      content.append(accounts);
-      if (client) mountMcpSettings(content, client);
+      const accountActions = el('div', 'data-desktop-account-actions');
+      accountActions.append(el('p', 'data-desktop-settings-row-help', 'Retrouvez vos espaces ou connectez un autre compte.'), accounts);
+      content.append(identity, workspace, accountActions);
     } else if (panel === 'account') {
       content.append(el('h1', 'data-desktop-settings-title', 'Profil local'));
       content.append(el('p', 'data-desktop-settings-intro', 'Cet espace appartient à cet appareil.'));
@@ -386,6 +404,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   aiTab.addEventListener('click', () => showPanel('ai'));
   generalTab.addEventListener('click', () => showPanel('general'));
   emojiTab.addEventListener('click', () => showPanel('emojis'));
+  connectionsTab.addEventListener('click', () => showPanel('connections'));
   membersTab.addEventListener('click', () => { if (admin) showPanel('members'); });
   const openSettings = (panel: SettingsPanel): void => {
     closeMenu();

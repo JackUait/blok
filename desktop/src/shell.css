@@ -532,3 +532,24 @@ div[data-desktop-menu-account], div[data-desktop-menu-account]:hover { cursor: d
 [data-desktop-cover-panel] > button:disabled { opacity: .6; cursor: wait; }
 [data-desktop-cover-panel] p { margin: 12px 0 0; text-align: center; color: var(--desktop-muted); font-size: 12px; line-height: 1.5; }
 [data-desktop-cover-panel] [role="status"]:empty { display: none; }
+
+/* Labels shrink inside the flex navigation instead of pushing past its edge. */
+[data-desktop-settings-nav] { min-width: 0; box-sizing: border-box; overflow-x: hidden; }
+[data-desktop-action-label] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-desktop-settings-nav-item] [data-desktop-action-label] { flex: 1; }
+[data-desktop-settings-copy] { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+[data-desktop-settings-copy] svg { flex: none; }
+[data-desktop-settings-content] { max-width: 860px; margin-inline: auto; }
+[data-desktop-settings-intro] { color: var(--desktop-muted); line-height: 1.5; margin-bottom: 32px; }
+[data-desktop-account-section] { margin-top: 30px; }
+[data-desktop-account] [data-desktop-settings-section] { font-size: 14px; padding-bottom: 12px; margin-bottom: 0; }
+[data-desktop-account] [data-desktop-settings-row] { justify-content: flex-start; padding: 15px 0; gap: 24px; }
+[data-desktop-account] [data-desktop-settings-row-title] { flex: 0 0 150px; font-weight: 500; color: var(--desktop-muted); }
+[data-desktop-account] [data-desktop-settings-row-value] { text-align: left; color: var(--desktop-ink); }
+[data-desktop-account-actions] { margin-top: 32px; padding-top: 22px; border-top: 1px solid var(--desktop-border); display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+[data-desktop-account-actions] p { margin: 0; line-height: 1.5; }
+[data-desktop-account-actions] [data-desktop-settings-copy] { margin: 0; }
+@media (max-width: 700px) {
+  [data-desktop-account-actions] { align-items: flex-start; flex-direction: column; }
+  [data-desktop-account] [data-desktop-settings-row-title] { flex-basis: 110px; }
+}

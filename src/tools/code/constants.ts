@@ -125,11 +125,15 @@ export const TAB_STYLES = [
   'border border-b-0 border-border-secondary bg-code-bg rounded-t-(--blok-radius-block) text-xs text-gray-text',
   '[--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-block)-var(--blok-border-width-hairline)-var(--blok-space-1)))]',
 ].join(' ');
-/** An empty filename takes no room at rest; it shows while the block is hovered or focused. */
+/**
+ * An empty filename takes no room at rest; it shows while the block is hovered or focused.
+ * The `group-has-[[aria-expanded=true]]` rule keeps it while the language picker is open:
+ * the picker mounts on <body>, so opening it ends both hover and focus-within.
+ */
 export const FILENAME_SLOT_STYLES = [
   'flex min-w-0 items-center gap-0.5 overflow-hidden',
   'before:content-[\'\'] before:shrink-0 before:w-px before:h-3.5 before:mx-0.5 before:bg-border-secondary',
-  'data-[empty=true]:hidden group-hover/code:data-[empty=true]:flex group-focus-within/code:data-[empty=true]:flex',
+  'data-[empty=true]:hidden group-hover/code:data-[empty=true]:flex group-focus-within/code:data-[empty=true]:flex group-has-[[aria-expanded=true]]/code:data-[empty=true]:flex',
 ].join(' ');
 /** Shows where the caret is, like `fibonacci() › if (n <= 1)`, while the code is focused. */
 export const BREADCRUMB_STYLES = 'flex flex-1 min-w-0 items-center justify-end gap-1 pb-1.5 font-mono text-xs text-gray-text whitespace-nowrap overflow-hidden select-none';
@@ -151,7 +155,8 @@ export const FILENAME_INPUT_STYLES = [
   FILENAME_TEXT_STYLES,
   '[field-sizing:content] rounded-(--blok-radius-inner,var(--blok-radius-control)) bg-item-hover-bg border-0 outline-hidden placeholder:text-gray-text',
 ].join(' ');
-export const HEADER_CONTROLS_STYLES = 'ms-auto pb-0.5 flex shrink-0 items-center gap-1 opacity-0 group-hover/code:opacity-100 group-focus-within/code:opacity-100 transition-opacity';
+/** Same reveal as the filename slot, including while the language picker is open. */
+export const HEADER_CONTROLS_STYLES = 'ms-auto pb-0.5 flex shrink-0 items-center gap-1 opacity-0 group-hover/code:opacity-100 group-focus-within/code:opacity-100 group-has-[[aria-expanded=true]]/code:opacity-100 transition-opacity';
 /**
  * `h-*`/`min-w-*` pin the box: the copy button swaps its 20px icon for a
  * text-xs "Copied!" label, which would otherwise shrink it below the height of

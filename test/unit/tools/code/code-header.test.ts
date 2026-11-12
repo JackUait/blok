@@ -333,6 +333,15 @@ describe('code block header', () => {
       expect(controls?.className).toContain('group-focus-within/code:opacity-100');
       expect(controls?.className).toContain('group-hover/code:opacity-100');
     });
+
+    // The picker mounts on <body>, so opening it ends both hover and focus-within.
+    it('stay shown while the language picker is open', async () => {
+      const CodeTool = await loadTool();
+      const el = new CodeTool(createOptions({ code: 'x' })).render();
+
+      expect(query(el, 'code-controls')?.className).toContain('group-has-[[aria-expanded=true]]/code:opacity-100');
+      expect(query(el, 'code-filename-slot')?.className).toContain('group-has-[[aria-expanded=true]]/code:data-[empty=true]:flex');
+    });
   });
 
   describe('preview area', () => {

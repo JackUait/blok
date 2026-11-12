@@ -183,6 +183,20 @@ test.describe('code block chrome', () => {
     expect(text[2] - text[1]).toBeGreaterThan((text[1] - text[0]) * 1.5);
   });
 
+  test('keeps the header controls and filename slot shown while the language picker is open', async ({ page }) => {
+    await createBlok(page, [{ type: 'code', data: { code: 'x', language: 'latex' } }], 600);
+
+    await page.getByTestId('code-language-btn').click();
+    await expect(page.getByTestId('code-language-btn')).toHaveAttribute('aria-expanded', 'true');
+
+    // The picker lives on <body>: with the pointer and focus out of the block, only its open state can reveal them.
+    await page.mouse.move(1, 1);
+    await expect.poll(() => page.evaluate(() => document.activeElement?.closest('[data-blok-tool="code"]') ?? null)).toBeNull();
+
+    await expect.poll(() => page.getByTestId('code-controls').evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
+    await expect(page.getByTestId('code-filename-slot')).toBeVisible();
+  });
+
   test('leaves no empty strip under the code of a block without a preview', async ({ page }) => {
     await createBlok(page, [{ type: 'code', data: { code: 'const a = 1;', language: 'javascript' } }], 600);
 

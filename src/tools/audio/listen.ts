@@ -87,6 +87,7 @@ export function createListener(audioEl: HTMLAudioElement): Listener {
     safe: false,
     // Play was asked for while the CORS load was still unconfirmed.
     playWanted: false,
+    probed: false,
   };
 
   const on = (type: string, handler: () => void): void => {
@@ -168,6 +169,12 @@ export function createListener(audioEl: HTMLAudioElement): Listener {
       .catch(() => undefined);
   };
 
+  const probeOnce = (): void => {
+    if (state.probed || state.destroyed) return;
+    state.probed = true;
+    runProbe(srcOf());
+  };
+
   const start = (): void => {
     const url = srcOf();
 
@@ -178,7 +185,10 @@ export function createListener(audioEl: HTMLAudioElement): Listener {
 
       return;
     }
-    runProbe(url);
+    // An element that has fetched nothing is lazy on purpose (off-screen
+    // media must not download). Probe only once it has loaded on its own.
+    if (media.readyState > HAVE_NOTHING) probeOnce();
+    else on('loadedmetadata', probeOnce);
   };
 
   start();

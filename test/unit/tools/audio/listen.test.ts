@@ -114,10 +114,10 @@ interface FakeMedia {
   leftover: () => number;
 }
 
-/** A real jsdom <audio> whose playback state the test controls. Starts at rest, nothing fetched. */
+/** A real jsdom <audio> whose playback state the test controls. Starts at rest with its metadata loaded. */
 function makeMedia(src: string): FakeMedia {
   const media = document.createElement('audio');
-  const state: MediaState = { paused: true, currentTime: 0, readyState: 0, networkState: 1 };
+  const state: MediaState = { paused: true, currentTime: 0, readyState: 1, networkState: 1 };
 
   media.src = src;
   Object.defineProperties(media, {
@@ -297,24 +297,30 @@ describe('audio listen', () => {
       expect(init?.signal?.aborted).toBe(true);
     });
 
-    it('does not reload an element that has fetched nothing yet', async () => {
+    it('requests nothing for an element that has fetched nothing, and probes at its first metadata', async () => {
       stubAudioContext();
 
-      const { probe } = stubFetch();
+      const { fetchMock, probe } = stubFetch();
       const fake = makeMedia(HTTP_SRC);
 
+      fake.state.readyState = 0;
       await create(fake.media);
+      await flush();
+
+      expect(fetchMock).not.toHaveBeenCalled();
+
+      fake.state.readyState = 1;
+      fake.fire('loadedmetadata');
       probe.resolve(okResponse());
       await flush();
 
-      expect(fake.load).not.toHaveBeenCalled();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(fake.media.crossOrigin).toBe('anonymous');
     });
 
     it.each([
       ['has loaded data', { readyState: 4, networkState: 1 }],
-      ['is loading', { readyState: 0, networkState: 2 }],
-      ['has not picked a source yet', { readyState: 0, networkState: 3 }],
+      ['is still loading more', { readyState: 1, networkState: 2 }],
     ])('reloads an element that %s, after the attribute is set', async (_name, patch) => {
       stubAudioContext();
 
@@ -482,7 +488,7 @@ describe('audio listen', () => {
       fake.fire('error');
 
       expect(fake.media.hasAttribute('crossorigin')).toBe(false);
-      expect(fake.load).toHaveBeenCalledTimes(1);
+      expect(fake.load).toHaveBeenCalledTimes(2); // the switch, then the revert
       expect(fake.play).not.toHaveBeenCalled();
 
       startPlaying(fake);
@@ -516,7 +522,7 @@ describe('audio listen', () => {
       fake.fire('play');
       fake.fire('error');
 
-      expect(order).toEqual(['load', 'play']);
+      expect(order).toEqual(['load', 'load', 'play']); // the switch, then the revert and replay
     });
 
     it('does not start playback again when the user paused before the load failed', async () => {
@@ -549,7 +555,7 @@ describe('audio listen', () => {
       fake.fire('error');
 
       expect(fake.media.crossOrigin).toBe('anonymous');
-      expect(fake.load).not.toHaveBeenCalled();
+      expect(fake.load).toHaveBeenCalledTimes(1); // the switch only, no revert
     });
   });
 
@@ -595,7 +601,7 @@ describe('audio listen', () => {
       startPlaying(fake);
 
       expect(fake.media.crossOrigin).toBe('anonymous');
-      expect(fake.load).not.toHaveBeenCalled();
+      expect(fake.load).toHaveBeenCalledTimes(1); // the switch only, no revert
       expect(contexts).toHaveLength(0);
       expect(listener.read()).toBeNull();
     });

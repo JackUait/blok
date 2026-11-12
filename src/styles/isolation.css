@@ -141,7 +141,8 @@
 }
 
 /* Body-mounted, so it would take the host page's font. Its parts set their own ink. */
-[data-blok-interface=link-hover-card] {
+[data-blok-interface=link-hover-card],
+[data-blok-interface=annotation-card] {
   font-family: var(--blok-font-family, var(--blok-font-sans)) !important;
 }
 

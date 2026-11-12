@@ -185,6 +185,20 @@ test.describe('annotation (Hint) inline tool', () => {
 
     await text.fill('The step that limits the whole chain, from the first order to the last delivery.');
     expect(await width()).toBe(340);
+    // The popover box hugs the card: nothing but its own padding and border around it.
+    expect(await card.evaluate((el) => {
+      const box = el.closest<HTMLElement>('[data-blok-popover-container]');
+
+      if (box === null) {
+        throw new Error('the popover box is missing');
+      }
+
+      const style = getComputedStyle(box);
+      const chrome = [style.paddingLeft, style.paddingRight, style.borderLeftWidth, style.borderRightWidth]
+        .reduce((sum, value) => sum + parseFloat(value), 0);
+
+      return box.offsetWidth - chrome;
+    })).toBe(340);
 
     await text.fill('Short');
     expect(await width()).toBe(240);
@@ -270,8 +284,74 @@ test.describe('annotation (Hint) inline tool', () => {
 
     expect(await page.evaluate(() => CSS.highlights.has('blok-annotation-open'))).toBe(true);
 
+    // Body-mounted, so without its own rule it would take the host page's font.
+    expect(await card.evaluate(el => getComputedStyle(el).fontFamily))
+      .toBe(await hint.evaluate(el => getComputedStyle(el).fontFamily));
+
+    // The lit underline is solid and sits where the dotted one does. A deeper one is clipped away.
+    const underline = await hint.evaluate((el) => {
+      const lit = getComputedStyle(el, '::highlight(blok-annotation-open)');
+
+      return { style: lit.textDecorationStyle, offset: lit.textUnderlineOffset, rest: getComputedStyle(el).textUnderlineOffset };
+    });
+
+    expect(underline).toEqual({ style: 'solid', offset: '2px', rest: '2px' });
+
     await page.keyboard.press('Escape');
     await expect(card).not.toHaveAttribute('data-state', 'open');
+    expect(await page.evaluate(() => CSS.highlights.has('blok-annotation-open'))).toBe(false);
+  });
+
+  test('the editor hangs from the phrase on a stem, centred on it, and the phrase is lit', async ({ page }) => {
+    await createBlok(page, [ WITH_HINT ]);
+
+    const hint = page.locator(HINT_SELECTOR);
+
+    await hint.click();
+    await expect(page.getByTestId('inline-annotation-text')).toBeFocused();
+
+    const tether = page.locator('[data-blok-inline-tether]');
+
+    await expect(tether).toHaveAttribute('data-blok-inline-tether', 'below');
+
+    const read = (): Promise<Record<string, number>> => page.evaluate((selector) => {
+      const phrase = document.querySelector(selector)?.getBoundingClientRect();
+      const root = document.querySelector<HTMLElement>('[data-blok-inline-tether]');
+      const card = root?.querySelector<HTMLElement>('[data-blok-popover-container]')?.getBoundingClientRect();
+
+      if (phrase === undefined || root === null || card === undefined) {
+        throw new Error('a part is missing');
+      }
+
+      const rootBox = root.getBoundingClientRect();
+      const stem = getComputedStyle(root, '::before');
+
+      return {
+        cardOffCentre: Math.abs(card.left + card.width / 2 - (phrase.left + phrase.width / 2)),
+        cardGap: card.top - phrase.bottom,
+        stemOffCentre: Math.abs(rootBox.left + parseFloat(stem.left) - (phrase.left + phrase.width / 2)),
+        stemOffPhrase: Math.abs(rootBox.top + parseFloat(stem.top) - phrase.bottom),
+        stemHeight: parseFloat(stem.height),
+      };
+    }, HINT_SELECTOR);
+
+    // The card springs in with a scale, so wait for it to settle.
+    await expect.poll(async () => Math.abs((await read()).cardGap - 11)).toBeLessThanOrEqual(1);
+
+    const settled = await read();
+
+    expect(settled.cardOffCentre).toBeLessThanOrEqual(1);
+    expect(settled.stemOffCentre).toBeLessThanOrEqual(1);
+    expect(settled.stemOffPhrase).toBeLessThanOrEqual(1);
+    expect(Math.abs(settled.stemHeight - 11)).toBeLessThanOrEqual(1);
+    expect(await page.evaluate(() => CSS.highlights.has('blok-annotation-open'))).toBe(true);
+
+    // Typing widens the card; it stays centred on the phrase.
+    await page.getByTestId('inline-annotation-text').fill('The step that limits the whole chain, from the first order to the last.');
+    await expect.poll(async () => (await read()).cardOffCentre).toBeLessThanOrEqual(1);
+
+    await page.keyboard.press('Escape');
+    await expect(tether).toHaveCount(0);
     expect(await page.evaluate(() => CSS.highlights.has('blok-annotation-open'))).toBe(false);
   });
 

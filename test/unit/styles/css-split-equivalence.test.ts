@@ -1579,6 +1579,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const POPOVER_THUMB_GUTTER_BYTES = 180;
     // preflight.css: an annotated phrase ("Hint") gets a dotted underline, a hover wash and a help cursor in read-only mode.
     const ANNOTATION_UNDERLINE_BYTES = 752;
+    // popover-animation.css + main.css: the Hint editor hangs from its phrase on a stem (stem, spring, content
+    // focus-in keyframes), the open phrase gets a highlight fill with a solid underline, and the reader card gets the Blok font.
+    const ANNOTATION_TETHER_BYTES = 1_640;
     // database.css: the tab bar "+" is round, header-icon ink, a 200ms fade, and shows on keyboard focus,
     // plus 124 for the 19.2px header glyphs in an 18px slot and the dark timeline panel shadow and header ink,
     // plus 233 for the right-aligned calculations and the 26px "Calculate" box that fades in on its own cell.
@@ -2093,7 +2096,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_DASHBOARD_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
-      + ANNOTATION_UNDERLINE_BYTES;
+      + ANNOTATION_UNDERLINE_BYTES
+      + ANNOTATION_TETHER_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

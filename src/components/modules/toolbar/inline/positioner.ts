@@ -1,6 +1,23 @@
 import { INLINE_TOOLBAR_VERTICAL_MARGIN_DESKTOP, INLINE_TOOLBAR_VERTICAL_MARGIN_MOBILE } from './constants';
 import type { InlinePositioningOptions } from './types';
 
+/** Gap between the selected text and a tethered menu. MUST match the stem height in popover-animation.css. */
+const TETHER_GAP = 11;
+
+/** MUST match the 8px in the clamp in popover-animation.css. */
+const TETHER_VIEWPORT_MARGIN = 8;
+
+interface TetherOptions {
+  /** The toolbar wrapper; already placed by `apply`. */
+  wrapper: HTMLElement;
+  /** The popover root, which draws the stem. */
+  root: HTMLElement;
+  selectionRect: DOMRect;
+  wrapperRect: DOMRect;
+  /** Layout height of the menu box; a rect would be scaled by its entrance animation. */
+  menuHeight: number;
+}
+
 /**
  * InlinePositioner handles positioning of the inline toolbar.
  *
@@ -53,5 +70,26 @@ export class InlinePositioner {
     wrapper.style.top = Math.floor(newCoords.y) + 'px';
 
     return side;
+  }
+
+  /**
+   * Moves an already positioned menu's origin onto the selected text: its
+   * horizontal centre, a fixed gap below it, or above when there is no room.
+   * popover-animation.css centres the menu on that origin and draws the stem.
+   */
+  public tether(options: TetherOptions): void {
+    const { wrapper, root, selectionRect, wrapperRect, menuHeight } = options;
+    const centre = selectionRect.left + selectionRect.width / 2;
+    const fitsBelow = selectionRect.bottom + TETHER_GAP + menuHeight <= window.innerHeight - TETHER_VIEWPORT_MARGIN;
+    const fitsAbove = selectionRect.top - TETHER_GAP - menuHeight >= TETHER_VIEWPORT_MARGIN;
+    const isBelow = fitsBelow || !fitsAbove;
+    const top = isBelow ? selectionRect.bottom + TETHER_GAP : selectionRect.top - TETHER_GAP;
+
+    wrapper.style.left = `${parseFloat(wrapper.style.left) + centre - wrapperRect.left}px`;
+    wrapper.style.top = `${parseFloat(wrapper.style.top) + top - wrapperRect.top}px`;
+
+    // Viewport x of the origin: the stylesheet clamps the centred menu to the viewport with it.
+    root.style.setProperty('--_blok-tether-centre-x', `${centre}px`);
+    root.setAttribute('data-blok-inline-tether', isBelow ? 'below' : 'above');
   }
 }

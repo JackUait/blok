@@ -25,6 +25,11 @@
 
 [data-blok-interface] ::highlight(blok-annotation-open) {
   background-color: var(--blok-item-hover-bg);
+  text-decoration-line: underline;
+  text-decoration-style: solid;
+  text-decoration-color: var(--blok-text-primary);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
 }
 
 :where(:root) ::highlight(blok-page-mention-query) {

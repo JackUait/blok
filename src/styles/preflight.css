@@ -138,7 +138,9 @@
   :where([data-blok-interface]) span[data-blok-annotation] {
     text-decoration: underline dotted var(--blok-text-secondary);
     text-decoration-thickness: 1.5px;
-    text-underline-offset: 4px;
+    /* MUST stay 2px or less, and equal to the ::highlight(blok-annotation-open) offset:
+       engines clip a highlight's underline to the text box, and a deeper one vanishes. */
+    text-underline-offset: 2px;
     border-radius: var(--blok-radius-mark);
     transition: background-color 120ms ease-out, text-decoration-color 120ms ease-out;
     /* A click opens the hint. */

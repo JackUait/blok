@@ -89,6 +89,15 @@ export class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, IInlineT
   }
 
   /**
+   * Whether the tool's own menu hangs from the selected text on a stem.
+   */
+  public get tetheredMenu(): boolean {
+    const constructable = this.constructable as InlineToolConstructable | undefined;
+
+    return constructable?.tetheredMenu ?? false;
+  }
+
+  /**
    * Whether, at a collapsed caret, the tool's keyboard shortcut should defer to
    * the browser's own native handling instead of being intercepted. True for
    * format tools with a native browser equivalent (Bold, Italic): the browser

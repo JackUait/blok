@@ -678,8 +678,20 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     if (directName !== null) {
-      this.applyDirectMenuLook();
-      this.directMenuChildren?.onOpen?.();
+      const tethered = this.Blok.Tools.inlineTools.get(directName)?.tetheredMenu ?? false;
+      // Read before onOpen: the tool moves focus into its menu, and the selection goes with it.
+      const tetherTo = tethered ? SelectionUtils.rect : null;
+
+      // A tethered menu is centred on the text, so the tool fills it in first: its width must be final.
+      if (tethered) {
+        this.directMenuChildren?.onOpen?.();
+      }
+
+      this.applyDirectMenuLook(tetherTo);
+
+      if (!tethered) {
+        this.directMenuChildren?.onOpen?.();
+      }
     }
   }
 
@@ -978,7 +990,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
    * vertical menu box (matching the nested-popover look), so it reads as a
    * standalone menu rather than a one-item toolbar.
    */
-  private applyDirectMenuLook(): void {
+  private applyDirectMenuLook(tetherTo: DOMRect | null = null): void {
     const popoverEl = this.popover?.getElement?.();
 
     if (!popoverEl) {
@@ -1016,6 +1028,10 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
         container.style.setProperty('--blok-direct-menu-origin-x', `${x}px`);
       }
 
+      if (tetherTo !== null) {
+        this.tetherDirectMenu(popoverEl, container, tetherTo);
+      }
+
       // Set last: the entrance animation starts the moment this matches.
       popoverEl.setAttribute('data-blok-inline-direct-menu', from);
     }
@@ -1025,6 +1041,29 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     if (items) {
       items.className = twMerge(items.className, 'block w-full pb-0');
     }
+  }
+
+  /**
+   * Hangs a tool's menu from the selected text: centred on it, a fixed gap
+   * away, with a stem drawn across the gap (popover-animation.css).
+   * @param popoverEl - the popover root, which draws the stem
+   * @param container - the menu box
+   * @param selection - the selected text's box
+   */
+  private tetherDirectMenu(popoverEl: HTMLElement, container: HTMLElement, selection: DOMRect): void {
+    const wrapper = this.nodes.wrapper;
+
+    if (!wrapper || selection.width === 0) {
+      return;
+    }
+
+    this.positioner.tether({
+      wrapper,
+      root: popoverEl,
+      selectionRect: selection,
+      wrapperRect: wrapper.getBoundingClientRect(),
+      menuHeight: container.offsetHeight,
+    });
   }
 
   /**

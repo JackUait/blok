@@ -65,6 +65,12 @@ export interface InlineToolConstructable extends BaseToolConstructable {
   replacesToolbar?: boolean;
 
   /**
+   * When true, the tool's own menu hangs from the selected text on a short
+   * stem and is centred on it, instead of lining up with the selection start.
+   */
+  tetheredMenu?: boolean;
+
+  /**
    * When true, the tool's keyboard shortcut defers to the browser's native
    * handling at a collapsed caret instead of being intercepted — for format
    * tools with a native browser equivalent (Bold, Italic), so the browser

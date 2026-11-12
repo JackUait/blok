@@ -10,6 +10,7 @@ import { ANNOTATION_ATTR, ANNOTATION_SUBTITLE_ATTR } from '../../shared/annotati
 import { IconAnnotation, IconCheck, IconTrash } from '../icons';
 import { applyMark, removeMark } from '../marks/mark-engine';
 import { SelectionUtils } from '../selection/index';
+import { lightAnnotationPhrase } from '../utils/annotation-highlight';
 import { PopoverItemType } from '../utils/popover';
 
 /** Any span carrying the attribute is the mark; its value is the hint text. */
@@ -53,6 +54,11 @@ export class AnnotationInlineTool implements InlineTool {
    * The toolbar button opens the hint card on its own.
    */
   public static replacesToolbar = true;
+
+  /**
+   * The card hangs from the phrase on a stem, as the reader's card does.
+   */
+  public static tetheredMenu = true;
 
   /**
    * Empty on purpose. The span survives through the shared text-field rule
@@ -149,10 +155,10 @@ export class AnnotationInlineTool implements InlineTool {
     this.fitText();
 
     if (this.hint === null) {
-      // Keeps the phrase looking selected while focus sits in the card.
-      this.selection.setFakeBackground();
       this.selection.save();
     }
+
+    this.lightPhrase();
 
     this.focusWithRetry(this.nodes.text);
   }
@@ -162,7 +168,7 @@ export class AnnotationInlineTool implements InlineTool {
    */
   private onClose(): void {
     this.commit();
-    this.selection.removeFakeBackground();
+    lightAnnotationPhrase(null);
     this.selection.clearSaved();
     this.hint = null;
     this.nodes.text.value = '';
@@ -241,12 +247,28 @@ export class AnnotationInlineTool implements InlineTool {
       return null;
     }
 
-    this.selection.removeFakeBackground();
     this.selection.restore();
 
     const selection = window.getSelection();
 
     return selection !== null && selection.rangeCount > 0 && !selection.isCollapsed ? selection.getRangeAt(0) : null;
+  }
+
+  /**
+   * Focus moves into the card and takes the native selection paint with it,
+   * so the phrase is lit the way the reader's card lights it.
+   */
+  private lightPhrase(): void {
+    if (this.hint === null) {
+      lightAnnotationPhrase(this.selection.savedSelectionRange?.cloneRange() ?? null);
+
+      return;
+    }
+
+    const range = document.createRange();
+
+    range.selectNodeContents(this.hint);
+    lightAnnotationPhrase(range);
   }
 
   /** The text field grows with its content instead of scrolling. */
@@ -280,8 +302,9 @@ export class AnnotationInlineTool implements InlineTool {
   private createUi(): AnnotationNodes {
     const wrapper = document.createElement('div');
 
-    // As wide as the text, between 240 and 340px.
-    wrapper.className = 'flex flex-col w-max min-w-[240px] max-w-[min(340px,100%)]';
+    // As wide as the text, between 240 and 340px. No percentage in the cap: the popover
+    // box is shrink-to-fit, so a percentage is ignored and the box sizes to the unwrapped text.
+    wrapper.className = 'flex flex-col w-max min-w-[240px] max-w-[min(340px,calc(100vw-28px))]';
     wrapper.setAttribute('data-blok-annotation-tool', '');
     wrapper.setAttribute('data-blok-testid', 'inline-annotation');
 
@@ -330,8 +353,8 @@ export class AnnotationInlineTool implements InlineTool {
 
     const sizer = document.createElement('div');
 
-    // Zero height, real width. MUST keep the text field's font size, or the two wrap differently.
-    sizer.className = 'h-0 overflow-hidden invisible whitespace-pre-wrap break-words text-[15px] leading-[22px]';
+    // Zero height (and -mb-2 cancels the column gap), real width. MUST keep the text field's font size, or the two wrap differently.
+    sizer.className = 'h-0 -mb-2 overflow-hidden invisible whitespace-pre-wrap break-words text-[15px] leading-[22px]';
     sizer.setAttribute('aria-hidden', 'true');
     subtitleRow.append(subtitle);
     body.append(sizer, text, subtitleRow);

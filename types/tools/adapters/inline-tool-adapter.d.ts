@@ -29,6 +29,11 @@ interface InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, InlineTool>
   replacesToolbar: boolean;
 
   /**
+   * Whether the tool's own menu hangs from the selected text on a stem.
+   */
+  tetheredMenu: boolean;
+
+  /**
    * Whether the tool's shortcut defers to native browser handling at a
    * collapsed caret (Bold, Italic).
    */

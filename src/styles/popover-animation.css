@@ -269,6 +269,71 @@
   animation: blok-inline-toolbar-ghost-out 160ms cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
+/* ─── Tethered tool menu (the Hint editor) ──────────────────────────────── */
+
+/* A stem grows from the selected text, the menu springs out of the stem's
+   end, then its content comes into focus. The reader's card
+   (annotation-card.ts) plays the same three beats; keep the timings equal.
+   InlineToolbar.tetherDirectMenu sets the attribute and the variables.
+   After the direct-menu rules on purpose: same specificity, later wins. */
+[data-blok-inline-tether] {
+  position: relative;
+}
+
+/* The root sits on the text's centre line, so the stem needs no offset. */
+[data-blok-inline-tether]::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  /* MUST match TETHER_GAP in the inline toolbar's positioner. */
+  top: -11px;
+  width: 1.5px;
+  height: 11px;
+  margin-left: -0.75px;
+  background: var(--blok-text-primary);
+  pointer-events: none;
+  transform-origin: top;
+  animation: blok-tether-stem-in 110ms ease-out both;
+}
+
+[data-blok-inline-tether='above']::before {
+  top: 0;
+  transform-origin: bottom;
+}
+
+/* Centred on the root, then kept 8px inside the viewport. `translate`, not
+   `transform`: the entrance animates transform. The percentages mean the
+   menu's own width in both properties, so the spring always starts at the stem. */
+[data-blok-inline-tether] > [data-blok-popover-container] {
+  --_blok-tether-shift: clamp(8px - var(--_blok-tether-centre-x), -50%, 100vw - 8px - var(--_blok-tether-centre-x) - 100%);
+  translate: var(--_blok-tether-shift) 0;
+  transform-origin: calc(-1 * var(--_blok-tether-shift)) top;
+  animation: blok-tether-menu-in 380ms cubic-bezier(0.2, 1.45, 0.35, 1) 90ms both;
+}
+
+/* Grows upward from the root. */
+[data-blok-inline-tether='above'] > [data-blok-popover-container] {
+  top: auto;
+  bottom: 0;
+  transform-origin: calc(-1 * var(--_blok-tether-shift)) bottom;
+}
+
+[data-blok-inline-tether] [data-blok-popover-items] {
+  animation: blok-tether-content-in 260ms ease-out 190ms both;
+}
+
+@keyframes blok-tether-stem-in {
+  from { transform: scaleY(0); }
+}
+
+@keyframes blok-tether-menu-in {
+  from { opacity: 0; transform: scale(0.55); }
+}
+
+@keyframes blok-tether-content-in {
+  from { opacity: 0; filter: blur(5px); transform: translateY(5px); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-blok-popover-container],
   [data-blok-popover-item-icon-chevron-right] {
@@ -278,7 +343,10 @@
 
   [data-blok-inline-direct-menu] > [data-blok-popover-container],
   [data-blok-popover-inline][data-blok-popover-opened='true']:not([data-blok-inline-direct-menu]) > [data-blok-popover-container],
-  [data-blok-inline-toolbar-ghost] {
+  [data-blok-inline-toolbar-ghost],
+  [data-blok-inline-tether]::before,
+  [data-blok-inline-tether] > [data-blok-popover-container],
+  [data-blok-inline-tether] [data-blok-popover-items] {
     animation: none;
   }
 

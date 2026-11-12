@@ -1,5 +1,6 @@
 import { ANNOTATION_ATTR, ANNOTATION_SUBTITLE_ATTR } from '../../shared/annotation-mark';
 
+import { lightAnnotationPhrase } from './annotation-highlight';
 import { syncPortalDirection } from './portal-direction';
 import { createPositionTracker, type PositionTracker } from './popover/anchored-position';
 import { HINT_DELAY } from './tooltip';
@@ -14,9 +15,6 @@ const GAP = 11;
 
 /** Keeps the stem off the card's rounded corners. */
 const STEM_INSET = 12;
-
-/** Must match the `::highlight()` rule in main.css. */
-const OPEN_HIGHLIGHT = 'blok-annotation-open';
 
 const VIEWPORT_MARGIN = 4;
 
@@ -267,17 +265,11 @@ export class AnnotationCard {
   };
 
   /**
-   * Paints the open phrase with a CSS highlight. An attribute on the phrase
-   * would be a content mutation: a change event, and an undo step.
    * @param anchor - the phrase to light, or null to clear
    */
   private lightPhrase(anchor: HTMLElement | null): void {
-    if (typeof CSS === 'undefined' || CSS.highlights === undefined || typeof Highlight !== 'function') {
-      return;
-    }
-
     if (anchor === null) {
-      CSS.highlights.delete(OPEN_HIGHLIGHT);
+      lightAnnotationPhrase(null);
 
       return;
     }
@@ -285,7 +277,7 @@ export class AnnotationCard {
     const range = document.createRange();
 
     range.selectNodeContents(anchor);
-    CSS.highlights.set(OPEN_HIGHLIGHT, new Highlight(range));
+    lightAnnotationPhrase(range);
   }
 
   /**

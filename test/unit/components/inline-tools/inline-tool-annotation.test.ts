@@ -222,6 +222,59 @@ describe('AnnotationInlineTool', () => {
     });
   });
 
+  it('asks the toolbar to hang its menu from the phrase on a stem', () => {
+    expect(AnnotationInlineTool.tetheredMenu).toBe(true);
+  });
+
+  describe('while the card is open', () => {
+    let highlights: Map<string, { ranges: Range[] }>;
+
+    beforeEach(() => {
+      highlights = new Map();
+      vi.stubGlobal('CSS', { highlights });
+      vi.stubGlobal('Highlight', class {
+        public readonly ranges: Range[];
+
+        constructor(...ranges: Range[]) {
+          this.ranges = ranges;
+        }
+      });
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('lights the selected phrase without touching the text', () => {
+      const { menu } = create();
+
+      select('phrase');
+      menu.children.onOpen();
+
+      expect(highlights.get('blok-annotation-open')?.ranges[0]?.toString()).toBe('phrase');
+      expect(container.innerHTML).toBe('a phrase b');
+
+      menu.children.onClose();
+      expect(highlights.has('blok-annotation-open')).toBe(false);
+    });
+
+    it('lights the hint being edited', () => {
+      container.innerHTML = 'a <span data-blok-annotation="Old">phrase</span> b';
+
+      const { menu } = create();
+      const hint = container.querySelector('span');
+
+      if (hint === null) {
+        throw new Error('the hint is missing');
+      }
+
+      caretIn(hint);
+      menu.children.onOpen();
+
+      expect(highlights.get('blok-annotation-open')?.ranges[0]?.toString()).toBe('phrase');
+    });
+  });
+
   it('has a round check button named Done instead of a text button', () => {
     const { ui } = create();
     const done = part(ui, 'done');

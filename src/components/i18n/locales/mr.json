@@ -107,6 +107,7 @@
   "blockSettings.copyLink": "ब्लॉकची लिंक कॉपी करा",
   "blockSettings.copyPageLink": "दुवा कॉपी करा",
   "blockSettings.moveToTrash": "कचरापेटीत हलवा",
+  "blockSettings.moveTo": "येथे हलवा",
   "blockSettings.lastEdited": "शेवटचे संपादन",
   "blockSettings.lastEditedBy": "{name} ने शेवटचे संपादन केले",
   "a11y.insertBlock": "ब्लॉक जोडा",

@@ -113,6 +113,7 @@
   "blockSettings.copyLink": "બ્લોકની લિંક કૉપી કરો",
   "blockSettings.copyPageLink": "લિંક કૉપિ કરો",
   "blockSettings.moveToTrash": "કચરાપેટીમાં ખસેડો",
+  "blockSettings.moveTo": "આમાં ખસેડો",
   "blockSettings.lastEdited": "છેલ્લે સંપાદિત",
   "blockSettings.lastEditedBy": "{name} દ્વારા છેલ્લે સંપાદિત",
   "a11y.insertBlock": "બ્લોક ઉમેરો",

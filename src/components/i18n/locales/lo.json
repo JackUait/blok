@@ -107,6 +107,7 @@
   "blockSettings.copyLink": "ສຳເນົາລິ້ງໄປຫາບລັອກ",
   "blockSettings.copyPageLink": "ສຳເນົາລິ້ງ",
   "blockSettings.moveToTrash": "ຍ້າຍໄປຖັງຂີ້ເຫຍື້ອ",
+  "blockSettings.moveTo": "ຍ້າຍໄປ",
   "blockSettings.lastEdited": "ແກ້ໄຂລ່າສຸດ",
   "blockSettings.lastEditedBy": "ແກ້ໄຂລ່າສຸດໂດຍ {name}",
   "a11y.insertBlock": "ແຊກບລັອກ",

@@ -161,6 +161,7 @@
   "blockSettings.copyLink": "نسخ رابط الكتلة",
   "blockSettings.copyPageLink": "نسخ الرابط",
   "blockSettings.moveToTrash": "نقل إلى سلة المهملات",
+  "blockSettings.moveTo": "نقل إلى",
   "blockSettings.lastEdited": "آخر تعديل",
   "blockSettings.lastEditedBy": "آخر تعديل بواسطة {name}",
   "a11y.insertBlock": "إدراج كتلة",

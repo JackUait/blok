@@ -119,6 +119,7 @@
   "blockSettings.copyLink": "Kopēt saiti uz bloku",
   "blockSettings.copyPageLink": "Kopēt saiti",
   "blockSettings.moveToTrash": "Pārvietot uz atkritni",
+  "blockSettings.moveTo": "Pārvietot uz",
   "blockSettings.lastEdited": "Pēdējo reizi rediģēts",
   "blockSettings.lastEditedBy": "Pēdējo reizi rediģēja {name}",
   "a11y.insertBlock": "Ievietot bloku",

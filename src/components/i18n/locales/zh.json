@@ -125,6 +125,7 @@
   "blockSettings.copyLink": "复制块链接",
   "blockSettings.copyPageLink": "复制链接",
   "blockSettings.moveToTrash": "移至回收站",
+  "blockSettings.moveTo": "移至",
   "blockSettings.lastEdited": "上次编辑",
   "blockSettings.lastEditedBy": "最后由 {name} 编辑",
   "a11y.insertBlock": "插入块",

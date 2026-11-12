@@ -161,6 +161,7 @@
   "blockSettings.copyLink": "Копирай връзка към блока",
   "blockSettings.copyPageLink": "Копирай връзката",
   "blockSettings.moveToTrash": "Премести в кошчето",
+  "blockSettings.moveTo": "Премести в",
   "blockSettings.lastEdited": "Последна редакция",
   "blockSettings.lastEditedBy": "Последна редакция от {name}",
   "a11y.insertBlock": "Вмъкни блок",

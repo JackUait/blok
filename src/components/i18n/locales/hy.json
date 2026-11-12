@@ -125,6 +125,7 @@
   "blockSettings.copyLink": "Պատճենել բլոկի հղումը",
   "blockSettings.copyPageLink": "Պատճենել հղումը",
   "blockSettings.moveToTrash": "Տեղափոխել աղբարկղ",
+  "blockSettings.moveTo": "Տեղափոխել",
   "blockSettings.lastEdited": "Վերջին խմբագրում",
   "blockSettings.lastEditedBy": "Վերջին անգամ խմբագրել է {name}",
   "a11y.insertBlock": "Ավելացնել բլոկ",

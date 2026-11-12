@@ -155,6 +155,7 @@ export type BlokMessageKey =
   | 'blockSettings.lastEditedBy'
   | 'blockSettings.menuShortcutMac'
   | 'blockSettings.menuShortcutWin'
+  | 'blockSettings.moveTo'
   | 'blockSettings.moveToTrash'
   | 'blockSettings.openMenuAction'
   | 'blockSettings.orConjunction'

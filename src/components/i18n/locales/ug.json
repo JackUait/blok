@@ -161,6 +161,7 @@
   "blockSettings.copyLink": "بۆلەككە ئۇلانما كۆچۈرۈش",
   "blockSettings.copyPageLink": "ئۇلانمىنى كۆچۈر",
   "blockSettings.moveToTrash": "ئەخلەت چېلىكىگە يۆتكەش",
+  "blockSettings.moveTo": "يۆتكەش",
   "blockSettings.lastEdited": "ئاخىرقى تەھرىرلەش",
   "blockSettings.lastEditedBy": "{name} ئاخىرقى تەھرىرلىگەن",
   "a11y.insertBlock": "بۆلەك قىستۇرۇش",

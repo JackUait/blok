@@ -149,6 +149,7 @@
   "blockSettings.copyLink": "Bloka keçid kopyala",
   "blockSettings.copyPageLink": "Keçidi kopyala",
   "blockSettings.moveToTrash": "Zibil qutusuna köçür",
+  "blockSettings.moveTo": "Bura köçür",
   "blockSettings.lastEdited": "Son redaktə",
   "blockSettings.lastEditedBy": "{name} tərəfindən son redaktə",
   "a11y.insertBlock": "Blok əlavə et",

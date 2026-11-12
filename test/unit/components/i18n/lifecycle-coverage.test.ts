@@ -283,7 +283,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2134 + 147 + 525 + 5 closure for all 2811 keys', () => {
+  it('rebuilds a disjoint 2135 + 147 + 525 + 5 closure for all 2812 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -297,7 +297,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2811);
+    expect(lifecycle.size).toBe(2812);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -522,7 +522,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +5: the video error card's title and detail lines (tools.video.errorUploadFailedDetail, errorFileTooLargeTitle, errorFileTooLargeDetail, errorUnplayableDetail, errorNotMediaUrlTitle), by literal.
       // +23: the page cover's 20 title.cover* keys and the database description's 3, by literal.
       // +11: the one-surface media empty state's sentences (tools.<tool>.emptyHint, emptyHintUpload, tools.image.emptyHintLink, emptyDropAnywhere, tools.audio.coverHint), by literal.
-      'executable-literal': 2134,
+      // +1: the block menu's Move to item (blockSettings.moveTo), by literal.
+      'executable-literal': 2135,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

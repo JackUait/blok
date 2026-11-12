@@ -161,6 +161,7 @@
   "blockSettings.copyLink": "بلاڪ ڏانهن لنڪ ڪاپي ڪريو",
   "blockSettings.copyPageLink": "لنڪ ڪاپي ڪريو",
   "blockSettings.moveToTrash": "ڪچري ۾ منتقل ڪريو",
+  "blockSettings.moveTo": "منتقل ڪريو",
   "blockSettings.lastEdited": "آخري ترميم",
   "blockSettings.lastEditedBy": "آخري ترميم ڪندڙ: {name}",
   "a11y.insertBlock": "بلاڪ داخل ڪريو",

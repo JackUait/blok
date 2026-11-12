@@ -149,6 +149,7 @@
   "blockSettings.copyLink": "ബ്ലോക്കിലേക്കുള്ള ലിങ്ക് പകർത്തുക",
   "blockSettings.copyPageLink": "ലിങ്ക് പകർത്തുക",
   "blockSettings.moveToTrash": "ട്രാഷിലേക്ക് നീക്കുക",
+  "blockSettings.moveTo": "ഇതിലേക്ക് നീക്കുക",
   "blockSettings.lastEdited": "അവസാനം തിരുത്തിയത്",
   "blockSettings.lastEditedBy": "അവസാനം തിരുത്തിയത്: {name}",
   "a11y.insertBlock": "ബ്ലോക്ക് ചേർക്കുക",

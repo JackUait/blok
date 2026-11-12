@@ -107,6 +107,7 @@
   "blockSettings.copyLink": "ਬਲਾਕ ਦਾ ਲਿੰਕ ਕਾਪੀ ਕਰੋ",
   "blockSettings.copyPageLink": "ਲਿੰਕ ਕਾਪੀ ਕਰੋ",
   "blockSettings.moveToTrash": "ਰੱਦੀ ਵਿੱਚ ਭੇਜੋ",
+  "blockSettings.moveTo": "ਇਸ ਵਿੱਚ ਲਿਜਾਓ",
   "blockSettings.lastEdited": "ਆਖਰੀ ਸੋਧ",
   "blockSettings.lastEditedBy": "{name} ਦੁਆਰਾ ਆਖਰੀ ਸੋਧ",
   "a11y.insertBlock": "ਬਲਾਕ ਸ਼ਾਮਲ ਕਰੋ",

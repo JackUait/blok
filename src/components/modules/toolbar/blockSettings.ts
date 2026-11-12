@@ -7,7 +7,7 @@ import { BlockAPI } from '../../block/api';
 import { Dom as $ } from '../../dom';
 import { BlockSettingsClosed, BlockSettingsOpened, BlokMobileLayoutToggled } from '../../events';
 import { Flipper } from '../../flipper';
-import { IconColumns, IconCopy, IconReplace, IconTrash } from '../../icons';
+import { IconArrowDiagonal, IconColumns, IconCopy, IconReplace, IconTrash } from '../../icons';
 import { resolveColumnWrapRoots, wrapBlocksInColumns } from '../../../tools/column-drop';
 import { SelectionUtils } from '../../selection/index';
 import type { BlockToolAdapter } from '../../tools/block';
@@ -27,6 +27,9 @@ import { isToolConvertable, translateToolTitle } from '../../utils/tools';
 import { prepareImportString } from '../blockManager/block-mutation';
 import { isBlockReadOnly } from '../../utils/read-only-blocks';
 import { deleteWithTrashToast, showTrashToast } from '../../utils/trash-toast';
+import { assertCanMoveUnder, type BlockTree } from '../api/block-placement';
+import { PagePicker } from '../../../tools/page/page-picker';
+import { filterMoveTargets, listMoveTargets } from './move-to';
 
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { DATA_ATTR } from '../../constants';
@@ -843,6 +846,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         : tune)
       : commonTunes;
 
+    const moveToItem = this.createMoveToItem(hasMultipleBlocksSelected ? selectionRoots(selectedBlocks) : [currentBlock]);
+    const moveTo = moveToItem === null ? [] : [moveToItem];
+
     // Keep custom actions in registration order, with deletion isolated last.
     if (!hasMultipleBlocksSelected) {
       const deleteIndex = actionTunes.findIndex(
@@ -856,18 +862,20 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         items.push(
           ...actionTunes.filter((_tune, index) => index !== deleteIndex),
           duplicateItem,
+          ...moveTo,
           this.withTrashToast({ ...actionTunes[deleteIndex], title: this.Blok.I18n.t('blockSettings.moveToTrash') } as MenuConfigItem, currentBlock)
         );
       } else {
         items.push(
           ...actionTunes.filter((_tune, index) => index !== deleteIndex),
           duplicateItem,
+          ...moveTo,
           { type: PopoverItemType.Separator },
           actionTunes[deleteIndex]
         );
       }
     } else {
-      items.push(duplicateItem, { type: PopoverItemType.Separator });
+      items.push(duplicateItem, ...moveTo, { type: PopoverItemType.Separator });
       items.push({
         icon: IconTrash,
         title: this.Blok.I18n.t('blockSettings.delete'),
@@ -916,6 +924,106 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     });
 
     return items;
+  }
+
+  /**
+   * "Move to": a page picker over the pages this document holds, like Notion's.
+   * Null when no page can take every block in `sources`.
+   * @param sources - the blocks to move, without their descendants
+   */
+  private createMoveToItem(sources: Block[]): MenuConfigItem | null {
+    const { BlockManager, I18n, Tools } = this.Blok;
+
+    // Only a database row holds a page body in this document.
+    if (!Tools.blockTools.has('database-row')) {
+      return null;
+    }
+    const tree: BlockTree = { blocks: BlockManager.blocks, getBlockById: (id) => BlockManager.getBlockById(id) };
+    const canMoveInto = (root: Block, rowId: string): boolean => {
+      try {
+        assertCanMoveUnder(tree, root, rowId);
+
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    const rules = { canMoveInto, isReadOnly: (block: Block): boolean => isBlockReadOnly(block, tree.getBlockById) };
+    const roots = [...sources].sort((left, right) => BlockManager.getBlockIndex(left) - BlockManager.getBlockIndex(right));
+    const targets = listMoveTargets(BlockManager.blocks, roots, rules);
+
+    if (targets.length === 0) {
+      return null;
+    }
+
+    // Captured now: the click that opens the picker clears the block selection.
+    const rootIds = roots.map((root) => root.id);
+    const anchor = roots[0].holder;
+
+    return {
+      icon: IconArrowDiagonal,
+      title: I18n.t('blockSettings.moveTo'),
+      name: 'move-to',
+      closeOnActivate: true,
+      onActivate: () => {
+        this.Blok.Toolbar.close();
+        this.openMovePicker(rootIds, targets, anchor, rules);
+      },
+    };
+  }
+
+  /**
+   * Opens the page picker for "Move to" and moves `rootIds` under the picked page.
+   * @param rootIds - the blocks to move, in document order
+   * @param targets - the pages offered
+   * @param anchor - the element the picker opens under
+   * @param rules - core's checks, asked again at the pick
+   */
+  private openMovePicker(
+    rootIds: string[],
+    targets: ReturnType<typeof listMoveTargets>,
+    anchor: HTMLElement,
+    rules: { canMoveInto: (root: Block, rowId: string) => boolean; isReadOnly: (block: Block) => boolean }
+  ): void {
+    const t = (key: string, vars?: Record<string, string | number>): string => this.Blok.I18n.t(key, vars);
+    const untitled = t('tools.database.relationUntitled');
+    const picker = new PagePicker(t('blockSettings.moveTo'), untitled, t('tools.page.draft'), t('popover.nothingFound'), t);
+
+    picker.open('', anchor, (rowId) => this.moveInto(rootIds, rowId, rules), {
+      searchField: {
+        placeholder: t('tools.page.search'),
+        onQuery: (query) => picker.setResults(filterMoveTargets(targets, query, untitled)),
+      },
+    });
+    picker.setResults(targets);
+  }
+
+  /**
+   * Moves the blocks, with their children, to the end of the page's body as
+   * one undo step. Does nothing when the document changed so that one of them
+   * may no longer go there.
+   * @param rootIds - the blocks to move, in document order
+   * @param rowId - the page's block
+   * @param rules - core's checks
+   */
+  private moveInto(
+    rootIds: string[],
+    rowId: string,
+    rules: { canMoveInto: (root: Block, rowId: string) => boolean; isReadOnly: (block: Block) => boolean }
+  ): void {
+    const { BlockManager, BlockSelection } = this.Blok;
+    const blocks = this.Blok.API.methods.blocks;
+    const row = BlockManager.getBlockById(rowId);
+    const roots = rootIds.map((id) => BlockManager.getBlockById(id)).filter((block): block is Block => block !== undefined);
+
+    if (row === undefined || rules.isReadOnly(row) || roots.length !== rootIds.length || !roots.every((root) => rules.canMoveInto(root, rowId))) {
+      return;
+    }
+
+    BlockSelection.clearSelection();
+    (blocks.transact ?? ((fn: () => void): void => fn()))(() => {
+      roots.forEach((root) => blocks.moveTo(root.id, { parentId: rowId, position: 'end' }));
+    });
   }
 
   /**

@@ -149,6 +149,7 @@
   "blockSettings.copyLink": "ಬ್ಲಾಕ್‌ಗೆ ಲಿಂಕ್ ನಕಲಿಸಿ",
   "blockSettings.copyPageLink": "ಲಿಂಕ್ ನಕಲಿಸಿ",
   "blockSettings.moveToTrash": "ಅನುಪಯುಕ್ತಕ್ಕೆ ಸರಿಸಿ",
+  "blockSettings.moveTo": "ಇಲ್ಲಿಗೆ ಸರಿಸಿ",
   "blockSettings.lastEdited": "ಕೊನೆಯದಾಗಿ ಸಂಪಾದಿಸಲಾಗಿದೆ",
   "blockSettings.lastEditedBy": "{name} ಕೊನೆಯದಾಗಿ ಸಂಪಾದಿಸಿದ್ದಾರೆ",
   "a11y.insertBlock": "ಬ್ಲಾಕ್ ಸೇರಿಸಿ",

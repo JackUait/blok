@@ -161,6 +161,7 @@
   "blockSettings.copyLink": "Copiar enlace al bloque",
   "blockSettings.copyPageLink": "Copiar enlace",
   "blockSettings.moveToTrash": "Mover a la papelera",
+  "blockSettings.moveTo": "Mover a",
   "blockSettings.lastEdited": "Última edición",
   "blockSettings.lastEditedBy": "Última edición por {name}",
   "a11y.insertBlock": "Insertar bloque",

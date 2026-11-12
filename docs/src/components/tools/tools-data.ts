@@ -505,7 +505,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Database Row',
     description:
-      'An internal block tool that stores a single database row. It is not user-insertable: rows are created and managed by the parent Database block. Each row stores property values that conform to the parent database schema, plus a position string for ordering.',
+      'An internal block tool that stores a single database row. It is not user-insertable: rows are created and managed by the parent Database block. Each row stores property values that conform to the parent database schema, plus a position string for ordering.\n\nA row\'s page body is its child blocks. The block menu\'s "Move to" lists these pages, with a search field. It moves the chosen blocks, with their children, to the end of the page body as one undo step. A row whose `pageId` points at a page in another document is not listed.',
     importExample: `import { DatabaseRow } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `interface DatabaseRowData {

@@ -161,6 +161,7 @@
   "blockSettings.copyLink": "Копировать ссылку на блок",
   "blockSettings.copyPageLink": "Копировать ссылку",
   "blockSettings.moveToTrash": "Переместить в корзину",
+  "blockSettings.moveTo": "Переместить в",
   "blockSettings.lastEdited": "Последнее изменение",
   "blockSettings.lastEditedBy": "Автор последнего изменения: {name}",
   "a11y.insertBlock": "Вставить блок",

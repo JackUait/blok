@@ -161,6 +161,7 @@
   "blockSettings.copyLink": "קאָפּירן לינק צום בלאָק",
   "blockSettings.copyPageLink": "קאָפּיר לינק",
   "blockSettings.moveToTrash": "אַריבערפֿירן אין מיסט",
+  "blockSettings.moveTo": "אַריבערפֿירן צו",
   "blockSettings.lastEdited": "לעצט רעדאַקטירט",
   "blockSettings.lastEditedBy": "לעצט רעדאַקטירט דורך {name}",
   "a11y.insertBlock": "לייג צו בלאָק",

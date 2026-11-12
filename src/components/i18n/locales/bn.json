@@ -113,6 +113,7 @@
   "blockSettings.copyLink": "ব্লকের লিঙ্ক কপি করুন",
   "blockSettings.copyPageLink": "লিঙ্ক কপি করুন",
   "blockSettings.moveToTrash": "ট্র্যাশে সরান",
+  "blockSettings.moveTo": "এতে সরান",
   "blockSettings.lastEdited": "সর্বশেষ সম্পাদনা",
   "blockSettings.lastEditedBy": "{name} দ্বারা সর্বশেষ সম্পাদনা",
   "a11y.insertBlock": "ব্লক যোগ করুন",

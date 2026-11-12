@@ -294,6 +294,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'tune:delete': cmd('block.delete'),
   'tune:copyLink': exempt('clipboard', 'Copies a link to the block to the OS clipboard; agents address blocks by id from doc.read.'),
   'tune:duplicate': cmd('block.duplicate'),
+  'tune:move-to': cmd('block.move'),
   'tune:convert-to': cmd('block.convert'),
   'tune:turn-into-columns': cmd('column_list.create'),
   'tune:edit-metadata': exempt('read-only-info', 'Shows who last edited the block and when; it writes nothing.'),

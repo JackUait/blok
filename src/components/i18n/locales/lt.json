@@ -119,6 +119,7 @@
   "blockSettings.copyLink": "Kopijuoti nuorodą į bloką",
   "blockSettings.copyPageLink": "Kopijuoti nuorodą",
   "blockSettings.moveToTrash": "Perkelti į šiukšlinę",
+  "blockSettings.moveTo": "Perkelti į",
   "blockSettings.lastEdited": "Paskutinį kartą redaguota",
   "blockSettings.lastEditedBy": "Paskutinį kartą redagavo {name}",
   "a11y.insertBlock": "Įterpti bloką",

@@ -161,6 +161,7 @@
   "blockSettings.copyLink": "Kopjo lidhjen e bllokut",
   "blockSettings.copyPageLink": "Kopjo lidhjen",
   "blockSettings.moveToTrash": "Zhvendos në kosh",
+  "blockSettings.moveTo": "Zhvendos te",
   "blockSettings.lastEdited": "Ndryshuar për herë të fundit",
   "blockSettings.lastEditedBy": "Ndryshuar për herë të fundit nga {name}",
   "a11y.insertBlock": "Fut bllok",

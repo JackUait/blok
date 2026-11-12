@@ -113,6 +113,7 @@
   "blockSettings.copyLink": "ወደ ብሎክ አገናኝ ቅዳ",
   "blockSettings.copyPageLink": "አገናኝ ቅዳ",
   "blockSettings.moveToTrash": "ወደ መጣያ ውሰድ",
+  "blockSettings.moveTo": "አንቀሳቅስ ወደ",
   "blockSettings.lastEdited": "የመጨረሻ አርትዖት",
   "blockSettings.lastEditedBy": "የመጨረሻው አርትዖት በ{name}",
   "a11y.insertBlock": "ብሎክ አስገባ",

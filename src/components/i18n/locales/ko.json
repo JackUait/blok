@@ -161,6 +161,7 @@
   "blockSettings.copyLink": "블록 링크 복사",
   "blockSettings.copyPageLink": "링크 복사",
   "blockSettings.moveToTrash": "휴지통으로 이동",
+  "blockSettings.moveTo": "다음으로 이동",
   "blockSettings.lastEdited": "마지막 수정",
   "blockSettings.lastEditedBy": "{name} 님이 마지막으로 수정",
   "a11y.insertBlock": "블록 삽입",

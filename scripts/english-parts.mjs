@@ -47,6 +47,7 @@ export const CORE_DATABASE_KEYS = [
   'tools.database.formWhoWorkspaceGeneric',
   'tools.database.movedToTrash',
   'tools.database.optionDeleteCancel',
+  'tools.database.relationUntitled',
   'tools.database.restore',
   'tools.database.settingsOff',
   'tools.database.settingsOn',

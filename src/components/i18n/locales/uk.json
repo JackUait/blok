@@ -119,6 +119,7 @@
   "blockSettings.copyLink": "Копіювати посилання на блок",
   "blockSettings.copyPageLink": "Копіювати посилання",
   "blockSettings.moveToTrash": "Перемістити в кошик",
+  "blockSettings.moveTo": "Перемістити в",
   "blockSettings.lastEdited": "Останнє редагування",
   "blockSettings.lastEditedBy": "Останнє редагування: {name}",
   "a11y.insertBlock": "Вставити блок",

@@ -125,6 +125,7 @@
   "blockSettings.copyLink": "Link naar blok kopiëren",
   "blockSettings.copyPageLink": "Link kopiëren",
   "blockSettings.moveToTrash": "Naar prullenbak verplaatsen",
+  "blockSettings.moveTo": "Verplaatsen naar",
   "blockSettings.lastEdited": "Laatst bewerkt",
   "blockSettings.lastEditedBy": "Laatst bewerkt door {name}",
   "a11y.insertBlock": "Blok invoegen",

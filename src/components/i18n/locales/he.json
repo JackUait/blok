@@ -161,6 +161,7 @@
   "blockSettings.copyLink": "העתק קישור לבלוק",
   "blockSettings.copyPageLink": "העתק קישור",
   "blockSettings.moveToTrash": "העבר לאשפה",
+  "blockSettings.moveTo": "העבר אל",
   "blockSettings.lastEdited": "נערך לאחרונה",
   "blockSettings.lastEditedBy": "נערך לאחרונה על ידי {name}",
   "a11y.insertBlock": "הוסף בלוק",

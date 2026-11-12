@@ -125,6 +125,7 @@
   "blockSettings.copyLink": "ब्लॉक का लिंक कॉपी करें",
   "blockSettings.copyPageLink": "लिंक कॉपी करें",
   "blockSettings.moveToTrash": "ट्रैश में ले जाएं",
+  "blockSettings.moveTo": "इसमें ले जाएँ",
   "blockSettings.lastEdited": "अंतिम बार संपादित",
   "blockSettings.lastEditedBy": "{name} द्वारा अंतिम बार संपादित",
   "a11y.insertBlock": "ब्लॉक जोड़ें",

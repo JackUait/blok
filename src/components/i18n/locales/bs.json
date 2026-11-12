@@ -113,6 +113,7 @@
   "blockSettings.copyLink": "Kopiraj vezu na blok",
   "blockSettings.copyPageLink": "Kopiraj vezu",
   "blockSettings.moveToTrash": "Premjesti u smeće",
+  "blockSettings.moveTo": "Premjesti u",
   "blockSettings.lastEdited": "Posljednja izmjena",
   "blockSettings.lastEditedBy": "Posljednja izmjena: {name}",
   "a11y.insertBlock": "Umetni blok",

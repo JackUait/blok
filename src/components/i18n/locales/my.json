@@ -149,6 +149,7 @@
   "blockSettings.copyLink": "ဘလောက်သို့ လင့်ခ်ကူးယူရန်",
   "blockSettings.copyPageLink": "လင့်ခ်ကူးယူရန်",
   "blockSettings.moveToTrash": "အမှိုက်ပုံးသို့ ရွှေ့ရန်",
+  "blockSettings.moveTo": "သို့ ရွှေ့ရန်",
   "blockSettings.lastEdited": "နောက်ဆုံးတည်းဖြတ်ချိန်",
   "blockSettings.lastEditedBy": "{name} မှ နောက်ဆုံးတည်းဖြတ်သည်",
   "a11y.insertBlock": "ဘလောက်ထည့်ရန်",

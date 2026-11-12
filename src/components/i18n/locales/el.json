@@ -125,6 +125,7 @@
   "blockSettings.copyLink": "Αντιγραφή συνδέσμου μπλοκ",
   "blockSettings.copyPageLink": "Αντιγραφή συνδέσμου",
   "blockSettings.moveToTrash": "Μετακίνηση στον κάδο",
+  "blockSettings.moveTo": "Μετακίνηση σε",
   "blockSettings.lastEdited": "Τελευταία επεξεργασία",
   "blockSettings.lastEditedBy": "Τελευταία επεξεργασία από {name}",
   "a11y.insertBlock": "Εισαγωγή μπλοκ",

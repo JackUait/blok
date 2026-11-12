@@ -165,6 +165,7 @@
   "blockSettings.copyLink": "複製區塊連結",
   "blockSettings.copyPageLink": "複製連結",
   "blockSettings.moveToTrash": "移至垃圾桶",
+  "blockSettings.moveTo": "移至",
   "a11y.insertBlock": "插入區塊",
   "a11y.dragHandle": "拖曳以移動區塊，或按一下以開啟選單",
   "a11y.dragHandleRole": "拖曳控點",

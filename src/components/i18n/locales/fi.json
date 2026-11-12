@@ -125,6 +125,7 @@
   "blockSettings.copyLink": "Kopioi lohkon linkki",
   "blockSettings.copyPageLink": "Kopioi linkki",
   "blockSettings.moveToTrash": "Siirrä roskakoriin",
+  "blockSettings.moveTo": "Siirrä kohteeseen",
   "blockSettings.lastEdited": "Viimeksi muokattu",
   "blockSettings.lastEditedBy": "Viimeksi muokannut {name}",
   "a11y.insertBlock": "Lisää lohko",

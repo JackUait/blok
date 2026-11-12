@@ -165,6 +165,7 @@
   "blockSettings.copyLink": "Copy link to block",
   "blockSettings.copyPageLink": "Copy link",
   "blockSettings.moveToTrash": "Move to Trash",
+  "blockSettings.moveTo": "Move to",
   "a11y.insertBlock": "Insert block",
   "a11y.dragHandle": "Drag to move block or click for menu",
   "a11y.dragHandleRole": "drag handle",

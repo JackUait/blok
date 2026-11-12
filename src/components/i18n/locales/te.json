@@ -107,6 +107,7 @@
   "blockSettings.copyLink": "బ్లాక్‌కు లింక్ కాపీ చేయి",
   "blockSettings.copyPageLink": "లింక్‌ను కాపీ చేయి",
   "blockSettings.moveToTrash": "ట్రాష్‌కు తరలించు",
+  "blockSettings.moveTo": "ఇక్కడికి తరలించు",
   "blockSettings.lastEdited": "చివరిగా సవరించబడింది",
   "blockSettings.lastEditedBy": "{name} చివరిగా సవరించారు",
   "a11y.insertBlock": "బ్లాక్ చొప్పించు",

@@ -119,6 +119,7 @@
   "blockSettings.copyLink": "بلاک کا لنک کاپی کریں",
   "blockSettings.copyPageLink": "لنک کاپی کریں",
   "blockSettings.moveToTrash": "ردی کی ٹوکری میں منتقل کریں",
+  "blockSettings.moveTo": "منتقل کریں",
   "blockSettings.lastEdited": "آخری ترمیم",
   "blockSettings.lastEditedBy": "{name} نے آخری ترمیم کی",
   "a11y.insertBlock": "بلاک شامل کریں",

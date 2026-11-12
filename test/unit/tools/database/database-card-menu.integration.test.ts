@@ -457,7 +457,8 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     });
   });
 
-  // notion-motion.md Round 16 §6: the feed ⋯ menu's left edge is the click x, and it stays 12px above the window bottom.
+  // notion-motion.md Round 16 §6 and Round 17 §2: the feed ⋯ menu's top-left is the click point, 1px down,
+  // and it stays 12px above the window bottom.
   describe('feed card ⋯ menu placement', () => {
     const openedAt = (x: number, detail: number): HTMLElement => {
       const { el } = buildTool(oneRow(), {}, viewData('feed'));
@@ -475,11 +476,11 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       return popover;
     };
 
-    it('opens with its left edge on the click x and its top on the button\'s top', () => {
+    it('opens with its top 1px below the click y and its left edge on the click x', () => {
       const popover = openedAt(595, 1);
 
+      expect(popover.style.top).toBe('351px');
       expect(popover.style.left).toBe('595px');
-      expect(popover.style.top).toBe('338px');
     });
 
     it('opens from a key press on the button\'s left edge', () => {

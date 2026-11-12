@@ -6060,11 +6060,11 @@ export class DatabaseTool implements BlockTool {
 
   /**
    * The card's More actions (research/19 §2e): the shared row menu, without the view settings rows.
-   * notion-motion.md Round 16 §6: its left edge is the click x, and it stays 12px above the window bottom.
-   * The top stays the button's: Notion's was pushed up, so where it starts is unread. A key press keeps the button.
+   * notion-motion.md Round 16 §6 and Round 17 §2: its top-left is the click point, 1px down, as the board
+   * card's menu, and it stays 12px above the window bottom. A key press keeps the button.
    */
   private openFeedActions(rowId: string, anchor: HTMLElement, card: HTMLElement, event: MouseEvent): void {
-    const at = event.detail === 0 ? undefined : { position: new DOMRect(event.clientX, anchor.getBoundingClientRect().top, 0, 0), positionContext: card };
+    const at = event.detail === 0 ? undefined : { position: new DOMRect(event.clientX, event.clientY + 1, 0, 0), positionContext: card };
 
     this.openRowMenu(rowId, anchor, card, { viewSettings: false, viewportMargin: 12, ...(at !== undefined ? { at } : {}) });
   }

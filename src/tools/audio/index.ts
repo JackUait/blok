@@ -910,6 +910,8 @@ export class AudioTool implements BlockTool {
       anchor,
       trigger,
       i18n: this.api.i18n,
+      surface: 'ink-well',
+      ...(this.data.coverUrl ? { current: this.data.coverUrl } : {}),
       onFile: (file) => this.applyCoverFile(file),
       onUrl: (url) => this.applyCoverUrl(url),
       onClose: () => {
@@ -937,14 +939,32 @@ export class AudioTool implements BlockTool {
           if (url.startsWith('blob:')) URL.revokeObjectURL(url);
           return;
         }
-        this.setCover(url);
-        this.coverPicker?.close();
+        this.landCover(url);
       })
       .catch(() => {
         this.coverPicker?.setError(
           tr(this.api.i18n, 'tools.audio.errorUploadFailed', 'Upload failed')
         );
       });
+  }
+
+  /**
+   * Sets a cover picked in the ink well, once the well has opened onto it.
+   * Setting it sooner rebuilds the player under the picker and closes it mid-motion.
+   */
+  private landCover(url: string): void {
+    const settled = this.coverPicker?.settle() ?? Promise.resolve();
+
+    void settled.then(() => {
+      if (this.destroyed) {
+        if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+
+        return;
+      }
+      this.setCover(url);
+      this.root?.querySelector('[data-role="audio-cover"]')?.classList.add('is-fresh');
+      this.coverPicker?.close();
+    });
   }
 
   private applyCoverUrl(url: string): void {
@@ -954,8 +974,7 @@ export class AudioTool implements BlockTool {
       .uploadByUrl(url, { kind: 'image', tool: this.block.name })
       .then(({ url: stored }) => {
         if (this.destroyed) return;
-        this.setCover(stored);
-        this.coverPicker?.close();
+        this.landCover(stored);
       })
       .catch(() => {
         this.coverPicker?.setError(

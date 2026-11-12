@@ -349,3 +349,86 @@ describe('openCoverPicker', () => {
     handle.close();
   });
 });
+
+describe('openCoverPicker — ink well surface', () => {
+  const open = (over: Partial<Parameters<typeof openCoverPicker>[0]> = {}): { handle: ReturnType<typeof openCoverPicker>; dialog: HTMLElement; onUrl: ReturnType<typeof vi.fn> } => {
+    const anchor = document.createElement('div');
+
+    document.body.appendChild(anchor);
+    const onUrl = vi.fn();
+    const handle = openCoverPicker({ anchor, onFile: vi.fn(), onUrl, surface: 'ink-well', ...over });
+    const dialog = document.querySelector<HTMLElement>('[data-role="audio-cover-picker"]');
+
+    if (!dialog) throw new Error('no picker');
+
+    return { handle, dialog, onUrl };
+  };
+
+  it('shows the ink well in place of the tabbed card', () => {
+    const { dialog, handle } = open();
+
+    expect(dialog.getAttribute('data-surface')).toBe('ink-well');
+    expect(dialog.querySelector('[data-role="ink-well"]')).not.toBeNull();
+    expect(dialog.querySelector('[data-tab]')).toBeNull();
+    expect(dialog.querySelector('[data-role="ink-well-title"]')?.textContent).toBe('Give the drop a picture');
+    expect(dialog.querySelector('[data-role="ink-well-hint"]')?.textContent).toBe('Drop an image on it, or pick one.');
+    expect(dialog.querySelector<HTMLInputElement>('[data-role="ink-well-link"]')?.placeholder).toBe('or paste a link');
+    handle.close();
+  });
+
+  it('translates the well through i18n', () => {
+    const i18n = { t: (key: string) => `[${key}]`, has: () => true } as unknown as NonNullable<Parameters<typeof openCoverPicker>[0]['i18n']>;
+    const { dialog, handle } = open({ i18n });
+
+    expect(dialog.querySelector('[data-role="ink-well-title"]')?.textContent).toBe('[tools.audio.coverWellTitle]');
+    expect(dialog.querySelector('[data-role="ink-well-hint"]')?.textContent).toBe('[tools.audio.coverWellHint]');
+    expect(dialog.querySelector<HTMLInputElement>('[data-role="ink-well-link"]')?.placeholder).toBe('[tools.audio.coverWellLink]');
+    handle.close();
+  });
+
+  it('forwards a pasted link and an error, and focuses the well first', () => {
+    const { dialog, handle, onUrl } = open();
+    const input = dialog.querySelector<HTMLInputElement>('[data-role="ink-well-link"]');
+
+    expect(dialog.querySelector('[data-role="ink-well"]')).toHaveFocus();
+
+    if (input) input.value = 'https://cdn/cover.png';
+    input?.closest('form')?.dispatchEvent(new Event('submit', { cancelable: true }));
+    expect(onUrl).toHaveBeenCalledWith('https://cdn/cover.png');
+
+    handle.setError('Upload failed');
+    expect(dialog.querySelector('[data-role="ink-well-error"]')?.textContent).toBe('Upload failed');
+    handle.close();
+  });
+
+  it('settles at once when nothing is opening, on either surface', async () => {
+    const well = open();
+    const done = vi.fn();
+
+    await well.handle.settle().then(done);
+    well.handle.close();
+
+    const anchor = document.createElement('div');
+
+    document.body.appendChild(anchor);
+    const card = openCoverPicker({ anchor, onFile: vi.fn(), onUrl: vi.fn() });
+
+    await card.settle().then(done);
+    card.close();
+
+    expect(done).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the tabbed card when no surface is asked for', () => {
+    const anchor = document.createElement('div');
+
+    document.body.appendChild(anchor);
+    const handle = openCoverPicker({ anchor, onFile: vi.fn(), onUrl: vi.fn() });
+    const dialog = document.querySelector('[data-role="audio-cover-picker"]');
+
+    expect(dialog?.getAttribute('data-surface')).toBe('card');
+    expect(dialog?.querySelector('[data-role="ink-well"]')).toBeNull();
+    expect(dialog?.querySelector('[data-tab]')).not.toBeNull();
+    handle.close();
+  });
+});

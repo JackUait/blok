@@ -1591,6 +1591,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // audio.css: the compact player is one row with the wire as its seek line (grid areas, the slider laid
     // over the wire, its keyboard ring, and the narrow-card layout).
     const AUDIO_COMPACT_WIRE_BYTES = 4_397;
+    // audio.css: the cover picker's ink well surface (the well, heading, button, link field, error line,
+    // keyboard rings, the narrow layout) and the pop of a cover just picked.
+    const AUDIO_INK_WELL_BYTES = 4_780;
     // database.css: the tab bar "+" is round, header-icon ink, a 200ms fade, and shows on keyboard focus,
     // plus 124 for the 19.2px header glyphs in an 18px slot and the dark timeline panel shadow and header ink,
     // plus 233 for the right-aligned calculations and the 26px "Calculate" box that fades in on its own cell.
@@ -2108,7 +2111,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES
       + ANNOTATION_TETHER_BYTES
-      + AUDIO_COMPACT_WIRE_BYTES;
+      + AUDIO_COMPACT_WIRE_BYTES
+      + AUDIO_INK_WELL_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

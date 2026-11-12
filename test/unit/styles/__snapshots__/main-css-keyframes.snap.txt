@@ -123,6 +123,12 @@
   to { opacity: 1; transform: translateY(0) scale(1) }
 }
 
+@keyframes blok-audio-cover-pop {
+  0% { transform: scale(0.7) }
+  60% { transform: scale(1.12) }
+  100% { transform: scale(1) }
+}
+
 @keyframes blok-audio-glitch {
   0%, 80%, 96% { height: var(--blok-audio-flatline) }
   84% { height: 16px }

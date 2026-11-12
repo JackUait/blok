@@ -21,8 +21,12 @@ const coverPickerCalls: Array<{
   onFile: (f: File) => void;
   onUrl: (u: string) => void;
   onClose?: () => void;
-  handle: { close: ReturnType<typeof vi.fn>; setError: ReturnType<typeof vi.fn> };
+  surface?: string;
+  current?: string;
+  handle: { close: ReturnType<typeof vi.fn>; setError: ReturnType<typeof vi.fn>; settle: ReturnType<typeof vi.fn> };
 }> = [];
+/** Set to hold the picker's `settle()` open; call the stored function to let it go. */
+const coverSettle: { hold: boolean; release: Array<() => void> } = { hold: false, release: [] };
 
 vi.mock('../../../../src/tools/audio/cover-picker', async (importOriginal) => {
   const actual = await importOriginal<typeof CoverPickerModule>();
@@ -34,14 +38,22 @@ vi.mock('../../../../src/tools/audio/cover-picker', async (importOriginal) => {
       onFile: (f: File) => void;
       onUrl: (u: string) => void;
       onClose?: () => void;
+      surface?: string;
+      current?: string;
     }) => {
-      const handle = { close: vi.fn(), setError: vi.fn() };
+      const handle = {
+        close: vi.fn(),
+        setError: vi.fn(),
+        settle: vi.fn(() => (coverSettle.hold ? new Promise<void>((resolve) => { coverSettle.release.push(resolve); }) : Promise.resolve())),
+      };
       coverPickerCalls.push({
         anchor: o.anchor,
         trigger: o.trigger,
         onFile: o.onFile,
         onUrl: o.onUrl,
         onClose: o.onClose,
+        surface: o.surface,
+        current: o.current,
         handle,
       });
       return handle;
@@ -125,6 +137,8 @@ const opts = (
 beforeEach(() => {
   vi.clearAllMocks();
   coverPickerCalls.length = 0;
+  coverSettle.hold = false;
+  coverSettle.release.length = 0;
   uploaderInstances.length = 0;
 });
 afterEach(() => {
@@ -759,6 +773,43 @@ describe('AudioTool', () => {
       });
       // The audio tool's own uploader is an audio endpoint — it must not see an image.
       expect(audioUploadByFile).not.toHaveBeenCalled();
+    });
+
+    it('opens the ink well, showing the cover the track has now', () => {
+      const { root } = renderTool({ coverUrl: 'https://cdn/old.png' });
+      root.querySelector<HTMLButtonElement>('[data-role="audio-cover-change"]')!.click();
+
+      expect(coverPickerCalls[0].surface).toBe('ink-well');
+      expect(coverPickerCalls[0].current).toBe('https://cdn/old.png');
+    });
+
+    it('waits for the ink well to open onto the picture before it sets the cover and closes', async () => {
+      coverSettle.hold = true;
+      const { root, block } = renderTool();
+      root.querySelector<HTMLButtonElement>('[data-role="audio-cover-change"]')!.click();
+      (block.dispatchChange as ReturnType<typeof vi.fn>).mockClear();
+
+      coverPickerCalls[0].onFile(new File(['x'], 'c.png', { type: 'image/png' }));
+      await vi.waitFor(() => expect(coverPickerCalls[0].handle.settle).toHaveBeenCalled());
+
+      // Uploaded, but the well is still opening: closing now would hide it.
+      expect(root.querySelector('[data-role="audio-cover"] img')).toBeNull();
+      expect(coverPickerCalls[0].handle.close).not.toHaveBeenCalled();
+
+      coverSettle.release.forEach((release) => release());
+      await vi.waitFor(() => {
+        expect(root.querySelector<HTMLImageElement>('[data-role="audio-cover"] img')?.getAttribute('src')).toBe('https://cdn/c.png');
+      });
+      expect(coverPickerCalls[0].handle.close).toHaveBeenCalled();
+      expect(block.dispatchChange).toHaveBeenCalledTimes(1);
+      // The new cover pops on the player.
+      expect(root.querySelector('[data-role="audio-cover"]')?.classList.contains('is-fresh')).toBe(true);
+    });
+
+    it('a cover that was there on load does not pop', () => {
+      const { root } = renderTool({ coverUrl: 'https://cdn/old.png' });
+
+      expect(root.querySelector('[data-role="audio-cover"]')?.classList.contains('is-fresh')).toBe(false);
     });
 
     it('rejects a non-image file via setError without mutating data', () => {

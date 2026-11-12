@@ -24207,6 +24207,173 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   box-shadow: var(--blok-popover-box-shadow);
 }
 
+.blok-audio-cover-picker[data-surface="ink-well"], .blok-audio-cover-picker[data-surface="ink-well"][data-blok-top-layer][popover] {
+  --blok-audio-well-size: 148px;
+  --blok-audio-well-paper: #f3efe6;
+  --blok-audio-well-ink: #0b0b0c;
+  --blok-audio-well-sheen: rgba(255, 255, 255, 0.2);
+  --blok-audio-well-edge: rgba(0, 0, 0, 0.08);
+  padding: var(--blok-space-3);
+}
+
+.blok-ink-well {
+  display: flex;
+  align-items: stretch;
+  gap: var(--blok-space-4);
+  font-family: var(--blok-font-family, var(--blok-font-sans));
+  color: var(--blok-text-primary);
+}
+
+.blok-ink-well__well {
+  flex: none;
+  width: var(--blok-audio-well-size);
+  height: var(--blok-audio-well-size);
+  border-radius: var(--blok-radius-block);
+  overflow: hidden;
+  background: var(--blok-audio-well-paper);
+  box-shadow: inset 0 0 0 1px var(--blok-audio-well-edge);
+  cursor: pointer;
+}
+
+.blok-ink-well__well canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.blok-ink-well__well.is-dragover {
+  box-shadow: inset 0 0 0 2px var(--blok-audio-well-ink);
+}
+
+:where(:root:not([data-blok-modality="pointer"])) .blok-ink-well__well:focus-visible, :where(:root:not([data-blok-modality="pointer"])) .blok-ink-well__choose:focus-visible, :where(:root:not([data-blok-modality="pointer"])) .blok-ink-well__submit:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
+}
+
+.blok-ink-well__well:focus, .blok-ink-well__choose:focus, .blok-ink-well__submit:focus, .blok-ink-well__link-input:focus {
+  outline: none;
+}
+
+.blok-ink-well__side {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--blok-space-2-5);
+}
+
+.blok-ink-well__title {
+  font-size: 17px;
+  font-weight: var(--blok-font-weight-semibold);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.blok-ink-well__hint {
+  margin: 0;
+  font-size: var(--blok-font-size-ui-label);
+  color: var(--blok-text-secondary);
+}
+
+.blok-ink-well__choose {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  padding: var(--blok-space-2-25) var(--blok-space-4);
+  border: 0;
+  border-radius: var(--blok-radius-control-lg);
+  background: var(--blok-text-primary);
+  color: var(--blok-bg-primary);
+  font: inherit;
+  font-weight: var(--blok-font-weight-semibold);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.blok-ink-well__choose svg {
+  width: 14px;
+  height: 14px;
+}
+
+.blok-ink-well__link {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  margin: 0;
+  padding: 0 var(--blok-space-1) 0 var(--blok-space-2-5);
+  border: 1px solid var(--blok-border-subtle);
+  border-radius: var(--blok-radius-control-lg);
+  background: var(--blok-bg-primary);
+}
+
+.blok-ink-well__link:has(.blok-ink-well__link-input:focus) {
+  border-color: var(--blok-text-primary);
+}
+
+.blok-ink-well__link-input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--blok-space-2) 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+
+.blok-ink-well__link-input::placeholder {
+  color: var(--blok-text-tertiary);
+}
+
+.blok-ink-well__submit {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--blok-radius-control);
+  background: none;
+  color: var(--blok-text-secondary);
+  cursor: pointer;
+}
+
+.blok-ink-well__submit:hover {
+  background: var(--blok-bg-hover);
+  color: var(--blok-text-primary);
+}
+
+.blok-ink-well__submit svg {
+  width: 14px;
+  height: 14px;
+}
+
+.blok-ink-well__error {
+  margin: 0;
+  font-size: var(--blok-font-size-ui-compact);
+  color: var(--blok-color-danger);
+}
+
+[@media (max-width: 480px)] .blok-ink-well {
+  flex-direction: column;
+  align-items: center;
+}
+
+[@media (max-width: 480px)] .blok-ink-well__side {
+  align-self: stretch;
+}
+
+[data-blok-tool="audio"][data-state="rendered"] .blok-audio-cover.is-fresh {
+  animation: blok-audio-cover-pop 500ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-tool="audio"][data-state="rendered"] .blok-audio-cover.is-fresh {
+  animation: none;
+}
+
 .blok-audio-cover-picker .blok-media-empty__card {
   border-radius: var(--blok-radius-inner, var(--blok-radius-block));
 }

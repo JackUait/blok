@@ -22,7 +22,7 @@ vi.mock('../../../../src/tools/audio/cover-picker', async (importOriginal) => {
   return {
     ...actual,
     openCoverPicker: vi.fn((o: { onFile: (f: File) => void; onUrl: (u: string) => void }) => {
-      const handle = { close: vi.fn(), setError: vi.fn() };
+      const handle = { close: vi.fn(), setError: vi.fn(), settle: vi.fn(() => Promise.resolve()) };
 
       coverPickerCalls.push({ onFile: o.onFile, onUrl: o.onUrl, handle });
 

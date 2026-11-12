@@ -97,7 +97,7 @@ vi.mock('../../../../src/tools/audio/cover-picker', async (importOriginal) => {
   return {
     ...actual,
     openCoverPicker: vi.fn((options: Omit<PickerCall, 'handle'>) => {
-      const handle = { close: vi.fn(), setError: vi.fn() };
+      const handle = { close: vi.fn(), setError: vi.fn(), settle: vi.fn(() => Promise.resolve()) };
 
       captured.pickers.push({ ...options, handle });
 

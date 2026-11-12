@@ -94,6 +94,8 @@ const EXEMPT_SINKS: Record<string, string> = {
     'HTMLImageElement src — <img> is not a script-execution sink (javascript: URLs do not run in img)',
   'tools/file/docx/drawing.ts » url':
     'HTMLImageElement src set to a blob: URL this file made from zip bytes whose raster signature it checked — image loads cannot run script',
+  'tools/audio/ink-well.ts » url':
+    'off-DOM HTMLImageElement decode for the well canvas: a blob: URL made by createSafeObjectUrl from the picked file, or a link that passed safeImageSrc first — image loads cannot run script',
   'tools/image/tone-sampler.ts » src':
     'HTMLImageElement src for a hidden CORS copy of the picture already on screen, only read for its tone — image loads cannot run script',
   'tools/image/error-state.ts » file.preview':

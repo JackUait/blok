@@ -261,16 +261,13 @@ test('user can set a cover image from a URL', async ({ page }) => {
   const picker = page.locator('[data-role="audio-cover-picker"]');
   await expect(picker).toBeVisible();
 
-  // Switch to the Link (embed) tab with a real click.
-  await picker.locator('[data-tab="embed"]').click();
-
-  // The URL input must be visible — this assertion guards the rendered picker width.
-  // A 2px-wide picker would make the input invisible/unreachable, catching the bug.
+  // The link field sits beside the well, with no tab to switch to. It must be
+  // visible: a 2px-wide picker would make it unreachable.
   await expect(picker.getByRole('textbox')).toBeVisible();
 
   // Fill the URL and submit with real interactions.
   await picker.getByRole('textbox').fill('https://example.com/cover.jpg');
-  await picker.locator('[data-action="submit-url"]').click();
+  await picker.locator('[data-role="ink-well-submit"]').click();
 
   // The cover img must appear with the submitted src.
   const coverImg = page.locator(`${AUDIO_BLOCK_SELECTOR} [data-role="audio-cover"] img`);
@@ -317,7 +314,7 @@ test('cover picker paints a themed surface matching the player (no white canvas)
   expect(surfaces.picker).not.toBe('rgb(255, 255, 255)');
 });
 
-test('cover picker subtree uses border-box so the tab-swap height does not jump', async ({ page }) => {
+test('cover picker subtree uses border-box, though it lives outside the editor', async ({ page }) => {
   await createBlok(page);
   await insertAudioBlock(page);
 
@@ -325,34 +322,65 @@ test('cover picker subtree uses border-box so the tab-swap height does not jump'
   await audioBlock.getByTestId('file-input').setInputFiles(FIXTURE_PATH);
   await expect(audioBlock.locator('[data-role="audio-controls"]')).toBeVisible();
 
-  const cover = audioBlock.locator('[data-role="audio-cover"]');
-  await cover.hover();
-  const changeBtn = audioBlock.locator('[data-role="audio-cover-change"]');
-  await expect(changeBtn).toBeVisible();
-  await changeBtn.click();
+  await audioBlock.locator('[data-role="audio-cover"]').hover();
+  await audioBlock.locator('[data-role="audio-cover-change"]').click();
 
   const picker = page.locator('[data-role="audio-cover-picker"]');
   await expect(picker).toBeVisible();
 
   // The picker is appended to document.body, outside blok's scoped border-box
-  // reset, so its panel defaulted to content-box. The Upload/Link height-swap
-  // animation measures the border-box height but animates the `height` property,
-  // which under content-box adds the panel padding on top — overshooting then
-  // snapping back (the visible jump). Border-box keeps the animated height equal
-  // to the measured one.
-  const boxes = await page.evaluate(() => {
-    const root = document.querySelector('[data-role="audio-cover-picker"]');
-    const panel = root?.querySelector('.blok-media-empty__panel');
-    const card = root?.querySelector('.blok-media-empty__card');
-    return {
-      dialog: root ? getComputedStyle(root).boxSizing : null,
-      panel: panel ? getComputedStyle(panel).boxSizing : null,
-      card: card ? getComputedStyle(card).boxSizing : null,
-    };
-  });
-  expect(boxes.dialog).toBe('border-box');
-  expect(boxes.panel).toBe('border-box');
-  expect(boxes.card).toBe('border-box');
+  // reset. Content-box would add the padding on top of the well's set size.
+  const boxes = await picker.evaluate((root) => ({
+    dialog: getComputedStyle(root).boxSizing,
+    surface: getComputedStyle(root.querySelector('[data-role="ink-well-surface"]') ?? root).boxSizing,
+    link: getComputedStyle(root.querySelector('[data-role="ink-well-link"]') ?? root).boxSizing,
+  }));
+  expect(boxes).toEqual({ dialog: 'border-box', surface: 'border-box', link: 'border-box' });
+});
+
+test('the ink well takes a picture: it opens onto it, then the cover lands on the player', async ({ page }) => {
+  await createBlok(page);
+  await insertAudioBlock(page);
+
+  const audioBlock = page.locator(AUDIO_BLOCK_SELECTOR);
+  await audioBlock.getByTestId('file-input').setInputFiles(FIXTURE_PATH);
+  await expect(audioBlock.locator('[data-role="audio-controls"]')).toBeVisible();
+
+  await audioBlock.locator('[data-role="audio-cover"]').hover();
+  await audioBlock.locator('[data-role="audio-cover-change"]').click();
+
+  const picker = page.locator('[data-role="audio-cover-picker"]');
+  const well = picker.locator('[data-role="ink-well"]');
+  const coverImg = audioBlock.locator('[data-role="audio-cover"] img');
+
+  // One surface: the well, one button and the link field, with no tabs.
+  await expect(well).toBeVisible();
+  await expect(picker.getByRole('button', { name: 'Choose file' })).toBeVisible();
+  await expect(picker.getByRole('textbox')).toBeVisible();
+  await expect(picker.getByRole('tab')).toHaveCount(0);
+
+  // Layout size, not the painted box: the picker is still scaling in.
+  expect(await well.evaluate((el: HTMLElement) => [el.offsetWidth, el.offsetHeight])).toEqual([148, 148]);
+
+  // The drop is drawn: the middle of the well is ink, its corner is paper.
+  const pixel = (x: number, y: number): Promise<number[]> => well.locator('[data-role="ink-well-canvas"]').evaluate((canvas: HTMLCanvasElement, at) => {
+    const scale = canvas.width / canvas.clientWidth;
+
+    return Array.from(canvas.getContext('2d')?.getImageData(Math.round(at.x * scale), Math.round(at.y * scale), 1, 1).data ?? []);
+  }, { x, y });
+
+  await expect.poll(async () => (await pixel(74, 74))[3]).toBe(255);
+  expect((await pixel(6, 6))[3]).toBe(0);
+
+  await picker.locator('[data-role="ink-well-file"]').setInputFiles(join(process.cwd(), 'test/playwright/fixtures/image/photo.jpg'));
+
+  // The well fills corner to corner, with ink and then with the picture.
+  await expect.poll(async () => (await pixel(6, 6))[3]).toBe(255);
+  // Still open while it shows the picture; the cover is not swapped under it.
+  await expect(picker).toBeVisible();
+
+  await expect(coverImg).toBeAttached();
+  await expect(picker).toHaveCount(0);
 });
 
 test('cover picker animates in when opened', async ({ page }) => {
@@ -400,10 +428,9 @@ test('user can remove a cover and the ink drop returns', async ({ page }) => {
 
   const picker2 = page.locator('[data-role="audio-cover-picker"]');
   await expect(picker2).toBeVisible();
-  await picker2.locator('[data-tab="embed"]').click();
   await expect(picker2.getByRole('textbox')).toBeVisible();
   await picker2.getByRole('textbox').fill('https://example.com/cover.jpg');
-  await picker2.locator('[data-action="submit-url"]').click();
+  await picker2.locator('[data-role="ink-well-submit"]').click();
 
   // Confirm cover img is set before removing it.
   const coverImg = page.locator(`${AUDIO_BLOCK_SELECTOR} [data-role="audio-cover"] img`);

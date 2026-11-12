@@ -75,12 +75,11 @@
   --blok-audio-disc-inner-shadow: rgba(0, 0, 0, 0.5);
   --blok-audio-label-shadow: rgba(0, 0, 0, 0.35);
   --blok-audio-spindle-catch: rgba(255, 255, 255, 0.4);
-  /* now-playing glow + beat ring, in ink so they stay neutral in both themes.
+  /* beat ring, in ink so it stays neutral in both themes.
      Driven by --blok-audio-level / --blok-audio-kick, which waveform.ts writes
      on the figure each frame; they stay 0 under reduced motion. */
   --blok-audio-level: 0;
   --blok-audio-kick: 0;
-  --blok-audio-halo: color-mix(in srgb, var(--blok-text-primary) 30%, transparent);
   --blok-audio-beat-ring: color-mix(in srgb, var(--blok-text-primary) 45%, transparent);
   /* cover overlay button — a semi-transparent dark scrim (same near-black as
      the disc, blended down to ~45% opacity so the art shows through) */
@@ -383,12 +382,11 @@
     0 1px 1px var(--blok-audio-label-shadow);
 }
 
-/* beat motion: the record punches out on each beat and a soft ink halo
-   breathes with the loudness. `scale` is separate from the inline
+/* beat motion: the record punches out on each beat. No glow: a shadow
+   while playing reads as a hover lift. `scale` is separate from the inline
    `transform: rotate()` disc.ts writes, so the two never fight. */
 [data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover__disc {
   scale: calc(1 + var(--blok-audio-kick) * 0.04);
-  filter: drop-shadow(0 0 calc(var(--blok-audio-level) * 14px) var(--blok-audio-halo));
 }
 
 /* beat ring — starts at the disc edge on a hit, then grows and fades as the
@@ -408,14 +406,9 @@
   pointer-events: none;
 }
 
-/* with cover art there is no disc: the art itself takes the punch and glow */
+/* with cover art there is no disc: the art itself takes the punch */
 [data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover img {
   scale: calc(1 + var(--blok-audio-kick) * 0.025);
-}
-[data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover:has(img) {
-  box-shadow:
-    inset 0 0 0 1px var(--blok-border-subtle),
-    0 calc(var(--blok-audio-level) * 6px) calc(var(--blok-audio-level) * 24px) var(--blok-audio-halo);
 }
 
 /* spindle hole — a crisp dark dot with a tiny rim catch */

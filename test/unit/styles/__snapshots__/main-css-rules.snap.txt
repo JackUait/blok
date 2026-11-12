@@ -24065,7 +24065,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   --blok-audio-spindle-catch: rgba(255, 255, 255, 0.4);
   --blok-audio-level: 0;
   --blok-audio-kick: 0;
-  --blok-audio-halo: color-mix(in srgb, var(--blok-text-primary) 30%, transparent);
   --blok-audio-beat-ring: color-mix(in srgb, var(--blok-text-primary) 45%, transparent);
   --blok-audio-cover-scrim: color-mix(in srgb, var(--blok-overlay-dark) 50%, transparent);
   position: relative;
@@ -24245,7 +24244,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover__disc {
   scale: calc(1 + var(--blok-audio-kick) * 0.04);
-  filter: drop-shadow(0 0 calc(var(--blok-audio-level) * 14px) var(--blok-audio-halo));
 }
 
 [data-blok-tool="audio"] .blok-audio-cover__placeholder::before {
@@ -24265,10 +24263,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover img {
   scale: calc(1 + var(--blok-audio-kick) * 0.025);
-}
-
-[data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover:has(img) {
-  box-shadow: inset 0 0 0 1px var(--blok-border-subtle), 0 calc(var(--blok-audio-level) * 6px) calc(var(--blok-audio-level) * 24px) var(--blok-audio-halo);
 }
 
 [data-blok-tool="audio"] .blok-audio-cover__disc::after {

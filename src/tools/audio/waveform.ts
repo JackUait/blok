@@ -90,7 +90,7 @@ export function attachWaveform(opts: {
   mount: HTMLElement;
   media: HTMLAudioElement;
   peaks: number[];
-  /** Gets `--blok-audio-level` and `--blok-audio-kick` each frame; audio.css glows and pulses the cover from them. */
+  /** Gets `--blok-audio-level` and `--blok-audio-kick` each frame; audio.css pulses the cover from the kick. */
   stage?: HTMLElement;
 }): WaveformHandle {
   const { mount, media, peaks, stage } = opts;

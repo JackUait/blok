@@ -58,9 +58,13 @@ describe('database drag auto-scroll speeds (notion-motion.md Round 17 §1)', () 
     expect(rowAutoScrollSpeed(36)).toBe(0);
   });
 
-  it('board cards: about 1.2 px/ms at 10px, still scrolling at 49px, nothing at 53px', () => {
-    expect(cardAutoScrollSpeed(10)).toBeCloseTo(1.2, 2);
-    expect(cardAutoScrollSpeed(49)).toBeGreaterThan(0);
+  // notion-motion.md Round 18 §1: the board's right edge, px/ms by the pointer's distance.
+  it.each([[1, 1.83], [4, 1.64], [9, 1.3], [19, 0.82], [34, 0.37], [49, 0.076]])('board cards: %ipx from the edge scrolls at about %f px/ms', (distance, speed) => {
+    expect(cardAutoScrollSpeed(distance)).toBeCloseTo(speed, 3);
+  });
+
+  it('board cards: nothing at 51px', () => {
+    expect(cardAutoScrollSpeed(51)).toBe(0);
     expect(cardAutoScrollSpeed(53)).toBe(0);
   });
 });
@@ -218,15 +222,15 @@ describe('database drags scroll near an edge', () => {
     return { board, card, drag };
   };
 
-  it('a board card held 10px from the board\'s right edge scrolls the board sideways at about 1.2 px/ms', () => {
+  it('a board card held 9px from the board\'s right edge scrolls the board sideways at about 1.3 px/ms', () => {
     const { board, card, drag } = boardFixture();
 
     drag.beginTracking('c1', 300, 170, card);
-    enter(890, 170, 'x');
+    enter(891, 170, 'x');
     runFrames(0, 72);
 
-    expect(board.scrollLeft).toBeGreaterThan(1.2 * 48);
-    expect(board.scrollLeft).toBeLessThan(1.2 * 96);
+    expect(board.scrollLeft).toBeGreaterThan(1.3 * 48);
+    expect(board.scrollLeft).toBeLessThan(1.3 * 96);
   });
 
   it('the board drop line follows the scroll with the pointer held still', () => {

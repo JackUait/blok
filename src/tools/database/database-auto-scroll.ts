@@ -30,11 +30,10 @@ export const listAutoScrollSpeed = VERTICAL;
 export const rowAutoScrollSpeed = VERTICAL;
 
 /**
- * Board cards near the board's side. notion-motion.md Round 17 §1: about
- * 1.2 px/ms at 10px, still scrolling at 49px, nothing at 53px. Read at the
- * left edge only; the right edge takes the same rule. Nearer than 10px is unread.
+ * Board cards near the board's side. notion-motion.md Round 18 §1, the right
+ * edge: nothing at 51px. The left edge has the same 50px zone (Round 17 §1).
  */
-export const cardAutoScrollSpeed = ramp([[10, 1.2], [50, 0]]);
+export const cardAutoScrollSpeed = ramp([[1, 1.83], [4, 1.64], [9, 1.3], [19, 0.82], [34, 0.37], [49, 0.076], [51, 0]]);
 
 /**
  * notion-motion.md Round 17 §1: the move that enters the zone does not start

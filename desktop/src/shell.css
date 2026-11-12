@@ -61,7 +61,7 @@ body[data-blok-theme="light"] [data-desktop-floating-toc] {
   background: transparent; color: var(--desktop-muted); font: inherit; cursor: pointer;
 }
 [data-desktop-tabstrip] button:hover { background: var(--desktop-hover); color: var(--desktop-ink); }
-[data-desktop-tabstrip] button:focus-visible, [role="tab"]:focus-visible {
+[data-desktop-tabstrip] button:focus-visible, [data-desktop-tabstrip] [role="tab"]:focus-visible {
   outline: 2px solid var(--desktop-ink); outline-offset: -3px;
 }
 [data-desktop-tabstrip] button:disabled { opacity: .4; cursor: default; }
@@ -71,24 +71,24 @@ body[data-blok-theme="light"] [data-desktop-floating-toc] {
   padding: 0 5px; border-right: 1px solid var(--desktop-border);
 }
 [data-desktop-navigation] button { width: 32px; height: 100%; border-radius: 0; }
-[role="tablist"] {
+[data-desktop-tabstrip] [role="tablist"] {
   display: flex; flex: 0 1 auto; min-width: 0; height: 39px;
   overflow-x: auto; scrollbar-width: none;
 }
-[role="tablist"]::-webkit-scrollbar { display: none; }
-[role="tab"] {
+[data-desktop-tabstrip] [role="tablist"]::-webkit-scrollbar { display: none; }
+[data-desktop-tabstrip] [role="tab"] {
   position: relative; display: flex; flex: none; align-items: center; gap: 8px;
   min-width: 120px; max-width: 280px; width: max-content; height: 39px;
   padding: 0 12px; border-right: 1px solid var(--desktop-border);
   color: var(--desktop-muted); font-size: 13px; cursor: pointer;
 }
-[role="tab"][aria-selected="true"] { background: var(--desktop-canvas); color: var(--desktop-ink); }
-[role="tab"]:hover { background: var(--desktop-hover); }
-[role="tab"][aria-selected="true"]:hover { background: var(--desktop-canvas); }
+[data-desktop-tabstrip] [role="tab"][aria-selected="true"] { background: var(--desktop-canvas); color: var(--desktop-ink); }
+[data-desktop-tabstrip] [role="tab"]:hover { background: var(--desktop-hover); }
+[data-desktop-tabstrip] [role="tab"][aria-selected="true"]:hover { background: var(--desktop-canvas); }
 [data-desktop-tab-label] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 [data-desktop-tab-icon] { display: grid; place-items: center; flex: none; width: 17px; height: 19px; }
 [data-desktop-close] { opacity: 0; margin-left: auto; }
-[role="tab"]:hover [data-desktop-close], [role="tab"]:focus-within [data-desktop-close] { opacity: 1; }
+[data-desktop-tabstrip] [role="tab"]:hover [data-desktop-close], [data-desktop-tabstrip] [role="tab"]:focus-within [data-desktop-close] { opacity: 1; }
 [data-desktop-action="new-tab"] { margin: 6px; }
 [data-desktop-workspace] { position: relative; flex: 1; min-height: 0; height: calc(100vh - 40px); }
 [data-desktop-workspace][data-blok-shell] { min-height: 0; }
@@ -520,10 +520,25 @@ div[data-desktop-menu-account], div[data-desktop-menu-account]:hover { cursor: d
   [data-desktop-settings-overlay][data-blok-top-layer][popover] { padding: 12px; }
 }
 
-[data-desktop-cover-tabs] { display: flex; gap: 18px; padding: 0 14px; border-bottom: 1px solid var(--desktop-border); }
-[data-desktop-cover-tabs] button { padding: 11px 0 9px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--desktop-muted); font: inherit; font-size: 13px; cursor: pointer; }
-[data-desktop-cover-tabs] button[aria-selected="true"] { border-bottom-color: var(--desktop-ink); color: var(--desktop-ink); }
-[data-desktop-cover-tabs] button:hover { color: var(--desktop-ink); }
+[data-desktop-cover-tabs] {
+  display: flex; align-items: center; gap: 20px; padding: 0 14px;
+  border-bottom: 1px solid var(--desktop-border);
+}
+[data-desktop-cover-tabs] > button {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  flex: 0 0 auto; min-width: 0; height: 38px; padding: 0 2px;
+  border: 0; border-radius: 0; background: transparent;
+  color: var(--desktop-muted); font: inherit; font-size: 13px; cursor: pointer;
+}
+[data-desktop-cover-tabs] > button[aria-selected="true"] { color: var(--desktop-ink); }
+[data-desktop-cover-tabs] > button[aria-selected="true"]::after {
+  content: ''; position: absolute; inset: auto 2px -1px; height: 2px;
+  border-radius: 2px; background: var(--desktop-ink);
+}
+[data-desktop-cover-tabs] > button:hover { color: var(--desktop-ink); }
+[data-desktop-cover-tabs] > button:focus-visible {
+  outline: 2px solid var(--desktop-ink); outline-offset: -3px; border-radius: 4px;
+}
 [data-desktop-cover-panel] { padding: 22px 16px; }
 [data-desktop-cover-panel][hidden], [data-desktop-cover-gallery-viewport][hidden] { display: none; }
 [data-desktop-cover-panel] input[type="url"] { width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 9px 10px; border: 1px solid var(--desktop-border); border-radius: 5px; background: var(--desktop-strip); color: var(--desktop-ink); font: inherit; font-size: 13px; }

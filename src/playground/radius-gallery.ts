@@ -26,6 +26,8 @@ export const RADIUS_ROLES: RadiusRole[] = [
   { token: '--blok-radius-surface', specimen: 'popover' },
   { token: '--blok-radius-block', specimen: 'callout' },
   { token: '--blok-radius-player', specimen: 'callout' },
+  { token: '--blok-radius-glass', specimen: 'popover' },
+  { token: '--blok-radius-glass-row', specimen: 'button', height: 36 },
   { token: '--blok-radius-field', specimen: 'field' },
   { token: '--blok-radius-control-lg', specimen: 'button', height: 36 },
   { token: '--blok-radius-control', specimen: 'button', height: 28 },

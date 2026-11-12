@@ -101,8 +101,9 @@ const RADII: Array<[string, string, string]> = [
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-media', role('player')],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-error-state', role('player')],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-retry', role('control')],
-  ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__menu', role('surface')],
-  ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__menu-row', nested('control')],
+  // The settings card is rounder glass, as picked in the design lab; its rows have their own role.
+  ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__menu', role('glass')],
+  ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__menu-row', role('glass-row')],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__speed-step', role('pill')],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__speed-preset', role('pill')],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__switch', role('pill')],
@@ -172,7 +173,6 @@ const INNER: Array<[string, string, string]> = [
   ['styles/main.css', '[data-blok-tool="image"] .blok-image-toolbar__align-popover', inner('surface', '--blok-space-1')],
   ['styles/main.css', '.blok-image-lightbox__bar', inner('surface', '--blok-space-1-5')],
   ['styles/main.css', '.blok-image-lightbox__nav', inner('surface', '--blok-space-1-5')],
-  ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__menu', inner('surface', BORDER, '--blok-space-1-5')],
   // The preset bar sits on the card's padding edge, so its chips nest one more ring in.
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__seek-tooltip', inner('control', '--blok-space-1')],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__ctx', inner('surface', '--blok-space-1-5')],

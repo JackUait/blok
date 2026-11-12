@@ -2386,6 +2386,8 @@
   --blok-radius-surface: var(--blok-radius-10);
   --blok-radius-block: var(--blok-radius-10);
   --blok-radius-player: var(--blok-radius-20);
+  --blok-radius-glass: 0.875rem;
+  --blok-radius-glass-row: 0.5625rem;
   --blok-radius-field: var(--blok-radius-8);
   --blok-radius-control-lg: var(--blok-radius-8);
   --blok-radius-control: var(--blok-radius-6);
@@ -23387,8 +23389,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   isolation: isolate;
   padding: var(--blok-space-1-5);
   border: 1px solid var(--blok-video-menu-border);
-  border-radius: var(--blok-radius-surface);
-  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-border-width-hairline) - var(--blok-space-1-5)));
+  border-radius: var(--blok-radius-glass);
   box-shadow: var(--blok-video-menu-shadow);
   color: var(--blok-video-control-fg);
   transform-origin: calc(50% + 50% * var(--_blok-inline-sign, 1)) bottom;
@@ -23454,7 +23455,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   min-height: 36px;
   padding: 0 var(--blok-space-2-5);
   border: 0;
-  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
+  border-radius: var(--blok-radius-glass-row);
   background: transparent;
   color: inherit;
   font-size: 13px;

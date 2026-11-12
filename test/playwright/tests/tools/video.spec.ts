@@ -195,6 +195,9 @@ test('the speed submenu: drag the bead, land on a peg, use a preset, step, and g
 
   await expect(menu).toHaveAttribute('data-pane', 'main');
   await expect(menu.getByRole('button', { name: 'Playback speed Normal', exact: true })).toBeVisible();
+  // The lab's corners: a 14px glass card with 9px rows.
+  await expect(menu).toHaveCSS('border-radius', '14px');
+  await expect(menu.getByRole('button', { name: 'Playback speed Normal', exact: true })).toHaveCSS('border-radius', '9px');
 
   await menu.locator('[data-action="open-speed"]').click();
   await expect(menu).toHaveAttribute('data-pane', 'speed');

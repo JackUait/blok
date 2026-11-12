@@ -383,6 +383,10 @@
   --blok-radius-block: var(--blok-radius-10);
   /* the video frame: a touch rounder than other media, to suit the floating island */
   --blok-radius-player: var(--blok-radius-20);
+  /* The video settings card: rounder glass, and its rows. Off the scale on purpose:
+     14 and 9 are the corners picked in the design lab. */
+  --blok-radius-glass: 0.875rem;
+  --blok-radius-glass-row: 0.5625rem;
   --blok-radius-field: var(--blok-radius-8);
   --blok-radius-control-lg: var(--blok-radius-8);
   --blok-radius-control: var(--blok-radius-6);

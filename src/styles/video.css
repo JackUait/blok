@@ -806,8 +806,7 @@
   isolation: isolate;
   padding: var(--blok-space-1-5);
   border: 1px solid var(--blok-video-menu-border);
-  border-radius: var(--blok-radius-surface);
-  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-border-width-hairline) - var(--blok-space-1-5)));
+  border-radius: var(--blok-radius-glass);
   box-shadow: var(--blok-video-menu-shadow);
   color: var(--blok-video-control-fg);
   /* The gear's corner: bottom right, bottom left in RTL. */
@@ -880,7 +879,7 @@
   min-height: 36px;
   padding: 0 var(--blok-space-2-5);
   border: 0;
-  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
+  border-radius: var(--blok-radius-glass-row);
   background: transparent;
   color: inherit;
   font-size: 13px;

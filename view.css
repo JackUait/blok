@@ -797,6 +797,8 @@
   --blok-radius-surface: var(--blok-radius-10);
   --blok-radius-block: var(--blok-radius-10);
   --blok-radius-player: var(--blok-radius-20);
+  --blok-radius-glass: 0.875rem;
+  --blok-radius-glass-row: 0.5625rem;
   --blok-radius-field: var(--blok-radius-8);
   --blok-radius-control-lg: var(--blok-radius-8);
   --blok-radius-control: var(--blok-radius-6);

@@ -266,7 +266,8 @@ export class PasteEngine {
         continue;
       }
 
-      const handled = await handler.handle(dataToCheck, context);
+      const literalText = handler instanceof TextHandler && this.htmlAsLiteralText(flavours) !== null;
+      const handled = await handler.handle(dataToCheck, literalText ? { ...context, literalText } : context);
 
       if (handled) {
         return true;

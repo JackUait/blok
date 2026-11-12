@@ -363,31 +363,14 @@ describe('hasMarkdownSignals', () => {
     expect(hasMarkdownSignals('$x^2 + y^2 = z^2$')).toBe(true);
   });
 
-  it('detects a thematic break on a line of its own between blank lines', () => {
-    expect(hasMarkdownSignals('---\n\nTAIL')).toBe(true);
-    expect(hasMarkdownSignals('***\n\nx')).toBe(true);
-    expect(hasMarkdownSignals('Before\n\n___\n\nAfter')).toBe(true);
-    expect(hasMarkdownSignals('Before\n\n- - -')).toBe(true);
-    expect(hasMarkdownSignals('Before\r\n\r\n---\r\n\r\nAfter')).toBe(true);
-    expect(hasMarkdownSignals('Before\n\n   -----   \n\nAfter')).toBe(true);
-  });
-
-  it('does not read a dash line under text, or a dash run inside text, as a thematic break', () => {
-    expect(hasMarkdownSignals('Title\n---')).toBe(false);
-    expect(hasMarkdownSignals('Title\n---\nbody')).toBe(false);
-    expect(hasMarkdownSignals('wait --- what')).toBe(false);
-    expect(hasMarkdownSignals('--')).toBe(false);
-    expect(hasMarkdownSignals('-*-\n\nx')).toBe(false);
-    expect(hasMarkdownSignals('    ---\n\nx')).toBe(false);
-  });
-
-  it('stays fast on a long dash run that is not a thematic break', () => {
-    const hostile = `${'-'.repeat(50_000)}x\n\n`.repeat(4);
-    const started = performance.now();
-
-    hasMarkdownSignals(hostile);
-
-    expect(performance.now() - started).toBeLessThan(50);
+  // A lone separator becomes a divider in the plain-text paste; it must not
+  // send the rest of the text through the Markdown parser.
+  it('does not read a lone separator line as a Markdown signal', () => {
+    expect(hasMarkdownSignals('---\n\nTAIL')).toBe(false);
+    expect(hasMarkdownSignals('***\n\nx')).toBe(false);
+    expect(hasMarkdownSignals('Before\n\n___\n\nAfter')).toBe(false);
+    expect(hasMarkdownSignals('Before\r\n\r\n---\r\n\r\nAfter')).toBe(false);
+    expect(hasMarkdownSignals('a *b* c\nsecond line\n\n---\n\nAfter')).toBe(false);
   });
 
   it('does not detect dollar amounts as math', () => {

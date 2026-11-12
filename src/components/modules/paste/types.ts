@@ -62,6 +62,8 @@ export interface HandlerContext {
   pasteTarget?: Element;
   /** The block data came from `application/x-blok`, not a converted foreign flavour. */
   fromBlokClipboard?: boolean;
+  /** The text came from an html flavour that says it is literal text, so no line is read as a separator. */
+  literalText?: boolean;
 }
 
 /**

@@ -1027,6 +1027,61 @@ test.describe('cross-context round trips', () => {
     });
   }
 
+  test('plain only: a lone separator becomes a divider and the rest stays plain text', async ({ page }) => {
+    await createEditor(page, 'cc-b');
+    await focusFirstEditable(page, 'cc-b');
+    await pasteClip(page, 'cc-b', { 'text/plain': 'a *b* c\nsecond line\n\n---\n\nAfter' });
+    const after = (await settledSave(page, 'cc-b')).blocks;
+
+    // Text saves as segments here.
+    const textOf = (text: unknown): string => Array.isArray(text) ? text.map((seg: { text?: string }) => seg.text ?? '').join('') : '';
+
+    expect(after.map((b) => `${b.type} ${textOf(b.data.text)}`.trim()))
+      .toEqual(['paragraph a *b* c', 'paragraph second line', 'divider', 'paragraph After']);
+  });
+
+  test('literal html text: a separator line stays text when the html says the text is literal', async ({ page }) => {
+    const text = 'Before\n\n---\n\nAfter';
+
+    await createEditor(page, 'cc-b');
+    await focusFirstEditable(page, 'cc-b');
+    await pasteClip(page, 'cc-b', { 'text/html': text, 'text/plain': text });
+    const after = (await settledSave(page, 'cc-b')).blocks;
+
+    expect(after.map((b) => b.type)).toEqual(['paragraph', 'paragraph', 'paragraph']);
+  });
+
+  // The html paste of the same blocks is the oracle: a divider at either end
+  // means no caret split, so every pasted block lands after the paragraph.
+  for (const edge of [
+    { name: 'leading', plain: '---\n\nx', html: '<hr><p>x</p>' },
+    { name: 'trailing', plain: 'x\n\n---', html: '<p>x</p><hr>' },
+  ]) {
+    test(`plain only: a ${edge.name} separator pasted mid-text lands like the same html`, async ({ page }) => {
+      const textOf = (text: unknown): string => Array.isArray(text) ? text.map((seg: { text?: string }) => seg.text ?? '').join('') : '';
+      const pasteAtCaret = async (clip: Clip): Promise<string[]> => {
+        await createEditor(page, 'cc-b', { data: { blocks: [{ id: 'mid', type: 'paragraph', data: { text: 'ABCD' } }] } });
+        await page.getByTestId('cc-b').getByText('ABCD').click();
+        await page.evaluate(() => {
+          const node = document.querySelector('#cc-b [data-blok-id="mid"] [contenteditable="true"]')?.firstChild;
+
+          if (node) {
+            window.getSelection()?.setPosition(node, 2);
+          }
+        });
+        await pasteClip(page, 'cc-b', clip);
+
+        return (await settledSave(page, 'cc-b')).blocks.map((b) => `${b.type} ${textOf(b.data.text)}`.trim());
+      };
+
+      const fromHtml = await pasteAtCaret({ 'text/html': edge.html, 'text/plain': edge.plain });
+      const fromPlain = await pasteAtCaret({ 'text/plain': edge.plain });
+
+      expect(fromHtml).toContain('divider');
+      expect(fromPlain).toEqual(fromHtml);
+    });
+  }
+
   test('missing tool: paste into an editor without toggle, then a bold paragraph into an editor without bold', async ({ page }) => {
     test.setTimeout(60_000);
     const errors: string[] = [];

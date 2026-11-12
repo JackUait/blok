@@ -12,6 +12,19 @@ import type { HandlerContext, PasteData } from '../types';
 import type { PasteHandler } from './base';
 import { BasePasteHandler } from './base';
 
+/** `---`, `***` or `___` (3+ marks, spaces between allowed) on a line of its own. Anchored, so linear. */
+const SEPARATOR_LINE = /^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/;
+
+/**
+ * Whether line `index` is a separator: a mark line with a blank line or the
+ * text edge on both sides. A dash line right under text is a setext heading
+ * underline, and prose underlined that way stays text.
+ */
+const isSeparatorAt = (lines: string[], index: number): boolean =>
+  SEPARATOR_LINE.test(lines[index]) &&
+  (lines[index - 1] ?? '').trim() === '' &&
+  (lines[index + 1] ?? '').trim() === '';
+
 /**
  * Text Handler Priority.
  * Handles plain text that doesn't match other handlers.
@@ -42,7 +55,8 @@ export class TextHandler extends BasePasteHandler implements PasteHandler {
     }
 
     const listTarget = await this.resolveListTarget();
-    const dataToInsert = this.processPlain(data, listTarget);
+    const withSeparators = context.literalText !== true && this.Blok.Tools.blockTools.has('divider');
+    const dataToInsert = this.processPlain(data, listTarget, withSeparators);
 
     if (!dataToInsert.length) {
       return false;
@@ -103,7 +117,11 @@ export class TextHandler extends BasePasteHandler implements PasteHandler {
    * by {@link BasePasteHandler.insertPasteData}); single-line pastes stay inline
    * in the current block so no list propagation is needed.
    */
-  private processPlain(plain: string, listTarget: { style: ListItemStyle; depth: number } | null): PasteData[] {
+  private processPlain(
+    plain: string,
+    listTarget: { style: ListItemStyle; depth: number } | null,
+    withSeparators: boolean
+  ): PasteData[] {
     const { defaultBlock } = this.config;
 
     if (!plain || !defaultBlock) {
@@ -111,6 +129,12 @@ export class TextHandler extends BasePasteHandler implements PasteHandler {
     }
 
     const rawLines = plain.split(/\r?\n/);
+    const separators = new Set(withSeparators ? rawLines.flatMap((_, index) => isSeparatorAt(rawLines, index) ? [index] : []) : []);
+
+    if (separators.size > 0) {
+      return this.processWithSeparators(rawLines, separators, listTarget, defaultBlock);
+    }
+
     const contentLines = rawLines.filter((text) => text.trim());
 
     // Preserve a single leading blank segment when a multi-line paste begins
@@ -123,29 +147,58 @@ export class TextHandler extends BasePasteHandler implements PasteHandler {
     const lines = startsBlank ? ['', ...contentLines] : contentLines;
     const applyListStyle = listTarget != null && contentLines.length > 1;
 
-    return lines.map((text) => {
-      const content = Dom.make('div');
+    return lines.map((text) => this.textLine(text, applyListStyle ? listTarget : null, defaultBlock));
+  }
 
-      content.textContent = text;
+  /**
+   * Separator lines become dividers. The other lines are pasted as they would
+   * be with no separator. A divider batch is a block batch, so a blank first
+   * line needs no empty lead: base.ts splits at the caret only when the first
+   * and last items are text.
+   */
+  private processWithSeparators(
+    rawLines: string[],
+    separators: Set<number>,
+    listTarget: { style: ListItemStyle; depth: number } | null,
+    defaultBlock: string
+  ): PasteData[] {
+    const contentLines = rawLines.filter((text, index) => text.trim() && !separators.has(index));
+    const lineListTarget = contentLines.length > 1 ? listTarget : null;
 
-      if (applyListStyle && listTarget) {
-        // Carrier attributes read back by the insert loop in base.ts. They live
-        // on the content root (not in innerHTML), so the list tool's onPaste —
-        // which reads content.innerHTML for text — is unaffected.
-        content.setAttribute('data-blok-paste-list-style', listTarget.style);
-        content.setAttribute('data-blok-paste-list-depth', String(listTarget.depth));
+    return rawLines.flatMap((text, index) => {
+      if (separators.has(index)) {
+        const content = Dom.make('hr');
+
+        return [{ content, tool: 'divider', isBlock: true, event: this.composePasteEvent('tag', { data: content }) }];
       }
 
-      const event = this.composePasteEvent('tag', {
-        data: content,
-      });
-
-      return {
-        content,
-        tool: applyListStyle ? 'list' : defaultBlock,
-        isBlock: false,
-        event,
-      };
+      return text.trim() ? [this.textLine(text, lineListTarget, defaultBlock)] : [];
     });
+  }
+
+  /** One pasted line as a text block, or a list item when it continues a list. */
+  private textLine(text: string, listTarget: { style: ListItemStyle; depth: number } | null, defaultBlock: string): PasteData {
+    const content = Dom.make('div');
+
+    content.textContent = text;
+
+    if (listTarget) {
+      // Carrier attributes read back by the insert loop in base.ts. They live
+      // on the content root (not in innerHTML), so the list tool's onPaste —
+      // which reads content.innerHTML for text — is unaffected.
+      content.setAttribute('data-blok-paste-list-style', listTarget.style);
+      content.setAttribute('data-blok-paste-list-depth', String(listTarget.depth));
+    }
+
+    const event = this.composePasteEvent('tag', {
+      data: content,
+    });
+
+    return {
+      content,
+      tool: listTarget ? 'list' : defaultBlock,
+      isBlock: false,
+      event,
+    };
   }
 }

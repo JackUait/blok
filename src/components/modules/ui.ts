@@ -35,6 +35,7 @@ import { GestureController } from './uiControllers/controllers/gesture';
 import { KeyboardController } from './uiControllers/controllers/keyboard';
 import { SelectionController } from './uiControllers/controllers/selection';
 import { createDocumentClickedHandler } from './uiControllers/handlers/click';
+import { placeCaretBesideRow } from './uiControllers/handlers/row-click';
 import { createRedactorTouchHandler } from './uiControllers/handlers/touch';
 import { ToggleShortcuts } from '../../tools/toggle/toggle-shortcuts';
 import { ANNOTATION_ATTR } from '../../shared/annotation-mark';
@@ -1471,6 +1472,10 @@ export class UI extends Module<UINodes> {
    * link text) is left untouched so the link stays editable.
    */
   private redactorClicked(event: MouseEvent): void {
+    if (placeCaretBesideRow(this.Blok, this.nodes.redactor, event)) {
+      return;
+    }
+
     const target = event.target as Element | null;
     const chip = target?.closest?.(`span[${EQUATION_SOURCE_ATTR}]`);
 

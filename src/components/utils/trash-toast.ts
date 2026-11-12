@@ -3,6 +3,8 @@ import type { NotifierOptions } from '../../../types/configs/notifier';
 import type { BlokModules } from '../../types-internal/blok-modules';
 import type { Block } from '../block';
 
+import { announceHistoryPress } from './history-announcement';
+
 type Modules = Pick<BlokModules, 'HistoryAPI' | 'NotifierAPI' | 'I18n' | 'YjsManager'>;
 type DeleteModules = Modules & Pick<BlokModules, 'BlockManager'>;
 
@@ -37,7 +39,10 @@ export const showTrashToast = (Blok: Modules, before: HistoryStep | undefined): 
       label: Blok.I18n.t('tools.database.restore'),
       onClick: () => {
         stopWatching();
-        Blok.HistoryAPI.undoStep(step);
+        const applied = Blok.HistoryAPI.undoStep(step);
+
+        // Restore is Blok's own undo button: it speaks like Meta+z (Notion U109).
+        announceHistoryPress((key) => Blok.I18n.t(key), 'undo', applied);
         Blok.NotifierAPI.dismiss(options);
       },
     }],

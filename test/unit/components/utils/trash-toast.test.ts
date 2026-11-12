@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const announceMock = vi.hoisted(() => vi.fn());
+
+vi.mock('../../../../src/components/utils/announcer', () => ({ announce: announceMock }));
+
 import type { Block } from '../../../../src/components/block';
 import { deleteWithTrashToast, showTrashToast, trashesBlock } from '../../../../src/components/utils/trash-toast';
 import type { HistoryStep } from '../../../../types/api/history';
@@ -37,7 +41,7 @@ const makeModules = (steps: Array<HistoryStep | Record<string, unknown> | undefi
     },
     // A method that reads `this`, like the real I18n: an unbound call throws.
     I18n: {
-      words: { 'tools.database.movedToTrash': 'Moved to Trash', 'tools.database.restore': 'Restore' } as Record<string, string>,
+      words: { 'tools.database.movedToTrash': 'Moved to Trash', 'tools.database.restore': 'Restore', 'a11y.undone': 'Undone' } as Record<string, string>,
       t(this: { words: Record<string, string> }, key: string): string {
         return this.words[key] ?? key;
       },
@@ -78,6 +82,15 @@ describe('trash toast', () => {
 
     expect(undoStep).toHaveBeenCalledWith(after);
     expect(dismiss).toHaveBeenCalledWith(shown[0]);
+  });
+
+  it('says "Undone" when Restore undoes the step, like an undo press (Notion U109)', () => {
+    const { modules, shown } = makeModules([{}]);
+
+    showTrashToast(modules, undefined);
+    shown[0].actions?.[0].onClick();
+
+    expect(announceMock).toHaveBeenCalledWith('Undone', { group: 'history' });
   });
 
   it('closes the toast once its step is undone another way (Meta+z, U108)', async () => {

@@ -870,6 +870,13 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // notion-motion.md Round 17 §5: the sort rule's direction list is 180x65, rows 172x28 29px apart.
+  describe('sort rule flyouts', () => {
+    it('steps the rows 29px', () => {
+      expect(declared('[data-blok-database-panel-page="sort-flyout"] > [data-blok-database-panel-row] + [data-blok-database-panel-row]', 'margin-block-start')).toEqual(['var(--blok-space-0-25)']);
+    });
+  });
+
   // notion-motion.md Round 9 (r9-vs-group.raw, table grouped by Select): Group by at y+46, Sort at y+75, Hide empty groups at y+104.
   describe('view settings Group page', () => {
     const PAGE = '[data-blok-database-panel-page="group"]';

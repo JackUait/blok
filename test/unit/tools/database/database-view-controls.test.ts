@@ -942,6 +942,80 @@ describe('DatabaseViewControls', () => {
       expect(controls.effective(saved.view).sorts[0]).toMatchObject({ propertyId: 'num', direction: 'desc' });
     });
 
+    // notion-motion.md Round 17 §5: the rule's pickers are flyouts under their button; the rule panel stays.
+    it('opens the direction list as a 180-wide flyout over the rule panel, the current direction checked', () => {
+      withSort();
+      click('database-sort-pill');
+      click('database-sort-direction-s1');
+      const flyout = q('database-sort-direction-picker');
+
+      expect(flyout?.style.width).toBe('180px');
+      expect(flyout?.getAttribute('data-blok-database-panel-page')).toBe('sort-flyout');
+      expect(q('database-sort-panel')?.contains(flyout)).toBe(false);
+      expect(q('database-sort-panel')?.querySelector('[data-blok-testid="database-sort-row-s1"]')).not.toBeNull();
+      expect(q('database-sort-direction-asc')?.getAttribute('aria-checked')).toBe('true');
+      expect(q('database-sort-direction-desc')?.getAttribute('aria-checked')).toBe('false');
+    });
+
+    it('closes the direction flyout on a pick and keeps the rule panel', () => {
+      withSort();
+      click('database-sort-pill');
+      click('database-sort-direction-s1');
+      click('database-sort-direction-desc');
+
+      expect(q('database-sort-direction-picker')).toBeNull();
+      expect(q('database-sort-panel')?.isConnected).toBe(true);
+    });
+
+    it('opens the property list as a 280-wide flyout over the rule panel, and a pick changes the rule', () => {
+      const { controls, saved } = withSort();
+
+      click('database-sort-pill');
+      click('database-sort-property-s1');
+      const flyout = q('database-sort-property-picker');
+
+      expect(flyout?.style.width).toBe('280px');
+      expect(q('database-sort-panel')?.contains(flyout)).toBe(false);
+      expect(q('database-sort-panel')?.querySelector('[data-blok-testid="database-sort-row-s1"]')).not.toBeNull();
+
+      click('database-pick-property-title');
+
+      expect(controls.effective(saved.view).sorts[0]).toMatchObject({ propertyId: 'title' });
+      expect(q('database-sort-property-picker')).toBeNull();
+      expect(q('database-sort-panel')?.isConnected).toBe(true);
+    });
+
+    it('Escape closes only the direction flyout and puts focus back on its button', () => {
+      withSort();
+      click('database-sort-pill');
+      click('database-sort-direction-s1');
+      document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(q('database-sort-direction-picker')).toBeNull();
+      expect(q('database-sort-panel')).not.toBeNull();
+      expect(q('database-sort-direction-s1')).toHaveFocus();
+    });
+
+    it('puts focus back on the rule\'s button after a pick, with the new label', () => {
+      withSort();
+      click('database-sort-pill');
+      click('database-sort-direction-s1');
+      click('database-sort-direction-desc');
+
+      expect(q('database-sort-direction-s1')).toHaveFocus();
+      expect(text(q('database-sort-direction-s1'))).toContain('tools.database.sortHighLow');
+    });
+
+    it('closes a rule flyout when the sort panel closes another way', () => {
+      const { controls } = withSort();
+
+      click('database-sort-pill');
+      click('database-sort-direction-s1');
+      controls.destroy();
+
+      expect(q('database-sort-direction-picker')).toBeNull();
+    });
+
     // notion-motion.md Round 17 §5: "Add sort" goes away once every property is sorted.
     it('hides "Add sort" when every sortable property is sorted', () => {
       const env = setup();

@@ -60,6 +60,8 @@ export class DatabasePanel {
   private readonly element: HTMLElement;
   private readonly popover: CellPopover;
   private readonly stack: PanelPage[];
+  /** Flyouts opened over this panel: they close with it. */
+  private readonly owned = new Set<DatabasePanel>();
   private closed = false;
 
   constructor(options: DatabasePanelOptions) {
@@ -103,6 +105,11 @@ export class DatabasePanel {
   /** Keeps this panel open under a panel it opens; outside presses, focus and Escape go there until the release. */
   hold(): () => void {
     return this.popover.hold();
+  }
+
+  /** Closes `child` when this panel closes. */
+  own(child: DatabasePanel): void {
+    this.owned.add(child);
   }
 
   push(page: PanelPage): void {
@@ -154,6 +161,7 @@ export class DatabasePanel {
   private finish(escape = false): void {
     if (this.closed) return;
     this.closed = true;
+    this.owned.forEach((child) => child.close());
     this.options.onClose?.(escape);
   }
 

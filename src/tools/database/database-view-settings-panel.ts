@@ -84,6 +84,7 @@ import { nanoid } from 'nanoid';
 import { CARD_LAYOUTS, resolveSubItemsDisplay, resolveSubItemsFilter } from './sub-items';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { automationListPage } from './database-automations-panel';
+import { openSortDirectionFlyout, openSortPropertyFlyout, sortChevron } from './database-sort-flyouts';
 import { dateRuleControls, operatorPick } from './database-filter-chip';
 import { VIEW_ICONS } from './database-tab-bar';
 import type { AutomationSettings } from './database-automations-panel';
@@ -2125,24 +2126,32 @@ export class ViewSettingsPages {
           remove.setAttribute('data-blok-database-sort-remove', '');
           line.setAttribute('data-blok-database-sort-row', '');
           line.setAttribute('data-blok-testid', `database-sort-row-${sort.id}`);
-          line.append(
-            panelRow({
-              label: property.name,
-              testId: `database-sort-property-${sort.id}`,
-              icon: propertyTypeMeta(property.type).icon,
-              opensPage: true,
-              onClick: () => panel.push(this.pickProperty(this.t('settingsSort'), GROUPABLE_TYPES, (picked) => {
-                this.ctx.updatePersonal({ sorts: withEntryIds(this.ctx.view().sorts).map((s) => (s.id === sort.id ? { ...s, propertyId: picked.id } : s)) });
-                panel.back();
-              })),
-            }),
-            panelRow({
-              label: this.ctx.i18n.t(sortDirectionLabelKey(property.type, sort.direction)),
-              testId: `database-sort-direction-${sort.id}`,
-              onClick: () => write(sorts.map((s) => (s.id === sort.id ? { ...s, direction: s.direction === 'asc' ? 'desc' : 'asc' } : s))),
-            }),
-            remove
-          );
+          // notion-motion.md Round 17 §5: both buttons open a flyout under them; the page stays.
+          const propertyButton: HTMLElement = sortChevron(panelRow({
+            label: property.name,
+            testId: `database-sort-property-${sort.id}`,
+            icon: propertyTypeMeta(property.type).icon,
+            onClick: () => openSortPropertyFlyout(
+              propertyButton,
+              panel,
+              schema.filter((p) => GROUPABLE_TYPES.includes(p.type)),
+              (picked) => write(withEntryIds(this.ctx.view().sorts).map((s) => (s.id === sort.id ? { ...s, propertyId: picked.id } : s)))
+            ),
+          }));
+          const directionButton: HTMLElement = sortChevron(panelRow({
+            label: this.ctx.i18n.t(sortDirectionLabelKey(property.type, sort.direction)),
+            testId: `database-sort-direction-${sort.id}`,
+            onClick: () => openSortDirectionFlyout(
+              directionButton,
+              panel,
+              (key) => this.ctx.i18n.t(key),
+              property,
+              sort.direction,
+              (direction) => write(withEntryIds(this.ctx.view().sorts).map((s) => (s.id === sort.id ? { ...s, direction } : s)))
+            ),
+          }));
+
+          line.append(propertyButton, directionButton, remove);
 
           return [{ id: sort.id, element: line }];
         });

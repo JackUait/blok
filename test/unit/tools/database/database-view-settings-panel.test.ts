@@ -975,8 +975,67 @@ describe('view settings panel', () => {
     expect(document.querySelector(`[data-blok-testid="database-sort-direction-${sort.id ?? ''}"]`)?.textContent).toContain('tools.database.sortLowHigh');
 
     click(`database-sort-direction-${sort.id ?? ''}`);
+    click('database-sort-direction-desc');
 
     expect(h.state.view.sorts[0].direction).toBe('desc');
+  });
+
+  // notion-motion.md Round 17 §5: on the Sort page the rule's pickers are flyouts under their button, the page stays.
+  describe('sort rule pickers', () => {
+    const q = (id: string): HTMLElement | null => document.querySelector(`[data-blok-testid="${id}"]`);
+
+    it('opens the direction list as a 180-wide flyout instead of flipping, the current one checked', () => {
+      const h = harness({ sorts: [{ id: 's1', propertyId: 'num', direction: 'asc' }] });
+      const panel = h.open('sort');
+
+      click('database-sort-direction-s1');
+      const flyout = q('database-sort-direction-picker');
+
+      expect(h.state.view.sorts[0].direction).toBe('asc');
+      expect(flyout?.style.width).toBe('180px');
+      expect(panel.root.contains(flyout)).toBe(false);
+      expect(q('database-sort-direction-asc')?.getAttribute('aria-checked')).toBe('true');
+
+      click('database-sort-direction-desc');
+
+      expect(h.state.view.sorts[0].direction).toBe('desc');
+      expect(q('database-sort-direction-picker')).toBeNull();
+      expect(panel.root.isConnected).toBe(true);
+    });
+
+    it('opens the property list as a 280-wide flyout and keeps the Sort page', () => {
+      const h = harness({ sorts: [{ id: 's1', propertyId: 'num', direction: 'asc' }] });
+      const panel = h.open('sort');
+
+      click('database-sort-property-s1');
+      const flyout = q('database-sort-property-picker');
+
+      expect(flyout?.style.width).toBe('280px');
+      expect(panel.root.contains(flyout)).toBe(false);
+      expect(panel.depth).toBe(1);
+
+      click('database-pick-property-due');
+
+      expect(h.state.view.sorts[0].propertyId).toBe('due');
+      expect(q('database-sort-property-picker')).toBeNull();
+    });
+
+    it('puts focus back on the direction button after a pick', () => {
+      harness({ sorts: [{ id: 's1', propertyId: 'num', direction: 'asc' }] }).open('sort');
+      click('database-sort-direction-s1');
+      click('database-sort-direction-desc');
+
+      expect(q('database-sort-direction-s1')).toHaveFocus();
+    });
+
+    it('closes a rule flyout when the panel closes', () => {
+      const panel = harness({ sorts: [{ id: 's1', propertyId: 'num', direction: 'asc' }] }).open('sort');
+
+      click('database-sort-direction-s1');
+      panel.close();
+
+      expect(q('database-sort-direction-picker')).toBeNull();
+    });
   });
 
   // notion-motion.md Round 17 §5: the Sort row shows the sorted property's name.

@@ -6,13 +6,13 @@ import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { propertyTypeMeta } from './database-property-types';
 import type { I18n } from '../../../types';
 import { DatabasePanel, panelInput, panelReorderList, panelRow, panelSeparator } from './database-panel';
-import type { PanelPage } from './database-panel';
 import { PersonalViewEdits } from './database-view-state';
 import type { ViewStateFallback } from './database-view-state';
 import { FILTERABLE_TYPES, defaultFilterFor, filterPillLabel, filterValueText, sortDirectionLabelKey } from './database-filter-labels';
 import { countFilterRules, withEntryIds } from './filter-tree';
 import { openAdvancedFilter, openViewSettings } from './database-view-settings-panel';
 import { openFilterChip } from './database-filter-chip';
+import { openSortDirectionFlyout, openSortPropertyFlyout, sortChevron } from './database-sort-flyouts';
 import { clearSearchMatches, paintSearchMatches } from './database-search-highlight';
 import { onHover } from '../../components/utils/tooltip';
 import type { AutofillPanelSettings, DataSourceSettings, EditPropertiesSettings, StarterRow, StructureSettings, ViewGroupEntry, ViewSettingsAction, ViewSettingsContext, ViewSettingsStart } from './database-view-settings-panel';
@@ -890,37 +890,6 @@ export class DatabaseViewControls {
   private openSortPanel(anchor: HTMLElement, opener: HTMLElement = anchor): void {
     const sorts = (): Array<SortConfig & { id: string }> => withEntryIds(this.view()?.sorts ?? []);
     const write = (next: SortConfig[]): void => this.updatePersonal({ sorts: next });
-    const chevron = (row: HTMLElement): HTMLElement => {
-      row.append(part('data-blok-database-chip-chevron', { icon: IconChevronDown }));
-
-      return row;
-    };
-    const propertyPage = (title: string, onPick: (property: PropertyDefinition) => void): PanelPage => ({
-      title,
-      build: () => {
-        const shown = this.host.schema().filter((p) => SORTABLE_TYPES.includes(p.type));
-
-        return [...shown.filter((p) => p.type === 'title'), ...shown.filter((p) => p.type !== 'title').sort((a, b) => a.name.localeCompare(b.name))]
-          .map((property) => panelRow({
-            label: property.name,
-            icon: propertyTypeMeta(property.type).icon,
-            testId: `database-pick-property-${property.id}`,
-            onClick: () => onPick(property),
-          }));
-      },
-    });
-    const directionPage = (sort: SortConfig & { id: string }, property: PropertyDefinition): PanelPage => ({
-      title: property.name,
-      build: (panel) => (['asc', 'desc'] as const).map((direction) => panelRow({
-        label: this.host.i18n.t(sortDirectionLabelKey(property.type, direction)),
-        testId: `database-sort-direction-${direction}`,
-        checked: sort.direction === direction,
-        onClick: () => {
-          write(sorts().map((s) => (s.id === sort.id ? { ...s, direction } : s)));
-          panel.back();
-        },
-      })),
-    });
     const panel = new DatabasePanel({
       anchor,
       root: {
@@ -946,21 +915,33 @@ export class DatabaseViewControls {
             remove.setAttribute('data-blok-database-sort-remove', '');
             line.setAttribute('data-blok-database-sort-row', '');
             line.setAttribute('data-blok-testid', `database-sort-row-${sort.id}`);
+            const propertyButton: HTMLElement = sortChevron(panelRow({
+              label: property.name,
+              testId: `database-sort-property-${sort.id}`,
+              icon: propertyTypeMeta(property.type).icon,
+              onClick: () => openSortPropertyFlyout(
+                propertyButton,
+                current,
+                schema.filter((p) => SORTABLE_TYPES.includes(p.type)),
+                (picked) => write(sorts().map((s) => (s.id === sort.id ? { ...s, propertyId: picked.id } : s)))
+              ),
+            }));
+            const directionButton: HTMLElement = sortChevron(panelRow({
+              label: this.host.i18n.t(sortDirectionLabelKey(property.type, sort.direction)),
+              testId: `database-sort-direction-${sort.id}`,
+              onClick: () => openSortDirectionFlyout(
+                directionButton,
+                current,
+                (key) => this.host.i18n.t(key),
+                property,
+                sort.direction,
+                (direction) => write(sorts().map((s) => (s.id === sort.id ? { ...s, direction } : s)))
+              ),
+            }));
+
             line.append(
-              chevron(panelRow({
-                label: property.name,
-                testId: `database-sort-property-${sort.id}`,
-                icon: propertyTypeMeta(property.type).icon,
-                onClick: () => current.push(propertyPage(this.t('settingsSort'), (picked) => {
-                  write(sorts().map((s) => (s.id === sort.id ? { ...s, propertyId: picked.id } : s)));
-                  current.back();
-                })),
-              })),
-              chevron(panelRow({
-                label: this.host.i18n.t(sortDirectionLabelKey(property.type, sort.direction)),
-                testId: `database-sort-direction-${sort.id}`,
-                onClick: () => current.push(directionPage(sort, property)),
-              })),
+              propertyButton,
+              directionButton,
               remove
             );
 

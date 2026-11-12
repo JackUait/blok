@@ -14,7 +14,7 @@ vi.mock('../../../../src/tools/audio/motion', () => ({
   createPeaksReader: vi.fn(() => peaksReader),
 }));
 
-import { attachWire, paintWire, wireOffset, WIRE_BEAD_RADIUS, WIRE_INSET } from '../../../../src/tools/audio/wire';
+import { attachWire, createWireMotion, paintWire, wireOffset, WIRE_BEAD_RADIUS, WIRE_INSET } from '../../../../src/tools/audio/wire';
 
 interface Call { name: string; args: number[]; stroke: string; fill: string }
 
@@ -43,7 +43,12 @@ const fakeContext = (): { ctx: CanvasRenderingContext2D; calls: Call[] } => {
   return { ctx: ctx as unknown as CanvasRenderingContext2D, calls };
 };
 
-const REST = { level: 0, kick: 0, time: 0 };
+const REST = { hum: 0, swing: 0, ripple: 0, slowPhase: 0, finePhase: 0 };
+const LOUD = { hum: 1, swing: 1, ripple: 1, slowPhase: 3.7, finePhase: 1.3 };
+const FRAME = 1 / 60;
+const QUIET = { level: 0, bass: 0, mid: 0, kick: 0, snare: 0, hat: 0 };
+const tallest = (motion: Parameters<typeof wireOffset>[1]): number =>
+  Math.max(...Array.from({ length: 121 }, (_, i) => Math.abs(wireOffset(i / 120, motion))));
 
 describe('wireOffset', () => {
   it('is flat at every point while nothing plays', () => {
@@ -52,25 +57,78 @@ describe('wireOffset', () => {
     expect(offsets.every((y) => y === 0)).toBe(true);
   });
 
-  it('is pinned at both ends however loud the track is', () => {
-    const loud = { level: 1, kick: 1, time: 3.7 };
-
-    expect(Math.abs(wireOffset(0, loud))).toBeLessThan(1e-9);
-    expect(Math.abs(wireOffset(1, loud))).toBeLessThan(1e-9);
+  it('is pinned at both ends however hard the track hits', () => {
+    expect(Math.abs(wireOffset(0, LOUD))).toBeLessThan(1e-9);
+    expect(Math.abs(wireOffset(1, LOUD))).toBeLessThan(1e-9);
   });
 
-  it('moves in the middle when the track is loud, within 16px', () => {
-    const loud = { level: 1, kick: 1, time: 3.7 };
-    const offsets = Array.from({ length: 121 }, (_, i) => wireOffset(i / 120, loud));
+  it('moves in the middle on a full hit, within 12px', () => {
+    expect(tallest(LOUD)).toBeGreaterThan(4);
+    expect(tallest(LOUD)).toBeLessThanOrEqual(12);
+  });
+});
 
-    expect(Math.max(...offsets.map(Math.abs))).toBeGreaterThan(4);
-    expect(Math.max(...offsets.map(Math.abs))).toBeLessThanOrEqual(16);
+describe('createWireMotion', () => {
+  /** Runs `seconds` of frames; `at(i)` gives the signals of frame i. */
+  const run = (motion: ReturnType<typeof createWireMotion>, seconds: number, at: (frame: number) => typeof QUIET | null): ReturnType<ReturnType<typeof createWireMotion>['step']> => {
+    const frames = Math.round(seconds / FRAME);
+
+    return Array.from({ length: frames }, (_, i) => motion.step(at(i), FRAME))[frames - 1];
+  };
+  const hit = (kick: number) => (frame: number): typeof QUIET => ({ ...QUIET, level: 1, kick: frame === 0 ? kick : 0 });
+
+  it('a loud track with no hits only hums: the line stays within 2px', () => {
+    const motion = createWireMotion();
+    const after = run(motion, 3, () => ({ ...QUIET, level: 1 }));
+
+    expect(tallest(after)).toBeGreaterThan(0.5);
+    expect(tallest(after)).toBeLessThanOrEqual(2);
   });
 
-  it('changes shape as time passes', () => {
-    const at = (time: number): number => wireOffset(0.4, { level: 0.8, kick: 0.5, time });
+  it('a strong hit swings the line, and it calms before a second passes', () => {
+    const motion = createWireMotion();
+    const struck = run(motion, 0.1, hit(0.75));
+    const later = run(motion, 0.8, () => ({ ...QUIET, level: 1 }));
 
-    expect(at(1)).not.toBeCloseTo(at(1.1), 3);
+    expect(struck.swing).toBeGreaterThan(0.5);
+    expect(later.swing).toBeLessThan(struck.swing * 0.2);
+  });
+
+  it('a weak hit moves the line far less than a strong one', () => {
+    const strong = run(createWireMotion(), 0.1, hit(0.75)).swing;
+    const weak = run(createWireMotion(), 0.1, hit(0.45)).swing;
+
+    expect(weak).toBeLessThan(strong / 3);
+  });
+
+  it('the wave runs faster on a hit than between hits', () => {
+    const motion = createWireMotion();
+    const start = run(motion, 0.5, () => ({ ...QUIET, level: 1 })).slowPhase;
+    const idle = run(motion, 0.2, () => ({ ...QUIET, level: 1 })).slowPhase - start;
+    const before = motion.step({ ...QUIET, level: 1, kick: 0.8 }, FRAME).slowPhase;
+    const onHit = run(motion, 0.2, () => ({ ...QUIET, level: 1 })).slowPhase - before;
+
+    expect(onHit).toBeGreaterThan(idle * 2);
+  });
+
+  it('snares and hats ripple the line without swinging it', () => {
+    const motion = createWireMotion();
+    const after = run(motion, 0.1, (frame) => ({ ...QUIET, level: 1, snare: frame === 0 ? 0.8 : 0 }));
+
+    expect(after.ripple).toBeGreaterThan(0.3);
+    expect(after.swing).toBeLessThan(0.01);
+  });
+
+  it('lies exactly flat once the track stops', () => {
+    const motion = createWireMotion();
+
+    run(motion, 0.2, hit(0.9));
+    expect(motion.atRest()).toBe(false);
+
+    const after = run(motion, 4, () => null);
+
+    expect(motion.atRest()).toBe(true);
+    expect(tallest(after)).toBe(0);
   });
 });
 
@@ -108,11 +166,10 @@ describe('paintWire', () => {
     expect(Math.max(...points.map(([x]) => x))).toBe(208 - WIRE_INSET);
   });
 
-  it('lifts the bead with the line when the track is loud', () => {
-    const loud = { level: 1, kick: 1, time: 3.7 };
-    const arc = paint(0.4, loud).find((c) => c.name === 'arc');
+  it('lifts the bead with the line on a hit', () => {
+    const arc = paint(0.4, LOUD).find((c) => c.name === 'arc');
 
-    expect(arc?.args[1]).toBeCloseTo(20 + wireOffset(0.4, loud), 6);
+    expect(arc?.args[1]).toBeCloseTo(20 + wireOffset(0.4, LOUD), 6);
   });
 });
 

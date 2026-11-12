@@ -1,8 +1,10 @@
+import type { InkSignals } from './motion';
 import { createTrackSignals } from './signals';
 
 /**
  * The compact player's seek line: one string with a bead at the playhead. It
- * lies flat at rest and hums with the track while it plays.
+ * lies flat at rest. While the track plays it hums a little, and each strong
+ * hit plucks it.
  */
 
 export interface WireHandle {
@@ -10,12 +12,15 @@ export interface WireHandle {
 }
 
 export interface WireMotion {
-  /** Smoothed loudness, 0..1. */
-  level: number;
-  /** Smoothed hit, 0..1. */
-  kick: number;
-  /** Seconds the line has been moving. */
-  time: number;
+  /** Steady loudness, 0..1. Only a small tremble: on a finished mix it sits near 1 all the time. */
+  hum: number;
+  /** How hard the last kicks plucked the line, 0..1. */
+  swing: number;
+  /** The same for snares and hats, 0..1. */
+  ripple: number;
+  /** Phases of the long and the short wave, in radians. They run faster on a hit. */
+  slowPhase: number;
+  finePhase: number;
 }
 
 /** Gap between the canvas edge and the line's ends. audio.css sizes the seek thumb to twice this, so a click lands under the bead. */
@@ -24,15 +29,28 @@ export const WIRE_BEAD_RADIUS = 4.5;
 
 const SEGMENTS = 120;
 const LINE_WIDTH = 2;
-/** Tallest swing in px of the slow wave a hit sends down the line. */
-const KICK_SWING = 10;
-/** Tallest swing in px of the fast hum that follows loudness. */
-const LEVEL_SWING = 6;
-/** Seconds for a hit to fall to ~37%. */
-const KICK_DECAY = 0.1;
+/** Tallest reach in px of each part of the motion. */
+const SWING_PX = 7;
+const RIPPLE_PX = 3;
+const HUM_PX = 1.5;
+/** A hit this weak or weaker does not move the line. Dense tracks land ~8 weak hits a second. */
+const HIT_FLOOR = 0.3;
+/** A hit this strong plucks at full reach. */
+const HIT_FULL = 0.75;
+/** Above 1, so the gap between a weak and a strong hit grows. */
+const HIT_CURVE = 1.5;
+const HAT_WEIGHT = 0.5;
+/** Seconds for a pluck to fall to ~37%. */
+const SWING_DECAY = 0.22;
+const RIPPLE_DECAY = 0.12;
 /** Per-second rates the drawn values chase their targets at. */
-const LEVEL_CHASE = 14;
-const KICK_CHASE = 30;
+const HIT_CHASE = 30;
+const HUM_CHASE = 6;
+/** Radians per second each wave travels: at idle, plus this much more at a full hit. */
+const SLOW_IDLE = 1.2;
+const SLOW_SURGE = 9;
+const FINE_IDLE = 2;
+const FINE_SURGE = 16;
 /** Below this the line counts as flat. */
 const REST_EPSILON = 0.002;
 const MAX_PIXEL_RATIO = 3;
@@ -41,10 +59,51 @@ const MAX_FRAME_S = 0.05;
 
 /** How far the line sits from its rest height at `ratio` (0..1) along it, in px. Both ends are pinned. */
 export function wireOffset(ratio: number, motion: WireMotion): number {
-  const slow = motion.kick * KICK_SWING * Math.sin(ratio * 9.42 - motion.time * 9);
-  const fast = motion.level * LEVEL_SWING * Math.sin(ratio * 40.8 + motion.time * 31);
+  const slow = motion.swing * SWING_PX * Math.sin(ratio * 9.42 - motion.slowPhase);
+  const fine = (motion.hum * HUM_PX + motion.ripple * RIPPLE_PX) * Math.sin(ratio * 40.8 + motion.finePhase);
 
-  return Math.sin(Math.PI * ratio) * (slow + fast);
+  return Math.sin(Math.PI * ratio) * (slow + fine);
+}
+
+/** 0 for a weak hit, 1 for a strong one. */
+const pluck = (strength: number): number =>
+  Math.min(1, Math.max(0, (strength - HIT_FLOOR) / (HIT_FULL - HIT_FLOOR))) ** HIT_CURVE;
+
+export interface WireMotionStepper {
+  /** Advance one frame. `heard` is null while the track is not playing. */
+  step(heard: InkSignals | null, dtSec: number): WireMotion;
+  atRest(): boolean;
+}
+
+export function createWireMotion(): WireMotionStepper {
+  const motion: WireMotion = { hum: 0, swing: 0, ripple: 0, slowPhase: 0, finePhase: 0 };
+  // What the last hits left behind; the drawn values chase these.
+  const struck = { swing: 0, ripple: 0 };
+  const flat = (): boolean => motion.hum < REST_EPSILON && motion.swing < REST_EPSILON && motion.ripple < REST_EPSILON;
+
+  return {
+    step(heard: InkSignals | null, dtSec: number): WireMotion {
+      const high = heard ? Math.max(pluck(heard.snare), pluck(heard.hat) * HAT_WEIGHT) : 0;
+
+      struck.swing = Math.max(struck.swing * Math.exp(-dtSec / SWING_DECAY), heard ? pluck(heard.kick) : 0);
+      struck.ripple = Math.max(struck.ripple * Math.exp(-dtSec / RIPPLE_DECAY), high);
+      motion.swing += (struck.swing - motion.swing) * Math.min(1, dtSec * HIT_CHASE);
+      motion.ripple += (struck.ripple - motion.ripple) * Math.min(1, dtSec * HIT_CHASE);
+      motion.hum += ((heard?.level ?? 0) - motion.hum) * Math.min(1, dtSec * HUM_CHASE);
+      motion.slowPhase += dtSec * (SLOW_IDLE + SLOW_SURGE * motion.swing);
+      motion.finePhase += dtSec * (FINE_IDLE + FINE_SURGE * motion.ripple);
+
+      if (!heard && flat()) {
+        struck.swing = 0;
+        struck.ripple = 0;
+        Object.assign(motion, { hum: 0, swing: 0, ripple: 0 });
+      }
+
+      // A copy: the caller keeps frames to compare, and this one changes every step.
+      return { ...motion };
+    },
+    atRest: flat,
+  };
 }
 
 export interface WirePaint extends WireMotion {
@@ -111,7 +170,8 @@ export function attachWire(opts: {
   mount.appendChild(canvas);
 
   const signals = createTrackSignals(opts);
-  const state = { playing: false, rafId: 0, last: 0, destroyed: false, level: 0, kick: 0, hit: 0, time: 0 };
+  const motion = createWireMotion();
+  const state = { playing: false, rafId: 0, last: 0, destroyed: false, shape: motion.step(null, 0) };
 
   const paint = (): void => {
     const width = canvas.clientWidth;
@@ -138,39 +198,20 @@ export function attachWire(opts: {
       width,
       height,
       progress: media.duration ? Math.min(1, Math.max(0, media.currentTime / media.duration)) : 0,
-      level: state.level,
-      kick: state.kick,
-      time: state.time,
+      ...state.shape,
       ink: styles.getPropertyValue('--blok-audio-bar-played').trim() || '#222',
       rest: styles.getPropertyValue('--blok-audio-bar').trim() || '#ddd',
     });
-  };
-
-  const step = (dt: number): void => {
-    const heard = state.playing ? signals.read(dt) : null;
-
-    state.hit = Math.max(state.hit * Math.exp(-dt / KICK_DECAY), heard?.kick ?? 0);
-    state.level += ((heard?.level ?? 0) - state.level) * Math.min(1, dt * LEVEL_CHASE);
-    state.kick += ((heard ? state.hit : 0) - state.kick) * Math.min(1, dt * KICK_CHASE);
-    state.time += dt;
   };
 
   const frame = (now: number): void => {
     const dt = state.last ? Math.min((now - state.last) / 1000, MAX_FRAME_S) : 0;
 
     state.last = now;
-    step(dt);
-
-    const flat = !state.playing && state.level < REST_EPSILON && state.kick < REST_EPSILON;
-
-    if (flat) {
-      state.level = 0;
-      state.kick = 0;
-      state.hit = 0;
-    }
+    state.shape = motion.step(state.playing ? signals.read(dt) : null, dt);
     paint();
     // Keep going after pause until the line lies flat.
-    state.rafId = flat ? 0 : requestAnimationFrame(frame);
+    state.rafId = state.playing || !motion.atRest() ? requestAnimationFrame(frame) : 0;
   };
 
   const onPlay = (): void => {

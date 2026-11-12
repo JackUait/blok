@@ -24,8 +24,8 @@ export interface InternalMarkdownImportConfig extends MarkdownImportConfig {
    */
   htmlText?: boolean;
   /**
-   * The page a link points at, when the host knows it. Such a link becomes the
-   * page's mention. Read with `htmlText` only. The paste sets it.
+   * The page a link with this visible text points at, when it should become
+   * the page's mention. Read with `htmlText` only. The paste sets it.
    */
-  pageIdFromHref?: (url: string) => string | undefined;
+  pageIdFromHref?: (url: string, text: string) => string | undefined;
 }

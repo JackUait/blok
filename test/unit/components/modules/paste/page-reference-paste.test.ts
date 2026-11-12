@@ -115,9 +115,11 @@ describe('inline page reference paste', () => {
 
 describe('a pasted link to a page this host knows', () => {
   const pageIdFromHref = (href: string): string | null => /^https:\/\/workspace\.test\/pages\/([^/?#]+)$/.exec(href)?.[1] ?? null;
+  const titles: Record<string, { title?: string; access?: 'none' }> = { roadmap: { title: 'Roadmap' }, secret: { title: 'Secret', access: 'none' } };
+  const resolve = (pageId: string): { title?: string; access?: 'none' } | null => titles[pageId] ?? null;
 
   /** Pastes `data` at the end of the `before` paragraph and returns what was saved. */
-  const pasteInto = async (text: string, data: Record<string, string>, config: Record<string, unknown> = { pageIdFromHref }): Promise<OutputData> => {
+  const pasteInto = async (text: string, data: Record<string, string>, config: Record<string, unknown> = { pageIdFromHref, resolve }): Promise<OutputData> => {
     const instance = new Blok({
       holder,
       sanitizer: { a: { href: true } },
@@ -168,6 +170,71 @@ describe('a pasted link to a page this host knows', () => {
     const output = await pasteInto('See ', { 'text/html': '<a href="https://workspace.test/pages/roadmap">Roadmap</a>', 'text/plain': 'Roadmap' });
 
     expect(texts(output)).toEqual(['See <a data-blok-page-id="roadmap">Page</a>']);
+  });
+
+  it('stays a link with its own text when that text is not the page\'s title', async () => {
+    const output = await pasteInto('See ', { 'text/plain': '[click here](https://workspace.test/pages/roadmap) now' });
+
+    expect(texts(output)).toEqual(['See <a href="https://workspace.test/pages/roadmap">click here</a> now']);
+  });
+
+  it('stays a link with its own text when html link text is not the page\'s title', async () => {
+    const output = await pasteInto('See ', { 'text/html': '<a href="https://workspace.test/pages/roadmap">click here</a>', 'text/plain': 'click here' });
+
+    expect(texts(output)).toEqual(['See <a href="https://workspace.test/pages/roadmap">click here</a>']);
+  });
+
+  it('compares the title as written: another case stays a link', async () => {
+    const output = await pasteInto('See ', { 'text/plain': '[roadmap](https://workspace.test/pages/roadmap) now' });
+
+    expect(texts(output)).toEqual(['See <a href="https://workspace.test/pages/roadmap">roadmap</a> now']);
+  });
+
+  it('becomes the mention when Markdown link text is the URL itself', async () => {
+    const output = await pasteInto('See ', { 'text/plain': '[https://workspace.test/pages/roadmap](https://workspace.test/pages/roadmap) now' });
+
+    expect(texts(output)).toEqual(['See <a data-blok-page-id="roadmap">Page</a> now']);
+  });
+
+  it('becomes the mention when html link text is the URL itself, with or without a trailing slash', async () => {
+    const output = await pasteInto('See ', {
+      'text/html': '<a href="https://workspace.test/pages/roadmap">https://workspace.test/pages/roadmap/</a>',
+      'text/plain': 'https://workspace.test/pages/roadmap/',
+    });
+
+    expect(texts(output)).toEqual(['See <a data-blok-page-id="roadmap">Page</a>']);
+  });
+
+  it('becomes the mention when html link text is the title with spaces around it', async () => {
+    const output = await pasteInto('See ', { 'text/html': '<a href="https://workspace.test/pages/roadmap"> Roadmap </a>', 'text/plain': 'Roadmap' });
+
+    expect(texts(output)).toEqual(['See <a data-blok-page-id="roadmap">Page</a>']);
+  });
+
+  it('stays a link when the user may not see the page, even with its title as text', async () => {
+    const output = await pasteInto('See ', { 'text/plain': '[Secret](https://workspace.test/pages/secret) now' });
+
+    expect(texts(output)).toEqual(['See <a href="https://workspace.test/pages/secret">Secret</a> now']);
+  });
+
+  it('stays a link when the host fails to resolve the page', async () => {
+    const failing = (): Promise<never> => Promise.reject(new Error('offline'));
+    const output = await pasteInto('See ', { 'text/plain': '[Roadmap](https://workspace.test/pages/roadmap) now' }, { pageIdFromHref, resolve: failing });
+
+    expect(texts(output)).toEqual(['See <a href="https://workspace.test/pages/roadmap">Roadmap</a> now']);
+  });
+
+  it('asks the host once per page, however many links point at it', async () => {
+    const counted = vi.fn(resolve);
+
+    const output = await pasteInto('', {
+      'text/html': '<p><a href="https://workspace.test/pages/roadmap">x</a> <a href="https://workspace.test/pages/roadmap">y</a> <a href="https://workspace.test/pages/roadmap">z</a></p>',
+      'text/plain': 'x y z',
+    }, { pageIdFromHref, resolve: counted });
+
+    // No link converts, so no mention on screen asks the host again.
+    expect(texts(output)).toEqual(['<a href="https://workspace.test/pages/roadmap">x</a> <a href="https://workspace.test/pages/roadmap">y</a> <a href="https://workspace.test/pages/roadmap">z</a>']);
+    expect(counted).toHaveBeenCalledTimes(1);
   });
 
   it('stays a link when the host does not know the page', async () => {

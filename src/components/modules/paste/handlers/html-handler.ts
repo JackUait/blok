@@ -16,7 +16,7 @@ import type { PasteHandler } from './base';
 import { BasePasteHandler } from './base';
 import { parseUntrustedHtml } from '../../../utils/inert-html';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK, preservePageReferenceAnchor } from '../../../../shared/page-reference';
-import { pastedPageId } from '../pasted-page-id';
+import { pastedPageMentions } from '../pasted-page-id';
 import { protectAnnotationSpan } from '../../../../shared/inline-text-sanitize';
 import { extractDepthFromPastedContent } from '../../../../tools/list/paste-handler';
 import { listParentIndices } from '../list-nesting';
@@ -74,7 +74,11 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
       return false;
     }
 
-    const dataToInsert = this.processHTML(data);
+    const wrapper = parseUntrustedHtml(data);
+
+    await this.mentionKnownPageLinks(wrapper);
+
+    const dataToInsert = this.processHTML(wrapper);
 
     if (!dataToInsert.length) {
       return false;
@@ -86,13 +90,20 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
   }
 
   /**
-   * A link to a page this host knows comes back as that page's mention.
-   * The host's `pageIdFromHref` names the page, never the pasted markup.
+   * A link to a page this host knows, whose text is the page's title or the
+   * URL, comes back as that page's mention. The host's `pageIdFromHref` names
+   * the page, never the pasted markup.
    * @param wrapper - the pasted html, detached
    */
-  private mentionKnownPageLinks(wrapper: HTMLElement): void {
-    wrapper.querySelectorAll(`a[href]:not([${PAGE_REFERENCE_ATTR}])`).forEach((link) => {
-      const pageId = pastedPageId(this.Blok.Tools, link.getAttribute('href') ?? '');
+  private async mentionKnownPageLinks(wrapper: HTMLElement): Promise<void> {
+    const links = Array.from(wrapper.querySelectorAll(`a[href]:not([${PAGE_REFERENCE_ATTR}])`));
+    const pageIds = await pastedPageMentions(
+      this.Blok.Tools,
+      links.map((link) => ({ href: link.getAttribute('href') ?? '', text: link.textContent ?? '' }))
+    );
+
+    links.forEach((link, index) => {
+      const pageId = pageIds[index];
 
       if (pageId === undefined) {
         return;
@@ -109,12 +120,8 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
   /**
    * Split HTML string to blocks and return it as array of Block data.
    */
-  private processHTML(innerHTML: string): PasteData[] {
+  private processHTML(wrapper: HTMLElement): PasteData[] {
     const { Tools } = this.Blok;
-
-    const wrapper = parseUntrustedHtml(innerHTML);
-
-    this.mentionKnownPageLinks(wrapper);
 
     // Empty references need their neutral text before the splitter drops empty nodes.
     wrapper.querySelectorAll(`a[${PAGE_REFERENCE_ATTR}]`).forEach(preservePageReferenceAnchor);

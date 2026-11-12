@@ -13,7 +13,7 @@ import { subtreeEndIndex } from '../components/utils/blocks-tree';
 import { parseUntrustedHtml } from '../components/utils/inert-html';
 import type { InternalMarkdownImportConfig } from './types';
 import { listParentIndices } from '../components/modules/paste/list-nesting';
-import { pastedPageId } from '../components/modules/paste/pasted-page-id';
+import { pastedPageId, pastedPageMentions, type PastedPageLink } from '../components/modules/paste/pasted-page-id';
 
 /**
  * Hang each list item under the item it was indented under. markdownToBlocks
@@ -282,13 +282,32 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
 
       // A line break the user pasted is one they can see; keep it. HTML text:
       // an inline paste below writes it into the DOM.
-      const config: InternalMarkdownImportConfig = {
-        softBreaks: true,
-        htmlText: true,
-        pageIdFromHref: (url) => pastedPageId(this.Blok.Tools, url),
-      };
+      const config: InternalMarkdownImportConfig = { softBreaks: true, htmlText: true };
+      const links: PastedPageLink[] = [];
+      const collect: InternalMarkdownImportConfig = {
+        ...config,
+        pageIdFromHref: (href, text) => {
+          if (pastedPageId(this.Blok.Tools, href) !== undefined) {
+            links.push({ href, text });
+          }
 
-      return await markdownToBlocks(data, config);
+          return undefined;
+        },
+      };
+      const blocks = await markdownToBlocks(data, collect);
+
+      if (links.length === 0) {
+        return blocks;
+      }
+
+      // The host's titles may come async; the converter is sync. Ask first,
+      // then convert again with the answers.
+      const pageIds = await pastedPageMentions(this.Blok.Tools, links);
+      const mentions = new Map(links.map(({ href, text }, index) => [`${href}\n${text}`, pageIds[index]]));
+
+      const convert: InternalMarkdownImportConfig = { ...config, pageIdFromHref: (href, text) => mentions.get(`${href}\n${text}`) };
+
+      return await markdownToBlocks(data, convert);
     } catch (e) {
       console.warn('MarkdownHandler: markdown conversion failed, falling back to plain text', e);
 

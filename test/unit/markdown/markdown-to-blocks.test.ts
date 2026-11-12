@@ -645,15 +645,35 @@ describe('image round trip through Markdown', () => {
 describe('markdownToBlocks with pageIdFromHref', () => {
   const config: InternalMarkdownImportConfig = {
     htmlText: true,
-    pageIdFromHref: (url) => (url === 'https://workspace.test/pages/roadmap' ? 'roadmap' : undefined),
+    pageIdFromHref: (url, text) => (url === 'https://workspace.test/pages/roadmap' && text === 'Roadmap' ? 'roadmap' : undefined),
   };
 
-  it('writes a link to a known page as its mention, inline and by reference', async () => {
-    const md = '**[Roadmap](https://workspace.test/pages/roadmap)** and [ref][r] and [other](https://other.test/)\n\n[r]: https://workspace.test/pages/roadmap';
+  it('writes a link the callback names as its mention, inline and by reference', async () => {
+    const md = '**[Roadmap](https://workspace.test/pages/roadmap)** and [Roadmap][r] and [ref][r] and [other](https://other.test/)\n\n[r]: https://workspace.test/pages/roadmap';
     const blocks = await markdownToSegmentBlocks(md, config);
 
     expect(blocks.map((block) => block.data.text)).toEqual([
-      '<strong><a data-blok-page-id="roadmap">Page</a></strong> and <a data-blok-page-id="roadmap">Page</a> and <a href="https://other.test/" target="_blank" rel="noopener noreferrer nofollow">other</a>',
+      '<strong><a data-blok-page-id="roadmap">Page</a></strong> and <a data-blok-page-id="roadmap">Page</a> and <a href="https://workspace.test/pages/roadmap" target="_blank" rel="noopener noreferrer nofollow">ref</a> and <a href="https://other.test/" target="_blank" rel="noopener noreferrer nofollow">other</a>',
+    ]);
+  });
+
+  it('hands the callback the link\'s plain text, marks dropped', async () => {
+    const seen: Array<[string, string]> = [];
+
+    const collect: InternalMarkdownImportConfig = {
+      htmlText: true,
+      pageIdFromHref: (url, text) => {
+        seen.push([url, text]);
+
+        return undefined;
+      },
+    };
+
+    await markdownToSegmentBlocks('[**Road**map](https://workspace.test/pages/roadmap) and <https://workspace.test/pages/x>', collect);
+
+    expect(seen).toEqual([
+      ['https://workspace.test/pages/roadmap', 'Roadmap'],
+      ['https://workspace.test/pages/x', 'https://workspace.test/pages/x'],
     ]);
   });
 });

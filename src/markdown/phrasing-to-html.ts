@@ -9,8 +9,8 @@ import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../shared/page-ref
  */
 export type DefinitionMap = ReadonlyMap<string, Definition>;
 
-/** The page a link points at, when the host knows it. Such a link becomes the page's mention. */
-export type PageIdFor = (url: string) => string | undefined;
+/** The page a link with this text points at, when it should become the page's mention. */
+export type PageIdFor = (url: string, text: string) => string | undefined;
 
 /**
  * Whether raw inline HTML is exactly `<br>`, `<br/>` or `<br />`. Anchored and
@@ -78,7 +78,7 @@ function serializeNode(node: PhrasingContent, definitions: DefinitionMap, pageId
       const children = inner(node.children);
 
       // Unsafe scheme → drop the anchor, keep the visible text.
-      return url === null ? children : linkHtml(url, children, pageIdFor);
+      return url === null ? children : linkHtml(url, node.children, children, pageIdFor);
     }
 
     case 'linkReference': {
@@ -91,7 +91,7 @@ function serializeNode(node: PhrasingContent, definitions: DefinitionMap, pageId
 
       const url = safeHref(definition.url);
 
-      return url === null ? children : linkHtml(url, children, pageIdFor);
+      return url === null ? children : linkHtml(url, node.children, children, pageIdFor);
     }
 
     case 'break':
@@ -137,8 +137,19 @@ function serializeNode(node: PhrasingContent, definitions: DefinitionMap, pageId
 /** Where an imported link opens: same-page anchors stay in the window. */
 export const linkTarget = (url: string): string => (isSamePageLink(url) ? '_self' : '_blank');
 
-function linkHtml(url: string, children: string, pageIdFor?: PageIdFor): string {
-  const pageId = pageIdFor?.(url);
+/** What a reader sees of inline nodes: marks dropped. */
+function plainText(nodes: PhrasingContent[]): string {
+  return nodes.map((node) => {
+    if (node.type === 'text' || node.type === 'inlineCode') {
+      return node.value;
+    }
+
+    return 'children' in node ? plainText(node.children) : '';
+  }).join('');
+}
+
+function linkHtml(url: string, nodes: PhrasingContent[], children: string, pageIdFor?: PageIdFor): string {
+  const pageId = pageIdFor?.(url, plainText(nodes));
 
   // The mention shows the page's own title, so the link text goes.
   return pageId === undefined ? anchor(url, children) : `<a ${PAGE_REFERENCE_ATTR}="${escapeHtml(pageId)}">${PAGE_REFERENCE_FALLBACK}</a>`;

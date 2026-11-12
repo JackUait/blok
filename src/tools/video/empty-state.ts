@@ -32,6 +32,11 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
     onUrl: opts.onUrl,
     labels: {
       add: tr(i18n, 'tools.video.emptyAddVideo', 'Add a video'),
+      hint: tr(i18n, 'tools.video.emptyHint', 'Drag a video here, choose one from your device, or paste a link.'),
+      hintUpload: tr(i18n, 'tools.video.emptyHintUpload', 'Drag a video here or choose one from your device.'),
+      hintLink: tr(i18n, 'tools.image.emptyHintLink', 'Paste a link to it below.'),
+      dropAnywhere: tr(i18n, 'tools.image.emptyDropAnywhere', 'Let go anywhere in this block.'),
+      cancelLink: tr(i18n, 'notifier.cancel', 'Cancel'),
       upload: tr(i18n, 'tools.video.emptyUpload', 'From device'),
       embed: tr(i18n, 'tools.video.emptyLink', 'From a link'),
       chooseFile: tr(i18n, 'tools.video.emptyChooseFile', 'Choose a video'),

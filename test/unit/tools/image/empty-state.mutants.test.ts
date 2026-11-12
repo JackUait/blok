@@ -40,6 +40,10 @@ describe('image empty state mutants', () => {
 
     expect(passed().labels).toMatchObject({
       add: 'i18n:tools.image.emptyAddImage',
+      hint: 'i18n:tools.image.emptyHint',
+      hintUpload: 'i18n:tools.image.emptyHintUpload',
+      hintLink: 'i18n:tools.image.emptyHintLink',
+      dropAnywhere: 'i18n:tools.image.emptyDropAnywhere',
       upload: 'i18n:tools.image.emptyUpload',
       embed: 'i18n:tools.image.emptyLink',
       chooseFile: 'i18n:tools.image.emptyChooseFile',

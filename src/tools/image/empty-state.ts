@@ -36,6 +36,11 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
     onUrl: opts.onUrl,
     labels: {
       add: tr(i18n, 'tools.image.emptyAddImage'),
+      hint: tr(i18n, 'tools.image.emptyHint'),
+      hintUpload: tr(i18n, 'tools.image.emptyHintUpload'),
+      hintLink: tr(i18n, 'tools.image.emptyHintLink'),
+      dropAnywhere: tr(i18n, 'tools.image.emptyDropAnywhere'),
+      cancelLink: tr(i18n, 'notifier.cancel'),
       upload: opts.uploadLabel ?? tr(i18n, 'tools.image.emptyUpload'),
       embed: opts.embedLabel ?? tr(i18n, 'tools.image.emptyLink'),
       chooseFile: tr(i18n, 'tools.image.emptyChooseFile'),

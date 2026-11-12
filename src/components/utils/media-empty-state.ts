@@ -26,6 +26,16 @@ import { brandMarkSlug, brandMarkSlugForUrl } from './brand-mark-services';
 export interface MediaEmptyStateLabels {
   /** Header caption, e.g. "Add an image" / "Add a file". */
   add: string;
+  /** Sentence under the title when both upload and link are offered. */
+  hint?: string;
+  /** Sentence for an upload-only block. Falls back to `hint`. */
+  hintUpload?: string;
+  /** Sentence for a link-only block. Falls back to `hint`. */
+  hintLink?: string;
+  /** Sentence shown while a file is dragged over the block. */
+  dropAnywhere?: string;
+  /** Name of the button that closes the link field. */
+  cancelLink?: string;
   /** Upload tab. */
   upload: string;
   /** Link/embed tab. */

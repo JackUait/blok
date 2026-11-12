@@ -32,6 +32,11 @@ describe('file empty state mutants', () => {
 
     expect(passed().labels).toStrictEqual({
       add: 'i18n:tools.file.emptyAddFile',
+      hint: 'i18n:tools.file.emptyHint',
+      hintUpload: 'i18n:tools.file.emptyHintUpload',
+      hintLink: 'i18n:tools.image.emptyHintLink',
+      dropAnywhere: 'i18n:tools.image.emptyDropAnywhere',
+      cancelLink: 'i18n:notifier.cancel',
       upload: 'i18n:tools.file.emptyUpload',
       embed: 'i18n:tools.file.emptyLink',
       chooseFile: 'i18n:tools.file.emptyChooseFile',

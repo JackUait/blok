@@ -103,6 +103,9 @@ function cardSurface(opts: OpenCoverPickerOptions): PickerSurface {
     swap: 'slide',
     labels: {
       add: tr(opts.i18n, 'tools.audio.coverAdd', 'Add a cover'),
+      hint: tr(opts.i18n, 'tools.audio.coverHint', 'Drag an image here, choose one, or paste a link.'),
+      dropAnywhere: tr(opts.i18n, 'tools.image.emptyDropAnywhere', 'Let go anywhere in this block.'),
+      cancelLink: tr(opts.i18n, 'notifier.cancel', 'Cancel'),
       upload: tr(opts.i18n, 'tools.audio.coverUpload', 'Upload'),
       embed: tr(opts.i18n, 'tools.audio.coverLink', 'Link'),
       chooseFile: tr(opts.i18n, 'tools.audio.coverChooseFile', 'Choose file'),

@@ -32,6 +32,11 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
     onUrl: opts.onUrl,
     labels: {
       add: tr(i18n, 'tools.audio.emptyAddAudio', 'Add audio'),
+      hint: tr(i18n, 'tools.audio.emptyHint', 'Drag an audio file here, choose one from your device, or paste a link.'),
+      hintUpload: tr(i18n, 'tools.audio.emptyHintUpload', 'Drag an audio file here or choose one from your device.'),
+      hintLink: tr(i18n, 'tools.image.emptyHintLink', 'Paste a link to it below.'),
+      dropAnywhere: tr(i18n, 'tools.image.emptyDropAnywhere', 'Let go anywhere in this block.'),
+      cancelLink: tr(i18n, 'notifier.cancel', 'Cancel'),
       upload: tr(i18n, 'tools.audio.emptyUpload', 'From device'),
       embed: tr(i18n, 'tools.audio.emptyLink', 'From a link'),
       chooseFile: tr(i18n, 'tools.audio.emptyChooseFile', 'Choose audio'),

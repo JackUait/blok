@@ -238,7 +238,7 @@ pub fn collab_updates() -> BTreeMap<String, Vec<u8>> {
         let text: String = text.chars().filter(|c| *c != '\n' && *c != '\r').collect();
         updates.insert(entry.file_name().to_string_lossy().into_owned(), b64(&text));
     }
-    assert_eq!(updates.len(), 31, "want 31 collab fixtures");
+    assert_eq!(updates.len(), 37, "want 37 collab fixtures");
     updates
 }
 

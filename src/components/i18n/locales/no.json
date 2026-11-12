@@ -931,7 +931,7 @@
   "tools.audio.errorBadge": "Nålen hoppet",
   "tools.audio.errorReplace": "Erstatt",
   "tools.audio.titlePlaceholder": "Tittel",
-  "tools.audio.artistPlaceholder": "Artist",
+  "tools.audio.artistPlaceholder": "Forfatter",
   "tools.audio.emptyAddAudio": "Legg til lyd",
   "tools.audio.emptyUpload": "Fra enhet",
   "tools.audio.emptyLink": "Fra en lenke",

@@ -931,7 +931,7 @@
   "tools.audio.errorBadge": "De naald versprong",
   "tools.audio.errorReplace": "Vervangen",
   "tools.audio.titlePlaceholder": "Titel",
-  "tools.audio.artistPlaceholder": "Artiest",
+  "tools.audio.artistPlaceholder": "Auteur",
   "tools.audio.emptyAddAudio": "Audio toevoegen",
   "tools.audio.emptyUpload": "Van apparaat",
   "tools.audio.emptyLink": "Van een link",

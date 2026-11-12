@@ -377,8 +377,6 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'toolbox.sectionDatabase',
     'tools.image.sizeFull',
     'tools.database.defaultStatusProperty',
-    // "Artist" is the established Bokmål music-metadata noun.
-    'tools.audio.artistPlaceholder',
     // Placeholder-only swatch labels follow Bokmål modifier-before-noun order.
     'tools.colorPicker.defaultSwatchLabel',
     'tools.colorPicker.colorSwatchLabel',
@@ -453,8 +451,6 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'searchTerms.layout',
     // "Text" is a direct cognate of the English word in Swedish.
     'tools.link.linkText',
-    // "Artist" is the established Swedish media noun and Apple Music field label.
-    'tools.audio.artistPlaceholder',
     'notifier.ok',
   ]),
   tr: new Set(['searchTerms.program', 'tools.image.cropRatioOval']),

@@ -931,7 +931,7 @@
   "tools.audio.errorBadge": "Nadel gesprungen",
   "tools.audio.errorReplace": "Ersetzen",
   "tools.audio.titlePlaceholder": "Titel",
-  "tools.audio.artistPlaceholder": "Künstler",
+  "tools.audio.artistPlaceholder": "Autor",
   "tools.audio.emptyAddAudio": "Audio hinzufügen",
   "tools.audio.emptyUpload": "Vom Gerät",
   "tools.audio.emptyLink": "Per Link",

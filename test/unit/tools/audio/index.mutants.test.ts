@@ -358,7 +358,7 @@ describe('AudioTool — static tool declarations', () => {
     expect(AudioTool.toolbox).toStrictEqual({
       icon: IconMusic,
       titleKey: 'audio',
-      searchTerms: ['audio', 'music', 'sound', 'song', 'mp3', 'track', 'media'],
+      searchTerms: ['audio', 'music', 'sound', 'song', 'mp3', 'track', 'media', 'podcast', 'voice', 'recording'],
       section: 'media',
       preview: { render: expect.any(Function), descriptionKey: 'toolbox.preview.audio' },
     });
@@ -1144,8 +1144,8 @@ describe('AudioTool — player card', () => {
   it('labels the editable lines and the cover button', () => {
     const { root } = mount({ url: 'https://cdn/a.mp3' });
 
-    expect(requireEl(root, '[data-role="audio-title"]').getAttribute('data-placeholder')).toBe('Track title');
-    expect(requireEl(root, '[data-role="audio-artist"]').getAttribute('data-placeholder')).toBe('Artist');
+    expect(requireEl(root, '[data-role="audio-title"]').getAttribute('data-placeholder')).toBe('Title');
+    expect(requireEl(root, '[data-role="audio-artist"]').getAttribute('data-placeholder')).toBe('Author');
     expect(requireEl(root, '[data-role="audio-cover-change"]').getAttribute('aria-label')).toBe('Change cover');
   });
 

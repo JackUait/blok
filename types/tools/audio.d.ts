@@ -20,6 +20,7 @@ export interface AudioData extends BlockToolData {
    */
   captionVisible?: boolean;
   title?: string;
+  /** Who made the recording: an artist, a host or a speaker. */
   artist?: string;
   coverUrl?: string;
   loop?: boolean;

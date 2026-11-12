@@ -157,7 +157,7 @@ export class AudioTool implements BlockTool {
     return {
       icon: IconMusic,
       titleKey: 'audio',
-      searchTerms: ['audio', 'music', 'sound', 'song', 'mp3', 'track', 'media'],
+      searchTerms: ['audio', 'music', 'sound', 'song', 'mp3', 'track', 'media', 'podcast', 'voice', 'recording'],
       section: 'media',
       preview: { render: renderAudioPreview, descriptionKey: 'toolbox.preview.audio' },
     };
@@ -665,8 +665,8 @@ export class AudioTool implements BlockTool {
 
   private renderRendered(): void {
     if (!this.root) return;
-    const titlePlaceholder = tr(this.api.i18n, 'tools.audio.titlePlaceholder', 'Track title');
-    const artistPlaceholder = tr(this.api.i18n, 'tools.audio.artistPlaceholder', 'Artist');
+    const titlePlaceholder = tr(this.api.i18n, 'tools.audio.titlePlaceholder', 'Title');
+    const artistPlaceholder = tr(this.api.i18n, 'tools.audio.artistPlaceholder', 'Author');
 
     const { figure, audio, waveformMount, title, artist, body, coverButton } = renderNowPlaying(this.data, {
       editable: !this.readOnly,

@@ -118,7 +118,7 @@ const EXEMPT_SINKS: Record<string, string> = {
     'HTMLImageElement src (failed-image toast tile), set only after SAFE_THUMBNAIL allows blob: or a raster data: image — <img> is not a script-execution sink',
   'tools/image/probe-dimensions.ts » url':
     'HTMLImageElement src (off-DOM dimension probe) — <img> is not a script-execution sink',
-  'tools/audio/ui.ts » data.coverUrl':
+  'tools/audio/ui.ts » coverUrl':
     'HTMLImageElement src (cover art) — <img> is not a script-execution sink',
   'tools/audio/ui.ts » data.url':
     'HTMLAudioElement src — media elements do not execute javascript: URLs',

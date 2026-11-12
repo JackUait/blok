@@ -247,6 +247,7 @@
   color: var(--blok-text-primary);
 }
 .blok-ink-well__well {
+  position: relative;
   flex: none;
   width: var(--blok-audio-well-size);
   height: var(--blok-audio-well-size);
@@ -263,6 +264,31 @@
 }
 .blok-ink-well__well.is-dragover {
   box-shadow: inset 0 0 0 2px var(--blok-audio-well-ink);
+}
+/* Hovering a chosen picture dims it and shows the image icon, like the
+   player's own cover. ink-well.ts sets data-picture once the picture is open. */
+.blok-ink-well__veil {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--blok-text-on-dark);
+  background: color-mix(in srgb, var(--blok-audio-well-ink) 32%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--blok-duration-base) ease;
+}
+.blok-ink-well__veil svg {
+  width: 24px;
+  height: 24px;
+  transform: scale(0.92);
+  transition: transform var(--blok-duration-slow) cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+.blok-ink-well__well[data-picture]:hover .blok-ink-well__veil { opacity: 1; }
+.blok-ink-well__well[data-picture]:hover .blok-ink-well__veil svg { transform: scale(1); }
+@media (prefers-reduced-motion: reduce) {
+  .blok-ink-well__veil,
+  .blok-ink-well__veil svg { transition: none; }
 }
 :where(:root:not([data-blok-modality="pointer"])) .blok-ink-well__well:focus-visible {
   outline: none;

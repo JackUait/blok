@@ -201,7 +201,7 @@ describe('renderInkWell', () => {
     expect(fileInput(el).accept).toBe('image/*');
     // The well is the drawing: the uploader brings none of its own.
     expect(card.hasAttribute('data-preview')).toBe(false);
-    expect(el.querySelector('[data-role^="ink-well-"]:not([data-role="ink-well-surface"]):not([data-role="ink-well-canvas"])')).toBeNull();
+    expect(el.querySelector('[data-role^="ink-well-"]:not([data-role="ink-well-surface"]):not([data-role="ink-well-canvas"]):not([data-role="ink-well-veil"])')).toBeNull();
   });
 
   it('From a link swaps the buttons for the link field, and the cross swaps back', () => {
@@ -378,6 +378,69 @@ describe('renderInkWell', () => {
 
     expect(loaded).toEqual([]);
     expect(onUrl).not.toHaveBeenCalled();
+  });
+
+  it('marks the well as a picture only once the picture has opened', async () => {
+    const { el } = setup();
+    const well = part(el, 'ink-well');
+
+    pick(el, png());
+    await Promise.resolve();
+    await Promise.resolve();
+    runFrames(1000, 1000 + WELL_FLOOD_MS);
+    expect(well.hasAttribute('data-picture')).toBe(false);
+
+    runFrames(1000 + WELL_FLOOD_MS, 1000 + WELL_FLOOD_MS + WELL_OPEN_MS + 64);
+    expect(well.hasAttribute('data-picture')).toBe(true);
+  });
+
+  it('marks the well as a picture at once when it opens on the current cover', async () => {
+    const { el } = setup({ current: 'https://cdn.example/cover.png' });
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(part(el, 'ink-well').hasAttribute('data-picture')).toBe(true);
+  });
+
+  it('leaves the drop unmarked', () => {
+    const { el } = setup();
+
+    runFrames(1000, 1100);
+
+    expect(part(el, 'ink-well').hasAttribute('data-picture')).toBe(false);
+  });
+
+  it('carries a veil with the image icon, hidden from assistive tech', () => {
+    const { el } = setup();
+    const veil = part(el, 'ink-well-veil');
+
+    expect(part(el, 'ink-well').contains(veil)).toBe(true);
+    expect(veil.getAttribute('aria-hidden')).toBe('true');
+    expect(veil.querySelector('svg')).not.toBeNull();
+  });
+
+  it('draws no ink over a shown picture while the pointer is on it', async () => {
+    const ctx = {
+      setTransform: vi.fn(), clearRect: vi.fn(), drawImage: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(),
+      lineTo: vi.fn(), bezierCurveTo: vi.fn(), quadraticCurveTo: vi.fn(), arc: vi.fn(), closePath: vi.fn(),
+      fill: vi.fn(), save: vi.fn(), restore: vi.fn(), fillStyle: '', globalAlpha: 1,
+    };
+
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, 'clientWidth', 'get').mockReturnValue(148);
+    const { el } = setup({ current: 'https://cdn.example/cover.png' });
+    const well = part(el, 'ink-well');
+
+    await Promise.resolve();
+    await Promise.resolve();
+    well.dispatchEvent(Object.assign(new Event('pointermove'), { clientX: 70, clientY: 70 }));
+    ctx.fill.mockClear();
+    ctx.drawImage.mockClear();
+    runFrames(1000, 1600);
+
+    expect(ctx.drawImage).toHaveBeenCalled();
+    expect(ctx.fill).not.toHaveBeenCalled();
   });
 
   it('frees the local picture and stops drawing on destroy', async () => {

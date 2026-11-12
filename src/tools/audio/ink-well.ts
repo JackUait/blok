@@ -1,3 +1,4 @@
+import { IconImage } from '../../components/icons';
 import { renderMediaEmptyState, type MediaEmptyStateLabels } from '../../components/utils/media-empty-state';
 import { createSafeObjectUrl } from '../../shared/safe-object-url';
 import { safeImageSrc } from '../../shared/sanitize-url';
@@ -197,18 +198,9 @@ function paintOpen(context: CanvasRenderingContext2D, paint: WellPaint): void {
   ctx.fill('evenodd');
 }
 
-function paintDone(context: CanvasRenderingContext2D, paint: WellPaint): void {
-  const ctx = context;
-  const { size, shape, pointer, timeSec } = paint;
-
-  if (paint.image) drawPicture(ctx, paint.image, size);
-  // A small drop follows the pointer: the well still takes a new picture.
-  if (shape.lean <= 0.02) return;
-  ctx.globalAlpha = shape.lean * 0.85;
-  traceBlob(ctx, { x: pointer.x, y: pointer.y, radius: size * 0.1 * shape.lean }, timeSec, 0, 0, 1);
-  ctx.fillStyle = paint.ink;
-  ctx.fill();
-  ctx.globalAlpha = 1;
+// Hovering the picture dims it under the veil (audio.css), so no ink is drawn on it.
+function paintDone(ctx: CanvasRenderingContext2D, paint: WellPaint): void {
+  if (paint.image) drawPicture(ctx, paint.image, paint.size);
 }
 
 const PAINTERS: Record<WellMode, (ctx: CanvasRenderingContext2D, paint: WellPaint) => void> = {
@@ -265,7 +257,10 @@ export function renderInkWell(opts: InkWellOptions): InkWellElement {
   const canvas = document.createElement('canvas');
   canvas.setAttribute('data-role', 'ink-well-canvas');
   canvas.setAttribute('aria-hidden', 'true');
-  well.append(canvas);
+  const veil = make('span', 'blok-ink-well__veil', 'ink-well-veil');
+  veil.setAttribute('aria-hidden', 'true');
+  veil.innerHTML = IconImage;
+  well.append(canvas, veil);
 
   // The well is the drawing, so the uploader brings none of its own.
   const side = renderMediaEmptyState({
@@ -302,6 +297,8 @@ export function renderInkWell(opts: InkWellOptions): InkWellElement {
   };
 
   const paint = (shape: WellShape, now: number): void => {
+    // Set before the size check: the veil keys off it even when the canvas has no box yet.
+    well.toggleAttribute('data-picture', shape.mode === 'done');
     const size = canvas.clientWidth;
 
     if (size <= 0) return;

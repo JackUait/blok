@@ -208,7 +208,15 @@ const MENU_CLASS = {
   selection: DATABASE_CARD_MENU_CLASS,
 } as const;
 
-const MENU_MIN_WIDTH: Partial<Record<NonNullable<OpenMenuOptions['kind']>, string>> = { card: '265px', handle: '265px', calc: CALC_MENU_MIN_WIDTH, selection: '265px' };
+/** Notion's handle menu is 265 wide; the side is picked before the menu is measured. */
+const HANDLE_MENU_WIDTH = 265;
+const HANDLE_MENU_GAP = 5;
+
+const MENU_MIN_WIDTH: Partial<Record<NonNullable<OpenMenuOptions['kind']>, string>> = { card: '265px', handle: `${HANDLE_MENU_WIDTH}px`, calc: CALC_MENU_MIN_WIDTH, selection: '265px' };
+
+/** Left of the handle, or right when a 265px menu and its gap do not fit before the window's left edge. */
+const handleMenuSide = (anchor: HTMLElement): 'left' | 'right' =>
+  anchor.getBoundingClientRect().left - HANDLE_MENU_GAP - HANDLE_MENU_WIDTH < 0 ? 'right' : 'left';
 
 /** Opens a menu under `anchor`; `data-popover-open` marks the anchor while it is up. */
 export const openMenu = (
@@ -221,7 +229,8 @@ export const openMenu = (
     class: menuClass,
     ...(options.kind === 'row' ? { placeLeftOfAnchor: true, viewportMargin: 8 } : {}),
     // notion-motion.md Round 10: the right edge 5px before the handle, centred on it; pushed up to ~12px over the window bottom.
-    ...(options.kind === 'handle' ? { placeLeftOfAnchor: true, offset: 5, viewportMargin: 12 } : {}),
+    // Round 16 §7: with no room on the left it flips to the right, 5px past the handle.
+    ...(options.kind === 'handle' ? { placeLeftOfAnchor: true, asideSide: handleMenuSide(anchor), offset: HANDLE_MENU_GAP, viewportMargin: 12 } : {}),
     // notion-motion.md Round 11: the footer value's menu, 200x123, on the button's bottom edge.
     // Round 12 "Board selection": the ⌘/ menu's top is the first picked card's bottom.
     ...(options.kind === 'calc' || options.kind === 'selection' ? { offset: 0 } : {}),

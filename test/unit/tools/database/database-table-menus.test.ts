@@ -84,6 +84,25 @@ describe('table view menus', () => {
     expect(constructed[0]?.viewportMargin).toBe(12);
     expect(constructed[0]?.cover).toBeUndefined();
   });
+
+  // notion-motion.md Round 16 §7: with no room on its left, the handle menu flips to the right, 5px past the handle.
+  it('opens a handle menu on the right of its handle when the 265px menu has no room on the left', () => {
+    const handle = (left: number): HTMLButtonElement => {
+      const button = document.createElement('button');
+
+      button.getBoundingClientRect = () => new DOMRect(left, 345, 18, 24);
+
+      return button;
+    };
+
+    openMenu(handle(84), [], { kind: 'handle' });
+    openMenu(handle(519), [], { kind: 'handle' });
+
+    expect(constructed[0]?.asideSide).toBe('right');
+    expect(constructed[0]?.placeLeftOfAnchor).toBe(true);
+    expect(constructed[0]?.offset).toBe(5);
+    expect(constructed[1]?.asideSide).toBe('left');
+  });
 });
 
 // research/30 B6 measured the date cell only; the row menu's last-edited time keeps "N days ago".

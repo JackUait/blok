@@ -148,14 +148,14 @@ describe('view settings panel', () => {
     ]);
   });
 
-  it('shows no value on an empty Filter, Sort, Group or Conditional color, and the count once set', () => {
+  it('shows no value on an empty Filter, Sort, Group or Conditional color, and a value once set', () => {
     const value = (id: string): string | null => document.querySelector(`[data-blok-testid="database-settings-${id}"] [data-blok-database-panel-value]`)?.textContent ?? null;
     const first = harness({ type: 'board' }).open();
 
     for (const id of ['filter', 'sort', 'group', 'subgroup', 'color']) expect(value(id), id).toBeNull();
     first.close();
     harness({ type: 'board', sorts: [{ id: 's', propertyId: 'num', direction: 'asc' }], groupBy: 'stage' }).open();
-    expect(value('sort')).toBe('1');
+    expect(value('sort')).toBe('Amount');
     expect(value('group')).toBe('Stage');
   });
 
@@ -977,6 +977,24 @@ describe('view settings panel', () => {
     click(`database-sort-direction-${sort.id ?? ''}`);
 
     expect(h.state.view.sorts[0].direction).toBe('desc');
+  });
+
+  // notion-motion.md Round 17 §5: the Sort row shows the sorted property's name.
+  describe('Sort row value', () => {
+    const valueOf = (): string | null | undefined =>
+      document.querySelector('[data-blok-testid="database-settings-sort"] [data-blok-database-panel-value]')?.textContent;
+
+    it('names the sorted property when there is one sort', () => {
+      harness({ sorts: [{ id: 's1', propertyId: 'num', direction: 'asc' }] }).open();
+
+      expect(valueOf()).toBe('Amount');
+    });
+
+    it('keeps the count with two sorts', () => {
+      harness({ sorts: [{ id: 's1', propertyId: 'num', direction: 'asc' }, { id: 's2', propertyId: 'due', direction: 'asc' }] }).open();
+
+      expect(valueOf()).toBe('2');
+    });
   });
 
   it('draws a sort as Notion\'s property button with its type icon and an icon-only remove × (research/26 §3a)', () => {

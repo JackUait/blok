@@ -290,6 +290,12 @@ const COLORS = ['default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue',
 /** findings V12: Notion shows no value on an empty Filter, Sort, Group or Conditional color. */
 const countValue = (count: number): { value?: string } => (count === 0 ? {} : { value: String(count) });
 const nameValue = (property: PropertyDefinition | undefined): { value?: string } => (property === undefined ? {} : { value: property.name });
+/** notion-motion.md Round 17 §5: one sort reads as its property's name. Two or more keep the count (Notion's is unread). */
+const sortValue = (sorts: SortConfig[], schema: PropertyDefinition[]): { value?: string } => {
+  const property = sorts.length === 1 ? schema.find((p) => p.id === sorts[0]?.propertyId) : undefined;
+
+  return property === undefined ? countValue(sorts.length) : nameValue(property);
+};
 
 const capital = (word: string): string => `${word.charAt(0).toUpperCase()}${word.slice(1)}`;
 
@@ -379,7 +385,7 @@ export class ViewSettingsPages {
             label: this.t('settingsSort'),
             testId: 'database-settings-sort',
             icon: IconSort,
-            ...countValue(view.sorts.length),
+            ...sortValue(view.sorts, this.ctx.schema()),
             opensPage: true,
             onClick: () => panel.push(this.sorts()),
           }),

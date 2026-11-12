@@ -5,7 +5,7 @@ import type { BlokModules } from '../../../types-internal/blok-modules';
 import { Dom as dom$ } from '../../dom';
 import { composeSanitizerConfig, clean } from '../../utils/sanitizer';
 import { normalizeInlineMarkupHtml } from '../../utils/inline-normalization';
-import { PAGE_REFERENCE_ATTR, preservePageReferenceAnchor } from '../../../shared/page-reference';
+import { mayHoldPageReference, preservePageReferenceAnchor } from '../../../shared/page-reference';
 import { protectAnnotationSpan } from '../../../shared/inline-text-sanitize';
 
 import { BLOK_MIME_TYPE, NEXT_SPACE_MIMES, NOTION_BLOCKS_V3_MIME, SAFE_STRUCTURAL_TAGS, STRUCTURAL_TAG_ATTRIBUTES } from './constants';
@@ -127,7 +127,7 @@ export class PasteEngine {
       ? this.config.onBeforePaste(clipboardHtml) ?? ''
       : clipboardHtml;
     // Awaited only for a mention, so other pastes keep their timing.
-    const rawHtmlData = hookedHtml.includes(PAGE_REFERENCE_ATTR)
+    const rawHtmlData = mayHoldPageReference(hookedHtml)
       ? await htmlWithConfirmedPageReferences(this.Blok, hookedHtml)
       : hookedHtml;
 

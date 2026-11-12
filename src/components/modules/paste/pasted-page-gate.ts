@@ -2,7 +2,7 @@ import type { BlockToolData } from '../../../../types';
 import type { PageConfig } from '../../../tools/page/types';
 import type { ClipboardBlockData } from '../../../shared/table/types';
 import type { BlokModules } from '../../../types-internal/blok-modules';
-import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../../shared/page-reference';
+import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK, mayHoldPageReference } from '../../../shared/page-reference';
 import { parseUntrustedDocument, parseUntrustedHtml } from '../../utils/inert-html';
 
 /**
@@ -48,7 +48,7 @@ export const unlinkPageReference = (anchor: Element): void => {
  */
 const collectIds = (value: unknown, ids: Set<string>): void => {
   if (typeof value === 'string') {
-    if (value.includes(PAGE_REFERENCE_ATTR)) {
+    if (mayHoldPageReference(value)) {
       referenceAnchors(parseUntrustedHtml(value)).forEach((anchor) => ids.add(anchor.getAttribute(PAGE_REFERENCE_ATTR) ?? ''));
     }
 
@@ -78,7 +78,7 @@ const collectIds = (value: unknown, ids: Set<string>): void => {
  */
 const withoutUnconfirmed = (value: unknown, confirmed: ReadonlySet<string>): unknown => {
   if (typeof value === 'string') {
-    if (!value.includes(PAGE_REFERENCE_ATTR)) {
+    if (!mayHoldPageReference(value)) {
       return value;
     }
     const wrapper = parseUntrustedHtml(value);
@@ -254,7 +254,7 @@ export const cellBlockWithoutUnconfirmedPages = (block: ClipboardBlockData, conf
  * @returns the same string when every mention may stay
  */
 export const htmlWithConfirmedPageReferences = async (Blok: BlokModules, html: string): Promise<string> => {
-  if (!html.includes(PAGE_REFERENCE_ATTR)) {
+  if (!mayHoldPageReference(html)) {
     return html;
   }
   // A whole document: Excel's <style> in <head> must survive for the pre-passes.

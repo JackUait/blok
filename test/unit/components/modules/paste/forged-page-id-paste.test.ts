@@ -5,6 +5,7 @@ import { PageTool } from '../../../../../src/tools/page';
 import { PageLink } from '../../../../../src/tools/page-link';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import { Table } from '../../../../../src/tools/table';
+import { CodeTool } from '../../../../../src/tools/code';
 import { LinkInlineTool } from '../../../../../src/components/inline-tools/inline-tool-link';
 import type { API, OutputBlockData, OutputData } from '../../../../../types';
 import { blocksAsHtml, htmlOf } from '../../../helpers/saved-as-html';
@@ -49,6 +50,7 @@ const pasteInto = async (
       paragraph: Paragraph,
       link: LinkInlineTool,
       table: Table,
+      code: CodeTool,
       page: { class: PageTool, config },
       'page-link': { class: PageLink, config },
     },
@@ -160,6 +162,18 @@ describe('a page id read from pasted html', () => {
 });
 
 describe('a page id read from pasted plain text', () => {
+  it('never becomes a mention from a lone line of raw html', async () => {
+    const output = await pasteInto({ 'text/plain': '<a data-blok-page-id="evil">x</a>' });
+
+    expect(pageIdsIn(output)).toEqual([]);
+  });
+
+  it('never becomes a mention from raw html in a tab-separated grid', async () => {
+    const output = await pasteInto({ 'text/plain': '<a data-blok-page-id="evil">x</a>\tB\nC\tD' });
+
+    expect(pageIdsIn(output)).toEqual([]);
+  });
+
   it('never becomes a mention from raw html inside Markdown', async () => {
     const output = await pasteInto({ 'text/plain': '**Go** <a data-blok-page-id="evil">Page</a> now' });
 
@@ -180,6 +194,13 @@ describe('a page id read from Blok clipboard data', () => {
     const output = await pasteInto(blok([{ id: 'a', tool: 'paragraph', data: { text: [{ text: 'Go ' }, { embed: { page: { id: 'evil' } } }] } }]));
 
     expect(pageIdsIn(output)).toEqual([]);
+  });
+
+  it('keeps code that spells out a mention as written', async () => {
+    const code = 'a < b && x("<a data-blok-page-id=\\"q\\">y</a>")';
+    const output = await pasteInto(blok([{ id: 'a', tool: 'code', data: { code, language: 'javascript' } }]));
+
+    expect(output.blocks.find((block) => block.type === 'code')?.data.code).toBe(code);
   });
 
   it('keeps a mention of a page the host resolves', async () => {
@@ -232,6 +253,16 @@ describe('a page id read from Blok clipboard data', () => {
 });
 
 describe('a page id read from a pasted table cell payload', () => {
+  it('keeps the payload, merge included, when its visible cell holds an unknown mention', async () => {
+    const payload = { rows: 1, cols: 2, cells: [[{ colspan: 2, blocks: [{ tool: 'paragraph', data: { text: 'Go <a data-blok-page-id="evil">Page</a>' } }] }, { blocks: [] }]] };
+    const html = `<table data-blok-table-cells='${JSON.stringify(payload)}'><tr><td colspan="2">Go <a data-blok-page-id="evil">Plans</a></td></tr></table>`;
+    const output = await pasteInto({ 'text/html': html, 'text/plain': 'Go Plans' });
+    const table = output.blocks.find((block) => block.type === 'table');
+
+    expect(pageIdsIn(output)).toEqual([]);
+    expect(JSON.stringify(table?.data.content)).toContain('"colspan":2');
+  });
+
   it('turns a mention of an unknown page in a cell into plain text', async () => {
     const payload = { rows: 1, cols: 2, cells: [[{ blocks: [{ tool: 'paragraph', data: { text: 'Go <a data-blok-page-id="evil">Page</a>' } }] }, { blocks: [{ tool: 'paragraph', data: { text: 'B' } }] }]] };
     const html = `<table data-blok-table-cells='${JSON.stringify(payload)}'><tr><td>Go Page</td><td>B</td></tr></table>`;
@@ -289,5 +320,29 @@ describe('a page id pasted into a table cell', () => {
 
     expect(pageIdsIn(output)).toEqual(['roadmap']);
     expect(output.blocks.filter((block) => block.type === 'table')).toHaveLength(1);
+  });
+});
+
+describe('a page id attribute written in another case', () => {
+  const cases = ['DATA-BLOK-PAGE-ID', 'Data-Blok-Page-Id'];
+
+  it.each(cases)('never becomes a mention from pasted html (%s)', async (attr) => {
+    const output = await pasteInto({ 'text/html': `<a ${attr}="evil">Plans</a>`, 'text/plain': 'Plans' });
+
+    expect(pageIdsIn(output)).toEqual([]);
+  });
+
+  it.each(cases)('never becomes a mention from Blok clipboard data (%s)', async (attr) => {
+    const output = await pasteInto({ 'application/x-blok': JSON.stringify([{ id: 'a', tool: 'paragraph', data: { text: `Go <a ${attr}="evil">Page</a>` } }]), 'text/plain': 'x' });
+
+    expect(pageIdsIn(output)).toEqual([]);
+  });
+
+  it.each(cases)('never becomes a mention from a table cell payload (%s)', async (attr) => {
+    const payload = { rows: 1, cols: 2, cells: [[{ blocks: [{ tool: 'paragraph', data: { text: `Go <a ${attr}="evil">Page</a>` } }] }, { blocks: [{ tool: 'paragraph', data: { text: 'B' } }] }]] };
+    const html = `<table data-blok-table-cells='${JSON.stringify(payload)}'><tr><td>Go Page</td><td>B</td></tr></table>`;
+    const output = await pasteInto({ 'text/html': html, 'text/plain': 'Go Page\tB' });
+
+    expect(pageIdsIn(output)).toEqual([]);
   });
 });

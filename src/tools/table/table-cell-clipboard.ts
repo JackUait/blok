@@ -18,7 +18,7 @@ import { CELL_CODE_TAG } from '../../components/modules/paste/constants';
 import { isSafeCssColor } from '../../shared/css-color';
 import { clean, sanitizeBlocks } from '../../components/utils/sanitizer';
 import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
-import { PAGE_REFERENCE_ATTR, preservePageReferenceAnchor } from '../../shared/page-reference';
+import { PAGE_REFERENCE_ATTR, mayHoldPageReference, preservePageReferenceAnchor } from '../../shared/page-reference';
 import { resolvePresetColorVars, resolvePresetColors } from '../../components/shared/resolve-preset-colors';
 import { parseUntrustedDocument, parseUntrustedHtml } from '../../components/utils/inert-html';
 import { trimTrailingBreaks } from '../../components/utils/trailing-breaks';
@@ -397,7 +397,7 @@ export const withPlainPageReferences = (block: ClipboardBlockData): ClipboardBlo
 
   return {
     ...block,
-    data: typeof text === 'string' && text.includes(PAGE_REFERENCE_ATTR)
+    data: typeof text === 'string' && mayHoldPageReference(text)
       ? { ...block.data, text: clean(text, INLINE_TEXT_SANITIZE) }
       : block.data,
     ...(block.children === undefined ? {} : { children: block.children.map(withPlainPageReferences) }),

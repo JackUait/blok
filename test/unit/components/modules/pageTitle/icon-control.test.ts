@@ -7,12 +7,12 @@ import type { PageIcon } from '../../../../../types/tools/page';
 
 const open = vi.fn(async (_anchor: HTMLElement, _rect?: DOMRect, _handlers?: { current?: string }) => undefined);
 const close = vi.fn();
-let lastOptions: { onSelect(native: string): void; onRemove(): void } | null = null;
+let lastOptions: { onSelect(native: string, origin?: DOMRect): void; onRemove(): void } | null = null;
 
 vi.mock('../../../../../src/tools/callout/emoji-picker', () => ({
   EmojiPicker: class {
     private readonly el = document.createElement('div');
-    constructor(options: { onSelect(native: string): void; onRemove(): void }) {
+    constructor(options: { onSelect(native: string, origin?: DOMRect): void; onRemove(): void }) {
       lastOptions = options;
     }
     public getElement(): HTMLElement {
@@ -220,5 +220,167 @@ describe('createIconControl', () => {
 
     expect(host.setIcon).not.toHaveBeenCalled();
     expect(open).not.toHaveBeenCalled();
+  });
+});
+
+describe('the page icon lands a picked emoji like a callout', () => {
+  const controls: Array<{ destroy(): void }> = [];
+  const rows: HTMLElement[] = [];
+  const cancels: Array<ReturnType<typeof vi.fn>> = [];
+  const origin = new DOMRect(300, 400, 32, 32);
+
+  const overlays = (): HTMLElement[] => Array.from(document.body.querySelectorAll<HTMLElement>('[data-blok-emoji-landing]'));
+
+  const stubReducedMotion = (reduce: boolean): void => {
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      configurable: true,
+      value: vi.fn((query: string) => ({ matches: reduce && query.includes('reduce') })),
+    });
+  };
+
+  /** Animations that never end, so the landing stays on screen until a test ends it. */
+  const stubAnimate = (): void => {
+    Element.prototype.animate = vi.fn(() => {
+      const cancel = vi.fn();
+
+      cancels.push(cancel);
+
+      return { finished: new Promise(() => undefined), cancel };
+    }) as unknown as Element['animate'];
+  };
+
+  const setup = (initial: PageIcon | null): { row: HTMLElement; redraw(): void; control: { destroy(): void } } => {
+    const row = document.createElement('div');
+    const state = { icon: initial };
+    const slot: { redraw: () => void } = { redraw: () => undefined };
+
+    document.body.append(row);
+    rows.push(row);
+    const control = createIconControl(row, {
+      getIcon: () => state.icon,
+      setIcon: (icon: PageIcon | null) => {
+        state.icon = icon;
+        slot.redraw();
+      },
+      isReadOnly: () => false,
+      labels: () => ({ add: 'Add icon', change: 'Change icon' }),
+      picker: () => ({ i18n: { t: (key: string) => key }, locale: 'en' }),
+    });
+
+    slot.redraw = control.redraw;
+    controls.push(control);
+
+    return { row, redraw: control.redraw, control };
+  };
+
+  const openPicker = async (row: HTMLElement): Promise<void> => {
+    row.querySelector<HTMLButtonElement>(`[${DATA_ATTR.pageIcon}]`)?.click();
+    await vi.waitFor(() => expect(open).toHaveBeenCalled());
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    lastOptions = null;
+    cancels.length = 0;
+    stubReducedMotion(false);
+    stubAnimate();
+  });
+
+  afterEach(() => {
+    controls.splice(0).forEach((control) => control.destroy());
+    rows.splice(0).forEach((row) => row.remove());
+    Reflect.deleteProperty(Element.prototype, 'animate');
+    Reflect.deleteProperty(window, 'matchMedia');
+    vi.restoreAllMocks();
+  });
+
+  it('flies a picked emoji from the picker to the icon, hiding the seat until it lands', async () => {
+    const { row } = setup({ type: 'emoji', value: '🌿' });
+
+    await openPicker(row);
+    lastOptions?.onSelect('🔥', origin);
+
+    const face = row.querySelector<HTMLElement>(`[${DATA_ATTR.pageIcon}] > span`);
+
+    expect(overlays()).toHaveLength(1);
+    expect(face?.textContent).toBe('🔥');
+    expect(face?.style.visibility).toBe('hidden');
+  });
+
+  it('swaps the icon with no landing when the pick has no origin', async () => {
+    const { row } = setup({ type: 'emoji', value: '🌿' });
+
+    await openPicker(row);
+    lastOptions?.onSelect('🔥');
+
+    expect(overlays()).toHaveLength(0);
+    expect(row.textContent).toBe('🔥');
+  });
+
+  it('swaps the icon with no landing when motion is reduced', async () => {
+    stubReducedMotion(true);
+    const { row } = setup({ type: 'emoji', value: '🌿' });
+
+    await openPicker(row);
+    lastOptions?.onSelect('🔥', origin);
+
+    expect(overlays()).toHaveLength(0);
+    expect(row.textContent).toBe('🔥');
+  });
+
+  it('a second pick cuts the first landing short', async () => {
+    const { row } = setup({ type: 'emoji', value: '🌿' });
+
+    await openPicker(row);
+    lastOptions?.onSelect('🔥', origin);
+    lastOptions?.onSelect('🌊', origin);
+
+    expect(overlays()).toHaveLength(1);
+    expect(row.textContent).toBe('🌊');
+  });
+
+  it('a redraw of the same icon mid-flight keeps the landing on the seat it flies to', async () => {
+    const { row, redraw } = setup({ type: 'emoji', value: '🌿' });
+
+    await openPicker(row);
+    lastOptions?.onSelect('🔥', origin);
+    const face = row.querySelector<HTMLElement>(`[${DATA_ATTR.pageIcon}] > span`);
+
+    redraw();
+
+    expect(row.querySelector(`[${DATA_ATTR.pageIcon}] > span`)).toBe(face);
+    expect(overlays()).toHaveLength(1);
+  });
+
+  it('a different icon arriving mid-flight ends the landing and shows the new icon', async () => {
+    const { row } = setup({ type: 'emoji', value: '🌿' });
+
+    await openPicker(row);
+    lastOptions?.onSelect('🔥', origin);
+    lastOptions?.onSelect('🌊');
+
+    expect(overlays()).toHaveLength(0);
+    expect(row.querySelector<HTMLElement>(`[${DATA_ATTR.pageIcon}] > span`)?.style.visibility).toBe('');
+  });
+
+  it('removing the icon mid-flight ends the landing', async () => {
+    const { row } = setup({ type: 'emoji', value: '🌿' });
+
+    await openPicker(row);
+    lastOptions?.onSelect('🔥', origin);
+    lastOptions?.onRemove();
+
+    expect(overlays()).toHaveLength(0);
+  });
+
+  it('destroy mid-flight ends the landing', async () => {
+    const { row, control } = setup({ type: 'emoji', value: '🌿' });
+
+    await openPicker(row);
+    lastOptions?.onSelect('🔥', origin);
+    control.destroy();
+
+    expect(overlays()).toHaveLength(0);
   });
 });

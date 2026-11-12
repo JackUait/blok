@@ -1,5 +1,6 @@
-// Type only: the picker loads on first open, so the bare editor bundle does not carry it.
+// Type only: the picker and its landings load on first open, so the bare editor bundle does not carry them.
 import type { EmojiPicker } from '../../../tools/callout/emoji-picker';
+import type { Landing, chooseLanding, playLanding } from '../../../tools/callout/emoji-landing';
 import { IconEmojiSmile } from '../../icons';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { loadEmojiGrid } from '../../utils/emoji/emoji-data';
@@ -14,16 +15,31 @@ export interface IconControlHost {
   picker(): { i18n: { t(key: string): string }; locale: string };
 }
 
-const pickerLoad: { pending: Promise<typeof EmojiPicker> | null } = { pending: null };
+interface PickerCode {
+  Picker: typeof EmojiPicker;
+  landings: { chooseLanding: typeof chooseLanding; playLanding: typeof playLanding };
+}
+
+const pickerLoad: { pending: Promise<PickerCode> | null } = { pending: null };
 
 /** One shared load; a failed one is dropped so the next click tries again. */
-const loadPicker = (): Promise<typeof EmojiPicker> => {
-  pickerLoad.pending ??= import('../../../tools/callout/emoji-picker').then(({ EmojiPicker: Picker }) => Picker, (error: unknown) => {
+const loadPicker = (): Promise<PickerCode> => {
+  pickerLoad.pending ??= Promise.all([
+    import('../../../tools/callout/emoji-picker'),
+    import('../../../tools/callout/emoji-landing'),
+  ]).then(([{ EmojiPicker: Picker }, landings]) => ({ Picker, landings }), (error: unknown) => {
     pickerLoad.pending = null;
     throw error;
   });
 
   return pickerLoad.pending;
+};
+
+/** The ghost box that fits a glyph of this face's font size; landings size the ghost's glyph at 0.9 of its box. */
+const seatSize = (face: HTMLElement): number | undefined => {
+  const fontSize = parseFloat(getComputedStyle(face).fontSize);
+
+  return fontSize > 0 ? fontSize / 0.9 : undefined;
 };
 
 const randomEmoji = async (): Promise<string> => {
@@ -37,6 +53,26 @@ const randomEmoji = async (): Promise<string> => {
   return emoji.native;
 };
 
+const iconKey = (icon: PageIcon | null): string | null => {
+  if (icon === null) {
+    return null;
+  }
+
+  return icon.type === 'emoji' ? `emoji:${icon.value}` : `image:${icon.url}`;
+};
+
+/** An emoji sits in a span so a landing can hide and spring it without moving the button's hover tile. */
+const faceNode = (icon: PageIcon): Node => {
+  if (icon.type !== 'emoji') {
+    return pageIconNode(icon);
+  }
+  const face = document.createElement('span');
+
+  face.textContent = icon.value;
+
+  return face;
+};
+
 /** `trailing` stays after the icon or Add icon, in the same row. */
 export const createIconControl = (row: HTMLElement, host: IconControlHost, trailing: () => HTMLElement[] = () => []): { redraw(): void; destroy(): void } => {
   const slot: { picker: EmojiPicker | null; locale: string | null; watch: MutationObserver | null; destroyed: boolean } = {
@@ -48,23 +84,56 @@ export const createIconControl = (row: HTMLElement, host: IconControlHost, trail
 
   // The open picker is anchored to the button and gives focus back to it, so a
   // redraw of the same kind updates that button instead of replacing it.
-  const shown: { kind: 'add' | 'icon' | null; button: HTMLButtonElement | null } = { kind: null, button: null };
+  const shown: { kind: 'add' | 'icon' | null; button: HTMLButtonElement | null; icon: PageIcon | null } = { kind: null, button: null, icon: null };
+  const landing: { last: Landing | null; stop: (() => void) | null } = { last: null, stop: null };
+
+  const stopLanding = (): void => {
+    landing.stop?.();
+    landing.stop = null;
+  };
 
   const openPicker = (anchor: HTMLElement): void => {
     // A failed chunk opens nothing; the next click tries again.
-    loadPicker().then((Picker) => {
+    loadPicker().then((code) => {
       // Destroy or read-only can land while the code loads.
       if (!slot.destroyed && !host.isReadOnly()) {
-        showPicker(Picker, anchor);
+        showPicker(code, anchor);
       }
     }, () => undefined);
   };
 
-  const showPicker = (Picker: typeof EmojiPicker, anchor: HTMLElement): void => {
+  /** Flies the picked glyph from the picker into the icon, as a callout does. */
+  const land = ({ chooseLanding, playLanding }: PickerCode['landings'], previous: PageIcon | null, native: string, origin: DOMRect): void => {
+    const face = shown.button?.querySelector('span');
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
+
+    if (face === null || face === undefined || reduceMotion) {
+      return;
+    }
+    landing.last = chooseLanding(landing.last);
+    landing.stop = playLanding(landing.last, {
+      from: origin,
+      face,
+      surface: shown.button ?? face,
+      previous: previous?.type === 'emoji' ? previous.value : '',
+      next: native,
+      size: seatSize(face),
+    });
+  };
+
+  const showPicker = ({ Picker, landings }: PickerCode, anchor: HTMLElement): void => {
     const { i18n, locale } = host.picker();
 
     const handlers = {
-      onSelect: (native: string): void => host.setIcon({ type: 'emoji', value: native }),
+      onSelect: (native: string, origin?: DOMRect): void => {
+        const previous = host.getIcon();
+
+        stopLanding();
+        host.setIcon({ type: 'emoji', value: native });
+        if (origin !== undefined && native !== '') {
+          land(landings, previous, native, origin);
+        }
+      },
       onRemove: (): void => host.setIcon(null),
     };
     const icon = host.getIcon();
@@ -180,9 +249,14 @@ export const createIconControl = (row: HTMLElement, host: IconControlHost, trail
     const button = shown.button;
 
     if (button === null) {
+      stopLanding();
+      shown.icon = null;
+
       return;
     }
     if (icon === null) {
+      stopLanding();
+      shown.icon = null;
       const label = button.querySelector('span');
 
       if (label !== null) {
@@ -193,7 +267,13 @@ export const createIconControl = (row: HTMLElement, host: IconControlHost, trail
     }
     button.disabled = readOnly;
     button.setAttribute('aria-label', change);
-    button.replaceChildren(pageIconNode(icon));
+    // A landing flies to the face that is on screen; replacing it for the same icon would show it early.
+    if (iconKey(shown.icon) === iconKey(icon) && button.firstChild !== null) {
+      return;
+    }
+    stopLanding();
+    shown.icon = icon;
+    button.replaceChildren(faceNode(icon));
   };
 
   redraw();
@@ -204,12 +284,14 @@ export const createIconControl = (row: HTMLElement, host: IconControlHost, trail
     redraw,
     destroy: (): void => {
       slot.destroyed = true;
+      stopLanding();
       slot.watch?.disconnect();
       slot.picker?.close();
       slot.picker?.getElement().remove();
       row.replaceChildren();
       shown.kind = null;
       shown.button = null;
+      shown.icon = null;
     },
   };
 };

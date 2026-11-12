@@ -3,7 +3,7 @@ import type { API, BlockToolConstructorOptions } from '../../../../types';
 import type { CalloutData, CalloutConfig } from '../../../../src/tools/callout/types';
 import type { CalloutTool } from '../../../../src/tools/callout';
 import type { ProcessedEmoji } from '../../../../src/components/utils/emoji/emoji-data';
-import { LANDINGS, chooseLanding } from '../../../../src/tools/callout/emoji-landing';
+import { LANDINGS, chooseLanding, playLanding } from '../../../../src/tools/callout/emoji-landing';
 
 vi.mock('../../../../src/components/utils/emoji/emoji-data', () => {
   const fixture = [
@@ -248,5 +248,43 @@ describe('CalloutTool icon landing', () => {
     expect(overlays()).toHaveLength(0);
     expect(face.textContent).toBe('😀');
     expect(face.style.visibility).toBe('');
+  });
+});
+
+describe('playLanding seat size', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    animations.length = 0;
+    Element.prototype.animate = vi.fn(fakeAnimate) as unknown as Element['animate'];
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    Reflect.deleteProperty(Element.prototype, 'animate');
+    vi.restoreAllMocks();
+  });
+
+  const scene = (size?: number): Parameters<typeof playLanding>[1] => {
+    const face = document.createElement('span');
+    const surface = document.createElement('div');
+
+    surface.append(face);
+    document.body.append(surface);
+
+    return { from: new DOMRect(0, 0, 32, 32), face, surface, previous: '', next: '😀', size };
+  };
+
+  const ghostWidth = (): string | undefined => document.body.querySelector<HTMLElement>('[data-blok-emoji-landing] > span')?.style.width;
+
+  it('flies a callout-sized ghost when the seat names no size', () => {
+    playLanding('swap', scene());
+
+    expect(ghostWidth()).toBe('24px');
+  });
+
+  it('flies a ghost as big as a larger seat, so it lands without a jump in size', () => {
+    playLanding('swap', scene(87));
+
+    expect(ghostWidth()).toBe('87px');
   });
 });

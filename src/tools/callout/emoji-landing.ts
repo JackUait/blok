@@ -25,6 +25,8 @@ export interface LandingScene {
   surface: HTMLElement;
   previous: string;
   next: string;
+  /** The ghost's box in px, sized to the seat's glyph. Defaults to the callout's 24. */
+  size?: number;
 }
 
 interface Point {
@@ -35,6 +37,9 @@ interface Point {
 type Frames = Keyframe[];
 
 const FALLBACK_COLOR = 'rgb(160, 160, 160)';
+
+/** The callout's seat; every distance below was tuned for it and grows with `k`. */
+const BASE_SIZE = 24;
 
 /**
  * Plays one landing on a fixed overlay over the page.
@@ -54,6 +59,9 @@ export function playLanding(kind: Landing, scene: LandingScene): () => void {
 class LandingRun {
   public readonly overlay: HTMLElement;
   public readonly color: string;
+  /** Seat size over the callout's, so effects at the seat keep their proportions. */
+  public readonly k: number;
+  private readonly size: number;
   private readonly face: HTMLElement;
   private readonly pending = new Set<Animation>();
   private readonly timers = new Set<number>();
@@ -63,6 +71,8 @@ class LandingRun {
   constructor(scene: LandingScene) {
     this.face = scene.face;
     this.color = emojiColor(scene.next) ?? FALLBACK_COLOR;
+    this.size = scene.size ?? BASE_SIZE;
+    this.k = this.size / BASE_SIZE;
     this.overlay = document.createElement('div');
     this.overlay.setAttribute('aria-hidden', 'true');
     this.overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;pointer-events:none;overflow:hidden;';
@@ -86,7 +96,18 @@ class LandingRun {
     this.face.style.visibility = 'hidden';
   }
 
-  public ghost(glyph: string, size = 24): HTMLElement {
+  /**
+   * Scale along a flight: `start` is sized for the picker's cell, so a big seat
+   * shrinks it to stay cell-sized at take-off and reaches `end` on the seat.
+   * @param start - take-off scale for a callout-sized ghost
+   * @param end - scale on the seat
+   * @param t - progress, 0 to 1
+   */
+  public grow(start: number, end: number, t: number): number {
+    return (start / this.k) * (1 - t) + end * t;
+  }
+
+  public ghost(glyph: string, size = this.size): HTMLElement {
     const ghost = document.createElement('span');
 
     ghost.textContent = glyph;
@@ -165,7 +186,8 @@ class LandingRun {
     this.animate(this.face, frames, { duration, easing: 'ease-out' });
   }
 
-  public ring(point: Point, size = 40, color = this.color): void {
+  public ring(point: Point, base = 40, color = this.color): void {
+    const size = base * this.k;
     const ring = this.dot(`left:${point.x - size / 2}px;top:${point.y - size / 2}px;width:${size}px;height:${size}px;border-radius:50%;border:2px solid ${color};box-sizing:border-box;`);
 
     this.animate(ring, [{ transform: 'scale(.3)', opacity: 0.9 }, { transform: 'scale(1.7)', opacity: 0 }], { duration: 560, easing: 'cubic-bezier(.2,.7,.3,1)' }, () => ring.remove());
@@ -232,7 +254,7 @@ const RUNNERS: Record<Landing, (run: LandingRun, scene: LandingScene) => void> =
     const b = run.slot();
     const c = { x: clampX(Math.max(a.x, b.x) + 160), y: Math.min(a.y, b.y) - 30 };
     const frames = path(a, c, b, 18, easeInOutCubic).map((p, index) => ({
-      transform: `translate(${p.x}px, ${p.y}px) scale(${(1.4 - 0.45 * (index / 18)).toFixed(3)}) rotate(${Math.sin((index / 18) * Math.PI) * -18}deg)`,
+      transform: `translate(${p.x}px, ${p.y}px) scale(${run.grow(1.4, 0.95, index / 18).toFixed(3)}) rotate(${Math.sin((index / 18) * Math.PI) * -18}deg)`,
     }));
 
     run.hideSlot();
@@ -266,7 +288,7 @@ const RUNNERS: Record<Landing, (run: LandingRun, scene: LandingScene) => void> =
 
     run.hideSlot();
     run.animate(ghost, path(a, c, b, 14, t => 1 - (1 - t) ** 2.4).map((p, index) => ({
-      transform: `translate(${p.x}px, ${p.y}px) scale(${(1.3 - 0.3 * (index / 14)).toFixed(3)}) rotate(${(index / 14) * 360}deg)`,
+      transform: `translate(${p.x}px, ${p.y}px) scale(${run.grow(1.3, 1, index / 14).toFixed(3)}) rotate(${(index / 14) * 360}deg)`,
     })), { duration: 460, easing: 'linear', fill: 'forwards' }, () => {
       ghost.remove();
 
@@ -275,8 +297,8 @@ const RUNNERS: Record<Landing, (run: LandingRun, scene: LandingScene) => void> =
 
         run.animate(knocked, [
           { transform: `translate(${b.x}px, ${b.y}px) rotate(0deg)`, easing: 'cubic-bezier(.2,.7,.4,1)' },
-          { transform: `translate(${b.x + 26}px, ${b.y - 34}px) rotate(70deg)`, offset: 0.24, easing: 'cubic-bezier(.55,0,1,.6)' },
-          { transform: `translate(${b.x + 78}px, ${b.y + 300}px) rotate(320deg)`, opacity: 0 },
+          { transform: `translate(${b.x + 26 * run.k}px, ${b.y - 34 * run.k}px) rotate(70deg)`, offset: 0.24, easing: 'cubic-bezier(.55,0,1,.6)' },
+          { transform: `translate(${b.x + 78 * run.k}px, ${b.y + 300}px) rotate(320deg)`, opacity: 0 },
         ], { duration: 1000, fill: 'forwards' }, () => knocked.remove());
       }
 
@@ -295,8 +317,11 @@ const RUNNERS: Record<Landing, (run: LandingRun, scene: LandingScene) => void> =
 
     const a = run.center(from);
     const b = run.slot();
-    const top = { x: b.x, y: b.y - 54 };
-    const shadow = run.dot(`left:${b.x - 14}px;top:${b.y + 7}px;width:28px;height:8px;border-radius:50%;background:rgba(0,0,0,.28);filter:blur(2px);`);
+    const { k } = run;
+    // A big seat lifts less, so the stamp stays near the icon.
+    const lift = 1 + 1.9 / k;
+    const top = { x: b.x, y: b.y - 54 * Math.sqrt(k) };
+    const shadow = run.dot(`left:${b.x - 14 * k}px;top:${b.y + 7 * k}px;width:${28 * k}px;height:${8 * k}px;border-radius:50%;background:rgba(0,0,0,.28);filter:blur(${2 * k}px);`);
     const ghost = run.ghost(next);
 
     run.hideSlot();
@@ -307,9 +332,9 @@ const RUNNERS: Record<Landing, (run: LandingRun, scene: LandingScene) => void> =
       { transform: 'scale(1.15)', opacity: 0.9 },
     ], { duration: 720, fill: 'forwards' });
     run.animate(ghost, [
-      { transform: `translate(${a.x}px, ${a.y}px) scale(1.2) rotate(0deg)`, easing: 'cubic-bezier(.2,.8,.25,1)' },
-      { transform: `translate(${top.x}px, ${top.y}px) scale(2.9) rotate(-8deg)`, offset: 0.5, easing: 'ease-in-out' },
-      { transform: `translate(${top.x}px, ${top.y - 5}px) scale(3) rotate(-4deg)`, offset: 0.74, easing: 'cubic-bezier(.6,0,1,1)' },
+      { transform: `translate(${a.x}px, ${a.y}px) scale(${1.2 / k}) rotate(0deg)`, easing: 'cubic-bezier(.2,.8,.25,1)' },
+      { transform: `translate(${top.x}px, ${top.y}px) scale(${lift}) rotate(-8deg)`, offset: 0.5, easing: 'ease-in-out' },
+      { transform: `translate(${top.x}px, ${top.y - 5}px) scale(${lift + 0.1}) rotate(-4deg)`, offset: 0.74, easing: 'cubic-bezier(.6,0,1,1)' },
       { transform: `translate(${b.x}px, ${b.y}px) scale(1) rotate(0deg)` },
     ], { duration: 720, fill: 'forwards' }, () => {
       ghost.remove();
@@ -317,12 +342,12 @@ const RUNNERS: Record<Landing, (run: LandingRun, scene: LandingScene) => void> =
 
       Array.from({ length: 12 }, (_, index) => index).forEach((index) => {
         const side = index % 2 === 0 ? -1 : 1;
-        const size = 3 + Math.random() * 3;
-        const dust = run.dot(`left:${b.x - size / 2}px;top:${b.y + 8}px;width:${size}px;height:${size}px;border-radius:50%;background:${run.color};`);
+        const size = (3 + Math.random() * 3) * k;
+        const dust = run.dot(`left:${b.x - size / 2}px;top:${b.y + 8 * k}px;width:${size}px;height:${size}px;border-radius:50%;background:${run.color};`);
 
         run.animate(dust, [
           { transform: 'translate(0,0)', opacity: 1 },
-          { transform: `translate(${side * (14 + Math.random() * 26)}px, ${-4 - Math.random() * 12}px) scale(.4)`, opacity: 0 },
+          { transform: `translate(${side * (14 + Math.random() * 26) * k}px, ${(-4 - Math.random() * 12) * k}px) scale(.4)`, opacity: 0 },
         ], { duration: 520, easing: 'cubic-bezier(.1,.8,.3,1)' }, () => dust.remove());
       });
 
@@ -353,7 +378,7 @@ const RUNNERS: Record<Landing, (run: LandingRun, scene: LandingScene) => void> =
     const ghost = run.ghost(next);
 
     ghost.style.filter = `drop-shadow(0 0 8px ${run.color})`;
-    run.animate(ghost, points.map((p, index) => ({ transform: `translate(${p.x}px, ${p.y}px) scale(${(1.3 - 0.3 * (index / steps)).toFixed(3)})` })), { duration, easing: 'linear', fill: 'forwards' }, () => {
+    run.animate(ghost, points.map((p, index) => ({ transform: `translate(${p.x}px, ${p.y}px) scale(${run.grow(1.3, 1, index / steps).toFixed(3)})` })), { duration, easing: 'linear', fill: 'forwards' }, () => {
       ghost.remove();
 
       const box = surface.getBoundingClientRect();
@@ -371,27 +396,29 @@ const RUNNERS: Record<Landing, (run: LandingRun, scene: LandingScene) => void> =
 
     const a = run.center(from);
     const b = run.slot();
-    const hole = (p: Point, width: number): HTMLElement =>
-      run.dot(`left:${p.x - width / 2}px;top:${p.y - 6}px;width:${width}px;height:12px;border-radius:50%;background:radial-gradient(closest-side, rgba(0,0,0,.9), rgba(0,0,0,.55) 60%, rgba(0,0,0,0));transform:scale(0);`);
-    const first = hole({ x: a.x, y: a.y + 10 }, 34);
+    const { k } = run;
+    // The first hole sits under the picker's cell, the second under the seat.
+    const hole = (p: Point, width: number, scale: number): HTMLElement =>
+      run.dot(`left:${p.x - (width * scale) / 2}px;top:${p.y - 6 * scale}px;width:${width * scale}px;height:${12 * scale}px;border-radius:50%;background:radial-gradient(closest-side, rgba(0,0,0,.9), rgba(0,0,0,.55) 60%, rgba(0,0,0,0));transform:scale(0);`);
+    const first = hole({ x: a.x, y: a.y + 10 }, 34, 1);
     const ghost = run.ghost(next);
 
     run.hideSlot();
     run.animate(first, [{ transform: 'scale(0)' }, { transform: 'scale(1)', offset: 0.35 }, { transform: 'scale(1)', offset: 0.75 }, { transform: 'scale(0)' }], { duration: 560, fill: 'forwards' }, () => first.remove());
     run.animate(ghost, [
-      { transform: `translate(${a.x}px, ${a.y}px) scale(1.2)` },
-      { transform: `translate(${a.x}px, ${a.y - 6}px) scale(1.3, 1.1)`, offset: 0.3 },
-      { transform: `translate(${a.x}px, ${a.y + 12}px) scale(.2, .7)`, opacity: 0 },
+      { transform: `translate(${a.x}px, ${a.y}px) scale(${1.2 / k})` },
+      { transform: `translate(${a.x}px, ${a.y - 6}px) scale(${1.3 / k}, ${1.1 / k})`, offset: 0.3 },
+      { transform: `translate(${a.x}px, ${a.y + 12}px) scale(${0.2 / k}, ${0.7 / k})`, opacity: 0 },
     ], { duration: 420, easing: 'cubic-bezier(.5,0,.9,.6)', fill: 'forwards' }, () => {
       ghost.remove();
 
-      const second = hole({ x: b.x, y: b.y + 11 }, 30);
+      const second = hole({ x: b.x, y: b.y + 11 * k }, 30, k);
       const rising = run.ghost(next);
 
       run.animate(second, [{ transform: 'scale(0)' }, { transform: 'scale(1)', offset: 0.3 }, { transform: 'scale(1)', offset: 0.6 }, { transform: 'scale(0)' }], { duration: 620, fill: 'forwards' }, () => second.remove());
       run.animate(rising, [
-        { transform: `translate(${b.x}px, ${b.y + 12}px) scale(.2, .7)`, opacity: 0 },
-        { transform: `translate(${b.x}px, ${b.y - 16}px) scale(1.25)`, opacity: 1, offset: 0.6 },
+        { transform: `translate(${b.x}px, ${b.y + 12 * k}px) scale(.2, .7)`, opacity: 0 },
+        { transform: `translate(${b.x}px, ${b.y - 16 * k}px) scale(1.25)`, opacity: 1, offset: 0.6 },
         { transform: `translate(${b.x}px, ${b.y}px) scale(1)` },
       ], { duration: 460, delay: 140, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'both' }, () => {
         rising.remove();
@@ -406,7 +433,8 @@ const RUNNERS: Record<Landing, (run: LandingRun, scene: LandingScene) => void> =
 
     const a = run.center(from);
     const b = run.slot();
-    const bubble = run.dot('left:0;top:0;width:42px;height:42px;margin:-21px 0 0 -21px;border-radius:50%;display:grid;place-items:center;font-size:22px;line-height:1;'
+    const { k } = run;
+    const bubble = run.dot(`left:0;top:0;width:${42 * k}px;height:${42 * k}px;margin:${-21 * k}px 0 0 ${-21 * k}px;border-radius:50%;display:grid;place-items:center;font-size:${22 * k}px;line-height:1;`
       + 'background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.9), rgba(255,255,255,0) 22%),conic-gradient(from 40deg, rgba(255,120,200,.22), rgba(120,200,255,.22), rgba(140,255,180,.22), rgba(255,230,120,.22), rgba(255,120,200,.22));'
       + 'box-shadow:inset 0 0 0 1px rgba(255,255,255,.75), inset 0 -4px 10px rgba(120,160,255,.25), 0 4px 12px rgba(0,0,0,.08);');
     const steps = 20;
@@ -414,13 +442,13 @@ const RUNNERS: Record<Landing, (run: LandingRun, scene: LandingScene) => void> =
       const t = (index + 1) / steps;
       const eased = 1 - (1 - t) ** 2;
       const wobble = Math.sin(t * Math.PI * 6) * 0.06;
-      const scale = 1.05 - 0.1 * t;
+      const scale = run.grow(1.05, 0.95, t);
 
       return {
         transform: `translate(${a.x + (b.x - a.x) * eased + Math.sin(t * Math.PI * 3) * 16 * (1 - t)}px, ${a.y + (b.y - a.y) * eased}px) scale(${((1 + wobble) * scale).toFixed(3)}, ${((1 - wobble) * scale).toFixed(3)})`,
       };
     });
-    const frames: Frames = [{ transform: `translate(${a.x}px, ${a.y}px) scale(.3)`, opacity: 0 }, ...drift];
+    const frames: Frames = [{ transform: `translate(${a.x}px, ${a.y}px) scale(${0.3 / k})`, opacity: 0 }, ...drift];
 
     bubble.textContent = next;
 
@@ -430,17 +458,17 @@ const RUNNERS: Record<Landing, (run: LandingRun, scene: LandingScene) => void> =
 
       Array.from({ length: 10 }, (_, index) => index).forEach((index) => {
         const angle = (index / 10) * Math.PI * 2;
-        const distance = 20 + Math.random() * 10;
-        const drop = run.dot(`left:${b.x - 2}px;top:${b.y - 2}px;width:4px;height:4px;border-radius:50%;background:rgba(150,190,255,.7);box-shadow:inset 0 0 0 1px rgba(255,255,255,.8);`);
+        const distance = (20 + Math.random() * 10) * k;
+        const drop = run.dot(`left:${b.x - 2 * k}px;top:${b.y - 2 * k}px;width:${4 * k}px;height:${4 * k}px;border-radius:50%;background:rgba(150,190,255,.7);box-shadow:inset 0 0 0 1px rgba(255,255,255,.8);`);
 
         run.animate(drop, [
           { transform: 'translate(0,0) scale(1)', opacity: 1 },
-          { transform: `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance + 6}px) scale(.3)`, opacity: 0 },
+          { transform: `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance + 6 * k}px) scale(.3)`, opacity: 0 },
         ], { duration: 420, easing: 'cubic-bezier(.1,.8,.3,1)' }, () => drop.remove());
       });
 
       run.ring(b, 44, 'rgba(150,190,255,.8)');
-      run.settle([{ transform: 'translateY(-4px) scale(1.15)' }, { transform: 'translateY(1px) scale(1.1, .9)' }, { transform: 'none' }], 380);
+      run.settle([{ transform: `translateY(${-4 * k}px) scale(1.15)` }, { transform: `translateY(${k}px) scale(1.1, .9)` }, { transform: 'none' }], 380);
     });
   },
 
@@ -466,8 +494,8 @@ const RUNNERS: Record<Landing, (run: LandingRun, scene: LandingScene) => void> =
       { transform: `rotate(${angle}rad) scaleX(0)`, opacity: 0.6 },
     ], { duration: 640, fill: 'forwards' }, () => band.remove());
     run.animate(ghost, [
-      { transform: `translate(${a.x}px, ${a.y}px) scale(1.2)`, easing: 'cubic-bezier(.3,0,.2,1)' },
-      { transform: `translate(${pull.x}px, ${pull.y}px) scale(1.45, 1.1) rotate(${-angle}rad)`, offset: 0.6, easing: 'cubic-bezier(.7,0,1,1)' },
+      { transform: `translate(${a.x}px, ${a.y}px) scale(${1.2 / run.k})`, easing: 'cubic-bezier(.3,0,.2,1)' },
+      { transform: `translate(${pull.x}px, ${pull.y}px) scale(${1.45 / run.k}, ${1.1 / run.k}) rotate(${-angle}rad)`, offset: 0.6, easing: 'cubic-bezier(.7,0,1,1)' },
       { transform: `translate(${b.x}px, ${b.y}px) scale(1.1, .9) rotate(0rad)` },
     ], { duration: 640, fill: 'forwards' }, () => {
       ghost.remove();
@@ -489,8 +517,8 @@ const RUNNERS: Record<Landing, (run: LandingRun, scene: LandingScene) => void> =
 
     run.hideSlot();
     run.animate(ghost, [
-      { transform: `translate(${a.x}px, ${a.y}px) scale(1.3)`, filter: 'blur(0px)', opacity: 1 },
-      { transform: `translate(${a.x}px, ${a.y}px) scale(1.6)`, filter: 'blur(4px)', opacity: 0 },
+      { transform: `translate(${a.x}px, ${a.y}px) scale(${1.3 / run.k})`, filter: 'blur(0px)', opacity: 1 },
+      { transform: `translate(${a.x}px, ${a.y}px) scale(${1.6 / run.k})`, filter: 'blur(4px)', opacity: 0 },
     ], { duration: 200, easing: 'ease-in', fill: 'forwards' }, () => ghost.remove());
 
     Array.from({ length: 26 }, (_, index) => index).forEach((index) => {
@@ -527,18 +555,18 @@ const RUNNERS: Record<Landing, (run: LandingRun, scene: LandingScene) => void> =
 
     run.hideSlot();
     run.animate(ghost, path(a, c, b, 12, t => 1 - (1 - t) ** 2).map((p, index) => ({
-      transform: `translate(${p.x}px, ${p.y}px) scale(${(1.3 - (0.3 * index) / 12).toFixed(3)})`,
+      transform: `translate(${p.x}px, ${p.y}px) scale(${run.grow(1.3, 1, index / 12).toFixed(3)})`,
     })), { duration: 420, easing: 'linear', fill: 'forwards' }, () => {
       ghost.remove();
 
       const palette = [run.color, `color-mix(in srgb, ${run.color} 50%, white)`, `color-mix(in srgb, ${run.color} 70%, black)`, '#f2c94c', '#eb5757', '#6fcf97', '#bb6bd9'];
 
       Array.from({ length: 30 }, (_, index) => index).forEach((index) => {
-        const width = 3 + Math.random() * 3;
-        const height = 6 + Math.random() * 5;
+        const width = (3 + Math.random() * 3) * Math.sqrt(run.k);
+        const height = (6 + Math.random() * 5) * Math.sqrt(run.k);
         const piece = run.dot(`left:${b.x - width / 2}px;top:${b.y - height / 2}px;width:${width}px;height:${height}px;border-radius:1px;background:${palette[index % palette.length]};`);
         const angle = -Math.PI / 2 + (Math.random() - 0.5) * 2.4;
-        const speed = 50 + Math.random() * 60;
+        const speed = (50 + Math.random() * 60) * Math.sqrt(run.k);
         const px = Math.cos(angle) * speed;
         const py = Math.sin(angle) * speed;
         const spin = (Math.random() - 0.5) * 900;

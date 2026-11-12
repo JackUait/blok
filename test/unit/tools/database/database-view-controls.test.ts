@@ -721,6 +721,17 @@ describe('DatabaseViewControls', () => {
       expect(q('database-filter-popover')?.style.width).toBe('220px');
     });
 
+    // notion-motion.md Round 19 §2 (r19-cb-new.raw, r19-cb-checked.raw): the Checkbox popover is 220 wide (220×95, 220×132).
+    it('opens a Checkbox filter 220 wide', () => {
+      const env = setup({ schema: () => [...schema, { id: 'done', name: 'Done', type: 'checkbox', position: 'a3' }] });
+
+      env.saved.view = { ...env.saved.view, filters: [{ id: 'f3', propertyId: 'done', operator: 'equals', value: true }] };
+      env.controls.refresh();
+      click('database-filter-pill-f3');
+
+      expect(q('database-filter-popover')?.style.width).toBe('220px');
+    });
+
     it('heads the popover with "Name operator" and a "…" button, 260 wide', () => {
       open();
       const popover = q('database-filter-popover');

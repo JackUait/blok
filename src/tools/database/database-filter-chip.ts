@@ -689,13 +689,13 @@ export const dateRuleControls = (
 
 /**
  * research/08:232 and shots-08/67-filter-number.png: the popover with a value
- * field is 220 wide. Notion's widths for the editors with lists (options,
- * people, relations, dates, checkbox) are unmeasured, so they keep 260.
+ * field is 220 wide. notion-motion.md Round 19 §2: Select, Multi-select, Person
+ * and Date are 260, Checkbox 220 (r19-cb-new.raw). Relations are unmeasured.
  */
 const VALUE_FIELD_FILTER_WIDTH = 220;
 const LIST_FILTER_WIDTH = 260;
 const LIST_FILTER_TYPES: readonly PropertyType[] = [
-  'select', 'multiSelect', 'status', 'checkbox', 'person', 'createdBy', 'lastEditedBy', 'relation', 'date', 'createdTime', 'lastEditedTime',
+  'select', 'multiSelect', 'status', 'person', 'createdBy', 'lastEditedBy', 'relation', 'date', 'createdTime', 'lastEditedTime',
 ];
 
 /** notion-motion.md Round 18 §2: the rule popover's top is the chip's bottom + 4, in the bar and on the settings Filters page. */

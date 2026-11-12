@@ -187,7 +187,7 @@
       "sup": {},
       "sub": {},
       "mark": "[fn preserveColorStyles]",
-      "span": "[fn preserveEquationSpan]"
+      "span": "[fn preserveInlineSpan]"
     },
     "schema": "plaintext",
     "deletedProperties": "plaintext",

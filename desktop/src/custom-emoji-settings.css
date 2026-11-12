@@ -16,7 +16,7 @@
 [data-custom-emoji-empty] svg { width:22px; height:22px; }
 [data-custom-emoji-empty] strong { font-size:14px; font-weight:500; color:var(--desktop-ink); }
 [data-custom-emoji-empty] p { max-width:300px; margin:7px 0 0; color:var(--desktop-muted); font-size:13px; line-height:1.5; }
-[data-custom-emoji-overlay] { position:fixed; inset:0; z-index:250; display:flex; align-items:center; justify-content:center; padding:24px; background:#0005; }
+[data-custom-emoji-overlay], [data-custom-emoji-overlay][data-blok-top-layer][popover] { position:fixed; inset:0; margin:0; width:100vw; height:100dvh; max-width:none; max-height:none; border:0; overflow:auto; z-index:250; display:flex; align-items:center; justify-content:center; padding:24px; background:#0005; }
 [data-custom-emoji-dialog] { width:420px; max-width:100%; max-height:calc(100dvh - 48px); overflow:auto; border:1px solid var(--desktop-border); border-radius:12px; background:var(--desktop-canvas); color:var(--desktop-ink); box-shadow:0 20px 80px #0005,0 2px 12px #0002; font:13px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
 [data-custom-emoji-dialog] > header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:22px 24px 0; }
 [data-custom-emoji-dialog] h2 { margin:0; font-size:18px; font-weight:600; letter-spacing:-.3px; }

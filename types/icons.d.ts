@@ -221,6 +221,7 @@ export declare const IconFilter: string;
 export declare const IconSigma: string;
 export declare const IconSort: string;
 export declare const IconMessage: string;
+export declare const IconAnnotation: string;
 export declare const IconFile: string;
 export declare const IconPage: string;
 export declare const IconPageEmpty: string;

@@ -1809,6 +1809,19 @@ export const IconMessage = `
 </svg>
 `;
 
+// Hint (annotation) icon: the card that opens, over the dotted word.
+// The dots span IconUnderline's rule; they sit 0.25 lower to clear the card by one stroke.
+export const IconAnnotation = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="3" y="3" width="14" height="7.5" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6 6.75h8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="5.5" cy="15.25" r="0.75" fill="currentColor"/>
+  <circle cx="8.5" cy="15.25" r="0.75" fill="currentColor"/>
+  <circle cx="11.5" cy="15.25" r="0.75" fill="currentColor"/>
+  <circle cx="14.5" cy="15.25" r="0.75" fill="currentColor"/>
+</svg>
+`;
+
 // File / document icon — page with a folded corner and text lines (link-type: document)
 export const IconFile = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

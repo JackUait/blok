@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { IconMessage } from '../../../../src/components/icons';
+import { IconAnnotation } from '../../../../src/components/icons';
 import { AnnotationInlineTool } from '../../../../src/components/inline-tools/inline-tool-annotation';
 import { PopoverItemType } from '../../../../src/components/utils/popover';
 import type { PopoverItemHtmlParams } from '../../../../types/utils/popover';
@@ -115,11 +115,11 @@ describe('AnnotationInlineTool', () => {
     expect(AnnotationInlineTool.sanitize).toEqual({});
   });
 
-  it('renders a button with the message icon and a menu holding its card', () => {
+  it('renders a button with the card-over-dots icon and a menu holding its card', () => {
     const { tool } = create();
     const config = tool.render() as unknown as { icon: string; name: string; children: { items: PopoverItemHtmlParams[] } };
 
-    expect(config.icon).toBe(IconMessage);
+    expect(config.icon).toBe(IconAnnotation);
     expect(config.name).toBe('annotation');
     expect(config.children.items[0].type).toBe(PopoverItemType.Html);
   });

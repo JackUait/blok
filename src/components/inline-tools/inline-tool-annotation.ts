@@ -7,7 +7,7 @@ import type { I18n, InlineToolbar } from '../../../types/api';
 import type { MarkSpec } from '../../../types/api/marks';
 import type { MenuConfig } from '../../../types/tools';
 import { ANNOTATION_ATTR, ANNOTATION_SUBTITLE_ATTR } from '../../shared/annotation-mark';
-import { IconMessage, IconTrash } from '../icons';
+import { IconAnnotation, IconTrash } from '../icons';
 import { applyMark, removeMark } from '../marks/mark-engine';
 import { SelectionUtils } from '../selection/index';
 import { PopoverItemType } from '../utils/popover';
@@ -99,7 +99,7 @@ export class AnnotationInlineTool implements InlineTool {
    */
   public render(): MenuConfig {
     return {
-      icon: IconMessage,
+      icon: IconAnnotation,
       name: 'annotation',
       isActive: () => this.hintAtSelection() !== null,
       children: {

@@ -255,6 +255,48 @@ test.describe('annotation (Hint) inline tool', () => {
     await expect(card).not.toHaveAttribute('data-state', 'open');
   });
 
+  test('a hovered card closes as soon as the pointer leaves, but not while the pointer crosses into it', async ({ page }) => {
+    await createBlok(page, [ WITH_HINT ]);
+
+    const card = page.getByTestId('annotation-card');
+    const openCards = page.locator('[data-blok-testid="annotation-card"][data-state="open"]');
+    const phrase = await page.locator(HINT_SELECTOR).boundingBox();
+
+    if (phrase === null) {
+      throw new Error('the hint has no box');
+    }
+
+    const x = phrase.x + phrase.width / 2;
+    const hover = async (): Promise<void> => {
+      await page.mouse.move(x - 4, phrase.y + phrase.height / 2);
+      await page.mouse.move(x, phrase.y + phrase.height / 2);
+      await expect(card).toHaveAttribute('data-state', 'open');
+    };
+
+    await hover();
+
+    const cardBox = await card.boundingBox();
+
+    if (cardBox === null) {
+      throw new Error('the card has no box');
+    }
+
+    // Straight down across the stem's gap, slowly: the card must still be there to land on.
+    await page.mouse.move(x, cardBox.y + 20, { steps: 12 });
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- asserts the card did NOT close during the crossing
+    await page.waitForTimeout(200);
+    expect(await openCards.count()).toBe(1);
+
+    await page.mouse.move(5, 5);
+    await expect(card).not.toHaveAttribute('data-state', 'open');
+
+    await hover();
+    await page.mouse.move(x, phrase.y - 40);
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- asserts there is no linger: the old card stayed 250ms
+    await page.waitForTimeout(100);
+    expect(await openCards.count()).toBe(0);
+  });
+
   test('the card hangs under the phrase on a stem, and the phrase stays lit while it is open', async ({ page }) => {
     await createBlok(page, [ WITH_HINT ], { readOnly: true });
 

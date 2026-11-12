@@ -1705,13 +1705,9 @@ export class UI extends Module<UINodes> {
 
     const card = this.ensureAnnotationCard();
 
-    if (card.anchor === hint) {
-      card.cancelHide();
-
-      return;
+    if (card.anchor !== hint) {
+      card.show(hint);
     }
-
-    card.show(hint);
   }
 
   /**
@@ -1721,11 +1717,16 @@ export class UI extends Module<UINodes> {
     const hint = this.annotationOf(event.target);
     const related = event.relatedTarget;
 
-    if (hint === null || (related instanceof Node && hint.contains(related))) {
+    if (hint === null) {
       return;
     }
 
-    this.annotationCard?.scheduleHide();
+    // Onto a child of the phrase, or straight into the card: not a leave.
+    if (related instanceof Node && (hint.contains(related) || this.annotationCard?.contains(related) === true)) {
+      return;
+    }
+
+    this.annotationCard?.pointerLeft();
   }
 
   /**

@@ -7,9 +7,6 @@ import { MIN_HINT_DELAY } from './tooltip';
 import { promoteToTopLayer, removeFromTopLayer } from './top-layer';
 import { twJoin } from './tw';
 
-/** Time the pointer has to travel from the phrase onto the card (WCAG 1.4.13). */
-const GRACE_HIDE_DURATION = 250;
-
 /** Gap between the phrase and the card. MUST match the 11px in the stem's `top` and `h` classes. */
 const GAP = 11;
 
@@ -67,7 +64,6 @@ export class AnnotationCard {
 
   private showTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  private graceHideTimeout: ReturnType<typeof setTimeout> | null = null;
 
   private exitTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -98,8 +94,6 @@ export class AnnotationCard {
    * @param anchor - the annotated phrase
    */
   public show(anchor: HTMLElement): void {
-    this.cancelHide();
-
     if (this.currentAnchor === anchor || this.pendingAnchor === anchor) {
       return;
     }
@@ -136,35 +130,29 @@ export class AnnotationCard {
     this.pin(anchor);
   }
 
-  /** The pointer left the phrase or the card. */
-  public scheduleHide(): void {
-    this.cancelHide();
-
+  /** The pointer left the phrase or the card: a hovered card closes at once, a pinned one stays. */
+  public pointerLeft(): void {
     if (!this.shown) {
       this.cancelShow();
 
       return;
     }
 
-    if (this.isPinned) {
-      return;
-    }
-
-    this.graceHideTimeout = setTimeout(() => {
-      this.graceHideTimeout = null;
+    if (!this.isPinned) {
       this.hide();
-    }, GRACE_HIDE_DURATION);
+    }
   }
 
-  public cancelHide(): void {
-    if (this.graceHideTimeout !== null) {
-      clearTimeout(this.graceHideTimeout);
-      this.graceHideTimeout = null;
-    }
+  /**
+   * Whether a node is part of the card. A pointer that goes from the phrase
+   * straight into the card has not left.
+   * @param node - where the pointer went
+   */
+  public contains(node: Node | null): boolean {
+    return node !== null && this.nodes.wrapper.contains(node);
   }
 
   public hide(): void {
-    this.cancelHide();
     this.cancelShow();
     this.cancelEnterFrame();
 
@@ -189,7 +177,6 @@ export class AnnotationCard {
   }
 
   public destroy(): void {
-    this.cancelHide();
     this.cancelShow();
     this.cancelEnterFrame();
     this.cancelExit();
@@ -210,7 +197,6 @@ export class AnnotationCard {
       return;
     }
 
-    this.cancelHide();
     this.cancelExit();
     this.currentAnchor = anchor;
     this.nodes.wrapper.inert = false;
@@ -364,6 +350,9 @@ export class AnnotationCard {
     // The wrapper only places the card; the surface below carries the look.
     wrapper.className = twJoin(
       'group fixed z-overlay top-0 left-0',
+      // A bridge over the stem's gap: the pointer can cross from the phrase into the card (WCAG 1.4.13).
+      'before:content-[""] before:absolute before:inset-x-0 before:h-[11px] before:top-[-11px]',
+      'data-[side=top]:before:top-auto data-[side=top]:before:bottom-[-11px]',
       'text-[15px] leading-[1.5] text-text-primary text-left'
     );
     // Inline, not utilities: the top-layer reset in isolation.css zeroes padding on the promoted element.
@@ -426,8 +415,13 @@ export class AnnotationCard {
     body.append(text, subtitle);
     surface.append(body);
     wrapper.append(stem, surface);
-    wrapper.addEventListener('mouseenter', () => this.cancelHide());
-    wrapper.addEventListener('mouseleave', () => this.scheduleHide());
+    wrapper.addEventListener('mouseleave', (event) => {
+      const next = event.relatedTarget;
+
+      if (!(next instanceof Node && this.currentAnchor?.contains(next) === true)) {
+        this.pointerLeft();
+      }
+    });
 
     return { wrapper, text, subtitle };
   }

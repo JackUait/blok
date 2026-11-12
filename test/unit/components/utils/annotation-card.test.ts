@@ -91,46 +91,63 @@ describe('AnnotationCard', () => {
       const anchor = createAnchor('A quote');
 
       card.show(anchor);
-      vi.advanceTimersByTime(300);
-      card.scheduleHide();
+      vi.advanceTimersByTime(200);
+      card.pointerLeft();
       vi.advanceTimersByTime(1000);
 
       expect(card.anchor).toBeNull();
       expect(isOpen()).toBe(false);
     });
 
-    it('hides after the grace period once the pointer leaves', () => {
+    it('closes the moment the pointer leaves, with no linger', () => {
       card.show(createAnchor('A quote'));
-      vi.advanceTimersByTime(500);
-      card.scheduleHide();
-      vi.advanceTimersByTime(249);
+      // 300ms hover wait, then one frame for the card to open
+      vi.advanceTimersByTime(350);
+      expect(isOpen()).toBe(true);
 
-      expect(card.anchor).not.toBeNull();
-
-      vi.advanceTimersByTime(1);
+      card.pointerLeft();
 
       expect(card.anchor).toBeNull();
+      expect(isOpen()).toBe(false);
 
       vi.advanceTimersByTime(150);
 
       expect(getCard()).toBeNull();
     });
 
-    it('stays open while the pointer is over the card', () => {
+    it('stays open while the pointer is over the card, and closes when it leaves the card', () => {
       const anchor = createAnchor('A quote');
 
       card.show(anchor);
-      vi.advanceTimersByTime(500);
-      card.scheduleHide();
+      vi.advanceTimersByTime(300);
       getCard()?.dispatchEvent(new MouseEvent('mouseenter'));
       vi.advanceTimersByTime(1000);
 
       expect(card.anchor).toBe(anchor);
 
       getCard()?.dispatchEvent(new MouseEvent('mouseleave'));
-      vi.advanceTimersByTime(250);
 
       expect(card.anchor).toBeNull();
+    });
+
+    it('stays open when the pointer goes from the card back to its phrase', () => {
+      const anchor = createAnchor('A quote');
+
+      card.show(anchor);
+      vi.advanceTimersByTime(300);
+      getCard()?.dispatchEvent(new MouseEvent('mouseleave', { relatedTarget: anchor }));
+
+      expect(card.anchor).toBe(anchor);
+    });
+
+    it('knows its own nodes, so a move from the phrase into the card is not a leave', () => {
+      card.show(createAnchor('A quote'));
+      vi.advanceTimersByTime(300);
+
+      expect(card.contains(getCard())).toBe(true);
+      expect(card.contains(getCard()?.querySelector(TEXT) ?? null)).toBe(true);
+      expect(card.contains(document.body)).toBe(false);
+      expect(card.contains(null)).toBe(false);
     });
 
     it('does not show a hint with an empty text', () => {
@@ -150,7 +167,7 @@ describe('AnnotationCard', () => {
       expect(card.anchor).toBe(anchor);
       expect(card.pinned).toBe(true);
 
-      card.scheduleHide();
+      card.pointerLeft();
       vi.advanceTimersByTime(1000);
 
       expect(card.anchor).toBe(anchor);
@@ -162,7 +179,7 @@ describe('AnnotationCard', () => {
       card.show(anchor);
       vi.advanceTimersByTime(500);
       card.toggle(anchor);
-      card.scheduleHide();
+      card.pointerLeft();
       vi.advanceTimersByTime(1000);
 
       expect(card.anchor).toBe(anchor);

@@ -2229,14 +2229,14 @@ describe('UI module — mutants', () => {
       target.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }));
     };
 
-    it('shows the card over a hint only after the full hint delay', () => {
+    it('shows the card over a hint only after the shortest hint delay', () => {
       vi.useFakeTimers();
 
       const { ui, redactor } = createHintUI();
       const hint = addHint(redactor, 'A quote');
 
       hint.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
-      vi.advanceTimersByTime(499);
+      vi.advanceTimersByTime(299);
 
       expect(cardOf(ui)?.anchor).toBeNull();
 
@@ -2244,6 +2244,24 @@ describe('UI module — mutants', () => {
 
       expect(cardOf(ui)?.anchor).toBe(hint);
       expect(document.body.querySelector(CARD)?.textContent).toBe('A quote');
+    });
+
+    it('closes a hovered card the moment the pointer leaves the hint, unless it went into the card', () => {
+      vi.useFakeTimers();
+
+      const { ui, redactor } = createHintUI();
+      const hint = addHint(redactor, 'A quote');
+      const leaveTo = (relatedTarget: EventTarget | null): boolean =>
+        hint.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget }));
+
+      hint.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+      vi.advanceTimersByTime(300);
+
+      leaveTo(document.body.querySelector(CARD));
+      expect(cardOf(ui)?.anchor).toBe(hint);
+
+      leaveTo(document.body);
+      expect(cardOf(ui)?.anchor).toBeNull();
     });
 
     it('names the card from i18n', () => {

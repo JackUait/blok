@@ -792,7 +792,13 @@ export class CrossBlockSelection extends Module {
     const fIndex = BlockManager.blocks.indexOf(this.firstSelectedBlock);
     const lIndex = BlockManager.blocks.indexOf(this.lastSelectedBlock);
 
-    if (!BlockSelection.anyBlockSelected || fIndex === -1 || lIndex === -1) {
+    // A plain click also sets the anchors. When a later selection (block menu,
+    // Escape) holds none of their blocks, they are not this range: no caret,
+    // or a block-selection delete lands one in the clicked block (Notion U109).
+    const range = BlockManager.blocks.slice(Math.min(fIndex, lIndex), Math.max(fIndex, lIndex) + 1);
+    const anchorsAreTheSelection = range.some((block) => block.selected);
+
+    if (!BlockSelection.anyBlockSelected || fIndex === -1 || lIndex === -1 || !anchorsAreTheSelection) {
       this.firstSelectedBlock = this.lastSelectedBlock = null;
 
       return;

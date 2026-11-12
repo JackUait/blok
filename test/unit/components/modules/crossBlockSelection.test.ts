@@ -408,6 +408,18 @@ describe('CrossBlockSelection', () => {
       expect(caretSetToBlock).toHaveBeenCalledWith(blocks[0], blokState.Caret.positions.START);
     });
 
+    it('places no caret from a click left behind when another block was selected later (Notion U108, U109, U142)', () => {
+      // A click in blocks[0] set the anchors; the block menu then selected blocks[1].
+      blocks[1].selected = true;
+      setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
+      setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[0]);
+
+      crossBlockSelection.clear(createKeyboardEventWithKey('Backspace'));
+
+      expect(caretSetToBlock).not.toHaveBeenCalled();
+      expect(accessPrivate<Block | null>(crossBlockSelection, 'firstSelectedBlock')).toBeNull();
+    });
+
     it('skips caret restoration when nothing is selected', () => {
       // No blocks selected → anyBlockSelected getter returns false.
       setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);

@@ -9,7 +9,7 @@ import { DatabasePanel, panelInput, panelReorderList, panelRow, panelSeparator, 
 import { PersonalViewEdits } from './database-view-state';
 import type { ViewStateFallback } from './database-view-state';
 import { FILTERABLE_TYPES, defaultFilterFor, filterPillLabel, filterPillParts, sortDirectionLabelKey } from './database-filter-labels';
-import { countFilterRules, withEntryIds } from './filter-tree';
+import { addFilterRule, countFilterRules, emptyFilterTree, withEntryIds } from './filter-tree';
 import { openAdvancedFilter, openViewSettings } from './database-view-settings-panel';
 import { chipPart, filterChip, openFilterChip } from './database-filter-chip';
 import { openSortDirectionFlyout, openSortPropertyFlyout, sortChevron } from './database-sort-flyouts';
@@ -701,8 +701,23 @@ export class DatabaseViewControls {
     });
   }
 
-  /** The bar shows once the first rule is written, as "+ Filter" does with a pick. */
-  private openAdvanced(anchor: HTMLElement): void {
+  /**
+   * notion-motion.md Round 18 §2 (r18-adv-open.raw, r18-adv-bar.raw): "Add advanced filter" writes a first
+   * rule on the Name ("Where Name Contains"), so the "1 rule" chip shows at once and the popover opens under it.
+   */
+  private openAdvanced(fallback: HTMLElement): void {
+    const view = this.view();
+    const title = this.host.schema().find((p) => p.type === 'title');
+
+    if (view !== undefined && title !== undefined && countFilterRules(view.filterTree) === 0) {
+      const tree = view.filterTree ?? emptyFilterTree();
+      const { id, propertyId, operator, value } = defaultFilterFor(title);
+
+      this.barOpen = true;
+      this.updatePersonal({ filterTree: addFilterRule(tree, tree.id, { id, propertyId, operator, value }) });
+    }
+    const chip = this.filterBar.querySelector<HTMLElement>('[data-blok-testid="database-advanced-pill"]');
+    const anchor = chip !== null && !this.filterBar.hidden ? chip : fallback;
     const ctx: ViewSettingsContext = {
       ...this.settingsContext(),
       updatePersonal: (patch) => {

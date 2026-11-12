@@ -2801,6 +2801,8 @@ export const openAdvancedFilter = (anchor: HTMLElement, ctx: ViewSettingsContext
     root: new ViewSettingsPages(ctx).advanced(),
     testId: 'database-advanced-filter',
     width: 290,
+    // notion-motion.md Round 18 §2 (r18-adv-open.raw): 4px under the "1 rule" chip.
+    gap: 4,
     backLabel: ctx.i18n.t('tools.database.settingsBack'),
     ...(onClose !== undefined ? { onClose } : {}),
   });

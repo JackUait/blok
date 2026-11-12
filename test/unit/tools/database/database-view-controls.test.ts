@@ -269,7 +269,7 @@ describe('DatabaseViewControls', () => {
 
   // notion-motion.md Round 5: the Filter list's last row is "Add advanced filter", pinned under the scrolling list.
   it('ends "+ Filter" with "Add advanced filter" under the property list, and it opens the advanced filter', () => {
-    const { saved } = setup();
+    const { controls, saved } = setup();
 
     click('database-toolbar-filter');
     const picker = q('database-filter-picker');
@@ -287,22 +287,20 @@ describe('DatabaseViewControls', () => {
     expect(q('database-filter-picker')).toBeNull();
     expect(q('database-advanced-filter')).not.toBeNull();
     expect(document.querySelector('[data-blok-testid="database-advanced-filter"] [data-blok-testid^="database-filter-add-rule-"]')).not.toBeNull();
-    expect(saved.view.filterTree).toBeUndefined();
+    // notion-motion.md Round 18 §2 (r18-adv-open.raw): it starts with one rule, "Where Name Contains".
+    expect(controls.effective(saved.view).filterTree?.filterRules).toEqual([expect.objectContaining({ propertyId: 'title', operator: 'contains', value: '' })]);
   });
 
-  it('shows the filter bar only once the advanced filter gets its first rule', () => {
+  // notion-motion.md Round 18 §2 (r18-adv-open.raw, r18-adv-bar.raw): the "1 rule" chip shows at once, and the popover opens under it.
+  it('shows the advanced chip at once and opens the advanced filter under it', () => {
     const { controls } = setup();
 
     click('database-toolbar-filter');
     click('database-filter-picker-advanced');
 
-    expect(controls.filterBar.hidden).toBe(true);
-
-    document.querySelector<HTMLElement>('[data-blok-testid="database-advanced-filter"] [data-blok-testid^="database-filter-add-rule-"]')?.click();
-    click('database-pick-property-num');
-
     expect(controls.filterBar.hidden).toBe(false);
-    expect(q('database-advanced-pill')).not.toBeNull();
+    expect(q('database-advanced-pill')?.hasAttribute('data-popover-open')).toBe(true);
+    expect(q('database-filter-bar-add')?.hasAttribute('data-popover-open')).toBe(false);
   });
 
   // notion-motion.md Round 18 §2 (r18-adv-bar.raw): the advanced chip goes first, before the simple chips.

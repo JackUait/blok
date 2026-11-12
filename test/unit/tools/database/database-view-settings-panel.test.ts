@@ -3,7 +3,7 @@ import { DatabaseModel } from '../../../../src/tools/database/database-model';
 import { openFilterPill, openViewSettings } from '../../../../src/tools/database/database-view-settings-panel';
 import type { ViewSettingsContext, ViewSettingsStart } from '../../../../src/tools/database/database-view-settings-panel';
 import type { DatabasePanel } from '../../../../src/tools/database/database-panel';
-import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
+import type { DatabaseViewConfig, FilterGroup, FilterRule, PropertyDefinition } from '../../../../src/tools/database/types';
 import { IconTable, IconViewBoard } from '../../../../src/components/icons';
 import { PopoverItemType } from '../../../../src/components/utils/popover/components/popover-item';
 import { PAGE_LIST_ROLLUP } from '../../../../src/shared/database/value-helpers';
@@ -1068,6 +1068,19 @@ describe('view settings panel', () => {
     it('keeps the count with two filters', () => {
       harness({ filters: [{ id: 'f1', propertyId: 'num', operator: 'equals', value: 5 }, { id: 'f2', propertyId: 'due', operator: 'is_empty', value: null }] }).open();
 
+      expect(valueOf()).toBe('2');
+    });
+
+    // notion-motion.md Round 19 §1 (r19-settings.raw): an advanced filter of 3 items and 4 rules reads "1".
+    it('counts an advanced filter as one filter', () => {
+      const rule = (id: string): FilterRule => ({ id, propertyId: 'num', operator: 'is_empty', value: null });
+      const filterTree: FilterGroup = { id: 'root', conjunction: 'and', filterRules: [rule('a'), rule('b'), { id: 'g', conjunction: 'or', filterRules: [rule('c'), rule('d')] }] };
+
+      harness({ filterTree }).open();
+      expect(valueOf()).toBe('1');
+
+      document.body.innerHTML = '';
+      harness({ filterTree, filters: [{ id: 'f1', propertyId: 'num', operator: 'equals', value: 5 }] }).open();
       expect(valueOf()).toBe('2');
     });
   });

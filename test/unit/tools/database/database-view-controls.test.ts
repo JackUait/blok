@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DatabaseViewControls } from '../../../../src/tools/database/database-view-controls';
 import type { ViewControlsHost } from '../../../../src/tools/database/database-view-controls';
-import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
+import type { DatabaseViewConfig, FilterRule, PropertyDefinition } from '../../../../src/tools/database/types';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { hover, shownHint } from './hint-harness';
 import { PAGE_LIST_ROLLUP } from '../../../../src/shared/database/value-helpers';
@@ -398,6 +398,20 @@ describe('DatabaseViewControls', () => {
     const order = [...document.querySelectorAll('[data-blok-database-filter-pills] > [data-blok-database-filter-pill]')].map((el) => el.getAttribute('data-blok-testid'));
 
     expect(order).toEqual(['database-advanced-pill', 'database-filter-pill-f1']);
+  });
+
+  // notion-motion.md Round 19 §1 (r19-adv-group2-bar.raw): rule, rule, group(rule, rule) reads "3 rules".
+  it('counts the advanced chip by its top-level items', () => {
+    const { controls, saved } = setup({ levers: { i18n: { t: (key: string, vars?: Record<string, string | number>) => `${key} ${String(vars?.count ?? '')}` } } });
+    const rule = (id: string): FilterRule => ({ id, propertyId: 'num', operator: 'is_empty', value: null });
+
+    saved.view = {
+      ...saved.view,
+      filterTree: { id: 'root', conjunction: 'and', filterRules: [rule('a'), rule('b'), { id: 'g', conjunction: 'or', filterRules: [rule('c'), rule('d')] }] },
+    };
+    controls.refresh();
+
+    expect(q('database-advanced-pill')?.getAttribute('aria-label')).toBe('tools.database.filterRuleCount 3');
   });
 
   it('gives "+ Sort" no advanced footer', () => {

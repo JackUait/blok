@@ -299,12 +299,15 @@ const sortValue = (sorts: SortConfig[], schema: PropertyDefinition[]): { value?:
   return property === undefined ? countValue(sorts.length) : nameValue(property);
 };
 
-/** notion-motion.md Round 18 §2: one filter reads as its property's name; two or more, or an advanced rule, give the count. */
+/**
+ * notion-motion.md Round 18 §2: one filter reads as its property's name; two or more give the count.
+ * Round 19 §1 (r19-settings.raw): an advanced filter counts once, however many rules it holds.
+ */
 const filterValue = (view: DatabaseViewConfig, schema: PropertyDefinition[]): { value?: string } => {
-  const rules = countFilterRules(view.filterTree);
-  const property = view.filters.length === 1 && rules === 0 ? schema.find((p) => p.id === view.filters[0]?.propertyId) : undefined;
+  const advanced = countFilterRules(view.filterTree) > 0 ? 1 : 0;
+  const property = view.filters.length === 1 && advanced === 0 ? schema.find((p) => p.id === view.filters[0]?.propertyId) : undefined;
 
-  return property === undefined ? countValue(view.filters.length + rules) : nameValue(property);
+  return property === undefined ? countValue(view.filters.length + advanced) : nameValue(property);
 };
 
 const capital = (word: string): string => `${word.charAt(0).toUpperCase()}${word.slice(1)}`;

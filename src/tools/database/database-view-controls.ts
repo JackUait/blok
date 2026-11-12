@@ -1127,10 +1127,9 @@ export class DatabaseViewControls {
       pills.push(pill, chipPart('data-blok-database-chip-divider', {}));
     }
     // notion-motion.md Round 18 §2 (r18-adv-bar.raw): the advanced chip goes before the simple ones.
-    const rules = countFilterRules(view.filterTree);
-
-    if (rules > 0) {
-      const label = this.t('filterRuleCount', { count: rules });
+    // Round 19 §1 (r19-adv-group2-bar.raw): the chip counts top-level items; a group counts once.
+    if (countFilterRules(view.filterTree) > 0) {
+      const label = this.t('filterRuleCount', { count: view.filterTree?.filterRules.length ?? 0 });
       const pill = filterChip('database-advanced-pill', label, { glyph: IconFilter, name: label });
 
       pill.setAttribute('data-active', '');

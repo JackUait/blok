@@ -59,11 +59,6 @@ const EXEMPT_SITES: ExemptSite[] = [
     reason: '`holder` is a detached container parsed from an HTML string, not a block holder',
   },
   {
-    file: 'src/components/modules/blockSelection.ts',
-    snippet: 'clean(holder.innerHTML, this.sanitizerConfig)',
-    reason: '`holder` is a detached div holding a range clone clamped to one editing host, not a block holder',
-  },
-  {
     file: 'src/components/modules/toolbar/plus-button.ts',
     snippet: 'hoveredBlock.pluginsContent.textContent',
     reason: 'gated on paragraph, whose rendered root holds only its own editable; startsWith reads its first characters',

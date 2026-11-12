@@ -133,6 +133,40 @@ describe('Announcer', () => {
     expect(written.indexOf('second')).toBeLessThan(written.indexOf('third'));
   });
 
+  it('keeps a newer message when an older message\'s clear time comes', async () => {
+    const { registerAnnouncer, announce } = await loadAnnouncer();
+
+    registerAnnouncer();
+
+    const polite = document.getElementById(POLITE_REGION_ID);
+
+    announce('1 block deleted', { politeness: 'polite' });
+    vi.advanceTimersByTime(900);
+    announce('Undone', { politeness: 'polite' });
+    vi.advanceTimersByTime(200);
+
+    expect(polite?.textContent).toBe('Undone');
+
+    vi.advanceTimersByTime(1000);
+
+    expect(polite?.textContent).toBe('');
+  });
+
+  it('keeps a repeated message when the first copy\'s clear time comes', async () => {
+    const { registerAnnouncer, announce } = await loadAnnouncer();
+
+    registerAnnouncer();
+
+    const polite = document.getElementById(POLITE_REGION_ID);
+
+    announce('Undone', { politeness: 'polite' });
+    vi.advanceTimersByTime(900);
+    announce('Undone', { politeness: 'polite' });
+    vi.advanceTimersByTime(200);
+
+    expect(polite?.textContent).toBe('Undone');
+  });
+
   it('drops queued texts of the same group when a newer one comes, and keeps the rest', async () => {
     const { registerAnnouncer, announce } = await loadAnnouncer();
 

@@ -697,11 +697,6 @@ export class EmojiPicker {
       el.appendChild(header);
     }
 
-    const custom = document.createElement('section');
-    custom.setAttribute('data-emoji-picker-custom', '');
-    custom.hidden = true;
-    el.append(custom);
-
     const body = document.createElement('div');
     body.setAttribute('data-emoji-picker-body', '');
     body.className = 'overflow-y-auto max-h-[260px] px-1.5 pb-2';
@@ -1762,11 +1757,15 @@ export class EmojiPicker {
   }
 
   private renderCustomEmojis(query: string): void {
-    const section = this._element.querySelector<HTMLElement>('[data-emoji-picker-custom]');
-    if (!section) return;
+    const section = this._body.querySelector<HTMLElement>('[data-emoji-picker-custom]') ?? document.createElement('section');
+    section.setAttribute('data-emoji-picker-custom', '');
+    this._body.append(section);
     section.replaceChildren();
     const needle = query.trim().toLocaleLowerCase();
-    const items = this.customItems.filter(item => item.name.toLocaleLowerCase().includes(needle));
+    const items = this.customItems.filter(item => item.name.toLocaleLowerCase().includes(needle) && safeImageSrc(item.url));
+    const empty = this._body.querySelector<HTMLElement>('[data-emoji-picker-empty]');
+    if (empty) empty.hidden = items.length > 0;
+    if (needle) this.announceResults(this._emojiButtons.length + items.length);
     section.hidden = items.length === 0;
     if (!items.length) return;
     const heading = document.createElement('h3');
@@ -1794,7 +1793,6 @@ export class EmojiPicker {
   }
 
   private handleFilterChange(query: string): void {
-    this.renderCustomEmojis(query);
     hideTooltip();
     this._scrollDestination = null;
     this._clearSearchButton.hidden = query.length === 0;
@@ -1830,6 +1828,8 @@ export class EmojiPicker {
       this._hasFullGrid = false;
       this.renderResults(results);
     }
+
+    this.renderCustomEmojis(query);
 
     // A short list changes the menu's height, which moves a menu that sits above the caret.
     if (this._inline && this._open && this._anchorEl !== null) {
@@ -1940,6 +1940,7 @@ export class EmojiPicker {
     this.setNavHidden(false);
     this.setFlat(false);
     this._hasFullGrid = true;
+    this.renderCustomEmojis('');
 
     // Set initial active nav after layout
     this.scheduleScrollEffects();

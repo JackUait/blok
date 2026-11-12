@@ -23136,7 +23136,11 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   background: var(--blok-video-island-play-bg-hover);
 }
 
-[data-blok-tool="video"] .blok-video-inner:hover .blok-video-controls__bar, [data-blok-tool="video"] .blok-video-controls:has(:focus-visible) .blok-video-controls__bar, [data-blok-tool="video"] .blok-video-controls__bar:has([aria-expanded="true"]) {
+[data-blok-tool="video"] .blok-video-inner[data-played="false"] .blok-video-controls__bar:not(:has(:focus-visible)) {
+  pointer-events: none;
+}
+
+[data-blok-tool="video"] .blok-video-inner[data-played="true"]:hover .blok-video-controls__bar, [data-blok-tool="video"] .blok-video-controls:has(:focus-visible) .blok-video-controls__bar, [data-blok-tool="video"] .blok-video-controls__bar:has([aria-expanded="true"]) {
   opacity: 1;
   transform: none;
 }

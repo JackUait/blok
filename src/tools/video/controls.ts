@@ -97,6 +97,8 @@ export function ratioFromPointer(clientX: number, rect: { left: number; width: n
   return Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
 }
 
+const playedSources = new Set<string>();
+
 function button(action: string, label: string, icon: string, extraClass = ''): HTMLButtonElement {
   const btn = document.createElement('button');
   btn.type = 'button';
@@ -290,6 +292,14 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   };
   setPlaying(false);
 
+  // Until the user first plays a video, hover shows only the centre play
+  // button. The set keeps that across re-renders for the rest of the page load.
+  const markPlayed = (): void => {
+    figure.setAttribute('data-played', 'true');
+    if (video.src) playedSources.add(video.src);
+  };
+  figure.setAttribute('data-played', String(video.src !== '' && playedSources.has(video.src)));
+
   // Announce the scrubber as a human-readable "M:SS of M:SS" (it otherwise reads
   // raw seconds). Reads the slider's own value/max so arrow-key seeks announce
   // the target position, and honours a `{current}/{total}` i18n template.
@@ -458,7 +468,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     seekTooltip.setAttribute('aria-hidden', 'true');
     preview.pendingTime = -1;
   };
-  const onPlay = (): void => setPlaying(true);
+  const onPlay = (): void => { setPlaying(true); markPlayed(); };
   const onPause = (): void => setPlaying(false);
   // Pop the mute glyph when the user flips audible↔muted (à la native players).
   const isMuted = (): boolean => video.muted || video.volume === 0;

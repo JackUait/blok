@@ -567,8 +567,12 @@
 }
 [data-blok-tool="video"] .blok-video-controls__btn[data-action="play-toggle"]:hover { background: var(--blok-video-island-play-bg-hover); }
 /* a resting player shows only the picture; the island comes up on hover, on
-   keyboard focus, and stays while the gear menu is open */
-[data-blok-tool="video"] .blok-video-inner:hover .blok-video-controls__bar,
+   keyboard focus, and stays while the gear menu is open. Before the first play,
+   hover shows only the centre play button, so the hidden island takes no clicks. */
+[data-blok-tool="video"] .blok-video-inner[data-played="false"] .blok-video-controls__bar:not(:has(:focus-visible)) {
+  pointer-events: none;
+}
+[data-blok-tool="video"] .blok-video-inner[data-played="true"]:hover .blok-video-controls__bar,
 [data-blok-tool="video"] .blok-video-controls:has(:focus-visible) .blok-video-controls__bar,
 [data-blok-tool="video"] .blok-video-controls__bar:has([aria-expanded="true"]) {
   opacity: 1;

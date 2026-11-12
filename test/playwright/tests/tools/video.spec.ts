@@ -147,6 +147,32 @@ test('fullscreen hides editor chrome and keeps only playback controls', async ({
   ).resolves.toBe('contain');
 });
 
+test('hovering a never-played video shows only the play button, not the control bar', async ({ page }) => {
+  await createBlok(page, {
+    blocks: [{ type: 'video', data: { url: SAMPLE_VIDEO_URL } }],
+  });
+
+  const videoBlock = page.locator(VIDEO_BLOCK_SELECTOR);
+  await expect(videoBlock).toHaveAttribute('data-state', 'rendered');
+
+  const player = videoBlock.getByTestId('video-player');
+  const bar = videoBlock.locator('[data-role="video-controls"] [data-action="play-toggle"]').locator('xpath=..');
+  const centerPlay = videoBlock.locator('[data-role="center-play"]');
+  const barOpacity = (): Promise<string> => bar.evaluate((el) => getComputedStyle(el).opacity);
+
+  await player.hover({ position: { x: 40, y: 40 } });
+  await expect(centerPlay).toBeVisible();
+  await expect.poll(barOpacity).toBe('0');
+
+  await centerPlay.click();
+  await expect(videoBlock.locator('[data-role="video-figure"]')).toHaveAttribute('data-played', 'true');
+  await player.evaluate((el) => (el as HTMLVideoElement).pause());
+
+  await page.mouse.move(0, 0);
+  await player.hover({ position: { x: 40, y: 40 } });
+  await expect.poll(barOpacity).toBe('1');
+});
+
 test('persists video data across save and reload', async ({ page }) => {
   await createBlok(page, {
     blocks: [{ type: 'video', data: { url: SAMPLE_VIDEO_URL, caption: 'My clip', alignment: 'center' } }],

@@ -223,7 +223,7 @@ test.describe('annotation (Hint) inline tool', () => {
     await page.mouse.move(box.x + 6, box.y + box.height / 2);
     await page.mouse.move(box.x + 14, box.y + box.height / 2);
     // eslint-disable-next-line playwright/no-wait-for-timeout -- asserts the card is NOT open before the delay ends
-    await page.waitForTimeout(250);
+    await page.waitForTimeout(150);
     // A one-shot read: a retrying assertion would wait for the card and then see it open.
     expect(await page.locator('[data-blok-testid="annotation-card"][data-state="open"]').count()).toBe(0);
 
@@ -267,8 +267,12 @@ test.describe('annotation (Hint) inline tool', () => {
     await expect(card).toHaveAttribute('data-side', 'bottom');
     await expect(page.getByTestId('annotation-card-text')).toBeVisible();
 
-    // The spring overshoots, so read the boxes once it has settled.
-    await expect.poll(async () => (await stem.boundingBox())?.height).toBe(11);
+    // The card grows into place, so read the boxes once the stem meets it.
+    await expect.poll(async () => {
+      const [ stemNow, cardNow ] = [ await stem.boundingBox(), await card.boundingBox() ];
+
+      return stemNow && cardNow ? Math.abs(stemNow.y + stemNow.height - cardNow.y) : null;
+    }).toBeLessThanOrEqual(1);
 
     const phrase = await hint.boundingBox();
     const stemBox = await stem.boundingBox();
@@ -278,7 +282,10 @@ test.describe('annotation (Hint) inline tool', () => {
       throw new Error('a box is missing');
     }
 
-    expect(Math.abs(stemBox.y - (phrase.y + phrase.height))).toBeLessThanOrEqual(1);
+    // The stem starts at the underline, which sits a few px above the bottom of the phrase's box.
+    expect(stemBox.y).toBeLessThanOrEqual(phrase.y + phrase.height);
+    expect(stemBox.y).toBeGreaterThanOrEqual(phrase.y + phrase.height - 6);
+    expect(cardBox.y - (phrase.y + phrase.height)).toBeCloseTo(11, 0);
     expect(Math.abs(stemBox.y + stemBox.height - cardBox.y)).toBeLessThanOrEqual(1);
     expect(Math.abs(stemBox.x + stemBox.width / 2 - (phrase.x + phrase.width / 2))).toBeLessThanOrEqual(1);
 

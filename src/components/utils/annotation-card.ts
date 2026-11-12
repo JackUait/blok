@@ -10,8 +10,31 @@ import { twJoin } from './tw';
 /** Time the pointer has to travel from the phrase onto the card (WCAG 1.4.13). */
 const GRACE_HIDE_DURATION = 250;
 
-/** Gap between the phrase and the card. MUST match the stem's `h-[11px]`. */
+/** Gap between the phrase and the card. MUST match the 11px in the stem's `top` and `h` classes. */
 const GAP = 11;
+
+/** MUST equal `text-underline-offset` of `span[data-blok-annotation]` in preflight.css. */
+const UNDERLINE_OFFSET = 2;
+
+/**
+ * How far the phrase's box hangs below its underline. The stem climbs that
+ * much, so it touches the line in any font. 0 where fonts cannot be measured.
+ */
+const underlineRise = (anchor: HTMLElement): number => {
+  if (typeof CanvasRenderingContext2D === 'undefined') {
+    return 0;
+  }
+
+  const context = document.createElement('canvas').getContext('2d');
+
+  if (!context) {
+    return 0;
+  }
+
+  context.font = getComputedStyle(anchor).font;
+
+  return Math.max(0, (context.measureText('').fontBoundingBoxDescent || 0) - UNDERLINE_OFFSET);
+};
 
 /** Keeps the stem off the card's rounded corners. */
 const STEM_INSET = 12;
@@ -309,6 +332,7 @@ export class AnnotationCard {
     this.nodes.wrapper.style.left = `${left}px`;
     this.nodes.wrapper.style.top = `${top}px`;
     this.nodes.wrapper.style.setProperty('--blok-annotation-stem-x', `${stemX}px`);
+    this.nodes.wrapper.style.setProperty('--blok-annotation-stem-rise', `${isBelow ? underlineRise(anchor) : 0}px`);
     this.nodes.wrapper.setAttribute('data-side', isBelow ? 'bottom' : 'top');
   }
 
@@ -349,6 +373,7 @@ export class AnnotationCard {
     wrapper.style.maxWidth = 'min(340px, calc(100vw - 8px))';
     wrapper.style.padding = '0';
     wrapper.setAttribute('data-state', 'closed');
+    wrapper.style.setProperty('--blok-annotation-stem-rise', '0px');
     wrapper.setAttribute('data-side', 'bottom');
     wrapper.setAttribute('data-blok-testid', 'annotation-card');
     wrapper.setAttribute('role', 'note');
@@ -361,9 +386,9 @@ export class AnnotationCard {
 
     // Grows from the phrase toward the card, on whichever side the card sits.
     stem.className = twJoin(
-      'absolute w-[1.5px] h-[11px] -ml-[0.75px] left-(--blok-annotation-stem-x) bg-text-primary',
-      'top-[-11px] origin-top group-data-[side=top]:top-auto group-data-[side=top]:bottom-[-11px] group-data-[side=top]:origin-bottom',
-      'scale-y-0 transition-[scale] duration-[80ms] ease-in',
+      'absolute w-[1.5px] h-[calc(11px_+_var(--blok-annotation-stem-rise))] -ml-[0.75px] left-(--blok-annotation-stem-x) bg-text-primary',
+      'top-[calc(-11px_-_var(--blok-annotation-stem-rise))] origin-top group-data-[side=top]:top-auto group-data-[side=top]:bottom-[-11px] group-data-[side=top]:origin-bottom',
+      'scale-y-0 transition-[scale] duration-[70ms] ease-in',
       'group-data-[state=open]:scale-y-100 group-data-[state=open]:ease-out',
       'motion-reduce:transition-none'
     );
@@ -372,25 +397,18 @@ export class AnnotationCard {
 
     const surface = document.createElement('div');
 
-    // Springs out of the stem's end; the open delay lets the stem land first.
+    // Grows a little out of the stem's end, as one piece with its words.
     surface.className = twJoin(
       'py-[14px] px-[16px] bg-popover-bg rounded-(--blok-radius-surface) shadow-(--blok-popover-box-shadow)',
       'origin-[var(--blok-annotation-stem-x)_0] group-data-[side=top]:origin-[var(--blok-annotation-stem-x)_100%]',
-      'opacity-0 scale-[0.55] transition-[opacity,scale] duration-[140ms] ease-in',
+      'opacity-0 scale-[0.94] transition-[opacity,scale] duration-[110ms] ease-in',
       'group-data-[state=open]:opacity-100 group-data-[state=open]:scale-100',
-      'group-data-[state=open]:duration-[240ms] group-data-[state=open]:delay-[40ms] group-data-[state=open]:ease-[cubic-bezier(0.2,1.45,0.35,1)]',
+      'group-data-[state=open]:duration-[130ms] group-data-[state=open]:delay-[30ms] group-data-[state=open]:ease-[cubic-bezier(0.2,0.8,0.2,1)]',
       'motion-reduce:transition-none motion-reduce:scale-100'
     );
 
     const body = document.createElement('div');
 
-    // The words come into focus after the card has landed.
-    body.className = twJoin(
-      'opacity-0 blur-[5px] translate-y-[5px] transition-[opacity,filter,translate] duration-[120ms] ease-out',
-      'group-data-[state=open]:opacity-100 group-data-[state=open]:blur-[0px] group-data-[state=open]:translate-y-0',
-      'group-data-[state=open]:duration-[150ms] group-data-[state=open]:delay-[80ms]',
-      'motion-reduce:transition-none motion-reduce:blur-[0px] motion-reduce:translate-y-0'
-    );
 
     const text = document.createElement('div');
 

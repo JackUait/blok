@@ -300,6 +300,50 @@ describe('AnnotationCard', () => {
     });
   });
 
+  describe('stem', () => {
+    const STEM = '[data-blok-testid="annotation-card-stem"]';
+    const rise = (): string | undefined => getCard()?.style.getPropertyValue('--blok-annotation-stem-rise');
+    /** Pretend the browser can measure fonts, and that this one hangs `descent` px under the baseline. */
+    const measureFonts = (descent: number): void => {
+      vi.stubGlobal('CanvasRenderingContext2D', class {});
+      vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+        { font: '', measureText: () => ({ fontBoundingBoxDescent: descent }) } as unknown as CanvasRenderingContext2D
+      );
+    };
+
+    afterEach(() => vi.unstubAllGlobals());
+
+    it('reaches up to the underline, which sits 2px under the baseline', () => {
+      measureFonts(5);
+      card.pin(createAnchor('A quote'));
+
+      expect(rise()).toBe('3px');
+      expect(getCard()?.querySelector(STEM)?.className).toContain('--blok-annotation-stem-rise');
+    });
+
+    it('never starts below the phrase when the font barely hangs under the baseline', () => {
+      measureFonts(1);
+      card.pin(createAnchor('A quote'));
+
+      expect(rise()).toBe('0px');
+    });
+
+    it('starts at the top of the phrase when the card sits above it', () => {
+      measureFonts(5);
+      vi.stubGlobal('innerHeight', 320);
+      card.pin(createAnchor('A quote', undefined, 300));
+
+      expect(getCard()?.getAttribute('data-side')).toBe('top');
+      expect(rise()).toBe('0px');
+    });
+
+    it('starts at the bottom of the phrase where fonts cannot be measured', () => {
+      card.pin(createAnchor('A quote'));
+
+      expect(rise()).toBe('0px');
+    });
+  });
+
   describe('entrance timing', () => {
     /** Open-state duration and delay, in ms, read from an element's classes. */
     const openTiming = (el: Element | null | undefined): { duration: number; delay: number } => {
@@ -320,23 +364,36 @@ describe('AnnotationCard', () => {
       };
     };
 
-    it('has the words in focus within a quarter of a second of opening', () => {
-      const { surface, words } = parts();
+    it('opens as one piece: the words are sharp from the first frame', () => {
+      card.pin(createAnchor('A quote'));
+      const words = getCard()?.querySelector(TEXT)?.parentElement;
 
-      expect(words.delay + words.duration).toBeGreaterThan(0);
-      expect(words.delay + words.duration).toBeLessThanOrEqual(250);
-      expect(surface.delay + surface.duration).toBeLessThanOrEqual(300);
+      expect(words?.className ?? 'missing').not.toMatch(/blur|opacity-0|transition|delay/);
     });
 
-    it('plays the same three beats as the hint editor', () => {
+    it('grows a little out of the stem, quickly and without a bounce', () => {
+      const { surface } = parts();
+      const classes = getCard()?.querySelector(TEXT)?.parentElement?.parentElement?.className ?? '';
+      const startScale = Number(/(?:^|\s)scale-\[([\d.]+)\]/.exec(classes)?.[1] ?? 0);
+      const curve = /group-data-\[state=open\]:ease-\[cubic-bezier\(([^)]+)\)\]/.exec(classes)?.[1].split(',').map(Number) ?? [ 9, 9, 9, 9 ];
+
+      expect(startScale).toBeGreaterThanOrEqual(0.9);
+      expect(startScale).toBeLessThan(1);
+      expect(surface.delay + surface.duration).toBeLessThanOrEqual(200);
+      // a control point above 1 is what makes a curve overshoot
+      expect(Math.max(curve[1], curve[3])).toBeLessThanOrEqual(1);
+    });
+
+    it('plays the same two beats as the hint editor', () => {
       const css = readFileSync(resolve(__dirname, '../../../../src/styles/popover-animation.css'), 'utf-8');
       const beat = (name: string): number[] =>
-        [...(new RegExp(`animation: ${name} ([^;]+);`).exec(css)?.[1] ?? '').matchAll(/(\d+)ms/g)].map((m) => Number(m[1]));
-      const { stem, surface, words } = parts();
+        [...(new RegExp(`animation: ${name} ([^;]+);`).exec(css)?.[1] ?? '').replace(/cubic-bezier\([^)]*\)/, '').matchAll(/(\d+)ms/g)].map((m) => Number(m[1]));
+      const { stem, surface } = parts();
 
       expect(beat('blok-tether-stem-in')).toEqual([stem.duration]);
       expect(beat('blok-tether-menu-in')).toEqual([surface.duration, surface.delay]);
-      expect(beat('blok-tether-content-in')).toEqual([words.duration, words.delay]);
+      expect(css).not.toContain('blok-tether-content-in');
+      expect(/@keyframes blok-tether-menu-in \{\s*from \{[^}]*scale\(([\d.]+)\)/.exec(css)?.[1]).toBe('0.94');
     });
   });
 });

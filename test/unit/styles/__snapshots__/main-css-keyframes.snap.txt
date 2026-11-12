@@ -984,12 +984,8 @@
   to { background-size: 100% 100% }
 }
 
-@keyframes blok-tether-content-in {
-  from { opacity: 0; filter: blur(5px); transform: translateY(5px) }
-}
-
 @keyframes blok-tether-menu-in {
-  from { opacity: 0; transform: scale(0.55) }
+  from { opacity: 0; transform: scale(0.94) }
 }
 
 @keyframes blok-tether-stem-in {

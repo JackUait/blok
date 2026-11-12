@@ -197,6 +197,8 @@ export interface OpenMenuOptions {
   kind?: 'header' | 'row' | 'card' | 'handle' | 'calc' | 'selection';
   /** Where the menu opens instead of the anchor's box; `positionContext` moves it with the page. */
   at?: { position: DOMRect; positionContext: HTMLElement };
+  /** The least gap to the window's edges, instead of the kind's own. */
+  viewportMargin?: number;
 }
 
 const MENU_CLASS = {
@@ -244,6 +246,7 @@ export const openMenu = (
     autoFocusFirstItem: false,
     ...(options.searchable === true ? { searchable: true } : {}),
     ...(options.searchPlaceholder !== undefined ? { messages: { search: options.searchPlaceholder } } : {}),
+    ...(options.viewportMargin !== undefined ? { viewportMargin: options.viewportMargin } : {}),
   };
   const at = options.at;
   const popover = new PopoverDesktop(at === undefined ? params : { ...params, position: at.position, positionContext: at.positionContext });

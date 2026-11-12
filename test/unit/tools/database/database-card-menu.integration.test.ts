@@ -456,4 +456,44 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       expect(open).not.toHaveBeenCalled();
     });
   });
+
+  // notion-motion.md Round 16 §6: the feed ⋯ menu's left edge is the click x, and it stays 12px above the window bottom.
+  describe('feed card ⋯ menu placement', () => {
+    const openedAt = (x: number, detail: number): HTMLElement => {
+      const { el } = buildTool(oneRow(), {}, viewData('feed'));
+
+      document.body.appendChild(el);
+      const button = el.querySelector<HTMLElement>('[data-blok-database-feed-more-actions]');
+
+      if (button === null) throw new Error('no More actions');
+      button.getBoundingClientRect = () => new DOMRect(588, 338, 24, 24);
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: x, clientY: 350, detail }));
+      const popover = [...document.querySelectorAll<HTMLElement>('[data-blok-popover]')].at(-1);
+
+      if (popover === undefined) throw new Error('no menu');
+
+      return popover;
+    };
+
+    it('opens with its left edge on the click x and its top on the button\'s top', () => {
+      const popover = openedAt(595, 1);
+
+      expect(popover.style.left).toBe('595px');
+      expect(popover.style.top).toBe('338px');
+    });
+
+    it('opens from a key press on the button\'s left edge', () => {
+      const popover = openedAt(0, 0);
+
+      expect(popover.style.left).toBe('588px');
+    });
+
+    it('stays 12px above the window bottom', () => {
+      vi.stubGlobal('innerHeight', 340);
+      const popover = openedAt(595, 1);
+
+      expect(popover.style.top).toBe(`${340 - 12 - popover.getBoundingClientRect().height}px`);
+      vi.unstubAllGlobals();
+    });
+  });
 });

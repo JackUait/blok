@@ -110,7 +110,7 @@ describe('DatabaseFeedView reactions', () => {
     expect(more?.getAttribute('aria-label')).toBe('tools.database.tableMoreActions');
     expect(tooltipOf(more as HTMLElement)).toBe('tools.database.tableMoreActions');
     more?.click();
-    expect(actions).toHaveBeenCalledWith('r1', more, card);
+    expect(actions).toHaveBeenCalledWith('r1', more, card, expect.any(MouseEvent));
   });
 
   it('shows reactions but no way to react when the viewer cannot react', () => {

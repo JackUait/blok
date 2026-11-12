@@ -5873,7 +5873,7 @@ export class DatabaseTool implements BlockTool {
       ...(this.config.feedFooter !== undefined ? { footer: this.config.feedFooter } : {}),
       reactions: this.feedReactions(),
       comments: (rowId) => (this.config.comments === undefined && this.builtInComments.enabled() ? this.builtInComments.feedBox(rowId) : null),
-      actions: (rowId, anchor, card) => this.openFeedActions(rowId, anchor, card),
+      actions: (rowId, anchor, card, event) => this.openFeedActions(rowId, anchor, card, event),
     });
 
     return this.view.createView();
@@ -5927,9 +5927,15 @@ export class DatabaseTool implements BlockTool {
     void this.reactionPicker.open(anchor, undefined, handlers);
   }
 
-  /** The card's More actions (research/19 §2e): the shared row menu, without the view settings rows. */
-  private openFeedActions(rowId: string, anchor: HTMLElement, card: HTMLElement): void {
-    this.openRowMenu(rowId, anchor, card, { viewSettings: false });
+  /**
+   * The card's More actions (research/19 §2e): the shared row menu, without the view settings rows.
+   * notion-motion.md Round 16 §6: its left edge is the click x, and it stays 12px above the window bottom.
+   * The top stays the button's: Notion's was pushed up, so where it starts is unread. A key press keeps the button.
+   */
+  private openFeedActions(rowId: string, anchor: HTMLElement, card: HTMLElement, event: MouseEvent): void {
+    const at = event.detail === 0 ? undefined : { position: new DOMRect(event.clientX, anchor.getBoundingClientRect().top, 0, 0), positionContext: card };
+
+    this.openRowMenu(rowId, anchor, card, { viewSettings: false, viewportMargin: 12, ...(at !== undefined ? { at } : {}) });
   }
 
   /** The active view as CSV, the way this person sees it: filters, sorts, search and visible properties. */
@@ -9368,7 +9374,7 @@ export class DatabaseTool implements BlockTool {
    * `rowMenuItems` as the table's ⋮⋮ so they cannot drift. `card` keeps its
    * hover buttons while the menu is up.
    */
-  private openRowMenu(rowId: string, anchor: HTMLElement, card: HTMLElement, options: { viewSettings: boolean; comment?: boolean; at?: OpenMenuOptions['at']; kind?: 'card' | 'handle' }): void {
+  private openRowMenu(rowId: string, anchor: HTMLElement, card: HTMLElement, options: { viewSettings: boolean; comment?: boolean; at?: OpenMenuOptions['at']; kind?: 'card' | 'handle'; viewportMargin?: number }): void {
     const comment = options.comment === false ? undefined : this.commentLever().comment;
     const writable = (): boolean => !this.readOnly && !this.destroyed;
     const listTargets = (): Array<{ id: string; title: string }> => this.moveTargets();
@@ -9414,6 +9420,7 @@ export class DatabaseTool implements BlockTool {
       searchable: true,
       kind: options.kind ?? 'card',
       ...(options.at !== undefined ? { at: options.at } : {}),
+      ...(options.viewportMargin !== undefined ? { viewportMargin: options.viewportMargin } : {}),
       searchPlaceholder: this.api.i18n.t('tools.database.searchActions'),
       onClose: () => {
         card.removeAttribute('data-popover-open');

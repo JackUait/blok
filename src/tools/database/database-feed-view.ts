@@ -75,7 +75,7 @@ export interface FeedViewOptions {
   /** Built-in comments: a card's comment box, or null for none. Not drawn when the host owns the footer. */
   comments?: (rowId: string) => HTMLElement | null;
   /** The card's "More actions" menu. */
-  actions?: (rowId: string, anchor: HTMLElement, card: HTMLElement) => void;
+  actions?: (rowId: string, anchor: HTMLElement, card: HTMLElement, event: MouseEvent) => void;
 }
 
 const field = (data: unknown, key: string): unknown =>
@@ -272,7 +272,7 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
     return this.options.footer === undefined ? this.options.reactions : undefined;
   }
 
-  private iconButton(attribute: string, label: string, icon: string, onClick: (button: HTMLButtonElement) => void): HTMLButtonElement {
+  private iconButton(attribute: string, label: string, icon: string, onClick: (button: HTMLButtonElement, event: MouseEvent) => void): HTMLButtonElement {
     const button = document.createElement('button');
 
     button.type = 'button';
@@ -281,7 +281,7 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
     button.innerHTML = icon;
     button.addEventListener('click', (event) => {
       event.stopPropagation();
-      onClick(button);
+      onClick(button, event);
     });
     onHover(button, label);
 
@@ -303,7 +303,7 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
       toolbar.appendChild(this.iconButton('data-blok-database-feed-react', t('tools.database.feedReact'), IconEmojiSmile, (button) => pick(rowId, button)));
     }
     if (actions !== undefined) {
-      toolbar.appendChild(this.iconButton('data-blok-database-feed-more-actions', t('tools.database.tableMoreActions'), IconDotsHorizontal, (button) => actions(rowId, button, card)));
+      toolbar.appendChild(this.iconButton('data-blok-database-feed-more-actions', t('tools.database.tableMoreActions'), IconDotsHorizontal, (button, event) => actions(rowId, button, card, event)));
     }
 
     return toolbar;

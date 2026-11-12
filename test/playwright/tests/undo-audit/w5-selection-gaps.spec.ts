@@ -349,6 +349,34 @@ test.describe('selection after delete, move and column drop (V1 V2 V4 V6)', () =
     expect(await caret(page)).toBe('b3:5');
   });
 
+  // A4-1 (Notion RM2-1): a caret move keeps the caret at its offset, and redo returns there.
+  for (const offset of [0, 2]) {
+    test(`U113: a keyboard move keeps the caret at offset ${offset}, and redo returns to it`, async ({ page }) => {
+      await createBlok(page, [P('b1', 'one'), P('b2', 'two'), P('b3', 'three')]);
+      await clickEnd(page, 'b3');
+      for (let i = 0; i < 5 - offset; i++) {
+        await page.keyboard.press('ArrowLeft');
+      }
+      expect(await caret(page)).toBe(`b3:${offset}`);
+
+      await press(page, MOVE_UP);
+      expect(await ids(page)).toEqual(['b1', 'b3', 'b2']);
+      expect(await caret(page)).toBe(`b3:${offset}`);
+      await wait(page, STEP_GAP_MS);
+
+      await press(page, MOVE_UP);
+      expect(await ids(page)).toEqual(['b3', 'b1', 'b2']);
+      expect(await caret(page)).toBe(`b3:${offset}`);
+      await wait(page, STEP_GAP_MS);
+
+      await press(page, UNDO);
+      expect(await ids(page)).toEqual(['b1', 'b3', 'b2']);
+      await press(page, REDO);
+      expect(await ids(page)).toEqual(['b3', 'b1', 'b2']);
+      expect(await caret(page)).toBe(`b3:${offset}`);
+    });
+  }
+
   test('U117: a column drop leaves the dragged block selected through the drop, undo and redo', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, [P('b1', 'left'), P('b2', 'right')]);

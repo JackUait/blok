@@ -181,7 +181,7 @@ const createMockDependencies = (): BlockOperationsDependencies => {
     Caret: {
       extractFragmentFromCaretPosition: vi.fn(() => document.createDocumentFragment()),
       setToBlock: vi.fn(),
-      positions: { START: 'start', END: 'end' },
+      positions: { START: 'start', END: 'end', DEFAULT: 'default' },
     } as unknown as Caret,
     I18n: {
       t: vi.fn((key: string) => key),
@@ -3911,6 +3911,25 @@ describe('BlockOperations', () => {
 
       expect(dependencies.Caret.setToBlock).toHaveBeenCalled();
       expect(operations.currentBlockIndexValue).toBe(0);
+    });
+
+    it('puts the caret back at its offset in the moved block, not at the end', () => {
+      const block = repository.getBlockByIndex(1);
+      const input = block?.holder.querySelector<HTMLElement>('[contenteditable="true"]');
+
+      if (block === undefined || input === null || input === undefined) {
+        throw new Error('expected block 2 and its input');
+      }
+      input.textContent = 'three';
+      Object.assign(block, { currentInput: input });
+      document.body.appendChild(block.holder);
+      window.getSelection()?.collapse(input.firstChild, 2);
+      operations.currentBlockIndexValue = 1;
+
+      operations.moveCurrentBlockUp(blocksStore);
+
+      expect(dependencies.Caret.setToBlock).toHaveBeenCalledWith(block, 'default', 2);
+      block.holder.remove();
     });
   });
 

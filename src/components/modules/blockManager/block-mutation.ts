@@ -32,6 +32,14 @@ import type { BlockRepository } from './repository';
 import type { BlockDidMutated, BlockOperationsDependencies, OperationsContext } from './operations-context';
 import type { BlocksStore, DerivedSource, PlannedConvert } from './types';
 import type { BlockYjsSync } from './yjs-sync';
+import { textOffsetOf } from '../../utils/caret/selection';
+import { Dom as $ } from '../../dom';
+
+/** A caret read before a keyboard move. */
+interface MovedCaret {
+  input: HTMLElement;
+  offset: number;
+}
 
 /**
  * The CHARACTERS a stored HTML string renders as, with entity spellings and
@@ -2008,6 +2016,7 @@ export class BlockMutation {
    */
   public moveCurrentBlockUp(blocksStore: BlocksStore, selectedBlocks?: Block[]): void {
     const group = this.resolveMoveGroup(selectedBlocks);
+    const caret = this.caretInCurrentInput();
 
     // Find the ROOT of the previous sibling subtree: the nearest block before the
     // group, in the SAME container, at the same/shallower depth — skipping that
@@ -2043,7 +2052,7 @@ export class BlockMutation {
     // Slide the group up so each member lands at predStart..(predStart + size).
     this.placeRun(this.blocksBetween(group.start, group.end), predStart, group.containerParentId, blocksStore);
 
-    this.finishMove(group.anchor, selectedBlocks, 'a11y.movedUp');
+    this.finishMove(group.anchor, selectedBlocks, 'a11y.movedUp', caret);
   }
 
   /**
@@ -2055,6 +2064,7 @@ export class BlockMutation {
    */
   public moveCurrentBlockDown(blocksStore: BlocksStore, selectedBlocks?: Block[]): void {
     const group = this.resolveMoveGroup(selectedBlocks);
+    const caret = this.caretInCurrentInput();
     const successor = group !== null
       ? this.repository.getBlockByIndex(group.end + 1)
       : undefined;
@@ -2080,7 +2090,7 @@ export class BlockMutation {
       blocksStore
     );
 
-    this.finishMove(group.anchor, selectedBlocks, 'a11y.movedDown');
+    this.finishMove(group.anchor, selectedBlocks, 'a11y.movedDown', caret);
   }
 
   /**
@@ -2140,8 +2150,9 @@ export class BlockMutation {
    * @param anchor - the group's anchor block (first block in document order)
    * @param selectedBlocks - block-level selection that drove the move, if any
    * @param messageKey - i18n key for the success announcement
+   * @param caret - the caret read before the move, put back at the same offset
    */
-  private finishMove(anchor: Block, selectedBlocks: Block[] | undefined, messageKey: string): void {
+  private finishMove(anchor: Block, selectedBlocks: Block[] | undefined, messageKey: string, caret: MovedCaret | null): void {
     this.ctx.currentBlockIndexValue = this.repository.getBlockIndex(anchor);
 
     // A block-level selection must persist after the move so the user can keep
@@ -2149,7 +2160,7 @@ export class BlockMutation {
     // selection down into a text caret, so skip it for selection moves and let
     // BlockManager re-apply the selection; only caret moves refocus.
     if (selectedBlocks === undefined || selectedBlocks.length === 0) {
-      this.refocusCurrentBlock();
+      this.refocusCurrentBlock(caret);
     }
 
     const message = this.dependencies.I18n.t(messageKey, {
@@ -2161,14 +2172,41 @@ export class BlockMutation {
   }
 
   /**
-   * Refocuses the current block at the end position
-   * Used after block movement to allow consecutive moves
+   * Refocuses the current block after a move, so the user can keep moving it.
+   * The caret goes back to its old offset, as in Notion; without one, to the end.
+   * @param caret - the caret read before the move
    */
-  private refocusCurrentBlock(): void {
+  private refocusCurrentBlock(caret: MovedCaret | null): void {
     const block = this.ctx.currentBlock;
 
-    if (block !== undefined) {
-      this.dependencies.Caret.setToBlock(block, this.dependencies.Caret.positions.END);
+    if (block === undefined) {
+      return;
     }
+
+    const { Caret } = this.dependencies;
+
+    if (caret !== null && block.holder.contains(caret.input)) {
+      block.currentInput = caret.input;
+      Caret.setToBlock(block, Caret.positions.DEFAULT, caret.offset);
+
+      return;
+    }
+
+    Caret.setToBlock(block, Caret.positions.END);
+  }
+
+  /**
+   * The collapsed caret in the current block's input, as a text offset; null otherwise.
+   */
+  private caretInCurrentInput(): MovedCaret | null {
+    const input = this.ctx.currentBlock?.currentInput;
+    const selection = window.getSelection();
+    const node = selection?.anchorNode ?? null;
+
+    if (input === undefined || selection === null || node === null || !selection.isCollapsed || !input.contains(node) || $.isNativeInput(input)) {
+      return null;
+    }
+
+    return { input, offset: textOffsetOf(input, node, selection.anchorOffset) };
   }
 }

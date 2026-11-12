@@ -283,7 +283,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2126 + 143 + 528 + 5 closure for all 2802 keys', () => {
+  it('rebuilds a disjoint 2126 + 147 + 525 + 5 closure for all 2803 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -297,7 +297,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2802);
+    expect(lifecycle.size).toBe(2803);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -538,7 +538,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: a11y.blocksConvertedTo_one/_other, a plural of the multi-block Turn into call.
       // +2: a11y.blocksDeleted_one/_other, a plural of the selected-block delete call.
       // +1: the audio seek slider's tools.audio.seek, built by i18nLabel like play and volume.
-      'finite-dynamic': 143,
+      // +4: the video speed submenu's back, speedDecrease, speedIncrease and the new speedNormal, built by i18nLabel.
+      'finite-dynamic': 147,
       // 12 of the 20 image darkroom keys are called by literal. The 8 filter
       // names stay here: filter-strip.ts builds them from the preset name.
       // +9: the markup tool names; markup-panel.ts builds them from a short key.
@@ -611,7 +612,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +3: the row-page "Updating layout for all pages" dialog's saveForAll* keys, via the controls' t().
       // +1: the date filter's "Custom date" row, tools.database.filterDateCustom (chip t() prefixes the namespace).
       // -3: chartTypeNumber, duplicateView and deleteView moved to executable-literal (dashboard menus).
-      'registered-namespace-compatible': 528,
+      // -3: tools.video.back, speedDecrease and speedIncrease have a caller again (the speed submenu).
+      'registered-namespace-compatible': 525,
       'catalog-only': 5,
     });
     expect(

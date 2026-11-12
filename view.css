@@ -378,6 +378,9 @@
   .whitespace-pre-wrap {
     white-space: pre-wrap;
   }
+  .\[tab-size\:2\] {
+    tab-size: 2;
+  }
   .text-text-primary\! {
     color: var(--blok-text-primary) !important;
   }
@@ -788,10 +791,12 @@
   --blok-radius-10: 0.625rem;
   --blok-radius-12: 0.75rem;
   --blok-radius-16: 1rem;
+  --blok-radius-20: 1.25rem;
   --blok-radius-full: 9999px;
   --blok-radius-dialog: var(--blok-radius-12);
   --blok-radius-surface: var(--blok-radius-10);
   --blok-radius-block: var(--blok-radius-10);
+  --blok-radius-player: var(--blok-radius-20);
   --blok-radius-field: var(--blok-radius-8);
   --blok-radius-control-lg: var(--blok-radius-8);
   --blok-radius-control: var(--blok-radius-6);
@@ -913,9 +918,12 @@
   --blok-video-error-bar-7: #0000c0;
   --blok-video-burst-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.4);
   --blok-video-burst-ring: rgba(255, 255, 255, 0.4);
-  --blok-video-menu-bg: rgba(22, 22, 22, 0.94);
+  --blok-video-menu-bg: rgba(26, 26, 28, 0.78);
+  --blok-video-menu-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 16px 40px -12px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.25);
   --blok-video-menu-value-fg: rgba(255, 255, 255, 0.62);
-  --blok-video-menu-border: rgba(255, 255, 255, 0.08);
+  --blok-video-menu-border: rgba(255, 255, 255, 0.1);
+  --blok-video-wire-peg: #1c1c1e;
+  --blok-video-wire-shadow: rgba(0, 0, 0, 0.45);
   --blok-video-menu-icon: rgba(255, 255, 255, 0.9);
   --blok-video-menu-row-active: var(--blok-video-accent);
   @supports (color: color-mix(in lab, red, red)) {
@@ -927,6 +935,14 @@
   --blok-video-scrim-mid: rgba(0, 0, 0, 0.2);
   --blok-video-shadow-hover: 0 8px 24px -8px rgba(0, 0, 0, 0.18);
   --blok-video-focus-ring: var(--blok-focus-ring);
+  --blok-video-island-bg: rgba(18, 18, 18, 0.4);
+  --blok-video-island-play-bg: #ffffff;
+  --blok-video-island-play-fg: #111111;
+  --blok-video-island-play-bg-hover: #ececec;
+  --blok-video-island-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 18px 40px -16px rgba(0, 0, 0, 0.7);
+  --blok-ease-spring-island: cubic-bezier(0.34, 1.56, 0.64, 1);
   --blok-find-match-bg: rgba(255, 212, 0, 0.32);
   --blok-find-match-active-bg: rgba(255, 138, 0, 0.5);
   --blok-find-lens-ring: rgba(255, 128, 0, 0.72);

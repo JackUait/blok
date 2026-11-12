@@ -127,7 +127,8 @@ export const createSpeedWire = ({ label, reducedMotion, onRate }: SpeedWireOptio
   slider.step = String(SPEED_SLIDER_STEP);
   slider.setAttribute('aria-label', label);
 
-  element.append(art, slider);
+  // The range comes first: video.css rings the bead from the range's focus with `~`.
+  element.append(slider, art);
 
   const state = {
     rate: 1,
@@ -231,6 +232,7 @@ export const createSpeedWire = ({ label, reducedMotion, onRate }: SpeedWireOptio
   };
 
   const halt = (): void => {
+    if (state.frame === 0) return;
     cancelAnimationFrame(state.frame);
     state.frame = 0;
   };

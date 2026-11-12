@@ -173,6 +173,75 @@ test('hovering a never-played video shows only the play button, not the control 
   await expect.poll(barOpacity).toBe('1');
 });
 
+test('the speed submenu: drag the bead, land on a peg, use a preset, step, and go back', async ({ page }) => {
+  await createBlok(page, { blocks: [ { type: 'video', data: { url: SAMPLE_VIDEO_URL } } ] });
+
+  const block = page.locator(VIDEO_BLOCK_SELECTOR);
+  const media = block.getByTestId('video-player');
+  const rate = (): Promise<number> => media.evaluate((element) => (element as HTMLVideoElement).playbackRate);
+
+  // The bar, gear included, stays hidden until the video has played once.
+  await media.evaluate(async (element) => {
+    const video = element as HTMLVideoElement;
+
+    video.muted = true;
+    await video.play();
+    video.pause();
+  });
+  await block.hover();
+  await block.locator('[data-action="gear"]').click();
+
+  const menu = block.locator('[data-role="playback-menu"]');
+
+  await expect(menu).toHaveAttribute('data-pane', 'main');
+  await expect(menu.getByRole('button', { name: 'Playback speed Normal', exact: true })).toBeVisible();
+
+  await menu.locator('[data-action="open-speed"]').click();
+  await expect(menu).toHaveAttribute('data-pane', 'speed');
+
+  // The pane slides in; measure the wire only once it has stopped.
+  await menu.evaluate(async (element) => {
+    await Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished.catch(() => undefined)));
+  });
+
+  const wire = menu.locator('[data-role="speed-wire"]');
+  const box = await wire.boundingBox();
+
+  if (!box) throw new Error('the speed wire has no box');
+
+  // The wire is drawn in a 240-wide space: 26 of padding, then 188 of wire.
+  const xAt = (share: number): number => box.x + ((26 + share * 188) / 240) * box.width;
+  const y = box.y + box.height / 2;
+
+  // Between two pegs the bead follows the pointer in steps of 0.05.
+  await page.mouse.move(xAt(0.5), y);
+  await page.mouse.down();
+  await page.mouse.move(xAt(0.6), y, { steps: 4 });
+  await expect.poll(rate).toBe(1.2);
+
+  // Close to a peg, the peg takes the bead and keeps it a little way past.
+  await page.mouse.move(xAt(0.72), y, { steps: 4 });
+  await expect.poll(rate).toBe(1.5);
+  await page.mouse.move(xAt(0.81), y, { steps: 4 });
+  await expect.poll(rate).toBe(1.5);
+  await page.mouse.up();
+
+  await menu.getByRole('button', { name: '0.5×', exact: true }).click();
+  await expect.poll(rate).toBe(0.5);
+  await expect(menu.locator('[data-role="speed-presets"] [aria-pressed]')).toHaveCount(0);
+
+  await menu.getByRole('button', { name: 'Increase playback speed', exact: true }).click();
+  await expect.poll(rate).toBe(0.55);
+  await expect(menu.locator('[data-role="speed-readout"]')).toHaveText('0.55×');
+
+  await menu.getByRole('button', { name: 'Back', exact: true }).click();
+  await expect(menu).toHaveAttribute('data-pane', 'main');
+  await expect(menu.locator('[data-action="open-speed"]')).toContainText('0.55×');
+
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+});
+
 test('persists video data across save and reload', async ({ page }) => {
   await createBlok(page, {
     blocks: [{ type: 'video', data: { url: SAMPLE_VIDEO_URL, caption: 'My clip', alignment: 'center' } }],

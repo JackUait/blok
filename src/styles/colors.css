@@ -556,11 +556,15 @@
   --blok-video-error-bar-7: #0000c0;
   --blok-video-burst-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.4);
   --blok-video-burst-ring: rgba(255, 255, 255, 0.4);
-  /* Settings popover — near-opaque dark so video never bleeds through the text. */
-  --blok-video-menu-bg: rgba(22, 22, 22, 0.94);
+  /* Settings popover — dark glass. The blur behind it keeps text readable over video. */
+  --blok-video-menu-bg: rgba(26, 26, 28, 0.78);
+  --blok-video-menu-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 16px 40px -12px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.25);
   --blok-video-menu-value-fg: rgba(255, 255, 255, 0.62);
   /* Frosted-glass edge + resting glyph tint + selected-row wash. */
-  --blok-video-menu-border: rgba(255, 255, 255, 0.08);
+  --blok-video-menu-border: rgba(255, 255, 255, 0.1);
+  /* Speed wire: the fill inside a peg ring, and the shadow under the bead. */
+  --blok-video-wire-peg: #1c1c1e;
+  --blok-video-wire-shadow: rgba(0, 0, 0, 0.45);
   --blok-video-menu-icon: rgba(255, 255, 255, 0.9);
   --blok-video-menu-row-active: color-mix(in srgb, var(--blok-video-accent) 14%, transparent);
   --blok-video-theater-scrim: rgba(0, 0, 0, 0.8);

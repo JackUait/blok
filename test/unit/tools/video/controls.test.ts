@@ -1035,49 +1035,257 @@ describe('video controls — playback gear menu', () => {
     expect(h.controls.contains(menu())).toBe(false);
   });
 
-  it('shows speed and loop together in one pane — there is no submenu to navigate', () => {
-    expect(menu().querySelector('[data-action="open-speed"]')).toBeNull();
-    expect(menu().querySelector('[data-action="speed-back"]')).toBeNull();
-    expect(menu().hasAttribute('data-view')).toBe(false);
-    expect(menu().querySelectorAll('[inert]')).toHaveLength(0);
-    expect(menu().contains(slider())).toBe(true);
-    expect(menu().contains(readout())).toBe(true);
-    expect(menu().contains(q(h.figure, '[data-action="loop"]'))).toBe(true);
-  });
-
-  it('labels the speed section as a group with a leading gauge icon', () => {
-    const section = q(h.figure, '[data-role="speed-section"]');
-    expect(section.getAttribute('role')).toBe('group');
-    expect(section.getAttribute('aria-label')).toBe('Playback speed');
-    expect(section.querySelector('.blok-video-controls__menu-icon svg')).not.toBeNull();
-  });
-
-  // --- speed: big readout + ruler tape over a native range + segmented presets ---
+  // --- the two panes: main list and speed submenu ---
   const slider = (): HTMLInputElement => q<HTMLInputElement>(h.figure, '[data-role="speed-slider"]');
   const readout = (): HTMLElement => q(h.figure, '[data-role="speed-readout"]');
-  const ruler = (): HTMLElement => q(h.figure, '[data-role="speed-ruler"]');
-  const chip = (rate: string): HTMLElement => q(h.figure, `[data-action="speed-${rate}"]`);
+  const speedRow = (): HTMLElement => q(h.figure, '[data-action="open-speed"]');
+  const backRow = (): HTMLElement => q(h.figure, '[data-action="menu-back"]');
+  const minus = (): HTMLButtonElement => q<HTMLButtonElement>(h.figure, '[data-action="speed-decrease"]');
+  const plus = (): HTMLButtonElement => q<HTMLButtonElement>(h.figure, '[data-action="speed-increase"]');
+  const preset = (rate: string): HTMLElement => q(h.figure, `[data-action="speed-${rate}"]`);
+  const pane = (): string | null => menu().getAttribute('data-pane');
+  const values = (): Array<string | null> => [...h.figure.querySelectorAll('[data-role="speed-value"]')].map((el) => el.textContent);
+  const actions = (role: string): Array<string | null> =>
+    [...q(h.figure, `[data-role="${role}"]`).children].map((el) => el.getAttribute('data-action') ?? el.getAttribute('data-role') ?? el.className);
   const dragSlider = (value: number): void => {
     const s = slider();
     s.value = String(value);
     s.dispatchEvent(new Event('input', { bubbles: true }));
   };
-  // jsdom has no PointerEvent; a MouseEvent with a pointer type carries clientX.
-  const pointer = (type: string, clientX: number): void => {
-    ruler().dispatchEvent(new MouseEvent(type, { clientX, bubbles: true, cancelable: true }));
+  // jsdom has no PointerEvent; a MouseEvent with a pointer type stands in.
+  const press = (el: HTMLElement, type = 'pointerdown', init: MouseEventInit = {}): void => {
+    el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, ...init }));
   };
-  // 9px of tape per 0.05× step.
-  const STEP_PX = 9;
+  const escape = (el: HTMLElement): void => {
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  };
 
-  it('keeps a native 0.05-step range as the keyboard and screen-reader control', () => {
-    const s = slider();
-    expect(s.type).toBe('range');
-    expect(s.min).toBe('0.25');
-    expect(s.max).toBe('2');
-    expect(s.step).toBe('0.05');
-    expect(s.value).toBe('1');
-    expect(s.getAttribute('aria-label')).toBe('Playback speed');
-    expect(ruler().contains(s)).toBe(true);
+  it('lists Playback speed then Loop on the main pane, with nothing between them', () => {
+    expect(actions('menu-main')).toEqual(['open-speed', 'loop']);
+    expect(pane()).toBe('main');
+  });
+
+  it('shows the speed row as a label, the current value and a way in', () => {
+    const row = speedRow();
+
+    expect(row.querySelector('.blok-video-controls__menu-label')?.textContent).toBe('Playback speed');
+    expect(row.querySelector('[data-role="speed-value"]')?.textContent).toBe('Normal');
+    expect(row.querySelector('.blok-video-controls__menu-chevron svg')).not.toBeNull();
+    expect(row.querySelector('.blok-video-controls__menu-icon:not(.blok-video-controls__menu-chevron) svg')).not.toBeNull();
+    expect(row.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('reads Normal on the main row at 1× and the number everywhere else', () => {
+    expect(values()).toEqual(['Normal', '1×']);
+    dragSlider(1.3);
+    expect(values()).toEqual(['1.3×', '1.3×']);
+    dragSlider(1);
+    expect(values()).toEqual(['Normal', '1×']);
+  });
+
+  it('translates Normal through its own key', () => {
+    const other = mount({ i18n: fakeI18n({ 'tools.video.speedNormal': 'Обычная' }) });
+
+    expect(q(other.figure, '[data-action="open-speed"] [data-role="speed-value"]').textContent).toBe('Обычная');
+    other.destroy();
+  });
+
+  it('opens the speed submenu from its row and returns with the back row', () => {
+    gear().click();
+    speedRow().click();
+
+    expect(pane()).toBe('speed');
+    expect(speedRow().getAttribute('aria-expanded')).toBe('true');
+    expect(q(h.figure, '[data-role="menu-main"]').inert).toBe(true);
+    expect(q(h.figure, '[data-role="menu-speed"]').inert).toBe(false);
+    expect(backRow()).toHaveFocus();
+
+    backRow().click();
+    expect(pane()).toBe('main');
+    expect(speedRow().getAttribute('aria-expanded')).toBe('false');
+    expect(q(h.figure, '[data-role="menu-main"]').inert).toBe(false);
+    expect(q(h.figure, '[data-role="menu-speed"]').inert).toBe(true);
+    expect(speedRow()).toHaveFocus();
+    expect(isOpen()).toBe(true);
+  });
+
+  it('Escape steps back out: submenu to the main list, main list to closed', () => {
+    gear().click();
+    speedRow().click();
+
+    escape(backRow());
+    expect(pane()).toBe('main');
+    expect(isOpen()).toBe(true);
+
+    escape(speedRow());
+    expect(isOpen()).toBe(false);
+    expect(gear()).toHaveFocus();
+  });
+
+  it('starts every open on the main list', () => {
+    gear().click();
+    speedRow().click();
+    gear().click();
+    gear().click();
+
+    expect(isOpen()).toBe(true);
+    expect(pane()).toBe('main');
+  });
+
+  it('builds the submenu as back row, divider, step line, wire, presets', () => {
+    expect(actions('menu-speed')).toEqual(['menu-back', 'blok-video-controls__menu-divider', 'speed-stepper', 'speed-wire', 'speed-presets']);
+    expect(actions('speed-stepper')).toEqual(['speed-decrease', 'speed-readout', 'speed-increase']);
+    expect(backRow().getAttribute('aria-label')).toBe('Back');
+    expect(backRow().querySelector('.blok-video-controls__menu-label')?.textContent).toBe('Playback speed');
+    expect(minus().getAttribute('aria-label')).toBe('Decrease playback speed');
+    expect(plus().getAttribute('aria-label')).toBe('Increase playback speed');
+  });
+
+  it('steps by 0.05 from minus and plus', () => {
+    plus().click();
+    expect(h.video.playbackRate).toBe(1.05);
+    minus().click();
+    minus().click();
+    expect(h.video.playbackRate).toBe(0.95);
+  });
+
+  it('steps once for a pointer press, not again for the click that follows it', () => {
+    press(plus());
+    press(plus(), 'pointerup');
+    press(plus(), 'click', { detail: 1 });
+
+    expect(h.video.playbackRate).toBe(1.05);
+  });
+
+  it('keeps stepping while a button is held: after 350ms, then every 70ms', () => {
+    vi.useFakeTimers();
+    press(plus());
+    expect(h.video.playbackRate).toBe(1.05);
+
+    vi.advanceTimersByTime(349);
+    expect(h.video.playbackRate).toBe(1.05);
+
+    vi.advanceTimersByTime(1 + 70);
+    expect(h.video.playbackRate).toBe(1.1);
+
+    vi.advanceTimersByTime(140);
+    expect(h.video.playbackRate).toBe(1.2);
+
+    press(plus(), 'pointerup');
+    vi.advanceTimersByTime(1000);
+    expect(h.video.playbackRate).toBe(1.2);
+  });
+
+  it.each(['pointerleave', 'pointercancel', 'blur'])('stops a held step on %s', (type) => {
+    vi.useFakeTimers();
+    press(minus());
+    plus().dispatchEvent(new Event(type));
+    minus().dispatchEvent(new Event(type));
+    vi.advanceTimersByTime(2000);
+
+    expect(h.video.playbackRate).toBe(0.95);
+  });
+
+  it.each([
+    ['the card closes', (): void => gear().click()],
+    ['the back row is used', (): void => backRow().click()],
+    ['the player is destroyed', (): void => h.destroy()],
+  ])('stops a held step when %s', (_label, leave) => {
+    vi.useFakeTimers();
+    gear().click();
+    speedRow().click();
+    press(plus());
+    leave();
+    vi.advanceTimersByTime(2000);
+
+    expect(h.video.playbackRate).toBe(1.05);
+  });
+
+  it('dims minus and plus at the ends of the range, and a hold ends there', () => {
+    vi.useFakeTimers();
+    dragSlider(1.9);
+    expect([minus().disabled, plus().disabled]).toEqual([false, false]);
+
+    press(plus());
+    vi.advanceTimersByTime(3000);
+    expect(h.video.playbackRate).toBe(2);
+    expect(plus().disabled).toBe(true);
+
+    // The hold is over: a step down is not undone by a leftover timer.
+    minus().click();
+    vi.advanceTimersByTime(3000);
+    expect(h.video.playbackRate).toBe(1.95);
+
+    dragSlider(0.25);
+    expect(minus().disabled).toBe(true);
+  });
+
+  it('offers five presets, one under each peg', () => {
+    const row = q(h.figure, '[data-role="speed-presets"]');
+    const presets = [...row.querySelectorAll<HTMLElement>('button')];
+
+    expect(row.getAttribute('role')).toBe('group');
+    expect(row.getAttribute('aria-label')).toBe('Speed presets');
+    expect(presets.map((el) => el.textContent)).toEqual(['0.25×', '0.5×', '1×', '1.5×', '2×']);
+    expect(presets.map((el) => el.getAttribute('data-action'))).toEqual(['speed-0.25', 'speed-0.5', 'speed-1', 'speed-1.5', 'speed-2']);
+    expect(presets.map((el) => el.style.getPropertyValue('--blok-speed-at'))).toEqual(['0', '0.25', '0.5', '0.75', '1']);
+  });
+
+  it('a preset sets the speed and never shows a selected state', () => {
+    const pressed = (): boolean[] => [...h.figure.querySelectorAll('[data-role="speed-presets"] button')].map((el) => el.hasAttribute('aria-pressed'));
+
+    expect(pressed()).toEqual([false, false, false, false, false]);
+
+    preset('1.5').click();
+    expect(h.video.playbackRate).toBe(1.5);
+    expect(pressed()).toEqual([false, false, false, false, false]);
+
+    preset('0.25').click();
+    expect(h.video.playbackRate).toBe(0.25);
+    expect(pressed()).toEqual([false, false, false, false, false]);
+  });
+
+  it('rolls only the characters that changed, up for faster and down for slower', () => {
+    const rolls = (): Array<string | null> => [...readout().querySelectorAll('.blok-video-controls__speed-digit')].map((el) => el.getAttribute('data-roll'));
+
+    expect(rolls()).toEqual([null]);
+
+    dragSlider(1.3);
+    expect(rolls()).toEqual([null, 'up', 'up']);
+
+    dragSlider(1.2);
+    expect(rolls()).toEqual([null, null, 'down']);
+  });
+
+  it('the < and > shortcuts move the value on every surface', () => {
+    h.video.dispatchEvent(new KeyboardEvent('keydown', { key: '>', bubbles: true }));
+
+    expect(h.video.playbackRate).toBe(1.25);
+    expect(readout().textContent).toBe('1.25×');
+    expect(values()).toEqual(['1.25×', '1.25×']);
+    expect(slider().value).toBe('1.25');
+
+    h.video.dispatchEvent(new KeyboardEvent('keydown', { key: '<', bubbles: true }));
+    expect(values()).toEqual(['Normal', '1×']);
+  });
+
+  it('shows one value everywhere for a stored speed that is off the 0.05 grid', () => {
+    const storage = { getItem: (key: string): string | null => (key === 'blok:video:rate' ? '1.33' : null), setItem: vi.fn(), removeItem: vi.fn() };
+    const other = mount({ storage });
+
+    expect(other.video.playbackRate).toBe(1.33);
+    expect(q(other.figure, '[data-role="speed-readout"]').textContent).toBe('1.33×');
+    expect([...other.figure.querySelectorAll('[data-role="speed-value"]')].map((el) => el.textContent)).toEqual(['1.33×', '1.33×']);
+    expect(q(other.figure, '[data-role="speed-slider"]').getAttribute('aria-valuetext')).toBe('1.33×');
+    other.destroy();
+  });
+
+  it('puts the wire in the submenu with the range input inside it', () => {
+    const wire = q(h.figure, '[data-role="speed-wire"]');
+
+    expect(q(h.figure, '[data-role="menu-speed"]').contains(wire)).toBe(true);
+    expect(wire.contains(slider())).toBe(true);
+    expect(wire.querySelectorAll('[data-role="wire-peg"]')).toHaveLength(5);
   });
 
   it('defaults the readout to 1×', () => {
@@ -1091,148 +1299,11 @@ describe('video controls — playback gear menu', () => {
     expect(slider().getAttribute('aria-valuetext')).toBe('1.15×');
   });
 
-  it('parks the tape so the current rate sits under the needle', () => {
-    // --blok-speed-pos counts 0.05 steps from the 0.25× start of the tape.
-    expect(ruler().style.getPropertyValue('--blok-speed-pos')).toBe('15');
-    dragSlider(1.5);
-    expect(ruler().style.getPropertyValue('--blok-speed-pos')).toBe('25');
-  });
-
-  it('draws one tick per 0.05× step and labels the round rates', () => {
-    const ticks = ruler().querySelectorAll('.blok-video-controls__speed-tick');
-    expect(ticks).toHaveLength(36);
-    const labels = Array.from(ruler().querySelectorAll('.blok-video-controls__speed-tick-label')).map((l) => l.textContent);
-    expect(labels).toEqual(['0.5×', '1×', '1.5×', '2×']);
-  });
-
-  it('dragging the tape left speeds up and dragging it right slows down, one step per 9px', () => {
-    pointer('pointerdown', 100);
-    pointer('pointermove', 100 - STEP_PX * 5);
-    expect(h.video.playbackRate).toBe(1.25);
-    expect(readout().textContent).toBe('1.25×');
-    pointer('pointermove', 100 + STEP_PX * 2);
-    expect(h.video.playbackRate).toBe(0.9);
-    pointer('pointerup', 100 + STEP_PX * 2);
-    // Moves after release do nothing.
-    pointer('pointermove', 0);
-    expect(h.video.playbackRate).toBe(0.9);
-  });
-
-  it('a tape drag snaps to whole steps without float drift and clamps at the ends', () => {
-    pointer('pointerdown', 200);
-    pointer('pointermove', 200 - STEP_PX * 3 - 2);
-    expect(h.video.playbackRate).toBe(1.15);
-    expect(readout().textContent).toBe('1.15×');
-    pointer('pointermove', -2000);
-    expect(h.video.playbackRate).toBe(2);
-    pointer('pointermove', 4000);
-    expect(h.video.playbackRate).toBe(0.25);
-    pointer('pointerup', 4000);
-  });
-
-  it('pressing the tape hands focus to the range so arrow keys carry on from there', () => {
-    pointer('pointerdown', 100);
-    expect(slider()).toHaveFocus();
-    pointer('pointerup', 100);
-  });
-
-  it('a pointer press hides the focus ring until the keyboard takes over', () => {
-    pointer('pointerdown', 100);
-    pointer('pointerup', 100);
-    // Chrome counts the scripted focus as :focus-visible, so the ruler gates the ring itself.
-    expect(ruler().hasAttribute('data-pointer-focus')).toBe(true);
-    slider().dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
-    expect(ruler().hasAttribute('data-pointer-focus')).toBe(false);
-    pointer('pointerdown', 100);
-    slider().dispatchEvent(new FocusEvent('blur'));
-    expect(ruler().hasAttribute('data-pointer-focus')).toBe(false);
-  });
-
-  it('tapping the tape jumps to the rate under the tap', () => {
-    vi.spyOn(ruler(), 'getBoundingClientRect').mockReturnValue({ left: 0, width: 240 } as DOMRect);
-    // The needle sits at the centre (120px); 5 steps to its right is 1.25×.
-    pointer('pointerdown', 120 + STEP_PX * 5);
-    pointer('pointerup', 120 + STEP_PX * 5);
-    expect(h.video.playbackRate).toBe(1.25);
-  });
-
-  it('scrolling over the tape nudges the rate one step per notch and keeps the page still', () => {
-    const wheel = new WheelEvent('wheel', { deltaY: STEP_PX * 2, bubbles: true, cancelable: true });
-    ruler().dispatchEvent(wheel);
-    expect(h.video.playbackRate).toBe(1.1);
-    expect(wheel.defaultPrevented).toBe(true);
-    ruler().dispatchEvent(new WheelEvent('wheel', { deltaX: -STEP_PX, bubbles: true, cancelable: true }));
-    expect(h.video.playbackRate).toBe(1.05);
-  });
-
-  it('offers 0.5× / 1× / 1.5× / 2× presets and marks the one that matches the rate', () => {
-    expect(h.figure.querySelectorAll('.blok-video-controls__speed-chip')).toHaveLength(4);
-    expect(chip('1').textContent).toBe('1×');
-    expect(chip('1').getAttribute('aria-pressed')).toBe('true');
-    expect(chip('1.5').getAttribute('aria-pressed')).toBe('false');
-
-    chip('1.5').click();
-    expect(h.video.playbackRate).toBe(1.5);
-    expect(chip('1.5').getAttribute('aria-pressed')).toBe('true');
-    expect(chip('1').getAttribute('aria-pressed')).toBe('false');
-
-    // A rate between presets marks none of them.
-    dragSlider(1.15);
-    ['0.5', '1', '1.5', '2'].forEach((rate) => expect(chip(rate).getAttribute('aria-pressed')).toBe('false'));
-  });
-
-  it('a puck in the preset bar tracks the rate and snaps onto a matching preset', () => {
-    const presets = q(h.figure, '[data-role="speed-presets"]');
-    const puck = q(presets, '[data-role="speed-puck"]');
-    expect(puck.getAttribute('aria-hidden')).toBe('true');
-    // --blok-speed-puck is a preset index: 0.5× → 0, 1× → 1, 1.5× → 2, 2× → 3.
-    expect(presets.style.getPropertyValue('--blok-speed-puck')).toBe('1');
-    expect(presets.hasAttribute('data-snapped')).toBe(true);
-
-    // Between presets it sits part way along, and is no longer snapped.
-    dragSlider(1.8);
-    expect(presets.style.getPropertyValue('--blok-speed-puck')).toBe('2.6');
-    expect(presets.hasAttribute('data-snapped')).toBe(false);
-
-    // Below the first preset it waits at the start.
-    dragSlider(0.25);
-    expect(presets.style.getPropertyValue('--blok-speed-puck')).toBe('0');
-    expect(presets.hasAttribute('data-snapped')).toBe(false);
-
-    // A preset click snaps at once; the puck then glides there with the tape.
-    chip('2').click();
-    expect(presets.hasAttribute('data-snapped')).toBe(true);
-  });
-
   it('a preset keeps the card open so the rate can still be fine-tuned', () => {
     gear().click();
-    chip('2').click();
+    speedRow().click();
+    preset('2').click();
     expect(isOpen()).toBe(true);
-  });
-
-  it('the < and > shortcuts move the readout, tape and presets with the rate', () => {
-    const key = (k: string): void => {
-      h.video.dispatchEvent(new KeyboardEvent('keydown', { key: k, shiftKey: true, bubbles: true }));
-    };
-    key('>');
-    expect(h.video.playbackRate).toBe(1.25);
-    expect(readout().textContent).toBe('1.25×');
-    expect(slider().value).toBe('1.25');
-    expect(ruler().style.getPropertyValue('--blok-speed-pos')).toBe('20');
-    key('>');
-    expect(chip('1.5').getAttribute('aria-pressed')).toBe('true');
-  });
-
-  it('a 2× hold leaves the readout on the chosen rate and restores it on release', () => {
-    vi.useFakeTimers();
-    chip('1.5').click();
-    h.video.dispatchEvent(new Event('pointerdown'));
-    vi.advanceTimersByTime(300);
-    expect(h.video.playbackRate).toBe(2);
-    expect(readout().textContent).toBe('1.5×');
-    expect(chip('2').getAttribute('aria-pressed')).toBe('false');
-    h.video.dispatchEvent(new Event('pointerup'));
-    expect(h.video.playbackRate).toBe(1.5);
   });
 
   // --- loop: a real switch ---
@@ -1259,65 +1330,6 @@ describe('video controls — playback gear menu', () => {
   it('does not offer a stable-volume toggle', () => {
     expect(h.figure.querySelector('[data-action="stable-volume"]')).toBeNull();
     expect(h.figure.textContent).not.toContain('Stable volume');
-  });
-});
-
-describe('video controls — preset glide animation', () => {
-  let h: Harness;
-  let raf: ReturnType<typeof vi.fn>;
-  let caf: ReturnType<typeof vi.fn>;
-  beforeEach(() => {
-    vi.clearAllMocks();
-    raf = vi.fn().mockReturnValue(7);
-    caf = vi.fn();
-    vi.stubGlobal('requestAnimationFrame', raf);
-    vi.stubGlobal('cancelAnimationFrame', caf);
-    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false })); // motion allowed
-    h = mount();
-  });
-  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.unstubAllGlobals(); vi.restoreAllMocks(); });
-
-  const chip = (rate: string): HTMLElement => q(h.figure, `[data-action="speed-${rate}"]`);
-  const slider = (): HTMLInputElement => q<HTMLInputElement>(h.figure, '[data-role="speed-slider"]');
-  const ruler = (): HTMLElement => q(h.figure, '[data-role="speed-ruler"]');
-
-  it('applies the new rate at once but glides the tape to it from the old position', () => {
-    chip('2').click();
-    // The rate changes instantly — only the tape animates.
-    expect(h.video.playbackRate).toBe(2);
-    expect(raf).toHaveBeenCalled();
-    // The tape starts back at the prior rate (1×), not snapped to 2×.
-    expect(Number(slider().value)).toBe(1);
-    expect(ruler().style.getPropertyValue('--blok-speed-pos')).toBe('15');
-    // The puck glides with the tape, from the 1× preset.
-    expect(q(h.figure, '[data-role="speed-presets"]').style.getPropertyValue('--blok-speed-puck')).toBe('1');
-  });
-
-  it('jumps straight to the rate with no animation under prefers-reduced-motion', () => {
-    h.destroy();
-    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }));
-    raf.mockClear();
-    h = mount();
-    chip('2').click();
-    expect(h.video.playbackRate).toBe(2);
-    expect(Number(slider().value)).toBe(2);
-    expect(ruler().style.getPropertyValue('--blok-speed-pos')).toBe('35');
-    expect(raf).not.toHaveBeenCalled();
-  });
-
-  it('does not glide while the tape is dragged — it follows the pointer', () => {
-    raf.mockClear();
-    ruler().dispatchEvent(new MouseEvent('pointerdown', { clientX: 100, bubbles: true }));
-    ruler().dispatchEvent(new MouseEvent('pointermove', { clientX: 91, bubbles: true }));
-    expect(h.video.playbackRate).toBe(1.05);
-    expect(raf).not.toHaveBeenCalled();
-  });
-
-  it('cancels an in-flight glide on destroy', () => {
-    chip('2').click();
-    caf.mockClear();
-    h.destroy();
-    expect(caf).toHaveBeenCalledWith(7); // the rAF id the glide is holding
   });
 });
 

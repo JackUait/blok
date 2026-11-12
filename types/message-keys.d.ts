@@ -2813,6 +2813,7 @@ export type BlokMessageKey =
   | 'tools.video.settings'
   | 'tools.video.speedDecrease'
   | 'tools.video.speedIncrease'
+  | 'tools.video.speedNormal'
   | 'tools.video.speedPresets'
   | 'tools.video.statsBufferHealth'
   | 'tools.video.statsDroppedFrames'

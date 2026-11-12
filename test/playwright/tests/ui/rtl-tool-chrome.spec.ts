@@ -219,7 +219,7 @@ for (const direction of DIRECTIONS) {
       })).toBe(direction);
     });
 
-    test('the video settings menu opens over the player with its speed ruler inside', async ({ page }) => {
+    test('the video settings menu opens over the player and its speed submenu keeps the wire left to right', async ({ page }) => {
       const caption = text(direction, 'My clip', 'مقطع فيديو');
 
       await createBlok(page, direction, [
@@ -229,8 +229,17 @@ for (const direction of DIRECTIONS) {
       const video = page.locator('[data-blok-tool="video"]');
       const gear = video.locator('[data-action="gear"]');
 
+      // The bar, gear included, stays hidden until the video has played once.
+      await video.getByTestId('video-player').evaluate(async (element) => {
+        const media = element as HTMLVideoElement;
+
+        media.muted = true;
+        await media.play();
+        media.pause();
+      });
       await video.hover();
-      await gear.click({ force: true });
+      await expect(gear).toBeVisible();
+      await gear.click();
 
       const menu = video.locator('[data-role="playback-menu"]');
 
@@ -245,17 +254,55 @@ for (const direction of DIRECTIONS) {
 
       expect(Math.abs(anchored)).toBeLessThanOrEqual(TOLERANCE);
 
-      // The tape is pinned LTR in both directions; its needle marks the card's centre.
-      const ruler = menu.locator('[data-role="speed-ruler"]');
+      // The row's chevron sits at the inline end, where the submenu comes from.
+      const speedRow = menu.locator('[data-action="open-speed"]');
+      const rowBox = await rect(speedRow);
+      const valueBox = await rect(speedRow.locator('[data-role="speed-value"]'));
+      const rowMiddle = (rowBox.left + rowBox.right) / 2;
 
-      await expect(ruler).toHaveAttribute('dir', 'ltr');
+      expect(direction === 'rtl' ? valueBox.right < rowMiddle : valueBox.left > rowMiddle).toBe(true);
 
-      const rulerBox = await rect(ruler);
-      const needle = await rect(ruler.locator('[data-role="speed-needle"]'));
+      await speedRow.click();
+      await expect(menu).toHaveAttribute('data-pane', 'speed');
+      await settle(menu);
 
-      expect(rulerBox.left).toBeGreaterThanOrEqual(menuBox.left - 1);
-      expect(rulerBox.right).toBeLessThanOrEqual(menuBox.right + 1);
-      expect(Math.abs((needle.left + needle.right) / 2 - (menuBox.left + menuBox.right) / 2)).toBeLessThanOrEqual(TOLERANCE);
+      const cardBox = await rect(menu);
+
+      // The back row's value is at the inline end too.
+      const backBox = await rect(menu.locator('[data-action="menu-back"]'));
+      const backValue = await rect(menu.locator('[data-action="menu-back"] [data-role="speed-value"]'));
+      const backMiddle = (backBox.left + backBox.right) / 2;
+
+      expect(direction === 'rtl' ? backValue.right < backMiddle : backValue.left > backMiddle).toBe(true);
+
+      // The wire is pinned LTR in both directions, like every slider in the player.
+      const wire = menu.locator('[data-role="speed-wire"]');
+
+      await expect(wire).toHaveAttribute('dir', 'ltr');
+
+      const wireBox = await rect(wire);
+
+      expect(wireBox.left).toBeGreaterThanOrEqual(cardBox.left - 1);
+      expect(wireBox.right).toBeLessThanOrEqual(cardBox.right + 1);
+
+      const centres = (locator: Locator): Promise<number[]> =>
+        locator.evaluateAll((elements) => elements.map((element) => {
+          const box = element.getBoundingClientRect();
+
+          return (box.left + box.right) / 2;
+        }));
+      const pegs = await centres(wire.locator('[data-role="wire-peg"]'));
+      const presets = await centres(menu.locator('[data-role="speed-presets"] button'));
+
+      // Slowest on the left, fastest on the right, whatever the reading direction.
+      expect(pegs).toEqual([...pegs].sort((left, right) => left - right));
+      await expect(menu.locator('[data-role="speed-presets"] button').first()).toHaveText('0.25×');
+
+      // Every preset sits under its own peg.
+      expect(presets).toHaveLength(5);
+      presets.forEach((centre, index) => {
+        expect(Math.abs(centre - pegs[index])).toBeLessThanOrEqual(TOLERANCE);
+      });
     });
 
     test('the audio speed menu grows from the gear toward the inline end', async ({ page }) => {

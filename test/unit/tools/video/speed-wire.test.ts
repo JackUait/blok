@@ -225,6 +225,48 @@ describe('speed wire', () => {
     expect(h.rates).toEqual([1.05, 0.95]);
   });
 
+  it('keeps the page still while the wheel turns over it', () => {
+    const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 9 });
+
+    h.wire.element.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('carries wheel travel below one step over to the next event', () => {
+    const wheel = (deltaY: number): void => {
+      h.wire.element.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY }));
+    };
+
+    wheel(5);
+    expect(h.rates).toEqual([]);
+    wheel(5);
+    expect(h.rates).toEqual([1.05]);
+  });
+
+  it('reads the wheel from whichever axis moved further', () => {
+    h.wire.element.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaX: -9, deltaY: 2 }));
+    expect(h.rates).toEqual([0.95]);
+  });
+
+  it('rounds partial backward wheel travel toward zero, not down a whole step', () => {
+    h.wire.element.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -8 }));
+    expect(h.rates).toEqual([]);
+  });
+
+  it('a pointer press focuses the range and hides its ring until a key is used', () => {
+    h.wire.element.dispatchEvent(at('pointerdown', 0.6));
+
+    expect(h.wire.slider).toHaveFocus();
+    expect(h.wire.element.hasAttribute('data-pointer-focus')).toBe(true);
+
+    h.wire.slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(h.wire.element.hasAttribute('data-pointer-focus')).toBe(false);
+
+    h.wire.element.dispatchEvent(at('pointerdown', 0.6));
+    h.wire.slider.dispatchEvent(new Event('blur'));
+    expect(h.wire.element.hasAttribute('data-pointer-focus')).toBe(false);
+  });
+
   it('stops drawing once everything is at rest', () => {
     settle();
     h.frames.mockClear();

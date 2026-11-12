@@ -1,21 +1,11 @@
 import { createInkDrop } from './ink';
 import { paintInk } from './ink-paint';
-import { createListener } from './listen';
-import {
-  bandsFromSpectrum,
-  createMotionReader,
-  createPeaksReader,
-  createSignalCore,
-  decodeMotion,
-  type InkSignals,
-  type SignalReader,
-} from './motion';
+import { createTrackSignals, SILENCE } from './signals';
 
 export interface InkCoverHandle {
   destroy(): void;
 }
 
-const SILENCE: InkSignals = { level: 0, bass: 0, mid: 0, kick: 0, snare: 0, hat: 0 };
 /** Above 3x the extra pixels cost paint time and show nothing on a 44px cover. */
 const MAX_PIXEL_RATIO = 3;
 /** Clamp per-frame dt so a backgrounded tab does not fling the drop on return. */
@@ -23,16 +13,6 @@ const MAX_FRAME_S = 0.05;
 
 const prefersReducedMotion = (): boolean =>
   globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-
-/** Saved motion first, then the coarse stored loudness, then nothing. */
-const savedReader = (media: HTMLAudioElement, motion?: string, peaks?: number[]): SignalReader | null => {
-  const track = motion ? decodeMotion(motion) : null;
-
-  if (track) return createMotionReader(track);
-  if (peaks?.length) return createPeaksReader(peaks, () => media.duration);
-
-  return null;
-};
 
 /**
  * The no-cover ink drop. It listens to the track live where the browser allows
@@ -46,9 +26,7 @@ export function attachInkCover(opts: {
 }): InkCoverHandle {
   const { canvas, media } = opts;
   const drop = createInkDrop();
-  const listener = createListener(media);
-  const core = createSignalCore();
-  const reader = savedReader(media, opts.motion, opts.peaks);
+  const signals = createTrackSignals(opts);
   const state = { playing: false, rafId: 0, last: 0, destroyed: false };
 
   const paint = (): void => {
@@ -75,20 +53,11 @@ export function attachInkCover(opts: {
     });
   };
 
-  const signalsNow = (dt: number): InkSignals => {
-    if (!state.playing) return SILENCE;
-    const live = listener.read();
-
-    if (live) return core.step(bandsFromSpectrum(live.bytes, live.hzPerBin), dt);
-
-    return reader ? reader.read(media.currentTime, dt) : SILENCE;
-  };
-
   const frame = (now: number): void => {
     const dt = state.last ? Math.min((now - state.last) / 1000, MAX_FRAME_S) : 0;
 
     state.last = now;
-    drop.step(signalsNow(dt), dt);
+    drop.step(state.playing ? signals.read(dt) : SILENCE, dt);
     paint();
     // Keep going after pause until the drop has settled.
     state.rafId = state.playing || !drop.atRest() ? requestAnimationFrame(frame) : 0;
@@ -135,7 +104,7 @@ export function attachInkCover(opts: {
       media.removeEventListener('play', onPlay);
       media.removeEventListener('pause', onStop);
       media.removeEventListener('ended', onStop);
-      listener.destroy();
+      signals.destroy();
     },
   };
 }

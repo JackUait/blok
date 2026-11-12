@@ -54,6 +54,10 @@ vi.mock('../../../../src/tools/audio/waveform', () => ({
   attachWaveform: vi.fn().mockReturnValue({ destroy: vi.fn() }),
 }));
 
+vi.mock('../../../../src/tools/audio/wire', () => ({
+  attachWire: vi.fn(() => ({ destroy: vi.fn() })),
+}));
+
 // Helper to get the mocked decodePeaks function after module mocking
 async function getDecodePeaksMock() {
   const mod = await import('../../../../src/tools/audio/waveform');
@@ -1021,6 +1025,55 @@ describe('AudioTool — compact mode', () => {
 
     expect(attach).toHaveBeenCalledTimes(1);
     expect(root.getAttribute('data-compact')).toBe('off');
+  });
+
+  it('draws the wire for a compact player, with or without peaks', async () => {
+    const { attachWire } = await import('../../../../src/tools/audio/wire');
+    const root = new AudioTool(opts({ url: 'https://x/y.mp3', compact: true, motion: 'm' })).render();
+
+    expect(vi.mocked(attachWire)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(attachWire).mock.calls[0]?.[0]).toMatchObject({
+      mount: root.querySelector('[data-role="audio-waveform"]'),
+      media: root.querySelector('[data-role="audio-media"]'),
+      motion: 'm',
+    });
+  });
+
+  it('draws no wire for a full player', async () => {
+    const { attachWire } = await import('../../../../src/tools/audio/wire');
+
+    new AudioTool(opts({ url: 'https://x/y.mp3', peaks: PEAKS })).render();
+
+    expect(vi.mocked(attachWire)).not.toHaveBeenCalled();
+  });
+
+  it('switching to compact swaps the ridgeline for the wire, and back', async () => {
+    const { attachWire } = await import('../../../../src/tools/audio/wire');
+    const attach = await waveformMock();
+    const tool = new AudioTool(opts({ url: 'https://x/y.mp3', peaks: PEAKS }));
+
+    tool.render();
+    compactItem(tool).onActivate?.();
+
+    expect(vi.mocked(attachWire)).toHaveBeenCalledTimes(1);
+    const wire = vi.mocked(attachWire).mock.results[0]?.value as { destroy: ReturnType<typeof vi.fn> };
+
+    compactItem(tool).onActivate?.();
+
+    expect(wire.destroy).toHaveBeenCalledTimes(1);
+    expect(attach).toHaveBeenCalledTimes(2);
+  });
+
+  it('removing the block tears the wire down', async () => {
+    const { attachWire } = await import('../../../../src/tools/audio/wire');
+    const tool = new AudioTool(opts({ url: 'https://x/y.mp3', compact: true }));
+
+    tool.render();
+    tool.destroy();
+
+    const wire = vi.mocked(attachWire).mock.results[0]?.value as { destroy: ReturnType<typeof vi.fn> };
+
+    expect(wire.destroy).toHaveBeenCalledTimes(1);
   });
 
   it('offers the setting in the block menu and marks it when on', () => {

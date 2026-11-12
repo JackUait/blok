@@ -24056,6 +24056,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   --blok-audio-gap: var(--blok-space-3-5);
   --blok-audio-pad: var(--blok-space-3-5);
   --blok-audio-wave-height: 120px;
+  --blok-audio-wire-height: 40px;
   --blok-audio-ridge-fill: var(--blok-bg-primary);
   --blok-audio-bar-height: 4px;
   --blok-audio-flatline: 2px;
@@ -24346,7 +24347,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   cursor: pointer;
 }
 
-[data-blok-tool="audio"] .blok-audio-waveform:empty, [data-blok-tool="audio"][data-compact="on"] .blok-audio-waveform {
+[data-blok-tool="audio"] .blok-audio-waveform:empty {
   display: none;
 }
 
@@ -24855,6 +24856,118 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [@media (prefers-reduced-motion: reduce)] [data-blok-tool="audio"] .blok-audio-error-state__upload {
   transition: none;
+}
+
+[data-blok-tool="audio"][data-compact="on"] {
+  --blok-audio-cover-size: var(--blok-audio-wire-height);
+  container-type: inline-size;
+}
+
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-inner {
+  grid-template-columns: auto auto fit-content(38%) minmax(60px, 1fr) auto auto auto auto;
+  grid-template-areas: "cover play title wire time volume speed loop" "cover play artist wire time volume speed loop" "caption caption caption caption caption caption caption caption";
+  padding: var(--blok-space-3) var(--blok-space-3-5);
+}
+
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-controls {
+  display: contents;
+}
+
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-cover {
+  grid-area: cover;
+}
+
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-title {
+  grid-area: title;
+}
+
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-artist {
+  grid-area: artist;
+  font-size: var(--blok-font-size-ui-compact);
+}
+
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-controls button[data-role="audio-play"] {
+  grid-area: play;
+  align-self: center;
+  margin-inline-end: 0;
+}
+
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-waveform {
+  grid-area: wire;
+  align-self: center;
+  height: var(--blok-audio-wire-height);
+  margin-top: 0;
+}
+
+[data-blok-tool="audio"] .blok-audio-wire {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-controls__seek {
+  grid-area: wire;
+  align-self: center;
+  z-index: 1;
+  width: 100%;
+  height: var(--blok-audio-wire-height);
+  background: none;
+  border-radius: var(--blok-radius-block);
+}
+
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="audio"][data-compact="on"] .blok-audio-controls__seek:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
+}
+
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-controls__seek::-webkit-slider-thumb {
+  width: 8px;
+  height: var(--blok-audio-wire-height);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-controls__seek::-moz-range-thumb {
+  width: 8px;
+  height: var(--blok-audio-wire-height);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-controls__time {
+  grid-area: time;
+  align-self: center;
+  margin-inline-end: 0;
+  font-size: var(--blok-font-size-ui-label);
+  font-weight: var(--blok-font-weight-regular);
+}
+
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-controls__volume-wrap {
+  grid-area: volume;
+  align-self: center;
+}
+
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-controls__speed-wrap {
+  grid-area: speed;
+  align-self: center;
+  margin-inline-start: calc(-1 * (var(--blok-space-3) + var(--blok-space-1)));
+}
+
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-controls button[data-role="audio-loop"] {
+  grid-area: loop;
+  align-self: center;
+  margin-inline-start: calc(-1 * var(--blok-space-3));
+}
+
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-caption-row {
+  grid-area: caption;
+}
+
+[@container (max-width: 460px)] [data-blok-tool="audio"][data-compact="on"] .blok-audio-inner {
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto auto auto;
+  grid-template-areas: "cover play title time volume speed loop" "cover play artist time volume speed loop" "wire wire wire wire wire wire wire" "caption caption caption caption caption caption caption";
 }
 
 [data-blok-tool="audio"]:not([data-state="rendered"]) .blok-audio-caption-row {

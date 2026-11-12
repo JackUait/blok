@@ -1,7 +1,7 @@
 // test/playwright/tests/tools/audio.spec.ts
 
 import { join } from 'node:path';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import type { Blok } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
@@ -458,6 +458,49 @@ test('the Compact setting hides the ridgeline and brings it back', async ({ page
 
   await expect(ridgeline).toBeVisible();
   await expect(audioBlock).toHaveAttribute('data-compact', 'off');
+});
+
+test('the compact player is one row: cover, play, title, then a wire that seeks', async ({ page }) => {
+  await createBlok(page);
+  await insertAudioBlock(page);
+
+  const audioBlock = page.locator(AUDIO_BLOCK_SELECTOR);
+  const compactItem = page.locator('[data-blok-item-name="audio-compact"]');
+  const part = (role: string): Locator => audioBlock.locator(`[data-role="${role}"]`);
+  const middleOf = async (role: string): Promise<{ x: number; y: number }> => {
+    const box = await part(role).boundingBox();
+
+    if (!box) throw new Error(`${role} has no box`);
+
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  };
+
+  await audioBlock.getByTestId('file-input').setInputFiles(FIXTURE_PATH);
+  await expect(part('audio-waveform-canvas')).toBeVisible();
+  await audioBlock.hover();
+  await page.locator(SETTINGS_BUTTON_SELECTOR).click();
+  await compactItem.click();
+
+  await expect(part('audio-wire')).toBeVisible();
+
+  const [cover, play, title, wire, time] = await Promise.all(
+    ['audio-cover', 'audio-play', 'audio-title', 'audio-wire', 'audio-time'].map(middleOf)
+  );
+
+  expect(cover.x).toBeLessThan(play.x);
+  expect(play.x).toBeLessThan(title.x);
+  expect(title.x).toBeLessThan(wire.x);
+  expect(wire.x).toBeLessThan(time.x);
+  // One row: the cover, the button, the wire and the time share a centre line.
+  expect(Math.abs(cover.y - play.y)).toBeLessThan(1);
+  expect(Math.abs(wire.y - play.y)).toBeLessThan(1);
+  expect(Math.abs(time.y - play.y)).toBeLessThan(1);
+
+  await expect.poll(() => part('audio-media').evaluate((el: HTMLAudioElement) => el.duration > 0)).toBe(true);
+  await page.mouse.click(wire.x, wire.y);
+
+  await expect.poll(() => part('audio-media').evaluate((el: HTMLAudioElement) => el.currentTime / el.duration))
+    .toBeCloseTo(0.5, 1);
 });
 
 // ---------------------------------------------------------------------------

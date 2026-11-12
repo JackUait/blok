@@ -55,6 +55,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/audio/controls.ts': exempt('view-only', PLAYBACK),
   'ui-file:src/tools/audio/cover-ink.ts': exempt('view-only', PLAYBACK),
   'ui-file:src/tools/audio/waveform.ts': exempt('view-only', PLAYBACK),
+  'ui-file:src/tools/audio/wire.ts': exempt('view-only', PLAYBACK),
   'ui-file:src/tools/audio/cover-picker.ts': cmds(['audio.setCover', 'block.update'], 'Sets or removes the cover; removing writes audio.coverUrl.'),
   'ui-file:src/tools/audio/index.ts': cmds(['audio.uploadFile', 'audio.setSource', 'block.update'], 'Upload/URL, then audio.title, audio.artist, audio.caption edits.'),
   'ui-file:src/tools/audio/ui.ts': cmds(['block.update'], 'Inline edits of audio.title, audio.artist, audio.caption.'),

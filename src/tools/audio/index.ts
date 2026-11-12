@@ -41,6 +41,7 @@ import { openCoverPicker, validateCoverFile, type CoverPickerHandle } from './co
 import { attachControls, type ControlsHandle } from './controls';
 import { attachInkCover, type InkCoverHandle } from './cover-ink';
 import { attachWaveform, decodePeaks, type WaveformHandle } from './waveform';
+import { attachWire } from './wire';
 import { readTrackMetadata, resolveCover } from './metadata';
 import { Uploader, AudioUploadError, type UploadResult } from './uploader';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
@@ -688,7 +689,7 @@ export class AudioTool implements BlockTool {
       audio.preload = 'metadata';
     });
 
-    this.mountRidgeline(figure, audio, waveformMount);
+    this.mountTrackDrawing(figure, audio, waveformMount);
     if (ink) this.inkHandle = attachInkCover({ canvas: ink, media: audio, motion: this.data.motion, peaks: this.data.peaks });
 
     // Transport controls — appended into the right-column body (under waveform)
@@ -827,13 +828,18 @@ export class AudioTool implements BlockTool {
     this.captionExitTimer = setTimeout(finish, 360);
   }
 
-  /** Draw the ridgeline when there are peaks to draw and the player is not compact. */
-  private mountRidgeline(figure: HTMLElement, audio: HTMLAudioElement, mount: HTMLElement): void {
-    if (this.data.compact || !this.data.peaks?.length) return;
+  /** A compact player draws the wire. A full one draws the ridgeline when it has peaks. */
+  private mountTrackDrawing(figure: HTMLElement, audio: HTMLAudioElement, mount: HTMLElement): void {
+    if (this.data.compact) {
+      this.waveformHandle = attachWire({ mount, media: audio, motion: this.data.motion, peaks: this.data.peaks });
+
+      return;
+    }
+    if (!this.data.peaks?.length) return;
     this.waveformHandle = attachWaveform({ mount, media: audio, peaks: this.data.peaks, stage: figure });
   }
 
-  /** Swaps the ridgeline in place: a re-render would rebuild the <audio> and stop a playing track. */
+  /** Swaps the drawing in place: a re-render would rebuild the <audio> and stop a playing track. */
   private toggleCompact(): void {
     this.data.compact = this.data.compact ? undefined : true;
     this.block.dispatchChange();
@@ -845,7 +851,7 @@ export class AudioTool implements BlockTool {
     const audio = figure?.querySelector<HTMLAudioElement>('[data-role="audio-media"]');
     const mount = figure?.querySelector<HTMLElement>('[data-role="audio-waveform"]');
 
-    if (figure && audio && mount) this.mountRidgeline(figure, audio, mount);
+    if (figure && audio && mount) this.mountTrackDrawing(figure, audio, mount);
   }
 
   private toggleLoop(): void {

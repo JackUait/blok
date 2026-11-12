@@ -5,7 +5,8 @@
    Full-bleed media player: the card always spans the editor column. A small
    cover sits beside the title and artist; under them the ridgeline draws the
    track as a landscape, then a transport bar with the seek slider. Compact
-   mode (data-compact="on") drops the ridgeline. The caption spans the full
+   mode (data-compact="on") is one row: cover, play, title, the wire (a seek
+   line that hums with the track), time and buttons. The caption spans the full
    width beneath, separated by a hairline. Airbnb-neutral surfaces, black
    active states, restrained shadows — palette mirrors the image/video tools.
    ================================================= */
@@ -20,6 +21,8 @@
   --blok-audio-gap: var(--blok-space-3-5);
   --blok-audio-pad: var(--blok-space-3-5);
   --blok-audio-wave-height: 120px;
+  /* the compact player's seek line; wire.ts paints into this box */
+  --blok-audio-wire-height: 40px;
   /* each ridge is filled with the card colour to hide the rows behind it */
   --blok-audio-ridge-fill: var(--blok-bg-primary);
   --blok-audio-bar-height: 4px;
@@ -463,9 +466,8 @@
   margin-top: var(--blok-space-1);
   cursor: pointer;
 }
-/* no peaks to draw, or compact mode: the row closes up */
-[data-blok-tool="audio"] .blok-audio-waveform:empty,
-[data-blok-tool="audio"][data-compact="on"] .blok-audio-waveform {
+/* no peaks to draw: the row closes up */
+[data-blok-tool="audio"] .blok-audio-waveform:empty {
   display: none;
 }
 [data-blok-tool="audio"] .blok-audio-waveform__canvas {
@@ -997,6 +999,116 @@
     animation: none;
   }
   [data-blok-tool="audio"] .blok-audio-error-state__upload { transition: none; }
+}
+
+/* ----- compact: one row, the wire is the seek line ---------
+   The controls bar dissolves (display:contents) so its buttons sit on the card
+   grid next to the cover and the title. The seek slider lies over the wire with
+   nothing painted: it keeps the pointer, the keyboard and the screen reader,
+   and wire.ts draws what you see. */
+[data-blok-tool="audio"][data-compact="on"] {
+  --blok-audio-cover-size: var(--blok-audio-wire-height);
+  container-type: inline-size;
+}
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-inner {
+  grid-template-columns: auto auto fit-content(38%) minmax(60px, 1fr) auto auto auto auto;
+  grid-template-areas:
+    "cover play title  wire time volume speed loop"
+    "cover play artist wire time volume speed loop"
+    "caption caption caption caption caption caption caption caption";
+  padding: var(--blok-space-3) var(--blok-space-3-5);
+}
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-controls {
+  display: contents;
+}
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-cover { grid-area: cover; }
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-title { grid-area: title; }
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-artist {
+  grid-area: artist;
+  font-size: var(--blok-font-size-ui-compact);
+}
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-controls button[data-role="audio-play"] {
+  grid-area: play;
+  align-self: center;
+  margin-inline-end: 0;
+}
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-waveform {
+  grid-area: wire;
+  align-self: center;
+  height: var(--blok-audio-wire-height);
+  margin-top: 0;
+}
+[data-blok-tool="audio"] .blok-audio-wire {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-controls__seek {
+  grid-area: wire;
+  align-self: center;
+  z-index: 1;
+  width: 100%;
+  height: var(--blok-audio-wire-height);
+  background: none;
+  border-radius: var(--blok-radius-block);
+}
+/* keyboard only: a click on the line must not ring it */
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="audio"][data-compact="on"] .blok-audio-controls__seek:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
+}
+/* 8px wide: twice WIRE_INSET in wire.ts, so the thumb's centre runs exactly
+   under the bead from one end of the line to the other. */
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-controls__seek::-webkit-slider-thumb {
+  width: 8px;
+  height: var(--blok-audio-wire-height);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-controls__seek::-moz-range-thumb {
+  width: 8px;
+  height: var(--blok-audio-wire-height);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-controls__time {
+  grid-area: time;
+  align-self: center;
+  margin-inline-end: 0;
+  font-size: var(--blok-font-size-ui-label);
+  font-weight: var(--blok-font-weight-regular);
+}
+/* the three buttons sit shoulder to shoulder: their icons already carry the gap */
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-controls__volume-wrap {
+  grid-area: volume;
+  align-self: center;
+}
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-controls__speed-wrap {
+  grid-area: speed;
+  align-self: center;
+  /* the column gap, plus the volume cluster's own gap before its folded slider */
+  margin-inline-start: calc(-1 * (var(--blok-space-3) + var(--blok-space-1)));
+}
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-controls button[data-role="audio-loop"] {
+  grid-area: loop;
+  align-self: center;
+  margin-inline-start: calc(-1 * var(--blok-space-3));
+}
+[data-blok-tool="audio"][data-compact="on"] .blok-audio-caption-row {
+  grid-area: caption;
+}
+/* a narrow card: the wire drops to its own line, so the title keeps its room */
+@container (max-width: 460px) {
+  [data-blok-tool="audio"][data-compact="on"] .blok-audio-inner {
+    grid-template-columns: auto auto minmax(0, 1fr) auto auto auto auto;
+    grid-template-areas:
+      "cover play title  time volume speed loop"
+      "cover play artist time volume speed loop"
+      "wire wire wire wire wire wire wire"
+      "caption caption caption caption caption caption caption";
+  }
 }
 
 /* ----- hide caption in non-rendered states --------------- */

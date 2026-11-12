@@ -57,7 +57,6 @@
 /* the size limit rides at the end of the sentence and never breaks inside */
 .blok-media-empty__meta {
   display: inline-block;
-  margin-inline-start: var(--blok-space-1);
   color: var(--blok-text-tertiary);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;

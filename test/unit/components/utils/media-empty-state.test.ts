@@ -109,7 +109,11 @@ describe('one surface', () => {
     const labels = { ...LABELS, maxSize: (size: string) => `max ${size}` };
 
     expect(render({ labels }).querySelector('.blok-media-empty__meta')).toBeNull();
-    expect(need(render({ labels, maxSize: 10 * 1024 * 1024 }), '.blok-media-empty__hint > .blok-media-empty__meta').textContent).toBe('max 10 MB');
+    const limited = render({ labels, maxSize: 10 * 1024 * 1024 });
+
+    expect(need(limited, '.blok-media-empty__hint > .blok-media-empty__meta').textContent).toBe('max 10 MB');
+    // a real space, not a margin: a margin would indent the limit when it wraps to its own line
+    expect(need(limited, '.blok-media-empty__hint').textContent).toBe('Drag a video here, choose one, or paste a link. max 10 MB');
   });
 
   it('owns the keyboard of its buttons and link field, so Enter on a button is a click and not a new block', () => {

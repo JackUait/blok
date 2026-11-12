@@ -195,7 +195,7 @@ test.describe('gallery', () => {
     await drawer(page).locator('[data-blok-database-drawer-add-cover]').click();
     const picker = page.getByRole('dialog', { name: 'Set cover image' });
 
-    await picker.getByRole('tab', { name: 'Link' }).click();
+    await picker.getByRole('button', { name: 'Link' }).click();
     await picker.getByRole('textbox', { name: 'Image URL' }).fill('https://example.com/new-cover.png');
     await picker.getByRole('button', { name: 'Insert' }).click();
 

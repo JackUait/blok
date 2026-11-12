@@ -292,7 +292,7 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
   const meta = showUpload && opts.maxSize !== undefined && labels.maxSize
     ? el('span', 'blok-media-empty__meta', labels.maxSize(formatBytes(opts.maxSize)))
     : null;
-  hint.append(hintText, ...(meta ? [meta] : []));
+  hint.append(hintText, ...(meta ? [' ', meta] : []));
 
   const error = el('div', 'blok-media-empty__error');
   error.id = `blok-media-empty-error-${uid()}`;

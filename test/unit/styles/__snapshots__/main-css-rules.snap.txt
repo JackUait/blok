@@ -20384,7 +20384,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 .blok-media-empty__meta {
   display: inline-block;
-  margin-inline-start: var(--blok-space-1);
   color: var(--blok-text-tertiary);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;

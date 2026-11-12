@@ -81,6 +81,7 @@ describe('media empty state: one surface (CSS)', () => {
 
   it('keeps the size limit on one line, in tertiary ink, with a capital first letter', () => {
     expect(decl('.blok-media-empty__meta', 'white-space')).toBe('nowrap');
+    expect(decl('.blok-media-empty__meta', 'margin-inline-start')).toBeUndefined();
     expect(decl('.blok-media-empty__meta', 'color')).toBe('var(--blok-text-tertiary)');
     expect(decl('.blok-media-empty__meta::first-letter', 'text-transform')).toBe('uppercase');
   });

@@ -954,6 +954,17 @@ describe('DatabaseViewControls', () => {
       expect(q('database-sort-add')).toBeNull();
     });
 
+    it('opens 4px under the chip', () => {
+      withSort();
+      const chip = q('database-sort-pill');
+
+      if (chip === null) throw new Error('no chip');
+      chip.getBoundingClientRect = () => new DOMRect(539, 277, 82, 24);
+      click('database-sort-pill');
+
+      expect(q('database-sort-panel')?.closest<HTMLElement>('[data-blok-popover]')?.style.top).toBe('305px');
+    });
+
     // notion-motion.md Rounds 10-11 "Add sort picker": a separate picker under the row, its search focused,
     // the already-sorted property left out, the sort panel still open under it.
     it('opens "Add sort" as a separate picker over the open sort panel, search focused', () => {
@@ -1020,12 +1031,24 @@ describe('DatabaseViewControls', () => {
       expect(q('database-pick-property-num')).not.toBeNull();
     });
 
-    it('opens the sort panel from the Sort button while a sort exists', () => {
+    // notion-motion.md Round 17 §5: with a sort, ⇅ first hides the bar, then shows it and opens the panel.
+    it('hides the filter bar on the first Sort button click, with no panel', () => {
       withSort();
       click('database-toolbar-sort');
 
-      expect(q('database-sort-panel')).not.toBeNull();
+      expect(q('database-sort-panel')).toBeNull();
+      expect(q('database-sort-pill')).toBeNull();
     });
+
+    it('shows the bar and opens the sort panel under the chip on the next click', () => {
+      withSort();
+      click('database-toolbar-sort');
+      click('database-toolbar-sort');
+
+      expect(q('database-sort-panel')).not.toBeNull();
+      expect(q('database-sort-pill')?.hasAttribute('data-popover-open')).toBe(true);
+    });
+
 
     it('deletes every sort and closes', () => {
       const { controls, saved } = withSort();

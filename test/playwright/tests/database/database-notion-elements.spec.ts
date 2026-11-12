@@ -174,7 +174,7 @@ for (const path of paths) {
     });
 
     test('sort panel: 32px bordered property and direction buttons, hover fill, a 24px remove × (§3a)', async ({ page }) => {
-      await page.getByTestId('database-toolbar-sort').click();
+      await page.getByTestId('database-sort-pill').click();
       const property = page.getByTestId('database-sort-property-s1');
       const direction = page.getByTestId('database-sort-direction-s1');
       const remove = page.getByTestId('database-sort-remove-s1');

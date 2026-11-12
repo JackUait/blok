@@ -33,6 +33,7 @@ import type {
 /** notion-motion.md Round 10: the "Add sort" picker box. */
 const ADD_SORT_PICKER_WIDTH = 280;
 const ADD_SORT_PICKER_HEIGHT = 287;
+const SORT_PANEL_GAP = 4;
 
 /** Notion's sort list adds files and ID to the groupable types (findings V20, shot 19). */
 const SORTABLE_TYPES: readonly PropertyType[] = [...GROUPABLE_TYPES, 'files', 'uniqueId'];
@@ -852,7 +853,10 @@ export class DatabaseViewControls {
     return panel;
   }
 
-  /** Sort: with no rule, the property picker; otherwise the sort panel under the chip. */
+  /**
+   * Sort: with no rule, the property picker. With one, notion-motion.md Round 17 §5:
+   * a shown bar hides; a hidden one shows and the sort panel opens under its chip.
+   */
   private openSort(): void {
     const view = this.view();
 
@@ -865,6 +869,14 @@ export class DatabaseViewControls {
 
       return;
     }
+    if (this.barShown) {
+      this.barOpen = false;
+      this.refresh();
+
+      return;
+    }
+    this.barOpen = true;
+    this.refresh();
     const chip = this.filterBar.querySelector<HTMLElement>('[data-blok-testid="database-sort-pill"]');
 
     this.openSortPanel(chip !== null && chip.isConnected && !this.filterBar.hidden ? chip : this.sortButton, this.sortButton);
@@ -992,6 +1004,8 @@ export class DatabaseViewControls {
       testId: 'database-sort-panel',
       width: 290,
       backLabel: this.t('settingsBack'),
+      // notion-motion.md Round 17 §5: chip bottom 301, panel top 305.
+      ...(anchor === this.sortButton ? {} : { gap: SORT_PANEL_GAP }),
       onClose: (escape) => {
         this.addSortPicker?.close();
         this.panelClosed(anchor, escape, opener);

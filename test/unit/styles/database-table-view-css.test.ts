@@ -89,11 +89,13 @@ describe('database table view styles', () => {
   it('paints a selected cell and row gray, never with the focus ring', () => {
     const selected = ruleBody('[data-blok-database-table-cell][aria-selected="true"]');
     const anchor = ruleBody('[data-blok-database-table-cell][data-blok-database-table-cell-anchor]');
-    const row = ruleBody('[data-blok-database-table-row][aria-selected="true"]::after');
+    // The halo's fill sits on the base rule, so it can fade out too (notion-motion.md Round 16 §2).
+    const row = ruleBody('[data-blok-database-table-row]::after');
 
     expect(selected).toContain('var(--blok-icon-active-bg)');
     expect(anchor).toContain('var(--blok-database-table-cell-ring)');
     expect(row).toContain('var(--blok-icon-active-bg)');
+    expect(ruleBody('[data-blok-database-table-row][aria-selected="true"]::after')).toContain('opacity: 1');
     expect(`${selected}${anchor}${row}`).not.toContain('focus-ring');
   });
 

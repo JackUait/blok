@@ -38,6 +38,7 @@ import { DatabaseTableColumnDrag } from './database-table-column-drag';
 import { DatabaseTableRowDrag } from './database-table-row-drag';
 import type { TableRowDropResult } from './database-table-row-drag';
 import { offHover, onHover } from '../../components/utils/tooltip';
+import { prefersReducedMotion } from '../../components/utils/reduced-motion';
 import { propertyHint } from './property-hint';
 import { syncCommentBadge } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
@@ -286,6 +287,8 @@ const NUMBER_RESULT_FNS: ReadonlySet<CalculationFn> = new Set<CalculationFn>(['s
 const COUNT_RESULT_FNS: ReadonlySet<CalculationFn> = new Set<CalculationFn>(['count', 'count_values', 'unique', 'empty', 'not_empty', 'checked', 'unchecked']);
 
 const MAX_SHOWN_COUNT = 99;
+/** Matches the leaving bar's fade in database.css. */
+const SELECTION_BAR_FADE_MS = 200;
 
 /** Cells whose value is a link: a click on it follows it, and a hover shows the action pill. */
 const LINK_TYPES: ReadonlySet<string> = new Set(['url', 'email', 'phone']);
@@ -359,6 +362,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
   /** A pointer is down in the grid. */
   private pressing = false;
   private bar: HTMLElement | null = null;
+  /** The bar fading out after the selection cleared, and the timer that removes it. */
+  private leavingBar: { el: HTMLElement; timer: number } | null = null;
   /** Unique per table, so two tables on a page never share a cell id. */
   private readonly idPrefix = `blok-database-table-${++tableIds.next}`;
   /** The menu this table opened. Its anchor dies with a redraw, so the menu must too. */
@@ -1460,11 +1465,12 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     });
 
     if (rowIds.length === 0) {
-      this.removeSelectionBar();
+      this.removeSelectionBar(true);
 
       return;
     }
     if (this.bar === null) {
+      this.dropLeavingBar();
       const slot = this.options.selectionBarSlot?.() ?? null;
 
       this.bar = this.createSelectionBar();
@@ -1482,11 +1488,40 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     }
   }
 
-  /** The bar can live outside the table root, so it never leaves with it. */
-  private removeSelectionBar(): void {
-    this.bar?.parentElement?.removeAttribute('data-blok-database-selecting');
-    this.bar?.remove();
+  /**
+   * The bar can live outside the table root, so it never leaves with it.
+   * `fade`: notion-motion.md Round 16 §2, the property buttons drop at once and the
+   * rest fades out in place. It loses the bar attribute, so nothing counts it as a bar.
+   */
+  private removeSelectionBar(fade = false): void {
+    const bar = this.bar;
+
     this.bar = null;
+    this.dropLeavingBar();
+    if (bar === null) {
+      return;
+    }
+    bar.parentElement?.removeAttribute('data-blok-database-selecting');
+    if (!fade || prefersReducedMotion() || !bar.isConnected) {
+      bar.remove();
+
+      return;
+    }
+    bar.querySelectorAll('[data-blok-database-table-selection-property]').forEach((button) => button.remove());
+    bar.removeAttribute('data-blok-database-table-selection-bar');
+    bar.setAttribute('data-blok-database-table-selection-bar-leaving', '');
+    bar.setAttribute('aria-hidden', 'true');
+    bar.inert = true;
+    this.leavingBar = { el: bar, timer: window.setTimeout(() => this.dropLeavingBar(), SELECTION_BAR_FADE_MS) };
+  }
+
+  private dropLeavingBar(): void {
+    if (this.leavingBar === null) {
+      return;
+    }
+    window.clearTimeout(this.leavingBar.timer);
+    this.leavingBar.el.remove();
+    this.leavingBar = null;
   }
 
   private createSelectionBar(): HTMLElement {

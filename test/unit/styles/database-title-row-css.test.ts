@@ -32,7 +32,8 @@ describe('one view: the toolbar shares the title row (V01)', () => {
   });
 
   it('the selection bar can take the title row', () => {
-    expect(rule('[data-blok-database-title-row][data-blok-database-selecting]')).toMatch(/position: relative/);
+    // The second selector holds the bar in place while it fades out (notion-motion.md Round 16 §2).
+    expect(rule('[data-blok-database-title-row][data-blok-database-selecting], [data-blok-database-title-row]:has(> [data-blok-database-table-selection-bar-leaving])')).toMatch(/position: relative/);
   });
 });
 

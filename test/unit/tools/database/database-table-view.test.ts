@@ -793,6 +793,89 @@ describe('DatabaseTableView', () => {
       expect(slot.hasAttribute('data-blok-database-selecting')).toBe(false);
     });
 
+    describe('selection bar fade-out (notion-motion.md Round 16 §2)', () => {
+      const LEAVING = '[data-blok-database-table-selection-bar-leaving]';
+      const selectRow = (root: HTMLElement): void => {
+        cell(root, 'r1', 'p-notes').click();
+        press(editorField(), 'Escape');
+        press(grid(root), 'Escape');
+      };
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it('drops the property buttons, fades the rest out for 200ms, then removes it', () => {
+        vi.useFakeTimers();
+        const slot = document.createElement('div');
+
+        document.body.appendChild(slot);
+        const { root } = mount({ selectionBarSlot: () => slot });
+
+        selectRow(root);
+        press(grid(root), 'Escape');
+        const leaving = slot.querySelector<HTMLElement>(LEAVING);
+
+        expect(leaving).not.toBeNull();
+        expect(leaving?.querySelector('[data-blok-database-table-selection-property]')).toBeNull();
+        expect(leaving?.querySelector('[data-blok-database-table-selection-count]')).not.toBeNull();
+        expect(leaving?.querySelector('[data-blok-database-table-selection-delete]')).not.toBeNull();
+        expect(leaving?.querySelector('[data-blok-database-table-selection-more]')).not.toBeNull();
+        expect(leaving?.getAttribute('aria-hidden')).toBe('true');
+        expect(slot.querySelector('[data-blok-database-table-selection-bar]')).toBeNull();
+        expect(slot.hasAttribute('data-blok-database-selecting')).toBe(false);
+
+        vi.advanceTimersByTime(199);
+        expect(slot.querySelector(LEAVING)).not.toBeNull();
+        vi.advanceTimersByTime(1);
+        expect(slot.querySelector(LEAVING)).toBeNull();
+      });
+
+      it('goes at once under reduced motion', () => {
+        vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce'), addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+        const slot = document.createElement('div');
+
+        document.body.appendChild(slot);
+        const { root } = mount({ selectionBarSlot: () => slot });
+
+        selectRow(root);
+        press(grid(root), 'Escape');
+
+        expect(slot.querySelector(LEAVING)).toBeNull();
+        expect(slot.querySelector('[data-blok-database-table-selection-bar]')).toBeNull();
+        vi.unstubAllGlobals();
+      });
+
+      it('a new selection while the old bar fades shows only one bar', () => {
+        vi.useFakeTimers();
+        const slot = document.createElement('div');
+
+        document.body.appendChild(slot);
+        const { root } = mount({ selectionBarSlot: () => slot });
+
+        selectRow(root);
+        press(grid(root), 'Escape');
+        selectRow(root);
+
+        expect(slot.querySelector(LEAVING)).toBeNull();
+        expect(slot.querySelectorAll('[data-blok-database-table-selection-bar]')).toHaveLength(1);
+      });
+
+      it('destroy removes a fading bar at once', () => {
+        vi.useFakeTimers();
+        const slot = document.createElement('div');
+
+        document.body.appendChild(slot);
+        const { root, view } = mount({ selectionBarSlot: () => slot });
+
+        selectRow(root);
+        press(grid(root), 'Escape');
+        view.destroy();
+
+        expect(slot.querySelector(LEAVING)).toBeNull();
+      });
+    });
+
     it('arrows move the selected cell and stop at the edges', () => {
       const { root } = mount();
 

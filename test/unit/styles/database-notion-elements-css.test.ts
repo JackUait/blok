@@ -74,6 +74,39 @@ describe('table selection bar fade (notion-motion.md Round 14, row checkbox)', (
   });
 });
 
+describe('table selection bar fade-out (notion-motion.md Round 16 §2)', () => {
+  const LEAVING = '[data-blok-database-table-selection-bar-leaving]';
+
+  it('fades the leaving bar 1 to 0 over 200ms ease, with no slide or scale', () => {
+    const body = ruleBody(LEAVING);
+
+    expect(body).toContain('animation: blok-database-confirm-fade-out 200ms ease forwards');
+    expect(body).toContain('pointer-events: none');
+    expect(body).not.toContain('transform');
+  });
+
+  it('keeps the leaving bar looking and sitting like the bar', () => {
+    for (const selector of [
+      '[data-blok-database-table-selection-bar]',
+      '[data-blok-database-view-bar] > [data-blok-database-table-selection-bar]',
+      '[data-blok-database-title-row] > [data-blok-database-table-selection-bar]',
+      '[data-blok-database-table-selection-bar] > :not(:last-child)',
+      '[data-blok-database-table-selection-bar] button',
+      '[data-blok-database-table-selection-bar] svg',
+    ]) {
+      expect(ruleBody(selector.replace('[data-blok-database-table-selection-bar]', LEAVING))).toContain(ruleBody(selector));
+    }
+    expect(ruleBody('[data-blok-database-view-bar]:has(> [data-blok-database-table-selection-bar-leaving])')).toContain('position: relative');
+    expect(ruleBody('[data-blok-database-title-row]:has(> [data-blok-database-table-selection-bar-leaving])')).toContain('position: relative');
+  });
+
+  it('fades the row halo out with the bar: only its opacity changes', () => {
+    expect(ruleBody('[data-blok-database-table-row]::after')).toContain('background-color: var(--blok-icon-active-bg)');
+    expect(ruleBody('[data-blok-database-table-row]::after')).toContain('transition: opacity 200ms ease');
+    expect(ruleBody('[data-blok-database-table-row][aria-selected="true"]::after')).not.toContain('background-color');
+  });
+});
+
 describe('property menu "Change icon" button (research/26 §3c, §4a)', () => {
   it('is bordered with no fill and hovers to the measured fill', () => {
     const body = ruleBody('[data-blok-database-property-menu-icon]');

@@ -2777,7 +2777,8 @@ button[data-blok-database-column-count]:hover {
 }
 
 /* The selection bar takes the toolbar's row, as it does in the view bar below. */
-[data-blok-database-title-row][data-blok-database-selecting] {
+[data-blok-database-title-row][data-blok-database-selecting],
+[data-blok-database-title-row]:has(> [data-blok-database-table-selection-bar-leaving]) {
   position: relative;
 }
 
@@ -2786,7 +2787,8 @@ button[data-blok-database-column-count]:hover {
   visibility: hidden;
 }
 
-[data-blok-database-title-row] > [data-blok-database-table-selection-bar] {
+[data-blok-database-title-row] > [data-blok-database-table-selection-bar],
+[data-blok-database-title-row] > [data-blok-database-table-selection-bar-leaving] {
   inset-block: 0;
   margin-block: auto;
 }
@@ -9010,20 +9012,20 @@ textarea[data-blok-database-cell-input] {
   display: flex;
 }
 
-/* Row selection halo: fades in over 200ms (research/08). */
+/* Row selection halo: fades in over 200ms (research/08) and out over 200ms (notion-motion.md Round 16 §2).
+   The fill stays put, so only the opacity moves. */
 [data-blok-database-table-row]::after {
   content: '';
   position: absolute;
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  background-color: transparent;
+  background-color: var(--blok-icon-active-bg);
   opacity: 0;
   transition: opacity 200ms ease;
 }
 
 [data-blok-database-table-row][aria-selected="true"]::after {
-  background-color: var(--blok-icon-active-bg);
   opacity: 1;
 }
 
@@ -10198,7 +10200,8 @@ button[data-blok-database-table-group-count]:hover {
 
 /* ─── Selection bar ─── */
 
-[data-blok-database-table-selection-bar] {
+[data-blok-database-table-selection-bar],
+[data-blok-database-table-selection-bar-leaving] {
   position: absolute;
   inset-block-start: 2px;
   inset-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
@@ -10213,7 +10216,8 @@ button[data-blok-database-table-group-count]:hover {
 }
 
 /* In Notion the bar replaces the view toolbar row (research/08); the row keeps its height. */
-[data-blok-database-view-bar][data-blok-database-selecting] {
+[data-blok-database-view-bar][data-blok-database-selecting],
+[data-blok-database-view-bar]:has(> [data-blok-database-table-selection-bar-leaving]) {
   position: relative;
   min-height: 32px;
 }
@@ -10226,7 +10230,8 @@ button[data-blok-database-table-group-count]:hover {
 }
 
 /* No inset-inline-start here: the base rule's centring offset lines the bar up with the tabs and the table. */
-[data-blok-database-view-bar] > [data-blok-database-table-selection-bar] {
+[data-blok-database-view-bar] > [data-blok-database-table-selection-bar],
+[data-blok-database-view-bar] > [data-blok-database-table-selection-bar-leaving] {
   inset-block: 0;
   margin-block: auto;
 }
@@ -10244,17 +10249,25 @@ button[data-blok-database-table-group-count]:hover {
   }
 }
 
+/* notion-motion.md Round 16 §2: the cleared bar fades out in place; database-table-view.ts removes it after. */
+[data-blok-database-table-selection-bar-leaving] {
+  pointer-events: none;
+  animation: blok-database-confirm-fade-out 200ms ease forwards;
+}
+
 /* notion-live/rowdrag-mid.png: the bar replaces Filter, Sort and Automations; the other icons and New stay put. */
 [data-blok-database-selecting="table"] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-selection-hides] {
   visibility: hidden;
 }
 
 /* research/26 §3b, §4a: segments sit 1px apart; a shadow on the end side divides them. */
-[data-blok-database-table-selection-bar] > :not(:last-child) {
+[data-blok-database-table-selection-bar] > :not(:last-child),
+[data-blok-database-table-selection-bar-leaving] > :not(:last-child) {
   box-shadow: var(--blok-database-table-border) 1px 0 0 0;
 }
 
-[dir="rtl"] [data-blok-database-table-selection-bar] > :not(:last-child) {
+[dir="rtl"] [data-blok-database-table-selection-bar] > :not(:last-child),
+[dir="rtl"] [data-blok-database-table-selection-bar-leaving] > :not(:last-child) {
   box-shadow: var(--blok-database-table-border) -1px 0 0 0;
 }
 
@@ -10267,7 +10280,8 @@ button[data-blok-database-table-group-count]:hover {
   line-height: 21px;
 }
 
-[data-blok-database-table-selection-bar] button {
+[data-blok-database-table-selection-bar] button,
+[data-blok-database-table-selection-bar-leaving] button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -10285,7 +10299,8 @@ button[data-blok-database-table-group-count]:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
-[data-blok-database-table-selection-bar] svg {
+[data-blok-database-table-selection-bar] svg,
+[data-blok-database-table-selection-bar-leaving] svg {
   width: 16px;
   height: 16px;
 }

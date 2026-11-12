@@ -280,6 +280,91 @@ describe('attachControls', () => {
       h.destroy();
     });
 
+    describe('between time updates', () => {
+      const frames = new Map<number, FrameRequestCallback>();
+      const ids = { next: 1 };
+      const runFrame = (): void => {
+        const pending = Array.from(frames.values());
+
+        frames.clear();
+        pending.forEach((frame) => frame(0));
+      };
+
+      beforeEach(() => {
+        frames.clear();
+        vi.stubGlobal('requestAnimationFrame', (frame: FrameRequestCallback) => {
+          const id = ids.next++;
+
+          frames.set(id, frame);
+
+          return id;
+        });
+        vi.stubGlobal('cancelAnimationFrame', (id: number) => void frames.delete(id));
+      });
+      afterEach(() => vi.unstubAllGlobals());
+
+      it('glides with the track on every frame while it plays', () => {
+        const media = makeMedia();
+        const h = attachControls({ media, figure: document.createElement('figure'), data: { url: 'u' } });
+        const seek = seekOf(h.element);
+
+        media.dispatchEvent(new Event('play'));
+        media.currentTime = 50.05;
+        runFrame();
+
+        expect(Number(seek.value)).toBeCloseTo(0.25025, 6);
+        expect(seek.style.getPropertyValue('--blok-audio-seek-pct')).toBe('25.025%');
+
+        media.currentTime = 50.1;
+        runFrame();
+
+        expect(Number(seek.value)).toBeCloseTo(0.2505, 6);
+        h.destroy();
+      });
+
+      it('holds still on frames once the track pauses', () => {
+        const media = makeMedia();
+        const h = attachControls({ media, figure: document.createElement('figure'), data: { url: 'u' } });
+        const seek = seekOf(h.element);
+
+        media.dispatchEvent(new Event('play'));
+        media.dispatchEvent(new Event('pause'));
+        media.currentTime = 50;
+        runFrame();
+        runFrame();
+
+        expect(seek.value).toBe('0');
+        h.destroy();
+      });
+
+      it('holds still on frames after destroy', () => {
+        const media = makeMedia();
+        const h = attachControls({ media, figure: document.createElement('figure'), data: { url: 'u' } });
+        const seek = seekOf(h.element);
+
+        media.dispatchEvent(new Event('play'));
+        h.destroy();
+        media.currentTime = 50;
+        runFrame();
+
+        expect(seek.value).toBe('0');
+      });
+
+      it('waits for time updates under reduced motion', () => {
+        vi.stubGlobal('matchMedia', () => ({ matches: true }));
+        const media = makeMedia();
+        const h = attachControls({ media, figure: document.createElement('figure'), data: { url: 'u' } });
+        const seek = seekOf(h.element);
+
+        media.dispatchEvent(new Event('play'));
+        media.currentTime = 50;
+        runFrame();
+
+        expect(seek.value).toBe('0');
+        h.destroy();
+      });
+    });
+
     it('stays at the start and does not seek while the track has no length', () => {
       const media = makeMedia();
 

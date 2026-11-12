@@ -1251,14 +1251,19 @@ describe('attachControls — vinyl platter', () => {
 
   const platterFixture = (): Platter => {
     const frames: FrameRequestCallback[] = [];
+    const cancelled = new Set<number>();
 
     vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((frame: FrameRequestCallback): number => {
-      frames.push(frame);
+      const id = frames.length + 1;
 
-      return frames.length;
+      frames.push((timestamp) => {
+        if (!cancelled.has(id)) frame(timestamp);
+      });
+
+      return id;
     });
 
-    const cancel = vi.fn();
+    const cancel = vi.fn((id: number) => void cancelled.add(id));
 
     vi.spyOn(globalThis, 'cancelAnimationFrame').mockImplementation(cancel);
 
@@ -1278,8 +1283,9 @@ describe('attachControls — vinyl platter', () => {
 
     expect(frames).toHaveLength(0);
 
+    // One frame for the record, one for the seek slider.
     media.dispatchEvent(new Event('play'));
-    expect(frames).toHaveLength(1);
+    expect(frames).toHaveLength(2);
     ui.handle.destroy();
   });
 

@@ -146,7 +146,8 @@ export function attachControls({
   seekInput.dir = 'ltr';
   seekInput.min = '0';
   seekInput.max = '1';
-  seekInput.step = '0.001';
+  // A stepped range snaps the thumb, so it would not glide.
+  seekInput.step = 'any';
   seekInput.value = '0';
   seekInput.className = 'blok-audio-controls__seek';
   seekInput.setAttribute('data-role', 'audio-seek');
@@ -154,13 +155,37 @@ export function attachControls({
 
   const trackLength = (): number => (Number.isFinite(media.duration) && media.duration > 0 ? media.duration : 0);
 
-  const syncSeek = (): void => {
+  const placeSeek = (): void => {
     const length = trackLength();
     const ratio = length ? Math.min(1, media.currentTime / length) : 0;
 
     seekInput.value = String(ratio);
-    seekInput.style.setProperty('--blok-audio-seek-pct', `${Number((ratio * 100).toFixed(2))}%`);
+    seekInput.style.setProperty('--blok-audio-seek-pct', `${Number((ratio * 100).toFixed(3))}%`);
+  };
+
+  const syncSeek = (): void => {
+    placeSeek();
     seekInput.setAttribute('aria-valuetext', timeEl.textContent ?? '');
+  };
+
+  // `timeupdate` fires only a few times a second, so the thumb follows the
+  // track on every frame while it plays.
+  const seekFollow = { raf: 0 };
+
+  const stopSeekFollow = (): void => {
+    if (seekFollow.raf) globalThis.cancelAnimationFrame(seekFollow.raf);
+    seekFollow.raf = 0;
+  };
+
+  const followSeek = (): void => {
+    placeSeek();
+    seekFollow.raf = globalThis.requestAnimationFrame(followSeek);
+  };
+
+  const startSeekFollow = (): void => {
+    stopSeekFollow();
+    if (globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    seekFollow.raf = globalThis.requestAnimationFrame(followSeek);
   };
 
   const onSeekInput = (): void => {
@@ -437,8 +462,14 @@ export function attachControls({
   };
 
   // ----- media event handlers -----
-  const onPlay = (): void => setPlaying(true);
-  const onPause = (): void => setPlaying(false);
+  const onPlay = (): void => {
+    setPlaying(true);
+    startSeekFollow();
+  };
+  const onPause = (): void => {
+    setPlaying(false);
+    stopSeekFollow();
+  };
   const onTimeUpdate = (): void => {
     renderTime();
     syncSeek();
@@ -519,6 +550,7 @@ export function attachControls({
   // ----- destroy -----
   const destroy = (): void => {
     platter.destroy();
+    stopSeekFollow();
     closeSpeedMenu();
 
     playToggle.removeEventListener('click', togglePlay);

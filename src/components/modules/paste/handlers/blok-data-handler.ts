@@ -29,6 +29,7 @@ import type { HandlerContext, PatternMatch } from '../types';
 import type { PasteHandler } from './base';
 import { BasePasteHandler } from './base';
 import { PatternHandler } from './pattern-handler';
+import { confirmPastedPageIds, dataWithoutUnconfirmedPages, pastedPageIds, pastedPointerId } from '../pasted-page-gate';
 
 /**
  * Shape of a block in the Blok clipboard data.
@@ -91,7 +92,7 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
     const plainData = context.plainData;
 
     if (!hasPatterns || !plainData || context.fromBlokClipboard === true) {
-      this.insertBlokBlocks(parsedBlokData, context.canReplaceCurrentBlock);
+      await this.insertCheckedBlocks(parsedBlokData, context.canReplaceCurrentBlock);
 
       return true;
     }
@@ -104,9 +105,66 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
       return true;
     }
 
-    this.insertBlokBlocks(parsedBlokData, context.canReplaceCurrentBlock);
+    await this.insertCheckedBlocks(parsedBlokData, context.canReplaceCurrentBlock);
 
     return true;
+  }
+
+  /**
+   * Inserts the entries once the host has confirmed the pages they name.
+   * @param entries - the parsed clipboard entries
+   * @param canReplace - whether the empty current block may be replaced
+   */
+  private async insertCheckedBlocks(entries: BlokClipboardBlock[], canReplace: boolean): Promise<void> {
+    // Resolved first: a stub can wrap a page link.
+    const resolved = entries.map(entry => this.withResolvedTool(entry));
+    const pageIds = pastedPageIds(resolved, this.Blok.Tools.stubTool);
+
+    if (pageIds.size === 0) {
+      this.insertBlokBlocks(resolved, canReplace, pageIds);
+
+      return;
+    }
+
+    const confirmed = await confirmPastedPageIds(this.Blok, pageIds);
+
+    // The host's resolve may be slow: the editor can be gone by now.
+    if (!this.destroyed) {
+      this.insertBlokBlocks(this.withoutUnconfirmedPages(resolved, confirmed), canReplace, confirmed);
+    }
+  }
+
+  /** Set when the editor goes; a paste still waiting on the host then drops. */
+  private destroyed = false;
+
+  destroy(): void {
+    this.destroyed = true;
+  }
+
+  /**
+   * The entries with every page the host did not confirm as text. A page
+   * block is left to linksForSingletons: a cut of it from this tab moves it.
+   * @param entries - the parsed clipboard entries, tools resolved
+   * @param confirmed - the page ids that may stay
+   */
+  private withoutUnconfirmedPages(entries: BlokClipboardBlock[], confirmed: ReadonlySet<string>): BlokClipboardBlock[] {
+    const { Tools } = this.Blok;
+    const { defaultTool } = Tools;
+
+    return entries.map((entry) => {
+      const pointer = entry.tool === 'page' ? undefined : pastedPointerId(entry, Tools.stubTool);
+
+      if (pointer !== undefined && !confirmed.has(pointer)) {
+        return {
+          id: entry.id,
+          parentId: entry.parentId,
+          tool: defaultTool.name,
+          data: convertStringToBlockData(PAGE_REFERENCE_FALLBACK, defaultTool.conversionConfig, defaultTool.settings),
+        };
+      }
+
+      return { ...entry, data: dataWithoutUnconfirmedPages(entry.data, confirmed) };
+    });
   }
 
   /**
@@ -205,8 +263,9 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
    * With no link at all the entry becomes a page reference or the tool's
    * exported text, or is dropped when that is empty.
    * @param entries - the parsed clipboard entries
+   * @param confirmed - the page ids that may stay page links or references
    */
-  private linksForSingletons(entries: BlokClipboardBlock[]): BlokClipboardBlock[] {
+  private linksForSingletons(entries: BlokClipboardBlock[], confirmed: ReadonlySet<string>): BlokClipboardBlock[] {
     const { Tools, BlockManager } = this.Blok;
     // Built on first need: most pastes hold no such block.
     const live = { urls: undefined as Set<string> | undefined, pageIds: undefined as Set<string> | undefined };
@@ -289,13 +348,15 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
         return [{ ...shape, ...linkToBlock(link, Tools.defaultTool) }];
       }
 
-      const pageLink = pageId === undefined ? undefined : Tools.blockTools.get('page-link');
+      // A page the host did not confirm falls through to its exported text.
+      const knownPageId = pageId !== undefined && confirmed.has(pageId) ? pageId : undefined;
+      const pageLink = knownPageId === undefined ? undefined : Tools.blockTools.get('page-link');
 
-      if (pageId !== undefined && pageLink?.name === 'page-link') {
-        return [{ ...shape, tool: pageLink.name, data: { pageId } }];
+      if (knownPageId !== undefined && pageLink?.name === 'page-link') {
+        return [{ ...shape, tool: pageLink.name, data: { pageId: knownPageId } }];
       }
 
-      const reference = pageId === undefined ? undefined : this.pageReference(pageId);
+      const reference = knownPageId === undefined ? undefined : this.pageReference(knownPageId);
 
       if (reference !== undefined) {
         return [{ ...shape, ...reference }];
@@ -563,7 +624,8 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
    */
   private insertBlokBlocks(
     rawBlocks: BlokClipboardBlock[],
-    canReplace: boolean
+    canReplace: boolean,
+    confirmed: ReadonlySet<string>
   ): void {
     const { BlockManager, Caret, Tools } = this.Blok;
 
@@ -572,7 +634,7 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
     // on the children themselves. Backfill parentId before classification so
     // those children get adopted by the table during the two-pass insert
     // instead of becoming detached top-level paragraphs.
-    const blocks = backfillTableChildParents(this.rowsOutsideDatabases(this.linksForSingletons(rawBlocks.map(entry => this.withResolvedTool(entry)))));
+    const blocks = backfillTableChildParents(this.rowsOutsideDatabases(this.linksForSingletons(rawBlocks, confirmed)));
     const sanitizedBlocks = sanitizeBlocks(
       blocks,
       (name) => Tools.blockTools.get(name)?.sanitizeConfig ?? {},

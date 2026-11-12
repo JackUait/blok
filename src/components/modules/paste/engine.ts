@@ -5,7 +5,7 @@ import type { BlokModules } from '../../../types-internal/blok-modules';
 import { Dom as dom$ } from '../../dom';
 import { composeSanitizerConfig, clean } from '../../utils/sanitizer';
 import { normalizeInlineMarkupHtml } from '../../utils/inline-normalization';
-import { preservePageReferenceAnchor } from '../../../shared/page-reference';
+import { PAGE_REFERENCE_ATTR, preservePageReferenceAnchor } from '../../../shared/page-reference';
 import { protectAnnotationSpan } from '../../../shared/inline-text-sanitize';
 
 import { BLOK_MIME_TYPE, NEXT_SPACE_MIMES, NOTION_BLOCKS_V3_MIME, SAFE_STRUCTURAL_TAGS, STRUCTURAL_TAG_ATTRIBUTES } from './constants';
@@ -25,6 +25,7 @@ import { SanitizerConfigBuilder } from './sanitizer-config';
 import type { ToolRegistry } from './tool-registry';
 import type { HandlerContext } from './types';
 import { pasteHtmlAsBlocks } from './html-import';
+import { htmlWithConfirmedPageReferences } from './pasted-page-gate';
 import { parseUntrustedHtml } from '../../utils/inert-html';
 
 /**
@@ -60,10 +61,14 @@ export class PasteEngine {
     ];
   }
 
+  /** Set when the editor goes; a paste still waiting on the host then drops. */
+  private destroyed = false;
+
   /**
    * Closes the link paste menu if it is still open.
    */
   public destroy(): void {
+    this.destroyed = true;
     this.handlers.forEach(handler => handler.destroy?.());
   }
 
@@ -118,9 +123,18 @@ export class PasteEngine {
     // HTML paste path entirely (an empty string makes HtmlHandler bail, so the
     // paste falls through to the plain-text handler).
     const clipboardHtml = dataTransfer.getData('text/html');
-    const rawHtmlData = clipboardHtml && this.config.onBeforePaste
+    const hookedHtml = clipboardHtml && this.config.onBeforePaste
       ? this.config.onBeforePaste(clipboardHtml) ?? ''
       : clipboardHtml;
+    // Awaited only for a mention, so other pastes keep their timing.
+    const rawHtmlData = hookedHtml.includes(PAGE_REFERENCE_ATTR)
+      ? await htmlWithConfirmedPageReferences(this.Blok, hookedHtml)
+      : hookedHtml;
+
+    // The host's resolve may be slow: the editor can be gone by now.
+    if (this.destroyed) {
+      return;
+    }
 
     // Native Blok clipboard data always wins. When absent, fall back to the
     // lossless proprietary flavours of other editors (web→web paste): they

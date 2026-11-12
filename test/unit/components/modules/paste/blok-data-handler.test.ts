@@ -865,8 +865,9 @@ describe('BlokDataHandler', () => {
     const urlOf = (pageId: unknown): string => `https://x.test/editor/page/${String(pageId)}`;
     const linkText = (pageId: string, title: string): string => `<a href="${urlOf(pageId)}">${title}</a>`;
 
-    const pageAdapter = (copyAsLink: (data: Record<string, unknown>) => { url: string; text: string } | null) => ({
+    const pageAdapter = (copyAsLink: (data: Record<string, unknown>) => { url: string; text: string } | null, settings: Record<string, unknown> = {}) => ({
       name: 'page',
+      settings,
       sanitizeConfig: {},
       conversionConfig: {
         export: (data: Record<string, unknown>): string => String((data.cache as { title?: string } | undefined)?.title ?? ''),
@@ -877,9 +878,10 @@ describe('BlokDataHandler', () => {
     const setup = (options: {
       liveBlocks?: Array<{ name: string; preservedData: Record<string, unknown> }>;
       copyAsLink?: (data: Record<string, unknown>) => { url: string; text: string } | null;
+      settings?: Record<string, unknown>;
     } = {}): { handler: BlokDataHandler; insertedBlocks: Array<{ tool: string; data: Record<string, unknown> }>; live: Array<{ name: string; preservedData: Record<string, unknown>; tool: unknown }> } => {
       const { modules, insertedBlocks } = createBlokModulesMock();
-      const page = pageAdapter(options.copyAsLink ?? ((data) => ({ url: urlOf(data.pageId), text: String((data.cache as { title?: string } | undefined)?.title ?? '') })));
+      const page = pageAdapter(options.copyAsLink ?? ((data) => ({ url: urlOf(data.pageId), text: String((data.cache as { title?: string } | undefined)?.title ?? '') })), options.settings);
       const paragraph = { name: 'paragraph', sanitizeConfig: {}, conversionConfig: { import: 'text', export: 'text' }, settings: {}, copyAsLink: () => undefined };
       const live = (options.liveBlocks ?? []).map((block) => ({ ...block, tool: block.name === 'page' ? page : paragraph }));
 
@@ -888,6 +890,7 @@ describe('BlokDataHandler', () => {
         blockTools: { get: vi.fn((name: string) => (name === 'page' ? page : paragraph)) },
       });
       Object.assign(modules.BlockManager, { blocks: live });
+      Object.assign(modules, { UI: { nodes: { wrapper: document.createElement('div') } } });
 
       return {
         handler: new BlokDataHandler(modules, createToolRegistryMock(), createSanitizerBuilderMock(), { sanitizer: {} }),
@@ -1004,11 +1007,19 @@ describe('BlokDataHandler', () => {
     });
 
     it('pastes a page with nothing to link to as a non-owning page reference', async () => {
-      const { handler, insertedBlocks } = setup({ copyAsLink: () => null });
+      const { handler, insertedBlocks } = setup({ copyAsLink: () => null, settings: { resolve: () => ({ title: 'Plans' }) } });
 
       await handler.handle(JSON.stringify([pageEntry()]), { canReplaceCurrentBlock: false });
 
       expect(insertedBlocks).toEqual([expect.objectContaining({ tool: 'paragraph', data: { text: '<a data-blok-page-id="p1">Page</a>' } })]);
+    });
+
+    it('pastes a page the host does not confirm as its exported text, not a reference', async () => {
+      const { handler, insertedBlocks } = setup({ copyAsLink: () => null, settings: { resolve: () => null } });
+
+      await handler.handle(JSON.stringify([pageEntry()]), { canReplaceCurrentBlock: false });
+
+      expect(insertedBlocks).toEqual([expect.objectContaining({ tool: 'paragraph', data: { text: 'Plans' } })]);
     });
 
     it('falls back to the exported text when there is nothing to link to, and skips an empty one', async () => {

@@ -47,14 +47,16 @@ let editor: TestEditor | undefined;
 let holder: HTMLDivElement | undefined;
 
 const PAGE_URL = new URL('/editor/page/p1', document.baseURI).href;
+// A pasted page id stays a reference in another document only when the host resolves it.
+const KNOWN_P1 = { open: (): void => undefined, resolve: (pageId: string) => (pageId === 'p1' ? { title: 'Plans' } : null) };
 
 const createEditor = async (withHref = true, withPageLink = false, hasPage = true): Promise<TestEditor> => {
   const instance = new Blok({
     holder,
     tools: {
       paragraph: Paragraph,
-      page: { class: PageTool, config: withHref ? { href: (pageId: string) => `/editor/page/${pageId}` } : { open: () => undefined } },
-      ...(withPageLink ? { 'page-link': { class: PageLink, config: { open: () => undefined } } } : {}),
+      page: { class: PageTool, config: withHref ? { href: (pageId: string) => `/editor/page/${pageId}` } : KNOWN_P1 },
+      ...(withPageLink ? { 'page-link': { class: PageLink, config: KNOWN_P1 } } : {}),
     },
     data: {
       blocks: [
@@ -203,8 +205,8 @@ describe('page block clipboard (entry points and links)', () => {
         tools: {
           custom: NoImportDefault,
           paragraph: Paragraph,
-          page: { class: PageTool, config: { open: () => undefined } },
-          ...(withPageLink ? { 'page-link': { class: PageLink, config: { open: () => undefined } } } : {}),
+          page: { class: PageTool, config: KNOWN_P1 },
+          ...(withPageLink ? { 'page-link': { class: PageLink, config: KNOWN_P1 } } : {}),
         },
         data: {
           blocks: [
@@ -240,7 +242,7 @@ describe('page block clipboard (entry points and links)', () => {
         tools: {
           code: CodeTool,
           paragraph: Paragraph,
-          page: { class: PageTool, config: { open: () => undefined } },
+          page: { class: PageTool, config: KNOWN_P1 },
         },
         data: {
           blocks: [

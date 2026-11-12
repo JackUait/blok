@@ -8,6 +8,7 @@ import type { HandlerContext } from '../types';
 
 import type { PasteHandler } from './base';
 import { BasePasteHandler } from './base';
+import { cellBlockWithoutUnconfirmedPages, confirmPastedPageIds, pastedPageIds, withChildren } from '../pasted-page-gate';
 
 /**
  * Clamp a payload cell's spans to the payload bounds (malformed payloads must
@@ -169,6 +170,13 @@ export const isTableCellPaste = (context: HandlerContext): boolean => {
  * Priority 90: higher than HTML (40) but lower than BlokData (100).
  */
 export class TableCellsHandler extends BasePasteHandler implements PasteHandler {
+  /** Set when the editor goes; a paste still waiting on the host then drops. */
+  private destroyed = false;
+
+  destroy(): void {
+    this.destroyed = true;
+  }
+
   constructor(
     Blok: BlokModules,
     toolRegistry: ToolRegistry,
@@ -205,6 +213,22 @@ export class TableCellsHandler extends BasePasteHandler implements PasteHandler 
     // where the event fired on the cell-blocks container itself).
     if (isTableCellPaste(context)) {
       return false;
+    }
+
+    const blocks = payload.cells.flat().flatMap(cell => withChildren(cell.blocks));
+    const pageIds = pastedPageIds(blocks, this.Blok.Tools.stubTool);
+
+    if (pageIds.size > 0) {
+      const confirmed = await confirmPastedPageIds(this.Blok, pageIds);
+
+      // The host's resolve may be slow: the editor can be gone by now.
+      if (this.destroyed) {
+        return true;
+      }
+      payload.cells.flat().forEach((cell) => {
+        // eslint-disable-next-line no-param-reassign -- the payload was parsed for this paste
+        cell.blocks = cell.blocks.map(block => cellBlockWithoutUnconfirmedPages(block, confirmed, this.Blok.Tools.stubTool));
+      });
     }
 
     const { BlockManager, Caret } = this.Blok;

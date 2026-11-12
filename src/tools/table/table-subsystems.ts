@@ -53,7 +53,12 @@ import { preprocessPastedHtml } from '../../components/modules/paste/preprocess-
 import { findOwn } from '../../components/utils/own-element';
 import { markPasteContinuation, pasteContinuationSettled } from '../../components/utils/paste-continuation';
 import { logLabeled } from '../../components/utils/logger';
+import { cellBlockWithoutUnconfirmedPages, confirmPageIds, pageReferenceIds, pastedPageIds, withChildren } from '../../components/modules/paste/pasted-page-gate';
+import type { PageConfig } from '../page/types';
 import { sanitizeBlocks } from '../../components/utils/sanitizer';
+
+/** Core's stub tool name (`Tools.stubTool`); a tool has no module access to read it. */
+const STUB_TOOL = 'stub';
 
 /**
  * Tags each bulk-formattable mark produces. The first entry is what we WRITE;
@@ -1896,6 +1901,71 @@ export class TableSubsystems {
       ? this.caretBlockToPasteAfter(targetCell, activeElement)
       : null;
 
+    const pageIds = pastedPageIds(payload.cells.flat().flatMap(cell => withChildren(cell.blocks)), STUB_TOOL);
+
+    if (pageIds.size === 0) {
+      this.landGridPaste(payload, { targetCell, targetRowIndex, targetColIndex, isTextOnlySingleCell, caretBlockId, contentOutsideTable }, gridEl);
+
+      return;
+    }
+
+    void this.confirmPastedPages(gridEl, payload, pageIds).then((confirmed) => {
+      // The table can be gone while the host resolves.
+      if (confirmed && gridEl.isConnected && targetCell.isConnected) {
+        this.landGridPaste(payload, { targetCell, targetRowIndex, targetColIndex, isTextOnlySingleCell, caretBlockId, contentOutsideTable }, gridEl);
+      }
+    });
+  }
+
+  /**
+   * Turns every page in the payload the host did not confirm into text. A
+   * pasted page id is a claim: it stays only when the page is already in this
+   * editor, or the page tool's `resolve` finds it and grants access.
+   * @returns false when the host could not be asked at all
+   */
+  private async confirmPastedPages(gridEl: HTMLElement, payload: TableCellsClipboard, pageIds: ReadonlySet<string>): Promise<boolean> {
+    try {
+      const page = this.host.api.tools?.getBlockTools().find(tool => tool.name === 'page')?.settings as PageConfig | undefined;
+      const editor = gridEl.closest(`[${DATA_ATTR.editor}]`) ?? gridEl;
+      const live = pageReferenceIds(editor);
+      const { blocks } = this.host.api;
+
+      Array.from({ length: blocks.getBlocksCount() }, (_, index) => blocks.getBlockByIndex(index)).forEach((block) => {
+        const pageId: unknown = block !== undefined && (block.name === 'page' || block.name === 'page-link') ? block.preservedData.pageId : undefined;
+
+        if (typeof pageId === 'string') {
+          live.add(pageId);
+        }
+      });
+
+      const confirmed = await confirmPageIds(page, live, pageIds);
+
+      payload.cells.flat().forEach((cell) => {
+        // eslint-disable-next-line no-param-reassign -- the payload was parsed for this paste
+        cell.blocks = cell.blocks.map(block => cellBlockWithoutUnconfirmedPages(block, confirmed, STUB_TOOL));
+      });
+
+      return true;
+    } catch (error) {
+      logLabeled('Table: could not check the pasted page links', 'warn', error);
+
+      return false;
+    }
+  }
+
+  private landGridPaste(
+    payload: TableCellsClipboard,
+    target: {
+      targetCell: HTMLElement;
+      targetRowIndex: number;
+      targetColIndex: number;
+      isTextOnlySingleCell: boolean;
+      caretBlockId: string | null;
+      contentOutsideTable: { html: string; text: string } | null;
+    },
+    gridEl: HTMLElement
+  ): void {
+    const { targetCell, targetRowIndex, targetColIndex, isTextOnlySingleCell, caretBlockId, contentOutsideTable } = target;
     const pasteCells = (): void => {
       if (isTextOnlySingleCell) {
         this.insertSingleCellPayloadInline(payload.cells[0][0]);

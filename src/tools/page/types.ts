@@ -92,7 +92,7 @@ export interface PageConfig {
   pageIdFromHref?(href: string): string | null | undefined;
   /** Opens the page on a plain click. Without it the link navigates to `href`. */
   open?(pageId: string, ctx: { event?: MouseEvent | KeyboardEvent }): void;
-  /** Authorized metadata. `null` means missing; `undefined` means unresolved. */
+  /** Authorized metadata. `null` means missing; `undefined` means unresolved. Paste keeps a pasted page id only when this grants it or the page is already in the document. */
   resolve?(pageId: string): PageInfo | null | undefined | Promise<PageInfo | null | undefined>;
   /** Makes the page a new page block points at. May answer with the host's own id. */
   create?(init: PageCreateInit): PageCreateResult | Promise<PageCreateResult>;

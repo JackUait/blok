@@ -157,6 +157,9 @@ export interface PageConfig {
    * Authorized metadata, asked on render and on each `subscribe` change.
    * `null` means missing; `undefined` means unresolved; `access: 'none'` means denied.
    * Old metadata is hidden while a new access check is pending. Metadata is never saved.
+   * Paste asks it too: a pasted page id stays a mention or page link only when
+   * the page is already in the document or `resolve` grants it. Otherwise it
+   * pastes as text.
    */
   resolve?(pageId: string): PageInfo | null | undefined | Promise<PageInfo | null | undefined>;
   /**

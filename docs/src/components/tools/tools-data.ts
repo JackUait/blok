@@ -1156,7 +1156,7 @@ const editor = new Blok({
         type: '(pageId: string) => PageInfo | null | undefined | Promise<…>',
         default: 'undefined',
         description:
-          'Returns authorized current page metadata. `null` means the page does not exist; `{ access: \'none\' }` hides the title and icon and shows No access; `undefined` leaves a neutral label. A returned title or icon is displayed but never saved in the page block.\n\nThe host must check permissions before returning metadata. `subscribe` triggers another lookup when access or metadata changes.',
+          'Returns authorized current page metadata. `null` means the page does not exist; `{ access: \'none\' }` hides the title and icon and shows No access; `undefined` leaves a neutral label. A returned title or icon is displayed but never saved in the page block.\n\nThe host must check permissions before returning metadata. `subscribe` triggers another lookup when access or metadata changes.\n\nPaste asks it too. Pasted content can name any page id, so a pasted mention or page link stays one only when the page is already in the document or `resolve` returns it with access. Otherwise it pastes as plain text, or as a plain link when it had a URL. Without `resolve`, only pages already in the document stay.',
       },
       {
         option: 'create',

@@ -142,7 +142,9 @@
        engines clip a highlight's underline to the text box, and a deeper one vanishes. */
     text-underline-offset: 2px;
     border-radius: var(--blok-radius-mark);
-    transition: background-color 120ms ease-out, text-decoration-color 120ms ease-out;
+    /* No fade on the fill: it hands over to ::highlight(blok-annotation-open), which
+       cannot fade, and a fading fill would stack with it for a moment. */
+    transition: text-decoration-color 120ms ease-out;
     /* A click opens the hint. */
     cursor: pointer;
   }

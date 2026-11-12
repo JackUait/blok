@@ -297,6 +297,80 @@ test.describe('annotation (Hint) inline tool', () => {
     expect(await openCards.count()).toBe(0);
   });
 
+  test('the phrase keeps one gray from hover, through the open card, to a pinned card with the pointer away', async ({ page }) => {
+    await createBlok(page, [ WITH_HINT ], { readOnly: true });
+
+    const hint = page.locator(HINT_SELECTOR);
+    const card = page.getByTestId('annotation-card');
+    const box = await hint.boundingBox();
+
+    if (box === null) {
+      throw new Error('the hint has no box');
+    }
+
+    /** The most common colour on a row near the top of the phrase: its background, not its letters. */
+    const background = async (): Promise<string> => {
+      const shot = await page.screenshot({ clip: { x: box.x + 3, y: box.y + 2, width: box.width - 6, height: 1 } });
+
+      return page.evaluate(async (base64) => {
+        const image = new Image();
+
+        image.src = `data:image/png;base64,${base64}`;
+        await image.decode();
+
+        const canvas = document.createElement('canvas');
+
+        canvas.width = image.width;
+        canvas.height = image.height;
+
+        const context = canvas.getContext('2d');
+
+        if (context === null) {
+          throw new Error('no 2d context');
+        }
+        context.drawImage(image, 0, 0);
+
+        const pixels = context.getImageData(0, 0, image.width, 1).data;
+        const counts = new Map<string, number>();
+
+        for (let i = 0; i < pixels.length; i += 4) {
+          const colour = `${pixels[i]},${pixels[i + 1]},${pixels[i + 2]}`;
+
+          counts.set(colour, (counts.get(colour) ?? 0) + 1);
+        }
+
+        return [ ...counts.entries() ].sort((a, b) => b[1] - a[1])[0][0];
+      }, shot.toString('base64'));
+    };
+    const settle = async (): Promise<void> => {
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- lets any background fade finish before the pixel read
+      await page.waitForTimeout(250);
+    };
+
+    const plain = await background();
+
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- reads the hover gray before the card opens at 300ms
+    await page.waitForTimeout(150);
+    const hovered = await background();
+
+    expect(hovered).not.toBe(plain);
+
+    await expect(card).toHaveAttribute('data-state', 'open');
+    await settle();
+    expect(await background(), 'hovered, card open').toBe(hovered);
+
+    await page.mouse.down();
+    await page.mouse.up();
+    await settle();
+    expect(await background(), 'hovered, card pinned').toBe(hovered);
+
+    await page.mouse.move(5, 5);
+    await settle();
+    await expect(card).toHaveAttribute('data-state', 'open');
+    expect(await background(), 'pinned, pointer away').toBe(hovered);
+  });
+
   test('the card hangs under the phrase on a stem, and the phrase stays lit while it is open', async ({ page }) => {
     await createBlok(page, [ WITH_HINT ], { readOnly: true });
 

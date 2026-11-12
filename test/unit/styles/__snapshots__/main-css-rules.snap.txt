@@ -1951,7 +1951,7 @@
   text-decoration-thickness: 1.5px;
   text-underline-offset: 2px;
   border-radius: var(--blok-radius-mark);
-  transition: background-color 120ms ease-out, text-decoration-color 120ms ease-out;
+  transition: text-decoration-color 120ms ease-out;
   cursor: pointer;
 }
 
@@ -3164,6 +3164,10 @@
   text-decoration-color: var(--blok-text-primary);
   text-decoration-thickness: 1.5px;
   text-underline-offset: 2px;
+}
+
+span[data-blok-annotation]:hover::highlight(blok-annotation-open) {
+  background-color: transparent;
 }
 
 [data-blok-width="full"] [data-blok-element-content] {

@@ -467,6 +467,12 @@
   text-underline-offset: 2px;
 }
 
+/* Under the pointer the phrase's own :hover fill (preflight.css) is the gray.
+   Both fills are translucent, so painting the two would stack into a darker one. */
+span[data-blok-annotation]:hover::highlight(blok-annotation-open) {
+  background-color: transparent;
+}
+
 /**
  * Content width mode
  * 'full' (data-blok-width="full" on the editor wrapper) removes the

@@ -605,6 +605,8 @@ function paint(): void {
 function strip(): HTMLElement {
   const header = document.createElement('header');
   header.setAttribute('data-desktop-tabstrip', '');
+  // Tauri's deep drag region covers empty gaps; buttons and tabs remain interactive.
+  header.setAttribute('data-tauri-drag-region', 'deep');
   return header;
 }
 

@@ -54,7 +54,7 @@ body[data-blok-theme="light"] [data-desktop-floating-toc] {
 }
 [data-desktop-traffic] { flex: none; align-self: stretch; }
 [data-desktop-leading-drag] { flex: 1; min-width: 8px; align-self: stretch; }
-[data-desktop-trailing-drag] { flex: 1; min-width: 8px; align-self: stretch; }
+[data-desktop-trailing-drag] { flex: 1; min-width: 72px; align-self: stretch; }
 [data-desktop-tabstrip] button {
   display: grid; place-items: center; flex: none;
   width: 28px; height: 28px; padding: 0; border: 0; border-radius: 5px;

@@ -148,6 +148,7 @@ describe('desktop tab strip', () => {
     const strip = root.querySelector('[data-desktop-tabstrip]');
     const list = root.querySelector('[role="tablist"]');
     expect(strip).not.toBeNull();
+    expect(strip?.getAttribute('data-tauri-drag-region')).toBe('deep');
     expect(list?.getAttribute('aria-label')).toBe("Onglets de l'application");
     expect(tabLabels(root)).toEqual(['Nouvelle page']);
     expect(selected(root).getAttribute('aria-selected')).toBe('true');

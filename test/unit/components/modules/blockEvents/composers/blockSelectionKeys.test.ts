@@ -76,6 +76,7 @@ const createBlokModules = (overrides: Partial<BlokModules> = {}): BlokModules =>
       anyBlockSelected: false,
       selectedBlocks: [],
       clearSelection: vi.fn(),
+      disableNavigationMode: vi.fn(),
       clearCache: vi.fn(),
       copySelectedBlocks: vi.fn(() => Promise.resolve()),
     } as unknown as BlokModules['BlockSelection'],
@@ -260,6 +261,27 @@ describe('BlockSelectionKeys', () => {
 
       expect(vi.mocked(announce)).toHaveBeenCalledWith('a11y.blocksDeleted:2');
       expect(vi.mocked(announce)).toHaveBeenCalledTimes(1);
+    });
+
+    // USER DECISION 2026-11-12 (A4-3): only the count is said, as in Notion.
+    it('leaves navigation mode without saying so before it clears the selection', () => {
+      const disableNavigationMode = vi.fn();
+      const clearSelection = vi.fn();
+      const blok = createBlokModules({
+        BlockSelection: {
+          anyBlockSelected: true,
+          disableNavigationMode,
+          clearSelection,
+        } as unknown as BlokModules['BlockSelection'],
+        BlockManager: {
+          deleteSelectedBlocksAndInsertReplacement: vi.fn(() => createBlock()),
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      new BlockSelectionKeys(blok).handleDeletion(createKeyboardEvent({ key: 'Delete' }));
+
+      expect(disableNavigationMode).toHaveBeenCalledWith(false, false);
+      expect(disableNavigationMode.mock.invocationCallOrder[0]).toBeLessThan(clearSelection.mock.invocationCallOrder[0]);
     });
   });
 

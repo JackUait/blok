@@ -503,6 +503,8 @@ export class BlockSelectionKeys extends BlockEventComposer {
       this.scheduleCaretRestore(nestedContainer);
     }
 
+    // Only the delete count is announced, as in Notion (USER 2026-11-12, A4-3).
+    BlockSelection.disableNavigationMode(false, false);
     BlockSelection.clearSelection(event);
 
     event.preventDefault();

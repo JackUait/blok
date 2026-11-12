@@ -204,6 +204,7 @@ const createHarness = (options: HarnessOptions) => {
       selectedBlocks,
       clearCache,
       clearSelection,
+      disableNavigationMode: vi.fn(),
       copySelectedBlocks,
       copyCrossBlockTextSelection,
     } as unknown as BlokModules['BlockSelection'],

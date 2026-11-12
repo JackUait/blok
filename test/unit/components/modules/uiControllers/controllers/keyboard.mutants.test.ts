@@ -1185,6 +1185,21 @@ describe('KeyboardController — mutation coverage', () => {
       expect(harness.blok.BlockManager.deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledTimes(1);
     });
 
+    // USER DECISION 2026-11-12 (A4-3): only the count is said, as in Notion.
+    it('leaves navigation mode without saying so before it clears the selection', () => {
+      const harness = enabledHarness();
+
+      harness.state.anyBlockSelected = true;
+      noNativeSelection();
+
+      harness.press(document.body, { key: 'Delete' });
+
+      const { disableNavigationMode, clearSelection } = harness.blok.BlockSelection;
+
+      expect(disableNavigationMode).toHaveBeenCalledWith(false, false);
+      expect(vi.mocked(disableNavigationMode).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(clearSelection).mock.invocationCallOrder[0]);
+    });
+
     it('says nothing when Backspace deleted none of the selected blocks', () => {
       const harness = enabledHarness();
       const locked = Object.assign(makeBlock('locked'), { selected: true, parentId: null });

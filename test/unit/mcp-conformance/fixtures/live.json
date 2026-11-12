@@ -879,6 +879,22 @@
                                               "type": "string"
                                             }
                                           }
+                                        },
+                                        "annotation": {
+                                          "type": "object",
+                                          "description": "Plain-text hint card on hover.",
+                                          "required": [
+                                            "text"
+                                          ],
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "text": {
+                                              "type": "string"
+                                            },
+                                            "subtitle": {
+                                              "type": "string"
+                                            }
+                                          }
                                         }
                                       },
                                       "patternProperties": {
@@ -1012,6 +1028,22 @@
                                               "type": "string"
                                             },
                                             "rel": {
+                                              "type": "string"
+                                            }
+                                          }
+                                        },
+                                        "annotation": {
+                                          "type": "object",
+                                          "description": "Plain-text hint card on hover.",
+                                          "required": [
+                                            "text"
+                                          ],
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "text": {
+                                              "type": "string"
+                                            },
+                                            "subtitle": {
                                               "type": "string"
                                             }
                                           }
@@ -1323,7 +1355,7 @@
                     },
                     {
                       "name": "database.addView",
-                      "summary": "Add a view at the end and open it."
+                      "summary": "Add a view at the end and open it, or a widget to a dashboard view."
                     },
                     {
                       "name": "database.applyTemplate",
@@ -1359,7 +1391,7 @@
                     },
                     {
                       "name": "database.deleteView",
-                      "summary": "Delete a view. If it was open, its neighbour opens."
+                      "summary": "Delete a view. If it was open, its neighbour opens. A dashboard takes its widget views with it; a widget view leaves its dashboard."
                     },
                     {
                       "name": "database.duplicateProperty",
@@ -1371,7 +1403,7 @@
                     },
                     {
                       "name": "database.duplicateView",
-                      "summary": "Copy a view with all its settings to the end, and open the copy."
+                      "summary": "Copy a view with all its settings to the end, and open the copy. A dashboard is copied with its widgets; a copied widget goes next to it on its dashboard."
                     },
                     {
                       "name": "database.editComment",
@@ -1678,7 +1710,7 @@
                       "reason": "host"
                     }
                   ],
-                  "guidance": "Rich text is a list of segments: { text, marks? } or { embed, marks? }. A plain string is plain text, HTML tags included.\nMarks: bold, italic, underline, strikethrough, code, sup, sub, highlight, color, background, link, and tag:<name> for a custom inline tool. sup and sub cannot share a run.\nhighlight alone is stored as background \"yellow\"; with a background, as that background. color and background take a preset: \"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\". Hex, rgb and hsl are stored as the nearest preset. A CSS colour name is lowercased and kept, and so is var(--name). Other syntaxes (oklch, lab, hwb, color()) are dropped, as are a transparent colour and a white or dark-grey page background.\nA link needs href. With no target or rel it gets target \"_blank\" and rel \"nofollow\"; an \"#anchor\" href gets target \"_self\". A target or rel you give is kept, but in the editor a host link config replaces both.\nEmbeds: { equation: { expression } } is inline LaTeX; { page: { id } } mentions a page: id is the pageId in a page block's data, not the block id.\ntext.format with unset [\"*\"] clears every mark; \"tag:*\" clears every custom mark.\nmarkdown.insert cannot write underline, sup, sub, highlight or colours: insert the text, then use text.format."
+                  "guidance": "Rich text is a list of segments: { text, marks? } or { embed, marks? }. A plain string is plain text, HTML tags included.\nMarks: bold, italic, underline, strikethrough, code, sup, sub, highlight, color, background, link, annotation, and tag:<name> for a custom inline tool. sup and sub cannot share a run.\nhighlight alone is stored as background \"yellow\"; with a background, as that background. color and background take a preset: \"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\". Hex, rgb and hsl are stored as the nearest preset. A CSS colour name is lowercased and kept, and so is var(--name). Other syntaxes (oklch, lab, hwb, color()) are dropped, as are a transparent colour and a white or dark-grey page background.\nA link needs href. With no target or rel it gets target \"_blank\" and rel \"nofollow\"; an \"#anchor\" href gets target \"_self\". A target or rel you give is kept, but in the editor a host link config replaces both.\nEmbeds: { equation: { expression } } is inline LaTeX; { page: { id } } mentions a page: id is the pageId in a page block's data, not the block id.\ntext.format with unset [\"*\"] clears every mark; \"tag:*\" clears every custom mark.\nmarkdown.insert cannot write underline, sup, sub, highlight or colours: insert the text, then use text.format."
                 }
               },
               "isError": false

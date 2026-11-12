@@ -726,6 +726,22 @@
                   "type": "string"
                 }
               }
+            },
+            "annotation": {
+              "type": "object",
+              "description": "Plain-text hint card on hover.",
+              "required": [
+                "text"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "subtitle": {
+                  "type": "string"
+                }
+              }
             }
           },
           "patternProperties": {

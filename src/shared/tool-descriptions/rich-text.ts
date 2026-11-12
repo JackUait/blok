@@ -33,10 +33,11 @@ export const RICH_TEXT_MARKS = {
     },
     annotation: {
       type: 'object',
-      description: 'A hint on the run: a dotted underline, and a card with this text on hover or click. Plain text only.',
+      // Short on purpose: this schema is sent to an agent on every call (render-tools-parity size budget).
+      description: 'Plain-text hint card on hover.',
       required: ['text'],
       additionalProperties: false,
-      properties: { text: { type: 'string' }, subtitle: { type: 'string', description: 'A quieter second line, e.g. who said it.' } },
+      properties: { text: { type: 'string' }, subtitle: { type: 'string' } },
     },
   },
   patternProperties: { '^tag:': { type: 'object', additionalProperties: { type: 'string' } } },

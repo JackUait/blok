@@ -2260,7 +2260,7 @@
                           },
                           "annotation": {
                             "type": "object",
-                            "description": "A hint on the run: a dotted underline, and a card with this text on hover or click. Plain text only.",
+                            "description": "Plain-text hint card on hover.",
                             "required": [
                               "text"
                             ],
@@ -2270,8 +2270,7 @@
                                 "type": "string"
                               },
                               "subtitle": {
-                                "type": "string",
-                                "description": "A quieter second line, e.g. who said it."
+                                "type": "string"
                               }
                             }
                           }
@@ -4135,7 +4134,7 @@
                           },
                           "annotation": {
                             "type": "object",
-                            "description": "A hint on the run: a dotted underline, and a card with this text on hover or click. Plain text only.",
+                            "description": "Plain-text hint card on hover.",
                             "required": [
                               "text"
                             ],
@@ -4145,8 +4144,7 @@
                                 "type": "string"
                               },
                               "subtitle": {
-                                "type": "string",
-                                "description": "A quieter second line, e.g. who said it."
+                                "type": "string"
                               }
                             }
                           }
@@ -6046,7 +6044,7 @@
                           },
                           "annotation": {
                             "type": "object",
-                            "description": "A hint on the run: a dotted underline, and a card with this text on hover or click. Plain text only.",
+                            "description": "Plain-text hint card on hover.",
                             "required": [
                               "text"
                             ],
@@ -6056,8 +6054,7 @@
                                 "type": "string"
                               },
                               "subtitle": {
-                                "type": "string",
-                                "description": "A quieter second line, e.g. who said it."
+                                "type": "string"
                               }
                             }
                           }
@@ -14269,7 +14266,7 @@
                                                           },
                                                           "annotation": {
                                                             "type": "object",
-                                                            "description": "A hint on the run: a dotted underline, and a card with this text on hover or click. Plain text only.",
+                                                            "description": "Plain-text hint card on hover.",
                                                             "required": [
                                                               "text"
                                                             ],
@@ -14279,8 +14276,7 @@
                                                                 "type": "string"
                                                               },
                                                               "subtitle": {
-                                                                "type": "string",
-                                                                "description": "A quieter second line, e.g. who said it."
+                                                                "type": "string"
                                                               }
                                                             }
                                                           }
@@ -14422,7 +14418,7 @@
                                                           },
                                                           "annotation": {
                                                             "type": "object",
-                                                            "description": "A hint on the run: a dotted underline, and a card with this text on hover or click. Plain text only.",
+                                                            "description": "Plain-text hint card on hover.",
                                                             "required": [
                                                               "text"
                                                             ],
@@ -14432,8 +14428,7 @@
                                                                 "type": "string"
                                                               },
                                                               "subtitle": {
-                                                                "type": "string",
-                                                                "description": "A quieter second line, e.g. who said it."
+                                                                "type": "string"
                                                               }
                                                             }
                                                           }
@@ -14842,7 +14837,7 @@
                                                           },
                                                           "annotation": {
                                                             "type": "object",
-                                                            "description": "A hint on the run: a dotted underline, and a card with this text on hover or click. Plain text only.",
+                                                            "description": "Plain-text hint card on hover.",
                                                             "required": [
                                                               "text"
                                                             ],
@@ -14852,8 +14847,7 @@
                                                                 "type": "string"
                                                               },
                                                               "subtitle": {
-                                                                "type": "string",
-                                                                "description": "A quieter second line, e.g. who said it."
+                                                                "type": "string"
                                                               }
                                                             }
                                                           }
@@ -14995,7 +14989,7 @@
                                                           },
                                                           "annotation": {
                                                             "type": "object",
-                                                            "description": "A hint on the run: a dotted underline, and a card with this text on hover or click. Plain text only.",
+                                                            "description": "Plain-text hint card on hover.",
                                                             "required": [
                                                               "text"
                                                             ],
@@ -15005,8 +14999,7 @@
                                                                 "type": "string"
                                                               },
                                                               "subtitle": {
-                                                                "type": "string",
-                                                                "description": "A quieter second line, e.g. who said it."
+                                                                "type": "string"
                                                               }
                                                             }
                                                           }
@@ -15155,7 +15148,7 @@
                                                           },
                                                           "annotation": {
                                                             "type": "object",
-                                                            "description": "A hint on the run: a dotted underline, and a card with this text on hover or click. Plain text only.",
+                                                            "description": "Plain-text hint card on hover.",
                                                             "required": [
                                                               "text"
                                                             ],
@@ -15165,8 +15158,7 @@
                                                                 "type": "string"
                                                               },
                                                               "subtitle": {
-                                                                "type": "string",
-                                                                "description": "A quieter second line, e.g. who said it."
+                                                                "type": "string"
                                                               }
                                                             }
                                                           }
@@ -15308,7 +15300,7 @@
                                                           },
                                                           "annotation": {
                                                             "type": "object",
-                                                            "description": "A hint on the run: a dotted underline, and a card with this text on hover or click. Plain text only.",
+                                                            "description": "Plain-text hint card on hover.",
                                                             "required": [
                                                               "text"
                                                             ],
@@ -15318,8 +15310,7 @@
                                                                 "type": "string"
                                                               },
                                                               "subtitle": {
-                                                                "type": "string",
-                                                                "description": "A quieter second line, e.g. who said it."
+                                                                "type": "string"
                                                               }
                                                             }
                                                           }
@@ -16004,7 +15995,7 @@
                                         },
                                         "annotation": {
                                           "type": "object",
-                                          "description": "A hint on the run: a dotted underline, and a card with this text on hover or click. Plain text only.",
+                                          "description": "Plain-text hint card on hover.",
                                           "required": [
                                             "text"
                                           ],
@@ -16014,8 +16005,7 @@
                                               "type": "string"
                                             },
                                             "subtitle": {
-                                              "type": "string",
-                                              "description": "A quieter second line, e.g. who said it."
+                                              "type": "string"
                                             }
                                           }
                                         }
@@ -16168,7 +16158,7 @@
                                                       },
                                                       "annotation": {
                                                         "type": "object",
-                                                        "description": "A hint on the run: a dotted underline, and a card with this text on hover or click. Plain text only.",
+                                                        "description": "Plain-text hint card on hover.",
                                                         "required": [
                                                           "text"
                                                         ],
@@ -16178,8 +16168,7 @@
                                                             "type": "string"
                                                           },
                                                           "subtitle": {
-                                                            "type": "string",
-                                                            "description": "A quieter second line, e.g. who said it."
+                                                            "type": "string"
                                                           }
                                                         }
                                                       }
@@ -16321,7 +16310,7 @@
                                                       },
                                                       "annotation": {
                                                         "type": "object",
-                                                        "description": "A hint on the run: a dotted underline, and a card with this text on hover or click. Plain text only.",
+                                                        "description": "Plain-text hint card on hover.",
                                                         "required": [
                                                           "text"
                                                         ],
@@ -16331,8 +16320,7 @@
                                                             "type": "string"
                                                           },
                                                           "subtitle": {
-                                                            "type": "string",
-                                                            "description": "A quieter second line, e.g. who said it."
+                                                            "type": "string"
                                                           }
                                                         }
                                                       }
@@ -16415,7 +16403,7 @@
                                         },
                                         "annotation": {
                                           "type": "object",
-                                          "description": "A hint on the run: a dotted underline, and a card with this text on hover or click. Plain text only.",
+                                          "description": "Plain-text hint card on hover.",
                                           "required": [
                                             "text"
                                           ],
@@ -16425,8 +16413,7 @@
                                               "type": "string"
                                             },
                                             "subtitle": {
-                                              "type": "string",
-                                              "description": "A quieter second line, e.g. who said it."
+                                              "type": "string"
                                             }
                                           }
                                         }
@@ -16606,7 +16593,7 @@
                                                       },
                                                       "annotation": {
                                                         "type": "object",
-                                                        "description": "A hint on the run: a dotted underline, and a card with this text on hover or click. Plain text only.",
+                                                        "description": "Plain-text hint card on hover.",
                                                         "required": [
                                                           "text"
                                                         ],
@@ -16616,8 +16603,7 @@
                                                             "type": "string"
                                                           },
                                                           "subtitle": {
-                                                            "type": "string",
-                                                            "description": "A quieter second line, e.g. who said it."
+                                                            "type": "string"
                                                           }
                                                         }
                                                       }
@@ -16759,7 +16745,7 @@
                                                       },
                                                       "annotation": {
                                                         "type": "object",
-                                                        "description": "A hint on the run: a dotted underline, and a card with this text on hover or click. Plain text only.",
+                                                        "description": "Plain-text hint card on hover.",
                                                         "required": [
                                                           "text"
                                                         ],
@@ -16769,8 +16755,7 @@
                                                             "type": "string"
                                                           },
                                                           "subtitle": {
-                                                            "type": "string",
-                                                            "description": "A quieter second line, e.g. who said it."
+                                                            "type": "string"
                                                           }
                                                         }
                                                       }
@@ -18642,7 +18627,7 @@
                           },
                           "annotation": {
                             "type": "object",
-                            "description": "A hint on the run: a dotted underline, and a card with this text on hover or click. Plain text only.",
+                            "description": "Plain-text hint card on hover.",
                             "required": [
                               "text"
                             ],
@@ -18652,8 +18637,7 @@
                                 "type": "string"
                               },
                               "subtitle": {
-                                "type": "string",
-                                "description": "A quieter second line, e.g. who said it."
+                                "type": "string"
                               }
                             }
                           }
@@ -20517,7 +20501,7 @@
                           },
                           "annotation": {
                             "type": "object",
-                            "description": "A hint on the run: a dotted underline, and a card with this text on hover or click. Plain text only.",
+                            "description": "Plain-text hint card on hover.",
                             "required": [
                               "text"
                             ],
@@ -20527,8 +20511,7 @@
                                 "type": "string"
                               },
                               "subtitle": {
-                                "type": "string",
-                                "description": "A quieter second line, e.g. who said it."
+                                "type": "string"
                               }
                             }
                           }
@@ -22398,7 +22381,7 @@
                           },
                           "annotation": {
                             "type": "object",
-                            "description": "A hint on the run: a dotted underline, and a card with this text on hover or click. Plain text only.",
+                            "description": "Plain-text hint card on hover.",
                             "required": [
                               "text"
                             ],
@@ -22408,8 +22391,7 @@
                                 "type": "string"
                               },
                               "subtitle": {
-                                "type": "string",
-                                "description": "A quieter second line, e.g. who said it."
+                                "type": "string"
                               }
                             }
                           }
@@ -24317,7 +24299,7 @@
                           },
                           "annotation": {
                             "type": "object",
-                            "description": "A hint on the run: a dotted underline, and a card with this text on hover or click. Plain text only.",
+                            "description": "Plain-text hint card on hover.",
                             "required": [
                               "text"
                             ],
@@ -24327,8 +24309,7 @@
                                 "type": "string"
                               },
                               "subtitle": {
-                                "type": "string",
-                                "description": "A quieter second line, e.g. who said it."
+                                "type": "string"
                               }
                             }
                           }

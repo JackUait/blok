@@ -303,7 +303,7 @@ body[data-blok-theme="light"] [data-desktop-floating-toc] {
 [data-desktop-cover-gallery][hidden] { display: none; }
 [data-desktop-cover-gallery-head] { display: flex; align-items: center; justify-content: space-between; height: 42px; padding: 0 14px; border-bottom: 1px solid var(--desktop-border); font-size: 13px; }
 [data-desktop-cover-gallery-head] button { border: 0; border-radius: 4px; padding: 5px 8px; background: transparent; color: var(--desktop-muted); font: inherit; cursor: pointer; }
-[data-desktop-cover-gallery-head] button:hover { background: var(--desktop-hover); color: var(--desktop-ink); }
+[data-desktop-cover-gallery-head] > button:hover { background: var(--desktop-hover); color: var(--desktop-ink); }
 [data-desktop-cover-content] { height: 350px; overflow-y: auto; overscroll-behavior: contain; }
 [data-desktop-cover-gallery-viewport] { position: relative; height: 100%; }
 [data-desktop-cover-gallery-scroll] {
@@ -530,22 +530,22 @@ div[data-desktop-menu-account], div[data-desktop-menu-account]:hover { cursor: d
 }
 
 [data-desktop-cover-tabs] {
-  display: flex; align-items: center; gap: 20px; padding: 0; min-width: 0;
+  display: flex; align-items: center; gap: 2px; height: 42px; padding: 0; min-width: 0; margin-inline-start: -8px;
 }
 [data-desktop-cover-tabs] > button {
   position: relative; display: inline-flex; align-items: center; justify-content: center;
-  flex: 0 0 auto; min-width: 0; height: 42px; padding: 0 2px;
-  border: 0; border-radius: 0; background: transparent;
+  flex: 0 0 auto; min-width: 0; height: 28px; padding: 0 8px;
+  border: 0; border-radius: 6px; background: transparent;
   color: var(--desktop-muted); font: inherit; font-size: 13px; cursor: pointer;
 }
 [data-desktop-cover-tabs] > button[aria-selected="true"] { color: var(--desktop-ink); }
 [data-desktop-cover-tabs] > button[aria-selected="true"]::after {
-  content: ''; position: absolute; inset: auto 2px -1px; height: 2px;
+  content: ''; position: absolute; inset: auto 8px -8px; height: 2px;
   border-radius: 2px; background: var(--desktop-ink);
 }
-[data-desktop-cover-tabs] > button:hover { color: var(--desktop-ink); }
+[data-desktop-cover-tabs] > button:hover:not([aria-selected="true"]) { background: var(--desktop-hover); }
 [data-desktop-cover-tabs] > button:focus-visible {
-  outline: 2px solid var(--desktop-ink); outline-offset: -3px; border-radius: 4px;
+  outline: 2px solid var(--desktop-ink); outline-offset: -2px;
 }
 [data-desktop-cover-panel] { padding: 22px 16px; }
 [data-desktop-cover-panel][hidden], [data-desktop-cover-gallery-viewport][hidden] { display: none; }

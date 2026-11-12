@@ -518,6 +518,11 @@
   50% { translate: -1.5px -2.5px }
 }
 
+@keyframes blok-media-preview-land {
+  0%, 100% { transform: translateY(var(--lift)) scale(var(--scale)) }
+  40% { transform: translateY(calc(var(--lift) - 4px)) scale(1.07) }
+}
+
 @keyframes blok-media-preview-pan {
   0%, 100% { transform: translateX(0) }
   50% { transform: translateX(-34px) }

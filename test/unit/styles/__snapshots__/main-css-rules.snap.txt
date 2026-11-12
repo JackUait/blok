@@ -20567,13 +20567,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   fill: none;
 }
 
-.blok-media-preview__fill {
-  fill: color-mix(in srgb, var(--blok-color-accent) 20%, transparent);
-  stroke: none;
-  transform-origin: bottom;
-  transform: scaleY(0);
-}
-
 .blok-media-preview__photo {
   transform: rotate(-3deg);
 }
@@ -20806,9 +20799,132 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   transition: transform 200ms linear;
 }
 
-.blok-media-preview[data-uploading] .blok-media-preview__fill {
-  transform: scaleY(var(--p));
+.blok-media-preview__scan, .blok-media-preview__playhead {
+  fill: var(--blok-color-accent);
+  stroke: none;
+  opacity: 0;
+}
+
+.blok-media-preview__veil {
+  fill: var(--blok-media-preview-tone);
+  stroke: none;
+}
+
+[data-blok-media-preview="image"] .blok-media-preview__veil {
+  transform-origin: 50% 100%;
+  transform: scaleY(0);
+}
+
+[data-blok-media-preview="video"] .blok-media-preview__veil {
+  transform-origin: 100% 50%;
+  transform: scaleX(0);
+}
+
+.blok-media-preview__chunks {
+  opacity: 0;
+}
+
+.blok-media-preview__chunk {
+  fill: var(--blok-media-preview-tone);
+  stroke: none;
+}
+
+.blok-media-preview[data-uploading][data-blok-media-preview="image"] .blok-media-preview__veil {
+  transform: scaleY(calc(1 - var(--p)));
   transition: transform 200ms linear;
+}
+
+.blok-media-preview[data-uploading][data-blok-media-preview="image"] .blok-media-preview__scan {
+  opacity: 1;
+  transform: translateY(calc(var(--p) * 69px));
+  transition: transform 200ms linear, opacity 200ms ease;
+}
+
+.blok-media-preview[data-uploading][data-blok-media-preview="image"] .blok-media-preview__scene {
+  opacity: 1;
+}
+
+.blok-media-preview[data-uploading][data-blok-media-preview="image"] .blok-media-preview__sun {
+  opacity: 1;
+  transform: translateY(calc((1 - var(--p)) * 5px));
+}
+
+.blok-media-preview[data-uploading][data-blok-media-preview="image"][data-done] .blok-media-preview__scan {
+  opacity: 0;
+}
+
+.blok-media-preview[data-uploading][data-blok-media-preview="video"] .blok-media-preview__veil {
+  transform: scaleX(calc(1 - var(--p)));
+  transition: transform 200ms linear;
+}
+
+.blok-media-preview[data-uploading][data-blok-media-preview="video"] .blok-media-preview__playhead {
+  opacity: 1;
+  transform: translateX(calc(var(--p) * 135px));
+  transition: transform 200ms linear, opacity 200ms ease;
+}
+
+.blok-media-preview[data-uploading][data-blok-media-preview="video"] .blok-media-preview__scene {
+  opacity: 1;
+}
+
+.blok-media-preview[data-uploading][data-blok-media-preview="video"] .blok-media-preview__knob-group {
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+.blok-media-preview[data-uploading][data-blok-media-preview="video"] .blok-media-preview__drop {
+  opacity: 0;
+}
+
+.blok-media-preview[data-uploading][data-blok-media-preview="video"][data-done] .blok-media-preview__playhead {
+  opacity: 0;
+}
+
+.blok-media-preview[data-uploading][data-blok-media-preview="video"][data-done] .blok-media-preview__drop {
+  opacity: 0.2;
+}
+
+.blok-media-preview[data-uploading][data-blok-media-preview="video"][data-done] .blok-media-preview__knob-group {
+  opacity: 1;
+  transform: none;
+  animation: blok-media-preview-press 600ms ease-out both;
+}
+
+.blok-media-preview[data-uploading][data-blok-media-preview="audio"] .blok-media-preview__bar {
+  animation: none;
+  transform: scaleY(calc(0.1 + var(--lit) * 0.9));
+  transition: transform 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  fill: color-mix(in srgb, var(--blok-color-accent) calc(var(--lit) * clamp(0, calc(2.5 - (var(--p) * 14 - var(--i))), 1) * 100%), currentColor);
+}
+
+.blok-media-preview[data-uploading][data-blok-media-preview="audio"][data-done] .blok-media-preview__bar {
+  fill: currentColor;
+}
+
+.blok-media-preview[data-uploading][data-blok-media-preview="file"] .blok-media-preview__line--write {
+  transform: none;
+}
+
+.blok-media-preview[data-uploading][data-blok-media-preview="file"] .blok-media-preview__page-text {
+  opacity: clamp(0, calc((var(--p) - 0.94) * 17), 1);
+  transition: opacity 200ms linear;
+}
+
+.blok-media-preview[data-uploading][data-blok-media-preview="file"] .blok-media-preview__chunks {
+  opacity: clamp(0, calc((1 - var(--p)) * 17), 1);
+  transition: opacity 200ms linear;
+}
+
+.blok-media-preview[data-uploading][data-blok-media-preview="file"] .blok-media-preview__chunk {
+  --lit: clamp(0, calc(var(--p) / 0.92 * 25 - var(--n)), 1);
+  transform: scale(calc(0.45 + var(--lit) * 0.55));
+  transition: transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  fill: color-mix(in srgb, var(--blok-color-accent) calc(var(--lit) * clamp(0, calc(4 - (var(--p) / 0.92 * 25 - var(--n))), 1) * 100%), color-mix(in srgb, currentColor calc(14% + var(--lit) * 50%), var(--blok-bg-primary)));
+}
+
+.blok-media-preview[data-uploading][data-done] {
+  animation: blok-media-preview-land 520ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 [@media (prefers-reduced-motion: reduce)] .blok-media-preview {

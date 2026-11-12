@@ -20,12 +20,14 @@ export function makePreview(kind: MediaPreviewKind): HTMLElement {
 export function setPreviewProgress(stage: HTMLElement, percent: number): void {
   const value = Number.isFinite(percent) ? Math.min(100, Math.max(0, percent)) : 0;
   stage.setAttribute('data-uploading', '');
+  stage.toggleAttribute('data-done', value >= 100);
   stage.style.setProperty('--blok-media-progress', String(value / 100));
 }
 
 /** Takes a preview back out of upload mode, to its resting look. */
 export function clearPreviewProgress(stage: HTMLElement): void {
   stage.removeAttribute('data-uploading');
+  stage.removeAttribute('data-done');
   stage.style.removeProperty('--blok-media-progress');
 }
 

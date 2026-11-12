@@ -65,6 +65,12 @@ const docLines = (): string => [
   .map((line, row) => `<rect class="blok-media-preview__line blok-media-preview__line--write${line.title ? ' blok-media-preview__line--title' : ''}" style="--row:${row}" x="78" y="${line.y}" width="${line.width}" height="${line.height}" rx="${line.height / 2}"/>`)
   .join('');
 
+// The file arriving in pieces while it uploads: a 5x5 grid on the front page.
+// --n orders the pieces for the fill-in in media-empty.css.
+const fileChunks = (): string => Array.from({ length: 25 }, (_, n) =>
+  `<rect class="blok-media-preview__chunk" style="--n:${n}" x="${78 + (n % 5) * 9.75}" y="${42 + Math.floor(n / 5) * 10}" width="7" height="7" rx="1.8"/>`)
+  .join('');
+
 // Clip, filter and shadow ids must be unique per instance: several empty
 // blocks share one document.
 const drawings: Record<MediaPreviewKind, (id: string) => string> = {
@@ -81,6 +87,8 @@ const drawings: Record<MediaPreviewKind, (id: string) => string> = {
           <path class="blok-media-preview__hill" d="M20 80l26-14 30 14 34-20 40 20 36-16 30 16z"/>
         </g>
       </g>
+      <rect class="blok-media-preview__veil" x="32" y="16" width="136" height="62" rx="7"/>
+      <rect class="blok-media-preview__playhead" x="31.5" y="16" width="2" height="62" rx="1"/>
       <rect class="blok-media-preview__track" x="32" y="87" width="136" height="4" rx="2"/>
       <rect class="blok-media-preview__progress" x="32" y="87" width="136" height="4" rx="2"/>
       ${drop(id)}`)}
@@ -94,8 +102,8 @@ const drawings: Record<MediaPreviewKind, (id: string) => string> = {
     ${ground(id)}
     ${layer(3, `
       <rect id="${id}-s" class="blok-media-preview__frame" x="14" y="20" width="172" height="80" rx="16"/>
-      <rect class="blok-media-preview__line" x="92" y="36" width="62" height="5" rx="2.5"/>
-      <rect class="blok-media-preview__line blok-media-preview__line--soft" x="92" y="46" width="38" height="4" rx="2"/>
+      <rect class="blok-media-preview__line blok-media-preview__line--write" style="--row:0" x="92" y="36" width="62" height="5" rx="2.5"/>
+      <rect class="blok-media-preview__line blok-media-preview__line--soft blok-media-preview__line--write" style="--row:1" x="92" y="46" width="38" height="4" rx="2"/>
       ${waveBars()}
       ${drop(id)}`)}
     ${layer(7, `
@@ -119,10 +127,12 @@ const drawings: Record<MediaPreviewKind, (id: string) => string> = {
             <path class="blok-media-preview__hill" d="M42 84l22-14 26 14z"/>
           </g>
         </g>
+        <rect class="blok-media-preview__veil" x="42" y="14" width="120" height="70" rx="3"/>
+        <rect class="blok-media-preview__scan" x="42" y="13.5" width="120" height="2" rx="1"/>
         <rect class="blok-media-preview__line blok-media-preview__line--soft" x="42" y="92" width="46" height="4" rx="2"/>
       </g>`)}`,
   file: (id) => `
-    <defs><clipPath id="${id}"><path d="${PAGE}"/></clipPath>${shadowFilters(id)}</defs>
+    <defs>${shadowFilters(id)}</defs>
     ${ground(id)}
     ${layer(1, `
       <g class="blok-media-preview__sheet blok-media-preview__sheet--back">
@@ -140,12 +150,14 @@ const drawings: Record<MediaPreviewKind, (id: string) => string> = {
     ${layer(5, `
       <g id="${id}-f" class="blok-media-preview__sheet blok-media-preview__sheet--front">
         <path id="${id}-s" class="blok-media-preview__frame" d="${PAGE}"/>
-        <g clip-path="url(#${id})"><rect class="blok-media-preview__fill" x="70" y="10" width="62" height="92"/></g>
         <path class="blok-media-preview__crease" filter="url(#${id}-d)" d="${FLAP}"/>
         <path class="blok-media-preview__flap" d="${FLAP}"/>
-        ${docLines()}
-        <rect class="blok-media-preview__chip" x="78" y="82" width="22" height="11" rx="3"/>
-        <rect class="blok-media-preview__chip-mark" x="82" y="86" width="14" height="3" rx="1.5"/>
+        <g class="blok-media-preview__page-text">
+          ${docLines()}
+          <rect class="blok-media-preview__chip" x="78" y="82" width="22" height="11" rx="3"/>
+          <rect class="blok-media-preview__chip-mark" x="82" y="86" width="14" height="3" rx="1.5"/>
+        </g>
+        <g class="blok-media-preview__chunks">${fileChunks()}</g>
       </g>`)}`,
 };
 

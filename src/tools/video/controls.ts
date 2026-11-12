@@ -958,17 +958,28 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   const positionMenu = (): void => {
     const g = gear.getBoundingClientRect();
     const f = figure.getBoundingClientRect();
-    // The card's inline-end edge tracks the gear's; bottom sits MENU_GAP above the bar,
-    // so the card grows upward — out of the player when there isn't room below the bar.
+    const b = bar.getBoundingClientRect();
+    const width = menu.offsetWidth;
+    const gearMiddle = g.left + g.width / 2;
+    // The card opens toward the inline end, from the gear's inline-start edge. With no
+    // room there it ends at the bar's inline-end edge instead (the player's, with no bar).
+    // It is pinned by whichever edge stays put, so a width change moves the other one.
+    const place = (edge: 'left' | 'right', offset: number, cardLeft: number): void => {
+      menu.style.left = edge === 'left' ? `${offset}px` : '';
+      menu.style.right = edge === 'right' ? `${offset}px` : '';
+      // The card grows out of the gear, wherever the gear sits under it.
+      menu.style.transformOrigin = `${gearMiddle - cardLeft}px 100%`;
+    };
     if (getElementDirection(figure) === 'rtl') {
-      menu.style.right = '';
-      menu.style.left = `${g.left - f.left}px`;
+      const limit = b.width ? b.left : f.left;
+      if (g.right - width >= limit) place('right', f.right - g.right, g.right - width);
+      else place('left', limit - f.left, limit);
     } else {
-      menu.style.left = '';
-      menu.style.right = `${f.right - g.right}px`;
+      const limit = b.width ? b.right : f.right;
+      if (g.left + width <= limit) place('left', g.left - f.left, g.left);
+      else place('right', f.right - limit, limit - width);
     }
     // Clear the bar, not just the gear: the bar's padding puts its edge above the gear's.
-    const b = bar.getBoundingClientRect();
     const top = b.height ? Math.min(g.top, b.top) : g.top;
     menu.style.bottom = `${f.bottom - top + MENU_GAP}px`;
   };

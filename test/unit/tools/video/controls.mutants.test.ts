@@ -1125,60 +1125,100 @@ describe('video controls — settings menu behaviour', () => {
     left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}), ...box,
   });
 
-  const stubRects = (gearRight: number, gearTop: number, figureRight: number, figureBottom: number): void => {
-    setProp(gear(), 'getBoundingClientRect', () => rect({ right: gearRight, top: gearTop }));
-    setProp(h.figure, 'getBoundingClientRect', () => rect({ right: figureRight, bottom: figureBottom }));
+  const bar = (): HTMLElement => q(h.figure, '.blok-video-controls__bar');
+  /** A 600 × 400 player with a 32px gear whose left edge is at `gearLeft`, in a bar from 20 to 580. */
+  const stubRects = (gearLeft: number, cardWidth = 264): void => {
+    setProp(gear(), 'getBoundingClientRect', () => rect({ left: gearLeft, right: gearLeft + 32, width: 32, top: 380 }));
+    setProp(h.figure, 'getBoundingClientRect', () => rect({ left: 0, right: 600, bottom: 400 }));
+    setProp(bar(), 'getBoundingClientRect', () => rect({ left: 20, right: 580, width: 560, top: 374, bottom: 392, height: 18 }));
+    setProp(menu(), 'offsetWidth', cardWidth);
   };
 
-  it('anchors the card to the gear, growing upward from above it', () => {
-    stubRects(500, 380, 600, 400);
+  it('opens to the right of the gear: the card starts at the gear\'s left edge', () => {
+    stubRects(100);
     gear().click();
-    // Right edge tracks the gear's right edge; the card's bottom sits 8px above it.
-    expect(menu().style.right).toBe('100px');
-    expect(menu().style.bottom).toBe('28px');
+
+    expect(menu().style.left).toBe('100px');
+    expect(menu().style.right).toBe('');
+    // The card grows out of the gear: the gear's middle, 16px into the card.
+    expect(menu().style.transformOrigin).toBe('16px 100%');
   });
 
-  it('clears the whole control bar, not just the gear inside it', () => {
-    stubRects(500, 380, 600, 400);
-    // The bar's padding puts its top edge 6px above the gear's.
-    setProp(q(h.figure, '.blok-video-controls__bar'), 'getBoundingClientRect', () => rect({ top: 374, bottom: 392, height: 18 }));
+  it('stays inside the bar when there is no room to the right of the gear', () => {
+    stubRects(450);
     gear().click();
 
-    expect(menu().style.bottom).toBe('34px');
+    // 450 + 264 would pass the bar's right edge at 580, so the card ends there.
+    expect(menu().style.right).toBe('20px');
+    expect(menu().style.left).toBe('');
+    // Its left edge is at 316; the gear's middle is 150px in.
+    expect(menu().style.transformOrigin).toBe('150px 100%');
   });
 
-  it('falls back to the gear when the bar has no box', () => {
-    stubRects(500, 380, 600, 400);
-    setProp(q(h.figure, '.blok-video-controls__bar'), 'getBoundingClientRect', () => rect({ top: 0, height: 0 }));
+  it('fits exactly: a card that just reaches the bar\'s edge is not pushed back', () => {
+    stubRects(316);
     gear().click();
 
-    expect(menu().style.bottom).toBe('28px');
-  });
-
-  it('anchors the card to the gear\'s left edge in RTL, growing toward the inline start', () => {
-    h.figure.setAttribute('dir', 'rtl');
-    setProp(gear(), 'getBoundingClientRect', () => rect({ left: 40, right: 70, top: 380 }));
-    setProp(h.figure, 'getBoundingClientRect', () => rect({ left: 10, right: 600, bottom: 400 }));
-    gear().click();
-    expect(menu().style.left).toBe('30px');
+    expect(menu().style.left).toBe('316px');
     expect(menu().style.right).toBe('');
   });
 
-  it('re-anchors the card when the viewport changes under it', () => {
-    stubRects(500, 380, 600, 400);
+  it('clears the whole control bar, not just the gear inside it', () => {
+    stubRects(100);
     gear().click();
-    stubRects(300, 380, 600, 400);
+
+    // The bar's padding puts its top edge 6px above the gear's: 400 − 374 + 8.
+    expect(menu().style.bottom).toBe('34px');
+  });
+
+  it('falls back to the gear and the player edge when the bar has no box', () => {
+    stubRects(450);
+    setProp(bar(), 'getBoundingClientRect', () => rect({ top: 0, height: 0, width: 0 }));
+    gear().click();
+
+    expect(menu().style.bottom).toBe('28px');
+    // 450 + 264 passes the player's right edge at 600, so the card ends there.
+    expect(menu().style.right).toBe('0px');
+  });
+
+  it('in RTL opens to the left of the gear: the card ends at the gear\'s right edge', () => {
+    h.figure.setAttribute('dir', 'rtl');
+    stubRects(400);
+    gear().click();
+
+    expect(menu().style.right).toBe('168px');
+    expect(menu().style.left).toBe('');
+    expect(menu().style.transformOrigin).toBe('248px 100%');
+  });
+
+  it('in RTL stays inside the bar when there is no room to the left of the gear', () => {
+    h.figure.setAttribute('dir', 'rtl');
+    stubRects(100);
+    gear().click();
+
+    // 132 − 264 would pass the bar's left edge at 20, so the card starts there.
+    expect(menu().style.left).toBe('20px');
+    expect(menu().style.right).toBe('');
+    expect(menu().style.transformOrigin).toBe('96px 100%');
+  });
+
+  it('re-anchors the card when the viewport changes under it', () => {
+    stubRects(100);
+    gear().click();
+    stubRects(200);
     window.dispatchEvent(new Event('resize'));
-    expect(menu().style.right).toBe('300px');
+
+    expect(menu().style.left).toBe('200px');
   });
 
   it('stops re-anchoring once the card is closed', () => {
-    stubRects(500, 380, 600, 400);
+    stubRects(100);
     gear().click();
     gear().click();
-    stubRects(300, 380, 600, 400);
+    stubRects(200);
     window.dispatchEvent(new Event('resize'));
-    expect(menu().style.right).toBe('100px');
+
+    expect(menu().style.left).toBe('100px');
     expect(gear().getAttribute('aria-expanded')).toBe('false');
   });
 
@@ -1937,19 +1977,19 @@ describe('video controls — teardown detaches every listener', () => {
   it('closes an open settings menu and stops tracking the viewport', () => {
     const gear = q(h.figure, '[data-action="gear"]');
     const menu = q(h.figure, '[data-role="playback-menu"]');
-    const rect = (right: number): DOMRect => ({
-      left: 0, right, top: 0, bottom: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}),
+    const rect = (left: number, right: number): DOMRect => ({
+      left, right, top: 0, bottom: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}),
     });
 
-    setProp(gear, 'getBoundingClientRect', () => rect(500));
-    setProp(h.figure, 'getBoundingClientRect', () => rect(600));
+    setProp(gear, 'getBoundingClientRect', () => rect(500, 532));
+    setProp(h.figure, 'getBoundingClientRect', () => rect(0, 600));
     gear.click();
-    expect(menu.style.right).toBe('100px');
+    expect(menu.style.left).toBe('500px');
     h.destroy();
     expect(gear.getAttribute('aria-expanded')).toBe('false');
-    setProp(gear, 'getBoundingClientRect', () => rect(300));
+    setProp(gear, 'getBoundingClientRect', () => rect(300, 332));
     window.dispatchEvent(new Event('resize'));
-    expect(menu.style.right).toBe('100px');
+    expect(menu.style.left).toBe('500px');
   });
 
   it('stops mirroring media play and pause', () => {

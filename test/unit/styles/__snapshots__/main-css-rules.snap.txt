@@ -23136,7 +23136,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   border-radius: var(--blok-radius-glass);
   box-shadow: var(--blok-video-menu-shadow);
   color: var(--blok-video-control-fg);
-  transform-origin: calc(50% + 50% * var(--_blok-inline-sign, 1)) bottom;
+  transform-origin: calc(50% - 50% * var(--_blok-inline-sign, 1)) bottom;
   z-index: 3;
 }
 

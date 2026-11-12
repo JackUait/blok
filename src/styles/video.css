@@ -811,8 +811,8 @@
   border-radius: var(--blok-radius-glass);
   box-shadow: var(--blok-video-menu-shadow);
   color: var(--blok-video-control-fg);
-  /* The gear's corner: bottom right, bottom left in RTL. */
-  transform-origin: calc(50% + 50% * var(--_blok-inline-sign, 1)) bottom;
+  /* The gear's corner. controls.ts overrides it with the gear's real place under the card. */
+  transform-origin: calc(50% - 50% * var(--_blok-inline-sign, 1)) bottom;
   z-index: 3;
 }
 /* Frosted glass lives on a ::before so it is NOT on the same box as overflow: hidden —

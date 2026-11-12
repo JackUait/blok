@@ -249,10 +249,17 @@ for (const direction of DIRECTIONS) {
       const menuBox = await rect(menu);
       const gearBox = await rect(gear);
 
-      // The card grows from the gear toward the inline start, like in LTR.
-      const anchored = direction === 'rtl' ? menuBox.left - gearBox.left : gearBox.right - menuBox.right;
+      // The card opens toward the inline end of the gear and stays inside the bar.
+      // The bar is the gear's grandparent: gear → its wrapper → bar.
+      const barBox = await rect(gear.locator('xpath=../..'));
 
-      expect(Math.abs(anchored)).toBeLessThanOrEqual(TOLERANCE);
+      if (direction === 'rtl') {
+        expect(menuBox.left).toBeLessThan(gearBox.left - TOLERANCE);
+        expect(menuBox.left).toBeGreaterThanOrEqual(barBox.left - TOLERANCE);
+      } else {
+        expect(menuBox.right).toBeGreaterThan(gearBox.right + TOLERANCE);
+        expect(menuBox.right).toBeLessThanOrEqual(barBox.right + TOLERANCE);
+      }
 
       // The row's chevron sits at the inline end, where the submenu comes from.
       const speedRow = menu.locator('[data-action="open-speed"]');

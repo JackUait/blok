@@ -1,3 +1,4 @@
+import { registerLayer } from '../../src/components/utils/dismissable-layer';
 import { createCoverDownloadButton } from '../../src/components/utils/cover-download';
 import additionalCover0 from './assets/covers/cma_130391.jpg';
 import additionalCover1 from './assets/covers/cma_136207.jpg';
@@ -602,7 +603,9 @@ export function createPageCover(
   const guide = document.createElement('span');
   guide.textContent = 'Glisser pour repositionner la couverture';
   drag.append(guide);
+  let savedPosition = position;
   let draft = position;
+  let unregisterReposition: (() => void) | null = null;
   let start: { y: number; position: number } | null = null;
   const setDraft = (next: number): void => {
     draft = Math.max(0, Math.min(100, Math.round(next)));
@@ -610,13 +613,23 @@ export function createPageCover(
     applyPosition(draft);
   };
   setDraft(position);
-  const finish = (): void => {
+  const finish = (restoreFocus = true): void => {
+    unregisterReposition?.();
+    unregisterReposition = null;
+    start = null;
     drag.hidden = true;
     root.removeAttribute('data-repositioning');
     actions.replaceChildren(change, reposition, download, gallery);
     actions.removeAttribute('data-open');
-    reposition.focus();
+    if (restoreFocus) reposition.focus();
   };
+  const commitPosition = (restoreFocus = true): void => {
+    const changed = draft !== savedPosition;
+    savedPosition = draft;
+    finish(restoreFocus);
+    if (changed) onPositionChange(savedPosition);
+  };
+  const cancelPosition = (): void => { setDraft(savedPosition); finish(); };
   drag.addEventListener('pointerdown', (event) => {
     start = { y: event.clientY, position: draft };
     drag.setPointerCapture(event.pointerId);
@@ -630,18 +643,18 @@ export function createPageCover(
     else if (event.key === 'ArrowDown') setDraft(draft - 5);
     else if (event.key === 'Home') setDraft(0);
     else if (event.key === 'End') setDraft(100);
-    else if (event.key === 'Escape') { setDraft(position); finish(); }
+    else if (event.key === 'Escape') cancelPosition();
     else return;
     event.preventDefault();
   });
   const cancel = document.createElement('button');
   cancel.type = 'button';
   cancel.textContent = 'Annuler';
-  cancel.addEventListener('click', () => { setDraft(position); finish(); });
+  cancel.addEventListener('click', cancelPosition);
   const save = document.createElement('button');
   save.type = 'button';
   save.textContent = 'Enregistrer la position';
-  save.addEventListener('click', () => { onPositionChange(draft); finish(); });
+  save.addEventListener('click', () => commitPosition());
   reposition.addEventListener('click', () => {
     closeGallery();
     drag.hidden = false;
@@ -649,6 +662,11 @@ export function createPageCover(
     actions.replaceChildren(cancel, save);
     actions.setAttribute('data-open', '');
     drag.focus();
+    unregisterReposition?.();
+    unregisterReposition = registerLayer({
+      element: root,
+      onDismiss: (reason) => { if (reason === 'outside') commitPosition(false); else cancelPosition(); },
+    });
   });
   actions.append(change, reposition, download, gallery);
   root.append(image, drag);

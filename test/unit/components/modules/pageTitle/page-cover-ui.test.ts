@@ -212,6 +212,20 @@ describe('page cover UI', () => {
       expect(strip()?.querySelector(`[${DATA_ATTR.pageCoverHint}]`)).toBeNull();
     });
 
+    it('click-away commits the draft, while Escape cancels it', async () => {
+      const editor = await boot({}, { ...DOC, cover: IMAGE });
+      byTestId('page-cover-reposition').click();
+      drag(-20);
+      document.body.dispatchEvent(new PointerEvent('pointerdown', {bubbles:true}));
+      expect(editor.title.cover.get()).toEqual({...IMAGE, position:50});
+      expect(strip()?.hasAttribute(DATA_ATTR.pageCoverRepositioning)).toBe(false);
+      byTestId('page-cover-reposition').click();
+      drag(-20);
+      document.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true}));
+      expect(editor.title.cover.get()).toEqual({...IMAGE, position:50});
+      expect(strip()?.querySelector('img')?.style.objectPosition).toBe('center 50%');
+    });
+
     it('Cancel keeps the saved position', async () => {
       const editor = await boot({}, { ...DOC, cover: IMAGE });
 

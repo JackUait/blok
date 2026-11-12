@@ -61,6 +61,30 @@ describe('desktop page cover', () => {
     root.remove();
   });
 
+  it('commits repositioning on click-away and cancels to the latest saved position', () => {
+    const onPositionChange = vi.fn();
+    const root = createPageCover('dusk', 50, vi.fn(), onPositionChange);
+    const outside = document.createElement('button');
+    document.body.append(root, outside);
+    const reposition = [...root.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent === 'Repositionner')!;
+    const slider = root.querySelector<HTMLElement>('[data-desktop-cover-drag]')!;
+    reposition.click();
+    slider.dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowUp', bubbles:true}));
+    root.dispatchEvent(new MouseEvent('pointerdown', {bubbles:true}));
+    expect(onPositionChange).not.toHaveBeenCalled();
+    outside.dispatchEvent(new MouseEvent('pointerdown', {bubbles:true}));
+    expect(onPositionChange).toHaveBeenCalledExactlyOnceWith(55);
+    expect(slider.hidden).toBe(true);
+    outside.dispatchEvent(new MouseEvent('pointerdown', {bubbles:true}));
+    expect(onPositionChange).toHaveBeenCalledTimes(1);
+    reposition.click();
+    slider.dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowUp', bubbles:true}));
+    document.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true}));
+    expect(slider.getAttribute('aria-valuenow')).toBe('55');
+    expect(onPositionChange).toHaveBeenCalledTimes(1);
+    root.remove(); outside.remove();
+  });
+
   it('reads image uploads and rejects unsupported or oversized files', async () => {
     await expect(readCoverFile(new File(['a'], 'cover.png', {type: 'image/png'}))).resolves.toBe('data:image/png;base64,YQ==');
     await expect(readCoverFile(new File(['a'], 'cover.svg', {type: 'image/svg+xml'}))).rejects.toThrow('PNG');

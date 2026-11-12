@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { AnnotationCard } from '../../../../src/components/utils/annotation-card';
 
 const CARD = '[data-blok-testid="annotation-card"]';
@@ -46,11 +48,11 @@ describe('AnnotationCard', () => {
   });
 
   describe('hover', () => {
-    it('waits the full hint delay before showing', () => {
+    it('waits the shortest hint delay before showing, and no longer', () => {
       const anchor = createAnchor('A quote');
 
       card.show(anchor);
-      vi.advanceTimersByTime(499);
+      vi.advanceTimersByTime(299);
 
       expect(card.anchor).toBeNull();
 
@@ -295,6 +297,46 @@ describe('AnnotationCard', () => {
 
       expect(getCard()).toBeNull();
       expect(card.anchor).toBeNull();
+    });
+  });
+
+  describe('entrance timing', () => {
+    /** Open-state duration and delay, in ms, read from an element's classes. */
+    const openTiming = (el: Element | null | undefined): { duration: number; delay: number } => {
+      const read = (name: string): number =>
+        Number(new RegExp(`group-data-\\[state=open\\]:${name}-\\[(\\d+)ms\\]`).exec(el?.className ?? '')?.[1] ?? 0);
+
+      return { duration: read('duration'), delay: read('delay') };
+    };
+    const parts = (): Record<'stem' | 'surface' | 'words', { duration: number; delay: number }> => {
+      card.pin(createAnchor('A quote'));
+      const words = getCard()?.querySelector(TEXT)?.parentElement;
+      const stem = getCard()?.querySelector('[data-blok-testid="annotation-card-stem"]');
+
+      return {
+        stem: { duration: Number(/(?:^|\s)duration-\[(\d+)ms\]/.exec(stem?.className ?? '')?.[1] ?? 0), delay: 0 },
+        surface: openTiming(words?.parentElement),
+        words: openTiming(words),
+      };
+    };
+
+    it('has the words in focus within a quarter of a second of opening', () => {
+      const { surface, words } = parts();
+
+      expect(words.delay + words.duration).toBeGreaterThan(0);
+      expect(words.delay + words.duration).toBeLessThanOrEqual(250);
+      expect(surface.delay + surface.duration).toBeLessThanOrEqual(300);
+    });
+
+    it('plays the same three beats as the hint editor', () => {
+      const css = readFileSync(resolve(__dirname, '../../../../src/styles/popover-animation.css'), 'utf-8');
+      const beat = (name: string): number[] =>
+        [...(new RegExp(`animation: ${name} ([^;]+);`).exec(css)?.[1] ?? '').matchAll(/(\d+)ms/g)].map((m) => Number(m[1]));
+      const { stem, surface, words } = parts();
+
+      expect(beat('blok-tether-stem-in')).toEqual([stem.duration]);
+      expect(beat('blok-tether-menu-in')).toEqual([surface.duration, surface.delay]);
+      expect(beat('blok-tether-content-in')).toEqual([words.duration, words.delay]);
     });
   });
 });

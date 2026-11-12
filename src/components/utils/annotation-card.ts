@@ -3,7 +3,7 @@ import { ANNOTATION_ATTR, ANNOTATION_SUBTITLE_ATTR } from '../../shared/annotati
 import { lightAnnotationPhrase } from './annotation-highlight';
 import { syncPortalDirection } from './portal-direction';
 import { createPositionTracker, type PositionTracker } from './popover/anchored-position';
-import { HINT_DELAY } from './tooltip';
+import { MIN_HINT_DELAY } from './tooltip';
 import { promoteToTopLayer, removeFromTopLayer } from './top-layer';
 import { twJoin } from './tw';
 
@@ -28,7 +28,7 @@ interface AnnotationCardOptions {
 
 /**
  * The card a reader gets for an annotated phrase: the hint text, and a quieter
- * subtitle under it. Hover shows it after the hint delay; a click pins it.
+ * subtitle under it. Hover shows it after the shortest hint delay; a click pins it.
  * Its text can be selected, so the shared tooltip cannot host it.
  */
 export class AnnotationCard {
@@ -71,7 +71,7 @@ export class AnnotationCard {
   }
 
   /**
-   * Hover: show after the hint delay.
+   * Hover: show after the shortest hint delay.
    * @param anchor - the annotated phrase
    */
   public show(anchor: HTMLElement): void {
@@ -87,7 +87,7 @@ export class AnnotationCard {
       this.showTimeout = null;
       this.pendingAnchor = null;
       this.showNow(anchor, false);
-    }, HINT_DELAY);
+    }, MIN_HINT_DELAY);
   }
 
   /**
@@ -363,7 +363,7 @@ export class AnnotationCard {
     stem.className = twJoin(
       'absolute w-[1.5px] h-[11px] -ml-[0.75px] left-(--blok-annotation-stem-x) bg-text-primary',
       'top-[-11px] origin-top group-data-[side=top]:top-auto group-data-[side=top]:bottom-[-11px] group-data-[side=top]:origin-bottom',
-      'scale-y-0 transition-[scale] duration-[110ms] ease-in',
+      'scale-y-0 transition-[scale] duration-[80ms] ease-in',
       'group-data-[state=open]:scale-y-100 group-data-[state=open]:ease-out',
       'motion-reduce:transition-none'
     );
@@ -378,7 +378,7 @@ export class AnnotationCard {
       'origin-[var(--blok-annotation-stem-x)_0] group-data-[side=top]:origin-[var(--blok-annotation-stem-x)_100%]',
       'opacity-0 scale-[0.55] transition-[opacity,scale] duration-[140ms] ease-in',
       'group-data-[state=open]:opacity-100 group-data-[state=open]:scale-100',
-      'group-data-[state=open]:duration-[380ms] group-data-[state=open]:delay-[90ms] group-data-[state=open]:ease-[cubic-bezier(0.2,1.45,0.35,1)]',
+      'group-data-[state=open]:duration-[240ms] group-data-[state=open]:delay-[40ms] group-data-[state=open]:ease-[cubic-bezier(0.2,1.45,0.35,1)]',
       'motion-reduce:transition-none motion-reduce:scale-100'
     );
 
@@ -388,7 +388,7 @@ export class AnnotationCard {
     body.className = twJoin(
       'opacity-0 blur-[5px] translate-y-[5px] transition-[opacity,filter,translate] duration-[120ms] ease-out',
       'group-data-[state=open]:opacity-100 group-data-[state=open]:blur-[0px] group-data-[state=open]:translate-y-0',
-      'group-data-[state=open]:duration-[260ms] group-data-[state=open]:delay-[190ms]',
+      'group-data-[state=open]:duration-[150ms] group-data-[state=open]:delay-[80ms]',
       'motion-reduce:transition-none motion-reduce:blur-[0px] motion-reduce:translate-y-0'
     );
 

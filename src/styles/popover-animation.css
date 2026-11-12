@@ -293,7 +293,7 @@
   background: var(--blok-text-primary);
   pointer-events: none;
   transform-origin: top;
-  animation: blok-tether-stem-in 110ms ease-out both;
+  animation: blok-tether-stem-in 80ms ease-out both;
 }
 
 [data-blok-inline-tether='above']::before {
@@ -308,7 +308,7 @@
   --_blok-tether-shift: clamp(8px - var(--_blok-tether-centre-x), -50%, 100vw - 8px - var(--_blok-tether-centre-x) - 100%);
   translate: var(--_blok-tether-shift) 0;
   transform-origin: calc(-1 * var(--_blok-tether-shift)) top;
-  animation: blok-tether-menu-in 380ms cubic-bezier(0.2, 1.45, 0.35, 1) 90ms both;
+  animation: blok-tether-menu-in 240ms cubic-bezier(0.2, 1.45, 0.35, 1) 40ms both;
 }
 
 /* Grows upward from the root. */
@@ -319,7 +319,7 @@
 }
 
 [data-blok-inline-tether] [data-blok-popover-items] {
-  animation: blok-tether-content-in 260ms ease-out 190ms both;
+  animation: blok-tether-content-in 150ms ease-out 80ms both;
 }
 
 @keyframes blok-tether-stem-in {

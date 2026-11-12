@@ -17,7 +17,7 @@ export const sortChevron = (row: HTMLElement): HTMLElement => {
 };
 
 /** notion-motion.md Round 17 §5: the rule's property list is 280 wide, its direction list 180. */
-const PROPERTY_FLYOUT_WIDTH = 280;
+export const PROPERTY_FLYOUT_WIDTH = 280;
 const DIRECTION_FLYOUT_WIDTH = 180;
 
 /**

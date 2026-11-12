@@ -303,6 +303,88 @@ describe('DatabaseViewControls', () => {
     expect(q('database-filter-bar-add')?.hasAttribute('data-popover-open')).toBe(false);
   });
 
+  // notion-motion.md Round 18 §2 (r18-adv-open.raw, -prop.raw, -op.raw): each rule is edited inline, its pickers are flyouts.
+  describe('advanced filter rules edited inline', () => {
+    const openAdvanced = (): { controls: DatabaseViewControls; saved: { view: DatabaseViewConfig }; ruleId: () => string; rule: () => Record<string, unknown> | undefined } => {
+      const { controls, saved } = setup();
+
+      click('database-toolbar-filter');
+      click('database-filter-picker-advanced');
+      const rule = (): Record<string, unknown> | undefined => controls.effective(saved.view).filterTree?.filterRules[0] as Record<string, unknown> | undefined;
+
+      return { controls, saved, rule, ruleId: () => String(rule()?.id) };
+    };
+    const panelDepthIsOne = (): boolean => document.querySelector('[data-blok-testid="database-advanced-filter"] [data-blok-testid="database-panel-back"]') === null;
+
+    it('draws the rule as property, operator, value and ⋯ controls, in a popover sized to them', () => {
+      const { ruleId } = openAdvanced();
+      const id = ruleId();
+
+      expect(text(q(`database-filter-rule-property-${id}`))).toBe('Name');
+      expect(text(q(`database-filter-rule-operator-${id}`))).toBe('tools.database.filterOperator.contains');
+      expect(q(`database-filter-rule-value-${id}`)).toBeInstanceOf(HTMLInputElement);
+      expect(q(`database-filter-rule-more-${id}`)).not.toBeNull();
+      expect(q('database-advanced-filter')?.style.width).not.toBe('290px');
+    });
+
+    it('opens the property list as a 280-wide flyout, and a pick resets the operator', () => {
+      const { ruleId, rule } = openAdvanced();
+      const id = ruleId();
+
+      click(`database-filter-rule-property-${id}`);
+
+      expect(panelDepthIsOne()).toBe(true);
+      expect(q('database-filter-rule-property-picker')?.style.width).toBe('280px');
+      click('database-pick-property-num');
+
+      expect(rule()).toEqual(expect.objectContaining({ id, propertyId: 'num', operator: 'equals', value: null }));
+      expect(q('database-filter-rule-property-picker')).toBeNull();
+      expect(text(q(`database-filter-rule-property-${id}`))).toBe('Amount');
+    });
+
+    it('opens the operator list as a 190-wide flyout under its button', () => {
+      const { ruleId, rule } = openAdvanced();
+      const id = ruleId();
+
+      click(`database-filter-rule-operator-${id}`);
+
+      expect(panelDepthIsOne()).toBe(true);
+      expect(q('database-filter-operator-picker')?.style.width).toBe('190px');
+      click('database-filter-op-does_not_contain');
+
+      expect(rule()).toEqual(expect.objectContaining({ id, operator: 'does_not_contain' }));
+    });
+
+    it('keeps typing in the value field across the redraw each keystroke causes', () => {
+      const { ruleId, rule } = openAdvanced();
+      const id = ruleId();
+      const type = (value: string): void => {
+        const input = q(`database-filter-rule-value-${id}`) as HTMLInputElement;
+
+        input.focus();
+        input.value = value;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+
+      type('a');
+      type('ab');
+
+      expect(rule()).toEqual(expect.objectContaining({ value: 'ab' }));
+      expect(q(`database-filter-rule-value-${id}`)).toHaveFocus();
+    });
+
+    it('deletes the rule from its ⋯ flyout', () => {
+      const { ruleId, controls, saved } = openAdvanced();
+      const id = ruleId();
+
+      click(`database-filter-rule-more-${id}`);
+      expect(panelDepthIsOne()).toBe(true);
+      click('database-filter-delete');
+
+      expect(controls.effective(saved.view).filterTree?.filterRules).toEqual([]);
+    });
+  });
+
   // notion-motion.md Round 18 §2 (r18-adv-bar.raw): the advanced chip goes first, before the simple chips.
   it('puts the advanced filter chip before the simple filter chips', () => {
     const { controls, saved } = setup();

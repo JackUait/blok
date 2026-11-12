@@ -16,6 +16,8 @@ export interface PanelPage {
   returnFocus?: string;
   /** Set as the panel's `data-blok-database-panel-page`, for CSS that holds one page's measured offsets. */
   name?: string;
+  /** The panel's width becomes a floor on this page: it grows to its widest row. */
+  fitContent?: boolean;
   build: (panel: DatabasePanel) => HTMLElement[];
 }
 
@@ -183,6 +185,15 @@ export class DatabasePanel {
       this.element.removeAttribute('data-blok-database-panel-page');
     } else {
       this.element.setAttribute('data-blok-database-panel-page', page.name);
+    }
+    const fit = page.fitContent === true;
+
+    // Only on a change: an opener may have set its own width (the sort panel's max-content).
+    // database.css lets the popover box follow a fitted width when a refresh grows it.
+    if (fit !== this.element.hasAttribute('data-fit-content')) {
+      this.element.toggleAttribute('data-fit-content', fit);
+      this.element.style.width = fit ? 'max-content' : `${this.options.width}px`;
+      this.element.style.minWidth = fit ? `${this.options.width}px` : '';
     }
     this.element.replaceChildren(...children);
   }

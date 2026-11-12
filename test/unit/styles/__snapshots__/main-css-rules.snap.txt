@@ -11040,6 +11040,11 @@ textarea[data-blok-database-property-description][data-blok-field] {
   border-radius: var(--blok-radius-surface);
 }
 
+[data-blok-popover-custom-class~='blok-database-panel'] [data-blok-popover-container]:has([data-blok-database-panel][data-fit-content]) {
+  inline-size: max-content;
+  min-inline-size: 0;
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-docked-page'] > [data-blok-popover-container] {
   --max-height: none;
   --blok-popover-box-shadow: none;
@@ -15598,6 +15603,64 @@ input[data-blok-database-picker-search]:focus {
 
 [data-blok-database-sort-row] {
   gap: var(--blok-space-2);
+}
+
+[data-blok-database-filter-rule] {
+  flex-wrap: nowrap;
+  gap: var(--blok-space-2);
+  padding: var(--blok-space-1);
+}
+
+[data-blok-database-filter-rule] > [data-blok-database-panel-note] {
+  flex-basis: 60px;
+}
+
+[data-blok-database-filter-rule] > [data-blok-database-filter-rule-button] {
+  flex: 0 0 auto;
+  width: auto;
+  height: 32px;
+  padding: 0 var(--blok-space-2);
+  border: 1px solid var(--blok-database-table-control-border);
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-sort-button-bg);
+  color: var(--blok-database-table-cell-text);
+}
+
+[data-blok-database-filter-rule] > [data-blok-database-filter-rule-button]:hover:not(:disabled), [data-blok-database-filter-rule] > [data-blok-database-filter-rule-button][data-popover-open], :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-filter-rule] > [data-blok-database-filter-rule-button]:focus-visible {
+  background-color: var(--blok-database-sort-button-hover-bg);
+}
+
+[data-blok-database-filter-rule] > [data-blok-database-filter-rule-value] {
+  width: 164px;
+  height: 32px;
+  margin: 0;
+  padding-block: 0;
+  padding-inline: var(--blok-space-1-5) var(--blok-space-2);
+  box-sizing: content-box;
+}
+
+[data-blok-database-filter-rule-more] {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-ink-secondary);
+  cursor: pointer;
+}
+
+[data-blok-database-filter-rule-more]:hover {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-filter-rule-more] svg {
+  width: 16px;
+  height: 16px;
 }
 
 [data-blok-database-panel-page="sort"] {

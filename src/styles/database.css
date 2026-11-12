@@ -7378,6 +7378,13 @@ textarea[data-blok-database-property-description][data-blok-field] {
   border-radius: var(--blok-radius-surface);
 }
 
+/* A panel sized to its rows (the advanced filter): the box follows it when a redraw makes it wider.
+   The popover's min-width is its show()-time --width, so it goes to 0 too. */
+[data-blok-popover-custom-class~='blok-database-panel'] [data-blok-popover-container]:has([data-blok-database-panel][data-fit-content]) {
+  inline-size: max-content;
+  min-inline-size: 0;
+}
+
 /* research/35 §2.3, research/27 18.png: on a full-page database View settings is a side panel from under the
    toolbar row to the window bottom. database-panel.ts sets the panel's height. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-docked-page'] > [data-blok-popover-container] {
@@ -12507,6 +12514,72 @@ input[data-blok-database-picker-search]:focus {
 
 [data-blok-database-sort-row] {
   gap: var(--blok-space-2);
+}
+
+/*
+ * notion-motion.md Round 18 §2 (r18-adv-open.raw), popover at x 539: the row 8 down, the property button at +76,
+ * buttons 32 tall and 8 apart (712.1 → 720.1), the value text 164 wide, 14 after the operator and 16 before
+ * the 32×32 ⋯, which ends 8 short of the edge. The 4/60/8 split of the 76 and the field's 6/8 padding are
+ * derived from those rects, not read.
+ */
+[data-blok-database-filter-rule] {
+  flex-wrap: nowrap;
+  gap: var(--blok-space-2);
+  padding: var(--blok-space-1);
+}
+
+[data-blok-database-filter-rule] > [data-blok-database-panel-note] {
+  flex-basis: 60px;
+}
+
+[data-blok-database-filter-rule] > [data-blok-database-filter-rule-button] {
+  flex: 0 0 auto;
+  width: auto;
+  height: 32px;
+  padding: 0 var(--blok-space-2);
+  border: 1px solid var(--blok-database-table-control-border);
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-sort-button-bg);
+  color: var(--blok-database-table-cell-text);
+}
+
+[data-blok-database-filter-rule] > [data-blok-database-filter-rule-button]:hover:not(:disabled),
+[data-blok-database-filter-rule] > [data-blok-database-filter-rule-button][data-popover-open],
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-database-filter-rule] > [data-blok-database-filter-rule-button]:focus-visible {
+  background-color: var(--blok-database-sort-button-hover-bg);
+}
+
+[data-blok-database-filter-rule] > [data-blok-database-filter-rule-value] {
+  width: 164px;
+  height: 32px;
+  margin: 0;
+  padding-block: 0;
+  padding-inline: var(--blok-space-1-5) var(--blok-space-2);
+  box-sizing: content-box;
+}
+
+[data-blok-database-filter-rule-more] {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-ink-secondary);
+  cursor: pointer;
+}
+
+[data-blok-database-filter-rule-more]:hover {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-filter-rule-more] svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* r35:497-509, r10-sort-popover.png: rules 40px apart, the first 8px down, Add sort 6px under the last, 5px under Delete sort. */

@@ -26,10 +26,10 @@ import type { FilterConfig, PropertyDefinition, PropertyType, SelectOption } fro
 type Filter = FilterConfig & { id: string };
 
 /** notion-motion.md Round 18 §2 (r18-filter-op-open.raw): rows 182x28 in a 190-wide list. */
-const OPERATOR_FLYOUT_WIDTH = 190;
+export const OPERATOR_FLYOUT_WIDTH = 190;
 /** notion-motion.md Round 18 §2 (r18-filter-more.raw): the rule ⋯ list. */
-const MORE_FLYOUT_WIDTH = 240;
-const MORE_FLYOUT_GAP = 2;
+export const MORE_FLYOUT_WIDTH = 240;
+export const MORE_FLYOUT_GAP = 2;
 
 const idList = (value: FilterConfig['value']): string[] => {
   if (Array.isArray(value)) return value.filter((id): id is string => typeof id === 'string');

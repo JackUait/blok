@@ -1631,6 +1631,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R14TABS_BYTES = 901;
     // Round 16 lane r16: calculation submenus fade with no scale; the table selection bar and row halo fade out; the 300x36 New group popover; the 99+ row's switch layout.
     const DATABASE_R16_BYTES = 423 + 978 + 941 + 1445;
+    // Round 18 lane r18b: the advanced filter's inline rule row (Where, property, operator, value, ⋯) and its fitted popover box.
+    const DATABASE_R18B_BYTES = 2_493;
     // Dashboard widgets: the grid gaps, the widget card, its fixed header and ⋯ over a scrolling view, Add widget, the empty state, the drop line; and the hidden New button.
     const DATABASE_DASHBOARD_BYTES = 3_548;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
@@ -2106,6 +2108,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R14ROWS_BYTES
       + DATABASE_R14TABS_BYTES
       + DATABASE_R16_BYTES
+      + DATABASE_R18B_BYTES
       + DATABASE_DASHBOARD_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES

@@ -85,8 +85,8 @@ import { nanoid } from 'nanoid';
 import { CARD_LAYOUTS, resolveSubItemsDisplay, resolveSubItemsFilter } from './sub-items';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { automationListPage } from './database-automations-panel';
-import { openSortDirectionFlyout, openSortPropertyFlyout, sortChevron } from './database-sort-flyouts';
-import { dateRuleControls, filterChip, openFilterChip, operatorPick } from './database-filter-chip';
+import { PROPERTY_FLYOUT_WIDTH, openFlyout, openSortDirectionFlyout, openSortPropertyFlyout, sortChevron } from './database-sort-flyouts';
+import { MORE_FLYOUT_GAP, MORE_FLYOUT_WIDTH, OPERATOR_FLYOUT_WIDTH, dateRuleControls, filterChip, openFilterChip, operatorPick } from './database-filter-chip';
 import { VIEW_ICONS } from './database-tab-bar';
 import type { AutomationSettings } from './database-automations-panel';
 import { offersAutofill } from './property-values';
@@ -1977,7 +1977,8 @@ export class ViewSettingsPages {
 
   // ─── Advanced filter ───
 
-  advanced(): PanelPage {
+  /** `titled` false: the chip's popover, which Notion draws with no header (r18-adv-open.raw). */
+  advanced(titled = true): PanelPage {
     // Keep rule ids stable until the first edit saves the tree.
     const view = this.ctx.view();
     const fallback = { ...emptyFilterTree(), filterRules: withEntryIds(view.filters) };
@@ -1988,7 +1989,9 @@ export class ViewSettingsPages {
     });
 
     return {
-      title: this.t('filterAdvanced'),
+      ...(titled ? { title: this.t('filterAdvanced') } : {}),
+      // notion-motion.md Round 18 §2 (r18-adv-open.raw): 508.2 wide for one Name rule, the width of its rules.
+      fitContent: true,
       build: (panel) => [
         ...this.groupRows(panel, tree(), 1, tree, write),
         panelSeparator(),
@@ -2014,7 +2017,6 @@ export class ViewSettingsPages {
     write: (next: FilterGroup) => void
   ): HTMLElement[] {
     const rows: HTMLElement[] = [];
-    const schema = this.ctx.schema();
 
     group.filterRules.forEach((node, index) => {
       const prefix = this.conjunctionLabel(panel, group, index, tree, write);
@@ -2038,21 +2040,7 @@ export class ViewSettingsPages {
 
         return;
       }
-      const property = schema.find((p) => p.id === node.propertyId);
-      const line = document.createElement('div');
-
-      line.setAttribute('data-blok-database-filter-rule', '');
-      line.append(prefix, panelRow({
-        label: property === undefined ? this.t('filterGone') : filterPillLabel(node, property, (key, vars) => this.ctx.i18n.t(key, vars), (id) => this.personName(id), (id) => this.ctx.relatedRows?.(property).find((row) => row.id === id)?.title),
-        testId: `database-filter-rule-${node.id}`,
-        opensPage: true,
-        onClick: () => panel.push(this.ruleEditor({
-          read: () => findRule(tree(), node.id),
-          update: (patch) => write(updateFilterRule(tree(), node.id, patch)),
-          remove: () => write(removeFilterNode(tree(), node.id)),
-        })),
-      }));
-      rows.push(line);
+      rows.push(this.ruleLine(panel, node, prefix, tree, write));
     });
 
     rows.push(panelRow({
@@ -2079,6 +2067,101 @@ export class ViewSettingsPages {
     }
 
     return rows;
+  }
+
+  /**
+   * notion-motion.md Round 18 §2 (r18-adv-open.raw): "Where · property ⌄ · operator ⌄ · value · ⋯", edited in
+   * place. The property and operator lists are flyouts under their buttons (r18-adv-prop.raw, r18-adv-op.raw).
+   * A value that is not one text field (options, people, dates) still opens the rule page: Notion's is unread.
+   */
+  private ruleLine(
+    panel: DatabasePanel,
+    node: FilterConfig & { id: string },
+    prefix: HTMLElement,
+    tree: () => FilterGroup,
+    write: (next: FilterGroup) => void
+  ): HTMLElement {
+    const id = node.id;
+    const line = document.createElement('div');
+    const property = this.property(node.propertyId);
+    const save = (patch: Partial<Pick<FilterConfig, 'propertyId' | 'operator' | 'value'>>): void => {
+      write(updateFilterRule(tree(), id, patch));
+      panel.refresh();
+    };
+    const button = (testId: string, label: string, onClick: (self: HTMLElement) => void, icon?: string): HTMLElement => {
+      const self: HTMLElement = sortChevron(panelRow({ label, testId, ...(icon !== undefined ? { icon } : {}), onClick: () => onClick(self) }));
+
+      self.setAttribute('data-blok-database-filter-rule-button', '');
+
+      return self;
+    };
+    const more = document.createElement('button');
+
+    line.setAttribute('data-blok-database-filter-rule', '');
+    line.setAttribute('data-blok-testid', `database-filter-rule-${id}`);
+    more.type = 'button';
+    more.setAttribute('data-blok-database-filter-rule-more', '');
+    more.setAttribute('data-blok-testid', `database-filter-rule-more-${id}`);
+    more.setAttribute('aria-label', this.t('tableMoreActions'));
+    more.innerHTML = IconDotsHorizontal;
+    more.addEventListener('click', () => openFlyout(more, panel, 'database-filter-rule-more-menu', MORE_FLYOUT_WIDTH, (pick) => [panelRow({
+      label: this.t('filterDelete'),
+      testId: 'database-filter-delete',
+      icon: IconTrash,
+      onClick: () => pick(() => {
+        write(removeFilterNode(tree(), id));
+        panel.refresh();
+      }),
+    })], { beside: MORE_FLYOUT_GAP }));
+
+    if (property === undefined) {
+      line.append(prefix, panelText(this.t('filterGone')), more);
+
+      return line;
+    }
+    const opKey = operatorLabelKey(property.type, node.operator);
+    const filterable = this.ctx.schema().filter((p) => FILTERABLE_TYPES.includes(p.type));
+    const ordered = [...filterable.filter((p) => p.type === 'title'), ...filterable.filter((p) => p.type !== 'title').sort((a, b) => a.name.localeCompare(b.name))];
+    const propertyButton = button(`database-filter-rule-property-${id}`, property.name, (self) => {
+      openFlyout(self, panel, 'database-filter-rule-property-picker', PROPERTY_FLYOUT_WIDTH, (pick) => ordered.map((p) => panelRow({
+        label: p.name,
+        icon: propertyTypeMeta(p.type).icon,
+        testId: `database-pick-property-${p.id}`,
+        onClick: () => pick(() => {
+          const { id: _fresh, ...condition } = defaultFilterFor(p);
+
+          save(condition);
+        }),
+      })));
+    }, propertyTypeMeta(property.type).icon);
+    const operatorButton = button(`database-filter-rule-operator-${id}`, opKey === undefined ? node.operator : this.ctx.i18n.t(opKey), (self) => {
+      openFlyout(self, panel, 'database-filter-operator-picker', OPERATOR_FLYOUT_WIDTH, (pick) => operatorChoicesFor(property, node.operator).map((choice) => panelRow({
+        label: this.ctx.i18n.t(choice.labelKey),
+        testId: `database-filter-op-${choice.operator}`,
+        checked: menuOperatorOf(node.operator) === choice.operator,
+        onClick: () => pick(() => save(operatorPick(property, choice.operator, node))),
+      })));
+    });
+    const controls = this.valueControls(property, node, (patch) => {
+      save(patch.operator === undefined ? patch : { ...patch, operator: keepLead(node.operator, patch.operator) });
+    });
+    const [only] = controls;
+
+    line.append(prefix, propertyButton, operatorButton);
+    if (controls.length === 1 && only instanceof HTMLInputElement) {
+      only.setAttribute('data-blok-testid', `database-filter-rule-value-${id}`);
+      only.setAttribute('data-blok-database-filter-rule-value', '');
+      line.append(only);
+    } else if (controls.length > 0) {
+      line.append(button(`database-filter-rule-value-${id}`, filterPillParts(node, property, (key, vars) => this.ctx.i18n.t(key, vars), (person) => this.personName(person), (row) => this.ctx.relatedRows?.(property).find((r) => r.id === row)?.title).value || this.t('filterValue'), () => panel.push(this.ruleEditor({
+        read: () => findRule(tree(), id),
+        update: (patch) => write(updateFilterRule(tree(), id, patch)),
+        remove: () => write(removeFilterNode(tree(), id)),
+      }))));
+    }
+    line.append(more);
+
+    return line;
   }
 
   /** "Where" on the first rule, the And/Or choice on the second, plain text after (research/08). */
@@ -2798,8 +2881,9 @@ export const openFilterList = (anchor: HTMLElement, ctx: ViewSettingsContext, te
 export const openAdvancedFilter = (anchor: HTMLElement, ctx: ViewSettingsContext, onClose?: (escape: boolean) => void): DatabasePanel => {
   const panel = new DatabasePanel({
     anchor,
-    root: new ViewSettingsPages(ctx).advanced(),
+    root: new ViewSettingsPages(ctx).advanced(false),
     testId: 'database-advanced-filter',
+    // The floor under the rules' width (advanced() fits its content). Blok's old fixed width, unmeasured in Notion.
     width: 290,
     // notion-motion.md Round 18 §2 (r18-adv-open.raw): 4px under the "1 rule" chip.
     gap: 4,

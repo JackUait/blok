@@ -435,6 +435,9 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
       dispatchChange: vi.fn(),
       preservedData: blockData,
       preservedTunes: tunes,
+      get isEmpty(): boolean {
+        return (editable.textContent ?? '') === '';
+      },
     } as unknown as BlockAPI;
 
     registry.set(id, block);
@@ -2742,6 +2745,42 @@ describe('cell-selection wiring', () => {
 
     expect(harness.idsOf(0, 0)).toEqual([]);
     expect(harness.focusClearedCell).not.toHaveBeenCalled();
+  });
+
+  // A second Delete on the emptied range would swap the empty paragraphs for
+  // new ones: an undo step that changes nothing, so the next undo looks dead.
+  it('leaves an already-empty range alone when the range stays selected', () => {
+    const harness = createHarness();
+    const cells = [harness.cellOf(0, 0), harness.cellOf(0, 1)];
+
+    cellSelectionOptions().onClearContent(cells, { keepRange: true });
+    cells.forEach((cell) => harness.ensureCellHasBlock(cell));
+    const emptied = [harness.idsOf(0, 0), harness.idsOf(0, 1)];
+    const transactions = harness.transactions.length;
+
+    cellSelectionOptions().onClearContent(cells, { keepRange: true });
+
+    expect([harness.idsOf(0, 0), harness.idsOf(0, 1)]).toEqual(emptied);
+    expect(harness.transactions).toHaveLength(transactions);
+  });
+
+  it('still empties a range that holds a non-paragraph block', () => {
+    const harness = createHarness();
+    const cells = [harness.cellOf(0, 0), harness.cellOf(0, 1)];
+
+    cellSelectionOptions().onClearContent(cells, { keepRange: true });
+    cells.forEach((cell) => harness.ensureCellHasBlock(cell));
+    const [first] = harness.idsOf(0, 0);
+    const block = harness.blockOf(first);
+
+    if (block === undefined) {
+      throw new Error('no seeded block');
+    }
+    Object.defineProperty(block, 'name', { value: 'header' });
+
+    cellSelectionOptions().onClearContent(cells, { keepRange: true });
+
+    expect(harness.idsOf(0, 0)).toEqual([]);
   });
 
   it('reads cell metadata straight off the model', () => {

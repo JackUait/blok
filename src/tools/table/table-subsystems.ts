@@ -1031,8 +1031,6 @@ export class TableSubsystems {
    * Colors and placement are formatting, not content: Notion's "Clear contents"
    * leaves them in place, and so does this. (There is no "clear formatting"
    * action; if one is ever added it must be its own explicitly-named operation.)
-   */
-  /**
    * @param cells - the cells to empty
    * @param focus - put the caret in the first cell; a cell-range Delete keeps the range instead (Notion U162)
    */
@@ -1040,6 +1038,12 @@ export class TableSubsystems {
     const cellBlocks = this.host.cellBlocks;
 
     if (!cellBlocks || cells.length === 0) {
+      return;
+    }
+
+    // The range stays selected after a Delete, so a second Delete would swap empty
+    // paragraphs for new ones: a step that changes nothing, and a dead undo press.
+    if (!focus && this.cellsAlreadyEmpty(cellBlocks.getBlockIdsFromCells(cells), cells.length)) {
       return;
     }
 
@@ -1073,6 +1077,19 @@ export class TableSubsystems {
     if (anchor !== null && (grid?.contains(anchor) === true || !anchor.isConnected)) {
       selection?.removeAllRanges();
     }
+  }
+
+  /**
+   * Each cell holds just the empty paragraph a clear leaves behind.
+   * @param ids - the cells' block ids
+   * @param cellCount - how many cells there are
+   */
+  private cellsAlreadyEmpty(ids: string[], cellCount: number): boolean {
+    return ids.length === cellCount && ids.every((id) => {
+      const block = this.host.api.blocks.getById(id);
+
+      return block?.name === 'paragraph' && block.isEmpty;
+    });
   }
 
   private handleRowColAction(gridEl: HTMLElement, action: RowColAction): void {

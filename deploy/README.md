@@ -16,22 +16,6 @@ Chaque connexion envoie un code neuf dans cette boîte locale. Aucun e-mail rée
 `./deploy/demo.sh stop` arrête la démo sans effacer les données ; `./deploy/demo.sh status` affiche les conteneurs.
 Cette pile distincte (`blok-local`) est limitée à l'ordinateur via `127.0.0.1`. La boîte mail donne accès aux codes : elle est uniquement destinée à la démonstration locale. Le déploiement public ci-dessous utilise ton relais SMTP et ne contient pas ce service.
 
-## Utiliser des images préconstruites
-
-`compose.images.yaml` lance les mêmes trois services sans aucune compilation et sans checkout du code. Charge d’abord les images Blok adaptées à l’architecture du VPS avec `docker load`, puis utilise ce fichier comme `compose.yaml`. Renseigne `APP_IMAGE` et `WEB_IMAGE` avec les tags chargés dans `.env` ; les deux services utilisent `pull_policy: never`. PostgreSQL utilise toujours l’image officielle.
-
-Le paquet exporté pour `debian@sandbox-tousamba-cloud` est en **linux/amd64 (x86_64)**. Il contient `images.tar`, `compose.yaml`, `.env.example`, `prepare.sh` et les scripts de sauvegarde/restauration. Après extraction :
-
-```sh
-cd blok-vps-amd64
-./prepare.sh
-nano .env
-sudo docker load -i images.tar
-sudo docker compose up -d --wait --wait-timeout 180
-```
-
-Le script `prepare.sh` crée les secrets, sans démarrer les conteneurs. Renseigne ton adresse administrateur et l’authentification du relais SMTP avant le lancement. Les données ne font pas partie de l’archive d’images : les volumes sont créés au premier démarrage. Docker Engine avec Compose v2 est nécessaire ; [installation officielle sur Debian](https://docs.docker.com/engine/install/debian/).
-
 ## Construire les images sur ton VPS
 
 Prérequis : Git, Docker avec Compose v2, OpenSSL et un proxy HTTPS existant pour le domaine.
@@ -68,9 +52,10 @@ Dans `.env`, une ligne par variable, **sans antislash final**. Un mot de passe c
 Dans Compose, les valeurs `MAILER_*` non vides sont prioritaires ; les anciens noms `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` et `SMTP_FROM` restent acceptés. Quand un hôte SMTP est configuré, SMTP est utilisé. Sans hôte SMTP, `RESEND_API_KEY` et `MAIL_FROM` permettent encore d’utiliser Resend.
 
 ```sh
-./deploy/install.sh
-./deploy/stack.sh ps
-./deploy/stack.sh logs --tail 100 app web
+cd deploy
+sudo docker compose up -d --build --wait --wait-timeout 180
+sudo docker compose ps
+sudo docker compose logs --tail 100 app web
 ```
 
 Le proxy existant gère le certificat HTTPS public. Caddy écoute en HTTP sur le port 80 du conteneur, publié uniquement sur `127.0.0.1:18088`. `PUBLIC_URL` reste l’adresse HTTPS du domaine. Vérifie la pile depuis le VPS avec `curl http://127.0.0.1:18088/healthz`.
@@ -79,6 +64,22 @@ L'attribution initiale ne se produit qu'une fois ; modifier cette variable aprè
 
 Si le réseau Docker `172.30.87.0/24` existe déjà, change ensemble `BLOK_NETWORK_SUBNET`, `BLOK_NETWORK_DYNAMIC_RANGE` et `CADDY_IP` dans `.env`. L'adresse fixe de Caddy doit rester hors de la plage dynamique.
 Seul Caddy est un proxy de confiance ; PostgreSQL et le service Go n'exposent aucun port sur le VPS.
+
+## Utiliser des images préconstruites
+
+`compose.images.yaml` lance les mêmes trois services sans aucune compilation et sans checkout du code. Charge d’abord les images Blok adaptées à l’architecture du VPS avec `docker load`, puis utilise ce fichier comme `compose.yaml`. Renseigne `APP_IMAGE` et `WEB_IMAGE` avec les tags chargés dans `.env` ; les deux services utilisent `pull_policy: never`. PostgreSQL utilise toujours l’image officielle.
+
+Le paquet exporté pour `debian@sandbox-tousamba-cloud` est en **linux/amd64 (x86_64)**. Il contient `images.tar`, `compose.yaml`, `.env.example`, `prepare.sh` et les scripts de sauvegarde/restauration. Après extraction :
+
+```sh
+cd blok-vps-amd64
+./prepare.sh
+nano .env
+sudo docker load -i images.tar
+sudo docker compose up -d --wait --wait-timeout 180
+```
+
+Le script `prepare.sh` crée les secrets, sans démarrer les conteneurs. Renseigne ton adresse administrateur et l’authentification du relais SMTP avant le lancement. Les données ne font pas partie de l’archive d’images : les volumes sont créés au premier démarrage. Docker Engine avec Compose v2 est nécessaire ; [installation officielle sur Debian](https://docs.docker.com/engine/install/debian/).
 
 ## Membres et administration
 

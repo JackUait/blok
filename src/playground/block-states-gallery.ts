@@ -10,8 +10,6 @@ export interface BlockStateSegment {
 export interface BlockStatesSpec {
   tool: string;
   label: string;
-  /** Cards take the whole row instead of sharing it two-up. */
-  wide?: boolean;
   segments: BlockStateSegment[];
 }
 
@@ -110,10 +108,6 @@ function createPanel(spec: BlockStatesSpec, renderBlock: (args: RenderBlockArgs)
   panel.className = 'block-states-panel';
   panel.setAttribute('role', 'tabpanel');
   panel.setAttribute('data-tool', spec.tool);
-
-  if (spec.wide) {
-    panel.setAttribute('data-wide', 'true');
-  }
 
   grid.className = 'block-states-grid';
   panel.append(createPanelHead(spec, () => cards), grid);

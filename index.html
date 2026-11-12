@@ -449,11 +449,10 @@
 
     .block-states-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 1fr);
       gap: 20px;
       align-items: start;
     }
-    .block-states-panel[data-wide] .block-states-grid { grid-template-columns: minmax(0, 1fr); }
     .block-states-card {
       position: relative;
       min-width: 0;
@@ -507,7 +506,6 @@
       .block-states-tab[aria-selected="true"],
       .block-states-tab[aria-selected="true"]:hover,
       .block-states-tabs:not([data-ready]) .block-states-tab[aria-selected="true"] { background: var(--pg-ink); border-color: var(--pg-ink); }
-      .block-states-grid { grid-template-columns: minmax(0, 1fr); }
     }
     @media (max-width: 768px) {
       #block-states-gallery { padding-left: 20px; padding-right: 20px; }
@@ -3261,9 +3259,6 @@
     // segment; a state with `toolConfig` gets its own segment (and thus its
     // own editor instance) so tool-level options like `sources` can vary
     // per state.
-    // Tools whose states need the full row: they lay out wide content.
-    const WIDE_STATE_TOOLS = ['table', 'column_list', 'tabs', 'database', 'code', 'image', 'video', 'embed'];
-
     function flattenStates(tool, label, states) {
       const segments = states.map((state) => ({
         label: state.label,
@@ -3276,7 +3271,7 @@
         // A typed draft is filled into the first block's URL field after mount.
         drafts: state.draft ? [{ id: state.blocks[0].id, ...state.draft }] : [],
       }));
-      return { tool, label, wide: WIDE_STATE_TOOLS.includes(tool), segments };
+      return { tool, label, segments };
     }
 
     const PLAYGROUND_PLACES = [

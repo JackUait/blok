@@ -18,7 +18,6 @@ const buildSpec = (): BlockStatesSpec[] => [
   {
     tool: 'header',
     label: 'Header',
-    wide: true,
     segments: [
       { label: 'H1', blocks: [ { id: 'h-1', type: 'header', data: { text: 'Title', level: 1 } } ] },
     ],
@@ -130,12 +129,6 @@ describe('playground block states gallery', () => {
       container: cardsOf(panels()[1])[0].querySelector('[data-block-states-preview]'),
       segments: [ spec[1].segments[0] ],
     });
-  });
-
-  test('marks wide tools so their cards span the whole row', () => {
-    renderBlockStatesGallery({ container, spec: buildSpec(), renderBlock: vi.fn() });
-
-    expect(panels().map((p) => p.dataset.wide)).toEqual([ undefined, 'true' ]);
   });
 
   test('a state chip scrolls to its card and flashes it', () => {

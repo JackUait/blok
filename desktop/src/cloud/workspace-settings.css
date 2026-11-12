@@ -1,0 +1,37 @@
+[data-cloud-members-panel], [data-cloud-invite-dialog] { font:14px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--desktop-ink); }
+[data-cloud-settings-muted] { color:var(--desktop-muted); font-size:12px; margin:4px 0; }
+[data-cloud-settings-button] { min-height:30px; padding:5px 10px; border:1px solid var(--desktop-border); border-radius:5px; background:transparent; color:var(--desktop-ink); font:inherit; font-size:13px; cursor:pointer; white-space:nowrap; }
+[data-cloud-settings-button]:hover { background:var(--desktop-hover); }
+[data-cloud-settings-button][data-cloud-settings-primary] { color:#fff; background:#2383e2; border-color:#2383e2; }
+[data-cloud-settings-button][data-cloud-settings-primary]:hover { background:#1475d1; }
+[data-cloud-members-panel] :focus-visible, [data-cloud-invite-dialog] :focus-visible { outline:2px solid #2383e2; outline-offset:2px; }
+[data-cloud-members-panel] :disabled, [data-cloud-invite-dialog] :disabled { opacity:.5; cursor:wait; }
+[data-cloud-members-toolbar] { display:flex; gap:16px; align-items:center; justify-content:space-between; margin:0 0 24px; }
+[data-cloud-members-toolbar] p { margin:0; }
+[data-cloud-members-tabs] { display:flex; gap:18px; border-bottom:1px solid var(--desktop-border); margin-bottom:18px; }
+[data-cloud-members-tabs] button { border:0; border-bottom:2px solid transparent; border-radius:0; padding:8px 0; background:transparent; color:var(--desktop-muted); }
+[data-cloud-members-tabs] button[aria-selected=true] { color:var(--desktop-ink); border-bottom-color:var(--desktop-ink); }
+[data-cloud-members-panel] > input { width:100%; margin-bottom:12px; background:transparent; cursor:text; }
+[data-cloud-member-row] { display:flex; align-items:center; gap:14px; justify-content:space-between; padding:15px 0; border-bottom:1px solid var(--desktop-border); }
+[data-cloud-member-identity] { display:flex; align-items:center; gap:10px; min-width:0; }
+[data-cloud-member-identity] > div { min-width:0; }
+[data-cloud-member-identity] strong { display:block; overflow-wrap:anywhere; font-size:13px; font-weight:500; }
+[data-cloud-member-identity] p { overflow-wrap:anywhere; }
+[data-cloud-member-avatar] { display:grid; place-items:center; width:28px; height:28px; flex:none; background:var(--desktop-hover); border-radius:50%; color:var(--desktop-muted); font-size:13px; }
+[data-cloud-member-actions] { display:flex; gap:8px; align-items:center; flex:none; }
+[data-cloud-member-actions] select { max-width:155px; font-size:12px; background:transparent; }
+[data-cloud-members-empty] { padding:30px 0; color:var(--desktop-muted); font-size:13px; }
+[data-cloud-settings-error] { color:#c75045; font-size:12px; white-space:pre-line; overflow-wrap:anywhere; }
+[data-cloud-invitation] { z-index:200; margin:0; width:100%; height:100%; max-width:none; max-height:none; border:0; }
+[data-cloud-invite-dialog] { width:min(500px,100%); padding:28px; border:1px solid var(--desktop-border); border-radius:12px; background:var(--desktop-canvas); box-shadow:0 16px 64px #0004; }
+[data-cloud-invite-icon] { display:grid; place-items:center; width:42px; height:42px; border:1px solid var(--desktop-border); border-radius:10px; margin-bottom:18px; background:var(--desktop-strip); }
+[data-cloud-invite-icon] svg { width:26px; height:26px; }
+[data-cloud-invite-dialog] h2 { font-size:22px; letter-spacing:-.4px; margin:0 0 8px; font-weight:600; }
+[data-cloud-invite-dialog] form { margin-top:24px; }
+[data-cloud-invite-dialog] label { display:block; margin:16px 0 6px; font-size:12px; font-weight:500; }
+[data-cloud-invite-dialog] input, [data-cloud-invite-dialog] textarea, [data-cloud-invite-dialog] select { display:block; width:100%; margin-top:7px; padding:9px 10px; border:1px solid var(--desktop-border); border-radius:6px; font:inherit; font-weight:400; color:var(--desktop-ink); background:var(--desktop-canvas); cursor:text; }
+[data-cloud-invite-dialog] select { cursor:pointer; }
+[data-cloud-invite-dialog] textarea { resize:vertical; min-height:76px; max-height:180px; }
+[data-cloud-invite-hint] { margin:5px 0 0; font-size:11px; color:var(--desktop-muted); }
+[data-cloud-invite-actions] { display:flex; justify-content:flex-end; gap:8px; margin-top:26px; }
+@media(max-width:700px) { [data-cloud-member-row] { align-items:flex-start; flex-wrap:wrap; } [data-cloud-member-actions] { margin-left:38px; flex-wrap:wrap; } [data-cloud-members-toolbar] { align-items:flex-start; flex-direction:column; gap:10px; } [data-cloud-members-tabs] { gap:12px; } [data-cloud-invite-dialog] { padding:22px; } }

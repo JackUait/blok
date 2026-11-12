@@ -8,6 +8,7 @@ export default defineConfig({
   plugins: [tailwindcss()],
   resolve: {
     alias: {
+      '@blok/modal-dialog': fileURLToPath(new URL('../src/components/utils/modal-dialog.ts', import.meta.url)),
       '@bloklabs/core/full': fileURLToPath(new URL('../src/full.ts', import.meta.url)),
       '@bloklabs/core/tools': fileURLToPath(new URL('../src/tools/index.ts', import.meta.url)),
       '@blok/sidebar': fileURLToPath(new URL('../src/shell/sidebar.ts', import.meta.url)),

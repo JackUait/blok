@@ -1,8 +1,20 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { rememberWorkspace, workspaceKey, type RemoteWorkspace } from './workspace-registry';
 import { applyAppearance, createDesktopFooter, readAppearance } from './settings';
 
+const childUi = vi.hoisted(() => ({
+  destroy: vi.fn(), refresh: vi.fn(async () => undefined),
+  mount: vi.fn(), invite: vi.fn(),
+}));
+vi.mock('./cloud/workspace-settings', () => ({
+  mountWorkspaceMembers: childUi.mount, openWorkspaceInvitation: childUi.invite,
+}));
+beforeEach(() => {
+  vi.clearAllMocks();
+  childUi.mount.mockReturnValue({destroy: childUi.destroy, refresh: childUi.refresh});
+});
 afterEach(() => {
+  document.querySelector<HTMLButtonElement>('[data-desktop-settings-close]')?.click();
   document.body.innerHTML = '';
   document.body.removeAttribute('data-blok-theme');
   document.documentElement.removeAttribute('data-blok-theme');
@@ -83,13 +95,39 @@ describe('workspace menu hierarchy',()=>{
     expect(menu.querySelector('[aria-label="Sur cet appareil"]')).toBeNull();
     expect(menu.querySelector('[role="menuitemradio"][aria-current="true"]')?.textContent).toContain('Tousambassadeurs');
   });
-  it('routes admin settings and invitations directly through their named cloud sections',()=>{
-    const footer=remoteFooter();const events: unknown[]=[];
+  it('opens existing settings and compact invitations in place; only account management navigates',()=>{
+    const footer=remoteFooter();const events: unknown[]=[];const href=location.href;
     footer.addEventListener('blok:desktop-connect-cloud',(event)=>events.push((event as CustomEvent).detail));
     [...footer.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find(node=>node.textContent==='Paramètres')!.click();
+    expect(document.querySelector('[data-desktop-settings-theme]')).not.toBeNull();
+    expect(footer.inert || footer.hasAttribute('inert')).toBe(true);
+    expect(location.href).toBe(href); expect(events).toEqual([]);
+    document.querySelector<HTMLButtonElement>('[data-desktop-settings-close]')!.click();
     footer.querySelector<HTMLButtonElement>('[data-desktop-menu-invite]')!.click();
+    expect(childUi.invite).toHaveBeenCalledWith(expect.objectContaining({slug:'tousambassadeurs',workspaceName:'Tousambassadeurs'}));
     footer.querySelector<HTMLButtonElement>('[data-desktop-menu-connect]')!.click();
-    expect(events).toEqual([{section:'settings'},{section:'invites'},{section:'account'}]);
+    expect(events).toEqual([{section:'account'}]);
+  });
+  it('reuses the members panel, nests invitations inside the settings modal, and tears down the panel on close',()=>{
+    const footer=remoteFooter();
+    [...footer.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find(node=>node.textContent==='Paramètres')!.click();
+    const dialog=document.querySelector<HTMLElement>('[data-desktop-settings-dialog]')!;
+    [...dialog.querySelectorAll<HTMLButtonElement>('[data-desktop-settings-nav-item]')].find(node=>node.textContent==='Membres')!.click();
+    expect(childUi.mount).toHaveBeenCalledWith(expect.any(HTMLElement),expect.objectContaining({slug:'tousambassadeurs'}));
+    childUi.mount.mock.calls[0]![1].onInvite();
+    expect(childUi.invite).toHaveBeenLastCalledWith(expect.objectContaining({container:dialog}));
+    dialog.querySelector<HTMLButtonElement>('[data-desktop-settings-close]')!.click();
+    expect(childUi.destroy).toHaveBeenCalledOnce();
+    expect(footer.hasAttribute('inert')).toBe(false);
+  });
+  it('shows actual account identity and role without an editable workspace-name masquerading as a profile',()=>{
+    const footer=remoteFooter();
+    [...footer.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find(node=>node.textContent==='Paramètres')!.click();
+    const dialog=document.querySelector<HTMLElement>('[data-desktop-settings-dialog]')!;
+    [...dialog.querySelectorAll<HTMLButtonElement>('[data-desktop-settings-nav-item]')].find(node=>node.textContent==='member@example.org')!.click();
+    expect(dialog.querySelector('[data-desktop-settings-content]')?.textContent).toContain('member@example.org');
+    expect(dialog.querySelector('[data-desktop-settings-content]')?.textContent).toContain('Administrateur');
+    expect(dialog.querySelector('[data-desktop-settings-name]')).toBeNull();
   });
   it.each(['member','viewer'] as const)('keeps invitations out of the %s menu and opens appearance preferences',role=>{
     const footer=remoteFooter(role);

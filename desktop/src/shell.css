@@ -363,18 +363,22 @@ body[data-blok-theme="light"] [data-desktop-floating-toc] {
 }
 [data-desktop-menu-item]:hover { background: var(--desktop-hover); }
 [data-desktop-menu-item] svg, [data-desktop-settings-nav-item] svg { flex: none; color: var(--desktop-muted); }
-[data-desktop-settings-overlay] {
+/* Preserve modal geometry above the shared two-attribute popover reset. */
+[data-desktop-settings-overlay],
+[data-desktop-settings-overlay][data-blok-top-layer][popover] {
   position: fixed; inset: 0; z-index: 100;
+  box-sizing: border-box; margin: 0; width: 100vw; height: 100vh; height: 100dvh;
+  max-width: none; max-height: none; border: 0; overflow: auto;
   display: grid; place-items: center; padding: 32px;
   background: rgba(0, 0, 0, .55);
 }
 [data-desktop-settings-dialog] {
-  display: flex; width: min(880px, 100%); height: min(560px, 100%);
+  display: flex; width: min(1100px, 100%); height: min(800px, 80dvh);
   overflow: hidden; border: 1px solid var(--desktop-border); border-radius: 12px;
   background: var(--desktop-canvas); color: var(--desktop-ink);
   box-shadow: 0 24px 72px rgba(0, 0, 0, .38);
 }
-[data-desktop-settings-nav] { flex: 0 0 230px; padding: 40px 8px 12px; border-right: 1px solid var(--desktop-border); background: var(--desktop-strip); }
+[data-desktop-settings-nav] { flex: 0 0 230px; padding: 30px 8px 18px; overflow-y: auto; border-right: 1px solid var(--desktop-border); background: var(--desktop-strip); }
 [data-desktop-settings-nav-heading] { padding: 8px 12px; color: var(--desktop-muted); font-size: 12px; font-weight: 600; }
 [data-desktop-settings-nav-item] {
   display: flex; align-items: center; gap: 10px; width: 100%; height: 34px; padding: 0 12px; border: 0; border-radius: 6px;
@@ -443,7 +447,8 @@ body[data-blok-theme="light"] [data-desktop-floating-toc] {
   outline: 2px solid #2e8cff; outline-offset: 2px;
 }
 @media (max-width: 680px) {
-  [data-desktop-settings-overlay] { padding: 12px; }
+  [data-desktop-settings-overlay],
+  [data-desktop-settings-overlay][data-blok-top-layer][popover] { padding: 12px; }
   [data-desktop-settings-nav] { flex-basis: 145px; }
   [data-desktop-settings-main] { padding: 48px 20px; }
 }
@@ -492,3 +497,21 @@ body[data-blok-theme="light"] [data-desktop-floating-toc] {
 [data-desktop-settings-content] details summary { cursor: pointer; margin-bottom: 12px; }
 
 div[data-desktop-menu-account], div[data-desktop-menu-account]:hover { cursor: default; background: transparent; }
+
+[data-desktop-settings-nav-item] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-desktop-settings-nav-item] svg { flex: none; }
+[data-desktop-settings-nav-heading]:not(:first-child) { margin-top: 20px; }
+[data-desktop-settings-row-value] { min-width: 0; overflow-wrap: anywhere; color: var(--desktop-muted); font-size: 14px; text-align: right; }
+@media (max-width: 520px) {
+  [data-desktop-settings-dialog] { flex-direction: column; height: min(800px, calc(100dvh - 24px)); }
+  [data-desktop-settings-nav] { flex: 0 0 160px; padding: 10px; border-right: 0; border-bottom: 1px solid var(--desktop-border); }
+  [data-desktop-settings-main] { padding: 48px 20px 24px; }
+  [data-desktop-settings-row] { gap: 12px; flex-wrap: wrap; }
+}
+
+[data-desktop-settings-overlay][data-cloud-invitation][data-blok-top-layer][popover] { z-index: 200; }
+
+@media (max-width: 700px) {
+  [data-desktop-settings-overlay],
+  [data-desktop-settings-overlay][data-blok-top-layer][popover] { padding: 12px; }
+}

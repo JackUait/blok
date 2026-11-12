@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"regexp"
 	"time"
+	"unicode/utf8"
 )
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{1,62}$`)
@@ -363,10 +364,15 @@ func (s *Service) invites(w http.ResponseWriter, r *http.Request, u identity, ws
 		return
 	}
 	var in struct {
-		Email string `json:"email"`
-		Role  string `json:"role"`
+		Email   string `json:"email"`
+		Role    string `json:"role"`
+		Message string `json:"message"`
 	}
 	if !body(w, r, &in) {
+		return
+	}
+	if utf8.RuneCountInString(in.Message) > 2000 {
+		problem(w, 400, "Invitation message must be at most 2000 characters")
 		return
 	}
 	email, e := normalizeEmail(in.Email)
@@ -391,7 +397,11 @@ func (s *Service) invites(w http.ResponseWriter, r *http.Request, u identity, ws
 		problem(w, 500, "Invitation failed")
 		return
 	}
-	if e = s.send(email, "Invitation Blok — "+ws.Name, "Vous êtes invité à rejoindre "+ws.Name+".\nConnectez-vous avec cette adresse email sur "+s.Config.PublicURL+" pour accepter cette invitation.\nCette invitation expire dans 7 jours."); e != nil {
+	invitationText := "Vous êtes invité à rejoindre " + ws.Name + ".\nConnectez-vous avec cette adresse email sur " + s.Config.PublicURL + " pour accepter cette invitation.\nCette invitation expire dans 7 jours."
+	if in.Message != "" {
+		invitationText += "\n\nMessage de l’administrateur :\n" + in.Message
+	}
+	if e = s.send(email, "Invitation Blok — "+ws.Name, invitationText); e != nil {
 		s.DB.Exec(r.Context(), "UPDATE invites SET status='delivery-failed' WHERE id=$1", inviteID)
 		problem(w, 503, "Invitation email delivery failed")
 		return

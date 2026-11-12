@@ -16,7 +16,7 @@ All paths relative to configured HTTPS API origin. JSON errors `{error:string}`.
 - POST `/api/workspaces/:slug/join-requests/:requestID/approve` `{role?:"member"|"viewer"}` → `{ok:true}` (admin).
 - POST `/api/workspaces/:slug/join-requests/:requestID/reject` `{}` → `{ok:true}` (admin).
 - GET `/api/workspaces/:slug/invites` → `{invites:[{id,email,role,status,expiresAt}]}` (admin).
-- POST `/api/workspaces/:slug/invites` `{email,role?:"member"|"viewer"}` → `{ok:true}`. Sends invitation email containing app link; verified email's pending invitations auto-accept on login. No token in URL.
+- POST `/api/workspaces/:slug/invites` `{email,role?:"member"|"viewer",message?:string}` → `{ok:true}`. The optional message is a plain-text delivery note limited to 2,000 Unicode characters; it is included in the email and is not retained in the invitation record. Sends invitation email containing app link; verified email's pending invitations auto-accept on login. No token in URL.
 - DELETE `/api/workspaces/:slug/invites/:inviteID` → `{ok:true}` (admin revoke).
 - GET `/api/workspaces/:slug/index` → `{pages:DesktopPage[],trash:DesktopPage[],revision:number}`.
 - PUT `/api/workspaces/:slug/index` `{pages,trash,revision}` → `{revision:number}` (CAS; 409 on stale revision; member/admin). Page IDs unique across service. New IDs create empty documents; omitted pages kept inaccessible (tombstoned). Content goes through Blok collaboration, not this API.

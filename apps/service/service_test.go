@@ -60,7 +60,11 @@ func TestCloudIntegration(t *testing.T) {
 	parsed.RawQuery = q.Encode()
 	var lock sync.Mutex
 	codes := map[string]string{}
+	deliveredMessages := map[string]string{}
 	deliver := func(to, subject, text string) error {
+		lock.Lock()
+		deliveredMessages[to] = text
+		lock.Unlock()
 		if m := regexp.MustCompile(`[0-9]{6}`).FindString(text); m != "" {
 			lock.Lock()
 			codes[to] = m
@@ -140,7 +144,24 @@ func TestCloudIntegration(t *testing.T) {
 	rid := requests[0].(map[string]any)["id"].(string)
 	request("POST", "/api/workspaces/tousambassadeurs/join-requests/"+rid+"/approve", applicant, map[string]any{}, 403)
 	request("POST", "/api/workspaces/tousambassadeurs/join-requests/"+rid+"/approve", admin, map[string]any{}, 200)
-	request("POST", "/api/workspaces/tousambassadeurs/invites", admin, map[string]any{"email": "invited@example.test", "role": "viewer"}, 201)
+	note := "Bienvenue dans l’équipe !\nNous avons hâte de collaborer."
+	request("POST", "/api/workspaces/tousambassadeurs/invites", admin, map[string]any{"email": "invited@example.test", "role": "viewer", "message": note}, 201)
+	lock.Lock()
+	invitationBody := deliveredMessages["invited@example.test"]
+	lock.Unlock()
+	if !strings.Contains(invitationBody, note) {
+		t.Fatal("Invitation delivery omitted the optional note")
+	}
+	request("POST", "/api/workspaces/tousambassadeurs/invites", admin, map[string]any{"email": "long-note@example.test", "message": strings.Repeat("é", 2001)}, 400)
+	request("POST", "/api/workspaces/tousambassadeurs/invites", admin, map[string]any{"email": "wrong-note@example.test", "message": []string{"invalid"}}, 400)
+	lock.Lock()
+	_, longDelivered := deliveredMessages["long-note@example.test"]
+	_, wrongDelivered := deliveredMessages["wrong-note@example.test"]
+	lock.Unlock()
+	if longDelivered || wrongDelivered {
+		t.Fatal("Invalid invitation note was delivered")
+	}
+	request("POST", "/api/workspaces/tousambassadeurs/invites", admin, map[string]any{"email": "boundary-note@example.test", "message": strings.Repeat("é", 2000)}, 201)
 	invited := login("invited@example.test")
 	request("GET", "/api/workspaces/tousambassadeurs/index", invited, nil, 200)
 	request("POST", "/api/workspaces/tousambassadeurs/join-requests", viewer, map[string]any{}, 200)

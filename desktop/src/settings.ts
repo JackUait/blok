@@ -1,3 +1,7 @@
+import { openModalDialog, type ModalDialogHandle } from '@blok/modal-dialog';
+import { CloudClient } from './cloud/client';
+import { nativeSessionAdapter } from './native-session';
+import { mountWorkspaceMembers, openWorkspaceInvitation } from './cloud/workspace-settings';
 import { activeWorkspace, listWorkspaces, createLocalWorkspace, workspaceKey, rememberWorkspace } from './workspace-registry';
 import { dataDirectory } from './storage';
 import corePackage from '../../package.json';
@@ -98,6 +102,14 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   const currentWorkspace = activeWorkspace();
   const native = '__TAURI_INTERNALS__' in window;
   const admin = currentWorkspace.kind === 'remote' && currentWorkspace.role === 'admin';
+  const client = currentWorkspace.kind === 'remote' ? new CloudClient({origin: currentWorkspace.server, sessionAdapter: native ? nativeSessionAdapter(currentWorkspace.server) : undefined}) : null;
+  let members: ReturnType<typeof mountWorkspaceMembers> | null = null;
+  let modal: ModalDialogHandle | null = null;
+  const openInvitation = (container?: HTMLElement): void => {
+    if (!admin || !client || currentWorkspace.kind !== 'remote') return;
+    if (!container) switcher.focus();
+    openWorkspaceInvitation({client, slug: currentWorkspace.workspaceId, workspaceName: currentWorkspace.name, container, onComplete: () => members?.refresh()});
+  };
   const footer = el('div', 'data-desktop-footer');
   const switcher = el('button', 'data-desktop-switcher');
   switcher.type = 'button';
@@ -131,7 +143,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
     const invite = actionButton('data-desktop-menu-invite', 'Inviter des membres', 'profile');
     invite.setAttribute('data-desktop-menu-item', '');
     invite.setAttribute('role', 'menuitem');
-    invite.addEventListener('click', () => emitCloud('invites'));
+    invite.addEventListener('click', () => { closeMenu(); openInvitation(); });
     menu.append(invite);
   }
   menu.append(connect);
@@ -190,17 +202,19 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   overlay.hidden = true;
   const dialog = el('div', 'data-desktop-settings-dialog');
   dialog.setAttribute('role', 'dialog');
-  dialog.setAttribute('aria-modal', 'true');
   dialog.setAttribute('aria-label', 'Réglages');
   dialog.tabIndex = -1;
   const nav = el('aside', 'data-desktop-settings-nav');
   nav.append(el('div', 'data-desktop-settings-nav-heading', 'Compte'));
-  const accountTab = actionButton('data-desktop-settings-nav-item', currentWorkspace.kind === 'remote' ? 'Compte' : 'Profil local', 'profile');
+  const accountTab = actionButton('data-desktop-settings-nav-item', currentWorkspace.kind === 'remote' ? currentWorkspace.userName ?? 'Mon compte' : 'Profil local', 'profile');
   nav.append(accountTab, el('div', 'data-desktop-settings-nav-heading', 'Application'));
   const prefsTab = actionButton('data-desktop-settings-nav-item', 'Préférences', 'settings');
   const aiTab = actionButton('data-desktop-settings-nav-item', 'Assistant IA', 'ai');
-  const dataTab = actionButton('data-desktop-settings-nav-item', 'Données locales', 'storage');
   nav.append(prefsTab, aiTab);
+  const generalTab = actionButton('data-desktop-settings-nav-item', 'Général', 'storage');
+  const membersTab = actionButton('data-desktop-settings-nav-item', 'Membres', 'profile');
+  nav.append(el('div', 'data-desktop-settings-nav-heading', 'Espace'), generalTab);
+  if (admin) nav.append(membersTab);
   const main = el('main', 'data-desktop-settings-main');
   const close = el('button', 'data-desktop-settings-close', '×');
   close.type = 'button';
@@ -246,38 +260,38 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
     document.addEventListener('keydown', menuKey);
   });
 
-  const closeSettings = (): void => {
-    overlay.hidden = true;
-    document.removeEventListener('keydown', settingsKey);
-    switcher.focus();
-  };
-  const settingsKey = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape') { closeSettings(); return; }
-    if (event.key !== 'Tab') return;
-    const controls = [...dialog.querySelectorAll<HTMLButtonElement | HTMLSelectElement | HTMLInputElement>('button, select, input:not(:disabled)')];
-    const first = controls[0];
-    const last = controls[controls.length - 1];
-    if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
-      event.preventDefault();
-      last?.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first?.focus();
-    }
-  };
+  const closeSettings = (): void => { modal?.close(); };
   close.addEventListener('click', closeSettings);
-  overlay.addEventListener('pointerdown', (event) => { if (event.target === overlay) closeSettings(); });
 
-  const showPanel = (panel: 'account' | 'preferences' | 'ai' | 'data'): void => {
+  type SettingsPanel = 'account' | 'preferences' | 'ai' | 'general' | 'members';
+  const showPanel = (panel: SettingsPanel): void => {
     accountTab.setAttribute('aria-current', panel === 'account' ? 'page' : 'false');
     prefsTab.setAttribute('aria-current', panel === 'preferences' ? 'page' : 'false');
     aiTab.setAttribute('aria-current', panel === 'ai' ? 'page' : 'false');
-    dataTab.setAttribute('aria-current', panel === 'data' ? 'page' : 'false');
+    generalTab.setAttribute('aria-current', panel === 'general' ? 'page' : 'false');
+    membersTab.setAttribute('aria-current', panel === 'members' ? 'page' : 'false');
+    members?.destroy(); members = null;
     main.querySelector('[data-desktop-settings-content]')?.remove();
     const content = el('div', 'data-desktop-settings-content');
-    if (panel === 'account') {
-      content.append(el('h1', 'data-desktop-settings-title', currentWorkspace.kind === 'remote' ? 'Compte en ligne' : 'Profil local'));
-      content.append(el('p', 'data-desktop-settings-intro', currentWorkspace.kind === 'remote' ? currentWorkspace.userName ?? 'Compte en ligne' : 'Cet espace appartient à cet appareil.'));
+    if (panel === 'members' && admin && client && currentWorkspace.kind === 'remote') {
+      content.append(el('h1', 'data-desktop-settings-title', 'Membres'));
+      main.append(content);
+      members = mountWorkspaceMembers(content, {client, slug: currentWorkspace.workspaceId, onInvite: () => openInvitation(dialog)});
+      return;
+    }
+    if (panel === 'account' && currentWorkspace.kind === 'remote') {
+      content.append(el('h1', 'data-desktop-settings-title', 'Mon compte'), el('p', 'data-desktop-settings-intro', 'Votre compte Blok.'));
+      const row = el('div', 'data-desktop-settings-row');
+      row.append(el('strong', 'data-desktop-settings-row-title', 'Adresse e-mail'), el('span', 'data-desktop-settings-row-value', currentWorkspace.userName ?? 'Compte en ligne'));
+      content.append(row);
+      const workspaceRow = el('div', 'data-desktop-settings-row');
+      workspaceRow.append(el('strong', 'data-desktop-settings-row-title', 'Espace'), el('span', 'data-desktop-settings-row-value', currentWorkspace.name));
+      const roleRow = el('div', 'data-desktop-settings-row');
+      roleRow.append(el('strong', 'data-desktop-settings-row-title', 'Rôle'), el('span', 'data-desktop-settings-row-value', currentWorkspace.role === 'admin' ? 'Administrateur' : currentWorkspace.role === 'viewer' ? 'Lecture seule' : 'Membre'));
+      content.append(workspaceRow, roleRow);
+    } else if (panel === 'account') {
+      content.append(el('h1', 'data-desktop-settings-title', 'Profil local'));
+      content.append(el('p', 'data-desktop-settings-intro', 'Cet espace appartient à cet appareil.'));
       content.append(el('h2', 'data-desktop-settings-section', 'Identité affichée'));
       const row = el('div', 'data-desktop-settings-row');
       const labels = el('div', 'data-desktop-settings-row-labels');
@@ -286,7 +300,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
       name.type = 'text';
       name.maxLength = 48;
       name.value = currentWorkspace.kind === 'local' && currentWorkspace.id === 'default' ? localStorage.getItem('blok:desktop:profile-name') || 'Espace local' : currentWorkspace.name;
-      name.disabled = currentWorkspace.kind === 'remote';
+
       name.setAttribute('aria-label', 'Nom du profil local');
       name.addEventListener('change', () => {
         const next = name.value.trim() || 'Espace local';
@@ -359,34 +373,41 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
         }).catch((error: unknown) => { status.textContent = `État indisponible : ${String(error)}`; radio.disabled = true; });
       }
       content.append(el('p', 'data-desktop-settings-explanation', 'La demande et, si tu le choisis, le texte de la page sont envoyés à l’agent sélectionné. La connexion de Codex ou Claude Code se fait dans leur CLI.'));
-    } else {
-      content.append(el('h1', 'data-desktop-settings-title', currentWorkspace.kind === 'remote' ? 'Données en ligne' : 'Données locales'));
-      content.append(el('p', 'data-desktop-settings-intro', currentWorkspace.kind === 'remote' ? 'Les pages sont enregistrées sur le serveur. Aucun contenu local n’est envoyé automatiquement.' : 'Les pages sont enregistrées sur cet appareil.'));
-      const path = el('code', 'data-desktop-settings-path', directory);
-      const copy = el('button', 'data-desktop-settings-copy', 'Copier le chemin');
-      copy.type = 'button';
-      copy.addEventListener('click', () => {
-        void navigator.clipboard.writeText(directory).then(() => { copy.textContent = 'Chemin copié'; });
-      });
-      content.append(path, copy, el('p', 'data-desktop-settings-version', `Blok ${CORE_VERSION} · App ${APP_VERSION}`));
+    } else if (panel === 'general') {
+      content.append(el('h1', 'data-desktop-settings-title', 'Général'), el('p', 'data-desktop-settings-intro', 'Informations sur votre espace.'));
+      const nameRow = el('div', 'data-desktop-settings-row');
+      nameRow.append(el('strong', 'data-desktop-settings-row-title', 'Nom de l’espace'), el('span', 'data-desktop-settings-row-value', currentWorkspace.name));
+      content.append(nameRow);
+      if (currentWorkspace.kind === 'remote') {
+        const serverRow = el('div', 'data-desktop-settings-row');
+        serverRow.append(el('strong', 'data-desktop-settings-row-title', 'Serveur'), el('span', 'data-desktop-settings-row-value', currentWorkspace.server));
+        const advanced = document.createElement('details');
+        const summary = document.createElement('summary'); summary.textContent = 'Avancé';
+        advanced.append(summary, serverRow); content.append(advanced);
+      } else content.append(el('p', 'data-desktop-settings-explanation', 'Les pages de cet espace sont enregistrées sur cet appareil.'));
+      content.append(el('p', 'data-desktop-settings-version', `Blok ${CORE_VERSION} · App ${APP_VERSION}`));
     }
+
     main.append(content);
   };
-  accountTab.addEventListener('click', () => currentWorkspace.kind === 'remote' ? emitCloud('account') : showPanel('account'));
+  accountTab.addEventListener('click', () => showPanel('account'));
   prefsTab.addEventListener('click', () => showPanel('preferences'));
   aiTab.addEventListener('click', () => showPanel('ai'));
-  dataTab.addEventListener('click', () => showPanel('data'));
-  const openSettings = (panel: 'account' | 'preferences' | 'ai' | 'data'): void => {
+  generalTab.addEventListener('click', () => showPanel('general'));
+  membersTab.addEventListener('click', () => { if (admin) showPanel('members'); });
+  const openSettings = (panel: SettingsPanel): void => {
     closeMenu();
     showPanel(panel);
+    switcher.focus();
     overlay.hidden = false;
-    dialog.focus();
-    document.addEventListener('keydown', settingsKey);
+    modal = openModalDialog({
+      content: overlay, surface: dialog, label: 'Paramètres', initialFocus: () => dialog,
+      onDismiss: () => closeSettings(),
+      onClose: () => { overlay.hidden = true; members?.destroy(); members = null; modal = null; },
+    });
   };
   footer.addEventListener('blok:desktop-open-ai-settings', () => openSettings('ai'));
-  preferences.addEventListener('click', () => {
-    if (admin) emitCloud('settings'); else openSettings('preferences');
-  });
+  preferences.addEventListener('click', () => openSettings('preferences'));
   if (account instanceof HTMLButtonElement) account.addEventListener('click', () => openSettings('account'));
   const profileName = currentWorkspace.kind === 'local' && currentWorkspace.id === 'default' ? localStorage.getItem('blok:desktop:profile-name') : currentWorkspace.name;
   if (profileName) {

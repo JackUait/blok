@@ -64,6 +64,9 @@ Un nouvel utilisateur vérifie son e-mail, puis demande à rejoindre Tousambassa
 Un administrateur peut approuver/refuser la demande, inviter par e-mail, changer un rôle ou retirer un membre.
 L'invitation devient effective à la prochaine connexion avec l'adresse invitée.
 
+Dans l'éditeur, le menu de l'espace ouvre **Paramètres** dans une dialog avec navigation à gauche. Les préférences, le compte et les accès sont réunis dans cette fenêtre ; sa fermeture rend la main à la page ouverte.
+**Inviter des membres** ouvre une dialog compacte avec les adresses séparées par des virgules, le rôle et un message facultatif (2 000 caractères maximum). Les invitations réussies ne sont pas renvoyées lorsqu'on réessaie après un échec partiel.
+
 | Rôle | Accès |
 | --- | --- |
 | Administrateur | Pages et gestion des membres/invitations/demandes |

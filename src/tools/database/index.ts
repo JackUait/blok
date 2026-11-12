@@ -7,7 +7,7 @@ import { DATABASE_COMMENT_HANDLERS } from '../../shared/tool-actions/database-co
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import { INLINE_TEXT_SANITIZE } from '../../shared/inline-text-sanitize';
 import { clean as cleanHtml } from '../../components/utils/sanitizer';
-import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, PageHeaderAction, ToolboxConfig, ToolboxConfigEntry, SanitizerConfig, ToolSanitizerConfig } from '../../../types';
+import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, PageHeaderAction, ToolboxConfig, ToolboxConfigEntry, ToolSanitizerConfig } from '../../../types';
 import type { AgentRun } from '../../../types/api';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
 import { HistoryDraftsCommit, type HistoryDraftsCommitPayload } from '../../components/events/HistoryDraftsCommit';

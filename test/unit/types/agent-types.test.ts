@@ -20,9 +20,9 @@ describe('published agent types', () => {
     vi.restoreAllMocks();
   });
 
-  it('names every core command from 06 §3.1, plus the version-history commands and html.insert', () => {
+  it('names every core command from 06 §3.1, plus the version-history commands, html.insert and doc.setCover', () => {
     expectTypeOf<CoreCommandName>().toEqualTypeOf<
-      | 'doc.read' | 'doc.find' | 'doc.setTitle' | 'doc.setIcon'
+      | 'doc.read' | 'doc.find' | 'doc.setTitle' | 'doc.setIcon' | 'doc.setCover'
       | 'block.insert' | 'block.update' | 'block.delete' | 'block.move'
       | 'block.convert' | 'block.duplicate'
       | 'text.insert' | 'text.delete' | 'text.replace' | 'text.format'
@@ -51,7 +51,7 @@ describe('published agent types', () => {
   });
 
   it('exposes the edit union and helpers 02 builds on', () => {
-    expectTypeOf<Extract<Edit, { op: 'setPageField' }>['key']>().toEqualTypeOf<'title' | 'icon'>();
+    expectTypeOf<Extract<Edit, { op: 'setPageField' }>['key']>().toEqualTypeOf<'title' | 'icon' | 'cover'>();
     expectTypeOf<InsertSpec['children']>().toEqualTypeOf<InsertSpec[] | undefined>();
     expectTypeOf<RichTextHelpers['plainText']>().parameters.toEqualTypeOf<[RichText]>();
     expectTypeOf<AgentBatch['commands'][number]['ref']>().toEqualTypeOf<string | undefined>();

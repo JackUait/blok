@@ -170,4 +170,17 @@ describe('cover picker: the popover is the surface (CSS)', () => {
     expect(decl('.blok-audio-cover-picker .blok-media-empty__title', 'font-size')).toBe('14px');
     expect(decl('.blok-audio-cover-picker .blok-media-empty__hint', 'font-size')).toBe('13px');
   });
+
+  it('beside the ink well the card is bare, in the block\'s type sizes, and its buttons never wrap', () => {
+    const card = '.blok-audio-cover-picker .blok-ink-well .blok-media-empty__card';
+
+    expect(decl(card, 'padding')).toBe('0');
+    expect(decl(card, 'background')).toBe('transparent');
+    expect(decl('.blok-audio-cover-picker .blok-ink-well .blok-media-empty__title', 'font-size')).toBe('16px');
+    expect(decl('.blok-audio-cover-picker .blok-ink-well .blok-media-empty__hint', 'font-size')).toBe('13.5px');
+    expect(decl('.blok-audio-cover-picker .blok-ink-well .blok-media-empty__actions', 'flex-wrap')).toBe('nowrap');
+    // The picker takes its width from the buttons; a size container would report none.
+    expect(decl('.blok-ink-well > .blok-media-empty', 'container-type')).toBe('normal');
+    expect(decl('.blok-audio-cover-picker[data-surface="ink-well"]', 'width')).toBe('max-content');
+  });
 });

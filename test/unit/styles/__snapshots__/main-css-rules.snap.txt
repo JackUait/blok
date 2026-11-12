@@ -24205,6 +24205,9 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   --blok-audio-well-ink: #0b0b0c;
   --blok-audio-well-sheen: rgba(255, 255, 255, 0.2);
   --blok-audio-well-edge: rgba(0, 0, 0, 0.08);
+  width: max-content;
+  min-width: min(440px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
   padding: var(--blok-space-3);
 }
 
@@ -24237,116 +24240,40 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   box-shadow: inset 0 0 0 2px var(--blok-audio-well-ink);
 }
 
-:where(:root:not([data-blok-modality="pointer"])) .blok-ink-well__well:focus-visible, :where(:root:not([data-blok-modality="pointer"])) .blok-ink-well__choose:focus-visible, :where(:root:not([data-blok-modality="pointer"])) .blok-ink-well__submit:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-ink-well__well:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
 
-.blok-ink-well__well:focus, .blok-ink-well__choose:focus, .blok-ink-well__submit:focus, .blok-ink-well__link-input:focus {
-  outline: none;
-}
-
-.blok-ink-well__side {
+.blok-ink-well > .blok-media-empty {
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
   justify-content: center;
-  gap: var(--blok-space-2-5);
+  container-type: normal;
 }
 
-.blok-ink-well__title {
-  font-size: 17px;
-  font-weight: var(--blok-font-weight-semibold);
-  line-height: 1.2;
-  letter-spacing: -0.01em;
-}
-
-.blok-ink-well__hint {
-  margin: 0;
-  font-size: var(--blok-font-size-ui-label);
-  color: var(--blok-text-secondary);
-}
-
-.blok-ink-well__choose {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--blok-space-2);
-  padding: var(--blok-space-2-25) var(--blok-space-4);
-  border: 0;
-  border-radius: var(--blok-radius-control-lg);
-  background: var(--blok-text-primary);
-  color: var(--blok-bg-primary);
-  font: inherit;
-  font-weight: var(--blok-font-weight-semibold);
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.blok-ink-well__choose svg {
-  width: 14px;
-  height: 14px;
-}
-
-.blok-ink-well__link {
-  align-self: stretch;
-  display: flex;
-  align-items: center;
-  gap: var(--blok-space-1-5);
-  margin: 0;
-  padding: 0 var(--blok-space-1) 0 var(--blok-space-2-5);
-  border: 1px solid var(--blok-border-subtle);
-  border-radius: var(--blok-radius-control-lg);
-  background: var(--blok-bg-primary);
-}
-
-.blok-ink-well__link:has(.blok-ink-well__link-input:focus) {
-  border-color: var(--blok-text-primary);
-}
-
-.blok-ink-well__link-input {
-  flex: 1;
-  min-width: 0;
-  padding: var(--blok-space-2) 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-}
-
-.blok-ink-well__link-input::placeholder {
-  color: var(--blok-text-tertiary);
-}
-
-.blok-ink-well__submit {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
+.blok-audio-cover-picker .blok-ink-well .blok-media-empty__card, .blok-audio-cover-picker .blok-ink-well .blok-media-empty__card.is-dragover {
   padding: 0;
   border: 0;
-  border-radius: var(--blok-radius-control);
-  background: none;
-  color: var(--blok-text-secondary);
-  cursor: pointer;
+  border-radius: 0;
+  background: transparent;
 }
 
-.blok-ink-well__submit:hover {
-  background: var(--blok-bg-hover);
-  color: var(--blok-text-primary);
+.blok-audio-cover-picker .blok-ink-well .blok-media-empty__title {
+  font-size: 16px;
 }
 
-.blok-ink-well__submit svg {
-  width: 14px;
-  height: 14px;
+.blok-audio-cover-picker .blok-ink-well .blok-media-empty__hint {
+  font-size: 13.5px;
 }
 
-.blok-ink-well__error {
-  margin: 0;
-  font-size: var(--blok-font-size-ui-compact);
-  color: var(--blok-color-danger);
+.blok-audio-cover-picker .blok-ink-well .blok-media-empty__actions {
+  flex-wrap: nowrap;
+}
+
+.blok-audio-cover-picker .blok-ink-well :is(.blok-media-empty__hint, .blok-media-empty__embed-bar, .blok-media-empty__error) {
+  width: 0;
+  min-width: 100%;
 }
 
 [@media (max-width: 480px)] .blok-ink-well {
@@ -24354,8 +24281,12 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   align-items: center;
 }
 
-[@media (max-width: 480px)] .blok-ink-well__side {
+[@media (max-width: 480px)] .blok-ink-well > .blok-media-empty {
   align-self: stretch;
+}
+
+[@media (max-width: 480px)] .blok-audio-cover-picker .blok-ink-well .blok-media-empty__actions {
+  flex-wrap: wrap;
 }
 
 [data-blok-tool="audio"][data-state="rendered"] .blok-audio-cover.is-fresh {

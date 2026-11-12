@@ -1,11 +1,11 @@
-import { IconArrowRightSmall, IconArrowUp } from '../../components/icons';
+import { renderMediaEmptyState, type MediaEmptyStateLabels } from '../../components/utils/media-empty-state';
 import { createSafeObjectUrl } from '../../shared/safe-object-url';
 import { safeImageSrc } from '../../shared/sanitize-url';
 
 /**
- * The audio cover picker's surface: the ink drop sits in a square well. It
- * leans toward the pointer and reaches for a dragged file. Given a picture, it
- * floods the well and opens up onto it.
+ * The audio cover picker's surface: the ink drop sits in a square well beside
+ * the shared uploader. The drop leans toward the pointer and reaches for a
+ * dragged file. Given a picture, it floods the well and opens up onto it.
  */
 
 export type WellMode = 'idle' | 'flood' | 'open' | 'done';
@@ -218,13 +218,7 @@ const PAINTERS: Record<WellMode, (ctx: CanvasRenderingContext2D, paint: WellPain
   done: paintDone,
 };
 
-export interface InkWellLabels {
-  title: string;
-  hint: string;
-  chooseFile: string;
-  linkPlaceholder: string;
-  linkAria: string;
-  submit: string;
+export interface InkWellLabels extends MediaEmptyStateLabels {
   wellAria: string;
 }
 
@@ -273,41 +267,15 @@ export function renderInkWell(opts: InkWellOptions): InkWellElement {
   canvas.setAttribute('aria-hidden', 'true');
   well.append(canvas);
 
-  const title = make('div', 'blok-ink-well__title', 'ink-well-title');
-  title.textContent = labels.title;
-  const hint = make('p', 'blok-ink-well__hint', 'ink-well-hint');
-  hint.textContent = labels.hint;
+  // The well is the drawing, so the uploader brings none of its own.
+  const side = renderMediaEmptyState({
+    acceptTypes: opts.acceptTypes,
+    labels,
+    onFile: (file) => takeFile(file),
+    onUrl: (url) => takeUrl(url),
+  });
+  const fileInput = side.querySelector<HTMLInputElement>('input[type="file"]');
 
-  const choose = make('button', 'blok-ink-well__choose', 'ink-well-choose');
-  choose.type = 'button';
-  choose.innerHTML = IconArrowUp;
-  choose.append(labels.chooseFile);
-  const fileInput = make('input', 'blok-ink-well__file', 'ink-well-file');
-  fileInput.type = 'file';
-  fileInput.accept = opts.acceptTypes.join(',');
-  fileInput.hidden = true;
-  fileInput.tabIndex = -1;
-
-  const form = make('form', 'blok-ink-well__link', 'ink-well-link-form');
-  form.noValidate = true;
-  const linkInput = make('input', 'blok-ink-well__link-input', 'ink-well-link');
-  linkInput.type = 'url';
-  linkInput.placeholder = labels.linkPlaceholder;
-  linkInput.setAttribute('aria-label', labels.linkAria);
-  linkInput.autocomplete = 'off';
-  const submit = make('button', 'blok-ink-well__submit', 'ink-well-submit');
-  submit.type = 'submit';
-  submit.setAttribute('aria-label', labels.submit);
-  submit.innerHTML = IconArrowRightSmall;
-  form.append(linkInput, submit);
-
-  const error = make('p', 'blok-ink-well__error', 'ink-well-error');
-  error.setAttribute('role', 'alert');
-  error.hidden = true;
-
-  const side = make('div', 'blok-ink-well__side', 'ink-well-side');
-  // The hint continues the button: "Choose file", "or drop an image here".
-  side.append(title, choose, fileInput, hint, form, error);
   root.append(well, side);
 
   const motion = createWellMotion();
@@ -424,42 +392,25 @@ export function renderInkWell(opts: InkWellOptions): InkWellElement {
     image.src = url;
   };
 
-  const takeFile = (file: File): void => {
-    showError(null);
+  function takeFile(file: File): void {
+    side.setError(null);
     reveal(createSafeObjectUrl(file), true);
     opts.onFile(file);
-  };
+  }
+  function takeUrl(url: string): void {
+    side.setError(null);
+    const safe = safeImageSrc(url);
 
-  function showError(message: string | null): void {
-    error.hidden = !message;
-    error.textContent = message ?? '';
+    if (safe !== null) reveal(safe, false);
+    opts.onUrl(url);
   }
 
-  const openChooser = (): void => fileInput.click();
+  const openChooser = (): void => fileInput?.click();
   const onWellKey = (event: KeyboardEvent): void => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
     openChooser();
   };
-  const onFileChange = (): void => {
-    const file = fileInput.files?.[0];
-
-    fileInput.value = '';
-    if (file) takeFile(file);
-  };
-  const onSubmit = (event: Event): void => {
-    event.preventDefault();
-    const value = linkInput.value.trim();
-
-    if (!value) return;
-    showError(null);
-    const safe = safeImageSrc(value);
-
-    if (safe !== null) reveal(safe, false);
-    opts.onUrl(value);
-  };
-  const onLinkInput = (): void => showError(null);
-
   const trackPointer = (event: { clientX: number; clientY: number }): void => {
     const box = well.getBoundingClientRect();
 
@@ -494,6 +445,8 @@ export function renderInkWell(opts: InkWellOptions): InkWellElement {
     if (!carriesFiles(event)) return;
     event.preventDefault();
     setDragDepth(0);
+    // The uploader hands over a file dropped on it; taking it here too would send it twice.
+    if (event.target instanceof Node && side.contains(event.target)) return;
     const file = event.dataTransfer?.files?.[0];
 
     if (file) takeFile(file);
@@ -503,10 +456,6 @@ export function renderInkWell(opts: InkWellOptions): InkWellElement {
   well.addEventListener('keydown', onWellKey);
   well.addEventListener('pointermove', onPointerMove);
   well.addEventListener('pointerleave', onPointerLeave);
-  choose.addEventListener('click', openChooser);
-  fileInput.addEventListener('change', onFileChange);
-  form.addEventListener('submit', onSubmit);
-  linkInput.addEventListener('input', onLinkInput);
   root.addEventListener('dragenter', onDragEnter);
   root.addEventListener('dragover', onDragOver);
   root.addEventListener('dragleave', onDragLeave);
@@ -526,7 +475,7 @@ export function renderInkWell(opts: InkWellOptions): InkWellElement {
   if (!prefersReducedMotion()) state.rafId = requestAnimationFrame(frame);
 
   const setError = (message: string | null): void => {
-    showError(message);
+    side.setError(message);
     if (!message) return;
     // The picture did not make it: back to what was there.
     endLoading();
@@ -551,10 +500,6 @@ export function renderInkWell(opts: InkWellOptions): InkWellElement {
     well.removeEventListener('keydown', onWellKey);
     well.removeEventListener('pointermove', onPointerMove);
     well.removeEventListener('pointerleave', onPointerLeave);
-    choose.removeEventListener('click', openChooser);
-    fileInput.removeEventListener('change', onFileChange);
-    form.removeEventListener('submit', onSubmit);
-    linkInput.removeEventListener('input', onLinkInput);
     root.removeEventListener('dragenter', onDragEnter);
     root.removeEventListener('dragover', onDragOver);
     root.removeEventListener('dragleave', onDragLeave);

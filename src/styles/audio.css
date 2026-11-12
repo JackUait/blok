@@ -223,7 +223,7 @@
   box-shadow: var(--blok-popover-box-shadow);
 }
 /* ----- ink well: the audio block's own picker surface --------
-   The ink drop sits in a square well beside one button and one link field.
+   The ink drop sits in a square well beside the shared uploader.
    ink-well.ts paints the drop. Its colours are fixed, like ink on paper, so
    the well reads the same in both themes. Declared here, not on the audio
    block: the picker lives at document.body. */
@@ -234,6 +234,9 @@
   --blok-audio-well-ink: #0b0b0c;
   --blok-audio-well-sheen: rgba(255, 255, 255, 0.2);
   --blok-audio-well-edge: rgba(0, 0, 0, 0.08);
+  width: max-content;
+  min-width: min(440px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
   padding: var(--blok-space-3);
 }
 .blok-ink-well {
@@ -261,108 +264,35 @@
 .blok-ink-well__well.is-dragover {
   box-shadow: inset 0 0 0 2px var(--blok-audio-well-ink);
 }
-:where(:root:not([data-blok-modality="pointer"])) .blok-ink-well__well:focus-visible,
-:where(:root:not([data-blok-modality="pointer"])) .blok-ink-well__choose:focus-visible,
-:where(:root:not([data-blok-modality="pointer"])) .blok-ink-well__submit:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-ink-well__well:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
-.blok-ink-well__well:focus,
-.blok-ink-well__choose:focus,
-.blok-ink-well__submit:focus,
-.blok-ink-well__link-input:focus {
-  outline: none;
-}
-.blok-ink-well__side {
+/* The uploader beside the well. The picker is the surface, so its card is bare.
+   These name the picker too, to outrank the card rules further down. */
+.blok-ink-well > .blok-media-empty {
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
   justify-content: center;
-  gap: var(--blok-space-2-5);
+  /* a size container reports no width of its own, so the picker could not grow to fit the buttons */
+  container-type: normal;
 }
-.blok-ink-well__title {
-  font-size: 17px;
-  font-weight: var(--blok-font-weight-semibold);
-  line-height: 1.2;
-  letter-spacing: -0.01em;
-}
-.blok-ink-well__hint {
-  margin: 0;
-  font-size: var(--blok-font-size-ui-label);
-  color: var(--blok-text-secondary);
-}
-.blok-ink-well__choose {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--blok-space-2);
-  padding: var(--blok-space-2-25) var(--blok-space-4);
-  border: 0;
-  border-radius: var(--blok-radius-control-lg);
-  background: var(--blok-text-primary);
-  color: var(--blok-bg-primary);
-  font: inherit;
-  font-weight: var(--blok-font-weight-semibold);
-  white-space: nowrap;
-  cursor: pointer;
-}
-.blok-ink-well__choose svg {
-  width: 14px;
-  height: 14px;
-}
-.blok-ink-well__link {
-  align-self: stretch;
-  display: flex;
-  align-items: center;
-  gap: var(--blok-space-1-5);
-  margin: 0;
-  padding: 0 var(--blok-space-1) 0 var(--blok-space-2-5);
-  border: 1px solid var(--blok-border-subtle);
-  border-radius: var(--blok-radius-control-lg);
-  background: var(--blok-bg-primary);
-}
-/* keyed off the text field, not :focus-within: a click on the arrow must not light the frame */
-.blok-ink-well__link:has(.blok-ink-well__link-input:focus) {
-  border-color: var(--blok-text-primary);
-}
-.blok-ink-well__link-input {
-  flex: 1;
-  min-width: 0;
-  padding: var(--blok-space-2) 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-}
-.blok-ink-well__link-input::placeholder {
-  color: var(--blok-text-tertiary);
-}
-.blok-ink-well__submit {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
+.blok-audio-cover-picker .blok-ink-well .blok-media-empty__card,
+.blok-audio-cover-picker .blok-ink-well .blok-media-empty__card.is-dragover {
   padding: 0;
   border: 0;
-  border-radius: var(--blok-radius-control);
-  background: none;
-  color: var(--blok-text-secondary);
-  cursor: pointer;
+  border-radius: 0;
+  background: transparent;
 }
-.blok-ink-well__submit:hover {
-  background: var(--blok-bg-hover);
-  color: var(--blok-text-primary);
-}
-.blok-ink-well__submit svg {
-  width: 14px;
-  height: 14px;
-}
-.blok-ink-well__error {
-  margin: 0;
-  font-size: var(--blok-font-size-ui-compact);
-  color: var(--blok-color-danger);
+.blok-audio-cover-picker .blok-ink-well .blok-media-empty__title { font-size: 16px; }
+.blok-audio-cover-picker .blok-ink-well .blok-media-empty__hint { font-size: 13.5px; }
+/* The picker is as wide as the two buttons need in this language. The
+   sentence, the link field and the error wrap inside that width: they must
+   not widen it. */
+.blok-audio-cover-picker .blok-ink-well .blok-media-empty__actions { flex-wrap: nowrap; }
+.blok-audio-cover-picker .blok-ink-well :is(.blok-media-empty__hint, .blok-media-empty__embed-bar, .blok-media-empty__error) {
+  width: 0;
+  min-width: 100%;
 }
 /* the window is too narrow for both: the well sits above the controls */
 @media (max-width: 480px) {
@@ -370,9 +300,10 @@
     flex-direction: column;
     align-items: center;
   }
-  .blok-ink-well__side {
+  .blok-ink-well > .blok-media-empty {
     align-self: stretch;
   }
+  .blok-audio-cover-picker .blok-ink-well .blok-media-empty__actions { flex-wrap: wrap; }
 }
 
 /* a cover just picked in the well pops onto the player */

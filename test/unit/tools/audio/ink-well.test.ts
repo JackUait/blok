@@ -10,12 +10,16 @@ import {
 } from '../../../../src/tools/audio/ink-well';
 
 const LABELS = {
-  title: 'Give the drop a picture',
-  hint: 'Drop an image on it, or pick one.',
+  add: 'Add a cover',
+  hint: 'Drag an image here, choose one, or paste a link.',
+  dropAnywhere: 'Let go anywhere.',
+  cancelLink: 'Cancel',
+  embed: 'From a link',
   chooseFile: 'Choose file',
-  linkPlaceholder: 'or paste a link',
-  linkAria: 'Image URL',
-  submit: 'Insert',
+  dropToUpload: 'Drop to upload',
+  urlPlaceholder: 'Paste an image URL…',
+  urlAria: 'Image URL',
+  submit: 'Add',
   wellAria: 'Set cover image',
 };
 
@@ -134,8 +138,26 @@ describe('renderInkWell', () => {
 
     return found;
   };
+  const find = <T extends HTMLElement>(el: HTMLElement, selector: string): T => {
+    const found = el.querySelector<T>(selector);
+
+    if (!found) throw new Error(`no ${selector}`);
+
+    return found;
+  };
+  const fileInput = (el: HTMLElement): HTMLInputElement => find(el, '[data-blok-testid="file-input"]');
+  const linkInput = (el: HTMLElement): HTMLInputElement => find(el, 'input[type="url"]');
+  /** Types a link into the field and presses Add. */
+  const addLink = (el: HTMLElement, value: string): void => {
+    const input = linkInput(el);
+
+    find(el, '[data-action="from-link"]').click();
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    find(el, '[data-action="submit-url"]').click();
+  };
   const pick = (el: HTMLElement, file: File): void => {
-    const input = part<HTMLInputElement>(el, 'ink-well-file');
+    const input = fileInput(el);
 
     Object.defineProperty(input, 'files', { configurable: true, value: [file] });
     input.dispatchEvent(new Event('change'));
@@ -162,31 +184,48 @@ describe('renderInkWell', () => {
     document.body.replaceChildren();
   });
 
-  it('shows the well, the heading, one button and the link field together, with no tabs', () => {
+  it('shows the well beside the shared uploader: a title, a sentence, Choose and From a link', () => {
     const { el } = setup();
     const well = part(el, 'ink-well');
+    const card = find(el, '[data-blok-media-empty-state] .blok-media-empty__card');
 
     expect(well.getAttribute('role')).toBe('button');
     expect(well.tabIndex).toBe(0);
     expect(well.getAttribute('aria-label')).toBe('Set cover image');
     expect(well.querySelector('canvas')?.getAttribute('aria-hidden')).toBe('true');
-    expect(part(el, 'ink-well-title').textContent).toBe('Give the drop a picture');
-    expect(part(el, 'ink-well-hint').textContent).toBe('Drop an image on it, or pick one.');
-    expect(part(el, 'ink-well-choose').textContent).toContain('Choose file');
-    expect(part<HTMLInputElement>(el, 'ink-well-link').placeholder).toBe('or paste a link');
-    expect(part(el, 'ink-well-submit').getAttribute('aria-label')).toBe('Insert');
-    expect(part<HTMLInputElement>(el, 'ink-well-file').accept).toBe('image/*');
-    expect(el.querySelector('[role="tab"], [data-tab]')).toBeNull();
+    expect(find(el, '.blok-media-empty__title').textContent).toBe('Add a cover');
+    expect(find(el, '.blok-media-empty__hint').textContent).toBe('Drag an image here, choose one, or paste a link.');
+    expect(find(el, '[data-action="choose-file"]').textContent?.trim()).toBe('Choose file');
+    expect(find(el, '[data-action="from-link"]').textContent?.trim()).toBe('From a link');
+    expect(linkInput(el).placeholder).toBe('Paste an image URL…');
+    expect(fileInput(el).accept).toBe('image/*');
+    // The well is the drawing: the uploader brings none of its own.
+    expect(card.hasAttribute('data-preview')).toBe(false);
+    expect(el.querySelector('[data-role^="ink-well-"]:not([data-role="ink-well-surface"]):not([data-role="ink-well-canvas"])')).toBeNull();
+  });
+
+  it('From a link swaps the buttons for the link field, and the cross swaps back', () => {
+    const { el } = setup();
+    const card = find(el, '.blok-media-empty__card');
+
+    expect(card.getAttribute('data-mode')).toBe('upload');
+
+    find(el, '[data-action="from-link"]').click();
+    expect(card.getAttribute('data-mode')).toBe('link');
+    expect(linkInput(el)).toHaveFocus();
+
+    find(el, '[data-action="cancel-link"]').click();
+    expect(card.getAttribute('data-mode')).toBe('upload');
   });
 
   it('opens the file chooser from the well, by click or keyboard, and from the button', () => {
     const { el } = setup();
-    const open = vi.spyOn(part<HTMLInputElement>(el, 'ink-well-file'), 'click').mockImplementation(() => undefined);
+    const open = vi.spyOn(fileInput(el), 'click').mockImplementation(() => undefined);
 
     part(el, 'ink-well').click();
     part(el, 'ink-well').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     part(el, 'ink-well').dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
-    part(el, 'ink-well-choose').click();
+    find(el, '[data-action="choose-file"]').click();
 
     expect(open).toHaveBeenCalledTimes(4);
   });
@@ -222,16 +261,25 @@ describe('renderInkWell', () => {
     expect(onFile).toHaveBeenCalledWith(file);
   });
 
-  it('hands a pasted link over, trimmed, and ignores an empty one', () => {
-    const { el, onUrl } = setup();
-    const input = part<HTMLInputElement>(el, 'ink-well-link');
-    const form = input.closest('form');
+  it('hands a dropped file over once when it lands on the uploader side', () => {
+    const { el, onFile } = setup();
+    const file = png();
+    const drop = new Event('drop', { bubbles: true, cancelable: true });
 
-    form?.dispatchEvent(new Event('submit', { cancelable: true }));
+    Object.defineProperty(drop, 'dataTransfer', { value: { types: ['Files'], files: [file] } });
+    find(el, '.blok-media-empty__title').dispatchEvent(drop);
+
+    expect(onFile).toHaveBeenCalledTimes(1);
+    expect(onFile).toHaveBeenCalledWith(file);
+  });
+
+  it('hands a link over, trimmed, and ignores an empty one', () => {
+    const { el, onUrl } = setup();
+
+    addLink(el, '');
     expect(onUrl).not.toHaveBeenCalled();
 
-    input.value = '  https://cdn/cover.png ';
-    form?.dispatchEvent(new Event('submit', { cancelable: true }));
+    addLink(el, '  https://cdn/cover.png ');
 
     expect(onUrl).toHaveBeenCalledWith('https://cdn/cover.png');
   });
@@ -298,7 +346,7 @@ describe('renderInkWell', () => {
 
   it('an error is read out, ends the opening, and clears when the link is edited', async () => {
     const { el } = setup();
-    const error = part(el, 'ink-well-error');
+    const error = find(el, '[data-role="error"]');
     const done = vi.fn();
 
     expect(error.hidden).toBe(true);
@@ -313,13 +361,12 @@ describe('renderInkWell', () => {
     expect(error.getAttribute('role')).toBe('alert');
     expect(done).toHaveBeenCalledTimes(1);
 
-    part(el, 'ink-well-link').dispatchEvent(new Event('input'));
+    linkInput(el).dispatchEvent(new Event('input'));
     expect(error.hidden).toBe(true);
   });
 
-  it('never loads a script link as a picture', () => {
+  it('never takes a script link', () => {
     const { el, onUrl } = setup();
-    const input = part<HTMLInputElement>(el, 'ink-well-link');
     const loaded: string[] = [];
 
     class SpyImage {
@@ -327,11 +374,10 @@ describe('renderInkWell', () => {
     }
     vi.stubGlobal('Image', SpyImage);
 
-    input.value = 'javascript:alert(1)';
-    input.closest('form')?.dispatchEvent(new Event('submit', { cancelable: true }));
+    addLink(el, 'javascript:alert(1)');
 
-    expect(onUrl).toHaveBeenCalledWith('javascript:alert(1)');
     expect(loaded).toEqual([]);
+    expect(onUrl).not.toHaveBeenCalled();
   });
 
   it('frees the local picture and stops drawing on destroy', async () => {

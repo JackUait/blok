@@ -283,7 +283,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2121 + 147 + 540 + 5 closure for all 2813 keys', () => {
+  it('rebuilds a disjoint 2120 + 147 + 541 + 5 closure for all 2813 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -526,7 +526,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -14: the media empty state lost its tabs, hint line and tablist name: tools.<tool>.emptyUpload,
       // emptyOrDropHere (tools.file.emptyDropHint), emptySourceAria, tools.audio.coverUpload and
       // coverSourceAria have no caller now. Still shipped: they are in BlokMessageKey since 2.1.0.
-      'executable-literal': 2121,
+      // -1: tools.audio.coverOrDropHere has no caller: the ink well shows the uploader's sentence (coverHint). Still shipped.
+      'executable-literal': 2120,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -618,8 +619,9 @@ describe('current English catalog lifecycle coverage', () => {
       // -3: chartTypeNumber, duplicateView and deleteView moved to executable-literal (dashboard menus).
       // -3: tools.video.back, speedDecrease and speedIncrease have a caller again (the speed submenu).
       // +14: the retired media empty state keys above.
+      // +1: tools.audio.coverOrDropHere, above.
       // +2 / -1: the advanced chip's tools.database.filterRuleCount_one/_other replace filterRuleCount, via the controls' t().
-      'registered-namespace-compatible': 540,
+      'registered-namespace-compatible': 541,
       'catalog-only': 5,
     });
     expect(

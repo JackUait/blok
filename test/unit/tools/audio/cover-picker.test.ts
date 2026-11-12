@@ -358,34 +358,26 @@ describe('openCoverPicker — ink well surface', () => {
     return { handle, dialog, onUrl };
   };
 
-  it('shows the ink well in place of the tabbed card', () => {
+  const text = (dialog: HTMLElement, selector: string): string | undefined => dialog.querySelector(selector)?.textContent?.trim();
+
+  it('shows the ink well beside the shared uploader', () => {
     const { dialog, handle } = open();
 
     expect(dialog.getAttribute('data-surface')).toBe('ink-well');
     expect(dialog.querySelector('[data-role="ink-well"]')).not.toBeNull();
     expect(dialog.querySelector('[data-tab]')).toBeNull();
-    // Plain words: the heading says what the picker does, not what the drop wants.
-    expect(dialog.querySelector('[data-role="ink-well-title"]')?.textContent).toBe('Add a cover');
-    expect(dialog.querySelector('[data-role="ink-well-hint"]')?.textContent).toBe('or drop an image here');
-    // One "or" at most: the link field names itself, it does not continue the list.
-    expect(dialog.querySelector<HTMLInputElement>('[data-role="ink-well-link"]')?.placeholder).toBe('Paste an image URL…');
+    expect(text(dialog, '.blok-media-empty__title')).toBe('Add a cover');
+    expect(text(dialog, '.blok-media-empty__hint')).toBe('Drag an image here, choose one, or paste a link.');
+    expect(text(dialog, '[data-action="choose-file"]')).toBe('Choose file');
+    expect(text(dialog, '[data-action="from-link"]')).toBe('From a link');
+    expect(dialog.querySelector<HTMLInputElement>('input[type="url"]')?.placeholder).toBe('Paste an image URL…');
     handle.close();
   });
 
   it('says Change cover when the track already has one', () => {
     const { dialog, handle } = open({ current: 'https://cdn/old.png' });
 
-    expect(dialog.querySelector('[data-role="ink-well-title"]')?.textContent).toBe('Change cover');
-    handle.close();
-  });
-
-  it('puts the drop hint right under the button it continues', () => {
-    const { dialog, handle } = open();
-    const roles = Array.from(dialog.querySelectorAll('[data-role="ink-well-side"] > [data-role]'))
-      .map((el) => el.getAttribute('data-role'))
-      .filter((role) => role !== 'ink-well-file');
-
-    expect(roles).toEqual(['ink-well-title', 'ink-well-choose', 'ink-well-hint', 'ink-well-link-form', 'ink-well-error']);
+    expect(text(dialog, '.blok-media-empty__title')).toBe('Change cover');
     handle.close();
   });
 
@@ -393,24 +385,27 @@ describe('openCoverPicker — ink well surface', () => {
     const i18n = { t: (key: string) => `[${key}]`, has: () => true } as unknown as NonNullable<Parameters<typeof openCoverPicker>[0]['i18n']>;
     const { dialog, handle } = open({ i18n });
 
-    expect(dialog.querySelector('[data-role="ink-well-title"]')?.textContent).toBe('[tools.audio.coverAdd]');
-    expect(dialog.querySelector('[data-role="ink-well-hint"]')?.textContent).toBe('[tools.audio.coverOrDropHere]');
-    expect(dialog.querySelector<HTMLInputElement>('[data-role="ink-well-link"]')?.placeholder).toBe('[tools.audio.coverUrlPlaceholder]');
+    expect(text(dialog, '.blok-media-empty__title')).toBe('[tools.audio.coverAdd]');
+    expect(text(dialog, '.blok-media-empty__hint')).toBe('[tools.audio.coverHint]');
+    expect(text(dialog, '[data-action="from-link"]')).toBe('[tools.audio.emptyLink]');
+    expect(dialog.querySelector<HTMLInputElement>('input[type="url"]')?.placeholder).toBe('[tools.audio.coverUrlPlaceholder]');
     handle.close();
   });
 
-  it('forwards a pasted link and an error, and focuses the well first', () => {
+  it('forwards a link and an error, and focuses the well first', () => {
     const { dialog, handle, onUrl } = open();
-    const input = dialog.querySelector<HTMLInputElement>('[data-role="ink-well-link"]');
+    const input = dialog.querySelector<HTMLInputElement>('input[type="url"]');
 
     expect(dialog.querySelector('[data-role="ink-well"]')).toHaveFocus();
 
+    dialog.querySelector<HTMLElement>('[data-action="from-link"]')?.click();
     if (input) input.value = 'https://cdn/cover.png';
-    input?.closest('form')?.dispatchEvent(new Event('submit', { cancelable: true }));
+    input?.dispatchEvent(new Event('input'));
+    dialog.querySelector<HTMLElement>('[data-action="submit-url"]')?.click();
     expect(onUrl).toHaveBeenCalledWith('https://cdn/cover.png');
 
     handle.setError('Upload failed');
-    expect(dialog.querySelector('[data-role="ink-well-error"]')?.textContent).toBe('Upload failed');
+    expect(text(dialog, '[data-role="error"]')).toBe('Upload failed');
     handle.close();
   });
 

@@ -261,13 +261,14 @@ test('user can set a cover image from a URL', async ({ page }) => {
   const picker = page.locator('[data-role="audio-cover-picker"]');
   await expect(picker).toBeVisible();
 
-  // The link field sits beside the well, with no tab to switch to. It must be
-  // visible: a 2px-wide picker would make it unreachable.
+  // "From a link" swaps the buttons for the link field. It must be visible:
+  // a 2px-wide picker would make it unreachable.
+  await picker.getByRole('button', { name: 'From a link' }).click();
   await expect(picker.getByRole('textbox')).toBeVisible();
 
   // Fill the URL and submit with real interactions.
   await picker.getByRole('textbox').fill('https://example.com/cover.jpg');
-  await picker.locator('[data-role="ink-well-submit"]').click();
+  await picker.getByRole('button', { name: 'Add' }).click();
 
   // The cover img must appear with the submitted src.
   const coverImg = page.locator(`${AUDIO_BLOCK_SELECTOR} [data-role="audio-cover"] img`);
@@ -333,7 +334,7 @@ test('cover picker subtree uses border-box, though it lives outside the editor',
   const boxes = await picker.evaluate((root) => ({
     dialog: getComputedStyle(root).boxSizing,
     surface: getComputedStyle(root.querySelector('[data-role="ink-well-surface"]') ?? root).boxSizing,
-    link: getComputedStyle(root.querySelector('[data-role="ink-well-link"]') ?? root).boxSizing,
+    link: getComputedStyle(root.querySelector('input[type="url"]') ?? root).boxSizing,
   }));
   expect(boxes).toEqual({ dialog: 'border-box', surface: 'border-box', link: 'border-box' });
 });
@@ -353,10 +354,10 @@ test('the ink well takes a picture: it opens onto it, then the cover lands on th
   const well = picker.locator('[data-role="ink-well"]');
   const coverImg = audioBlock.locator('[data-role="audio-cover"] img');
 
-  // One surface: the well, one button and the link field, with no tabs.
+  // One surface: the well, Choose file and From a link, with no tabs.
   await expect(well).toBeVisible();
   await expect(picker.getByRole('button', { name: 'Choose file' })).toBeVisible();
-  await expect(picker.getByRole('textbox')).toBeVisible();
+  await expect(picker.getByRole('button', { name: 'From a link' })).toBeVisible();
   await expect(picker.getByRole('tab')).toHaveCount(0);
 
   // Layout size, not the painted box: the picker is still scaling in.
@@ -372,7 +373,7 @@ test('the ink well takes a picture: it opens onto it, then the cover lands on th
   await expect.poll(async () => (await pixel(74, 74))[3]).toBe(255);
   expect((await pixel(6, 6))[3]).toBe(0);
 
-  await picker.locator('[data-role="ink-well-file"]').setInputFiles(join(process.cwd(), 'test/playwright/fixtures/image/photo.jpg'));
+  await picker.getByTestId('file-input').setInputFiles(join(process.cwd(), 'test/playwright/fixtures/image/photo.jpg'));
 
   // The well fills corner to corner, with ink and then with the picture.
   await expect.poll(async () => (await pixel(6, 6))[3]).toBe(255);
@@ -381,6 +382,50 @@ test('the ink well takes a picture: it opens onto it, then the cover lands on th
 
   await expect(coverImg).toBeAttached();
   await expect(picker).toHaveCount(0);
+});
+
+test('the ink well picker widens so both buttons stay on one line', async ({ page }) => {
+  await createBlok(page);
+  await insertAudioBlock(page);
+
+  const audioBlock = page.locator(AUDIO_BLOCK_SELECTOR);
+  await audioBlock.getByTestId('file-input').setInputFiles(FIXTURE_PATH);
+  await expect(audioBlock.locator('[data-role="audio-controls"]')).toBeVisible();
+
+  await audioBlock.locator('[data-role="audio-cover"]').hover();
+  await audioBlock.locator('[data-role="audio-cover-change"]').click();
+
+  const picker = page.locator('[data-role="audio-cover-picker"]');
+  const choose = picker.getByRole('button', { name: 'Choose file' });
+  const fromLink = picker.locator('[data-action="from-link"]');
+  const tops = async (): Promise<number[]> => [
+    await choose.evaluate((el: HTMLElement) => el.offsetTop),
+    await fromLink.evaluate((el: HTMLElement) => el.offsetTop),
+  ];
+  const width = (): Promise<number> => picker.evaluate((el: HTMLElement) => el.offsetWidth);
+
+  await expect(choose).toBeVisible();
+  expect(await width()).toBe(440);
+  expect(new Set(await tops()).size).toBe(1);
+
+  // A language with long labels: the picker grows, the buttons do not wrap or clip.
+  await fromLink.evaluate((el) => {
+    const label = el.querySelector('span:last-child');
+
+    if (label) label.textContent = 'From a link somewhere on the internet';
+  });
+
+  expect(await width()).toBeGreaterThan(440);
+  expect(new Set(await tops()).size).toBe(1);
+  const fits = await picker.evaluate((root) => {
+    const box = root.getBoundingClientRect();
+    const button = root.querySelector('[data-action="from-link"]')?.getBoundingClientRect();
+
+    return button !== undefined && button.right <= box.right;
+  });
+  expect(fits).toBe(true);
+  // The sentence wraps inside the picker; it never sets the width.
+  expect(await picker.evaluate((root) => root.scrollWidth <= root.clientWidth)).toBe(true);
 });
 
 test('cover picker animates in when opened', async ({ page }) => {
@@ -428,9 +473,9 @@ test('user can remove a cover and the ink drop returns', async ({ page }) => {
 
   const picker2 = page.locator('[data-role="audio-cover-picker"]');
   await expect(picker2).toBeVisible();
-  await expect(picker2.getByRole('textbox')).toBeVisible();
+  await picker2.getByRole('button', { name: 'From a link' }).click();
   await picker2.getByRole('textbox').fill('https://example.com/cover.jpg');
-  await picker2.locator('[data-role="ink-well-submit"]').click();
+  await picker2.getByRole('button', { name: 'Add' }).click();
 
   // Confirm cover img is set before removing it.
   const coverImg = page.locator(`${AUDIO_BLOCK_SELECTOR} [data-role="audio-cover"] img`);

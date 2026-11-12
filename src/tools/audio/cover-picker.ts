@@ -11,7 +11,7 @@ import {
   positionAnchored,
   createPositionTracker,
 } from '../../components/utils/popover/anchored-position';
-import { renderMediaEmptyState } from '../../components/utils/media-empty-state';
+import { renderMediaEmptyState, type MediaEmptyStateLabels } from '../../components/utils/media-empty-state';
 import { renderInkWell } from './ink-well';
 
 /** Validate a chosen cover file. Returns an error message, or null when valid. */
@@ -39,8 +39,8 @@ export interface OpenCoverPickerOptions {
   onClose?(): void;
   i18n?: I18nInstance;
   /**
-   * `ink-well` is the audio block's own picker: the ink drop takes the picture.
-   * `card` is the plain tabbed uploader. Defaults to `card`.
+   * `ink-well` is the audio block's own picker: the ink drop beside the uploader.
+   * `card` is the uploader alone. Defaults to `card`.
    */
   surface?: 'card' | 'ink-well';
   /** The cover set now. The ink well shows it from the start. */
@@ -65,6 +65,21 @@ interface PickerSurface {
   destroy(): void;
 }
 
+function uploaderLabels(opts: OpenCoverPickerOptions): MediaEmptyStateLabels {
+  return {
+    add: tr(opts.i18n, 'tools.audio.coverAdd', 'Add a cover'),
+    hint: tr(opts.i18n, 'tools.audio.coverHint', 'Drag an image here, choose one, or paste a link.'),
+    dropAnywhere: tr(opts.i18n, 'tools.image.emptyDropAnywhere', 'Let go anywhere in this block.'),
+    cancelLink: tr(opts.i18n, 'notifier.cancel', 'Cancel'),
+    embed: tr(opts.i18n, 'tools.audio.coverLink', 'Link'),
+    chooseFile: tr(opts.i18n, 'tools.audio.coverChooseFile', 'Choose file'),
+    dropToUpload: tr(opts.i18n, 'tools.audio.coverDropToUpload', 'Drop to upload'),
+    urlPlaceholder: tr(opts.i18n, 'tools.audio.coverUrlPlaceholder', 'Paste an image URL…'),
+    urlAria: tr(opts.i18n, 'tools.audio.coverUrlAria', 'Image URL'),
+    submit: tr(opts.i18n, 'tools.audio.coverInsert', 'Insert'),
+  };
+}
+
 function inkWellSurface(opts: OpenCoverPickerOptions): PickerSurface {
   const element = renderInkWell({
     acceptTypes: [...COVER_TYPES],
@@ -72,14 +87,11 @@ function inkWellSurface(opts: OpenCoverPickerOptions): PickerSurface {
     onUrl: opts.onUrl,
     ...(opts.current ? { current: opts.current } : {}),
     labels: {
-      title: opts.current
-        ? tr(opts.i18n, 'tools.audio.coverChange', 'Change cover')
-        : tr(opts.i18n, 'tools.audio.coverAdd', 'Add a cover'),
-      hint: tr(opts.i18n, 'tools.audio.coverOrDropHere', 'or drop an image here'),
-      chooseFile: tr(opts.i18n, 'tools.audio.coverChooseFile', 'Choose file'),
-      linkPlaceholder: tr(opts.i18n, 'tools.audio.coverUrlPlaceholder', 'Paste an image URL…'),
-      linkAria: tr(opts.i18n, 'tools.audio.coverUrlAria', 'Image URL'),
-      submit: tr(opts.i18n, 'tools.audio.coverInsert', 'Insert'),
+      ...uploaderLabels(opts),
+      ...(opts.current ? { add: tr(opts.i18n, 'tools.audio.coverChange', 'Change cover') } : {}),
+      // The same words as the audio block's own uploader.
+      embed: tr(opts.i18n, 'tools.audio.emptyLink', 'From a link'),
+      submit: tr(opts.i18n, 'tools.audio.emptyInsert', 'Add'),
       wellAria: tr(opts.i18n, 'tools.audio.coverSet', 'Set cover image'),
     },
   });
@@ -97,18 +109,7 @@ function cardSurface(opts: OpenCoverPickerOptions): PickerSurface {
     acceptTypes: [...COVER_TYPES],
     onFile: opts.onFile,
     onUrl: opts.onUrl,
-    labels: {
-      add: tr(opts.i18n, 'tools.audio.coverAdd', 'Add a cover'),
-      hint: tr(opts.i18n, 'tools.audio.coverHint', 'Drag an image here, choose one, or paste a link.'),
-      dropAnywhere: tr(opts.i18n, 'tools.image.emptyDropAnywhere', 'Let go anywhere in this block.'),
-      cancelLink: tr(opts.i18n, 'notifier.cancel', 'Cancel'),
-      embed: tr(opts.i18n, 'tools.audio.coverLink', 'Link'),
-      chooseFile: tr(opts.i18n, 'tools.audio.coverChooseFile', 'Choose file'),
-      dropToUpload: tr(opts.i18n, 'tools.audio.coverDropToUpload', 'Drop to upload'),
-      urlPlaceholder: tr(opts.i18n, 'tools.audio.coverUrlPlaceholder', 'Paste an image URL…'),
-      urlAria: tr(opts.i18n, 'tools.audio.coverUrlAria', 'Image URL'),
-      submit: tr(opts.i18n, 'tools.audio.coverInsert', 'Insert'),
-    },
+    labels: uploaderLabels(opts),
   });
 
   return {

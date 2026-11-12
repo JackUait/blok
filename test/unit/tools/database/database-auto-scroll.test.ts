@@ -41,24 +41,35 @@ const pointer = (type: string, x: number, y: number, target: EventTarget = docum
   target.dispatchEvent(event);
 };
 
-describe('database drag auto-scroll speeds (notion-motion.md Round 14)', () => {
-  it('rows: about 0.84 px/ms at 10px from the edge, 0.38 at 20px, none at 30px', () => {
-    expect(rowAutoScrollSpeed(10)).toBeCloseTo(0.84, 2);
-    expect(rowAutoScrollSpeed(20)).toBeCloseTo(0.38, 2);
-    expect(rowAutoScrollSpeed(30)).toBe(0);
+// notion-motion.md Round 17 §1: the bottom edge's measured speeds, in px/ms.
+const VERTICAL: Array<[number, number]> = [[35, 0.034], [34, 0.033], [32, 0.081], [20, 0.33], [10, 0.74], [5, 1.11], [1, 1.39]];
+
+describe('database drag auto-scroll speeds (notion-motion.md Round 17 §1)', () => {
+  it.each(VERTICAL)('list rows: %ipx from the edge scrolls at about %f px/ms', (distance, speed) => {
+    expect(listAutoScrollSpeed(distance)).toBeCloseTo(speed, 2);
   });
 
-  it('board cards: about 1.5 px/ms at 10px from the edge, none at 20px', () => {
-    expect(cardAutoScrollSpeed(10)).toBeCloseTo(1.5, 2);
-    expect(cardAutoScrollSpeed(20)).toBe(0);
+  it.each(VERTICAL)('table rows: %ipx from the edge scrolls at about %f px/ms', (distance, speed) => {
+    expect(rowAutoScrollSpeed(distance)).toBeCloseTo(speed, 2);
   });
 
-  it('list rows (Round 16): about 0.66 px/ms at 10px from the edge, none at 12px', () => {
-    expect(listAutoScrollSpeed(10)).toBeCloseTo(0.66, 2);
-    expect(listAutoScrollSpeed(12)).toBe(0);
-    expect(listAutoScrollSpeed(20)).toBe(0);
+  it('rows: nothing at 36px', () => {
+    expect(listAutoScrollSpeed(36)).toBe(0);
+    expect(rowAutoScrollSpeed(36)).toBe(0);
+  });
+
+  it('board cards: about 1.2 px/ms at 10px, still scrolling at 49px, nothing at 53px', () => {
+    expect(cardAutoScrollSpeed(10)).toBeCloseTo(1.2, 2);
+    expect(cardAutoScrollSpeed(49)).toBeGreaterThan(0);
+    expect(cardAutoScrollSpeed(53)).toBe(0);
   });
 });
+
+/** notion-motion.md Round 17 §1: the move that enters the zone does not start the scroll; the next one inside it does. */
+const enter = (x: number, y: number, axis: 'x' | 'y' = 'y'): void => {
+  pointer('pointermove', x, y);
+  pointer('pointermove', axis === 'y' ? x + 1 : x, axis === 'y' ? y : y + 1);
+};
 
 describe('database drags scroll near an edge', () => {
   beforeEach(() => {
@@ -111,26 +122,26 @@ describe('database drags scroll near an edge', () => {
     return { scroller, grid, handle, drag, onDrop };
   };
 
-  it('a table row held 10px above the window bottom scrolls the page down at about 0.84 px/ms', () => {
+  it('a table row held 10px above the window bottom scrolls the page down at about 0.74 px/ms', () => {
     const { scroller, handle } = tableFixture();
 
     pointer('pointerdown', 50, 110, handle);
-    pointer('pointermove', 50, 440);
+    enter(50, 440);
     runFrames(0, 240);
 
-    expect(scroller.scrollTop).toBeGreaterThan(0.84 * 192);
-    expect(scroller.scrollTop).toBeLessThan(0.84 * 264);
+    expect(scroller.scrollTop).toBeGreaterThan(0.74 * 192);
+    expect(scroller.scrollTop).toBeLessThan(0.74 * 264);
   });
 
-  it('a table row held 20px above the window bottom scrolls slower, at about 0.38 px/ms', () => {
+  it('a table row held 20px above the window bottom scrolls slower, at about 0.33 px/ms', () => {
     const { scroller, handle } = tableFixture();
 
     pointer('pointerdown', 50, 110, handle);
-    pointer('pointermove', 50, 430);
+    enter(50, 430);
     runFrames(0, 240);
 
-    expect(scroller.scrollTop).toBeGreaterThan(0.38 * 192);
-    expect(scroller.scrollTop).toBeLessThan(0.38 * 264);
+    expect(scroller.scrollTop).toBeGreaterThan(0.33 * 192);
+    expect(scroller.scrollTop).toBeLessThan(0.33 * 264);
   });
 
   it('a table row held in the middle does not scroll', () => {
@@ -147,7 +158,7 @@ describe('database drags scroll near an edge', () => {
     const { scroller, handle, onDrop } = tableFixture();
 
     pointer('pointerdown', 50, 110, handle);
-    pointer('pointermove', 50, 440);
+    enter(50, 440);
     runFrames(0, 72);
     pointer('pointerup', 50, 440);
     // Rows are 36 tall from y 100: the drop goes before the first row whose middle is below the pointer.
@@ -161,7 +172,7 @@ describe('database drags scroll near an edge', () => {
     const { scroller, handle } = tableFixture();
 
     pointer('pointerdown', 50, 110, handle);
-    pointer('pointermove', 50, 440);
+    enter(50, 440);
     runFrames(0, 48);
     pointer('pointerup', 50, 440);
     const at = scroller.scrollTop;
@@ -174,7 +185,7 @@ describe('database drags scroll near an edge', () => {
     const { scroller, handle } = tableFixture();
 
     pointer('pointerdown', 50, 110, handle);
-    pointer('pointermove', 50, 440);
+    enter(50, 440);
     runFrames(0, 48);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     const at = scroller.scrollTop;
@@ -207,15 +218,15 @@ describe('database drags scroll near an edge', () => {
     return { board, card, drag };
   };
 
-  it('a board card held 10px from the board\'s right edge scrolls the board sideways at about 1.5 px/ms', () => {
+  it('a board card held 10px from the board\'s right edge scrolls the board sideways at about 1.2 px/ms', () => {
     const { board, card, drag } = boardFixture();
 
     drag.beginTracking('c1', 300, 170, card);
-    pointer('pointermove', 890, 170);
+    enter(890, 170, 'x');
     runFrames(0, 72);
 
-    expect(board.scrollLeft).toBeGreaterThan(1.5 * 48);
-    expect(board.scrollLeft).toBeLessThan(1.5 * 96);
+    expect(board.scrollLeft).toBeGreaterThan(1.2 * 48);
+    expect(board.scrollLeft).toBeLessThan(1.2 * 96);
   });
 
   it('the board drop line follows the scroll with the pointer held still', () => {
@@ -227,7 +238,7 @@ describe('database drags scroll near an edge', () => {
     const before = line?.style.left;
 
     // Still over the column after the board moves: the column starts at 280 - scrollLeft.
-    pointer('pointermove', 890, 190);
+    enter(890, 190, 'x');
     const held = document.querySelector<HTMLElement>('[data-blok-database-drop-line]')?.style.left;
 
     runFrames(0, 72);
@@ -238,11 +249,11 @@ describe('database drags scroll near an edge', () => {
     expect(board.scrollLeft).toBeGreaterThan(0);
   });
 
-  it('a board card held 20px from the right edge does not scroll', () => {
+  it('a board card held 53px from the right edge does not scroll', () => {
     const { board, card, drag } = boardFixture();
 
     drag.beginTracking('c1', 300, 170, card);
-    pointer('pointermove', 880, 170);
+    enter(847, 170, 'x');
     runFrames(0, 240);
 
     expect(board.scrollLeft).toBe(0);
@@ -252,7 +263,7 @@ describe('database drags scroll near an edge', () => {
     const { board, card, drag } = boardFixture();
 
     drag.beginTracking('c1', 300, 170, card);
-    pointer('pointermove', 890, 170);
+    enter(890, 170, 'x');
     runFrames(0, 24);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     const at = board.scrollLeft;
@@ -283,22 +294,22 @@ describe('database drags scroll near an edge', () => {
     return { scroller, drag, onDrop };
   };
 
-  it('a list row held 10px above the window bottom scrolls the page down at about 0.66 px/ms', () => {
+  it('a list row held 10px above the window bottom scrolls the page down at about 0.74 px/ms', () => {
     const { scroller, drag } = listFixture();
 
     drag.beginTracking('r0', 50, 110);
-    pointer('pointermove', 50, 440);
+    enter(50, 440);
     runFrames(0, 240);
 
-    expect(scroller.scrollTop).toBeGreaterThan(0.66 * 192);
-    expect(scroller.scrollTop).toBeLessThan(0.66 * 264);
+    expect(scroller.scrollTop).toBeGreaterThan(0.74 * 192);
+    expect(scroller.scrollTop).toBeLessThan(0.74 * 264);
   });
 
-  it('a list row held 12px above the window bottom does not scroll', () => {
+  it('a list row held 36px above the window bottom does not scroll', () => {
     const { scroller, drag } = listFixture();
 
     drag.beginTracking('r0', 50, 110);
-    pointer('pointermove', 50, 438);
+    enter(50, 414);
     runFrames(0, 240);
 
     expect(scroller.scrollTop).toBe(0);
@@ -308,7 +319,7 @@ describe('database drags scroll near an edge', () => {
     const { scroller, drag, onDrop } = listFixture();
 
     drag.beginTracking('r0', 50, 110);
-    pointer('pointermove', 50, 440);
+    enter(50, 440);
     runFrames(0, 72);
     const line = document.querySelector<HTMLElement>('[data-blok-database-drop-line]');
     const before = Array.from({ length: 12 }, (_, i) => i).find((i) => i > 0 && 100 + i * 36 + 18 - scroller.scrollTop > 440);
@@ -326,7 +337,7 @@ describe('database drags scroll near an edge', () => {
     const { scroller, drag } = listFixture();
 
     drag.beginTracking('r0', 50, 110);
-    pointer('pointermove', 50, 440);
+    enter(50, 440);
     runFrames(0, 48);
     pointer('pointerup', 50, 440);
     const at = scroller.scrollTop;
@@ -339,12 +350,92 @@ describe('database drags scroll near an edge', () => {
     const { scroller, drag } = listFixture();
 
     drag.beginTracking('r0', 50, 110);
-    pointer('pointermove', 50, 440);
+    enter(50, 440);
     runFrames(0, 48);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     const at = scroller.scrollTop;
 
     runFrames(56, 240);
     expect(scroller.scrollTop).toBe(at);
+  });
+
+  it('a list row that jumps into the zone and holds still does not scroll', () => {
+    const { scroller, drag } = listFixture();
+
+    drag.beginTracking('r0', 50, 110);
+    pointer('pointermove', 50, 430);
+    runFrames(0, 240);
+
+    expect(scroller.scrollTop).toBe(0);
+  });
+
+  it('a second move inside the zone starts the scroll, and it keeps going with the pointer held still', () => {
+    const { scroller, drag } = listFixture();
+
+    drag.beginTracking('r0', 50, 110);
+    pointer('pointermove', 50, 430);
+    runFrames(0, 240);
+    pointer('pointermove', 51, 430);
+    runFrames(248, 488);
+
+    expect(scroller.scrollTop).toBeGreaterThan(0.33 * 192);
+  });
+
+  it('a move out of the zone needs two moves back in to scroll again', () => {
+    const { scroller, drag } = listFixture();
+
+    drag.beginTracking('r0', 50, 110);
+    enter(50, 430);
+    pointer('pointermove', 50, 250);
+    runFrames(0, 48);
+    const at = scroller.scrollTop;
+
+    pointer('pointermove', 50, 430);
+    runFrames(56, 240);
+
+    expect(scroller.scrollTop).toBe(at);
+  });
+
+  it('a table row that jumps into the zone and holds still does not scroll', () => {
+    const { scroller, handle } = tableFixture();
+
+    pointer('pointerdown', 50, 110, handle);
+    pointer('pointermove', 50, 440);
+    runFrames(0, 240);
+
+    expect(scroller.scrollTop).toBe(0);
+  });
+
+  it('a board card that jumps into the zone and holds still does not scroll', () => {
+    const { board, card, drag } = boardFixture();
+
+    drag.beginTracking('c1', 300, 170, card);
+    pointer('pointermove', 890, 170);
+    runFrames(0, 240);
+
+    expect(board.scrollLeft).toBe(0);
+  });
+
+  // Round 17 §1: at the top, 10px inside the scroller scrolls up; inside the top bar above it does not.
+  it('a list row 10px below the scroller top scrolls up', () => {
+    const { scroller, drag } = listFixture();
+
+    scroller.scrollTop = 150;
+    drag.beginTracking('r0', 50, 110);
+    enter(50, 54);
+    runFrames(0, 240);
+
+    expect(scroller.scrollTop).toBeLessThan(150 - 0.74 * 192);
+  });
+
+  it('a list row over the bar above the scroller does not scroll', () => {
+    const { scroller, drag } = listFixture();
+
+    scroller.scrollTop = 150;
+    drag.beginTracking('r0', 50, 110);
+    enter(50, 30);
+    runFrames(0, 240);
+
+    expect(scroller.scrollTop).toBe(150);
   });
 });

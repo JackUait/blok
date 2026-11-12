@@ -2900,6 +2900,50 @@ test.describe('copy and paste', () => {
         ]);
       }
     });
+
+    test('keeps a partly selected item as a list item right after typing into it', async ({ page }) => {
+      await createBlokWithElements(page, [
+        { id: 'one', type: 'list', data: { text: 'first item', style: 'unordered' } },
+        { id: 'two', type: 'list', data: { text: 'second item', style: 'unordered' } },
+      ]);
+
+      await page.locator('[data-blok-id="one"]').getByText('first item', { exact: true }).click();
+      await page.keyboard.press('End');
+      await page.keyboard.type('Z');
+
+      const point = (id: string, needle: string): Promise<{ x: number; y: number }> => page.evaluate(({ blockId, text }) => {
+        const holder = document.querySelector(`[data-blok-id="${blockId}"]`) as Node;
+        const walker = document.createTreeWalker(holder, NodeFilter.SHOW_TEXT);
+
+        for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+          const offset = (node.textContent ?? '').indexOf(text);
+
+          if (offset !== -1) {
+            const range = document.createRange();
+
+            range.setStart(node, offset);
+            range.setEnd(node, offset + 1);
+
+            const box = range.getBoundingClientRect();
+
+            return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+          }
+        }
+        throw new Error(`no "${text}" in ${blockId}`);
+      }, { blockId: id, text: needle });
+
+      const from = await point('one', 'rst');
+      const to = await point('two', 'cond');
+
+      await page.mouse.move(from.x, from.y);
+      await page.mouse.down();
+      await page.mouse.move(to.x, to.y, { steps: 5 });
+      await page.mouse.up();
+
+      const clipboard = await copyFromElement(page.locator(':focus'));
+
+      expect(clipboard['text/html']).toMatch(/^<ul><li>r?st itemZ<\/li><li>s?e?<\/li><\/ul>$/);
+    });
   });
 
   test('selected list blocks paste back from html with their start number and checked state', async ({ page }) => {

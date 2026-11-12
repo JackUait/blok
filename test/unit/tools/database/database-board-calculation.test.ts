@@ -147,6 +147,20 @@ describe('board column calculation', () => {
       expect(titleEl?.firstChild?.textContent).toBe('tools.database.calcShowLargeCounts');
     });
 
+    // notion-motion.md Round 16 §9: the 99+ row draws a 30x18 switch after its title, not a check or a fill.
+    it('draws the 99+ state as the database switch after the title', () => {
+      const count = titled(groupCalculationItems(menu()), 'tools.database.calcCount');
+      const cap = titled(count.children?.items, 'tools.database.calcShowLargeCounts');
+      const titleEl = 'titleEl' in cap ? cap.titleEl : undefined;
+      const track = titleEl?.querySelector('[data-blok-database-switch-track]');
+
+      expect([...(titleEl?.children ?? [])].map((child) => [...child.attributes].map((a) => a.name)[0])).toEqual([
+        'data-blok-database-calc-cap-title', 'data-blok-database-switch-track', 'data-blok-database-calc-hint',
+      ]);
+      expect(track?.getAttribute('aria-hidden')).toBe('true');
+      expect(track?.children).toHaveLength(1);
+    });
+
     // notion-motion.md Round 12: every list is 250 wide, and a divider sits under the 99+ row (r11-calc-count-sub.png).
     it('opens every list 250 wide, with a divider under the 99+ row', () => {
       const items = groupCalculationItems(menu()) as Item[];

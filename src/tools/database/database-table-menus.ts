@@ -82,12 +82,20 @@ export const capCountsItems = (
   row: { name: string; isActive: boolean; onActivate: () => void; closeOnActivate?: boolean }
 ): PopoverItemParams[] => {
   const title = document.createElement('span');
+  const name = document.createElement('span');
   const hint = document.createElement('span');
+  // notion-motion.md Round 16 §9: a switch after the title. The item's aria-checked carries the state.
+  const track = document.createElement('span');
 
   title.setAttribute('data-blok-database-calc-cap', '');
+  name.setAttribute('data-blok-database-calc-cap-title', '');
+  name.textContent = t('tools.database.calcShowLargeCounts');
+  track.setAttribute('data-blok-database-switch-track', '');
+  track.setAttribute('aria-hidden', 'true');
+  track.appendChild(document.createElement('span'));
   hint.setAttribute('data-blok-database-calc-hint', '');
   hint.textContent = t('tools.database.calcShowLargeCountsHint');
-  title.append(t('tools.database.calcShowLargeCounts'), hint);
+  title.append(name, track, hint);
 
   return [
     {
@@ -96,6 +104,8 @@ export const capCountsItems = (
       title: t('tools.database.calcShowLargeCounts'),
       titleEl: title,
       isActive: row.isActive,
+      // The popover flips the item, and with it the switch, while the menu stays open.
+      toggle: true,
       ...(row.closeOnActivate === true ? { closeOnActivate: true } : {}),
       onActivate: row.onActivate,
     },
@@ -136,12 +146,17 @@ export const calculationItems = (
   });
   const checkbox = property.type === 'checkbox';
   const offered = CALCULATIONS_FOR_TYPE[property.type] ?? [];
+  // The menu stays open, so the state is kept here: `cap.capCounts` is the state the menu opened with.
+  const capped = { on: cap?.capCounts === true };
   const capToggle: PopoverItemParams[] = cap === undefined
     ? []
     : capCountsItems((key) => i18n.t(key), {
       name: 'database-calc-cap-counts',
-      isActive: cap.capCounts,
-      onActivate: () => cap.onCapCounts(!cap.capCounts),
+      isActive: capped.on,
+      onActivate: () => {
+        capped.on = !capped.on;
+        cap.onCapCounts(capped.on);
+      },
     });
   const items: PopoverItemParams[] = [
     {

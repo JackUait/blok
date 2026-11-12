@@ -447,9 +447,34 @@ describe('calculation Count list 99+ row', () => {
 
   it('grows the table\'s 99+ row to 72.4 and drops the one-line cap', () => {
     expect(declared(`${CALC} [data-blok-item-name='database-calc-cap-counts']`, 'height')).toEqual(['auto']);
-    expect(declared(`${CALC} [data-blok-item-name='database-calc-cap-counts']`, 'padding-block')).toEqual(['10.2px']);
-    expect(declared(`${CALC} [data-blok-item-name='database-group-calc-cap-counts']`, 'padding-block')).toEqual(['10.2px']);
     expect(declared('[data-blok-item-name="database-calc-cap-counts"]', 'max-height')).toEqual(['none']);
+  });
+
+  // notion-motion.md Round 16 §9: 8px in on every side; title 14/16.8, the 12/16.8 hint 6px under it,
+  // and the 30x18 switch 8px from the row's right, top-aligned with the title.
+  it('lays the 99+ row out as Notion\'s: title, switch on its line, hint under', () => {
+    for (const name of ['database-calc-cap-counts', 'database-group-calc-cap-counts']) {
+      expect(declared(`${CALC} [data-blok-item-name='${name}']`, 'padding')).toEqual(['var(--blok-space-2)']);
+    }
+    expect(declared('[data-blok-database-calc-cap]', 'display')).toEqual(['grid']);
+    expect(declared('[data-blok-database-calc-cap]', 'grid-template-columns')).toEqual(['188px 30px']);
+    expect(declared('[data-blok-database-calc-cap]', 'column-gap')).toEqual(['var(--blok-space-2)']);
+    expect(declared('[data-blok-database-calc-cap]', 'row-gap')).toEqual(['var(--blok-space-1-5)']);
+    expect(declared('[data-blok-database-calc-cap-title]', 'line-height')).toEqual(['16.8px']);
+    expect(declared('[data-blok-database-calc-cap-title]', 'font-size')).toEqual(['14px']);
+    expect(declared('[data-blok-database-calc-hint]', 'grid-column')).toEqual(['1']);
+    expect(declared('[data-blok-database-calc-cap] > [data-blok-database-switch-track]', 'grid-row')).toEqual(['1 / span 2']);
+    expect(declared('[data-blok-database-calc-hint]', 'line-height')).toEqual(['16.8px']);
+    expect(declared('[data-blok-database-calc-cap] > [data-blok-database-switch-track]', 'align-self')).toEqual(['start']);
+  });
+
+  // The switch carries the state; the row keeps only its hover fill. On stays blue (user decision).
+  it('shows the on state on the switch, not as a fill', () => {
+    const ON = "[data-blok-item-name$='calc-cap-counts'][aria-checked='true']";
+
+    expect(declared(`${CALC} [data-blok-item-name$='calc-cap-counts'][data-blok-popover-item-active]:not(:hover, [data-blok-focused='true'])`, 'background-color')).toEqual(['transparent']);
+    expect(declared(`${ON} [data-blok-database-switch-track]`, 'background-color')).toEqual(['var(--blok-database-switch-on-bg)']);
+    expect(declared(`${ON} [data-blok-database-switch-track] > span`, 'transform')).toEqual(['translateX(12px)']);
   });
 
   it('makes the divider under it 8 tall, 12px in from the box sides', () => {

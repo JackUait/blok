@@ -7026,7 +7026,15 @@ button[data-blok-database-column-count]:hover {
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-item-name='database-group-calc-cap-counts'], [data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-item-name='database-calc-cap-counts'] {
   height: auto;
-  padding-block: 10.2px;
+  padding: var(--blok-space-2);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-item-name$='calc-cap-counts'][data-blok-popover-item-active]:not(:hover, [data-blok-focused='true']) {
+  background-color: transparent;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-item-name$='calc-cap-counts'][data-blok-popover-item-active]:is(:hover, [data-blok-focused='true']) {
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-popover-item-separator] {
@@ -15350,17 +15358,42 @@ input[data-blok-database-picker-search]:focus {
 }
 
 [data-blok-database-calc-cap] {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 188px 30px;
+  column-gap: var(--blok-space-2);
+  row-gap: var(--blok-space-1-5);
+  white-space: normal;
+}
+
+[data-blok-database-calc-cap-title] {
+  font-size: 14px;
+  line-height: 16.8px;
+}
+
+[data-blok-database-calc-cap] > [data-blok-database-switch-track] {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  align-self: start;
+}
+
+[data-blok-item-name$='calc-cap-counts'][aria-checked='true'] [data-blok-database-switch-track] {
+  background-color: var(--blok-database-switch-on-bg);
+}
+
+[data-blok-item-name$='calc-cap-counts'][aria-checked='true'] [data-blok-database-switch-track] > span {
+  transform: translateX(12px);
+}
+
+[dir="rtl"] [data-blok-item-name$='calc-cap-counts'][aria-checked='true'] [data-blok-database-switch-track] > span {
+  transform: translateX(-12px);
 }
 
 [data-blok-database-calc-hint] {
-  width: 176px;
+  grid-column: 1;
   color: var(--blok-database-ink-secondary);
   font-size: 12px;
   font-weight: 400;
-  line-height: 16px;
-  white-space: normal;
+  line-height: 16.8px;
 }
 
 [data-blok-database-panel-switch] > [data-blok-database-switch-track] {

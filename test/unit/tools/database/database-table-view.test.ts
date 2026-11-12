@@ -2110,6 +2110,22 @@ describe('DatabaseTableView', () => {
       expect(onCap).toHaveBeenCalledWith(true);
     });
 
+    // The 99+ switch flips in the open menu, so a second press turns the cap back off.
+    it('flips the 99+ switch in place: each press sends the other state', () => {
+      const onCap = vi.fn();
+      const items = calculationItems({ type: 'text' }, 'count', { t: (key: string) => key }, vi.fn(), { capCounts: false, onCapCounts: onCap }) as Array<{
+        title?: string;
+        children?: { items?: Array<{ title?: string; toggle?: boolean; onActivate?: () => void }> };
+      }>;
+      const cap = items.find((item) => item.title === 'tools.database.calcCount')?.children?.items?.[0];
+
+      cap?.onActivate?.();
+      cap?.onActivate?.();
+
+      expect(cap?.toggle).toBe(true);
+      expect(onCap.mock.calls).toEqual([[true], [false]]);
+    });
+
     // notion-motion.md Round 12 (r12-sub-count-checkbox.raw): a checkbox's Count list starts with the 99+ row too.
     it('starts a checkbox column\'s Count list with the 99+ toggle', () => {
       const items = calculationItems({ type: 'checkbox' }, undefined, { t: (key: string) => key }, vi.fn(), { capCounts: false, onCapCounts: vi.fn() }) as Array<{ title?: string; children?: { items?: Array<{ title?: string }> } }>;

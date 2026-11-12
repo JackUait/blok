@@ -554,6 +554,28 @@ test.describe('annotation (Hint) inline tool', () => {
     await expect.poll(opacity).toBe('0');
   });
 
+  test('hovering a hint that is open for editing does not open its reading card', async ({ page }) => {
+    await createBlok(page, [ WITH_HINT ]);
+
+    const hint = page.locator(HINT_SELECTOR);
+    const box = await hint.boundingBox();
+
+    if (box === null) {
+      throw new Error('the hint has no box');
+    }
+
+    await hint.click();
+    await expect(page.getByTestId('inline-annotation-text')).toBeFocused();
+
+    await page.mouse.move(box.x + 6, box.y + box.height / 2);
+    await page.mouse.move(box.x + 14, box.y + box.height / 2);
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- asserts the card stays closed past the hint delay
+    await page.waitForTimeout(700);
+
+    expect(await page.locator('[data-blok-testid="annotation-card"][data-state="open"]').count()).toBe(0);
+    await expect(page.getByTestId('inline-annotation-text')).toBeVisible();
+  });
+
   test('the remove button takes the hint off the phrase', async ({ page }) => {
     await createBlok(page, [ WITH_HINT ]);
     await page.locator(HINT_SELECTOR).click();

@@ -1699,7 +1699,8 @@ export class UI extends Module<UINodes> {
   private handleAnnotationMouseMove(event: MouseEvent): void {
     const hint = this.annotationOf(event.target);
 
-    if (hint === null) {
+    // The hint editor lives in the inline toolbar. While it is open, the phrase is being written, not read.
+    if (hint === null || this.Blok.InlineToolbar.opened) {
       return;
     }
 

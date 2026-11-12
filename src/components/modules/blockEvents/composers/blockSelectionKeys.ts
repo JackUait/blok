@@ -679,10 +679,10 @@ export class BlockSelectionKeys extends BlockEventComposer {
     }
 
     if (!BlockSelection.anyBlockSelected) {
-      const covered = this.blocksUnderReadOnlyTextSelection();
+      const covered = this.readOnlyTextSelection();
 
-      if (covered.length > 0) {
-        void BlockSelection.copySelectedBlocks(event, { blocks: covered });
+      if (covered !== null) {
+        void BlockSelection.copySelectedBlocks(event, covered);
 
         return;
       }
@@ -731,17 +731,18 @@ export class BlockSelectionKeys extends BlockEventComposer {
   }
 
   /**
-   * The blocks a read-only text selection spans, when it crosses a block edge.
-   * Read-only inputs are not contenteditable, so the cross-block text selection
-   * never resolves there. The browser's own copy of the rendered DOM loses
-   * lists and toggles, so these blocks are copied whole instead.
+   * The blocks a read-only text selection spans, when it crosses a block edge,
+   * with the selection. Read-only inputs are not contenteditable, so the
+   * cross-block text selection never resolves there. The browser's own copy of
+   * the rendered DOM loses lists and toggles, so these blocks are copied as
+   * blocks, cut to the selected text.
    */
-  private blocksUnderReadOnlyTextSelection(): Block[] {
+  private readOnlyTextSelection(): { blocks: Block[]; range: Range } | null {
     const { BlockManager, ReadOnly } = this.Blok;
     const selection = SelectionUtils.get();
 
     if (!ReadOnly.isEnabled || selection === null || selection.rangeCount === 0) {
-      return [];
+      return null;
     }
 
     const range = selection.getRangeAt(0);
@@ -749,10 +750,10 @@ export class BlockSelectionKeys extends BlockEventComposer {
     const end = BlockManager.getBlockByChildNode(range.endContainer);
 
     if (range.collapsed || start === undefined || end === undefined || start === end) {
-      return [];
+      return null;
     }
 
-    return BlockManager.getSelectionSiblingRange(start, end);
+    return { blocks: BlockManager.getSelectionSiblingRange(start, end), range };
   }
 
   /**

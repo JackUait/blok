@@ -376,14 +376,14 @@ describe('BlockSelectionKeys', () => {
         return { blockSelectionKeys: new BlockSelectionKeys(blok), copySelectedBlocks };
       };
 
-      it('copies the blocks the selection spans', () => {
+      it('copies the blocks the selection spans, cut to the selection', () => {
         const { blockSelectionKeys, copySelectedBlocks } = setup(true);
         const event = createClipboardEvent();
 
         selectFrom(first.firstInput?.firstChild as Node, second.firstInput?.firstChild as Node);
         blockSelectionKeys.handleCopy(event);
 
-        expect(copySelectedBlocks).toHaveBeenCalledWith(event, { blocks: [first, second] });
+        expect(copySelectedBlocks).toHaveBeenCalledWith(event, { blocks: [first, second], range: SelectionUtilsModule.SelectionUtils.get()?.getRangeAt(0) });
       });
 
       it('leaves a selection that ends in another editor alone', () => {

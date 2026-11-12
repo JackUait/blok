@@ -3528,6 +3528,153 @@ test.describe('copy and paste', () => {
       expect(clipboard['text/plain']).toMatch(/RO-END/);
     });
 
+    /** Select from the start of `fromText` in one block to the end of `toText` in another. */
+    const selectTextBetween = async (page: Page, from: { id: string; text: string }, to: { id: string; text: string }): Promise<void> => {
+      await page.evaluate(({ start, end }) => {
+        const pointOf = (id: string, text: string, atEnd: boolean): [Node, number] => {
+          const holder = document.querySelector(`[data-blok-id="${id}"]`) as Node;
+          const walker = document.createTreeWalker(holder, NodeFilter.SHOW_TEXT);
+
+          for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+            const at = (n.textContent ?? '').indexOf(text);
+
+            if (at !== -1) {
+              return [n, atEnd ? at + text.length : at];
+            }
+          }
+          throw new Error(`no "${text}" in ${id}`);
+        };
+        const range = document.createRange();
+
+        range.setStart(...pointOf(start.id, start.text, false));
+        range.setEnd(...pointOf(end.id, end.text, true));
+        window.getSelection()?.removeAllRanges();
+        window.getSelection()?.addRange(range);
+        document.dispatchEvent(new Event('selectionchange'));
+      }, { start: from, end: to });
+    };
+
+    type Entry = { id: string; tool: string; data: Record<string, unknown>; parentId?: string | null; contentIds?: string[] };
+    const entriesOf = (clipboard: Record<string, string>): Entry[] => JSON.parse(clipboard['application/x-blok'] ?? '[]') as Entry[];
+
+    test('the first and last blocks keep only their selected text, with their type', async ({ page }) => {
+      await createBlok(page, { data: { blocks: doc }, readOnly: true });
+      await selectTextBetween(page, { id: 'h', text: 'heading' }, { id: 'last', text: 'RO-' });
+
+      const clipboard = await copyFromElement(page.locator('[data-blok-id="h"]'));
+      const entries = entriesOf(clipboard);
+
+      expect(entries.map((entry) => [entry.tool, entry.data.text])).toEqual([
+        ['header', 'heading'],
+        ['paragraph', 'RO <strong>bold</strong> para'],
+        ['list', 'RO item'],
+        ['toggle', 'RO toggle'],
+        ['paragraph', 'RO child'],
+        ['paragraph', 'RO-'],
+      ]);
+      expect(entries[0].data.level).toBe(2);
+      expect(clipboard['text/html']).toMatch(/<h2[^>]*>heading<\/h2>/);
+      expect(clipboard['text/html']).not.toMatch(/RO heading|RO-END/);
+      expect(clipboard['text/plain']).toMatch(/^## heading\n/);
+      expect(clipboard['text/plain']).not.toMatch(/RO heading|RO-END/);
+    });
+
+    test('a partly selected block keeps the marks of its selected text', async ({ page }) => {
+      await createBlok(page, { data: { blocks: doc }, readOnly: true });
+      await selectTextBetween(page, { id: 'p', text: 'ld' }, { id: 'l1', text: 'RO it' });
+
+      const clipboard = await copyFromElement(page.locator('[data-blok-id="p"]'));
+      const entries = entriesOf(clipboard);
+
+      expect(entries.map((entry) => [entry.tool, entry.data.text])).toEqual([
+        ['paragraph', '<strong>ld</strong> para'],
+        ['list', 'RO it'],
+      ]);
+      expect(entries[1].data.style).toBe('unordered');
+      expect(clipboard['text/html']).toMatch(/<strong>ld<\/strong> para/);
+      expect(clipboard['text/html']).toMatch(/<ul[^>]*>[\s\S]*RO it[\s\S]*<\/ul>/);
+      expect(clipboard['text/html']).not.toMatch(/bold|item/);
+      expect(clipboard['text/plain']).not.toMatch(/bold|item/);
+    });
+
+    test('a selection that ends in a toggle title leaves its children out', async ({ page }) => {
+      await createBlok(page, { data: { blocks: doc }, readOnly: true });
+      await selectTextBetween(page, { id: 'p', text: 'para' }, { id: 't', text: 'RO tog' });
+
+      const clipboard = await copyFromElement(page.locator('[data-blok-id="p"]'));
+      const entries = entriesOf(clipboard);
+
+      expect(entries.map((entry) => [entry.tool, entry.data.text])).toEqual([
+        ['paragraph', 'para'],
+        ['list', 'RO item'],
+        ['toggle', 'RO tog'],
+      ]);
+      expect(entries[2].contentIds).toEqual([]);
+      for (const flavor of ['text/html', 'text/plain', 'application/x-blok']) {
+        expect(clipboard[flavor], flavor).not.toMatch(/RO child|RO toggle|bold/);
+      }
+    });
+
+    test('a selection that starts in a toggle child leaves the toggle title out', async ({ page }) => {
+      await createBlok(page, { data: { blocks: doc }, readOnly: true });
+      await selectTextBetween(page, { id: 'tc', text: 'child' }, { id: 'last', text: 'RO' });
+
+      const clipboard = await copyFromElement(page.locator('[data-blok-id="tc"]'));
+
+      expect(entriesOf(clipboard).map((entry) => [entry.id, entry.data.text])).toEqual([
+        ['tc', 'child'],
+        ['last', 'RO'],
+      ]);
+      for (const flavor of ['text/html', 'text/plain']) {
+        expect(clipboard[flavor], flavor).not.toMatch(/RO toggle|RO child|RO-END/);
+      }
+
+      await createBlok(page, { data: { blocks: [{ id: 'tgt', type: 'paragraph', data: { text: '' } }] } });
+      await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), clipboard);
+
+      await expect.poll(async () => (await saveBlok(page)).blocks.map((block) => [block.type, block.data.text, block.parent ?? null]))
+        .toEqual([
+          ['paragraph', 'child', null],
+          ['paragraph', 'RO', null],
+        ]);
+    });
+
+    test('a partly selected code block keeps only the selected code', async ({ page }) => {
+      await createBlok(page, { data: { blocks: [
+        { id: 'c', type: 'code', data: { code: 'const a = 1 < 2;\nskip()', language: 'javascript' } },
+        { id: 'e', type: 'paragraph', data: { text: 'after' } },
+      ] }, readOnly: true });
+      // The highlighter rewrites the code once it is ready, which would drop an earlier selection.
+      await expect(page.locator('[data-blok-id="c"] code span').first()).toBeAttached();
+      await selectTextBetween(page, { id: 'c', text: 'skip' }, { id: 'e', text: 'af' });
+
+      const clipboard = await copyFromElement(page.locator('[data-blok-id="c"]'));
+
+      expect(entriesOf(clipboard).map((entry) => [entry.tool, entry.data.code ?? entry.data.text])).toEqual([
+        ['code', 'skip()'],
+        ['paragraph', 'af'],
+      ]);
+      for (const flavor of ['text/html', 'text/plain']) {
+        expect(clipboard[flavor], flavor).not.toMatch(/const|1 < 2|after/);
+      }
+    });
+
+    test('a partly selected table copies only the selected cell text', async ({ page }) => {
+      await createBlok(page, { data: { blocks: [
+        { id: 'b', type: 'paragraph', data: { text: 'before' } },
+        { id: 'tbl', type: 'table', data: { withHeadings: false, content: [['cell one', 'cell two'], ['cell three', 'cell four']] } },
+      ] }, readOnly: true });
+      await selectTextBetween(page, { id: 'b', text: 'fore' }, { id: 'tbl', text: 'cell one' });
+
+      const clipboard = await copyFromElement(page.locator('[data-blok-id="b"]'));
+
+      for (const flavor of ['text/html', 'text/plain', 'application/x-blok']) {
+        expect(clipboard[flavor], flavor).toMatch(/cell one/);
+        expect(clipboard[flavor], flavor).not.toMatch(/before|cell two|cell three|cell four/);
+      }
+    });
+
     test('the copied blocks paste back with their types', async ({ page }) => {
       await createBlok(page, { data: { blocks: doc }, readOnly: true });
       await selectTextAcross(page, 'h', 'last');

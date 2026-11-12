@@ -42,6 +42,7 @@ import type { ClipboardBlockData } from '../../tools/table/types';
 import type { TableData } from '../../shared/table/types';
 import { getElementDirection } from '../utils/direction';
 import { isInAnnotation } from './blockManager/new-block-placement';
+import { cutBlockToRange, sliceHtmlByText, type BlockCut } from '../utils/range-cut';
 
 /**
  * A run of consecutive selected blocks for clipboard serialization: either a
@@ -51,6 +52,20 @@ import { isInAnnotation } from './blockManager/new-block-placement';
 type ClipboardSegment =
   | { type: 'list'; items: Block[] }
   | { type: 'other'; block: Block };
+
+/**
+ * A block a text selection covers only in part: its data and html cut to the
+ * selected text. `tool` is set when the block could not be cut in place and
+ * goes out as a paragraph of the selected text.
+ */
+interface BlockPart {
+  data: Record<string, unknown>;
+  html: string;
+  tool?: string;
+}
+
+/** The partly covered blocks of a copy. Absent when whole blocks are copied. */
+type BlockParts = Map<Block, BlockPart>;
 
 /** One block in the `application/x-blok` payload. */
 interface ClipboardEntry {
@@ -520,9 +535,10 @@ export class BlockSelection extends Module {
    * @param options - `cut` when the blocks are about to be deleted
    * @param options.cut - a `copyAsLink` block may then come back once anywhere
    * @param options.blocks - blocks to copy instead of the selected ones
+   * @param options.range - a text selection: blocks it covers in part keep only the selected text
    * @returns {Promise<void>}
    */
-  public async copySelectedBlocks(e: ClipboardEvent, options: { cut?: boolean; blocks?: Block[] } = {}): Promise<void> {
+  public async copySelectedBlocks(e: ClipboardEvent, options: { cut?: boolean; blocks?: Block[]; range?: Range } = {}): Promise<void> {
     /**
      * Prevent default copy
      */
@@ -548,17 +564,20 @@ export class BlockSelection extends Module {
      * (e.g. when a collapsed toggle is copied — its hidden children must travel with it
      * so paste can restore the full toggle with its children).
      */
-    const allBlocks = this.collectBlocksForClipboard(options.blocks ?? this.selectedBlocks);
+    const collected = this.collectBlocksForClipboard(options.blocks ?? this.selectedBlocks);
+    const { blocks: allBlocks, parts } = options.range === undefined
+      ? { blocks: collected, parts: undefined }
+      : this.cutToRange(collected, options.range);
     const links = this.copyLinksOf(allBlocks);
     // A linked block stands alone: its descendants are not part of the link.
     const copiedBlocks = this.withoutLinkedDescendants(allBlocks, links);
-    const linkedData = this.serializeBlocksForClipboard(copiedBlocks, links);
+    const linkedData = this.serializeBlocksForClipboard(copiedBlocks, links, undefined, parts);
     const cutToken = options.cut === true && (links.size > 0 || allBlocks.some((block) => isPagePointer(block.name, block.preservedData)))
       ? rememberCut()
       : null;
     // Blok's own flavor carries linked blocks as themselves; paste decides
     // whether each one may stay a block or must become its link.
-    const savedData = this.serializeBlocksForClipboard(allBlocks, links, cutToken);
+    const savedData = this.serializeBlocksForClipboard(allBlocks, links, cutToken, parts);
 
     /**
      * List blocks render as non-semantic `<div role="listitem">` with a marker
@@ -586,13 +605,15 @@ export class BlockSelection extends Module {
 
         paragraph.innerHTML = linkToHtml(link);
         target.appendChild(paragraph);
+      } else if (segment.type === 'other' && parts?.get(segment.block)?.tool !== undefined) {
+        this.appendNonListBlock(segment.block, target, parts);
       } else if (segment.type === 'other' && isPagePointer(segment.block.name, segment.block.preservedData)) {
         const paragraph = $.make('p');
 
         paragraph.appendChild(this.pageReferenceAnchor(segment.block));
         target.appendChild(paragraph);
       } else if (segment.type === 'list') {
-        this.appendSemanticList(segment.items, target);
+        this.appendSemanticList(segment.items, target, parts);
       } else if (rowTitles.has(segment.block.id)) {
         const paragraph = $.make('p');
 
@@ -601,11 +622,11 @@ export class BlockSelection extends Module {
           target.appendChild(paragraph);
         }
       } else if (this.isClipboardContainer(segment.block)) {
-        bodies.set(segment.block.id, this.appendClipboardContainer(segment.block, target));
+        bodies.set(segment.block.id, this.appendClipboardContainer(segment.block, target, parts));
       } else if (segment.block.name === TAB_TOOL_NAME) {
         this.appendTabTitle(segment.block, target);
       } else {
-        this.appendNonListBlock(segment.block, target);
+        this.appendNonListBlock(segment.block, target, parts);
       }
     });
 
@@ -846,9 +867,10 @@ export class BlockSelection extends Module {
    * semantic `<ul>`/`<ol>` structure.
    * @param items - the consecutive list blocks
    * @param fakeClipboard - the container receiving the semantic list
+   * @param parts - blocks a text selection covers in part
    */
-  private appendSemanticList(items: Block[], fakeClipboard: HTMLElement): void {
-    const group: SemanticListItem[] = items.map((block) => this.toSemanticListItem(this.clipboardDataForBlock(block)));
+  private appendSemanticList(items: Block[], fakeClipboard: HTMLElement, parts?: BlockParts): void {
+    const group: SemanticListItem[] = items.map((block) => this.toSemanticListItem(this.clipboardDataForBlock(block, parts)));
     const listContainer = buildSemanticListHtml(group);
 
     while (listContainer.firstChild) {
@@ -862,16 +884,19 @@ export class BlockSelection extends Module {
    * never run together in the pasted document.
    * @param block - the non-list block
    * @param fakeClipboard - the container receiving the sanitized content
+   * @param parts - blocks a text selection covers in part
    */
-  private appendNonListBlock(block: Block, fakeClipboard: HTMLElement): void {
-    if (block.name === CODE_TOOL_NAME) {
-      this.appendCodeBlock(block, fakeClipboard);
+  private appendNonListBlock(block: Block, fakeClipboard: HTMLElement, parts?: BlockParts): void {
+    const part = parts?.get(block);
+
+    if (block.name === CODE_TOOL_NAME && part?.tool === undefined) {
+      this.appendCodeBlock(block, fakeClipboard, parts);
 
       return;
     }
 
     // The sanitizer keeps no <hr>, and a run with no text is dropped.
-    if (block.name === DIVIDER_TOOL_NAME) {
+    if (block.name === DIVIDER_TOOL_NAME && part === undefined) {
       fakeClipboard.appendChild($.make('hr'));
 
       return;
@@ -879,7 +904,7 @@ export class BlockSelection extends Module {
 
     // The table's own cell copy writes this html raw too. The copy sanitizer
     // would drop its payload, cell colors and the block boundaries in a cell.
-    if (block.name === TABLE_TOOL_NAME) {
+    if (block.name === TABLE_TOOL_NAME && part === undefined) {
       fakeClipboard.insertAdjacentHTML('beforeend', tableClipboardHtml(
         block.preservedData as TableData,
         (ids) => ids.flatMap((id) => {
@@ -895,7 +920,7 @@ export class BlockSelection extends Module {
     }
 
     const wrapper = $.make('div');
-    const own = (block.tool as Block['tool'] | undefined)?.clipboardHtml(block.preservedData);
+    const own = part?.html ?? (block.tool as Block['tool'] | undefined)?.clipboardHtml(block.preservedData);
 
     wrapper.innerHTML = clean(typeof own === 'string' ? own : ownClone(block.holder).innerHTML, this.sanitizerConfig);
 
@@ -979,14 +1004,15 @@ export class BlockSelection extends Module {
    * The callout's emoji is left out: the html has no place for it.
    * @param block - the container block
    * @param target - the element receiving it
+   * @param parts - blocks a text selection covers in part
    * @returns the element its children go into
    */
-  private appendClipboardContainer(block: Block, target: HTMLElement): HTMLElement {
+  private appendClipboardContainer(block: Block, target: HTMLElement, parts?: BlockParts): HTMLElement {
     if (block.name === CALLOUT_TOOL_NAME) {
       return target.appendChild($.make('aside'));
     }
 
-    const data = block.preservedData;
+    const data = parts?.get(block)?.data ?? block.preservedData;
     const details = $.make('details');
     const summary = $.make('summary');
     const text = clean(typeof data.text === 'string' ? data.text : '', this.sanitizerConfig);
@@ -1032,9 +1058,10 @@ export class BlockSelection extends Module {
    * A code block keeps its line breaks and indentation only inside `<pre>`.
    * @param block - the code block
    * @param fakeClipboard - the container receiving the code
+   * @param parts - blocks a text selection covers in part
    */
-  private appendCodeBlock(block: Block, fakeClipboard: HTMLElement): void {
-    const { code, language, filename } = block.preservedData;
+  private appendCodeBlock(block: Block, fakeClipboard: HTMLElement, parts?: BlockParts): void {
+    const { code, language, filename } = parts?.get(block)?.data ?? block.preservedData;
     const pre = $.make('pre');
     const codeElement = $.make('code');
 
@@ -1070,8 +1097,8 @@ export class BlockSelection extends Module {
     };
   }
 
-  private clipboardDataForBlock(block: Block): Record<string, unknown> {
-    const data = block.preservedData;
+  private clipboardDataForBlock(block: Block, parts?: BlockParts): Record<string, unknown> {
+    const data = parts?.get(block)?.data ?? block.preservedData;
     const text = data.text;
 
     if (typeof text !== 'string' || !text.includes(PAGE_REFERENCE_ATTR)) {
@@ -1162,9 +1189,10 @@ export class BlockSelection extends Module {
    * @param blocks - the blocks from {@link collectBlocksForClipboard}
    * @param links - the links from {@link copyLinksOf}
    * @param cut - a cut token, or null for a copy or a cut with no linked blocks
+   * @param parts - blocks a text selection covers in part; with it, children left out of the copy are left out of `contentIds`
    * @returns serialized block data in document order
    */
-  private serializeBlocksForClipboard(blocks: Block[], links: Map<Block, CopyLink>, cut?: string | null): ClipboardEntry[] {
+  private serializeBlocksForClipboard(blocks: Block[], links: Map<Block, CopyLink>, cut?: string | null, parts?: BlockParts): ClipboardEntry[] {
     const copiedIds = new Set(blocks.map((block) => block.id));
 
     return blocks.map((block): ClipboardEntry | null => {
@@ -1210,10 +1238,10 @@ export class BlockSelection extends Module {
 
       return {
         ...shape,
-        tool: block.name,
-        data: this.clipboardDataForBlock(block),
+        tool: parts?.get(block)?.tool ?? block.name,
+        data: this.clipboardDataForBlock(block, parts),
         tunes: block.preservedTunes,
-        contentIds: block.contentIds,
+        contentIds: parts === undefined ? block.contentIds : block.contentIds.filter((id) => copiedIds.has(id)),
         open: this.Blok.ViewStateAPI.methods.get(block.id, 'open') === true,
         ...(cut !== undefined && cut !== null && (link !== undefined || isPage) && { cut }),
         ...(link !== undefined && { link }),
@@ -1323,6 +1351,86 @@ export class BlockSelection extends Module {
     }
 
     return collected;
+  }
+
+  /**
+   * Keep only what a text selection covers: a block it does not reach, or
+   * reaches only in its children, is left out, and a block it covers in part
+   * keeps only the selected text with its type.
+   * @param blocks - the blocks from {@link collectBlocksForClipboard}
+   * @param range - the page selection
+   */
+  private cutToRange(blocks: Block[], range: Range): { blocks: Block[]; parts: BlockParts } {
+    const parts: BlockParts = new Map();
+    const dropped = new Set<string>();
+    const kept = blocks.filter((block) => {
+      const cut = cutBlockToRange(block.holder, range);
+
+      if (cut.kind === 'none') {
+        return false;
+      }
+      if (cut.kind === 'part') {
+        const part = this.blockPart(block, cut);
+
+        parts.set(block, part);
+        // A block that became a paragraph carries its children's selected text already.
+        if (part.tool !== undefined) {
+          dropped.add(block.id);
+        }
+      }
+
+      return true;
+    });
+
+    return { blocks: kept.filter((block) => !this.hasAncestorIn(block, dropped)), parts };
+  }
+
+  /**
+   * Whether one of the block's ancestors is in `ids`.
+   * @param block - a block
+   * @param ids - block ids
+   */
+  private hasAncestorIn(block: Block, ids: Set<string>): boolean {
+    if (block.parentId === null) {
+      return false;
+    }
+
+    const parent = this.Blok.BlockManager.getBlockById(block.parentId);
+
+    return ids.has(block.parentId) || (parent !== undefined && this.hasAncestorIn(parent, ids));
+  }
+
+  /**
+   * A partly covered block cut to the selected text. Its text field is the
+   * one its conversion exports. When the saved text does not match what the
+   * block shows, it cannot be cut safely and becomes a paragraph of the
+   * selected text, so no unselected text is copied.
+   * @param block - a block the selection covers in part
+   * @param cut - what the selection covers of it
+   */
+  private blockPart(block: Block, cut: Extract<BlockCut, { kind: 'part' }>): BlockPart {
+    const data = block.preservedData;
+    const exportRule = (block.tool as Block['tool'] | undefined)?.conversionConfig?.export;
+    const key = typeof exportRule === 'string' ? exportRule : 'text';
+    const value = data[key];
+    const html = clean(cut.html, this.sanitizerConfig);
+
+    // Code is plain text: parsing it as html would read `<` and `&` as markup.
+    if (typeof value === 'string' && block.name === CODE_TOOL_NAME && value === cut.text) {
+      return { data: { ...data, [key]: value.slice(cut.from, cut.to) }, html };
+    }
+    if (typeof value === 'string' && block.name !== CODE_TOOL_NAME && parseUntrustedHtml(value).textContent === cut.text) {
+      return { data: { ...data, [key]: sliceHtmlByText(value, cut.from, cut.to) }, html };
+    }
+
+    const { defaultTool } = this.Blok.Tools;
+    const inline = clean(cut.html, { ...INLINE_TEXT_SANITIZE });
+
+    return {
+      tool: defaultTool.name,
+      data: convertStringToBlockData(inline, defaultTool.conversionConfig, defaultTool.settings),
+      html: `<p>${inline}</p>`,
+    };
   }
 
   /**

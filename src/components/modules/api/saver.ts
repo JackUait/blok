@@ -15,6 +15,7 @@ export class SaverAPI extends Module {
   public get methods(): Saver {
     return {
       save: (): Promise<OutputData> => this.save(),
+      flush: (timeoutMs?: number): Promise<void> => this.Blok.Collaboration.flush(timeoutMs),
     };
   }
 

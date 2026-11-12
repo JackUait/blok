@@ -70,7 +70,7 @@ export function expandServerConfig(config: BlokConfig): BlokConfig {
   // a page full of images mints one rather than one per request.
   const headers = config.ticket === undefined
     ? undefined
-    : createPassSource({ endpoint: config.ticket });
+    : createPassSource({ endpoint: config.ticket, doc: config.collaboration?.doc });
 
   const expanded: BlokConfig = { ...config };
 

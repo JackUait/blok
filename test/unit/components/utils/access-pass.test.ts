@@ -100,6 +100,27 @@ describe('createPassSource', () => {
 });
 
 describe('createTicketSource', () => {
+  it('scopes native callbacks, shares pending requests, and refreshes rejected tickets', async () => {
+    const mint = vi.fn().mockResolvedValueOnce(PASS).mockResolvedValue(REFRESHED_PASS);
+    const source = createTicketSource(mint, { doc: 'private-page', now: () => 0 });
+
+    expect(await Promise.all([source(), source()])).toEqual([PASS, PASS]);
+    expect(mint).toHaveBeenCalledTimes(1);
+    expect(mint).toHaveBeenCalledWith({ doc: 'private-page' });
+    expect(await source()).toBe(PASS);
+    expect(await source({ forceRefresh: true })).toBe(REFRESHED_PASS);
+    expect(mint).toHaveBeenLastCalledWith({ doc: 'private-page', forceRefresh: true });
+  });
+
+  it('does not cache a failed native callback and rejects empty results', async () => {
+    const mint = vi.fn().mockRejectedValueOnce(new Error('Session expired')).mockResolvedValueOnce('').mockResolvedValue(PASS);
+    const source = createTicketSource(mint, { now: () => 0 });
+
+    await expect(source()).rejects.toThrow('Session expired');
+    await expect(source()).rejects.toThrow('empty or invalid');
+    await expect(source()).resolves.toBe(PASS);
+  });
+
   let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {

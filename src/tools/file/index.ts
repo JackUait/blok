@@ -525,7 +525,9 @@ export class FileTool implements BlockTool {
     anchor.download = this.data.fileName ?? '';
     anchor.target = '_blank';
     anchor.rel = 'noopener noreferrer';
+    document.body.appendChild(anchor);
     anchor.click();
+    anchor.remove();
   }
 
   private openPreview(): void {

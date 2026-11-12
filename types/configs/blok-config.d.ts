@@ -661,10 +661,14 @@ export interface BlokMountOptions {
    * at a standalone service — routes running inside your own app already know
    * who the caller is.
    *
+   * Alternatively provide an authenticated callback, for example to mint from
+   * a native application's secure session. It receives the document scope and
+   * a forceRefresh flag when a connection rejects its previous pass. Return the
+   * raw short-lived ticket; never expose the durable session secret.
    * The editor caches the pass and replaces it ahead of expiry, and uploads and
    * link previews share the same one.
    */
-  ticket?: string;
+  ticket?: string | ((request: { doc?: string; forceRefresh?: boolean }) => Promise<string>);
 
   /**
    * Load the document on mount and save it as it changes, against YOUR OWN

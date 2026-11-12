@@ -115,6 +115,7 @@ const createMockAPIMethods = (): APIInterface => ({
   },
   saver: {
     save: vi.fn().mockResolvedValue({ blocks: [] }),
+    flush: vi.fn().mockResolvedValue(undefined),
   },
   selection: {
     findParentTag: vi.fn(),

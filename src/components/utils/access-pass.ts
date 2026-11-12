@@ -1,3 +1,7 @@
+import type { BlokConfig } from '../../../types';
+
+type TicketEndpoint = NonNullable<BlokConfig['ticket']>;
+
 /**
  * Refresh this many milliseconds BEFORE the stated expiry. Without a margin,
  * a pass fetched at the last moment can arrive at the service already expired.
@@ -6,7 +10,9 @@ const REFRESH_MARGIN_MS = 30_000;
 
 export interface PassSourceOptions {
   /** Endpoint in the host app that mints a pass for the current session. */
-  endpoint: string;
+  endpoint: TicketEndpoint;
+  /** Scope service passes to the editor's document when collaborating. */
+  doc?: string;
   /** Injectable clock; production uses Date.now. */
   now?: () => number;
 }
@@ -105,9 +111,9 @@ function readExpiry(token: string): number {
  * @param endpoint - the host app route that mints a ticket for the session
  * @param options - an optional document scope (`?doc=`) and clock
  */
-export function createTicketSource(endpoint: string, options: TicketSourceOptions = {}): TicketSource {
+export function createTicketSource(endpoint: TicketEndpoint, options: TicketSourceOptions = {}): TicketSource {
   const now = options.now ?? ((): number => Date.now());
-  const url = composeEndpoint(endpoint, options.doc);
+  const url = typeof endpoint === 'string' ? composeEndpoint(endpoint, options.doc) : null;
 
   // One mutable holder rather than two rebindable locals: the repo bans `let`,
   // and both fields have to survive across calls to the returned function.
@@ -116,10 +122,22 @@ export function createTicketSource(endpoint: string, options: TicketSourceOption
     inFlight: null,
   };
 
-  const fetchPass = async (): Promise<CachedPass> => {
+  const fetchPass = async (request?: TicketRequest): Promise<CachedPass> => {
+    if (typeof endpoint === 'function') {
+      const token = await endpoint({
+        ...(options.doc === undefined ? {} : { doc: options.doc }),
+        ...(request?.forceRefresh === true ? { forceRefresh: true } : {}),
+      });
+
+      if (typeof token !== 'string' || token.trim() === '') {
+        throw new Error('The ticket callback returned an empty or invalid ticket');
+      }
+
+      return { token, expiresAtMs: readExpiry(token) };
+    }
     // credentials: the endpoint authorises using the host app's own session
     // cookie, which is the entire reason it can vouch for this user.
-    const response = await fetch(url, { credentials: 'same-origin' });
+    const response = await fetch(url as string, { credentials: 'same-origin' });
 
     if (!response.ok) {
       throw new Error(`Blok could not get an access pass from ${url} (status ${response.status})`);
@@ -143,7 +161,7 @@ export function createTicketSource(endpoint: string, options: TicketSourceOption
 
     // One request serves every concurrent caller: a page with six images would
     // otherwise mint six passes on load.
-    state.inFlight ??= fetchPass().finally(() => {
+    state.inFlight ??= fetchPass(request).finally(() => {
       state.inFlight = null;
     });
 
@@ -162,7 +180,7 @@ export function createTicketSource(endpoint: string, options: TicketSourceOption
  * @param options - the minting endpoint and an optional clock
  */
 export function createPassSource(options: PassSourceOptions): () => Promise<Record<string, string>> {
-  const ticketSource = createTicketSource(options.endpoint, { now: options.now });
+  const ticketSource = createTicketSource(options.endpoint, { now: options.now, doc: options.doc });
 
   return async (): Promise<Record<string, string>> => {
     const token = await ticketSource();

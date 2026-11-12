@@ -2925,6 +2925,12 @@ button[data-blok-database-column-count]:hover {
   transform: none;
 }
 
+/* notion-motion.md Round 16 §5, §8: calculation submenus fade in with no scale. A root calc menu keeps its scale. */
+[data-blok-popover][data-blok-nested][data-blok-popover-custom-class~='blok-database-calc-menu'] > [data-blok-popover-container],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-popover][data-blok-nested] > [data-blok-popover-container] {
+  transform: none;
+}
+
 /* notion-motion.md Round 10 "List view row menu anchor": the row handle menu scales in from its centre. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-handle-menu'] > [data-blok-popover-container] {
   transform-origin: center;

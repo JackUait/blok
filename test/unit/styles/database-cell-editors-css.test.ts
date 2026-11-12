@@ -665,6 +665,12 @@ describe('cell editor CSS', () => {
     expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] > [data-blok-popover-container]", 'transform')).toEqual(['none']);
   });
 
+  // notion-motion.md Round 16 §5, §8: "Calculate ›", the board's and the timeline's "Count ›" fade in with no scale.
+  it('fades calculation submenus with no scale', () => {
+    expect(declared("[data-blok-popover][data-blok-nested][data-blok-popover-custom-class~='blok-database-calc-menu'] > [data-blok-popover-container]", 'transform')).toEqual(['none']);
+    expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-popover][data-blok-nested] > [data-blok-popover-container]", 'transform')).toEqual(['none']);
+  });
+
   // A submenu of a database menu fades out over 200ms; the shared 120ms display step would cut it short.
   it('keeps a database submenu painted for its whole 200ms fade', () => {
     expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover][data-blok-nested][popover]", 'transition'))

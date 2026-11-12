@@ -6946,6 +6946,10 @@ button[data-blok-database-column-count]:hover {
   transform: none;
 }
 
+[data-blok-popover][data-blok-nested][data-blok-popover-custom-class~='blok-database-calc-menu'] > [data-blok-popover-container], [data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-popover][data-blok-nested] > [data-blok-popover-container] {
+  transform: none;
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-handle-menu'] > [data-blok-popover-container] {
   transform-origin: center;
 }

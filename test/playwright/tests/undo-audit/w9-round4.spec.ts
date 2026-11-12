@@ -70,7 +70,11 @@ const savedAndDom = async (page: Page): Promise<{ saved: string[]; dom: string[]
     dom: Array.from(document.querySelectorAll(`#${holder} [data-blok-testid="block-wrapper"]`)).map((el) =>
       `${el.getAttribute('data-blok-id') ?? ''}:${el.querySelector('[contenteditable="true"]')?.innerHTML ?? ''}`),
   }), HOLDER_ID);
-  const saved = blocksAsHtml(blocks).map((block) => `${block.id ?? ''}:${String(block.data.text ?? '')}`);
+  const saved = blocksAsHtml(blocks).map((block) => {
+    const text: unknown = block.data.text;
+
+    return `${block.id ?? ''}:${typeof text === 'string' ? text : ''}`;
+  });
 
   return { saved, dom };
 };

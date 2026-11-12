@@ -443,6 +443,29 @@ describe('database drags scroll near an edge', () => {
     expect(scroller.scrollTop).toBe(150);
   });
 
+  // notion-motion.md Round 18 §1 run c: a scroll starts only inside the scroller.
+  it('a list row whose moves all land past the window bottom does not scroll', () => {
+    const { scroller, drag } = listFixture();
+
+    drag.beginTracking('r0', 50, 110);
+    pointer('pointermove', 50, 480);
+    pointer('pointermove', 51, 480);
+    runFrames(0, 240);
+
+    expect(scroller.scrollTop).toBe(0);
+  });
+
+  it('a board card whose moves all land past the window\'s right edge does not scroll', () => {
+    const { board, card, drag } = boardFixture();
+
+    drag.beginTracking('c1', 300, 170, card);
+    pointer('pointermove', 950, 170);
+    pointer('pointermove', 950, 171);
+    runFrames(0, 240);
+
+    expect(board.scrollLeft).toBe(0);
+  });
+
   it('a list row dragged past the window bottom keeps scrolling', () => {
     const { scroller, drag } = listFixture();
 

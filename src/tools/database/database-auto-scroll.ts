@@ -35,22 +35,33 @@ export const rowAutoScrollSpeed = VERTICAL;
  */
 export const cardAutoScrollSpeed = ramp([[1, 1.83], [4, 1.64], [9, 1.3], [19, 0.82], [34, 0.37], [49, 0.076], [51, 0]]);
 
+type Where = 'zone' | 'out' | 'past';
+
 /**
  * notion-motion.md Round 17 §1: the move that enters the zone does not start
  * the scroll; the next move inside it does. Once started it runs with the
- * pointer held still. Leaving the zone resets it.
+ * pointer held still. Leaving the zone resets it. Round 18 §1: past the
+ * window edge a running scroll keeps going, but none starts there.
  */
 class SecondMoveAutoScroll extends AutoScroll {
-  private readonly zone: (coord: number) => boolean;
+  private readonly where: (coord: number) => Where;
   private armed = false;
+  private running = false;
 
-  constructor(scroller: HTMLElement | null, options: AutoScrollOptions, zone: (coord: number) => boolean) {
+  constructor(scroller: HTMLElement | null, options: AutoScrollOptions, where: (coord: number) => Where) {
     super(scroller, options);
-    this.zone = zone;
+    this.where = where;
   }
 
   start(coord: number): void {
-    if (!this.zone(coord)) {
+    const where = this.where(coord);
+
+    if (where === 'past' && this.running) {
+      super.start(coord);
+
+      return;
+    }
+    if (where !== 'zone') {
       this.stop();
 
       return;
@@ -60,11 +71,13 @@ class SecondMoveAutoScroll extends AutoScroll {
 
       return;
     }
+    this.running = true;
     super.start(coord);
   }
 
   stop(): void {
     this.armed = false;
+    this.running = false;
     super.stop();
   }
 }
@@ -93,15 +106,15 @@ export const createDatabaseAutoScroll = (
       : { start: Math.max(0, rect.left), end: Math.min(size, rect.right) };
   };
   // Round 17 §1: a pointer outside the scroller but in the window (over the top bar) does not scroll.
-  // Past the window edge is unread; it keeps the full speed a drag there always had.
-  const inZone = (coord: number): boolean => {
+  // Round 18 §1: past the window edge Notion keeps its 1px speed; AutoScroll clamps the distance to 0.
+  const where = (coord: number): Where => {
     const { start, end } = bounds();
     const size = axis === 'y' ? window.innerHeight : window.innerWidth;
 
-    if (coord < 0 || coord > size) return true;
+    if (coord < 0 || coord > size) return 'past';
 
-    return coord >= start && coord <= end && speed(Math.min(end - coord, coord - start)) > 0;
+    return coord >= start && coord <= end && speed(Math.min(end - coord, coord - start)) > 0 ? 'zone' : 'out';
   };
 
-  return new SecondMoveAutoScroll(scroller, { axis, speed, stepMs: STEP_MS, onStep, bounds }, inZone);
+  return new SecondMoveAutoScroll(scroller, { axis, speed, stepMs: STEP_MS, onStep, bounds }, where);
 };

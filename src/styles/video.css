@@ -1209,6 +1209,16 @@
   background: var(--blok-video-control-bg-active);
   color: var(--blok-video-accent);
 }
+/* The gear turns one tooth along while its menu is open. It has six teeth, so 60°
+   lands on the same drawing. */
+[data-blok-tool="video"] .blok-video-controls__btn[data-action="gear"][aria-expanded="true"] svg {
+  transform: rotate(60deg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-blok-tool="video"] .blok-video-controls__btn[data-action="gear"] svg {
+    transition: transform 420ms cubic-bezier(0.3, 1.35, 0.5, 1);
+  }
+}
 
 /* ambient glow — blurred frame sample bleeding out behind the player */
 [data-blok-tool="video"] .blok-video-controls__ambient {

@@ -1530,13 +1530,13 @@ export const IconPlayerVolumeMute = `
 </svg>
 `;
 
-// Player settings — sliders / tune (three adjustable tracks with knobs)
+// Player settings — a gear wheel: six teeth between a tip circle of 7 and a root
+// circle of 5, each 20° wide at the tip and 32° at the root, around a hub of 2.25.
+// Six-fold, so a turn of 60° lands on the same drawing (the players turn it on open).
 export const IconPlayerSettings = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M3 5h7M16 5H17M3 10h2M11 10H17M3 15h5M14 15H17" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
-  <circle cx="13" cy="5" r="1.5" stroke="currentColor" stroke-width="1.25"/>
-  <circle cx="8" cy="10" r="1.5" stroke="currentColor" stroke-width="1.25"/>
-  <circle cx="11" cy="15" r="1.5" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M8.62 5.19L8.78 3.11A7 7 0 0 1 11.22 3.11L11.38 5.19A5 5 0 0 1 13.47 6.4L15.36 5.5A7 7 0 0 1 16.58 7.61L14.85 8.79A5 5 0 0 1 14.85 11.21L16.58 12.39A7 7 0 0 1 15.36 14.5L13.47 13.6A5 5 0 0 1 11.38 14.81L11.22 16.89A7 7 0 0 1 8.78 16.89L8.62 14.81A5 5 0 0 1 6.53 13.6L4.64 14.5A7 7 0 0 1 3.42 12.39L5.15 11.21A5 5 0 0 1 5.15 8.79L3.42 7.61A7 7 0 0 1 4.64 5.5L6.53 6.4A5 5 0 0 1 8.62 5.19Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="10" cy="10" r="2.25" stroke="currentColor" stroke-width="1.25"/>
 </svg>
 `;
 

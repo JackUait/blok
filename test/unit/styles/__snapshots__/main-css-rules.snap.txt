@@ -23694,6 +23694,14 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   color: var(--blok-video-accent);
 }
 
+[data-blok-tool="video"] .blok-video-controls__btn[data-action="gear"][aria-expanded="true"] svg {
+  transform: rotate(60deg);
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-tool="video"] .blok-video-controls__btn[data-action="gear"] svg {
+  transition: transform 420ms cubic-bezier(0.3, 1.35, 0.5, 1);
+}
+
 [data-blok-tool="video"] .blok-video-controls__ambient {
   position: absolute;
   inset: 0;
@@ -24621,6 +24629,14 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 [data-blok-tool="audio"] .blok-audio-controls button[data-role="audio-speed"][aria-expanded="true"] {
   background: var(--blok-bg-hover);
   color: var(--blok-text-primary);
+}
+
+[data-blok-tool="audio"] .blok-audio-controls button[data-role="audio-speed"][aria-expanded="true"] svg {
+  transform: rotate(60deg);
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-tool="audio"] .blok-audio-controls button[data-role="audio-speed"] svg {
+  transition: transform 420ms cubic-bezier(0.3, 1.35, 0.5, 1);
 }
 
 [data-blok-tool="audio"] .blok-audio-controls__speed-menu {

@@ -829,6 +829,16 @@
   background: var(--blok-bg-hover);
   color: var(--blok-text-primary);
 }
+/* The gear turns one tooth along while its menu is open. It has six teeth, so 60°
+   lands on the same drawing. */
+[data-blok-tool="audio"] .blok-audio-controls button[data-role="audio-speed"][aria-expanded="true"] svg {
+  transform: rotate(60deg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-blok-tool="audio"] .blok-audio-controls button[data-role="audio-speed"] svg {
+    transition: transform 420ms cubic-bezier(0.3, 1.35, 0.5, 1);
+  }
+}
 
 /* ----- speed menu ----------------------------------------- */
 [data-blok-tool="audio"] .blok-audio-controls__speed-menu {

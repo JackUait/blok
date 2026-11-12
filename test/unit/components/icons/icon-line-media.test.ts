@@ -355,18 +355,79 @@ describe('Blok Line media family', () => {
     });
   });
 
-  it('keeps settings knobs separate with a full stroke of vertical breathing room', () => {
-    const knobs = Array.from(svgOf(Icons.IconPlayerSettings).querySelectorAll('circle'));
+  describe('player settings gear', () => {
+    const gear = (): { rim: Element; hub: Element } => {
+      const svg = svgOf(Icons.IconPlayerSettings);
+      const [rim] = Array.from(svg.querySelectorAll('path'));
+      const [hub] = Array.from(svg.querySelectorAll('circle'));
 
-    expect(knobs).toHaveLength(3);
+      return { rim, hub };
+    };
+    /** Where each straight or curved stroke of the rim ends, as distance and angle from the middle. */
+    const corners = (): { radius: number; angle: number }[] =>
+      commands(gear().rim)
+        // The start point is also where the last curve ends, so it is not counted twice.
+        .filter(({ command }) => command !== 'Z' && command !== 'M')
+        .map(({ values }) => {
+          const [x, y] = values.slice(-2);
 
-    for (let index = 1; index < knobs.length; index++) {
-      const previous = knobs[index - 1];
-      const next = knobs[index];
-      const verticalGap = Number(required(next, 'cy')) - Number(required(previous, 'cy'))
-        - Number(required(previous, 'r')) - Number(required(next, 'r')) - 1.25;
+          return { radius: Math.hypot(x - 10, y - 10), angle: (Math.atan2(y - 10, x - 10) * 180 / Math.PI + 450) % 360 };
+        });
 
-      expect(verticalGap).toBeGreaterThanOrEqual(0.75);
-    }
+    it('is one rim and one hub, nothing else', () => {
+      const svg = svgOf(Icons.IconPlayerSettings);
+
+      expect(svg.querySelectorAll('path')).toHaveLength(1);
+      expect(svg.querySelectorAll('circle')).toHaveLength(1);
+      expect(svg.children).toHaveLength(2);
+    });
+
+    it('has six teeth: twelve corners on the tip circle and twelve on the root circle', () => {
+      const tips = corners().filter(({ radius }) => Math.abs(radius - 7) < 0.02);
+      const roots = corners().filter(({ radius }) => Math.abs(radius - 5) < 0.02);
+
+      expect(tips).toHaveLength(12);
+      expect(roots).toHaveLength(12);
+      expect(corners()).toHaveLength(24);
+    });
+
+    it('spaces the teeth evenly, a sixth of a turn apart, with one pointing straight up', () => {
+      const tips = corners().filter(({ radius }) => Math.abs(radius - 7) < 0.02).map(({ angle }) => angle).sort((a, b) => a - b);
+      // Each tooth is 20 degrees wide at the tip: its two corners sit 10 either side of its middle.
+      const middles = [0, 60, 120, 180, 240, 300];
+      const expected = middles.flatMap((middle) => [(middle + 350) % 360, (middle + 10) % 360]).sort((a, b) => a - b);
+
+      tips.forEach((angle, index) => {
+        expect(Math.abs(angle - expected[index])).toBeLessThan(0.5);
+      });
+    });
+
+    it('makes each tooth wider at the root than at the tip', () => {
+      const widths = (radius: number): number[] => {
+        const angles = corners().filter((corner) => Math.abs(corner.radius - radius) < 0.02).map(({ angle }) => angle);
+
+        // The pair around 0 degrees wraps, so measure the pair around 60.
+        return angles.filter((angle) => angle > 30 && angle < 90).sort((a, b) => a - b);
+      };
+      const [tipStart, tipEnd] = widths(7);
+      const [rootStart, rootEnd] = widths(5);
+
+      expect(tipEnd - tipStart).toBeCloseTo(20, 0);
+      expect(rootEnd - rootStart).toBeCloseTo(32, 0);
+    });
+
+    it('stays inside the 3 to 17 content box', () => {
+      corners().forEach(({ radius }) => expect(radius).toBeLessThanOrEqual(7.01));
+    });
+
+    it('centres the hub and leaves a full stroke of clear space between it and the rim', () => {
+      const { hub } = gear();
+      const radius = Number(required(hub, 'r'));
+
+      expect([required(hub, 'cx'), required(hub, 'cy')]).toEqual(['10', '10']);
+      expect(radius).toBe(2.25);
+      // Root circle 5 and hub 2.25, each losing half a stroke to its own line.
+      expect(5 - radius - 1.25).toBeGreaterThanOrEqual(1.25);
+    });
   });
 });

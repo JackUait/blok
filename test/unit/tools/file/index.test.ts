@@ -712,6 +712,7 @@ describe('FileTool — an upload belongs to the pick that started it', () => {
     tool.onPaste(filePasteEvent(pdf()));
     await Promise.resolve();
 
-    expect(root.querySelector('.blok-file-uploading [data-blok-media-preview="file"]')).not.toBeNull();
+    expect(root.querySelector('[data-role="uploading"] [data-blok-media-preview="file"]')).not.toBeNull();
+    expect(root.querySelector('.blok-file-uploading')).toBeNull();
   });
 });

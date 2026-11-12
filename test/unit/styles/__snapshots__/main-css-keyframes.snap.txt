@@ -283,11 +283,6 @@
   to { transform: translateY(0) scale(1) }
 }
 
-@keyframes blok-file-bar-sheen {
-  from { transform: translateX(-100%) }
-  to { transform: translateX(100%) }
-}
-
 @keyframes blok-file-preview-backdrop-in {
   from { opacity: 0 }
   to { opacity: 1 }
@@ -423,11 +418,6 @@
   2% { width: 24% }
   6.5% { width: 46% }
   100% { width: 92% }
-}
-
-@keyframes blok-image-shimmer {
-  from { transform: translateX(-100%) }
-  to { transform: translateX(100%) }
 }
 
 @keyframes blok-image-unmend {

@@ -118,3 +118,12 @@ describe('renderUploadingState with a preview', () => {
     expect(el.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('40');
   });
 });
+
+describe('labels a tool may bring', () => {
+  it('names the cancel button and the progress bar with the caller\'s own words', () => {
+    const el = renderUploadingState({ fileName: 'a.pdf', cancelLabel: 'Stop the upload', progressLabel: 'How far it is' });
+
+    expect(el.querySelector('[data-action="cancel"]')?.getAttribute('aria-label')).toBe('Stop the upload');
+    expect(el.querySelector('[role="progressbar"]')?.getAttribute('aria-label')).toBe('How far it is');
+  });
+});

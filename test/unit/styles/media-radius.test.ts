@@ -135,8 +135,6 @@ const RADII: Array<[string, string, string]> = [
   ['styles/bookmark.css', '[data-blok-tool="bookmark"] .blok-bookmark__placeholder', role('block')],
   ['styles/file.css', '[data-blok-tool="file"] .blok-file-card', role('block')],
   ['styles/file.css', '[data-blok-tool="file"] .blok-file-icon', role('control-lg')],
-  ['styles/file.css', '[data-blok-tool="file"] .blok-file-uploading', role('block')],
-  ['styles/file.css', '[data-blok-tool="file"] .blok-file-cancel', role('control')],
   ['styles/file.css', '[data-blok-tool="file"] .blok-file-error-state', role('block')],
   ['styles/file.css', '[data-blok-tool="file"] .blok-file-retry', role('control')],
   ['styles/file.css', '.blok-file-preview', role('dialog')],

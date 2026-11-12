@@ -141,11 +141,6 @@
   to { opacity: 1; }
 }
 
-@keyframes blok-image-shimmer {
-  from { transform: translateX(-100%); }
-  to   { transform: translateX(100%); }
-}
-
 @keyframes blok-image-retry-spin {
   to { transform: rotate(360deg); }
 }

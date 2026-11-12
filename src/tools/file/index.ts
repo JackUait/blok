@@ -21,7 +21,7 @@ import type { VideoData } from '../../../types/tools/video';
 import { IconCaption, IconCopy, IconDownload, IconFile, IconLinkExternal, IconReplace } from '../../components/icons';
 import { PASTE_EXTENSIONS, PASTE_MIME_TYPES } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
-import { renderUploadingState, type UploadingStateElement } from './uploading-state';
+import { renderUploadingState, type UploadingStateElement } from '../image/uploading-state';
 import { renderCaptionRow, renderFileCard } from './ui';
 import { Uploader } from './uploader';
 import { FileToolError } from './errors';
@@ -569,13 +569,13 @@ export class FileTool implements BlockTool {
     const i18n = this.api.i18n;
     return renderUploadingState({
       fileName: this.lastFileName,
-      labels: {
-        uploading: i18n.t('tools.file.uploading'),
-        cancel: i18n.t('tools.file.cancelUpload'),
-        progress: i18n.t('tools.file.uploadProgress'),
-      },
+      // With a file name the shared title ("Uploading") leads; without one this line stands alone.
+      ...(this.lastFileName === null ? { statusLabel: i18n.t('tools.file.uploading') } : {}),
+      cancelLabel: i18n.t('tools.file.cancelUpload'),
+      progressLabel: i18n.t('tools.file.uploadProgress'),
       onCancel: () => this.transitionToEmpty(),
       preview: 'file',
+      i18n,
     });
   }
 

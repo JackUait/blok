@@ -7,6 +7,10 @@ export interface UploadingStateOptions {
   fileName: string | null;
   sizeLabel?: string;
   statusLabel?: string;
+  /** Name of the cancel button. Defaults to the image tool's. */
+  cancelLabel?: string;
+  /** Name of the progress bar. Defaults to the image tool's. */
+  progressLabel?: string;
   onCancel?(): void;
   i18n?: I18nInstance;
   /** Draws the block preview, filled by the upload, instead of the icon tile. */
@@ -43,7 +47,7 @@ export function renderUploadingState(opts: UploadingStateOptions): UploadingStat
   cancel.type = 'button';
   cancel.className = 'blok-image-uploading__cancel';
   cancel.setAttribute('data-action', 'cancel');
-  cancel.setAttribute('aria-label', tr(opts.i18n, 'tools.image.cancelUpload'));
+  cancel.setAttribute('aria-label', opts.cancelLabel ?? tr(opts.i18n, 'tools.image.cancelUpload'));
   cancel.innerHTML = IconCross;
   cancel.addEventListener('click', () => {
     opts.onCancel?.();
@@ -104,7 +108,7 @@ export function renderUploadingState(opts: UploadingStateOptions): UploadingStat
   bar.setAttribute('aria-valuemin', '0');
   bar.setAttribute('aria-valuemax', '100');
   bar.setAttribute('aria-valuenow', '0');
-  bar.setAttribute('aria-label', tr(opts.i18n, 'tools.image.uploadProgress'));
+  bar.setAttribute('aria-label', opts.progressLabel ?? tr(opts.i18n, 'tools.image.uploadProgress'));
 
   const fill = document.createElement('div');
   fill.className = 'blok-image-uploading__bar-fill';

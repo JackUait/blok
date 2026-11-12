@@ -1129,8 +1129,6 @@
   "test/unit/tools/file/ui.test.ts": 0.204,
   "test/unit/tools/file/uploader.mutants.test.ts": 0.065,
   "test/unit/tools/file/uploader.test.ts": 0.179,
-  "test/unit/tools/file/uploading-state.mutants.test.ts": 0.023,
-  "test/unit/tools/file/uploading-state.test.ts": 0.037,
   "test/unit/tools/file/url.mutants.test.ts": 0.006,
   "test/unit/tools/file/url.test.ts": 0.009,
   "test/unit/tools/header-anchor-data.test.ts": 0.076,

@@ -693,7 +693,8 @@ describe('FileTool mutants', () => {
       uploader.handleFile.mockImplementation(() => new Promise(() => undefined));
       tool.onPaste(pasteFile(new File(['x'], 'report.pdf', { type: 'application/pdf' })));
 
-      expect(root.textContent).toContain('tools.file.uploading report.pdf');
+      expect(root.querySelector('.blok-image-uploading__label')?.textContent).toBe('Uploading');
+      expect(root.querySelector('[data-role="filename"]')?.textContent).toBe('report.pdf');
       expect(root.querySelector('[data-action="cancel"]')?.getAttribute('aria-label')).toBe(
         'tools.file.cancelUpload',
       );

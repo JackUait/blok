@@ -51,6 +51,11 @@
   background: var(--blok-video-stage);
   outline: none;
 }
+/* A video at rest says it can be clicked. While it plays the cursor stays plain,
+   so it does not sit on the picture as a hand. */
+[data-blok-tool="video"] .blok-video-inner:not([data-playing="true"]) .blok-video-media video {
+  cursor: pointer;
+}
 
 
 /* ----- caption ----- */

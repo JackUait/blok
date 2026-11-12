@@ -22527,6 +22527,10 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   outline: none;
 }
 
+[data-blok-tool="video"] .blok-video-inner:not([data-playing="true"]) .blok-video-media video {
+  cursor: pointer;
+}
+
 [data-blok-tool="video"] .blok-video-caption-row {
   display: flex;
   align-items: flex-start;

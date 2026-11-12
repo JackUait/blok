@@ -181,13 +181,16 @@ test('a paused video always shows a play button at rest, so it never looks like 
   const centerPlay = block.locator('[data-role="center-play"]');
   const opacity = (): Promise<string> => centerPlay.evaluate((element) => getComputedStyle(element).opacity);
 
-  // Never played, pointer elsewhere.
+  // Never played, pointer elsewhere. The whole picture takes the hand cursor.
   await page.mouse.move(0, 0);
   await expect(centerPlay).toBeVisible();
+  await expect(player).toHaveCSS('cursor', 'pointer');
 
   // Played into, then paused part-way, pointer elsewhere: the button is back.
   await centerPlay.click();
   await expect(centerPlay).toBeHidden();
+  // While it plays, the cursor over the picture is plain.
+  await expect(player).not.toHaveCSS('cursor', 'pointer');
   await player.evaluate(async (element) => {
     const video = element as HTMLVideoElement;
 
@@ -198,6 +201,7 @@ test('a paused video always shows a play button at rest, so it never looks like 
   await page.mouse.move(0, 0);
   await expect(centerPlay).toBeVisible();
   await expect.poll(opacity).toBe('1');
+  await expect(player).toHaveCSS('cursor', 'pointer');
 
   // Hovering brings the bar up, and the centre button steps aside.
   await player.hover({ position: { x: 40, y: 40 } });

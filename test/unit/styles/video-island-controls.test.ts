@@ -94,8 +94,13 @@ describe('video island controls', () => {
     expect(rule).toContain('transition: none');
   });
 
-  it('shows the hand cursor only over controls, not over the picture', () => {
-    expect(css).not.toMatch(/\.blok-video-media video\s*\{[^}]*cursor: pointer/);
+  it('shows the hand cursor over the whole picture while the video is not playing', () => {
+    expect(block(`${T} .blok-video-inner:not([data-playing="true"]) .blok-video-media video`)).toContain('cursor: pointer');
+  });
+
+  it('keeps the plain cursor over the picture while it plays', () => {
+    expect(block(`${T} .blok-video-media video`)).not.toContain('cursor');
+    expect(css).not.toMatch(/data-playing="true"\]\s[^{]*\.blok-video-media video\s*\{[^}]*cursor: pointer/);
   });
 
   it('keeps the default playing glow faint and close to the frame', () => {

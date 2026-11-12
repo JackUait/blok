@@ -401,7 +401,7 @@ describe('VideoTool — onPaste', () => {
     tool.onPaste(event);
     await new Promise((r) => setTimeout(r, 0));
     const msg = root.querySelector('[data-role="video-error-message"]');
-    expect(msg?.textContent).toBe('tools.video.errorFileTooLarge');
+    expect(msg?.textContent).toBe('Video is too large');
     expect(msg?.textContent).not.toContain('FILE_TOO_LARGE');
   });
 });
@@ -1212,6 +1212,8 @@ describe('VideoTool — URL field validation', () => {
 
     expect(root.getAttribute('data-state')).toBe('error');
     expect(root.querySelector('[data-role="video-error-message"]')?.textContent)
+      .toBe('This link isn’t a video file');
+    expect(root.querySelector('[data-role="video-error-detail"]')?.textContent)
       .toBe('Link a video file (.mp4, .webm, .mov), or use an embed block');
     expect(root.querySelector('video')).toBeNull();
   });
@@ -1227,7 +1229,7 @@ describe('VideoTool — URL field validation', () => {
 
     await submitUrl(tool, root, 'https://example.com/watch/not-a-file');
 
-    expect(root.querySelector('[data-role="video-error-message"]')?.textContent)
+    expect(root.querySelector('[data-role="video-error-detail"]')?.textContent)
       .toBe('Verknüpfe eine Videodatei oder verwende einen Einbettungsblock');
   });
 
@@ -1238,7 +1240,7 @@ describe('VideoTool — URL field validation', () => {
     await submitUrl(tool, root, 'https://example.com/watch/some-video');
 
     expect(root.getAttribute('data-state')).toBe('error');
-    expect(root.querySelector('[data-role="video-error-message"]')?.textContent)
+    expect(root.querySelector('[data-role="video-error-detail"]')?.textContent)
       .toBe('Link a video file (.mp4, .webm, .mov), or use an embed block');
   });
 
@@ -1823,5 +1825,106 @@ describe('VideoTool — the broken screen', () => {
     root.querySelector('video')?.dispatchEvent(new Event('error'));
     expect(root.querySelector('[data-role="video-error-message"]')?.textContent).toBe("This video can't be played");
     expect(root.querySelector('[data-role="video-error"] button')).toBeNull();
+  });
+});
+
+describe('VideoTool — error text', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  const pasteFile = async (tool: VideoTool, file: File): Promise<void> => {
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+  };
+  const big = (): File => new File([new Uint8Array(50)], 'big.mp4', { type: 'video/mp4' });
+  const small = (type = 'video/mp4'): File => new File([new Uint8Array(2)], 'clip', { type });
+  const lines = (root: HTMLElement): { title: string | null; detail: string | null } => ({
+    title: root.querySelector('[data-role="video-error-message"]')?.textContent ?? null,
+    detail: root.querySelector('[data-role="video-error-detail"]')?.textContent ?? null,
+  });
+
+  it('splits a too-large file into a title and the two sizes', async () => {
+    const tool = new VideoTool(createOptions({}, { maxSize: 5 }));
+    const root = tool.render();
+
+    await pasteFile(tool, big());
+
+    expect(lines(root)).toEqual({ title: 'Video is too large', detail: '50 B exceeds the 5 B limit.' });
+  });
+
+  it('adds connection advice to an upload the server refused', async () => {
+    const tool = new VideoTool(createOptions({}, { uploader: { uploadByFile: () => Promise.reject(new Error('500')) } }));
+    const root = tool.render();
+
+    await pasteFile(tool, small());
+
+    expect(lines(root)).toEqual({ title: 'Upload failed', detail: 'Check your connection and try again.' });
+  });
+
+  it('gives no connection advice for a file type it turns away', async () => {
+    const tool = new VideoTool(createOptions({}, { types: ['video/webm'] }));
+    const root = tool.render();
+
+    await pasteFile(tool, small('video/mp4'));
+
+    expect(lines(root)).toEqual({ title: 'Upload failed', detail: null });
+  });
+
+  it('says why a saved video may not play', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
+    const root = tool.render();
+
+    root.querySelector('video')?.dispatchEvent(new Event('error'));
+
+    expect(lines(root)).toEqual({
+      title: 'This video can\'t be played',
+      detail: 'The file may be damaged, or in a format this browser can’t play.',
+    });
+  });
+
+  it('puts the text from onUploadError under the Upload failed title', async () => {
+    const tool = new VideoTool(createOptions({}, { maxSize: 5, onUploadError: () => 'Ask an admin for more space' }));
+    const root = tool.render();
+
+    await pasteFile(tool, big());
+
+    expect(lines(root)).toEqual({ title: 'Upload failed', detail: 'Ask an admin for more space' });
+  });
+
+  it('keeps its own two lines when onUploadError returns nothing', async () => {
+    const tool = new VideoTool(createOptions({}, { maxSize: 5, onUploadError: () => undefined }));
+    const root = tool.render();
+
+    await pasteFile(tool, big());
+
+    expect(lines(root)).toEqual({ title: 'Video is too large', detail: '50 B exceeds the 5 B limit.' });
+  });
+
+  it('translates both lines', async () => {
+    const tool = new VideoTool({
+      ...createOptions({}, { maxSize: 5 }),
+      api: createMockApi({
+        'tools.video.errorFileTooLargeTitle': 'Видео слишком большое',
+        'tools.video.errorFileTooLargeDetail': '{size} больше лимита {max}.',
+      }),
+    });
+    const root = tool.render();
+
+    await pasteFile(tool, big());
+
+    expect(lines(root)).toEqual({ title: 'Видео слишком большое', detail: '50 B больше лимита 5 B.' });
+  });
+
+  it('clears the old detail when the next failure has none', async () => {
+    const tool = new VideoTool(createOptions({}, { maxSize: 5, types: ['video/mp4'] }));
+    const root = tool.render();
+
+    await pasteFile(tool, big());
+    await pasteFile(tool, small('video/webm'));
+
+    expect(lines(root)).toEqual({ title: 'Upload failed', detail: null });
   });
 });

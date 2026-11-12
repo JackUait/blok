@@ -2,6 +2,7 @@ import type { VideoAlignment, VideoData } from '../../../types/tools/video';
 import { readVariants } from '../../shared/read-variants';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconUpload } from '../../components/icons';
+import { mountErrorScreen } from './error-screen';
 
 const ALIGN_TO_TEXT_ALIGN: Record<VideoAlignment, string> = {
   left: 'left',
@@ -106,11 +107,10 @@ export function renderCaptionRow(opts: CaptionRowOptions): HTMLElement {
   return row;
 }
 
-/** SMPTE colour bars, left to right; video.css paints each by position. */
-const TEAR_BARS = 7;
-
 export interface ErrorStateOptions {
-  message: string;
+  title: string;
+  /** A softer second line: what went wrong in detail, or what to do next. */
+  detail?: string;
   /** The player's saved width in percent, so the screen stands where the video did. */
   width?: number;
   /** Send the block back to its empty state. Omit for a reader, who cannot change the source. */
@@ -120,8 +120,8 @@ export interface ErrorStateOptions {
 }
 
 /**
- * The failed player: a dead screen of static with a colour-bar tear, and a
- * glass card on top. Only the card's message and buttons are read out.
+ * The failed player: colour bars that melt, and a glass card on top.
+ * Only the card's message and buttons are read out.
  */
 export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
   const wrap = document.createElement('div');
@@ -133,10 +133,10 @@ export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
   screen.className = 'blok-video-error-state__screen';
   screen.setAttribute('data-role', 'video-error-screen');
   screen.setAttribute('aria-hidden', 'true');
-  const tear = document.createElement('div');
-  tear.className = 'blok-video-error-state__tear';
-  tear.append(...Array.from({ length: TEAR_BARS }, () => document.createElement('span')));
-  screen.append(tear);
+  const picture = document.createElement('canvas');
+  picture.className = 'blok-video-error-state__picture';
+  screen.append(picture);
+  mountErrorScreen(picture, wrap);
 
   const card = document.createElement('div');
   card.className = 'blok-video-error-state__card';
@@ -145,11 +145,23 @@ export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
   signal.className = 'blok-video-error-state__signal';
   signal.setAttribute('aria-hidden', 'true');
 
+  const text = document.createElement('div');
+  text.className = 'blok-video-error-state__text';
+  text.setAttribute('role', 'status');
+
   const message = document.createElement('p');
   message.className = 'blok-video-error-state__message';
   message.setAttribute('data-role', 'video-error-message');
-  message.setAttribute('role', 'status');
-  message.textContent = opts.message;
+  message.textContent = opts.title;
+  text.append(message);
+
+  if (opts.detail) {
+    const detail = document.createElement('p');
+    detail.className = 'blok-video-error-state__detail';
+    detail.setAttribute('data-role', 'video-error-detail');
+    detail.textContent = opts.detail;
+    text.append(detail);
+  }
 
   const actions = document.createElement('div');
   actions.className = 'blok-video-error-state__actions';
@@ -185,7 +197,7 @@ export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
     actions.append(retry);
   }
 
-  card.append(signal, message, actions);
+  card.append(signal, text, actions);
   wrap.append(screen, card);
 
   return wrap;

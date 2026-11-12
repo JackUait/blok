@@ -188,12 +188,11 @@
   transition-duration: 0s;
 }
 
-/* ----- error state — the screen, no signal -----------------
+/* ----- error state — the stream that lost its keyframe -----
    Same frame as a working player, so the failure reads as "this video", not a
-   generic alert: a dead screen of static that a colour-bar tear rips across now
-   and then, with a glass card on top that holds the way out. The screen stays
-   dark in both themes, like a real one, and the card is the player's own
-   dark glass, like the gear menu. */
+   generic alert: colour bars that melt block by block, with a glass card on
+   top that holds the way out. The screen stays dark in both themes, like a
+   real one, and the card is the player's own dark glass, like the gear menu. */
 [data-blok-tool="video"] .blok-video-error-state {
   --blok-video-error-ink: var(--blok-color-danger);
   position: relative;
@@ -226,45 +225,28 @@
   border-radius: inherit;
   pointer-events: none;
 }
-/* the static — a noise tile, oversized so the hard jumps never show an edge */
-[data-blok-tool="video"] .blok-video-error-state__screen::before {
-  content: "";
+/* the picture: error-screen.ts draws 16px blocks, so it must scale unsmoothed */
+[data-blok-tool="video"] .blok-video-error-state__picture {
   position: absolute;
-  inset: -50%;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='2.4' intercept='-0.7'/%3E%3CfeFuncG type='linear' slope='2.4' intercept='-0.7'/%3E%3CfeFuncB type='linear' slope='2.4' intercept='-0.7'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 160px 160px repeat;
-  opacity: 0.78;
-  animation: blok-video-static 0.5s steps(1) infinite;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
 }
-/* scanlines, a slow rolling band, and a vignette that darkens the corners */
+/* a shade over the picture, so the card and its text stay readable on the bright bars */
 [data-blok-tool="video"] .blok-video-error-state__screen::after {
   content: "";
   position: absolute;
   inset: 0;
-  background:
-    repeating-linear-gradient(0deg, var(--blok-video-error-scanline) 0 1px, transparent 1px 3px),
-    linear-gradient(180deg, transparent 0%, var(--blok-video-error-roll) 48%, transparent 56%) 0 0 / 100% 300% no-repeat,
-    radial-gradient(ellipse at center, transparent 35%, var(--blok-video-error-vignette) 100%);
-  animation: blok-video-roll 6s linear infinite;
+  background: radial-gradient(
+    ellipse at center,
+    var(--blok-video-error-shade) 0%,
+    color-mix(in srgb, var(--blok-video-error-shade) 50%, transparent) 60%,
+    var(--blok-video-error-vignette) 100%
+  );
 }
-/* the tear: SMPTE colour bars that flash across the static for a beat */
-[data-blok-tool="video"] .blok-video-error-state__tear {
-  position: absolute;
-  inset-inline: 0;
-  top: 30%;
-  height: 18%;
-  display: flex;
-  opacity: 0;
-  filter: drop-shadow(3px 0 var(--blok-video-error-split-red)) drop-shadow(-3px 0 var(--blok-video-error-split-cyan));
-  animation: blok-video-tear 3.4s steps(1) infinite;
-}
-[data-blok-tool="video"] .blok-video-error-state__tear span { flex: 1; }
-[data-blok-tool="video"] .blok-video-error-state__tear span:nth-child(1) { background: var(--blok-video-error-bar-1); }
-[data-blok-tool="video"] .blok-video-error-state__tear span:nth-child(2) { background: var(--blok-video-error-bar-2); }
-[data-blok-tool="video"] .blok-video-error-state__tear span:nth-child(3) { background: var(--blok-video-error-bar-3); }
-[data-blok-tool="video"] .blok-video-error-state__tear span:nth-child(4) { background: var(--blok-video-error-bar-4); }
-[data-blok-tool="video"] .blok-video-error-state__tear span:nth-child(5) { background: var(--blok-video-error-bar-5); }
-[data-blok-tool="video"] .blok-video-error-state__tear span:nth-child(6) { background: var(--blok-video-error-bar-6); }
-[data-blok-tool="video"] .blok-video-error-state__tear span:nth-child(7) { background: var(--blok-video-error-bar-7); }
 [data-blok-tool="video"] .blok-video-error-state__card {
   grid-area: 1 / 1;
   place-self: center;
@@ -296,11 +278,23 @@
   margin-block-start: calc(14px * 1.45 / 2 - 4px);
   animation: blok-video-ping 1.6s ease-out infinite;
 }
+[data-blok-tool="video"] .blok-video-error-state__text {
+  display: grid;
+  gap: var(--blok-space-0-5);
+  min-width: 0;
+}
 [data-blok-tool="video"] .blok-video-error-state__message {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
   line-height: 1.45;
+  text-wrap: pretty;
+}
+[data-blok-tool="video"] .blok-video-error-state__detail {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--blok-video-control-fg) 68%, transparent);
   text-wrap: pretty;
 }
 [data-blok-tool="video"] .blok-video-error-state__actions {
@@ -348,25 +342,6 @@
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
-@keyframes blok-video-static {
-  0%   { transform: translate(0, 0); }
-  20%  { transform: translate(-7%, 4%); }
-  40%  { transform: translate(5%, -6%); }
-  60%  { transform: translate(-3%, -9%); }
-  80%  { transform: translate(8%, 3%); }
-}
-@keyframes blok-video-roll {
-  from { background-position: 0 0, 0 100%, 0 0; }
-  to   { background-position: 0 0, 0 0, 0 0; }
-}
-@keyframes blok-video-tear {
-  0%   { opacity: 0; }
-  84%  { opacity: 1; transform: translateX(-9%); clip-path: inset(0 0 58% 0); }
-  86%  { opacity: 1; transform: translateX(6%) scaleY(0.6); clip-path: inset(36% 0 0 0); }
-  88%  { opacity: 0.85; transform: translateX(-2%); clip-path: inset(0); }
-  90%  { opacity: 1; transform: translate(12%, 140%) scaleY(0.3); clip-path: inset(0 0 40% 0); }
-  92%  { opacity: 0; transform: none; clip-path: inset(0); }
-}
 @keyframes blok-video-rise {
   from { opacity: 0; transform: translateY(8px) scale(0.98); }
   to   { opacity: 1; transform: none; }
@@ -376,9 +351,6 @@
   100% { box-shadow: 0 0 0 7px transparent; }
 }
 @media (prefers-reduced-motion: reduce) {
-  [data-blok-tool="video"] .blok-video-error-state__screen::before,
-  [data-blok-tool="video"] .blok-video-error-state__screen::after,
-  [data-blok-tool="video"] .blok-video-error-state__tear,
   [data-blok-tool="video"] .blok-video-error-state__card,
   [data-blok-tool="video"] .blok-video-error-state__signal {
     animation: none;

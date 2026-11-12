@@ -901,11 +901,8 @@
   --blok-video-thumb-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   --blok-video-burst-bg: rgba(0, 0, 0, 0.5);
   --blok-video-burst-fg: #ffffff;
-  --blok-video-error-scanline: rgba(0, 0, 0, 0.22);
-  --blok-video-error-roll: rgba(255, 255, 255, 0.07);
+  --blok-video-error-shade: rgba(0, 0, 0, 0.42);
   --blok-video-error-vignette: rgba(0, 0, 0, 0.7);
-  --blok-video-error-split-red: rgba(255, 0, 64, 0.55);
-  --blok-video-error-split-cyan: rgba(0, 224, 255, 0.55);
   --blok-video-error-card-shadow: 0 18px 48px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.25);
   --blok-video-error-bar-1: #c0c0c0;
   --blok-video-error-bar-2: #c0c000;

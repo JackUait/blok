@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS invites(id text PRIMARY KEY,workspace_id text REFEREN
 CREATE TABLE IF NOT EXISTS pages(id text PRIMARY KEY,workspace_id text NOT NULL REFERENCES workspaces(id),metadata jsonb NOT NULL,trashed boolean NOT NULL DEFAULT false,deleted boolean NOT NULL DEFAULT false,content jsonb,version bigint NOT NULL DEFAULT 0,lineage text,sequence numeric(20,0));
 CREATE INDEX IF NOT EXISTS pages_workspace ON pages(workspace_id);
 CREATE INDEX IF NOT EXISTS sessions_user ON sessions(user_id);
+CREATE TABLE IF NOT EXISTS mcp_tokens(id text PRIMARY KEY,user_id text NOT NULL REFERENCES users(id),label text NOT NULL,expires_at timestamptz NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),last_used_at timestamptz);
+CREATE INDEX IF NOT EXISTS mcp_tokens_user ON mcp_tokens(user_id);
 CREATE TABLE IF NOT EXISTS email_rate_limits(key text PRIMARY KEY,window_start timestamptz NOT NULL DEFAULT now(),count int NOT NULL);
 CREATE TABLE IF NOT EXISTS assets(name text PRIMARY KEY,workspace_id text NOT NULL REFERENCES workspaces(id),document_id text NOT NULL REFERENCES pages(id),created_at timestamptz NOT NULL DEFAULT now());
 CREATE TABLE IF NOT EXISTS bootstrap_markers(name text PRIMARY KEY,created_at timestamptz NOT NULL DEFAULT now());

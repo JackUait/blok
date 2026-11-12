@@ -404,6 +404,10 @@ body[data-blok-theme="light"] [data-desktop-floating-toc] {
 }
 [data-desktop-settings-path] { display: block; overflow-wrap: anywhere; padding: 12px; border: 1px solid var(--desktop-border); border-radius: 6px; font-size: 13px; }
 [data-desktop-settings-copy] { margin-top: 16px; }
+[data-desktop-mcp-actions] { display: inline-flex; gap: 8px; }
+[data-desktop-mcp-actions] [data-desktop-settings-copy] { margin-top: 0; }
+[data-desktop-mcp-name] { display: block; width: min(100%, 360px); margin-top: 18px; }
+[data-desktop-mcp-secret] { margin: 16px 0; }
 [data-desktop-settings-version] { margin-top: 44px; color: var(--desktop-muted); font-size: 12px; }
 [data-desktop-settings-explanation] { margin-top: 22px; max-width: 550px; color: var(--desktop-muted); font-size: 13px; line-height: 1.5; }
 [data-desktop-settings-provider-status] { color: var(--desktop-muted); font-size: 13px; }

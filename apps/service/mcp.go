@@ -3,10 +3,13 @@ package cloud
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/JackUait/blok/packages/server/go/v2/blokmcp"
+	"github.com/jackc/pgx/v5"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -60,7 +63,7 @@ func (s *Service) initMCP() error {
 			problem(w, http.StatusUnauthorized, "Bearer token required")
 			return
 		}
-		u, err := s.session(r)
+		u, err := s.mcpIdentity(r)
 		if err != nil {
 			problem(w, http.StatusUnauthorized, "Invalid or expired token")
 			return
@@ -68,6 +71,126 @@ func (s *Service) initMCP() error {
 		sdk.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), mcpUserKey{}, u)))
 	})
 	return nil
+}
+
+func (s *Service) mcpIdentity(r *http.Request) (identity, error) {
+	var u identity
+	token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	u.Session = hash(token)
+	err := s.DB.QueryRow(r.Context(), `SELECT u.id,u.email FROM mcp_tokens t JOIN users u ON u.id=t.user_id WHERE t.id=$1 AND t.expires_at>now()`, u.Session).Scan(&u.ID, &u.Email)
+	if err == nil {
+		_, _ = s.DB.Exec(r.Context(), `UPDATE mcp_tokens SET last_used_at=now() WHERE id=$1`, u.Session)
+	}
+	return u, err
+}
+
+func (s *Service) mcpTokens(w http.ResponseWriter, r *http.Request) {
+	u, ok := s.require(w, r)
+	if !ok {
+		return
+	}
+	if r.Method == http.MethodGet {
+		rows, err := s.DB.Query(r.Context(), `SELECT id,label,created_at,expires_at,last_used_at FROM mcp_tokens WHERE user_id=$1 AND expires_at>now() ORDER BY created_at DESC`, u.ID)
+		if err != nil {
+			problem(w, 503, "Tokens unavailable")
+			return
+		}
+		defer rows.Close()
+		out := []map[string]any{}
+		for rows.Next() {
+			var id, label string
+			var created, expires time.Time
+			var lastUsed *time.Time
+			if rows.Scan(&id, &label, &created, &expires, &lastUsed) != nil {
+				problem(w, 503, "Tokens unavailable")
+				return
+			}
+			out = append(out, map[string]any{"id": id, "label": label, "createdAt": created, "expiresAt": expires, "lastUsedAt": lastUsed})
+		}
+		if rows.Err() != nil {
+			problem(w, 503, "Tokens unavailable")
+			return
+		}
+		jsonOut(w, 200, map[string]any{"tokens": out})
+		return
+	}
+	if r.Method != http.MethodPost {
+		problem(w, 405, "Method not allowed")
+		return
+	}
+	var in struct {
+		Label string `json:"label"`
+	}
+	if !body(w, r, &in) {
+		return
+	}
+	in.Label = strings.TrimSpace(in.Label)
+	if in.Label == "" || len(in.Label) > 80 {
+		problem(w, 400, "Invalid token name")
+		return
+	}
+	if !s.rate(r.Context(), "mcp-token:"+u.ID, 10) {
+		problem(w, 429, "Too many tokens created")
+		return
+	}
+	var count int
+	if s.DB.QueryRow(r.Context(), `SELECT count(*) FROM mcp_tokens WHERE user_id=$1 AND expires_at>now()`, u.ID).Scan(&count) != nil {
+		problem(w, 503, "Tokens unavailable")
+		return
+	}
+	if count >= 10 {
+		problem(w, 409, "Revoke an existing token first")
+		return
+	}
+	token := opaque()
+	var created, expires time.Time
+	err := s.DB.QueryRow(r.Context(), `INSERT INTO mcp_tokens(id,user_id,label,expires_at) VALUES($1,$2,$3,now()+interval '90 days') RETURNING created_at,expires_at`, hash(token), u.ID, in.Label).Scan(&created, &expires)
+	if err != nil {
+		problem(w, 503, "Could not create token")
+		return
+	}
+	jsonOut(w, 201, map[string]any{"id": hash(token), "label": in.Label, "token": token, "createdAt": created, "expiresAt": expires})
+}
+
+func (s *Service) revokeMCPToken(w http.ResponseWriter, r *http.Request) {
+	u, ok := s.require(w, r)
+	if !ok {
+		return
+	}
+	tag, err := s.DB.Exec(r.Context(), `DELETE FROM mcp_tokens WHERE id=$1 AND user_id=$2`, r.PathValue("id"), u.ID)
+	if err != nil {
+		problem(w, 503, "Could not revoke token")
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		problem(w, 404, "Token not found")
+		return
+	}
+	jsonOut(w, 200, map[string]bool{"ok": true})
+}
+
+func (s *Service) rotateMCPToken(w http.ResponseWriter, r *http.Request) {
+	u, ok := s.require(w, r)
+	if !ok {
+		return
+	}
+	if !s.rate(r.Context(), "mcp-token:"+u.ID, 10) {
+		problem(w, 429, "Too many token changes")
+		return
+	}
+	token := opaque()
+	var label string
+	var created, expires time.Time
+	err := s.DB.QueryRow(r.Context(), `UPDATE mcp_tokens SET id=$1,created_at=now(),expires_at=now()+interval '90 days',last_used_at=NULL WHERE id=$2 AND user_id=$3 AND expires_at>now() RETURNING label,created_at,expires_at`, hash(token), r.PathValue("id"), u.ID).Scan(&label, &created, &expires)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			problem(w, 404, "Token not found")
+		} else {
+			problem(w, 503, "Could not rotate token")
+		}
+		return
+	}
+	jsonOut(w, 200, map[string]any{"id": hash(token), "label": label, "token": token, "createdAt": created, "expiresAt": expires})
 }
 
 func (s *Service) mcpListWorkspaces(ctx context.Context, _ *mcp.CallToolRequest) (*mcp.CallToolResult, error) {

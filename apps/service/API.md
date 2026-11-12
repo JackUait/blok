@@ -27,7 +27,12 @@ Workspace = `{id,slug,name,role}`. Default slug `tousambassadeurs`.
 
 ## Hosted MCP
 
-`POST /mcp` is a stateless Streamable HTTP MCP endpoint on the same HTTPS origin. Each caller must send `Authorization: Bearer <personal session token>`; browser cookies and cross-origin browser requests do not authorize MCP calls. A user can obtain a 30-day personal token through the existing email code flow by verifying with `client:"desktop"`. Treat it as a password and reauthenticate when it expires. Logout revokes that session token. The MCP server checks the user's current workspace membership and role on each request and document operation.
+`POST /mcp` is a stateless Streamable HTTP MCP endpoint on the same HTTPS origin. Each caller must send `Authorization: Bearer <personal MCP token>`; browser cookies, native session tokens and cross-origin browser requests do not authorize MCP calls. A signed-in user creates and revokes dedicated tokens in **Mon compte → Accès MCP**. Tokens are displayed only at creation, hashed in PostgreSQL and expire after 90 days. Treat them as passwords. The MCP server checks the user's current workspace membership and role on each request and document operation.
+
+- GET `/api/mcp/tokens` → `{tokens:[{id,label,createdAt,expiresAt,lastUsedAt}]}`. The token secret is never returned.
+- POST `/api/mcp/tokens` `{label}` → `{id,label,token,createdAt,expiresAt}`. Requires an authenticated web or native session; maximum 10 active tokens per account and 10 creations per hour.
+- DELETE `/api/mcp/tokens/:id` → `{ok:true}`. Only the owner may revoke a token; revocation takes effect on the next MCP request.
+- POST `/api/mcp/tokens/:id/rotate` → `{id,label,token,createdAt,expiresAt}`. Atomically invalidates the old token and returns a fresh one, shown only once. Only the owner may rotate it.
 
 Alongside Blok's document editing tools, the host serves `blok_list_workspaces`, `blok_list_pages` (`{workspace:slug}`), and `blok_create_page` (`{workspace:slug,title,parentId?:pageID}`). Creating a page updates its workspace index and creates an empty document atomically. Viewers may list/read but cannot create or edit; nonmembers cannot list pages. The MCP endpoint is served by the existing Go app and reverse proxy, with no additional published port.
 

@@ -8,6 +8,7 @@ import { dataDirectory } from './storage';
 import corePackage from '../../package.json';
 import appPackage from '../package.json';
 import { mountAiSettings } from './ai-settings';
+import { mountMcpSettings } from './mcp-settings';
 
 export type Appearance = 'dark' | 'light' | 'auto';
 
@@ -300,6 +301,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
       const accounts = actionButton('data-desktop-settings-copy', 'Comptes et espaces', 'profile');
       accounts.addEventListener('click', () => { closeSettings(); emitCloud('account'); });
       content.append(accounts);
+      if (client) mountMcpSettings(content, client);
     } else if (panel === 'account') {
       content.append(el('h1', 'data-desktop-settings-title', 'Profil local'));
       content.append(el('p', 'data-desktop-settings-intro', 'Cet espace appartient à cet appareil.'));

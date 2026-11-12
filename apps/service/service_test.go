@@ -352,7 +352,14 @@ func TestCloudIntegration(t *testing.T) {
 	request("GET", "/api/workspaces/tousambassadeurs/pages/test-page-1", admin, nil, 404)
 	request("GET", "/internal/documents/test-page-1", cfg.InternalSecret, nil, 200)
 	request("PUT", "/internal/documents/test-page-1", cfg.InternalSecret, map[string]any{"blocks": []any{}}, 200)
-	// Hosted MCP uses each caller's own bearer session and workspace role.
+	// Hosted MCP uses dedicated, revocable personal tokens and workspace roles.
+	adminToken := request("POST", "/api/mcp/tokens", admin, map[string]any{"label": "Codex"}, 201)
+	adminMCP := adminToken["token"].(string)
+	otherMCP := request("POST", "/api/mcp/tokens", other, map[string]any{"label": "Other client"}, 201)["token"].(string)
+	listedTokens := request("GET", "/api/mcp/tokens", admin, nil, 200)["tokens"].([]any)
+	if len(listedTokens) != 1 || listedTokens[0].(map[string]any)["token"] != nil {
+		t.Fatal("MCP token leaked in listing", listedTokens)
+	}
 	mcpCall := func(token, name string, args map[string]any, status int) map[string]any {
 		t.Helper()
 		payload, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": map[string]any{"name": name, "arguments": args}})
@@ -385,7 +392,8 @@ func TestCloudIntegration(t *testing.T) {
 		return out
 	}
 	mcpCall("", "blok_list_workspaces", map[string]any{}, 401)
-	created := mcpCall(admin, "blok_create_page", map[string]any{"workspace": "tousambassadeurs", "title": "Created through MCP"}, 200)
+	mcpCall(admin, "blok_list_workspaces", map[string]any{}, 401)
+	created := mcpCall(adminMCP, "blok_create_page", map[string]any{"workspace": "tousambassadeurs", "title": "Created through MCP"}, 200)
 	if created["error"] != nil || created["result"].(map[string]any)["isError"] == true {
 		t.Fatal("MCP create failed", created)
 	}
@@ -396,12 +404,17 @@ func TestCloudIntegration(t *testing.T) {
 	if json.Unmarshal([]byte(content), &pageCreated) != nil || pageCreated.ID == "" {
 		t.Fatal("MCP missing created page", created)
 	}
-	opened := mcpCall(admin, "blok_open", map[string]any{"documentId": pageCreated.ID, "write": true}, 200)
+	opened := mcpCall(adminMCP, "blok_open", map[string]any{"documentId": pageCreated.ID, "write": true}, 200)
 	if opened["error"] != nil || opened["result"].(map[string]any)["isError"] == true {
 		t.Fatal("MCP could not open created page", opened)
 	}
-	mcpCall(admin, "blok_list_pages", map[string]any{"workspace": "tousambassadeurs"}, 200)
-	denied := mcpCall(other, "blok_create_page", map[string]any{"workspace": "tousambassadeurs", "title": "Forbidden"}, 200)
+	mcpCall(adminMCP, "blok_list_pages", map[string]any{"workspace": "tousambassadeurs"}, 200)
+	request("POST", "/api/mcp/tokens/"+adminToken["id"].(string)+"/rotate", other, nil, 404)
+	rotated := request("POST", "/api/mcp/tokens/"+adminToken["id"].(string)+"/rotate", admin, nil, 200)
+	mcpCall(adminMCP, "blok_list_workspaces", map[string]any{}, 401)
+	adminMCP = rotated["token"].(string)
+	mcpCall(adminMCP, "blok_list_workspaces", map[string]any{}, 200)
+	denied := mcpCall(otherMCP, "blok_create_page", map[string]any{"workspace": "tousambassadeurs", "title": "Forbidden"}, 200)
 	if denied["result"].(map[string]any)["isError"] != true {
 		t.Fatal("MCP non-member created page", denied)
 	}
@@ -410,10 +423,13 @@ func TestCloudIntegration(t *testing.T) {
 	if _, e = s.DB.Exec(ctx, "UPDATE memberships SET role='viewer' WHERE workspace_id=$1 AND user_id=$2", public["id"], adminID); e != nil {
 		t.Fatal(e)
 	}
-	denied = mcpCall(admin, "blok_create_page", map[string]any{"workspace": "tousambassadeurs", "title": "Viewer cannot write"}, 200)
+	denied = mcpCall(adminMCP, "blok_create_page", map[string]any{"workspace": "tousambassadeurs", "title": "Viewer cannot write"}, 200)
 	if denied["result"].(map[string]any)["isError"] != true {
 		t.Fatal("MCP viewer created page", denied)
 	}
+	request("DELETE", "/api/mcp/tokens/"+rotated["id"].(string), other, nil, 404)
+	request("DELETE", "/api/mcp/tokens/"+rotated["id"].(string), admin, nil, 200)
+	mcpCall(adminMCP, "blok_list_workspaces", map[string]any{}, 401)
 	second, e := New(ctx, cfg)
 	if e != nil {
 		t.Fatal(e)

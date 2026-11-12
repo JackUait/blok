@@ -491,6 +491,7 @@ export function createPageCover(
   uploadPanel.append(upload, file, hint, uploadStatus);
   const linkPanel = document.createElement('form');
   linkPanel.setAttribute('data-desktop-cover-panel', '');
+  linkPanel.noValidate = true;
   const link = document.createElement('input');
   link.type = 'url';
   link.placeholder = 'https://exemple.com/image.jpg';
@@ -517,6 +518,7 @@ export function createPageCover(
   const panels = [scrollFrame, uploadPanel, linkPanel];
   const tabButtons: HTMLButtonElement[] = [];
   const selectTab = (index: number): void => {
+    content.toggleAttribute('data-gallery', index === 0);
     panels.forEach((panel, current) => { panel.hidden = current !== index; });
     tabButtons.forEach((tab, current) => { tab.setAttribute('aria-selected', String(current === index)); tab.tabIndex = current === index ? 0 : -1; });
     updateScrollbar();
@@ -580,7 +582,7 @@ export function createPageCover(
   change.addEventListener('click', () => {
     if (gallery.hidden) {
       gallery.hidden = false;
-      content.style.height = `${Math.max(0, Math.min(350, window.innerHeight - gallery.getBoundingClientRect().top - 60))}px`;
+      content.style.setProperty('--desktop-cover-gallery-height', `${Math.max(0, Math.min(350, window.innerHeight - gallery.getBoundingClientRect().top - 60))}px`);
       updateScrollbar();
       change.setAttribute('aria-expanded', 'true');
       actions.setAttribute('data-open', '');

@@ -231,3 +231,35 @@ export const resolveMoveTo = (tree: BlockTree, block: Block, target: MoveToTarge
 
   return placement;
 };
+
+/**
+ * A dry run of `blocks.moveTo(id, target)` for each block in turn: each check
+ * sees the blocks before it already moved. Throws the first refusal.
+ * @param tree - the blocks
+ * @param blocks - the blocks to move, in move order, none inside another
+ * @param target - new parent and position, the same for each
+ */
+export const assertCanMoveAll = (tree: BlockTree, blocks: Block[], target: MoveToTarget): void => {
+  const byId = new Map(tree.blocks.map(block => [block.id, block]));
+  const state = { order: [...tree.blocks] };
+  const view: BlockTree = {
+    get blocks() {
+      return state.order;
+    },
+    getBlockById: id => byId.get(id),
+  };
+
+  blocks.forEach(original => {
+    const block = byId.get(original.id) ?? original;
+    const placement = resolveMoveTo(view, block, target);
+    const members = state.order.filter(candidate => candidate === block || isUnder(view, candidate, block.id));
+    // Only the parent changes. The holder stays where it is, which the table
+    // cell checks can bear: a moved block's cell blocks stay in its own table.
+    const moved = Object.create(block, { parentId: { value: placement.parentId } }) as Block;
+    const kept = state.order.filter(candidate => !members.includes(candidate));
+    const at = state.order.slice(0, placement.index).filter(candidate => !members.includes(candidate)).length;
+
+    byId.set(block.id, moved);
+    state.order = [...kept.slice(0, at), ...members.map(member => (member === block ? moved : member)), ...kept.slice(at)];
+  });
+};

@@ -10,8 +10,8 @@ export interface MoveToBlock {
 }
 
 interface MoveToRules<B extends MoveToBlock> {
-  /** Core's placement check: false when `root` may not go under `rowId`. */
-  canMoveInto: (root: B, rowId: string) => boolean;
+  /** Core's placement check: false when `roots`, moved in order, may not all go under `rowId`. */
+  canMoveInto: (roots: readonly B[], rowId: string) => boolean;
   isReadOnly: (block: B) => boolean;
 }
 
@@ -72,7 +72,7 @@ export const listMoveTargets = <B extends MoveToBlock>(blocks: readonly B[], roo
   return rows
     .filter((row) => !rules.isReadOnly(row)
       && !roots.every((root) => root.parentId === row.id)
-      && roots.every((root) => rules.canMoveInto(root, row.id)))
+      && rules.canMoveInto(roots, row.id))
     .map((row, index) => ({ row, index }))
     // Stable: equal recency keeps document order.
     .sort((left, right) => (recency.get(right.row.id) ?? 0) - (recency.get(left.row.id) ?? 0) || left.index - right.index)

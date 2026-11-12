@@ -27,7 +27,7 @@ import { isToolConvertable, translateToolTitle } from '../../utils/tools';
 import { prepareImportString } from '../blockManager/block-mutation';
 import { isBlockReadOnly } from '../../utils/read-only-blocks';
 import { deleteWithTrashToast, showTrashToast } from '../../utils/trash-toast';
-import { resolveMoveTo, type BlockTree } from '../api/block-placement';
+import { assertCanMoveAll, type BlockTree } from '../api/block-placement';
 import { PagePicker } from '../../../tools/page/page-picker';
 import { filterMoveTargets, listMoveTargets } from './move-to';
 
@@ -939,10 +939,10 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       return null;
     }
     const tree: BlockTree = { blocks: BlockManager.blocks, getBlockById: (id) => BlockManager.getBlockById(id) };
-    const canMoveInto = (root: Block, rowId: string): boolean => {
+    const canMoveInto = (roots: readonly Block[], rowId: string): boolean => {
       try {
-        // The same target moveInto passes to blocks.moveTo, so a pick never throws.
-        resolveMoveTo(tree, root, { parentId: rowId, position: 'end' });
+        // The same moves moveInto makes, in its order, so a pick never throws.
+        assertCanMoveAll(tree, [...roots], { parentId: rowId, position: 'end' });
 
         return true;
       } catch {
@@ -984,7 +984,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     rootIds: string[],
     targets: ReturnType<typeof listMoveTargets>,
     anchor: HTMLElement,
-    rules: { canMoveInto: (root: Block, rowId: string) => boolean; isReadOnly: (block: Block) => boolean }
+    rules: { canMoveInto: (roots: readonly Block[], rowId: string) => boolean; isReadOnly: (block: Block) => boolean }
   ): void {
     const t = (key: string, vars?: Record<string, string | number>): string => this.Blok.I18n.t(key, vars);
     const untitled = t('tools.database.relationUntitled');
@@ -1010,14 +1010,14 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   private moveInto(
     rootIds: string[],
     rowId: string,
-    rules: { canMoveInto: (root: Block, rowId: string) => boolean; isReadOnly: (block: Block) => boolean }
+    rules: { canMoveInto: (roots: readonly Block[], rowId: string) => boolean; isReadOnly: (block: Block) => boolean }
   ): void {
     const { BlockManager, BlockSelection } = this.Blok;
     const blocks = this.Blok.API.methods.blocks;
     const row = BlockManager.getBlockById(rowId);
     const roots = rootIds.map((id) => BlockManager.getBlockById(id)).filter((block): block is Block => block !== undefined);
 
-    if (row === undefined || rules.isReadOnly(row) || roots.length !== rootIds.length || !roots.every((root) => rules.canMoveInto(root, rowId))) {
+    if (row === undefined || rules.isReadOnly(row) || roots.length !== rootIds.length || !rules.canMoveInto(roots, rowId)) {
       return;
     }
 

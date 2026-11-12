@@ -276,6 +276,56 @@ test.describe('W10 Move to', () => {
     expect(await save(page)).toEqual(before);
   });
 
+  test('W10-6: a selection is checked in move order, so a pick moves all of it or is not offered', async ({ page }) => {
+    const errors: string[] = [];
+    const table = (id: string, parent?: string): SavedBlock => ({ id, type: 'table', ...(parent === undefined ? {} : { parent }), data: { withHeadings: false, content: [['a', 'b']] } });
+    const heading: SavedBlock = { id: 'h', type: 'header', data: { text: 'Head', level: 2 } };
+    const rowOne = DOC.filter(block => block.id === 'row-1').map(block => ({ ...block, content: ['t9'] }));
+    const selectPair = async (lastId: string): Promise<void> => {
+      await editable(page, lastId).click();
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('Shift+ArrowUp');
+      await expect(page.locator('[data-blok-selected="true"]')).toHaveCount(2);
+      await page.keyboard.press(MENU);
+      await expect(page.locator(TUNES_POPOVER)).toBeVisible();
+    };
+
+    page.on('pageerror', error => errors.push(error.message));
+
+    // The heading would land right after the table's last cell block.
+    await createBlok(page, [table('t1'), heading, DOC[5], database(['row-2']), ...DOC.filter(block => block.id === 'row-2')]);
+    await gap(page);
+    await selectPair('h');
+    await expect(moveToItem(page)).toHaveCount(0);
+
+    // The heading lands after the paragraph, not after the page's table.
+    await createBlok(page, [
+      { id: 'p1', type: 'paragraph', data: { text: 'para' } },
+      heading,
+      DOC[5],
+      database(['row-1']),
+      ...rowOne,
+      table('t9', 'row-1'),
+    ]);
+    await gap(page);
+    const before = await save(page);
+
+    await selectPair('h');
+    await moveToItem(page).click();
+    await expect(pickerRows(page)).toHaveText([/Card one/]);
+    await page.keyboard.press('Enter');
+    await gap(page);
+
+    expect(errors).toEqual([]);
+    const after = await save(page);
+
+    expect(contentOf(after, 'row-1')).toEqual(['t9', 'p1', 'h']);
+    expect(await domParents(page)).toMatchObject(savedParents(after));
+    await editable(page, 'p-after').click();
+    await undo(page);
+    expect(await save(page)).toEqual(before);
+  });
+
   test('W10-4: no row this editor can write means no Move to item', async ({ page }) => {
     await createBlok(page, DOC.filter(block => block.id !== 'row-1' && block.id !== 'row-1-body' && block.id !== 'row-2')
       .map(block => (block.id === 'db-1' ? database(['row-far']) : block)));

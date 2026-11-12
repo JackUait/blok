@@ -54,7 +54,7 @@ describe('listMoveTargets', () => {
     const blocks = [source, DATABASE, block('r1', 'database-row', 'db', { properties: {} }), block('r2', 'database-row', 'db', { properties: {} })];
 
     expect(listMoveTargets(blocks, [source], {
-      canMoveInto: (_root, rowId) => rowId !== 'r1',
+      canMoveInto: (_roots, rowId) => rowId !== 'r1',
       isReadOnly: () => false,
     }).map((target) => target.pageId)).toEqual(['r2']);
     expect(listMoveTargets(blocks, [source], {

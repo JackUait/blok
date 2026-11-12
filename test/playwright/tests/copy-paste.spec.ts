@@ -1617,6 +1617,41 @@ test.describe('copy and paste', () => {
       expect(await page.evaluate(() => (window as unknown as { __imageUploads: string[] }).__imageUploads)).toEqual([]);
     });
 
+    test('keeps a relative url from a real Blok copy', async ({ page }) => {
+      const RELATIVE = '/test/playwright/fixtures/image/shot.png';
+
+      await createUploadingBlok(page, [
+        { id: 'bef', type: 'paragraph', data: { text: 'Before' } },
+        { id: 'img', type: 'image', data: { url: RELATIVE } },
+        { id: 'aft', type: 'paragraph', data: { text: 'After' } },
+      ]);
+      await page.locator('[data-blok-id="bef"] [contenteditable="true"]').click();
+      await page.locator('[data-blok-id="aft"] [contenteditable="true"]').click({ modifiers: ['Shift'] });
+      await expect(page.locator('[data-blok-id="aft"][data-blok-selected="true"]')).toBeVisible();
+
+      const clipboard = await withClipboardEvent(page.locator('[data-blok-id="bef"]'), 'copy');
+
+      expect(clipboard['text/html']).toContain(`src="${RELATIVE}"`);
+      await createUploadingBlok(page, [{ id: 'tgt', type: 'paragraph', data: { text: '' } }]);
+      await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), { 'text/html': clipboard['text/html'] ?? '', 'text/plain': clipboard['text/plain'] ?? '' });
+
+      await expect.poll(async () => (await saveBlok(page)).blocks.find((block) => block.type === 'image')?.data.url).toBe(RELATIVE);
+      expect(await page.evaluate(() => (window as unknown as { __imageUploads: string[] }).__imageUploads)).toEqual([]);
+    });
+
+    for (const forged of ['blob:http://127.0.0.1:4444/6f1c', 'ftp://evil.example/a.png']) {
+      test(`does not keep ${forged.split(':')[0]}: under a forged copy mark`, async ({ page }) => {
+        await createUploadingBlok(page, [{ id: 'tgt', type: 'paragraph', data: { text: '' } }]);
+        await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+        await paste(page, page.locator(':focus'), { 'text/html': `<p>Look</p><p><img src="${forged}" data-blok-hosted=""></p>`, 'text/plain': 'Look' });
+
+        await expect.poll(async () => (await saveBlok(page)).blocks.map((block) => block.type)).toContain('paragraph');
+        await expect.poll(async () => JSON.stringify((await saveBlok(page)).blocks)).not.toContain(forged);
+        expect(await page.evaluate(() => (window as unknown as { __imageUploads: string[] }).__imageUploads)).toEqual([]);
+      });
+    }
+
     test('is uploaded when the host uploader says so, because the copy mark is only a hint', async ({ page }) => {
       await createUploadingBlok(page, [{ id: 'tgt', type: 'paragraph', data: { text: '' } }], true);
       await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();

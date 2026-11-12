@@ -1,6 +1,7 @@
 import { describeImage } from '../../shared/tool-descriptions/image';
 import { BLOK_HOSTED_IMAGE_ATTR, imageClipboardHtml } from '../../shared/clipboard-html';
 import { IMAGE_ACTION_HANDLERS } from '../../shared/tool-actions/image';
+import { isSafeImageUrl } from '../../shared/url-policy';
 import { MEDIA_ACTION_HANDLERS } from '../../shared/tool-actions/media';
 import { imageSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
@@ -318,9 +319,10 @@ export class ImageTool implements BlockTool {
       const upload = this.uploader.decidePastedUrl(src, { source: 'html', copiedFromBlok });
       if (upload !== undefined) {
         this.startUrl(src, upload);
-      } else if (copiedFromBlok && !isDataUrl(src)) {
-        // Like a paste of Blok's own clipboard: the url is kept as it is. A data:
-        // url still gets the file checks, since the mark proves nothing.
+      } else if (copiedFromBlok && !isDataUrl(src) && isSafeImageUrl(src)) {
+        // Like a paste of Blok's own clipboard: the url is kept as it is. Any page
+        // can forge the mark, so it keeps only what Blok's copy can write: http(s)
+        // or a relative path. Everything else, data: too, goes through the checks.
         this.applyResult({ url: src });
       } else {
         this.startUrl(src);

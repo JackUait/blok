@@ -338,6 +338,34 @@ describe('ImageTool — the host uploader decides whether a pasted url is upload
     expect(uploadByFile).not.toHaveBeenCalled();
   });
 
+  it.each([
+    'blob:https://evil.example/6f1c',
+    'ftp://evil.example/a.png',
+    'javascript:alert(1)',
+    'java\nscript:alert(1)',
+    'file:///etc/passwd',
+  ])('refuses %s under a forged Blok mark when no host decides', async (src) => {
+    const tool = new ImageTool(createOptions());
+    tool.render();
+    pasteImg(tool, src, true);
+    await settle();
+    expect(tool.save().url).toBe('');
+  });
+
+  it.each([
+    'https://cdn.example/already-hosted.png',
+    '/uploads/a.png',
+    'images/a.png',
+  ])('keeps %s from a real Blok copy when no host decides', async (src) => {
+    const uploadByUrl = rehost();
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByUrl } }));
+    tool.render();
+    pasteImg(tool, src, true);
+    await settle();
+    expect(tool.save().url).toBe(src);
+    expect(uploadByUrl).not.toHaveBeenCalled();
+  });
+
   it('falls back to the marker when the host decision throws', async () => {
     const uploadByUrl = rehost();
     const shouldUploadUrl = (): boolean => {

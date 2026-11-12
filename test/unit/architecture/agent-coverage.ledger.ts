@@ -51,7 +51,10 @@ const HOST_SEND = 'The host sends this message when an automation runs; the docu
 
 const PLAYBACK = 'Plays, pauses, seeks and scrubs media; playback state is never saved.';
 
+const ERROR_OBJECT = 'Moves the broken object drawn on a failed audio card; the error card is never saved.';
+
 const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
+  'ui-file:src/tools/audio/error-scenes/stage.ts': exempt('view-only', ERROR_OBJECT),
   'ui-file:src/tools/audio/controls.ts': exempt('view-only', PLAYBACK),
   'ui-file:src/tools/audio/cover-ink.ts': exempt('view-only', PLAYBACK),
   'ui-file:src/tools/audio/waveform.ts': exempt('view-only', PLAYBACK),

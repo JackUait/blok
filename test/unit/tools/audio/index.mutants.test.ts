@@ -3,6 +3,7 @@ import type { API, BlockAPI, PasteEvent } from '../../../../types';
 import type { MenuConfig } from '../../../../types/tools/menu-config';
 import type { AudioAlignment, AudioConfig, AudioData } from '../../../../types/tools/audio';
 import type * as CoverPickerModule from '../../../../src/tools/audio/cover-picker';
+import type * as WontFitModule from '../../../../src/tools/audio/error-scenes/wont-fit';
 import {
   IconAlignCenter,
   IconAlignLeft,
@@ -20,7 +21,9 @@ import {
 import { AudioTool } from '../../../../src/tools/audio';
 import { openCoverPicker } from '../../../../src/tools/audio/cover-picker';
 import { readTrackMetadata, resolveCover } from '../../../../src/tools/audio/metadata';
+import { createWontFit } from '../../../../src/tools/audio/error-scenes/wont-fit';
 import { AudioUploadError } from '../../../../src/tools/audio/uploader';
+import { formatBytes } from '../../../../src/components/utils/format-bytes';
 import { attachWaveform, decodePeaks } from '../../../../src/tools/audio/waveform';
 
 type Mock = ReturnType<typeof vi.fn>;
@@ -67,6 +70,12 @@ const captured = vi.hoisted(() => ({
   controls: [] as ControlsCall[],
   pickers: [] as PickerCall[],
 }));
+
+vi.mock('../../../../src/tools/audio/error-scenes/wont-fit', async (importOriginal) => {
+  const actual = await importOriginal<typeof WontFitModule>();
+
+  return { ...actual, createWontFit: vi.fn(actual.createWontFit) };
+});
 
 vi.mock('../../../../src/tools/audio/metadata', () => ({
   readTrackMetadata: vi.fn(),
@@ -890,6 +899,47 @@ describe('AudioTool — upload failures', () => {
     expect(root.getAttribute('data-state')).toBe('error');
     expect(text).toContain('sprengt das Limit von');
     expect(text).not.toContain('Hochladen fehlgeschlagen');
+  });
+
+  it('prints the file size and the limit on the record when the file is too large', async () => {
+    const { root } = await failWith(new AudioUploadError('FILE_TOO_LARGE', '88080384 > 52428800'));
+
+    expect(vi.mocked(createWontFit)).toHaveBeenCalledWith({ size: formatBytes(88080384), limit: `max ${formatBytes(52428800)}` });
+    expect(requireEl(root, '[data-role="audio-error"]').getAttribute('data-scene')).toBe('wont-fit');
+  });
+
+  it('words the limit on the record in the reader\'s language', async () => {
+    await failWith(new AudioUploadError('FILE_TOO_LARGE', '88080384 > 52428800'), {
+      'tools.audio.emptyMaxSize': 'höchstens {size}',
+    });
+
+    expect(vi.mocked(createWontFit)).toHaveBeenCalledWith(expect.objectContaining({ limit: `höchstens ${formatBytes(52428800)}` }));
+  });
+
+  it('keeps the too-large record for size errors only', async () => {
+    const { root } = await failWith(new AudioUploadError('UPLOAD_FAILED'));
+
+    expect(requireEl(root, '[data-role="audio-error"]').getAttribute('data-scene')).not.toBe('wont-fit');
+    expect(vi.mocked(createWontFit)).not.toHaveBeenCalled();
+  });
+
+  it('falls back to one of the four objects when a size error carries no sizes', async () => {
+    const { root } = await failWith(new AudioUploadError('FILE_TOO_LARGE', 'nonsense'));
+
+    expect(requireEl(root, '[data-role="audio-error"]').getAttribute('data-scene')).not.toBe('wont-fit');
+  });
+
+  it('stops the broken object when the card goes away', async () => {
+    const disconnect = vi.fn();
+
+    vi.stubGlobal('IntersectionObserver', class { public observe = vi.fn(); public disconnect = disconnect; });
+    vi.stubGlobal('ResizeObserver', class { public observe = vi.fn(); public disconnect = vi.fn(); });
+    const { root } = await failWith(new AudioUploadError('UPLOAD_FAILED'));
+
+    requireEl(root, '[data-action="replace"]').click();
+
+    expect(disconnect).toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 });
 

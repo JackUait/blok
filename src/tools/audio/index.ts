@@ -36,7 +36,7 @@ import { deliverToRebuiltBlock, putBackOnRebuiltBlock, releaseObjectUrl } from '
 import { DEFAULT_CAPTION_PLACEHOLDER, DEFAULT_MIME_TYPES, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { tr } from './i18n';
-import { renderCaptionRow, renderCoverArt, renderErrorState, renderNowPlaying, type ErrorService } from './ui';
+import { renderCaptionRow, renderCoverArt, renderErrorState, renderNowPlaying, type ErrorService, type ErrorState } from './ui';
 import { openCoverPicker, validateCoverFile, type CoverPickerHandle } from './cover-picker';
 import { attachControls, type ControlsHandle } from './controls';
 import { attachInkCover, type InkCoverHandle } from './cover-ink';
@@ -44,7 +44,8 @@ import { attachWaveform, decodePeaks, type WaveformHandle } from './waveform';
 import { attachWire } from './wire';
 import { readTrackMetadata, resolveCover } from './metadata';
 import { Uploader, AudioUploadError, type UploadResult } from './uploader';
-import { uploadErrorMessage } from '../../components/utils/upload-error-message';
+import { parseTooLargeDetail, uploadErrorMessage } from '../../components/utils/upload-error-message';
+import { formatBytes } from '../../components/utils/format-bytes';
 import { resolveUploadError } from '../../components/utils/media-upload-error';
 import { pickDisplayMaxSize } from '../../components/utils/max-size';
 import { logLabeled } from '../../components/utils/logger';
@@ -96,6 +97,9 @@ export class AudioTool implements BlockTool {
   private lastFileName: string | null = null;
   private errorMessage: string | null = null;
   private errorService: ErrorService | undefined;
+  /** File size and limit in bytes, when the failure was a file over the limit. */
+  private errorSizes: { size: number; max: number } | null = null;
+  private errorCard: ErrorState | null = null;
   private lastSource: { kind: 'file'; file: File } | { kind: 'url'; url: string } | null = null;
   private controlsHandle: ControlsHandle | null = null;
   private stopNearWatch: () => void = () => undefined;
@@ -335,6 +339,8 @@ export class AudioTool implements BlockTool {
     this.waveformHandle = null;
     this.inkHandle?.destroy();
     this.inkHandle = null;
+    this.errorCard?.destroy();
+    this.errorCard = null;
     this.coverPicker?.close();
     this.coverPicker = null;
   }
@@ -555,6 +561,7 @@ export class AudioTool implements BlockTool {
 
     this.errorMessage = outcome.kind === 'message' ? outcome.message : null;
     this.errorService = errorServiceOf(own);
+    this.errorSizes = own?.code === 'FILE_TOO_LARGE' ? parseTooLargeDetail(own.detail) : null;
     this.state = outcome.kind === 'message' ? 'ERROR' : 'EMPTY';
     this.renderState();
   }
@@ -601,6 +608,8 @@ export class AudioTool implements BlockTool {
     this.waveformHandle = null;
     this.inkHandle?.destroy();
     this.inkHandle = null;
+    this.errorCard?.destroy();
+    this.errorCard = null;
     this.stopNearWatch();
     this.root.replaceChildren();
     this.uploadingEl = null;
@@ -652,11 +661,16 @@ export class AudioTool implements BlockTool {
   private renderError(): void {
     if (!this.root) return;
     const canUpload = !this.readOnly && this.config.sources !== 'url';
-    this.root.appendChild(renderErrorState({
+    this.errorCard = renderErrorState({
       message: this.errorMessage ?? tr(this.api.i18n, 'tools.audio.errorUploadFailed', 'Upload failed'),
       service: this.errorService,
-      ...(this.errorService
-        ? { badge: tr(this.api.i18n, 'tools.audio.errorBadge', 'Needle skipped') }
+      ...(this.errorSizes
+        ? {
+          tooLarge: {
+            size: formatBytes(this.errorSizes.size),
+            limit: tr(this.api.i18n, 'tools.audio.emptyMaxSize', 'max {size}').replace(/\{size\}/g, formatBytes(this.errorSizes.max)),
+          },
+        }
         : {}),
       replaceLabel: tr(this.api.i18n, 'tools.audio.errorReplace', 'Replace'),
       onReplace: () => this.transitionToEmpty(),
@@ -669,7 +683,8 @@ export class AudioTool implements BlockTool {
           },
         }
         : {}),
-    }));
+    });
+    this.root.appendChild(this.errorCard.element);
   }
 
   private renderRendered(): void {

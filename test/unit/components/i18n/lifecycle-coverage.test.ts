@@ -283,7 +283,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2120 + 147 + 541 + 5 closure for all 2813 keys', () => {
+  it('rebuilds a disjoint 2119 + 147 + 542 + 5 closure for all 2813 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -527,7 +527,8 @@ describe('current English catalog lifecycle coverage', () => {
       // emptyOrDropHere (tools.file.emptyDropHint), emptySourceAria, tools.audio.coverUpload and
       // coverSourceAria have no caller now. Still shipped: they are in BlokMessageKey since 2.1.0.
       // -1: tools.audio.coverOrDropHere has no caller: the ink well shows the uploader's sentence (coverHint). Still shipped.
-      'executable-literal': 2120,
+      // -1: the audio error card dropped its badge; tools.audio.errorBadge has no caller now. Still shipped.
+      'executable-literal': 2119,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -621,7 +622,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +14: the retired media empty state keys above.
       // +1: tools.audio.coverOrDropHere, above.
       // +2 / -1: the advanced chip's tools.database.filterRuleCount_one/_other replace filterRuleCount, via the controls' t().
-      'registered-namespace-compatible': 541,
+      // +1: tools.audio.errorBadge, see above.
+      'registered-namespace-compatible': 542,
       'catalog-only': 5,
     });
     expect(

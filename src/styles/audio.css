@@ -26,8 +26,6 @@
   /* each ridge is filled with the card colour to hide the rows behind it */
   --blok-audio-ridge-fill: var(--blok-bg-primary);
   --blok-audio-bar-height: 4px;
-  /* bar height of the dead waveform on the error card */
-  --blok-audio-flatline: 2px;
   /* lift the slim slider thumbs (volume + speed) off the track so they read as
      tactile pucks rather than flat dots */
   --blok-audio-thumb-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
@@ -47,48 +45,11 @@
   --blok-audio-ink: var(--blok-text-primary);
   --blok-audio-ink-sheen: rgba(255, 255, 255, 0.22);
   --blok-audio-ink-glint: rgba(255, 255, 255, 0.5);
-  /* the error card's record — a glossy black disc. The disc body is built
-     from --blok-overlay-dark (near-black in both themes) so it always reads as
-     vinyl, not a grey CD; grooves + sheen are white at low alpha, the label is
-     a cream-white puck, the spindle is a crisp dark dot. A fixed specular sits
-     above the disc (placeholder::after) so grooves shimmer *under* it as it spins. */
-  --blok-audio-disc-size: 38px;
-  --blok-audio-groove-w: 0.75px;
-  --blok-audio-groove-gap: 2px;
-  --blok-audio-cover-glow: color-mix(in srgb, var(--blok-bg-primary) 55%, transparent);
-  /* glossy black record body: a near-black face with a centre→edge vignette so it
-     reads as a curved, light-catching surface rather than a flat circle. */
-  --blok-audio-disc-base: var(--blok-overlay-dark);
-  --blok-audio-disc-deep: color-mix(in srgb, #000 42%, var(--blok-overlay-dark));
-  --blok-audio-disc-edge: color-mix(in srgb, var(--blok-text-on-dark) 6%, var(--blok-overlay-dark));
-  --blok-audio-disc-groove: color-mix(in srgb, var(--blok-text-on-dark) 8%, transparent);
-  --blok-audio-disc-rim: color-mix(in srgb, var(--blok-text-on-dark) 16%, transparent);
-  --blok-audio-disc-rim-light: color-mix(in srgb, var(--blok-text-on-dark) 26%, transparent);
-  /* fixed specular reflection — two bright bands of "light" the grooves shimmer
-     under as the disc spins (this is what sells real glossy vinyl). */
-  --blok-audio-disc-sheen: color-mix(in srgb, var(--blok-text-on-dark) 32%, transparent);
-  --blok-audio-disc-sheen-soft: color-mix(in srgb, var(--blok-text-on-dark) 12%, transparent);
-  /* a soft highlight wedge printed on the disc — sweeps round with the grooves so
-     the (otherwise radially-symmetric) spin actually reads as motion. */
-  --blok-audio-disc-shine: color-mix(in srgb, var(--blok-text-on-dark) 10%, transparent);
-  /* centre label — a matte, faintly warm cream puck (not a flat white disc) */
-  --blok-audio-disc-label: color-mix(in srgb, var(--blok-text-on-dark) 93%, var(--blok-overlay-dark));
-  --blok-audio-disc-label-hi: var(--blok-text-on-dark);
-  --blok-audio-disc-label-edge: color-mix(in srgb, var(--blok-text-on-dark) 72%, var(--blok-overlay-dark));
-  --blok-audio-disc-label-ring: color-mix(in srgb, var(--blok-overlay-dark) 24%, transparent);
-  --blok-audio-disc-hole: var(--blok-overlay-dark);
-  /* opaque fill for the reflection mask (only its alpha matters) */
-  --blok-audio-mask-solid: #000;
-  /* depth shadows for the disc rim, label lift and spindle catch-light */
-  --blok-audio-disc-inner-shadow: rgba(0, 0, 0, 0.5);
-  --blok-audio-label-shadow: rgba(0, 0, 0, 0.35);
-  --blok-audio-spindle-catch: rgba(255, 255, 255, 0.4);
   /* waveform.ts writes these on the figure each frame; they stay 0 under
      reduced motion. */
   --blok-audio-level: 0;
   --blok-audio-kick: 0;
-  /* cover overlay button — a semi-transparent dark scrim (same near-black as
-     the disc, blended down to ~45% opacity so the art shows through) */
+  /* cover overlay button — a near-black scrim, thin enough that the art shows through */
   --blok-audio-cover-scrim: color-mix(in srgb, var(--blok-overlay-dark) 50%, transparent);
 
   position: relative;
@@ -394,143 +355,9 @@
   height: 100%;
 }
 
-/* ----- the error card's record: a glossy black vinyl ------ */
-[data-blok-tool="audio"] .blok-audio-cover__placeholder {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  /* faint top-centre sheen so the panel has depth behind the disc */
-  background: radial-gradient(120% 90% at 50% 36%, var(--blok-audio-cover-glow), transparent 70%);
-}
-
-/* fixed specular glint pinned over the disc — it does NOT rotate, so the grooves
-   shimmer beneath it as the record spins (the bit that sells the motion). */
-[data-blok-tool="audio"] .blok-audio-cover__placeholder::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: var(--blok-audio-disc-size);
-  height: var(--blok-audio-disc-size);
-  transform: translate(-50%, -50%);
-  border-radius: var(--blok-radius-pill);
-  background:
-    /* bright crescent of light along the top rim */
-    radial-gradient(72% 50% at 50% 2%, var(--blok-audio-disc-sheen), transparent 60%),
-    /* the main gloss: two opposed soft bands (a vinyl "bow-tie" reflection) */
-    conic-gradient(
-      from 142deg at 50% 50%,
-      transparent 0 6%,
-      var(--blok-audio-disc-sheen) 15%,
-      transparent 30% 64%,
-      var(--blok-audio-disc-sheen-soft) 80%,
-      transparent 92% 100%
-    ),
-    /* faint bounce light in the lower-right quadrant */
-    radial-gradient(44% 36% at 72% 84%, var(--blok-audio-disc-sheen-soft), transparent 62%);
-  /* the gloss only lives on the vinyl — keep it off the matte paper label */
-  mask: radial-gradient(circle at center, transparent 30%, var(--blok-audio-mask-solid) 40%);
-  -webkit-mask: radial-gradient(circle at center, transparent 30%, var(--blok-audio-mask-solid) 40%);
-  pointer-events: none;
-}
-
-/* the record body: fine concentric grooves over a near-black radial face,
-   lifted off the panel by an inset rim + soft shadow. */
-[data-blok-tool="audio"] .blok-audio-cover__disc {
-  position: relative;
-  width: var(--blok-audio-disc-size);
-  height: var(--blok-audio-disc-size);
-  border-radius: var(--blok-radius-pill);
-  background:
-    /* soft shine wedge that rotates with the grooves (rotation feedback) */
-    conic-gradient(
-      from 210deg,
-      transparent 0 64%,
-      var(--blok-audio-disc-shine) 78%,
-      transparent 92% 100%
-    ),
-    /* a narrower bright streak opposite it, so the turn reads at a glance */
-    conic-gradient(
-      from 30deg,
-      transparent 0 72%,
-      var(--blok-audio-disc-sheen-soft) 79%,
-      transparent 86% 100%
-    ),
-    /* a bright hairline run just inside the edge — the glossy outer bevel */
-    radial-gradient(
-      circle at center,
-      transparent 82%,
-      var(--blok-audio-disc-rim-light) 85% 87%,
-      transparent 90%
-    ),
-    /* fine concentric grooves */
-    repeating-radial-gradient(
-      circle at center,
-      var(--blok-audio-disc-groove) 0 var(--blok-audio-groove-w),
-      transparent var(--blok-audio-groove-w) var(--blok-audio-groove-gap)
-    ),
-    /* glossy black face with a centre→edge vignette (curved-surface shading) */
-    radial-gradient(
-      circle at center,
-      var(--blok-audio-disc-edge) 0 14%,
-      var(--blok-audio-disc-base) 44%,
-      var(--blok-audio-disc-base) 72%,
-      var(--blok-audio-disc-deep) 100%
-    );
-  box-shadow:
-    inset 0 0 0 1px var(--blok-audio-disc-rim),
-    inset 0 0 7px var(--blok-audio-disc-inner-shadow),
-    var(--blok-image-shadow-resting);
-}
-
-/* centre label — a small matte cream puck with a printed concentric ring */
-[data-blok-tool="audio"] .blok-audio-cover__disc::before {
-  content: "";
-  position: absolute;
-  inset: 36%;
-  border-radius: var(--blok-radius-pill);
-  background:
-    /* an off-centre printed dot — the label is otherwise round, so this is
-       what shows it turning */
-    radial-gradient(circle at 50% 22%, var(--blok-audio-disc-hole) 0 7%, transparent 9%),
-    /* a short printed line opposite it, like a line of label text */
-    linear-gradient(var(--blok-audio-disc-label-ring), var(--blok-audio-disc-label-ring))
-      50% 72% / 36% 7% no-repeat,
-    /* a thin printed ring near the label rim */
-    radial-gradient(
-      circle at center,
-      transparent 58%,
-      var(--blok-audio-disc-label-ring) 60% 64%,
-      transparent 66%
-    ),
-    /* paper with a soft off-axis sheen */
-    radial-gradient(
-      circle at 40% 34%,
-      var(--blok-audio-disc-label-hi),
-      var(--blok-audio-disc-label) 52%,
-      var(--blok-audio-disc-label-edge)
-    );
-  box-shadow:
-    inset 0 0 0 1px var(--blok-audio-disc-rim),
-    0 1px 1px var(--blok-audio-label-shadow);
-}
-
 /* cover art punches out on each beat */
 [data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover img {
   scale: calc(1 + var(--blok-audio-kick) * 0.025);
-}
-
-/* spindle hole — a crisp dark dot with a tiny rim catch */
-[data-blok-tool="audio"] .blok-audio-cover__disc::after {
-  content: "";
-  position: absolute;
-  inset: 47%;
-  border-radius: var(--blok-radius-pill);
-  background: var(--blok-audio-disc-hole);
-  box-shadow: inset 0 1px 1px var(--blok-audio-spindle-catch);
 }
 
 /* ----- body: its children sit straight on the card grid ---- */
@@ -967,19 +794,19 @@
   opacity: 0.7;
 }
 
-/* ----- error state — the player, broken -------------------
-   Same card as a working track, so the failure reads as "this player", not a
-   generic alert: a cracked record that skips, and a dead waveform with a red
-   glitch where the sound should be. */
+/* ----- error state — one object breaks beside the words ----
+   The canvas fills the card and error-scenes/stage.ts draws on it. The words
+   sit over the left part of a wide card and under the object on a narrow one. */
 [data-blok-tool="audio"] .blok-audio-error-state {
-  --blok-audio-error-ink: var(--blok-color-danger);
-  /* The error card keeps the big record; its crack is drawn for a 92px disc. */
-  --blok-audio-cover-size: 104px;
-  --blok-audio-disc-size: 92px;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  column-gap: var(--blok-audio-gap);
-  padding: var(--blok-audio-pad);
+  /* plain colours only: the canvas reads these as strings */
+  --blok-audio-scene-ink: var(--blok-text-primary);
+  --blok-audio-scene-card: var(--blok-bg-primary);
+  --blok-audio-scene-muted: var(--blok-text-tertiary);
+  position: relative;
+  display: flex;
+  min-height: 216px;
+  padding: var(--blok-space-5);
+  overflow: hidden;
   background: var(--blok-bg-primary);
   border: 1px solid var(--blok-border-subtle);
   border-radius: var(--blok-radius-block);
@@ -989,51 +816,29 @@
   text-align: start;
   animation: blok-audio-rise var(--blok-duration-slow) var(--blok-ease-popover) both;
 }
-/* the disc is set at an angle and twitches back, like a needle stuck in a groove */
-[data-blok-tool="audio"] .blok-audio-error-state .blok-audio-cover__disc {
-  transform: rotate(-14deg);
-  animation: blok-audio-skip 2.4s steps(1) infinite;
-}
-[data-blok-tool="audio"] .blok-audio-error-state__crack {
+[data-blok-tool="audio"] .blok-audio-error-state__scene {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  background: var(--blok-audio-disc-label-hi);
-  opacity: 0.85;
-  /* the crack line, drawn in the disc's 92px box (--blok-audio-disc-size) */
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 92 92' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 30 24 36 30 31 41 42 39 47M24 36l-2 8'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 92 92' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 30 24 36 30 31 41 42 39 47M24 36l-2 8'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  touch-action: pan-y;
+}
+[data-blok-tool="audio"] .blok-audio-error-state__scene[data-drag] {
+  touch-action: none;
+  cursor: grab;
+}
+[data-blok-tool="audio"] .blok-audio-error-state__scene[data-role="audio-error-gloss"] {
   pointer-events: none;
 }
+/* the pointer passes through the words to the object behind them */
 [data-blok-tool="audio"] .blok-audio-error-state__body {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  width: 43%;
   min-width: 0;
-  padding-block: var(--blok-space-1);
-}
-[data-blok-tool="audio"] .blok-audio-error-state__source {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--blok-space-1-5);
-  margin-block-end: var(--blok-space-2);
-  padding: var(--blok-space-0-5) var(--blok-space-2) var(--blok-space-0-5) var(--blok-space-1-5);
-  border-radius: var(--blok-radius-pill);
-  background: color-mix(in srgb, var(--blok-audio-error-ink) 9%, transparent);
-  color: color-mix(in srgb, var(--blok-audio-error-ink) 82%, var(--blok-text-primary));
-  font-size: 11.5px;
-  font-weight: 600;
-  line-height: 16px;
-}
-/* a red "signal lost" dot that keeps pinging */
-[data-blok-tool="audio"] .blok-audio-error-state__source::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: var(--blok-radius-pill);
-  background: var(--blok-audio-error-ink);
-  animation: blok-audio-ping 1.6s ease-out infinite;
+  pointer-events: none;
 }
 [data-blok-tool="audio"] .blok-audio-error-state__message {
   margin: 0;
@@ -1042,31 +847,13 @@
   line-height: 1.45;
   text-wrap: pretty;
 }
-[data-blok-tool="audio"] .blok-audio-error-state__wave {
-  display: flex;
-  align-items: center;
-  gap: var(--blok-space-0-5);
-  align-self: stretch;
-  height: 24px;
-  margin-block: var(--blok-space-2-5);
-}
-[data-blok-tool="audio"] .blok-audio-error-state__wave span {
-  flex: 1;
-  height: var(--blok-audio-flatline);
-  border-radius: var(--blok-radius-pill);
-  background: var(--blok-audio-bar);
-}
-[data-blok-tool="audio"] .blok-audio-error-state__wave span[data-glitch] {
-  background: var(--blok-audio-error-ink);
-  animation: blok-audio-glitch 2.4s steps(1) infinite;
-}
-[data-blok-tool="audio"] .blok-audio-error-state__wave span[data-glitch] + span[data-glitch] {
-  animation-delay: 80ms;
-}
 [data-blok-tool="audio"] .blok-audio-error-state__actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--blok-space-2);
+  margin-block-start: auto;
+  padding-block-start: var(--blok-space-3-5);
+  pointer-events: auto;
 }
 [data-blok-tool="audio"] .blok-audio-error-state__upload,
 [data-blok-tool="audio"] .blok-audio-retry {
@@ -1112,29 +899,21 @@
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
-@keyframes blok-audio-skip {
-  0%, 82% { transform: rotate(-14deg); }
-  86% { transform: rotate(-6deg); }
-  90% { transform: rotate(-14deg); }
-  94% { transform: rotate(-8deg); }
+/* narrow: the object goes on top. stage.ts draws it in the top 172px below the
+   same width (NARROW_BELOW), so the two numbers move together. */
+[data-blok-tool="audio"][data-state="error"] {
+  container-type: inline-size;
 }
-@keyframes blok-audio-glitch {
-  0%, 80%, 96% { height: var(--blok-audio-flatline); }
-  84% { height: 16px; }
-  88% { height: 6px; }
-  92% { height: 20px; }
-}
-@keyframes blok-audio-ping {
-  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--blok-audio-error-ink) 45%, transparent); }
-  100% { box-shadow: 0 0 0 6px transparent; }
+@container (max-width: 519px) {
+  [data-blok-tool="audio"] .blok-audio-error-state {
+    padding-block-start: 186px;
+  }
+  [data-blok-tool="audio"] .blok-audio-error-state__body {
+    width: 100%;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  [data-blok-tool="audio"] .blok-audio-error-state,
-  [data-blok-tool="audio"] .blok-audio-error-state .blok-audio-cover__disc,
-  [data-blok-tool="audio"] .blok-audio-error-state__source::before,
-  [data-blok-tool="audio"] .blok-audio-error-state__wave span[data-glitch] {
-    animation: none;
-  }
+  [data-blok-tool="audio"] .blok-audio-error-state { animation: none; }
   [data-blok-tool="audio"] .blok-audio-error-state__upload { transition: none; }
 }
 

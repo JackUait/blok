@@ -1,6 +1,14 @@
 import type { AudioData } from '../../../types/tools/audio';
 import { IconImage, IconUpload } from '../../components/icons';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { createInkBurst } from './error-scenes/ink-burst';
+import { pickErrorScene, type ErrorSceneName } from './error-scenes/pick';
+import { createPulledPlug } from './error-scenes/pulled-plug';
+import { createSand } from './error-scenes/sand';
+import { createShattered } from './error-scenes/shattered';
+import { mountErrorStage } from './error-scenes/stage';
+import type { ErrorScene, SceneFactory } from './error-scenes/types';
+import { createWontFit, type WontFitLabel } from './error-scenes/wont-fit';
 
 export interface NowPlayingOptions {
   editable: boolean;
@@ -143,74 +151,66 @@ export function renderCaptionRow(opts: CaptionRowOptions): HTMLElement {
 
 export type ErrorService = 'google-drive' | 'onedrive';
 
-/** Bars in the dead waveform; the glitch sits a little before the middle. */
-const FLATLINE_BARS = 48;
-const GLITCH_BARS = [19, 20, 21];
+const SCENES: Record<ErrorSceneName, SceneFactory> = {
+  'shattered': createShattered,
+  'ink-burst': createInkBurst,
+  'sand': createSand,
+  'pulled-plug': createPulledPlug,
+};
 
 export interface ErrorStateOptions {
   message: string;
   /** The share service the link came from, when that is why it failed. */
   service?: ErrorService;
-  /** Short decorative label above the message. */
-  badge?: string;
+  /** The file was over the size limit: the two lines for the record's label. */
+  tooLarge?: WontFitLabel;
   replaceLabel: string;
   onReplace(): void;
   /** Offer a file picker right on the card. Omit when uploading is not allowed. */
   upload?: { label: string; accept: string; onFile(file: File): void };
 }
 
+const sceneFor = (tooLarge: WontFitLabel | undefined): { name: string; scene: ErrorScene } => {
+  if (tooLarge) return { name: 'wont-fit', scene: createWontFit(tooLarge) };
+  const name = pickErrorScene();
+
+  return { name, scene: SCENES[name]() };
+};
+
+export interface ErrorState {
+  element: HTMLElement;
+  /** Stop the object. Call it when the card leaves the page. */
+  destroy(): void;
+}
+
 /**
- * The failed player: the same card as a working track, but the record is
- * cracked and the waveform is flat. Only the message and buttons are read out.
+ * The failed player: the words and buttons on one side, and one object that
+ * breaks on the other. A file over the limit always gets the record that will
+ * not fit; every other failure gets one of four objects at random. Only the
+ * message and buttons are read out.
  */
-export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
+export function renderErrorState(opts: ErrorStateOptions): ErrorState {
   const wrap = document.createElement('div');
   wrap.className = 'blok-audio-error-state';
   wrap.setAttribute('data-role', 'audio-error');
   if (opts.service) wrap.setAttribute('data-reason', opts.service);
 
-  const art = document.createElement('div');
-  art.className = 'blok-audio-cover blok-audio-error-state__art';
-  art.setAttribute('data-role', 'audio-error-art');
-  art.setAttribute('aria-hidden', 'true');
-  const placeholder = document.createElement('span');
-  placeholder.className = 'blok-audio-cover__placeholder';
-  const disc = document.createElement('span');
-  disc.className = 'blok-audio-cover__disc';
-  placeholder.append(disc);
-  // Inside the disc so the crack turns with it; audio.css draws the line.
-  const crack = document.createElement('span');
-  crack.className = 'blok-audio-error-state__crack';
-  disc.append(crack);
-  art.append(placeholder);
+  const { name, scene } = sceneFor(opts.tooLarge);
+
+  wrap.setAttribute('data-scene', name);
+
+  const canvas = document.createElement('canvas');
+  canvas.className = 'blok-audio-error-state__scene';
+  canvas.setAttribute('data-role', 'audio-error-scene');
+  canvas.setAttribute('aria-hidden', 'true');
 
   const body = document.createElement('div');
   body.className = 'blok-audio-error-state__body';
-
-  if (opts.badge) {
-    const source = document.createElement('span');
-    source.className = 'blok-audio-error-state__source';
-    source.setAttribute('data-role', 'audio-error-source');
-    source.setAttribute('aria-hidden', 'true');
-    source.textContent = opts.badge;
-    body.append(source);
-  }
 
   const message = document.createElement('p');
   message.className = 'blok-audio-error-state__message';
   message.setAttribute('data-role', 'audio-error-message');
   message.textContent = opts.message;
-
-  const wave = document.createElement('div');
-  wave.className = 'blok-audio-error-state__wave';
-  wave.setAttribute('data-role', 'audio-error-wave');
-  wave.setAttribute('aria-hidden', 'true');
-  wave.append(...Array.from({ length: FLATLINE_BARS }, (_, i) => {
-    const bar = document.createElement('span');
-    if (GLITCH_BARS.includes(i)) bar.setAttribute('data-glitch', '');
-
-    return bar;
-  }));
 
   const actions = document.createElement('div');
   actions.className = 'blok-audio-error-state__actions';
@@ -243,8 +243,8 @@ export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
   retry.addEventListener('click', () => opts.onReplace());
   actions.append(retry);
 
-  body.append(message, wave, actions);
-  wrap.append(art, body);
+  body.append(message, actions);
+  wrap.append(canvas, body);
 
-  return wrap;
+  return { element: wrap, destroy: mountErrorStage(canvas, wrap, scene).destroy };
 }

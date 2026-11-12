@@ -757,7 +757,7 @@ const editor = new Blok({
         type: 'ImageUploader',
         default: 'undefined',
         description:
-          'Consumer-supplied uploader with optional `uploadByFile(file, ctx)` and `uploadByUrl(url, ctx)` methods, each resolving to `{ url, fileName? }`. When omitted, images fall back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl). An SVG file becomes a `data:image/svg+xml` URL, up to 256 KB.',
+          'Consumer-supplied uploader with optional `uploadByFile(file, ctx)` and `uploadByUrl(url, ctx)` methods, each resolving to `{ url, fileName? }`. When omitted, images fall back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl). An SVG file becomes a `data:image/svg+xml` URL, up to 256 KB.\n\nAdd `shouldUploadUrl(url, ctx)` to decide whether a pasted image URL is uploaded (`true`) or kept (`false`). The editor `uploader` option describes it.',
       },
       {
         option: 'types',

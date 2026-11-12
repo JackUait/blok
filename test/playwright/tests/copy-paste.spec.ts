@@ -1562,10 +1562,12 @@ test.describe('copy and paste', () => {
     const IMAGE = 'http://127.0.0.1:4444/test/playwright/fixtures/image/shot.png';
 
     // An image tool whose uploader records each url it is asked to upload.
-    const createUploadingBlok = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
+    // With `answer`, the uploader also has shouldUploadUrl, which records what it was told.
+    const createUploadingBlok = async (page: Page, blocks: OutputData['blocks'], answer?: boolean): Promise<void> => {
       await resetBlok(page);
-      await page.evaluate(async ({ holder, initial }) => {
+      await page.evaluate(async ({ holder, initial, decides }) => {
         const uploads: string[] = [];
+        const asked: unknown[] = [];
         const defaults = (window as unknown as { defaultBlockTools: Record<string, { class: unknown }> }).defaultBlockTools;
         const blok = new window.Blok({
           holder,
@@ -1574,15 +1576,23 @@ test.describe('copy and paste', () => {
             uploadByUrl: (url: string) => {
               uploads.push(url);
 
-              return Promise.resolve({ url });
+              return Promise.resolve({ url: `${url}?rehosted` });
             },
+            ...(decides === null ? {} : {
+              shouldUploadUrl: (url: string, ctx: unknown) => {
+                asked.push({ url, ctx });
+
+                return decides;
+              },
+            }),
           } } } },
         });
 
         (window as unknown as { __imageUploads: string[] }).__imageUploads = uploads;
+        (window as unknown as { __imageAsked: unknown[] }).__imageAsked = asked;
         window.blokInstance = blok;
         await blok.isReady;
-      }, { holder: HOLDER_ID, initial: blocks });
+      }, { holder: HOLDER_ID, initial: blocks, decides: answer ?? null });
     };
 
     test('keeps its url and is not uploaded again', async ({ page }) => {
@@ -1604,6 +1614,31 @@ test.describe('copy and paste', () => {
       await expect.poll(async () => (await saveBlok(page)).blocks.map((block) =>
         block.type === 'image' ? `image ${String(block.data.url)}` : `${block.type} ${String(block.data.text)}`
       )).toEqual(['paragraph Before', `image ${IMAGE}`, 'paragraph Cap', 'paragraph After']);
+      expect(await page.evaluate(() => (window as unknown as { __imageUploads: string[] }).__imageUploads)).toEqual([]);
+    });
+
+    test('is uploaded when the host uploader says so, because the copy mark is only a hint', async ({ page }) => {
+      await createUploadingBlok(page, [{ id: 'tgt', type: 'paragraph', data: { text: '' } }], true);
+      await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+      // Any web page can write this mark into the clipboard.
+      await paste(page, page.locator(':focus'), { 'text/html': `<p>Look</p><p><img src="${IMAGE}" data-blok-hosted=""></p>`, 'text/plain': 'Look' });
+
+      await expect.poll(async () => (await saveBlok(page)).blocks.find((block) => block.type === 'image')?.data.url).toBe(`${IMAGE}?rehosted`);
+      expect(await page.evaluate(() => (window as unknown as { __imageAsked: unknown[] }).__imageAsked)).toEqual([
+        { url: IMAGE, ctx: { kind: 'image', tool: 'image', source: 'html', copiedFromBlok: true } },
+      ]);
+    });
+
+    test('keeps a bare pasted url embedded from the link menu when the host uploader says keep', async ({ page }) => {
+      await createUploadingBlok(page, [{ id: 'tgt', type: 'paragraph', data: { text: '' } }], false);
+      await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), { 'text/plain': IMAGE });
+      await page.locator('[data-blok-item-name="paste-menu-embed"]').click();
+
+      await expect.poll(async () => (await saveBlok(page)).blocks.find((block) => block.type === 'image')?.data.url).toBe(IMAGE);
+      expect(await page.evaluate(() => (window as unknown as { __imageAsked: unknown[] }).__imageAsked)).toEqual([
+        { url: IMAGE, ctx: { kind: 'image', tool: 'image', source: 'url', copiedFromBlok: false } },
+      ]);
       expect(await page.evaluate(() => (window as unknown as { __imageUploads: string[] }).__imageUploads)).toEqual([]);
     });
   });

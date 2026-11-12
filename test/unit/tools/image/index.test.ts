@@ -237,6 +237,140 @@ describe('ImageTool — onPaste', () => {
   });
 });
 
+describe('ImageTool — the host uploader decides whether a pasted url is uploaded', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  const pasteImg = (tool: ImageTool, src: string, marked = false): void => {
+    const img = document.createElement('img');
+    img.setAttribute('src', src);
+    if (marked) img.setAttribute('data-blok-hosted', '');
+    const event = new CustomEvent('paste', { detail: { data: img } }) as HTMLPasteEvent;
+    Object.defineProperty(event, 'type', { value: 'tag' });
+    tool.onPaste(event);
+  };
+  const pasteUrl = (tool: ImageTool, url: string): void => {
+    const event = new CustomEvent('paste', { detail: { key: 'image', data: url } }) as PatternPasteEvent;
+    Object.defineProperty(event, 'type', { value: 'pattern' });
+    tool.onPaste(event);
+  };
+  const settle = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
+  const rehost = () => vi.fn(async (src: string) => ({ url: `https://cdn/${encodeURIComponent(src)}` }));
+
+  it('uploads an img marked as a Blok copy when the host says upload, so a forged marker decides nothing', async () => {
+    const uploadByUrl = rehost();
+    const shouldUploadUrl = vi.fn(() => true);
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByUrl, shouldUploadUrl } }));
+    tool.render();
+    pasteImg(tool, 'https://evil.example/a.png', true);
+    await settle();
+    expect(tool.save().url).toBe('https://cdn/https%3A%2F%2Fevil.example%2Fa.png');
+    expect(shouldUploadUrl).toHaveBeenCalledWith('https://evil.example/a.png', { kind: 'image', tool: 'image', source: 'html', copiedFromBlok: true });
+  });
+
+  it('keeps an unmarked img as it is when the host says keep', async () => {
+    const uploadByUrl = rehost();
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByUrl, shouldUploadUrl: () => false } }));
+    tool.render();
+    pasteImg(tool, 'https://x/a.png');
+    await settle();
+    expect(uploadByUrl).not.toHaveBeenCalled();
+    expect(tool.save().url).toBe('https://x/a.png');
+  });
+
+  it('uploads a bare pasted url when the host says upload', async () => {
+    const uploadByUrl = rehost();
+    const shouldUploadUrl = vi.fn(async () => true);
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByUrl, shouldUploadUrl } }));
+    tool.render();
+    pasteUrl(tool, 'https://x/y.png');
+    await settle();
+    expect(tool.save().url).toBe('https://cdn/https%3A%2F%2Fx%2Fy.png');
+    expect(shouldUploadUrl).toHaveBeenCalledWith('https://x/y.png', { kind: 'image', tool: 'image', source: 'url', copiedFromBlok: false });
+  });
+
+  it('keeps a bare pasted url when the host says keep', async () => {
+    const uploadByUrl = rehost();
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByUrl, shouldUploadUrl: async () => false } }));
+    tool.render();
+    pasteUrl(tool, 'https://x/y.png');
+    await settle();
+    expect(uploadByUrl).not.toHaveBeenCalled();
+    expect(tool.save().url).toBe('https://x/y.png');
+  });
+
+  it('writes the pasted url at once, while the host is still deciding', () => {
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByUrl: rehost(), shouldUploadUrl: () => new Promise<boolean>(() => undefined) } }));
+    tool.render();
+    pasteImg(tool, 'https://x/a.png');
+    expect(tool.save().url).toBe('https://x/a.png');
+  });
+
+  it('still refuses a url that is not http or https when the host says keep', async () => {
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByUrl: rehost(), shouldUploadUrl: () => false } }));
+    tool.render();
+    pasteImg(tool, 'ftp://x/a.png');
+    await settle();
+    expect(tool.save().url).toBe('');
+  });
+
+  it('does not ask about a pasted data: url, which is not an outside link', async () => {
+    const shouldUploadUrl = vi.fn(() => false);
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByUrl: rehost(), shouldUploadUrl } }));
+    tool.render();
+    pasteImg(tool, 'data:image/png;base64,iVBORw0KGgo=');
+    await settle();
+    expect(shouldUploadUrl).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the marker when the host decision throws', async () => {
+    const uploadByUrl = rehost();
+    const shouldUploadUrl = (): boolean => {
+      throw new Error('boom');
+    };
+    const marked = new ImageTool(createOptions({}, { uploader: { uploadByUrl, shouldUploadUrl } }));
+    const plain = new ImageTool(createOptions({}, { uploader: { uploadByUrl, shouldUploadUrl } }));
+    marked.render();
+    plain.render();
+    pasteImg(marked, 'https://x/kept.png', true);
+    pasteImg(plain, 'https://x/sent.png');
+    await settle();
+    expect(marked.save().url).toBe('https://x/kept.png');
+    expect(plain.save().url).toBe('https://cdn/https%3A%2F%2Fx%2Fsent.png');
+  });
+
+  it('does not turn a GIF link the host keeps into a video', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(8) })));
+    mockConvert.mockResolvedValue(new Blob([new Uint8Array([1])], { type: 'video/webm' }));
+    const insert = vi.fn();
+    const api = createMockApi();
+    (api as unknown as { blocks: unknown }).blocks = { getBlockIndex: () => 0, insert };
+    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }), getBlockTools: () => [{ name: 'video' }] };
+    const tool = new ImageTool({ ...createOptions({}, { uploader: { uploadByUrl: rehost(), shouldUploadUrl: () => false } }), api });
+    tool.render();
+    pasteUrl(tool, 'https://x/cat.gif');
+    await settle();
+    expect(mockConvert).not.toHaveBeenCalled();
+    expect(insert).not.toHaveBeenCalled();
+    expect(tool.save().url).toBe('https://x/cat.gif');
+    vi.unstubAllGlobals();
+  });
+
+  it('asks the editor-level uploader through api.uploader', async () => {
+    const uploadByUrl = vi.fn();
+    const shouldUploadUrl = vi.fn(async () => false);
+    const api = createMockApi();
+    (api as unknown as { uploader: unknown }).uploader = { isConfigured: () => true, uploadByUrl, shouldUploadUrl };
+    const tool = new ImageTool({ ...createOptions(), api });
+    tool.render();
+    pasteImg(tool, 'https://x/a.png');
+    await settle();
+    expect(shouldUploadUrl).toHaveBeenCalledWith('https://x/a.png', { kind: 'image', tool: 'image', source: 'html', copiedFromBlok: false });
+    expect(uploadByUrl).not.toHaveBeenCalled();
+    expect(tool.save().url).toBe('https://x/a.png');
+  });
+});
+
 describe('ImageTool — onPaste honors sources config', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());

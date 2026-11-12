@@ -621,7 +621,7 @@ const editor = new Blok(config);`,
         type: "BlokUploader",
         default: "undefined",
         description:
-          "Editor-level uploader for every media asset, routed by asset KIND rather than by tool. `uploadByFile(file, { kind, tool })` and `uploadByUrl(url, { kind, tool })` receive `kind: 'image' | 'video' | 'audio' | 'file'`, so one implementation serves the image, video, audio and file blocks.\n\nThat includes assets a tool owns outside its own media family, such as the audio block's cover art (`kind: 'image'`, `tool: 'audio'`), which has no tool-level uploader of its own.\n\nA tool-level uploader (`tools.image.config.uploader`) stays authoritative for its own kind and takes precedence. This one is the fallback. Without either, assets become `blob:` URLs that do not survive a reload.",
+          "Editor-level uploader for every media asset, routed by asset KIND rather than by tool. `uploadByFile(file, { kind, tool })` and `uploadByUrl(url, { kind, tool })` receive `kind: 'image' | 'video' | 'audio' | 'file'`, so one implementation serves the image, video, audio and file blocks.\n\nThat includes assets a tool owns outside its own media family, such as the audio block's cover art (`kind: 'image'`, `tool: 'audio'`), which has no tool-level uploader of its own.\n\nA tool-level uploader (`tools.image.config.uploader`) stays authoritative for its own kind and takes precedence. This one is the fallback. Without either, assets become `blob:` URLs that do not survive a reload.\n\n`shouldUploadUrl(url, ctx)` decides whether a pasted image URL is uploaded with `uploadByUrl` (`true`) or kept as it is (`false`). Blok asks it for an `<img>` in pasted HTML, and for a bare image URL pasted and then embedded from the link menu.\n\n- `ctx` is `{ kind, tool, source, copiedFromBlok }`. `source` is `'html'` or `'url'`.\n- `copiedFromBlok` says the `<img>` carried the mark Blok puts on images it copies. Any web page can write that mark into the clipboard, so use it as a hint only.\n- Blok asks only the uploader that would upload the URL. A `data:` URL is never asked about.\n- Without `shouldUploadUrl`, an image Blok copied keeps its URL, any other pasted `<img>` is uploaded, and a bare URL is kept. A throw, or an answer that is not a boolean, does the same.\n- A kept URL must still be http or https. A kept GIF is not turned into a video.",
       },
       {
         option: "media",
@@ -3942,6 +3942,18 @@ const { url } = await this.api.uploader.uploadByFile(file, {
         example: `const { url } = await this.api.uploader.uploadByUrl(pastedUrl, {
   kind: 'image',
   tool: 'my-card',
+});`,
+      },
+      {
+        name: "uploader.shouldUploadUrl(url, ctx)",
+        returnType: "Promise<boolean> | undefined",
+        description:
+          "Ask the host whether to upload a pasted URL (`true`) or keep it as it is (`false`). It returns `undefined` at once when the uploader that would upload the URL has no `shouldUploadUrl`. The promise rejects when the host throws or answers something other than a boolean. `ctx` is `{ kind, tool?, source, copiedFromBlok }`.",
+        example: `const upload = this.api.uploader.shouldUploadUrl?.(pastedUrl, {
+  kind: 'image',
+  tool: 'my-card',
+  source: 'html',
+  copiedFromBlok: false,
 });`,
       },
       {

@@ -9,6 +9,7 @@ import { compressImage } from './compress';
 import { DEFAULT_MAX_SIZE, DEFAULT_MIME_TYPES } from './constants';
 import { ImageError } from './errors';
 import { localImageUrl } from '../../shared/safe-object-url';
+import { decideAssetUrl } from '../../components/utils/asset-uploader';
 
 export interface UploadResult {
   url: string;
@@ -18,6 +19,14 @@ export interface UploadResult {
 
 export interface UploadOptions {
   onProgress?: (percent: number) => void;
+  /** The host's answer for a pasted URL: false keeps it as it is. */
+  upload?: Promise<boolean>;
+}
+
+/** How a URL was pasted, as the host is told. */
+export interface PastedUrl {
+  source: 'html' | 'url';
+  copiedFromBlok: boolean;
 }
 
 function parseUrl(raw: string): URL | null {
@@ -68,6 +77,9 @@ export class Uploader {
       return this.handleDataUrl(raw, options);
     }
     this.validateUrl(raw);
+    if (options.upload !== undefined && !(await options.upload)) {
+      return { url: raw };
+    }
     // `api.uploader` is asked first even when this tool declares an uploader:
     // it resolves the tool's own uploader ahead of the editor-level one, so the
     // same uploader runs — and only this route records the asset for the orphan
@@ -80,6 +92,28 @@ export class Uploader {
     }
 
     return { url: raw };
+  }
+
+  /**
+   * Ask the host whether to upload a pasted URL.
+   * @param raw - the pasted URL
+   * @param pasted - how it was pasted
+   * @returns undefined at once when the host has no say, or for a `data:` URL,
+   * which is not an outside link. A failed answer falls back to what Blok does
+   * without one: upload an unmarked `<img>`, keep the rest.
+   */
+  public decidePastedUrl(raw: string, pasted: PastedUrl): Promise<boolean> | undefined {
+    if (/^data:/i.test(raw)) {
+      return undefined;
+    }
+
+    const ctx = { kind: 'image', tool: 'image', ...pasted } as const;
+    // Same routing as handleUrl, so the uploader that would upload is the one asked.
+    const answer = this.assets?.isConfigured('image', 'uploadByUrl')
+      ? this.assets.shouldUploadUrl?.(raw, ctx)
+      : decideAssetUrl(raw, ctx, { byKind: { image: this.config.uploader } });
+
+    return answer?.catch(() => pasted.source === 'html' && !pasted.copiedFromBlok);
   }
 
   public async handleFile(file: File, options: UploadOptions = {}): Promise<UploadResult> {

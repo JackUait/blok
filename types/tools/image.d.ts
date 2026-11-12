@@ -1,4 +1,4 @@
-import { DeleteContext, PasteConfig, SanitizerConfig } from '../configs';
+import { DeleteContext, PasteConfig, SanitizerConfig, UrlUploadDecisionContext } from '../configs';
 import { BlockTool, BlockToolConstructorOptions } from './block-tool';
 import { BlockToolData } from './block-tool-data';
 import { MaxSizeConfig } from './max-size';
@@ -210,6 +210,12 @@ export interface ImageUploadContext {
 export interface ImageUploader {
   uploadByFile?(file: File, ctx?: ImageUploadContext): Promise<{ url: string; fileName?: string }>;
   uploadByUrl?(url: string, ctx?: ImageUploadContext): Promise<{ url: string }>;
+  /**
+   * Decide whether a pasted image URL is uploaded with `uploadByUrl` (`true`)
+   * or kept as it is (`false`). Asked only when this uploader has `uploadByUrl`.
+   * See {@link BlokUploader.shouldUploadUrl}.
+   */
+  shouldUploadUrl?(url: string, ctx: UrlUploadDecisionContext): boolean | Promise<boolean>;
   /**
    * Delete an asset this uploader stored, by the URL it returned for it. Blok
    * calls it once a saved document no longer references the asset. Without it

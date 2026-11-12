@@ -3,6 +3,7 @@ import type { AssetKind } from '../../../../types/tools/block-tool';
 import { Module } from '../../__module';
 import {
   collectAssetUploaderSources,
+  decideAssetUrl,
   hasAssetUploader,
   uploadAssetFile,
   uploadAssetUrl,
@@ -23,6 +24,7 @@ export class UploaderAPI extends Module {
     return {
       uploadByFile: (file, ctx) => uploadAssetFile(file, ctx, this.sources),
       uploadByUrl: (url, ctx) => uploadAssetUrl(url, ctx, this.sources),
+      shouldUploadUrl: (url, ctx) => decideAssetUrl(url, ctx, this.sources),
       isConfigured: (kind: AssetKind, method) => hasAssetUploader(kind, this.sources, method),
     };
   }

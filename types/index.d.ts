@@ -140,6 +140,7 @@ export {
   BlokUploader,
   UploadContext,
   UploadedAsset,
+  UrlUploadDecisionContext,
   PersistedDocument,
   SaveContext,
   SaveResult,

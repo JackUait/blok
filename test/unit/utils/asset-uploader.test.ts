@@ -6,6 +6,7 @@ import {
   resolveAssetUploader,
   uploadAssetFile,
   uploadAssetUrl,
+  decideAssetUrl,
   hasAssetUploader,
   collectAssetUploaderSources,
   type AssetUploaderSources,
@@ -445,5 +446,57 @@ describe('deleting what a session uploaded', () => {
     await uploadAssetUrl('https://third-party/art.png', { kind: 'image' }, sources());
 
     expect(record).not.toHaveBeenCalled();
+  });
+});
+
+describe('decideAssetUrl', () => {
+  const ctx = { kind: 'image', tool: 'image', source: 'html', copiedFromBlok: true } as const;
+
+  it('asks the uploader that would upload the url, with the url and the context', async () => {
+    const shouldUploadUrl = vi.fn().mockReturnValue(false);
+    const editor: BlokUploader = { ...uploaderWith('editor'), shouldUploadUrl };
+
+    await expect(decideAssetUrl('https://x/a.png', ctx, sources({ editor }))).resolves.toBe(false);
+    expect(shouldUploadUrl).toHaveBeenCalledWith('https://x/a.png', ctx);
+  });
+
+  it('takes an async answer', async () => {
+    const editor: BlokUploader = { ...uploaderWith('editor'), shouldUploadUrl: () => Promise.resolve(true) };
+
+    await expect(decideAssetUrl('https://x/a.png', ctx, sources({ editor }))).resolves.toBe(true);
+  });
+
+  it('has no answer when the uploader serving uploadByUrl has no shouldUploadUrl, even if another one does', () => {
+    const shouldUploadUrl = vi.fn().mockReturnValue(true);
+    const editor: BlokUploader = { ...uploaderWith('editor'), shouldUploadUrl };
+
+    expect(decideAssetUrl('https://x/a.png', ctx, sources({ editor, byKind: { image: uploaderWith('image') } }))).toBeUndefined();
+    expect(shouldUploadUrl).not.toHaveBeenCalled();
+  });
+
+  it('has no answer when nothing would upload the url', () => {
+    const editor: BlokUploader = { uploadByFile: vi.fn(), shouldUploadUrl: vi.fn().mockReturnValue(true) };
+
+    expect(decideAssetUrl('https://x/a.png', ctx, sources({ editor }))).toBeUndefined();
+  });
+
+  it('keeps shouldUploadUrl bound to its own object', async () => {
+    const editor = {
+      ...uploaderWith('editor'),
+      answer: false,
+      shouldUploadUrl(this: { answer: boolean }): boolean {
+        return this.answer;
+      },
+    };
+
+    await expect(decideAssetUrl('https://x/a.png', ctx, sources({ editor }))).resolves.toBe(false);
+  });
+
+  it('rejects when the host throws or answers something other than a boolean', async () => {
+    const throws: BlokUploader = { ...uploaderWith('a'), shouldUploadUrl: () => { throw new Error('boom'); } };
+    const odd = { ...uploaderWith('b'), shouldUploadUrl: (): unknown => 'yes' } as unknown as BlokUploader;
+
+    await expect(decideAssetUrl('https://x/a.png', ctx, sources({ editor: throws }))).rejects.toThrow('boom');
+    await expect(decideAssetUrl('https://x/a.png', ctx, sources({ editor: odd }))).rejects.toThrow(TypeError);
   });
 });

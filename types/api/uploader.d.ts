@@ -1,5 +1,5 @@
 import { AssetKind } from '../tools/block-tool';
-import { UploadContext, UploadedAsset } from '../configs/uploader';
+import { UploadContext, UploadedAsset, UrlUploadDecisionContext } from '../configs/uploader';
 
 /**
  * Asset uploads, routed by the kind of asset rather than by the tool that asks.
@@ -28,6 +28,16 @@ export interface Uploader {
    * @param ctx - the kind of asset, the requesting tool, and optional progress
    */
   uploadByUrl(url: string, ctx: UploadContext): Promise<UploadedAsset>;
+
+  /**
+   * Ask the host whether to upload a pasted URL (`true`) or keep it (`false`).
+   * Returns `undefined` at once when the uploader that would upload it has no
+   * `shouldUploadUrl`. The promise rejects when the host throws or answers
+   * something other than a boolean.
+   * @param url - the pasted URL
+   * @param ctx - the kind of asset, the asking tool, and how the URL came in
+   */
+  shouldUploadUrl?(url: string, ctx: UrlUploadDecisionContext): Promise<boolean> | undefined;
 
   /**
    * Whether a host uploader handles this kind. False means the caller would get

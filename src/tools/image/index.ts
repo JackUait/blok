@@ -83,6 +83,9 @@ import { createSafeObjectUrl } from '../../shared/safe-object-url';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
+/** A link job. `upload` is the host's answer for a pasted link; a retry reuses it. */
+type UrlSource = { kind: 'url'; url: string; upload?: Promise<boolean> };
+
 function canAnimate(el: Element | null): el is Element & { animate: HTMLElement['animate'] } {
   return el != null && typeof (el as HTMLElement).animate === 'function';
 }
@@ -151,7 +154,7 @@ export class ImageTool implements BlockTool {
   private altPopoverDetach: (() => void) | null = null;
   private errorMessage: string | null = null;
   private lastFileName: string | null = null;
-  private lastSource: { kind: 'file'; file: File } | { kind: 'url'; url: string } | null = null;
+  private lastSource: { kind: 'file'; file: File } | UrlSource | null = null;
   private brokenImage = false;
   private retrying = false;
   /** Tries of the current upload, the first one included. */
@@ -295,7 +298,10 @@ export class ImageTool implements BlockTool {
     if (event.type === 'pattern') {
       if (sources === 'upload') return;
       const detail = (event as PatternPasteEvent).detail;
-      if (this.shouldConvertGifUrl(detail.data)) {
+      const upload = this.uploader.decidePastedUrl(detail.data, { source: 'url', copiedFromBlok: false });
+      if (upload !== undefined) {
+        this.startUrl(detail.data, upload);
+      } else if (this.shouldConvertGifUrl(detail.data)) {
         this.startUrl(detail.data);
       } else {
         this.applyResult({ url: detail.data });
@@ -307,8 +313,13 @@ export class ImageTool implements BlockTool {
       const node = (event as HTMLPasteEvent).detail.data;
       const src = node?.getAttribute?.('src') ?? '';
       if (!src) return;
-      // Like a paste of Blok's own clipboard: the url is kept as it is.
-      if (node?.hasAttribute?.(BLOK_HOSTED_IMAGE_ATTR)) {
+      const copiedFromBlok = node.hasAttribute(BLOK_HOSTED_IMAGE_ATTR);
+      // The host decides when it can. Any page can forge the mark, so it is only a hint then.
+      const upload = this.uploader.decidePastedUrl(src, { source: 'html', copiedFromBlok });
+      if (upload !== undefined) {
+        this.startUrl(src, upload);
+      } else if (copiedFromBlok) {
+        // Like a paste of Blok's own clipboard: the url is kept as it is.
         this.applyResult({ url: src });
       } else {
         this.startUrl(src);
@@ -478,17 +489,21 @@ export class ImageTool implements BlockTool {
     return true;
   }
 
-  private startUrl(url: string): void {
+  /**
+   * @param url - the link
+   * @param upload - the host's answer for a pasted link; false keeps it as it is
+   */
+  private startUrl(url: string, upload?: Promise<boolean>): void {
     this.uploadTries = 1;
     const before = this.writeEnteredUrl(url);
 
     if (this.shouldConvertGifUrl(url)) {
-      void this.convertGifUrlToVideoBlock(url).then((handled) => {
-        if (!handled) this.loadImageUrl(url, before);
+      void this.convertGifUrlToVideoBlock(url, upload).then((handled) => {
+        if (!handled) this.loadImageUrl(url, before, upload);
       });
       return;
     }
-    this.loadImageUrl(url, before);
+    this.loadImageUrl(url, before, upload);
   }
 
   /**
@@ -506,8 +521,8 @@ export class ImageTool implements BlockTool {
     return before;
   }
 
-  private loadImageUrl(url: string, before: string): void {
-    const source = { kind: 'url', url } as const;
+  private loadImageUrl(url: string, before: string, upload?: Promise<boolean>): void {
+    const source: UrlSource = { kind: 'url', url, upload };
 
     this.conversionJob++;
     this.converting = false;
@@ -524,9 +539,9 @@ export class ImageTool implements BlockTool {
    * @param source - the job
    * @param before - `data.url` before the link was entered
    */
-  private uploadUrl(source: { kind: 'url'; url: string }, before: string): void {
+  private uploadUrl(source: UrlSource, before: string): void {
     void this.uploader
-      .handleUrl(source.url, { onProgress: this.reportProgress })
+      .handleUrl(source.url, { onProgress: this.reportProgress, upload: source.upload })
       .then((result) => this.applyUrlUpload(result, source))
       .catch((err) => this.applyUrlError(err, source, before));
   }
@@ -556,8 +571,10 @@ export class ImageTool implements BlockTool {
   }
 
   /** Like {@link convertGifToVideoBlock}, for a link. */
-  private async convertGifUrlToVideoBlock(url: string): Promise<boolean> {
+  private async convertGifUrlToVideoBlock(url: string, upload?: Promise<boolean>): Promise<boolean> {
     const job = ++this.conversionJob;
+    // The video is a new upload, so a link the host keeps is not converted.
+    if (upload !== undefined && !(await upload)) return this.conversionGone(job);
     const bytes = await this.fetchGifBytes(url);
     if (this.conversionGone(job)) return true;
     if (!bytes) return false;

@@ -35,6 +35,24 @@ export interface UploadContext {
 }
 
 /**
+ * What Blok tells the host when it asks whether to upload a pasted URL
+ * (see {@link BlokUploader.shouldUploadUrl}).
+ */
+export interface UrlUploadDecisionContext {
+  /** Kind of asset the URL points to. */
+  kind: AssetKind;
+  /** Name of the block tool that asks, when known. */
+  tool?: string;
+  /** How the URL came in: an `<img>` in pasted HTML, or a bare pasted URL. */
+  source: 'html' | 'url';
+  /**
+   * The pasted `<img>` carried the mark Blok puts on images it copies. Any web
+   * page can write that mark into the clipboard, so treat it as a hint only.
+   */
+  copiedFromBlok: boolean;
+}
+
+/**
  * Describes a single deletion request.
  *
  * The same `kind`/`tool` pair {@link UploadContext} carries, so a host can
@@ -72,6 +90,16 @@ export interface BlokUploader {
    * When absent for a kind, the URL is stored verbatim.
    */
   uploadByUrl?(url: string, ctx: UploadContext): Promise<UploadedAsset>;
+
+  /**
+   * Decide whether a pasted image URL is uploaded with `uploadByUrl` (`true`)
+   * or kept as it is (`false`). Blok asks it for an `<img>` in pasted HTML and
+   * for a bare pasted URL, and only when this same uploader has `uploadByUrl`.
+   *
+   * When absent, an image Blok copied is kept and any other pasted `<img>` is
+   * uploaded. A throw or an answer that is not a boolean does the same.
+   */
+  shouldUploadUrl?(url: string, ctx: UrlUploadDecisionContext): boolean | Promise<boolean>;
 
   /**
    * Delete a stored asset by the URL this uploader returned for it.

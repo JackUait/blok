@@ -964,7 +964,6 @@
   "tools.audio.coverUrlPlaceholder": "Şəkil URL-ini yapışdırın…",
   "tools.audio.coverUrlAria": "Şəkil URL-i",
   "tools.audio.coverSourceAria": "Üz qabığının mənbəyi",
-  "tools.audio.coverWellLink": "və ya keçid yapışdırın",
   "a11y.allBlocksSelected": "Bütün bloklar seçildi. Cəmi: {count}.",
   "a11y.blocksSelected": "{count} blok seçildi",
   "a11y.blocksDeleted_one": "{count} blok silindi",

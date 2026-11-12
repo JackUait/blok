@@ -964,7 +964,6 @@
   "tools.audio.coverUrlPlaceholder": "රූප URL අලවන්න…",
   "tools.audio.coverUrlAria": "රූප URL",
   "tools.audio.coverSourceAria": "රූපයේ මූලාශ්‍රය",
-  "tools.audio.coverWellLink": "හෝ සබැඳියක් අලවන්න",
   "a11y.allBlocksSelected": "සියලු බ්ලොක් තෝරා ඇත, බ්ලොක් {count}ක්",
   "a11y.blocksSelected": "බ්ලොක් {count}ක් තෝරා ඇත",
   "a11y.blocksDeleted_one": "බ්ලොක් {count}ක් මකා ඇත",

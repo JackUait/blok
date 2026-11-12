@@ -77,7 +77,7 @@ function inkWellSurface(opts: OpenCoverPickerOptions): PickerSurface {
         : tr(opts.i18n, 'tools.audio.coverAdd', 'Add a cover'),
       hint: tr(opts.i18n, 'tools.audio.coverOrDropHere', 'or drop an image here'),
       chooseFile: tr(opts.i18n, 'tools.audio.coverChooseFile', 'Choose file'),
-      linkPlaceholder: tr(opts.i18n, 'tools.audio.coverWellLink', 'or paste a link'),
+      linkPlaceholder: tr(opts.i18n, 'tools.audio.coverUrlPlaceholder', 'Paste an image URL…'),
       linkAria: tr(opts.i18n, 'tools.audio.coverUrlAria', 'Image URL'),
       submit: tr(opts.i18n, 'tools.audio.coverInsert', 'Insert'),
       wellAria: tr(opts.i18n, 'tools.audio.coverSet', 'Set cover image'),

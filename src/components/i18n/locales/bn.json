@@ -964,7 +964,6 @@
   "tools.audio.coverUrlPlaceholder": "ছবির URL পেস্ট করুন…",
   "tools.audio.coverUrlAria": "ছবির URL",
   "tools.audio.coverSourceAria": "প্রচ্ছদের উৎস",
-  "tools.audio.coverWellLink": "অথবা লিঙ্ক পেস্ট করুন",
   "a11y.allBlocksSelected": "সব ব্লক নির্বাচিত হয়েছে। মোট: {count}",
   "a11y.blocksSelected": "{count}টি ব্লক নির্বাচিত হয়েছে",
   "a11y.blocksDeleted_one": "{count}টি ব্লক মুছে ফেলা হয়েছে",

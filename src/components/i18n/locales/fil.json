@@ -962,7 +962,6 @@
   "tools.audio.coverUrlPlaceholder": "I-paste ang URL ng larawan…",
   "tools.audio.coverUrlAria": "URL ng larawan",
   "tools.audio.coverSourceAria": "Pinagmulan ng larawan",
-  "tools.audio.coverWellLink": "o mag-paste ng link",
   "toolNames.video": "Video",
   "toolNames.audio": "Audio",
   "a11y.allBlocksSelected": "Napili ang lahat ng block. Kabuuan: {count}",

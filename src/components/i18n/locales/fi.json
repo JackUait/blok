@@ -962,7 +962,6 @@
   "tools.audio.coverUrlPlaceholder": "Liitä kuvan URL…",
   "tools.audio.coverUrlAria": "Kuvan URL",
   "tools.audio.coverSourceAria": "Kansikuvan lähde",
-  "tools.audio.coverWellLink": "tai liitä linkki",
   "toolNames.video": "Video",
   "toolNames.audio": "Ääni",
   "a11y.allBlocksSelected": "Kaikki lohkot valittu. Lohkoja yhteensä: {count}",

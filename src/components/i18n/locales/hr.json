@@ -963,7 +963,6 @@
   "tools.audio.coverUrlPlaceholder": "Zalijepi URL slike…",
   "tools.audio.coverUrlAria": "URL slike",
   "tools.audio.coverSourceAria": "Izvor naslovnice",
-  "tools.audio.coverWellLink": "ili zalijepi poveznicu",
   "toolNames.video": "Video",
   "toolNames.audio": "Zvuk",
   "a11y.allBlocksSelected": "Odabrani su svi blokovi. Ukupno: {count}",

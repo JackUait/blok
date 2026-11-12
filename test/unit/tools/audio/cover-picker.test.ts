@@ -373,7 +373,8 @@ describe('openCoverPicker — ink well surface', () => {
     // Plain words: the heading says what the picker does, not what the drop wants.
     expect(dialog.querySelector('[data-role="ink-well-title"]')?.textContent).toBe('Add a cover');
     expect(dialog.querySelector('[data-role="ink-well-hint"]')?.textContent).toBe('or drop an image here');
-    expect(dialog.querySelector<HTMLInputElement>('[data-role="ink-well-link"]')?.placeholder).toBe('or paste a link');
+    // One "or" at most: the link field names itself, it does not continue the list.
+    expect(dialog.querySelector<HTMLInputElement>('[data-role="ink-well-link"]')?.placeholder).toBe('Paste an image URL…');
     handle.close();
   });
 
@@ -400,7 +401,7 @@ describe('openCoverPicker — ink well surface', () => {
 
     expect(dialog.querySelector('[data-role="ink-well-title"]')?.textContent).toBe('[tools.audio.coverAdd]');
     expect(dialog.querySelector('[data-role="ink-well-hint"]')?.textContent).toBe('[tools.audio.coverOrDropHere]');
-    expect(dialog.querySelector<HTMLInputElement>('[data-role="ink-well-link"]')?.placeholder).toBe('[tools.audio.coverWellLink]');
+    expect(dialog.querySelector<HTMLInputElement>('[data-role="ink-well-link"]')?.placeholder).toBe('[tools.audio.coverUrlPlaceholder]');
     handle.close();
   });
 

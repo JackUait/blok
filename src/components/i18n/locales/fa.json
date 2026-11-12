@@ -962,7 +962,6 @@
   "tools.audio.coverUrlPlaceholder": "URL تصویر را بچسبانید…",
   "tools.audio.coverUrlAria": "URL تصویر",
   "tools.audio.coverSourceAria": "منبع جلدنگاره",
-  "tools.audio.coverWellLink": "یا پیوندی بچسبانید",
   "toolNames.video": "ویدیو",
   "toolNames.audio": "صدا",
   "a11y.allBlocksSelected": "همه بلوک‌ها انتخاب شدند، {count} بلوک",

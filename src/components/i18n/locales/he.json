@@ -963,7 +963,6 @@
   "tools.audio.coverUrlPlaceholder": "הדבק כתובת תמונה…",
   "tools.audio.coverUrlAria": "כתובת תמונה",
   "tools.audio.coverSourceAria": "מקור העטיפה",
-  "tools.audio.coverWellLink": "או הדבק קישור",
   "toolNames.video": "וידאו",
   "toolNames.audio": "שמע",
   "a11y.allBlocksSelected": "כל הבלוקים נבחרו. סך הכול: {count}",

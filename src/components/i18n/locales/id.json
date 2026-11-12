@@ -964,7 +964,6 @@
   "tools.audio.coverUrlPlaceholder": "Tempel URL gambar…",
   "tools.audio.coverUrlAria": "URL gambar",
   "tools.audio.coverSourceAria": "Sumber sampul",
-  "tools.audio.coverWellLink": "atau tempel tautan",
   "a11y.allBlocksSelected": "Semua blok dipilih. Total: {count}",
   "a11y.blocksSelected": "{count} blok dipilih",
   "a11y.blocksDeleted_one": "{count} blok dihapus",

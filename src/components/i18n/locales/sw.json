@@ -964,7 +964,6 @@
   "tools.audio.coverUrlPlaceholder": "Bandika URL ya picha…",
   "tools.audio.coverUrlAria": "URL ya picha",
   "tools.audio.coverSourceAria": "Chanzo cha jalada",
-  "tools.audio.coverWellLink": "au bandika kiungo",
   "a11y.allBlocksSelected": "Vizuizi vyote vimechaguliwa. Jumla: {count}",
   "a11y.blocksSelected": "Idadi ya vizuizi vilivyochaguliwa: {count}",
   "a11y.blocksDeleted_one": "Idadi ya vizuizi vilivyofutwa: {count}",

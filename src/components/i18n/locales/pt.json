@@ -965,7 +965,6 @@
   "tools.audio.coverUrlPlaceholder": "Cole a URL de uma imagem…",
   "tools.audio.coverUrlAria": "URL da imagem",
   "tools.audio.coverSourceAria": "Origem da capa",
-  "tools.audio.coverWellLink": "ou cole um link",
   "a11y.allBlocksSelected": "Todos os blocos selecionados. Total: {count}",
   "a11y.blocksSelected": "{count} blocos selecionados",
   "a11y.blocksDeleted_one": "{count} bloco excluído",

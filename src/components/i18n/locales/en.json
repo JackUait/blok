@@ -804,7 +804,6 @@
   "tools.audio.coverUrlPlaceholder": "Paste an image URL…",
   "tools.audio.coverUrlAria": "Image URL",
   "tools.audio.coverSourceAria": "Cover source",
-  "tools.audio.coverWellLink": "or paste a link",
   "tools.database.titlePlaceholder": "New database",
   "tools.database.renameView": "Rename",
   "tools.database.duplicateView": "Duplicate",

@@ -962,7 +962,6 @@
   "tools.audio.coverUrlPlaceholder": "छवि URL चिपकाएं…",
   "tools.audio.coverUrlAria": "छवि URL",
   "tools.audio.coverSourceAria": "कवर छवि का स्रोत",
-  "tools.audio.coverWellLink": "या लिंक चिपकाएं",
   "toolNames.video": "वीडियो",
   "toolNames.audio": "ऑडियो",
   "a11y.allBlocksSelected": "सभी ब्लॉक चुने गए। कुल: {count}",

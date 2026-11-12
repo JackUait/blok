@@ -962,7 +962,6 @@
   "tools.audio.coverUrlPlaceholder": "Illesszen be egy kép-URL-t…",
   "tools.audio.coverUrlAria": "Kép URL-címe",
   "tools.audio.coverSourceAria": "Borító forrása",
-  "tools.audio.coverWellLink": "vagy illesszen be egy hivatkozást",
   "toolNames.video": "Videó",
   "toolNames.audio": "Hang",
   "a11y.allBlocksSelected": "Minden blokk kijelölve, {count} blokk",

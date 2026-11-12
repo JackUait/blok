@@ -964,7 +964,6 @@
   "tools.audio.coverUrlPlaceholder": "చిత్రం URL అతికించండి…",
   "tools.audio.coverUrlAria": "చిత్రం URL",
   "tools.audio.coverSourceAria": "కవర్ మూలం",
-  "tools.audio.coverWellLink": "లేదా లింక్ అతికించండి",
   "a11y.allBlocksSelected": "అన్ని బ్లాక్‌లు ఎంపికయ్యాయి. మొత్తం: {count}",
   "a11y.blocksSelected": "ఎంపికైన బ్లాక్‌ల సంఖ్య: {count}",
   "a11y.blocksDeleted_one": "తొలగించిన బ్లాక్‌ల సంఖ్య: {count}",

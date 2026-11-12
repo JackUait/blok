@@ -964,7 +964,6 @@
   "tools.audio.coverUrlPlaceholder": "粘贴图片 URL…",
   "tools.audio.coverUrlAria": "图片 URL",
   "tools.audio.coverSourceAria": "封面来源",
-  "tools.audio.coverWellLink": "或粘贴链接",
   "a11y.allBlocksSelected": "已选择全部内容块，共 {count} 个",
   "a11y.blocksSelected": "已选择 {count} 个内容块",
   "a11y.blocksDeleted_one": "已删除 {count} 个内容块",

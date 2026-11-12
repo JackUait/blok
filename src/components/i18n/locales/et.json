@@ -962,7 +962,6 @@
   "tools.audio.coverUrlPlaceholder": "Kleebi pildi URL…",
   "tools.audio.coverUrlAria": "Pildi URL",
   "tools.audio.coverSourceAria": "Kaanepildi allikas",
-  "tools.audio.coverWellLink": "või kleebi link",
   "toolNames.video": "Video",
   "toolNames.audio": "Heli",
   "a11y.allBlocksSelected": "Kõik plokid valitud. Kokku: {count}",

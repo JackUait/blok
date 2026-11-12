@@ -407,7 +407,6 @@ export type BlokMessageKey =
   | 'tools.audio.coverUpload'
   | 'tools.audio.coverUrlAria'
   | 'tools.audio.coverUrlPlaceholder'
-  | 'tools.audio.coverWellLink'
   | 'tools.audio.download'
   | 'tools.audio.emptyAddAudio'
   | 'tools.audio.emptyChooseFile'

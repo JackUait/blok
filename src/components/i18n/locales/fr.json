@@ -963,7 +963,6 @@
   "tools.audio.coverUrlPlaceholder": "Collez l’URL d’une image…",
   "tools.audio.coverUrlAria": "URL de l’image",
   "tools.audio.coverSourceAria": "Source de la pochette",
-  "tools.audio.coverWellLink": "ou collez un lien",
   "toolNames.video": "Vidéo",
   "toolNames.audio": "Audio",
   "a11y.allBlocksSelected": "Tous les blocs sont sélectionnés. Total : {count}",

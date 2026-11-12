@@ -965,7 +965,6 @@
   "tools.audio.coverUrlPlaceholder": "Налепите URL слике…",
   "tools.audio.coverUrlAria": "URL слике",
   "tools.audio.coverSourceAria": "Извор омота",
-  "tools.audio.coverWellLink": "или налепите везу",
   "a11y.allBlocksSelected": "Изабрани су сви блокови. Укупно: {count}.",
   "a11y.blocksSelected": "Изабрани блокови: {count}",
   "a11y.blocksDeleted_one": "Избрисани блокови: {count}",

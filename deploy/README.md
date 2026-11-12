@@ -1,7 +1,7 @@
 # Blok pour Tousambassadeurs
 
 Ce déploiement sert le navigateur et les clients Tauri sur `https://blok.tousamba.cloud`.
-Il comprend Caddy (HTTPS + interface), le service Go et PostgreSQL 17. Un seul service Go doit utiliser le volume de collaboration.
+Il comprend Caddy (interface + proxy HTTP interne), le service Go et PostgreSQL 17. Le proxy déjà présent sur le VPS termine HTTPS. Un seul service Go doit utiliser le volume de collaboration.
 
 ## Démonstration sur ton ordinateur
 
@@ -34,9 +34,9 @@ Le script `prepare.sh` crée les secrets, sans démarrer les conteneurs. Renseig
 
 ## Construire les images sur ton VPS
 
-Prérequis : Git, Docker avec Compose v2, OpenSSL, accès aux ports TCP 80/443 (UDP 443 facultatif).
+Prérequis : Git, Docker avec Compose v2, OpenSSL et un proxy HTTPS existant pour le domaine.
 Fais pointer le DNS A de `blok.tousamba.cloud` vers le VPS choisi ; retire un éventuel AAAA qui pointe ailleurs.
-Si un proxy utilise déjà ces ports, adapte Compose et le routage avant de lancer la pile.
+Le seul port publié par Blok est `127.0.0.1:18088`, absent des ports déjà occupés fournis pour ce VPS. Configure ton proxy existant pour transmettre `blok.tousamba.cloud` vers `http://127.0.0.1:18088`, en conservant Host et les connexions WebSocket. Le port 18088 est local uniquement ; les ports 80, 443 et 5432 existants ne sont pas utilisés par Blok.
 
 ```sh
 git clone --branch feat/tousambassadeurs-cloud https://github.com/joceqo/blok.git
@@ -73,7 +73,7 @@ Dans Compose, les valeurs `MAILER_*` non vides sont prioritaires ; les anciens n
 ./deploy/stack.sh logs --tail 100 app web
 ```
 
-Caddy obtient le certificat HTTPS lorsque le DNS et les ports sont prêts.
+Le proxy existant gère le certificat HTTPS public. Caddy écoute en HTTP sur le port 80 du conteneur, publié uniquement sur `127.0.0.1:18088`. `PUBLIC_URL` reste l’adresse HTTPS du domaine. Vérifie la pile depuis le VPS avec `curl http://127.0.0.1:18088/healthz`.
 Ouvre le site, entre l'adresse `BOOTSTRAP_ADMIN_EMAIL` et le code reçu : cet utilisateur est administrateur de Tousambassadeurs.
 L'attribution initiale ne se produit qu'une fois ; modifier cette variable après installation ne promeut pas un nouveau compte.
 
@@ -120,7 +120,7 @@ npm run tauri --prefix desktop -- build
 | --- | --- |
 | `blok-cloud_postgres` | Utilisateurs, sessions, espaces, rôles, index des pages, projections du contenu et clés OpenAI chiffrées |
 | `blok-cloud_state` | Journal durable de collaboration `/data/collab`, fichiers joints `/data/uploads` et clé de chiffrement `/data/ai-key` |
-| `blok-cloud_caddy_data` | Certificats HTTPS |
+| `blok-cloud_caddy_data` | État du Caddy interne (le certificat public est géré par le proxy existant) |
 
 Les images contiennent le programme. Les volumes contiennent les données et survivent à leur remplacement.
 **La base seule ne suffit pas à sauvegarder les documents : conserve aussi le volume `state`.**
@@ -159,7 +159,7 @@ Une image ancienne n'est pas nécessairement compatible avec un schéma plus ré
 La restauration refuse une base ou un volume de données non vide. Elle ne supprime rien pour forcer le passage.
 Si elle échoue après avoir commencé, conserve la sauvegarde et inspecte les logs avant de reprendre sur une destination vide.
 En gardant le même domaine et les secrets, les liens et identités restent cohérents. Changer aussi le domaine nécessite de migrer les URL absolues des pièces jointes.
-Les certificats peuvent être réémis par Caddy ; les données locales Tauri d'un ordinateur ne font pas partie de la sauvegarde serveur.
+Les certificats sont gérés par le proxy existant ; les données locales Tauri d'un ordinateur ne font pas partie de la sauvegarde serveur.
 
 ## Vérifications de développement
 

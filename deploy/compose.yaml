@@ -61,14 +61,13 @@ services:
       target: web
     restart: unless-stopped
     environment:
-      DOMAIN: ${DOMAIN:-blok.tousamba.cloud}
+      # HTTPS is terminated by the existing host reverse proxy.
+      DOMAIN: ':80'
     networks:
       default:
         ipv4_address: ${CADDY_IP:-172.30.87.3}
     ports:
-      - '80:80'
-      - '443:443'
-      - '443:443/udp'
+      - '127.0.0.1:18088:80'
     volumes:
       - caddy_data:/data
       - caddy_config:/config

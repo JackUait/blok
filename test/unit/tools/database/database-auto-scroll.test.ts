@@ -438,4 +438,15 @@ describe('database drags scroll near an edge', () => {
 
     expect(scroller.scrollTop).toBe(150);
   });
+
+  it('a list row dragged past the window bottom keeps scrolling', () => {
+    const { scroller, drag } = listFixture();
+
+    drag.beginTracking('r0', 50, 110);
+    enter(50, 440);
+    pointer('pointermove', 50, 470);
+    runFrames(0, 240);
+
+    expect(scroller.scrollTop).toBeGreaterThan(1.39 * 192);
+  });
 });

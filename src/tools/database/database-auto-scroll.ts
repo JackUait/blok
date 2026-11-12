@@ -93,9 +93,13 @@ export const createDatabaseAutoScroll = (
       ? { start: Math.max(0, rect.top), end: Math.min(size, rect.bottom) }
       : { start: Math.max(0, rect.left), end: Math.min(size, rect.right) };
   };
-  // Round 17 §1: a pointer outside the scroller (over the top bar) does not scroll.
+  // Round 17 §1: a pointer outside the scroller but in the window (over the top bar) does not scroll.
+  // Past the window edge is unread; it keeps the full speed a drag there always had.
   const inZone = (coord: number): boolean => {
     const { start, end } = bounds();
+    const size = axis === 'y' ? window.innerHeight : window.innerWidth;
+
+    if (coord < 0 || coord > size) return true;
 
     return coord >= start && coord <= end && speed(Math.min(end - coord, coord - start)) > 0;
   };

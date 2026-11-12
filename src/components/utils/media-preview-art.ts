@@ -86,8 +86,9 @@ const drawings: Record<MediaPreviewKind, (id: string) => string> = {
           <path class="blok-media-preview__hill blok-media-preview__hill--far" d="M20 80l34-30 26 20 22-16 40 26 30-22 44 30z"/>
           <path class="blok-media-preview__hill" d="M20 80l26-14 30 14 34-20 40 20 36-16 30 16z"/>
         </g>
+        <rect class="blok-media-preview__veil" x="32" y="16" width="136" height="62"/>
       </g>
-      <rect class="blok-media-preview__veil" x="32" y="16" width="136" height="62" rx="7"/>
+      <rect class="blok-media-preview__screen-edge" x="32" y="16" width="136" height="62" rx="7"/>
       <rect class="blok-media-preview__playhead" x="31.5" y="16" width="2" height="62" rx="1"/>
       <rect class="blok-media-preview__track" x="32" y="87" width="136" height="4" rx="2"/>
       <rect class="blok-media-preview__progress" x="32" y="87" width="136" height="4" rx="2"/>
@@ -126,8 +127,9 @@ const drawings: Record<MediaPreviewKind, (id: string) => string> = {
             <path class="blok-media-preview__hill blok-media-preview__hill--far" d="M42 84l30-30 24 20 18-12 48 22z"/>
             <path class="blok-media-preview__hill" d="M42 84l22-14 26 14z"/>
           </g>
+          <rect class="blok-media-preview__veil" x="42" y="14" width="120" height="70"/>
         </g>
-        <rect class="blok-media-preview__veil" x="42" y="14" width="120" height="70" rx="3"/>
+        <rect class="blok-media-preview__screen-edge" x="42" y="14" width="120" height="70" rx="3"/>
         <rect class="blok-media-preview__scan" x="42" y="13.5" width="120" height="2" rx="1"/>
         <rect class="blok-media-preview__line blok-media-preview__line--soft" x="42" y="92" width="46" height="4" rx="2"/>
       </g>`)}`,

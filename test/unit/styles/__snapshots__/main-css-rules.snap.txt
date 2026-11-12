@@ -20881,6 +20881,10 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   stroke: none;
 }
 
+.blok-media-preview__screen-edge {
+  fill: none;
+}
+
 [data-blok-media-preview="image"] .blok-media-preview__veil {
   transform-origin: 50% 100%;
   transform: scaleY(0);

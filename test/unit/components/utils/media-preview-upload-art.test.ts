@@ -26,6 +26,21 @@ describe('upload parts in the drawings', () => {
     expect(box(stage.querySelector(part('playhead')))).toEqual(['31.5', '16', '2', '62']);
   });
 
+  it.each([
+    ['image', ['42', '14', '120', '70']],
+    ['video', ['32', '16', '136', '62']],
+  ] as const)('%s: the veil is clipped to the screen and the screen\'s outline is drawn again over it', (kind, screen) => {
+    const stage = makePreview(kind);
+    const veil = stage.querySelector(part('veil'));
+    const edge = stage.querySelector(part('screen-edge'));
+
+    // Unclipped, the veil's square corners and fill hid the screen's border on the side still loading.
+    expect(veil?.closest('[clip-path]')).not.toBeNull();
+    expect(box(edge)).toEqual([...screen]);
+    expect(edge?.getAttribute('rx')).toBe(stage.querySelector(part('screen'))?.getAttribute('rx'));
+    expect(Boolean(veil && edge && (veil.compareDocumentPosition(edge) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
+  });
+
   it('audio: the two title lines can write in, in order', () => {
     const rows = Array.from(makePreview('audio').querySelectorAll<SVGElement>(part('line--write')))
       .map((line) => line.style.getPropertyValue('--row'));
@@ -104,6 +119,7 @@ describe('upload animations (CSS)', () => {
     selector.includes('[data-uploading]') && !selector.includes('[data-done]') && selector.includes(`[data-blok-media-preview="${kind}"]`) && selector.endsWith(part(name));
 
   it('hides the upload parts at rest', () => {
+    expect(decl((s) => s === part('screen-edge'), 'fill')).toBe('none');
     expect(decl((s) => s === part('scan') || s === part('playhead'), 'opacity')).toBe('0');
     expect(decl((s) => s === part('chunks'), 'opacity')).toBe('0');
     expect(decl((s) => s === `[data-blok-media-preview="image"] ${part('veil')}`, 'transform')).toBe('scaleY(0)');

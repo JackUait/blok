@@ -378,7 +378,10 @@
    embed scenes and the search drawing keep the shared rules above. ----- */
 .blok-media-preview__scan,
 .blok-media-preview__playhead { fill: var(--blok-color-accent); stroke: none; opacity: 0; }
+/* The veil sits inside the screen's clip, and the screen's outline is drawn
+   again above it: a bare veil hid the border on the side still loading. */
 .blok-media-preview__veil { fill: var(--blok-media-preview-tone); stroke: none; }
+.blok-media-preview__screen-edge { fill: none; }
 [data-blok-media-preview="image"] .blok-media-preview__veil { transform-origin: 50% 100%; transform: scaleY(0); }
 [data-blok-media-preview="video"] .blok-media-preview__veil { transform-origin: 100% 50%; transform: scaleX(0); }
 .blok-media-preview__chunks { opacity: 0; }

@@ -1211,8 +1211,8 @@
   z-index: -1;
   width: 100%;
   height: 100%;
-  filter: blur(28px) saturate(1.5);
-  transform: scale(1.06);
+  filter: blur(24px) saturate(1.5);
+  transform: scale(1.03);
   /* glow is dark until the video plays; data-active fades it in, and dropping it
      on pause fades the bloom back out instead of freezing the last frame */
   opacity: 0;
@@ -1222,7 +1222,7 @@
 /* user-chosen glow intensity (block settings → Glow): more / less / minimal / none.
    minimal is the default — a barely-there bloom that lifts the player off the page
    without competing with the frame. */
-[data-blok-tool="video"] .blok-video-controls__ambient[data-glow="minimal"][data-active="true"] { opacity: 0.3; }
+[data-blok-tool="video"] .blok-video-controls__ambient[data-glow="minimal"][data-active="true"] { opacity: 0.15; }
 [data-blok-tool="video"] .blok-video-controls__ambient[data-glow="less"][data-active="true"] { opacity: 0.55; }
 [data-blok-tool="video"] .blok-video-controls__ambient[data-glow="more"][data-active="true"] { opacity: 0.85; }
 [data-blok-tool="video"] .blok-video-controls__ambient[data-glow="none"] { display: none; }

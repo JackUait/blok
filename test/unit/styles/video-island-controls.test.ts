@@ -89,6 +89,16 @@ describe('video island controls', () => {
     expect(css).not.toMatch(/\.blok-video-media video\s*\{[^}]*cursor: pointer/);
   });
 
+  it('keeps the default playing glow faint and close to the frame', () => {
+    const minimal = block(`${T} .blok-video-controls__ambient[data-glow="minimal"][data-active="true"]`);
+    const opacity = Number(minimal.match(/opacity: ([\d.]+)/)?.[1]);
+    const scale = Number(block(`${T} .blok-video-controls__ambient`).match(/transform: scale\(([\d.]+)\)/)?.[1]);
+
+    expect(opacity).toBeGreaterThan(0);
+    expect(opacity).toBeLessThanOrEqual(0.15);
+    expect(scale).toBeLessThanOrEqual(1.03);
+  });
+
   it('rounds the player frame with its own radius role', () => {
     expect(colors).toMatch(/--blok-radius-player: var\(--blok-radius-16\);/);
   });

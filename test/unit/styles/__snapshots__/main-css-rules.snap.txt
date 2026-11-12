@@ -23759,15 +23759,15 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   z-index: -1;
   width: 100%;
   height: 100%;
-  filter: blur(28px) saturate(1.5);
-  transform: scale(1.06);
+  filter: blur(24px) saturate(1.5);
+  transform: scale(1.03);
   opacity: 0;
   transition: opacity 420ms ease;
   pointer-events: none;
 }
 
 [data-blok-tool="video"] .blok-video-controls__ambient[data-glow="minimal"][data-active="true"] {
-  opacity: 0.3;
+  opacity: 0.15;
 }
 
 [data-blok-tool="video"] .blok-video-controls__ambient[data-glow="less"][data-active="true"] {

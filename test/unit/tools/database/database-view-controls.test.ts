@@ -942,6 +942,18 @@ describe('DatabaseViewControls', () => {
       expect(controls.effective(saved.view).sorts[0]).toMatchObject({ propertyId: 'num', direction: 'desc' });
     });
 
+    // notion-motion.md Round 17 §5: "Add sort" goes away once every property is sorted.
+    it('hides "Add sort" when every sortable property is sorted', () => {
+      const env = setup();
+
+      env.saved.view = { ...env.saved.view, sorts: [{ id: 's1', propertyId: 'num', direction: 'asc' }, { id: 's2', propertyId: 'title', direction: 'asc' }] };
+      env.controls.refresh();
+      click('database-sort-pill');
+
+      expect(q('database-sort-panel')).not.toBeNull();
+      expect(q('database-sort-add')).toBeNull();
+    });
+
     // notion-motion.md Rounds 10-11 "Add sort picker": a separate picker under the row, its search focused,
     // the already-sorted property left out, the sort panel still open under it.
     it('opens "Add sort" as a separate picker over the open sort panel, search focused', () => {

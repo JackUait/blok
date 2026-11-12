@@ -968,13 +968,14 @@ export class DatabaseViewControls {
                 if (moving !== undefined) write([...rest.slice(0, at), moving, ...rest.slice(at)]);
               },
             }),
-            panelRow({
+            // notion-motion.md Round 17 §5: gone once every property is sorted.
+            ...(schema.some((p) => SORTABLE_TYPES.includes(p.type) && !all.some((s) => s.propertyId === p.id)) ? [panelRow({
               label: this.t('sortAdd'),
               testId: 'database-sort-add',
               muted: true,
               icon: IconPlus,
               onClick: () => this.openAddSortPicker(current),
-            }),
+            })] : []),
             panelRow({
               label: this.t('sortDeleteAll'),
               testId: 'database-sort-delete-all',

@@ -997,6 +997,17 @@ describe('view settings panel', () => {
     });
   });
 
+  // notion-motion.md Round 17 §5: "Add sort" goes away once every property is sorted.
+  it('hides "Add sort" when every property is sorted', () => {
+    const h = harness({ sorts: [{ id: 's1', propertyId: 'title', direction: 'asc' }] });
+
+    h.ctx.schema = () => [{ id: 'title', name: 'Name', type: 'title', position: 'a0' }];
+    h.open('sort');
+
+    expect(exists('database-sort-row-s1')).toBe(true);
+    expect(exists('database-sort-add')).toBe(false);
+  });
+
   it('draws a sort as Notion\'s property button with its type icon and an icon-only remove × (research/26 §3a)', () => {
     const h = harness({ sorts: [{ id: 's1', propertyId: 'due', direction: 'asc' }] });
 

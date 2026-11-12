@@ -2160,7 +2160,8 @@ export class ViewSettingsPages {
               if (moving !== undefined) write([...rest.slice(0, at), moving, ...rest.slice(at)]);
             },
           }),
-          panelRow({
+          // notion-motion.md Round 17 §5: gone once every property is sorted.
+          ...(schema.some((p) => GROUPABLE_TYPES.includes(p.type) && !sorts.some((s) => s.propertyId === p.id)) ? [panelRow({
             label: this.t('sortAdd'),
             testId: 'database-sort-add',
             muted: true,
@@ -2169,7 +2170,7 @@ export class ViewSettingsPages {
               this.ctx.updatePersonal({ sorts: [...sorts, { id: nanoid(), propertyId: property.id, direction: 'asc' }] });
               panel.back();
             }, { measured: true, used: () => sorts.map((sort) => sort.propertyId) })),
-          }),
+          })] : []),
           panelRow({
             label: this.t('sortDeleteAll'),
             testId: 'database-sort-delete-all',

@@ -1500,13 +1500,17 @@ export class ViewSettingsPages {
         .filter((p) => types.includes(p.type) && p.name.toLowerCase().includes(needle) && options.used?.includes(p.id) !== true)
         .sort((a, b) => Number(b.type === 'title') - Number(a.type === 'title') || a.name.localeCompare(b.name));
 
-      list.replaceChildren(...(options.leading?.() ?? []), ...choices.map((property) => panelRow({
+      const leading = options.leading?.() ?? [];
+      const rows = choices.map((property) => panelRow({
         label: property.name,
         testId: `database-pick-property-${property.id}`,
         icon: propertyTypeMeta(property.type).icon,
         disabled: options.disabled === true,
         onClick: () => onPick(property),
-      })));
+      }));
+
+      // notion-motion.md Round 18 §2: an empty list says "No results".
+      list.replaceChildren(...leading, ...(leading.length + rows.length === 0 ? [panelText(this.ctx.i18n.t('find.noResults'))] : rows));
     };
     const placeholder = options.placeholder ?? this.t('settingsSearchProperty');
     const search = panelInput({

@@ -5,7 +5,7 @@ import { openDatabaseConfirm } from './database-confirm-dialog';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { propertyTypeMeta } from './database-property-types';
 import type { I18n } from '../../../types';
-import { DatabasePanel, panelInput, panelReorderList, panelRow, panelSeparator } from './database-panel';
+import { DatabasePanel, panelInput, panelReorderList, panelRow, panelSeparator, panelText } from './database-panel';
 import { PersonalViewEdits } from './database-view-state';
 import type { ViewStateFallback } from './database-view-state';
 import { FILTERABLE_TYPES, defaultFilterFor, filterPillLabel, filterPillParts, sortDirectionLabelKey } from './database-filter-labels';
@@ -778,7 +778,7 @@ export class DatabaseViewControls {
       onPick(property);
     };
     const fill = (): void => {
-      list.replaceChildren(...matches().map((property, index) => {
+      const rows = matches().map((property, index) => {
         const row = panelRow({
           label: property.name,
           icon: propertyTypeMeta(property.type).icon,
@@ -789,7 +789,10 @@ export class DatabaseViewControls {
         row.toggleAttribute('data-active', index === state.active);
 
         return row;
-      }));
+      });
+
+      // notion-motion.md Round 18 §2 (r18-bar-addfilter-allused.raw): an empty list says "No results".
+      list.replaceChildren(...(rows.length === 0 ? [panelText(this.host.i18n.t('find.noResults'))] : rows));
     };
     const panel = new DatabasePanel({
       anchor,

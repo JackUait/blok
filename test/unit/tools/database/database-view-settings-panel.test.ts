@@ -1074,6 +1074,15 @@ describe('view settings panel', () => {
     });
   });
 
+  // notion-motion.md Round 18 §2 (r18-settings-addfilter.raw): an empty "Add filter" list says "No results".
+  it('says "No results" on the Add filter page once every property is filtered', () => {
+    harness({ filters: schema.map((p, i) => ({ id: `f${i}`, propertyId: p.id, operator: 'is_not_empty', value: null })) }).open();
+    click('database-settings-filter');
+    click('database-filter-add');
+
+    expect(document.querySelector('[data-blok-database-property-picker-list] [data-blok-database-panel-note]')?.textContent).toBe('find.noResults');
+  });
+
   // notion-motion.md Round 17 §5: "Add sort" goes away once every property is sorted.
   it('hides "Add sort" when every property is sorted', () => {
     const h = harness({ sorts: [{ id: 's1', propertyId: 'title', direction: 'asc' }] });

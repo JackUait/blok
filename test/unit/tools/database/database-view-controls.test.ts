@@ -1567,6 +1567,22 @@ describe('DatabaseViewControls', () => {
       expect(q('database-pick-property-title')).not.toBeNull();
     });
 
+    // notion-motion.md Round 18 §2 (r18-bar-addfilter-allused.raw): an empty list says "No results".
+    it('says "No results" in "+ Filter" once every property is filtered', () => {
+      const { controls, saved } = setup();
+
+      saved.view = {
+        ...saved.view,
+        filters: [{ id: 'f1', propertyId: 'num', operator: 'greater_than', value: 5 }, { id: 'f2', propertyId: 'title', operator: 'contains', value: 'a' }],
+      };
+      controls.refresh();
+      click('database-filter-bar-add');
+      const note = q('database-filter-picker')?.querySelector('[data-blok-database-panel-note]');
+
+      expect(note?.textContent).toBe('find.noResults');
+      expect(q('database-filter-picker-advanced')).not.toBeNull();
+    });
+
     it('keeps the bar, with only "+ Filter", after the last rule is deleted', () => {
       const { controls } = withFilter();
 

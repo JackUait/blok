@@ -6,9 +6,9 @@ import {
   IconPlayerSettings,
   IconPlayerSpeed,
   IconPlayerVolume,
-  IconPlayerVolumeMute,
   IconPlus,
 } from '../../components/icons';
+import { createVolumeIcon } from '../../components/utils/volume-icon';
 import { createPlatterSpin } from './disc';
 import { tr } from './i18n';
 import type { I18nInstance } from '../../components/utils/tools';
@@ -213,11 +213,12 @@ export function attachControls({
   volumeInput.setAttribute('aria-label', i18nLabel('volume', 'Volume'));
 
   const isMuted = (): boolean => media.muted || media.volume === 0;
+  const volumeIcon = createVolumeIcon(muteToggle);
 
   const syncMuteUI = (): void => {
     const muted = isMuted();
     muteToggle.setAttribute('aria-pressed', String(muted));
-    muteToggle.innerHTML = muted ? IconPlayerVolumeMute : IconPlayerVolume;
+    volumeIcon.paint(media.volume, muted);
     muteToggle.setAttribute('aria-label', muted ? i18nLabel('unmute', 'Unmute') : i18nLabel('mute', 'Mute'));
     volumeInput.value = muted ? '0' : String(media.volume);
     // audio.css paints the filled track from --blok-audio-vol-pct (same naming
@@ -259,6 +260,8 @@ export function attachControls({
     } catch { /* corrupt entry */ }
   };
   restoreVolume();
+  // The first paint never glides, so it must follow the restore.
+  volumeIcon.paint(media.volume, isMuted());
 
   const restorePosition = (): void => {
     const raw = safeGet(posKey());
@@ -566,6 +569,7 @@ export function attachControls({
     media.removeEventListener('timeupdate', onTimeUpdate);
     media.removeEventListener('loadedmetadata', onLoadedMetadata);
     media.removeEventListener('volumechange', onVolumeChange);
+    volumeIcon.destroy();
 
     figure.removeEventListener('keydown', onFigureKeydown);
     window.removeEventListener('storage', onStorage);

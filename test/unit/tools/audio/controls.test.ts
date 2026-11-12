@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { attachControls } from '../../../../src/tools/audio/controls';
+import { volumeLevelIcon } from '../../../../src/components/utils/volume-icon';
+import { IconPlayerVolumeMute } from '../../../../src/components/icons';
 
 const makeMedia = (): HTMLAudioElement => {
   const a = document.createElement('audio');
@@ -137,6 +139,36 @@ describe('attachControls', () => {
     storage.setItem('blok:audio:volume', JSON.stringify({ volume: 0.3, muted: false }));
     attachControls({ media, figure, data: { url: 'u' }, storage });
     expect(media.volume).toBeCloseTo(0.3, 5);
+  });
+
+  it('draws the speaker icon for the current volume', async () => {
+    const media = makeMedia();
+    const figure = document.createElement('figure');
+    const h = attachControls({ media, figure, data: { url: 'u' } });
+    const volume = h.element.querySelector('[data-role="audio-volume"]') as HTMLInputElement;
+    const mute = h.element.querySelector('[data-role="audio-mute"]') as HTMLButtonElement;
+    const drawn = (svg: string): string => {
+      const holder = document.createElement('div');
+
+      holder.innerHTML = svg;
+
+      return holder.innerHTML;
+    };
+
+    volume.value = '0.25';
+    volume.dispatchEvent(new Event('input', { bubbles: true }));
+    await vi.waitFor(() => expect(mute.innerHTML).toBe(drawn(volumeLevelIcon(0.25))));
+
+    volume.value = '0.8';
+    volume.dispatchEvent(new Event('input', { bubbles: true }));
+    await vi.waitFor(() => expect(mute.innerHTML).toBe(drawn(volumeLevelIcon(0.8))));
+
+    mute.click();
+    await vi.waitFor(() => expect(mute.innerHTML).toBe(drawn(IconPlayerVolumeMute)));
+
+    mute.click();
+    await vi.waitFor(() => expect(mute.innerHTML).toBe(drawn(volumeLevelIcon(0.8))));
+    h.destroy();
   });
 
   it('paints the volume slider fill from the gradient property the stylesheet reads', () => {

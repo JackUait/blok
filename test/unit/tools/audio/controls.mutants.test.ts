@@ -8,10 +8,10 @@ import {
   IconPlayerPause,
   IconPlayerPlay,
   IconPlayerSettings,
-  IconPlayerVolume,
   IconPlayerVolumeMute,
   IconPlus,
 } from '../../../../src/components/icons';
+import { volumeLevelIcon } from '../../../../src/components/utils/volume-icon';
 
 const VOL_KEY = 'blok:audio:volume';
 const RATE_KEY = 'blok:audio:rate';
@@ -270,7 +270,7 @@ describe('attachControls — rendered contract', () => {
     expect(ui.volume.getAttribute('aria-label')).toBe('Volume');
     expect(ui.mute.getAttribute('aria-pressed')).toBe('false');
     expect(ui.mute.getAttribute('aria-label')).toBe('Mute');
-    expect(ui.mute.innerHTML).toBe(iconMarkup(IconPlayerVolume));
+    expect(ui.mute.innerHTML).toBe(iconMarkup(volumeLevelIcon(1)));
     ui.handle.destroy();
   });
 
@@ -558,7 +558,7 @@ describe('attachControls — position restore', () => {
 });
 
 describe('attachControls — volume and mute', () => {
-  it('repaints the mute state from the click itself, not from the element echoing it', () => {
+  it('repaints the mute state from the click itself, not from the element echoing it', async () => {
     const storage = memoryStorage();
     const media = silentVolumeEcho();
     const ui = mount({ media, storage });
@@ -567,14 +567,14 @@ describe('attachControls — volume and mute', () => {
 
     expect(ui.mute.getAttribute('aria-pressed')).toBe('true');
     expect(ui.mute.getAttribute('aria-label')).toBe('Unmute');
-    expect(ui.mute.innerHTML).toBe(iconMarkup(IconPlayerVolumeMute));
+    await vi.waitFor(() => expect(ui.mute.innerHTML).toBe(iconMarkup(IconPlayerVolumeMute)));
     expect(ui.volume.value).toBe('0');
     expect(ui.volume.style.getPropertyValue('--blok-audio-vol-pct')).toBe('0%');
     expect(storage.entries.get(VOL_KEY)).toBe('{"volume":1,"muted":true}');
     ui.handle.destroy();
   });
 
-  it('mutes the element and repaints the button, slider and fill', () => {
+  it('mutes the element and repaints the button, slider and fill', async () => {
     const storage = memoryStorage();
     const media = makeMedia();
     const ui = mount({ media, storage });
@@ -584,7 +584,7 @@ describe('attachControls — volume and mute', () => {
     expect(media.muted).toBe(true);
     expect(ui.mute.getAttribute('aria-pressed')).toBe('true');
     expect(ui.mute.getAttribute('aria-label')).toBe('Unmute');
-    expect(ui.mute.innerHTML).toBe(iconMarkup(IconPlayerVolumeMute));
+    await vi.waitFor(() => expect(ui.mute.innerHTML).toBe(iconMarkup(IconPlayerVolumeMute)));
     expect(ui.volume.value).toBe('0');
     expect(ui.volume.style.getPropertyValue('--blok-audio-vol-pct')).toBe('0%');
     expect(storage.entries.get(VOL_KEY)).toBe('{"volume":1,"muted":true}');
@@ -601,7 +601,7 @@ describe('attachControls — volume and mute', () => {
     expect(media.muted).toBe(false);
     expect(ui.mute.getAttribute('aria-pressed')).toBe('false');
     expect(ui.mute.getAttribute('aria-label')).toBe('Mute');
-    expect(ui.mute.innerHTML).toBe(iconMarkup(IconPlayerVolume));
+    expect(ui.mute.innerHTML).toBe(iconMarkup(volumeLevelIcon(1)));
     expect(ui.volume.value).toBe('1');
     ui.handle.destroy();
   });

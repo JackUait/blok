@@ -7,9 +7,9 @@ import {
   IconPlayerForward,
   IconPlayerPause,
   IconPlayerPlay,
-  IconPlayerVolume,
   IconPlayerVolumeMute,
 } from '../../../../src/components/icons';
+import { volumeLevelIcon } from '../../../../src/components/utils/volume-icon';
 import type { ControlsOptions } from '../../../../src/tools/video/controls';
 
 // Mounts without an explicit storage stub fall back to jsdom's real localStorage,
@@ -804,17 +804,17 @@ describe('video controls — volume and mute', () => {
   const mute = (): HTMLElement => q(h.controls, '[data-action="mute-toggle"]');
   const volume = (): HTMLInputElement => q<HTMLInputElement>(h.controls, '[data-role="volume"]');
 
-  it('reads a zero volume as muted even when the media is not flagged muted', () => {
+  it('reads a zero volume as muted even when the media is not flagged muted', async () => {
     h.video.volume = 0;
     h.video.dispatchEvent(new Event('volumechange'));
     expect(mute().getAttribute('aria-pressed')).toBe('true');
-    expect(mute().innerHTML).toBe(iconHtml(IconPlayerVolumeMute));
+    await vi.waitFor(() => expect(mute().innerHTML).toBe(iconHtml(IconPlayerVolumeMute)));
   });
 
-  it('shows the audible glyph while sound is on', () => {
+  it('shows the audible glyph while sound is on', async () => {
     h.video.volume = 0.5;
     h.video.dispatchEvent(new Event('volumechange'));
-    expect(mute().innerHTML).toBe(iconHtml(IconPlayerVolume));
+    await vi.waitFor(() => expect(mute().innerHTML).toBe(iconHtml(volumeLevelIcon(0.5))));
   });
 
   it('paints the volume slider fill from the current level', () => {

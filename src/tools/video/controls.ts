@@ -11,10 +11,10 @@ import {
   IconPlayerSpeed,
   IconPlayerTheater,
   IconPlayerVolume,
-  IconPlayerVolumeMute,
 } from '../../components/icons';
 import { promoteToTopLayer, removeFromTopLayer, supportsPopoverAPI } from '../../components/utils/top-layer';
 import { isKeyboardModality } from '../../components/utils/input-modality';
+import { createVolumeIcon } from '../../components/utils/volume-icon';
 import { getElementDirection } from '../../components/utils/direction';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { tr } from './i18n';
@@ -462,6 +462,9 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   const onPause = (): void => setPlaying(false);
   // Pop the mute glyph when the user flips audible↔muted (à la native players).
   const isMuted = (): boolean => video.muted || video.volume === 0;
+  const volumeIcon = createVolumeIcon(muteToggle);
+  // The first paint never glides. Paint now so the first mute does.
+  volumeIcon.paint(video.volume, isMuted());
   const bumpMute = (): void => {
     muteToggle.classList.remove('is-bumped');
     muteToggle.offsetWidth;
@@ -470,7 +473,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   const onVolumeChange = (): void => {
     const muted = isMuted();
     muteToggle.setAttribute('aria-pressed', String(muted));
-    muteToggle.innerHTML = muted ? IconPlayerVolumeMute : IconPlayerVolume;
+    volumeIcon.paint(video.volume, muted);
     muteToggle.setAttribute('aria-label', muted ? i18nLabel('unmute', 'Unmute') : i18nLabel('mute', 'Mute'));
     // muting parks the slider at the very beginning; unmuted tracks the real volume
     volume.value = muted ? '0' : String(video.volume);
@@ -1535,6 +1538,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     video.removeEventListener('play', onPlay);
     video.removeEventListener('pause', onPause);
     video.removeEventListener('volumechange', onVolumeChange);
+    volumeIcon.destroy();
     muteToggle.removeEventListener('animationend', onMuteBumpEnd);
     document.removeEventListener('fullscreenchange', onFullscreenChange);
     document.removeEventListener('pointerdown', onTheaterOutside);

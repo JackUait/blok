@@ -6,6 +6,8 @@ import {
   timeAtRatio,
   ratioFromPointer,
 } from '../../../../src/tools/video/controls';
+import { volumeLevelIcon } from '../../../../src/components/utils/volume-icon';
+import { IconPlayerVolumeMute } from '../../../../src/components/icons';
 
 // Mounts without an explicit storage stub fall back to jsdom's real localStorage,
 // which persists across tests — clear it so persisted rate/loop/volume can't leak.
@@ -858,6 +860,32 @@ describe('video controls — volume + fullscreen', () => {
     btn.click();
     expect(h.video.muted).toBe(false);
     expect(btn.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('draws the speaker icon for the current volume', async () => {
+    const btn = q(h.controls, '[data-action="mute-toggle"]');
+    const slider = q<HTMLInputElement>(h.controls, '[data-role="volume"]');
+    const drawn = (svg: string): string => {
+      const holder = document.createElement('div');
+
+      holder.innerHTML = svg;
+
+      return holder.innerHTML;
+    };
+
+    slider.value = '0.25';
+    slider.dispatchEvent(new Event('input', { bubbles: true }));
+    await vi.waitFor(() => expect(btn.innerHTML).toBe(drawn(volumeLevelIcon(0.25))));
+
+    slider.value = '0.8';
+    slider.dispatchEvent(new Event('input', { bubbles: true }));
+    await vi.waitFor(() => expect(btn.innerHTML).toBe(drawn(volumeLevelIcon(0.8))));
+
+    btn.click();
+    await vi.waitFor(() => expect(btn.innerHTML).toBe(drawn(IconPlayerVolumeMute)));
+
+    btn.click();
+    await vi.waitFor(() => expect(btn.innerHTML).toBe(drawn(volumeLevelIcon(0.8))));
   });
 
   it('muting drives the volume slider to the very beginning', () => {

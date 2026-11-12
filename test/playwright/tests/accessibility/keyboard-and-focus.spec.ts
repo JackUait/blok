@@ -5,7 +5,7 @@
  * lost: roving tabindex on the block toolbar, flipper virtual focus in
  * popovers, the shared modal-dialog focus trap, focus return on popover close,
  * layered Escape, and the keyboard contracts of the toggle arrow, spacer
- * resizer, media empty-state tablist and code view-mode group.
+ * resizer, media empty-state link field and code view-mode group.
  */
 import type { Locator, Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
@@ -555,7 +555,7 @@ test.describe('keyboard operability and focus management', () => {
     });
   });
 
-  test.describe('media empty-state tablist', () => {
+  test.describe('media empty-state link field', () => {
     const imageBlok = async (page: Page): Promise<void> => {
       await createBlok(page, {
         data: { blocks: [ { type: 'image',
@@ -563,45 +563,49 @@ test.describe('keyboard operability and focus management', () => {
       });
     };
 
-    test('the tablist starts with one tab stop and the first tab selected', async ({ page }) => {
+    test('the two ways in are two buttons, not tabs', async ({ page }) => {
       await imageBlok(page);
 
-      const tablist = page.getByRole('tablist');
-      const tabs = tablist.getByRole('tab');
+      const surface = page.getByRole('group', { name: 'Add an image' });
 
-      await expect(tablist).toBeVisible();
-      await expect(tabs).toHaveCount(2);
-
-      await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'true');
-      await expect(tabs.nth(0)).toHaveAttribute('tabindex', '0');
-      await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'false');
-      await expect(tabs.nth(1)).toHaveAttribute('tabindex', '-1');
+      await expect(surface.getByRole('tablist')).toHaveCount(0);
+      await expect(surface.getByRole('button', { name: 'Choose an image' })).toBeVisible();
+      await expect(surface.getByRole('button', { name: 'From a link' })).toBeVisible();
+      // The link field is there but off: it must not be reachable yet.
+      await expect(surface.getByRole('textbox')).toHaveCount(0);
     });
 
-    test('arrow keys switch the selected tab and roll the tab stop', async ({ page }) => {
+    test('"From a link" moves focus into the field, and Escape gives it back to the button', async ({ page }) => {
       await imageBlok(page);
 
-      const tabs = page.getByRole('tablist').getByRole('tab');
+      const surface = page.getByRole('group', { name: 'Add an image' });
+      const fromLink = surface.getByRole('button', { name: 'From a link' });
 
-      await tabs.nth(0).focus();
-      await expect(tabs.nth(0)).toBeFocused();
+      await fromLink.focus();
+      await page.keyboard.press('Enter');
 
-      await page.keyboard.press('ArrowRight');
+      const field = surface.getByRole('textbox', { name: 'Image URL' });
 
-      await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
-      await expect(tabs.nth(1)).toHaveAttribute('tabindex', '0');
-      await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'false');
-      await expect(tabs.nth(0)).toHaveAttribute('tabindex', '-1');
+      await expect(field).toBeFocused();
+      await expect(surface.getByRole('button', { name: 'From a link' })).toHaveCount(0);
 
-      // The Link panel pulls focus into its URL field on render, so focus lands
-      // there rather than on the tab — it must still be somewhere real.
+      await page.keyboard.type('example.com/a.png');
+      await page.keyboard.press('Escape');
+
+      await expect(fromLink).toBeFocused();
+      await expect(surface.getByRole('textbox')).toHaveCount(0);
       await expect.poll(() => readFocus(page)).toStrictEqual(FOCUS_IS_HELD);
+    });
 
-      await tabs.nth(1).focus();
-      await page.keyboard.press('ArrowLeft');
+    test('the cross closes the field and returns focus to "From a link"', async ({ page }) => {
+      await imageBlok(page);
 
-      await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'true');
-      await expect(tabs.nth(0)).toBeFocused();
+      const surface = page.getByRole('group', { name: 'Add an image' });
+
+      await surface.getByRole('button', { name: 'From a link' }).click();
+      await surface.getByRole('button', { name: 'Cancel' }).click();
+
+      await expect(surface.getByRole('button', { name: 'From a link' })).toBeFocused();
     });
   });
 

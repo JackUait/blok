@@ -159,7 +159,7 @@ describe.each(cases)('$tool tool — onUploadError', ({ tool: name, create, file
     const tool = create({ uploader: { uploadByUrl: () => Promise.reject(serverError) }, onUploadError });
     const root = tool.render() as HTMLElement;
 
-    root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    root.querySelector<HTMLButtonElement>('[data-action="from-link"]')?.click();
     const input = root.querySelector<HTMLInputElement>('input[type="url"]');
     const submit = root.querySelector<HTMLButtonElement>('[data-action="submit-url"]');
 

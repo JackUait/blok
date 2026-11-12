@@ -327,7 +327,7 @@ describe('VideoTool — onPaste', () => {
       }),
     });
     const root = tool.render();
-    root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    root.querySelector<HTMLButtonElement>('[data-action="from-link"]')?.click();
     const input = root.querySelector<HTMLInputElement>('input[type="url"]');
     if (!input) throw new Error('url input missing');
     input.value = 'https://x/y.mp4';
@@ -345,7 +345,7 @@ describe('VideoTool — onPaste', () => {
     const uploadByUrl = (): Promise<{ url: string }> => new Promise(() => undefined);
     const tool = new VideoTool(createOptions({}, { uploader: { uploadByUrl } }));
     const root = tool.render();
-    root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    root.querySelector<HTMLButtonElement>('[data-action="from-link"]')?.click();
     const input = root.querySelector<HTMLInputElement>('input[type="url"]');
     if (!input) throw new Error('url input missing');
     input.value = 'https://x/y.mp4';
@@ -415,13 +415,13 @@ describe('VideoTool — EMPTY state', () => {
     const root = tool.render();
     expect(root.getAttribute('data-state')).toBe('empty');
     expect(root.querySelector('input[type="file"]')).not.toBeNull();
-    expect(root.querySelector('[data-tab="embed"]')).not.toBeNull();
+    expect(root.querySelector('[data-action="from-link"]')).not.toBeNull();
   });
 
   it('submitting a URL via embed tab transitions to RENDERED', async () => {
     const tool = new VideoTool(createOptions());
     const root = tool.render();
-    root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    root.querySelector<HTMLButtonElement>('[data-action="from-link"]')?.click();
     const input = root.querySelector<HTMLInputElement>('input[type="url"]');
     if (!input) throw new Error('url input missing');
     input.value = 'https://x/y.mp4';
@@ -1196,7 +1196,7 @@ describe('VideoTool — URL field validation', () => {
   afterEach(() => vi.restoreAllMocks());
 
   const submitUrl = async (tool: VideoTool, root: HTMLElement, url: string): Promise<void> => {
-    root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    root.querySelector<HTMLButtonElement>('[data-action="from-link"]')?.click();
     const input = root.querySelector<HTMLInputElement>('input[type="url"]');
     if (!input) throw new Error('url input missing');
     input.value = url;
@@ -1408,7 +1408,7 @@ describe('VideoTool — an upload belongs to the pick that started it', () => {
     });
     const tool = new VideoTool(createOptions({}, { uploader: { uploadByUrl } }));
     const root = tool.render();
-    root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    root.querySelector<HTMLButtonElement>('[data-action="from-link"]')?.click();
     const input = root.querySelector<HTMLInputElement>('input[type="url"]');
     if (!input) throw new Error('url input missing');
     input.value = 'https://x/y.mp4';

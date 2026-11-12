@@ -37,15 +37,12 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
       hintLink: tr(i18n, 'tools.image.emptyHintLink', 'Paste a link to it below.'),
       dropAnywhere: tr(i18n, 'tools.image.emptyDropAnywhere', 'Let go anywhere in this block.'),
       cancelLink: tr(i18n, 'notifier.cancel', 'Cancel'),
-      upload: tr(i18n, 'tools.audio.emptyUpload', 'From device'),
       embed: tr(i18n, 'tools.audio.emptyLink', 'From a link'),
       chooseFile: tr(i18n, 'tools.audio.emptyChooseFile', 'Choose audio'),
-      orDropHere: tr(i18n, 'tools.audio.emptyOrDropHere', 'or drag it here'),
       dropToUpload: tr(i18n, 'tools.audio.emptyDropToUpload', 'Drop to add'),
       urlPlaceholder: tr(i18n, 'tools.audio.emptyUrlPlaceholder', 'Paste an audio link…'),
       urlAria: tr(i18n, 'tools.audio.emptyUrlAria', 'Audio URL'),
       submit: tr(i18n, 'tools.audio.emptyInsert', 'Add'),
-      sourceAria: tr(i18n, 'tools.audio.emptySourceAria', 'Audio source'),
       maxSize: (size) =>
         i18n?.has('tools.audio.emptyMaxSize')
           ? i18n.t('tools.audio.emptyMaxSize', { size })

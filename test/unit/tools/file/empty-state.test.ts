@@ -25,19 +25,19 @@ const render = (overrides: Partial<Parameters<typeof renderEmptyState>[0]> = {})
   renderEmptyState({ acceptTypes: [], i18n, onFile: vi.fn(), onUrl: vi.fn(), ...overrides });
 
 describe('file renderEmptyState', () => {
-  it('renders a hidden file input and an Upload/Link tab pair', () => {
+  it('renders a hidden file input, a link button and a way back from the link field', () => {
     const el = render();
     expect(el.querySelector('input[type="file"]')).not.toBeNull();
-    expect(el.querySelector('[data-tab="upload"]')).not.toBeNull();
-    expect(el.querySelector('[data-tab="embed"]')).not.toBeNull();
+    expect(el.querySelector('[data-action="cancel-link"]')).not.toBeNull();
+    expect(el.querySelector('[data-action="from-link"]')).not.toBeNull();
   });
 
-  it('labels the card and tabs from file i18n keys', () => {
+  it('labels the card and the link button from file i18n keys', () => {
     const el = render();
     const card = el.querySelector<HTMLElement>('.blok-media-empty__card');
     expect(card?.getAttribute('aria-label')).toBe('Add a file');
-    expect(el.querySelector('[data-tab="upload"]')?.textContent).toBe('Upload');
-    expect(el.querySelector('[data-tab="embed"]')?.textContent).toBe('Link');
+    expect(el.querySelector('.blok-media-empty__title')?.textContent).toBe('Add a file');
+    expect(el.querySelector('[data-action="from-link"]')?.textContent?.trim()).toBe('Link');
   });
 
   it('calls onFile when the hidden input emits a file', () => {
@@ -54,7 +54,7 @@ describe('file renderEmptyState', () => {
   it('calls onUrl when a URL is submitted from the Link tab', () => {
     const onUrl = vi.fn();
     const el = render({ onUrl });
-    el.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    el.querySelector<HTMLButtonElement>('[data-action="from-link"]')?.click();
     const urlInput = el.querySelector<HTMLInputElement>('input[type="url"]');
     if (!urlInput) throw new Error('url input missing');
     urlInput.value = 'https://site.com/doc.pdf';
@@ -83,14 +83,14 @@ describe('file renderEmptyState', () => {
 
   it('with sources "upload" forwards through and hides the Link tab', () => {
     const el = render({ sources: 'upload' });
-    expect(el.querySelector('[data-tab="embed"]')).toBeNull();
+    expect(el.querySelector('[data-action="from-link"]')).toBeNull();
     expect(el.querySelector('input[type="file"]')).not.toBeNull();
     expect(el.querySelector('[role="tablist"]')).toBeNull();
   });
 
   it('with sources "url" forwards through and hides upload (no file input)', () => {
     const el = render({ sources: 'url' });
-    expect(el.querySelector('[data-tab="upload"]')).toBeNull();
+    expect(el.querySelector('[data-action="cancel-link"]')).toBeNull();
     expect(el.querySelector('input[type="file"]')).toBeNull();
     expect(el.querySelector('input[type="url"]')).not.toBeNull();
   });

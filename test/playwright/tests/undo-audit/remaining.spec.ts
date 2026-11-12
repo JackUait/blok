@@ -174,7 +174,7 @@ const media = (page: Page, tool: string): Locator => page.locator(`[data-blok-to
 const enterUrl = async (page: Page, tool: string, url: string): Promise<void> => {
   const block = media(page, tool);
 
-  await block.locator('[data-tab="embed"]').click();
+  await block.locator('[data-action="from-link"]').click();
   await block.getByRole('textbox').fill(url);
   await block.locator('[data-action="submit-url"]').click();
 };

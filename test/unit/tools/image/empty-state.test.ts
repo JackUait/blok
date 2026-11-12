@@ -16,47 +16,35 @@ describe('renderEmptyState', () => {
 
   it('switches to Embed tab on click and shows URL input', () => {
     const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn() });
-    const embedTab = el.querySelector<HTMLButtonElement>('[data-tab="embed"]');
+    const embedTab = el.querySelector<HTMLButtonElement>('[data-action="from-link"]');
     if (!embedTab) throw new Error('embed tab missing');
     embedTab.click();
     const url = el.querySelector('input[type="url"]');
     expect(url).not.toBeNull();
   });
 
-  it('tablist keeps a single tab stop on the selected tab', () => {
+  it('has no tablist: the two ways in are two buttons', () => {
     const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn() });
-    const tabs = Array.from(el.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
-    expect(tabs).toHaveLength(2);
-    expect(tabs.map((t) => t.tabIndex)).toEqual([0, -1]);
+
+    expect(el.querySelector('[role="tablist"], [role="tab"]')).toBeNull();
+    expect(el.querySelector('button[data-action="choose-file"]')).not.toBeNull();
+    expect(el.querySelector('button[data-action="from-link"]')).not.toBeNull();
   });
 
-  it('ArrowRight moves to the next tab and follows focus', () => {
+  it('"From a link" opens the link field and focuses it; Escape goes back to the button', () => {
     const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn() });
     document.body.appendChild(el);
-    const tabs = Array.from(el.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
-    tabs[0].focus();
-    tabs[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    const fromLink = el.querySelector<HTMLButtonElement>('[data-action="from-link"]');
+    const url = el.querySelector<HTMLInputElement>('input[type="url"]');
+    if (!fromLink || !url) throw new Error('link controls missing');
 
-    expect(tabs[1].getAttribute('aria-selected')).toBe('true');
-    expect(tabs[0].getAttribute('aria-selected')).toBe('false');
-    expect(tabs[1]).toHaveFocus();
-    expect(tabs.map((t) => t.tabIndex)).toEqual([-1, 0]);
-    expect(el.querySelector('input[type="url"]')).not.toBeNull();
-    el.remove();
-  });
+    fromLink.click();
+    expect(url).toHaveFocus();
+    expect(url.closest('[inert]')).toBeNull();
 
-  it('Home/End jump to the first/last tab', () => {
-    const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn() });
-    document.body.appendChild(el);
-    const tabs = Array.from(el.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
-    tabs[0].focus();
-    tabs[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
-    expect(tabs[1].getAttribute('aria-selected')).toBe('true');
-    expect(tabs[1]).toHaveFocus();
-
-    tabs[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
-    expect(tabs[0].getAttribute('aria-selected')).toBe('true');
-    expect(tabs[0]).toHaveFocus();
+    url.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    expect(fromLink).toHaveFocus();
+    expect(url.closest('[inert]')).not.toBeNull();
     el.remove();
   });
 
@@ -74,7 +62,7 @@ describe('renderEmptyState', () => {
   it('calls onUrl with the trimmed URL on submit', () => {
     const onUrl = vi.fn();
     const el = renderEmptyState({ onFile: vi.fn(), onUrl });
-    const embedTab = el.querySelector<HTMLButtonElement>('[data-tab="embed"]');
+    const embedTab = el.querySelector<HTMLButtonElement>('[data-action="from-link"]');
     if (!embedTab) throw new Error('embed tab missing');
     embedTab.click();
     const input = el.querySelector<HTMLInputElement>('input[type="url"]');
@@ -147,13 +135,13 @@ describe('renderEmptyState', () => {
 
   it('with sources "upload" renders only the Upload source (no Link tab)', () => {
     const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn(), sources: 'upload' });
-    expect(el.querySelector('[data-tab="embed"]')).toBeNull();
+    expect(el.querySelector('[data-action="from-link"]')).toBeNull();
     expect(el.querySelector('input[type="file"]')).not.toBeNull();
   });
 
   it('with sources "url" renders only the Link source (no Upload tab, URL input active)', () => {
     const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn(), sources: 'url' });
-    expect(el.querySelector('[data-tab="upload"]')).toBeNull();
+    expect(el.querySelector('[data-action="cancel-link"]')).toBeNull();
     expect(el.querySelector('input[type="url"]')).not.toBeNull();
     expect(el.querySelector('input[type="file"]')).toBeNull();
   });
@@ -177,8 +165,8 @@ describe('renderEmptyState', () => {
 
   it('defaults to both sources when sources omitted', () => {
     const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn() });
-    expect(el.querySelector('[data-tab="upload"]')).not.toBeNull();
-    expect(el.querySelector('[data-tab="embed"]')).not.toBeNull();
+    expect(el.querySelector('[data-action="cancel-link"]')).not.toBeNull();
+    expect(el.querySelector('[data-action="from-link"]')).not.toBeNull();
   });
 
   it('falls back to English when i18n omitted', () => {
@@ -186,12 +174,11 @@ describe('renderEmptyState', () => {
     const card = el.querySelector<HTMLElement>('.blok-media-empty__card');
     if (!card) throw new Error('card missing');
     expect(card.getAttribute('aria-label')).toBe('Add an image');
-    const labelEl = el.querySelector('.blok-media-empty__label');
-    expect(labelEl?.textContent).toBe('Add an image');
-    const uploadTab = el.querySelector<HTMLButtonElement>('[data-tab="upload"]');
-    expect(uploadTab?.textContent).toBe('From device');
-    const embedTab = el.querySelector<HTMLButtonElement>('[data-tab="embed"]');
-    expect(embedTab?.textContent).toBe('From a link');
+    expect(el.querySelector('.blok-media-empty__title')?.textContent).toBe('Add an image');
+    expect(el.querySelector('.blok-media-empty__hint-text')?.textContent).toBe('Drag a picture here, choose one from your device, or paste a link.');
+    expect(el.querySelector('[data-action="choose-file"]')?.textContent?.trim()).toBe('Choose an image');
+    const embedTab = el.querySelector<HTMLButtonElement>('[data-action="from-link"]');
+    expect(embedTab?.textContent?.trim()).toBe('From a link');
     embedTab?.click();
     const urlInput = el.querySelector<HTMLInputElement>('input[type="url"]');
     expect(urlInput?.placeholder).toBe('Paste an image link…');

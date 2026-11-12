@@ -497,23 +497,6 @@
   to { stroke-dasharray: 1 1; stroke-dashoffset: 0 }
 }
 
-@keyframes blok-media-empty-host-in {
-  from { opacity: 0; transform: translateX(6px) }
-}
-
-@keyframes blok-media-empty-kbd-nudge {
-  50% { transform: translateX(2px) }
-}
-
-@keyframes blok-media-empty-shine {
-  from { transform: translateX(-110%) }
-  to { transform: translateX(110%) }
-}
-
-@keyframes blok-media-empty-site-flip {
-  from { transform: scaleX(0) }
-}
-
 @keyframes blok-media-preview-breathe {
   0%, 100% { transform: scaleY(0.55) }
   50% { transform: scaleY(1) }

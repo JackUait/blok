@@ -1,11 +1,15 @@
 /* The narrow-card rules of media-empty.css. They come after invalid-field.css, which stays eager. */
-@container (max-width: 460px) {
-  .blok-media-empty__panel { flex-wrap: wrap; }
-  .blok-media-empty__content--row { flex-wrap: wrap; }
-  .blok-media-empty__primary { width: 100%; }
-  .blok-media-empty__meta { font-size: 10px; }
-}
-@container (max-width: 360px) {
-  .blok-media-empty__tabs { margin-inline-start: 0; }
-  .blok-media-empty__header { flex-wrap: wrap; }
+/* narrow: the drawing goes on top and everything centres */
+@container (max-width: 470px) {
+  .blok-media-empty__card[data-preview] {
+    flex-direction: column;
+    gap: var(--blok-space-2-5);
+    padding: var(--blok-space-5) var(--blok-space-4);
+    text-align: center;
+  }
+  .blok-media-empty__card[data-preview] .blok-media-empty__body { flex: 0 0 auto; width: 100%; align-items: center; }
+  .blok-media-empty__card[data-preview] .blok-media-empty__body > * { width: 100%; }
+  .blok-media-empty__card[data-preview] .blok-media-empty__slot { justify-items: center; }
+  .blok-media-empty__card[data-preview] .blok-media-empty__actions { justify-content: center; }
+  .blok-media-empty__card > .blok-media-preview svg { width: 150px; }
 }

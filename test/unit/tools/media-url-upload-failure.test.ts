@@ -35,7 +35,7 @@ const createBlock = (name: string): BlockAPI => ({
 } as unknown as BlockAPI);
 
 const enterLink = (root: HTMLElement, url: string): void => {
-  root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+  root.querySelector<HTMLButtonElement>('[data-action="from-link"]')?.click();
   const input = root.querySelector<HTMLInputElement>('input[type="url"]');
 
   if (input === null) {

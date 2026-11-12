@@ -97,24 +97,17 @@ function cardSurface(opts: OpenCoverPickerOptions): PickerSurface {
     acceptTypes: [...COVER_TYPES],
     onFile: opts.onFile,
     onUrl: opts.onUrl,
-    // The picker is a floating popover, so the inline height tween only reads as
-    // lag here. Slide the incoming panel in from the travel direction instead —
-    // the swap keeps its personality while the popover resizes instantly.
-    swap: 'slide',
     labels: {
       add: tr(opts.i18n, 'tools.audio.coverAdd', 'Add a cover'),
       hint: tr(opts.i18n, 'tools.audio.coverHint', 'Drag an image here, choose one, or paste a link.'),
       dropAnywhere: tr(opts.i18n, 'tools.image.emptyDropAnywhere', 'Let go anywhere in this block.'),
       cancelLink: tr(opts.i18n, 'notifier.cancel', 'Cancel'),
-      upload: tr(opts.i18n, 'tools.audio.coverUpload', 'Upload'),
       embed: tr(opts.i18n, 'tools.audio.coverLink', 'Link'),
       chooseFile: tr(opts.i18n, 'tools.audio.coverChooseFile', 'Choose file'),
-      orDropHere: tr(opts.i18n, 'tools.audio.coverOrDropHere', 'or drop an image here'),
       dropToUpload: tr(opts.i18n, 'tools.audio.coverDropToUpload', 'Drop to upload'),
       urlPlaceholder: tr(opts.i18n, 'tools.audio.coverUrlPlaceholder', 'Paste an image URL…'),
       urlAria: tr(opts.i18n, 'tools.audio.coverUrlAria', 'Image URL'),
       submit: tr(opts.i18n, 'tools.audio.coverInsert', 'Insert'),
-      sourceAria: tr(opts.i18n, 'tools.audio.coverSourceAria', 'Cover source'),
     },
   });
 

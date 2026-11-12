@@ -48,7 +48,7 @@ describe('FileTool — rendering', () => {
   it('renders the empty state when data.url is empty', () => {
     const root = new FileTool(createOptions()).render();
     expect(root.querySelector('input[type="file"]')).not.toBeNull();
-    expect(root.querySelector('[data-tab="embed"]')).not.toBeNull();
+    expect(root.querySelector('[data-action="from-link"]')).not.toBeNull();
   });
 
   it('renders the download card when data.url is present', () => {
@@ -347,7 +347,7 @@ describe('FileTool — image auto-convert', () => {
     const tool = new FileTool(createOptions({}, {}, undefined, api));
     const root = tool.render();
 
-    root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    root.querySelector<HTMLButtonElement>('[data-action="from-link"]')?.click();
     const urlInput = root.querySelector<HTMLInputElement>('.blok-media-empty__embed-input');
     const submit = root.querySelector<HTMLButtonElement>('[data-action="submit-url"]');
     if (!urlInput || !submit) throw new Error('embed url field missing');
@@ -689,7 +689,7 @@ describe('FileTool — an upload belongs to the pick that started it', () => {
     });
     const tool = new FileTool(createOptions({}, { uploader: { uploadByUrl }, onUploadError }));
     const root = tool.render();
-    root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    root.querySelector<HTMLButtonElement>('[data-action="from-link"]')?.click();
     const urlInput = root.querySelector<HTMLInputElement>('.blok-media-empty__embed-input');
     const submit = root.querySelector<HTMLButtonElement>('[data-action="submit-url"]');
     if (!urlInput || !submit) throw new Error('embed url field missing');

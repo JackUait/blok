@@ -16,7 +16,6 @@ export interface EmptyStateOptions {
   maxSize?: number;
   /** Which insert sources to expose. Default `'both'`. */
   sources?: MediaSource;
-  uploadLabel?: string;
   embedLabel?: string;
   embedPlaceholder?: string;
   submitLabel?: string;
@@ -41,15 +40,12 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
       hintLink: tr(i18n, 'tools.image.emptyHintLink'),
       dropAnywhere: tr(i18n, 'tools.image.emptyDropAnywhere'),
       cancelLink: tr(i18n, 'notifier.cancel'),
-      upload: opts.uploadLabel ?? tr(i18n, 'tools.image.emptyUpload'),
       embed: opts.embedLabel ?? tr(i18n, 'tools.image.emptyLink'),
       chooseFile: tr(i18n, 'tools.image.emptyChooseFile'),
-      orDropHere: tr(i18n, 'tools.image.emptyOrDropHere'),
       dropToUpload: tr(i18n, 'tools.image.emptyDropToUpload'),
       urlPlaceholder: opts.embedPlaceholder ?? tr(i18n, 'tools.image.emptyUrlPlaceholder'),
       urlAria: tr(i18n, 'tools.image.emptyUrlAria'),
       submit: opts.submitLabel ?? tr(i18n, 'tools.image.emptyInsert'),
-      sourceAria: tr(i18n, 'tools.image.emptySourceAria'),
       maxSize: (size) =>
         i18n?.has('tools.image.emptyMaxSize')
           ? i18n.t('tools.image.emptyMaxSize', { size })

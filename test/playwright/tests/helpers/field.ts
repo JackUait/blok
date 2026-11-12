@@ -10,7 +10,7 @@ import type { Locator } from '@playwright/test';
  * @param input - the text input inside it (or the field itself)
  * @param kind - 'search' adds the glyph, 'text' has none
  * @param options.multiline - a textarea field grows with its rows, so it is at least one line tall
- * @param options.height - a field drawn in a larger size on purpose (the media Link tab's 48px field)
+ * @param options.height - a field drawn in a larger size on purpose (the media link field, 40px)
  * @param options.radius - a field at a rounded card's corner takes the card's inner radius instead of the field role
  */
 export const expectBlokField = async (

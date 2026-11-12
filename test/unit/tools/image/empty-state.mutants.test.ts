@@ -44,31 +44,27 @@ describe('image empty state mutants', () => {
       hintUpload: 'i18n:tools.image.emptyHintUpload',
       hintLink: 'i18n:tools.image.emptyHintLink',
       dropAnywhere: 'i18n:tools.image.emptyDropAnywhere',
-      upload: 'i18n:tools.image.emptyUpload',
+      cancelLink: 'Cancel',
       embed: 'i18n:tools.image.emptyLink',
       chooseFile: 'i18n:tools.image.emptyChooseFile',
-      orDropHere: 'i18n:tools.image.emptyOrDropHere',
       dropToUpload: 'i18n:tools.image.emptyDropToUpload',
       urlPlaceholder: 'i18n:tools.image.emptyUrlPlaceholder',
       urlAria: 'i18n:tools.image.emptyUrlAria',
       submit: 'i18n:tools.image.emptyInsert',
-      sourceAria: 'i18n:tools.image.emptySourceAria',
     });
   });
 
-  it('lets the caller override the four labels it may pass itself', () => {
+  it('lets the caller override the three labels it may pass itself', () => {
     renderEmptyState({
       onFile: vi.fn(),
       onUrl: vi.fn(),
       i18n: echoI18n(),
-      uploadLabel: 'Mine upload',
       embedLabel: 'Mine embed',
       embedPlaceholder: 'Mine placeholder',
       submitLabel: 'Mine submit',
     });
 
     expect(passed().labels).toMatchObject({
-      upload: 'Mine upload',
       embed: 'Mine embed',
       urlPlaceholder: 'Mine placeholder',
       submit: 'Mine submit',

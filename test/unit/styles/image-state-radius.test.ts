@@ -35,11 +35,7 @@ describe('Image state card radius (src/styles/main.css)', () => {
     expect(extractRadius(findRuleBody(css, selector))).toBe('var(--blok-radius-block)');
   });
 
-  it('empty-state source tabs sit concentric inside the card header', () => {
-    expect(extractRadius(findRuleBody(css, '.blok-media-empty__tab'))).toBe('var(--blok-radius-inner, var(--blok-radius-control))');
-  });
-
-  it('empty-state inner panel sits concentric inside the card, not at the card radius', () => {
-    expect(extractRadius(findRuleBody(css, '.blok-media-empty__panel'))).toBe('var(--blok-radius-inner, var(--blok-radius-block))');
+  it.each(['.blok-media-empty__choose', '.blok-media-empty__from-link'])('empty-state button %s uses the control radius', (selector) => {
+    expect(extractRadius(findRuleBody(css, selector))).toBe('var(--blok-radius-control)');
   });
 });

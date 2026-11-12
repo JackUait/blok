@@ -283,7 +283,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2135 + 147 + 525 + 5 closure for all 2812 keys', () => {
+  it('rebuilds a disjoint 2121 + 147 + 539 + 5 closure for all 2812 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -523,7 +523,10 @@ describe('current English catalog lifecycle coverage', () => {
       // +23: the page cover's 20 title.cover* keys and the database description's 3, by literal.
       // +11: the one-surface media empty state's sentences (tools.<tool>.emptyHint, emptyHintUpload, tools.image.emptyHintLink, emptyDropAnywhere, tools.audio.coverHint), by literal.
       // +1: the block menu's Move to item (blockSettings.moveTo), by literal.
-      'executable-literal': 2135,
+      // -14: the media empty state lost its tabs, hint line and tablist name: tools.<tool>.emptyUpload,
+      // emptyOrDropHere (tools.file.emptyDropHint), emptySourceAria, tools.audio.coverUpload and
+      // coverSourceAria have no caller now. Still shipped: they are in BlokMessageKey since 2.1.0.
+      'executable-literal': 2121,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -614,7 +617,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the date filter's "Custom date" row, tools.database.filterDateCustom (chip t() prefixes the namespace).
       // -3: chartTypeNumber, duplicateView and deleteView moved to executable-literal (dashboard menus).
       // -3: tools.video.back, speedDecrease and speedIncrease have a caller again (the speed submenu).
-      'registered-namespace-compatible': 525,
+      // +14: the retired media empty state keys above.
+      'registered-namespace-compatible': 539,
       'catalog-only': 5,
     });
     expect(

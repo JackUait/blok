@@ -463,7 +463,7 @@ describe('Task02/28 inputFields scratch candidate', () => {
         clickPageRename();
       }
       if (sample.state === 'empty link form') {
-        requireElement(block, '[data-blok-media-empty-state] [data-tab="embed"]').click();
+        requireElement(block, '[data-blok-media-empty-state] [data-action="from-link"]').click();
       }
       if (['toggle open', 'toggle closed', 'rich toggle open', 'rich toggle closed'].includes(sample.state)) {
         instance.moduleInstances.ViewStateAPI.methods.set('b', 'open', sample.state.endsWith('open'));

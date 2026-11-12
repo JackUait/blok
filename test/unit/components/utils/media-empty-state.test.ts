@@ -11,15 +11,17 @@ import type { I18nInstance } from '../../../../src/components/utils/tools';
 
 const LABELS: MediaEmptyStateOptions['labels'] = {
   add: 'Add a video',
-  upload: 'Upload',
-  embed: 'Link',
+  hint: 'Drag a video here, choose one, or paste a link.',
+  hintUpload: 'Drag a video here or choose one.',
+  hintLink: 'Paste a link to it below.',
+  dropAnywhere: 'Let go anywhere in this block.',
+  cancelLink: 'Cancel',
+  embed: 'From a link',
   chooseFile: 'Choose file',
-  orDropHere: 'or drop a video here',
-  dropToUpload: 'Drop to upload',
+  dropToUpload: 'Drop to add',
   urlPlaceholder: 'Paste a video URL…',
   urlAria: 'Video URL',
-  submit: 'Insert',
-  sourceAria: 'Video source',
+  submit: 'Add',
 };
 
 const render = (overrides: Partial<MediaEmptyStateOptions> = {}) =>
@@ -31,66 +33,373 @@ const render = (overrides: Partial<MediaEmptyStateOptions> = {}) =>
     ...overrides,
   });
 
-const fileDrag = (type: string): Event => {
+const fileDrag = (type: string, files: File[] = []): Event => {
   const ev = new Event(type, { bubbles: true, cancelable: true });
   Object.defineProperty(ev, 'dataTransfer', {
-    value: { types: ['Files'], files: [], dropEffect: 'none' },
+    value: { types: ['Files'], files, dropEffect: 'none' },
   });
   return ev;
 };
 
-const card = (el: HTMLElement): HTMLElement => {
-  const found = el.querySelector<HTMLElement>('.blok-media-empty__card');
-  if (!found) throw new Error('card missing');
+const need = <T extends Element>(root: ParentNode, selector: string): T => {
+  const found = root.querySelector<T>(selector);
+  if (!found) throw new Error(`${selector} missing`);
   return found;
 };
 
-const hintText = (el: HTMLElement): string | null =>
-  el.querySelector('.blok-media-empty__hint')?.textContent ?? null;
+const card = (el: HTMLElement): HTMLElement => need<HTMLElement>(el, '.blok-media-empty__card');
+const title = (el: HTMLElement): string | null => need(el, '.blok-media-empty__title').textContent;
+const hint = (el: HTMLElement): string | null => need(el, '.blok-media-empty__hint-text').textContent;
+const urlInput = (el: HTMLElement): HTMLInputElement => need<HTMLInputElement>(el, 'input[type="url"]');
+const fromLink = (el: HTMLElement): HTMLButtonElement => need<HTMLButtonElement>(el, '[data-action="from-link"]');
+const cancelLink = (el: HTMLElement): HTMLButtonElement => need<HTMLButtonElement>(el, '[data-action="cancel-link"]');
+const submit = (el: HTMLElement): HTMLButtonElement => need<HTMLButtonElement>(el, '[data-action="submit-url"]');
+const type = (el: HTMLElement, value: string, inputType = 'insertText'): void => {
+  const input = urlInput(el);
+  input.value = value;
+  input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType }));
+};
+const mount = (el: HTMLElement): HTMLElement => {
+  document.body.append(el);
+  return el;
+};
 
-describe('renderMediaEmptyState preview', () => {
+describe('one surface', () => {
   beforeEach(() => vi.clearAllMocks());
-  afterEach(() => vi.restoreAllMocks());
-
-  it.each(['video', 'audio', 'image', 'file'] as const)('draws a decorative %s preview instead of the icon tile', (kind) => {
-    const el = render({ preview: kind });
-    const preview = el.querySelector(`[data-blok-media-preview="${kind}"]`);
-
-    expect(preview).not.toBeNull();
-    expect(preview?.getAttribute('aria-hidden')).toBe('true');
-    expect(preview?.querySelector('svg')).not.toBeNull();
-    expect(el.querySelector('.blok-media-empty__tile')).toBeNull();
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.replaceChildren();
   });
 
-  it('keeps the small icon tile when no preview is asked for', () => {
+  it('builds one surface: no tablist, no tabs, no header label, no inner panel', () => {
+    const el = render({ preview: 'video' });
+
+    expect(el.querySelector('[role="tablist"], [role="tab"], [role="tabpanel"], [data-tab]')).toBeNull();
+    expect(el.querySelector('.blok-media-empty__header, .blok-media-empty__label, .blok-media-empty__panel')).toBeNull();
+    expect(card(el).getAttribute('role')).toBe('group');
+    expect(card(el).getAttribute('aria-label')).toBe('Add a video');
+    expect(card(el).getAttribute('data-mode')).toBe('upload');
+  });
+
+  it('shows the title, then the sentence, then both actions', () => {
+    const el = render({ preview: 'video' });
+
+    expect(title(el)).toBe('Add a video');
+    expect(hint(el)).toBe('Drag a video here, choose one, or paste a link.');
+    expect(need(el, '[data-action="choose-file"]').textContent?.trim()).toBe('Choose file');
+    expect(fromLink(el).textContent?.trim()).toBe('From a link');
+  });
+
+  it.each([
+    ['both', 'Drag a video here, choose one, or paste a link.'],
+    ['upload', 'Drag a video here or choose one.'],
+    ['url', 'Paste a link to it below.'],
+  ] as const)('with sources "%s" the sentence fits what is offered', (sources, sentence) => {
+    expect(hint(render({ sources }))).toBe(sentence);
+  });
+
+  it('falls back to the main sentence when a block has no single-source one', () => {
+    const labels = { ...LABELS, hintUpload: undefined, hintLink: undefined };
+
+    expect(hint(render({ sources: 'upload', labels }))).toBe(LABELS.hint);
+    expect(hint(render({ sources: 'url', labels }))).toBe(LABELS.hint);
+  });
+
+  it('puts the size limit after the sentence, and nothing when there is no limit', () => {
+    const labels = { ...LABELS, maxSize: (size: string) => `max ${size}` };
+
+    expect(render({ labels }).querySelector('.blok-media-empty__meta')).toBeNull();
+    expect(need(render({ labels, maxSize: 10 * 1024 * 1024 }), '.blok-media-empty__hint > .blok-media-empty__meta').textContent).toBe('max 10 MB');
+  });
+
+  it('owns the keyboard of its buttons and link field, so Enter on a button is a click and not a new block', () => {
+    const el = render();
+    const owner = need(el, '[data-blok-keyboard-owner]');
+
+    expect(owner.contains(fromLink(el))).toBe(true);
+    expect(owner.contains(urlInput(el))).toBe(true);
+    // The surface itself stays Blok's: arrows and Escape still leave the block.
+    expect(card(el).hasAttribute('data-blok-keyboard-owner')).toBe(false);
+  });
+
+  it('has exactly one file input, from the first render', () => {
     const el = render();
 
-    expect(el.querySelector('[data-blok-media-preview]')).toBeNull();
-    expect(el.querySelector('.blok-media-empty__tile')).not.toBeNull();
+    expect(el.querySelectorAll('input[type="file"]')).toHaveLength(1);
+    expect(need<HTMLInputElement>(el, '[data-blok-testid="file-input"]').accept).toBe('video/mp4');
   });
 
-  it('says "drop to upload" under the button while a file hovers the card', () => {
-    const el = render({ preview: 'video' });
+  it('opens the file picker from the Choose button, from a click on the surface, and from Enter on it', () => {
+    const el = render();
+    const picker = vi.spyOn(need<HTMLInputElement>(el, 'input[type="file"]'), 'click').mockImplementation(() => undefined);
 
-    card(el).dispatchEvent(fileDrag('dragenter'));
-    expect(hintText(el)).toBe('Drop to upload');
+    need<HTMLButtonElement>(el, '[data-action="choose-file"]').click();
+    card(el).click();
+    card(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 
-    card(el).dispatchEvent(fileDrag('dragleave'));
-    expect(hintText(el)).toBe('or drop a video here');
-  });
-
-  it('restores the hint after a drop', () => {
-    const el = render({ preview: 'video' });
-
-    card(el).dispatchEvent(fileDrag('dragenter'));
-    card(el).dispatchEvent(fileDrag('drop'));
-
-    expect(hintText(el)).toBe('or drop a video here');
-    expect(card(el).classList.contains('is-dragover')).toBe(false);
+    expect(picker).toHaveBeenCalledTimes(3);
   });
 });
 
-describe('media tools pick their own preview', () => {
+describe('one source only', () => {
+  it('an upload-only block has no link button and no link field', () => {
+    const el = render({ sources: 'upload' });
+
+    expect(el.querySelector('[data-action="from-link"]')).toBeNull();
+    expect(el.querySelector('input[type="url"]')).toBeNull();
+    expect(el.querySelector('[data-action="choose-file"]')).not.toBeNull();
+  });
+
+  it('a link-only block starts on the field, with no cross, no buttons and no file input', () => {
+    const el = render({ sources: 'url' });
+
+    expect(card(el).getAttribute('data-mode')).toBe('link');
+    expect(urlInput(el).closest('[inert]')).toBeNull();
+    expect(el.querySelector('[data-action="cancel-link"]')).toBeNull();
+    expect(el.querySelector('[data-action="choose-file"], [data-action="from-link"]')).toBeNull();
+    expect(el.querySelector('input[type="file"]')).toBeNull();
+  });
+
+  it('Escape does nothing in a link-only block', () => {
+    const el = render({ sources: 'url' });
+
+    type(el, 'https://example.com/a.mp4');
+    urlInput(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(card(el).getAttribute('data-mode')).toBe('link');
+    expect(urlInput(el).value).toBe('https://example.com/a.mp4');
+  });
+});
+
+describe('link field', () => {
+  afterEach(() => document.body.replaceChildren());
+
+  it('"From a link" switches to the field in place and focuses it', async () => {
+    const el = mount(render({ preview: 'image' }));
+    const input = urlInput(el);
+    const actions = need(el, '.blok-media-empty__actions');
+
+    expect(input.closest('[inert]')).not.toBeNull();
+    fromLink(el).click();
+    await Promise.resolve();
+
+    expect(card(el).getAttribute('data-mode')).toBe('link');
+    expect(urlInput(el)).toBe(input);
+    expect(input.closest('[inert]')).toBeNull();
+    expect(actions.hasAttribute('inert')).toBe(true);
+    expect(actions.parentElement).toBe(input.closest('.blok-media-empty__embed-bar')?.parentElement);
+    expect(input).toHaveFocus();
+  });
+
+  it('is the shared text field: the input sits directly in a data-blok-field="text" bar', () => {
+    const el = render();
+
+    expect(urlInput(el).parentElement?.getAttribute('data-blok-field')).toBe('text');
+    expect(urlInput(el).placeholder).toBe('Paste a video URL…');
+    expect(urlInput(el).getAttribute('aria-label')).toBe('Video URL');
+  });
+
+  it.each(['cross', 'Escape'] as const)('the %s clears the link, goes back to the buttons and focuses "From a link"', async (how) => {
+    const el = mount(render());
+
+    fromLink(el).click();
+    await Promise.resolve();
+    type(el, 'https://example.com/a.mp4');
+    if (how === 'cross') cancelLink(el).click();
+    else urlInput(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(card(el).getAttribute('data-mode')).toBe('upload');
+    expect(urlInput(el).value).toBe('');
+    expect(need(el, '.blok-media-empty__embed-bar').getAttribute('data-valid')).toBe('false');
+    expect(fromLink(el)).toHaveFocus();
+  });
+
+  it('names the cross for assistive tech', () => {
+    expect(cancelLink(render()).getAttribute('aria-label')).toBe('Cancel');
+  });
+
+  it('Add stays disabled until the link is valid, then Enter or a click adds it', () => {
+    const onUrl = vi.fn();
+    const el = render({ onUrl });
+    const bar = need(el, '.blok-media-empty__embed-bar');
+
+    fromLink(el).click();
+    expect(bar.getAttribute('data-valid')).toBe('false');
+    expect(submit(el).getAttribute('aria-disabled')).toBe('true');
+    submit(el).click();
+    urlInput(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    expect(onUrl).not.toHaveBeenCalled();
+
+    type(el, ' https://example.com/a.mp4 ');
+    expect(bar.getAttribute('data-valid')).toBe('true');
+    expect(submit(el).getAttribute('aria-disabled')).toBe('false');
+    expect(submit(el).textContent).toContain('Add');
+
+    urlInput(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    submit(el).click();
+    expect(onUrl.mock.calls).toEqual([['https://example.com/a.mp4'], ['https://example.com/a.mp4']]);
+  });
+
+  it('a pasted link waits for Enter', () => {
+    const onUrl = vi.fn();
+    const el = render({ onUrl });
+
+    fromLink(el).click();
+    type(el, 'https://example.com/a.mp4', 'insertFromPaste');
+
+    expect(onUrl).not.toHaveBeenCalled();
+  });
+
+  it('keeps the chain icon: no letter tile, no brand logo, no type badge', async () => {
+    const el = render({ preview: 'image', acceptTypes: ['image/jpeg'] });
+    const icon = need(el, '.blok-media-empty__embed-icon');
+
+    fromLink(el).click();
+    type(el, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    await vi.dynamicImportSettled();
+    type(el, 'https://images.unsplash.com/photo.jpg');
+
+    expect(icon.querySelector('svg')).not.toBeNull();
+    expect(icon.children).toHaveLength(1);
+    expect(icon.hasAttribute('data-site')).toBe(false);
+    expect(icon.hasAttribute('data-logo')).toBe(false);
+    expect(el.querySelector('.blok-media-empty__embed-host, .blok-media-empty__embed-type, [data-brand]')).toBeNull();
+  });
+
+  it('draws the link like an address bar: faded protocol, strong domain, muted path', () => {
+    const el = render();
+
+    fromLink(el).click();
+    type(el, 'https://www.youtube.com/watch?v=1');
+    const part = (name: string): string | null | undefined =>
+      el.querySelector(`.blok-media-empty__embed-mirror .blok-media-empty__url-${name}`)?.textContent;
+
+    expect([part('proto'), part('www'), part('host'), part('path')]).toEqual(['https://', 'www.', 'youtube.com', '/watch?v=1']);
+    expect(need(el, '.blok-media-empty__embed-mirror').getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('shows an error under the surface and marks the field, and editing clears it', () => {
+    const el = render();
+    const error = need<HTMLElement>(el, '[data-role="error"]');
+
+    fromLink(el).click();
+    el.setError('That link did not work');
+    expect(error.hidden).toBe(false);
+    expect(error.textContent).toBe('That link did not work');
+    expect(urlInput(el).getAttribute('aria-invalid')).toBe('true');
+    expect(urlInput(el).getAttribute('aria-describedby')).toBe(error.id);
+
+    type(el, 'https://example.com/b.mp4');
+    expect(error.hidden).toBe(true);
+    expect(urlInput(el).hasAttribute('aria-invalid')).toBe(false);
+  });
+});
+
+describe('dragging a file over the surface', () => {
+  it('swaps the title and the sentence, and puts them back on leave', () => {
+    const el = render({ preview: 'video' });
+
+    card(el).dispatchEvent(fileDrag('dragenter'));
+    expect(card(el).classList.contains('is-dragover')).toBe(true);
+    expect([title(el), hint(el)]).toEqual(['Drop to add', 'Let go anywhere in this block.']);
+
+    card(el).dispatchEvent(fileDrag('dragleave'));
+    expect(card(el).classList.contains('is-dragover')).toBe(false);
+    expect([title(el), hint(el)]).toEqual(['Add a video', 'Drag a video here, choose one, or paste a link.']);
+  });
+
+  it('hides the size limit while dragging and restores it after the drop', () => {
+    const el = render({ maxSize: 1024 * 1024, labels: { ...LABELS, maxSize: (size) => `max ${size}` } });
+    const meta = need<HTMLElement>(el, '.blok-media-empty__meta');
+
+    card(el).dispatchEvent(fileDrag('dragenter'));
+    expect(meta.hidden).toBe(true);
+
+    card(el).dispatchEvent(fileDrag('drop'));
+    expect(meta.hidden).toBe(false);
+    expect(title(el)).toBe('Add a video');
+    expect(card(el).classList.contains('is-dragover')).toBe(false);
+  });
+
+  it('stays in the drag state until the pointer has left every nested element', () => {
+    const el = render();
+
+    card(el).dispatchEvent(fileDrag('dragenter'));
+    card(el).dispatchEvent(fileDrag('dragenter'));
+    card(el).dispatchEvent(fileDrag('dragleave'));
+    expect(card(el).classList.contains('is-dragover')).toBe(true);
+
+    card(el).dispatchEvent(fileDrag('dragleave'));
+    expect(card(el).classList.contains('is-dragover')).toBe(false);
+  });
+
+  it('uploads a file dropped while the link field is open', () => {
+    const onFile = vi.fn();
+    const el = render({ onFile });
+    const file = new File(['x'], 'clip.mp4', { type: 'video/mp4' });
+
+    fromLink(el).click();
+    type(el, 'https://example.com/half-typed');
+    card(el).dispatchEvent(fileDrag('drop', [file]));
+
+    expect(onFile).toHaveBeenCalledWith(file);
+  });
+
+  it('ignores drags and drops on a link-only block', () => {
+    const onFile = vi.fn();
+    const el = render({ sources: 'url', onFile });
+
+    card(el).dispatchEvent(fileDrag('dragenter'));
+    card(el).dispatchEvent(fileDrag('drop', [new File(['x'], 'clip.mp4', { type: 'video/mp4' })]));
+
+    expect(card(el).classList.contains('is-dragover')).toBe(false);
+    expect(onFile).not.toHaveBeenCalled();
+  });
+});
+
+describe('the drawing', () => {
+  it.each(['video', 'audio', 'image', 'file'] as const)('draws a decorative %s drawing as the first thing on the surface', (kind) => {
+    const el = render({ preview: kind });
+    const preview = need(el, `.blok-media-empty__card > [data-blok-media-preview="${kind}"]`);
+
+    expect(card(el).firstElementChild).toBe(preview);
+    expect(preview.getAttribute('aria-hidden')).toBe('true');
+    expect(preview.querySelector('svg')).not.toBeNull();
+    expect(card(el).getAttribute('data-preview')).toBe(kind);
+  });
+
+  it('draws nothing at all when no drawing is asked for', () => {
+    const el = render();
+
+    expect(el.querySelector('[data-blok-media-preview], .blok-media-empty__tile')).toBeNull();
+    expect(card(el).hasAttribute('data-preview')).toBe(false);
+  });
+
+  it('is the very same node in both modes, and the link field never puts it in upload mode', () => {
+    const el = render({ preview: 'image' });
+    const drawing = need<HTMLElement>(el, '[data-blok-media-preview]');
+
+    fromLink(el).click();
+    type(el, 'https://images.unsplash.com/photo.jpg');
+    expect(need(el, '[data-blok-media-preview]')).toBe(drawing);
+    expect(drawing.hasAttribute('data-uploading')).toBe(false);
+    expect(drawing.style.getPropertyValue('--blok-media-progress')).toBe('');
+
+    cancelLink(el).click();
+    expect(need(el, '[data-blok-media-preview]')).toBe(drawing);
+  });
+
+  it('catches a pasted valid link', () => {
+    const el = render({ preview: 'image' });
+
+    fromLink(el).click();
+    type(el, 'https://images.unsplash.com/photo.jpg', 'insertFromPaste');
+
+    expect(need(el, '[data-blok-media-preview]').classList.contains('is-caught')).toBe(true);
+  });
+});
+
+describe('media tools pick their own drawing', () => {
   const i18n = {
     t: (key: string) => key,
     has: () => false,
@@ -117,30 +426,25 @@ describe('media tools pick their own preview', () => {
     expect(el.textContent).not.toMatch(/MP4|WEBM|QUICKTIME|MPEG|MP3|OGG|PNG|JPG|JPEG|PDF|ZIP/);
     expect(el.querySelector('.blok-media-empty__meta')).toBeNull();
   });
-});
 
-describe('upload panel meta line', () => {
-  it('shows only the size limit, without formats', () => {
-    const el = render({
-      acceptTypes: ['video/mp4', 'video/webm'],
-      maxSize: 10 * 1024 * 1024,
-      labels: { ...LABELS, maxSize: (size) => `Up to ${size}` },
-    });
-
-    expect(el.querySelector('.blok-media-empty__meta')?.textContent).toBe('Up to 10 MB');
+  it.each([
+    ['video', () => renderVideo(handlers), 'Drag a video here, choose one from your device, or paste a link.'],
+    ['audio', () => renderAudio(handlers), 'Drag an audio file here, choose one from your device, or paste a link.'],
+    ['image', () => renderImage(handlers), 'Drag a picture here, choose one from your device, or paste a link.'],
+  ] as const)('%s has its own sentence', (_kind, make, sentence) => {
+    expect(hint(make())).toBe(sentence);
   });
 });
 
-describe('preview depth follows the pointer', () => {
+describe('drawing depth follows the pointer', () => {
   const nextFrame = (): Promise<void> => new Promise((r) => requestAnimationFrame(() => r()));
 
-  const setup = (): { panel: HTMLElement; preview: HTMLElement } => {
+  const setup = (): { surface: HTMLElement; preview: HTMLElement } => {
     const el = render({ preview: 'image' });
-    const panel = el.querySelector<HTMLElement>('.blok-media-empty__panel');
-    const preview = el.querySelector<HTMLElement>('[data-blok-media-preview]');
-    if (!panel || !preview) throw new Error('panel or preview missing');
-    vi.spyOn(panel, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 200, 100));
-    return { panel, preview };
+    const surface = card(el);
+    const preview = need<HTMLElement>(el, '[data-blok-media-preview]');
+    vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 200, 100));
+    return { surface, preview };
   };
 
   const move = (target: HTMLElement, x: number, y: number): void => {
@@ -148,13 +452,14 @@ describe('preview depth follows the pointer', () => {
   };
 
   afterEach(() => {
+    vi.restoreAllMocks();
     Reflect.deleteProperty(window, 'matchMedia');
   });
 
   it('leans toward the pointer, from -1 at one edge to 1 at the other', async () => {
-    const { panel, preview } = setup();
+    const { surface, preview } = setup();
 
-    move(panel, 200, 0);
+    move(surface, 200, 0);
     await nextFrame();
 
     expect(preview.style.getPropertyValue('--mx')).toBe('1');
@@ -162,11 +467,11 @@ describe('preview depth follows the pointer', () => {
   });
 
   it('settles back to center when the pointer leaves', async () => {
-    const { panel, preview } = setup();
+    const { surface, preview } = setup();
 
-    move(panel, 50, 75);
+    move(surface, 50, 75);
     await nextFrame();
-    panel.dispatchEvent(new MouseEvent('pointerleave'));
+    surface.dispatchEvent(new MouseEvent('pointerleave'));
 
     expect(preview.style.getPropertyValue('--mx')).toBe('0');
     expect(preview.style.getPropertyValue('--my')).toBe('0');
@@ -177,22 +482,19 @@ describe('preview depth follows the pointer', () => {
       configurable: true,
       value: (query: string) => ({ matches: query.includes('reduce'), media: query }),
     });
-    const { panel, preview } = setup();
+    const { surface, preview } = setup();
 
-    move(panel, 200, 0);
+    move(surface, 200, 0);
     await nextFrame();
 
     expect(preview.style.getPropertyValue('--mx')).toBe('');
   });
 });
 
-describe('preview springs home when the pointer leaves', () => {
-  const setup = (): { panel: HTMLElement; preview: HTMLElement } => {
+describe('drawing springs home when the pointer leaves', () => {
+  const setup = (): { surface: HTMLElement; preview: HTMLElement } => {
     const el = render({ preview: 'video' });
-    const panel = el.querySelector<HTMLElement>('.blok-media-empty__panel');
-    const preview = el.querySelector<HTMLElement>('[data-blok-media-preview]');
-    if (!panel || !preview) throw new Error('panel or preview missing');
-    return { panel, preview };
+    return { surface: card(el), preview: need<HTMLElement>(el, '[data-blok-media-preview]') };
   };
 
   beforeEach(() => {
@@ -204,19 +506,19 @@ describe('preview springs home when the pointer leaves', () => {
     Reflect.deleteProperty(window, 'matchMedia');
   });
 
-  it('plays the demo while the pointer is over the panel', () => {
-    const { panel, preview } = setup();
+  it('plays the demo while the pointer is over the surface', () => {
+    const { surface, preview } = setup();
 
-    panel.dispatchEvent(new MouseEvent('pointerenter'));
+    surface.dispatchEvent(new MouseEvent('pointerenter'));
 
     expect(preview.hasAttribute('data-hover')).toBe(true);
   });
 
   it('swaps the demo for an exit that clears once it has played', () => {
-    const { panel, preview } = setup();
-    panel.dispatchEvent(new MouseEvent('pointerenter'));
+    const { surface, preview } = setup();
+    surface.dispatchEvent(new MouseEvent('pointerenter'));
 
-    panel.dispatchEvent(new MouseEvent('pointerleave'));
+    surface.dispatchEvent(new MouseEvent('pointerleave'));
 
     expect(preview.hasAttribute('data-hover')).toBe(false);
     expect(preview.hasAttribute('data-leaving')).toBe(true);
@@ -227,11 +529,11 @@ describe('preview springs home when the pointer leaves', () => {
   });
 
   it('drops the exit and replays the demo when the pointer comes back', () => {
-    const { panel, preview } = setup();
-    panel.dispatchEvent(new MouseEvent('pointerenter'));
-    panel.dispatchEvent(new MouseEvent('pointerleave'));
+    const { surface, preview } = setup();
+    surface.dispatchEvent(new MouseEvent('pointerenter'));
+    surface.dispatchEvent(new MouseEvent('pointerleave'));
 
-    panel.dispatchEvent(new MouseEvent('pointerenter'));
+    surface.dispatchEvent(new MouseEvent('pointerenter'));
 
     expect(preview.hasAttribute('data-leaving')).toBe(false);
     expect(preview.hasAttribute('data-hover')).toBe(true);
@@ -246,200 +548,12 @@ describe('preview springs home when the pointer leaves', () => {
       configurable: true,
       value: (query: string) => ({ matches: query.includes('reduce'), media: query }),
     });
-    const { panel, preview } = setup();
-    panel.dispatchEvent(new MouseEvent('pointerenter'));
+    const { surface, preview } = setup();
+    surface.dispatchEvent(new MouseEvent('pointerenter'));
 
-    panel.dispatchEvent(new MouseEvent('pointerleave'));
+    surface.dispatchEvent(new MouseEvent('pointerleave'));
 
     expect(preview.hasAttribute('data-hover')).toBe(false);
     expect(preview.hasAttribute('data-leaving')).toBe(false);
-  });
-});
-
-describe('link tab', () => {
-  const openLink = (overrides: Partial<MediaEmptyStateOptions> = {}): HTMLElement => {
-    const el = render({ preview: 'image', acceptTypes: ['image/jpeg', 'image/png'], ...overrides });
-    el.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
-    return el;
-  };
-
-  const type = (el: HTMLElement, value: string, inputType = 'insertText'): void => {
-    const input = el.querySelector<HTMLInputElement>('input[type="url"]');
-    if (!input) throw new Error('url input missing');
-    input.value = value;
-    input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType }));
-  };
-
-  const drawing = (el: HTMLElement): HTMLElement | null =>
-    el.querySelector<HTMLElement>('.blok-media-empty__panel > [data-blok-media-preview="image"]');
-
-  const host = (el: HTMLElement): HTMLElement | null =>
-    el.querySelector<HTMLElement>('.blok-media-empty__embed-host');
-
-  it('keeps the full-size drawing on stage above a large field, pale until the link is valid', () => {
-    const el = openLink();
-
-    expect(drawing(el)?.style.getPropertyValue('--blok-media-progress')).toBe('0');
-    expect(el.querySelector('.blok-media-empty__embed-bar')?.classList.contains('blok-media-empty__embed-bar--large')).toBe(true);
-    expect(el.querySelector('.blok-media-empty__embed-bar [data-blok-media-preview]')).toBeNull();
-    expect(el.querySelector('.blok-media-empty__embed-icon svg')).not.toBeNull();
-  });
-
-  it('completes the drawing once the link is valid, and resets it when cleared', () => {
-    const el = openLink();
-
-    type(el, 'https://images.unsplash.com/photo.jpg');
-    expect(drawing(el)?.style.getPropertyValue('--blok-media-progress')).toBe('1');
-
-    type(el, '');
-    expect(drawing(el)?.style.getPropertyValue('--blok-media-progress')).toBe('0');
-  });
-
-  it('reads a file link back as its accepted type, without repeating the domain', () => {
-    const el = openLink();
-
-    type(el, 'https://images.unsplash.com/photo.jpg');
-
-    expect(host(el)?.hidden).toBe(false);
-    expect(el.querySelector('.blok-media-empty__embed-type')?.textContent).toBe('JPG');
-    expect(el.querySelector('.blok-media-empty__embed-domain')).toBeNull();
-  });
-
-  it('shows a known provider\'s own logo on the left, never its name on the right', async () => {
-    const el = openLink();
-
-    type(el, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
-    await vi.dynamicImportSettled();
-
-    expect(el.querySelector('.blok-media-empty__embed-icon [data-brand="youtube"]')).not.toBeNull();
-    expect(el.querySelector('.blok-media-empty__embed-icon')?.hasAttribute('data-logo')).toBe(true);
-    expect(el.querySelector('.blok-media-empty__embed-provider')).toBeNull();
-    expect(host(el)?.hidden).toBe(true);
-  });
-
-  it('says nothing beside a link when there is nothing new to say', () => {
-    const el = openLink();
-
-    type(el, 'https://example.com/gallery');
-
-    expect(host(el)?.hidden).toBe(true);
-  });
-
-  it('draws the link like an address bar: faded protocol, strong domain, muted path', () => {
-    const el = openLink();
-
-    type(el, 'https://www.youtube.com/watch?v=1');
-    const part = (name: string): string | null | undefined =>
-      el.querySelector(`.blok-media-empty__embed-mirror .blok-media-empty__url-${name}`)?.textContent;
-
-    expect([part('proto'), part('www'), part('host'), part('path')]).toEqual(['https://', 'www.', 'youtube.com', '/watch?v=1']);
-    expect(el.querySelector('.blok-media-empty__embed-mirror')?.getAttribute('aria-hidden')).toBe('true');
-  });
-
-  it('gives the site a face once the link is valid, from its registrable domain', () => {
-    const el = openLink();
-    const icon = (): HTMLElement | null => el.querySelector<HTMLElement>('.blok-media-empty__embed-icon');
-
-    type(el, 'https://www.bbc.co.uk/news/pic.png');
-    expect(icon()?.getAttribute('data-site')).toBe('B');
-
-    type(el, 'not a link');
-    expect(icon()?.hasAttribute('data-site')).toBe(false);
-  });
-
-  it('hides the read-back while the link is not valid yet', () => {
-    const el = openLink();
-
-    type(el, 'https://images.unsplash.com/photo.jpg');
-    type(el, 'not a link');
-
-    expect(host(el)?.hidden).toBe(true);
-  });
-
-  it('catches a pasted valid link', () => {
-    const el = openLink();
-
-    type(el, 'https://images.unsplash.com/photo.jpg', 'insertFromPaste');
-
-    expect(drawing(el)?.classList.contains('is-caught')).toBe(true);
-  });
-
-  it('keeps the plain link icon when no drawing is asked for', () => {
-    const el = render();
-    el.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
-
-    expect(el.querySelector('.blok-media-empty__embed-bar [data-blok-media-preview]')).toBeNull();
-    expect(el.querySelector('.blok-media-empty__embed-icon svg')).not.toBeNull();
-    expect(el.querySelector('.blok-media-empty__embed-bar')?.classList.contains('blok-media-empty__embed-bar--large')).toBe(false);
-  });
-});
-
-describe('switching tabs', () => {
-  it('keeps the very same drawing on stage, so it never re-renders', () => {
-    const el = render({ preview: 'image' });
-    const first = el.querySelector('[data-blok-media-preview]');
-
-    el.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
-    const onLink = el.querySelector('[data-blok-media-preview]');
-    el.querySelector<HTMLButtonElement>('[data-tab="upload"]')?.click();
-    const backOnUpload = el.querySelector('[data-blok-media-preview]');
-
-    expect(first).not.toBeNull();
-    expect(onLink).toBe(first);
-    expect(backOnUpload).toBe(first);
-  });
-
-  it('waits for a link on the Link tab and rests again back on Upload', () => {
-    const el = render({ preview: 'image' });
-    const drawing = el.querySelector<HTMLElement>('[data-blok-media-preview]');
-
-    el.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
-    expect(drawing?.hasAttribute('data-uploading')).toBe(true);
-
-    el.querySelector<HTMLButtonElement>('[data-tab="upload"]')?.click();
-    expect(drawing?.hasAttribute('data-uploading')).toBe(false);
-    expect(drawing?.style.getPropertyValue('--blok-media-progress')).toBe('');
-  });
-});
-
-describe('link tab site face', () => {
-  const openLink = (): HTMLElement => {
-    const el = render({ preview: 'image', acceptTypes: ['image/jpeg'] });
-    el.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
-    return el;
-  };
-  const type = (el: HTMLElement, value: string): void => {
-    const input = el.querySelector<HTMLInputElement>('input[type="url"]');
-    if (!input) throw new Error('url input missing');
-    input.value = value;
-    input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }));
-  };
-  const icon = (el: HTMLElement): HTMLElement | null => el.querySelector<HTMLElement>('.blok-media-empty__embed-icon');
-
-  it('shows a provider\'s mark for its bare site address, not only for an embeddable link', async () => {
-    const el = openLink();
-
-    type(el, 'https://youtube.com/');
-    await vi.dynamicImportSettled();
-
-    expect(icon(el)?.querySelector('[data-brand="youtube"]')).not.toBeNull();
-    expect(icon(el)?.hasAttribute('data-logo')).toBe(true);
-  });
-
-  it('never loads an unknown site\'s own icon, and keeps its letter', async () => {
-    vi.useFakeTimers();
-    try {
-      const el = openLink();
-
-      type(el, 'https://example.com/clip');
-      vi.advanceTimersByTime(2000);
-      await vi.dynamicImportSettled();
-
-      expect(icon(el)?.querySelector('img')).toBeNull();
-      expect(icon(el)?.hasAttribute('data-logo')).toBe(false);
-      expect(icon(el)?.getAttribute('data-site')).toBe('E');
-    } finally {
-      vi.useRealTimers();
-    }
   });
 });

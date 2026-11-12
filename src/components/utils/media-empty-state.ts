@@ -1,205 +1,88 @@
 import type { MediaSource } from '../../../types/tools/media-source';
-import {
-  IconArrowDownLine,
-  IconArrowUp,
-  IconLink,
-  IconUpload,
-} from '../icons';
+import { DATA_ATTR } from '../constants/data-attributes';
+import { IconArrowUp, IconCross, IconLink } from '../icons';
 import { formatBytes } from './format-bytes';
 import { setFieldValidity } from './field-validity';
 import { matchesMime } from './mime-match';
-import { rovingRadioGroup } from './roving-radio-group';
-import { clearPreviewProgress, EXIT_CLEAR_MS, makePreview, setPreviewProgress, springHome, type MediaPreviewKind } from './media-empty-preview';
+import { EXIT_CLEAR_MS, makePreview, springHome, type MediaPreviewKind } from './media-empty-preview';
 import { leanPreview } from './media-preview-3d';
 import { createUrlMirror } from './url-mirror';
-import { matchEmbedService } from '../../tools/link/registry';
-import { brandMarkSlug, brandMarkSlugForUrl } from './brand-mark-services';
 
 /**
- * Shared "empty" uploader surface for media-style block tools (image, file):
- * a card with a header (label + Upload/Link tabs), a dashed dropzone that
- * picks a file, and a Link tab with an inline URL bar. Tools supply their own
- * resolved labels + accepted types; this module owns the markup, styling
- * hooks (`blok-media-empty*`), drag/paste handling, and tab keyboard a11y.
+ * Shared "empty" uploader surface for the media block tools (image, video,
+ * audio, file) and the cover picker: one surface with a drawing, a title, a
+ * sentence and two actions. "From a link" swaps the buttons for a URL field in
+ * the same place. Tools supply their own labels and accepted types; this
+ * module owns the markup, styling hooks (`blok-media-empty*`) and drag/paste
+ * handling.
  */
 
 export interface MediaEmptyStateLabels {
-  /** Header caption, e.g. "Add an image" / "Add a file". */
+  /** Title, e.g. "Add an image" / "Add a file". Also names the surface. */
   add: string;
   /** Sentence under the title when both upload and link are offered. */
-  hint?: string;
+  hint: string;
   /** Sentence for an upload-only block. Falls back to `hint`. */
   hintUpload?: string;
   /** Sentence for a link-only block. Falls back to `hint`. */
   hintLink?: string;
   /** Sentence shown while a file is dragged over the block. */
-  dropAnywhere?: string;
+  dropAnywhere: string;
   /** Name of the button that closes the link field. */
-  cancelLink?: string;
-  /** Upload tab. */
-  upload: string;
-  /** Link/embed tab. */
+  cancelLink: string;
+  /** Button that opens the link field, e.g. "From a link". */
   embed: string;
   /** Primary "Choose file" button. */
   chooseFile: string;
-  /** Hint under the button, e.g. "or drop it here". */
-  orDropHere: string;
-  /** Drop overlay caption shown while dragging a file over the card. */
+  /** Title shown while a file is dragged over the block. */
   dropToUpload: string;
   /** URL field placeholder. */
   urlPlaceholder: string;
   /** URL field aria-label. */
   urlAria: string;
-  /** Submit button on the Link tab. */
+  /** Button that adds the link. */
   submit: string;
-  /** Tablist aria-label, e.g. "Image source". */
-  sourceAria: string;
-  /** Optional formatter for the max-size meta line. */
+  /** Optional formatter for the size limit shown after the sentence. */
   maxSize?: (size: string) => string;
 }
 
 export interface MediaEmptyStateOptions {
   /** Accepted MIME types — drives the file picker. */
   acceptTypes: string[];
-  /** Max file size in bytes — shown under the button when set. */
+  /** Max file size in bytes — shown after the sentence when set. */
   maxSize?: number;
   labels: MediaEmptyStateLabels;
   onFile(file: File): void;
   onUrl(url: string): void;
   /**
    * Which insert sources to expose:
-   * - `'both'` (default): show the Upload and Link tabs.
-   * - `'upload'`: file upload only — the Link tab and URL bar are hidden.
-   * - `'url'`: link/embed only — the Upload dropzone, file picker, and
-   *   drag/paste-to-upload affordances are hidden.
-   * With a single source the tablist is omitted entirely.
+   * - `'both'` (default): the Choose button and "From a link".
+   * - `'upload'`: file upload only — no link button, no URL field.
+   * - `'url'`: link only — the URL field is shown at once; no file picker and
+   *   no drag/paste-to-upload.
    */
   sources?: MediaSource;
-  /**
-   * How the panel transitions when switching Upload/Link tabs:
-   * - `'reflow'` (default): ease the panel height between the two layouts and
-   *   fade the incoming content in. Smooths the inline reflow of image/file
-   *   blocks, where content below the card shifts with the height.
-   * - `'slide'`: keep the height instant and slide + fade the incoming panel in
-   *   from the travel direction. A floating popover (audio cover-picker) has
-   *   nothing reflowing beneath it, so a height tween only reads as lag — the
-   *   directional slide gives the swap personality without the bottom-edge crawl.
-   * - `'none'`: swap instantly with no animation.
-   */
-  swap?: MediaEmptyStateSwap;
-  /**
-   * Outline of the finished block shown in the Upload panel in place of the
-   * small upload icon. Omit it for compact surfaces (the audio cover picker).
-   */
+  /** Drawing of the finished block. Omit it for compact surfaces (the cover picker). */
   preview?: MediaPreviewKind;
 }
-
-export type MediaEmptyStateSwap = 'reflow' | 'slide' | 'none';
 
 /** Re-exported from the public type so the renderer and tools share one source. */
 export type { MediaSource };
 export type { MediaPreviewKind };
 
-const MIME_LABELS: Record<string, string> = {
-  'image/jpeg': 'JPG',
-  'image/jpg': 'JPG',
-  'image/png': 'PNG',
-  'image/gif': 'GIF',
-  'image/webp': 'WebP',
-  'image/svg+xml': 'SVG',
-  'image/avif': 'AVIF',
-  'image/heic': 'HEIC',
-  'image/heif': 'HEIF',
-  'image/bmp': 'BMP',
-  'image/tiff': 'TIFF',
-  'image/x-icon': 'ICO',
-  'application/pdf': 'PDF',
-  'application/zip': 'ZIP',
-};
-
-function mimeToLabel(mime: string): string {
-  const key = mime.toLowerCase().trim();
-  if (MIME_LABELS[key]) return MIME_LABELS[key];
-  const slash = key.indexOf('/');
-  const tail = slash >= 0 ? key.slice(slash + 1) : key;
-  return tail.replace(/^x-/, '').split('+')[0].toUpperCase();
-}
-
-function parseLink(raw: string): URL | null {
-  const value = raw.trim();
-  try {
-    return new URL(/^[a-z][\w+.-]*:\/\//i.test(value) ? value : `https://${value}`);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Where a typed link points: its registrable domain ("images.unsplash.com" is
- * "unsplash.com", "www.bbc.co.uk" is "bbc.co.uk") and, when the path ends in a
- * type the tool accepts, that type's label. Reads the text only; no requests.
- */
-function readLink(raw: string, types: readonly string[]): { domain: string; type: string | null } | null {
-  const url = parseLink(raw);
-  if (!url) return null;
-  const host = url.hostname.replace(/^www\./, '');
-  const parts = host.split('.');
-  const isAddress = /^[\d.]+$/.test(host) || host.startsWith('[');
-  // A two-letter country code behind a short second level (co.uk, com.au).
-  const countryPair = parts.length > 2 && parts[parts.length - 1].length === 2 && parts[parts.length - 2].length <= 3;
-  const keep = isAddress ? parts.length : 2 + Number(countryPair);
-  const extension = url.pathname.match(/\.([a-z0-9]{2,5})$/i)?.[1];
-  const label = extension ? mimeToLabel(`x/${extension === 'jpeg' ? 'jpg' : extension}`) : null;
-  const accepted = label !== null && (types.length === 0 || types.some((t) => mimeToLabel(t) === label));
-  return {
-    domain: parts.slice(-keep).join('.'),
-    type: accepted ? label : null,
-  };
-}
-
 export interface MediaEmptyStateElement extends HTMLElement {
   setError(message: string | null): void;
 }
 
-type SourceKind = 'upload' | 'embed';
-
-function makeTile(icon: string): HTMLElement {
-  const tile = document.createElement('span');
-  tile.className = 'blok-media-empty__tile';
-  tile.setAttribute('aria-hidden', 'true');
-  tile.innerHTML = icon;
-  return tile;
-}
+type Mode = 'upload' | 'link';
 
 function uid(): string {
   return Math.random().toString(36).slice(2, 9);
 }
 
-function makeTab(kind: SourceKind, label: string, panelId: string, current: boolean): HTMLButtonElement {
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'blok-media-empty__tab';
-  btn.id = `blok-media-empty-tab-${uid()}`;
-  btn.setAttribute('data-src', kind);
-  btn.setAttribute('data-tab', kind);
-  btn.setAttribute('role', 'tab');
-  btn.setAttribute('aria-controls', panelId);
-  btn.setAttribute('aria-selected', current ? 'true' : 'false');
-  btn.tabIndex = current ? 0 : -1;
-  if (current) btn.setAttribute('aria-current', 'true');
-  btn.textContent = label;
-  return btn;
-}
-
 function isInteractive(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
-  return target.closest('button, a, input, textarea, select, [role="button"], [role="tab"]') !== null;
-}
-
-const SWAP_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
-
-function canAnimate(el: Element): el is Element & { animate: HTMLElement['animate'] } {
-  return typeof (el as HTMLElement).animate === 'function';
+  return target.closest('button, a, input, textarea, select, [role="button"]') !== null;
 }
 
 function prefersReducedMotion(): boolean {
@@ -208,473 +91,306 @@ function prefersReducedMotion(): boolean {
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-/**
- * Cross-fades the new panel content in while easing the panel's height between
- * the two tab layouts (the Upload dropzone is much taller than the Link bar).
- * `startHeight` is captured before the content swaps; degrades to an instant
- * swap when WAAPI is unavailable or reduced motion is requested.
- */
-function animatePanelSwap(panel: HTMLElement, startHeight: number, keep: Element | null): void {
-  const endHeight = panel.getBoundingClientRect().height;
-
-  panel.classList.add('is-swapping');
-  const sizing = panel.animate(
-    [{ height: `${startHeight}px` }, { height: `${endHeight}px` }],
-    { duration: 260, easing: SWAP_EASING }
-  );
-  const restore = (): void => {
-    panel.classList.remove('is-swapping');
-  };
-
-  sizing.finished.then(restore).catch(restore);
-
-  // Fade the incoming content in promptly (no delay/offset) so it reveals as
-  // the panel grows rather than popping in once the height tween settles.
-  for (const child of Array.from(panel.children)) {
-    if (child === keep || !canAnimate(child)) continue;
-    child.animate(
-      [{ opacity: 0 }, { opacity: 1 }],
-      { duration: 150, easing: 'ease-out', fill: 'backwards' }
-    );
+function isLink(raw: string): boolean {
+  const value = raw.trim();
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return /^[\w-]+(\.[\w-]+)+([/?#].*)?$/i.test(value);
   }
 }
 
-/**
- * Slides the freshly-rendered panel content in from the travel direction while
- * fading it up — `dir` is +1 when moving to a tab on the right, -1 to the left.
- * The panel keeps its new height instantly; only the content moves, so there is
- * no bottom-edge crawl (the part that read as lag in a floating popover).
- */
-function animatePanelContent(panel: HTMLElement, dir: number, keep: Element | null): void {
-  const dx = dir * 12;
-  for (const child of Array.from(panel.children)) {
-    if (child === keep || !canAnimate(child)) continue;
-    child.animate(
-      [
-        { opacity: 0, transform: `translateX(${dx}px)` },
-        { opacity: 1, transform: 'translateX(0)' },
-      ],
-      { duration: 200, easing: SWAP_EASING, fill: 'backwards' }
-    );
+function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, text?: string): HTMLElementTagNameMap[K] {
+  const node = document.createElement(tag);
+  node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function iconButton(className: string, action: string, icon: string, label: string): HTMLButtonElement {
+  const button = el('button', className);
+  button.type = 'button';
+  button.setAttribute('data-action', action);
+  const glyph = el('span', `${className}-icon`);
+  glyph.setAttribute('aria-hidden', 'true');
+  glyph.innerHTML = icon;
+  button.append(glyph, el('span', `${className}-label`, label));
+  return button;
+}
+
+interface LinkField {
+  bar: HTMLElement;
+  input: HTMLInputElement;
+  cancel: HTMLButtonElement | null;
+  clear(): void;
+}
+
+function makeLinkField(
+  labels: MediaEmptyStateLabels,
+  withCancel: boolean,
+  hooks: { onCommit(url: string): void; onEdit(valid: boolean, pasted: boolean): void; onCancel(): void }
+): LinkField {
+  const bar = el('div', 'blok-media-empty__embed-bar');
+  bar.setAttribute('data-valid', 'false');
+  bar.setAttribute('data-blok-field', 'text');
+
+  const icon = el('span', 'blok-media-empty__embed-icon');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.innerHTML = IconLink;
+
+  const input = el('input', 'blok-media-empty__embed-input');
+  input.type = 'url';
+  input.placeholder = labels.urlPlaceholder;
+  input.setAttribute('aria-label', labels.urlAria);
+  input.autocomplete = 'off';
+  input.spellcheck = false;
+
+  const mirror = createUrlMirror(input);
+
+  const submit = el('button', 'blok-media-empty__embed-submit');
+  submit.type = 'button';
+  submit.setAttribute('data-action', 'submit-url');
+  const kbd = el('kbd', 'blok-media-empty__embed-kbd', '↵');
+  kbd.setAttribute('aria-hidden', 'true');
+  submit.append(el('span', 'blok-media-empty__embed-submit-label', labels.submit), kbd);
+
+  const cancel = withCancel ? el('button', 'blok-media-empty__embed-cancel') : null;
+  if (cancel) {
+    cancel.type = 'button';
+    cancel.setAttribute('data-action', 'cancel-link');
+    cancel.setAttribute('aria-label', labels.cancelLink);
+    cancel.innerHTML = IconCross;
+    cancel.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      hooks.onCancel();
+    });
   }
+
+  const sync = (pasted = false): void => {
+    const valid = isLink(input.value);
+    bar.setAttribute('data-valid', valid ? 'true' : 'false');
+    submit.setAttribute('aria-disabled', valid ? 'false' : 'true');
+    // Add is not drawn until the link is valid, so it must not take focus either.
+    submit.tabIndex = valid ? 0 : -1;
+    mirror.draw();
+    hooks.onEdit(valid, pasted);
+  };
+  const commit = (): void => {
+    if (isLink(input.value)) hooks.onCommit(input.value.trim());
+  };
+
+  submit.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    commit();
+  });
+  input.addEventListener('input', (ev) => {
+    sync(ev instanceof InputEvent && ev.inputType === 'insertFromPaste');
+  });
+  input.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      commit();
+    }
+    if (ev.key === 'Escape' && cancel) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      hooks.onCancel();
+    }
+  });
+
+  bar.append(icon, mirror.element, input, submit, ...(cancel ? [cancel] : []));
+  sync();
+
+  return {
+    bar,
+    input,
+    cancel,
+    clear: () => {
+      input.value = '';
+      sync();
+    },
+  };
+}
+
+/** Pointer tilt, hover demo and spring exit for the drawing; the surface is the pointer target. */
+function animateDrawing(surface: HTMLElement, stage: HTMLElement): void {
+  const pointer = { x: 0, y: 0, frame: 0 };
+  const lean = (mx: string, my: string): void => {
+    stage.style.setProperty('--mx', mx);
+    stage.style.setProperty('--my', my);
+    leanPreview(stage, Number(mx), Number(my));
+  };
+  const axis = (pos: number, start: number, size: number): string =>
+    String(Math.round(Math.min(1, Math.max(-1, ((pos - start) / size) * 2 - 1)) * 1000) / 1000);
+
+  surface.addEventListener('pointermove', (ev) => {
+    if (prefersReducedMotion()) return;
+    pointer.x = ev.clientX;
+    pointer.y = ev.clientY;
+    if (pointer.frame) return;
+    pointer.frame = requestAnimationFrame(() => {
+      pointer.frame = 0;
+      const rect = surface.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      lean(axis(pointer.x, rect.left, rect.width), axis(pointer.y, rect.top, rect.height));
+    });
+  });
+  const exit = { timer: 0, stop: (): void => undefined };
+
+  surface.addEventListener('pointerenter', () => {
+    window.clearTimeout(exit.timer);
+    exit.stop();
+    stage.removeAttribute('data-leaving');
+    stage.setAttribute('data-hover', '');
+  });
+  surface.addEventListener('pointerleave', () => {
+    if (pointer.frame) cancelAnimationFrame(pointer.frame);
+    pointer.frame = 0;
+    if (prefersReducedMotion()) {
+      stage.removeAttribute('data-hover');
+      lean('0', '0');
+      return;
+    }
+    // springHome must switch on data-leaving before the lean resets, or the
+    // tilt starts its way back on the plain curve instead of the spring.
+    exit.stop = springHome(stage);
+    lean('0', '0');
+    exit.timer = window.setTimeout(() => stage.removeAttribute('data-leaving'), EXIT_CLEAR_MS);
+  });
 }
 
 export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyStateElement {
   const { labels } = opts;
   const types = opts.acceptTypes;
-  const accept = types.length ? types.join(',') : '*';
-  const sizeHint = opts.maxSize !== undefined ? formatBytes(opts.maxSize) : '';
-
-  const swapMode: MediaEmptyStateSwap = opts.swap ?? 'reflow';
-
   const source: MediaSource = opts.sources ?? 'both';
   const showUpload = source !== 'url';
-  const showEmbed = source !== 'upload';
+  const showLink = source !== 'upload';
+  const both = showUpload && showLink;
+  const restHint = both ? labels.hint : (showUpload ? labels.hintUpload : labels.hintLink) ?? labels.hint;
 
   const root = document.createElement('div') as unknown as MediaEmptyStateElement;
   root.className = 'blok-media-empty';
   root.setAttribute('data-blok-media-empty-state', '');
 
-  const card = document.createElement('div');
-  card.className = 'blok-media-empty__card';
+  const card = el('div', 'blok-media-empty__card');
   card.tabIndex = 0;
   card.setAttribute('role', 'group');
   card.setAttribute('aria-label', labels.add);
+  card.setAttribute('data-sources', source);
   if (opts.preview) card.setAttribute('data-preview', opts.preview);
 
-  const label = document.createElement('span');
-  label.className = 'blok-media-empty__label';
-  label.textContent = labels.add;
+  const stage = opts.preview ? makePreview(opts.preview) : null;
+  stage?.addEventListener('animationend', (ev) => {
+    if (ev.target === stage) stage.classList.remove('is-caught');
+  });
 
-  const panel = document.createElement('div');
-  panel.className = 'blok-media-empty__panel';
-  panel.id = `blok-media-empty-panel-${uid()}`;
-  panel.setAttribute('data-panel-host', '');
-  panel.setAttribute('role', 'tabpanel');
+  const title = el('div', 'blok-media-empty__title', labels.add);
+  const hint = el('div', 'blok-media-empty__hint');
+  const hintText = el('span', 'blok-media-empty__hint-text', restHint);
+  const meta = showUpload && opts.maxSize !== undefined && labels.maxSize
+    ? el('span', 'blok-media-empty__meta', labels.maxSize(formatBytes(opts.maxSize)))
+    : null;
+  hint.append(hintText, ...(meta ? [meta] : []));
 
-  const initialKind: SourceKind = showUpload ? 'upload' : 'embed';
-
-  const tabs = document.createElement('div');
-  tabs.className = 'blok-media-empty__tabs';
-  tabs.setAttribute('role', 'tablist');
-  tabs.setAttribute('aria-label', labels.sourceAria);
-  const tabList: HTMLButtonElement[] = [];
-  const tabKinds: SourceKind[] = [];
-  if (showUpload) {
-    const uploadTab = makeTab('upload', labels.upload, panel.id, true);
-    tabs.append(uploadTab);
-    tabList.push(uploadTab);
-    tabKinds.push('upload');
-  }
-  if (showEmbed) {
-    const embedTab = makeTab('embed', labels.embed, panel.id, !showUpload);
-    tabs.append(embedTab);
-    tabList.push(embedTab);
-    tabKinds.push('embed');
-  }
-  panel.setAttribute('aria-labelledby', tabList[0].id);
-
-  const dropOverlay = document.createElement('div');
-  dropOverlay.className = 'blok-media-empty__drop-overlay';
-  dropOverlay.setAttribute('aria-hidden', 'true');
-  const dropInner = document.createElement('div');
-  dropInner.className = 'blok-media-empty__drop-inner';
-  dropInner.innerHTML = `<span class="blok-media-empty__drop-icon">${IconArrowDownLine}</span><span>${labels.dropToUpload}</span>`;
-  dropOverlay.appendChild(dropInner);
-
-  const error = document.createElement('div');
-  error.className = 'blok-media-empty__error';
+  const error = el('div', 'blok-media-empty__error');
   error.id = `blok-media-empty-error-${uid()}`;
   error.setAttribute('data-role', 'error');
   error.setAttribute('role', 'alert');
   error.hidden = true;
 
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = accept;
-  input.hidden = true;
-  input.setAttribute('data-blok-testid', 'file-input');
-  input.addEventListener('change', () => {
-    const file = input.files?.[0];
-    if (file) opts.onFile(file);
-  });
-
-  // Re-created by every renderUpload, so drag handlers look it up through this ref.
-  const hintRef: { el: HTMLElement | null } = { el: null };
-
-  const setDragover = (on: boolean): void => {
-    card.classList.toggle('is-dragover', on);
-    if (hintRef.el) hintRef.el.textContent = on ? labels.dropToUpload : labels.orDropHere;
-  };
-
-  // One drawing for both tabs: rebuilding it on every switch made it blink and
-  // lose its tilt. Each tab clears everything else and keeps it first.
-  const stage = opts.preview ? makePreview(opts.preview) : null;
-  stage?.addEventListener('animationend', (ev) => {
-    if (ev.target === stage) stage.classList.remove('is-caught');
-  });
-  const clearPanel = (): void => {
-    for (const child of Array.from(panel.children)) {
-      if (child !== stage) child.remove();
-    }
-    if (stage && stage.parentElement !== panel) panel.prepend(stage);
-  };
-
-  const renderUpload = (): void => {
-    clearPanel();
-    if (stage) clearPreviewProgress(stage);
-    else panel.appendChild(makeTile(IconUpload));
-
-    const content = document.createElement('div');
-    content.className = 'blok-media-empty__content';
-
-    const primary = document.createElement('div');
-    primary.className = 'blok-media-empty__primary';
-
-    const choose = document.createElement('button');
-    choose.type = 'button';
-    choose.className = 'blok-media-empty__choose';
-    choose.setAttribute('data-action', 'choose-file');
-    choose.innerHTML = `<span class="blok-media-empty__choose-icon">${IconArrowUp}</span><span>${labels.chooseFile}</span>`;
-    choose.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      input.click();
-    });
-
-    const hint = document.createElement('span');
-    hint.className = 'blok-media-empty__hint';
-    hint.textContent = labels.orDropHere;
-    hintRef.el = hint;
-
-    primary.append(choose, hint);
-
-    content.append(primary);
-    if (sizeHint && labels.maxSize) {
-      const meta = document.createElement('div');
-      meta.className = 'blok-media-empty__meta';
-      meta.textContent = labels.maxSize(sizeHint);
-      content.append(meta);
-    }
-
-    panel.append(content, input);
-  };
-
-  const renderEmbed = (): void => {
-    clearPanel();
-    hintRef.el = null;
-
-    const bar = document.createElement('div');
-    bar.className = 'blok-media-empty__embed-bar';
-    bar.setAttribute('data-valid', 'false');
-    bar.setAttribute('data-blok-field', 'text');
-
-    const fieldIcon = document.createElement('span');
-    fieldIcon.className = 'blok-media-empty__embed-icon';
-    fieldIcon.setAttribute('aria-hidden', 'true');
-    fieldIcon.innerHTML = IconLink;
-    // The site's face: the chain flips into its first letter once the link is valid.
-    const site = document.createElement('span');
-    site.className = 'blok-media-empty__embed-site';
-    // A known provider's bundled mark over the letter.
-    const logo = document.createElement('span');
-    logo.className = 'blok-media-empty__embed-logo';
-    fieldIcon.append(site, logo);
-
-    // The Upload tab's drawing stays on stage, in upload mode: pale until the
-    // link is valid, then it plays its "complete" moment.
-    if (stage) {
-      setPreviewProgress(stage, 0);
-      bar.classList.add('blok-media-empty__embed-bar--large');
-    }
-
-    const readBack = document.createElement('span');
-    readBack.className = 'blok-media-empty__embed-host';
-    readBack.setAttribute('aria-hidden', 'true');
-    readBack.hidden = true;
-    const typeEl = document.createElement('span');
-    typeEl.className = 'blok-media-empty__embed-type';
-
-    const urlInput = document.createElement('input');
-    urlInput.type = 'url';
-    urlInput.className = 'blok-media-empty__embed-input';
-    urlInput.placeholder = labels.urlPlaceholder;
-    urlInput.setAttribute('aria-label', labels.urlAria);
-    urlInput.autocomplete = 'off';
-    urlInput.spellcheck = false;
-
-    const mirror = stage ? createUrlMirror(urlInput) : null;
-
-    const submit = document.createElement('button');
-    submit.type = 'button';
-    submit.className = 'blok-media-empty__embed-submit';
-    submit.setAttribute('data-action', 'submit-url');
-
-    const submitLabelEl = document.createElement('span');
-    submitLabelEl.className = 'blok-media-empty__embed-submit-label';
-    submitLabelEl.textContent = labels.submit;
-
-    const kbd = document.createElement('kbd');
-    kbd.className = 'blok-media-empty__embed-kbd';
-    kbd.setAttribute('aria-hidden', 'true');
-    kbd.textContent = '↵';
-
-    submit.append(submitLabelEl, kbd);
-
-    // The site's face: a known provider's bundled mark, loaded lazily. Other
-    // sites keep the letter tile; their own icons are often low-res and blurry.
-    const face = { token: 0, url: '' };
-    const clearFace = (): void => {
-      face.token += 1;
-      logo.replaceChildren();
-      fieldIcon.removeAttribute('data-logo');
-    };
-    const showFace = (url: URL | null): void => {
-      const link = url ? url.toString() : '';
-      if (link === face.url) return;
-      face.url = link;
-      clearFace();
-      if (!url) return;
-      const token = face.token;
-      const service = matchEmbedService(url.href)?.service;
-      const slug = (service ? brandMarkSlug(service) : null) ?? brandMarkSlugForUrl(url);
-      if (!slug) return;
-      void import('./brand-marks').then(({ brandMarkSvg }) => {
-        const svg = brandMarkSvg(slug);
-        if (token !== face.token || !svg) return;
-        logo.innerHTML = svg;
-        fieldIcon.setAttribute('data-logo', '');
-      });
-    };
-
-    const isValid = (raw: string): boolean => {
-      const value = raw.trim();
-      if (!value) return false;
-      try {
-        const url = new URL(value);
-        return url.protocol === 'http:' || url.protocol === 'https:';
-      } catch {
-        return /^[\w-]+(\.[\w-]+)+([/?#].*)?$/i.test(value);
-      }
-    };
-
-    const sync = (): void => {
-      const valid = isValid(urlInput.value);
-      bar.setAttribute('data-valid', valid ? 'true' : 'false');
-      submit.setAttribute('aria-disabled', valid ? 'false' : 'true');
-      if (stage) setPreviewProgress(stage, valid ? 100 : 0);
-      const link = valid ? readLink(urlInput.value, types) : null;
-      typeEl.textContent = link?.type ?? '';
-      readBack.replaceChildren(...(link?.type ? [typeEl] : []));
-      readBack.hidden = !link?.type;
-      showFace(valid ? parseLink(urlInput.value) : null);
-      const letter = link?.domain.charAt(0).toUpperCase() ?? '';
-      if (letter) fieldIcon.setAttribute('data-site', letter);
-      else fieldIcon.removeAttribute('data-site');
-      site.textContent = letter;
-      mirror?.draw();
-      // Editing after a rejected submit resets the shared invalid state so the
-      // stale error doesn't linger while the user fixes the URL.
-      if (!error.hidden) {
-        error.hidden = true;
-        error.textContent = '';
-        setFieldValidity(urlInput, true, error.id);
-      }
-    };
-
-    const commit = (): void => {
-      const value = urlInput.value.trim();
-      if (!value) return;
-      opts.onUrl(value);
-    };
-
-    submit.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      if (isValid(urlInput.value)) commit();
-    });
-    urlInput.addEventListener('click', (ev) => ev.stopPropagation());
-    urlInput.addEventListener('input', (ev) => {
-      sync();
-      // A pasted valid link gets the same "catch" as a file dropped on Upload.
-      const pasted = ev instanceof InputEvent && ev.inputType === 'insertFromPaste';
-      if (!stage || !pasted || !isValid(urlInput.value)) return;
-      stage.classList.remove('is-caught');
-      stage.offsetWidth;
-      stage.classList.add('is-caught');
-    });
-    urlInput.addEventListener('keydown', (ev) => {
-      if (ev.key === 'Enter') {
-        ev.preventDefault();
-        if (isValid(urlInput.value)) commit();
-      }
-    });
-
-    bar.append(fieldIcon, ...(mirror ? [mirror.element] : []), urlInput, readBack, submit);
-    panel.appendChild(bar);
-    sync();
-    queueMicrotask(() => urlInput.focus());
-  };
-
-  const activate = (kind: SourceKind, transition = false): void => {
-    const prevKind = card.getAttribute('data-active-tab') as SourceKind | null;
-    const motion = transition
-      && swapMode !== 'none'
-      && canAnimate(panel)
-      && !prefersReducedMotion();
-    // Capture the reflow start-height before the content swaps (height tween only).
-    const startHeight = motion && swapMode === 'reflow'
-      ? panel.getBoundingClientRect().height
-      : null;
-    const dir = prevKind ? Math.sign(tabKinds.indexOf(kind) - tabKinds.indexOf(prevKind)) : 0;
-
-    const activeTab = tabList[tabKinds.indexOf(kind)];
-    for (const tab of tabList) {
-      const isActive = tab === activeTab;
-      tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
-      tab.tabIndex = isActive ? 0 : -1;
-      if (isActive) tab.setAttribute('aria-current', 'true');
-      else tab.removeAttribute('aria-current');
-    }
-    panel.setAttribute('aria-labelledby', activeTab.id);
-    card.setAttribute('data-active-tab', kind);
-    if (kind === 'upload') renderUpload();
-    else renderEmbed();
-
-    if (!motion) return;
-    if (swapMode === 'reflow' && startHeight !== null) animatePanelSwap(panel, startHeight, stage);
-    else if (swapMode === 'slide') animatePanelContent(panel, dir, stage);
-  };
-
-  tabList.forEach((tab, idx) => {
-    tab.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      activate(tabKinds[idx], true);
-      tab.focus();
-    });
-  });
-
-  // Single tab stop + selection-follows-focus arrow/Home/End navigation, shared
-  // with the crop editor's ratio radiogroup. `activate` owns the tab state; the
-  // helper focuses and manages the roving tabindex.
-  rovingRadioGroup({
-    radios: tabList,
-    getSelectedIndex: () => {
-      const active = card.getAttribute('data-active-tab') as SourceKind | null;
-      return active ? tabKinds.indexOf(active) : 0;
-    },
-    onSelect: (idx) => activate(tabKinds[idx], true),
-  });
-
-  panel.addEventListener('click', (ev) => {
-    if (card.getAttribute('data-active-tab') !== 'upload') return;
-    if (isInteractive(ev.target)) return;
-    input.click();
-  });
-
-  if (opts.preview) {
-    const pointer = { x: 0, y: 0, frame: 0 };
-    const lean = (mx: string, my: string): void => {
-      const stage = panel.querySelector<HTMLElement>('.blok-media-preview');
-      if (!stage) return;
-      stage.style.setProperty('--mx', mx);
-      stage.style.setProperty('--my', my);
-      leanPreview(stage, Number(mx), Number(my));
-    };
-    const axis = (pos: number, start: number, size: number): string =>
-      String(Math.round(Math.min(1, Math.max(-1, ((pos - start) / size) * 2 - 1)) * 1000) / 1000);
-
-    panel.addEventListener('pointermove', (ev) => {
-      if (prefersReducedMotion()) return;
-      pointer.x = ev.clientX;
-      pointer.y = ev.clientY;
-      if (pointer.frame) return;
-      pointer.frame = requestAnimationFrame(() => {
-        pointer.frame = 0;
-        const rect = panel.getBoundingClientRect();
-        if (!rect.width || !rect.height) return;
-        lean(axis(pointer.x, rect.left, rect.width), axis(pointer.y, rect.top, rect.height));
-      });
-    });
-    const exit = { timer: 0, stop: (): void => undefined };
-    const stageEl = (): HTMLElement | null => panel.querySelector<HTMLElement>('.blok-media-preview');
-
-    panel.addEventListener('pointerenter', () => {
-      const stage = stageEl();
-      if (!stage) return;
-      window.clearTimeout(exit.timer);
-      exit.stop();
-      stage.removeAttribute('data-leaving');
-      stage.setAttribute('data-hover', '');
-    });
-    panel.addEventListener('pointerleave', () => {
-      if (pointer.frame) cancelAnimationFrame(pointer.frame);
-      pointer.frame = 0;
-      const stage = stageEl();
-      if (!stage || prefersReducedMotion()) {
-        stage?.removeAttribute('data-hover');
-        lean('0', '0');
-        return;
-      }
-      // springHome must switch on data-leaving before the lean resets, or the
-      // tilt starts its way back on the plain curve instead of the spring.
-      exit.stop = springHome(stage);
-      lean('0', '0');
-      exit.timer = window.setTimeout(() => stage.removeAttribute('data-leaving'), EXIT_CLEAR_MS);
+  const input = showUpload ? document.createElement('input') : null;
+  if (input) {
+    input.type = 'file';
+    input.accept = types.length ? types.join(',') : '*';
+    input.hidden = true;
+    input.setAttribute('data-blok-testid', 'file-input');
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+      if (file) opts.onFile(file);
     });
   }
 
-  card.addEventListener('keydown', (ev) => {
-    if (ev.target !== card) return;
-    if (card.getAttribute('data-active-tab') !== 'upload') return;
-    if (ev.key === 'Enter' || ev.key === ' ') {
-      ev.preventDefault();
-      input.click();
-    }
+  const actions = showUpload ? el('div', 'blok-media-empty__actions') : null;
+  const choose = iconButton('blok-media-empty__choose', 'choose-file', IconArrowUp, labels.chooseFile);
+  const fromLink = iconButton('blok-media-empty__from-link', 'from-link', IconLink, labels.embed);
+  actions?.append(choose, ...(both ? [fromLink] : []));
+
+  const setMode = (mode: Mode): void => {
+    card.setAttribute('data-mode', mode);
+    actions?.toggleAttribute('inert', mode !== 'upload');
+    link?.bar.toggleAttribute('inert', mode !== 'link');
+  };
+  const clearError = (): void => {
+    error.hidden = true;
+    error.textContent = '';
+    if (link) setFieldValidity(link.input, true, error.id);
+  };
+
+  const link = showLink
+    ? makeLinkField(labels, both, {
+      onCommit: (url) => opts.onUrl(url),
+      onEdit: (valid, pasted) => {
+        // Editing after a rejected link clears the stale error.
+        if (!error.hidden) clearError();
+        if (!stage || !pasted || !valid) return;
+        // A pasted valid link gets the same "catch" as a dropped file.
+        stage.classList.remove('is-caught');
+        stage.offsetWidth;
+        stage.classList.add('is-caught');
+      },
+      onCancel: () => {
+        link?.clear();
+        setMode('upload');
+        fromLink.focus();
+      },
+    })
+    : null;
+
+  choose.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    input?.click();
+  });
+  fromLink.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    setMode('link');
+    link?.input.focus();
   });
 
-  // File-based affordances (paste/drag/drop) only apply when upload is enabled.
-  if (showUpload) {
+  const slot = el('div', 'blok-media-empty__slot');
+  // Without this Blok treats Enter on a button as "split the block" and the button never fires.
+  slot.setAttribute(DATA_ATTR.keyboardOwner, '');
+  slot.append(...(actions ? [actions] : []), ...(link ? [link.bar] : []));
+
+  const body = el('div', 'blok-media-empty__body');
+  body.append(title, hint, slot);
+  card.append(...(stage ? [stage] : []), body, ...(input ? [input] : []));
+  root.append(card, error);
+
+  if (stage) animateDrawing(card, stage);
+
+  if (input) {
+    const isUploadMode = (): boolean => card.getAttribute('data-mode') === 'upload';
+    const setDragover = (on: boolean): void => {
+      card.classList.toggle('is-dragover', on);
+      title.textContent = on ? labels.dropToUpload : labels.add;
+      hintText.textContent = on ? labels.dropAnywhere : restHint;
+      if (meta) meta.hidden = on;
+    };
+
+    card.addEventListener('click', (ev) => {
+      if (isUploadMode() && !isInteractive(ev.target)) input.click();
+    });
+    card.addEventListener('keydown', (ev) => {
+      if (ev.target !== card || !isUploadMode()) return;
+      if (ev.key === 'Enter' || ev.key === ' ') {
+        ev.preventDefault();
+        input.click();
+      }
+    });
     card.addEventListener('paste', (ev) => {
-      if (card.getAttribute('data-active-tab') !== 'upload') return;
+      if (!isUploadMode()) return;
       const clip = ev.clipboardData;
       if (!clip) return;
       for (const item of Array.from(clip.items)) {
@@ -714,31 +430,19 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     });
   }
 
-  const header = document.createElement('div');
-  header.className = 'blok-media-empty__header';
-  // A single source needs no tablist — show just the caption.
-  if (tabList.length > 1) header.append(label, tabs);
-  else header.append(label);
-
-  card.append(header, panel);
-  if (showUpload) card.append(dropOverlay);
-  root.append(card, error);
-  activate(initialKind);
+  setMode(showUpload ? 'upload' : 'link');
+  // A link-only block has nothing else to do: put the caret in its field.
+  if (!showUpload) queueMicrotask(() => link?.input.focus());
 
   root.setError = (message: string | null): void => {
-    // Mirror the message onto the active URL field via the shared invalid-state
-    // convention so the error is announced and linked (aria-invalid + describedby).
-    const urlInput = root.querySelector<HTMLInputElement>('.blok-media-empty__embed-input');
-
     if (!message) {
-      error.hidden = true;
-      error.textContent = '';
-      if (urlInput) setFieldValidity(urlInput, true, error.id);
+      clearError();
       return;
     }
     error.hidden = false;
     error.textContent = message;
-    if (urlInput) setFieldValidity(urlInput, false, error.id);
+    // Mark the URL field with the shared invalid state so the error is announced and linked.
+    if (link) setFieldValidity(link.input, false, error.id);
   };
 
   return root;

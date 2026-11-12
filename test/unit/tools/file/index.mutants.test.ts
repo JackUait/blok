@@ -121,7 +121,7 @@ const mount = (data: Partial<FileData> = {}): { tool: FileTool; root: HTMLElemen
 
 /** Fills the empty state's link form and submits it. */
 const submitUrl = (root: HTMLElement, url: string): void => {
-  root.querySelector<HTMLButtonElement>('[data-src="embed"]')?.click();
+  root.querySelector<HTMLButtonElement>('[data-action="from-link"]')?.click();
   const input = root.querySelector<HTMLInputElement>('input[type="url"]');
 
   if (input === null) {

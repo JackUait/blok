@@ -37,15 +37,12 @@ describe('file empty state mutants', () => {
       hintLink: 'i18n:tools.image.emptyHintLink',
       dropAnywhere: 'i18n:tools.image.emptyDropAnywhere',
       cancelLink: 'i18n:notifier.cancel',
-      upload: 'i18n:tools.file.emptyUpload',
       embed: 'i18n:tools.file.emptyLink',
       chooseFile: 'i18n:tools.file.emptyChooseFile',
-      orDropHere: 'i18n:tools.file.emptyDropHint',
       dropToUpload: 'i18n:tools.file.emptyDropToUpload',
       urlPlaceholder: 'i18n:tools.file.emptyUrlPlaceholder',
       urlAria: 'i18n:tools.file.emptyUrlAria',
       submit: 'i18n:tools.file.emptyInsert',
-      sourceAria: 'i18n:tools.file.emptySourceAria',
     });
   });
 

@@ -104,7 +104,7 @@ const pasteFile = async (tool: VideoTool, file: File): Promise<void> => {
 };
 
 const submitUrl = async (root: HTMLElement, url: string): Promise<void> => {
-  root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+  root.querySelector<HTMLButtonElement>('[data-action="from-link"]')?.click();
   const input = root.querySelector<HTMLInputElement>('input[type="url"]');
 
   if (!input) throw new Error('url input missing');

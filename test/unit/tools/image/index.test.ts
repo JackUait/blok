@@ -464,13 +464,13 @@ describe('ImageTool — EMPTY state', () => {
     const tool = new ImageTool(createOptions());
     const root = tool.render();
     expect(root.querySelector('input[type="file"]')).not.toBeNull();
-    expect(root.querySelector('[data-tab="embed"]')).not.toBeNull();
+    expect(root.querySelector('[data-action="from-link"]')).not.toBeNull();
   });
 
   it('submitting URL via empty-state transitions to RENDERED', async () => {
     const tool = new ImageTool(createOptions());
     const root = tool.render();
-    const embedTab = root.querySelector<HTMLButtonElement>('[data-tab="embed"]');
+    const embedTab = root.querySelector<HTMLButtonElement>('[data-action="from-link"]');
     if (!embedTab) throw new Error('embed tab missing');
     embedTab.click();
     const input = root.querySelector<HTMLInputElement>('input[type="url"]');
@@ -1209,7 +1209,7 @@ describe('ImageTool — upload progression', () => {
       }),
     });
     const root = tool.render();
-    root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    root.querySelector<HTMLButtonElement>('[data-action="from-link"]')?.click();
     const input = root.querySelector<HTMLInputElement>('input[type="url"]');
     if (!input) throw new Error('url input missing');
     input.value = 'https://x/p.png';
@@ -1226,7 +1226,7 @@ describe('ImageTool — upload progression', () => {
     const uploadByUrl = (): Promise<{ url: string }> => new Promise(() => undefined);
     const tool = new ImageTool(createOptions({}, { uploader: { uploadByUrl } }));
     const root = tool.render();
-    root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    root.querySelector<HTMLButtonElement>('[data-action="from-link"]')?.click();
     const input = root.querySelector<HTMLInputElement>('input[type="url"]');
     if (!input) throw new Error('url input missing');
     input.value = 'https://x/p.png';
@@ -1371,7 +1371,7 @@ describe('ImageTool — error state', () => {
     const uploadByUrl = vi.fn().mockRejectedValue(new Error('404'));
     const tool = new ImageTool(createOptions({}, { uploader: { uploadByUrl } }));
     const root = tool.render();
-    const embed = root.querySelector<HTMLButtonElement>('[data-tab="embed"]');
+    const embed = root.querySelector<HTMLButtonElement>('[data-action="from-link"]');
     if (!embed) throw new Error('embed tab missing');
     embed.click();
     const input = root.querySelector<HTMLInputElement>('input[type="url"]');
@@ -2546,7 +2546,7 @@ describe('ImageTool — GIF auto-conversion', () => {
     pasteGif(tool);
     await vi.waitFor(() => expect(mockConvert).toHaveBeenCalledOnce());
     cancel(root);
-    root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    root.querySelector<HTMLButtonElement>('[data-action="from-link"]')?.click();
     const input = root.querySelector<HTMLInputElement>('input[type="url"]');
     if (!input) throw new Error('url input missing');
     input.value = 'https://x/p.png';

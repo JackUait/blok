@@ -55,7 +55,7 @@ describe('openCoverPicker', () => {
     expect(dialog).not.toBeNull();
 
     // Drive the Link tab: click the embed tab, type a URL, submit.
-    const linkTab = dialog!.querySelector<HTMLButtonElement>('[data-tab="embed"]');
+    const linkTab = dialog!.querySelector<HTMLButtonElement>('[data-action="from-link"]');
     linkTab?.click();
     const input = dialog!.querySelector<HTMLInputElement>('input[type="url"]');
     if (input) { input.value = 'https://cdn/cover.png'; }
@@ -81,12 +81,9 @@ describe('openCoverPicker', () => {
     anchor.remove();
   });
 
-  it('slides the new panel in on tab switch without tweening the popover height', () => {
-    // Make the WAAPI path reachable: real animate + reduced-motion off. A
-    // floating popover has nothing reflowing beneath it, so the inline height
-    // tween only read as lag — the picker uses the directional content slide
-    // instead: the new panel slides + fades in while the popover resizes
-    // instantly (no bottom-edge crawl).
+  it('opens the link field in place, with no animation driven from script', () => {
+    // The buttons and the field share one cell, so the popover keeps its size
+    // and nothing has to be tweened by hand.
     const animateSpy = vi.fn((..._args: unknown[]) => ({ finished: Promise.resolve(undefined) }));
     const proto = HTMLElement.prototype as unknown as { animate?: unknown };
     const original = proto.animate;
@@ -98,17 +95,14 @@ describe('openCoverPicker', () => {
       document.body.appendChild(anchor);
       const handle = openCoverPicker({ anchor, onFile: vi.fn(), onUrl: vi.fn() });
       const dialog = document.querySelector('[data-role="audio-cover-picker"]')!;
+      const card = dialog.querySelector('.blok-media-empty__card')!;
 
       animateSpy.mockClear();
-      dialog.querySelector<HTMLButtonElement>('[data-tab="embed"]')!.click();
+      dialog.querySelector<HTMLButtonElement>('[data-action="from-link"]')!.click();
 
-      // The incoming panel content slides/fades in...
-      expect(animateSpy).toHaveBeenCalled();
-      // ...but the popover height itself never tweens (that crawl read as lag).
-      const tweensHeight = animateSpy.mock.calls.some(([frames]: unknown[]) =>
-        Array.isArray(frames)
-        && frames.some((f: unknown) => f !== null && typeof f === 'object' && 'height' in f));
-      expect(tweensHeight).toBe(false);
+      expect(card.getAttribute('data-mode')).toBe('link');
+      expect(dialog.querySelector('input[type="url"]')).toHaveFocus();
+      expect(animateSpy).not.toHaveBeenCalled();
 
       handle.close();
     } finally {
@@ -438,7 +432,7 @@ describe('openCoverPicker — ink well surface', () => {
     expect(done).toHaveBeenCalledTimes(2);
   });
 
-  it('keeps the tabbed card when no surface is asked for', () => {
+  it('keeps the shared uploader card when no surface is asked for', () => {
     const anchor = document.createElement('div');
 
     document.body.appendChild(anchor);
@@ -447,7 +441,8 @@ describe('openCoverPicker — ink well surface', () => {
 
     expect(dialog?.getAttribute('data-surface')).toBe('card');
     expect(dialog?.querySelector('[data-role="ink-well"]')).toBeNull();
-    expect(dialog?.querySelector('[data-tab]')).not.toBeNull();
+    expect(dialog?.querySelector('[data-blok-media-empty-state] [data-action="from-link"]')).not.toBeNull();
+    expect(dialog?.querySelector('[data-blok-media-preview]')).toBeNull();
     handle.close();
   });
 });

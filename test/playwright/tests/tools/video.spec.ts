@@ -78,7 +78,7 @@ test('inserts a video via the slash menu and embeds a URL', async ({ page }) => 
   await insertVideoBlock(page);
 
   const videoBlock = page.locator(VIDEO_BLOCK_SELECTOR);
-  await videoBlock.locator('[data-tab="embed"]').click();
+  await videoBlock.locator('[data-action="from-link"]').click();
   await videoBlock.getByPlaceholder('Paste a video link…').fill(SAMPLE_VIDEO_URL);
   await videoBlock.locator('[data-action="submit-url"]').click();
 

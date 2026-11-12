@@ -37,15 +37,12 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
       hintLink: tr(i18n, 'tools.image.emptyHintLink', 'Paste a link to it below.'),
       dropAnywhere: tr(i18n, 'tools.image.emptyDropAnywhere', 'Let go anywhere in this block.'),
       cancelLink: tr(i18n, 'notifier.cancel', 'Cancel'),
-      upload: tr(i18n, 'tools.video.emptyUpload', 'From device'),
       embed: tr(i18n, 'tools.video.emptyLink', 'From a link'),
       chooseFile: tr(i18n, 'tools.video.emptyChooseFile', 'Choose a video'),
-      orDropHere: tr(i18n, 'tools.video.emptyOrDropHere', 'or drag it here'),
       dropToUpload: tr(i18n, 'tools.video.emptyDropToUpload', 'Drop to add'),
       urlPlaceholder: tr(i18n, 'tools.video.emptyUrlPlaceholder', 'Paste a video link…'),
       urlAria: tr(i18n, 'tools.video.emptyUrlAria', 'Video URL'),
       submit: tr(i18n, 'tools.video.emptyInsert', 'Add'),
-      sourceAria: tr(i18n, 'tools.video.emptySourceAria', 'Video source'),
       maxSize: (size) =>
         i18n?.has('tools.video.emptyMaxSize')
           ? i18n.t('tools.video.emptyMaxSize', { size })

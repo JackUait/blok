@@ -388,16 +388,21 @@
   [data-blok-tool="audio"][data-state="rendered"] .blok-audio-cover.is-fresh { animation: none; }
 }
 
-/* The picker's padding is the gap to the uploader card's corners. */
+/* The picker's padding is the gap to the uploader card's corners. The popover
+   is the surface, so the card inside has no fill of its own. */
 .blok-audio-cover-picker .blok-media-empty__card {
   border-radius: var(--blok-radius-inner, var(--blok-radius-block));
+  background: transparent;
+  padding: var(--blok-space-3-5) var(--blok-space-3-5) var(--blok-space-4);
 }
+.blok-audio-cover-picker .blok-media-empty__card.is-dragover {
+  background: color-mix(in srgb, var(--blok-color-accent) 6%, var(--blok-bg-primary));
+}
+.blok-audio-cover-picker .blok-media-empty__title { font-size: 14px; }
+.blok-audio-cover-picker .blok-media-empty__hint { font-size: 13px; }
 /* The picker lives at document.body, outside blok's scoped border-box reset, so
-   its subtree would default to content-box. The media-empty Upload/Link height-
-   swap animation measures the border-box height but animates the `height`
-   property — under content-box that adds the panel padding on top, overshooting
-   then snapping back (a visible height jump). Match the inline (border-box)
-   context the component was built for. */
+   its subtree would default to content-box. Match the inline (border-box)
+   context the uploader was built for. */
 .blok-audio-cover-picker,
 .blok-audio-cover-picker * {
   box-sizing: border-box;
@@ -405,8 +410,7 @@
 
 /* Entrance — the picker rises + scales up from its top-left anchor corner so it
    reads as growing out of the cover, matching the block's own mount language
-   (blok-audio-rise / --blok-ease-popover). The directional content slide between
-   the Upload/Link tabs is driven from media-empty-state.ts (WAAPI). */
+   (blok-audio-rise / --blok-ease-popover). */
 .blok-audio-cover-picker {
   transform-origin: top left;
   animation: blok-audio-cover-picker-in var(--blok-duration-slow) var(--blok-ease-popover) both;

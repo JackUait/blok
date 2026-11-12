@@ -149,21 +149,16 @@ const RADII: Array<[string, string, string]> = [
   ['styles/file.css', '.blok-file-preview-xlsx-table', role('surface')],
   ['styles/file.css', '.blok-file-preview-pptx > *', role('surface')],
   ['styles/media-empty.css', '.blok-media-empty__card', role('block')],
-  ['styles/media-empty.css', '.blok-media-empty__tab', nested('control')],
-  ['styles/media-empty.css', '.blok-media-empty__panel', nested('block')],
-  ['styles/media-empty.css', '.blok-media-empty__tile', role('control-lg')],
   ['styles/media-empty.css', '.blok-media-empty__glyph', role('control-lg')],
   ['styles/media-empty.css', '.blok-media-empty__choose', role('control')],
-  ['styles/media-empty.css', '.blok-media-empty__embed-icon[data-site] .blok-media-empty__embed-site', role('control-sm')],
-  ['styles/media-empty.css', '.blok-media-empty__embed-submit', role('control-sm')],
-  ['styles/media-empty.css', '.blok-media-empty__embed-bar--large .blok-media-empty__embed-submit', nested('control-lg')],
+  ['styles/media-empty.css', '.blok-media-empty__from-link', role('control')],
+  ['styles/media-empty.css', '.blok-media-empty__embed-submit', role('control')],
+  ['styles/media-empty.css', '.blok-media-empty__embed-cancel', role('control')],
   ['styles/media-empty.css', '.blok-media-empty__embed-kbd', role('control-sm')],
-  ['styles/media-empty.css', '.blok-media-empty__embed-type', role('control-sm')],
   ['styles/media-empty.css', '.blok-media-empty__input', role('field')],
   ['styles/media-empty.css', '.blok-media-empty__search', role('field')],
   ['styles/media-empty.css', '.blok-media-empty__submit', role('control')],
   ['styles/media-empty.css', '.blok-media-empty__badge', role('control-sm')],
-  ['styles/media-empty.css', '.blok-media-empty__drop-inner', role('control')],
 ];
 
 /** Containers publish --blok-radius-inner from their own role, border and padding tokens. */
@@ -181,8 +176,6 @@ const INNER: Array<[string, string, string]> = [
   ['styles/embed.css', '[data-blok-tool="embed"] .blok-embed-toolbar', inner('surface', '--blok-space-1')],
   ['styles/embed.css', '[data-blok-tool="embed"] .blok-embed-toolbar__align-popover', inner('surface', '--blok-space-1')],
   ['styles/embed.css', '.blok-embed-linkcard__actions', inner('block', BORDER, '--blok-space-1')],
-  ['styles/media-empty.css', '.blok-media-empty__card > *', inner('block', BORDER, '--blok-space-2')],
-  ['styles/media-empty.css', '[data-blok-field].blok-media-empty__embed-bar--large', inner('field', BORDER, '--blok-space-1-5')],
 ];
 
 const parsed = new Map<string, Map<string, string[]>>();

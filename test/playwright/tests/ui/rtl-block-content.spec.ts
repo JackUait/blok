@@ -194,8 +194,9 @@ test.describe('RTL block content mirrors LTR', () => {
       { id: 'im', type: 'image', data: {} },
     ];
     const probes = {
-      mediaEmptyLabel: '[data-blok-id="im"] .blok-media-empty__label',
-      mediaEmptyTabs: '[data-blok-id="im"] .blok-media-empty__tabs',
+      mediaEmptyTitle: '[data-blok-id="im"] .blok-media-empty__title',
+      mediaEmptyActions: '[data-blok-id="im"] .blok-media-empty__actions',
+      mediaEmptyDrawing: '[data-blok-id="im"] [data-blok-media-preview]',
       stubInfo: '[data-blok-id="st"] [data-blok-stub-info]',
       spacerReadout: '[data-blok-id="sp"] [data-blok-spacer-readout]',
       codeChevron: '[data-blok-id="cd"] [data-blok-testid="code-language-chevron"]',

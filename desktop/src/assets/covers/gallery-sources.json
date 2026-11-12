@@ -1,0 +1,202 @@
+[
+  {
+    "id": "texture-blue-plaster-wall",
+    "file": "polyhaven_blue_plaster_wall.jpg",
+    "label": "Enduit bleu",
+    "source": "https://polyhaven.com/a/blue_plaster_wall",
+    "author": "Dimitrios Savva",
+    "license": "CC0-1.0",
+    "group": "Textures · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/blue_plaster_wall/blue_plaster_wall_diff_2k.jpg"
+  },
+  {
+    "id": "texture-blue-metal-plate",
+    "file": "polyhaven_blue_metal_plate.jpg",
+    "label": "Métal bleu",
+    "source": "https://polyhaven.com/a/blue_metal_plate",
+    "author": "Rob Tuytel",
+    "license": "CC0-1.0",
+    "group": "Textures · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/blue_metal_plate/blue_metal_plate_diff_2k.jpg"
+  },
+  {
+    "id": "texture-green-metal-rust",
+    "file": "polyhaven_green_metal_rust.jpg",
+    "label": "Métal patiné",
+    "source": "https://polyhaven.com/a/green_metal_rust",
+    "author": "Rob Tuytel",
+    "license": "CC0-1.0",
+    "group": "Textures · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/green_metal_rust/green_metal_rust_diff_2k.jpg"
+  },
+  {
+    "id": "texture-grey-plaster",
+    "file": "polyhaven_grey_plaster.jpg",
+    "label": "Enduit gris",
+    "source": "https://polyhaven.com/a/grey_plaster",
+    "author": "Rob Tuytel",
+    "license": "CC0-1.0",
+    "group": "Textures · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/grey_plaster/grey_plaster_diff_2k.jpg"
+  },
+  {
+    "id": "texture-denim-fabric",
+    "file": "polyhaven_denim_fabric.jpg",
+    "label": "Denim",
+    "source": "https://polyhaven.com/a/denim_fabric",
+    "author": "Rob Tuytel",
+    "license": "CC0-1.0",
+    "group": "Textures · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/denim_fabric/denim_fabric_diff_2k.jpg"
+  },
+  {
+    "id": "texture-marble-01",
+    "file": "polyhaven_marble_01.jpg",
+    "label": "Marbre",
+    "source": "https://polyhaven.com/a/marble_01",
+    "author": "Rob Tuytel",
+    "license": "CC0-1.0",
+    "group": "Textures · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/marble_01/marble_01_diff_2k.jpg"
+  },
+  {
+    "id": "texture-clay-plaster",
+    "file": "polyhaven_clay_plaster.jpg",
+    "label": "Argile",
+    "source": "https://polyhaven.com/a/clay_plaster",
+    "author": "Amal Kumar",
+    "license": "CC0-1.0",
+    "group": "Textures · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/clay_plaster/clay_plaster_diff_2k.jpg"
+  },
+  {
+    "id": "texture-rusty-painted-metal",
+    "file": "polyhaven_rusty_painted_metal.jpg",
+    "label": "Métal rouillé",
+    "source": "https://polyhaven.com/a/rusty_painted_metal",
+    "author": "Amal Kumar",
+    "license": "CC0-1.0",
+    "group": "Textures · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusty_painted_metal/rusty_painted_metal_diff_2k.jpg"
+  },
+  {
+    "id": "texture-concrete",
+    "file": "polyhaven_concrete.jpg",
+    "label": "Béton",
+    "source": "https://polyhaven.com/a/concrete",
+    "author": "Rob Tuytel",
+    "license": "CC0-1.0",
+    "group": "Textures · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/concrete/concrete_diff_2k.jpg"
+  },
+  {
+    "id": "texture-red-plaster-weathered",
+    "file": "polyhaven_red_plaster_weathered.jpg",
+    "label": "Enduit rouge",
+    "source": "https://polyhaven.com/a/red_plaster_weathered",
+    "author": "Amal Kumar",
+    "license": "CC0-1.0",
+    "group": "Textures · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/red_plaster_weathered/red_plaster_weathered_diff_2k.jpg"
+  },
+  {
+    "id": "texture-yellow-plaster",
+    "file": "polyhaven_yellow_plaster.jpg",
+    "label": "Enduit jaune",
+    "source": "https://polyhaven.com/a/yellow_plaster",
+    "author": "Rob Tuytel",
+    "license": "CC0-1.0",
+    "group": "Textures · Poly Haven",
+    "original": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/yellow_plaster/yellow_plaster_diff_2k.jpg"
+  },
+  {
+    "id": "met-436965",
+    "file": "met_436965.jpg",
+    "label": "La famille Monet au jardin · Edouard Manet",
+    "source": "https://www.metmuseum.org/art/collection/search/436965",
+    "author": "Edouard Manet",
+    "license": "CC0-1.0",
+    "group": "Peintures · The Met",
+    "original": "https://images.metmuseum.org/CRDImages/ep/original/DP-25465-001.jpg"
+  },
+  {
+    "id": "met-436105",
+    "file": "met_436105.jpg",
+    "label": "La Mort de Socrate · Jacques Louis David",
+    "source": "https://www.metmuseum.org/art/collection/search/436105",
+    "author": "Jacques Louis David",
+    "license": "CC0-1.0",
+    "group": "Peintures · The Met",
+    "original": "https://images.metmuseum.org/CRDImages/ep/original/DP-13139-001.jpg"
+  },
+  {
+    "id": "met-436121",
+    "file": "met_436121.jpg",
+    "label": "Femme au vase de fleurs · Edgar Degas",
+    "source": "https://www.metmuseum.org/art/collection/search/436121",
+    "author": "Edgar Degas",
+    "license": "CC0-1.0",
+    "group": "Peintures · The Met",
+    "original": "https://images.metmuseum.org/CRDImages/ep/original/DP-25460-001.jpg"
+  },
+  {
+    "id": "met-437853",
+    "file": "met_437853.jpg",
+    "label": "Venise · Joseph Mallord William Turner",
+    "source": "https://www.metmuseum.org/art/collection/search/437853",
+    "author": "Joseph Mallord William Turner",
+    "license": "CC0-1.0",
+    "group": "Peintures · The Met",
+    "original": "https://images.metmuseum.org/CRDImages/ep/original/DP169568.jpg"
+  },
+  {
+    "id": "met-437980",
+    "file": "met_437980.jpg",
+    "label": "Cyprès · Vincent van Gogh",
+    "source": "https://www.metmuseum.org/art/collection/search/437980",
+    "author": "Vincent van Gogh",
+    "license": "CC0-1.0",
+    "group": "Peintures · The Met",
+    "original": "https://images.metmuseum.org/CRDImages/ep/original/DP130999.jpg"
+  },
+  {
+    "id": "met-436524",
+    "file": "met_436524.jpg",
+    "label": "Tournesols · Vincent van Gogh",
+    "source": "https://www.metmuseum.org/art/collection/search/436524",
+    "author": "Vincent van Gogh",
+    "license": "CC0-1.0",
+    "group": "Peintures · The Met",
+    "original": "https://images.metmuseum.org/CRDImages/ep/original/DP-41223-001.jpg"
+  },
+  {
+    "id": "met-437881",
+    "file": "met_437881.jpg",
+    "label": "La Femme à l’aiguière · Johannes Vermeer",
+    "source": "https://www.metmuseum.org/art/collection/search/437881",
+    "author": "Johannes Vermeer",
+    "license": "CC0-1.0",
+    "group": "Peintures · The Met",
+    "original": "https://images.metmuseum.org/CRDImages/ep/original/DP353257.jpg"
+  },
+  {
+    "id": "met-436529",
+    "file": "met_436529.jpg",
+    "label": "L’Arlésienne · Vincent van Gogh",
+    "source": "https://www.metmuseum.org/art/collection/search/436529",
+    "author": "Vincent van Gogh",
+    "license": "CC0-1.0",
+    "group": "Peintures · The Met",
+    "original": "https://images.metmuseum.org/CRDImages/ep/original/DT1396.jpg"
+  },
+  {
+    "id": "met-436532",
+    "file": "met_436532.jpg",
+    "label": "Autoportrait au chapeau de paille · Vincent van Gogh",
+    "source": "https://www.metmuseum.org/art/collection/search/436532",
+    "author": "Vincent van Gogh",
+    "license": "CC0-1.0",
+    "group": "Peintures · The Met",
+    "original": "https://images.metmuseum.org/CRDImages/ep/original/DT1502_cropped2.jpg"
+  }
+]

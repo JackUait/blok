@@ -102,7 +102,8 @@ describe('desktop page cover', () => {
     expect(isCoverId('met-great-wave')).toBe(true);
     covered.querySelector<HTMLButtonElement>('[data-cover-id="met-great-wave"]')!.click();
     expect(change).toHaveBeenCalledWith('met-great-wave');
-    covered.querySelector<HTMLButtonElement>('[data-desktop-cover-gallery-head] button')!.click();
+    [...covered.querySelectorAll<HTMLButtonElement>('[data-desktop-cover-gallery-head] button')]
+      .find((button) => button.textContent === 'Supprimer')!.click();
     expect(change).toHaveBeenCalledWith(undefined);
     [...covered.querySelectorAll<HTMLButtonElement>('[data-desktop-cover-actions] > button')]
       .find((button) => button.textContent === 'Repositionner')!.click();

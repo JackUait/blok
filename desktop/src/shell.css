@@ -275,20 +275,26 @@ body[data-blok-theme="light"] [data-desktop-floating-toc] {
 [data-desktop-cover] { position: relative; height: 220px; }
 [data-desktop-cover-image] { width: 100%; height: 100%; background-size: cover; }
 [data-desktop-cover-actions] {
-  position: absolute; right: max(16px, calc((100% - 900px) / 2 + 64px)); bottom: 12px;
-  z-index: 3; display: flex; gap: 6px; opacity: 0;
+  position: absolute; right: 12px; top: 12px;
+  z-index: 3; display: flex; align-items: center; gap: 0; padding: 2px; opacity: 0;
+  border: 1px solid var(--desktop-border); border-radius: var(--blok-radius-control, 6px);
+  background: var(--desktop-strip); box-shadow: 0 2px 6px #0002;
 }
-[data-blok-agent-editor][data-full-width] [data-desktop-cover-actions] { right: clamp(24px, 5vw, 96px); }
+
 [data-desktop-cover]:hover [data-desktop-cover-actions], [data-desktop-cover-actions]:focus-within,
 [data-desktop-cover-actions][data-open] { opacity: 1; }
 [data-desktop-cover-actions] > button {
-  height: 28px; padding: 0 9px; border: 0; border-radius: 4px;
-  background: rgba(20, 20, 20, .72); color: #fff; font: inherit; font-size: 12px; cursor: pointer;
+  position: relative; height: 26px; padding: 0 9px; border: 0; border-radius: 4px;
+  background: transparent; color: var(--desktop-muted); font: inherit; font-size: 13px; cursor: pointer;
 }
-[data-desktop-cover-actions] > button:hover { background: rgba(20, 20, 20, .9); }
+[data-desktop-cover-actions] > button + button::before {
+  content: ''; position: absolute; left: 0; top: 5px; bottom: 5px;
+  width: 1px; background: var(--desktop-border);
+}
+[data-desktop-cover-actions] > button:hover { background: var(--desktop-hover); color: var(--desktop-ink); }
 [data-desktop-cover-gallery] {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 4;
-  width: min(430px, calc(100vw - 24px)); max-height: min(450px, calc(100vh - 24px));
+  width: min(540px, calc(100vw - 24px)); max-height: min(450px, calc(100vh - 24px));
   overflow: hidden; border: 1px solid var(--desktop-border); border-radius: 10px;
   background: var(--desktop-strip); color: var(--desktop-ink); box-shadow: 0 12px 32px rgba(0, 0, 0, .35);
 }
@@ -315,7 +321,7 @@ body[data-blok-theme="light"] [data-desktop-floating-toc] {
 [data-desktop-cover-gallery-thumb]:active { cursor: grabbing; background: var(--desktop-ink); }
 [data-desktop-cover-gallery] section + section { margin-top: 16px; }
 [data-desktop-cover-gallery] h3 { margin: 0 0 10px; color: var(--desktop-muted); font-size: 12px; font-weight: 600; }
-[data-desktop-cover-grid] { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+[data-desktop-cover-grid] { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 [data-desktop-cover-grid] button { height: 62px; border: 2px solid transparent; border-radius: 5px; background-size: cover; background-position: center; cursor: pointer; }
 [data-desktop-cover-grid] button:hover, [data-desktop-cover-grid] button:focus-visible,
 [data-desktop-cover-grid] button[aria-pressed="true"] { border-color: var(--desktop-ink); }
@@ -522,12 +528,11 @@ div[data-desktop-menu-account], div[data-desktop-menu-account]:hover { cursor: d
 }
 
 [data-desktop-cover-tabs] {
-  display: flex; align-items: center; gap: 20px; padding: 0 14px;
-  border-bottom: 1px solid var(--desktop-border);
+  display: flex; align-items: center; gap: 20px; padding: 0; min-width: 0;
 }
 [data-desktop-cover-tabs] > button {
   position: relative; display: inline-flex; align-items: center; justify-content: center;
-  flex: 0 0 auto; min-width: 0; height: 38px; padding: 0 2px;
+  flex: 0 0 auto; min-width: 0; height: 42px; padding: 0 2px;
   border: 0; border-radius: 0; background: transparent;
   color: var(--desktop-muted); font: inherit; font-size: 13px; cursor: pointer;
 }

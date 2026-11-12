@@ -1,3 +1,23 @@
+import extraCover0 from './assets/covers/polyhaven_blue_plaster_wall.jpg';
+import extraCover1 from './assets/covers/polyhaven_blue_metal_plate.jpg';
+import extraCover2 from './assets/covers/polyhaven_green_metal_rust.jpg';
+import extraCover3 from './assets/covers/polyhaven_grey_plaster.jpg';
+import extraCover4 from './assets/covers/polyhaven_denim_fabric.jpg';
+import extraCover5 from './assets/covers/polyhaven_marble_01.jpg';
+import extraCover6 from './assets/covers/polyhaven_clay_plaster.jpg';
+import extraCover7 from './assets/covers/polyhaven_rusty_painted_metal.jpg';
+import extraCover8 from './assets/covers/polyhaven_concrete.jpg';
+import extraCover9 from './assets/covers/polyhaven_red_plaster_weathered.jpg';
+import extraCover10 from './assets/covers/polyhaven_yellow_plaster.jpg';
+import extraCover11 from './assets/covers/met_436965.jpg';
+import extraCover12 from './assets/covers/met_436105.jpg';
+import extraCover13 from './assets/covers/met_436121.jpg';
+import extraCover14 from './assets/covers/met_437853.jpg';
+import extraCover15 from './assets/covers/met_437980.jpg';
+import extraCover16 from './assets/covers/met_436524.jpg';
+import extraCover17 from './assets/covers/met_437881.jpg';
+import extraCover18 from './assets/covers/met_436529.jpg';
+import extraCover19 from './assets/covers/met_436532.jpg';
 import earth from './assets/covers/nasa_the_blue_marble.jpg';
 import desert from './assets/covers/nasa_great_sandy_desert_australia.jpg';
 import nebula from './assets/covers/webb1.jpg';
@@ -41,6 +61,30 @@ export const COVER_GROUPS = [
     { id: 'solid-orange', label: 'Orange', background: 'linear-gradient(#d99c76, #d99c76)' },
     { id: 'solid-red', label: 'Rouge', background: 'linear-gradient(#c57f78, #c57f78)' },
     { id: 'solid-pink', label: 'Rose poudré', background: 'linear-gradient(#cba3ae, #cba3ae)' },
+  ] },
+  { label: "Textures · Poly Haven", items: [
+    { id: "texture-blue-plaster-wall", label: "Enduit bleu", background: `url("${extraCover0}")` },
+    { id: "texture-blue-metal-plate", label: "Métal bleu", background: `url("${extraCover1}")` },
+    { id: "texture-green-metal-rust", label: "Métal patiné", background: `url("${extraCover2}")` },
+    { id: "texture-grey-plaster", label: "Enduit gris", background: `url("${extraCover3}")` },
+    { id: "texture-denim-fabric", label: "Denim", background: `url("${extraCover4}")` },
+    { id: "texture-marble-01", label: "Marbre", background: `url("${extraCover5}")` },
+    { id: "texture-clay-plaster", label: "Argile", background: `url("${extraCover6}")` },
+    { id: "texture-rusty-painted-metal", label: "Métal rouillé", background: `url("${extraCover7}")` },
+    { id: "texture-concrete", label: "Béton", background: `url("${extraCover8}")` },
+    { id: "texture-red-plaster-weathered", label: "Enduit rouge", background: `url("${extraCover9}")` },
+    { id: "texture-yellow-plaster", label: "Enduit jaune", background: `url("${extraCover10}")` },
+  ] },
+  { label: "Peintures · The Met", items: [
+    { id: "met-436965", label: "La famille Monet au jardin · Edouard Manet", background: `url("${extraCover11}")` },
+    { id: "met-436105", label: "La Mort de Socrate · Jacques Louis David", background: `url("${extraCover12}")` },
+    { id: "met-436121", label: "Femme au vase de fleurs · Edgar Degas", background: `url("${extraCover13}")` },
+    { id: "met-437853", label: "Venise · Joseph Mallord William Turner", background: `url("${extraCover14}")` },
+    { id: "met-437980", label: "Cyprès · Vincent van Gogh", background: `url("${extraCover15}")` },
+    { id: "met-436524", label: "Tournesols · Vincent van Gogh", background: `url("${extraCover16}")` },
+    { id: "met-437881", label: "La Femme à l’aiguière · Johannes Vermeer", background: `url("${extraCover17}")` },
+    { id: "met-436529", label: "L’Arlésienne · Vincent van Gogh", background: `url("${extraCover18}")` },
+    { id: "met-436532", label: "Autoportrait au chapeau de paille · Vincent van Gogh", background: `url("${extraCover19}")` },
   ] },
   { label: 'Images spatiales', items: [
     { id: 'earth', label: 'La Terre', background: `url("${earth}")` },
@@ -205,19 +249,16 @@ export function createPageCover(
   gallery.hidden = true;
   const head = document.createElement('div');
   head.setAttribute('data-desktop-cover-gallery-head', '');
-  const title = document.createElement('strong');
-  title.textContent = 'Couverture de page';
   const remove = document.createElement('button');
   remove.type = 'button';
   remove.textContent = 'Supprimer';
   remove.addEventListener('click', () => onChange(undefined));
-  head.append(title, remove);
   gallery.append(head);
   const tabs = document.createElement('div');
   tabs.setAttribute('data-desktop-cover-tabs', '');
   tabs.setAttribute('role', 'tablist');
   tabs.setAttribute('aria-label', 'Source de la couverture');
-  gallery.append(tabs);
+  head.append(tabs, remove);
   const scroll = document.createElement('div');
   scroll.setAttribute('data-desktop-cover-gallery-scroll', '');
   const scrollFrame = document.createElement('div');
@@ -369,7 +410,7 @@ export function createPageCover(
   change.addEventListener('click', () => {
     if (gallery.hidden) {
       gallery.hidden = false;
-      content.style.height = `${Math.max(0, Math.min(350, window.innerHeight - gallery.getBoundingClientRect().top - 100))}px`;
+      content.style.height = `${Math.max(0, Math.min(350, window.innerHeight - gallery.getBoundingClientRect().top - 60))}px`;
       updateScrollbar();
       change.setAttribute('aria-expanded', 'true');
       actions.setAttribute('data-open', '');
@@ -403,7 +444,7 @@ export function createPageCover(
   const finish = (): void => {
     drag.hidden = true;
     root.removeAttribute('data-repositioning');
-    actions.replaceChildren(reposition, change, gallery);
+    actions.replaceChildren(change, reposition, gallery);
     actions.removeAttribute('data-open');
     reposition.focus();
   };
@@ -440,7 +481,7 @@ export function createPageCover(
     actions.setAttribute('data-open', '');
     drag.focus();
   });
-  actions.append(reposition, change, gallery);
+  actions.append(change, reposition, gallery);
   root.append(image, drag);
   if (!options.readOnly) root.append(actions);
   return root;

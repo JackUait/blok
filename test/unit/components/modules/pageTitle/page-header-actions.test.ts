@@ -9,6 +9,12 @@ const activate = vi.fn();
 const state = { label: 'Add description' };
 
 class Asking implements BlockTool {
+  public static get isReadOnlySupported(): boolean {
+    return true;
+  }
+
+  public setReadOnly(): void {}
+
   public render(): HTMLElement {
     return document.createElement('div');
   }
@@ -73,6 +79,17 @@ describe('page header actions', () => {
 
     expect(activate).toHaveBeenCalledTimes(1);
     expect(actions()[0]?.textContent).toBe('Hide description');
+  });
+
+  it('drops the buttons when the editor turns read-only', async () => {
+    blok = create({ holder, pageTitle: true, data: { blocks: [{ id: 'a', type: 'asking', data: {} }] } });
+    await blok.isReady;
+    header().dispatchEvent(new PointerEvent('pointerenter'));
+    expect(actions()).toHaveLength(1);
+
+    await blok.readOnly.set(true);
+
+    expect(actions()).toEqual([]);
   });
 
   it('asks nothing of a block that is not first, and adds nothing to the row', async () => {

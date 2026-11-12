@@ -5,6 +5,8 @@ import { describeDatabase } from '../../shared/tool-descriptions/database';
 import { DATABASE_ACTION_HANDLERS } from '../../shared/tool-actions/database';
 import { DATABASE_COMMENT_HANDLERS } from '../../shared/tool-actions/database-comments';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
+import { INLINE_TEXT_SANITIZE } from '../../shared/inline-text-sanitize';
+import { clean as cleanHtml } from '../../components/utils/sanitizer';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, PageHeaderAction, ToolboxConfig, ToolboxConfigEntry, SanitizerConfig, ToolSanitizerConfig } from '../../../types';
 import type { AgentRun } from '../../../types/api';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
@@ -448,6 +450,13 @@ const deletedBackendRowsOf = (adapter: DatabaseAdapter | undefined, databaseId: 
 const BACKLINKS_SETTLE_MS = 300;
 
 // `icon` and `starter` stay in the passthrough: a value this client cannot draw (a newer glyph) is saved back as it came.
+/**
+ * The description is drawn with innerHTML, and saved data, undo, a peer and
+ * an agent's block.update all reach it unsanitized: only inline marks survive.
+ */
+const cleanDescription = (value: unknown): string =>
+  typeof value === 'string' ? cleanHtml(value, { ...INLINE_TEXT_SANITIZE }) : '';
+
 const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'description', 'schema', 'views', 'activeViewId', 'deletedProperties', 'source', 'automations', 'hideDataSourceTitles', 'fullPage', INITIAL_VIEW_KEY, LINK_PICKER_KEY, ALONE_SKIPS_PANEL_KEY]);
 
 const sourceRefOf = (data: DatabaseData | undefined): DatabaseSourceRef | undefined => {
@@ -809,7 +818,7 @@ export class DatabaseTool implements BlockTool {
     this.unknown = unknownKeys(data);
     this.dataSourceTitlesHidden = data?.hideDataSourceTitles === true;
     this.fullPage = data?.fullPage === true;
-    this.description = typeof data?.description === 'string' ? data.description : '';
+    this.description = cleanDescription(data?.description);
     this.databaseIcon = iconOf(data);
     this.starter = starterOf(data);
     this.savedAutomations = structuredClone(data?.automations);
@@ -2345,6 +2354,9 @@ export class DatabaseTool implements BlockTool {
       label: this.api.i18n.t(shown ? 'tools.database.hideDescription' : 'tools.database.addDescription'),
       icon: IconInfo,
       onActivate: () => {
+        if (this.readOnly) {
+          return;
+        }
         if (this.descriptionElement === null) {
           this.showDescription(true);
 
@@ -2382,6 +2394,19 @@ export class DatabaseTool implements BlockTool {
     element.setAttribute('contenteditable', this.readOnly ? 'false' : 'true');
     // Saved as written: the Saver runs the description sanitizer over it.
     element.innerHTML = this.description;
+    // One line, like the title: Enter and Tab leave it. Backspace or Delete in an
+    // empty line must not reach core, which would merge or remove the database.
+    element.addEventListener('keydown', (event: KeyboardEvent) => {
+      const empty = (element.textContent ?? '') === '';
+
+      if (event.key === 'Enter' || event.key === 'Tab' || ((event.key === 'Backspace' || event.key === 'Delete') && empty)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      if (event.key === 'Enter' || event.key === 'Tab') {
+        element.blur();
+      }
+    });
     // Clearing it removes the line (notion-motion.md Round 15 C).
     element.addEventListener('blur', () => {
       if (this.descriptionElement === element && (element.textContent ?? '').trim() === '') {
@@ -2937,7 +2962,7 @@ export class DatabaseTool implements BlockTool {
     this.dataSourceTitlesHidden = data.hideDataSourceTitles === true;
     this.fullPage = data.fullPage === true;
     this.element?.toggleAttribute('data-blok-database-page', this.fullPage);
-    this.description = typeof data.description === 'string' ? data.description : '';
+    this.description = cleanDescription(data.description);
     this.syncDescription();
     this.databaseIcon = iconOf(data);
     this.starter = starterOf(data);

@@ -297,6 +297,7 @@ export class PageTitle extends Module {
     }
     this.iconControl?.redraw();
     this.coverControl?.redraw();
+    this.refreshActions();
   }
 
   public destroy(): void {

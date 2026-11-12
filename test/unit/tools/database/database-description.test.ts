@@ -79,6 +79,24 @@ describe('DatabaseTool — description on a full-page database', () => {
     expect(save(tool)).not.toHaveProperty('description');
   });
 
+  it('keeps Enter and an empty Backspace away from core', () => {
+    const { tool, el } = open({ fullPage: true });
+
+    tool.pageHeaderActions()[0]?.onActivate();
+    const description = field(el);
+    const reached = vi.fn();
+
+    el.addEventListener('keydown', reached);
+    ['Enter', 'Backspace', 'Delete', 'Tab'].forEach((key) => {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+
+      description?.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    expect(reached).not.toHaveBeenCalled();
+  });
+
   it('Hide description removes the line', () => {
     const { tool, el } = open({ fullPage: true, description: 'Gone soon' });
 
@@ -103,6 +121,27 @@ describe('DatabaseTool — description on a full-page database', () => {
 
     expect(field(el)?.getAttribute('contenteditable')).not.toBe('true');
     expect(tool.pageHeaderActions()).toEqual([]);
+  });
+
+  it.each([
+    '<img src=x onerror="window.__descXss = 1">Hi',
+    'Hi<script>window.__descXss = 1</script>',
+  ])('never draws script from a loaded description: %s', (html) => {
+    const { el } = open({ fullPage: true, description: html });
+    const description = field(el);
+
+    expect(description?.querySelector('img, script')).toBeNull();
+    expect(description?.innerHTML).not.toMatch(/onerror|script/i);
+    expect(description?.textContent).toBe('Hi');
+  });
+
+  it('never draws script from a description that setData brings', () => {
+    const { tool, el } = open({ fullPage: true, description: 'Safe' });
+
+    tool.setData(data({ fullPage: true, description: '<b onclick="x()">Bold</b><img src=x onerror="y()">' }));
+    const description = field(el);
+
+    expect(description?.innerHTML).toBe('<b>Bold</b>');
   });
 
   it('keeps inline marks through the sanitizer config and nothing else', () => {

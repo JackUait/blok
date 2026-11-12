@@ -95,7 +95,7 @@ describe('workspace menu hierarchy',()=>{
     expect(menu.querySelector('[aria-label="Sur cet appareil"]')).toBeNull();
     expect(menu.querySelector('[role="menuitemradio"][aria-current="true"]')?.textContent).toContain('Tousambassadeurs');
   });
-  it('opens existing settings and compact invitations in place; only account management navigates',()=>{
+  it('opens settings, invitations and account management in place; only the explicit account chooser navigates',()=>{
     const footer=remoteFooter();const events: unknown[]=[];const href=location.href;
     footer.addEventListener('blok:desktop-connect-cloud',(event)=>events.push((event as CustomEvent).detail));
     [...footer.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find(node=>node.textContent==='Paramètres')!.click();
@@ -106,6 +106,12 @@ describe('workspace menu hierarchy',()=>{
     footer.querySelector<HTMLButtonElement>('[data-desktop-menu-invite]')!.click();
     expect(childUi.invite).toHaveBeenCalledWith(expect.objectContaining({slug:'tousambassadeurs',workspaceName:'Tousambassadeurs'}));
     footer.querySelector<HTMLButtonElement>('[data-desktop-menu-connect]')!.click();
+    const dialog=document.querySelector<HTMLElement>('[data-desktop-settings-dialog]')!;
+    expect(dialog.querySelector('[data-desktop-settings-title]')?.textContent).toBe('Mon compte');
+    expect(dialog.querySelector('[data-desktop-settings-content]')?.textContent).toContain('member@example.org');
+    expect(dialog.querySelector('[data-desktop-settings-nav-item][aria-current="page"]')?.textContent).toBe('member@example.org');
+    expect(location.href).toBe(href); expect(events).toEqual([]);
+    [...dialog.querySelectorAll<HTMLButtonElement>('button')].find(node=>node.textContent==='Comptes et espaces')!.click();
     expect(events).toEqual([{section:'account'}]);
   });
   it('reuses the members panel, nests invitations inside the settings modal, and tears down the panel on close',()=>{

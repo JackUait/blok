@@ -137,7 +137,10 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   const connect = actionButton('data-desktop-menu-connect', currentWorkspace.kind === 'remote' ? 'Gérer mon compte' : 'Ajouter un compte', 'profile');
   connect.setAttribute('data-desktop-menu-item', '');
   connect.setAttribute('role', 'menuitem');
-  connect.addEventListener('click', () => emitCloud('account'));
+  connect.addEventListener('click', () => {
+    if (currentWorkspace.kind === 'remote') openSettings('account');
+    else emitCloud('account');
+  });
   menu.append(account, preferences);
   if (admin) {
     const invite = actionButton('data-desktop-menu-invite', 'Inviter des membres', 'profile');
@@ -289,6 +292,9 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
       const roleRow = el('div', 'data-desktop-settings-row');
       roleRow.append(el('strong', 'data-desktop-settings-row-title', 'Rôle'), el('span', 'data-desktop-settings-row-value', currentWorkspace.role === 'admin' ? 'Administrateur' : currentWorkspace.role === 'viewer' ? 'Lecture seule' : 'Membre'));
       content.append(workspaceRow, roleRow);
+      const accounts = actionButton('data-desktop-settings-copy', 'Comptes et espaces', 'profile');
+      accounts.addEventListener('click', () => { closeSettings(); emitCloud('account'); });
+      content.append(accounts);
     } else if (panel === 'account') {
       content.append(el('h1', 'data-desktop-settings-title', 'Profil local'));
       content.append(el('p', 'data-desktop-settings-intro', 'Cet espace appartient à cet appareil.'));

@@ -403,7 +403,7 @@ test.describe('undo audit: keyboard cross-block text selection (U072)', () => {
     expect(await savedText(page)).toEqual(['b1:Hello brave world']);
   });
 
-  test('undo and redo of Cmd+B on a backward selection in one block re-select it forward', async ({ page }) => {
+  test('RM2-5: undo and redo of Cmd+B on a backward selection in one block keep it backward, like Notion', async ({ page }) => {
     await mount(page, [{ id: 'b1', type: 'paragraph', data: { text: 'Hello brave world' } }]);
     await editable(page, 'b1').click();
     await page.keyboard.press('End');
@@ -419,16 +419,17 @@ test.describe('undo audit: keyboard cross-block text selection (U072)', () => {
     await page.keyboard.press(`${MOD}+b`);
     await pause(page, 1000);
     expect(await savedText(page)).toEqual(['b1:Hello <strong>brave</strong> world']);
+    expect(await selection(page)).toBe('b1@11 -> b1@6');
 
     await page.keyboard.press(`${MOD}+z`);
     await pause(page, 300);
     expect(await savedText(page)).toEqual(['b1:Hello brave world']);
-    expect(await selection(page)).toBe('b1@6 -> b1@11');
+    expect(await selection(page)).toBe('b1@11 -> b1@6');
 
     await page.keyboard.press(`${MOD}+Shift+z`);
     await pause(page, 300);
     expect(await savedText(page)).toEqual(['b1:Hello <strong>brave</strong> world']);
-    expect(await selection(page)).toBe('b1@6 -> b1@11');
+    expect(await selection(page)).toBe('b1@11 -> b1@6');
   });
 });
 

@@ -1051,8 +1051,8 @@ describe('UndoHistory', () => {
       second.remove();
     });
 
-    // Notion U038: a one-block range made backward comes back forward.
-    it('re-selects a backward range inside one input forward', () => {
+    // Notion U038: undo that puts the text back re-selects it forward.
+    it('re-selects a backward range inside one input forward when the step removed its text', () => {
       const input = document.createElement('div');
 
       input.textContent = 'hello world';
@@ -1065,17 +1065,40 @@ describe('UndoHistory', () => {
 
       const snapshot = history.captureCaretSnapshot();
 
-      expect(snapshot).toEqual({ blockId: 'b1', inputIndex: 0, offset: 6, end: 11 });
+      expect(snapshot).toEqual({ blockId: 'b1', inputIndex: 0, offset: 6, end: 11, backward: true });
 
       (blok.BlockManager as unknown as { getBlockById: typeof vi.fn }).getBlockById = vi.fn().mockReturnValue(block);
       window.getSelection()?.removeAllRanges();
-      (history as unknown as { caretUndoStack: CaretHistoryEntry[] }).caretUndoStack.push({ before: snapshot, after: null });
+      (history as unknown as { caretUndoStack: CaretHistoryEntry[] }).caretUndoStack.push({
+        before: snapshot,
+        after: { blockId: 'b1', inputIndex: 0, offset: 6 },
+      });
 
       history.undo();
 
       const selection = window.getSelection();
 
       expect([selection?.anchorOffset, selection?.focusOffset]).toEqual([6, 11]);
+      input.remove();
+    });
+
+    // Notion RM2 item 5: undo of Cmd+B keeps the user's direction.
+    it('keeps a backward range inside one input backward when the step left the same range selected', () => {
+      const input = document.createElement('div');
+
+      input.textContent = 'hello world';
+      document.body.appendChild(input);
+      const block = { id: 'b1', inputs: [input], currentInputIndex: 0, currentInput: input, parentId: null };
+      const range = { blockId: 'b1', inputIndex: 0, offset: 6, end: 11, backward: true as const };
+
+      (blok.BlockManager as unknown as { getBlockById: typeof vi.fn }).getBlockById = vi.fn().mockReturnValue(block);
+      (history as unknown as { caretUndoStack: CaretHistoryEntry[] }).caretUndoStack.push({ before: range, after: { ...range } });
+
+      history.undo();
+
+      const selection = window.getSelection();
+
+      expect([selection?.anchorOffset, selection?.focusOffset]).toEqual([11, 6]);
       input.remove();
     });
 

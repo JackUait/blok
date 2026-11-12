@@ -2344,11 +2344,39 @@ export class UndoHistory {
     // The fallback offset will be clamped to the actual text length by the
     // caret restore logic, so the caret ends up at a reasonable position.
     const snapshot = position === 'before'
-      ? entry.before ?? entry.after
+      ? UndoHistory.undoSelection(entry)
       : entry.after ?? entry.before;
 
     this.caretJustRestored = this.restoreCaretSnapshot(snapshot);
     this.restoredCaret = this.caretJustRestored ? snapshot : null;
+  }
+
+  /**
+   * Where undo puts the selection. An undo that puts back a one-block range's
+   * text re-selects it forward (Notion U038). A step that left that same range
+   * selected only changed its marks, so its direction stays (Notion RM2 item 5).
+   * @param entry - the step being undone
+   */
+  private static undoSelection(entry: CaretHistoryEntry): CaretSnapshot | null {
+    const { before, after } = entry;
+
+    if (before === null || before.backward !== true || before.end === undefined) {
+      return before ?? after;
+    }
+
+    const formatOnly = after !== null
+      && after.blockId === before.blockId
+      && after.inputIndex === before.inputIndex
+      && after.offset === before.offset
+      && after.end === before.end;
+
+    if (formatOnly) {
+      return before;
+    }
+
+    const { backward: _dropped, ...forward } = before;
+
+    return forward;
   }
 
   /**
@@ -3434,8 +3462,7 @@ export class UndoHistory {
     // is on a toolbar control, or selectionchange hasn't set it yet for nested
     // blocks like table cell paragraphs).
     // The range start, not the anchor: a backward range is recorded from its
-    // start, so offset/end/endIn mean the same both ways. Only a range across
-    // blocks is also marked `backward`.
+    // start, so offset/end/endIn mean the same both ways, and marked `backward`.
     const liveSelection = window.getSelection();
     const startNode = liveSelection !== null && liveSelection.rangeCount > 0
       ? liveSelection.getRangeAt(0).startContainer
@@ -3472,9 +3499,7 @@ export class UndoHistory {
     const offset = input !== undefined ? getCaretOffset(input) : 0;
     const end = input !== undefined ? UndoHistory.selectionEndIn(input) : null;
     const endIn = input !== undefined && end === null ? this.selectionEndInOtherBlock(input) : null;
-    // Only a range across blocks keeps its direction: Notion re-selects a
-    // one-block range forward (U038). Cross-block is unmeasured there.
-    const backward = endIn !== null && UndoHistory.isBackward(liveSelection);
+    const backward = (end !== null || endIn !== null) && UndoHistory.isBackward(liveSelection);
 
     return {
       blockId: currentBlock.id,
@@ -3794,7 +3819,9 @@ export class UndoHistory {
     const end = resolveCaretRange(input, snapshot.end);
 
     if (start !== null && end !== null) {
-      window.getSelection()?.setBaseAndExtent(start.startContainer, start.startOffset, end.startContainer, end.startOffset);
+      const [base, extent] = snapshot.backward === true ? [end, start] : [start, end];
+
+      window.getSelection()?.setBaseAndExtent(base.startContainer, base.startOffset, extent.startContainer, extent.startOffset);
       this.showToolbarForRange();
     }
   }

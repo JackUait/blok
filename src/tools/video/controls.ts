@@ -917,9 +917,10 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     window.clearTimeout(menuResize.timer);
     menuResize.timer = 0;
     menu.style.height = '';
+    menu.style.width = '';
   };
   const showPane = (pane: 'main' | 'speed', { animate = true, focus = false } = {}): void => {
-    const from = menu.offsetHeight;
+    const from = { height: menu.offsetHeight, width: menu.offsetWidth };
     const entering = pane === 'speed' && menu.getAttribute('data-pane') !== 'speed';
     endMenuResize();
     menu.setAttribute('data-pane', pane);
@@ -930,13 +931,15 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     if (entering) speedWire.enter();
     if (pane === 'main') speedWire.rest();
     if (focus) (pane === 'speed' ? backRow : speedRow).focus({ preventScroll: true });
-    // Height cannot animate to or from `auto`: pin the old height, then the new one.
-    const to = menu.offsetHeight;
-    if (!animate || reducedMotion || !from || !to || from === to) return;
-    menu.style.height = `${from}px`;
-    // Reading the box commits the pinned height before the next one is set.
+    // A size cannot animate to or from `auto`: pin the old size, then the new one.
+    const to = { height: menu.offsetHeight, width: menu.offsetWidth };
+    if (!animate || reducedMotion || !from.height || !to.height || (from.height === to.height && from.width === to.width)) return;
+    menu.style.height = `${from.height}px`;
+    menu.style.width = `${from.width}px`;
+    // Reading the box commits the pinned size before the next one is set.
     menu.getBoundingClientRect();
-    menu.style.height = `${to}px`;
+    menu.style.height = `${to.height}px`;
+    menu.style.width = `${to.width}px`;
     // Longer than the CSS transition, so a missed transitionend cannot leave it pinned.
     menuResize.timer = window.setTimeout(endMenuResize, 400);
   };

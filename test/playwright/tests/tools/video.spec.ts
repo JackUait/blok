@@ -199,6 +199,23 @@ test('the speed submenu: drag the bead, land on a peg, use a preset, step, and g
   await expect(menu).toHaveCSS('border-radius', '14px');
   await expect(menu.getByRole('button', { name: 'Playback speed Normal', exact: true })).toHaveCSS('border-radius', '9px');
 
+  // A longer translated label keeps to one line: the card widens, the row stays one row tall.
+  const speedRow = menu.locator('[data-action="open-speed"]');
+  const rowHeight = (): Promise<number> => speedRow.evaluate((element) => (element as HTMLElement).offsetHeight);
+  // Layout width: the card is still scaling in, which a bounding box would include.
+  const cardWidth = (): Promise<number> => menu.evaluate((element) => (element as HTMLElement).offsetWidth);
+  const oneRow = await rowHeight();
+
+  expect(await cardWidth()).toBe(264);
+  await speedRow.evaluate((element) => {
+    const [label, value] = [...element.querySelectorAll('span')].filter((span) => span.children.length === 0);
+
+    label.textContent = 'Скорость воспроизведения';
+    value.textContent = 'Обычная';
+  });
+  expect(await rowHeight()).toBe(oneRow);
+  expect(await cardWidth()).toBeGreaterThan(264);
+
   await menu.locator('[data-action="open-speed"]').click();
   await expect(menu).toHaveAttribute('data-pane', 'speed');
 
@@ -206,6 +223,9 @@ test('the speed submenu: drag the bead, land on a peg, use a preset, step, and g
   await menu.evaluate(async (element) => {
     await Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished.catch(() => undefined)));
   });
+
+  // The submenu is always the 264px card, however wide the main list was.
+  expect(await cardWidth()).toBe(264);
 
   const wire = menu.locator('[data-role="speed-wire"]');
   const box = await wire.boundingBox();

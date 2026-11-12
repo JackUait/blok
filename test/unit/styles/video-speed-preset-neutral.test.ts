@@ -97,7 +97,22 @@ describe('video settings card panes', () => {
     expect(css).toMatch(/\[data-pane="speed"\] \[data-role="menu-main"\]\s*\{\s*transform: translateX\(calc\(-28% \* var\(--_blok-inline-sign, 1\)\)\);/);
   });
 
-  it('keeps the card at 264px', () => {
-    expect(px('[data-blok-tool="video"] .blok-video-controls__menu', 'width')).toBe(264);
+  it('is at least 264px and grows to keep a long label on one line', () => {
+    const menu = block('[data-blok-tool="video"] .blok-video-controls__menu');
+
+    expect(menu).toContain('width: max-content');
+    expect(px('[data-blok-tool="video"] .blok-video-controls__menu', 'min-width')).toBe(264);
+    expect(block('[data-blok-tool="video"] .blok-video-controls__menu-label')).toContain('white-space: nowrap');
   });
+
+  it('keeps the speed submenu at the 264px card: its wire and presets are sized for it', () => {
+    // 264 minus the card's padding and hairline border on both sides.
+    expect(block('[data-blok-tool="video"] .blok-video-controls__menu [data-role="menu-speed"]'))
+      .toContain('width: calc(264px - 2 * var(--blok-space-1-5) - 2 * var(--blok-border-width-hairline))');
+  });
+
+  it('animates the card to its new size when the pane changes', () => {
+    expect(css).toMatch(/transition: height 300ms cubic-bezier\(0\.25, 0\.9, 0\.3, 1\), width 300ms cubic-bezier\(0\.25, 0\.9, 0\.3, 1\);/);
+  });
+
 });

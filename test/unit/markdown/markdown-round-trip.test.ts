@@ -621,6 +621,15 @@ describe('markdown export: a database is a GFM table', () => {
     ].join('\n'));
   });
 
+  it('writes a unique id with its prefix, the way the grid shows it', () => {
+    const markdown = exportBoth([
+      { id: 'db', tool: 'database', data: { schema: [{ id: 'name', name: 'Name', type: 'title', position: 'a0' }, { id: 'n', name: 'ID', type: 'uniqueId', position: 'a1', uniqueId: { prefix: 'TASK' } }] }, contentIds: ['r'] },
+      { id: 'r', tool: 'database-row', parentId: 'db', data: { title: 'One', properties: { n: 3 } } },
+    ]);
+
+    expect(markdown).toBe('| Name | ID |\n| --- | --- |\n| One | TASK-3 |');
+  });
+
   it('pastes back as a table carrying every value', async () => {
     const { blocks } = await reimport(exportBoth(database));
     const table = blocks.find((block) => block.type === 'table');

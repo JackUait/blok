@@ -1196,6 +1196,11 @@ const databaseCellMarkdown = (property: Record<string, unknown>, value: unknown,
       return isRecordValue(value) && Array.isArray(value.blocks)
         ? value.blocks.filter(isRecordValue).map((inner) => inlineMarkdown(context, asString(isRecordValue(inner.data) ? inner.data.text : ''))).filter((line) => line !== '').join(HARD_BREAK)
         : plain(asString(value));
+    case 'uniqueId': {
+      const prefix = isRecordValue(property.uniqueId) ? asString(property.uniqueId.prefix) : '';
+
+      return typeof value === 'number' ? plain(prefix === '' ? String(value) : `${prefix}-${value}`) : '';
+    }
     case 'place':
       return plain(placeText(value as PropertyValue));
     case 'verification':

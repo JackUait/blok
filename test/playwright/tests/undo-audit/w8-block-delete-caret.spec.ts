@@ -276,6 +276,36 @@ test.describe('a block-selection delete leaves no caret (W1)', () => {
     await expectSavedMatchesDom(page, ['p1:Alpha', 'p2:Beta', 'p3:Gammax']);
   });
 
+  test('handle menu, Escape, Shift+ArrowDown grows from the selected block, and Backspace deletes only that range', async ({ page }) => {
+    await createBlok(page, [...BASE, P('p4', 'Delta')]);
+    await caretAtEnd(page, 'p1');
+    await openTunes(page, 'p3');
+    await page.keyboard.press('Escape');
+    await gap(page, 300);
+    expect(await selectedIds(page)).toEqual(['p3']);
+
+    await page.keyboard.press('Shift+ArrowDown');
+    await expect.poll(() => selectedIds(page)).toEqual(['p3', 'p4']);
+
+    await page.keyboard.press('Backspace');
+    await expect.poll(() => ids(page)).toEqual(['p1', 'p2']);
+  });
+
+  test('handle menu, Escape, Shift+ArrowUp grows from the selected block, and Backspace deletes only that range', async ({ page }) => {
+    await createBlok(page, [...BASE, P('p4', 'Delta')]);
+    await caretAtEnd(page, 'p1');
+    await openTunes(page, 'p4');
+    await page.keyboard.press('Escape');
+    await gap(page, 300);
+    expect(await selectedIds(page)).toEqual(['p4']);
+
+    await page.keyboard.press('Shift+ArrowUp');
+    await expect.poll(() => selectedIds(page)).toEqual(['p3', 'p4']);
+
+    await page.keyboard.press('Backspace');
+    await expect.poll(() => ids(page)).toEqual(['p1', 'p2']);
+  });
+
   test('U108: a sub-page block deleted from the menu selection leaves no caret in the text above', async ({ page }) => {
     await createBlok(page, PAGE_BLOCKS);
     await caretAtEnd(page, 'p1');

@@ -368,6 +368,27 @@ describe('CrossBlockSelection', () => {
       expect(toggleChild.selected).toBe(false);
     });
 
+    it('grows from a block the menu selected, not from the block a click left as anchor', () => {
+      // A click in blocks[0] set the anchors; the block menu then selected blocks[2].
+      blocks[2].selected = true;
+      setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
+      setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[0]);
+
+      crossBlockSelection.toggleBlockSelectedState(true);
+
+      expect(blocks.map((block) => block.selected)).toEqual([false, false, true, true]);
+    });
+
+    it('grows up from a block the menu selected, not from the block a click left as anchor', () => {
+      blocks[3].selected = true;
+      setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
+      setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[0]);
+
+      crossBlockSelection.toggleBlockSelectedState(false);
+
+      expect(blocks.map((block) => block.selected)).toEqual([false, false, true, true]);
+    });
+
     it('announces the selected block count as the keyboard selection grows (H9)', () => {
       (announce as ReturnType<typeof vi.fn>).mockClear();
 

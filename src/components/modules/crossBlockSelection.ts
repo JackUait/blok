@@ -679,7 +679,16 @@ export class CrossBlockSelection extends Module {
    * @param {boolean} next - if true, toggle next block. Previous otherwise
    */
   public toggleBlockSelectedState(next = true): void {
-    const { BlockManager } = this.Blok;
+    const { BlockManager, BlockSelection } = this.Blok;
+    const selected = BlockSelection.selectedBlocks;
+
+    // A plain click sets the anchors, and a later menu selection leaves them.
+    // Growing from them would select blocks the user never picked, and the
+    // next Backspace would delete them.
+    if (selected.length > 0 && this.firstSelectedBlock?.selected !== true && this.lastSelectedBlock?.selected !== true) {
+      this.firstSelectedBlock = selected[0];
+      this.lastSelectedBlock = selected[selected.length - 1];
+    }
 
     const anchorCandidate = this.lastSelectedBlock ?? BlockManager.currentBlock;
 

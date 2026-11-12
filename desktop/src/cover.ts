@@ -1,3 +1,37 @@
+import { createCoverDownloadButton } from '../../src/components/utils/cover-download';
+import additionalCover0 from './assets/covers/cma_130391.jpg';
+import additionalCover1 from './assets/covers/cma_136207.jpg';
+import additionalCover2 from './assets/covers/cma_115067.jpg';
+import additionalCover3 from './assets/covers/cma_143462.jpg';
+import additionalCover4 from './assets/covers/cma_153736.jpg';
+import additionalCover5 from './assets/covers/cma_135469.jpg';
+import additionalCover6 from './assets/covers/cma_153737.jpg';
+import additionalCover7 from './assets/covers/cma_153735.jpg';
+import additionalCover8 from './assets/covers/cma_125886.jpg';
+import additionalCover9 from './assets/covers/cma_125884.jpg';
+import additionalCover10 from './assets/covers/cma_92480.jpg';
+import additionalCover11 from './assets/covers/cma_143272.jpg';
+import additionalCover12 from './assets/covers/cma_101951.jpg';
+import additionalCover13 from './assets/covers/cma_83453.jpg';
+import additionalCover14 from './assets/covers/cma_130974.jpg';
+import additionalCover15 from './assets/covers/cma_134862.jpg';
+import additionalCover16 from './assets/covers/cma_157428.jpg';
+import additionalCover17 from './assets/covers/cma_97315.jpg';
+import additionalCover18 from './assets/covers/cma_142659.jpg';
+import additionalCover19 from './assets/covers/cma_119697.jpg';
+import additionalCover20 from './assets/covers/cma_113945.jpg';
+import additionalCover21 from './assets/covers/cma_130361.jpg';
+import additionalCover22 from './assets/covers/cma_149791.jpg';
+import additionalCover23 from './assets/covers/cma_145010.jpg';
+import additionalCover24 from './assets/covers/cma_160138.jpg';
+import additionalCover25 from './assets/covers/cma_143477.jpg';
+import additionalCover26 from './assets/covers/cma_135836.jpg';
+import additionalCover27 from './assets/covers/cma_160137.jpg';
+import additionalCover28 from './assets/covers/cma_136296.jpg';
+import additionalCover29 from './assets/covers/cma_144732.jpg';
+import additionalCover30 from './assets/covers/cma_159739.jpg';
+import additionalCover31 from './assets/covers/cma_150165.jpg';
+import additionalCover32 from './assets/covers/cma_148810.jpg';
 import expansionCover0 from './assets/covers/polyhaven_dark_wood.jpg';
 import expansionCover1 from './assets/covers/polyhaven_plywood.jpg';
 import expansionCover2 from './assets/covers/polyhaven_rosewood_veneer1.jpg';
@@ -174,6 +208,47 @@ export const COVER_GROUPS = [
     { id: "cma-159769", label: "Italian Landscape", background: `url("${expansionCover38}")` },
     { id: "cma-150176", label: "Classical Landscape", background: `url("${expansionCover39}")` },
   ] },
+  { label: "Fleurs et oiseaux · Cleveland Museum of Art", items: [
+    { id: "cma-130391", label: "Spring Flowers", background: `url("${additionalCover0}")` },
+    { id: "cma-136207", label: "Flowers in a Glass", background: `url("${additionalCover1}")` },
+    { id: "cma-115067", label: "Vase of Flowers", background: `url("${additionalCover2}")` },
+    { id: "cma-143462", label: "Ink Flowers", background: `url("${additionalCover3}")` },
+    { id: "cma-153736", label: "Winter and Summer Flowers", background: `url("${additionalCover4}")` },
+    { id: "cma-135469", label: "Vase of Flowers", background: `url("${additionalCover5}")` },
+    { id: "cma-153737", label: "Winter and Summer Flowers", background: `url("${additionalCover6}")` },
+    { id: "cma-153735", label: "Winter and Summer Flowers", background: `url("${additionalCover7}")` },
+    { id: "cma-125886", label: "Birds and Flowers", background: `url("${additionalCover8}")` },
+    { id: "cma-125884", label: "Birds and Flowers", background: `url("${additionalCover9}")` },
+  ] },
+  { label: "Mers et rivages · Cleveland Museum of Art", items: [
+    { id: "cma-92480", label: "Seascape with Open Sky", background: `url("${additionalCover10}")` },
+    { id: "cma-143272", label: "Seascape", background: `url("${additionalCover11}")` },
+    { id: "cma-101951", label: "Seascape", background: `url("${additionalCover12}")` },
+    { id: "cma-83453", label: "The Beach at Saint-Jacut", background: `url("${additionalCover13}")` },
+    { id: "cma-130974", label: "The Rocky Seashore", background: `url("${additionalCover14}")` },
+    { id: "cma-134862", label: "Marine", background: `url("${additionalCover15}")` },
+    { id: "cma-157428", label: "Edwin Booth's Boat House, Near Newport, August 6, 1884", background: `url("${additionalCover16}")` },
+    { id: "cma-97315", label: "Abalone Divers off the Coast of Ise, from an Untitled Landscape Series", background: `url("${additionalCover17}")` },
+    { id: "cma-142659", label: "The Cliffs at Beg-ar-Fry, Saint-Jean-du-Doigt", background: `url("${additionalCover18}")` },
+    { id: "cma-119697", label: "Boats at Berck-sur-Mer", background: `url("${additionalCover19}")` },
+  ] },
+  { label: "Montagnes · Cleveland Museum of Art", items: [
+    { id: "cma-113945", label: "Cloudy Mountains", background: `url("${additionalCover20}")` },
+    { id: "cma-130361", label: "Streams and Mountains without End", background: `url("${additionalCover21}")` },
+    { id: "cma-149791", label: "Mt. Qingbian", background: `url("${additionalCover22}")` },
+    { id: "cma-145010", label: "Shakyamuni Emerging from the Mountains", background: `url("${additionalCover23}")` },
+    { id: "cma-160138", label: "Streams and Mountains", background: `url("${additionalCover24}")` },
+    { id: "cma-143477", label: "An October Day in the White Mountains", background: `url("${additionalCover25}")` },
+    { id: "cma-135836", label: "Buddhist Retreat by Stream and Mountains", background: `url("${additionalCover26}")` },
+    { id: "cma-160137", label: "Mountains of the Immortals", background: `url("${additionalCover27}")` },
+    { id: "cma-136296", label: "Dream Journey among Rivers and Mountains, no. 90", background: `url("${additionalCover28}")` },
+    { id: "cma-144732", label: "Storm in the Mountains", background: `url("${additionalCover29}")` },
+  ] },
+  { label: "Paysages japonais · Cleveland Museum of Art", items: [
+    { id: "cma-159739", label: "Snow Landscape", background: `url("${additionalCover30}")` },
+    { id: "cma-150165", label: "Landscape", background: `url("${additionalCover31}")` },
+    { id: "cma-148810", label: "Haboku (Flung-ink) Landscape", background: `url("${additionalCover32}")` },
+  ] },
   { label: 'Images spatiales', items: [
     { id: 'earth', label: 'La Terre', background: `url("${earth}")` },
     { id: 'desert', label: 'Désert australien', background: `url("${desert}")` },
@@ -329,6 +404,12 @@ export function createPageCover(
   change.textContent = 'Changer la couverture';
   change.setAttribute('aria-haspopup', 'dialog');
   change.setAttribute('aria-expanded', 'false');
+  const download = createCoverDownloadButton(async () => {
+    const index = COVER_PRESETS.findIndex((item) => item.id === value);
+    const builtin = index < 0 ? undefined : COVER_GALLERY.flatMap((group) => group.items)[index];
+    const url = builtin?.url ?? (options.resolveUrl ? await options.resolveUrl(value) : value);
+    return {url, ...(builtin ? {name: `${value}.${url.startsWith('data:image/svg+xml') ? 'svg' : 'jpg'}`} : {})};
+  }, 'Télécharger la couverture', 'Téléchargement impossible. Vérifiez la connexion ou les autorisations de l’image.');
 
   const gallery = document.createElement('div');
   gallery.setAttribute('data-desktop-cover-gallery', '');
@@ -532,7 +613,7 @@ export function createPageCover(
   const finish = (): void => {
     drag.hidden = true;
     root.removeAttribute('data-repositioning');
-    actions.replaceChildren(change, reposition, gallery);
+    actions.replaceChildren(change, reposition, download, gallery);
     actions.removeAttribute('data-open');
     reposition.focus();
   };
@@ -569,7 +650,7 @@ export function createPageCover(
     actions.setAttribute('data-open', '');
     drag.focus();
   });
-  actions.append(change, reposition, gallery);
+  actions.append(change, reposition, download, gallery);
   root.append(image, drag);
   if (!options.readOnly) root.append(actions);
   return root;

@@ -539,6 +539,8 @@ export class PageTitle extends Module {
         invalid: I18n.t('title.coverInvalid'),
         uploadFailed: I18n.t('title.coverUploadFailed'),
         pickerAria: I18n.t('title.coverPickerAria'),
+        download: I18n.t('tools.image.download'),
+        downloadFailed: I18n.t('tools.image.downloadFailed'),
         galleryName: (id) => I18n.t(`tools.colorPicker.color.${id}`),
       }),
     });

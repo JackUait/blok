@@ -1,3 +1,4 @@
+import { createCoverDownloadButton, coverGradientImage } from '../../utils/cover-download';
 import { IconImage } from '../../icons';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { safeImageSrc } from '../../../shared/sanitize-url';
@@ -28,6 +29,8 @@ export interface CoverLabels {
   invalid: string;
   uploadFailed: string;
   pickerAria: string;
+  download?: string;
+  downloadFailed?: string;
   galleryName(id: string): string;
 }
 
@@ -70,6 +73,13 @@ export const createCoverControl = (header: HTMLElement, host: CoverControlHost):
   const controls = document.createElement('div');
   const changeButton = button('', { 'data-blok-testid': 'page-cover-change', 'aria-haspopup': 'dialog', 'aria-expanded': 'false' });
   const repositionButton = button('', { 'data-blok-testid': 'page-cover-reposition' });
+  const downloadButton = createCoverDownloadButton(() => {
+    const cover = host.getCover();
+    if (!cover) throw new Error('No cover');
+    if (cover.type === 'image') return {url: cover.url};
+    const fill = art();
+    return {url: coverGradientImage(fill ? getComputedStyle(fill).backgroundImage : ''), name: 'cover.svg'};
+  }, host.labels().download ?? 'Download cover', host.labels().downloadFailed ?? 'Unable to download this image.');
   const saveButton = button('', { 'data-blok-testid': 'page-cover-save-position' });
   const cancelButton = button('', { 'data-blok-testid': 'page-cover-cancel-position' });
   const hint = document.createElement('span');
@@ -156,7 +166,7 @@ export const createCoverControl = (header: HTMLElement, host: CoverControlHost):
     const repositioning = state.draft !== null;
     const wanted = repositioning
       ? [saveButton, cancelButton]
-      : [changeButton, ...(cover.type === 'image' ? [repositionButton] : [])];
+      : [changeButton, ...(cover.type === 'image' ? [repositionButton] : []), downloadButton];
 
     if (wanted.some((element, index) => controls.children[index] !== element) || controls.children.length !== wanted.length) {
       controls.replaceChildren(...wanted);

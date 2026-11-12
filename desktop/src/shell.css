@@ -291,6 +291,8 @@ body[data-blok-theme="light"] [data-desktop-floating-toc] {
   content: ''; position: absolute; left: 0; top: 5px; bottom: 5px;
   width: 1px; background: var(--desktop-border);
 }
+[data-desktop-cover-actions] > [data-cover-download] { display: grid; place-items: center; width: 32px; padding: 0; }
+[data-desktop-cover-actions] > [data-cover-download]:disabled { opacity: .5; cursor: wait; }
 [data-desktop-cover-actions] > button:hover { background: var(--desktop-hover); color: var(--desktop-ink); }
 [data-desktop-cover-gallery] {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 4;

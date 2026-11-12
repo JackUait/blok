@@ -545,6 +545,7 @@
   "tools.image.exitFullscreen": "Exit full screen",
   "tools.image.downloadOriginal": "Download original",
   "tools.image.download": "Download",
+  "tools.image.downloadFailed": "Unable to download. Check your connection or the image permissions.",
   "tools.image.copyUrl": "Copy URL",
   "tools.image.moreOptions": "More options",
   "tools.image.uploading": "Uploading…",

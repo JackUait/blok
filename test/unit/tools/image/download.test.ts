@@ -31,6 +31,14 @@ describe('downloadImage', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
 
+  it('rejects instead of navigating when a cover download is blocked', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('CORS')));
+    const {attrs, restore} = captureAnchors();
+    await expect(downloadImage('https://external.test/cover.jpg', undefined, {fallback: false})).rejects.toThrow('CORS');
+    expect(attrs).toHaveLength(0);
+    restore();
+  });
+
   it('fetches the image as a blob and triggers a same-origin object-url download (no new tab)', async () => {
     const blob = new Blob(['data'], { type: 'image/png' });
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, blob: async () => blob })));

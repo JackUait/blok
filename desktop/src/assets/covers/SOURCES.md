@@ -92,3 +92,43 @@ Textures [Poly Haven CC0](https://polyhaven.com/license) et paysages du [Clevela
 | `cma_141639.jpg` | Frederic Edwin Church (American, 1826–1900) | https://clevelandart.org/art/1965.233 | CC0-1.0 |
 | `cma_159769.jpg` | John Robert Cozens (British, 1752–1797) | https://clevelandart.org/art/1997.137 | CC0-1.0 |
 | `cma_150176.jpg` | Pierre Henri de Valenciennes (French, 1750–1819) | https://clevelandart.org/art/1980.91 | CC0-1.0 |
+
+## Galerie étendue
+
+Textures [Poly Haven CC0](https://polyhaven.com/license) et paysages du [Cleveland Museum of Art Open Access](https://www.clevelandart.org/open-access), vérifiés avec `share_license_status: CC0`. Images réduites à 1 600 px et JPEG qualité 72. Originaux et crédits dans `gallery-sources.json`.
+
+| Fichier | Crédit | Source | Licence |
+| --- | --- | --- | --- |
+| `cma_130391.jpg` | Claude Monet (French, 1840–1926) | https://clevelandart.org/art/1953.155 | CC0-1.0 |
+| `cma_136207.jpg` | Ambrosius Bosschaert (Dutch, 1573–1621) | https://clevelandart.org/art/1960.108 | CC0-1.0 |
+| `cma_115067.jpg` | Odilon Redon (French, 1840–1916) | https://clevelandart.org/art/1935.233 | CC0-1.0 |
+| `cma_143462.jpg` | Zhao Zhong (Chinese, second half of the 1300s) | https://clevelandart.org/art/1967.36 | CC0-1.0 |
+| `cma_153736.jpg` | Kaihō Yūshō (Japanese, 1533–1615) | https://clevelandart.org/art/1987.40.1 | CC0-1.0 |
+| `cma_135469.jpg` | Odilon Redon (French, 1840–1916) | https://clevelandart.org/art/1958.46 | CC0-1.0 |
+| `cma_153737.jpg` | Kaihō Yūshō (Japanese, 1533–1615) | https://clevelandart.org/art/1987.40.2 | CC0-1.0 |
+| `cma_153735.jpg` | Kaihō Yūshō (Japanese, 1533–1615) | https://clevelandart.org/art/1987.40 | CC0-1.0 |
+| `cma_125886.jpg` | Kano Mitsunobu (Japanese, 1565–1608) | https://clevelandart.org/art/1948.128.2 | CC0-1.0 |
+| `cma_125884.jpg` | Kano Mitsunobu (Japanese, 1565–1608), Kano Shōei (Japanese, 1519–1592) | https://clevelandart.org/art/1948.128 | CC0-1.0 |
+| `cma_92480.jpg` | Eugène Boudin (French, 1824–1898) | https://clevelandart.org/art/2020.116 | CC0-1.0 |
+| `cma_143272.jpg` | Henry Ward Ranger (American, 1858–1916) | https://clevelandart.org/art/1967.21 | CC0-1.0 |
+| `cma_101951.jpg` | Auguste Louis Lepère (French, 1849–1918) | https://clevelandart.org/art/1920.612 | CC0-1.0 |
+| `cma_83453.jpg` | Édouard Vuillard (French, 1868–1940) | https://clevelandart.org/art/2020.143 | CC0-1.0 |
+| `cma_130974.jpg` | Maurice Prendergast (American, born Newfoundland [now Canada], 1858–1924) | https://clevelandart.org/art/1953.655 | CC0-1.0 |
+| `cma_134862.jpg` | William Merritt Chase (American, 1849–1916) | https://clevelandart.org/art/1957.422 | CC0-1.0 |
+| `cma_157428.jpg` | Louise Deshong Woodbridge (American, 1848–1925) | https://clevelandart.org/art/1994.280 | CC0-1.0 |
+| `cma_97315.jpg` | Utagawa Kunisada (Japanese, 1786–1865), Yamaguchiya Tobei (Japanese) | https://clevelandart.org/art/1916.944 | CC0-1.0 |
+| `cma_142659.jpg` | Maxime Maufra (French, 1861–1918) | https://clevelandart.org/art/1966.382 | CC0-1.0 |
+| `cma_119697.jpg` | Édouard Manet (French, 1832–1883) | https://clevelandart.org/art/1940.534 | CC0-1.0 |
+| `cma_113945.jpg` | Mi Youren (Chinese, 1072–1151) | https://clevelandart.org/art/1933.220 | CC0-1.0 |
+| `cma_130361.jpg` |  | https://clevelandart.org/art/1953.126 | CC0-1.0 |
+| `cma_149791.jpg` | Dong Qichang (Chinese, 1555–1636) | https://clevelandart.org/art/1980.10 | CC0-1.0 |
+| `cma_145010.jpg` |  | https://clevelandart.org/art/1970.2 | CC0-1.0 |
+| `cma_160138.jpg` | Xu Ben (Chinese, 1335–1380) | https://clevelandart.org/art/1997.96 | CC0-1.0 |
+| `cma_143477.jpg` | John Frederick Kensett (American, 1816–1872) | https://clevelandart.org/art/1967.5 | CC0-1.0 |
+| `cma_135836.jpg` | Juran (Chinese, active 960–985) | https://clevelandart.org/art/1959.348 | CC0-1.0 |
+| `cma_160137.jpg` | Chen Ruyan (Chinese, c. 1331–1371), Ni Zan (Chinese, 1301–1374) | https://clevelandart.org/art/1997.95 | CC0-1.0 |
+| `cma_136296.jpg` | Cheng Zhengkui (Chinese, 1604–1676) | https://clevelandart.org/art/1960.182 | CC0-1.0 |
+| `cma_144732.jpg` | Frederic Edwin Church (American, 1826–1900) | https://clevelandart.org/art/1969.52 | CC0-1.0 |
+| `cma_159739.jpg` | Yosa Buson (Japanese, 1716–1783) | https://clevelandart.org/art/1997.111 | CC0-1.0 |
+| `cma_150165.jpg` | Gion Nankai (Japanese, 1677–1751) | https://clevelandart.org/art/1980.81 | CC0-1.0 |
+| `cma_148810.jpg` | Shūgetsu Tōkan (Japanese, 1440?–1529) | https://clevelandart.org/art/1976.59 | CC0-1.0 |

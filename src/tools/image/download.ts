@@ -13,7 +13,7 @@ import { createSafeObjectUrl } from '../../shared/safe-object-url';
  * The stored URL is scheme-gated first: that fallback anchor would otherwise
  * carry a persisted `javascript:` URL straight into a click (stored XSS).
  */
-export async function downloadImage(url: string, fileName?: string): Promise<void> {
+export async function downloadImage(url: string, fileName?: string, options: { fallback?: boolean } = {}): Promise<void> {
   if (SVG_DATA.test(stripIgnoredUrlChars(url))) {
     downloadSvgData(url, fileName);
 
@@ -33,7 +33,8 @@ export async function downloadImage(url: string, fileName?: string): Promise<voi
     const objectUrl = createSafeObjectUrl(blob, { svgImage: true });
     triggerAnchorDownload(objectUrl, fileName);
     URL.revokeObjectURL(objectUrl);
-  } catch {
+  } catch (error) {
+    if (options.fallback === false) throw error;
     triggerAnchorDownload(safeUrl, fileName);
   }
 }

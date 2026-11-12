@@ -2335,25 +2335,21 @@
   object-fit: cover;
 }
 
-[data-blok-database-drawer-change-cover] {
-  position: absolute;
-  inset-block-end: var(--blok-space-2);
-  inset-inline-end: var(--blok-space-2);
-  padding: var(--blok-space-0-5) var(--blok-space-1-5);
-  border: none;
-  border-radius: var(--blok-radius-control-sm);
-  background-color: var(--blok-database-table-open-bg);
-  box-shadow: var(--blok-database-table-open-shadow);
-  color: var(--blok-database-ink-secondary);
-  font-size: 12px;
-  cursor: pointer;
-  opacity: 0;
+[data-blok-database-drawer-cover-controls] {
+  position: absolute; inset-block-start: var(--blok-space-3); inset-inline-end: var(--blok-space-3);
+  display: flex; align-items: center; padding: 2px; border-radius: var(--blok-radius-control);
+  background: var(--blok-bg-primary); box-shadow: var(--blok-database-table-open-shadow); opacity: 0;
 }
-
-[data-blok-database-drawer-cover]:hover [data-blok-database-drawer-change-cover],
-[data-blok-database-drawer-change-cover]:focus-visible {
-  opacity: 1;
+[data-blok-database-drawer-cover-controls] > button {
+  position: relative; display: inline-flex; align-items: center; height: 26px;
+  padding: 0 8px; border: 0; border-radius: var(--blok-radius-control-sm);
+  background: transparent; color: var(--blok-text-secondary); font: inherit; font-size: 12px; cursor: pointer;
 }
+[data-blok-database-drawer-cover-controls] > button + button { border-inline-start: 1px solid var(--blok-border-subtle); }
+[data-blok-database-drawer-cover-controls] > button:hover { background: var(--blok-item-hover-bg); }
+[data-blok-database-drawer-cover-controls] > button:disabled { opacity: .5; cursor: wait; }
+[data-blok-database-drawer-cover]:hover [data-blok-database-drawer-cover-controls],
+[data-blok-database-drawer-cover-controls]:focus-within { opacity: 1; }
 
 /* Page icon above the title (icon size unmeasured: Blok's page title icon scale). */
 [data-blok-database-drawer-page-head] {

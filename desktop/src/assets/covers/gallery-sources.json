@@ -598,5 +598,335 @@
     "license": "CC0-1.0",
     "group": "Paysages · Cleveland Museum of Art",
     "original": "https://openaccess-cdn.clevelandart.org/1980.91/1980.91_print.jpg"
+  },
+  {
+    "id": "cma-130391",
+    "file": "cma_130391.jpg",
+    "label": "Spring Flowers",
+    "source": "https://clevelandart.org/art/1953.155",
+    "author": "Claude Monet (French, 1840–1926)",
+    "license": "CC0-1.0",
+    "group": "Fleurs et oiseaux · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1953.155/1953.155_print.jpg"
+  },
+  {
+    "id": "cma-136207",
+    "file": "cma_136207.jpg",
+    "label": "Flowers in a Glass",
+    "source": "https://clevelandart.org/art/1960.108",
+    "author": "Ambrosius Bosschaert (Dutch, 1573–1621)",
+    "license": "CC0-1.0",
+    "group": "Fleurs et oiseaux · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1960.108/1960.108_print.jpg"
+  },
+  {
+    "id": "cma-115067",
+    "file": "cma_115067.jpg",
+    "label": "Vase of Flowers",
+    "source": "https://clevelandart.org/art/1935.233",
+    "author": "Odilon Redon (French, 1840–1916)",
+    "license": "CC0-1.0",
+    "group": "Fleurs et oiseaux · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1935.233/1935.233_print.jpg"
+  },
+  {
+    "id": "cma-143462",
+    "file": "cma_143462.jpg",
+    "label": "Ink Flowers",
+    "source": "https://clevelandart.org/art/1967.36",
+    "author": "Zhao Zhong (Chinese, second half of the 1300s)",
+    "license": "CC0-1.0",
+    "group": "Fleurs et oiseaux · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1967.36/1967.36_print.jpg"
+  },
+  {
+    "id": "cma-153736",
+    "file": "cma_153736.jpg",
+    "label": "Winter and Summer Flowers",
+    "source": "https://clevelandart.org/art/1987.40.1",
+    "author": "Kaihō Yūshō (Japanese, 1533–1615)",
+    "license": "CC0-1.0",
+    "group": "Fleurs et oiseaux · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1987.40.1/1987.40.1_print.jpg"
+  },
+  {
+    "id": "cma-135469",
+    "file": "cma_135469.jpg",
+    "label": "Vase of Flowers",
+    "source": "https://clevelandart.org/art/1958.46",
+    "author": "Odilon Redon (French, 1840–1916)",
+    "license": "CC0-1.0",
+    "group": "Fleurs et oiseaux · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1958.46/1958.46_print.jpg"
+  },
+  {
+    "id": "cma-153737",
+    "file": "cma_153737.jpg",
+    "label": "Winter and Summer Flowers",
+    "source": "https://clevelandart.org/art/1987.40.2",
+    "author": "Kaihō Yūshō (Japanese, 1533–1615)",
+    "license": "CC0-1.0",
+    "group": "Fleurs et oiseaux · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1987.40.2/1987.40.2_print.jpg"
+  },
+  {
+    "id": "cma-153735",
+    "file": "cma_153735.jpg",
+    "label": "Winter and Summer Flowers",
+    "source": "https://clevelandart.org/art/1987.40",
+    "author": "Kaihō Yūshō (Japanese, 1533–1615)",
+    "license": "CC0-1.0",
+    "group": "Fleurs et oiseaux · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1987.40/1987.40_print.jpg"
+  },
+  {
+    "id": "cma-125886",
+    "file": "cma_125886.jpg",
+    "label": "Birds and Flowers",
+    "source": "https://clevelandart.org/art/1948.128.2",
+    "author": "Kano Mitsunobu (Japanese, 1565–1608)",
+    "license": "CC0-1.0",
+    "group": "Fleurs et oiseaux · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1948.128.2/1948.128.2_print.jpg"
+  },
+  {
+    "id": "cma-125884",
+    "file": "cma_125884.jpg",
+    "label": "Birds and Flowers",
+    "source": "https://clevelandart.org/art/1948.128",
+    "author": "Kano Mitsunobu (Japanese, 1565–1608), Kano Shōei (Japanese, 1519–1592)",
+    "license": "CC0-1.0",
+    "group": "Fleurs et oiseaux · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1948.128/1948.128_print.jpg"
+  },
+  {
+    "id": "cma-92480",
+    "file": "cma_92480.jpg",
+    "label": "Seascape with Open Sky",
+    "source": "https://clevelandart.org/art/2020.116",
+    "author": "Eugène Boudin (French, 1824–1898)",
+    "license": "CC0-1.0",
+    "group": "Mers et rivages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/2020.116/2020.116_print.jpg"
+  },
+  {
+    "id": "cma-143272",
+    "file": "cma_143272.jpg",
+    "label": "Seascape",
+    "source": "https://clevelandart.org/art/1967.21",
+    "author": "Henry Ward Ranger (American, 1858–1916)",
+    "license": "CC0-1.0",
+    "group": "Mers et rivages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1967.21/1967.21_print.jpg"
+  },
+  {
+    "id": "cma-101951",
+    "file": "cma_101951.jpg",
+    "label": "Seascape",
+    "source": "https://clevelandart.org/art/1920.612",
+    "author": "Auguste Louis Lepère (French, 1849–1918)",
+    "license": "CC0-1.0",
+    "group": "Mers et rivages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1920.612/1920.612_print.jpg"
+  },
+  {
+    "id": "cma-83453",
+    "file": "cma_83453.jpg",
+    "label": "The Beach at Saint-Jacut",
+    "source": "https://clevelandart.org/art/2020.143",
+    "author": "Édouard Vuillard (French, 1868–1940)",
+    "license": "CC0-1.0",
+    "group": "Mers et rivages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/2020.143/2020.143_print.jpg"
+  },
+  {
+    "id": "cma-130974",
+    "file": "cma_130974.jpg",
+    "label": "The Rocky Seashore",
+    "source": "https://clevelandart.org/art/1953.655",
+    "author": "Maurice Prendergast (American, born Newfoundland [now Canada], 1858–1924)",
+    "license": "CC0-1.0",
+    "group": "Mers et rivages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1953.655/1953.655_print.jpg"
+  },
+  {
+    "id": "cma-134862",
+    "file": "cma_134862.jpg",
+    "label": "Marine",
+    "source": "https://clevelandart.org/art/1957.422",
+    "author": "William Merritt Chase (American, 1849–1916)",
+    "license": "CC0-1.0",
+    "group": "Mers et rivages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1957.422/1957.422_print.jpg"
+  },
+  {
+    "id": "cma-157428",
+    "file": "cma_157428.jpg",
+    "label": "Edwin Booth's Boat House, Near Newport, August 6, 1884",
+    "source": "https://clevelandart.org/art/1994.280",
+    "author": "Louise Deshong Woodbridge (American, 1848–1925)",
+    "license": "CC0-1.0",
+    "group": "Mers et rivages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1994.280/1994.280_print.jpg"
+  },
+  {
+    "id": "cma-97315",
+    "file": "cma_97315.jpg",
+    "label": "Abalone Divers off the Coast of Ise, from an Untitled Landscape Series",
+    "source": "https://clevelandart.org/art/1916.944",
+    "author": "Utagawa Kunisada (Japanese, 1786–1865), Yamaguchiya Tobei (Japanese)",
+    "license": "CC0-1.0",
+    "group": "Mers et rivages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1916.944/1916.944_print.jpg"
+  },
+  {
+    "id": "cma-142659",
+    "file": "cma_142659.jpg",
+    "label": "The Cliffs at Beg-ar-Fry, Saint-Jean-du-Doigt",
+    "source": "https://clevelandart.org/art/1966.382",
+    "author": "Maxime Maufra (French, 1861–1918)",
+    "license": "CC0-1.0",
+    "group": "Mers et rivages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1966.382/1966.382_print.jpg"
+  },
+  {
+    "id": "cma-119697",
+    "file": "cma_119697.jpg",
+    "label": "Boats at Berck-sur-Mer",
+    "source": "https://clevelandart.org/art/1940.534",
+    "author": "Édouard Manet (French, 1832–1883)",
+    "license": "CC0-1.0",
+    "group": "Mers et rivages · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1940.534/1940.534_print.jpg"
+  },
+  {
+    "id": "cma-113945",
+    "file": "cma_113945.jpg",
+    "label": "Cloudy Mountains",
+    "source": "https://clevelandart.org/art/1933.220",
+    "author": "Mi Youren (Chinese, 1072–1151)",
+    "license": "CC0-1.0",
+    "group": "Montagnes · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1933.220/1933.220_print.jpg"
+  },
+  {
+    "id": "cma-130361",
+    "file": "cma_130361.jpg",
+    "label": "Streams and Mountains without End",
+    "source": "https://clevelandart.org/art/1953.126",
+    "author": "",
+    "license": "CC0-1.0",
+    "group": "Montagnes · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1953.126/1953.126_print.jpg"
+  },
+  {
+    "id": "cma-149791",
+    "file": "cma_149791.jpg",
+    "label": "Mt. Qingbian",
+    "source": "https://clevelandart.org/art/1980.10",
+    "author": "Dong Qichang (Chinese, 1555–1636)",
+    "license": "CC0-1.0",
+    "group": "Montagnes · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1980.10/1980.10_print.jpg"
+  },
+  {
+    "id": "cma-145010",
+    "file": "cma_145010.jpg",
+    "label": "Shakyamuni Emerging from the Mountains",
+    "source": "https://clevelandart.org/art/1970.2",
+    "author": "",
+    "license": "CC0-1.0",
+    "group": "Montagnes · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1970.2/1970.2_print.jpg"
+  },
+  {
+    "id": "cma-160138",
+    "file": "cma_160138.jpg",
+    "label": "Streams and Mountains",
+    "source": "https://clevelandart.org/art/1997.96",
+    "author": "Xu Ben (Chinese, 1335–1380)",
+    "license": "CC0-1.0",
+    "group": "Montagnes · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1997.96/1997.96_print.jpg"
+  },
+  {
+    "id": "cma-143477",
+    "file": "cma_143477.jpg",
+    "label": "An October Day in the White Mountains",
+    "source": "https://clevelandart.org/art/1967.5",
+    "author": "John Frederick Kensett (American, 1816–1872)",
+    "license": "CC0-1.0",
+    "group": "Montagnes · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1967.5/1967.5_print.jpg"
+  },
+  {
+    "id": "cma-135836",
+    "file": "cma_135836.jpg",
+    "label": "Buddhist Retreat by Stream and Mountains",
+    "source": "https://clevelandart.org/art/1959.348",
+    "author": "Juran (Chinese, active 960–985)",
+    "license": "CC0-1.0",
+    "group": "Montagnes · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1959.348/1959.348_print.jpg"
+  },
+  {
+    "id": "cma-160137",
+    "file": "cma_160137.jpg",
+    "label": "Mountains of the Immortals",
+    "source": "https://clevelandart.org/art/1997.95",
+    "author": "Chen Ruyan (Chinese, c. 1331–1371), Ni Zan (Chinese, 1301–1374)",
+    "license": "CC0-1.0",
+    "group": "Montagnes · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1997.95/1997.95_print.jpg"
+  },
+  {
+    "id": "cma-136296",
+    "file": "cma_136296.jpg",
+    "label": "Dream Journey among Rivers and Mountains, no. 90",
+    "source": "https://clevelandart.org/art/1960.182",
+    "author": "Cheng Zhengkui (Chinese, 1604–1676)",
+    "license": "CC0-1.0",
+    "group": "Montagnes · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1960.182/1960.182_print.jpg"
+  },
+  {
+    "id": "cma-144732",
+    "file": "cma_144732.jpg",
+    "label": "Storm in the Mountains",
+    "source": "https://clevelandart.org/art/1969.52",
+    "author": "Frederic Edwin Church (American, 1826–1900)",
+    "license": "CC0-1.0",
+    "group": "Montagnes · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1969.52/1969.52_print.jpg"
+  },
+  {
+    "id": "cma-159739",
+    "file": "cma_159739.jpg",
+    "label": "Snow Landscape",
+    "source": "https://clevelandart.org/art/1997.111",
+    "author": "Yosa Buson (Japanese, 1716–1783)",
+    "license": "CC0-1.0",
+    "group": "Paysages japonais · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1997.111/1997.111_print.jpg"
+  },
+  {
+    "id": "cma-150165",
+    "file": "cma_150165.jpg",
+    "label": "Landscape",
+    "source": "https://clevelandart.org/art/1980.81",
+    "author": "Gion Nankai (Japanese, 1677–1751)",
+    "license": "CC0-1.0",
+    "group": "Paysages japonais · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1980.81/1980.81_print.jpg"
+  },
+  {
+    "id": "cma-148810",
+    "file": "cma_148810.jpg",
+    "label": "Haboku (Flung-ink) Landscape",
+    "source": "https://clevelandart.org/art/1976.59",
+    "author": "Shūgetsu Tōkan (Japanese, 1440?–1529)",
+    "license": "CC0-1.0",
+    "group": "Paysages japonais · Cleveland Museum of Art",
+    "original": "https://openaccess-cdn.clevelandart.org/1976.59/1976.59_print.jpg"
   }
 ]

@@ -524,6 +524,7 @@
   "tools.image.exitFullscreen": "Quitter le plein écran",
   "tools.image.downloadOriginal": "Télécharger l’original",
   "tools.image.download": "Télécharger",
+  "tools.image.downloadFailed": "Téléchargement impossible. Vérifiez la connexion ou les autorisations de l’image.",
   "tools.image.copyUrl": "Copier l’URL",
   "tools.image.moreOptions": "Plus d’options",
   "tools.image.uploading": "Envoi…",

@@ -107,8 +107,8 @@ describe('AnnotationInlineTool', () => {
 
   it('speaks of a note with a caption, not of a hint with a subtitle', () => {
     expect(en['toolNames.annotation']).toBe('Note');
-    expect(en['tools.annotation.placeholder']).toBe('Add a note…');
-    expect(en['tools.annotation.subtitle']).toBe('Add a caption…');
+    expect(en['tools.annotation.placeholder']).toBe('Add a note');
+    expect(en['tools.annotation.subtitle']).toBe('Add a caption');
     expect(en['tools.annotation.remove']).toBe('Remove note');
   });
 

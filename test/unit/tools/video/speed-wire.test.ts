@@ -297,15 +297,28 @@ describe('speed wire', () => {
     expect(num(part(h, 'wire-bead'), 'cy')).toBe(MID);
   });
 
-  it('enter() runs the bead in from the start of the wire', () => {
+  it('enter() shows the wire at rest: the bead is in place and nothing moves', () => {
+    h.wire.rest();
+    h.frames.mockClear();
+    h.wire.enter();
+
+    expect(h.frames).not.toHaveBeenCalled();
+    expect(num(part(h, 'wire-bead'), 'cx')).toBe(120);
+    expect(num(part(h, 'wire-bead'), 'cy')).toBe(MID);
+    expect(part(h, 'wire-ghost').hasAttribute('data-active')).toBe(false);
+
+    vi.advanceTimersByTime(500);
+    expect(num(part(h, 'wire-bead'), 'cx')).toBe(120);
+    expect(num(part(h, 'wire-bead'), 'cy')).toBe(MID);
+  });
+
+  it('still plucks for a change made after the wire is showing', () => {
     h.wire.rest();
     h.wire.enter();
-    vi.advanceTimersByTime(16);
+    h.wire.sync(1.3);
+    vi.advanceTimersByTime(32);
 
-    expect(num(part(h, 'wire-bead'), 'cx')).toBeLessThan(60);
-
-    settle();
-    expect(num(part(h, 'wire-bead'), 'cx')).toBeCloseTo(120, 3);
+    expect(num(part(h, 'wire-bead'), 'cy')).toBeLessThan(MID - 0.5);
   });
 
   it('destroy() stops the frames', () => {

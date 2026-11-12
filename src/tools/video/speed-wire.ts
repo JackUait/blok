@@ -14,7 +14,7 @@ export interface SpeedWire {
   slider: HTMLInputElement;
   /** Show this speed. A change that did not come from a drag plucks the wire. */
   sync(rate: number): void;
-  /** The card is showing the wire: run the bead in from the start. */
+  /** The card is showing the wire: from now on a change may move it. */
   enter(): void;
   /** The card is hidden: drop any drag, stop drawing, follow the speed silently. */
   rest(): void;
@@ -49,7 +49,7 @@ const SPRING = {
   hum: { stiffness: 1500, damping: 6 },
   twang: { stiffness: 2600, damping: 14 },
 };
-const KICK = { pluck: 150, twang: 260, enter: 260 };
+const KICK = { pluck: 150, twang: 260 };
 const SWELL = { size: 3.5, held: 1.5, decay: 3.2 };
 
 const ids = { next: 0 };
@@ -326,11 +326,9 @@ export const createSpeedWire = ({ label, reducedMotion, onRate }: SpeedWireOptio
     element,
     slider,
     sync,
+    // No entrance motion: the wire is simply there, at rest, when the card shows it.
     enter(): void {
       state.resting = false;
-      if (reducedMotion) { run(); return; }
-      Object.assign(state, { pos: 0, vel: 0, bendVel: state.bendVel - KICK.enter });
-      run();
     },
     rest(): void {
       state.resting = true;

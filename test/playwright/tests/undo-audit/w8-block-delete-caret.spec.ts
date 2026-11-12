@@ -262,6 +262,20 @@ test.describe('a block-selection delete leaves no caret (W1)', () => {
     await deleteAndRedo(page, ['p1', 'p2', 'p3', 'p4'], ['p1', 'p4']);
   });
 
+  test('handle menu, Escape, Enter: the caret goes to the end of the selected block, not the block clicked before', async ({ page }) => {
+    await createBlok(page, BASE);
+    await caretAtEnd(page, 'p1');
+    await openTunes(page, 'p3');
+    await page.keyboard.press('Escape');
+    await gap(page, 300);
+    expect(await selectedIds(page)).toEqual(['p3']);
+
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('x');
+
+    await expectSavedMatchesDom(page, ['p1:Alpha', 'p2:Beta', 'p3:Gammax']);
+  });
+
   test('U108: a sub-page block deleted from the menu selection leaves no caret in the text above', async ({ page }) => {
     await createBlok(page, PAGE_BLOCKS);
     await caretAtEnd(page, 'p1');

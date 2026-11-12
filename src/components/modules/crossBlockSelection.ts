@@ -789,16 +789,18 @@ export class CrossBlockSelection extends Module {
       return;
     }
 
-    const fIndex = BlockManager.blocks.indexOf(this.firstSelectedBlock);
-    const lIndex = BlockManager.blocks.indexOf(this.lastSelectedBlock);
+    const anchorIndexes = [this.firstSelectedBlock, this.lastSelectedBlock].map((block) => BlockManager.blocks.indexOf(block));
+    const anchorRange = BlockManager.blocks.slice(Math.min(...anchorIndexes), Math.max(...anchorIndexes) + 1);
+    const selected = BlockSelection.selectedBlocks;
 
-    // A plain click also sets the anchors. When a later selection (block menu,
-    // Escape) holds none of their blocks, they are not this range: no caret,
-    // or a block-selection delete lands one in the clicked block (Notion U109).
-    const range = BlockManager.blocks.slice(Math.min(fIndex, lIndex), Math.max(fIndex, lIndex) + 1);
-    const anchorsAreTheSelection = range.some((block) => block.selected);
+    // A plain click also sets the anchors. When a later selection (block menu)
+    // holds none of their blocks, the selection is the range instead, and none
+    // after a delete: a caret in the clicked block would take the next key (Notion U109).
+    const [fIndex, lIndex] = anchorIndexes.includes(-1) || anchorRange.some((block) => block.selected)
+      ? anchorIndexes
+      : [selected[0], selected.at(-1)].map((block) => (block === undefined ? -1 : BlockManager.blocks.indexOf(block)));
 
-    if (!BlockSelection.anyBlockSelected || fIndex === -1 || lIndex === -1 || !anchorsAreTheSelection) {
+    if (!BlockSelection.anyBlockSelected || fIndex === -1 || lIndex === -1) {
       this.firstSelectedBlock = this.lastSelectedBlock = null;
 
       return;

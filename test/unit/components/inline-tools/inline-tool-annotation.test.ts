@@ -223,37 +223,35 @@ describe('AnnotationInlineTool', () => {
   });
 
   describe('the subtitle', () => {
-    it('is off and hidden at first', () => {
+    it('is always shown, with no button to switch it', () => {
       const { menu, ui } = create();
 
       select('phrase');
       menu.children.onOpen();
 
-      expect(part(ui, 'subtitle-toggle').getAttribute('aria-pressed')).toBe('false');
-      expect(part(ui, 'subtitle').hidden).toBe(true);
+      const subtitle = part<HTMLInputElement>(ui, 'subtitle');
+
+      expect(ui.querySelector('[data-blok-testid="inline-annotation-subtitle-toggle"]')).toBeNull();
+      expect(subtitle.hidden).toBe(false);
+      expect(subtitle.style.display).toBe('');
+      expect(subtitle.value).toBe('');
     });
 
-    it('opens pre-filled with the configured default', () => {
+    it('opens pre-filled with the configured default on a new hint', () => {
       const { menu, ui } = create({ defaultSubtitle: '  From the team interview ' });
 
       select('phrase');
       menu.children.onOpen();
-      part(ui, 'subtitle-toggle').click();
 
-      const subtitle = part<HTMLInputElement>(ui, 'subtitle');
-
-      expect(part(ui, 'subtitle-toggle').getAttribute('aria-pressed')).toBe('true');
-      expect(subtitle.hidden).toBe(false);
-      expect(subtitle.value).toBe('From the team interview');
-      expect(subtitle).toHaveFocus();
+      expect(part<HTMLInputElement>(ui, 'subtitle').value).toBe('From the team interview');
+      expect(part(ui, 'text')).toHaveFocus();
     });
 
-    it('opens empty when no default is configured', () => {
+    it('opens empty when the configured default is not a string', () => {
       const { menu, ui } = create({ defaultSubtitle: 5 });
 
       select('phrase');
       menu.children.onOpen();
-      part(ui, 'subtitle-toggle').click();
 
       expect(part<HTMLInputElement>(ui, 'subtitle').value).toBe('');
     });
@@ -264,37 +262,28 @@ describe('AnnotationInlineTool', () => {
       select('phrase');
       menu.children.onOpen();
       type(part<HTMLTextAreaElement>(ui, 'text'), 'A quote');
-      part(ui, 'subtitle-toggle').click();
       part(ui, 'done').click();
 
       expect(container.innerHTML)
         .toBe('a <span data-blok-annotation="A quote" data-blok-annotation-subtitle="Anna">phrase</span> b');
     });
 
-    it('is not saved when switched off again or left empty', () => {
+    it('is not saved when left empty or cleared', () => {
       const { menu, ui } = create({ defaultSubtitle: 'Anna' });
 
       select('phrase');
       menu.children.onOpen();
       type(part<HTMLTextAreaElement>(ui, 'text'), 'A quote');
-      part(ui, 'subtitle-toggle').click();
-      part(ui, 'subtitle-toggle').click();
+      type(part<HTMLInputElement>(ui, 'subtitle'), '  ');
       part(ui, 'done').click();
 
       expect(container.innerHTML).toBe('a <span data-blok-annotation="A quote">phrase</span> b');
     });
 
-    it('does not replace what the writer typed when toggled twice', () => {
-      const { menu, ui } = create({ defaultSubtitle: 'Anna' });
+    it('fits the text field to one line at first', () => {
+      const { ui } = create();
 
-      select('phrase');
-      menu.children.onOpen();
-      part(ui, 'subtitle-toggle').click();
-      type(part<HTMLInputElement>(ui, 'subtitle'), 'Igor');
-      part(ui, 'subtitle-toggle').click();
-      part(ui, 'subtitle-toggle').click();
-
-      expect(part<HTMLInputElement>(ui, 'subtitle').value).toBe('Igor');
+      expect(part<HTMLTextAreaElement>(ui, 'text').rows).toBe(1);
     });
   });
 
@@ -329,8 +318,15 @@ describe('AnnotationInlineTool', () => {
 
       expect(part<HTMLTextAreaElement>(ui, 'text').value).toBe('A quote');
       expect(part<HTMLInputElement>(ui, 'subtitle').value).toBe('Anna');
-      expect(part(ui, 'subtitle-toggle').getAttribute('aria-pressed')).toBe('true');
       expect(part(ui, 'remove').hidden).toBe(false);
+    });
+
+    it('does not take the default subtitle when it has none', () => {
+      container.innerHTML = 'a <span data-blok-annotation="A quote">phrase</span> b';
+
+      const { ui } = openOnHint({ defaultSubtitle: 'Ignored' });
+
+      expect(part<HTMLInputElement>(ui, 'subtitle').value).toBe('');
     });
 
     it('updates the same span in place', () => {
@@ -338,7 +334,7 @@ describe('AnnotationInlineTool', () => {
       const { ui } = openOnHint();
 
       type(part<HTMLTextAreaElement>(ui, 'text'), 'Another quote');
-      part(ui, 'subtitle-toggle').click();
+      type(part<HTMLInputElement>(ui, 'subtitle'), '');
       part(ui, 'done').click();
 
       expect(container.innerHTML).toBe('a <span data-blok-annotation="Another quote">phrase</span> b');
@@ -397,7 +393,6 @@ describe('AnnotationInlineTool', () => {
     it('saves on Enter in the subtitle', () => {
       const ui = openNew();
 
-      part(ui, 'subtitle-toggle').click();
       part(ui, 'subtitle').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
 
       expect(container.querySelector('span[data-blok-annotation]')).not.toBeNull();

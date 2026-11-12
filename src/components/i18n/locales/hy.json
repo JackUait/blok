@@ -452,7 +452,7 @@
   "tools.equation.done": "Պատրաստ է",
   "toolNames.annotation": "Հուշում",
   "tools.annotation.placeholder": "Գրեք հուշում…",
-  "tools.annotation.subtitle": "Ենթավերնագիր",
+  "tools.annotation.subtitle": "Ենթավերնագիր (ըստ ցանկության)",
   "tools.annotation.remove": "Հեռացնել հուշումը",
   "tools.annotation.done": "Պատրաստ է",
   "tools.supSub.superscript": "Վերին ինդեքս",

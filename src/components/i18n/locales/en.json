@@ -469,7 +469,7 @@
   "tools.equation.done": "Done",
   "toolNames.annotation": "Hint",
   "tools.annotation.placeholder": "Write a hint…",
-  "tools.annotation.subtitle": "Subtitle",
+  "tools.annotation.subtitle": "Subtitle (optional)",
   "tools.annotation.remove": "Remove hint",
   "tools.annotation.done": "Done",
   "tools.supSub.superscript": "Superscript",

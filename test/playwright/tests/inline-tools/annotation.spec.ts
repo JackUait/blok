@@ -114,13 +114,8 @@ test.describe('annotation (Hint) inline tool', () => {
     await page.keyboard.type('Six extra steps per order.');
     await expect(text).toHaveValue('We moved the oven.\nSix extra steps per order.');
 
-    await page.getByTestId('inline-annotation-subtitle-toggle').click();
-
-    const subtitle = page.getByTestId('inline-annotation-subtitle');
-
-    await expect(subtitle).toBeFocused();
-    await expect(subtitle).toHaveValue('From the team interview');
-    await expect(page.getByTestId('inline-annotation-subtitle-toggle')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('inline-annotation-subtitle-toggle')).toHaveCount(0);
+    await expect(page.getByTestId('inline-annotation-subtitle')).toHaveValue('From the team interview');
 
     await page.getByTestId('inline-annotation-done').click();
 
@@ -141,12 +136,44 @@ test.describe('annotation (Hint) inline tool', () => {
     await selectText(page, page.locator(PARAGRAPH_SELECTOR).first(), 'kitchen layout');
     await page.locator(HINT_BUTTON_SELECTOR).click();
     await page.keyboard.type('A quote');
-    await page.getByTestId('inline-annotation-subtitle-toggle').click();
+    // Tab selects the default, so typing replaces it.
+    await page.keyboard.press('Tab');
+    await expect(page.getByTestId('inline-annotation-subtitle')).toBeFocused();
     await page.keyboard.type('Anna, manager');
     await page.keyboard.press('Enter');
 
     await expect(page.getByTestId('inline-annotation-text')).toBeHidden();
     await expect(page.locator(HINT_SELECTOR)).toHaveAttribute('data-blok-annotation-subtitle', 'Anna, manager');
+  });
+
+  test('the text field is as tall as its text', async ({ page }) => {
+    await createBlok(page, [ PLAIN ]);
+    await selectText(page, page.locator(PARAGRAPH_SELECTOR).first(), 'kitchen layout');
+    await page.locator(HINT_BUTTON_SELECTOR).click();
+
+    const text = page.getByTestId('inline-annotation-text');
+    // The card scales while it opens, so read the layout height, not the painted box.
+    const height = (): Promise<number> => text.evaluate(el => el.clientHeight);
+    const lineHeight = await text.evaluate(el => parseFloat(getComputedStyle(el).lineHeight));
+
+    await expect(text).toBeFocused();
+    expect(await height()).toBeCloseTo(lineHeight, 0);
+
+    await page.keyboard.type('One');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Two');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Three');
+    expect(await height()).toBeCloseTo(lineHeight * 3, 0);
+
+    await text.fill('One');
+    expect(await height()).toBeCloseTo(lineHeight, 0);
+  });
+
+  test('a hint shows a hand cursor while the editor is editable', async ({ page }) => {
+    await createBlok(page, [ WITH_HINT ]);
+
+    await expect(page.locator(HINT_SELECTOR)).toHaveCSS('cursor', 'pointer');
   });
 
   test('a reader sees the card only after hovering for the hint delay', async ({ page }) => {

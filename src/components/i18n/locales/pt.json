@@ -453,7 +453,7 @@
   "tools.equation.done": "Concluído",
   "toolNames.annotation": "Dica",
   "tools.annotation.placeholder": "Escreva uma dica…",
-  "tools.annotation.subtitle": "Subtítulo",
+  "tools.annotation.subtitle": "Subtítulo (opcional)",
   "tools.annotation.remove": "Remover dica",
   "tools.annotation.done": "Concluído",
   "tools.supSub.superscript": "Sobrescrito",

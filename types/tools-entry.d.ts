@@ -288,7 +288,7 @@ export const Annotation: InlineToolConstructable;
 
 /** Config of the {@link Annotation} tool. */
 export interface AnnotationConfig {
-  /** Pre-fills the subtitle line when the writer turns it on. */
+  /** Pre-fills the subtitle line of a new hint. */
   defaultSubtitle?: string;
 }
 export const ClearFormat: InlineToolConstructable;

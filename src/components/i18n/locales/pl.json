@@ -454,7 +454,7 @@
   "tools.equation.done": "Gotowe",
   "toolNames.annotation": "Podpowiedź",
   "tools.annotation.placeholder": "Wpisz podpowiedź…",
-  "tools.annotation.subtitle": "Podtytuł",
+  "tools.annotation.subtitle": "Podtytuł (opcjonalnie)",
   "tools.annotation.remove": "Usuń podpowiedź",
   "tools.annotation.done": "Gotowe",
   "tools.supSub.superscript": "Indeks górny",

@@ -453,7 +453,7 @@
   "tools.equation.done": "Gata",
   "toolNames.annotation": "Indiciu",
   "tools.annotation.placeholder": "Scrieți un indiciu…",
-  "tools.annotation.subtitle": "Subtitlu",
+  "tools.annotation.subtitle": "Subtitlu (opțional)",
   "tools.annotation.remove": "Elimină indiciul",
   "tools.annotation.done": "Gata",
   "tools.supSub.superscript": "Exponent",

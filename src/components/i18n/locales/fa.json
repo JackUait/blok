@@ -452,7 +452,7 @@
   "tools.equation.done": "انجام شد",
   "toolNames.annotation": "راهنما",
   "tools.annotation.placeholder": "یک راهنما بنویسید…",
-  "tools.annotation.subtitle": "زیرعنوان",
+  "tools.annotation.subtitle": "زیرعنوان (اختیاری)",
   "tools.annotation.remove": "حذف راهنما",
   "tools.annotation.done": "انجام شد",
   "tools.supSub.superscript": "بالانویس",

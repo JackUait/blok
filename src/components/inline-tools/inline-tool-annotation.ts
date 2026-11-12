@@ -22,7 +22,6 @@ interface AnnotationNodes {
   wrapper: HTMLElement;
   text: HTMLTextAreaElement;
   subtitle: HTMLInputElement;
-  subtitleToggle: HTMLButtonElement;
   remove: HTMLButtonElement;
 }
 
@@ -68,15 +67,13 @@ export class AnnotationInlineTool implements InlineTool {
 
   private readonly selection: SelectionUtils;
 
-  /** Pre-fills the subtitle line when the writer turns it on. */
+  /** Pre-fills the subtitle line of a new hint. */
   private readonly defaultSubtitle: string;
 
   private readonly nodes: AnnotationNodes;
 
   /** The hint being edited; null while a new one is being written. */
   private hint: HTMLElement | null = null;
-
-  private subtitleOn = false;
 
   /** Closing the menu saves, so a save that already happened must not repeat. */
   private settled = true;
@@ -141,13 +138,12 @@ export class AnnotationInlineTool implements InlineTool {
 
     this.settled = false;
 
-    const subtitle = this.hint?.getAttribute(ANNOTATION_SUBTITLE_ATTR) ?? '';
-
     this.nodes.text.value = this.hint?.getAttribute(ANNOTATION_ATTR) ?? '';
-    this.nodes.subtitle.value = subtitle;
+    this.nodes.subtitle.value = this.hint === null
+      ? this.defaultSubtitle
+      : this.hint.getAttribute(ANNOTATION_SUBTITLE_ATTR) ?? '';
     this.nodes.remove.hidden = this.hint === null;
     this.nodes.remove.style.display = this.hint === null ? 'none' : '';
-    this.setSubtitleOn(subtitle !== '');
     this.fitText();
 
     if (this.hint === null) {
@@ -184,7 +180,7 @@ export class AnnotationInlineTool implements InlineTool {
     this.settled = true;
 
     const text = this.nodes.text.value.trim();
-    const subtitle = this.subtitleOn ? this.nodes.subtitle.value.trim() : '';
+    const subtitle = this.nodes.subtitle.value.trim();
 
     if (this.hint !== null) {
       if (text === '') {
@@ -251,34 +247,6 @@ export class AnnotationInlineTool implements InlineTool {
     return selection !== null && selection.rangeCount > 0 && !selection.isCollapsed ? selection.getRangeAt(0) : null;
   }
 
-  private setSubtitleOn(on: boolean): void {
-    this.subtitleOn = on;
-    this.nodes.subtitleToggle.setAttribute('aria-pressed', String(on));
-    this.nodes.subtitle.hidden = !on;
-    // `hidden` alone loses to the `block` utility on the same element.
-    this.nodes.subtitle.style.display = on ? '' : 'none';
-  }
-
-  private toggleSubtitle(): void {
-    const on = !this.subtitleOn;
-
-    this.setSubtitleOn(on);
-
-    if (!on) {
-      this.nodes.text.focus();
-
-      return;
-    }
-
-    if (this.nodes.subtitle.value === '') {
-      this.nodes.subtitle.value = this.defaultSubtitle;
-    }
-
-    this.nodes.subtitle.focus();
-    // Selected, so typing replaces the default.
-    this.nodes.subtitle.select();
-  }
-
   /** The text field grows with its content instead of scrolling. */
   private fitText(): void {
     this.nodes.text.style.height = 'auto';
@@ -294,6 +262,9 @@ export class AnnotationInlineTool implements InlineTool {
     field.focus();
 
     window.setTimeout(() => {
+      // The card may not be laid out yet when onOpen runs.
+      this.fitText();
+
       if (this.settled || document.activeElement === field || this.nodes.wrapper.contains(document.activeElement)) {
         return;
       }
@@ -314,7 +285,7 @@ export class AnnotationInlineTool implements InlineTool {
 
     const text = document.createElement('textarea');
 
-    text.rows = 2;
+    text.rows = 1;
     text.placeholder = this.i18n.t('tools.annotation.placeholder');
     text.setAttribute('aria-label', this.i18n.t('toolNames.annotation'));
     text.className = 'block w-full m-0 p-0 resize-none overflow-hidden bg-transparent border-0 outline-hidden appearance-none font-[inherit] text-[14px] leading-[1.5] text-text-primary placeholder:text-gray-text';
@@ -354,17 +325,6 @@ export class AnnotationInlineTool implements InlineTool {
     // Focus stays in the field, so the popover and the saved selection survive the click.
     const keepFocus = (event: Event): void => event.preventDefault();
 
-    const subtitleToggle = document.createElement('button');
-
-    subtitleToggle.type = 'button';
-    // Pressed is gray, never blue.
-    subtitleToggle.className = `${button} ${quiet} px-2 aria-pressed:bg-icon-active-bg aria-pressed:text-text-primary`;
-    subtitleToggle.textContent = this.i18n.t('tools.annotation.subtitle');
-    subtitleToggle.setAttribute('aria-pressed', 'false');
-    subtitleToggle.setAttribute('data-blok-testid', 'inline-annotation-subtitle-toggle');
-    subtitleToggle.addEventListener('mousedown', keepFocus);
-    subtitleToggle.addEventListener('click', () => this.toggleSubtitle());
-
     const remove = document.createElement('button');
 
     remove.type = 'button';
@@ -388,9 +348,9 @@ export class AnnotationInlineTool implements InlineTool {
     done.addEventListener('mousedown', keepFocus);
     done.addEventListener('click', () => this.confirm());
 
-    footer.append(subtitleToggle, remove, spacer, done);
+    footer.append(remove, spacer, done);
     wrapper.append(body, footer);
 
-    return { wrapper, text, subtitle, subtitleToggle, remove };
+    return { wrapper, text, subtitle, remove };
   }
 }

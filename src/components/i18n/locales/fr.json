@@ -453,7 +453,7 @@
   "tools.equation.done": "Terminé",
   "toolNames.annotation": "Indice",
   "tools.annotation.placeholder": "Saisissez un indice…",
-  "tools.annotation.subtitle": "Sous-titre",
+  "tools.annotation.subtitle": "Sous-titre (facultatif)",
   "tools.annotation.remove": "Supprimer l’indice",
   "tools.annotation.done": "Terminé",
   "tools.supSub.superscript": "Exposant",

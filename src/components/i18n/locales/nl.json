@@ -452,7 +452,7 @@
   "tools.equation.done": "Klaar",
   "toolNames.annotation": "Tip",
   "tools.annotation.placeholder": "Schrijf een tip…",
-  "tools.annotation.subtitle": "Ondertitel",
+  "tools.annotation.subtitle": "Ondertitel (optioneel)",
   "tools.annotation.remove": "Tip verwijderen",
   "tools.annotation.done": "Klaar",
   "tools.supSub.superscript": "Superscript",

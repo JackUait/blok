@@ -452,7 +452,7 @@
   "tools.equation.done": "Τέλος",
   "toolNames.annotation": "Υπόδειξη",
   "tools.annotation.placeholder": "Γράψτε μια υπόδειξη…",
-  "tools.annotation.subtitle": "Υπότιτλος",
+  "tools.annotation.subtitle": "Υπότιτλος (προαιρετικό)",
   "tools.annotation.remove": "Κατάργηση υπόδειξης",
   "tools.annotation.done": "Τέλος",
   "tools.supSub.superscript": "Εκθέτης",

@@ -452,7 +452,7 @@
   "tools.equation.done": "Ferdig",
   "toolNames.annotation": "Tips",
   "tools.annotation.placeholder": "Skriv et tips…",
-  "tools.annotation.subtitle": "Undertittel",
+  "tools.annotation.subtitle": "Undertittel (valgfritt)",
   "tools.annotation.remove": "Fjern tips",
   "tools.annotation.done": "Ferdig",
   "tools.supSub.superscript": "Hevet skrift",

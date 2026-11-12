@@ -452,7 +452,7 @@
   "tools.equation.done": "Kész",
   "toolNames.annotation": "Tipp",
   "tools.annotation.placeholder": "Írjon tippet…",
-  "tools.annotation.subtitle": "Alcím",
+  "tools.annotation.subtitle": "Alcím (nem kötelező)",
   "tools.annotation.remove": "Tipp eltávolítása",
   "tools.annotation.done": "Kész",
   "tools.supSub.superscript": "Felső index",

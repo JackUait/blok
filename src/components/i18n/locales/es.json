@@ -453,7 +453,7 @@
   "tools.equation.done": "Listo",
   "toolNames.annotation": "Pista",
   "tools.annotation.placeholder": "Escribe una pista…",
-  "tools.annotation.subtitle": "Subtítulo",
+  "tools.annotation.subtitle": "Subtítulo (opcional)",
   "tools.annotation.remove": "Quitar pista",
   "tools.annotation.done": "Listo",
   "tools.supSub.superscript": "Superíndice",

@@ -452,7 +452,7 @@
   "tools.equation.done": "U krye",
   "toolNames.annotation": "Ndihmëz",
   "tools.annotation.placeholder": "Shkruaj një ndihmëz…",
-  "tools.annotation.subtitle": "Nëntitull",
+  "tools.annotation.subtitle": "Nëntitull (opsionale)",
   "tools.annotation.remove": "Hiq ndihmëzën",
   "tools.annotation.done": "U krye",
   "tools.supSub.superscript": "Eksponent",

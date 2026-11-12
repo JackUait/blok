@@ -454,7 +454,7 @@
   "tools.equation.done": "Готово",
   "toolNames.annotation": "Подсказка",
   "tools.annotation.placeholder": "Напишите подсказку…",
-  "tools.annotation.subtitle": "Подпись",
+  "tools.annotation.subtitle": "Подпись (необязательно)",
   "tools.annotation.remove": "Удалить подсказку",
   "tools.annotation.done": "Готово",
   "tools.supSub.superscript": "Надстрочный",

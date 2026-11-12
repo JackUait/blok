@@ -452,7 +452,7 @@
   "tools.equation.done": "Selesai",
   "toolNames.annotation": "Petunjuk",
   "tools.annotation.placeholder": "Tulis petunjuk…",
-  "tools.annotation.subtitle": "Subjudul",
+  "tools.annotation.subtitle": "Subjudul (opsional)",
   "tools.annotation.remove": "Hapus petunjuk",
   "tools.annotation.done": "Selesai",
   "tools.supSub.superscript": "Superskrip",

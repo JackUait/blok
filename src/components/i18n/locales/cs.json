@@ -454,7 +454,7 @@
   "tools.equation.done": "Hotovo",
   "toolNames.annotation": "Nápověda",
   "tools.annotation.placeholder": "Zadejte nápovědu…",
-  "tools.annotation.subtitle": "Podnadpis",
+  "tools.annotation.subtitle": "Podnadpis (volitelné)",
   "tools.annotation.remove": "Odebrat nápovědu",
   "tools.annotation.done": "Hotovo",
   "tools.supSub.superscript": "Horní index",

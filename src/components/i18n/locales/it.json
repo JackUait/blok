@@ -453,7 +453,7 @@
   "tools.equation.done": "Fine",
   "toolNames.annotation": "Suggerimento",
   "tools.annotation.placeholder": "Scrivi un suggerimento…",
-  "tools.annotation.subtitle": "Sottotitolo",
+  "tools.annotation.subtitle": "Sottotitolo (facoltativo)",
   "tools.annotation.remove": "Rimuovi suggerimento",
   "tools.annotation.done": "Fine",
   "tools.supSub.superscript": "Apice",

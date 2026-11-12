@@ -469,7 +469,7 @@
   "tools.equation.done": "完成",
   "toolNames.annotation": "提示",
   "tools.annotation.placeholder": "輸入提示…",
-  "tools.annotation.subtitle": "副標題",
+  "tools.annotation.subtitle": "副標題（選填）",
   "tools.annotation.remove": "移除提示",
   "tools.annotation.done": "完成",
   "tools.supSub.superscript": "上標",

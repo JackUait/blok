@@ -452,7 +452,7 @@
   "tools.equation.done": "Tamam",
   "toolNames.annotation": "İpucu",
   "tools.annotation.placeholder": "İpucu yazın…",
-  "tools.annotation.subtitle": "Alt başlık",
+  "tools.annotation.subtitle": "Alt başlık (isteğe bağlı)",
   "tools.annotation.remove": "İpucunu kaldır",
   "tools.annotation.done": "Tamam",
   "tools.supSub.superscript": "Üst simge",

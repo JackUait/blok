@@ -453,7 +453,7 @@
   "tools.equation.done": "Gotovo",
   "toolNames.annotation": "Napomena",
   "tools.annotation.placeholder": "Upiši napomenu…",
-  "tools.annotation.subtitle": "Podnaslov",
+  "tools.annotation.subtitle": "Podnaslov (neobavezno)",
   "tools.annotation.remove": "Ukloni napomenu",
   "tools.annotation.done": "Gotovo",
   "tools.supSub.superscript": "Eksponent",

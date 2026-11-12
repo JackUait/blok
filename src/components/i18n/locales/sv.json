@@ -452,7 +452,7 @@
   "tools.equation.done": "Klar",
   "toolNames.annotation": "Tips",
   "tools.annotation.placeholder": "Skriv ett tips…",
-  "tools.annotation.subtitle": "Underrubrik",
+  "tools.annotation.subtitle": "Underrubrik (valfritt)",
   "tools.annotation.remove": "Ta bort tips",
   "tools.annotation.done": "Klar",
   "tools.supSub.superscript": "Upphöjt",

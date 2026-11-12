@@ -452,7 +452,7 @@
   "tools.equation.done": "Xong",
   "toolNames.annotation": "Gợi ý",
   "tools.annotation.placeholder": "Viết gợi ý…",
-  "tools.annotation.subtitle": "Tiêu đề phụ",
+  "tools.annotation.subtitle": "Tiêu đề phụ (không bắt buộc)",
   "tools.annotation.remove": "Xóa gợi ý",
   "tools.annotation.done": "Xong",
   "tools.supSub.superscript": "Chỉ số trên",

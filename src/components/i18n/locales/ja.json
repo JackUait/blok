@@ -452,7 +452,7 @@
   "tools.equation.done": "完了",
   "toolNames.annotation": "ヒント",
   "tools.annotation.placeholder": "ヒントを入力…",
-  "tools.annotation.subtitle": "サブタイトル",
+  "tools.annotation.subtitle": "サブタイトル（任意）",
   "tools.annotation.remove": "ヒントを削除",
   "tools.annotation.done": "完了",
   "tools.supSub.superscript": "上付き文字",

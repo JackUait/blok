@@ -452,7 +452,7 @@
   "tools.equation.done": "Fertig",
   "toolNames.annotation": "Hinweis",
   "tools.annotation.placeholder": "Hinweis schreiben…",
-  "tools.annotation.subtitle": "Untertitel",
+  "tools.annotation.subtitle": "Untertitel (optional)",
   "tools.annotation.remove": "Hinweis entfernen",
   "tools.annotation.done": "Fertig",
   "tools.supSub.superscript": "Hochgestellt",

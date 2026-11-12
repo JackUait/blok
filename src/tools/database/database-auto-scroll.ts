@@ -18,6 +18,13 @@ export const rowAutoScrollSpeed = (distance: number): number => Math.max(0, 0.84
 export const cardAutoScrollSpeed = (distance: number): number => Math.max(0, 0.15 * (20 - distance));
 
 /**
+ * List rows near the top or bottom. notion-motion.md Round 16: about 0.66 px/ms
+ * at 10px from the window bottom, and nothing at 12px or farther. Notion also
+ * did not scroll at 5px, for a reason not read; this zone runs to the edge.
+ */
+export const listAutoScrollSpeed = (distance: number): number => (distance < 12 ? 0.66 : 0);
+
+/**
  * A drag's auto-scroll on one axis. The zones hug the scroller's edges, cut
  * to the window, or the window's edges when nothing inside the page scrolls.
  */

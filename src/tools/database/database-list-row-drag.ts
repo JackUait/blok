@@ -1,4 +1,6 @@
+import type { AutoScroll } from '../../components/modules/drag/utils/AutoScroll';
 import { copyGhostRadius, mountGhost } from './copy-ghost-radius';
+import { createDatabaseAutoScroll, listAutoScrollSpeed } from './database-auto-scroll';
 import { DatabaseDropLine } from './database-drop-line';
 
 const DRAG_THRESHOLD = 10;
@@ -33,6 +35,8 @@ export class DatabaseListRowDrag {
   /** Where a fixed ghost at 0,0 lands: not the viewport corner inside a transformed ancestor. */
   private ghostOrigin = { x: 0, y: 0 };
   private readonly dropLine: DatabaseDropLine;
+  private autoScroll: AutoScroll | null = null;
+  private lastPointer: PointerEvent | null = null;
 
   private readonly boundPointerMove: (e: PointerEvent) => void;
   private readonly boundPointerUp: (e: PointerEvent) => void;
@@ -73,6 +77,10 @@ export class DatabaseListRowDrag {
     document.removeEventListener('pointercancel', this.boundPointerCancel);
     document.removeEventListener('keydown', this.boundKeyDown);
 
+    this.autoScroll?.destroy();
+    this.autoScroll = null;
+    this.lastPointer = null;
+
     this.ghostEl?.remove();
     this.ghostEl = null;
 
@@ -109,8 +117,10 @@ export class DatabaseListRowDrag {
     }
 
     if (this.isDragging) {
+      this.lastPointer = e;
       this.updateGhostPosition(e);
       this.updateDropIndicator(e);
+      this.autoScroll?.start(e.clientY);
     }
   }
 
@@ -142,6 +152,11 @@ export class DatabaseListRowDrag {
     }
 
     this.createGhost(e);
+    this.autoScroll = createDatabaseAutoScroll(this.sourceRow ?? this.wrapper, 'y', listAutoScrollSpeed, () => {
+      if (this.lastPointer !== null) {
+        this.updateDropIndicator(this.lastPointer);
+      }
+    });
   }
 
   private createGhost(e: PointerEvent): void {

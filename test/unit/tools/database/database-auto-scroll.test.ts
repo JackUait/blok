@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cardAutoScrollSpeed, rowAutoScrollSpeed } from '../../../../src/tools/database/database-auto-scroll';
+import { cardAutoScrollSpeed, listAutoScrollSpeed, rowAutoScrollSpeed } from '../../../../src/tools/database/database-auto-scroll';
 import { DatabaseCardDrag } from '../../../../src/tools/database/database-card-drag';
+import { DatabaseListRowDrag } from '../../../../src/tools/database/database-list-row-drag';
 import { DatabaseTableRowDrag } from '../../../../src/tools/database/database-table-row-drag';
 import { createTableState } from '../../../../src/tools/database/database-table-grid';
 
@@ -50,6 +51,12 @@ describe('database drag auto-scroll speeds (notion-motion.md Round 14)', () => {
   it('board cards: about 1.5 px/ms at 10px from the edge, none at 20px', () => {
     expect(cardAutoScrollSpeed(10)).toBeCloseTo(1.5, 2);
     expect(cardAutoScrollSpeed(20)).toBe(0);
+  });
+
+  it('list rows (Round 16): about 0.66 px/ms at 10px from the edge, none at 12px', () => {
+    expect(listAutoScrollSpeed(10)).toBeCloseTo(0.66, 2);
+    expect(listAutoScrollSpeed(12)).toBe(0);
+    expect(listAutoScrollSpeed(20)).toBe(0);
   });
 });
 
@@ -252,5 +259,92 @@ describe('database drags scroll near an edge', () => {
 
     runFrames(32, 240);
     expect(board.scrollLeft).toBe(at);
+  });
+
+  const listFixture = (): { scroller: HTMLElement; drag: DatabaseListRowDrag; onDrop: ReturnType<typeof vi.fn> } => {
+    const scroller = document.createElement('div');
+    const list = document.createElement('div');
+
+    makeScroller(scroller, 'y', 304);
+    stubRect(scroller, () => rect(0, 44, 900, 406));
+    for (let i = 0; i < 12; i++) {
+      const row = document.createElement('div');
+
+      row.setAttribute('data-blok-database-list-row', '');
+      row.setAttribute('data-row-id', `r${i}`);
+      stubRect(row, () => rect(40, 100 + i * 36 - scroller.scrollTop, 800, 36));
+      list.appendChild(row);
+    }
+    scroller.appendChild(list);
+    document.body.appendChild(scroller);
+    const onDrop = vi.fn();
+    const drag = new DatabaseListRowDrag({ wrapper: list, onDrop });
+
+    return { scroller, drag, onDrop };
+  };
+
+  it('a list row held 10px above the window bottom scrolls the page down at about 0.66 px/ms', () => {
+    const { scroller, drag } = listFixture();
+
+    drag.beginTracking('r0', 50, 110);
+    pointer('pointermove', 50, 440);
+    runFrames(0, 240);
+
+    expect(scroller.scrollTop).toBeGreaterThan(0.66 * 192);
+    expect(scroller.scrollTop).toBeLessThan(0.66 * 264);
+  });
+
+  it('a list row held 12px above the window bottom does not scroll', () => {
+    const { scroller, drag } = listFixture();
+
+    drag.beginTracking('r0', 50, 110);
+    pointer('pointermove', 50, 438);
+    runFrames(0, 240);
+
+    expect(scroller.scrollTop).toBe(0);
+  });
+
+  it('the list drop target follows the scroll with the pointer held still', () => {
+    const { scroller, drag, onDrop } = listFixture();
+
+    drag.beginTracking('r0', 50, 110);
+    pointer('pointermove', 50, 440);
+    runFrames(0, 72);
+    const line = document.querySelector<HTMLElement>('[data-blok-database-drop-line]');
+    const before = Array.from({ length: 12 }, (_, i) => i).find((i) => i > 0 && 100 + i * 36 + 18 - scroller.scrollTop > 440);
+    const top = 100 + (before ?? 0) * 36 - scroller.scrollTop;
+    const lineTop = line === null ? NaN : parseFloat(line.style.top) + parseFloat(line.style.height || '0') / 2;
+
+    pointer('pointerup', 50, 440);
+
+    expect(scroller.scrollTop).toBeGreaterThan(36);
+    expect(Math.abs(lineTop - top)).toBeLessThan(3);
+    expect(onDrop).toHaveBeenCalledWith(expect.objectContaining({ rowId: 'r0', beforeRowId: `r${before}` }));
+  });
+
+  it('dropping the list row stops the scroll', () => {
+    const { scroller, drag } = listFixture();
+
+    drag.beginTracking('r0', 50, 110);
+    pointer('pointermove', 50, 440);
+    runFrames(0, 48);
+    pointer('pointerup', 50, 440);
+    const at = scroller.scrollTop;
+
+    runFrames(56, 240);
+    expect(scroller.scrollTop).toBe(at);
+  });
+
+  it('Escape stops the list row scroll', () => {
+    const { scroller, drag } = listFixture();
+
+    drag.beginTracking('r0', 50, 110);
+    pointer('pointermove', 50, 440);
+    runFrames(0, 48);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    const at = scroller.scrollTop;
+
+    runFrames(56, 240);
+    expect(scroller.scrollTop).toBe(at);
   });
 });

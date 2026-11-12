@@ -258,6 +258,7 @@
   "a11y.searchResults": "Hasil carian: {count}",
   "a11y.blockToolbar": "Bar alat blok",
   "a11y.textFormatting": "Pemformatan teks",
+  "a11y.moreOptions": "Pilihan lain",
   "a11y.loadingContent": "Memuatkan kandungan…",
   "a11y.allBlocksSelected": "Semua blok dipilih. Jumlah: {count}.",
   "a11y.blocksSelected": "{count} blok dipilih",

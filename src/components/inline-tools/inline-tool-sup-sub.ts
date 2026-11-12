@@ -11,6 +11,7 @@ import { DATA_ATTR, createSelector } from '../constants';
 import { IconSubscript, IconSuperscript } from '../icons';
 import { applyMark, hasMark, removeMark, toggleMarkAtCaret } from '../marks/mark-engine';
 import { SelectionUtils } from '../selection/index';
+import { beautifyShortcut } from '../utils/string';
 
 import { InlineToolEventManager } from './services/inline-tool-event-manager';
 import { normalizeNbspIn } from './simple-mark-tool';
@@ -19,6 +20,9 @@ import { normalizeNbspIn } from './simple-mark-tool';
  * The two baseline-shift modes
  */
 type ScriptMode = 'superscript' | 'subscript';
+
+/** The key each mode takes with ⌘/Ctrl. The row label and the handler both read it. */
+const MODE_KEY: Record<ScriptMode, string> = { superscript: '.', subscript: ',' };
 
 /**
  * Superscript and subscript as plain tag marks. Different tags mean different
@@ -191,6 +195,7 @@ export class SupSubInlineTool implements InlineTool {
     icon: string;
     name: ScriptMode;
     title: string;
+    secondaryLabel: string;
     closeOnActivate: boolean;
     isActive: () => boolean;
     onActivate: () => void;
@@ -199,6 +204,7 @@ export class SupSubInlineTool implements InlineTool {
       icon,
       name: mode,
       title: this.i18n.t(titleKey),
+      secondaryLabel: beautifyShortcut(`CMD+${MODE_KEY[mode]}`),
       closeOnActivate: true,
       isActive: () => this.isModeActive(mode),
       onActivate: () => {
@@ -252,8 +258,8 @@ export class SupSubInlineTool implements InlineTool {
       });
     };
 
-    registerModeShortcut('superscript', '.');
-    registerModeShortcut('subscript', ',');
+    registerModeShortcut('superscript', MODE_KEY.superscript);
+    registerModeShortcut('subscript', MODE_KEY.subscript);
   }
 
   /**

@@ -283,7 +283,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2094 + 143 + 528 + 5 closure for all 2770 keys', () => {
+  it('rebuilds a disjoint 2095 + 143 + 528 + 5 closure for all 2771 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -297,7 +297,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2770);
+    expect(lifecycle.size).toBe(2771);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -519,7 +519,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +5: the annotation ("Hint") tool's four tools.annotation.* strings and toolNames.annotation, the hint card's name, by literal.
       // +3: the Dashboard view's name, its Add widget button and its empty line (tools.database.viewTypeDashboard, dashboardAddWidget, dashboardEmpty), by literal.
       // +3: the dashboard menus call tools.database.chartTypeNumber, duplicateView and deleteView by literal (moved from registered-namespace-compatible).
-      'executable-literal': 2094,
+      'executable-literal': 2095,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

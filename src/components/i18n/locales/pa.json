@@ -204,6 +204,7 @@
   "a11y.searchResults": "ਖੋਜ ਨਤੀਜੇ: {count}",
   "a11y.blockToolbar": "ਬਲਾਕ ਟੂਲਬਾਰ",
   "a11y.textFormatting": "ਟੈਕਸਟ ਫਾਰਮੈਟਿੰਗ",
+  "a11y.moreOptions": "ਹੋਰ ਵਿਕਲਪ",
   "a11y.loadingContent": "ਸਮੱਗਰੀ ਲੋਡ ਹੋ ਰਹੀ ਹੈ…",
   "tools.paragraph.placeholder": "ਕੁਝ ਲਿਖੋ ਜਾਂ ਟੂਲ ਚੁਣਨ ਲਈ / ਦਬਾਓ",
   "tools.paragraph.placeholderAi": "AI ਲਈ “ਸਪੇਸ” ਜਾਂ ਕਮਾਂਡਾਂ ਲਈ “/” ਦਬਾਓ",

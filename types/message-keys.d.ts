@@ -49,6 +49,7 @@ export type BlokMessageKey =
   | 'a11y.dropPosition'
   | 'a11y.insertBlock'
   | 'a11y.loadingContent'
+  | 'a11y.moreOptions'
   | 'a11y.movedDown'
   | 'a11y.movedUp'
   | 'a11y.navigatedToBlock'

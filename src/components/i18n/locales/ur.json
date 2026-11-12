@@ -216,6 +216,7 @@
   "a11y.searchResults": "تلاش کے نتائج: {count}",
   "a11y.blockToolbar": "بلاک ٹول بار",
   "a11y.textFormatting": "متن کی فارمیٹنگ",
+  "a11y.moreOptions": "مزید اختیارات",
   "a11y.loadingContent": "مواد لوڈ ہو رہا ہے…",
   "tools.paragraph.placeholder": "کچھ لکھیں یا کوئی ٹول منتخب کرنے کے لیے / دبائیں",
   "tools.paragraph.placeholderAi": "AI کے لیے “اسپیس” یا کمانڈز کے لیے “/” دبائیں",

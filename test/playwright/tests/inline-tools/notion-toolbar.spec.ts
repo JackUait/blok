@@ -77,7 +77,7 @@ test('cells sit in Notion order, five per row', async ({ page }) => {
 
   // The shared test page does not register every built-in, so check the order
   // of the ones it does.
-  const canonical = [ 'marker', 'bold', 'italic', 'underline', 'clearFormat', 'link', 'strikethrough', 'inlineCode', 'equation', 'supSub' ];
+  const canonical = [ 'marker', 'bold', 'italic', 'underline', 'clearFormat', 'link', 'strikethrough', 'inlineCode', 'more' ];
 
   expect(names.length).toBeGreaterThan(5);
   expect(names).toEqual(canonical.filter(name => names.includes(name)));

@@ -4,6 +4,7 @@ import type { ModuleConfig } from '../../../../types-internal/module-config';
 import { Module } from '../../../__module';
 import { DATA_ATTR, INLINE_TOOLBAR_INTERFACE_VALUE } from '../../../constants';
 import { Dom as $ } from '../../../dom';
+import { IconDotsHorizontal } from '../../../icons';
 import { InlineToolEventManager } from '../../../inline-tools/services/inline-tool-event-manager';
 import { SelectionUtils } from '../../../selection/index';
 import type { InlineToolAdapter } from '../../../tools/inline';
@@ -20,6 +21,7 @@ import { isPromotedToTopLayer, promoteToTopLayer, removeFromTopLayer, TOP_LAYER_
  */
 import { InlineKeyboardHandler } from './keyboard-handler';
 import { InlineLifecycleManager } from './lifecycle-manager';
+import { groupIntoMoreMenu } from './more-menu';
 import { InlinePopoverBuilder } from './popover-builder';
 import { InlinePositioner } from './positioner';
 import { InlineSelectionValidator } from './selection-validator';
@@ -687,7 +689,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
   private async buildPopoverItems(): Promise<PopoverItemParams[]> {
     const items = await this.popoverBuilder.build(this.tools);
 
-    return items.map((item) => {
+    const swapped = items.map((item): PopoverItemParams => {
       const name = 'name' in item ? item.name : undefined;
 
       if (name === undefined || !('children' in item) || !this.Blok.Tools.inlineTools.get(name)?.replacesToolbar) {
@@ -704,6 +706,8 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
         },
       };
     });
+
+    return groupIntoMoreMenu(swapped, { title: this.Blok.I18n.t('a11y.moreOptions'), icon: IconDotsHorizontal });
   }
 
   /**

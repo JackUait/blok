@@ -216,6 +216,7 @@
   "a11y.searchResults": "ผลการค้นหา: {count} รายการ",
   "a11y.blockToolbar": "แถบเครื่องมือบล็อก",
   "a11y.textFormatting": "การจัดรูปแบบข้อความ",
+  "a11y.moreOptions": "ตัวเลือกเพิ่มเติม",
   "a11y.loadingContent": "กำลังโหลดเนื้อหา…",
   "tools.paragraph.placeholder": "เขียนอะไรสักอย่าง หรือกด / เพื่อเลือกเครื่องมือ",
   "tools.paragraph.placeholderAi": "กด “เว้นวรรค” เพื่อใช้ AI หรือ “/” เพื่อดูคำสั่ง",

@@ -246,6 +246,7 @@
   "a11y.searchResults": "ရှာဖွေမှုရလဒ် {count} ခု",
   "a11y.blockToolbar": "ဘလောက်ကိရိယာဘား",
   "a11y.textFormatting": "စာသားဖော်မတ်ချခြင်း",
+  "a11y.moreOptions": "အခြားရွေးချယ်စရာများ",
   "a11y.loadingContent": "အကြောင်းအရာကို တင်နေသည်…",
   "a11y.allBlocksSelected": "ဘလောက်အားလုံးကို ရွေးထားသည်။ စုစုပေါင်း {count} ခု",
   "a11y.blocksSelected": "ဘလောက် {count} ခု ရွေးထားသည်",

@@ -258,6 +258,7 @@
   "a11y.searchResults": "Hasil pencarian: {count}",
   "a11y.blockToolbar": "Bilah alat blok",
   "a11y.textFormatting": "Pemformatan teks",
+  "a11y.moreOptions": "Opsi lainnya",
   "a11y.loadingContent": "Memuat konten…",
   "blockSettings.convertWithChildrenWarning": "Blok bersarang: {count}. Mengubah blok ini akan memindahkan konten bersarang ke tingkat teratas. Lanjutkan?",
   "toolNames.underline": "Garis bawah",

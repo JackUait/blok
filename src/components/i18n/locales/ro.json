@@ -216,6 +216,7 @@
   "a11y.searchResults": "Rezultate ale căutării: {count}",
   "a11y.blockToolbar": "Bară de instrumente pentru blocuri",
   "a11y.textFormatting": "Formatarea textului",
+  "a11y.moreOptions": "Mai multe opțiuni",
   "a11y.loadingContent": "Se încarcă conținutul…",
   "tools.paragraph.placeholder": "Scrieți ceva sau apăsați / pentru a selecta un instrument",
   "tools.paragraph.placeholderAi": "Apăsați „spațiu” pentru AI sau „/” pentru comenzi",

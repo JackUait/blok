@@ -216,6 +216,7 @@
   "a11y.searchResults": "{count} შედეგი",
   "a11y.blockToolbar": "ბლოკის ხელსაწყოთა პანელი",
   "a11y.textFormatting": "ტექსტის ფორმატირება",
+  "a11y.moreOptions": "მეტი პარამეტრები",
   "a11y.loadingContent": "შიგთავსი იტვირთება…",
   "tools.paragraph.placeholder": "დაწერეთ რამე ან ხელსაწყოს ასარჩევად დააჭირეთ „/“-ს",
   "tools.paragraph.placeholderAi": "AI-სთვის დააჭირეთ „ჰარს“, ბრძანებებისთვის კი — „/“-ს",

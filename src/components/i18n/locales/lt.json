@@ -216,6 +216,7 @@
   "a11y.searchResults": "Paieškos rezultatų: {count}",
   "a11y.blockToolbar": "Bloko įrankių juosta",
   "a11y.textFormatting": "Teksto formatavimas",
+  "a11y.moreOptions": "Daugiau parinkčių",
   "a11y.loadingContent": "Įkeliamas turinys…",
   "a11y.allBlocksSelected": "Pasirinkti visi blokai. Iš viso: {count}",
   "a11y.blocksSelected": "Pasirinkta blokų: {count}",

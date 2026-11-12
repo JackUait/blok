@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InlineToolbar } from '../../../../../../src/components/modules/toolbar/inline/index';
 import type { BlokModules } from '../../../../../../src/types-internal/blok-modules';
 import { SelectionUtils } from '../../../../../../src/components/selection/index';
+import { IconDotsHorizontal } from '../../../../../../src/components/icons';
 
 /**
  * Mock the helper classes that InlineToolbar instantiates in its constructor.
@@ -256,6 +257,23 @@ describe('InlineToolbar.tryToShow error recovery', () => {
     const wrapper = (inlineToolbar as unknown as { nodes: { wrapper: HTMLElement } }).nodes.wrapper;
 
     expect(wrapper.style.getPropertyValue('--_blok-inline-toolbar-origin')).toBe('left top');
+  });
+
+  it('moves Equation into a ⋯ button with its own icon and hint', async () => {
+    const builder = (inlineToolbar as unknown as { popoverBuilder: { build: ReturnType<typeof vi.fn> } }).popoverBuilder;
+
+    builder.build.mockResolvedValue([
+      { name: 'bold', icon: 'B', onActivate: vi.fn() },
+      { name: 'equation', icon: 'E', hint: { title: 'Equation' }, onActivate: vi.fn() },
+    ]);
+
+    await inlineToolbar.tryToShow();
+
+    const items = (popoverHolder.params as { items: Array<{ name?: string; icon?: string; hint?: { title?: string } }> }).items;
+
+    expect(items.map((item) => item.name)).toEqual(['bold', 'more']);
+    expect(items[1].icon).toBe(IconDotsHorizontal);
+    expect(items[1].hint?.title).toBe('a11y.moreOptions');
   });
 
   describe('selection inside a top-layer panel', () => {

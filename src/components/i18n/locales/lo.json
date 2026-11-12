@@ -204,6 +204,7 @@
   "a11y.searchResults": "ຜົນການຄົ້ນຫາ: {count}",
   "a11y.blockToolbar": "ແຖບເຄື່ອງມືບລັອກ",
   "a11y.textFormatting": "ການຈັດຮູບແບບຂໍ້ຄວາມ",
+  "a11y.moreOptions": "ຕົວເລືອກເພີ່ມເຕີມ",
   "a11y.loadingContent": "ກຳລັງໂຫຼດເນື້ອຫາ…",
   "a11y.allBlocksSelected": "ເລືອກທຸກບລັອກແລ້ວ, {count} ບລັອກ",
   "a11y.blocksSelected": "ເລືອກ {count} ບລັອກແລ້ວ",

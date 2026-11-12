@@ -216,6 +216,7 @@
   "a11y.searchResults": "Результатів пошуку: {count}",
   "a11y.blockToolbar": "Панель інструментів блока",
   "a11y.textFormatting": "Форматування тексту",
+  "a11y.moreOptions": "Ще",
   "a11y.loadingContent": "Завантаження вмісту…",
   "tools.paragraph.placeholder": "Напишіть щось або натисніть /, щоб вибрати інструмент",
   "tools.paragraph.placeholderAi": "Натисніть «пробіл» для ШІ або «/» для команд",

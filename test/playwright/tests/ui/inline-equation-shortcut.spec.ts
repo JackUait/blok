@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { MODIFIER_KEY, selectionChangeDebounceTimeout } from '../../../../src/components/constants';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
@@ -117,6 +117,16 @@ const selectAllInFirstEditable = async (page: Page): Promise<void> => {
     selection?.removeAllRanges();
     selection?.addRange(range);
   }, HOLDER_ID);
+};
+
+/**
+ * Opens the inline toolbar's ⋯ menu, where the Equation row lives.
+ * @param page - The Playwright page object
+ */
+const openEquationRow = async (page: Page): Promise<Locator> => {
+  await page.locator('[data-blok-testid="inline-toolbar"] [data-blok-item-name="more"]').click();
+
+  return page.locator('[data-blok-item-name="equation"]');
 };
 
 const placeCollapsedCaretInFirstEditable = async (page: Page, offset: number): Promise<void> => {
@@ -355,7 +365,7 @@ test.describe('Inline equation shortcut', () => {
 
     await selectAllInFirstEditable(page);
 
-    const equationButton = page.locator('[data-blok-item-name="equation"]');
+    const equationButton = await openEquationRow(page);
 
     await expect(equationButton).toBeVisible();
     await equationButton.click();
@@ -462,7 +472,7 @@ test.describe('Inline equation shortcut', () => {
 
       await selectAllInFirstEditable(page);
 
-      const equationButton = page.locator('[data-blok-item-name="equation"]');
+      const equationButton = await openEquationRow(page);
 
       await expect(equationButton).toBeVisible();
 
@@ -513,7 +523,7 @@ test.describe('Inline equation shortcut', () => {
       ]);
 
       await selectAllInFirstEditable(page);
-      await page.locator('[data-blok-item-name="equation"]').click();
+      await (await openEquationRow(page)).click();
 
       await expect(page.getByTestId('inline-equation-input')).toBeFocused();
       await expect.poll(() => readMenuMotion(page)).toMatchObject({ animation: 'none' });

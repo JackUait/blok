@@ -258,6 +258,7 @@
   "a11y.searchResults": "ئەنجامەکانی گەڕان: {count}",
   "a11y.blockToolbar": "شریتی ئامرازەکانی بلۆک",
   "a11y.textFormatting": "شێوەپێدانی دەق",
+  "a11y.moreOptions": "بژاردەی زیاتر",
   "a11y.loadingContent": "ناوەڕۆک بار دەکرێت…",
   "a11y.allBlocksSelected": "هەموو بلۆکەکان هەڵبژێردران. کۆی گشتی: {count}",
   "a11y.blocksSelected": "{count} بلۆک هەڵبژێردرا",

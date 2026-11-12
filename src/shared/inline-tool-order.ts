@@ -28,6 +28,13 @@ export const INLINE_TOOL_ORDER: readonly string[] = [
   'inlineCode',
   'equation',
   'supSub',
-  // Opt-in. Last, so it starts a row of its own and leaves the two default rows as they are.
+  // Opt-in. Last in the grid, so it takes the free cell beside ⋯.
   'annotation',
 ];
+
+/**
+ * Built-in tools the inline toolbar moves out of its grid into the ⋯ menu.
+ * These are popover item names (what a tool's render() calls itself), not
+ * tool names: Superscript & subscript renders as 'sup-sub'.
+ */
+export const INLINE_TOOL_MORE_MENU: readonly string[] = ['equation', 'sup-sub'];

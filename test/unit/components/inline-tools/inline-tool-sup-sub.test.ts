@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { beautifyShortcut } from '../../../../src/components/utils/string';
 import { IconSuperscript, IconSubscript } from '../../../../src/components/icons';
 import { SupSubInlineTool } from '../../../../src/components/inline-tools/inline-tool-sup-sub';
 import { InlineToolEventManager } from '../../../../src/components/inline-tools/services/inline-tool-event-manager';
@@ -23,6 +24,7 @@ interface ModeItemShape {
   icon: string;
   title: string;
   closeOnActivate: boolean;
+  secondaryLabel?: string;
   isActive: () => boolean;
   onActivate: () => void;
 }
@@ -85,6 +87,14 @@ describe('SupSubInlineTool', () => {
     expect(subItem.icon).toBe(IconSubscript);
     expect(subItem.title).toBe('tools.supSub.subscript');
     expect(subItem.closeOnActivate).toBe(true);
+  });
+
+  it('shows each mode\'s shortcut on its row', () => {
+    const config = tool.render() as WithChildren<PopoverItemDefaultBaseParams>;
+    const [supItem, subItem] = config.children.items as unknown as [ModeItemShape, ModeItemShape];
+
+    expect(supItem.secondaryLabel).toBe(beautifyShortcut('CMD+.'));
+    expect(subItem.secondaryLabel).toBe(beautifyShortcut('CMD+,'));
   });
 
   it('wraps a selection in <sup> and unwraps it on re-toggle', () => {

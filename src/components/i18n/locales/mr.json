@@ -204,6 +204,7 @@
   "a11y.searchResults": "शोध परिणाम: {count}",
   "a11y.blockToolbar": "ब्लॉक टूलबार",
   "a11y.textFormatting": "मजकूर स्वरूपण",
+  "a11y.moreOptions": "अधिक पर्याय",
   "a11y.loadingContent": "आशय लोड होत आहे…",
   "a11y.allBlocksSelected": "सर्व ब्लॉक निवडले. एकूण: {count}.",
   "a11y.blocksSelected": "{count} ब्लॉक निवडले",

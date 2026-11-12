@@ -10,6 +10,7 @@ const HOLDER_ID = 'blok';
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"] [contenteditable]`;
 const INLINE_TOOLBAR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid=inline-toolbar]`;
 const SUP_SUB_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="sup-sub"]`;
+const MORE_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="more"]`;
 const SUPERSCRIPT_ITEM_SELECTOR = '[data-blok-item-name="superscript"]';
 const SUBSCRIPT_ITEM_SELECTOR = '[data-blok-item-name="subscript"]';
 
@@ -152,14 +153,14 @@ const getModifierKey = async (page: Page): Promise<'Meta' | 'Control'> => {
 };
 
 /**
- * Select the paragraph text and open the sup-sub nested popover
+ * Select the paragraph text and open the ⋯ menu that holds Superscript and Subscript
  * @param page - The Playwright page object
  * @param text - The text to select first
  */
 const openSupSubPopover = async (page: Page, text: string): Promise<void> => {
   await selectText(page.locator(PARAGRAPH_SELECTOR).first(), text);
 
-  const button = page.locator(SUP_SUB_BUTTON_SELECTOR);
+  const button = page.locator(MORE_BUTTON_SELECTOR);
 
   await expect(button).toBeVisible();
   await button.click();
@@ -178,10 +179,14 @@ test.describe('inline tool sup-sub', () => {
     ]);
   });
 
-  test('shows the sup-sub button in the inline toolbar grid', async ({ page }) => {
+  test('keeps Superscript and Subscript in the ⋯ menu, not in the grid', async ({ page }) => {
     await selectText(page.locator(PARAGRAPH_SELECTOR).first(), 'E = mc2');
 
-    await expect(page.locator(SUP_SUB_BUTTON_SELECTOR)).toBeVisible();
+    await expect(page.locator(MORE_BUTTON_SELECTOR)).toBeVisible();
+    await expect(page.locator(SUP_SUB_BUTTON_SELECTOR)).toHaveCount(0);
+    await page.locator(MORE_BUTTON_SELECTOR).click();
+    await expect(page.locator(SUPERSCRIPT_ITEM_SELECTOR)).toBeVisible();
+    await expect(page.locator(SUBSCRIPT_ITEM_SELECTOR)).toBeVisible();
   });
 
   test('applies superscript from the nested popover and saves it', async ({ page }) => {

@@ -283,7 +283,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2121 + 147 + 539 + 5 closure for all 2812 keys', () => {
+  it('rebuilds a disjoint 2121 + 147 + 540 + 5 closure for all 2813 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -297,7 +297,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2812);
+    expect(lifecycle.size).toBe(2813);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -618,7 +618,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -3: chartTypeNumber, duplicateView and deleteView moved to executable-literal (dashboard menus).
       // -3: tools.video.back, speedDecrease and speedIncrease have a caller again (the speed submenu).
       // +14: the retired media empty state keys above.
-      'registered-namespace-compatible': 539,
+      // +2 / -1: the advanced chip's tools.database.filterRuleCount_one/_other replace filterRuleCount, via the controls' t().
+      'registered-namespace-compatible': 540,
       'catalog-only': 5,
     });
     expect(

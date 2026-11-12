@@ -42,6 +42,21 @@ describe('plural forms', () => {
     expect(i18n.t('tools.database.feedCommentReplies', { count: 5 })).toBe('5 ответов');
   });
 
+  // notion-motion.md Round 18 §2 (r18-adv-bar.raw): the advanced chip reads "≡ 1 rule".
+  it('counts advanced filter rules as "1 rule" and "2 rules"', async () => {
+    const i18n = createI18n();
+
+    await i18n.prepare();
+
+    expect(i18n.t('tools.database.filterRuleCount', { count: 1 })).toBe('1 rule');
+    expect(i18n.t('tools.database.filterRuleCount', { count: 2 })).toBe('2 rules');
+
+    await i18n.setLocale('ru');
+
+    expect(i18n.t('tools.database.filterRuleCount', { count: 1 })).toBe('1 правило');
+    expect(i18n.t('tools.database.filterRuleCount', { count: 5 })).toBe('5 правил');
+  });
+
   it('picks the plural form a host override gives', async () => {
     const i18n = createI18n();
 

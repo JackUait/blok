@@ -64,6 +64,8 @@ export interface HandlerContext {
   fromBlokClipboard?: boolean;
   /** The text came from an html flavour that says it is literal text, so no line is read as a separator. */
   literalText?: boolean;
+  /** Set only by the editor's own html import, never by a clipboard: page ids are not checked. */
+  trustPageIds?: boolean;
 }
 
 /**

@@ -30,11 +30,13 @@ const pasteWithPageTool = async (
     hasOnPasteHandler: true,
     isDefault: true,
   } as unknown as BlockToolAdapter;
+  // Paste keeps a pasted page id only when the host knows the page.
   const page = {
     name: 'page',
     pasteConfig: false,
     baseSanitizeConfig: {},
     hasOnPasteHandler: false,
+    settings: { resolve: (pageId: string) => (pageId === 'p1' ? { title: 'Plans' } : null) },
   } as unknown as BlockToolAdapter;
   const paste = new Paste({
     config: { defaultBlock: 'paragraph', sanitizer },
@@ -43,6 +45,7 @@ const pasteWithPageTool = async (
 
   paste.state = {
     BlockManager: {
+      blocks: [],
       currentBlock: null,
       paste: vi.fn((tool: string, event: CustomEvent<{ data: HTMLElement }>) => {
         pasted.push({ tool, html: event.detail.data.innerHTML });
@@ -67,7 +70,7 @@ const pasteWithPageTool = async (
     YjsManager: { stopCapturing: vi.fn() },
     DragManager: { isDragging: false },
     ReadOnly: { isEnabled: false },
-    UI: { nodes: { holder: document.createElement('div') } },
+    UI: { nodes: { holder: document.createElement('div'), wrapper: document.createElement('div') } },
   } as unknown as BlokModules;
 
   await paste.prepare();

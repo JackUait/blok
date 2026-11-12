@@ -167,7 +167,8 @@ export const pasteHtmlAsBlocks = async (config: BlokConfig, html: string): Promi
     if (first !== undefined) {
       scratch.module.caret.setToBlock(first, 'start');
     }
-    await scratch.module.paste.processDataTransfer(htmlOnlyTransfer(html));
+    // The hidden editor holds no page, so a page check here would drop every mention.
+    await scratch.module.paste.processDataTransfer(htmlOnlyTransfer(html), undefined, undefined, true);
 
     return (await scratch.save()).blocks;
   } finally {

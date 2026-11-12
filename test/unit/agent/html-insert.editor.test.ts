@@ -5,6 +5,7 @@ import { Blok } from '../../../src/blok';
 import { Bold, Callout, Code, Header, Image, Italic, Link, List, Marker, Paragraph, Quote, Table, Toggle, Video } from '../../../src/tools';
 import type { Agent, API, BlokConfig, OutputBlockData, OutputData } from '../../../types';
 import type { AgentResult } from '../../../types/agent';
+import { buildClipboardHtml } from '../../../src/tools/table/table-cell-clipboard';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -365,6 +366,17 @@ describe('html.insert checks what the paste made, as it checks any agent write',
 
   it('warns about a page mention it cannot check', async () => {
     const imported = await agentImports('<p>see <a data-blok-page-id="ghost">x</a></p>');
+
+    expect(imported.result.warnings.map(warning => warning.code)).toContain('UNVERIFIED_PAGE');
+  });
+
+  it('warns about a page mention inside copied table cells it cannot check', async () => {
+    const html = buildClipboardHtml({
+      rows: 1,
+      cols: 1,
+      cells: [[{ blocks: [{ tool: 'paragraph', data: { text: 'see <a data-blok-page-id="ghost">x</a>' } }] }]],
+    });
+    const imported = await agentImports(html);
 
     expect(imported.result.warnings.map(warning => warning.code)).toContain('UNVERIFIED_PAGE');
   });

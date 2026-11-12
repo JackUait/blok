@@ -166,11 +166,12 @@ export class Paste extends Module {
   /**
    * Handle pasted data transfer object. Reads it at once: the browser empties
    * a clipboard once its event is over, and the pipeline may still be loading.
+   * @param trustPageIds - only for markup the editor's own code hands in, never a clipboard
    */
-  public async processDataTransfer(dataTransfer: DataTransfer, pasteTarget?: Element, loadedAtEvent = this.engineLoaded): Promise<void> {
+  public async processDataTransfer(dataTransfer: DataTransfer, pasteTarget?: Element, loadedAtEvent = this.engineLoaded, trustPageIds = false): Promise<void> {
     const snapshot = snapshotOf(dataTransfer);
 
-    await this.withEngine(snapshot, false, loadedAtEvent, engine => engine.processDataTransfer(snapshot, pasteTarget));
+    await this.withEngine(snapshot, false, loadedAtEvent, engine => engine.processDataTransfer(snapshot, pasteTarget, trustPageIds));
   }
 
   /** The paste pipeline. One shared load; a failed one is dropped so the next paste tries again. */

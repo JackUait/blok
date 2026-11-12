@@ -113,8 +113,10 @@ export class PasteEngine {
 
   /**
    * Handle pasted data transfer object.
+   * @param trustPageIds - skip the page id check: the agent's import runs its own
+   *   checks on the result, and in its hidden editor every live page looks unknown
    */
-  public async processDataTransfer(dataTransfer: DataTransfer, pasteTarget?: Element): Promise<void> {
+  public async processDataTransfer(dataTransfer: DataTransfer, pasteTarget?: Element, trustPageIds = false): Promise<void> {
     const plainData = dataTransfer.getData('text/plain');
 
     // Give consumers a chance to transform or drop the raw clipboard HTML
@@ -139,7 +141,7 @@ export class PasteEngine {
 
     // Awaited only for a mention the paste will use: block data wins over the
     // html, and BlokDataHandler checks its own pages.
-    const rawHtmlData = mayHoldPageReference(hookedHtml) && !isBlockList(blokData)
+    const rawHtmlData = !trustPageIds && mayHoldPageReference(hookedHtml) && !isBlockList(blokData)
       ? await htmlWithConfirmedPageReferences(this.Blok, hookedHtml)
       : hookedHtml;
 
@@ -149,7 +151,7 @@ export class PasteEngine {
     }
 
     // Route to handlers based on data type
-    const handled = await this.routeToHandlers(dataTransfer, plainData, rawHtmlData, blokData, pasteTarget, nativeBlokData !== '');
+    const handled = await this.routeToHandlers(dataTransfer, plainData, rawHtmlData, blokData, pasteTarget, nativeBlokData !== '', trustPageIds);
 
     if (handled) {
       return;
@@ -239,7 +241,8 @@ export class PasteEngine {
     rawHtmlData: string,
     blokData: string,
     pasteTarget?: Element,
-    fromBlokClipboard = false
+    fromBlokClipboard = false,
+    trustPageIds = false
   ): Promise<boolean> {
     const { BlockManager } = this.Blok;
     const currentBlock = BlockManager.currentBlock;
@@ -257,6 +260,7 @@ export class PasteEngine {
       plainData,
       pasteTarget,
       fromBlokClipboard,
+      trustPageIds,
     };
 
     const memo: { cleaned?: string } = {};

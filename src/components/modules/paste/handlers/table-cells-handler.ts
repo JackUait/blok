@@ -220,7 +220,7 @@ export class TableCellsHandler extends BasePasteHandler implements PasteHandler 
     const rulesFor = (tool: string): SanitizerConfig | undefined => this.Blok.Tools.blockTools.get(tool)?.sanitizeConfig;
     const pageIds = pastedPageIds(blocks, this.Blok.Tools.stubTool, rulesFor);
 
-    if (pageIds.size > 0) {
+    if (pageIds.size > 0 && context.trustPageIds !== true) {
       const confirmed = await confirmPastedPageIds(this.Blok, pageIds);
 
       // The host's resolve may be slow: the editor can be gone by now.

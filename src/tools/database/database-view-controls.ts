@@ -11,7 +11,7 @@ import type { ViewStateFallback } from './database-view-state';
 import { FILTERABLE_TYPES, defaultFilterFor, filterPillLabel, filterPillParts, sortDirectionLabelKey } from './database-filter-labels';
 import { countFilterRules, withEntryIds } from './filter-tree';
 import { openAdvancedFilter, openViewSettings } from './database-view-settings-panel';
-import { openFilterChip } from './database-filter-chip';
+import { chipPart, filterChip, openFilterChip } from './database-filter-chip';
 import { openSortDirectionFlyout, openSortPropertyFlyout, sortChevron } from './database-sort-flyouts';
 import { clearSearchMatches, paintSearchMatches } from './database-search-highlight';
 import { onHover } from '../../components/utils/tooltip';
@@ -110,32 +110,6 @@ export interface ViewControlsHost {
   /** ⤢ "Open as full page": undefined hides it. */
   openFullPage?: () => (() => void) | undefined;
 }
-
-const part = (attribute: string, content: { icon?: string; text?: string }): HTMLElement => {
-  const el = document.createElement('span');
-
-  el.setAttribute(attribute, '');
-  if (content.icon !== undefined) {
-    el.setAttribute('aria-hidden', 'true');
-    el.innerHTML = content.icon;
-  }
-  if (content.text !== undefined) el.textContent = content.text;
-
-  return el;
-};
-
-/** Notion's chip: a glyph, the name in 500, the value in 400, then a down chevron. */
-const chip = (testId: string, label: string, parts: { glyph: string; name: string; value?: string }): HTMLButtonElement => {
-  const el = button(testId, label, {});
-
-  el.setAttribute('data-blok-database-filter-pill', '');
-  el.append(part('data-blok-database-chip-glyph', { icon: parts.glyph }));
-  el.append(part('data-blok-database-chip-name', { text: parts.name }));
-  if (parts.value !== undefined && parts.value !== '') el.append(' ', part('data-blok-database-chip-value', { text: parts.value }));
-  el.append(part('data-blok-database-chip-chevron', { icon: IconChevronDown }));
-
-  return el;
-};
 
 const button = (testId: string, label: string, content: { icon?: string; text?: string }): HTMLButtonElement => {
   const el = document.createElement('button');
@@ -1130,12 +1104,12 @@ export class DatabaseViewControls {
       const label = view.sorts.length === 1 && first !== undefined
         ? `${first.name}: ${t(sortDirectionLabelKey(first.type, view.sorts[0].direction))}`
         : name;
-      const pill = chip('database-sort-pill', label, { glyph: view.sorts.length === 1 ? IconArrowUp : IconSort, name });
+      const pill = filterChip('database-sort-pill', label, { glyph: view.sorts.length === 1 ? IconArrowUp : IconSort, name });
 
       pill.setAttribute('data-direction', view.sorts[0].direction);
       pill.setAttribute('data-active', '');
       pill.addEventListener('click', () => this.openSortPanel(pill));
-      pills.push(pill, part('data-blok-database-chip-divider', {}));
+      pills.push(pill, chipPart('data-blok-database-chip-divider', {}));
     }
     for (const filter of withEntryIds(view.filters)) {
       const property = schema.find((p) => p.id === filter.propertyId);
@@ -1145,7 +1119,7 @@ export class DatabaseViewControls {
       const rowTitle = (id: string): string | undefined => this.host.relatedRows?.(property).find((row) => row.id === id)?.title;
       const label = filterPillLabel(filter, property, t, personName, rowTitle);
       const { name, value } = filterPillParts(filter, property, t, personName, rowTitle);
-      const pill = chip(`database-filter-pill-${filter.id}`, label, { glyph: propertyTypeMeta(property.type).icon, name, value });
+      const pill = filterChip(`database-filter-pill-${filter.id}`, label, { glyph: propertyTypeMeta(property.type).icon, name, value });
 
       pill.setAttribute('data-filter-id', filter.id);
       pill.toggleAttribute('data-active', value !== '');
@@ -1156,7 +1130,7 @@ export class DatabaseViewControls {
 
     if (rules > 0) {
       const label = this.t('filterRuleCount', { count: rules });
-      const pill = chip('database-advanced-pill', label, { glyph: IconFilter, name: label });
+      const pill = filterChip('database-advanced-pill', label, { glyph: IconFilter, name: label });
 
       pill.setAttribute('data-active', '');
       pill.addEventListener('click', () => this.openSettings(pill, 'filter'));

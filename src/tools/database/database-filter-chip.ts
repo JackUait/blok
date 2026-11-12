@@ -86,6 +86,36 @@ const optionPill = (option: SelectOption, type: PropertyDefinition['type']): HTM
   return pill;
 };
 
+/** One span of a chip: an aria-hidden icon, or text. */
+export const chipPart = (attribute: string, content: { icon?: string; text?: string }): HTMLElement => {
+  const el = document.createElement('span');
+
+  el.setAttribute(attribute, '');
+  if (content.icon !== undefined) {
+    el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = content.icon;
+  }
+  if (content.text !== undefined) el.textContent = content.text;
+
+  return el;
+};
+
+/** Notion's chip: a glyph, the name in 500, the value in 400, then a down chevron. The bar and the settings Filters page share it. */
+export const filterChip = (testId: string, label: string, parts: { glyph: string; name: string; value?: string }): HTMLButtonElement => {
+  const el = document.createElement('button');
+
+  el.type = 'button';
+  el.setAttribute('data-blok-testid', testId);
+  el.setAttribute('aria-label', label);
+  el.setAttribute('data-blok-database-filter-pill', '');
+  el.append(chipPart('data-blok-database-chip-glyph', { icon: parts.glyph }));
+  el.append(chipPart('data-blok-database-chip-name', { text: parts.name }));
+  if (parts.value !== undefined && parts.value !== '') el.append(' ', chipPart('data-blok-database-chip-value', { text: parts.value }));
+  el.append(chipPart('data-blok-database-chip-chevron', { icon: IconChevronDown }));
+
+  return el;
+};
+
 /**
  * A filter chip's popover, as Notion draws it (findings V17): a header with
  * "Name operator ▾" and a "…" menu, then the value editor. Select options sit
@@ -668,8 +698,14 @@ const LIST_FILTER_TYPES: readonly PropertyType[] = [
   'select', 'multiSelect', 'status', 'checkbox', 'person', 'createdBy', 'lastEditedBy', 'relation', 'date', 'createdTime', 'lastEditedTime',
 ];
 
-/** Opens a filter chip's popover under the chip. */
-export const openFilterChip = (anchor: HTMLElement, ctx: ViewSettingsContext, filterId: string, onClose?: () => void): DatabasePanel => {
+/** notion-motion.md Round 18 §2: the rule popover's top is the chip's bottom + 4, in the bar and on the settings Filters page. */
+const CHIP_POPOVER_GAP = 4;
+
+/**
+ * Opens a filter chip's popover under the chip. With `host` it is a flyout
+ * over that panel, which stays open under it (the settings Filters page).
+ */
+export const openFilterChip = (anchor: HTMLElement, ctx: ViewSettingsContext, filterId: string, onClose?: () => void, host?: DatabasePanel): DatabasePanel => {
   const filter = withEntryIds(ctx.view().filters).find((f) => f.id === filterId);
   const property = ctx.schema().find((p) => p.id === filter?.propertyId);
   // A rollup of the Name has a text field, as Notion's 220-wide popover shows (r13-filter-ops-rollup.png).
@@ -680,9 +716,15 @@ export const openFilterChip = (anchor: HTMLElement, ctx: ViewSettingsContext, fi
     testId: 'database-filter-popover',
     width: listed ? LIST_FILTER_WIDTH : VALUE_FIELD_FILTER_WIDTH,
     backLabel: ctx.i18n.t('tools.database.settingsBack'),
-    ...(onClose !== undefined ? { onClose } : {}),
+    gap: CHIP_POPOVER_GAP,
+    onClose: () => {
+      release?.();
+      onClose?.();
+    },
   });
+  const release = host?.hold();
 
+  host?.own(panel);
   panel.open();
   // Notion opens on the value: the token field or the value input, not the header.
   panel.root.querySelector<HTMLElement>('[data-blok-database-select-search], [data-blok-database-panel-input], [data-blok-database-chip-select]')?.focus();

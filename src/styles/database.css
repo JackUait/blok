@@ -12383,6 +12383,13 @@ input[data-blok-database-picker-search]:focus {
   min-width: 0;
 }
 
+/* notion-motion.md Round 18 §2 (r18-settings-filterpage.raw): a Filters page chip keeps to its words, x+36, 32px apart. */
+[data-blok-database-panel-list-item] > [data-blok-database-filter-pill] {
+  flex: 0 1 auto;
+  margin-block: var(--blok-space-1);
+  margin-inline-start: var(--blok-space-3-5);
+}
+
 [data-blok-database-panel-handle] {
   display: inline-flex;
   flex: 0 0 auto;

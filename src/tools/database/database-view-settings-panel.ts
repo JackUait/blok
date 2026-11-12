@@ -18,6 +18,7 @@ import {
   WITHIN_OPERATORS,
   defaultFilterFor,
   filterPillLabel,
+  filterPillParts,
   isQuantifiedText,
   joinOperator,
   keepLead,
@@ -85,7 +86,7 @@ import { CARD_LAYOUTS, resolveSubItemsDisplay, resolveSubItemsFilter } from './s
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { automationListPage } from './database-automations-panel';
 import { openSortDirectionFlyout, openSortPropertyFlyout, sortChevron } from './database-sort-flyouts';
-import { dateRuleControls, operatorPick } from './database-filter-chip';
+import { dateRuleControls, filterChip, openFilterChip, operatorPick } from './database-filter-chip';
 import { VIEW_ICONS } from './database-tab-bar';
 import type { AutomationSettings } from './database-automations-panel';
 import { offersAutofill } from './property-values';
@@ -1470,14 +1471,14 @@ export class ViewSettingsPages {
     title: string,
     types: readonly PropertyType[],
     onPick: (property: PropertyDefinition) => void,
-    options: { measured?: boolean; used?: () => string[] } = {}
+    options: { measured?: boolean; used?: () => string[]; footer?: (panel: DatabasePanel) => HTMLElement[] } = {}
   ): PanelPage {
     const query = queryState();
 
     return {
       title,
       ...(options.measured === true ? { name: 'pick' } : {}),
-      build: () => this.propertyPicker(query, types, onPick, { used: options.used?.() ?? [] }),
+      build: (panel) => [...this.propertyPicker(query, types, onPick, { used: options.used?.() ?? [] }), ...(options.footer?.(panel) ?? [])],
     };
   }
 
@@ -1575,15 +1576,21 @@ export class ViewSettingsPages {
 
           if (property === undefined) return [];
 
-          return [{
-            id: filter.id,
-            element: panelRow({
-              label: filterPillLabel(filter, property, (key, vars) => this.ctx.i18n.t(key, vars), (id) => this.personName(id), (id) => this.ctx.relatedRows?.(property).find((row) => row.id === id)?.title),
-              testId: `database-filter-row-${filter.id}`,
-              opensPage: true,
-              onClick: () => panel.push(this.simpleFilter(filter.id)),
-            }),
-          }];
+          const translate = (key: string, vars?: Record<string, string | number>): string => this.ctx.i18n.t(key, vars);
+          const rowTitle = (id: string): string | undefined => this.ctx.relatedRows?.(property).find((row) => row.id === id)?.title;
+          const parts = filterPillParts(filter, property, translate, (id) => this.personName(id), rowTitle);
+          // notion-motion.md Round 18 §2: each filter is its chip; a click opens its rule popover under it, the page stays.
+          const chip = filterChip(`database-filter-row-${filter.id}`, filterPillLabel(filter, property, translate, (id) => this.personName(id), rowTitle), {
+            glyph: propertyTypeMeta(property.type).icon,
+            ...parts,
+          });
+
+          chip.toggleAttribute('data-active', parts.value !== '');
+          chip.addEventListener('click', () => {
+            openFilterChip(chip, this.ctx, filter.id, () => panel.refresh(), panel);
+          });
+
+          return [{ id: filter.id, element: chip }];
         });
         const rows: HTMLElement[] = [];
 
@@ -1614,17 +1621,32 @@ export class ViewSettingsPages {
               this.ctx.updatePersonal({ filters: [...withEntryIds(this.ctx.view().filters), filter] });
               panel.back();
               panel.push(this.simpleFilter(filter.id));
-            }, { measured: true, used: () => this.ctx.view().filters.map((f) => f.propertyId) })),
+            }, {
+              measured: true,
+              used: () => this.ctx.view().filters.map((f) => f.propertyId),
+              // notion-motion.md Round 18 §2 (r18-settings-addfilter.raw): "Add advanced filter" at the foot.
+              footer: (page) => [panelSeparator(), panelRow({
+                label: this.t('filterAdvanced'),
+                testId: 'database-filter-advanced',
+                icon: IconPlus,
+                muted: true,
+                onClick: () => page.push(this.advanced()),
+              })],
+            })),
           }),
-          panelSeparator(),
-          panelRow({
+        );
+        const rules = countFilterRules(view.filterTree);
+
+        // Round 18 §2: no Advanced filter row while there is no advanced filter.
+        if (rules > 0) {
+          rows.push(panelSeparator(), panelRow({
             label: this.t('filterAdvanced'),
             testId: 'database-filter-advanced',
-            value: String(countFilterRules(view.filterTree)),
+            value: String(rules),
             opensPage: true,
             onClick: () => panel.push(this.advanced()),
-          })
-        );
+          }));
+        }
 
         return rows;
       },

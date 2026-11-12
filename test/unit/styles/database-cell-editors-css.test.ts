@@ -877,6 +877,17 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // notion-motion.md Round 18 §2 (r18-settings-filterpage.raw): Filters page chips sit at x+36, sized to their words, 32px apart.
+  describe('settings Filters page chips', () => {
+    const CHIP = '[data-blok-database-panel-list-item] > [data-blok-database-filter-pill]';
+
+    it('keeps each chip to its words, 32px apart, at x+36', () => {
+      expect(declared(CHIP, 'flex')).toEqual(['0 1 auto']);
+      expect(declared(CHIP, 'margin-block')).toEqual(['var(--blok-space-1)']);
+      expect(declared(CHIP, 'margin-inline-start')).toEqual(['var(--blok-space-3-5)']);
+    });
+  });
+
   // notion-motion.md Round 9 (r9-vs-group.raw, table grouped by Select): Group by at y+46, Sort at y+75, Hide empty groups at y+104.
   describe('view settings Group page', () => {
     const PAGE = '[data-blok-database-panel-page="group"]';

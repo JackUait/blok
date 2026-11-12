@@ -25,6 +25,7 @@ const click = (id: string): void => {
 };
 
 const exists = (id: string): boolean => document.querySelector(`[data-blok-testid="${id}"]`) !== null;
+const q = (id: string): HTMLElement | null => document.querySelector<HTMLElement>(`[data-blok-testid="${id}"]`);
 
 interface Harness {
   ctx: ViewSettingsContext;
@@ -412,8 +413,7 @@ describe('view settings panel', () => {
     it('keeps End date through the date editor and an operator pick, and goes back to Start date', () => {
       const h = harness({ filters: [{ id: 'f1', propertyId: 'due', operator: 'end:this_week', value: null }] });
 
-      h.open('filter');
-      click('database-filter-row-f1');
+      h.openPill('f1');
       expect(document.querySelector('[data-blok-testid="database-filter-side"]')?.textContent).toContain('tools.database.dateEnd');
 
       const unit = document.querySelector<HTMLSelectElement>('[data-blok-testid="database-filter-unit"]');
@@ -441,8 +441,7 @@ describe('view settings panel', () => {
       const h = harness({ filters: [{ id: 'f1', propertyId: 'names', operator: 'any:contains', value: '' }] });
 
       h.ctx.schema = () => [...schema, names];
-      h.open('filter');
-      click('database-filter-row-f1');
+      h.openPill('f1');
 
       click('database-filter-quantifier');
       expect([...document.querySelectorAll('[data-blok-testid^="database-filter-quantifier-"]')].map((el) => el.getAttribute('data-blok-testid')))
@@ -469,8 +468,7 @@ describe('view settings panel', () => {
     const openRule = (filter: { operator: string; value: unknown }): ReturnType<typeof harness> => {
       const h = harness({ filters: [{ id: 'f1', propertyId: 'due', operator: filter.operator, value: filter.value as never }] });
 
-      h.open('filter');
-      click('database-filter-row-f1');
+      h.openPill('f1');
 
       return h;
     };
@@ -1083,6 +1081,59 @@ describe('view settings panel', () => {
     expect(document.querySelector('[data-blok-database-property-picker-list] [data-blok-database-panel-note]')?.textContent).toBe('find.noResults');
   });
 
+  // notion-motion.md Round 18 §2 (r18-settings-filterpage.raw, r18-settings-chipclick.raw): the Filters page lists chips.
+  describe('Filters page chips', () => {
+    const withFilter = (view: Partial<DatabaseViewConfig> = {}): Harness => {
+      const h = harness({ filters: [{ id: 'f1', propertyId: 'title', operator: 'contains', value: 'a' }], ...view });
+
+      h.open('filter');
+
+      return h;
+    };
+    const settings = (): HTMLElement | null => document.querySelector('[data-blok-testid="database-view-settings"]');
+
+    it('shows each filter as its chip, with a drag handle', () => {
+      withFilter();
+      const chip = q('database-filter-row-f1');
+
+      expect(chip?.hasAttribute('data-blok-database-filter-pill')).toBe(true);
+      expect(chip?.hasAttribute('data-active')).toBe(true);
+      expect(chip?.querySelector('[data-blok-database-chip-name]')?.textContent).toBe('Name:');
+      expect(exists('database-filters-list-handle-f1')).toBe(true);
+    });
+
+    it('a chip click opens the rule popover beside the page, which stays', () => {
+      withFilter();
+      click('database-filter-row-f1');
+      const popover = q('database-filter-popover');
+
+      expect(popover).not.toBeNull();
+      expect(settings()?.contains(popover)).toBe(false);
+      expect(settings()?.querySelector('[data-blok-testid="database-filter-row-f1"]')).not.toBeNull();
+    });
+
+    it('Escape in the rule popover closes only it', () => {
+      withFilter();
+      click('database-filter-row-f1');
+      document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(q('database-filter-popover')).toBeNull();
+      expect(settings()).not.toBeNull();
+    });
+
+    it('has no Advanced filter row while there is no advanced filter', () => {
+      withFilter();
+
+      expect(exists('database-filter-advanced')).toBe(false);
+    });
+
+    it('keeps the Advanced filter row when an advanced filter exists', () => {
+      withFilter({ filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'a', propertyId: 'num', operator: 'is_empty', value: null }] } });
+
+      expect(exists('database-filter-advanced')).toBe(true);
+    });
+  });
+
   // notion-motion.md Round 17 §5: "Add sort" goes away once every property is sorted.
   it('hides "Add sort" when every property is sorted', () => {
     const h = harness({ sorts: [{ id: 's1', propertyId: 'title', direction: 'asc' }] });
@@ -1294,6 +1345,7 @@ describe('view settings panel', () => {
     ] });
 
     h.open('filter');
+    click('database-filter-add');
     click('database-filter-advanced');
     const add = document.querySelector<HTMLElement>('[data-blok-testid^="database-filter-add-rule-"]');
 

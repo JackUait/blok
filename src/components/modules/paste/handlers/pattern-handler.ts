@@ -8,9 +8,9 @@ import {
 } from '../../../../tools/link/paste-menu/controller';
 import { isOwnHostLink, type PasteMenuActionType, type PasteMenuMedia } from '../../../../tools/link/paste-menu/options';
 import { genericEmbedPolicy } from '../../../../tools/link/generic-embed-policy';
-import type { PageConfig } from '../../../../tools/page/types';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../../../shared/page-reference';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
+import { pastedPageId } from '../pasted-page-id';
 import { applyResolvedLinkAttributes, resolveLinkAttributes } from '../../../utils/resolve-link-attributes';
 import { ownClone } from '../../../utils/own-element';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
@@ -182,21 +182,8 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     return selection !== null && !selection.isCollapsed && selection.toString().length > 0;
   }
 
-  /** The page a pasted URL links to, asked of the page tool's `pageIdFromHref`. */
   private pageIdFor(text: string): string | undefined {
-    const page = this.Blok.Tools?.blockTools.get('page')?.settings as PageConfig | undefined;
-
-    if (page?.pageIdFromHref === undefined || !isHttpUrl(text)) {
-      return undefined;
-    }
-
-    try {
-      const pageId = page.pageIdFromHref(new URL(text.trim(), document.baseURI).href);
-
-      return typeof pageId === 'string' && pageId !== '' ? pageId : undefined;
-    } catch {
-      return undefined;
-    }
+    return pastedPageId(this.Blok.Tools, text);
   }
 
   private getCaretRect(): DOMRect | null {

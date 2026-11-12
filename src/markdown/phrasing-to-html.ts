@@ -1,12 +1,16 @@
 import type { Definition, PhrasingContent } from '../../types/data-formats/markdown-tree';
 import { safeHref, safeImageSrc } from '../components/utils/sanitize-url';
 import { isSamePageLink } from '../tools/link/registry';
+import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../shared/page-reference';
 
 /**
  * Link and image definitions in scope for a document, keyed by mdast
  * `identifier` (already case-folded by the parser).
  */
 export type DefinitionMap = ReadonlyMap<string, Definition>;
+
+/** The page a link points at, when the host knows it. Such a link becomes the page's mention. */
+export type PageIdFor = (url: string) => string | undefined;
 
 /**
  * Whether raw inline HTML is exactly `<br>`, `<br/>` or `<br />`. Anchored and
@@ -44,39 +48,42 @@ function escapeHtml(text: string): string {
  *
  * @param nodes - phrasing nodes to serialize
  * @param definitions - definitions the document's references resolve against
+ * @param pageIdFor - turns a link to a page the host knows into that page's mention
  */
-export function phrasingToHtml(nodes: PhrasingContent[], definitions: DefinitionMap): string {
-  return nodes.map((node) => serializeNode(node, definitions)).join('');
+export function phrasingToHtml(nodes: PhrasingContent[], definitions: DefinitionMap, pageIdFor?: PageIdFor): string {
+  return nodes.map((node) => serializeNode(node, definitions, pageIdFor)).join('');
 }
 
-function serializeNode(node: PhrasingContent, definitions: DefinitionMap): string {
+function serializeNode(node: PhrasingContent, definitions: DefinitionMap, pageIdFor?: PageIdFor): string {
+  const inner = (children: PhrasingContent[]): string => phrasingToHtml(children, definitions, pageIdFor);
+
   switch (node.type) {
     case 'text':
       return escapeHtml(node.value);
 
     case 'strong':
-      return `<strong>${phrasingToHtml(node.children, definitions)}</strong>`;
+      return `<strong>${inner(node.children)}</strong>`;
 
     case 'emphasis':
-      return `<i>${phrasingToHtml(node.children, definitions)}</i>`;
+      return `<i>${inner(node.children)}</i>`;
 
     case 'delete':
-      return `<s>${phrasingToHtml(node.children, definitions)}</s>`;
+      return `<s>${inner(node.children)}</s>`;
 
     case 'inlineCode':
       return `<code>${escapeHtml(node.value)}</code>`;
 
     case 'link': {
       const url = safeHref(node.url);
-      const children = phrasingToHtml(node.children, definitions);
+      const children = inner(node.children);
 
       // Unsafe scheme → drop the anchor, keep the visible text.
-      return url === null ? children : anchor(url, children);
+      return url === null ? children : linkHtml(url, children, pageIdFor);
     }
 
     case 'linkReference': {
       const definition = definitions.get(node.identifier);
-      const children = phrasingToHtml(node.children, definitions);
+      const children = inner(node.children);
 
       if (definition === undefined) {
         return referenceFallback(node.label ?? node.identifier, children, false);
@@ -84,7 +91,7 @@ function serializeNode(node: PhrasingContent, definitions: DefinitionMap): strin
 
       const url = safeHref(definition.url);
 
-      return url === null ? children : anchor(url, children);
+      return url === null ? children : linkHtml(url, children, pageIdFor);
     }
 
     case 'break':
@@ -129,6 +136,13 @@ function serializeNode(node: PhrasingContent, definitions: DefinitionMap): strin
 
 /** Where an imported link opens: same-page anchors stay in the window. */
 export const linkTarget = (url: string): string => (isSamePageLink(url) ? '_self' : '_blank');
+
+function linkHtml(url: string, children: string, pageIdFor?: PageIdFor): string {
+  const pageId = pageIdFor?.(url);
+
+  // The mention shows the page's own title, so the link text goes.
+  return pageId === undefined ? anchor(url, children) : `<a ${PAGE_REFERENCE_ATTR}="${escapeHtml(pageId)}">${PAGE_REFERENCE_FALLBACK}</a>`;
+}
 
 function anchor(url: string, children: string): string {
   return `<a href="${escapeHtml(url)}" target="${linkTarget(url)}" rel="noopener noreferrer nofollow">${children}</a>`;

@@ -84,8 +84,8 @@
     "date": "2026-10-05"
   },
   "/docs/config": {
-    "hash": "73180faadf1e6238",
-    "date": "2026-11-11"
+    "hash": "ca8aab56c7f50073",
+    "date": "2026-11-12"
   },
   "/docs/core": {
     "hash": "bbf26a19fdeecc03",
@@ -148,8 +148,8 @@
     "date": "2026-09-08"
   },
   "/docs/image": {
-    "hash": "9abbb72f21e4f03e",
-    "date": "2026-11-03"
+    "hash": "6aa82eb231c8a108",
+    "date": "2026-11-12"
   },
   "/docs/inline-toolbar-api": {
     "hash": "84f4b5d434a66c9a",
@@ -192,8 +192,8 @@
     "date": "2026-10-26"
   },
   "/docs/page": {
-    "hash": "595b52e28a1aefec",
-    "date": "2026-11-09"
+    "hash": "151c12c13fcd9417",
+    "date": "2026-11-12"
   },
   "/docs/page-link": {
     "hash": "9676c2329dc1eede",
@@ -304,8 +304,8 @@
     "date": "2026-10-07"
   },
   "/docs/uploader-api": {
-    "hash": "d00048de68e5d5c0",
-    "date": "2026-11-03"
+    "hash": "bbdb31ae45d10440",
+    "date": "2026-11-12"
   },
   "/docs/use-blocks": {
     "hash": "61c1c6d5d3786e78",
@@ -424,8 +424,8 @@
     "date": "2026-10-05"
   },
   "/ru/docs/config": {
-    "hash": "cb1f0d486d8bb7ef",
-    "date": "2026-11-11"
+    "hash": "b6822c377ab42500",
+    "date": "2026-11-12"
   },
   "/ru/docs/core": {
     "hash": "b1c6e1c381d91d77",
@@ -488,8 +488,8 @@
     "date": "2026-09-08"
   },
   "/ru/docs/image": {
-    "hash": "f3dff373f63fafa8",
-    "date": "2026-11-03"
+    "hash": "a137c9ae4f651663",
+    "date": "2026-11-12"
   },
   "/ru/docs/inline-toolbar-api": {
     "hash": "6b4597ab28d605c5",
@@ -532,8 +532,8 @@
     "date": "2026-10-26"
   },
   "/ru/docs/page": {
-    "hash": "6db39b69d2f3e42f",
-    "date": "2026-11-09"
+    "hash": "38f078148fa6033d",
+    "date": "2026-11-12"
   },
   "/ru/docs/page-link": {
     "hash": "4a17b6190ff46ca9",
@@ -644,8 +644,8 @@
     "date": "2026-10-07"
   },
   "/ru/docs/uploader-api": {
-    "hash": "2228298c53e53839",
-    "date": "2026-11-03"
+    "hash": "52cff86edad2f2c5",
+    "date": "2026-11-12"
   },
   "/ru/docs/use-blocks": {
     "hash": "a4ca56c964e0e9fa",

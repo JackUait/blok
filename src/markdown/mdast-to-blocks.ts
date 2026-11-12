@@ -1,10 +1,10 @@
 import type { Root, Nodes, List, ListItem, PhrasingContent, Table, Blockquote, RootContent, Definition } from '../../types/data-formats/markdown-tree';
 import type { OutputBlockData } from '../../types/data-formats/output-data';
-import type { MarkdownImportConfig } from './types';
+import type { InternalMarkdownImportConfig, MarkdownImportConfig } from './types';
 import type { CellPlacement } from '../tools/table/types';
 import { safeImageSrc } from '../components/utils/sanitize-url';
 import { isBareBreak, phrasingToHtml } from './phrasing-to-html';
-import type { DefinitionMap } from './phrasing-to-html';
+import type { DefinitionMap, PageIdFor } from './phrasing-to-html';
 import { BREAK, literalTree, phrasingToTree } from './phrasing-to-tree';
 import type { InlineNode } from '../shared/rich-text/inline-tree';
 import { inlineTreeToSegments } from '../shared/rich-text/html-to-segments';
@@ -16,6 +16,8 @@ interface ConvertContext {
   config: MarkdownImportConfig;
   generateId: () => string;
   definitions: DefinitionMap;
+  /** Turns links to pages the host knows into mentions. HTML form only: the paste reads that form. */
+  pageIdFor?: PageIdFor;
   /** Writes a rich field in the shape the caller asked for. */
   write: (value: Rich) => unknown;
 }
@@ -31,8 +33,8 @@ interface Rich {
 
 const EMPTY: Rich = { html: '', tree: [] };
 
-function phrasing(nodes: PhrasingContent[], definitions: DefinitionMap): Rich {
-  return { html: phrasingToHtml(nodes, definitions), tree: phrasingToTree(nodes, definitions) };
+function phrasing(nodes: PhrasingContent[], { definitions, pageIdFor }: ConvertContext): Rich {
+  return { html: phrasingToHtml(nodes, definitions, pageIdFor), tree: phrasingToTree(nodes, definitions) };
 }
 
 function literal(text: string): Rich {
@@ -124,11 +126,12 @@ function collectDefinitions(tree: Root): DefinitionMap {
 /**
  * Convert an mdast tree to an array of Blok OutputBlockData.
  */
-export function mdastToBlocks(tree: Root, config: MarkdownImportConfig = {}, richText: 'html' | 'segments' = 'html'): OutputBlockData[] {
+export function mdastToBlocks(tree: Root, config: InternalMarkdownImportConfig = {}, richText: 'html' | 'segments' = 'html'): OutputBlockData[] {
   const ctx: ConvertContext = {
     config,
     generateId: createIdGenerator(),
     definitions: collectDefinitions(tree),
+    ...(config.pageIdFromHref === undefined ? {} : { pageIdFor: config.pageIdFromHref }),
     write: richText === 'html' ? value => value.html : value => inlineTreeToSegments(value.tree),
   };
 
@@ -221,7 +224,7 @@ function handleBuiltInNode(
   }
 
   if (node.type === 'heading') {
-    return [makeBlock('header', { text: ctx.write(phrasing(node.children, ctx.definitions)), level: node.depth }, ctx.generateId)];
+    return [makeBlock('header', { text: ctx.write(phrasing(node.children, ctx)), level: node.depth }, ctx.generateId)];
   }
 
   if (node.type === 'thematicBreak') {
@@ -356,7 +359,7 @@ function handleParagraph(children: PhrasingContent[], ctx: ConvertContext): Outp
   const hasInlineMath = children.some(c => c.type === 'inlineMath');
 
   if (!hasInlineMath) {
-    return [makeParagraph(phrasing(children, ctx.definitions), ctx)];
+    return [makeParagraph(phrasing(children, ctx), ctx)];
   }
 
   return splitOnInlineMath(children, ctx);
@@ -372,7 +375,7 @@ function splitOnInlineMath(children: PhrasingContent[], ctx: ConvertContext): Ou
       continue;
     }
 
-    const text = trim(phrasing(segment.nodes, ctx.definitions));
+    const text = trim(phrasing(segment.nodes, ctx));
 
     if (text.html !== '') {
       blocks.push(makeParagraph(text, ctx));
@@ -504,7 +507,7 @@ function handleListItem(
   const paragraphChild = item.children.find(
     (c): c is Extract<typeof c, { type: 'paragraph' }> => c.type === 'paragraph',
   );
-  const text = paragraphChild ? phrasing(paragraphChild.children, ctx.definitions) : EMPTY;
+  const text = paragraphChild ? phrasing(paragraphChild.children, ctx) : EMPTY;
 
   const data: Record<string, unknown> = { text: ctx.write(text), style, depth };
 
@@ -558,7 +561,7 @@ function handleBlockquote(bq: Blockquote, ctx: ConvertContext): OutputBlockData[
 
   for (const child of bq.children) {
     if (child.type === 'paragraph') {
-      parts.push(phrasing(child.children, ctx.definitions));
+      parts.push(phrasing(child.children, ctx));
       continue;
     }
 
@@ -664,7 +667,7 @@ function processTableRow(
 }
 
 function textCellBlock(children: PhrasingContent[], ctx: ConvertContext): OutputBlockData {
-  const text = phrasing(children, ctx.definitions);
+  const text = phrasing(children, ctx);
 
   /** The exporter marks a blank heading row with a lone `<br>` (see `tableToMarkdown`). */
   return makeParagraph(text.html === '<br>' ? EMPTY : text, ctx);

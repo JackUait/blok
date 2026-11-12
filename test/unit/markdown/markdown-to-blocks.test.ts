@@ -641,3 +641,19 @@ describe('image round trip through Markdown', () => {
     expect(blocks[0].data).toMatchObject({ alt: 'A cat' });
   });
 });
+
+describe('markdownToBlocks with pageIdFromHref', () => {
+  const config: InternalMarkdownImportConfig = {
+    htmlText: true,
+    pageIdFromHref: (url) => (url === 'https://workspace.test/pages/roadmap' ? 'roadmap' : undefined),
+  };
+
+  it('writes a link to a known page as its mention, inline and by reference', async () => {
+    const md = '**[Roadmap](https://workspace.test/pages/roadmap)** and [ref][r] and [other](https://other.test/)\n\n[r]: https://workspace.test/pages/roadmap';
+    const blocks = await markdownToSegmentBlocks(md, config);
+
+    expect(blocks.map((block) => block.data.text)).toEqual([
+      '<strong><a data-blok-page-id="roadmap">Page</a></strong> and <a data-blok-page-id="roadmap">Page</a> and <a href="https://other.test/" target="_blank" rel="noopener noreferrer nofollow">other</a>',
+    ]);
+  });
+});

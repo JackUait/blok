@@ -1142,7 +1142,7 @@ const editor = new Blok({
         type: '(href: string) => string | null | undefined',
         default: 'undefined',
         description:
-          'Turns a URL back into a page id, or returns `null` when the URL is not a page link. Blok passes an absolute URL. With it, pasting a page link offers Mention, which inserts an inline reference to the page instead of a plain link.',
+          'Turns a URL back into a page id, or returns `null` when the URL is not a page link. Blok passes an absolute URL.\n\nWith it, pasting a page link offers Mention, which inserts an inline reference to the page instead of a plain link. A link to a known page inside pasted Markdown or HTML becomes that page\'s mention on its own.',
       },
       {
         option: 'open',

@@ -13,6 +13,7 @@ import { subtreeEndIndex } from '../components/utils/blocks-tree';
 import { parseUntrustedHtml } from '../components/utils/inert-html';
 import type { InternalMarkdownImportConfig } from './types';
 import { listParentIndices } from '../components/modules/paste/list-nesting';
+import { pastedPageId } from '../components/modules/paste/pasted-page-id';
 
 /**
  * Hang each list item under the item it was indented under. markdownToBlocks
@@ -283,7 +284,11 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
 
       // A line break the user pasted is one they can see; keep it. HTML text:
       // an inline paste below writes it into the DOM.
-      const config: InternalMarkdownImportConfig = { softBreaks: true, htmlText: true };
+      const config: InternalMarkdownImportConfig = {
+        softBreaks: true,
+        htmlText: true,
+        pageIdFromHref: (url) => pastedPageId(this.Blok.Tools, url),
+      };
 
       return await markdownToBlocks(data, config);
     } catch (e) {

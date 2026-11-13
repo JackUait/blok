@@ -1568,10 +1568,15 @@ describe('DatabaseViewControls', () => {
         expect(document.querySelector('[data-blok-database-chip-note]')).toBeNull();
       });
 
-      // notion-motion.md Round 22 §1 (r22-d-t4-enter-ds.raw): a day with no year takes the next one still ahead.
+      // notion-motion.md Round 23 §1 (r23-y*-ds.raw): a day with no year stays this year up to 30 days back, else next year.
       it.each([
         ['march 5', '2027-03-05'],
         ['November 20', '2026-11-20'],
+        ['Nov 13', '2026-11-13'],
+        ['Nov 12', '2026-11-12'],
+        ['Oct 14', '2026-10-14'],
+        ['Oct 13', '2027-10-13'],
+        ['Dec 25', '2026-12-25'],
         ['3/5/25', '2025-03-05'],
       ])('reads "%s" as %s', (typed, iso) => {
         const { controls, saved } = open({ operator: 'equals', value: null });

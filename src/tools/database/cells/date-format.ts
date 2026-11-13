@@ -301,9 +301,12 @@ export const parseDayField = (text: string, locale: string, display: DateDisplay
   return Number.isFinite(ms) ? toIsoDay(new Date(ms)) : null;
 };
 
+/** How far back a yearless day may sit and still stay this year. */
+const YEARLESS_DAYS_BACK = 30;
+
 /**
- * A filter's typed day. notion-motion.md Round 22 §1 (r22-d-t4-enter-ds.raw): a day with no year takes
- * the next one still ahead of `now` ("march 5" on 2026-11-13 is 2027-03-05). Today itself counts as ahead (unmeasured).
+ * A filter's typed day. notion-motion.md Round 23 §1 (r23-y*-ds.raw): a day with no year stays this year when it is
+ * at most 30 days back, else next year ("Oct 14" on 2026-11-13 is 2026, "Oct 13" is 2027). Read only inside one year.
  */
 export const parseFilterDay = (text: string, locale: string, now: Date = new Date()): string | null => {
   const day = parseDayField(text, locale, {}, now.getFullYear(), now);
@@ -313,7 +316,7 @@ export const parseFilterDay = (text: string, locale: string, now: Date = new Dat
 
   if (!Number.isFinite(ms)) return day;
   const thisYear = new Date(ms);
-  const ahead = thisYear >= new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const ahead = thisYear >= new Date(now.getFullYear(), now.getMonth(), now.getDate() - YEARLESS_DAYS_BACK)
     ? thisYear
     : new Date(thisYear.getFullYear() + 1, thisYear.getMonth(), thisYear.getDate());
 

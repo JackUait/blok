@@ -12772,6 +12772,10 @@ textarea[data-blok-database-cell-input] {
   background-image: linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg));
 }
 
+[data-blok-database-table-open]:active {
+  background-image: linear-gradient(var(--blok-database-pressed-bg), var(--blok-database-pressed-bg));
+}
+
 [data-blok-database-table-cell-actions] {
   position: absolute;
   inset-block-start: 6px;

@@ -246,6 +246,12 @@ describe('side peek', () => {
     expect(body(reducedMotion, '[data-blok-database-table-row]::before')).toContain('transition: none');
   });
 
+  it('darkens the OPEN button while it is pressed, then drops back to the hover fill (notion-motion.md "Side peek")', () => {
+    const pressed = body(outsideReducedMotion, '[data-blok-database-table-open]:active');
+
+    expect(pressed).toContain('linear-gradient(var(--blok-database-pressed-bg), var(--blok-database-pressed-bg))');
+  });
+
   // notion-motion.md Round 6: Notion's "~70ms" lag was a busy main thread, not a delay.
   it('starts the new row\'s ring on the same frame the old one starts to fade', () => {
     expect(database).not.toContain('data-peeked="step"');

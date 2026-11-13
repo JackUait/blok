@@ -9380,6 +9380,10 @@ textarea[data-blok-database-cell-input] {
   background-image: linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg));
 }
 
+[data-blok-database-table-open]:active {
+  background-image: linear-gradient(var(--blok-database-pressed-bg), var(--blok-database-pressed-bg));
+}
+
 /* ─── URL, email and phone cells: hover pill with Comment and Copy (research/16 §4) ─── */
 
 /* Notion: 52x24 at the cell's right edge, radius 6, the OPEN button's shadow; hover only, no delay (notion-spec-2 §19.23). */

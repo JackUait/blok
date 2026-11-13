@@ -3,6 +3,8 @@ import type { StubData } from '../../tools/stub';
 import type { BlockToolAdapter } from '../tools/block';
 import type { BlokModules } from '../../types-internal/blok-modules';
 
+import { humanizeToolName } from './string';
+
 /**
  * Map of legacy EditorJS tool names to their Blok equivalents.
  * Used when loading or pasting blocks to migrate old data.
@@ -30,7 +32,7 @@ export const composeStubData = (Tools: StubTools, tool: string, data: BlockToolD
       type: tool,
       data,
     },
-    title: toolboxTitle ?? tool,
+    title: toolboxTitle ?? humanizeToolName(tool),
   };
 };
 

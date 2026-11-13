@@ -530,7 +530,7 @@ describe('Renderer mutation coverage', () => {
       expect(stubPayloadTitle(args.data)).toBe('Ghost Tool');
     });
 
-    it('titles the stub with the tool name when the tool declares no toolbox', async () => {
+    it('titles the stub with the readable tool name when the tool declares no toolbox', async () => {
       vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
 
       const { renderer, composeBlock, tools } = createRenderer();
@@ -539,10 +539,10 @@ describe('Renderer mutation coverage', () => {
 
       await renderer.render(ghostBlock({ text: 'x' }));
 
-      expect(stubPayloadTitle(firstComposeArgs(composeBlock).data)).toBe('ghost');
+      expect(stubPayloadTitle(firstComposeArgs(composeBlock).data)).toBe('Ghost');
     });
 
-    it('titles the stub with the tool name when the toolbox entry has no title', async () => {
+    it('titles the stub with the readable tool name when the toolbox entry has no title', async () => {
       vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
 
       const { renderer, composeBlock, tools } = createRenderer();
@@ -551,7 +551,7 @@ describe('Renderer mutation coverage', () => {
 
       await renderer.render(ghostBlock({ text: 'x' }));
 
-      expect(stubPayloadTitle(firstComposeArgs(composeBlock).data)).toBe('ghost');
+      expect(stubPayloadTitle(firstComposeArgs(composeBlock).data)).toBe('Ghost');
     });
 
     it('hands the stub its original payload untouched', async () => {

@@ -1120,7 +1120,7 @@ describe('BlokDataHandler — tools the pasting editor does not have', () => {
     expect(inserted.map(entry => entry.tool)).toEqual(['paragraph', 'stub', 'paragraph', 'paragraph']);
     expect(inserted[1].data).toEqual({
       savedData: { type: 'toggle', data: { text: '<b>Toggle</b>' } },
-      title: 'toggle',
+      title: 'Toggle',
     });
     expect(blocks[2].parentId).toBe(blocks[1].id);
     expect(inserted[3].data).toEqual({ text: 'After' });
@@ -1170,7 +1170,7 @@ describe('BlokDataHandler — tools the pasting editor does not have', () => {
 
     expect(inserted).toEqual([expect.objectContaining({
       tool: 'stub',
-      data: { savedData: { type: 'toggle', data: { text: 'Toggle' } }, title: 'toggle' },
+      data: { savedData: { type: 'toggle', data: { text: 'Toggle' } }, title: 'Toggle' },
     })]);
   });
 

@@ -84,14 +84,14 @@ describe('Stub tool', () => {
     expect(translator).toHaveBeenCalledWith('tools.stub.blockCannotBeDisplayed');
   });
 
-  it('shows the block type on a mono chip, written as it is saved', () => {
-    const { stub } = createStub({ data: { title: 'kanban' } });
+  it('shows the name on a chip in the text font, as it is given', () => {
+    const { stub } = createStub({ data: { title: 'Kanban board' } });
     const titleEl = stub.render().querySelector('[data-blok-stub-title]');
     const classes = titleEl?.className.split(/\s+/) ?? [];
 
-    expect(titleEl?.textContent).toBe('kanban');
+    expect(titleEl?.textContent).toBe('Kanban board');
+    expect(classes).not.toContain('font-mono');
     expect(classes).not.toContain('capitalize');
-    expect(classes).toContain('font-mono');
     expect(classes).toContain('truncate');
     expect(classes).toContain('rounded-(--blok-radius-control)');
   });

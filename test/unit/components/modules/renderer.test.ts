@@ -400,7 +400,7 @@ describe('Renderer module', () => {
 
     const stubData = composeArgs.data as StubData;
 
-    expect(stubData.title).toBe('unsupported');
+    expect(stubData.title).toBe('Unsupported');
     expect(stubData.savedData).toEqual({
       id: 'missing-tool-block',
       type: 'unsupported',
@@ -946,7 +946,7 @@ describe('Renderer module', () => {
 
     const stubData = blockManager.composeBlock.mock.calls[0][0].data as StubData;
 
-    expect(stubData.title).toBe('fallback');
+    expect(stubData.title).toBe('Fallback');
     expect(stubData.savedData).toEqual({
       id: 'block-id',
       type: 'fallback',

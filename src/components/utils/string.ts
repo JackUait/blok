@@ -16,6 +16,20 @@ export const capitalize = (text: string): string => {
 };
 
 /**
+ * Turns a tool name into words a reader can follow: 'column_list' -> 'Column list'.
+ * A name with no letters or digits is returned as it is.
+ */
+export const humanizeToolName = (name: string): string => {
+  const words = name
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .split(/[\s_-]+/)
+    .filter(Boolean);
+
+  return words.length === 0 ? name : capitalize(words.join(' ').toLowerCase());
+};
+
+/**
  * Make shortcut command more human-readable
  * @param shortcut — string like 'CMD+B'
  */

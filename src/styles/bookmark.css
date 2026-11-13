@@ -269,6 +269,15 @@
 }
 
 /*
+  Empty: the shared link field. The media blocks cap it at a fixed width
+  because a drawing sits beside it. Here it stands alone, so it runs the
+  full width.
+*/
+[data-blok-tool="bookmark"] [data-blok-field].blok-media-empty__embed-bar {
+  max-width: none;
+}
+
+/*
   Loading: the card's own shape, with only the address filled in. The bones
   stand where the title and description will land, so nothing moves when
   they do.

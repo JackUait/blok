@@ -27592,6 +27592,10 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   color: var(--bookmark-ink-soft);
 }
 
+[data-blok-tool="bookmark"] [data-blok-field].blok-media-empty__embed-bar {
+  max-width: none;
+}
+
 [data-blok-tool="bookmark"] .blok-bookmark--loading {
   cursor: default;
 }

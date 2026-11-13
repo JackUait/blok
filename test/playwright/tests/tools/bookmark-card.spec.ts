@@ -134,6 +134,15 @@ test.describe('Bookmark card', () => {
 
     const field = page.locator('[data-blok-id="bm"]').getByRole('textbox');
 
+    // The field runs the full width of the surface: its two side gaps match.
+    const [ bar, surface ] = await Promise.all([
+      box(page.locator('[data-blok-id="bm"] [data-blok-field="text"]')),
+      box(page.locator('[data-blok-id="bm"]').getByRole('group')),
+    ]);
+
+    expect(bar.left - surface.left).toBeGreaterThan(0);
+    expect(Math.abs((bar.left - surface.left) - (surface.right - bar.right))).toBeLessThan(1);
+
     await field.fill('read this later');
     await field.press('Enter');
     await expect(page.locator('[data-blok-id="bm"]').getByRole('alert')).toBeVisible();

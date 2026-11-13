@@ -602,9 +602,10 @@ class Tooltip {
    * @param element - the trigger
    */
   private isBehindOpenPopover(element: HTMLElement): boolean {
-    const openedPopover = document.querySelector('[data-blok-popover-opened="true"]');
+    // The newest open popover is on top: a flyout over a panel shows its own hints.
+    const openedPopover = [...document.querySelectorAll('[data-blok-popover-opened="true"]')].at(-1);
 
-    return openedPopover !== null && !openedPopover.contains(element);
+    return openedPopover !== undefined && !openedPopover.contains(element);
   }
 
   public onHover(element: HTMLElement, content: TooltipContent, options: HintOptions = {}): void {

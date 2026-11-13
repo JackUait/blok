@@ -698,6 +698,38 @@ describe('Tooltip utility', () => {
     hide();
   });
 
+  // A flyout over an open panel (a database colour picker) is the top popover: its own hints show.
+  it('shows a hint inside the newest open popover while an older one stays open under it', () => {
+    vi.useFakeTimers();
+
+    const under = document.createElement('div');
+    const flyout = document.createElement('div');
+    const target = createTargetElement();
+    const behind = createTargetElement();
+
+    under.setAttribute('data-blok-popover-opened', 'true');
+    flyout.setAttribute('data-blok-popover-opened', 'true');
+    under.appendChild(behind);
+    flyout.appendChild(target);
+    document.body.append(under, flyout);
+
+    onHover(behind, 'under hint');
+    behind.dispatchEvent(new Event('mouseenter'));
+    vi.advanceTimersByTime(HINT_DELAY);
+
+    expect(getTooltipWrapper()?.getAttribute('data-blok-shown')).not.toBe('true');
+
+    onHover(target, 'flyout hint');
+    target.dispatchEvent(new Event('mouseenter'));
+    vi.advanceTimersByTime(HINT_DELAY);
+
+    expect(getTooltipWrapper()?.getAttribute('data-blok-shown')).toBe('true');
+
+    under.remove();
+    flyout.remove();
+    hide();
+  });
+
   // A quick hover-then-click opens the trigger's menu before the hover delay runs out.
   it('does not reveal a delayed tooltip once a Popover has opened during the delay', () => {
     vi.useFakeTimers();

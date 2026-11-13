@@ -271,6 +271,7 @@ func (s *Service) routes() {
 	s.mux.HandleFunc("/api/workspaces/{slug}/{resource}", s.workspaceResource)
 	s.mux.HandleFunc("/api/workspaces/{slug}/{resource}/{id}", s.workspaceResource)
 	s.mux.HandleFunc("/api/workspaces/{slug}/{resource}/{id}/{action}", s.workspaceResource)
+	s.mux.HandleFunc("/api/workspaces/{slug}/{resource}/{id}/{action}/{target}", s.workspaceResource)
 	s.mux.HandleFunc("GET /api/blok-ticket", s.getTicket)
 	s.mux.HandleFunc("/internal/documents/{id}", s.document)
 	// Blok's own local-file branch bypasses its auth wrapper; explicitly guard it here.

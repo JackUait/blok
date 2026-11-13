@@ -243,6 +243,12 @@ func (s *Service) mutateMember(w http.ResponseWriter, r *http.Request, u identit
 		}
 	}
 	if r.Method == "DELETE" {
+		// « Qui a accès » doit dire la vérité : un partage laissé derrière
+		// quelqu'un qui a quitté l'espace ressusciterait à son retour.
+		if _, e = tx.Exec(r.Context(), "DELETE FROM page_shares sh USING pages p WHERE sh.page_id=p.id AND p.workspace_id=$1 AND sh.user_id=$2", ws.ID, id); e != nil {
+			problem(w, 500, "Update failed")
+			return
+		}
 		_, e = tx.Exec(r.Context(), "DELETE FROM memberships WHERE workspace_id=$1 AND user_id=$2", ws.ID, id)
 	} else {
 		_, e = tx.Exec(r.Context(), "UPDATE memberships SET role=$3 WHERE workspace_id=$1 AND user_id=$2", ws.ID, id, in.Role)

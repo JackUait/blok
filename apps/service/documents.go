@@ -251,6 +251,14 @@ func (s *Service) page(w http.ResponseWriter, r *http.Request, u identity, ws Wo
 		s.duplicate(w, r, u, ws)
 		return
 	}
+	switch r.PathValue("action") {
+	case "access":
+		s.pageAccess(w, r, u, ws)
+		return
+	case "shares":
+		s.pageShare(w, r, u, ws)
+		return
+	}
 	if r.Method != "GET" {
 		problem(w, 405, "Use Blok collaboration to edit document content")
 		return

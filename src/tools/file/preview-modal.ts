@@ -32,6 +32,8 @@ export interface FilePreviewOptions {
   fetchPreview?: FileConfig['fetchPreview'];
   /** See FileConfig.pdfAssetsUrl. */
   pdfAssetsUrl?: string;
+  /** See FileConfig.previewEndpoint. */
+  previewEndpoint?: FileConfig['previewEndpoint'];
 }
 
 interface PreviewElements {

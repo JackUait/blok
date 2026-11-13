@@ -6,12 +6,14 @@ import { askPdfPassword } from './pdf-password';
 import type { PdfDocumentLike, PdfPageLike, PdfViewport } from './pdf-types';
 import { mountPdfView, type PdfViewLib } from './pdf-view';
 import { resolvePdfSources } from './pdf-source';
+import { PdfUnreadableError } from './pdf-errors';
+import { createRangeTransport, SERVER_CHUNK_BYTES, type RangeReader } from './pdf-server-transport';
 
 /** Where the PDF's bytes come from. */
 export type PdfSource =
   | { kind: 'data'; data: Uint8Array }
   | { kind: 'url'; url: string }
-  | { kind: 'transport'; transport: unknown; length: number };
+  | { kind: 'transport'; reader: RangeReader };
 
 /**
  * pdf.js shrinks decoded images to fit this, in bytes (4 per pixel).
@@ -19,7 +21,7 @@ export type PdfSource =
  */
 const CANVAS_MAX_AREA_IN_BYTES = 16_777_216 * 4;
 
-function sourceParams(source: PdfSource): Record<string, unknown> {
+function sourceParams(source: PdfSource, lib: PdfJs, onFailure: () => void): Record<string, unknown> {
   if (source.kind === 'data') {
     return { data: source.data };
   }
@@ -27,12 +29,15 @@ function sourceParams(source: PdfSource): Record<string, unknown> {
     return { url: source.url, withCredentials: false };
   }
 
-  return { range: source.transport, length: source.length };
-}
-
-/** Bytes arrived but are no readable PDF: the chain stops on the error card. */
-class PdfUnreadableError extends Error {
-  public override readonly name = 'PdfUnreadableError';
+  // The server's rate limit counts requests, so pdf.js fetches only the
+  // ranges it draws: no read-ahead, no streaming of the rest.
+  return {
+    range: createRangeTransport(lib, source.reader, onFailure),
+    length: source.reader.length,
+    rangeChunkSize: SERVER_CHUNK_BYTES,
+    disableAutoFetch: true,
+    disableStream: true,
+  };
 }
 
 const isUnreadable = (error: unknown): boolean =>
@@ -94,13 +99,31 @@ export async function fillPdfBody(
   if (chrome.isClosed()) {
     return;
   }
+  const held: { view: { destroy(): void } | null; carded: boolean; task: { destroy(): Promise<void> } | null } = {
+    view: null,
+    carded: false,
+    task: null,
+  };
+  // A page that fails to draw, or a range the server will not send: the error card, once.
+  const fail = (): void => {
+    if (held.carded || chrome.isClosed()) {
+      return;
+    }
+    held.carded = true;
+    held.view?.destroy();
+    buildErrorInto(chrome.body, opts, pdfHref);
+  };
   const task = lib.getDocument({
-    ...sourceParams(source),
+    ...sourceParams(source, lib, () => {
+      fail();
+      // Ends a load still waiting on the range; pdf.js has no other way to hear of it.
+      held.task?.destroy().catch(() => undefined);
+    }),
     ...assetParams(opts.pdfAssetsUrl),
     useSystemFonts: true,
     canvasMaxAreaInBytes: CANVAS_MAX_AREA_IN_BYTES,
   });
-  const held: { view: { destroy(): void } | null; carded: boolean } = { view: null, carded: false };
+  held.task = task;
   chrome.onRelease(() => {
     held.view?.destroy();
     // destroy() rejects when the worker is already gone; nothing is left to free then.
@@ -140,20 +163,12 @@ export async function fillPdfBody(
   if (chrome.isClosed()) {
     return;
   }
-  const failed = { done: false };
   // pdf.js types `canvas` as required in render(); at runtime it defaults to canvasContext.canvas.
   const view = await mountPdfView(chrome.body, doc as unknown as PdfDocumentLike, { renderTextLayer: textLayerOf(lib) }, chrome, {
-    onError: () => {
-      if (failed.done || chrome.isClosed()) {
-        return;
-      }
-      failed.done = true;
-      held.view?.destroy();
-      buildErrorInto(chrome.body, opts, pdfHref);
-    },
+    onError: fail,
   });
   held.view = view;
-  if (chrome.isClosed() || failed.done) {
+  if (chrome.isClosed() || held.carded) {
     view.destroy();
 
     return;
@@ -164,7 +179,7 @@ export async function fillPdfBody(
 
 /** True once a source opened (or the preview closed); throws on bytes that are no readable PDF. */
 async function openFirstSource(opts: FilePreviewOptions, chrome: PreviewChrome, signal: AbortSignal): Promise<boolean> {
-  for await (const source of resolvePdfSources(opts.url, opts.fetchPreview, signal)) {
+  for await (const source of resolvePdfSources(opts.url, opts.fetchPreview, signal, opts.previewEndpoint)) {
     if (chrome.isClosed()) {
       return true;
     }

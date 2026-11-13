@@ -1,14 +1,14 @@
 // Writes the PDF fixtures for file-pdf-preview.spec.ts. The spec imports
 // manyPagesPdf to build its large file at run time instead of committing it.
-// Run: node test/playwright/fixtures/pdf/make-fixtures.mjs
+// Run from the repo root: node test/playwright/fixtures/pdf/make-fixtures.mjs
 // Output is byte-stable: rerunning it must leave git clean.
+// No import.meta: Playwright loads this file as CommonJS when the spec imports it.
 
 import { createHash } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 
-const OUT = dirname(fileURLToPath(import.meta.url));
+const OUT = join(process.cwd(), 'test/playwright/fixtures/pdf');
 const ID = Buffer.from('426c6f6b2050444620666978747572', 'hex');
 
 /** Padding from the PDF spec's standard security handler (algorithm 2). */
@@ -149,27 +149,31 @@ const corruptPdf = () => Buffer.from('%PDF-1.7\nthis file was cut off before any
 
 /**
  * `count` Letter pages titled "Blok PDF page N", each padded with `padding`
- * bytes of comment, so the file spans several 1 MiB server chunks.
+ * bytes of comment, so the file spans several 1 MiB server chunks. The page
+ * objects come first and the contents after, as most writers lay them out:
+ * pdf.js reads every page object on open (it checks the last page).
  */
 export function manyPagesPdf(count, padding) {
   const filler = `${'% padding '.repeat(Math.ceil(padding / 10)).slice(0, padding - 1)}\n`;
-  const pageNum = (index) => 3 + index * 2;
+  const pageRef = (index) => 3 + index;
+  const contentRef = (index) => 3 + count + index;
+  const fontRef = 3 + 2 * count;
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
-    `<< /Type /Pages /Kids [${Array.from({ length: count }, (_, i) => `${pageNum(i)} 0 R`).join(' ')}] /Count ${count} >>`,
+    `<< /Type /Pages /Kids [${Array.from({ length: count }, (_, i) => `${pageRef(i)} 0 R`).join(' ')}] /Count ${count} >>`,
   ];
   for (let i = 0; i < count; i++) {
-    objects.push(
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 ${pageNum(count)} 0 R >> >> /Contents ${pageNum(i) + 1} 0 R >>`,
-      stream('', `${filler}${text([[72, 700, 28, `Blok PDF page ${i + 1}`]])}`),
-    );
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 ${fontRef} 0 R >> >> /Contents ${contentRef(i)} 0 R >>`);
+  }
+  for (let i = 0; i < count; i++) {
+    objects.push(stream('', `${filler}${text([[72, 700, 28, `Blok PDF page ${i + 1}`]])}`));
   }
   objects.push(FONT);
 
   return buildPdf(objects);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1]?.endsWith('make-fixtures.mjs')) {
   writeFileSync(join(OUT, 'three-pages.pdf'), textPdf());
   writeFileSync(join(OUT, 'password-blok.pdf'), passwordPdf());
   writeFileSync(join(OUT, 'corrupt.pdf'), corruptPdf());

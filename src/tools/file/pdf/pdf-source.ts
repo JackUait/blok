@@ -1,6 +1,7 @@
 import type { FileConfig } from '../../../../types/tools/file';
 import { safeHttpHref } from '../url';
 import type { PdfSource } from './pdf-preview';
+import { createServerRangeSource } from './pdf-server-transport';
 
 type FetchPreview = FileConfig['fetchPreview'];
 
@@ -21,13 +22,15 @@ async function bytesOf(got: Blob | ArrayBuffer | Response): Promise<Uint8Array> 
 
 /**
  * Where an http(s) PDF's bytes may come from, best first: the host's hook,
- * then the url itself. Nothing for any other url, so neither the hook nor
- * pdf.js ever sees one.
+ * the url itself, then the Blok server. Nothing for any other url, so no
+ * hook, pdf.js or server ever sees one. Throws PdfUnreadableError when the
+ * server says the file is no PDF.
  */
 export async function* resolvePdfSources(
   url: string,
   hook: FetchPreview,
   signal: AbortSignal,
+  endpoint?: FileConfig['previewEndpoint'],
 ): AsyncGenerator<PdfSource> {
   const href = safeHttpHref(url);
   if (href === null) {
@@ -46,4 +49,11 @@ export async function* resolvePdfSources(
     return;
   }
   yield { kind: 'url', url: href };
+  if (endpoint === undefined || signal.aborted) {
+    return;
+  }
+  const served = await createServerRangeSource(endpoint.url, href, endpoint.headers, signal);
+  if (served !== null && !signal.aborted) {
+    yield served;
+  }
 }

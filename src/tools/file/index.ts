@@ -572,6 +572,7 @@ export class FileTool implements BlockTool {
       directionSource: this.root,
       fetchPreview: this.config.fetchPreview,
       pdfAssetsUrl: this.config.pdfAssetsUrl,
+      previewEndpoint: this.config.previewEndpoint,
     });
   }
 

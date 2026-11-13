@@ -47,4 +47,12 @@ describe('FileTool hands its preview config to the preview', () => {
       pdfAssetsUrl: 'https://cdn.example.com/pdfjs/',
     }));
   });
+
+  it('passes the Blok server preview endpoint', () => {
+    const previewEndpoint = { url: 'https://blok.example.com/file-bytes' };
+
+    openPreview({ previewEndpoint });
+
+    expect(modal.openFilePreview).toHaveBeenCalledWith(expect.objectContaining({ previewEndpoint }));
+  });
 });

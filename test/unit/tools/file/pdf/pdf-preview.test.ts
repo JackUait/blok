@@ -475,6 +475,17 @@ describe('blob PDFs open with pdf.js', () => {
   });
 });
 
+/** pdf.js's PDFDataRangeTransport, as far as the server transport uses it. */
+class FakeRangeBase {
+  constructor(public length: number, public initialData: Uint8Array) {}
+
+  onDataRange(_begin: number, _chunk: Uint8Array): void {}
+
+  requestDataRange(_begin: number, _end: number): void {}
+
+  abort(): void {}
+}
+
 describe('http(s) PDFs open with pdf.js when Blok can get the bytes', () => {
   const HTTP = 'https://files.example.com/a.pdf';
   const REMOTE_LABELS = { ...LABELS, openInNewTab: 'Open in new tab' };
@@ -501,7 +512,7 @@ describe('http(s) PDFs open with pdf.js when Blok can get the bytes', () => {
       return made;
     });
     loader.supportsPdfJs.mockReturnValue(true);
-    loader.loadPdfJs.mockResolvedValue({ getDocument, TextLayer: undefined });
+    loader.loadPdfJs.mockResolvedValue({ getDocument, TextLayer: undefined, PDFDataRangeTransport: FakeRangeBase });
     vi.stubGlobal('IntersectionObserver', QuietObserver);
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function getContext(this: HTMLCanvasElement) {
       return { canvas: this } as unknown as CanvasRenderingContext2D;
@@ -514,6 +525,102 @@ describe('http(s) PDFs open with pdf.js when Blok can get the bytes', () => {
     vi.restoreAllMocks();
     document.body.innerHTML = '';
     document.body.style.overflow = '';
+  });
+
+  describe('through the Blok server', () => {
+    const MIB = 1_048_576;
+    const ENDPOINT = { url: 'https://blok.example.com/file-bytes' };
+    const pdf = (size: number): Uint8Array => {
+      const bytes = new Uint8Array(size);
+      bytes.set(new TextEncoder().encode('%PDF-'), 0);
+
+      return bytes;
+    };
+    const serve = (answer: (range: string) => Response): void => {
+      vi.stubGlobal('fetch', vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) =>
+        answer(new Headers(init?.headers).get('range') ?? '')));
+    };
+    const ranges = (size: number) => (range: string): Response => {
+      const [start, end] = range.replace('bytes=', '').split('-').map(Number);
+      const last = Math.min(end, size - 1);
+
+      return new Response(pdf(size).slice(start, last + 1), {
+        status: 206,
+        headers: { 'Content-Range': `bytes ${start}-${last}/${size}` },
+      });
+    };
+    /** The direct read fails the way a CORS block does, so the chain moves on. */
+    const openThroughServer = async (): Promise<void> => {
+      openFilePreview({ url: HTTP, fileName: 'a.pdf', labels: REMOTE_LABELS, previewEndpoint: ENDPOINT });
+      await flush();
+      tasks[0].reject(blocked());
+      await flush();
+    };
+
+    it('reads a large file through a range transport after the url fails', async () => {
+      serve(ranges(3 * MIB));
+      await openThroughServer();
+
+      expect(params(1)).toMatchObject({
+        length: 3 * MIB,
+        rangeChunkSize: MIB,
+        disableAutoFetch: true,
+        disableStream: true,
+      });
+      expect(params(1).range).toBeInstanceOf(FakeRangeBase);
+      tasks[1].resolve(fakeDoc());
+      await flush();
+
+      expect(body().querySelectorAll('[data-role="file-preview-pdf-page"]')).toHaveLength(3);
+    });
+
+    it('opens a small file from the first answer\'s bytes', async () => {
+      serve(ranges(1500));
+      await openThroughServer();
+
+      expect((params(1).data as Uint8Array).length).toBe(1500);
+    });
+
+    it('falls back to the link when the route is off', async () => {
+      serve(() => new Response('404 page not found\n', { status: 404 }));
+      await openThroughServer();
+
+      expect(getDocument).toHaveBeenCalledTimes(1);
+      expect(body().querySelector('[data-action="preview-open-external"]')?.getAttribute('href')).toBe(HTTP);
+    });
+
+    it('shows the error card when the server says the file is no PDF', async () => {
+      serve(() => new Response('not a pdf\n', { status: 415 }));
+      await openThroughServer();
+
+      expect(getDocument).toHaveBeenCalledTimes(1);
+      expect(body().querySelector('[data-role="file-preview-error"]')).not.toBeNull();
+      expect(body().querySelector('[data-role="file-preview-external"]')).toBeNull();
+    });
+
+    it('shows the error card, not a page loading forever, when a later range fails', async () => {
+      serve(ranges(3 * MIB));
+      await openThroughServer();
+      tasks[1].resolve(fakeDoc());
+      await flush();
+      serve(() => new Response('rate limit exceeded\n', { status: 429 }));
+
+      (params(1).range as FakeRangeBase).requestDataRange(MIB, 2 * MIB);
+      await flush();
+
+      expect(body().querySelector('[data-role="file-preview-error"]')).not.toBeNull();
+      expect(body().querySelector('[data-role="file-preview-pdf"]')).toBeNull();
+      expect(unhandled).toEqual([]);
+    });
+
+    it('asks the server only after the hook and the url', async () => {
+      serve(ranges(1500));
+      openFilePreview({ url: HTTP, fileName: 'a.pdf', labels: REMOTE_LABELS, previewEndpoint: ENDPOINT });
+      await flush();
+
+      expect(fetch).not.toHaveBeenCalled();
+      expect(params(0)).toMatchObject({ url: HTTP });
+    });
   });
 
   it('reads the url directly, without cookies for other sites', async () => {

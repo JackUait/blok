@@ -107,5 +107,17 @@ export function expandServerConfig(config: BlokConfig): BlokConfig {
     };
   }
 
+  // Only a file tool the consumer registered: an entry without a class fails validation.
+  const file = config.tools?.file;
+
+  if (file !== undefined && readToolConfig(file)?.previewEndpoint === undefined) {
+    expanded.tools = {
+      ...(expanded.tools ?? config.tools),
+      file: withConfig(file, {
+        previewEndpoint: { url: `${base}/file-bytes`, ...(headers === undefined ? {} : { headers }) },
+      }),
+    };
+  }
+
   return expanded;
 }

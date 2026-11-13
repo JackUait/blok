@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { expandServerConfig } from '../../../../src/components/utils/server-config';
-import type { BlokConfig } from '../../../../types';
+import type { BlokConfig, ToolConstructable } from '../../../../types';
 
 /**
  * `tools` values are `ToolConstructable | ToolSettings`, so the settings side
@@ -17,6 +17,8 @@ const toolConfig = (config: BlokConfig, toolName: string): Record<string, unknow
 
   return settings.config;
 };
+
+const FileStub = class {} as unknown as ToolConstructable;
 
 describe('expandServerConfig', () => {
   beforeEach(() => {
@@ -176,10 +178,61 @@ describe('expandServerConfig', () => {
       expect(toolConfig(result, 'bookmark')?.headers).toEqual({ Authorization: 'Bearer mine' });
     });
 
+    it('gives the file preview the same pass as bookmarks', () => {
+      const result = expandServerConfig({
+        server: 'https://blok.example.com',
+        ticket: '/api/blok-ticket',
+        tools: { file: FileStub },
+      });
+
+      expect(toolConfig(result, 'file')?.previewEndpoint).toEqual({
+        url: 'https://blok.example.com/file-bytes',
+        headers: toolConfig(result, 'bookmark')?.headers,
+      });
+    });
+
     it('ignores a ticket endpoint when there is no server to point it at', () => {
       const config: BlokConfig = { ticket: '/api/blok-ticket' };
 
       expect(expandServerConfig(config)).toEqual(config);
+    });
+  });
+
+  describe('file preview endpoint', () => {
+    it('points a registered file tool at the PDF route', () => {
+      const result = expandServerConfig({
+        server: 'https://blok.example.com/',
+        tools: { file: { class: FileStub, config: { captionPlaceholder: 'Say more' } } },
+      });
+
+      expect(toolConfig(result, 'file')).toEqual({
+        captionPlaceholder: 'Say more',
+        previewEndpoint: { url: 'https://blok.example.com/file-bytes' },
+      });
+    });
+
+    it('keeps a file tool registered as a constructable', () => {
+      const result = expandServerConfig({ server: 'https://blok.example.com', tools: { file: FileStub } });
+      const settings = result.tools?.file;
+
+      expect(typeof settings === 'object' && settings !== null && 'class' in settings && settings.class).toBe(FileStub);
+    });
+
+    it('keeps an explicit preview endpoint', () => {
+      const mine = { url: 'https://pdf.mine.example.com/bytes' };
+      const result = expandServerConfig({
+        server: 'https://blok.example.com',
+        tools: { file: { class: FileStub, config: { previewEndpoint: mine } } },
+      });
+
+      expect(toolConfig(result, 'file')?.previewEndpoint).toBe(mine);
+    });
+
+    // A settings entry without a class fails tool validation.
+    it('registers no file tool the consumer did not', () => {
+      const result = expandServerConfig({ server: 'https://blok.example.com' });
+
+      expect(result.tools?.file).toBeUndefined();
     });
   });
 

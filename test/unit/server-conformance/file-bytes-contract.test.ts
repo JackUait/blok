@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 
 import { expect, it as baseIt } from 'vitest';
 
+import { createServerRangeSource, SERVER_CHUNK_BYTES } from '../../../src/tools/file/pdf/pdf-server-transport';
 import { fixturePdf, startFixtureOrigin, type FixtureOrigin } from './fixture-origin';
 import { startServer, type RunningServer } from './run-against';
 import type { HttpResponse } from './http-client';
@@ -223,5 +224,37 @@ it('serves PDF bytes and stored-file CORS the same on every server', async () =>
   expect(inputs(actual)).toEqual(inputs(expected));
   for (const [index, entry] of actual.entries()) {
     expect.soft(entry, entry.name).toEqual(expected[index]);
+  }
+}, 120_000);
+
+// The editor's side of the contract: the preview's range reader against the
+// real server. Every full chunk is exactly the 1 MiB answer cap.
+it('lets the editor read a PDF over 1 MiB in ranges the server accepts', async () => {
+  const origin = await startFixtureOrigin();
+  const storage = await mkdtemp(join(tmpdir(), 'blok-file-bytes-reader-'));
+  const key = `${'6'.repeat(32)}.pdf`;
+  const stored = Buffer.from(Array.from({ length: 2 * SERVER_CHUNK_BYTES + 4321 }, (_, index) => index % 251));
+  stored.write('%PDF-1.7', 0, 'latin1');
+  await writeFile(join(storage, key), stored);
+  const server = await startServer({
+    args: ['--listen', '127.0.0.1:0', ...serverArgs('default-cap', storage, origin.baseUrl)],
+    env: { BLOK_SECRET: SECRET },
+  });
+  const readAll = async (url: string): Promise<Buffer> => {
+    const source = await createServerRangeSource(`${server.baseUrl}/file-bytes`, url, undefined, new AbortController().signal);
+    if (source?.kind !== 'transport') {
+      throw new Error(`expected a range transport, got ${source?.kind ?? 'null'}`);
+    }
+
+    return Buffer.concat([source.reader.initial, await source.reader.read(SERVER_CHUNK_BYTES, source.reader.length)]);
+  };
+
+  try {
+    expect((await readAll(`${PUBLIC_URL}${key}`)).equals(stored)).toBe(true);
+    expect((await readAll(`${origin.baseUrl}/pdf/mib-plus-one.pdf`)).toString('latin1')).toBe(fixturePdf(2 ** 20 + 1));
+  } finally {
+    await server.stop();
+    await origin.stop();
+    await rm(storage, { recursive: true, force: true });
   }
 }, 120_000);

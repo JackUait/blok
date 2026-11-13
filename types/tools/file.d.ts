@@ -108,6 +108,15 @@ export interface FileConfig {
    * show with gaps. Blok ships none of these files.
    */
   pdfAssetsUrl?: string;
+  /**
+   * A Blok server's `/file-bytes` route, tried for an http(s) PDF after the
+   * hook and the url itself. The `server` shorthand fills it in. Blok reads the
+   * file in ranges of at most 1 MiB, minting `headers` again for each one.
+   */
+  previewEndpoint?: {
+    url: string;
+    headers?: Record<string, string> | (() => Promise<Record<string, string>>);
+  };
 }
 
 /**

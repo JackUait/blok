@@ -4,6 +4,7 @@ import type { Locator, Page } from '@playwright/test';
 import type { Blok } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { manyPagesPdf } from '../../fixtures/pdf/make-fixtures.mjs';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 // Made by test/playwright/fixtures/pdf/make-fixtures.mjs.
@@ -165,12 +166,14 @@ const NO_CORS = 'http://127.0.0.1:4444/test/playwright/fixtures/pdf/three-pages.
 interface RemoteOptions {
   /** Give the File tool a fetchPreview hook that reads through this same-origin proxy path. */
   proxy?: string;
+  /** Give the File tool a Blok server preview endpoint at this same-origin path. */
+  previewEndpoint?: string;
 }
 
 /** An editor holding one File block for `url`, with its preview open. */
 const openRemotePdf = async (page: Page, url: string, options: RemoteOptions = {}): Promise<Locator> => {
   await page.waitForFunction(() => typeof window.Blok === 'function');
-  await page.evaluate(async ({ holder, url: fileUrl, proxy }) => {
+  await page.evaluate(async ({ holder, url: fileUrl, proxy, previewEndpoint }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
       window.blokInstance = undefined;
@@ -181,9 +184,10 @@ const openRemotePdf = async (page: Page, url: string, options: RemoteOptions = {
     document.body.appendChild(container);
     // @ts-expect-error built bundle has no TS types — runtime-only dynamic import
     const { File: FileTool } = await import('/dist/tools.mjs?_v=1') as Record<string, new (...args: unknown[]) => unknown>;
-    const config = proxy === undefined
-      ? {}
-      : { fetchPreview: (target: string) => fetch(`${proxy}?url=${encodeURIComponent(target)}`) };
+    const config = {
+      ...(proxy === undefined ? {} : { fetchPreview: (target: string) => fetch(`${proxy}?url=${encodeURIComponent(target)}`) }),
+      ...(previewEndpoint === undefined ? {} : { previewEndpoint: { url: `${location.origin}${previewEndpoint}` } }),
+    };
     const blok = new window.Blok({
       holder,
       tools: { file: { class: FileTool, config } },
@@ -191,7 +195,7 @@ const openRemotePdf = async (page: Page, url: string, options: RemoteOptions = {
     });
     window.blokInstance = blok;
     await blok.isReady;
-  }, { holder: HOLDER_ID, url, proxy: options.proxy });
+  }, { holder: HOLDER_ID, url, proxy: options.proxy, previewEndpoint: options.previewEndpoint });
   await page.getByRole('button', { name: /remote\.pdf/i }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
@@ -262,5 +266,55 @@ test.describe('PDF preview of an http(s) file', () => {
     expect(await page.evaluate(() => document.querySelectorAll('iframe, object, embed').length)).toBe(0);
     expect(await page.evaluate(() => (window as unknown as { __pdfHtmlRan?: boolean }).__pdfHtmlRan)).toBeUndefined();
     await expect(dialog.locator('[data-role="file-preview-external"]')).toHaveCount(0);
+  });
+});
+
+test.describe('PDF preview through the Blok server', () => {
+  const MIB = 1_048_576;
+  // 50 pages of about 200 KB each: a file of ten 1 MiB chunks.
+  const LARGE: Buffer = manyPagesPdf(50, 200_000);
+
+  test('reads a large PDF in ranges of at most 1 MiB, only where it draws', async ({ page }) => {
+    const ranges: string[] = [];
+    await page.route('**/file-bytes?*', (route) => {
+      const range = route.request().headers().range ?? '';
+      ranges.push(range);
+      const [start, end] = range.replace('bytes=', '').split('-').map(Number);
+      const last = Math.min(end, LARGE.length - 1);
+      if (last - start + 1 > MIB) {
+        return route.fulfill({ status: 413, body: 'range too large\n' });
+      }
+
+      return route.fulfill({
+        status: 206,
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Range': `bytes ${start}-${last}/${LARGE.length}`,
+          'Access-Control-Expose-Headers': 'Accept-Ranges, Content-Length, Content-Range',
+        },
+        body: LARGE.subarray(start, last + 1),
+      });
+    });
+    const dialog = await openRemotePdf(page, NO_CORS, { previewEndpoint: '/file-bytes' });
+    const first = dialog.getByRole('region', { name: 'Page 1', exact: true });
+    const last = dialog.getByRole('region', { name: 'Page 50', exact: true });
+
+    await expect(dialog.getByRole('region', { name: /^Page \d+$/ })).toHaveCount(50);
+    await expect.poll(() => inkedPixels(first)).toBeGreaterThan(100);
+    const atOpen = ranges.length;
+    await last.scrollIntoViewIfNeeded();
+    await expect.poll(() => inkedPixels(last)).toBeGreaterThan(100);
+
+    test.info().annotations.push({ type: 'file-bytes requests', description: `${atOpen} to open, ${ranges.length} after page 50 (${LARGE.length} bytes)` });
+    expect(ranges[0]).toBe(`bytes=0-${MIB - 1}`);
+    for (const range of ranges) {
+      const [start, end] = range.replace('bytes=', '').split('-').map(Number);
+      expect(end - start + 1).toBeLessThanOrEqual(MIB);
+    }
+    // No read-ahead: opening reads the head and the cross-reference table at
+    // the tail; page 50 adds only the chunk its content sits in.
+    expect(atOpen).toBe(2);
+    expect(ranges.length).toBeLessThan(Math.ceil(LARGE.length / MIB));
+    expect(new Set(ranges).size).toBe(ranges.length);
   });
 });

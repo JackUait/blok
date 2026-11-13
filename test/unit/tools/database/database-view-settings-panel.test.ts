@@ -2137,6 +2137,24 @@ describe('view settings panel', () => {
     });
   });
 
+  it('keeps conditional color rules in order while the view is locked', () => {
+    const h = harness({
+      colorRules: [
+        { id: 'c1', propertyId: 'num', operator: 'is_not_empty', value: null, color: 'gray' },
+        { id: 'c2', propertyId: 'stage', operator: 'is_not_empty', value: null, color: 'green' },
+      ],
+    });
+
+    h.state.locked = true;
+    h.open();
+    click('database-settings-color');
+    q('database-color-rules-handle-c1')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', altKey: true, bubbles: true }));
+
+    expect(h.state.view.colorRules?.map((rule) => rule.id)).toEqual(['c1', 'c2']);
+    expect(q('database-color-rules-handle-c1')).toBeNull();
+    expect(document.querySelector('[data-blok-database-color-rules]')).not.toBeNull();
+  });
+
   it('blocks shared edits while locked, but not personal filters', () => {
     const h = harness();
 

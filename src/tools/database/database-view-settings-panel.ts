@@ -3005,7 +3005,9 @@ export class ViewSettingsPages {
         return [
           ...(cards.length === 0 ? [panelText(this.t('colorBlurb'))] : []),
           // notion-motion.md Round 20 §4: the list order is each cell's priority; a ⠿ handle reorders it.
-          ...(cards.length === 0 ? [] : [marked(panelReorderList({
+          // A locked view cannot reorder: the cards stand in a plain list.
+          ...(cards.length > 0 && disabled ? [plainColorRules(cards.map((card) => card.element))] : []),
+          ...(cards.length === 0 || disabled ? [] : [marked(panelReorderList({
             testId: 'database-color-rules',
             handleLabel: this.t('settingsDragToReorder'),
             items: cards,
@@ -3060,6 +3062,15 @@ const rulesOf = (group: FilterGroup): FilterRule[] =>
 /** Marks the rule list for database.css: its handles sit on the cards' left edge. */
 const colorRuleList = (list: HTMLElement): HTMLElement => {
   list.setAttribute('data-blok-database-color-rules', '');
+/** The rule cards without handles, for a locked view. */
+const plainColorRules = (cards: HTMLElement[]): HTMLElement => {
+  const list = marked(document.createElement('div'), 'data-blok-database-color-rules');
+
+  list.append(...cards);
+
+  return list;
+};
+
 /** Sets a bare attribute database.css styles the element by. */
 const marked = <T extends HTMLElement>(element: T, attribute: string): T => {
   element.setAttribute(attribute, '');

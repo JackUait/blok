@@ -1017,25 +1017,30 @@
   white-space: nowrap;
 }
 
+/* The real card is filled by its cover's colours. Here that is the drawn cover's green, darkened. */
 [data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='card'] {
+  position: relative;
   display: flex;
   height: 86px;
   overflow: hidden;
-  border: 1px solid var(--blok-popover-border);
   border-radius: var(--blok-radius-block);
-  background: var(--blok-bg-primary);
+  background: color-mix(in srgb, var(--blok-color-teal-text) 34%, var(--blok-overlay-dark));
+  color: var(--blok-text-on-dark);
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='content'] {
+  position: relative;
   display: flex;
-  flex: 1;
   flex-direction: column;
+  box-sizing: border-box;
+  width: 60%;
   min-width: 0;
   padding: var(--blok-space-2) var(--blok-space-2-5);
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='title'] {
   font-size: var(--blok-font-size-ui-compact);
+  font-weight: 600;
   line-height: 16px;
   white-space: nowrap;
   overflow: hidden;
@@ -1048,7 +1053,7 @@
   overflow: hidden;
   font-size: var(--blok-font-size-ui-small);
   line-height: 14px;
-  color: var(--blok-text-secondary);
+  color: color-mix(in srgb, var(--blok-text-on-dark) 80%, transparent);
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -1068,7 +1073,7 @@
   padding-block: var(--blok-space-0-5);
   padding-inline: var(--blok-space-0-5) var(--blok-space-1-5);
   border-radius: var(--blok-radius-pill);
-  background: var(--blok-item-hover-bg);
+  background: color-mix(in srgb, var(--blok-text-on-dark) 14%, transparent);
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='favicon'] {
@@ -1090,69 +1095,23 @@
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='path'] {
-  color: var(--blok-text-secondary);
+  color: color-mix(in srgb, var(--blok-text-on-dark) 80%, transparent);
 }
 
-/* The cover sits in a small browser window that leans away from the text, as on the real card. */
+/* The cover sits at the card's end and fades into it, as on the real card. */
 [data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='cover'] {
-  position: relative;
-  flex: 0 0 70px;
-}
-
-[data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='window'] {
   position: absolute;
-  inset-block-start: 10px;
-  inset-inline-start: 10px;
-  width: 96px;
-  overflow: hidden;
-  border-radius: var(--blok-radius-control);
-  background: var(--blok-bg-primary);
-  box-shadow: 0 0 0 var(--blok-border-width-hairline) var(--blok-popover-border), var(--blok-image-shadow-resting);
-  transform: rotate(calc(-4deg * var(--_blok-inline-sign, 1))) translateY(4px);
-  transform-origin: calc(50% - 30% * var(--_blok-inline-sign, 1)) 100%;
-}
-
-[data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='bar'] {
-  display: flex;
-  align-items: center;
-  height: 12px;
-  padding-inline: calc(var(--_bm-dot) * 5 / 3);
-  background: color-mix(in srgb, var(--blok-text-primary) 4%, var(--blok-bg-primary));
-  --_bm-dot: 3px;
-  --_bm-dot-color: color-mix(in srgb, var(--blok-text-secondary) 35%, transparent);
-}
-
-/* three dots: one circle and two box-shadow copies along the inline axis */
-[data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='bar']::before {
-  content: '';
-  flex: none;
-  width: var(--_bm-dot);
-  height: var(--_bm-dot);
-  margin-inline-end: calc(var(--_bm-dot) * 14 / 3);
-  border-radius: var(--blok-radius-pill);
-  background: var(--_bm-dot-color);
-  box-shadow:
-    calc(var(--_bm-dot) * 5 / 3 * var(--_blok-inline-sign, 1)) 0 0 var(--_bm-dot-color),
-    calc(var(--_bm-dot) * 10 / 3 * var(--_blok-inline-sign, 1)) 0 0 var(--_bm-dot-color);
-}
-
-[data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='location'] {
-  flex: 1;
-  min-width: 0;
-  padding-inline: var(--_bm-dot);
-  border-radius: var(--blok-radius-mark);
-  background: var(--blok-item-hover-bg);
-  color: var(--blok-text-secondary);
-  font-size: calc(var(--_bm-dot) * 5 / 3);
-  line-height: calc(var(--_bm-dot) * 7 / 3);
-  white-space: nowrap;
-  overflow: hidden;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: 46%;
+  -webkit-mask-image: linear-gradient(calc(90deg * var(--_blok-inline-sign, 1)), transparent 0, var(--blok-overlay-dark) 45%);
+  mask-image: linear-gradient(calc(90deg * var(--_blok-inline-sign, 1)), transparent 0, var(--blok-overlay-dark) 45%);
 }
 
 /* The link's cover image: a sun over a green hill. */
 [data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='shot'] {
   position: relative;
-  height: 72px;
+  height: 100%;
   overflow: hidden;
   background: linear-gradient(
     170deg,

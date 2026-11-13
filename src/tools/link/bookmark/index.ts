@@ -358,7 +358,7 @@ export class Bookmark implements BlockTool {
     linkRow.appendChild(addressPill);
     content.appendChild(linkRow);
 
-    card.appendChild(content);
+    const layers = this.colourLayers(this.data.image || this.data.favicon);
 
     if (this.data.image) {
       const imageContainer = document.createElement('div');
@@ -366,71 +366,60 @@ export class Bookmark implements BlockTool {
       imageContainer.classList.add('blok-bookmark__image');
       imageContainer.setAttribute('data-role', 'bookmark-image');
 
-      const frame = document.createElement('div');
+      const image = this.decorativeImage(this.data.image);
 
-      frame.classList.add('blok-bookmark__window');
-      frame.setAttribute('data-role', 'bookmark-window');
-
-      const bar = document.createElement('div');
-
-      bar.classList.add('blok-bookmark__window-bar');
-      bar.setAttribute('data-role', 'bookmark-window-bar');
-      bar.setAttribute('aria-hidden', 'true');
-
-      const address = this.splitAddress();
-      const barAddress = document.createElement('span');
-
-      barAddress.textContent = address === null ? this.data.url : address.host + address.path;
-      bar.appendChild(barAddress);
-
-      const image = document.createElement('img');
-
-      image.addEventListener('error', () => image.replaceWith(this.drawnCover(address?.host ?? this.data.url)), { once: true });
-      image.setAttribute('loading', 'lazy');
-      image.src = this.data.image;
-      image.alt = '';
-      frame.append(bar, image);
-      imageContainer.appendChild(frame);
-      card.appendChild(imageContainer);
+      image.addEventListener('error', () => {
+        imageContainer.remove();
+        layers.forEach((layer) => layer.remove());
+        card.classList.add('blok-bookmark--bare');
+        card.prepend(...this.colourLayers(this.data.favicon));
+      }, { once: true });
+      imageContainer.appendChild(image);
+      card.append(...layers, imageContainer, content);
+    } else {
+      card.classList.add('blok-bookmark--bare');
+      card.append(...layers, content);
     }
 
     return card;
   }
 
   /**
-   * Stands in for a cover that won't load: a gray sketch of the page on a
-   * sheet whose corner is turned up, showing the site's initial beneath.
+   * The glow under the card and the blurred backdrop inside it, both drawn
+   * from one picture: the cover, or the favicon when there is no cover.
+   * CSS filters do the colouring, so a cross-origin picture needs no CORS.
    */
-  private drawnCover(host: string): HTMLElement {
-    const name = host.replace(/^www\./, '');
-    const scene = document.createElement('div');
+  private colourLayers(src: string | undefined): HTMLElement[] {
+    if (!src) {
+      return [];
+    }
 
-    scene.classList.add('blok-bookmark__scene');
-    scene.setAttribute('data-role', 'bookmark-scene');
-    scene.setAttribute('aria-hidden', 'true');
+    const layers = ['glow', 'wash'].map((name) => {
+      const layer = document.createElement('span');
 
-    const under = document.createElement('span');
+      layer.classList.add(`blok-bookmark__${name}`);
+      layer.setAttribute('data-role', `bookmark-${name}`);
+      layer.setAttribute('aria-hidden', 'true');
 
-    under.classList.add('blok-bookmark__peel-under');
-    under.textContent = name.charAt(0).toUpperCase();
+      const image = this.decorativeImage(src);
 
-    const sheet = document.createElement('span');
+      image.addEventListener('error', () => layers.forEach((each) => each.remove()), { once: true });
+      layer.appendChild(image);
 
-    sheet.classList.add('blok-bookmark__peel-sheet');
-    sheet.append(...['nav', 'picture', 'heading', 'subheading', 'line', 'line', 'line', 'line', 'line'].map((part) => {
-      const piece = document.createElement('span');
+      return layer;
+    });
 
-      piece.setAttribute('data-part', part);
+    return layers;
+  }
 
-      return piece;
-    }));
+  private decorativeImage(src: string): HTMLImageElement {
+    const image = document.createElement('img');
 
-    const flap = document.createElement('span');
+    image.setAttribute('loading', 'lazy');
+    image.src = src;
+    image.alt = '';
 
-    flap.classList.add('blok-bookmark__peel-flap');
-    scene.append(under, sheet, flap);
-
-    return scene;
+    return image;
   }
 
   /** Host in ink, path in gray; an unparseable url is shown as saved. */

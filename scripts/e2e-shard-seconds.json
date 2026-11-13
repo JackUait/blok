@@ -198,7 +198,7 @@
     "tools/audio.spec.ts": 32,
     "tools/block-color-turn-into.spec.ts": 5.5,
     "tools/bookmark-link.spec.ts": 5.3,
-    "tools/bookmark-window.spec.ts": 4.2,
+    "tools/bookmark-card.spec.ts": 4.2,
     "tools/callout-empty-backspace.spec.ts": 6.2,
     "tools/callout-enter-after.spec.ts": 6.2,
     "tools/callout-paste-regression.spec.ts": 7.8,

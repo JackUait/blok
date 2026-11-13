@@ -351,43 +351,85 @@ describe('Bookmark tool', () => {
       expect(card.querySelector('[data-role="bookmark-host"]')).toBeNull();
     });
 
-    it('frames the cover in a small browser window whose bar shows the address', () => {
+    it('shows the cover three times: sharp at the end, blurred as the backdrop, and as the glow under the card', () => {
+      const card = renderCard(fullMeta);
+      const srcOf = (role: string): string | null | undefined =>
+        card.querySelector(`[data-role="${role}"] img`)?.getAttribute('src');
+
+      expect(card.classList.contains('blok-bookmark--bare')).toBe(false);
+      expect(srcOf('bookmark-image')).toBe('https://example.com/og.png');
+      expect(srcOf('bookmark-wash')).toBe('https://example.com/og.png');
+      expect(srcOf('bookmark-glow')).toBe('https://example.com/og.png');
+    });
+
+    it('hides the backdrop and the glow from assistive tech and loads them lazily', () => {
       const card = renderCard(fullMeta);
 
-      const frame = card.querySelector('[data-role="bookmark-image"] [data-role="bookmark-window"]');
-      const bar = frame?.querySelector('[data-role="bookmark-window-bar"]');
+      for (const role of ['bookmark-wash', 'bookmark-glow']) {
+        const layer = card.querySelector(`[data-role="${role}"]`);
 
-      expect(bar?.getAttribute('aria-hidden')).toBe('true');
-      expect(bar?.textContent).toBe('example.com/article');
-      expect(bar?.querySelector('img')).toBeNull();
-      expect(frame?.querySelector('img')?.getAttribute('src')).toBe('https://example.com/og.png');
+        expect(layer?.getAttribute('aria-hidden'), role).toBe('true');
+        expect(layer?.querySelector('img')?.getAttribute('alt'), role).toBe('');
+        expect(layer?.querySelector('img')?.getAttribute('loading'), role).toBe('lazy');
+      }
     });
 
-    it('swaps a cover that fails to load for a drawn scene marked with the site initial', () => {
-      const card = renderCard({ ...fullMeta, url: 'https://www.kommersant.ru/doc/2614770' });
-      const img = card.querySelector('[data-role="bookmark-window"] img');
+    it('colours a link with no cover from its favicon', () => {
+      const card = renderCard({ url: 'https://example.com/article', title: 'Hello Title', favicon: 'https://example.com/favicon.ico' });
 
-      img?.dispatchEvent(new Event('error'));
-
-      const frame = card.querySelector('[data-role="bookmark-window"]');
-      const scene = frame?.querySelector('[data-role="bookmark-scene"]');
-
-      expect(frame?.querySelector('img')).toBeNull();
-      expect(scene?.getAttribute('aria-hidden')).toBe('true');
-      expect(scene?.textContent).toBe('K');
-      expect(frame?.querySelector('[data-role="bookmark-window-bar"]')?.textContent).toBe('www.kommersant.ru/doc/2614770');
+      expect(card.classList.contains('blok-bookmark--bare')).toBe(true);
+      expect(card.querySelector('[data-role="bookmark-image"]')).toBeNull();
+      expect(card.querySelector('[data-role="bookmark-wash"] img')?.getAttribute('src')).toBe('https://example.com/favicon.ico');
+      expect(card.querySelector('[data-role="bookmark-glow"] img')?.getAttribute('src')).toBe('https://example.com/favicon.ico');
     });
 
-    it('draws the failed cover as a sheet whose corner peels back to the site initial', () => {
-      const card = renderCard({ ...fullMeta, url: 'https://www.kommersant.ru/doc/2614770' });
+    it('leaves a link with no cover and no favicon without colour layers', () => {
+      const card = renderCard({ url: 'https://example.com/article', title: 'Hello Title' });
 
-      card.querySelector('[data-role="bookmark-window"] img')?.dispatchEvent(new Event('error'));
+      expect(card.classList.contains('blok-bookmark--bare')).toBe(true);
+      expect(card.querySelector('[data-role="bookmark-wash"]')).toBeNull();
+      expect(card.querySelector('[data-role="bookmark-glow"]')).toBeNull();
+    });
 
-      const scene = card.querySelector('[data-role="bookmark-scene"]');
+    it('turns into the no-cover card, coloured by the favicon, when the cover fails to load', () => {
+      const card = renderCard(fullMeta);
 
-      expect(scene?.querySelector('.blok-bookmark__peel-under')?.textContent).toBe('K');
-      expect(scene?.querySelector('.blok-bookmark__peel-sheet')).not.toBeNull();
-      expect(scene?.querySelector('.blok-bookmark__peel-flap')).not.toBeNull();
+      card.querySelector('[data-role="bookmark-image"] img')?.dispatchEvent(new Event('error'));
+
+      expect(card.classList.contains('blok-bookmark--bare')).toBe(true);
+      expect(card.querySelector('[data-role="bookmark-image"]')).toBeNull();
+      expect(card.querySelector('[data-role="bookmark-wash"] img')?.getAttribute('src')).toBe('https://example.com/favicon.ico');
+      expect(card.querySelector('[data-role="bookmark-glow"] img')?.getAttribute('src')).toBe('https://example.com/favicon.ico');
+    });
+
+    it('drops the colour layers when the cover fails and there is no favicon', () => {
+      const card = renderCard({ ...fullMeta, favicon: undefined });
+
+      card.querySelector('[data-role="bookmark-image"] img')?.dispatchEvent(new Event('error'));
+
+      expect(card.classList.contains('blok-bookmark--bare')).toBe(true);
+      expect(card.querySelector('[data-role="bookmark-wash"]')).toBeNull();
+      expect(card.querySelector('[data-role="bookmark-glow"]')).toBeNull();
+    });
+
+    it('drops the colour layers when the favicon they are drawn from fails to load', () => {
+      const card = renderCard({ url: 'https://example.com/article', favicon: 'https://example.com/favicon.ico' });
+
+      const washImage = card.querySelector('[data-role="bookmark-wash"] img');
+
+      expect(washImage).not.toBeNull();
+      washImage?.dispatchEvent(new Event('error'));
+
+      expect(card.querySelector('[data-role="bookmark-wash"]')).toBeNull();
+      expect(card.querySelector('[data-role="bookmark-glow"]')).toBeNull();
+    });
+
+    it('keeps the text column as the last child, so it paints over the colour layers', () => {
+      const card = renderCard(fullMeta);
+
+      expect(Array.from(card.children, (child) => child.getAttribute('data-role'))).toEqual([
+        'bookmark-glow', 'bookmark-wash', 'bookmark-image', 'bookmark-content',
+      ]);
     });
 
     it('renders the cover image in its own container outside the content column', () => {

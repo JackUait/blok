@@ -14,13 +14,18 @@ const ruleFor = (part: string): string => {
 };
 
 describe('bookmark toolbox preview', () => {
-  it('frames the cover in a leaning browser window, like the real card', () => {
-    const cover = renderBookmarkPreview().querySelector('[data-part="cover"]');
-    const frame = cover?.querySelector('[data-part="window"]');
+  it('draws the cover at the card\'s end with no browser window around it, like the real card', () => {
+    const cover = renderBookmarkPreview().querySelector('[data-part="card"] > [data-part="cover"]');
 
-    expect(frame?.querySelector('[data-part="bar"]')?.textContent).toBe('craft.blog/slow');
-    expect(frame?.querySelector('[data-part="shot"]')).not.toBeNull();
-    expect(ruleFor('window')).toContain('rotate(');
+    expect(cover?.querySelector('[data-part="shot"]')).not.toBeNull();
+    expect(cover?.querySelector('[data-part="window"]')).toBeNull();
+    expect(cover?.querySelector('[data-part="bar"]')).toBeNull();
+  });
+
+  it('fades the cover into a dark card and sets the text in white, like the real card', () => {
+    expect(ruleFor('cover')).toContain('mask-image: linear-gradient(');
+    expect(ruleFor('card')).toContain('color: var(--blok-text-on-dark);');
+    expect(ruleFor('card')).not.toContain('border:');
   });
 
   it('shows the link as host and path', () => {

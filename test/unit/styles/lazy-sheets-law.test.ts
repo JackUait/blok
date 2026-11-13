@@ -87,7 +87,7 @@ describe('media and Ask AI CSS load lazily', () => {
     ['video.css', '.blok-video-controls'],
     ['audio.css', '.blok-audio-cover'],
     ['embed.css', '.blok-embed-window'],
-    ['bookmark.css', '.blok-bookmark__window'],
+    ['bookmark.css', '.blok-bookmark__wash'],
     ['file.css', '.blok-file-card'],
     ['assistant.css', '[data-blok-assistant-reply]'],
     ['ask-ai-menu.css', '[data-blok-ask-ai-open]'],

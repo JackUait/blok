@@ -56,7 +56,8 @@ const EXEMPT_SINKS: Record<string, string> = {
     'HTMLImageElement src — <img> is not a script-execution sink (javascript: URLs do not run in img)',
   'bookmark/index.ts » this.data.favicon':
     'HTMLImageElement src — <img> is not a script-execution sink (javascript: URLs do not run in img)',
-  'bookmark/index.ts » this.data.image':
+  // The cover or the favicon, drawn as the card's cover, wash and glow.
+  'bookmark/index.ts » src':
     'HTMLImageElement src — <img> is not a script-execution sink (javascript: URLs do not run in img)',
 };
 

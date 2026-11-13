@@ -80,8 +80,8 @@ describe('per-block font-size tokens', () => {
       ['audio caption', 'var(--blok-audio-caption-font-size, var(--blok-font-size-ui-label))'],
       ['file caption', 'var(--blok-file-caption-font-size, var(--blok-font-size-ui-label))'],
       ['embed caption', 'var(--blok-embed-caption-font-size, 0.875em)'],
-      ['bookmark title', 'var(--blok-bookmark-title-font-size, 14px)'],
-      ['bookmark description', 'var(--blok-bookmark-description-font-size, 12px)'],
+      ['bookmark title', 'var(--blok-bookmark-title-font-size, 18px)'],
+      ['bookmark description', 'var(--blok-bookmark-description-font-size, 13px)'],
       ['bookmark link row', 'var(--blok-bookmark-link-font-size, 12px)'],
     ])('%s read their token with the historical size as fallback', (_scenario, declaration) => {
       expect(css).toContain(`font-size: ${declaration}`);
@@ -110,7 +110,7 @@ describe('per-block font-size tokens', () => {
        * 36px), so its scale is a plain em.
        */
       expect(css).toContain(
-        '.blok-bookmark__content {\n  --bookmark-scale: var(--blok-bookmark-title-font-size, 14px);'
+        '.blok-bookmark {\n  --bookmark-scale: var(--blok-bookmark-title-font-size, 18px);'
       );
       expect(css).toContain('.blok-bookmark__placeholder {\n  --bookmark-scale: 1em;');
     });

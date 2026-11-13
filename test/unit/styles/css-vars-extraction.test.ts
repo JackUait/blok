@@ -229,6 +229,8 @@ describe('R2 — repeated length literals in themeable properties must be tokeni
     '[data-blok-tool="video"] .blok-video-controls__speed-needle::before|margin-left',
     // Centres the 20px title "Aa" over the 16px column icon slot.
     '[data-blok-database-table-column-icon][data-type="title"] svg|margin',
+    // Notion's 61px "And" starts 1px left of the 60px "Where" column, so both rows' buttons line up.
+    '[data-blok-database-filter-conjunction]|margin-inline-start',
   ]);
 
   it('no non-zero length repeats across themeable-property declarations', () => {

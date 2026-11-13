@@ -12803,6 +12803,17 @@ input[data-blok-database-picker-search]:focus {
 }
 
 /*
+ * Round 19 §1 (r19-adv-andor.raw): "And ⌄" is 61 wide at x 546, so it starts 1px left of the column and the
+ * property button still starts at +76. In 60px "And" (26.4 at 14px 500) lost its "nd". A longer word grows the button.
+ */
+[data-blok-database-filter-rule] > [data-blok-database-panel-row][data-blok-database-filter-conjunction],
+[data-blok-database-filter-group-line] > [data-blok-database-panel-row][data-blok-database-filter-conjunction] {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 61px;
+}
+
+/*
  * notion-motion.md Round 19 §1 (r19-adv-group.raw): the group's And/Or and ⋯ stay in the outer columns, and the
  * box fills the property column on. Inside, rules and "+ Add filter rule" are 8 apart, the box 80 tall for one rule.
  */
@@ -12845,6 +12856,7 @@ input[data-blok-database-picker-search]:focus {
 /* notion-motion.md Round 19 §1 (r19-adv-andor.raw): "And ⌄" is a white bordered button like the rule's, in the 60 column. */
 [data-blok-database-filter-conjunction] {
   justify-content: space-between;
+  margin-inline-start: -1px;
   gap: var(--blok-space-1);
   height: 32px;
   padding: 0 var(--blok-space-2);

@@ -188,6 +188,35 @@ test.describe('database view settings', () => {
     await expect(byTestId(page, 'database-advanced-pill')).toHaveText('2 rules');
   });
 
+  // notion-motion.md Round 19 §1 (r19-adv-andor.raw): "And ⌄" is 61 wide and reads in full.
+  test('shows the whole "And" on the root conjunction button', async ({ page }) => {
+    const rule = { propertyId: 'p-title', operator: 'contains', value: '' };
+
+    await mount(page, blocks({ filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'f1', ...rule }, { id: 'f2', ...rule }] } }));
+    await byTestId(page, 'database-advanced-pill').click();
+
+    const button = byTestId(page, 'database-filter-conjunction-root');
+
+    await expect(button).toHaveText('And');
+
+    // The popover scales in on open; measure after it settles.
+    const fit = await button.evaluate(async (element) => {
+      await Promise.all(document.getAnimations().map((animation) => animation.finished));
+      const label = element.querySelector('[data-blok-database-panel-label]');
+
+      if (label === null) return null;
+      const range = document.createRange();
+
+      range.selectNodeContents(label);
+
+      return { text: range.getBoundingClientRect().width, box: label.getBoundingClientRect().width, button: element.getBoundingClientRect().width };
+    });
+
+    expect(fit).not.toBeNull();
+    expect(fit?.text).toBeLessThanOrEqual(fit?.box ?? 0);
+    expect(fit?.button).toBeGreaterThanOrEqual(61);
+  });
+
   test('groups by a select and hides a group', async ({ page }) => {
     await mount(page, blocks({ groupBy: 'p-stage' }));
     await byTestId(page, 'database-toolbar-settings').click();

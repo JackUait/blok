@@ -108,6 +108,9 @@ const CROSS_BROWSER_TESTS = [
   // Image compression rides on each browser's own canvas encoders
   '**/tools/image-compression.spec.ts',
 
+  // pdf.js draws on each engine's canvas, text layout and worker
+  '**/tools/file-pdf-preview.spec.ts',
+
   // Where an engine paints the caret inside an empty block is engine-specific
   // (each one special-cases a host with no layout box), so the placeholder must
   // be proven layout-inert on all three

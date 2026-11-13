@@ -1,0 +1,65 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R 5 0 R 7 0 R] /Count 3 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 10 0 R >> >> /Contents 4 0 R /Annots [8 0 R 9 0 R] >>
+endobj
+4 0 obj
+<<  /Length 134 >>
+stream
+BT /F1 28 Tf 72 700 Td (Blok PDF page 1) Tj ET
+BT /F1 16 Tf 72 640 Td (Blok website) Tj ET
+BT /F1 16 Tf 72 600 Td (Go to page 3) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 10 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<<  /Length 46 >>
+stream
+BT /F1 28 Tf 72 700 Td (Blok PDF page 2) Tj ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 10 0 R >> >> /Contents 11 0 R >>
+endobj
+8 0 obj
+<< /Type /Annot /Subtype /Link /Rect [70 634 180 654] /Border [0 0 0] /A << /S /URI /URI (https://example.com/blok) >> >>
+endobj
+9 0 obj
+<< /Type /Annot /Subtype /Link /Rect [70 594 180 614] /Border [0 0 0] /Dest [7 0 R /XYZ 0 792 null] >>
+endobj
+10 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+11 0 obj
+<<  /Length 46 >>
+stream
+BT /F1 28 Tf 72 700 Td (Blok PDF page 3) Tj ET
+endstream
+endobj
+xref
+0 12
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000133 00000 n 
+0000000282 00000 n 
+0000000468 00000 n 
+0000000595 00000 n 
+0000000692 00000 n 
+0000000820 00000 n 
+0000000957 00000 n 
+0000001075 00000 n 
+0000001173 00000 n 
+trailer
+<< /Size 12 /Root 1 0 R /ID [<426c6f6b2050444620666978747572> <426c6f6b2050444620666978747572>] >>
+startxref
+1271
+%%EOF

@@ -139,6 +139,8 @@ class FilterChipPages {
   private readonly filterId: string;
   /** The token field's search: kept across the refresh every edit causes. */
   private query = '';
+  /** The panel last built, so a control can reach the redrawn page after its own edit. */
+  private panel: DatabasePanel | undefined;
   /** Set when another editor (view settings) owns the rule: edits go there. */
   private readonly writer: ((patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>) => void) | undefined;
 
@@ -160,6 +162,7 @@ class FilterChipPages {
   root(): PanelPage {
     return {
       build: (panel) => {
+        this.panel = panel;
         const filter = this.current();
         const property = this.ctx.schema().find((p) => p.id === filter?.propertyId);
 
@@ -173,7 +176,8 @@ class FilterChipPages {
   /** The value controls alone: an advanced rule's value flyout. A Checkbox pick calls `done`, as Notion's menu closes. */
   values(done: () => void): PanelPage {
     return {
-      build: () => {
+      build: (panel) => {
+        this.panel = panel;
         const filter = this.current();
         const property = this.ctx.schema().find((p) => p.id === filter?.propertyId);
 
@@ -592,14 +596,18 @@ class FilterChipPages {
         checked: value === relative,
         onClick: () => this.update({ value: relative }),
       })),
-      // notion-motion.md Round 13: Notion's preset list ends with "Custom date". Its click is unmeasured; here it focuses the date field.
+      // notion-motion.md Round 13: the presets end with "Custom date". Round 20 §3 (r20-ct-custom.raw): it clears the value and focuses the field.
       panelRow({
         label: this.t('filterDateCustom'),
         testId: 'database-filter-date-custom',
         checked: !isPreset,
-        onClick: () => exact.focus(),
+        onClick: () => {
+          if (isPreset) this.update({ value: null });
+          this.focusDateField();
+        },
       }),
       exact,
+      ...(isPreset ? [this.updatesNote()] : []),
     ];
   }
 
@@ -685,11 +693,21 @@ class FilterChipPages {
       (unit) => this.update(spanFilter({ ...span, unit: unit as RelativeDateUnit }))
     ));
 
+    return [row, this.windowCalendar(span), this.updatesNote()];
+  }
+
+  /** An edit redraws the page, so the field to focus is the new one. */
+  private focusDateField(): void {
+    this.panel?.root.querySelector<HTMLElement>('[data-blok-testid="database-filter-value"]')?.focus();
+  }
+
+  /** "Filter will update with the current date": under a relative window or a preset day (Round 20 §3, r20-ct-wk.raw). */
+  private updatesNote(): HTMLElement {
     const note = panelText(this.t('filterUpdatesWithDate'));
 
     note.setAttribute('data-blok-database-chip-note', '');
 
-    return [row, this.windowCalendar(span), note];
+    return note;
   }
 
   /** This month's grid with the filter's window marked. It only shows the window: the selects edit it. */

@@ -1451,6 +1451,27 @@ describe('DatabaseViewControls', () => {
       expect(q('database-filter-date-custom')?.getAttribute('aria-checked')).toBe('false');
     });
 
+    // notion-motion.md Round 20 §3 (r20-ct-wk.raw): a preset adds "Filter will update with the current date".
+    it('notes that a preset follows the current date, and a typed day does not', () => {
+      open({ operator: 'equals', value: 'one_week_ago' });
+      expect(text(document.querySelector('[data-blok-database-chip-note]'))).toBe('tools.database.filterUpdatesWithDate');
+
+      document.body.replaceChildren();
+      open({ operator: 'equals', value: '2025-03-05' });
+      expect(document.querySelector('[data-blok-database-chip-note]')).toBeNull();
+    });
+
+    // notion-motion.md Round 20 §3 (r20-ct-custom.raw): "Custom date" clears the value and focuses the field.
+    it('clears a preset from Custom date', () => {
+      const { controls, saved } = open({ operator: 'equals', value: 'one_week_ago' });
+
+      click('database-filter-date-custom');
+
+      expect(controls.effective(saved.view).filters[0]).toMatchObject({ operator: 'equals', value: null });
+      expect(q('database-filter-value')).toHaveFocus();
+      expect(document.querySelector('[data-blok-database-chip-note]')).toBeNull();
+    });
+
     it('opens an old "past month" filter as Past 1 month and writes nothing until a change', () => {
       const { controls, saved } = open({ operator: 'past_month', value: null });
 

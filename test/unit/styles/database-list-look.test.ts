@@ -448,7 +448,7 @@ describe('conditional color page (notion-motion.md Round 20 §4, r20-cc-intro.ra
   });
 
   it('draws the value as a 30-tall field with a 1px ring', () => {
-    const field = ruleBody(database, '[data-blok-database-color-rule-value]');
+    const field = ruleBody(database, '[data-blok-database-color-rule-field]');
 
     expect(field).toContain('height: 30px');
     expect(field).toContain('background-color: var(--blok-database-panel-input-bg)');

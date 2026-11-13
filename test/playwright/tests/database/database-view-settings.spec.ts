@@ -270,6 +270,42 @@ test.describe('database view settings', () => {
     await expect(page.locator('[data-row-id="r3"][data-blok-database-color]')).toHaveCount(0);
   });
 
+  // notion-motion.md Round 20 §4 (r20-cc-list-style.raw, r20-cc-is.raw, r20-cc-selval.raw).
+  test('lays out conditional color cards and the value field at Notion\'s sizes', async ({ page }) => {
+    await mount(page, blocks({ colorRules: [
+      { id: 'c1', propertyId: 'p-stage', operator: 'is_not_empty', value: null, color: 'match' },
+      { id: 'c2', propertyId: 'p-stage', operator: 'equals', value: null, color: 'match' },
+    ] }));
+    await byTestId(page, 'database-toolbar-settings').click();
+    await byTestId(page, 'database-settings-color').click();
+    await byTestId(page, 'database-color-value-c2').click();
+    await expect(byTestId(page, 'database-filter-value-picker')).toBeVisible();
+
+    const box = await page.evaluate(async () => {
+      await Promise.all(document.getAnimations().map((animation) => animation.finished));
+      const rect = (selector: string): DOMRect | undefined => document.querySelector(selector)?.getBoundingClientRect();
+      const one = rect('[data-blok-testid="database-color-rule-c1"]');
+      const two = rect('[data-blok-testid="database-color-rule-c2"]');
+      const wrapper = rect('[data-blok-testid="database-color-value-c2"]');
+      const field = rect('[data-blok-testid="database-color-value-c2"] [data-blok-database-color-rule-field]');
+      const flyout = rect('[data-blok-testid="database-filter-value-picker"]');
+
+      if (!one || !two || !wrapper || !field || !flyout) return null;
+
+      return {
+        card: [one.width, one.height],
+        wrapper: [wrapper.x - two.x, wrapper.y - two.y, wrapper.width, wrapper.height],
+        field: [field.x - two.x, field.y - two.y, field.width, field.height],
+        flyout: [flyout.x - wrapper.x, flyout.y - wrapper.bottom, flyout.width],
+      };
+    });
+
+    expect(box?.card).toEqual([258, 100]);
+    expect(box?.wrapper).toEqual([9, 36, 240, 34]);
+    expect(box?.field).toEqual([13, 38, 232, 30]);
+    expect(box?.flyout).toEqual([0, 4, 240]);
+  });
+
   test('searches rows by title and property text', async ({ page }) => {
     await mount(page, blocks());
     await byTestId(page, 'database-toolbar-search').click();

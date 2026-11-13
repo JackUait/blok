@@ -2881,18 +2881,22 @@ export class ViewSettingsPages {
       only.disabled = disabled;
       only.setAttribute('data-blok-testid', `database-color-value-${rule.id}`);
       only.setAttribute('data-blok-database-color-rule-value', '');
+      only.setAttribute('data-blok-database-color-rule-field', '');
 
       return [only];
     }
-    const field = document.createElement('button');
+    // r20-cc-is.raw: a 240×34 button holds the 232×30 field, and the flyout opens under the button.
+    const button = document.createElement('button');
+    const field = document.createElement('span');
     const text = filterValueText(rule, property, (key, vars) => this.ctx.i18n.t(key, vars), (person) => this.personName(person), (row) => this.ctx.relatedRows?.(property).find((r) => r.id === row)?.title, editorLocale(this.ctx.i18n));
     const scoped: ViewSettingsContext = { ...this.ctx, thisPageDatabase: () => null };
 
-    field.type = 'button';
-    field.disabled = disabled;
-    field.setAttribute('data-blok-database-color-rule-value', '');
-    field.setAttribute('data-blok-testid', `database-color-value-${rule.id}`);
-    field.toggleAttribute('data-empty', text === '');
+    button.type = 'button';
+    button.disabled = disabled;
+    button.setAttribute('data-blok-database-color-rule-value', '');
+    button.setAttribute('data-blok-testid', `database-color-value-${rule.id}`);
+    button.toggleAttribute('data-empty', text === '');
+    field.setAttribute('data-blok-database-color-rule-field', '');
     field.textContent = text === '' ? this.t('filterValue') : text;
     // r20-cc-is.raw, r20-cc-red.png: a Select rule reads "Select..." while empty and shows its picks as tokens.
     // Other types are unmeasured and keep "Value" and plain text.
@@ -2900,13 +2904,14 @@ export class ViewSettingsPages {
       const picked = Array.isArray(rule.value) ? rule.value : [];
       const tokens = (property.config?.options ?? []).filter((option) => picked.includes(option.id)).map((option) => createOptionPill(option));
 
-      field.toggleAttribute('data-empty', tokens.length === 0);
+      button.toggleAttribute('data-empty', tokens.length === 0);
       if (tokens.length === 0) field.textContent = this.t('colorValuePlaceholder');
       else field.replaceChildren(...tokens);
     }
-    field.addEventListener('click', () => openRuleValueFlyout(field, panel, scoped, read, save, COLOR_VALUE_FLYOUT_WIDTH));
+    button.append(field);
+    button.addEventListener('click', () => openRuleValueFlyout(button, panel, scoped, read, save, COLOR_VALUE_FLYOUT_WIDTH, COLOR_VALUE_FLYOUT_GAP));
 
-    return [field];
+    return [button];
   }
 
   /**
@@ -3096,6 +3101,8 @@ const COLOR_PROPERTY_FLYOUT_GAP = 4;
 
 /** notion-motion.md Round 20 §4 (r20-cc-selval.raw): a colour rule's value flyout is 240 wide. */
 const COLOR_VALUE_FLYOUT_WIDTH = 240;
+/** r20-cc-is.raw, r20-cc-selval.raw: the button ends at 493, the flyout starts at 497. */
+const COLOR_VALUE_FLYOUT_GAP = 4;
 
 /** notion-motion.md Round 20 §4 (r20-cc-bg.raw): the colour picker is 190 wide. */
 const COLOR_PICKER_WIDTH = 190;

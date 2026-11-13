@@ -1644,7 +1644,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Round 20 lane r20a: the Status filter's group rows and options, and the advanced value placeholder.
     const DATABASE_R20A_BYTES = 1_878;
     // Round 21 lane r21: the And/Or button's 61px Notion width, so "And" reads in full; the rule buttons' weight 500.
-    const DATABASE_R21_BYTES = 542 + 20;
+    // ... and the colour card's 100px height, its value button holding the 232px field.
+    const DATABASE_R21_BYTES = 542 + 20 + 853;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

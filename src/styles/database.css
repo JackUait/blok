@@ -12568,8 +12568,9 @@ input[data-blok-database-picker-search]:focus {
   padding: var(--blok-space-1) var(--blok-space-3) var(--blok-space-3);
 }
 
+/* r20-cc-list-style.raw: the trash sits 6 down (1 border + 5), the lines 32 apart, the card 100 tall. */
 [data-blok-database-color-rule] {
-  padding: var(--blok-space-1);
+  padding: 5px var(--blok-space-1);
   border: 1px solid var(--blok-database-color-rule-bg);
   border-radius: var(--blok-radius-surface);
   background-color: var(--blok-database-color-rule-bg);
@@ -12603,12 +12604,34 @@ input[data-blok-database-picker-search]:focus {
   height: 16px;
 }
 
-/* r20-cc-is.raw: 232x30, radius 6, padding 4px 6px. */
-[data-blok-database-color-rule-value] {
+/* r20-cc-is.raw: a 240x34 button 9 in and 36 down, holding the 232x30 field 13 in and 38 down. */
+button[data-blok-database-color-rule-value] {
   display: block;
   width: calc(100% - 2 * var(--blok-space-1));
+  height: 34px;
+  margin: var(--blok-space-1-5) var(--blok-space-1) 0;
+  padding: var(--blok-space-0-5) var(--blok-space-1);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+button[data-blok-database-color-rule-value]:hover:not(:disabled) {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+input[data-blok-database-color-rule-field] {
+  width: calc(100% - 2 * var(--blok-space-2));
+  margin: var(--blok-space-2) var(--blok-space-2) var(--blok-space-1);
+}
+
+/* r20-cc-is.raw: 232x30, radius 6, padding 4px 6px. */
+[data-blok-database-color-rule-field] {
+  display: block;
   height: 30px;
-  margin: var(--blok-space-0-5) var(--blok-space-1) var(--blok-space-1);
+  line-height: 22px;
   padding: var(--blok-space-1) var(--blok-space-1-5);
   border: none;
   border-radius: var(--blok-radius-control);
@@ -12624,7 +12647,7 @@ input[data-blok-database-picker-search]:focus {
   cursor: pointer;
 }
 
-[data-blok-database-color-rule-value][data-empty] {
+[data-blok-database-color-rule-value][data-empty] > [data-blok-database-color-rule-field] {
   color: var(--blok-database-panel-value-text);
 }
 
@@ -12662,13 +12685,13 @@ input[data-blok-database-picker-search]:focus {
 }
 
 /* A card's "Page background" / "Apply to" line: only the value is a button (notion-motion.md Round 20 §4).
-   Line height is unmeasured: the panel row's 28. */
+   r20-cc-list-style.raw: the lines are 32 apart (Page background y 348, Apply to y 380). */
 [data-blok-database-color-setting] {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--blok-space-2);
-  min-height: 28px;
+  min-height: 32px;
   padding-inline: var(--blok-space-2);
 }
 

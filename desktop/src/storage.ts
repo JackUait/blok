@@ -2,6 +2,7 @@ import { activeWorkspace, type WorkspaceRef } from './workspace-registry';
 import type { ShellPage } from '@blok/sidebar';
 import type { PageCover } from './cover';
 import type { DateDisplay } from '@blok/date-editor';
+import type { PageAccessMap } from './page-access';
 
 export type DesktopPage = ShellPage & { cover?: PageCover; coverPosition?: number; fullWidth?: boolean; titleDate?: string; titleDateDisplay?: DateDisplay; titleDateSuffix?: string };
 
@@ -9,6 +10,8 @@ export interface WorkspaceIndex {
   pages: DesktopPage[];
   activeId: string;
   trash?: DesktopPage[];
+  /** Niveau du compte sur chaque page, tel que le serveur l'annonce. Absent hors ligne. */
+  access?: PageAccessMap;
 }
 
 type TauriWindow = Window & {

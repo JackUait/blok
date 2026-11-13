@@ -24,7 +24,7 @@ export function workspaceRepository(workspace: WorkspaceRef) {
       if (ref.kind === 'local') return loadIndex(ref);
       const value = await request<WorkspaceIndex & { revision: number }>(`${base}/index`);
       revision = value.revision;
-      const index = { pages: value.pages, trash: value.trash ?? [], activeId: value.pages[0]?.id ?? '' };
+      const index = { pages: value.pages, trash: value.trash ?? [], activeId: value.pages[0]?.id ?? '', access: value.access };
       baseline = snapshot(index); acknowledged = snapshot(index);
       return index;
     },
@@ -33,7 +33,7 @@ export function workspaceRepository(workspace: WorkspaceRef) {
       const value = await request<WorkspaceIndex & {revision: number}>(`${base}/index`);
       if (!accept()) return null;
       revision = value.revision;
-      const index = {pages:value.pages,trash:value.trash ?? [],activeId:value.pages[0]?.id ?? ''};
+      const index = {pages:value.pages,trash:value.trash ?? [],activeId:value.pages[0]?.id ?? '',access:value.access};
       baseline = snapshot(index); acknowledged = snapshot(index);
       return index;
     },

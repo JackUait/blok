@@ -6,6 +6,7 @@ import { Audio, Bookmark, File, Video, Callout, Code, Database, DatabaseComment,
 import { createPageFrame, type PageFrame, type ShellPage, type SidebarAction } from '@blok/sidebar';
 import { type DesktopPage, type WorkspaceIndex } from './storage';
 import { workspaceRepository } from './workspace-repository';
+import { pageAccess } from './page-access';
 import { activeWorkspace, workspaceKey, type WorkspaceRef } from './workspace-registry';
 import { createDesktopFooter, readAppearance } from './settings';
 import { COVER_GALLERY, readCoverFile, createAddCoverButton, createPageCover, isPageCover, trackPageHeaderHover, type PageCover } from './cover';
@@ -55,7 +56,18 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   const emojis = customEmojiStore(ref);
   const pageIcon = (value: string) => /^(https?:|data:image\/|\/files\/)/i.test(value) ? {type: 'image' as const, url: value} : {type: 'emoji' as const, value};
   if (ref.kind === 'remote' && '__TAURI_INTERNALS__' in window) mountRemoteAssets(ref.server, repository.assetUrl);
-  const viewer = ref.kind === 'remote' && ref.role === 'viewer';
+  // L'interface ne savait dire qu'une chose : cet espace est-il en lecture seule ?
+  // Elle dit désormais : cette page-ci l'est-elle. Le niveau vient de l'index, et
+  // se réévalue à chaque fois qu'il est reçu.
+  let access = pageAccess(ref, undefined);
+  const adoptIndex = (value: WorkspaceIndex): WorkspaceIndex => {
+    index = value;
+    access = pageAccess(ref, value.access);
+    return value;
+  };
+  const readOnly = (pageId: string): boolean => !access.canEdit(pageId);
+  const canCreateUnder = (parentId: string | null): boolean =>
+    parentId ? access.canEdit(parentId) : !access.readOnlyWorkspace;
   // The add-cover button is re-appended whenever the core rebuilds the icon row, and
   // WebKit keeps `:hover` latched on a node moved under the cursor. See trackPageHeaderHover.
   trackPageHeaderHover(document);
@@ -120,7 +132,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         Object.assign(live, remotePage);
         updated.pages = updated.pages.map((page) => page.id === currentId ? live : page);
       }
-      index = updated;
+      adoptIndex(updated);
       frame.setPages(index.pages, index.activeId);
       pageToolbar?.setBreadcrumbs(breadcrumbs(currentId));
       for (const id of new Set([...original.pages.map((page) => page.id), ...index.pages.map((page) => page.id)])) notifyPage(id);
@@ -240,7 +252,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     },
     open: (id) => { if (index?.pages.some((page) => page.id === id)) navigate(id); },
     create: async ({ pageId, title, parentId, document: initialDocument }) => {
-      if (!index || viewer) throw new Error('Espace indisponible ou en lecture seule');
+      if (!index || !canCreateUnder(parentId ?? currentId ?? null)) throw new Error('Espace indisponible ou en lecture seule');
       if (index.pages.some((page) => page.id === pageId)) throw new Error('Cette page existe déjà');
       const page: DesktopPage = { id: pageId, title: title?.trim() || 'Nouvelle page', parentId: parentId ?? currentId };
       if (initialDocument && ref.kind === 'local') await repository.writePage(pageId, JSON.stringify(initialDocument));
@@ -270,6 +282,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       return;
     }
     currentId = id;
+    frame.element.toggleAttribute('data-desktop-read-only', readOnly(id));
     const turn = ++generation;
     coverRowObserver?.disconnect();
     coverRowObserver = null;
@@ -291,7 +304,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       editor?.width.set(enabled ? 'full' : 'narrow');
     };
     const toolbar = createPageToolbar(breadcrumbs(id), page.fullWidth === true, (enabled) => {
-      if (viewer) return;
+      if (readOnly(id)) return;
       page.fullWidth = enabled;
       applyFullWidth();
       saveManifest();
@@ -301,7 +314,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     });
     if (ref.kind === 'remote') {
       const origin = toolbar.element.querySelector<HTMLElement>('[data-desktop-page-local]');
-      if (origin) { origin.textContent = `${viewer ? 'Lecture seule · ' : ''}${ref.name}`; origin.title = ref.server; }
+      if (origin) { origin.textContent = `${readOnly(id) ? 'Lecture seule · ' : ''}${ref.name}`; origin.title = ref.server; }
     }
     pageToolbar = toolbar;
     applyFullWidth();
@@ -312,14 +325,14 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     let renderedCoverPosition: number | undefined;
     let coverButton: HTMLButtonElement | null = null;
     function changeCover(cover: PageCover | undefined): void {
-      if (viewer) return;
+      if (readOnly(id)) return;
       selectedPage.cover = cover;
       if (cover === undefined) selectedPage.coverPosition = undefined;
       if (generation === turn) renderCover();
       saveManifest();
     }
     const attachCoverAction = (): void => {
-      if (viewer) return;
+      if (readOnly(id)) return;
       if (isPageCover(page.cover)) return;
       const row = holder.querySelector<HTMLElement>('[data-blok-page-icon-row]');
       if (!row) return;
@@ -343,11 +356,11 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         renderedCover = page.cover;
         renderedCoverPosition = position;
         const next = createPageCover(page.cover, position, changeCover, (value) => {
-          if (viewer) return;
+          if (readOnly(id)) return;
           page.coverPosition = value;
           renderedCoverPosition = value;
           saveManifest();
-        }, { upload: repository.uploadImage, resolveUrl: repository.assetUrl, readOnly: viewer });
+        }, { upload: repository.uploadImage, resolveUrl: repository.assetUrl, readOnly: readOnly(id) });
         if (coverNode) coverNode.replaceWith(next);
         else pageCanvas.insertBefore(next, article);
         coverNode = next;
@@ -362,7 +375,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     renderCover();
     const instance = new Blok({
       holder,
-      readOnly: viewer,
+      readOnly: readOnly(id),
       tools: { ...desktopTools, database: {class: Database, config: {customEmojis: () => emojis.list(), coverGallery: COVER_GALLERY, uploadCover: (file: globalThis.File) => readCoverFile(file).then(repository.uploadImage)}}, page: { class: Page, config: { ...pageConfig } } },
       theme: readAppearance(),
       pageTitle: {
@@ -474,7 +487,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   };
 
   const action = async (command: SidebarAction): Promise<void> => {
-    if (viewer && command.type !== 'open-tab') return;
+    if (command.type !== 'open-tab' && readOnly(command.id)) return;
     const wasInert = frame.element.inert;
     if (ref.kind === 'remote') { frame.element.inert = true; metadataAction = true; }
     try {
@@ -500,8 +513,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         if (editor) { await editor.isReady; await editor.saver.flush(); }
         await saveOrder;
         await repository.duplicatePage(page.id, copy);
-        index = await repository.loadIndex();
-        frame.setPages(index.pages, index.activeId);
+        const refreshed = adoptIndex(await repository.loadIndex());
+        frame.setPages(refreshed.pages, refreshed.activeId);
         navigate(copy.id);
         return;
       }
@@ -574,7 +587,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   const observer = new ResizeObserver(() => onLayout(sidebar.getBoundingClientRect().width));
   observer.observe(sidebar);
   frame.element.setAttribute('data-desktop-workspace', '');
-  frame.element.toggleAttribute('data-desktop-read-only', viewer);
+  frame.element.toggleAttribute('data-desktop-read-only', access.readOnlyWorkspace);
 
   async function showEmptyWorkspace(): Promise<void> {
     if (editor) {
@@ -593,7 +606,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     currentId = '';
     status.textContent = '';
     status.removeAttribute('data-error');
-    pageCanvas.replaceChildren(createEmptyWorkspaceState(viewer, () => createPage()));
+    pageCanvas.replaceChildren(createEmptyWorkspaceState(access.readOnlyWorkspace, () => createPage()));
     const url = new URL(location.href);
     if (url.searchParams.has('page')) { url.searchParams.delete('page'); history.replaceState(null, '', url); }
     document.title = ref.name;
@@ -618,7 +631,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   }
 
   function createPage(parentId: string | null = null): void {
-    if (!index || viewer || metadataAction) return;
+    if (!index || metadataAction || !canCreateUnder(parentId)) return;
     const page: ShellPage = { id: crypto.randomUUID(), title: 'Nouvelle page', parentId };
     index.pages.push(page);
     saveManifest();
@@ -629,9 +642,9 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     element: frame.element,
     async start() {
       try {
-        index = await repository.loadIndex();
+        const loaded = adoptIndex(await repository.loadIndex());
         refreshDateTitles();
-        frame.setPages(index.pages, index.activeId);
+        frame.setPages(loaded.pages, loaded.activeId);
         onRoute();
         scheduleDateRefresh();
         window.addEventListener('focus', refreshDateTitles);

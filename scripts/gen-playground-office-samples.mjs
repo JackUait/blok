@@ -63,6 +63,33 @@ const docxBody = [
   ),
 ].join('');
 
+// A second page, after a page break: the long version of the agreement.
+const docxSecondPage = [
+  '<w:p><w:r><w:br w:type="page"/></w:r></w:p>',
+  docxPara('5. Data Protection', { bold: true }),
+  docxPara(
+    'Provider processes Client content only to deliver the services. Provider keeps Client content encrypted in transit and at rest and deletes it within thirty (30) days of termination.',
+  ),
+  docxPara('6. Service Levels', { bold: true }),
+  docxPara(
+    'Provider targets 99.9% monthly availability. If availability falls below that level, Client may claim a service credit of five percent (5%) of the monthly fee for each full hour of downtime.',
+  ),
+  docxPara('7. Limitation of Liability', { bold: true }),
+  docxPara(
+    'Neither party is liable for indirect or consequential losses. Each party’s total liability under this Agreement is limited to the fees paid in the twelve (12) months before the claim.',
+  ),
+  docxPara('8. Termination', { bold: true }),
+  docxPara(
+    'Either party may terminate this Agreement if the other materially breaches it and does not cure the breach within thirty (30) days of written notice.',
+  ),
+  docxPara('9. Governing Law', { bold: true }),
+  docxPara('This Agreement is governed by the laws of the State of Delaware, without regard to its conflict of laws rules.'),
+].join('');
+
+// Two files. `service-agreement.docx` is one page: its bytes are pinned by
+// test/unit/tools/file/zip (frozen JSZip goldens), so it must not change.
+// `service-agreement-full.docx` adds the second page. The playground shows that one.
+const buildAgreement = (body) => {
 const docx = new Map();
 docx.set(
   '[Content_Types].xml',
@@ -84,10 +111,13 @@ docx.set(
   'word/document.xml',
   `${XML}
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-<w:body>${docxBody}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1080" w:right="1080" w:bottom="1080" w:left="1080" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body>
+<w:body>${body}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1080" w:right="1080" w:bottom="1080" w:left="1080" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body>
 </w:document>`,
 );
-writeFileSync(join(OUT, 'service-agreement.docx'), zip(docx));
+return zip(docx);
+};
+writeFileSync(join(OUT, 'service-agreement.docx'), buildAgreement(docxBody));
+writeFileSync(join(OUT, 'service-agreement-full.docx'), buildAgreement(docxBody + docxSecondPage));
 
 // ---- xlsx: a quarterly budget --------------------------------------------
 // 2D grid; strings become shared strings, numbers stay inline numeric. The

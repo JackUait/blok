@@ -990,6 +990,7 @@ export type BlokMessageKey =
   | 'tools.database.filterDuplicate'
   | 'tools.database.filterExactDate'
   | 'tools.database.filterGone'
+  | 'tools.database.filterInvalidDate'
   | 'tools.database.filterMe'
   | 'tools.database.filterOperator.after'
   | 'tools.database.filterOperator.any'

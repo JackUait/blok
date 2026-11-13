@@ -1409,6 +1409,7 @@
   "tools.database.filterDateCustom": "Własna data",
   "tools.database.filterDatePlaceholder": "Wybierz lub wpisz datę…",
   "tools.database.filterDatePresets": "Menu wyboru daty względem dzisiaj",
+  "tools.database.filterInvalidDate": "Nieprawidłowa data",
   "tools.database.filterChecked": "Zaznaczone",
   "tools.database.filterUnchecked": "Niezaznaczone",
   "tools.database.filterCount": "Liczba",

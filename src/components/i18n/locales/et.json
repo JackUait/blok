@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "Kohandatud kuupäev",
   "tools.database.filterDatePlaceholder": "Vali või sisesta kuupäev…",
   "tools.database.filterDatePresets": "Rippmenüü kuupäeva valimiseks tänase suhtes",
+  "tools.database.filterInvalidDate": "Vigane kuupäev",
   "tools.database.filterChecked": "Märgitud",
   "tools.database.filterUnchecked": "Märkimata",
   "tools.database.filterCount": "Arv",

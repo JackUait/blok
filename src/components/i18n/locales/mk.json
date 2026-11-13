@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "Сопствен датум",
   "tools.database.filterDatePlaceholder": "Изберете или внесете датум…",
   "tools.database.filterDatePresets": "Мени за избор на датум во однос на денес",
+  "tools.database.filterInvalidDate": "Неважечки датум",
   "tools.database.filterChecked": "Означено",
   "tools.database.filterUnchecked": "Неозначено",
   "tools.database.filterCount": "Број",

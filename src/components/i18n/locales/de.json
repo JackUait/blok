@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "Benutzerdefiniertes Datum",
   "tools.database.filterDatePlaceholder": "Datum auswählen oder eingeben…",
   "tools.database.filterDatePresets": "Menü zur Auswahl eines Datums relativ zu heute",
+  "tools.database.filterInvalidDate": "Ungültiges Datum",
   "tools.database.filterChecked": "Aktiviert",
   "tools.database.filterUnchecked": "Deaktiviert",
   "tools.database.filterCount": "Anzahl",

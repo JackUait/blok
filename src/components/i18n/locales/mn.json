@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "Өөрийн огноо",
   "tools.database.filterDatePlaceholder": "Огноо сонгох эсвэл бичих…",
   "tools.database.filterDatePresets": "Өнөөдөртэй харьцуулан огноо сонгох цэс",
+  "tools.database.filterInvalidDate": "Буруу огноо",
   "tools.database.filterChecked": "Тэмдэглэсэн",
   "tools.database.filterUnchecked": "Тэмдэглээгүй",
   "tools.database.filterCount": "Тоо",

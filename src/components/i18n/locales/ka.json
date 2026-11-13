@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "მორგებული თარიღი",
   "tools.database.filterDatePlaceholder": "აირჩიეთ ან აკრიფეთ თარიღი…",
   "tools.database.filterDatePresets": "მენიუ დღევანდელთან მიმართებით თარიღის ასარჩევად",
+  "tools.database.filterInvalidDate": "არასწორი თარიღი",
   "tools.database.filterChecked": "მონიშნული",
   "tools.database.filterUnchecked": "მოუნიშნავი",
   "tools.database.filterCount": "რაოდენობა",

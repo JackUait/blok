@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "วันที่กำหนดเอง",
   "tools.database.filterDatePlaceholder": "เลือกหรือพิมพ์วันที่…",
   "tools.database.filterDatePresets": "เมนูเลือกวันที่เทียบกับวันนี้",
+  "tools.database.filterInvalidDate": "วันที่ไม่ถูกต้อง",
   "tools.database.filterChecked": "เลือกแล้ว",
   "tools.database.filterUnchecked": "ยังไม่ได้เลือก",
   "tools.database.filterCount": "จำนวน",

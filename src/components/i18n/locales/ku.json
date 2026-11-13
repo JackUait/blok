@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "بەرواری تایبەت",
   "tools.database.filterDatePlaceholder": "بەروارێک هەڵبژێرە یان بنووسە…",
   "tools.database.filterDatePresets": "لیست بۆ هەڵبژاردنی بەروار بە بەراورد بە ئەمڕۆ",
+  "tools.database.filterInvalidDate": "Dîroka nederbasdar",
   "tools.database.filterChecked": "هەڵبژێردراو",
   "tools.database.filterUnchecked": "هەڵنەبژێردراو",
   "tools.database.filterCount": "ژمارە",

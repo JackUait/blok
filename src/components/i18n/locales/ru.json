@@ -1409,6 +1409,7 @@
   "tools.database.filterDateCustom": "Своя дата",
   "tools.database.filterDatePlaceholder": "Выберите или введите дату…",
   "tools.database.filterDatePresets": "Меню выбора даты относительно сегодня",
+  "tools.database.filterInvalidDate": "Некорректная дата",
   "tools.database.filterChecked": "Отмечено",
   "tools.database.filterUnchecked": "Не отмечено",
   "tools.database.filterCount": "Число",

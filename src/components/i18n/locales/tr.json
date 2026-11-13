@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "Özel tarih",
   "tools.database.filterDatePlaceholder": "Bir tarih seçin veya yazın…",
   "tools.database.filterDatePresets": "Bugüne göre tarih seçmek için menü",
+  "tools.database.filterInvalidDate": "Geçersiz tarih",
   "tools.database.filterChecked": "İşaretli",
   "tools.database.filterUnchecked": "İşaretsiz",
   "tools.database.filterCount": "Sayı",

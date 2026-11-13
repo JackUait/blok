@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "Mukautettu päivämäärä",
   "tools.database.filterDatePlaceholder": "Valitse tai kirjoita päivämäärä…",
   "tools.database.filterDatePresets": "Valikko päivämäärän valitsemiseen suhteessa tähän päivään",
+  "tools.database.filterInvalidDate": "Virheellinen päivämäärä",
   "tools.database.filterChecked": "Valittu",
   "tools.database.filterUnchecked": "Ei valittu",
   "tools.database.filterCount": "Määrä",

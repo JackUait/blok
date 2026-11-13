@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "Tarehe maalum",
   "tools.database.filterDatePlaceholder": "Chagua au andika tarehe…",
   "tools.database.filterDatePresets": "Menyu ya kuchagua tarehe kulingana na leo",
+  "tools.database.filterInvalidDate": "Tarehe si sahihi",
   "tools.database.filterChecked": "Kimewekewa tiki",
   "tools.database.filterUnchecked": "Hakijawekewa tiki",
   "tools.database.filterCount": "Idadi",

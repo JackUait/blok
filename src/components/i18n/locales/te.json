@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "అనుకూల తేదీ",
   "tools.database.filterDatePlaceholder": "తేదీని ఎంచుకోండి లేదా టైప్ చేయండి…",
   "tools.database.filterDatePresets": "ఈరోజు ఆధారంగా తేదీని ఎంచుకునే మెను",
+  "tools.database.filterInvalidDate": "చెల్లని తేదీ",
   "tools.database.filterChecked": "ఎంపిక చేయబడింది",
   "tools.database.filterUnchecked": "ఎంపిక చేయబడలేదు",
   "tools.database.filterCount": "సంఖ్య",

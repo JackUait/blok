@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "Προσαρμοσμένη ημερομηνία",
   "tools.database.filterDatePlaceholder": "Επιλέξτε ή πληκτρολογήστε ημερομηνία…",
   "tools.database.filterDatePresets": "Μενού επιλογής ημερομηνίας σε σχέση με σήμερα",
+  "tools.database.filterInvalidDate": "Μη έγκυρη ημερομηνία",
   "tools.database.filterChecked": "Επιλεγμένο",
   "tools.database.filterUnchecked": "Μη επιλεγμένο",
   "tools.database.filterCount": "Πλήθος",

@@ -1403,6 +1403,7 @@
   "tools.database.filterDateCustom": "Fecha personalizada",
   "tools.database.filterDatePlaceholder": "Selecciona o escribe una fecha…",
   "tools.database.filterDatePresets": "Menú para elegir una fecha relativa a hoy",
+  "tools.database.filterInvalidDate": "Fecha no válida",
   "tools.database.filterChecked": "Marcado",
   "tools.database.filterUnchecked": "Sin marcar",
   "tools.database.filterCount": "Cantidad",

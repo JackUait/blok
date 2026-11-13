@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "پنهنجي مرضي جي تاريخ",
   "tools.database.filterDatePlaceholder": "تاريخ چونڊيو يا ٽائيپ ڪريو…",
   "tools.database.filterDatePresets": "اڄ جي نسبت سان تاريخ چونڊڻ جي لسٽ",
+  "tools.database.filterInvalidDate": "غلط تاريخ",
   "tools.database.filterChecked": "نشان لڳل",
   "tools.database.filterUnchecked": "نشان نه لڳل",
   "tools.database.filterCount": "تعداد",

@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "Egendefinert dato",
   "tools.database.filterDatePlaceholder": "Velg eller skriv inn en dato…",
   "tools.database.filterDatePresets": "Meny for å velge en dato i forhold til i dag",
+  "tools.database.filterInvalidDate": "Ugyldig dato",
   "tools.database.filterChecked": "Avmerket",
   "tools.database.filterUnchecked": "Ikke avmerket",
   "tools.database.filterCount": "Antall",

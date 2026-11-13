@@ -14133,8 +14133,21 @@ button[data-blok-database-table-group-count]:hover {
   background-color: var(--blok-database-hover-bg);
 }
 
-[data-blok-database-chip-date-input][aria-invalid="true"] {
-  color: var(--blok-color-red-text);
+[data-blok-database-chip-date-error] {
+  position: fixed;
+  border-radius: var(--blok-radius-control);
+  background: var(--blok-tooltip-bg);
+  pointer-events: none;
+}
+
+[data-blok-database-chip-date-error] > span {
+  display: block;
+  padding: var(--blok-space-1-25) var(--blok-space-2);
+  color: var(--blok-tooltip-font);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16.8px;
+  white-space: nowrap;
 }
 
 [data-blok-database-chip-month] {

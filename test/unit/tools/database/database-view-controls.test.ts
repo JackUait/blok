@@ -1659,6 +1659,62 @@ describe('DatabaseViewControls', () => {
         expect(controls.effective(saved.view).filters[0]).toMatchObject({ value: null });
       });
 
+      // notion-motion.md Round 22 §1 (r22-d-t5-*-ds.raw, r22-d-t5-tip.raw): "Invalid date" shows outside the popover,
+      // left of the field, and the text stays.
+      describe('"Invalid date"', () => {
+        const message = (): HTMLElement | null => document.querySelector('[data-blok-database-chip-date-error]');
+
+        it('shows on a failed Enter, outside the popover, and names the field\'s error', () => {
+          open({ operator: 'equals', value: null });
+
+          field().value = 'zzz';
+          enter(field());
+
+          expect(message()?.textContent).toBe('tools.database.filterInvalidDate');
+          expect(message()?.getAttribute('role')).toBe('alert');
+          expect(popover().contains(message())).toBe(false);
+          expect(field().getAttribute('aria-describedby')).toBe(message()?.id);
+          expect(field().value).toBe('zzz');
+        });
+
+        it('shows on a failed Tab, and goes once the text changes', async () => {
+          open({ operator: 'equals', value: null });
+
+          field().value = 'zzz';
+          field().blur();
+          await new Promise((resolve) => {
+            setTimeout(resolve, 0);
+          });
+          expect(message()).not.toBeNull();
+
+          field().value = 'zz';
+          field().dispatchEvent(new Event('input', { bubbles: true }));
+
+          expect(message()).toBeNull();
+          expect(field().hasAttribute('aria-describedby')).toBe(false);
+        });
+
+        it('goes when the popover closes', () => {
+          open({ operator: 'equals', value: null });
+
+          field().value = 'zzz';
+          enter(field());
+          field().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+          expect(q('database-filter-popover')).toBeNull();
+          expect(message()).toBeNull();
+        });
+
+        it('does not show while typing', () => {
+          open({ operator: 'equals', value: null });
+
+          field().value = 'qq';
+          field().dispatchEvent(new Event('input', { bubbles: true }));
+
+          expect(message()).toBeNull();
+        });
+      });
+
       it('picks a clicked day, and steps months without writing', () => {
         const { controls, saved } = open({ operator: 'on_or_after', value: null });
 

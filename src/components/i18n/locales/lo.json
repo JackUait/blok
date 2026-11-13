@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "ວັນທີກຳນົດເອງ",
   "tools.database.filterDatePlaceholder": "ເລືອກ ຫຼື ພິມວັນທີ…",
   "tools.database.filterDatePresets": "ເມນູເລືອກວັນທີທຽບກັບມື້ນີ້",
+  "tools.database.filterInvalidDate": "ວັນທີບໍ່ຖືກຕ້ອງ",
   "tools.database.filterChecked": "ໝາຍແລ້ວ",
   "tools.database.filterUnchecked": "ຍັງບໍ່ໝາຍ",
   "tools.database.filterCount": "ຈຳນວນ",

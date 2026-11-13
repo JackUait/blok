@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "ብጁ ቀን",
   "tools.database.filterDatePlaceholder": "ቀን ይምረጡ ወይም ይተይቡ…",
   "tools.database.filterDatePresets": "ከዛሬ አንጻር ቀን ለመምረጥ ዝርዝር",
+  "tools.database.filterInvalidDate": "ልክ ያልሆነ ቀን",
   "tools.database.filterChecked": "የተመረጠ",
   "tools.database.filterUnchecked": "ያልተመረጠ",
   "tools.database.filterCount": "ብዛት",

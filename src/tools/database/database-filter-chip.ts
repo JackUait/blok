@@ -17,6 +17,7 @@ import {
   splitOperator,
 } from './database-filter-labels';
 import { openFlyout } from './database-sort-flyouts';
+import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
 import { editorLocale, formatDatePart, parseFilterDay, resolveWeekStart } from './cells/date-format';
 import { MonthCalendar } from './cells/month-calendar';
 import { addFilterRule, emptyFilterTree, withEntryIds } from './filter-tree';
@@ -33,6 +34,7 @@ export const OPERATOR_FLYOUT_WIDTH = 190;
 /** notion-motion.md Round 18 §2 (r18-filter-more.raw): the rule ⋯ list. */
 export const MORE_FLYOUT_WIDTH = 240;
 export const MORE_FLYOUT_GAP = 2;
+const INVALID_NOTE_MARGIN = 12;
 /** notion-motion.md Round 20 §3 (r20-ct-rel.raw): the presets menu is 240 wide, its top the field's bottom + 6. */
 const DATE_PRESET_MENU_WIDTH = 240;
 const DATE_PRESET_MENU_GAP = 6;
@@ -152,6 +154,8 @@ class FilterChipPages {
   private calendar: MonthCalendar | undefined;
   private calendarDay: string | undefined;
   private calendarRedraw: (() => void) | undefined;
+  /** The "Invalid date" message beside the day field, on the body (the popover clips its overflow). */
+  private invalidNote: HTMLElement | undefined;
   /** A pointer is down inside the panel: a field's blur commit waits for its click. */
   private pointerHeld = false;
   private trackedRoot: HTMLElement | undefined;
@@ -176,6 +180,7 @@ class FilterChipPages {
       build: (panel) => {
         this.panel = panel;
         this.trackPointer(panel.root);
+        this.hideInvalid();
         const filter = this.current();
         const property = this.ctx.schema().find((p) => p.id === filter?.propertyId);
 
@@ -206,6 +211,56 @@ class FilterChipPages {
 
   private t(key: string, vars?: Record<string, string | number>): string {
     return this.ctx.i18n.t(`tools.database.${key}`, vars);
+  }
+
+  /** Removes what the pages put outside the panel. */
+  dispose(): void {
+    this.hideInvalid();
+  }
+
+  /**
+   * notion-motion.md Round 22 §1 (r22-d-t5-tip.raw): "Invalid date" sits left of the field, its right edge on the
+   * field's left edge. It is an error message, not a hint: it shows at once, and the popover clips its own overflow.
+   */
+  private showInvalid(input: HTMLInputElement, field: HTMLElement): void {
+    this.hideInvalid();
+    const note = document.createElement('div');
+    const text = document.createElement('span');
+    const box = field.getBoundingClientRect();
+
+    note.id = `blok-database-date-error-${nanoid(6)}`;
+    note.setAttribute('data-blok-interface', 'database-date-error');
+    note.setAttribute('data-blok-database-chip-date-error', '');
+    note.setAttribute('role', 'alert');
+    // The top-layer reset zeroes the box's own padding, so the text carries it.
+    text.textContent = this.t('filterInvalidDate');
+    note.appendChild(text);
+    document.body.appendChild(note);
+    promoteToTopLayer(note);
+    const size = note.getBoundingClientRect();
+
+    // Notion's room on the left was not measured running out: the message stops 12px inside the window.
+    note.style.left = `${Math.max(INVALID_NOTE_MARGIN, box.left - size.width)}px`;
+    note.style.top = `${box.top + (box.height - size.height) / 2}px`;
+    input.setAttribute('aria-describedby', note.id);
+    this.invalidNote = note;
+    // It is placed once, so any scroll takes it away instead of leaving it behind.
+    window.addEventListener('scroll', this.hideInvalidOnScroll, { capture: true, once: true });
+  }
+
+  private readonly hideInvalidOnScroll = (): void => {
+    this.hideInvalid();
+  };
+
+  private hideInvalid(): void {
+    const note = this.invalidNote;
+
+    if (note === undefined) return;
+    this.invalidNote = undefined;
+    window.removeEventListener('scroll', this.hideInvalidOnScroll, { capture: true });
+    document.querySelector(`[aria-describedby="${CSS.escape(note.id)}"]`)?.removeAttribute('aria-describedby');
+    removeFromTopLayer(note);
+    note.remove();
   }
 
   private trackPointer(root: HTMLElement): void {
@@ -639,6 +694,7 @@ class FilterChipPages {
 
       if (day === null) {
         input.setAttribute('aria-invalid', 'true');
+        this.showInvalid(input, field);
 
         return false;
       }
@@ -647,7 +703,10 @@ class FilterChipPages {
       return true;
     };
 
-    input.addEventListener('input', () => input.removeAttribute('aria-invalid'));
+    input.addEventListener('input', () => {
+      input.removeAttribute('aria-invalid');
+      this.hideInvalid();
+    });
     input.addEventListener('keydown', (event) => {
       if (event.isComposing) return;
       if (event.key !== 'Enter') return;
@@ -1015,14 +1074,16 @@ export const openFilterChip = (anchor: HTMLElement, ctx: ViewSettingsContext, fi
   const property = ctx.schema().find((p) => p.id === filter?.propertyId);
   // A rollup of the Name has a text field, as Notion's 220-wide popover shows (r13-filter-ops-rollup.png).
   const listed = property !== undefined && filter !== undefined && LIST_FILTER_TYPES.includes(property.type) && !isQuantifiedText(property, filter.operator);
+  const pages = new FilterChipPages(ctx, filterId);
   const panel = new DatabasePanel({
     anchor,
-    root: new FilterChipPages(ctx, filterId).root(),
+    root: pages.root(),
     testId: 'database-filter-popover',
     width: listed ? LIST_FILTER_WIDTH : VALUE_FIELD_FILTER_WIDTH,
     backLabel: ctx.i18n.t('tools.database.settingsBack'),
     gap: CHIP_POPOVER_GAP,
     onClose: () => {
+      pages.dispose();
       release?.();
       onClose?.();
     },

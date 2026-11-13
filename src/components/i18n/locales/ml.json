@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "ഇഷ്‌ടാനുസൃത തീയതി",
   "tools.database.filterDatePlaceholder": "ഒരു തീയതി തിരഞ്ഞെടുക്കുക അല്ലെങ്കിൽ ടൈപ്പ് ചെയ്യുക…",
   "tools.database.filterDatePresets": "ഇന്നത്തെ അടിസ്ഥാനത്തിൽ തീയതി തിരഞ്ഞെടുക്കാനുള്ള മെനു",
+  "tools.database.filterInvalidDate": "അസാധുവായ തീയതി",
   "tools.database.filterChecked": "പരിശോധിച്ചത്",
   "tools.database.filterUnchecked": "പരിശോധിക്കാത്തത്",
   "tools.database.filterCount": "എണ്ണം",

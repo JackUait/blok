@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "Aangepaste datum",
   "tools.database.filterDatePlaceholder": "Selecteer of typ een datum…",
   "tools.database.filterDatePresets": "Menu om een datum ten opzichte van vandaag te kiezen",
+  "tools.database.filterInvalidDate": "Ongeldige datum",
   "tools.database.filterChecked": "Aangevinkt",
   "tools.database.filterUnchecked": "Niet aangevinkt",
   "tools.database.filterCount": "Aantal",

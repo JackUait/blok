@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "Anpassat datum",
   "tools.database.filterDatePlaceholder": "Välj eller skriv ett datum…",
   "tools.database.filterDatePresets": "Meny för att välja ett datum i förhållande till i dag",
+  "tools.database.filterInvalidDate": "Ogiltigt datum",
   "tools.database.filterChecked": "Markerad",
   "tools.database.filterUnchecked": "Omarkerad",
   "tools.database.filterCount": "Antal",

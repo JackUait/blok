@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "Ngày tùy chỉnh",
   "tools.database.filterDatePlaceholder": "Chọn hoặc nhập ngày…",
   "tools.database.filterDatePresets": "Menu chọn ngày so với hôm nay",
+  "tools.database.filterInvalidDate": "Ngày không hợp lệ",
   "tools.database.filterChecked": "Đã chọn",
   "tools.database.filterUnchecked": "Chưa chọn",
   "tools.database.filterCount": "Số lượng",

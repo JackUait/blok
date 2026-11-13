@@ -1409,6 +1409,7 @@
   "tools.database.filterDateCustom": "Vlastný dátum",
   "tools.database.filterDatePlaceholder": "Vyberte alebo zadajte dátum…",
   "tools.database.filterDatePresets": "Ponuka na výber dátumu vzhľadom na dnešok",
+  "tools.database.filterInvalidDate": "Neplatný dátum",
   "tools.database.filterChecked": "Začiarknuté",
   "tools.database.filterUnchecked": "Nezačiarknuté",
   "tools.database.filterCount": "Počet",

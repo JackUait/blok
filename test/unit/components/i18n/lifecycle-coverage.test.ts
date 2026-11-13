@@ -283,7 +283,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2193 + 147 + 564 + 5 closure for all 2909 keys', () => {
+  it('rebuilds a disjoint 2193 + 147 + 565 + 5 closure for all 2910 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -297,7 +297,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2909);
+    expect(lifecycle.size).toBe(2910);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -639,7 +639,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: a Multi-select colour rule's "Match first option" (tools.database.colorMatchFirstOption), through the panel's t().
       // +1: a board colour rule's "Card background" (tools.database.colorCardBackground), through the panel's t().
       // +8: the typed-speed help line (tools.audio/video.speedEntryRange, TooHigh, TooLow, NotNumber), through speed-entry.ts's t().
-      'registered-namespace-compatible': 564,
+      // +1: the Date filter's "Invalid date" message (tools.database.filterInvalidDate), through the chip's t().
+      'registered-namespace-compatible': 565,
       'catalog-only': 5,
     });
     expect(

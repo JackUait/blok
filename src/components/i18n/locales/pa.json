@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "ਕਸਟਮ ਮਿਤੀ",
   "tools.database.filterDatePlaceholder": "ਮਿਤੀ ਚੁਣੋ ਜਾਂ ਟਾਈਪ ਕਰੋ…",
   "tools.database.filterDatePresets": "ਅੱਜ ਦੇ ਮੁਕਾਬਲੇ ਮਿਤੀ ਚੁਣਨ ਲਈ ਮੀਨੂ",
+  "tools.database.filterInvalidDate": "ਅਵੈਧ ਮਿਤੀ",
   "tools.database.filterChecked": "ਨਿਸ਼ਾਨਬੱਧ ਕੀਤਾ ਗਿਆ",
   "tools.database.filterUnchecked": "ਨਿਸ਼ਾਨਬੱਧ ਨਹੀਂ ਕੀਤਾ ਗਿਆ",
   "tools.database.filterCount": "ਗਿਣਤੀ",

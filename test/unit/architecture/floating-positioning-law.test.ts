@@ -111,6 +111,7 @@ const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
   'tools/callout/index.ts': 'Mount owner for the tracked emoji-picker root surface.',
   'tools/database/database-drop-line.ts': 'Fixed database drop line the drag code places on every pointer move.',
   'tools/database/database-property-type-popover.ts': 'Shared anchored root surface registered in ROOT_SURFACE_CONTRACTS.',
+  'tools/database/database-filter-chip.ts': 'The Date filter\'s "Invalid date" message: a fixed top-layer box beside the day field, dismissed on scroll (ROOT_SURFACE_CONTRACTS).',
   'tools/database/database-property-menu.ts': 'Mount owner for the tracked emoji-picker root surface (property icon).',
   'tools/database/database-card-drawer.ts': 'Mount owner for the tracked emoji-picker root surface (row page icon).',
   'tools/database/index.ts': 'Mount owner for the tracked emoji-picker root surface (feed reactions).',
@@ -166,6 +167,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'tools/database/database-list-row-drag.ts': 'Fixed pointer-following row ghost refreshes coordinates on every drag pointer move.',
   'tools/database/database-list-view.ts': 'The right-click menu point is placed once at the pointer inside the row, corrected for a transformed ancestor, and removed when the menu closes.',
   'tools/database/database-table-column-drag.ts': 'Fixed pointer-following table header ghost refreshes coordinates on every drag pointer move.',
+  'tools/database/database-filter-chip.ts': 'The "Invalid date" message is placed once, left of the day field\'s rect, in viewport coordinates; any scroll, an edit, a redraw or the popover closing removes it.',
   'tools/database/database-panel.ts': 'A dragged panel list row follows the pointer in flow, offset from its own box read at drag start.',
   'tools/database/database-table-row-drag.ts': 'Fixed pointer-following table row ghost refreshes coordinates on every drag pointer move.',
   'tools/database/database-dashboard-editor.ts': 'Dashboard drop line, absolute inside the dashboard root, placed from row and widget rects on every drag pointer move and removed on drop or Escape.',
@@ -223,6 +225,7 @@ const CAPTURE_SCROLL_CLASSIFICATIONS: Record<string, string> = {
   'components/utils/tooltip.ts': 'Capture-phase scroll listener intentionally dismisses the snapshot tooltip.',
   'tools/file/preview-scroll-haze.ts': 'Capture-phase listener refreshes local file-preview scroll haze state.',
   'tools/table-of-contents/index.ts': 'Capture-phase listener marks which heading is being read as any scroller moves; the thumb sits at the row offset inside the nav, never at viewport coordinates.',
+  'tools/database/database-filter-chip.ts': 'Capture-phase scroll listener dismisses the once-placed "Invalid date" message.',
   'tools/table/table-row-col-controls.ts': 'Capture-phase listener catches the full-screen table modal\'s own scroll (scroll does not bubble) and re-places the grips in its overlay, including a column grip held fixed at the header line.',
 };
 
@@ -238,6 +241,7 @@ const ROOT_SURFACE_CONTRACTS: Record<string, SurfaceContract> = {
   'components/modules/pageTitle/cover-control.ts': 'shared',
   'tools/callout/emoji-picker/index.ts': 'tracked-manual',
   'tools/database/database-property-type-popover.ts': 'shared',
+  'tools/database/database-filter-chip.ts': 'dismiss-on-scroll',
   'tools/image/alt-popover.ts': 'shared',
   'tools/page/hover-preview.ts': 'shared',
 };

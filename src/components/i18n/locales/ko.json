@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "맞춤 날짜",
   "tools.database.filterDatePlaceholder": "날짜 선택 또는 입력…",
   "tools.database.filterDatePresets": "오늘 기준으로 날짜를 선택하는 메뉴",
+  "tools.database.filterInvalidDate": "잘못된 날짜",
   "tools.database.filterChecked": "선택됨",
   "tools.database.filterUnchecked": "선택 안 됨",
   "tools.database.filterCount": "수",

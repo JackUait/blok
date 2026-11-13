@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "कस्टम तिथि",
   "tools.database.filterDatePlaceholder": "तिथि चुनें या लिखें…",
   "tools.database.filterDatePresets": "आज के सापेक्ष तिथि चुनने का मेनू",
+  "tools.database.filterInvalidDate": "अमान्य तारीख",
   "tools.database.filterChecked": "चेक किया गया",
   "tools.database.filterUnchecked": "चेक नहीं किया गया",
   "tools.database.filterCount": "संख्या",

@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "Pasadyang petsa",
   "tools.database.filterDatePlaceholder": "Pumili o mag-type ng petsa…",
   "tools.database.filterDatePresets": "Dropdown para pumili ng petsa batay sa ngayon",
+  "tools.database.filterInvalidDate": "Di-wastong petsa",
   "tools.database.filterChecked": "Naka-check",
   "tools.database.filterUnchecked": "Hindi naka-check",
   "tools.database.filterCount": "Bilang",

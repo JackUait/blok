@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "Tarikh tersuai",
   "tools.database.filterDatePlaceholder": "Pilih atau taip tarikh…",
   "tools.database.filterDatePresets": "Menu untuk memilih tarikh relatif kepada hari ini",
+  "tools.database.filterInvalidDate": "Tarikh tidak sah",
   "tools.database.filterChecked": "Ditandai",
   "tools.database.filterUnchecked": "Tidak ditandai",
   "tools.database.filterCount": "Bilangan",

@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "Egyéni dátum",
   "tools.database.filterDatePlaceholder": "Válasszon vagy írjon be egy dátumot…",
   "tools.database.filterDatePresets": "Menü a mai naphoz viszonyított dátum kiválasztásához",
+  "tools.database.filterInvalidDate": "Érvénytelen dátum",
   "tools.database.filterChecked": "Bejelölve",
   "tools.database.filterUnchecked": "Nincs bejelölve",
   "tools.database.filterCount": "Darabszám",

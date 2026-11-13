@@ -1397,6 +1397,7 @@
   "tools.database.filterDateCustom": "ޚާއްސަ ތާރީޚް",
   "tools.database.filterDatePlaceholder": "ތާރީޚެއް ޚިޔާރުކުރޭ ނުވަތަ ލިޔޭ…",
   "tools.database.filterDatePresets": "މިއަދާ ގުޅޭގޮތުން ތާރީޚެއް ޚިޔާރުކުރާ ލިސްޓް",
+  "tools.database.filterInvalidDate": "ނުބައި ތާރީޚް",
   "tools.database.filterChecked": "ފާހަގަކޮށްފައި",
   "tools.database.filterUnchecked": "ފާހަގަނުކޮށް",
   "tools.database.filterCount": "އަދަދު",

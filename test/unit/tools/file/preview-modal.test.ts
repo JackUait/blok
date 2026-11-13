@@ -184,9 +184,9 @@ describe('openFilePreview', () => {
     expect(open?.getAttribute('aria-label')).toBe('Open in new tab');
   });
 
-  it('omits the open-in-new-tab anchor for a text file', () => {
+  it('omits the open-in-new-tab anchor for a blob text file', () => {
     vi.mocked(loadTextPreview).mockResolvedValue({ ok: true, text: '' });
-    const teardown = openFilePreview({ url: 'notes.txt', fileName: 'notes.txt', labels: { ...labels, openInNewTab: 'Open in new tab' } });
+    const teardown = openFilePreview({ url: 'blob:https://example.com/notes', fileName: 'notes.txt', labels: { ...labels, openInNewTab: 'Open in new tab' } });
 
     expect(document.body.querySelector('[data-action="preview-open-tab"]')).toBeNull();
     teardown();
@@ -418,19 +418,20 @@ describe('openFilePreview — text kinds', () => {
       'docx',
       expect.any(Function),
       expect.any(Function),
+      expect.any(Object),
     );
     teardown();
   });
 
   it('routes xlsx files to fillOfficeBody', () => {
     const teardown = openFilePreview({ url: 'blob:x', fileName: 'a.xlsx', labels: LABELS });
-    expect(fillOfficeBody).toHaveBeenCalledWith(expect.any(HTMLElement), expect.any(Object), 'xlsx', expect.any(Function), expect.any(Function));
+    expect(fillOfficeBody).toHaveBeenCalledWith(expect.any(HTMLElement), expect.any(Object), 'xlsx', expect.any(Function), expect.any(Function), expect.any(Object));
     teardown();
   });
 
   it('routes pptx files to fillOfficeBody', () => {
     const teardown = openFilePreview({ url: 'blob:x', fileName: 'a.pptx', labels: LABELS });
-    expect(fillOfficeBody).toHaveBeenCalledWith(expect.any(HTMLElement), expect.any(Object), 'pptx', expect.any(Function), expect.any(Function));
+    expect(fillOfficeBody).toHaveBeenCalledWith(expect.any(HTMLElement), expect.any(Object), 'pptx', expect.any(Function), expect.any(Function), expect.any(Object));
     teardown();
   });
 

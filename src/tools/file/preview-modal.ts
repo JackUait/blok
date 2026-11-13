@@ -1,35 +1,26 @@
 import { openModalDialog } from '../../components/utils/modal-dialog';
-import { safePreviewSrc } from './url';
+import { safeHttpHref, safePreviewSrc } from './url';
 import { extOf, getPreviewKind, type PreviewKind } from './preview';
 import { loadTextPreview } from './text-preview';
 import { extToPrismLang } from './code-languages';
 import { tokenizePrism, isHighlightable } from '../code/prism-loader';
 import { applyPrismHighlight, ensurePrismStyles } from '../code/prism-applier';
 import { measureLineRows, rowHeight } from '../code/line-geometry';
-import { IconFile, IconCross, IconLinkExternal } from '../../components/icons';
+import { IconCross, IconDownload, IconLinkExternal } from '../../components/icons';
 import { buildErrorInto } from './preview-error';
 import { fillOfficeBody, isOfficeKind } from './office-preview';
 import { ScrollHaze } from './preview-scroll-haze';
 import { createSafeObjectUrl } from '../../shared/safe-object-url';
+import { resolvePreviewLabels, type PreviewLabels } from './preview-labels';
+import { describePreviewType, metaText, OVERLAY_ATTR, type PreviewChrome } from './preview-chrome';
 
 export interface FilePreviewOptions {
   url: string;
   fileName?: string;
   mimeType?: string;
-  labels: {
-    close: string;
-    raw?: string;
-    render?: string;
-    loading?: string;
-    error?: string;
-    /** The line under the error title: what to do next. */
-    errorDetail?: string;
-    /** That line when there is no safe link to download from. */
-    errorNoLinkDetail?: string;
-    download?: string;
-    openInNewTab?: string;
-    backToContent?: string;
-  };
+  /** Bytes, when known. Shown in the header. */
+  size?: number;
+  labels: Partial<PreviewLabels> & { close: string };
   /** Element whose direction the preview takes (it mounts outside the editor). */
   directionSource?: Element | null;
 }
@@ -41,6 +32,8 @@ interface PreviewElements {
   actions: HTMLElement;
   closeButton: HTMLButtonElement;
   body: HTMLElement;
+  meta: HTMLElement;
+  typeName: string;
   kind: PreviewKind | null;
 }
 
@@ -99,6 +92,26 @@ function buildOpenTabLink(opts: FilePreviewOptions): HTMLAnchorElement {
   return open;
 }
 
+/** The header's download link. A blob downloads in place, so it opens no tab. */
+function buildSaveLink(opts: FilePreviewOptions, href: string): HTMLAnchorElement {
+  const save = document.createElement('a');
+  save.className = 'blok-file-preview-save';
+  save.setAttribute('data-action', 'preview-save');
+  // Callers pass a gated url; the gate here keeps this sink safe on its own.
+  save.href = safePreviewSrc(href) ?? '';
+  save.setAttribute('download', opts.fileName ?? '');
+  save.rel = 'noopener noreferrer';
+  if (!href.startsWith('blob:')) {
+    save.target = '_blank';
+  }
+  const label = opts.labels.download ?? 'Download';
+  save.setAttribute('aria-label', label);
+  save.title = label;
+  save.innerHTML = IconDownload;
+
+  return save;
+}
+
 /**
  * Frames a blob: pdf. A blob url has the editor's origin, so a text/html blob
  * would run as the editor, framed or opened in a tab. Re-typing the bytes as
@@ -132,7 +145,7 @@ async function fillPdfBlobBody(
   body.replaceChildren(frame);
   const open = buildOpenTabLink(opts);
   open.href = src;
-  actions.prepend(open);
+  actions.prepend(buildSaveLink(opts, src), open);
 }
 
 function renderPlainText(body: HTMLElement, text: string): void {
@@ -338,10 +351,15 @@ function buildElements(opts: FilePreviewOptions): PreviewElements {
   const title = document.createElement('span');
   title.className = 'blok-file-preview-title';
 
-  const titleIcon = document.createElement('span');
-  titleIcon.className = 'blok-file-preview-title-icon';
-  titleIcon.setAttribute('aria-hidden', 'true');
-  titleIcon.innerHTML = IconFile;
+  const kind = getPreviewKind({ url: opts.url, fileName: opts.fileName, mimeType: opts.mimeType });
+  const type = describePreviewType(opts, kind ?? 'text', resolvePreviewLabels(opts.labels));
+
+  const badge = document.createElement('span');
+  badge.className = 'blok-file-preview-badge';
+  badge.setAttribute('data-role', 'file-preview-badge');
+  badge.setAttribute('data-file-category', type.category);
+  badge.setAttribute('aria-hidden', 'true');
+  badge.textContent = type.badge;
 
   const titleText = document.createElement('span');
   titleText.className = 'blok-file-preview-title-text';
@@ -349,7 +367,12 @@ function buildElements(opts: FilePreviewOptions): PreviewElements {
     titleText.textContent = opts.fileName;
   }
 
-  title.append(titleIcon, titleText);
+  const meta = document.createElement('span');
+  meta.className = 'blok-file-preview-meta';
+  meta.setAttribute('data-role', 'file-preview-meta');
+  meta.textContent = metaText(type.name, [], opts.size);
+
+  title.append(badge, titleText, meta);
 
   const closeButton = document.createElement('button');
   closeButton.type = 'button';
@@ -361,14 +384,17 @@ function buildElements(opts: FilePreviewOptions): PreviewElements {
   const actions = document.createElement('div');
   actions.className = 'blok-file-preview-actions';
 
-  const kind = getPreviewKind({ url: opts.url, fileName: opts.fileName, mimeType: opts.mimeType });
-
-  // PDFs have no browser chrome of their own here, so give readers a one-click
-  // escape into a full tab. A blob link is added once its bytes are re-typed.
-  const openHref = kind === 'pdf' ? safePreviewSrc(opts.url) : null;
-  if (openHref !== null && !openHref.startsWith('blob:')) {
+  // A blob opened in a tab has the editor's origin, so only http(s) gets the
+  // link here. A blob pdf gets both links once its bytes are re-typed.
+  const httpHref = safeHttpHref(opts.url);
+  const blobHref = kind === 'pdf' || httpHref !== null ? null : safePreviewSrc(opts.url);
+  const saveHref = httpHref ?? blobHref;
+  if (saveHref !== null) {
+    actions.appendChild(buildSaveLink(opts, saveHref));
+  }
+  if (httpHref !== null) {
     const open = buildOpenTabLink(opts);
-    open.href = openHref;
+    open.href = httpHref;
     actions.appendChild(open);
   }
   actions.appendChild(closeButton);
@@ -379,11 +405,11 @@ function buildElements(opts: FilePreviewOptions): PreviewElements {
   dialog.append(header, body);
   backdrop.appendChild(dialog);
 
-  return { backdrop, dialog, header, actions, closeButton, body, kind };
+  return { backdrop, dialog, header, actions, closeButton, body, meta, typeName: type.name, kind };
 }
 
 export function openFilePreview(opts: FilePreviewOptions): () => void {
-  const { backdrop, dialog, header, actions, closeButton, body, kind } = buildElements(opts);
+  const { backdrop, dialog, header, actions, closeButton, body, meta, typeName, kind } = buildElements(opts);
   const officeKind = isOfficeKind(kind) ? kind : null;
   const textualKind = kind === null || kind === 'pdf' || officeKind !== null ? null : kind;
 
@@ -397,6 +423,38 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
   const haze = new ScrollHaze();
 
   const label = opts.fileName ?? opts.labels.close;
+
+  const overlays: HTMLElement[] = [];
+  const keyHandlers: Array<(event: KeyboardEvent) => void> = [];
+  const slots: { bar: HTMLElement | null } = { bar: null };
+  const chrome: PreviewChrome = {
+    labels: resolvePreviewLabels(opts.labels),
+    header,
+    body,
+    setFacts: (facts) => {
+      meta.textContent = metaText(typeName, facts, opts.size);
+    },
+    setBar: (bar) => {
+      slots.bar?.remove();
+      slots.bar = bar;
+      if (bar !== null) {
+        dialog.appendChild(bar);
+      }
+    },
+    addOverlay: (overlay) => {
+      overlay.setAttribute(OVERLAY_ATTR, '');
+      overlays.push(overlay);
+      body.appendChild(overlay);
+    },
+    isClosed: () => state.closed,
+    onRelease: (release) => {
+      releases.push(release);
+    },
+    onKey: (handler) => {
+      keyHandlers.push(handler);
+    },
+  };
+  dialog.addEventListener('keydown', (event) => keyHandlers.forEach((handler) => handler(event)));
 
   // The shared modal primitive owns mounting, Top Layer promotion, background
   // `inert`, the focus trap, focus restore, Escape/outside dismissal and the
@@ -428,7 +486,7 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
       return fillPdfBlobBody(body, actions, opts, () => state.closed, (release) => releases.push(release));
     }
     if (officeKind !== null) {
-      return fillOfficeBody(body, opts, officeKind, () => state.closed, (release) => releases.push(release));
+      return fillOfficeBody(body, opts, officeKind, () => state.closed, (release) => releases.push(release), chrome);
     }
     if (textualKind !== null) {
       return fillTextBody(body, header, opts, textualKind, () => state.closed, (release) => releases.push(release));

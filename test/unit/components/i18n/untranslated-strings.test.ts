@@ -983,6 +983,25 @@ for (const [locale, keys] of Object.entries(DASHBOARD_COGNATE_RETENTIONS)) {
   for (const key of keys) set.add(key);
 }
 
+/** File preview labels where the locale's own word is spelled as in English. Each has a ledger retention row. */
+const FILE_PREVIEW_COGNATE_RETENTIONS: Record<string, string[]> = {
+  cs: ['tools.file.previewTypeText'],
+  da: ['tools.file.previewSum'],
+  de: ['tools.file.previewTypeText'],
+  fr: ['tools.file.previewPages', 'tools.file.previewPagesOne'],
+  id: ['tools.file.previewSlidesOne', 'tools.file.previewSlideN'],
+  no: ['tools.file.previewSum'],
+  pt: ['tools.file.previewSlides', 'tools.file.previewSlidesOne', 'tools.file.previewSlideN'],
+  ro: ['tools.file.previewTypeText'],
+  sk: ['tools.file.previewTypeText'],
+  sv: ['tools.file.previewTypeText'],
+};
+
+for (const [locale, keys] of Object.entries(FILE_PREVIEW_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
+
 describe('locale values are translated (identical-to-en only when cognate)', () => {
   const english = loadLocaleMessages('en');
   const nonEnglish = listLocaleCodes().filter(code => code !== 'en');

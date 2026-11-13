@@ -179,12 +179,15 @@ describe('openFilePreview — modal chrome', () => {
 
     const title = childAt(header, 0);
     expect(title.className).toBe('blok-file-preview-title');
-    expect(title.children.length).toBe(2);
+    expect(title.children.length).toBe(3);
 
-    const titleIcon = childAt(title, 0);
-    expect(titleIcon.className).toBe('blok-file-preview-title-icon');
-    expect(titleIcon.getAttribute('aria-hidden')).toBe('true');
-    expect(titleIcon.innerHTML).toContain('svg');
+    const badge = childAt(title, 0);
+    expect(badge.className).toBe('blok-file-preview-badge');
+    expect(badge.getAttribute('aria-hidden')).toBe('true');
+    expect(badge.textContent).toBe('PDF');
+
+    const meta = childAt(title, 2);
+    expect(meta.className).toBe('blok-file-preview-meta');
 
     const titleText = childAt(title, 1);
     expect(titleText.className).toBe('blok-file-preview-title-text');
@@ -320,14 +323,13 @@ describe('openFilePreview — modal chrome', () => {
     expect(open.title).toBe('');
   });
 
-  it('shows the loading placeholder — not an iframe, not an open-tab anchor — for a text file', () => {
+  it('shows the loading placeholder, not an iframe, for a text file', () => {
     vi.mocked(loadTextPreview).mockReturnValue(new Promise(() => undefined));
 
     teardown = openFilePreview({ url: 'https://example.com/notes.txt', fileName: 'notes.txt', labels: FULL_LABELS });
 
     const body = childAt(dialogEl(), 1);
     expect(body.querySelector('[data-role="file-preview-frame"]')).toBeNull();
-    expect(document.body.querySelector('[data-action="preview-open-tab"]')).toBeNull();
 
     const loading = find(body, '[data-role="file-preview-loading"]');
     expect(loading.className).toBe('blok-file-preview-loading');

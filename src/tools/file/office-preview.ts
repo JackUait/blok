@@ -4,6 +4,8 @@ import { loadBinaryPreview } from './binary-preview';
 import { ZipParts } from './zip-parts';
 import { loadDocxRenderer, loadPptxRenderer } from './office-loaders';
 import { buildErrorInto } from './preview-error';
+import { mountPager } from './page-pager';
+import type { PreviewChrome } from './preview-chrome';
 
 export type OfficeKind = Extract<PreviewKind, 'docx' | 'xlsx' | 'pptx'>;
 
@@ -172,6 +174,13 @@ async function renderInto(
   return () => deck.destroy();
 }
 
+/** The controls a rendered office body gets: page and zoom for a document. */
+function mountKindChrome(container: HTMLElement, kind: OfficeKind, chrome: PreviewChrome): void {
+  if (kind === 'docx') {
+    mountPager(container, chrome);
+  }
+}
+
 /**
  * Fetch and render a docx/xlsx/pptx body, unless the modal was torn down.
  * `onRelease` receives the function that frees the render's resources; when the
@@ -183,6 +192,7 @@ export async function fillOfficeBody(
   kind: OfficeKind,
   isClosed: () => boolean,
   onRelease: (release: () => void) => void = () => undefined,
+  chrome?: PreviewChrome,
 ): Promise<void> {
   const result = await loadBinaryPreview(opts.url);
   if (isClosed()) {
@@ -205,6 +215,9 @@ export async function fillOfficeBody(
       release();
     } else if (release !== null) {
       onRelease(release);
+    }
+    if (chrome !== undefined && !isClosed()) {
+      mountKindChrome(container, kind, chrome);
     }
   } catch (e) {
     console.warn(`[blok] Failed to render ${kind} preview:`, e);

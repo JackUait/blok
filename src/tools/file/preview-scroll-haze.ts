@@ -127,6 +127,7 @@ export class ScrollHaze {
       (el): el is HTMLElement =>
         el instanceof HTMLElement
         && !el.classList.contains('blok-file-preview-haze')
+        && !el.hasAttribute('data-blok-preview-overlay')
         && !el.hidden
         && getComputedStyle(el).display !== 'none',
     );

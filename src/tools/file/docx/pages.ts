@@ -9,6 +9,7 @@ type HeaderKind = 'default' | 'first' | 'even';
 
 export interface Section {
   width: number;
+  height: number;
   margins: { top: number; right: number; bottom: number; left: number; header: number; footer: number };
   titlePage: boolean;
   /** Newspaper columns of the body, or null for one. */
@@ -22,6 +23,7 @@ export interface Section {
 
 /** US Letter with one-inch margins, Word's default page, in twips. */
 const LETTER_WIDTH = 12240;
+const LETTER_HEIGHT = 15840;
 const INCH = 1440;
 const HALF_INCH = 720;
 
@@ -68,6 +70,7 @@ function parseSection(sectPr: Element | null, previous: Section | null): Section
 
   return {
     width: num(attr(pgSz, 'w')) ?? LETTER_WIDTH,
+    height: num(attr(pgSz, 'h')) ?? LETTER_HEIGHT,
     margins: {
       top: margin('top', INCH),
       right: margin('right', INCH),
@@ -277,6 +280,7 @@ export class Pages implements BlockSink {
     const el = document.createElement('section');
     el.className = 'blok-docx';
     el.style.width = pt(section.width);
+    el.style.minHeight = pt(section.height);
     const header = this.headerFor('headers', section);
     const footer = this.headerFor('footers', section);
     el.style.paddingTop = pt(header === null ? margins.top : Math.min(margins.header, margins.top));

@@ -14,6 +14,8 @@ vi.mock('../../../../src/tools/file/office-loaders', () => ({
 import { fillOfficeBody, renderXlsxInto } from '../../../../src/tools/file/office-preview';
 import { loadBinaryPreview } from '../../../../src/tools/file/binary-preview';
 import { loadDocxRenderer, loadPptxRenderer, loadZipReader } from '../../../../src/tools/file/office-loaders';
+import { DEFAULT_PREVIEW_LABELS } from '../../../../src/tools/file/preview-labels';
+import type { PreviewChrome } from '../../../../src/tools/file/preview-chrome';
 
 const OPTS = { url: 'blob:x', fileName: 'a.docx', labels: { close: 'Close', error: 'Error', download: 'Download' } };
 
@@ -54,6 +56,41 @@ describe('fillOfficeBody', () => {
     const body = document.createElement('div');
     await fillOfficeBody(body, { ...OPTS, fileName: 'a.pptx', url: 'https://x.com/a.pptx' }, 'pptx', () => false, () => undefined);
     expect(body.querySelector('[data-role="file-preview-error"]')).not.toBeNull();
+  });
+});
+
+describe('fillOfficeBody — docx controls', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it('gives a rendered document its page counter and page count', async () => {
+    vi.mocked(loadBinaryPreview).mockResolvedValue({ ok: true, buf: new ArrayBuffer(4) });
+    vi.mocked(loadDocxRenderer).mockResolvedValue(async (_buf, container) => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'blok-docx-wrapper';
+      wrapper.innerHTML = '<section class="blok-docx"></section><section class="blok-docx"></section>';
+      container.appendChild(wrapper);
+
+      return () => undefined;
+    });
+    const body = document.createElement('div');
+    const facts: string[][] = [];
+    const chrome: PreviewChrome = {
+      labels: DEFAULT_PREVIEW_LABELS,
+      header: document.createElement('div'),
+      body,
+      setFacts: (next) => facts.push(next),
+      setBar: () => undefined,
+      addOverlay: (overlay) => body.appendChild(overlay),
+      isClosed: () => false,
+      onRelease: () => undefined,
+      onKey: () => undefined,
+    };
+
+    await fillOfficeBody(body, OPTS, 'docx', () => false, () => undefined, chrome);
+
+    expect(facts).toEqual([['2 pages']]);
+    expect(body.querySelector('[data-role="file-preview-page"]')?.textContent).toMatch(/ \/ 2$/);
   });
 });
 

@@ -30,6 +30,26 @@ async function render(body: string, files = headerFiles(), settings?: string): P
 
 const sectPr = (refs: string, extra = ''): string => `<w:sectPr>${refs}${extra}</w:sectPr>`;
 
+describe('renderDocxInto — paper size', () => {
+  afterEach(() => {
+    document.body.replaceChildren();
+  });
+
+  it('makes a short page as tall as the paper it was written for', async () => {
+    const c = await render(p('one') + '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/></w:sectPr>', {});
+    const page = c.querySelector<HTMLElement>('section.blok-docx');
+
+    expect(page?.style.minHeight).toBe('841.9pt');
+    expect(page?.style.width).toBe('595.3pt');
+  });
+
+  it('falls back to US Letter height when the document names no paper', async () => {
+    const c = await render(p('one'), {});
+
+    expect(c.querySelector<HTMLElement>('section.blok-docx')?.style.minHeight).toBe('792pt');
+  });
+});
+
 describe('renderDocxInto — headers and footers', () => {
   beforeEach(() => {
     vi.clearAllMocks();

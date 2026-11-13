@@ -237,6 +237,11 @@ export class DatabaseTableGrid {
     }
   }
 
+  /** Commit and close a floating cell editor before opening its row page. */
+  finishEditing(): void {
+    this.editor?.close();
+  }
+
   get isEditing(): boolean {
     return this.editor?.isOpen === true;
   }

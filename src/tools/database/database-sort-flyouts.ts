@@ -31,7 +31,7 @@ export const openFlyout = (
   testId: string,
   width: number,
   rows: (pick: (write: () => void) => void) => HTMLElement[],
-  place: { beside?: number } = {}
+  place: { beside?: number; fit?: boolean } = {}
 ): DatabasePanel => {
   const release = host.hold();
   const focusKey = anchor.getAttribute('data-blok-testid') ?? '';
@@ -40,6 +40,8 @@ export const openFlyout = (
     root: {
       // database.css: the measured row pitch, the same for sort and filter lists.
       name: 'sort-flyout',
+      // `width` becomes a floor: the list grows to its widest row.
+      ...(place.fit === true ? { fitContent: true } : {}),
       build: () => rows((write) => {
         flyout.close();
         write();

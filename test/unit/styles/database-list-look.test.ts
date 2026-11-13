@@ -355,3 +355,15 @@ describe('conditional color fill on a table (notion-motion.md Round 20 §4)', ()
     }
   });
 });
+
+describe('conditional color card lines (notion-motion.md Round 20 §4)', () => {
+  it('sets the label in the ink and the value button in the value ink with a 16px chevron', () => {
+    expect(ruleBody(database, '[data-blok-database-color-setting]')).toContain('display: flex');
+    expect(ruleBody(database, '[data-blok-database-color-setting-label]')).toContain('color: var(--blok-database-ink)');
+    const value = ruleBody(database, '[data-blok-database-color-setting-value]');
+
+    expect(value).toContain('color: var(--blok-database-panel-value-text)');
+    expect(value).toContain('font-size: 14px');
+    expect(ruleBody(database, '[data-blok-database-color-setting-value] svg')).toContain('width: 16px');
+  });
+});

@@ -1492,7 +1492,7 @@
   "tools.database.colorPageBackground": "Page background",
   "tools.database.colorApplyTo": "Apply to",
   "tools.database.colorApplyRow": "Entire row",
-  "tools.database.colorApplyProperty": "Property",
+  "tools.database.colorApplyProperty": "This property",
   "tools.database.colorDelete": "Delete color setting",
   "tools.database.colorDefault": "Default",
   "tools.database.colorGray": "Gray",

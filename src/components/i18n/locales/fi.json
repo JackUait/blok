@@ -1492,7 +1492,7 @@
   "tools.database.colorPageBackground": "Sivun tausta",
   "tools.database.colorApplyTo": "Käytä kohteeseen",
   "tools.database.colorApplyRow": "Koko rivi",
-  "tools.database.colorApplyProperty": "Ominaisuus",
+  "tools.database.colorApplyProperty": "Tämä ominaisuus",
   "tools.database.colorDelete": "Poista väriasetus",
   "tools.database.colorDefault": "Oletus",
   "tools.database.colorGray": "Harmaa",

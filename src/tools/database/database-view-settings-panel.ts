@@ -1,4 +1,4 @@
-import { IconBolt, IconCalendar, IconCheck, IconChevronUpDown, IconCopy, IconCross, IconDatabase, IconDotsHorizontal, IconEyeSlash, IconFilter, IconGallery, IconLink, IconListBulleted, IconLock, IconPaintRoller, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
+import { IconBolt, IconCalendar, IconCheck, IconChevronRight, IconChevronUpDown, IconCopy, IconCross, IconDatabase, IconDotsHorizontal, IconEyeSlash, IconFilter, IconGallery, IconLink, IconListBulleted, IconLock, IconPaintRoller, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
 import type { I18n } from '../../../types';
 import {
   DatabasePanel,
@@ -2812,11 +2812,10 @@ export class ViewSettingsPages {
                 noThisPage: true,
               })),
             }),
-            panelRow({
+            colorSetting({
               label: this.t('colorPageBackground'),
               testId: `database-color-background-${rule.id}`,
               value: this.t(`color${capital(rule.color)}`),
-              opensPage: true,
               disabled,
               onClick: () => panel.push({
                 title: this.t('colorPageBackground'),
@@ -2839,24 +2838,20 @@ export class ViewSettingsPages {
             })
           );
           if (view.type === 'table') {
-            card.appendChild(panelRow({
+            card.appendChild(colorSetting({
               label: this.t('colorApplyTo'),
               testId: `database-color-apply-${rule.id}`,
               value: this.t(rule.applyTo === 'property' ? 'colorApplyProperty' : 'colorApplyRow'),
-              opensPage: true,
               disabled,
-              onClick: () => panel.push({
-                title: this.t('colorApplyTo'),
-                build: (inner) => (['row', 'property'] as const).map((applyTo) => panelRow({
-                  label: this.t(applyTo === 'property' ? 'colorApplyProperty' : 'colorApplyRow'),
-                  testId: `database-color-apply-${applyTo}`,
-                  checked: (rules().find((r) => r.id === rule.id)?.applyTo ?? 'row') === applyTo,
-                  onClick: () => {
-                    patch(rule.id, { applyTo });
-                    inner.back();
-                  },
-                })),
-              }),
+              onClick: (button) => openFlyout(button, panel, 'database-color-apply-picker', APPLY_FLYOUT_WIDTH, (pick) => (['row', 'property'] as const).map((applyTo) => panelRow({
+                label: this.t(applyTo === 'property' ? 'colorApplyProperty' : 'colorApplyRow'),
+                testId: `database-color-apply-${applyTo}`,
+                checked: (rules().find((r) => r.id === rule.id)?.applyTo ?? 'row') === applyTo,
+                onClick: () => pick(() => {
+                  patch(rule.id, { applyTo });
+                  panel.refresh();
+                }),
+              })), { fit: true }),
             }));
           }
           card.appendChild(panelRow({
@@ -2912,6 +2907,38 @@ const ISO_DAY_VALUE = /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2})?$/;
 
 const rulesOf = (group: FilterGroup): FilterRule[] =>
   group.filterRules.flatMap((node) => (isFilterGroup(node) ? rulesOf(node) : [node]));
+
+/** notion-motion.md Round 20 §4 (r20-cc-apply.raw): 112.6 wide in English; a longer label widens it. */
+const APPLY_FLYOUT_WIDTH = 112;
+
+/**
+ * A conditional color card's "Page background" / "Apply to" line. Only the
+ * value is a button, and its flyout opens under it (notion-motion.md Round 20 §4).
+ */
+const colorSetting = (options: { label: string; testId: string; value: string; disabled: boolean; onClick: (button: HTMLButtonElement) => void }): HTMLElement => {
+  const line = document.createElement('div');
+  const label = document.createElement('span');
+  const button = document.createElement('button');
+  const text = document.createElement('span');
+  const chevron = document.createElement('span');
+
+  line.setAttribute('data-blok-database-color-setting', '');
+  label.setAttribute('data-blok-database-color-setting-label', '');
+  label.textContent = options.label;
+  button.type = 'button';
+  button.setAttribute('data-blok-database-color-setting-value', '');
+  button.setAttribute('data-blok-testid', options.testId);
+  button.setAttribute('aria-label', `${options.label}: ${options.value}`);
+  button.disabled = options.disabled;
+  text.textContent = options.value;
+  chevron.setAttribute('aria-hidden', 'true');
+  chevron.innerHTML = IconChevronRight;
+  button.append(text, chevron);
+  button.addEventListener('click', () => options.onClick(button));
+  line.append(label, button);
+
+  return line;
+};
 
 const findRule = (group: FilterGroup, id: string): FilterRule | undefined => {
   for (const node of group.filterRules) {

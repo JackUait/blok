@@ -12548,6 +12548,54 @@ input[data-blok-database-picker-search]:focus {
   align-items: center;
 }
 
+/* A card's "Page background" / "Apply to" line: only the value is a button (notion-motion.md Round 20 §4).
+   Line height is unmeasured: the panel row's 28. */
+[data-blok-database-color-setting] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--blok-space-2);
+  min-height: 28px;
+  padding-inline: var(--blok-space-2);
+}
+
+[data-blok-database-color-setting-label] {
+  color: var(--blok-database-ink);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+[data-blok-database-color-setting-value] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  min-height: 24px;
+  padding: 0 var(--blok-space-1);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-panel-value-text);
+  font: inherit;
+  font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+[data-blok-database-color-setting-value]:hover:not(:disabled),
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-database-color-setting-value]:focus-visible {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-color-setting-value]:disabled {
+  cursor: default;
+}
+
+[data-blok-database-color-setting-value] svg {
+  width: 16px;
+  height: 16px;
+  color: var(--blok-database-table-gutter-icon);
+}
+
 [data-blok-database-filter-rule] > [data-blok-database-panel-note] {
   flex: 0 0 48px;
   padding-block: 0;

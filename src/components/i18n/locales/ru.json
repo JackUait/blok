@@ -1504,7 +1504,7 @@
   "tools.database.colorPageBackground": "Фон страницы",
   "tools.database.colorApplyTo": "Применить к",
   "tools.database.colorApplyRow": "Всей строке",
-  "tools.database.colorApplyProperty": "Свойству",
+  "tools.database.colorApplyProperty": "Этому свойству",
   "tools.database.colorDelete": "Удалить настройку цвета",
   "tools.database.colorDefault": "По умолчанию",
   "tools.database.colorGray": "Серый",

@@ -1952,6 +1952,33 @@ describe('view settings panel', () => {
     expect(h.state.view.colorRules?.[0]).toMatchObject({ color: 'green', applyTo: 'property' });
   });
 
+  // notion-motion.md Round 20 §4 (r20-cc-apply.raw): "Apply to" opens a flyout under its value: Entire row, This property.
+  it('opens "Apply to" as a flyout under its value and keeps the color page', () => {
+    const h = harness({ colorRules: [{ id: 'c1', propertyId: 'num', operator: 'is_not_empty', value: null, color: 'gray' }] });
+    const panel = h.open();
+
+    click('database-settings-color');
+    click('database-color-apply-c1');
+    const flyout = q('database-color-apply-picker');
+
+    expect(flyout).not.toBeNull();
+    expect(panel.root.contains(flyout)).toBe(false);
+    expect(q('database-color-apply-row')?.getAttribute('aria-checked')).toBe('true');
+    expect(q('database-color-apply-property')?.textContent).toBe('tools.database.colorApplyProperty');
+
+    click('database-color-apply-property');
+
+    expect(h.state.view.colorRules?.[0].applyTo).toBe('property');
+    expect(q('database-color-apply-picker')).toBeNull();
+    expect(q('database-color-apply-c1')?.textContent?.trim()).toBe('tools.database.colorApplyProperty');
+  });
+
+  it('names the cell choice "This property", as Notion does', async () => {
+    const { default: en } = await import('../../../../src/components/i18n/locales/en.json');
+
+    expect(en['tools.database.colorApplyProperty']).toBe('This property');
+  });
+
   it('blocks shared edits while locked, but not personal filters', () => {
     const h = harness();
 

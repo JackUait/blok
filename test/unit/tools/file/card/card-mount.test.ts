@@ -1,14 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderFileCard } from '../../../../../src/tools/file/ui';
-import { mountCardObject, type CardLabels } from '../../../../../src/tools/file/card';
+import { mountCardObject, type CardUnit } from '../../../../../src/tools/file/card';
 
-const labels: CardLabels = {
-  pages: '{count} pages', pagesOne: '1 page',
-  sheets: '{count} sheets', sheetsOne: '1 sheet',
-  slides: '{count} slides', slidesOne: '1 slide',
-  lines: '{count} lines', linesOne: '1 line',
-  files: '{count} files', filesOne: '1 file',
+const NOUNS: Record<CardUnit, [one: string, many: string]> = {
+  pages: ['page', 'pages'], lines: ['line', 'lines'], sheets: ['sheet', 'sheets'], slides: ['slide', 'slides'], files: ['file', 'files'], rows: ['row', 'rows'],
 };
+const countLabel = (unit: CardUnit, count: number): string => `${count} ${NOUNS[unit][count === 1 ? 0 : 1]}`;
 
 const text = (body: string): Response => new Response(new TextEncoder().encode(body));
 
@@ -16,7 +13,7 @@ function mount(data: { url: string; fileName?: string; size?: number }): { wrapp
   const wrapper = renderFileCard(data);
   document.body.appendChild(wrapper);
 
-  return { wrapper, teardown: mountCardObject(wrapper, { data, config: {}, labels }) };
+  return { wrapper, teardown: mountCardObject(wrapper, { data, config: {}, countLabel }) };
 }
 
 const stageOf = (wrapper: HTMLElement): HTMLElement | null => wrapper.querySelector<HTMLElement>('[data-role="file-object"]');
@@ -55,18 +52,24 @@ describe('mountCardObject', () => {
     expect(stageOf(wrapper)?.parentElement?.className).toBe('blok-file-card');
   });
 
-  it('puts the count before the size once the file is read', async () => {
+  it('shows the count once the file is read, and never the size of a code file', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(text('a\nb\nc\n')));
     const { wrapper } = mount({ url: 'https://cdn/a.ts', fileName: 'a.ts', size: 2048 });
 
-    await vi.waitFor(() => expect(sizeOf(wrapper)).toBe('3 lines · 2 KB'));
+    expect(sizeOf(wrapper)).toBeNull();
+    await vi.waitFor(() => expect(sizeOf(wrapper)).toBe('3 lines'));
   });
 
-  it('shows the count alone when the size is unknown', async () => {
+  it('asks for the label with the number, so each language can pick its plural form', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(text('only\n')));
-    const { wrapper } = mount({ url: 'https://cdn/a.ts', fileName: 'a.ts' });
+    const seen = vi.fn(countLabel);
+    const data = { url: 'https://cdn/a.ts', fileName: 'a.ts' };
+    const wrapper = renderFileCard(data);
+    document.body.appendChild(wrapper);
+    mountCardObject(wrapper, { data, config: {}, countLabel: seen });
 
     await vi.waitFor(() => expect(sizeOf(wrapper)).toBe('1 line'));
+    expect(seen).toHaveBeenCalledWith('lines', 1);
   });
 
   it('keeps the plain card when the file cannot be read', async () => {
@@ -78,7 +81,7 @@ describe('mountCardObject', () => {
 
     expect(stageOf(wrapper)).toBeNull();
     expect(wrapper.hasAttribute('data-file-object')).toBe(false);
-    expect(sizeOf(wrapper)).toBe('2 KB');
+    expect(sizeOf(wrapper)).toBeNull();
   });
 
   it('shows a folder at once for an archive, and fills in its file count when known', async () => {

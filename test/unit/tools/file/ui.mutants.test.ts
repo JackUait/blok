@@ -98,7 +98,7 @@ describe('file card UI mutants', () => {
 
   describe('card chrome', () => {
     it('names every part it builds', () => {
-      const wrapper = card({ url: SAFE_URL, fileName: 'report.pdf', size: 2048 });
+      const wrapper = card({ url: SAFE_URL, fileName: 'report.zip', size: 2048 });
 
       expect(wrapper.className).toBe('blok-file-card-wrapper');
       expect(wrapper.getAttribute('data-role')).toBe('file-card-wrapper');

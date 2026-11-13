@@ -291,6 +291,36 @@ describe('card content', () => {
       });
     });
 
+    it('counts the rows of a CSV it read whole, without the header row', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(streamed([encode('Name,Total\nAda,12.5\nGrace,7\n')]).response));
+
+      const loaded = await loadCardContent('spreadsheet', source({ url: 'https://cdn/people.csv', fileName: 'people.csv' }));
+
+      expect(loaded?.count).toEqual({ unit: 'rows', value: 2 });
+    });
+
+    it('counts the rows of a CSV much longer than the card shows', async () => {
+      const csv = `Name,Total\n${Array.from({ length: 5000 }, (_, i) => `person ${i},${i}`).join('\n')}\n`;
+      expect(csv.length).toBeGreaterThan(4096);
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(streamed([encode(csv)]).response));
+
+      const loaded = await loadCardContent('spreadsheet', source({ url: 'https://cdn/people.csv', fileName: 'people.csv' }));
+
+      expect(loaded?.count).toEqual({ unit: 'rows', value: 5000 });
+    });
+
+    it('gives a CSV no row count when it is too long to read to the end, and still shows its first rows', async () => {
+      const chunk = encode(`${'x'.repeat(1023)}\n`);
+      const { response, cancelled } = streamed(Array.from({ length: 2048 }, () => chunk));
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response));
+
+      const loaded = await loadCardContent('spreadsheet', source({ url: 'https://cdn/huge.csv', fileName: 'huge.csv' }));
+
+      expect(loaded?.content.kind).toBe('spreadsheet');
+      expect(loaded?.count).toBeUndefined();
+      expect(cancelled()).toBe(true);
+    });
+
     it('does not download an office file larger than the limit', async () => {
       const fetchSpy = vi.fn();
       vi.stubGlobal('fetch', fetchSpy);

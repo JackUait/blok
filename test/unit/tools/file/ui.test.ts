@@ -64,10 +64,24 @@ describe('renderFileCard', () => {
     });
   });
 
-  it('shows the filename and human-readable size', () => {
+  it('shows the filename', () => {
     const card = renderFileCard({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf', size: 2048 });
     expect(card.querySelector('[data-role="file-name"]')?.textContent).toBe('doc.pdf');
-    expect(card.querySelector('[data-role="file-size"]')?.textContent).toBe('2 KB');
+  });
+
+  it('never shows how much a document, a picture or a code file weighs', () => {
+    for (const fileName of ['doc.pdf', 'notes.docx', 'photo.jpg', 'main.ts', 'README.md', 'song.mp3', 'film.mp4']) {
+      const card = renderFileCard({ url: `https://cdn/${fileName}`, fileName, size: 2048 });
+      expect(card.querySelector('[data-role="file-size"]'), fileName).toBeNull();
+    }
+  });
+
+  it('shows the size where it is what defines the file: an archive, or a file of unknown type', () => {
+    const archive = renderFileCard({ url: 'https://cdn/assets.zip', fileName: 'assets.zip', size: 2048 });
+    const unknown = renderFileCard({ url: 'https://cdn/backup.bin', fileName: 'backup.bin', size: 2048 });
+
+    expect(archive.querySelector('[data-role="file-size"]')?.textContent).toBe('2 KB');
+    expect(unknown.querySelector('[data-role="file-size"]')?.textContent).toBe('2 KB');
   });
 
   it('falls back to the url as the name when fileName is absent', () => {
@@ -76,7 +90,7 @@ describe('renderFileCard', () => {
   });
 
   it('omits the size element when size is undefined', () => {
-    const card = renderFileCard({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf' });
+    const card = renderFileCard({ url: 'https://cdn/a.zip', fileName: 'a.zip' });
     expect(card.querySelector('[data-role="file-size"]')).toBeNull();
   });
 

@@ -16,7 +16,7 @@ import { titleOf, type CardContent } from './card-objects';
 
 /** A number the card's second line shows next to the size, e.g. "14 pages". */
 export type CardCount =
-  | { unit: 'pages' | 'lines' | 'sheets' | 'slides' | 'files'; value: number }
+  | { unit: 'pages' | 'lines' | 'sheets' | 'slides' | 'files' | 'rows'; value: number }
   | { unit: 'plain'; text: string };
 
 export interface LoadedCard {
@@ -36,6 +36,8 @@ export interface CardSource {
 export const HEAD_BYTES = 4096;
 /** Largest office file or PDF a card downloads whole. Bigger ones keep the plain card. */
 export const MAX_WHOLE_BYTES = 20 * 1024 * 1024;
+/** A CSV is read this far so its rows can be counted; a longer one shows no count. */
+const CSV_BYTES = 1024 * 1024;
 const CODE_LINES = 14;
 const TEXT_LINES = 16;
 /** A Markdown file often opens with a logo and badges, which the card drops; it reads past them. */
@@ -255,21 +257,28 @@ async function loadText(source: CardSource): Promise<LoadedCard | null> {
   return { content: { kind: 'markdown', html: await markdownToHtml(text, { baseUrl: source.data.url }) }, ...lineCount(total) };
 }
 
+/** Rows of a CSV the card keeps; it draws six. */
+const CSV_ROWS = 8;
 const NUMBER = /^-?\d+(?:[.,]\d+)?%?$/;
 
 async function loadSpreadsheet(source: CardSource): Promise<LoadedCard | null> {
   const ext = extOf(nameOf(source));
   if (ext === 'csv' || ext === 'tsv') {
-    const head = await readHead(source.data.url, HEAD_BYTES, source.signal);
+    const head = await readHead(source.data.url, CSV_BYTES, source.signal);
     if (head === null) {
       return null;
     }
     const parsed = parseCsv(new TextDecoder().decode(head.bytes));
     // The last row of a cut-off read may be half a row.
-    const rows = (head.complete ? parsed : parsed.slice(0, -1))
+    const whole = head.complete ? parsed : parsed.slice(0, -1);
+    const rows = whole.slice(0, CSV_ROWS)
       .map((row) => row.map((field): GridCell => ({ text: field, value: NUMBER.test(field.trim()) ? parseFloat(field.replace(',', '.')) : null })));
+    if (rows.length === 0) {
+      return null;
+    }
 
-    return rows.length === 0 ? null : { content: { kind: 'spreadsheet', rows } };
+    // The first row is the header, as in the preview's own count.
+    return { content: { kind: 'spreadsheet', rows }, ...(head.complete ? { count: { unit: 'rows', value: Math.max(0, whole.length - 1) } } : {}) };
   }
   if (ext !== 'xlsx' && !(source.data.mimeType ?? '').includes('spreadsheetml')) {
     return null;

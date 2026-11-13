@@ -14,7 +14,7 @@ export interface FileData extends BlockToolData {
   url: string;
   /** Original filename, when known. */
   fileName?: string;
-  /** File size in bytes; rendered human-readable. */
+  /** File size in bytes. The card shows it only for an archive or a file of unknown type. */
   size?: number;
   /** MIME type; used to pick the type icon. */
   mimeType?: string;

@@ -1,44 +1,25 @@
 import type { FileConfig, FileData } from '../../../../types/tools/file';
 import { whenNearViewport } from '../../../components/utils/near-viewport';
-import { resolveFileIcon } from '../file-icon';
+import { resolveFileIcon, showsFileSize } from '../file-icon';
 import { humanFileSize } from '../format';
-import { counted } from '../preview-labels';
 import { initialContent, loadCardContent, type CardCount, type LoadedCard } from './card-content';
 import { buildCardObject, type BuiltObject, type CardContent } from './card-objects';
 import { createSprings, kickSprings, reducedMotion, stepSprings, stopSprings, wakeSprings, type Springs } from './card-physics';
 
-/** Count labels: `{count}` templates, and the form for exactly one. */
-export interface CardLabels {
-  pages: string;
-  pagesOne: string;
-  sheets: string;
-  sheetsOne: string;
-  slides: string;
-  slidesOne: string;
-  lines: string;
-  linesOne: string;
-  files: string;
-  filesOne: string;
-}
+/** What a count counts. */
+export type CardUnit = 'pages' | 'lines' | 'sheets' | 'slides' | 'files' | 'rows';
 
 export interface CardObjectOptions {
   data: Pick<FileData, 'url' | 'fileName' | 'size' | 'mimeType'>;
   config: Pick<FileConfig, 'fetchPreview' | 'pdfAssetsUrl' | 'previewEndpoint'>;
-  labels: CardLabels;
+  /** "14 pages" in the reader's language. It gets the number, so each language picks its plural form. */
+  countLabel: (unit: CardUnit, count: number) => string;
 }
 
 /** How far below rest a freshly read object starts, so it rises into the card. */
 const ENTER_FROM = 46;
 /** Length of the download arrow's drop, in ms. Matches `blok-file-drop` in file.css. */
 const DROP_MS = 800;
-
-function countText(count: CardCount, labels: CardLabels): string {
-  if (count.unit === 'plain') {
-    return count.text;
-  }
-
-  return counted(count.value, labels[`${count.unit}One`], labels[count.unit]);
-}
 
 /**
  * Gives a rendered file card its object: the file's first page, an editor tab
@@ -97,7 +78,7 @@ export function mountCardObject(wrapper: HTMLElement, opts: CardObjectOptions): 
   };
 
   const showCount = (count: CardCount): void => {
-    const text = countText(count, opts.labels);
+    const text = count.unit === 'plain' ? count.text : opts.countLabel(count.unit, count.value);
     if (held.built?.detail !== undefined) {
       held.built.detail.textContent = text;
     }
@@ -109,7 +90,8 @@ export function mountCardObject(wrapper: HTMLElement, opts: CardObjectOptions): 
       size.setAttribute('data-role', 'file-size');
       meta?.appendChild(size);
     }
-    size.textContent = [text, humanFileSize(opts.data.size)].filter((part) => part !== '').join(' · ');
+    const weight = showsFileSize(category) ? humanFileSize(opts.data.size) : '';
+    size.textContent = [text, weight].filter((part) => part !== '').join(' · ');
   };
 
   const apply = (loaded: LoadedCard | null): void => {

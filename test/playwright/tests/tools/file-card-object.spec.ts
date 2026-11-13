@@ -76,7 +76,8 @@ test.describe('file card object', () => {
     await expect(block.locator('[data-role="file-object-tab"]')).toHaveText('TSmain.ts');
     await expect(block.locator('[data-role="file-object-code"]')).toHaveText('export const answer = 42;\nconsole.log(answer);');
     await expect(block.locator('[data-role="file-object-line-numbers"]')).toHaveText('1\n2');
-    await expect(block.locator('[data-role="file-size"]')).toHaveText('2 lines · 2 KB');
+    // The count only: a code file never shows how much it weighs.
+    await expect(block.locator('[data-role="file-size"]')).toHaveText('2 lines');
   });
 
   test('reads only the start of a long text file', async ({ page }) => {
@@ -115,7 +116,7 @@ test.describe('file card object', () => {
     await expect.poll(() => asked.count).toBeGreaterThan(0);
     await expect(block.locator('[data-role="file-object"]')).toHaveCount(0);
     await expect(block.locator('[data-role="file-card-wrapper"]')).not.toHaveAttribute('data-file-object');
-    await expect(block.locator('[data-role="file-size"]')).toHaveText('2 KB');
+    await expect(block.locator('[data-role="file-size"]')).toHaveCount(0);
   });
 
   test('an archive shows a folder at once, titled by the file', async ({ page }) => {
@@ -126,6 +127,21 @@ test.describe('file card object', () => {
     await expect(block.locator('[data-role="file-object"]')).toHaveAttribute('data-file-object', 'archive');
     await expect(block.locator('[data-role="file-object-title"]')).toHaveText('Brand assets');
     await expect(block.locator('[data-role="file-object-folder-sheet"]')).toHaveCount(3);
+  });
+
+  test('only an archive or an unknown file shows its size', async ({ page }) => {
+    await page.route(`${REMOTE}/**`, (route) => route.fulfill({ status: 404, body: '' }));
+    const size = page.locator(FILE_BLOCK_SELECTOR).locator('[data-role="file-size"]');
+
+    await createBlokWithFile(page, { url: `${REMOTE}/a.zip`, fileName: 'a.zip', size: 2048 });
+    await expect(size).toHaveText('2 KB');
+
+    await createBlokWithFile(page, { url: `${REMOTE}/backup.bin`, fileName: 'backup.bin', size: 2048 });
+    await expect(size).toHaveText('2 KB');
+
+    await createBlokWithFile(page, { url: `${REMOTE}/notes.docx`, fileName: 'notes.docx', size: 2048 });
+    await expect(page.locator(FILE_BLOCK_SELECTOR).locator('[data-role="file-name"]')).toHaveText('notes.docx');
+    await expect(size).toHaveCount(0);
   });
 
   test('the object lifts while the pointer is over the card and settles back after', async ({ page }) => {

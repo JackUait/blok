@@ -100,3 +100,11 @@ export function resolveFileIcon(data: Partial<FileData>): { category: FileIconCa
 
   return { category, icon: CATEGORY_ICON[category] };
 }
+
+/**
+ * Whether a card shows the file's size. Only where the size is what defines
+ * the file: an archive, or a file of unknown type, which has no other fact to show.
+ */
+export function showsFileSize(category: FileIconCategory): boolean {
+  return category === 'archive' || category === 'generic';
+}

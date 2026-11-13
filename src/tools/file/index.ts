@@ -23,7 +23,7 @@ import { PASTE_EXTENSIONS, PASTE_MIME_TYPES } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { renderUploadingState, type UploadingStateElement } from '../image/uploading-state';
 import { renderCaptionRow, renderFileCard } from './ui';
-import { mountCardObject } from './card';
+import { mountCardObject, type CardUnit } from './card';
 import { Uploader } from './uploader';
 import { FileToolError } from './errors';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
@@ -55,6 +55,16 @@ const IMAGE_EXTENSION_RE = /\.(png|jpe?g|gif|webp|svg)(?:[?#]|$)/i;
 
 /** Video filenames/URLs that should auto-convert the File block into a Video. */
 const VIDEO_EXTENSION_RE = /\.(mp4|webm|ogg|mov|m4v)(?:[?#]|$)/i;
+
+/** Plural keys: i18n picks `_one`, `_few`, `_many`… from the count. */
+const CARD_COUNT_KEYS: Record<CardUnit, string> = {
+  pages: 'tools.file.cardPages',
+  lines: 'tools.file.cardLines',
+  sheets: 'tools.file.cardSheets',
+  slides: 'tools.file.cardSlides',
+  files: 'tools.file.cardFiles',
+  rows: 'tools.file.cardRows',
+};
 
 export class FileTool implements BlockTool {
   public static get 'blok.runtimePartsOwner'(): string {
@@ -685,23 +695,10 @@ export class FileTool implements BlockTool {
     const onRename = this.readOnly ? undefined : (next: string): void => this.renameFile(next);
     const card = renderFileCard(this.data, onPreview, this.api.i18n.t('tools.file.download'), onRename);
     wrap.appendChild(card);
-    const t = (key: string): string => this.api.i18n.t(key);
-    const many = (key: string): string => this.api.i18n.t(key, { count: '{count}' });
     this.cardTeardown = this.config.cardPreview === false ? null : mountCardObject(card, {
       data: this.data,
       config: this.config,
-      labels: {
-        pages: many('tools.file.previewPages'),
-        pagesOne: t('tools.file.previewPagesOne'),
-        sheets: many('tools.file.previewSheets'),
-        sheetsOne: t('tools.file.previewSheetsOne'),
-        slides: many('tools.file.previewSlides'),
-        slidesOne: t('tools.file.previewSlidesOne'),
-        lines: many('tools.file.previewLines'),
-        linesOne: t('tools.file.previewLinesOne'),
-        files: many('tools.file.cardFiles'),
-        filesOne: t('tools.file.cardFilesOne'),
-      },
+      countLabel: (unit, count) => this.api.i18n.t(CARD_COUNT_KEYS[unit], { count }),
     });
 
     const hasCaption = (this.data.caption ?? '') !== '';

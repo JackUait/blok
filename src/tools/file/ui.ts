@@ -1,7 +1,7 @@
 import { IconDownload } from '../../components/icons';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import type { FileData } from '../../../types/tools/file';
-import { resolveFileIcon } from './file-icon';
+import { resolveFileIcon, showsFileSize } from './file-icon';
 import { humanFileSize } from './format';
 import { safeHttpHref } from './url';
 
@@ -160,7 +160,7 @@ export function renderFileCard(
   }
   meta.appendChild(name);
 
-  const sizeText = humanFileSize(data.size);
+  const sizeText = showsFileSize(category) ? humanFileSize(data.size) : '';
   if (sizeText) {
     const size = document.createElement('span');
     size.className = 'blok-file-size';

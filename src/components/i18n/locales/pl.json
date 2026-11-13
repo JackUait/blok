@@ -1402,6 +1402,7 @@
   "tools.database.filterUnitOneYear": "rok",
   "tools.database.filterRelativePast": "W ciągu ostatnich {count} {unit}",
   "tools.database.filterRelativeNext": "W ciągu następnych {count} {unit}",
+  "tools.database.filterPillNot": "Nie {value}",
   "tools.database.filterDateThisWeek": "Ten tydzień",
   "tools.database.filterDateThisMonth": "Ten miesiąc",
   "tools.database.filterDateThisYear": "Ten rok",

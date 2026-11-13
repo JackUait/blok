@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "tahun",
   "tools.database.filterRelativePast": "{count} {unit} terakhir",
   "tools.database.filterRelativeNext": "{count} {unit} ke depan",
+  "tools.database.filterPillNot": "Bukan {value}",
   "tools.database.filterDateThisWeek": "Minggu ini",
   "tools.database.filterDateThisMonth": "Bulan ini",
   "tools.database.filterDateThisYear": "Tahun ini",

@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "సంవత్సరం",
   "tools.database.filterRelativePast": "గత {count} {unit}",
   "tools.database.filterRelativeNext": "రాబోయే {count} {unit}",
+  "tools.database.filterPillNot": "{value} కాదు",
   "tools.database.filterDateThisWeek": "ఈ వారం",
   "tools.database.filterDateThisMonth": "ఈ నెల",
   "tools.database.filterDateThisYear": "ఈ సంవత్సరం",

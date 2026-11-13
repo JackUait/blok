@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "वर्ष",
   "tools.database.filterRelativePast": "पिछले {count} {unit}",
   "tools.database.filterRelativeNext": "अगले {count} {unit}",
+  "tools.database.filterPillNot": "{value} नहीं",
   "tools.database.filterDateThisWeek": "यह सप्ताह",
   "tools.database.filterDateThisMonth": "यह महीना",
   "tools.database.filterDateThisYear": "यह वर्ष",

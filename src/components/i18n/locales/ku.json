@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "ساڵ",
   "tools.database.filterRelativePast": "{count} {unit}ی ڕابردوو",
   "tools.database.filterRelativeNext": "{count} {unit}ی داهاتوو",
+  "tools.database.filterPillNot": "{value} نییە",
   "tools.database.filterDateThisWeek": "ئەم هەفتەیە",
   "tools.database.filterDateThisMonth": "ئەم مانگە",
   "tools.database.filterDateThisYear": "ئەم ساڵە",

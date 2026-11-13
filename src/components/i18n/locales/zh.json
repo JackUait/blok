@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "年",
   "tools.database.filterRelativePast": "过去 {count} {unit}",
   "tools.database.filterRelativeNext": "未来 {count} {unit}",
+  "tools.database.filterPillNot": "不是 {value}",
   "tools.database.filterDateThisWeek": "本周",
   "tools.database.filterDateThisMonth": "本月",
   "tools.database.filterDateThisYear": "今年",

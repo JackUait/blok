@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "წელი",
   "tools.database.filterRelativePast": "ბოლო {count} {unit}",
   "tools.database.filterRelativeNext": "შემდეგი {count} {unit}",
+  "tools.database.filterPillNot": "არა {value}",
   "tools.database.filterDateThisWeek": "ეს კვირა",
   "tools.database.filterDateThisMonth": "ეს თვე",
   "tools.database.filterDateThisYear": "ეს წელი",

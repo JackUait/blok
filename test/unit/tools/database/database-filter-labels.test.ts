@@ -12,7 +12,9 @@ import {
   sortDirectionLabelKey,
 } from '../../../../src/tools/database/database-filter-labels';
 import { PAGE_LIST_ROLLUP } from '../../../../src/shared/database/value-helpers';
-import type { DatabaseRow, PropertyDefinition } from '../../../../src/tools/database/types';
+import type { DatabaseRow, FilterConfig, PropertyDefinition } from '../../../../src/tools/database/types';
+import { I18n } from '../../../../src/components/modules/i18n';
+import { EventsDispatcher } from '../../../../src/components/utils/events';
 import { rowMatchesFilters } from '../../../../src/shared/database/database-query';
 
 /** Echoes the key and its vars, so a test reads which key a label used. */
@@ -117,13 +119,13 @@ describe('database filter labels', () => {
   it('names "Me" and known people on a person pill', () => {
     const names = (id: string): string | undefined => (id === 'u1' ? 'Ada' : undefined);
 
-    expect(filterPillLabel({ operator: 'contains', value: ['me', 'u1'] }, prop('person'), t, names)).toBe('Due: tools.database.filterMe, Ada');
+    expect(filterPillLabel({ operator: 'contains', value: ['me', 'u1'] }, prop('person'), t, names)).toBe('Due: tools.database.filterOperator.contains tools.database.filterMe, Ada');
   });
 
   it('names "This page" and known rows on a relation pill (research/13 §1c)', () => {
     const rows = (id: string): string | undefined => (id === 'r1' ? 'One' : undefined);
 
-    expect(filterPillLabel({ operator: 'contains', value: ['this_page', 'r1'] }, prop('relation'), t, undefined, rows)).toBe('Due: tools.database.filterThisPage, One');
+    expect(filterPillLabel({ operator: 'contains', value: ['this_page', 'r1'] }, prop('relation'), t, undefined, rows)).toBe('Due: tools.database.filterOperator.contains tools.database.filterThisPage, One');
   });
 
   it('labels sort directions per type (research/08)', () => {
@@ -205,5 +207,53 @@ describe('database filter labels', () => {
     expect(operatorNeedsValue('end:is_empty')).toBe(false);
     expect(filterPillLabel({ operator: 'end:this_week', value: null }, prop('date'), t)).toBe('Due: tools.database.filterDateThisWeek');
     expect(filterPillLabel({ operator: 'end:equals', value: 'today' }, prop('date'), t)).toBe('Due: tools.database.filterDateToday');
+  });
+});
+
+// notion-motion.md Round 19 §2 (views-kit/notion-live/r19-<name>-bar.raw): every chip text read off Notion.
+describe('filter chip text, as Notion prints it', () => {
+  const sel = prop('select', { name: 'Select', config: { options: [{ id: 'r', label: 'Red', position: 'a0' }] } });
+  const ms = prop('multiSelect', { name: 'Multi-select', config: { options: [{ id: 'o1', label: 'One', position: 'a0' }, { id: 'o2', label: 'OTwo', position: 'a1' }] } });
+  const text = prop('text', { name: 'Text' });
+  const num = prop('number', { name: 'Number' });
+  const date = prop('date', { name: 'Date' });
+  const box = prop('checkbox', { name: 'Checkbox' });
+  const person = prop('person', { name: 'Person' });
+
+  const cases: Array<[string, { operator: string; value: unknown }, PropertyDefinition]> = [
+    ['Text: Not a', { operator: 'does_not_equal', value: 'a' }, text],
+    ['Text: Contains a', { operator: 'contains', value: 'a' }, text],
+    ['Text: Does not contain a', { operator: 'does_not_contain', value: 'a' }, text],
+    ['Text: Starts with a', { operator: 'starts_with', value: 'a' }, text],
+    ['Text: Ends with a', { operator: 'ends_with', value: 'a' }, text],
+    ['Text: Is empty', { operator: 'is_empty', value: null }, text],
+    ['Text: Is not empty', { operator: 'is_not_empty', value: null }, text],
+    ['Number = 5', { operator: 'equals', value: 5 }, num],
+    ['Number ≠ 5', { operator: 'does_not_equal', value: 5 }, num],
+    ['Number > 5', { operator: 'greater_than', value: 5 }, num],
+    ['Number: Is empty', { operator: 'is_empty', value: null }, num],
+    ['Select: Red', { operator: 'equals', value: ['r'] }, sel],
+    ['Select: Not Red', { operator: 'does_not_equal', value: ['r'] }, sel],
+    ['Select: Is empty', { operator: 'is_empty', value: null }, sel],
+    ['Select: Is not empty', { operator: 'is_not_empty', value: null }, sel],
+    ['Multi-select: Contains One, OTwo', { operator: 'contains', value: ['o1', 'o2'] }, ms],
+    ['Multi-select: Does not contain One, OTwo', { operator: 'does_not_contain', value: ['o1', 'o2'] }, ms],
+    ['Date: This week', { operator: 'relative_to_today', value: 'this:1:week' }, date],
+    ['Date: Past 3 months', { operator: 'relative_to_today', value: 'past:3:month' }, date],
+    ['Date: Next 3 months', { operator: 'relative_to_today', value: 'next:3:month' }, date],
+    ['Date: Is empty', { operator: 'is_empty', value: null }, date],
+    ['Date: Is not empty', { operator: 'is_not_empty', value: null }, date],
+    ['Checkbox: Checked', { operator: 'equals', value: true }, box],
+    ['Checkbox: Unchecked', { operator: 'equals', value: false }, box],
+    ['Checkbox: Not Checked', { operator: 'does_not_equal', value: true }, box],
+    ['Person: Contains Me', { operator: 'contains', value: ['me'] }, person],
+  ];
+
+  it.each(cases)('prints "%s"', async (want, filter, property) => {
+    const i18n = new I18n({ config: {}, eventsDispatcher: new EventsDispatcher() });
+
+    await i18n.prepare();
+
+    expect(filterPillLabel(filter as FilterConfig, property, (key, vars) => i18n.t(key, vars))).toBe(want);
   });
 });

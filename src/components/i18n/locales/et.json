@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "aasta",
   "tools.database.filterRelativePast": "Viimased {count} {unit}",
   "tools.database.filterRelativeNext": "Järgmised {count} {unit}",
+  "tools.database.filterPillNot": "Ei ole {value}",
   "tools.database.filterDateThisWeek": "See nädal",
   "tools.database.filterDateThisMonth": "See kuu",
   "tools.database.filterDateThisYear": "See aasta",

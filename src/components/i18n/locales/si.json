@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "අවුරුද්ද",
   "tools.database.filterRelativePast": "පසුගිය {unit} {count}",
   "tools.database.filterRelativeNext": "ඊළඟ {unit} {count}",
+  "tools.database.filterPillNot": "{value} නොවේ",
   "tools.database.filterDateThisWeek": "මෙම සතිය",
   "tools.database.filterDateThisMonth": "මෙම මාසය",
   "tools.database.filterDateThisYear": "මෙම අවුරුද්ද",

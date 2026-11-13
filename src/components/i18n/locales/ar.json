@@ -1414,6 +1414,7 @@
   "tools.database.filterUnitOneYear": "سنة",
   "tools.database.filterRelativePast": "آخر {count} {unit}",
   "tools.database.filterRelativeNext": "الـ{count} {unit} القادمة",
+  "tools.database.filterPillNot": "ليس {value}",
   "tools.database.filterDateThisWeek": "هذا الأسبوع",
   "tools.database.filterDateThisMonth": "هذا الشهر",
   "tools.database.filterDateThisYear": "هذه السنة",

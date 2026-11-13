@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "jaar",
   "tools.database.filterRelativePast": "Afgelopen {count} {unit}",
   "tools.database.filterRelativeNext": "Komende {count} {unit}",
+  "tools.database.filterPillNot": "Niet {value}",
   "tools.database.filterDateThisWeek": "Deze week",
   "tools.database.filterDateThisMonth": "Deze maand",
   "tools.database.filterDateThisYear": "Dit jaar",

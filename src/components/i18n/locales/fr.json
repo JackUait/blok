@@ -1396,6 +1396,7 @@
   "tools.database.filterUnitOneYear": "année",
   "tools.database.filterRelativePast": "Depuis {count} {unit}",
   "tools.database.filterRelativeNext": "D’ici {count} {unit}",
+  "tools.database.filterPillNot": "Pas {value}",
   "tools.database.filterDateThisWeek": "Cette semaine",
   "tools.database.filterDateThisMonth": "Ce mois-ci",
   "tools.database.filterDateThisYear": "Cette année",

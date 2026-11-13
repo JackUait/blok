@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "év",
   "tools.database.filterRelativePast": "Elmúlt {count} {unit}",
   "tools.database.filterRelativeNext": "Következő {count} {unit}",
+  "tools.database.filterPillNot": "Nem {value}",
   "tools.database.filterDateThisWeek": "Ezen a héten",
   "tools.database.filterDateThisMonth": "Ebben a hónapban",
   "tools.database.filterDateThisYear": "Ebben az évben",

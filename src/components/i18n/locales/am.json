@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "ዓመት",
   "tools.database.filterRelativePast": "ያለፉት {count} {unit}",
   "tools.database.filterRelativeNext": "የሚቀጥሉት {count} {unit}",
+  "tools.database.filterPillNot": "{value} አይደለም",
   "tools.database.filterDateThisWeek": "ይህ ሳምንት",
   "tools.database.filterDateThisMonth": "ይህ ወር",
   "tools.database.filterDateThisYear": "ይህ ዓመት",

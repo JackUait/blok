@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "വർഷം",
   "tools.database.filterRelativePast": "കഴിഞ്ഞ {count} {unit}",
   "tools.database.filterRelativeNext": "അടുത്ത {count} {unit}",
+  "tools.database.filterPillNot": "{value} അല്ല",
   "tools.database.filterDateThisWeek": "ഈ ആഴ്ച",
   "tools.database.filterDateThisMonth": "ഈ മാസം",
   "tools.database.filterDateThisYear": "ഈ വർഷം",

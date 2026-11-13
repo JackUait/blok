@@ -1402,6 +1402,7 @@
   "tools.database.filterUnitOneYear": "rok",
   "tools.database.filterRelativePast": "Počas posledných {count} {unit}",
   "tools.database.filterRelativeNext": "Počas nasledujúcich {count} {unit}",
+  "tools.database.filterPillNot": "Nie {value}",
   "tools.database.filterDateThisWeek": "Tento týždeň",
   "tools.database.filterDateThisMonth": "Tento mesiac",
   "tools.database.filterDateThisYear": "Tento rok",

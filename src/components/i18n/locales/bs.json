@@ -1396,6 +1396,7 @@
   "tools.database.filterUnitOneYear": "godina",
   "tools.database.filterRelativePast": "Unazad ({unit}): {count}",
   "tools.database.filterRelativeNext": "Unaprijed ({unit}): {count}",
+  "tools.database.filterPillNot": "Nije {value}",
   "tools.database.filterDateThisWeek": "Ova sedmica",
   "tools.database.filterDateThisMonth": "Ovaj mjesec",
   "tools.database.filterDateThisYear": "Ova godina",

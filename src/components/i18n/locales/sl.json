@@ -1402,6 +1402,7 @@
   "tools.database.filterUnitOneYear": "leto",
   "tools.database.filterRelativePast": "Nazaj ({unit}): {count}",
   "tools.database.filterRelativeNext": "Vnaprej ({unit}): {count}",
+  "tools.database.filterPillNot": "Ni {value}",
   "tools.database.filterDateThisWeek": "Ta teden",
   "tools.database.filterDateThisMonth": "Ta mesec",
   "tools.database.filterDateThisYear": "To leto",

@@ -1402,6 +1402,7 @@
   "tools.database.filterUnitOneYear": "metai",
   "tools.database.filterRelativePast": "Praeityje ({unit}): {count}",
   "tools.database.filterRelativeNext": "Ateityje ({unit}): {count}",
+  "tools.database.filterPillNot": "Ne {value}",
   "tools.database.filterDateThisWeek": "Ši savaitė",
   "tools.database.filterDateThisMonth": "Šis mėnuo",
   "tools.database.filterDateThisYear": "Šie metai",

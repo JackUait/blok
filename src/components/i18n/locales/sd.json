@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "سال",
   "tools.database.filterRelativePast": "گذريل {count} {unit}",
   "tools.database.filterRelativeNext": "ايندڙ {count} {unit}",
+  "tools.database.filterPillNot": "{value} ناهي",
   "tools.database.filterDateThisWeek": "هن هفتي",
   "tools.database.filterDateThisMonth": "هن مهيني",
   "tools.database.filterDateThisYear": "هن سال",

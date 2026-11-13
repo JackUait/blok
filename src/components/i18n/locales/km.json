@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "ឆ្នាំ",
   "tools.database.filterRelativePast": "{count} {unit}កន្លងមក",
   "tools.database.filterRelativeNext": "{count} {unit}ខាងមុខ",
+  "tools.database.filterPillNot": "មិនមែន {value}",
   "tools.database.filterDateThisWeek": "សប្ដាហ៍នេះ",
   "tools.database.filterDateThisMonth": "ខែនេះ",
   "tools.database.filterDateThisYear": "ឆ្នាំនេះ",

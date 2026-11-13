@@ -1396,6 +1396,7 @@
   "tools.database.filterUnitOneYear": "година",
   "tools.database.filterRelativePast": "Уназад ({unit}): {count}",
   "tools.database.filterRelativeNext": "Унапред ({unit}): {count}",
+  "tools.database.filterPillNot": "Није {value}",
   "tools.database.filterDateThisWeek": "Ова недеља",
   "tools.database.filterDateThisMonth": "Овај месец",
   "tools.database.filterDateThisYear": "Ова година",

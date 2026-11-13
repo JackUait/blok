@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "ปี",
   "tools.database.filterRelativePast": "{count} {unit}ที่ผ่านมา",
   "tools.database.filterRelativeNext": "{count} {unit}ข้างหน้า",
+  "tools.database.filterPillNot": "ไม่ใช่ {value}",
   "tools.database.filterDateThisWeek": "สัปดาห์นี้",
   "tools.database.filterDateThisMonth": "เดือนนี้",
   "tools.database.filterDateThisYear": "ปีนี้",

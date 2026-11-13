@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "жил",
   "tools.database.filterRelativePast": "Сүүлийн {count} {unit}",
   "tools.database.filterRelativeNext": "Ирэх {count} {unit}",
+  "tools.database.filterPillNot": "{value} биш",
   "tools.database.filterDateThisWeek": "Энэ долоо хоног",
   "tools.database.filterDateThisMonth": "Энэ сар",
   "tools.database.filterDateThisYear": "Энэ жил",

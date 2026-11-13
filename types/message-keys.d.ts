@@ -1003,6 +1003,7 @@ export type BlokMessageKey =
   | 'tools.database.filterOperator.startsWith'
   | 'tools.database.filterOr'
   | 'tools.database.filterOrDescription'
+  | 'tools.database.filterPillNot'
   | 'tools.database.filterRelativeNext'
   | 'tools.database.filterRelativePast'
   | 'tools.database.filterRuleCount_one'

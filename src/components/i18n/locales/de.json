@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "Jahr",
   "tools.database.filterRelativePast": "Letzte {count} {unit}",
   "tools.database.filterRelativeNext": "Nächste {count} {unit}",
+  "tools.database.filterPillNot": "Nicht {value}",
   "tools.database.filterDateThisWeek": "Diese Woche",
   "tools.database.filterDateThisMonth": "Dieser Monat",
   "tools.database.filterDateThisYear": "Dieses Jahr",

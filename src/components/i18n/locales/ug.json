@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "يىل",
   "tools.database.filterRelativePast": "ئۆتكەن {count} {unit}",
   "tools.database.filterRelativeNext": "كېيىنكى {count} {unit}",
+  "tools.database.filterPillNot": "{value} ئەمەس",
   "tools.database.filterDateThisWeek": "بۇ ھەپتە",
   "tools.database.filterDateThisMonth": "بۇ ئاي",
   "tools.database.filterDateThisYear": "بۇ يىل",

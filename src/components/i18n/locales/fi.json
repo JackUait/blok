@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "vuosi",
   "tools.database.filterRelativePast": "Viimeiset {count} {unit}",
   "tools.database.filterRelativeNext": "Seuraavat {count} {unit}",
+  "tools.database.filterPillNot": "Ei {value}",
   "tools.database.filterDateThisWeek": "Tämä viikko",
   "tools.database.filterDateThisMonth": "Tämä kuukausi",
   "tools.database.filterDateThisYear": "Tämä vuosi",

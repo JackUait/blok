@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "år",
   "tools.database.filterRelativePast": "Senaste {count} {unit}",
   "tools.database.filterRelativeNext": "Kommande {count} {unit}",
+  "tools.database.filterPillNot": "Inte {value}",
   "tools.database.filterDateThisWeek": "Den här veckan",
   "tools.database.filterDateThisMonth": "Den här månaden",
   "tools.database.filterDateThisYear": "Det här året",

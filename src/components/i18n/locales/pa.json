@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "ਸਾਲ",
   "tools.database.filterRelativePast": "ਪਿਛਲੇ {count} {unit}",
   "tools.database.filterRelativeNext": "ਅਗਲੇ {count} {unit}",
+  "tools.database.filterPillNot": "{value} ਨਹੀਂ",
   "tools.database.filterDateThisWeek": "ਇਹ ਹਫ਼ਤਾ",
   "tools.database.filterDateThisMonth": "ਇਹ ਮਹੀਨਾ",
   "tools.database.filterDateThisYear": "ਇਹ ਸਾਲ",

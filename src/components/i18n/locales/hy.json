@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "տարի",
   "tools.database.filterRelativePast": "Վերջին {count} {unit}",
   "tools.database.filterRelativeNext": "Առաջիկա {count} {unit}",
+  "tools.database.filterPillNot": "Ոչ {value}",
   "tools.database.filterDateThisWeek": "Այս շաբաթ",
   "tools.database.filterDateThisMonth": "Այս ամիս",
   "tools.database.filterDateThisYear": "Այս տարի",

@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "yıl",
   "tools.database.filterRelativePast": "Son {count} {unit}",
   "tools.database.filterRelativeNext": "Gelecek {count} {unit}",
+  "tools.database.filterPillNot": "{value} değil",
   "tools.database.filterDateThisWeek": "Bu hafta",
   "tools.database.filterDateThisMonth": "Bu ay",
   "tools.database.filterDateThisYear": "Bu yıl",

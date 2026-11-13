@@ -1402,6 +1402,7 @@
   "tools.database.filterUnitOneYear": "год",
   "tools.database.filterRelativePast": "Последние {unit}: {count}",
   "tools.database.filterRelativeNext": "Следующие {unit}: {count}",
+  "tools.database.filterPillNot": "Не {value}",
   "tools.database.filterDateThisWeek": "Эта неделя",
   "tools.database.filterDateThisMonth": "Этот месяц",
   "tools.database.filterDateThisYear": "Этот год",

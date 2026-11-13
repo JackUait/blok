@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "کال",
   "tools.database.filterRelativePast": "تېر: {count} {unit}",
   "tools.database.filterRelativeNext": "راتلونکی: {count} {unit}",
+  "tools.database.filterPillNot": "نه {value}",
   "tools.database.filterDateThisWeek": "دا اونۍ",
   "tools.database.filterDateThisMonth": "دا میاشت",
   "tools.database.filterDateThisYear": "دا کال",

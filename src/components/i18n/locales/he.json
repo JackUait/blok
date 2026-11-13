@@ -1396,6 +1396,7 @@
   "tools.database.filterUnitOneYear": "שנה",
   "tools.database.filterRelativePast": "{count} {unit} אחורה",
   "tools.database.filterRelativeNext": "{count} {unit} קדימה",
+  "tools.database.filterPillNot": "לא {value}",
   "tools.database.filterDateThisWeek": "השבוע",
   "tools.database.filterDateThisMonth": "החודש",
   "tools.database.filterDateThisYear": "השנה",

@@ -313,12 +313,37 @@ export const filterValueText = (
   return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
 };
 
-/** Types whose pill names the operator too (notion-motion.md Round 18 §2). Other types are unread. */
-const PILL_OPERATOR_TYPES: ReadonlySet<PropertyType> = new Set(['title', 'text', 'url', 'email', 'phone', 'number', 'uniqueId']);
+/** Types whose pill names the operator (notion-motion.md Round 18 §2, Round 19 §2). */
+const PILL_OPERATOR_TYPES: ReadonlySet<PropertyType> = new Set([
+  'title', 'text', 'url', 'email', 'phone', 'number', 'uniqueId', 'select', 'status', 'checkbox',
+  'multiSelect', 'person', 'createdBy', 'lastEditedBy', 'relation',
+]);
+
+const TEXT_TYPES: ReadonlySet<PropertyType> = new Set(['title', 'text', 'url', 'email', 'phone']);
+
+/** Operators whose words wrap the value: "Not Red" (Round 19 §2). */
+const PILL_TEMPLATE_KEYS: Readonly<Record<string, string>> = {
+  does_not_equal: 'tools.database.filterPillNot',
+};
+
+/** How a pill shows its operator: a template around the value, a word before it, or nothing. */
+const pillOperator = (type: PropertyType, operator: string): { template: string } | { word: string; colon: boolean } | undefined => {
+  if (!PILL_OPERATOR_TYPES.has(type) || !operatorNeedsValue(operator)) return undefined;
+  const key = operatorLabelKey(type, operator);
+
+  // "Number = 5": the symbol stands in for the colon.
+  if (type === 'number' || type === 'uniqueId') return key === undefined ? undefined : { word: key, colon: false };
+  const template = PILL_TEMPLATE_KEYS[operator];
+
+  if (template !== undefined) return { template };
+  if (operator === 'is_between' || operator === 'relative_to_today' || (operator === 'equals' && !TEXT_TYPES.has(type))) return undefined;
+
+  return key === undefined ? undefined : { word: key, colon: true };
+};
 
 /**
- * A pill's two parts: "Name:" + "Contains a", "Number" + "= 5" (Round 18 §2,
- * no colon before a symbol), "Due:" + "This week" (research/08), or "Due" + "".
+ * A pill's two parts: "Name:" + "Contains a", "Number" + "= 5", "Select:" +
+ * "Not Red", or "Due" + "" before it has a value (Round 18 §2, Round 19 §2).
  */
 export const filterPillParts = (
   filter: Pick<FilterConfig, 'operator' | 'value'>,
@@ -331,14 +356,13 @@ export const filterPillParts = (
 
   if (value === '') return { name: property.name, value };
   const { lead, operator } = splitOperator(filter.operator);
-  const key = lead === undefined && PILL_OPERATOR_TYPES.has(property.type) && operatorNeedsValue(operator)
-    ? operatorLabelKey(property.type, operator)
-    : undefined;
+  // A rollup's quantifier is no operator word (Round 13 reads "Names: des"); an End date side keeps its operator.
+  const shown = (lead === undefined || lead === 'end') && !isRollupList(property) ? pillOperator(property.type, operator) : undefined;
 
-  if (key === undefined) return { name: `${property.name}:`, value };
-  const symbol = property.type === 'number' || property.type === 'uniqueId';
+  if (shown === undefined) return { name: `${property.name}:`, value };
+  if ('template' in shown) return { name: `${property.name}:`, value: t(shown.template, { value }) };
 
-  return { name: symbol ? property.name : `${property.name}:`, value: `${t(key)} ${value}` };
+  return { name: shown.colon ? `${property.name}:` : property.name, value: `${t(shown.word)} ${value}` };
 };
 
 /** The whole pill as one line, for its label. */

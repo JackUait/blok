@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "година",
   "tools.database.filterRelativePast": "Последните {count} {unit}",
   "tools.database.filterRelativeNext": "Следващите {count} {unit}",
+  "tools.database.filterPillNot": "Не е {value}",
   "tools.database.filterDateThisWeek": "Тази седмица",
   "tools.database.filterDateThisMonth": "Този месец",
   "tools.database.filterDateThisYear": "Тази година",

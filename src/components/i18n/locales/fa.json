@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "سال",
   "tools.database.filterRelativePast": "{count} {unit} گذشته",
   "tools.database.filterRelativeNext": "{count} {unit} آینده",
+  "tools.database.filterPillNot": "برابر نیست با {value}",
   "tools.database.filterDateThisWeek": "این هفته",
   "tools.database.filterDateThisMonth": "این ماه",
   "tools.database.filterDateThisYear": "امسال",

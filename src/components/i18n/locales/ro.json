@@ -1396,6 +1396,7 @@
   "tools.database.filterUnitOneYear": "an",
   "tools.database.filterRelativePast": "Până la {count} {unit} în urmă",
   "tools.database.filterRelativeNext": "În cel mult {count} {unit}",
+  "tools.database.filterPillNot": "Nu este {value}",
   "tools.database.filterDateThisWeek": "Săptămâna aceasta",
   "tools.database.filterDateThisMonth": "Luna aceasta",
   "tools.database.filterDateThisYear": "Anul acesta",

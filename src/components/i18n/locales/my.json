@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "နှစ်",
   "tools.database.filterRelativePast": "ပြီးခဲ့သော {count} {unit}",
   "tools.database.filterRelativeNext": "လာမည့် {count} {unit}",
+  "tools.database.filterPillNot": "{value} မဟုတ်",
   "tools.database.filterDateThisWeek": "ဤအပတ်",
   "tools.database.filterDateThisMonth": "ဤလ",
   "tools.database.filterDateThisYear": "ဤနှစ်",

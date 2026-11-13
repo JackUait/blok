@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "년",
   "tools.database.filterRelativePast": "지난 {count}{unit}",
   "tools.database.filterRelativeNext": "향후 {count}{unit}",
+  "tools.database.filterPillNot": "{value} 아님",
   "tools.database.filterDateThisWeek": "이번 주",
   "tools.database.filterDateThisMonth": "이번 달",
   "tools.database.filterDateThisYear": "올해",

@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "viti",
   "tools.database.filterRelativePast": "{count} {unit} e fundit",
   "tools.database.filterRelativeNext": "{count} {unit} në vijim",
+  "tools.database.filterPillNot": "Jo {value}",
   "tools.database.filterDateThisWeek": "Këtë javë",
   "tools.database.filterDateThisMonth": "Këtë muaj",
   "tools.database.filterDateThisYear": "Këtë vit",

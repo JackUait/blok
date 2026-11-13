@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "יאָר",
   "tools.database.filterRelativePast": "לעצטע {count} {unit}",
   "tools.database.filterRelativeNext": "קומענדיקע {count} {unit}",
+  "tools.database.filterPillNot": "נישט {value}",
   "tools.database.filterDateThisWeek": "די וואָך",
   "tools.database.filterDateThisMonth": "דער חודש",
   "tools.database.filterDateThisYear": "דאָס יאָר",

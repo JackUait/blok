@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "năm",
   "tools.database.filterRelativePast": "{count} {unit} qua",
   "tools.database.filterRelativeNext": "{count} {unit} tới",
+  "tools.database.filterPillNot": "Không phải {value}",
   "tools.database.filterDateThisWeek": "Tuần này",
   "tools.database.filterDateThisMonth": "Tháng này",
   "tools.database.filterDateThisYear": "Năm nay",

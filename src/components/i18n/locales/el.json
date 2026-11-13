@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "έτους",
   "tools.database.filterRelativePast": "Εντός των τελευταίων {count} {unit}",
   "tools.database.filterRelativeNext": "Εντός των επόμενων {count} {unit}",
+  "tools.database.filterPillNot": "Όχι {value}",
   "tools.database.filterDateThisWeek": "Αυτή την εβδομάδα",
   "tools.database.filterDateThisMonth": "Αυτόν τον μήνα",
   "tools.database.filterDateThisYear": "Αυτό το έτος",

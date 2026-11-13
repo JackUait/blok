@@ -1396,6 +1396,7 @@
   "tools.database.filterUnitOneYear": "gads",
   "tools.database.filterRelativePast": "Pagātnē ({unit}): {count}",
   "tools.database.filterRelativeNext": "Nākotnē ({unit}): {count}",
+  "tools.database.filterPillNot": "Nav {value}",
   "tools.database.filterDateThisWeek": "Šī nedēļa",
   "tools.database.filterDateThisMonth": "Šis mēnesis",
   "tools.database.filterDateThisYear": "Šis gads",

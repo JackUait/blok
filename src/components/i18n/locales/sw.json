@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "mwaka",
   "tools.database.filterRelativePast": "Hadi {unit} {count} nyuma",
   "tools.database.filterRelativeNext": "Ndani ya {unit} {count}",
+  "tools.database.filterPillNot": "Si {value}",
   "tools.database.filterDateThisWeek": "Wiki hii",
   "tools.database.filterDateThisMonth": "Mwezi huu",
   "tools.database.filterDateThisYear": "Mwaka huu",

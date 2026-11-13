@@ -1390,6 +1390,7 @@
   "tools.database.filterUnitOneYear": "taon",
   "tools.database.filterRelativePast": "Nakaraang {count} {unit}",
   "tools.database.filterRelativeNext": "Susunod na {count} {unit}",
+  "tools.database.filterPillNot": "Hindi {value}",
   "tools.database.filterDateThisWeek": "Ngayong linggo",
   "tools.database.filterDateThisMonth": "Ngayong buwan",
   "tools.database.filterDateThisYear": "Ngayong taon",

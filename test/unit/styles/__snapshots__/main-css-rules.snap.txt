@@ -15386,6 +15386,12 @@ input[data-blok-database-picker-search]:focus {
 
 [data-blok-database-panel-page="properties"] [data-blok-database-panel-list-item] {
   margin-inline: var(--blok-space-1);
+  padding-inline: var(--blok-space-1) var(--blok-space-2);
+}
+
+[data-blok-database-panel-page="properties"] [data-blok-database-property-visibility-row] {
+  gap: var(--blok-space-1-5);
+  padding-inline: var(--blok-space-1-5) 0;
 }
 
 [data-blok-database-panel-page="pick"] > [data-blok-database-panel-input] {

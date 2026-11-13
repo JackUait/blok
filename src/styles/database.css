@@ -12281,8 +12281,15 @@ input[data-blok-database-picker-search]:focus {
   padding-block: 0;
 }
 
+/* notion-motion.md Round 9 (r9-vs-propvis.raw): ⋮⋮ at x+12, the glyph at x+36.4, the name at x+62, the eye at x+250. */
 [data-blok-database-panel-page="properties"] [data-blok-database-panel-list-item] {
   margin-inline: var(--blok-space-1);
+  padding-inline: var(--blok-space-1) var(--blok-space-2);
+}
+
+[data-blok-database-panel-page="properties"] [data-blok-database-property-visibility-row] {
+  gap: var(--blok-space-1-5);
+  padding-inline: var(--blok-space-1-5) 0;
 }
 
 /* notion-motion.md Round 9 (r9-vs-filter.raw, r9-vs-sort.raw): the empty Filter and Sort pages put the search

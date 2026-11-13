@@ -852,6 +852,21 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // notion-motion.md Round 9 (r9-vs-propvis.raw): in a 274 row at x+8, ⋮⋮ at x+12, the glyph at x+36.4,
+  // the name at x+62 and the 24px eye at x+250.
+  describe('Property visibility rows', () => {
+    const PAGE = '[data-blok-database-panel-page="properties"]';
+
+    it('puts ⋮⋮ 4px into the row and leaves 8px after the eye', () => {
+      expect(declared(`${PAGE} [data-blok-database-panel-list-item]`, 'padding-inline')).toEqual(['var(--blok-space-1) var(--blok-space-2)']);
+    });
+
+    it('puts the glyph 6px after ⋮⋮ and the name 6px after the glyph', () => {
+      expect(declared(`${PAGE} [data-blok-database-property-visibility-row]`, 'padding-inline')).toEqual(['var(--blok-space-1-5) 0']);
+      expect(declared(`${PAGE} [data-blok-database-property-visibility-row]`, 'gap')).toEqual(['var(--blok-space-1-5)']);
+    });
+  });
+
   // notion-motion.md Round 10 "Add sort picker", "Filter by picker", "Add filter picker": the search box at (12,12),
   // the first row at y 52, rows 29 apart, a glyph centred at x 26 (Notion's 19.2px at 16.4), the name at x 44.
   describe('Sort and Filter property pickers', () => {

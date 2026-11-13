@@ -63,6 +63,46 @@ describe('embed preview scenes', () => {
     }
   });
 
+  const num = (el: Element | null, name: string): number => parseFloat(el?.getAttribute(name) ?? 'NaN');
+
+  const floatCircle = (stage: HTMLElement): { cx: number; cy: number; r: number } => {
+    const circle = stage.querySelector('[id$="-f"] > circle.blok-media-preview__frame');
+
+    return { cx: num(circle, 'cx'), cy: num(circle, 'cy'), r: num(circle, 'r') };
+  };
+
+  // A badge that almost touches the card edge reads as a mistake, so it must hang clearly over the corner.
+  it.each(['social', 'generic'] as const)('%s hangs its round badge over the card corner', (kind) => {
+    const stage = render(kind);
+    const card = stage.querySelector('[id$="-s"]');
+    const { cx, cy, r } = floatCircle(stage);
+
+    expect(cx + r - (num(card, 'x') + num(card, 'width'))).toBeGreaterThanOrEqual(6);
+    expect(cy + r - (num(card, 'y') + num(card, 'height'))).toBeGreaterThanOrEqual(6);
+  });
+
+  it('social keeps the heart badge clear of the picture and the text', () => {
+    const stage = render('social');
+    const { cx, cy, r } = floatCircle(stage);
+    const parts = Array.from(stage.querySelectorAll('rect.blok-media-preview__screen, rect.blok-media-preview__line'));
+
+    expect(parts.length).toBeGreaterThan(0);
+    for (const part of parts) {
+      const nearX = Math.min(Math.max(cx, num(part, 'x')), num(part, 'x') + num(part, 'width'));
+      const nearY = Math.min(Math.max(cy, num(part, 'y')), num(part, 'y') + num(part, 'height'));
+
+      expect(Math.hypot(cx - nearX, cy - nearY)).toBeGreaterThanOrEqual(r + 3);
+    }
+  });
+
+  it('social draws its picture like the image scene: two hills, a sun and an edge on top', () => {
+    const stage = render('social');
+
+    expect(stage.querySelectorAll('.blok-media-preview__hill')).toHaveLength(2);
+    expect(stage.querySelector('.blok-media-preview__sun')).not.toBeNull();
+    expect(stage.querySelector('.blok-media-preview__screen-edge')).not.toBeNull();
+  });
+
   it.each(EMBED_SCENE_KINDS)('%s gives its ids a per-instance suffix', (kind) => {
     const ids = [render(kind), render(kind)]
       .flatMap((stage) => Array.from(stage.querySelectorAll('[id]')).map((el) => el.id));

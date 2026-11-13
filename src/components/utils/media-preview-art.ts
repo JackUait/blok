@@ -260,30 +260,32 @@ const embedScenes: Record<EmbedScene, (id: string) => string> = {
       ${drop(id)}`)}
     ${layer(7, `
       <g id="${id}-f">
-        ${circle('frame', 156, 86, 15)}
-        <ellipse class="blok-media-preview__groove" cx="156" cy="86" rx="6.5" ry="15"/>
-        ${path('groove', 'M141 86h30')}
+        ${circle('frame', 168, 96, 14)}
+        <ellipse class="blok-media-preview__groove" cx="168" cy="96" rx="6" ry="14"/>
+        ${path('groove', 'M154 96h28')}
       </g>`)}`,
   social: (id) => `
-    <defs><clipPath id="${id}"><rect x="52" y="58" width="96" height="36" rx="6"/></clipPath>${shadowFilters(id)}</defs>
+    <defs><clipPath id="${id}"><rect x="52" y="38" width="96" height="36" rx="6"/></clipPath>${shadowFilters(id)}</defs>
     ${ground(id)}
     ${layer(3, `
       ${rect('frame', 40, 6, 120, 98, 12, body(id))}
       ${circle('screen', 61, 24, 8)}
       ${rect('line line--title', 75, 19, 40, 4.5, 2.25)}
       ${rect('line line--soft', 75, 27, 26, 3, 1.5)}
-      ${rect('line', 52, 40, 92, 3.5, 1.75)}
-      ${rect('line', 52, 48, 70, 3.5, 1.75)}
-      ${rect('screen', 52, 58, 96, 36, 6)}
+      ${rect('screen', 52, 38, 96, 36, 6)}
       <g clip-path="url(#${id})"><g class="blok-media-preview__scene">
-        ${circle('sun', 128, 68, 5)}
-        ${path('hill hill--far', 'M52 94l24-20 20 12 18-10 34 18z')}
+        ${circle('sun', 130, 48, 5)}
+        ${path('hill hill--far', 'M52 74l24-18 20 11 16-9 36 16z')}
+        ${path('hill', 'M52 74l18-9 24 9z')}
       </g></g>
+      ${rect('screen-edge', 52, 38, 96, 36, 6)}
+      ${rect('line', 52, 81, 70, 3.5, 1.75)}
+      ${rect('line line--soft', 52, 89, 46, 3.5, 1.75)}
       ${drop(id)}`)}
     ${layer(7, `
       <g id="${id}-f">
-        ${circle('frame', 158, 92, 13)}
-        ${path('heart', 'M158 98.5c-6-4-9-7-9-11a4.5 4.5 0 0 1 9-2a4.5 4.5 0 0 1 9 2c0 4-3 7-9 11z')}
+        ${circle('frame', 162, 98, 12)}
+        ${path('heart', 'M162 104c-4.6-3.2-6.8-5.6-6.8-8.6a3.5 3.5 0 0 1 6.8-1.4a3.5 3.5 0 0 1 6.8 1.4c0 3-2.2 5.4-6.8 8.6z')}
       </g>`)}`,
   document: (id) => `
     <defs>${shadowFilters(id)}</defs>

@@ -12205,6 +12205,11 @@ input[data-blok-database-picker-search]:focus {
   margin-block-start: var(--blok-space-0-25);
 }
 
+/* notion-motion.md Round 18 §2 (r18-adv-addrule.raw), Round 19 §1 (r19-adv-groupmore.raw, r19-adv-andor.raw): a row with a hint is 45 tall. */
+[data-blok-database-panel-page="sort-flyout"] > [data-blok-database-panel-row]:has(> [data-blok-database-panel-text]) {
+  min-height: 45px;
+}
+
 /* Round 10 "Group by list": "None" has no icon and keeps its text at x+12. */
 [data-blok-database-panel-page="pick"] [data-blok-database-property-picker-list] > [data-blok-database-panel-row]:has(> [data-blok-database-panel-icon]),
 [data-blok-database-panel-page="picker"] [data-blok-database-picker-list] > [data-blok-database-panel-row]:has(> [data-blok-database-panel-icon]) {

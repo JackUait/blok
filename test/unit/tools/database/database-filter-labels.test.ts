@@ -233,6 +233,12 @@ describe('filter chip text, as Notion prints it', () => {
   const person = prop('person', { name: 'Person' });
   const rel = prop('relation', { name: 'Relation' });
   const ct = prop('createdTime', { name: 'Created time' });
+  const st = prop('status', { name: 'Status', config: { options: [
+    { id: 's1', label: 'Not started', position: 'a0', groupId: 'todo' },
+    { id: 's2', label: 'In progress', position: 'a0', groupId: 'inProgress' },
+    { id: 's3', label: 'Done', position: 'a0', groupId: 'complete' },
+    { id: 's4', label: 'Archived', position: 'a1', groupId: 'complete' },
+  ] } });
   const rows = (id: string): string | undefined => ({ a: 'Alpha', b: 'Beta' } as Record<string, string>)[id];
 
   beforeEach(() => {
@@ -285,6 +291,13 @@ describe('filter chip text, as Notion prints it', () => {
     ['Relation: Contains Alpha, Beta', { operator: 'contains', value: ['a', 'b'] }, rel],
     ['Relation: Does not contain Alpha, Beta', { operator: 'does_not_contain', value: ['a', 'b'] }, rel],
     ['Relation: Is empty', { operator: 'is_empty', value: null }, rel],
+    // Round 20 §1 (r20-st-grp-bar.raw, r20-st-ord-bar.raw, r20-st-isnot-bar.raw): a fully ticked group shows its name, in pick order.
+    ['Status: Done', { operator: 'equals', value: ['s3'] }, st],
+    ['Status: Complete', { operator: 'equals', value: ['s3', 's4'] }, st],
+    ['Status: In progress', { operator: 'equals', value: ['s2'] }, st],
+    ['Status: To-do, Complete', { operator: 'equals', value: ['s1', 's4', 's3'] }, st],
+    ['Status: Complete, To-do', { operator: 'equals', value: ['s4', 's1', 's3'] }, st],
+    ['Status: Not To-do, Complete', { operator: 'does_not_equal', value: ['s1', 's3', 's4'] }, st],
     // Round 20 §1: another year prints it (r20-ct-2025-bar.raw, r20-ct-before-bar.raw, r20-ct-oa-bar.raw, r20-date-end-bar.raw, r20-date-end-before-bar.raw).
     ['Created time: Mar 5, 2025', { operator: 'equals', value: '2025-03-05' }, ct],
     ['Created time: Before Mar 5, 2025', { operator: 'before', value: '2025-03-05' }, ct],

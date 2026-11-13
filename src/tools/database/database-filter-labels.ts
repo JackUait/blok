@@ -2,7 +2,7 @@ import { nanoid } from 'nanoid';
 import { RELATIVE_DATE_OPERATORS, RELATIVE_DATE_VALUES, parseRelativeSpan } from './relative-dates';
 import type { RelativeDateUnit } from './relative-dates';
 import { ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from './database-query';
-import { isPageListRollup } from '../../shared/database/value-helpers';
+import { isPageListRollup, statusGroupOf } from '../../shared/database/value-helpers';
 import { formatDatePart, formatShortDatePart, resolveLocale, toLocalDate } from './cells/date-format';
 import type { FilterConfig, PropertyDefinition, PropertyType, SortConfig } from './types';
 
@@ -360,6 +360,29 @@ export const filterValueText = (
   return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
 };
 
+/**
+ * A Status chip's values in pick order, a group whose every option is picked named once by the group
+ * (notion-motion.md Round 20 §1, r20-st-grp-bar.raw). The advanced button keeps the options (r20-adv-st-val.raw).
+ */
+const statusChipValue = (property: PropertyDefinition, value: unknown): string => {
+  const ids = idsOf(value);
+  const options = property.config?.options ?? [];
+  const named = new Set<string>();
+
+  return ids.map((id) => {
+    const group = statusGroupOf(property, id);
+
+    if (group === undefined) return '';
+    if (!options.filter((o) => statusGroupOf(property, o.id)?.id === group.id).every((o) => ids.includes(o.id))) {
+      return options.find((o) => o.id === id)?.label ?? '';
+    }
+    if (named.has(group.id)) return '';
+    named.add(group.id);
+
+    return group.name;
+  }).filter((name) => name !== '').join(', ');
+};
+
 /** Types whose pill names the operator (notion-motion.md Round 18 §2, Round 19 §2, Round 20 §1). */
 const PILL_OPERATOR_TYPES: ReadonlySet<PropertyType> = new Set([
   'title', 'text', 'url', 'email', 'phone', 'number', 'uniqueId', 'select', 'status', 'checkbox',
@@ -405,7 +428,9 @@ export const filterPillParts = (
   locale?: string
 ): { name: string; colon: boolean; value: string } => {
   const name = property.name;
-  const value = filterValueText(filter, property, t, personName, rowTitle, locale);
+  const value = property.type === 'status' && idsOf(filter.value).length > 0
+    ? statusChipValue(property, filter.value)
+    : filterValueText(filter, property, t, personName, rowTitle, locale);
 
   if (value === '') return { name, colon: false, value };
   const { lead, operator } = splitOperator(filter.operator);

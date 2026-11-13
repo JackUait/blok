@@ -3059,9 +3059,6 @@ const ISO_DAY_VALUE = /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2})?$/;
 const rulesOf = (group: FilterGroup): FilterRule[] =>
   group.filterRules.flatMap((node) => (isFilterGroup(node) ? rulesOf(node) : [node]));
 
-/** Marks the rule list for database.css: its handles sit on the cards' left edge. */
-const colorRuleList = (list: HTMLElement): HTMLElement => {
-  list.setAttribute('data-blok-database-color-rules', '');
 /** The rule cards without handles, for a locked view. */
 const plainColorRules = (cards: HTMLElement[]): HTMLElement => {
   const list = marked(document.createElement('div'), 'data-blok-database-color-rules');

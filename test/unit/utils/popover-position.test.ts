@@ -907,36 +907,42 @@ describe('resolvePosition', () => {
 
       expect(result.top).toBe(717 - 12 - 600);
       expect(result.openTop).toBe(false);
-      expect(result.maxHeight).toBeUndefined();
     });
 
-    // notion-motion.md Round 22 §6 (r22-flip-df.raw): the Date filter popover fit neither side and opened above, cut to fit.
-    describe('with coverShrinkAbove', () => {
-      it('opens above, cut to the room there, when it fits neither side and above is roomier', () => {
-        const result = resolvePosition({ ...base, coverShrinkAbove: true, popoverSize: { width: 258, height: 600 } });
-
-        expect(result.top).toBe(12);
-        expect(result.openTop).toBe(true);
-        expect(result.maxHeight).toBe(574 - 12);
+    // notion-motion.md Round 23 §1 (r23-flipH-*.raw): the Date filter popover under a chip at 277-301, 4 under it;
+    // 8 from the window top and bottom, 12 sideways. Below when it fits, else above, else it slides up over its chip.
+    describe('with coverVerticalMargin', () => {
+      const chip = {
+        ...base,
+        anchor: rect({ top: 305, bottom: 305, left: 539, right: 799, width: 260, height: 0 }),
+        coverFlipOffset: 32,
+        coverVerticalMargin: 8,
+      };
+      const at = (height: number, innerHeight: number): ReturnType<typeof resolvePosition> => resolvePosition({
+        ...chip,
+        scopeBounds: rect({ top: 0, bottom: innerHeight, left: 0, right: 1512 }),
+        viewportSize: { width: 1512, height: innerHeight },
+        popoverSize: { width: 260, height },
       });
 
-      it('slides when below is roomier', () => {
-        const result = resolvePosition({
-          ...base,
-          anchor: rect({ top: 100, bottom: 100, left: 1226, right: 1484, width: 258, height: 0 }),
-          coverShrinkAbove: true,
-          popoverSize: { width: 258, height: 700 },
-        });
+      it.each([
+        [626, 313, 305, false],
+        [624, 312, 304, false],
+        [622, 311, 303, false],
+        [600, 300, 292, false],
+        [560, 280, 272, false],
+        [530, 265, 8, true],
+      ])('in a %s-tall window, a %s-tall popover sits at %s', (innerHeight, height, top, above) => {
+        const result = at(height, innerHeight);
 
-        expect(result.openTop).toBe(false);
-        expect(result.maxHeight).toBeUndefined();
+        expect(result.top).toBe(top);
+        expect(result.openTop).toBe(above);
       });
 
-      it('stays below when it fits below', () => {
-        const result = resolvePosition({ ...base, coverShrinkAbove: true, popoverSize: { width: 258, height: 84 } });
+      it('keeps 12 sideways', () => {
+        const result = resolvePosition({ ...chip, anchor: rect({ top: 305, bottom: 305, left: 1400, right: 1660, width: 260, height: 0 }), popoverSize: { width: 260, height: 100 } });
 
-        expect(result.top).toBe(610);
-        expect(result.maxHeight).toBeUndefined();
+        expect(result.left).toBe(1512 - 12 - 260);
       });
     });
   });

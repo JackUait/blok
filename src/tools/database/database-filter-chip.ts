@@ -1050,6 +1050,7 @@ const LIST_FILTER_TYPES: readonly PropertyType[] = [
 
 /** notion-motion.md Round 18 §2: the rule popover's top is the chip's bottom + 4, in the bar and on the settings Filters page. */
 const CHIP_POPOVER_GAP = 4;
+const CHIP_POPOVER_WINDOW_MARGIN = 8;
 
 /**
  * Opens a filter chip's popover under the chip. With `host` it is a flyout
@@ -1068,9 +1069,11 @@ export const openFilterChip = (anchor: HTMLElement, ctx: ViewSettingsContext, fi
     width: listed ? LIST_FILTER_WIDTH : VALUE_FIELD_FILTER_WIDTH,
     backLabel: ctx.i18n.t('tools.database.settingsBack'),
     gap: CHIP_POPOVER_GAP,
-    // notion-motion.md Round 22 §6 (r22-flip-df.raw): above the chip, its bottom 4 over it, when it does not fit below;
-    // cut to fit above when it fits neither side and the room above is larger.
-    flip: 'shrink',
+    // notion-motion.md Round 23 §1 (r23-flipH-*.raw): at most half the window tall, 8 from its top and bottom. Below the
+    // chip when it fits, else above, its bottom 4 over the chip, else it slides up over the chip.
+    flip: true,
+    verticalMargin: CHIP_POPOVER_WINDOW_MARGIN,
+    halfWindow: true,
     onClose: () => {
       pages.dispose();
       release?.();

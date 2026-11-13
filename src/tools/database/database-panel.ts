@@ -38,11 +38,12 @@ export interface DatabasePanelOptions {
   gap?: number;
   /** Opens beside the anchor, this far right of it, top level with it. */
   beside?: number;
-  /**
-   * Opens above the anchor, `gap` over it, when it does not fit below (notion-motion.md Round 21 §1).
-   * `'shrink'`: when it fits neither side, above if there is more room there, cut to fit (Round 22 §6).
-   */
-  flip?: boolean | 'shrink';
+  /** Opens above the anchor, `gap` over it, when it does not fit below (notion-motion.md Round 21 §1). */
+  flip?: boolean;
+  /** The gap to the window's top and bottom, when it is not the usual 12. */
+  verticalMargin?: number;
+  /** Never taller than half the window. */
+  halfWindow?: boolean;
   /** `escape` is true when Escape closed the first page. */
   onClose?: (escape: boolean) => void;
 }
@@ -81,6 +82,7 @@ export class DatabasePanel {
     this.element.setAttribute('data-blok-testid', options.testId);
     this.element.style.width = `${options.width}px`;
     if (options.docked === true) this.element.setAttribute('data-docked', '');
+    if (options.halfWindow === true) this.element.style.maxHeight = '50vh';
     const dock = options.docked === true ? dockOf(options.anchor) : undefined;
 
     // The page dock runs to the window bottom; database.css lifts the usual height cap.
@@ -93,7 +95,8 @@ export class DatabasePanel {
       ...(dock ?? {}),
       ...(options.gap !== undefined ? { gap: options.gap } : {}),
       ...(options.beside !== undefined ? { beside: options.beside } : {}),
-      ...(options.flip !== undefined && options.flip !== false ? { flip: options.flip } : {}),
+      ...(options.flip === true ? { flip: true } : {}),
+      ...(options.verticalMargin !== undefined ? { verticalMargin: options.verticalMargin } : {}),
       onEscape: () => this.back(true),
       onDismiss: () => this.finish(),
     });

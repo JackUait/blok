@@ -58,11 +58,8 @@ export interface PositionInput {
   coverFlipOffset?: number;
   /** With `coverFlipOffset`: it opened above, so it stays there, its bottom kept, while it is open. */
   coverStayAbove?: boolean;
-  /**
-   * With `coverFlipOffset`: when it fits neither side and there is more room above, it opens above anyway,
-   * and `maxHeight` cuts it to the room there.
-   */
-  coverShrinkAbove?: boolean;
+  /** With `cover`: the gap to the viewport's top and bottom edges. Defaults to `viewportMargin`. */
+  coverVerticalMargin?: number;
 }
 
 export interface ResolvedPosition {
@@ -74,8 +71,6 @@ export interface ResolvedPosition {
   openTop: boolean;
   /** True if popover opens to the left of the anchor */
   openLeft: boolean;
-  /** With `coverShrinkAbove`, above the anchor: the most it may be tall. */
-  maxHeight?: number;
 }
 
 /**
@@ -117,7 +112,7 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
     cover = false,
     coverFlipOffset,
     coverStayAbove = false,
-    coverShrinkAbove = false,
+    coverVerticalMargin = viewportMargin,
   } = input;
 
   const boundaryBottom = Math.min(viewportSize.height, scopeBounds.bottom);
@@ -182,24 +177,15 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
     const start = direction === 'rtl' ? anchor.right - popoverSize.width : anchor.left;
     const left = clamp(start, boundaryLeft + viewportMargin, boundaryRight - viewportMargin - popoverSize.width);
     const aboveBottom = coverFlipOffset === undefined ? undefined : anchor.top - coverFlipOffset;
-    const fitsBelow = anchor.top + popoverSize.height <= boundaryBottom - viewportMargin;
-    const fitsAbove = aboveBottom !== undefined && aboveBottom - popoverSize.height >= boundaryTop + viewportMargin;
+    const fitsBelow = anchor.top + popoverSize.height <= boundaryBottom - coverVerticalMargin;
+    const fitsAbove = aboveBottom !== undefined && aboveBottom - popoverSize.height >= boundaryTop + coverVerticalMargin;
 
-    const roomAbove = aboveBottom === undefined ? 0 : aboveBottom - boundaryTop - viewportMargin;
-    const shrinkAbove = coverShrinkAbove && !fitsBelow && !fitsAbove && roomAbove > boundaryBottom - viewportMargin - anchor.top;
+    if (aboveBottom !== undefined && (coverStayAbove || (!fitsBelow && fitsAbove))) {
+      const top = Math.max(boundaryTop + coverVerticalMargin, aboveBottom - popoverSize.height);
 
-    if (aboveBottom !== undefined && (coverStayAbove || (!fitsBelow && fitsAbove) || shrinkAbove)) {
-      const top = Math.max(boundaryTop + viewportMargin, aboveBottom - popoverSize.height);
-
-      return {
-        top: top + scrollOffset.y,
-        left: left + scrollOffset.x,
-        openTop: true,
-        openLeft: direction === 'rtl',
-        ...(coverShrinkAbove ? { maxHeight: roomAbove } : {}),
-      };
+      return { top: top + scrollOffset.y, left: left + scrollOffset.x, openTop: true, openLeft: direction === 'rtl' };
     }
-    const top = clamp(anchor.top, boundaryTop + viewportMargin, boundaryBottom - viewportMargin - popoverSize.height);
+    const top = clamp(anchor.top, boundaryTop + coverVerticalMargin, boundaryBottom - coverVerticalMargin - popoverSize.height);
 
     return { top: top + scrollOffset.y, left: left + scrollOffset.x, openTop: false, openLeft: direction === 'rtl' };
   }

@@ -1489,6 +1489,13 @@ describe('DatabaseViewControls', () => {
         vi.useRealTimers();
       });
 
+      // notion-motion.md Round 23 §1 (r23-flipH-*.raw): the popover is never taller than half the window.
+      it('caps the popover at half the window', () => {
+        open({ operator: 'equals', value: null });
+
+        expect(popover().style.maxHeight).toBe('50vh');
+      });
+
       it('opens on an empty, focused field with a presets ⌄, then this month\'s calendar with no Today button', () => {
         open({ operator: 'equals', value: null });
 

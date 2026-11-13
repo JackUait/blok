@@ -7136,6 +7136,7 @@ export class DatabaseTool implements BlockTool {
 
     this.view = new DatabaseBoardView({
       readOnly: this.readOnly,
+      structureLocked: this.structureLocked(),
       i18n: this.api.i18n,
       options,
       getRows: (optionId, subKey) => {

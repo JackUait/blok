@@ -22,6 +22,8 @@ import type { CommentBadges } from './database-comment-badge';
 
 interface DatabaseBoardViewOptions {
   readOnly: boolean;
+  /** "Lock database": no "+ New group", and Unpin is disabled (notion-motion.md Round 25 §2). */
+  structureLocked?: boolean;
   i18n: I18n;
   options: SelectOption[];
   /** A column's rows; with sub-groups, only those in the `subKey` lane. */
@@ -196,8 +198,8 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
 
     strip?.setAttribute('data-blok-database-group-strip', '');
 
-    // Notion's Status board has no add-group button (findings-board B04).
-    if (!this.readOnly && !this.isStatusBoard) {
+    // Notion's Status board has no add-group button (findings-board B04); a locked one neither (Round 25 §2).
+    if (!this.readOnly && !this.isStatusBoard && this.settings.structureLocked !== true) {
       const addColumnBtn = document.createElement('button');
 
       addColumnBtn.setAttribute('data-blok-database-add-column', '');
@@ -722,6 +724,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       unpin.setAttribute('data-option-id', option.id);
       unpin.setAttribute('aria-label', this.i18n.t('tools.database.groupUnpin'));
       unpin.innerHTML = IconPinFilled;
+      unpin.disabled = this.settings.structureLocked === true;
       line.append(open, unpin);
       section.appendChild(line);
     }

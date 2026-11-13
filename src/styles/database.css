@@ -1597,6 +1597,16 @@
   color: var(--blok-database-table-muted-text);
 }
 
+/* notion-motion.md Round 25 §2 (r25-pinsec-status.raw, r25-pinsec-locked.raw): with no "+ New group" above it the
+   header starts at the column top. */
+[data-blok-database-group-strip] > [data-blok-database-pinned-groups]:first-child > [data-blok-database-pinned-groups-header] {
+  margin-block-start: 0;
+}
+
+[data-blok-database-pinned-group-unpin]:disabled {
+  cursor: default;
+}
+
 [data-blok-database-pinned-groups-header] svg {
   display: block;
   width: 16px;
@@ -1652,7 +1662,7 @@
 
 [data-blok-database-pinned-groups-header]:hover,
 [data-blok-database-pinned-group-open]:hover,
-[data-blok-database-pinned-group-unpin]:hover {
+[data-blok-database-pinned-group-unpin]:hover:not(:disabled) {
   background-color: var(--blok-database-hover-bg);
 }
 

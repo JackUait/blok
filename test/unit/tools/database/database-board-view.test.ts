@@ -323,6 +323,40 @@ describe('DatabaseBoardView', () => {
       expect(lines[0].querySelector('[data-blok-database-pinned-group-unpin]')?.getAttribute('aria-label')).toBe('tools.database.groupUnpin');
     });
 
+    // notion-motion.md Round 25 §2 (r25-pinsec-status.raw): a Status board has the same strip minus "+ New group",
+    // so "Pinned groups" is its first item.
+    it('lists pinned groups first on a Status board', () => {
+      const board = new DatabaseBoardView({
+        readOnly: false, i18n, options: [makeOption({ id: 'ip', label: 'In progress' })], getRows: () => [], titlePropertyId: 'title',
+        schema: [{ id: 's', name: 'Status', type: 'status', position: 'a1' }],
+        view: { id: 'v', name: 'Board', type: 'board', position: 'a0', sorts: [], filters: [], visibleProperties: [], groupBy: 's' },
+        pinnedGroups: [{ option: makeOption({ id: 'ip', label: 'In progress' }), count: 2 }],
+      }).createView();
+      const strip = board.querySelector('[data-blok-database-group-strip]');
+
+      expect(strip?.firstElementChild?.hasAttribute('data-blok-database-pinned-groups')).toBe(true);
+      expect(strip?.querySelector('[data-blok-database-add-column]')).toBeNull();
+      expect(strip?.querySelector('[data-blok-database-pinned-group-unpin]')).not.toBeNull();
+    });
+
+    // notion-motion.md Round 25 §2 (r25-pinsec-locked.raw): a locked database keeps the strip and its Unpin buttons;
+    // only "+ New group" goes. Lock refuses the view write, so Unpin stays in place but disabled, like the Settings pin.
+    it('keeps the pinned strip on a locked database and drops "+ New group"', () => {
+      const locked = new DatabaseBoardView({
+        readOnly: false, structureLocked: true, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title',
+        pinnedGroups: [{ option: makeOption({ id: 'red', label: 'Red' }), count: 1 }],
+      }).createView();
+      const lockedNoPins = new DatabaseBoardView({
+        readOnly: false, structureLocked: true, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title',
+      }).createView();
+      const strip = locked.querySelector('[data-blok-database-group-strip]');
+
+      expect(locked.querySelector('[data-blok-database-add-column]')).toBeNull();
+      expect(lockedNoPins.querySelector('[data-blok-database-add-column]')).toBeNull();
+      expect(strip?.firstElementChild?.hasAttribute('data-blok-database-pinned-groups')).toBe(true);
+      expect(strip?.querySelector<HTMLButtonElement>('[data-blok-database-pinned-group-unpin]')?.disabled).toBe(true);
+    });
+
     it('draws no pinned strip without pins or in read-only', () => {
       const plain = new DatabaseBoardView({ readOnly: false, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title' }).createView();
       const readOnly = new DatabaseBoardView({

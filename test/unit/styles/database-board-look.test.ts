@@ -346,6 +346,11 @@ describe('board pinned groups strip', () => {
     expect(ruleBody(database, '[data-blok-database-pinned-group-count]')).toContain('color: var(--blok-database-table-cell-text)');
   });
 
+  // notion-motion.md Round 25 §2: the header sits 4 under "+ New group", and at the column top when it is first.
+  it('drops the header gap when the header is the strip\'s first item', () => {
+    expect(ruleBody(database, '[data-blok-database-group-strip] > [data-blok-database-pinned-groups]:first-child > [data-blok-database-pinned-groups-header]')).toContain('margin-block-start: 0');
+  });
+
   it('draws Unpin 24px square', () => {
     const body = ruleBody(database, '[data-blok-database-pinned-group-unpin]');
 

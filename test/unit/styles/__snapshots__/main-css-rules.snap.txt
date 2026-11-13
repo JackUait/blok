@@ -5928,6 +5928,14 @@ span[data-blok-slash-search] {
   color: var(--blok-database-table-muted-text);
 }
 
+[data-blok-database-group-strip] > [data-blok-database-pinned-groups]:first-child > [data-blok-database-pinned-groups-header] {
+  margin-block-start: 0;
+}
+
+[data-blok-database-pinned-group-unpin]:disabled {
+  cursor: default;
+}
+
 [data-blok-database-pinned-groups-header] svg {
   display: block;
   width: 16px;
@@ -5981,7 +5989,7 @@ span[data-blok-slash-search] {
   height: 16px;
 }
 
-[data-blok-database-pinned-groups-header]:hover, [data-blok-database-pinned-group-open]:hover, [data-blok-database-pinned-group-unpin]:hover {
+[data-blok-database-pinned-groups-header]:hover, [data-blok-database-pinned-group-open]:hover, [data-blok-database-pinned-group-unpin]:hover:not(:disabled) {
   background-color: var(--blok-database-hover-bg);
 }
 

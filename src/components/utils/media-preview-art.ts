@@ -284,8 +284,8 @@ const embedScenes: Record<EmbedScene, (id: string) => string> = {
       ${drop(id)}`)}
     ${layer(7, `
       <g id="${id}-f">
-        ${circle('frame', 162, 98, 12)}
-        ${path('heart', 'M162 104c-4.6-3.2-6.8-5.6-6.8-8.6a3.5 3.5 0 0 1 6.8-1.4a3.5 3.5 0 0 1 6.8 1.4c0 3-2.2 5.4-6.8 8.6z')}
+        ${circle('frame', 139, 88, 9)}
+        ${path('heart', 'M139 92.8c-3.5-2.4-5.2-4.3-5.2-6.6a2.7 2.7 0 0 1 5.2-1.1a2.7 2.7 0 0 1 5.2 1.1c0 2.3-1.7 4.2-5.2 6.6z')}
       </g>`)}`,
   document: (id) => `
     <defs>${shadowFilters(id)}</defs>

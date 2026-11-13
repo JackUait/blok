@@ -72,13 +72,24 @@ describe('embed preview scenes', () => {
   };
 
   // A badge that almost touches the card edge reads as a mistake, so it must hang clearly over the corner.
-  it.each(['social', 'generic'] as const)('%s hangs its round badge over the card corner', (kind) => {
-    const stage = render(kind);
+  it('generic hangs its round badge over the card corner', () => {
+    const stage = render('generic');
     const card = stage.querySelector('[id$="-s"]');
     const { cx, cy, r } = floatCircle(stage);
 
     expect(cx + r - (num(card, 'x') + num(card, 'width'))).toBeGreaterThanOrEqual(6);
     expect(cy + r - (num(card, 'y') + num(card, 'height'))).toBeGreaterThanOrEqual(6);
+  });
+
+  it('social keeps the heart button inside the post card, off its edges', () => {
+    const stage = render('social');
+    const card = stage.querySelector('[id$="-s"]');
+    const { cx, cy, r } = floatCircle(stage);
+
+    expect(cx - r - num(card, 'x')).toBeGreaterThanOrEqual(5);
+    expect(cy - r - num(card, 'y')).toBeGreaterThanOrEqual(5);
+    expect(num(card, 'x') + num(card, 'width') - (cx + r)).toBeGreaterThanOrEqual(5);
+    expect(num(card, 'y') + num(card, 'height') - (cy + r)).toBeGreaterThanOrEqual(5);
   });
 
   it('social keeps the heart badge clear of the picture and the text', () => {

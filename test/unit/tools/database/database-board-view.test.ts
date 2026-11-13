@@ -1152,14 +1152,15 @@ describe('DatabaseBoardView', () => {
       expect(addCardBtn.style.borderColor).toBe('');
     });
 
-    it('add-column button matches column width (260px) via flex', () => {
+    // notion-motion.md Round 16 §3: "+ New group" is 108 wide, as wide as its label, not a column.
+    it('add-column button keeps to its label instead of a column width', () => {
       const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });
       const board = view.createView();
 
       const addColBtn = board.querySelector('[data-blok-database-add-column]') as HTMLElement;
 
-      expect(addColBtn.style.minWidth).toBe('260px');
-      expect(addColBtn.style.flex).toBe('0 0 260px');
+      expect(addColBtn.style.minWidth).toBe('');
+      expect(addColBtn.style.flex).toBe('');
     });
   });
 

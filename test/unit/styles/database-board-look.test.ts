@@ -152,6 +152,18 @@ describe('board column, card and header look (research/08)', () => {
     expect(icon).toContain('flex-shrink: 0');
   });
 
+  // notion-motion.md Round 16 §3: "+ New group" is a 108x30 button with no ring; hover 0.051 and press 0.102 over 20ms ease-in.
+  it('makes "+ New group" a plain 30px button that fills in 20ms', () => {
+    const body = ruleBody(database, '[data-blok-database-add-column]');
+
+    expect(body).toContain('height: 30px');
+    expect(body).toContain('border: none');
+    expect(body).not.toContain('border: 1px');
+    expect(body).toContain('transition: background-color 20ms ease-in');
+    expect(ruleBody(database, '[data-blok-database-add-column]:hover')).toContain('background-color: var(--blok-database-popover-hover)');
+    expect(ruleBody(database, '[data-blok-database-add-column]:active')).toContain('background-color: var(--blok-database-pressed-bg)');
+  });
+
   it('makes "+ New page" a 40px ring button with group-colored text', () => {
     const body = ruleBody(database, '[data-blok-database-add-card]');
 

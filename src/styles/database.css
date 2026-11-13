@@ -1428,8 +1428,7 @@
 /**
  * Add card / Add column buttons — muted text with hover fill.
  */
-[data-blok-database-add-card],
-[data-blok-database-add-column] {
+[data-blok-database-add-card] {
   background: none;
   border: 1px solid var(--blok-database-add-border);
   cursor: pointer;
@@ -1444,8 +1443,7 @@
   transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
 }
 
-[data-blok-database-add-card]:hover,
-[data-blok-database-add-column]:hover {
+[data-blok-database-add-card]:hover {
   background-color: var(--blok-database-add-hover-bg);
   color: var(--blok-database-ink);
 }
@@ -1456,12 +1454,30 @@
   color: var(--_blok-group-accent, var(--blok-database-column-accent));
 }
 
+/* notion-motion.md Round 16 §3: "+ New group" is a plain 108x30 button; hover 0.051, press 0.102, 20ms ease-in. */
 [data-blok-database-add-column] {
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
   align-self: flex-start;
   flex-shrink: 0;
-  padding: var(--blok-space-2-5) var(--blok-space-3);
+  height: 30px;
+  padding: 0 var(--blok-space-2);
+  border: none;
   border-radius: var(--blok-radius-control-lg);
+  background: none;
+  color: var(--blok-database-add-text);
+  font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 20ms ease-in;
+}
+
+[data-blok-database-add-column]:hover {
+  background-color: var(--blok-database-popover-hover);
+}
+
+[data-blok-database-add-column]:active {
+  background-color: var(--blok-database-pressed-bg);
 }
 
 /**

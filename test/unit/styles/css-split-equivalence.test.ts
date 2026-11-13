@@ -1656,8 +1656,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Round 21 lane r23: the colour rule head (name outside the operator), the Text/Number value box and its "=";
     // ... and the opaque rule fill on board cards and list rows; the rule name's lighter ink.
     const DATABASE_R23_BYTES = 3_971;
-    // Lane r24: the Add view tile's 20ms fill and its pressed fill; the OPEN button's pressed fill; the Property visibility row offsets.
-    const DATABASE_R24_BYTES = 599;
+    // Lane r24: the Add view tile's 20ms fill and its pressed fill; the OPEN button's pressed fill; the Property visibility row offsets; the plain "+ New group" button.
+    const DATABASE_R24_BYTES = 1035;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

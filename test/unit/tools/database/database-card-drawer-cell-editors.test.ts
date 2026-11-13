@@ -408,6 +408,29 @@ describe('DatabaseCardDrawer — link values', () => {
     expect(valueOf(options, 'prop-status').querySelector('[data-blok-database-drawer-prop-actions]')).toBeNull();
   });
 
+  // notion-motion.md Round 26 §5: a Multi-select value's pill has Comment only.
+  it('a filled multi-select value shows Comment alone, and only with the comment hook', () => {
+    const tags: PropertyDefinition = {
+      id: 'prop-tags', name: 'Tags', type: 'multiSelect', position: 'a4',
+      config: { options: [{ id: 't1', label: 'Alpha', color: 'blue', position: 'a0' }] },
+    };
+    const onCommentProperty = vi.fn();
+    const options = createOptions({ schema: [...SCHEMA, tags], onCommentProperty });
+
+    new DatabaseCardDrawer(options).open(makeRow({ 'prop-tags': ['t1'] }));
+    const comment = actionIn(options, 'prop-tags', 'tools.database.tableComment');
+
+    expect(valueOf(options, 'prop-tags').querySelectorAll('[data-blok-database-drawer-prop-actions] button')).toHaveLength(1);
+    expect(comment).not.toBeNull();
+    if (comment !== null) clickOn(comment);
+    expect(onCommentProperty).toHaveBeenCalledWith(expect.any(String), 'prop-tags', valueOf(options, 'prop-tags'));
+
+    const bare = createOptions({ schema: [...SCHEMA, tags] });
+
+    new DatabaseCardDrawer(bare).open(makeRow({ 'prop-tags': ['t1'] }));
+    expect(valueOf(bare, 'prop-tags').querySelector('[data-blok-database-drawer-prop-actions]')).toBeNull();
+  });
+
   it('an empty link value has no buttons, and Comment needs the host hook', () => {
     const options = createOptions({ schema: LINK_SCHEMA });
 

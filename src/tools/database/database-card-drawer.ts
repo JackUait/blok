@@ -221,6 +221,8 @@ const LINK_TYPES: ReadonlySet<string> = new Set(['url', 'email', 'phone']);
 const COPY_TYPES: ReadonlySet<string> = new Set([...LINK_TYPES, 'text', 'number']);
 /** notion-spec-2 §20.1: a time row shows Copy to Clipboard and no Comment. */
 const COPY_ONLY_TYPES: ReadonlySet<string> = new Set(['createdTime', 'lastEditedTime']);
+/** notion-motion.md Round 26 §5: a Multi-select value shows Comment and no Copy. */
+const COMMENT_ONLY_TYPES: ReadonlySet<string> = new Set(['multiSelect']);
 
 /** View tab edits of the open draft. `made` are the blocks Discard deletes; `fresh` every tab made now. */
 class PageLayoutTabEdits {
@@ -3575,12 +3577,15 @@ export class DatabaseCardDrawer {
     if ((COPY_TYPES.has(def.type) || COPY_ONLY_TYPES.has(def.type)) && filled) {
       slot.appendChild(this.createLinkActions(def));
     }
+    if (COMMENT_ONLY_TYPES.has(def.type) && filled && this.onCommentProperty !== undefined) {
+      slot.appendChild(this.createLinkActions(def));
+    }
   }
 
   /** research/22 §3: a filled url, email or phone value's Comment and Copy to Clipboard, as in the table. */
   private createLinkActions(def: PropertyDefinition): HTMLElement {
     const actions = document.createElement('span');
-    const entries: Array<[action: string, key: string, icon: string]> = [['copy', 'tools.database.cellCopy', IconCopy]];
+    const entries: Array<[action: string, key: string, icon: string]> = COMMENT_ONLY_TYPES.has(def.type) ? [] : [['copy', 'tools.database.cellCopy', IconCopy]];
 
     if (this.onCommentProperty !== undefined && !COPY_ONLY_TYPES.has(def.type)) {
       entries.unshift(['comment', 'tools.database.tableComment', IconMessage]);

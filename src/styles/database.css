@@ -13854,7 +13854,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-calendar-day-today-text);
 }
 
-/* notion-motion.md Calendar: a 24px white disc 6px from the corner, shown at once. */
+/* notion-motion.md Round 24 §4 Calendar: a white 24px chip, radius 8, 6px from the corner, fading in.
+   ::before is the 20px radius-6 button inside it, so a hover tints only that. */
 [data-blok-database-calendar-add] {
   position: absolute;
   inset-block-start: 6px;
@@ -13866,27 +13867,34 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   block-size: 24px;
   padding: 0;
   border: none;
-  border-radius: var(--blok-radius-pill);
+  border-radius: var(--blok-radius-control-lg);
   background-color: var(--blok-database-calendar-event-bg);
-  /* Fitted to calhover.png: this shadow's tail matches Notion's within one step. */
   box-shadow: var(--blok-database-popover-shadow);
   color: var(--blok-database-calendar-nav-icon);
   cursor: pointer;
   opacity: 0;
+  transition: opacity 0.2s ease-out;
+}
+
+[data-blok-database-calendar-add]::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: var(--blok-radius-control);
 }
 
 [data-blok-database-calendar-add] svg {
-  inline-size: 24px;
-  block-size: 24px;
+  position: relative;
+  inline-size: 20px;
+  block-size: 20px;
 }
 
 [data-blok-database-calendar-day]:hover [data-blok-database-calendar-add] {
   opacity: 1;
 }
 
-/* An image layer keeps the white fill under the tint. */
-[data-blok-database-calendar-add]:hover {
-  background-image: linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg));
+[data-blok-database-calendar-add]:hover::before {
+  background-color: var(--blok-database-table-header-hover-bg);
 }
 
 [data-blok-database-calendar][data-dragging] [data-blok-database-calendar-add] {
@@ -14055,6 +14063,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 @media (prefers-reduced-motion: reduce) {
   [data-blok-database-calendar-nav] button,
+  [data-blok-database-calendar-add],
   [data-blok-database-calendar-day-number],
   [data-blok-database-calendar-event] {
     transition: none;

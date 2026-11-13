@@ -1664,6 +1664,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R27_BYTES = 1366;
     // Round 23 lane r26: the advanced Date rule's gaps (4 after the property, 16 before ⋯), its 165-wide day button and the room under its calendar.
     const DATABASE_R26_BYTES = 820;
+    // Round 24 lane r29: the calendar day "+" chip (radius 8, inner 20px button, 200ms fade).
+    const DATABASE_R29_BYTES = 148;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2163,6 +2165,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R25_BYTES
       + DATABASE_R27_BYTES
       + DATABASE_R26_BYTES
+      + DATABASE_R29_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

@@ -222,26 +222,36 @@ describe('database gallery and calendar styles', () => {
     expect(css.indexOf(fromIn)).toBeGreaterThan(css.indexOf(outside));
   });
 
-  it('draws the day "+" as a 24px white disc 6px from the corner, shown at once (notion-motion.md, Calendar)', () => {
+  it('draws the day "+" as a 24px white radius-8 chip with a 20px button inside, fading in (notion-motion.md, Round 24 §4 Calendar)', () => {
     const add = ruleBody('[data-blok-database-calendar-add]');
 
+    expect(add).toMatch(/border-radius:\s*var\(--blok-radius-control-lg\)/);
+    expect(add).toMatch(/transition:\s*opacity 0\.2s ease-out/);
     expect(add).toMatch(/inset-block-start:\s*6px/);
     expect(add).toMatch(/inset-inline-start:\s*6px/);
     expect(add).toMatch(/inline-size:\s*24px/);
     expect(add).toMatch(/block-size:\s*24px/);
-    expect(add).toMatch(/border-radius:\s*var\(--blok-radius-pill\)/);
     expect(add).toMatch(/background-color:\s*var\(--blok-database-calendar-event-bg\)/);
-    // Fitted to calhover.png pixel by pixel: the popover shadow's tail matches within 1 step.
     expect(add).toMatch(/box-shadow:\s*var\(--blok-database-popover-shadow\)/);
-    expect(add).not.toMatch(/transition/);
-    expect(ruleBody('[data-blok-database-calendar-add] svg')).toMatch(/inline-size:\s*24px/);
+    expect(ruleBody('[data-blok-database-calendar-add] svg')).toMatch(/inline-size:\s*20px/);
+
+    const inner = ruleBody('[data-blok-database-calendar-add]::before');
+
+    expect(inner).toMatch(/inset:\s*2px/);
+    expect(inner).toMatch(/border-radius:\s*var\(--blok-radius-control\)/);
   });
 
-  it('tints the day "+" on hover without losing its white fill', () => {
-    const hover = ruleBody('[data-blok-database-calendar-add]:hover');
+  it('tints only the day "+"\'s inner 20px button on hover, keeping the white chip', () => {
+    const hover = ruleBody('[data-blok-database-calendar-add]:hover::before');
 
-    expect(hover).not.toMatch(/background-color/);
-    expect(hover).toMatch(/background-image:\s*linear-gradient/);
+    expect(ruleBody('[data-blok-database-calendar-add]:hover')).not.toMatch(/background/);
+    expect(hover).toMatch(/background-color:\s*var\(--blok-database-table-header-hover-bg\)/);
+  });
+
+  it('drops the day "+" fade under reduced motion', () => {
+    const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce) {\n  [data-blok-database-calendar-nav] button'));
+
+    expect(reduced.slice(0, reduced.indexOf('}'))).toContain('[data-blok-database-calendar-add]');
   });
 
   it('draws ‹ and › as 24px squares (findings C12)', () => {

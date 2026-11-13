@@ -9,6 +9,7 @@ import { workspaceRepository } from './workspace-repository';
 import { pageAccess } from './page-access';
 import { openPageSharing } from './cloud/page-sharing';
 import { groupPagesBySection, sectionNames } from './page-section';
+import { describeAccessLoss } from './access-friction';
 import { activeWorkspace, workspaceKey, type WorkspaceRef } from './workspace-registry';
 import { createDesktopFooter, readAppearance } from './settings';
 import { COVER_GALLERY, readCoverFile, createAddCoverButton, createPageCover, isPageCover, trackPageHeaderHover, type PageCover } from './cover';
@@ -221,9 +222,13 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     }));
   };
   const showError = (error: unknown): void => {
-    status.textContent = `Enregistrement impossible : ${String(error)}`;
+    // Un retrait d'accès ferme la session en moins de cinq secondes côté
+    // serveur. Le présenter comme une panne d'enregistrement laisserait croire
+    // à un incident, et pousserait à réessayer pour rien.
+    const refusal = describeAccessLoss(error);
+    status.textContent = refusal ?? `Enregistrement impossible : ${String(error)}`;
     status.setAttribute('data-error', '');
-    status.setAttribute('data-sync-state', 'error');
+    status.setAttribute('data-sync-state', refusal ? 'denied' : 'error');
   };
   const syncPageIcon = (page: ShellPage, icon: ReturnType<Blok['title']['icon']['get']>, persist = true): void => {
     if (!index) return;

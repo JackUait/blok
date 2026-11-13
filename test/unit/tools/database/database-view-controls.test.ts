@@ -574,6 +574,24 @@ describe('DatabaseViewControls', () => {
     expect(q('database-advanced-pill')?.hasAttribute('data-popover-open')).toBe(true);
   });
 
+  // notion-motion.md Round 19 §1 (r19-adv-cb*.raw): Checkbox's value is a 220-wide menu of Unchecked and Checked.
+  it('picks an advanced Checkbox value from a menu that closes on the pick', () => {
+    const { controls, saved } = setup({ schema: () => [...schema, { id: 'done', name: 'Done', type: 'checkbox', position: 'a3' }] });
+
+    saved.view = { ...saved.view, filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'r', propertyId: 'done', operator: 'equals', value: null }] } };
+    controls.refresh();
+    click('database-advanced-pill');
+    click('database-filter-rule-value-r');
+
+    expect(q('database-filter-value-picker')?.style.width).toBe('220px');
+    expect(q('database-advanced-filter')?.querySelector('[data-blok-testid="database-panel-back"]')).toBeNull();
+    click('database-filter-checkbox-true');
+
+    expect(controls.effective(saved.view).filterTree?.filterRules[0]).toEqual(expect.objectContaining({ value: true }));
+    expect(q('database-filter-value-picker')).toBeNull();
+    expect(text(q('database-filter-rule-value-r'))).not.toBe('tools.database.filterValue');
+  });
+
   it('gives "+ Sort" no advanced footer', () => {
     setup();
     click('database-toolbar-sort');

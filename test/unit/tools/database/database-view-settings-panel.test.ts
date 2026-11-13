@@ -1430,6 +1430,43 @@ describe('view settings panel', () => {
     expect(h.ctx.updateView).not.toHaveBeenCalled();
   });
 
+  // notion-motion.md Round 19 §1 (r19-adv-sel*.raw, r19-adv-cb*.raw): a value that is not text is a flyout under its button.
+  describe('advanced rule value flyouts', () => {
+    const openRule = (rule: Record<string, unknown>): Harness => {
+      const h = harness({ filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'r', ...rule } as never] } });
+
+      h.open('filter');
+      click('database-filter-advanced-chip');
+      click('database-filter-rule-value-r');
+
+      return h;
+    };
+    const value = (h: Harness): unknown => (h.state.view.filterTree?.filterRules[0] as { value?: unknown } | undefined)?.value;
+    const pushed = (): boolean => document.querySelector('[data-blok-testid="database-advanced-filter"] [data-blok-testid="database-panel-back"]') !== null;
+
+    it('picks a Select option in a 260-wide flyout, the rule list staying', () => {
+      const h = openRule({ propertyId: 'stage', operator: 'equals', value: null });
+      const flyout = q('database-filter-value-picker');
+
+      expect(pushed()).toBe(false);
+      expect(flyout?.style.width).toBe('260px');
+      expect(q('database-advanced-filter')?.contains(flyout)).toBe(false);
+      click('database-filter-option-o1');
+
+      expect(value(h)).toEqual(['o1']);
+      expect(q('database-filter-value-picker')).not.toBeNull();
+    });
+
+    it('keeps a text value as a field in the row', () => {
+      const h = harness({ filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'r', propertyId: 'title', operator: 'contains', value: '' }] } });
+
+      h.open('filter');
+      click('database-filter-advanced-chip');
+
+      expect(q('database-filter-rule-value-r')).toBeInstanceOf(HTMLInputElement);
+    });
+  });
+
   it('sets And or Or on a group', () => {
     const h = harness({
       filterTree: {

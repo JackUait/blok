@@ -92,7 +92,7 @@ import { CARD_LAYOUTS, resolveSubItemsDisplay, resolveSubItemsFilter } from './s
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { automationListPage } from './database-automations-panel';
 import { PROPERTY_FLYOUT_WIDTH, openFlyout, openSortDirectionFlyout, openSortPropertyFlyout, sortChevron } from './database-sort-flyouts';
-import { OPERATOR_FLYOUT_WIDTH, dateRuleControls, filterChip, openFilterChip, operatorPick } from './database-filter-chip';
+import { OPERATOR_FLYOUT_WIDTH, dateRuleControls, filterChip, openFilterChip, openRuleValueFlyout, operatorPick } from './database-filter-chip';
 import { VIEW_ICONS } from './database-tab-bar';
 import type { AutomationSettings } from './database-automations-panel';
 import { offersAutofill } from './property-values';
@@ -2193,11 +2193,11 @@ export class ViewSettingsPages {
       only.setAttribute('data-blok-database-filter-rule-value', '');
       line.append(only);
     } else if (controls.length > 0) {
-      line.append(button(`database-filter-rule-value-${id}`, filterValueText(node, property, (key, vars) => this.ctx.i18n.t(key, vars), (person) => this.personName(person), (row) => this.ctx.relatedRows?.(property).find((r) => r.id === row)?.title, editorLocale(this.ctx.i18n)) || this.t('filterValue'), () => panel.push(this.ruleEditor({
-        read: () => findRule(tree(), id),
-        update: (patch) => write(updateFilterRule(tree(), id, patch)),
-        remove: () => write(removeFilterNode(tree(), id)),
-      }))));
+      line.append(button(`database-filter-rule-value-${id}`, filterValueText(node, property, (key, vars) => this.ctx.i18n.t(key, vars), (person) => this.personName(person), (row) => this.ctx.relatedRows?.(property).find((r) => r.id === row)?.title, editorLocale(this.ctx.i18n)) || this.t('filterValue'), (self) => {
+        openRuleValueFlyout(self, panel, this.ctx, () => findRule(tree(), id), (patch) => {
+          write(updateFilterRule(tree(), id, patch.operator === undefined ? patch : { ...patch, operator: keepLead(findRule(tree(), id)?.operator ?? node.operator, patch.operator) }));
+        });
+      }));
     }
     line.append(more);
 

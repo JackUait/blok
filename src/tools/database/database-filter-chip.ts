@@ -169,6 +169,23 @@ class FilterChipPages {
     };
   }
 
+  /** The value controls alone: an advanced rule's value flyout. A Checkbox pick calls `done`, as Notion's menu closes. */
+  values(done: () => void): PanelPage {
+    return {
+      build: () => {
+        const filter = this.current();
+        const property = this.ctx.schema().find((p) => p.id === filter?.propertyId);
+
+        if (filter === undefined || property === undefined) return [panelText(this.t('filterGone'))];
+        const rows = this.valueControls(filter, property);
+
+        if (property.type === 'checkbox') rows.forEach((row) => row.addEventListener('click', done));
+
+        return rows;
+      },
+    };
+  }
+
   private t(key: string, vars?: Record<string, string | number>): string {
     return this.ctx.i18n.t(`tools.database.${key}`, vars);
   }
@@ -743,4 +760,54 @@ export const openFilterChip = (anchor: HTMLElement, ctx: ViewSettingsContext, fi
   panel.root.querySelector<HTMLElement>('[data-blok-database-select-search], [data-blok-database-panel-input], [data-blok-database-chip-select]')?.focus();
 
   return panel;
+};
+
+/** notion-motion.md Round 19 §1 (r19-adv-cb*.raw): Checkbox's value menu is 220 wide; options and people 260. */
+const CHECKBOX_VALUE_WIDTH = 220;
+
+/**
+ * notion-motion.md Round 19 §1 (r19-adv-sel*.raw, r19-adv-cb*.raw, r19-adv-person*.raw): an advanced rule's value
+ * that is not text opens under its button (left = button left, top = button bottom); the rule list stays.
+ * The rule list redraws when it closes, so the button never moves under an open flyout.
+ */
+export const openRuleValueFlyout = (
+  anchor: HTMLElement,
+  host: DatabasePanel,
+  ctx: ViewSettingsContext,
+  rule: () => Filter | undefined,
+  update: (patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>) => void
+): DatabasePanel => {
+  const scoped: ViewSettingsContext = {
+    ...ctx,
+    view: () => {
+      const current = rule();
+
+      return { ...ctx.view(), filters: current === undefined ? [] : [current] };
+    },
+  };
+  const property = ctx.schema().find((p) => p.id === rule()?.propertyId);
+  const release = host.hold();
+  const pages = new FilterChipPages(scoped, rule()?.id ?? '', (patch) => {
+    update(patch);
+    flyout.refresh();
+  });
+  const flyout: DatabasePanel = new DatabasePanel({
+    anchor,
+    root: pages.values(() => flyout.close()),
+    testId: 'database-filter-value-picker',
+    width: property?.type === 'checkbox' ? CHECKBOX_VALUE_WIDTH : LIST_FILTER_WIDTH,
+    backLabel: ctx.i18n.t('tools.database.settingsBack'),
+    gap: 0,
+    onClose: (escape) => {
+      release();
+      host.refresh();
+      if (escape) host.root.querySelector<HTMLElement>(`[data-blok-testid="${CSS.escape(anchor.getAttribute('data-blok-testid') ?? '')}"]`)?.focus();
+    },
+  });
+
+  host.own(flyout);
+  flyout.open();
+  flyout.root.querySelector<HTMLElement>('[data-blok-database-select-search], [data-blok-database-panel-input]')?.focus();
+
+  return flyout;
 };

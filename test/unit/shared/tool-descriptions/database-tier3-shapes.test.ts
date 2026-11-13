@@ -192,3 +192,21 @@ describe('database schema: AI Autofill page content trigger', () => {
     expect(validate(data)).toEqual([]);
   });
 });
+
+describe('database schema: conditional color rules', () => {
+  const data = (color: string): Record<string, unknown> => ({
+    activeViewId: 'v',
+    schema: [
+      { id: 'title', name: 'Name', type: 'title', position: 'a0' },
+      { id: 'stage', name: 'Stage', type: 'select', position: 'a1' },
+    ],
+    views: [view({ id: 'v', type: 'table', colorRules: [{ id: 'c', propertyId: 'stage', operator: 'is_not_empty', value: null, color }] })],
+  });
+
+  // A Select rule saves color "match" and takes the row's option color.
+  it('documents the option colors and "match" as a rule color', () => {
+    expect(validate(data('match'))).toEqual([]);
+    expect(validate(data('green'))).toEqual([]);
+    expect(validate(data('teal'))).not.toEqual([]);
+  });
+});

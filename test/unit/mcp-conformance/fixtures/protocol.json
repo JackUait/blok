@@ -12892,7 +12892,21 @@
                                                     "description": "Any property value; shape follows the property type."
                                                   },
                                                   "color": {
-                                                    "type": "string"
+                                                    "type": "string",
+                                                    "enum": [
+                                                      "default",
+                                                      "gray",
+                                                      "brown",
+                                                      "orange",
+                                                      "yellow",
+                                                      "green",
+                                                      "blue",
+                                                      "purple",
+                                                      "pink",
+                                                      "red",
+                                                      "match"
+                                                    ],
+                                                    "description": "An option color, or \"match\": a select rule takes the row's option color."
                                                   },
                                                   "applyTo": {
                                                     "type": "string",

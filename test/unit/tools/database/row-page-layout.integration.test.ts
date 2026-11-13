@@ -1517,8 +1517,8 @@ describe('row page layout through the database tool', () => {
         await openRow('r3');
 
         expect(shownRows(drawer())).toEqual(['b3']);
-        // The filter pill names the token.
-        expect(drawer()?.querySelector('[data-blok-database-drawer-tab-panel]')?.textContent).toContain('Measure A: This page');
+        // The filter pill names the operator and the token, as Notion's "Place: Contains This page" (notion-motion.md Round 21 §5).
+        expect(drawer()?.querySelector('[data-blok-database-drawer-tab-panel]')?.textContent).toContain('Measure A: Contains This page');
       });
 
       // research/11 §4 (35-filter-saved.png): the tab's view is shared by every row page, so its Save asks first.

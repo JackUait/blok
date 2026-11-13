@@ -442,9 +442,8 @@ export const filterPillParts = (
   if (value === '') return { name, colon: false, value };
   const { lead, operator } = splitOperator(filter.operator);
   // A rollup's quantifier is no operator word (Round 13 reads "Names: des"); an End date side keeps its operator.
-  // Notion's "This page" relation chip is unmeasured: it keeps the older form, with no operator word.
-  const thisPage = property.type === 'relation' && idsOf(filter.value).includes(THIS_PAGE_FILTER_VALUE);
-  const shown = (lead === undefined || lead === 'end') && !isRollupList(property) && !thisPage ? pillOperator(property.type, operator) : undefined;
+  // A "This page" relation chip keeps it too: "Place: Contains This page" (notion-motion.md Round 21 §5).
+  const shown = (lead === undefined || lead === 'end') && !isRollupList(property) ? pillOperator(property.type, operator) : undefined;
 
   if (shown === undefined) return { name, colon: true, value };
   if ('template' in shown) return { name, colon: true, value: t(shown.template, { value }) };

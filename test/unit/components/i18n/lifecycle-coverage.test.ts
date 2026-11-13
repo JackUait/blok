@@ -29,6 +29,9 @@ const CATALOG_ONLY_KEYS = new Set([
   // The code language picker lost its Suggested section to family groups.
   // Kept for public BlokMessageKey compatibility: it shipped in 2.1.0.
   'tools.code.suggested',
+  // The timeline's end picker lost its None choice to the Separate start and end dates switch.
+  // Kept for public BlokMessageKey compatibility: it shipped in 2.1.0.
+  'tools.database.timelineEndNone',
 ]);
 
 const sourceFiles = (directory: string): string[] => {
@@ -283,7 +286,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2195 + 147 + 565 + 5 closure for all 2912 keys', () => {
+  it('rebuilds a disjoint 2196 + 147 + 565 + 6 closure for all 2914 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -297,7 +300,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2912);
+    expect(lifecycle.size).toBe(2914);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -539,7 +542,9 @@ describe('current English catalog lifecycle coverage', () => {
       // +4: the PDF preview's password prompt, Open button and page names (tools.file.previewPdf*), by literal.
       // +1: a dashboard tab's hint "Dashboard view" (tools.database.tabView), by literal.
       // +1: the PDF thumbnail rail's toggle (tools.file.previewThumbnails), by literal.
-      'executable-literal': 2195,
+      // +2: Round 24 layout rows (tools.database.galleryFitMedia, timelineSeparateDates) by literal.
+      // -1: tools.database.timelineEndNone is now catalog-only (the end picker lost its None choice).
+      'executable-literal': 2196,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -643,7 +648,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +8: the typed-speed help line (tools.audio/video.speedEntryRange, TooHigh, TooLow, NotNumber), through speed-entry.ts's t().
       // +1: the Date filter's "Invalid date" message (tools.database.filterInvalidDate), through the chip's t().
       'registered-namespace-compatible': 565,
-      'catalog-only': 5,
+      'catalog-only': 6,
     });
     expect(
       [...lifecycle.entries()]

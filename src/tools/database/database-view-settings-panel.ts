@@ -1022,13 +1022,27 @@ export class ViewSettingsPages {
           onToggle: (next) => this.ctx.updateView({ wrapCells: next }),
         });
 
+        // notion-motion.md Round 24 §4: Calendar and Timeline list their own rows before Open pages in.
+        // List and Timeline have no Wrap row; Calendar has no Load limit (it shows every row).
+        // Calendar's "Wrap page titles" is left out: its event cards are one fixed-pitch line.
+        if (view.type === 'calendar' || view.type === 'timeline') {
+          return [
+            tiles,
+            ...sourceTitle,
+            pageIcon,
+            ...this.layoutRows(panel),
+            openPages,
+            ...(view.type === 'timeline' ? [loadLimit] : []),
+          ];
+        }
+
         // 11-notion-layout.png: the switches, then Open pages in and Load limit.
         return [
           tiles,
           ...sourceTitle,
           ...verticalLines,
           pageIcon,
-          wrap,
+          ...(view.type === 'list' ? [] : [wrap]),
           openPages,
           loadLimit,
           ...this.layoutRows(panel),

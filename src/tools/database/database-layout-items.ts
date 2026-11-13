@@ -81,7 +81,8 @@ const cardLayoutItems = (
         ],
       },
     },
-    choice(`${prefix}-fit-image`, i18n.t('tools.database.galleryFitImage'), fit, () => update({ fitImage: !fit })),
+    // notion-motion.md Round 24 §4: the gallery says "Fit media". The board's label is unmeasured.
+    choice(`${prefix}-fit-image`, i18n.t(prefix === 'gallery' ? 'tools.database.galleryFitMedia' : 'tools.database.galleryFitImage'), fit, () => update({ fitImage: !fit })),
   ];
 };
 
@@ -148,6 +149,7 @@ export const timelineLayoutItems = (
   const dates = ordered.filter((p) => p.type === 'date');
   const by = resolveTimelineBy(view, schema);
   const endBy = resolveTimelineEndBy(view, schema);
+  const endCandidates = dates.filter((p) => p.id !== by);
   const tableShown = resolveShowTimelineTable(view);
   const columns = resolveTimelineTableProperties(view, schema);
   const stored = Array.isArray(view.tableProperties) ? view.tableProperties : [];
@@ -168,17 +170,16 @@ export const timelineLayoutItems = (
       title: i18n.t('tools.database.timelineShowBy'),
       children: { items: dates.map((p) => choice(`timeline-show-by-${p.id}`, p.name, by === p.id, () => update({ timelineBy: p.id }))) },
     },
-    {
+    // notion-motion.md Round 24 §4 Timeline: a switch; on, the bar ends at a second date property.
+    ...(endCandidates.length === 0 ? [] : [
+      choice('timeline-separate-dates', i18n.t('tools.database.timelineSeparateDates'), endBy !== undefined, () => update({ timelineEndBy: endBy === undefined ? endCandidates[0].id : '' })),
+    ]),
+    ...(endBy === undefined ? [] : [{
       type: PopoverItemType.Default,
       name: 'timeline-end-by',
       title: i18n.t('tools.database.timelineEndBy'),
-      children: {
-        items: [
-          choice('timeline-end-by-none', i18n.t('tools.database.timelineEndNone'), endBy === undefined, () => update({ timelineEndBy: '' })),
-          ...dates.filter((p) => p.id !== by).map((p) => choice(`timeline-end-by-${p.id}`, p.name, endBy === p.id, () => update({ timelineEndBy: p.id }))),
-        ],
-      },
-    },
+      children: { items: endCandidates.map((p) => choice(`timeline-end-by-${p.id}`, p.name, endBy === p.id, () => update({ timelineEndBy: p.id }))) },
+    } satisfies PopoverItemParams]),
     choice('timeline-show-table', i18n.t('tools.database.timelineShowTable'), tableShown, () => update({ showTimelineTable: !tableShown })),
     {
       type: PopoverItemType.Default,

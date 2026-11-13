@@ -7,6 +7,7 @@ import type { ColorRule, DatabaseViewConfig, FilterGroup, FilterRule, PropertyDe
 import { COLOR_RULE_TYPES } from '../../../../src/tools/database/view-data';
 import { IconTable, IconViewBoard } from '../../../../src/components/icons';
 import { PopoverItemType } from '../../../../src/components/utils/popover/components/popover-item';
+import type { PopoverItemParams } from '../../../../types/utils/popover/popover-item';
 import { PAGE_LIST_ROLLUP } from '../../../../src/shared/database/value-helpers';
 
 const schema: PropertyDefinition[] = [
@@ -601,6 +602,39 @@ describe('view settings panel', () => {
         'database-settings-data-source-title', 'database-settings-vertical-lines', 'database-settings-page-icon', 'database-settings-wrap',
         'database-settings-open-pages', 'database-settings-load-limit',
       ]);
+    });
+  });
+
+  // notion-motion.md Round 24 §4: each layout lists its own rows; Calendar and Timeline put theirs before Open pages in.
+  describe('Layout page rows per view (Round 24)', () => {
+    const ids = (): Array<string | null> =>
+      [...document.querySelectorAll<HTMLElement>(['settings', 'calendar', 'timeline']
+        .map((prefix) => `[data-blok-testid="database-view-settings"] [data-blok-testid^="database-${prefix}-"]`).join(', '))]
+        .map((el) => el.getAttribute('data-blok-testid'));
+    const own = (name: string): PopoverItemParams => ({ type: PopoverItemType.Default, name, title: name, isActive: false, onActivate: vi.fn() });
+
+    it('gives a List no Wrap row', () => {
+      harness({ type: 'list' }).open('layout');
+
+      expect(ids()).toEqual(['database-settings-page-icon', 'database-settings-open-pages', 'database-settings-load-limit']);
+    });
+
+    it('gives a Calendar no Wrap and no Load limit, and puts its own rows before Open pages in', () => {
+      const h = harness({ type: 'calendar' });
+
+      h.ctx.layoutItems = () => [own('calendar-weekends')];
+      h.open('layout');
+
+      expect(ids()).toEqual(['database-settings-page-icon', 'database-calendar-weekends', 'database-settings-open-pages']);
+    });
+
+    it('gives a Timeline no Wrap, and puts its own rows before Open pages in and Load limit', () => {
+      const h = harness({ type: 'timeline' });
+
+      h.ctx.layoutItems = () => [own('timeline-show-table')];
+      h.open('layout');
+
+      expect(ids()).toEqual(['database-settings-page-icon', 'database-timeline-show-table', 'database-settings-open-pages', 'database-settings-load-limit']);
     });
   });
 

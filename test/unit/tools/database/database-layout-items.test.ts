@@ -107,9 +107,10 @@ describe('database layout items', () => {
       expect(update).toHaveBeenCalledWith({ cardPreview: 'property:p-link' });
     });
 
-    it('flips fit image', () => {
+    // notion-motion.md Round 24 §4 Gallery: the row reads "Fit media".
+    it('flips fit media', () => {
       const update = vi.fn();
-      const fit = find(flat(galleryLayoutItems(view({ fitImage: true }), schema, i18n, update)), 'tools.database.galleryFitImage');
+      const fit = find(flat(galleryLayoutItems(view({ fitImage: true }), schema, i18n, update)), 'tools.database.galleryFitMedia');
 
       expect(fit.isActive).toBe(true);
       fit.onActivate?.();
@@ -161,13 +162,43 @@ describe('database layout items', () => {
       expect(update).toHaveBeenCalledWith({ timelineBy: 'p-due' });
     });
 
-    it('picks a separate end property, or none', () => {
+    // notion-motion.md Round 24 §4 Timeline: a "Separate start and end dates" switch, off, after Show timeline by.
+    it('turns separate start and end dates on with the next date property, and off again', () => {
       const update = vi.fn();
-      const endBy = find(flat(timelineLayoutItems(view({ type: 'timeline' }), schema, i18n, update)), 'tools.database.timelineEndBy');
+      const off = flat(timelineLayoutItems(view({ type: 'timeline' }), schema, i18n, update));
+      const toggle = find(off, 'tools.database.timelineSeparateDates');
 
-      expect(endBy.children?.map((c) => [c.title, c.isActive])).toEqual([['tools.database.timelineEndNone', true], ['Start', false]]);
-      find(endBy.children ?? [], 'Start').onActivate?.();
+      expect(off.map((item) => item.title).slice(0, 3)).toEqual([
+        'tools.database.timelineShowBy', 'tools.database.timelineSeparateDates', 'tools.database.timelineShowTable',
+      ]);
+      expect(toggle.isActive).toBe(false);
+      expect(toggle.children).toBeUndefined();
+      toggle.onActivate?.();
       expect(update).toHaveBeenLastCalledWith({ timelineEndBy: 'p-start' });
+
+      const on = flat(timelineLayoutItems(view({ type: 'timeline', timelineEndBy: 'p-start' }), schema, i18n, update));
+
+      expect(find(on, 'tools.database.timelineSeparateDates').isActive).toBe(true);
+      find(on, 'tools.database.timelineSeparateDates').onActivate?.();
+      expect(update).toHaveBeenLastCalledWith({ timelineEndBy: '' });
+    });
+
+    it('lets a separate end property be picked only while the switch is on', () => {
+      const update = vi.fn();
+
+      expect(flat(timelineLayoutItems(view({ type: 'timeline' }), schema, i18n, update)).some((item) => item.title === 'tools.database.timelineEndBy')).toBe(false);
+
+      const on = flat(timelineLayoutItems(view({ type: 'timeline', timelineEndBy: 'p-start' }), schema, i18n, update));
+      const endBy = find(on, 'tools.database.timelineEndBy');
+
+      expect(on.map((item) => item.title).indexOf('tools.database.timelineEndBy')).toBe(2);
+      expect(endBy.children?.map((c) => [c.title, c.isActive])).toEqual([['Start', true]]);
+    });
+
+    it('has no switch when no second date property exists', () => {
+      const oneDate = schema.filter((p) => p.id !== 'p-start');
+
+      expect(flat(timelineLayoutItems(view({ type: 'timeline' }), oneDate, i18n, vi.fn())).some((item) => item.title === 'tools.database.timelineSeparateDates')).toBe(false);
     });
 
     it('toggles the table panel', () => {

@@ -2211,14 +2211,17 @@ export class ViewSettingsPages {
     if (property.type === 'date') {
       const { lead, operator } = splitOperator(node.operator);
 
-      line.append(button(`database-filter-rule-side-${id}`, this.t(lead === 'end' ? 'dateEnd' : 'dateStart'), (self) => {
+      const sideButton = button(`database-filter-rule-side-${id}`, this.t(lead === 'end' ? 'dateEnd' : 'dateStart'), (self) => {
         openFlyout(self, panel, 'database-filter-side-picker', OPERATOR_FLYOUT_WIDTH, (pick) => (['start', 'end'] as const).map((side) => panelRow({
           label: this.t(side === 'end' ? 'dateEnd' : 'dateStart'),
           testId: `database-filter-side-${side}`,
           checked: (lead === 'end') === (side === 'end'),
           onClick: () => pick(() => save({ operator: joinOperator(side === 'end' ? 'end' : undefined, operator) })),
         })));
-      }));
+      });
+
+      sideButton.setAttribute('data-blok-database-filter-rule-side', '');
+      line.append(sideButton);
     }
     line.append(operatorButton);
     if (controls.length === 1 && only instanceof HTMLInputElement) {
@@ -2226,20 +2229,76 @@ export class ViewSettingsPages {
       only.setAttribute('data-blok-database-filter-rule-value', '');
       line.append(only);
     } else if (controls.length > 0) {
-      const day = DATE_LIKE_TYPES.includes(property.type) && typeof node.value === 'string' && ISO_DAY_VALUE.test(node.value) ? node.value : undefined;
-      const shown = day !== undefined ? longDay(day, editorLocale(this.ctx.i18n)) : filterValueText(node, property, (key, vars) => this.ctx.i18n.t(key, vars), (person) => this.personName(person), (row) => this.ctx.relatedRows?.(property).find((r) => r.id === row)?.title, editorLocale(this.ctx.i18n));
-      const valueButton = button(`database-filter-rule-value-${id}`, shown || this.ctx.i18n.t(VALUE_PLACEHOLDER_KEYS[property.type] ?? 'tools.database.filterValue'), (self) => {
+      const valueText = (rule: Pick<FilterConfig, 'operator' | 'value'>): string => {
+        const day = DATE_LIKE_TYPES.includes(property.type) && typeof rule.value === 'string' && ISO_DAY_VALUE.test(rule.value) ? rule.value : undefined;
+
+        return day !== undefined ? longDay(day, editorLocale(this.ctx.i18n)) : filterValueText(rule, property, (key, vars) => this.ctx.i18n.t(key, vars), (person) => this.personName(person), (row) => this.ctx.relatedRows?.(property).find((r) => r.id === row)?.title, editorLocale(this.ctx.i18n));
+      };
+      const placeholder = this.ctx.i18n.t(VALUE_PLACEHOLDER_KEYS[property.type] ?? 'tools.database.filterValue');
+      const shown = valueText(node);
+      // notion-motion.md Round 23 §2 (r23-adv-btns.raw): a day editor gets "Custom date ⌄" before its "Select a date ⌄".
+      // Not a relative span or a range: the flyout holds the day field and calendar (openRuleValueFlyout).
+      const dayEditor = DATE_LIKE_TYPES.includes(property.type) && dateRuleControls(this.ctx, node, () => undefined) === undefined;
+      const preset = RELATIVE_DATE_VALUES.find((relative) => relative === node.value);
+      const valueButton = button(`database-filter-rule-value-${id}`, shown || placeholder, (self) => {
         openRuleValueFlyout(self, panel, this.ctx, () => findRule(tree(), id), (patch) => {
           write(updateFilterRule(tree(), id, patch.operator === undefined ? patch : { ...patch, operator: keepLead(findRule(tree(), id)?.operator ?? node.operator, patch.operator) }));
+          // r23-adv-tab-btns.raw: the fixed-width day button reads a typed day at once, under the open flyout.
+          const rule = findRule(tree(), id);
+
+          if (!dayEditor || rule === undefined || RELATIVE_DATE_VALUES.some((relative) => relative === rule.value)) return;
+          const text = valueText(rule);
+          const label = self.querySelector('[data-blok-database-panel-label]');
+
+          if (label !== null) label.textContent = text || placeholder;
+          self.toggleAttribute('data-blok-database-filter-placeholder', text === '');
         });
       });
 
       if (shown === '') valueButton.setAttribute('data-blok-database-filter-placeholder', '');
-      line.append(valueButton);
+      if (dayEditor) line.append(this.datePresetButton(panel, id, preset, save));
+      // r22-adv-wk.raw: a preset leaves only the first button.
+      if (!dayEditor || preset === undefined) line.append(valueButton);
+      if (dayEditor) valueButton.setAttribute('data-blok-database-filter-rule-day', '');
     }
     line.append(more);
 
     return line;
+  }
+
+  /**
+   * notion-motion.md Round 22 §2 (r22-adv-preset-rows.raw) and Round 23 §2 (r23-adv-preset.raw): a 180-wide presets
+   * flyout under the button. Blok keeps its ✓ on the current row (user-approved). With a preset the button reads its name.
+   */
+  private datePresetButton(
+    panel: DatabasePanel,
+    id: string,
+    preset: typeof RELATIVE_DATE_VALUES[number] | undefined,
+    save: (patch: Partial<Pick<FilterConfig, 'value'>>) => void
+  ): HTMLElement {
+    const self: HTMLElement = sortChevron(panelRow({
+      label: preset === undefined ? this.t('filterDateCustom') : this.ctx.i18n.t(relativeValueLabelKey(preset)),
+      testId: `database-filter-rule-preset-${id}`,
+      onClick: () => openFlyout(self, panel, 'database-filter-date-menu', DATE_PRESET_FLYOUT_WIDTH, (pick) => [
+        ...RELATIVE_DATE_VALUES.map((relative) => panelRow({
+          label: this.ctx.i18n.t(relativeValueLabelKey(relative)),
+          testId: `database-filter-date-${relative}`,
+          checked: preset === relative,
+          onClick: () => pick(() => save({ value: relative })),
+        })),
+        // As in the simple popover (Round 22 §1, r22-d-t1-custom-ds.raw), Custom date clears the value.
+        panelRow({
+          label: this.t('filterDateCustom'),
+          testId: 'database-filter-date-custom',
+          checked: preset === undefined,
+          onClick: () => pick(() => save({ value: null })),
+        }),
+      ]),
+    }));
+
+    self.setAttribute('data-blok-database-filter-rule-button', '');
+
+    return self;
   }
 
   /** A rule's or group's ⋯: Remove (red), Duplicate, then the rows `extra` gives. A pick saves and redraws. */
@@ -3091,6 +3150,9 @@ export class ViewSettingsPages {
 }
 
 /** notion-motion.md Round 20 §2 (r20-adv-*-parts.raw): what an empty advanced value asks for, per type. */
+/** notion-motion.md Round 22 §2 (r22-adv-preset-rows.raw): the advanced "Custom date ⌄" list is 180 wide. */
+const DATE_PRESET_FLYOUT_WIDTH = 180;
+
 const VALUE_PLACEHOLDER_KEYS: Partial<Record<PropertyType, string>> = {
   select: 'tools.database.filterSelectOption',
   multiSelect: 'tools.database.filterSelectOption',

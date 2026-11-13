@@ -13131,6 +13131,20 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   font-weight: 500;
 }
 
+/* notion-motion.md Round 23 §2 (r23-adv-btns.raw): Date → Start date 4 apart, the rest 8, the last button → ⋯ 16.
+   "Select a date" is a fixed 165, so a picked day does not move the button under its open flyout. */
+[data-blok-database-filter-rule] > [data-blok-database-filter-rule-side] {
+  margin-inline-start: calc(-1 * var(--blok-space-1));
+}
+
+[data-blok-database-filter-rule] > [data-blok-database-filter-rule-button] + [data-blok-database-filter-rule-more] {
+  margin-inline-start: var(--blok-space-2);
+}
+
+[data-blok-database-filter-rule] > [data-blok-database-filter-rule-day] {
+  width: 165px;
+}
+
 /* notion-motion.md Round 20 §1 (r20-st-rows.raw): a Status group row in 500 and its group's ink. Notion's inks
    (rgb(142,139,134), rgb(39,131,222), rgb(70,161,113)) fail AA at 14px, so the row takes the option ink. */
 [data-blok-database-filter-status-group] {

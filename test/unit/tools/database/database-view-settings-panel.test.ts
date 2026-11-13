@@ -1486,6 +1486,8 @@ describe('view settings panel', () => {
       const h = openRule({ propertyId: 'due', operator: 'this_week', value: null });
       const operator = (): string | undefined => (h.state.view.filterTree?.filterRules[0] as { operator?: string } | undefined)?.operator;
 
+      // Round 23 §2 (r23-adv-btns.raw): 4 after the property button, not 8 (database.css).
+      expect(q('database-filter-rule-side-r')?.hasAttribute('data-blok-database-filter-rule-side')).toBe(true);
       click('database-filter-rule-side-r');
       expect(q('database-filter-side-picker')?.style.width).toBe('190px');
       click('database-filter-side-end');
@@ -1522,7 +1524,67 @@ describe('view settings panel', () => {
 
         expect(value(h)).toBe('one_week_ago');
         expect(exists('database-filter-value-picker')).toBe(false);
-        expect(q('database-filter-rule-value-r')?.textContent?.trim()).toBe('tools.database.filterDateOneWeekAgo');
+        expect(q('database-filter-rule-preset-r')?.textContent?.trim()).toBe('tools.database.filterDateOneWeekAgo');
+        expect(exists('database-filter-rule-value-r')).toBe(false);
+      });
+
+      // notion-motion.md Round 23 §2 (r23-adv-btns.raw): "Custom date ⌄" then "Select a date ⌄", the second a fixed 165.
+      it('shows a Custom date button before the Select a date button', () => {
+        openRule({ propertyId: 'due', operator: 'equals', value: null });
+        const rule = q('database-filter-rule-r');
+        const preset = q('database-filter-rule-preset-r');
+        const day = q('database-filter-rule-value-r');
+
+        expect(preset?.textContent?.trim()).toBe('tools.database.filterDateCustom');
+        expect(day?.textContent?.trim()).toBe('tools.database.filterSelectDate');
+        expect(day?.hasAttribute('data-blok-database-filter-rule-day')).toBe(true);
+        expect(preset?.nextElementSibling).toBe(day);
+        expect(rule?.contains(preset)).toBe(true);
+      });
+
+      // Round 22 §2 / Round 23 §2 (r22-adv-preset-rows.raw, r23-adv-preset.raw): the presets flyout is 180 wide, under the button.
+      it('opens the presets in a 180-wide flyout from Custom date, and a preset leaves one button', () => {
+        const h = openRule({ propertyId: 'due', operator: 'equals', value: null });
+
+        click('database-filter-rule-preset-r');
+        expect(q('database-filter-date-menu')?.style.width).toBe('180px');
+        expect(q('database-filter-date-custom')?.getAttribute('aria-checked')).toBe('true');
+        click('database-filter-date-tomorrow');
+
+        expect(value(h)).toBe('tomorrow');
+        expect(exists('database-filter-date-menu')).toBe(false);
+        expect(q('database-filter-rule-preset-r')?.textContent?.trim()).toBe('tools.database.filterDateTomorrow');
+        expect(exists('database-filter-rule-value-r')).toBe(false);
+      });
+
+      it('clears a preset from Custom date, bringing the Select a date button back', () => {
+        const h = harness({ filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'r', propertyId: 'due', operator: 'equals', value: 'tomorrow' } as never] } });
+
+        h.open('filter');
+        click('database-filter-advanced-chip');
+        click('database-filter-rule-preset-r');
+        click('database-filter-date-custom');
+
+        expect(value(h)).toBeNull();
+        expect(exists('database-filter-rule-value-r')).toBe(true);
+      });
+
+      // notion-motion.md Round 23 §2 (r23-adv-tab-btns.raw): after Tab the button reads the day at once, the flyout still open.
+      it('writes the typed day on the button at once on Tab', async () => {
+        openRule({ propertyId: 'due', operator: 'equals', value: null });
+        const input = field();
+
+        if (input === null) throw new Error('no field');
+        input.value = '3/5/25';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.blur();
+        await new Promise((resolve) => {
+          setTimeout(resolve, 0);
+        });
+
+        expect(exists('database-filter-value-picker')).toBe(true);
+        expect(q('database-filter-rule-value-r')?.textContent?.trim()).toBe('March 5, 2025');
+        expect(q('database-filter-rule-value-r')?.hasAttribute('data-blok-database-filter-placeholder')).toBe(false);
       });
 
       it('commits typed text on Enter, then shows the day and a ⊗', () => {

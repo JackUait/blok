@@ -16184,6 +16184,18 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   font-weight: 500;
 }
 
+[data-blok-database-filter-rule] > [data-blok-database-filter-rule-side] {
+  margin-inline-start: calc(-1 * var(--blok-space-1));
+}
+
+[data-blok-database-filter-rule] > [data-blok-database-filter-rule-button] + [data-blok-database-filter-rule-more] {
+  margin-inline-start: var(--blok-space-2);
+}
+
+[data-blok-database-filter-rule] > [data-blok-database-filter-rule-day] {
+  width: 165px;
+}
+
 [data-blok-database-filter-status-group] {
   font-weight: 500;
 }

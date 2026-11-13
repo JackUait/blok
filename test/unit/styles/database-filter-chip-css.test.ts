@@ -78,6 +78,18 @@ describe('advanced filter popover', () => {
     expect(declared('[data-blok-database-panel-page="sort-flyout"] > [data-blok-database-panel-row]:has(> [data-blok-database-panel-text])', 'min-height')).toEqual(['45px']);
   });
 
+  // notion-motion.md Round 23 §2 (r23-adv-btns.raw): gaps 4 after the property, 8 between the rest, 16 before ⋯.
+  it('spaces a rule\'s buttons 4, then 8, then 16 before the ⋯', () => {
+    expect(declared('[data-blok-database-filter-rule]', 'gap')).toEqual(['var(--blok-space-2)']);
+    expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-side]', 'margin-inline-start')).toEqual(['calc(-1 * var(--blok-space-1))']);
+    expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-button] + [data-blok-database-filter-rule-more]', 'margin-inline-start')).toEqual(['var(--blok-space-2)']);
+  });
+
+  // notion-motion.md Round 23 §2 (r23-adv-btns.raw): "Select a date" is a fixed 165, its text left and its chevron right.
+  it('makes the Select a date button 165 wide', () => {
+    expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-day]', 'width')).toEqual(['165px']);
+  });
+
   // r19-adv-groupmore.raw: with a group present the outer Value field grew 164 → 215.5, so every ⋯ shares one column.
   it('lets a rule\'s value field grow so the ⋯ buttons line up', () => {
     expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-value]', 'flex')).toEqual(['1 0 auto']);

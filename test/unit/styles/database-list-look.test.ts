@@ -281,6 +281,12 @@ describe('list "+ New page" (findings-listgallery L18)', () => {
     expect(body).not.toContain('margin-top');
   });
 
+  // notion-motion.md Round 24 §4 List (motion-r24-list-newhover.json): the hover fill comes in over 20ms ease-in.
+  // The ink stays Blok's AA muted text, not Notion's rgb(161,158,153).
+  it('fills over 20ms ease-in', () => {
+    expect(rule()).toContain('transition: background-color 20ms ease-in');
+  });
+
   it('draws a 16px gray plus with a 1px 8px margin', () => {
     expect(ruleBody(database, '[data-blok-database-add-row] > span[aria-hidden="true"]')).toContain('margin: var(--blok-space-0-25) var(--blok-space-2)');
     expect(ruleBody(database, '[data-blok-database-add-row] > span[aria-hidden="true"]')).toContain('color: var(--blok-database-table-gutter-icon)');

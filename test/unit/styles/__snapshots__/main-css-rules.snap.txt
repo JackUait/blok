@@ -7949,7 +7949,7 @@ button[data-blok-database-column-count]:hover {
   line-height: 21px;
   color: var(--blok-database-table-muted-text);
   text-align: start;
-  transition: background-color 80ms ease;
+  transition: background-color 20ms ease-in;
 }
 
 [data-blok-database-list] > [data-blok-database-add-row]:hover, [data-blok-database-list-rows] ~ [data-blok-database-add-row]:hover {

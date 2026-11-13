@@ -217,10 +217,10 @@ export const defaultFilterFor = (property: PropertyDefinition): FilterConfig & {
 
   switch (property.type) {
     case 'date':
-    case 'lastEditedTime':
       return { ...base, operator: 'this_week', value: null };
-    // notion-motion.md Round 13: Created time opens on "is" with no date, so it hides nothing.
+    // notion-motion.md Round 13 and Round 20 §1: "is" with no date, so it hides nothing.
     case 'createdTime':
+    case 'lastEditedTime':
       return { ...base, operator: 'equals', value: null };
     case 'number':
     case 'uniqueId':

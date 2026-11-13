@@ -120,7 +120,8 @@ describe('database filter labels', () => {
     expect(operatorChoices('createdTime')).toEqual(operatorChoices('date'));
     expect(defaultFilterFor(prop('person'))).toMatchObject({ operator: 'contains', value: [] });
     expect(defaultFilterFor(prop('files'))).toMatchObject({ operator: 'is_not_empty' });
-    expect(defaultFilterFor(prop('lastEditedTime'))).toMatchObject({ operator: 'this_week' });
+    // notion-motion.md Round 20 §1 (r20-let.raw): "is" with no date, like Created time.
+    expect(defaultFilterFor(prop('lastEditedTime'))).toMatchObject({ operator: 'equals', value: null });
   });
 
   it('names "Me" and known people on a person pill', () => {

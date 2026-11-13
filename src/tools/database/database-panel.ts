@@ -38,6 +38,8 @@ export interface DatabasePanelOptions {
   gap?: number;
   /** Opens beside the anchor, this far right of it, top level with it. */
   beside?: number;
+  /** Opens above the anchor, `gap` over it, when it does not fit below (notion-motion.md Round 21 §1). */
+  flip?: boolean;
   /** `escape` is true when Escape closed the first page. */
   onClose?: (escape: boolean) => void;
 }
@@ -88,6 +90,7 @@ export class DatabasePanel {
       ...(dock ?? {}),
       ...(options.gap !== undefined ? { gap: options.gap } : {}),
       ...(options.beside !== undefined ? { beside: options.beside } : {}),
+      ...(options.flip === true ? { flip: true } : {}),
       onEscape: () => this.back(true),
       onDismiss: () => this.finish(),
     });

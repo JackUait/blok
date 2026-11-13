@@ -331,6 +331,38 @@ test.describe('database view settings', () => {
     expect(box?.input).toEqual([13, 36, 232, 28]);
   });
 
+  // notion-motion.md Round 21 §1 (r21-cc-add3.raw, r21-cc-add3-srch.raw): the property list opens above
+  // "Add another" when it does not fit below, its bottom 4 over the button, and keeps that bottom while filtered.
+  test('opens the color property list above "Add another" when it does not fit below', async ({ page }) => {
+    await page.setViewportSize({ width: 1512, height: 560 });
+    await mount(page, blocks({ colorRules: [
+      { id: 'c1', propertyId: 'p-stage', operator: 'is_not_empty', value: null, color: 'match' },
+      { id: 'c2', propertyId: 'p-amount', operator: 'is_not_empty', value: null, color: 'green' },
+      { id: 'c3', propertyId: 'p-title', operator: 'is_not_empty', value: null, color: 'green' },
+    ] }));
+    await byTestId(page, 'database-toolbar-settings').click();
+    await byTestId(page, 'database-settings-color').click();
+    await byTestId(page, 'database-color-add').click();
+    await expect(byTestId(page, 'database-color-property-picker')).toBeVisible();
+    // The click may scroll the panel, so the button is read once the list is open.
+    const settled = async (): Promise<{ top: number; bottom: number; add: number } | null> => page.evaluate(async () => {
+      await Promise.all(document.getAnimations().map((animation) => animation.finished));
+      const rect = document.querySelector('[data-blok-testid="database-color-property-picker"]')?.getBoundingClientRect();
+      const add = document.querySelector('[data-blok-testid="database-color-add"]')?.getBoundingClientRect();
+
+      return rect === undefined || add === undefined ? null : { top: rect.top, bottom: rect.bottom, add: add.top };
+    });
+    const full = await settled();
+
+    expect(full?.bottom).toBeCloseTo((full?.add ?? 0) - 4, 0);
+
+    await page.keyboard.type('Am');
+    await expect(byTestId(page, 'database-pick-property-p-stage')).toHaveCount(0);
+    // The list re-places on its next resize callback.
+    await expect.poll(async () => Math.round((await settled())?.bottom ?? 0)).toBe(Math.round((full?.add ?? 0) - 4));
+    expect((await settled())?.top).toBeGreaterThan(full?.top ?? 0);
+  });
+
   test('searches rows by title and property text', async ({ page }) => {
     await mount(page, blocks());
     await byTestId(page, 'database-toolbar-search').click();

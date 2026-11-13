@@ -51,6 +51,13 @@ export interface PositionInput {
    * and slides only as far as needed to stay inside the viewport/scope.
    */
   cover?: boolean;
+  /**
+   * With `cover`: how far above the anchor's top the popover's bottom sits when it opens above.
+   * It opens above only when it does not fit below and does fit above. Unset: it never flips.
+   */
+  coverFlipOffset?: number;
+  /** With `coverFlipOffset`: it opened above, so it stays there, its bottom kept, while it is open. */
+  coverStayAbove?: boolean;
 }
 
 export interface ResolvedPosition {
@@ -101,6 +108,8 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
     viewportMargin = 0,
     direction = 'ltr',
     cover = false,
+    coverFlipOffset,
+    coverStayAbove = false,
   } = input;
 
   const boundaryBottom = Math.min(viewportSize.height, scopeBounds.bottom);
@@ -162,9 +171,18 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
 
   if (cover) {
     const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(value, max));
-    const top = clamp(anchor.top, boundaryTop + viewportMargin, boundaryBottom - viewportMargin - popoverSize.height);
     const start = direction === 'rtl' ? anchor.right - popoverSize.width : anchor.left;
     const left = clamp(start, boundaryLeft + viewportMargin, boundaryRight - viewportMargin - popoverSize.width);
+    const aboveBottom = coverFlipOffset === undefined ? undefined : anchor.top - coverFlipOffset;
+    const fitsBelow = anchor.top + popoverSize.height <= boundaryBottom - viewportMargin;
+    const fitsAbove = aboveBottom !== undefined && aboveBottom - popoverSize.height >= boundaryTop + viewportMargin;
+
+    if (aboveBottom !== undefined && (coverStayAbove || (!fitsBelow && fitsAbove))) {
+      const top = Math.max(boundaryTop + viewportMargin, aboveBottom - popoverSize.height);
+
+      return { top: top + scrollOffset.y, left: left + scrollOffset.x, openTop: true, openLeft: direction === 'rtl' };
+    }
+    const top = clamp(anchor.top, boundaryTop + viewportMargin, boundaryBottom - viewportMargin - popoverSize.height);
 
     return { top: top + scrollOffset.y, left: left + scrollOffset.x, openTop: false, openLeft: direction === 'rtl' };
   }

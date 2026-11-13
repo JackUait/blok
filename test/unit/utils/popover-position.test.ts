@@ -867,4 +867,46 @@ describe('resolvePosition', () => {
       expect(result.top).toBe(3581); // 408 + 8 + 3165 = viewport 416
     });
   });
+  // notion-motion.md Round 21 §1: a database colour flyout that does not fit below opens above its button,
+  // bottom = button top - 4 (r21-cc-date-val.raw, r21-cc-add3.raw).
+  describe('cover placement that flips above', () => {
+    // A button 28 tall at y 578 in a 717 window; the flyout is placed 4 under it, the flip 4 over it.
+    const base = {
+      anchor: rect({ top: 610, bottom: 610, left: 1226, right: 1484, width: 258, height: 0 }),
+      scopeBounds: rect({ top: 0, bottom: 717, left: 0, right: 1512 }),
+      viewportSize: { width: 1512, height: 717 },
+      scrollOffset: { x: 0, y: 0 },
+      viewportMargin: 12,
+      cover: true,
+      coverFlipOffset: 36,
+    };
+
+    it('opens above, its bottom 4 over the button, when it fits there and not below', () => {
+      const result = resolvePosition({ ...base, popoverSize: { width: 258, height: 403 } });
+
+      expect(result.top).toBe(574 - 403);
+      expect(result.openTop).toBe(true);
+    });
+
+    it('stays below when it fits below', () => {
+      const result = resolvePosition({ ...base, popoverSize: { width: 258, height: 84 } });
+
+      expect(result.top).toBe(610);
+      expect(result.openTop).toBe(false);
+    });
+
+    it('keeps its bottom when it shrinks after opening above', () => {
+      const result = resolvePosition({ ...base, popoverSize: { width: 258, height: 84 }, coverStayAbove: true });
+
+      expect(result.top).toBe(574 - 84);
+      expect(result.openTop).toBe(true);
+    });
+
+    it('slides as before when it fits neither side', () => {
+      const result = resolvePosition({ ...base, popoverSize: { width: 258, height: 600 } });
+
+      expect(result.top).toBe(717 - 12 - 600);
+      expect(result.openTop).toBe(false);
+    });
+  });
 });

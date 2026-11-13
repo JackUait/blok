@@ -2912,7 +2912,7 @@ export class ViewSettingsPages {
 
       return [box];
     }
-    // r20-cc-is.raw: a 240×34 button holds the 232×30 field, and the flyout opens under the button.
+    // r20-cc-is.raw: a 240×34 button holds the 232×30 field. The flyout opens under it, or above when it does not fit (r21-cc-date-val.raw).
     const button = document.createElement('button');
     const field = document.createElement('span');
     const text = filterValueText(rule, property, (key, vars) => this.ctx.i18n.t(key, vars), (person) => this.personName(person), (row) => this.ctx.relatedRows?.(property).find((r) => r.id === row)?.title, editorLocale(this.ctx.i18n));
@@ -2935,7 +2935,7 @@ export class ViewSettingsPages {
       if (tokens.length > 0) field.replaceChildren(...tokens);
     }
     button.append(field);
-    button.addEventListener('click', () => openRuleValueFlyout(button, panel, scoped, read, save, COLOR_VALUE_FLYOUT_WIDTH, COLOR_VALUE_FLYOUT_GAP));
+    button.addEventListener('click', () => openRuleValueFlyout(button, panel, scoped, read, save, COLOR_VALUE_FLYOUT_WIDTH, COLOR_VALUE_FLYOUT_GAP, true));
 
     return [button];
   }
@@ -3044,7 +3044,7 @@ export class ViewSettingsPages {
         });
 
         // notion-motion.md Round 20 §4 (r20-cc-new.raw): the property list is a 258-wide flyout, its search focused.
-        // Notion keeps it 4px off the button.
+        // Notion keeps it 4px off the button, above it when it does not fit below (Round 21 §1, r21-cc-add3.raw).
         const add: HTMLElement = marked(panelRow({
           label: this.t(cards.length === 0 ? 'colorNew' : 'colorAddAnother'),
           testId: 'database-color-add',
@@ -3053,7 +3053,7 @@ export class ViewSettingsPages {
           onClick: () => openFlyout(add, panel, 'database-color-property-picker', COLOR_PROPERTY_FLYOUT_WIDTH, (pick) => this.propertyPicker(queryState(), COLOR_RULE_TYPES, (property) => pick(() => {
             write([...rules(), { id: nanoid(), propertyId: property.id, ...newColorRule(property.type) }]);
             panel.refresh();
-          })), { gap: COLOR_PROPERTY_FLYOUT_GAP }),
+          })), { gap: COLOR_PROPERTY_FLYOUT_GAP, flip: true }),
         }), cards.length === 0 ? 'data-blok-database-color-new' : 'data-blok-database-color-add-another');
 
         // notion-motion.md Round 20 §4: the intro text shows only while there is no rule.

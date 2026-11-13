@@ -1,4 +1,5 @@
 import { PopoverDesktop } from '../../../components/utils/popover';
+import type { PopoverDesktopParams } from '../../../components/utils/popover/popover-desktop';
 import { PopoverItemType } from '../../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '../../../../types/utils/popover/popover-event';
 import type { PopoverParams } from '../../../../types/utils/popover/popover';
@@ -24,6 +25,8 @@ export interface CellPopoverOptions {
   gap?: number;
   /** Opens beside the anchor instead: this far right of it, top level with it. */
   beside?: number;
+  /** Opens above the anchor, `gap` over it, when it fits there and not below. */
+  flip?: boolean;
   /** Escape pressed while open. The owner decides: close, or step back a panel. */
   onEscape: () => void;
   /** The popover closed itself: an outside press, or focus moved away. */
@@ -75,7 +78,7 @@ const PANEL_GAP = 8;
  * panel that would run past the window slides up to stay inside it, as view
  * settings does (side-by-side-v1.md "Filter / Sort popovers").
  */
-const fitPlacement = (anchor: HTMLElement, gap = PANEL_GAP): Pick<PopoverParams, 'cover' | 'viewportMargin'> & { position: DOMRect; positionContext: HTMLElement } => {
+const fitPlacement = (anchor: HTMLElement, gap = PANEL_GAP, flip = false): Pick<PopoverDesktopParams, 'cover' | 'viewportMargin' | 'coverFlipOffset'> & { position: DOMRect; positionContext: HTMLElement } => {
   const rect = anchor.getBoundingClientRect();
 
   return {
@@ -83,6 +86,8 @@ const fitPlacement = (anchor: HTMLElement, gap = PANEL_GAP): Pick<PopoverParams,
     viewportMargin: COVER_VIEWPORT_MARGIN,
     position: new DOMRect(rect.x, rect.bottom + gap, rect.width, 0),
     positionContext: anchor,
+    // Above, its bottom sits `gap` over the anchor's top (r21-cc-date-val.raw, r21-cc-add3.raw).
+    ...(flip ? { coverFlipOffset: rect.height + 2 * gap } : {}),
   };
 };
 
@@ -162,7 +167,7 @@ export class CellPopover {
       class: [CELL_EDITOR_CLASS, ...(panel === true ? [PANEL_CLASS] : []), ...(docked !== undefined && docked !== false ? [DOCKED_CLASS] : []), ...(docked === 'page' ? [DOCKED_PAGE_CLASS] : []), ...(cover === 'value' ? [VALUE_EDITOR_CLASS] : []), ...(cover === true ? [TABLE_EDITOR_CLASS] : [])].join(' '),
       ...(this.options.minWidth !== undefined ? { minWidth: this.options.minWidth } : {}),
     };
-    const fit = this.options.beside !== undefined ? besidePlacement(anchor, this.options.beside) : fitPlacement(anchor, this.options.gap);
+    const fit = this.options.beside !== undefined ? besidePlacement(anchor, this.options.beside) : fitPlacement(anchor, this.options.gap, this.options.flip);
     const coverOrFit = cover === true || cover === 'value' ? coverPlacement(anchor, cover === 'value', cover === true && this.options.below === true) : fit;
     const docks = {
       page: () => dockPlacement(anchor, (this.options.dockRow ?? anchor).getBoundingClientRect().bottom, 0),

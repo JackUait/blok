@@ -129,6 +129,15 @@ export interface PopoverCurrentItem {
  * only the start side has room.
  * @internal
  */
+/** Params only Blok's own callers pass. */
+export type PopoverDesktopParams = PopoverParams & {
+  /**
+   * With `cover`: open above when the popover does not fit below and fits above, its bottom this far
+   * above the virtual position's top. Once above, it stays above while open.
+   */
+  coverFlipOffset?: number;
+};
+
 export class PopoverDesktop extends PopoverAbstract {
   /**
    * Flipper - module for keyboard iteration between elements.
@@ -330,6 +339,12 @@ export class PopoverDesktop extends PopoverAbstract {
   /** Gap between the trigger and the popover (see `PopoverParams.offset`). */
   private offset = 8;
 
+  /** With `cover`: how far above the anchor the bottom sits when it opens above (see `resolvePosition`). */
+  private coverFlipOffset: number | undefined;
+
+  /** It opened above: it stays there while open, so a shrinking list keeps its bottom. */
+  private coverAbove = false;
+
   /**
    * Updates the element whose left edge is used for horizontal positioning.
    * @param element - new element to align against, or undefined to fall back to trigger
@@ -384,8 +399,10 @@ export class PopoverDesktop extends PopoverAbstract {
    * @param itemsRenderParams – popover item render params.
    * The parameters that are not set by user via popover api but rather depend on technical implementation
    */
-  constructor(params: PopoverParams, itemsRenderParams?: PopoverItemRenderParamsMap) {
+  constructor(params: PopoverDesktopParams, itemsRenderParams?: PopoverItemRenderParamsMap) {
     super(params, itemsRenderParams);
+
+    this.coverFlipOffset = params.coverFlipOffset;
 
     if (params.trigger) {
       this.trigger = params.trigger;
@@ -623,6 +640,7 @@ export class PopoverDesktop extends PopoverAbstract {
   public show(): void {
     // Before placement: settling a close clears top/left.
     this.settleClose();
+    this.coverAbove = false;
 
     const mountTarget = this.getMountElement();
     const hasAnchor = this.hasRootAnchor();
@@ -881,7 +899,7 @@ export class PopoverDesktop extends PopoverAbstract {
     const viewportSize = { width: window.innerWidth, height: window.innerHeight };
     const scopeBounds = resolveBoundaryRect(this.scopeElement, viewportSize);
 
-    return resolvePosition({
+    const resolved = resolvePosition({
       anchor: rect,
       popoverSize: this.size,
       scopeBounds,
@@ -894,7 +912,13 @@ export class PopoverDesktop extends PopoverAbstract {
       asideSide: this.asideSide,
       viewportMargin: this.viewportMargin,
       cover: this.cover,
+      coverFlipOffset: this.coverFlipOffset,
+      coverStayAbove: this.coverAbove,
     });
+
+    this.coverAbove = resolved.openTop && this.cover && this.coverFlipOffset !== undefined;
+
+    return resolved;
   }
 
   /**

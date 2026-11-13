@@ -996,7 +996,8 @@ export const openRuleValueFlyout = (
   rule: () => Filter | undefined,
   update: (patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>) => void,
   width?: number,
-  gap = 0
+  gap = 0,
+  flip = false
 ): DatabasePanel => {
   const scoped: ViewSettingsContext = {
     ...ctx,
@@ -1019,6 +1020,7 @@ export const openRuleValueFlyout = (
     width: width ?? (property?.type === 'checkbox' ? CHECKBOX_VALUE_WIDTH : LIST_FILTER_WIDTH),
     backLabel: ctx.i18n.t('tools.database.settingsBack'),
     gap,
+    flip,
     onClose: (escape) => {
       release();
       host.refresh();

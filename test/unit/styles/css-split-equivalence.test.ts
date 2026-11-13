@@ -1641,6 +1641,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Round 20 lane r20b: a conditional color card's label / value-button lines; the rule handle on the card's edge; the colour swatches;
     // the filled rule cards, their header trash and value field, and the intro's blue button.
     const DATABASE_R20B_BYTES = 1_316 + 739 + 3_258 + 3_032;
+    // Round 20 lane r20a: the Status filter's group rows and options, and the advanced value placeholder.
+    const DATABASE_R20A_BYTES = 1_878;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2117,6 +2119,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R18B_BYTES
       + DATABASE_DASHBOARD_BYTES
       + DATABASE_R20B_BYTES
+      + DATABASE_R20A_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

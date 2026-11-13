@@ -7399,11 +7399,15 @@ button[data-blok-database-column-count]:hover {
   color: var(--blok-database-ink);
   font: inherit;
   cursor: pointer;
-  transition: background-color 120ms ease;
+  transition: background-color 20ms ease-in;
 }
 
 [data-blok-database-view-option]:hover, [data-blok-focused='true'] > [data-blok-database-view-option], [data-blok-database-view-option][data-blok-focused='true'] {
   background-color: var(--blok-database-popover-hover);
+}
+
+[data-blok-database-view-option]:active {
+  background-color: var(--blok-database-pressed-bg);
 }
 
 [data-blok-database-view-option-icon] {

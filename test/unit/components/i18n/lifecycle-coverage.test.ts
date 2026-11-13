@@ -295,7 +295,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2213 + 146 + 578 + 9 closure for all 2946 keys', () => {
+  it('rebuilds a disjoint 2214 + 145 + 578 + 9 closure for all 2946 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -564,7 +564,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -8: the file preview header shows no counts, so tools.file.previewPages, previewSheets, previewSlides,
       // previewRows and their One forms are gone.
       // +20: the type menu's "?" on every other type Round 27 read (tools.database.propertyTypeHelp*).
-      'executable-literal': 2213,
+      // +1: toolNames.bookmark is called by literal (the empty bookmark's link field, 8b103e09).
+      'executable-literal': 2214,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -581,7 +582,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: a11y.blocksDeleted_one/_other, a plural of the selected-block delete call.
       // +1: the audio seek slider's tools.audio.seek, built by i18nLabel like play and volume.
       // +4: the video speed submenu's back, speedDecrease, speedIncrease and the new speedNormal, built by i18nLabel.
-      'finite-dynamic': 146,
+      // -1: toolNames.bookmark (see executable-literal).
+      'finite-dynamic': 145,
       // 12 of the 20 image darkroom keys are called by literal. The 8 filter
       // names stay here: filter-strip.ts builds them from the preset name.
       // +9: the markup tool names; markup-panel.ts builds them from a short key.

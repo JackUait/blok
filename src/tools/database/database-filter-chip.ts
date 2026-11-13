@@ -152,6 +152,9 @@ class FilterChipPages {
   private calendar: MonthCalendar | undefined;
   private calendarDay: string | undefined;
   private calendarRedraw: (() => void) | undefined;
+  /** A pointer is down inside the panel: a field's blur commit waits for its click. */
+  private pointerHeld = false;
+  private trackedRoot: HTMLElement | undefined;
 
   constructor(ctx: ViewSettingsContext, filterId: string, writer?: (patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>) => void) {
     this.ctx = ctx;
@@ -172,6 +175,7 @@ class FilterChipPages {
     return {
       build: (panel) => {
         this.panel = panel;
+        this.trackPointer(panel.root);
         const filter = this.current();
         const property = this.ctx.schema().find((p) => p.id === filter?.propertyId);
 
@@ -202,6 +206,17 @@ class FilterChipPages {
 
   private t(key: string, vars?: Record<string, string | number>): string {
     return this.ctx.i18n.t(`tools.database.${key}`, vars);
+  }
+
+  private trackPointer(root: HTMLElement): void {
+    if (this.trackedRoot === root) return;
+    this.trackedRoot = root;
+    root.addEventListener('pointerdown', () => {
+      this.pointerHeld = true;
+      document.addEventListener('pointerup', () => {
+        this.pointerHeld = false;
+      }, { once: true, capture: true });
+    }, true);
   }
 
   private current(): Filter | undefined {
@@ -617,21 +632,51 @@ class FilterChipPages {
     input.setAttribute('aria-label', this.t('filterExactDate'));
     input.setAttribute('data-blok-database-chip-date-input', '');
     input.setAttribute('data-blok-testid', 'database-filter-value');
-    input.addEventListener('input', () => input.removeAttribute('aria-invalid'));
-    input.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter' || event.isComposing) return;
-      event.preventDefault();
-      // The field already shows the value (a preset's name reads back as no date).
-      if (input.value.trim() === shown.trim()) return;
-      const day = parseFilterDay(input.value, locale);
+    // Writes the typed text; false when it is no date. Text the field already shows (a preset's name) writes nothing.
+    const commit = (text: string): boolean => {
+      if (text.trim() === shown.trim() || text.trim() === '') return true;
+      const day = parseFilterDay(text, locale);
 
       if (day === null) {
         input.setAttribute('aria-invalid', 'true');
 
-        return;
+        return false;
       }
       this.update({ value: day });
-      this.focusDateField();
+
+      return true;
+    };
+
+    input.addEventListener('input', () => input.removeAttribute('aria-invalid'));
+    input.addEventListener('keydown', (event) => {
+      if (event.isComposing) return;
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      if (input.value.trim() !== shown.trim() && commit(input.value)) this.focusDateField();
+    });
+    // notion-motion.md Round 22 §1: Tab and a click inside the popover commit, as Enter does. The write waits until
+    // the click is done, so the redraw never takes the clicked control away; a click that wrote (a day) wins.
+    input.addEventListener('blur', () => {
+      const text = input.value;
+
+      if (text.trim() === shown.trim()) return;
+      const before = this.current()?.value;
+      const done = (): void => {
+        setTimeout(() => {
+          const panel = this.panel;
+
+          // A closed popover writes nothing: Escape closes it before the field's own keydown runs. A click outside is unmeasured.
+          if (this.current()?.value !== before || panel === undefined || !panel.isOpen) return;
+          const inside = panel.root.contains(document.activeElement);
+
+          // r22-d-t1-tab-ds.raw: after Tab the focus is on the new ⊗.
+          if (commit(text) && inside && !pressed) panel.root.querySelector<HTMLElement>('[data-blok-testid="database-filter-date-clear"]')?.focus();
+        }, 0);
+      };
+      const pressed = this.pointerHeld;
+
+      if (pressed) document.addEventListener('pointerup', done, { once: true, capture: true });
+      else done();
     });
     field.appendChild(input);
     if (value !== null && value !== undefined && value !== '') {
@@ -654,7 +699,17 @@ class FilterChipPages {
     presets.setAttribute('aria-label', this.t('filterDatePresets'));
     presets.setAttribute('aria-haspopup', 'menu');
     presets.innerHTML = IconChevronDown;
-    presets.addEventListener('click', () => this.presetMenu(field, value));
+    presets.addEventListener('click', () => {
+      // Typed text commits first (Round 22 §1), so the menu opens on the redrawn field.
+      if (input.value.trim() !== shown.trim() && input.value.trim() !== '' && commit(input.value)) {
+        const redrawn = this.panel?.root.querySelector<HTMLElement>('[data-blok-database-chip-date-field]');
+
+        if (redrawn !== null && redrawn !== undefined) this.presetMenu(redrawn, this.current()?.value ?? null);
+
+        return;
+      }
+      this.presetMenu(field, value);
+    });
     field.appendChild(presets);
 
     return [field, this.dayCalendar(picked, locale), ...(preset !== undefined ? [this.updatesNote()] : [])];

@@ -1564,6 +1564,82 @@ describe('DatabaseViewControls', () => {
         expect(controls.effective(saved.view).filters[0]).toMatchObject({ value: iso });
       });
 
+      // notion-motion.md Round 22 §1: Tab and a click inside the popover commit typed text, as Enter does.
+      describe('commits typed text without Enter', () => {
+        const settle = (): Promise<void> => new Promise((resolve) => {
+          setTimeout(resolve, 0);
+        });
+        const type = (text: string): void => {
+          field().value = text;
+          field().dispatchEvent(new Event('input', { bubbles: true }));
+        };
+        /** A pointer press on `el`: down, the field's blur, up, then the click, as a browser orders them. */
+        const press = (el: Element): void => {
+          el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+          field().blur();
+          el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+          (el as HTMLElement).click();
+        };
+
+        it('on Tab, and hands the focus to the new ⊗ (r22-d-t1-tab-ds.raw)', async () => {
+          const { controls, saved } = open({ operator: 'equals', value: null });
+
+          type('3/5/25');
+          q('database-filter-date-presets')?.focus();
+          await settle();
+
+          expect(controls.effective(saved.view).filters[0]).toMatchObject({ value: '2025-03-05' });
+          expect(field().value).toBe('March 5, 2025');
+          expect(q('database-filter-date-clear')).toHaveFocus();
+        });
+
+        it('on a click inside the popover (r22-d-t2-clickin-ds.raw)', async () => {
+          const { controls, saved } = open({ operator: 'equals', value: null });
+
+          type('2025-03-05');
+          press(popover().querySelector('[data-blok-database-date-month]') as Element);
+          await settle();
+
+          expect(controls.effective(saved.view).filters[0]).toMatchObject({ value: '2025-03-05' });
+        });
+
+        it('lets a clicked day win over the typed text', async () => {
+          const { controls, saved } = open({ operator: 'equals', value: null });
+
+          type('2025-03-05');
+          press(day('2026-11-20') as Element);
+          await settle();
+
+          expect(controls.effective(saved.view).filters[0]).toMatchObject({ value: '2026-11-20' });
+        });
+
+        it('commits before the ⌄ opens its menu, with the ✓ on Custom date', async () => {
+          const { controls, saved } = open({ operator: 'equals', value: null });
+
+          type('3/5/25');
+          press(q('database-filter-date-presets') as Element);
+          await settle();
+
+          expect(controls.effective(saved.view).filters[0]).toMatchObject({ value: '2025-03-05' });
+          expect(q('database-filter-date-custom')?.getAttribute('aria-checked')).toBe('true');
+        });
+
+        it('throws the text away on Escape (r22-d-t3-esc-ds.raw)', async () => {
+          const { controls } = open({ operator: 'equals', value: null });
+
+          const input = field();
+
+          type('march 5');
+          input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+          expect(q('database-filter-popover')).toBeNull();
+          // A browser blurs the field as the popover closes; jsdom does not.
+          input.dispatchEvent(new FocusEvent('blur'));
+          await settle();
+
+          expect(controls.hasPersonalEdits('v1')).toBe(false);
+        });
+      });
+
       it('keeps a preset when Enter finds its own name in the field', () => {
         const { controls, saved } = open({ operator: 'before', value: 'one_week_ago' });
 

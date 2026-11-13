@@ -104,6 +104,10 @@ export class DatabasePanel {
     return this.element;
   }
 
+  get isOpen(): boolean {
+    return !this.closed;
+  }
+
   open(): void {
     this.render();
     this.popover.show();

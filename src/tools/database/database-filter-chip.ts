@@ -334,7 +334,7 @@ class FilterChipPages {
     header.setAttribute('data-blok-database-chip-header', '');
     if (property.type === 'date') {
       lead.append(
-        this.headerButton('database-filter-side', this.t(part === 'end' ? 'dateEnd' : 'dateStart'), () => panel.push(this.sides())),
+        this.headerButton('database-filter-side', this.t(part === 'end' ? 'dateEnd' : 'dateStart'), (button) => this.sideFlyout(button, panel)),
         this.headerButton('database-filter-operator', opLabel, openOperators)
       );
     } else if (isQuantifiedText(property, filter.operator)) {
@@ -359,24 +359,22 @@ class FilterChipPages {
     return header;
   }
 
-  /** Notion's Start date / End date menu (r13-filter-ops-date.raw). Start date is the plain operator. */
-  private sides(): PanelPage {
-    return {
-      build: (panel) => {
-        const current = this.current()?.operator ?? '';
-        const { lead, operator } = splitOperator(current);
+  /**
+   * Notion's Start date / End date menu (r13-filter-ops-date.raw). Start date is the plain operator.
+   * notion-motion.md Round 22 §2 (r22-sd-simple-rows.raw): a 190x65 flyout under the button. Blok keeps its ✓ on the current side.
+   */
+  private sideFlyout(button: HTMLElement, panel: DatabasePanel): void {
+    const { lead, operator } = splitOperator(this.current()?.operator ?? '');
 
-        return (['start', 'end'] as const).map((side) => panelRow({
-          label: this.t(side === 'end' ? 'dateEnd' : 'dateStart'),
-          testId: `database-filter-side-${side}`,
-          checked: (lead === 'end') === (side === 'end'),
-          onClick: () => {
-            this.update({ operator: joinOperator(side === 'end' ? 'end' : undefined, operator) }, false);
-            panel.back();
-          },
-        }));
-      },
-    };
+    openFlyout(button, panel, 'database-filter-side-picker', OPERATOR_FLYOUT_WIDTH, (pick) => (['start', 'end'] as const).map((side) => panelRow({
+      label: this.t(side === 'end' ? 'dateEnd' : 'dateStart'),
+      testId: `database-filter-side-${side}`,
+      checked: (lead === 'end') === (side === 'end'),
+      onClick: () => pick(() => {
+        this.update({ operator: joinOperator(side === 'end' ? 'end' : undefined, operator) }, false);
+        panel.refresh();
+      }),
+    })), { flip: true });
   }
 
   /** Notion's Any / None / Every menu (r13-filter-ops-rollup.raw). */

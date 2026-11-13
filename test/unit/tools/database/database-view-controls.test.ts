@@ -1389,7 +1389,7 @@ describe('DatabaseViewControls', () => {
       expect(text(q('database-filter-side')?.parentElement)).toBe('tools.database.dateStart tools.database.filteroperator.isrelativetotoday');
 
       click('database-filter-side');
-      const rows = [...document.querySelectorAll('[data-blok-testid^="database-filter-side-"]')].map((el) => el.getAttribute('data-blok-testid'));
+      const rows = [...document.querySelectorAll('[data-blok-testid="database-filter-side-picker"] [data-blok-testid^="database-filter-side-"]')].map((el) => el.getAttribute('data-blok-testid'));
 
       expect(rows).toEqual(['database-filter-side-start', 'database-filter-side-end']);
       expect(text(q('database-filter-side-end'))).toBe('tools.database.dateEnd');
@@ -1399,6 +1399,24 @@ describe('DatabaseViewControls', () => {
 
       expect(controls.effective(saved.view).filters[0]).toMatchObject({ operator: 'end:this_week', value: null });
       expect(text(q('database-filter-side'))).toBe('tools.database.dateEnd');
+    });
+
+    // notion-motion.md Round 22 §2 (r22-sd-simple-rows.raw): a 190-wide flyout under the button, not a new page.
+    // Blok keeps its ✓ on the current side.
+    it('opens Start date / End date as a flyout over the popover, and gives the focus back to its button', () => {
+      open({ operator: 'equals', value: null });
+
+      click('database-filter-side');
+
+      expect(q('database-filter-side-picker')?.style.width).toBe('190px');
+      expect(q('database-filter-popover')?.contains(q('database-filter-side-picker'))).toBe(false);
+      expect(q('database-filter-value')).not.toBeNull();
+      expect(q('database-panel-back')).toBeNull();
+
+      click('database-filter-side-end');
+
+      expect(q('database-filter-side-picker')).toBeNull();
+      expect(q('database-filter-side')).toHaveFocus();
     });
 
     it('keeps End date through the relative editor and an operator pick, and goes back to Start date', () => {

@@ -84,6 +84,18 @@ describe('buildCardObject', () => {
     expect(md?.querySelector('a')?.textContent).toBe('link');
   });
 
+  it('keeps no attribute on Markdown markup: no handler, link target or style', () => {
+    const { stage } = build({
+      kind: 'markdown',
+      html: '<details open ontoggle="window.__ran = 1"><summary onclick="x()">S</summary></details><p style="position:fixed" onmouseover="x()"><a href="javascript:alert(1)">link</a></p>',
+    });
+    const md = q(stage, 'file-object-markdown');
+    const named = Array.from(md?.querySelectorAll('*') ?? []).flatMap((node) => node.getAttributeNames());
+
+    expect(named).toEqual([]);
+    expect(md?.querySelector('a')?.textContent).toBe('link');
+  });
+
   describe('spreadsheet', () => {
     const rows = [
       [cell('Quarter'), cell('Revenue'), cell('Costs'), cell('Margin'), cell('Notes')],

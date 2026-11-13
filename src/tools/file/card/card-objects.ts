@@ -157,6 +157,11 @@ function buildMarkdown(content: Extract<CardContent, { kind: 'markdown' }>): Omi
   const template = document.createElement('template');
   template.innerHTML = content.html;
   template.content.querySelectorAll(MD_DROPPED).forEach((node) => node.remove());
+  // The miniature needs no attribute, so none survives: no handler, link target or inline style,
+  // whatever the caller's sanitizer let through.
+  template.content.querySelectorAll('*').forEach((node) => {
+    node.getAttributeNames().forEach((name) => node.removeAttribute(name));
+  });
   md.appendChild(template.content);
 
   return { top: sheet('sheet', md), unders: [] };

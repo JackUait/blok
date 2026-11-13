@@ -1,5 +1,6 @@
 import { JUMP_PAD, mountPager, type PagedView } from '../page-pager';
 import type { PreviewChrome } from '../preview-chrome';
+import { renderPdfLinks } from './pdf-links';
 import type { PdfDocumentLike, PdfPageLike, PdfRenderTask, PdfViewport } from './pdf-types';
 
 /** pdf.js sizes pages in pt; the screen counts CSS px. */
@@ -15,8 +16,29 @@ const NEIGHBOURS = 2;
 export interface PdfViewLib {
   /** Fills `host` with selectable text for the page; `cancel` stops it. */
   renderTextLayer?(page: PdfPageLike, viewport: PdfViewport, host: HTMLElement): Promise<{ cancel(): void }>;
-  /** Fills `host` with the page's links. */
-  renderLinks?(host: HTMLElement, page: PdfPageLike, viewport: PdfViewport): Promise<void>;
+  /** Fills `host` with the page's links. Without it the view draws them with renderPdfLinks. */
+  renderLinks?(host: HTMLElement, page: PdfPageLike, viewport: PdfViewport, goTo: (dest: unknown) => void): Promise<void>;
+}
+
+async function drawLinks(host: HTMLElement, page: PdfPageLike, viewport: PdfViewport, goTo: (dest: unknown) => void): Promise<void> {
+  renderPdfLinks(host, await page.getAnnotations(), viewport, goTo);
+}
+
+/**
+ * The page index a link destination points at, or null. A named destination
+ * is looked up first; an explicit one starts with a page ref or a page index.
+ */
+async function destPage(doc: PdfDocumentLike, dest: unknown): Promise<number | null> {
+  const explicit = typeof dest === 'string' ? await doc.getDestination?.(dest) : dest;
+  const target: unknown = Array.isArray(explicit) ? explicit[0] : null;
+  if (typeof target === 'number' && Number.isInteger(target)) {
+    return target;
+  }
+  if (target instanceof Object && doc.getPageIndex !== undefined) {
+    return doc.getPageIndex(target);
+  }
+
+  return null;
 }
 
 interface Slot {
@@ -144,7 +166,7 @@ export async function mountPdfView(
     const slot = slots[index];
     slot.text = freshLayer(slot.text);
     slot.links = freshLayer(slot.links);
-    const links = lib.renderLinks?.(slot.links, page, viewport).catch(report);
+    const links = (lib.renderLinks ?? drawLinks)(slot.links, page, viewport, goTo).catch(report);
     if (lib.renderTextLayer !== undefined) {
       const handle = await lib.renderTextLayer(page, viewport, slot.text);
       if (live()) {
@@ -282,6 +304,15 @@ export async function mountPdfView(
       slots.forEach((_, i) => sizeBox(i));
       sync();
     },
+  };
+
+  // A broken destination is the PDF's fault; the click just does nothing.
+  const goTo = (dest: unknown): void => {
+    destPage(doc, dest).then((index) => {
+      if (index !== null && !state.destroyed) {
+        view.scrollToPage(index);
+      }
+    }, () => undefined);
   };
 
   // The pager sets the fitted scale first, so pages never draw at a throwaway size.

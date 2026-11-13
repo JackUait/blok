@@ -7,6 +7,8 @@ export interface PdfViewport {
   width: number;
   height: number;
   scale: number;
+  /** PDF rect to viewport px, rotation and page offset included. */
+  convertToViewportRectangle?(rect: number[]): number[];
 }
 
 export interface PdfRenderTask {
@@ -27,6 +29,8 @@ export interface PdfAnnotationLike {
   rect: number[];
   url?: string;
   dest?: unknown;
+  /** The page text under a link, read by pdf.js. */
+  overlaidText?: string;
 }
 
 export interface PdfDocumentLike {

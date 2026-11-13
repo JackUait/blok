@@ -28856,7 +28856,14 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 .blok-file-preview-pdf-links > * {
+  position: absolute;
   pointer-events: auto;
+  cursor: pointer;
+}
+
+.blok-file-preview-pdf-links > :focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: 1px;
 }
 
 .blok-file-preview-xlsx {

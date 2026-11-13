@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, beforeEach, vi, type Mock } from 'vitest';
 import { mountPdfView, type PdfViewLib } from '../../../../../src/tools/file/pdf/pdf-view';
-import type { PdfDocumentLike, PdfPageLike, PdfViewport } from '../../../../../src/tools/file/pdf/pdf-types';
+import type { PdfAnnotationLike, PdfDocumentLike, PdfPageLike, PdfViewport } from '../../../../../src/tools/file/pdf/pdf-types';
 import { detachedChrome, type PreviewChrome } from '../../../../../src/tools/file/preview-chrome';
 
 const CANVAS_CAP = 16_777_216;
@@ -437,4 +437,77 @@ describe('mountPdfView', () => {
 
     await expect(mountPdfView(h.container, doc, {}, h.chrome)).rejects.toThrow('broken');
   });
+
+  /** Page 1 carries one link annotation; the rest carry none. */
+  const withLink = (doc: FakeDoc, annotation: PdfAnnotationLike): FakeDoc => {
+    const getPage = doc.getPage.bind(doc);
+
+    return {
+      ...doc,
+      getPage: async (n) => {
+        const page = await getPage(n);
+
+        return n === 1 ? { ...page, getAnnotations: () => Promise.resolve([annotation]) } : page;
+      },
+    };
+  };
+
+  const followLink = async (h: Harness): Promise<Mock> => {
+    const scrollTo = vi.fn();
+    Object.assign(h.scroller(), { scrollTo });
+    observer().show(1, 1);
+    await settle();
+    h.pages()[0].querySelector<HTMLAnchorElement>('.blok-file-preview-pdf-links a')?.click();
+    await settle();
+
+    return scrollTo;
+  };
+
+  it('draws the page links and scrolls to the page a named destination points at', async () => {
+    const h = harness();
+    const ref = { num: 40, gen: 0 };
+    const doc = withLink(fakeDoc(5), { subtype: 'Link', rect: [0, 0, 10, 10], dest: 'chapter-3' });
+    doc.getDestination = vi.fn((name: string) => Promise.resolve(name === 'chapter-3' ? [ref, { name: 'Fit' }] : null));
+    doc.getPageIndex = vi.fn((target: unknown) => Promise.resolve(target === ref ? 2 : 0));
+    await mountPdfView(h.container, doc, {}, h.chrome);
+
+    const scrollTo = await followLink(h);
+
+    const pageHeight = 792 * PX_PER_PT;
+    expect(scrollTo).toHaveBeenCalledWith({ top: 2 * pageHeight - 20, behavior: 'smooth' });
+  });
+
+  it('scrolls to a destination that names its page by index', async () => {
+    const h = harness();
+    const doc = withLink(fakeDoc(5), { subtype: 'Link', rect: [0, 0, 10, 10], dest: [1, { name: 'Fit' }] });
+    await mountPdfView(h.container, doc, {}, h.chrome);
+
+    const scrollTo = await followLink(h);
+
+    expect(scrollTo).toHaveBeenCalledWith({ top: 792 * PX_PER_PT - 20, behavior: 'smooth' });
+  });
+
+  it('stays put when a named destination is missing or cannot be read', async () => {
+    const h = harness();
+    const doc = withLink(fakeDoc(5), { subtype: 'Link', rect: [0, 0, 10, 10], dest: 'nowhere' });
+    doc.getDestination = vi.fn(() => Promise.reject(new Error('bad dest')));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await mountPdfView(h.container, doc, {}, h.chrome);
+
+    const scrollTo = await followLink(h);
+
+    expect(scrollTo).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('opens an external page link through the safe url gate', async () => {
+    const h = harness();
+    const doc = withLink(fakeDoc(2), { subtype: 'Link', rect: [0, 0, 10, 10], url: 'javascript:alert(1)' });
+    await mountPdfView(h.container, doc, {}, h.chrome);
+    observer().show(1, 1);
+    await settle();
+
+    expect(h.pages()[0].querySelectorAll('.blok-file-preview-pdf-links a')).toHaveLength(0);
+  });
+
 });

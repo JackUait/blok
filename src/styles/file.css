@@ -1558,7 +1558,14 @@
 }
 
 .blok-file-preview-pdf-links > * {
+  position: absolute;
   pointer-events: auto;
+  cursor: pointer;
+}
+
+.blok-file-preview-pdf-links > :focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: 1px;
 }
 
 /* --- xlsx and csv: a spreadsheet grid that fills the body ----------------- */

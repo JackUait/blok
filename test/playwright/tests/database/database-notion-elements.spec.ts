@@ -197,7 +197,8 @@ for (const path of paths) {
       expect(await size(remove)).toEqual({ width: 24, height: 24 });
     });
 
-    test('selection bar: a 1px divider shadow on every segment but the last (§3b)', async ({ page }) => {
+    // notion-motion.md Round 27 §3 "Row gutter and selection": the segments abut (gap 0).
+    test('selection bar: a 1px divider shadow on every segment but the last, segments abutting (§3b)', async ({ page }) => {
       const row = page.locator('[data-blok-database-table-row][data-row-id="r1"]');
 
       await row.hover();
@@ -222,7 +223,7 @@ for (const path of paths) {
       expect(last?.shadow).toBe('none');
       const gap = segments[1].gap;
 
-      expect(Math.round(gap)).toBe(1);
+      expect(Math.round(gap)).toBe(0);
     });
 
     test('property menu: a 28px bordered icon button with no fill and the measured hover (§3c)', async ({ page }) => {

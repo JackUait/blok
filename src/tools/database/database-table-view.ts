@@ -166,6 +166,8 @@ export interface DatabaseTableViewOptions {
   groups?: TableGroup[];
   /** "Show aggregation": the number after each group's name, by group key. Without it no count is drawn. */
   groupAggregate?: (groupKey: string) => string;
+  /** The count's hover hint: the calculation's name, as in notion-motion.md Round 12. */
+  groupAggregateHint?: string;
   titlePropertyId: string;
   state?: TableState;
   handlers?: TableHandlers;
@@ -1346,6 +1348,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     }
     count.setAttribute('data-blok-database-table-group-count', '');
     count.textContent = text;
+    if (this.options.groupAggregateHint !== undefined) {
+      onHover(count, this.options.groupAggregateHint, { placement: 'top', gap: 6 });
+    }
 
     return count;
   }

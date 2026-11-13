@@ -47,7 +47,7 @@ import { resolveDynamicProperties } from './dynamic-values';
 import { safeHref } from '../../components/utils/sanitize-url';
 import { announce } from '../../components/utils/announcer';
 import { bulkCloseClearsSelection, bulkEditableProperties, bulkStartValue, createSelectionBar, watchBulkCloseKey } from './database-selection-bar';
-import { CALC_MENU_MIN_WIDTH, calcMenuAt, calculationItems, DATABASE_CALC_MENU_CLASS, DATABASE_HEADER_MENU_CLASS, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems, selectionActionItems, selectionMenuItems } from './database-table-menus';
+import { CALC_MENU_MIN_WIDTH, CALCULATION_LABEL_KEYS, calcMenuAt, calculationItems, DATABASE_CALC_MENU_CLASS, DATABASE_HEADER_MENU_CLASS, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems, selectionActionItems, selectionMenuItems } from './database-table-menus';
 import type { OpenMenuOptions, RowFavorite } from './database-table-menus';
 import { EmojiPicker, prefetchEmojiPickerData } from '../callout/emoji-picker';
 import { refreshCommentBadges } from './database-comment-badge';
@@ -7711,7 +7711,7 @@ export class DatabaseTool implements BlockTool {
       schema: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
       rows: nesting === undefined ? rows : nesting.nest(rows),
       ...(groups !== undefined ? { groups: nesting === undefined ? groups : groups.map((group) => ({ ...group, rows: nesting.nest(group.rows) })) } : {}),
-      ...(groups !== undefined && viewConfig.hideGroupAggregation === false ? { groupAggregate: this.tableGroupAggregate(viewConfig, groups) } : {}),
+      ...(groups !== undefined && viewConfig.hideGroupAggregation === false ? { groupAggregate: this.tableGroupAggregate(viewConfig, groups), groupAggregateHint: this.tableGroupAggregateHint(viewConfig) } : {}),
       ...(nesting !== undefined ? { nesting: nesting.table } : {}),
       titlePropertyId: titlePropId,
       state,
@@ -7912,6 +7912,14 @@ export class DatabaseTool implements BlockTool {
     const locale = editorLocale(this.api.i18n);
 
     return (groupKey) => groupCalculationText(calculation, groups.find((group) => group.key === groupKey)?.rows ?? [], schema, locale, shownOf);
+  }
+
+  /** Unlike the board's, the table count names Count all too (notion-motion.md Round 12). */
+  private tableGroupAggregateHint(viewConfig: DatabaseViewConfig): string {
+    const schema = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n);
+    const calculation = resolveGroupCalculation(viewConfig, schema.map((property) => this.computedValues.valueProperty(property)));
+
+    return groupCalculationHint(calculation, schema, this.api.i18n) ?? this.api.i18n.t(CALCULATION_LABEL_KEYS[calculation.fn]);
   }
 
   /** What the table view asks of the tool. Each write goes through the row block or the view, then the backend. */

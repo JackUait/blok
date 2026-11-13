@@ -1657,6 +1657,31 @@ describe('DatabaseTableView', () => {
         expect(header(root, 'p-amount').hasAttribute('data-dragging')).toBe(false);
         expect(vi.mocked(handlers.updateView).mock.lastCall?.[0].properties?.map((p) => p.id).slice(0, 3)).toEqual(['p-title', 'p-amount', 'p-notes']);
       });
+
+      // notion-motion.md Round 27 §3 "Column drag": after Escape and mouseup the order stayed.
+      it('Escape cancels the drag: the headers go back, the release writes nothing and opens no menu', () => {
+        const { root, handlers } = mount();
+        const outside = vi.fn();
+
+        lay(root);
+        document.addEventListener('keydown', outside);
+        pointer(header(root, 'p-amount'), 'pointerdown', 450, 10);
+        pointer(document, 'pointermove', 250, 10);
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+        expect(header(root, 'p-notes').style.transform).toBe('');
+        expect(header(root, 'p-amount').hasAttribute('data-dragging')).toBe(false);
+        expect(document.querySelector('[data-blok-database-table-column-ghost]')).toBeNull();
+        expect(outside).not.toHaveBeenCalled();
+
+        pointer(document, 'pointermove', 100, 10);
+        pointer(header(root, 'p-amount'), 'pointerup', 100, 10);
+        header(root, 'p-amount').querySelector<HTMLElement>('[data-blok-database-table-column-button]')?.click();
+
+        expect(handlers.updateView).not.toHaveBeenCalled();
+        expect(handlers.openPropertyMenu).not.toHaveBeenCalled();
+        document.removeEventListener('keydown', outside);
+      });
     });
 
     it('the + header button asks for a new property', () => {

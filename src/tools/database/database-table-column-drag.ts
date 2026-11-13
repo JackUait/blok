@@ -95,6 +95,8 @@ export class DatabaseTableColumnDrag {
     mountGhost(header, ghost);
     this.ghost = ghost;
     this.slots = this.headers().map((el) => ({ el, rect: el.getBoundingClientRect() }));
+    // Capture: the drag's Escape must not also reach Blok's own Escape handling.
+    document.addEventListener('keydown', this.handleKey, true);
     header.setAttribute('data-dragging', '');
     this.grid.setAttribute('data-column-dragging', '');
     this.state.busy = true;
@@ -133,8 +135,7 @@ export class DatabaseTableColumnDrag {
     }
     // A drag is not a click: the header must not open its menu on release.
     // On the document: the drop redraws the table, so the click lands in new DOM.
-    document.addEventListener('click', swallow, { capture: true, once: true });
-    setTimeout(() => document.removeEventListener('click', swallow, { capture: true }), 0);
+    armSwallow();
 
     const propertyId = press.header.getAttribute('data-property-id') ?? '';
     const headers = [...press.header.parentElement?.querySelectorAll<HTMLElement>(':scope > [data-blok-database-table-column-header]') ?? []];
@@ -149,10 +150,22 @@ export class DatabaseTableColumnDrag {
     this.stop();
   };
 
+  /** notion-motion.md Round 27 §3 "Column drag": Escape cancels; the release after it moves nothing and opens no menu. */
+  private readonly handleKey = (event: KeyboardEvent): void => {
+    if (event.key !== 'Escape') {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    this.stop();
+    document.addEventListener('pointerup', armSwallow, { capture: true, once: true });
+  };
+
   private stop(): void {
     document.removeEventListener('pointermove', this.handleMove);
     document.removeEventListener('pointerup', this.handleUp);
     document.removeEventListener('pointercancel', this.handleCancel);
+    document.removeEventListener('keydown', this.handleKey, true);
     this.ghost?.remove();
     // The slide transition goes first, so the headers jump back instead of sliding.
     this.grid.removeAttribute('data-column-dragging');
@@ -171,4 +184,10 @@ export class DatabaseTableColumnDrag {
 const swallow = (event: Event): void => {
   event.stopPropagation();
   event.preventDefault();
+};
+
+/** Swallows the click the current release makes, if it makes one. */
+const armSwallow = (): void => {
+  document.addEventListener('click', swallow, { capture: true, once: true });
+  setTimeout(() => document.removeEventListener('click', swallow, { capture: true }), 0);
 };

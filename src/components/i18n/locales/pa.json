@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "ਫਿਲਟਰ ਸਮੂਹ ਮਿਟਾਓ",
   "tools.database.filterAddRule": "ਫਿਲਟਰ ਨਿਯਮ ਜੋੜੋ",
   "tools.database.filterAddGroup": "ਫਿਲਟਰ ਸਮੂਹ ਜੋੜੋ",
+  "tools.database.filterAddGroupDescription": "ਹੋਰ ਫਿਲਟਰ ਰੱਖਣ ਲਈ ਸਮੂਹ",
   "tools.database.filterWhere": "ਜਿੱਥੇ",
   "tools.database.filterAnd": "ਅਤੇ",
   "tools.database.filterOr": "ਜਾਂ",

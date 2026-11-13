@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "필터 그룹 삭제",
   "tools.database.filterAddRule": "필터 규칙 추가",
   "tools.database.filterAddGroup": "필터 그룹 추가",
+  "tools.database.filterAddGroupDescription": "더 많은 필터를 중첩할 그룹",
   "tools.database.filterWhere": "조건",
   "tools.database.filterAnd": "그리고",
   "tools.database.filterOr": "또는",

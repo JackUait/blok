@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "删除筛选器组",
   "tools.database.filterAddRule": "添加筛选规则",
   "tools.database.filterAddGroup": "添加筛选器组",
+  "tools.database.filterAddGroupDescription": "用于嵌套更多筛选器的组",
   "tools.database.filterWhere": "条件",
   "tools.database.filterAnd": "且",
   "tools.database.filterOr": "或",

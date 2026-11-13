@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "سۈزگۈچ گۇرۇپپىسىنى ئۆچۈرۈش",
   "tools.database.filterAddRule": "سۈزۈش قائىدىسى قوشۇش",
   "tools.database.filterAddGroup": "سۈزگۈچ گۇرۇپپىسى قوشۇش",
+  "tools.database.filterAddGroupDescription": "تېخىمۇ كۆپ سۈزگۈچ قىستۇرۇش ئۈچۈن گۇرۇپپا",
   "tools.database.filterWhere": "ئەگەر",
   "tools.database.filterAnd": "ۋە",
   "tools.database.filterOr": "ياكى",

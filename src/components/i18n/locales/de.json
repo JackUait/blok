@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "Filtergruppe löschen",
   "tools.database.filterAddRule": "Filterregel hinzufügen",
   "tools.database.filterAddGroup": "Filtergruppe hinzufügen",
+  "tools.database.filterAddGroupDescription": "Eine Gruppe für weitere verschachtelte Filter",
   "tools.database.filterWhere": "Wo",
   "tools.database.filterAnd": "Und",
   "tools.database.filterOr": "Oder",

@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "Slet filtergruppe",
   "tools.database.filterAddRule": "Tilføj filterregel",
   "tools.database.filterAddGroup": "Tilføj filtergruppe",
+  "tools.database.filterAddGroupDescription": "En gruppe til at indlejre flere filtre",
   "tools.database.filterWhere": "Hvor",
   "tools.database.filterAnd": "Og",
   "tools.database.filterOr": "Eller",

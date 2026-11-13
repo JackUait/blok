@@ -374,6 +374,41 @@ describe('DatabaseViewControls', () => {
       expect(q(`database-filter-rule-value-${id}`)).toHaveFocus();
     });
 
+    // notion-motion.md Round 18 §2 (r18-adv-addrule.raw), Round 19 §1 (r19-adv-two.raw, r19-adv-group.raw).
+    it('"+ Add filter rule ⌄" opens a menu; "Add filter rule" adds a Name rule at once, with no picker', () => {
+      const { controls, saved } = openAdvanced();
+      const tree = (): DatabaseViewConfig['filterTree'] => controls.effective(saved.view).filterTree;
+
+      click(`database-filter-add-rule-${tree()?.id ?? ''}`);
+      const menu = q('database-filter-add-menu');
+
+      expect(menu?.style.width).toBe('206.9px');
+      expect(text(q('database-filter-add-rule'))).toBe('tools.database.filterAddRule');
+      expect(text(q('database-filter-add-group')?.querySelector('[data-blok-database-panel-label]'))).toBe('tools.database.filterAddGroup');
+      expect(text(q('database-filter-add-group')?.querySelector('[data-blok-database-panel-description]'))).toBe('tools.database.filterAddGroupDescription');
+      click('database-filter-add-rule');
+
+      expect(q('database-filter-add-menu')).toBeNull();
+      expect(q('database-filter-rule-property-picker')).toBeNull();
+      expect(panelDepthIsOne()).toBe(true);
+      expect(tree()?.filterRules).toEqual([
+        expect.objectContaining({ propertyId: 'title', operator: 'contains' }),
+        expect.objectContaining({ propertyId: 'title', operator: 'contains', value: '' }),
+      ]);
+    });
+
+    it('"Add filter group" adds a group that holds one Name rule', () => {
+      const { controls, saved } = openAdvanced();
+      const tree = (): DatabaseViewConfig['filterTree'] => controls.effective(saved.view).filterTree;
+
+      click(`database-filter-add-rule-${tree()?.id ?? ''}`);
+      click('database-filter-add-group');
+
+      expect(tree()?.filterRules[1]).toEqual(expect.objectContaining({
+        filterRules: [expect.objectContaining({ propertyId: 'title', operator: 'contains', value: '' })],
+      }));
+    });
+
     it('deletes the rule from its ⋯ flyout', () => {
       const { ruleId, controls, saved } = openAdvanced();
       const id = ruleId();

@@ -941,6 +941,7 @@ export type BlokMessageKey =
   | 'tools.database.filterAdd'
   | 'tools.database.filterAddAdvanced'
   | 'tools.database.filterAddGroup'
+  | 'tools.database.filterAddGroupDescription'
   | 'tools.database.filterAddRule'
   | 'tools.database.filterAddToAdvanced'
   | 'tools.database.filterAdvanced'

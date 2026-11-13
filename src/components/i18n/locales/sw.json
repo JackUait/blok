@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "Futa kikundi cha vichujio",
   "tools.database.filterAddRule": "Ongeza kanuni ya kichujio",
   "tools.database.filterAddGroup": "Ongeza kikundi cha vichujio",
+  "tools.database.filterAddGroupDescription": "Kikundi cha kuweka vichujio zaidi",
   "tools.database.filterWhere": "Ambapo",
   "tools.database.filterAnd": "Na",
   "tools.database.filterOr": "Au",

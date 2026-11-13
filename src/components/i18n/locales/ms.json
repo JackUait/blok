@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "Padam kumpulan penapis",
   "tools.database.filterAddRule": "Tambah peraturan penapis",
   "tools.database.filterAddGroup": "Tambah kumpulan penapis",
+  "tools.database.filterAddGroupDescription": "Kumpulan untuk menyarangkan lebih banyak penapis",
   "tools.database.filterWhere": "Di mana",
   "tools.database.filterAnd": "Dan",
   "tools.database.filterOr": "Atau",

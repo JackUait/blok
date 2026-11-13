@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "ఫిల్టర్ సమూహాన్ని తొలగించు",
   "tools.database.filterAddRule": "ఫిల్టర్ నియమాన్ని జోడించు",
   "tools.database.filterAddGroup": "ఫిల్టర్ సమూహాన్ని జోడించు",
+  "tools.database.filterAddGroupDescription": "మరిన్ని ఫిల్టర్‌లను ఉంచడానికి సమూహం",
   "tools.database.filterWhere": "షరతు",
   "tools.database.filterAnd": "మరియు",
   "tools.database.filterOr": "లేదా",

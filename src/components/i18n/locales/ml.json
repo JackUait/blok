@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "ഫിൽട്ടർ ഗ്രൂപ്പ് ഇല്ലാതാക്കുക",
   "tools.database.filterAddRule": "ഫിൽട്ടർ നിയമം ചേർക്കുക",
   "tools.database.filterAddGroup": "ഫിൽട്ടർ ഗ്രൂപ്പ് ചേർക്കുക",
+  "tools.database.filterAddGroupDescription": "കൂടുതൽ ഫിൽട്ടറുകൾ ഉൾപ്പെടുത്താനുള്ള ഗ്രൂപ്പ്",
   "tools.database.filterWhere": "എവിടെ",
   "tools.database.filterAnd": "ഒപ്പം",
   "tools.database.filterOr": "അല്ലെങ്കിൽ",

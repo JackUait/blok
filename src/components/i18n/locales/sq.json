@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "Fshi grupin e filtrave",
   "tools.database.filterAddRule": "Shto rregull filtri",
   "tools.database.filterAddGroup": "Shto grup filtrash",
+  "tools.database.filterAddGroupDescription": "Një grup për të futur më shumë filtra",
   "tools.database.filterWhere": "Ku",
   "tools.database.filterAnd": "Dhe",
   "tools.database.filterOr": "Ose",

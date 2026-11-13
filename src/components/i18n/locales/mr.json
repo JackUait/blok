@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "फिल्टर गट हटवा",
   "tools.database.filterAddRule": "फिल्टर नियम जोडा",
   "tools.database.filterAddGroup": "फिल्टर गट जोडा",
+  "tools.database.filterAddGroupDescription": "अधिक फिल्टर ठेवण्यासाठी गट",
   "tools.database.filterWhere": "जिथे",
   "tools.database.filterAnd": "आणि",
   "tools.database.filterOr": "किंवा",

@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "Szűrőcsoport törlése",
   "tools.database.filterAddRule": "Szűrőszabály hozzáadása",
   "tools.database.filterAddGroup": "Szűrőcsoport hozzáadása",
+  "tools.database.filterAddGroupDescription": "Csoport további szűrők beágyazásához",
   "tools.database.filterWhere": "Ahol",
   "tools.database.filterAnd": "És",
   "tools.database.filterOr": "Vagy",

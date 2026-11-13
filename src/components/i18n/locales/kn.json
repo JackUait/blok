@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "ಫಿಲ್ಟರ್ ಗುಂಪನ್ನು ಅಳಿಸಿ",
   "tools.database.filterAddRule": "ಫಿಲ್ಟರ್ ನಿಯಮ ಸೇರಿಸಿ",
   "tools.database.filterAddGroup": "ಫಿಲ್ಟರ್ ಗುಂಪು ಸೇರಿಸಿ",
+  "tools.database.filterAddGroupDescription": "ಹೆಚ್ಚಿನ ಫಿಲ್ಟರ್‌ಗಳನ್ನು ಒಳಗೊಳ್ಳಲು ಒಂದು ಗುಂಪು",
   "tools.database.filterWhere": "ಎಲ್ಲಿ",
   "tools.database.filterAnd": "ಮತ್ತು",
   "tools.database.filterOr": "ಅಥವಾ",

@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "Διαγραφή ομάδας φίλτρων",
   "tools.database.filterAddRule": "Προσθήκη κανόνα φίλτρου",
   "tools.database.filterAddGroup": "Προσθήκη ομάδας φίλτρων",
+  "tools.database.filterAddGroupDescription": "Ομάδα για ένθεση περισσότερων φίλτρων",
   "tools.database.filterWhere": "Όπου",
   "tools.database.filterAnd": "Και",
   "tools.database.filterOr": "Ή",

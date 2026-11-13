@@ -1369,6 +1369,7 @@
   "tools.database.filterDeleteGroup": "Elimina gruppo di filtri",
   "tools.database.filterAddRule": "Aggiungi regola di filtro",
   "tools.database.filterAddGroup": "Aggiungi gruppo di filtri",
+  "tools.database.filterAddGroupDescription": "Un gruppo per annidare altri filtri",
   "tools.database.filterWhere": "Dove",
   "tools.database.filterAnd": "E",
   "tools.database.filterOr": "O",

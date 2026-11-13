@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "フィルターグループを削除",
   "tools.database.filterAddRule": "フィルタールールを追加",
   "tools.database.filterAddGroup": "フィルターグループを追加",
+  "tools.database.filterAddGroupDescription": "さらにフィルターを入れ子にするグループ",
   "tools.database.filterWhere": "条件",
   "tools.database.filterAnd": "かつ",
   "tools.database.filterOr": "または",

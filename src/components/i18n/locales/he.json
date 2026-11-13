@@ -1369,6 +1369,7 @@
   "tools.database.filterDeleteGroup": "מחק קבוצת מסננים",
   "tools.database.filterAddRule": "הוסף כלל סינון",
   "tools.database.filterAddGroup": "הוסף קבוצת מסננים",
+  "tools.database.filterAddGroupDescription": "קבוצה לקינון מסננים נוספים",
   "tools.database.filterWhere": "כאשר",
   "tools.database.filterAnd": "וגם",
   "tools.database.filterOr": "או",

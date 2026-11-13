@@ -1369,6 +1369,7 @@
   "tools.database.filterDeleteGroup": "Izbriši grupu filtara",
   "tools.database.filterAddRule": "Dodaj pravilo filtra",
   "tools.database.filterAddGroup": "Dodaj grupu filtara",
+  "tools.database.filterAddGroupDescription": "Grupa za ugnježđivanje više filtara",
   "tools.database.filterWhere": "Gdje",
   "tools.database.filterAnd": "I",
   "tools.database.filterOr": "Ili",

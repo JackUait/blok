@@ -1375,6 +1375,7 @@
   "tools.database.filterDeleteGroup": "Izbriši skupino filtrov",
   "tools.database.filterAddRule": "Dodaj pravilo filtra",
   "tools.database.filterAddGroup": "Dodaj skupino filtrov",
+  "tools.database.filterAddGroupDescription": "Skupina za gnezdenje več filtrov",
   "tools.database.filterWhere": "Kjer",
   "tools.database.filterAnd": "In",
   "tools.database.filterOr": "Ali",

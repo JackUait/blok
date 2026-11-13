@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "Filtr qrupunu sil",
   "tools.database.filterAddRule": "Filtr qaydası əlavə et",
   "tools.database.filterAddGroup": "Filtr qrupu əlavə et",
+  "tools.database.filterAddGroupDescription": "Daha çox filtr yerləşdirmək üçün qrup",
   "tools.database.filterWhere": "Şərt",
   "tools.database.filterAnd": "Və",
   "tools.database.filterOr": "Və ya",

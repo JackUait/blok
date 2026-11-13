@@ -1388,7 +1388,7 @@ describe('view settings panel', () => {
 
     if (add === null) throw new Error('no advanced filter add button');
     add.click();
-    click('database-pick-property-due');
+    click('database-filter-add-rule');
 
     expect(h.state.view.filters).toEqual([]);
     expect(h.state.view.filterTree?.filterRules).toHaveLength(3);
@@ -1406,8 +1406,9 @@ describe('view settings panel', () => {
     const root = (): string => h.state.view.filterTree?.id ?? '';
 
     click(`database-filter-add-rule-${root()}`);
-    click('database-pick-property-num');
-    click(`database-filter-add-group-${root()}`);
+    click('database-filter-add-rule');
+    click(`database-filter-add-rule-${root()}`);
+    click('database-filter-add-group');
 
     const tree = h.state.view.filterTree;
     const layer2 = tree?.filterRules.find((node) => 'filterRules' in node);
@@ -1415,14 +1416,17 @@ describe('view settings panel', () => {
     expect(tree?.filterRules).toHaveLength(2);
     expect(exists(`database-filter-conjunction-${root()}`)).toBe(true);
 
-    click(`database-filter-add-group-${layer2?.id ?? ''}`);
+    click(`database-filter-add-rule-${layer2?.id ?? ''}`);
+    click('database-filter-add-group');
     const layer3 = h.state.view.filterTree?.filterRules
       .flatMap((node) => ('filterRules' in node ? node.filterRules : []))
       .find((node) => 'filterRules' in node);
 
     expect(layer3).toBeDefined();
     expect(exists(`database-filter-add-rule-${layer3?.id ?? ''}`)).toBe(true);
-    expect(exists(`database-filter-add-group-${layer3?.id ?? ''}`)).toBe(false);
+    click(`database-filter-add-rule-${layer3?.id ?? ''}`);
+    expect(exists('database-filter-add-rule')).toBe(true);
+    expect(exists('database-filter-add-group')).toBe(false);
     expect(h.ctx.updateView).not.toHaveBeenCalled();
   });
 

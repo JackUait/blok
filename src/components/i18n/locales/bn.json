@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "ফিল্টার গোষ্ঠী মুছুন",
   "tools.database.filterAddRule": "ফিল্টারের নিয়ম যোগ করুন",
   "tools.database.filterAddGroup": "ফিল্টার গোষ্ঠী যোগ করুন",
+  "tools.database.filterAddGroupDescription": "আরও ফিল্টার রাখার জন্য একটি গোষ্ঠী",
   "tools.database.filterWhere": "যেখানে",
   "tools.database.filterAnd": "এবং",
   "tools.database.filterOr": "অথবা",

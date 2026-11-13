@@ -1387,6 +1387,7 @@
   "tools.database.filterDeleteGroup": "حذف مجموعة الفلاتر",
   "tools.database.filterAddRule": "إضافة قاعدة فلتر",
   "tools.database.filterAddGroup": "إضافة مجموعة فلاتر",
+  "tools.database.filterAddGroupDescription": "مجموعة لتضمين مزيد من الفلاتر",
   "tools.database.filterWhere": "حيث",
   "tools.database.filterAnd": "و",
   "tools.database.filterOr": "أو",

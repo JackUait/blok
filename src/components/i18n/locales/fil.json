@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "Tanggalin ang grupo ng filter",
   "tools.database.filterAddRule": "Magdagdag ng panuntunan",
   "tools.database.filterAddGroup": "Magdagdag ng grupo ng filter",
+  "tools.database.filterAddGroupDescription": "Grupo para maglagay ng iba pang filter",
   "tools.database.filterWhere": "Kung saan",
   "tools.database.filterAnd": "At",
   "tools.database.filterOr": "O",

@@ -1369,6 +1369,7 @@
   "tools.database.filterDeleteGroup": "Șterge grupul de filtre",
   "tools.database.filterAddRule": "Adaugă regulă de filtrare",
   "tools.database.filterAddGroup": "Adaugă grup de filtre",
+  "tools.database.filterAddGroupDescription": "Un grup pentru a imbrica mai multe filtre",
   "tools.database.filterWhere": "Unde",
   "tools.database.filterAnd": "Și",
   "tools.database.filterOr": "Sau",

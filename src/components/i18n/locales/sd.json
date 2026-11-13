@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "فلٽر گروپ ختم ڪريو",
   "tools.database.filterAddRule": "فلٽر جو اصول شامل ڪريو",
   "tools.database.filterAddGroup": "فلٽر گروپ شامل ڪريو",
+  "tools.database.filterAddGroupDescription": "وڌيڪ فلٽر رکڻ لاءِ گروپ",
   "tools.database.filterWhere": "جتي",
   "tools.database.filterAnd": "۽",
   "tools.database.filterOr": "يا",

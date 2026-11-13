@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "Изтрий групата филтри",
   "tools.database.filterAddRule": "Добави правило за филтриране",
   "tools.database.filterAddGroup": "Добави група филтри",
+  "tools.database.filterAddGroupDescription": "Група за влагане на още филтри",
   "tools.database.filterWhere": "Където",
   "tools.database.filterAnd": "И",
   "tools.database.filterOr": "Или",

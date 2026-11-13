@@ -178,9 +178,10 @@ test.describe('database view settings', () => {
     await byTestId(page, 'database-settings-filter').click();
     await byTestId(page, 'database-filter-advanced').click();
     await byTestId(page, 'database-filter-add-rule-root').click();
-    await byTestId(page, 'database-pick-property-p-amount').click();
+    await byTestId(page, 'database-filter-add-rule').click();
+    await expect(byTestId(page, 'database-filter-add-menu')).toHaveCount(0);
     await byTestId(page, 'database-filter-add-rule-root').click();
-    await byTestId(page, 'database-pick-property-p-stage').click();
+    await byTestId(page, 'database-filter-add-rule').click();
     await byTestId(page, 'database-filter-conjunction-root').click();
     await byTestId(page, 'database-filter-conjunction-or').click();
 

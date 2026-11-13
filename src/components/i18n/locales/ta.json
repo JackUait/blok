@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "வடிப்பான் குழுவை நீக்கு",
   "tools.database.filterAddRule": "வடிப்பான் விதியைச் சேர்",
   "tools.database.filterAddGroup": "வடிப்பான் குழுவைச் சேர்",
+  "tools.database.filterAddGroupDescription": "மேலும் வடிப்பான்களை உள்ளடக்க ஒரு குழு",
   "tools.database.filterWhere": "நிபந்தனை",
   "tools.database.filterAnd": "மற்றும்",
   "tools.database.filterOr": "அல்லது",

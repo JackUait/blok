@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "ફિલ્ટર જૂથ કાઢી નાખો",
   "tools.database.filterAddRule": "ફિલ્ટર નિયમ ઉમેરો",
   "tools.database.filterAddGroup": "ફિલ્ટર જૂથ ઉમેરો",
+  "tools.database.filterAddGroupDescription": "વધુ ફિલ્ટર સમાવવા માટેનું જૂથ",
   "tools.database.filterWhere": "જ્યાં",
   "tools.database.filterAnd": "અને",
   "tools.database.filterOr": "અથવા",

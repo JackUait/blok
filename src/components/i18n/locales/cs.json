@@ -1375,6 +1375,7 @@
   "tools.database.filterDeleteGroup": "Smazat skupinu filtrů",
   "tools.database.filterAddRule": "Přidat pravidlo filtru",
   "tools.database.filterAddGroup": "Přidat skupinu filtrů",
+  "tools.database.filterAddGroupDescription": "Skupina pro vnoření dalších filtrů",
   "tools.database.filterWhere": "Kde",
   "tools.database.filterAnd": "A",
   "tools.database.filterOr": "Nebo",

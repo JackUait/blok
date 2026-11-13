@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "Kustuta filtrirühm",
   "tools.database.filterAddRule": "Lisa filtrireegel",
   "tools.database.filterAddGroup": "Lisa filtrirühm",
+  "tools.database.filterAddGroupDescription": "Rühm rohkemate filtrite pesastamiseks",
   "tools.database.filterWhere": "Kus",
   "tools.database.filterAnd": "Ja",
   "tools.database.filterOr": "Või",

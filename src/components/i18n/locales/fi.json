@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "Poista suodatinryhmä",
   "tools.database.filterAddRule": "Lisää suodatinsääntö",
   "tools.database.filterAddGroup": "Lisää suodatinryhmä",
+  "tools.database.filterAddGroupDescription": "Ryhmä, johon voi sisäkkäistää lisää suodattimia",
   "tools.database.filterWhere": "Jossa",
   "tools.database.filterAnd": "Ja",
   "tools.database.filterOr": "Tai",

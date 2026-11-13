@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "د فلټر ګروپ ړنګ کړئ",
   "tools.database.filterAddRule": "د فلټر قاعده اضافه کړئ",
   "tools.database.filterAddGroup": "د فلټر ګروپ اضافه کړئ",
+  "tools.database.filterAddGroupDescription": "د نورو فلټرونو د ځای پر ځای کولو لپاره ګروپ",
   "tools.database.filterWhere": "چېرې چې",
   "tools.database.filterAnd": "او",
   "tools.database.filterOr": "یا",

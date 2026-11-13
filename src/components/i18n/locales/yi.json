@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "אויסמעקן פֿילטער־גרופּע",
   "tools.database.filterAddRule": "צולייגן פֿילטער־כּלל",
   "tools.database.filterAddGroup": "צולייגן פֿילטער־גרופּע",
+  "tools.database.filterAddGroupDescription": "אַ גרופּע צו נעסטן מער פֿילטערס",
   "tools.database.filterWhere": "ווו",
   "tools.database.filterAnd": "און",
   "tools.database.filterOr": "אָדער",

@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "Ջնջել ֆիլտրերի խումբը",
   "tools.database.filterAddRule": "Ավելացնել ֆիլտրի կանոն",
   "tools.database.filterAddGroup": "Ավելացնել ֆիլտրերի խումբ",
+  "tools.database.filterAddGroupDescription": "Խումբ՝ ավելի շատ ֆիլտրեր ներդնելու համար",
   "tools.database.filterWhere": "Որտեղ",
   "tools.database.filterAnd": "Եվ",
   "tools.database.filterOr": "Կամ",

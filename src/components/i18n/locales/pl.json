@@ -1375,6 +1375,7 @@
   "tools.database.filterDeleteGroup": "Usuń grupę filtrów",
   "tools.database.filterAddRule": "Dodaj regułę filtru",
   "tools.database.filterAddGroup": "Dodaj grupę filtrów",
+  "tools.database.filterAddGroupDescription": "Grupa do zagnieżdżania kolejnych filtrów",
   "tools.database.filterWhere": "Gdzie",
   "tools.database.filterAnd": "Oraz",
   "tools.database.filterOr": "Lub",

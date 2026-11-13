@@ -1375,6 +1375,7 @@
   "tools.database.filterDeleteGroup": "Видалити групу фільтрів",
   "tools.database.filterAddRule": "Додати правило фільтра",
   "tools.database.filterAddGroup": "Додати групу фільтрів",
+  "tools.database.filterAddGroupDescription": "Група для вкладених фільтрів",
   "tools.database.filterWhere": "Де",
   "tools.database.filterAnd": "І",
   "tools.database.filterOr": "Або",

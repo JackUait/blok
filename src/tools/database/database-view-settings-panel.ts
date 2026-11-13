@@ -2058,28 +2058,36 @@ export class ViewSettingsPages {
       rows.push(this.ruleLine(panel, node, prefix, tree, write));
     });
 
-    rows.push(panelRow({
+    // notion-motion.md Round 18 §2 (r18-adv-addrule.raw): one "+ Add filter rule ⌄" button, its menu under it.
+    const add: HTMLElement = sortChevron(panelRow({
       label: this.t('filterAddRule'),
       testId: `database-filter-add-rule-${group.id}`,
       icon: IconPlus,
-      onClick: () => panel.push(this.pickProperty(this.t('filterAddRule'), FILTERABLE_TYPES, (property) => {
-        const { id: _id, ...condition } = defaultFilterFor(property);
-
-        write(addFilterRule(tree(), group.id, { id: nanoid(), ...condition }));
-        panel.back();
-      })),
+      onClick: () => openFlyout(add, panel, 'database-filter-add-menu', ADD_MENU_WIDTH, (pick) => [
+        // Round 19 §1 (r19-adv-two.raw): the rule comes at once as "Name · Contains", no property picker first.
+        panelRow({
+          label: this.t('filterAddRule'),
+          testId: 'database-filter-add-rule',
+          onClick: () => pick(() => {
+            write(addFilterRule(tree(), group.id, this.firstRule()));
+            panel.refresh();
+          }),
+        }),
+        ...(layer < MAX_FILTER_DEPTH && filterGroupDepth(tree(), group.id) < MAX_FILTER_DEPTH ? [panelRow({
+          label: this.t('filterAddGroup'),
+          description: this.t('filterAddGroupDescription'),
+          testId: 'database-filter-add-group',
+          onClick: () => pick(() => {
+            // Round 19 §1 (r19-adv-group.raw): a new group holds one rule.
+            write(addFilterGroup(tree(), group.id, { id: nanoid(), conjunction: 'and', filterRules: [this.firstRule()] }));
+            panel.refresh();
+          }),
+        })] : []),
+      ]),
     }));
-    if (layer < MAX_FILTER_DEPTH && filterGroupDepth(tree(), group.id) < MAX_FILTER_DEPTH) {
-      rows.push(panelRow({
-        label: this.t('filterAddGroup'),
-        testId: `database-filter-add-group-${group.id}`,
-        icon: IconPlus,
-        onClick: () => {
-          write(addFilterGroup(tree(), group.id, { id: nanoid(), conjunction: 'and', filterRules: [] }));
-          panel.refresh();
-        },
-      }));
-    }
+
+    add.setAttribute('data-blok-database-filter-add-rule', '');
+    rows.push(add);
 
     return rows;
   }
@@ -2177,6 +2185,15 @@ export class ViewSettingsPages {
     line.append(more);
 
     return line;
+  }
+
+  /** A new advanced rule: "Name · Contains", empty. */
+  private firstRule(): FilterConfig & { id: string } {
+    const filterable = this.ctx.schema().filter((p) => FILTERABLE_TYPES.includes(p.type));
+    const property = filterable.find((p) => p.type === 'title') ?? filterable[0];
+    const { id: _id, ...condition } = defaultFilterFor(property);
+
+    return { id: nanoid(), ...condition };
   }
 
   /** "Where" on the first rule, the And/Or choice on the second, plain text after (research/08). */
@@ -2891,6 +2908,9 @@ export const openFilterList = (anchor: HTMLElement, ctx: ViewSettingsContext, te
 
   return panel;
 };
+
+/** notion-motion.md Round 18 §2 (r18-adv-addrule.raw): the "+ Add filter rule ⌄" menu. */
+const ADD_MENU_WIDTH = 206.9;
 
 /** The advanced filter on its own: "+ Filter"'s "Add advanced filter" footer opens it. */
 export const openAdvancedFilter = (anchor: HTMLElement, ctx: ViewSettingsContext, onClose?: (escape: boolean) => void, host?: DatabasePanel): DatabasePanel => {

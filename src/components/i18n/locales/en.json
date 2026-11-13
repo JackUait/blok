@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "Delete filter group",
   "tools.database.filterAddRule": "Add filter rule",
   "tools.database.filterAddGroup": "Add filter group",
+  "tools.database.filterAddGroupDescription": "A group to nest more filters",
   "tools.database.filterWhere": "Where",
   "tools.database.filterAnd": "And",
   "tools.database.filterOr": "Or",

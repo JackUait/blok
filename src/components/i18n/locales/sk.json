@@ -1375,6 +1375,7 @@
   "tools.database.filterDeleteGroup": "Odstrániť skupinu filtrov",
   "tools.database.filterAddRule": "Pridať pravidlo filtra",
   "tools.database.filterAddGroup": "Pridať skupinu filtrov",
+  "tools.database.filterAddGroupDescription": "Skupina na vnorenie ďalších filtrov",
   "tools.database.filterWhere": "Kde",
   "tools.database.filterAnd": "A",
   "tools.database.filterOr": "Alebo",

@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "Filtergroep verwijderen",
   "tools.database.filterAddRule": "Filterregel toevoegen",
   "tools.database.filterAddGroup": "Filtergroep toevoegen",
+  "tools.database.filterAddGroupDescription": "Een groep om meer filters in te nesten",
   "tools.database.filterWhere": "Waar",
   "tools.database.filterAnd": "En",
   "tools.database.filterOr": "Of",

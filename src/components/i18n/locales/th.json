@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "ลบกลุ่มตัวกรอง",
   "tools.database.filterAddRule": "เพิ่มกฎตัวกรอง",
   "tools.database.filterAddGroup": "เพิ่มกลุ่มตัวกรอง",
+  "tools.database.filterAddGroupDescription": "กลุ่มสำหรับซ้อนตัวกรองเพิ่มเติม",
   "tools.database.filterWhere": "เมื่อ",
   "tools.database.filterAnd": "และ",
   "tools.database.filterOr": "หรือ",

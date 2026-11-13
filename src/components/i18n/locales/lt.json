@@ -1375,6 +1375,7 @@
   "tools.database.filterDeleteGroup": "Ištrinti filtrų grupę",
   "tools.database.filterAddRule": "Pridėti filtro taisyklę",
   "tools.database.filterAddGroup": "Pridėti filtrų grupę",
+  "tools.database.filterAddGroupDescription": "Grupė daugiau filtrų įdėti",
   "tools.database.filterWhere": "Kur",
   "tools.database.filterAnd": "Ir",
   "tools.database.filterOr": "Arba",

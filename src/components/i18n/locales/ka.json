@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "ფილტრების ჯგუფის წაშლა",
   "tools.database.filterAddRule": "ფილტრის წესის დამატება",
   "tools.database.filterAddGroup": "ფილტრების ჯგუფის დამატება",
+  "tools.database.filterAddGroupDescription": "ჯგუფი მეტი ფილტრის ჩასასმელად",
   "tools.database.filterWhere": "სადაც",
   "tools.database.filterAnd": "და",
   "tools.database.filterOr": "ან",

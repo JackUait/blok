@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "سڕینەوەی گرووپی فلتەر",
   "tools.database.filterAddRule": "زیادکردنی یاسای فلتەر",
   "tools.database.filterAddGroup": "زیادکردنی گرووپی فلتەر",
+  "tools.database.filterAddGroupDescription": "گرووپێک بۆ جێگیرکردنی فلتەری زیاتر",
   "tools.database.filterWhere": "کاتێک",
   "tools.database.filterAnd": "و",
   "tools.database.filterOr": "یان",

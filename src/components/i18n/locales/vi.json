@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "Xóa nhóm bộ lọc",
   "tools.database.filterAddRule": "Thêm quy tắc lọc",
   "tools.database.filterAddGroup": "Thêm nhóm bộ lọc",
+  "tools.database.filterAddGroupDescription": "Nhóm để lồng thêm bộ lọc",
   "tools.database.filterWhere": "Khi",
   "tools.database.filterAnd": "Và",
   "tools.database.filterOr": "Hoặc",

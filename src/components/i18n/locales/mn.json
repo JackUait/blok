@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "Шүүлтүүрийн бүлэг устгах",
   "tools.database.filterAddRule": "Шүүлтүүрийн дүрэм нэмэх",
   "tools.database.filterAddGroup": "Шүүлтүүрийн бүлэг нэмэх",
+  "tools.database.filterAddGroupDescription": "Илүү олон шүүлтүүр багтаах бүлэг",
   "tools.database.filterWhere": "Хэрэв",
   "tools.database.filterAnd": "Ба",
   "tools.database.filterOr": "Эсвэл",

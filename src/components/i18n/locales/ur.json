@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "فلٹر گروپ حذف کریں",
   "tools.database.filterAddRule": "فلٹر کا اصول شامل کریں",
   "tools.database.filterAddGroup": "فلٹر گروپ شامل کریں",
+  "tools.database.filterAddGroupDescription": "مزید فلٹرز رکھنے کے لیے گروپ",
   "tools.database.filterWhere": "جہاں",
   "tools.database.filterAnd": "اور",
   "tools.database.filterOr": "یا",

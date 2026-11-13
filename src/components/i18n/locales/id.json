@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "Hapus grup filter",
   "tools.database.filterAddRule": "Tambah aturan filter",
   "tools.database.filterAddGroup": "Tambah grup filter",
+  "tools.database.filterAddGroupDescription": "Grup untuk menyusun lebih banyak filter",
   "tools.database.filterWhere": "Di mana",
   "tools.database.filterAnd": "Dan",
   "tools.database.filterOr": "Atau",

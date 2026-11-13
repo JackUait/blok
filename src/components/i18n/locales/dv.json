@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "ފިލްޓަރު ގްރޫޕް ފޮހެލާ",
   "tools.database.filterAddRule": "ފިލްޓަރު ޤަވާޢިދެއް އިތުރުކުރޭ",
   "tools.database.filterAddGroup": "ފިލްޓަރު ގްރޫޕެއް އިތުރުކުރޭ",
+  "tools.database.filterAddGroupDescription": "އިތުރު ފިލްޓަރުތައް ލާނެ ގްރޫޕެއް",
   "tools.database.filterWhere": "ޝަރުޠަކީ",
   "tools.database.filterAnd": "އަދި",
   "tools.database.filterOr": "ނުވަތަ",

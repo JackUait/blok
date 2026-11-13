@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "පෙරහන් සමූහය මකන්න",
   "tools.database.filterAddRule": "පෙරහන් නීතියක් එක් කරන්න",
   "tools.database.filterAddGroup": "පෙරහන් සමූහයක් එක් කරන්න",
+  "tools.database.filterAddGroupDescription": "තවත් පෙරහන් ඇතුළත් කිරීමට සමූහයක්",
   "tools.database.filterWhere": "කොන්දේසිය",
   "tools.database.filterAnd": "සහ",
   "tools.database.filterOr": "හෝ",

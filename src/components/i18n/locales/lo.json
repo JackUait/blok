@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "ລຶບກຸ່ມຕົວກອງ",
   "tools.database.filterAddRule": "ເພີ່ມກົດຕົວກອງ",
   "tools.database.filterAddGroup": "ເພີ່ມກຸ່ມຕົວກອງ",
+  "tools.database.filterAddGroupDescription": "ກຸ່ມສຳລັບຊ້ອນຕົວກອງເພີ່ມເຕີມ",
   "tools.database.filterWhere": "ເມື່ອ",
   "tools.database.filterAnd": "ແລະ",
   "tools.database.filterOr": "ຫຼື",

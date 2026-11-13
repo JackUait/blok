@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "စစ်ထုတ်မှု အုပ်စု ဖျက်ရန်",
   "tools.database.filterAddRule": "စစ်ထုတ်မှု စည်းမျဉ်း ထည့်ရန်",
   "tools.database.filterAddGroup": "စစ်ထုတ်မှု အုပ်စု ထည့်ရန်",
+  "tools.database.filterAddGroupDescription": "နောက်ထပ် စစ်ထုတ်မှုများ ထည့်ရန် အုပ်စု",
   "tools.database.filterWhere": "အကယ်၍",
   "tools.database.filterAnd": "နှင့်",
   "tools.database.filterOr": "သို့မဟုတ်",

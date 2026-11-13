@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "حذف گروه فیلتر",
   "tools.database.filterAddRule": "افزودن قانون فیلتر",
   "tools.database.filterAddGroup": "افزودن گروه فیلتر",
+  "tools.database.filterAddGroupDescription": "گروهی برای قرار دادن فیلترهای بیشتر",
   "tools.database.filterWhere": "جایی که",
   "tools.database.filterAnd": "و",
   "tools.database.filterOr": "یا",

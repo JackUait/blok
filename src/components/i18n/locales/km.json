@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "លុបក្រុមតម្រង",
   "tools.database.filterAddRule": "បន្ថែមច្បាប់តម្រង",
   "tools.database.filterAddGroup": "បន្ថែមក្រុមតម្រង",
+  "tools.database.filterAddGroupDescription": "ក្រុមសម្រាប់ដាក់តម្រងបន្ថែម",
   "tools.database.filterWhere": "នៅពេល",
   "tools.database.filterAnd": "និង",
   "tools.database.filterOr": "ឬ",

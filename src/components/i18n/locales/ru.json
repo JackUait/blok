@@ -1375,6 +1375,7 @@
   "tools.database.filterDeleteGroup": "Удалить группу фильтров",
   "tools.database.filterAddRule": "Добавить правило фильтра",
   "tools.database.filterAddGroup": "Добавить группу фильтров",
+  "tools.database.filterAddGroupDescription": "Группа для вложенных фильтров",
   "tools.database.filterWhere": "Где",
   "tools.database.filterAnd": "И",
   "tools.database.filterOr": "Или",

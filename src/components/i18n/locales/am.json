@@ -1363,6 +1363,7 @@
   "tools.database.filterDeleteGroup": "የማጣሪያ ቡድን ሰርዝ",
   "tools.database.filterAddRule": "የማጣሪያ ደንብ አክል",
   "tools.database.filterAddGroup": "የማጣሪያ ቡድን አክል",
+  "tools.database.filterAddGroupDescription": "ተጨማሪ ማጣሪያዎችን የሚይዝ ቡድን",
   "tools.database.filterWhere": "ሁኔታ",
   "tools.database.filterAnd": "እና",
   "tools.database.filterOr": "ወይም",

@@ -44,6 +44,16 @@ describe('sidebar sections', () => {
       .toEqual(['c', 'b']);
   });
 
+  it('keeps visible recents in place and only promotes a page outside the five shortcuts', () => {
+    const pages = ['a', 'b', 'c', 'd', 'e', 'f'].map((id) => page(id));
+    const frame = mount(pages, 'a');
+    for (const id of ['b', 'c', 'd', 'e']) frame.setPages(pages, id);
+    const titles = () => [...frame.element.querySelectorAll('[data-blok-sidebar-recents] [data-blok-sidebar-label]')].map((item) => item.textContent);
+    frame.setPages(pages, 'c'); expect(titles()).toEqual(['e', 'd', 'c', 'b', 'a']);
+    frame.setPages(pages, 'f'); expect(titles()).toEqual(['f', 'e', 'd', 'c', 'b']);
+    frame.setPages(pages, 'a'); expect(titles()).toEqual(['a', 'f', 'e', 'd', 'c']);
+  });
+
   // Notion replie une section d'un clic sur son titre.
   it('collapses a section when its heading is clicked', () => {
     mount([page('a', { section: 'Équipe' }), page('b', { section: 'Privé' })]);
@@ -75,6 +85,17 @@ describe('sidebar sections', () => {
 });
 
 describe('teamspace row', () => {
+  it('keeps creation and settings separate from the workspace disclosure', () => {
+    const created: (string | null)[] = []; let settings = 0;
+    const frame = createPageFrame({ pages: [page('a', { section: 'workspace' })], activeId: '',
+      onOpen() {}, onCreate: (id) => created.push(id), onTeamspaceMenu() { settings++; }, teamspace: { name: 'Équipe' },
+    });
+    document.body.append(frame.element);
+    frame.element.querySelector<HTMLButtonElement>('[data-blok-sidebar-teamspace-add]')!.click();
+    frame.element.querySelector<HTMLButtonElement>('[data-blok-sidebar-teamspace-more]')!.click();
+    expect(created).toEqual([null]); expect(settings).toBe(1);
+    expect(frame.element.querySelectorAll('[data-blok-sidebar-row]')).toHaveLength(1);
+  });
   // Chez Notion, l'espace n'est pas un titre : c'est une ligne avec son icône,
   // sous un en-tête « Espaces », et les pages sont indentées dessous.
   it('puts the workspace on a row of its own under Espaces', () => {
@@ -84,7 +105,7 @@ describe('teamspace row', () => {
       teamspace: { name: 'Tousambassadeurs' },
     });
     document.body.append(frame.element);
-    expect(headings()).toContain('Espaces');
+    expect(headings()).toContain("Espaces d’équipe");
     expect(document.querySelector('[data-blok-sidebar-teamspace]')?.textContent).toContain('Tousambassadeurs');
     expect(document.querySelectorAll('[data-blok-sidebar-row]')).toHaveLength(1);
   });
@@ -124,4 +145,31 @@ describe('sidebar shortcuts', () => {
     document.querySelector<HTMLButtonElement>('[data-blok-sidebar-shortcut]')?.click();
     expect(created).toEqual([null]);
   });
+});
+
+it('keeps recent shortcuts flat even if the page has nested children', () => {
+  const frame = mount([page('parent'), page('child', { parentId: 'parent' })], 'parent');
+  const recent = frame.element.querySelector('[data-blok-sidebar-recents]');
+  expect(recent?.querySelectorAll('[data-blok-sidebar-row]')).toHaveLength(1);
+  expect(recent?.querySelector('[data-blok-sidebar-toggle]')).toBeNull();
+  expect(frame.element.querySelectorAll('[data-blok-sidebar-label]')).toHaveLength(3);
+});
+
+it('keeps copying and favoriting readable pages while hiding unavailable editing actions', () => {
+  const frame = createPageFrame({ pages: [page('shared')], activeId: '', onOpen() {}, onCreate() {},
+    canEdit: () => false, canCreate: () => false, availableActions: ['rename', 'duplicate', 'delete', 'open-tab'],
+  });
+  document.body.append(frame.element);
+  const commands = [...frame.element.querySelectorAll('[data-blok-sidebar-menu-label]')].map(node => node.textContent);
+  expect(commands).toEqual(['Ajouter aux favoris', 'Copier le lien', 'Ouvrir dans un nouvel onglet']);
+  expect(frame.element.querySelector<HTMLButtonElement>('[data-blok-sidebar-add]')?.hidden).toBe(true);
+});
+
+it('offers private creation even before the first private page exists', () => {
+  let created = 0;
+  const frame = createPageFrame({ pages: [], activeId: '', onOpen() {}, onCreate() {}, onCreatePrivate() { created++; } });
+  document.body.append(frame.element);
+  expect(headings()).toContain('Privé');
+  frame.element.querySelector<HTMLButtonElement>('[data-blok-sidebar-create-private]')!.click();
+  expect(created).toBe(1);
 });

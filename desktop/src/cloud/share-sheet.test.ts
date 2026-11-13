@@ -14,6 +14,7 @@ const sheet = (over: Partial<PageAccessSheet> = {}): PageAccessSheet => ({
 function client(responses: { get?: PageAccessSheet; fail?: boolean } = {}): CloudClient {
   const instance = new CloudClient({ origin: 'https://example.org' });
   vi.spyOn(instance, 'request').mockImplementation(async (_path: string, init?: RequestInit) => {
+    if (_path.endsWith('/members')) return { members: [{ id: 'bob', email: 'bob@example.test' }] };
     if (!init || init.method === undefined || init.method === 'GET') return responses.get ?? sheet();
     if (responses.fail) throw new Error('Refusé');
     return { ok: true };
@@ -32,6 +33,25 @@ const mount = async (instance: CloudClient, pageTitle = 'Page') => {
 afterEach(() => { document.body.replaceChildren(); vi.restoreAllMocks(); });
 
 describe('share sheet', () => {
+  it('only requests member suggestions for people who may manage access', async () => {
+    const instance = client({ get: sheet({ myLevel: 'view' }) });
+    const { host } = await mount(instance);
+    expect(host.querySelector<HTMLElement>('[data-cloud-share-invitation]')!.hidden).toBe(true);
+    expect(instance.request).not.toHaveBeenCalledWith(expect.stringContaining('/members'));
+  });
+
+  it('notifies navigation after an individual share changes, without opening the page to the workspace', async () => {
+    const instance = client();
+    const onChanged = vi.fn();
+    const host = document.createElement('div'); document.body.append(host);
+    const handle = mountShareSheet(host, { client: instance, slug: 'equipe', pageId: 'p', pageTitle: 'Privé', onChanged });
+    await vi.waitFor(() => expect(host.querySelector('[data-cloud-share-row]')).not.toBeNull());
+    await (host.querySelector('[data-cloud-share-sheet]') as HTMLElement & { testChange: (u: string, l: string) => Promise<void> }).testChange('bob', 'view');
+    expect(instance.request).toHaveBeenCalledWith('/api/workspaces/equipe/pages/p/shares/bob', { method: 'PUT', body: JSON.stringify({ level: 'view' }) });
+    expect(instance.request).not.toHaveBeenCalledWith(expect.stringContaining('/access'), expect.objectContaining({ method: 'PUT' }));
+    expect(onChanged).toHaveBeenCalledOnce();
+    handle.destroy();
+  });
   it('separates rights decided here from rights that come from a parent', async () => {
     const { host } = await mount(client());
     const own = host.querySelectorAll('[data-cloud-share-row]:not([data-cloud-share-inherited])');

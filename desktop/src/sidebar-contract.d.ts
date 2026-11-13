@@ -25,4 +25,14 @@ export function createPageFrame(options: {
   onOpen(id: string): void;
   onCreate(parentId: string | null): void;
   onAction?(action: SidebarAction): void;
+  onFavorite?(id: string, favorite: boolean): void;
+  onCreatePrivate?(): void;
+  onSearch?(recentIds?: string[]): void;
+  recentIds?: string[];
+  onRecentsChange?(ids: string[]): void;
+  onTeamspaceMenu?(anchor: HTMLButtonElement): void;
+  pageUrl?(id: string): string;
+  availableActions?: SidebarAction['type'][];
+  canEdit?(id: string): boolean;
+  canCreate?(parentId: string | null): boolean;
 }): PageFrame;

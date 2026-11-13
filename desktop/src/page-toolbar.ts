@@ -1,9 +1,11 @@
+import { promoteToTopLayer, removeFromTopLayer } from '../../src/components/utils/top-layer';
 import { renderPageIcon } from '../../src/shell/page-icon';
 export interface PageToolbar {
   element: HTMLElement;
   setBreadcrumbs(items: PageBreadcrumbItem[]): void;
   setTitle(title: string): void;
   setIcon(icon: string | undefined): void;
+  setFavorite(favorite: boolean): void;
   destroy(): void;
 }
 
@@ -49,8 +51,20 @@ export function createPageToolbar(
   fullWidth: boolean,
   onFullWidthChange: (value: boolean) => void,
   onToggleSidebar?: () => void,
-  onShare?: () => void,
+  onShare?: (anchor: HTMLButtonElement) => (() => void) | void,
+  options: {
+    workspaceName?: string;
+    workspacePages?: () => PageBreadcrumbChoice[];
+    pageUrl?: (id: string) => string;
+    favorite?: boolean;
+    onFavorite?: (favorite: boolean) => void;
+    readOnly?: boolean;
+    onRename?: () => void;
+    onDuplicate?: () => void;
+    onDelete?: () => void;
+  } = {},
 ): PageToolbar {
+  let closeSharing: (() => void) | void;
   const toolbar = document.createElement('div');
   toolbar.setAttribute('data-desktop-page-toolbar', '');
   if (onToggleSidebar) {
@@ -72,7 +86,35 @@ export function createPageToolbar(
   local.setAttribute('data-desktop-page-local', '');
   local.title = 'Cette page est enregistrée sur cet appareil';
   local.append(glyph(['M2.5 3.5h11v8h-11z', 'M5.5 13.5h5']), document.createTextNode('Sur cet appareil'));
-  identity.append(trail, local);
+  if (options.workspaceName) {
+    const workspace = document.createElement('button');
+    workspace.type = 'button';
+    workspace.setAttribute('data-desktop-page-workspace', '');
+    workspace.title = options.workspaceName;
+    workspace.append(glyph(['M2 7 8 2l6 5', 'M4 6v7h3V9h2v4h3V6']));
+    const name = document.createElement('span');
+    name.textContent = options.workspaceName;
+    workspace.append(name);
+    if (options.workspacePages) {
+      workspace.setAttribute('aria-haspopup', 'menu');
+      workspace.setAttribute('aria-expanded', 'false');
+      workspace.addEventListener('click', () => openBreadcrumbMenu({
+        id: 'workspace', title: options.workspaceName!, menuHeading: options.workspaceName,
+        menu: options.workspacePages!(),
+      }, workspace));
+    }
+    const separator = document.createElement('span');
+    separator.setAttribute('data-desktop-page-breadcrumb-separator', '');
+    separator.textContent = '/';
+    separator.setAttribute('aria-hidden', 'true');
+    identity.append(workspace, separator, trail);
+  } else identity.append(trail, local);
+  if (options.readOnly) {
+    const badge = document.createElement('span');
+    badge.setAttribute('data-desktop-page-readonly', '');
+    badge.textContent = 'Lecture seule';
+    identity.append(badge);
+  }
 
   const actions = document.createElement('div');
   actions.setAttribute('data-desktop-page-actions', '');
@@ -83,16 +125,79 @@ export function createPageToolbar(
     share.type = 'button';
     share.setAttribute('data-desktop-page-share', '');
     share.textContent = 'Partager';
-    share.addEventListener('click', onShare);
+    share.setAttribute('aria-haspopup', 'dialog');
+    share.setAttribute('aria-expanded', 'false');
+    share.addEventListener('click', () => { close(); closeBreadcrumbMenu(); closeSharing = onShare(share); });
     actions.append(share);
   }
+  const copy = document.createElement('button');
+  copy.type = 'button';
+  copy.setAttribute('data-desktop-page-copy', '');
+  copy.setAttribute('aria-label', 'Copier le lien de la page');
+  copy.title = 'Copier le lien de la page';
+  const linkIcon = () => glyph(['M6.5 9.5 9.5 6.5', 'M6 10l-1 1a2.5 2.5 0 0 1-3.5-3.5L4 5', 'M10 6l1-1a2.5 2.5 0 0 1 3.5 3.5L12 11']);
+  copy.append(linkIcon());
+  const feedback = document.createElement('span');
+  feedback.setAttribute('data-desktop-page-feedback', '');
+  feedback.setAttribute('role', 'status');
+  feedback.hidden = true;
+  let feedbackTimer: ReturnType<typeof setTimeout> | undefined;
+  let disposed = false;
+  const resetFeedback = (): void => {
+    clearTimeout(feedbackTimer);
+    feedback.hidden = true;
+    feedback.textContent = '';
+    copy.replaceChildren(linkIcon());
+    copy.title = 'Copier le lien de la page';
+  };
+  copy.addEventListener('click', () => {
+    if (copy.disabled) return;
+    resetFeedback();
+    copy.disabled = true;
+    const url = new URL(location.href);
+    url.pathname = '/'; url.search = ''; url.hash = '';
+    const id = items.at(-1)?.id;
+    if (id) url.searchParams.set('page', id);
+    void (async () => {
+      try {
+        await navigator.clipboard.writeText(id ? options.pageUrl?.(id) ?? url.href : url.href);
+        if (disposed) return;
+        feedback.textContent = 'Lien copié';
+        copy.replaceChildren(glyph(['M3 8l3 3 7-7']));
+        copy.title = 'Lien copié';
+      } catch {
+        if (disposed) return;
+        feedback.textContent = 'Copie impossible : vérifiez l’autorisation du presse-papiers.';
+        copy.title = 'La copie a échoué';
+      } finally { copy.disabled = false; }
+      feedback.hidden = false;
+      feedbackTimer = setTimeout(resetFeedback, 4000);
+    })();
+  });
+  actions.append(copy, feedback);
+  const favorite = document.createElement('button');
+  favorite.type = 'button';
+  favorite.setAttribute('data-desktop-page-favorite', '');
+  favorite.append(glyph(['M8 1.8 9.7 6.1l4.6.4-3.5 2.9 1.1 4.5L8 11.5 4.1 13.9l1.1-4.5L1.7 6.5l4.6-.4Z']));
+  const setFavorite = (value: boolean): void => {
+    favorite.setAttribute('aria-pressed', String(value));
+    favorite.setAttribute('aria-label', value ? 'Retirer des favoris' : 'Ajouter aux favoris');
+    favorite.title = favorite.getAttribute('aria-label')!;
+  };
+  setFavorite(options.favorite === true);
+  favorite.addEventListener('click', () => {
+    const value = favorite.getAttribute('aria-pressed') !== 'true';
+    setFavorite(value); options.onFavorite?.(value);
+  });
+  if (options.onFavorite) actions.append(favorite);
   const more = document.createElement('button');
   more.type = 'button';
   more.setAttribute('data-desktop-page-more', '');
   more.setAttribute('aria-label', 'Actions de la page');
   more.setAttribute('aria-haspopup', 'dialog');
   more.setAttribute('aria-expanded', 'false');
-  more.append(glyph(['M4 8h.01', 'M8 8h.01', 'M12 8h.01']));
+  more.title = 'Actions de la page';
+  more.append(glyph(['M3 8h.2', 'M7.9 8h.2', 'M12.8 8h.2']));
   const menu = document.createElement('div');
   menu.setAttribute('data-desktop-page-menu', '');
   menu.setAttribute('role', 'dialog');
@@ -112,13 +217,28 @@ export function createPageToolbar(
   const track = document.createElement('span');
   track.setAttribute('data-desktop-page-switch-track', '');
   fullWidthButton.append(label, track);
+  fullWidthButton.disabled = options.readOnly === true;
   menu.append(heading, fullWidthButton);
+  const commands = [
+    ['Renommer', options.onRename], ['Dupliquer', options.onDuplicate], ['Mettre à la corbeille', options.onDelete],
+  ] as const;
+  for (const [title, run] of commands) {
+    if (!run || options.readOnly) continue;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.setAttribute('data-desktop-page-command', '');
+    if (title === 'Mettre à la corbeille') button.setAttribute('data-danger', '');
+    button.textContent = title;
+    button.addEventListener('click', () => { close(); run(); });
+    menu.append(button);
+  }
   actions.append(more, menu);
   toolbar.append(identity, actions);
 
   const close = (restoreFocus = false): void => {
     if (menu.hidden) return;
     menu.hidden = true;
+    removeFromTopLayer(menu);
     more.setAttribute('aria-expanded', 'false');
     document.removeEventListener('pointerdown', outside, true);
     document.removeEventListener('keydown', onKey, true);
@@ -129,6 +249,7 @@ export function createPageToolbar(
     close();
   };
   const onKey = (event: KeyboardEvent): void => {
+    if (event.key === 'Tab') close();
     if (event.key === 'Escape') {
       event.preventDefault();
       close(true);
@@ -139,7 +260,12 @@ export function createPageToolbar(
       close();
       return;
     }
+    closeBreadcrumbMenu();
     menu.hidden = false;
+    promoteToTopLayer(menu);
+    const bounds = more.getBoundingClientRect();
+    menu.style.left = `${Math.max(8, Math.min(bounds.right - 280, window.innerWidth - 288))}px`;
+    menu.style.top = `${bounds.bottom + 6}px`;
     more.setAttribute('aria-expanded', 'true');
     document.addEventListener('pointerdown', outside, true);
     document.addEventListener('keydown', onKey, true);
@@ -160,6 +286,7 @@ export function createPageToolbar(
   const closeBreadcrumbMenu = (restoreFocus = false): void => {
     if (breadcrumbMenu.hidden) return;
     breadcrumbMenu.hidden = true;
+    removeFromTopLayer(breadcrumbMenu);
     activeCrumb?.setAttribute('aria-expanded', 'false');
     if (restoreFocus) activeCrumb?.focus();
     activeCrumb = null;
@@ -177,6 +304,13 @@ export function createPageToolbar(
       event.preventDefault();
       closeBreadcrumbMenu(true);
     }
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const buttons = [...breadcrumbMenu.querySelectorAll<HTMLButtonElement>('button')];
+      const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
+      buttons[(at + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length]?.focus();
+    }
+    if (event.key === 'Tab') closeBreadcrumbMenu();
   };
   const onBreadcrumbResize = (): void => closeBreadcrumbMenu();
   const openBreadcrumbMenu = (item: PageBreadcrumbItem, anchor: HTMLButtonElement): void => {
@@ -248,12 +382,19 @@ export function createPageToolbar(
     };
 
     renderChoices(choices, item.menuHeading ?? 'Pages');
+    if (!choices.length) {
+      const empty = document.createElement('p');
+      empty.setAttribute('data-desktop-breadcrumb-menu-heading', '');
+      empty.textContent = 'Aucune page dans cet espace';
+      breadcrumbMenu.append(empty);
+    }
     const bounds = anchor.getBoundingClientRect();
-    const toolbarBounds = toolbar.getBoundingClientRect();
     const width = Math.min(320, window.innerWidth - 24);
 
-    breadcrumbMenu.style.left = `${Math.max(8, Math.min(bounds.left - toolbarBounds.left, toolbarBounds.width - width - 8))}px`;
+    breadcrumbMenu.style.left = `${Math.max(8, Math.min(bounds.left, window.innerWidth - width - 8))}px`;
+    breadcrumbMenu.style.top = `${bounds.bottom + 6}px`;
     breadcrumbMenu.hidden = false;
+    promoteToTopLayer(breadcrumbMenu);
     activeCrumb = anchor;
     anchor.setAttribute('aria-expanded', 'true');
     document.addEventListener('pointerdown', outsideBreadcrumbMenu, true);
@@ -319,9 +460,10 @@ export function createPageToolbar(
 
   return {
     element: toolbar,
-    setBreadcrumbs(value) { items = value.map((item) => ({ ...item })); paint(); },
+    setBreadcrumbs(value) { resetFeedback(); items = value.map((item) => ({ ...item })); paint(); },
     setTitle(value) { updateCurrent({ title: value }); },
     setIcon(value) { updateCurrent({ icon: value }); },
-    destroy() { close(); closeBreadcrumbMenu(); },
+    setFavorite,
+    destroy() { disposed = true; clearTimeout(feedbackTimer); closeSharing?.(); close(); closeBreadcrumbMenu(); },
   };
 }

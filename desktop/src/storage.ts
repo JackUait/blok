@@ -4,7 +4,7 @@ import type { PageCover } from './cover';
 import type { DateDisplay } from '@blok/date-editor';
 import type { PageAccessMap } from './page-access';
 
-export type DesktopPage = ShellPage & { cover?: PageCover; coverPosition?: number; fullWidth?: boolean; titleDate?: string; titleDateDisplay?: DateDisplay; titleDateSuffix?: string };
+export type DesktopPage = ShellPage & { initialVisibility?: 'private'; cover?: PageCover; coverPosition?: number; fullWidth?: boolean; titleDate?: string; titleDateDisplay?: DateDisplay; titleDateSuffix?: string };
 
 export interface WorkspaceIndex {
   pages: DesktopPage[];

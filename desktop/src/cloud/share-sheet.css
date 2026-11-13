@@ -1,25 +1,44 @@
-/* La surface de la boîte : même géométrie que l'invitation d'un membre, pour
-   qu'un partage de page et une invitation à l'espace se ressemblent. */
 [data-cloud-share-dialog] {
-  width: min(460px, 100%);
-  padding: 24px;
-  border: 1px solid var(--desktop-border);
-  border-radius: 12px;
-  background: var(--desktop-canvas);
-  color: var(--desktop-ink);
-  box-shadow: 0 16px 64px #0004;
-  font: 14px/1.45 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  box-sizing: border-box; width: min(440px, 100%); padding: 0;
+  border: 1px solid var(--desktop-border); border-radius: 10px;
+  background: var(--desktop-strip); color: var(--desktop-ink);
+  box-shadow: 0 8px 28px #0003; overflow: auto;
+  font: 13px/1.45 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --blok-text-primary: var(--desktop-ink);
+  --blok-text-secondary: var(--desktop-muted);
+  --blok-popover-bg: var(--desktop-strip);
+  --blok-popover-border: var(--desktop-border);
+  --blok-item-hover-bg: var(--desktop-hover);
 }
-[data-cloud-share-dialog] h2 { margin: 0 0 4px; font-size: 16px; }
-[data-cloud-share-sheet] { display: flex; flex-direction: column; gap: 12px; }
-[data-cloud-share-visibility] { margin: 0; color: var(--blok-text-secondary); font-size: 13px; }
+[data-cloud-share-dialog][data-cloud-share-anchored] { position: fixed; inset: auto; margin: 0; z-index: 40; }
+[data-cloud-share-dialog] h2 { margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--desktop-border); font-size: 14px; font-weight: 600; }
+[data-cloud-share-title] { margin: 12px 16px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+[data-cloud-share-sheet] { display: flex; flex-direction: column; gap: 12px; padding: 0 16px 16px; }
+[data-cloud-share-visibility] { margin: 0; color: var(--desktop-muted); font-size: 12px; }
 [data-cloud-share-list] { display: flex; flex-direction: column; }
-[data-cloud-share-row] { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
-[data-cloud-share-email] { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Un droit hérité se lit, il ne se change pas ici : il porte l'encre secondaire,
-   jamais un état désactivé qui laisserait croire à une panne. */
-[data-cloud-share-origin] { color: var(--blok-text-secondary); font-size: 13px; }
-[data-cloud-share-remove] { background: none; border: 0; color: var(--blok-text-secondary); cursor: pointer; padding: 4px 6px; border-radius: 4px; }
-[data-cloud-share-remove]:hover:not(:disabled) { background: var(--blok-item-hover-bg); color: var(--blok-text-primary); }
-[data-cloud-share-remove]:disabled { opacity: .5; cursor: default; }
+[data-cloud-share-row] { display: flex; align-items: center; gap: 8px; padding: 8px 0; }
+[data-cloud-share-avatar] { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border: 1px solid var(--desktop-border); border-radius: 50%; color: var(--desktop-muted); background: var(--desktop-hover); }
+[data-cloud-share-identity] { flex: 1; min-width: 0; }
+[data-cloud-share-email], [data-cloud-share-origin] { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-cloud-share-origin], [data-cloud-share-level] { color: var(--desktop-muted); font-size: 12px; }
+[data-cloud-share-level] { flex: none; }
+[data-cloud-share-row] [data-desktop-choice] { flex: none; border-color: transparent; font-size: 12px; padding-inline: 4px; }
+[data-cloud-share-remove] { background: none; border: 0; color: var(--desktop-muted); cursor: pointer; padding: 4px; border-radius: 4px; font: inherit; font-size: 11px; }
+[data-cloud-share-remove]:hover:not(:disabled) { background: var(--desktop-hover); color: var(--blok-item-destructive-text); }
 [data-cloud-share-error] { margin: 0; color: var(--blok-text-danger, #c0392b); font-size: 13px; }
+[data-cloud-share-empty] { margin: 4px 0; color: var(--desktop-muted); font-size: 12px; }
+[data-cloud-share-dialog] footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--desktop-border); padding: 12px 16px; }
+[data-cloud-share-dialog] footer span { font-size: 11px; color: var(--desktop-muted); }
+[data-cloud-share-dialog] footer button { flex: none; padding: 5px 10px; border: 1px solid var(--desktop-border); border-radius: 5px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+[data-cloud-share-dialog] footer button:hover { background: var(--desktop-hover); }
+[data-cloud-share-dialog] button:focus-visible { outline: 2px solid var(--blok-focus-ring, #2383e2); outline-offset: 2px; }
+[data-cloud-share-invitation] { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; }
+[data-cloud-share-invitation][hidden] { display: none; }
+[data-cloud-share-person-picker] { display: flex; gap: 8px; }
+[data-cloud-share-person-picker] [data-desktop-choice] { flex: 1; min-width: 0; text-align: left; }
+[data-cloud-share-add] { flex: none; border: 0; border-radius: 5px; padding: 6px 12px; background: #2383e2; color: white; font: inherit; font-weight: 500; cursor: pointer; }
+[data-cloud-share-add]:disabled { opacity: .45; cursor: default; }
+[data-cloud-share-invite-level] { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--desktop-muted); font-size: 12px; }
+[data-cloud-share-invite-level] [data-desktop-choice] { border-color: transparent; font-size: 12px; }
+[data-cloud-share-invite-note] { margin: 0; color: var(--desktop-muted); font-size: 11px; }
+[data-cloud-share-heading] { margin: 4px 0 -6px; color: var(--desktop-muted); font-size: 12px; font-weight: 500; }

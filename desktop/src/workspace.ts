@@ -1,3 +1,6 @@
+import { navigationFavorites, navigationRecents } from './navigation-preferences';
+import { openPageSearch, openPageCreation, type CreationDestination } from './navigation-dialogs';
+import { PopoverDesktop } from '@blok/popover';
 import { customEmojiStore } from './custom-emojis';
 import { createEmptyWorkspaceState } from './workspace-empty';
 import { mountRemoteAssets } from './remote-assets';
@@ -56,6 +59,13 @@ export interface Workspace {
 export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (id: string, icon: string) => void, options: { ref?: WorkspaceRef } = {}): Workspace {
   const ref = Object.freeze({... (options.ref ?? activeWorkspace())});
   const repository = workspaceRepository(ref);
+  const favorites = navigationFavorites(ref);
+  const recentPages = navigationRecents(ref);
+  const pageUrl = (id: string): string => {
+    const url = new URL('/', ref.kind === 'remote' ? ref.server : location.href);
+    url.searchParams.set('page', id);
+    return url.href;
+  };
   const emojis = customEmojiStore(ref);
   const pageIcon = (value: string) => /^(https?:|data:image\/|\/files\/)/i.test(value) ? {type: 'image' as const, url: value} : {type: 'emoji' as const, value};
   if (ref.kind === 'remote' && '__TAURI_INTERNALS__' in window) mountRemoteAssets(ref.server, repository.assetUrl);
@@ -74,7 +84,9 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
    * basculer la page tout seul, au prochain index reçu.
    */
   const withSections = (pages: DesktopPage[]): DesktopPage[] => {
-    if (ref.kind !== 'remote' || !index?.access) return pages;
+    pages = pages.map((page) => ({ ...page, favorite: favorites.has(page.id) }));
+    if (ref.kind !== 'remote') return pages;
+    if (!index?.access) return pages.map((page) => ({ ...page, section: page.parentId ? undefined : 'workspace' }));
     const roots = pages.filter((page) => !page.parentId);
     const labelled = new Map(groupPagesBySection(roots, index.access)
       .flatMap((group) => group.pages.map((page) => [page.id, sectionNames[group.section]] as const)));
@@ -330,11 +342,32 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     }, '__TAURI_INTERNALS__' in window ? undefined : () => {
       frame.toggleSidebar();
       onLayout(sidebar.getBoundingClientRect().width);
-    }, ref.kind === 'remote' ? () => { void openPageSharing(ref, id, page.title); } : undefined);
-    if (ref.kind === 'remote') {
-      const origin = toolbar.element.querySelector<HTMLElement>('[data-desktop-page-local]');
-      if (origin) { origin.textContent = `${readOnly(id) ? 'Lecture seule · ' : ''}${ref.name}`; origin.title = ref.server; }
-    }
+    }, ref.kind === 'remote' ? (anchor) => openPageSharing(ref, id, page.title, anchor, refreshRemoteManifest) : undefined, {
+      workspaceName: ref.name,
+      workspacePages: () => {
+        const pages = withSections(index?.pages ?? []);
+        const choice = (page: DesktopPage): PageBreadcrumbChoice => ({
+          id: page.id, title: page.title, icon: page.icon, current: page.id === currentId,
+          onOpen: () => navigate(page.id),
+          children: pages.filter((child) => child.parentId === page.id).map(choice),
+        });
+        return pages.filter((page) => !page.parentId && (ref.kind === 'local' || page.section === 'workspace')).map(choice);
+      },
+      pageUrl,
+      favorite: favorites.has(id),
+      onFavorite: (value) => {
+        favorites.set(id, value);
+        if (index) frame.setPages(withSections(index.pages), currentId);
+      },
+      readOnly: readOnly(id),
+      onRename: () => {
+        const title = holder.querySelector<HTMLElement>('[data-blok-title] h1, h1[contenteditable="true"]');
+        title?.focus();
+        if (title) { const range = document.createRange(); range.selectNodeContents(title); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range); }
+      },
+      onDuplicate: () => { void action({ id, type: 'duplicate' }).catch(showError); },
+      onDelete: () => { void action({ id, type: 'delete' }).catch(showError); },
+    });
     pageToolbar = toolbar;
     applyFullWidth();
     const holder = document.createElement('div');
@@ -582,9 +615,48 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   frame = createPageFrame({
     teamspace: ref.kind === 'remote' ? { name: ref.name } : undefined,
     pages: [], activeId: '',
+    recentIds: recentPages.ids,
+    onRecentsChange: recentPages.save,
     onOpen: (id) => navigate(id),
-    onCreate: (parentId) => createPage(parentId),
+    onCreate: (parentId) => chooseNewPage(parentId),
+    onCreatePrivate: ref.kind === 'remote' ? () => chooseNewPage(null, true) : undefined,
+    onSearch: (recentIds) => {
+      closeSearch?.();
+      closeSearch = openPageSearch({ workspaceName: ref.name, pages: () => index?.pages ?? [], onOpen: navigate, recentIds });
+    },
+    onTeamspaceMenu: (anchor) => {
+      let requestedPanel: 'invites' | 'general' | undefined;
+      let settled = false;
+      const menu = new PopoverDesktop({ trigger: anchor, autoFocusFirstItem: true,
+        items: [
+          ...(ref.kind === 'remote' && ref.role === 'admin' ? [{ name: 'invite', title: 'Inviter des membres', closeOnActivate: true,
+            onActivate: () => { requestedPanel = 'invites'; } }] : []),
+          { name: 'settings', title: 'Paramètres de l’espace', closeOnActivate: true,
+            onActivate: () => { requestedPanel = 'general'; } },
+        ],
+      });
+      anchor.setAttribute('aria-expanded', 'true');
+      menu.on('closed', () => {
+        if (settled) return;
+        settled = true;
+        anchor.setAttribute('aria-expanded', 'false');
+        // Release the menu's focus manager before handing focus to a modal.
+        queueMicrotask(() => {
+          menu.destroy();
+          if (requestedPanel) footer.dispatchEvent(new CustomEvent('blok:desktop-open-settings', { detail: requestedPanel }));
+        });
+      });
+      menu.show();
+    },
     onAction: (command) => { void action(command).catch(showError); },
+    pageUrl,
+    availableActions: ['rename', 'duplicate', 'delete', 'open-tab'],
+    canEdit: (id) => !readOnly(id),
+    canCreate: canCreateUnder,
+    onFavorite: (id, value) => {
+      favorites.set(id, value);
+      if (currentId === id) pageToolbar?.setFavorite(value);
+    },
   });
   frame.element.append(status);
   assistant = mountAgentAssistant({
@@ -650,12 +722,42 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     });
   }
 
-  function createPage(parentId: string | null = null): void {
+  let closeSearch: (() => void) | undefined;
+  document.addEventListener('keydown', (event) => {
+    if (event.defaultPrevented || !frame.element.isConnected || document.querySelector('[aria-modal="true"]')) return;
+    if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey || event.key.toLowerCase() !== 'k') return;
+    event.preventDefault();
+    closeSearch?.();
+    closeSearch = openPageSearch({ workspaceName: ref.name, pages: () => index?.pages ?? [], onOpen: navigate });
+  });
+  function chooseNewPage(parentId: string | null = null, privatePage = false): void {
+    if (!index || !canCreateUnder(parentId)) return;
+    const destinations: CreationDestination[] = [];
+    if (canCreateUnder(null)) {
+      destinations.push({ value: 'workspace', label: ref.name, parentId: null });
+      if (ref.kind === 'remote') destinations.push({ value: 'private', label: 'Privé · Vous uniquement', parentId: null, privatePage: true });
+    }
+    destinations.push(...index.pages.filter((page) => canCreateUnder(page.id)).map((page) => ({ value: page.id, label: page.title, parentId: page.id })));
+    openPageCreation({ destinations, destination: parentId ?? (privatePage ? 'private' : 'workspace'),
+      onCreate: (target, database) => createPage(target.parentId, target.privatePage, database),
+    });
+  }
+
+  function createPage(parentId: string | null = null, privatePage = false, database = false): void {
     if (!index || metadataAction || !canCreateUnder(parentId)) return;
-    const page: ShellPage = { id: crypto.randomUUID(), title: 'Nouvelle page', parentId };
+    const page: DesktopPage = { id: crypto.randomUUID(), title: database ? 'Nouvelle base de données' : 'Nouvelle page', parentId, ...(privatePage ? { initialVisibility: 'private' as const } : {}) };
     index.pages.push(page);
     saveManifest();
-    void saveOrder.then(() => navigate(page.id)).catch(showError);
+    void saveOrder.then(async () => {
+      if (manifestFailed) return;
+      if (database) {
+        const document = { title: page.title, blocks: [{ id: crypto.randomUUID(), type: 'database', data: { initialView: 'table', fullPage: true } }] };
+        if (ref.kind === 'remote') await repository.seedPage(page.id, document);
+        else await repository.writePage(page.id, JSON.stringify(document));
+      }
+      if (privatePage) await refreshRemoteManifest();
+      navigate(page.id);
+    }).catch(showError);
   }
 
   return {

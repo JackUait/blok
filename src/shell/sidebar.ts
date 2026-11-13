@@ -48,6 +48,16 @@ export interface PageFrameOptions {
   onOpen: (id: string) => void;
   onCreate: (parentId: string | null) => void;
   onAction?: (action: SidebarAction) => void;
+  onFavorite?: (id: string, favorite: boolean) => void;
+  onCreatePrivate?: () => void;
+  onSearch?: (recentIds?: string[]) => void;
+  recentIds?: string[];
+  onRecentsChange?: (ids: string[]) => void;
+  onTeamspaceMenu?: (anchor: HTMLButtonElement) => void;
+  pageUrl?: (id: string) => string;
+  availableActions?: SidebarAction['type'][];
+  canEdit?: (id: string) => boolean;
+  canCreate?: (parentId: string | null) => boolean;
 }
 
 const minWidth = 220;
@@ -87,8 +97,8 @@ const ICONS = {
   peek: ['M3 3.5h10v9H3Z', 'M8.2 3.5v9'],
 } as const;
 
-const ADD_HINT = 'Add a page inside';
-const MORE_HINT = 'Delete, duplicate, and more';
+const ADD_HINT = 'Ajouter une sous-page';
+const MORE_HINT = 'Actions de la page';
 const MENU_WIDTH = 248;
 
 const dismissers = new Map<HTMLElement, (event: PointerEvent) => void>();
@@ -99,11 +109,13 @@ function closeMenu(menu: HTMLElement): void {
     document.removeEventListener('pointerdown', dismiss, true);
     dismissers.delete(menu);
   }
+  menu.parentElement?.querySelector('[data-blok-sidebar-more]')?.setAttribute('aria-expanded', 'false');
   removeFromTopLayer(menu);
 }
 
 function openMenu(menu: HTMLElement, anchor: HTMLElement): void {
   promoteToTopLayer(menu);
+  anchor.setAttribute('aria-expanded', 'true');
   const dismiss = (event: PointerEvent): void => {
     const target = event.target;
     if (target instanceof Node && (menu.contains(target) || anchor.contains(target))) return;
@@ -113,10 +125,15 @@ function openMenu(menu: HTMLElement, anchor: HTMLElement): void {
   document.addEventListener('pointerdown', dismiss, true);
 }
 
-function copyLink(id: string): void {
+function copyLink(id: string, pageUrl?: (id: string) => string): void {
   const clipboard = navigator.clipboard;
   if (clipboard === undefined || typeof clipboard.writeText !== 'function') return;
-  void Promise.resolve(clipboard.writeText(`/?page=${id}`)).catch(() => undefined);
+  const url = new URL(location.href);
+  url.pathname = '/';
+  url.search = '';
+  url.hash = '';
+  url.searchParams.set('page', id);
+  void Promise.resolve(clipboard.writeText(pageUrl?.(id) ?? url.href)).catch(() => undefined);
 }
 
 const chevron = () => svg(['M6 4.5 10 8 6 11.5']);
@@ -168,15 +185,21 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
 
   const header = document.createElement('div');
   header.setAttribute('data-blok-sidebar-header', '');
-  const title = document.createElement('span');
-  title.textContent = 'Pages';
+  const collapse = document.createElement('button');
+  collapse.type = 'button';
+  collapse.setAttribute('data-blok-sidebar-icon', '');
+  collapse.setAttribute('aria-label', 'Masquer la barre latérale');
+  collapse.title = 'Masquer la barre latérale';
+  collapse.append(svg(['M2 2.5h12v11H2z', 'M6 2.5v11']));
+  collapse.addEventListener('click', () => setCollapsed(true));
   const create = document.createElement('button');
   create.type = 'button';
   create.setAttribute('data-blok-sidebar-icon', '');
   create.setAttribute('aria-label', 'Nouvelle page');
-  create.append(plus());
+  create.title = 'Nouvelle page';
+  create.append(svg(ICONS.pencil));
   create.addEventListener('click', () => options.onCreate(null));
-  header.append(title, create);
+  header.append(collapse, create);
 
   // Notion met « New page » sur une ligne de la barre, pas seulement derrière le
   // + de l'en-tête : c'est l'action la plus fréquente, elle mérite sa place.
@@ -185,25 +208,35 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
   const newPage = document.createElement('button');
   newPage.type = 'button';
   newPage.setAttribute('data-blok-sidebar-shortcut', '');
-  newPage.append(plus());
+  newPage.append(svg(ICONS.pencil));
   const newPageLabel = document.createElement('span');
   newPageLabel.textContent = 'Nouvelle page';
   newPage.append(newPageLabel);
   newPage.addEventListener('click', () => options.onCreate(null));
   shortcuts.append(newPage);
 
-  const searchLabel = document.createElement('label');
+  const searchLabel = document.createElement(options.onSearch ? 'button' : 'label');
   searchLabel.setAttribute('data-blok-sidebar-search', '');
   searchLabel.append(search());
   const searchInput = document.createElement('input');
   searchInput.type = 'search';
-  searchInput.placeholder = 'Rechercher';
+  searchInput.placeholder = 'Rechercher une page…';
   searchInput.setAttribute('aria-label', 'Rechercher une page');
   searchInput.addEventListener('input', () => {
     view.query = searchInput.value.trim().toLocaleLowerCase();
     paint();
   });
-  searchLabel.append(searchInput);
+  if (searchLabel instanceof HTMLButtonElement) {
+    searchLabel.type = 'button';
+    searchLabel.setAttribute('aria-label', 'Rechercher une page');
+    searchLabel.setAttribute('aria-haspopup', 'dialog');
+    const label = document.createElement('span');
+    label.textContent = 'Rechercher…';
+    const shortcut = document.createElement('kbd');
+    shortcut.textContent = /Mac/i.test(navigator.platform) ? '⌘K' : 'Ctrl K';
+    searchLabel.append(label, shortcut);
+    searchLabel.addEventListener('click', () => options.onSearch?.());
+  } else searchLabel.append(searchInput);
 
   const tree = document.createElement('nav');
   tree.setAttribute('data-blok-sidebar-tree', '');
@@ -227,14 +260,14 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
   const hint = document.createElement('div');
   hint.setAttribute('data-blok-sidebar-resize-hint', '');
   const hintGesture = document.createElement('span');
-  hintGesture.textContent = 'Click or ⌘\\';
+  hintGesture.textContent = 'Clic ou ⌘\\';
   const hintResize = document.createElement('span');
-  hintResize.textContent = 'Resize';
+  hintResize.textContent = 'Redimensionner';
   const hintDrag = document.createElement('span');
-  hintDrag.textContent = 'Drag';
+  hintDrag.textContent = 'Glisser';
   hint.append(hintAction, hintGesture, hintResize, hintDrag);
   const syncHint = (): void => {
-    hintAction.textContent = sidebar.hasAttribute('data-collapsed') ? 'Open' : 'Close';
+    hintAction.textContent = sidebar.hasAttribute('data-collapsed') ? 'Ouvrir' : 'Fermer';
   };
   syncHint();
   onHover(resize, hint, { placement: 'right', anchor: () => anchor, gap: 12 });
@@ -252,6 +285,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     resize.setAttribute('aria-valuenow', String(Math.min(100, Math.max(0, value))));
   };
   const setCollapsed = (collapsed: boolean): void => {
+    tree.querySelectorAll<HTMLElement>('[data-blok-sidebar-menu]').forEach(closeMenu);
     if (collapsed) {
       widthState.open = sidebar.getBoundingClientRect().width || widthState.open;
       sidebar.setAttribute('data-collapsed', '');
@@ -303,6 +337,11 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     syncValue();
   });
   shell.addEventListener('keydown', (event) => {
+    if (options.onSearch && (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      options.onSearch();
+      return;
+    }
     if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey || event.key !== '\\') return;
     const target = event.target;
     if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
@@ -319,13 +358,16 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
   const collapsed = new Set<string>();
   // La barre latérale tient elle-même la liste des pages ouvertes : elle reçoit
   // déjà chaque changement de page active, et l'hôte n'a rien à lui transmettre.
-  const recents: string[] = [];
+  const recents: string[] = [...new Set(options.recentIds ?? [])].slice(0, 50);
   const remember = (id: string): void => {
     if (id === '') return;
     const seen = recents.indexOf(id);
+    // Keep the five visible shortcuts stable while navigating between them.
+    if (seen >= 0 && seen < 5) return;
     if (seen !== -1) recents.splice(seen, 1);
     recents.unshift(id);
-    recents.splice(5);
+    recents.splice(50);
+    options.onRecentsChange?.([...recents]);
   };
 
   function paint(): void {
@@ -333,6 +375,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
       if (node instanceof HTMLElement) closeMenu(node);
     });
     tree.replaceChildren();
+    create.hidden = newPage.hidden = options.canCreate?.(null) === false;
     const needle = view.query;
     const roots = childrenOf(view.pages, null).filter((page) => needle === '' || matches(view.pages, page, needle));
     if (roots.length === 0) {
@@ -340,17 +383,21 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
       empty.setAttribute('data-blok-sidebar-empty', '');
       empty.textContent = 'Aucune page';
       tree.append(empty);
+      if (needle === '' && options.teamspace) openSection('workspace');
+      if (needle === '' && options.onCreatePrivate) appendPrivateAdd(appendSection('Privé', 'Privé'));
       return;
     }
     // Favoris et Récents sont des raccourcis : une page y apparaît en plus de sa
     // place dans l'arbre, jamais à la place. Ils ne s'affichent qu'avec quelque
     // chose à montrer, comme chez Notion où Favoris naît du premier favori.
     const favorites = view.pages.filter((page) => page.favorite === true && (needle === '' || matches(view.pages, page, needle)));
-    if (favorites.length > 0) appendShortcutSection('Favoris', 'favorites', favorites);
+
     const recent = recents
       .map((id) => view.pages.find((page) => page.id === id))
       .filter((page): page is ShellPage => page !== undefined && (needle === '' || matches(view.pages, page, needle)));
-    if (recent.length > 0) appendShortcutSection('Récents', 'recents', recent);
+    if (needle === '' && recent.length > 0) appendShortcutSection('Récents', 'recents', recent);
+    if (needle === '' && favorites.length > 0) appendShortcutSection('Favoris', 'favorites', favorites);
+    if (needle === '' && options.teamspace && !roots.some((page) => page.section === 'workspace')) openSection('workspace');
 
     // Les sections d'accès ne sont pas des conteneurs : les pages restent une
     // seule liste et conservent leur ordre. Un titre s'intercale quand la
@@ -358,6 +405,8 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     // Un titre par section rencontrée, puis les pages dessous : l'ordre des
     // pages décide, la section n'est qu'un repère posé au changement.
     const opened = new Map<string, HTMLElement>();
+    const order = ['workspace', 'Partagé', 'Privé'];
+    roots.sort((a, b) => order.indexOf(a.section ?? '') - order.indexOf(b.section ?? ''));
     roots.forEach((page) => {
       const section = page.section ?? '';
       if (section === '') {
@@ -369,6 +418,10 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
       if (collapsed.has(section)) return;
       body.append(...rows(page, 0, needle !== ''));
     });
+    if (needle === '' && options.onCreatePrivate) {
+      const group = opened.get('Privé') ?? appendSection('Privé', 'Privé');
+      if (!collapsed.has('Privé')) appendPrivateAdd(group);
+    }
   }
 
   /**
@@ -379,7 +432,8 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
   function openSection(section: string): HTMLElement {
     const teamspace = options.teamspace;
     if (section !== 'workspace' || !teamspace) return appendSection(section, section);
-    const group = appendSection('Espaces', 'workspace');
+    const group = appendSection('Espaces d’équipe', 'workspace');
+    if (collapsed.has('workspace')) return document.createElement('div');
     const row = document.createElement('div');
     row.setAttribute('data-blok-sidebar-teamspace', '');
     const toggle = document.createElement('button');
@@ -388,9 +442,12 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     const mark = document.createElement('span');
     mark.setAttribute('data-blok-sidebar-teamspace-mark', '');
     mark.setAttribute('aria-hidden', 'true');
-    mark.textContent = teamspace.name.slice(0, 1).toLocaleUpperCase();
+    mark.append(svg(['M2 7 8 2l6 5', 'M4 6v7h3V9h2v4h3V6']));
     const label = document.createElement('span');
     label.textContent = teamspace.name;
+    const arrow = chevron();
+    arrow.setAttribute('data-blok-sidebar-teamspace-chevron', '');
+    mark.append(arrow);
     toggle.append(mark, label);
     toggle.addEventListener('click', () => {
       if (collapsed.has('teamspace')) collapsed.delete('teamspace');
@@ -398,6 +455,25 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
       paint();
     });
     row.append(toggle);
+    if (options.canCreate?.(null) !== false) {
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.setAttribute('data-blok-sidebar-teamspace-add', '');
+      add.setAttribute('aria-label', `Créer dans ${teamspace.name}`);
+      add.append(plus());
+      add.addEventListener('click', () => options.onCreate(null));
+      row.append(add);
+    }
+    if (options.onTeamspaceMenu) {
+      const more = document.createElement('button');
+      more.type = 'button';
+      more.setAttribute('data-blok-sidebar-teamspace-more', '');
+      more.setAttribute('aria-label', `Paramètres de ${teamspace.name}`);
+      more.setAttribute('aria-haspopup', 'menu');
+      more.append(dots());
+      more.addEventListener('click', () => options.onTeamspaceMenu?.(more));
+      row.append(more);
+    }
     group.append(row);
     if (collapsed.has('teamspace')) return document.createElement('div');
     const nested = document.createElement('div');
@@ -420,7 +496,21 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     });
     const group = document.createElement('div');
     group.setAttribute('data-blok-sidebar-section', '');
-    group.append(heading);
+    const sectionHeader = document.createElement('div');
+    sectionHeader.setAttribute('data-blok-sidebar-section-header', '');
+    sectionHeader.append(heading);
+    if (key === 'Privé' && options.onCreatePrivate && options.canCreate?.(null) !== false) {
+      const addPrivate = document.createElement('button');
+      addPrivate.type = 'button';
+      addPrivate.setAttribute('data-blok-sidebar-icon', '');
+      addPrivate.setAttribute('data-blok-sidebar-create-private', '');
+      addPrivate.setAttribute('aria-label', 'Créer une page privée');
+      addPrivate.title = 'Créer une page privée';
+      addPrivate.append(plus());
+      addPrivate.addEventListener('click', () => { collapsed.delete('Privé'); options.onCreatePrivate?.(); });
+      sectionHeader.append(addPrivate);
+    }
+    group.append(sectionHeader);
     tree.append(group);
     return group;
   }
@@ -430,11 +520,30 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     group.setAttribute(`data-blok-sidebar-${key}`, '');
     if (collapsed.has(key)) return;
     // À plat : un raccourci n'a pas d'enfants à déployer.
-    pages.forEach((page) => group.append(...rows(page, 0, false)));
+    (key === 'recents' ? pages.slice(0, 5) : pages).forEach((page) => group.append(...rows(page, 0, false, true)));
+    if (key === 'recents' && options.onSearch) {
+      const all = document.createElement('button');
+      all.type = 'button';
+      all.setAttribute('data-blok-sidebar-shortcut', '');
+      all.append(dots(), document.createTextNode('Tout voir'));
+      all.addEventListener('click', () => options.onSearch?.([...recents]));
+      group.append(all);
+    }
   }
 
-  function rows(page: ShellPage, depth: number, forceOpen: boolean): HTMLElement[] {
-    const visibleChildren = view.query === ''
+  function appendPrivateAdd(group: HTMLElement): void {
+    if (options.canCreate?.(null) === false || collapsed.has('Privé')) return;
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.setAttribute('data-blok-sidebar-shortcut', '');
+    add.setAttribute('data-blok-sidebar-private-add-row', '');
+    add.append(plus(), document.createTextNode('Ajouter une page'));
+    add.addEventListener('click', () => options.onCreatePrivate?.());
+    group.append(add);
+  }
+
+  function rows(page: ShellPage, depth: number, forceOpen: boolean, shortcut = false): HTMLElement[] {
+    const visibleChildren = shortcut ? [] : view.query === ''
       ? childrenOf(view.pages, page.id)
       : childrenOf(view.pages, page.id).filter((child) => matches(view.pages, child, view.query));
     const expanded = visibleChildren.length > 0 && (forceOpen || !closed.has(page.id));
@@ -449,6 +558,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
       leading.setAttribute('type', 'button');
       leading.setAttribute('data-blok-sidebar-toggle', '');
       leading.setAttribute('aria-label', expanded ? 'Replier' : 'Déplier');
+      leading.setAttribute('aria-expanded', String(expanded));
     } else {
       leading.setAttribute('data-blok-sidebar-leaf', '');
       leading.setAttribute('aria-hidden', 'true');
@@ -480,20 +590,15 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     const label = document.createElement('span');
     label.setAttribute('data-blok-sidebar-label', '');
     label.textContent = page.title;
+    link.title = page.title;
     link.append(label);
-    if (page.favorite === true) {
-      const star = document.createElement('span');
-      star.setAttribute('data-blok-sidebar-favorite', '');
-      star.setAttribute('aria-hidden', 'true');
-      star.append(svg(ICONS.star, true));
-      link.append(star);
-    }
     link.addEventListener('click', () => options.onOpen(page.id));
 
     const add = document.createElement('button');
     add.type = 'button';
     add.setAttribute('data-blok-sidebar-add', '');
     add.setAttribute('aria-label', ADD_HINT);
+    add.hidden = options.canCreate?.(page.id) === false;
     add.append(plus());
     onHover(add, ADD_HINT);
     add.addEventListener('click', () => {
@@ -506,6 +611,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     more.setAttribute('data-blok-sidebar-more', '');
     more.setAttribute('aria-label', MORE_HINT);
     more.setAttribute('aria-haspopup', 'menu');
+    more.setAttribute('aria-expanded', 'false');
     more.append(dots());
     onHover(more, MORE_HINT);
 
@@ -515,10 +621,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     list.setAttribute('role', 'menu');
     list.setAttribute('aria-label', MORE_HINT);
     appendPageMenu(list, menu, link, page);
-    const meta = document.createElement('p');
-    meta.setAttribute('data-blok-sidebar-menu-meta', '');
-    meta.textContent = 'Last edited';
-    menu.append(list, meta);
+    menu.append(list);
     more.addEventListener('click', () => {
       if (isPromotedToTopLayer(menu)) {
         closeMenu(menu);
@@ -526,11 +629,26 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
       }
       const rect = more.getBoundingClientRect();
       menu.style.top = `${rect.bottom + 4}px`;
-      menu.style.left = `${Math.max(8, rect.right - MENU_WIDTH)}px`;
+      menu.style.left = `${Math.max(8, Math.min(rect.right - MENU_WIDTH, window.innerWidth - MENU_WIDTH - 8))}px`;
+      tree.querySelectorAll<HTMLElement>('[data-blok-sidebar-menu]').forEach((other) => { if (other !== menu) closeMenu(other); });
       openMenu(menu, more);
+      menu.style.top = `${Math.max(8, Math.min(rect.bottom + 4, window.innerHeight - menu.getBoundingClientRect().height - 8))}px`;
+      list.querySelector<HTMLButtonElement>('button')?.focus();
     });
 
-    row.append(leading, link, add, more, menu);
+    menu.addEventListener('keydown', (event) => {
+      const buttons = [...list.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];
+      const current = buttons.indexOf(document.activeElement as HTMLButtonElement);
+      if (event.key === 'Escape' || event.key === 'Tab') {
+        closeMenu(menu);
+        if (event.key === 'Escape') { event.preventDefault(); more.focus(); }
+      } else if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+        event.preventDefault();
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (current + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length;
+        buttons[next]?.focus();
+      }
+    });
+    row.append(leading, link, more, add, menu);
     const nested = expanded ? visibleChildren.flatMap((child) => rows(child, depth + 1, forceOpen)) : [];
     return [row, ...nested];
   }
@@ -542,24 +660,35 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
       | { kind: 'check'; action: 'favorite' | 'offline'; label: string; icon: readonly string[]; on: boolean; filled?: boolean }
       | { kind: 'item'; label: string; icon: readonly string[]; danger?: boolean; run: () => void }
     > = [
-      { kind: 'check', action: 'favorite', label: favoriteOn ? 'Remove from Favorites' : 'Add to Favorites', icon: ICONS.star, on: favoriteOn, filled: favoriteOn },
-      { kind: 'check', action: 'offline', label: 'Available offline', icon: ICONS.cloud, on: offline.has(page.id) },
+      { kind: 'check', action: 'favorite', label: favoriteOn ? 'Retirer des favoris' : 'Ajouter aux favoris', icon: ICONS.star, on: favoriteOn, filled: favoriteOn },
+      { kind: 'check', action: 'offline', label: 'Disponible hors connexion', icon: ICONS.cloud, on: offline.has(page.id) },
       { kind: 'separator' },
-      { kind: 'item', label: 'Copy link', icon: ICONS.link, run: () => copyLink(page.id) },
-      { kind: 'item', label: 'Duplicate', icon: ICONS.copy, run: () => options.onAction?.({ id: page.id, type: 'duplicate' }) },
-      { kind: 'item', label: 'Rename', icon: ICONS.pencil, run: () => beginRename(link, page) },
-      { kind: 'item', label: 'Move to', icon: ICONS.move, run: () => options.onAction?.({ id: page.id, type: 'move' }) },
-      { kind: 'item', label: 'Move to Trash', icon: ICONS.trash, danger: true, run: () => options.onAction?.({ id: page.id, type: 'delete' }) },
+      { kind: 'item', label: 'Copier le lien', icon: ICONS.link, run: () => copyLink(page.id, options.pageUrl) },
+      { kind: 'item', label: 'Dupliquer', icon: ICONS.copy, run: () => options.onAction?.({ id: page.id, type: 'duplicate' }) },
+      { kind: 'item', label: 'Renommer', icon: ICONS.pencil, run: () => beginRename(link, page) },
+      { kind: 'item', label: 'Déplacer vers', icon: ICONS.move, run: () => options.onAction?.({ id: page.id, type: 'move' }) },
+      { kind: 'item', label: 'Mettre à la corbeille', icon: ICONS.trash, danger: true, run: () => options.onAction?.({ id: page.id, type: 'delete' }) },
       { kind: 'separator' },
-      { kind: 'item', label: 'Turn into wiki', icon: ICONS.wiki, run: () => options.onAction?.({ id: page.id, type: 'wiki' }) },
+      { kind: 'item', label: 'Transformer en wiki', icon: ICONS.wiki, run: () => options.onAction?.({ id: page.id, type: 'wiki' }) },
       { kind: 'separator' },
-      { kind: 'item', label: 'Open in new tab', icon: ICONS.tab, run: () => options.onAction?.({ id: page.id, type: 'open-tab' }) },
-      { kind: 'item', label: 'Open in new window', icon: ICONS.window, run: () => options.onAction?.({ id: page.id, type: 'open-window' }) },
-      { kind: 'item', label: 'Open in side peek', icon: ICONS.peek, run: () => options.onAction?.({ id: page.id, type: 'open-peek' }) },
+      { kind: 'item', label: 'Ouvrir dans un nouvel onglet', icon: ICONS.tab, run: () => options.onAction?.({ id: page.id, type: 'open-tab' }) },
+      { kind: 'item', label: 'Ouvrir dans une nouvelle fenêtre', icon: ICONS.window, run: () => options.onAction?.({ id: page.id, type: 'open-window' }) },
+      { kind: 'item', label: 'Ouvrir en aperçu latéral', icon: ICONS.peek, run: () => options.onAction?.({ id: page.id, type: 'open-peek' }) },
       { kind: 'separator' },
     ];
 
-    entries.forEach((entry) => {
+    const supported = new Map<string, SidebarAction['type']>([
+      ['Dupliquer', 'duplicate'], ['Renommer', 'rename'], ['Déplacer vers', 'move'],
+      ['Mettre à la corbeille', 'delete'], ['Transformer en wiki', 'wiki'],
+      ['Ouvrir dans un nouvel onglet', 'open-tab'], ['Ouvrir dans une nouvelle fenêtre', 'open-window'], ['Ouvrir en aperçu latéral', 'open-peek'],
+    ]);
+    const allowed = entries.filter((entry) => {
+      if (entry.kind === 'separator') return true;
+      const action = entry.kind === 'check' ? (entry.action === 'offline' ? 'offline' : undefined) : supported.get(entry.label);
+      if (action && options.availableActions && !options.availableActions.includes(action)) return false;
+      return !action || action.startsWith('open-') || options.canEdit?.(page.id) !== false;
+    }).filter((entry, i, all) => entry.kind !== 'separator' || (i > 0 && i < all.length - 1 && all[i - 1]?.kind !== 'separator'));
+    allowed.forEach((entry) => {
       if (entry.kind === 'separator') {
         const line = document.createElement('div');
         line.setAttribute('data-blok-sidebar-menu-separator', '');
@@ -593,7 +722,10 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
           if (entry.action === 'favorite') {
             closeMenu(menu);
             const target = view.pages.find((item) => item.id === page.id);
-            if (target !== undefined) target.favorite = target.favorite !== true;
+            if (target !== undefined) {
+              target.favorite = target.favorite !== true;
+              options.onFavorite?.(target.id, target.favorite);
+            }
             paint();
             return;
           }
@@ -650,6 +782,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     input.addEventListener('blur', () => commit(true));
   }
 
+  remember(options.activeId);
   paint();
 
   return {
@@ -659,6 +792,8 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     setPages(next, nextActive) {
       view.pages = next;
       view.activeId = nextActive;
+      const allowed = new Set(next.map((page) => page.id));
+      for (let i = recents.length - 1; i >= 0; i--) if (!allowed.has(recents[i])) recents.splice(i, 1);
       remember(nextActive);
       paint();
     },

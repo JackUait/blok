@@ -29,14 +29,14 @@
   :root:not([data-blok-theme="light"]) [data-blok-sidebar] {
     --blok-sidebar-edge-color: #222222;
     --blok-sidebar-edge-hover-color: #2e2e2e;
-    background: #1b1b1b;
+    background: #202020;
   }
 }
 
 [data-blok-theme="dark"] [data-blok-sidebar] {
   --blok-sidebar-edge-color: #222222;
   --blok-sidebar-edge-hover-color: #2e2e2e;
-  background: #1b1b1b;
+  background: #202020;
 }
 
 [data-blok-sidebar-header] {
@@ -123,8 +123,11 @@
 
 [data-blok-sidebar-tree] {
   flex: 1;
+  min-height: 0;
   overflow: auto;
-  padding: 0 var(--blok-space-2) var(--blok-space-4);
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  padding: 8px var(--blok-space-2) var(--blok-space-4);
 }
 
 [data-blok-sidebar-empty] {
@@ -136,9 +139,10 @@
 [data-blok-sidebar-row] {
   display: flex;
   align-items: center;
+  position: relative;
   gap: 2px;
-  min-height: 32px;
-  border-radius: var(--blok-radius-control);
+  min-height: 30px;
+  border-radius: 6px;
 }
 
 [data-blok-sidebar-row]:hover,
@@ -200,7 +204,7 @@
   gap: var(--blok-space-2);
   flex: 1;
   min-width: 0;
-  height: 32px;
+  height: 30px;
   padding: 0 var(--blok-space-1);
   border: 0;
   background: transparent;
@@ -267,11 +271,12 @@
 [data-blok-sidebar-add],
 [data-blok-sidebar-more] {
   flex: none;
+  display: none;
   opacity: 0;
 }
 
 [data-blok-sidebar-more] {
-  margin-inline-end: var(--blok-space-1);
+  margin-inline-end: 0;
 }
 
 [data-blok-sidebar-row]:hover [data-blok-sidebar-add],
@@ -280,6 +285,7 @@
 [data-blok-sidebar-row]:focus-within [data-blok-sidebar-more],
 [data-blok-sidebar-row]:has([data-blok-sidebar-menu]:popover-open) [data-blok-sidebar-add],
 [data-blok-sidebar-row]:has([data-blok-sidebar-menu]:popover-open) [data-blok-sidebar-more] {
+  display: inline-flex;
   opacity: 1;
 }
 
@@ -288,7 +294,10 @@
   position: fixed;
   inset: auto;
   flex-direction: column;
-  min-width: 248px;
+  width: 248px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
   margin: 0;
   padding: var(--blok-space-1);
   border: 0;
@@ -488,12 +497,12 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-blok-theme="light"]) [data-blok-sidebar-canvas] {
-    background: #161616;
+    background: #191919;
   }
 }
 
 [data-blok-theme="dark"] [data-blok-sidebar-canvas] {
-  background: #161616;
+  background: #191919;
 }
 
 [data-blok-sidebar-canvas] [data-story-container] {
@@ -505,7 +514,7 @@
 }
 
 [data-blok-sidebar-section] { display: block; }
-[data-blok-sidebar-section] + [data-blok-sidebar-section] { margin-top: 14px; }
+[data-blok-sidebar-section] + [data-blok-sidebar-section] { margin-top: 22px; }
 
 /* Les titres de section de Notion ne crient pas : casse normale, gris, petits.
    Des capitales espacées transforment un repère en bandeau. */
@@ -513,7 +522,7 @@
   display: block;
   width: 100%;
   margin: 0 0 2px;
-  padding: 3px 8px;
+  padding: 6px 8px;
   border: 0;
   background: none;
   color: var(--blok-text-secondary);
@@ -528,11 +537,12 @@
 
 /* L'espace est une ligne, pas un titre : même hauteur et même encre qu'une page,
    avec sa pastille d'initiale à la place de l'icône de document. */
-[data-blok-sidebar-teamspace] > button {
+[data-blok-sidebar-teamspace] > button:first-child {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
+  min-height: 30px;
   padding: 4px 8px;
   border: 0;
   border-radius: 4px;
@@ -543,7 +553,7 @@
   text-align: start;
   cursor: pointer;
 }
-[data-blok-sidebar-teamspace] > button:hover { background: var(--blok-item-hover-bg); }
+[data-blok-sidebar-teamspace]:hover { background: var(--blok-item-hover-bg); }
 [data-blok-sidebar-teamspace-mark] {
   display: grid;
   place-items: center;
@@ -557,7 +567,7 @@
   font-weight: 600;
 }
 /* Les pages de l'espace s'indentent sous sa ligne, comme chez Notion. */
-[data-blok-sidebar-teamspace-pages] { padding-left: 10px; }
+[data-blok-sidebar-teamspace-pages] { padding-left: 0; }
 
 /* « Nouvelle page » est une ligne de la barre, pas seulement un + dans l'en-tête. */
 [data-blok-sidebar-shortcuts] { padding: 2px 8px 6px; }
@@ -566,7 +576,8 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 4px 6px;
+  min-height: 30px;
+  padding: 4px 8px;
   border: 0;
   border-radius: 4px;
   background: none;
@@ -578,3 +589,74 @@
 }
 [data-blok-sidebar-shortcut]:hover { background: var(--blok-item-hover-bg); color: var(--blok-text-primary); }
 [data-blok-sidebar-shortcut] svg { flex: none; width: 16px; height: 16px; }
+
+[data-blok-sidebar] button[hidden] { display: none; }
+[data-blok-sidebar-tree]:hover { scrollbar-color: var(--blok-text-secondary) transparent; }
+[data-blok-sidebar-teamspace] > button > span:not([data-blok-sidebar-teamspace-mark]) {
+  flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 600;
+}
+[data-blok-sidebar-teamspace-mark] svg { width: 14px; height: 14px; }
+[data-blok-sidebar-teamspace-chevron] { flex: none; width: 12px; height: 12px; color: var(--blok-text-secondary); transform: rotate(90deg); }
+[data-blok-sidebar-teamspace] > button[aria-expanded="false"] [data-blok-sidebar-teamspace-chevron] { transform: none; }
+[data-blok-sidebar-section-label]::after { content: '⌄'; margin-inline-start: 6px; opacity: 0; }
+[data-blok-sidebar-section-label]:is(:hover, :focus-visible)::after { opacity: 1; }
+[data-blok-sidebar-section-label][aria-expanded="false"]::after { content: '›'; opacity: 1; }
+[data-blok-sidebar-section-label]:focus-visible,
+[data-blok-sidebar-shortcut]:focus-visible,
+[data-blok-sidebar-teamspace] > button:focus-visible { outline: 2px solid var(--blok-focus-ring); outline-offset: -2px; }
+[data-blok-sidebar-row] > [data-blok-sidebar-add] { margin-inline-end: 4px; }
+@media (hover: none) {
+  [data-blok-sidebar-more], [data-blok-sidebar-add] { display: inline-flex; opacity: 1; }
+}
+
+[data-blok-sidebar-section-header] { display: flex; align-items: center; gap: 4px; }
+[data-blok-sidebar-section-header] [data-blok-sidebar-section-label] { flex: 1; min-width: 0; margin: 0; }
+[data-blok-sidebar-create-private] { flex: none; margin-inline-end: 4px; }
+
+/* Keep the workspace icon and disclosure in the same slot; actions never shift its label. */
+[data-blok-sidebar-teamspace] { display: flex; align-items: center; border-radius: 4px; padding-right: 4px; }
+[data-blok-sidebar-teamspace] > button:first-child { flex: 1; min-width: 0; width: auto; }
+[data-blok-sidebar-teamspace-mark] { position: relative; }
+[data-blok-sidebar-teamspace-chevron] { position: absolute; opacity: 0; }
+[data-blok-sidebar-teamspace]:is(:hover, :focus-within) [data-blok-sidebar-teamspace-mark] { background: transparent; }
+[data-blok-sidebar-teamspace]:is(:hover, :focus-within) [data-blok-sidebar-teamspace-mark] > svg:first-child { opacity: 0; }
+[data-blok-sidebar-teamspace]:is(:hover, :focus-within) [data-blok-sidebar-teamspace-chevron] { opacity: 1; }
+[data-blok-sidebar-teamspace-add], [data-blok-sidebar-teamspace-more] {
+  display: grid; place-items: center; flex: none; width: 24px; height: 24px;
+  border: 0; border-radius: 4px; padding: 0; background: transparent; color: var(--blok-text-secondary); cursor: pointer; opacity: 0;
+}
+[data-blok-sidebar-teamspace]:is(:hover, :focus-within) > button { opacity: 1; }
+[data-blok-sidebar-teamspace] > button:not(:first-child):hover { background: var(--blok-item-hover-bg); }
+button[data-blok-sidebar-search] { cursor: pointer; font: inherit; font-size: 13px; text-align: start; }
+button[data-blok-sidebar-search] > span { flex: 1; }
+button[data-blok-sidebar-search] kbd { font: inherit; font-size: 11px; padding: 1px 4px; border-radius: 3px; background: var(--blok-item-hover-bg); }
+button[data-blok-sidebar-search]:hover { background: var(--blok-item-hover-bg); }
+@media (hover: none) { [data-blok-sidebar-teamspace-add], [data-blok-sidebar-teamspace-more] { opacity: 1; } }
+
+/* Muted navigation labels, brighter selection: use a separate palette from document text. */
+[data-blok-sidebar] { --blok-sidebar-label: var(--blok-text-primary); --blok-sidebar-heading: var(--blok-text-secondary); --blok-sidebar-selected: var(--blok-text-primary); }
+[data-blok-theme="dark"] [data-blok-sidebar] {
+  --blok-sidebar-label: #b7b7b5; --blok-sidebar-heading: #888885; --blok-sidebar-selected: #f0f0ef;
+  --blok-item-hover-bg: #2c2c2c; --blok-icon-active-bg: #303030;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-blok-theme="light"]) [data-blok-sidebar] {
+    --blok-sidebar-label: #b7b7b5; --blok-sidebar-heading: #888885; --blok-sidebar-selected: #f0f0ef;
+    --blok-item-hover-bg: #2c2c2c; --blok-icon-active-bg: #303030;
+  }
+}
+[data-blok-sidebar-link], [data-blok-sidebar-teamspace] > button:first-child { color: var(--blok-sidebar-label); }
+[data-blok-sidebar-row][data-active] [data-blok-sidebar-link] { color: var(--blok-sidebar-selected); font-weight: 500; }
+[data-blok-sidebar-row][data-active]:hover { background: color-mix(in srgb, var(--blok-icon-active-bg), var(--blok-text-primary) 5%); }
+[data-blok-sidebar-section-label], [data-blok-sidebar-recents] > [data-blok-sidebar-shortcut] { color: var(--blok-sidebar-heading); }
+[data-blok-sidebar-section-label] { margin-bottom: 2px; font-weight: 500; }
+[data-blok-sidebar-teamspace] > button:first-child > span:not([data-blok-sidebar-teamspace-mark]) { font-weight: 600; }
+[data-blok-sidebar-section-header] [data-blok-sidebar-create-private] { opacity: 0; }
+[data-blok-sidebar-section-header]:is(:hover, :focus-within) [data-blok-sidebar-create-private] { opacity: 1; }
+[data-blok-sidebar-row]:has(> button:focus-visible) { outline: 2px solid var(--blok-focus-ring); outline-offset: -2px; }
+@media (hover: none) { [data-blok-sidebar-section-header] [data-blok-sidebar-create-private] { opacity: 1; } }
+
+[data-blok-theme="light"] [data-blok-sidebar] {
+  background: #f7f7f5; --blok-sidebar-label: #5f5e5b; --blok-sidebar-heading: #91918e; --blok-sidebar-selected: #37352f;
+  --blok-item-hover-bg: #ebebea; --blok-icon-active-bg: #e8e8e6;
+}

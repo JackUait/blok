@@ -51,7 +51,7 @@ const mount = (): Harness => {
 };
 
 const row = (title: string): HTMLElement => {
-  const link = [...document.querySelectorAll('[data-blok-sidebar-link]')].find((node) => node.textContent?.includes(title));
+  const link = [...document.querySelectorAll('[data-blok-sidebar-link]')].find((node) => node.textContent?.includes(title) && !node.closest('[data-blok-sidebar-recents], [data-blok-sidebar-favorites]'));
   const found = link?.closest('[data-blok-sidebar-row]');
 
   if (!(found instanceof HTMLElement)) {
@@ -167,8 +167,8 @@ describe('page sidebar row', () => {
 
     expect(harness.opened).toEqual(['notes']);
     expect(harness.created).toEqual(['home']);
-    expect(row('Home').querySelector('[data-blok-sidebar-add]')?.getAttribute('aria-label')).toBe('Add a page inside');
-    expect(row('Home').querySelector('[data-blok-sidebar-more]')?.getAttribute('aria-label')).toBe('Delete, duplicate, and more');
+    expect(row('Home').querySelector('[data-blok-sidebar-add]')?.getAttribute('aria-label')).toBe('Ajouter une sous-page');
+    expect(row('Home').querySelector('[data-blok-sidebar-more]')?.getAttribute('aria-label')).toBe('Actions de la page');
   });
 
   it('lists the Notion page menu, with separators, and a muted last-edited line', () => {
@@ -181,64 +181,60 @@ describe('page sidebar row', () => {
     });
 
     expect(script).toEqual([
-      'item:Add to Favorites',
-      'item:Available offline',
+      'item:Ajouter aux favoris',
+      'item:Disponible hors connexion',
       'separator',
-      'item:Copy link',
-      'item:Duplicate',
-      'item:Rename',
-      'item:Move to',
-      'item:Move to Trash',
+      'item:Copier le lien',
+      'item:Dupliquer',
+      'item:Renommer',
+      'item:Déplacer vers',
+      'item:Mettre à la corbeille',
       'separator',
-      'item:Turn into wiki',
+      'item:Transformer en wiki',
       'separator',
-      'item:Open in new tab',
-      'item:Open in new window',
-      'item:Open in side peek',
-      'separator',
-      'meta:Last edited',
+      'item:Ouvrir dans un nouvel onglet',
+      'item:Ouvrir dans une nouvelle fenêtre',
+      'item:Ouvrir en aperçu latéral',
     ]);
 
     const meta = menuOf('Home').querySelector('[data-blok-sidebar-menu-meta]');
 
-    expect(meta).not.toBeNull();
-    expect(meta?.tagName).not.toBe('BUTTON');
-    expect(meta?.getAttribute('role')).not.toBe('menuitem');
-    expect(item('Home', 'Available offline').getAttribute('role')).toBe('menuitemcheckbox');
-    expect(item('Home', 'Available offline').querySelector('[data-blok-sidebar-switch]')).not.toBeNull();
-    expect(item('Home', 'Move to Trash').hasAttribute('data-danger')).toBe(true);
+    expect(meta).toBeNull();
+    expect(item('Home', 'Disponible hors connexion').getAttribute('role')).toBe('menuitemcheckbox');
+    expect(item('Home', 'Disponible hors connexion').querySelector('[data-blok-sidebar-switch]')).not.toBeNull();
+    expect(item('Home', 'Mettre à la corbeille').hasAttribute('data-danger')).toBe(true);
   });
 
   it('keeps rename, duplicate, and move to trash wired', () => {
     const harness = mount();
 
-    click(item('Home', 'Duplicate'));
+    click(item('Home', 'Dupliquer'));
     expect(harness.actions).toEqual([{ id: 'home', type: 'duplicate' }]);
     expect(harness.opened).toEqual([]);
 
-    click(item('Notes', 'Move to Trash'));
+    click(item('Notes', 'Mettre à la corbeille'));
     expect(harness.actions.at(-1)).toEqual({ id: 'notes', type: 'delete' });
 
-    click(item('Draft', 'Rename'));
+    click(item('Draft', 'Renommer'));
     const input = document.querySelector('[data-blok-sidebar-rename]');
 
     if (!(input instanceof HTMLInputElement)) {
       throw new Error('rename input');
     }
 
-    input.value = 'Renamed';
+    input.value = 'Renommerd';
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     expect(harness.actions).toEqual([
       { id: 'home', type: 'duplicate' },
       { id: 'notes', type: 'delete' },
-      { id: 'draft', type: 'rename', title: 'Renamed' },
+      { id: 'draft', type: 'rename', title: 'Renommerd' },
     ]);
   });
 
   it('cancels rename on Escape and still does not open the page', () => {
     const harness = mount();
 
-    click(item('Home', 'Rename'));
+    click(item('Home', 'Renommer'));
     const input = document.querySelector('[data-blok-sidebar-rename]');
 
     if (!(input instanceof HTMLInputElement)) {
@@ -258,20 +254,20 @@ describe('page sidebar row', () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
 
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
-    click(item('Home', 'Copy link'));
+    click(item('Home', 'Copier le lien'));
 
-    expect(writeText).toHaveBeenCalledWith('/?page=home');
+    expect(writeText).toHaveBeenCalledWith(new URL('/?page=home', location.origin).href);
     expect(harness.actions).toEqual([]);
     expect(harness.opened).toEqual([]);
 
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
-    expect(() => click(item('Notes', 'Copy link'))).not.toThrow();
+    expect(() => click(item('Notes', 'Copier le lien'))).not.toThrow();
     expect(harness.actions).toEqual([]);
   });
 
-  it('toggles a favorite boolean on the page and shows a filled star', () => {
+  it('toggles favorites through the menu without adding stars beside page titles', () => {
     const harness = mount();
-    const favorite = item('Home', 'Add to Favorites');
+    const favorite = item('Home', 'Ajouter aux favoris');
 
     expect(harness.pages[0]?.favorite).not.toBe(true);
     expect(favorite.getAttribute('aria-checked')).toBe('false');
@@ -284,28 +280,28 @@ describe('page sidebar row', () => {
     expect(harness.pages[0]?.favorite).toBe(true);
     expect(harness.actions).toEqual([]);
     expect(harness.opened).toEqual([]);
-    const filled = item('Home', 'Remove from Favorites');
+    const filled = item('Home', 'Retirer des favoris');
 
     expect(filled.getAttribute('aria-checked')).toBe('true');
     expect(filled.hasAttribute('data-filled')).toBe(true);
     expect(filled.querySelector('[data-blok-sidebar-menu-icon] path')?.getAttribute('fill')).toBe('currentColor');
-    expect(row('Home').querySelector('[data-blok-sidebar-favorite] svg path')?.getAttribute('fill')).toBe('currentColor');
+    expect(row('Home').querySelector('[data-blok-sidebar-favorite]')).toBeNull();
 
     click(filled);
 
     expect(harness.pages[0]?.favorite).toBe(false);
     expect(row('Home').querySelector('[data-blok-sidebar-favorite]')).toBeNull();
-    expect(item('Home', 'Add to Favorites').hasAttribute('data-filled')).toBe(false);
+    expect(item('Home', 'Ajouter aux favoris').hasAttribute('data-filled')).toBe(false);
   });
 
   it('reports the unwired rows as distinct actions and does not open the page', () => {
     const harness = mount();
     const cases: Array<[string, SidebarAction]> = [
-      ['Move to', { id: 'home', type: 'move' }],
-      ['Turn into wiki', { id: 'home', type: 'wiki' }],
-      ['Open in new tab', { id: 'home', type: 'open-tab' }],
-      ['Open in new window', { id: 'home', type: 'open-window' }],
-      ['Open in side peek', { id: 'home', type: 'open-peek' }],
+      ['Déplacer vers', { id: 'home', type: 'move' }],
+      ['Transformer en wiki', { id: 'home', type: 'wiki' }],
+      ['Ouvrir dans un nouvel onglet', { id: 'home', type: 'open-tab' }],
+      ['Ouvrir dans une nouvelle fenêtre', { id: 'home', type: 'open-window' }],
+      ['Ouvrir en aperçu latéral', { id: 'home', type: 'open-peek' }],
     ];
 
     cases.forEach(([label]) => click(item('Home', label)));
@@ -315,9 +311,9 @@ describe('page sidebar row', () => {
     expect(row('Home').textContent).toContain('Home');
   });
 
-  it('toggles Available offline and tells the host, without opening the page', () => {
+  it('toggles Disponible hors connexion and tells the host, without opening the page', () => {
     const harness = mount();
-    const offline = item('Home', 'Available offline');
+    const offline = item('Home', 'Disponible hors connexion');
 
     expect(offline.getAttribute('aria-checked')).toBe('false');
 
@@ -354,10 +350,10 @@ describe('page sidebar row', () => {
     expect(tooltipShown()).toBe(false);
     vi.advanceTimersByTime(1);
     expect(tooltipShown()).toBe(true);
-    expect(tooltipText()).toBe('Add a page inside');
+    expect(tooltipText()).toBe('Ajouter une sous-page');
 
     hover(more);
     vi.advanceTimersByTime(HINT_DELAY);
-    expect(tooltipText()).toBe('Delete, duplicate, and more');
+    expect(tooltipText()).toBe('Actions de la page');
   });
 });

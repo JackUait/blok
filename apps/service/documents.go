@@ -204,7 +204,6 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 				p["parentId"] = real
 			}
 		}
-		encoded, _ := json.Marshal(p)
 		// Une page naît ouverte à l'espace quand elle est à la racine, et héritière
 		// sinon. Sans cela une page neuve naîtrait privée sans que personne ne
 		// l'ait demandé — invisible y compris pour son auteur, qui ne détient
@@ -214,6 +213,23 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 		if parent, _ := p["parentId"].(string); parent == "" {
 			visibility = visWorkspace
 		}
+		// Creation-only intent: private visibility and the author's full access
+		// are committed together. Never publish first and restrict in a second call.
+		if requested, present := p["initialVisibility"]; present {
+			if requested != visPrivate {
+				problem(w, 400, "Invalid initial visibility")
+				return
+			}
+			if !known[slot.id] {
+				if parent, _ := p["parentId"].(string); parent != "" {
+					problem(w, 400, "Private creation requires a root page")
+					return
+				}
+				visibility = visPrivate
+			}
+			delete(p, "initialVisibility")
+		}
+		encoded, _ := json.Marshal(p)
 		tag, e := tx.Exec(r.Context(), `INSERT INTO pages(id,workspace_id,metadata,trashed,visibility) VALUES($1,$2,$3,$4,$5) ON CONFLICT(id) DO UPDATE SET metadata=$3,trashed=$4,deleted=false WHERE pages.workspace_id=$2`, slot.id, ws.ID, encoded, slot.trashed, visibility)
 		if e != nil {
 			problem(w, 500, "Save failed")

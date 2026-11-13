@@ -184,3 +184,27 @@ func TestIndexSaveStillRefusesStaleRevision(t *testing.T) {
 	w.putIndex(t, tokenAlice, []map[string]any{entry("public", nil)}, 0, 200)
 	w.putIndex(t, tokenAlice, []map[string]any{entry("public", nil)}, 0, 409)
 }
+
+func TestIndexCreatesPrivatePageAtomically(t *testing.T) {
+	w := newReadsWorld(t)
+	private := entry("new-private", nil)
+	private["initialVisibility"] = "private"
+	w.putIndex(t, tokenAlice, []map[string]any{entry("public", nil), private}, 0, 200)
+	own := w.send(t, "GET", tokenAlice, "/api/workspaces/equipe/pages/new-private/access", nil, 200)
+	if own["visibility"] != visPrivate || own["myLevel"] != "full" {
+		t.Fatalf("unexpected private access: %v", own)
+	}
+	w.send(t, "GET", tokenBob, "/api/workspaces/equipe/pages/new-private/access", nil, 404)
+	w.send(t, "GET", tokenZoe, "/api/workspaces/equipe/pages/new-private/access", nil, 404)
+}
+
+func TestIndexInitialVisibilityCannotChangeExistingAccess(t *testing.T) {
+	w := newReadsWorld(t)
+	public := entry("public", nil)
+	public["initialVisibility"] = "private"
+	w.putIndex(t, tokenAlice, []map[string]any{public}, 0, 200)
+	own := w.send(t, "GET", tokenBob, "/api/workspaces/equipe/pages/public/access", nil, 200)
+	if own["visibility"] != visWorkspace {
+		t.Fatalf("index changed existing access: %v", own)
+	}
+}

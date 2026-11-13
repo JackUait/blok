@@ -478,6 +478,12 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
     });
   };
   footer.addEventListener('blok:desktop-open-ai-settings', () => openSettings('ai'));
+  footer.addEventListener('blok:desktop-open-settings', (event) => {
+    const section = (event as CustomEvent<string>).detail;
+    if (section === 'invites' && admin) { closeMenu(); openInvitation(); }
+    else if (section === 'members' && admin) openSettings('members');
+    else openSettings('general');
+  });
   preferences.addEventListener('click', () => openSettings('preferences'));
   if (account instanceof HTMLButtonElement) account.addEventListener('click', () => openSettings('account'));
   const profileName = currentWorkspace.kind === 'local' && currentWorkspace.id === 'default' ? localStorage.getItem('blok:desktop:profile-name') : currentWorkspace.name;

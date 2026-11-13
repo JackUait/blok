@@ -61,6 +61,16 @@ describe('view-data', () => {
       expect(resolveRowColors(rows, view({ type: 'list', colorRules: [rule] }), schema).get('a')).toEqual({ row: 'blue', cells: {} });
     });
 
+    it('paints each cell with the first matching rule in the list, row rules included (notion-motion.md Round 20 §4)', () => {
+      const typed: PropertyDefinition[] = [...schema, { id: 'sel', name: 'Select', type: 'select', position: 'a2', config: { options: [{ id: 'o1', label: 'One', position: 'a0' }] } }];
+      const row: DatabaseRow = { id: 'a', position: 'a0', properties: { num: 5, sel: 'o1' } };
+      const cellRule = { id: 'c1', propertyId: 'sel', operator: 'is_not_empty', value: null, color: 'blue', applyTo: 'property' as const };
+      const rowRule = { id: 'c2', propertyId: 'num', operator: 'is_not_empty', value: null, color: 'green' };
+
+      expect(resolveRowColors([row], view({ colorRules: [rowRule, cellRule] }), typed).get('a')).toEqual({ row: 'green', cells: {} });
+      expect(resolveRowColors([row], view({ colorRules: [cellRule, rowRule] }), typed).get('a')).toEqual({ row: 'green', cells: { sel: 'blue' } });
+    });
+
     it('colors by status, person, relation, formula and rollup, as Notion does (research/05 §6.2)', () => {
       const typed: PropertyDefinition[] = [
         ...schema,

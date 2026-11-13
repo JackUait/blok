@@ -25,8 +25,10 @@ export interface RowColor {
 }
 
 /**
- * Colors per row id. The first rule that matches a row paints it; a rule
- * the engine cannot read paints nothing. Only a table colors one cell.
+ * Colors per row id. The first matching rule in the list paints each cell,
+ * row rules included: a cell rule below a matching row rule paints nothing
+ * (notion-motion.md Round 20 §4). A rule the engine cannot read paints
+ * nothing. Only a table colors one cell.
  */
 export const resolveRowColors = (
   rows: DatabaseRow[],
@@ -48,10 +50,10 @@ export const resolveRowColors = (
     for (const rule of matching) {
       const isCell = rule.applyTo === 'property' && view.type === 'table';
 
-      if (isCell) {
-        color.cells[rule.propertyId] ??= rule.color;
-      } else {
+      if (!isCell) {
         color.row ??= rule.color;
+      } else if (color.row === undefined) {
+        color.cells[rule.propertyId] ??= rule.color;
       }
     }
 

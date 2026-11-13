@@ -12504,7 +12504,6 @@ input[data-blok-database-picker-search]:focus {
   opacity: 0.4;
 }
 
-[data-blok-database-filter-group],
 [data-blok-database-color-rule] {
   margin-block: var(--blok-space-1);
   padding-block: var(--blok-space-1);
@@ -12540,14 +12539,56 @@ input[data-blok-database-picker-search]:focus {
   padding: var(--blok-space-1);
 }
 
-[data-blok-database-filter-rule] > [data-blok-database-panel-note] {
+[data-blok-database-filter-rule] > [data-blok-database-panel-note],
+[data-blok-database-filter-group-line] > [data-blok-database-panel-note] {
   flex-basis: 60px;
 }
 
 /* The And/Or choice holds the same column, so every rule's property button lines up at +76. */
-[data-blok-database-filter-rule] > [data-blok-database-panel-row]:not([data-blok-database-filter-rule-button]) {
+[data-blok-database-filter-rule] > [data-blok-database-panel-row]:not([data-blok-database-filter-rule-button]),
+[data-blok-database-filter-group-line] > [data-blok-database-panel-row] {
   flex: 0 0 60px;
   width: 60px;
+}
+
+/*
+ * notion-motion.md Round 19 §1 (r19-adv-group.raw): the group's And/Or and ⋯ stay in the outer columns, and the
+ * box fills the property column on. Inside, rules and "+ Add filter rule" are 8 apart, the box 80 tall for one rule.
+ */
+[data-blok-database-filter-group-line] {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--blok-space-2);
+  padding: var(--blok-space-1);
+}
+
+[data-blok-database-filter-group-line] > [data-blok-database-panel-note] {
+  flex-shrink: 0;
+  padding-block: 0;
+  padding-inline: var(--blok-space-2) 0;
+  line-height: 32px;
+}
+
+[data-blok-database-filter-group] {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--blok-space-2);
+  min-width: 0;
+  padding: var(--blok-space-2) var(--blok-space-2) 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-column-bg);
+}
+
+[data-blok-database-filter-group] > [data-blok-database-filter-rule],
+[data-blok-database-filter-group] > [data-blok-database-filter-group-line] {
+  padding: 0;
+}
+
+/* Round 18 §2 (r18-adv-open.raw) and Round 19 §1 (r19-adv-group.raw): "+ Add filter rule ⌄" is 32 tall. */
+[data-blok-database-filter-add-rule] {
+  height: 32px;
 }
 
 [data-blok-database-filter-rule] > [data-blok-database-filter-rule-button] {
@@ -12568,6 +12609,7 @@ input[data-blok-database-picker-search]:focus {
 }
 
 [data-blok-database-filter-rule] > [data-blok-database-filter-rule-value] {
+  flex: 1 0 auto;
   width: 164px;
   height: 32px;
   margin: 0;
@@ -12576,7 +12618,8 @@ input[data-blok-database-picker-search]:focus {
   box-sizing: content-box;
 }
 
-[data-blok-database-filter-rule-more] {
+[data-blok-database-filter-rule-more],
+[data-blok-database-filter-group-more] {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
@@ -12591,11 +12634,13 @@ input[data-blok-database-picker-search]:focus {
   cursor: pointer;
 }
 
-[data-blok-database-filter-rule-more]:hover {
+[data-blok-database-filter-rule-more]:hover,
+[data-blok-database-filter-group-more]:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
-[data-blok-database-filter-rule-more] svg {
+[data-blok-database-filter-rule-more] svg,
+[data-blok-database-filter-group-more] svg {
   width: 16px;
   height: 16px;
 }

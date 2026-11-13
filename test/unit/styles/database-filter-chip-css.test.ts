@@ -38,4 +38,20 @@ describe('advanced filter popover', () => {
   it('gives the And/Or button the same 60px column as "Where"', () => {
     expect(declared('[data-blok-database-filter-rule] > [data-blok-database-panel-row]:not([data-blok-database-filter-rule-button])', 'flex')).toEqual(['0 0 60px']);
   });
+
+  // notion-motion.md Round 19 §1 (r19-adv-group.raw): no border, fill rgba(66,35,3,0.03), radius 6, padding 8px 8px 0, gap 8.
+  it('draws a filter group as a borderless faint box', () => {
+    const group = '[data-blok-database-filter-group]';
+
+    expect(declared(group, 'border')).toEqual(['none']);
+    expect(declared(group, 'background-color')).toEqual(['var(--blok-database-column-bg)']);
+    expect(declared(group, 'border-radius')).toEqual(['var(--blok-radius-control)']);
+    expect(declared(group, 'padding')).toEqual(['var(--blok-space-2) var(--blok-space-2) 0']);
+    expect(declared(group, 'gap')).toEqual(['var(--blok-space-2)']);
+  });
+
+  // r19-adv-groupmore.raw: with a group present the outer Value field grew 164 → 215.5, so every ⋯ shares one column.
+  it('lets a rule\'s value field grow so the ⋯ buttons line up', () => {
+    expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-value]', 'flex')).toEqual(['1 0 auto']);
+  });
 });

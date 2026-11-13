@@ -447,6 +447,32 @@ describe('DatabaseViewControls', () => {
       expect(rules()[0]).toEqual(expect.objectContaining({ filterRules: [] }));
     });
 
+    // notion-motion.md Round 19 §1 (r19-adv-group.raw, r19-adv-group2.raw): "And", then the box in the property column, then its ⋯.
+    it('lays a group out as its And, its box and its ⋯, and a new group reads "Or"', () => {
+      const { controls, saved } = openAdvanced();
+      const tree = (): DatabaseViewConfig['filterTree'] => controls.effective(saved.view).filterTree;
+
+      click(`database-filter-add-rule-${tree()?.id ?? ''}`);
+      click('database-filter-add-group');
+      const group = tree()?.filterRules[1];
+      const groupId = group?.id ?? '';
+      const box = q(`database-filter-group-${groupId}`);
+      const line = box?.parentElement;
+
+      expect(group).toEqual(expect.objectContaining({ conjunction: 'or' }));
+      expect(line?.hasAttribute('data-blok-database-filter-group-line')).toBe(true);
+      expect([...(line?.children ?? [])].map((el) => el.getAttribute('data-blok-testid') ?? el.textContent?.trim())).toEqual([
+        `database-filter-conjunction-${tree()?.id ?? ''}`,
+        `database-filter-group-${groupId}`,
+        `database-filter-group-more-${groupId}`,
+      ]);
+      expect(box?.querySelector('[data-blok-testid^="database-filter-delete-group-"]')).toBeNull();
+
+      click(`database-filter-add-rule-${groupId}`);
+      click('database-filter-add-rule');
+      expect(text(box?.ownerDocument.querySelector(`[data-blok-testid="database-filter-conjunction-${groupId}"]`))).toBe('tools.database.filterOr');
+    });
+
     // notion-motion.md Round 19 §1 (r19-adv-groupmore.raw): 232.4 wide; Remove, Duplicate, Turn into filter, Wrap in group.
     it('gives a group its own ⋯: Remove, Duplicate, Turn into filter and Wrap in group', () => {
       const { controls, saved } = setup();

@@ -2063,20 +2063,16 @@ export class ViewSettingsPages {
           }),
         ]);
 
+        const line = document.createElement('div');
+
         more.setAttribute('data-blok-database-filter-group-more', '');
         box.setAttribute('data-blok-database-filter-group', '');
         box.setAttribute('data-blok-testid', `database-filter-group-${node.id}`);
-        box.append(more, prefix, ...this.groupRows(panel, node, layer + 1, tree, write), panelRow({
-          label: this.t('filterDeleteGroup'),
-          testId: `database-filter-delete-group-${node.id}`,
-          icon: IconTrash,
-          danger: true,
-          onClick: () => {
-            write(removeFilterNode(tree(), node.id));
-            panel.refresh();
-          },
-        }));
-        rows.push(box);
+        box.append(...this.groupRows(panel, node, layer + 1, tree, write));
+        // notion-motion.md Round 19 §1 (r19-adv-group.raw): the box starts in the property column, its ⋯ in the rules' ⋯ column.
+        line.setAttribute('data-blok-database-filter-group-line', '');
+        line.append(prefix, box, more);
+        rows.push(line);
 
         return;
       }
@@ -2104,7 +2100,7 @@ export class ViewSettingsPages {
           testId: 'database-filter-add-group',
           onClick: () => pick(() => {
             // Round 19 §1 (r19-adv-group.raw): a new group holds one rule.
-            write(addFilterGroup(tree(), group.id, { id: nanoid(), conjunction: 'and', filterRules: [this.firstRule()] }));
+            write(addFilterGroup(tree(), group.id, { id: nanoid(), conjunction: NEW_GROUP_CONJUNCTION, filterRules: [this.firstRule()] }));
             panel.refresh();
           }),
         })] : []),
@@ -2976,7 +2972,7 @@ export const openFilterList = (anchor: HTMLElement, ctx: ViewSettingsContext, te
 const RULE_MORE_WIDTH = 150.8;
 const GROUP_MORE_WIDTH = 232.4;
 /** A group Blok makes (add, turn into, wrap). Round 19 §1 saw "Or" in a new group once (r19-adv-group2.raw). */
-const NEW_GROUP_CONJUNCTION = 'and';
+const NEW_GROUP_CONJUNCTION = 'or';
 
 /** notion-motion.md Round 18 §2 (r18-adv-addrule.raw): the "+ Add filter rule ⌄" menu. */
 const ADD_MENU_WIDTH = 206.9;

@@ -1386,30 +1386,25 @@ export const IconArrowDownLine = wrapImageSvg('<path d="M12 4.2v10.8m-3.6-3.6 3.
 // Menu icons retain intrinsic 20×20 dimensions; overlay icons are CSS-sized.
 // ============================================================================
 
-// Align left — bars hang from a guide line on the left
+// Alignment: one block slides between two text lines. Only the block's x differs.
 export const IconAlignLeft = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M3.5 3v14" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="6" y="5.5" width="10.5" height="3.5" rx="1" fill="currentColor"/>
-  <rect x="6" y="11" width="6.5" height="3.5" rx="1" fill="currentColor"/>
+  <path d="M3.5 4.5h13M3.5 15.5h13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="3.5" y="7.25" width="6" height="5.5" rx="1.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
-// Align center — the bars cover the guide, so it shows only between them
 export const IconAlignCenter = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M10 3v14" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="4.75" y="5.5" width="10.5" height="3.5" rx="1" fill="currentColor"/>
-  <rect x="6.75" y="11" width="6.5" height="3.5" rx="1" fill="currentColor"/>
+  <path d="M3.5 4.5h13M3.5 15.5h13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="7" y="7.25" width="6" height="5.5" rx="1.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
-// Align right — mirror of IconAlignLeft
 export const IconAlignRight = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M16.5 3v14" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="3.5" y="5.5" width="10.5" height="3.5" rx="1" fill="currentColor"/>
-  <rect x="7.5" y="11" width="6.5" height="3.5" rx="1" fill="currentColor"/>
+  <path d="M3.5 4.5h13M3.5 15.5h13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="10.5" y="7.25" width="6" height="5.5" rx="1.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 

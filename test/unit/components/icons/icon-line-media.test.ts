@@ -143,26 +143,35 @@ describe('Blok Line media family', () => {
     expect(x - bottomEndX - stroke).toBeGreaterThanOrEqual(stroke);
   });
 
-  it('hangs mirrored alignment bars from a shared guide line', () => {
+  it('slides one outlined block between two text lines to show alignment', () => {
     const icons = [Icons.IconAlignLeft, Icons.IconAlignCenter, Icons.IconAlignRight].map(icon => svgOf(icon));
-    const guides = icons.map(svg => svg.querySelector('path')?.getAttribute('d'));
-    const bars = icons.map(svg => Array.from(svg.querySelectorAll('rect')).map(bar =>
-      ['x', 'y', 'width', 'height'].map(name => Number(required(bar, name)))));
+    const stroke = 1.25;
+    const blocks = icons.map((svg) => {
+      const rects = Array.from(svg.querySelectorAll('rect'));
 
-    expect(guides).toEqual(['M3.5 3v14', 'M10 3v14', 'M16.5 3v14']);
-    bars.forEach(set => {
-      expect(set).toHaveLength(2);
-      expect(set.map(([, y, width, height]) => [y, width, height])).toEqual(bars[0].map(([, y, width, height]) => [y, width, height]));
+      expect(rects).toHaveLength(1);
+      expect(rects[0].getAttribute('fill')).toBeNull();
+      expect(required(rects[0], 'stroke')).toBe('currentColor');
+      expect(Number(required(rects[0], 'stroke-width'))).toBe(stroke);
+
+      return ['x', 'y', 'width', 'height', 'rx'].map(name => Number(required(rects[0], name)));
     });
-    icons.forEach(svg => svg.querySelectorAll('rect').forEach(bar => {
-      expect(bar.getAttribute('rx')).toBe('1');
-      expect(bar.getAttribute('fill')).toBe('currentColor');
-    }));
-    bars[0].forEach(([x], index) => {
-      expect(x - 3.5).toBe(2.5);
-      expect(x + bars[2][index][0] + bars[2][index][2]).toBe(20);
-      expect(bars[1][index][0] + bars[1][index][2] / 2).toBe(10);
+
+    // Left edge, centre and right edge of the text lines (x 3.5 to 16.5).
+    expect(blocks[0][0]).toBe(3.5);
+    expect(blocks[1][0] + blocks[1][2] / 2).toBe(10);
+    expect(blocks[2][0] + blocks[2][2]).toBe(16.5);
+    blocks.forEach(block => expect(block.slice(1)).toEqual(blocks[0].slice(1)));
+
+    icons.forEach((svg) => {
+      expect(svg.querySelectorAll('[fill="currentColor"]')).toHaveLength(0);
+      expect(Array.from(svg.querySelectorAll('path'), path => path.getAttribute('d'))).toEqual(['M3.5 4.5h13M3.5 15.5h13']);
     });
+
+    const [, y, , height] = blocks[0];
+
+    expect(y - stroke / 2 - (4.5 + stroke / 2)).toBeGreaterThanOrEqual(stroke);
+    expect(15.5 - stroke / 2 - (y + height + stroke / 2)).toBeGreaterThanOrEqual(stroke);
   });
 
   it('points the theater arrows outward from the centre of the wide screen', () => {

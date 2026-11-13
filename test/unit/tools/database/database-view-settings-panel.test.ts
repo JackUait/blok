@@ -1141,6 +1141,18 @@ describe('view settings panel', () => {
     });
 
     // notion-motion.md Round 19 §1 (r19-settings-filterpage.raw, r19-settings-advchip.raw): the advanced filter is its chip.
+    // notion-motion.md Round 19 §1 (r19-adv-group2-bar.raw): rule, rule, group(rule, rule) reads "3 rules", as on the bar chip.
+    it('counts the advanced chip on the Filters page by its top-level items', () => {
+      const rule = (id: string): FilterRule => ({ id, propertyId: 'num', operator: 'is_empty', value: null });
+
+      const h = harness({ filterTree: { id: 'root', conjunction: 'and', filterRules: [rule('a'), rule('b'), { id: 'g', conjunction: 'or', filterRules: [rule('c'), rule('d')] }] } });
+
+      h.ctx.i18n = { t: (key: string, params?: Record<string, string | number>) => `${key} ${String(params?.count ?? '')}` };
+      h.open('filter');
+
+      expect(q('database-filter-advanced-chip')?.textContent).toContain('tools.database.filterRuleCount 3');
+    });
+
     it('lists the advanced filter as its chip, which opens the advanced popover beside the page', () => {
       withFilter({ filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'a', propertyId: 'num', operator: 'is_empty', value: null }] } });
       const chip = q('database-filter-advanced-chip');
@@ -1164,7 +1176,7 @@ describe('view settings panel', () => {
         { id: 'a', propertyId: 'stage', operator: 'does_not_equal', value: ['o1'] },
         { id: 'b', propertyId: 'owner', operator: 'contains', value: ['me'] },
       ] } });
-      click('database-filter-advanced');
+      click('database-filter-advanced-chip');
 
       expect(q('database-filter-rule-value-a')?.textContent?.trim()).toBe('Idea');
       expect(q('database-filter-rule-value-b')?.textContent?.trim()).toBe('tools.database.filterMe');

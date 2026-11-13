@@ -1651,7 +1651,8 @@ export class ViewSettingsPages {
         // notion-motion.md Round 19 §1 (r19-settings-filterpage.raw, r19-settings-advchip.raw): the advanced filter
         // is its chip; a click opens its popover beside the page, which stays.
         if (rules > 0) {
-          const label = this.t('filterRuleCount', { count: rules });
+          // Top-level items, as the bar chip counts them: a group is one.
+          const label = this.t('filterRuleCount', { count: view.filterTree?.filterRules.length ?? 0 });
           const chip = filterChip('database-filter-advanced-chip', label, { glyph: IconFilter, name: label });
 
           chip.setAttribute('data-active', '');

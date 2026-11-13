@@ -1254,6 +1254,17 @@ describe('video controls — playback gear menu', () => {
     expect(plus().disabled).toBe(true);
   });
 
+  it('puts the help line in the presets row and marks the pane while typing', () => {
+    gear().click();
+    speedRow().click();
+    typeSpeed('');
+
+    const help = q(h.figure, '[data-role="speed-presets"] .blok-video-controls__speed-help');
+
+    expect(help.textContent).toBe('0.1× to 3× · Enter to set');
+    expect(q(h.figure, '[data-role="speed-presets"]').parentElement?.getAttribute('data-speed-entry')).toBe('open');
+  });
+
   it('Escape in the field closes only the field, not the speed pane', () => {
     gear().click();
     speedRow().click();

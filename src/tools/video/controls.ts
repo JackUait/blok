@@ -815,8 +815,9 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   speedReadout.append(readoutDigits, menuText('blok-video-controls__speed-readout-unit', '×'));
   const speedEntry = createSpeedEntry({
     readout: speedReadout,
+    host: speedPane,
     classPrefix: 'blok-video-controls',
-    label: i18nLabel('playbackSpeed', 'Playback speed'),
+    t: i18nLabel,
     rate: () => state.selectedRate,
     onRate: (rate) => setRate(rate),
   });
@@ -852,6 +853,8 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     preset.addEventListener('click', () => setRate(rate));
     speedPresets.append(preset);
   });
+  // While the field is open the presets give way to this line (see the stylesheet).
+  speedPresets.append(speedEntry.helpLine);
 
   speedPane.append(backRow, menuDivider, speedStepper, speedWire.element, speedPresets);
   // A press anywhere else in the card sets a typed speed first, so a step or a drag

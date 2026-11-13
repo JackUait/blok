@@ -1597,9 +1597,10 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // file.css: the finished file preview: header badge and facts, status bar, floating pill, spreadsheet grid,
     // code guides, hover band and minimap, log lines, the Markdown outline rail and the slide stage.
     const FILE_PREVIEW_FINISHED_BYTES = 9_000;
-    // audio.css + video.css: the field that stands in for the big speed number (its text cursor,
-    // keyboard ring and bare input), measured 798 + 804.
-    const MEDIA_SPEED_ENTRY_BYTES = 1_602;
+    // audio.css + video.css: the field that stands in for the big speed number (the Well: one box for
+    // the number and the open field, the hidden-copy sizer, the help line that swaps in for the presets),
+    // measured 798 + 804, then the Well 1_958 + 1_976.
+    const MEDIA_SPEED_ENTRY_BYTES = 5_536;
     // database.css: the tab bar "+" is round, header-icon ink, a 200ms fade, and shows on keyboard focus,
     // plus 124 for the 19.2px header glyphs in an 18px slot and the dark timeline panel shadow and header ink,
     // plus 233 for the right-aligned calculations and the 26px "Calculate" box that fades in on its own cell.

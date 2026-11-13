@@ -608,6 +608,19 @@ describe('attachControls — speed card', () => {
       ui.h.destroy();
     });
 
+    it('puts the help line in the presets row and marks the card while typing', () => {
+      const ui = open();
+
+      ui.gear.click();
+      typeSpeed(ui, '');
+
+      const help = one<HTMLElement>(ui.presetRow, '.blok-audio-controls__speed-help');
+
+      expect(help.textContent).toBe('0.1× to 3× · Enter to set');
+      expect(ui.menu.getAttribute('data-speed-entry')).toBe('open');
+      ui.h.destroy();
+    });
+
     it('lets digits be typed: the player\'s 0-9 seek keys stay out of the field', () => {
       const ui = open();
 

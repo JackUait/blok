@@ -1048,19 +1048,48 @@
   color: var(--blok-video-control-fg);
 }
 [data-blok-tool="video"] .blok-video-controls__speed-readout-digits { display: inline-flex; }
-/* Click the number to type a speed. The field takes its place at the same size. */
+/* Click the number to type a speed (the Well, from the Typed Speed Lab). The number and
+   the open field share one box: same padding, pulled back by the same amount, so opening
+   the field moves nothing. video.css and audio.css keep these rules alike; a test compares them. */
+[data-blok-tool="video"] .blok-video-controls__speed-readout[role="button"],
+[data-blok-tool="video"] .blok-video-controls__speed-entry {
+  padding: var(--blok-space-0-5) var(--blok-space-2);
+  margin: calc(-1 * var(--blok-space-0-5)) 0;
+  border-radius: var(--blok-radius-field);
+}
 [data-blok-tool="video"] .blok-video-controls__speed-readout[role="button"] {
-  cursor: text;
-  border-radius: var(--blok-radius-control);
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+[data-blok-tool="video"] .blok-video-controls__speed-readout[role="button"]:hover,
+[data-blok-tool="video"] .blok-video-controls__speed-entry {
+  background: var(--blok-video-control-bg-hover);
 }
 :where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__speed-readout[role="button"]:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-video-focus-ring);
 }
+/* A hidden copy of the text sets the field's width and baseline. The input lies over it, out
+   of flow, so the input's own minimum width never shows. */
+[data-blok-tool="video"] .blok-video-controls__speed-entry-sizer {
+  /* An input centres its text; this much off the bottom puts the digits on the number's own
+     pixels (measured at 40px: 1px lower without it). */
+  --blok-video-speed-entry-lift: 0.05em;
+  display: inline-block;
+  position: relative;
+}
+[data-blok-tool="video"] .blok-video-controls__speed-entry-sizer::after {
+  content: attr(data-value);
+  visibility: hidden;
+  white-space: pre;
+}
 [data-blok-tool="video"] .blok-video-controls__speed-entry-input {
-  /* Four characters fit "0.25" and "2.75"; tabular digits keep them one width. */
-  width: 4ch;
-  padding: 0;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 0 0 var(--blok-video-speed-entry-lift);
   margin: 0;
   border: 0;
   background: transparent;
@@ -1068,8 +1097,30 @@
   font: inherit;
   letter-spacing: inherit;
   font-variant-numeric: inherit;
-  text-align: end;
   outline: none;
+}
+/* While the field is open the presets give way to a line with the range, or what is wrong. */
+[data-blok-tool="video"] .blok-video-controls__speed-help {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--blok-video-menu-value-fg);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+[data-blok-tool="video"] .blok-video-controls__speed-help[data-strong="true"] {
+  color: var(--blok-video-control-fg);
+}
+[data-blok-tool="video"] [data-speed-entry="open"] .blok-video-controls__speed-preset {
+  opacity: 0;
+  pointer-events: none;
+}
+[data-blok-tool="video"] [data-speed-entry="open"] .blok-video-controls__speed-help {
+  opacity: 1;
 }
 [data-blok-tool="video"] .blok-video-controls__speed-digit { display: inline-block; }
 [data-blok-tool="video"] .blok-video-controls__speed-readout-unit {
@@ -1212,7 +1263,7 @@
   font-variant-numeric: tabular-nums;
   cursor: pointer;
   transform: translateX(-50%);
-  transition: background 140ms ease, color 140ms ease, transform 160ms cubic-bezier(0.3, 1.35, 0.5, 1);
+  transition: background 140ms ease, color 140ms ease, transform 160ms cubic-bezier(0.3, 1.35, 0.5, 1), opacity 160ms ease;
 }
 [data-blok-tool="video"] .blok-video-controls__speed-preset:hover {
   background: var(--blok-video-control-bg-hover);

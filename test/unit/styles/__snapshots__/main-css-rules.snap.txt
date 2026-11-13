@@ -24168,9 +24168,19 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   display: inline-flex;
 }
 
+[data-blok-tool="video"] .blok-video-controls__speed-readout[role="button"], [data-blok-tool="video"] .blok-video-controls__speed-entry {
+  padding: var(--blok-space-0-5) var(--blok-space-2);
+  margin: calc(-1 * var(--blok-space-0-5)) 0;
+  border-radius: var(--blok-radius-field);
+}
+
 [data-blok-tool="video"] .blok-video-controls__speed-readout[role="button"] {
-  cursor: text;
-  border-radius: var(--blok-radius-control);
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+[data-blok-tool="video"] .blok-video-controls__speed-readout[role="button"]:hover, [data-blok-tool="video"] .blok-video-controls__speed-entry {
+  background: var(--blok-video-control-bg-hover);
 }
 
 :where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__speed-readout[role="button"]:focus-visible {
@@ -24178,9 +24188,25 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   box-shadow: 0 0 0 2px var(--blok-video-focus-ring);
 }
 
+[data-blok-tool="video"] .blok-video-controls__speed-entry-sizer {
+  --blok-video-speed-entry-lift: 0.05em;
+  display: inline-block;
+  position: relative;
+}
+
+[data-blok-tool="video"] .blok-video-controls__speed-entry-sizer::after {
+  content: attr(data-value);
+  visibility: hidden;
+  white-space: pre;
+}
+
 [data-blok-tool="video"] .blok-video-controls__speed-entry-input {
-  width: 4ch;
-  padding: 0;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 0 0 var(--blok-video-speed-entry-lift);
   margin: 0;
   border: 0;
   background: transparent;
@@ -24188,8 +24214,33 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   font: inherit;
   letter-spacing: inherit;
   font-variant-numeric: inherit;
-  text-align: end;
   outline: none;
+}
+
+[data-blok-tool="video"] .blok-video-controls__speed-help {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--blok-video-menu-value-fg);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+[data-blok-tool="video"] .blok-video-controls__speed-help[data-strong="true"] {
+  color: var(--blok-video-control-fg);
+}
+
+[data-blok-tool="video"] [data-speed-entry="open"] .blok-video-controls__speed-preset {
+  opacity: 0;
+  pointer-events: none;
+}
+
+[data-blok-tool="video"] [data-speed-entry="open"] .blok-video-controls__speed-help {
+  opacity: 1;
 }
 
 [data-blok-tool="video"] .blok-video-controls__speed-digit {
@@ -24343,7 +24394,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   font-variant-numeric: tabular-nums;
   cursor: pointer;
   transform: translateX(-50%);
-  transition: background 140ms ease, color 140ms ease, transform 160ms cubic-bezier(0.3, 1.35, 0.5, 1);
+  transition: background 140ms ease, color 140ms ease, transform 160ms cubic-bezier(0.3, 1.35, 0.5, 1), opacity 160ms ease;
 }
 
 [data-blok-tool="video"] .blok-video-controls__speed-preset:hover {
@@ -25282,9 +25333,19 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   display: inline-flex;
 }
 
+[data-blok-tool="audio"] .blok-audio-controls__speed-readout[role="button"], [data-blok-tool="audio"] .blok-audio-controls__speed-entry {
+  padding: var(--blok-space-0-5) var(--blok-space-2);
+  margin: calc(-1 * var(--blok-space-0-5)) 0;
+  border-radius: var(--blok-radius-field);
+}
+
 [data-blok-tool="audio"] .blok-audio-controls__speed-readout[role="button"] {
-  cursor: text;
-  border-radius: var(--blok-radius-control);
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+[data-blok-tool="audio"] .blok-audio-controls__speed-readout[role="button"]:hover, [data-blok-tool="audio"] .blok-audio-controls__speed-entry {
+  background: var(--blok-item-hover-bg);
 }
 
 :where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="audio"] .blok-audio-controls__speed-readout[role="button"]:focus-visible {
@@ -25292,9 +25353,25 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
 
+[data-blok-tool="audio"] .blok-audio-controls__speed-entry-sizer {
+  --blok-audio-speed-entry-lift: 0.05em;
+  display: inline-block;
+  position: relative;
+}
+
+[data-blok-tool="audio"] .blok-audio-controls__speed-entry-sizer::after {
+  content: attr(data-value);
+  visibility: hidden;
+  white-space: pre;
+}
+
 [data-blok-tool="audio"] .blok-audio-controls__speed-entry-input {
-  width: 4ch;
-  padding: 0;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 0 0 var(--blok-audio-speed-entry-lift);
   margin: 0;
   border: 0;
   background: transparent;
@@ -25302,8 +25379,33 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   font: inherit;
   letter-spacing: inherit;
   font-variant-numeric: inherit;
-  text-align: end;
   outline: none;
+}
+
+[data-blok-tool="audio"] .blok-audio-controls__speed-help {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--blok-text-secondary);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+[data-blok-tool="audio"] .blok-audio-controls__speed-help[data-strong="true"] {
+  color: var(--blok-text-primary);
+}
+
+[data-blok-tool="audio"] [data-speed-entry="open"] .blok-audio-controls__speed-preset {
+  opacity: 0;
+  pointer-events: none;
+}
+
+[data-blok-tool="audio"] [data-speed-entry="open"] .blok-audio-controls__speed-help {
+  opacity: 1;
 }
 
 [data-blok-tool="audio"] .blok-audio-controls__speed-digit {
@@ -25456,7 +25558,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   font-variant-numeric: tabular-nums;
   cursor: pointer;
   transform: translateX(-50%);
-  transition: background 140ms ease, color 140ms ease, transform 160ms cubic-bezier(0.3, 1.35, 0.5, 1);
+  transition: background 140ms ease, color 140ms ease, transform 160ms cubic-bezier(0.3, 1.35, 0.5, 1), opacity 160ms ease;
 }
 
 [data-blok-tool="audio"] .blok-audio-controls__speed-preset:hover {

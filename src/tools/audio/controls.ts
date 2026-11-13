@@ -296,8 +296,9 @@ export function attachControls({
   speedReadout.append(readoutDigits, speedSpan('blok-audio-controls__speed-readout-unit', '×'));
   const speedEntry = createSpeedEntry({
     readout: speedReadout,
+    host: speedMenu,
     classPrefix: 'blok-audio-controls',
-    label: i18nLabel('playbackSpeed', 'Playback speed'),
+    t: i18nLabel,
     rate: () => state.selectedRate,
     onRate: (rate) => setRate(rate),
   });
@@ -407,6 +408,8 @@ export function attachControls({
     preset.addEventListener('click', () => setRate(rate));
     speedPresets.appendChild(preset);
   });
+  // While the field is open the presets give way to this line (see the stylesheet).
+  speedPresets.append(speedEntry.helpLine);
 
   speedMenu.append(speedStepperRow, speedWire.element, speedPresets);
   // A press anywhere else in the card sets a typed speed first, so a step or a drag

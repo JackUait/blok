@@ -132,7 +132,7 @@ describe('database filter labels', () => {
   it('names "This page" and known rows on a relation pill (research/13 §1c)', () => {
     const rows = (id: string): string | undefined => (id === 'r1' ? 'One' : undefined);
 
-    expect(filterPillLabel({ operator: 'contains', value: ['this_page', 'r1'] }, prop('relation'), t, undefined, rows)).toBe('Due: tools.database.filterThisPage, One');
+    expect(filterPillLabel({ operator: 'contains', value: ['this_page', 'r1'] }, prop('relation'), t, undefined, rows)).toBe('Due: tools.database.filterOperator.contains tools.database.filterThisPage, One');
   });
 
   it('labels sort directions per type (research/08)', () => {
@@ -226,6 +226,17 @@ describe('filter chip text, as Notion prints it', () => {
   const date = prop('date', { name: 'Date' });
   const box = prop('checkbox', { name: 'Checkbox' });
   const person = prop('person', { name: 'Person' });
+  const rel = prop('relation', { name: 'Relation' });
+  const rows = (id: string): string | undefined => ({ a: 'Alpha', b: 'Beta' } as Record<string, string>)[id];
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 13));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   const cases: Array<[string, { operator: string; value: unknown }, PropertyDefinition]> = [
     ['Text: a', { operator: 'equals', value: 'a' }, text],
@@ -263,6 +274,11 @@ describe('filter chip text, as Notion prints it', () => {
     ['Checkbox: Unchecked', { operator: 'equals', value: false }, box],
     ['Checkbox: Not Checked', { operator: 'does_not_equal', value: true }, box],
     ['Person: Contains Me', { operator: 'contains', value: ['me'] }, person],
+    // Round 20 §1 (r20-rel-a-bar.raw, r20-rel-ab-bar.raw, r20-rel-dnc-bar.raw, r20-rel-empty-bar.raw).
+    ['Relation: Contains Alpha', { operator: 'contains', value: ['a'] }, rel],
+    ['Relation: Contains Alpha, Beta', { operator: 'contains', value: ['a', 'b'] }, rel],
+    ['Relation: Does not contain Alpha, Beta', { operator: 'does_not_contain', value: ['a', 'b'] }, rel],
+    ['Relation: Is empty', { operator: 'is_empty', value: null }, rel],
   ];
 
   it.each(cases)('prints "%s"', async (want, filter, property) => {
@@ -270,6 +286,6 @@ describe('filter chip text, as Notion prints it', () => {
 
     await i18n.prepare();
 
-    expect(filterPillLabel(filter as FilterConfig, property, (key, vars) => i18n.t(key, vars), undefined, undefined, 'en-US')).toBe(want);
+    expect(filterPillLabel(filter as FilterConfig, property, (key, vars) => i18n.t(key, vars), undefined, rows, 'en-US')).toBe(want);
   });
 });

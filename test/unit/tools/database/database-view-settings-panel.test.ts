@@ -2125,6 +2125,15 @@ describe('view settings panel', () => {
       expect(q('database-filter-value-picker')).not.toBeNull();
     });
 
+    // notion-motion.md Round 20 §4 (r20-cc-selval.raw): the value flyout is 240 wide, not the advanced filter's 260.
+    it('opens a 240-wide value flyout', () => {
+      harness({ colorRules: [{ id: 'c1', propertyId: 'stage', operator: 'equals', value: null, color: 'match' }] }).open();
+      click('database-settings-color');
+      click('database-color-value-c1');
+
+      expect(q('database-filter-value-picker')?.style.width).toBe('240px');
+    });
+
     it('deletes a rule at once with its trash, and the last delete brings back the intro', () => {
       const h = harness({ colorRules: [{ id: 'c1', propertyId: 'num', operator: 'is_not_empty', value: null, color: 'gray' }] });
 

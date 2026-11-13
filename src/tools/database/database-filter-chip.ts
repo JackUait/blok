@@ -840,7 +840,8 @@ export const openRuleValueFlyout = (
   host: DatabasePanel,
   ctx: ViewSettingsContext,
   rule: () => Filter | undefined,
-  update: (patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>) => void
+  update: (patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>) => void,
+  width?: number
 ): DatabasePanel => {
   const scoped: ViewSettingsContext = {
     ...ctx,
@@ -860,7 +861,7 @@ export const openRuleValueFlyout = (
     anchor,
     root: pages.values(() => flyout.close()),
     testId: 'database-filter-value-picker',
-    width: property?.type === 'checkbox' ? CHECKBOX_VALUE_WIDTH : LIST_FILTER_WIDTH,
+    width: width ?? (property?.type === 'checkbox' ? CHECKBOX_VALUE_WIDTH : LIST_FILTER_WIDTH),
     backLabel: ctx.i18n.t('tools.database.settingsBack'),
     gap: 0,
     onClose: (escape) => {

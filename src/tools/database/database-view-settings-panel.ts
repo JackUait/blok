@@ -2893,7 +2893,7 @@ export class ViewSettingsPages {
     field.setAttribute('data-blok-testid', `database-color-value-${rule.id}`);
     field.toggleAttribute('data-empty', text === '');
     field.textContent = text === '' ? this.t('filterValue') : text;
-    field.addEventListener('click', () => openRuleValueFlyout(field, panel, scoped, read, save));
+    field.addEventListener('click', () => openRuleValueFlyout(field, panel, scoped, read, save, COLOR_VALUE_FLYOUT_WIDTH));
 
     return [field];
   }
@@ -3074,6 +3074,9 @@ const marked = <T extends HTMLElement>(element: T, attribute: string): T => {
 
   return element;
 };
+
+/** notion-motion.md Round 20 §4 (r20-cc-selval.raw): a colour rule's value flyout is 240 wide. */
+const COLOR_VALUE_FLYOUT_WIDTH = 240;
 
 /** notion-motion.md Round 20 §4 (r20-cc-bg.raw): the colour picker is 190 wide. */
 const COLOR_PICKER_WIDTH = 190;

@@ -569,7 +569,8 @@ describe('DatabaseViewControls', () => {
 
       expect(group).toEqual(expect.objectContaining({ conjunction: 'or' }));
       expect(line?.hasAttribute('data-blok-database-filter-group-line')).toBe(true);
-      expect([...(line?.children ?? [])].map((el) => el.getAttribute('data-blok-testid') ?? el.textContent?.trim())).toEqual([
+      // The And/Or sits in its column's cell (notion-motion.md Round 25 §3).
+      expect([...(line?.children ?? [])].map((el) => el.getAttribute('data-blok-testid') ?? el.firstElementChild?.getAttribute('data-blok-testid') ?? el.textContent?.trim())).toEqual([
         `database-filter-conjunction-${tree()?.id ?? ''}`,
         `database-filter-group-${groupId}`,
         `database-filter-group-more-${groupId}`,
@@ -846,6 +847,8 @@ describe('DatabaseViewControls', () => {
 
     expect(controls.effective(saved.view).sorts).toEqual([expect.objectContaining({ propertyId: 'num', direction: 'desc' })]);
     expect(text(q('database-sort-pill'))).toBe('Amount');
+    // notion-motion.md Round 25 §3: one sort shows Notion's 8×14 arrow.
+    expect(q('database-sort-pill')?.hasAttribute('data-blok-database-sort-arrow')).toBe(true);
 
     click('database-view-reset');
 

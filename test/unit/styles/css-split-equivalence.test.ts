@@ -1668,6 +1668,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R29_BYTES = 1062;
     // Round 24 lane r28: list and gallery "+ New page" timings, the gallery's 40-tall tile with no cards; the board's Hidden groups button is gone; the chip and rule chevron's 8.6×14 box; the board's Pinned groups strip and the Settings pin button.
     const DATABASE_R28_BYTES = 3384;
+    // Round 25 lane r30: sort, And/Or and Add filter rule chevrons; And/Or ends where "Where" ends; the one-sort arrow's 8×14 box.
+    const DATABASE_R30_BYTES = 1411;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2169,6 +2171,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R26_BYTES
       + DATABASE_R29_BYTES
       + DATABASE_R28_BYTES
+      + DATABASE_R30_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

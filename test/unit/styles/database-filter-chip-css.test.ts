@@ -133,3 +133,46 @@ describe('database chip chevron', () => {
       .toEqual(['var(--blok-database-table-gutter-icon)']);
   });
 });
+
+// notion-motion.md Round 25 §3 (r25-sortbtns.raw, r25-andor-btn.raw, r25-or-btn.raw, r25-addrule-btn.raw).
+describe('sort and rule control chevrons', () => {
+  it('paints the sort row chevrons in the light icon tone', () => {
+    expect(declared('[data-blok-database-sort-row] > [data-blok-database-panel-row] > [data-blok-database-chip-chevron]', 'color'))
+      .toEqual(['var(--blok-database-table-gutter-icon)']);
+  });
+
+  it('gives And/Or an 8px gap, its own width and the light chevron', () => {
+    expect(declared('[data-blok-database-filter-conjunction]', 'gap')).toEqual(['var(--blok-space-2)']);
+    expect(declared('[data-blok-database-filter-conjunction] > [data-blok-database-chip-chevron]', 'color'))
+      .toEqual(['var(--blok-database-table-gutter-icon)']);
+    expect(database).not.toContain('min-width: 61px');
+  });
+
+  // "Where" text, And and Or all end 8 before the property button.
+  it('ends "Where" and And/Or at the column end', () => {
+    expect(declared('[data-blok-database-filter-conjunction-cell]', 'flex')).toEqual(['0 0 60px']);
+    expect(declared('[data-blok-database-filter-conjunction-cell]', 'justify-content')).toEqual(['flex-end']);
+    expect(declared('[data-blok-database-filter-rule] > [data-blok-database-panel-note]', 'text-align')).toEqual(['end']);
+  });
+
+  // Text 125,122,117 fails AA (4.27:1), so it takes Blok's AA step of that ink.
+  it('draws Add filter rule with a 14px chevron box 6 after its text', () => {
+    const chevron = '[data-blok-database-filter-add-rule] > [data-blok-database-chip-chevron]';
+
+    expect(declared(chevron, 'width')).toEqual(['14px']);
+    expect(declared(chevron, 'height')).toEqual(['14px']);
+    expect(declared(chevron, 'color')).toEqual(['var(--blok-database-table-header-icon)']);
+    expect(declared(chevron, 'margin-inline-start')).toEqual(['calc(-1 * var(--blok-space-0-5))']);
+    expect(declared('[data-blok-database-filter-add-rule]', 'color')).toEqual(['var(--blok-database-ink-secondary)']);
+    // The label stops at its text, so the chevron follows it rather than the row's end.
+    expect(declared('[data-blok-database-filter-add-rule] > [data-blok-database-panel-label]', 'flex')).toEqual(['0 1 auto']);
+  });
+
+  // r25-sortbtns.raw: arrowStraightUpFillSmall is 8×14. Its ink is unread, so Blok's arrow keeps its drawing.
+  it('puts the one-sort arrow in an 8×14 box', () => {
+    const glyph = '[data-blok-database-filter-pill][data-blok-database-sort-arrow] > [data-blok-database-chip-glyph]';
+
+    expect(declared(glyph, 'width')).toEqual(['8px']);
+    expect(declared(glyph, 'height')).toEqual(['14px']);
+  });
+});

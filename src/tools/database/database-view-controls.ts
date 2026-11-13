@@ -1129,6 +1129,7 @@ export class DatabaseViewControls {
       const pill = filterChip('database-sort-pill', label, { glyph: view.sorts.length === 1 ? IconArrowUp : IconSort, name });
 
       pill.setAttribute('data-direction', view.sorts[0].direction);
+      pill.toggleAttribute('data-blok-database-sort-arrow', view.sorts.length === 1);
       pill.setAttribute('data-active', '');
       pill.addEventListener('click', () => this.openSortPanel(pill));
       pills.push(pill, chipPart('data-blok-database-chip-divider', {}));

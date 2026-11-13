@@ -14076,6 +14076,19 @@ button[data-blok-database-table-group-count]:hover {
   max-height: none;
 }
 
+[data-blok-database-filter-pill][data-blok-database-sort-arrow] > [data-blok-database-chip-glyph] {
+  width: 8px;
+  height: 14px;
+  align-items: center;
+  justify-content: center;
+}
+
+[data-blok-database-filter-pill][data-blok-database-sort-arrow] > [data-blok-database-chip-glyph] svg {
+  flex: none;
+  max-width: none;
+  max-height: none;
+}
+
 [data-blok-database-filter-pill][data-direction="desc"] > [data-blok-database-chip-glyph] svg {
   transform: rotate(180deg);
 }
@@ -16201,6 +16214,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-filter-rule] > [data-blok-database-panel-note], [data-blok-database-filter-group-line] > [data-blok-database-panel-note] {
   flex-basis: 60px;
+  text-align: end;
 }
 
 [data-blok-database-filter-rule] > [data-blok-database-panel-row]:not([data-blok-database-filter-rule-button]), [data-blok-database-filter-group-line] > [data-blok-database-panel-row] {
@@ -16208,10 +16222,15 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   width: 60px;
 }
 
-[data-blok-database-filter-rule] > [data-blok-database-panel-row][data-blok-database-filter-conjunction], [data-blok-database-filter-group-line] > [data-blok-database-panel-row][data-blok-database-filter-conjunction] {
+[data-blok-database-filter-conjunction-cell] {
+  display: flex;
+  flex: 0 0 60px;
+  justify-content: flex-end;
+}
+
+[data-blok-database-filter-conjunction-cell] > [data-blok-database-filter-conjunction] {
   flex: 0 0 auto;
   width: auto;
-  min-width: 61px;
 }
 
 [data-blok-database-filter-group-line] {
@@ -16246,12 +16265,27 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-filter-add-rule] {
   height: 32px;
+  color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-filter-add-rule] > [data-blok-database-panel-label] {
+  flex: 0 1 auto;
+}
+
+[data-blok-database-filter-add-rule] > [data-blok-database-chip-chevron] {
+  width: 14px;
+  height: 14px;
+  margin-inline-start: calc(-1 * var(--blok-space-0-5));
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-sort-row] > [data-blok-database-panel-row] > [data-blok-database-chip-chevron], [data-blok-database-filter-conjunction] > [data-blok-database-chip-chevron] {
+  color: var(--blok-database-table-gutter-icon);
 }
 
 [data-blok-database-filter-conjunction] {
   justify-content: space-between;
-  margin-inline-start: -1px;
-  gap: var(--blok-space-1);
+  gap: var(--blok-space-2);
   height: 32px;
   padding: 0 var(--blok-space-2);
   border: 1px solid var(--blok-database-table-control-border);

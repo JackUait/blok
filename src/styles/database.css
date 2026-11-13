@@ -10891,6 +10891,20 @@ button[data-blok-database-table-group-count]:hover {
   max-height: none;
 }
 
+/* notion-motion.md Round 25 §3 (r25-sortbtns.raw): one sort's arrow is an 8×14 box. Its ink is unread; the 16px drawing overflows evenly. */
+[data-blok-database-filter-pill][data-blok-database-sort-arrow] > [data-blok-database-chip-glyph] {
+  width: 8px;
+  height: 14px;
+  align-items: center;
+  justify-content: center;
+}
+
+[data-blok-database-filter-pill][data-blok-database-sort-arrow] > [data-blok-database-chip-glyph] svg {
+  flex: none;
+  max-width: none;
+  max-height: none;
+}
+
 /* One arrow glyph: a descending sort turns it over. */
 [data-blok-database-filter-pill][data-direction="desc"] > [data-blok-database-chip-glyph] svg {
   transform: rotate(180deg);
@@ -13142,9 +13156,11 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   padding: var(--blok-space-1);
 }
 
+/* notion-motion.md Round 25 §3: "Where", And and Or all end 8 before the property button. */
 [data-blok-database-filter-rule] > [data-blok-database-panel-note],
 [data-blok-database-filter-group-line] > [data-blok-database-panel-note] {
   flex-basis: 60px;
+  text-align: end;
 }
 
 /* The And/Or choice holds the same column, so every rule's property button lines up at +76. */
@@ -13155,14 +13171,18 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 /*
- * Round 19 §1 (r19-adv-andor.raw): "And ⌄" is 61 wide at x 546, so it starts 1px left of the column and the
- * property button still starts at +76. In 60px "And" (26.4 at 14px 500) lost its "nd". A longer word grows the button.
+ * Round 25 §3 (r25-andor-btn.raw, r25-or-btn.raw): And is 61 wide and Or 50.8, both ending at the column's end, so
+ * And starts 1px left of the column and the property button still starts at +76.
  */
-[data-blok-database-filter-rule] > [data-blok-database-panel-row][data-blok-database-filter-conjunction],
-[data-blok-database-filter-group-line] > [data-blok-database-panel-row][data-blok-database-filter-conjunction] {
+[data-blok-database-filter-conjunction-cell] {
+  display: flex;
+  flex: 0 0 60px;
+  justify-content: flex-end;
+}
+
+[data-blok-database-filter-conjunction-cell] > [data-blok-database-filter-conjunction] {
   flex: 0 0 auto;
   width: auto;
-  min-width: 61px;
 }
 
 /*
@@ -13200,16 +13220,35 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   padding: 0;
 }
 
-/* Round 18 §2 (r18-adv-open.raw) and Round 19 §1 (r19-adv-group.raw): "+ Add filter rule ⌄" is 32 tall. */
+/* Round 18 §2 (r18-adv-open.raw) and Round 19 §1 (r19-adv-group.raw): "+ Add filter rule ⌄" is 32 tall.
+   Round 25 §3 (r25-addrule-btn.raw): text 125,122,117 is 4.27:1, so it takes the AA step of that ink. */
 [data-blok-database-filter-add-rule] {
   height: 32px;
+  color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-filter-add-rule] > [data-blok-database-panel-label] {
+  flex: 0 1 auto;
+}
+
+/* r25-addrule-btn.raw: a 14×14 chevron box 6 after the text. The drawing keeps the chip chevron's 8.6 ink. */
+[data-blok-database-filter-add-rule] > [data-blok-database-chip-chevron] {
+  width: 14px;
+  height: 14px;
+  margin-inline-start: calc(-1 * var(--blok-space-0-5));
+  color: var(--blok-database-table-header-icon);
+}
+
+/* Round 25 §3 (r25-sortbtns.raw, r25-or-btn.raw): sort row and And/Or chevrons are rgb(173,169,163). */
+[data-blok-database-sort-row] > [data-blok-database-panel-row] > [data-blok-database-chip-chevron],
+[data-blok-database-filter-conjunction] > [data-blok-database-chip-chevron] {
+  color: var(--blok-database-table-gutter-icon);
 }
 
 /* notion-motion.md Round 19 §1 (r19-adv-andor.raw): "And ⌄" is a white bordered button like the rule's, in the 60 column. */
 [data-blok-database-filter-conjunction] {
   justify-content: space-between;
-  margin-inline-start: -1px;
-  gap: var(--blok-space-1);
+  gap: var(--blok-space-2);
   height: 32px;
   padding: 0 var(--blok-space-2);
   border: 1px solid var(--blok-database-table-control-border);

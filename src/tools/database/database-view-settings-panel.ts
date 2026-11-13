@@ -2423,8 +2423,13 @@ export class ViewSettingsPages {
     }));
 
     button.setAttribute('data-blok-database-filter-conjunction', '');
+    // Round 25 §3 (r25-or-btn.raw): And/Or sizes to its word and ends where "Where" ends, so a cell holds the column.
+    const cell = document.createElement('span');
 
-    return button;
+    cell.setAttribute('data-blok-database-filter-conjunction-cell', '');
+    cell.append(button);
+
+    return cell;
   }
 
   // ─── Sorts ───

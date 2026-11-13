@@ -1473,6 +1473,8 @@ describe('view settings panel', () => {
 
     expect(tree?.filterRules).toHaveLength(2);
     expect(exists(`database-filter-conjunction-${root()}`)).toBe(true);
+    // notion-motion.md Round 25 §3: And/Or ends where "Where" ends, so it sits in the 60px column's cell.
+    expect(document.querySelector(`[data-blok-testid="database-filter-conjunction-${root()}"]`)?.parentElement?.hasAttribute('data-blok-database-filter-conjunction-cell')).toBe(true);
 
     click(`database-filter-add-rule-${layer2?.id ?? ''}`);
     click('database-filter-add-group');

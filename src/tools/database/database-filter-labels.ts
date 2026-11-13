@@ -3,7 +3,7 @@ import { RELATIVE_DATE_OPERATORS, RELATIVE_DATE_VALUES, parseRelativeSpan } from
 import type { RelativeDateUnit } from './relative-dates';
 import { ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from './database-query';
 import { isPageListRollup } from '../../shared/database/value-helpers';
-import { formatShortDatePart, resolveLocale, toLocalDate } from './cells/date-format';
+import { formatDatePart, formatShortDatePart, resolveLocale, toLocalDate } from './cells/date-format';
 import type { FilterConfig, PropertyDefinition, PropertyType, SortConfig } from './types';
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
@@ -285,18 +285,23 @@ const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?$/;
  * document data, so a day off the calendar ("2026-02-30") stays as saved: the
  * formatter throws on an invalid date, and `Date` would roll it into another day.
  */
-const shortDay = (part: string, locale: string): string => {
+const onCalendar = (part: string): boolean => {
   const match = ISO_DAY.exec(part);
 
-  if (match === null) return part;
+  if (match === null) return false;
   const [, y, m, d, hh = '0', mm = '0'] = match;
   const date = toLocalDate(part);
-  const real = !Number.isNaN(date.getTime())
+
+  return !Number.isNaN(date.getTime())
     && date.getFullYear() === Number(y) && date.getMonth() === Number(m) - 1 && date.getDate() === Number(d)
     && Number(hh) < 24 && Number(mm) < 60;
-
-  return real ? formatShortDatePart(part, locale, undefined, date.getFullYear() !== new Date().getFullYear()) : part;
 };
+
+const shortDay = (part: string, locale: string): string =>
+  (onCalendar(part) ? formatShortDatePart(part, locale, undefined, toLocalDate(part).getFullYear() !== new Date().getFullYear()) : part);
+
+/** A saved day as an advanced rule's button prints it: "March 5, 2025" (Round 20 §2, r20-adv-typed-parts.raw). */
+export const longDay = (part: string, locale: string): string => (onCalendar(part) ? formatDatePart(part, locale) : part);
 
 const isRelativeValue = (value: unknown): value is typeof RELATIVE_DATE_VALUES[number] =>
   typeof value === 'string' && (RELATIVE_DATE_VALUES as readonly string[]).includes(value);

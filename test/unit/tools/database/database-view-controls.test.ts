@@ -681,6 +681,18 @@ describe('DatabaseViewControls', () => {
     expect(q('database-filter-rule-value-r')?.hasAttribute('data-blok-database-filter-placeholder')).toBe(true);
   });
 
+  // notion-motion.md Round 20 §2 (r20-adv-typed-parts.raw): the advanced button prints the long day; the chip keeps "Mar 5, 2025".
+  it('prints an advanced date value as the long day, March 5, 2025', () => {
+    const { controls, saved } = setup({ schema: () => [...schema, { id: 'due', name: 'Due', type: 'date', position: 'a3' }] });
+
+    saved.view = { ...saved.view, filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'r', propertyId: 'due', operator: 'equals', value: '2025-03-05' }] } };
+    controls.refresh();
+    click('database-advanced-pill');
+
+    expect(text(q('database-filter-rule-value-r'))).toBe(new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(2025, 2, 5)));
+    expect(text(q('database-filter-rule-value-r'))).toContain('2025');
+  });
+
   it('drops the placeholder mark once the advanced value is set', () => {
     const { controls, saved } = setup({ schema: () => [...schema, { id: 'done', name: 'Done', type: 'checkbox', position: 'a3' }] });
 

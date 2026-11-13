@@ -21,6 +21,7 @@ import {
   filterPillLabel,
   filterPillParts,
   filterValueText,
+  longDay,
   isQuantifiedText,
   joinOperator,
   keepLead,
@@ -2221,7 +2222,8 @@ export class ViewSettingsPages {
       only.setAttribute('data-blok-database-filter-rule-value', '');
       line.append(only);
     } else if (controls.length > 0) {
-      const shown = filterValueText(node, property, (key, vars) => this.ctx.i18n.t(key, vars), (person) => this.personName(person), (row) => this.ctx.relatedRows?.(property).find((r) => r.id === row)?.title, editorLocale(this.ctx.i18n));
+      const day = DATE_LIKE_TYPES.includes(property.type) && typeof node.value === 'string' && ISO_DAY_VALUE.test(node.value) ? node.value : undefined;
+      const shown = day !== undefined ? longDay(day, editorLocale(this.ctx.i18n)) : filterValueText(node, property, (key, vars) => this.ctx.i18n.t(key, vars), (person) => this.personName(person), (row) => this.ctx.relatedRows?.(property).find((r) => r.id === row)?.title, editorLocale(this.ctx.i18n));
       const valueButton = button(`database-filter-rule-value-${id}`, shown || this.ctx.i18n.t(VALUE_PLACEHOLDER_KEYS[property.type] ?? 'tools.database.filterValue'), (self) => {
         openRuleValueFlyout(self, panel, this.ctx, () => findRule(tree(), id), (patch) => {
           write(updateFilterRule(tree(), id, patch.operator === undefined ? patch : { ...patch, operator: keepLead(findRule(tree(), id)?.operator ?? node.operator, patch.operator) }));
@@ -2905,6 +2907,8 @@ const VALUE_PLACEHOLDER_KEYS: Partial<Record<PropertyType, string>> = {
   createdTime: 'tools.database.filterSelectDate',
   lastEditedTime: 'tools.database.filterSelectDate',
 };
+
+const ISO_DAY_VALUE = /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2})?$/;
 
 const rulesOf = (group: FilterGroup): FilterRule[] =>
   group.filterRules.flatMap((node) => (isFilterGroup(node) ? rulesOf(node) : [node]));

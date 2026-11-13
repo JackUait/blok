@@ -915,8 +915,6 @@
   "tools.file.previewNextPage": "Neste side",
   "tools.file.previewZoomIn": "Zoom inn",
   "tools.file.previewZoomOut": "Zoom ut",
-  "tools.file.previewPrevSlide": "Forrige lysbilde",
-  "tools.file.previewNextSlide": "Neste lysbilde",
   "tools.file.previewSlideN": "Lysbilde {number}",
   "tools.file.previewSum": "Sum",
   "tools.file.previewAverage": "Gjennomsnitt",

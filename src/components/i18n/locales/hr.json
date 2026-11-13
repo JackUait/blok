@@ -916,8 +916,6 @@
   "tools.file.previewNextPage": "Sljedeća stranica",
   "tools.file.previewZoomIn": "Povećaj",
   "tools.file.previewZoomOut": "Smanji",
-  "tools.file.previewPrevSlide": "Prethodni slajd",
-  "tools.file.previewNextSlide": "Sljedeći slajd",
   "tools.file.previewSlideN": "Slajd {number}",
   "tools.file.previewSum": "Zbroj",
   "tools.file.previewAverage": "Prosjek",

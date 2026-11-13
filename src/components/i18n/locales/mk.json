@@ -935,8 +935,6 @@
   "tools.file.previewNextPage": "Следна страница",
   "tools.file.previewZoomIn": "Зголеми",
   "tools.file.previewZoomOut": "Намали",
-  "tools.file.previewPrevSlide": "Претходен слајд",
-  "tools.file.previewNextSlide": "Следен слајд",
   "tools.file.previewSlideN": "Слајд {number}",
   "tools.file.previewSum": "Збир",
   "tools.file.previewAverage": "Просек",

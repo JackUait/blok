@@ -917,8 +917,6 @@
   "tools.file.previewNextPage": "ඊළඟ පිටුව",
   "tools.file.previewZoomIn": "විශාලනය",
   "tools.file.previewZoomOut": "කුඩාකරණය",
-  "tools.file.previewPrevSlide": "පෙර ස්ලයිඩය",
-  "tools.file.previewNextSlide": "ඊළඟ ස්ලයිඩය",
   "tools.file.previewSlideN": "ස්ලයිඩය {number}",
   "tools.file.previewSum": "එකතුව",
   "tools.file.previewAverage": "සාමාන්‍යය",

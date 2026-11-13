@@ -938,8 +938,6 @@
   "tools.file.previewNextPage": "Nākamā lappuse",
   "tools.file.previewZoomIn": "Tuvināt",
   "tools.file.previewZoomOut": "Tālināt",
-  "tools.file.previewPrevSlide": "Iepriekšējais slaids",
-  "tools.file.previewNextSlide": "Nākamais slaids",
   "tools.file.previewSlideN": "Slaids {number}",
   "tools.file.previewSum": "Summa",
   "tools.file.previewAverage": "Vidējais",

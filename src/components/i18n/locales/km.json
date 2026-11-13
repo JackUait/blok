@@ -917,8 +917,6 @@
   "tools.file.previewNextPage": "ទំព័របន្ទាប់",
   "tools.file.previewZoomIn": "ពង្រីក",
   "tools.file.previewZoomOut": "បង្រួម",
-  "tools.file.previewPrevSlide": "ស្លាយមុន",
-  "tools.file.previewNextSlide": "ស្លាយបន្ទាប់",
   "tools.file.previewSlideN": "ស្លាយ {number}",
   "tools.file.previewSum": "ផលបូក",
   "tools.file.previewAverage": "មធ្យមភាគ",

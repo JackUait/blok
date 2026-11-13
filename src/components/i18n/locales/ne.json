@@ -935,8 +935,6 @@
   "tools.file.previewNextPage": "अर्को पृष्ठ",
   "tools.file.previewZoomIn": "जुम इन",
   "tools.file.previewZoomOut": "जुम आउट",
-  "tools.file.previewPrevSlide": "अघिल्लो स्लाइड",
-  "tools.file.previewNextSlide": "अर्को स्लाइड",
   "tools.file.previewSlideN": "स्लाइड {number}",
   "tools.file.previewSum": "योगफल",
   "tools.file.previewAverage": "औसत",

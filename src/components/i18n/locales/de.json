@@ -917,8 +917,6 @@
   "tools.file.previewNextPage": "Nächste Seite",
   "tools.file.previewZoomIn": "Vergrößern",
   "tools.file.previewZoomOut": "Verkleinern",
-  "tools.file.previewPrevSlide": "Vorherige Folie",
-  "tools.file.previewNextSlide": "Nächste Folie",
   "tools.file.previewSlideN": "Folie {number}",
   "tools.file.previewSum": "Summe",
   "tools.file.previewAverage": "Mittelwert",

@@ -915,8 +915,6 @@
   "tools.file.previewNextPage": "หน้าถัดไป",
   "tools.file.previewZoomIn": "ขยาย",
   "tools.file.previewZoomOut": "ย่อ",
-  "tools.file.previewPrevSlide": "สไลด์ก่อนหน้า",
-  "tools.file.previewNextSlide": "สไลด์ถัดไป",
   "tools.file.previewSlideN": "สไลด์ {number}",
   "tools.file.previewSum": "ผลรวม",
   "tools.file.previewAverage": "ค่าเฉลี่ย",

@@ -915,8 +915,6 @@
   "tools.file.previewNextPage": "Nästa sida",
   "tools.file.previewZoomIn": "Zooma in",
   "tools.file.previewZoomOut": "Zooma ut",
-  "tools.file.previewPrevSlide": "Föregående bild",
-  "tools.file.previewNextSlide": "Nästa bild",
   "tools.file.previewSlideN": "Bild {number}",
   "tools.file.previewSum": "Summa",
   "tools.file.previewAverage": "Medelvärde",

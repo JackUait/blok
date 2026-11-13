@@ -943,8 +943,6 @@
   "tools.file.previewNextPage": "Kitas puslapis",
   "tools.file.previewZoomIn": "Priartinti",
   "tools.file.previewZoomOut": "Atitolinti",
-  "tools.file.previewPrevSlide": "Ankstesnė skaidrė",
-  "tools.file.previewNextSlide": "Kita skaidrė",
   "tools.file.previewSlideN": "Skaidrė {number}",
   "tools.file.previewSum": "Suma",
   "tools.file.previewAverage": "Vidurkis",

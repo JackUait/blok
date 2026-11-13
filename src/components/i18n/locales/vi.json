@@ -915,8 +915,6 @@
   "tools.file.previewNextPage": "Trang tiếp theo",
   "tools.file.previewZoomIn": "Phóng to",
   "tools.file.previewZoomOut": "Thu nhỏ",
-  "tools.file.previewPrevSlide": "Trang chiếu trước",
-  "tools.file.previewNextSlide": "Trang chiếu tiếp theo",
   "tools.file.previewSlideN": "Trang chiếu {number}",
   "tools.file.previewSum": "Tổng",
   "tools.file.previewAverage": "Trung bình",

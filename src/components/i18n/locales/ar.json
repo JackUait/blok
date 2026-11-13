@@ -921,8 +921,6 @@
   "tools.file.previewNextPage": "الصفحة التالية",
   "tools.file.previewZoomIn": "تكبير",
   "tools.file.previewZoomOut": "تصغير",
-  "tools.file.previewPrevSlide": "الشريحة السابقة",
-  "tools.file.previewNextSlide": "الشريحة التالية",
   "tools.file.previewSlideN": "الشريحة {number}",
   "tools.file.previewSum": "المجموع",
   "tools.file.previewAverage": "المتوسط",

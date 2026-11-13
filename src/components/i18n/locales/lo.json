@@ -937,8 +937,6 @@
   "tools.file.previewNextPage": "ໜ້າຕໍ່ໄປ",
   "tools.file.previewZoomIn": "ຂະຫຍາຍ",
   "tools.file.previewZoomOut": "ຊູມອອກ",
-  "tools.file.previewPrevSlide": "ສະໄລ້ກ່ອນໜ້າ",
-  "tools.file.previewNextSlide": "ສະໄລ້ຕໍ່ໄປ",
   "tools.file.previewSlideN": "ສະໄລ້ {number}",
   "tools.file.previewSum": "ຜົນລວມ",
   "tools.file.previewAverage": "ຄ່າສະເລ່ຍ",

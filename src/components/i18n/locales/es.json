@@ -916,8 +916,6 @@
   "tools.file.previewNextPage": "Página siguiente",
   "tools.file.previewZoomIn": "Ampliar",
   "tools.file.previewZoomOut": "Reducir",
-  "tools.file.previewPrevSlide": "Diapositiva anterior",
-  "tools.file.previewNextSlide": "Diapositiva siguiente",
   "tools.file.previewSlideN": "Diapositiva {number}",
   "tools.file.previewSum": "Suma",
   "tools.file.previewAverage": "Promedio",

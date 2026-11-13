@@ -917,8 +917,6 @@
   "tools.file.previewNextPage": "ދެން އޮތް ޞަފްޙާ",
   "tools.file.previewZoomIn": "ޒޫމް އިން",
   "tools.file.previewZoomOut": "ޒޫމް އައުޓް",
-  "tools.file.previewPrevSlide": "ކުރީގެ ސްލައިޑް",
-  "tools.file.previewNextSlide": "ދެން އޮތް ސްލައިޑް",
   "tools.file.previewSlideN": "ސްލައިޑް {number}",
   "tools.file.previewSum": "ޖުމްލަ",
   "tools.file.previewAverage": "އެވްރެޖް",

@@ -915,8 +915,6 @@
   "tools.file.previewNextPage": "அடுத்த பக்கம்",
   "tools.file.previewZoomIn": "பெரிதாக்கு",
   "tools.file.previewZoomOut": "சிறிதாக்கு",
-  "tools.file.previewPrevSlide": "முந்தைய ஸ்லைடு",
-  "tools.file.previewNextSlide": "அடுத்த ஸ்லைடு",
   "tools.file.previewSlideN": "ஸ்லைடு {number}",
   "tools.file.previewSum": "கூட்டுத்தொகை",
   "tools.file.previewAverage": "சராசரி",

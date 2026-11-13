@@ -915,8 +915,6 @@
   "tools.file.previewNextPage": "اگلا صفحہ",
   "tools.file.previewZoomIn": "زوم ان",
   "tools.file.previewZoomOut": "زوم آؤٹ",
-  "tools.file.previewPrevSlide": "پچھلی سلائیڈ",
-  "tools.file.previewNextSlide": "اگلی سلائیڈ",
   "tools.file.previewSlideN": "سلائیڈ {number}",
   "tools.file.previewSum": "مجموعہ",
   "tools.file.previewAverage": "اوسط",

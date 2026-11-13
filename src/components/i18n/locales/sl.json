@@ -919,8 +919,6 @@
   "tools.file.previewNextPage": "Naslednja stran",
   "tools.file.previewZoomIn": "Povečaj",
   "tools.file.previewZoomOut": "Pomanjšaj",
-  "tools.file.previewPrevSlide": "Prejšnji diapozitiv",
-  "tools.file.previewNextSlide": "Naslednji diapozitiv",
   "tools.file.previewSlideN": "Diapozitiv {number}",
   "tools.file.previewSum": "Vsota",
   "tools.file.previewAverage": "Povprečje",

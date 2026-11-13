@@ -919,8 +919,6 @@
   "tools.file.previewNextPage": "Следующая страница",
   "tools.file.previewZoomIn": "Увеличить",
   "tools.file.previewZoomOut": "Уменьшить",
-  "tools.file.previewPrevSlide": "Предыдущий слайд",
-  "tools.file.previewNextSlide": "Следующий слайд",
   "tools.file.previewSlideN": "Слайд {number}",
   "tools.file.previewSum": "Сумма",
   "tools.file.previewAverage": "Среднее",

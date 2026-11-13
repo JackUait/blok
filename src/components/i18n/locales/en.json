@@ -757,8 +757,6 @@
   "tools.file.previewNextPage": "Next page",
   "tools.file.previewZoomIn": "Zoom in",
   "tools.file.previewZoomOut": "Zoom out",
-  "tools.file.previewPrevSlide": "Previous slide",
-  "tools.file.previewNextSlide": "Next slide",
   "tools.file.previewSlideN": "Slide {number}",
   "tools.file.previewSum": "Sum",
   "tools.file.previewAverage": "Average",

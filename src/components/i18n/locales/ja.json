@@ -917,8 +917,6 @@
   "tools.file.previewNextPage": "次のページ",
   "tools.file.previewZoomIn": "拡大",
   "tools.file.previewZoomOut": "縮小",
-  "tools.file.previewPrevSlide": "前のスライド",
-  "tools.file.previewNextSlide": "次のスライド",
   "tools.file.previewSlideN": "スライド {number}",
   "tools.file.previewSum": "合計",
   "tools.file.previewAverage": "平均",

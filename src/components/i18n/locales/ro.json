@@ -918,8 +918,6 @@
   "tools.file.previewNextPage": "Pagina următoare",
   "tools.file.previewZoomIn": "Mărește",
   "tools.file.previewZoomOut": "Micșorează",
-  "tools.file.previewPrevSlide": "Diapozitivul anterior",
-  "tools.file.previewNextSlide": "Diapozitivul următor",
   "tools.file.previewSlideN": "Diapozitivul {number}",
   "tools.file.previewSum": "Sumă",
   "tools.file.previewAverage": "Medie",

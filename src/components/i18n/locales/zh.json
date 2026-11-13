@@ -915,8 +915,6 @@
   "tools.file.previewNextPage": "下一页",
   "tools.file.previewZoomIn": "放大",
   "tools.file.previewZoomOut": "缩小",
-  "tools.file.previewPrevSlide": "上一张幻灯片",
-  "tools.file.previewNextSlide": "下一张幻灯片",
   "tools.file.previewSlideN": "幻灯片 {number}",
   "tools.file.previewSum": "求和",
   "tools.file.previewAverage": "平均值",

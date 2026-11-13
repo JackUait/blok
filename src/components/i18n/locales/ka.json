@@ -917,8 +917,6 @@
   "tools.file.previewNextPage": "შემდეგი გვერდი",
   "tools.file.previewZoomIn": "გადიდება",
   "tools.file.previewZoomOut": "დაპატარავება",
-  "tools.file.previewPrevSlide": "წინა სლაიდი",
-  "tools.file.previewNextSlide": "შემდეგი სლაიდი",
   "tools.file.previewSlideN": "სლაიდი {number}",
   "tools.file.previewSum": "ჯამი",
   "tools.file.previewAverage": "საშუალო",

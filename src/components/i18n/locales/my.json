@@ -935,8 +935,6 @@
   "tools.file.previewNextPage": "နောက်စာမျက်နှာ",
   "tools.file.previewZoomIn": "ချဲ့",
   "tools.file.previewZoomOut": "ချုံ့",
-  "tools.file.previewPrevSlide": "ယခင်ဆလိုက်",
-  "tools.file.previewNextSlide": "နောက်ဆလိုက်",
   "tools.file.previewSlideN": "ဆလိုက် {number}",
   "tools.file.previewSum": "ပေါင်းလဒ်",
   "tools.file.previewAverage": "ပျမ်းမျှ",

@@ -915,8 +915,6 @@
   "tools.file.previewNextPage": "Järgmine lehekülg",
   "tools.file.previewZoomIn": "Suumi sisse",
   "tools.file.previewZoomOut": "Suumi välja",
-  "tools.file.previewPrevSlide": "Eelmine slaid",
-  "tools.file.previewNextSlide": "Järgmine slaid",
   "tools.file.previewSlideN": "Slaid {number}",
   "tools.file.previewSum": "Summa",
   "tools.file.previewAverage": "Keskmine",

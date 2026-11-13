@@ -929,8 +929,6 @@ describe('FileTool mutants', () => {
           nextPage: 'tools.file.previewNextPage',
           zoomIn: 'tools.file.previewZoomIn',
           zoomOut: 'tools.file.previewZoomOut',
-          prevSlide: 'tools.file.previewPrevSlide',
-          nextSlide: 'tools.file.previewNextSlide',
           slideN: 'tools.file.previewSlideN',
           sum: 'tools.file.previewSum',
           average: 'tools.file.previewAverage',

@@ -915,8 +915,6 @@
   "tools.file.previewNextPage": "كېيىنكى بەت",
   "tools.file.previewZoomIn": "چوڭايتىش",
   "tools.file.previewZoomOut": "كىچىكلىتىش",
-  "tools.file.previewPrevSlide": "ئالدىنقى تام تەسۋىر",
-  "tools.file.previewNextSlide": "كېيىنكى تام تەسۋىر",
   "tools.file.previewSlideN": "تام تەسۋىر {number}",
   "tools.file.previewSum": "يىغىندى",
   "tools.file.previewAverage": "ئوتتۇرىچە",

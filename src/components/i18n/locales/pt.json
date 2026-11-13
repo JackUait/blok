@@ -918,8 +918,6 @@
   "tools.file.previewNextPage": "Próxima página",
   "tools.file.previewZoomIn": "Ampliar",
   "tools.file.previewZoomOut": "Reduzir",
-  "tools.file.previewPrevSlide": "Slide anterior",
-  "tools.file.previewNextSlide": "Próximo slide",
   "tools.file.previewSlideN": "Slide {number}",
   "tools.file.previewSum": "Soma",
   "tools.file.previewAverage": "Média",

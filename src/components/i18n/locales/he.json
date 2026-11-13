@@ -916,8 +916,6 @@
   "tools.file.previewNextPage": "העמוד הבא",
   "tools.file.previewZoomIn": "התקרב",
   "tools.file.previewZoomOut": "התרחק",
-  "tools.file.previewPrevSlide": "השקופית הקודמת",
-  "tools.file.previewNextSlide": "השקופית הבאה",
   "tools.file.previewSlideN": "שקופית {number}",
   "tools.file.previewSum": "סכום",
   "tools.file.previewAverage": "ממוצע",

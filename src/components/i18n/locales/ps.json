@@ -917,8 +917,6 @@
   "tools.file.previewNextPage": "بله پاڼه",
   "tools.file.previewZoomIn": "زوم زیات کړئ",
   "tools.file.previewZoomOut": "زوم کم کړئ",
-  "tools.file.previewPrevSlide": "پخوانی سلایډ",
-  "tools.file.previewNextSlide": "بل سلایډ",
   "tools.file.previewSlideN": "سلایډ {number}",
   "tools.file.previewSum": "مجموعه",
   "tools.file.previewAverage": "اوسط",

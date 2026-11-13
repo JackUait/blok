@@ -28,8 +28,6 @@ export interface PreviewLabels {
   nextPage: string;
   zoomIn: string;
   zoomOut: string;
-  prevSlide: string;
-  nextSlide: string;
   slideN: string;
   sum: string;
   average: string;
@@ -69,8 +67,6 @@ export const DEFAULT_PREVIEW_LABELS: PreviewLabels = {
   nextPage: 'Next page',
   zoomIn: 'Zoom in',
   zoomOut: 'Zoom out',
-  prevSlide: 'Previous slide',
-  nextSlide: 'Next slide',
   slideN: 'Slide {number}',
   sum: 'Sum',
   average: 'Average',

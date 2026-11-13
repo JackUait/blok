@@ -915,8 +915,6 @@
   "tools.file.previewNextPage": "अगला पृष्ठ",
   "tools.file.previewZoomIn": "ज़ूम इन",
   "tools.file.previewZoomOut": "ज़ूम आउट",
-  "tools.file.previewPrevSlide": "पिछली स्लाइड",
-  "tools.file.previewNextSlide": "अगली स्लाइड",
   "tools.file.previewSlideN": "स्लाइड {number}",
   "tools.file.previewSum": "योग",
   "tools.file.previewAverage": "औसत",

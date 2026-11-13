@@ -283,7 +283,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2184 + 147 + 549 + 5 closure for all 2885 keys', () => {
+  it('rebuilds a disjoint 2182 + 147 + 549 + 5 closure for all 2883 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -297,7 +297,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2885);
+    expect(lifecycle.size).toBe(2883);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -529,11 +529,11 @@ describe('current English catalog lifecycle coverage', () => {
       // -1: tools.audio.coverOrDropHere has no caller: the ink well shows the uploader's sentence (coverHint). Still shipped.
       // -1: the audio error card dropped its badge; tools.audio.errorBadge has no caller now. Still shipped.
       // +22: every media error card has a title and a detail: the audio (10), file (8) and video (4) error*Title / error*Detail keys, by literal.
-      // +30: the file preview's counts, pager, zoom, slide, status bar, table, wrap, copy, outline and log filter labels (tools.file.preview*), by literal.
+      // +28: the file preview's counts, pager, zoom, slide, status bar, table, wrap, copy, outline and log filter labels (tools.file.preview*), by literal.
       // +1: a negated filter chip reads "Not Red" (tools.database.filterPillNot), by literal.
       // +4: a dated filter chip reads "Before Nov 10" (tools.database.filterPillBefore, After, OnOrBefore, OnOrAfter), by literal.
       // +8: a one-unit relative date chip reads "Past week" (tools.database.filterRelativePast*/Next* per unit), by literal.
-      'executable-literal': 2184,
+      'executable-literal': 2182,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

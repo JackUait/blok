@@ -915,8 +915,6 @@
   "tools.file.previewNextPage": "صفحه بعدی",
   "tools.file.previewZoomIn": "بزرگ‌نمایی",
   "tools.file.previewZoomOut": "کوچک‌نمایی",
-  "tools.file.previewPrevSlide": "اسلاید قبلی",
-  "tools.file.previewNextSlide": "اسلاید بعدی",
   "tools.file.previewSlideN": "اسلاید {number}",
   "tools.file.previewSum": "مجموع",
   "tools.file.previewAverage": "میانگین",

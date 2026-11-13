@@ -917,8 +917,6 @@
   "tools.file.previewNextPage": "Næste side",
   "tools.file.previewZoomIn": "Zoom ind",
   "tools.file.previewZoomOut": "Zoom ud",
-  "tools.file.previewPrevSlide": "Forrige dias",
-  "tools.file.previewNextSlide": "Næste dias",
   "tools.file.previewSlideN": "Dias {number}",
   "tools.file.previewSum": "Sum",
   "tools.file.previewAverage": "Gennemsnit",

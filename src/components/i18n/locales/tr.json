@@ -915,8 +915,6 @@
   "tools.file.previewNextPage": "Sonraki sayfa",
   "tools.file.previewZoomIn": "Yakınlaştır",
   "tools.file.previewZoomOut": "Uzaklaştır",
-  "tools.file.previewPrevSlide": "Önceki slayt",
-  "tools.file.previewNextSlide": "Sonraki slayt",
   "tools.file.previewSlideN": "Slayt {number}",
   "tools.file.previewSum": "Toplam",
   "tools.file.previewAverage": "Ortalama",

@@ -915,8 +915,6 @@
   "tools.file.previewNextPage": "Következő oldal",
   "tools.file.previewZoomIn": "Nagyítás",
   "tools.file.previewZoomOut": "Kicsinyítés",
-  "tools.file.previewPrevSlide": "Előző dia",
-  "tools.file.previewNextSlide": "Következő dia",
   "tools.file.previewSlideN": "{number}. dia",
   "tools.file.previewSum": "Összeg",
   "tools.file.previewAverage": "Átlag",

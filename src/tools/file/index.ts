@@ -550,8 +550,6 @@ export class FileTool implements BlockTool {
         nextPage: this.api.i18n.t('tools.file.previewNextPage'),
         zoomIn: this.api.i18n.t('tools.file.previewZoomIn'),
         zoomOut: this.api.i18n.t('tools.file.previewZoomOut'),
-        prevSlide: this.api.i18n.t('tools.file.previewPrevSlide'),
-        nextSlide: this.api.i18n.t('tools.file.previewNextSlide'),
         slideN: this.api.i18n.t('tools.file.previewSlideN', { number: '{number}' }),
         sum: this.api.i18n.t('tools.file.previewSum'),
         average: this.api.i18n.t('tools.file.previewAverage'),

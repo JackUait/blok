@@ -917,8 +917,6 @@
   "tools.file.previewNextPage": "ቀጣይ ገጽ",
   "tools.file.previewZoomIn": "አጉላ",
   "tools.file.previewZoomOut": "አሳንስ",
-  "tools.file.previewPrevSlide": "ቀዳሚ ስላይድ",
-  "tools.file.previewNextSlide": "ቀጣይ ስላይድ",
   "tools.file.previewSlideN": "ስላይድ {number}",
   "tools.file.previewSum": "ድምር",
   "tools.file.previewAverage": "አማካይ",

@@ -757,8 +757,6 @@
   "tools.file.previewNextPage": "下一頁",
   "tools.file.previewZoomIn": "放大",
   "tools.file.previewZoomOut": "縮小",
-  "tools.file.previewPrevSlide": "上一張投影片",
-  "tools.file.previewNextSlide": "下一張投影片",
   "tools.file.previewSlideN": "投影片 {number}",
   "tools.file.previewSum": "總和",
   "tools.file.previewAverage": "平均值",

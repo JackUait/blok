@@ -917,8 +917,6 @@
   "tools.file.previewNextPage": "পরবর্তী পৃষ্ঠা",
   "tools.file.previewZoomIn": "জুম ইন",
   "tools.file.previewZoomOut": "জুম আউট",
-  "tools.file.previewPrevSlide": "আগের স্লাইড",
-  "tools.file.previewNextSlide": "পরবর্তী স্লাইড",
   "tools.file.previewSlideN": "স্লাইড {number}",
   "tools.file.previewSum": "যোগফল",
   "tools.file.previewAverage": "গড়",

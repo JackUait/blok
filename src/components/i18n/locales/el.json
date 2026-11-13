@@ -917,8 +917,6 @@
   "tools.file.previewNextPage": "Επόμενη σελίδα",
   "tools.file.previewZoomIn": "Μεγέθυνση",
   "tools.file.previewZoomOut": "Σμίκρυνση",
-  "tools.file.previewPrevSlide": "Προηγούμενη διαφάνεια",
-  "tools.file.previewNextSlide": "Επόμενη διαφάνεια",
   "tools.file.previewSlideN": "Διαφάνεια {number}",
   "tools.file.previewSum": "Άθροισμα",
   "tools.file.previewAverage": "Μέσος όρος",

@@ -915,8 +915,6 @@
   "tools.file.previewNextPage": "Seuraava sivu",
   "tools.file.previewZoomIn": "Lähennä",
   "tools.file.previewZoomOut": "Loitonna",
-  "tools.file.previewPrevSlide": "Edellinen dia",
-  "tools.file.previewNextSlide": "Seuraava dia",
   "tools.file.previewSlideN": "Dia {number}",
   "tools.file.previewSum": "Summa",
   "tools.file.previewAverage": "Keskiarvo",

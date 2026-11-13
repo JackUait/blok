@@ -918,8 +918,6 @@
   "tools.file.previewNextPage": "Pagina successiva",
   "tools.file.previewZoomIn": "Zoom avanti",
   "tools.file.previewZoomOut": "Zoom indietro",
-  "tools.file.previewPrevSlide": "Diapositiva precedente",
-  "tools.file.previewNextSlide": "Diapositiva successiva",
   "tools.file.previewSlideN": "Diapositiva {number}",
   "tools.file.previewSum": "Somma",
   "tools.file.previewAverage": "Media",

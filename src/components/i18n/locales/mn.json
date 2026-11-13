@@ -935,8 +935,6 @@
   "tools.file.previewNextPage": "Дараагийн хуудас",
   "tools.file.previewZoomIn": "Томруулах",
   "tools.file.previewZoomOut": "Жижигрүүлэх",
-  "tools.file.previewPrevSlide": "Өмнөх слайд",
-  "tools.file.previewNextSlide": "Дараагийн слайд",
   "tools.file.previewSlideN": "Слайд {number}",
   "tools.file.previewSum": "Нийлбэр",
   "tools.file.previewAverage": "Дундаж",

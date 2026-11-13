@@ -919,8 +919,6 @@
   "tools.file.previewNextPage": "Następna strona",
   "tools.file.previewZoomIn": "Powiększ",
   "tools.file.previewZoomOut": "Pomniejsz",
-  "tools.file.previewPrevSlide": "Poprzedni slajd",
-  "tools.file.previewNextSlide": "Następny slajd",
   "tools.file.previewSlideN": "Slajd {number}",
   "tools.file.previewSum": "Suma",
   "tools.file.previewAverage": "Średnia",

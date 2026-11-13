@@ -12,7 +12,7 @@ import { createCardPreview } from './database-card-preview';
 import type { BodyBlock } from './row-body';
 import { resolveBoardCardPreview, resolveCardLayout, resolveCardSize, resolveFitImage, resolveViewProperties } from './view-settings';
 import { getElementDirection } from '../../components/utils/direction';
-import { IconPlus, IconPencilLine, IconDotsHorizontal, IconChevronDown, IconPage, IconSidebarRight } from '../../components/icons';
+import { IconPlus, IconPencilLine, IconDotsHorizontal, IconChevronDown, IconPage, IconPin, IconPinFilled, IconSidebarRight } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
 import { onHover } from '../../components/utils/tooltip';
 import { onPropertyHover } from './property-hint';
@@ -59,6 +59,8 @@ interface DatabaseBoardViewOptions {
   addCardLabel?: string;
   /** A lasso from the margin or a drag box over empty board space: these cards become the selection. Absent when read-only. */
   lassoRows?: (rowIds: string[]) => void;
+  /** The view's pinned groups in group order, hidden ones included, each with its row count. */
+  pinnedGroups?: Array<{ option: SelectOption; count: number }>;
 }
 
 /** A card title edit in progress, carried across a redraw so typed text is not lost. */
@@ -123,7 +125,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   private readonly hideCounts: boolean;
   private readonly aggregate: ((optionId: string) => string) | undefined;
   private readonly aggregateHint: string | undefined;
-  private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups' | 'onLaneToggle' | 'cellContext' | 'getTotal' | 'onLoadMore' | 'commentBadges' | 'addCardLabel' | 'lassoRows'>;
+  private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups' | 'onLaneToggle' | 'cellContext' | 'getTotal' | 'onLoadMore' | 'commentBadges' | 'addCardLabel' | 'lassoRows' | 'pinnedGroups'>;
   private root: HTMLElement | null = null;
   private box: { startX: number; startY: number; el: HTMLElement | null; picked: string | null } | null = null;
   private readonly editHints = new WeakMap<HTMLElement, HTMLElement>();
@@ -188,6 +190,12 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     }
 
     // A board drops a hidden column without a trace (findings-board B25, notion-motion.md Round 24 §1); Settings › Group lists it.
+    const pinned = this.settings.pinnedGroups ?? [];
+    // notion-motion.md Round 24 §1: "+ New group" and "Pinned groups" share one strip after the last column.
+    const strip = !this.readOnly && pinned.length > 0 && lanes === undefined ? document.createElement('div') : null;
+
+    strip?.setAttribute('data-blok-database-group-strip', '');
+
     // Notion's Status board has no add-group button (findings-board B04).
     if (!this.readOnly && !this.isStatusBoard) {
       const addColumnBtn = document.createElement('button');
@@ -199,7 +207,12 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       addColumnIcon.setAttribute('data-blok-database-add-column-icon', '');
       addColumnIcon.innerHTML = IconPlus;
       addColumnBtn.append(addColumnIcon, this.i18n.t('tools.database.newGroup'));
-      buttonRow.appendChild(addColumnBtn);
+      (strip ?? buttonRow).appendChild(addColumnBtn);
+    }
+
+    if (strip !== null) {
+      strip.appendChild(this.createPinnedGroups(pinned));
+      buttonRow.appendChild(strip);
     }
 
     wrapper.appendChild(boardArea);
@@ -665,6 +678,57 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   }
 
   /** The pill, the row count and, when editable, the header buttons. */
+  /**
+   * notion-motion.md Round 24 §1 (r24-pinsec-1.raw): a "Pinned groups" header, then one row per group: its pill and
+   * count (a click opens the group), and an Unpin button. The tool handles the clicks by attribute.
+   */
+  private createPinnedGroups(pinned: Array<{ option: SelectOption; count: number }>): HTMLElement {
+    const section = document.createElement('div');
+    const header = document.createElement('button');
+    const headerIcon = document.createElement('span');
+
+    section.setAttribute('data-blok-database-pinned-groups', '');
+    header.type = 'button';
+    header.setAttribute('data-blok-database-pinned-groups-header', '');
+    headerIcon.setAttribute('aria-hidden', 'true');
+    headerIcon.innerHTML = IconPin;
+    header.append(headerIcon, this.i18n.t('tools.database.pinnedGroups'));
+    section.appendChild(header);
+
+    for (const { option, count } of pinned) {
+      const line = document.createElement('div');
+      const open = document.createElement('button');
+      const pill = document.createElement('span');
+      const countEl = document.createElement('span');
+      const unpin = document.createElement('button');
+      const color = this.isStatusBoard && option.id !== NO_VALUE_GROUP_KEY ? shownStatusOption(option).color : option.color;
+
+      line.setAttribute('data-blok-database-pinned-group', '');
+      line.setAttribute('data-option-id', option.id);
+      open.type = 'button';
+      open.setAttribute('data-blok-database-pinned-group-open', '');
+      open.setAttribute('data-option-id', option.id);
+      pill.setAttribute('data-blok-database-pinned-group-pill', '');
+      pill.textContent = option.label;
+      if (color !== undefined) {
+        pill.style.backgroundColor = `var(--blok-database-option-${color}-bg)`;
+        pill.style.color = `var(--blok-database-option-${color}-text)`;
+      }
+      countEl.setAttribute('data-blok-database-pinned-group-count', '');
+      countEl.textContent = String(count);
+      open.append(pill, countEl);
+      unpin.type = 'button';
+      unpin.setAttribute('data-blok-database-pinned-group-unpin', '');
+      unpin.setAttribute('data-option-id', option.id);
+      unpin.setAttribute('aria-label', this.i18n.t('tools.database.groupUnpin'));
+      unpin.innerHTML = IconPinFilled;
+      line.append(open, unpin);
+      section.appendChild(line);
+    }
+
+    return section;
+  }
+
   private createColumnHeader(option: SelectOption, count: number): HTMLElement {
     const header = document.createElement('div');
 

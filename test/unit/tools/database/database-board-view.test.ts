@@ -301,6 +301,38 @@ describe('DatabaseBoardView', () => {
       expect(count()?.hasAttribute('hidden')).toBe(false);
     });
 
+    // notion-motion.md Round 24 §1 (r24-pinsec-1.raw, r24-pinsec-two.raw): "Pinned groups" sits under "+ New group",
+    // one row per pinned group in the order given (group order), each with its pill, count and an Unpin button.
+    it('lists pinned groups under the add-group button', () => {
+      const board = new DatabaseBoardView({
+        readOnly: false, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title',
+        pinnedGroups: [
+          { option: makeOption({ id: 'red', label: 'Red', color: 'red' }), count: 1 },
+          { option: makeOption({ id: 'pz', label: 'Pz' }), count: 0 },
+        ],
+      }).createView();
+      const strip = board.querySelector('[data-blok-database-group-strip]');
+      const lines = [...board.querySelectorAll<HTMLElement>('[data-blok-database-pinned-group]')];
+
+      expect(strip?.firstElementChild?.hasAttribute('data-blok-database-add-column')).toBe(true);
+      expect(strip?.querySelector('[data-blok-database-pinned-groups-header]')?.textContent?.trim()).toBe('tools.database.pinnedGroups');
+      expect(lines.map((line) => [line.getAttribute('data-option-id'), line.querySelector('[data-blok-database-pinned-group-open]')?.textContent])).toEqual([
+        ['red', 'Red1'],
+        ['pz', 'Pz0'],
+      ]);
+      expect(lines[0].querySelector('[data-blok-database-pinned-group-unpin]')?.getAttribute('aria-label')).toBe('tools.database.groupUnpin');
+    });
+
+    it('draws no pinned strip without pins or in read-only', () => {
+      const plain = new DatabaseBoardView({ readOnly: false, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title' }).createView();
+      const readOnly = new DatabaseBoardView({
+        readOnly: true, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title', pinnedGroups: [{ option: makeOption(), count: 0 }],
+      }).createView();
+
+      expect(plain.querySelector('[data-blok-database-group-strip]')).toBeNull();
+      expect(readOnly.querySelector('[data-blok-database-pinned-groups]')).toBeNull();
+    });
+
     // notion-motion.md Round 24 §1 (r24-pin-and-hidden.png): a Select board shows no trace of its hidden groups.
     // Settings › Group shows them again.
     it('offers no hidden-groups button on a Select board', () => {

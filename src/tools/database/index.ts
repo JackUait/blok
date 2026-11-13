@@ -185,7 +185,7 @@ import { openFilterList } from './database-view-settings-panel';
 import type { DatabasePanel } from './database-panel';
 import { registerGroupToggle } from './database-group-toggle';
 import { GROUPABLE_TYPES, defaultGroupSort, groupValueForKey } from './group-keys';
-import { resolveRowColors } from './view-data';
+import { resolveRowColors, withGroupFlags } from './view-data';
 import { groupLabel } from './database-group-labels';
 import { buildChartData, foldChartData } from './chart-data';
 import type { ChartGroupInput, ChartPoint, ChartSeriesInput } from './chart-data';
@@ -373,6 +373,7 @@ const ROW_CONTROL_SELECTOR = [
   '[data-blok-database-column-menu]',
   '[data-blok-database-column-count]',
   '[data-blok-database-add-column]',
+  '[data-blok-database-pinned-groups]',
   '[data-blok-database-card-menu]',
   '[data-blok-database-list-row-handle]',
   '[data-blok-database-add-row]',
@@ -7158,6 +7159,7 @@ export class DatabaseTool implements BlockTool {
       },
       titlePropertyId: titlePropId,
       hideCounts: viewConfig?.hideGroupAggregation === true,
+      ...(viewConfig !== undefined && groupByPropId !== undefined ? { pinnedGroups: this.pinnedBoardGroups(viewConfig, groupByPropId) } : {}),
       ...(aggregate !== undefined && calculation !== undefined
         ? { aggregate, aggregateHint: groupCalculationHint(calculation, localSchema, this.api.i18n) }
         : {}),
@@ -7187,6 +7189,21 @@ export class DatabaseTool implements BlockTool {
     }
 
     return boardEl;
+  }
+
+  /**
+   * notion-motion.md Round 24 §1: the view's pinned groups in group order, with their row counts. A hidden group and
+   * one "Hide empty groups" drops stay listed; a pin whose group is gone is skipped.
+   */
+  private pinnedBoardGroups(view: DatabaseViewConfig, groupByPropId: string): Array<{ option: SelectOption; count: number }> {
+    const pins = new Set((view.pinnedGroups ?? []).map((group) => group.id));
+
+    if (pins.size === 0) return [];
+    const unhidden = { ...view, groupSettings: { ...view.groupSettings, hideEmptyGroups: false } };
+    const options = this.groupOptions(groupByPropId, unhidden).filter((option) => pins.has(option.id));
+    const rows = this.queryGroupRows(view, options.map((option) => option.id));
+
+    return options.map((option) => ({ option, count: rows.get(option.id)?.length ?? 0 }));
   }
 
   /** Notion shows "Load more groups" past ten groups (research/08). */
@@ -9320,6 +9337,27 @@ export class DatabaseTool implements BlockTool {
           event.stopPropagation();
           this.openGroupMenu(groupMenuBtn, optionId);
         }
+
+        return;
+      }
+
+      const pinnedHeader = target.closest<HTMLElement>('[data-blok-database-pinned-groups-header]');
+
+      if (pinnedHeader !== null) {
+        event.stopPropagation();
+        this.controls.openSettingsPage('group', pinnedHeader);
+
+        return;
+      }
+
+      const unpinBtn = target.closest<HTMLElement>('[data-blok-database-pinned-group-unpin]');
+      const unpinId = unpinBtn?.getAttribute('data-option-id');
+
+      if (unpinId !== null && unpinId !== undefined) {
+        const view = this.shownView();
+
+        event.stopPropagation();
+        if (view !== undefined) this.updateActiveView(withGroupFlags(view, [unpinId], { pinned: false }));
 
         return;
       }

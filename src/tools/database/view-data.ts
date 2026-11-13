@@ -111,16 +111,18 @@ export const isGroupHidden = (view: DatabaseViewConfig, key: string): boolean =>
 
 export const isGroupCollapsed = (view: DatabaseViewConfig, key: string): boolean => hasRef(view.collapsedGroups, key);
 
+export const isGroupPinned = (view: DatabaseViewConfig, key: string): boolean => hasRef(view.pinnedGroups, key);
+
 /**
- * The `hiddenGroups` / `collapsedGroups` lists after showing, hiding,
- * folding or opening some groups. A key is in a list or not; entries are id
+ * The `hiddenGroups` / `collapsedGroups` / `pinnedGroups` lists after showing,
+ * hiding, folding, opening, pinning or unpinning some groups. A key is in a list or not; entries are id
  * objects, so two peers' adds merge. A sub-group's key starts with `sub:`.
  */
 export const withGroupFlags = (
   view: DatabaseViewConfig,
   keys: readonly string[],
-  patch: { hidden?: boolean; collapsed?: boolean }
-): Partial<Pick<DatabaseViewConfig, 'hiddenGroups' | 'collapsedGroups'>> => {
+  patch: { hidden?: boolean; collapsed?: boolean; pinned?: boolean }
+): Partial<Pick<DatabaseViewConfig, 'hiddenGroups' | 'collapsedGroups' | 'pinnedGroups'>> => {
   const apply = (list: GroupRef[] | undefined, on: boolean): GroupRef[] => {
     const current = (list ?? []).map((group) => ({ ...group }));
 
@@ -132,6 +134,7 @@ export const withGroupFlags = (
   return {
     ...(patch.hidden !== undefined ? { hiddenGroups: apply(view.hiddenGroups, patch.hidden) } : {}),
     ...(patch.collapsed !== undefined ? { collapsedGroups: apply(view.collapsedGroups, patch.collapsed) } : {}),
+    ...(patch.pinned !== undefined ? { pinnedGroups: apply(view.pinnedGroups, patch.pinned) } : {}),
   };
 };
 

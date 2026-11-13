@@ -772,6 +772,7 @@ export const DATABASE_DATA = {
           },
           hiddenGroups: GROUP_REFS,
           collapsedGroups: GROUP_REFS,
+          pinnedGroups: { ...GROUP_REFS, description: 'Board: groups listed under "Pinned groups", shown in group order. Pinning does not move a column.' },
           hideGroupAggregation: { type: 'boolean' },
           groupCalculation: {
             ...VIEW_CALCULATION,

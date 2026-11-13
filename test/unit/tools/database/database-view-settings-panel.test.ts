@@ -1704,6 +1704,33 @@ describe('view settings panel', () => {
     expect(eye('none')?.getAttribute('aria-label')).toBe('tools.database.groupHide');
   });
 
+  // notion-motion.md Round 24 §1 (r24-grp.raw, r24-pinpz.raw): a board group row has a 24px "Pin group" button before
+  // its eye. A click pins it and the button reads "Unpin group".
+  it('pins a board group from its row and unpins it again', () => {
+    const h = harness({ type: 'board', groupBy: 'stage' });
+
+    h.open('group');
+    const pin = (): Element | null => document.querySelector('[data-blok-testid="database-group-pin-o1"]');
+
+    expect(pin()?.nextElementSibling?.getAttribute('data-blok-testid')).toBe('database-group-visible-o1');
+    expect(pin()?.getAttribute('aria-label')).toBe('tools.database.groupPin');
+
+    click('database-group-pin-o1');
+
+    expect(h.state.view.pinnedGroups).toEqual([{ id: 'o1' }]);
+    expect(pin()?.getAttribute('aria-label')).toBe('tools.database.groupUnpin');
+
+    click('database-group-pin-o1');
+
+    expect(h.state.view.pinnedGroups).toEqual([]);
+  });
+
+  it('offers no pin on a table\'s groups', () => {
+    harness({ type: 'table', groupBy: 'stage' }).open('group');
+
+    expect(document.querySelector('[data-blok-testid="database-group-pin-o1"]')).toBeNull();
+  });
+
   it('puts Hide all on the Groups label row', () => {
     harness({ type: 'board', groupBy: 'stage' }).open('group');
 

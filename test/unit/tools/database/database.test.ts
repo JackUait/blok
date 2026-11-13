@@ -4302,6 +4302,54 @@ describe('DatabaseTool', () => {
       views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [], ...overrides }],
     });
 
+    // notion-motion.md Round 24 §1: the strip lists pins in group order (r24-pinsec-two.raw), keeps a hidden one
+    // (r24-pinsec-pinhidden.raw) and moves no column (r24-pin-pz.raw).
+    describe('pinned groups', () => {
+      const pinnedLines = (element: HTMLElement): Array<[string | null, string | undefined]> =>
+        queryAllByData(element, 'data-blok-database-pinned-group')
+          .map((line) => [line.getAttribute('data-option-id'), line.querySelector('[data-blok-database-pinned-group-count]')?.textContent ?? undefined]);
+
+      it('lists pins in group order with their counts, a hidden one included, and moves no column', () => {
+        const { tool, element } = board(false, boardView({ pinnedGroups: [{ id: 'opt-done' }, { id: 'opt-todo' }], hiddenGroups: [{ id: 'opt-done' }] }));
+
+        expect(pinnedLines(element)).toEqual([['opt-todo', '2'], ['opt-done', '1']]);
+        expect(columnIds(element)).toEqual(['opt-todo', 'opt-doing', NO_VALUE_GROUP_KEY]);
+
+        tool.destroy();
+      });
+
+      it('keeps a pinned group listed when Hide empty groups drops its column', () => {
+        const { tool, element } = board(false, boardView({ pinnedGroups: [{ id: 'opt-doing' }], groupSettings: { hideEmptyGroups: true } }));
+
+        expect(columnIds(element)).not.toContain('opt-doing');
+        expect(pinnedLines(element)).toEqual([['opt-doing', '0']]);
+
+        tool.destroy();
+      });
+
+      it('unpins a group from its strip row', () => {
+        const { tool, element } = board(false, boardView({ pinnedGroups: [{ id: 'opt-todo' }] }));
+
+        queryByData(element, 'data-blok-database-pinned-group-unpin')?.click();
+
+        expect(tool.save(element).views[0].pinnedGroups).toEqual([]);
+        expect(queryByData(element, 'data-blok-database-pinned-groups')).toBeNull();
+
+        tool.destroy();
+      });
+
+      // Round 24 §1 (r24-pinhdr-click.raw): the header opens View settings › Group.
+      it('opens the group settings from the strip header', () => {
+        const { tool, element } = board(false, boardView({ pinnedGroups: [{ id: 'opt-todo' }] }));
+
+        queryByData(element, 'data-blok-database-pinned-groups-header')?.click();
+
+        expect(document.querySelector('[data-blok-testid="database-group-pin-opt-todo"]')).not.toBeNull();
+
+        tool.destroy();
+      });
+    });
+
     const countOf = (element: HTMLElement, optionId: string): HTMLElement | undefined =>
       queryAllByData(element, 'data-blok-database-column')
         .find((col) => col.getAttribute('data-option-id') === optionId)

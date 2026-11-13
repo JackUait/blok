@@ -4543,6 +4543,23 @@
                   }
                 }
               },
+              "pinnedGroups": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "Option id of the group."
+                    }
+                  }
+                },
+                "description": "Board: groups listed under \"Pinned groups\", shown in group order. Pinning does not move a column."
+              },
               "hideGroupAggregation": {
                 "type": "boolean"
               },

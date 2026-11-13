@@ -1,4 +1,4 @@
-import { IconBolt, IconCalendar, IconCheck, IconChevronDown, IconChevronRight, IconChevronUpDown, IconCopy, IconCross, IconDatabase, IconDotsHorizontal, IconEyeSlash, IconFilter, IconGallery, IconLink, IconListBulleted, IconLock, IconPaintRoller, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
+import { IconBolt, IconCalendar, IconCheck, IconChevronDown, IconChevronRight, IconChevronUpDown, IconCopy, IconCross, IconDatabase, IconDotsHorizontal, IconEyeSlash, IconFilter, IconGallery, IconLink, IconListBulleted, IconLock, IconPaintRoller, IconPin, IconPinFilled, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
 import type { I18n } from '../../../types';
 import { onHover } from '../../components/utils/tooltip';
 import {
@@ -57,7 +57,7 @@ import {
 import { DEFAULT_RANGE, GROUPABLE_TYPES, defaultGroupSort, groupByChange, rangeOf, subGroupByChange } from './group-keys';
 import { RELATIVE_DATE_UNITS, RELATIVE_DATE_VALUES, formatRelativeSpan, parseRelativeSpan } from './relative-dates';
 import { ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from './database-query';
-import { COLOR_RULE_LAYOUTS, COLOR_RULE_TYPES, MATCH_OPTION_COLOR, MATCH_OPTION_TYPES, isGroupHidden, withGroupFlags } from './view-data';
+import { COLOR_RULE_LAYOUTS, COLOR_RULE_TYPES, MATCH_OPTION_COLOR, MATCH_OPTION_TYPES, isGroupHidden, isGroupPinned, withGroupFlags } from './view-data';
 import {
   LOAD_LIMITS,
   resolveCardLayout,
@@ -1437,8 +1437,17 @@ export class ViewSettingsPages {
     return row;
   }
 
-  /** The group's pill (or name) and an eye. A hidden group's pill is faded and its eye gray (database.css). */
-  private groupVisibilityRow(group: ViewGroupEntry, isHidden: boolean, disabled: boolean, onToggle: () => void): HTMLElement {
+  /**
+   * The group's pill (or name), a board's pin and an eye. A hidden group's pill is faded and its eye gray (database.css).
+   * notion-motion.md Round 24 §1 (r24-grp.raw): the 24px pin sits right before the eye and is named for what a click does.
+   */
+  private groupVisibilityRow(
+    group: ViewGroupEntry,
+    isHidden: boolean,
+    disabled: boolean,
+    onToggle: () => void,
+    pin?: { pinned: boolean; onToggle: () => void }
+  ): HTMLElement {
     const row = document.createElement('div');
     const name = document.createElement('span');
     const eye = document.createElement('button');
@@ -1456,7 +1465,20 @@ export class ViewSettingsPages {
     eye.innerHTML = isHidden ? IconEyeSlash : IconPreview;
     eye.disabled = disabled;
     eye.addEventListener('click', onToggle);
-    row.append(name, eye);
+    row.append(name);
+    if (pin !== undefined) {
+      const button = document.createElement('button');
+
+      button.type = 'button';
+      button.setAttribute('aria-label', this.t(pin.pinned ? 'groupUnpin' : 'groupPin'));
+      button.setAttribute('data-blok-database-group-pin', '');
+      button.setAttribute('data-blok-testid', `database-group-pin-${group.key}`);
+      button.innerHTML = pin.pinned ? IconPinFilled : IconPin;
+      button.disabled = disabled;
+      button.addEventListener('click', pin.onToggle);
+      row.append(button);
+    }
+    row.append(eye);
 
     return row;
   }
@@ -2669,7 +2691,12 @@ export class ViewSettingsPages {
           header,
           ...groups.map((group) => this.groupVisibilityRow(group, hidden(group.key), disabled, refreshAfter(() => this.ctx.updateView({
             ...withGroupFlags(this.ctx.view(), [stateKey(group.key)], { hidden: !hidden(group.key) }),
-          })))),
+          })), view.type === 'board' && !sub ? {
+            pinned: isGroupPinned(this.ctx.view(), group.key),
+            onToggle: refreshAfter(() => this.ctx.updateView({
+              ...withGroupFlags(this.ctx.view(), [group.key], { pinned: !isGroupPinned(this.ctx.view(), group.key) }),
+            })),
+          } : undefined)),
         );
         if (view.type !== 'board' || sub) {
           rows.push(panelSeparator(), panelRow({

@@ -286,7 +286,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2195 + 147 + 565 + 6 closure for all 2913 keys', () => {
+  it('rebuilds a disjoint 2197 + 147 + 566 + 6 closure for all 2916 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -300,7 +300,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2913);
+    expect(lifecycle.size).toBe(2916);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -545,7 +545,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: Round 24 layout rows (tools.database.galleryFitMedia, timelineSeparateDates) by literal.
       // -1: tools.database.timelineEndNone is now catalog-only (the end picker lost its None choice).
       // -1: the board's "Hidden groups" button is gone (tools.database.hiddenGroups left the catalog).
-      'executable-literal': 2195,
+      // +2: the board's pinned strip calls tools.database.pinnedGroups and groupUnpin by literal.
+      'executable-literal': 2197,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -648,7 +649,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: a board colour rule's "Card background" (tools.database.colorCardBackground), through the panel's t().
       // +8: the typed-speed help line (tools.audio/video.speedEntryRange, TooHigh, TooLow, NotNumber), through speed-entry.ts's t().
       // +1: the Date filter's "Invalid date" message (tools.database.filterInvalidDate), through the chip's t().
-      'registered-namespace-compatible': 565,
+      'registered-namespace-compatible': 566,
+      // +1: Settings › Group's pin button names itself with groupPin through the panel's tools.database. prefix.
       'catalog-only': 6,
     });
     expect(

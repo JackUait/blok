@@ -985,6 +985,8 @@ export interface DatabaseViewConfig {
   hiddenGroups?: GroupRef[];
   /** Groups this view shows collapsed, by option id. */
   collapsedGroups?: GroupRef[];
+  /** Board: groups listed under "Pinned groups", by option id. Pinning does not move a column. Shown in group order. */
+  pinnedGroups?: GroupRef[];
   /**
    * Hides the row count beside each group's name. A board shows it unless this is true;
    * a table shows it only when this is false ("Show aggregation").
@@ -1034,7 +1036,7 @@ export interface GroupRef {
 /** View fields a caller may set when creating or changing a view. */
 export type DatabaseViewSettingKey =
   | 'properties' | 'wrapCells' | 'frozenColumnCount' | 'showVerticalLines' | 'loadLimit' | 'calculations' | 'openPagesIn'
-  | 'noValueGroupPosition' | 'groupOrder' | 'hiddenGroups' | 'collapsedGroups' | 'hideGroupAggregation' | 'groupCalculation'
+  | 'noValueGroupPosition' | 'groupOrder' | 'hiddenGroups' | 'collapsedGroups' | 'pinnedGroups' | 'hideGroupAggregation' | 'groupCalculation'
   | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'colorRules' | 'showPageIcon' | 'showDataSourceTitle' | 'groupByStatus'
   | 'cardSize' | 'cardPreview' | 'fitImage' | 'cardLayout' | 'calendarBy' | 'calendarRange' | 'showWeekends'
   | 'timelineBy' | 'timelineEndBy' | 'timelineZoom' | 'timelineCenter' | 'showTimelineTable' | 'tableProperties' | 'arrowsBy'

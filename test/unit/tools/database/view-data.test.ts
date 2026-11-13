@@ -8,6 +8,7 @@ import {
   resolveRowColors,
   sortFromHeader,
   withGroupFlags,
+  isGroupPinned,
 } from '../../../../src/tools/database/view-data';
 import { resolveLoadLimit } from '../../../../src/tools/database/view-settings';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
@@ -198,6 +199,16 @@ describe('view-data', () => {
       expect(withGroupFlags(v, ['k2'], { hidden: true })).toEqual({ hiddenGroups: [{ id: 'k1' }, { id: 'k2' }] });
       expect(withGroupFlags(v, ['k1'], { hidden: false })).toEqual({ hiddenGroups: [] });
       expect(withGroupFlags(v, ['k3', 'k4'], { collapsed: true })).toEqual({ collapsedGroups: [{ id: 'k3' }, { id: 'k4' }] });
+    });
+
+    // notion-motion.md Round 24 §1: a view pins groups by key, as it hides them.
+    it('pins and unpins groups', () => {
+      const v = view({ pinnedGroups: [{ id: 'k1' }] });
+
+      expect(isGroupPinned(v, 'k1')).toBe(true);
+      expect(isGroupPinned(v, 'k2')).toBe(false);
+      expect(withGroupFlags(v, ['k2'], { pinned: true })).toEqual({ pinnedGroups: [{ id: 'k1' }, { id: 'k2' }] });
+      expect(withGroupFlags(v, ['k1'], { pinned: false })).toEqual({ pinnedGroups: [] });
     });
   });
 

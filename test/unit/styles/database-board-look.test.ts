@@ -301,3 +301,62 @@ describe('group eye on the Group page', () => {
       .toContain('color: var(--blok-database-table-gutter-icon)');
   });
 });
+
+// notion-motion.md Round 24 §1 (r24-pinsec-1.raw): "+ New group" and "Pinned groups" share one strip. The header is
+// 28 tall, 4 under New group, padded 0 8 with a gap 8, radius 6. Rows are 28 tall, 24 in, the first 10 under the header,
+// pitch 32. A row holds a 20px pill (3px around it) and the count 11 after it; its Unpin (24px) sits right after the row.
+// Notion's header ink rgb(161,158,153) fails AA, so it takes Blok's muted text; the count is primary ink.
+describe('board pinned groups strip', () => {
+  it('stacks the add-group button and the pinned list in one column', () => {
+    const body = ruleBody(database, '[data-blok-database-group-strip]');
+
+    expect(body).toContain('flex-direction: column');
+    expect(body).toContain('flex-shrink: 0');
+  });
+
+  it('draws the header 28px tall, 4px under New group, padded 0 8px with an 8px gap', () => {
+    const body = ruleBody(database, '[data-blok-database-pinned-groups-header]');
+
+    expect(body).toContain('height: 28px');
+    expect(body).toContain('margin-block-start: var(--blok-space-1)');
+    expect(body).toContain('padding: 0 var(--blok-space-2)');
+    expect(body).toContain('gap: var(--blok-space-2)');
+    expect(body).toContain('border-radius: var(--blok-radius-control)');
+    expect(body).toContain('color: var(--blok-database-table-muted-text)');
+    expect(body).toContain('transition: background-color 0.1s ease-in-out');
+  });
+
+  it('indents rows 24px, the first 10px under the header, 32px apart', () => {
+    const body = ruleBody(database, '[data-blok-database-pinned-group]');
+
+    expect(body).toContain('margin-inline-start: var(--blok-space-6)');
+    expect(body).toContain('margin-block-start: var(--blok-space-1)');
+    expect(ruleBody(database, '[data-blok-database-pinned-groups-header] + [data-blok-database-pinned-group]')).toContain('margin-block-start: var(--blok-space-2-5)');
+  });
+
+  it('draws a row 28px tall with the count 11px after a 3px-framed pill', () => {
+    const row = ruleBody(database, '[data-blok-database-pinned-group-open]');
+
+    expect(row).toContain('height: 28px');
+    expect(row).toContain('padding: 0 var(--blok-space-2)');
+    expect(row).toContain('gap: var(--blok-space-2-75)');
+    expect(row).toContain('transition: background-color 0.1s ease-in-out');
+    expect(ruleBody(database, '[data-blok-database-pinned-group-pill]')).toContain('margin-inline: var(--blok-space-0-75)');
+    expect(ruleBody(database, '[data-blok-database-pinned-group-pill]')).toContain('height: 20px');
+    expect(ruleBody(database, '[data-blok-database-pinned-group-count]')).toContain('color: var(--blok-database-table-cell-text)');
+  });
+
+  it('draws Unpin 24px square', () => {
+    const body = ruleBody(database, '[data-blok-database-pinned-group-unpin]');
+
+    expect(body).toContain('width: 24px');
+    expect(body).toContain('height: 24px');
+  });
+});
+
+// notion-motion.md Round 24 §1 (r24-grp.raw): in Settings › Group the pin (x 1440) touches the eye (x 1464).
+describe('Settings › Group pin button', () => {
+  it('sits right against the eye', () => {
+    expect(ruleBody(database, '[data-blok-database-group-pin] + [data-blok-database-property-eye]')).toContain('margin-inline-start: calc(-1 * var(--blok-space-2))');
+  });
+});

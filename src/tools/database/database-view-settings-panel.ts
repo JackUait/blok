@@ -1,4 +1,4 @@
-import { IconBolt, IconCalendar, IconCheck, IconChevronRight, IconChevronUpDown, IconCopy, IconCross, IconDatabase, IconDotsHorizontal, IconEyeSlash, IconFilter, IconGallery, IconLink, IconListBulleted, IconLock, IconPaintRoller, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
+import { IconBolt, IconCalendar, IconCheck, IconChevronDown, IconChevronRight, IconChevronUpDown, IconCopy, IconCross, IconDatabase, IconDotsHorizontal, IconEyeSlash, IconFilter, IconGallery, IconLink, IconListBulleted, IconLock, IconPaintRoller, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
 import type { I18n } from '../../../types';
 import { onHover } from '../../components/utils/tooltip';
 import {
@@ -1704,8 +1704,6 @@ export class ViewSettingsPages {
     update: (patch: Partial<Pick<FilterConfig, 'propertyId' | 'operator' | 'value'>>) => void;
     remove: () => void;
     toAdvanced?: () => void;
-    /** A color rule reads no row page, so "This page" would never match there. */
-    noThisPage?: boolean;
   }): PanelPage {
     return {
       build: (panel) => {
@@ -1762,7 +1760,7 @@ export class ViewSettingsPages {
           ...this.valueControls(property, current, (patch) => {
             rule.update(patch.operator === undefined ? patch : { ...patch, operator: keepLead(current.operator, patch.operator) });
             panel.refresh();
-          }, rule.noThisPage !== true),
+          }),
           panelSeparator(),
         ];
 
@@ -2784,6 +2782,123 @@ export class ViewSettingsPages {
   // ─── Conditional color ───
 
   /**
+   * A color rule card's head, the simple filter popover's (notion-motion.md Round 20 §4, r20-cc-sel.raw):
+   * "Select is not empty ⌄", the operator in a 190-wide flyout, then a trash that deletes at once.
+   * A Date rule leads with "Start date ⌄" and a Name rollup with "any ⌄", as the advanced filter's rule.
+   */
+  private colorRuleHeader(
+    panel: DatabasePanel,
+    rule: ColorRule,
+    property: PropertyDefinition | undefined,
+    disabled: boolean,
+    update: (change: Partial<ColorRule>) => void,
+    remove: () => void
+  ): HTMLElement {
+    const header = document.createElement('div');
+    const lead = document.createElement('span');
+    const trash = document.createElement('button');
+    // A flyout list under the button, 190 wide, as the filter popover's operator (Round 18 §2).
+    const headerButton = (testId: string, label: string, flyoutId: string, rows: (pick: (write: () => void) => void) => HTMLElement[], name?: string): HTMLButtonElement => {
+      const button = document.createElement('button');
+      const text = document.createElement('span');
+      const chevron = document.createElement('span');
+
+      button.type = 'button';
+      button.disabled = disabled;
+      button.setAttribute('data-blok-database-chip-operator', '');
+      button.setAttribute('data-blok-testid', testId);
+      text.setAttribute('data-blok-database-chip-operator-label', '');
+      text.textContent = label;
+      chevron.setAttribute('aria-hidden', 'true');
+      chevron.innerHTML = IconChevronDown;
+      if (name !== undefined) button.append(name, ' ');
+      button.append(text, chevron);
+      button.addEventListener('click', () => openFlyout(button, panel, flyoutId, OPERATOR_FLYOUT_WIDTH, rows));
+
+      return button;
+    };
+    const choice = (testId: string, label: string, checked: boolean, change: Partial<ColorRule>, pick: (write: () => void) => void): HTMLElement => panelRow({
+      label,
+      testId,
+      checked,
+      onClick: () => pick(() => {
+        update(change);
+        panel.refresh();
+      }),
+    });
+
+    header.setAttribute('data-blok-database-chip-header', '');
+    header.setAttribute('data-blok-database-color-rule-header', '');
+    if (property === undefined) {
+      lead.textContent = this.t('filterGone');
+    } else {
+      const { lead: part, operator: inner } = splitOperator(rule.operator);
+      const opKey = operatorLabelKey(property.type, rule.operator);
+      const plain = property.type !== 'date' && !isQuantifiedText(property, rule.operator);
+
+      if (property.type === 'date') {
+        lead.append(headerButton(`database-color-side-${rule.id}`, this.t(part === 'end' ? 'dateEnd' : 'dateStart'), 'database-filter-side-picker', (pick) => (['start', 'end'] as const).map((side) =>
+          choice(`database-filter-side-${side}`, this.t(side === 'end' ? 'dateEnd' : 'dateStart'), (part === 'end') === (side === 'end'), { operator: joinOperator(side === 'end' ? 'end' : undefined, inner) }, pick))));
+      } else if (!plain) {
+        lead.append(property.name, ' ', headerButton(`database-color-quantifier-${rule.id}`, this.ctx.i18n.t(`tools.database.filterOperator.${part ?? 'any'}`).toLocaleLowerCase(), 'database-filter-quantifier-picker', (pick) => quantifierChoices().map((q) =>
+          choice(`database-filter-quantifier-${q.operator}`, this.ctx.i18n.t(q.labelKey), (part ?? 'any') === q.operator, { operator: joinOperator(q.operator, inner) }, pick))));
+      }
+      lead.append(headerButton(`database-color-operator-${rule.id}`, (opKey === undefined ? rule.operator : this.ctx.i18n.t(opKey)).toLocaleLowerCase(), 'database-filter-operator-picker', (pick) => operatorChoicesFor(property, rule.operator).map((c) =>
+        choice(`database-filter-op-${c.operator}`, this.ctx.i18n.t(c.labelKey), menuOperatorOf(rule.operator) === c.operator, operatorPick(property, c.operator, rule), pick)), plain ? property.name : undefined));
+    }
+    trash.type = 'button';
+    trash.disabled = disabled;
+    trash.setAttribute('data-blok-database-color-rule-delete', '');
+    trash.setAttribute('data-blok-testid', `database-color-delete-${rule.id}`);
+    trash.setAttribute('aria-label', this.t('colorDelete'));
+    trash.innerHTML = IconTrash;
+    trash.addEventListener('click', remove);
+    header.append(lead, trash);
+
+    return header;
+  }
+
+  /**
+   * The value under a color rule's head when its operator takes one (notion-motion.md Round 20 §4,
+   * r20-cc-is.raw): a text field inline, anything else a field that opens the advanced filter's value flyout.
+   * A color rule reads no row page, so "This page" is never offered.
+   */
+  private colorRuleValue(
+    panel: DatabasePanel,
+    rule: ColorRule,
+    property: PropertyDefinition,
+    disabled: boolean,
+    read: () => ColorRule | undefined,
+    update: (change: Partial<ColorRule>) => void
+  ): HTMLElement[] {
+    const save = (change: Partial<Pick<FilterConfig, 'operator' | 'value'>>): void => update(change.operator === undefined ? change : { ...change, operator: keepLead(read()?.operator ?? rule.operator, change.operator) });
+    const controls = this.valueControls(property, rule, save, false);
+    const [only] = controls;
+
+    if (controls.length === 0) return [];
+    if (controls.length === 1 && only instanceof HTMLInputElement) {
+      only.disabled = disabled;
+      only.setAttribute('data-blok-testid', `database-color-value-${rule.id}`);
+      only.setAttribute('data-blok-database-color-rule-value', '');
+
+      return [only];
+    }
+    const field = document.createElement('button');
+    const text = filterValueText(rule, property, (key, vars) => this.ctx.i18n.t(key, vars), (person) => this.personName(person), (row) => this.ctx.relatedRows?.(property).find((r) => r.id === row)?.title, editorLocale(this.ctx.i18n));
+    const scoped: ViewSettingsContext = { ...this.ctx, thisPageDatabase: () => null };
+
+    field.type = 'button';
+    field.disabled = disabled;
+    field.setAttribute('data-blok-database-color-rule-value', '');
+    field.setAttribute('data-blok-testid', `database-color-value-${rule.id}`);
+    field.toggleAttribute('data-empty', text === '');
+    field.textContent = text === '' ? this.t('filterValue') : text;
+    field.addEventListener('click', () => openRuleValueFlyout(field, panel, scoped, read, save));
+
+    return [field];
+  }
+
+  /**
    * notion-motion.md Round 20 §4 (r20-cc-bg.raw, r20-cc-swatches.raw): a 190-wide flyout under the value.
    * A Select rule first gets a focused "Match option" switch and a divider; then 10 swatches with no names,
    * hinted "Blue background". A pick closes it. Blok marks the current swatch with a neutral ring, not
@@ -2852,18 +2967,11 @@ export class ViewSettingsPages {
           card.setAttribute('data-blok-database-color-rule', '');
           card.setAttribute('data-blok-testid', `database-color-rule-${rule.id}`);
           card.append(
-            panelRow({
-              label: property === undefined ? this.t('filterGone') : filterPillLabel(rule, property, (key, vars) => this.ctx.i18n.t(key, vars), (id) => this.personName(id), (id) => this.ctx.relatedRows?.(property).find((row) => row.id === id)?.title),
-              testId: `database-color-condition-${rule.id}`,
-              opensPage: true,
-              disabled,
-              onClick: () => panel.push(this.ruleEditor({
-                read: () => rules().find((r) => r.id === rule.id),
-                update: (change) => patch(rule.id, change),
-                remove: () => write(rules().filter((r) => r.id !== rule.id)),
-                noThisPage: true,
-              })),
+            this.colorRuleHeader(panel, rule, property, disabled, (change) => patch(rule.id, change), () => {
+              write(rules().filter((r) => r.id !== rule.id));
+              panel.refresh();
             }),
+            ...(property === undefined ? [] : this.colorRuleValue(panel, rule, property, disabled, () => rules().find((r) => r.id === rule.id), (change) => patch(rule.id, change))),
             colorSetting({
               label: this.t('colorPageBackground'),
               testId: `database-color-background-${rule.id}`,
@@ -2890,25 +2998,14 @@ export class ViewSettingsPages {
               })), { fit: true }),
             }));
           }
-          card.appendChild(panelRow({
-            label: this.t('colorDelete'),
-            testId: `database-color-delete-${rule.id}`,
-            icon: IconTrash,
-            danger: true,
-            disabled,
-            onClick: () => {
-              write(rules().filter((r) => r.id !== rule.id));
-              panel.refresh();
-            },
-          }));
-
           return { id: rule.id, element: card };
         });
 
+        // notion-motion.md Round 20 §4: the intro text shows only while there is no rule.
         return [
-          panelText(this.t('colorBlurb')),
+          ...(cards.length === 0 ? [panelText(this.t('colorBlurb'))] : []),
           // notion-motion.md Round 20 §4: the list order is each cell's priority; a ⠿ handle reorders it.
-          ...(cards.length === 0 ? [] : [colorRuleList(panelReorderList({
+          ...(cards.length === 0 ? [] : [marked(panelReorderList({
             testId: 'database-color-rules',
             handleLabel: this.t('settingsDragToReorder'),
             items: cards,
@@ -2920,8 +3017,8 @@ export class ViewSettingsPages {
 
               if (moving !== undefined) write([...rest.slice(0, at), moving, ...rest.slice(at)]);
             },
-          }))]),
-          panelRow({
+          }), 'data-blok-database-color-rules')]),
+          marked(panelRow({
             label: this.t(cards.length === 0 ? 'colorNew' : 'colorAddAnother'),
             testId: 'database-color-add',
             icon: IconPlus,
@@ -2933,7 +3030,7 @@ export class ViewSettingsPages {
               write([...rules(), { id: nanoid(), propertyId: property.id, operator: 'is_not_empty', value: null, color }]);
               panel.back();
             })),
-          }),
+          }), cards.length === 0 ? 'data-blok-database-color-new' : 'data-blok-database-color-add-another'),
         ];
       },
     };
@@ -2963,8 +3060,11 @@ const rulesOf = (group: FilterGroup): FilterRule[] =>
 /** Marks the rule list for database.css: its handles sit on the cards' left edge. */
 const colorRuleList = (list: HTMLElement): HTMLElement => {
   list.setAttribute('data-blok-database-color-rules', '');
+/** Sets a bare attribute database.css styles the element by. */
+const marked = <T extends HTMLElement>(element: T, attribute: string): T => {
+  element.setAttribute(attribute, '');
 
-  return list;
+  return element;
 };
 
 /** notion-motion.md Round 20 §4 (r20-cc-bg.raw): the colour picker is 190 wide. */

@@ -426,3 +426,41 @@ describe('conditional color swatches (notion-motion.md Round 20 §4, r20-cc-swat
     expect(chip).toContain('border-radius: var(--blok-radius-control-sm)');
   });
 });
+
+describe('conditional color page (notion-motion.md Round 20 §4, r20-cc-intro.raw, r20-cc-list-style.raw)', () => {
+  it('fills a rule card, borders it in the same colour, radius 10, 12px apart', () => {
+    const card = ruleBody(database, '[data-blok-database-color-rule]');
+
+    expect(card).toContain('background-color: var(--blok-database-color-rule-bg)');
+    expect(card).toContain('border: 1px solid var(--blok-database-color-rule-bg)');
+    expect(card).toContain('border-radius: var(--blok-radius-surface)');
+    expect(ruleBody(database, '[data-blok-database-color-rules]')).toContain('gap: var(--blok-space-3)');
+    expect(database).toContain('--blok-database-color-rule-bg: var(--blok-database-place-view-head-bg)');
+  });
+
+  it('gives the header a 24x24 trash with a 16px icon', () => {
+    const trash = ruleBody(database, '[data-blok-database-color-rule-delete]');
+
+    expect(trash).toContain('width: 24px');
+    expect(trash).toContain('height: 24px');
+    expect(trash).toContain('color: var(--blok-database-table-header-icon)');
+    expect(ruleBody(database, '[data-blok-database-color-rule-delete] svg')).toContain('width: 16px');
+  });
+
+  it('draws the value as a 30-tall field with a 1px ring', () => {
+    const field = ruleBody(database, '[data-blok-database-color-rule-value]');
+
+    expect(field).toContain('height: 30px');
+    expect(field).toContain('background-color: var(--blok-database-panel-input-bg)');
+    expect(field).toContain('box-shadow: inset 0 0 0 1px var(--blok-database-table-control-border)');
+  });
+
+  it('makes "New color setting" a blue button and "Add another" a bordered one, both 28 tall', () => {
+    const fresh = ruleBody(database, '[data-blok-database-panel-row][data-blok-database-color-new]');
+
+    expect(fresh).toContain('background-color: var(--blok-database-new-bg)');
+    expect(fresh).toContain('color: var(--blok-database-new-text)');
+    expect(fresh).toContain('font-weight: 500');
+    expect(ruleBody(database, '[data-blok-database-panel-row][data-blok-database-color-add-another]')).toContain('border: 1px solid var(--blok-database-feed-actions-border)');
+  });
+});

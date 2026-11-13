@@ -257,6 +257,8 @@
   --blok-database-rule-purple-bg: rgb(243, 235, 249);
   --blok-database-rule-pink-bg: rgb(250, 233, 241);
   --blok-database-rule-red-bg: rgb(252, 233, 231);
+  /* A conditional color card (r20-cc-list-style.raw): rgb(249, 248, 247), Notion's panel surface. */
+  --blok-database-color-rule-bg: var(--blok-database-place-view-head-bg);
   /* "More templates" (research/26 §2): modal bg, source card fill. Dark is unmeasured. */
   --blok-database-tpl-gallery-bg: rgb(249, 248, 247);
   --blok-database-tpl-gallery-card-bg: rgba(66, 35, 3, 0.03);
@@ -12557,11 +12559,100 @@ input[data-blok-database-picker-search]:focus {
   opacity: 0.4;
 }
 
+/* notion-motion.md Round 20 §4 (r20-cc-list-style.raw): 258-wide filled cards, radius 10, 12px apart.
+   The card's inner padding is unmeasured. */
+[data-blok-database-color-rules] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-3);
+  padding: var(--blok-space-1) var(--blok-space-3) var(--blok-space-3);
+}
+
 [data-blok-database-color-rule] {
-  margin-block: var(--blok-space-1);
-  padding-block: var(--blok-space-1);
-  border: 1px solid var(--blok-database-table-border);
-  border-radius: var(--blok-radius-control-lg);
+  padding: var(--blok-space-1);
+  border: 1px solid var(--blok-database-color-rule-bg);
+  border-radius: var(--blok-radius-surface);
+  background-color: var(--blok-database-color-rule-bg);
+}
+
+[data-blok-database-color-rule-header] {
+  padding: 0 0 0 var(--blok-space-1);
+}
+
+[data-blok-database-color-rule-delete] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-table-header-icon);
+  cursor: pointer;
+}
+
+[data-blok-database-color-rule-delete]:hover:not(:disabled),
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-database-color-rule-delete]:focus-visible {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-color-rule-delete] svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* r20-cc-is.raw: 232x30, radius 6, padding 4px 6px. */
+[data-blok-database-color-rule-value] {
+  display: block;
+  width: calc(100% - 2 * var(--blok-space-1));
+  height: 30px;
+  margin: var(--blok-space-0-5) var(--blok-space-1) var(--blok-space-1);
+  padding: var(--blok-space-1) var(--blok-space-1-5);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-panel-input-bg);
+  box-shadow: inset 0 0 0 1px var(--blok-database-table-control-border);
+  color: var(--blok-database-ink);
+  font: inherit;
+  font-size: 14px;
+  text-align: start;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+[data-blok-database-color-rule-value][data-empty] {
+  color: var(--blok-database-panel-value-text);
+}
+
+/* r20-cc-intro.raw: a blue 258x28 "New color setting", 14px 500, radius 6; the blue is Blok's AA step of it. */
+[data-blok-database-panel-row]:is([data-blok-database-color-new], [data-blok-database-color-add-another]) {
+  justify-content: center;
+  width: calc(100% - 2 * var(--blok-space-3));
+  margin-inline: var(--blok-space-3);
+  margin-block-end: var(--blok-space-2);
+}
+
+[data-blok-database-panel-row][data-blok-database-color-new] {
+  background-color: var(--blok-database-new-bg);
+  color: var(--blok-database-new-text);
+  font-weight: 500;
+}
+
+[data-blok-database-panel-row][data-blok-database-color-new]:hover:not(:disabled) {
+  background-color: var(--blok-database-new-hover-bg);
+}
+
+[data-blok-database-panel-row][data-blok-database-color-new] [data-blok-database-panel-icon] {
+  color: inherit;
+}
+
+/* r20-cc-two.raw: "Add another" is bordered, 1px rgb(240, 239, 237). */
+[data-blok-database-panel-row][data-blok-database-color-add-another] {
+  border: 1px solid var(--blok-database-feed-actions-border);
 }
 
 [data-blok-database-filter-rule],

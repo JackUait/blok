@@ -1915,7 +1915,7 @@ describe('view settings panel', () => {
     h.ctx.thisPageDatabase = () => 'a';
     h.open();
     click('database-settings-color');
-    click('database-color-condition-c1');
+    click('database-color-value-c1');
 
     expect(document.querySelector('[data-blok-testid="database-filter-related-r1"]')).not.toBeNull();
     expect(document.querySelector('[data-blok-testid="database-filter-related-this-page"]')).toBeNull();
@@ -2066,6 +2066,74 @@ describe('view settings panel', () => {
 
       expect(q('database-color-background-picker')).not.toBeNull();
       expect(q('database-color-match-option')).toBeNull();
+    });
+  });
+
+  // notion-motion.md Round 20 §4 (r20-cc-intro.raw, r20-cc-sel.raw, r20-cc-list-style.raw, r20-cc-ops.raw, r20-cc-del*.raw).
+  describe('conditional color page', () => {
+    const note = (): Element | null => document.querySelector('[data-blok-testid="database-view-settings"] [data-blok-database-panel-note]');
+
+    it('shows the intro text and a "New color setting" button while there is no rule', () => {
+      harness().open();
+      click('database-settings-color');
+
+      expect(note()?.textContent).toBe('tools.database.colorBlurb');
+      expect(q('database-color-add')?.hasAttribute('data-blok-database-color-new')).toBe(true);
+    });
+
+    it('drops the intro once a rule exists and heads each card "Property operator ⌄" with a trash', () => {
+      const h = harness({ colorRules: [{ id: 'c1', propertyId: 'stage', operator: 'is_not_empty', value: null, color: 'match' }] });
+
+      h.open();
+      click('database-settings-color');
+      const operator = q('database-color-operator-c1');
+
+      expect(note()).toBeNull();
+      expect(q('database-color-add')?.hasAttribute('data-blok-database-color-add-another')).toBe(true);
+      expect(q('database-color-rule-c1')?.querySelector('[data-blok-database-chip-header]')?.contains(operator)).toBe(true);
+      expect(operator?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Stage tools.database.filteroperator.isnotempty');
+      expect(q('database-color-delete-c1')?.getAttribute('aria-label')).toBe('tools.database.colorDelete');
+      expect(q('database-color-condition-c1')).toBeNull();
+    });
+
+    it('picks the operator from a 190-wide flyout under the header button', () => {
+      const h = harness({ colorRules: [{ id: 'c1', propertyId: 'stage', operator: 'is_not_empty', value: null, color: 'match' }] });
+      const panel = h.open();
+
+      click('database-settings-color');
+      click('database-color-operator-c1');
+      const flyout = q('database-filter-operator-picker');
+
+      expect(flyout?.style.width).toBe('190px');
+      expect(panel.root.contains(flyout)).toBe(false);
+      click('database-filter-op-equals');
+
+      expect(h.state.view.colorRules?.[0].operator).toBe('equals');
+      expect(q('database-filter-operator-picker')).toBeNull();
+    });
+
+    it('shows a value field under the header when the operator takes one, opening the value flyout', () => {
+      const h = harness({ colorRules: [{ id: 'c1', propertyId: 'stage', operator: 'equals', value: null, color: 'match' }] });
+
+      h.open();
+      click('database-settings-color');
+      const card = q('database-color-rule-c1');
+      const header = card?.querySelector('[data-blok-database-chip-header]');
+
+      expect(header?.nextElementSibling).toBe(q('database-color-value-c1'));
+      click('database-color-value-c1');
+      expect(q('database-filter-value-picker')).not.toBeNull();
+    });
+
+    it('deletes a rule at once with its trash, and the last delete brings back the intro', () => {
+      const h = harness({ colorRules: [{ id: 'c1', propertyId: 'num', operator: 'is_not_empty', value: null, color: 'gray' }] });
+
+      h.open();
+      click('database-settings-color');
+      click('database-color-delete-c1');
+
+      expect(h.state.view.colorRules).toEqual([]);
+      expect(note()?.textContent).toBe('tools.database.colorBlurb');
     });
   });
 

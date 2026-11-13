@@ -4809,6 +4809,7 @@ span[data-blok-slash-search] {
   --blok-database-rule-purple-bg: rgb(243, 235, 249);
   --blok-database-rule-pink-bg: rgb(250, 233, 241);
   --blok-database-rule-red-bg: rgb(252, 233, 231);
+  --blok-database-color-rule-bg: var(--blok-database-place-view-head-bg);
   --blok-database-tpl-gallery-bg: rgb(249, 248, 247);
   --blok-database-tpl-gallery-card-bg: rgba(66, 35, 3, 0.03);
   --blok-database-confirm-shadow: rgba(25, 25, 25, 0.24) 0 24px 48px, rgba(25, 25, 25, 0.14) 0 4px 12px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
@@ -15639,11 +15640,94 @@ input[data-blok-database-picker-search]:focus {
   opacity: 0.4;
 }
 
+[data-blok-database-color-rules] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-3);
+  padding: var(--blok-space-1) var(--blok-space-3) var(--blok-space-3);
+}
+
 [data-blok-database-color-rule] {
-  margin-block: var(--blok-space-1);
-  padding-block: var(--blok-space-1);
-  border: 1px solid var(--blok-database-table-border);
-  border-radius: var(--blok-radius-control-lg);
+  padding: var(--blok-space-1);
+  border: 1px solid var(--blok-database-color-rule-bg);
+  border-radius: var(--blok-radius-surface);
+  background-color: var(--blok-database-color-rule-bg);
+}
+
+[data-blok-database-color-rule-header] {
+  padding: 0 0 0 var(--blok-space-1);
+}
+
+[data-blok-database-color-rule-delete] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-table-header-icon);
+  cursor: pointer;
+}
+
+[data-blok-database-color-rule-delete]:hover:not(:disabled), :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-color-rule-delete]:focus-visible {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-color-rule-delete] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-color-rule-value] {
+  display: block;
+  width: calc(100% - 2 * var(--blok-space-1));
+  height: 30px;
+  margin: var(--blok-space-0-5) var(--blok-space-1) var(--blok-space-1);
+  padding: var(--blok-space-1) var(--blok-space-1-5);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-panel-input-bg);
+  box-shadow: inset 0 0 0 1px var(--blok-database-table-control-border);
+  color: var(--blok-database-ink);
+  font: inherit;
+  font-size: 14px;
+  text-align: start;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+[data-blok-database-color-rule-value][data-empty] {
+  color: var(--blok-database-panel-value-text);
+}
+
+[data-blok-database-panel-row]:is([data-blok-database-color-new], [data-blok-database-color-add-another]) {
+  justify-content: center;
+  width: calc(100% - 2 * var(--blok-space-3));
+  margin-inline: var(--blok-space-3);
+  margin-block-end: var(--blok-space-2);
+}
+
+[data-blok-database-panel-row][data-blok-database-color-new] {
+  background-color: var(--blok-database-new-bg);
+  color: var(--blok-database-new-text);
+  font-weight: 500;
+}
+
+[data-blok-database-panel-row][data-blok-database-color-new]:hover:not(:disabled) {
+  background-color: var(--blok-database-new-hover-bg);
+}
+
+[data-blok-database-panel-row][data-blok-database-color-new] [data-blok-database-panel-icon] {
+  color: inherit;
+}
+
+[data-blok-database-panel-row][data-blok-database-color-add-another] {
+  border: 1px solid var(--blok-database-feed-actions-border);
 }
 
 [data-blok-database-filter-rule], [data-blok-database-sort-row] {

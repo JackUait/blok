@@ -1603,10 +1603,6 @@
   margin-block-start: 0;
 }
 
-[data-blok-database-pinned-group-unpin]:disabled {
-  cursor: default;
-}
-
 [data-blok-database-pinned-groups-header] svg {
   display: block;
   width: 16px;
@@ -1662,7 +1658,7 @@
 
 [data-blok-database-pinned-groups-header]:hover,
 [data-blok-database-pinned-group-open]:hover,
-[data-blok-database-pinned-group-unpin]:hover:not(:disabled) {
+[data-blok-database-pinned-group-unpin]:hover {
   background-color: var(--blok-database-hover-bg);
 }
 

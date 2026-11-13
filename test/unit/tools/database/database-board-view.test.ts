@@ -340,7 +340,7 @@ describe('DatabaseBoardView', () => {
     });
 
     // notion-motion.md Round 25 §2 (r25-pinsec-locked.raw): a locked database keeps the strip and its Unpin buttons;
-    // only "+ New group" goes. Lock refuses the view write, so Unpin stays in place but disabled, like the Settings pin.
+    // only "+ New group" goes. Round 26 §1 (r26-lock-strip.raw): Unpin keeps its pointer, hover and hint, and a click does nothing.
     it('keeps the pinned strip on a locked database and drops "+ New group"', () => {
       const locked = new DatabaseBoardView({
         readOnly: false, structureLocked: true, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title',
@@ -354,7 +354,34 @@ describe('DatabaseBoardView', () => {
       expect(locked.querySelector('[data-blok-database-add-column]')).toBeNull();
       expect(lockedNoPins.querySelector('[data-blok-database-add-column]')).toBeNull();
       expect(strip?.firstElementChild?.hasAttribute('data-blok-database-pinned-groups')).toBe(true);
-      expect(strip?.querySelector<HTMLButtonElement>('[data-blok-database-pinned-group-unpin]')?.disabled).toBe(true);
+      const unpin = strip?.querySelector<HTMLButtonElement>('[data-blok-database-pinned-group-unpin]');
+
+      expect(unpin?.getAttribute('aria-disabled')).toBe('true');
+      expect(unpin?.disabled).toBe(false);
+    });
+
+    // Round 26 §1 (r26-lock-strip.raw): the hint "Unpin group", locked or not, after Blok's hint delay.
+    it.each([false, true])('hints "Unpin group" on hover (locked: %s)', (structureLocked) => {
+      destroyTooltip();
+      vi.useFakeTimers();
+      try {
+        const board = new DatabaseBoardView({
+          readOnly: false, structureLocked, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title',
+          pinnedGroups: [{ option: makeOption({ id: 'red', label: 'Red' }), count: 1 }],
+        }).createView();
+        const unpin = board.querySelector<HTMLElement>('[data-blok-database-pinned-group-unpin]');
+
+        if (unpin === null) throw new Error('no unpin');
+        document.body.appendChild(board);
+        unpin.dispatchEvent(new MouseEvent('mouseenter'));
+        vi.advanceTimersByTime(HINT_DELAY + 50);
+
+        expect(document.querySelector('[data-blok-testid="tooltip"][data-blok-shown="true"]')?.textContent).toBe('tools.database.groupUnpin');
+      } finally {
+        vi.useRealTimers();
+        destroyTooltip();
+        document.body.innerHTML = '';
+      }
     });
 
     it('draws no pinned strip without pins or in read-only', () => {

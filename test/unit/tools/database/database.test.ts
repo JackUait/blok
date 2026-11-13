@@ -4339,6 +4339,22 @@ describe('DatabaseTool', () => {
         tool.destroy();
       });
 
+      // Round 26 §1 (r26-lock-unpin-after2.raw): on a locked database a click on Unpin does nothing.
+      it('keeps the pin when Unpin is clicked on a locked database', () => {
+        const schema = makeDefaultData().schema;
+        const { tool, element } = board(false, {
+          schema: [{ ...schema[0], databaseLocked: true }, ...schema.slice(1)],
+          ...boardView({ pinnedGroups: [{ id: 'opt-todo' }] }),
+        });
+
+        queryByData(element, 'data-blok-database-pinned-group-unpin')?.click();
+
+        expect(tool.save(element).views[0].pinnedGroups).toEqual([{ id: 'opt-todo' }]);
+        expect(queryByData(element, 'data-blok-database-pinned-group-unpin')?.getAttribute('aria-disabled')).toBe('true');
+
+        tool.destroy();
+      });
+
       // notion-motion.md Round 25 §1 (r25-pinmodal.raw, r25-modal-inherit.raw, r25-modal-celledit.raw): a row opens a
       // modal with the group pill as its title and a read-only table of that group's rows. The view's sorts carry over,
       // the grouped property is the second column, and there is no "+ New" and no calculation row.

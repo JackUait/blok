@@ -22,7 +22,7 @@ import type { CommentBadges } from './database-comment-badge';
 
 interface DatabaseBoardViewOptions {
   readOnly: boolean;
-  /** "Lock database": no "+ New group", and Unpin is disabled (notion-motion.md Round 25 §2). */
+  /** "Lock database": no "+ New group", and Unpin does nothing (notion-motion.md Round 25 §2, Round 26 §1). */
   structureLocked?: boolean;
   i18n: I18n;
   options: SelectOption[];
@@ -724,7 +724,9 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       unpin.setAttribute('data-option-id', option.id);
       unpin.setAttribute('aria-label', this.i18n.t('tools.database.groupUnpin'));
       unpin.innerHTML = IconPinFilled;
-      unpin.disabled = this.settings.structureLocked === true;
+      // Round 26 §1 (r26-lock-strip.raw): locked, Unpin keeps its pointer, hover and hint; the tool ignores the click.
+      if (this.settings.structureLocked === true) unpin.setAttribute('aria-disabled', 'true');
+      onHover(unpin, this.i18n.t('tools.database.groupUnpin'));
       line.append(open, unpin);
       section.appendChild(line);
     }

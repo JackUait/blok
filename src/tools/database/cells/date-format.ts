@@ -57,9 +57,10 @@ export const formatDatePart = (part: string, locale: string, hourCycle?: 'h12' |
   return `${day} ${time}`;
 };
 
-/** A stored part as short text: "Oct 20, 2:45 AM", or "Oct 20" when it has no time. */
-export const formatShortDatePart = (part: string, locale: string, hourCycle?: 'h12' | 'h23'): string =>
+/** A stored part as short text: "Oct 20, 2:45 AM", or "Oct 20" when it has no time; "Mar 5, 2025" with the year. */
+export const formatShortDatePart = (part: string, locale: string, hourCycle?: 'h12' | 'h23', withYear = false): string =>
   new Intl.DateTimeFormat(locale, {
+    ...(withYear ? { year: 'numeric' } : {}),
     month: 'short',
     day: 'numeric',
     ...(part.includes('T') ? { hour: 'numeric', minute: '2-digit', ...(hourCycle !== undefined ? { hourCycle } : {}) } : {}),

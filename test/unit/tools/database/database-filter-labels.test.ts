@@ -227,6 +227,7 @@ describe('filter chip text, as Notion prints it', () => {
   const box = prop('checkbox', { name: 'Checkbox' });
   const person = prop('person', { name: 'Person' });
   const rel = prop('relation', { name: 'Relation' });
+  const ct = prop('createdTime', { name: 'Created time' });
   const rows = (id: string): string | undefined => ({ a: 'Alpha', b: 'Beta' } as Record<string, string>)[id];
 
   beforeEach(() => {
@@ -279,6 +280,12 @@ describe('filter chip text, as Notion prints it', () => {
     ['Relation: Contains Alpha, Beta', { operator: 'contains', value: ['a', 'b'] }, rel],
     ['Relation: Does not contain Alpha, Beta', { operator: 'does_not_contain', value: ['a', 'b'] }, rel],
     ['Relation: Is empty', { operator: 'is_empty', value: null }, rel],
+    // Round 20 §1: another year prints it (r20-ct-2025-bar.raw, r20-ct-before-bar.raw, r20-ct-oa-bar.raw, r20-date-end-bar.raw, r20-date-end-before-bar.raw).
+    ['Created time: Mar 5, 2025', { operator: 'equals', value: '2025-03-05' }, ct],
+    ['Created time: Before Mar 5, 2025', { operator: 'before', value: '2025-03-05' }, ct],
+    ['Created time: On or after Mar 5, 2025', { operator: 'on_or_after', value: '2025-03-05' }, ct],
+    ['Date: Mar 5, 2025', { operator: 'end:equals', value: '2025-03-05' }, date],
+    ['Date: Before Mar 5, 2025', { operator: 'end:before', value: '2025-03-05' }, date],
   ];
 
   it.each(cases)('prints "%s"', async (want, filter, property) => {

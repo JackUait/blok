@@ -280,7 +280,8 @@ const ONE_SPAN_LABEL_KEYS: Record<'past' | 'next', Record<RelativeDateUnit, stri
 const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?$/;
 
 /**
- * A saved day as the chip prints it: "Nov 10" (Round 19 §2). The value comes from
+ * A saved day as the chip prints it: "Nov 10" (Round 19 §2), "Mar 5, 2025" in
+ * another year (Round 20 §1). The value comes from
  * document data, so a day off the calendar ("2026-02-30") stays as saved: the
  * formatter throws on an invalid date, and `Date` would roll it into another day.
  */
@@ -294,7 +295,7 @@ const shortDay = (part: string, locale: string): string => {
     && date.getFullYear() === Number(y) && date.getMonth() === Number(m) - 1 && date.getDate() === Number(d)
     && Number(hh) < 24 && Number(mm) < 60;
 
-  return real ? formatShortDatePart(part, locale) : part;
+  return real ? formatShortDatePart(part, locale, undefined, date.getFullYear() !== new Date().getFullYear()) : part;
 };
 
 const isRelativeValue = (value: unknown): value is typeof RELATIVE_DATE_VALUES[number] =>

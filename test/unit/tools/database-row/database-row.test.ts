@@ -71,6 +71,29 @@ describe('DatabaseRowTool', () => {
   });
 
   describe('render()', () => {
+    it('resolves the template prompt only after the parent database is registered', () => {
+      const options = createRowOptions();
+      const getById = vi.fn(() => {
+        throw new Error('Parent is not registered during composition');
+      });
+
+      options.api.blocks.getById = getById;
+      (options as { block: unknown }).block = { id: 'row', parentId: 'db' };
+      const tool = new DatabaseRowTool(options);
+      const element = tool.render();
+
+      expect(element.querySelector('[data-blok-database-row-empty]')?.textContent)
+        .toBe('tools.database.rowBodyEmpty');
+      getById.mockImplementation(() => ({
+        call: (method: string, param: { receive: (prompt: unknown) => void }) => {
+          if (method === 'rowPagePrompt') param.receive({ templates: true, list: [] });
+        },
+      }) as never);
+      tool.rendered();
+
+      expect(element.querySelector('[data-blok-database-row-create-template]')).not.toBeNull();
+    });
+
     it('returns HTMLDivElement with data-blok-tool="database-row"', () => {
       const tool = new DatabaseRowTool(createRowOptions());
       const element = tool.render();

@@ -36,7 +36,7 @@ const makeBlockStub = (id: string, name: string, parentId: string | null = null)
  * `flatDepth` so we can prove reported/serialized/rendered depth follow the tree
  * (structural depth 1) and NOT the stale flat carrier.
  */
-const buildStructurallyNestedItem = (flatDepth: number): { tool: ListItem } => {
+const buildStructurallyNestedItem = (flatDepth: number) => {
   const parent = makeBlockStub('parent', 'list', null);
   const current = makeBlockStub('current', 'list', 'parent');
 
@@ -70,7 +70,7 @@ const buildStructurallyNestedItem = (flatDepth: number): { tool: ListItem } => {
     block: { id: 'current' } as never,
   });
 
-  return { tool };
+  return { tool, blocksAPI };
 };
 
 beforeEach(() => {
@@ -79,6 +79,26 @@ beforeEach(() => {
 });
 
 describe('ListItem structural-depth drift proofing', () => {
+  it('waits for block registration before resolving structural depth during loading', () => {
+    const { tool, blocksAPI } = buildStructurallyNestedItem(3);
+    const byId = vi.spyOn(blocksAPI, 'getById').mockImplementation(() => {
+      throw new Error('Blocks are not registered during composition');
+    });
+    const byIndex = vi.spyOn(blocksAPI, 'getBlockIndex').mockImplementation(() => {
+      throw new Error('Blocks are not registered during composition');
+    });
+    const element = tool.render();
+
+    document.body.appendChild(element);
+    byId.mockRestore();
+    byIndex.mockRestore();
+    tool.rendered();
+
+    expect(element.querySelector<HTMLElement>('[role="listitem"]')?.style.marginInlineStart)
+      .toBe(`${INDENT_PER_LEVEL}px`);
+    expect(tool.save().depth).toBe(1);
+  });
+
   it('save() serializes the STRUCTURAL depth, ignoring a stale higher data.depth', () => {
     const { tool } = buildStructurallyNestedItem(3);
     tool.render();
@@ -103,6 +123,7 @@ describe('ListItem structural-depth drift proofing', () => {
     const { tool } = buildStructurallyNestedItem(3);
     const element = tool.render();
     document.body.appendChild(element);
+    tool.rendered();
 
     const listItem = element.querySelector('[role="listitem"]');
     const indent = (listItem as HTMLElement | null)?.style.marginInlineStart ?? '';

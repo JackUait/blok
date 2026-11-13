@@ -177,16 +177,10 @@ export class ListItem implements BlockTool {
       return this._element;
     }
 
-    // Reconcile the flat carrier to the tree BEFORE the DOM builder reads
-    // data.depth for the indent/marker, so a stale value can never render a
-    // depth that disagrees with the block's structural nesting.
-    this.reconcileDepthFromStructure();
-
-    const blockIndex = this.blockId
-      ? this.api.blocks.getBlockIndex(this.blockId) ?? this.api.blocks.getCurrentBlockIndex()
-      : this.api.blocks.getCurrentBlockIndex();
-    const depth = this._data.depth ?? 0;
-    const markerDepth = this.markerCalculator.getVisualDepth(blockIndex, depth);
+    // Bulk loading composes every tool before registering the blocks. Use the
+    // saved depth here; rendered() resolves structure and markers once the tree
+    // is available, before the editor is revealed.
+    const markerDepth = this._data.depth ?? 0;
 
     if (!this.boundHandleKeyDown) {
       this.boundHandleKeyDown = this.handleKeyDown.bind(this);
@@ -276,9 +270,11 @@ export class ListItem implements BlockTool {
     // the rendered indent + marker now so structure stays the source of truth.
     if (structuralDepth !== null && structuralDepth !== (this._data.depth ?? 0)) {
       this.adjustDepthTo(structuralDepth);
-      this.updateMarkerForDepth(structuralDepth, this._data.style);
     }
 
+    if (this._data.style === 'unordered') {
+      this.updateMarkerForDepth(this._data.depth ?? 0, this._data.style);
+    }
     this.updateMarkersAfterPositionChange();
   }
 

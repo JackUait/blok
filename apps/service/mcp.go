@@ -52,6 +52,7 @@ func (s *Service) initMCP() error {
 		server.AddTool(&mcp.Tool{Name: "blok_list_workspaces", Description: "List workspaces available to the signed-in user.", InputSchema: json.RawMessage(`{"type":"object","properties":{}}`)}, s.mcpListWorkspaces)
 		server.AddTool(&mcp.Tool{Name: "blok_list_pages", Description: "List pages in a workspace by slug.", InputSchema: json.RawMessage(`{"type":"object","properties":{"workspace":{"type":"string"}},"required":["workspace"]}`)}, s.mcpListPages)
 		server.AddTool(&mcp.Tool{Name: "blok_create_page", Description: "Create a page in a workspace. Members and admins may create pages.", InputSchema: json.RawMessage(`{"type":"object","properties":{"workspace":{"type":"string"},"title":{"type":"string"},"parentId":{"type":"string"}},"required":["workspace","title"]}`)}, s.mcpCreatePage)
+		server.AddTool(&mcp.Tool{Name: "blok_upload_image", Description: "Upload a private workspace image (PNG, JPEG, GIF or WebP, up to 5 MiB). Returns a persistent /files/ URL to use in document content. Requires workspace write access.", InputSchema: json.RawMessage(`{"type":"object","properties":{"workspace":{"type":"string"},"dataUrl":{"type":"string"}},"required":["workspace","dataUrl"],"additionalProperties":false}`)}, s.mcpUploadImage)
 		if err := attached.Attach(server); err != nil {
 			return nil
 		}
@@ -63,6 +64,7 @@ func (s *Service) initMCP() error {
 			problem(w, http.StatusUnauthorized, "Bearer token required")
 			return
 		}
+		r.Body = http.MaxBytesReader(w, r.Body, 8<<20)
 		u, err := s.mcpIdentity(r)
 		if err != nil {
 			problem(w, http.StatusUnauthorized, "Invalid or expired token")
@@ -289,4 +291,26 @@ func (s *Service) mcpCreatePage(ctx context.Context, req *mcp.CallToolRequest) (
 		return mcpError("Could not create page"), nil
 	}
 	return mcpText(map[string]any{"id": pageID, "title": args.Title, "workspace": ws.Slug, "revision": revision + 1}), nil
+}
+
+func (s *Service) mcpUploadImage(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	var args struct {
+		Workspace string `json:"workspace"`
+		DataURL   string `json:"dataUrl"`
+	}
+	if json.Unmarshal(req.Params.Arguments, &args) != nil {
+		return mcpError("Invalid arguments"), nil
+	}
+	ws, ok := s.mcpWorkspace(ctx, args.Workspace)
+	if !ok || ws.Role == "viewer" {
+		return mcpError("Write access required"), nil
+	}
+	if _, _, err := decodeWorkspaceImage(args.DataURL, maxWorkspaceImage); err != nil {
+		return mcpError("Use a PNG, JPEG, GIF or WebP image up to 5 MiB"), nil
+	}
+	imageURL, err := s.storeWorkspaceImage(ctx, ws, args.DataURL, maxWorkspaceImage)
+	if err != nil {
+		return mcpError("Could not save image"), nil
+	}
+	return mcpText(map[string]string{"url": imageURL}), nil
 }

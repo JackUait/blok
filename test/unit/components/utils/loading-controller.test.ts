@@ -277,7 +277,28 @@ describe('LoadingController', () => {
     await done;
 
     expect(mockRunSkeletonHandoff).toHaveBeenCalledTimes(1);
-    expect(mockRunSkeletonHandoff).toHaveBeenCalledWith({ bars, targets: [target], content });
+    expect(mockRunSkeletonHandoff).toHaveBeenCalledWith({ bars, targets: [target], content, companions: [] });
+  });
+
+  it('reveals the page header in the same handoff as the body and cleans both surfaces', async () => {
+    const { wrapper, content, controller } = setup();
+    const header = document.createElement('header');
+
+    header.setAttribute(DATA_ATTR.pageHeader, '');
+    wrapper.prepend(header);
+    mockRunSkeletonHandoff.mockImplementation(async (args) => {
+      expect(args.companions).toEqual([header]);
+      expect(header.style.opacity).toBe(content.style.opacity);
+      expect(header.hasAttribute('inert')).toBe(true);
+      expect(wrapper.hasAttribute(DATA_ATTR.loading)).toBe(false);
+    });
+    controller.show();
+    vi.advanceTimersByTime(600);
+    await controller.hide([]);
+
+    expect(header.style.opacity).toBe('');
+    expect(header.hasAttribute('inert')).toBe(false);
+    expect(content.style.opacity).toBe('');
   });
 
   it('starts the handoff with the content transparent and the loading flag gone', async () => {

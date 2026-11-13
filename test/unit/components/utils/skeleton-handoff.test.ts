@@ -35,6 +35,20 @@ describe('runSkeletonHandoff', () => {
     return el;
   });
 
+  it.each([false, true])('fades the header and body together (reduced motion: %s)', async (reduced) => {
+    vi.spyOn(motion, 'prefersReducedMotion').mockReturnValue(reduced);
+    const content = document.createElement('div');
+    const header = document.createElement('header');
+
+    await runSkeletonHandoff({ bars: make(2, [0, 30]), targets: [], content, companions: [header] });
+
+    const bodyAnimation = calls.find(call => call.el === content);
+    const headerAnimation = calls.find(call => call.el === header);
+
+    expect(headerAnimation?.keyframes).toEqual(bodyAnimation?.keyframes);
+    expect(headerAnimation?.options).toEqual(bodyAnimation?.options);
+  });
+
   it('moves bar i onto block i, staggered top to bottom', async () => {
     const bars = make(2, [0, 30]);
     const targets = make(2, [100, 160]);

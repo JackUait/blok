@@ -99,13 +99,18 @@ export class LoadingController {
 
       const { content, wrapper } = this.args;
 
-      content.style.opacity = '0';
+      const header = wrapper.querySelector<HTMLElement>(`:scope > [${DATA_ATTR.pageHeader}]`);
+      const companions = header === null ? [] : [header];
+      const surfaces = [content, ...companions];
+
+      for (const surface of surfaces) surface.style.opacity = '0';
+      header?.setAttribute('inert', '');
       wrapper.removeAttribute(DATA_ATTR.loading);
 
       try {
         // `finished` may never settle in a background tab; a stuck boot is worse than a cut animation.
         await Promise.race([
-          runSkeletonHandoff({ bars: skeleton.bars, targets, content }),
+          runSkeletonHandoff({ bars: skeleton.bars, targets, content, companions }),
           this.sleep(skeleton.bars.length * HANDOFF_STAGGER + HANDOFF_DURATION + HANDOFF_GRACE),
         ]);
       } catch (error) {
@@ -114,8 +119,11 @@ export class LoadingController {
       } finally {
         this.stopWaiting();
         // The handoff uses fill: 'forwards', which would pin opacity and filter on the content.
-        content.getAnimations?.().forEach(animation => animation.cancel());
-        content.style.removeProperty('opacity');
+        surfaces.forEach(surface => {
+          surface.getAnimations?.().forEach(animation => animation.cancel());
+          surface.style.removeProperty('opacity');
+        });
+        header?.removeAttribute('inert');
         this.teardown();
       }
 

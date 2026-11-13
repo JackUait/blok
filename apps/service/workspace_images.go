@@ -1,6 +1,7 @@
 package cloud
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
@@ -57,7 +58,7 @@ func validRemoteImage(raw string) bool {
 	return err == nil && len(raw) <= 4096 && u.Scheme == "https" && u.Hostname() != "" && u.User == nil
 }
 
-func (s *Service) storeWorkspaceImage(r *http.Request, ws Workspace, raw string, limit int) (string, error) {
+func (s *Service) storeWorkspaceImage(ctx context.Context, ws Workspace, raw string, limit int) (string, error) {
 	data, extension, err := decodeWorkspaceImage(raw, limit)
 	if err != nil {
 		return "", err
@@ -75,7 +76,7 @@ func (s *Service) storeWorkspaceImage(r *http.Request, ws Workspace, raw string,
 	if err = os.WriteFile(filename, data, 0600); err != nil {
 		return "", err
 	}
-	if _, err = s.DB.Exec(r.Context(), "INSERT INTO assets(name,workspace_id) VALUES($1,$2)", name, ws.ID); err != nil {
+	if _, err = s.DB.Exec(ctx, "INSERT INTO assets(name,workspace_id) VALUES($1,$2)", name, ws.ID); err != nil {
 		os.Remove(filename)
 		return "", err
 	}
@@ -101,7 +102,7 @@ func (s *Service) workspaceImage(w http.ResponseWriter, r *http.Request, ws Work
 		problem(w, 400, "Use a PNG, JPEG, GIF or WebP image up to 5 MiB")
 		return
 	}
-	imageURL, err := s.storeWorkspaceImage(r, ws, in.DataURL, maxWorkspaceImage)
+	imageURL, err := s.storeWorkspaceImage(r.Context(), ws, in.DataURL, maxWorkspaceImage)
 	if err != nil {
 		problem(w, 500, "Could not save image")
 		return
@@ -182,7 +183,7 @@ func (s *Service) emojis(w http.ResponseWriter, r *http.Request, u identity, ws 
 			return
 		}
 		var err error
-		in.URL, err = s.storeWorkspaceImage(r, ws, in.DataURL, maxEmojiImage)
+		in.URL, err = s.storeWorkspaceImage(r.Context(), ws, in.DataURL, maxEmojiImage)
 		if err != nil {
 			problem(w, 500, "Could not save emoji image")
 			return

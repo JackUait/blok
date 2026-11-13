@@ -439,6 +439,36 @@ func TestCloudIntegration(t *testing.T) {
 		t.Fatal("MCP could not open created page", opened)
 	}
 	mcpCall(adminMCP, "blok_list_pages", map[string]any{"workspace": "tousambassadeurs"}, 200)
+	// Imported images use the existing private asset store, never document base64.
+	uploaded := mcpCall(adminMCP, "blok_upload_image", map[string]any{"workspace": "tousambassadeurs", "dataUrl": tinyPNG}, 200)
+	if uploaded["error"] != nil || uploaded["result"].(map[string]any)["isError"] == true {
+		t.Fatal("MCP image upload failed")
+	}
+	var uploadedImage struct {
+		URL string `json:"url"`
+	}
+	if json.Unmarshal([]byte(uploaded["result"].(map[string]any)["content"].([]any)[0].(map[string]any)["text"].(string)), &uploadedImage) != nil || !strings.HasPrefix(uploadedImage.URL, "/files/") {
+		t.Fatal("MCP upload did not return a persistent asset URL")
+	}
+	request("GET", "/api/assets/url?url="+url.QueryEscape(uploadedImage.URL), admin, nil, 200)
+	request("GET", "/api/assets/url?url="+url.QueryEscape(uploadedImage.URL), other, nil, 403)
+	for _, args := range []map[string]any{
+		{"workspace": "tousambassadeurs", "dataUrl": "data:image/svg+xml;base64,PHN2Zy8+"},
+		{"workspace": "tousambassadeurs", "dataUrl": "https://example.test/picture.png"},
+		{"workspace": "missing", "dataUrl": tinyPNG},
+	} {
+		result := mcpCall(adminMCP, "blok_upload_image", args, 200)
+		if result["result"].(map[string]any)["isError"] != true {
+			t.Fatal("MCP upload accepted invalid input")
+		}
+	}
+	viewerMCP := request("POST", "/api/mcp/tokens", viewer, map[string]any{"label": "Viewer upload test"}, 201)["token"].(string)
+	for _, token := range []string{otherMCP, viewerMCP} {
+		result := mcpCall(token, "blok_upload_image", map[string]any{"workspace": "tousambassadeurs", "dataUrl": tinyPNG}, 200)
+		if result["result"].(map[string]any)["isError"] != true {
+			t.Fatal("MCP upload accepted a non-writer")
+		}
+	}
 	request("POST", "/api/mcp/tokens/"+adminToken["id"].(string)+"/rotate", other, nil, 404)
 	rotated := request("POST", "/api/mcp/tokens/"+adminToken["id"].(string)+"/rotate", admin, nil, 200)
 	mcpCall(adminMCP, "blok_list_workspaces", map[string]any{}, 401)

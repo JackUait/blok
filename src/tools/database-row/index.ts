@@ -160,7 +160,9 @@ export class DatabaseRowTool implements BlockTool {
     el.append(bodySlot, placeholder);
     this.bodySlot = bodySlot;
     this.placeholder = placeholder;
-    this.drawPrompt();
+    // The parent database is not registered until bulk composition finishes.
+    // rendered() replaces this plain prompt with the parent's template picker.
+    placeholder.textContent = this.api?.i18n.t('tools.database.rowBodyEmpty') ?? '';
     this.updatePlaceholder();
 
     return el;

@@ -25,10 +25,11 @@ const visibleRect = (target: HTMLElement | undefined): DOMRect | undefined => {
  * not the full-width holder. Always resolves, even when an animation is cancelled.
  */
 
-export const runSkeletonHandoff = async ({ bars, targets, content }: {
+export const runSkeletonHandoff = async ({ bars, targets, content, companions = [] }: {
   bars: HTMLElement[];
   targets: HTMLElement[];
   content: HTMLElement;
+  companions?: HTMLElement[];
 }): Promise<void> => {
   if (typeof content.animate !== 'function') {
     return;
@@ -37,7 +38,7 @@ export const runSkeletonHandoff = async ({ bars, targets, content }: {
   if (prefersReducedMotion()) {
     await Promise.all([
       ...bars.map(bar => settle(bar.animate([{ opacity: 1 }, { opacity: 0 }], { duration: REDUCED_FADE, fill: 'forwards' }))),
-      settle(content.animate([{ opacity: 0 }, { opacity: 1 }], { duration: REDUCED_FADE, fill: 'forwards' })),
+      ...[content, ...companions].map(element => settle(element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: REDUCED_FADE, fill: 'forwards' }))),
     ]);
 
     return;
@@ -75,10 +76,10 @@ export const runSkeletonHandoff = async ({ bars, targets, content }: {
   });
 
   // The content arrives as one sheet; the per-bar stagger carries the top-to-bottom feel.
-  const contentAnimation = settle(content.animate([
+  const contentAnimations = [content, ...companions].map(element => settle(element.animate([
     { opacity: 0, filter: 'blur(6px)' },
     { opacity: 1, filter: 'blur(0px)' },
-  ], { duration: HANDOFF_DURATION + delayOf(Math.max(bars.length - 1, 0)), easing: EASE, fill: 'forwards' }));
+  ], { duration: HANDOFF_DURATION + delayOf(Math.max(bars.length - 1, 0)), easing: EASE, fill: 'forwards' })));
 
-  await Promise.all([...barAnimations, contentAnimation]);
+  await Promise.all([...barAnimations, ...contentAnimations]);
 };

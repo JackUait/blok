@@ -27,6 +27,8 @@ Workspace = `{id,slug,name,role}`. Default slug `tousambassadeurs`.
 
 ## Hosted MCP
 
+`blok_upload_image` accepts `{workspace:slug,dataUrl}` for PNG, JPEG, GIF or WebP images up to 5 MiB. It requires workspace write access, stores the image in the existing persistent private asset volume, and returns `{url:"/files/..."}` for use in document content. Remote URLs and SVG are refused; the host never fetches the source.
+
 `POST /mcp` is a stateless Streamable HTTP MCP endpoint on the same HTTPS origin. Each caller must send `Authorization: Bearer <personal MCP token>`; browser cookies, native session tokens and cross-origin browser requests do not authorize MCP calls. A signed-in user creates and revokes dedicated tokens in **Mon compte → Accès MCP**. Tokens are displayed only at creation, hashed in PostgreSQL and expire after 90 days. Treat them as passwords. The MCP server checks the user's current workspace membership and role on each request and document operation.
 
 - GET `/api/mcp/tokens` → `{tokens:[{id,label,createdAt,expiresAt,lastUsedAt}]}`. The token secret is never returned.

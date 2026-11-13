@@ -17,9 +17,9 @@
   opacity: 0;
 }
 
-/* The title is a sibling of the redactor, not one of its blocks. Keep it
-   hidden through the handoff so its empty placeholder never overlaps the bars. */
-[aria-busy="true"] > [data-blok-page-header] {
+/* The title is a sibling of the redactor. Hide its placeholder during loading;
+   the handoff then fades the ready header and body in together. */
+[data-blok-loading] > [data-blok-page-header] {
   visibility: hidden;
 }
 

@@ -37538,7 +37538,7 @@ textarea[data-blok-field] {
   opacity: 0;
 }
 
-[aria-busy="true"] > [data-blok-page-header] {
+[data-blok-loading] > [data-blok-page-header] {
   visibility: hidden;
 }
 

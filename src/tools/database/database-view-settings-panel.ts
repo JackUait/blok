@@ -2179,7 +2179,12 @@ export class ViewSettingsPages {
         label: this.ctx.i18n.t(choice.labelKey),
         testId: `database-filter-op-${choice.operator}`,
         checked: menuOperatorOf(node.operator) === choice.operator,
-        onClick: () => pick(() => save(operatorPick(property, choice.operator, node))),
+        onClick: () => pick(() => {
+          const picked = operatorPick(property, choice.operator, node);
+
+          // notion-motion.md Round 19 §1 (r19-adv-date*.raw): an advanced Date "Is" starts on Today.
+          save(property.type === 'date' && choice.operator === 'equals' && (picked.value === null || picked.value === '') ? { ...picked, value: 'today' } : picked);
+        }),
       })));
     });
     const controls = this.valueControls(property, node, (patch) => {
@@ -2187,7 +2192,21 @@ export class ViewSettingsPages {
     });
     const [only] = controls;
 
-    line.append(prefix, propertyButton, operatorButton);
+    line.append(prefix, propertyButton);
+    // notion-motion.md Round 19 §1 (r19-adv-date*.raw): a Date row adds "Start date ⌄" before the operator.
+    if (property.type === 'date') {
+      const { lead, operator } = splitOperator(node.operator);
+
+      line.append(button(`database-filter-rule-side-${id}`, this.t(lead === 'end' ? 'dateEnd' : 'dateStart'), (self) => {
+        openFlyout(self, panel, 'database-filter-side-picker', OPERATOR_FLYOUT_WIDTH, (pick) => (['start', 'end'] as const).map((side) => panelRow({
+          label: this.t(side === 'end' ? 'dateEnd' : 'dateStart'),
+          testId: `database-filter-side-${side}`,
+          checked: (lead === 'end') === (side === 'end'),
+          onClick: () => pick(() => save({ operator: joinOperator(side === 'end' ? 'end' : undefined, operator) })),
+        })));
+      }));
+    }
+    line.append(operatorButton);
     if (controls.length === 1 && only instanceof HTMLInputElement) {
       only.setAttribute('data-blok-testid', `database-filter-rule-value-${id}`);
       only.setAttribute('data-blok-database-filter-rule-value', '');

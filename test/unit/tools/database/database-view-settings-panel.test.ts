@@ -1457,6 +1457,28 @@ describe('view settings panel', () => {
       expect(q('database-filter-value-picker')).not.toBeNull();
     });
 
+    // r19-adv-date*.raw: Date rows carry "Start date ⌄" after the property; its list is Notion's 190-wide side menu.
+    it('gives a Date rule a Start date / End date button with a flyout', () => {
+      const h = openRule({ propertyId: 'due', operator: 'this_week', value: null });
+      const operator = (): string | undefined => (h.state.view.filterTree?.filterRules[0] as { operator?: string } | undefined)?.operator;
+
+      click('database-filter-rule-side-r');
+      expect(q('database-filter-side-picker')?.style.width).toBe('190px');
+      click('database-filter-side-end');
+
+      expect(operator()).toBe('end:this_week');
+      expect(q('database-filter-rule-side-r')?.textContent?.trim()).toBe('tools.database.dateEnd');
+    });
+
+    it('starts an advanced Date "Is" rule on Today', () => {
+      const h = openRule({ propertyId: 'due', operator: 'this_week', value: null });
+
+      click('database-filter-rule-operator-r');
+      click('database-filter-op-equals');
+
+      expect(h.state.view.filterTree?.filterRules[0]).toEqual(expect.objectContaining({ operator: 'equals', value: 'today' }));
+    });
+
     it('keeps a text value as a field in the row', () => {
       const h = harness({ filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'r', propertyId: 'title', operator: 'contains', value: '' }] } });
 

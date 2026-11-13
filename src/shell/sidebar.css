@@ -504,15 +504,26 @@
   padding: 48px var(--blok-space-6) 64px;
 }
 
-/* Un titre de section n'est pas une ligne cliquable : encre secondaire, pas de
-   surface, pas d'état sélectionné. Il sépare, il ne se choisit pas. */
-[data-blok-sidebar-section] {
-  margin: 12px 0 2px;
-  padding: 0 8px;
+[data-blok-sidebar-section] { display: block; }
+[data-blok-sidebar-section] + [data-blok-sidebar-section] { margin-top: 12px; }
+
+/* Un titre de section se replie d'un clic, mais il n'est pas une ligne de page :
+   encre secondaire, aucune surface au repos, et jamais d'état sélectionné. */
+[data-blok-sidebar-section-label] {
+  display: block;
+  width: 100%;
+  margin: 0 0 2px;
+  padding: 4px 8px;
+  border: 0;
+  background: none;
   color: var(--blok-text-secondary);
+  font: inherit;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: .04em;
+  text-align: start;
   text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 4px;
 }
-[data-blok-sidebar-section]:first-child { margin-top: 0; }
+[data-blok-sidebar-section-label]:hover { background: var(--blok-item-hover-bg); color: var(--blok-text-primary); }

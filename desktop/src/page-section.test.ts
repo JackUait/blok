@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sectionOf, groupPagesBySection, type PageSection } from './page-section';
+import { sectionOf, groupPagesBySection, sectionNames, type PageSection } from './page-section';
 import type { PageAccessEntry } from './page-access';
 
 const entry = (over: Partial<PageAccessEntry>): PageAccessEntry => ({ level: 'edit', visibility: 'private', shared: false, ...over });
@@ -12,8 +12,10 @@ describe('sidebar sections', () => {
       [entry({ visibility: 'workspace' }), 'workspace'],
       [entry({ visibility: 'private', shared: false }), 'private'],
       [entry({ visibility: 'private', shared: true }), 'shared'],
-      [entry({ visibility: 'private', shared: true, sharedRoot: true }), 'sharedWithMe'],
-      [entry({ visibility: 'workspace', sharedRoot: true }), 'sharedWithMe'],
+      // « Partagé avec moi » n'est pas une section à part : une page qu'on m'a
+      // ouverte et une page que j'ai ouverte sont toutes deux « Partagé ».
+      [entry({ visibility: 'private', shared: true, sharedRoot: true }), 'shared'],
+      [entry({ visibility: 'workspace', sharedRoot: true }), 'shared'],
     ];
     for (const [access, expected] of cases) expect(sectionOf(access)).toBe(expected);
   });
@@ -41,6 +43,12 @@ describe('sidebar sections', () => {
     expect(groups.map((group) => group.section)).toEqual(['workspace', 'shared', 'private']);
     expect(groups[0].pages.map((page) => page.id)).toEqual(['a', 'c']);
     expect(groups.some((group) => group.pages.length === 0)).toBe(false);
+  });
+
+  // « Espace » ne désigne rien ; Notion affiche le nom du teamspace.
+  it('names the workspace section after the workspace itself', () => {
+    expect(sectionNames('Tousambassadeurs').workspace).toBe('Tousambassadeurs');
+    expect(sectionNames('Tousambassadeurs').private).toBe('Privé');
   });
 
   it('keeps every page in exactly one section', () => {

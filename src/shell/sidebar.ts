@@ -300,6 +300,18 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
   canvas.setAttribute('data-blok-sidebar-canvas', '');
   shell.append(sidebar, canvas);
 
+  const collapsed = new Set<string>();
+  // La barre latérale tient elle-même la liste des pages ouvertes : elle reçoit
+  // déjà chaque changement de page active, et l'hôte n'a rien à lui transmettre.
+  const recents: string[] = [];
+  const remember = (id: string): void => {
+    if (id === '') return;
+    const seen = recents.indexOf(id);
+    if (seen !== -1) recents.splice(seen, 1);
+    recents.unshift(id);
+    recents.splice(5);
+  };
+
   function paint(): void {
     tree.querySelectorAll('[data-blok-sidebar-menu]').forEach((node) => {
       if (node instanceof HTMLElement) closeMenu(node);
@@ -314,23 +326,60 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
       tree.append(empty);
       return;
     }
-    // Les sections ne sont pas des conteneurs : les pages restent une seule
-    // liste et conservent leur ordre. Un titre s'intercale quand la section
-    // change, ce qui laisse le glisser-déposer et la hiérarchie intacts.
-    let shown = '';
+    // Favoris et Récents sont des raccourcis : une page y apparaît en plus de sa
+    // place dans l'arbre, jamais à la place. Ils ne s'affichent qu'avec quelque
+    // chose à montrer, comme chez Notion où Favoris naît du premier favori.
+    const favorites = view.pages.filter((page) => page.favorite === true && (needle === '' || matches(view.pages, page, needle)));
+    if (favorites.length > 0) appendShortcutSection('Favoris', 'favorites', favorites);
+    const recent = recents
+      .map((id) => view.pages.find((page) => page.id === id))
+      .filter((page): page is ShellPage => page !== undefined && (needle === '' || matches(view.pages, page, needle)));
+    if (recent.length > 0) appendShortcutSection('Récents', 'recents', recent);
+
+    // Les sections d'accès ne sont pas des conteneurs : les pages restent une
+    // seule liste et conservent leur ordre. Un titre s'intercale quand la
+    // section change, ce qui laisse le glisser-déposer et la hiérarchie intacts.
+    // Un titre par section rencontrée, puis les pages dessous : l'ordre des
+    // pages décide, la section n'est qu'un repère posé au changement.
+    const opened = new Map<string, HTMLElement>();
     roots.forEach((page) => {
       const section = page.section ?? '';
-      if (section !== shown) {
-        shown = section;
-        if (section !== '') {
-          const heading = document.createElement('p');
-          heading.setAttribute('data-blok-sidebar-section', '');
-          heading.textContent = section;
-          tree.append(heading);
-        }
+      if (section === '') {
+        tree.append(...rows(page, 0, needle !== ''));
+        return;
       }
-      tree.append(...rows(page, 0, needle !== ''));
+      const body = opened.get(section) ?? appendSection(section, section);
+      opened.set(section, body);
+      if (collapsed.has(section)) return;
+      body.append(...rows(page, 0, needle !== ''));
     });
+  }
+
+  /** Un titre de section, repliable d'un clic comme chez Notion. */
+  function appendSection(label: string, key: string): HTMLElement {
+    const heading = document.createElement('button');
+    heading.type = 'button';
+    heading.setAttribute('data-blok-sidebar-section-label', '');
+    heading.setAttribute('aria-expanded', String(!collapsed.has(key)));
+    heading.textContent = label;
+    heading.addEventListener('click', () => {
+      if (collapsed.has(key)) collapsed.delete(key);
+      else collapsed.add(key);
+      paint();
+    });
+    const group = document.createElement('div');
+    group.setAttribute('data-blok-sidebar-section', '');
+    group.append(heading);
+    tree.append(group);
+    return group;
+  }
+
+  function appendShortcutSection(label: string, key: string, pages: ShellPage[]): void {
+    const group = appendSection(label, key);
+    group.setAttribute(`data-blok-sidebar-${key}`, '');
+    if (collapsed.has(key)) return;
+    // À plat : un raccourci n'a pas d'enfants à déployer.
+    pages.forEach((page) => group.append(...rows(page, 0, false)));
   }
 
   function rows(page: ShellPage, depth: number, forceOpen: boolean): HTMLElement[] {
@@ -378,6 +427,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     link.setAttribute('data-blok-sidebar-link', '');
     if (page.id === view.activeId) link.setAttribute('aria-current', 'page');
     const label = document.createElement('span');
+    label.setAttribute('data-blok-sidebar-label', '');
     label.textContent = page.title;
     link.append(label);
     if (page.favorite === true) {
@@ -558,6 +608,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     setPages(next, nextActive) {
       view.pages = next;
       view.activeId = nextActive;
+      remember(nextActive);
       paint();
     },
   };

@@ -1,16 +1,24 @@
 import type { PageAccessEntry, PageAccessMap } from './page-access';
 
-/** Les sections de la barre latérale, dans l'ordre où elles s'affichent. */
-export type PageSection = 'workspace' | 'shared' | 'sharedWithMe' | 'private';
+/**
+ * Les sections d'accès de la barre latérale, dans l'ordre où elles s'affichent.
+ *
+ * Trois, comme Notion : l'espace lui-même, ce qui est partagé avec des personnes
+ * précises, et ce qui n'appartient qu'à soi. « Partagé avec moi » n'est pas une
+ * quatrième section : une page que quelqu'un m'a ouverte et une page que j'ai
+ * ouverte à quelqu'un sont toutes deux « Partagé ».
+ */
+export type PageSection = 'workspace' | 'shared' | 'private';
 
-export const sectionOrder: PageSection[] = ['workspace', 'shared', 'sharedWithMe', 'private'];
+export const sectionOrder: PageSection[] = ['workspace', 'shared', 'private'];
 
-export const sectionNames: Record<PageSection, string> = {
-  workspace: 'Espace',
-  shared: 'Partagé',
-  sharedWithMe: 'Partagé avec moi',
-  private: 'Privé',
-};
+/**
+ * La section de l'espace porte le nom de l'espace — c'est ce que Notion affiche
+ * pour un teamspace, et « Espace » tout court ne désigne rien.
+ */
+export function sectionNames(workspaceName: string): Record<PageSection, string> {
+  return { workspace: workspaceName, shared: 'Partagé', private: 'Privé' };
+}
 
 /**
  * La section se déduit, elle ne se stocke pas.
@@ -26,8 +34,8 @@ export function sectionOf(access: PageAccessEntry | undefined): PageSection {
   // comportement d'avant les permissions par page.
   if (!access) return 'workspace';
   // Une page dont l'ancêtre est hors d'atteinte ne peut s'afficher nulle part
-  // ailleurs : elle vient de quelqu'un d'autre, et elle le dit.
-  if (access.sharedRoot === true) return 'sharedWithMe';
+  // ailleurs : quelqu'un me l'a ouverte, donc elle est partagée.
+  if (access.sharedRoot === true) return 'shared';
   if (access.visibility === 'workspace') return 'workspace';
   return access.shared === true ? 'shared' : 'private';
 }

@@ -79,9 +79,8 @@ const cardLayoutItems = (
       ],
     },
   };
-  // notion-motion.md Round 24 §4 (gallery), Round 25 §7 (board): preview, size, "Fit media".
-  // A board shows Fit media only once a preview is set; a gallery without a preview is unmeasured.
-  const fitRow = prefix === 'board' && preview.kind === 'none'
+  // notion-motion.md Round 24 §4, Round 25 §7, Round 26 §3: "Fit media" shows only once a preview is set.
+  const fitRow = preview.kind === 'none'
     ? []
     : [choice(`${prefix}-fit-image`, i18n.t('tools.database.galleryFitMedia'), fit, () => update({ fitImage: !fit }))];
 

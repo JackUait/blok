@@ -116,6 +116,13 @@ describe('database layout items', () => {
       fit.onActivate?.();
       expect(update).toHaveBeenCalledWith({ fitImage: false });
     });
+
+    // notion-motion.md Round 26 §3: Card preview None drops the Fit media row, as on a board.
+    it('hides Fit media while the preview is None', () => {
+      const titles = flat(galleryLayoutItems(view({ cardPreview: 'none' }), schema, i18n, vi.fn())).map((item) => item.title);
+
+      expect(titles).toEqual(['tools.database.galleryCardPreview', 'tools.database.galleryCardSize']);
+    });
   });
 
   describe('calendar', () => {

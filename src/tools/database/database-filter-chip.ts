@@ -682,7 +682,8 @@ class FilterChipPages {
       redraw: () => this.calendarRedraw?.(),
     }, picked ?? toLocalDay(new Date()));
 
-    if (this.calendar !== undefined && picked !== undefined && picked !== this.calendarDay) calendar.show(picked);
+    // r22-d-t1-custom-ds.raw: a cleared day turns the calendar back to this month.
+    if (this.calendar !== undefined && picked !== this.calendarDay) calendar.show(picked ?? toLocalDay(new Date()));
     this.calendar = calendar;
     this.calendarDay = picked;
     this.calendarRedraw = draw;
@@ -715,16 +716,18 @@ class FilterChipPages {
           return presetsButton();
         }),
       })),
-      // Round 20 §3 (r20-ct-custom.raw): it clears the value and focuses the field.
+      // It clears the value. Round 20 §3 (r20-ct-custom.raw): a preset hands the focus to the field.
+      // Round 22 §1 (r22-d-t1-custom-ds.raw): a typed day hands it to the ⌄.
       panelRow({
         label: this.t('filterDateCustom'),
         testId: 'database-filter-date-custom',
         checked: !isPreset,
         onClick: () => pick(() => {
-          // Measured clearing a preset only; a typed day stays.
-          if (isPreset) this.update({ value: null });
+          const typed = !isPreset && value !== null && value !== undefined && value !== '';
 
-          return this.panel?.root.querySelector<HTMLElement>('[data-blok-database-chip-date-input]');
+          if (isPreset || typed) this.update({ value: null });
+
+          return typed ? presetsButton() : this.panel?.root.querySelector<HTMLElement>('[data-blok-database-chip-date-input]');
         }),
       }),
     ], { gap: DATE_PRESET_MENU_GAP, escapeFocus: presetsButton });

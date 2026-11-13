@@ -1622,15 +1622,17 @@ describe('DatabaseViewControls', () => {
         expect(field()).toHaveFocus();
       });
 
-      // Custom date was measured clearing a preset only: a typed day stays.
-      it('keeps a typed day when Custom date is picked', () => {
+      // notion-motion.md Round 22 §1 (r22-d-t1-custom-ds.raw): Custom date clears a typed day too; the focus goes to the ⌄.
+      it('clears a typed day when Custom date is picked and focuses the ⌄', () => {
         const { controls, saved } = open({ operator: 'equals', value: '2025-03-05' });
 
         click('database-filter-date-presets');
         click('database-filter-date-custom');
 
-        expect(controls.effective(saved.view).filters[0]).toMatchObject({ value: '2025-03-05' });
-        expect(field()).toHaveFocus();
+        expect(controls.effective(saved.view).filters[0]).toMatchObject({ value: null });
+        expect(field().value).toBe('');
+        expect(text(popover().querySelector('[data-blok-database-date-month]'))).toBe('Nov 2026');
+        expect(q('database-filter-date-presets')).toHaveFocus();
       });
 
       it('writes nothing and marks nothing on Enter in an empty field', () => {

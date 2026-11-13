@@ -390,6 +390,43 @@ test.describe('database view settings', () => {
     expect(placed?.bottom).toBeCloseTo(placed?.button ?? 0, 0);
   });
 
+  // notion-motion.md Round 22 §6 (r22-flip-df.raw): with no room on either side the Date filter popover opens above
+  // its chip, its bottom 4 over it, cut to the room there; its list scrolls.
+  test('opens a Date filter popover above its chip, cut to fit, when it fits neither side', async ({ page }) => {
+    await page.setViewportSize({ width: 1512, height: 530 });
+    const [database, ...rows] = blocks({ filters: [{ id: 'f1', propertyId: 'p-due', operator: 'equals', value: null }] });
+    const data = database.data as { schema: unknown[] };
+
+    await mount(page, [{ ...database, data: { ...data, schema: [...data.schema, { id: 'p-due', name: 'Due', type: 'date', position: 'a3' }] } }, ...rows]);
+    await page.evaluate(() => {
+      const holder = document.getElementById('blok');
+
+      if (holder !== null) holder.style.marginTop = '0px';
+      const chip = document.querySelector('[data-blok-testid="database-filter-pill-f1"]')?.getBoundingClientRect();
+
+      if (holder !== null && chip !== undefined) holder.style.marginTop = `${277 - chip.top}px`;
+    });
+    await byTestId(page, 'database-filter-pill-f1').click();
+    await expect(byTestId(page, 'database-filter-popover')).toBeVisible();
+    const placed = await page.evaluate(async () => {
+      await Promise.all(document.getAnimations().map((animation) => animation.finished));
+      const panel = document.querySelector('[data-blok-testid="database-filter-popover"]');
+      const box = panel?.closest('[data-blok-popover-container]')?.getBoundingClientRect();
+      const items = panel?.closest('[data-blok-testid="popover-items"]');
+      const chip = document.querySelector('[data-blok-testid="database-filter-pill-f1"]')?.getBoundingClientRect();
+
+      return box === undefined || chip === undefined || items === null || items === undefined
+        ? null
+        : { top: box.top, bottom: box.bottom, chip: chip.top, scrolls: items.scrollHeight > items.clientHeight };
+    });
+
+    // Low enough that the popover fits neither above nor below the chip.
+    expect(placed?.chip).toBeGreaterThan(240);
+    expect(placed?.top).toBeCloseTo(12, 0);
+    expect(placed?.bottom).toBeCloseTo((placed?.chip ?? 0) - 4, 0);
+    expect(placed?.scrolls).toBe(true);
+  });
+
   test('searches rows by title and property text', async ({ page }) => {
     await mount(page, blocks());
     await byTestId(page, 'database-toolbar-search').click();

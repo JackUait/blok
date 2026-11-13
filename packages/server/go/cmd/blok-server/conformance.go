@@ -137,8 +137,9 @@ func applyConformanceOptions(options *blokserver.Options, parsed conformanceArgu
 	options.CollabEnforceRestoreGuards = parsed.restoreGuards
 	options.CollabRestoreTrashesPages = parsed.restoreTrashesPages
 	options.CollabStampAuthority = parsed.stampAuthority
-	options.FileBytesEnabled = parsed.fileBytes
-	options.FilesCORS = parsed.filesCORS
+	// Only ever on: the host flags may have opened them already.
+	options.FileBytesEnabled = options.FileBytesEnabled || parsed.fileBytes
+	options.FilesCORS = options.FilesCORS || parsed.filesCORS
 	if parsed.fileBytesMax != nil {
 		options.FileBytesMaxBytes = parsed.fileBytesMax
 	}

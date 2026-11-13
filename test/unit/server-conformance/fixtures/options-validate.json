@@ -1006,6 +1006,23 @@
       },
       "error": "",
       "localPublicPath": ""
+    },
+    {
+      "name": "file bytes with a zero cap",
+      "options": {
+        "FileBytesEnabled": true,
+        "FileBytesMaxBytes": 0
+      },
+      "error": "FileBytesMaxBytes must be a positive number of bytes (got 0)",
+      "localPublicPath": ""
+    },
+    {
+      "name": "a zero file bytes cap while the route is off",
+      "options": {
+        "FileBytesMaxBytes": 0
+      },
+      "error": "",
+      "localPublicPath": ""
     }
   ]
 }

@@ -37,15 +37,21 @@ internal static class LocalFileEndpoint
         ["GET", "HEAD"],
         context => ServeAsync(
             context,
-            options.StorageDirectory,
+            options,
             context.Request.RouteValues["fileName"] as string ?? ""));
   }
 
   private static async Task ServeAsync(
       HttpContext context,
-      string directory,
+      BlokServerOptions options,
       string fileName)
   {
+    var directory = options.StorageDirectory;
+    if (options.FilesCors)
+    {
+      AllowFilesOrigin(context, options);
+    }
+
     if (!IsDirectFileName(fileName) || !BlobKey.IsGenerated(fileName))
     {
       await NotFoundAsync(context);
@@ -504,6 +510,19 @@ internal static class LocalFileEndpoint
   {
     return fileName is not ("" or "." or "..") &&
         fileName.IndexOfAny(['/', '\\']) < 0;
+  }
+
+  // Before any refusal, so a 404 is readable too.
+  private static void AllowFilesOrigin(HttpContext context, BlokServerOptions options)
+  {
+    var headers = context.Response.Headers;
+    headers.Append("Vary", "Origin");
+    var origin = BlokServerCors.RequestOrigin(context.Request);
+    if (BlokServerCors.IsAllowed(origin, options.AllowedOrigins))
+    {
+      headers.AccessControlAllowOrigin = origin;
+      headers.AccessControlExposeHeaders = "Accept-Ranges, Content-Length, Content-Range";
+    }
   }
 
   private static async Task NotFoundAsync(HttpContext context)

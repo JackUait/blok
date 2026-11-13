@@ -96,6 +96,27 @@ public sealed class BlokServerOptions
   public bool UnfurlDisabled { get; set; } = true;
 
   /// <summary>
+  /// Opens <c>GET /file-bytes</c>, behind the same guard as <c>/unfurl</c>:
+  /// the PDF preview reads a file's bytes through it, one range at a time.
+  /// Off by default, and apart from <see cref="UnfurlDisabled"/>, since it
+  /// relays whole files.
+  /// </summary>
+  public bool FileBytesEnabled { get; set; }
+
+  /// <summary>
+  /// Largest file <c>GET /file-bytes</c> serves, in bytes (100 MiB by
+  /// default). Must be positive while the route is open.
+  /// </summary>
+  public long FileBytesMaxBytes { get; set; } = 100L << 20;
+
+  /// <summary>
+  /// Sends CORS headers on stored local files to an origin in
+  /// <see cref="AllowedOrigins"/>, so a page on another origin can read them.
+  /// Off by default.
+  /// </summary>
+  public bool FilesCors { get; set; }
+
+  /// <summary>
   /// S3-compatible endpoint: a full HTTP(S) origin with no credentials, path,
   /// query or fragment. Plain HTTP is accepted only against loopback.
   /// </summary>
@@ -368,6 +389,12 @@ public sealed class BlokServerOptions
     {
       throw new InvalidOperationException(
           $"--rate-limit must be zero or greater (got {RateLimitPerMinute})");
+    }
+
+    if (FileBytesEnabled && FileBytesMaxBytes <= 0)
+    {
+      throw new InvalidOperationException(
+          $"FileBytesMaxBytes must be a positive number of bytes (got {FileBytesMaxBytes})");
     }
 
     ValidateCollab();

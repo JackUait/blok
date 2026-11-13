@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Headers;
@@ -12,7 +13,9 @@ namespace Blok.Server.Outbound;
 // MaximumResponseBytes of the body instead of failing past them. Upload takes
 // a slot from the upload pool, so long downloads never starve short checks.
 // Caller is the rate-limit key: a caller runs at most two fetches at once in
-// each pool, and more wait for one of its own slots. Null is no cap.
+// each pool, and more wait for one of its own slots. Null is no cap. Range,
+// when set, is sent on every hop: the only request header besides Host and
+// User-Agent.
 internal readonly record struct GuardedFetchLimits(
     TimeSpan TotalTimeout,
     long MaximumResponseBytes,
@@ -20,7 +23,17 @@ internal readonly record struct GuardedFetchLimits(
     Func<bool>? AllowHop = null,
     bool TruncateBody = false,
     bool Upload = false,
-    string? Caller = null);
+    string? Caller = null,
+    GuardedByteRange? Range = null);
+
+// bytes=Start-End, or bytes=Start- when End is negative. Typed, so no caller
+// text reaches the request.
+internal readonly record struct GuardedByteRange(long Start, long End)
+{
+  internal string HeaderValue => End < 0
+    ? string.Create(CultureInfo.InvariantCulture, $"bytes={Start}-")
+    : string.Create(CultureInfo.InvariantCulture, $"bytes={Start}-{End}");
+}
 
 internal sealed class GuardedResponse : IAsyncDisposable
 {
@@ -253,6 +266,10 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
       request.Headers.TryAddWithoutValidation(
           "User-Agent",
           UserAgent);
+      if (limits.Range is { } range)
+      {
+        request.Headers.TryAddWithoutValidation("Range", range.HeaderValue);
+      }
       using var response = await client.SendAsync(
           request,
           HttpCompletionOption.ResponseHeadersRead,

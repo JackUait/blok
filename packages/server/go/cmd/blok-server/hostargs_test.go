@@ -178,3 +178,25 @@ func TestKeepsPortZeroWhenBindingABlankHostListener(t *testing.T) {
 		t.Fatalf("exit %d", code)
 	}
 }
+
+func TestFileBytesAndFilesCORSAreOffByDefault(t *testing.T) {
+	options := parsedOK(t, nil, noEnv).options
+	if options.FileBytesEnabled || options.FilesCORS || options.FileBytesMaxBytes == nil || *options.FileBytesMaxBytes != 100<<20 {
+		t.Fatalf("defaults %v %v %v", options.FileBytesEnabled, options.FilesCORS, options.FileBytesMaxBytes)
+	}
+}
+
+func TestParsesTheFileBytesFlags(t *testing.T) {
+	options := parsedOK(t, []string{"--file-bytes", "--file-bytes-max-bytes", "2048", "--files-cors"}, noEnv).options
+	if !options.FileBytesEnabled || !options.FilesCORS || *options.FileBytesMaxBytes != 2048 {
+		t.Fatalf("got %v %v %d", options.FileBytesEnabled, options.FilesCORS, *options.FileBytesMaxBytes)
+	}
+	options = parsedOK(t, []string{"--file-bytes=false", "--files-cors=false", "--file-bytes-max-bytes=0x800"}, noEnv).options
+	if options.FileBytesEnabled || options.FilesCORS || *options.FileBytesMaxBytes != 2048 {
+		t.Fatalf("explicit forms: %v %v %d", options.FileBytesEnabled, options.FilesCORS, *options.FileBytesMaxBytes)
+	}
+	parseError(t, []string{"--file-bytes=maybe"}, noEnv, `invalid value "maybe" for flag -file-bytes: parse error`)
+	parseError(t, []string{"--files-cors=maybe"}, noEnv, `invalid value "maybe" for flag -files-cors: parse error`)
+	parseError(t, []string{"--file-bytes-max-bytes=lots"}, noEnv, `invalid value "lots" for flag -file-bytes-max-bytes: parse error`)
+	parseError(t, []string{"--file-bytes-max-bytes"}, noEnv, "flag needs an argument: -file-bytes-max-bytes")
+}

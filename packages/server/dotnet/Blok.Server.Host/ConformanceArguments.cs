@@ -13,7 +13,10 @@ internal sealed record ConformanceParseResult(
     bool RestoreGuards = false,
     bool RestoreTrashesPages = false,
     bool RecordNotes = false,
-    bool StampAuthority = false);
+    bool StampAuthority = false,
+    bool FileBytes = false,
+    long? FileBytesMaxBytes = null,
+    bool FilesCors = false);
 
 internal static class ConformanceArguments
 {
@@ -34,6 +37,9 @@ internal static class ConformanceArguments
     var recordNotes = false;
     var stampAuthority = false;
     int? keepAliveMs = null;
+    var fileBytes = false;
+    long? fileBytesMaxBytes = null;
+    var filesCors = false;
 
     for (var index = 0; index < arguments.Length; index++)
     {
@@ -74,6 +80,30 @@ internal static class ConformanceArguments
       if (argument == "--conformance-stamp-authority")
       {
         stampAuthority = true;
+        continue;
+      }
+
+      if (argument == "--conformance-file-bytes")
+      {
+        fileBytes = true;
+        continue;
+      }
+
+      if (argument == "--conformance-files-cors")
+      {
+        filesCors = true;
+        continue;
+      }
+
+      if (argument.StartsWith("--conformance-file-bytes-max-bytes=", StringComparison.Ordinal))
+      {
+        var text = argument["--conformance-file-bytes-max-bytes=".Length..];
+        if (!long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var bytes))
+        {
+          return Error($"--conformance-file-bytes-max-bytes must be a whole number of bytes (got \"{text}\")");
+        }
+
+        fileBytesMaxBytes = bytes;
         continue;
       }
 
@@ -154,7 +184,10 @@ internal static class ConformanceArguments
         restoreGuards,
         restoreTrashesPages,
         recordNotes,
-        stampAuthority);
+        stampAuthority,
+        fileBytes,
+        fileBytesMaxBytes,
+        filesCors);
   }
 
   private static ConformanceParseResult Error(string error)

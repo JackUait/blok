@@ -47,7 +47,7 @@ func parseHostArguments(args []string, getenv func(string) string) hostArguments
 		switch name {
 		case "h", "help":
 			return hostArguments{help: true}
-		case "no-unfurl", "collab", "collab-journal":
+		case "no-unfurl", "collab", "collab-journal", "file-bytes", "files-cors":
 			value := true
 			if hasInline {
 				parsed, ok := parseBool(inline)
@@ -61,6 +61,10 @@ func parseHostArguments(args []string, getenv func(string) string) hostArguments
 				options.UnfurlEnabled = !value
 			case "collab":
 				options.CollabEnabled = value
+			case "file-bytes":
+				options.FileBytesEnabled = value
+			case "files-cors":
+				options.FilesCORS = value
 			default:
 				options.CollabJournal = value
 				journalFromFlag = true
@@ -101,6 +105,12 @@ func parseHostArguments(args []string, getenv func(string) string) hostArguments
 				return invalid()
 			}
 			options.MaxUploadBytes = new(parsed)
+		case "file-bytes-max-bytes":
+			parsed, ok := parseBaseZeroInt64(value)
+			if !ok {
+				return invalid()
+			}
+			options.FileBytesMaxBytes = new(parsed)
 		case "rate-limit":
 			parsed, ok := parseBaseZeroInt64(value)
 			if !ok {
@@ -179,7 +189,7 @@ func csQuote(s string) string { return `"` + s + `"` }
 func isValueFlag(name string) bool {
 	switch name {
 	case "listen", "auth", "secret", "allow-origin", "storage-dir", "public-url",
-		"max-upload", "rate-limit", "s3-endpoint", "s3-region", "s3-bucket",
+		"max-upload", "file-bytes-max-bytes", "rate-limit", "s3-endpoint", "s3-region", "s3-bucket",
 		"s3-bucket-url", "s3-addressing", "doc-endpoint", "doc-endpoint-auth",
 		"collab-dir", "collab-s3-prefix", "rich-text-fields":
 		return true

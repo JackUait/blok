@@ -89,6 +89,7 @@ public static class BlokServerServiceCollectionExtensions
             provider.GetRequiredService<IGuardedOutboundPolicy>()));
     services.TryAddSingleton<FixedWindowRateLimiter>();
     services.TryAddSingleton<BlokServerRequestGuard>();
+    services.TryAddSingleton<PdfCheckCache>();
 
     services.TryAddSingleton<IBlobStore>(provider =>
     {

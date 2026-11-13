@@ -37,6 +37,12 @@ internal static class HostArguments
           requests a minute per caller (ticket mode defaults to 60; other modes default to 0)
         --no-unfurl
           close GET /unfurl and POST /upload-by-url
+        --file-bytes
+          serve GET /file-bytes, which hands the PDF preview a file's bytes (off by default)
+        --file-bytes-max-bytes value
+          largest file GET /file-bytes serves, in bytes (default 104857600)
+        --files-cors
+          let --allow-origin origins read stored files from another origin (off by default)
         --s3-endpoint value
           S3-compatible endpoint
         --s3-region value
@@ -147,6 +153,27 @@ internal static class HostArguments
         continue;
       }
 
+      if (name is "file-bytes" or "files-cors")
+      {
+        var enabled = true;
+        if (inlineValue is not null && !TryParseBoolean(inlineValue, out enabled))
+        {
+          return ParseError(
+              $"invalid value \"{inlineValue}\" for flag -{name}: parse error");
+        }
+
+        if (name == "file-bytes")
+        {
+          options.FileBytesEnabled = enabled;
+        }
+        else
+        {
+          options.FilesCors = enabled;
+        }
+
+        continue;
+      }
+
       if (name == "collab-journal")
       {
         collabJournalFromFlag = true;
@@ -216,6 +243,15 @@ internal static class HostArguments
           }
 
           options.MaxUploadBytes = maxUpload;
+          break;
+        case "file-bytes-max-bytes":
+          if (!TryParseBaseZeroInt64(value, out var fileBytesMax))
+          {
+            return ParseError(
+                $"invalid value \"{value}\" for flag -file-bytes-max-bytes: parse error");
+          }
+
+          options.FileBytesMaxBytes = fileBytesMax;
           break;
         case "rate-limit":
           if (!TryParseBaseZeroInt64(value, out var parsedRateLimit))
@@ -334,6 +370,7 @@ internal static class HostArguments
         "storage-dir" or
         "public-url" or
         "max-upload" or
+        "file-bytes-max-bytes" or
         "rate-limit" or
         "s3-endpoint" or
         "s3-region" or

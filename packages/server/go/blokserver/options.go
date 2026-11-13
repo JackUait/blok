@@ -158,8 +158,7 @@ type Options struct {
 }
 
 // DefaultOptions returns the C# BlokServerOptions defaults, every pointer
-// field set. FileBytesMaxBytes stays nil until C# has it: options-defaults.json
-// is written from C#.
+// field set.
 func DefaultOptions() Options {
 	d := defaults()
 	return Options{
@@ -167,6 +166,7 @@ func DefaultOptions() Options {
 		ListenAddress:                        &d.ListenAddress,
 		Auth:                                 &d.Auth,
 		MaxUploadBytes:                       &d.MaxUploadBytes,
+		FileBytesMaxBytes:                    &d.FileBytesMaxBytes,
 		CollabMaxConnectionsPerUserPerDoc:    &d.CollabMaxConnectionsPerUserPerDoc,
 		CollabMaxMessageBytes:                &d.CollabMaxMessageBytes,
 		CollabKeepAliveInterval:              &d.CollabKeepAliveInterval,

@@ -42,6 +42,12 @@ const usage = `Usage of blok-server:
     requests a minute per caller (ticket mode defaults to 60; other modes default to 0)
   --no-unfurl
     close GET /unfurl and POST /upload-by-url
+  --file-bytes
+    serve GET /file-bytes, which hands the PDF preview a file's bytes (off by default)
+  --file-bytes-max-bytes value
+    largest file GET /file-bytes serves, in bytes (default 104857600)
+  --files-cors
+    let --allow-origin origins read stored files from another origin (off by default)
   --s3-endpoint value
     S3-compatible endpoint
   --s3-region value

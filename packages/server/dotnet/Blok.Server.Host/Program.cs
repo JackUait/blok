@@ -53,6 +53,13 @@ if (conformance.KeepAliveMs is { } keepAliveMs)
 options.CollabEnforceRestoreGuards = conformance.RestoreGuards;
 options.CollabRestoreTrashesPages = conformance.RestoreTrashesPages;
 options.CollabStampAuthority = conformance.StampAuthority;
+// Only ever on: the host flags may have opened them already.
+options.FileBytesEnabled |= conformance.FileBytes;
+options.FilesCors |= conformance.FilesCors;
+if (conformance.FileBytesMaxBytes is { } fileBytesMaxBytes)
+{
+  options.FileBytesMaxBytes = fileBytesMaxBytes;
+}
 #endif
 
 try

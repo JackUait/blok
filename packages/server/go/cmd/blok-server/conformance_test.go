@@ -28,3 +28,16 @@ func TestConformanceFileBytesCapMustBeANumber(t *testing.T) {
 		t.Fatalf("failure %q", failure)
 	}
 }
+
+// The conformance flags only ever turn these on: a host flag stays.
+func TestConformanceFlagsKeepTheHostFileBytesFlags(t *testing.T) {
+	_, parsed, failure := parseConformanceArguments(nil)
+	if failure != "" {
+		t.Fatal(failure)
+	}
+	options := blokserver.Options{FileBytesEnabled: true, FilesCORS: true}
+	applyConformanceOptions(&options, parsed)
+	if !options.FileBytesEnabled || !options.FilesCORS {
+		t.Fatalf("options %+v", options)
+	}
+}

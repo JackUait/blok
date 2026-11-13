@@ -56,6 +56,30 @@ it.each([
     stderr: 'invalid value "maybe" for flag -no-unfurl: parse error',
   },
   {
+    name: 'a file-bytes flag with a bad value',
+    args: ['--file-bytes=maybe'],
+    exitCode: 2,
+    stderr: 'invalid value "maybe" for flag -file-bytes: parse error\nUsage of blok-server:',
+  },
+  {
+    name: 'a files-cors flag with a bad value',
+    args: ['--files-cors=maybe'],
+    exitCode: 2,
+    stderr: 'invalid value "maybe" for flag -files-cors: parse error',
+  },
+  {
+    name: 'a file-bytes cap that is not a number',
+    args: ['--file-bytes-max-bytes', '1x'],
+    exitCode: 2,
+    stderr: 'invalid value "1x" for flag -file-bytes-max-bytes: parse error',
+  },
+  {
+    name: 'a zero file-bytes cap with the route open',
+    args: ['--file-bytes', '--file-bytes-max-bytes', '0'],
+    exitCode: 1,
+    stderr: 'blok-server refused to start: FileBytesMaxBytes must be a positive number of bytes (got 0)',
+  },
+  {
     name: 'a bad BLOK_COLLAB_JOURNAL',
     args: [],
     env: { BLOK_COLLAB_JOURNAL: 'maybe' },

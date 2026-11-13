@@ -2,7 +2,7 @@
 
 Blok's shared server is written in C#. It handles file uploads, link previews and live collaboration, and it converts saved documents. Use it inside an ASP.NET Core app, or run the same routes as a standalone npm binary or Docker image.
 
-A Go version of the server lives in `packages/server/go`. It serves the same routes as the C# server. Every conformance suite runs against both. It serves health, link previews (`/unfurl`), uploads (`/upload`, `/upload-by-url`), deletes and local files. Its `blokdocs` package converts saved documents. With `--collab` it also serves live collaboration: the sync socket, `/edit`, `/state`, `/reset` and the history routes. It reads and writes the same collaboration directory as the C# server.
+A Go version of the server lives in `packages/server/go`. It serves the same routes as the C# server. Every conformance suite runs against both. It serves health, link previews (`/unfurl`), PDF bytes for the preview (`/file-bytes`), uploads (`/upload`, `/upload-by-url`), deletes and local files. Its `blokdocs` package converts saved documents. With `--collab` it also serves live collaboration: the sync socket, `/edit`, `/state`, `/reset` and the history routes. It reads and writes the same collaboration directory as the C# server.
 
 The npm binary, the Docker image and the NuGet packages all ship the C# server. See [Go module and archives](#go-module-and-archives) for how the Go server ships.
 
@@ -307,7 +307,7 @@ new Blok({
 });
 ```
 
-One key fills in the uploader and the link-preview endpoint. Anything you set yourself wins, so uploading into your own storage while keeping previews here needs no extra wiring.
+One key fills in the uploader, the link-preview endpoint and the file tool's `previewEndpoint`. Anything you set yourself wins, so uploading into your own storage while keeping previews here needs no extra wiring.
 
 The standalone host uses routes at the root. An ASP.NET Core app uses the prefix passed to `MapBlokServer`.
 
@@ -362,6 +362,7 @@ Passes are needed whenever the routes run with `Auth = "ticket"`, including rout
 | `GET /health` | Reports liveness and the running version |
 | `GET /unfurl?url=…` | Reads title, description, and image metadata |
 | `GET /frame-check?url=…&embedder=…` | Says whether the page would let your editor show it in a frame, plus safe oEmbed details |
+| `GET /file-bytes?url=…` | Hands the editor's PDF preview a PDF's bytes, one range at a time (off by default) |
 | `POST /upload` | Stores an uploaded file |
 | `POST /upload-by-url` | Fetches and stores a remote file; the request media type must be `application/json` |
 | `GET /sync/{doc}` | WebSocket; the editor's live collaboration connection to one document (with `--collab`) |
@@ -445,6 +446,19 @@ At most four page fetches (`/unfurl`, `/frame-check`) and four downloads (`/uplo
 
 The verdict is a hint for your UI, not a security check. The server cannot see the reader's cookies, the full chain of frames above your editor, or scripts that break out of frames.
 
+`GET /file-bytes?url=…` is how the editor's PDF preview reads a PDF that neither the browser nor your `fetchPreview` hook can read. It is off by default and does not follow `--no-unfurl`, because it relays whole files.
+
+- Turn it on with `--file-bytes`. In-process, the option is `FileBytesEnabled` (C#, Go) or `file_bytes_enabled` (Rust).
+- It uses the same origin, pass and rate checks as `/unfurl`. A pass with `write: false` may call it.
+- It serves PDFs only. It looks for `%PDF-` in the first 1024 bytes and answers 415 otherwise. A URL that passed is trusted for 10 minutes. The check can cost one more request against the rate limit.
+- It forwards one `Range` (`bytes=a-b` or `bytes=a-`) and answers 200 or 206. One answer holds at most 1 MiB. A larger one gets 413, so ask for a range, as the editor does.
+- A file over `--file-bytes-max-bytes` gets 413. The default is 100 MiB (`FileBytesMaxBytes`, `file_bytes_max_bytes`).
+- A file this service stored on local disk is read from disk. Anything else goes through the guarded outbound client, with the redirect rules above.
+- Other answers: 404 when the route is off or a stored file is missing, 416 for a range past the end of a stored file, 429 for the rate limit, and 502 when the file could not be fetched or did not answer 2xx.
+- A 200 or 206 answer is `application/pdf` with `X-Content-Type-Options: nosniff` and `Content-Security-Policy: sandbox`, so a browser never runs it as a page.
+
+`--files-cors` (`FilesCors` in C#, `FilesCORS` in Go, `files_cors` in Rust) sends CORS headers on stored local files to each `--allow-origin` origin. It is off by default. With it on, the editor can read a stored PDF straight from its URL.
+
 A request that carries `Origin` must match an allowed origin in every auth mode. In `none` and `proxy`, a genuinely originless backend request remains allowed, but an originless browser request carrying `Sec-Fetch-Site: cross-site` is rejected. `ticket` always requires an allowed `Origin`.
 
 With `--auth none` or `proxy`, the standalone host also checks `Host` on these routes. This stops DNS rebinding: a page whose name now points at 127.0.0.1 sends its own name as `Host`.
@@ -457,7 +471,7 @@ If a front proxy forwards your public `Host`, add that origin to `--allow-origin
 
 In your own ASP.NET Core app the check is off. Turn it on with `AddBlokServer(...).UseLoopbackHostCheck()` when the app listens on loopback only. Leave it off when the app serves the routes under its own public name. The Go handler has the same switch: `Options.LoopbackHostCheck`.
 
-A ticket with `write: false` may call `GET /unfurl`, `GET /frame-check`, `GET /sync/{doc}/state`, the three `GET` history routes and open `GET /sync/{doc}` read-only; both upload routes, `reset`, `edit`, the history `DELETE` and `restore` require `write: true`. The `doc` claim scopes the collaboration routes: `/sync/{doc}`, its `reset`, its `edit`, its `state` and its history routes are refused when the pass names no document or a different one. `state` and the three history reads ask your `IBlokAuthorization` for read access only. A collaboration pass must also name its `user`: `GET /sync/{doc}` closes one with an empty `user` as 4401 `pass names no user`, because the per-user connection cap and rate window key on that name. The upload and unfurl routes ignore it, so a pass minted for one page works for every upload and preview that page can make.
+A ticket with `write: false` may call `GET /unfurl`, `GET /frame-check`, `GET /file-bytes`, `GET /sync/{doc}/state`, the three `GET` history routes and open `GET /sync/{doc}` read-only; both upload routes, `reset`, `edit`, the history `DELETE` and `restore` require `write: true`. The `doc` claim scopes the collaboration routes: `/sync/{doc}`, its `reset`, its `edit`, its `state` and its history routes are refused when the pass names no document or a different one. `state` and the three history reads ask your `IBlokAuthorization` for read access only. A collaboration pass must also name its `user`: `GET /sync/{doc}` closes one with an empty `user` as 4401 `pass names no user`, because the per-user connection cap and rate window key on that name. The upload and unfurl routes ignore it, so a pass minted for one page works for every upload and preview that page can make.
 
 ### Version history
 

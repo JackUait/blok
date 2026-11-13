@@ -484,6 +484,9 @@ describe('server docs data', () => {
       '--collab-s3-prefix',
       '--doc-endpoint',
       '--doc-endpoint-auth',
+      '--file-bytes',
+      '--file-bytes-max-bytes',
+      '--files-cors',
       '--listen',
       '--max-upload',
       '--no-unfurl',
@@ -559,7 +562,7 @@ describe('server docs data', () => {
     expect(prose).toMatch(inOrder('--rate-limit', 'ticket', '60', 'otherwise', '0'));
   });
 
-  it('states the thirty-six service limits the design refuses to bury', () => {
+  it('states the thirty-seven service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
       'collab-replaces-persistence',
@@ -579,6 +582,7 @@ describe('server docs data', () => {
       'loopback-host',
       'upload-by-url-json',
       'frame-check',
+      'file-bytes',
       'outbound-redirects',
       'proxy-rate-limit',
       'ticket-not-scoped',
@@ -614,6 +618,23 @@ describe('server docs data', () => {
     expect(body).toMatch(inOrder('unknown', 'Origin'));
     expect(body).toMatch(/linkPaste\.checkEmbed/);
     expect(body).toMatch(/not a security check/);
+  });
+
+  it('describes GET /file-bytes: off by default, PDF only, 1 MiB an answer, and its statuses', () => {
+    const body = serverLimits.find((l) => l.id === 'file-bytes')?.body ?? '';
+
+    expect(body).toMatch(inOrder('GET /file-bytes', 'off by default', '--file-bytes'));
+    expect(body).toMatch(/--no-unfurl/);
+    expect(body).toMatch(inOrder('--file-bytes-max-bytes', '100 MiB'));
+    expect(body).toMatch(inOrder('FileBytesEnabled', 'FileBytesMaxBytes', 'FilesCors'));
+    expect(body).toMatch(/FilesCORS/);
+    expect(body).toMatch(/%PDF-/);
+    expect(body).toMatch(/1 MiB/);
+    expect(body).toMatch(/write: false/);
+    for (const status of ['404', '413', '415', '416', '429', '502']) {
+      expect(body).toContain(status);
+    }
+    expect(body).toMatch(inOrder('--files-cors', '--allow-origin'));
   });
 
   it('prices the outbound fetch limits: five redirects, no https to http, each hop rate-limited', () => {

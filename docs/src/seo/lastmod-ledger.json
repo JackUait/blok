@@ -84,8 +84,8 @@
     "date": "2026-10-05"
   },
   "/docs/config": {
-    "hash": "ca8aab56c7f50073",
-    "date": "2026-11-12"
+    "hash": "8a31cf2766da3a1f",
+    "date": "2026-11-13"
   },
   "/docs/core": {
     "hash": "bbf26a19fdeecc03",
@@ -132,7 +132,7 @@
     "date": "2026-09-08"
   },
   "/docs/file": {
-    "hash": "9c7ae296af1388c1",
+    "hash": "7276d587c6b90804",
     "date": "2026-11-13"
   },
   "/docs/header": {
@@ -424,8 +424,8 @@
     "date": "2026-10-05"
   },
   "/ru/docs/config": {
-    "hash": "b6822c377ab42500",
-    "date": "2026-11-12"
+    "hash": "3221dd880b18d324",
+    "date": "2026-11-13"
   },
   "/ru/docs/core": {
     "hash": "b1c6e1c381d91d77",
@@ -472,7 +472,7 @@
     "date": "2026-09-08"
   },
   "/ru/docs/file": {
-    "hash": "6c4792fb3a0db85d",
+    "hash": "47be015e44ed7360",
     "date": "2026-11-13"
   },
   "/ru/docs/header": {
@@ -684,16 +684,16 @@
     "date": "2026-11-03"
   },
   "/ru/server": {
-    "hash": "1dfc67d02c29c740",
-    "date": "2026-11-12"
+    "hash": "4035a96a10a174bf",
+    "date": "2026-11-13"
   },
   "/ru/tools": {
     "hash": "2b0fddd440ba58c4",
     "date": null
   },
   "/server": {
-    "hash": "623bd0924739094f",
-    "date": "2026-11-12"
+    "hash": "29d57d6142f0bb2c",
+    "date": "2026-11-13"
   },
   "/tools": {
     "hash": "8ae406d370e08ec0",

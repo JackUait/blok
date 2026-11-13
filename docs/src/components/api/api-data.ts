@@ -635,7 +635,7 @@ const editor = new Blok(config);`,
         type: "string",
         default: "undefined",
         description:
-          "Base URL of a service speaking Blok's upload and unfurl contracts, such as `https://blok.myapp.com`, or a same-origin path like `/api/blok`. It is shorthand only.\n\nIt fills in `uploader`, the bookmark tool's `endpoint`, `link.unfurl` and `linkPaste.checkEmbed` when you have not set them yourself, and anything you set explicitly wins. That is what lets you take the service for link previews while uploading into your own S3, with no bridging code.\n\nIt does not configure document storage. Your documents stay yours. See `persistence`.",
+          "Base URL of a service speaking Blok's upload and unfurl contracts, such as `https://blok.myapp.com`, or a same-origin path like `/api/blok`. It is shorthand only.\n\nIt fills in `uploader`, the bookmark tool's `endpoint`, `link.unfurl`, `linkPaste.checkEmbed` and the file tool's `previewEndpoint` when you have not set them yourself, and anything you set explicitly wins. That is what lets you take the service for link previews while uploading into your own S3, with no bridging code.\n\nIt does not configure document storage. Your documents stay yours. See `persistence`.",
       },
       {
         option: "ticket",

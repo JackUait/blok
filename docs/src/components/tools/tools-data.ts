@@ -1299,7 +1299,7 @@ const editor = new Blok({
     type: 'block',
     title: 'File',
     description:
-      'An attachment card for any uploaded file. It shows a type icon, filename, human-readable size, a download action, and an optional caption.\n\nFiles are sent through an uploader that you supply. When there is none, the tool falls back to a local blob URL (uploadByFile) or to the pasted URL itself (uploadByUrl). An optional MIME allowlist and max size can gate what is accepted.\n\nThe fallback blob URL gets a safe type. Any type outside a short safe list becomes `text/plain`, such as HTML, SVG, XML, zip, Office or untyped files. The bytes stay the same. Read the file\'s type from `mimeType`, not from the blob.\n\nA click on the card of a file that can be previewed opens it in a window. The header names the file type and offers Download and, for an http(s) file, Open in new tab.\n\n- Word: pages, with a page counter and zoom.\n- Excel and CSV: a spreadsheet grid. Each sheet is a tab. Dragging over cells shows their sum, average and count.\n- PowerPoint: one slide at a time over a filmstrip. The arrow keys turn the slides.\n- Code: line numbers, indent guides, a minimap, Wrap lines and Copy.\n- Logs: coloured levels and a filter for errors and warnings.\n- Markdown: the rendered page with an outline of its headings, or its source.\n- PDF: the browser\'s own viewer.\n\nThe PDF preview frames only a `blob:` PDF, re-typed as `application/pdf`. A remote http(s) PDF gets an "Open in new tab" link instead, because the preview never frames a remote page. With a strict CSP, the preview may need `blob:` in `connect-src`, since it reads the blob with `fetch`.',
+      'An attachment card for any uploaded file. It shows a type icon, filename, human-readable size, a download action, and an optional caption.\n\nFiles are sent through an uploader that you supply. When there is none, the tool falls back to a local blob URL (uploadByFile) or to the pasted URL itself (uploadByUrl). An optional MIME allowlist and max size can gate what is accepted.\n\nThe fallback blob URL gets a safe type. Any type outside a short safe list becomes `text/plain`, such as HTML, SVG, XML, zip, Office or untyped files. The bytes stay the same. Read the file\'s type from `mimeType`, not from the blob.\n\nA click on the card of a file that can be previewed opens it in a window. The header names the file type and offers Download and, for an http(s) file, Open in new tab.\n\n- Word: pages, with a page counter and zoom.\n- Excel and CSV: a spreadsheet grid. Each sheet is a tab. Dragging over cells shows their sum, average and count.\n- PowerPoint: one slide at a time over a filmstrip. The arrow keys turn the slides.\n- Code: line numbers, indent guides, a minimap, Wrap lines and Copy.\n- Logs: coloured levels and a filter for errors and warnings.\n- Markdown: the rendered page with an outline of its headings, or its source.\n- PDF: pages drawn with pdf.js, with a page counter and zoom. Text can be selected, and links in the file open safely. A locked PDF asks for its password.\n\nA PDF that cannot be read shows an error card that offers a download.\n\nAn http(s) PDF needs its bytes. Blok tries these ways in order and uses the first that works:\n\n- `fetchPreview`, when you set it.\n- The url itself. This works only when the file\'s host answers CORS. No cookies are sent.\n- `previewEndpoint`, a Blok server\'s `GET /file-bytes` route.\n- When none works, an "Open in new tab" link.\n\nBytes that are not a PDF end on the error card, not on the link.\n\nOlder browsers keep the old behaviour. Without `Promise.withResolvers`, Web Workers or a 2D canvas, a `blob:` PDF shows in the browser\'s PDF viewer. An http(s) PDF then gets the link.\n\npdf.js runs in a worker loaded from a `blob:` URL. With a strict CSP, allow `worker-src blob:`. Without it, pdf.js loads the same `blob:` URL as a script on the page, so `script-src` must allow `blob:`. A `blob:` PDF is read with `fetch`, so it may also need `blob:` in `connect-src`.',
     importExample: `import { File } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -1360,6 +1360,27 @@ const editor = new Blok({
         default: '"Write a caption…"',
         description:
           'Placeholder text shown in the caption field. Defaults to the localized `tools.file.captionPlaceholder` string.',
+      },
+      {
+        option: 'fetchPreview',
+        type: '(url: string, init: { signal: AbortSignal }) => Promise<Blob | ArrayBuffer | Response>',
+        default: 'undefined',
+        description:
+          'Fetches a PDF\'s bytes for the preview when the browser cannot read the url itself. For example, the host sends no CORS headers or needs a cookie. Blok calls it first, with the http(s) url and a signal that aborts when the preview closes.\n\nResolve to a `Blob`, an `ArrayBuffer` or a `Response`. If it throws or answers with a `Response` that is not ok, Blok tries the url itself next.',
+      },
+      {
+        option: 'previewEndpoint',
+        type: '{ url: string; headers?: Record<string, string> | (() => Promise<Record<string, string>>) }',
+        default: 'undefined',
+        description:
+          'A Blok server\'s `/file-bytes` route. Blok tries it for an http(s) PDF after `fetchPreview` and the url itself.\n\nBlok reads the file in ranges of at most 1 MiB. It sends `headers` with every range. A function is called again for each range, so a short-lived pass stays fresh.\n\nThe `server` shorthand fills this in when the file tool is registered. It uses the `ticket` pass as the headers, when you set one. The route is off on the server by default.',
+      },
+      {
+        option: 'pdfAssetsUrl',
+        type: 'string',
+        default: 'undefined',
+        description:
+          'Base URL that holds pdf.js\'s `cmaps/`, `wasm/` and `iccs/` folders. Blok ships none of these files. Copy them from the `pdfjs-dist` package, at the version in Blok\'s own `package.json`.\n\nWithout it, a PDF with CJK text and no embedded font, or with JPEG 2000 or JBIG2 images, shows with gaps. With it, pdf.js runs its WebAssembly decoders, which need `\'wasm-unsafe-eval\'` in your CSP.',
       },
     ],
     saveDataShape: `interface FileData {

@@ -2221,11 +2221,15 @@ export class ViewSettingsPages {
       only.setAttribute('data-blok-database-filter-rule-value', '');
       line.append(only);
     } else if (controls.length > 0) {
-      line.append(button(`database-filter-rule-value-${id}`, filterValueText(node, property, (key, vars) => this.ctx.i18n.t(key, vars), (person) => this.personName(person), (row) => this.ctx.relatedRows?.(property).find((r) => r.id === row)?.title, editorLocale(this.ctx.i18n)) || this.t('filterValue'), (self) => {
+      const shown = filterValueText(node, property, (key, vars) => this.ctx.i18n.t(key, vars), (person) => this.personName(person), (row) => this.ctx.relatedRows?.(property).find((r) => r.id === row)?.title, editorLocale(this.ctx.i18n));
+      const valueButton = button(`database-filter-rule-value-${id}`, shown || this.ctx.i18n.t(VALUE_PLACEHOLDER_KEYS[property.type] ?? 'tools.database.filterValue'), (self) => {
         openRuleValueFlyout(self, panel, this.ctx, () => findRule(tree(), id), (patch) => {
           write(updateFilterRule(tree(), id, patch.operator === undefined ? patch : { ...patch, operator: keepLead(findRule(tree(), id)?.operator ?? node.operator, patch.operator) }));
         });
-      }));
+      });
+
+      if (shown === '') valueButton.setAttribute('data-blok-database-filter-placeholder', '');
+      line.append(valueButton);
     }
     line.append(more);
 
@@ -2886,6 +2890,21 @@ export class ViewSettingsPages {
     };
   }
 }
+
+/** notion-motion.md Round 20 §2 (r20-adv-*-parts.raw): what an empty advanced value asks for, per type. */
+const VALUE_PLACEHOLDER_KEYS: Partial<Record<PropertyType, string>> = {
+  select: 'tools.database.filterSelectOption',
+  multiSelect: 'tools.database.filterSelectOption',
+  status: 'tools.database.filterSelectOption',
+  checkbox: 'tools.database.filterSelectValue',
+  person: 'tools.database.filterSelectPeople',
+  createdBy: 'tools.database.filterSelectPeople',
+  lastEditedBy: 'tools.database.filterSelectPeople',
+  relation: 'tools.database.filterSelectPage',
+  date: 'tools.database.filterSelectDate',
+  createdTime: 'tools.database.filterSelectDate',
+  lastEditedTime: 'tools.database.filterSelectDate',
+};
 
 const rulesOf = (group: FilterGroup): FilterRule[] =>
   group.filterRules.flatMap((node) => (isFilterGroup(node) ? rulesOf(node) : [node]));

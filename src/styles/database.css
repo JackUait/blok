@@ -12625,6 +12625,11 @@ input[data-blok-database-picker-search]:focus {
   color: var(--blok-database-table-cell-text);
 }
 
+/* notion-motion.md Round 20 §2: an empty value's placeholder. Blok's AA secondary ink, darker than Notion's rgb(125,122,117). */
+[data-blok-database-filter-rule] > [data-blok-database-filter-rule-button][data-blok-database-filter-placeholder] {
+  color: var(--blok-database-ink-secondary);
+}
+
 [data-blok-database-filter-rule] > [data-blok-database-filter-rule-button]:hover:not(:disabled),
 [data-blok-database-filter-rule] > [data-blok-database-filter-rule-button][data-popover-open],
 :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-filter-rule] > [data-blok-database-filter-rule-button]:focus-visible {

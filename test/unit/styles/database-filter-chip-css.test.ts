@@ -39,6 +39,11 @@ describe('advanced filter popover', () => {
     expect(declared('[data-blok-database-filter-rule] > [data-blok-database-panel-row]:not([data-blok-database-filter-rule-button])', 'flex')).toEqual(['0 0 60px']);
   });
 
+  // notion-motion.md Round 20 §2: an empty value reads in secondary ink. AA rule: Blok's token, not Notion's lighter rgb(125,122,117).
+  it('paints an empty rule value in secondary ink', () => {
+    expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-button][data-blok-database-filter-placeholder]', 'color')).toEqual(['var(--blok-database-ink-secondary)']);
+  });
+
   // notion-motion.md Round 19 §1 (r19-adv-group.raw): no border, fill rgba(66,35,3,0.03), radius 6, padding 8px 8px 0, gap 8.
   it('draws a filter group as a borderless faint box', () => {
     const group = '[data-blok-database-filter-group]';

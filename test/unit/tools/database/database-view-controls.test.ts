@@ -655,6 +655,42 @@ describe('DatabaseViewControls', () => {
     expect(text(q('database-filter-rule-value-r'))).not.toBe('tools.database.filterValue');
   });
 
+  // notion-motion.md Round 20 §2 (r20-adv-*-parts.raw): an empty advanced value names what to pick, in secondary ink.
+  it.each([
+    ['select', 'equals', 'tools.database.filterSelectOption'],
+    ['multiSelect', 'contains', 'tools.database.filterSelectOption'],
+    ['status', 'equals', 'tools.database.filterSelectOption'],
+    ['checkbox', 'equals', 'tools.database.filterSelectValue'],
+    ['person', 'contains', 'tools.database.filterSelectPeople'],
+    ['createdBy', 'contains', 'tools.database.filterSelectPeople'],
+    ['lastEditedBy', 'contains', 'tools.database.filterSelectPeople'],
+    ['relation', 'contains', 'tools.database.filterSelectPage'],
+    ['date', 'equals', 'tools.database.filterSelectDate'],
+  ] as const)('shows an empty advanced %s value as its placeholder', (type, operator, key) => {
+    const options = [{ id: 'o', label: 'O', position: 'a0' }];
+    const { controls, saved } = setup({
+      schema: () => [...schema, { id: 'p', name: 'P', type, position: 'a3', config: { options } }],
+      levers: { relatedRows: () => [{ id: 'x', title: 'X' }] },
+    });
+
+    saved.view = { ...saved.view, filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'r', propertyId: 'p', operator, value: null }] } };
+    controls.refresh();
+    click('database-advanced-pill');
+
+    expect(text(q('database-filter-rule-value-r'))).toBe(key);
+    expect(q('database-filter-rule-value-r')?.hasAttribute('data-blok-database-filter-placeholder')).toBe(true);
+  });
+
+  it('drops the placeholder mark once the advanced value is set', () => {
+    const { controls, saved } = setup({ schema: () => [...schema, { id: 'done', name: 'Done', type: 'checkbox', position: 'a3' }] });
+
+    saved.view = { ...saved.view, filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'r', propertyId: 'done', operator: 'equals', value: true }] } };
+    controls.refresh();
+    click('database-advanced-pill');
+
+    expect(q('database-filter-rule-value-r')?.hasAttribute('data-blok-database-filter-placeholder')).toBe(false);
+  });
+
   it('gives "+ Sort" no advanced footer', () => {
     setup();
     click('database-toolbar-sort');

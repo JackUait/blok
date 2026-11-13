@@ -15696,6 +15696,10 @@ input[data-blok-database-picker-search]:focus {
   color: var(--blok-database-table-cell-text);
 }
 
+[data-blok-database-filter-rule] > [data-blok-database-filter-rule-button][data-blok-database-filter-placeholder] {
+  color: var(--blok-database-ink-secondary);
+}
+
 [data-blok-database-filter-rule] > [data-blok-database-filter-rule-button]:hover:not(:disabled), [data-blok-database-filter-rule] > [data-blok-database-filter-rule-button][data-popover-open], :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-filter-rule] > [data-blok-database-filter-rule-button]:focus-visible {
   background-color: var(--blok-database-sort-button-hover-bg);
 }

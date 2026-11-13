@@ -1241,6 +1241,21 @@ export default defineConfig(
       'no-unused-vars': 'off',
     },
   },
+  // `desktop/` est un programme TypeScript distinct : ses alias `@blok/*`
+  // (sidebar, date-editor, modal-dialog, popover, agent-assistant) ne sont
+  // déclarés que dans `desktop/tsconfig.json`. Analysé avec le projet racine,
+  // aucun de ses imports internes ne résout, tout ce qui en vient devient un
+  // type irrésolu, et chaque accès déclenche une règle `no-unsafe-*` — environ
+  // un millier d'erreurs qui ne décrivent aucun défaut du code.
+  {
+    files: ['desktop/src/**/*.ts', 'desktop/src/**/*.tsx'],
+    languageOptions: {
+      parserOptions: {
+        project: ['./desktop/tsconfig.json'],
+        tsconfigRootDir: __dirname,
+      },
+    },
+  },
   {
     files: ['src/**/*.ts', 'src/**/*.tsx'],
     plugins: {

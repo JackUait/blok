@@ -152,7 +152,9 @@ describe('sort and rule control chevrons', () => {
   it('ends "Where" and And/Or at the column end', () => {
     expect(declared('[data-blok-database-filter-conjunction-cell]', 'flex')).toEqual(['0 0 60px']);
     expect(declared('[data-blok-database-filter-conjunction-cell]', 'justify-content')).toEqual(['flex-end']);
-    expect(declared('[data-blok-database-filter-rule] > [data-blok-database-panel-note]', 'text-align')).toEqual(['end']);
+    expect(declared('[data-blok-database-filter-where]', 'text-align')).toEqual(['end']);
+    // A third rule's plain "And" keeps its place: Notion's is unread.
+    expect(declared('[data-blok-database-filter-rule] > [data-blok-database-panel-note]', 'text-align')).toEqual([]);
   });
 
   // Text 125,122,117 fails AA (4.27:1), so it takes Blok's AA step of that ink.

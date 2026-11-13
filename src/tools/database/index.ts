@@ -7228,27 +7228,34 @@ export class DatabaseTool implements BlockTool {
     const { groupBy: _groupBy, subGroupBy: _subGroupBy, calculations: _calculations, propertyOrder: _order, ...rest } = view;
     const tableView: DatabaseViewConfig = { ...rest, type: 'table', properties: ordered.map((id) => ({ id, visible: true })) };
 
+    // One state for the dialog's life, so "Load more" keeps its count across redraws.
+    const state = createTableState();
+
     this.pinnedGroupModal?.close();
     this.pinnedGroupModal = openPinnedGroupModal({
       pill: pill.cloneNode(true) as HTMLElement,
       label: pill.textContent ?? '',
       i18n: this.api.i18n,
       directionSource: this.element,
-      table: (search) => new DatabaseTableView({
-        readOnly: true,
-        i18n: this.api.i18n,
-        locale: editorLocale(this.api.i18n),
-        view: tableView,
-        schema,
-        rows: this.model.queryRows({ view, group: optionId, search }).rows,
-        titlePropertyId: titleId,
-        state: createTableState(),
-        cellContext: this.cellContext(),
-        openRow: (rowId: string) => {
-          this.pinnedGroupModal?.close();
-          this.handleRowClick(rowId);
-        },
-      }).createView(),
+      table: (search) => {
+        const renderer = new DatabaseTableView({
+          readOnly: true,
+          i18n: this.api.i18n,
+          locale: editorLocale(this.api.i18n),
+          view: tableView,
+          schema,
+          rows: this.model.queryRows({ view, group: optionId, search }).rows,
+          titlePropertyId: titleId,
+          state,
+          cellContext: this.cellContext(),
+          openRow: (rowId: string) => {
+            this.pinnedGroupModal?.close();
+            this.handleRowClick(rowId);
+          },
+        });
+
+        return { root: renderer.createView(), destroy: () => renderer.destroy() };
+      },
       onClose: () => {
         this.pinnedGroupModal = null;
         // A redraw under the dialog replaces the strip row it would hand focus back to.

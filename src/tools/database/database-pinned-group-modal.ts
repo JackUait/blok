@@ -9,7 +9,7 @@ export interface PinnedGroupModalOptions {
   /** The group's name, for the dialog's label. */
   label: string;
   /** The group's rows as a read-only table, narrowed by `search`. */
-  table: (search: string) => HTMLElement;
+  table: (search: string) => { root: HTMLElement; destroy: () => void };
   i18n: Pick<I18n, 't'>;
   directionSource: Element | null;
   /** Runs after the dialog is gone, whatever closed it. */
@@ -30,8 +30,17 @@ export const openPinnedGroupModal = (options: PinnedGroupModalOptions): { close:
   const input = document.createElement('input');
   const close = document.createElement('button');
   const body = document.createElement('div');
-  const state: { handle: ModalDialogHandle | null } = { handle: null };
+  const state: { handle: ModalDialogHandle | null; table: { destroy: () => void } | null } = { handle: null, table: null };
   const dismiss = (): void => state.handle?.close();
+  const draw = (): void => {
+    const table = options.table(input.value);
+
+    state.table?.destroy();
+    state.table = table;
+    // Its Edit filters / Clear search need the view's write handlers, which this view-only table has not.
+    table.root.querySelector('[data-blok-database-table-empty]')?.remove();
+    body.replaceChildren(table.root);
+  };
 
   // data-blok-popover gives the body-mounted dialog the database tokens and theme.
   backdrop.setAttribute('data-blok-popover', '');
@@ -54,18 +63,25 @@ export const openPinnedGroupModal = (options: PinnedGroupModalOptions): { close:
   close.setAttribute('aria-label', i18n.t('tools.database.close'));
   close.innerHTML = IconCross;
   body.setAttribute('data-blok-database-group-modal-body', '');
-  body.append(options.table(''));
+  draw();
 
   search.addEventListener('click', () => {
     input.hidden = false;
     input.focus();
   });
-  input.addEventListener('input', () => body.replaceChildren(options.table(input.value)));
+  input.addEventListener('input', draw);
   close.addEventListener('click', dismiss);
-  // r25-modal-celledit.raw: the table is view-only, so a cell click does nothing; only OPEN acts.
+  // r25-modal-celledit.raw: the table is view-only, so a cell click does nothing; only OPEN and Load more act.
+  const acts = (target: EventTarget | null): boolean =>
+    target instanceof Element && target.closest('[data-blok-database-table-open], [data-blok-database-table-load-more]') !== null;
+
   body.addEventListener('click', (event) => {
-    if (event.target instanceof Element && event.target.closest('[data-blok-database-table-open]') === null) event.stopPropagation();
+    if (!acts(event.target)) event.stopPropagation();
   }, true);
+  // The table counts the extra rows in its state but redraws only through a write handler, so the modal redraws.
+  body.addEventListener('click', (event) => {
+    if (event.target instanceof Element && event.target.closest('[data-blok-database-table-load-more]') !== null) draw();
+  });
 
   header.append(title, search, input, close);
   panel.append(header, body);
@@ -77,7 +93,11 @@ export const openPinnedGroupModal = (options: PinnedGroupModalOptions): { close:
     label: options.label,
     directionSource: options.directionSource,
     onDismiss: dismiss,
-    onClose: options.onClose,
+    onClose: () => {
+      state.table?.destroy();
+      state.table = null;
+      options.onClose();
+    },
   });
 
   return { close: dismiss };

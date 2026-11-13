@@ -16244,6 +16244,9 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-filter-rule] > [data-blok-database-panel-note], [data-blok-database-filter-group-line] > [data-blok-database-panel-note] {
   flex-basis: 60px;
+}
+
+[data-blok-database-filter-where] {
   text-align: end;
 }
 

@@ -1669,7 +1669,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Round 24 lane r28: list and gallery "+ New page" timings, the gallery's 40-tall tile with no cards; the board's Hidden groups button is gone; the chip and rule chevron's 8.6×14 box; the board's Pinned groups strip and the Settings pin button.
     const DATABASE_R28_BYTES = 3384;
     // Round 25 lane r30: sort, And/Or and Add filter rule chevrons; And/Or ends where "Where" ends; the one-sort arrow's 8×14 box; the Settings pin's 16px glyph and hover swap; the Pinned groups header at the top of a strip with no "+ New group"; the pinned group modal.
-    const DATABASE_R30_BYTES = 6610;
+    const DATABASE_R30_BYTES = 6649;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

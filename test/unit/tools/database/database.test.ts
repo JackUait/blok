@@ -7,6 +7,7 @@ import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 import { DatabaseChartView } from '../../../../src/tools/database/database-chart-view';
+import { DatabaseTableView } from '../../../../src/tools/database/database-table-view';
 import { DataPersistenceManager } from '../../../../src/components/block/data-persistence-manager';
 import { NO_VALUE_GROUP_KEY, type DatabaseModel } from '../../../../src/tools/database/database-model';
 import type { CardDragResult, DatabaseCardDrag } from '../../../../src/tools/database/database-card-drag';
@@ -4391,6 +4392,59 @@ describe('DatabaseTool', () => {
 
         expect(document.querySelector('[data-blok-database-group-modal-panel] [role="gridcell"][aria-selected="true"]')).toBeNull();
         expect(cell).not.toBeNull();
+
+        tool.destroy();
+      });
+
+      // A group past the view's load limit keeps Blok's "Load more", and it loads more inside the modal.
+      it('loads more rows of a long pinned group', () => {
+        const rows = Array.from({ length: 11 }, (_, i) => groupRow(`row-${i}`, { 'prop-title': `Row ${i}`, 'prop-status': 'opt-todo' }, `a${i.toString(36)}`));
+        const tool = new DatabaseTool(createDatabaseOptions(boardView({ pinnedGroups: [{ id: 'opt-todo' }], loadLimit: 10 }), {}, { childBlocks: rows }));
+        const element = tool.render();
+
+        document.body.appendChild(element);
+        tool.rendered();
+        queryByData(element, 'data-blok-database-pinned-group-open')?.click();
+        const shown = (): number => document.querySelectorAll('[data-blok-database-group-modal-panel] [role="row"][data-row-id]').length;
+
+        expect(shown()).toBe(10);
+        document.querySelector<HTMLElement>('[data-blok-database-group-modal-panel] [data-blok-database-table-load-more]')?.click();
+        expect(shown()).toBe(11);
+
+        tool.destroy();
+      });
+
+      // The empty state's Edit filters needs the view's filter handlers, which a read-only modal has not.
+      it('shows no dead Edit filters button for an empty filtered group', () => {
+        const { tool, element } = board(false, boardView({
+          pinnedGroups: [{ id: 'opt-doing' }],
+          filters: [{ id: 'f', propertyId: 'prop-title', operator: 'is_not_empty', value: null }],
+        }));
+
+        queryByData(element, 'data-blok-database-pinned-group-open')?.click();
+
+        expect(document.querySelector('[data-blok-database-group-modal-panel] [data-blok-database-table-edit-filters]')).toBeNull();
+        expect(document.querySelector('[data-blok-database-group-modal-panel] [role="grid"]')).not.toBeNull();
+
+        tool.destroy();
+      });
+
+      // Each table the modal draws is torn down: on every search redraw and when it closes.
+      it('destroys the modal\'s tables when it redraws and closes', () => {
+        const destroy = vi.spyOn(DatabaseTableView.prototype, 'destroy');
+        const { tool, element } = board(false, boardView({ pinnedGroups: [{ id: 'opt-todo' }] }));
+
+        queryByData(element, 'data-blok-database-pinned-group-open')?.click();
+        const before = destroy.mock.calls.length;
+        const input = document.querySelector<HTMLInputElement>('[data-blok-database-group-modal-search-input]');
+
+        if (input !== null) {
+          input.value = 'T';
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        document.querySelector<HTMLElement>('[data-blok-database-group-modal-close]')?.click();
+
+        expect(destroy.mock.calls.length - before).toBe(2);
 
         tool.destroy();
       });

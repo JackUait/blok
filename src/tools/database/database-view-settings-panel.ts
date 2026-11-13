@@ -2408,7 +2408,14 @@ export class ViewSettingsPages {
     tree: () => FilterGroup,
     write: (next: FilterGroup) => void
   ): HTMLElement {
-    if (index === 0) return panelText(this.t('filterWhere'));
+    if (index === 0) {
+      const where = panelText(this.t('filterWhere'));
+
+      // notion-motion.md Round 25 §3: "Where" ends where And/Or ends. Rows 3+ keep their plain word (position unread).
+      where.setAttribute('data-blok-database-filter-where', '');
+
+      return where;
+    }
     const label = this.t(group.conjunction === 'or' ? 'filterOr' : 'filterAnd');
 
     if (index > 1) return panelText(label);

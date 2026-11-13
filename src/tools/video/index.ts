@@ -663,7 +663,7 @@ export class VideoTool implements BlockTool {
    * The error card's two lines. `uploadErrorText` is the same failure as one
    * sentence, which is what `onUploadError` receives.
    */
-  private errorLines(err: VideoUploadError | null, own: string, shown: string): { title: string; detail?: string } {
+  private errorLines(err: VideoUploadError | null, own: string, shown: string): { title: string; detail: string } {
     const i18n = this.api.i18n;
     const title = tr(i18n, 'tools.video.errorUploadFailed', 'Upload failed');
 
@@ -686,9 +686,20 @@ export class VideoTool implements BlockTool {
     }
 
     // Our own refusals (wrong type, bad link) are not the network's fault.
-    return err
-      ? { title }
-      : { title, detail: tr(i18n, 'tools.video.errorUploadFailedDetail', 'Check your connection and try again.') };
+    if (err?.code === 'UNSUPPORTED_TYPE') {
+      return {
+        title: tr(i18n, 'tools.video.errorUnsupportedTitle', 'This file type isn’t supported'),
+        detail: tr(i18n, 'tools.video.errorUnsupportedDetail', 'Choose a different file.'),
+      };
+    }
+    if (err?.code === 'INVALID_URL') {
+      return {
+        title: tr(i18n, 'tools.video.errorInvalidUrlTitle', 'This link doesn’t work'),
+        detail: tr(i18n, 'tools.video.errorInvalidUrlDetail', 'Check the link and try again.'),
+      };
+    }
+
+    return { title, detail: tr(i18n, 'tools.video.errorUploadFailedDetail', 'Check your connection and try again.') };
   }
 
   private uploadErrorText(err: VideoUploadError | null): string {

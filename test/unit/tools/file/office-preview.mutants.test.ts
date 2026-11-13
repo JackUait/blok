@@ -356,7 +356,7 @@ describe('office preview mutants', () => {
 
       // A failed fetch must not pull a renderer chunk in to render nothing.
       expect(loaders.loadZipReader).not.toHaveBeenCalled();
-      expect(body.querySelector('[data-role="file-preview-error"]')?.textContent).toBe('Preview failed');
+      expect(body.querySelector('[data-role="file-preview-error-title"]')?.textContent).toBe('Preview failed');
       expect(body.querySelector('.blok-file-preview-office')).toBeNull();
     });
 
@@ -449,7 +449,7 @@ describe('office preview mutants', () => {
 
       expect(warn.mock.calls[0][0]).toBe('[blok] Failed to render docx preview:');
       expect(warn.mock.calls[0][1]).toStrictEqual(new Error('boom'));
-      expect(body.querySelector('[data-role="file-preview-error"]')?.textContent).toBe('Preview failed');
+      expect(body.querySelector('[data-role="file-preview-error-title"]')?.textContent).toBe('Preview failed');
     });
 
     it('keeps the container when the modal closed during a failing render', async () => {

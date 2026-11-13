@@ -45,6 +45,7 @@ import { attachWire } from './wire';
 import { readTrackMetadata, resolveCover } from './metadata';
 import { Uploader, AudioUploadError, type UploadResult } from './uploader';
 import { parseTooLargeDetail, uploadErrorMessage } from '../../components/utils/upload-error-message';
+import { uploadErrorLines, type UploadErrorLineKeys, type UploadErrorLines } from '../../components/utils/upload-error-lines';
 import { formatBytes } from '../../components/utils/format-bytes';
 import { resolveUploadError } from '../../components/utils/media-upload-error';
 import { pickDisplayMaxSize } from '../../components/utils/max-size';
@@ -56,6 +57,38 @@ import { whenNearViewport } from '../../components/utils/near-viewport';
 import type { LazySheet } from '../../components/utils/lazy-styles';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
+
+const ERROR_LINE_KEYS: UploadErrorLineKeys = {
+  failed: 'tools.audio.errorUploadFailed',
+  failedDetail: 'tools.audio.errorUploadFailedDetail',
+  tooLargeTitle: 'tools.audio.errorFileTooLargeTitle',
+  tooLargeDetail: 'tools.audio.errorFileTooLargeDetail',
+  unsupportedTitle: 'tools.audio.errorUnsupportedTitle',
+  unsupportedDetail: 'tools.audio.errorUnsupportedDetail',
+  invalidUrlTitle: 'tools.audio.errorInvalidUrlTitle',
+  invalidUrlDetail: 'tools.audio.errorInvalidUrlDetail',
+};
+
+/** The title for a link the named service will not let us play. */
+const SHARE_LINK_TITLES: Record<string, string | undefined> = {
+  GOOGLE_DRIVE_NEEDS_UPLOADER: 'tools.audio.errorGoogleDriveTitle',
+  ONEDRIVE_NEEDS_UPLOADER: 'tools.audio.errorOneDriveTitle',
+};
+
+/** English for a host that has not registered these keys. */
+const ERROR_LINE_FALLBACKS: Record<string, string | undefined> = {
+  'tools.audio.errorUploadFailed': 'Upload failed',
+  'tools.audio.errorUploadFailedDetail': 'Check your connection and try again.',
+  'tools.audio.errorFileTooLargeTitle': 'Audio is too large',
+  'tools.audio.errorFileTooLargeDetail': '{size} exceeds the {max} limit.',
+  'tools.audio.errorUnsupportedTitle': 'This file type isn’t supported',
+  'tools.audio.errorUnsupportedDetail': 'Choose a different file.',
+  'tools.audio.errorInvalidUrlTitle': 'This link doesn’t work',
+  'tools.audio.errorInvalidUrlDetail': 'Check the link and try again.',
+  'tools.audio.errorGoogleDriveTitle': 'Google Drive audio can’t play here',
+  'tools.audio.errorOneDriveTitle': 'OneDrive audio can’t play here',
+  'tools.audio.errorShareLinkDetail': 'Download the file and upload it here instead.',
+};
 
 export class AudioTool implements BlockTool {
   public static get 'blok.runtimePartsOwner'(): string {
@@ -95,7 +128,8 @@ export class AudioTool implements BlockTool {
   private state: ToolState;
   private uploadingEl: UploadingStateElement | null = null;
   private lastFileName: string | null = null;
-  private errorMessage: string | null = null;
+  /** The error card's title and detail. */
+  private errorLines: UploadErrorLines | null = null;
   private errorService: ErrorService | undefined;
   /** File size and limit in bytes, when the failure was a file over the limit. */
   private errorSizes: { size: number; max: number } | null = null;
@@ -482,7 +516,7 @@ export class AudioTool implements BlockTool {
       fileName: result.fileName ?? this.lastFileName ?? this.data.fileName,
       mimeType: file?.type || this.data.mimeType,
     };
-    this.errorMessage = null;
+    this.errorLines = null;
     this.state = 'RENDERED';
     this.renderState();
   }
@@ -550,20 +584,37 @@ export class AudioTool implements BlockTool {
 
   private applyError(err: unknown, source: { file?: File; url?: string }): void {
     const own = err instanceof AudioUploadError ? err : null;
+    const message = this.uploadErrorText(own);
     const outcome = resolveUploadError({
       tool: 'audio',
       error: own,
       cause: err,
-      message: this.uploadErrorText(own),
+      message,
       source,
       onUploadError: this.config.onUploadError,
     });
 
-    this.errorMessage = outcome.kind === 'message' ? outcome.message : null;
+    this.errorLines = outcome.kind === 'message' ? this.linesFor(own, message, outcome.message) : null;
     this.errorService = errorServiceOf(own);
     this.errorSizes = own?.code === 'FILE_TOO_LARGE' ? parseTooLargeDetail(own.detail) : null;
     this.state = outcome.kind === 'message' ? 'ERROR' : 'EMPTY';
     this.renderState();
+  }
+
+  /**
+   * The error card's two lines. `uploadErrorText` is the same failure as one
+   * sentence, which is what `onUploadError` receives.
+   */
+  private linesFor(err: AudioUploadError | null, own: string, shown: string): UploadErrorLines {
+    const t = (key: string): string => tr(this.api.i18n, key, ERROR_LINE_FALLBACKS[key] ?? key);
+    const shareTitle = SHARE_LINK_TITLES[err?.code ?? ''];
+
+    // A share link has its own advice, unless the host app replaced our sentence.
+    if (shareTitle !== undefined && shown === own) {
+      return { title: t(shareTitle), detail: t('tools.audio.errorShareLinkDetail') };
+    }
+
+    return uploadErrorLines({ error: err, own, shown, t, keys: ERROR_LINE_KEYS });
   }
 
   private uploadErrorText(err: AudioUploadError | null): string {
@@ -662,7 +713,7 @@ export class AudioTool implements BlockTool {
     if (!this.root) return;
     const canUpload = !this.readOnly && this.config.sources !== 'url';
     this.errorCard = renderErrorState({
-      message: this.errorMessage ?? tr(this.api.i18n, 'tools.audio.errorUploadFailed', 'Upload failed'),
+      ...(this.errorLines ?? this.linesFor(null, '', '')),
       service: this.errorService,
       ...(this.errorSizes
         ? {

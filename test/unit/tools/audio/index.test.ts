@@ -285,9 +285,8 @@ describe('AudioTool', () => {
     await Promise.resolve();
 
     const error = el.querySelector('[data-role="audio-error"]');
-    expect(error?.textContent).toContain(
-      'Audio from Google Drive can’t be played directly. Download the file and upload it here instead.',
-    );
+    expect(error?.querySelector('[data-role="audio-error-title"]')?.textContent).toBe('Google Drive audio can’t play here');
+    expect(error?.querySelector('[data-role="audio-error-message"]')?.textContent).toBe('Download the file and upload it here instead.');
   });
 
   it('shows a OneDrive-specific error when the link needs an upload backend', async () => {
@@ -308,9 +307,8 @@ describe('AudioTool', () => {
     await Promise.resolve();
 
     const error = el.querySelector('[data-role="audio-error"]');
-    expect(error?.textContent).toContain(
-      'Audio from OneDrive can’t be played directly. Download the file and upload it here instead.',
-    );
+    expect(error?.querySelector('[data-role="audio-error-title"]')?.textContent).toBe('OneDrive audio can’t play here');
+    expect(error?.querySelector('[data-role="audio-error-message"]')?.textContent).toBe('Download the file and upload it here instead.');
   });
 
   describe('error state', () => {

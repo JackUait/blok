@@ -227,9 +227,14 @@
   font-size: var(--blok-font-size-ui-label);
   color: var(--blok-item-destructive-text);
 }
-[data-blok-tool="file"] .blok-file-error-state span {
+[data-blok-tool="file"] .blok-file-error-state__text {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   min-width: 0;
+}
+[data-blok-tool="file"] .blok-file-error-state__title {
+  font-weight: var(--blok-font-weight-semibold);
 }
 [data-blok-tool="file"] .blok-file-retry {
   flex: 0 0 auto;
@@ -861,6 +866,20 @@
   flex: 1 1 auto;
   min-height: 0;
   color: var(--blok-text-secondary);
+}
+
+.blok-file-preview-error__title,
+.blok-file-preview-error__detail {
+  margin: 0;
+  text-align: center;
+}
+.blok-file-preview-error__title {
+  font-weight: var(--blok-font-weight-semibold);
+  color: var(--blok-text-primary);
+}
+/* the two lines read as one pair inside the column's wider gap */
+.blok-file-preview-error__detail {
+  margin-block-start: calc(var(--blok-space-2) * -1);
 }
 
 .blok-file-preview-download {

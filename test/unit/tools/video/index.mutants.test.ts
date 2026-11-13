@@ -730,18 +730,18 @@ describe('VideoTool — failed uploads', () => {
     expect(errorText(root)).toBe('L10n upload failed');
   });
 
-  it('routes an unsupported file type through the generic failure key', async () => {
+  it('names an unsupported file type instead of calling it a failed upload', async () => {
     const tool = new VideoTool(createOptions(
       {},
       {},
       undefined,
-      createMockApi({ 'tools.video.errorUploadFailed': 'L10n upload failed' })
+      createMockApi({ 'tools.video.errorUploadFailed': 'L10n upload failed', 'tools.video.errorUnsupportedTitle': 'L10n wrong type' })
     ));
     const root = tool.render();
 
     await pasteFile(tool, videoFile('poster.png', 'image/png'));
 
-    expect(errorText(root)).toBe('L10n upload failed');
+    expect(errorText(root)).toBe('L10n wrong type');
   });
 
   it('offers a real Replace button in the error state', async () => {

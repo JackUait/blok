@@ -24957,11 +24957,19 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   pointer-events: none;
 }
 
-[data-blok-tool="audio"] .blok-audio-error-state__message {
+[data-blok-tool="audio"] .blok-audio-error-state__title {
   margin: 0;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-wrap: balance;
+}
+
+[data-blok-tool="audio"] .blok-audio-error-state__message {
+  margin: var(--blok-space-1) 0 0;
+  font-size: 13px;
   line-height: 1.45;
+  color: var(--blok-text-secondary);
   text-wrap: pretty;
 }
 
@@ -26928,9 +26936,15 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   color: var(--blok-item-destructive-text);
 }
 
-[data-blok-tool="file"] .blok-file-error-state span {
+[data-blok-tool="file"] .blok-file-error-state__text {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   min-width: 0;
+}
+
+[data-blok-tool="file"] .blok-file-error-state__title {
+  font-weight: var(--blok-font-weight-semibold);
 }
 
 [data-blok-tool="file"] .blok-file-retry {
@@ -27427,6 +27441,20 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   flex: 1 1 auto;
   min-height: 0;
   color: var(--blok-text-secondary);
+}
+
+.blok-file-preview-error__title, .blok-file-preview-error__detail {
+  margin: 0;
+  text-align: center;
+}
+
+.blok-file-preview-error__title {
+  font-weight: var(--blok-font-weight-semibold);
+  color: var(--blok-text-primary);
+}
+
+.blok-file-preview-error__detail {
+  margin-block-start: calc(var(--blok-space-2) * -1);
 }
 
 .blok-file-preview-download {

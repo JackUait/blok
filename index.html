@@ -5323,7 +5323,8 @@
         if (audioDriveErrRoot) {
           audioDriveErrRoot.setAttribute('data-state', 'error');
           audioDriveErrRoot.replaceChildren(renderAudioErrorState({
-            message: 'Audio from Google Drive can’t be played directly. Download the file and upload it here instead.',
+            title: 'Google Drive audio can’t play here',
+            detail: 'Download the file and upload it here instead.',
             service: 'google-drive',
             replaceLabel: 'Replace',
             onReplace: () => {},

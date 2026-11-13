@@ -204,6 +204,10 @@ describe('playground block states spec (index.html)', () => {
       expect(html).toMatch(/audioDriveErrRoot\.replaceChildren\(renderAudioErrorState\(\{[\s\S]*?\}\)\.element\);/);
     });
 
+    test('the Google Drive error demo gives the card a title and a detail', () => {
+      expect(html).toMatch(/renderAudioErrorState\(\{\s*title: 'Google Drive audio can’t play here',\s*detail: 'Download the file and upload it here instead\.',/);
+    });
+
     test('the Google Drive error demo passes no badge: the card has none', () => {
       expect(html).not.toContain("badge: 'Needle skipped'");
     });

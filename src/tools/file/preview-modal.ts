@@ -22,6 +22,10 @@ export interface FilePreviewOptions {
     render?: string;
     loading?: string;
     error?: string;
+    /** The line under the error title: what to do next. */
+    errorDetail?: string;
+    /** That line when there is no safe link to download from. */
+    errorNoLinkDetail?: string;
     download?: string;
     openInNewTab?: string;
     backToContent?: string;
@@ -47,10 +51,7 @@ function buildBody(opts: FilePreviewOptions, kind: PreviewKind): HTMLElement {
   if (kind === 'pdf') {
     const src = safePreviewSrc(opts.url);
     if (src === null) {
-      const error = document.createElement('div');
-      error.className = 'blok-file-preview-error';
-      error.setAttribute('data-role', 'file-preview-error');
-      body.appendChild(error);
+      buildErrorInto(body, opts);
 
       return body;
     }

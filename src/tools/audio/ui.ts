@@ -159,7 +159,10 @@ const SCENES: Record<ErrorSceneName, SceneFactory> = {
 };
 
 export interface ErrorStateOptions {
-  message: string;
+  /** What went wrong, in a few words. */
+  title: string;
+  /** What to do about it. */
+  detail: string;
   /** The share service the link came from, when that is why it failed. */
   service?: ErrorService;
   /** The file was over the size limit: the two lines for the record's label. */
@@ -207,10 +210,15 @@ export function renderErrorState(opts: ErrorStateOptions): ErrorState {
   const body = document.createElement('div');
   body.className = 'blok-audio-error-state__body';
 
+  const title = document.createElement('p');
+  title.className = 'blok-audio-error-state__title';
+  title.setAttribute('data-role', 'audio-error-title');
+  title.textContent = opts.title;
+
   const message = document.createElement('p');
   message.className = 'blok-audio-error-state__message';
   message.setAttribute('data-role', 'audio-error-message');
-  message.textContent = opts.message;
+  message.textContent = opts.detail;
 
   const actions = document.createElement('div');
   actions.className = 'blok-audio-error-state__actions';
@@ -243,7 +251,7 @@ export function renderErrorState(opts: ErrorStateOptions): ErrorState {
   retry.addEventListener('click', () => opts.onReplace());
   actions.append(retry);
 
-  body.append(message, actions);
+  body.append(title, message, actions);
   wrap.append(canvas, body);
 
   return { element: wrap, destroy: mountErrorStage(canvas, wrap, scene).destroy };

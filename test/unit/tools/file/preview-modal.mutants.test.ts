@@ -290,6 +290,19 @@ describe('openFilePreview — modal chrome', () => {
     expect(body.children.length).toBe(1);
   });
 
+  it('gives an unsafe pdf url both lines too, with advice about the link', () => {
+    teardown = openFilePreview({
+      url: 'data:application/pdf;base64,AAAA',
+      mimeType: 'application/pdf',
+      labels: { ...FULL_LABELS, error: 'Vorschau fehlgeschlagen', errorNoLinkDetail: 'Link prüfen.' },
+    });
+
+    const error = find(document.body, '[data-role="file-preview-error"]');
+
+    expect(find(error, '[data-role="file-preview-error-detail"]').textContent).toBe('Link prüfen.');
+    expect(find(error, '[data-role="file-preview-error-title"]').textContent).toBe('Vorschau fehlgeschlagen');
+  });
+
   it('renders the open-in-new-tab anchor with its class and label', () => {
     teardown = openFilePreview({ url: 'https://example.com/a.pdf', fileName: 'report.pdf', labels: FULL_LABELS });
 

@@ -143,7 +143,8 @@ describe('renderErrorState', () => {
   });
 
   const base = {
-    message: 'Audio from Google Drive can’t be played directly.',
+    title: 'Google Drive audio can’t play here',
+    detail: 'Download the file and upload it here instead.',
     replaceLabel: 'Replace',
     onReplace: (): void => {},
   };
@@ -165,8 +166,19 @@ describe('renderErrorState', () => {
 
     expect(scene?.getAttribute('aria-hidden')).toBe('true');
     expect(scene?.tagName).toBe('CANVAS');
-    expect(el.querySelector('[data-role="audio-error-message"]')?.textContent).toBe(base.message);
-    expect(el.textContent).toBe(`${base.message}Replace`);
+    expect(el.querySelector('[data-role="audio-error-title"]')?.textContent).toBe(base.title);
+    expect(el.querySelector('[data-role="audio-error-message"]')?.textContent).toBe(base.detail);
+    expect(el.textContent).toBe(`${base.title}${base.detail}Replace`);
+  });
+
+  it('puts the title above the detail, as two separate lines', () => {
+    const el = renderErrorState(base).element;
+    const title = el.querySelector('[data-role="audio-error-title"]');
+    const detail = el.querySelector('[data-role="audio-error-message"]');
+
+    expect(title?.nextElementSibling).toBe(detail);
+    expect(title?.tagName).toBe('P');
+    expect(detail?.tagName).toBe('P');
   });
 
   it('marks the service a failed link came from', () => {

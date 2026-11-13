@@ -283,7 +283,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2119 + 147 + 542 + 5 closure for all 2813 keys', () => {
+  it('rebuilds a disjoint 2141 + 147 + 542 + 5 closure for all 2835 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -297,7 +297,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2813);
+    expect(lifecycle.size).toBe(2835);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -528,7 +528,8 @@ describe('current English catalog lifecycle coverage', () => {
       // coverSourceAria have no caller now. Still shipped: they are in BlokMessageKey since 2.1.0.
       // -1: tools.audio.coverOrDropHere has no caller: the ink well shows the uploader's sentence (coverHint). Still shipped.
       // -1: the audio error card dropped its badge; tools.audio.errorBadge has no caller now. Still shipped.
-      'executable-literal': 2119,
+      // +22: every media error card has a title and a detail: the audio (10), file (8) and video (4) error*Title / error*Detail keys, by literal.
+      'executable-literal': 2141,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

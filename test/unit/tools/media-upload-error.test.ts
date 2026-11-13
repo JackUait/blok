@@ -32,6 +32,9 @@ interface Case {
   errorSelector: string;
   /** What the block shows for a too-large file when the handler adds nothing. */
   shown: string;
+  /** The card's two lines. */
+  title: string;
+  detail: string;
 }
 
 const api = {
@@ -63,6 +66,8 @@ const cases: Case[] = [
     file: new File([new Uint8Array(50)], 'big.png', { type: 'image/png' }),
     errorSelector: '[data-role="error-state"]',
     shown: 'tools.image.errorFileTooLarge',
+    title: '.blok-image-error__title',
+    detail: '.blok-image-error__msg',
   },
   {
     tool: 'video',
@@ -70,20 +75,26 @@ const cases: Case[] = [
     file: new File([new Uint8Array(50)], 'big.mp4', { type: 'video/mp4' }),
     errorSelector: '[data-role="video-error"]',
     shown: 'Video is too large',
+    title: '[data-role="video-error-message"]',
+    detail: '[data-role="video-error-detail"]',
   },
   {
     tool: 'audio',
     create: (config) => new AudioTool(options('audio', config)),
     file: new File([new Uint8Array(50)], 'big.mp3', { type: 'audio/mpeg' }),
     errorSelector: '[data-role="audio-error"]',
-    shown: 'tools.audio.errorFileTooLarge',
+    shown: 'Audio is too large',
+    title: '[data-role="audio-error-title"]',
+    detail: '[data-role="audio-error-message"]',
   },
   {
     tool: 'file',
     create: (config) => new FileTool(options('file', config)),
     file: new File([new Uint8Array(50)], 'big.pdf', { type: 'application/pdf' }),
     errorSelector: '[data-role="file-error"]',
-    shown: 'tools.file.errorFileTooLarge',
+    shown: 'tools.file.errorFileTooLargeTitle',
+    title: '[data-role="file-error-title"]',
+    detail: '[data-role="file-error-detail"]',
   },
 ];
 
@@ -100,6 +111,35 @@ const pasteInto = async (tool: BlockTool, file: File): Promise<HTMLElement> => {
 
   return root;
 };
+
+describe.each(cases)('$tool tool — every error has a title and a description', ({ create, file, errorSelector, title, detail }) => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  const lines = (root: HTMLElement): { title: string; detail: string } => {
+    const card = root.querySelector(errorSelector);
+
+    return {
+      title: card?.querySelector(title)?.textContent?.trim() ?? '',
+      detail: card?.querySelector(detail)?.textContent?.trim() ?? '',
+    };
+  };
+
+  it.each([
+    ['a file over the limit', { maxSize: 5 }],
+    ['an upload the server refused', { uploader: { uploadByFile: () => Promise.reject(new Error('503')) } }],
+    ['a host app that supplies its own text', { maxSize: 5, onUploadError: () => 'Ask your admin for more space.' }],
+  ])('for %s', async (_name, config) => {
+    const shownLines = lines(await pasteInto(create(config), file));
+
+    expect(shownLines.detail).not.toBe('');
+    expect(shownLines.title).not.toBe('');
+    expect(shownLines.detail).not.toBe(shownLines.title);
+  });
+});
 
 describe.each(cases)('$tool tool — onUploadError', ({ tool: name, create, file, errorSelector, shown }) => {
   beforeEach(() => {

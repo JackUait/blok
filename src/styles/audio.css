@@ -942,11 +942,18 @@
   min-width: 0;
   pointer-events: none;
 }
-[data-blok-tool="audio"] .blok-audio-error-state__message {
+[data-blok-tool="audio"] .blok-audio-error-state__title {
   margin: 0;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-wrap: balance;
+}
+[data-blok-tool="audio"] .blok-audio-error-state__message {
+  margin: var(--blok-space-1) 0 0;
+  font-size: 13px;
   line-height: 1.45;
+  color: var(--blok-text-secondary);
   text-wrap: pretty;
 }
 [data-blok-tool="audio"] .blok-audio-error-state__actions {

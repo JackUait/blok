@@ -1864,13 +1864,13 @@ describe('VideoTool — error text', () => {
     expect(lines(root)).toEqual({ title: 'Upload failed', detail: 'Check your connection and try again.' });
   });
 
-  it('gives no connection advice for a file type it turns away', async () => {
+  it('tells a turned-away file type to pick another file, not to check the connection', async () => {
     const tool = new VideoTool(createOptions({}, { types: ['video/webm'] }));
     const root = tool.render();
 
     await pasteFile(tool, small('video/mp4'));
 
-    expect(lines(root)).toEqual({ title: 'Upload failed', detail: null });
+    expect(lines(root)).toEqual({ title: 'This file type isn’t supported', detail: 'Choose a different file.' });
   });
 
   it('says why a saved video may not play', () => {
@@ -1918,13 +1918,13 @@ describe('VideoTool — error text', () => {
     expect(lines(root)).toEqual({ title: 'Видео слишком большое', detail: '50 B больше лимита 5 B.' });
   });
 
-  it('clears the old detail when the next failure has none', async () => {
+  it('swaps both lines when the next failure is a different one', async () => {
     const tool = new VideoTool(createOptions({}, { maxSize: 5, types: ['video/mp4'] }));
     const root = tool.render();
 
     await pasteFile(tool, big());
     await pasteFile(tool, small('video/webm'));
 
-    expect(lines(root)).toEqual({ title: 'Upload failed', detail: null });
+    expect(lines(root)).toEqual({ title: 'This file type isn’t supported', detail: 'Choose a different file.' });
   });
 });

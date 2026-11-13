@@ -796,7 +796,8 @@ describe('FileTool mutants', () => {
 
       const wrap = root.querySelector('[data-role="file-error"]');
 
-      expect(wrap?.textContent).toContain('tools.file.errorUploadFailed');
+      expect(wrap?.querySelector('[data-role="file-error-title"]')?.textContent).toBe('tools.file.errorUploadFailed');
+      expect(wrap?.querySelector('[data-role="file-error-detail"]')?.textContent).toBe('tools.file.errorUploadFailedDetail');
       expect(wrap?.className).toBe('blok-file-error-state');
 
       const retry = wrap?.querySelector('button');
@@ -907,6 +908,8 @@ describe('FileTool mutants', () => {
           render: 'tools.file.previewRender',
           loading: 'tools.file.previewLoading',
           error: 'tools.file.previewError',
+          errorDetail: 'tools.file.previewErrorDetail',
+          errorNoLinkDetail: 'tools.file.errorInvalidUrlDetail',
           download: 'tools.file.previewDownload',
           openInNewTab: 'tools.file.previewOpenInNewTab',
           backToContent: 'tools.file.previewBackToContent',

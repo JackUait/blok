@@ -26,6 +26,7 @@ import { renderCaptionRow, renderFileCard } from './ui';
 import { Uploader } from './uploader';
 import { FileToolError } from './errors';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
+import { uploadErrorLines, type UploadErrorLineKeys, type UploadErrorLines } from '../../components/utils/upload-error-lines';
 import { resolveUploadError } from '../../components/utils/media-upload-error';
 import { safeHttpHref, safePreviewSrc } from './url';
 import { isPreviewable } from './preview';
@@ -36,6 +37,17 @@ import { overrideStatic } from '../../components/utils/override-static';
 import type { LazySheet } from '../../components/utils/lazy-styles';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
+
+const ERROR_LINE_KEYS: UploadErrorLineKeys = {
+  failed: 'tools.file.errorUploadFailed',
+  failedDetail: 'tools.file.errorUploadFailedDetail',
+  tooLargeTitle: 'tools.file.errorFileTooLargeTitle',
+  tooLargeDetail: 'tools.file.errorFileTooLargeDetail',
+  unsupportedTitle: 'tools.file.errorUnsupportedTitle',
+  unsupportedDetail: 'tools.file.errorUnsupportedDetail',
+  invalidUrlTitle: 'tools.file.errorInvalidUrlTitle',
+  invalidUrlDetail: 'tools.file.errorInvalidUrlDetail',
+};
 
 /** Image filenames/URLs that should auto-convert the File block into an Image. */
 const IMAGE_EXTENSION_RE = /\.(png|jpe?g|gif|webp|svg)(?:[?#]|$)/i;
@@ -79,7 +91,8 @@ export class FileTool implements BlockTool {
   private state: ToolState;
   private uploadingEl: UploadingStateElement | null = null;
   private lastFileName: string | null = null;
-  private errorMessage: string | null = null;
+  /** The error card's title and detail. */
+  private errorLines: UploadErrorLines | null = null;
   private previewTeardown: (() => void) | null = null;
   /** When the pending upload is an image, the result converts to an Image block. */
   private pendingImageConversion = false;
@@ -369,7 +382,7 @@ export class FileTool implements BlockTool {
    * @returns false when the block was converted to an image or a video instead
    */
   private showResult(result: FileUploadResult, from: readonly string[]): boolean {
-    this.errorMessage = null;
+    this.errorLines = null;
     this.data = {
       ...this.data,
       url: result.url,
@@ -436,19 +449,23 @@ export class FileTool implements BlockTool {
 
   private applyError(err: unknown, source: { file?: File; url?: string }): void {
     const own = err instanceof FileToolError ? err : null;
+    const t = (key: string): string => this.api.i18n.t(key);
+    const message = uploadErrorMessage(own ?? { code: 'UPLOAD_FAILED' }, t, {
+      tooLarge: 'tools.file.errorFileTooLarge',
+      generic: 'tools.file.errorUploadFailed',
+    });
     const outcome = resolveUploadError({
       tool: 'file',
       error: own,
       cause: err,
-      message: uploadErrorMessage(own ?? { code: 'UPLOAD_FAILED' }, (key) => this.api.i18n.t(key), {
-        tooLarge: 'tools.file.errorFileTooLarge',
-        generic: 'tools.file.errorUploadFailed',
-      }),
+      message,
       source,
       onUploadError: this.config.onUploadError,
     });
 
-    this.errorMessage = outcome.kind === 'message' ? outcome.message : null;
+    this.errorLines = outcome.kind === 'message'
+      ? uploadErrorLines({ error: own, own: message, shown: outcome.message, t, keys: ERROR_LINE_KEYS })
+      : null;
     this.state = outcome.kind === 'message' ? 'ERROR' : 'EMPTY';
     this.renderState();
   }
@@ -511,6 +528,8 @@ export class FileTool implements BlockTool {
         render: this.api.i18n.t('tools.file.previewRender'),
         loading: this.api.i18n.t('tools.file.previewLoading'),
         error: this.api.i18n.t('tools.file.previewError'),
+        errorDetail: this.api.i18n.t('tools.file.previewErrorDetail'),
+        errorNoLinkDetail: this.api.i18n.t('tools.file.errorInvalidUrlDetail'),
         download: this.api.i18n.t('tools.file.previewDownload'),
         openInNewTab: this.api.i18n.t('tools.file.previewOpenInNewTab'),
         backToContent: this.api.i18n.t('tools.file.previewBackToContent'),
@@ -585,8 +604,18 @@ export class FileTool implements BlockTool {
     wrap.className = 'blok-file-error-state';
     wrap.setAttribute('data-role', 'file-error');
 
-    const message = document.createElement('span');
-    message.textContent = this.errorMessage ?? i18n.t('tools.file.errorUploadFailed');
+    const lines = this.errorLines ?? uploadErrorLines({ error: null, own: '', shown: '', t: (key) => i18n.t(key), keys: ERROR_LINE_KEYS });
+    const text = document.createElement('div');
+    text.className = 'blok-file-error-state__text';
+    const title = document.createElement('span');
+    title.className = 'blok-file-error-state__title';
+    title.setAttribute('data-role', 'file-error-title');
+    title.textContent = lines.title;
+    const detail = document.createElement('span');
+    detail.className = 'blok-file-error-state__detail';
+    detail.setAttribute('data-role', 'file-error-detail');
+    detail.textContent = lines.detail;
+    text.append(title, detail);
 
     const retry = document.createElement('button');
     retry.type = 'button';
@@ -595,7 +624,7 @@ export class FileTool implements BlockTool {
     retry.textContent = i18n.t('tools.file.errorReplace');
     retry.addEventListener('click', () => this.transitionToEmpty());
 
-    wrap.append(message, retry);
+    wrap.append(text, retry);
     return wrap;
   }
 

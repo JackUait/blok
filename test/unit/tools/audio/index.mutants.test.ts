@@ -862,25 +862,27 @@ describe('AudioTool — upload failures', () => {
 
   it('translates the Google Drive hint', async () => {
     const { root } = await failWith(new AudioUploadError('GOOGLE_DRIVE_NEEDS_UPLOADER'), {
-      'tools.audio.errorGoogleDrive': 'Drive-Links lassen sich nicht abspielen',
+      'tools.audio.errorGoogleDriveTitle': 'Drive-Links lassen sich nicht abspielen',
+      'tools.audio.errorShareLinkDetail': 'Datei herunterladen und hier hochladen.',
     });
 
-    expect(requireEl(root, '[data-role="audio-error"]').textContent)
-      .toContain('Drive-Links lassen sich nicht abspielen');
+    expect(requireEl(root, '[data-role="audio-error-title"]').textContent).toBe('Drive-Links lassen sich nicht abspielen');
+    expect(requireEl(root, '[data-role="audio-error-message"]').textContent).toBe('Datei herunterladen und hier hochladen.');
   });
 
   it('translates the OneDrive hint', async () => {
     const { root } = await failWith(new AudioUploadError('ONEDRIVE_NEEDS_UPLOADER'), {
-      'tools.audio.errorOneDrive': 'OneDrive-Links lassen sich nicht abspielen',
+      'tools.audio.errorOneDriveTitle': 'OneDrive-Links lassen sich nicht abspielen',
+      'tools.audio.errorShareLinkDetail': 'Datei herunterladen und hier hochladen.',
     });
 
-    expect(requireEl(root, '[data-role="audio-error"]').textContent)
-      .toContain('OneDrive-Links lassen sich nicht abspielen');
+    expect(requireEl(root, '[data-role="audio-error-title"]').textContent).toBe('OneDrive-Links lassen sich nicht abspielen');
+    expect(requireEl(root, '[data-role="audio-error-message"]').textContent).toBe('Datei herunterladen und hier hochladen.');
   });
 
   it('does not blame OneDrive for an unrelated upload error', async () => {
     const { root } = await failWith(new AudioUploadError('UPLOAD_FAILED'), {
-      'tools.audio.errorOneDrive': 'OneDrive-Hinweis',
+      'tools.audio.errorOneDriveTitle': 'OneDrive-Hinweis',
       'tools.audio.errorUploadFailed': 'Hochladen fehlgeschlagen',
     });
     const text = requireEl(root, '[data-role="audio-error"]').textContent;
@@ -891,13 +893,15 @@ describe('AudioTool — upload failures', () => {
 
   it('spells out both sizes when the file is too large', async () => {
     const { root } = await failWith(new AudioUploadError('FILE_TOO_LARGE', '2000 > 1000'), {
-      'tools.audio.errorFileTooLarge': '{size} sprengt das Limit von {max}',
+      'tools.audio.errorFileTooLargeTitle': 'Audiodatei ist zu groß',
+      'tools.audio.errorFileTooLargeDetail': '{size} sprengt das Limit von {max}',
       'tools.audio.errorUploadFailed': 'Hochladen fehlgeschlagen',
     });
     const text = requireEl(root, '[data-role="audio-error"]').textContent;
 
     expect(root.getAttribute('data-state')).toBe('error');
-    expect(text).toContain('sprengt das Limit von');
+    expect(requireEl(root, '[data-role="audio-error-title"]').textContent).toBe('Audiodatei ist zu groß');
+    expect(requireEl(root, '[data-role="audio-error-message"]').textContent).toBe(`${formatBytes(2000)} sprengt das Limit von ${formatBytes(1000)}`);
     expect(text).not.toContain('Hochladen fehlgeschlagen');
   });
 

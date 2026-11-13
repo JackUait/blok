@@ -193,9 +193,10 @@ describe('FileTool — upload flow', () => {
     const root = tool.render();
     tool.onPaste(filePasteEvent(new File([new Uint8Array(50)], 'big.bin', { type: 'application/octet-stream' })));
     await flush();
-    const msg = root.querySelector('[data-role="file-error"] span');
-    expect(msg?.textContent).toBe('tools.file.errorFileTooLarge');
-    expect(msg?.textContent).not.toContain('FILE_TOO_LARGE');
+    const card = root.querySelector('[data-role="file-error"]');
+    expect(card?.querySelector('[data-role="file-error-title"]')?.textContent).toBe('tools.file.errorFileTooLargeTitle');
+    expect(card?.querySelector('[data-role="file-error-detail"]')?.textContent).toBe('tools.file.errorFileTooLargeDetail');
+    expect(card?.textContent).not.toContain('FILE_TOO_LARGE');
   });
 });
 

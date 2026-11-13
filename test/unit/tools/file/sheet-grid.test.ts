@@ -19,7 +19,6 @@ const PEOPLE: GridSheet = { name: 'People', rows: [[text('Name')], [text('Amara'
 interface Harness {
   container: HTMLElement;
   bar: () => HTMLElement;
-  facts: string[][];
   cell: (ref: string) => HTMLElement;
   status: () => string;
   down: (ref: string, init?: MouseEventInit) => void;
@@ -32,10 +31,8 @@ function harness(sheets: GridSheet[]): Harness {
   body.appendChild(container);
   document.body.appendChild(body);
   const slots: { bar: HTMLElement | null } = { bar: null };
-  const facts: string[][] = [];
   const chrome: PreviewChrome = {
     ...detachedChrome(body),
-    setFacts: (next) => facts.push(next),
     setBar: (bar) => { slots.bar = bar; },
   };
   mountSheetGrid(container, sheets, chrome);
@@ -56,7 +53,7 @@ function harness(sheets: GridSheet[]): Harness {
   };
 
   return {
-    container, bar, facts, cell,
+    container, bar, cell,
     status: () => bar().querySelector('[data-role="file-preview-grid-status"]')?.textContent ?? '',
     down: (ref, init = {}) => cell(ref).dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, buttons: 1, ...init })),
     dragTo: (ref) => cell(ref).dispatchEvent(new MouseEvent('pointermove', { bubbles: true, buttons: 1 })),
@@ -229,11 +226,6 @@ describe('mountSheetGrid', () => {
     expect(tabs.map((tab) => tab.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
   });
 
-  it('reports the sheet count as a header fact', () => {
-    expect(harness([BUDGET, PEOPLE]).facts).toEqual([['2 sheets']]);
-    expect(harness([BUDGET]).facts).toEqual([['1 sheet']]);
-  });
-
   it('writes cell text as text, never as markup', () => {
     const h = harness([{ name: 'x', rows: [[text('<b>x</b>')]] }]);
 
@@ -255,6 +247,5 @@ describe('mountSheetGrid', () => {
     const h = harness([]);
 
     expect(h.container.querySelector('td')).toBeNull();
-    expect(h.facts).toEqual([]);
   });
 });

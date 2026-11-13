@@ -8,7 +8,6 @@ interface Harness {
   chrome: PreviewChrome;
   body: HTMLElement;
   header: HTMLElement;
-  facts: string[][];
   bar: () => HTMLElement;
 }
 
@@ -16,15 +15,13 @@ function harness(): Harness {
   const body = document.createElement('div');
   document.body.appendChild(body);
   const slots: { bar: HTMLElement | null } = { bar: null };
-  const facts: string[][] = [];
   const chrome: PreviewChrome = {
     ...detachedChrome(body),
-    setFacts: (next) => facts.push(next),
     setBar: (bar) => { slots.bar = bar; },
   };
 
   return {
-    chrome, body, header: chrome.header, facts,
+    chrome, body, header: chrome.header,
     bar: () => {
       if (slots.bar === null) {
         throw new Error('no bar');
@@ -98,20 +95,6 @@ describe('renderCsv', () => {
     expect(h.body.querySelector('td[data-ref="A2"]')?.textContent).toBe('Amara');
     expect(h.body.querySelector('td[data-ref="B3"]')?.classList.contains('blok-file-preview-xlsx-num')).toBe(true);
     expect(h.body.querySelector('td[data-ref="A2"]')?.classList.contains('blok-file-preview-xlsx-num')).toBe(false);
-  });
-
-  it('counts the rows under the header row', () => {
-    const h = harness();
-    renderCsv(h.chrome, CSV);
-
-    expect(h.facts).toEqual([['2 rows']]);
-  });
-
-  it('says "1 row" for a single data row', () => {
-    const h = harness();
-    renderCsv(h.chrome, 'Name\nAmara');
-
-    expect(h.facts).toEqual([['1 row']]);
   });
 
   it('has no sheet tabs', () => {
@@ -196,7 +179,6 @@ describe('renderLog', () => {
     const filters = Array.from(h.bar().querySelectorAll('[data-action="preview-log-filter"]'));
     expect(filters.map((b) => b.textContent)).toEqual(['All 5', 'Errors 2', 'Warnings 1']);
     expect(pressed(h.bar(), 'preview-log-filter')).toEqual(['true', 'false', 'false']);
-    expect(h.facts).toEqual([['5 lines']]);
   });
 
   it('shows only the errors, or only the warnings, and keeps their line numbers', () => {
@@ -225,14 +207,13 @@ describe('renderLog', () => {
 });
 
 describe('renderPlainText', () => {
-  it('shows the text untouched, with its line count and a Copy button', () => {
+  it('shows the text untouched, with a Copy button', () => {
     const h = harness();
     renderPlainText(h.chrome, 'one\ntwo\n');
 
     const pre = h.body.querySelector('[data-role="file-preview-text"]');
     expect(pre?.textContent).toBe('one\ntwo\n');
     expect(pre?.className).toBe('blok-file-preview-pre');
-    expect(h.facts).toEqual([['2 lines']]);
     expect(h.bar().querySelector('[data-action="preview-copy"]')).not.toBeNull();
   });
 });

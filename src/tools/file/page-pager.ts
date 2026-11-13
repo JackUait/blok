@@ -1,6 +1,6 @@
 import { IconChevronLeft, IconChevronRight, IconMinus, IconPlus } from '../../components/icons';
 import { buildPill, iconButton, pillDivider, pillText, type PreviewChrome } from './preview-chrome';
-import { counted, fill } from './preview-labels';
+import { fill } from './preview-labels';
 
 /** Space kept on both sides of a fitted page, in px. */
 const FIT_GUTTER = 48;
@@ -131,7 +131,6 @@ export function mountPager(scroller: HTMLElement, view: PagedView, chrome: Previ
     chrome.onRelease(() => observer.disconnect());
   }
 
-  chrome.setFacts([counted(view.count, labels.pagesOne, labels.pages)]);
   const pill = buildPill([
     iconButton(IconChevronLeft, labels.prevPage, 'preview-prev-page', () => go(state.current - 1)),
     pageText,

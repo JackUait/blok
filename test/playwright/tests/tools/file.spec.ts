@@ -533,7 +533,7 @@ test('pptx preview turns slides with the arrow keys and a click on either half',
   const shown = sheets.last();
 
   await expect(shown).toHaveText('Long deck slide 1');
-  await expect(dialog.locator('[data-role="file-preview-meta"]')).toContainText(`${LONG_DECK_SLIDES} slides`);
+  await expect(dialog.locator('[data-role="file-preview-meta"]')).toHaveCount(0);
 
   await page.keyboard.press('ArrowRight');
   await expect(shown).toHaveText('Long deck slide 2');
@@ -645,15 +645,14 @@ const openTextPreview = async (page: Page, name: string, mimeType: string, text:
   return dialog;
 };
 
-test('preview header names the file type, counts its pages and offers a download', async ({ page }) => {
+test('preview header shows the badge and a download, with no type, count or size text', async ({ page }) => {
   await uploadFixture(page, 'sample.docx');
   await page.getByRole('button', { name: /sample\.docx/i }).click();
 
   const dialog = page.getByRole('dialog');
 
   await expect(dialog.locator('[data-role="file-preview-badge"]')).toHaveText('DOC');
-  await expect(dialog.locator('[data-role="file-preview-meta"]')).toContainText('Word');
-  await expect(dialog.locator('[data-role="file-preview-meta"]')).toContainText('1 page');
+  await expect(dialog.locator('[data-role="file-preview-meta"]')).toHaveCount(0);
   await expect(dialog.getByRole('link', { name: 'Download' })).toHaveAttribute('download', 'sample.docx');
 });
 
@@ -692,7 +691,7 @@ test('csv preview is a grid: dragging over numbers shows their sum, average and 
   const dialog = await openTextPreview(page, 'seats.csv', 'text/csv', 'Team,Seats\nDesign,4\nPlatform,12\nMobile,8\n');
   const status = dialog.locator('[data-role="file-preview-grid-status"]');
 
-  await expect(dialog.locator('[data-role="file-preview-meta"]')).toContainText('3 rows');
+  await expect(dialog.locator('[data-role="file-preview-meta"]')).toHaveCount(0);
   await expect(dialog.locator('[data-col]')).toHaveText(['A', 'B']);
   await expect(status).toHaveText('A1');
 

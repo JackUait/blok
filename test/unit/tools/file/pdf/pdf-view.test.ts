@@ -92,7 +92,6 @@ const frames: FrameRequestCallback[] = [];
 interface Harness {
   container: HTMLElement;
   chrome: PreviewChrome;
-  facts: string[][];
   releases: Array<() => void>;
   scroller: () => HTMLElement;
   pages: () => HTMLElement[];
@@ -101,12 +100,8 @@ interface Harness {
 function harness(): Harness {
   const container = document.createElement('div');
   document.body.appendChild(container);
-  const facts: string[][] = [];
   const releases: Array<() => void> = [];
-  const chrome: PreviewChrome = {
-    ...detachedChrome(container, () => false, (release) => releases.push(release)),
-    setFacts: (next) => facts.push(next),
-  };
+  const chrome = detachedChrome(container, () => false, (release) => releases.push(release));
   const scroller = (): HTMLElement => {
     const found = container.querySelector<HTMLElement>('[data-role="file-preview-pdf"]');
     if (found === null) {
@@ -117,7 +112,7 @@ function harness(): Harness {
   };
 
   return {
-    container, chrome, facts, releases, scroller,
+    container, chrome, releases, scroller,
     pages: () => Array.from(container.querySelectorAll<HTMLElement>('[data-role="file-preview-pdf-page"]')),
   };
 }
@@ -166,11 +161,10 @@ describe('mountPdfView', () => {
     expect(pages[0].querySelector('.blok-file-preview-pdf-text')).not.toBeNull();
   });
 
-  it('counts the pages once, through the pager', async () => {
+  it('counts the pages in the pager', async () => {
     const h = harness();
     await mountPdfView(h.container, fakeDoc(50), {}, h.chrome);
 
-    expect(h.facts).toEqual([['50 pages']]);
     expect(h.container.querySelector('[data-role="file-preview-page"]')?.textContent).toBe('Page 1 / 50');
   });
 

@@ -48,7 +48,6 @@ function fakeDeck(count: number): Fake {
 
 interface Harness {
   container: HTMLElement;
-  facts: string[][];
   keys: Array<(event: KeyboardEvent) => void>;
   deck: DeckView;
   frame: HTMLElement;
@@ -70,11 +69,9 @@ async function harness(fake: Fake, stageSize = { width: W + 48, height: H + 40 }
   vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(function clientHeight(this: HTMLElement) {
     return this.getAttribute('data-role') === 'file-preview-stage' ? stageSize.height : 0;
   });
-  const facts: string[][] = [];
   const keys: Array<(event: KeyboardEvent) => void> = [];
   const chrome: PreviewChrome = {
     ...detachedChrome(body),
-    setFacts: (next) => facts.push(next),
     onKey: (handler) => keys.push(handler),
   };
   const deck = await openDeckStage(new ArrayBuffer(4), container, chrome, fake.open);
@@ -85,7 +82,7 @@ async function harness(fake: Fake, stageSize = { width: W + 48, height: H + 40 }
   const thumbs = (): HTMLElement[] => Array.from(container.querySelectorAll<HTMLElement>('[data-role="file-preview-thumb"]'));
 
   return {
-    container, facts, keys, deck, frame, thumbs,
+    container, keys, deck, frame, thumbs,
     stageText: () => frame.querySelector('p')?.textContent ?? '',
     current: () => thumbs().map((thumb) => thumb.getAttribute('aria-current')),
     key: (key) => keys.forEach((handler) => handler(new KeyboardEvent('keydown', { key }))),
@@ -109,11 +106,6 @@ describe('openDeckStage', () => {
     expect(h.thumbs().map((thumb) => thumb.getAttribute('aria-label'))).toEqual(['Slide 1', 'Slide 2', 'Slide 3']);
     expect(h.thumbs().map((thumb) => thumb.querySelector('[data-role="file-preview-thumb-number"]')?.textContent)).toEqual(['1', '2', '3']);
     expect(h.current()).toEqual(['true', 'false', 'false']);
-    expect(h.facts).toEqual([['3 slides']]);
-  });
-
-  it('says "1 slide" for a single slide', async () => {
-    expect((await harness(fakeDeck(1))).facts).toEqual([['1 slide']]);
   });
 
   it('puts a copy on the stage and leaves the slide itself in the filmstrip', async () => {

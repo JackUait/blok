@@ -1,6 +1,6 @@
 import type { DeckOptions, DeckView } from './pptx/viewer';
 import type { PreviewChrome } from './preview-chrome';
-import { counted, fill } from './preview-labels';
+import { fill } from './preview-labels';
 
 type OpenDeck = (
   buf: ArrayBuffer,
@@ -208,9 +208,6 @@ export async function openDeckStage(
   const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(fit);
   resize?.observe(stage);
   fit();
-  if (deck.count > 0) {
-    chrome.setFacts([counted(deck.count, labels.slidesOne, labels.slides)]);
-  }
 
   return {
     count: deck.count,

@@ -42,30 +42,20 @@ describe('file preview header', () => {
   });
 
   it.each([
-    ['report.docx', 'Word'],
-    ['budget.xlsx', 'Excel'],
-    ['deck.pptx', 'PowerPoint'],
+    ['report.docx', 'DOC'],
+    ['budget.xlsx', 'XLS'],
+    ['deck.pptx', 'PPT'],
     ['invoice.pdf', 'PDF'],
-    ['README.md', 'Markdown'],
-    ['queue.ts', 'TypeScript'],
+    ['README.md', 'MD'],
+    ['queue.ts', 'TS'],
     ['people.csv', 'CSV'],
-    ['notes.txt', 'Text'],
-  ])('names the type of %s as %s, then its size', (fileName, type) => {
+    ['notes.txt', 'TXT'],
+  ])('shows no type, count or size after the name of %s', (fileName, badge) => {
     openFilePreview({ url: `https://example.com/${fileName}`, fileName, size: 18_432, labels });
 
-    expect(q('[data-role="file-preview-meta"]')?.textContent).toBe(`${type} · 18 KB`);
-  });
-
-  it('leaves the size out when it is unknown', () => {
-    openFilePreview({ url: 'https://example.com/a.docx', fileName: 'a.docx', labels });
-
-    expect(q('[data-role="file-preview-meta"]')?.textContent).toBe('Word');
-  });
-
-  it('uses the translated name for a plain text file', () => {
-    openFilePreview({ url: 'https://example.com/a.txt', fileName: 'a.txt', labels: { ...labels, text: 'Текст' } });
-
-    expect(q('[data-role="file-preview-meta"]')?.textContent).toBe('Текст');
+    expect(q('[data-role="file-preview-meta"]')).toBeNull();
+    const title = q('[data-role="file-preview-badge"]')?.parentElement;
+    expect(Array.from(title?.children ?? []).map((el) => el.textContent)).toEqual([badge, fileName]);
   });
 
   it('offers a download link named after the file', () => {

@@ -179,15 +179,12 @@ describe('openFilePreview — modal chrome', () => {
 
     const title = childAt(header, 0);
     expect(title.className).toBe('blok-file-preview-title');
-    expect(title.children.length).toBe(3);
+    expect(title.children.length).toBe(2);
 
     const badge = childAt(title, 0);
     expect(badge.className).toBe('blok-file-preview-badge');
     expect(badge.getAttribute('aria-hidden')).toBe('true');
     expect(badge.textContent).toBe('PDF');
-
-    const meta = childAt(title, 2);
-    expect(meta.className).toBe('blok-file-preview-meta');
 
     const titleText = childAt(title, 1);
     expect(titleText.className).toBe('blok-file-preview-title-text');

@@ -6,7 +6,6 @@ interface Harness {
   chrome: PreviewChrome;
   scroller: HTMLElement;
   pages: HTMLElement[];
-  facts: string[][];
   pill: () => HTMLElement;
   press: (action: string) => void;
   text: (role: string) => string;
@@ -46,8 +45,7 @@ function harness(count: number, viewport = { width: 1000, height: 600 }): Harnes
     flush();
   }) as typeof scroller.scrollTo;
 
-  const facts: string[][] = [];
-  const chrome: PreviewChrome = { ...detachedChrome(body), setFacts: (next) => facts.push(next) };
+  const chrome = detachedChrome(body);
   const pill = (): HTMLElement => {
     const found = body.querySelector<HTMLElement>('[data-role="file-preview-pill"]');
     if (found === null) {
@@ -65,7 +63,7 @@ function harness(count: number, viewport = { width: 1000, height: 600 }): Harnes
   };
 
   return {
-    chrome, scroller, pages, facts, pill, mount,
+    chrome, scroller, pages, pill, mount,
     press: (action) => pill().querySelector<HTMLButtonElement>(`[data-action="${action}"]`)?.click(),
     text: (role) => pill().querySelector(`[data-role="${role}"]`)?.textContent ?? '',
   };
@@ -86,20 +84,6 @@ describe('mountPager with docx pages', () => {
   afterEach(() => {
     document.body.replaceChildren();
     vi.restoreAllMocks();
-  });
-
-  it('reports the page count as a header fact', () => {
-    const h = harness(3);
-    h.mount();
-
-    expect(h.facts).toEqual([['3 pages']]);
-  });
-
-  it('says "1 page" for a single page', () => {
-    const h = harness(1);
-    h.mount();
-
-    expect(h.facts).toEqual([['1 page']]);
   });
 
   it('starts on page 1 and follows the scroll', () => {
@@ -202,7 +186,6 @@ describe('mountPager with docx pages', () => {
     h.mount();
 
     expect(h.chrome.body.querySelector('[data-role="file-preview-pill"]')).toBeNull();
-    expect(h.facts).toEqual([]);
   });
 });
 

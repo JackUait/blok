@@ -14,7 +14,7 @@ vi.mock('../../../../src/tools/file/office-loaders', () => ({
 import { fillOfficeBody, renderXlsxInto } from '../../../../src/tools/file/office-preview';
 import { loadBinaryPreview } from '../../../../src/tools/file/binary-preview';
 import { loadDocxRenderer, loadPptxRenderer, loadZipReader } from '../../../../src/tools/file/office-loaders';
-import { detachedChrome, type PreviewChrome } from '../../../../src/tools/file/preview-chrome';
+import { detachedChrome } from '../../../../src/tools/file/preview-chrome';
 
 const OPTS = { url: 'blob:x', fileName: 'a.docx', labels: { close: 'Close', error: 'Error', download: 'Download' } };
 
@@ -62,7 +62,7 @@ describe('fillOfficeBody — docx controls', () => {
   beforeEach(() => { vi.clearAllMocks(); });
   afterEach(() => { vi.restoreAllMocks(); });
 
-  it('gives a rendered document its page counter and page count', async () => {
+  it('gives a rendered document its page counter', async () => {
     vi.mocked(loadBinaryPreview).mockResolvedValue({ ok: true, buf: new ArrayBuffer(4) });
     vi.mocked(loadDocxRenderer).mockResolvedValue(async (_buf, container) => {
       const wrapper = document.createElement('div');
@@ -73,12 +73,9 @@ describe('fillOfficeBody — docx controls', () => {
       return () => undefined;
     });
     const body = document.createElement('div');
-    const facts: string[][] = [];
-    const chrome: PreviewChrome = { ...detachedChrome(body), setFacts: (next) => facts.push(next) };
 
-    await fillOfficeBody(body, OPTS, 'docx', () => false, () => undefined, chrome);
+    await fillOfficeBody(body, OPTS, 'docx', () => false, () => undefined, detachedChrome(body));
 
-    expect(facts).toEqual([['2 pages']]);
     expect(body.querySelector('[data-role="file-preview-page"]')?.textContent).toMatch(/ \/ 2$/);
   });
 });

@@ -21,7 +21,6 @@ interface Harness {
   body: HTMLElement;
   pre: HTMLElement;
   bar: HTMLElement;
-  facts: string[][];
   map: HTMLElement;
   guides: () => HTMLElement[];
 }
@@ -30,11 +29,9 @@ async function harness(text: string, extra: Partial<PreviewChrome> = {}): Promis
   const body = document.createElement('div');
   document.body.appendChild(body);
   const slots: { bar: HTMLElement | null } = { bar: null };
-  const facts: string[][] = [];
   const chrome: PreviewChrome = {
     ...detachedChrome(body),
     typeName: 'TypeScript',
-    setFacts: (next) => facts.push(next),
     setBar: (bar) => { slots.bar = bar; },
     ...extra,
   };
@@ -51,7 +48,6 @@ async function harness(text: string, extra: Partial<PreviewChrome> = {}): Promis
     body,
     pre: need(body.querySelector<HTMLElement>('[data-role="file-preview-code"]'), 'pre'),
     bar: need(slots.bar, 'bar'),
-    facts,
     map: need(body.querySelector<HTMLElement>('[data-role="file-preview-minimap"]'), 'minimap'),
     guides: () => Array.from(body.querySelectorAll<HTMLElement>('[data-role="file-preview-guides"] > *')),
   };
@@ -71,10 +67,9 @@ describe('renderCode', () => {
     vi.restoreAllMocks();
   });
 
-  it('counts the lines for the header and the status bar, next to the language', async () => {
+  it('counts the lines for the status bar, next to the language', async () => {
     const h = await harness('a\nb\nc\n');
 
-    expect(h.facts).toEqual([['3 lines']]);
     const texts = Array.from(h.bar.querySelectorAll('.blok-file-preview-bar-text')).map((el) => el.textContent);
     expect(texts).toEqual(['TypeScript', '3 lines']);
   });

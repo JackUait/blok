@@ -295,7 +295,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2200 + 147 + 578 + 9 closure for all 2934 keys', () => {
+  it('rebuilds a disjoint 2193 + 146 + 578 + 9 closure for all 2926 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -309,7 +309,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2934);
+    expect(lifecycle.size).toBe(2926);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -561,7 +561,9 @@ describe('current English catalog lifecycle coverage', () => {
       // +3: the list's open button (openInCenterPeek, openAsPage) and the type menu's Number "?" (propertyTypeHelpNumber).
       // +1: the pinned group modal's sort chip calls tools.database.sortCount by literal.
       // -2: tools.file.cardFiles and cardFilesOne are gone (see registered-namespace-compatible).
-      'executable-literal': 2200,
+      // -8: the file preview header shows no counts, so tools.file.previewPages, previewSheets, previewSlides,
+      // previewRows and their One forms are gone.
+      'executable-literal': 2193,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -578,7 +580,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: a11y.blocksDeleted_one/_other, a plural of the selected-block delete call.
       // +1: the audio seek slider's tools.audio.seek, built by i18nLabel like play and volume.
       // +4: the video speed submenu's back, speedDecrease, speedIncrease and the new speedNormal, built by i18nLabel.
-      'finite-dynamic': 147,
+      'finite-dynamic': 146,
       // 12 of the 20 image darkroom keys are called by literal. The 8 filter
       // names stay here: filter-strip.ts builds them from the preset name.
       // +9: the markup tool names; markup-panel.ts builds them from a short key.

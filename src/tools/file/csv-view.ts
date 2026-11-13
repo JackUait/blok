@@ -1,5 +1,4 @@
 import { mountViewToggle, type PreviewChrome } from './preview-chrome';
-import { counted } from './preview-labels';
 import { MAX_GRID_CELLS, mountSheetGrid, type GridCell } from './sheet-grid';
 
 const DELIMITERS = [',', ';', '\t'];
@@ -93,7 +92,6 @@ export function renderCsv(chrome: PreviewChrome, text: string): void {
   source.hidden = true;
   body.append(table, source);
 
-  chrome.setFacts([counted(Math.max(0, rows.length - 1), labels.rowsOne, labels.rows)]);
   mountViewToggle(chrome.header, labels.table, labels.raw, (raw) => {
     table.hidden = raw;
     source.hidden = !raw;

@@ -2,7 +2,6 @@ import { onHover } from '../../components/utils/tooltip';
 import { LANGUAGES } from '../code/constants';
 import { extToPrismLang } from './code-languages';
 import { resolveFileIcon, type FileIconCategory } from './file-icon';
-import { humanFileSize } from './format';
 import { extOf, type PreviewKind } from './preview';
 import { DEFAULT_PREVIEW_LABELS, type PreviewLabels } from './preview-labels';
 
@@ -11,12 +10,10 @@ export interface PreviewChrome {
   readonly labels: PreviewLabels;
   readonly header: HTMLElement;
   readonly body: HTMLElement;
-  /** The type name the header shows: "Word", "TypeScript". */
+  /** The type's name: "Word", "TypeScript". */
   readonly typeName: string;
   /** Bytes, when known. */
   readonly size: number | undefined;
-  /** Facts counted after load ("2 pages"). Shown between the type and the size. */
-  setFacts(facts: string[]): void;
   /** The status bar under the body, or null to take it away. */
   setBar(bar: HTMLElement | null): void;
   /** Layers over the body (pill, rail, minimap). They survive a body refill. */
@@ -27,7 +24,7 @@ export interface PreviewChrome {
   onKey(handler: (event: KeyboardEvent) => void): void;
 }
 
-/** A chrome with no modal around it: facts and the bar go nowhere, overlays land in `body`. */
+/** A chrome with no modal around it: the bar goes nowhere, overlays land in `body`. */
 export function detachedChrome(
   body: HTMLElement,
   isClosed: () => boolean = () => false,
@@ -39,7 +36,6 @@ export function detachedChrome(
     body,
     typeName: '',
     size: undefined,
-    setFacts: () => undefined,
     setBar: () => undefined,
     addOverlay: (overlay) => body.appendChild(overlay),
     isClosed,
@@ -75,7 +71,7 @@ export function isLog(file: { url: string; fileName?: string }): boolean {
   return extOf(file.fileName ?? file.url) === 'log';
 }
 
-/** The badge text, type name and colour category the header shows for a file. */
+/** A file's badge text, type name and colour category. */
 export function describePreviewType(
   file: { url: string; fileName?: string; mimeType?: string },
   kind: PreviewKind,
@@ -95,11 +91,6 @@ export function describePreviewType(
   }
 
   return { badge, name: isCsv(file) ? 'CSV' : labels.text, category };
-}
-
-/** The header's "Word · 2 pages · 18 KB" line. */
-export function metaText(typeName: string, facts: string[], size: number | undefined): string {
-  return [typeName, ...facts, humanFileSize(size)].filter((part) => part !== '').join(' · ');
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, role?: string): HTMLElementTagNameMap[K] {

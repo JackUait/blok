@@ -1,7 +1,6 @@
 import { IconCopy } from '../../components/icons';
 import { splitLines } from './code-view';
 import { barButton, barSpacer, buildBar, copyButton, type PreviewChrome } from './preview-chrome';
-import { counted } from './preview-labels';
 
 type Level = 'error' | 'warn' | 'info';
 
@@ -87,11 +86,10 @@ export function renderLog(chrome: PreviewChrome, text: string): void {
     buttons.forEach((button, i) => button.setAttribute('aria-pressed', String(i === index)));
   }, { pressed: index === 0 }));
 
-  chrome.setFacts([counted(lines.length, labels.linesOne, labels.lines)]);
   chrome.setBar(buildBar([...buttons, barSpacer(), copyButton(() => text, labels, IconCopy)]));
 }
 
-/** Any other text file: the text as it is, with its line count and a Copy button. */
+/** Any other text file: the text as it is, with a Copy button. */
 export function renderPlainText(chrome: PreviewChrome, text: string): void {
   const { body, labels } = chrome;
   body.replaceChildren();
@@ -101,6 +99,5 @@ export function renderPlainText(chrome: PreviewChrome, text: string): void {
   pre.textContent = text;
   body.appendChild(pre);
 
-  chrome.setFacts([counted(splitLines(text).length, labels.linesOne, labels.lines)]);
   chrome.setBar(buildBar([barSpacer(), copyButton(() => text, labels, IconCopy)]));
 }

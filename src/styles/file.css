@@ -1163,20 +1163,6 @@
   text-overflow: ellipsis;
 }
 
-.blok-file-preview-meta {
-  flex: 0 0 auto;
-  font-size: var(--blok-font-size-ui-compact);
-  color: var(--blok-text-secondary);
-  white-space: nowrap;
-}
-.blok-file-preview-meta::before {
-  content: '·';
-  margin-inline-end: var(--blok-space-1);
-}
-.blok-file-preview-meta:empty {
-  display: none;
-}
-
 .blok-file-preview-actions {
   grid-column: 3;
   grid-row: 1;

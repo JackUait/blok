@@ -8,22 +8,22 @@ import { tokenizePrism } from '../code/prism-loader';
 import { applyPrismHighlight, ensurePrismStyles } from '../code/prism-applier';
 import { IconCross, IconDownload, IconLinkExternal } from '../../components/icons';
 import { buildErrorInto, buildExternalNoticeInto, createTypedPdfUrl } from './preview-error';
-import { renderCode, splitLines } from './code-view';
+import { renderCode } from './code-view';
 import { renderCsv } from './csv-view';
 import { renderLog, renderPlainText } from './log-view';
 import { mountOutline } from './md-outline';
 import { fillOfficeBody, isOfficeKind } from './office-preview';
 import { ScrollHaze } from './preview-scroll-haze';
-import { counted, resolvePreviewLabels, type PreviewLabels } from './preview-labels';
+import { resolvePreviewLabels, type PreviewLabels } from './preview-labels';
 import { supportsPdfJs } from './pdf/pdf-loader';
 import { fillPdfBody, fillRemotePdfBody } from './pdf/pdf-preview';
-import { describePreviewType, isCsv, isLog, metaText, mountViewToggle, OVERLAY_ATTR, type PreviewChrome } from './preview-chrome';
+import { describePreviewType, isCsv, isLog, mountViewToggle, OVERLAY_ATTR, type PreviewChrome } from './preview-chrome';
 
 export interface FilePreviewOptions {
   url: string;
   fileName?: string;
   mimeType?: string;
-  /** Bytes, when known. Shown in the header. */
+  /** Bytes, when known. Shown in the code view's status bar. */
   size?: number;
   labels: Partial<PreviewLabels> & { close: string };
   /** Element whose direction the preview takes (it mounts outside the editor). */
@@ -43,7 +43,6 @@ interface PreviewElements {
   actions: HTMLElement;
   closeButton: HTMLButtonElement;
   body: HTMLElement;
-  meta: HTMLElement;
   typeName: string;
   kind: PreviewKind | null;
 }
@@ -186,7 +185,6 @@ async function renderMarkdown(chrome: PreviewChrome, text: string, opts: FilePre
       views.rail.hidden = raw;
     }
   });
-  chrome.setFacts([counted(splitLines(text).length, labels.linesOne, labels.lines)]);
 
   ensurePrismStyles();
   const { markdownToHtml } = await import('../../markdown/markdownToHtml');
@@ -274,12 +272,7 @@ function buildElements(opts: FilePreviewOptions): PreviewElements {
     titleText.textContent = opts.fileName;
   }
 
-  const meta = document.createElement('span');
-  meta.className = 'blok-file-preview-meta';
-  meta.setAttribute('data-role', 'file-preview-meta');
-  meta.textContent = metaText(type.name, [], opts.size);
-
-  title.append(badge, titleText, meta);
+  title.append(badge, titleText);
 
   const closeButton = document.createElement('button');
   closeButton.type = 'button';
@@ -312,11 +305,11 @@ function buildElements(opts: FilePreviewOptions): PreviewElements {
   dialog.append(header, body);
   backdrop.appendChild(dialog);
 
-  return { backdrop, dialog, header, actions, closeButton, body, meta, typeName: type.name, kind };
+  return { backdrop, dialog, header, actions, closeButton, body, typeName: type.name, kind };
 }
 
 export function openFilePreview(opts: FilePreviewOptions): () => void {
-  const { backdrop, dialog, header, actions, closeButton, body, meta, typeName, kind } = buildElements(opts);
+  const { backdrop, dialog, header, actions, closeButton, body, typeName, kind } = buildElements(opts);
   const officeKind = isOfficeKind(kind) ? kind : null;
   const textualKind = kind === null || kind === 'pdf' || officeKind !== null ? null : kind;
 
@@ -340,9 +333,6 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
     body,
     typeName,
     size: opts.size,
-    setFacts: (facts) => {
-      meta.textContent = metaText(typeName, facts, opts.size);
-    },
     setBar: (bar) => {
       slots.bar?.remove();
       slots.bar = bar;

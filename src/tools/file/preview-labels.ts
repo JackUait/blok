@@ -13,16 +13,8 @@ export interface PreviewLabels {
   openInNewTab: string;
   backToContent: string;
   text: string;
-  pages: string;
-  pagesOne: string;
-  sheets: string;
-  sheetsOne: string;
-  slides: string;
-  slidesOne: string;
   lines: string;
   linesOne: string;
-  rows: string;
-  rowsOne: string;
   pageOf: string;
   prevPage: string;
   nextPage: string;
@@ -63,16 +55,8 @@ export const DEFAULT_PREVIEW_LABELS: PreviewLabels = {
   openInNewTab: 'Open in new tab',
   backToContent: 'Back to content',
   text: 'Text',
-  pages: '{count} pages',
-  pagesOne: '1 page',
-  sheets: '{count} sheets',
-  sheetsOne: '1 sheet',
-  slides: '{count} slides',
-  slidesOne: '1 slide',
   lines: '{count} lines',
   linesOne: '1 line',
-  rows: '{count} rows',
-  rowsOne: '1 row',
   pageOf: 'Page {page} / {total}',
   prevPage: 'Previous page',
   nextPage: 'Next page',
@@ -115,7 +99,7 @@ export function fill(template: string, values: Record<string, string | number>):
   return template.replace(/\{(\w+)\}/g, (slot, name: string) => (name in values ? String(values[name]) : slot));
 }
 
-/** "1 page" or "12 pages": the singular label for one, the counted one otherwise. */
+/** "1 line" or "12 lines": the singular label for one, the counted one otherwise. */
 export function counted(count: number, one: string, many: string): string {
   return count === 1 ? one : fill(many, { count });
 }

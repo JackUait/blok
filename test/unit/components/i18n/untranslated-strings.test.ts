@@ -991,17 +991,13 @@ const FILE_PREVIEW_COGNATE_RETENTIONS: Record<string, string[]> = {
   de: ['tools.file.previewTypeText'],
   fil: ['tools.file.cardSheets_one', 'tools.file.cardSlides_one', 'tools.file.cardFiles_one'],
   fr: [
-    'tools.file.previewPages',
-    'tools.file.previewPagesOne',
     'tools.file.previewPdfPageN',
     'tools.file.cardPages_one',
     'tools.file.cardPages_other',
   ],
-  id: ['tools.file.previewSlidesOne', 'tools.file.previewSlideN', 'tools.file.cardSlides_one'],
+  id: ['tools.file.previewSlideN', 'tools.file.cardSlides_one'],
   no: ['tools.file.previewSum'],
   pt: [
-    'tools.file.previewSlides',
-    'tools.file.previewSlidesOne',
     'tools.file.previewSlideN',
     'tools.file.cardSlides_one',
     'tools.file.cardSlides_other',

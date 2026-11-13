@@ -1,5 +1,4 @@
 import { barButton, barSpacer, buildBar, type PreviewChrome } from './preview-chrome';
-import { counted } from './preview-labels';
 
 export interface GridCell {
   /** What the cell shows. */
@@ -234,9 +233,6 @@ export function mountSheetGrid(
   tabList.append(...tabs);
 
   const withTabs = opts.tabs !== false;
-  if (withTabs) {
-    chrome.setFacts([counted(sheets.length, labels.sheetsOne, labels.sheets)]);
-  }
   const bar = buildBar(withTabs ? [tabList, barSpacer(), status] : [barSpacer(), status]);
   chrome.setBar(bar);
   open(0);

@@ -219,7 +219,6 @@ export async function renderCode(chrome: PreviewChrome, text: string, lang: stri
   };
 
   const lineCount = counted(lines.length, labels.linesOne, labels.lines);
-  chrome.setFacts([lineCount]);
   chrome.setBar(buildBar([
     ...[chrome.typeName, lineCount, humanFileSize(chrome.size)].filter((part) => part !== '').map((part) => barText(part)),
     barSpacer(),

@@ -4939,8 +4939,10 @@ export class DatabaseTool implements BlockTool {
     }
 
     const { id: _id, name, type, position: _position, ...settings } = sourceView;
-    // notion-motion.md Round 27 §3: "Table" copies as "Table (1)". A second copy's number is unmeasured.
-    const newView = this.model.addView(`${name} (1)`, type, settings);
+    // notion-motion.md Round 28 §2: "Table" copies as "Table (1)", every time; "Table (1)" copies as "Table (2)".
+    const numbered = / \((\d+)\)$/.exec(name);
+    const copyName = numbered === null ? `${name} (1)` : `${name.slice(0, numbered.index)} (${Number(numbered[1]) + 1})`;
+    const newView = this.model.addView(copyName, type, settings);
 
     void this.sync.syncCreateView(structuredClone(newView));
     // A copied dashboard gets copies of its widgets, so the two never share one.

@@ -5837,6 +5837,24 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
 
+    // notion-motion.md Round 28 §2 (r28-dupnames.raw): a copy of "Table (1)" is "Table (2)", and a second
+    // copy of "Table" is "Table (1)" again, so the source's own number goes up by one.
+    it.each([
+      ['Table (1)', 'Table (2)'],
+      ['Table (9)', 'Table (10)'],
+      ['Table', 'Table (1)'],
+      ['Q3 (draft)', 'Q3 (draft) (1)'],
+    ])('names a copy of "%s" "%s"', (sourceName, copyName) => {
+      const tool = new DatabaseTool(createDatabaseOptions({ views: [{ ...tableView, name: sourceName }], activeViewId: tableView.id }));
+      const element = tool.render();
+
+      tool.duplicateView(tableView.id);
+
+      expect(tool.save(element).views.map((view) => view.name)).toEqual([sourceName, copyName]);
+
+      tool.destroy();
+    });
+
     it('carries every view setting into a duplicate and to the backend', () => {
       const adapter = {
         loadDatabase: vi.fn().mockResolvedValue(undefined),

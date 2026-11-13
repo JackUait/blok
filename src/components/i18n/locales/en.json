@@ -443,6 +443,7 @@
   "tools.database.pinnedGroups": "Pinned groups",
   "tools.database.groupMoveToTrash": "Move to Trash",
   "tools.database.groupTrashConfirm": "Are you sure? All pages inside this group will be moved to Trash.",
+  "tools.database.hiddenGroups": "Hidden groups",
   "tools.database.emptyColumn": "No cards",
   "tools.database.rowTitlePlaceholder": "New page",
   "tools.database.addRow": "Add row",

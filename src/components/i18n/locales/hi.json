@@ -408,6 +408,7 @@
   "tools.database.pinnedGroups": "पिन किए गए समूह",
   "tools.database.groupMoveToTrash": "ट्रैश में ले जाएं",
   "tools.database.groupTrashConfirm": "क्या आप निश्चित हैं? इस समूह के सभी पेज ट्रैश में ले जाए जाएँगे।",
+  "tools.database.hiddenGroups": "छिपे हुए समूह",
   "tools.database.deleteCard": "कार्ड हटाएं",
   "tools.database.editCardTitle": "शीर्षक संपादित करें",
   "tools.database.cardMenuLabel": "कार्ड विकल्प",

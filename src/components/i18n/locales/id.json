@@ -408,6 +408,7 @@
   "tools.database.pinnedGroups": "Grup tersemat",
   "tools.database.groupMoveToTrash": "Pindahkan ke sampah",
   "tools.database.groupTrashConfirm": "Anda yakin? Semua halaman di dalam grup ini akan dipindahkan ke sampah.",
+  "tools.database.hiddenGroups": "Grup tersembunyi",
   "tools.database.deleteCard": "Hapus kartu",
   "tools.database.editCardTitle": "Ubah judul",
   "tools.database.cardMenuLabel": "Opsi kartu",

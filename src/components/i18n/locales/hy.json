@@ -408,6 +408,7 @@
   "tools.database.pinnedGroups": "Ամրացված խմբեր",
   "tools.database.groupMoveToTrash": "Տեղափոխել աղբարկղ",
   "tools.database.groupTrashConfirm": "Վստա՞հ եք։ Այս խմբի բոլոր էջերը կտեղափոխվեն աղբարկղ։",
+  "tools.database.hiddenGroups": "Թաքցված խմբեր",
   "tools.database.deleteCard": "Ջնջել քարտը",
   "tools.database.editCardTitle": "Խմբագրել վերնագիրը",
   "tools.database.cardMenuLabel": "Քարտի ընտրանքներ",

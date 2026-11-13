@@ -433,6 +433,7 @@
   "tools.database.pinnedGroups": "പിൻ ചെയ്ത ഗ്രൂപ്പുകൾ",
   "tools.database.groupMoveToTrash": "ട്രാഷിലേക്ക് നീക്കുക",
   "tools.database.groupTrashConfirm": "ഉറപ്പാണോ? ഈ ഗ്രൂപ്പിലെ എല്ലാ പേജുകളും ട്രാഷിലേക്ക് നീക്കും.",
+  "tools.database.hiddenGroups": "മറച്ച ഗ്രൂപ്പുകൾ",
   "tools.database.emptyColumn": "കാർഡുകളില്ല",
   "tools.database.rowTitlePlaceholder": "പുതിയ പേജ്",
   "tools.database.addRow": "വരി ചേർക്കുക",

@@ -408,6 +408,7 @@
   "tools.database.pinnedGroups": "Vastgemaakte groepen",
   "tools.database.groupMoveToTrash": "Naar prullenbak verplaatsen",
   "tools.database.groupTrashConfirm": "Weet je het zeker? Alle pagina's in deze groep worden naar de prullenbak verplaatst.",
+  "tools.database.hiddenGroups": "Verborgen groepen",
   "tools.database.deleteCard": "Kaart verwijderen",
   "tools.database.editCardTitle": "Titel bewerken",
   "tools.database.cardMenuLabel": "Kaartopties",

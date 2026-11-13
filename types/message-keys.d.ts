@@ -1342,6 +1342,7 @@ export type BlokMessageKey =
   | 'tools.database.groupWeekOf'
   | 'tools.database.groupWeekStart'
   | 'tools.database.groupWeekSunday'
+  | 'tools.database.hiddenGroups'
   | 'tools.database.hideDataSourceTitles'
   | 'tools.database.hideDescription'
   | 'tools.database.hideTitle'

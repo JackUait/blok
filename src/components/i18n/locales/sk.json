@@ -410,6 +410,7 @@
   "tools.database.pinnedGroups": "Pripnuté skupiny",
   "tools.database.groupMoveToTrash": "Presunúť do koša",
   "tools.database.groupTrashConfirm": "Naozaj? Všetky stránky v tejto skupine sa presunú do koša.",
+  "tools.database.hiddenGroups": "Skryté skupiny",
   "tools.database.deleteCard": "Odstrániť kartu",
   "tools.database.editCardTitle": "Upraviť názov",
   "tools.database.cardMenuLabel": "Možnosti karty",

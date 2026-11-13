@@ -408,6 +408,7 @@
   "tools.database.pinnedGroups": "Các nhóm đã ghim",
   "tools.database.groupMoveToTrash": "Chuyển vào thùng rác",
   "tools.database.groupTrashConfirm": "Bạn có chắc không? Tất cả các trang trong nhóm này sẽ được chuyển vào thùng rác.",
+  "tools.database.hiddenGroups": "Nhóm đã ẩn",
   "tools.database.deleteCard": "Xóa thẻ",
   "tools.database.editCardTitle": "Chỉnh sửa tiêu đề",
   "tools.database.cardMenuLabel": "Tùy chọn thẻ",

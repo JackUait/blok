@@ -409,6 +409,7 @@
   "tools.database.pinnedGroups": "Gruppi fissati",
   "tools.database.groupMoveToTrash": "Sposta nel cestino",
   "tools.database.groupTrashConfirm": "Sei sicuro? Tutte le pagine di questo gruppo verranno spostate nel cestino.",
+  "tools.database.hiddenGroups": "Gruppi nascosti",
   "tools.database.deleteCard": "Elimina scheda",
   "tools.database.editCardTitle": "Modifica titolo",
   "tools.database.cardMenuLabel": "Opzioni scheda",

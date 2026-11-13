@@ -428,6 +428,7 @@
   "tools.database.pinnedGroups": "Kumpulan tersemat",
   "tools.database.groupMoveToTrash": "Alih ke sampah",
   "tools.database.groupTrashConfirm": "Adakah anda pasti? Semua halaman dalam kumpulan ini akan dialihkan ke sampah.",
+  "tools.database.hiddenGroups": "Kumpulan tersembunyi",
   "tools.database.deleteCard": "Padam kad",
   "tools.database.editCardTitle": "Sunting tajuk",
   "tools.database.cardMenuLabel": "Pilihan kad",

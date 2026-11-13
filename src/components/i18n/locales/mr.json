@@ -433,6 +433,7 @@
   "tools.database.pinnedGroups": "पिन केलेले गट",
   "tools.database.groupMoveToTrash": "कचरापेटीत हलवा",
   "tools.database.groupTrashConfirm": "तुम्हाला खात्री आहे? या गटातील सर्व पृष्ठे कचरापेटीत हलवली जातील.",
+  "tools.database.hiddenGroups": "लपवलेले गट",
   "tools.database.emptyColumn": "कार्ड नाहीत",
   "tools.database.rowTitlePlaceholder": "नवीन पृष्ठ",
   "tools.database.addRow": "पंक्ती जोडा",

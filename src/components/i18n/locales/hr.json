@@ -409,6 +409,7 @@
   "tools.database.pinnedGroups": "Prikvačene grupe",
   "tools.database.groupMoveToTrash": "Premjesti u smeće",
   "tools.database.groupTrashConfirm": "Jeste li sigurni? Sve stranice unutar ove grupe bit će premještene u smeće.",
+  "tools.database.hiddenGroups": "Skrivene grupe",
   "tools.database.deleteCard": "Obriši karticu",
   "tools.database.editCardTitle": "Uredi naslov",
   "tools.database.cardMenuLabel": "Opcije kartice",

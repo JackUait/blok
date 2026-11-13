@@ -409,6 +409,7 @@
   "tools.database.pinnedGroups": "Groupes épinglés",
   "tools.database.groupMoveToTrash": "Mettre à la corbeille",
   "tools.database.groupTrashConfirm": "Êtes-vous sûr ? Toutes les pages de ce groupe seront mises à la corbeille.",
+  "tools.database.hiddenGroups": "Groupes masqués",
   "tools.database.deleteCard": "Supprimer la carte",
   "tools.database.editCardTitle": "Modifier le titre",
   "tools.database.cardMenuLabel": "Options de la carte",

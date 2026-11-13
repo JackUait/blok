@@ -408,6 +408,7 @@
   "tools.database.pinnedGroups": "Grupet e fiksuara",
   "tools.database.groupMoveToTrash": "Zhvendos në kosh",
   "tools.database.groupTrashConfirm": "Je i sigurt? Të gjitha faqet në këtë grup do të zhvendosen në kosh.",
+  "tools.database.hiddenGroups": "Grupet e fshehura",
   "tools.database.deleteCard": "Fshi kartën",
   "tools.database.editCardTitle": "Ndrysho titullin",
   "tools.database.cardMenuLabel": "Opsionet e kartës",

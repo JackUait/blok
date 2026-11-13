@@ -32,6 +32,9 @@ const CATALOG_ONLY_KEYS = new Set([
   // The timeline's end picker lost its None choice to the Separate start and end dates switch.
   // Kept for public BlokMessageKey compatibility: it shipped in 2.1.0.
   'tools.database.timelineEndNone',
+  // The board lost its Hidden groups button; Settings › Group un-hides groups.
+  // Kept for public BlokMessageKey compatibility: it shipped in 2.1.0.
+  'tools.database.hiddenGroups',
 ]);
 
 const sourceFiles = (directory: string): string[] => {
@@ -286,7 +289,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2197 + 147 + 566 + 6 closure for all 2916 keys', () => {
+  it('rebuilds a disjoint 2197 + 147 + 566 + 7 closure for all 2917 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -300,7 +303,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2916);
+    expect(lifecycle.size).toBe(2917);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -651,7 +654,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the Date filter's "Invalid date" message (tools.database.filterInvalidDate), through the chip's t().
       'registered-namespace-compatible': 566,
       // +1: Settings › Group's pin button names itself with groupPin through the panel's tools.database. prefix.
-      'catalog-only': 6,
+      'catalog-only': 7,
     });
     expect(
       [...lifecycle.entries()]

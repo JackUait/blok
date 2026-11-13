@@ -408,6 +408,7 @@
   "tools.database.pinnedGroups": "پن کیے گئے گروپس",
   "tools.database.groupMoveToTrash": "ردی کی ٹوکری میں منتقل کریں",
   "tools.database.groupTrashConfirm": "کیا آپ کو یقین ہے؟ اس گروپ کے تمام صفحات ردی کی ٹوکری میں منتقل کر دیے جائیں گے۔",
+  "tools.database.hiddenGroups": "چھپے ہوئے گروپس",
   "tools.database.deleteCard": "کارڈ حذف کریں",
   "tools.database.editCardTitle": "عنوان میں ترمیم کریں",
   "tools.database.cardMenuLabel": "کارڈ کے اختیارات",

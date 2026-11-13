@@ -408,6 +408,7 @@
   "tools.database.pinnedGroups": "Vikundi vilivyobandikwa",
   "tools.database.groupMoveToTrash": "Hamishia kwenye tupio",
   "tools.database.groupTrashConfirm": "Una uhakika? Kurasa zote ndani ya kikundi hiki zitahamishiwa kwenye tupio.",
+  "tools.database.hiddenGroups": "Vikundi vilivyofichwa",
   "tools.database.deleteCard": "Futa kadi",
   "tools.database.editCardTitle": "Hariri kichwa",
   "tools.database.cardMenuLabel": "Chaguo za kadi",

@@ -433,6 +433,7 @@
   "tools.database.pinnedGroups": "ಪಿನ್ ಮಾಡಿದ ಗುಂಪುಗಳು",
   "tools.database.groupMoveToTrash": "ಅನುಪಯುಕ್ತಕ್ಕೆ ಸರಿಸಿ",
   "tools.database.groupTrashConfirm": "ನೀವು ಖಚಿತವಾಗಿರುವಿರಾ? ಈ ಗುಂಪಿನಲ್ಲಿರುವ ಎಲ್ಲಾ ಪುಟಗಳನ್ನು ಅನುಪಯುಕ್ತಕ್ಕೆ ಸರಿಸಲಾಗುತ್ತದೆ.",
+  "tools.database.hiddenGroups": "ಮರೆಮಾಡಿದ ಗುಂಪುಗಳು",
   "tools.database.emptyColumn": "ಯಾವುದೇ ಕಾರ್ಡ್‌ಗಳಿಲ್ಲ",
   "tools.database.rowTitlePlaceholder": "ಹೊಸ ಪುಟ",
   "tools.database.addRow": "ಸಾಲು ಸೇರಿಸಿ",

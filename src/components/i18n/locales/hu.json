@@ -408,6 +408,7 @@
   "tools.database.pinnedGroups": "Rögzített csoportok",
   "tools.database.groupMoveToTrash": "Áthelyezés a kukába",
   "tools.database.groupTrashConfirm": "Biztos benne? A csoportban lévő összes oldal a kukába kerül.",
+  "tools.database.hiddenGroups": "Rejtett csoportok",
   "tools.database.deleteCard": "Kártya törlése",
   "tools.database.editCardTitle": "Cím szerkesztése",
   "tools.database.cardMenuLabel": "Kártya beállításai",

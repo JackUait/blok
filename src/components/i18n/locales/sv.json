@@ -408,6 +408,7 @@
   "tools.database.pinnedGroups": "Fästa grupper",
   "tools.database.groupMoveToTrash": "Flytta till papperskorgen",
   "tools.database.groupTrashConfirm": "Är du säker? Alla sidor i den här gruppen flyttas till papperskorgen.",
+  "tools.database.hiddenGroups": "Dolda grupper",
   "tools.database.deleteCard": "Ta bort kort",
   "tools.database.editCardTitle": "Redigera titel",
   "tools.database.cardMenuLabel": "Kortalternativ",

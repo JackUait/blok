@@ -408,6 +408,7 @@
   "tools.database.pinnedGroups": "Festede grupper",
   "tools.database.groupMoveToTrash": "Flytt til papirkurven",
   "tools.database.groupTrashConfirm": "Er du sikker? Alle sidene i denne gruppen blir flyttet til papirkurven.",
+  "tools.database.hiddenGroups": "Skjulte grupper",
   "tools.database.deleteCard": "Slett kort",
   "tools.database.editCardTitle": "Rediger tittel",
   "tools.database.cardMenuLabel": "Kortalternativer",

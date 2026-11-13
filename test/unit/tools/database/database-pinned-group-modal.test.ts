@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { pinnedGroupChips } from '../../../../src/tools/database/database-pinned-group-modal';
+import { filterPillLabel } from '../../../../src/tools/database/database-filter-labels';
 import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
 
 const i18n = {
@@ -39,15 +40,28 @@ describe('pinnedGroupChips', () => {
       filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'r', propertyId: 'title', operator: 'is_not_empty', value: null }] },
     }), schema, i18n);
 
-    expect(texts(chips)).toEqual(['Name: tools.database.sortAZ', 'tools.database.filterRuleCount(count=2)']);
+    expect(texts(chips)).toEqual(['Name: tools.database.sortAZ', null, 'tools.database.filterRuleCount(count=2)']);
     expect(chips[0].getAttribute('data-direction')).toBe('asc');
   });
 
-  // Simple filters join the rule count too (an inference: Notion's modal was read with an advanced filter only).
-  it('counts the view\'s simple filters as rules', () => {
-    const chips = pinnedGroupChips(view({ filters: [{ id: 'f', propertyId: 'title', operator: 'is_not_empty', value: null }] }), schema, i18n);
+  // notion-motion.md Round 27 §2 "Rule count with a simple filter" (r27-pm-filtered.raw): the count stays 1 and the
+  // simple filter keeps its own chip after it, as the toolbar draws it.
+  it('keeps a simple filter as its own chip, out of the rule count', () => {
+    const filter = { id: 'f', propertyId: 'title', operator: 'contains', value: 'a' };
+    const chips = pinnedGroupChips(view({ filters: [filter] }), schema, i18n);
+    const name = schema[0];
 
-    expect(texts(chips)).toEqual(['tools.database.filterRuleCount(count=2)']);
+    expect(texts(chips)).toEqual(['tools.database.filterRuleCount(count=1)', filterPillLabel(filter, name, i18n.t)]);
+    expect(chips[1].getAttribute('aria-disabled')).toBe('true');
+    expect(chips[1].hasAttribute('data-active')).toBe(true);
+  });
+
+  // Round 27 §2 "Chip row layout" (r27-pm-open.png): a divider parts the sort chip from the filter chips.
+  it('parts the sort chip from the filter chips with a divider', () => {
+    const chips = pinnedGroupChips(view({ sorts: [{ id: 's', propertyId: 'title', direction: 'asc' }] }), schema, i18n);
+
+    expect(chips.map((chip) => chip.hasAttribute('data-blok-database-chip-divider'))).toEqual([false, true, false]);
+    expect(chips[1].hasAttribute('aria-disabled')).toBe(false);
   });
 
   // Round 26 §1 (r26-pm-key-*.raw): Tab reaches the chips; inside the read-only modal they edit nothing.

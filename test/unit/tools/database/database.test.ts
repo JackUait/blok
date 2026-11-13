@@ -4390,7 +4390,7 @@ describe('DatabaseTool', () => {
         // Round 26 §1 (r26-pm-modal.raw): the chip row sits between the header and the table.
         expect(dialog?.querySelector('[data-blok-database-group-modal-header]')?.nextElementSibling?.hasAttribute('data-blok-database-group-modal-chips')).toBe(true);
         expect([...(dialog?.querySelectorAll('[data-blok-database-group-modal-chips] > *') ?? [])].map((chip) => chip.getAttribute('data-blok-testid')))
-          .toEqual(['database-group-modal-sort-chip', 'database-group-modal-rules-chip']);
+          .toEqual(['database-group-modal-sort-chip', null, 'database-group-modal-rules-chip']);
 
         // Round 25 §1 (motion-r25-pinmodal-esc.json): Escape closes it at once, and focus goes back to the strip row.
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
@@ -4416,6 +4416,28 @@ describe('DatabaseTool', () => {
         const headers = document.querySelectorAll('[data-blok-database-group-modal-panel] [role="columnheader"]');
 
         expect([...headers].map((cell) => cell.getAttribute('data-property-id'))).toEqual(['prop-title', 'prop-status', 'prop-notes']);
+
+        tool.destroy();
+      });
+
+      // notion-motion.md Round 27 §2 "Column widths": the modal table uses the Table view's resized widths. Which table
+      // view Notion reads with several is unread; Blok takes the first table tab. A column it has no width for keeps the default.
+      it('draws the modal columns at the first table view\'s widths', () => {
+        const schema = makeDefaultData().schema;
+        const { tool } = board(false, {
+          schema: [schema[0], { id: 'prop-notes', name: 'Notes', type: 'richText', position: 'a0V' }, schema[1]],
+          views: [
+            { id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [], pinnedGroups: [{ id: 'opt-todo' }] },
+            { id: 'view-2', name: 'Table', type: 'table', position: 'a1', sorts: [], filters: [], visibleProperties: [], properties: [{ id: 'prop-title', visible: true, width: 140 }, { id: 'prop-status', visible: false, width: 120 }] },
+            { id: 'view-3', name: 'Table 2', type: 'table', position: 'a2', sorts: [], filters: [], visibleProperties: [], properties: [{ id: 'prop-title', visible: true, width: 300 }] },
+          ],
+        });
+
+        document.querySelector<HTMLElement>('[data-blok-database-pinned-group-open]')?.click();
+        const width = (id: string): string | undefined =>
+          document.querySelector<HTMLElement>(`[data-blok-database-group-modal-panel] [role="columnheader"][data-property-id="${id}"]`)?.style.width;
+
+        expect([width('prop-title'), width('prop-status'), width('prop-notes')]).toEqual(['140px', '120px', '200px']);
 
         tool.destroy();
       });

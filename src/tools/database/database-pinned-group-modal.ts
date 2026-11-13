@@ -4,9 +4,10 @@ import { IconArrowDiagonal, IconArrowUp, IconCross, IconDatabase, IconDotsHorizo
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { DATABASE_HEADER_MENU_CLASS } from './database-table-menus';
-import { filterChip } from './database-filter-chip';
-import { sortDirectionLabelKey } from './database-filter-labels';
-import { countFilterRules } from './filter-tree';
+import { chipPart, filterChip } from './database-filter-chip';
+import { filterPillLabel, filterPillParts, sortDirectionLabelKey } from './database-filter-labels';
+import { propertyTypeMeta } from './database-property-types';
+import { countFilterRules, withEntryIds } from './filter-tree';
 import type { DatabaseViewConfig, PropertyDefinition } from './types';
 import { openModalDialog } from '../../components/utils/modal-dialog';
 import type { ModalDialogHandle } from '../../components/utils/modal-dialog';
@@ -28,12 +29,25 @@ export interface PinnedGroupModalOptions {
   onClose: () => void;
 }
 
+/** What a simple filter chip needs to name a person, a related row and a date, as the toolbar's chip does. */
+export interface PinnedGroupChipNames {
+  personName?: (id: string) => string | undefined;
+  rowTitle?: (property: PropertyDefinition, id: string) => string | undefined;
+  locale?: string;
+}
+
 /**
  * notion-motion.md Round 25 §1 (r25-modal-inherit.raw): the view's sort chip, then one "N rules" chip. The modal adds
- * the group's own rule to the view's filters ("1 rule" with none). Round 26 §1: Tab reaches the chips, so they stay
- * buttons; the modal edits nothing, so they are aria-disabled.
+ * the group's own rule to the view's advanced rules ("1 rule" with none). Round 27 §2 (r27-pm-filtered.raw): a simple
+ * filter keeps its own chip after the count, and a divider parts the sort chip from the filter chips (r27-pm-open.png).
+ * Round 26 §1: Tab reaches the chips, so they stay buttons; the modal edits nothing, so they are aria-disabled.
  */
-export const pinnedGroupChips = (view: DatabaseViewConfig, schema: PropertyDefinition[], i18n: Pick<I18n, 't'>): HTMLElement[] => {
+export const pinnedGroupChips = (
+  view: DatabaseViewConfig,
+  schema: PropertyDefinition[],
+  i18n: Pick<I18n, 't'>,
+  names: PinnedGroupChipNames = {}
+): HTMLElement[] => {
   const chips: HTMLElement[] = [];
 
   if (view.sorts.length > 0) {
@@ -45,16 +59,31 @@ export const pinnedGroupChips = (view: DatabaseViewConfig, schema: PropertyDefin
 
     chip.setAttribute('data-direction', view.sorts[0].direction);
     chip.toggleAttribute('data-blok-database-sort-arrow', one);
+    chip.setAttribute('data-active', '');
     chips.push(chip);
   }
   const advanced = countFilterRules(view.filterTree) > 0 ? view.filterTree?.filterRules.length ?? 0 : 0;
-  const rules = i18n.t('tools.database.filterRuleCount', { count: advanced + view.filters.length + 1 });
+  const rules = i18n.t('tools.database.filterRuleCount', { count: advanced + 1 });
+  const rulesChip = filterChip('database-group-modal-rules-chip', rules, { glyph: IconFilter, name: rules });
 
-  chips.push(filterChip('database-group-modal-rules-chip', rules, { glyph: IconFilter, name: rules }));
-  chips.forEach((chip) => {
-    chip.setAttribute('data-active', '');
-    chip.setAttribute('aria-disabled', 'true');
-  });
+  rulesChip.setAttribute('data-active', '');
+  chips.push(rulesChip);
+  const t = (key: string, vars?: Record<string, string | number>): string => i18n.t(key, vars);
+
+  for (const filter of withEntryIds(view.filters)) {
+    const property = schema.find((p) => p.id === filter.propertyId);
+
+    if (property === undefined) continue;
+    const rowTitle = (id: string): string | undefined => names.rowTitle?.(property, id);
+    const label = filterPillLabel(filter, property, t, names.personName, rowTitle, names.locale);
+    const parts = filterPillParts(filter, property, t, names.personName, rowTitle, names.locale);
+    const chip = filterChip(`database-group-modal-filter-chip-${filter.id}`, label, { glyph: propertyTypeMeta(property.type).icon, ...parts });
+
+    chip.toggleAttribute('data-active', parts.value !== '');
+    chips.push(chip);
+  }
+  chips.forEach((chip) => chip.setAttribute('aria-disabled', 'true'));
+  if (view.sorts.length > 0) chips.splice(1, 0, chipPart('data-blok-database-chip-divider', {}));
 
   return chips;
 };

@@ -7239,7 +7239,17 @@ export class DatabaseTool implements BlockTool {
     const schema = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n);
     const ordered = [titleId, groupBy, ...schema.map((p) => p.id).filter((id) => id !== titleId && id !== groupBy)];
     const { groupBy: _groupBy, subGroupBy: _subGroupBy, calculations: _calculations, propertyOrder: _order, ...rest } = view;
-    const tableView: DatabaseViewConfig = { ...rest, type: 'table', properties: ordered.map((id) => ({ id, visible: true })) };
+    // notion-motion.md Round 27 §2 "Column widths": the Table view's resized widths. Which one with several is unread; the first table tab.
+    const widths = new Map((this.model.getTabViews().find((other) => other.type === 'table')?.properties ?? []).map((setting) => [setting.id, setting.width]));
+    const tableView: DatabaseViewConfig = {
+      ...rest,
+      type: 'table',
+      properties: ordered.map((id) => {
+        const width = widths.get(id);
+
+        return width === undefined ? { id, visible: true } : { id, visible: true, width };
+      }),
+    };
 
     // One state for the dialog's life, so "Load more" keeps its count across redraws.
     const state = createTableState();
@@ -7249,7 +7259,11 @@ export class DatabaseTool implements BlockTool {
     this.pinnedGroupModal = openPinnedGroupModal({
       pill: pill.cloneNode(true) as HTMLElement,
       label: pill.textContent ?? '',
-      chips: pinnedGroupChips(view, schema, this.api.i18n),
+      chips: pinnedGroupChips(view, schema, this.api.i18n, {
+        personName: (id) => this.people?.find((person) => person.id === id)?.name,
+        rowTitle: (property, id) => this.activeSource().relationCandidates(property).find((row) => row.id === id)?.title,
+        locale: editorLocale(this.api.i18n),
+      }),
       ...(opener === undefined ? {} : { openDatabase: { name: this.title.trim() === '' ? this.api.i18n.t('tools.database.titlePlaceholder') : this.title.trim(), open: opener } }),
       i18n: this.api.i18n,
       directionSource: this.element,

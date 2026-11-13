@@ -339,6 +339,9 @@ class FilterChipPages {
       onClick: () => pick(() => {
         this.update(operatorPick(property, choice.operator, { operator: this.current()?.operator ?? '', value: this.current()?.value ?? null }, this.writer === undefined));
         panel.refresh();
+
+        // notion-motion.md Round 20 §3: after "is on or after" the focus went to the date field (the other day operators share it).
+        return panel.root.querySelector<HTMLElement>('[data-blok-database-chip-date-input]');
       }),
     })));
   }
@@ -666,7 +669,8 @@ class FilterChipPages {
     const calendar = this.calendar ?? new MonthCalendar({
       locale,
       weekStart: resolveWeekStart(locale),
-      directionOf: holder,
+      // The panel root outlives every redraw; the holder does not.
+      directionOf: this.panel?.root ?? holder,
       t: (key) => this.ctx.i18n.t(key),
       isSelected: (iso) => iso === this.calendarDay,
       onPick: (iso) => {
@@ -699,9 +703,6 @@ class FilterChipPages {
     const isPreset = (RELATIVE_DATE_VALUES as readonly unknown[]).includes(value);
     // The anchor is the field box, which takes no focus: Escape hands it to the ⌄.
     const presetsButton = (): HTMLElement | null => panel.root.querySelector<HTMLElement>('[data-blok-testid="database-filter-date-presets"]');
-    const focusPresets = (): void => {
-      presetsButton()?.focus();
-    };
 
     openFlyout(field, panel, 'database-filter-date-menu', DATE_PRESET_MENU_WIDTH, (pick) => [
       ...RELATIVE_DATE_VALUES.map((relative) => panelRow({
@@ -710,7 +711,8 @@ class FilterChipPages {
         checked: value === relative,
         onClick: () => pick(() => {
           this.update({ value: relative });
-          focusPresets();
+
+          return presetsButton();
         }),
       })),
       // Round 20 §3 (r20-ct-custom.raw): it clears the value and focuses the field.
@@ -719,8 +721,10 @@ class FilterChipPages {
         testId: 'database-filter-date-custom',
         checked: !isPreset,
         onClick: () => pick(() => {
-          if (value !== null) this.update({ value: null });
-          this.focusDateField();
+          // Measured clearing a preset only; a typed day stays.
+          if (isPreset) this.update({ value: null });
+
+          return this.panel?.root.querySelector<HTMLElement>('[data-blok-database-chip-date-input]');
         }),
       }),
     ], { gap: DATE_PRESET_MENU_GAP, escapeFocus: presetsButton });

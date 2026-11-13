@@ -1597,6 +1597,36 @@ describe('DatabaseViewControls', () => {
         expect(field()).toHaveFocus();
       });
 
+      // Round 20 §3: after "is on or after" was picked, focus went to the date input, not the operator button.
+      it('focuses the date field after an operator pick that shows it', () => {
+        open({ operator: 'relative_to_today', value: 'this:1:week' });
+
+        click('database-filter-operator');
+        click('database-filter-op-on_or_after');
+
+        expect(field()).toHaveFocus();
+      });
+
+      // Custom date was measured clearing a preset only: a typed day stays.
+      it('keeps a typed day when Custom date is picked', () => {
+        const { controls, saved } = open({ operator: 'equals', value: '2025-03-05' });
+
+        click('database-filter-date-presets');
+        click('database-filter-date-custom');
+
+        expect(controls.effective(saved.view).filters[0]).toMatchObject({ value: '2025-03-05' });
+        expect(field()).toHaveFocus();
+      });
+
+      it('writes nothing and marks nothing on Enter in an empty field', () => {
+        const { controls } = open({ operator: 'equals', value: null });
+
+        enter(field());
+
+        expect(field().hasAttribute('aria-invalid')).toBe(false);
+        expect(controls.hasPersonalEdits('v1')).toBe(false);
+      });
+
       it('gives the focus back to the ⌄ when Escape closes its menu', () => {
         open({ operator: 'equals', value: null });
 

@@ -23,3 +23,13 @@ INSERT INTO schema_migrations(version) VALUES(2) ON CONFLICT DO NOTHING;
 ALTER TABLE assets ALTER COLUMN document_id DROP NOT NULL;
 CREATE TABLE IF NOT EXISTS workspace_emojis(id text PRIMARY KEY,workspace_id text NOT NULL REFERENCES workspaces(id),name text NOT NULL,url text NOT NULL,created_by text NOT NULL REFERENCES users(id),created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(workspace_id,name));
 INSERT INTO schema_migrations(version) VALUES(3) ON CONFLICT DO NOTHING;
+
+-- Permissions par page. La visibilité s'hérite du parent tant qu'elle vaut 'inherit' ;
+-- un partage nommé s'ajoute par-dessus. Conception : docs/plans/2026-11-13-page-permissions-design.md
+ALTER TABLE pages ADD COLUMN IF NOT EXISTS visibility text NOT NULL DEFAULT 'inherit' CHECK(visibility IN ('inherit','private','workspace'));
+-- Compatibilité : ce qui existait reste ouvert à l'espace. Le schéma étant rejoué à
+-- chaque démarrage, ce rattrapage se conditionne à sa propre première exécution.
+UPDATE pages SET visibility='workspace' WHERE coalesce(metadata->>'parentId','')='' AND visibility='inherit' AND NOT EXISTS(SELECT 1 FROM schema_migrations WHERE version=4);
+CREATE TABLE IF NOT EXISTS page_shares(page_id text NOT NULL REFERENCES pages(id),user_id text NOT NULL REFERENCES users(id),level text NOT NULL CHECK(level IN ('view','edit','full')),granted_by text NOT NULL REFERENCES users(id),created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(page_id,user_id));
+CREATE INDEX IF NOT EXISTS page_shares_user ON page_shares(user_id);
+INSERT INTO schema_migrations(version) VALUES(4) ON CONFLICT DO NOTHING;

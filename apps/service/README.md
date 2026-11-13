@@ -37,6 +37,18 @@ The service applies the embedded idempotent migration under a PostgreSQL advisor
 TEST_DATABASE_URL='postgres://postgres:password@localhost:5432/blok_test?sslmode=disable' go test -race -v ./...
 ```
 
+Without a local Go toolchain, `./test.sh` runs the same suite inside a `golang`
+container pinned to this module's version, and passes its arguments through
+(`./test.sh -run TestResolve`). It expects a throwaway PostgreSQL:
+
+```sh
+docker run -d --name blok-test-pg -e POSTGRES_PASSWORD=password \
+  -e POSTGRES_DB=blok_test -p 55432:5432 postgres:17-alpine
+```
+
+Integration tests skip themselves when `TEST_DATABASE_URL` is unset, so the unit
+layer — including the page-permission truth table — runs with no database at all.
+
 Integration tests create and drop a unique PostgreSQL schema. They use an in-memory mail function and send no live email. They verify authentication and single-use codes, join approval, invitation acceptance, viewer restrictions, admin invariants, index revisions and PR25 metadata, internal document isolation, actual Blok room loading and live duplication, seeding guards, private signed file grants, logout/session revocation and one-time bootstrap behavior.
 
 The API contract is in [API.md](API.md). Administrators can attach an optional plain-text invitation note of up to 2,000 Unicode characters; the note is delivered in the email and is not stored with the invitation. Tickets contain a session digest rather than a reusable bearer token. This permits immediate rechecking of logout, session expiry and membership/role changes, including established WebSockets. Logout, role changes, member removal and workspace index changes trigger Blok `RecheckAccess` immediately; an observed-document sweep rechecks expiry every five seconds and closes denied live sockets. Journal actor identifiers therefore represent sessions; they are not stable user profile identifiers.

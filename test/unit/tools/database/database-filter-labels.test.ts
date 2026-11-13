@@ -94,6 +94,13 @@ describe('database filter labels', () => {
     expect(rows.filter((row) => rowMatchesFilters(row, [filter], [box]))).toHaveLength(2);
   });
 
+  // A saved value comes from document data: a day that is not on the calendar prints raw, and never throws.
+  it.each(['2026-13-45', '2026-02-30', '2026-02-30T99', '2026-11-10T25:00'])('prints the impossible day "%s" as saved', (day) => {
+    expect(filterPillLabel({ operator: 'before', value: day }, prop('date'), t, undefined, undefined, 'en-US')).toBe(`Due: tools.database.filterPillBefore(${day})`);
+    expect(filterPillLabel({ operator: 'is_between', value: `${day}/2026-11-10` }, prop('date'), t, undefined, undefined, 'en-US')).toBe(`Due: ${day} → Nov 10`);
+    expect(filterPillLabel({ operator: 'is_between', value: `2026-11-03/${day}` }, prop('date'), t, undefined, undefined, 'en-US')).toBe(`Due: Nov 3 → ${day}`);
+  });
+
   it('shows option labels on a select pill', () => {
     const select = prop('select', { config: { options: [{ id: 'o1', label: 'Idea', position: 'a0' }, { id: 'o2', label: 'Ship', position: 'a1' }] } });
 

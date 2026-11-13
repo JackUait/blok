@@ -3,7 +3,7 @@ import { RELATIVE_DATE_OPERATORS, RELATIVE_DATE_VALUES, parseRelativeSpan } from
 import type { RelativeDateUnit } from './relative-dates';
 import { ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from './database-query';
 import { isPageListRollup } from '../../shared/database/value-helpers';
-import { formatShortDatePart, resolveLocale } from './cells/date-format';
+import { formatShortDatePart, resolveLocale, toLocalDate } from './cells/date-format';
 import type { FilterConfig, PropertyDefinition, PropertyType, SortConfig } from './types';
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
@@ -276,8 +276,26 @@ const ONE_SPAN_LABEL_KEYS: Record<'past' | 'next', Record<RelativeDateUnit, stri
   },
 };
 
-/** A saved day (or instant) the chip prints short: "Nov 10" (Round 19 §2). */
-const ISO_DAY = /^\d{4}-\d{2}-\d{2}(T|$)/;
+/** The stored day shape `toLocalDate` reads as wall-clock time. */
+const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?$/;
+
+/**
+ * A saved day as the chip prints it: "Nov 10" (Round 19 §2). The value comes from
+ * document data, so a day off the calendar ("2026-02-30") stays as saved: the
+ * formatter throws on an invalid date, and `Date` would roll it into another day.
+ */
+const shortDay = (part: string, locale: string): string => {
+  const match = ISO_DAY.exec(part);
+
+  if (match === null) return part;
+  const [, y, m, d, hh = '0', mm = '0'] = match;
+  const date = toLocalDate(part);
+  const real = !Number.isNaN(date.getTime())
+    && date.getFullYear() === Number(y) && date.getMonth() === Number(m) - 1 && date.getDate() === Number(d)
+    && Number(hh) < 24 && Number(mm) < 60;
+
+  return real ? formatShortDatePart(part, locale) : part;
+};
 
 const isRelativeValue = (value: unknown): value is typeof RELATIVE_DATE_VALUES[number] =>
   typeof value === 'string' && (RELATIVE_DATE_VALUES as readonly string[]).includes(value);
@@ -310,7 +328,7 @@ export const filterValueText = (
   if (operator === 'is_between') {
     const range = typeof value === 'string' ? value.split('/') : [];
 
-    return range.length === 2 ? `${formatShortDatePart(range[0], locale)} → ${formatShortDatePart(range[1], locale)}` : '';
+    return range.length === 2 ? `${shortDay(range[0], locale)} → ${shortDay(range[1], locale)}` : '';
   }
   if (property.type === 'checkbox') {
     if (typeof value !== 'boolean') return '';
@@ -331,7 +349,7 @@ export const filterValueText = (
     return ids.map((id) => options.find((o) => o.id === id)?.label ?? '').filter((label) => label !== '').join(', ');
   }
   if (['date', 'createdTime', 'lastEditedTime'].includes(property.type) && isRelativeValue(value)) return t(relativeValueLabelKey(value));
-  if (isDateType(property.type) && typeof value === 'string' && ISO_DAY.test(value)) return formatShortDatePart(value, locale);
+  if (isDateType(property.type) && typeof value === 'string') return shortDay(value, locale);
 
   return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
 };

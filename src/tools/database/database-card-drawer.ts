@@ -28,11 +28,10 @@ import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { EmojiPicker } from '../callout/emoji-picker';
 import { loadEmojiGrid } from '../../components/utils/emoji/emoji-data';
 import { renderPageIcon } from '../../shell/page-icon';
-import type { DatabaseConfig } from './types';
 import { fileChipIcon } from './page-icon';
 import { openCoverPicker, validateCoverFile } from '../audio/cover-picker';
 import { loadSheet } from '../../components/utils/lazy-styles';
-import type { CoverPickerHandle } from '../audio/cover-picker';
+import type { CoverPickerHandle, OpenCoverPickerOptions } from '../audio/cover-picker';
 import { safeHref, safeImageSrc } from '../../components/utils/sanitize-url';
 import { isEscapeConsumed, markEscapeConsumed } from '../../components/utils/consumed-escape';
 import { getElementDirection, logicalArrow } from '../../components/utils/direction';
@@ -312,7 +311,7 @@ export interface CardDrawerOptions {
   onCoverChange?: (rowId: string, cover: string | null) => void;
   /** Uploads a picked cover file and gives its URL. Without it, a cover comes from a link only. */
   uploadCover?: (file: File) => Promise<string>;
-  coverGallery?: import('../audio/cover-picker').OpenCoverPickerOptions['gallery'];
+  coverGallery?: OpenCoverPickerOptions['gallery'];
   /** Escape closed the page of this row. */
   onEscapeClose?: (rowId: string) => void;
   /** "Copy link to view" on a row page's view tab. Without it, the tab menu has no such item. */

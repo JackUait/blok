@@ -124,6 +124,7 @@ async fn upload_by_url_holds_its_fetch_slot_until_the_store_returns() {
         truncate: false,
         upload: true,
         caller: String::new(),
+        range: None,
     };
     let mut held = Vec::new();
     for i in 0..3 {
@@ -664,6 +665,7 @@ async fn assert_all_fetch_slots_free(server: &Server, origin: &str) {
         truncate: false,
         upload: false,
         caller: String::new(),
+        range: None,
     };
     let mut held = Vec::new();
     for i in 0..4 {

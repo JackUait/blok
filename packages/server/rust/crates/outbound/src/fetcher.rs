@@ -21,7 +21,8 @@ use crate::lanes::{CallerLanes, Lease};
 use crate::policy::{Error, Failure, Policy, Target, fail};
 use crate::wire::{Body, Headers, content_length, framing, header_text, read_head, request_head};
 
-/// Sent with every fetch, and no other header but Host.
+/// Sent with every fetch, and no other header but Host and a Range the
+/// caller set.
 pub const USER_AGENT: &str = "blok-server (+https://blokeditor.com)";
 
 /// .NET's Array.MaxLength, C#'s byte cap ceiling.
@@ -52,6 +53,26 @@ pub struct Limits {
     /// The rate-limit key. A caller runs at most two fetches at once in each
     /// pool; more wait for one of its own slots. Empty is no cap.
     pub caller: String,
+    /// Sent on every hop when set. The only request header besides Host and
+    /// User-Agent.
+    pub range: Option<ByteRange>,
+}
+
+/// bytes=start-end, or bytes=start- with no end. Typed, so no caller text
+/// reaches the request line.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ByteRange {
+    pub start: u64,
+    pub end: Option<u64>,
+}
+
+impl ByteRange {
+    fn header(self) -> String {
+        match self.end {
+            Some(end) => format!("bytes={}-{end}", self.start),
+            None => format!("bytes={}-", self.start),
+        }
+    }
 }
 
 /// GuardedResponse. Dropping it frees the concurrency slot; callers hold it
@@ -244,7 +265,7 @@ impl Fetcher {
             if addresses.is_empty() || !addresses.iter().all(|&a| self.policy.address_allowed(a)) {
                 return Err(blocked);
             }
-            let stream = self.connect(&target, &addresses).await?;
+            let stream = self.connect(&target, &addresses, limits.range).await?;
             let mut reader = BufReader::new(stream);
             let head = read_head(&mut reader, MAX_RESPONSE_HEADER_BYTES)
                 .await
@@ -304,6 +325,7 @@ impl Fetcher {
         &self,
         target: &Target,
         addresses: &[IpAddr],
+        range: Option<ByteRange>,
     ) -> Result<Box<dyn Stream>, Error> {
         let blocked = fail(Failure::Blocked);
         if target.literal.is_none() && !plain_host_name(&target.host) {
@@ -350,12 +372,13 @@ impl Fetcher {
             Box::new(tcp)
         };
         let path = format!("{}{}", target.url.absolute_path, target.url.query);
-        let head = request_head(
-            "GET",
-            &path,
-            &[("Host", &host_header(target)), ("User-Agent", USER_AGENT)],
-        )
-        .map_err(|_| blocked)?;
+        let host = host_header(target);
+        let range = range.map(ByteRange::header);
+        let mut headers = vec![("Host", host.as_str()), ("User-Agent", USER_AGENT)];
+        if let Some(range) = &range {
+            headers.push(("Range", range));
+        }
+        let head = request_head("GET", &path, &headers).map_err(|_| blocked)?;
         stream.write_all(&head).await.map_err(|_| blocked)?;
         stream.flush().await.map_err(|_| blocked)?;
         Ok(stream)

@@ -22,7 +22,7 @@ mod socks;
 pub mod wire;
 
 pub use browserurl::browser_url;
-pub use fetcher::{Fetcher, Limits, Resolver, Response, Roots, USER_AGENT};
+pub use fetcher::{ByteRange, Fetcher, Limits, Resolver, Response, Roots, USER_AGENT};
 pub use policy::{
     DefaultPolicy, Error, ExactOriginPolicy, Failure, Policy, Target, has_control, is_failure,
 };
@@ -52,6 +52,8 @@ mod pki_test;
 mod policy_test;
 #[cfg(test)]
 mod proxy_test;
+#[cfg(test)]
+mod range_test;
 #[cfg(test)]
 mod socks_test;
 #[cfg(test)]

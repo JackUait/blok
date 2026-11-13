@@ -1,5 +1,5 @@
-//! LocalFileEndpoint: generated names only, no guard and no CORS, served as
-//! an attachment with nosniff.
+//! LocalFileEndpoint: generated names only, no guard, CORS only with
+//! files_cors, served as an attachment with nosniff.
 
 use std::io::SeekFrom;
 use std::sync::Arc;
@@ -32,6 +32,7 @@ pub(crate) async fn serve_local_file(
     request: Request,
     mut response: ResponseWriter,
 ) {
+    crate::filebytes::files_cors(&inner, &request, &mut response);
     let name = path_value(&request, "fileName").to_owned();
     if name.is_empty()
         || name == "."

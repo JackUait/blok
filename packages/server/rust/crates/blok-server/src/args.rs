@@ -60,7 +60,7 @@ pub fn parse_host_arguments(args: &[String], getenv: &dyn Fn(&str) -> String) ->
                     ..HostArguments::default()
                 };
             }
-            "no-unfurl" | "collab" | "collab-journal" => {
+            "no-unfurl" | "collab" | "collab-journal" | "file-bytes" | "files-cors" => {
                 let value = match inline {
                     Some(text) => match parse_bool(text) {
                         Some(value) => value,
@@ -76,6 +76,8 @@ pub fn parse_host_arguments(args: &[String], getenv: &dyn Fn(&str) -> String) ->
                 match name {
                     "no-unfurl" => options.unfurl_enabled = !value,
                     "collab" => options.collab_enabled = value,
+                    "file-bytes" => options.file_bytes_enabled = value,
+                    "files-cors" => options.files_cors = value,
                     _ => {
                         options.collab_journal = value;
                         journal_from_flag = true;
@@ -121,6 +123,10 @@ pub fn parse_host_arguments(args: &[String], getenv: &dyn Fn(&str) -> String) ->
             },
             "rate-limit" => match parse_base_zero_int64(&value) {
                 Some(parsed) => rate_limit = Some(parsed),
+                None => return invalid(),
+            },
+            "file-bytes-max-bytes" => match parse_base_zero_int64(&value) {
+                Some(parsed) => options.file_bytes_max_bytes = parsed,
                 None => return invalid(),
             },
             "s3-endpoint" => options.s3_endpoint = value.clone(),
@@ -212,6 +218,7 @@ fn is_value_flag(name: &str) -> bool {
             | "public-url"
             | "max-upload"
             | "rate-limit"
+            | "file-bytes-max-bytes"
             | "s3-endpoint"
             | "s3-region"
             | "s3-bucket"

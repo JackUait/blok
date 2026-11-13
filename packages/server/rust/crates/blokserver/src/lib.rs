@@ -5,6 +5,7 @@
 mod collab;
 mod contenttypes;
 mod disposition;
+mod filebytes;
 mod handlers;
 mod host;
 mod localfile;

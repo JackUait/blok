@@ -97,6 +97,11 @@ fn from_csharp(spec: &Node) -> Options {
                     .map(|m| (key(m), m.value.items.iter().map(text).collect()))
                     .collect::<BTreeMap<_, _>>();
             }
+            "FileBytesEnabled" => o.file_bytes_enabled = boolean(raw),
+            // Go reads it into a pointer, so a null keeps the default.
+            "FileBytesMaxBytes" if raw.kind != Kind::Null => o.file_bytes_max_bytes = int(raw),
+            "FileBytesMaxBytes" => {}
+            "FilesCors" => o.files_cors = boolean(raw),
             "Version" => o.version = text(raw),
             other => panic!("no Rust mapping for option {other}"),
         }
@@ -134,6 +139,18 @@ fn validate_matches_the_csharp_fixture() {
 #[test]
 fn zero_options_keep_outbound_routes_closed() {
     assert!(!Options::default().unfurl_enabled);
+}
+
+#[test]
+fn from_csharp_reads_the_file_bytes_options() {
+    let spec = parse_node(
+        br#"{"FileBytesEnabled":true,"FileBytesMaxBytes":2048,"FilesCors":true}"#,
+        JsonOptions::default(),
+    )
+    .unwrap();
+    let o = from_csharp(&spec);
+    assert!(o.file_bytes_enabled && o.files_cors);
+    assert_eq!(o.file_bytes_max_bytes, 2048);
 }
 
 #[test]

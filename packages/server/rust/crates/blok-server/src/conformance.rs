@@ -27,6 +27,11 @@ pub struct ConformanceArguments {
     pub record_notes: bool,
     /// CollabStampAuthority.
     pub stamp_authority: bool,
+    /// FileBytesEnabled, and file_bytes_max FileBytesMaxBytes when set.
+    pub file_bytes: bool,
+    pub file_bytes_max: Option<i64>,
+    /// FilesCors.
+    pub files_cors: bool,
 }
 
 /// Takes the two flags out of args, at any place before "--", before the
@@ -66,6 +71,31 @@ pub fn parse_conformance_arguments(
         }
         if argument == "--conformance-stamp-authority" {
             parsed.stamp_authority = true;
+            i += 1;
+            continue;
+        }
+        if argument == "--conformance-file-bytes" {
+            parsed.file_bytes = true;
+            i += 1;
+            continue;
+        }
+        if argument == "--conformance-files-cors" {
+            parsed.files_cors = true;
+            i += 1;
+            continue;
+        }
+        if let Some(text) = argument.strip_prefix("--conformance-file-bytes-max-bytes=") {
+            match text.parse::<i64>() {
+                Ok(bytes) if !text.is_empty() && text.bytes().all(|b| b.is_ascii_digit()) => {
+                    parsed.file_bytes_max = Some(bytes);
+                }
+                _ => {
+                    return Err(format!(
+                        "--conformance-file-bytes-max-bytes must be a whole number of bytes (got {})",
+                        cs_quote(text)
+                    ));
+                }
+            }
             i += 1;
             continue;
         }
@@ -134,6 +164,16 @@ pub fn apply_conformance_options(options: &mut Options, parsed: &ConformanceArgu
     options.collab_enforce_restore_guards = parsed.restore_guards;
     options.collab_restore_trashes_pages = parsed.restore_trashes_pages;
     options.collab_stamp_authority = parsed.stamp_authority;
+    // Only when given, so the host's own --file-bytes flags stand.
+    if parsed.file_bytes {
+        options.file_bytes_enabled = true;
+    }
+    if parsed.files_cors {
+        options.files_cors = true;
+    }
+    if let Some(bytes) = parsed.file_bytes_max {
+        options.file_bytes_max_bytes = bytes;
+    }
     if parsed.record_notes {
         options.collab_record_notes = Some(std::sync::Arc::new(
             blok_blokserver::MemoryRecordNotes::default(),
@@ -156,3 +196,55 @@ pub fn apply_conformance(server: &Server, parsed: &ConformanceArguments) {
 
 #[cfg(not(feature = "conformance"))]
 pub fn apply_conformance(_server: &Server, _parsed: &ConformanceArguments) {}
+
+#[cfg(all(test, feature = "conformance"))]
+mod tests {
+    use super::*;
+
+    fn strings(args: &[&str]) -> Vec<String> {
+        args.iter().map(|s| (*s).to_owned()).collect()
+    }
+
+    #[test]
+    fn conformance_flags_open_file_bytes_and_files_cors() {
+        let (rest, parsed) = parse_conformance_arguments(&strings(&[
+            "--conformance-file-bytes",
+            "--conformance-file-bytes-max-bytes=2048",
+            "--conformance-files-cors",
+            "--listen",
+            "x",
+        ]))
+        .unwrap();
+        assert_eq!(rest, ["--listen", "x"]);
+        let mut options = Options::default();
+        apply_conformance_options(&mut options, &parsed);
+        assert!(options.file_bytes_enabled && options.files_cors);
+        assert_eq!(options.file_bytes_max_bytes, 2048);
+    }
+
+    #[test]
+    fn conformance_file_bytes_cap_must_be_a_number() {
+        let failure =
+            parse_conformance_arguments(&strings(&["--conformance-file-bytes-max-bytes=lots"]))
+                .unwrap_err();
+        assert_eq!(
+            failure,
+            r#"--conformance-file-bytes-max-bytes must be a whole number of bytes (got "lots")"#
+        );
+    }
+
+    // Without the conformance flags, the host's own file-bytes flags stand.
+    #[test]
+    fn conformance_options_keep_the_host_file_bytes_flags() {
+        let (_, parsed) = parse_conformance_arguments(&[]).unwrap();
+        let mut options = Options {
+            file_bytes_enabled: true,
+            files_cors: true,
+            file_bytes_max_bytes: 7,
+            ..Options::default()
+        };
+        apply_conformance_options(&mut options, &parsed);
+        assert!(options.file_bytes_enabled && options.files_cors);
+        assert_eq!(options.file_bytes_max_bytes, 7);
+    }
+}

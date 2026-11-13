@@ -367,6 +367,35 @@ fn bare_boolean_flags_parse() {
     );
 }
 
+#[test]
+fn file_bytes_flags_parse() {
+    let parsed = parse_host_arguments(&[], &no_env);
+    assert!(!parsed.options.file_bytes_enabled && !parsed.options.files_cors);
+    assert_eq!(parsed.options.file_bytes_max_bytes, 100 << 20);
+
+    let parsed = parse_host_arguments(
+        &strings(&[
+            "--file-bytes",
+            "--files-cors",
+            "--file-bytes-max-bytes",
+            "0x800",
+        ]),
+        &no_env,
+    );
+    assert_eq!(parsed.err, "");
+    assert!(parsed.options.file_bytes_enabled && parsed.options.files_cors);
+    assert_eq!(parsed.options.file_bytes_max_bytes, 2048);
+
+    let parsed = parse_host_arguments(&strings(&["--file-bytes=false"]), &no_env);
+    assert!(parsed.err.is_empty() && !parsed.options.file_bytes_enabled);
+
+    let parsed = parse_host_arguments(&strings(&["--file-bytes-max-bytes=lots"]), &no_env);
+    assert_eq!(
+        parsed.err,
+        r#"invalid value "lots" for flag -file-bytes-max-bytes: parse error"#
+    );
+}
+
 #[tokio::test]
 async fn malformed_listen_refuses_to_start() {
     within(async {

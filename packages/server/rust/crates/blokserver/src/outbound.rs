@@ -25,7 +25,10 @@ fn units(s: &str) -> Vec<u16> {
 
 /// Charges each outbound redirect hop to the caller's rate-limit key, the
 /// one the guard charged for the request itself.
-fn hop_budget(inner: &Arc<Inner>, request: &Request) -> Arc<dyn Fn() -> bool + Send + Sync> {
+pub(crate) fn hop_budget(
+    inner: &Arc<Inner>,
+    request: &Request,
+) -> Arc<dyn Fn() -> bool + Send + Sync> {
     let key = request
         .extensions
         .get::<RateKey>()
@@ -37,7 +40,7 @@ fn hop_budget(inner: &Arc<Inner>, request: &Request) -> Arc<dyn Fn() -> bool + S
 
 /// The key the fetcher's per-caller lanes share: the one the guard charged.
 /// With the rate limit off there are no per-caller limits.
-fn fetch_caller(inner: &Inner, request: &Request) -> String {
+pub(crate) fn fetch_caller(inner: &Inner, request: &Request) -> String {
     if inner.options.rate_limit_per_minute <= 0 {
         return String::new();
     }
@@ -50,7 +53,7 @@ fn fetch_caller(inner: &Inner, request: &Request) -> String {
 
 /// The fetch, or None when the request was cancelled first: then nothing is
 /// answered, as the C# endpoints let the cancellation end the request.
-async fn fetch(
+pub(crate) async fn fetch(
     inner: &Inner,
     cancel: &CancelToken,
     url: &str,
@@ -63,7 +66,7 @@ async fn fetch(
     }
 }
 
-fn query(request: &Request) -> &str {
+pub(crate) fn query(request: &Request) -> &str {
     request.query().strip_prefix('?').unwrap_or(request.query())
 }
 
@@ -105,6 +108,7 @@ fn unfurl_limits(hop: Arc<dyn Fn() -> bool + Send + Sync>) -> Limits {
         truncate: false,
         upload: false,
         caller: String::new(),
+        range: None,
     }
 }
 
@@ -208,6 +212,7 @@ fn upload_by_url_limits(max_upload_bytes: i64, hop: Arc<dyn Fn() -> bool + Send 
         truncate: false,
         upload: true,
         caller: String::new(),
+        range: None,
     }
 }
 
@@ -242,6 +247,7 @@ pub(crate) async fn frame_check(inner: Arc<Inner>, request: Request, mut respons
         truncate: true,
         upload: false,
         caller: fetch_caller(&inner, &request),
+        range: None,
     };
     let cancel = request.cancel_token();
     let Some(result) = fetch(&inner, &cancel, &target, &limits).await else {
@@ -338,6 +344,7 @@ async fn fetch_oembed(
         truncate: false,
         upload: false,
         caller,
+        range: None,
     };
     let fetched = fetch(inner, cancel, url, &limits).await?.ok()?;
     if !(200..=299).contains(&fetched.status_code) {

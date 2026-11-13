@@ -330,6 +330,7 @@ pub fn limits() -> Limits {
         truncate: false,
         upload: false,
         caller: String::new(),
+        range: None,
     }
 }
 
@@ -342,6 +343,7 @@ pub fn limits_of(timeout_ms: u64, max_bytes: u64, max_redirects: usize) -> Limit
         truncate: false,
         upload: false,
         caller: String::new(),
+        range: None,
     }
 }
 

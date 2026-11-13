@@ -102,6 +102,8 @@ pub(crate) struct Inner {
     pub(crate) host_names: Vec<String>,
     pub limiter: RateLimiter,
     pub clock: Clock,
+    /// Final URLs /file-bytes found to be PDFs.
+    pub(crate) pdf_checks: crate::filebytes::PdfCheckCache,
     pub(crate) store: OnceLock<Result<Arc<dyn Store>, String>>,
     fetcher: Mutex<blok_outbound::Fetcher>,
     #[cfg_attr(not(feature = "conformance"), allow(dead_code))]
@@ -181,6 +183,7 @@ impl Server {
             public_path,
             host_names,
             limiter,
+            pdf_checks: crate::filebytes::PdfCheckCache::new(Arc::clone(&clock)),
             clock,
             store: OnceLock::new(),
             fetcher: Mutex::new(blok_outbound::Fetcher::new(Arc::new(
@@ -309,6 +312,15 @@ impl Server {
                 &format!("{prefix}/frame-check"),
                 "GET",
                 crate::outbound::frame_check,
+                protect,
+            );
+        }
+        if o.file_bytes_enabled {
+            self.shell(
+                &mut router,
+                &format!("{prefix}/file-bytes"),
+                "GET",
+                crate::filebytes::file_bytes,
                 protect,
             );
         }

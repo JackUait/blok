@@ -50,6 +50,16 @@ pub struct Options {
     /// keeps them closed, like C#'s UnfurlDisabled = true.
     pub unfurl_enabled: bool,
 
+    /// Opens GET /file-bytes, behind the same guard as /unfurl: the PDF
+    /// preview reads a file's bytes through it. Off by default, apart from
+    /// unfurl_enabled, since it relays whole files.
+    pub file_bytes_enabled: bool,
+    /// The largest file /file-bytes serves.
+    pub file_bytes_max_bytes: i64,
+    /// Sends CORS headers on stored local files for an allowed origin, so a
+    /// page on another origin can read them. Off by default.
+    pub files_cors: bool,
+
     pub s3_endpoint: String,
     pub s3_region: String,
     pub s3_bucket: String,
@@ -152,6 +162,9 @@ impl Default for Options {
             max_upload_bytes: 32 << 20,
             rate_limit_per_minute: 0,
             unfurl_enabled: false,
+            file_bytes_enabled: false,
+            file_bytes_max_bytes: 100 << 20,
+            files_cors: false,
             s3_endpoint: String::new(),
             s3_region: String::new(),
             s3_bucket: String::new(),
@@ -206,6 +219,9 @@ impl fmt::Debug for Options {
             .field("max_upload_bytes", &self.max_upload_bytes)
             .field("rate_limit_per_minute", &self.rate_limit_per_minute)
             .field("unfurl_enabled", &self.unfurl_enabled)
+            .field("file_bytes_enabled", &self.file_bytes_enabled)
+            .field("file_bytes_max_bytes", &self.file_bytes_max_bytes)
+            .field("files_cors", &self.files_cors)
             .field("s3_endpoint", &self.s3_endpoint)
             .field("s3_region", &self.s3_region)
             .field("s3_bucket", &self.s3_bucket)
@@ -366,6 +382,12 @@ impl Options {
             return fail(format!(
                 "--rate-limit must be zero or greater (got {})",
                 self.rate_limit_per_minute
+            ));
+        }
+        if self.file_bytes_enabled && self.file_bytes_max_bytes <= 0 {
+            return fail(format!(
+                "FileBytesMaxBytes must be a positive number of bytes (got {})",
+                self.file_bytes_max_bytes
             ));
         }
         // C# AddBlokDocuments refuses these in the call, not at the first

@@ -100,3 +100,36 @@ describe('advanced filter popover', () => {
     expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-value]', 'flex')).toEqual(['1 0 auto']);
   });
 });
+
+// notion-motion.md Round 24 §2 (r24-chev-path.raw): Notion's chip and rule chevron is an 8.64×4.86 glyph in an 8.6×14 box,
+// arms about 1.1px. Blok draws its shared stroked chevron (ink 9.25×5.25 units on a 20-unit canvas) at 18.69px, so its
+// ink is 8.64×4.91 with 1.17px arms. The box stays 8.6×14 and the drawing overflows it evenly.
+describe('database chip chevron', () => {
+  it('sits in an 8.6×14 box with its drawing centred', () => {
+    expect(declared('[data-blok-database-chip-chevron]', 'width')).toEqual(['8.6px']);
+    expect(declared('[data-blok-database-chip-chevron]', 'height')).toEqual(['14px']);
+    expect(declared('[data-blok-database-chip-chevron]', 'justify-content')).toEqual(['center']);
+    expect(declared('[data-blok-database-chip-chevron]', 'align-items')).toEqual(['center']);
+  });
+
+  it('draws the shared chevron at 18.69px so its ink is 8.64 wide', () => {
+    expect(declared('[data-blok-database-chip-chevron] svg', 'width')).toEqual(['18.69px']);
+    expect(declared('[data-blok-database-chip-chevron] svg', 'height')).toEqual(['18.69px']);
+    expect(declared('[data-blok-database-chip-chevron] svg', 'flex')).toEqual(['none']);
+    // A chip's [&_svg]:max-h-full would squash it back to the 14px box.
+    expect(declared('[data-blok-database-chip-chevron] svg', 'max-height')).toEqual(['none']);
+  });
+
+  // Round 24 §2: a chip is padded 0 8 with a 6px gap.
+  it('pads a filter chip 0 8px with a 6px gap', () => {
+    expect(declared('[data-blok-database-filter-pill]', 'padding-inline')).toEqual(['var(--blok-space-2)']);
+    expect(declared('[data-blok-database-filter-pill]', 'gap')).toEqual(['var(--blok-space-1-5)']);
+  });
+
+  // Round 24 §2: on a rule button the chevron is rgb(173,169,163) under rgb(44,44,43) text. It is aria-hidden beside its
+  // label, so the lighter icon tone (the gutter icon token) is used, not the AA text ink.
+  it('paints a rule button chevron in the light icon tone', () => {
+    expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-button] > [data-blok-database-chip-chevron]', 'color'))
+      .toEqual(['var(--blok-database-table-gutter-icon)']);
+  });
+});

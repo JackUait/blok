@@ -10752,9 +10752,9 @@ button[data-blok-database-table-group-count]:hover {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: var(--blok-space-1);
+  gap: var(--blok-space-1-5);
   height: 24px;
-  padding-inline: var(--blok-space-2) var(--blok-space-1-5);
+  padding-inline: var(--blok-space-2);
   border: none;
   border-radius: var(--blok-radius-pill);
   background-color: var(--blok-database-table-header-hover-bg);
@@ -10777,9 +10777,21 @@ button[data-blok-database-table-group-count]:hover {
   height: 16px;
 }
 
+/* notion-motion.md Round 24 §2 (r24-chev-path.raw): an 8.6×14 box. The shared 20-unit chevron at 18.69px draws
+   Notion's 8.64-wide ink; it overflows the box evenly. */
+[data-blok-database-chip-chevron] {
+  width: 8.6px;
+  height: 14px;
+  align-items: center;
+  justify-content: center;
+}
+
 [data-blok-database-chip-chevron] svg {
-  width: 12px;
-  height: 12px;
+  flex: none;
+  width: 18.69px;
+  height: 18.69px;
+  max-width: none;
+  max-height: none;
 }
 
 /* One arrow glyph: a descending sort turns it over. */
@@ -13123,6 +13135,11 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
    "Select a date" is a fixed 165, so a picked day does not move the button under its open flyout. */
 [data-blok-database-filter-rule] > [data-blok-database-filter-rule-side] {
   margin-inline-start: calc(-1 * var(--blok-space-1));
+}
+
+/* Round 24 §2: Notion's rule chevron is rgb(173,169,163). It is aria-hidden beside its label, so it takes the icon tone. */
+[data-blok-database-filter-rule] > [data-blok-database-filter-rule-button] > [data-blok-database-chip-chevron] {
+  color: var(--blok-database-table-gutter-icon);
 }
 
 [data-blok-database-filter-rule] > [data-blok-database-filter-rule-button] + [data-blok-database-filter-rule-more] {

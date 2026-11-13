@@ -491,6 +491,40 @@ test.describe('timeline', () => {
     await expect(drawer(page)).toBeVisible();
   });
 
+  // notion-motion.md Round 25 §4: the ghost click makes a 5-day bar on the hovered day, named in place, no peek.
+  test('a click on the "+ New" lane ghost adds a 5-day bar on the hovered day and names it in place', async ({ page }) => {
+    await mount(page, blocks({ type: 'timeline' }));
+
+    const first = await bar(page, 'r1').boundingBox();
+    const lane = await page.locator('[data-blok-database-timeline-new-lane]').boundingBox();
+
+    if (first === null || lane === null) throw new Error('no layout');
+    // r1 is on Oct 9; a month-zoom day is 40px wide. Oct 20 is 11 days later.
+    const x = first.x - 1.5 + 11 * 40 + 20;
+
+    await page.mouse.move(x, lane.y + lane.height / 2);
+    await expect(page.locator('[data-blok-database-timeline-new-ghost]')).toHaveAttribute('data-day', '2026-10-20');
+    await page.mouse.click(x, lane.y + lane.height / 2);
+
+    const input = page.getByPlaceholder('Type a name…');
+
+    await expect(input).toBeFocused();
+    await expect(drawer(page)).not.toBeVisible();
+    await input.fill('Zed');
+    await input.press('Enter');
+
+    const due = await page.evaluate(async () => {
+      const output = await window.blokInstance?.save();
+      const row = (output?.blocks ?? []).find((block) => block.type === 'database-row'
+        && (block.data as { properties: Record<string, unknown> }).properties['p-title'] === 'Zed');
+
+      return (row?.data as { properties: Record<string, unknown> } | undefined)?.properties['p-due'];
+    });
+
+    expect(due).toBe('2026-10-20/2026-10-24');
+    await expect(drawer(page)).not.toBeVisible();
+  });
+
   test('read-only shows bars without "+ New" or handles', async ({ page }) => {
     await mount(page, blocks({ type: 'timeline' }), true);
 

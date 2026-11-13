@@ -390,14 +390,14 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   }
 
   /**
-   * A new bar: NEW_BAR_DAYS long from the second day on screen. Notion's rule
-   * is unmeasured; this matches its one measured case (screen from Oct 14, bar Oct 15–19).
+   * A new bar: NEW_BAR_DAYS long from `day`, else from the second day on screen
+   * (findings C07: screen from Oct 14, bar Oct 15–19).
    */
-  private newBar(): BarWrite {
+  private newBar(day?: string): BarWrite {
     const viewport = this.scroller?.clientWidth ?? 0;
-    const start = viewport > 0
+    const start = day ?? (viewport > 0
       ? addDays(visibleRange({ scrollStart: this.scrollStart, viewport, windowStart: this.window.start, zoom: this.zoom }).first, 1)
-      : this.options.today;
+      : this.options.today);
 
     return newBarWrite(start, NEW_BAR_DAYS, this.options.endPropertyId !== undefined);
   }
@@ -1161,9 +1161,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       // Unmeasured in Notion: the step is one screen.
       ['[data-blok-database-timeline-prev]', () => this.stepScreen(-1)],
       ['[data-blok-database-timeline-next]', () => this.stepScreen(1)],
-      ['[data-blok-database-timeline-new], [data-blok-database-timeline-new-ghost], [data-blok-database-timeline-table-new]', () => {
+      // notion-motion.md Round 25 §4: the ghost's bar starts on the hovered day.
+      ['[data-blok-database-timeline-new], [data-blok-database-timeline-new-ghost], [data-blok-database-timeline-table-new]', (el) => {
         if (this.canEdit) {
-          handlers.addRow(this.options.grouped ? this.options.groups[0]?.key ?? null : null, this.newBar());
+          handlers.addRow(this.options.grouped ? this.options.groups[0]?.key ?? null : null, this.newBar(el.getAttribute('data-day') ?? undefined));
         }
       }],
       ['[data-blok-database-timeline-load-more]', (el) => handlers.loadMore(el.getAttribute('data-group-key') ?? '')],

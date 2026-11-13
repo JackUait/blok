@@ -563,11 +563,14 @@ describe('DatabaseTimelineView', () => {
         expect(ghost(root)?.hasAttribute('data-day')).toBe(false);
       });
 
-      it('adds the same 5-day bar as "+ New" when the ghost is clicked', () => {
+      // notion-motion.md Round 25 §4: the click makes a 5-day bar from the hovered day.
+      it('adds a 5-day bar starting on the hovered day when the ghost is clicked', () => {
         const { root, handlers } = mount();
 
+        rect(canvas(root), 0, 0, timelineWindow(CENTER, 'month').days * 40, 400);
+        pointer('pointermove', lane(root), px('2026-10-20') + 20, 390);
         ghost(root)?.click();
-        expect(handlers.addRow).toHaveBeenCalledWith(null, { start: '2026-10-09/2026-10-13' });
+        expect(handlers.addRow).toHaveBeenCalledWith(null, { start: '2026-10-20/2026-10-24' });
       });
 
       it('has no ghost when read-only', () => {

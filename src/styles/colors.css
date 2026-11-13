@@ -92,6 +92,8 @@
   --blok-selection-inactive: rgba(55, 53, 47, 0.16);
   --blok-selection-highlight: rgba(46, 170, 220, 0.2);
   --blok-bg-light: #eff2f5;
+  /* Diagonal lines on the unknown-block placeholder. */
+  --blok-stub-hatch: rgba(55, 53, 47, 0.07);
   /*
     Secondary text grey. The previous #707684 measured 4.55:1 on white — it
     cleared AA by 0.05 and therefore failed on every tinted light surface Blok
@@ -616,6 +618,7 @@
     --blok-selection-inactive: rgba(255, 255, 255, 0.16);
     --blok-selection-highlight: rgba(35, 131, 226, 0.25);
     --blok-bg-light: rgba(255, 255, 255, 0.08);
+    --blok-stub-hatch: rgba(255, 255, 255, 0.07);
     --blok-gray-text: #a39e98;
     --blok-menu-section-label: #9b9a97;
     --blok-dark: #191918;
@@ -822,6 +825,7 @@
   --blok-selection-inactive: rgba(255, 255, 255, 0.16);
   --blok-selection-highlight: rgba(35, 131, 226, 0.25);
   --blok-bg-light: rgba(255, 255, 255, 0.08);
+  --blok-stub-hatch: rgba(255, 255, 255, 0.07);
   --blok-gray-text: #a39e98;
   --blok-menu-section-label: #9b9a97;
   --blok-dark: #191918;

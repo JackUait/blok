@@ -1,7 +1,6 @@
 import type { API, BlockTool, BlockToolConstructorOptions, BlockToolData } from '../../../types';
 import { DATA_ATTR } from '../../components/constants';
 import { Dom as $ } from '../../components/dom';
-import { IconWarning } from '../../components/icons';
 
 export interface StubData extends BlockToolData {
   title: string;
@@ -100,13 +99,11 @@ export class Stub implements BlockTool {
    * @returns {HTMLElement}
    */
   private make(): HTMLElement {
-    const wrapper = $.make('div', 'flex items-center py-3 px-[18px] my-2.5 rounded-(--blok-radius-block) bg-bg-light border border-line-gray text-gray-text text-sm [&_svg]:size-icon');
-    const icon = IconWarning;
-    const infoContainer = $.make('div', 'ms-3.5');
-    const title = $.make('div', 'font-medium capitalize', {
+    const wrapper = $.make('div', 'flex flex-wrap items-center gap-2.5 py-2.25 px-3 my-2.5 rounded-(--blok-radius-block) border-[1.5px] border-dashed border-(--blok-border-strong) bg-[repeating-linear-gradient(135deg,transparent_0_9px,var(--blok-stub-hatch)_9px_10px)] text-sm leading-normal text-(--blok-text-secondary)');
+    const infoContainer = $.make('div', 'min-w-0 flex-1');
+    const title = $.make('div', 'flex-none max-w-full truncate py-[3px] px-[7px] rounded-(--blok-radius-control) border border-(--blok-border-primary) bg-(--blok-bg-primary) font-mono font-medium text-xs leading-normal text-(--blok-text-primary)', {
       textContent: this.title,
     });
-     
     const subtitle = $.make('div', '', {
       textContent: this.subtitle,
     });
@@ -120,10 +117,9 @@ export class Stub implements BlockTool {
     title.setAttribute(DATA_ATTR.stubTitle, '');
     subtitle.setAttribute(DATA_ATTR.stubSubtitle, '');
 
-    wrapper.innerHTML = icon;
-
-    infoContainer.appendChild(title);
     infoContainer.appendChild(subtitle);
+
+    wrapper.appendChild(title);
 
     wrapper.appendChild(infoContainer);
 

@@ -2198,6 +2198,7 @@
   --blok-selection-inactive: rgba(55, 53, 47, 0.16);
   --blok-selection-highlight: rgba(46, 170, 220, 0.2);
   --blok-bg-light: #eff2f5;
+  --blok-stub-hatch: rgba(55, 53, 47, 0.07);
   --blok-gray-text: #646a79;
   --blok-menu-section-label: #73726e;
   --blok-dark: #1d202b;
@@ -2548,6 +2549,7 @@
   --blok-selection-inactive: rgba(255, 255, 255, 0.16);
   --blok-selection-highlight: rgba(35, 131, 226, 0.25);
   --blok-bg-light: rgba(255, 255, 255, 0.08);
+  --blok-stub-hatch: rgba(255, 255, 255, 0.07);
   --blok-gray-text: #a39e98;
   --blok-menu-section-label: #9b9a97;
   --blok-dark: #191918;
@@ -2718,6 +2720,7 @@
   --blok-selection-inactive: rgba(255, 255, 255, 0.16);
   --blok-selection-highlight: rgba(35, 131, 226, 0.25);
   --blok-bg-light: rgba(255, 255, 255, 0.08);
+  --blok-stub-hatch: rgba(255, 255, 255, 0.07);
   --blok-gray-text: #a39e98;
   --blok-menu-section-label: #9b9a97;
   --blok-dark: #191918;

@@ -2,6 +2,9 @@ import {afterEach, describe, expect, it, vi} from 'vitest';
 import {mountCloudGateway, CloudClient} from './index';
 const user = {id:'u1', email:'alice@example.com'};
 const workspace = {id:'w1', slug:'tousambassadeurs', name:'Tousambassadeurs', role:'admin'};
+// Le selecteur ne s'affiche qu'a partir de deux espaces : un seul ouvre directement.
+// Les tests qui visent ses boutons (Gerer, Changer de compte) en declarent donc un second.
+const second = {id:'w2', slug:'autre-espace', name:'Autre espace', role:'member'};
 function response(data: unknown, status = 200): Response { return {ok:status < 400, status, json:async () => data} as Response; }
 function click(text: string): void { const button = [...document.querySelectorAll('button')].find(item => item.textContent === text); expect(button).toBeTruthy(); button!.click(); }
 async function settle(): Promise<void> {await vi.waitFor(() => {expect(document.querySelector('button:disabled')).toBeNull();});}
@@ -33,15 +36,29 @@ describe('cloud gateway', () => {
     await mountCloudGateway(document.body,{onOpenWorkspace:vi.fn()});const email=document.querySelector<HTMLInputElement>('#cloud-email')!;expect(email.type).toBe('email');expect(email.autocomplete).toBe('email');expect(email.getAttribute('data-blok-field')).toBe('text');email.value='alice@example.test';email.form!.dispatchEvent(new Event('submit',{cancelable:true}));await settle();
     const code=document.querySelector<HTMLInputElement>('#cloud-code')!;expect(code.autocomplete).toBe('one-time-code');expect(code.inputMode).toBe('numeric');expect(code.pattern).toBe('[0-9]{6}');expect(code.getAttribute('data-blok-field')).toBe('text');
   });
-  it('opens the actual workspace only on explicit selection', async () => {
-    const open = vi.fn(); vi.stubGlobal('fetch', vi.fn(async (url: string) => response(url.endsWith('/api/session') ? {user,workspaces:[workspace]} : {...workspace,joinStatus:'approved'})));
-    await mountCloudGateway(document.body,{onOpenWorkspace:open}); expect(open).not.toHaveBeenCalled();
+  it('opens a workspace only on explicit selection when several are available', async () => {
+    const open = vi.fn(); vi.stubGlobal('fetch', vi.fn(async (url: string) => response(url.endsWith('/api/session') ? {user,workspaces:[workspace,second]} : {...workspace,joinStatus:'approved'})));
+    await mountCloudGateway(document.body,{onOpenWorkspace:open});
+    expect(document.body.textContent).toContain('Où souhaitez-vous travailler ?');
+    expect(open).not.toHaveBeenCalled();
     click('Ouvrir l’espace'); await settle(); expect(open).toHaveBeenCalledWith(workspace, expect.any(CloudClient));
+  });
+  it('enters the only workspace without asking where to work', async () => {
+    const open = vi.fn(); vi.stubGlobal('fetch', vi.fn(async (url: string) => response(url.endsWith('/api/session') ? {user,workspaces:[workspace]} : {...workspace,joinStatus:'approved'})));
+    await mountCloudGateway(document.body,{onOpenWorkspace:open});
+    expect(open).toHaveBeenCalledWith(workspace, expect.any(CloudClient));
+    expect(document.body.textContent).not.toContain('Où souhaitez-vous travailler ?');
+  });
+  it('still asks where to work when no workspace is joined yet', async () => {
+    const open = vi.fn(); vi.stubGlobal('fetch', vi.fn(async (url: string) => response(url.endsWith('/api/session') ? {user,workspaces:[]} : {...workspace,role:null,joinStatus:null})));
+    await mountCloudGateway(document.body,{onOpenWorkspace:open});
+    expect(open).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain('Où souhaitez-vous travailler ?');
   });
   it('approves a pending request through the API and reloads administration', async () => {
     let pending = true;
     const fetch = vi.fn(async (url: string, init?: RequestInit) => {
-      if (url.endsWith('/api/session')) return response({user,workspaces:[workspace]});
+      if (url.endsWith('/api/session')) return response({user,workspaces:[workspace,second]});
       if (url.endsWith('/approve')) {expect(init?.method).toBe('POST'); expect(JSON.parse(init?.body as string)).toEqual({role:'member'}); pending = false; return response({ok:true});}
       if (url.endsWith('/members')) return response({members:[{...user,role:'admin'}]});
       if (url.endsWith('/join-requests')) return response({requests:pending ? [{id:'r1',email:'bob@example.com',status:'pending',message:'Bonjour'}] : []});
@@ -54,7 +71,7 @@ describe('cloud gateway', () => {
   });
   it('keeps a refused admin operation visible and reports the error', async () => {
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
-      if (url.endsWith('/api/session')) return response({user,workspaces:[workspace]});
+      if (url.endsWith('/api/session')) return response({user,workspaces:[workspace,second]});
       if (url.endsWith('/reject')) return response({error:'Accès refusé'},403);
       if (url.endsWith('/members')) return response({members:[]});
       if (url.endsWith('/join-requests')) return response({requests:[{id:'r1',email:'bob@example.com',status:'pending'}]});
@@ -67,7 +84,7 @@ describe('cloud gateway', () => {
 });
 describe('cloud account and server selection', () => {
   it('revokes the current session before switching accounts', async () => {
-    const fetch = vi.fn(async (url: string) => response(url.endsWith('/api/session') ? {user,workspaces:[workspace]} : {...workspace,joinStatus:'approved'}));
+    const fetch = vi.fn(async (url: string) => response(url.endsWith('/api/session') ? {user,workspaces:[workspace,second]} : {...workspace,joinStatus:'approved'}));
     vi.stubGlobal('fetch',fetch);
     await mountCloudGateway(document.body,{onOpenWorkspace:vi.fn()}); click('Changer de compte'); await settle();
     expect(fetch.mock.calls.some(([url]) => url.endsWith('/api/auth/logout'))).toBe(true);
@@ -111,6 +128,29 @@ describe('direct workspace administration', () => {
     await mountCloudGateway(document.body,{onOpenWorkspace:vi.fn(),initialManage:{slug:workspace.slug,section:'members'}});
     expect(document.activeElement?.textContent).toBe('Membres · 1');
     click('← Tous les espaces'); await settle(); expect(document.body.textContent).toContain('Où souhaitez-vous travailler ?');
+  });
+  it('lets an administrator rename the workspace from the management screen', async () => {
+    const fetch = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/api/session')) return response({user,workspaces:[workspace]});
+      if (url.endsWith('/members')) return response({members:[{...user,role:'admin'}]});
+      if (url.endsWith('/join-requests')) return response({requests:[]});
+      if (url.endsWith('/invites')) return response({invites:[]});
+      if (init?.method === 'PATCH') return response({...workspace,name:'Jocehome'});
+      return response({...workspace,joinStatus:'approved'});
+    }); vi.stubGlobal('fetch',fetch);
+    await mountCloudGateway(document.body,{onOpenWorkspace:vi.fn(),initialManage:{slug:workspace.slug}});
+    const field = document.querySelector<HTMLInputElement>('#cloud-workspace-rename');
+    expect(field?.value).toBe('Tousambassadeurs');
+    if (!field?.form) throw new Error('champ de renommage absent');
+    field.value = 'Jocehome';
+    field.form.dispatchEvent(new Event('submit',{cancelable:true}));
+    await settle();
+    const patch = fetch.mock.calls.find(([,init]) => init?.method === 'PATCH');
+    if (!patch) throw new Error('aucune requête PATCH émise');
+    const [patchUrl, patchInit] = patch;
+    expect(patchUrl).toContain('/api/workspaces/tousambassadeurs');
+    expect(JSON.parse(patchInit?.body as string)).toEqual({name:'Jocehome'});
+    expect(document.body.textContent).toContain('Jocehome');
   });
   it.each(['member','viewer','missing'])('falls back to the selector for an unauthorized %s route', async role => {
     const fetch = vi.fn(async (url: string) => response(url.endsWith('/api/session') ? {user,workspaces:role === 'missing' ? [] : [{...workspace,role}]} : {...workspace,role:role === 'missing' ? null : role,joinStatus:null}));

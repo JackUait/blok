@@ -160,6 +160,14 @@ export async function mountCloudGateway(root: HTMLElement, options: CloudGateway
       try { await admin(workspace, options.initialManage?.section); return; }
       catch (reason) { if (!(reason instanceof CloudApiError && reason.status === 403)) throw reason; }
     }
+    // Un seul espace : on y entre, sans demander ou travailler. Le selecteur reste
+    // joignable par le commutateur en pied de barre laterale et par « ← Tous les espaces ».
+    // Exclu quand un lien ?manage= est demande : son repli attendu est le selecteur.
+    if (!options.initialManage && active.workspaces.length === 1) {
+      session = active; client.currentSession = active;
+      await options.onOpenWorkspace(active.workspaces[0], client);
+      return;
+    }
     await list();
   }
   async function admin(workspace: CloudWorkspace, initialSection?: 'members' | 'invites'): Promise<void> {
@@ -170,6 +178,12 @@ export async function mountCloudGateway(root: HTMLElement, options: CloudGateway
     const navigation = node('div', undefined, 'data-cloud-actions');
     navigation.append(button('← Tous les espaces', () => run(list)), button('Ouvrir l’espace', () => run(async () => {await options.onOpenWorkspace(workspace, client);})));
     main.append(navigation, node('h1', workspace.name), node('p', 'Gérez les accès à cet espace de travail.', 'data-cloud-muted'));
+    const identity = node('section', undefined, 'data-cloud-section');
+    identity.append(node('h2', 'Nom de l’espace'), node('p', 'Visible par les membres. L’identifiant dans l’adresse ne change pas.', 'data-cloud-muted'));
+    const renameForm = node('form'); const renameField = field(renameForm, 'Nom de l’espace', 'text', 'workspace-rename', workspace.name); renameField.maxLength = 120;
+    const renameSubmit = button('Renommer', () => {}, true); renameSubmit.type = 'submit'; renameForm.append(renameSubmit);
+    renameForm.addEventListener('submit', event => {event.preventDefault(); void run(async () => {const renamed = await client.request<{name:string}>(base, {method:'PATCH', body:JSON.stringify({name:renameField.value.trim()})}); await admin({...workspace, name:renamed.name});});});
+    identity.append(renameForm); main.append(identity);
     const pending = requests.requests.filter(request => request.status === 'pending');
     const requestSection = node('section', undefined, 'data-cloud-section'); requestSection.append(node('h2', `Demandes en attente · ${pending.length}`));
     if (!pending.length) requestSection.append(node('p', 'Aucune demande en attente.', 'data-cloud-muted'));

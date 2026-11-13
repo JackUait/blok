@@ -69,6 +69,10 @@ func (s *Service) lookupWorkspace(ctx context.Context, slug, user string) (Works
 	return out, e
 }
 func (s *Service) workspace(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "PATCH" {
+		s.renameWorkspace(w, r)
+		return
+	}
 	if r.Method != "GET" {
 		problem(w, 405, "Method not allowed")
 		return
@@ -91,6 +95,40 @@ func (s *Service) workspace(w http.ResponseWriter, r *http.Request) {
 		role = &ws.Role
 	}
 	jsonOut(w, 200, map[string]any{"id": ws.ID, "slug": ws.Slug, "name": ws.Name, "role": role, "joinStatus": status})
+}
+func (s *Service) renameWorkspace(w http.ResponseWriter, r *http.Request) {
+	u, ok := s.require(w, r)
+	if !ok {
+		return
+	}
+	ws, e := s.lookupWorkspace(r.Context(), r.PathValue("slug"), u.ID)
+	if e != nil {
+		problem(w, 404, "Workspace not found")
+		return
+	}
+	if ws.Role != "admin" {
+		problem(w, 403, "Administrator required")
+		return
+	}
+	var in struct {
+		Name string `json:"name"`
+	}
+	if !body(w, r, &in) {
+		return
+	}
+	// Memes bornes qu'a la creation : un nom renommable doit rester creable.
+	if len(in.Name) < 1 || len(in.Name) > 120 {
+		problem(w, 400, "Invalid workspace name")
+		return
+	}
+	// Le slug n'est pas touche : il porte l'URL de l'espace, et le bootstrap
+	// recreerait un espace vide si le sien disparaissait. La revision non plus,
+	// elle arbitre les ecritures concurrentes de l'index des pages.
+	if _, e = s.DB.Exec(r.Context(), "UPDATE workspaces SET name=$1 WHERE id=$2", in.Name, ws.ID); e != nil {
+		problem(w, 503, "Database unavailable")
+		return
+	}
+	jsonOut(w, 200, map[string]any{"id": ws.ID, "slug": ws.Slug, "name": in.Name, "role": ws.Role})
 }
 func (s *Service) workspaceResource(w http.ResponseWriter, r *http.Request) {
 	u, ok := s.require(w, r)

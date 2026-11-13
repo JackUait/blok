@@ -15717,6 +15717,10 @@ input[data-blok-database-picker-search]:focus {
   padding-block-start: var(--blok-space-1);
 }
 
+[data-blok-database-color-rule-name] {
+  color: var(--blok-database-ink-tertiary);
+}
+
 [data-blok-database-color-rule-lead] {
   display: inline-flex;
   align-items: center;

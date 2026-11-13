@@ -475,6 +475,8 @@ describe('conditional color page (notion-motion.md Round 20 §4, r20-cc-intro.ra
     expect(op).toContain('gap: var(--blok-space-1)');
     expect(ruleBody(database, '[data-blok-database-color-rule-header] [data-blok-database-chip-operator] + [data-blok-database-chip-operator]')).toContain('margin-inline-start: var(--blok-space-1-5)');
     expect(ruleBody(database, '[data-blok-database-color-rule-header][data-blok-database-color-rule-plain-date]')).toContain('padding-block-start: var(--blok-space-1)');
+    // Notion's name is lighter than the operator (400 rgb(161, 158, 153)); Blok keeps its AA step of that ink.
+    expect(ruleBody(database, '[data-blok-database-color-rule-name]')).toContain('color: var(--blok-database-ink-tertiary)');
   });
 
   // notion-motion.md Round 21 §1 (r21-cc-num-field.raw): a 232x28 box, padding 3px 6px; Number's "=" before the input.

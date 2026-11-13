@@ -1653,8 +1653,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // ... and Round 21's calendar 20 under the field, 24px ‹ › and ⊗, and the note with no rule.
     const DATABASE_R22_BYTES = 1_979;
     // Round 21 lane r23: the colour rule head (name outside the operator), the Text/Number value box and its "=";
-    // ... and the opaque rule fill on board cards and list rows.
-    const DATABASE_R23_BYTES = 1_224 + 1_771;
+    // ... and the opaque rule fill on board cards and list rows; the rule name's lighter ink.
+    const DATABASE_R23_BYTES = 1_224 + 1_771 + 188;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

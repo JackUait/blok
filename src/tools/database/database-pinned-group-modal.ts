@@ -1,5 +1,9 @@
 import type { I18n } from '../../../types';
-import { IconArrowUp, IconCross, IconFilter, IconSearch, IconSort } from '../../components/icons';
+import { PopoverEvent } from '@/types/utils/popover/popover-event';
+import { IconArrowDiagonal, IconArrowUp, IconCross, IconDatabase, IconDotsHorizontal, IconFilter, IconSearch, IconSort } from '../../components/icons';
+import { PopoverDesktop } from '../../components/utils/popover';
+import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
+import { DATABASE_HEADER_MENU_CLASS } from './database-table-menus';
 import { filterChip } from './database-filter-chip';
 import { sortDirectionLabelKey } from './database-filter-labels';
 import { countFilterRules } from './filter-tree';
@@ -14,6 +18,8 @@ export interface PinnedGroupModalOptions {
   label: string;
   /** The view's rules as read-only chips, from {@link pinnedGroupChips}. */
   chips: HTMLElement[];
+  /** "Open <database>" in the ⋯ menu. Without it there is no ⋯: Blok has no "Save as view in…". */
+  openDatabase?: { name: string; open: () => void };
   /** The group's rows as a read-only table, narrowed by `search`. */
   table: (search: string) => { root: HTMLElement; destroy: () => void };
   i18n: Pick<I18n, 't'>;
@@ -51,6 +57,56 @@ export const pinnedGroupChips = (view: DatabaseViewConfig, schema: PropertyDefin
   });
 
   return chips;
+};
+
+/** notion-motion.md Round 26 §1 (r26-pm-more-menu.raw): the ⋯ menu is 201.1 wide, centred under its button, top on its bottom. */
+const MORE_MENU_WIDTH = 201.1;
+
+const openMoreMenu = (anchor: HTMLElement, i18n: Pick<I18n, 't'>, target: { name: string; open: () => void }): void => {
+  const at = anchor.getBoundingClientRect();
+  const left = at.left + at.width / 2 - MORE_MENU_WIDTH / 2;
+  // "Open", the database icon, then its name (r26-pm-more-menu.raw).
+  const title = document.createElement('span');
+  const icon = document.createElement('span');
+
+  title.setAttribute('data-blok-database-group-modal-open-title', '');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.innerHTML = IconDatabase;
+  title.append(i18n.t('tools.database.tableOpen'), icon, target.name);
+  const menu = new PopoverDesktop({
+    // The column menu's rows: 28 tall, the 20px icon at +8, the text at +36 (Notion's, r26-pm-more-menu.raw).
+    class: `${DATABASE_HEADER_MENU_CLASS} blok-database-column-menu`,
+    animateClose: true,
+    trigger: anchor,
+    width: 'auto',
+    // The container adds 4px of padding on each side.
+    minWidth: `${MORE_MENU_WIDTH - 8}px`,
+    offset: 0,
+    autoFocusFirstItem: false,
+    position: new DOMRect(left, at.top, MORE_MENU_WIDTH, at.height),
+    positionContext: anchor,
+    items: [{
+      type: PopoverItemType.Default,
+      name: 'group-modal-open-database',
+      title: i18n.t('tools.database.tableOpen'),
+      titleEl: title,
+      icon: IconArrowDiagonal,
+      closeOnActivate: true,
+      onActivate: () => target.open(),
+    }],
+  });
+
+  const state = { closed: false };
+
+  anchor.setAttribute('aria-expanded', 'true');
+  // destroy() emits Closed again; the flag stops that from looping.
+  menu.on(PopoverEvent.Closed, () => {
+    if (state.closed) return;
+    state.closed = true;
+    anchor.setAttribute('aria-expanded', 'false');
+    queueMicrotask(() => menu.destroy());
+  });
+  menu.show();
 };
 
 /**
@@ -103,6 +159,21 @@ export const openPinnedGroupModal = (options: PinnedGroupModalOptions): { close:
   input.placeholder = i18n.t('tools.database.searchPlaceholder');
   input.setAttribute('aria-label', i18n.t('tools.database.searchLabel'));
   input.setAttribute('data-blok-database-group-modal-search-input', '');
+  const more = options.openDatabase === undefined ? null : document.createElement('button');
+  const target = options.openDatabase;
+
+  if (more !== null && target !== undefined) {
+    more.type = 'button';
+    more.setAttribute('data-blok-database-group-modal-more', '');
+    more.setAttribute('aria-label', i18n.t('tools.database.tableMoreActions'));
+    more.setAttribute('aria-haspopup', 'menu');
+    more.setAttribute('aria-expanded', 'false');
+    more.innerHTML = IconDotsHorizontal;
+    more.addEventListener('click', () => openMoreMenu(more, i18n, { name: target.name, open: () => {
+      dismiss();
+      target.open();
+    } }));
+  }
   close.type = 'button';
   close.setAttribute('data-blok-database-group-modal-close', '');
   close.setAttribute('aria-label', i18n.t('tools.database.close'));
@@ -133,7 +204,7 @@ export const openPinnedGroupModal = (options: PinnedGroupModalOptions): { close:
     if (event.target instanceof Element && event.target.closest('[data-blok-database-table-load-more]') !== null) draw();
   });
 
-  header.append(title, search, input, close);
+  header.append(...[title, search, input, more, close].filter((el): el is HTMLElement => el !== null));
   panel.append(header, chipRow, body);
   backdrop.appendChild(panel);
   state.handle = openModalDialog({
@@ -142,7 +213,11 @@ export const openPinnedGroupModal = (options: PinnedGroupModalOptions): { close:
     role: 'dialog',
     label: options.label,
     directionSource: options.directionSource,
-    onDismiss: dismiss,
+    // The ⋯ menu lives on body, so a press on it reads as outside. While it is open, an outside press closes only the menu.
+    onDismiss: (reason) => {
+      if (reason === 'outside' && more?.getAttribute('aria-expanded') === 'true') return;
+      dismiss();
+    },
     onClose: () => {
       state.table?.destroy();
       state.table = null;

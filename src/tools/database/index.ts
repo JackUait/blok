@@ -7230,12 +7230,14 @@ export class DatabaseTool implements BlockTool {
 
     // One state for the dialog's life, so "Load more" keeps its count across redraws.
     const state = createTableState();
+    const opener = this.fullPageOpener();
 
     this.pinnedGroupModal?.close();
     this.pinnedGroupModal = openPinnedGroupModal({
       pill: pill.cloneNode(true) as HTMLElement,
       label: pill.textContent ?? '',
       chips: pinnedGroupChips(view, schema, this.api.i18n),
+      ...(opener === undefined ? {} : { openDatabase: { name: this.title.trim() === '' ? this.api.i18n.t('tools.database.titlePlaceholder') : this.title.trim(), open: opener } }),
       i18n: this.api.i18n,
       directionSource: this.element,
       table: (search) => {

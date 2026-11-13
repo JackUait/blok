@@ -4420,6 +4420,33 @@ describe('DatabaseTool', () => {
         tool.destroy();
       });
 
+      // Round 26 §1 (r26-pm-more-menu.raw): ⋯ between Search and Dismiss; "Open <database>" opens the database.
+      // "Save as view in…" has no Blok action and is not offered.
+      it('opens the database from the pinned group modal\'s ⋯ menu', () => {
+        const openFullPage = vi.fn();
+        const rows = [groupRow('row-1', { 'prop-title': 'One', 'prop-status': 'opt-todo' }, 'a0')];
+        const tool = new DatabaseTool(createDatabaseOptions(boardView({ pinnedGroups: [{ id: 'opt-todo' }] }), { openFullPage }, { childBlocks: rows }));
+        const element = tool.render();
+
+        document.body.appendChild(element);
+        tool.rendered();
+        queryByData(element, 'data-blok-database-pinned-group-open')?.click();
+        const header = document.querySelector('[data-blok-database-group-modal-header]');
+        const more = header?.querySelector<HTMLElement>('[data-blok-database-group-modal-more]');
+
+        expect([...(header?.querySelectorAll('button') ?? [])].map((button) => button.getAttribute('aria-label')))
+          .toEqual(['tools.database.searchLabel', 'tools.database.tableMoreActions', 'tools.database.close']);
+        more?.click();
+        expect([...document.body.querySelectorAll('[data-mock-popover-action]')].map((item) => item.getAttribute('data-mock-popover-action')))
+          .toEqual(['tools.database.tableopen']);
+        queryByData(document.body, 'data-mock-popover-action', 'tools.database.tableopen')?.click();
+
+        expect(openFullPage).toHaveBeenCalledWith(expect.objectContaining({ viewId: 'view-1' }));
+        expect(document.querySelector('[data-blok-database-group-modal-panel]')).toBeNull();
+
+        tool.destroy();
+      });
+
       // Round 25 §1 (r25-modal-celledit.raw, r25-modal-nameclick.raw): a click on a cell does nothing.
       it('selects no cell on a click inside the pinned group modal', () => {
         const { tool, element } = board(false, boardView({ pinnedGroups: [{ id: 'opt-todo' }] }));

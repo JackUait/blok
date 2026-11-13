@@ -19569,7 +19569,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   margin-inline: 0;
 }
 
-[data-blok-database-group-modal-search], [data-blok-database-group-modal-close] {
+[data-blok-database-group-modal-search], [data-blok-database-group-modal-more], [data-blok-database-group-modal-close] {
   display: inline-flex;
   flex: none;
   align-items: center;
@@ -19580,7 +19580,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   transition: background-color 0.1s ease-in-out;
 }
 
-[data-blok-database-group-modal-search] {
+[data-blok-database-group-modal-search], [data-blok-database-group-modal-more] {
   width: 28px;
   height: 28px;
   border-radius: var(--blok-radius-control);
@@ -19588,7 +19588,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-table-header-icon);
 }
 
-[data-blok-database-group-modal-search]:hover {
+[data-blok-database-group-modal-search]:hover, [data-blok-database-group-modal-more]:hover, [data-blok-database-group-modal-more][aria-expanded="true"] {
   background-color: var(--blok-database-hover-bg);
 }
 
@@ -19606,7 +19606,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   background-color: var(--blok-database-confirm-small-close-hover-bg);
 }
 
-[data-blok-database-group-modal-search] svg, [data-blok-database-group-modal-close] svg {
+[data-blok-database-group-modal-search] svg, [data-blok-database-group-modal-more] svg, [data-blok-database-group-modal-close] svg {
   width: 16px;
   height: 16px;
 }
@@ -19623,9 +19623,25 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   outline: none;
 }
 
-:where(:root:not([data-blok-modality="pointer"])) [data-blok-database-group-modal-search]:focus-visible, :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-group-modal-close]:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-database-group-modal-search]:focus-visible, :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-group-modal-more]:focus-visible, :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-group-modal-close]:focus-visible {
   outline: 2px solid var(--blok-focus-ring);
   outline-offset: 1px;
+}
+
+[data-blok-database-group-modal-open-title] {
+  display: inline-flex;
+  align-items: center;
+}
+
+[data-blok-database-group-modal-open-title] > span {
+  display: inline-flex;
+  margin-inline: var(--blok-space-1-5) var(--blok-space-0-5);
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-group-modal-open-title] svg {
+  width: 16px;
+  height: 16px;
 }
 
 [data-blok-database-group-modal-chips] {

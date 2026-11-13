@@ -1674,6 +1674,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R31_BYTES = 1192;
     // Round 26 lane r33: the list's "Add Date" ghost and the type menu's "?"; Add a property and the handle swap lose their extra margin and fades.
     const DATABASE_R33_BYTES = 752;
+    // Round 26 lane r32: the pinned group modal's chip row and ⋯ menu; a locked Unpin keeps its pointer and hover.
+    const DATABASE_R32_BYTES = 1132;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2180,6 +2182,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R30_BYTES
       + DATABASE_R31_BYTES
       + DATABASE_R33_BYTES
+      + DATABASE_R32_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

@@ -5,6 +5,8 @@ import type { SceneLayout, ScenePointer } from '../../../../../src/tools/audio/e
 
 const WIDE: SceneLayout = { width: 768, height: 216, scale: 2, zone: { x: 361, y: 0, width: 407, floor: 216 } };
 const NARROW: SceneLayout = { width: 380, height: 420, scale: 2, zone: { x: 0, y: 0, width: 380, floor: 172 } };
+/** A card about 560px wide: the zone is too narrow for the full-size record. */
+const TIGHT: SceneLayout = { width: 560, height: 216, scale: 2, zone: { x: 263, y: 0, width: 297, floor: 216 } };
 const AWAY: ScenePointer = { x: 0, y: 0, vx: 0, vy: 0, inside: false, down: false };
 const COLORS = { ink: '#000', card: '#fff', muted: '#999' };
 const DT = 1 / 60;
@@ -68,6 +70,18 @@ describe('createWontFit', () => {
     expect(radius * 2).toBeLessThan(WIDE.zone.floor - WIDE.zone.y);
   });
 
+  it.each([['wide', WIDE], ['narrow', NARROW], ['tight', TIGHT]])('never crosses the left edge of its %s zone, even at its biggest', (_name, layout) => {
+    const scene = make(layout);
+    const lefts = Array.from({ length: 600 }, () => {
+      scene.step(DT, AWAY);
+      const { x, radius } = scene.disc();
+
+      return x - radius;
+    });
+
+    expect(Math.min(...lefts)).toBeGreaterThanOrEqual(layout.zone.x);
+  });
+
   it.each([['wide', WIDE], ['narrow', NARROW]])('swells until it is taller than its %s zone', (_name, layout) => {
     const scene = make(layout);
 
@@ -76,17 +90,25 @@ describe('createWontFit', () => {
     expect(scene.disc().radius * 2).toBeGreaterThan((layout.zone.floor - layout.zone.y) * 2);
   });
 
-  it('keeps its label inside the zone when it has swollen', () => {
-    const scene = make();
+  it('still does not fit a tight zone: it stays much taller than the card', () => {
+    const scene = make(TIGHT);
+
+    settle(scene);
+
+    expect(scene.disc().radius * 2).toBeGreaterThan((TIGHT.zone.floor - TIGHT.zone.y) * 1.5);
+  });
+
+  it.each([['wide', WIDE], ['narrow', NARROW], ['tight', TIGHT]])('keeps its label inside the %s zone when it has swollen', (_name, layout) => {
+    const scene = make(layout);
 
     settle(scene);
     const { x, y, radius } = scene.disc();
     const label = radius * 0.335;
 
-    expect(x - label).toBeGreaterThan(WIDE.zone.x);
-    expect(x + label).toBeLessThan(WIDE.zone.x + WIDE.zone.width);
-    expect(y - label).toBeGreaterThan(WIDE.zone.y);
-    expect(y + label).toBeLessThan(WIDE.zone.floor);
+    expect(x + label).toBeLessThan(layout.zone.x + layout.zone.width);
+    expect(x - label).toBeGreaterThan(layout.zone.x);
+    expect(y - label).toBeGreaterThan(layout.zone.y);
+    expect(y + label).toBeLessThan(layout.zone.floor);
   });
 
   it('overshoots its final size on the way, like something heavy landing', () => {

@@ -6,6 +6,10 @@ const SMALL = 0.34;
 /** Final radius as a share of the zone's height: more than half, so the card cuts it off. */
 const RADIUS_SHARE = 1.05;
 const CENTER_X = 0.6;
+/** The record's biggest size on the way to rest, as a share of its final size. It follows from the swell spring. */
+const PEAK = 1.08;
+/** Room kept between the record and the words, and between its label and the card's edge. */
+const EDGE = 8;
 const CENTER_Y = 0.56;
 /** Label radius as a share of the record's. The centre is placed so the label stays in view. */
 const LABEL = 0.335;
@@ -169,8 +173,9 @@ export function createWontFit(label: WontFitLabel): WontFitScene {
       const height = layout.zone.floor - layout.zone.y;
 
       state.zone = layout.zone;
-      state.radius = Math.round(height * RADIUS_SHARE);
-      state.x = layout.zone.x + layout.zone.width * CENTER_X;
+      // The record at its biggest stays clear of the words, and its label stays in view.
+      state.radius = Math.round(Math.max(0, Math.min(height * RADIUS_SHARE, (layout.zone.width - EDGE * 2) / (PEAK + LABEL))));
+      state.x = layout.zone.x + Math.max(layout.zone.width * CENTER_X, EDGE + state.radius * PEAK);
       state.y = layout.zone.y + height * CENTER_Y;
     },
 

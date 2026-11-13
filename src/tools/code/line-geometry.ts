@@ -74,7 +74,8 @@ function rowsOf(code: HTMLElement, runs: TextRun[], start: number, end: number, 
   range.setStart(from.node, Math.max(0, from.offset - 1));
   range.setEnd(to.node, to.offset);
 
-  const rects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 || rect.height > 0);
+  // WebKit adds a zero-width box at the end of the line above; counting it adds a row to every line.
+  const rects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0);
 
   if (rects.length === 0) {
     return 1;

@@ -27,6 +27,7 @@ var permissionExemptions = map[string]string{
 
 	// Pas de contenu : des identifiants, ou un drapeau posé après autorisation.
 	"recheckWorkspace": "ne lit que des identifiants pour relancer une revérification",
+	"currentIndex":     "ne lit que des identifiants et leur ordre ; l'appelant résout les niveaux",
 	"mintTicket":       "marque l'admission d'un document déjà autorisé par l'appelant",
 
 	// Authentification propre, hors du modèle de permissions par page.

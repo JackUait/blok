@@ -1,6 +1,7 @@
 package cloud
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/JackUait/blok/packages/server/go/v2/blokserver/ticket"
+	"github.com/jackc/pgx/v5"
 )
 
 func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws Workspace) {
@@ -105,8 +107,15 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 	}
 	ids := map[string]bool{}
 	parents := map[string]string{}
-	all := append(append([]map[string]any{}, in.Pages...), in.Trash...)
-	for i, p := range all {
+	all := []incomingPage{}
+	for _, p := range in.Pages {
+		all = append(all, incomingPage{page: p, trashed: false})
+	}
+	for _, p := range in.Trash {
+		all = append(all, incomingPage{page: p, trashed: true})
+	}
+	for _, entry := range all {
+		p := entry.page
 		id, _ := p["id"].(string)
 		parent, _ := p["parentId"].(string)
 		if !validPageMetadata(p) || ids[id] {
@@ -115,7 +124,6 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 		}
 		ids[id] = true
 		parents[id] = parent
-		p["position"] = i
 	}
 	if !validParents(parents) {
 		problem(w, 400, "Invalid parent hierarchy (missing parent or cycle)")
@@ -141,13 +149,60 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 		problem(w, 409, "Workspace changed; reload before saving")
 		return
 	}
-	if _, e = tx.Exec(r.Context(), "UPDATE pages SET deleted=true WHERE workspace_id=$1", ws.ID); e != nil {
+	levels, realParents, e := s.workspaceLevels(r.Context(), tx, u.ID, ws.ID)
+	if e != nil {
 		problem(w, 500, "Save failed")
 		return
 	}
-	for i, p := range all {
+	known, order, e := currentIndex(r.Context(), tx, ws.ID)
+	if e != nil {
+		problem(w, 500, "Save failed")
+		return
+	}
+	// Nommer une page qu'on ne voit pas n'est pas un enregistrement : c'est une
+	// tentative de reprise. Un identifiant inconnu, lui, reste une création.
+	for _, entry := range all {
+		id := entry.id()
+		if known[id] && levels[id] < levelView {
+			problem(w, 403, "Page access refused")
+			return
+		}
+	}
+	// L'appelant n'a pu envoyer que ce qu'il voit. Tombstoner sur cette seule
+	// base effacerait les pages des autres ; la suppression ne porte donc que sur
+	// ce qu'il peut écrire.
+	removable := []string{}
+	for _, id := range order {
+		if levels[id] >= levelEdit && !ids[id] {
+			removable = append(removable, id)
+		}
+	}
+	if _, e = tx.Exec(r.Context(), "UPDATE pages SET deleted=true WHERE workspace_id=$1 AND id=ANY($2)", ws.ID, removable); e != nil {
+		problem(w, 500, "Save failed")
+		return
+	}
+	for position, slot := range mergeIndexOrder(order, all, levels, known) {
+		if slot.page == nil {
+			// Page invisible ou en lecture seule : elle garde son contenu et sa
+			// place relative. Seul son rang bouge, parce qu'un ordre global ne
+			// peut pas se renuméroter à moitié.
+			if _, e = tx.Exec(r.Context(), `UPDATE pages SET metadata=jsonb_set(metadata,'{position}',to_jsonb($2::int)) WHERE id=$1 AND NOT deleted`, slot.id, position); e != nil {
+				problem(w, 500, "Save failed")
+				return
+			}
+			continue
+		}
+		p := slot.page
+		p["position"] = position
+		// L'index détache une page de son parent caché pour pouvoir l'afficher.
+		// La réécrire telle quelle la déracinerait. Un parent explicitement
+		// différent reste un déplacement voulu.
+		if parent, sent := p["parentId"].(string); !sent || parent == "" {
+			if real := realParents[slot.id]; real != "" && levels[real] < levelView {
+				p["parentId"] = real
+			}
+		}
 		encoded, _ := json.Marshal(p)
-		id := p["id"].(string)
 		// Une page naît ouverte à l'espace quand elle est à la racine, et héritière
 		// sinon. Sans cela une page neuve naîtrait privée sans que personne ne
 		// l'ait demandé — invisible y compris pour son auteur, qui ne détient
@@ -157,7 +212,7 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 		if parent, _ := p["parentId"].(string); parent == "" {
 			visibility = visWorkspace
 		}
-		tag, e := tx.Exec(r.Context(), `INSERT INTO pages(id,workspace_id,metadata,trashed,visibility) VALUES($1,$2,$3,$4,$5) ON CONFLICT(id) DO UPDATE SET metadata=$3,trashed=$4,deleted=false WHERE pages.workspace_id=$2`, id, ws.ID, encoded, i >= len(in.Pages), visibility)
+		tag, e := tx.Exec(r.Context(), `INSERT INTO pages(id,workspace_id,metadata,trashed,visibility) VALUES($1,$2,$3,$4,$5) ON CONFLICT(id) DO UPDATE SET metadata=$3,trashed=$4,deleted=false WHERE pages.workspace_id=$2`, slot.id, ws.ID, encoded, slot.trashed, visibility)
 		if e != nil {
 			problem(w, 500, "Save failed")
 			return
@@ -472,4 +527,85 @@ func detachParent(meta []byte) ([]byte, error) {
 	}
 	page["parentId"] = nil
 	return json.Marshal(page)
+}
+
+// Une page telle que le client l'envoie, avec la liste dont elle vient.
+type incomingPage struct {
+	page    map[string]any
+	trashed bool
+}
+
+// Un emplacement de l'index fusionné. Une page dont le client n'a pas la main
+// n'a pas de contenu à réécrire : seul son rang est connu.
+type indexSlot struct {
+	id      string
+	page    map[string]any
+	trashed bool
+}
+
+func (p incomingPage) id() string { v, _ := p.page["id"].(string); return v }
+
+// currentIndex rend les pages vivantes de l'espace et leur ordre actuel.
+func currentIndex(ctx context.Context, tx pgx.Tx, workspace string) (map[string]bool, []string, error) {
+	rows, e := tx.Query(ctx, "SELECT id FROM pages WHERE workspace_id=$1 AND NOT deleted ORDER BY (metadata->>'position')::numeric NULLS LAST,id", workspace)
+	if e != nil {
+		return nil, nil, e
+	}
+	defer rows.Close()
+	known := map[string]bool{}
+	order := []string{}
+	for rows.Next() {
+		var id string
+		if e = rows.Scan(&id); e != nil {
+			return nil, nil, e
+		}
+		known[id] = true
+		order = append(order, id)
+	}
+	return known, order, rows.Err()
+}
+
+// mergeIndexOrder reconstruit un ordre global à partir d'un ordre partiel.
+//
+// Le client ne connaît que les pages qu'il peut voir, et les renumérote de zéro.
+// Appliquer tel quel ferait diverger les deux vues en silence. Chaque page que
+// l'appelant ne maîtrise pas est donc rattachée à la page maîtrisée qui la
+// précédait, et replacée derrière elle. Si cette ancre disparaît de
+// l'enregistrement, la page suit à la fin plutôt que de se perdre.
+func mergeIndexOrder(previous []string, incoming []incomingPage, levels map[string]level, known map[string]bool) []indexSlot {
+	anchored := map[string][]string{}
+	anchor := ""
+	for _, id := range previous {
+		if levels[id] >= levelEdit {
+			anchor = id
+			continue
+		}
+		anchored[anchor] = append(anchored[anchor], id)
+	}
+	merged := []indexSlot{}
+	placed := map[string]bool{}
+	follow := func(key string) {
+		for _, id := range anchored[key] {
+			merged = append(merged, indexSlot{id: id})
+			placed[id] = true
+		}
+	}
+	follow("")
+	for _, entry := range incoming {
+		id := entry.id()
+		// Une page inconnue est une création. Une page connue n'est réécrite que
+		// si l'appelant peut l'écrire ; sinon elle garde sa place d'origine, que
+		// `follow` lui rend.
+		if !known[id] || levels[id] >= levelEdit {
+			merged = append(merged, indexSlot{id: id, page: entry.page, trashed: entry.trashed})
+		}
+		follow(id)
+	}
+	for _, id := range previous {
+		if !placed[id] && levels[id] < levelEdit {
+			merged = append(merged, indexSlot{id: id})
+			placed[id] = true
+		}
+	}
+	return merged
 }

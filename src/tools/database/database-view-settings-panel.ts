@@ -2080,8 +2080,14 @@ export class ViewSettingsPages {
       rows.push(this.ruleLine(panel, node, prefix, tree, write));
     });
 
+    const addRule = (): void => {
+      write(addFilterRule(tree(), group.id, this.firstRule(group, tree())));
+      panel.refresh();
+    };
+    const canAddGroup = layer < MAX_FILTER_DEPTH && filterGroupDepth(tree(), group.id) < MAX_FILTER_DEPTH;
     // notion-motion.md Round 18 §2 (r18-adv-addrule.raw): one "+ Add filter rule ⌄" button, its menu under it.
-    const add: HTMLElement = sortChevron(panelRow({
+    // Round 20 §2 (r20-g-lvl3.png): a group that cannot hold a group gets a plain button that adds the rule at once.
+    const add: HTMLElement = canAddGroup ? sortChevron(panelRow({
       label: this.t('filterAddRule'),
       testId: `database-filter-add-rule-${group.id}`,
       icon: IconPlus,
@@ -2090,12 +2096,9 @@ export class ViewSettingsPages {
         panelRow({
           label: this.t('filterAddRule'),
           testId: 'database-filter-add-rule',
-          onClick: () => pick(() => {
-            write(addFilterRule(tree(), group.id, this.firstRule(group, tree())));
-            panel.refresh();
-          }),
+          onClick: () => pick(addRule),
         }),
-        ...(layer < MAX_FILTER_DEPTH && filterGroupDepth(tree(), group.id) < MAX_FILTER_DEPTH ? [panelRow({
+        panelRow({
           label: this.t('filterAddGroup'),
           description: this.t('filterAddGroupDescription'),
           testId: 'database-filter-add-group',
@@ -2104,9 +2107,14 @@ export class ViewSettingsPages {
             write(addFilterGroup(tree(), group.id, { id: nanoid(), conjunction: group.conjunction === 'and' ? 'or' : 'and', filterRules: [this.firstRule(group, tree())] }));
             panel.refresh();
           }),
-        })] : []),
+        }),
       ]),
-    }));
+    })) : panelRow({
+      label: this.t('filterAddRule'),
+      testId: `database-filter-add-rule-${group.id}`,
+      icon: IconPlus,
+      onClick: addRule,
+    });
 
     add.setAttribute('data-blok-database-filter-add-rule', '');
     rows.push(add);

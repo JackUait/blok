@@ -1437,7 +1437,7 @@ describe('view settings panel', () => {
     expect(layer3).toBeDefined();
     expect(exists(`database-filter-add-rule-${layer3?.id ?? ''}`)).toBe(true);
     click(`database-filter-add-rule-${layer3?.id ?? ''}`);
-    expect(exists('database-filter-add-rule')).toBe(true);
+    expect(exists('database-filter-add-menu')).toBe(false);
     expect(exists('database-filter-add-group')).toBe(false);
     expect(h.ctx.updateView).not.toHaveBeenCalled();
   });

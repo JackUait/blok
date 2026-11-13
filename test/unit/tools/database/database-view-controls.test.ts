@@ -449,6 +449,29 @@ describe('DatabaseViewControls', () => {
       expect(inner).toEqual(expect.objectContaining({ conjunction: 'or' }));
     });
 
+    // notion-motion.md Round 20 §2 (r20-g-lvl3.png): the deepest group cannot add a group, so its button has no ⌄ and adds a rule at once.
+    it('gives a third-level group a plain "+ Add filter rule" that adds a rule at once', () => {
+      const { controls, saved } = openAdvanced();
+      const tree = (): DatabaseViewConfig['filterTree'] => controls.effective(saved.view).filterTree;
+
+      click(`database-filter-add-rule-${tree()?.id ?? ''}`);
+      click('database-filter-add-group');
+      const middleId = tree()?.filterRules[1]?.id ?? '';
+
+      click(`database-filter-add-rule-${middleId}`);
+      click('database-filter-add-group');
+      const deepest = (): { id: string; filterRules: unknown[] } | undefined =>
+        (tree()?.filterRules[1] as { filterRules: Array<{ id: string; filterRules: unknown[] }> } | undefined)?.filterRules[1];
+      const add = q(`database-filter-add-rule-${deepest()?.id ?? ''}`);
+
+      expect(add?.querySelector('[data-blok-database-chip-chevron]')).toBeNull();
+      expect(q(`database-filter-add-rule-${middleId}`)?.querySelector('[data-blok-database-chip-chevron]')).not.toBeNull();
+      add?.click();
+
+      expect(q('database-filter-add-menu')).toBeNull();
+      expect(deepest()?.filterRules).toHaveLength(2);
+    });
+
     const rowsOf = (menu: string): Array<[string | undefined, boolean]> => [...(q(menu)?.querySelectorAll('[data-blok-database-panel-row]') ?? [])]
       .map((row) => [text(row.querySelector('[data-blok-database-panel-label]')), row.hasAttribute('data-danger')]);
 

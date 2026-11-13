@@ -199,6 +199,20 @@ describe('playground block states spec (index.html)', () => {
       expect(html).toContain('[data-blok-id="au-drive-error"] [data-blok-tool="audio"]');
       expect(html).toContain('renderAudioErrorState({');
     });
+
+    test('mounts the error card\'s element, not the handle that carries it', () => {
+      expect(html).toMatch(/audioDriveErrRoot\.replaceChildren\(renderAudioErrorState\(\{[\s\S]*?\}\)\.element\);/);
+    });
+
+    test('the Google Drive error demo passes no badge: the card has none', () => {
+      expect(html).not.toContain("badge: 'Needle skipped'");
+    });
+
+    test('the "Too large" state is a live tool whose limit the demo file is over', () => {
+      expect(sectionFor('audio')).toMatch(
+        /label: 'Too large', demoPick: 'mp3', toolConfig: \{ audio: \{ maxSize: 50 \* 1024 \} \}, blocks: \[\{ id: 'au-too-large', type: 'audio'/
+      );
+    });
   });
 
   describe('restricted-source empty states are live tools', () => {
@@ -390,7 +404,7 @@ describe('block states gallery covers every state a block can show', () => {
     ['table_of_contents', [ 'Colored text', 'Deep outline' ]],
     ['image', [ 'Uploading', 'Too large', 'Right aligned', 'Size preset', 'Border frame', 'Shadow frame', 'Square corners', 'Caption hidden', 'Circle crop', 'Rotated', 'Filter', 'Markup', 'Read-only' ]],
     ['video', [ 'Uploading', 'Failed to load', 'Right aligned', 'No controls', 'Read-only', 'Read-only failed' ]],
-    ['audio', [ 'Uploading', 'Upload failed', 'With caption', 'Compact', 'Untitled · no waveform', 'Read-only' ]],
+    ['audio', [ 'Uploading', 'Upload failed', 'Too large', 'With caption', 'Compact', 'Untitled · no waveform', 'Read-only' ]],
     ['file', [ 'Upload failed', 'Too large', 'Image' ]],
     ['bookmark', [ 'Failed cover', 'Long text (clamped)' ]],
     ['embed', [ 'Right aligned', 'Caption (empty)', 'Google Docs (fixed height)', 'TikTok (fixed width)', 'Telegram (script)', 'Threads (script)', 'Read-only' ]],

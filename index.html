@@ -4840,6 +4840,7 @@
           { label: 'Google Drive error', blocks: [{ id: 'au-drive-error', type: 'audio', data: { url: '' } }] },
           { label: 'Uploading', demoPick: 'mp3', toolConfig: { audio: { uploader: { uploadByFile: (file, ctx) => { ctx?.onProgress?.(64); return new Promise(() => {}); } } } }, blocks: [{ id: 'au-uploading', type: 'audio', data: { url: '' } }] },
           { label: 'Upload failed', demoPick: 'mp3', toolConfig: { audio: { uploader: { uploadByFile: () => Promise.reject(new Error('Playground: this upload always fails')) } } }, blocks: [{ id: 'au-upload-error', type: 'audio', data: { url: '' } }] },
+          { label: 'Too large', demoPick: 'mp3', toolConfig: { audio: { maxSize: 50 * 1024 } }, blocks: [{ id: 'au-too-large', type: 'audio', data: { url: '' } }] },
           { label: 'With caption', blocks: [{ id: 'au-caption', type: 'audio', data: {
             url: '/samples/soundhelix-song-1.mp3',
             title: 'SoundHelix Song 1',
@@ -5324,11 +5325,10 @@
           audioDriveErrRoot.replaceChildren(renderAudioErrorState({
             message: 'Audio from Google Drive can’t be played directly. Download the file and upload it here instead.',
             service: 'google-drive',
-            badge: 'Needle skipped',
             replaceLabel: 'Replace',
             onReplace: () => {},
             upload: { label: 'Choose audio', accept: 'audio/*', onFile: () => {} },
-          }));
+          }).element);
         }
 
         // Force the transient file-upload loading state. The uploader resolves

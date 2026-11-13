@@ -6853,6 +6853,7 @@ export class DatabaseTool implements BlockTool {
       savedView: () => owner.model.getView(context?.viewId ?? this.activeViewId),
       // Filters and sorts read a formula or rollup as its result type.
       schema: () => localizeDatabaseSchema(data().model.getValueSchema(), this.api.i18n),
+      storedType: (propertyId) => data().model.getProperty(propertyId)?.type,
       rowCount: () => data().model.getOrderedRows().length,
       locked: () => owner.structureLocked(),
       readOnly: () => context === undefined ? this.readOnly : !context.authority.writable(),

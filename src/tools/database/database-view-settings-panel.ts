@@ -118,6 +118,8 @@ export interface ViewSettingsContext {
   view: () => DatabaseViewConfig;
   /** Localized schema. */
   schema: () => PropertyDefinition[];
+  /** A property's saved type: `schema` shows a formula or rollup as its result type. */
+  storedType?: (propertyId: string) => PropertyType | undefined;
   locked: () => boolean;
   /** Layouts Blok renders. */
   layouts: readonly ViewType[];
@@ -2900,12 +2902,13 @@ export class ViewSettingsPages {
       only.setAttribute('data-blok-testid', `database-color-value-${rule.id}`);
       only.setAttribute('data-blok-database-color-rule-value', '');
       only.setAttribute('data-blok-database-color-rule-input', '');
-      // Only "=" was read (r21-cc-num-eq-cc.raw); the other Number operators are unmeasured.
-      if (property.type === 'number' && menuOperatorOf(rule.operator) === 'equals') {
+      const symbol = property.type === 'number' ? COMPARE_SYMBOLS[menuOperatorOf(rule.operator)] : undefined;
+
+      if (symbol !== undefined) {
         const prefix = marked(document.createElement('span'), 'data-blok-database-color-rule-prefix');
 
         prefix.setAttribute('aria-hidden', 'true');
-        prefix.textContent = '=';
+        prefix.textContent = symbol;
         box.append(prefix);
       }
       box.append(only);
@@ -3052,7 +3055,7 @@ export class ViewSettingsPages {
           icon: IconPlus,
           disabled,
           onClick: () => openFlyout(add, panel, 'database-color-property-picker', COLOR_PROPERTY_FLYOUT_WIDTH, (pick) => this.propertyPicker(queryState(), COLOR_RULE_TYPES, (property) => pick(() => {
-            write([...rules(), { id: nanoid(), propertyId: property.id, ...newColorRule(property.type) }]);
+            write([...rules(), { id: nanoid(), propertyId: property.id, ...newColorRule(property.type, this.ctx.storedType?.(property.id)) }]);
             panel.refresh();
           })), { gap: COLOR_PROPERTY_FLYOUT_GAP, flip: true }),
         }), cards.length === 0 ? 'data-blok-database-color-new' : 'data-blok-database-color-add-another');
@@ -3120,24 +3123,45 @@ const marked = <T extends HTMLElement>(element: T, attribute: string): T => {
 };
 
 /**
- * What a new colour rule starts on (notion-motion.md Round 20 §4, Round 21 §1): option types on
- * Match option, the five types read on Green. The rest keep gray: unread.
+ * What a new colour rule starts on (notion-motion.md Round 20 §4, Round 21 §1, Round 22 §3): option types on
+ * Match option, the types read on Green. The rest keep gray: unread.
  * Checkbox starts on "is" with no value; every type's flyout offers "is not empty" otherwise.
  */
-const GREEN_RULE_TYPES: readonly PropertyType[] = ['text', 'number', 'date', 'checkbox', 'person'];
+const GREEN_RULE_TYPES: readonly PropertyType[] = [
+  'title', 'text', 'number', 'date', 'checkbox', 'person', 'formula', 'relation', 'rollup',
+  'createdBy', 'createdTime', 'lastEditedBy', 'lastEditedTime',
+];
 
-const newColorRule = (type: PropertyType): Pick<ColorRule, 'operator' | 'value' | 'color'> => {
+/**
+ * `type` is the shown one: a formula comes as its result type. Round 22 §3: a Number formula starts on "="
+ * with its input. A Number rollup (Sum and the like) is unmeasured and keeps "is not empty".
+ */
+const newColorRule = (type: PropertyType, storedType: PropertyType | undefined): Pick<ColorRule, 'operator' | 'value' | 'color'> => {
   const plain = GREEN_RULE_TYPES.includes(type) ? 'green' : 'gray';
+  const numberFormula = type === 'number' && storedType === 'formula';
 
   return {
-    operator: type === 'checkbox' ? 'equals' : 'is_not_empty',
+    operator: type === 'checkbox' || numberFormula ? 'equals' : 'is_not_empty',
     value: null,
     color: MATCH_OPTION_TYPES.includes(type) ? MATCH_OPTION_COLOR : plain,
   };
 };
 
-/** notion-motion.md Round 20 §4, Round 21 §1: the colour rule value types measured reading "Select...". */
-const SELECT_PLACEHOLDER_TYPES: readonly PropertyType[] = ['select', 'status', 'multiSelect', 'date', 'checkbox', 'person'];
+/** notion-motion.md Round 22 §4 (r22-cc-num-*-cc.raw): a Number value box leads with its operator's symbol. */
+const COMPARE_SYMBOLS: Partial<Record<string, string>> = {
+  equals: '=',
+  does_not_equal: '≠',
+  greater_than: '>',
+  less_than: '<',
+  greater_than_or_equal_to: '≥',
+  less_than_or_equal_to: '≤',
+};
+
+/** notion-motion.md Round 20 §4, Round 21 §1, Round 22 §3: the colour rule value types measured reading "Select...". */
+const SELECT_PLACEHOLDER_TYPES: readonly PropertyType[] = [
+  'select', 'status', 'multiSelect', 'date', 'checkbox', 'person',
+  'relation', 'createdBy', 'createdTime', 'lastEditedBy', 'lastEditedTime',
+];
 
 /** notion-motion.md Round 21 §1 (r21-cc-ms-bg.raw): Multi-select's switch reads "Match first option". */
 const matchOptionLabelKey = (property: PropertyDefinition | undefined): string =>

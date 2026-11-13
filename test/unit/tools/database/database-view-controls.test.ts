@@ -77,6 +77,21 @@ describe('DatabaseViewControls', () => {
     vi.restoreAllMocks();
   });
 
+  // notion-motion.md Round 22 §3: a Number formula's new colour rule starts on "=". The host knows it is a formula.
+  it('starts a Number formula\'s colour rule on "="', () => {
+    const { saved } = setup({
+      schema: () => [...schema, { id: 'fn', name: 'Double', type: 'number', position: 'a3' }],
+      levers: { storedType: (id) => (id === 'fn' ? 'formula' : undefined) },
+    });
+
+    click('database-toolbar-settings');
+    click('database-settings-color');
+    click('database-color-add');
+    click('database-pick-property-fn');
+
+    expect(saved.view.colorRules?.[0]).toMatchObject({ propertyId: 'fn', operator: 'equals' });
+  });
+
   it('draws Filter, Sort, search and settings as named icon buttons, as Notion does (research/07:53)', () => {
     setup();
 

@@ -2038,6 +2038,9 @@ describe('view settings panel', () => {
     it.each([
       ['txt', 'green'], ['num', 'green'], ['due', 'green'], ['cb', 'green'], ['owner', 'green'],
       ['stage', 'match'], ['prog', 'match'], ['tags', 'match'],
+      // notion-motion.md Round 22 §3: Green on these too.
+      ['title', 'green'], ['f', 'green'], ['rel', 'green'], ['roll', 'green'],
+      ['cby', 'green'], ['ct', 'green'], ['lby', 'green'], ['lt', 'green'],
     ])('starts %s on %s, first or second', (id, color) => {
       const h = open();
 
@@ -2051,6 +2054,18 @@ describe('view settings panel', () => {
       expect(add(h, 'cb')).toMatchObject({ operator: 'equals', value: null });
       expect(add(h, 'prog')).toMatchObject({ operator: 'is_not_empty', value: null });
       expect(add(h, 'txt')).toMatchObject({ operator: 'is_not_empty', value: null });
+    });
+
+    // notion-motion.md Round 22 §3: a Number formula starts on "=" with its input. The panel gets it as its result type.
+    it('starts a Number formula on "=", and a plain Number on "is not empty"', () => {
+      const h = open();
+
+      h.ctx.schema = () => [...typed, { id: 'fn', name: 'Double', type: 'number', position: 'c0' }];
+      h.ctx.storedType = (id) => (id === 'fn' ? 'formula' : typed.find((p) => p.id === id)?.type);
+
+      expect(add(h, 'fn')).toMatchObject({ operator: 'equals', value: null, color: 'green' });
+      expect(q(`database-color-value-${h.state.view.colorRules?.[0]?.id ?? ''}`)).toBeInstanceOf(HTMLInputElement);
+      expect(add(h, 'num')).toMatchObject({ operator: 'is_not_empty' });
     });
 
     it('never starts a rule on an operator its own flyout cannot offer', () => {
@@ -2271,8 +2286,8 @@ describe('view settings panel', () => {
       expect(q('database-color-side-c1')?.textContent?.trim()).toBe('tools.database.dateEnd');
     });
 
-    // notion-motion.md Round 21 §1 (r21-cc-num-eq-cc.raw): Number "=" shows the "=" inside the value box.
-    it('puts a "=" before a Number rule\'s value only on "="', () => {
+    // notion-motion.md Round 22 §4 (r22-cc-num-*-cc.raw): each comparison puts its own symbol before the value.
+    it('puts the operator\'s own symbol before a Number rule\'s value', () => {
       const h = harness({ colorRules: [{ id: 'c1', propertyId: 'num', operator: 'equals', value: null, color: 'green' }] });
       const prefix = (): Element | null | undefined => q('database-color-rule-c1')?.querySelector('[data-blok-database-color-rule-prefix]');
 
@@ -2282,10 +2297,29 @@ describe('view settings panel', () => {
       expect(prefix()?.textContent).toBe('=');
       expect(prefix()?.parentElement?.contains(q('database-color-value-c1'))).toBe(true);
 
-      h.ctx.updateView({ colorRules: [{ id: 'c1', propertyId: 'num', operator: 'greater_than', value: null, color: 'green' }] });
+      for (const [operator, symbol] of [
+        ['does_not_equal', '≠'], ['greater_than', '>'], ['less_than', '<'],
+        ['greater_than_or_equal_to', '≥'], ['less_than_or_equal_to', '≤'],
+      ]) {
+        h.ctx.updateView({ colorRules: [{ id: 'c1', propertyId: 'num', operator, value: null, color: 'green' }] });
 
-      expect(prefix()).toBeNull();
-      expect(q('database-color-value-c1')).not.toBeNull();
+        expect(prefix()?.textContent, operator).toBe(symbol);
+      }
+    });
+
+    // notion-motion.md Round 22 §4: a Number formula does the same. A Text rule has no prefix.
+    it('puts the symbol before a Number formula\'s value, and none before a Text one', () => {
+      const h = harness({ colorRules: [
+        { id: 'c1', propertyId: 'fn', operator: 'does_not_equal', value: null, color: 'green' },
+        { id: 'c2', propertyId: 'title', operator: 'equals', value: null, color: 'green' },
+      ] });
+
+      h.ctx.schema = () => [...schema, { id: 'fn', name: 'Double', type: 'number', position: 'c0' }];
+      h.open();
+      click('database-settings-color');
+
+      expect(q('database-color-rule-c1')?.querySelector('[data-blok-database-color-rule-prefix]')?.textContent).toBe('≠');
+      expect(q('database-color-rule-c2')?.querySelector('[data-blok-database-color-rule-prefix]')).toBeNull();
     });
 
     // notion-motion.md Round 21 §2 (r21-board-cc-cc.raw, r21-list-cc-cc.raw): a board says "Card background", a list
@@ -2323,6 +2357,31 @@ describe('view settings panel', () => {
 
         expect(value?.textContent, id).toBe('tools.database.colorValuePlaceholder');
         expect(value?.hasAttribute('data-empty'), id).toBe(true);
+      }
+    });
+
+    // notion-motion.md Round 22 §3: "Select..." on Relation, Created by/time and Last edited by/time too.
+    it('reads "Select..." on Relation, Created and Last edited rules while empty', () => {
+      const h = harness({ colorRules: [
+        { id: 'c1', propertyId: 'rel', operator: 'contains', value: null, color: 'green' },
+        { id: 'c2', propertyId: 'cby', operator: 'contains', value: null, color: 'green' },
+        { id: 'c3', propertyId: 'lby', operator: 'contains', value: null, color: 'green' },
+        { id: 'c4', propertyId: 'ct', operator: 'equals', value: null, color: 'green' },
+        { id: 'c5', propertyId: 'lt', operator: 'equals', value: null, color: 'green' },
+      ] });
+
+      h.ctx.schema = () => [...schema,
+        { id: 'rel', name: 'Rel', type: 'relation', position: 'b0', relation: { targetDatabaseId: 'x' } },
+        { id: 'cby', name: 'Created by', type: 'createdBy', position: 'b1' },
+        { id: 'lby', name: 'Edited by', type: 'lastEditedBy', position: 'b2' },
+        { id: 'ct', name: 'Created', type: 'createdTime', position: 'b3' },
+        { id: 'lt', name: 'Edited', type: 'lastEditedTime', position: 'b4' }];
+      h.ctx.relatedRows = () => [{ id: 'r1', title: 'Alpha' }];
+      h.open();
+      click('database-settings-color');
+
+      for (const id of ['c1', 'c2', 'c3', 'c4', 'c5']) {
+        expect(q(`database-color-value-${id}`)?.textContent, id).toBe('tools.database.colorValuePlaceholder');
       }
     });
 

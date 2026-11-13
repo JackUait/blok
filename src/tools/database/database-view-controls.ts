@@ -51,6 +51,8 @@ export interface ViewControlsHost {
   savedView: () => DatabaseViewConfig | undefined;
   /** Localized schema. */
   schema: () => PropertyDefinition[];
+  /** A property's saved type: `schema` shows a formula or rollup as its result type. */
+  storedType?: (propertyId: string) => PropertyType | undefined;
   rowCount: () => number;
   locked: () => boolean;
   readOnly: () => boolean;
@@ -606,6 +608,7 @@ export class DatabaseViewControls {
       i18n: this.host.i18n,
       view: () => this.view() ?? this.emptyView(),
       schema: () => this.host.schema(),
+      ...(this.host.storedType === undefined ? {} : { storedType: this.host.storedType }),
       locked: () => this.host.locked(),
       layouts: this.host.layouts,
       canDeleteView: () => this.host.viewCount() > 1,

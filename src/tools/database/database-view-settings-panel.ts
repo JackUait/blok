@@ -2100,8 +2100,8 @@ export class ViewSettingsPages {
           description: this.t('filterAddGroupDescription'),
           testId: 'database-filter-add-group',
           onClick: () => pick(() => {
-            // Round 19 §1 (r19-adv-group.raw): a new group holds one rule.
-            write(addFilterGroup(tree(), group.id, { id: nanoid(), conjunction: NEW_GROUP_CONJUNCTION, filterRules: [this.firstRule()] }));
+            // Round 19 §1 (r19-adv-group.raw): a new group holds one rule. Round 20 §5: its And/Or is the opposite of its parent's.
+            write(addFilterGroup(tree(), group.id, { id: nanoid(), conjunction: group.conjunction === 'and' ? 'or' : 'and', filterRules: [this.firstRule()] }));
             panel.refresh();
           }),
         })] : []),

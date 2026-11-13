@@ -409,6 +409,28 @@ describe('DatabaseViewControls', () => {
       }));
     });
 
+    // notion-motion.md Round 20 §5 (r20-g-inner2-parts.raw, r20-g-lvl3add-parts.raw): the opposite of the parent's And/Or.
+    it('gives a new group the opposite And/Or of its parent', () => {
+      const { controls, saved } = openAdvanced();
+      const tree = (): DatabaseViewConfig['filterTree'] => controls.effective(saved.view).filterTree;
+      const rootId = tree()?.id ?? '';
+
+      click(`database-filter-add-rule-${rootId}`);
+      click('database-filter-add-rule');
+      click(`database-filter-conjunction-${rootId}`);
+      click('database-filter-conjunction-or');
+      click(`database-filter-add-rule-${rootId}`);
+      click('database-filter-add-group');
+      const middle = tree()?.filterRules[2];
+
+      expect(middle).toEqual(expect.objectContaining({ conjunction: 'and' }));
+      click(`database-filter-add-rule-${middle?.id ?? ''}`);
+      click('database-filter-add-group');
+      const inner = (tree()?.filterRules[2] as { filterRules: unknown[] } | undefined)?.filterRules[1];
+
+      expect(inner).toEqual(expect.objectContaining({ conjunction: 'or' }));
+    });
+
     const rowsOf = (menu: string): Array<[string | undefined, boolean]> => [...(q(menu)?.querySelectorAll('[data-blok-database-panel-row]') ?? [])]
       .map((row) => [text(row.querySelector('[data-blok-database-panel-label]')), row.hasAttribute('data-danger')]);
 

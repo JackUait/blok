@@ -4274,16 +4274,14 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
 
-    it('shows a hidden group again from the hidden-groups button', () => {
+    // notion-motion.md Round 24 §1 (r24-pin-and-hidden.png): Settings › Group shows it again; the board keeps no button.
+    it('leaves no hidden-groups button on the board', () => {
       const { tool, element } = board();
 
       openMenu(element, 'opt-todo');
       pick('tools.database.groupHide');
-      queryByData(element, 'data-blok-database-hidden-groups')?.click();
-      pick('Todo');
 
-      expect(columnIds(element)).toContain('opt-todo');
-      expect(tool.save(element).views[0].hiddenGroups).toEqual([]);
+      expect(element.querySelector('[data-blok-database-hidden-groups]')).toBeNull();
 
       tool.destroy();
     });

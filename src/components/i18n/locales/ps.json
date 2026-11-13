@@ -405,7 +405,6 @@
   "tools.database.groupShow": "ګروپ وښایئ",
   "tools.database.groupMoveToTrash": "کثافاتو ته ولېږدوئ",
   "tools.database.groupTrashConfirm": "ایا تاسو ډاډه یاست؟ د دې ګروپ ټولې پاڼې به کثافاتو ته ولېږدول شي.",
-  "tools.database.hiddenGroups": "پټ ګروپونه",
   "tools.database.deleteCard": "کارت ړنګ کړئ",
   "tools.database.editCardTitle": "سرلیک سم کړئ",
   "tools.database.cardMenuLabel": "د کارت اختیارونه",

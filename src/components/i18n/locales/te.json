@@ -410,7 +410,6 @@
   "tools.database.groupShow": "సమూహాన్ని చూపు",
   "tools.database.groupMoveToTrash": "ట్రాష్‌కు తరలించు",
   "tools.database.groupTrashConfirm": "మీరు ఖచ్చితంగా అనుకుంటున్నారా? ఈ సమూహంలోని అన్ని పేజీలు ట్రాష్‌కు తరలించబడతాయి.",
-  "tools.database.hiddenGroups": "దాచిన సమూహాలు",
   "tools.database.emptyColumn": "కార్డ్‌లు లేవు",
   "tools.database.rowTitlePlaceholder": "కొత్త పేజీ",
   "tools.database.addRow": "వరుస జోడించండి",

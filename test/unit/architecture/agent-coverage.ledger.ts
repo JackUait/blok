@@ -407,7 +407,6 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/buttonPerson-*': cmd('database.updateProperty'),
   'menu:database/buttonRecipientProperty-*': cmd('database.updateProperty'),
   'menu:database/reset': cmds(['database.updateProperty', 'block.delete'], 'Reset to original page layout: the default pageLayout* fields (pins and section entries become group entries), and the layout tabs block deleted.'),
-  'menu:database/group-*': cmd('database.updateView'),
   'menu:database/edit-groups': exempt('chrome', 'Opens the group settings page; each setting in it has its own ledger row.'),
   'menu:database/toggle-aggregation': cmd('database.updateView'),
   'menu:database/hide-group': cmd('database.updateView'),

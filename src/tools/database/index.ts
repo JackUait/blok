@@ -372,7 +372,6 @@ const ROW_CONTROL_SELECTOR = [
   '[data-blok-database-column-new-page]',
   '[data-blok-database-column-menu]',
   '[data-blok-database-column-count]',
-  '[data-blok-database-hidden-groups]',
   '[data-blok-database-add-column]',
   '[data-blok-database-card-menu]',
   '[data-blok-database-list-row-handle]',
@@ -7162,7 +7161,6 @@ export class DatabaseTool implements BlockTool {
       ...(aggregate !== undefined && calculation !== undefined
         ? { aggregate, aggregateHint: groupCalculationHint(calculation, localSchema, this.api.i18n) }
         : {}),
-      hiddenGroupCount: allOptions.length - shown.length,
       ...(viewConfig !== undefined ? { view: viewConfig } : {}),
       schema: localSchema,
       bodyOf: (rowId) => this.rowBodyBlocks(rowId, descriptionId),
@@ -9326,15 +9324,6 @@ export class DatabaseTool implements BlockTool {
         return;
       }
 
-      const hiddenGroupsBtn = target.closest<HTMLElement>('[data-blok-database-hidden-groups]');
-
-      if (hiddenGroupsBtn !== null) {
-        event.stopPropagation();
-        this.openHiddenGroupsMenu(hiddenGroupsBtn);
-
-        return;
-      }
-
       const addColumnBtn = target.closest('[data-blok-database-add-column]');
 
       if (addColumnBtn instanceof HTMLElement) {
@@ -9722,17 +9711,6 @@ export class DatabaseTool implements BlockTool {
       minWidth: CALC_MENU_MIN_WIDTH,
       offset: 0,
     });
-  }
-
-  /** Lists every group with a check mark on the shown ones; a pick shows or hides it. */
-  private openHiddenGroupsMenu(anchor: HTMLElement): void {
-    this.showGroupPopover(anchor, this.boardGroups().map((group) => ({
-      name: `group-${group.id}`,
-      title: group.label,
-      trailingIcon: group.hidden ? undefined : IconCheck,
-      closeOnActivate: true,
-      onActivate: () => this.toggleGroupHidden(group.id),
-    })));
   }
 
   /** Kept on the view without a redraw, so the caret's turn plays out. Read-only keeps it on screen only. */

@@ -405,7 +405,6 @@
   "tools.database.groupShow": "ჯგუფის ჩვენება",
   "tools.database.groupMoveToTrash": "ნაგავში გადატანა",
   "tools.database.groupTrashConfirm": "დარწმუნებული ხართ? ამ ჯგუფის ყველა გვერდი ნაგავში გადავა.",
-  "tools.database.hiddenGroups": "დამალული ჯგუფები",
   "tools.database.deleteCard": "ბარათის წაშლა",
   "tools.database.editCardTitle": "სათაურის რედაქტირება",
   "tools.database.cardMenuLabel": "ბარათის პარამეტრები",

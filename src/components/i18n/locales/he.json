@@ -406,7 +406,6 @@
   "tools.database.groupShow": "הצג קבוצה",
   "tools.database.groupMoveToTrash": "העבר לאשפה",
   "tools.database.groupTrashConfirm": "האם אתה בטוח? כל הדפים בקבוצה זו יועברו לאשפה.",
-  "tools.database.hiddenGroups": "קבוצות מוסתרות",
   "tools.database.deleteCard": "מחק כרטיס",
   "tools.database.editCardTitle": "ערוך כותרת",
   "tools.database.cardMenuLabel": "אפשרויות כרטיס",

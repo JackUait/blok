@@ -410,7 +410,6 @@
   "tools.database.groupShow": "குழுவைக் காட்டு",
   "tools.database.groupMoveToTrash": "குப்பைக்கு நகர்த்து",
   "tools.database.groupTrashConfirm": "நிச்சயமாகவா? இந்தக் குழுவில் உள்ள அனைத்துப் பக்கங்களும் குப்பைக்கு நகர்த்தப்படும்.",
-  "tools.database.hiddenGroups": "மறைக்கப்பட்ட குழுக்கள்",
   "tools.database.emptyColumn": "அட்டைகள் இல்லை",
   "tools.database.rowTitlePlaceholder": "புதிய பக்கம்",
   "tools.database.addRow": "வரிசை சேர்க்கவும்",

@@ -440,7 +440,6 @@
   "tools.database.groupShow": "顯示群組",
   "tools.database.groupMoveToTrash": "移至垃圾桶",
   "tools.database.groupTrashConfirm": "確定嗎？此群組內的所有頁面都會移至垃圾桶。",
-  "tools.database.hiddenGroups": "已隱藏的群組",
   "tools.database.emptyColumn": "沒有卡片",
   "tools.database.rowTitlePlaceholder": "新增頁面",
   "tools.database.addRow": "新增列",

@@ -407,7 +407,6 @@
   "tools.database.groupShow": "Prikaži skupino",
   "tools.database.groupMoveToTrash": "Premakni v koš",
   "tools.database.groupTrashConfirm": "Ali ste prepričani? Vse strani v tej skupini bodo premaknjene v koš.",
-  "tools.database.hiddenGroups": "Skrite skupine",
   "tools.database.deleteCard": "Izbriši kartico",
   "tools.database.editCardTitle": "Uredi naslov",
   "tools.database.cardMenuLabel": "Možnosti kartice",

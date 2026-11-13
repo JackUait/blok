@@ -430,7 +430,6 @@
   "tools.database.groupShow": "समूह देखाउनुहोस्",
   "tools.database.groupMoveToTrash": "रद्दीटोकरीमा सार्नुहोस्",
   "tools.database.groupTrashConfirm": "के तपाईं निश्चित हुनुहुन्छ? यस समूहभित्रका सबै पृष्ठहरू रद्दीटोकरीमा सारिनेछन्।",
-  "tools.database.hiddenGroups": "लुकाइएका समूहहरू",
   "tools.database.emptyColumn": "कुनै कार्ड छैन",
   "tools.database.rowTitlePlaceholder": "नयाँ पृष्ठ",
   "tools.database.addRow": "पङ्क्ति थप्नुहोस्",

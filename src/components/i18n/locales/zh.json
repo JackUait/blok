@@ -405,7 +405,6 @@
   "tools.database.groupShow": "显示分组",
   "tools.database.groupMoveToTrash": "移至回收站",
   "tools.database.groupTrashConfirm": "确定吗？此分组中的所有页面都将移至回收站。",
-  "tools.database.hiddenGroups": "已隐藏的分组",
   "tools.database.deleteCard": "删除卡片",
   "tools.database.editCardTitle": "编辑标题",
   "tools.database.cardMenuLabel": "卡片选项",

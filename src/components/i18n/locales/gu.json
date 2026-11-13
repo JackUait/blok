@@ -410,7 +410,6 @@
   "tools.database.groupShow": "જૂથ બતાવો",
   "tools.database.groupMoveToTrash": "કચરાપેટીમાં ખસેડો",
   "tools.database.groupTrashConfirm": "શું તમને ખાતરી છે? આ જૂથની અંદરના બધા પૃષ્ઠો કચરાપેટીમાં ખસેડવામાં આવશે.",
-  "tools.database.hiddenGroups": "છુપાયેલા જૂથો",
   "tools.database.emptyColumn": "કોઈ કાર્ડ નથી",
   "tools.database.rowTitlePlaceholder": "નવું પૃષ્ઠ",
   "tools.database.addRow": "પંક્તિ ઉમેરો",

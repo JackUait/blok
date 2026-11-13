@@ -410,7 +410,6 @@
   "tools.database.groupShow": "Qrupu göstər",
   "tools.database.groupMoveToTrash": "Zibil qutusuna köçür",
   "tools.database.groupTrashConfirm": "Əminsiniz? Bu qrupdakı bütün səhifələr zibil qutusuna köçürüləcək.",
-  "tools.database.hiddenGroups": "Gizli qruplar",
   "tools.database.emptyColumn": "Kart yoxdur",
   "tools.database.rowTitlePlaceholder": "Yeni səhifə",
   "tools.database.addRow": "Sətir əlavə et",

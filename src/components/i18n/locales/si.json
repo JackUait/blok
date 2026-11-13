@@ -410,7 +410,6 @@
   "tools.database.groupShow": "සමූහය පෙන්වන්න",
   "tools.database.groupMoveToTrash": "කුණු බඳුනට ගෙන යන්න",
   "tools.database.groupTrashConfirm": "ඔබට විශ්වාසද? මෙම සමූහයේ සියලුම පිටු කුණු බඳුනට ගෙන යනු ඇත.",
-  "tools.database.hiddenGroups": "සැඟවූ සමූහ",
   "tools.database.emptyColumn": "කාඩ්පත් නැත",
   "tools.database.rowTitlePlaceholder": "නව පිටුව",
   "tools.database.addRow": "පේළිය එක් කරන්න",

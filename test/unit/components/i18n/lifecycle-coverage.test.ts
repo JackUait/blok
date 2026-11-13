@@ -286,7 +286,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2196 + 147 + 565 + 6 closure for all 2914 keys', () => {
+  it('rebuilds a disjoint 2195 + 147 + 565 + 6 closure for all 2913 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -300,7 +300,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2914);
+    expect(lifecycle.size).toBe(2913);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -544,7 +544,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the PDF thumbnail rail's toggle (tools.file.previewThumbnails), by literal.
       // +2: Round 24 layout rows (tools.database.galleryFitMedia, timelineSeparateDates) by literal.
       // -1: tools.database.timelineEndNone is now catalog-only (the end picker lost its None choice).
-      'executable-literal': 2196,
+      // -1: the board's "Hidden groups" button is gone (tools.database.hiddenGroups left the catalog).
+      'executable-literal': 2195,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

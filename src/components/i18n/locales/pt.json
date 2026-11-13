@@ -406,7 +406,6 @@
   "tools.database.groupShow": "Mostrar grupo",
   "tools.database.groupMoveToTrash": "Mover para a lixeira",
   "tools.database.groupTrashConfirm": "Tem certeza? Todas as páginas deste grupo serão movidas para a lixeira.",
-  "tools.database.hiddenGroups": "Grupos ocultos",
   "tools.database.deleteCard": "Excluir cartão",
   "tools.database.editCardTitle": "Editar título",
   "tools.database.cardMenuLabel": "Opções do cartão",

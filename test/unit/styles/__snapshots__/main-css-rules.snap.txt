@@ -5893,23 +5893,6 @@ span[data-blok-slash-search] {
   height: 16px;
 }
 
-[data-blok-database-hidden-groups] {
-  flex: 0 0 auto;
-  height: 32px;
-  padding: 0 var(--blok-space-2);
-  border: none;
-  border-radius: var(--blok-radius-control);
-  background: none;
-  color: var(--blok-database-add-text);
-  font-size: 14px;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-[data-blok-database-hidden-groups]:hover {
-  background-color: var(--blok-database-hover-bg);
-}
-
 [data-blok-database-column-pill] {
   display: inline-flex;
   align-items: center;

@@ -411,7 +411,6 @@
   "tools.database.groupShow": "Prikaži grupu",
   "tools.database.groupMoveToTrash": "Premjesti u smeće",
   "tools.database.groupTrashConfirm": "Jeste li sigurni? Sve stranice u ovoj grupi bit će premještene u smeće.",
-  "tools.database.hiddenGroups": "Skrivene grupe",
   "tools.database.emptyColumn": "Nema kartica",
   "tools.database.rowTitlePlaceholder": "Nova stranica",
   "tools.database.addRow": "Dodaj red",

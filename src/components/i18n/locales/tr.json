@@ -405,7 +405,6 @@
   "tools.database.groupShow": "Grubu göster",
   "tools.database.groupMoveToTrash": "Çöp kutusuna taşı",
   "tools.database.groupTrashConfirm": "Emin misiniz? Bu gruptaki tüm sayfalar çöp kutusuna taşınacak.",
-  "tools.database.hiddenGroups": "Gizli gruplar",
   "tools.database.deleteCard": "Kartı sil",
   "tools.database.editCardTitle": "Başlığı düzenle",
   "tools.database.cardMenuLabel": "Kart seçenekleri",

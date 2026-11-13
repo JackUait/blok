@@ -430,7 +430,6 @@
   "tools.database.groupShow": "ສະແດງກຸ່ມ",
   "tools.database.groupMoveToTrash": "ຍ້າຍໄປຖັງຂີ້ເຫຍື້ອ",
   "tools.database.groupTrashConfirm": "ທ່ານແນ່ໃຈບໍ່? ທຸກໜ້າໃນກຸ່ມນີ້ຈະຖືກຍ້າຍໄປຖັງຂີ້ເຫຍື້ອ.",
-  "tools.database.hiddenGroups": "ກຸ່ມທີ່ເຊື່ອງໄວ້",
   "tools.database.emptyColumn": "ບໍ່ມີບັດ",
   "tools.database.rowTitlePlaceholder": "ໜ້າໃໝ່",
   "tools.database.addRow": "ເພີ່ມແຖວ",

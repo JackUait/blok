@@ -405,7 +405,6 @@
   "tools.database.groupShow": "แสดงกลุ่ม",
   "tools.database.groupMoveToTrash": "ย้ายไปถังขยะ",
   "tools.database.groupTrashConfirm": "คุณแน่ใจหรือไม่? หน้าทั้งหมดในกลุ่มนี้จะถูกย้ายไปถังขยะ",
-  "tools.database.hiddenGroups": "กลุ่มที่ซ่อน",
   "tools.database.deleteCard": "ลบการ์ด",
   "tools.database.editCardTitle": "แก้ไขชื่อ",
   "tools.database.cardMenuLabel": "ตัวเลือกการ์ด",

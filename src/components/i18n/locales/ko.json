@@ -425,7 +425,6 @@
   "tools.database.groupShow": "그룹 표시",
   "tools.database.groupMoveToTrash": "휴지통으로 이동",
   "tools.database.groupTrashConfirm": "계속하시겠습니까? 이 그룹 안의 모든 페이지가 휴지통으로 이동됩니다.",
-  "tools.database.hiddenGroups": "숨겨진 그룹",
   "tools.database.deleteCard": "카드 삭제",
   "tools.database.editCardTitle": "제목 편집",
   "tools.database.cardMenuLabel": "카드 옵션",

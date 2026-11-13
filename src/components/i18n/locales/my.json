@@ -430,7 +430,6 @@
   "tools.database.groupShow": "အုပ်စုကို ပြရန်",
   "tools.database.groupMoveToTrash": "အမှိုက်ပုံးသို့ ရွှေ့ရန်",
   "tools.database.groupTrashConfirm": "သေချာပါသလား။ ဤအုပ်စုရှိ စာမျက်နှာအားလုံးကို အမှိုက်ပုံးသို့ ရွှေ့ပါမည်။",
-  "tools.database.hiddenGroups": "ဖျောက်ထားသော အုပ်စုများ",
   "tools.database.emptyColumn": "ကတ်မရှိ",
   "tools.database.rowTitlePlaceholder": "စာမျက်နှာအသစ်",
   "tools.database.addRow": "အတန်းထည့်ရန်",

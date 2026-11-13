@@ -410,7 +410,6 @@
   "tools.database.groupShow": "Ipakita ang grupo",
   "tools.database.groupMoveToTrash": "Ilipat sa basurahan",
   "tools.database.groupTrashConfirm": "Sigurado ka ba? Ililipat sa basurahan ang lahat ng page sa grupong ito.",
-  "tools.database.hiddenGroups": "Mga nakatagong grupo",
   "tools.database.emptyColumn": "Walang mga card",
   "tools.database.rowTitlePlaceholder": "Bagong pahina",
   "tools.database.addRow": "Magdagdag ng hanay",

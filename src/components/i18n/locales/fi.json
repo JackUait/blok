@@ -405,7 +405,6 @@
   "tools.database.groupShow": "Näytä ryhmä",
   "tools.database.groupMoveToTrash": "Siirrä roskakoriin",
   "tools.database.groupTrashConfirm": "Oletko varma? Kaikki tämän ryhmän sivut siirretään roskakoriin.",
-  "tools.database.hiddenGroups": "Piilotetut ryhmät",
   "tools.database.deleteCard": "Poista kortti",
   "tools.database.editCardTitle": "Muokkaa otsikkoa",
   "tools.database.cardMenuLabel": "Kortin vaihtoehdot",

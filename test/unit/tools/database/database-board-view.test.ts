@@ -169,10 +169,10 @@ describe('DatabaseBoardView', () => {
       expect(statusView([makeOption()]).querySelector('[data-blok-database-add-column]')).toBeNull();
     });
 
-    // findings-board B25: the hidden column just goes; Settings › Group lists it. Select boards are unmeasured and keep the button.
+    // findings-board B25: the hidden column just goes; Settings › Group lists it.
     it('offers no hidden-groups button', () => {
       const board = new DatabaseBoardView({
-        readOnly: false, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title', hiddenGroupCount: 1,
+        readOnly: false, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title',
         schema: [{ id: 's', name: 'Status', type: 'status', position: 'a1' }],
         view: { id: 'v', name: 'Board', type: 'board', position: 'a0', sorts: [], filters: [], visibleProperties: [], groupBy: 's' },
       }).createView();
@@ -301,27 +301,12 @@ describe('DatabaseBoardView', () => {
       expect(count()?.hasAttribute('hidden')).toBe(false);
     });
 
-    it('offers the hidden groups after the last column so they can be shown again', () => {
+    // notion-motion.md Round 24 §1 (r24-pin-and-hidden.png): a Select board shows no trace of its hidden groups.
+    // Settings › Group shows them again.
+    it('offers no hidden-groups button on a Select board', () => {
       const view = new DatabaseBoardView({
-        readOnly: false, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title', hiddenGroupCount: 2,
+        readOnly: false, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title',
       });
-      const board = view.createView();
-      const button = board.querySelector('[data-blok-database-hidden-groups]');
-
-      expect(button?.textContent).toBe('tools.database.hiddenGroups');
-      expect(button?.nextElementSibling?.hasAttribute('data-blok-database-add-column')).toBe(true);
-    });
-
-    it('offers no hidden-groups button in read-only, where it could not show a group again', () => {
-      const view = new DatabaseBoardView({
-        readOnly: true, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title', hiddenGroupCount: 2,
-      });
-
-      expect(view.createView().querySelector('[data-blok-database-hidden-groups]')).toBeNull();
-    });
-
-    it('offers no hidden-groups button when nothing is hidden', () => {
-      const view = new DatabaseBoardView({ readOnly: false, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title' });
 
       expect(view.createView().querySelector('[data-blok-database-hidden-groups]')).toBeNull();
     });

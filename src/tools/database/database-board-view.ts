@@ -34,8 +34,6 @@ interface DatabaseBoardViewOptions {
   aggregate?: (optionId: string) => string;
   /** The count's hover hint. None for Count all, as in Notion. */
   aggregateHint?: string;
-  /** How many groups the view hides; above zero, a button after the columns shows them again. */
-  hiddenGroupCount?: number;
   /** The board's view: card size, preview and the properties cards show. Without it cards show only the title. */
   view?: DatabaseViewConfig;
   /** Localized schema. */
@@ -123,7 +121,6 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   private readonly titlePropertyId: string;
   private readonly onTitleEdit: ((rowId: string, newTitle: string) => void) | undefined;
   private readonly hideCounts: boolean;
-  private readonly hiddenGroupCount: number;
   private readonly aggregate: ((optionId: string) => string) | undefined;
   private readonly aggregateHint: string | undefined;
   private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups' | 'onLaneToggle' | 'cellContext' | 'getTotal' | 'onLoadMore' | 'commentBadges' | 'addCardLabel' | 'lassoRows'>;
@@ -133,7 +130,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   private editing: ({ rowId: string; input: HTMLInputElement } & CardTitleHooks) | null = null;
 
   constructor({
-    readOnly, i18n, options, getRows, titlePropertyId, onTitleEdit, hideCounts, hiddenGroupCount, aggregate, aggregateHint, ...settings
+    readOnly, i18n, options, getRows, titlePropertyId, onTitleEdit, hideCounts, aggregate, aggregateHint, ...settings
   }: DatabaseBoardViewOptions) {
     this.aggregate = aggregate;
     this.aggregateHint = aggregateHint;
@@ -145,7 +142,6 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     this.titlePropertyId = titlePropertyId;
     this.onTitleEdit = onTitleEdit;
     this.hideCounts = hideCounts ?? false;
-    this.hiddenGroupCount = hiddenGroupCount ?? 0;
   }
 
   /**
@@ -191,17 +187,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       }
     }
 
-    // A Status board drops a hidden column without a trace (findings-board B25); Settings › Group lists it.
-    if (this.hiddenGroupCount > 0 && !this.readOnly && !this.isStatusBoard) {
-      const hiddenBtn = document.createElement('button');
-
-      hiddenBtn.type = 'button';
-      hiddenBtn.setAttribute('data-blok-database-hidden-groups', '');
-      hiddenBtn.setAttribute('aria-haspopup', 'menu');
-      hiddenBtn.textContent = this.i18n.t('tools.database.hiddenGroups');
-      buttonRow.appendChild(hiddenBtn);
-    }
-
+    // A board drops a hidden column without a trace (findings-board B25, notion-motion.md Round 24 §1); Settings › Group lists it.
     // Notion's Status board has no add-group button (findings-board B04).
     if (!this.readOnly && !this.isStatusBoard) {
       const addColumnBtn = document.createElement('button');

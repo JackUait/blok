@@ -428,7 +428,6 @@
   "tools.database.groupShow": "Rādīt grupu",
   "tools.database.groupMoveToTrash": "Pārvietot uz atkritni",
   "tools.database.groupTrashConfirm": "Vai tiešām? Visas šīs grupas lapas tiks pārvietotas uz atkritni.",
-  "tools.database.hiddenGroups": "Paslēptās grupas",
   "tools.database.deleteCard": "Dzēst kartīti",
   "tools.database.editCardTitle": "Rediģēt nosaukumu",
   "tools.database.cardMenuLabel": "Kartītes opcijas",

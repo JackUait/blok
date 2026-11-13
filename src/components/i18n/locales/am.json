@@ -410,7 +410,6 @@
   "tools.database.groupShow": "ቡድኑን አሳይ",
   "tools.database.groupMoveToTrash": "ወደ መጣያ ውሰድ",
   "tools.database.groupTrashConfirm": "እርግጠኛ ነዎት? በዚህ ቡድን ውስጥ ያሉ ሁሉም ገጾች ወደ መጣያ ይወሰዳሉ።",
-  "tools.database.hiddenGroups": "የተደበቁ ቡድኖች",
   "tools.database.emptyColumn": "ካርዶች የሉም",
   "tools.database.rowTitlePlaceholder": "አዲስ ገጽ",
   "tools.database.addRow": "ረድፍ ጨምር",

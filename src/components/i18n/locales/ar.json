@@ -409,7 +409,6 @@
   "tools.database.groupShow": "إظهار المجموعة",
   "tools.database.groupMoveToTrash": "نقل إلى سلة المهملات",
   "tools.database.groupTrashConfirm": "هل أنت متأكد؟ سيتم نقل جميع الصفحات داخل هذه المجموعة إلى سلة المهملات.",
-  "tools.database.hiddenGroups": "المجموعات المخفية",
   "tools.database.deleteCard": "حذف البطاقة",
   "tools.database.editCardTitle": "تعديل العنوان",
   "tools.database.cardMenuLabel": "خيارات البطاقة",

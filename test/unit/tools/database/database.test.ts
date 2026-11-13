@@ -4397,6 +4397,25 @@ describe('DatabaseTool', () => {
         tool.destroy();
       });
 
+      // Round 26 §1 (r26-pm-more-leaf.raw): the board's cards show no property, yet every property is a modal column.
+      it('shows the properties the board hides as modal columns', () => {
+        const schema = makeDefaultData().schema;
+        const { tool, element } = board(false, {
+          schema: [schema[0], { id: 'prop-notes', name: 'Notes', type: 'richText', position: 'a0V' }, schema[1]],
+          ...boardView({
+            pinnedGroups: [{ id: 'opt-todo' }],
+            properties: [{ id: 'prop-title', visible: true }, { id: 'prop-notes', visible: false }, { id: 'prop-status', visible: false }],
+          }),
+        });
+
+        queryByData(element, 'data-blok-database-pinned-group-open')?.click();
+        const headers = document.querySelectorAll('[data-blok-database-group-modal-panel] [role="columnheader"]');
+
+        expect([...headers].map((cell) => cell.getAttribute('data-property-id'))).toEqual(['prop-title', 'prop-status', 'prop-notes']);
+
+        tool.destroy();
+      });
+
       // Round 25 §1 (r25-modal-celledit.raw, r25-modal-nameclick.raw): a click on a cell does nothing.
       it('selects no cell on a click inside the pinned group modal', () => {
         const { tool, element } = board(false, boardView({ pinnedGroups: [{ id: 'opt-todo' }] }));

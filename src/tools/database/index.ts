@@ -7213,7 +7213,7 @@ export class DatabaseTool implements BlockTool {
   /**
    * notion-motion.md Round 25 §1: a pinned group's rows as a read-only table in a modal. The view's sorts and filters
    * carry over, the grouped property is the second column, and there is no "+ New" and no calculation row.
-   * Every property is a column (r25-pinmodal-row.raw: scrollWidth 3584); whether Notion drops ones the board hides is unread.
+   * Every property is a column, even ones the board hides (Round 26 §1, r26-pm-more-leaf.raw).
    */
   private openPinnedGroup(row: HTMLElement, optionId: string): void {
     const saved = this.shownView();

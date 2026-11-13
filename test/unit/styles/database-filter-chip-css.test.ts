@@ -90,6 +90,11 @@ describe('advanced filter popover', () => {
     expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-day]', 'width')).toEqual(['165px']);
   });
 
+  // notion-motion.md Round 22 §2 (r22-adv-cal.raw): the last day row ends 22 above the "Select a date" flyout's bottom.
+  it('leaves room under the calendar in a rule\'s day flyout', () => {
+    expect(declared('[data-blok-database-chip-date-rule] + [data-blok-database-chip-month]', 'padding-block-end')).toEqual(['var(--blok-space-4)']);
+  });
+
   // r19-adv-groupmore.raw: with a group present the outer Value field grew 164 → 215.5, so every ⋯ shares one column.
   it('lets a rule\'s value field grow so the ⋯ buttons line up', () => {
     expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-value]', 'flex')).toEqual(['1 0 auto']);

@@ -1558,7 +1558,7 @@ describe('view settings panel', () => {
       });
 
       it('clears a preset from Custom date, bringing the Select a date button back', () => {
-        const h = harness({ filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'r', propertyId: 'due', operator: 'equals', value: 'tomorrow' } as never] } });
+        const h = harness({ filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'r', propertyId: 'due', operator: 'equals', value: 'tomorrow' }] } });
 
         h.open('filter');
         click('database-filter-advanced-chip');

@@ -231,7 +231,7 @@ class FilterChipPages {
     const field = this.dayField;
 
     this.dayField = undefined;
-    if (escape || field === undefined || !field.input.isConnected) return;
+    if (escape || field === undefined || !field.input.isConnected || this.current() === undefined) return;
     const text = field.input.value.trim();
 
     if (text === '' || text === field.shown.trim()) return;

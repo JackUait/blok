@@ -1662,8 +1662,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R25_BYTES = 634;
     // Round 23 lane r27: the board card's gray pick under its ⋯ menu; title row, card button and feed pill timings; the "+ New group" plus icon.
     const DATABASE_R27_BYTES = 1366;
-    // Round 23 lane r26: the advanced Date rule's gaps (4 after the property, 16 before ⋯) and its 165-wide day button.
-    const DATABASE_R26_BYTES = 614;
+    // Round 23 lane r26: the advanced Date rule's gaps (4 after the property, 16 before ⋯), its 165-wide day button and the room under its calendar.
+    const DATABASE_R26_BYTES = 820;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

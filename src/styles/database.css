@@ -11019,6 +11019,11 @@ button[data-blok-database-table-group-count]:hover {
   padding-inline: var(--blok-space-3-5);
 }
 
+/* r22-adv-cal.raw: in a rule's day flyout the last day row ends 22 above the bottom. */
+[data-blok-database-chip-date-rule] + [data-blok-database-chip-month] {
+  padding-block-end: var(--blok-space-4);
+}
+
 /* notion-motion.md Round 21 §6 (r21-df-is-cal.raw): the calendar starts 20 under the field; ‹ › and ⊗ are 24x24. */
 [data-blok-database-chip-month] [data-blok-database-date-header] {
   margin-top: var(--blok-space-5);

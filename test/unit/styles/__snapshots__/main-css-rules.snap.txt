@@ -14192,6 +14192,10 @@ button[data-blok-database-table-group-count]:hover {
   padding-inline: var(--blok-space-3-5);
 }
 
+[data-blok-database-chip-date-rule] + [data-blok-database-chip-month] {
+  padding-block-end: var(--blok-space-4);
+}
+
 [data-blok-database-chip-month] [data-blok-database-date-header] {
   margin-top: var(--blok-space-5);
 }

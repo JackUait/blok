@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DatabaseViewControls } from '../../../../src/tools/database/database-view-controls';
 import type { ViewControlsHost } from '../../../../src/tools/database/database-view-controls';
+import { operatorPick } from '../../../../src/tools/database/database-filter-chip';
 import type { DatabaseViewConfig, FilterRule, PropertyDefinition } from '../../../../src/tools/database/types';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { hover, shownHint } from './hint-harness';
@@ -988,6 +989,22 @@ describe('DatabaseViewControls', () => {
       select.value = value;
       select.dispatchEvent(new Event('change'));
     };
+
+    // notion-motion.md Round 19 §2 (r19-date-is.raw): after a relative rule, "is" leaves the day empty and the chip goes gray.
+    it('switches a relative date filter to "is" with no day', () => {
+      const { controls, saved } = open({ operator: 'relative_to_today', value: 'this:1:week' });
+
+      click('database-filter-operator');
+      click('database-filter-op-equals');
+
+      expect(controls.effective(saved.view).filters[0]).toMatchObject({ operator: 'equals', value: null });
+      expect(q('database-filter-pill-f1')?.hasAttribute('data-active')).toBe(false);
+    });
+
+    // notion-motion.md Round 19 §1 (r19-adv-date-is.raw): an advanced Date "is" rule starts on Today.
+    it('keeps Today when a rule editor switches a span to "is"', () => {
+      expect(operatorPick(date, 'equals', { operator: 'relative_to_today', value: 'this:1:week' })).toEqual({ operator: 'equals', value: 'today' });
+    });
 
     // notion-motion.md Round 13 (r13-filter-date.png, r13-filter-ops-date.raw): "Start date ⌄ is relative to today ⌄",
     // the first button choosing Start date / End date.

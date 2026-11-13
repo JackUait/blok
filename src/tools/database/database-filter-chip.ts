@@ -39,12 +39,16 @@ const idList = (value: FilterConfig['value']): string[] => {
 
 const toggled = (ids: string[], id: string): string[] => (ids.includes(id) ? ids.filter((other) => other !== id) : [...ids, id]);
 
-/** Keeps a value the new operator can still read; otherwise starts it empty. */
-const valueFor = (property: PropertyDefinition, operator: string, value: FilterConfig['value']): FilterConfig['value'] => {
+/**
+ * Keeps a value the new operator can still read; otherwise starts it empty.
+ * `emptyDay`: the toolbar chip leaves "is" without a day after a span, as Notion's
+ * simple popover does (notion-motion.md Round 19 §2, r19-date-is.raw); a rule editor takes Today.
+ */
+const valueFor = (property: PropertyDefinition, operator: string, value: FilterConfig['value'], emptyDay: boolean): FilterConfig['value'] => {
   if (!operatorNeedsValue(operator)) return null;
   // A single day is no range: a kept 'today' would filter while the chip read empty.
   if (operator === 'is_between') return typeof value === 'string' && /^[^/]+\/[^/]+$/.test(value) ? value : null;
-  if (property.type === 'date' && parseRelativeSpan(value) !== undefined) return 'today';
+  if (property.type === 'date' && parseRelativeSpan(value) !== undefined) return emptyDay && operator === 'equals' ? null : 'today';
 
   return value;
 };
@@ -294,7 +298,7 @@ class FilterChipPages {
       testId: `database-filter-op-${choice.operator}`,
       checked: menuOperatorOf(current) === choice.operator,
       onClick: () => pick(() => {
-        this.update(operatorPick(property, choice.operator, { operator: this.current()?.operator ?? '', value: this.current()?.value ?? null }));
+        this.update(operatorPick(property, choice.operator, { operator: this.current()?.operator ?? '', value: this.current()?.value ?? null }, this.writer === undefined));
         panel.refresh();
       }),
     })));
@@ -669,11 +673,12 @@ class FilterChipPages {
 export const operatorPick = (
   property: PropertyDefinition,
   operator: string,
-  current: Pick<FilterConfig, 'operator' | 'value'>
+  current: Pick<FilterConfig, 'operator' | 'value'>,
+  emptyDay = false
 ): Pick<FilterConfig, 'operator' | 'value'> => {
   const picked = operator === 'relative_to_today'
     ? spanFilter(spanOf(current.operator, current.value) ?? DEFAULT_SPAN)
-    : { operator, value: valueFor(property, operator, current.value) };
+    : { operator, value: valueFor(property, operator, current.value, emptyDay) };
 
   return { ...picked, operator: keepLead(current.operator, picked.operator) };
 };

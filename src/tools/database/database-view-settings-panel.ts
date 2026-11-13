@@ -2268,25 +2268,26 @@ export class ViewSettingsPages {
 
     if (index > 1) return panelText(label);
 
-    return panelRow({
+    // notion-motion.md Round 19 §1 (r19-adv-andor.raw): a flyout under the button, two rows with a hint each.
+    // Blok marks the current one with a checkmark; Notion only tints it.
+    const button: HTMLElement = sortChevron(panelRow({
       label,
       testId: `database-filter-conjunction-${group.id}`,
-      opensPage: true,
-      onClick: () => panel.push({
-        build: (inner) => (['and', 'or'] as const).flatMap((conjunction) => [
-          panelRow({
-            label: this.t(conjunction === 'or' ? 'filterOr' : 'filterAnd'),
-            testId: `database-filter-conjunction-${conjunction}`,
-            checked: group.conjunction === conjunction,
-            onClick: () => {
-              write(setFilterConjunction(tree(), group.id, conjunction));
-              inner.back();
-            },
-          }),
-          panelText(this.t(conjunction === 'or' ? 'filterOrDescription' : 'filterAndDescription')),
-        ]),
-      }),
-    });
+      onClick: () => openFlyout(button, panel, 'database-filter-conjunction-picker', CONJUNCTION_FLYOUT_WIDTH, (pick) => (['and', 'or'] as const).map((conjunction) => panelRow({
+        label: this.t(conjunction === 'or' ? 'filterOr' : 'filterAnd'),
+        description: this.t(conjunction === 'or' ? 'filterOrDescription' : 'filterAndDescription'),
+        testId: `database-filter-conjunction-${conjunction}`,
+        checked: group.conjunction === conjunction,
+        onClick: () => pick(() => {
+          write(setFilterConjunction(tree(), group.id, conjunction));
+          panel.refresh();
+        }),
+      }))),
+    }));
+
+    button.setAttribute('data-blok-database-filter-conjunction', '');
+
+    return button;
   }
 
   // ─── Sorts ───
@@ -2970,6 +2971,8 @@ export const openFilterList = (anchor: HTMLElement, ctx: ViewSettingsContext, te
 
 /** notion-motion.md Round 19 §1 (r19-adv-rulemore.raw, r19-adv-groupmore.raw): the rule and group ⋯ menus. */
 const RULE_MORE_WIDTH = 150.8;
+/** notion-motion.md Round 19 §1 (r19-adv-andor.raw). */
+const CONJUNCTION_FLYOUT_WIDTH = 190.2;
 const GROUP_MORE_WIDTH = 232.4;
 /** A group Blok makes (add, turn into, wrap). Round 19 §1 saw "Or" in a new group once (r19-adv-group2.raw). */
 const NEW_GROUP_CONJUNCTION = 'or';

@@ -15665,6 +15665,22 @@ input[data-blok-database-picker-search]:focus {
   height: 32px;
 }
 
+[data-blok-database-filter-conjunction] {
+  justify-content: space-between;
+  gap: var(--blok-space-1);
+  height: 32px;
+  padding: 0 var(--blok-space-2);
+  border: 1px solid var(--blok-database-table-control-border);
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-sort-button-bg);
+  color: var(--blok-database-table-cell-text);
+  font-weight: 500;
+}
+
+[data-blok-database-filter-conjunction]:hover:not(:disabled), [data-blok-database-filter-conjunction][data-popover-open] {
+  background-color: var(--blok-database-sort-button-hover-bg);
+}
+
 [data-blok-database-filter-rule] > [data-blok-database-filter-rule-button] {
   flex: 0 0 auto;
   width: auto;

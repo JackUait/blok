@@ -447,6 +447,36 @@ describe('DatabaseViewControls', () => {
       expect(rules()[0]).toEqual(expect.objectContaining({ filterRules: [] }));
     });
 
+    // notion-motion.md Round 19 §1 (r19-adv-andor.raw): "And ⌄" opens a 190.2-wide flyout, two rows with hints.
+    it('opens And/Or as a flyout under its button, the current one checked', () => {
+      const { controls, saved } = openAdvanced();
+      const tree = (): DatabaseViewConfig['filterTree'] => controls.effective(saved.view).filterTree;
+      const rootId = tree()?.id ?? '';
+
+      click(`database-filter-add-rule-${rootId}`);
+      click('database-filter-add-rule');
+      expect(q(`database-filter-conjunction-${rootId}`)?.querySelector('[data-blok-database-chip-chevron]')).not.toBeNull();
+      click(`database-filter-conjunction-${rootId}`);
+
+      expect(panelDepthIsOne()).toBe(true);
+      expect(q('database-filter-conjunction-picker')?.style.width).toBe('190.2px');
+      const rows = [...(q('database-filter-conjunction-picker')?.querySelectorAll('[data-blok-database-panel-row]') ?? [])];
+
+      expect(rows.map((row) => [
+        text(row.querySelector('[data-blok-database-panel-label]')),
+        text(row.querySelector('[data-blok-database-panel-description]')),
+        row.getAttribute('aria-checked'),
+      ])).toEqual([
+        ['tools.database.filterAnd', 'tools.database.filterAndDescription', 'true'],
+        ['tools.database.filterOr', 'tools.database.filterOrDescription', 'false'],
+      ]);
+      click('database-filter-conjunction-or');
+
+      expect(tree()?.conjunction).toBe('or');
+      expect(q('database-filter-conjunction-picker')).toBeNull();
+      expect(text(q(`database-filter-conjunction-${rootId}`))).toBe('tools.database.filterOr');
+    });
+
     // notion-motion.md Round 19 §1 (r19-adv-group.raw, r19-adv-group2.raw): "And", then the box in the property column, then its ⋯.
     it('lays a group out as its And, its box and its ⋯, and a new group reads "Or"', () => {
       const { controls, saved } = openAdvanced();

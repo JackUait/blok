@@ -1491,6 +1491,7 @@
   "tools.database.colorAddAnother": "Tilføj en til",
   "tools.database.colorPageBackground": "Sidebaggrund",
   "tools.database.colorMatchOption": "Følg valgmulighed",
+  "tools.database.colorBackgroundHint": "{color} baggrund",
   "tools.database.colorApplyTo": "Anvend på",
   "tools.database.colorApplyRow": "Hele rækken",
   "tools.database.colorApplyProperty": "Denne egenskab",

@@ -1491,6 +1491,7 @@
   "tools.database.colorAddAnother": "צולייגן נאָך איינס",
   "tools.database.colorPageBackground": "בלאט־הינטערגרונט",
   "tools.database.colorMatchOption": "לויט דער אָפּציע",
+  "tools.database.colorBackgroundHint": "הינטערגרונט: {color}",
   "tools.database.colorApplyTo": "אָנווענדן אויף",
   "tools.database.colorApplyRow": "גאַנצע שורה",
   "tools.database.colorApplyProperty": "די אייגנשאפט",

@@ -1491,6 +1491,7 @@
   "tools.database.colorAddAnother": "Дахин нэмэх",
   "tools.database.colorPageBackground": "Хуудасны дэвсгэр",
   "tools.database.colorMatchOption": "Сонголтыг дагах",
+  "tools.database.colorBackgroundHint": "{color} дэвсгэр",
   "tools.database.colorApplyTo": "Хэрэглэх хүрээ",
   "tools.database.colorApplyRow": "Бүтэн мөр",
   "tools.database.colorApplyProperty": "Энэ шинж",

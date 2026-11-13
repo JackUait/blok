@@ -383,3 +383,46 @@ describe('conditional color rule handle (notion-motion.md Round 20 §4)', () => 
     expect(ruleBody(database, '[data-blok-database-color-rules] [data-blok-database-panel-list-item]:hover > [data-blok-database-panel-handle]')).toContain('opacity: 1');
   });
 });
+
+describe('conditional color swatches (notion-motion.md Round 20 §4, r20-cc-swatches.raw)', () => {
+  const COLORS = ['default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'];
+
+  it('lays 10 swatches in 2 rows of 5: 30x30 buttons holding 26x26 chips, radius 6', () => {
+    const grid = ruleBody(database, '[data-blok-database-color-swatches]');
+
+    expect(grid).toContain('grid-template-columns: repeat(5, 30px)');
+    expect(grid).toContain('gap: var(--blok-space-2) var(--blok-space-1)');
+    expect(grid).toContain('padding: var(--blok-space-2)');
+    const swatch = ruleBody(database, '[data-blok-database-color-swatch]');
+
+    expect(swatch).toContain('width: 30px');
+    expect(swatch).toContain('height: 30px');
+    expect(swatch).toContain('padding: var(--blok-space-0-5)');
+    expect(swatch).toContain('border-radius: var(--blok-radius-control)');
+    const chip = ruleBody(database, '[data-blok-database-color-swatch] > [data-blok-database-color-chip]');
+
+    expect(chip).toContain('width: 26px');
+    expect(chip).toContain('border-radius: var(--blok-radius-control)');
+  });
+
+  it('fills each chip with the row fill and rings it with the option colour; Default rings gray', () => {
+    for (const color of COLORS) {
+      const body = ruleBody(database, `[data-blok-database-color-chip][data-color="${color}"]`);
+
+      expect(body, color).toContain(`background-color: var(--blok-database-rule-${color}-bg)`);
+      expect(body, color).toContain(`--_blok-database-chip-ring: var(--blok-database-option-${color === 'default' ? 'gray' : color}-bg)`);
+    }
+  });
+
+  it('marks the current swatch with a neutral ring, never blue', () => {
+    expect(ruleBody(database, '[data-blok-database-color-swatch][aria-pressed="true"]')).toContain('box-shadow: inset 0 0 0 2px var(--blok-icon-active-text)');
+  });
+
+  it('shows a 16x16 chip, radius 4, before the picked colour name', () => {
+    const chip = ruleBody(database, '[data-blok-database-color-setting-value] > [data-blok-database-color-chip]');
+
+    expect(chip).toContain('width: 16px');
+    expect(chip).toContain('height: 16px');
+    expect(chip).toContain('border-radius: var(--blok-radius-control-sm)');
+  });
+});

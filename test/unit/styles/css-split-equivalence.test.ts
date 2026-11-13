@@ -1638,8 +1638,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R18B_BYTES = 2_493 + 245;
     // Dashboard widgets: the grid gaps, the widget card, its fixed header and ⋯ over a scrolling view, Add widget, the empty state, the drop line; and the hidden New button.
     const DATABASE_DASHBOARD_BYTES = 3_548;
-    // Round 20 lane r20b: a conditional color card's label / value-button lines; the rule handle on the card's edge.
-    const DATABASE_R20B_BYTES = 1_316 + 739;
+    // Round 20 lane r20b: a conditional color card's label / value-button lines; the rule handle on the card's edge; the colour swatches.
+    const DATABASE_R20B_BYTES = 1_316 + 739 + 3_258;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

@@ -1491,6 +1491,7 @@
   "tools.database.colorAddAnother": "ಇನ್ನೊಂದು ಸೇರಿಸಿ",
   "tools.database.colorPageBackground": "ಪುಟದ ಹಿನ್ನೆಲೆ",
   "tools.database.colorMatchOption": "ಆಯ್ಕೆಗೆ ಹೊಂದಿಸಿ",
+  "tools.database.colorBackgroundHint": "{color} ಹಿನ್ನೆಲೆ",
   "tools.database.colorApplyTo": "ಇದಕ್ಕೆ ಅನ್ವಯಿಸಿ",
   "tools.database.colorApplyRow": "ಸಂಪೂರ್ಣ ಸಾಲು",
   "tools.database.colorApplyProperty": "ಈ ಗುಣಲಕ್ಷಣ",

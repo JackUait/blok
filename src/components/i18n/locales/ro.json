@@ -1497,6 +1497,7 @@
   "tools.database.colorAddAnother": "Adaugă încă una",
   "tools.database.colorPageBackground": "Fundalul paginii",
   "tools.database.colorMatchOption": "Ca opțiunea",
+  "tools.database.colorBackgroundHint": "Fundal: {color}",
   "tools.database.colorApplyTo": "Aplică la",
   "tools.database.colorApplyRow": "Întregul rând",
   "tools.database.colorApplyProperty": "Această proprietate",

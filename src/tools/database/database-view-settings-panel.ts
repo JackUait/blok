@@ -1,5 +1,6 @@
 import { IconBolt, IconCalendar, IconCheck, IconChevronRight, IconChevronUpDown, IconCopy, IconCross, IconDatabase, IconDotsHorizontal, IconEyeSlash, IconFilter, IconGallery, IconLink, IconListBulleted, IconLock, IconPaintRoller, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
 import type { I18n } from '../../../types';
+import { onHover } from '../../components/utils/tooltip';
 import {
   DatabasePanel,
   panelCloseButton,
@@ -2782,6 +2783,57 @@ export class ViewSettingsPages {
 
   // ─── Conditional color ───
 
+  /**
+   * notion-motion.md Round 20 §4 (r20-cc-bg.raw, r20-cc-swatches.raw): a 190-wide flyout under the value.
+   * A Select rule first gets a focused "Match option" switch and a divider; then 10 swatches with no names,
+   * hinted "Blue background". A pick closes it. Blok marks the current swatch with a neutral ring, not
+   * Notion's blue one (no-blue law); the switch stays blue (approved).
+   */
+  private colorPicker(
+    anchor: HTMLButtonElement,
+    panel: DatabasePanel,
+    property: PropertyDefinition | undefined,
+    current: () => string | undefined,
+    write: (color: string) => void
+  ): void {
+    const picker = openFlyout(anchor, panel, 'database-color-background-picker', COLOR_PICKER_WIDTH, (pick) => {
+      const grid = document.createElement('div');
+
+      grid.setAttribute('data-blok-database-color-swatches', '');
+      grid.append(...COLORS.map((color) => {
+        const swatch = document.createElement('button');
+        const chip = document.createElement('span');
+        const hint = this.t('colorBackgroundHint', { color: this.t(`color${capital(color)}`) });
+
+        swatch.type = 'button';
+        swatch.setAttribute('data-blok-database-color-swatch', '');
+        swatch.setAttribute('data-color', color);
+        swatch.setAttribute('data-blok-testid', `database-color-pick-${color}`);
+        swatch.setAttribute('aria-label', hint);
+        swatch.setAttribute('aria-pressed', String(current() === color));
+        chip.setAttribute('data-blok-database-color-chip', '');
+        chip.setAttribute('data-color', color);
+        swatch.append(chip);
+        onHover(swatch, hint);
+        swatch.addEventListener('click', () => pick(() => write(color)));
+
+        return swatch;
+      }));
+      if (property?.type !== 'select') return [grid];
+
+      // Turning it off is unmeasured: the rule takes Default, the first swatch.
+      return [panelSwitch({
+        label: this.t('colorMatchOption'),
+        testId: 'database-color-match-option',
+        checked: current() === MATCH_OPTION_COLOR,
+        onToggle: (on) => pick(() => write(on ? MATCH_OPTION_COLOR : 'default')),
+      }), panelSeparator(), grid];
+    });
+
+    picker.root.querySelector<HTMLElement>('[data-blok-testid="database-color-match-option"]')?.focus();
+  }
+
+
   private colors(): PanelPage {
     const rules = (): ColorRule[] => this.ctx.view().colorRules ?? [];
     const write = (next: ColorRule[]): void => this.ctx.updateView({ colorRules: next });
@@ -2816,25 +2868,9 @@ export class ViewSettingsPages {
               label: this.t('colorPageBackground'),
               testId: `database-color-background-${rule.id}`,
               value: this.t(rule.color === MATCH_OPTION_COLOR ? 'colorMatchOption' : `color${capital(rule.color)}`),
+              chip: rule.color === MATCH_OPTION_COLOR ? undefined : rule.color,
               disabled,
-              onClick: () => panel.push({
-                title: this.t('colorPageBackground'),
-                build: (inner) => COLORS.map((color) => {
-                  const row = panelRow({
-                    label: this.t(`color${capital(color)}`),
-                    testId: `database-color-pick-${color}`,
-                    checked: (rules().find((r) => r.id === rule.id)?.color ?? '') === color,
-                    onClick: () => {
-                      patch(rule.id, { color });
-                      inner.back();
-                    },
-                  });
-
-                  row.setAttribute('data-color', color);
-
-                  return row;
-                }),
-              }),
+              onClick: (button) => this.colorPicker(button, panel, property, () => rules().find((r) => r.id === rule.id)?.color, (color) => patch(rule.id, { color })),
             })
           );
           if (view.type === 'table') {
@@ -2931,6 +2967,9 @@ const colorRuleList = (list: HTMLElement): HTMLElement => {
   return list;
 };
 
+/** notion-motion.md Round 20 §4 (r20-cc-bg.raw): the colour picker is 190 wide. */
+const COLOR_PICKER_WIDTH = 190;
+
 /** notion-motion.md Round 20 §4 (r20-cc-apply.raw): 112.6 wide in English; a longer label widens it. */
 const APPLY_FLYOUT_WIDTH = 112;
 
@@ -2938,7 +2977,7 @@ const APPLY_FLYOUT_WIDTH = 112;
  * A conditional color card's "Page background" / "Apply to" line. Only the
  * value is a button, and its flyout opens under it (notion-motion.md Round 20 §4).
  */
-const colorSetting = (options: { label: string; testId: string; value: string; disabled: boolean; onClick: (button: HTMLButtonElement) => void }): HTMLElement => {
+const colorSetting = (options: { label: string; testId: string; value: string; chip?: string; disabled: boolean; onClick: (button: HTMLButtonElement) => void }): HTMLElement => {
   const line = document.createElement('div');
   const label = document.createElement('span');
   const button = document.createElement('button');
@@ -2956,6 +2995,14 @@ const colorSetting = (options: { label: string; testId: string; value: string; d
   text.textContent = options.value;
   chevron.setAttribute('aria-hidden', 'true');
   chevron.innerHTML = IconChevronRight;
+  if (options.chip !== undefined) {
+    const chip = document.createElement('span');
+
+    chip.setAttribute('data-blok-database-color-chip', '');
+    chip.setAttribute('data-color', options.chip);
+    chip.setAttribute('aria-hidden', 'true');
+    button.append(chip);
+  }
   button.append(text, chevron);
   button.addEventListener('click', () => options.onClick(button));
   line.append(label, button);

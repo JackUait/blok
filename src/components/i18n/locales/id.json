@@ -1491,6 +1491,7 @@
   "tools.database.colorAddAnother": "Tambah lagi",
   "tools.database.colorPageBackground": "Latar halaman",
   "tools.database.colorMatchOption": "Sesuaikan opsi",
+  "tools.database.colorBackgroundHint": "Latar: {color}",
   "tools.database.colorApplyTo": "Terapkan ke",
   "tools.database.colorApplyRow": "Seluruh baris",
   "tools.database.colorApplyProperty": "Properti ini",

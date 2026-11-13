@@ -1503,6 +1503,7 @@
   "tools.database.colorAddAnother": "Pridėti dar vieną",
   "tools.database.colorPageBackground": "Puslapio fonas",
   "tools.database.colorMatchOption": "Pagal parinktį",
+  "tools.database.colorBackgroundHint": "Fonas: {color}",
   "tools.database.colorApplyTo": "Taikyti",
   "tools.database.colorApplyRow": "Visai eilutei",
   "tools.database.colorApplyProperty": "Šiai savybei",

@@ -1491,6 +1491,7 @@
   "tools.database.colorAddAnother": "하나 더 추가",
   "tools.database.colorPageBackground": "페이지 배경",
   "tools.database.colorMatchOption": "옵션과 일치",
+  "tools.database.colorBackgroundHint": "{color} 배경",
   "tools.database.colorApplyTo": "적용 대상",
   "tools.database.colorApplyRow": "행 전체",
   "tools.database.colorApplyProperty": "이 속성",

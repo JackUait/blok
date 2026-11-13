@@ -1515,6 +1515,7 @@
   "tools.database.colorAddAnother": "إضافة آخر",
   "tools.database.colorPageBackground": "خلفية الصفحة",
   "tools.database.colorMatchOption": "مطابقة الخيار",
+  "tools.database.colorBackgroundHint": "خلفية {color}",
   "tools.database.colorApplyTo": "تطبيق على",
   "tools.database.colorApplyRow": "الصف بأكمله",
   "tools.database.colorApplyProperty": "هذه الخاصية",

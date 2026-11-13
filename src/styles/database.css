@@ -12618,6 +12618,65 @@ input[data-blok-database-picker-search]:focus {
   color: var(--blok-database-table-gutter-icon);
 }
 
+/* Colour picker (notion-motion.md Round 20 §4, r20-cc-swatches.raw): 2 rows of 5 swatches. A chip's fill is
+   the row fill; its 1px ring is the option tag colour (Default rings like Gray). Hover is unmeasured. */
+[data-blok-database-color-swatches] {
+  display: grid;
+  grid-template-columns: repeat(5, 30px);
+  gap: var(--blok-space-2) var(--blok-space-1);
+  justify-content: space-between;
+  padding: var(--blok-space-2);
+}
+
+[data-blok-database-color-swatch] {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  padding: var(--blok-space-0-5);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  cursor: pointer;
+}
+
+[data-blok-database-color-swatch]:hover,
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-database-color-swatch]:focus-visible {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+/* Notion rings the current swatch blue; Blok's selected states stay neutral. */
+[data-blok-database-color-swatch][aria-pressed="true"] {
+  box-shadow: inset 0 0 0 2px var(--blok-icon-active-text);
+}
+
+[data-blok-database-color-chip] {
+  flex: 0 0 auto;
+  box-shadow: inset 0 0 0 1px var(--_blok-database-chip-ring);
+}
+
+[data-blok-database-color-swatch] > [data-blok-database-color-chip] {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--blok-radius-control);
+}
+
+[data-blok-database-color-setting-value] > [data-blok-database-color-chip] {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--blok-radius-control-sm);
+}
+
+[data-blok-database-color-chip][data-color="default"] { --_blok-database-chip-ring: var(--blok-database-option-gray-bg); background-color: var(--blok-database-rule-default-bg); }
+[data-blok-database-color-chip][data-color="gray"] { --_blok-database-chip-ring: var(--blok-database-option-gray-bg); background-color: var(--blok-database-rule-gray-bg); }
+[data-blok-database-color-chip][data-color="brown"] { --_blok-database-chip-ring: var(--blok-database-option-brown-bg); background-color: var(--blok-database-rule-brown-bg); }
+[data-blok-database-color-chip][data-color="orange"] { --_blok-database-chip-ring: var(--blok-database-option-orange-bg); background-color: var(--blok-database-rule-orange-bg); }
+[data-blok-database-color-chip][data-color="yellow"] { --_blok-database-chip-ring: var(--blok-database-option-yellow-bg); background-color: var(--blok-database-rule-yellow-bg); }
+[data-blok-database-color-chip][data-color="green"] { --_blok-database-chip-ring: var(--blok-database-option-green-bg); background-color: var(--blok-database-rule-green-bg); }
+[data-blok-database-color-chip][data-color="blue"] { --_blok-database-chip-ring: var(--blok-database-option-blue-bg); background-color: var(--blok-database-rule-blue-bg); }
+[data-blok-database-color-chip][data-color="purple"] { --_blok-database-chip-ring: var(--blok-database-option-purple-bg); background-color: var(--blok-database-rule-purple-bg); }
+[data-blok-database-color-chip][data-color="pink"] { --_blok-database-chip-ring: var(--blok-database-option-pink-bg); background-color: var(--blok-database-rule-pink-bg); }
+[data-blok-database-color-chip][data-color="red"] { --_blok-database-chip-ring: var(--blok-database-option-red-bg); background-color: var(--blok-database-rule-red-bg); }
+
 [data-blok-database-filter-rule] > [data-blok-database-panel-note] {
   flex: 0 0 48px;
   padding-block: 0;

@@ -1497,6 +1497,7 @@
   "tools.database.colorAddAnother": "Adicionar outra",
   "tools.database.colorPageBackground": "Fundo da página",
   "tools.database.colorMatchOption": "Igual à opção",
+  "tools.database.colorBackgroundHint": "Fundo: {color}",
   "tools.database.colorApplyTo": "Aplicar a",
   "tools.database.colorApplyRow": "Linha inteira",
   "tools.database.colorApplyProperty": "Esta propriedade",

@@ -1491,6 +1491,7 @@
   "tools.database.colorAddAnother": "Lägg till en till",
   "tools.database.colorPageBackground": "Sidbakgrund",
   "tools.database.colorMatchOption": "Följ alternativet",
+  "tools.database.colorBackgroundHint": "{color} bakgrund",
   "tools.database.colorApplyTo": "Tillämpa på",
   "tools.database.colorApplyRow": "Hela raden",
   "tools.database.colorApplyProperty": "Denna egenskap",

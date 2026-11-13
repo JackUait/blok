@@ -1491,6 +1491,7 @@
   "tools.database.colorAddAnother": "एक और जोड़ें",
   "tools.database.colorPageBackground": "पृष्ठ की पृष्ठभूमि",
   "tools.database.colorMatchOption": "विकल्प से मिलाएँ",
+  "tools.database.colorBackgroundHint": "{color} पृष्ठभूमि",
   "tools.database.colorApplyTo": "इस पर लागू करें",
   "tools.database.colorApplyRow": "पूरी पंक्ति",
   "tools.database.colorApplyProperty": "यह प्रॉपर्टी",

@@ -1503,6 +1503,7 @@
   "tools.database.colorAddAnother": "Pridať ďalšie",
   "tools.database.colorPageBackground": "Pozadie stránky",
   "tools.database.colorMatchOption": "Podľa možnosti",
+  "tools.database.colorBackgroundHint": "Pozadie: {color}",
   "tools.database.colorApplyTo": "Použiť na",
   "tools.database.colorApplyRow": "Celý riadok",
   "tools.database.colorApplyProperty": "Táto vlastnosť",

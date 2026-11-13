@@ -1491,6 +1491,7 @@
   "tools.database.colorAddAnother": "ເພີ່ມອີກ",
   "tools.database.colorPageBackground": "ພື້ນຫຼັງໜ້າ",
   "tools.database.colorMatchOption": "ຕາມຕົວເລືອກ",
+  "tools.database.colorBackgroundHint": "ພື້ນຫຼັງ{color}",
   "tools.database.colorApplyTo": "ນຳໃຊ້ກັບ",
   "tools.database.colorApplyRow": "ທັງແຖວ",
   "tools.database.colorApplyProperty": "ຄຸນສົມບັດນີ້",

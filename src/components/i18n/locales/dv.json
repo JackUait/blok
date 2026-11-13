@@ -1491,6 +1491,7 @@
   "tools.database.colorAddAnother": "އަނެއްކާ އެއް އިތުރުކުރޭ",
   "tools.database.colorPageBackground": "ޞަފްޙާގެ ފަސްބިން",
   "tools.database.colorMatchOption": "އޮޕްޝަނާ އެއްގޮތްކުރޭ",
+  "tools.database.colorBackgroundHint": "ބެކްގްރައުންޑް: {color}",
   "tools.database.colorApplyTo": "ލާގޫކުރާނީ",
   "tools.database.colorApplyRow": "މުޅި ރޯ",
   "tools.database.colorApplyProperty": "މި ޕްރޮޕަރޓީ",

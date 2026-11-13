@@ -1491,6 +1491,7 @@
   "tools.database.colorAddAnother": "再新增一個",
   "tools.database.colorPageBackground": "頁面背景",
   "tools.database.colorMatchOption": "符合選項",
+  "tools.database.colorBackgroundHint": "{color}背景",
   "tools.database.colorApplyTo": "套用至",
   "tools.database.colorApplyRow": "整列",
   "tools.database.colorApplyProperty": "此屬性",

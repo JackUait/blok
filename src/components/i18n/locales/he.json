@@ -1497,6 +1497,7 @@
   "tools.database.colorAddAnother": "הוסף עוד",
   "tools.database.colorPageBackground": "רקע הדף",
   "tools.database.colorMatchOption": "התאמה לאפשרות",
+  "tools.database.colorBackgroundHint": "רקע {color}",
   "tools.database.colorApplyTo": "החל על",
   "tools.database.colorApplyRow": "כל השורה",
   "tools.database.colorApplyProperty": "מאפיין זה",

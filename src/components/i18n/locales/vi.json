@@ -1491,6 +1491,7 @@
   "tools.database.colorAddAnother": "Thêm cái khác",
   "tools.database.colorPageBackground": "Nền trang",
   "tools.database.colorMatchOption": "Theo tùy chọn",
+  "tools.database.colorBackgroundHint": "Nền: {color}",
   "tools.database.colorApplyTo": "Áp dụng cho",
   "tools.database.colorApplyRow": "Toàn bộ hàng",
   "tools.database.colorApplyProperty": "Thuộc tính này",

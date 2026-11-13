@@ -2012,6 +2012,63 @@ describe('view settings panel', () => {
     expect(h.state.view.colorRules?.map((rule) => rule.id)).toEqual(['c2', 'c1']);
   });
 
+  // notion-motion.md Round 20 §4 (r20-cc-bg.raw, r20-cc-swatches.raw): a 190-wide flyout, Match option, 10 swatches.
+  describe('conditional color picker', () => {
+    const COLORS = ['default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'];
+
+    it('opens under the value with a focused Match option switch and ten unnamed swatches', () => {
+      const h = harness({ colorRules: [{ id: 'c1', propertyId: 'stage', operator: 'is_not_empty', value: null, color: 'match' }] });
+      const panel = h.open();
+
+      click('database-settings-color');
+      click('database-color-background-c1');
+      const flyout = q('database-color-background-picker');
+      const toggle = q('database-color-match-option');
+
+      expect(flyout?.style.width).toBe('190px');
+      expect(panel.root.contains(flyout)).toBe(false);
+      expect(toggle?.getAttribute('aria-checked')).toBe('true');
+      expect(toggle).toHaveFocus();
+      expect([...(flyout?.querySelectorAll('[data-blok-database-color-swatch]') ?? [])].map((el) => el.getAttribute('data-color'))).toEqual(COLORS);
+      expect(q('database-color-pick-blue')?.textContent).toBe('');
+      expect(q('database-color-pick-blue')?.getAttribute('aria-label')).toBe('tools.database.colorBackgroundHint');
+    });
+
+    it('closes on a swatch pick, turns Match option off and shows the swatch before the name', () => {
+      const h = harness({ colorRules: [{ id: 'c1', propertyId: 'stage', operator: 'is_not_empty', value: null, color: 'match' }] });
+
+      h.open();
+      click('database-settings-color');
+      click('database-color-background-c1');
+      click('database-color-pick-blue');
+
+      expect(h.state.view.colorRules?.[0].color).toBe('blue');
+      expect(q('database-color-background-picker')).toBeNull();
+      expect(q('database-color-background-c1')?.querySelector('[data-blok-database-color-chip]')?.getAttribute('data-color')).toBe('blue');
+
+      click('database-color-background-c1');
+
+      expect(q('database-color-match-option')?.getAttribute('aria-checked')).toBe('false');
+      expect(q('database-color-pick-blue')?.getAttribute('aria-pressed')).toBe('true');
+      expect(q('database-color-pick-red')?.getAttribute('aria-pressed')).toBe('false');
+
+      click('database-color-match-option');
+
+      expect(h.state.view.colorRules?.[0].color).toBe('match');
+    });
+
+    it('has no Match option for a rule on a property without options', () => {
+      const h = harness({ colorRules: [{ id: 'c1', propertyId: 'num', operator: 'is_not_empty', value: null, color: 'gray' }] });
+
+      h.open();
+      click('database-settings-color');
+      click('database-color-background-c1');
+
+      expect(q('database-color-background-picker')).not.toBeNull();
+      expect(q('database-color-match-option')).toBeNull();
+    });
+  });
+
   it('blocks shared edits while locked, but not personal filters', () => {
     const h = harness();
 

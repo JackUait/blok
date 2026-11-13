@@ -1491,6 +1491,7 @@
   "tools.database.colorAddAnother": "ਇੱਕ ਹੋਰ ਜੋੜੋ",
   "tools.database.colorPageBackground": "ਪੰਨੇ ਦਾ ਪਿਛੋਕੜ",
   "tools.database.colorMatchOption": "ਵਿਕਲਪ ਨਾਲ ਮਿਲਾਓ",
+  "tools.database.colorBackgroundHint": "{color} ਪਿਛੋਕੜ",
   "tools.database.colorApplyTo": "ਇਸ 'ਤੇ ਲਾਗੂ ਕਰੋ",
   "tools.database.colorApplyRow": "ਪੂਰੀ ਕਤਾਰ",
   "tools.database.colorApplyProperty": "ਇਹ ਵਿਸ਼ੇਸ਼ਤਾ",

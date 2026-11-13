@@ -773,6 +773,7 @@ export type BlokMessageKey =
   | 'tools.database.colorApplyProperty'
   | 'tools.database.colorApplyRow'
   | 'tools.database.colorApplyTo'
+  | 'tools.database.colorBackgroundHint'
   | 'tools.database.colorBlue'
   | 'tools.database.colorBlurb'
   | 'tools.database.colorBrown'

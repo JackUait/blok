@@ -1491,6 +1491,7 @@
   "tools.database.colorAddAnother": "മറ്റൊന്ന് ചേർക്കുക",
   "tools.database.colorPageBackground": "പേജ് പശ്ചാത്തലം",
   "tools.database.colorMatchOption": "ഓപ്ഷനുമായി പൊരുത്തപ്പെടുത്തുക",
+  "tools.database.colorBackgroundHint": "{color} പശ്ചാത്തലം",
   "tools.database.colorApplyTo": "ഇതിൽ പ്രയോഗിക്കുക",
   "tools.database.colorApplyRow": "മുഴുവൻ വരി",
   "tools.database.colorApplyProperty": "ഈ പ്രോപ്പർട്ടി",

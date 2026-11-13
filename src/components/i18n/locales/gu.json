@@ -1491,6 +1491,7 @@
   "tools.database.colorAddAnother": "બીજું ઉમેરો",
   "tools.database.colorPageBackground": "પૃષ્ઠની પૃષ્ઠભૂમિ",
   "tools.database.colorMatchOption": "વિકલ્પ સાથે મેળવો",
+  "tools.database.colorBackgroundHint": "{color} પૃષ્ઠભૂમિ",
   "tools.database.colorApplyTo": "આના પર લાગુ કરો",
   "tools.database.colorApplyRow": "આખી પંક્તિ",
   "tools.database.colorApplyProperty": "આ ગુણધર્મ",

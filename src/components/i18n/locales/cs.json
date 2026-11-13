@@ -1503,6 +1503,7 @@
   "tools.database.colorAddAnother": "Přidat další",
   "tools.database.colorPageBackground": "Pozadí stránky",
   "tools.database.colorMatchOption": "Podle možnosti",
+  "tools.database.colorBackgroundHint": "Pozadí: {color}",
   "tools.database.colorApplyTo": "Použít na",
   "tools.database.colorApplyRow": "Celý řádek",
   "tools.database.colorApplyProperty": "Tato vlastnost",

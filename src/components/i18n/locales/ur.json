@@ -1491,6 +1491,7 @@
   "tools.database.colorAddAnother": "ایک اور شامل کریں",
   "tools.database.colorPageBackground": "صفحے کا پس منظر",
   "tools.database.colorMatchOption": "آپشن سے میل",
+  "tools.database.colorBackgroundHint": "{color} پس منظر",
   "tools.database.colorApplyTo": "لاگو کریں",
   "tools.database.colorApplyRow": "پوری قطار",
   "tools.database.colorApplyProperty": "یہ پراپرٹی",

@@ -1491,6 +1491,7 @@
   "tools.database.colorAddAnother": "Προσθήκη άλλης",
   "tools.database.colorPageBackground": "Φόντο σελίδας",
   "tools.database.colorMatchOption": "Αντιστοίχιση επιλογής",
+  "tools.database.colorBackgroundHint": "Φόντο: {color}",
   "tools.database.colorApplyTo": "Εφαρμογή σε",
   "tools.database.colorApplyRow": "Ολόκληρη τη γραμμή",
   "tools.database.colorApplyProperty": "Αυτή η ιδιότητα",

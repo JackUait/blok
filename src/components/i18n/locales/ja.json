@@ -1493,6 +1493,7 @@
   "tools.database.colorAddAnother": "さらに追加",
   "tools.database.colorPageBackground": "ページの背景",
   "tools.database.colorMatchOption": "オプションに合わせる",
+  "tools.database.colorMatchFirstOption": "最初のオプションに合わせる",
   "tools.database.colorBackgroundHint": "{color}の背景",
   "tools.database.colorApplyTo": "適用先",
   "tools.database.colorApplyRow": "行全体",

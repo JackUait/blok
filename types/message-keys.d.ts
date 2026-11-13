@@ -781,6 +781,7 @@ export type BlokMessageKey =
   | 'tools.database.colorDelete'
   | 'tools.database.colorGray'
   | 'tools.database.colorGreen'
+  | 'tools.database.colorMatchFirstOption'
   | 'tools.database.colorMatchOption'
   | 'tools.database.colorNew'
   | 'tools.database.colorOrange'

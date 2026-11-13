@@ -3,7 +3,8 @@ import { DatabaseModel } from '../../../../src/tools/database/database-model';
 import { openFilterPill, openViewSettings } from '../../../../src/tools/database/database-view-settings-panel';
 import type { ViewSettingsContext, ViewSettingsStart } from '../../../../src/tools/database/database-view-settings-panel';
 import type { DatabasePanel } from '../../../../src/tools/database/database-panel';
-import type { DatabaseViewConfig, FilterGroup, FilterRule, PropertyDefinition } from '../../../../src/tools/database/types';
+import type { ColorRule, DatabaseViewConfig, FilterGroup, FilterRule, PropertyDefinition } from '../../../../src/tools/database/types';
+import { COLOR_RULE_TYPES } from '../../../../src/tools/database/view-data';
 import { IconTable, IconViewBoard } from '../../../../src/components/icons';
 import { PopoverItemType } from '../../../../src/components/utils/popover/components/popover-item';
 import { PAGE_LIST_ROLLUP } from '../../../../src/shared/database/value-helpers';
@@ -1942,8 +1943,10 @@ describe('view settings panel', () => {
     click('database-pick-property-num');
     const [rule] = h.state.view.colorRules ?? [];
 
-    expect(rule).toMatchObject({ propertyId: 'num', operator: 'is_not_empty', color: 'gray' });
+    expect(rule).toMatchObject({ propertyId: 'num', operator: 'is_not_empty', color: 'green' });
 
+    click(`database-color-background-${rule.id}`);
+    click('database-color-pick-gray');
     click(`database-color-background-${rule.id}`);
     click('database-color-pick-green');
     click(`database-color-apply-${rule.id}`);
@@ -1986,7 +1989,7 @@ describe('view settings panel', () => {
     expect(en['tools.database.colorApplyProperty']).toBe('This property');
   });
 
-  // notion-motion.md Round 20 §4: a new Select rule starts on "Match option"; other types keep gray (unmeasured).
+  // notion-motion.md Round 20 §4: a new Select rule starts on "Match option".
   it('starts a new Select rule on "Match option"', () => {
     const h = harness();
 
@@ -1998,6 +2001,98 @@ describe('view settings panel', () => {
 
     expect(rule).toMatchObject({ propertyId: 'stage', color: 'match' });
     expect(q(`database-color-background-${rule.id}`)?.textContent?.trim()).toBe('tools.database.colorMatchOption');
+  });
+
+  // notion-motion.md Round 21 §1: what a new rule starts on, per type, also as a second rule.
+  describe('a new conditional color rule (Round 21)', () => {
+    const typed: PropertyDefinition[] = [
+      ...schema,
+      { id: 'txt', name: 'Notes', type: 'text', position: 'b0' },
+      { id: 'cb', name: 'Done', type: 'checkbox', position: 'b1' },
+      { id: 'tags', name: 'Tags', type: 'multiSelect', position: 'b2', config: { options: [{ id: 'm1', label: 'One', position: 'a0' }] } },
+      { id: 'f', name: 'Formula', type: 'formula', position: 'b3' },
+      { id: 'rel', name: 'Rel', type: 'relation', position: 'b4', relation: { targetDatabaseId: 'x' } },
+      { id: 'roll', name: 'Roll', type: 'rollup', position: 'b5' },
+      { id: 'cby', name: 'Created by', type: 'createdBy', position: 'b6' },
+      { id: 'ct', name: 'Created', type: 'createdTime', position: 'b7' },
+      { id: 'lby', name: 'Edited by', type: 'lastEditedBy', position: 'b8' },
+      { id: 'lt', name: 'Edited', type: 'lastEditedTime', position: 'b9' },
+    ];
+    const add = (h: Harness, id: string): ColorRule => {
+      click('database-color-add');
+      click(`database-pick-property-${id}`);
+      const rules = h.state.view.colorRules ?? [];
+
+      return rules[rules.length - 1];
+    };
+    const open = (view: Partial<DatabaseViewConfig> = {}): Harness => {
+      const h = harness(view);
+
+      h.ctx.schema = () => typed;
+      h.open();
+      click('database-settings-color');
+
+      return h;
+    };
+
+    it.each([
+      ['txt', 'green'], ['num', 'green'], ['due', 'green'], ['cb', 'green'], ['owner', 'green'],
+      ['stage', 'match'], ['prog', 'match'], ['tags', 'match'],
+    ])('starts %s on %s, first or second', (id, color) => {
+      const h = open();
+
+      expect(add(h, id).color).toBe(color);
+      expect(add(h, id).color).toBe(color);
+    });
+
+    it('starts Checkbox on "is" with no value and every other type on "is not empty"', () => {
+      const h = open();
+
+      expect(add(h, 'cb')).toMatchObject({ operator: 'equals', value: null });
+      expect(add(h, 'prog')).toMatchObject({ operator: 'is_not_empty', value: null });
+      expect(add(h, 'txt')).toMatchObject({ operator: 'is_not_empty', value: null });
+    });
+
+    it('never starts a rule on an operator its own flyout cannot offer', () => {
+      const h = open();
+
+      for (const property of typed.filter((p) => COLOR_RULE_TYPES.includes(p.type))) {
+        const rule = add(h, property.id);
+
+        click(`database-color-operator-${rule.id}`);
+        const picked = document.querySelector('[data-blok-testid="database-filter-operator-picker"] [aria-checked="true"]');
+
+        expect(picked?.getAttribute('data-blok-testid'), property.type).toBe(`database-filter-op-${rule.operator}`);
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        q('database-filter-operator-picker')?.closest('[data-blok-popover]')?.remove();
+      }
+    });
+
+    // The Status filter keeps Is, Is not (database-filter-labels.test.ts).
+    it('offers Is, Is not, Is empty, Is not empty on a Status rule', () => {
+      open({ colorRules: [{ id: 'c1', propertyId: 'prog', operator: 'is_not_empty', value: null, color: 'match' }] });
+      const ops = (): (string | null)[] => [...document.querySelectorAll('[data-blok-testid="database-filter-operator-picker"] [data-blok-testid^="database-filter-op-"]')]
+        .map((el) => el.getAttribute('data-blok-testid'));
+
+      click('database-color-operator-c1');
+      expect(ops()).toEqual(['database-filter-op-equals', 'database-filter-op-does_not_equal', 'database-filter-op-is_empty', 'database-filter-op-is_not_empty']);
+    });
+
+    it('labels the Multi-select switch and value "Match first option", Status "Match option"', () => {
+      open({ colorRules: [
+        { id: 'c1', propertyId: 'tags', operator: 'is_not_empty', value: null, color: 'match' },
+        { id: 'c2', propertyId: 'prog', operator: 'is_not_empty', value: null, color: 'match' },
+      ] });
+
+      expect(q('database-color-background-c1')?.textContent?.trim()).toBe('tools.database.colorMatchFirstOption');
+      expect(q('database-color-background-c2')?.textContent?.trim()).toBe('tools.database.colorMatchOption');
+      click('database-color-background-c1');
+      expect(q('database-color-match-option')?.textContent).toContain('tools.database.colorMatchFirstOption');
+      expect(q('database-color-match-option')?.getAttribute('aria-checked')).toBe('true');
+      click('database-color-pick-red');
+      click('database-color-background-c2');
+      expect(q('database-color-match-option')?.textContent).toContain('tools.database.colorMatchOption');
+    });
   });
 
   // notion-motion.md Round 20 §4: a ⠿ handle on each card reorders the rules; the order is their priority.

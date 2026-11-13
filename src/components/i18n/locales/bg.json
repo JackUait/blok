@@ -1493,6 +1493,7 @@
   "tools.database.colorAddAnother": "Добави още",
   "tools.database.colorPageBackground": "Фон на страницата",
   "tools.database.colorMatchOption": "Като опцията",
+  "tools.database.colorMatchFirstOption": "Като първата опция",
   "tools.database.colorBackgroundHint": "Фон: {color}",
   "tools.database.colorApplyTo": "Приложи към",
   "tools.database.colorApplyRow": "Целия ред",

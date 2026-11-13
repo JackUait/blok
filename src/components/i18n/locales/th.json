@@ -1493,6 +1493,7 @@
   "tools.database.colorAddAnother": "เพิ่มอีก",
   "tools.database.colorPageBackground": "พื้นหลังหน้า",
   "tools.database.colorMatchOption": "ตามตัวเลือก",
+  "tools.database.colorMatchFirstOption": "ตามตัวเลือกแรก",
   "tools.database.colorBackgroundHint": "พื้นหลัง{color}",
   "tools.database.colorApplyTo": "ใช้กับ",
   "tools.database.colorApplyRow": "ทั้งแถว",

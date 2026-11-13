@@ -1493,6 +1493,7 @@
   "tools.database.colorAddAnother": "Ավելացնել ևս մեկը",
   "tools.database.colorPageBackground": "Էջի ֆոն",
   "tools.database.colorMatchOption": "Ըստ տարբերակի",
+  "tools.database.colorMatchFirstOption": "Ըստ առաջին տարբերակի",
   "tools.database.colorBackgroundHint": "{color} ֆոն",
   "tools.database.colorApplyTo": "Կիրառել",
   "tools.database.colorApplyRow": "Ամբողջ տողին",

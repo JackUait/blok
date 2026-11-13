@@ -1493,6 +1493,7 @@
   "tools.database.colorAddAnother": "আরেকটি যোগ করুন",
   "tools.database.colorPageBackground": "পৃষ্ঠার পটভূমি",
   "tools.database.colorMatchOption": "বিকল্পের সাথে মেলান",
+  "tools.database.colorMatchFirstOption": "প্রথম বিকল্পের সাথে মেলান",
   "tools.database.colorBackgroundHint": "{color} পটভূমি",
   "tools.database.colorApplyTo": "যেখানে প্রয়োগ হবে",
   "tools.database.colorApplyRow": "পুরো সারি",

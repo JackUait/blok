@@ -1505,6 +1505,7 @@
   "tools.database.colorAddAnother": "Dodaj kolejne",
   "tools.database.colorPageBackground": "Tło strony",
   "tools.database.colorMatchOption": "Zgodnie z opcją",
+  "tools.database.colorMatchFirstOption": "Zgodnie z pierwszą opcją",
   "tools.database.colorBackgroundHint": "Tło: {color}",
   "tools.database.colorApplyTo": "Zastosuj do",
   "tools.database.colorApplyRow": "Cały wiersz",

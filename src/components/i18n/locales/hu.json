@@ -1493,6 +1493,7 @@
   "tools.database.colorAddAnother": "Újabb hozzáadása",
   "tools.database.colorPageBackground": "Oldal háttere",
   "tools.database.colorMatchOption": "Opcióhoz igazítás",
+  "tools.database.colorMatchFirstOption": "Első opcióhoz igazítás",
   "tools.database.colorBackgroundHint": "{color} háttér",
   "tools.database.colorApplyTo": "Alkalmazás erre",
   "tools.database.colorApplyRow": "Teljes sor",

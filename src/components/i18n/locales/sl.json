@@ -1505,6 +1505,7 @@
   "tools.database.colorAddAnother": "Dodaj še eno",
   "tools.database.colorPageBackground": "Ozadje strani",
   "tools.database.colorMatchOption": "Ujemanje z možnostjo",
+  "tools.database.colorMatchFirstOption": "Ujemanje s prvo možnostjo",
   "tools.database.colorBackgroundHint": "Ozadje: {color}",
   "tools.database.colorApplyTo": "Uporabi za",
   "tools.database.colorApplyRow": "Celotno vrstico",

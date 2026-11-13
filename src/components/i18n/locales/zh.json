@@ -1493,6 +1493,7 @@
   "tools.database.colorAddAnother": "再添加一个",
   "tools.database.colorPageBackground": "页面背景",
   "tools.database.colorMatchOption": "匹配选项",
+  "tools.database.colorMatchFirstOption": "匹配第一个选项",
   "tools.database.colorBackgroundHint": "{color}背景",
   "tools.database.colorApplyTo": "应用于",
   "tools.database.colorApplyRow": "整行",

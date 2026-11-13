@@ -104,6 +104,43 @@ describe('view-data', () => {
       expect(resolveRowColors([one], view({ colorRules: [{ ...rule, applyTo: 'property' }] }), typed).get('a')).toEqual({ cells: { sel: 'yellow' } });
     });
 
+    // notion-motion.md Round 21 §1: Status reads "Match option", Multi-select "Match first option".
+    it('paints a "Match option" Status rule and a Multi-select rule with the first picked option\'s colour', () => {
+      const typed: PropertyDefinition[] = [...schema,
+        { id: 'st', name: 'Stage', type: 'status', position: 'a2', config: { options: [{ id: 's1', label: 'Doing', color: 'blue', position: 'a0', groupId: 'inProgress' }] } },
+        { id: 'ms', name: 'Tags', type: 'multiSelect', position: 'a3', config: { options: [{ id: 'm1', label: 'One', color: 'red', position: 'a0' }, { id: 'm2', label: 'Two', color: 'green', position: 'a1' }] } },
+      ];
+      const row: DatabaseRow = { id: 'a', position: 'a0', properties: { st: 's1', ms: ['gone', 'm2', 'm1'] } };
+      const bare: DatabaseRow = { id: 'b', position: 'a1', properties: {} };
+      const rule = (propertyId: string): DatabaseViewConfig => view({ colorRules: [{ id: 'c', propertyId, operator: 'is_not_empty', value: null, color: MATCH_OPTION_COLOR }] });
+
+      expect(resolveRowColors([row, bare], rule('st'), typed).get('a')).toEqual({ row: 'blue', cells: {} });
+      expect(resolveRowColors([row, bare], rule('ms'), typed).get('a')).toEqual({ row: 'green', cells: {} });
+      expect(resolveRowColors([row, bare], rule('st'), typed).has('b')).toBe(false);
+      expect(resolveRowColors([row, bare], rule('ms'), typed).has('b')).toBe(false);
+    });
+
+    // notion-motion.md Round 21 §1: Status colour rules offer Is empty / Is not empty.
+    it('paints a Status emptiness rule only on rows that match it', () => {
+      const typed: PropertyDefinition[] = [...schema, { id: 'st', name: 'Stage', type: 'status', position: 'a2', config: { options: [{ id: 's1', label: 'Done', position: 'a0', groupId: 'complete' }] } }];
+      const set: DatabaseRow = { id: 'a', position: 'a0', properties: { st: 's1' } };
+      const bare: DatabaseRow = { id: 'b', position: 'a1', properties: {} };
+      const rule = (operator: string): DatabaseViewConfig => view({ colorRules: [{ id: 'c', propertyId: 'st', operator, value: null, color: 'green' }] });
+
+      expect([...resolveRowColors([set, bare], rule('is_not_empty'), typed).keys()]).toEqual(['a']);
+      expect([...resolveRowColors([set, bare], rule('is_empty'), typed).keys()]).toEqual(['b']);
+    });
+
+    // notion-motion.md Round 21 §1: a new Checkbox rule starts on "is" with no value; it must paint nothing until one is picked.
+    it('paints nothing for a Checkbox "is" rule with no value', () => {
+      const typed: PropertyDefinition[] = [...schema, { id: 'cb', name: 'Done', type: 'checkbox', position: 'a2' }];
+      const on: DatabaseRow = { id: 'a', position: 'a0', properties: { cb: true } };
+      const off: DatabaseRow = { id: 'b', position: 'a1', properties: { cb: false } };
+      const v = view({ colorRules: [{ id: 'c', propertyId: 'cb', operator: 'equals', value: null, color: 'green' }] });
+
+      expect(resolveRowColors([on, off], v, typed).size).toBe(0);
+    });
+
     it('colors by status, person, relation, formula and rollup, as Notion does (research/05 §6.2)', () => {
       const typed: PropertyDefinition[] = [
         ...schema,

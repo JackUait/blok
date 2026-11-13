@@ -1493,6 +1493,7 @@
   "tools.database.colorAddAnother": "ሌላ አክል",
   "tools.database.colorPageBackground": "የገጽ ዳራ",
   "tools.database.colorMatchOption": "ከአማራጩ ጋር አዛምድ",
+  "tools.database.colorMatchFirstOption": "ከመጀመሪያው አማራጭ ጋር አዛምድ",
   "tools.database.colorBackgroundHint": "{color} ዳራ",
   "tools.database.colorApplyTo": "የሚተገበርበት",
   "tools.database.colorApplyRow": "ሙሉ ረድፍ",

@@ -25,17 +25,27 @@ export const COLOR_RULE_TYPES: readonly PropertyType[] = [
 export const COLOR_RULE_LAYOUTS: readonly ViewType[] = ['table', 'list', 'board', 'calendar', 'timeline', 'feed', 'map'];
 
 /**
- * A Select rule's colour that follows the row's option (Notion's "Match option",
- * notion-motion.md Round 20 §4). Saved in `color` so older clients keep it as is.
+ * A rule's colour that follows the row's option: Notion's "Match option" on Select and Status,
+ * "Match first option" on Multi-select (notion-motion.md Round 20 §4, Round 21 §1).
+ * Saved in `color` so older clients keep it as is.
  */
 export const MATCH_OPTION_COLOR = 'match';
 
-/** A rule's colour on one row. A "Match option" rule with no option paints nothing (unmeasured). */
+/** Types whose rules may follow the row's option colour. */
+export const MATCH_OPTION_TYPES: readonly PropertyType[] = ['select', 'status', 'multiSelect'];
+
+/**
+ * A rule's colour on one row. A "Match option" rule with no option paints nothing (unmeasured).
+ * Multi-select takes the first option in the cell's order, the one the cell shows first (an assumption:
+ * Round 21 does not say which order).
+ */
 const ruleColor = (rule: ColorRule, row: DatabaseRow, schema: PropertyDefinition[]): string | undefined => {
   if (rule.color !== MATCH_OPTION_COLOR) return rule.color;
   const property = schema.find((p) => p.id === rule.propertyId);
   const value = row.properties[rule.propertyId];
-  const option = property?.type === 'select' ? property.config?.options?.find((o) => o.id === value) : undefined;
+  const ids: unknown[] = Array.isArray(value) ? value : [value];
+  const options = property !== undefined && MATCH_OPTION_TYPES.includes(property.type) ? property.config?.options ?? [] : [];
+  const option = ids.map((id) => options.find((o) => o.id === id)).find((o) => o !== undefined);
 
   return option === undefined ? undefined : optionColorOf(option);
 };

@@ -1499,6 +1499,7 @@
   "tools.database.colorAddAnother": "Dodaj još",
   "tools.database.colorPageBackground": "Pozadina stranice",
   "tools.database.colorMatchOption": "Uskladi s opcijom",
+  "tools.database.colorMatchFirstOption": "Uskladi s prvom opcijom",
   "tools.database.colorBackgroundHint": "Pozadina: {color}",
   "tools.database.colorApplyTo": "Primijeni na",
   "tools.database.colorApplyRow": "Cijeli redak",

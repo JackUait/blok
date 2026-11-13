@@ -1493,6 +1493,7 @@
   "tools.database.colorAddAnother": "आणखी एक जोडा",
   "tools.database.colorPageBackground": "पृष्ठाची पार्श्वभूमी",
   "tools.database.colorMatchOption": "पर्यायाशी जुळवा",
+  "tools.database.colorMatchFirstOption": "पहिल्या पर्यायाशी जुळवा",
   "tools.database.colorBackgroundHint": "{color} पार्श्वभूमी",
   "tools.database.colorApplyTo": "यावर लागू करा",
   "tools.database.colorApplyRow": "संपूर्ण पंक्ती",

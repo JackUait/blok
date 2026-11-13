@@ -1499,6 +1499,7 @@
   "tools.database.colorAddAnother": "Додај још",
   "tools.database.colorPageBackground": "Позадина странице",
   "tools.database.colorMatchOption": "Према опцији",
+  "tools.database.colorMatchFirstOption": "Према првој опцији",
   "tools.database.colorBackgroundHint": "{color} позадина",
   "tools.database.colorApplyTo": "Примени на",
   "tools.database.colorApplyRow": "Цео ред",

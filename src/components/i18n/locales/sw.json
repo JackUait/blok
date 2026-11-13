@@ -1493,6 +1493,7 @@
   "tools.database.colorAddAnother": "Ongeza nyingine",
   "tools.database.colorPageBackground": "Mandharinyuma ya ukurasa",
   "tools.database.colorMatchOption": "Linganisha na chaguo",
+  "tools.database.colorMatchFirstOption": "Linganisha na chaguo la kwanza",
   "tools.database.colorBackgroundHint": "Mandharinyuma: {color}",
   "tools.database.colorApplyTo": "Tumia kwa",
   "tools.database.colorApplyRow": "Safu mlalo nzima",

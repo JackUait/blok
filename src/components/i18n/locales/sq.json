@@ -1493,6 +1493,7 @@
   "tools.database.colorAddAnother": "Shto një tjetër",
   "tools.database.colorPageBackground": "Sfondi i faqes",
   "tools.database.colorMatchOption": "Sipas opsionit",
+  "tools.database.colorMatchFirstOption": "Sipas opsionit të parë",
   "tools.database.colorBackgroundHint": "Sfond: {color}",
   "tools.database.colorApplyTo": "Zbato te",
   "tools.database.colorApplyRow": "I gjithë rreshti",

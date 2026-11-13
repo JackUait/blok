@@ -1493,6 +1493,7 @@
   "tools.database.colorAddAnother": "Bir tane daha ekle",
   "tools.database.colorPageBackground": "Sayfa arka planı",
   "tools.database.colorMatchOption": "Seçeneğe uydur",
+  "tools.database.colorMatchFirstOption": "İlk seçeneğe uydur",
   "tools.database.colorBackgroundHint": "{color} arka plan",
   "tools.database.colorApplyTo": "Uygulanacak yer",
   "tools.database.colorApplyRow": "Tüm satır",

@@ -1493,6 +1493,7 @@
   "tools.database.colorAddAnother": "మరొకటి జోడించు",
   "tools.database.colorPageBackground": "పేజీ నేపథ్యం",
   "tools.database.colorMatchOption": "ఎంపికకు సరిపోల్చు",
+  "tools.database.colorMatchFirstOption": "మొదటి ఎంపికకు సరిపోల్చు",
   "tools.database.colorBackgroundHint": "{color} నేపథ్యం",
   "tools.database.colorApplyTo": "దీనికి వర్తింపజేయి",
   "tools.database.colorApplyRow": "మొత్తం వరుస",

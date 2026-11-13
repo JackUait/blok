@@ -1493,6 +1493,7 @@
   "tools.database.colorAddAnother": "Weitere hinzufügen",
   "tools.database.colorPageBackground": "Seitenhintergrund",
   "tools.database.colorMatchOption": "An Option anpassen",
+  "tools.database.colorMatchFirstOption": "An erste Option anpassen",
   "tools.database.colorBackgroundHint": "Hintergrund: {color}",
   "tools.database.colorApplyTo": "Anwenden auf",
   "tools.database.colorApplyRow": "Ganze Zeile",

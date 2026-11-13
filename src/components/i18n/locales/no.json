@@ -1493,6 +1493,7 @@
   "tools.database.colorAddAnother": "Legg til en til",
   "tools.database.colorPageBackground": "Sidebakgrunn",
   "tools.database.colorMatchOption": "Følg alternativet",
+  "tools.database.colorMatchFirstOption": "Følg første alternativ",
   "tools.database.colorBackgroundHint": "{color} bakgrunn",
   "tools.database.colorApplyTo": "Bruk på",
   "tools.database.colorApplyRow": "Hele raden",

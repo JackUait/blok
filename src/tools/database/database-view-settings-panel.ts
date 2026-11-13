@@ -27,6 +27,7 @@ import {
   joinOperator,
   keepLead,
   menuOperatorOf,
+  colorRuleOperatorChoices,
   operatorChoicesFor,
   operatorLabelKey,
   operatorNeedsValue,
@@ -56,7 +57,7 @@ import {
 import { DEFAULT_RANGE, GROUPABLE_TYPES, defaultGroupSort, groupByChange, rangeOf, subGroupByChange } from './group-keys';
 import { RELATIVE_DATE_UNITS, RELATIVE_DATE_VALUES, formatRelativeSpan, parseRelativeSpan } from './relative-dates';
 import { ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from './database-query';
-import { COLOR_RULE_LAYOUTS, COLOR_RULE_TYPES, MATCH_OPTION_COLOR, isGroupHidden, withGroupFlags } from './view-data';
+import { COLOR_RULE_LAYOUTS, COLOR_RULE_TYPES, MATCH_OPTION_COLOR, MATCH_OPTION_TYPES, isGroupHidden, withGroupFlags } from './view-data';
 import {
   LOAD_LIMITS,
   resolveCardLayout,
@@ -2844,7 +2845,7 @@ export class ViewSettingsPages {
         lead.append(property.name, ' ', headerButton(`database-color-quantifier-${rule.id}`, this.ctx.i18n.t(`tools.database.filterOperator.${part ?? 'any'}`).toLocaleLowerCase(), 'database-filter-quantifier-picker', (pick) => quantifierChoices().map((q) =>
           choice(`database-filter-quantifier-${q.operator}`, this.ctx.i18n.t(q.labelKey), (part ?? 'any') === q.operator, { operator: joinOperator(q.operator, inner) }, pick))));
       }
-      lead.append(headerButton(`database-color-operator-${rule.id}`, (opKey === undefined ? rule.operator : this.ctx.i18n.t(opKey)).toLocaleLowerCase(), 'database-filter-operator-picker', (pick) => operatorChoicesFor(property, rule.operator).map((c) =>
+      lead.append(headerButton(`database-color-operator-${rule.id}`, (opKey === undefined ? rule.operator : this.ctx.i18n.t(opKey)).toLocaleLowerCase(), 'database-filter-operator-picker', (pick) => colorRuleOperatorChoices(property, rule.operator).map((c) =>
         choice(`database-filter-op-${c.operator}`, this.ctx.i18n.t(c.labelKey), menuOperatorOf(rule.operator) === c.operator, operatorPick(property, c.operator, rule), pick)), plain ? property.name : undefined));
     }
     trash.type = 'button';
@@ -2950,11 +2951,11 @@ export class ViewSettingsPages {
 
         return swatch;
       }));
-      if (property?.type !== 'select') return [grid];
+      if (property === undefined || !MATCH_OPTION_TYPES.includes(property.type)) return [grid];
 
       // Turning it off is unmeasured: the rule takes Default, the first swatch.
       return [panelSwitch({
-        label: this.t('colorMatchOption'),
+        label: this.t(matchOptionLabelKey(property)),
         testId: 'database-color-match-option',
         checked: current() === MATCH_OPTION_COLOR,
         onToggle: (on) => pick(() => write(on ? MATCH_OPTION_COLOR : 'default')),
@@ -2991,7 +2992,7 @@ export class ViewSettingsPages {
             colorSetting({
               label: this.t('colorPageBackground'),
               testId: `database-color-background-${rule.id}`,
-              value: this.t(rule.color === MATCH_OPTION_COLOR ? 'colorMatchOption' : `color${capital(rule.color)}`),
+              value: this.t(rule.color === MATCH_OPTION_COLOR ? matchOptionLabelKey(property) : `color${capital(rule.color)}`),
               chip: rule.color === MATCH_OPTION_COLOR ? undefined : rule.color,
               disabled,
               onClick: (button) => this.colorPicker(button, panel, property, () => rules().find((r) => r.id === rule.id)?.color, (color) => patch(rule.id, { color })),
@@ -3025,10 +3026,7 @@ export class ViewSettingsPages {
           icon: IconPlus,
           disabled,
           onClick: () => openFlyout(add, panel, 'database-color-property-picker', COLOR_PROPERTY_FLYOUT_WIDTH, (pick) => this.propertyPicker(queryState(), COLOR_RULE_TYPES, (property) => pick(() => {
-            // notion-motion.md Round 20 §4: a Select rule starts on Match option. Other types keep gray: one Number rule read Green.
-            const color = property.type === 'select' ? MATCH_OPTION_COLOR : 'gray';
-
-            write([...rules(), { id: nanoid(), propertyId: property.id, operator: 'is_not_empty', value: null, color }]);
+            write([...rules(), { id: nanoid(), propertyId: property.id, ...newColorRule(property.type) }]);
             panel.refresh();
           })), { gap: COLOR_PROPERTY_FLYOUT_GAP }),
         }), cards.length === 0 ? 'data-blok-database-color-new' : 'data-blok-database-color-add-another');
@@ -3094,6 +3092,27 @@ const marked = <T extends HTMLElement>(element: T, attribute: string): T => {
 
   return element;
 };
+
+/**
+ * What a new colour rule starts on (notion-motion.md Round 20 §4, Round 21 §1): option types on
+ * Match option, the five types read on Green. The rest keep gray: unread.
+ * Checkbox starts on "is" with no value; every type's flyout offers "is not empty" otherwise.
+ */
+const GREEN_RULE_TYPES: readonly PropertyType[] = ['text', 'number', 'date', 'checkbox', 'person'];
+
+const newColorRule = (type: PropertyType): Pick<ColorRule, 'operator' | 'value' | 'color'> => {
+  const plain = GREEN_RULE_TYPES.includes(type) ? 'green' : 'gray';
+
+  return {
+    operator: type === 'checkbox' ? 'equals' : 'is_not_empty',
+    value: null,
+    color: MATCH_OPTION_TYPES.includes(type) ? MATCH_OPTION_COLOR : plain,
+  };
+};
+
+/** notion-motion.md Round 21 §1 (r21-cc-ms-bg.raw): Multi-select's switch reads "Match first option". */
+const matchOptionLabelKey = (property: PropertyDefinition | undefined): string =>
+  (property?.type === 'multiSelect' ? 'colorMatchFirstOption' : 'colorMatchOption');
 
 /** notion-motion.md Round 20 §4 (r20-cc-new.raw, r20-cc-srch.raw): the property list is 258 wide, 4px off its button. */
 const COLOR_PROPERTY_FLYOUT_WIDTH = 258;

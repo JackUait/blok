@@ -1493,6 +1493,7 @@
   "tools.database.colorAddAnother": "Tambah lagi",
   "tools.database.colorPageBackground": "Latar belakang halaman",
   "tools.database.colorMatchOption": "Padankan pilihan",
+  "tools.database.colorMatchFirstOption": "Padankan pilihan pertama",
   "tools.database.colorBackgroundHint": "Latar belakang: {color}",
   "tools.database.colorApplyTo": "Gunakan pada",
   "tools.database.colorApplyRow": "Seluruh baris",

@@ -146,6 +146,13 @@ export const operatorChoicesFor = (property: PropertyDefinition, operator: strin
 
 export const operatorChoices = (type: PropertyType): OperatorChoice[] => OPERATORS[type];
 
+/** notion-motion.md Round 21 §1: a Status colour rule adds the emptiness checks its filter lacks. */
+const STATUS_COLOR_RULE = [op('equals', 'is'), op('does_not_equal', 'isNot'), ...EMPTY];
+
+/** A conditional colour rule's operators: the filter's, except Status. */
+export const colorRuleOperatorChoices = (property: PropertyDefinition, operator: string): OperatorChoice[] =>
+  (property.type === 'status' && !isRollupList(property) ? STATUS_COLOR_RULE : operatorChoicesFor(property, operator));
+
 /** The windows "Is within" offers, in menu order. */
 export const WITHIN_OPERATORS = ['this_week', 'past_week', 'past_month', 'past_year', 'next_week', 'next_month', 'next_year'] as const;
 

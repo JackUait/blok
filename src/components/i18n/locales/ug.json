@@ -1493,6 +1493,7 @@
   "tools.database.colorAddAnother": "يەنە بىرنى قوشۇش",
   "tools.database.colorPageBackground": "بەت تەگلىكى",
   "tools.database.colorMatchOption": "تاللانمىغا ماسلاش",
+  "tools.database.colorMatchFirstOption": "بىرىنچى تاللانمىغا ماسلاش",
   "tools.database.colorBackgroundHint": "{color} تەگلىك",
   "tools.database.colorApplyTo": "قوللىنىش دائىرىسى",
   "tools.database.colorApplyRow": "پۈتۈن قۇر",

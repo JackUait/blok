@@ -1493,6 +1493,7 @@
   "tools.database.colorAddAnother": "კიდევ ერთის დამატება",
   "tools.database.colorPageBackground": "გვერდის ფონი",
   "tools.database.colorMatchOption": "ვარიანტის მიხედვით",
+  "tools.database.colorMatchFirstOption": "პირველი ვარიანტის მიხედვით",
   "tools.database.colorBackgroundHint": "{color} ფონი",
   "tools.database.colorApplyTo": "გამოყენების არე",
   "tools.database.colorApplyRow": "მთელი მწკრივი",

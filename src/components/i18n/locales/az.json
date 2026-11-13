@@ -1493,6 +1493,7 @@
   "tools.database.colorAddAnother": "Daha birini əlavə et",
   "tools.database.colorPageBackground": "Səhifə fonu",
   "tools.database.colorMatchOption": "Seçimə uyğunlaşdır",
+  "tools.database.colorMatchFirstOption": "İlk seçimə uyğunlaşdır",
   "tools.database.colorBackgroundHint": "{color} arxa fon",
   "tools.database.colorApplyTo": "Tətbiq yeri",
   "tools.database.colorApplyRow": "Bütün sətir",

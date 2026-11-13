@@ -42,6 +42,8 @@ export interface MediaEmptyStateLabels {
   urlAria: string;
   /** Button that adds the link. */
   submit: string;
+  /** Shown when Enter is pressed on text that is not a link. Without it, Enter does nothing there. */
+  invalidLink?: string;
   /** Optional formatter for the size limit shown after the sentence. */
   maxSize?: (size: string) => string;
 }
@@ -64,6 +66,10 @@ export interface MediaEmptyStateOptions {
   sources?: MediaSource;
   /** Drawing of the finished block. Omit it for compact surfaces (the cover picker). */
   preview?: MediaPreviewKind;
+  /** Draw no title: the sentence and the field stand alone. `labels.add` still names the surface. */
+  hideTitle?: boolean;
+  /** A link-only block puts the caret in its field as it appears. Pass `false` to leave the caret alone. */
+  autoFocus?: boolean;
 }
 
 /** Re-exported from the public type so the renderer and tools share one source. */
@@ -130,7 +136,7 @@ interface LinkField {
 function makeLinkField(
   labels: MediaEmptyStateLabels,
   withCancel: boolean,
-  hooks: { onCommit(url: string): void; onEdit(valid: boolean, pasted: boolean): void; onCancel(): void }
+  hooks: { onCommit(url: string): void; onEdit(valid: boolean, pasted: boolean): void; onCancel(): void; onRefuse(): void }
 ): LinkField {
   const bar = el('div', 'blok-media-empty__embed-bar');
   bar.setAttribute('data-valid', 'false');
@@ -179,6 +185,7 @@ function makeLinkField(
   };
   const commit = (): void => {
     if (isLink(input.value)) hooks.onCommit(input.value.trim());
+    else if (input.value.trim()) hooks.onRefuse();
   };
 
   submit.addEventListener('click', (ev) => {
@@ -345,6 +352,9 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
         setMode('upload');
         fromLink.focus();
       },
+      onRefuse: () => {
+        if (labels.invalidLink) root.setError(labels.invalidLink);
+      },
     })
     : null;
 
@@ -364,7 +374,7 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
   slot.append(...(actions ? [actions] : []), ...(link ? [link.bar] : []));
 
   const body = el('div', 'blok-media-empty__body');
-  body.append(title, hint, slot);
+  body.append(...(opts.hideTitle ? [] : [title]), hint, slot);
   card.append(...(stage ? [stage] : []), body, ...(input ? [input] : []));
   root.append(card, error);
 
@@ -432,7 +442,7 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
 
   setMode(showUpload ? 'upload' : 'link');
   // A link-only block has nothing else to do: put the caret in its field.
-  if (!showUpload) queueMicrotask(() => link?.input.focus());
+  if (!showUpload && opts.autoFocus !== false) queueMicrotask(() => link?.input.focus());
 
   root.setError = (message: string | null): void => {
     if (!message) {

@@ -112,6 +112,45 @@ test.describe('Bookmark card', () => {
     await page.emulateMedia({ reducedMotion: null });
   });
 
+  test('turns a typed link into a card on Enter', async ({ page }) => {
+    await page.evaluate(async (holder) => {
+      if (window.blokInstance) {
+        await window.blokInstance.destroy?.();
+        window.blokInstance = undefined;
+      }
+      document.getElementById(holder)?.remove();
+
+      const container = document.createElement('div');
+
+      container.id = holder;
+      container.style.width = '800px';
+      document.body.appendChild(container);
+
+      const blok = new window.Blok({ holder, data: { blocks: [ { id: 'bm', type: 'bookmark', data: { url: '' } } ] } });
+
+      window.blokInstance = blok;
+      await blok.isReady;
+    }, HOLDER_ID);
+
+    const field = page.locator('[data-blok-id="bm"]').getByRole('textbox');
+
+    await field.fill('read this later');
+    await field.press('Enter');
+    await expect(page.locator('[data-blok-id="bm"]').getByRole('alert')).toBeVisible();
+    await expect(card(page)).toHaveCount(0);
+
+    // A bare domain is a link, as in a browser's address bar.
+    await field.fill('example.com/article');
+    await field.press('Enter');
+
+    await expect(card(page)).toHaveAttribute('href', 'https://example.com/article');
+    await expect(field).toHaveCount(0);
+
+    const saved = await page.evaluate(async () => (await window.blokInstance?.save())?.blocks[0]?.data);
+
+    expect(saved).toMatchObject({ url: 'https://example.com/article' });
+  });
+
   test('gives the text the full width when there is no cover', async ({ page }) => {
     await createBookmark(page, 'ltr', false);
     await expect(card(page)).toBeVisible();

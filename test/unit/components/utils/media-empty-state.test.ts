@@ -164,6 +164,61 @@ describe('one source only', () => {
     expect(el.querySelector('input[type="file"]')).toBeNull();
   });
 
+  it('draws no title when asked, and still names the surface for assistive tech', () => {
+    const el = render({ sources: 'url', hideTitle: true });
+
+    expect(el.querySelector('.blok-media-empty__title')).toBeNull();
+    expect(card(el).getAttribute('aria-label')).toBe(LABELS.add);
+    expect(el.querySelector('.blok-media-empty__hint-text')?.textContent).toBe(LABELS.hintLink);
+  });
+
+  it('says so when Enter is pressed on text that is not a link, and adds nothing', () => {
+    const onUrl = vi.fn();
+    const el = render({ sources: 'url', onUrl, labels: { ...LABELS, invalidLink: 'Invalid link' } });
+
+    type(el, 'read this later');
+    urlInput(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+    const error = el.querySelector<HTMLElement>('[data-role="error"]');
+
+    expect(onUrl).not.toHaveBeenCalled();
+    expect(error?.hidden).toBe(false);
+    expect(error?.textContent).toBe('Invalid link');
+  });
+
+  it('clears that message as soon as the text is edited', () => {
+    const el = render({ sources: 'url', labels: { ...LABELS, invalidLink: 'Invalid link' } });
+
+    type(el, 'read this later');
+    urlInput(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    type(el, 'read this later.');
+
+    expect(el.querySelector<HTMLElement>('[data-role="error"]')?.hidden).toBe(true);
+  });
+
+  it('stays quiet on Enter in an empty field, and without the label', () => {
+    const quiet = render({ sources: 'url', labels: { ...LABELS, invalidLink: 'Invalid link' } });
+
+    urlInput(quiet).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    expect(quiet.querySelector<HTMLElement>('[data-role="error"]')?.hidden).toBe(true);
+
+    const unlabelled = render({ sources: 'url' });
+
+    type(unlabelled, 'read this later');
+    urlInput(unlabelled).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    expect(unlabelled.querySelector<HTMLElement>('[data-role="error"]')?.hidden).toBe(true);
+  });
+
+  it('leaves the caret alone when told not to take it', async () => {
+    const el = render({ sources: 'url', autoFocus: false });
+
+    document.body.appendChild(el);
+    await Promise.resolve();
+
+    expect(urlInput(el)).not.toHaveFocus();
+    el.remove();
+  });
+
   it('Escape does nothing in a link-only block', () => {
     const el = render({ sources: 'url' });
 

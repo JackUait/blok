@@ -484,17 +484,142 @@ describe('Bookmark tool', () => {
     });
   });
 
-  describe('placeholder states share the styled placeholder class', () => {
-    it('marks the empty state with blok-bookmark__placeholder', () => {
+  describe('empty state: the shared link field', () => {
+    const field = (root: HTMLElement): HTMLInputElement => {
+      const input = root.querySelector<HTMLInputElement>('[data-blok-testid="bookmark-empty"] input[type="url"]');
+
+      if (input === null) {
+        throw new Error('the empty bookmark has no link field');
+      }
+
+      return input;
+    };
+    const enter = (root: HTMLElement, text: string): void => {
+      const input = field(root);
+
+      input.value = text;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    };
+
+    beforeEach(() => {
+      vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
+    });
+
+    it('shows one sentence and one link field, with no title', () => {
+      const root = new Bookmark(createOptions()).render();
+      const empty = root.querySelector('[data-blok-testid="bookmark-empty"]');
+
+      expect(empty?.hasAttribute('data-blok-media-empty-state')).toBe(true);
+      expect(empty?.querySelector('.blok-media-empty__title')).toBeNull();
+      expect(empty?.querySelector('.blok-media-empty__hint-text')?.textContent).toBe('tools.bookmark.empty');
+      expect(empty?.querySelector('[role="group"]')?.getAttribute('aria-label')).toBe('toolNames.bookmark');
+      expect(field(root).placeholder).toBe('https://');
+      expect(field(root).getAttribute('aria-label')).toBe('tools.link.webLink');
+    });
+
+    it('starts loading the link when Enter is pressed, and reports the edit', () => {
+      const dispatchChange = vi.fn();
+      const tool = new Bookmark(createOptions({}, undefined, false, dispatchChange));
+      const root = tool.render();
+
+      enter(root, 'https://example.com/article');
+
+      expect(root.querySelector('[data-blok-testid="bookmark-loading"]')).not.toBeNull();
+      expect(tool.save().url).toBe('https://example.com/article');
+      expect(dispatchChange).toHaveBeenCalledTimes(1);
+      expect(dispatchChange).toHaveBeenCalledWith();
+    });
+
+    it('takes a bare domain as an https link, as a browser address bar does', () => {
       const tool = new Bookmark(createOptions());
       const root = tool.render();
 
+      enter(root, 'stripe.com/pricing');
+
+      expect(tool.save().url).toBe('https://stripe.com/pricing');
+    });
+
+    it('refuses text that is not a link and says so', () => {
+      const tool = new Bookmark(createOptions());
+      const root = tool.render();
+
+      enter(root, 'read this later');
+
+      const error = root.querySelector<HTMLElement>('[data-role="error"]');
+
+      expect(error?.hidden).toBe(false);
+      expect(error?.textContent).toBe('tools.link.invalidLink');
+      expect(root.querySelector('[data-blok-testid="bookmark-loading"]')).toBeNull();
+      expect(tool.save().url).toBe('');
+    });
+
+    it('adds a link that is dropped on it', () => {
+      const tool = new Bookmark(createOptions());
+      const root = tool.render();
+      const drop = new Event('drop', { bubbles: true, cancelable: true });
+
+      Object.defineProperty(drop, 'dataTransfer', {
+        value: { getData: (type: string) => (type === 'text/uri-list' ? 'https://example.com/dropped' : '') },
+      });
+      field(root).dispatchEvent(drop);
+
+      expect(drop.defaultPrevented).toBe(true);
+      expect(tool.save().url).toBe('https://example.com/dropped');
+      expect(root.querySelector('[data-blok-testid="bookmark-loading"]')).not.toBeNull();
+    });
+
+    it('leaves a dropped thing that is not a link to the editor', () => {
+      const tool = new Bookmark(createOptions());
+      const root = tool.render();
+      const drop = new Event('drop', { bubbles: true, cancelable: true });
+
+      Object.defineProperty(drop, 'dataTransfer', { value: { getData: () => 'just some words' } });
+      field(root).dispatchEvent(drop);
+
+      expect(drop.defaultPrevented).toBe(false);
+      expect(tool.save().url).toBe('');
+    });
+
+    it.each([
+      ['user', true],
+      ['convert', true],
+      ['load', false],
+      ['replay', false],
+      [undefined, false],
+    ] as const)('takes the caret for a block of origin %s: %s', async (origin, takes) => {
+      const root = new Bookmark({ ...createOptions(), origin }).render();
+
+      document.body.appendChild(root);
+      await Promise.resolve();
+
+      expect(document.activeElement === field(root)).toBe(takes);
+      root.remove();
+    });
+
+    it('shows plain text and no field in read-only mode', () => {
+      const root = new Bookmark(createOptions({}, undefined, true)).render();
       const empty = root.querySelector('[data-blok-testid="bookmark-empty"]');
 
+      expect(empty?.querySelector('input')).toBeNull();
+      expect(empty?.textContent).toBe('tools.bookmark.empty');
       expect(empty?.classList.contains('blok-bookmark__placeholder')).toBe(true);
     });
 
-    it('marks the loading state with blok-bookmark__placeholder', () => {
+    it('swaps the field for plain text when read-only is switched on in place, and back', () => {
+      const tool = new Bookmark(createOptions());
+      const root = tool.render();
+
+      tool.setReadOnly(true);
+      expect(root.querySelector('[data-blok-testid="bookmark-empty"] input')).toBeNull();
+
+      tool.setReadOnly(false);
+      expect(root.querySelector('[data-blok-testid="bookmark-empty"] input[type="url"]')).not.toBeNull();
+    });
+  });
+
+  describe('loading state: the card, waiting', () => {
+    it('has the card\'s shape, shows the address at once, and reports itself as busy', () => {
       vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
       const tool = new Bookmark(createOptions());
       const root = tool.render();
@@ -503,7 +628,68 @@ describe('Bookmark tool', () => {
 
       const loading = root.querySelector('[data-blok-testid="bookmark-loading"]');
 
-      expect(loading?.classList.contains('blok-bookmark__placeholder')).toBe(true);
+      expect(loading?.classList.contains('blok-bookmark')).toBe(true);
+      expect(loading?.classList.contains('blok-bookmark--loading')).toBe(true);
+      expect(loading?.getAttribute('role')).toBe('status');
+      expect(loading?.getAttribute('aria-label')).toBe('tools.bookmark.loading');
+      expect(loading?.querySelector('[data-role="bookmark-address"]')?.textContent).toBe('example.com/article');
+      expect(loading?.querySelectorAll('.blok-bookmark__bone[aria-hidden="true"]')).toHaveLength(3);
+    });
+
+    it('glides the block from the field\'s height to the card\'s, so the lines below do not jump', () => {
+      vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
+      const tool = new Bookmark(createOptions());
+      const root = tool.render();
+      const heights = [ 112, 148 ];
+      const animate = vi.fn();
+
+      vi.spyOn(root, 'getBoundingClientRect').mockImplementation(() => ({ height: heights.shift() ?? 148 }) as DOMRect);
+      root.animate = animate;
+
+      tool.onPaste(patternEvent('https://example.com/article'));
+
+      expect(animate).toHaveBeenCalledTimes(1);
+      expect(animate.mock.calls[0][0]).toEqual([ { height: '112px' }, { height: '148px' } ]);
+    });
+
+    it('does not glide when the height stays the same or motion is reduced', () => {
+      vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
+      const same = new Bookmark(createOptions());
+      const sameRoot = same.render();
+      const animate = vi.fn();
+
+      vi.spyOn(sameRoot, 'getBoundingClientRect').mockImplementation(() => ({ height: 148 }) as DOMRect);
+      sameRoot.animate = animate;
+      same.onPaste(patternEvent('https://example.com/article'));
+
+      const reduced = new Bookmark(createOptions());
+      const reducedRoot = reduced.render();
+      const heights = [ 112, 148 ];
+
+      vi.spyOn(reducedRoot, 'getBoundingClientRect').mockImplementation(() => ({ height: heights.shift() ?? 148 }) as DOMRect);
+      reducedRoot.animate = animate;
+      vi.stubGlobal('matchMedia', () => ({ matches: true }));
+      reduced.onPaste(patternEvent('https://example.com/article'));
+      vi.unstubAllGlobals();
+
+      expect(animate).not.toHaveBeenCalled();
+    });
+
+    it('marks the card that lands after loading as arriving', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(okResponse({ url: 'https://example.com/article', title: 'Hello' }));
+      const tool = new Bookmark(createOptions());
+      const root = tool.render();
+
+      tool.onPaste(patternEvent('https://example.com/article'));
+      await flush();
+
+      expect(root.querySelector('[data-blok-testid="bookmark-card"]')?.classList.contains('blok-bookmark--arriving')).toBe(true);
+    });
+
+    it('does not mark a card that was already saved', () => {
+      const root = new Bookmark(createOptions({ url: 'https://example.com/article', title: 'Hello' })).render();
+
+      expect(root.querySelector('[data-blok-testid="bookmark-card"]')?.classList.contains('blok-bookmark--arriving')).toBe(false);
     });
   });
 
@@ -561,7 +747,9 @@ describe('Bookmark tool', () => {
       const afterFailedPaste = await renderAfterFailedFetch();
       const afterReload = new Bookmark(createOptions({ url: URL })).render();
 
-      expect(afterFailedPaste.innerHTML).toBe(afterReload.innerHTML);
+      // The arrival mark only plays the fade-in. It is not content.
+      expect(afterFailedPaste.innerHTML.replace(' blok-bookmark--arriving', '')).toBe(afterReload.innerHTML);
+      expect(afterFailedPaste.innerHTML).toContain(' blok-bookmark--arriving');
     });
 
     it('owns its link, so Blok shows no link hover card over the card', () => {

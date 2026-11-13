@@ -269,9 +269,74 @@
 }
 
 /*
-  empty / loading / error states — same shell, muted text. The text stands in
-  for the title, so it follows the title token; a host that retypes the card
-  must not get a mismatched shell.
+  Loading: the card's own shape, with only the address filled in. The bones
+  stand where the title and description will land, so nothing moves when
+  they do.
+*/
+[data-blok-tool="bookmark"] .blok-bookmark--loading {
+  cursor: default;
+}
+[data-blok-tool="bookmark"] .blok-bookmark--loading::before {
+  content: none;
+}
+[data-blok-tool="bookmark"] .blok-bookmark__bone {
+  display: block;
+  width: 92%;
+  height: calc(var(--bookmark-scale) * 5 / 9);
+  margin-block-start: calc(var(--bookmark-scale) * 4 / 9);
+  border-radius: var(--blok-radius-control-sm);
+  background: var(--bookmark-pill);
+}
+[data-blok-tool="bookmark"] .blok-bookmark__bone[data-part="title"] {
+  width: 72%;
+  height: calc(var(--bookmark-scale) * 8 / 9);
+  margin-block: calc(var(--bookmark-scale) * 2 / 9) calc(var(--bookmark-scale) / 9);
+}
+[data-blok-tool="bookmark"] .blok-bookmark__bone:nth-child(3) {
+  width: 60%;
+}
+
+@keyframes blok-bookmark-fade {
+  from { opacity: 0; }
+}
+@keyframes blok-bookmark-focus {
+  from { opacity: 0; filter: blur(16px); }
+}
+@keyframes blok-bookmark-breathe {
+  50% { opacity: 0.45; }
+}
+/*
+  Arrival, played once on the card that follows the loading card: the colour
+  comes up blurred, then the cover pulls into focus. The glow has its own
+  resting opacity, so `from` alone fades it to that.
+*/
+@media (prefers-reduced-motion: no-preference) {
+  [data-blok-tool="bookmark"] .blok-bookmark--loading {
+    animation: blok-bookmark-fade 220ms ease both;
+  }
+  [data-blok-tool="bookmark"] .blok-bookmark__bone {
+    animation: blok-bookmark-breathe 1400ms ease-in-out infinite;
+  }
+  [data-blok-tool="bookmark"] .blok-bookmark--arriving .blok-bookmark__wash,
+  [data-blok-tool="bookmark"] .blok-bookmark--arriving .blok-bookmark__glow {
+    animation: blok-bookmark-fade 700ms ease backwards;
+  }
+  [data-blok-tool="bookmark"] .blok-bookmark--arriving .blok-bookmark__image {
+    animation: blok-bookmark-focus 1000ms cubic-bezier(.2, .7, .2, 1) 180ms backwards;
+  }
+  [data-blok-tool="bookmark"] .blok-bookmark--arriving .blok-bookmark__title,
+  [data-blok-tool="bookmark"] .blok-bookmark--arriving .blok-bookmark__favicon {
+    animation: blok-bookmark-fade 380ms ease backwards;
+  }
+  [data-blok-tool="bookmark"] .blok-bookmark--arriving .blok-bookmark__description {
+    animation: blok-bookmark-fade 380ms ease 80ms backwards;
+  }
+}
+
+/*
+  The empty block in read-only mode: a muted sentence in a shell. The text
+  stands in for the title, so it follows the title token; a host that retypes
+  the card must not get a mismatched shell.
 */
 [data-blok-tool="bookmark"] .blok-bookmark__placeholder {
   --bookmark-scale: 1em;

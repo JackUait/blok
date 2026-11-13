@@ -27505,6 +27505,57 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   color: var(--bookmark-ink-soft);
 }
 
+[data-blok-tool="bookmark"] .blok-bookmark--loading {
+  cursor: default;
+}
+
+[data-blok-tool="bookmark"] .blok-bookmark--loading::before {
+  content: none;
+}
+
+[data-blok-tool="bookmark"] .blok-bookmark__bone {
+  display: block;
+  width: 92%;
+  height: calc(var(--bookmark-scale) * 5 / 9);
+  margin-block-start: calc(var(--bookmark-scale) * 4 / 9);
+  border-radius: var(--blok-radius-control-sm);
+  background: var(--bookmark-pill);
+}
+
+[data-blok-tool="bookmark"] .blok-bookmark__bone[data-part="title"] {
+  width: 72%;
+  height: calc(var(--bookmark-scale) * 8 / 9);
+  margin-block: calc(var(--bookmark-scale) * 2 / 9) calc(var(--bookmark-scale) / 9);
+}
+
+[data-blok-tool="bookmark"] .blok-bookmark__bone:nth-child(3) {
+  width: 60%;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-tool="bookmark"] .blok-bookmark--loading {
+  animation: blok-bookmark-fade 220ms ease both;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-tool="bookmark"] .blok-bookmark__bone {
+  animation: blok-bookmark-breathe 1400ms ease-in-out infinite;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-tool="bookmark"] .blok-bookmark--arriving .blok-bookmark__wash, [data-blok-tool="bookmark"] .blok-bookmark--arriving .blok-bookmark__glow {
+  animation: blok-bookmark-fade 700ms ease backwards;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-tool="bookmark"] .blok-bookmark--arriving .blok-bookmark__image {
+  animation: blok-bookmark-focus 1000ms cubic-bezier(.2, .7, .2, 1) 180ms backwards;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-tool="bookmark"] .blok-bookmark--arriving .blok-bookmark__title, [data-blok-tool="bookmark"] .blok-bookmark--arriving .blok-bookmark__favicon {
+  animation: blok-bookmark-fade 380ms ease backwards;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-tool="bookmark"] .blok-bookmark--arriving .blok-bookmark__description {
+  animation: blok-bookmark-fade 380ms ease 80ms backwards;
+}
+
 [data-blok-tool="bookmark"] .blok-bookmark__placeholder {
   --bookmark-scale: 1em;
   border: 1px solid var(--blok-popover-border);

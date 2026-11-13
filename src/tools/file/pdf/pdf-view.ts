@@ -1,5 +1,6 @@
 import { JUMP_PAD, mountPager, type PagedView } from '../page-pager';
 import type { PreviewChrome } from '../preview-chrome';
+import { fill } from '../preview-labels';
 import { renderPdfLinks } from './pdf-links';
 import type { PdfDocumentLike, PdfPageLike, PdfRenderTask, PdfViewport } from './pdf-types';
 
@@ -65,7 +66,7 @@ function isCancel(error: unknown): boolean {
   return name === 'RenderingCancelledException' || name === 'AbortException';
 }
 
-function report(error: unknown): void {
+function warn(error: unknown): void {
   if (!isCancel(error)) {
     console.warn('[blok] Failed to render a PDF page:', error);
   }
@@ -113,6 +114,7 @@ export async function mountPdfView(
   doc: PdfDocumentLike,
   lib: PdfViewLib,
   chrome: PreviewChrome,
+  options: { onError?(error: unknown): void } = {},
 ): Promise<{ destroy(): void }> {
   const first = await doc.getPage(1);
   const base = first.getViewport({ scale: 1 });
@@ -128,7 +130,7 @@ export async function mountPdfView(
     const box = part('div', 'blok-file-preview-pdf-page');
     box.setAttribute('data-role', 'file-preview-pdf-page');
     box.setAttribute('role', 'region');
-    box.setAttribute('aria-label', `Page ${i + 1}`);
+    box.setAttribute('aria-label', fill(chrome.labels.pdfPageN, { number: i + 1 }));
     const canvas = part('canvas', 'blok-file-preview-pdf-canvas');
     const text = part('div', 'blok-file-preview-pdf-text');
     const links = part('div', 'blok-file-preview-pdf-links');
@@ -166,14 +168,13 @@ export async function mountPdfView(
     const slot = slots[index];
     slot.text = freshLayer(slot.text);
     slot.links = freshLayer(slot.links);
-    const links = (lib.renderLinks ?? drawLinks)(slot.links, page, viewport, goTo).catch(report);
-    if (lib.renderTextLayer !== undefined) {
-      const handle = await lib.renderTextLayer(page, viewport, slot.text);
-      if (live()) {
-        slot.textTask = handle;
-      } else {
-        handle.cancel();
-      }
+    const links = (lib.renderLinks ?? drawLinks)(slot.links, page, viewport, goTo).catch(warn);
+    // Missing text or links leave a readable page, so they only warn.
+    const handle = await lib.renderTextLayer?.(page, viewport, slot.text).catch(warn);
+    if (handle !== undefined && live()) {
+      slot.textTask = handle;
+    } else {
+      handle?.cancel();
     }
     await links;
   };
@@ -237,6 +238,14 @@ export async function mountPdfView(
     slot.canvas.replaceWith(canvas);
     slot.canvas = canvas;
     await drawLayers(index, page, viewport, live);
+  };
+
+  // A page that cannot be drawn is a broken view: the caller shows an error.
+  const report = (error: unknown): void => {
+    warn(error);
+    if (!isCancel(error) && !state.destroyed) {
+      options.onError?.(error);
+    }
   };
 
   const visible = new Set<number>();

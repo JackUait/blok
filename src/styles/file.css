@@ -1568,6 +1568,26 @@
   outline-offset: 1px;
 }
 
+/* The password prompt sits in the error card's centred column. */
+.blok-file-preview-pdf-password {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--blok-space-3);
+  width: min(320px, 100%);
+  margin: 0;
+  text-align: center;
+}
+
+.blok-file-preview-pdf-password > input {
+  width: 100%;
+}
+
+.blok-file-preview-pdf-password-actions {
+  display: flex;
+  gap: var(--blok-space-2);
+}
+
 /* --- xlsx and csv: a spreadsheet grid that fills the body ----------------- */
 /* sheet-grid.ts builds the table. Letters and numbers stick to the top and the
    start edge; the sheet's own first row sticks under the letters. */

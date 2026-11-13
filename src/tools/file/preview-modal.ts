@@ -15,6 +15,8 @@ import { fillOfficeBody, isOfficeKind } from './office-preview';
 import { ScrollHaze } from './preview-scroll-haze';
 import { createSafeObjectUrl } from '../../shared/safe-object-url';
 import { counted, resolvePreviewLabels, type PreviewLabels } from './preview-labels';
+import { supportsPdfJs } from './pdf/pdf-loader';
+import { fillPdfBody } from './pdf/pdf-preview';
 import { describePreviewType, isCsv, isLog, metaText, mountViewToggle, OVERLAY_ATTR, type PreviewChrome } from './preview-chrome';
 
 export interface FilePreviewOptions {
@@ -116,39 +118,43 @@ function buildSaveLink(opts: FilePreviewOptions, href: string): HTMLAnchorElemen
 }
 
 /**
- * Frames a blob: pdf. A blob url has the editor's origin, so a text/html blob
- * would run as the editor, framed or opened in a tab. Re-typing the bytes as
- * application/pdf makes the browser parse them only as a PDF. No sandbox:
- * Chrome blocks its PDF viewer in every sandboxed frame.
+ * Shows a blob: pdf. A blob url has the editor's origin, so a text/html blob
+ * would run as the editor, framed or opened in a tab. The header links and
+ * the fallback frame use the bytes re-typed as application/pdf, which the
+ * browser parses only as a PDF. pdf.js gets the bytes themselves.
+ * No sandbox on the frame: Chrome blocks its PDF viewer in every sandboxed frame.
  */
 async function fillPdfBlobBody(
-  body: HTMLElement,
+  chrome: PreviewChrome,
   actions: HTMLElement,
   opts: FilePreviewOptions,
-  isClosed: () => boolean,
-  onRelease: (release: () => void) => void,
 ): Promise<void> {
   const response = await fetch(opts.url);
   if (!response.ok) {
     throw new Error(`blob read failed: ${response.status}`);
   }
   const bytes = await response.blob();
-  if (isClosed()) {
+  if (chrome.isClosed()) {
     return;
   }
   const src = createSafeObjectUrl(new Blob([bytes], { type: 'application/pdf' }));
-  onRelease(() => URL.revokeObjectURL(src));
+  chrome.onRelease(() => URL.revokeObjectURL(src));
+  const open = buildOpenTabLink(opts);
+  open.href = src;
+  actions.prepend(buildSaveLink(opts, src), open);
 
+  if (supportsPdfJs()) {
+    await fillPdfBody(opts, chrome, { kind: 'data', data: new Uint8Array(await bytes.arrayBuffer()) });
+
+    return;
+  }
   const frame = document.createElement('iframe');
   frame.className = 'blok-file-preview-frame';
   frame.setAttribute('data-role', 'file-preview-frame');
   frame.setAttribute('title', opts.fileName ?? opts.labels.close);
   frame.setAttribute('referrerpolicy', 'no-referrer');
   frame.src = src;
-  body.replaceChildren(frame);
-  const open = buildOpenTabLink(opts);
-  open.href = src;
-  actions.prepend(buildSaveLink(opts, src), open);
+  chrome.body.replaceChildren(frame);
 }
 
 async function renderMarkdown(chrome: PreviewChrome, text: string, opts: FilePreviewOptions): Promise<void> {
@@ -317,8 +323,8 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
   const state = { closed: false };
   const releases: Array<() => void> = [];
 
-  // Edge haze that marks the previewable content as scrollable. PDFs render in
-  // an iframe with its own scrollbar, so they opt out.
+  // Edge haze that marks the previewable content as scrollable. A PDF in the
+  // browser's frame has its own scrollbar, so only the pdf.js view gets it.
   const haze = new ScrollHaze();
 
   const label = opts.fileName ?? opts.labels.close;
@@ -384,7 +390,7 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
 
   const startFill = (): Promise<void> => {
     if (kind === 'pdf' && safePreviewSrc(opts.url)?.startsWith('blob:') === true) {
-      return fillPdfBlobBody(body, actions, opts, () => state.closed, (release) => releases.push(release));
+      return fillPdfBlobBody(chrome, actions, opts);
     }
     if (officeKind !== null) {
       return fillOfficeBody(body, opts, officeKind, () => state.closed, (release) => releases.push(release), chrome);
@@ -399,10 +405,10 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
   // Mount the scroll haze only once the body holds its rendered view — the fill
   // helpers call body.replaceChildren(), which would otherwise wipe the strips.
   // The haze's own MutationObserver then tracks later changes (e.g. the markdown
-  // Preview ⇄ Source toggle). PDFs scroll inside their iframe, so they opt out.
+  // Preview ⇄ Source toggle). Other PDF bodies (frame, link, error) opt out.
   // A fill can fail late, e.g. when a lazy renderer chunk does not load.
   void startFill().then(() => {
-    if (!state.closed && kind !== 'pdf') {
+    if (!state.closed && (kind !== 'pdf' || body.querySelector('[data-role="file-preview-pdf"]') !== null)) {
       haze.init(body);
     }
   }, () => {

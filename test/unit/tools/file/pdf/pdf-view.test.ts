@@ -510,4 +510,45 @@ describe('mountPdfView', () => {
     expect(h.pages()[0].querySelectorAll('.blok-file-preview-pdf-links a')).toHaveLength(0);
   });
 
+  it('names each page with the preview label', async () => {
+    const h = harness();
+    const chrome: PreviewChrome = { ...h.chrome, labels: { ...h.chrome.labels, pdfPageN: 'Seite {number}' } };
+    await mountPdfView(h.container, fakeDoc(3), {}, chrome);
+
+    expect(h.pages()[2].getAttribute('aria-label')).toBe('Seite 3');
+  });
+
+  it('reports a page that fails to draw, once, and not a cancelled one', async () => {
+    const h = harness();
+    const doc = fakeDoc(5);
+    const getPage = doc.getPage.bind(doc);
+    doc.getPage = async (n) => {
+      const page = await getPage(n);
+
+      return n === 2 || n === 3 ? { ...page, render: () => ({ promise: Promise.reject(new Error('bad page')), cancel: () => undefined }) } : page;
+    };
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const onError = vi.fn();
+    await mountPdfView(h.container, doc, {}, h.chrome, { onError });
+
+    observer().show(1, 1);
+    await settle();
+
+    expect(onError).toHaveBeenCalledTimes(2);
+    expect(onError.mock.calls[0][0]).toEqual(new Error('bad page'));
+  });
+
+  it('keeps a failing text layer to itself', async () => {
+    const h = harness();
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const onError = vi.fn();
+    const lib: PdfViewLib = { renderTextLayer: () => Promise.reject(new Error('no text')) };
+    await mountPdfView(h.container, fakeDoc(3), lib, h.chrome, { onError });
+
+    observer().show(1, 1);
+    await settle();
+
+    expect(onError).not.toHaveBeenCalled();
+    expect(h.pages()[0].querySelector('canvas')?.width).toBeGreaterThan(0);
+  });
 });

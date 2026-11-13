@@ -491,6 +491,18 @@ describe('eager ESM path ships no ES2023+ runtime APIs', () => {
     ).toBe(true)
   })
 
+  it('keeps pdf.js behind a dynamic import (non-vacuity)', async () => {
+    await initLexer()
+    const closure = [...staticClosure()]
+    expect(closure.some((file) => /pdf-runtime-[^/]*\.mjs$/.test(file))).toBe(false)
+    expect(
+      closure.some((file) => /import\(\s*[`'"]\.{1,2}\/(?:[\w-]+\/)?pdf-runtime-[^`'"]+\.mjs[`'"]\s*\)/.test(readFileSync(file, 'utf-8')))
+    ).toBe(true)
+    // The lazy chunk really is pdf.js.
+    const runtime = listJsFiles(dist).find((file) => /pdf-runtime-[^/]*\.mjs$/.test(file))
+    expect(runtime !== undefined && readFileSync(runtime, 'utf-8').includes('GlobalWorkerOptions')).toBe(true)
+  })
+
   it('no eager file calls an API newer than the eager path already uses', async () => {
     await initLexer()
     const hits = [...staticClosure()].flatMap((file) => {
@@ -881,10 +893,12 @@ describe('dist weight (consumer parse cost)', () => {
     // module as blob sources, CSS); code went 12,633,521 -> 14,350,582 bytes.
     // 14.3 MiB (USER, 2026-10-21): Ask AI and database parity rounds; code measured 14,687,410 bytes.
     // 14.4 MiB (USER, 2026-10-27): database and Ask AI growth, no duplication; code measured 15,042,671 bytes.
+    // 16 MiB (USER, 2026-11-13: bundle pdf.js): its lazy chunk is 1,884,822 bytes (library and worker source);
+    // code went 14,779,303 -> 16,673,517 bytes.
     const codeBytes = esFiles
       .filter((file) => !readFileSync(file, 'utf-8').slice(0, 200).includes('JSON.parse('))
       .reduce((sum, file) => sum + readFileSync(file).byteLength, 0)
-    expect(codeBytes).toBeLessThan(14.4 * 1024 * 1024)
+    expect(codeBytes).toBeLessThan(16 * 1024 * 1024)
   })
 
   // Minifiers keep the newlines inside string and template literals (the SVG

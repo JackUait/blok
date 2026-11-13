@@ -988,7 +988,7 @@ const FILE_PREVIEW_COGNATE_RETENTIONS: Record<string, string[]> = {
   cs: ['tools.file.previewTypeText'],
   da: ['tools.file.previewSum'],
   de: ['tools.file.previewTypeText'],
-  fr: ['tools.file.previewPages', 'tools.file.previewPagesOne'],
+  fr: ['tools.file.previewPages', 'tools.file.previewPagesOne', 'tools.file.previewPdfPageN'],
   id: ['tools.file.previewSlidesOne', 'tools.file.previewSlideN'],
   no: ['tools.file.previewSum'],
   pt: ['tools.file.previewSlides', 'tools.file.previewSlidesOne', 'tools.file.previewSlideN'],

@@ -40,6 +40,11 @@ export interface PreviewLabels {
   logAll: string;
   logErrors: string;
   logWarnings: string;
+  cancel: string;
+  pdfPassword: string;
+  pdfPasswordWrong: string;
+  pdfOpen: string;
+  pdfPageN: string;
 }
 
 export const DEFAULT_PREVIEW_LABELS: PreviewLabels = {
@@ -79,6 +84,11 @@ export const DEFAULT_PREVIEW_LABELS: PreviewLabels = {
   logAll: 'All',
   logErrors: 'Errors',
   logWarnings: 'Warnings',
+  cancel: 'Cancel',
+  pdfPassword: 'This PDF is protected. Enter its password.',
+  pdfPasswordWrong: 'That password is wrong. Try again.',
+  pdfOpen: 'Open',
+  pdfPageN: 'Page {number}',
 };
 
 /** Labels a caller left out fall back to English. */

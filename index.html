@@ -5212,6 +5212,36 @@
         states: [
           // No tool is registered for this type, so core renders its Stub in its place.
           { label: 'Unknown block type', blocks: [{ id: 'stub-unknown', type: 'kanban', data: { columns: [] } }] },
+          { label: 'Long type name', blocks: [{ id: 'stub-long', type: 'acme-interactive-pricing-calculator-with-yearly-toggle', data: { currency: 'EUR' } }] },
+          { label: 'Long type name · narrow', width: 320, blocks: [{ id: 'stub-long-narrow', type: 'acme-interactive-pricing-calculator-with-yearly-toggle', data: { currency: 'EUR' } }] },
+          { label: 'Narrow', width: 240, blocks: [{ id: 'stub-narrow', type: 'kanban', data: { columns: [] } }] },
+          { label: 'Between paragraphs', blocks: [
+            { id: 'stub-flow-p1', type: 'paragraph', data: { text: 'The team board for this sprint:' } },
+            { id: 'stub-flow', type: 'kanban', data: { columns: [] } },
+            { id: 'stub-flow-p2', type: 'paragraph', data: { text: 'We update it every Monday.' } },
+          ] },
+          { label: 'Several in a row', blocks: [
+            { id: 'stub-row-1', type: 'kanban', data: { columns: [] } },
+            { id: 'stub-row-2', type: 'mermaid', data: { code: 'graph TD' } },
+            { id: 'stub-row-3', type: 'poll', data: { question: 'Lunch?' } },
+          ] },
+          { label: 'Inside a toggle', blocks: [
+            { id: 'stub-tg', type: 'toggle', data: { text: 'Sprint board', isOpen: true }, content: ['stub-tg-c'] },
+            { id: 'stub-tg-c', type: 'kanban', data: { columns: [] }, parent: 'stub-tg' },
+          ] },
+          { label: 'Inside a callout', blocks: [
+            { id: 'stub-co', type: 'callout', data: { emoji: '💡' }, content: ['stub-co-p', 'stub-co-c'] },
+            { id: 'stub-co-p', type: 'paragraph', data: { text: 'A callout with an unknown block in it.' }, parent: 'stub-co' },
+            { id: 'stub-co-c', type: 'kanban', data: { columns: [] }, parent: 'stub-co' },
+          ] },
+          { label: 'Inside columns', blocks: [
+            { id: 'stub-cols', type: 'column_list', data: {}, content: ['stub-col-a', 'stub-col-b'] },
+            { id: 'stub-col-a', type: 'column', data: {}, content: ['stub-col-a-c'], parent: 'stub-cols' },
+            { id: 'stub-col-a-c', type: 'kanban', data: { columns: [] }, parent: 'stub-col-a' },
+            { id: 'stub-col-b', type: 'column', data: {}, content: ['stub-col-b-c'], parent: 'stub-cols' },
+            { id: 'stub-col-b-c', type: 'acme-interactive-pricing-calculator', data: { currency: 'EUR' }, parent: 'stub-col-b' },
+          ] },
+          { label: 'Read-only', readOnly: true, blocks: [{ id: 'stub-ro', type: 'kanban', data: { columns: [] } }] },
         ],
       },
     ];

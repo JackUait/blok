@@ -107,6 +107,16 @@ describe('Stub tool', () => {
     expect(classes).toContain('items-center');
   });
 
+  it('sets the chip on the top border, at the start side', () => {
+    const element = createStub().stub.render();
+    const chip = element.querySelector('[data-blok-stub-title]');
+    const chipClasses = chip?.className.split(/\s+/) ?? [];
+
+    expect(chipClasses).toEqual(expect.arrayContaining(['absolute', '-top-px', 'start-3', '-translate-y-1/2']));
+    expect(chipClasses).toContain('max-w-[calc(100%-1.5rem)]');
+    expect(element.className.split(/\s+/)).toContain('relative');
+  });
+
   it('keeps the chip and the message as siblings on the row', () => {
     const element = createStub().stub.render();
     const titleEl = element.querySelector('[data-blok-stub-title]');

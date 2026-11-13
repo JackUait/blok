@@ -99,9 +99,9 @@ export class Stub implements BlockTool {
    * @returns {HTMLElement}
    */
   private make(): HTMLElement {
-    const wrapper = $.make('div', 'flex flex-wrap items-center gap-2.5 py-2.25 px-3 my-2.5 rounded-(--blok-radius-block) border-[1.5px] border-dashed border-(--blok-border-strong) bg-[repeating-linear-gradient(135deg,transparent_0_9px,var(--blok-stub-hatch)_9px_10px)] text-sm leading-normal text-(--blok-text-secondary)');
+    const wrapper = $.make('div', 'relative flex items-center pt-4.5 pb-2.5 px-3 mt-4 mb-2.5 rounded-(--blok-radius-block) border-[1.5px] border-dashed border-(--blok-border-strong) bg-[repeating-linear-gradient(135deg,transparent_0_9px,var(--blok-stub-hatch)_9px_10px)] text-sm leading-normal text-(--blok-text-secondary)');
     const infoContainer = $.make('div', 'min-w-0 flex-1');
-    const title = $.make('div', 'flex-none max-w-full truncate py-[3px] px-[7px] rounded-(--blok-radius-control) border border-(--blok-border-primary) bg-(--blok-bg-primary) font-mono font-medium text-xs leading-normal text-(--blok-text-primary)', {
+    const title = $.make('div', 'absolute -top-px start-3 -translate-y-1/2 max-w-[calc(100%-1.5rem)] truncate py-[3px] px-[7px] rounded-(--blok-radius-control) border border-(--blok-border-primary) bg-(--blok-bg-primary) font-mono font-medium text-xs leading-normal text-(--blok-text-primary)', {
       textContent: this.title,
     });
     const subtitle = $.make('div', '', {

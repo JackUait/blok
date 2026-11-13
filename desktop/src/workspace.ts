@@ -7,6 +7,7 @@ import { createPageFrame, type PageFrame, type ShellPage, type SidebarAction } f
 import { type DesktopPage, type WorkspaceIndex } from './storage';
 import { workspaceRepository } from './workspace-repository';
 import { pageAccess } from './page-access';
+import { openPageSharing } from './cloud/page-sharing';
 import { activeWorkspace, workspaceKey, type WorkspaceRef } from './workspace-registry';
 import { createDesktopFooter, readAppearance } from './settings';
 import { COVER_GALLERY, readCoverFile, createAddCoverButton, createPageCover, isPageCover, trackPageHeaderHover, type PageCover } from './cover';
@@ -311,7 +312,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     }, '__TAURI_INTERNALS__' in window ? undefined : () => {
       frame.toggleSidebar();
       onLayout(sidebar.getBoundingClientRect().width);
-    });
+    }, ref.kind === 'remote' ? () => { void openPageSharing(ref, id, page.title); } : undefined);
     if (ref.kind === 'remote') {
       const origin = toolbar.element.querySelector<HTMLElement>('[data-desktop-page-local]');
       if (origin) { origin.textContent = `${readOnly(id) ? 'Lecture seule · ' : ''}${ref.name}`; origin.title = ref.server; }

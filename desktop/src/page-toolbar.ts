@@ -49,6 +49,7 @@ export function createPageToolbar(
   fullWidth: boolean,
   onFullWidthChange: (value: boolean) => void,
   onToggleSidebar?: () => void,
+  onShare?: () => void,
 ): PageToolbar {
   const toolbar = document.createElement('div');
   toolbar.setAttribute('data-desktop-page-toolbar', '');
@@ -75,6 +76,16 @@ export function createPageToolbar(
 
   const actions = document.createElement('div');
   actions.setAttribute('data-desktop-page-actions', '');
+  // « Qui voit cette page ? » se répond depuis la barre du haut, avant d'avoir
+  // à ouvrir quoi que ce soit — c'est ce qui rend les permissions vivables.
+  if (onShare) {
+    const share = document.createElement('button');
+    share.type = 'button';
+    share.setAttribute('data-desktop-page-share', '');
+    share.textContent = 'Partager';
+    share.addEventListener('click', onShare);
+    actions.append(share);
+  }
   const more = document.createElement('button');
   more.type = 'button';
   more.setAttribute('data-desktop-page-more', '');

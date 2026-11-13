@@ -1483,6 +1483,59 @@ describe('view settings panel', () => {
       expect(q('database-filter-rule-side-r')?.textContent?.trim()).toBe('tools.database.dateEnd');
     });
 
+    // notion-motion.md Round 22 §2 (r22-adv-seldate*.raw, r22-adv-fclick*.raw, r22-adv-t1-tab.raw): the simple popover's
+    // field and calendar; no ⌄ or ⊗ while empty; a click on the empty field opens the presets.
+    describe('a Date "Is" value', () => {
+      const field = (): HTMLInputElement | null => q('database-filter-value-picker')?.querySelector<HTMLInputElement>('[data-blok-database-chip-date-input]') ?? null;
+
+      it('shows the focused field and the month calendar, with no ⌄ or ⊗ while empty', () => {
+        openRule({ propertyId: 'due', operator: 'equals', value: null });
+
+        expect(field()).not.toBeNull();
+        expect(field()).toHaveFocus();
+        expect(q('database-filter-value-picker')?.querySelector('[data-blok-database-chip-month] [data-blok-database-date-day]')).not.toBeNull();
+        expect(exists('database-filter-date-presets')).toBe(false);
+        expect(exists('database-filter-date-clear')).toBe(false);
+        expect(exists('database-filter-date-today')).toBe(false);
+      });
+
+      it('opens the presets from a click on the empty field, and a pick closes the flyout', () => {
+        const h = openRule({ propertyId: 'due', operator: 'equals', value: null });
+
+        field()?.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+
+        expect(q('database-filter-date-menu')?.style.width).toBe('240px');
+        expect(q('database-filter-date-custom')?.getAttribute('aria-checked')).toBe('true');
+
+        click('database-filter-date-one_week_ago');
+
+        expect(value(h)).toBe('one_week_ago');
+        expect(exists('database-filter-value-picker')).toBe(false);
+        expect(q('database-filter-rule-value-r')?.textContent?.trim()).toBe('tools.database.filterDateOneWeekAgo');
+      });
+
+      it('commits typed text on Enter, then shows the day and a ⊗', () => {
+        const h = openRule({ propertyId: 'due', operator: 'equals', value: null });
+        const input = field();
+
+        if (input === null) throw new Error('no field');
+        input.value = '3/5/25';
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+        expect(value(h)).toBe('2025-03-05');
+        expect(field()?.value).toBe('March 5, 2025');
+        expect(exists('database-filter-date-clear')).toBe(true);
+      });
+
+      it('picks a calendar day', () => {
+        const h = openRule({ propertyId: 'due', operator: 'equals', value: '2026-11-13' });
+
+        q('database-filter-value-picker')?.querySelector<HTMLElement>('[data-blok-database-date-day="2026-11-20"]')?.click();
+
+        expect(value(h)).toBe('2026-11-20');
+      });
+    });
+
     it('starts an advanced Date "Is" rule on Today', () => {
       const h = openRule({ propertyId: 'due', operator: 'this_week', value: null });
 

@@ -10924,6 +10924,11 @@ button[data-blok-database-table-group-count]:hover {
   padding-inline-end: var(--blok-space-1);
 }
 
+/* r22-adv-seldate-field.raw: in a rule's value flyout the field sits 12 under the flyout's top. */
+[data-blok-database-chip-date-field][data-blok-database-chip-date-rule] {
+  margin-block-start: var(--blok-space-2);
+}
+
 [data-blok-database-chip-date-field] > button {
   display: inline-flex;
   flex: none;

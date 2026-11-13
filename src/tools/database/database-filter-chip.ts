@@ -156,6 +156,8 @@ class FilterChipPages {
   private calendarRedraw: (() => void) | undefined;
   /** The "Invalid date" message beside the day field, on the body (the popover clips its overflow). */
   private invalidNote: HTMLElement | undefined;
+  /** Closes a rule editor's value flyout (`values`). */
+  private closeValues: (() => void) | undefined;
   /** A pointer is down inside the panel: a field's blur commit waits for its click. */
   private pointerHeld = false;
   private trackedRoot: HTMLElement | undefined;
@@ -193,9 +195,13 @@ class FilterChipPages {
 
   /** The value controls alone: an advanced rule's value flyout. A Checkbox pick calls `done`, as Notion's menu closes. */
   values(done: () => void): PanelPage {
+    this.closeValues = done;
+
     return {
       build: (panel) => {
         this.panel = panel;
+        this.trackPointer(panel.root);
+        this.hideInvalid();
         const filter = this.current();
         const property = this.ctx.schema().find((p) => p.id === filter?.propertyId);
 
@@ -659,7 +665,8 @@ class FilterChipPages {
   private dateControls(operator: string, value: FilterConfig['value']): HTMLElement[] {
     if (operator === 'is_between') return this.betweenControls(value);
 
-    return this.writer === undefined ? this.dayControls(value) : this.presetRows(value);
+    // notion-motion.md Round 22 §2: a rule editor's value flyout holds the simple popover's field and calendar.
+    return this.dayControls(value, this.writer !== undefined);
   }
 
   /**
@@ -667,7 +674,11 @@ class FilterChipPages {
    * "Select or type a date…" field with ⊗ (once there is a value) and a presets ⌄, then the month calendar.
    * A preset shows its name in the field; a day shows long ("March 5, 2025", Round 14).
    */
-  private dayControls(value: FilterConfig['value']): HTMLElement[] {
+  /**
+   * `advanced`: a rule editor's value flyout (Round 22 §2, r22-adv-seldate*.raw, r22-adv-fclick.raw). No ⌄: a pointer
+   * click on the empty field opens the presets, and a preset pick closes the flyout.
+   */
+  private dayControls(value: FilterConfig['value'], advanced = false): HTMLElement[] {
     const locale = editorLocale(this.ctx.i18n);
     const preset = RELATIVE_DATE_VALUES.find((relative) => relative === value);
     const exact = typeof value === 'string' && DAY.test(value) ? value : undefined;
@@ -751,6 +762,14 @@ class FilterChipPages {
       });
       field.appendChild(clear);
     }
+    if (advanced) {
+      field.setAttribute('data-blok-database-chip-date-rule', '');
+      input.addEventListener('click', (event) => {
+        if (event.detail > 0 && input.value === '') this.presetMenu(field, value);
+      });
+
+      return [field, this.dayCalendar(picked, locale), ...(preset !== undefined ? [this.updatesNote()] : [])];
+    }
     presets.type = 'button';
     presets.setAttribute('data-blok-database-chip-date-presets', '');
     presets.setAttribute('data-blok-testid', 'database-filter-date-presets');
@@ -815,8 +834,9 @@ class FilterChipPages {
 
     if (panel === undefined) return;
     const isPreset = (RELATIVE_DATE_VALUES as readonly unknown[]).includes(value);
-    // The anchor is the field box, which takes no focus: Escape hands it to the ⌄.
-    const presetsButton = (): HTMLElement | null => panel.root.querySelector<HTMLElement>('[data-blok-testid="database-filter-date-presets"]');
+    // The anchor is the field box, which takes no focus: Escape hands it to the ⌄, or the field where there is none.
+    const presetsButton = (): HTMLElement | null => panel.root.querySelector<HTMLElement>('[data-blok-testid="database-filter-date-presets"]')
+      ?? panel.root.querySelector<HTMLElement>('[data-blok-database-chip-date-input]');
 
     openFlyout(field, panel, 'database-filter-date-menu', DATE_PRESET_MENU_WIDTH, (pick) => [
       ...RELATIVE_DATE_VALUES.map((relative) => panelRow({
@@ -825,6 +845,8 @@ class FilterChipPages {
         checked: value === relative,
         onClick: () => pick(() => {
           this.update({ value: relative });
+          // r22-adv-wk.raw: in a rule editor's flyout a preset closes the flyout.
+          if (this.writer !== undefined) this.closeValues?.();
 
           return presetsButton();
         }),
@@ -844,41 +866,6 @@ class FilterChipPages {
         }),
       }),
     ], { gap: DATE_PRESET_MENU_GAP, escapeFocus: presetsButton });
-  }
-
-  /** The advanced rule's value flyout keeps the presets as rows and a YYYY-MM-DD field. */
-  private presetRows(value: FilterConfig['value']): HTMLElement[] {
-    const exact = panelInput({
-      value: typeof value === 'string' && DAY.test(value) ? value : '',
-      placeholder: 'YYYY-MM-DD',
-      label: this.t('filterExactDate'),
-      testId: 'database-filter-value',
-      onInput: (text) => {
-        if (DAY.test(text)) this.update({ value: text });
-      },
-    });
-    const isPreset = (RELATIVE_DATE_VALUES as readonly unknown[]).includes(value);
-
-    return [
-      ...RELATIVE_DATE_VALUES.map((relative) => panelRow({
-        label: this.ctx.i18n.t(relativeValueLabelKey(relative)),
-        testId: `database-filter-date-${relative}`,
-        checked: value === relative,
-        onClick: () => this.update({ value: relative }),
-      })),
-      // notion-motion.md Round 13: the presets end with "Custom date". Round 20 §3 (r20-ct-custom.raw): it clears the value and focuses the field.
-      panelRow({
-        label: this.t('filterDateCustom'),
-        testId: 'database-filter-date-custom',
-        checked: !isPreset,
-        onClick: () => {
-          if (isPreset) this.update({ value: null });
-          this.focusDateField();
-        },
-      }),
-      exact,
-      ...(isPreset ? [this.updatesNote()] : []),
-    ];
   }
 
   /** "Is between": a start and an end day, saved as a date range once both are whole. */
@@ -1143,6 +1130,7 @@ export const openRuleValueFlyout = (
     gap,
     flip,
     onClose: (escape) => {
+      pages.dispose();
       release();
       host.refresh();
       if (escape) host.root.querySelector<HTMLElement>(`[data-blok-testid="${CSS.escape(anchor.getAttribute('data-blok-testid') ?? '')}"]`)?.focus();
@@ -1151,7 +1139,7 @@ export const openRuleValueFlyout = (
 
   host.own(flyout);
   flyout.open();
-  flyout.root.querySelector<HTMLElement>('[data-blok-database-select-search], [data-blok-database-panel-input]')?.focus();
+  flyout.root.querySelector<HTMLElement>('[data-blok-database-select-search], [data-blok-database-panel-input], [data-blok-database-chip-date-input]')?.focus();
 
   return flyout;
 };

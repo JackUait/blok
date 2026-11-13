@@ -1658,6 +1658,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R23_BYTES = 3_971;
     // Lane r24: the Add view tile's 20ms fill and its pressed fill; the OPEN button's pressed fill; the Property visibility row offsets; the plain "+ New group" button; the Add view tile label ink.
     const DATABASE_R24_BYTES = 1444;
+    // Round 22 lane r25: the Date filter's dark "Invalid date" message (the red typed ink goes); a rule flyout's field 12 down.
+    const DATABASE_R25_BYTES = 634;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2145,6 +2147,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R22_BYTES
       + DATABASE_R23_BYTES
       + DATABASE_R24_BYTES
+      + DATABASE_R25_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

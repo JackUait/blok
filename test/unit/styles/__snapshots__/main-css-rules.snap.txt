@@ -14109,6 +14109,10 @@ button[data-blok-database-table-group-count]:hover {
   padding-inline-end: var(--blok-space-1);
 }
 
+[data-blok-database-chip-date-field][data-blok-database-chip-date-rule] {
+  margin-block-start: var(--blok-space-2);
+}
+
 [data-blok-database-chip-date-field] > button {
   display: inline-flex;
   flex: none;

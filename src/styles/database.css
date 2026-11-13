@@ -2536,7 +2536,6 @@
   inline-size: 18px;
   block-size: 24px;
   color: var(--blok-database-peek-label-icon);
-  transition: opacity 0.15s;
 }
 
 /* The details panel's width is unmeasured: it keeps Blok's narrower label column. */
@@ -2606,7 +2605,6 @@
     block-size: 24px;
     color: var(--blok-database-peek-label-icon);
     opacity: 0;
-    transition: opacity 0.15s;
   }
 
   [data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]):hover > [data-blok-database-drawer-prop-head] > [data-blok-database-drawer-prop-handle]:has(+ [data-blok-database-drawer-prop-icon]) {
@@ -3868,14 +3866,14 @@ button[data-blok-database-column-count]:hover {
   color: var(--blok-database-add-text);
 }
 
-/* Notion's white "Edit" pencil right after the title, on hover (findings-listgallery L04). */
+/* Notion's white "Edit" pencil right after the title, on hover: 26x20, a 16px pencilLine (notion-motion.md Round 26 §4). */
 [data-blok-database-list-row-edit] {
   display: none;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 30px;
-  height: 24px;
+  width: 26px;
+  height: 20px;
   margin-inline-start: var(--blok-space-1-75);
   padding: 0;
   border: none;
@@ -3895,8 +3893,8 @@ button[data-blok-database-column-count]:hover {
 }
 
 [data-blok-database-list-row-edit] svg {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
 }
 
 /* notion-motion.md Round 25 §6: with "Directly edit page name" on, a 26x20 "Open in side peek" and a text cursor. */
@@ -4257,7 +4255,6 @@ button[data-blok-database-column-count]:hover {
   gap: var(--blok-space-1-5);
   height: 34px;
   padding: 0 var(--blok-space-2) 0 var(--blok-space-1-5);
-  margin-top: var(--blok-space-1);
   background: none;
   border: none;
   border-radius: var(--blok-radius-control);
@@ -4267,7 +4264,7 @@ button[data-blok-database-column-count]:hover {
   /* Notion's rgb(161, 158, 153) fails AA: the "Empty" value's AA step. */
   color: var(--blok-database-ink-tertiary);
   text-align: start;
-  transition: background-color 130ms ease;
+  transition: background-color 0.1s ease-in-out;
 }
 
 [data-blok-database-drawer-add-prop] svg {
@@ -6910,14 +6907,14 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   background-color: var(--blok-database-option-default-bg);
 }
 
-/* Checkbox: 16px as measured. Notion's 3px radius (research/07:75) has no role; the small-control role stands in. Checked uses Blok's checklist blue. */
+/* Checkbox: 16px, radius 3 as measured (notion-motion.md Round 26 §5). Checked uses Blok's checklist blue. */
 [data-blok-database-checkbox] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 16px;
   height: 16px;
-  border-radius: var(--blok-radius-control-sm);
+  border-radius: var(--blok-radius-checkbox);
   border: 1px solid var(--blok-database-checkbox-border);
   color: var(--blok-database-checkbox-check);
   transition: background-color 0.2s ease-out;

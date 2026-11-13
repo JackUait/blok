@@ -19,6 +19,8 @@ const ruleBody = (selector: string): string =>
     .map((rule) => rule[2])
     .join(';');
 
+const colors = readFileSync(resolve(__dirname, '../../../src/styles/colors.css'), 'utf8');
+
 /** A token's value in the light block, then the two dark blocks. */
 const tokenValues = (name: string): string[] =>
   [ ...database.matchAll(new RegExp(`${name}: ([^;]+);`, 'g')) ].map((m) => m[1].trim());
@@ -381,8 +383,8 @@ describe('row page property drag handle', () => {
     expect(ruleBody(`${shown} + [data-blok-database-drawer-prop-icon]`)).toContain('display: none');
   });
 
-  // Notion's dragHandleFillSmall: in the 18x24 icon slot, opacity 0 → 1 over 0.15s while the icon fades out.
-  it('crossfades with the type icon in the same 18x24 slot', () => {
+  // notion-motion.md Round 26 §5: Notion's dragHandleFillSmall takes the 18x24 icon slot at once, with no fade.
+  it('swaps with the type icon in the same 18x24 slot, at once', () => {
     const handle = ruleBody(`${head} > ${overIcon}`);
 
     expect(handle).toContain('display: inline-flex');
@@ -391,7 +393,7 @@ describe('row page property drag handle', () => {
     expect(handle).toContain('inline-size: 18px');
     expect(handle).toContain('block-size: 24px');
     expect(handle).toContain('opacity: 0');
-    expect(handle).toContain('transition: opacity 0.15s');
+    expect(handle).not.toContain('transition');
     expect(handle).toContain('color: var(--blok-database-peek-label-icon)');
     expect(handle).not.toContain('display: none');
     expect(ruleBody(`${hoveredHead} > ${overIcon}`)).toContain('opacity: 1');
@@ -400,10 +402,10 @@ describe('row page property drag handle', () => {
 
     expect(icon).toContain('display: inline-flex');
     expect(icon).toContain('opacity: 0');
-    expect(ruleBody(`${head} > [data-blok-database-drawer-prop-icon]`)).toContain('transition: opacity 0.15s');
+    expect(ruleBody(`${head} > [data-blok-database-drawer-prop-icon]`)).not.toContain('transition');
   });
 
-  it('only crossfades where a pointer can hover', () => {
+  it('only swaps where a pointer can hover', () => {
     const hoverOnly = [ ...database.matchAll(/@media \(hover: hover\) \{((?:[^{}]*\{[^{}]*\})*[^{}]*)\}/g) ].map((m) => m[1]).join(' ');
 
     expect(hoverOnly).toContain(`${head} > ${overIcon}`);
@@ -457,6 +459,15 @@ describe('row page Add a property', () => {
     expect(body).toContain('align-self: flex-start');
     expect(ruleBody('[data-blok-database-drawer-add-prop]:hover')).not.toContain('border-color');
     expect(ruleBody('[data-blok-database-drawer-add-prop] svg')).toContain('inline-size: 16px');
+  });
+
+  // notion-motion.md Round 26 §5: 4 under the last row (the list's own 4px gap), hover `background 0.1s ease-in-out`.
+  it('sits 4 under the last row and fills over 0.1s ease-in-out', () => {
+    const body = ruleBody('[data-blok-database-drawer-add-prop]');
+
+    expect(ruleBody('[data-blok-database-drawer-props]')).toContain('gap: var(--blok-space-1)');
+    expect(body).not.toContain('margin-top');
+    expect(body).toContain('transition: background-color 0.1s ease-in-out');
   });
 
   // Notion's plusFillSmall: 1px lower than centre. Its rgb(173, 169, 163) is 2.34:1 on white, so the icon takes 142,139,134 (3.39:1).
@@ -552,5 +563,13 @@ describe('status pill', () => {
   // Notion's 10px is half the 20px height: the pill role renders the same, and the radius law wants a role.
   it('keeps the pill radius role, which a 20px pill draws at 10px', () => {
     expect(ruleBody('[data-blok-database-option-pill][data-status-group]')).toContain('border-radius: var(--blok-radius-pill)');
+  });
+});
+
+// notion-motion.md Round 26 §5 (r26-cb-parts.raw): the database checkbox is 16x16 with a 3px radius.
+describe('database checkbox', () => {
+  it('rounds the box 3px', () => {
+    expect(ruleBody('[data-blok-database-checkbox]')).toContain('border-radius: var(--blok-radius-checkbox)');
+    expect(colors).toContain('--blok-radius-checkbox: 0.1875rem;');
   });
 });

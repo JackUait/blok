@@ -2393,6 +2393,7 @@
   --blok-radius-control: var(--blok-radius-6);
   --blok-radius-control-sm: var(--blok-radius-4);
   --blok-radius-mark: var(--blok-radius-2);
+  --blok-radius-checkbox: 0.1875rem;
   --blok-radius-floor: var(--blok-radius-4);
   --blok-radius-notch: 0.09375rem;
   --blok-radius-table: var(--blok-radius-2);
@@ -6681,7 +6682,6 @@ span[data-blok-slash-search] {
   inline-size: 18px;
   block-size: 24px;
   color: var(--blok-database-peek-label-icon);
-  transition: opacity 0.15s;
 }
 
 [data-blok-database-drawer-details] [data-blok-database-drawer-prop-row] > [data-blok-database-drawer-prop-head] {
@@ -6744,7 +6744,6 @@ span[data-blok-slash-search] {
   block-size: 24px;
   color: var(--blok-database-peek-label-icon);
   opacity: 0;
-  transition: opacity 0.15s;
 }
 
 [@media (hover: hover)] [data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]):hover > [data-blok-database-drawer-prop-head] > [data-blok-database-drawer-prop-handle]:has(+ [data-blok-database-drawer-prop-icon]) {
@@ -7821,8 +7820,8 @@ button[data-blok-database-column-count]:hover {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 30px;
-  height: 24px;
+  width: 26px;
+  height: 20px;
   margin-inline-start: var(--blok-space-1-75);
   padding: 0;
   border: none;
@@ -7842,8 +7841,8 @@ button[data-blok-database-column-count]:hover {
 }
 
 [data-blok-database-list-row-edit] svg {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
 }
 
 [data-blok-database-list][data-direct-edit] [data-blok-database-list-row-title] {
@@ -8153,7 +8152,6 @@ button[data-blok-database-column-count]:hover {
   gap: var(--blok-space-1-5);
   height: 34px;
   padding: 0 var(--blok-space-2) 0 var(--blok-space-1-5);
-  margin-top: var(--blok-space-1);
   background: none;
   border: none;
   border-radius: var(--blok-radius-control);
@@ -8162,7 +8160,7 @@ button[data-blok-database-column-count]:hover {
   font-weight: 400;
   color: var(--blok-database-ink-tertiary);
   text-align: start;
-  transition: background-color 130ms ease;
+  transition: background-color 0.1s ease-in-out;
 }
 
 [data-blok-database-drawer-add-prop] svg {
@@ -10576,7 +10574,7 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   justify-content: center;
   width: 16px;
   height: 16px;
-  border-radius: var(--blok-radius-control-sm);
+  border-radius: var(--blok-radius-checkbox);
   border: 1px solid var(--blok-database-checkbox-border);
   color: var(--blok-database-checkbox-check);
   transition: background-color 0.2s ease-out;

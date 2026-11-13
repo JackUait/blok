@@ -47,8 +47,9 @@ describe('8px-padded table cells (§18.1)', () => {
 });
 
 describe('table checkbox (§18.1)', () => {
-  it('draws a checked box with no border, keeping its 4px radius', () => {
+  // notion-motion.md Round 26 §5: the box is rounded 3.
+  it('draws a checked box with no border, keeping its 3px radius', () => {
     expect(ruleBody('[data-blok-database-table-cell] [data-blok-database-checkbox][data-state="checked"]')).toContain('border-width: 0');
-    expect(ruleBody('[data-blok-database-checkbox]')).toContain('border-radius: var(--blok-radius-control-sm)');
+    expect(ruleBody('[data-blok-database-checkbox]')).toContain('border-radius: var(--blok-radius-checkbox)');
   });
 });

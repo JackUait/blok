@@ -33,6 +33,7 @@ export const RADIUS_ROLES: RadiusRole[] = [
   { token: '--blok-radius-control', specimen: 'button', height: 28 },
   { token: '--blok-radius-control-sm', specimen: 'button', height: 20 },
   { token: '--blok-radius-mark', specimen: 'mark' },
+  { token: '--blok-radius-checkbox', specimen: 'button', height: 16 },
   { token: '--blok-radius-pill', specimen: 'pill' },
   { token: '--blok-radius-notch', specimen: 'caret' },
   { token: '--blok-radius-table', specimen: 'table' },

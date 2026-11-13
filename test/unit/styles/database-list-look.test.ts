@@ -185,13 +185,14 @@ describe('list row hover chrome (findings-listgallery L03, L04)', () => {
     expect(ruleBody(database, '[data-blok-database-list-row-add]')).toContain('height: 24px');
   });
 
-  // notion-live/motion-listhover.json: the pencil's box is 30x24 at (623,345); listhover.png rings it 1px outside.
-  it('shows the white 30x24 Edit pencil only while the row is hovered', () => {
+  // notion-motion.md Round 26 §4 (r26-list-off-hover.raw): "Edit" is 26x20, radius 6, a 16px pencilLine.
+  it('shows the white 26x20 Edit pencil only while the row is hovered', () => {
     const body = ruleBody(database, '[data-blok-database-list-row-edit]');
 
     expect(body).toContain('display: none');
-    expect(body).toContain('width: 30px');
-    expect(body).toContain('height: 24px');
+    expect(body).toContain('width: 26px');
+    expect(body).toContain('height: 20px');
+    expect(ruleBody(database, '[data-blok-database-list-row-edit] svg')).toContain('width: 16px');
     expect(body).toContain('border-radius: var(--blok-radius-control)');
     expect(body).toContain('background: var(--blok-database-card-actions-bg)');
     expect(body).toContain('box-shadow: var(--blok-database-card-actions-shadow)');

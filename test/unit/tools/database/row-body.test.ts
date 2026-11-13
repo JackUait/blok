@@ -26,6 +26,12 @@ describe('row-body', () => {
       expect(rowDescription(row({ 'p-body': body }), schema, 'p-body')).toEqual(body);
     });
 
+    it('gives no body for a plain string the cell editor wrote, without reviving an orphan column', () => {
+      const orphan = { blocks: [{ type: 'paragraph', data: { text: 'Old' } }] };
+
+      expect(rowDescription(row({ 'p-body': 'typed in the cell', gone: orphan }), schema, 'p-body')).toBeUndefined();
+    });
+
     it('keeps an explicit empty body instead of reviving an orphan column', () => {
       const orphan = { blocks: [{ type: 'paragraph', data: { text: 'Old' } }] };
 

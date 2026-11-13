@@ -42,8 +42,9 @@ export const rowDescription = (
   const designatedValue = descriptionPropertyId === undefined ? undefined : row.properties[descriptionPropertyId];
 
   // An explicit empty body must not revive an older body column.
+  // The cell editor saves plain text here: that is no block body.
   if (designatedValue !== undefined) {
-    return designatedValue === null ? undefined : designatedValue as OutputData;
+    return isOutputData(designatedValue) ? designatedValue : undefined;
   }
 
   // Peers can create duplicate body columns with the same name.
@@ -63,7 +64,7 @@ export const rowDescription = (
     }
   }
 
-  return descriptionPropertyId === undefined ? undefined : row.properties[descriptionPropertyId] as OutputData | undefined;
+  return undefined;
 };
 
 const field = (data: unknown, key: string): unknown =>

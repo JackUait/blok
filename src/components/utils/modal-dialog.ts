@@ -208,6 +208,15 @@ export interface ModalDialogHandle {
 
   /** Play the exit animation on the animation target, then tear down. */
   closeAnimated: () => void;
+
+  /**
+   * Hands the page to a surface the dialog opens on top of itself, such as a
+   * peek. Until the returned resume runs, that surface's body-level subtree is
+   * not inert, focus may leave the dialog, and Escape and outside presses do
+   * not dismiss it. Resume gives focus back to the dialog when it is elsewhere;
+   * after a close it does nothing.
+   */
+  handOff: (other: HTMLElement) => () => void;
 }
 
 /**
@@ -420,7 +429,7 @@ export const openModalDialog = (options: OpenModalDialogOptions): ModalDialogHan
   surface.addEventListener('keydown', onKeyDownTrap);
   document.addEventListener('focusin', onFocusIn, true);
 
-  const unregister = registerLayer({
+  const register = (): (() => void) => registerLayer({
     element: surface,
     anchor: options.anchor,
     escape: options.escape ?? true,
@@ -435,6 +444,7 @@ export const openModalDialog = (options: OpenModalDialogOptions): ModalDialogHan
       options.onDismiss(reason ?? 'outside');
     },
   });
+  const layer = { unregister: register() };
 
   const focusInitial = (): boolean => {
     const target = options.initialFocus?.() ?? getTabbables(surface)[0] ?? null;
@@ -478,7 +488,7 @@ export const openModalDialog = (options: OpenModalDialogOptions): ModalDialogHan
 
     surface.removeEventListener('keydown', onKeyDownTrap);
     document.removeEventListener('focusin', onFocusIn, true);
-    unregister();
+    layer.unregister();
     removeInert();
     // blockSettings reads aria-modal to ask whether a modal is open.
     surface.removeAttribute('aria-modal');
@@ -557,10 +567,37 @@ export const openModalDialog = (options: OpenModalDialogOptions): ModalDialogHan
     settle.fallback = window.setTimeout(finishClose, CLOSE_ANIMATION_FALLBACK_MS);
   };
 
+  const handOff = (other: HTMLElement): (() => void) => {
+    if (state.closed || released.done) {
+      return () => undefined;
+    }
+    const top = bodyLevelAncestor(other);
+    const freed = top !== null && inertedElements.includes(top) ? top : null;
+    const resumed = { done: false };
+
+    freed?.removeAttribute('inert');
+    layer.unregister();
+    document.removeEventListener('focusin', onFocusIn, true);
+
+    return () => {
+      if (resumed.done || state.closed || released.done) {
+        return;
+      }
+      resumed.done = true;
+      freed?.setAttribute('inert', '');
+      layer.unregister = register();
+      document.addEventListener('focusin', onFocusIn, true);
+      if (!surface.contains(document.activeElement)) {
+        focusInitial();
+      }
+    };
+  };
+
   return {
     content,
     surface,
     close: finalize,
     closeAnimated,
+    handOff,
   };
 };

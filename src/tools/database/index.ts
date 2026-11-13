@@ -194,6 +194,7 @@ import { chartLayoutItems, chartMeasureLabel } from './chart-layout-items';
 import { DatabaseChartView } from './database-chart-view';
 import { openChartDrilldown } from './database-chart-drilldown';
 import { openPinnedGroupModal, pinnedGroupChips } from './database-pinned-group-modal';
+import type { PinnedGroupModalHandle } from './database-pinned-group-modal';
 import { DatabaseFeedView } from './database-feed-view';
 import type { FeedReactions } from './database-feed-view';
 import { rowReactions } from './row-reactions';
@@ -5641,7 +5642,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   private formPreview: ModalDialogHandle | null = null;
-  private pinnedGroupModal: { close: () => void } | null = null;
+  private pinnedGroupModal: PinnedGroupModalHandle | null = null;
 
   /**
    * research/36 §13: "Preview" shows the form as a respondent sees it, in a
@@ -7251,10 +7252,7 @@ export class DatabaseTool implements BlockTool {
           titlePropertyId: titleId,
           state,
           cellContext: this.cellContext(),
-          openRow: (rowId: string) => {
-            this.pinnedGroupModal?.close();
-            this.handleRowClick(rowId);
-          },
+          openRow: (rowId: string) => this.openPinnedGroupRow(rowId),
         });
 
         return { root: renderer.createView(), destroy: () => renderer.destroy() };
@@ -7267,6 +7265,32 @@ export class DatabaseTool implements BlockTool {
         }
       },
     });
+  }
+
+  /**
+   * notion-motion.md Round 26 §1 (r26-pm-centerpeek.raw): OPEN in the modal opens a Center peek on top of it, whatever
+   * the view's Open pages in, and closing the peek gives the modal back. A linked view's peek opens in its source's
+   * block, which this one cannot follow, so it closes the modal first as before.
+   */
+  private openPinnedGroupRow(rowId: string): void {
+    const modal = this.pinnedGroupModal;
+
+    if (modal !== null && this.source === undefined && this.element !== null) {
+      // Before the open: the peek takes focus, and the modal would pull it back.
+      const resume = modal.handOff(this.element);
+
+      this.handleRowClick(rowId, 'center');
+      if (this.cardDrawer?.isOpen === true && this.cardDrawer.openRowId === rowId) {
+        // The slot runs as the peek closes or its drawer is destroyed.
+        this.endRelatedPeek();
+        this.relatedPeekClosed = resume;
+
+        return;
+      }
+      resume();
+    }
+    this.pinnedGroupModal?.close();
+    this.handleRowClick(rowId);
   }
 
   /** Notion shows "Load more groups" past ten groups (research/08). */
@@ -11771,7 +11795,7 @@ export class DatabaseTool implements BlockTool {
     return id;
   }
 
-  /** The relation picker held open under the peek (notion-spec-2 §19.2). */
+  /** What waits under the peek for it to close: the relation picker (notion-spec-2 §19.2) or the pinned group modal. */
   private relatedPeekClosed: (() => void) | null = null;
 
   private endRelatedPeek(): void {

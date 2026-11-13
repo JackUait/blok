@@ -109,11 +109,17 @@ const openMoreMenu = (anchor: HTMLElement, i18n: Pick<I18n, 't'>, target: { name
   menu.show();
 };
 
+export interface PinnedGroupModalHandle {
+  close: () => void;
+  /** Hands the page to a peek opened over the modal; the returned resume gives it back (see ModalDialogHandle). */
+  handOff: (other: HTMLElement) => () => void;
+}
+
 /**
  * notion-motion.md Round 25 §1 (r25-pinmodal.raw): a pinned group's rows in an 800×496 dialog. The header holds the
  * group pill, Search and a round Dismiss. Every close is instant (motion-r25-pinmodal-esc.json, -outside, -x).
  */
-export const openPinnedGroupModal = (options: PinnedGroupModalOptions): { close: () => void } => {
+export const openPinnedGroupModal = (options: PinnedGroupModalOptions): PinnedGroupModalHandle => {
   const { i18n } = options;
   const backdrop = document.createElement('div');
   const panel = document.createElement('div');
@@ -225,5 +231,5 @@ export const openPinnedGroupModal = (options: PinnedGroupModalOptions): { close:
     },
   });
 
-  return { close: dismiss };
+  return { close: dismiss, handOff: (other) => state.handle?.handOff(other) ?? ((): void => undefined) };
 };

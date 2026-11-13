@@ -13,7 +13,7 @@ const schema: PropertyDefinition[] = [
 ];
 
 const view = (overrides: Partial<DatabaseViewConfig>): DatabaseViewConfig => ({
-  id: 'v', name: 'Board', type: 'board', position: 'a0', groupBy: 'sel', sorts: [], filters: [], ...overrides,
+  id: 'v', name: 'Board', type: 'board', position: 'a0', groupBy: 'sel', sorts: [], filters: [], visibleProperties: [], ...overrides,
 });
 
 const texts = (chips: HTMLElement[]): Array<string | null> => chips.map((chip) => chip.getAttribute('aria-label'));

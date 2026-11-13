@@ -377,3 +377,52 @@ describe('openModalDialog', () => {
     });
   });
 });
+
+// A dialog can hand the page to a surface it opens on top (the pinned group modal's center peek, notion-motion.md
+// Round 26 §1): while handed off, that surface is not inert, keeps focus, and Escape and presses do not close the dialog.
+describe('openModalDialog handOff', () => {
+  it('stands down for another surface until resumed', () => {
+    const { content, surface, first } = buildDialog();
+    const page = document.createElement('div');
+    const peek = document.createElement('button');
+    const onDismiss = vi.fn();
+
+    page.appendChild(peek);
+    document.body.appendChild(page);
+    const handle = openModalDialog({ content, surface, onDismiss });
+
+    expect(page.hasAttribute('inert')).toBe(true);
+    const resume = handle.handOff(peek);
+
+    expect(page.hasAttribute('inert')).toBe(false);
+    peek.focus();
+    expect(peek).toHaveFocus();
+    peek.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(onDismiss).not.toHaveBeenCalled();
+
+    resume();
+
+    expect(page.hasAttribute('inert')).toBe(true);
+    expect(surface.contains(document.activeElement)).toBe(true);
+    expect(first).toHaveFocus();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(onDismiss).toHaveBeenCalledWith('escape');
+
+    handle.close();
+  });
+
+  it('does nothing on resume after the dialog closed', () => {
+    const { content, surface } = buildDialog();
+    const page = document.createElement('div');
+
+    document.body.appendChild(page);
+    const handle = openModalDialog({ content, surface, onDismiss: vi.fn() });
+    const resume = handle.handOff(page);
+
+    handle.close();
+    resume();
+
+    expect(page.hasAttribute('inert')).toBe(false);
+  });
+});

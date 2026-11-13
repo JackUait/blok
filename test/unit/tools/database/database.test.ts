@@ -4447,6 +4447,31 @@ describe('DatabaseTool', () => {
         tool.destroy();
       });
 
+      // Round 26 §1 (r26-pm-centerpeek.raw, motion-r26-pm-centerpeek-esc.json): OPEN opens a Center peek over the modal,
+      // whatever the board's Open pages in; Escape closes the peek and the modal is back.
+      it('opens a row in a center peek over the pinned group modal', () => {
+        const { tool, element } = board(false, boardView({ pinnedGroups: [{ id: 'opt-todo' }] }));
+
+        queryByData(element, 'data-blok-database-pinned-group-open')?.click();
+        document.querySelector<HTMLElement>('[data-blok-database-group-modal-panel] [data-blok-database-table-open]')?.click();
+        const peek = document.querySelector<HTMLElement>('[data-blok-database-drawer]');
+
+        expect(peek?.getAttribute('data-peek-mode')).toBe('center');
+        expect(document.querySelector('[data-blok-database-group-modal-panel]')).not.toBeNull();
+        expect(element.closest('[inert]')).toBeNull();
+
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+        expect(document.querySelector('[data-blok-database-drawer]')).toBeNull();
+        expect(document.querySelector('[data-blok-database-group-modal-panel]')).not.toBeNull();
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+        expect(document.querySelector('[data-blok-database-group-modal-panel]')).toBeNull();
+
+        tool.destroy();
+      });
+
       // Round 25 §1 (r25-modal-celledit.raw, r25-modal-nameclick.raw): a click on a cell does nothing.
       it('selects no cell on a click inside the pinned group modal', () => {
         const { tool, element } = board(false, boardView({ pinnedGroups: [{ id: 'opt-todo' }] }));

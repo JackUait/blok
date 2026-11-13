@@ -52,6 +52,11 @@ describe('advanced filter popover', () => {
     expect(declared('[data-blok-database-filter-rule] > [data-blok-database-panel-row]:not([data-blok-database-filter-rule-button])', 'flex')).toEqual(['0 0 60px']);
   });
 
+  // r19-adv-andor.raw and Round 20 §2 (r20-g-inner2-parts.raw): the property, operator and value buttons are 14px 500, placeholder included.
+  it('sets every rule button in weight 500', () => {
+    expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-button]', 'font-weight')).toEqual(['500']);
+  });
+
   // notion-motion.md Round 20 §2: an empty value reads in secondary ink. AA rule: Blok's token, not Notion's lighter rgb(125,122,117).
   it('paints an empty rule value in secondary ink', () => {
     expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-button][data-blok-database-filter-placeholder]', 'color')).toEqual(['var(--blok-database-ink-secondary)']);

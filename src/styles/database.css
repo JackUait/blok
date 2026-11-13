@@ -12881,6 +12881,7 @@ input[data-blok-database-picker-search]:focus {
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-sort-button-bg);
   color: var(--blok-database-table-cell-text);
+  font-weight: 500;
 }
 
 /* notion-motion.md Round 20 §1 (r20-st-rows.raw): a Status group row in 500 and its group's ink. Notion's inks

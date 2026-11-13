@@ -15965,6 +15965,7 @@ input[data-blok-database-picker-search]:focus {
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-sort-button-bg);
   color: var(--blok-database-table-cell-text);
+  font-weight: 500;
 }
 
 [data-blok-database-filter-status-group] {

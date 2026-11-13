@@ -33,11 +33,6 @@ var permissionExemptions = map[string]string{
 	// Authentification propre, hors du modèle de permissions par page.
 	"document":            "point interne, authentifié par INTERNAL_SECRET et bloqué au proxy public",
 	"storeWorkspaceImage": "ressource d'espace sans page de rattachement",
-
-	// Dette assumée, levée par le lot des portes d'écriture.
-	"duplicate":     "écriture — passe par le résolveur au lot 4",
-	"seed":          "écriture — passe par le résolveur au lot 4",
-	"mcpCreatePage": "écriture — passe par le résolveur au lot 4",
 }
 
 var permissionGuards = []string{

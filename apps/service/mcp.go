@@ -299,6 +299,10 @@ func (s *Service) mcpCreatePage(ctx context.Context, req *mcp.CallToolRequest) (
 		if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pages WHERE id=$1 AND workspace_id=$2 AND NOT deleted AND NOT trashed)`, args.ParentID, ws.ID).Scan(&exists); err != nil || !exists {
 			return mcpError("Parent page unavailable"), nil
 		}
+		granted, err := s.effectiveLevel(ctx, tx, ctx.Value(mcpUserKey{}).(identity).ID, args.ParentID)
+		if err != nil || granted < levelEdit {
+			return mcpError("Parent page unavailable"), nil
+		}
 	}
 	var position int
 	if err = tx.QueryRow(ctx, `SELECT count(*) FROM pages WHERE workspace_id=$1 AND NOT deleted AND NOT trashed`, ws.ID).Scan(&position); err != nil {
@@ -315,6 +319,9 @@ func (s *Service) mcpCreatePage(ctx context.Context, req *mcp.CallToolRequest) (
 		visibility = visWorkspace
 	}
 	if _, err = tx.Exec(ctx, `INSERT INTO pages(id,workspace_id,metadata,content,visibility) VALUES($1,$2,$3,$4,$5)`, pageID, ws.ID, meta, []byte(`{"blocks":[]}`), visibility); err != nil {
+		return mcpError("Could not create page"), nil
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO page_shares(page_id,user_id,level,granted_by) VALUES($1,$2,'full',$2)`, pageID, ctx.Value(mcpUserKey{}).(identity).ID); err != nil {
 		return mcpError("Could not create page"), nil
 	}
 	if _, err = tx.Exec(ctx, `UPDATE workspaces SET revision=revision+1 WHERE id=$1`, ws.ID); err != nil || tx.Commit(ctx) != nil {

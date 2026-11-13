@@ -221,6 +221,15 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 			problem(w, 409, "Page ID already belongs to another workspace")
 			return
 		}
+		// Sans cela, partager serait réservé aux administrateurs — y compris la
+		// page qu'on vient d'écrire soi-même. Maîtriser n'est pas fermer : la
+		// page reste ouverte à l'espace si elle est à la racine.
+		if !known[slot.id] {
+			if _, e = tx.Exec(r.Context(), "INSERT INTO page_shares(page_id,user_id,level,granted_by) VALUES($1,$2,'full',$2) ON CONFLICT DO NOTHING", slot.id, u.ID); e != nil {
+				problem(w, 500, "Save failed")
+				return
+			}
+		}
 	}
 	if _, e = tx.Exec(r.Context(), "UPDATE workspaces SET revision=revision+1 WHERE id=$1", ws.ID); e != nil {
 		problem(w, 500, "Save failed")
@@ -397,6 +406,29 @@ func (s *Service) duplicate(w http.ResponseWriter, r *http.Request, u identity, 
 		problem(w, 404, "Source page not found")
 		return
 	}
+	// Dupliquer traverse deux pages aux droits différents : on lit la source, on
+	// écrit sous le parent. Les deux se vérifient, et par 404 — un 403 dirait que
+	// la page existe.
+	granted, e := s.effectiveLevel(r.Context(), s.DB, u.ID, source)
+	if e != nil {
+		problem(w, 503, "Database unavailable")
+		return
+	}
+	if granted < levelView {
+		problem(w, 404, "Source page not found")
+		return
+	}
+	if in.ParentID != nil && *in.ParentID != "" {
+		target, e := s.effectiveLevel(r.Context(), s.DB, u.ID, *in.ParentID)
+		if e != nil {
+			problem(w, 503, "Database unavailable")
+			return
+		}
+		if target < levelEdit {
+			problem(w, 404, "Parent page not found")
+			return
+		}
+	}
 	if _, e := s.DB.Exec(r.Context(), "UPDATE pages SET admission_started=true WHERE id=$1", source); e != nil {
 		problem(w, 503, "Database unavailable")
 		return
@@ -495,6 +527,19 @@ func (s *Service) seed(w http.ResponseWriter, r *http.Request, u identity, ws Wo
 		Document json.RawMessage `json:"document"`
 	}
 	if !body(w, r, &in) {
+		return
+	}
+	granted, e := s.effectiveLevel(r.Context(), s.DB, u.ID, r.PathValue("id"))
+	if e != nil {
+		problem(w, 503, "Database unavailable")
+		return
+	}
+	if granted < levelView {
+		problem(w, 404, "Page not found")
+		return
+	}
+	if granted < levelEdit {
+		problem(w, 403, "Write access required")
 		return
 	}
 	var doc map[string]any

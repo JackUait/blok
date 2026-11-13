@@ -12906,7 +12906,7 @@
                                                       "red",
                                                       "match"
                                                     ],
-                                                    "description": "An option color, or \"match\": a select rule takes the row's option color."
+                                                    "description": "An option color, or \"match\": a select or status rule takes the row's option color, a multi-select rule its first option's."
                                                   },
                                                   "applyTo": {
                                                     "type": "string",

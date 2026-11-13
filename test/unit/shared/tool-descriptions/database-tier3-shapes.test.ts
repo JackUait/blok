@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { validateAgainst } from '../../../../src/shared/schema/validate';
 import { BUILT_IN_BLOCK_DESCRIPTIONS } from '../../../../src/shared/tool-descriptions';
+import { DATABASE_DATA } from '../../../../src/shared/tool-descriptions/database';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -203,10 +204,17 @@ describe('database schema: conditional color rules', () => {
     views: [view({ id: 'v', type: 'table', colorRules: [{ id: 'c', propertyId: 'stage', operator: 'is_not_empty', value: null, color }] })],
   });
 
-  // A Select rule saves color "match" and takes the row's option color.
+  // A Select, Status or Multi-select rule saves color "match" and takes the row's option color.
   it('documents the option colors and "match" as a rule color', () => {
     expect(validate(data('match'))).toEqual([]);
     expect(validate(data('green'))).toEqual([]);
     expect(validate(data('teal'))).not.toEqual([]);
+  });
+
+  // notion-motion.md Round 21 §1: Status and Multi-select rules follow the option colour too.
+  it('tells an agent that "match" works on select, status and multi-select rules', () => {
+    const text = JSON.stringify(DATABASE_DATA);
+
+    expect(text).toContain('a select or status rule takes the row\'s option color, a multi-select rule its first option\'s');
   });
 });

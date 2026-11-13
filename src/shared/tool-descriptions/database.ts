@@ -793,7 +793,7 @@ export const DATABASE_DATA = {
                 propertyId: { type: 'string' },
                 operator: { type: 'string' },
                 value: { description: 'Any property value; shape follows the property type.' },
-                color: { type: 'string', enum: [...COLORS, 'match'], description: 'An option color, or "match": a select rule takes the row\'s option color.' },
+                color: { type: 'string', enum: [...COLORS, 'match'], description: 'An option color, or "match": a select or status rule takes the row\'s option color, a multi-select rule its first option\'s.' },
                 applyTo: { type: 'string', enum: ['row', 'property'], description: 'Table only. Default row.' },
               },
             },

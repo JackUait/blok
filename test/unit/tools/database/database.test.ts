@@ -4435,6 +4435,25 @@ describe('DatabaseTool', () => {
         tool.destroy();
       });
 
+      // Round 26 §1 (r26-pm-key-*.raw, r26-pm-focusring.raw): no cell takes focus, so arrows move nothing and Tab skips the table.
+      it('lets no cell or grid of the pinned group modal take focus', async () => {
+        const { tool, element } = board(false, boardView({ pinnedGroups: [{ id: 'opt-todo' }] }));
+
+        queryByData(element, 'data-blok-database-pinned-group-open')?.click();
+        // The grid paints its tab stops once it is in the page.
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        document.querySelector<HTMLElement>('[data-blok-database-group-modal-panel] [role="gridcell"]')
+          ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+        const panel = document.querySelector<HTMLElement>('[data-blok-database-group-modal-panel]');
+        const focusable = [...(panel?.querySelectorAll('[role="grid"], [role="gridcell"], [role="columnheader"]') ?? [])]
+          .filter((el) => el.hasAttribute('tabindex'));
+
+        expect(focusable).toEqual([]);
+        expect(panel?.querySelectorAll('[role="gridcell"]').length).toBeGreaterThan(0);
+
+        tool.destroy();
+      });
+
       // A group past the view's load limit keeps Blok's "Load more", and it loads more inside the modal.
       it('loads more rows of a long pinned group', () => {
         const rows = Array.from({ length: 11 }, (_, i) => groupRow(`row-${i}`, { 'prop-title': `Row ${i}`, 'prop-status': 'opt-todo' }, `a${i.toString(36)}`));

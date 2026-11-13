@@ -77,6 +77,13 @@ export const openPinnedGroupModal = (options: PinnedGroupModalOptions): { close:
     state.table = table;
     // Its Edit filters / Clear search need the view's write handlers, which this view-only table has not.
     table.root.querySelector('[data-blok-database-table-empty]')?.remove();
+    // Round 26 §1 (r26-pm-key-*.raw): no cell takes focus, so a click leaves no ring, arrows move nothing and Tab skips the table.
+    // Again after the grid's own first paint, which it queues as a microtask once the table is in the page.
+    const unfocusable = (): void => table.root.querySelectorAll('[role="grid"], [role="gridcell"], [role="columnheader"]')
+      .forEach((el) => el.removeAttribute('tabindex'));
+
+    unfocusable();
+    queueMicrotask(unfocusable);
     body.replaceChildren(table.root);
   };
 
@@ -115,9 +122,12 @@ export const openPinnedGroupModal = (options: PinnedGroupModalOptions): { close:
   const acts = (target: EventTarget | null): boolean =>
     target instanceof Element && target.closest('[data-blok-database-table-open], [data-blok-database-table-load-more]') !== null;
 
-  body.addEventListener('click', (event) => {
-    if (!acts(event.target)) event.stopPropagation();
-  }, true);
+  // The grid's own presses select a cell and give it a tabindex again, so they never reach it.
+  for (const type of ['pointerdown', 'click'] as const) {
+    body.addEventListener(type, (event) => {
+      if (!acts(event.target)) event.stopPropagation();
+    }, true);
+  }
   // The table counts the extra rows in its state but redraws only through a write handler, so the modal redraws.
   body.addEventListener('click', (event) => {
     if (event.target instanceof Element && event.target.closest('[data-blok-database-table-load-more]') !== null) draw();

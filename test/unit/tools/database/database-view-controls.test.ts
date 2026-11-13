@@ -1654,6 +1654,30 @@ describe('DatabaseViewControls', () => {
           expect(q('database-filter-date-custom')?.getAttribute('aria-checked')).toBe('true');
         });
 
+        // notion-motion.md Round 23 §1 (r23-o1-*-ds.raw, r23-o2-*-ds.raw): a click outside commits a day and drops other text.
+        it('on a click outside the popover', async () => {
+          const { controls, saved } = open({ operator: 'equals', value: null });
+
+          type('3/5/25');
+          document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+          await settle();
+
+          expect(q('database-filter-popover')).toBeNull();
+          expect(controls.effective(saved.view).filters[0]).toMatchObject({ value: '2025-03-05' });
+        });
+
+        it('keeps the old day when a click outside finds no date', async () => {
+          const { controls, saved } = open({ operator: 'equals', value: '2025-03-05' });
+
+          type('March 5, 2025zzz');
+          document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+          await settle();
+
+          expect(q('database-filter-popover')).toBeNull();
+          expect(controls.effective(saved.view).filters[0]).toMatchObject({ value: '2025-03-05' });
+          expect(document.querySelector('[data-blok-database-chip-date-error]')).toBeNull();
+        });
+
         it('throws the text away on Escape (r22-d-t3-esc-ds.raw)', async () => {
           const { controls } = open({ operator: 'equals', value: null });
 
@@ -1733,6 +1757,28 @@ describe('DatabaseViewControls', () => {
 
           expect(q('database-filter-popover')).toBeNull();
           expect(message()).toBeNull();
+        });
+
+        // notion-motion.md Round 23 §1 (r23-tip-360.raw, r23-tip-320.raw): with no room on the left it goes under the
+        // field box, centred on it, its top 4 above the box's bottom.
+        it.each([
+          [100, 'left'],
+          [60, 'below'],
+        ])('with the field box at x %s, sits %s of it', (left, side) => {
+          open({ operator: 'equals', value: null });
+          const box = popover().querySelector('[data-blok-database-chip-date-field]') as HTMLElement;
+
+          vi.spyOn(box, 'getBoundingClientRect').mockReturnValue(new DOMRect(left, 101.5, 236, 28));
+          vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+            return this === box ? new DOMRect(left, 101.5, 236, 28) : new DOMRect(0, 0, 80.7, 26.8);
+          });
+          field().value = 'zzz';
+          enter(field());
+
+          const tip = message();
+
+          expect(tip?.style.left).toBe(side === 'left' ? `${left - 80.7}px` : `${left + 118 - 80.7 / 2}px`);
+          expect(tip?.style.top).toBe(side === 'left' ? `${101.5 + (28 - 26.8) / 2}px` : `${101.5 + 28 - 4}px`);
         });
 
         it('does not show while typing', () => {

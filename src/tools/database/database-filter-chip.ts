@@ -35,6 +35,7 @@ export const OPERATOR_FLYOUT_WIDTH = 190;
 export const MORE_FLYOUT_WIDTH = 240;
 export const MORE_FLYOUT_GAP = 2;
 const INVALID_NOTE_MARGIN = 12;
+const INVALID_NOTE_OVERLAP = 4;
 /** notion-motion.md Round 20 §3 (r20-ct-rel.raw): the presets menu is 240 wide, its top the field's bottom + 6. */
 const DATE_PRESET_MENU_WIDTH = 240;
 const DATE_PRESET_MENU_GAP = 6;
@@ -161,6 +162,8 @@ class FilterChipPages {
   /** A pointer is down inside the panel: a field's blur commit waits for its click. */
   private pointerHeld = false;
   private trackedRoot: HTMLElement | undefined;
+  /** The simple popover's day field as last drawn, with the text it was drawn with. */
+  private dayField: { input: HTMLInputElement; shown: string } | undefined;
 
   constructor(ctx: ViewSettingsContext, filterId: string, writer?: (patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>) => void) {
     this.ctx = ctx;
@@ -219,13 +222,26 @@ class FilterChipPages {
     return this.ctx.i18n.t(`tools.database.${key}`, vars);
   }
 
-  /** Removes what the pages put outside the panel. */
-  dispose(): void {
+  /**
+   * Removes what the pages put outside the panel. notion-motion.md Round 23 §1 (r23-o1-*-ds.raw, r23-o2-*-ds.raw):
+   * a close that is not Escape writes a typed day; text that is no day is dropped and the old value stays.
+   */
+  dispose(escape = false): void {
     this.hideInvalid();
+    const field = this.dayField;
+
+    this.dayField = undefined;
+    if (escape || field === undefined || !field.input.isConnected) return;
+    const text = field.input.value.trim();
+
+    if (text === '' || text === field.shown.trim()) return;
+    const day = parseFilterDay(text, editorLocale(this.ctx.i18n));
+
+    if (day !== null && day !== this.current()?.value) this.update({ value: day });
   }
 
   /**
-   * notion-motion.md Round 22 §1 (r22-d-t5-tip.raw): "Invalid date" sits left of the field, its right edge on the
+   * notion-motion.md Round 22 §1 (r22-d-t5-tip.raw): "Invalid date" sits left of the field box, its right edge on the
    * field's left edge. It is an error message, not a hint: it shows at once, and the popover clips its own overflow.
    */
   private showInvalid(input: HTMLInputElement, field: HTMLElement): void {
@@ -245,9 +261,12 @@ class FilterChipPages {
     promoteToTopLayer(note);
     const size = note.getBoundingClientRect();
 
-    // Notion's room on the left was not measured running out: the message stops 12px inside the window.
-    note.style.left = `${Math.max(INVALID_NOTE_MARGIN, box.left - size.width)}px`;
-    note.style.top = `${box.top + (box.height - size.height) / 2}px`;
+    // notion-motion.md Round 23 §1 (r23-tip-360.raw, r23-tip-320.raw): with no room on the left it goes under the box,
+    // centred, its top 4 above the box's bottom. Notion's cut-off lies between 0 and 19.3 px of room; Blok keeps 12.
+    const roomLeft = box.left - size.width >= INVALID_NOTE_MARGIN;
+
+    note.style.left = `${roomLeft ? box.left - size.width : box.left + (box.width - size.width) / 2}px`;
+    note.style.top = `${roomLeft ? box.top + (box.height - size.height) / 2 : box.bottom - INVALID_NOTE_OVERLAP}px`;
     input.setAttribute('aria-describedby', note.id);
     this.invalidNote = note;
     // It is placed once, so any scroll takes it away instead of leaving it behind.
@@ -748,6 +767,7 @@ class FilterChipPages {
       else done();
     });
     field.appendChild(input);
+    if (!advanced) this.dayField = { input, shown };
     if (value !== null && value !== undefined && value !== '') {
       const clear = document.createElement('button');
 
@@ -1074,8 +1094,8 @@ export const openFilterChip = (anchor: HTMLElement, ctx: ViewSettingsContext, fi
     flip: true,
     verticalMargin: CHIP_POPOVER_WINDOW_MARGIN,
     halfWindow: true,
-    onClose: () => {
-      pages.dispose();
+    onClose: (escape) => {
+      pages.dispose(escape);
       release?.();
       onClose?.();
     },

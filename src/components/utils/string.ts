@@ -22,7 +22,8 @@ export const capitalize = (text: string): string => {
 export const humanizeToolName = (name: string): string => {
   const words = name
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    // Lookahead, not ([A-Z]+)([A-Z][a-z]): that form is quadratic on a long run of capitals.
+    .replace(/([A-Z])(?=[A-Z][a-z])/g, '$1 ')
     .split(/[\s_-]+/)
     .filter(Boolean);
 

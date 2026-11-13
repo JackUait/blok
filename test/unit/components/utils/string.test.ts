@@ -3,6 +3,14 @@ import { capitalize, beautifyShortcut, humanizeToolName } from '../../../../src/
 
 describe('string', () => {
   describe('humanizeToolName', () => {
+    it('stays fast on a very long run of capitals', () => {
+      const started = performance.now();
+
+      humanizeToolName('A'.repeat(100000));
+
+      expect(performance.now() - started).toBeLessThan(1000);
+    });
+
     it.each([
       ['kanban', 'Kanban'],
       ['acme-interactive-pricing-calculator', 'Acme interactive pricing calculator'],

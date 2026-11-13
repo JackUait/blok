@@ -437,6 +437,23 @@ describe('DatabaseGalleryView', () => {
     expect(handlers.addRow).toHaveBeenCalledWith(null);
   });
 
+  // notion-motion.md Round 24 §4 Gallery (r24-gal-empty.png): a grid with no cards is marked, so its tile can be 40 tall.
+  it('marks a grid that has no cards', () => {
+    const { root } = mount({ groups: single([]) });
+    const grid = root.querySelector('[data-blok-database-gallery-grid]');
+
+    expect(grid?.hasAttribute('data-empty')).toBe(true);
+    expect(mount().root.querySelector('[data-blok-database-gallery-grid]')?.hasAttribute('data-empty')).toBe(false);
+  });
+
+  it('marks the grid once its last card is removed', () => {
+    const { root, view } = mount({ groups: single([row('r1', 'Alpha')]) });
+
+    view.removeRow(root, 'r1');
+
+    expect(root.querySelector('[data-blok-database-gallery-grid]')?.hasAttribute('data-empty')).toBe(true);
+  });
+
   it('has no "+ New" card when read-only, and still opens cards', () => {
     const { root, handlers } = mount({ readOnly: true });
 

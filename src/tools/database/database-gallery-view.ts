@@ -199,6 +199,7 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
     grid.setAttribute('data-blok-database-gallery-grid', '');
     grid.setAttribute('data-group-key', group.key);
     grid.setAttribute('role', 'list');
+    grid.toggleAttribute('data-empty', group.rows.length === 0);
 
     for (const row of group.rows) {
       grid.appendChild(this.createCard(row, group.key));
@@ -769,7 +770,11 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
   }
 
   removeRow(wrapper: HTMLElement, rowId: string): void {
-    this.findCard(wrapper, rowId)?.remove();
+    const card = this.findCard(wrapper, rowId);
+    const grid = card?.closest('[data-blok-database-gallery-grid]');
+
+    card?.remove();
+    grid?.toggleAttribute('data-empty', grid.querySelector('[data-blok-database-gallery-card]') === null);
   }
 
   updateRowTitle(wrapper: HTMLElement, rowId: string, title: string): void {

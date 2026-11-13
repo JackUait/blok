@@ -16694,12 +16694,21 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   box-shadow: 0 0 0 1px var(--blok-database-gallery-preview-border);
   color: var(--blok-database-gallery-muted-text);
   font-size: 15px;
+  transition: background-color 20ms ease-in;
 }
 
 [data-blok-database-gallery-new]::before {
   content: '';
   margin-inline-end: calc(-1 * var(--blok-space-1));
   padding-block-start: var(--blok-database-gallery-new-height, calc(56.25% + 38.5px));
+}
+
+[data-blok-database-gallery-grid][data-empty] > [data-blok-database-gallery-new] {
+  block-size: 40px;
+}
+
+[data-blok-database-gallery-grid][data-empty] > [data-blok-database-gallery-new]::before {
+  content: none;
 }
 
 [data-blok-database-gallery-new] svg {

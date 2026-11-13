@@ -1666,6 +1666,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R26_BYTES = 820;
     // Round 24 lane r29: the calendar day "+" chip (radius 8, inner 20px button, 200ms fade); the timeline's plain "+ New" label and its ghost bar.
     const DATABASE_R29_BYTES = 1062;
+    // Round 24 lane r28: list and gallery "+ New page" timings, the gallery's 40-tall tile with no cards.
+    const DATABASE_R28_BYTES = 382;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2166,6 +2168,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R27_BYTES
       + DATABASE_R26_BYTES
       + DATABASE_R29_BYTES
+      + DATABASE_R28_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

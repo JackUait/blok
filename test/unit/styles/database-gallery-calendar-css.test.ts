@@ -74,6 +74,17 @@ describe('database gallery and calendar styles', () => {
     expect(ruleBody('[data-blok-database-gallery][data-card-size="medium"]')).toContain('--blok-database-gallery-new-height: calc(146.25px + 38.5px)');
   });
 
+  // notion-motion.md Round 24 §4 Gallery (r24-gal-empty.png): with no cards the tile is 338×40, not card height.
+  it('draws the "+ New page" tile 40px tall when its grid has no cards', () => {
+    expect(ruleBody('[data-blok-database-gallery-grid][data-empty] > [data-blok-database-gallery-new]')).toContain('block-size: 40px');
+    expect(ruleBody('[data-blok-database-gallery-grid][data-empty] > [data-blok-database-gallery-new]::before')).toContain('content: none');
+  });
+
+  // notion-motion.md Round 24 §4 Gallery: the "+ New page" tile's hover fill comes in over 20ms ease-in.
+  it('fills the "+ New page" tile over 20ms ease-in', () => {
+    expect(ruleBody('[data-blok-database-gallery-new]')).toContain('transition: background-color 20ms ease-in');
+  });
+
   // findings-listgallery L12: a long title wraps in full; grid rows stretch same-row cards to one height.
   it('wraps a long title instead of cutting it', () => {
     const title = ruleBody('[data-blok-database-gallery-title]');

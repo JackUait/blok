@@ -14187,7 +14187,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   transform: scaleX(-1);
 }
 
-/* findings C07: the canvas's last 36px lane; the 197x34 button stays at the screen's start. */
+/* notion-motion.md Round 24 §4 Timeline: the canvas's last 36px lane. "+ New" is a plain label at the
+   text column; a hovered lane hides it and shows a 197x34 ghost bar at the pointer's day. */
 [data-blok-database-timeline-new-lane] {
   position: relative;
   display: flex;
@@ -14199,9 +14200,37 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   margin-block-start: 0;
   position: sticky;
   inset-inline-start: max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  inline-size: 197px;
-  block-size: 34px;
+  gap: var(--blok-space-1-5);
+  block-size: 36px;
+  padding: 0;
   line-height: 20px;
+}
+
+[data-blok-database-timeline-new-lane] [data-blok-database-timeline-new]:hover {
+  background-color: transparent;
+}
+
+[data-blok-database-timeline-new-lane] [data-blok-database-timeline-new] svg {
+  color: var(--blok-database-timeline-control-text);
+}
+
+[data-blok-database-timeline-new-lane]:hover [data-blok-database-timeline-new] {
+  opacity: 0;
+}
+
+[data-blok-database-timeline-new-ghost] {
+  position: absolute;
+  inset-block-start: 1px;
+  block-size: 34px;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-add-hover-bg);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+}
+
+[data-blok-database-timeline-new-lane]:hover [data-blok-database-timeline-new-ghost][data-day] {
+  opacity: 1;
 }
 
 [data-blok-database-timeline-empty] {
@@ -14864,6 +14893,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 @media (prefers-reduced-motion: reduce) {
   [data-blok-database-timeline-toolbar] button,
   [data-blok-database-timeline-new],
+  [data-blok-database-timeline-new-ghost],
   [data-blok-database-timeline-load-more],
   [data-blok-database-timeline-row-handle],
   [data-blok-database-timeline-bar],

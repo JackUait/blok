@@ -527,6 +527,54 @@ describe('DatabaseTimelineView', () => {
       expect(handlers.addRow).toHaveBeenCalledWith(null, { start: '2026-10-09/2026-10-13' });
     });
 
+    // notion-motion.md Round 24 §4 Timeline: hovering the "+ New" lane shows a 197x34 ghost bar at the hovered day.
+    describe('"+ New" lane ghost bar', () => {
+      const lane = (root: HTMLElement): HTMLElement => {
+        const el = root.querySelector<HTMLElement>('[data-blok-database-timeline-new-lane]');
+
+        if (el === null) throw new Error('no lane');
+
+        return el;
+      };
+      const ghost = (root: HTMLElement): HTMLElement | null => root.querySelector<HTMLElement>('[data-blok-database-timeline-new-ghost]');
+      const range = (root: HTMLElement): HTMLElement | null => root.querySelector<HTMLElement>('[data-blok-database-timeline-range]');
+
+      it('puts a 5-day ghost bar at the hovered day and pills those days in the header', () => {
+        const { root } = mount();
+
+        rect(canvas(root), 0, 0, timelineWindow(CENTER, 'month').days * 40, 400);
+        pointer('pointermove', lane(root), px('2026-10-20') + 20, 390);
+
+        expect(ghost(root)?.style.insetInlineStart).toBe(`${px('2026-10-20') + 1.5}px`);
+        expect(ghost(root)?.style.width).toBe('197px');
+        expect(ghost(root)?.getAttribute('data-day')).toBe('2026-10-20');
+        expect(range(root)?.style.insetInlineStart).toBe(`${px('2026-10-20')}px`);
+        expect(range(root)?.style.width).toBe(`${5 * TIMELINE_DAY_WIDTH.month}px`);
+      });
+
+      it('drops the header pill when the pointer leaves the lane', () => {
+        const { root } = mount();
+
+        rect(canvas(root), 0, 0, timelineWindow(CENTER, 'month').days * 40, 400);
+        pointer('pointermove', lane(root), px('2026-10-20') + 20, 390);
+        lane(root).dispatchEvent(new PointerEvent('pointerleave'));
+
+        expect(range(root)).toBeNull();
+        expect(ghost(root)?.hasAttribute('data-day')).toBe(false);
+      });
+
+      it('adds the same 5-day bar as "+ New" when the ghost is clicked', () => {
+        const { root, handlers } = mount();
+
+        ghost(root)?.click();
+        expect(handlers.addRow).toHaveBeenCalledWith(null, { start: '2026-10-09/2026-10-13' });
+      });
+
+      it('has no ghost when read-only', () => {
+        expect(ghost(mount({ readOnly: true }).root)).toBeNull();
+      });
+    });
+
     it('names a new bar in place: Enter keeps it selected, Escape keeps the name and drops the selection', () => {
       const renameRow = vi.fn();
       const pickRow = vi.fn();

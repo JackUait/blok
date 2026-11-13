@@ -603,9 +603,38 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     add.setAttribute('data-blok-database-timeline-new', '');
     add.innerHTML = IconPlus;
     add.append(this.t('tools.database.timelineNew'));
-    lane.appendChild(add);
+
+    // notion-motion.md Round 24 §4 Timeline: a hovered lane shows a ghost bar at the pointer's day.
+    const ghost = document.createElement('div');
+
+    ghost.setAttribute('data-blok-database-timeline-new-ghost', '');
+    ghost.setAttribute('aria-hidden', 'true');
+    lane.append(add, ghost);
+    lane.addEventListener('pointermove', (event) => this.placeGhost(ghost, event.clientX));
+    lane.addEventListener('pointerleave', () => {
+      ghost.removeAttribute('data-day');
+      if (this.drag?.active !== true) {
+        this.clearDragMarks();
+      }
+    });
 
     return lane;
+  }
+
+  private placeGhost(ghost: HTMLElement, x: number): void {
+    const day = this.dayAt(x);
+
+    if (this.drag?.active === true || ghost.getAttribute('data-day') === day) {
+      return;
+    }
+    const span = { start: day, end: addDays(day, NEW_BAR_DAYS - 1) };
+    const days = barGeometry(span, this.window.start, this.zoom);
+    const inset = MONTH_IN_TOOLBAR.has(this.zoom) ? BAR_INSET : 0;
+
+    ghost.setAttribute('data-day', day);
+    ghost.style.setProperty('inset-inline-start', `${days.offset + inset}px`);
+    ghost.style.setProperty('width', `${days.width - 2 * inset}px`);
+    this.showRange(span, days, true);
   }
 
   /**
@@ -1132,7 +1161,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       // Unmeasured in Notion: the step is one screen.
       ['[data-blok-database-timeline-prev]', () => this.stepScreen(-1)],
       ['[data-blok-database-timeline-next]', () => this.stepScreen(1)],
-      ['[data-blok-database-timeline-new], [data-blok-database-timeline-table-new]', () => {
+      ['[data-blok-database-timeline-new], [data-blok-database-timeline-new-ghost], [data-blok-database-timeline-table-new]', () => {
         if (this.canEdit) {
           handlers.addRow(this.options.grouped ? this.options.groups[0]?.key ?? null : null, this.newBar());
         }

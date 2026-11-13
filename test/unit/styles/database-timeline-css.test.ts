@@ -321,3 +321,34 @@ describe('content inset (side-by-side-4 #2)', () => {
     expect(ruleBody('[data-blok-database-timeline-new-lane] [data-blok-database-timeline-new]')).toContain('inset-inline-start: max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2))');
   });
 });
+
+// notion-motion.md Round 24 §4 Timeline: a plain "+ New" label at rest; a ghost bar on lane hover.
+describe('"+ New" lane (Round 24)', () => {
+  const label = '[data-blok-database-timeline-new-lane] [data-blok-database-timeline-new]';
+
+  it('draws "+ New" as a plain 36px label: 16px plus, 6 gap, no padding and no hover fill', () => {
+    const body = ruleBody(label);
+
+    expect(body).toMatch(/block-size:\s*36px/);
+    expect(body).toMatch(/gap:\s*var\(--blok-space-1-5\)/);
+    expect(body).toMatch(/padding:\s*0/);
+    expect(body).not.toMatch(/inline-size:\s*197px/);
+    expect(ruleBody(`${label}:hover`)).toMatch(/background-color:\s*transparent/);
+    expect(ruleBody(`${label} svg`)).toMatch(/color:\s*var\(--blok-database-timeline-control-text\)/);
+  });
+
+  it('hides the label while the lane is hovered', () => {
+    expect(ruleBody('[data-blok-database-timeline-new-lane]:hover [data-blok-database-timeline-new]')).toMatch(/opacity:\s*0/);
+  });
+
+  it('draws the ghost bar 34 tall, radius 6, in the 0.06 fill, fading in over 200ms ease-out', () => {
+    const ghost = ruleBody('[data-blok-database-timeline-new-ghost]');
+
+    expect(ghost).toMatch(/block-size:\s*34px/);
+    expect(ghost).toMatch(/border-radius:\s*var\(--blok-radius-control\)/);
+    expect(ghost).toMatch(/background-color:\s*var\(--blok-database-add-hover-bg\)/);
+    expect(ghost).toMatch(/opacity:\s*0/);
+    expect(ghost).toMatch(/transition:\s*opacity 0\.2s ease-out/);
+    expect(ruleBody('[data-blok-database-timeline-new-lane]:hover [data-blok-database-timeline-new-ghost][data-day]')).toMatch(/opacity:\s*1/);
+  });
+});

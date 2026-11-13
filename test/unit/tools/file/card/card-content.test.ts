@@ -63,6 +63,15 @@ describe('card content', () => {
       expect(head?.complete).toBe(false);
     });
 
+    it('sends no referrer, so a file host never learns the page address', async () => {
+      const fetchSpy = vi.fn().mockResolvedValue(streamed([encode('a')]).response);
+      vi.stubGlobal('fetch', fetchSpy);
+
+      await readHead('https://cdn/a.ts', 10, new AbortController().signal);
+
+      expect(fetchSpy.mock.calls[0][1].referrerPolicy).toBe('no-referrer');
+    });
+
     it('says a small file was read whole', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue(streamed([encode('a\nb\n')]).response));
 
@@ -302,6 +311,7 @@ describe('card content', () => {
       const loaded = await loadCardContent('archive', source({ url: 'https://cdn/brand-assets.zip', fileName: 'brand-assets.zip' }));
 
       expect(fetchSpy.mock.calls[0][1].headers).toEqual({ Range: 'bytes=-65557' });
+      expect(fetchSpy.mock.calls[0][1].referrerPolicy).toBe('no-referrer');
       expect(loaded?.content).toEqual({ kind: 'archive', title: 'Brand assets' });
       expect(loaded?.count).toEqual({ unit: 'files', value: 38 });
     });

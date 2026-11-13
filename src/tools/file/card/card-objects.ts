@@ -135,6 +135,8 @@ function buildPdf(content: Extract<CardContent, { kind: 'pdf' }>): Omit<BuiltObj
   const page = make('span', 'blok-file-pdf-page', 'file-object-page');
   page.appendChild(content.page);
   const mark = make('span', 'blok-file-pages', 'file-object-pages');
+  // "1 / 14" reads left to right in every language.
+  mark.dir = 'ltr';
   mark.textContent = `1 / ${content.pages}`;
 
   return { top: sheet('sheet', page, mark), unders: makeUnders(2, 'sheet') };
@@ -178,7 +180,6 @@ function tableCell(text: string, kind: string): HTMLElement {
 function buildSpreadsheet(content: Extract<CardContent, { kind: 'spreadsheet' }>): Omit<BuiltObject, 'stage'> {
   const rows = content.rows.slice(0, TABLE_ROWS);
   const table = make('div', 'blok-file-tbl', 'file-object-table');
-  table.dir = 'auto';
   rows.forEach((row, rowIndex) => {
     table.appendChild(tableCell(String(rowIndex + 1), 'gutter'));
     Array.from({ length: TABLE_COLUMNS }, (_, column) => {
@@ -191,13 +192,17 @@ function buildSpreadsheet(content: Extract<CardContent, { kind: 'spreadsheet' }>
     });
   });
   const columns = Math.max(1, Math.min(TABLE_COLUMNS, Math.max(0, ...rows.map((row) => row.length))));
-  const parts: Node[] = [table];
+  // One box sets the direction for the cells and the selection, so the
+  // selection lands on its column in a right-to-left sheet too.
+  const grid = make('span', 'blok-file-grid');
+  grid.dir = 'auto';
+  grid.appendChild(table);
   // The selection sits on the second row, so a one-row sheet has none.
   if (rows.length > 1) {
-    parts.push(make('span', 'blok-file-sel', 'file-object-selection'));
+    grid.appendChild(make('span', 'blok-file-sel', 'file-object-selection'));
   }
 
-  return { top: sheet('sheet', ...parts), unders: makeUnders(2, 'sheet'), columns };
+  return { top: sheet('sheet', grid), unders: makeUnders(2, 'sheet'), columns };
 }
 
 function buildPresentation(content: Extract<CardContent, { kind: 'presentation' }>): Omit<BuiltObject, 'stage'> {
@@ -220,8 +225,6 @@ function buildCode(content: Extract<CardContent, { kind: 'code' }>): Omit<BuiltO
   const numbers = make('pre', 'blok-file-nums', 'file-object-line-numbers');
   numbers.textContent = Array.from({ length: count }, (_, index) => index + 1).join('\n');
   const code = make('pre', 'blok-file-code', 'file-object-code');
-  // Source reads LTR in any editor direction.
-  code.dir = 'ltr';
   if (content.html === null) {
     code.textContent = content.text;
   } else {
@@ -231,7 +234,11 @@ function buildCode(content: Extract<CardContent, { kind: 'code' }>): Omit<BuiltO
   const roll = make('span', 'blok-file-roll');
   roll.append(numbers, code);
 
-  return { top: sheet('editor', tabbar, roll), unders: [] };
+  const top = sheet('editor', tabbar, roll);
+  // An editor tab is laid out left to right in any editor direction.
+  top.dir = 'ltr';
+
+  return { top, unders: [] };
 }
 
 function buildImage(content: Extract<CardContent, { kind: 'image' }>): Omit<BuiltObject, 'stage'> {

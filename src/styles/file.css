@@ -428,6 +428,11 @@
 }
 
 /* Spreadsheet: the real cells, and a selected cell that follows the pointer */
+[data-blok-tool="file"] .blok-file-grid {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
 [data-blok-tool="file"] .blok-file-tbl {
   position: absolute;
   inset: 10px 12px auto 12px;

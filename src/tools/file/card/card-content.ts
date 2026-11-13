@@ -6,7 +6,7 @@ import type { FileIconCategory } from '../file-icon';
 import { loadDocxRenderer, loadPptxFirstSlide } from '../office-loaders';
 import { readWorkbook } from '../office-preview';
 import { loadPdfJs, supportsPdfJs } from '../pdf/pdf-loader';
-import { assetParams, sourceParams, type PdfSource } from '../pdf/pdf-preview';
+import { assetParams, CANVAS_MAX_AREA_IN_BYTES, sourceParams, type PdfSource } from '../pdf/pdf-preview';
 import { resolvePdfSources } from '../pdf/pdf-source';
 import type { PdfDocumentLike } from '../pdf/pdf-types';
 import { extOf } from '../preview';
@@ -54,6 +54,10 @@ const ZIP_TAIL_BYTES = 65_557;
 /**
  * The url to read, or null unless it is http(s) or blob. A relative url is
  * read against the page, as fetch would.
+ *
+ * Requests keep fetch's default credentials on purpose: a host that serves its
+ * own files behind a cookie must still get a card. That is the reach an image
+ * block's <img> already has; cross-origin requests carry no cookie.
  */
 export function cardSrc(raw: string): string | null {
   try {
@@ -128,7 +132,7 @@ export async function readHead(url: string, max: number, signal: AbortSignal): P
     return null;
   }
   try {
-    const response = await fetch(src, { signal });
+    const response = await fetch(src, { signal, referrerPolicy: 'no-referrer' });
     if (!response.ok) {
       return null;
     }
@@ -150,7 +154,7 @@ export async function readWhole(source: CardSource): Promise<ArrayBuffer | null>
     return null;
   }
   try {
-    const response = await fetch(src, { signal: source.signal });
+    const response = await fetch(src, { signal: source.signal, referrerPolicy: 'no-referrer' });
     if (!response.ok || Number(response.headers.get('content-length') ?? 0) > MAX_WHOLE_BYTES) {
       await response.body?.cancel().catch(() => undefined);
 
@@ -368,6 +372,8 @@ export function inkBox(pixels: Uint8ClampedArray, width: number, height: number)
   return { left: box.left / width, top: box.top / height, right: (box.right + 1) / width };
 }
 
+/** Rows of the first pass: about two sheets' worth of a page's top. */
+const PROBE_MAX_HEIGHT = 360;
 /** Side padding around a zoomed page, in CSS px. */
 const PAGE_PAD_X = 12;
 /** A PDF sits this far down the sheet, so its first line clears the page mark. */
@@ -380,16 +386,22 @@ const PDF_PAD_Y = 15;
 async function drawPdfPage(doc: PdfDocumentLike): Promise<HTMLCanvasElement | null> {
   const page = await doc.getPage(1);
   const natural = page.getViewport({ scale: 1 });
+  if (!(natural.width > 0) || !(natural.height > 0)) {
+    return null;
+  }
   const probe = document.createElement('canvas');
   const probeView = page.getViewport({ scale: SHEET_WIDTH / natural.width });
-  probe.width = Math.floor(probeView.width);
-  probe.height = Math.floor(probeView.height);
+  probe.width = SHEET_WIDTH;
+  // A page can claim any height. Only its top shows, so only its top is drawn.
+  probe.height = Math.max(1, Math.min(Math.floor(probeView.height), PROBE_MAX_HEIGHT));
   const probeContext = probe.getContext('2d', { willReadFrequently: true });
   if (probeContext === null) {
     return null;
   }
   await page.render({ canvasContext: probeContext, viewport: probeView }).promise;
-  const ink = inkBox(probeContext.getImageData(0, 0, probe.width, probe.height).data, probe.width, probe.height);
+  const found = inkBox(probeContext.getImageData(0, 0, probe.width, probe.height).data, probe.width, probe.height);
+  // `top` came back as a share of the probe; the shift below needs a share of the page.
+  const ink = { ...found, top: (found.top * probe.height) / probeView.height };
 
   const ratio = 2;
   const scale = ((SHEET_WIDTH - PAGE_PAD_X * 2) * ratio) / (Math.max(0.2, ink.right - ink.left) * natural.width);
@@ -415,6 +427,7 @@ async function openPdf(source: CardSource, from: PdfSource): Promise<LoadedCard 
     ...sourceParams(from, lib, () => undefined),
     ...assetParams(source.config.pdfAssetsUrl),
     useSystemFonts: true,
+    canvasMaxAreaInBytes: CANVAS_MAX_AREA_IN_BYTES,
     // The card draws one page: no read-ahead of the rest of the file.
     disableAutoFetch: true,
     disableStream: true,
@@ -597,7 +610,7 @@ async function readTail(url: string, bytes: number, signal: AbortSignal): Promis
     return null;
   }
   try {
-    const response = await fetch(src, { signal, headers: { Range: `bytes=-${bytes}` } });
+    const response = await fetch(src, { signal, referrerPolicy: 'no-referrer', headers: { Range: `bytes=-${bytes}` } });
     // 200 means the range was ignored and the whole file is coming: not worth it for a count.
     if (response.status !== 206 && !src.startsWith('blob:')) {
       await response.body?.cancel().catch(() => undefined);

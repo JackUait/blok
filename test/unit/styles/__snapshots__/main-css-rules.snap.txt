@@ -28411,6 +28411,12 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   border-top: 0.5px solid var(--blok-file-ink-3);
 }
 
+[data-blok-tool="file"] .blok-file-grid {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
 [data-blok-tool="file"] .blok-file-tbl {
   position: absolute;
   inset: 10px 12px auto 12px;

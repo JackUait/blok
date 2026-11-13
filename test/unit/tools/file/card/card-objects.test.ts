@@ -35,6 +35,7 @@ describe('buildCardObject', () => {
     expect(unders).toHaveLength(2);
     expect(top.contains(page)).toBe(true);
     expect(q(stage, 'file-object-pages')?.textContent).toBe('1 / 14');
+    expect(q(stage, 'file-object-pages')?.getAttribute('dir')).toBe('ltr');
   });
 
   it('draws a Word file as its first page with one sheet under it', () => {
@@ -125,6 +126,14 @@ describe('buildCardObject', () => {
       expect(q(stage, 'file-object-selection')).toBeNull();
     });
 
+    it('gives the cells and the selection one direction, taken from the sheet\'s own text', () => {
+      const { stage } = build({ kind: 'spreadsheet', rows });
+      const selection = q(stage, 'file-object-selection');
+
+      expect(selection?.parentElement).toBe(q(stage, 'file-object-table')?.parentElement);
+      expect(selection?.parentElement?.getAttribute('dir')).toBe('auto');
+    });
+
     it('shows six rows at most', () => {
       const many = Array.from({ length: 20 }, (_, i) => [cell(`r${i}`)]);
       const { stage } = build({ kind: 'spreadsheet', rows: many });
@@ -159,6 +168,10 @@ describe('buildCardObject', () => {
       expect(top.getAttribute('data-shape')).toBe('editor');
       expect(tab?.textContent).toBe('TSpaste-handler.ts');
       expect(tab?.querySelector('[data-lang]')?.getAttribute('data-lang')).toBe('typescript');
+    });
+
+    it('is laid out left to right in any editor direction', () => {
+      expect(build(content).top.getAttribute('dir')).toBe('ltr');
     });
 
     it('numbers the lines the file really has', () => {

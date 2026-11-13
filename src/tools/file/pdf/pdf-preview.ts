@@ -19,7 +19,7 @@ export type PdfSource =
  * pdf.js shrinks decoded images to fit this, in bytes (4 per pixel).
  * Same 16,777,216 px as the page canvas cap in pdf-canvas.ts.
  */
-const CANVAS_MAX_AREA_IN_BYTES = 16_777_216 * 4;
+export const CANVAS_MAX_AREA_IN_BYTES = 16_777_216 * 4;
 
 export function sourceParams(source: PdfSource, lib: PdfJs, onFailure: () => void): Record<string, unknown> {
   if (source.kind === 'data') {

@@ -585,13 +585,16 @@ describe('DatabaseBoardView', () => {
       expect(view('compact').querySelector('[data-blok-database-board]')?.getAttribute('data-card-layout')).toBe('compact');
     });
 
-    it('prefixes add-column button text with +', () => {
+    // notion-motion.md Round 23 §5: a plus icon, not a typed "+", then the words.
+    it('leads the add-column button with a plus icon instead of a typed +', () => {
       const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });
       const board = view.createView();
 
       const addColBtn = board.querySelector('[data-blok-database-add-column]');
 
-      expect(addColBtn?.textContent).toMatch(/^\+ /);
+      expect(addColBtn?.firstElementChild?.matches('[data-blok-database-add-column-icon]')).toBe(true);
+      expect(addColBtn?.querySelector('[data-blok-database-add-column-icon] svg')).not.toBeNull();
+      expect(addColBtn?.textContent).not.toMatch(/\+/);
     });
 
     it('renders colored dot in column header when color is defined', () => {

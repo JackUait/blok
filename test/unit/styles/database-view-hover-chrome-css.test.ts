@@ -82,6 +82,38 @@ describe('board and gallery card action pill divider (research/21 §1f)', () => 
   });
 });
 
+// notion-motion.md Round 23 §4 "Hover fades".
+describe('card and feed hover timings (notion-motion.md Round 23 §4)', () => {
+  it('fills the card ✎ and ⋯ buttons over 20ms ease-in', () => {
+    expect(ruleBody('[data-blok-database-edit-card]')).toMatch(/transition: background-color 20ms ease-in(;|$)/);
+    expect(ruleBody('[data-blok-database-card-menu]')).toMatch(/transition: background-color 20ms ease-in(;|$)/);
+  });
+
+  it('fades the feed pill over 100ms ease-out, in and out', () => {
+    expect(ruleBody('[data-blok-database-feed-card-actions]')).toContain('transition: opacity 100ms ease-out');
+  });
+});
+
+// notion-motion.md Round 23 §3: Notion lays rgba(35,131,226,0.14) 2px inside the card while its ⋯ menu is open.
+describe('board card while its ⋯ menu is open (notion-motion.md Round 23 §3)', () => {
+  it('lays a gray overlay 2px inside the picked card, never blue', () => {
+    const overlay = ruleBody('[data-blok-database-card]::after');
+    const shown = ruleBody('[data-blok-database-card][data-blok-database-card-picked]::after');
+
+    expect(overlay).toContain('inset: var(--blok-space-0-5)');
+    expect(overlay).toContain('background-color: var(--blok-icon-active-bg)');
+    expect(overlay).toContain('pointer-events: none');
+    expect(overlay).toContain('opacity: 0');
+    expect(overlay).toContain('transition: opacity 200ms');
+    expect(shown).toContain('opacity: 1');
+    expect(`${overlay};${shown}`).not.toMatch(/blue|focus-ring|#2383e2|35, 131, 226/i);
+  });
+
+  it('drops the hover fill while the menu is open', () => {
+    expect(ruleBody('[data-blok-database-card][data-popover-open]')).toContain('background-color: var(--_blok-group-card, var(--blok-database-card-bg))');
+  });
+});
+
 describe('timeline (research/21 §1i)', () => {
   it('lays the hover overlay over the bar fill, so a conditional colour stays under it', () => {
     expect(ruleBody('[data-blok-database-timeline-bar]::before')).toContain('z-index: -1');

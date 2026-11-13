@@ -1660,6 +1660,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R24_BYTES = 1444;
     // Round 22 lane r25: the Date filter's dark "Invalid date" message (the red typed ink goes); a rule flyout's field 12 down.
     const DATABASE_R25_BYTES = 634;
+    // Round 23 lane r27: the board card's gray pick under its ⋯ menu; title row, card button and feed pill timings; the "+ New group" plus icon.
+    const DATABASE_R27_BYTES = 1366;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2157,6 +2159,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R23_BYTES
       + DATABASE_R24_BYTES
       + DATABASE_R25_BYTES
+      + DATABASE_R27_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

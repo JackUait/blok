@@ -1050,7 +1050,8 @@ export class ViewSettingsPages {
 
       return at === -1 ? LAYOUT_TILE_ORDER.length : at;
     };
-    const types = [...this.ctx.layouts].sort((a, b) => rank(a) - rank(b));
+    // notion-motion.md Round 23 §6: Form is only in Add view. A Form view keeps its own tile (unread in Notion).
+    const types = this.ctx.layouts.filter((type) => type !== 'form' || current === 'form').sort((a, b) => rank(a) - rank(b));
 
     grid.setAttribute('data-blok-database-layout-tiles', '');
     grid.append(...types.map((type) => {

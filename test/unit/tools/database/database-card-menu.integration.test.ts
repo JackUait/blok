@@ -188,6 +188,31 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     expect(document.querySelector('[data-blok-database-menu-point]')).toBeNull();
   });
 
+  // notion-motion.md Round 23 §3: the card is picked while its ⋯ menu is open, stays picked after Escape, and a click outside clears it.
+  it('picks the board card while its ⋯ menu is open and after Escape, until the next press', () => {
+    const { el } = buildTool(oneRow(), {}, viewData('board'));
+
+    openMenu(el, 'board');
+    expect(rowEl(el, 'board').hasAttribute('data-blok-database-card-picked')).toBe(true);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(rowEl(el, 'board').hasAttribute('data-popover-open')).toBe(false);
+    expect(rowEl(el, 'board').hasAttribute('data-blok-database-card-picked')).toBe(true);
+
+    document.body.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    expect(rowEl(el, 'board').hasAttribute('data-blok-database-card-picked')).toBe(false);
+  });
+
+  it('drops the card pick when the tool is destroyed', () => {
+    const { el, tool } = buildTool(oneRow(), {}, viewData('board'));
+
+    openMenu(el, 'board');
+    const card = rowEl(el, 'board');
+
+    tool.destroy();
+    expect(card.hasAttribute('data-blok-database-card-picked')).toBe(false);
+  });
+
   it('keeps a board card\'s right-click menu on the card', () => {
     const { el } = buildTool(oneRow(), {}, viewData('board'));
 

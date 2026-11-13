@@ -143,6 +143,21 @@ describe('title row "+" and "…" (V02, V03)', () => {
   });
 });
 
+// notion-motion.md Round 23 §4 "Title row": "+" shows and hides at once; "⋯" fades in 200ms ease and goes at once.
+describe('title row "+" and "…" fades (notion-motion.md Round 23 §4)', () => {
+  const shown = '[data-blok-database-title-row]:hover [data-blok-database-add-view], [data-blok-database-title-row] [data-blok-database-add-view][data-popover-open], [data-blok-database-title-row]:hover [data-blok-database-title-more], [data-blok-database-title-more][data-popover-open], [data-blok-database-title-more]:focus-visible';
+
+  it('"+" shows and hides with no fade, its fill over 100ms ease-in-out', () => {
+    expect(rule('[data-blok-database-title-row][data-single-view] [data-blok-database-add-view]')).toMatch(/transition: background-color 100ms ease-in-out;/);
+  });
+
+  it('"…" hides at once and fades in over 200ms ease', () => {
+    expect(rule('[data-blok-database-title-more]')).toMatch(/transition: background-color 100ms ease-in-out;/);
+    expect(rule(shown)).toMatch(/opacity: 1/);
+    expect(rule('[data-blok-database-title-row]:hover [data-blok-database-title-more], [data-blok-database-title-more][data-popover-open], [data-blok-database-title-more]:focus-visible')).toMatch(/transition: background-color 100ms ease-in-out, opacity 200ms ease;/);
+  });
+});
+
 describe('tab row sizes (V26, V32, V33)', () => {
   it('the tab-bar "+" is 28px with a 16px glyph, 1px after the last tab', () => {
     const plus = rule('[data-blok-database-add-view]');

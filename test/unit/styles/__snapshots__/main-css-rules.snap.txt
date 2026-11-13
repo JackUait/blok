@@ -5635,6 +5635,25 @@ span[data-blok-slash-search] {
   background-color: var(--_blok-group-card-hover, var(--blok-database-card-bg-hover));
 }
 
+[data-blok-database-card]::after {
+  content: '';
+  position: absolute;
+  inset: var(--blok-space-0-5);
+  border-radius: inherit;
+  background-color: var(--blok-icon-active-bg);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms;
+}
+
+[data-blok-database-card][data-blok-database-card-picked]::after {
+  opacity: 1;
+}
+
+[data-blok-database-card][data-popover-open] {
+  background-color: var(--_blok-group-card, var(--blok-database-card-bg));
+}
+
 [data-blok-database-card-active] {
   background-color: var(--_blok-group-card-hover, var(--blok-database-card-bg-hover));
   outline: 2px solid var(--blok-database-card-border-active);
@@ -5715,7 +5734,7 @@ span[data-blok-slash-search] {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 120ms ease, color 120ms ease;
+  transition: background-color 20ms ease-in;
   padding: 0;
   flex-shrink: 0;
 }
@@ -5807,7 +5826,7 @@ span[data-blok-slash-search] {
   align-self: flex-start;
   flex-shrink: 0;
   height: 30px;
-  padding: 0 var(--blok-space-2);
+  padding: 0 var(--blok-space-2) 0 var(--blok-space-1-5);
   border: none;
   border-radius: var(--blok-radius-control-lg);
   background: none;
@@ -5816,6 +5835,16 @@ span[data-blok-slash-search] {
   white-space: nowrap;
   cursor: pointer;
   transition: background-color 20ms ease-in;
+}
+
+[data-blok-database-add-column-icon] {
+  display: flex;
+  margin-inline-end: var(--blok-space-2);
+}
+
+[data-blok-database-add-column-icon] svg {
+  width: 16px;
+  height: 16px;
 }
 
 [data-blok-database-add-column]:hover {
@@ -6894,6 +6923,7 @@ button[data-blok-database-column-count]:hover {
 }
 
 [data-blok-database-title-row][data-single-view] [data-blok-database-add-view] {
+  transition: background-color 100ms ease-in-out;
   width: 24px;
   height: 24px;
   flex-shrink: 0;
@@ -6913,7 +6943,7 @@ button[data-blok-database-column-count]:hover {
   border-radius: var(--blok-radius-control);
   cursor: pointer;
   color: var(--blok-database-tab-text);
-  transition: background-color 120ms ease, opacity 120ms ease;
+  transition: background-color 100ms ease-in-out;
   opacity: 0;
 }
 
@@ -6945,6 +6975,10 @@ button[data-blok-database-column-count]:hover {
 
 [data-blok-database-title-row]:hover [data-blok-database-add-view], [data-blok-database-title-row] [data-blok-database-add-view][data-popover-open], [data-blok-database-title-row]:hover [data-blok-database-title-more], [data-blok-database-title-more][data-popover-open], [data-blok-database-title-more]:focus-visible {
   opacity: 1;
+}
+
+[data-blok-database-title-row]:hover [data-blok-database-title-more], [data-blok-database-title-more][data-popover-open], [data-blok-database-title-more]:focus-visible {
+  transition: background-color 100ms ease-in-out, opacity 200ms ease;
 }
 
 [data-blok-database-tab] {
@@ -19323,7 +19357,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   box-shadow: var(--blok-database-feed-actions-shadow);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 120ms ease;
+  transition: opacity 100ms ease-out;
 }
 
 [data-blok-database-feed-card]:hover > [data-blok-database-feed-card-actions], [data-blok-database-feed-card][data-popover-open] > [data-blok-database-feed-card-actions], [data-blok-database-feed-card-actions]:has(:focus-visible) {

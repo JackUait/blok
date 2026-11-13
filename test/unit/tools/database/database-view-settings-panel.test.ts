@@ -561,11 +561,22 @@ describe('view settings panel', () => {
       h.ctx.layouts = ['table', 'board', 'list', 'gallery', 'calendar', 'timeline', 'chart', 'feed', 'map', 'form'];
       h.open('layout');
 
+      // notion-motion.md Round 23 §6: a Table view's Layout list has no Form; Form stays in Add view.
       expect(tiles().map((tile) => tile.getAttribute('data-blok-database-layout-tile'))).toEqual([
-        'table', 'board', 'timeline', 'calendar', 'list', 'gallery', 'chart', 'feed', 'map', 'form',
+        'table', 'board', 'timeline', 'calendar', 'list', 'gallery', 'chart', 'feed', 'map',
       ]);
       for (const tile of tiles()) expect(tile.querySelector('svg')).not.toBeNull();
       expect(tiles()[1].textContent?.trim()).toBe('tools.database.viewTypeBoard');
+    });
+
+    // A Form view's own Layout list is unread in Notion (Round 23 §6), so it keeps its own tile.
+    it('keeps the Form tile in a Form view\'s own list', () => {
+      const h = harness({ type: 'form' });
+
+      h.ctx.layouts = ['table', 'board', 'form'];
+      h.open('layout');
+
+      expect(tiles().map((tile) => tile.getAttribute('data-blok-database-layout-tile'))).toEqual(['table', 'board', 'form']);
     });
 
     // Notion rings the pick blue; Blok marks it gray with a ✓ (no-blue law, findings "Deliberate deviations").

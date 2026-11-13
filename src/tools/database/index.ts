@@ -737,6 +737,8 @@ export class DatabaseTool implements BlockTool {
   private readonly pendingDescriptions = new Map<string, OutputData>();
   private keyboard: DatabaseKeyboard | null = null;
   private cardMenuPopover: PopoverDesktop | null = null;
+  /** Clears the card picked by its ⋯ menu; the pick outlives Escape and goes on the next press. */
+  private dropCardPick: (() => void) | null = null;
   /** The ⌘/ menu of picked board or gallery cards. */
   private selectionMenu: PopoverDesktop | null = null;
   /** Escapes pressed while that menu was up: they close it and keep the pick. */
@@ -2871,6 +2873,7 @@ export class DatabaseTool implements BlockTool {
     this.addPropertyPopover = null;
     this.stopWaitingForIdle();
     this.cardMenuPopover?.destroy();
+    this.dropCardPick?.();
     this.selectionMenu?.destroy();
     this.reactionPicker?.close();
     this.reactionPicker?.getElement().remove();
@@ -9540,6 +9543,7 @@ export class DatabaseTool implements BlockTool {
 
     this.cardMenuPopover?.destroy();
     card.setAttribute('data-popover-open', '');
+    this.pickCard(card);
     const favorite = this.favoriteFor(rowId);
     const popover = openMenu(anchor, rowMenuItems({
       i18n: this.api.i18n,
@@ -9570,6 +9574,20 @@ export class DatabaseTool implements BlockTool {
     });
 
     this.cardMenuPopover = popover;
+  }
+
+  /** notion-motion.md Round 23 §3: the card stays picked after Escape; the next press anywhere clears it. */
+  private pickCard(card: HTMLElement): void {
+    this.dropCardPick?.();
+    const drop = (): void => {
+      card.removeAttribute('data-blok-database-card-picked');
+      document.removeEventListener('pointerdown', drop, true);
+      if (this.dropCardPick === drop) this.dropCardPick = null;
+    };
+
+    card.setAttribute('data-blok-database-card-picked', '');
+    document.addEventListener('pointerdown', drop, true);
+    this.dropCardPick = drop;
   }
 
   /** The row menu's Edit icon: the row page opens, then its icon picker. */

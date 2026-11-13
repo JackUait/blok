@@ -271,9 +271,11 @@ describe('New data source: every layout on a second source', () => {
     await make(doc('vb'));
     await openLayoutPage();
 
-    for (const type of ['table', 'board', 'gallery', 'list', 'chart', 'timeline', 'feed', 'calendar', 'form', 'map']) {
+    for (const type of ['table', 'board', 'gallery', 'list', 'chart', 'timeline', 'feed', 'calendar', 'map']) {
       expect(document.querySelector(`[data-blok-testid="database-layout-${type}"]`), type).not.toBeNull();
     }
+    // notion-motion.md Round 23 §6: Form is only in Add view, not a table's Layout list.
+    expect(document.querySelector('[data-blok-testid="database-layout-form"]')).toBeNull();
   });
 
   it('switching a second source\'s view to Board groups by the source\'s select and saves on the holder', async () => {

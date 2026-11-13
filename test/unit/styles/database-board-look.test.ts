@@ -164,6 +164,17 @@ describe('board column, card and header look (research/08)', () => {
     expect(ruleBody(database, '[data-blok-database-add-column]:active')).toContain('background-color: var(--blok-database-pressed-bg)');
   });
 
+  // notion-motion.md Round 23 §5: padding 0 8 0 6, a 16px plus, 8px after it.
+  it('lays "+ New group" out as a 16px plus 8px before its words, 6px from the start', () => {
+    const body = ruleBody(database, '[data-blok-database-add-column]');
+    const icon = ruleBody(database, '[data-blok-database-add-column-icon] svg');
+
+    expect(body).toContain('padding: 0 var(--blok-space-2) 0 var(--blok-space-1-5)');
+    expect(icon).toContain('width: 16px');
+    expect(icon).toContain('height: 16px');
+    expect(ruleBody(database, '[data-blok-database-add-column-icon]')).toContain('margin-inline-end: var(--blok-space-2)');
+  });
+
   it('makes "+ New page" a 40px ring button with group-colored text', () => {
     const body = ruleBody(database, '[data-blok-database-add-card]');
 

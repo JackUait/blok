@@ -131,6 +131,7 @@ const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
  * even when it is locally contained rather than root mounted.
  */
 const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
+  'tools/file/code-view.ts': 'The hover band and minimap window are positioned inside their own scroll box, from that box\'s own lines and scroll offset; nothing floats over other content.',
   'tools/file/pptx/renderer/TextRenderer.ts': 'Measures pptx text and bullet boxes to fit text to its shape; the rects size slide content, they never place a floating element.',
   'tools/image/darkroom/markup-editor.ts': 'Markup selection box and text editor convert the camera plane rect into offsets local to the stage overlay they live in; refresh() re-places them on every camera paint and stage resize.',
   'tools/image/index.ts': 'Snap guides are placed at container percentages inside the block root; the container width is read only for the readout px, not to position a floating root.',

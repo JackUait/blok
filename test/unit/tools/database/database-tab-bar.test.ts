@@ -234,6 +234,40 @@ describe('DatabaseTabBar', () => {
     });
   });
 
+  // notion-motion.md Round 14 "View tab drag" and Round 15 §A "Tab": a tab hints its name, then "Table view of New database".
+  describe('the view tab hint', () => {
+    afterEach(() => {
+      destroyTooltip();
+      vi.useRealTimers();
+    });
+
+    const api = {
+      i18n: {
+        t: (key: string, vars?: Record<string, string | number>) => (vars === undefined ? key : `${key}:${JSON.stringify(vars)}`),
+        has: () => true,
+      },
+    } as unknown as API;
+
+    it('names the view, then its layout and the database, after the hover delay', () => {
+      destroyTooltip();
+      vi.useFakeTimers();
+      const view = makeView({ type: 'table', name: 'Tasks' });
+      const el = new DatabaseTabBar({
+        views: [view], activeViewId: view.id, onTabClick, onAddView, onRename, onDuplicate, onDelete, onReorder, api,
+        sourceTitle: () => 'Projects',
+      }).render();
+
+      document.body.appendChild(el);
+      hover(el.querySelector('[data-blok-database-tab]'));
+      vi.advanceTimersByTime(HINT_DELAY - 1);
+      expect(shownHint()).toBeNull();
+      vi.advanceTimersByTime(1);
+      expect(shownHint()?.text).toBe('Taskstools.database.tabViewOf:{"layout":"tools.database.viewTypeTable","database":"Projects"}');
+      expect(shownHint()?.placement).toBe('bottom');
+      el.remove();
+    });
+  });
+
   describe('render()', () => {
     it('gives a table view tab the table icon', () => {
       const view = makeView({ type: 'table' });

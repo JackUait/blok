@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "Locația curentă",
   "tools.database.dashboardUnavailable": "Panourile de bord nu sunt încă disponibile aici.",
   "tools.database.viewTypeDashboard": "Panou de bord",
+  "tools.database.tabViewOf": "Vizualizare {layout} pentru {database}",
   "tools.database.dashboardAddWidget": "Adaugă un widget",
   "tools.database.dashboardEmpty": "Adaugă diagrame, numere, tabele și liste.",
   "tools.database.timelineLabel": "Cronologie",

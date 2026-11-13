@@ -1649,6 +1649,7 @@
   "tools.database.placeCurrentLocation": "Nuværende placering",
   "tools.database.dashboardUnavailable": "Dashboards er ikke tilgængelige her endnu.",
   "tools.database.viewTypeDashboard": "Dashboard",
+  "tools.database.tabViewOf": "{layout}-visning af {database}",
   "tools.database.dashboardAddWidget": "Tilføj widget",
   "tools.database.dashboardEmpty": "Tilføj diagrammer, tal, tabeller og lister.",
   "tools.database.timelineLabel": "Tidslinje",

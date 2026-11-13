@@ -5192,6 +5192,7 @@ export class DatabaseTool implements BlockTool {
       onCopyLink: (viewId) => this.copyViewLink(viewId),
       openFullPage: () => (this.fullPageOpener() === undefined ? undefined : (viewId) => this.openFullPage(viewId)),
       onEditTitle: () => this.focusTitle(),
+      sourceTitle: () => (this.title.trim() === '' ? this.api.i18n.t('tools.database.titlePlaceholder') : this.title.trim()),
       ...this.editLayoutOption(),
       display: this.tabDisplay.get(),
       onDisplayChange: (display) => {

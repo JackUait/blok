@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "Тренутна локација",
   "tools.database.dashboardUnavailable": "Контролне табле овде још нису доступне.",
   "tools.database.viewTypeDashboard": "Контролна табла",
+  "tools.database.tabViewOf": "Приказ {layout} за {database}",
   "tools.database.dashboardAddWidget": "Додај виџет",
   "tools.database.dashboardEmpty": "Додајте графиконе, бројеве, табеле и листе.",
   "tools.database.timelineLabel": "Временска линија",

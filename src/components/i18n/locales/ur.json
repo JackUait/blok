@@ -1649,6 +1649,7 @@
   "tools.database.placeCurrentLocation": "موجودہ مقام",
   "tools.database.dashboardUnavailable": "ڈیش بورڈز ابھی یہاں دستیاب نہیں ہیں۔",
   "tools.database.viewTypeDashboard": "ڈیش بورڈ",
+  "tools.database.tabViewOf": "{database} کا {layout} ویو",
   "tools.database.dashboardAddWidget": "ویجیٹ شامل کریں",
   "tools.database.dashboardEmpty": "چارٹ، نمبر، ٹیبل اور فہرستیں شامل کریں۔",
   "tools.database.timelineLabel": "ٹائم لائن",

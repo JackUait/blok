@@ -1661,6 +1661,7 @@
   "tools.database.placeCurrentLocation": "Aktuální poloha",
   "tools.database.dashboardUnavailable": "Nástěnky zde zatím nejsou k dispozici.",
   "tools.database.viewTypeDashboard": "Nástěnka",
+  "tools.database.tabViewOf": "Zobrazení {layout} databáze {database}",
   "tools.database.dashboardAddWidget": "Přidat widget",
   "tools.database.dashboardEmpty": "Přidejte grafy, čísla, tabulky a seznamy.",
   "tools.database.timelineLabel": "Časová osa",

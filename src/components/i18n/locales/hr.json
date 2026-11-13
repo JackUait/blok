@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "Trenutačna lokacija",
   "tools.database.dashboardUnavailable": "Nadzorne ploče ovdje još nisu dostupne.",
   "tools.database.viewTypeDashboard": "Nadzorna ploča",
+  "tools.database.tabViewOf": "Prikaz {layout} za {database}",
   "tools.database.dashboardAddWidget": "Dodaj widget",
   "tools.database.dashboardEmpty": "Dodajte grafikone, brojeve, tablice i popise.",
   "tools.database.timelineLabel": "Vremenska crta",

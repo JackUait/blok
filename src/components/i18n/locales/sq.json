@@ -1649,6 +1649,7 @@
   "tools.database.placeCurrentLocation": "Vendndodhja aktuale",
   "tools.database.dashboardUnavailable": "Panelet e kontrollit nuk janë ende të disponueshme këtu.",
   "tools.database.viewTypeDashboard": "Paneli i kontrollit",
+  "tools.database.tabViewOf": "Pamja {layout} e {database}",
   "tools.database.dashboardAddWidget": "Shto widget",
   "tools.database.dashboardEmpty": "Shtoni grafikë, numra, tabela dhe lista.",
   "tools.database.timelineLabel": "Kronologji",

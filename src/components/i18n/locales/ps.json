@@ -1649,6 +1649,7 @@
   "tools.database.placeCurrentLocation": "اوسنی ځای",
   "tools.database.dashboardUnavailable": "ډشبورډونه لا تر اوسه دلته شتون نه لري.",
   "tools.database.viewTypeDashboard": "ډشبورډ",
+  "tools.database.tabViewOf": "د {database} {layout} لید",
   "tools.database.dashboardAddWidget": "ویجټ اضافه کړئ",
   "tools.database.dashboardEmpty": "چارټونه، شمېرې، جدولونه او لېستونه اضافه کړئ.",
   "tools.database.timelineLabel": "مهالکرښه",

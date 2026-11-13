@@ -1649,6 +1649,7 @@
   "tools.database.placeCurrentLocation": "Lokasi saat ini",
   "tools.database.dashboardUnavailable": "Dasbor belum tersedia di sini.",
   "tools.database.viewTypeDashboard": "Dasbor",
+  "tools.database.tabViewOf": "Tampilan {layout} dari {database}",
   "tools.database.dashboardAddWidget": "Tambah widget",
   "tools.database.dashboardEmpty": "Tambahkan bagan, angka, tabel, dan daftar.",
   "tools.database.timelineLabel": "Linimasa",

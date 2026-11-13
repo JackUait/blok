@@ -1649,6 +1649,7 @@
   "tools.database.placeCurrentLocation": "Geçerli konum",
   "tools.database.dashboardUnavailable": "Panolar henüz burada kullanılamıyor.",
   "tools.database.viewTypeDashboard": "Pano",
+  "tools.database.tabViewOf": "{database} için {layout} görünümü",
   "tools.database.dashboardAddWidget": "Pencere öğesi ekle",
   "tools.database.dashboardEmpty": "Grafik, sayı, tablo ve liste ekleyin.",
   "tools.database.timelineLabel": "Zaman çizelgesi",

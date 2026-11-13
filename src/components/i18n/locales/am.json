@@ -1649,6 +1649,7 @@
   "tools.database.placeCurrentLocation": "የአሁኑ አካባቢ",
   "tools.database.dashboardUnavailable": "ዳሽቦርዶች እዚህ ገና አይገኙም።",
   "tools.database.viewTypeDashboard": "ዳሽቦርድ",
+  "tools.database.tabViewOf": "የ{database} {layout} ዕይታ",
   "tools.database.dashboardAddWidget": "ዊጀት አክል",
   "tools.database.dashboardEmpty": "ገበታዎችን፣ ቁጥሮችን፣ ሰንጠረዦችን እና ዝርዝሮችን ያክሉ።",
   "tools.database.timelineLabel": "የጊዜ መስመር",

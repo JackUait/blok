@@ -14,6 +14,7 @@ import { DATA_ATTR } from '../../components/constants/data-attributes';
 import type { API } from '../../../types';
 import type { DatabaseTabDisplay, DatabaseViewConfig, ViewType } from './types';
 import { isHistoryKey } from './database-keyboard';
+import { propertyHint } from './property-hint';
 import { positionBetween } from '../../shared/database/positions';
 
 const DRAG_THRESHOLD = 10;
@@ -49,6 +50,21 @@ export const VIEW_ICONS: Record<string, string> = {
   form: IconForm,
   map: IconMap,
   dashboard: IconViewDashboard,
+};
+
+/** Each layout's name, for a tab's hint. */
+const VIEW_LABEL_KEYS: Record<ViewType, string> = {
+  board: 'tools.database.viewTypeBoard',
+  list: 'tools.database.viewTypeList',
+  table: 'tools.database.viewTypeTable',
+  gallery: 'tools.database.viewTypeGallery',
+  calendar: 'tools.database.viewTypeCalendar',
+  timeline: 'tools.database.viewTypeTimeline',
+  chart: 'tools.database.viewTypeChart',
+  feed: 'tools.database.viewTypeFeed',
+  form: 'tools.database.viewTypeForm',
+  map: 'tools.database.viewTypeMap',
+  dashboard: 'tools.database.viewTypeDashboard',
 };
 
 export interface TabBarOptions {
@@ -87,6 +103,8 @@ export interface TabBarOptions {
   onDataSourceTitlesToggle?: () => void;
   /** Offers "New data source" last in the add-view menu and the "N more…" list (research/23 §10). */
   onNewDataSource?: () => void;
+  /** The database's name, read on hover for each tab's "Table view of …" hint. */
+  sourceTitle?: () => string;
 }
 
 export class DatabaseTabBar {
@@ -435,8 +453,26 @@ export class DatabaseTabBar {
     activateOnEnterOrSpace(tab, () => {
       this.activateTab(view.id, true);
     });
+    this.bindTabHint(tab, view);
 
     return tab;
+  }
+
+  /** notion-motion.md Round 14, Round 15 §A: the name, then "Table view of New database", under the tab. */
+  private bindTabHint(tab: HTMLElement, view: DatabaseViewConfig): void {
+    const { api, sourceTitle } = this.options;
+
+    if (api === undefined || sourceTitle === undefined || view.type === 'dashboard') {
+      return;
+    }
+    const layout = api.i18n.t(VIEW_LABEL_KEYS[view.type]);
+    const hint = document.createElement('div');
+
+    // The title can change while the tabs stay, so the hint is rebuilt on each hover.
+    tab.addEventListener('mouseenter', () => {
+      hint.replaceChildren(propertyHint(view.name, api.i18n.t('tools.database.tabViewOf', { layout, database: sourceTitle() })));
+    });
+    onHover(tab, hint, { bare: true, placement: 'bottom' });
   }
 
   private openContextPopover(tab: HTMLElement, viewId: string): void {

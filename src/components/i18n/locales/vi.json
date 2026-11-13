@@ -1649,6 +1649,7 @@
   "tools.database.placeCurrentLocation": "Vị trí hiện tại",
   "tools.database.dashboardUnavailable": "Bảng điều khiển chưa khả dụng ở đây.",
   "tools.database.viewTypeDashboard": "Bảng điều khiển",
+  "tools.database.tabViewOf": "Chế độ xem {layout} của {database}",
   "tools.database.dashboardAddWidget": "Thêm tiện ích",
   "tools.database.dashboardEmpty": "Thêm biểu đồ, số, bảng và danh sách.",
   "tools.database.timelineLabel": "Dòng thời gian",

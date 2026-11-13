@@ -1649,6 +1649,7 @@
   "tools.database.placeCurrentLocation": "Nåværende posisjon",
   "tools.database.dashboardUnavailable": "Instrumentbord er ikke tilgjengelige her ennå.",
   "tools.database.viewTypeDashboard": "Instrumentbord",
+  "tools.database.tabViewOf": "{layout}-visning av {database}",
   "tools.database.dashboardAddWidget": "Legg til modul",
   "tools.database.dashboardEmpty": "Legg til diagrammer, tall, tabeller og lister.",
   "tools.database.timelineLabel": "Tidslinje",

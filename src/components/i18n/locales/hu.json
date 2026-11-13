@@ -1649,6 +1649,7 @@
   "tools.database.placeCurrentLocation": "Jelenlegi hely",
   "tools.database.dashboardUnavailable": "Az irányítópultok itt még nem érhetők el.",
   "tools.database.viewTypeDashboard": "Irányítópult",
+  "tools.database.tabViewOf": "{database}: {layout} nézet",
   "tools.database.dashboardAddWidget": "Widget hozzáadása",
   "tools.database.dashboardEmpty": "Adjon hozzá diagramokat, számokat, táblázatokat és listákat.",
   "tools.database.timelineLabel": "Idővonal",

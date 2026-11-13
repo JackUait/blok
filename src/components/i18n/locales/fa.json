@@ -1649,6 +1649,7 @@
   "tools.database.placeCurrentLocation": "موقعیت فعلی",
   "tools.database.dashboardUnavailable": "داشبوردها هنوز در اینجا در دسترس نیستند.",
   "tools.database.viewTypeDashboard": "داشبورد",
+  "tools.database.tabViewOf": "نمای {layout} از {database}",
   "tools.database.dashboardAddWidget": "افزودن ابزارک",
   "tools.database.dashboardEmpty": "نمودار، عدد، جدول و فهرست اضافه کنید.",
   "tools.database.timelineLabel": "خط زمانی",

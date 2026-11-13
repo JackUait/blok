@@ -1649,6 +1649,7 @@
   "tools.database.placeCurrentLocation": "လက်ရှိတည်နေရာ",
   "tools.database.dashboardUnavailable": "ဒက်ရှ်ဘုတ်များကို ဤနေရာတွင် မသုံးနိုင်သေးပါ။",
   "tools.database.viewTypeDashboard": "ဒက်ရှ်ဘုတ်",
+  "tools.database.tabViewOf": "{database} ၏ {layout} မြင်ကွင်း",
   "tools.database.dashboardAddWidget": "ဝစ်ဂျက် ထည့်ရန်",
   "tools.database.dashboardEmpty": "ပုံပြဇယား၊ ကိန်းဂဏန်း၊ ဇယားနှင့် စာရင်းများ ထည့်ပါ။",
   "tools.database.timelineLabel": "အချိန်လိုင်း",

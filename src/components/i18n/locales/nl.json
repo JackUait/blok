@@ -1649,6 +1649,7 @@
   "tools.database.placeCurrentLocation": "Huidige locatie",
   "tools.database.dashboardUnavailable": "Dashboards zijn hier nog niet beschikbaar.",
   "tools.database.viewTypeDashboard": "Dashboard",
+  "tools.database.tabViewOf": "{layout}-weergave van {database}",
   "tools.database.dashboardAddWidget": "Widget toevoegen",
   "tools.database.dashboardEmpty": "Voeg grafieken, getallen, tabellen en lijsten toe.",
   "tools.database.timelineLabel": "Tijdlijn",

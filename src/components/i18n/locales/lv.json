@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "Pašreizējā atrašanās vieta",
   "tools.database.dashboardUnavailable": "Informācijas paneļi šeit vēl nav pieejami.",
   "tools.database.viewTypeDashboard": "Informācijas panelis",
+  "tools.database.tabViewOf": "{database} skats {layout}",
   "tools.database.dashboardAddWidget": "Pievienot logrīku",
   "tools.database.dashboardEmpty": "Pievienojiet diagrammas, skaitļus, tabulas un sarakstus.",
   "tools.database.timelineLabel": "Laika skala",

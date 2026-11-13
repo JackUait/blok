@@ -1649,6 +1649,7 @@
   "tools.database.placeCurrentLocation": "شوێنی ئێستا",
   "tools.database.dashboardUnavailable": "داشبۆردەکان هێشتا لێرە بەردەست نین.",
   "tools.database.viewTypeDashboard": "داشبۆرد",
+  "tools.database.tabViewOf": "بینینی {layout}ی {database}",
   "tools.database.dashboardAddWidget": "ویجێت زیاد بکە",
   "tools.database.dashboardEmpty": "چارت، ژمارە، خشتە و لیست زیاد بکە.",
   "tools.database.timelineLabel": "هێڵی کات",

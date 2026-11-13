@@ -1649,6 +1649,7 @@
   "tools.database.placeCurrentLocation": "Mahali ulipo sasa",
   "tools.database.dashboardUnavailable": "Dashibodi bado hazipatikani hapa.",
   "tools.database.viewTypeDashboard": "Dashibodi",
+  "tools.database.tabViewOf": "Mwonekano wa {layout} wa {database}",
   "tools.database.dashboardAddWidget": "Ongeza wijeti",
   "tools.database.dashboardEmpty": "Ongeza chati, nambari, majedwali na orodha.",
   "tools.database.timelineLabel": "Rekodi ya matukio",

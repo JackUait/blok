@@ -1649,6 +1649,7 @@
   "tools.database.placeCurrentLocation": "ప్రస్తుత లొకేషన్",
   "tools.database.dashboardUnavailable": "డాష్‌బోర్డ్‌లు ఇంకా ఇక్కడ అందుబాటులో లేవు.",
   "tools.database.viewTypeDashboard": "డాష్‌బోర్డ్",
+  "tools.database.tabViewOf": "{database} యొక్క {layout} వీక్షణ",
   "tools.database.dashboardAddWidget": "విడ్జెట్ జోడించు",
   "tools.database.dashboardEmpty": "చార్ట్‌లు, సంఖ్యలు, పట్టికలు, జాబితాలను జోడించండి.",
   "tools.database.timelineLabel": "టైమ్‌లైన్",

@@ -1649,6 +1649,7 @@
   "tools.database.placeCurrentLocation": "Τρέχουσα τοποθεσία",
   "tools.database.dashboardUnavailable": "Οι πίνακες ελέγχου δεν είναι ακόμη διαθέσιμοι εδώ.",
   "tools.database.viewTypeDashboard": "Πίνακας ελέγχου",
+  "tools.database.tabViewOf": "Προβολή {layout} του {database}",
   "tools.database.dashboardAddWidget": "Προσθήκη γραφικού στοιχείου",
   "tools.database.dashboardEmpty": "Προσθέστε γραφήματα, αριθμούς, πίνακες και λίστες.",
   "tools.database.timelineLabel": "Χρονολόγιο",

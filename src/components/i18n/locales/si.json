@@ -1649,6 +1649,7 @@
   "tools.database.placeCurrentLocation": "වත්මන් ස්ථානය",
   "tools.database.dashboardUnavailable": "උපකරණ පුවරු තවමත් මෙහි ලබා ගත නොහැක.",
   "tools.database.viewTypeDashboard": "උපකරණ පුවරුව",
+  "tools.database.tabViewOf": "{database} හි {layout} දසුන",
   "tools.database.dashboardAddWidget": "විජට් එක් කරන්න",
   "tools.database.dashboardEmpty": "ප්‍රස්තාර, අංක, වගු සහ ලැයිස්තු එක් කරන්න.",
   "tools.database.timelineLabel": "කාලරේඛාව",

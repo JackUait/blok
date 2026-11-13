@@ -1649,6 +1649,7 @@
   "tools.database.placeCurrentLocation": "މިހާރު ހުރި ތަން",
   "tools.database.dashboardUnavailable": "ޑޭޝްބޯޑުތައް މިތާނގައި އަދި ނުލިބޭ.",
   "tools.database.viewTypeDashboard": "ޑޭޝްބޯޑު",
+  "tools.database.tabViewOf": "{database} ގެ {layout} ވިއު",
   "tools.database.dashboardAddWidget": "ވިޖެޓެއް އިތުރުކުރޭ",
   "tools.database.dashboardEmpty": "ޗާޓު، ނަންބަރު، ޓޭބަލް އަދި ލިސްޓު އިތުރުކުރޭ.",
   "tools.database.timelineLabel": "ޓައިމްލައިން",

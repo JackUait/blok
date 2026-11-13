@@ -1649,6 +1649,7 @@
   "tools.database.placeCurrentLocation": "Ընթացիկ վայրը",
   "tools.database.dashboardUnavailable": "Կառավարման վահանակներն այստեղ դեռ հասանելի չեն։",
   "tools.database.viewTypeDashboard": "Կառավարման վահանակ",
+  "tools.database.tabViewOf": "{database}-ի {layout} տեսք",
   "tools.database.dashboardAddWidget": "Ավելացնել վիջեթ",
   "tools.database.dashboardEmpty": "Ավելացրեք գծապատկերներ, թվեր, աղյուսակներ և ցուցակներ։",
   "tools.database.timelineLabel": "Ժամանակագիծ",

@@ -1654,7 +1654,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R22_BYTES = 1_979;
     // Round 21 lane r23: the colour rule head (name outside the operator), the Text/Number value box and its "=";
     // ... and the opaque rule fill on board cards and list rows; the rule name's lighter ink.
-    const DATABASE_R23_BYTES = 1_224 + 1_771 + 188;
+    const DATABASE_R23_BYTES = 3_971;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2134,7 +2134,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R20A_BYTES
       + DATABASE_R21_BYTES
       + DATABASE_R22_BYTES
-      + DATABASE_R23_BYTES;
+      + DATABASE_R23_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

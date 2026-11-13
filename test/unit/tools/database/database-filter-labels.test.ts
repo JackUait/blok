@@ -27,9 +27,13 @@ const prop = (type: PropertyDefinition['type'], extra: Partial<PropertyDefinitio
 describe('database filter labels', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // A chip prints the year only for another year, so the 2026 days below need 2026 to be now.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 13));
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 

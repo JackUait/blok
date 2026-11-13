@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "Lås visninger",
   "tools.database.settingsNone": "Ingen",
   "tools.database.settingsWrapAll": "Bryt alt innhold",
+  "tools.database.settingsWrapPageTitles": "Bryt sidetitler",
+  "tools.database.settingsDirectEditPageName": "Rediger sidenavn direkte",
   "tools.database.settingsVerticalLines": "Vis loddrette linjer",
   "tools.database.settingsShowPageIcon": "Vis sideikon",
   "tools.database.settingsShowDataSourceTitle": "Vis datakildens tittel",

@@ -12040,7 +12040,7 @@
                                           "anyOf": [
                                             {
                                               "type": "boolean",
-                                              "description": "Wrap every cell. Default true for a board, false otherwise."
+                                              "description": "Wrap every cell; on a calendar, wrap page titles to two lines. Default true for a board, false otherwise."
                                             },
                                             {
                                               "type": "null"
@@ -12211,6 +12211,17 @@
                                             }
                                           ]
                                         },
+                                        "directTitleEdit": {
+                                          "anyOf": [
+                                            {
+                                              "type": "boolean",
+                                              "description": "List: a title click edits the title in place instead of opening the row. Default false."
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
                                         "calendarBy": {
                                           "anyOf": [
                                             {
@@ -12263,7 +12274,7 @@
                                           "anyOf": [
                                             {
                                               "type": "string",
-                                              "description": "Timeline: a second date property id that ends each bar. Absent means timelineBy holds the range."
+                                              "description": "Timeline: the date property id that ends each bar. Set, even to timelineBy, turns \"Separate start and end dates\" on. Absent, empty or equal to timelineBy: timelineBy holds the range."
                                             },
                                             {
                                               "type": "null"

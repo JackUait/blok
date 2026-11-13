@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "قوفڵکردنی بینینەکان",
   "tools.database.settingsNone": "هیچ",
   "tools.database.settingsWrapAll": "پەچانەوەی هەموو ناوەڕۆک",
+  "tools.database.settingsWrapPageTitles": "پەچانەوەی سەردێڕی پەڕەکان",
+  "tools.database.settingsDirectEditPageName": "دەستکاریکردنی ڕاستەوخۆی ناوی پەڕە",
   "tools.database.settingsVerticalLines": "پیشاندانی هێڵە ستوونییەکان",
   "tools.database.settingsShowPageIcon": "پیشاندانی ئایکۆنی پەڕە",
   "tools.database.settingsShowDataSourceTitle": "پیشاندانی ناونیشانی سەرچاوەی داتا",

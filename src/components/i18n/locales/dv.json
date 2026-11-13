@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "ވިއުތައް ލޮކްކުރޭ",
   "tools.database.settingsNone": "އެއްވެސް ނޫން",
   "tools.database.settingsWrapAll": "ހުރިހާ ކޮންޓެންޓެއް ލަނބާ",
+  "tools.database.settingsWrapPageTitles": "ޞަފްޙާގެ ސުރުޚީތައް ލަނބާ",
+  "tools.database.settingsDirectEditPageName": "ޞަފްޙާގެ ނަން ސީދާ އެޑިޓް ކުރޭ",
   "tools.database.settingsVerticalLines": "ވަޓިކަލް ލައިންތައް ދައްކާ",
   "tools.database.settingsShowPageIcon": "ޞަފްޙާގެ އައިކަން ދައްކާ",
   "tools.database.settingsShowDataSourceTitle": "ޑޭޓާ ސޯހުގެ ސުރުޚީ ދައްކާ",

@@ -1337,6 +1337,8 @@
   "tools.database.settingsLockViews": "Zamknout zobrazení",
   "tools.database.settingsNone": "Žádné",
   "tools.database.settingsWrapAll": "Zalamovat veškerý obsah",
+  "tools.database.settingsWrapPageTitles": "Zalamovat názvy stránek",
+  "tools.database.settingsDirectEditPageName": "Upravovat název stránky přímo",
   "tools.database.settingsVerticalLines": "Zobrazit svislé čáry",
   "tools.database.settingsShowPageIcon": "Zobrazit ikonu stránky",
   "tools.database.settingsShowDataSourceTitle": "Zobrazit název zdroje dat",

@@ -9266,6 +9266,7 @@ export class DatabaseTool implements BlockTool {
     const query = this.pagedQuery(viewConfig, shown, limit, (context?.controls ?? this.controls).search);
     const common = {
       showPageIcon: showsPageIcon(viewConfig),
+      directTitleEdit: viewConfig.directTitleEdit === true,
       readOnly: context === undefined ? this.readOnly : !context.writable(),
       i18n: this.api.i18n,
       titlePropertyId: titlePropId,

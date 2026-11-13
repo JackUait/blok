@@ -204,6 +204,18 @@ describe('list row hover chrome (findings-listgallery L03, L04)', () => {
     expect(ruleBody(database, '[data-blok-database-list-row-edit]')).toContain('margin-inline-start: var(--blok-space-1-75)');
   });
 
+  // notion-motion.md Round 25 §6: with "Directly edit page name" on, the button is a 26x20 "Open in side peek", radius 4,
+  // and the title takes a text cursor.
+  it('makes the button a 26x20 Open in side peek, and the title a text field, when direct edit is on', () => {
+    const body = ruleBody(database, '[data-blok-database-list][data-direct-edit] [data-blok-database-list-row-edit]');
+
+    expect(body).toContain('width: 26px');
+    expect(body).toContain('height: 20px');
+    expect(body).toContain('border-radius: var(--blok-radius-control-sm)');
+    expect(ruleBody(database, '[data-blok-database-list][data-direct-edit] [data-blok-database-list-row-edit] svg')).toContain('height: 20px');
+    expect(ruleBody(database, '[data-blok-database-list][data-direct-edit] [data-blok-database-list-row-title]')).toContain('cursor: text');
+  });
+
   // notion-motion.md "View tabs, gallery, list": the gutter fades in over 200ms ease-out.
   it('fades the hovered row\'s gutter in over 200ms ease-out, and not under reduced motion', () => {
     expect(ruleBody(database, '[data-blok-database-list-row-gutter]')).toContain('transition: opacity 200ms ease-out');

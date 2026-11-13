@@ -1332,6 +1332,8 @@
   "tools.database.settingsLockViews": "Blocca viste",
   "tools.database.settingsNone": "Nessuno",
   "tools.database.settingsWrapAll": "A capo automatico ovunque",
+  "tools.database.settingsWrapPageTitles": "A capo nei titoli delle pagine",
+  "tools.database.settingsDirectEditPageName": "Modifica direttamente il nome della pagina",
   "tools.database.settingsVerticalLines": "Mostra linee verticali",
   "tools.database.settingsShowPageIcon": "Mostra icona pagina",
   "tools.database.settingsShowDataSourceTitle": "Mostra titolo dell’origine dati",

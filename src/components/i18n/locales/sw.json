@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "Funga mionekano",
   "tools.database.settingsNone": "Hakuna",
   "tools.database.settingsWrapAll": "Kunja maudhui yote",
+  "tools.database.settingsWrapPageTitles": "Kunja mada za kurasa",
+  "tools.database.settingsDirectEditPageName": "Hariri jina la ukurasa moja kwa moja",
   "tools.database.settingsVerticalLines": "Onyesha mistari wima",
   "tools.database.settingsShowPageIcon": "Onyesha aikoni ya ukurasa",
   "tools.database.settingsShowDataSourceTitle": "Onyesha kichwa cha chanzo cha data",

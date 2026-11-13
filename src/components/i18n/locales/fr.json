@@ -1332,6 +1332,8 @@
   "tools.database.settingsLockViews": "Verrouiller les vues",
   "tools.database.settingsNone": "Aucun",
   "tools.database.settingsWrapAll": "Renvoyer tout le contenu à la ligne",
+  "tools.database.settingsWrapPageTitles": "Renvoyer les titres de page à la ligne",
+  "tools.database.settingsDirectEditPageName": "Modifier directement le nom de la page",
   "tools.database.settingsVerticalLines": "Afficher les lignes verticales",
   "tools.database.settingsShowPageIcon": "Afficher l’icône de page",
   "tools.database.settingsShowDataSourceTitle": "Afficher le titre de la source de données",

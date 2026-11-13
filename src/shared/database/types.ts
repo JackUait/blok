@@ -914,13 +914,18 @@ export interface DatabaseViewConfig {
   fitImage?: boolean;
   /** Board: `list` puts each card property on its own line, `compact` sets them side by side. Default 'list'. */
   cardLayout?: CardLayout;
+  /** List: a title click edits the title in place instead of opening the row. Default false. */
+  directTitleEdit?: boolean;
   /** Calendar: the date property that places each row. */
   calendarBy?: string;
   calendarRange?: CalendarRange;
   showWeekends?: boolean;
   /** Timeline: the date property that places each bar. */
   timelineBy?: string;
-  /** Timeline: a second date property that ends each bar. Absent means `timelineBy` holds the range. */
+  /**
+   * Timeline: the date property that ends each bar. Set, even to `timelineBy`, turns
+   * "Separate start and end dates" on. Absent, empty or equal to `timelineBy`: `timelineBy` holds the range.
+   */
   timelineEndBy?: string;
   timelineZoom?: TimelineZoom;
   /** Timeline: the shared centre day, `YYYY-MM-DD` (Notion's `center_timestamp`). A person's own last centre wins over it. */
@@ -1046,7 +1051,7 @@ export type DatabaseViewSettingKey =
   | 'properties' | 'wrapCells' | 'frozenColumnCount' | 'showVerticalLines' | 'loadLimit' | 'calculations' | 'openPagesIn'
   | 'noValueGroupPosition' | 'groupOrder' | 'hiddenGroups' | 'collapsedGroups' | 'pinnedGroups' | 'hideGroupAggregation' | 'groupCalculation'
   | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'colorRules' | 'showPageIcon' | 'showDataSourceTitle' | 'groupByStatus'
-  | 'cardSize' | 'cardPreview' | 'fitImage' | 'cardLayout' | 'calendarBy' | 'calendarRange' | 'showWeekends'
+  | 'cardSize' | 'cardPreview' | 'fitImage' | 'cardLayout' | 'directTitleEdit' | 'calendarBy' | 'calendarRange' | 'showWeekends'
   | 'timelineBy' | 'timelineEndBy' | 'timelineZoom' | 'timelineCenter' | 'showTimelineTable' | 'tableProperties' | 'arrowsBy'
   | 'toolbarMinimized'
   | 'chartType' | 'chartMeasure' | 'chartSort' | 'chartOmitZero' | 'chartCumulative' | 'chartColor' | 'chartHeight'

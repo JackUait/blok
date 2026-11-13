@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "ವೀಕ್ಷಣೆಗಳನ್ನು ಲಾಕ್ ಮಾಡಿ",
   "tools.database.settingsNone": "ಯಾವುದೂ ಇಲ್ಲ",
   "tools.database.settingsWrapAll": "ಎಲ್ಲಾ ವಿಷಯವನ್ನು ಸುತ್ತಿಸಿ",
+  "tools.database.settingsWrapPageTitles": "ಪುಟ ಶೀರ್ಷಿಕೆಗಳನ್ನು ಸುತ್ತಿಸಿ",
+  "tools.database.settingsDirectEditPageName": "ಪುಟದ ಹೆಸರನ್ನು ನೇರವಾಗಿ ಸಂಪಾದಿಸಿ",
   "tools.database.settingsVerticalLines": "ಲಂಬ ರೇಖೆಗಳನ್ನು ತೋರಿಸಿ",
   "tools.database.settingsShowPageIcon": "ಪುಟದ ಐಕಾನ್ ತೋರಿಸಿ",
   "tools.database.settingsShowDataSourceTitle": "ಡೇಟಾ ಮೂಲದ ಶೀರ್ಷಿಕೆ ತೋರಿಸಿ",

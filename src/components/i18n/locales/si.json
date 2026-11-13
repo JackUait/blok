@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "දසුන් අගුළු දමන්න",
   "tools.database.settingsNone": "කිසිවක් නැත",
   "tools.database.settingsWrapAll": "සියලු අන්තර්ගතය එතන්න",
+  "tools.database.settingsWrapPageTitles": "පිටු මාතෘකා එතන්න",
+  "tools.database.settingsDirectEditPageName": "පිටුවේ නම සෘජුවම සංස්කරණය කරන්න",
   "tools.database.settingsVerticalLines": "සිරස් රේඛා පෙන්වන්න",
   "tools.database.settingsShowPageIcon": "පිටු නිරූපකය පෙන්වන්න",
   "tools.database.settingsShowDataSourceTitle": "දත්ත මූලාශ්‍රයේ මාතෘකාව පෙන්වන්න",

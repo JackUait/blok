@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "Weergaven vergrendelen",
   "tools.database.settingsNone": "Geen",
   "tools.database.settingsWrapAll": "Alle inhoud laten teruglopen",
+  "tools.database.settingsWrapPageTitles": "Paginatitels laten teruglopen",
+  "tools.database.settingsDirectEditPageName": "Paginanaam direct bewerken",
   "tools.database.settingsVerticalLines": "Verticale lijnen tonen",
   "tools.database.settingsShowPageIcon": "Paginapictogram tonen",
   "tools.database.settingsShowDataSourceTitle": "Titel van gegevensbron tonen",

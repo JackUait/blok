@@ -176,6 +176,39 @@ test.describe('list view', () => {
   });
 });
 
+// notion-motion.md Round 25 §6: "Directly edit page name".
+test.describe('list "Directly edit page name"', () => {
+  test('off, a title click opens the row', async ({ page }) => {
+    await mount(page, blocks({ type: 'list', name: 'List' }));
+    await row(page, 'r1').locator('[data-blok-database-list-row-title]').click();
+
+    await expect(page.locator('[data-blok-database-drawer]')).toBeVisible();
+    await expect(page.locator('[data-blok-database-list-title-input]')).toHaveCount(0);
+  });
+
+  test('on, a title click puts the caret in the title, and a 26x20 Open in side peek shows on hover', async ({ page }) => {
+    await mount(page, blocks({ type: 'list', name: 'List', directTitleEdit: true }));
+    await row(page, 'r1').hover();
+    const button = row(page, 'r1').getByRole('button', { name: 'Open in side peek' });
+    const box = await button.boundingBox();
+
+    expect(box?.width).toBe(26);
+    expect(box?.height).toBe(20);
+    await row(page, 'r1').locator('[data-blok-database-list-row-title]').click();
+
+    await expect(page.locator('[data-blok-database-list-title-input]')).toBeFocused();
+    await expect(page.locator('[data-blok-database-drawer]')).not.toBeVisible();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' One');
+    await page.keyboard.press('Enter');
+    expect((await savedRows(page)).find((r) => r.id === 'r1')?.properties['p-title']).toBe('Alpha One');
+
+    await row(page, 'r1').hover();
+    await button.click();
+    await expect(page.locator('[data-blok-database-drawer]')).toBeVisible();
+  });
+});
+
 test.describe('list view accessibility and focus', () => {
   test('names each editable property by its value, and nests no control in a control', async ({ page }) => {
     await mount(page, blocks({ type: 'list', name: 'List' }));

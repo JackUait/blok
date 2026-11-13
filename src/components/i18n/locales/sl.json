@@ -1337,6 +1337,8 @@
   "tools.database.settingsLockViews": "Zakleni poglede",
   "tools.database.settingsNone": "Brez",
   "tools.database.settingsWrapAll": "Prelomi vso vsebino",
+  "tools.database.settingsWrapPageTitles": "Prelomi naslove strani",
+  "tools.database.settingsDirectEditPageName": "Neposredno uredi ime strani",
   "tools.database.settingsVerticalLines": "Prikaži navpične črte",
   "tools.database.settingsShowPageIcon": "Prikaži ikono strani",
   "tools.database.settingsShowDataSourceTitle": "Prikaži naslov vira podatkov",

@@ -1337,6 +1337,8 @@
   "tools.database.settingsLockViews": "Заблокировать представления",
   "tools.database.settingsNone": "Нет",
   "tools.database.settingsWrapAll": "Переносить всё содержимое",
+  "tools.database.settingsWrapPageTitles": "Переносить названия страниц",
+  "tools.database.settingsDirectEditPageName": "Редактировать название страницы напрямую",
   "tools.database.settingsVerticalLines": "Показывать вертикальные линии",
   "tools.database.settingsShowPageIcon": "Показывать значок страницы",
   "tools.database.settingsShowDataSourceTitle": "Показывать название источника данных",

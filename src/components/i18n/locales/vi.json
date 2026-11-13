@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "Khóa chế độ xem",
   "tools.database.settingsNone": "Không có",
   "tools.database.settingsWrapAll": "Ngắt dòng mọi nội dung",
+  "tools.database.settingsWrapPageTitles": "Ngắt dòng tiêu đề trang",
+  "tools.database.settingsDirectEditPageName": "Sửa trực tiếp tên trang",
   "tools.database.settingsVerticalLines": "Hiện đường kẻ dọc",
   "tools.database.settingsShowPageIcon": "Hiện biểu tượng trang",
   "tools.database.settingsShowDataSourceTitle": "Hiện tiêu đề nguồn dữ liệu",

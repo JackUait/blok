@@ -1337,6 +1337,8 @@
   "tools.database.settingsLockViews": "Zablokuj widoki",
   "tools.database.settingsNone": "Brak",
   "tools.database.settingsWrapAll": "Zawijaj całą zawartość",
+  "tools.database.settingsWrapPageTitles": "Zawijaj tytuły stron",
+  "tools.database.settingsDirectEditPageName": "Edytuj nazwę strony bezpośrednio",
   "tools.database.settingsVerticalLines": "Pokaż linie pionowe",
   "tools.database.settingsShowPageIcon": "Pokaż ikonę strony",
   "tools.database.settingsShowDataSourceTitle": "Pokaż tytuł źródła danych",

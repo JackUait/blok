@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "Κλείδωμα προβολών",
   "tools.database.settingsNone": "Κανένα",
   "tools.database.settingsWrapAll": "Αναδίπλωση όλου του περιεχομένου",
+  "tools.database.settingsWrapPageTitles": "Αναδίπλωση τίτλων σελίδων",
+  "tools.database.settingsDirectEditPageName": "Άμεση επεξεργασία ονόματος σελίδας",
   "tools.database.settingsVerticalLines": "Εμφάνιση κάθετων γραμμών",
   "tools.database.settingsShowPageIcon": "Εμφάνιση εικονιδίου σελίδας",
   "tools.database.settingsShowDataSourceTitle": "Εμφάνιση τίτλου πηγής δεδομένων",

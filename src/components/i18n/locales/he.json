@@ -1332,6 +1332,8 @@
   "tools.database.settingsLockViews": "נעל תצוגות",
   "tools.database.settingsNone": "ללא",
   "tools.database.settingsWrapAll": "גלישת כל התוכן",
+  "tools.database.settingsWrapPageTitles": "גלישת כותרות דפים",
+  "tools.database.settingsDirectEditPageName": "עריכה ישירה של שם הדף",
   "tools.database.settingsVerticalLines": "הצג קווים אנכיים",
   "tools.database.settingsShowPageIcon": "הצג סמל דף",
   "tools.database.settingsShowDataSourceTitle": "הצג את כותרת מקור הנתונים",

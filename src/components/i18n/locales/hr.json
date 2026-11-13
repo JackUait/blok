@@ -1332,6 +1332,8 @@
   "tools.database.settingsLockViews": "Zaključaj prikaze",
   "tools.database.settingsNone": "Ništa",
   "tools.database.settingsWrapAll": "Prelomi sav sadržaj",
+  "tools.database.settingsWrapPageTitles": "Prelomi naslove stranica",
+  "tools.database.settingsDirectEditPageName": "Izravno uredi naziv stranice",
   "tools.database.settingsVerticalLines": "Prikaži okomite linije",
   "tools.database.settingsShowPageIcon": "Prikaži ikonu stranice",
   "tools.database.settingsShowDataSourceTitle": "Prikaži naslov izvora podataka",

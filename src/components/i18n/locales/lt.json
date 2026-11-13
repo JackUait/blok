@@ -1337,6 +1337,8 @@
   "tools.database.settingsLockViews": "Užrakinti rodinius",
   "tools.database.settingsNone": "Nėra",
   "tools.database.settingsWrapAll": "Laužyti visą turinį",
+  "tools.database.settingsWrapPageTitles": "Laužyti puslapių pavadinimus",
+  "tools.database.settingsDirectEditPageName": "Redaguoti puslapio pavadinimą tiesiogiai",
   "tools.database.settingsVerticalLines": "Rodyti vertikalias linijas",
   "tools.database.settingsShowPageIcon": "Rodyti puslapio piktogramą",
   "tools.database.settingsShowDataSourceTitle": "Rodyti duomenų šaltinio pavadinimą",

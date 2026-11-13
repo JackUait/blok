@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "ዕይታዎችን ቆልፍ",
   "tools.database.settingsNone": "ምንም",
   "tools.database.settingsWrapAll": "ሁሉንም ይዘት ጠቅልል",
+  "tools.database.settingsWrapPageTitles": "የገጽ ርዕሶችን ጠቅልል",
+  "tools.database.settingsDirectEditPageName": "የገጽ ስምን በቀጥታ አርትዕ",
   "tools.database.settingsVerticalLines": "ቋሚ መስመሮችን አሳይ",
   "tools.database.settingsShowPageIcon": "የገጽ አዶ አሳይ",
   "tools.database.settingsShowDataSourceTitle": "የውሂብ ምንጭ ርዕስ አሳይ",

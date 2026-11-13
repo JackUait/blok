@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "ویوز لاک کریں",
   "tools.database.settingsNone": "کوئی نہیں",
   "tools.database.settingsWrapAll": "تمام مواد لپیٹیں",
+  "tools.database.settingsWrapPageTitles": "صفحے کے عنوانات لپیٹیں",
+  "tools.database.settingsDirectEditPageName": "صفحے کا نام براہ راست ترمیم کریں",
   "tools.database.settingsVerticalLines": "عمودی لکیریں دکھائیں",
   "tools.database.settingsShowPageIcon": "صفحے کا آئیکن دکھائیں",
   "tools.database.settingsShowDataSourceTitle": "ڈیٹا ماخذ کا عنوان دکھائیں",

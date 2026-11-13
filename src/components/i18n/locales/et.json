@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "Lukusta vaated",
   "tools.database.settingsNone": "Puudub",
   "tools.database.settingsWrapAll": "Murra kogu sisu",
+  "tools.database.settingsWrapPageTitles": "Murra lehtede pealkirjad",
+  "tools.database.settingsDirectEditPageName": "Muuda lehe nime otse",
   "tools.database.settingsVerticalLines": "Kuva vertikaalsed jooned",
   "tools.database.settingsShowPageIcon": "Kuva lehe ikoon",
   "tools.database.settingsShowDataSourceTitle": "Kuva andmeallika pealkiri",

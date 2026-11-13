@@ -295,7 +295,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2196 + 147 + 565 + 9 closure for all 2917 keys', () => {
+  it('rebuilds a disjoint 2196 + 147 + 567 + 9 closure for all 2919 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -309,7 +309,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2917);
+    expect(lifecycle.size).toBe(2919);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -662,7 +662,9 @@ describe('current English catalog lifecycle coverage', () => {
       // +8: the typed-speed help line (tools.audio/video.speedEntryRange, TooHigh, TooLow, NotNumber), through speed-entry.ts's t().
       // +1: the Date filter's "Invalid date" message (tools.database.filterInvalidDate), through the chip's t().
       // -1: tools.database.searchPlaceholder is now called by literal (the pinned group modal).
-      'registered-namespace-compatible': 565,
+      // +2: the Layout page's "Wrap page titles" and "Directly edit page name" (tools.database.settingsWrapPageTitles,
+      // settingsDirectEditPageName), through the panel's t().
+      'registered-namespace-compatible': 567,
       // +1: Settings › Group's pin button names itself with groupPin through the panel's tools.database. prefix.
       // +1: tools.database.galleryFitImage, above. +1: tools.database.timelineEndBy, above.
       'catalog-only': 9,

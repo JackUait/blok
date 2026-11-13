@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "Կողպել տեսքերը",
   "tools.database.settingsNone": "Ոչ մեկը",
   "tools.database.settingsWrapAll": "Տողադարձել ամբողջ բովանդակությունը",
+  "tools.database.settingsWrapPageTitles": "Տողադարձել էջերի վերնագրերը",
+  "tools.database.settingsDirectEditPageName": "Խմբագրել էջի անունն ուղղակիորեն",
   "tools.database.settingsVerticalLines": "Ցուցադրել ուղղահայաց գծերը",
   "tools.database.settingsShowPageIcon": "Ցուցադրել էջի պատկերակը",
   "tools.database.settingsShowDataSourceTitle": "Ցուցադրել տվյալների աղբյուրի վերնագիրը",

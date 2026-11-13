@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "Харагдацуудыг түгжих",
   "tools.database.settingsNone": "Байхгүй",
   "tools.database.settingsWrapAll": "Бүх агуулгын мөр шилжүүлэх",
+  "tools.database.settingsWrapPageTitles": "Хуудасны гарчгийн мөр шилжүүлэх",
+  "tools.database.settingsDirectEditPageName": "Хуудасны нэрийг шууд засах",
   "tools.database.settingsVerticalLines": "Босоо шугам харуулах",
   "tools.database.settingsShowPageIcon": "Хуудасны дүрс харуулах",
   "tools.database.settingsShowDataSourceTitle": "Өгөгдлийн эх сурвалжийн гарчиг харуулах",

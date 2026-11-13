@@ -1024,13 +1024,19 @@ export class ViewSettingsPages {
 
         // notion-motion.md Round 24 §4: Calendar and Timeline list their own rows before Open pages in.
         // List and Timeline have no Wrap row; Calendar has no Load limit (it shows every row).
-        // Calendar's "Wrap page titles" is left out: its event cards are one fixed-pitch line.
-        // Round 25 §7: no separator before their own rows.
+        // Calendar calls its Wrap row "Wrap page titles" (Round 25 §5). Round 25 §7: no separator before their own rows.
         if (view.type === 'calendar' || view.type === 'timeline') {
           return [
             tiles,
             ...sourceTitle,
             pageIcon,
+            ...(view.type === 'calendar' ? [panelSwitch({
+              label: this.t('settingsWrapPageTitles'),
+              testId: 'database-settings-wrap',
+              checked: resolveWrapCells(view),
+              disabled: !this.shared,
+              onToggle: (next) => this.ctx.updateView({ wrapCells: next }),
+            })] : []),
             ...this.layoutRows(panel, false),
             openPages,
             ...(view.type === 'timeline' ? [loadLimit] : []),
@@ -1039,12 +1045,21 @@ export class ViewSettingsPages {
 
         // 11-notion-layout.png: the switches, then Open pages in and Load limit.
         // notion-motion.md Round 25 §7: a board's Group by and Color columns sit before Open pages in.
+        // notion-motion.md Round 24 §4, Round 25 §6: List has "Directly edit page name" (off) in the Wrap row's place.
+        const directEdit = panelSwitch({
+          label: this.t('settingsDirectEditPageName'),
+          testId: 'database-settings-direct-edit',
+          checked: view.directTitleEdit === true,
+          disabled: !this.shared,
+          onToggle: (next) => this.ctx.updateView({ directTitleEdit: next }),
+        });
+
         return [
           tiles,
           ...sourceTitle,
           ...verticalLines,
           pageIcon,
-          ...(view.type === 'list' ? [] : [wrap]),
+          view.type === 'list' ? directEdit : wrap,
           ...(view.type === 'board' ? this.boardGroupRows(panel) : []),
           openPages,
           loadLimit,

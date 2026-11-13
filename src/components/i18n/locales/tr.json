@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "Görünümleri kilitle",
   "tools.database.settingsNone": "Yok",
   "tools.database.settingsWrapAll": "Tüm içeriği kaydır",
+  "tools.database.settingsWrapPageTitles": "Sayfa başlıklarını kaydır",
+  "tools.database.settingsDirectEditPageName": "Sayfa adını doğrudan düzenle",
   "tools.database.settingsVerticalLines": "Dikey çizgileri göster",
   "tools.database.settingsShowPageIcon": "Sayfa simgesini göster",
   "tools.database.settingsShowDataSourceTitle": "Veri kaynağı başlığını göster",

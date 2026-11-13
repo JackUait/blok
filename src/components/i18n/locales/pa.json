@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "ਦ੍ਰਿਸ਼ ਲਾਕ ਕਰੋ",
   "tools.database.settingsNone": "ਕੋਈ ਨਹੀਂ",
   "tools.database.settingsWrapAll": "ਸਾਰੀ ਸਮੱਗਰੀ ਸਮੇਟੋ",
+  "tools.database.settingsWrapPageTitles": "ਪੰਨੇ ਦੇ ਸਿਰਲੇਖ ਸਮੇਟੋ",
+  "tools.database.settingsDirectEditPageName": "ਪੰਨੇ ਦਾ ਨਾਮ ਸਿੱਧਾ ਸੰਪਾਦਿਤ ਕਰੋ",
   "tools.database.settingsVerticalLines": "ਖੜ੍ਹੀਆਂ ਲਕੀਰਾਂ ਦਿਖਾਓ",
   "tools.database.settingsShowPageIcon": "ਪੰਨੇ ਦਾ ਆਈਕਨ ਦਿਖਾਓ",
   "tools.database.settingsShowDataSourceTitle": "ਡਾਟਾ ਸਰੋਤ ਦਾ ਸਿਰਲੇਖ ਦਿਖਾਓ",

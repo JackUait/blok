@@ -613,19 +613,31 @@ describe('view settings panel', () => {
         .map((el) => el.getAttribute('data-blok-testid'));
     const own = (name: string): PopoverItemParams => ({ type: PopoverItemType.Default, name, title: name, isActive: false, onActivate: vi.fn() });
 
-    it('gives a List no Wrap row', () => {
-      harness({ type: 'list' }).open('layout');
+    // Round 24 §4, Round 25 §6: a List has "Directly edit page name" (off) after Show page icon, and no Wrap row.
+    it('gives a List "Directly edit page name", off, and no Wrap row', () => {
+      const h = harness({ type: 'list' });
 
-      expect(ids()).toEqual(['database-settings-page-icon', 'database-settings-open-pages', 'database-settings-load-limit']);
+      h.open('layout');
+
+      expect(ids()).toEqual(['database-settings-page-icon', 'database-settings-direct-edit', 'database-settings-open-pages', 'database-settings-load-limit']);
+      expect(q('database-settings-direct-edit')?.textContent).toBe('tools.database.settingsDirectEditPageName');
+      expect(q('database-settings-direct-edit')?.getAttribute('aria-checked')).toBe('false');
+      click('database-settings-direct-edit');
+      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ directTitleEdit: true });
     });
 
-    it('gives a Calendar no Wrap and no Load limit, and puts its own rows before Open pages in', () => {
+    // Round 25 §5, §7: Calendar's "Wrap page titles" switch sits after Show page icon.
+    it('gives a Calendar "Wrap page titles" and no Load limit, and puts its own rows before Open pages in', () => {
       const h = harness({ type: 'calendar' });
 
       h.ctx.layoutItems = () => [own('calendar-weekends')];
       h.open('layout');
 
-      expect(ids()).toEqual(['database-settings-page-icon', 'database-calendar-weekends', 'database-settings-open-pages']);
+      expect(ids()).toEqual(['database-settings-page-icon', 'database-settings-wrap', 'database-calendar-weekends', 'database-settings-open-pages']);
+      expect(q('database-settings-wrap')?.textContent).toBe('tools.database.settingsWrapPageTitles');
+      expect(q('database-settings-wrap')?.getAttribute('aria-checked')).toBe('false');
+      click('database-settings-wrap');
+      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ wrapCells: true });
     });
 
     it('gives a Timeline no Wrap, and puts its own rows before Open pages in and Load limit', () => {

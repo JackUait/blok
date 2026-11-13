@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "ล็อกมุมมอง",
   "tools.database.settingsNone": "ไม่มี",
   "tools.database.settingsWrapAll": "ตัดบรรทัดเนื้อหาทั้งหมด",
+  "tools.database.settingsWrapPageTitles": "ตัดบรรทัดชื่อหน้า",
+  "tools.database.settingsDirectEditPageName": "แก้ไขชื่อหน้าโดยตรง",
   "tools.database.settingsVerticalLines": "แสดงเส้นแนวตั้ง",
   "tools.database.settingsShowPageIcon": "แสดงไอคอนหน้า",
   "tools.database.settingsShowDataSourceTitle": "แสดงชื่อแหล่งข้อมูล",

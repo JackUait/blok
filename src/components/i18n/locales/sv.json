@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "Lås vyer",
   "tools.database.settingsNone": "Ingen",
   "tools.database.settingsWrapAll": "Radbryt allt innehåll",
+  "tools.database.settingsWrapPageTitles": "Radbryt sidtitlar",
+  "tools.database.settingsDirectEditPageName": "Redigera sidnamn direkt",
   "tools.database.settingsVerticalLines": "Visa lodräta linjer",
   "tools.database.settingsShowPageIcon": "Visa sidikon",
   "tools.database.settingsShowDataSourceTitle": "Visa datakällans titel",

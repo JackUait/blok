@@ -133,6 +133,21 @@ describe('database gallery and calendar styles', () => {
     expect(ruleBody('[data-blok-database-calendar-day][data-today] [data-blok-database-calendar-day-number]')).toContain('var(--blok-database-today)');
   });
 
+  // notion-motion.md Round 25 §5: wrapped, every card is 40 tall (46 slot) and its title is two 17px lines at most.
+  it('makes every card 40px with a two-line title when page titles wrap', () => {
+    const calendar = ruleBody('[data-blok-database-calendar][data-wrap-titles]');
+    const event = ruleBody('[data-blok-database-calendar][data-wrap-titles] [data-blok-database-calendar-event]');
+    const title = ruleBody('[data-blok-database-calendar][data-wrap-titles] [data-blok-database-calendar-event-title]');
+
+    expect(calendar).toMatch(/--blok-database-calendar-lane-pitch:\s*calc\(46px \+ var\(--blok-database-calendar-event-lines, 0\) \* 24px\)/);
+    expect(event).toMatch(/min-block-size:\s*40px/);
+    expect(title).toMatch(/-webkit-line-clamp:\s*2/);
+    expect(title).toMatch(/line-height:\s*17px/);
+    expect(title).toMatch(/block-size:\s*36px/);
+    expect(title).toMatch(/padding-block-start:\s*var\(--blok-space-0-5\)/);
+    expect(title).toMatch(/white-space:\s*pre-wrap/);
+  });
+
   // 78-alarm-calendar.png: a card grows from 28px to 52px with one shown property, and the date is cut, not ellipsized.
   it('gives each shown property its own 24px line, clipped at the card edge', () => {
     const event = ruleBody('[data-blok-database-calendar-event]');

@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "كۆرۈنۈشلەرنى قۇلۇپلاش",
   "tools.database.settingsNone": "يوق",
   "tools.database.settingsWrapAll": "بارلىق مەزمۇننى ئوراش",
+  "tools.database.settingsWrapPageTitles": "بەت ماۋزۇلىرىنى ئوراش",
+  "tools.database.settingsDirectEditPageName": "بەت نامىنى بىۋاسىتە تەھرىرلەش",
   "tools.database.settingsVerticalLines": "تىك سىزىقلارنى كۆرسىتىش",
   "tools.database.settingsShowPageIcon": "بەت سىنبەلگىسىنى كۆرسىتىش",
   "tools.database.settingsShowDataSourceTitle": "سانلىق مەلۇمات مەنبەسىنىڭ ماۋزۇسىنى كۆرسىتىش",

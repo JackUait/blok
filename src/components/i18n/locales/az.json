@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "Görünüşləri kilidlə",
   "tools.database.settingsNone": "Heç biri",
   "tools.database.settingsWrapAll": "Bütün məzmunu sığdır",
+  "tools.database.settingsWrapPageTitles": "Səhifə başlıqlarını sığdır",
+  "tools.database.settingsDirectEditPageName": "Səhifə adını birbaşa redaktə et",
   "tools.database.settingsVerticalLines": "Şaquli xətləri göstər",
   "tools.database.settingsShowPageIcon": "Səhifə ikonunu göstər",
   "tools.database.settingsShowDataSourceTitle": "Verilənlər mənbəyinin başlığını göstər",

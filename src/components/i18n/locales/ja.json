@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "ビューをロック",
   "tools.database.settingsNone": "なし",
   "tools.database.settingsWrapAll": "すべての内容を折り返す",
+  "tools.database.settingsWrapPageTitles": "ページタイトルを折り返す",
+  "tools.database.settingsDirectEditPageName": "ページ名を直接編集",
   "tools.database.settingsVerticalLines": "縦線を表示",
   "tools.database.settingsShowPageIcon": "ページアイコンを表示",
   "tools.database.settingsShowDataSourceTitle": "データソースのタイトルを表示",

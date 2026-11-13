@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "I-lock ang mga view",
   "tools.database.settingsNone": "Wala",
   "tools.database.settingsWrapAll": "I-wrap ang lahat ng nilalaman",
+  "tools.database.settingsWrapPageTitles": "I-wrap ang mga pamagat ng pahina",
+  "tools.database.settingsDirectEditPageName": "Direktang i-edit ang pangalan ng pahina",
   "tools.database.settingsVerticalLines": "Ipakita ang mga patayong linya",
   "tools.database.settingsShowPageIcon": "Ipakita ang icon ng pahina",
   "tools.database.settingsShowDataSourceTitle": "Ipakita ang pamagat ng data source",

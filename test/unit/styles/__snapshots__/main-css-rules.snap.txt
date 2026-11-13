@@ -7846,6 +7846,21 @@ button[data-blok-database-column-count]:hover {
   height: 14px;
 }
 
+[data-blok-database-list][data-direct-edit] [data-blok-database-list-row-title] {
+  cursor: text;
+}
+
+[data-blok-database-list][data-direct-edit] [data-blok-database-list-row-edit] {
+  width: 26px;
+  height: 20px;
+  border-radius: var(--blok-radius-control-sm);
+}
+
+[data-blok-database-list][data-direct-edit] [data-blok-database-list-row-edit] svg {
+  width: 20px;
+  height: 20px;
+}
+
 [data-blok-database-list-title-input] {
   flex: 1 1 auto;
   min-width: 0;
@@ -17214,6 +17229,25 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   font-size: 14px;
   line-height: 21px;
   font-weight: 600;
+}
+
+[data-blok-database-calendar][data-wrap-titles] {
+  --blok-database-calendar-lane-pitch: calc(46px + var(--blok-database-calendar-event-lines, 0) * 24px);
+}
+
+[data-blok-database-calendar][data-wrap-titles] [data-blok-database-calendar-event] {
+  min-block-size: 40px;
+}
+
+[data-blok-database-calendar][data-wrap-titles] [data-blok-database-calendar-event-title] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  box-sizing: border-box;
+  block-size: 36px;
+  padding-block-start: var(--blok-space-0-5);
+  white-space: pre-wrap;
+  line-height: 17px;
 }
 
 [data-blok-database-calendar-event-title]:has(+ [data-blok-database-comment-badge]) {

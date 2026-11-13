@@ -141,6 +141,13 @@ describe('DatabaseCalendarView', () => {
       expect(root.querySelectorAll('[role="columnheader"]')).toHaveLength(5);
     });
 
+    // notion-motion.md Round 25 §5: "Wrap page titles" is the view's wrap setting; off by default.
+    it('marks the calendar when page titles wrap, and only then', () => {
+      expect(mount().root.hasAttribute('data-wrap-titles')).toBe(false);
+      document.body.innerHTML = '';
+      expect(mount({ view: calendarView({ wrapCells: true }) }).root.hasAttribute('data-wrap-titles')).toBe(true);
+    });
+
     it('shows one week in week range', () => {
       const { root } = mount({ view: calendarView({ calendarRange: 'week' }) });
 

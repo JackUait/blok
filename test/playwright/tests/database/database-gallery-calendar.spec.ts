@@ -663,6 +663,25 @@ test.describe('calendar', () => {
     expect(trip).toBeGreaterThan(oneDay * 2);
   });
 
+  // notion-motion.md Round 25 §5: off, one 21px line in a 28px card; on, every card is 40 tall with at most two 17px lines.
+  test('"Wrap page titles" makes every card 40 tall with at most two title lines', async ({ page }) => {
+    const longTitle = 'A very long event title that keeps going across several lines to test wrapping';
+    const rows = [
+      { id: 'r1', properties: { 'p-title': longTitle, 'p-due': '2026-10-07' } },
+      { id: 'r2', properties: { 'p-title': 'Zed', 'p-due': '2026-10-08' } },
+    ];
+
+    await mount(page, blocks({ type: 'calendar' }, rows));
+    expect((await event(page, 'r1').boundingBox())?.height).toBe(28);
+    expect((await event(page, 'r2').boundingBox())?.height).toBe(28);
+
+    await mount(page, blocks({ type: 'calendar', wrapCells: true }, rows));
+    expect((await event(page, 'r1').boundingBox())?.height).toBe(40);
+    expect((await event(page, 'r2').boundingBox())?.height).toBe(40);
+    expect(await event(page, 'r1').locator('[data-blok-database-calendar-event-title]').evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+    expect(await event(page, 'r1').locator('[data-blok-database-calendar-event-title]').evaluate((el) => getComputedStyle(el).webkitLineClamp)).toBe('2');
+  });
+
   // 78-alarm-calendar.png: 28px card, +24px per shown property, each on its own line and cut at the edge.
   test('gives each shown property its own line and grows the card', async ({ page }) => {
     const longTitle = 'A title far too long for one day';

@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "Lock views",
   "tools.database.settingsNone": "None",
   "tools.database.settingsWrapAll": "Wrap all content",
+  "tools.database.settingsWrapPageTitles": "Wrap page titles",
+  "tools.database.settingsDirectEditPageName": "Directly edit page name",
   "tools.database.settingsVerticalLines": "Show vertical lines",
   "tools.database.settingsShowPageIcon": "Show page icon",
   "tools.database.settingsShowDataSourceTitle": "Show data source title",

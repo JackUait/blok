@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "قفل کردن نماها",
   "tools.database.settingsNone": "هیچ‌کدام",
   "tools.database.settingsWrapAll": "شکستن همه محتوا",
+  "tools.database.settingsWrapPageTitles": "شکستن عنوان صفحه‌ها",
+  "tools.database.settingsDirectEditPageName": "ویرایش مستقیم نام صفحه",
   "tools.database.settingsVerticalLines": "نمایش خطوط عمودی",
   "tools.database.settingsShowPageIcon": "نمایش نماد صفحه",
   "tools.database.settingsShowDataSourceTitle": "نمایش عنوان منبع داده",

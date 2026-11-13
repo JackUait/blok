@@ -1670,6 +1670,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R28_BYTES = 3384;
     // Round 25 lane r30: sort, And/Or and Add filter rule chevrons; And/Or ends where "Where" ends; the one-sort arrow's 8×14 box; the Settings pin's 16px glyph and hover swap; the Pinned groups header at the top of a strip with no "+ New group"; the pinned group modal.
     const DATABASE_R30_BYTES = 6649;
+    // Round 25 lane r31: the calendar's "Wrap page titles" (40-tall cards, two-line titles) and the list's direct-edit "Open in side peek".
+    const DATABASE_R31_BYTES = 1192;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2172,6 +2174,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R29_BYTES
       + DATABASE_R28_BYTES
       + DATABASE_R30_BYTES
+      + DATABASE_R31_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

@@ -49,6 +49,8 @@ interface DatabaseListViewOptions {
   onLoadMore?: (groupKey: string) => void;
   /** A lasso from the page margin: these rows become the selection. Absent when read-only. */
   lassoRows?: (rowIds: string[]) => void;
+  /** "Directly edit page name": a title click edits it in place, and the button after it opens the row. */
+  directTitleEdit?: boolean;
 }
 
 /** Types without an editor: computed, or written by Blok itself. */
@@ -77,7 +79,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
   private readonly showPageIcon: boolean;
   private readonly onToggleCollapse: ((optionId: string, collapsed: boolean) => void) | undefined;
   private readonly settings: Pick<DatabaseListViewOptions,
-    'cellContext' | 'commentBadges' | 'locale' | 'onPropertyEdit' | 'onNewBelow' | 'onTitleEdit' | 'onOpenRow' | 'total' | 'getTotal' | 'onLoadMore' | 'lassoRows'>;
+    'cellContext' | 'commentBadges' | 'locale' | 'onPropertyEdit' | 'onNewBelow' | 'onTitleEdit' | 'onOpenRow' | 'total' | 'getTotal' | 'onLoadMore' | 'lassoRows' | 'directTitleEdit'>;
   private wrapper: HTMLDivElement | null = null;
   /** Where a Shift+Arrow selection started (findings-listgallery L20). */
   private selectionAnchor: HTMLElement | null = null;
@@ -107,6 +109,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
     wrapper.setAttribute('data-blok-database-list', '');
     // Tab and Shift+Enter belong to the list, not to Blok's block indent and split.
     wrapper.setAttribute('data-blok-keyboard-owner', '');
+    wrapper.toggleAttribute('data-direct-edit', this.directEdit);
 
     if (this.groupOptions !== undefined && this.groupOptions.length > 0 && this.getGroupRows !== undefined) {
       for (const option of this.groupOptions) {
@@ -205,7 +208,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
     const endEditing = (): void => {
       rowEl.removeAttribute('data-editing');
       glyph?.remove();
-      if (edit !== null) {
+      if (edit !== null && !this.directEdit) {
         edit.innerHTML = IconPencil;
         edit.setAttribute('aria-label', this.i18n.t('tools.database.editCardTitle'));
       }
@@ -281,10 +284,17 @@ export class DatabaseListView implements DatabaseViewRenderer {
 
       return;
     }
+    // notion-motion.md Round 25 §6: with "Directly edit page name" on, the title edits in place.
+    if (this.directEdit && rowEl !== null && rowEl !== undefined && target?.closest('[data-blok-database-list-row-title]') !== null) {
+      event.stopPropagation();
+      this.editTitle(rowEl.getAttribute('data-row-id') ?? '');
+
+      return;
+    }
     if (rowEl !== null && rowEl !== undefined && target?.closest('[data-blok-database-list-row-edit]') !== null) {
       event.stopPropagation();
-      // While editing it is Open in side peek: save the title, then open the row.
-      if (rowEl.hasAttribute('data-editing')) {
+      // While editing, or with direct edit on, it is Open in side peek: save the title, then open the row.
+      if (rowEl.hasAttribute('data-editing') || this.directEdit) {
         rowEl.querySelector<HTMLInputElement>('[data-blok-database-list-title-input]')?.blur();
         this.settings.onOpenRow?.(rowEl.getAttribute('data-row-id') ?? '');
 
@@ -672,17 +682,24 @@ export class DatabaseListView implements DatabaseViewRenderer {
     return gutter;
   }
 
-  /** Notion's white "Edit" pencil after the title: renames the row in place (findings-listgallery L04). */
+  /**
+   * Notion's white "Edit" pencil after the title: renames the row in place (findings-listgallery L04).
+   * With direct edit on it is "Open in side peek" (notion-motion.md Round 25 §6).
+   */
   private createEditButton(): HTMLButtonElement {
     const edit = document.createElement('button');
 
     edit.type = 'button';
     edit.setAttribute('data-blok-database-list-row-edit', '');
-    edit.setAttribute('aria-label', this.i18n.t('tools.database.editCardTitle'));
+    edit.setAttribute('aria-label', this.i18n.t(this.directEdit ? 'tools.page.openInSidePeek' : 'tools.database.editCardTitle'));
     edit.tabIndex = -1;
-    edit.innerHTML = IconPencil;
+    edit.innerHTML = this.directEdit ? IconSidebarRight : IconPencil;
 
     return edit;
+  }
+
+  private get directEdit(): boolean {
+    return this.settings.directTitleEdit === true && !this.readOnly;
   }
 
   private createTitleElement(title: string): HTMLDivElement {

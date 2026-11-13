@@ -1332,6 +1332,8 @@
   "tools.database.settingsLockViews": "Bloķēt skatus",
   "tools.database.settingsNone": "Nav",
   "tools.database.settingsWrapAll": "Aplauzt visu saturu",
+  "tools.database.settingsWrapPageTitles": "Aplauzt lapu nosaukumus",
+  "tools.database.settingsDirectEditPageName": "Rediģēt lapas nosaukumu tieši",
   "tools.database.settingsVerticalLines": "Rādīt vertikālās līnijas",
   "tools.database.settingsShowPageIcon": "Rādīt lapas ikonu",
   "tools.database.settingsShowDataSourceTitle": "Rādīt datu avota nosaukumu",

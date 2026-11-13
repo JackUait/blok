@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "Kunci paparan",
   "tools.database.settingsNone": "Tiada",
   "tools.database.settingsWrapAll": "Balut semua kandungan",
+  "tools.database.settingsWrapPageTitles": "Balut tajuk halaman",
+  "tools.database.settingsDirectEditPageName": "Edit nama halaman secara terus",
   "tools.database.settingsVerticalLines": "Tunjukkan garis menegak",
   "tools.database.settingsShowPageIcon": "Tunjukkan ikon halaman",
   "tools.database.settingsShowDataSourceTitle": "Tunjukkan tajuk sumber data",

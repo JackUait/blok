@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "દૃશ્યો લૉક કરો",
   "tools.database.settingsNone": "કોઈ નહીં",
   "tools.database.settingsWrapAll": "બધી સામગ્રી વાળો",
+  "tools.database.settingsWrapPageTitles": "પૃષ્ઠ શીર્ષકો વાળો",
+  "tools.database.settingsDirectEditPageName": "પૃષ્ઠનું નામ સીધું સંપાદિત કરો",
   "tools.database.settingsVerticalLines": "ઊભી રેખાઓ બતાવો",
   "tools.database.settingsShowPageIcon": "પૃષ્ઠ આઇકન બતાવો",
   "tools.database.settingsShowDataSourceTitle": "ડેટા સ્રોતનું શીર્ષક બતાવો",

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, onTestFinished } from 'vitest';
 import { DatabaseListView } from '../../../../src/tools/database/database-list-view';
 import type { DatabaseRow, PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
 import type { I18n } from '../../../../types';
@@ -855,6 +855,61 @@ describe('DatabaseListView', () => {
       expect(list.querySelectorAll('[data-blok-database-page-icon-placeholder]')).toHaveLength(1);
       expect(list.querySelector('[data-blok-database-list-row-edit]')?.getAttribute('aria-label')).toBe('tools.database.editCardTitle');
       list.remove();
+    });
+  });
+
+  // notion-motion.md Round 25 §6: "Directly edit page name". Off, a title click opens the row; on, it edits in place
+  // and the button after the title is "Open in side peek".
+  describe('Directly edit page name', () => {
+    const make = (directTitleEdit: boolean): { list: HTMLElement; onOpenRow: ReturnType<typeof vi.fn>; opened: ReturnType<typeof vi.fn> } => {
+      const onOpenRow = vi.fn();
+      const opened = vi.fn();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [makeRow({ properties: { title: 'Zed' } })], titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [],
+        onOpenRow, directTitleEdit,
+      });
+      const list = view.createView();
+
+      document.body.appendChild(list);
+      document.body.addEventListener('click', opened);
+      onTestFinished(() => document.body.removeEventListener('click', opened));
+
+      return { list, onOpenRow, opened };
+    };
+
+    it('off, a title click reaches the host, which opens the row, and the pencil stays', () => {
+      const { list, opened } = make(false);
+
+      list.querySelector<HTMLElement>('[data-blok-database-list-row-title]')?.click();
+
+      expect(opened).toHaveBeenCalledTimes(1);
+      expect(list.querySelector('[data-blok-database-list-title-input]')).toBeNull();
+      expect(list.hasAttribute('data-direct-edit')).toBe(false);
+      expect(list.querySelector('[data-blok-database-list-row-edit]')?.getAttribute('aria-label')).toBe('tools.database.editCardTitle');
+    });
+
+    it('on, a title click edits the title in place and opens nothing', () => {
+      const { list, opened, onOpenRow } = make(true);
+
+      list.querySelector<HTMLElement>('[data-blok-database-list-row-title]')?.click();
+
+      expect(list.hasAttribute('data-direct-edit')).toBe(true);
+      expect(opened).not.toHaveBeenCalled();
+      expect(onOpenRow).not.toHaveBeenCalled();
+      expect(list.querySelector<HTMLInputElement>('[data-blok-database-list-title-input]')?.value).toBe('Zed');
+      expect(list.querySelector('[data-blok-database-list-row]')?.hasAttribute('data-editing')).toBe(true);
+    });
+
+    it('on, the button after the title is "Open in side peek" and opens the row', () => {
+      const { list, opened, onOpenRow } = make(true);
+      const button = list.querySelector<HTMLElement>('[data-blok-database-list-row-edit]');
+
+      expect(button?.getAttribute('aria-label')).toBe('tools.page.openInSidePeek');
+      button?.click();
+
+      expect(onOpenRow).toHaveBeenCalledWith('row-1');
+      expect(opened).not.toHaveBeenCalled();
+      expect(list.querySelector('[data-blok-database-list-title-input]')).toBeNull();
     });
   });
 

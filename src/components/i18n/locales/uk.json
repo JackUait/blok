@@ -1337,6 +1337,8 @@
   "tools.database.settingsLockViews": "Заблокувати подання",
   "tools.database.settingsNone": "Немає",
   "tools.database.settingsWrapAll": "Переносити весь вміст",
+  "tools.database.settingsWrapPageTitles": "Переносити назви сторінок",
+  "tools.database.settingsDirectEditPageName": "Редагувати назву сторінки безпосередньо",
   "tools.database.settingsVerticalLines": "Показувати вертикальні лінії",
   "tools.database.settingsShowPageIcon": "Показувати іконку сторінки",
   "tools.database.settingsShowDataSourceTitle": "Показувати назву джерела даних",

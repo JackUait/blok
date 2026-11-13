@@ -1332,6 +1332,8 @@
   "tools.database.settingsLockViews": "Blochează vizualizările",
   "tools.database.settingsNone": "Niciunul",
   "tools.database.settingsWrapAll": "Încadrează tot conținutul",
+  "tools.database.settingsWrapPageTitles": "Încadrează titlurile paginilor",
+  "tools.database.settingsDirectEditPageName": "Editează direct numele paginii",
   "tools.database.settingsVerticalLines": "Afișează liniile verticale",
   "tools.database.settingsShowPageIcon": "Afișează pictograma paginii",
   "tools.database.settingsShowDataSourceTitle": "Afișează titlul sursei de date",

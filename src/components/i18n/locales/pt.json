@@ -1332,6 +1332,8 @@
   "tools.database.settingsLockViews": "Bloquear visualizações",
   "tools.database.settingsNone": "Nenhum",
   "tools.database.settingsWrapAll": "Quebrar todo o conteúdo",
+  "tools.database.settingsWrapPageTitles": "Quebrar títulos de página",
+  "tools.database.settingsDirectEditPageName": "Editar o nome da página diretamente",
   "tools.database.settingsVerticalLines": "Mostrar linhas verticais",
   "tools.database.settingsShowPageIcon": "Mostrar ícone da página",
   "tools.database.settingsShowDataSourceTitle": "Mostrar título da fonte de dados",

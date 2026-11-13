@@ -1327,6 +1327,8 @@
   "tools.database.settingsLockViews": "Lukitse näkymät",
   "tools.database.settingsNone": "Ei mitään",
   "tools.database.settingsWrapAll": "Rivitä kaikki sisältö",
+  "tools.database.settingsWrapPageTitles": "Rivitä sivujen otsikot",
+  "tools.database.settingsDirectEditPageName": "Muokkaa sivun nimeä suoraan",
   "tools.database.settingsVerticalLines": "Näytä pystyviivat",
   "tools.database.settingsShowPageIcon": "Näytä sivun kuvake",
   "tools.database.settingsShowDataSourceTitle": "Näytä tietolähteen otsikko",

@@ -1347,6 +1347,8 @@
   "tools.database.settingsLockViews": "قفل العروض",
   "tools.database.settingsNone": "بلا",
   "tools.database.settingsWrapAll": "التفاف كل المحتوى",
+  "tools.database.settingsWrapPageTitles": "التفاف عناوين الصفحات",
+  "tools.database.settingsDirectEditPageName": "تحرير اسم الصفحة مباشرة",
   "tools.database.settingsVerticalLines": "إظهار الخطوط العمودية",
   "tools.database.settingsShowPageIcon": "إظهار أيقونة الصفحة",
   "tools.database.settingsShowDataSourceTitle": "إظهار عنوان مصدر البيانات",

@@ -905,7 +905,7 @@ export interface DatabaseViewConfig {
    * Listed entries keep their order. Absent: unlisted properties go last.
    */
   propertyOrder?: 'alphabetical';
-  /** Wrap every cell. Default true for a board, false otherwise. */
+  /** Wrap every cell; on a calendar, wrap page titles to two lines. Default true for a board, false otherwise. */
   wrapCells?: boolean;
   /** Columns, from the start, that stay put on horizontal scroll. Default 0. */
   frozenColumnCount?: number;
@@ -923,6 +923,8 @@ export interface DatabaseViewConfig {
   fitImage?: boolean;
   /** Board: `list` puts each card property on its own line, `compact` sets them side by side. Default 'list'. */
   cardLayout?: CardLayout;
+  /** List: a title click edits the title in place instead of opening the row. Default false. */
+  directTitleEdit?: boolean;
   /** Calendar: the date property that places each row. Default the first date property. */
   calendarBy?: string;
   /** Calendar. Default 'month'. */
@@ -931,7 +933,10 @@ export interface DatabaseViewConfig {
   showWeekends?: boolean;
   /** Timeline: the date property that places each bar. Default the first date property. */
   timelineBy?: string;
-  /** Timeline: a second date property that ends each bar. Absent means `timelineBy` holds the range. */
+  /**
+   * Timeline: the date property that ends each bar. Set, even to `timelineBy`, turns
+   * "Separate start and end dates" on. Absent, empty or equal to `timelineBy`: `timelineBy` holds the range.
+   */
   timelineEndBy?: string;
   /** Timeline. Default 'month'. */
   timelineZoom?: TimelineZoom;
@@ -1038,7 +1043,7 @@ export type DatabaseViewSettingKey =
   | 'properties' | 'wrapCells' | 'frozenColumnCount' | 'showVerticalLines' | 'loadLimit' | 'calculations' | 'openPagesIn'
   | 'noValueGroupPosition' | 'groupOrder' | 'hiddenGroups' | 'collapsedGroups' | 'pinnedGroups' | 'hideGroupAggregation' | 'groupCalculation'
   | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'colorRules' | 'showPageIcon' | 'showDataSourceTitle' | 'groupByStatus'
-  | 'cardSize' | 'cardPreview' | 'fitImage' | 'cardLayout' | 'calendarBy' | 'calendarRange' | 'showWeekends'
+  | 'cardSize' | 'cardPreview' | 'fitImage' | 'cardLayout' | 'directTitleEdit' | 'calendarBy' | 'calendarRange' | 'showWeekends'
   | 'timelineBy' | 'timelineEndBy' | 'timelineZoom' | 'timelineCenter' | 'showTimelineTable' | 'tableProperties' | 'arrowsBy'
   | 'toolbarMinimized'
   | 'chartType' | 'chartMeasure' | 'chartSort' | 'chartOmitZero' | 'chartCumulative' | 'chartColor' | 'chartHeight'

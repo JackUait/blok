@@ -20,7 +20,7 @@ import {
   visibleDays,
 } from './calendar-dates';
 import type { PlacedEvent } from './calendar-dates';
-import { resolveCalendarRange, resolveShowWeekends, resolveViewProperties } from './view-settings';
+import { resolveCalendarRange, resolveShowWeekends, resolveViewProperties, resolveWrapCells } from './view-settings';
 import { isHistoryKey } from './database-keyboard';
 import { syncCommentBadge } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
@@ -153,6 +153,8 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     root.setAttribute('role', 'region');
     root.setAttribute('aria-label', this.t('tools.database.calendarLabel'));
     root.style.setProperty('--blok-database-calendar-event-lines', String(this.visibleProperties().length));
+    // notion-motion.md Round 25 §5: "Wrap page titles" makes every card two lines tall.
+    root.toggleAttribute('data-wrap-titles', resolveWrapCells(this.options.view));
     this.root = root;
 
     root.appendChild(this.createToolbar());

@@ -20,6 +20,7 @@ import {
   defaultFilterFor,
   filterPillLabel,
   filterPillParts,
+  filterValueText,
   isQuantifiedText,
   joinOperator,
   keepLead,
@@ -2159,7 +2160,7 @@ export class ViewSettingsPages {
       only.setAttribute('data-blok-database-filter-rule-value', '');
       line.append(only);
     } else if (controls.length > 0) {
-      line.append(button(`database-filter-rule-value-${id}`, filterPillParts(node, property, (key, vars) => this.ctx.i18n.t(key, vars), (person) => this.personName(person), (row) => this.ctx.relatedRows?.(property).find((r) => r.id === row)?.title).value || this.t('filterValue'), () => panel.push(this.ruleEditor({
+      line.append(button(`database-filter-rule-value-${id}`, filterValueText(node, property, (key, vars) => this.ctx.i18n.t(key, vars), (person) => this.personName(person), (row) => this.ctx.relatedRows?.(property).find((r) => r.id === row)?.title, editorLocale(this.ctx.i18n)) || this.t('filterValue'), () => panel.push(this.ruleEditor({
         read: () => findRule(tree(), id),
         update: (patch) => write(updateFilterRule(tree(), id, patch)),
         remove: () => write(removeFilterNode(tree(), id)),

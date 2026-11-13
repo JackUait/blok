@@ -1145,6 +1145,18 @@ describe('view settings panel', () => {
 
       expect(exists('database-filter-advanced')).toBe(true);
     });
+
+    // notion-motion.md Round 19 §1 (r19-adv-sel-red.raw): the operator has its own button, so the value button reads "Red" alone.
+    it('names only the value on an advanced rule\'s value button', () => {
+      withFilter({ filterTree: { id: 'root', conjunction: 'and', filterRules: [
+        { id: 'a', propertyId: 'stage', operator: 'does_not_equal', value: ['o1'] },
+        { id: 'b', propertyId: 'owner', operator: 'contains', value: ['me'] },
+      ] } });
+      click('database-filter-advanced');
+
+      expect(q('database-filter-rule-value-a')?.textContent?.trim()).toBe('Idea');
+      expect(q('database-filter-rule-value-b')?.textContent?.trim()).toBe('tools.database.filterMe');
+    });
   });
 
   // notion-motion.md Round 17 §5: "Add sort" goes away once every property is sorted.

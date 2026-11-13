@@ -221,6 +221,7 @@ describe('filter chip text, as Notion prints it', () => {
   const person = prop('person', { name: 'Person' });
 
   const cases: Array<[string, { operator: string; value: unknown }, PropertyDefinition]> = [
+    ['Text: a', { operator: 'equals', value: 'a' }, text],
     ['Text: Not a', { operator: 'does_not_equal', value: 'a' }, text],
     ['Text: Contains a', { operator: 'contains', value: 'a' }, text],
     ['Text: Does not contain a', { operator: 'does_not_contain', value: 'a' }, text],

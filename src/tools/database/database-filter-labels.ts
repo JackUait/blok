@@ -319,8 +319,6 @@ const PILL_OPERATOR_TYPES: ReadonlySet<PropertyType> = new Set([
   'multiSelect', 'person', 'createdBy', 'lastEditedBy', 'relation',
 ]);
 
-const TEXT_TYPES: ReadonlySet<PropertyType> = new Set(['title', 'text', 'url', 'email', 'phone']);
-
 /** Operators whose words wrap the value: "Not Red" (Round 19 §2). */
 const PILL_TEMPLATE_KEYS: Readonly<Record<string, string>> = {
   does_not_equal: 'tools.database.filterPillNot',
@@ -336,7 +334,8 @@ const pillOperator = (type: PropertyType, operator: string): { template: string 
   const template = PILL_TEMPLATE_KEYS[operator];
 
   if (template !== undefined) return { template };
-  if (operator === 'is_between' || operator === 'relative_to_today' || (operator === 'equals' && !TEXT_TYPES.has(type))) return undefined;
+  // "is" prints no word: "Text: a", "Select: Red".
+  if (operator === 'equals' || operator === 'is_between' || operator === 'relative_to_today') return undefined;
 
   return key === undefined ? undefined : { word: key, colon: true };
 };

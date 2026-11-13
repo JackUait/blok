@@ -25,7 +25,7 @@ describe('embed preview scenes', () => {
   it('draws a scene for every kind the embed window can show', () => {
     expect([...EMBED_SCENE_KINDS].sort()).toEqual([
       'audio', 'calendar', 'chart', 'code', 'design', 'document', 'form',
-      'generic', 'idle', 'image', 'map', 'social', 'table', 'video',
+      'generic', 'image', 'map', 'social', 'table', 'video',
     ]);
   });
 

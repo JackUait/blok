@@ -150,6 +150,18 @@
   100% { background-color: transparent }
 }
 
+@keyframes blok-bookmark-breathe {
+  50% { opacity: 0.45 }
+}
+
+@keyframes blok-bookmark-fade {
+  from { opacity: 0 }
+}
+
+@keyframes blok-bookmark-focus {
+  from { opacity: 0; filter: blur(16px) }
+}
+
 @keyframes blok-callout-emoji-jump-in {
   0% { transform: translateY(-18px) scale(0.55); opacity: 0 }
   30% { opacity: 1 }
@@ -252,6 +264,25 @@
 
 @keyframes blok-embed-caught {
   40% { transform: scale(1.025) }
+}
+
+@keyframes blok-embed-deck-shuffle {
+  0% { transform: var(--_right); z-index: 4; opacity: 1 }
+  5%, 17.5% { transform: var(--_front); z-index: 5; opacity: 1 }
+  20% { transform: translate(0, -64px) rotate(-9deg) scale(.7); z-index: 5; opacity: 1 }
+  20.01% { z-index: 1 }
+  24.5%, 60% { transform: var(--_back); z-index: 1; opacity: 0 }
+  65%, 80% { transform: var(--_left); z-index: 3; opacity: 1 }
+  85%, 100% { transform: var(--_right); z-index: 4; opacity: 1 }
+}
+
+@keyframes blok-embed-deck-tone {
+  0%, 14% { --blok-embed-window-tone: var(--blok-color-red-text) }
+  20%, 34% { --blok-embed-window-tone: var(--blok-color-blue-text) }
+  40%, 54% { --blok-embed-window-tone: var(--blok-color-purple-text) }
+  60%, 74% { --blok-embed-window-tone: var(--blok-color-pink-text) }
+  80%, 94% { --blok-embed-window-tone: var(--blok-color-green-text) }
+  100% { --blok-embed-window-tone: var(--blok-color-red-text) }
 }
 
 @keyframes blok-embed-rejected {

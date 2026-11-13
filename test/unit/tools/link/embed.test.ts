@@ -688,11 +688,31 @@ describe('Embed tool — empty state', () => {
   const brandOf = (root: HTMLElement): HTMLElement | null =>
     windowOf(root)?.querySelector<HTMLElement>('[data-role="embed-brand"]') ?? null;
 
-  it('draws the idle scene as a media preview drawing', () => {
+  const deckOf = (root: HTMLElement): HTMLElement | null =>
+    windowOf(root)?.querySelector<HTMLElement>('[data-role="embed-deck"]') ?? null;
+
+  it('draws the idle window as a deck of five embed drawings', () => {
+    const root = mount(new Embed(createOptions({})));
+    const cards = Array.from(deckOf(root)?.children ?? []);
+
+    expect(cards.map((card) => card.getAttribute('data-kind'))).toEqual(['video', 'social', 'design', 'audio', 'table']);
+    for (const card of cards) {
+      expect(card.querySelector('.blok-media-preview svg')).not.toBeNull();
+    }
+  });
+
+  it('takes the deck away when a provider is typed, and deals it again once the field is cleared', () => {
     const root = mount(new Embed(createOptions({})));
 
+    type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+
+    expect(deckOf(root)).toBeNull();
     expect(stagesOf(root)).toHaveLength(1);
-    expect(stagesOf(root)[0]?.querySelector('svg')).not.toBeNull();
+
+    type(root, '');
+
+    expect(deckOf(root)?.children).toHaveLength(5);
+    expect(stagesOf(root)).toHaveLength(5);
   });
 
   it('replaces the drawing with the scene of the typed provider', () => {

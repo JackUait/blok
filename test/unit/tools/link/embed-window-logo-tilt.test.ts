@@ -49,6 +49,33 @@ const shift = (badge: HTMLElement): [number, number] => {
   return [parseFloat(x) || 0, parseFloat(y) || 0];
 };
 
+describe('embed window idle deck fan', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  // An unregistered custom property cannot transition: the deck would snap open on hover.
+  it('registers the fan as a number, so hover eases the deck open', () => {
+    const registerProperty = vi.fn();
+
+    vi.stubGlobal('CSS', { registerProperty });
+    createEmbedWindow();
+
+    expect(registerProperty).toHaveBeenCalledWith({ name: '--blok-embed-deck-fan', syntax: '<number>', inherits: true, initialValue: '0' });
+  });
+
+  it('builds the window when the property is already registered', () => {
+    vi.stubGlobal('CSS', {
+      registerProperty: () => {
+        throw new DOMException('already registered', 'InvalidModificationError');
+      },
+    });
+
+    expect(() => createEmbedWindow()).not.toThrow();
+  });
+});
+
 describe('embed window logo tile and the tilting drawing', () => {
   beforeEach(() => {
     vi.clearAllMocks();

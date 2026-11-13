@@ -210,27 +210,54 @@
   transition: box-shadow .3s ease;
 }
 .blok-embed-window[data-kind='generic'] { --blok-embed-window-tone: var(--blok-color-gray-text); }
-.blok-embed-window:is([data-kind='video'], [data-kind='calendar']) { --blok-embed-window-tone: var(--blok-color-red-text); }
-.blok-embed-window[data-kind='audio'] { --blok-embed-window-tone: var(--blok-color-pink-text); }
+:is(.blok-embed-window, .blok-embed-deck__card):is([data-kind='video'], [data-kind='calendar'], [data-kind='idle']) { --blok-embed-window-tone: var(--blok-color-red-text); }
+:is(.blok-embed-window, .blok-embed-deck__card)[data-kind='audio'] { --blok-embed-window-tone: var(--blok-color-pink-text); }
 .blok-embed-window[data-kind='image'] { --blok-embed-window-tone: var(--blok-color-orange-text); }
-.blok-embed-window:is([data-kind='social'], [data-kind='document']) { --blok-embed-window-tone: var(--blok-color-blue-text); }
-.blok-embed-window:is([data-kind='table'], [data-kind='map']) { --blok-embed-window-tone: var(--blok-color-green-text); }
-.blok-embed-window:is([data-kind='form'], [data-kind='design']) { --blok-embed-window-tone: var(--blok-color-purple-text); }
+:is(.blok-embed-window, .blok-embed-deck__card):is([data-kind='social'], [data-kind='document']) { --blok-embed-window-tone: var(--blok-color-blue-text); }
+:is(.blok-embed-window, .blok-embed-deck__card):is([data-kind='table'], [data-kind='map']) { --blok-embed-window-tone: var(--blok-color-green-text); }
+:is(.blok-embed-window, .blok-embed-deck__card):is([data-kind='form'], [data-kind='design']) { --blok-embed-window-tone: var(--blok-color-purple-text); }
 .blok-embed-window[data-kind='code'] { --blok-embed-window-tone: var(--blok-color-brown-text); }
 .blok-embed-window[data-kind='chart'] { --blok-embed-window-tone: var(--blok-color-teal-text); }
 
 /* Old and new scenes share one cell while they morph. */
-.blok-embed-window > .blok-media-preview {
+.blok-embed-window > .blok-media-preview,
+.blok-embed-deck__card > .blok-media-preview {
   grid-area: 1 / 1;
   --blok-media-preview-ink: var(--blok-embed-window-tone);
 }
+
+/* The idle window: a stack of the drawings a link can become (empty-window.ts).
+   The window is tinted by the leading card, starting with the first. Hover fans
+   it: empty-window.ts registers the fan as a number so it can ease (view.css
+   copies every @property rule, and this one is edit-only). */
+.blok-embed-window {
+  --blok-embed-deck-fan: 0;
+}
+.blok-embed-window:hover { --blok-embed-deck-fan: 1; }
+.blok-embed-deck {
+  grid-area: 1 / 1;
+  position: relative;
+  width: 200px;
+  height: 120px;
+  --_front: translate(0, calc(7px + 2px * var(--blok-embed-deck-fan))) rotate(0deg) scale(.74);
+  --_right: translate(calc(24px + 20px * var(--blok-embed-deck-fan)), calc(-2px + 1px * var(--blok-embed-deck-fan))) rotate(calc(7deg + 4deg * var(--blok-embed-deck-fan))) scale(.68);
+  --_left: translate(calc(-24px - 20px * var(--blok-embed-deck-fan)), calc(-4px + 1px * var(--blok-embed-deck-fan))) rotate(calc(-7deg - 4deg * var(--blok-embed-deck-fan))) scale(.64);
+  --_back: translate(0, calc(-10px - 6px * var(--blok-embed-deck-fan))) rotate(0deg) scale(.58);
+}
+.blok-embed-deck__card { position: absolute; inset: 0; z-index: 1; opacity: 0; transform: var(--_back); }
+.blok-embed-deck__card:nth-child(1) { z-index: 5; opacity: 1; transform: var(--_front); }
+.blok-embed-deck__card:nth-child(2) { z-index: 4; opacity: 1; transform: var(--_right); }
+.blok-embed-deck__card:nth-child(3) { z-index: 3; opacity: 1; transform: var(--_left); }
+/* A card is one object on the stack: no floor shadow of its own. */
+.blok-embed-deck .blok-media-preview__ground { display: none; }
+.blok-embed-deck svg { filter: drop-shadow(0 5px 7px color-mix(in srgb, var(--blok-media-preview-shadow) 16%, transparent)); }
+
 /* Strokes keep their width while a part is scaled into place. */
 .blok-media-preview--morphing * { vector-effect: non-scaling-stroke; }
 
 /* Parts only the embed scenes draw (media-empty.css paints the shared ones). */
 .blok-media-preview__dashed { fill: none; stroke-dasharray: 3 3.5; }
 .blok-media-preview__frame.blok-media-preview__dashed { fill: var(--blok-bg-primary); }
-.blok-media-preview__link { fill: none; stroke-width: 1.6; }
 .blok-media-preview__select { stroke-width: 1.8; }
 .blok-media-preview__button { fill: currentColor; stroke: none; opacity: .55; }
 .blok-media-preview__band { fill: currentColor; stroke: none; opacity: .22; }
@@ -313,7 +340,21 @@
 
 
 @media (prefers-reduced-motion: no-preference) {
-  .blok-embed-window { transition: --blok-embed-window-tone .7s cubic-bezier(0.22, 1, 0.36, 1), box-shadow .3s ease; }
+  .blok-embed-window { transition: --blok-embed-window-tone .7s cubic-bezier(0.22, 1, 0.36, 1), --blok-embed-deck-fan .62s cubic-bezier(0.34, 1.4, 0.64, 1), box-shadow .3s ease; }
+  /* One shuffle is 12s: each card leads for 2.4s. The delays put the cards a
+     fifth of it apart, in the order they take the lead (1, 2, 3, 4, 5), and
+     blok-embed-deck-tone turns the window to the new leader 14% + n * 20% in.
+     Change one and the colours drift off the cards. */
+  .blok-embed-deck__card { animation: blok-embed-deck-shuffle 12s cubic-bezier(0.34, 1.4, 0.64, 1) infinite; }
+  .blok-embed-deck__card:nth-child(1) { animation-delay: -0.72s; }
+  .blok-embed-deck__card:nth-child(2) { animation-delay: -10.32s; }
+  .blok-embed-deck__card:nth-child(3) { animation-delay: -7.92s; }
+  .blok-embed-deck__card:nth-child(4) { animation-delay: -5.52s; }
+  .blok-embed-deck__card:nth-child(5) { animation-delay: -3.12s; }
+  .blok-embed-window[data-kind='idle'] { animation: blok-embed-deck-tone 12s linear infinite; }
+  /* Listed again so the shake does not restart the colour cycle. */
+  .blok-embed-window[data-kind='idle'][data-anim='caught'] { animation: blok-embed-deck-tone 12s linear infinite, blok-embed-caught .5s var(--blok-ease-popover); }
+  .blok-embed-window[data-kind='idle'][data-anim='rejected'] { animation: blok-embed-deck-tone 12s linear infinite, blok-embed-rejected .36s ease-in-out; }
   .blok-embed-window__brand {
     animation: blok-embed-brand-in .9s cubic-bezier(0.34, 1.56, 0.64, 1) .32s both;
     transition: inset-inline-start .62s cubic-bezier(0.34, 1.3, 0.64, 1), top .62s cubic-bezier(0.34, 1.3, 0.64, 1);
@@ -323,6 +364,24 @@
   .blok-embed-window[data-anim='rejected'] { animation: blok-embed-rejected .36s ease-in-out; }
 }
 
+/* A card's lap: into the lead, off the top, hidden at the back, then left and right. */
+@keyframes blok-embed-deck-shuffle {
+  0% { transform: var(--_right); z-index: 4; opacity: 1; }
+  5%, 17.5% { transform: var(--_front); z-index: 5; opacity: 1; }
+  20% { transform: translate(0, -64px) rotate(-9deg) scale(.7); z-index: 5; opacity: 1; }
+  20.01% { z-index: 1; }
+  24.5%, 60% { transform: var(--_back); z-index: 1; opacity: 0; }
+  65%, 80% { transform: var(--_left); z-index: 3; opacity: 1; }
+  85%, 100% { transform: var(--_right); z-index: 4; opacity: 1; }
+}
+@keyframes blok-embed-deck-tone {
+  0%, 14% { --blok-embed-window-tone: var(--blok-color-red-text); }
+  20%, 34% { --blok-embed-window-tone: var(--blok-color-blue-text); }
+  40%, 54% { --blok-embed-window-tone: var(--blok-color-purple-text); }
+  60%, 74% { --blok-embed-window-tone: var(--blok-color-pink-text); }
+  80%, 94% { --blok-embed-window-tone: var(--blok-color-green-text); }
+  100% { --blok-embed-window-tone: var(--blok-color-red-text); }
+}
 @keyframes blok-embed-brand-in {
   from { opacity: 0; transform: translateY(-18px) scale(.4) rotate(-14deg); }
 }

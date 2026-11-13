@@ -208,7 +208,7 @@ export const previewSvg = (kind: MediaPreviewKind): string =>
 // ---- Embed window scenes: what a typed link will become ----
 
 export const EMBED_SCENE_KINDS = [
-  'idle', 'generic', 'video', 'audio', 'image', 'social', 'document',
+  'generic', 'video', 'audio', 'image', 'social', 'document',
   'table', 'form', 'code', 'design', 'chart', 'map', 'calendar',
 ] as const;
 
@@ -226,25 +226,6 @@ const winDots = (x: number, y: number): string => [0, 1, 2].map((i) => circle('c
 type EmbedScene = Exclude<EmbedSceneKind, 'video' | 'audio' | 'image'>;
 
 const embedScenes: Record<EmbedScene, (id: string) => string> = {
-  idle: (id) => `
-    <defs>${shadowFilters(id)}</defs>
-    ${ground(id)}
-    ${layer(3, `
-      ${rect('frame dashed', 30, 12, 140, 88, 12, body(id))}
-      ${winDots(43, 24)}
-      ${rect('field', 70, 19, 86, 10, 5)}
-      ${rect('line line--title', 44, 42, 62, 5, 2.5)}
-      ${rect('line', 44, 54, 96, 3.5, 1.75)}
-      ${rect('line', 44, 62, 80, 3.5, 1.75)}
-      ${rect('line line--soft', 44, 70, 52, 3.5, 1.75)}
-      ${drop(id)}`)}
-    ${layer(7, `
-      <g id="${id}-f" class="blok-media-preview__chip-float">
-        ${rect('frame', 96, 72, 68, 24, 12)}
-        ${rect('link', 105, 80, 11, 8, 4)}
-        ${rect('link', 112, 80, 11, 8, 4)}
-        ${rect('line', 130, 82, 24, 4, 2)}
-      </g>`)}`,
   generic: (id) => `
     <defs>${shadowFilters(id)}</defs>
     ${ground(id)}

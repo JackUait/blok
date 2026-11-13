@@ -4342,7 +4342,7 @@
               },
               "timelineEndBy": {
                 "type": "string",
-                "description": "Timeline: the date property id that ends each bar. Set, even to timelineBy, turns \"Separate start and end dates\" on. Absent, empty or equal to timelineBy: timelineBy holds the range."
+                "description": "Timeline: the date property id that ends each bar. Set, even to timelineBy, turns \"Separate start and end dates\" on. Absent or equal to timelineBy: timelineBy holds the range."
               },
               "timelineZoom": {
                 "type": "string",

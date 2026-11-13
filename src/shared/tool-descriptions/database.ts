@@ -718,7 +718,7 @@ export const DATABASE_DATA = {
           calendarRange: { type: 'string', enum: ['month', 'week'], description: 'Calendar range. Default month.' },
           showWeekends: { type: 'boolean', description: 'Calendar. Default true.' },
           timelineBy: { type: 'string', description: 'Timeline: the date property id that places each bar. Default the first date property.' },
-          timelineEndBy: { type: 'string', description: 'Timeline: the date property id that ends each bar. Set, even to timelineBy, turns "Separate start and end dates" on. Absent, empty or equal to timelineBy: timelineBy holds the range.' },
+          timelineEndBy: { type: 'string', description: 'Timeline: the date property id that ends each bar. Set, even to timelineBy, turns "Separate start and end dates" on. Absent or equal to timelineBy: timelineBy holds the range.' },
           timelineZoom: {
             type: 'string',
             enum: ['hours', 'day', 'week', 'bi_week', 'month', 'quarter', 'year', '5_years'],

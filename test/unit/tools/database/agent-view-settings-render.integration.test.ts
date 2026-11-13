@@ -262,6 +262,7 @@ const CASES: Case[] = [
   { setting: 'cardPreview', view: 'gallery', ui: () => ({ cardPreview: 'none' }), agent: { cardPreview: 'none' } },
   { setting: 'fitImage', view: seedView('gallery', { cardPreview: 'cover' }), ui: () => ({ fitImage: true }), agent: { fitImage: true }, drawn: false },
   { setting: 'cardLayout', view: seedView('board', { properties: [{ id: 'n', visible: true }, { id: 'c', visible: true }] }), ui: () => ({ cardLayout: 'compact' }), agent: { cardLayout: 'compact' } },
+  { setting: 'directTitleEdit', view: 'list', ui: () => ({ directTitleEdit: true }), agent: { directTitleEdit: true } },
   { setting: 'calendarBy', view: 'calendar', ui: () => ({ calendarBy: 'e' }), agent: { calendarBy: 'e' } },
   { setting: 'calendarRange', view: 'calendar', ui: () => ({ calendarRange: 'week' }), agent: { calendarRange: 'week' } },
   { setting: 'showWeekends', view: 'calendar', ui: () => ({ showWeekends: false }), agent: { showWeekends: false } },

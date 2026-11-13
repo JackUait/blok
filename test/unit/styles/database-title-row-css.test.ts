@@ -108,6 +108,13 @@ describe("Add view is Notion's tile grid (V04)", () => {
     expect(rule('[data-blok-database-view-option-label]')).toMatch(/font-size: 14px; line-height: 20px/);
   });
 
+  it('a tile label is the lighter rgb(73,72,70) ink, 4px in from each side (notion-motion.md Round 9 and Round 15 §A)', () => {
+    const label = rule('[data-blok-database-view-option-label]');
+
+    expect(label).toMatch(/color: var\(--blok-database-option-gray-text\)/);
+    expect(label).toMatch(/padding: 0 var\(--blok-space-1\)/);
+  });
+
   it('a tile fills over 20ms ease-in on hover and doubles the fill when pressed (notion-motion.md Round 15 §A)', () => {
     expect(rule('[data-blok-database-view-option]')).toMatch(/transition: background-color 20ms ease-in;/);
     expect(rule('[data-blok-database-view-option]:active')).toMatch(/background-color: var\(--blok-database-pressed-bg\)/);

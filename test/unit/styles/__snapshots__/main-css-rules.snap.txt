@@ -7441,10 +7441,13 @@ button[data-blok-database-column-count]:hover {
 }
 
 [data-blok-database-view-option-label] {
+  box-sizing: border-box;
   max-width: 100%;
+  padding: 0 var(--blok-space-1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--blok-database-option-gray-text);
   font-size: 14px;
   line-height: 20px;
   font-weight: 400;
@@ -7462,6 +7465,11 @@ button[data-blok-database-column-count]:hover {
 [data-blok-database-view-new-source] [data-blok-database-view-option-icon] svg {
   width: 20px;
   height: 20px;
+}
+
+[data-blok-database-view-new-source] [data-blok-database-view-option-label] {
+  padding: 0;
+  color: inherit;
 }
 
 [data-blok-database-tab-overflow-dropdown] > [data-blok-field="search"] {

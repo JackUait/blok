@@ -25074,7 +25074,8 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 [data-blok-tool="audio"] .blok-audio-controls__speed-menu {
   position: absolute;
   bottom: calc(100% + var(--blok-space-2));
-  inset-inline-start: 0;
+  left: 50%;
+  transform: translateX(-50%);
   width: 264px;
   max-width: calc(100vw - 2 * var(--blok-space-2));
   box-sizing: border-box;

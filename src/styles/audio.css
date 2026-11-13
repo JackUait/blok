@@ -633,7 +633,10 @@
 [data-blok-tool="audio"] .blok-audio-controls__speed-menu {
   position: absolute;
   bottom: calc(100% + var(--blok-space-2));
-  inset-inline-start: 0;
+  /* Centered on the gear. The window-edge nudge in controls.ts uses `translate`,
+     which stacks with this transform. */
+  left: 50%;
+  transform: translateX(-50%);
   /* The wire and the presets under it are sized for this width. */
   width: 264px;
   max-width: calc(100vw - 2 * var(--blok-space-2));

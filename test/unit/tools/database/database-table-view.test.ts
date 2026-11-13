@@ -1583,6 +1583,31 @@ describe('DatabaseTableView', () => {
       expect(changes.properties?.find((p) => p.id === 'p-notes')?.width).toBe(280);
     });
 
+    // notion-motion.md Round 27 §3 "Column resize": min width 100, for the title column and the others.
+    it('a resize stops at 100 however far the pointer goes', () => {
+      const { root, handlers } = mount();
+      const handle = header(root, 'p-notes').querySelector<HTMLElement>('[data-blok-database-table-resize]');
+
+      if (handle === null) {
+        throw new Error('no handle');
+      }
+      pointer(handle, 'pointerdown', 300);
+      pointer(document, 'pointermove', 0);
+
+      expect(header(root, 'p-notes').style.width).toBe('100px');
+      pointer(document, 'pointerup', 0);
+      expect(vi.mocked(handlers.updateView).mock.calls[0][0].properties?.find((p) => p.id === 'p-notes')?.width).toBe(100);
+    });
+
+    it('a saved width under 100 draws at 100 and is not rewritten', () => {
+      const { root, handlers } = mount({ view: tableView({ properties: [{ id: 'p-title', visible: true, width: 40 }, { id: 'p-notes', visible: true, width: 50 }] }) });
+
+      expect(header(root, 'p-title').style.width).toBe('100px');
+      expect(header(root, 'p-notes').style.width).toBe('100px');
+      expect(cell(root, 'r1', 'p-notes').style.width).toBe('100px');
+      expect(handlers.updateView).not.toHaveBeenCalled();
+    });
+
     it('a double-click fit leaves room for the AI Autofill sparkle beside the header button', () => {
       const autofillSchema = schema.map((p) => (p.id === 'p-notes' ? { ...p, autofill: { mode: 'summary' as const } } : p));
       const { root, handlers } = mount({ schema: autofillSchema, autofill: { filling: () => false, run: vi.fn(), open: vi.fn() } });

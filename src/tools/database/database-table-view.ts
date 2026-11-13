@@ -33,7 +33,7 @@ import { fileChipIcon, pageIconElement, pagePlaceholderIcon, showsPageIcon } fro
 import { CALCULATION_LABEL_KEYS, calcMenuAt, calculationItems, headerViewItems, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
 import type { CountCap, OpenMenuOptions, RowFavorite } from './database-table-menus';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
-import { DatabaseTableColumnResize } from './database-table-resize';
+import { DatabaseTableColumnResize, MIN_COLUMN_WIDTH } from './database-table-resize';
 import { DatabaseTableColumnDrag } from './database-table-column-drag';
 import { DatabaseTableRowDrag } from './database-table-row-drag';
 import type { TableRowDropResult } from './database-table-row-drag';
@@ -67,7 +67,7 @@ export type { TableState };
 /** Observed Notion widths (research/07): title 280, other columns 200. Unverified as defaults. */
 export const DEFAULT_TITLE_WIDTH = 280;
 export const DEFAULT_COLUMN_WIDTH = 200;
-export const MIN_COLUMN_WIDTH = 32;
+export { MIN_COLUMN_WIDTH };
 
 export interface TableGroup {
   /** Group key; the model's no-value key for "No ⟨property⟩". */
@@ -413,7 +413,10 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     const sized = visible.map((setting) => {
       const property = byId.get(setting.id) as PropertyDefinition;
 
-      return { property, wrap: setting.wrap, width: setting.width ?? (property.type === 'title' ? DEFAULT_TITLE_WIDTH : DEFAULT_COLUMN_WIDTH) };
+      const width = setting.width ?? (property.type === 'title' ? DEFAULT_TITLE_WIDTH : DEFAULT_COLUMN_WIDTH);
+
+      // An older, narrower saved width draws at the minimum; the saved value stays until the user resizes.
+      return { property, wrap: setting.wrap, width: Math.max(MIN_COLUMN_WIDTH, width) };
     });
 
     return sized.map((column, index) => {

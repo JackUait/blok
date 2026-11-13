@@ -1,6 +1,7 @@
 import type { TableState } from './database-table-grid';
 
-const MIN_WIDTH = 32;
+/** notion-motion.md Round 27 §3 "Column resize": no column, the title included, goes under 100. */
+export const MIN_COLUMN_WIDTH = 100;
 
 export interface ColumnResizeOptions {
   grid: HTMLElement;
@@ -80,7 +81,7 @@ export class DatabaseTableColumnResize {
     }
     const delta = (event.clientX - drag.startX) * (drag.rtl ? -1 : 1);
 
-    drag.width = Math.max(MIN_WIDTH, Math.round(drag.startWidth + delta));
+    drag.width = Math.max(MIN_COLUMN_WIDTH, Math.round(drag.startWidth + delta));
     this.applyWidth(drag.propertyId, drag.width);
   };
 

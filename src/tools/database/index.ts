@@ -193,6 +193,7 @@ import { resolveChartSettings } from './chart-settings';
 import { chartLayoutItems, chartMeasureLabel } from './chart-layout-items';
 import { DatabaseChartView } from './database-chart-view';
 import { openChartDrilldown } from './database-chart-drilldown';
+import { openPinnedGroupModal } from './database-pinned-group-modal';
 import { DatabaseFeedView } from './database-feed-view';
 import type { FeedReactions } from './database-feed-view';
 import { rowReactions } from './row-reactions';
@@ -2832,6 +2833,7 @@ export class DatabaseTool implements BlockTool {
     this.destroyed = true;
     this.sourcePicker?.close();
     this.formPreview?.close();
+    this.pinnedGroupModal?.close();
     this.formPromptAbort?.abort();
     this.api.events.off(DATABASE_GONE_EVENT, this.handleDatabaseGone);
     this.api.events.emit(DATABASE_GONE_EVENT, { databaseId: this.block.id });
@@ -5639,6 +5641,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   private formPreview: ModalDialogHandle | null = null;
+  private pinnedGroupModal: { close: () => void } | null = null;
 
   /**
    * research/36 §13: "Preview" shows the form as a respondent sees it, in a
@@ -7205,6 +7208,55 @@ export class DatabaseTool implements BlockTool {
     const rows = this.queryGroupRows(view, options.map((option) => option.id));
 
     return options.map((option) => ({ option, count: rows.get(option.id)?.length ?? 0 }));
+  }
+
+  /**
+   * notion-motion.md Round 25 §1: a pinned group's rows as a read-only table in a modal. The view's sorts and filters
+   * carry over, the grouped property is the second column, and there is no "+ New" and no calculation row.
+   * Every property is a column (r25-pinmodal-row.raw: scrollWidth 3584); whether Notion drops ones the board hides is unread.
+   */
+  private openPinnedGroup(row: HTMLElement, optionId: string): void {
+    const saved = this.shownView();
+    const view = saved === undefined ? undefined : this.controls.effective(saved);
+    const groupBy = view?.groupBy;
+    const pill = row.querySelector('[data-blok-database-pinned-group-pill]');
+
+    if (view === undefined || groupBy === undefined || !(pill instanceof HTMLElement)) return;
+    const titleId = this.titlePropertyId();
+    const schema = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n);
+    const ordered = [titleId, groupBy, ...schema.map((p) => p.id).filter((id) => id !== titleId && id !== groupBy)];
+    const { groupBy: _groupBy, subGroupBy: _subGroupBy, calculations: _calculations, propertyOrder: _order, ...rest } = view;
+    const tableView: DatabaseViewConfig = { ...rest, type: 'table', properties: ordered.map((id) => ({ id, visible: true })) };
+
+    this.pinnedGroupModal?.close();
+    this.pinnedGroupModal = openPinnedGroupModal({
+      pill: pill.cloneNode(true) as HTMLElement,
+      label: pill.textContent ?? '',
+      i18n: this.api.i18n,
+      directionSource: this.element,
+      table: (search) => new DatabaseTableView({
+        readOnly: true,
+        i18n: this.api.i18n,
+        locale: editorLocale(this.api.i18n),
+        view: tableView,
+        schema,
+        rows: this.model.queryRows({ view, group: optionId, search }).rows,
+        titlePropertyId: titleId,
+        state: createTableState(),
+        cellContext: this.cellContext(),
+        openRow: (rowId: string) => {
+          this.pinnedGroupModal?.close();
+          this.handleRowClick(rowId);
+        },
+      }).createView(),
+      onClose: () => {
+        this.pinnedGroupModal = null;
+        // A redraw under the dialog replaces the strip row it would hand focus back to.
+        if (!row.isConnected) {
+          this.element?.querySelector<HTMLElement>(`[data-blok-database-pinned-group-open][data-option-id="${CSS.escape(optionId)}"]`)?.focus();
+        }
+      },
+    });
   }
 
   /** Notion shows "Load more groups" past ten groups (research/08). */
@@ -9347,6 +9399,16 @@ export class DatabaseTool implements BlockTool {
       if (pinnedHeader !== null) {
         event.stopPropagation();
         this.controls.openSettingsPage('group', pinnedHeader);
+
+        return;
+      }
+
+      const pinnedRow = target.closest<HTMLElement>('[data-blok-database-pinned-group-open]');
+      const pinnedId = pinnedRow?.getAttribute('data-option-id');
+
+      if (pinnedRow !== null && pinnedId !== null && pinnedId !== undefined) {
+        event.stopPropagation();
+        this.openPinnedGroup(pinnedRow, pinnedId);
 
         return;
       }

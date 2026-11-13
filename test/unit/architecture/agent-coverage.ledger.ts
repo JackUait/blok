@@ -98,6 +98,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/database-autofill-setup.ts': cmds(['database.updateProperty'], 'Sets up AI autofill on a property: writes its autofill settings.'),
   'ui-file:src/tools/database/database-calendar-view.ts': cmds(['database.addRow', 'database.setRowValues'], 'Add a row on a day; drag a card to another day writes its date value.'),
   'ui-file:src/tools/database/database-chart-drilldown.ts': exempt('view-only', 'Lists the rows behind a chart point and opens one; the document does not change.'),
+  'ui-file:src/tools/database/database-pinned-group-modal.ts': exempt('view-only', 'Lists a pinned group\'s rows, searches them and opens one; the document does not change.'),
   'ui-file:src/tools/database/database-chart-view.ts': exempt('view-only', 'Legend toggles and chart point drilldown change only what is shown; nothing is saved.'),
   'ui-file:src/tools/database/database-template-gallery.ts': cmds(['database.addProperty', 'database.addView', 'database.addRow'], 'The More templates gallery only picks a template or a source; an agent adds the properties, views and rows itself.'),
   'ui-file:src/tools/database/database-starter-modal.ts': cmds(['database.addProperty', 'database.addView', 'database.addRow'], 'The Customize step of a Suggested template only picks properties and views; an agent adds them and the sample rows itself.'),

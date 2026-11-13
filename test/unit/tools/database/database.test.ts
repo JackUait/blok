@@ -4338,6 +4338,86 @@ describe('DatabaseTool', () => {
         tool.destroy();
       });
 
+      // notion-motion.md Round 25 §1 (r25-pinmodal.raw, r25-modal-inherit.raw, r25-modal-celledit.raw): a row opens a
+      // modal with the group pill as its title and a read-only table of that group's rows. The view's sorts carry over,
+      // the grouped property is the second column, and there is no "+ New" and no calculation row.
+      it('opens a pinned group as a read-only table of its rows', () => {
+        const schema = makeDefaultData().schema;
+        const { tool, element } = board(false, {
+          schema: [schema[0], { id: 'prop-notes', name: 'Notes', type: 'richText', position: 'a0V' }, schema[1]],
+          ...boardView({
+            pinnedGroups: [{ id: 'opt-todo' }],
+            sorts: [{ id: 's', propertyId: 'prop-title', direction: 'desc' }],
+            calculations: [{ id: 'prop-title', fn: 'count' }],
+          }),
+        });
+        const open = queryByData(element, 'data-blok-database-pinned-group-open');
+
+        // A keyboard user: the row has focus, and Enter clicks it.
+        open?.focus();
+        open?.click();
+        const dialog = document.querySelector<HTMLElement>('[data-blok-database-group-modal-panel]');
+        const grid = dialog?.querySelector('[role="grid"]');
+        const rowIds = [...new Set([...(grid?.querySelectorAll('[role="row"][data-row-id]') ?? [])].map((row) => row.getAttribute('data-row-id')))];
+
+        expect(dialog?.getAttribute('role')).toBe('dialog');
+        expect(dialog?.contains(document.activeElement)).toBe(true);
+        expect(dialog?.querySelector('[data-blok-database-group-modal-title]')?.textContent).toBe('Todo');
+        expect(grid?.getAttribute('aria-readonly')).toBe('true');
+        expect([...(grid?.querySelectorAll('[role="columnheader"]') ?? [])].map((cell) => cell.getAttribute('data-property-id')))
+          .toEqual(['prop-title', 'prop-status', 'prop-notes']);
+        expect(rowIds).toEqual(['row-2', 'row-1']);
+        expect(grid?.querySelector('[data-blok-database-table-add-row]')).toBeNull();
+        expect(grid?.querySelector('[data-blok-database-table-footer]')).toBeNull();
+        expect(dialog?.querySelector('[data-blok-database-group-modal-count]')).toBeNull();
+
+        // Round 25 §1 (motion-r25-pinmodal-esc.json): Escape closes it at once, and focus goes back to the strip row.
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+        expect(document.querySelector('[data-blok-database-group-modal-panel]')).toBeNull();
+        expect(queryByData(element, 'data-blok-database-pinned-group-open')).toHaveFocus();
+
+        tool.destroy();
+      });
+
+      // Round 25 §1 (r25-modal-celledit.raw, r25-modal-nameclick.raw): a click on a cell does nothing.
+      it('selects no cell on a click inside the pinned group modal', () => {
+        const { tool, element } = board(false, boardView({ pinnedGroups: [{ id: 'opt-todo' }] }));
+
+        queryByData(element, 'data-blok-database-pinned-group-open')?.click();
+        const cell = document.querySelector<HTMLElement>('[data-blok-database-group-modal-panel] [role="gridcell"]');
+
+        cell?.click();
+
+        expect(document.querySelector('[data-blok-database-group-modal-panel] [role="gridcell"][aria-selected="true"]')).toBeNull();
+        expect(cell).not.toBeNull();
+
+        tool.destroy();
+      });
+
+      // Round 25 §1 (r25-modal-searchopen.raw): Search opens a field beside its button; typing narrows the rows.
+      it('searches the pinned group\'s rows', () => {
+        const { tool, element } = board(false, boardView({ pinnedGroups: [{ id: 'opt-todo' }] }));
+
+        queryByData(element, 'data-blok-database-pinned-group-open')?.click();
+        const dialog = document.querySelector<HTMLElement>('[data-blok-database-group-modal-panel]');
+
+        dialog?.querySelector<HTMLElement>('[data-blok-database-group-modal-search]')?.click();
+        const input = dialog?.querySelector<HTMLInputElement>('[data-blok-database-group-modal-search-input]');
+
+        expect(input).toHaveFocus();
+        if (input !== null && input !== undefined) {
+          input.value = 'Two';
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        expect([...new Set([...(dialog?.querySelectorAll('[role="row"][data-row-id]') ?? [])].map((row) => row.getAttribute('data-row-id')))]).toEqual(['row-2']);
+
+        tool.destroy();
+
+        expect(document.querySelector('[data-blok-database-group-modal-panel]')).toBeNull();
+      });
+
       // Round 24 §1 (r24-pinhdr-click.raw): the header opens View settings › Group.
       it('opens the group settings from the strip header', () => {
         const { tool, element } = board(false, boardView({ pinnedGroups: [{ id: 'opt-todo' }] }));

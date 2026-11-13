@@ -289,7 +289,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2197 + 147 + 566 + 7 closure for all 2917 keys', () => {
+  it('rebuilds a disjoint 2198 + 147 + 565 + 7 closure for all 2917 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -549,7 +549,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -1: tools.database.timelineEndNone is now catalog-only (the end picker lost its None choice).
       // -1: the board's "Hidden groups" button is gone (tools.database.hiddenGroups left the catalog).
       // +2: the board's pinned strip calls tools.database.pinnedGroups and groupUnpin by literal.
-      'executable-literal': 2197,
+      // +1: the pinned group modal's search field calls tools.database.searchPlaceholder by literal.
+      'executable-literal': 2198,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -652,7 +653,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: a board colour rule's "Card background" (tools.database.colorCardBackground), through the panel's t().
       // +8: the typed-speed help line (tools.audio/video.speedEntryRange, TooHigh, TooLow, NotNumber), through speed-entry.ts's t().
       // +1: the Date filter's "Invalid date" message (tools.database.filterInvalidDate), through the chip's t().
-      'registered-namespace-compatible': 566,
+      // -1: tools.database.searchPlaceholder is now called by literal (the pinned group modal).
+      'registered-namespace-compatible': 565,
       // +1: Settings › Group's pin button names itself with groupPin through the panel's tools.database. prefix.
       'catalog-only': 7,
     });

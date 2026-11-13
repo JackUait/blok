@@ -380,3 +380,55 @@ describe('Settings › Group pin button', () => {
     expect(ruleBody(database, '[data-blok-database-group-pin]:hover:not(:disabled) > [data-blok-database-group-pin-glyph="hover"]')).toContain('display: flex');
   });
 });
+
+// notion-motion.md Round 25 §1 (r25-pinmodal.raw, motion-r25-pinrow-open.json): an 800×496 dialog, radius 12, over a
+// rgba(15,15,15,0.6) overlay; the overlay fades in and the dialog scales 0.97 → 1, both 200ms ease. Closing is instant.
+describe('pinned group modal', () => {
+  it('fades the overlay in and scales the dialog up over 200ms', () => {
+    const backdrop = ruleBody(database, '[data-blok-database-group-modal]');
+    const panel = ruleBody(database, '[data-blok-database-group-modal-panel]');
+
+    expect(backdrop).toContain('background-color: var(--blok-database-confirm-backdrop)');
+    expect(backdrop).toContain('animation: blok-database-confirm-fade 200ms ease both');
+    expect(panel).toContain('animation: blok-database-confirm-in 200ms ease both');
+    expect(database).not.toContain('[data-blok-database-group-modal][data-blok-closing]');
+    expect(database).toMatch(/\[data-blok-database-group-modal\],\s*\[data-blok-database-group-modal-panel\]\s*\{\s*animation: none;/);
+  });
+
+  it('draws an 800×496 dialog with radius 12 and the dialog shadow', () => {
+    const panel = ruleBody(database, '[data-blok-database-group-modal-panel]');
+
+    expect(panel).toContain('width: 800px');
+    expect(panel).toContain('height: 496px');
+    expect(panel).toContain('border-radius: var(--blok-radius-dialog)');
+    expect(panel).toContain('box-shadow: var(--blok-database-confirm-shadow)');
+  });
+
+  // r25-pinmodal.raw: header 48 tall, padding 12 24 0; Search 28×28 radius 6; Dismiss a 22×22 circle, fill 0.06,
+  // hover 0.16 over 0.1s, ending 32 from the dialog's right edge. The × takes Blok's 3:1 step of 142,139,134.
+  it('lays the header out as Notion does', () => {
+    const header = ruleBody(database, '[data-blok-database-group-modal-header]');
+    const search = ruleBody(database, '[data-blok-database-group-modal-search]');
+    const close = ruleBody(database, '[data-blok-database-group-modal-close]');
+
+    expect(header).toContain('height: 48px');
+    expect(header).toContain('padding: var(--blok-space-3) var(--blok-space-6) 0');
+    expect(search).toContain('width: 28px');
+    expect(search).toContain('height: 28px');
+    expect(search).toContain('border-radius: var(--blok-radius-control)');
+    expect(close).toContain('width: 22px');
+    expect(close).toContain('height: 22px');
+    expect(close).toContain('border-radius: 50%');
+    expect(close).toContain('background-color: var(--blok-database-confirm-small-close-bg)');
+    expect(close).toContain('color: var(--blok-database-confirm-small-close-icon)');
+    expect(close).toContain('margin-inline-end: var(--blok-space-2)');
+    expect(close).toContain('transition: background-color 0.1s ease-in-out');
+    expect(ruleBody(database, '[data-blok-database-group-modal-close]:hover')).toContain('background-color: var(--blok-database-confirm-small-close-hover-bg)');
+  });
+
+  // r25-pinmodal-row.raw: one 800-wide scroller that scrolls both ways, content 24 in.
+  it('scrolls the table both ways in one body', () => {
+    expect(ruleBody(database, '[data-blok-database-group-modal-body]')).toContain('overflow: auto');
+    expect(ruleBody(database, '[data-blok-database-group-modal-body] [data-blok-database-table-scroller]')).toContain('overflow: visible');
+  });
+});

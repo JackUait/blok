@@ -10,9 +10,13 @@ import type {
   ViewType,
 } from './types';
 
-/** Notion's list (research/05 §6.2); formulas, relations and rollups since 2025-11-17. */
+/**
+ * Notion's list (research/05 §6.2); formulas, relations and rollups since 2025-11-17; Created by/time and
+ * Last edited by/time in notion-motion.md Round 20 §4. URL, Phone, Email, Files and ID stay out.
+ */
 export const COLOR_RULE_TYPES: readonly PropertyType[] = [
   'title', 'text', 'number', 'select', 'multiSelect', 'status', 'date', 'person', 'checkbox', 'formula', 'relation', 'rollup',
+  'createdBy', 'createdTime', 'lastEditedBy', 'lastEditedTime',
 ];
 
 /** Layouts Notion colors (research/05 §6.2; map measured in research/20 §1f). */

@@ -35,10 +35,27 @@ describe('view-data', () => {
   });
 
   describe('conditional color', () => {
-    it('allows the property types Notion lists (research/05 §6.2)', () => {
+    it('allows the property types Notion lists (research/05 §6.2, notion-motion.md Round 20 §4)', () => {
       expect(COLOR_RULE_TYPES).toEqual([
         'title', 'text', 'number', 'select', 'multiSelect', 'status', 'date', 'person', 'checkbox', 'formula', 'relation', 'rollup',
+        'createdBy', 'createdTime', 'lastEditedBy', 'lastEditedTime',
       ]);
+    });
+
+    it('colors by who made or last edited a row and when, read from the row meta', () => {
+      const typed: PropertyDefinition[] = [
+        ...schema,
+        { id: 'cb', name: 'Created by', type: 'createdBy', position: 'a2' },
+        { id: 'ct', name: 'Created time', type: 'createdTime', position: 'a3' },
+        { id: 'lb', name: 'Last edited by', type: 'lastEditedBy', position: 'a4' },
+        { id: 'lt', name: 'Last edited time', type: 'lastEditedTime', position: 'a5' },
+      ];
+      const row: DatabaseRow = { id: 'a', position: 'a0', properties: {}, meta: { createdBy: 'u1', createdAt: 1, lastEditedBy: 'u1', lastEditedAt: 1 } };
+      const rule = (propertyId: string): DatabaseViewConfig => view({ colorRules: [{ id: 'c', propertyId, operator: 'is_not_empty', value: null, color: 'red' }] });
+
+      for (const id of ['cb', 'ct', 'lb', 'lt']) {
+        expect(resolveRowColors([row], rule(id), typed).get('a'), id).toEqual({ row: 'red', cells: {} });
+      }
     });
 
     it('tints matching rows; the first matching rule wins', () => {

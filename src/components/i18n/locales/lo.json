@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "ເລືອກໄດ້ຫຼາຍຄົນ",
   "tools.database.filterSelectPage": "ເລືອກໜ້າ",
   "tools.database.filterSelectDate": "ເລືອກວັນທີ",
+  "tools.database.filterClearSelection": "ລຶບການເລືອກ",
   "tools.database.filterExactDate": "ວັນທີທີ່ລະບຸ",
   "tools.database.filterDateCustom": "ວັນທີກຳນົດເອງ",
   "tools.database.filterChecked": "ໝາຍແລ້ວ",

@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "మీకు కావలసినన్ని ఎంచుకోండి",
   "tools.database.filterSelectPage": "పేజీని ఎంచుకోండి",
   "tools.database.filterSelectDate": "తేదీని ఎంచుకోండి",
+  "tools.database.filterClearSelection": "ఎంపికను క్లియర్ చేయండి",
   "tools.database.filterExactDate": "ఖచ్చితమైన తేదీ",
   "tools.database.filterDateCustom": "అనుకూల తేదీ",
   "tools.database.filterChecked": "ఎంపిక చేయబడింది",

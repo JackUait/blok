@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "აირჩიეთ რამდენიც გსურთ",
   "tools.database.filterSelectPage": "გვერდის არჩევა",
   "tools.database.filterSelectDate": "აირჩიეთ თარიღი",
+  "tools.database.filterClearSelection": "არჩევანის გასუფთავება",
   "tools.database.filterExactDate": "ზუსტი თარიღი",
   "tools.database.filterDateCustom": "მორგებული თარიღი",
   "tools.database.filterChecked": "მონიშნული",

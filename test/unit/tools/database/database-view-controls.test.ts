@@ -1023,6 +1023,63 @@ describe('DatabaseViewControls', () => {
       expect(q('database-filter-popover')?.style.width).toBe('220px');
     });
 
+    // notion-motion.md Round 20 §1 (r20-st.raw, r20-st-rows.raw, r20-st.png): Status lists group rows, each before its
+    // options, then "Clear selection". No search field; the operator button takes focus.
+    describe('Status', () => {
+      const status: PropertyDefinition = { id: 'st', name: 'Status', type: 'status', position: 'a3', config: { options: [
+        { id: 's1', label: 'Not started', position: 'a0', groupId: 'todo' },
+        { id: 's3', label: 'Done', position: 'a0', groupId: 'complete' },
+        { id: 's4', label: 'Archived', position: 'a1', groupId: 'complete' },
+      ] } };
+      const openStatus = (value: string[] = []): ReturnType<typeof setup> => {
+        const env = setup({ schema: () => [...schema, status] });
+
+        env.saved.view = { ...env.saved.view, filters: [{ id: 'fs', propertyId: 'st', operator: 'equals', value }] };
+        env.controls.refresh();
+        click('database-filter-pill-fs');
+
+        return env;
+      };
+      const valueOf = (env: ReturnType<typeof setup>): unknown => env.controls.effective(env.saved.view).filters[0]?.value;
+
+      it('lists each group before its options, then Clear selection, with no search', () => {
+        openStatus();
+        const rows = [...(q('database-filter-popover')?.querySelectorAll('[data-blok-database-panel-row]') ?? [])]
+          .map((row) => row.getAttribute('data-blok-testid'));
+
+        expect(q('database-filter-popover')?.style.width).toBe('260px');
+        expect(q('database-filter-option-search')).toBeNull();
+        expect(rows).toEqual([
+          'database-filter-status-group-todo', 'database-filter-option-s1',
+          'database-filter-status-group-inProgress',
+          'database-filter-status-group-complete', 'database-filter-option-s3', 'database-filter-option-s4',
+          'database-filter-clear-selection',
+        ]);
+        expect(text(q('database-filter-status-group-complete'))).toBe('Complete');
+        expect(q('database-filter-status-group-complete')?.getAttribute('data-color')).toBe('green');
+        expect(q('database-filter-option-s3')?.hasAttribute('data-blok-database-filter-status-option')).toBe(true);
+        expect(text(q('database-filter-clear-selection'))).toBe('tools.database.filterClearSelection');
+        expect(q('database-filter-operator')).toHaveFocus();
+      });
+
+      it('ticks every option of a group from its row, and unticks them when all are ticked', () => {
+        const env = openStatus(['s1']);
+
+        click('database-filter-status-group-complete');
+        expect(valueOf(env)).toEqual(['s1', 's3', 's4']);
+        expect(q('database-filter-status-group-complete')?.getAttribute('aria-checked')).toBe('true');
+        click('database-filter-status-group-complete');
+        expect(valueOf(env)).toEqual(['s1']);
+      });
+
+      it('clears every pick from Clear selection', () => {
+        const env = openStatus(['s1', 's3']);
+
+        click('database-filter-clear-selection');
+        expect(valueOf(env)).toEqual([]);
+      });
+    });
+
     it('heads the popover with "Name operator" and a "…" button, 260 wide', () => {
       open();
       const popover = q('database-filter-popover');

@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "可選取多人",
   "tools.database.filterSelectPage": "選取頁面",
   "tools.database.filterSelectDate": "選取日期",
+  "tools.database.filterClearSelection": "清除選取",
   "tools.database.filterExactDate": "確切日期",
   "tools.database.filterDateCustom": "自訂日期",
   "tools.database.filterChecked": "已勾選",

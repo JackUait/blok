@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "လိုသလောက် ရွေးနိုင်ပါသည်",
   "tools.database.filterSelectPage": "စာမျက်နှာ ရွေးရန်",
   "tools.database.filterSelectDate": "ရက်စွဲ ရွေးပါ",
+  "tools.database.filterClearSelection": "ရွေးချယ်မှု ရှင်းပါ",
   "tools.database.filterExactDate": "တိကျသော ရက်စွဲ",
   "tools.database.filterDateCustom": "စိတ်ကြိုက် ရက်စွဲ",
   "tools.database.filterChecked": "အမှန်ခြစ်ထားသည်",

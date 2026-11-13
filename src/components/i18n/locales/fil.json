@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "Pumili ng kahit ilan",
   "tools.database.filterSelectPage": "Pumili ng pahina",
   "tools.database.filterSelectDate": "Pumili ng petsa",
+  "tools.database.filterClearSelection": "I-clear ang pinili",
   "tools.database.filterExactDate": "Eksaktong petsa",
   "tools.database.filterDateCustom": "Pasadyang petsa",
   "tools.database.filterChecked": "Naka-check",

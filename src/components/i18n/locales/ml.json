@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "ആവശ്യമുള്ളത്ര തിരഞ്ഞെടുക്കുക",
   "tools.database.filterSelectPage": "ഒരു പേജ് തിരഞ്ഞെടുക്കുക",
   "tools.database.filterSelectDate": "ഒരു തീയതി തിരഞ്ഞെടുക്കുക",
+  "tools.database.filterClearSelection": "തിരഞ്ഞെടുപ്പ് മായ്ക്കുക",
   "tools.database.filterExactDate": "കൃത്യമായ തീയതി",
   "tools.database.filterDateCustom": "ഇഷ്‌ടാനുസൃത തീയതി",
   "tools.database.filterChecked": "പരിശോധിച്ചത്",

@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "તમે ઇચ્છો તેટલા પસંદ કરો",
   "tools.database.filterSelectPage": "પૃષ્ઠ પસંદ કરો",
   "tools.database.filterSelectDate": "તારીખ પસંદ કરો",
+  "tools.database.filterClearSelection": "પસંદગી સાફ કરો",
   "tools.database.filterExactDate": "ચોક્કસ તારીખ",
   "tools.database.filterDateCustom": "કસ્ટમ તારીખ",
   "tools.database.filterChecked": "ચેક કરેલું",

@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "អាចជ្រើសរើសបានច្រើននាក់",
   "tools.database.filterSelectPage": "ជ្រើសទំព័រ",
   "tools.database.filterSelectDate": "ជ្រើសរើសកាលបរិច្ឆេទ",
+  "tools.database.filterClearSelection": "សម្អាតការជ្រើសរើស",
   "tools.database.filterExactDate": "កាលបរិច្ឆេទជាក់លាក់",
   "tools.database.filterDateCustom": "កាលបរិច្ឆេទផ្ទាល់ខ្លួន",
   "tools.database.filterChecked": "បានធីក",

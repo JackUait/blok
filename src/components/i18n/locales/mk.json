@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "Изберете колку што сакате",
   "tools.database.filterSelectPage": "Избери страница",
   "tools.database.filterSelectDate": "Изберете датум",
+  "tools.database.filterClearSelection": "Исчисти го изборот",
   "tools.database.filterExactDate": "Точен датум",
   "tools.database.filterDateCustom": "Сопствен датум",
   "tools.database.filterChecked": "Означено",

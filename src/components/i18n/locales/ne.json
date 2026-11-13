@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "जति चाहनुहुन्छ त्यति छान्नुहोस्",
   "tools.database.filterSelectPage": "पृष्ठ छान्नुहोस्",
   "tools.database.filterSelectDate": "मिति छान्नुहोस्",
+  "tools.database.filterClearSelection": "चयन खाली गर्नुहोस्",
   "tools.database.filterExactDate": "ठ्याक्कै मिति",
   "tools.database.filterDateCustom": "अनुकूलित मिति",
   "tools.database.filterChecked": "जाँच गरिएको",

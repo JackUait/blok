@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "Valida saab mitu",
   "tools.database.filterSelectPage": "Vali leht",
   "tools.database.filterSelectDate": "Vali kuupäev",
+  "tools.database.filterClearSelection": "Tühjenda valik",
   "tools.database.filterExactDate": "Täpne kuupäev",
   "tools.database.filterDateCustom": "Kohandatud kuupäev",
   "tools.database.filterChecked": "Märgitud",

@@ -1392,6 +1392,7 @@
   "tools.database.filterSelectPeople": "Izberite poljubno število",
   "tools.database.filterSelectPage": "Izberi stran",
   "tools.database.filterSelectDate": "Izberite datum",
+  "tools.database.filterClearSelection": "Počisti izbor",
   "tools.database.filterExactDate": "Točen datum",
   "tools.database.filterDateCustom": "Datum po meri",
   "tools.database.filterChecked": "Označeno",

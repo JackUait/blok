@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "Valitse niin monta kuin haluat",
   "tools.database.filterSelectPage": "Valitse sivu",
   "tools.database.filterSelectDate": "Valitse päivämäärä",
+  "tools.database.filterClearSelection": "Tyhjennä valinta",
   "tools.database.filterExactDate": "Tarkka päivämäärä",
   "tools.database.filterDateCustom": "Mukautettu päivämäärä",
   "tools.database.filterChecked": "Valittu",

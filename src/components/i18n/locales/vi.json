@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "Chọn bao nhiêu người tùy ý",
   "tools.database.filterSelectPage": "Chọn một trang",
   "tools.database.filterSelectDate": "Chọn ngày",
+  "tools.database.filterClearSelection": "Xóa lựa chọn",
   "tools.database.filterExactDate": "Ngày cụ thể",
   "tools.database.filterDateCustom": "Ngày tùy chỉnh",
   "tools.database.filterChecked": "Đã chọn",

@@ -1386,6 +1386,7 @@
   "tools.database.filterSelectPeople": "Selectați oricâte doriți",
   "tools.database.filterSelectPage": "Selectează o pagină",
   "tools.database.filterSelectDate": "Selectați o dată",
+  "tools.database.filterClearSelection": "Șterge selecția",
   "tools.database.filterExactDate": "Dată exactă",
   "tools.database.filterDateCustom": "Dată personalizată",
   "tools.database.filterChecked": "Bifat",

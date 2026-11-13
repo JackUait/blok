@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "Chagua wengi kadiri unavyotaka",
   "tools.database.filterSelectPage": "Chagua ukurasa",
   "tools.database.filterSelectDate": "Chagua tarehe",
+  "tools.database.filterClearSelection": "Futa uteuzi",
   "tools.database.filterExactDate": "Tarehe kamili",
   "tools.database.filterDateCustom": "Tarehe maalum",
   "tools.database.filterChecked": "Kimewekewa tiki",

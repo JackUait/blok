@@ -1404,6 +1404,7 @@
   "tools.database.filterSelectPeople": "اختر أي عدد تريده",
   "tools.database.filterSelectPage": "اختيار صفحة",
   "tools.database.filterSelectDate": "اختر تاريخًا",
+  "tools.database.filterClearSelection": "مسح التحديد",
   "tools.database.filterExactDate": "تاريخ محدد",
   "tools.database.filterDateCustom": "تاريخ مخصص",
   "tools.database.filterChecked": "محدد",

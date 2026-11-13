@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "ඔබට අවශ්‍ය තරම් තෝරන්න",
   "tools.database.filterSelectPage": "පිටුවක් තෝරන්න",
   "tools.database.filterSelectDate": "දිනයක් තෝරන්න",
+  "tools.database.filterClearSelection": "තේරීම හිස් කරන්න",
   "tools.database.filterExactDate": "නිශ්චිත දිනය",
   "tools.database.filterDateCustom": "අභිරුචි දිනය",
   "tools.database.filterChecked": "සලකුණු කර ඇත",

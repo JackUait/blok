@@ -1392,6 +1392,7 @@
   "tools.database.filterSelectPeople": "Wybierz dowolną liczbę",
   "tools.database.filterSelectPage": "Wybierz stronę",
   "tools.database.filterSelectDate": "Wybierz datę",
+  "tools.database.filterClearSelection": "Wyczyść wybór",
   "tools.database.filterExactDate": "Dokładna data",
   "tools.database.filterDateCustom": "Własna data",
   "tools.database.filterChecked": "Zaznaczone",

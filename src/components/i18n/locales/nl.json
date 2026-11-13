@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "Selecteer er zoveel als je wilt",
   "tools.database.filterSelectPage": "Pagina selecteren",
   "tools.database.filterSelectDate": "Selecteer een datum",
+  "tools.database.filterClearSelection": "Selectie wissen",
   "tools.database.filterExactDate": "Exacte datum",
   "tools.database.filterDateCustom": "Aangepaste datum",
   "tools.database.filterChecked": "Aangevinkt",

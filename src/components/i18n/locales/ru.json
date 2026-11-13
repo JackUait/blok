@@ -1392,6 +1392,7 @@
   "tools.database.filterSelectPeople": "Выберите сколько угодно",
   "tools.database.filterSelectPage": "Выберите страницу",
   "tools.database.filterSelectDate": "Выберите дату",
+  "tools.database.filterClearSelection": "Очистить выбор",
   "tools.database.filterExactDate": "Точная дата",
   "tools.database.filterDateCustom": "Своя дата",
   "tools.database.filterChecked": "Отмечено",

@@ -1392,6 +1392,7 @@
   "tools.database.filterSelectPeople": "Виберіть скільки завгодно",
   "tools.database.filterSelectPage": "Виберіть сторінку",
   "tools.database.filterSelectDate": "Виберіть дату",
+  "tools.database.filterClearSelection": "Очистити вибір",
   "tools.database.filterExactDate": "Точна дата",
   "tools.database.filterDateCustom": "Власна дата",
   "tools.database.filterChecked": "Позначено",

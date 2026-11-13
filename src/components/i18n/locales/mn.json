@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "Хүссэн хэдийгээ сонгож болно",
   "tools.database.filterSelectPage": "Хуудас сонгох",
   "tools.database.filterSelectDate": "Огноо сонгох",
+  "tools.database.filterClearSelection": "Сонголтыг арилгах",
   "tools.database.filterExactDate": "Тодорхой огноо",
   "tools.database.filterDateCustom": "Өөрийн огноо",
   "tools.database.filterChecked": "Тэмдэглэсэн",

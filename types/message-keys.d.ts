@@ -950,6 +950,7 @@ export type BlokMessageKey =
   | 'tools.database.filterBarMinimize'
   | 'tools.database.filterByPlaceholder'
   | 'tools.database.filterChecked'
+  | 'tools.database.filterClearSelection'
   | 'tools.database.filterCount'
   | 'tools.database.filterDateCustom'
   | 'tools.database.filterDateNextMonth'

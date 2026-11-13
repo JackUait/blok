@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "เลือกได้หลายคน",
   "tools.database.filterSelectPage": "เลือกหน้า",
   "tools.database.filterSelectDate": "เลือกวันที่",
+  "tools.database.filterClearSelection": "ล้างการเลือก",
   "tools.database.filterExactDate": "วันที่ที่ระบุ",
   "tools.database.filterDateCustom": "วันที่กำหนดเอง",
   "tools.database.filterChecked": "เลือกแล้ว",

@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "هر تعداد که می‌خواهید انتخاب کنید",
   "tools.database.filterSelectPage": "انتخاب صفحه",
   "tools.database.filterSelectDate": "یک تاریخ انتخاب کنید",
+  "tools.database.filterClearSelection": "پاک کردن انتخاب",
   "tools.database.filterExactDate": "تاریخ دقیق",
   "tools.database.filterDateCustom": "تاریخ سفارشی",
   "tools.database.filterChecked": "علامت‌خورده",

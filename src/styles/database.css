@@ -12625,6 +12625,28 @@ input[data-blok-database-picker-search]:focus {
   color: var(--blok-database-table-cell-text);
 }
 
+/* notion-motion.md Round 20 §1 (r20-st-rows.raw): a Status group row in 500 and its group's ink. Notion's inks
+   (rgb(142,139,134), rgb(39,131,222), rgb(70,161,113)) fail AA at 14px, so the row takes the option ink. */
+[data-blok-database-filter-status-group] {
+  font-weight: 500;
+}
+
+[data-blok-database-filter-status-group][data-color="default"] { color: var(--blok-database-option-default-text); }
+[data-blok-database-filter-status-group][data-color="gray"] { color: var(--blok-database-option-gray-text); }
+[data-blok-database-filter-status-group][data-color="brown"] { color: var(--blok-database-option-brown-text); }
+[data-blok-database-filter-status-group][data-color="orange"] { color: var(--blok-database-option-orange-text); }
+[data-blok-database-filter-status-group][data-color="yellow"] { color: var(--blok-database-option-yellow-text); }
+[data-blok-database-filter-status-group][data-color="green"] { color: var(--blok-database-option-green-text); }
+[data-blok-database-filter-status-group][data-color="blue"] { color: var(--blok-database-option-blue-text); }
+[data-blok-database-filter-status-group][data-color="purple"] { color: var(--blok-database-option-purple-text); }
+[data-blok-database-filter-status-group][data-color="pink"] { color: var(--blok-database-option-pink-text); }
+[data-blok-database-filter-status-group][data-color="red"] { color: var(--blok-database-option-red-text); }
+
+/* Options sit 8px further in than their group (checkbox x 563 vs 555): 8 + 8. */
+[data-blok-database-filter-status-option] {
+  padding-inline-start: var(--blok-space-4);
+}
+
 /* notion-motion.md Round 20 §2: an empty value's placeholder. Blok's AA secondary ink, darker than Notion's rgb(125,122,117). */
 [data-blok-database-filter-rule] > [data-blok-database-filter-rule-button][data-blok-database-filter-placeholder] {
   color: var(--blok-database-ink-secondary);

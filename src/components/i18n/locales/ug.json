@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "خالىغانچە تاللاڭ",
   "tools.database.filterSelectPage": "بەت تاللاش",
   "tools.database.filterSelectDate": "چېسلا تاللاڭ",
+  "tools.database.filterClearSelection": "تاللاشنى تازىلا",
   "tools.database.filterExactDate": "ئېنىق چېسلا",
   "tools.database.filterDateCustom": "ئۆزلەشتۈرۈلگەن چېسلا",
   "tools.database.filterChecked": "بەلگە قويۇلدى",

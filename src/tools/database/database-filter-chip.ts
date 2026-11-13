@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid';
 import { IconChevronDown, IconCross, IconDotsHorizontal, IconTrash } from '../../components/icons';
-import { DatabasePanel, panelInput, panelRow, panelText } from './database-panel';
+import { DatabasePanel, panelInput, panelRow, panelSeparator, panelText } from './database-panel';
 import type { PanelPage } from './database-panel';
 import type { ViewSettingsContext } from './database-view-settings-panel';
 import { ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from './database-query';
@@ -21,6 +21,7 @@ import { addFilterRule, emptyFilterTree, withEntryIds } from './filter-tree';
 import { RELATIVE_DATE_UNITS, RELATIVE_DATE_VALUES, formatRelativeSpan, parseRelativeSpan, relativeWindow, toLocalDay } from './relative-dates';
 import type { RelativeDateUnit, RelativeSpan } from './relative-dates';
 import { optionColorOf, shownStatusOption } from './cells/option-colors';
+import { orderedStatusOptions, statusGroupOf, statusGroupsOf } from './property-values';
 import type { FilterConfig, PropertyDefinition, PropertyType, SelectOption } from './types';
 
 type Filter = FilterConfig & { id: string };
@@ -373,8 +374,9 @@ class FilterChipPages {
     switch (property.type) {
       case 'select':
       case 'multiSelect':
-      case 'status':
         return this.optionControls(property, idList(value));
+      case 'status':
+        return this.statusControls(property, idList(value));
       case 'checkbox':
         return [true, false].map((checked) => panelRow({
           label: this.t(checked ? 'filterChecked' : 'filterUnchecked'),
@@ -495,6 +497,49 @@ class FilterChipPages {
     fill();
 
     return [field, list];
+  }
+
+  /**
+   * notion-motion.md Round 20 §1 (r20-st.raw, r20-st-rows.raw): each group row, then its options, then
+   * "Clear selection". No search. A group row ticks or unticks all its options; the value stays option ids.
+   */
+  private statusControls(property: PropertyDefinition, ids: string[]): HTMLElement[] {
+    const options = orderedStatusOptions(property);
+    const rows = statusGroupsOf(property).flatMap((group) => {
+      const members = options.filter((option) => statusGroupOf(property, option.id)?.id === group.id);
+      const all = members.length > 0 && members.every((option) => ids.includes(option.id));
+      const head = panelRow({
+        label: group.name,
+        testId: `database-filter-status-group-${group.id}`,
+        checked: all,
+        onClick: () => this.update({ value: all
+          ? ids.filter((id) => !members.some((option) => option.id === id))
+          : [...ids, ...members.map((option) => option.id).filter((id) => !ids.includes(id))] }),
+      });
+
+      head.setAttribute('data-blok-database-filter-status-group', '');
+      head.setAttribute('data-color', group.color ?? 'default');
+
+      return [head, ...members.map((option) => {
+        const row = panelRow({
+          label: option.label,
+          testId: `database-filter-option-${option.id}`,
+          checked: ids.includes(option.id),
+          onClick: () => this.update({ value: toggled(ids, option.id) }),
+        });
+
+        row.setAttribute('data-blok-database-filter-status-option', '');
+        row.querySelector('[data-blok-database-panel-label]')?.replaceChildren(optionPill(option, property.type));
+
+        return row;
+      })];
+    });
+
+    return [...rows, panelSeparator(), panelRow({
+      label: this.ctx.i18n.t('tools.database.filterClearSelection'),
+      testId: 'database-filter-clear-selection',
+      onClick: () => this.update({ value: [] }),
+    })];
   }
 
   private idRows(value: FilterConfig['value'], entries: Array<{ id: string; label: string; testId: string }>): HTMLElement[] {
@@ -756,8 +801,10 @@ export const openFilterChip = (anchor: HTMLElement, ctx: ViewSettingsContext, fi
 
   host?.own(panel);
   panel.open();
-  // Notion opens on the value: the token field or the value input, not the header.
-  panel.root.querySelector<HTMLElement>('[data-blok-database-select-search], [data-blok-database-panel-input], [data-blok-database-chip-select]')?.focus();
+  // Notion opens on the value: the token field or the value input, not the header. Status has neither and
+  // focuses its operator (notion-motion.md Round 20 §1, r20-st.raw).
+  (panel.root.querySelector<HTMLElement>('[data-blok-database-select-search], [data-blok-database-panel-input], [data-blok-database-chip-select]')
+    ?? (property?.type === 'status' ? panel.root.querySelector<HTMLElement>('[data-blok-testid="database-filter-operator"]') : null))?.focus();
 
   return panel;
 };

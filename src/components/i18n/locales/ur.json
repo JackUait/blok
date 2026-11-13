@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "جتنے چاہیں منتخب کریں",
   "tools.database.filterSelectPage": "صفحہ منتخب کریں",
   "tools.database.filterSelectDate": "تاریخ منتخب کریں",
+  "tools.database.filterClearSelection": "انتخاب صاف کریں",
   "tools.database.filterExactDate": "مخصوص تاریخ",
   "tools.database.filterDateCustom": "حسب ضرورت تاریخ",
   "tools.database.filterChecked": "نشان زد",

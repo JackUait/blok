@@ -25,6 +25,19 @@ describe('filter rule popover header', () => {
   });
 });
 
+// notion-motion.md Round 20 §1 (r20-st-rows.raw): group rows 14px 500 in the group's ink, options 8px further in.
+describe('status filter rows', () => {
+  it('draws a group row in weight 500 and its group colour, at AA', () => {
+    expect(declared('[data-blok-database-filter-status-group]', 'font-weight')).toEqual(['500']);
+    expect(declared('[data-blok-database-filter-status-group][data-color="green"]', 'color')).toEqual(['var(--blok-database-option-green-text)']);
+    expect(declared('[data-blok-database-filter-status-group][data-color="gray"]', 'color')).toEqual(['var(--blok-database-option-gray-text)']);
+  });
+
+  it('sets an option row 8px in from its group', () => {
+    expect(declared('[data-blok-database-filter-status-option]', 'padding-inline-start')).toEqual(['var(--blok-space-4)']);
+  });
+});
+
 describe('advanced filter popover', () => {
   // Without it the box keeps its open-time width and clips a rule that a new operator widened.
   it('lets the popover box follow a panel sized to its rows', () => {

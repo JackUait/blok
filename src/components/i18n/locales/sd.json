@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "جيترا چاهيو چونڊيو",
   "tools.database.filterSelectPage": "صفحو چونڊيو",
   "tools.database.filterSelectDate": "تاريخ چونڊيو",
+  "tools.database.filterClearSelection": "چونڊ صاف ڪريو",
   "tools.database.filterExactDate": "مخصوص تاريخ",
   "tools.database.filterDateCustom": "پنهنجي مرضي جي تاريخ",
   "tools.database.filterChecked": "نشان لڳل",

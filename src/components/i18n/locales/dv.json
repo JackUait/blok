@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "ބޭނުން ވަރަކަށް ހޮވާ",
   "tools.database.filterSelectPage": "ޞަފްޙާއެއް ޚިޔާރުކުރޭ",
   "tools.database.filterSelectDate": "ތާރީޚެއް ހޮވާ",
+  "tools.database.filterClearSelection": "ހޮވާފައިވާތަކެތި ފޮހެލާ",
   "tools.database.filterExactDate": "ކަނޑައެޅިގެންވާ ތާރީޚް",
   "tools.database.filterDateCustom": "ޚާއްސަ ތާރީޚް",
   "tools.database.filterChecked": "ފާހަގަކޮށްފައި",

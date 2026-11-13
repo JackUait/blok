@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "څومره چې غواړئ وټاکئ",
   "tools.database.filterSelectPage": "یوه پاڼه وټاکئ",
   "tools.database.filterSelectDate": "یوه نېټه وټاکئ",
+  "tools.database.filterClearSelection": "ټاکنه پاکه کړئ",
   "tools.database.filterExactDate": "دقیقه نېټه",
   "tools.database.filterDateCustom": "ځانګړې نېټه",
   "tools.database.filterChecked": "نښه شوی",

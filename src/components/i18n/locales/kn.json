@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "ಬೇಕಾದಷ್ಟು ಆಯ್ಕೆಮಾಡಿ",
   "tools.database.filterSelectPage": "ಪುಟ ಆಯ್ಕೆಮಾಡಿ",
   "tools.database.filterSelectDate": "ದಿನಾಂಕವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+  "tools.database.filterClearSelection": "ಆಯ್ಕೆಯನ್ನು ತೆರವುಗೊಳಿಸಿ",
   "tools.database.filterExactDate": "ನಿಖರ ದಿನಾಂಕ",
   "tools.database.filterDateCustom": "ಕಸ್ಟಮ್ ದಿನಾಂಕ",
   "tools.database.filterChecked": "ಗುರುತಿಸಲಾಗಿದೆ",

@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "Επιλέξτε όσα θέλετε",
   "tools.database.filterSelectPage": "Επιλογή σελίδας",
   "tools.database.filterSelectDate": "Επιλέξτε ημερομηνία",
+  "tools.database.filterClearSelection": "Απαλοιφή επιλογής",
   "tools.database.filterExactDate": "Ακριβής ημερομηνία",
   "tools.database.filterDateCustom": "Προσαρμοσμένη ημερομηνία",
   "tools.database.filterChecked": "Επιλεγμένο",

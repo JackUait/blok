@@ -1392,6 +1392,7 @@
   "tools.database.filterSelectPeople": "Vyberte libovolný počet",
   "tools.database.filterSelectPage": "Vybrat stránku",
   "tools.database.filterSelectDate": "Vyberte datum",
+  "tools.database.filterClearSelection": "Zrušit výběr",
   "tools.database.filterExactDate": "Přesné datum",
   "tools.database.filterDateCustom": "Vlastní datum",
   "tools.database.filterChecked": "Zaškrtnuto",

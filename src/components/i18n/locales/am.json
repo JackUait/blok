@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "የፈለጉትን ያህል ይምረጡ",
   "tools.database.filterSelectPage": "ገጽ ምረጥ",
   "tools.database.filterSelectDate": "ቀን ይምረጡ",
+  "tools.database.filterClearSelection": "ምርጫን አጽዳ",
   "tools.database.filterExactDate": "ትክክለኛ ቀን",
   "tools.database.filterDateCustom": "ብጁ ቀን",
   "tools.database.filterChecked": "የተመረጠ",

@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "Välj så många du vill",
   "tools.database.filterSelectPage": "Välj en sida",
   "tools.database.filterSelectDate": "Välj ett datum",
+  "tools.database.filterClearSelection": "Rensa val",
   "tools.database.filterExactDate": "Exakt datum",
   "tools.database.filterDateCustom": "Anpassat datum",
   "tools.database.filterChecked": "Markerad",

@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "যত খুশি নির্বাচন করুন",
   "tools.database.filterSelectPage": "একটি পৃষ্ঠা নির্বাচন করুন",
   "tools.database.filterSelectDate": "একটি তারিখ নির্বাচন করুন",
+  "tools.database.filterClearSelection": "নির্বাচন মুছুন",
   "tools.database.filterExactDate": "নির্দিষ্ট তারিখ",
   "tools.database.filterDateCustom": "নিজস্ব তারিখ",
   "tools.database.filterChecked": "টিক দেওয়া আছে",

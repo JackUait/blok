@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "Tetszőleges számú személyt kiválaszthat",
   "tools.database.filterSelectPage": "Oldal kiválasztása",
   "tools.database.filterSelectDate": "Válasszon egy dátumot",
+  "tools.database.filterClearSelection": "Kijelölés törlése",
   "tools.database.filterExactDate": "Pontos dátum",
   "tools.database.filterDateCustom": "Egyéni dátum",
   "tools.database.filterChecked": "Bejelölve",

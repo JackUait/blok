@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "Select as many as you like",
   "tools.database.filterSelectPage": "Select a page",
   "tools.database.filterSelectDate": "Select a date",
+  "tools.database.filterClearSelection": "Clear selection",
   "tools.database.filterExactDate": "Exact date",
   "tools.database.filterDateCustom": "Custom date",
   "tools.database.filterChecked": "Checked",

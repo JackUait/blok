@@ -1386,6 +1386,7 @@
   "tools.database.filterSelectPeople": "בחר כמה שתרצה",
   "tools.database.filterSelectPage": "בחר דף",
   "tools.database.filterSelectDate": "בחירת תאריך",
+  "tools.database.filterClearSelection": "ניקוי הבחירה",
   "tools.database.filterExactDate": "תאריך מדויק",
   "tools.database.filterDateCustom": "תאריך מותאם אישית",
   "tools.database.filterChecked": "מסומן",

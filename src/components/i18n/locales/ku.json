@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "هەرچەندەت دەوێت هەڵبژێرە",
   "tools.database.filterSelectPage": "پەڕەیەک هەڵبژێرە",
   "tools.database.filterSelectDate": "بەروارێک هەڵبژێرە",
+  "tools.database.filterClearSelection": "هەڵبژاردن پاک بکەرەوە",
   "tools.database.filterExactDate": "بەرواری ورد",
   "tools.database.filterDateCustom": "بەرواری تایبەت",
   "tools.database.filterChecked": "هەڵبژێردراو",

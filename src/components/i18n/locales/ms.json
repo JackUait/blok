@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "Pilih seberapa banyak yang anda mahu",
   "tools.database.filterSelectPage": "Pilih halaman",
   "tools.database.filterSelectDate": "Pilih tarikh",
+  "tools.database.filterClearSelection": "Kosongkan pilihan",
   "tools.database.filterExactDate": "Tarikh tepat",
   "tools.database.filterDateCustom": "Tarikh tersuai",
   "tools.database.filterChecked": "Ditandai",

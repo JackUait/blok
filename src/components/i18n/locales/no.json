@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "Velg så mange du vil",
   "tools.database.filterSelectPage": "Velg en side",
   "tools.database.filterSelectDate": "Velg en dato",
+  "tools.database.filterClearSelection": "Fjern valg",
   "tools.database.filterExactDate": "Nøyaktig dato",
   "tools.database.filterDateCustom": "Egendefinert dato",
   "tools.database.filterChecked": "Avmerket",

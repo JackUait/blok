@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "İstediğiniz kadar seçin",
   "tools.database.filterSelectPage": "Sayfa seç",
   "tools.database.filterSelectDate": "Bir tarih seçin",
+  "tools.database.filterClearSelection": "Seçimi temizle",
   "tools.database.filterExactDate": "Kesin tarih",
   "tools.database.filterDateCustom": "Özel tarih",
   "tools.database.filterChecked": "İşaretli",

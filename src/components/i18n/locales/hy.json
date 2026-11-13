@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "Ընտրեք որքան ցանկանում եք",
   "tools.database.filterSelectPage": "Ընտրել էջ",
   "tools.database.filterSelectDate": "Ընտրեք ամսաթիվ",
+  "tools.database.filterClearSelection": "Մաքրել ընտրությունը",
   "tools.database.filterExactDate": "Ճշգրիտ ամսաթիվ",
   "tools.database.filterDateCustom": "Անհատական ամսաթիվ",
   "tools.database.filterChecked": "Նշված",

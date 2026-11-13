@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "விரும்பும் அளவுக்குத் தேர்ந்தெடுக்கவும்",
   "tools.database.filterSelectPage": "ஒரு பக்கத்தைத் தேர்ந்தெடு",
   "tools.database.filterSelectDate": "ஒரு தேதியைத் தேர்ந்தெடு",
+  "tools.database.filterClearSelection": "தேர்வை அழி",
   "tools.database.filterExactDate": "சரியான தேதி",
   "tools.database.filterDateCustom": "தனிப்பயன் தேதி",
   "tools.database.filterChecked": "தேர்ந்தெடுக்கப்பட்டது",

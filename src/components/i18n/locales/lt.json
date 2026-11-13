@@ -1392,6 +1392,7 @@
   "tools.database.filterSelectPeople": "Pasirinkite kiek norite",
   "tools.database.filterSelectPage": "Pasirinkti puslapį",
   "tools.database.filterSelectDate": "Pasirinkite datą",
+  "tools.database.filterClearSelection": "Išvalyti pasirinkimą",
   "tools.database.filterExactDate": "Tiksli data",
   "tools.database.filterDateCustom": "Pasirinktinė data",
   "tools.database.filterChecked": "Pažymėta",

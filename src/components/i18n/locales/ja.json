@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "複数選択できます",
   "tools.database.filterSelectPage": "ページを選択",
   "tools.database.filterSelectDate": "日付を選択",
+  "tools.database.filterClearSelection": "選択をクリア",
   "tools.database.filterExactDate": "特定の日付",
   "tools.database.filterDateCustom": "カスタム日付",
   "tools.database.filterChecked": "チェック済み",

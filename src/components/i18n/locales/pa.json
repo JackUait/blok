@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "ਜਿੰਨੇ ਚਾਹੋ ਚੁਣੋ",
   "tools.database.filterSelectPage": "ਪੰਨਾ ਚੁਣੋ",
   "tools.database.filterSelectDate": "ਕੋਈ ਮਿਤੀ ਚੁਣੋ",
+  "tools.database.filterClearSelection": "ਚੋਣ ਸਾਫ਼ ਕਰੋ",
   "tools.database.filterExactDate": "ਸਹੀ ਮਿਤੀ",
   "tools.database.filterDateCustom": "ਕਸਟਮ ਮਿਤੀ",
   "tools.database.filterChecked": "ਨਿਸ਼ਾਨਬੱਧ ਕੀਤਾ ਗਿਆ",

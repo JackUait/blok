@@ -1380,6 +1380,7 @@
   "tools.database.filterSelectPeople": "여러 명을 선택할 수 있습니다",
   "tools.database.filterSelectPage": "페이지 선택",
   "tools.database.filterSelectDate": "날짜 선택",
+  "tools.database.filterClearSelection": "선택 해제",
   "tools.database.filterExactDate": "정확한 날짜",
   "tools.database.filterDateCustom": "맞춤 날짜",
   "tools.database.filterChecked": "선택됨",

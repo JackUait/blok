@@ -1386,6 +1386,7 @@
   "tools.database.filterSelectPeople": "Odaberite koliko želite",
   "tools.database.filterSelectPage": "Odaberi stranicu",
   "tools.database.filterSelectDate": "Odaberite datum",
+  "tools.database.filterClearSelection": "Poništi odabir",
   "tools.database.filterExactDate": "Tačan datum",
   "tools.database.filterDateCustom": "Prilagođeni datum",
   "tools.database.filterChecked": "Označeno",

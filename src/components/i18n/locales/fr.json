@@ -1386,6 +1386,7 @@
   "tools.database.filterSelectPeople": "Sélectionnez-en autant que vous le souhaitez",
   "tools.database.filterSelectPage": "Sélectionner une page",
   "tools.database.filterSelectDate": "Sélectionnez une date",
+  "tools.database.filterClearSelection": "Effacer la sélection",
   "tools.database.filterExactDate": "Date exacte",
   "tools.database.filterDateCustom": "Date personnalisée",
   "tools.database.filterChecked": "Cochée",

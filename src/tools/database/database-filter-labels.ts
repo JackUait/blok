@@ -354,10 +354,10 @@ export const filterValueText = (
   return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
 };
 
-/** Types whose pill names the operator (notion-motion.md Round 18 §2, Round 19 §2). */
+/** Types whose pill names the operator (notion-motion.md Round 18 §2, Round 19 §2). A relation's chip is unread. */
 const PILL_OPERATOR_TYPES: ReadonlySet<PropertyType> = new Set([
   'title', 'text', 'url', 'email', 'phone', 'number', 'uniqueId', 'select', 'status', 'checkbox',
-  'multiSelect', 'person', 'createdBy', 'lastEditedBy', 'relation', 'date', 'createdTime', 'lastEditedTime',
+  'multiSelect', 'person', 'createdBy', 'lastEditedBy', 'date', 'createdTime', 'lastEditedTime',
 ]);
 
 /** Operators whose words wrap the value: "Not Red", "Before Nov 10" (Round 19 §2). */

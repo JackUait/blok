@@ -296,7 +296,8 @@
 .blok-embed-window[data-kind='image'] { --_badge-x: 40px; --_badge-y: 16px; }
 .blok-embed-window[data-kind='social'] { --_badge-x: 30px; --_badge-y: 16px; }
 .blok-embed-window[data-kind='form'] { --_badge-x: 28px; --_badge-y: 16px; }
-.blok-embed-window[data-kind='document'] { --_badge-x: 2px; --_badge-y: 20px; }
+/* The page's top corner is folded away, so the tile takes the bottom one. */
+.blok-embed-window[data-kind='document'] { --_badge-x: 2px; --_badge-y: 104px; }
 .blok-embed-window[data-kind='table'] { --_badge-y: 22px; }
 .blok-embed-window[data-kind='calendar'] { --_badge-x: 34px; --_badge-y: 24px; }
 

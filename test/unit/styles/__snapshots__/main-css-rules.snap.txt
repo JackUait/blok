@@ -26823,7 +26823,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 .blok-embed-window[data-kind='document'] {
   --_badge-x: 2px;
-  --_badge-y: 20px;
+  --_badge-y: 104px;
 }
 
 .blok-embed-window[data-kind='table'] {

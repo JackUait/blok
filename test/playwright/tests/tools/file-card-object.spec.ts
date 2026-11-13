@@ -163,6 +163,28 @@ test.describe('file card object', () => {
     await expect(page.getByRole('dialog')).toBeVisible();
   });
 
+  test('no link card (URL, copy, edit) shows when the pointer rests on a file', async ({ page }) => {
+    await page.route(`${REMOTE}/a.zip`, (route) => route.fulfill({ status: 404, body: '' }));
+    await createBlokWithFile(page, { url: `${REMOTE}/a.zip`, fileName: 'a.zip' });
+    const block = page.locator(FILE_BLOCK_SELECTOR);
+    const linkCard = page.getByTestId('link-hover-card');
+
+    // The card body and the download button are both links here.
+    for (const target of [block.locator('[data-role="file-card"]'), block.getByRole('link', { name: 'Download' })]) {
+      const box = await target.boundingBox();
+      await page.mouse.move((box?.x ?? 0) + 6, (box?.y ?? 0) + 6);
+      await page.mouse.move((box?.x ?? 0) + 9, (box?.y ?? 0) + 8);
+      const start = Date.now();
+
+      // The link card waits 350ms before it shows; give it more than twice that.
+      await expect.poll(async () => {
+        const shown = await linkCard.count();
+
+        return shown > 0 || Date.now() - start > 900 ? shown : -1;
+      }).toBe(0);
+    }
+  });
+
   test('cardPreview: false keeps the plain card and asks for nothing', async ({ page }) => {
     const seen = await serve(page, '/main.ts', 'const a = 1;\n', 'text/plain');
     await createBlokWithFile(page, { url: `${REMOTE}/main.ts`, fileName: 'main.ts' }, { cardPreview: false });

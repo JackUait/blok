@@ -45,6 +45,17 @@ describe('renderFileCard', () => {
     expect(download?.getAttribute('href')).toBe('https://cdn/doc.pdf');
   });
 
+  it('owns its links, so the editor\'s link hover card (URL, copy, edit) never shows on a file', () => {
+    const preview = renderFileCard({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf' }, () => undefined);
+    const download = renderFileCard({ url: 'https://cdn/a.bin', fileName: 'a.bin' });
+
+    for (const card of [preview, download]) {
+      const anchors = Array.from(card.querySelectorAll('a'));
+      expect(anchors.length).toBeGreaterThan(0);
+      expect(anchors.every((anchor) => anchor.closest('[data-blok-link-owner]') !== null)).toBe(true);
+    }
+  });
+
   it('has no nested anchors inside any anchor', () => {
     const card = renderFileCard({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf', size: 2048 });
     const anchors = card.querySelectorAll('a');

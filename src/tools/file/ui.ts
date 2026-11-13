@@ -89,6 +89,9 @@ export function renderFileCard(
   const wrapper = document.createElement('div');
   wrapper.className = 'blok-file-card-wrapper';
   wrapper.setAttribute('data-role', 'file-card-wrapper');
+  // A file is not a text link: Blok's link hover card (URL, copy, edit) stays off it,
+  // and the browser handles the download click itself.
+  wrapper.setAttribute(DATA_ATTR.linkOwner, '');
 
   const href = safeHttpHref(data.url);
   const downloadName = data.fileName ?? '';

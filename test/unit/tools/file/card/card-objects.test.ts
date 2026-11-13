@@ -84,6 +84,17 @@ describe('buildCardObject', () => {
     expect(md?.querySelector('a')?.textContent).toBe('link');
   });
 
+  it('leaves no gap where Markdown pictures were: the text after them follows the title', () => {
+    const { stage } = build({
+      kind: 'markdown',
+      html: '<p><a href="https://x"><img src="logo.png"></a></p><h1>Blok</h1><p> <a href="https://x"><img src="badge.svg"></a>\n<a href="https://y"><img src="badge2.svg"></a> </p><p>A block editor.</p><hr>',
+    });
+    const md = q(stage, 'file-object-markdown');
+
+    expect(Array.from(md?.children ?? []).map((node) => node.tagName)).toEqual(['H1', 'P', 'HR']);
+    expect(md?.textContent).toBe('BlokA block editor.');
+  });
+
   it('keeps no attribute on Markdown markup: no handler, link target or style', () => {
     const { stage } = build({
       kind: 'markdown',

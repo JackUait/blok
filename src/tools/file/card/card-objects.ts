@@ -157,6 +157,13 @@ function buildMarkdown(content: Extract<CardContent, { kind: 'markdown' }>): Omi
   const template = document.createElement('template');
   template.innerHTML = content.html;
   template.content.querySelectorAll(MD_DROPPED).forEach((node) => node.remove());
+  // A dropped picture can leave an empty link in an empty paragraph. Deepest first, so
+  // a parent that only held empty children goes too; a rule or a line break stays.
+  Array.from(template.content.querySelectorAll('*')).reverse().forEach((node) => {
+    if (!node.matches('hr, br, td, th') && node.children.length === 0 && (node.textContent ?? '').trim() === '') {
+      node.remove();
+    }
+  });
   // The miniature needs no attribute, so none survives: no handler, link target or inline style,
   // whatever the caller's sanitizer let through.
   template.content.querySelectorAll('*').forEach((node) => {

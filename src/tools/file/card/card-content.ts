@@ -38,6 +38,9 @@ export const HEAD_BYTES = 4096;
 export const MAX_WHOLE_BYTES = 20 * 1024 * 1024;
 const CODE_LINES = 14;
 const TEXT_LINES = 16;
+/** A Markdown file often opens with a logo and badges, which the card drops; it reads past them. */
+const MARKDOWN_BYTES = 16_384;
+const MARKDOWN_LINES = 200;
 /** Longest line kept; the sheet shows about forty characters. */
 const LINE_CHARS = 120;
 const FRAME_COUNT = 6;
@@ -169,7 +172,7 @@ export async function readWhole(source: CardSource): Promise<ArrayBuffer | null>
 }
 
 /** The first lines of a text file. A cut-off last line is dropped unless it is the only one. */
-export function headLines(head: Head, max: number): { lines: string[]; total: number | null } {
+export function headLines(head: Head, max: number, lineChars = LINE_CHARS): { lines: string[]; total: number | null } {
   const text = new TextDecoder().decode(head.bytes).replace(/^﻿/, '').replace(/\r\n?/g, '\n');
   const all = text.split('\n');
   if (head.complete && all[all.length - 1] === '') {
@@ -178,7 +181,7 @@ export function headLines(head: Head, max: number): { lines: string[]; total: nu
   const whole = head.complete || all.length === 1 ? all : all.slice(0, -1);
 
   return {
-    lines: whole.slice(0, max).map((line) => line.slice(0, LINE_CHARS)),
+    lines: whole.slice(0, max).map((line) => line.slice(0, lineChars)),
     total: head.complete ? all.length : null,
   };
 }
@@ -232,17 +235,19 @@ async function loadCode(source: CardSource): Promise<LoadedCard | null> {
 }
 
 async function loadText(source: CardSource): Promise<LoadedCard | null> {
-  const head = await readHead(source.data.url, HEAD_BYTES, source.signal);
+  const ext = extOf(nameOf(source));
+  const markdown = source.data.mimeType === 'text/markdown' || ext === 'md' || ext === 'markdown';
+  const head = await readHead(source.data.url, markdown ? MARKDOWN_BYTES : HEAD_BYTES, source.signal);
   if (head === null) {
     return null;
   }
-  const { lines, total } = headLines(head, TEXT_LINES);
+  // Markdown lines stay whole: a cut inside an HTML tag would swallow the text after it.
+  const { lines, total } = markdown ? headLines(head, MARKDOWN_LINES, Infinity) : headLines(head, TEXT_LINES);
   const text = lines.join('\n');
   if (text.trim() === '') {
     return null;
   }
-  const ext = extOf(nameOf(source));
-  if (source.data.mimeType !== 'text/markdown' && ext !== 'md' && ext !== 'markdown') {
+  if (!markdown) {
     return { content: { kind: 'text', text }, ...lineCount(total) };
   }
   const { markdownToHtml } = await import('../../../markdown/markdownToHtml');

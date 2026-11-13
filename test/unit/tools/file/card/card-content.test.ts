@@ -125,6 +125,14 @@ describe('card content', () => {
       expect(total).toBe(2);
     });
 
+    it('cuts a long line to what a sheet can show, unless told to keep it whole', () => {
+      const head = { bytes: encode(`${'x'.repeat(300)}\nnext`), complete: true };
+
+      expect(headLines(head, 10).lines[0]).toHaveLength(120);
+      // Markdown asks for whole lines: a cut inside an HTML tag would swallow the text after it.
+      expect(headLines(head, 10, Infinity).lines[0]).toHaveLength(300);
+    });
+
     it('keeps at most the lines asked for, and drops a byte order mark', () => {
       const { lines, total } = headLines({ bytes: encode('﻿a\nb\nc\nd'), complete: true }, 2);
 
@@ -255,6 +263,17 @@ describe('card content', () => {
 
       expect(loaded?.content.kind).toBe('markdown');
       expect(loaded?.content.kind === 'markdown' && loaded.content.html).toContain('README</h1>');
+    });
+
+    it('reads far enough into a Markdown file to get past a long block of badges', async () => {
+      const badges = Array.from({ length: 40 }, (_, i) => `<a href="https://x/${i}"><img alt="badge ${i}" src="https://img/${i}.svg?style=flat-square&label=package"></a>`).join('\n');
+      const md = `# Blok\n\n<p align="center">\n${badges}\n</p>\n\nA block editor for the web.\n`;
+      expect(md.length).toBeGreaterThan(4096);
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(streamed([encode(md)]).response));
+
+      const loaded = await loadCardContent('text', source({ url: 'https://cdn/README.md', fileName: 'README.md' }));
+
+      expect(loaded?.content.kind === 'markdown' && loaded.content.html).toContain('A block editor for the web.');
     });
 
     it('reads the real cells of a CSV, with numbers marked', async () => {

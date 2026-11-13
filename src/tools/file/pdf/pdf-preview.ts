@@ -1,7 +1,8 @@
 import type { FilePreviewOptions } from '../preview-modal';
 import type { PreviewChrome } from '../preview-chrome';
 import { buildErrorInto, buildExternalNoticeInto } from '../preview-error';
-import { loadPdfJs, type PdfJs } from './pdf-loader';
+import { canCompileWasm, loadPdfJs, type PdfJs } from './pdf-loader';
+import { PdfAssetFactory } from './pdf-assets';
 import { askPdfPassword } from './pdf-password';
 import type { PdfDocumentLike, PdfPageLike, PdfViewport } from './pdf-types';
 import { mountPdfView, type PdfViewLib } from './pdf-view';
@@ -46,13 +47,24 @@ const isUnreadable = (error: unknown): boolean =>
 
 /** pdf.js needs a trailing slash on each folder url. */
 export function assetParams(base: string | undefined): Record<string, unknown> {
+  // Without 'wasm-unsafe-eval' the worker carries JS decoders (pdf-runtime.ts).
+  const useWasm = canCompileWasm();
   if (base === undefined || base === '') {
-    return { useWasm: false };
+    return { BinaryDataFactory: PdfAssetFactory, useWasm };
   }
-  const root = base.endsWith('/') ? base : `${base}/`;
+  // Full urls: pdf.js fetches them from its blob worker, where a relative url
+  // does not resolve. With all four set, the worker fetches by itself, the
+  // only way pdf.js reads ICC colour data.
+  const root = new URL(base.endsWith('/') ? base : `${base}/`, document.baseURI).href;
 
-  // wasm decoders need 'wasm-unsafe-eval', so they run only when the host serves them.
-  return { cMapUrl: `${root}cmaps/`, cMapPacked: true, wasmUrl: `${root}wasm/`, iccUrl: `${root}iccs/`, useWasm: true };
+  return {
+    cMapUrl: `${root}cmaps/`,
+    cMapPacked: true,
+    wasmUrl: `${root}wasm/`,
+    iccUrl: `${root}iccs/`,
+    standardFontDataUrl: `${root}standard_fonts/`,
+    useWasm,
+  };
 }
 
 const loadingText = (chrome: PreviewChrome, percent: number | null): string =>

@@ -4,11 +4,13 @@ import type { PdfPageLike } from '../../../../../src/tools/file/pdf/pdf-types';
 const loader = vi.hoisted(() => ({
   loadPdfJs: vi.fn(),
   supportsPdfJs: vi.fn(() => true),
+  canCompileWasm: vi.fn(() => true),
 }));
 
 vi.mock('../../../../../src/tools/file/pdf/pdf-loader', () => loader);
 
 import { openFilePreview } from '../../../../../src/tools/file/preview-modal';
+import { PdfAssetFactory } from '../../../../../src/tools/file/pdf/pdf-assets';
 
 const RAW = 'blob:https://example.com/raw';
 const WRAPPED = 'blob:https://example.com/wrapped';
@@ -129,6 +131,7 @@ describe('blob PDFs open with pdf.js', () => {
     task = fakeTask();
     getDocument = vi.fn(() => task);
     loader.supportsPdfJs.mockReturnValue(true);
+    loader.canCompileWasm.mockReturnValue(true);
     loader.loadPdfJs.mockResolvedValue({ getDocument, TextLayer: undefined });
     vi.stubGlobal('IntersectionObserver', QuietObserver);
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob(['%PDF-1.7'], { type: 'text/html' }) }));
@@ -159,7 +162,7 @@ describe('blob PDFs open with pdf.js', () => {
     expect(document.body.querySelector('[data-role="file-preview-loading"]')).toBeNull();
   });
 
-  it('hands pdf.js the bytes with system fonts, no wasm and a canvas cap', async () => {
+  it('hands pdf.js the bytes with system fonts, the bundled assets and a canvas cap', async () => {
     openFilePreview({ url: RAW, fileName: 'a.pdf', labels: LABELS });
     await flush();
 
@@ -167,8 +170,18 @@ describe('blob PDFs open with pdf.js', () => {
     expect(params.data).toBeInstanceOf(Uint8Array);
     expect(new TextDecoder().decode(params.data as Uint8Array)).toBe('%PDF-1.7');
     expect(params.useSystemFonts).toBe(true);
-    expect(params.useWasm).toBe(false);
+    expect(params.BinaryDataFactory).toBe(PdfAssetFactory);
+    expect(params.useWasm).toBe(true);
     expect(params.canvasMaxAreaInBytes).toBe(16_777_216 * 4);
+  });
+
+  it('keeps pdf.js off wasm where the CSP blocks it', async () => {
+    loader.canCompileWasm.mockReturnValue(false);
+    openFilePreview({ url: RAW, fileName: 'a.pdf', labels: LABELS });
+    await flush();
+
+    const params = getDocument.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(params.useWasm).toBe(false);
   });
 
   it('keeps the Download and Open in new tab links on the re-typed bytes', async () => {
@@ -627,7 +640,7 @@ describe('http(s) PDFs open with pdf.js when Blok can get the bytes', () => {
     openFilePreview({ url: HTTP, fileName: 'a.pdf', labels: REMOTE_LABELS });
     await flush();
 
-    expect(params(0)).toMatchObject({ url: HTTP, withCredentials: false, useWasm: false });
+    expect(params(0)).toMatchObject({ url: HTTP, withCredentials: false });
     tasks[0].resolve(fakeDoc());
     await flush();
 
@@ -753,17 +766,34 @@ describe('http(s) PDFs open with pdf.js when Blok can get the bytes', () => {
       cMapPacked: true,
       wasmUrl: 'https://cdn.example.com/pdfjs/wasm/',
       iccUrl: 'https://cdn.example.com/pdfjs/iccs/',
+      standardFontDataUrl: 'https://cdn.example.com/pdfjs/standard_fonts/',
       useWasm: true,
+    });
+    // pdf.js reads ICC data only when its worker fetches by url itself.
+    expect(params(0)).not.toHaveProperty('BinaryDataFactory');
+  });
+
+  it('turns a relative assets url into a full one, which the blob worker can fetch', async () => {
+    openFilePreview({ url: HTTP, fileName: 'a.pdf', labels: REMOTE_LABELS, pdfAssetsUrl: '/static/pdfjs/' });
+    await flush();
+
+    expect(params(0)).toMatchObject({
+      cMapUrl: new URL('/static/pdfjs/cmaps/', document.baseURI).href,
+      wasmUrl: new URL('/static/pdfjs/wasm/', document.baseURI).href,
+      iccUrl: new URL('/static/pdfjs/iccs/', document.baseURI).href,
+      standardFontDataUrl: new URL('/static/pdfjs/standard_fonts/', document.baseURI).href,
     });
   });
 
-  it('asks for no assets without an assets url', async () => {
+  it('reads assets from Blok, not from a url, without an assets url', async () => {
     openFilePreview({ url: HTTP, fileName: 'a.pdf', labels: REMOTE_LABELS });
     await flush();
 
+    expect(params(0)).toMatchObject({ BinaryDataFactory: PdfAssetFactory });
     expect(params(0)).not.toHaveProperty('cMapUrl');
     expect(params(0)).not.toHaveProperty('wasmUrl');
     expect(params(0)).not.toHaveProperty('iccUrl');
+    expect(params(0)).not.toHaveProperty('standardFontDataUrl');
   });
 
   it('keeps the link without pdf.js', async () => {

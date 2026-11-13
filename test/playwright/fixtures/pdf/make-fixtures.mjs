@@ -144,6 +144,25 @@ function passwordPdf() {
   return buildPdf(objects, standardSecurity('blok', 'blok-owner'));
 }
 
+/**
+ * Japanese in a font the file does not carry, as many Japanese writers make
+ * it: pdf.js needs the 90ms-RKSJ-H cmap to read the bytes. The text is
+ * 日本語テスト in Shift-JIS.
+ */
+function cjkPdf() {
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>',
+    stream('', 'BT /F1 72 Tf 72 600 Td <93fa967b8cea836583588367> Tj ET'),
+    '<< /Type /Font /Subtype /Type0 /BaseFont /HeiseiMin-W3 /Encoding /90ms-RKSJ-H /DescendantFonts [6 0 R] >>',
+    '<< /Type /Font /Subtype /CIDFontType0 /BaseFont /HeiseiMin-W3 /CIDSystemInfo << /Registry (Adobe) /Ordering (Japan1) /Supplement 2 >> /FontDescriptor 7 0 R /DW 1000 >>',
+    '<< /Type /FontDescriptor /FontName /HeiseiMin-W3 /Flags 6 /FontBBox [-123 -257 1001 910] /ItalicAngle 0 /Ascent 723 /Descent -241 /CapHeight 709 /StemV 69 >>',
+  ];
+
+  return buildPdf(objects);
+}
+
 /** A PDF header over bytes that are no PDF at all. */
 const corruptPdf = () => Buffer.from('%PDF-1.7\nthis file was cut off before any object\n', 'latin1');
 
@@ -177,4 +196,5 @@ if (process.argv[1]?.endsWith('make-fixtures.mjs')) {
   writeFileSync(join(OUT, 'three-pages.pdf'), textPdf());
   writeFileSync(join(OUT, 'password-blok.pdf'), passwordPdf());
   writeFileSync(join(OUT, 'corrupt.pdf'), corruptPdf());
+  writeFileSync(join(OUT, 'japanese-no-font.pdf'), cjkPdf());
 }

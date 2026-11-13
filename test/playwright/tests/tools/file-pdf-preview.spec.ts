@@ -97,6 +97,22 @@ test.describe('PDF preview', () => {
     expect(await page.evaluate(() => window.getSelection()?.toString().trim())).toBe('Blok PDF page 1');
   });
 
+  test('draws Japanese text in a font the file does not carry', async ({ page }) => {
+    const dialog = await openPdf(page, 'japanese-no-font.pdf');
+    const first = dialog.getByRole('region', { name: 'Page 1', exact: true });
+
+    // The page holds nothing but that text: no cmap, no ink.
+    await expect.poll(() => inkedPixels(first)).toBeGreaterThan(500);
+  });
+
+  test('draws a black-and-white scan', async ({ page }) => {
+    // scan-ccitt.pdf: a 1-bit image in CCITT G4, as scanners write it (made with tiff2pdf).
+    const dialog = await openPdf(page, 'scan-ccitt.pdf');
+    const first = dialog.getByRole('region', { name: 'Page 1', exact: true });
+
+    await expect.poll(() => inkedPixels(first)).toBeGreaterThan(500);
+  });
+
   test('the next page button moves the counter', async ({ page }) => {
     const dialog = await openPdf(page, 'three-pages.pdf');
     const counter = dialog.locator('[data-role="file-preview-page"]');

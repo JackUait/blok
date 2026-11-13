@@ -112,9 +112,10 @@ export interface FileConfig {
    */
   fetchPreview?: (url: string, init: { signal: AbortSignal }) => Promise<Blob | ArrayBuffer | Response>;
   /**
-   * Base url that holds pdf.js's `cmaps/`, `wasm/` and `iccs/` folders. Without
-   * it, PDFs with CJK text and no embedded font, JPEG 2000 or JBIG2 images
-   * show with gaps. Blok ships none of these files.
+   * Base url of a folder holding pdf.js's `cmaps/`, `wasm/`, `iccs/` and
+   * `standard_fonts/` folders. Blok ships the cmaps, image decoders and fonts
+   * itself; set this to get CMYK and ICC colours exact, which pdf.js reads
+   * only by url. A relative url works.
    */
   pdfAssetsUrl?: string;
   /**

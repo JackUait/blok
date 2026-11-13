@@ -94,4 +94,22 @@ describe('pdf.js loader', () => {
 
     expect(supportsPdfJs()).toBe(false);
   });
+
+  it('says wasm can run where the page allows it', async () => {
+    const { canCompileWasm } = await loader();
+
+    expect(canCompileWasm()).toBe(true);
+  });
+
+  it('says wasm cannot run where the CSP blocks it, and tries only once', async () => {
+    const Module = vi.fn(function blocked() {
+      throw new WebAssembly.CompileError('blocked by CSP');
+    });
+    vi.stubGlobal('WebAssembly', { ...WebAssembly, Module });
+    const { canCompileWasm } = await loader();
+
+    expect(canCompileWasm()).toBe(false);
+    expect(canCompileWasm()).toBe(false);
+    expect(Module).toHaveBeenCalledTimes(1);
+  });
 });

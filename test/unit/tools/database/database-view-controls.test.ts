@@ -640,8 +640,10 @@ describe('DatabaseViewControls', () => {
       const chip = q('database-filter-pill-f1');
 
       expect(chip?.querySelector('[data-blok-database-chip-glyph] svg')).not.toBeNull();
-      expect(chip?.querySelector('[data-blok-database-chip-name]')?.textContent).toBe('Select:');
+      // notion-motion.md Round 19 §2 (r19-sel-red-bar.raw): only the name is 500, so the colon sits outside its span.
+      expect(chip?.querySelector('[data-blok-database-chip-name]')?.textContent).toBe('Select');
       expect(chip?.querySelector('[data-blok-database-chip-value]')?.textContent).toBe('Red');
+      expect(chip?.querySelector('[data-blok-database-chip-text]')?.textContent).toBe('Select: Red');
       expect(chip?.querySelector('[data-blok-database-chip-chevron] svg')).not.toBeNull();
       expect(text(chip)).toBe('Select: Red');
       expect(chip?.getAttribute('aria-label')).toBe('Select: Red');

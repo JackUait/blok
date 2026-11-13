@@ -1111,7 +1111,7 @@ describe('view settings panel', () => {
 
       expect(chip?.hasAttribute('data-blok-database-filter-pill')).toBe(true);
       expect(chip?.hasAttribute('data-active')).toBe(true);
-      expect(chip?.querySelector('[data-blok-database-chip-name]')?.textContent).toBe('Name:');
+      expect(chip?.querySelector('[data-blok-database-chip-name]')?.textContent).toBe('Name');
       expect(exists('database-filters-list-handle-f1')).toBe(true);
     });
 

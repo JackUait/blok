@@ -69,9 +69,9 @@ describe('database filter labels', () => {
     expect(filterPillLabel({ operator: 'contains', value: 'a' }, prop('title', { name: 'Name' }), en)).toBe('Name: Contains a');
     expect(filterPillLabel({ operator: 'equals', value: 5 }, prop('number', { name: 'Number' }), en)).toBe('Number = 5');
     expect(filterPillLabel({ operator: 'greater_than', value: 5 }, prop('number', { name: 'Number' }), en)).toBe('Number > 5');
-    expect(filterPillParts({ operator: 'contains', value: 'a' }, prop('title', { name: 'Name' }), en)).toEqual({ name: 'Name:', value: 'Contains a' });
-    expect(filterPillParts({ operator: 'equals', value: 5 }, prop('number', { name: 'Number' }), en)).toEqual({ name: 'Number', value: '= 5' });
-    expect(filterPillParts({ operator: 'contains', value: '' }, prop('title', { name: 'Name' }), en)).toEqual({ name: 'Name', value: '' });
+    expect(filterPillParts({ operator: 'contains', value: 'a' }, prop('title', { name: 'Name' }), en)).toEqual({ name: 'Name', colon: true, value: 'Contains a' });
+    expect(filterPillParts({ operator: 'equals', value: 5 }, prop('number', { name: 'Number' }), en)).toEqual({ name: 'Number', colon: false, value: '= 5' });
+    expect(filterPillParts({ operator: 'contains', value: '' }, prop('title', { name: 'Name' }), en)).toEqual({ name: 'Name', colon: false, value: '' });
   });
 
   it('names a pill by its property alone until it has a value', () => {

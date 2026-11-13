@@ -1147,8 +1147,8 @@ export class DatabaseViewControls {
       const personName = (id: string): string | undefined => this.host.people?.().find((person) => person.id === id)?.name;
       const rowTitle = (id: string): string | undefined => this.host.relatedRows?.(property).find((row) => row.id === id)?.title;
       const label = filterPillLabel(filter, property, t, personName, rowTitle, locale);
-      const { name, value } = filterPillParts(filter, property, t, personName, rowTitle, locale);
-      const pill = filterChip(`database-filter-pill-${filter.id}`, label, { glyph: propertyTypeMeta(property.type).icon, name, value });
+      const { name, colon, value } = filterPillParts(filter, property, t, personName, rowTitle, locale);
+      const pill = filterChip(`database-filter-pill-${filter.id}`, label, { glyph: propertyTypeMeta(property.type).icon, name, colon, value });
 
       pill.setAttribute('data-filter-id', filter.id);
       pill.toggleAttribute('data-active', value !== '');

@@ -386,8 +386,9 @@ const pillOperator = (type: PropertyType, operator: string): { template: string 
 };
 
 /**
- * A pill's two parts: "Name:" + "Contains a", "Number" + "= 5", "Select:" +
- * "Not Red", or "Due" + "" before it has a value (Round 18 §2, Round 19 §2).
+ * A pill's parts: "Name" + ":" + "Contains a", "Number" + "= 5" (no colon),
+ * "Select" + ":" + "Not Red", or "Due" alone before it has a value (Round 18 §2, Round 19 §2).
+ * The colon is its own part: only the name is weight 500.
  */
 export const filterPillParts = (
   filter: Pick<FilterConfig, 'operator' | 'value'>,
@@ -396,18 +397,19 @@ export const filterPillParts = (
   personName?: (id: string) => string | undefined,
   rowTitle?: (id: string) => string | undefined,
   locale?: string
-): { name: string; value: string } => {
+): { name: string; colon: boolean; value: string } => {
+  const name = property.name;
   const value = filterValueText(filter, property, t, personName, rowTitle, locale);
 
-  if (value === '') return { name: property.name, value };
+  if (value === '') return { name, colon: false, value };
   const { lead, operator } = splitOperator(filter.operator);
   // A rollup's quantifier is no operator word (Round 13 reads "Names: des"); an End date side keeps its operator.
   const shown = (lead === undefined || lead === 'end') && !isRollupList(property) ? pillOperator(property.type, operator) : undefined;
 
-  if (shown === undefined) return { name: `${property.name}:`, value };
-  if ('template' in shown) return { name: `${property.name}:`, value: t(shown.template, { value }) };
+  if (shown === undefined) return { name, colon: true, value };
+  if ('template' in shown) return { name, colon: true, value: t(shown.template, { value }) };
 
-  return { name: shown.colon ? `${property.name}:` : property.name, value: `${t(shown.word)} ${value}` };
+  return { name, colon: shown.colon, value: `${t(shown.word)} ${value}` };
 };
 
 /** The whole pill as one line, for its label. */
@@ -419,9 +421,9 @@ export const filterPillLabel = (
   rowTitle?: (id: string) => string | undefined,
   locale?: string
 ): string => {
-  const { name, value } = filterPillParts(filter, property, t, personName, rowTitle, locale);
+  const { name, colon, value } = filterPillParts(filter, property, t, personName, rowTitle, locale);
 
-  return value === '' ? name : `${name} ${value}`;
+  return value === '' ? name : `${name}${colon ? ':' : ''} ${value}`;
 };
 
 /** Per-type sort labels from the header menu (research/08). */

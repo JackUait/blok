@@ -888,6 +888,23 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // notion-motion.md Round 19 §2 (r19-ms-two read, r19-*-bar.raw): one text span, 180px at most with an ellipsis;
+  // only the property name is 500, and a chip with no value is 400 throughout.
+  describe('filter chip text', () => {
+    it('cuts the text at 180px with an ellipsis', () => {
+      expect(declared('[data-blok-database-chip-text]', 'max-width')).toEqual(['180px']);
+      expect(declared('[data-blok-database-chip-text]', 'overflow')).toEqual(['hidden']);
+      expect(declared('[data-blok-database-chip-text]', 'text-overflow')).toEqual(['ellipsis']);
+      expect(declared('[data-blok-database-chip-text]', 'white-space')).toEqual(['nowrap']);
+    });
+
+    it('sets only the name in 500, and a chip with no value in 400', () => {
+      expect(declared('[data-blok-database-chip-name]', 'font-weight')).toEqual(['500']);
+      expect(declared('[data-blok-database-filter-pill]:not([data-active]) [data-blok-database-chip-name]', 'font-weight')).toEqual(['400']);
+      expect(declared('[data-blok-database-filter-pill]', 'font-weight')).toEqual(['400']);
+    });
+  });
+
   // notion-motion.md Round 9 (r9-vs-group.raw, table grouped by Select): Group by at y+46, Sort at y+75, Hide empty groups at y+104.
   describe('view settings Group page', () => {
     const PAGE = '[data-blok-database-panel-page="group"]';

@@ -104,17 +104,25 @@ export const chipPart = (attribute: string, content: { icon?: string; text?: str
   return el;
 };
 
-/** Notion's chip: a glyph, the name in 500, the value in 400, then a down chevron. The bar and the settings Filters page share it. */
-export const filterChip = (testId: string, label: string, parts: { glyph: string; name: string; value?: string }): HTMLButtonElement => {
+/**
+ * Notion's chip: a glyph, the text, then a down chevron. The text is one span
+ * (cut at 180px): the name in 500, then the colon and value in 400 (Round 19 §2).
+ * The bar and the settings Filters page share it.
+ */
+export const filterChip = (testId: string, label: string, parts: { glyph: string; name: string; colon?: boolean; value?: string }): HTMLButtonElement => {
   const el = document.createElement('button');
+  const text = chipPart('data-blok-database-chip-text', {});
 
   el.type = 'button';
   el.setAttribute('data-blok-testid', testId);
   el.setAttribute('aria-label', label);
   el.setAttribute('data-blok-database-filter-pill', '');
   el.append(chipPart('data-blok-database-chip-glyph', { icon: parts.glyph }));
-  el.append(chipPart('data-blok-database-chip-name', { text: parts.name }));
-  if (parts.value !== undefined && parts.value !== '') el.append(' ', chipPart('data-blok-database-chip-value', { text: parts.value }));
+  text.append(chipPart('data-blok-database-chip-name', { text: parts.name }));
+  if (parts.value !== undefined && parts.value !== '') {
+    text.append(`${parts.colon === true ? ':' : ''} `, chipPart('data-blok-database-chip-value', { text: parts.value }));
+  }
+  el.append(text);
   el.append(chipPart('data-blok-database-chip-chevron', { icon: IconChevronDown }));
 
   return el;

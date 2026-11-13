@@ -13905,8 +13905,19 @@ button[data-blok-database-table-group-count]:hover {
   transform: rotate(180deg);
 }
 
+[data-blok-database-chip-text] {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 [data-blok-database-chip-name] {
   font-weight: 500;
+}
+
+[data-blok-database-filter-pill]:not([data-active]) [data-blok-database-chip-name] {
+  font-weight: 400;
 }
 
 [data-blok-database-chip-divider] {

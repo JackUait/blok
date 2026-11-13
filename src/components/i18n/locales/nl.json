@@ -1496,7 +1496,7 @@
   "tools.database.colorApplyRow": "Hele rij",
   "tools.database.colorApplyProperty": "Deze eigenschap",
   "tools.database.colorValuePlaceholder": "Selecteer…",
-  "tools.database.colorDelete": "Kleurinstelling verwijderen",
+  "tools.database.colorDelete": "Regel voor voorwaardelijke kleur verwijderen",
   "tools.database.colorDefault": "Standaard",
   "tools.database.colorGray": "Grijs",
   "tools.database.colorBrown": "Bruin",

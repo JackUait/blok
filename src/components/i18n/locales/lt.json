@@ -1508,7 +1508,7 @@
   "tools.database.colorApplyRow": "Visai eilutei",
   "tools.database.colorApplyProperty": "Šiai savybei",
   "tools.database.colorValuePlaceholder": "Pasirinkite…",
-  "tools.database.colorDelete": "Ištrinti spalvos nustatymą",
+  "tools.database.colorDelete": "Ištrinti sąlyginės spalvos taisyklę",
   "tools.database.colorDefault": "Numatytoji",
   "tools.database.colorGray": "Pilka",
   "tools.database.colorBrown": "Ruda",

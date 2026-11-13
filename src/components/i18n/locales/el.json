@@ -1496,7 +1496,7 @@
   "tools.database.colorApplyRow": "Ολόκληρη τη γραμμή",
   "tools.database.colorApplyProperty": "Αυτή η ιδιότητα",
   "tools.database.colorValuePlaceholder": "Επιλέξτε…",
-  "tools.database.colorDelete": "Διαγραφή ρύθμισης χρώματος",
+  "tools.database.colorDelete": "Διαγραφή κανόνα χρώματος υπό όρους",
   "tools.database.colorDefault": "Προεπιλογή",
   "tools.database.colorGray": "Γκρι",
   "tools.database.colorBrown": "Καφέ",

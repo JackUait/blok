@@ -1508,7 +1508,7 @@
   "tools.database.colorApplyRow": "Усього рядка",
   "tools.database.colorApplyProperty": "Цій властивості",
   "tools.database.colorValuePlaceholder": "Виберіть…",
-  "tools.database.colorDelete": "Видалити налаштування кольору",
+  "tools.database.colorDelete": "Видалити правило умовного кольору",
   "tools.database.colorDefault": "за замовчуванням",
   "tools.database.colorGray": "Сірий",
   "tools.database.colorBrown": "Коричневий",

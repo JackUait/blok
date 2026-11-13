@@ -1496,7 +1496,7 @@
   "tools.database.colorApplyRow": "Kogu reale",
   "tools.database.colorApplyProperty": "Sellele omadusele",
   "tools.database.colorValuePlaceholder": "Vali…",
-  "tools.database.colorDelete": "Kustuta värviseade",
+  "tools.database.colorDelete": "Kustuta tingimusliku värvi reegel",
   "tools.database.colorDefault": "vaikimisi",
   "tools.database.colorGray": "Hall",
   "tools.database.colorBrown": "Pruun",

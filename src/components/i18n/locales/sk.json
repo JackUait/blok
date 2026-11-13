@@ -1508,7 +1508,7 @@
   "tools.database.colorApplyRow": "Celý riadok",
   "tools.database.colorApplyProperty": "Táto vlastnosť",
   "tools.database.colorValuePlaceholder": "Vyberte…",
-  "tools.database.colorDelete": "Odstrániť nastavenie farby",
+  "tools.database.colorDelete": "Odstrániť pravidlo podmienenej farby",
   "tools.database.colorDefault": "Predvolené",
   "tools.database.colorGray": "Sivá",
   "tools.database.colorBrown": "Hnedá",

@@ -1496,7 +1496,7 @@
   "tools.database.colorApplyRow": "Seluruh baris",
   "tools.database.colorApplyProperty": "Properti ini",
   "tools.database.colorValuePlaceholder": "Pilih…",
-  "tools.database.colorDelete": "Hapus pengaturan warna",
+  "tools.database.colorDelete": "Hapus aturan warna bersyarat",
   "tools.database.colorDefault": "Bawaan",
   "tools.database.colorGray": "Abu-abu",
   "tools.database.colorBrown": "Cokelat",

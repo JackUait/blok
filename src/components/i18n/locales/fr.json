@@ -1502,7 +1502,7 @@
   "tools.database.colorApplyRow": "Ligne entière",
   "tools.database.colorApplyProperty": "Cette propriété",
   "tools.database.colorValuePlaceholder": "Sélectionnez…",
-  "tools.database.colorDelete": "Supprimer le paramètre de couleur",
+  "tools.database.colorDelete": "Supprimer la règle de couleur conditionnelle",
   "tools.database.colorDefault": "Par défaut",
   "tools.database.colorGray": "Gris",
   "tools.database.colorBrown": "Marron",

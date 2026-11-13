@@ -1496,7 +1496,7 @@
   "tools.database.colorApplyRow": "Hela raden",
   "tools.database.colorApplyProperty": "Denna egenskap",
   "tools.database.colorValuePlaceholder": "Välj…",
-  "tools.database.colorDelete": "Ta bort färginställning",
+  "tools.database.colorDelete": "Ta bort regel för villkorsstyrd färg",
   "tools.database.colorDefault": "Standard",
   "tools.database.colorGray": "Grå",
   "tools.database.colorBrown": "Brun",

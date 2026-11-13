@@ -1496,7 +1496,7 @@
   "tools.database.colorApplyRow": "Entire row",
   "tools.database.colorApplyProperty": "This property",
   "tools.database.colorValuePlaceholder": "Select...",
-  "tools.database.colorDelete": "Delete color setting",
+  "tools.database.colorDelete": "Delete conditional color rule",
   "tools.database.colorDefault": "Default",
   "tools.database.colorGray": "Gray",
   "tools.database.colorBrown": "Brown",

@@ -1502,7 +1502,7 @@
   "tools.database.colorApplyRow": "Цео ред",
   "tools.database.colorApplyProperty": "Ово својство",
   "tools.database.colorValuePlaceholder": "Изаберите…",
-  "tools.database.colorDelete": "Обриши подешавање боје",
+  "tools.database.colorDelete": "Обриши правило условне боје",
   "tools.database.colorDefault": "Подразумевано",
   "tools.database.colorGray": "Сива",
   "tools.database.colorBrown": "Смеђа",

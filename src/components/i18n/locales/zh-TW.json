@@ -1496,7 +1496,7 @@
   "tools.database.colorApplyRow": "整列",
   "tools.database.colorApplyProperty": "此屬性",
   "tools.database.colorValuePlaceholder": "選取…",
-  "tools.database.colorDelete": "刪除色彩設定",
+  "tools.database.colorDelete": "刪除條件式色彩規則",
   "tools.database.colorDefault": "預設",
   "tools.database.colorGray": "灰色",
   "tools.database.colorBrown": "棕色",

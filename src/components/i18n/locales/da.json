@@ -1496,7 +1496,7 @@
   "tools.database.colorApplyRow": "Hele rækken",
   "tools.database.colorApplyProperty": "Denne egenskab",
   "tools.database.colorValuePlaceholder": "Vælg…",
-  "tools.database.colorDelete": "Slet farveindstilling",
+  "tools.database.colorDelete": "Slet regel for betinget farve",
   "tools.database.colorDefault": "Standard",
   "tools.database.colorGray": "Grå",
   "tools.database.colorBrown": "Brun",

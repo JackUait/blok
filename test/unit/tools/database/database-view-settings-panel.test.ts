@@ -1973,6 +1973,13 @@ describe('view settings panel', () => {
     expect(q('database-color-apply-c1')?.textContent?.trim()).toBe('tools.database.colorApplyProperty');
   });
 
+  // notion-motion.md Round 20 §4 (r20-cc-is.raw): the card's trash is "Delete conditional color rule".
+  it('names the rule trash "Delete conditional color rule", as Notion does', async () => {
+    const { default: en } = await import('../../../../src/components/i18n/locales/en.json');
+
+    expect(en['tools.database.colorDelete']).toBe('Delete conditional color rule');
+  });
+
   it('names the cell choice "This property", as Notion does', async () => {
     const { default: en } = await import('../../../../src/components/i18n/locales/en.json');
 

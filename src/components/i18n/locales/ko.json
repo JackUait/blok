@@ -1496,7 +1496,7 @@
   "tools.database.colorApplyRow": "행 전체",
   "tools.database.colorApplyProperty": "이 속성",
   "tools.database.colorValuePlaceholder": "선택…",
-  "tools.database.colorDelete": "색상 설정 삭제",
+  "tools.database.colorDelete": "조건부 색상 규칙 삭제",
   "tools.database.colorDefault": "기본값",
   "tools.database.colorGray": "회색",
   "tools.database.colorBrown": "갈색",

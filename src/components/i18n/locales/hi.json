@@ -1496,7 +1496,7 @@
   "tools.database.colorApplyRow": "पूरी पंक्ति",
   "tools.database.colorApplyProperty": "यह प्रॉपर्टी",
   "tools.database.colorValuePlaceholder": "चुनें…",
-  "tools.database.colorDelete": "रंग सेटिंग हटाएं",
+  "tools.database.colorDelete": "सशर्त रंग नियम हटाएं",
   "tools.database.colorDefault": "डिफ़ॉल्ट",
   "tools.database.colorGray": "ग्रे",
   "tools.database.colorBrown": "भूरा",

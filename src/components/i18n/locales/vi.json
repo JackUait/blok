@@ -1496,7 +1496,7 @@
   "tools.database.colorApplyRow": "Toàn bộ hàng",
   "tools.database.colorApplyProperty": "Thuộc tính này",
   "tools.database.colorValuePlaceholder": "Chọn…",
-  "tools.database.colorDelete": "Xóa cài đặt màu",
+  "tools.database.colorDelete": "Xóa quy tắc màu theo điều kiện",
   "tools.database.colorDefault": "Mặc định",
   "tools.database.colorGray": "Xám",
   "tools.database.colorBrown": "Nâu",

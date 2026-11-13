@@ -1496,7 +1496,7 @@
   "tools.database.colorApplyRow": "Tüm satır",
   "tools.database.colorApplyProperty": "Bu özellik",
   "tools.database.colorValuePlaceholder": "Seçin…",
-  "tools.database.colorDelete": "Renk ayarını sil",
+  "tools.database.colorDelete": "Koşullu renk kuralını sil",
   "tools.database.colorDefault": "Varsayılan",
   "tools.database.colorGray": "Gri",
   "tools.database.colorBrown": "Kahverengi",

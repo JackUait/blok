@@ -1508,7 +1508,7 @@
   "tools.database.colorApplyRow": "Cały wiersz",
   "tools.database.colorApplyProperty": "Ta właściwość",
   "tools.database.colorValuePlaceholder": "Wybierz…",
-  "tools.database.colorDelete": "Usuń ustawienie koloru",
+  "tools.database.colorDelete": "Usuń regułę koloru warunkowego",
   "tools.database.colorDefault": "Domyślnie",
   "tools.database.colorGray": "Szary",
   "tools.database.colorBrown": "Brązowy",

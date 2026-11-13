@@ -1496,7 +1496,7 @@
   "tools.database.colorApplyRow": "পুরো সারি",
   "tools.database.colorApplyProperty": "এই বৈশিষ্ট্য",
   "tools.database.colorValuePlaceholder": "নির্বাচন করুন…",
-  "tools.database.colorDelete": "রঙের সেটিং মুছুন",
+  "tools.database.colorDelete": "শর্তসাপেক্ষ রঙের নিয়ম মুছুন",
   "tools.database.colorDefault": "ডিফল্ট",
   "tools.database.colorGray": "ধূসর",
   "tools.database.colorBrown": "বাদামী",

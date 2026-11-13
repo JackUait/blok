@@ -1502,7 +1502,7 @@
   "tools.database.colorApplyRow": "Intera riga",
   "tools.database.colorApplyProperty": "Questa proprietà",
   "tools.database.colorValuePlaceholder": "Seleziona…",
-  "tools.database.colorDelete": "Elimina impostazione colore",
+  "tools.database.colorDelete": "Elimina regola di colore condizionale",
   "tools.database.colorDefault": "Predefinito",
   "tools.database.colorGray": "Grigio",
   "tools.database.colorBrown": "Marrone",

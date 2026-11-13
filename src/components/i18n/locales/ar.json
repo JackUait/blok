@@ -1520,7 +1520,7 @@
   "tools.database.colorApplyRow": "الصف بأكمله",
   "tools.database.colorApplyProperty": "هذه الخاصية",
   "tools.database.colorValuePlaceholder": "اختر…",
-  "tools.database.colorDelete": "حذف إعداد اللون",
+  "tools.database.colorDelete": "حذف قاعدة التلوين الشرطي",
   "tools.database.colorDefault": "افتراضي",
   "tools.database.colorGray": "رمادي",
   "tools.database.colorBrown": "بني",

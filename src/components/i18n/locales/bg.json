@@ -1496,7 +1496,7 @@
   "tools.database.colorApplyRow": "Целия ред",
   "tools.database.colorApplyProperty": "Това свойство",
   "tools.database.colorValuePlaceholder": "Изберете…",
-  "tools.database.colorDelete": "Изтрий настройката за цвят",
+  "tools.database.colorDelete": "Изтрий правилото за условен цвят",
   "tools.database.colorDefault": "По подразбиране",
   "tools.database.colorGray": "Сиво",
   "tools.database.colorBrown": "Кафяво",

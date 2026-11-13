@@ -1502,7 +1502,7 @@
   "tools.database.colorApplyRow": "Linha inteira",
   "tools.database.colorApplyProperty": "Esta propriedade",
   "tools.database.colorValuePlaceholder": "Selecione…",
-  "tools.database.colorDelete": "Excluir configuração de cor",
+  "tools.database.colorDelete": "Excluir regra de cor condicional",
   "tools.database.colorDefault": "Padrão",
   "tools.database.colorGray": "Cinza",
   "tools.database.colorBrown": "Marrom",

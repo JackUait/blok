@@ -16853,12 +16853,24 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   outline-offset: 1px;
 }
 
-/* r25-pinmodal-row.raw: one scroller under the header that scrolls both ways; the table starts 24 in. */
+/* notion-motion.md Round 26 §1 (r26-pm-modal.raw): a 44-tall row 4 under the header, chips 24 in and 12 down,
+   so the table starts 96 below the dialog top. */
+[data-blok-database-group-modal-chips] {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  gap: var(--blok-space-1-5);
+  box-sizing: border-box;
+  height: 44px;
+  margin-block-start: var(--blok-space-1);
+  padding: var(--blok-space-3) var(--blok-space-6) 0;
+}
+
+/* r25-pinmodal-row.raw: one scroller under the chips that scrolls both ways; the table starts 24 in. */
 [data-blok-database-group-modal-body] {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  margin-block-start: var(--blok-space-3);
 }
 
 [data-blok-database-group-modal-body] [data-blok-database-table-scroller] {

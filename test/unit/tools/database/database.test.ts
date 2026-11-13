@@ -4387,6 +4387,10 @@ describe('DatabaseTool', () => {
         expect(grid?.querySelector('[data-blok-database-table-add-row]')).toBeNull();
         expect(grid?.querySelector('[data-blok-database-table-footer]')).toBeNull();
         expect(dialog?.querySelector('[data-blok-database-group-modal-count]')).toBeNull();
+        // Round 26 §1 (r26-pm-modal.raw): the chip row sits between the header and the table.
+        expect(dialog?.querySelector('[data-blok-database-group-modal-header]')?.nextElementSibling?.hasAttribute('data-blok-database-group-modal-chips')).toBe(true);
+        expect([...(dialog?.querySelectorAll('[data-blok-database-group-modal-chips] > *') ?? [])].map((chip) => chip.getAttribute('data-blok-testid')))
+          .toEqual(['database-group-modal-sort-chip', 'database-group-modal-rules-chip']);
 
         // Round 25 §1 (motion-r25-pinmodal-esc.json): Escape closes it at once, and focus goes back to the strip row.
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));

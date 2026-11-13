@@ -193,7 +193,7 @@ import { resolveChartSettings } from './chart-settings';
 import { chartLayoutItems, chartMeasureLabel } from './chart-layout-items';
 import { DatabaseChartView } from './database-chart-view';
 import { openChartDrilldown } from './database-chart-drilldown';
-import { openPinnedGroupModal } from './database-pinned-group-modal';
+import { openPinnedGroupModal, pinnedGroupChips } from './database-pinned-group-modal';
 import { DatabaseFeedView } from './database-feed-view';
 import type { FeedReactions } from './database-feed-view';
 import { rowReactions } from './row-reactions';
@@ -7235,6 +7235,7 @@ export class DatabaseTool implements BlockTool {
     this.pinnedGroupModal = openPinnedGroupModal({
       pill: pill.cloneNode(true) as HTMLElement,
       label: pill.textContent ?? '',
+      chips: pinnedGroupChips(view, schema, this.api.i18n),
       i18n: this.api.i18n,
       directionSource: this.element,
       table: (search) => {

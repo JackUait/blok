@@ -1,5 +1,9 @@
 import type { I18n } from '../../../types';
-import { IconCross, IconSearch } from '../../components/icons';
+import { IconArrowUp, IconCross, IconFilter, IconSearch, IconSort } from '../../components/icons';
+import { filterChip } from './database-filter-chip';
+import { sortDirectionLabelKey } from './database-filter-labels';
+import { countFilterRules } from './filter-tree';
+import type { DatabaseViewConfig, PropertyDefinition } from './types';
 import { openModalDialog } from '../../components/utils/modal-dialog';
 import type { ModalDialogHandle } from '../../components/utils/modal-dialog';
 
@@ -8,6 +12,8 @@ export interface PinnedGroupModalOptions {
   pill: HTMLElement;
   /** The group's name, for the dialog's label. */
   label: string;
+  /** The view's rules as read-only chips, from {@link pinnedGroupChips}. */
+  chips: HTMLElement[];
   /** The group's rows as a read-only table, narrowed by `search`. */
   table: (search: string) => { root: HTMLElement; destroy: () => void };
   i18n: Pick<I18n, 't'>;
@@ -15,6 +21,37 @@ export interface PinnedGroupModalOptions {
   /** Runs after the dialog is gone, whatever closed it. */
   onClose: () => void;
 }
+
+/**
+ * notion-motion.md Round 25 §1 (r25-modal-inherit.raw): the view's sort chip, then one "N rules" chip. The modal adds
+ * the group's own rule to the view's filters ("1 rule" with none). Round 26 §1: Tab reaches the chips, so they stay
+ * buttons; the modal edits nothing, so they are aria-disabled.
+ */
+export const pinnedGroupChips = (view: DatabaseViewConfig, schema: PropertyDefinition[], i18n: Pick<I18n, 't'>): HTMLElement[] => {
+  const chips: HTMLElement[] = [];
+
+  if (view.sorts.length > 0) {
+    const first = schema.find((p) => p.id === view.sorts[0].propertyId);
+    const one = view.sorts.length === 1 && first !== undefined;
+    const name = one ? first.name : i18n.t('tools.database.sortCount', { count: view.sorts.length });
+    const label = one ? `${first.name}: ${i18n.t(sortDirectionLabelKey(first.type, view.sorts[0].direction))}` : name;
+    const chip = filterChip('database-group-modal-sort-chip', label, { glyph: one ? IconArrowUp : IconSort, name });
+
+    chip.setAttribute('data-direction', view.sorts[0].direction);
+    chip.toggleAttribute('data-blok-database-sort-arrow', one);
+    chips.push(chip);
+  }
+  const advanced = countFilterRules(view.filterTree) > 0 ? view.filterTree?.filterRules.length ?? 0 : 0;
+  const rules = i18n.t('tools.database.filterRuleCount', { count: advanced + view.filters.length + 1 });
+
+  chips.push(filterChip('database-group-modal-rules-chip', rules, { glyph: IconFilter, name: rules }));
+  chips.forEach((chip) => {
+    chip.setAttribute('data-active', '');
+    chip.setAttribute('aria-disabled', 'true');
+  });
+
+  return chips;
+};
 
 /**
  * notion-motion.md Round 25 §1 (r25-pinmodal.raw): a pinned group's rows in an 800×496 dialog. The header holds the
@@ -29,6 +66,7 @@ export const openPinnedGroupModal = (options: PinnedGroupModalOptions): { close:
   const search = document.createElement('button');
   const input = document.createElement('input');
   const close = document.createElement('button');
+  const chipRow = document.createElement('div');
   const body = document.createElement('div');
   const state: { handle: ModalDialogHandle | null; table: { destroy: () => void } | null } = { handle: null, table: null };
   const dismiss = (): void => state.handle?.close();
@@ -62,6 +100,8 @@ export const openPinnedGroupModal = (options: PinnedGroupModalOptions): { close:
   close.setAttribute('data-blok-database-group-modal-close', '');
   close.setAttribute('aria-label', i18n.t('tools.database.close'));
   close.innerHTML = IconCross;
+  chipRow.setAttribute('data-blok-database-group-modal-chips', '');
+  chipRow.append(...options.chips);
   body.setAttribute('data-blok-database-group-modal-body', '');
   draw();
 
@@ -84,7 +124,7 @@ export const openPinnedGroupModal = (options: PinnedGroupModalOptions): { close:
   });
 
   header.append(title, search, input, close);
-  panel.append(header, body);
+  panel.append(header, chipRow, body);
   backdrop.appendChild(panel);
   state.handle = openModalDialog({
     content: backdrop,

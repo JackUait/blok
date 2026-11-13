@@ -233,7 +233,8 @@ export const defaultFilterFor = (property: PropertyDefinition): FilterConfig & {
     case 'lastEditedBy':
     case 'relation':
       return { ...base, operator: 'contains', value: [] };
-    case 'checkbox': return { ...base, operator: 'equals', value: true };
+    // notion-motion.md Round 19 §2 (r19-cb-new.raw): no value yet, so it hides nothing.
+    case 'checkbox': return { ...base, operator: 'equals', value: null };
     case 'richText':
     case 'files':
     case 'formula':
@@ -289,7 +290,11 @@ export const filterValueText = (
 
     return range.length === 2 ? `${range[0]} → ${range[1]}` : '';
   }
-  if (property.type === 'checkbox') return value === true ? t('tools.database.filterChecked') : t('tools.database.filterUnchecked');
+  if (property.type === 'checkbox') {
+    if (typeof value !== 'boolean') return '';
+
+    return value ? t('tools.database.filterChecked') : t('tools.database.filterUnchecked');
+  }
   if (property.type === 'person' || property.type === 'createdBy' || property.type === 'lastEditedBy') {
     return idsOf(value).map((id) => (id === ME_FILTER_VALUE ? t('tools.database.filterMe') : personName(id) ?? '')).filter((name) => name !== '').join(', ');
   }

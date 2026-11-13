@@ -12,7 +12,8 @@ import {
   sortDirectionLabelKey,
 } from '../../../../src/tools/database/database-filter-labels';
 import { PAGE_LIST_ROLLUP } from '../../../../src/shared/database/value-helpers';
-import type { PropertyDefinition } from '../../../../src/tools/database/types';
+import type { DatabaseRow, PropertyDefinition } from '../../../../src/tools/database/types';
+import { rowMatchesFilters } from '../../../../src/shared/database/database-query';
 
 /** Echoes the key and its vars, so a test reads which key a label used. */
 const t = (key: string, vars?: Record<string, string | number>): string =>
@@ -78,6 +79,17 @@ describe('database filter labels', () => {
     expect(filterPillLabel({ operator: 'this_week', value: null }, prop('date'), t)).toBe('Due: tools.database.filterDateThisWeek');
     expect(filterPillLabel({ operator: 'equals', value: 'tomorrow' }, prop('date'), t)).toBe('Due: tools.database.filterDateTomorrow');
     expect(filterPillLabel({ operator: 'equals', value: true }, prop('checkbox'), t)).toBe('Due: tools.database.filterChecked');
+  });
+
+  // notion-motion.md Round 19 §2 (r19-cb-new.raw, r19-cb-new-bar.raw): a new Checkbox filter has no value, a gray "Checkbox" chip, and hides nothing.
+  it('starts a Checkbox filter with no value, so it hides no rows', () => {
+    const box = prop('checkbox', { name: 'Checkbox' });
+    const filter = defaultFilterFor(box);
+    const rows = [true, false].map((checked, i): DatabaseRow => ({ id: `r${i}`, position: `a${i}`, properties: { p: checked } }));
+
+    expect(filter).toMatchObject({ operator: 'equals', value: null });
+    expect(filterPillLabel(filter, box, t)).toBe('Checkbox');
+    expect(rows.filter((row) => rowMatchesFilters(row, [filter], [box]))).toHaveLength(2);
   });
 
   it('shows option labels on a select pill', () => {

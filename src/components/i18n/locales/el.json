@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "Απαλοιφή επιλογής",
   "tools.database.filterExactDate": "Ακριβής ημερομηνία",
   "tools.database.filterDateCustom": "Προσαρμοσμένη ημερομηνία",
+  "tools.database.filterDatePlaceholder": "Επιλέξτε ή πληκτρολογήστε ημερομηνία…",
+  "tools.database.filterDatePresets": "Μενού επιλογής ημερομηνίας σε σχέση με σήμερα",
   "tools.database.filterChecked": "Επιλεγμένο",
   "tools.database.filterUnchecked": "Μη επιλεγμένο",
   "tools.database.filterCount": "Πλήθος",

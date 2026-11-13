@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "தேர்வை அழி",
   "tools.database.filterExactDate": "சரியான தேதி",
   "tools.database.filterDateCustom": "தனிப்பயன் தேதி",
+  "tools.database.filterDatePlaceholder": "ஒரு தேதியைத் தேர்ந்தெடு அல்லது தட்டச்சு செய்…",
+  "tools.database.filterDatePresets": "இன்றைய அடிப்படையில் தேதியைத் தேர்ந்தெடுக்கும் பட்டியல்",
   "tools.database.filterChecked": "தேர்ந்தெடுக்கப்பட்டது",
   "tools.database.filterUnchecked": "தேர்ந்தெடுக்கப்படவில்லை",
   "tools.database.filterCount": "எண்ணிக்கை",

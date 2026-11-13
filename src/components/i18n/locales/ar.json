@@ -1407,6 +1407,8 @@
   "tools.database.filterClearSelection": "مسح التحديد",
   "tools.database.filterExactDate": "تاريخ محدد",
   "tools.database.filterDateCustom": "تاريخ مخصص",
+  "tools.database.filterDatePlaceholder": "اختر تاريخًا أو اكتبه…",
+  "tools.database.filterDatePresets": "قائمة لاختيار تاريخ نسبةً إلى اليوم",
   "tools.database.filterChecked": "محدد",
   "tools.database.filterUnchecked": "غير محدد",
   "tools.database.filterCount": "العدد",

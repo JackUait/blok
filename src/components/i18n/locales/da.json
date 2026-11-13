@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "Ryd valg",
   "tools.database.filterExactDate": "Præcis dato",
   "tools.database.filterDateCustom": "Tilpasset dato",
+  "tools.database.filterDatePlaceholder": "Vælg eller skriv en dato…",
+  "tools.database.filterDatePresets": "Rullemenu til at vælge en dato i forhold til i dag",
   "tools.database.filterChecked": "Markeret",
   "tools.database.filterUnchecked": "Ikke markeret",
   "tools.database.filterCount": "Antal",

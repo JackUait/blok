@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "چونڊ صاف ڪريو",
   "tools.database.filterExactDate": "مخصوص تاريخ",
   "tools.database.filterDateCustom": "پنهنجي مرضي جي تاريخ",
+  "tools.database.filterDatePlaceholder": "تاريخ چونڊيو يا ٽائيپ ڪريو…",
+  "tools.database.filterDatePresets": "اڄ جي نسبت سان تاريخ چونڊڻ جي لسٽ",
   "tools.database.filterChecked": "نشان لڳل",
   "tools.database.filterUnchecked": "نشان نه لڳل",
   "tools.database.filterCount": "تعداد",

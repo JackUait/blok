@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "ล้างการเลือก",
   "tools.database.filterExactDate": "วันที่ที่ระบุ",
   "tools.database.filterDateCustom": "วันที่กำหนดเอง",
+  "tools.database.filterDatePlaceholder": "เลือกหรือพิมพ์วันที่…",
+  "tools.database.filterDatePresets": "เมนูเลือกวันที่เทียบกับวันนี้",
   "tools.database.filterChecked": "เลือกแล้ว",
   "tools.database.filterUnchecked": "ยังไม่ได้เลือก",
   "tools.database.filterCount": "จำนวน",

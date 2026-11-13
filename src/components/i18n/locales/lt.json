@@ -1395,6 +1395,8 @@
   "tools.database.filterClearSelection": "Išvalyti pasirinkimą",
   "tools.database.filterExactDate": "Tiksli data",
   "tools.database.filterDateCustom": "Pasirinktinė data",
+  "tools.database.filterDatePlaceholder": "Pasirinkite arba įveskite datą…",
+  "tools.database.filterDatePresets": "Meniu datai pasirinkti šiandienos atžvilgiu",
   "tools.database.filterChecked": "Pažymėta",
   "tools.database.filterUnchecked": "Nepažymėta",
   "tools.database.filterCount": "Skaičius",

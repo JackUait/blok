@@ -242,6 +242,8 @@ export class DatabasePanel {
 
   private readonly handleKeydown = (event: KeyboardEvent): void => {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    // A control with its own arrow keys (a calendar grid) took the key.
+    if (event.defaultPrevented) return;
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
     const items = [...this.element.querySelectorAll<HTMLElement>(FOCUSABLE)];
     const index = items.indexOf(document.activeElement as HTMLElement);

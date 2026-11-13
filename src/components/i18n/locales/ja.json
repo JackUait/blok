@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "選択をクリア",
   "tools.database.filterExactDate": "特定の日付",
   "tools.database.filterDateCustom": "カスタム日付",
+  "tools.database.filterDatePlaceholder": "日付を選択または入力…",
+  "tools.database.filterDatePresets": "今日を基準に日付を選ぶメニュー",
   "tools.database.filterChecked": "チェック済み",
   "tools.database.filterUnchecked": "未チェック",
   "tools.database.filterCount": "数",

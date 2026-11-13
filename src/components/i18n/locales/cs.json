@@ -1395,6 +1395,8 @@
   "tools.database.filterClearSelection": "Zrušit výběr",
   "tools.database.filterExactDate": "Přesné datum",
   "tools.database.filterDateCustom": "Vlastní datum",
+  "tools.database.filterDatePlaceholder": "Vyberte nebo zadejte datum…",
+  "tools.database.filterDatePresets": "Nabídka pro výběr data vzhledem k dnešku",
   "tools.database.filterChecked": "Zaškrtnuto",
   "tools.database.filterUnchecked": "Nezaškrtnuto",
   "tools.database.filterCount": "Počet",

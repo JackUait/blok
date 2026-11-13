@@ -11929,7 +11929,7 @@ textarea[data-blok-database-cell-input] {
   gap: var(--blok-space-1);
 }
 
-[data-blok-database-date-field][data-blok-field] {
+[data-blok-database-date-field][data-blok-field], [data-blok-database-chip-date-field][data-blok-field] {
   font-size: 14px;
   line-height: 16.8px;
 }
@@ -14068,6 +14068,44 @@ button[data-blok-database-table-group-count]:hover {
 [data-blok-database-chip-day][data-today] {
   color: var(--blok-color-red-text);
   font-weight: 600;
+}
+
+[data-blok-database-chip-date-field][data-blok-field] {
+  margin-inline: var(--blok-space-2);
+  gap: var(--blok-space-1);
+  padding-inline-end: var(--blok-space-1);
+}
+
+[data-blok-database-chip-date-field] > button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background: transparent;
+  color: var(--blok-database-ink-tertiary);
+  cursor: pointer;
+}
+
+[data-blok-database-chip-date-field] > button svg {
+  width: 16px;
+  height: 16px;
+}
+
+[@media (hover: hover)] [data-blok-database-chip-date-field] > button:hover {
+  background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-chip-date-input][aria-invalid="true"] {
+  color: var(--blok-color-red-text);
+}
+
+[data-blok-database-chip-month] {
+  padding-inline: var(--blok-space-3-5);
 }
 
 [data-blok-database-chip-note] {

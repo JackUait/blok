@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "សម្អាតការជ្រើសរើស",
   "tools.database.filterExactDate": "កាលបរិច្ឆេទជាក់លាក់",
   "tools.database.filterDateCustom": "កាលបរិច្ឆេទផ្ទាល់ខ្លួន",
+  "tools.database.filterDatePlaceholder": "ជ្រើសរើស ឬវាយកាលបរិច្ឆេទ…",
+  "tools.database.filterDatePresets": "ម៉ឺនុយសម្រាប់ជ្រើសរើសកាលបរិច្ឆេទធៀបនឹងថ្ងៃនេះ",
   "tools.database.filterChecked": "បានធីក",
   "tools.database.filterUnchecked": "មិនបានធីក",
   "tools.database.filterCount": "ចំនួន",

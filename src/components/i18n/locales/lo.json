@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "ລຶບການເລືອກ",
   "tools.database.filterExactDate": "ວັນທີທີ່ລະບຸ",
   "tools.database.filterDateCustom": "ວັນທີກຳນົດເອງ",
+  "tools.database.filterDatePlaceholder": "ເລືອກ ຫຼື ພິມວັນທີ…",
+  "tools.database.filterDatePresets": "ເມນູເລືອກວັນທີທຽບກັບມື້ນີ້",
   "tools.database.filterChecked": "ໝາຍແລ້ວ",
   "tools.database.filterUnchecked": "ຍັງບໍ່ໝາຍ",
   "tools.database.filterCount": "ຈຳນວນ",

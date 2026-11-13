@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "Clear selection",
   "tools.database.filterExactDate": "Exact date",
   "tools.database.filterDateCustom": "Custom date",
+  "tools.database.filterDatePlaceholder": "Select or type a date…",
+  "tools.database.filterDatePresets": "Dropdown to select a date relative to today",
   "tools.database.filterChecked": "Checked",
   "tools.database.filterUnchecked": "Unchecked",
   "tools.database.filterCount": "Count",

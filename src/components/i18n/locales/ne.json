@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "चयन खाली गर्नुहोस्",
   "tools.database.filterExactDate": "ठ्याक्कै मिति",
   "tools.database.filterDateCustom": "अनुकूलित मिति",
+  "tools.database.filterDatePlaceholder": "मिति छान्नुहोस् वा टाइप गर्नुहोस्…",
+  "tools.database.filterDatePresets": "आजको सापेक्ष मिति छान्ने मेनु",
   "tools.database.filterChecked": "जाँच गरिएको",
   "tools.database.filterUnchecked": "जाँच गरिएको छैन",
   "tools.database.filterCount": "संख्या",

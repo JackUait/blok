@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "Մաքրել ընտրությունը",
   "tools.database.filterExactDate": "Ճշգրիտ ամսաթիվ",
   "tools.database.filterDateCustom": "Անհատական ամսաթիվ",
+  "tools.database.filterDatePlaceholder": "Ընտրեք կամ մուտքագրեք ամսաթիվ…",
+  "tools.database.filterDatePresets": "Ցանկ՝ այսօրվա համեմատ ամսաթիվ ընտրելու համար",
   "tools.database.filterChecked": "Նշված",
   "tools.database.filterUnchecked": "Չնշված",
   "tools.database.filterCount": "Քանակ",

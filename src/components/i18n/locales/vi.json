@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "Xóa lựa chọn",
   "tools.database.filterExactDate": "Ngày cụ thể",
   "tools.database.filterDateCustom": "Ngày tùy chỉnh",
+  "tools.database.filterDatePlaceholder": "Chọn hoặc nhập ngày…",
+  "tools.database.filterDatePresets": "Menu chọn ngày so với hôm nay",
   "tools.database.filterChecked": "Đã chọn",
   "tools.database.filterUnchecked": "Chưa chọn",
   "tools.database.filterCount": "Số lượng",

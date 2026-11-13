@@ -1431,45 +1431,182 @@ describe('DatabaseViewControls', () => {
       expect(controls.effective(saved.view).filters[0]).toMatchObject({ operator: 'relative_to_today', value: 'this:1:month' });
     });
 
-    it('ends the "Is" presets with Custom date, checked while no preset is picked (notion-motion.md Round 13)', () => {
-      open({ operator: 'equals', value: null });
+    // notion-motion.md Round 20 §3 (r20-ct.raw, r20-ct-rel.raw, r20-ct-wk.raw, r20-ct-custom.raw, r20-ct-2025.raw):
+    // one "Select or type a date…" field with a presets ⌄, and the month calendar under it.
+    describe('"is" day field and calendar', () => {
+      const popover = (): HTMLElement => {
+        const el = q('database-filter-popover');
 
-      const presets = [...document.querySelectorAll('[data-blok-testid^="database-filter-date-"]')].map((el) => el.getAttribute('data-blok-testid'));
+        if (el === null) throw new Error('no popover');
 
-      expect(presets.at(-1)).toBe('database-filter-date-custom');
-      expect(text(q('database-filter-date-custom'))).toBe('tools.database.filterDateCustom');
-      expect(q('database-filter-date-custom')?.getAttribute('aria-checked')).toBe('true');
+        return el;
+      };
+      const field = (): HTMLInputElement => q('database-filter-value') as HTMLInputElement;
+      const day = (iso: string): HTMLElement | null => popover().querySelector(`[data-blok-database-date-day="${iso}"]`);
+      const enter = (el: Element): void => {
+        el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+      };
 
-      click('database-filter-date-custom');
+      beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date(2026, 10, 13, 10, 0));
+      });
 
-      expect(q('database-filter-value')).toHaveFocus();
-    });
+      afterEach(() => {
+        vi.useRealTimers();
+      });
 
-    it('leaves Custom date unchecked on a preset', () => {
-      open({ operator: 'equals', value: 'today' });
+      it('opens on an empty, focused field with a presets ⌄, then this month\'s calendar with no Today button', () => {
+        open({ operator: 'equals', value: null });
 
-      expect(q('database-filter-date-custom')?.getAttribute('aria-checked')).toBe('false');
-    });
+        expect(field().placeholder).toBe('tools.database.filterDatePlaceholder');
+        expect(field().value).toBe('');
+        expect(field()).toHaveFocus();
+        expect(q('database-filter-date-presets')?.getAttribute('aria-label')).toBe('tools.database.filterDatePresets');
+        expect(q('database-filter-date-clear')).toBeNull();
+        expect(q('database-filter-date-today')).toBeNull();
+        expect(text(popover().querySelector('[data-blok-database-date-month]'))).toBe('Nov 2026');
+        expect(popover().querySelector('[data-blok-database-date-today]')).toBeNull();
+        expect(day('2026-11-13')?.hasAttribute('data-today')).toBe(true);
+        expect(popover().querySelector('[data-blok-database-date-day][aria-selected="true"]')).toBeNull();
+        expect(document.querySelector('[data-blok-database-chip-note]')).toBeNull();
+      });
 
-    // notion-motion.md Round 20 §3 (r20-ct-wk.raw): a preset adds "Filter will update with the current date".
-    it('notes that a preset follows the current date, and a typed day does not', () => {
-      open({ operator: 'equals', value: 'one_week_ago' });
-      expect(text(document.querySelector('[data-blok-database-chip-note]'))).toBe('tools.database.filterUpdatesWithDate');
+      it('lists the presets then Custom date under the field, 240 wide, with the ✓ on Custom date while empty', () => {
+        open({ operator: 'equals', value: null });
 
-      document.body.replaceChildren();
-      open({ operator: 'equals', value: '2025-03-05' });
-      expect(document.querySelector('[data-blok-database-chip-note]')).toBeNull();
-    });
+        click('database-filter-date-presets');
+        const rows = [...(q('database-filter-date-menu')?.querySelectorAll('[data-blok-testid^="database-filter-date-"]') ?? [])].map((el) => el.getAttribute('data-blok-testid'));
 
-    // notion-motion.md Round 20 §3 (r20-ct-custom.raw): "Custom date" clears the value and focuses the field.
-    it('clears a preset from Custom date', () => {
-      const { controls, saved } = open({ operator: 'equals', value: 'one_week_ago' });
+        expect(rows).toEqual([
+          'database-filter-date-today', 'database-filter-date-tomorrow', 'database-filter-date-yesterday', 'database-filter-date-one_week_ago',
+          'database-filter-date-one_week_from_now', 'database-filter-date-one_month_ago', 'database-filter-date-one_month_from_now', 'database-filter-date-custom',
+        ]);
+        expect(q('database-filter-date-menu')?.style.width).toBe('240px');
+        expect(text(q('database-filter-date-custom'))).toBe('tools.database.filterDateCustom');
+        expect(q('database-filter-date-custom')?.getAttribute('aria-checked')).toBe('true');
+        expect(q('database-filter-date-today')?.getAttribute('aria-checked')).toBe('false');
+      });
 
-      click('database-filter-date-custom');
+      it('writes a preset\'s name into the field, marks its day and notes that it follows the date', () => {
+        const { controls, saved } = open({ operator: 'equals', value: null });
 
-      expect(controls.effective(saved.view).filters[0]).toMatchObject({ operator: 'equals', value: null });
-      expect(q('database-filter-value')).toHaveFocus();
-      expect(document.querySelector('[data-blok-database-chip-note]')).toBeNull();
+        click('database-filter-date-presets');
+        click('database-filter-date-one_week_ago');
+
+        expect(controls.effective(saved.view).filters[0]).toMatchObject({ operator: 'equals', value: 'one_week_ago' });
+        expect(q('database-filter-date-menu')).toBeNull();
+        expect(field().value).toBe('tools.database.filterDateOneWeekAgo');
+        expect(day('2026-11-06')?.getAttribute('aria-selected')).toBe('true');
+        expect(day('2026-11-13')?.hasAttribute('data-today')).toBe(true);
+        expect(text(document.querySelector('[data-blok-database-chip-note]'))).toBe('tools.database.filterUpdatesWithDate');
+        expect(q('database-filter-date-clear')).not.toBeNull();
+
+        click('database-filter-date-presets');
+        expect(q('database-filter-date-one_week_ago')?.getAttribute('aria-checked')).toBe('true');
+        expect(q('database-filter-date-custom')?.getAttribute('aria-checked')).toBe('false');
+      });
+
+      it('clears a preset from Custom date and focuses the empty field', () => {
+        const { controls, saved } = open({ operator: 'equals', value: 'one_week_ago' });
+
+        click('database-filter-date-presets');
+        click('database-filter-date-custom');
+
+        expect(controls.effective(saved.view).filters[0]).toMatchObject({ operator: 'equals', value: null });
+        expect(field()).toHaveFocus();
+        expect(field().value).toBe('');
+        expect(document.querySelector('[data-blok-database-chip-note]')).toBeNull();
+      });
+
+      it('commits a typed date on Enter, not while typing, and turns the calendar to its month', () => {
+        const { controls, saved } = open({ operator: 'equals', value: null });
+
+        field().value = 'March 5, 2025';
+        field().dispatchEvent(new Event('input', { bubbles: true }));
+        expect(controls.effective(saved.view).filters[0]).toMatchObject({ value: null });
+
+        enter(field());
+
+        expect(controls.effective(saved.view).filters[0]).toMatchObject({ operator: 'equals', value: '2025-03-05' });
+        expect(field().value).toBe('March 5, 2025');
+        expect(text(popover().querySelector('[data-blok-database-date-month]'))).toBe('Mar 2025');
+        expect(day('2025-03-05')?.getAttribute('aria-selected')).toBe('true');
+        expect(document.querySelector('[data-blok-database-chip-note]')).toBeNull();
+      });
+
+      it('keeps a preset when Enter finds its own name in the field', () => {
+        const { controls, saved } = open({ operator: 'before', value: 'one_week_ago' });
+
+        enter(field());
+
+        expect(controls.effective(saved.view).filters[0]).toMatchObject({ operator: 'before', value: 'one_week_ago' });
+        expect(field().hasAttribute('aria-invalid')).toBe(false);
+      });
+
+      it('marks text that is no date and writes nothing', () => {
+        const { controls, saved } = open({ operator: 'equals', value: null });
+
+        field().value = 'soon';
+        enter(field());
+
+        expect(field().getAttribute('aria-invalid')).toBe('true');
+        expect(controls.effective(saved.view).filters[0]).toMatchObject({ value: null });
+      });
+
+      it('picks a clicked day, and steps months without writing', () => {
+        const { controls, saved } = open({ operator: 'on_or_after', value: null });
+
+        popover().querySelector<HTMLButtonElement>('[data-blok-database-date-next]')?.click();
+        expect(text(popover().querySelector('[data-blok-database-date-month]'))).toBe('Dec 2026');
+        expect(controls.hasPersonalEdits('v1')).toBe(false);
+
+        day('2026-12-24')?.click();
+
+        expect(controls.effective(saved.view).filters[0]).toMatchObject({ operator: 'on_or_after', value: '2026-12-24' });
+        expect(field().value).toBe('December 24, 2026');
+        expect(text(popover().querySelector('[data-blok-database-date-month]'))).toBe('Dec 2026');
+      });
+
+      it('keeps the focus on a day picked with Enter after the page redraws', () => {
+        const { controls, saved } = open({ operator: 'equals', value: '2026-11-20' });
+
+        day('2026-11-20')?.focus();
+        day('2026-11-20')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+        expect(day('2026-11-21')).toHaveFocus();
+        day('2026-11-21')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+        expect(day('2026-11-28')).toHaveFocus();
+        day('2026-11-28')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+        expect(day('2026-11-21')).toHaveFocus();
+
+        enter(day('2026-11-21') as HTMLElement);
+
+        expect(controls.effective(saved.view).filters[0]).toMatchObject({ value: '2026-11-21' });
+        expect(day('2026-11-21')).toHaveFocus();
+      });
+
+      it('clears the value from ⊗ and focuses the field', () => {
+        const { controls, saved } = open({ operator: 'equals', value: '2025-03-05' });
+
+        expect(field().value).toBe('March 5, 2025');
+        expect(q('database-filter-date-clear')?.getAttribute('aria-label')).toBe('tools.database.dateClear');
+
+        click('database-filter-date-clear');
+
+        expect(controls.effective(saved.view).filters[0]).toMatchObject({ value: null });
+        expect(field()).toHaveFocus();
+      });
+
+      it('gives the focus back to the ⌄ when Escape closes its menu', () => {
+        open({ operator: 'equals', value: null });
+
+        click('database-filter-date-presets');
+        q('database-filter-date-today')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+        expect(q('database-filter-date-menu')).toBeNull();
+        expect(q('database-filter-popover')).not.toBeNull();
+        expect(q('database-filter-date-presets')).toHaveFocus();
+      });
     });
 
     it('opens an old "past month" filter as Past 1 month and writes nothing until a change', () => {
@@ -1486,7 +1623,7 @@ describe('DatabaseViewControls', () => {
       const { controls } = open({ operator: 'does_not_equal', value: 'today' });
 
       expect(text(q('database-filter-operator'))).toBe('tools.database.filteroperator.isnot');
-      expect(q('database-filter-date-today')?.getAttribute('aria-checked')).toBe('true');
+      expect((q('database-filter-value') as HTMLInputElement).value).toBe('tools.database.filterDateToday');
       expect(controls.hasPersonalEdits('v1')).toBe(false);
 
       click('database-filter-operator');

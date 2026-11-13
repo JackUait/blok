@@ -1646,6 +1646,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Round 21 lane r21: the And/Or button's 61px Notion width, so "And" reads in full; the rule buttons' weight 500.
     // ... and the colour card's 100px height, its value button holding the 232px field.
     const DATABASE_R21_BYTES = 542 + 20 + 853;
+    // Round 22 lane r22: the simple Date filter's day field, its ⊗ and presets ⌄, and the calendar's 32px columns.
+    const DATABASE_R22_BYTES = 454;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2124,6 +2126,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R20B_BYTES
       + DATABASE_R20A_BYTES
       + DATABASE_R21_BYTES
+      + DATABASE_R22_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

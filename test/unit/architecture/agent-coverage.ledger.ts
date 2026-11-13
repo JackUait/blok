@@ -85,6 +85,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/database-new-source-panel.ts': cmds(['database.addProperty', 'database.addView', 'database.addRow'], 'The New database AI prompt asks the host to set the database up, and a Suggested template builds one; an agent adds the properties, views and rows itself.'),
   'ui-file:src/tools/database/cells/cell-popover.ts': exempt('chrome', 'Closes the cell editor popover on Escape; the editors inside it have their own ids.'),
   'ui-file:src/tools/database/cells/date-editor.ts': cmds(['database.setRowValues'], CELL_EDIT),
+  'ui-file:src/tools/database/cells/month-calendar.ts': cmds(['database.setRowValues', 'database.updateView'], 'The month grid picks a day for the date cell (a cell value) or a date filter (the view\'s filters).'),
   'ui-file:src/tools/database/cells/display.ts': exempt('view-only', 'Follows a link or opens a related row from a cell; the document does not change.'),
   'ui-file:src/tools/database/cells/files-editor.ts': cmds(['database.setRowValues'], CELL_EDIT),
   'ui-file:src/tools/database/cells/index.ts': cmds(['database.setRowValues'], 'Clear a place with the × on its name chip.'),

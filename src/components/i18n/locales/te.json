@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "ఎంపికను క్లియర్ చేయండి",
   "tools.database.filterExactDate": "ఖచ్చితమైన తేదీ",
   "tools.database.filterDateCustom": "అనుకూల తేదీ",
+  "tools.database.filterDatePlaceholder": "తేదీని ఎంచుకోండి లేదా టైప్ చేయండి…",
+  "tools.database.filterDatePresets": "ఈరోజు ఆధారంగా తేదీని ఎంచుకునే మెను",
   "tools.database.filterChecked": "ఎంపిక చేయబడింది",
   "tools.database.filterUnchecked": "ఎంపిక చేయబడలేదు",
   "tools.database.filterCount": "సంఖ్య",

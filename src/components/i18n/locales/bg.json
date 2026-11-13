@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "Изчистване на избора",
   "tools.database.filterExactDate": "Точна дата",
   "tools.database.filterDateCustom": "Персонализирана дата",
+  "tools.database.filterDatePlaceholder": "Изберете или въведете дата…",
+  "tools.database.filterDatePresets": "Списък за избор на дата спрямо днес",
   "tools.database.filterChecked": "Отметнато",
   "tools.database.filterUnchecked": "Без отметка",
   "tools.database.filterCount": "Брой",

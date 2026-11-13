@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "ಆಯ್ಕೆಯನ್ನು ತೆರವುಗೊಳಿಸಿ",
   "tools.database.filterExactDate": "ನಿಖರ ದಿನಾಂಕ",
   "tools.database.filterDateCustom": "ಕಸ್ಟಮ್ ದಿನಾಂಕ",
+  "tools.database.filterDatePlaceholder": "ದಿನಾಂಕವನ್ನು ಆಯ್ಕೆಮಾಡಿ ಅಥವಾ ಟೈಪ್ ಮಾಡಿ…",
+  "tools.database.filterDatePresets": "ಇಂದಿನ ಸಾಪೇಕ್ಷವಾಗಿ ದಿನಾಂಕ ಆಯ್ಕೆಮಾಡುವ ಮೆನು",
   "tools.database.filterChecked": "ಗುರುತಿಸಲಾಗಿದೆ",
   "tools.database.filterUnchecked": "ಗುರುತಿಸಲಾಗಿಲ್ಲ",
   "tools.database.filterCount": "ಸಂಖ್ಯೆ",

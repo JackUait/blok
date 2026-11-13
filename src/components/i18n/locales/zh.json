@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "清除选择",
   "tools.database.filterExactDate": "确切日期",
   "tools.database.filterDateCustom": "自定义日期",
+  "tools.database.filterDatePlaceholder": "选择或输入日期…",
+  "tools.database.filterDatePresets": "选择相对于今天的日期的菜单",
   "tools.database.filterChecked": "已选中",
   "tools.database.filterUnchecked": "未选中",
   "tools.database.filterCount": "数量",

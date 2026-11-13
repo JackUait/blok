@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "ټاکنه پاکه کړئ",
   "tools.database.filterExactDate": "دقیقه نېټه",
   "tools.database.filterDateCustom": "ځانګړې نېټه",
+  "tools.database.filterDatePlaceholder": "نېټه وټاکئ یا ولیکئ…",
+  "tools.database.filterDatePresets": "د نن ورځې په پرتله د نېټې ټاکلو لېست",
   "tools.database.filterChecked": "نښه شوی",
   "tools.database.filterUnchecked": "نه نښه شوی",
   "tools.database.filterCount": "شمېر",

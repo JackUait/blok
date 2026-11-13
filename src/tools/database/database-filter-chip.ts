@@ -17,8 +17,10 @@ import {
   splitOperator,
 } from './database-filter-labels';
 import { openFlyout } from './database-sort-flyouts';
+import { editorLocale, formatDatePart, parseDayField, resolveWeekStart } from './cells/date-format';
+import { MonthCalendar } from './cells/month-calendar';
 import { addFilterRule, emptyFilterTree, withEntryIds } from './filter-tree';
-import { RELATIVE_DATE_UNITS, RELATIVE_DATE_VALUES, formatRelativeSpan, parseRelativeSpan, relativeWindow, toLocalDay } from './relative-dates';
+import { RELATIVE_DATE_UNITS, RELATIVE_DATE_VALUES, formatRelativeSpan, parseRelativeSpan, relativeWindow, resolveDay, toLocalDay } from './relative-dates';
 import type { RelativeDateUnit, RelativeSpan } from './relative-dates';
 import { optionColorOf, shownStatusOption } from './cells/option-colors';
 import { orderedStatusOptions, statusGroupOf, statusGroupsOf } from './property-values';
@@ -31,6 +33,9 @@ export const OPERATOR_FLYOUT_WIDTH = 190;
 /** notion-motion.md Round 18 §2 (r18-filter-more.raw): the rule ⋯ list. */
 export const MORE_FLYOUT_WIDTH = 240;
 export const MORE_FLYOUT_GAP = 2;
+/** notion-motion.md Round 20 §3 (r20-ct-rel.raw): the presets menu is 240 wide, its top the field's bottom + 6. */
+const DATE_PRESET_MENU_WIDTH = 240;
+const DATE_PRESET_MENU_GAP = 6;
 
 const idList = (value: FilterConfig['value']): string[] => {
   if (Array.isArray(value)) return value.filter((id): id is string => typeof id === 'string');
@@ -143,6 +148,10 @@ class FilterChipPages {
   private panel: DatabasePanel | undefined;
   /** Set when another editor (view settings) owns the rule: edits go there. */
   private readonly writer: ((patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>) => void) | undefined;
+  /** The "is" day calendar: its shown month, the day it last marked, and how to draw it in the latest page. */
+  private calendar: MonthCalendar | undefined;
+  private calendarDay: string | undefined;
+  private calendarRedraw: (() => void) | undefined;
 
   constructor(ctx: ViewSettingsContext, filterId: string, writer?: (patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>) => void) {
     this.ctx = ctx;
@@ -578,6 +587,147 @@ class FilterChipPages {
   private dateControls(operator: string, value: FilterConfig['value']): HTMLElement[] {
     if (operator === 'is_between') return this.betweenControls(value);
 
+    return this.writer === undefined ? this.dayControls(value) : this.presetRows(value);
+  }
+
+  /**
+   * notion-motion.md Round 20 §3 (r20-ct.raw, r20-ct-rel.raw, r20-ct-wk.raw, r20-ct-2025.raw): one
+   * "Select or type a date…" field with ⊗ (once there is a value) and a presets ⌄, then the month calendar.
+   * A preset shows its name in the field; a day shows long ("March 5, 2025", Round 14).
+   */
+  private dayControls(value: FilterConfig['value']): HTMLElement[] {
+    const locale = editorLocale(this.ctx.i18n);
+    const preset = RELATIVE_DATE_VALUES.find((relative) => relative === value);
+    const exact = typeof value === 'string' && DAY.test(value) ? value : undefined;
+    const picked = resolveDay(value, new Date());
+    const dayText = exact === undefined ? '' : formatDatePart(exact, locale);
+    const shown = preset === undefined ? dayText : this.ctx.i18n.t(relativeValueLabelKey(preset));
+    const field = document.createElement('div');
+    const input = document.createElement('input');
+    const presets = document.createElement('button');
+
+    field.setAttribute('data-blok-database-chip-date-field', '');
+    field.setAttribute('data-blok-field', 'text');
+    input.type = 'text';
+    input.value = shown;
+    input.placeholder = this.t('filterDatePlaceholder');
+    input.setAttribute('aria-label', this.t('filterExactDate'));
+    input.setAttribute('data-blok-database-chip-date-input', '');
+    input.setAttribute('data-blok-testid', 'database-filter-value');
+    input.addEventListener('input', () => input.removeAttribute('aria-invalid'));
+    input.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || event.isComposing) return;
+      event.preventDefault();
+      // The field already shows the value (a preset's name reads back as no date).
+      if (input.value.trim() === shown.trim()) return;
+      const day = parseDayField(input.value, locale, {}, new Date().getFullYear());
+
+      if (day === null) {
+        input.setAttribute('aria-invalid', 'true');
+
+        return;
+      }
+      this.update({ value: day });
+      this.focusDateField();
+    });
+    field.appendChild(input);
+    if (value !== null && value !== undefined && value !== '') {
+      const clear = document.createElement('button');
+
+      clear.type = 'button';
+      clear.setAttribute('data-blok-database-chip-date-clear', '');
+      clear.setAttribute('data-blok-testid', 'database-filter-date-clear');
+      clear.setAttribute('aria-label', this.ctx.i18n.t('tools.database.dateClear'));
+      clear.innerHTML = IconCross;
+      clear.addEventListener('click', () => {
+        this.update({ value: null });
+        this.focusDateField();
+      });
+      field.appendChild(clear);
+    }
+    presets.type = 'button';
+    presets.setAttribute('data-blok-database-chip-date-presets', '');
+    presets.setAttribute('data-blok-testid', 'database-filter-date-presets');
+    presets.setAttribute('aria-label', this.t('filterDatePresets'));
+    presets.setAttribute('aria-haspopup', 'menu');
+    presets.innerHTML = IconChevronDown;
+    presets.addEventListener('click', () => this.presetMenu(field, value));
+    field.appendChild(presets);
+
+    return [field, this.dayCalendar(picked, locale), ...(preset !== undefined ? [this.updatesNote()] : [])];
+  }
+
+  /** The calendar outlives the redraw every write causes, so a month step stays until the value changes. */
+  private dayCalendar(picked: string | undefined, locale: string): HTMLElement {
+    const holder = document.createElement('div');
+    const draw = (): void => {
+      holder.replaceChildren(calendar.header(), calendar.grid());
+    };
+    const calendar = this.calendar ?? new MonthCalendar({
+      locale,
+      weekStart: resolveWeekStart(locale),
+      directionOf: holder,
+      t: (key) => this.ctx.i18n.t(key),
+      isSelected: (iso) => iso === this.calendarDay,
+      onPick: (iso) => {
+        const focused = this.panel?.root.contains(document.activeElement) === true && document.activeElement?.hasAttribute('data-blok-database-date-day') === true;
+
+        this.update({ value: iso });
+        if (focused) this.calendar?.focusDay();
+      },
+      redraw: () => this.calendarRedraw?.(),
+    }, picked ?? toLocalDay(new Date()));
+
+    if (this.calendar !== undefined && picked !== undefined && picked !== this.calendarDay) calendar.show(picked);
+    this.calendar = calendar;
+    this.calendarDay = picked;
+    this.calendarRedraw = draw;
+    holder.setAttribute('data-blok-database-chip-month', '');
+    draw();
+
+    return holder;
+  }
+
+  /**
+   * notion-motion.md Round 20 §3 (r20-ct-rel.raw): 240 wide under the field (Notion's left is the field's − 2, not
+   * matched), rows Today … One month from now, Custom date, the current one with a ✓ and no fill.
+   */
+  private presetMenu(field: HTMLElement, value: FilterConfig['value']): void {
+    const panel = this.panel;
+
+    if (panel === undefined) return;
+    const isPreset = (RELATIVE_DATE_VALUES as readonly unknown[]).includes(value);
+    // The anchor is the field box, which takes no focus: Escape hands it to the ⌄.
+    const presetsButton = (): HTMLElement | null => panel.root.querySelector<HTMLElement>('[data-blok-testid="database-filter-date-presets"]');
+    const focusPresets = (): void => {
+      presetsButton()?.focus();
+    };
+
+    openFlyout(field, panel, 'database-filter-date-menu', DATE_PRESET_MENU_WIDTH, (pick) => [
+      ...RELATIVE_DATE_VALUES.map((relative) => panelRow({
+        label: this.ctx.i18n.t(relativeValueLabelKey(relative)),
+        testId: `database-filter-date-${relative}`,
+        checked: value === relative,
+        onClick: () => pick(() => {
+          this.update({ value: relative });
+          focusPresets();
+        }),
+      })),
+      // Round 20 §3 (r20-ct-custom.raw): it clears the value and focuses the field.
+      panelRow({
+        label: this.t('filterDateCustom'),
+        testId: 'database-filter-date-custom',
+        checked: !isPreset,
+        onClick: () => pick(() => {
+          if (value !== null) this.update({ value: null });
+          this.focusDateField();
+        }),
+      }),
+    ], { gap: DATE_PRESET_MENU_GAP, escapeFocus: presetsButton });
+  }
+
+  /** The advanced rule's value flyout keeps the presets as rows and a YYYY-MM-DD field. */
+  private presetRows(value: FilterConfig['value']): HTMLElement[] {
     const exact = panelInput({
       value: typeof value === 'string' && DAY.test(value) ? value : '',
       placeholder: 'YYYY-MM-DD',
@@ -821,7 +971,7 @@ export const openFilterChip = (anchor: HTMLElement, ctx: ViewSettingsContext, fi
   panel.open();
   // Notion opens on the value: the token field or the value input, not the header. Status has neither and
   // focuses its operator (notion-motion.md Round 20 §1, r20-st.raw).
-  (panel.root.querySelector<HTMLElement>('[data-blok-database-select-search], [data-blok-database-panel-input], [data-blok-database-chip-select]')
+  (panel.root.querySelector<HTMLElement>('[data-blok-database-select-search], [data-blok-database-panel-input], [data-blok-database-chip-date-input], [data-blok-database-chip-select]')
     ?? (property?.type === 'status' ? panel.root.querySelector<HTMLElement>('[data-blok-testid="database-filter-operator"]') : null))?.focus();
 
   return panel;

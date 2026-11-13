@@ -8421,7 +8421,8 @@ textarea[data-blok-database-cell-input] {
 }
 
 /* The box is field.css's look; Notion's text is 14px/16.8px. */
-[data-blok-database-date-field][data-blok-field] {
+[data-blok-database-date-field][data-blok-field],
+[data-blok-database-chip-date-field][data-blok-field] {
   font-size: 14px;
   line-height: 16.8px;
 }
@@ -10879,6 +10880,49 @@ button[data-blok-database-table-group-count]:hover {
 [data-blok-database-chip-day][data-today] {
   color: var(--blok-color-red-text);
   font-weight: 600;
+}
+
+/* notion-motion.md Round 20 §3 (r20-ct.raw): the "is" day field, 236x28 in the 260 popover, with ⊗ and the presets ⌄
+   (20x20, tertiary ink) inside it. The box is field.css's look. */
+[data-blok-database-chip-date-field][data-blok-field] {
+  margin-inline: var(--blok-space-2);
+  gap: var(--blok-space-1);
+  padding-inline-end: var(--blok-space-1);
+}
+
+[data-blok-database-chip-date-field] > button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background: transparent;
+  color: var(--blok-database-ink-tertiary);
+  cursor: pointer;
+}
+
+[data-blok-database-chip-date-field] > button svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (hover: hover) {
+  [data-blok-database-chip-date-field] > button:hover {
+    background-color: var(--blok-database-hover-bg);
+  }
+}
+
+[data-blok-database-chip-date-input][aria-invalid="true"] {
+  color: var(--blok-color-red-text);
+}
+
+/* r20-ct-wk.raw: seven 32px columns, the first day 20 in from the popover's edge. */
+[data-blok-database-chip-month] {
+  padding-inline: var(--blok-space-3-5);
 }
 
 [data-blok-database-chip-note] {

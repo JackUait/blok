@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "انتخاب صاف کریں",
   "tools.database.filterExactDate": "مخصوص تاریخ",
   "tools.database.filterDateCustom": "حسب ضرورت تاریخ",
+  "tools.database.filterDatePlaceholder": "تاریخ منتخب کریں یا ٹائپ کریں…",
+  "tools.database.filterDatePresets": "آج کے لحاظ سے تاریخ منتخب کرنے کا مینو",
   "tools.database.filterChecked": "نشان زد",
   "tools.database.filterUnchecked": "غیر نشان زد",
   "tools.database.filterCount": "تعداد",

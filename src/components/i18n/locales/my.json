@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "ရွေးချယ်မှု ရှင်းပါ",
   "tools.database.filterExactDate": "တိကျသော ရက်စွဲ",
   "tools.database.filterDateCustom": "စိတ်ကြိုက် ရက်စွဲ",
+  "tools.database.filterDatePlaceholder": "ရက်စွဲ ရွေးပါ သို့မဟုတ် ရိုက်ပါ…",
+  "tools.database.filterDatePresets": "ယနေ့နှင့် နှိုင်းယှဉ်၍ ရက်စွဲရွေးရန် မီနူး",
   "tools.database.filterChecked": "အမှန်ခြစ်ထားသည်",
   "tools.database.filterUnchecked": "အမှန်ခြစ်မထားပါ",
   "tools.database.filterCount": "အရေအတွက်",

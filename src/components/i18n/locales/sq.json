@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "Pastro përzgjedhjen",
   "tools.database.filterExactDate": "Data e saktë",
   "tools.database.filterDateCustom": "Data e personalizuar",
+  "tools.database.filterDatePlaceholder": "Zgjidh ose shkruaj një datë…",
+  "tools.database.filterDatePresets": "Meny për të zgjedhur një datë në lidhje me sot",
   "tools.database.filterChecked": "E zgjedhur",
   "tools.database.filterUnchecked": "E pazgjedhur",
   "tools.database.filterCount": "Numri",

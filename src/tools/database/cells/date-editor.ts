@@ -1,5 +1,5 @@
-import { IconCheck, IconChevronLeft, IconChevronRight } from '../../../components/icons';
-import { getElementDirection, logicalArrow } from '../../../components/utils/direction';
+import { IconCheck, IconChevronRight } from '../../../components/icons';
+import { getElementDirection } from '../../../components/utils/direction';
 import { promoteToTopLayer, removeFromTopLayer } from '../../../components/utils/top-layer';
 import { helpLink } from '../database-help-link';
 import { reminderFits, reminderLabel, remindersFor } from '../reminders';
@@ -10,9 +10,7 @@ import {
   HOUR_CYCLES,
   TIME_FORMATS,
   applyDateDisplayChange,
-  formatDatePart,
   formatDayField,
-  pickerWeekdayNames,
   parseDayField,
   resolveHourCycle,
   resolveLocale,
@@ -26,6 +24,7 @@ import {
 } from './date-format';
 import type { DateDisplayChange } from './date-format';
 import { formatDateValue, parseDateValue } from './date-value';
+import { MonthCalendar } from './month-calendar';
 import type { CellEditorContext, CellEditorHandle } from './types';
 
 /** Time a date on another day than today takes when "Include time" turns on (research/27 §4b). */
@@ -36,14 +35,6 @@ const DEFAULT_TIME = '09:00';
  * unmeasured: it still moves one hour, and past 23:00 wraps to 00:00 and leaves the day alone.
  */
 const nextWholeHour = (): string => `${String((new Date().getHours() + 1) % 24).padStart(2, '0')}:00`;
-
-const DAYS_SHOWN = 42;
-
-const addDays = (iso: string, days: number): string => {
-  const date = toLocalDate(iso);
-
-  return toIsoDay(new Date(date.getFullYear(), date.getMonth(), date.getDate() + days));
-};
 
 /** A typed time, 24-hour ("17:45") or 12-hour ("5:45 pm"), as `HH:mm`. */
 const parseTypedTime = (text: string): string | null => {
@@ -196,9 +187,7 @@ class DateEditor {
   // Set when Include time turns on; a part with no time of its own shows and saves it.
   private defaultTime = DEFAULT_TIME;
   private rangeTarget: 'start' | 'end' = 'start';
-  private viewYear: number;
-  private viewMonth: number;
-  private focusedDay: string;
+  private readonly calendar: MonthCalendar;
   /** undefined: nothing written yet in a bulk edit, so any value writes. */
   private lastValue: string | null | undefined;
   /** The Remind row's choice. On an empty cell it can wait for the first date. */
@@ -240,9 +229,29 @@ class DateEditor {
 
     const shown = toLocalDate(this.start?.day ?? toIsoDay(new Date()));
 
-    this.viewYear = shown.getFullYear();
-    this.viewMonth = shown.getMonth();
-    this.focusedDay = toIsoDay(shown);
+    this.calendar = new MonthCalendar({
+      locale: this.locale,
+      weekStart: this.weekStart,
+      directionOf: anchor,
+      t: (key) => this.t(key),
+      isSelected: (iso) => iso === this.start?.day || (this.rangeEnd() !== undefined && iso === this.rangeEnd()),
+      isInRange: (iso) => {
+        const rangeEnd = this.rangeEnd();
+
+        return rangeEnd !== undefined && this.start !== null && iso > this.start.day && iso < rangeEnd;
+      },
+      onPick: (iso) => this.pickDay(iso),
+      redraw: () => this.render(),
+      // research/23 §1: with a time it reads "Now" and sets the time too.
+      today: {
+        label: () => this.t(this.timeOn ? 'tools.database.dateNow' : 'tools.database.dateToday'),
+        onPick: () => {
+          const now = new Date();
+
+          this.pickDay(toIsoDay(now), this.timeOn ? toIsoTime(now) : undefined);
+        },
+      },
+    }, toIsoDay(shown));
 
     this.root.setAttribute('data-blok-database-date-editor', '');
     this.root.setAttribute('aria-label', property.name);
@@ -368,11 +377,11 @@ class DateEditor {
   }
 
   private showDay(day: string): void {
-    const date = toLocalDate(day);
+    this.calendar.show(day);
+  }
 
-    this.viewYear = date.getFullYear();
-    this.viewMonth = date.getMonth();
-    this.focusedDay = day;
+  private rangeEnd(): string | undefined {
+    return this.rangeOn ? (this.end ?? this.start)?.day : undefined;
   }
 
   /** `time` replaces the picked part's time ("Now"); without it the part keeps its own. */
@@ -401,9 +410,9 @@ class DateEditor {
       ? document.activeElement?.getAttribute('data-blok-database-date-day')
       : null;
 
-    this.root.replaceChildren(this.renderFields(), this.renderHeader(), this.renderGrid(), this.renderOptions());
+    this.root.replaceChildren(this.renderFields(), this.calendar.header(), this.calendar.grid(), this.renderOptions());
     if (focusedDay !== null && focusedDay !== undefined) {
-      this.dayButton(this.focusedDay)?.focus();
+      this.calendar.focusDay();
     }
   }
 
@@ -521,121 +530,6 @@ class DateEditor {
     input.addEventListener('change', apply);
 
     return input;
-  }
-
-  private renderHeader(): HTMLElement {
-    const header = document.createElement('div');
-    const label = document.createElement('span');
-    const today = document.createElement('button');
-
-    header.setAttribute('data-blok-database-date-header', '');
-    label.setAttribute('data-blok-database-date-month', '');
-    label.setAttribute('aria-live', 'polite');
-    label.textContent = new Intl.DateTimeFormat(this.locale, { month: 'short', year: 'numeric' })
-      .format(new Date(this.viewYear, this.viewMonth, 1));
-
-    today.type = 'button';
-    today.setAttribute('data-blok-database-date-today', '');
-    // research/23 §1: with a time it reads "Now" and sets the time too.
-    today.textContent = this.t(this.timeOn ? 'tools.database.dateNow' : 'tools.database.dateToday');
-    today.addEventListener('click', () => {
-      const now = new Date();
-
-      this.pickDay(toIsoDay(now), this.timeOn ? toIsoTime(now) : undefined);
-    });
-
-    header.append(
-      label,
-      today,
-      this.monthStepButton('data-blok-database-date-prev', IconChevronLeft, 'tools.database.datePreviousMonth', -1),
-      this.monthStepButton('data-blok-database-date-next', IconChevronRight, 'tools.database.dateNextMonth', 1)
-    );
-
-    return header;
-  }
-
-  private monthStepButton(attribute: string, icon: string, labelKey: string, months: number): HTMLButtonElement {
-    const button = document.createElement('button');
-
-    button.type = 'button';
-    button.setAttribute(attribute, '');
-    button.setAttribute('aria-label', this.t(labelKey));
-    button.innerHTML = icon;
-    button.addEventListener('click', () => {
-      const first = new Date(this.viewYear, this.viewMonth + months, 1);
-
-      this.viewYear = first.getFullYear();
-      this.viewMonth = first.getMonth();
-      this.focusedDay = toIsoDay(first);
-      this.render();
-    });
-
-    return button;
-  }
-
-  private renderGrid(): HTMLElement {
-    const grid = document.createElement('div');
-    const weekdayRow = document.createElement('div');
-    const weekdayNames = pickerWeekdayNames(this.locale);
-
-    grid.setAttribute('role', 'grid');
-    grid.setAttribute('data-blok-database-date-grid', '');
-    weekdayRow.setAttribute('role', 'row');
-    weekdayRow.append(...Array.from({ length: 7 }, (_, i) => {
-      const dow = (this.weekStart + i) % 7;
-      const cell = document.createElement('span');
-
-      cell.setAttribute('role', 'columnheader');
-      cell.setAttribute('data-blok-database-date-weekday', '');
-      cell.setAttribute('data-day', String(dow));
-      cell.textContent = weekdayNames[dow];
-
-      return cell;
-    }));
-    grid.appendChild(weekdayRow);
-
-    const first = new Date(this.viewYear, this.viewMonth, 1);
-    const lead = (first.getDay() - this.weekStart + 7) % 7;
-    const firstShown = addDays(toIsoDay(first), -lead);
-
-    grid.append(...Array.from({ length: DAYS_SHOWN / 7 }, (_, week) => {
-      const row = document.createElement('div');
-
-      row.setAttribute('role', 'row');
-      row.append(...Array.from({ length: 7 }, (__, d) => this.renderDay(addDays(firstShown, week * 7 + d))));
-
-      return row;
-    }));
-    grid.addEventListener('keydown', this.handleGridKey);
-
-    return grid;
-  }
-
-  private renderDay(iso: string): HTMLButtonElement {
-    const date = toLocalDate(iso);
-    const button = document.createElement('button');
-    const rangeEnd = this.rangeOn ? (this.end ?? this.start)?.day : undefined;
-    const selected = iso === this.start?.day || (rangeEnd !== undefined && iso === rangeEnd);
-
-    button.type = 'button';
-    button.setAttribute('role', 'gridcell');
-    button.setAttribute('data-blok-database-date-day', iso);
-    button.setAttribute('aria-selected', String(selected));
-    button.setAttribute('aria-label', formatDatePart(iso, this.locale));
-    button.tabIndex = iso === this.focusedDay ? 0 : -1;
-    button.textContent = String(date.getDate());
-    if (date.getMonth() !== this.viewMonth) {
-      button.setAttribute('data-outside', '');
-    }
-    if (iso === toIsoDay(new Date())) {
-      button.setAttribute('data-today', '');
-    }
-    if (rangeEnd !== undefined && this.start !== null && iso > this.start.day && iso < rangeEnd) {
-      button.setAttribute('data-in-range', '');
-    }
-    button.addEventListener('click', () => this.pickDay(iso));
-
-    return button;
   }
 
   private renderOptions(): HTMLElement {
@@ -1061,40 +955,6 @@ class DateEditor {
     event.preventDefault();
     items.forEach((item, i) => item.setAttribute('tabindex', i === target ? '0' : '-1'));
     items[target]?.focus();
-  };
-
-  private dayButton(day: string): HTMLButtonElement | null {
-    return this.root.querySelector<HTMLButtonElement>(`[data-blok-database-date-day="${day}"]`);
-  }
-
-  private readonly handleGridKey = (event: KeyboardEvent): void => {
-    const horizontal = logicalArrow(event.key, getElementDirection(this.anchor));
-    const steps: Record<string, number> = { ArrowUp: -7, ArrowDown: 7, forward: 1, backward: -1 };
-    const delta = steps[horizontal ?? event.key];
-
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      this.pickDay(this.focusedDay);
-
-      return;
-    }
-    if (delta === undefined) {
-      return;
-    }
-    event.preventDefault();
-    const day = addDays(this.focusedDay, delta);
-    const date = toLocalDate(day);
-
-    this.focusedDay = day;
-    if (date.getMonth() !== this.viewMonth || date.getFullYear() !== this.viewYear) {
-      this.viewYear = date.getFullYear();
-      this.viewMonth = date.getMonth();
-      this.render();
-    } else {
-      this.root.querySelectorAll('[data-blok-database-date-day][tabindex="0"]').forEach((b) => b.setAttribute('tabindex', '-1'));
-      this.dayButton(day)?.setAttribute('tabindex', '0');
-    }
-    this.dayButton(day)?.focus();
   };
 }
 

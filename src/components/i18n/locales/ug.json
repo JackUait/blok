@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "تاللاشنى تازىلا",
   "tools.database.filterExactDate": "ئېنىق چېسلا",
   "tools.database.filterDateCustom": "ئۆزلەشتۈرۈلگەن چېسلا",
+  "tools.database.filterDatePlaceholder": "چېسلا تاللاڭ ياكى كىرگۈزۈڭ…",
+  "tools.database.filterDatePresets": "بۈگۈنگە نىسبەتەن چېسلا تاللاش تىزىملىكى",
   "tools.database.filterChecked": "بەلگە قويۇلدى",
   "tools.database.filterUnchecked": "بەلگە قويۇلمىدى",
   "tools.database.filterCount": "سانى",

@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "Kosongkan pilihan",
   "tools.database.filterExactDate": "Tarikh tepat",
   "tools.database.filterDateCustom": "Tarikh tersuai",
+  "tools.database.filterDatePlaceholder": "Pilih atau taip tarikh…",
+  "tools.database.filterDatePresets": "Menu untuk memilih tarikh relatif kepada hari ini",
   "tools.database.filterChecked": "Ditandai",
   "tools.database.filterUnchecked": "Tidak ditandai",
   "tools.database.filterCount": "Bilangan",

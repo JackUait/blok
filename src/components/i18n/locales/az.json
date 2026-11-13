@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "Seçimi təmizlə",
   "tools.database.filterExactDate": "Dəqiq tarix",
   "tools.database.filterDateCustom": "Fərdi tarix",
+  "tools.database.filterDatePlaceholder": "Tarix seçin və ya yazın…",
+  "tools.database.filterDatePresets": "Bu günə nisbətən tarix seçmək üçün siyahı",
   "tools.database.filterChecked": "İşarələnib",
   "tools.database.filterUnchecked": "İşarələnməyib",
   "tools.database.filterCount": "Say",

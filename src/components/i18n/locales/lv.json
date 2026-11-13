@@ -1389,6 +1389,8 @@
   "tools.database.filterClearSelection": "Notīrīt atlasi",
   "tools.database.filterExactDate": "Precīzs datums",
   "tools.database.filterDateCustom": "Pielāgots datums",
+  "tools.database.filterDatePlaceholder": "Izvēlieties vai ierakstiet datumu…",
+  "tools.database.filterDatePresets": "Izvēlne datuma izvēlei attiecībā pret šodienu",
   "tools.database.filterChecked": "Atzīmēta",
   "tools.database.filterUnchecked": "Neatzīmēta",
   "tools.database.filterCount": "Skaits",

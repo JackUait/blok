@@ -1389,6 +1389,8 @@
   "tools.database.filterClearSelection": "Cancella selezione",
   "tools.database.filterExactDate": "Data esatta",
   "tools.database.filterDateCustom": "Data personalizzata",
+  "tools.database.filterDatePlaceholder": "Seleziona o digita una data…",
+  "tools.database.filterDatePresets": "Menu per scegliere una data relativa a oggi",
   "tools.database.filterChecked": "Selezionata",
   "tools.database.filterUnchecked": "Non selezionata",
   "tools.database.filterCount": "Quantità",

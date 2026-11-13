@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "ਚੋਣ ਸਾਫ਼ ਕਰੋ",
   "tools.database.filterExactDate": "ਸਹੀ ਮਿਤੀ",
   "tools.database.filterDateCustom": "ਕਸਟਮ ਮਿਤੀ",
+  "tools.database.filterDatePlaceholder": "ਮਿਤੀ ਚੁਣੋ ਜਾਂ ਟਾਈਪ ਕਰੋ…",
+  "tools.database.filterDatePresets": "ਅੱਜ ਦੇ ਮੁਕਾਬਲੇ ਮਿਤੀ ਚੁਣਨ ਲਈ ਮੀਨੂ",
   "tools.database.filterChecked": "ਨਿਸ਼ਾਨਬੱਧ ਕੀਤਾ ਗਿਆ",
   "tools.database.filterUnchecked": "ਨਿਸ਼ਾਨਬੱਧ ਨਹੀਂ ਕੀਤਾ ਗਿਆ",
   "tools.database.filterCount": "ਗਿਣਤੀ",

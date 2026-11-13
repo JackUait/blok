@@ -1389,6 +1389,8 @@
   "tools.database.filterClearSelection": "Șterge selecția",
   "tools.database.filterExactDate": "Dată exactă",
   "tools.database.filterDateCustom": "Dată personalizată",
+  "tools.database.filterDatePlaceholder": "Selectați sau tastați o dată…",
+  "tools.database.filterDatePresets": "Meniu pentru a alege o dată relativă la azi",
   "tools.database.filterChecked": "Bifat",
   "tools.database.filterUnchecked": "Nebifat",
   "tools.database.filterCount": "Număr",

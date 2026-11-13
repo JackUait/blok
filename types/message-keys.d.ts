@@ -966,6 +966,8 @@ export type BlokMessageKey =
   | 'tools.database.filterDatePastMonth'
   | 'tools.database.filterDatePastWeek'
   | 'tools.database.filterDatePastYear'
+  | 'tools.database.filterDatePlaceholder'
+  | 'tools.database.filterDatePresets'
   | 'tools.database.filterDateThisMonth'
   | 'tools.database.filterDateThisWeek'
   | 'tools.database.filterDateThisYear'

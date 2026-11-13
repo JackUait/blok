@@ -1389,6 +1389,8 @@
   "tools.database.filterClearSelection": "ניקוי הבחירה",
   "tools.database.filterExactDate": "תאריך מדויק",
   "tools.database.filterDateCustom": "תאריך מותאם אישית",
+  "tools.database.filterDatePlaceholder": "בחר או הקלד תאריך…",
+  "tools.database.filterDatePresets": "תפריט לבחירת תאריך ביחס להיום",
   "tools.database.filterChecked": "מסומן",
   "tools.database.filterUnchecked": "לא מסומן",
   "tools.database.filterCount": "מספר",

@@ -1395,6 +1395,8 @@
   "tools.database.filterClearSelection": "Очистити вибір",
   "tools.database.filterExactDate": "Точна дата",
   "tools.database.filterDateCustom": "Власна дата",
+  "tools.database.filterDatePlaceholder": "Виберіть або введіть дату…",
+  "tools.database.filterDatePresets": "Меню вибору дати відносно сьогодні",
   "tools.database.filterChecked": "Позначено",
   "tools.database.filterUnchecked": "Не позначено",
   "tools.database.filterCount": "Число",

@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "Tyhjennä valinta",
   "tools.database.filterExactDate": "Tarkka päivämäärä",
   "tools.database.filterDateCustom": "Mukautettu päivämäärä",
+  "tools.database.filterDatePlaceholder": "Valitse tai kirjoita päivämäärä…",
+  "tools.database.filterDatePresets": "Valikko päivämäärän valitsemiseen suhteessa tähän päivään",
   "tools.database.filterChecked": "Valittu",
   "tools.database.filterUnchecked": "Ei valittu",
   "tools.database.filterCount": "Määrä",

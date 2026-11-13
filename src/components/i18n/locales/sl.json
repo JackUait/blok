@@ -1395,6 +1395,8 @@
   "tools.database.filterClearSelection": "Počisti izbor",
   "tools.database.filterExactDate": "Točen datum",
   "tools.database.filterDateCustom": "Datum po meri",
+  "tools.database.filterDatePlaceholder": "Izberite ali vnesite datum…",
+  "tools.database.filterDatePresets": "Meni za izbiro datuma glede na danes",
   "tools.database.filterChecked": "Označeno",
   "tools.database.filterUnchecked": "Neoznačeno",
   "tools.database.filterCount": "Število",

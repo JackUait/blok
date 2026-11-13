@@ -1383,6 +1383,8 @@
   "tools.database.filterClearSelection": "אויסמעקן די אויסקלײַב",
   "tools.database.filterExactDate": "פּינקטלעכע דאטום",
   "tools.database.filterDateCustom": "אייגענע דאטום",
+  "tools.database.filterDatePlaceholder": "קלויבט אָדער טיפּט אַ דאַטום…",
+  "tools.database.filterDatePresets": "מעניו צו קלייבן אַ דאַטום לגבי הײַנט",
   "tools.database.filterChecked": "אָפּגעצייכנט",
   "tools.database.filterUnchecked": "ניט אָפּגעצייכנט",
   "tools.database.filterCount": "צאָל",

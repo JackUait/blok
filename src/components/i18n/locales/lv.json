@@ -935,6 +935,8 @@
   "tools.file.previewSlidesOne": "1 slaids",
   "tools.file.previewLines": "Rindas: {count}",
   "tools.file.previewLinesOne": "1 rinda",
+  "tools.file.cardFiles": "Faili: {count}",
+  "tools.file.cardFilesOne": "1 fails",
   "tools.file.previewRows": "Rindas: {count}",
   "tools.file.previewRowsOne": "1 rinda",
   "tools.file.previewPageOf": "Lappuse {page} / {total}",

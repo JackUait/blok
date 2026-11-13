@@ -912,6 +912,8 @@
   "tools.file.previewSlidesOne": "1 સ્લાઇડ",
   "tools.file.previewLines": "{count} લીટીઓ",
   "tools.file.previewLinesOne": "1 લીટી",
+  "tools.file.cardFiles": "{count} ફાઇલ",
+  "tools.file.cardFilesOne": "1 ફાઇલ",
   "tools.file.previewRows": "{count} હરોળ",
   "tools.file.previewRowsOne": "1 હરોળ",
   "tools.file.previewPageOf": "પૃષ્ઠ {page} / {total}",

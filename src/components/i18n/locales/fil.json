@@ -912,6 +912,8 @@
   "tools.file.previewSlidesOne": "Isang slide",
   "tools.file.previewLines": "{count} linya",
   "tools.file.previewLinesOne": "1 linya",
+  "tools.file.cardFiles": "{count} file",
+  "tools.file.cardFilesOne": "Isang file",
   "tools.file.previewRows": "{count} hanay",
   "tools.file.previewRowsOne": "1 hanay",
   "tools.file.previewPageOf": "Pahina {page} / {total}",

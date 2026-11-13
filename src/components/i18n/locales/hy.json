@@ -914,6 +914,8 @@
   "tools.file.previewSlidesOne": "1 սլայդ",
   "tools.file.previewLines": "{count} տող",
   "tools.file.previewLinesOne": "1 տող",
+  "tools.file.cardFiles": "{count} ֆայլ",
+  "tools.file.cardFilesOne": "1 ֆայլ",
   "tools.file.previewRows": "{count} տող",
   "tools.file.previewRowsOne": "1 տող",
   "tools.file.previewPageOf": "Էջ {page} / {total}",

@@ -914,6 +914,8 @@
   "tools.file.previewSlidesOne": "1 diapozitiv",
   "tools.file.previewLines": "{count} rreshta",
   "tools.file.previewLinesOne": "1 rresht",
+  "tools.file.cardFiles": "{count} skedarë",
+  "tools.file.cardFilesOne": "1 skedar",
   "tools.file.previewRows": "{count} rreshta",
   "tools.file.previewRowsOne": "1 rresht",
   "tools.file.previewPageOf": "Faqja {page} / {total}",

@@ -914,6 +914,8 @@
   "tools.file.previewSlidesOne": "1 სლაიდი",
   "tools.file.previewLines": "{count} სტრიქონი",
   "tools.file.previewLinesOne": "1 სტრიქონი",
+  "tools.file.cardFiles": "{count} ფაილი",
+  "tools.file.cardFilesOne": "1 ფაილი",
   "tools.file.previewRows": "{count} მწკრივი",
   "tools.file.previewRowsOne": "1 მწკრივი",
   "tools.file.previewPageOf": "გვერდი {page} / {total}",

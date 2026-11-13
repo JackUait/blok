@@ -97,6 +97,15 @@ export interface FileConfig {
   /** Caption placeholder. */
   captionPlaceholder?: string;
   /**
+   * Whether a file card shows an object made from the file itself: its first
+   * page, its first lines of code, frames of a video. To draw it, Blok reads
+   * the file when the card comes near the screen: the first 4 KB of a text
+   * file, the whole file for Word, Excel and PowerPoint (up to 20 MiB), the
+   * needed ranges of a PDF or a video. Default `true`. Set `false` to keep the
+   * plain card and make no such request.
+   */
+  cardPreview?: boolean;
+  /**
    * Fetches a file's bytes for the preview when the browser cannot read the
    * url itself (no CORS). Blok calls it before trying the url directly. Throw
    * or answer with an error status to let Blok try the next way.

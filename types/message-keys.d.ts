@@ -2478,6 +2478,8 @@ export type BlokMessageKey =
   | 'tools.equation.placeholder'
   | 'tools.file.cancelUpload'
   | 'tools.file.captionPlaceholder'
+  | 'tools.file.cardFiles'
+  | 'tools.file.cardFilesOne'
   | 'tools.file.copyUrl'
   | 'tools.file.download'
   | 'tools.file.emptyAddFile'

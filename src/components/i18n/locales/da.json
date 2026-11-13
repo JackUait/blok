@@ -914,6 +914,8 @@
   "tools.file.previewSlidesOne": "1 dias",
   "tools.file.previewLines": "{count} linjer",
   "tools.file.previewLinesOne": "1 linje",
+  "tools.file.cardFiles": "{count} filer",
+  "tools.file.cardFilesOne": "1 fil",
   "tools.file.previewRows": "{count} rækker",
   "tools.file.previewRowsOne": "1 række",
   "tools.file.previewPageOf": "Side {page} / {total}",

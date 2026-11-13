@@ -914,6 +914,8 @@
   "tools.file.previewSlidesOne": "1 слайд",
   "tools.file.previewLines": "Рядків: {count}",
   "tools.file.previewLinesOne": "1 рядок",
+  "tools.file.cardFiles": "Файлів: {count}",
+  "tools.file.cardFilesOne": "1 файл",
   "tools.file.previewRows": "Рядків: {count}",
   "tools.file.previewRowsOne": "1 рядок",
   "tools.file.previewPageOf": "Сторінка {page} / {total}",

@@ -912,6 +912,8 @@
   "tools.file.previewSlidesOne": "1 dia",
   "tools.file.previewLines": "{count} regels",
   "tools.file.previewLinesOne": "1 regel",
+  "tools.file.cardFiles": "{count} bestanden",
+  "tools.file.cardFilesOne": "1 bestand",
   "tools.file.previewRows": "{count} rijen",
   "tools.file.previewRowsOne": "1 rij",
   "tools.file.previewPageOf": "Pagina {page} / {total}",

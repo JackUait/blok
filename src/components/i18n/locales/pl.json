@@ -916,6 +916,8 @@
   "tools.file.previewSlidesOne": "1 slajd",
   "tools.file.previewLines": "Liczba wierszy: {count}",
   "tools.file.previewLinesOne": "1 wiersz",
+  "tools.file.cardFiles": "Liczba plików: {count}",
+  "tools.file.cardFilesOne": "1 plik",
   "tools.file.previewRows": "Liczba wierszy: {count}",
   "tools.file.previewRowsOne": "1 wiersz",
   "tools.file.previewPageOf": "Strona {page} / {total}",

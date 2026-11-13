@@ -912,6 +912,8 @@
   "tools.file.previewSlidesOne": "1 ਸਲਾਈਡ",
   "tools.file.previewLines": "{count} ਲਾਈਨਾਂ",
   "tools.file.previewLinesOne": "1 ਲਾਈਨ",
+  "tools.file.cardFiles": "{count} ਫ਼ਾਈਲਾਂ",
+  "tools.file.cardFilesOne": "1 ਫ਼ਾਈਲ",
   "tools.file.previewRows": "{count} ਕਤਾਰਾਂ",
   "tools.file.previewRowsOne": "1 ਕਤਾਰ",
   "tools.file.previewPageOf": "ਪੰਨਾ {page} / {total}",

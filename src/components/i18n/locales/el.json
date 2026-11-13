@@ -914,6 +914,8 @@
   "tools.file.previewSlidesOne": "1 διαφάνεια",
   "tools.file.previewLines": "{count} γραμμές",
   "tools.file.previewLinesOne": "1 γραμμή",
+  "tools.file.cardFiles": "{count} αρχεία",
+  "tools.file.cardFilesOne": "1 αρχείο",
   "tools.file.previewRows": "{count} γραμμές",
   "tools.file.previewRowsOne": "1 γραμμή",
   "tools.file.previewPageOf": "Σελίδα {page} / {total}",

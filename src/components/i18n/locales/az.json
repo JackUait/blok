@@ -914,6 +914,8 @@
   "tools.file.previewSlidesOne": "1 slayd",
   "tools.file.previewLines": "{count} sətir",
   "tools.file.previewLinesOne": "1 sətir",
+  "tools.file.cardFiles": "{count} fayl",
+  "tools.file.cardFilesOne": "1 fayl",
   "tools.file.previewRows": "{count} sətir",
   "tools.file.previewRowsOne": "1 sətir",
   "tools.file.previewPageOf": "Səhifə {page} / {total}",

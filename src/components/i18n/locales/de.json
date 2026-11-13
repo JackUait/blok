@@ -914,6 +914,8 @@
   "tools.file.previewSlidesOne": "1 Folie",
   "tools.file.previewLines": "{count} Zeilen",
   "tools.file.previewLinesOne": "1 Zeile",
+  "tools.file.cardFiles": "{count} Dateien",
+  "tools.file.cardFilesOne": "1 Datei",
   "tools.file.previewRows": "{count} Zeilen",
   "tools.file.previewRowsOne": "1 Zeile",
   "tools.file.previewPageOf": "Seite {page} / {total}",

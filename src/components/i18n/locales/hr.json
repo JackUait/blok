@@ -913,6 +913,8 @@
   "tools.file.previewSlidesOne": "1 slajd",
   "tools.file.previewLines": "Broj redaka: {count}",
   "tools.file.previewLinesOne": "1 redak",
+  "tools.file.cardFiles": "Broj datoteka: {count}",
+  "tools.file.cardFilesOne": "1 datoteka",
   "tools.file.previewRows": "Broj redaka: {count}",
   "tools.file.previewRowsOne": "1 redak",
   "tools.file.previewPageOf": "Stranica {page} / {total}",

@@ -915,6 +915,8 @@
   "tools.file.previewSlidesOne": "1 diapozitiv",
   "tools.file.previewLines": "Linii: {count}",
   "tools.file.previewLinesOne": "1 linie",
+  "tools.file.cardFiles": "Fișiere: {count}",
+  "tools.file.cardFilesOne": "1 fișier",
   "tools.file.previewRows": "Rânduri: {count}",
   "tools.file.previewRowsOne": "1 rând",
   "tools.file.previewPageOf": "Pagina {page} / {total}",

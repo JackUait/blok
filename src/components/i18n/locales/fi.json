@@ -912,6 +912,8 @@
   "tools.file.previewSlidesOne": "1 dia",
   "tools.file.previewLines": "{count} riviä",
   "tools.file.previewLinesOne": "1 rivi",
+  "tools.file.cardFiles": "{count} tiedostoa",
+  "tools.file.cardFilesOne": "1 tiedosto",
   "tools.file.previewRows": "{count} riviä",
   "tools.file.previewRowsOne": "1 rivi",
   "tools.file.previewPageOf": "Sivu {page} / {total}",

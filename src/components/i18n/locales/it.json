@@ -915,6 +915,8 @@
   "tools.file.previewSlidesOne": "1 diapositiva",
   "tools.file.previewLines": "{count} righe",
   "tools.file.previewLinesOne": "1 riga",
+  "tools.file.cardFiles": "{count} file",
+  "tools.file.cardFilesOne": "1 file",
   "tools.file.previewRows": "{count} righe",
   "tools.file.previewRowsOne": "1 riga",
   "tools.file.previewPageOf": "Pagina {page} / {total}",

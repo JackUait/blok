@@ -913,6 +913,8 @@
   "tools.file.previewSlidesOne": "שקופית אחת",
   "tools.file.previewLines": "{count} שורות",
   "tools.file.previewLinesOne": "שורה אחת",
+  "tools.file.cardFiles": "{count} קבצים",
+  "tools.file.cardFilesOne": "קובץ אחד",
   "tools.file.previewRows": "{count} שורות",
   "tools.file.previewRowsOne": "שורה אחת",
   "tools.file.previewPageOf": "עמוד {page} / {total}",

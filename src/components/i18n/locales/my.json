@@ -932,6 +932,8 @@
   "tools.file.previewSlidesOne": "1 ဆလိုက်",
   "tools.file.previewLines": "စာကြောင်း {count} ကြောင်း",
   "tools.file.previewLinesOne": "1 စာကြောင်း",
+  "tools.file.cardFiles": "ဖိုင် {count} ခု",
+  "tools.file.cardFilesOne": "1 ဖိုင်",
   "tools.file.previewRows": "အတန်း {count} ခု",
   "tools.file.previewRowsOne": "1 အတန်း",
   "tools.file.previewPageOf": "စာမျက်နှာ {page} / {total}",

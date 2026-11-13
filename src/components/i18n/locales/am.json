@@ -914,6 +914,8 @@
   "tools.file.previewSlidesOne": "1 ስላይድ",
   "tools.file.previewLines": "{count} መስመሮች",
   "tools.file.previewLinesOne": "1 መስመር",
+  "tools.file.cardFiles": "{count} ፋይሎች",
+  "tools.file.cardFilesOne": "1 ፋይል",
   "tools.file.previewRows": "{count} ረድፎች",
   "tools.file.previewRowsOne": "1 ረድፍ",
   "tools.file.previewPageOf": "ገጽ {page} / {total}",

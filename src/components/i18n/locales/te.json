@@ -912,6 +912,8 @@
   "tools.file.previewSlidesOne": "1 స్లయిడ్",
   "tools.file.previewLines": "{count} లైన్‌లు",
   "tools.file.previewLinesOne": "1 లైన్",
+  "tools.file.cardFiles": "{count} ఫైల్‌లు",
+  "tools.file.cardFilesOne": "1 ఫైల్",
   "tools.file.previewRows": "{count} వరుసలు",
   "tools.file.previewRowsOne": "1 వరుస",
   "tools.file.previewPageOf": "పేజీ {page} / {total}",

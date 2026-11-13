@@ -1,4 +1,4 @@
-import type { DeckView } from './pptx/viewer';
+import type { DeckView, SlideView } from './pptx/viewer';
 import type { readZip } from './zip/read-zip';
 
 /**
@@ -31,4 +31,11 @@ export async function loadPptxRenderer(): Promise<{
   const mod = await import('./pptx/viewer');
 
   return { open: mod.openDeck };
+}
+
+/** Dynamic-import the pptx viewer's first-slide renderer, for a card thumbnail. */
+export async function loadPptxFirstSlide(): Promise<
+  (buf: ArrayBuffer, isCancelled?: () => boolean) => Promise<SlideView | null>
+> {
+  return (await import('./pptx/viewer')).openFirstSlide;
 }

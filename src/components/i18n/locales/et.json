@@ -912,6 +912,8 @@
   "tools.file.previewSlidesOne": "1 slaid",
   "tools.file.previewLines": "{count} rida",
   "tools.file.previewLinesOne": "1 rida",
+  "tools.file.cardFiles": "{count} faili",
+  "tools.file.cardFilesOne": "1 fail",
   "tools.file.previewRows": "{count} rida",
   "tools.file.previewRowsOne": "1 rida",
   "tools.file.previewPageOf": "Lehekülg {page} / {total}",

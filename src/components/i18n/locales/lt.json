@@ -940,6 +940,8 @@
   "tools.file.previewSlidesOne": "1 skaidrė",
   "tools.file.previewLines": "Eilučių: {count}",
   "tools.file.previewLinesOne": "1 eilutė",
+  "tools.file.cardFiles": "Failų: {count}",
+  "tools.file.cardFilesOne": "1 failas",
   "tools.file.previewRows": "Eilučių: {count}",
   "tools.file.previewRowsOne": "1 eilutė",
   "tools.file.previewPageOf": "Puslapis {page} / {total}",

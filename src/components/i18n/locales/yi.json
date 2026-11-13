@@ -912,6 +912,8 @@
   "tools.file.previewSlidesOne": "1 סלײַד",
   "tools.file.previewLines": "{count} שורות",
   "tools.file.previewLinesOne": "1 שורה",
+  "tools.file.cardFiles": "{count} טעקעס",
+  "tools.file.cardFilesOne": "1 טעקע",
   "tools.file.previewRows": "{count} רייען",
   "tools.file.previewRowsOne": "1 ריי",
   "tools.file.previewPageOf": "בלאַט {page} / {total}",

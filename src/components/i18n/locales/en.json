@@ -753,6 +753,8 @@
   "tools.file.previewSlidesOne": "1 slide",
   "tools.file.previewLines": "{count} lines",
   "tools.file.previewLinesOne": "1 line",
+  "tools.file.cardFiles": "{count} files",
+  "tools.file.cardFilesOne": "1 file",
   "tools.file.previewRows": "{count} rows",
   "tools.file.previewRowsOne": "1 row",
   "tools.file.previewPageOf": "Page {page} / {total}",

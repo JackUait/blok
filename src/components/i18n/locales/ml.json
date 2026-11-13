@@ -932,6 +932,8 @@
   "tools.file.previewSlidesOne": "1 സ്ലൈഡ്",
   "tools.file.previewLines": "{count} വരികൾ",
   "tools.file.previewLinesOne": "1 വരി",
+  "tools.file.cardFiles": "{count} ഫയലുകൾ",
+  "tools.file.cardFilesOne": "1 ഫയൽ",
   "tools.file.previewRows": "{count} വരികൾ",
   "tools.file.previewRowsOne": "1 വരി",
   "tools.file.previewPageOf": "പേജ് {page} / {total}",

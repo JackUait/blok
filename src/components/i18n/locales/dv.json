@@ -914,6 +914,8 @@
   "tools.file.previewSlidesOne": "1 ސްލައިޑް",
   "tools.file.previewLines": "{count} ފޮޅުވަތް",
   "tools.file.previewLinesOne": "1 ފޮޅުވަތް",
+  "tools.file.cardFiles": "{count} ފައިލް",
+  "tools.file.cardFilesOne": "1 ފައިލް",
   "tools.file.previewRows": "{count} ރޯ",
   "tools.file.previewRowsOne": "1 ރޯ",
   "tools.file.previewPageOf": "ޞަފްޙާ {page} / {total}",

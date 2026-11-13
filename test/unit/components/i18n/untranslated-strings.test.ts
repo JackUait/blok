@@ -308,6 +308,7 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     // "Web" is a dictionary-listed noun; see the ledger's retention row.
     'tools.code.familyWeb',
     'tools.database.filesLimitOne',
+    'tools.file.cardFilesOne',
     // Established Italian product and computing loanwords.
     'searchTerms.layout',
     'toolNames.file',

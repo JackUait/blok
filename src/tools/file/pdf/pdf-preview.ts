@@ -21,7 +21,7 @@ export type PdfSource =
  */
 const CANVAS_MAX_AREA_IN_BYTES = 16_777_216 * 4;
 
-function sourceParams(source: PdfSource, lib: PdfJs, onFailure: () => void): Record<string, unknown> {
+export function sourceParams(source: PdfSource, lib: PdfJs, onFailure: () => void): Record<string, unknown> {
   if (source.kind === 'data') {
     return { data: source.data };
   }
@@ -45,7 +45,7 @@ const isUnreadable = (error: unknown): boolean =>
   (error instanceof Error && error.name === 'InvalidPDFException');
 
 /** pdf.js needs a trailing slash on each folder url. */
-function assetParams(base: string | undefined): Record<string, unknown> {
+export function assetParams(base: string | undefined): Record<string, unknown> {
   if (base === undefined || base === '') {
     return { useWasm: false };
   }

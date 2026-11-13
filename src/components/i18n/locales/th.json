@@ -912,6 +912,8 @@
   "tools.file.previewSlidesOne": "1 สไลด์",
   "tools.file.previewLines": "{count} บรรทัด",
   "tools.file.previewLinesOne": "1 บรรทัด",
+  "tools.file.cardFiles": "{count} ไฟล์",
+  "tools.file.cardFilesOne": "1 ไฟล์",
   "tools.file.previewRows": "{count} แถว",
   "tools.file.previewRowsOne": "1 แถว",
   "tools.file.previewPageOf": "หน้า {page} / {total}",

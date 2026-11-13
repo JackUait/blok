@@ -916,6 +916,8 @@
   "tools.file.previewSlidesOne": "1 слайд",
   "tools.file.previewLines": "Строк: {count}",
   "tools.file.previewLinesOne": "1 строка",
+  "tools.file.cardFiles": "Файлов: {count}",
+  "tools.file.cardFilesOne": "1 файл",
   "tools.file.previewRows": "Строк: {count}",
   "tools.file.previewRowsOne": "1 строка",
   "tools.file.previewPageOf": "Страница {page} / {total}",

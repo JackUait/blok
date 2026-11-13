@@ -252,6 +252,8 @@ const openRemotePdf = async (page: Page, url: string, options: RemoteOptions = {
     // @ts-expect-error built bundle has no TS types — runtime-only dynamic import
     const { File: FileTool } = await import('/dist/tools.mjs?_v=1') as Record<string, new (...args: unknown[]) => unknown>;
     const config = {
+      // These tests count the preview's own requests; the card would add its own.
+      cardPreview: false,
       ...(proxy === undefined ? {} : { fetchPreview: (target: string) => fetch(`${proxy}?url=${encodeURIComponent(target)}`) }),
       ...(previewEndpoint === undefined ? {} : { previewEndpoint: { url: `${location.origin}${previewEndpoint}` } }),
     };

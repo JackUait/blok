@@ -914,6 +914,8 @@
   "tools.file.previewSlidesOne": "1 سلائيڊ",
   "tools.file.previewLines": "{count} لائينون",
   "tools.file.previewLinesOne": "1 لائين",
+  "tools.file.cardFiles": "{count} فائيلون",
+  "tools.file.cardFilesOne": "1 فائيل",
   "tools.file.previewRows": "{count} قطارون",
   "tools.file.previewRowsOne": "1 قطار",
   "tools.file.previewPageOf": "صفحو {page} / {total}",

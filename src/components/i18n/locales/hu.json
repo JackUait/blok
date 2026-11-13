@@ -912,6 +912,8 @@
   "tools.file.previewSlidesOne": "1 dia",
   "tools.file.previewLines": "{count} sor",
   "tools.file.previewLinesOne": "1 sor",
+  "tools.file.cardFiles": "{count} fájl",
+  "tools.file.cardFilesOne": "1 fájl",
   "tools.file.previewRows": "{count} sor",
   "tools.file.previewRowsOne": "1 sor",
   "tools.file.previewPageOf": "{page}. oldal / {total}",

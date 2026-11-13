@@ -915,6 +915,8 @@
   "tools.file.previewSlidesOne": "1 slajd",
   "tools.file.previewLines": "Broj redova: {count}",
   "tools.file.previewLinesOne": "1 red",
+  "tools.file.cardFiles": "Broj datoteka: {count}",
+  "tools.file.cardFilesOne": "1 datoteka",
   "tools.file.previewRows": "Broj redova: {count}",
   "tools.file.previewRowsOne": "1 red",
   "tools.file.previewPageOf": "Stranica {page} / {total}",

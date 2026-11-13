@@ -914,6 +914,8 @@
   "tools.file.previewSlidesOne": "1টি স্লাইড",
   "tools.file.previewLines": "{count}টি লাইন",
   "tools.file.previewLinesOne": "1টি লাইন",
+  "tools.file.cardFiles": "{count}টি ফাইল",
+  "tools.file.cardFilesOne": "1টি ফাইল",
   "tools.file.previewRows": "{count}টি সারি",
   "tools.file.previewRowsOne": "1টি সারি",
   "tools.file.previewPageOf": "পৃষ্ঠা {page} / {total}",

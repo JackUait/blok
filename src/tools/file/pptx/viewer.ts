@@ -159,3 +159,48 @@ export async function openDeck(
 
   return { destroy, count: presentation.slides.length, width: presentation.width, height: presentation.height };
 }
+
+/** One drawn slide, at full size. */
+export interface SlideView {
+  readonly element: HTMLElement;
+  /** Slides in the deck. */
+  readonly count: number;
+  readonly width: number;
+  readonly height: number;
+  destroy(): void;
+}
+
+/**
+ * Draws only the first slide of a .pptx, at full size, for a thumbnail.
+ * Null when cancelled or when the deck has no slide.
+ */
+export async function openFirstSlide(
+  buf: ArrayBuffer,
+  isCancelled: () => boolean = () => false,
+): Promise<SlideView | null> {
+  const files = await parseZip(buf, RECOMMENDED_ZIP_LIMITS);
+
+  if (isCancelled()) {
+    return null;
+  }
+  const presentation = buildPresentation(files);
+  const first = presentation.slides[0];
+
+  if (first === undefined) {
+    return null;
+  }
+  const mediaUrlCache = new Map<string, string>();
+  const handle = renderSlide(presentation, first, { mediaUrlCache, shapeBudget: { remaining: DECK_SHAPE_BUDGET } });
+
+  return {
+    element: handle.element,
+    count: presentation.slides.length,
+    width: presentation.width,
+    height: presentation.height,
+    destroy: () => {
+      handle.dispose();
+      mediaUrlCache.forEach((url) => URL.revokeObjectURL(url));
+      mediaUrlCache.clear();
+    },
+  };
+}

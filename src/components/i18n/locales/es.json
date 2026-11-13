@@ -913,6 +913,8 @@
   "tools.file.previewSlidesOne": "1 diapositiva",
   "tools.file.previewLines": "{count} líneas",
   "tools.file.previewLinesOne": "1 línea",
+  "tools.file.cardFiles": "{count} archivos",
+  "tools.file.cardFilesOne": "1 archivo",
   "tools.file.previewRows": "{count} filas",
   "tools.file.previewRowsOne": "1 fila",
   "tools.file.previewPageOf": "Página {page} / {total}",

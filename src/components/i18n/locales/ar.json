@@ -918,6 +918,8 @@
   "tools.file.previewSlidesOne": "شريحة واحدة",
   "tools.file.previewLines": "الأسطر: {count}",
   "tools.file.previewLinesOne": "سطر واحد",
+  "tools.file.cardFiles": "الملفات: {count}",
+  "tools.file.cardFilesOne": "ملف واحد",
   "tools.file.previewRows": "الصفوف: {count}",
   "tools.file.previewRowsOne": "صف واحد",
   "tools.file.previewPageOf": "الصفحة {page} / {total}",

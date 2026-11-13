@@ -912,6 +912,8 @@
   "tools.file.previewSlidesOne": "1 trang chiếu",
   "tools.file.previewLines": "{count} dòng",
   "tools.file.previewLinesOne": "1 dòng",
+  "tools.file.cardFiles": "{count} tệp",
+  "tools.file.cardFilesOne": "1 tệp",
   "tools.file.previewRows": "{count} hàng",
   "tools.file.previewRowsOne": "1 hàng",
   "tools.file.previewPageOf": "Trang {page} / {total}",

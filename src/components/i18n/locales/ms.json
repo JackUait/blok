@@ -932,6 +932,8 @@
   "tools.file.previewSlidesOne": "1 slaid",
   "tools.file.previewLines": "{count} baris",
   "tools.file.previewLinesOne": "1 baris",
+  "tools.file.cardFiles": "{count} fail",
+  "tools.file.cardFilesOne": "1 fail",
   "tools.file.previewRows": "{count} baris",
   "tools.file.previewRowsOne": "1 baris",
   "tools.file.previewPageOf": "Halaman {page} / {total}",

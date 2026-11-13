@@ -932,6 +932,8 @@
   "tools.file.previewSlidesOne": "1 слайд",
   "tools.file.previewLines": "{count} мөр",
   "tools.file.previewLinesOne": "1 мөр",
+  "tools.file.cardFiles": "{count} файл",
+  "tools.file.cardFilesOne": "1 файл",
   "tools.file.previewRows": "{count} мөр",
   "tools.file.previewRowsOne": "1 мөр",
   "tools.file.previewPageOf": "Хуудас {page} / {total}",

@@ -274,6 +274,13 @@
   to { transform: translateY(0) scale(1) }
 }
 
+@keyframes blok-file-drop {
+  0% { transform: translateY(0); opacity: 1 }
+  38% { transform: translateY(7px); opacity: 0 }
+  39% { transform: translateY(-11px); opacity: 0 }
+  100% { transform: translateY(0); opacity: 1 }
+}
+
 @keyframes blok-file-preview-backdrop-in {
   from { opacity: 0 }
   to { opacity: 1 }
@@ -303,6 +310,12 @@
 @keyframes blok-file-preview-view-in-right {
   from { transform: translate3d(14px, 0, 0) }
   to { transform: none }
+}
+
+@keyframes blok-file-tray {
+  0%, 28%, 100% { transform: none }
+  44% { transform: translateY(1.5px) scaleX(1.06) }
+  62% { transform: translateY(-0.5px) }
 }
 
 @keyframes blok-find-arrive {

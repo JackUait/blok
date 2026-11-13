@@ -57,6 +57,28 @@ const ACTIVATOR_STYLE: Partial<CSSStyleDeclaration> = {
   cursor: 'inherit',
 };
 
+/** Where the tray starts in IconDownload's single path. */
+const TRAY_START = 'M3.5 13';
+
+/**
+ * Splits the download icon into an arrow and a tray, so the arrow can drop
+ * into the tray on its own. Same drawing; left whole if the icon ever changes shape.
+ */
+function splitDownloadIcon(host: HTMLElement): void {
+  const path = host.querySelector('path');
+  const d = path?.getAttribute('d') ?? '';
+  const at = d.indexOf(TRAY_START);
+  if (path === null || at <= 0) {
+    return;
+  }
+  const tray = path.cloneNode(false) as SVGPathElement;
+  path.setAttribute('d', d.slice(0, at).trim());
+  path.setAttribute('data-part', 'arrow');
+  tray.setAttribute('d', d.slice(at));
+  tray.setAttribute('data-part', 'tray');
+  path.after(tray);
+}
+
 /** Renders the static download card: type icon, filename, size, download affordance. */
 export function renderFileCard(
   data: Partial<FileData> & { url: string },
@@ -160,6 +182,7 @@ export function renderFileCard(
     download.setAttribute('aria-label', downloadLabel);
   }
   download.innerHTML = IconDownload;
+  splitDownloadIcon(download);
 
   wrapper.append(card, download);
   return wrapper;

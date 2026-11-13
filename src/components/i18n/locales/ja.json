@@ -914,6 +914,8 @@
   "tools.file.previewSlidesOne": "1 スライド",
   "tools.file.previewLines": "{count}行",
   "tools.file.previewLinesOne": "1 行",
+  "tools.file.cardFiles": "{count}ファイル",
+  "tools.file.cardFilesOne": "1 ファイル",
   "tools.file.previewRows": "{count}行",
   "tools.file.previewRowsOne": "1 行",
   "tools.file.previewPageOf": "{page} / {total} ページ",

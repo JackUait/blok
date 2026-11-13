@@ -912,6 +912,8 @@
   "tools.file.previewSlidesOne": "1 اسلاید",
   "tools.file.previewLines": "{count} خط",
   "tools.file.previewLinesOne": "1 خط",
+  "tools.file.cardFiles": "{count} فایل",
+  "tools.file.cardFilesOne": "1 فایل",
   "tools.file.previewRows": "{count} ردیف",
   "tools.file.previewRowsOne": "1 ردیف",
   "tools.file.previewPageOf": "صفحه {page} / {total}",

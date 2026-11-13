@@ -912,6 +912,8 @@
   "tools.file.previewSlidesOne": "1 ஸ்லைடு",
   "tools.file.previewLines": "{count} வரிகள்",
   "tools.file.previewLinesOne": "1 வரி",
+  "tools.file.cardFiles": "{count} கோப்புகள்",
+  "tools.file.cardFilesOne": "1 கோப்பு",
   "tools.file.previewRows": "{count} வரிசைகள்",
   "tools.file.previewRowsOne": "1 வரிசை",
   "tools.file.previewPageOf": "பக்கம் {page} / {total}",

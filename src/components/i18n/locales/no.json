@@ -912,6 +912,8 @@
   "tools.file.previewSlidesOne": "1 lysbilde",
   "tools.file.previewLines": "{count} linjer",
   "tools.file.previewLinesOne": "1 linje",
+  "tools.file.cardFiles": "{count} filer",
+  "tools.file.cardFilesOne": "1 fil",
   "tools.file.previewRows": "{count} rader",
   "tools.file.previewRowsOne": "1 rad",
   "tools.file.previewPageOf": "Side {page} / {total}",

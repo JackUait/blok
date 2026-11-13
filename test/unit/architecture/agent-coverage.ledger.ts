@@ -140,6 +140,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/file/docx/inline.ts': exempt('view-only', 'A link inside a Word preview scrolls the preview to its bookmark; nothing is saved.'),
   'ui-file:src/tools/file/index.ts': cmds(['file.uploadFile', 'file.setSource'], 'Upload or URL.'),
   'ui-file:src/tools/file/pptx/renderer/navigation.ts': exempt('view-only', 'A link in a PowerPoint preview scrolls to a slide or opens a web page; nothing is saved.'),
+  'ui-file:src/tools/file/card/index.ts': exempt('view-only', 'The object on a file card lifts under the pointer and drops on download; nothing is saved.'),
   'ui-file:src/tools/file/code-view.ts': exempt('view-only', 'Wrap, copy and scroll a code preview; nothing is saved.'),
   'ui-file:src/tools/file/deck-stage.ts': exempt('view-only', 'Turns the slides of a PowerPoint preview; nothing is saved.'),
   'ui-file:src/tools/file/md-outline.ts': exempt('view-only', 'Scrolls a Markdown preview to a heading; nothing is saved.'),

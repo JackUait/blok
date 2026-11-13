@@ -915,6 +915,8 @@
   "tools.file.previewSlidesOne": "1 slide",
   "tools.file.previewLines": "{count} linhas",
   "tools.file.previewLinesOne": "1 linha",
+  "tools.file.cardFiles": "{count} arquivos",
+  "tools.file.cardFilesOne": "1 arquivo",
   "tools.file.previewRows": "{count} linhas",
   "tools.file.previewRowsOne": "1 linha",
   "tools.file.previewPageOf": "Página {page} / {total}",

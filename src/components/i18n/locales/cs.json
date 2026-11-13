@@ -916,6 +916,8 @@
   "tools.file.previewSlidesOne": "1 snímek",
   "tools.file.previewLines": "Počet řádků: {count}",
   "tools.file.previewLinesOne": "1 řádek",
+  "tools.file.cardFiles": "Počet souborů: {count}",
+  "tools.file.cardFilesOne": "1 soubor",
   "tools.file.previewRows": "Počet řádků: {count}",
   "tools.file.previewRowsOne": "1 řádek",
   "tools.file.previewPageOf": "Stránka {page} / {total}",

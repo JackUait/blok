@@ -51,6 +51,36 @@ describe('FileTool — rendering', () => {
     expect(root.querySelector('[data-action="from-link"]')).not.toBeNull();
   });
 
+  it('gives the card its object: an archive shows a folder at once', () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 404 })));
+    const root = new FileTool(createOptions({ url: 'https://cdn/assets.zip', fileName: 'assets.zip' })).render();
+
+    expect(root.querySelector('[data-role="file-object"]')?.getAttribute('data-file-object')).toBe('archive');
+    vi.unstubAllGlobals();
+  });
+
+  it('keeps the plain card and reads nothing when cardPreview is off', () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = new FileTool(createOptions({ url: 'https://cdn/assets.zip', fileName: 'assets.zip' }, { cardPreview: false })).render();
+
+    expect(root.querySelector('[data-role="file-card-wrapper"]')).not.toBeNull();
+    expect(root.querySelector('[data-role="file-object"]')).toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('takes the object away when the block is removed', () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 404 })));
+    const tool = new FileTool(createOptions({ url: 'https://cdn/assets.zip', fileName: 'assets.zip' }));
+    const root = tool.render();
+
+    tool.removed();
+
+    expect(root.querySelector('[data-role="file-object"]')).toBeNull();
+    vi.unstubAllGlobals();
+  });
+
   it('renders the download card when data.url is present', () => {
     const root = new FileTool(createOptions({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf' })).render();
     const link = root.querySelector<HTMLAnchorElement>('a[data-action="download"]');

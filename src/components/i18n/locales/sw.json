@@ -912,6 +912,8 @@
   "tools.file.previewSlidesOne": "Slaidi 1",
   "tools.file.previewLines": "Mistari {count}",
   "tools.file.previewLinesOne": "Mstari 1",
+  "tools.file.cardFiles": "Faili {count}",
+  "tools.file.cardFilesOne": "Faili 1",
   "tools.file.previewRows": "Safu mlalo {count}",
   "tools.file.previewRowsOne": "Safu mlalo 1",
   "tools.file.previewPageOf": "Ukurasa {page} / {total}",

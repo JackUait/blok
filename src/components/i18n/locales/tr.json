@@ -912,6 +912,8 @@
   "tools.file.previewSlidesOne": "1 slayt",
   "tools.file.previewLines": "{count} satır",
   "tools.file.previewLinesOne": "1 satır",
+  "tools.file.cardFiles": "{count} dosya",
+  "tools.file.cardFilesOne": "1 dosya",
   "tools.file.previewRows": "{count} satır",
   "tools.file.previewRowsOne": "1 satır",
   "tools.file.previewPageOf": "Sayfa {page} / {total}",

@@ -23,6 +23,7 @@ import { PASTE_EXTENSIONS, PASTE_MIME_TYPES } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { renderUploadingState, type UploadingStateElement } from '../image/uploading-state';
 import { renderCaptionRow, renderFileCard } from './ui';
+import { mountCardObject } from './card';
 import { Uploader } from './uploader';
 import { FileToolError } from './errors';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
@@ -94,6 +95,7 @@ export class FileTool implements BlockTool {
   /** The error card's title and detail. */
   private errorLines: UploadErrorLines | null = null;
   private previewTeardown: (() => void) | null = null;
+  private cardTeardown: (() => void) | null = null;
   /** When the pending upload is an image, the result converts to an Image block. */
   private pendingImageConversion = false;
   /** When the pending upload is a video, the result converts to a Video block. */
@@ -591,6 +593,8 @@ export class FileTool implements BlockTool {
   public destroy(): void {
     this.previewTeardown?.();
     this.previewTeardown = null;
+    this.cardTeardown?.();
+    this.cardTeardown = null;
   }
 
   private renderState(): void {
@@ -599,6 +603,8 @@ export class FileTool implements BlockTool {
     }
     this.previewTeardown?.();
     this.previewTeardown = null;
+    this.cardTeardown?.();
+    this.cardTeardown = null;
     this.root.innerHTML = '';
     this.uploadingEl = null;
 
@@ -677,7 +683,26 @@ export class FileTool implements BlockTool {
     wrap.className = 'blok-file-rendered';
     const onPreview = isPreviewable(this.data) ? (): void => this.openPreview() : undefined;
     const onRename = this.readOnly ? undefined : (next: string): void => this.renameFile(next);
-    wrap.appendChild(renderFileCard(this.data, onPreview, this.api.i18n.t('tools.file.download'), onRename));
+    const card = renderFileCard(this.data, onPreview, this.api.i18n.t('tools.file.download'), onRename);
+    wrap.appendChild(card);
+    const t = (key: string): string => this.api.i18n.t(key);
+    const many = (key: string): string => this.api.i18n.t(key, { count: '{count}' });
+    this.cardTeardown = this.config.cardPreview === false ? null : mountCardObject(card, {
+      data: this.data,
+      config: this.config,
+      labels: {
+        pages: many('tools.file.previewPages'),
+        pagesOne: t('tools.file.previewPagesOne'),
+        sheets: many('tools.file.previewSheets'),
+        sheetsOne: t('tools.file.previewSheetsOne'),
+        slides: many('tools.file.previewSlides'),
+        slidesOne: t('tools.file.previewSlidesOne'),
+        lines: many('tools.file.previewLines'),
+        linesOne: t('tools.file.previewLinesOne'),
+        files: many('tools.file.cardFiles'),
+        filesOne: t('tools.file.cardFilesOne'),
+      },
+    });
 
     const hasCaption = (this.data.caption ?? '') !== '';
     // Hidden by default: the row shows only when explicitly toggled on or when

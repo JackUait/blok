@@ -916,6 +916,8 @@
   "tools.file.previewSlidesOne": "1 diapozitiv",
   "tools.file.previewLines": "Število vrstic: {count}",
   "tools.file.previewLinesOne": "1 vrstica",
+  "tools.file.cardFiles": "Število datotek: {count}",
+  "tools.file.cardFilesOne": "1 datoteka",
   "tools.file.previewRows": "Število vrstic: {count}",
   "tools.file.previewRowsOne": "1 vrstica",
   "tools.file.previewPageOf": "Stran {page} / {total}",

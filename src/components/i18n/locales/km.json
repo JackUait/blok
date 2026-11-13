@@ -914,6 +914,8 @@
   "tools.file.previewSlidesOne": "1 ស្លាយ",
   "tools.file.previewLines": "{count} បន្ទាត់",
   "tools.file.previewLinesOne": "1 បន្ទាត់",
+  "tools.file.cardFiles": "{count} ឯកសារ",
+  "tools.file.cardFilesOne": "1 ឯកសារ",
   "tools.file.previewRows": "{count} ជួរដេក",
   "tools.file.previewRowsOne": "1 ជួរដេក",
   "tools.file.previewPageOf": "ទំព័រ {page} / {total}",

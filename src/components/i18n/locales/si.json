@@ -914,6 +914,8 @@
   "tools.file.previewSlidesOne": "ස්ලයිඩ 1",
   "tools.file.previewLines": "පේළි {count}",
   "tools.file.previewLinesOne": "පේළි 1",
+  "tools.file.cardFiles": "ගොනු {count}",
+  "tools.file.cardFilesOne": "ගොනු 1",
   "tools.file.previewRows": "පේළි {count}",
   "tools.file.previewRowsOne": "පේළි 1",
   "tools.file.previewPageOf": "පිටුව {page} / {total}",

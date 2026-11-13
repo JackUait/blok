@@ -17,7 +17,7 @@ import {
   splitOperator,
 } from './database-filter-labels';
 import { openFlyout } from './database-sort-flyouts';
-import { editorLocale, formatDatePart, parseDayField, resolveWeekStart } from './cells/date-format';
+import { editorLocale, formatDatePart, parseFilterDay, resolveWeekStart } from './cells/date-format';
 import { MonthCalendar } from './cells/month-calendar';
 import { addFilterRule, emptyFilterTree, withEntryIds } from './filter-tree';
 import { RELATIVE_DATE_UNITS, RELATIVE_DATE_VALUES, formatRelativeSpan, parseRelativeSpan, relativeWindow, resolveDay, toLocalDay } from './relative-dates';
@@ -623,7 +623,7 @@ class FilterChipPages {
       event.preventDefault();
       // The field already shows the value (a preset's name reads back as no date).
       if (input.value.trim() === shown.trim()) return;
-      const day = parseDayField(input.value, locale, {}, new Date().getFullYear());
+      const day = parseFilterDay(input.value, locale);
 
       if (day === null) {
         input.setAttribute('aria-invalid', 'true');

@@ -1550,6 +1550,20 @@ describe('DatabaseViewControls', () => {
         expect(document.querySelector('[data-blok-database-chip-note]')).toBeNull();
       });
 
+      // notion-motion.md Round 22 §1 (r22-d-t4-enter-ds.raw): a day with no year takes the next one still ahead.
+      it.each([
+        ['march 5', '2027-03-05'],
+        ['November 20', '2026-11-20'],
+        ['3/5/25', '2025-03-05'],
+      ])('reads "%s" as %s', (typed, iso) => {
+        const { controls, saved } = open({ operator: 'equals', value: null });
+
+        field().value = typed;
+        enter(field());
+
+        expect(controls.effective(saved.view).filters[0]).toMatchObject({ value: iso });
+      });
+
       it('keeps a preset when Enter finds its own name in the field', () => {
         const { controls, saved } = open({ operator: 'before', value: 'one_week_ago' });
 

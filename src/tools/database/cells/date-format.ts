@@ -301,6 +301,25 @@ export const parseDayField = (text: string, locale: string, display: DateDisplay
   return Number.isFinite(ms) ? toIsoDay(new Date(ms)) : null;
 };
 
+/**
+ * A filter's typed day. notion-motion.md Round 22 §1 (r22-d-t4-enter-ds.raw): a day with no year takes
+ * the next one still ahead of `now` ("march 5" on 2026-11-13 is 2027-03-05). Today itself counts as ahead (unmeasured).
+ */
+export const parseFilterDay = (text: string, locale: string, now: Date = new Date()): string | null => {
+  const day = parseDayField(text, locale, {}, now.getFullYear(), now);
+
+  if (day === null || /\d{4}|\d\s*[/.-]\s*\d+\s*[/.-]\s*\d/.test(text)) return day;
+  const ms = Date.parse(`${text.trim()} ${now.getFullYear()}`);
+
+  if (!Number.isFinite(ms)) return day;
+  const thisYear = new Date(ms);
+  const ahead = thisYear >= new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    ? thisYear
+    : new Date(thisYear.getFullYear() + 1, thisYear.getMonth(), thisYear.getDate());
+
+  return toIsoDay(ahead);
+};
+
 export const HOUR_CYCLES: Partial<Record<string, 'h12' | 'h23'>> = { '12_hour': 'h12', '24_hour': 'h23' };
 
 /** The choices of Date format and Time format, shared by the property menu and the date picker. */

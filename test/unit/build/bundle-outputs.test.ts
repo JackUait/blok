@@ -882,6 +882,16 @@ describe('dist weight (consumer parse cost)', () => {
     expect(withKatex).toEqual([])
   })
 
+  // One base64 string and nothing else, like the pdf.js asset chunks: one cheap string node.
+  const BASE64_DATA_CHUNK = /^var (\w+)=`[A-Za-z0-9+/\n]*={0,2}\n?`;export\{\1 as default\};?\s*$/
+
+  it('tells a base64 data chunk from code', () => {
+    expect(BASE64_DATA_CHUNK.test('var e=`AAEC/+Q=`;export{e as default};')).toBe(true)
+    expect(BASE64_DATA_CHUNK.test('var e=`\nAAEC\n/+Q=\n`;export{e as default};')).toBe(true)
+    expect(BASE64_DATA_CHUNK.test('var e=`a${b}`;export{e as default};')).toBe(false)
+    expect(BASE64_DATA_CHUNK.test('var e=`AAEC`;export{e as default};function f(){}')).toBe(false)
+  })
+
   it('keeps the non-data ES code surface under the parse-cost budget', () => {
     // JSON.parse data chunks are one cheap string node each; the expensive part
     // for a consumer's bundler is real code. Unminified output put code at
@@ -895,10 +905,17 @@ describe('dist weight (consumer parse cost)', () => {
     // 14.4 MiB (USER, 2026-10-27): database and Ask AI growth, no duplication; code measured 15,042,671 bytes.
     // 16 MiB (USER, 2026-11-13: bundle pdf.js): its lazy chunk is 1,884,822 bytes (library and worker source);
     // code went 14,779,303 -> 16,673,517 bytes.
+    // 16.5 MiB (USER, 2026-11-14: pdf.js assets in Blok): the JS image decoders for a CSP without wasm are
+    // 470,957 bytes; code measured 17,261,125. pdf.js's cmaps, fonts and wasm are base64 data chunks.
     const codeBytes = esFiles
-      .filter((file) => !readFileSync(file, 'utf-8').slice(0, 200).includes('JSON.parse('))
+      .filter((file) => {
+        const code = readFileSync(file, 'utf-8')
+
+        return !code.slice(0, 200).includes('JSON.parse(') && !BASE64_DATA_CHUNK.test(code)
+      })
       .reduce((sum, file) => sum + readFileSync(file).byteLength, 0)
-    expect(codeBytes).toBeLessThan(16 * 1024 * 1024)
+    expect(esFiles.filter((file) => BASE64_DATA_CHUNK.test(readFileSync(file, 'utf-8'))).length).toBeGreaterThan(100)
+    expect(codeBytes).toBeLessThan(16.5 * 1024 * 1024)
   })
 
   // Minifiers keep the newlines inside string and template literals (the SVG

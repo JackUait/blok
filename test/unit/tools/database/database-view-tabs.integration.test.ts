@@ -265,7 +265,7 @@ describe('view tabs (feel/findings-toolbar)', () => {
       menuItem('database-view-delete').click();
       await quiet();
 
-      expect(document.activeElement).toBe(document.querySelector('[data-blok-database-confirm-action="confirm"]'));
+      expect(document.querySelector('[data-blok-database-confirm-action="confirm"]')).toHaveFocus();
     });
   });
 
@@ -297,7 +297,7 @@ describe('view tabs (feel/findings-toolbar)', () => {
       const name = settingsPanel()?.querySelector<HTMLInputElement>('[data-blok-testid="database-settings-view-name"]');
 
       expect(name).toBeInstanceOf(HTMLInputElement);
-      expect(document.activeElement).toBe(name);
+      expect(name).toHaveFocus();
       expect([name?.selectionStart, name?.selectionEnd]).toEqual([0, 'Table (1)'.length]);
     });
   });

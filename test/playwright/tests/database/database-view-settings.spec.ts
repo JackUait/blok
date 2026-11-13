@@ -275,6 +275,7 @@ test.describe('database view settings', () => {
     await mount(page, blocks({ colorRules: [
       { id: 'c1', propertyId: 'p-stage', operator: 'is_not_empty', value: null, color: 'match' },
       { id: 'c2', propertyId: 'p-stage', operator: 'equals', value: null, color: 'match' },
+      { id: 'c3', propertyId: 'p-amount', operator: 'equals', value: null, color: 'gray' },
     ] }));
     await byTestId(page, 'database-toolbar-settings').click();
     await byTestId(page, 'database-settings-color').click();
@@ -289,14 +290,17 @@ test.describe('database view settings', () => {
       const wrapper = rect('[data-blok-testid="database-color-value-c2"]');
       const field = rect('[data-blok-testid="database-color-value-c2"] [data-blok-database-color-rule-field]');
       const flyout = rect('[data-blok-testid="database-filter-value-picker"]');
+      const three = rect('[data-blok-testid="database-color-rule-c3"]');
+      const input = rect('[data-blok-testid="database-color-value-c3"]');
 
-      if (!one || !two || !wrapper || !field || !flyout) return null;
+      if (!one || !two || !wrapper || !field || !flyout || !three || !input) return null;
 
       return {
         card: [one.width, one.height],
         wrapper: [wrapper.x - two.x, wrapper.y - two.y, wrapper.width, wrapper.height],
         field: [field.x - two.x, field.y - two.y, field.width, field.height],
         flyout: [flyout.x - wrapper.x, flyout.y - wrapper.bottom, flyout.width],
+        input: [input.x - three.x, input.width, input.height],
       };
     });
 
@@ -304,6 +308,8 @@ test.describe('database view settings', () => {
     expect(box?.wrapper).toEqual([9, 36, 240, 34]);
     expect(box?.field).toEqual([13, 38, 232, 30]);
     expect(box?.flyout).toEqual([0, 4, 240]);
+    // A text value is the field itself, in the same place.
+    expect(box?.input).toEqual([13, 232, 30]);
   });
 
   test('searches rows by title and property text', async ({ page }) => {

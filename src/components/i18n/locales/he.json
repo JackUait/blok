@@ -1501,6 +1501,7 @@
   "tools.database.colorApplyTo": "החל על",
   "tools.database.colorApplyRow": "כל השורה",
   "tools.database.colorApplyProperty": "מאפיין זה",
+  "tools.database.colorValuePlaceholder": "בחירה…",
   "tools.database.colorDelete": "מחק הגדרת צבע",
   "tools.database.colorDefault": "ברירת מחדל",
   "tools.database.colorGray": "אפור",

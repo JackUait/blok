@@ -1495,6 +1495,7 @@
   "tools.database.colorApplyTo": "Կիրառել",
   "tools.database.colorApplyRow": "Ամբողջ տողին",
   "tools.database.colorApplyProperty": "Այս հատկությանը",
+  "tools.database.colorValuePlaceholder": "Ընտրեք…",
   "tools.database.colorDelete": "Ջնջել գույնի կարգավորումը",
   "tools.database.colorDefault": "Կանխադրված",
   "tools.database.colorGray": "Մոխրագույն",

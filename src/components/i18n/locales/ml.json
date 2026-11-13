@@ -1495,6 +1495,7 @@
   "tools.database.colorApplyTo": "ഇതിൽ പ്രയോഗിക്കുക",
   "tools.database.colorApplyRow": "മുഴുവൻ വരി",
   "tools.database.colorApplyProperty": "ഈ പ്രോപ്പർട്ടി",
+  "tools.database.colorValuePlaceholder": "തിരഞ്ഞെടുക്കുക…",
   "tools.database.colorDelete": "നിറ ക്രമീകരണം ഇല്ലാതാക്കുക",
   "tools.database.colorDefault": "സ്ഥിരസ്ഥിതി",
   "tools.database.colorGray": "ചാരനിറം",

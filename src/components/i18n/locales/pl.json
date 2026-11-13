@@ -1507,6 +1507,7 @@
   "tools.database.colorApplyTo": "Zastosuj do",
   "tools.database.colorApplyRow": "Cały wiersz",
   "tools.database.colorApplyProperty": "Ta właściwość",
+  "tools.database.colorValuePlaceholder": "Wybierz…",
   "tools.database.colorDelete": "Usuń ustawienie koloru",
   "tools.database.colorDefault": "Domyślnie",
   "tools.database.colorGray": "Szary",

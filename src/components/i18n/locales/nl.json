@@ -1495,6 +1495,7 @@
   "tools.database.colorApplyTo": "Toepassen op",
   "tools.database.colorApplyRow": "Hele rij",
   "tools.database.colorApplyProperty": "Deze eigenschap",
+  "tools.database.colorValuePlaceholder": "Selecteer…",
   "tools.database.colorDelete": "Kleurinstelling verwijderen",
   "tools.database.colorDefault": "Standaard",
   "tools.database.colorGray": "Grijs",

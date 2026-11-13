@@ -1495,6 +1495,7 @@
   "tools.database.colorApplyTo": "આના પર લાગુ કરો",
   "tools.database.colorApplyRow": "આખી પંક્તિ",
   "tools.database.colorApplyProperty": "આ ગુણધર્મ",
+  "tools.database.colorValuePlaceholder": "પસંદ કરો…",
   "tools.database.colorDelete": "રંગ સેટિંગ કાઢી નાખો",
   "tools.database.colorDefault": "ડિફૉલ્ટ",
   "tools.database.colorGray": "ગ્રે",

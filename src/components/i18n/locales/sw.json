@@ -1495,6 +1495,7 @@
   "tools.database.colorApplyTo": "Tumia kwa",
   "tools.database.colorApplyRow": "Safu mlalo nzima",
   "tools.database.colorApplyProperty": "Sifa hii",
+  "tools.database.colorValuePlaceholder": "Chagua…",
   "tools.database.colorDelete": "Futa mpangilio wa rangi",
   "tools.database.colorDefault": "Chaguo-msingi",
   "tools.database.colorGray": "Kijivu",

@@ -1495,6 +1495,7 @@
   "tools.database.colorApplyTo": "ಇದಕ್ಕೆ ಅನ್ವಯಿಸಿ",
   "tools.database.colorApplyRow": "ಸಂಪೂರ್ಣ ಸಾಲು",
   "tools.database.colorApplyProperty": "ಈ ಗುಣಲಕ್ಷಣ",
+  "tools.database.colorValuePlaceholder": "ಆಯ್ಕೆಮಾಡಿ…",
   "tools.database.colorDelete": "ಬಣ್ಣದ ಸೆಟ್ಟಿಂಗ್ ಅಳಿಸಿ",
   "tools.database.colorDefault": "ಡೀಫಾಲ್ಟ್",
   "tools.database.colorGray": "ಬೂದು",

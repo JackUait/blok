@@ -1495,6 +1495,7 @@
   "tools.database.colorApplyTo": "应用于",
   "tools.database.colorApplyRow": "整行",
   "tools.database.colorApplyProperty": "此属性",
+  "tools.database.colorValuePlaceholder": "选择…",
   "tools.database.colorDelete": "删除颜色设置",
   "tools.database.colorDefault": "默认",
   "tools.database.colorGray": "灰色",

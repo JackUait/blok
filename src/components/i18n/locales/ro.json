@@ -1501,6 +1501,7 @@
   "tools.database.colorApplyTo": "Aplică la",
   "tools.database.colorApplyRow": "Întregul rând",
   "tools.database.colorApplyProperty": "Această proprietate",
+  "tools.database.colorValuePlaceholder": "Selectați…",
   "tools.database.colorDelete": "Șterge setarea de culoare",
   "tools.database.colorDefault": "Implicit",
   "tools.database.colorGray": "Gri",

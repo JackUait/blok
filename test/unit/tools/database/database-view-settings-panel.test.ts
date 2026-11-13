@@ -2125,6 +2125,30 @@ describe('view settings panel', () => {
       expect(q('database-filter-value-picker')).not.toBeNull();
     });
 
+    // notion-motion.md Round 20 §4 (r20-cc-is.raw, r20-cc-red.png): an empty Select value reads "Select...", a pick shows its token.
+    it('shows a Select rule\'s value as its option token, and "Select..." while empty', () => {
+      const h = harness({ colorRules: [{ id: 'c1', propertyId: 'stage', operator: 'equals', value: null, color: 'match' }] });
+
+      h.open();
+      click('database-settings-color');
+
+      expect(q('database-color-value-c1')?.textContent).toBe('tools.database.colorValuePlaceholder');
+
+      h.ctx.updateView({ colorRules: [{ id: 'c1', propertyId: 'stage', operator: 'equals', value: ['o1'], color: 'match' }] });
+      const token = q('database-color-value-c1')?.querySelector('[data-blok-database-option-pill]');
+
+      expect(token?.textContent).toBe('Idea');
+      expect(q('database-color-value-c1')?.hasAttribute('data-empty')).toBe(false);
+    });
+
+    // Only a Select rule's value is measured; the others keep "Value".
+    it('keeps "Value" for an empty Status rule', () => {
+      harness({ colorRules: [{ id: 'c1', propertyId: 'prog', operator: 'equals', value: null, color: 'gray' }] }).open();
+      click('database-settings-color');
+
+      expect(q('database-color-value-c1')?.textContent).toBe('tools.database.filterValue');
+    });
+
     // notion-motion.md Round 20 §4 (r20-cc-new.raw): the property list is a 258-wide flyout with a focused search.
     it('picks a new rule\'s property from a flyout and stays on the color page', () => {
       const h = harness();

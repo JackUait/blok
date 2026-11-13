@@ -1495,6 +1495,7 @@
   "tools.database.colorApplyTo": "Ilapat sa",
   "tools.database.colorApplyRow": "Buong hanay",
   "tools.database.colorApplyProperty": "Itong property lang",
+  "tools.database.colorValuePlaceholder": "Pumili…",
   "tools.database.colorDelete": "Tanggalin ang setting ng kulay",
   "tools.database.colorDefault": "Karaniwan",
   "tools.database.colorGray": "Kulay-abo",

@@ -1495,6 +1495,7 @@
   "tools.database.colorApplyTo": "Alkalmazás erre",
   "tools.database.colorApplyRow": "Teljes sor",
   "tools.database.colorApplyProperty": "Ez a tulajdonság",
+  "tools.database.colorValuePlaceholder": "Válasszon…",
   "tools.database.colorDelete": "Színbeállítás törlése",
   "tools.database.colorDefault": "Alapértelmezett",
   "tools.database.colorGray": "Szürke",

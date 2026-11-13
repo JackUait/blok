@@ -1495,6 +1495,7 @@
   "tools.database.colorApplyTo": "ใช้กับ",
   "tools.database.colorApplyRow": "ทั้งแถว",
   "tools.database.colorApplyProperty": "คุณสมบัตินี้",
+  "tools.database.colorValuePlaceholder": "เลือก…",
   "tools.database.colorDelete": "ลบการตั้งค่าสี",
   "tools.database.colorDefault": "ค่าเริ่มต้น",
   "tools.database.colorGray": "สีเทา",

@@ -1495,6 +1495,7 @@
   "tools.database.colorApplyTo": "Хэрэглэх хүрээ",
   "tools.database.colorApplyRow": "Бүтэн мөр",
   "tools.database.colorApplyProperty": "Энэ шинж",
+  "tools.database.colorValuePlaceholder": "Сонгох…",
   "tools.database.colorDelete": "Өнгөний тохиргоо устгах",
   "tools.database.colorDefault": "Өгөгдмөл",
   "tools.database.colorGray": "Саарал",

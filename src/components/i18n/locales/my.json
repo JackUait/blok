@@ -1495,6 +1495,7 @@
   "tools.database.colorApplyTo": "အသုံးပြုမည့်နေရာ",
   "tools.database.colorApplyRow": "အတန်းတစ်ခုလုံး",
   "tools.database.colorApplyProperty": "ဤဂုဏ်သတ္တိ",
+  "tools.database.colorValuePlaceholder": "ရွေးပါ…",
   "tools.database.colorDelete": "အရောင် ဆက်တင် ဖျက်ရန်",
   "tools.database.colorDefault": "မူလ",
   "tools.database.colorGray": "မီးခိုးရောင်",

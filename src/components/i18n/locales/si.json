@@ -1495,6 +1495,7 @@
   "tools.database.colorApplyTo": "යොදන්නේ",
   "tools.database.colorApplyRow": "සම්පූර්ණ පේළියට",
   "tools.database.colorApplyProperty": "මෙම ගුණාංගයට",
+  "tools.database.colorValuePlaceholder": "තෝරන්න…",
   "tools.database.colorDelete": "වර්ණ සැකසුම මකන්න",
   "tools.database.colorDefault": "පෙරනිමි",
   "tools.database.colorGray": "අළු",

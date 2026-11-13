@@ -1501,6 +1501,7 @@
   "tools.database.colorApplyTo": "Primijeni na",
   "tools.database.colorApplyRow": "Cijeli redak",
   "tools.database.colorApplyProperty": "Ovo svojstvo",
+  "tools.database.colorValuePlaceholder": "Odaberi…",
   "tools.database.colorDelete": "Izbriši postavku boje",
   "tools.database.colorDefault": "Zadano",
   "tools.database.colorGray": "Sivo",

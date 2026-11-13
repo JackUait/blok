@@ -1507,6 +1507,7 @@
   "tools.database.colorApplyTo": "Применить к",
   "tools.database.colorApplyRow": "Всей строке",
   "tools.database.colorApplyProperty": "Этому свойству",
+  "tools.database.colorValuePlaceholder": "Выберите…",
   "tools.database.colorDelete": "Удалить настройку цвета",
   "tools.database.colorDefault": "По умолчанию",
   "tools.database.colorGray": "Серый",

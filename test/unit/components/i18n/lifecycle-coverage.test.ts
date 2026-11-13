@@ -283,7 +283,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2188 + 147 + 551 + 5 closure for all 2891 keys', () => {
+  it('rebuilds a disjoint 2188 + 147 + 552 + 5 closure for all 2892 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -297,7 +297,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2891);
+    expect(lifecycle.size).toBe(2892);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -632,7 +632,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: tools.audio.errorBadge, see above.
       // +1: a conditional color rule's Match option (tools.database.colorMatchOption), via the panel's t().
       // +1: a colour swatch's hint, "Blue background" (tools.database.colorBackgroundHint), via the panel's t().
-      'registered-namespace-compatible': 551,
+      // +1: an empty Select colour rule value reads "Select..." (tools.database.colorValuePlaceholder), through the panel's t().
+      'registered-namespace-compatible': 552,
       'catalog-only': 5,
     });
     expect(

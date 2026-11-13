@@ -1495,6 +1495,7 @@
   "tools.database.colorApplyTo": "გამოყენების არე",
   "tools.database.colorApplyRow": "მთელი მწკრივი",
   "tools.database.colorApplyProperty": "ეს თვისება",
+  "tools.database.colorValuePlaceholder": "აირჩიეთ…",
   "tools.database.colorDelete": "ფერის პარამეტრის წაშლა",
   "tools.database.colorDefault": "ნაგულისხმევი",
   "tools.database.colorGray": "ნაცრისფერი",

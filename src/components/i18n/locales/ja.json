@@ -1495,6 +1495,7 @@
   "tools.database.colorApplyTo": "適用先",
   "tools.database.colorApplyRow": "行全体",
   "tools.database.colorApplyProperty": "このプロパティ",
+  "tools.database.colorValuePlaceholder": "選択…",
   "tools.database.colorDelete": "カラー設定を削除",
   "tools.database.colorDefault": "デフォルト",
   "tools.database.colorGray": "グレー",

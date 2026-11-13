@@ -1495,6 +1495,7 @@
   "tools.database.colorApplyTo": "Bruk på",
   "tools.database.colorApplyRow": "Hele raden",
   "tools.database.colorApplyProperty": "Denne egenskapen",
+  "tools.database.colorValuePlaceholder": "Velg…",
   "tools.database.colorDelete": "Slett fargeinnstilling",
   "tools.database.colorDefault": "Standard",
   "tools.database.colorGray": "Grå",

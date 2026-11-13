@@ -1507,6 +1507,7 @@
   "tools.database.colorApplyTo": "Použít na",
   "tools.database.colorApplyRow": "Celý řádek",
   "tools.database.colorApplyProperty": "Tato vlastnost",
+  "tools.database.colorValuePlaceholder": "Vyberte…",
   "tools.database.colorDelete": "Smazat nastavení barvy",
   "tools.database.colorDefault": "Výchozí",
   "tools.database.colorGray": "Šedá",

@@ -98,6 +98,7 @@ import { OPERATOR_FLYOUT_WIDTH, dateRuleControls, filterChip, openFilterChip, op
 import { VIEW_ICONS } from './database-tab-bar';
 import type { AutomationSettings } from './database-automations-panel';
 import { offersAutofill } from './property-values';
+import { createOptionPill } from './cells/display';
 import { MAP_HEIGHTS, resolveMapBy, resolveMapHeight } from './database-map-view';
 
 export interface ViewGroupEntry {
@@ -2893,6 +2894,16 @@ export class ViewSettingsPages {
     field.setAttribute('data-blok-testid', `database-color-value-${rule.id}`);
     field.toggleAttribute('data-empty', text === '');
     field.textContent = text === '' ? this.t('filterValue') : text;
+    // r20-cc-is.raw, r20-cc-red.png: a Select rule reads "Select..." while empty and shows its picks as tokens.
+    // Other types are unmeasured and keep "Value" and plain text.
+    if (property.type === 'select') {
+      const picked = Array.isArray(rule.value) ? rule.value : [];
+      const tokens = (property.config?.options ?? []).filter((option) => picked.includes(option.id)).map((option) => createOptionPill(option));
+
+      field.toggleAttribute('data-empty', tokens.length === 0);
+      if (tokens.length === 0) field.textContent = this.t('colorValuePlaceholder');
+      else field.replaceChildren(...tokens);
+    }
     field.addEventListener('click', () => openRuleValueFlyout(field, panel, scoped, read, save, COLOR_VALUE_FLYOUT_WIDTH));
 
     return [field];

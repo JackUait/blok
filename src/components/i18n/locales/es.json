@@ -1501,6 +1501,7 @@
   "tools.database.colorApplyTo": "Aplicar a",
   "tools.database.colorApplyRow": "Fila completa",
   "tools.database.colorApplyProperty": "Esta propiedad",
+  "tools.database.colorValuePlaceholder": "Selecciona…",
   "tools.database.colorDelete": "Eliminar configuración de color",
   "tools.database.colorDefault": "Predeterminado",
   "tools.database.colorGray": "Gris",

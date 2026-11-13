@@ -1495,6 +1495,7 @@
   "tools.database.colorApplyTo": "អនុវត្តចំពោះ",
   "tools.database.colorApplyRow": "ជួរដេកទាំងមូល",
   "tools.database.colorApplyProperty": "លក្ខណៈនេះ",
+  "tools.database.colorValuePlaceholder": "ជ្រើសរើស…",
   "tools.database.colorDelete": "លុបការកំណត់ពណ៌",
   "tools.database.colorDefault": "លំនាំដើម",
   "tools.database.colorGray": "ប្រផេះ",

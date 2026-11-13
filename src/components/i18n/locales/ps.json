@@ -1495,6 +1495,7 @@
   "tools.database.colorApplyTo": "پلي کړئ په",
   "tools.database.colorApplyRow": "ټول قطار",
   "tools.database.colorApplyProperty": "دا ځانګړتیا",
+  "tools.database.colorValuePlaceholder": "وټاکئ…",
   "tools.database.colorDelete": "د رنګ تنظیم ړنګ کړئ",
   "tools.database.colorDefault": "تلواله",
   "tools.database.colorGray": "خړ",

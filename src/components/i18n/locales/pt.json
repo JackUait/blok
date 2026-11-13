@@ -1501,6 +1501,7 @@
   "tools.database.colorApplyTo": "Aplicar a",
   "tools.database.colorApplyRow": "Linha inteira",
   "tools.database.colorApplyProperty": "Esta propriedade",
+  "tools.database.colorValuePlaceholder": "Selecione…",
   "tools.database.colorDelete": "Excluir configuração de cor",
   "tools.database.colorDefault": "Padrão",
   "tools.database.colorGray": "Cinza",

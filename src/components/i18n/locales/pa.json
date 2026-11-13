@@ -1495,6 +1495,7 @@
   "tools.database.colorApplyTo": "ਇਸ 'ਤੇ ਲਾਗੂ ਕਰੋ",
   "tools.database.colorApplyRow": "ਪੂਰੀ ਕਤਾਰ",
   "tools.database.colorApplyProperty": "ਇਹ ਵਿਸ਼ੇਸ਼ਤਾ",
+  "tools.database.colorValuePlaceholder": "ਚੁਣੋ…",
   "tools.database.colorDelete": "ਰੰਗ ਸੈਟਿੰਗ ਮਿਟਾਓ",
   "tools.database.colorDefault": "ਮੂਲ",
   "tools.database.colorGray": "ਸਲੇਟੀ",

@@ -1519,6 +1519,7 @@
   "tools.database.colorApplyTo": "تطبيق على",
   "tools.database.colorApplyRow": "الصف بأكمله",
   "tools.database.colorApplyProperty": "هذه الخاصية",
+  "tools.database.colorValuePlaceholder": "اختر…",
   "tools.database.colorDelete": "حذف إعداد اللون",
   "tools.database.colorDefault": "افتراضي",
   "tools.database.colorGray": "رمادي",

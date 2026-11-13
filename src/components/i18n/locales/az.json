@@ -1495,6 +1495,7 @@
   "tools.database.colorApplyTo": "Tətbiq yeri",
   "tools.database.colorApplyRow": "Bütün sətir",
   "tools.database.colorApplyProperty": "Bu xüsusiyyət",
+  "tools.database.colorValuePlaceholder": "Seçin…",
   "tools.database.colorDelete": "Rəng ayarını sil",
   "tools.database.colorDefault": "Standart",
   "tools.database.colorGray": "Boz",

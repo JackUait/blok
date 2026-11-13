@@ -788,6 +788,7 @@ export type BlokMessageKey =
   | 'tools.database.colorPink'
   | 'tools.database.colorPurple'
   | 'tools.database.colorRed'
+  | 'tools.database.colorValuePlaceholder'
   | 'tools.database.colorYellow'
   | 'tools.database.columnTitlePlaceholder'
   | 'tools.database.commentAnonymous'

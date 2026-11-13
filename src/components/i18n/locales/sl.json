@@ -1507,6 +1507,7 @@
   "tools.database.colorApplyTo": "Uporabi za",
   "tools.database.colorApplyRow": "Celotno vrstico",
   "tools.database.colorApplyProperty": "To lastnost",
+  "tools.database.colorValuePlaceholder": "Izberite…",
   "tools.database.colorDelete": "Izbriši nastavitev barve",
   "tools.database.colorDefault": "Privzeto",
   "tools.database.colorGray": "Siva",

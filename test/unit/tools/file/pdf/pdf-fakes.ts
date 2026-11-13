@@ -27,8 +27,12 @@ export interface TextDoc extends PdfDocumentLike {
 export const textContentOf = (lines: string[]): { items: Array<{ str: string; hasEOL: boolean }> } =>
   ({ items: lines.map((str) => ({ str, hasEOL: true })) });
 
-/** A doc of `count` Letter pages. `text(n)` is page n's lines. */
-export function textDoc(count: number, text: (n: number) => string[] = (n) => [`Blok PDF page ${n}`]): TextDoc {
+/** A doc of `count` pages, Letter unless `sizes` says otherwise (pt). `text(n)` is page n's lines. */
+export function textDoc(
+  count: number,
+  text: (n: number) => string[] = (n) => [`Blok PDF page ${n}`],
+  sizes: Record<number, [number, number]> = {},
+): TextDoc {
   const doc: TextDoc = {
     numPages: count,
     renders: [],
@@ -36,8 +40,9 @@ export function textDoc(count: number, text: (n: number) => string[] = (n) => [`
     textReads: [],
     hold: false,
     getPage: (n) => {
+      const [w, h] = sizes[n] ?? [612, 792];
       const page: PdfPageLike = {
-        getViewport: ({ scale }) => ({ width: 612 * scale, height: 792 * scale, scale }),
+        getViewport: ({ scale }) => ({ width: w * scale, height: h * scale, scale }),
         render: ({ canvasContext, viewport }) => {
           const done: { resolve: () => void; reject: (error: Error) => void } = { resolve: () => undefined, reject: () => undefined };
           const promise = doc.hold

@@ -1,6 +1,7 @@
 import { JUMP_PAD, mountPager, type PagedView } from '../page-pager';
 import type { PreviewChrome } from '../preview-chrome';
 import { fill } from '../preview-labels';
+import { backingRatio } from './pdf-canvas';
 import { mountPdfFind } from './pdf-find';
 import { renderPdfLinks } from './pdf-links';
 import { mountPdfThumbs } from './pdf-thumbs';
@@ -8,10 +9,6 @@ import type { PdfDocumentLike, PdfPageLike, PdfRenderTask, PdfViewport } from '.
 
 /** pdf.js sizes pages in pt; the screen counts CSS px. */
 const PX_PER_PT = 96 / 72;
-/** Safari draws nothing on a larger canvas. pdf.js caps the same way (`canvasMaxAreaInBytes`). */
-const MAX_CANVAS_AREA = 16_777_216;
-/** Browsers refuse a longer canvas side (pdf.js `maxCanvasDim`). */
-const MAX_CANVAS_SIDE = 32_767;
 /** Pages kept drawn on each side of the ones on screen. */
 const NEIGHBOURS = 2;
 /** A pinch counts as over after this long without a move; only then do pages redraw. */
@@ -83,16 +80,6 @@ function warn(error: unknown): void {
 /** A zero-size canvas gives its pixel memory back at once. */
 function freeCanvas(canvas: HTMLCanvasElement): void {
   Object.assign(canvas, { width: 0, height: 0 });
-}
-
-/** Backing pixels per CSS px: the device ratio, lowered until the canvas fits the browser's limits. */
-function backingRatio(width: number, height: number): number {
-  return Math.min(
-    window.devicePixelRatio || 1,
-    Math.sqrt(MAX_CANVAS_AREA / (width * height)),
-    MAX_CANVAS_SIDE / width,
-    MAX_CANVAS_SIDE / height,
-  );
 }
 
 /**

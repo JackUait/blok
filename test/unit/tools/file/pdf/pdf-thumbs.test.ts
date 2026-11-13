@@ -2,7 +2,9 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { mountPdfView } from '../../../../../src/tools/file/pdf/pdf-view';
 import { FakeObserver, PX_PER_PT, harness, pageObserver, releaseAll, settle, textDoc, type Harness, type TextDoc } from './pdf-fakes';
 
-const THUMB_SCALE = 0.2;
+/** Every thumbnail is this wide in CSS px, whatever the page size. */
+const THUMB_WIDTH = 122;
+const CANVAS_CAP = 16_777_216;
 
 const toggle = (h: Harness): HTMLButtonElement => {
   const button = h.container.querySelector<HTMLButtonElement>('[data-action="preview-thumbnails"]');
@@ -22,7 +24,9 @@ const thumbObserver = (): FakeObserver => {
 
   return found;
 };
-const thumbRenders = (doc: TextDoc): number[] => doc.renders.filter((call) => call.viewport.scale === THUMB_SCALE).map((call) => call.page);
+/** Main-view renders draw at ≥ 50% of a fitted page; thumbnails far below it. */
+const isThumb = (call: TextDoc['renders'][number]): boolean => call.viewport.width <= THUMB_WIDTH + 1;
+const thumbRenders = (doc: TextDoc): number[] => doc.renders.filter(isThumb).map((call) => call.page);
 
 describe('PDF page thumbnails', () => {
   beforeEach(() => {
@@ -82,7 +86,7 @@ describe('PDF page thumbnails', () => {
 
     expect(thumbRenders(doc).sort((a, b) => a - b)).toEqual([1, 2, 3]);
     const canvas = thumbs(h)[0].querySelector('canvas');
-    expect(canvas?.width).toBe(Math.floor(612 * THUMB_SCALE));
+    expect(canvas?.width).toBe(THUMB_WIDTH);
     expect(thumbs(h)[10].querySelector('canvas')?.width ?? 0).toBe(0);
   });
 
@@ -157,7 +161,7 @@ describe('PDF page thumbnails', () => {
     doc.hold = true;
     thumbObserver().show(1, 3);
     await settle();
-    const drawing = doc.renders.filter((call) => call.viewport.scale === THUMB_SCALE);
+    const drawing = doc.renders.filter((call) => isThumb(call));
     expect(drawing).toHaveLength(1);
 
     h.release();
@@ -182,9 +186,45 @@ describe('PDF page thumbnails', () => {
     await settle();
     expect(thumbRenders(doc)).toEqual([1]);
 
-    doc.renders.filter((call) => call.viewport.scale === THUMB_SCALE)[0].finish();
+    doc.renders.filter((call) => isThumb(call))[0].finish();
     await settle();
     await settle();
     expect(thumbRenders(doc)).toEqual([1, 2]);
+  });
+
+  /** Opens the rail on a one-page doc of `size` pt, draws its thumbnail and returns the canvas. */
+  const drawOne = async (size: [number, number]): Promise<{ canvas: HTMLCanvasElement | null | undefined; doc: TextDoc }> => {
+    const h = harness();
+    const doc = textDoc(1, undefined, { 1: size });
+    await mountPdfView(h.container, doc, {}, h.chrome);
+    toggle(h).click();
+    thumbObserver().show(1, 1);
+    await settle();
+    await settle();
+
+    return { canvas: thumbs(h)[0].querySelector('canvas'), doc };
+  };
+
+  it('keeps a huge page thumbnail canvas under the size cap', async () => {
+    Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 2 });
+    const { canvas, doc } = await drawOne([14400, 14400]);
+
+    expect((canvas?.width ?? 0) * (canvas?.height ?? 0)).toBeLessThanOrEqual(CANVAS_CAP);
+    expect(canvas?.width).toBeGreaterThan(0);
+    expect(thumbRenders(doc)).toEqual([1]);
+  });
+
+  it('keeps each side of a long thin page thumbnail under 32,767 pixels', async () => {
+    const { canvas } = await drawOne([10, 400000]);
+
+    expect(canvas?.height).toBeLessThanOrEqual(32_767);
+    expect(canvas?.height).toBeGreaterThan(0);
+  });
+
+  it('draws every thumbnail at the same width, whatever the page size', async () => {
+    const { canvas } = await drawOne([14400, 14400]);
+
+    expect(canvas?.style.width).toBe(`${THUMB_WIDTH}px`);
+    expect(canvas?.style.height).toBe(`${THUMB_WIDTH}px`);
   });
 });

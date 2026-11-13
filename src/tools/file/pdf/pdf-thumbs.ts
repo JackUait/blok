@@ -1,10 +1,11 @@
 import { IconGallery } from '../../../components/icons';
 import { hintButton, pillDivider, type PreviewChrome } from '../preview-chrome';
 import { fill } from '../preview-labels';
+import { backingRatio } from './pdf-canvas';
 import type { PdfDocumentLike, PdfRenderTask } from './pdf-types';
 
-/** Thumbnail size against the page at 100%, in pdf.js scale (pt to px at 1). */
-const THUMB_SCALE = 0.2;
+/** Every thumbnail's CSS width; its height follows the page shape. A Letter page draws at about scale 0.2. */
+const THUMB_WIDTH = 122;
 /** Thumbnails this far past the rail's edges draw ahead of the scroll. */
 const AHEAD = '300px 0px';
 
@@ -100,19 +101,23 @@ export function mountPdfThumbs(
       if (!live()) {
         return;
       }
-      const viewport = page.getViewport({ scale: THUMB_SCALE });
-      const ratio = window.devicePixelRatio || 1;
+      const natural = page.getViewport({ scale: 1 });
+      const viewport = page.getViewport({ scale: THUMB_WIDTH / natural.width });
+      const ratio = backingRatio(viewport.width, viewport.height);
       const canvas = document.createElement('canvas');
       canvas.className = thumb.canvas.className;
       canvas.width = Math.floor(viewport.width * ratio);
       canvas.height = Math.floor(viewport.height * ratio);
-      canvas.style.width = `${viewport.width}px`;
-      canvas.style.height = `${viewport.height}px`;
+      canvas.style.width = `${THUMB_WIDTH}px`;
+      canvas.style.height = `${(THUMB_WIDTH * natural.height) / natural.width}px`;
       const context = canvas.getContext('2d');
       if (context === null) {
         return;
       }
-      const task = page.render({ canvasContext: context, viewport, ...(ratio === 1 ? {} : { transform: [ratio, 0, 0, ratio, 0, 0] }) });
+      const sx = canvas.width / viewport.width;
+      const sy = canvas.height / viewport.height;
+      const transform = sx === 1 && sy === 1 ? undefined : [sx, 0, 0, sy, 0, 0];
+      const task = page.render({ canvasContext: context, viewport, ...(transform === undefined ? {} : { transform }) });
       state.task = task;
       try {
         await task.promise;
@@ -160,8 +165,8 @@ export function mountPdfThumbs(
       canvas.className = 'blok-file-preview-pdf-thumb-canvas';
       canvas.width = 0;
       canvas.height = 0;
-      canvas.style.width = `${view.width * THUMB_SCALE}px`;
-      canvas.style.height = `${view.height * THUMB_SCALE}px`;
+      canvas.style.width = `${THUMB_WIDTH}px`;
+      canvas.style.height = `${(THUMB_WIDTH * view.height) / view.width}px`;
       const number = document.createElement('span');
       number.setAttribute('aria-hidden', 'true');
       number.textContent = String(index + 1);

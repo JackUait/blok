@@ -246,6 +246,7 @@ describe('server release wiring', () => {
       'page-transfer-sidecar',
       'sync-transport-contract',
       'collab-http-contract',
+      'file-bytes-contract',
     ]) {
       expect(runner).toContain(`'${suite}'`);
     }

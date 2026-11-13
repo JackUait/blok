@@ -146,6 +146,64 @@ const ENCODED: Record<string, { body: () => Buffer; encoding: string[] }> = {
   'gzip-long-comment': { body: () => withHeaderField(gzipSync(PRECEDENCE_HTML), 0x10, 600), encoding: ['gzip'] },
 };
 
+/**
+ * An ASCII stand-in for a PDF: `size` bytes with "%PDF-1.7" at `magicAt`.
+ * ASCII, so a golden can hold it as text.
+ */
+export function fixturePdf(size: number, magicAt = 0): string {
+  const filler = (length: number): string =>
+    Array.from({ length }, (_, index) => String.fromCharCode(97 + (index % 26))).join('');
+  const magic = '%PDF-1.7';
+
+  return (filler(magicAt) + magic + filler(size)).slice(0, size);
+}
+
+// /pdf/NAME. `ranges: false` ignores Range, as some hosts do.
+const PDFS: Record<string, { body: string; ranges: boolean; encoding?: string }> = {
+  'doc.pdf': { body: fixturePdf(1500), ranges: true },
+  // "%PDF-" ends at byte 1023, the last one the check reads.
+  'magic-1019.pdf': { body: fixturePdf(1500, 1019), ranges: true },
+  'magic-1020.pdf': { body: fixturePdf(1500, 1020), ranges: true },
+  'big.pdf': { body: fixturePdf(3000), ranges: true },
+  'no-ranges.pdf': { body: fixturePdf(1500), ranges: false },
+  'gzip.pdf': { body: fixturePdf(1500), ranges: true, encoding: 'gzip' },
+  // One byte over what one /file-bytes answer may carry.
+  'mib-plus-one.pdf': { body: fixturePdf(2 ** 20 + 1), ranges: true },
+};
+
+// One "bytes=a-b" or "bytes=a-" range, else the whole body. With a
+// Content-Length: writeHead fixes the head, so Node would send chunked.
+function sendPdf(range: string | undefined, response: ServerResponse, pdf: (typeof PDFS)[string]): void {
+  const headers: Record<string, string> = { 'Content-Type': 'application/pdf', 'Accept-Ranges': 'bytes' };
+  const match = pdf.ranges ? /^bytes=(\d+)-(\d*)$/.exec(range ?? '') : null;
+
+  if (pdf.encoding !== undefined) {
+    headers['Content-Encoding'] = pdf.encoding;
+  }
+  if (match === null) {
+    headers['Content-Length'] = String(pdf.body.length);
+    response.writeHead(200, headers);
+    response.end(pdf.body);
+
+    return;
+  }
+
+  const size = pdf.body.length;
+  const start = Number(match[1]);
+  const end = Math.min(match[2] === '' ? size - 1 : Number(match[2]), size - 1);
+
+  if (start >= size) {
+    response.writeHead(416, { 'Content-Range': `bytes */${size}` });
+    response.end();
+
+    return;
+  }
+  headers['Content-Range'] = `bytes ${start}-${end}/${size}`;
+  headers['Content-Length'] = String(end - start + 1);
+  response.writeHead(206, headers);
+  response.end(pdf.body.slice(start, end + 1));
+}
+
 /** The Content-Encoding lines the origin sends for /encoded/{name}. */
 export function encodedContentEncoding(name: string): string[] | undefined {
   return ENCODED[name]?.encoding;
@@ -289,6 +347,21 @@ export async function startFixtureOrigin(): Promise<FixtureOrigin> {
         held.current--;
         send(response, 200, path.endsWith('.png') ? 'image/png' : 'text/html; charset=utf-8', PRECEDENCE_HTML);
       });
+
+      return;
+    }
+
+    if (path === '/pdf/redirect') {
+      response.writeHead(302, { Location: '/pdf/doc.pdf' });
+      response.end();
+
+      return;
+    }
+
+    const pdf = path.startsWith('/pdf/') ? PDFS[path.slice('/pdf/'.length)] : undefined;
+
+    if (pdf !== undefined) {
+      sendPdf(request.headers.range, response, pdf);
 
       return;
     }

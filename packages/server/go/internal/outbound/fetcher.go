@@ -22,7 +22,8 @@ import (
 	"github.com/JackUait/blok/packages/server/go/v2/internal/sectrust"
 )
 
-// UserAgent is sent with every fetch, and no other header but Host.
+// UserAgent is sent with every fetch, and no other header but Host and a
+// Range the caller set.
 const UserAgent = "blok-server (+https://blokeditor.com)"
 
 const connectAttemptTimeout = time.Second
@@ -50,6 +51,21 @@ type Limits struct {
 	// Caller is the rate-limit key. A caller runs at most two fetches at
 	// once in each pool; more wait for one of its own slots. Empty is no cap.
 	Caller string
+	// Range, when set, is sent on every hop. The only request header besides
+	// Host and User-Agent.
+	Range *ByteRange
+}
+
+// ByteRange is bytes=Start-End, or bytes=Start- when End is negative.
+// Typed, so no caller text reaches the request line.
+type ByteRange struct{ Start, End int64 }
+
+func (b ByteRange) header() string {
+	value := "bytes=" + strconv.FormatInt(b.Start, 10) + "-"
+	if b.End >= 0 {
+		value += strconv.FormatInt(b.End, 10)
+	}
+	return value
 }
 
 // Response is GuardedResponse. Release frees the concurrency slot; callers
@@ -158,14 +174,29 @@ func systemResolve(ctx context.Context, host string) ([]netip.Addr, error) {
 // Get fetches raw. The timeout covers the wait for a slot. Every failure
 // but the caller's own cancellation and bad limits becomes an *Error.
 func (f *Fetcher) Get(ctx context.Context, raw string, limits Limits) (*Response, error) {
-	if err := ctx.Err(); err != nil {
+	deadline, cancel, release, err := f.acquire(ctx, limits)
+	if err != nil {
 		return nil, err
+	}
+	defer cancel()
+	response, err := f.get(deadline, raw, limits)
+	if err != nil {
+		release()
+		return nil, f.collapse(ctx, deadline, err)
+	}
+	response.release = release
+	return response, nil
+}
+
+// acquire checks the limits and takes a slot. The deadline covers the wait.
+func (f *Fetcher) acquire(ctx context.Context, limits Limits) (context.Context, context.CancelFunc, func(), error) {
+	if err := ctx.Err(); err != nil {
+		return nil, nil, nil, err
 	}
 	if err := validateLimits(limits); err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 	deadline, cancel := context.WithTimeout(ctx, limits.Timeout)
-	defer cancel()
 	permits, callers := f.permits, &f.checkCallers
 	if limits.Upload {
 		permits, callers = f.uploads, &f.uploadCallers
@@ -174,25 +205,20 @@ func (f *Fetcher) Get(ctx context.Context, raw string, limits Limits) (*Response
 	// pool slot others could use.
 	leave, err := callers.enter(deadline, limits.Caller)
 	if err != nil {
-		return nil, f.collapse(ctx, deadline, err)
+		defer cancel()
+		return nil, nil, nil, f.collapse(ctx, deadline, err)
 	}
 	select {
 	case permits <- struct{}{}:
 	case <-deadline.Done():
 		leave()
-		return nil, f.collapse(ctx, deadline, deadline.Err())
+		defer cancel()
+		return nil, nil, nil, f.collapse(ctx, deadline, deadline.Err())
 	}
-	release := func() {
+	return deadline, cancel, func() {
 		<-permits
 		leave()
-	}
-	response, err := f.get(deadline, raw, limits)
-	if err != nil {
-		release()
-		return nil, f.collapse(ctx, deadline, err)
-	}
-	response.release = release
-	return response, nil
+	}, nil
 }
 
 // maxArrayLength is .NET's Array.MaxLength, C#'s byte cap ceiling.
@@ -224,33 +250,55 @@ func (f *Fetcher) collapse(ctx, deadline context.Context, err error) error {
 }
 
 func (f *Fetcher) get(ctx context.Context, raw string, limits Limits) (*Response, error) {
+	response, target, redirects, err := f.follow(ctx, raw, limits)
+	if err != nil {
+		return nil, err
+	}
+	body, err := readBounded(response, limits.MaxBytes, limits.Truncate)
+	_ = response.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+	return &Response{
+		StatusCode:  response.StatusCode,
+		Body:        body,
+		ContentType: contentType(response.Header.Get("Content-Type")),
+		FinalURL:    target.URL.AbsoluteURI,
+		Header:      response.Header,
+		Redirects:   redirects,
+	}, nil
+}
+
+// follow sends the GET and follows redirects. The final response's body is
+// left unread.
+func (f *Fetcher) follow(ctx context.Context, raw string, limits Limits) (*http.Response, Target, int, error) {
 	redirects := 0
 	for {
 		if err := ctx.Err(); err != nil {
-			return nil, err
+			return nil, Target{}, 0, err
 		}
 		target, err := f.Policy.Validate(raw, nil)
 		if err != nil {
-			return nil, err
+			return nil, Target{}, 0, err
 		}
 		addresses := []netip.Addr{target.Literal}
 		if !target.Literal.IsValid() {
 			addresses, err = f.Resolve(ctx, target.Host)
 			if err != nil {
-				return nil, err
+				return nil, Target{}, 0, err
 			}
 		}
 		if len(addresses) == 0 {
-			return nil, fail(Blocked)
+			return nil, Target{}, 0, fail(Blocked)
 		}
 		for _, address := range addresses {
 			if !f.Policy.AddressAllowed(address) {
-				return nil, fail(Blocked)
+				return nil, Target{}, 0, fail(Blocked)
 			}
 		}
-		response, err := f.roundTrip(ctx, target, addresses)
+		response, err := f.roundTrip(ctx, target, addresses, limits.Range)
 		if err != nil {
-			return nil, err
+			return nil, Target{}, 0, err
 		}
 		// C# follows only a Location .NET parses as a Uri; else the 3xx is
 		// the answer.
@@ -258,35 +306,23 @@ func (f *Fetcher) get(ctx context.Context, raw string, limits Limits) (*Response
 			dotnet.ParsesAsURI(location) {
 			_ = response.Body.Close()
 			if redirects >= limits.MaxRedirects {
-				return nil, fail(TooManyRedirects)
+				return nil, Target{}, 0, fail(TooManyRedirects)
 			}
 			next, err := f.Policy.Validate(location, target.URL)
 			if err != nil {
-				return nil, err
+				return nil, Target{}, 0, err
 			}
 			if target.URL.Scheme == "https" && next.URL.Scheme != "https" {
-				return nil, fail(Blocked)
+				return nil, Target{}, 0, fail(Blocked)
 			}
 			if limits.Hop != nil && !limits.Hop() {
-				return nil, fail(RateLimited)
+				return nil, Target{}, 0, fail(RateLimited)
 			}
 			raw = next.URL.AbsoluteURI
 			redirects++
 			continue
 		}
-		body, err := readBounded(response, limits.MaxBytes, limits.Truncate)
-		_ = response.Body.Close()
-		if err != nil {
-			return nil, err
-		}
-		return &Response{
-			StatusCode:  response.StatusCode,
-			Body:        body,
-			ContentType: contentType(response.Header.Get("Content-Type")),
-			FinalURL:    target.URL.AbsoluteURI,
-			Header:      response.Header,
-			Redirects:   redirects,
-		}, nil
+		return response, target, redirects, nil
 	}
 }
 
@@ -301,7 +337,7 @@ func isRedirect(status int) bool {
 // roundTrip sends one GET on a fresh connection to a vetted address, with
 // no proxy, no Accept-Encoding, and nothing followed. The response is read
 // by wire.go, as .NET reads it.
-func (f *Fetcher) roundTrip(ctx context.Context, target Target, addresses []netip.Addr) (*http.Response, error) {
+func (f *Fetcher) roundTrip(ctx context.Context, target Target, addresses []netip.Addr, byteRange *ByteRange) (*http.Response, error) {
 	if !target.Literal.IsValid() && !plainHostName(target.Host) {
 		return nil, fail(Blocked)
 	}
@@ -330,7 +366,11 @@ func (f *Fetcher) roundTrip(ctx context.Context, target Target, addresses []neti
 		conn = secure
 	}
 	request := "GET " + requestURI(target) + " HTTP/1.1\r\nHost: " + hostHeader(target) +
-		"\r\nUser-Agent: " + UserAgent + "\r\n\r\n"
+		"\r\nUser-Agent: " + UserAgent + "\r\n"
+	if byteRange != nil {
+		request += "Range: " + byteRange.header() + "\r\n"
+	}
+	request += "\r\n"
 	if _, err := io.WriteString(conn, request); err != nil {
 		_ = closeConn()
 		return nil, err

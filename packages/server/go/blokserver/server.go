@@ -33,6 +33,7 @@ type Server struct {
 	limiter   *rateLimiter
 	clock     func() time.Time
 	fetcher   *outbound.Fetcher
+	pdfChecks *pdfCheckCache
 
 	storeOnce sync.Once
 	store     blob.Store
@@ -99,6 +100,7 @@ func New(options Options) (*Server, error) {
 		}()
 	}
 	s.limiter = newRateLimiter(o.RateLimitPerMinute, func() time.Time { return s.clock() })
+	s.pdfChecks = newPDFCheckCache(func() time.Time { return s.clock() })
 	s.connections = synchttp.NewConnectionTable(o.CollabMaxConnections, o.CollabMaxConnectionsPerUserPerDoc)
 	if o.CollabEnabled {
 		s.collab = &collabRooms{server: s}
@@ -172,6 +174,9 @@ func (s *Server) handler(prefix string, protect func(http.Handler) http.Handler)
 	if o.UnfurlEnabled {
 		shell(prefix+"/unfurl", "GET", s.unfurl)
 		shell(prefix+"/frame-check", "GET", s.frameCheck)
+	}
+	if o.FileBytesEnabled {
+		shell(prefix+"/file-bytes", "GET", s.fileBytes)
 	}
 	if o.hasStorage() {
 		shell(prefix+"/upload", "POST", s.upload)

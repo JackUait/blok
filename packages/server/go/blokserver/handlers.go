@@ -189,9 +189,10 @@ func nameFromURL(raw string) string {
 	return sanitizeFileName(dotnet.UnescapeDataString(url.AbsolutePath))
 }
 
-// serveLocalFile is LocalFileEndpoint: no guard and no CORS, a generated
-// name only, served as an attachment with nosniff.
+// serveLocalFile is LocalFileEndpoint: no guard, CORS only with FilesCORS,
+// a generated name only, served as an attachment with nosniff.
 func (s *Server) serveLocalFile(w http.ResponseWriter, r *http.Request) {
+	s.filesCORS(w, r)
 	name := r.PathValue("fileName")
 	if name == "" || name == "." || name == ".." || strings.ContainsAny(name, `/\`) || !blob.IsGenerated(name) {
 		writeText(w, http.StatusNotFound, "404 page not found\n")

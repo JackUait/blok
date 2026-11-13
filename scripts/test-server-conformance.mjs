@@ -55,6 +55,7 @@ const SUITES = [
   'page-transfer-sidecar',
   'sync-transport-contract',
   'collab-http-contract',
+  'file-bytes-contract',
 ];
 
 // Suites that live outside test/unit/server-conformance.

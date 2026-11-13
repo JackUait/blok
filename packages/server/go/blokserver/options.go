@@ -57,6 +57,17 @@ type Options struct {
 	// so the zero value keeps them closed, like C#'s UnfurlDisabled = true.
 	UnfurlEnabled bool
 
+	// FileBytesEnabled opens GET /file-bytes, behind the same guard as
+	// /unfurl: the PDF preview reads a file's bytes through it. Off by
+	// default, apart from UnfurlEnabled, since it relays whole files.
+	FileBytesEnabled bool
+	// FileBytesMaxBytes is the largest file /file-bytes serves. Nil is
+	// 100 MiB.
+	FileBytesMaxBytes *int64
+	// FilesCORS sends CORS headers on stored local files for an allowed
+	// origin, so a page on another origin can read them. Off by default.
+	FilesCORS bool
+
 	S3Endpoint   string
 	S3Region     string
 	S3Bucket     string
@@ -147,7 +158,8 @@ type Options struct {
 }
 
 // DefaultOptions returns the C# BlokServerOptions defaults, every pointer
-// field set.
+// field set. FileBytesMaxBytes stays nil until C# has it: options-defaults.json
+// is written from C#.
 func DefaultOptions() Options {
 	d := defaults()
 	return Options{
@@ -174,6 +186,7 @@ type settings struct {
 	ListenAddress                        string
 	Auth                                 string
 	MaxUploadBytes                       int64
+	FileBytesMaxBytes                    int64
 	CollabMaxConnectionsPerUserPerDoc    int
 	CollabMaxMessageBytes                int
 	CollabKeepAliveInterval              time.Duration
@@ -191,6 +204,7 @@ func defaults() settings {
 		ListenAddress:                        "127.0.0.1:4000",
 		Auth:                                 "none",
 		MaxUploadBytes:                       32 << 20,
+		FileBytesMaxBytes:                    100 << 20,
 		CollabMaxConnectionsPerUserPerDoc:    8,
 		CollabMaxMessageBytes:                1 << 20,
 		CollabKeepAliveInterval:              15 * time.Second,
@@ -218,6 +232,7 @@ func (o *Options) resolve() settings {
 		ListenAddress:                        pick(o.ListenAddress, d.ListenAddress),
 		Auth:                                 pick(o.Auth, d.Auth),
 		MaxUploadBytes:                       pick(o.MaxUploadBytes, d.MaxUploadBytes),
+		FileBytesMaxBytes:                    pick(o.FileBytesMaxBytes, d.FileBytesMaxBytes),
 		CollabMaxConnectionsPerUserPerDoc:    pick(o.CollabMaxConnectionsPerUserPerDoc, d.CollabMaxConnectionsPerUserPerDoc),
 		CollabMaxMessageBytes:                pick(o.CollabMaxMessageBytes, d.CollabMaxMessageBytes),
 		CollabKeepAliveInterval:              pick(o.CollabKeepAliveInterval, d.CollabKeepAliveInterval),
@@ -269,6 +284,9 @@ func (o *settings) validate() (string, error) {
 	}
 	if o.RateLimitPerMinute < 0 {
 		return fail("--rate-limit must be zero or greater (got %d)", o.RateLimitPerMinute)
+	}
+	if o.FileBytesEnabled && o.FileBytesMaxBytes <= 0 {
+		return fail("FileBytesMaxBytes must be a positive number of bytes (got %d)", o.FileBytesMaxBytes)
 	}
 	// C# AddBlokDocuments refuses these in the call, not at the first
 	// conversion.

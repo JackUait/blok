@@ -29,6 +29,11 @@ type conformanceArguments struct {
 	stampAuthority bool
 	// keepAlive is CollabKeepAliveInterval, when set.
 	keepAlive *time.Duration
+	// fileBytes is FileBytesEnabled, and fileBytesMax FileBytesMaxBytes.
+	fileBytes    bool
+	fileBytesMax *int64
+	// filesCORS is FilesCORS.
+	filesCORS bool
 }
 
 // parseConformanceArguments is ConformanceArguments.Parse: it takes its two
@@ -60,6 +65,22 @@ func parseConformanceArguments(args []string) ([]string, conformanceArguments, s
 		}
 		if argument == "--conformance-stamp-authority" {
 			parsed.stampAuthority = true
+			continue
+		}
+		if argument == "--conformance-file-bytes" {
+			parsed.fileBytes = true
+			continue
+		}
+		if argument == "--conformance-files-cors" {
+			parsed.filesCORS = true
+			continue
+		}
+		if text, ok := strings.CutPrefix(argument, "--conformance-file-bytes-max-bytes="); ok {
+			bytes, err := strconv.ParseInt(text, 10, 64)
+			if err != nil || !isDigits(text) {
+				return nil, parsed, "--conformance-file-bytes-max-bytes must be a whole number of bytes (got " + csQuote(text) + ")"
+			}
+			parsed.fileBytesMax = &bytes
 			continue
 		}
 		if text, ok := strings.CutPrefix(argument, "--conformance-keep-alive-ms="); ok {
@@ -116,6 +137,11 @@ func applyConformanceOptions(options *blokserver.Options, parsed conformanceArgu
 	options.CollabEnforceRestoreGuards = parsed.restoreGuards
 	options.CollabRestoreTrashesPages = parsed.restoreTrashesPages
 	options.CollabStampAuthority = parsed.stampAuthority
+	options.FileBytesEnabled = parsed.fileBytes
+	options.FilesCORS = parsed.filesCORS
+	if parsed.fileBytesMax != nil {
+		options.FileBytesMaxBytes = parsed.fileBytesMax
+	}
 	if parsed.recordNotes {
 		options.CollabRecordNotes = collabstore.NewMemoryRecordNotes()
 	}

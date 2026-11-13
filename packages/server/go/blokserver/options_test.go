@@ -108,6 +108,12 @@ func fromCSharp(t *testing.T, spec map[string]json.RawMessage) Options {
 			read(raw, &o.CollabInboundAwarenessBytesPerSecond)
 		case "RichTextFields":
 			read(raw, &o.RichTextFields)
+		case "FileBytesEnabled":
+			read(raw, &o.FileBytesEnabled)
+		case "FileBytesMaxBytes":
+			read(raw, &o.FileBytesMaxBytes)
+		case "FilesCors":
+			read(raw, &o.FilesCORS)
 		case "Version":
 			read(raw, &o.Version)
 		default:

@@ -1,0 +1,1381 @@
+[
+  {
+    "name": "off: the route is not mapped",
+    "server": "off",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "<origin>/pdf/doc.pdf",
+    "headers": {},
+    "response": {
+      "status": 404,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "404 page not found\n"
+    },
+    "origin": []
+  },
+  {
+    "name": "no url",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "headers": {},
+    "response": {
+      "status": 400,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "expected ?url=...\n"
+    },
+    "origin": []
+  },
+  {
+    "name": "origin not allowed",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "<origin>/pdf/doc.pdf",
+    "headers": {
+      "Origin": "https://evil.example"
+    },
+    "response": {
+      "status": 403,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "origin not allowed\n"
+    },
+    "origin": []
+  },
+  {
+    "name": "preflight for Range",
+    "server": "on",
+    "method": "OPTIONS",
+    "path": "/file-bytes",
+    "headers": {
+      "Origin": "https://editor.example.com",
+      "Access-Control-Request-Method": "GET",
+      "Access-Control-Request-Headers": "range"
+    },
+    "response": {
+      "status": 204,
+      "headers": {
+        "access-control-allow-headers": [
+          "range"
+        ],
+        "access-control-allow-methods": [
+          "GET, OPTIONS"
+        ],
+        "access-control-allow-origin": [
+          "https://editor.example.com"
+        ],
+        "access-control-max-age": [
+          "600"
+        ],
+        "vary": [
+          "Access-Control-Request-Headers",
+          "Origin"
+        ]
+      },
+      "body": ""
+    },
+    "origin": []
+  },
+  {
+    "name": "remote: whole file, no cookie or authorization forwarded",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "<origin>/pdf/doc.pdf",
+    "headers": {
+      "Origin": "https://editor.example.com",
+      "Cookie": "session=1",
+      "Authorization": "Bearer x"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "access-control-allow-origin": [
+          "https://editor.example.com"
+        ],
+        "access-control-expose-headers": [
+          "Accept-Ranges, Content-Length, Content-Range"
+        ],
+        "cache-control": [
+          "private, max-age=300"
+        ],
+        "content-length": [
+          "1500"
+        ],
+        "content-security-policy": [
+          "sandbox"
+        ],
+        "content-type": [
+          "application/pdf"
+        ],
+        "vary": [
+          "Origin, Authorization"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "%PDF-1.7abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghij"
+    },
+    "origin": [
+      {
+        "path": "/pdf/doc.pdf",
+        "headers": {
+          "host": "<origin host>",
+          "user-agent": "blok-server (+https://blokeditor.com)"
+        }
+      }
+    ]
+  },
+  {
+    "name": "remote: a range of a checked url goes straight through",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "<origin>/pdf/doc.pdf",
+    "headers": {
+      "Range": "bytes=1000-1099"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "access-control-expose-headers": [
+          "Accept-Ranges, Content-Length, Content-Range"
+        ],
+        "cache-control": [
+          "private, max-age=300"
+        ],
+        "content-length": [
+          "100"
+        ],
+        "content-range": [
+          "bytes 1000-1099/1500"
+        ],
+        "content-security-policy": [
+          "sandbox"
+        ],
+        "content-type": [
+          "application/pdf"
+        ],
+        "vary": [
+          "Origin, Authorization"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "efghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"
+    },
+    "origin": [
+      {
+        "path": "/pdf/doc.pdf",
+        "headers": {
+          "host": "<origin host>",
+          "range": "bytes=1000-1099",
+          "user-agent": "blok-server (+https://blokeditor.com)"
+        }
+      }
+    ]
+  },
+  {
+    "name": "remote: an open range",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "<origin>/pdf/doc.pdf",
+    "headers": {
+      "Range": "bytes=1400-"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "access-control-expose-headers": [
+          "Accept-Ranges, Content-Length, Content-Range"
+        ],
+        "cache-control": [
+          "private, max-age=300"
+        ],
+        "content-length": [
+          "100"
+        ],
+        "content-range": [
+          "bytes 1400-1499/1500"
+        ],
+        "content-security-policy": [
+          "sandbox"
+        ],
+        "content-type": [
+          "application/pdf"
+        ],
+        "vary": [
+          "Origin, Authorization"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "opqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghij"
+    },
+    "origin": [
+      {
+        "path": "/pdf/doc.pdf",
+        "headers": {
+          "host": "<origin host>",
+          "range": "bytes=1400-",
+          "user-agent": "blok-server (+https://blokeditor.com)"
+        }
+      }
+    ]
+  },
+  {
+    "name": "remote: a new url read from 0 is checked by its own bytes",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "<origin>/pdf/doc.pdf?first=zero",
+    "headers": {
+      "Range": "bytes=0-99"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "access-control-expose-headers": [
+          "Accept-Ranges, Content-Length, Content-Range"
+        ],
+        "cache-control": [
+          "private, max-age=300"
+        ],
+        "content-length": [
+          "100"
+        ],
+        "content-range": [
+          "bytes 0-99/1500"
+        ],
+        "content-security-policy": [
+          "sandbox"
+        ],
+        "content-type": [
+          "application/pdf"
+        ],
+        "vary": [
+          "Origin, Authorization"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "%PDF-1.7abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmn"
+    },
+    "origin": [
+      {
+        "path": "/pdf/doc.pdf",
+        "headers": {
+          "host": "<origin host>",
+          "range": "bytes=0-99",
+          "user-agent": "blok-server (+https://blokeditor.com)"
+        }
+      }
+    ]
+  },
+  {
+    "name": "remote: a new url read past 0 fetches its first 1024 bytes",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "<origin>/pdf/doc.pdf?first=middle",
+    "headers": {
+      "Range": "bytes=1000-1099"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "access-control-expose-headers": [
+          "Accept-Ranges, Content-Length, Content-Range"
+        ],
+        "cache-control": [
+          "private, max-age=300"
+        ],
+        "content-length": [
+          "100"
+        ],
+        "content-range": [
+          "bytes 1000-1099/1500"
+        ],
+        "content-security-policy": [
+          "sandbox"
+        ],
+        "content-type": [
+          "application/pdf"
+        ],
+        "vary": [
+          "Origin, Authorization"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "efghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"
+    },
+    "origin": [
+      {
+        "path": "/pdf/doc.pdf",
+        "headers": {
+          "host": "<origin host>",
+          "range": "bytes=1000-1099",
+          "user-agent": "blok-server (+https://blokeditor.com)"
+        }
+      },
+      {
+        "path": "/pdf/doc.pdf",
+        "headers": {
+          "host": "<origin host>",
+          "range": "bytes=0-1023",
+          "user-agent": "blok-server (+https://blokeditor.com)"
+        }
+      }
+    ]
+  },
+  {
+    "name": "remote: two ranges are not forwarded",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "<origin>/pdf/doc.pdf",
+    "headers": {
+      "Range": "bytes=0-1,5-6"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "access-control-expose-headers": [
+          "Accept-Ranges, Content-Length, Content-Range"
+        ],
+        "cache-control": [
+          "private, max-age=300"
+        ],
+        "content-length": [
+          "1500"
+        ],
+        "content-security-policy": [
+          "sandbox"
+        ],
+        "content-type": [
+          "application/pdf"
+        ],
+        "vary": [
+          "Origin, Authorization"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "%PDF-1.7abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghij"
+    },
+    "origin": [
+      {
+        "path": "/pdf/doc.pdf",
+        "headers": {
+          "host": "<origin host>",
+          "user-agent": "blok-server (+https://blokeditor.com)"
+        }
+      }
+    ]
+  },
+  {
+    "name": "remote: a suffix range is not forwarded",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "<origin>/pdf/doc.pdf",
+    "headers": {
+      "Range": "bytes=-5"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "access-control-expose-headers": [
+          "Accept-Ranges, Content-Length, Content-Range"
+        ],
+        "cache-control": [
+          "private, max-age=300"
+        ],
+        "content-length": [
+          "1500"
+        ],
+        "content-security-policy": [
+          "sandbox"
+        ],
+        "content-type": [
+          "application/pdf"
+        ],
+        "vary": [
+          "Origin, Authorization"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "%PDF-1.7abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghij"
+    },
+    "origin": [
+      {
+        "path": "/pdf/doc.pdf",
+        "headers": {
+          "host": "<origin host>",
+          "user-agent": "blok-server (+https://blokeditor.com)"
+        }
+      }
+    ]
+  },
+  {
+    "name": "remote: %PDF- ending at byte 1023",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "<origin>/pdf/magic-1019.pdf",
+    "headers": {},
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "access-control-expose-headers": [
+          "Accept-Ranges, Content-Length, Content-Range"
+        ],
+        "cache-control": [
+          "private, max-age=300"
+        ],
+        "content-length": [
+          "1500"
+        ],
+        "content-security-policy": [
+          "sandbox"
+        ],
+        "content-type": [
+          "application/pdf"
+        ],
+        "vary": [
+          "Origin, Authorization"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcde%PDF-1.7abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcde"
+    },
+    "origin": [
+      {
+        "path": "/pdf/magic-1019.pdf",
+        "headers": {
+          "host": "<origin host>",
+          "user-agent": "blok-server (+https://blokeditor.com)"
+        }
+      }
+    ]
+  },
+  {
+    "name": "remote: %PDF- starting at byte 1020",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "<origin>/pdf/magic-1020.pdf",
+    "headers": {},
+    "response": {
+      "status": 415,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "not a pdf\n"
+    },
+    "origin": [
+      {
+        "path": "/pdf/magic-1020.pdf",
+        "headers": {
+          "host": "<origin host>",
+          "user-agent": "blok-server (+https://blokeditor.com)"
+        }
+      },
+      {
+        "path": "/pdf/magic-1020.pdf",
+        "headers": {
+          "host": "<origin host>",
+          "range": "bytes=0-1023",
+          "user-agent": "blok-server (+https://blokeditor.com)"
+        }
+      }
+    ]
+  },
+  {
+    "name": "remote: an html page",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "<origin>/metadata/final/page.html",
+    "headers": {},
+    "response": {
+      "status": 415,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "not a pdf\n"
+    },
+    "origin": [
+      {
+        "path": "/metadata/final/page.html",
+        "headers": {
+          "host": "<origin host>",
+          "user-agent": "blok-server (+https://blokeditor.com)"
+        }
+      },
+      {
+        "path": "/metadata/final/page.html",
+        "headers": {
+          "host": "<origin host>",
+          "range": "bytes=0-1023",
+          "user-agent": "blok-server (+https://blokeditor.com)"
+        }
+      }
+    ]
+  },
+  {
+    "name": "remote: a redirect to a pdf",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "<origin>/pdf/redirect",
+    "headers": {
+      "Range": "bytes=0-9"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "access-control-expose-headers": [
+          "Accept-Ranges, Content-Length, Content-Range"
+        ],
+        "cache-control": [
+          "private, max-age=300"
+        ],
+        "content-length": [
+          "10"
+        ],
+        "content-range": [
+          "bytes 0-9/1500"
+        ],
+        "content-security-policy": [
+          "sandbox"
+        ],
+        "content-type": [
+          "application/pdf"
+        ],
+        "vary": [
+          "Origin, Authorization"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "%PDF-1.7ab"
+    },
+    "origin": [
+      {
+        "path": "/pdf/redirect",
+        "headers": {
+          "host": "<origin host>",
+          "range": "bytes=0-9",
+          "user-agent": "blok-server (+https://blokeditor.com)"
+        }
+      },
+      {
+        "path": "/pdf/doc.pdf",
+        "headers": {
+          "host": "<origin host>",
+          "range": "bytes=0-9",
+          "user-agent": "blok-server (+https://blokeditor.com)"
+        }
+      }
+    ]
+  },
+  {
+    "name": "remote: upstream 404",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "<origin>/pdf/missing.pdf",
+    "headers": {},
+    "response": {
+      "status": 502,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "the URL could not be fetched\n"
+    },
+    "origin": [
+      {
+        "path": "/pdf/missing.pdf",
+        "headers": {
+          "host": "<origin host>",
+          "user-agent": "blok-server (+https://blokeditor.com)"
+        }
+      }
+    ]
+  },
+  {
+    "name": "remote: past the size cap",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "<origin>/pdf/big.pdf",
+    "headers": {},
+    "response": {
+      "status": 413,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "file too large\n"
+    },
+    "origin": [
+      {
+        "path": "/pdf/big.pdf",
+        "headers": {
+          "host": "<origin host>",
+          "user-agent": "blok-server (+https://blokeditor.com)"
+        }
+      }
+    ]
+  },
+  {
+    "name": "remote: an origin that ignores Range",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "<origin>/pdf/no-ranges.pdf",
+    "headers": {
+      "Range": "bytes=1000-1099"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "access-control-expose-headers": [
+          "Accept-Ranges, Content-Length, Content-Range"
+        ],
+        "cache-control": [
+          "private, max-age=300"
+        ],
+        "content-length": [
+          "1500"
+        ],
+        "content-security-policy": [
+          "sandbox"
+        ],
+        "content-type": [
+          "application/pdf"
+        ],
+        "vary": [
+          "Origin, Authorization"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "%PDF-1.7abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghij"
+    },
+    "origin": [
+      {
+        "path": "/pdf/no-ranges.pdf",
+        "headers": {
+          "host": "<origin host>",
+          "range": "bytes=1000-1099",
+          "user-agent": "blok-server (+https://blokeditor.com)"
+        }
+      }
+    ]
+  },
+  {
+    "name": "remote: a content-encoding",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "<origin>/pdf/gzip.pdf",
+    "headers": {},
+    "response": {
+      "status": 502,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "the URL could not be fetched\n"
+    },
+    "origin": [
+      {
+        "path": "/pdf/gzip.pdf",
+        "headers": {
+          "host": "<origin host>",
+          "user-agent": "blok-server (+https://blokeditor.com)"
+        }
+      }
+    ]
+  },
+  {
+    "name": "remote: not an http url",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "javascript:alert(1)",
+    "headers": {},
+    "response": {
+      "status": 502,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "the URL could not be fetched\n"
+    },
+    "origin": []
+  },
+  {
+    "name": "stored: whole file, no outbound fetch",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "https://uploads.example.com/files/11111111111111111111111111111111.pdf",
+    "headers": {
+      "Origin": "https://editor.example.com"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "access-control-allow-origin": [
+          "https://editor.example.com"
+        ],
+        "access-control-expose-headers": [
+          "Accept-Ranges, Content-Length, Content-Range"
+        ],
+        "cache-control": [
+          "private, max-age=300"
+        ],
+        "content-length": [
+          "1500"
+        ],
+        "content-security-policy": [
+          "sandbox"
+        ],
+        "content-type": [
+          "application/pdf"
+        ],
+        "vary": [
+          "Origin, Authorization"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "%PDF-1.7abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghij"
+    },
+    "origin": []
+  },
+  {
+    "name": "stored: a range",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "https://uploads.example.com/files/11111111111111111111111111111111.pdf",
+    "headers": {
+      "Range": "bytes=1000-1099"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "access-control-expose-headers": [
+          "Accept-Ranges, Content-Length, Content-Range"
+        ],
+        "cache-control": [
+          "private, max-age=300"
+        ],
+        "content-length": [
+          "100"
+        ],
+        "content-range": [
+          "bytes 1000-1099/1500"
+        ],
+        "content-security-policy": [
+          "sandbox"
+        ],
+        "content-type": [
+          "application/pdf"
+        ],
+        "vary": [
+          "Origin, Authorization"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "efghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"
+    },
+    "origin": []
+  },
+  {
+    "name": "stored: a query is ignored",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "https://uploads.example.com/files/11111111111111111111111111111111.pdf?download=1",
+    "headers": {
+      "Range": "bytes=0-9"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "access-control-expose-headers": [
+          "Accept-Ranges, Content-Length, Content-Range"
+        ],
+        "cache-control": [
+          "private, max-age=300"
+        ],
+        "content-length": [
+          "10"
+        ],
+        "content-range": [
+          "bytes 0-9/1500"
+        ],
+        "content-security-policy": [
+          "sandbox"
+        ],
+        "content-type": [
+          "application/pdf"
+        ],
+        "vary": [
+          "Origin, Authorization"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "%PDF-1.7ab"
+    },
+    "origin": []
+  },
+  {
+    "name": "stored: a range past the end",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "https://uploads.example.com/files/11111111111111111111111111111111.pdf",
+    "headers": {
+      "Range": "bytes=1500-"
+    },
+    "response": {
+      "status": 416,
+      "headers": {
+        "content-range": [
+          "bytes */1500"
+        ],
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "range not satisfiable\n"
+    },
+    "origin": []
+  },
+  {
+    "name": "stored: not a pdf",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "https://uploads.example.com/files/22222222222222222222222222222222.txt",
+    "headers": {},
+    "response": {
+      "status": 415,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "not a pdf\n"
+    },
+    "origin": []
+  },
+  {
+    "name": "stored: past the size cap",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "https://uploads.example.com/files/33333333333333333333333333333333.pdf",
+    "headers": {},
+    "response": {
+      "status": 413,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "file too large\n"
+    },
+    "origin": []
+  },
+  {
+    "name": "stored: missing key",
+    "server": "on",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "https://uploads.example.com/files/44444444444444444444444444444444.pdf",
+    "headers": {},
+    "response": {
+      "status": 404,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "not found\n"
+    },
+    "origin": []
+  },
+  {
+    "name": "files: no CORS without the option",
+    "server": "on",
+    "method": "GET",
+    "path": "/files/11111111111111111111111111111111.pdf",
+    "headers": {
+      "Origin": "https://editor.example.com",
+      "Range": "bytes=0-9"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "10"
+        ],
+        "content-range": [
+          "bytes 0-9/1500"
+        ],
+        "content-type": [
+          "application/pdf"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "%PDF-1.7ab"
+    },
+    "origin": []
+  },
+  {
+    "name": "answer cap: a remote answer over 1 MiB",
+    "server": "default-cap",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "<origin>/pdf/mib-plus-one.pdf",
+    "headers": {},
+    "response": {
+      "status": 413,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "range too large\n"
+    },
+    "origin": [
+      {
+        "path": "/pdf/mib-plus-one.pdf",
+        "headers": {
+          "host": "<origin host>",
+          "user-agent": "blok-server (+https://blokeditor.com)"
+        }
+      }
+    ]
+  },
+  {
+    "name": "answer cap: a stored answer over 1 MiB",
+    "server": "default-cap",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "https://uploads.example.com/files/55555555555555555555555555555555.pdf",
+    "headers": {},
+    "response": {
+      "status": 413,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "range too large\n"
+    },
+    "origin": []
+  },
+  {
+    "name": "ticket: no pass",
+    "server": "ticket",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "<origin>/pdf/doc.pdf",
+    "headers": {
+      "Origin": "https://editor.example.com"
+    },
+    "response": {
+      "status": 401,
+      "headers": {
+        "access-control-allow-origin": [
+          "https://editor.example.com"
+        ],
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "missing pass\n"
+    },
+    "origin": []
+  },
+  {
+    "name": "rate: the first request",
+    "server": "rate",
+    "method": "GET",
+    "path": "/file-bytes",
+    "headers": {},
+    "response": {
+      "status": 400,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "expected ?url=...\n"
+    },
+    "origin": []
+  },
+  {
+    "name": "rate: the second request",
+    "server": "rate",
+    "method": "GET",
+    "path": "/file-bytes",
+    "headers": {},
+    "response": {
+      "status": 429,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "rate limit exceeded\n"
+    },
+    "origin": []
+  },
+  {
+    "name": "rate: the PDF check fetch is charged",
+    "server": "probe-rate",
+    "method": "GET",
+    "path": "/file-bytes",
+    "url": "<origin>/pdf/doc.pdf?first=rate",
+    "headers": {
+      "Range": "bytes=1000-1099"
+    },
+    "response": {
+      "status": 429,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "rate limit exceeded\n"
+    },
+    "origin": [
+      {
+        "path": "/pdf/doc.pdf",
+        "headers": {
+          "host": "<origin host>",
+          "range": "bytes=1000-1099",
+          "user-agent": "blok-server (+https://blokeditor.com)"
+        }
+      }
+    ]
+  },
+  {
+    "name": "files CORS: an allowed origin",
+    "server": "files-cors",
+    "method": "GET",
+    "path": "/files/11111111111111111111111111111111.pdf",
+    "headers": {
+      "Origin": "https://editor.example.com",
+      "Range": "bytes=0-9"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "access-control-allow-origin": [
+          "https://editor.example.com"
+        ],
+        "access-control-expose-headers": [
+          "Accept-Ranges, Content-Length, Content-Range"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "10"
+        ],
+        "content-range": [
+          "bytes 0-9/1500"
+        ],
+        "content-type": [
+          "application/pdf"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "vary": [
+          "Origin"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "%PDF-1.7ab"
+    },
+    "origin": []
+  },
+  {
+    "name": "files CORS: another origin",
+    "server": "files-cors",
+    "method": "GET",
+    "path": "/files/11111111111111111111111111111111.pdf",
+    "headers": {
+      "Origin": "https://evil.example",
+      "Range": "bytes=0-9"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "10"
+        ],
+        "content-range": [
+          "bytes 0-9/1500"
+        ],
+        "content-type": [
+          "application/pdf"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "vary": [
+          "Origin"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "%PDF-1.7ab"
+    },
+    "origin": []
+  },
+  {
+    "name": "files CORS: no origin",
+    "server": "files-cors",
+    "method": "GET",
+    "path": "/files/11111111111111111111111111111111.pdf",
+    "headers": {
+      "Range": "bytes=0-9"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "10"
+        ],
+        "content-range": [
+          "bytes 0-9/1500"
+        ],
+        "content-type": [
+          "application/pdf"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "vary": [
+          "Origin"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "%PDF-1.7ab"
+    },
+    "origin": []
+  },
+  {
+    "name": "files CORS: missing key",
+    "server": "files-cors",
+    "method": "GET",
+    "path": "/files/44444444444444444444444444444444.pdf",
+    "headers": {
+      "Origin": "https://editor.example.com"
+    },
+    "response": {
+      "status": 404,
+      "headers": {
+        "access-control-allow-origin": [
+          "https://editor.example.com"
+        ],
+        "access-control-expose-headers": [
+          "Accept-Ranges, Content-Length, Content-Range"
+        ],
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "404 page not found\n"
+    },
+    "origin": []
+  }
+]

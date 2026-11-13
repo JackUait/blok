@@ -295,7 +295,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2199 + 147 + 567 + 9 closure for all 2922 keys', () => {
+  it('rebuilds a disjoint 2200 + 147 + 566 + 9 closure for all 2922 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -559,7 +559,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -1: tools.database.galleryFitImage is now catalog-only (the board says "Fit media").
       // -1: tools.database.timelineEndBy is now catalog-only (Start date and End date rows).
       // +3: the list's open button (openInCenterPeek, openAsPage) and the type menu's Number "?" (propertyTypeHelpNumber).
-      'executable-literal': 2199,
+      // +1: the pinned group modal's sort chip calls tools.database.sortCount by literal.
+      'executable-literal': 2200,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -665,7 +666,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -1: tools.database.searchPlaceholder is now called by literal (the pinned group modal).
       // +2: the Layout page's "Wrap page titles" and "Directly edit page name" (tools.database.settingsWrapPageTitles,
       // settingsDirectEditPageName), through the panel's t().
-      'registered-namespace-compatible': 567,
+      // -1: tools.database.sortCount (see executable-literal).
+      'registered-namespace-compatible': 566,
       // +1: Settings › Group's pin button names itself with groupPin through the panel's tools.database. prefix.
       // +1: tools.database.galleryFitImage, above. +1: tools.database.timelineEndBy, above.
       'catalog-only': 9,

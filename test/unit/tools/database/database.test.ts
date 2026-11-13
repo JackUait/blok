@@ -6792,7 +6792,7 @@ describe('DatabaseTool — board card parity', () => {
     const { tool } = mount();
     const titles = tool.layoutItems().map((item) => (item as { title?: string }).title);
 
-    expect(titles).toEqual(['tools.database.galleryCardSize', 'tools.database.galleryCardPreview', 'tools.database.galleryFitImage']);
+    expect(titles).toEqual(['tools.database.galleryCardPreview', 'tools.database.galleryCardSize']);
 
     tool.destroy();
   });

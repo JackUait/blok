@@ -64,9 +64,9 @@ describe('database layout items', () => {
     });
 
     expect(named(galleryLayoutItems(view(), schema, i18n, vi.fn()))).toEqual([
-      'gallery-card-size', 'gallery-card-size-small', 'gallery-card-size-medium', 'gallery-card-size-large',
       'gallery-card-preview', 'gallery-card-preview-none', 'gallery-card-preview-cover', 'gallery-card-preview-content',
       'gallery-card-preview-p-link', 'gallery-card-preview-p-files',
+      'gallery-card-size', 'gallery-card-size-small', 'gallery-card-size-medium', 'gallery-card-size-large',
       'gallery-fit-image',
     ]);
     expect(named(calendarLayoutItems(view({ type: 'calendar' }), schema, i18n, vi.fn()))).toEqual([
@@ -224,15 +224,26 @@ describe('database layout items', () => {
   });
 
   describe('board', () => {
-    it('offers card size, card preview and fit image, with no preview marked by default', () => {
+    // notion-motion.md Round 25 §7: Card preview, Card size, then "Fit media" only once a preview is set.
+    it('offers card preview then card size, and no Fit media while the preview is None', () => {
       const update = vi.fn();
       const items = flat(boardLayoutItems(view({ type: 'board' }), schema, i18n, update));
       const preview = find(items, 'tools.database.galleryCardPreview');
 
+      expect(items.map((item) => item.title)).toEqual(['tools.database.galleryCardPreview', 'tools.database.galleryCardSize']);
       expect(find(preview.children ?? [], 'tools.database.galleryCardPreviewNone').isActive).toBe(true);
       find(find(items, 'tools.database.galleryCardSize').children ?? [], 'tools.database.galleryCardSizeLarge').onActivate?.();
       expect(update).toHaveBeenCalledWith({ cardSize: 'large' });
-      find(items, 'tools.database.galleryFitImage').onActivate?.();
+    });
+
+    it('adds a "Fit media" switch after Card size once a preview is set', () => {
+      const update = vi.fn();
+      const items = flat(boardLayoutItems(view({ type: 'board', cardPreview: 'content' }), schema, i18n, update));
+
+      expect(items.map((item) => item.title)).toEqual([
+        'tools.database.galleryCardPreview', 'tools.database.galleryCardSize', 'tools.database.galleryFitMedia',
+      ]);
+      find(items, 'tools.database.galleryFitMedia').onActivate?.();
       expect(update).toHaveBeenLastCalledWith({ fitImage: true });
     });
 
@@ -242,7 +253,7 @@ describe('database layout items', () => {
 
         return [record.name ?? '', ...(record.children !== undefined ? names(record.children.items) : [])];
       });
-      const items = names(boardLayoutItems(view({ type: 'board' }), schema, i18n, vi.fn()));
+      const items = names(boardLayoutItems(view({ type: 'board', cardPreview: 'cover' }), schema, i18n, vi.fn()));
 
       expect(items).toContain('board-card-size');
       expect(items).toContain('board-card-preview-none');

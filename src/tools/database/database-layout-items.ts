@@ -57,36 +57,39 @@ const cardLayoutItems = (
   const imageProperties = schema.filter((p) => p.type === 'url' || p.type === 'files');
   const fit = resolveFitImage(view);
 
-  return [
-    {
-      type: PopoverItemType.Default,
-      name: `${prefix}-card-size`,
-      title: i18n.t('tools.database.galleryCardSize'),
-      children: {
-        items: CARD_SIZES.map(([value, key]) => choice(`${prefix}-card-size-${value}`, i18n.t(key), size === value, () => update({ cardSize: value }))),
-      },
+  const sizeRow: PopoverItemParams = {
+    type: PopoverItemType.Default,
+    name: `${prefix}-card-size`,
+    title: i18n.t('tools.database.galleryCardSize'),
+    children: {
+      items: CARD_SIZES.map(([value, key]) => choice(`${prefix}-card-size-${value}`, i18n.t(key), size === value, () => update({ cardSize: value }))),
     },
-    {
-      type: PopoverItemType.Default,
-      name: `${prefix}-card-preview`,
-      title: i18n.t('tools.database.galleryCardPreview'),
-      children: {
-        items: [
-          ...PREVIEWS.map(([value, key]) => choice(`${prefix}-card-preview-${value}`, i18n.t(key), previewKey === value, () => update({ cardPreview: value }))),
-          ...imageProperties.map((p) => {
-            const value: CardPreview = `property:${p.id}`;
+  };
+  const previewRow: PopoverItemParams = {
+    type: PopoverItemType.Default,
+    name: `${prefix}-card-preview`,
+    title: i18n.t('tools.database.galleryCardPreview'),
+    children: {
+      items: [
+        ...PREVIEWS.map(([value, key]) => choice(`${prefix}-card-preview-${value}`, i18n.t(key), previewKey === value, () => update({ cardPreview: value }))),
+        ...imageProperties.map((p) => {
+          const value: CardPreview = `property:${p.id}`;
 
-            return choice(`${prefix}-card-preview-${p.id}`, p.name, previewKey === value, () => update({ cardPreview: value }));
-          }),
-        ],
-      },
+          return choice(`${prefix}-card-preview-${p.id}`, p.name, previewKey === value, () => update({ cardPreview: value }));
+        }),
+      ],
     },
-    // notion-motion.md Round 24 §4: the gallery says "Fit media". The board's label is unmeasured.
-    choice(`${prefix}-fit-image`, i18n.t(prefix === 'gallery' ? 'tools.database.galleryFitMedia' : 'tools.database.galleryFitImage'), fit, () => update({ fitImage: !fit })),
-  ];
+  };
+  // notion-motion.md Round 24 §4 (gallery), Round 25 §7 (board): preview, size, "Fit media".
+  // A board shows Fit media only once a preview is set; a gallery without a preview is unmeasured.
+  const fitRow = prefix === 'board' && preview.kind === 'none'
+    ? []
+    : [choice(`${prefix}-fit-image`, i18n.t('tools.database.galleryFitMedia'), fit, () => update({ fitImage: !fit }))];
+
+  return [previewRow, sizeRow, ...fitRow];
 };
 
-/** Card size, Card preview and Fit image (H-galleries). Files & media properties, and url properties holding an image link, can be the preview. */
+/** Card preview, Card size and Fit media (H-galleries). Files & media properties, and url properties holding an image link, can be the preview. */
 export const galleryLayoutItems = (
   view: DatabaseViewConfig,
   schema: PropertyDefinition[],

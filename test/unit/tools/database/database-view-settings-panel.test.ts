@@ -638,6 +638,60 @@ describe('view settings panel', () => {
     });
   });
 
+  // notion-motion.md Round 25 §7: where the separator sits, and the board's Group by and Color columns rows.
+  describe('Layout page rows and separators (Round 25)', () => {
+    /** The page's rows after the tiles; a separator reads "—". */
+    const parts = (): string[] => {
+      const all = [...document.querySelectorAll<HTMLElement>('[data-blok-testid="database-view-settings"] > *')];
+      const tiles = all.findIndex((el) => el.hasAttribute('data-blok-database-layout-tiles'));
+
+      return all.slice(tiles + 1).map((el) => (el.hasAttribute('data-blok-database-panel-separator') ? '—' : el.getAttribute('data-blok-testid') ?? ''));
+    };
+    const own = (name: string): PopoverItemParams => ({ type: PopoverItemType.Default, name, title: name, isActive: false, onActivate: vi.fn() });
+
+    it('puts a board\'s Group by and Color columns before Open pages in, then a separator and the card rows', () => {
+      const h = harness({ type: 'board', groupBy: 'stage' });
+
+      h.ctx.layoutItems = () => [own('board-card-preview'), own('board-card-size')];
+      h.open('layout');
+
+      expect(parts()).toEqual([
+        'database-settings-page-icon', 'database-settings-wrap',
+        'database-settings-group-by', 'database-settings-color-columns',
+        'database-settings-open-pages', 'database-settings-load-limit',
+        '—', 'database-board-card-preview', 'database-board-card-size', 'database-settings-card-layout',
+      ]);
+      expect(q('database-settings-group-by')?.textContent).toContain('Stage');
+    });
+
+    it('lets the board\'s Group by row pick the property, and Color columns write the group setting', () => {
+      const h = harness({ type: 'board', groupBy: 'stage' });
+
+      h.open('layout');
+      click('database-settings-color-columns');
+      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ groupSettings: { colorColumns: false } });
+      click('database-settings-group-by');
+      click('database-pick-property-prog');
+      expect(h.state.view.groupBy).toBe('prog');
+    });
+
+    it('gives no Color columns row when the board groups by a property without colors', () => {
+      harness({ type: 'board', groupBy: 'owner' }).open('layout');
+
+      expect(exists('database-settings-group-by')).toBe(true);
+      expect(exists('database-settings-color-columns')).toBe(false);
+    });
+
+    it.each(['calendar', 'timeline'] as const)('puts no separator before a %s\'s own rows', (type) => {
+      const h = harness({ type });
+
+      h.ctx.layoutItems = () => [own(`${type}-own`)];
+      h.open('layout');
+
+      expect(parts()).not.toContain('—');
+    });
+  });
+
   it('switches the layout and marks the current one with a check', () => {
     const h = harness();
 

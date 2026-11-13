@@ -1025,27 +1025,30 @@ export class ViewSettingsPages {
         // notion-motion.md Round 24 §4: Calendar and Timeline list their own rows before Open pages in.
         // List and Timeline have no Wrap row; Calendar has no Load limit (it shows every row).
         // Calendar's "Wrap page titles" is left out: its event cards are one fixed-pitch line.
+        // Round 25 §7: no separator before their own rows.
         if (view.type === 'calendar' || view.type === 'timeline') {
           return [
             tiles,
             ...sourceTitle,
             pageIcon,
-            ...this.layoutRows(panel),
+            ...this.layoutRows(panel, false),
             openPages,
             ...(view.type === 'timeline' ? [loadLimit] : []),
           ];
         }
 
         // 11-notion-layout.png: the switches, then Open pages in and Load limit.
+        // notion-motion.md Round 25 §7: a board's Group by and Color columns sit before Open pages in.
         return [
           tiles,
           ...sourceTitle,
           ...verticalLines,
           pageIcon,
           ...(view.type === 'list' ? [] : [wrap]),
+          ...(view.type === 'board' ? this.boardGroupRows(panel) : []),
           openPages,
           loadLimit,
-          ...this.layoutRows(panel),
+          ...this.layoutRows(panel, true),
           ...(view.type === 'board' || view.type === 'gallery' ? [this.cardLayoutBox(panel)] : []),
         ];
       },
@@ -1148,15 +1151,49 @@ export class ViewSettingsPages {
     return readLayoutItems(this.ctx.layoutItems?.() ?? []);
   }
 
-  /** The gallery or calendar rows, read afresh on every refresh so a pick shows at once. */
-  private layoutRows(panel: DatabasePanel): HTMLElement[] {
+  /**
+   * notion-motion.md Round 25 §7: the board's Layout page names its grouping.
+   * What Notion's Group by row opens is unread; it opens the Group page's property list.
+   */
+  private boardGroupRows(panel: DatabasePanel): HTMLElement[] {
+    const view = this.ctx.view();
+    const property = this.property(view.groupBy);
+    const settings = view.groupSettings ?? {};
+    const groupBy = panelRow({
+      label: this.t('groupBy'),
+      testId: 'database-settings-group-by',
+      value: property?.name ?? this.t('settingsNone'),
+      opensPage: true,
+      disabled: !this.shared,
+      onClick: () => panel.push(this.pickProperty(this.t('groupBy'), GROUPABLE_TYPES, (picked) => {
+        this.ctx.updateView(groupByChange(this.ctx.view(), picked));
+        panel.back();
+      }, { measured: true })),
+    });
+    // The same rule as the Group page's Color columns.
+    const colored = property !== undefined && (property.type === 'select' || property.type === 'multiSelect' || property.type === 'status');
+
+    return [
+      groupBy,
+      ...(colored ? [panelSwitch({
+        label: this.t('groupColorColumns'),
+        testId: 'database-settings-color-columns',
+        checked: settings.colorColumns !== false,
+        disabled: !this.shared,
+        onToggle: (next) => this.ctx.updateView({ groupSettings: { ...(this.ctx.view().groupSettings ?? {}), colorColumns: next } }),
+      })] : []),
+    ];
+  }
+
+  /** The view's own layout rows, read afresh on every refresh so a pick shows at once. */
+  private layoutRows(panel: DatabasePanel, separated: boolean): HTMLElement[] {
     const items = this.currentLayoutItems();
 
     if (items.length === 0) {
       return [];
     }
 
-    return [panelSeparator(), ...items.map((item) => {
+    return [...(separated ? [panelSeparator()] : []), ...items.map((item) => {
       if (item.children === undefined) {
         return panelSwitch({
           label: item.title,

@@ -1765,6 +1765,21 @@ describe('DatabaseTableView', () => {
         expect(handlers.openPropertyMenu).not.toHaveBeenCalled();
         document.removeEventListener('keydown', outside);
       });
+
+      it('a cancelled pointer after Escape leaves the next click alone', async () => {
+        const { root, handlers } = mount();
+
+        lay(root);
+        pointer(header(root, 'p-amount'), 'pointerdown', 450, 10);
+        pointer(document, 'pointermove', 250, 10);
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        pointer(document, 'pointercancel', 250, 10);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        pointer(header(root, 'p-notes'), 'pointerup', 250, 10);
+        header(root, 'p-notes').querySelector<HTMLElement>('[data-blok-database-table-column-button]')?.click();
+
+        expect(handlers.openPropertyMenu).toHaveBeenCalledWith('p-notes', header(root, 'p-notes'));
+      });
     });
 
     it('the + header button asks for a new property', () => {

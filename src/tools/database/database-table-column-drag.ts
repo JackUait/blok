@@ -37,6 +37,7 @@ export class DatabaseTableColumnDrag {
   destroy(): void {
     this.grid.removeEventListener('pointerdown', this.handleDown);
     this.stop();
+    disarm();
   }
 
   /** The pressed header's own row: a grouped table repeats the header row per group. */
@@ -159,6 +160,7 @@ export class DatabaseTableColumnDrag {
     event.stopPropagation();
     this.stop();
     document.addEventListener('pointerup', armSwallow, { capture: true, once: true });
+    document.addEventListener('pointercancel', disarm, { capture: true, once: true });
   };
 
   private stop(): void {
@@ -188,6 +190,13 @@ const swallow = (event: Event): void => {
 
 /** Swallows the click the current release makes, if it makes one. */
 const armSwallow = (): void => {
+  document.removeEventListener('pointercancel', disarm, { capture: true });
   document.addEventListener('click', swallow, { capture: true, once: true });
   setTimeout(() => document.removeEventListener('click', swallow, { capture: true }), 0);
+};
+
+/** After Escape, a cancelled pointer makes no release: the next ordinary click must not be swallowed. */
+const disarm = (): void => {
+  document.removeEventListener('pointerup', armSwallow, { capture: true });
+  document.removeEventListener('pointercancel', disarm, { capture: true });
 };

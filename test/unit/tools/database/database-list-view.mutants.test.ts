@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { IconChevronDown, IconDotsHorizontal, IconPageEmpty, IconPencil, IconPlus, IconRowGrip } from '../../../../src/components/icons';
+import { IconChevronDown, IconDotsHorizontal, IconPageEmpty, IconPencilLine, IconPlus, IconRowGrip } from '../../../../src/components/icons';
 import { DatabaseListView } from '../../../../src/tools/database/database-list-view';
 import type { DatabaseRow, PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
 import type { I18n } from '../../../../types';
@@ -55,7 +55,7 @@ const gutterHtml = (rowId: string): string =>
   + `<button type="button" data-blok-database-list-row-handle="" data-row-id="${rowId}" aria-label="T(tools.database.tableDragHandle)" tabindex="-1">${serialized(IconRowGrip)}</button>`
   + '</div>';
 
-const EDIT_HTML = `<button type="button" data-blok-database-list-row-edit="" aria-label="T(tools.database.editCardTitle)" tabindex="-1">${serialized(IconPencil)}</button>`;
+const EDIT_HTML = `<button type="button" data-blok-database-list-row-edit="" aria-label="T(tools.database.editCardTitle)" tabindex="-1">${serialized(IconPencilLine)}</button>`;
 
 const rowHtml = (rowId: string, title: string, tabindex = '0'): string =>
   `<div data-blok-database-list-row="" data-row-id="${rowId}" role="listitem" tabindex="${tabindex}">`

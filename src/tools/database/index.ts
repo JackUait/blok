@@ -9267,6 +9267,7 @@ export class DatabaseTool implements BlockTool {
     const common = {
       showPageIcon: showsPageIcon(viewConfig),
       directTitleEdit: viewConfig.directTitleEdit === true,
+      openPagesIn: resolveOpenPagesIn(viewConfig),
       readOnly: context === undefined ? this.readOnly : !context.writable(),
       i18n: this.api.i18n,
       titlePropertyId: titlePropId,

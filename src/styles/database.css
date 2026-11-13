@@ -3965,7 +3965,8 @@ button[data-blok-database-column-count]:hover {
  * One property slot (research/07): 30px tall, padded 0 8px. Notion's is 5px
  * round; the 24–32px control role is 6px.
  */
-[data-blok-database-list-row-property] {
+[data-blok-database-list-row-property],
+[data-blok-database-list-row-ghost] {
   display: inline-flex;
   align-items: center;
   /* Values keep their size; the row clips the run (notion-spec-2 §21.8). */
@@ -3979,6 +3980,19 @@ button[data-blok-database-column-count]:hover {
   line-height: 21px;
   color: var(--blok-database-ink);
   outline: none;
+}
+
+/* notion-motion.md Round 26 §4: "Add Date" while the title is edited, no fill even on hover. */
+[data-blok-database-list-row-ghost] {
+  gap: var(--blok-space-1-5);
+  color: var(--blok-database-ink-tertiary);
+  cursor: pointer;
+}
+
+[data-blok-database-list-row-ghost] svg {
+  width: 16.8px;
+  height: 16.8px;
+  color: var(--blok-database-peek-label-icon);
 }
 
 /* Notion's per-type slot caps (findings-listgallery L01). */
@@ -5845,6 +5859,24 @@ button[data-blok-database-layout-pin-name]:focus-visible {
 [data-blok-database-property-type-option-icon] svg {
   width: 20px;
   height: 20px;
+}
+
+/* notion-motion.md Round 26 §5: the type row's "?" shows on row hover. */
+[data-blok-database-property-type-help] {
+  display: flex;
+  margin-inline-start: auto;
+  color: var(--blok-database-peek-label-icon);
+  opacity: 0;
+  transition: opacity 200ms ease-in-out;
+}
+
+[data-blok-database-property-type-option]:hover > [data-blok-database-property-type-help] {
+  opacity: 1;
+}
+
+[data-blok-database-property-type-help] svg {
+  width: 14px;
+  height: 14px;
 }
 
 /* "Type" and its magnifier; the magnifier turns the line into a search field. */

@@ -229,6 +229,33 @@ describe('list row hover chrome (findings-listgallery L03, L04)', () => {
   });
 });
 
+// notion-motion.md Round 26 §4 (r26-list-edit-ghost.raw, r26-list-ghost-text.raw): the "Add Date" ghost is a 30-tall slot,
+// padding 0 8, no fill at rest or on hover, a 16.8 icon in rgb(142, 139, 134) and 14px text in the AA tertiary ink.
+describe('list Add ghost', () => {
+  const ghost = '[data-blok-database-list-row-ghost]';
+
+  it('takes the property slot\'s box', () => {
+    const body = ruleBody(database, '[data-blok-database-list-row-property]');
+    const own = ruleBody(database, ghost);
+
+    expect(body).toContain('height: 30px');
+    expect(own).toContain('height: 30px');
+    expect(own).toContain('padding: 0 var(--blok-space-2)');
+    expect(own).toContain('border-radius: var(--blok-radius-control)');
+    expect(own).toContain('color: var(--blok-database-ink-tertiary)');
+    expect(own).toContain('cursor: pointer');
+    expect(own).not.toContain('background');
+  });
+
+  it('draws a 16.8px icon in the label icon ink', () => {
+    const svg = ruleBody(database, `${ghost} svg`);
+
+    expect(svg).toContain('width: 16.8px');
+    expect(svg).toContain('height: 16.8px');
+    expect(svg).toContain('color: var(--blok-database-peek-label-icon)');
+  });
+});
+
 describe('list title edit (findings-listgallery L05)', () => {
   it('edits the title in place at its own type, with a gray placeholder', () => {
     const body = ruleBody(database, '[data-blok-database-list-title-input]');

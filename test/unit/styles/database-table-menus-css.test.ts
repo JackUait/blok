@@ -70,6 +70,19 @@ describe('add property menu (T12)', () => {
     expect(declared('[data-blok-database-property-type-body]', 'overflow-y')).toEqual(['auto']);
   });
 
+  // notion-motion.md Round 26 §5: a 14px "?" in rgb(142, 139, 134) at the row's end, hidden until the row is hovered,
+  // then fading in over 200ms ease-in-out.
+  it('shows a type row\'s "?" at its end only on row hover', () => {
+    const help = '[data-blok-database-property-type-help]';
+
+    expect(declared(help, 'margin-inline-start')).toEqual(['auto']);
+    expect(declared(help, 'opacity')).toEqual(['0']);
+    expect(declared(help, 'transition')).toEqual(['opacity 200ms ease-in-out']);
+    expect(declared(help, 'color')).toEqual(['var(--blok-database-peek-label-icon)']);
+    expect(declared(`${help} svg`, 'width')).toEqual(['14px']);
+    expect(declared(`[data-blok-database-property-type-option]:hover > ${help}`, 'opacity')).toEqual(['1']);
+  });
+
   it('has 28px rows of 14px text with 20px glyphs and a sentence-case label', () => {
     expect(declared('[data-blok-database-property-type-option]', 'min-height')).toEqual(['28px']);
     expect(declared('[data-blok-database-property-type-option]', 'font-size')).toEqual(['14px']);

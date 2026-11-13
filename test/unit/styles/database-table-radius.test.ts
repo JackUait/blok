@@ -155,8 +155,8 @@ describe('database tabs and menus', () => {
 describe('database list and drawer', () => {
   it('rows and row-like buttons are controls', () => {
     expect(radiusOf('database.css', '[data-blok-database-list-row]')).toEqual([role('control')]);
-    // A 30px property slot (research/07) is a control, not a small tag.
-    expect(radiusOf('database.css', '[data-blok-database-list-row-property]')).toEqual([role('control')]);
+    // A 30px property slot (research/07) is a control, not a small tag; so is the "Add Date" ghost (Notion 5, Round 26 §4).
+    expect(radiusOf('database.css', '[data-blok-database-list-row-property], [data-blok-database-list-row-ghost]')).toEqual([role('control')]);
     expect(radiusOf('database.css', '[data-blok-database-list-group-toggle], [data-blok-database-list-group-actions] button')).toEqual([role('control-sm')]);
     expect(radiusOf('database.css', '[data-blok-database-drawer-add-prop]')).toEqual([role('control')]);
     expect(radiusOf(

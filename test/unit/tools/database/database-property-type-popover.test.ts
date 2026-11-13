@@ -3,6 +3,8 @@ import { DatabasePropertyTypePopover } from '../../../../src/tools/database/data
 import type { PropertyType } from '../../../../src/tools/database/types';
 import type { I18n } from '../../../../types';
 import { propertyTypeMeta } from '../../../../src/tools/database/database-property-types';
+import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
+import { hover, shownHint } from './hint-harness';
 
 const rect = (overrides: Partial<DOMRect>): DOMRect => ({
   x: 0, y: 0, width: 0, height: 0, top: 0, right: 0, bottom: 0, left: 0,
@@ -27,6 +29,49 @@ describe('DatabasePropertyTypePopover', () => {
     popover.destroy();
     anchor.remove();
     vi.restoreAllMocks();
+  });
+
+  // notion-motion.md Round 26 §5 (r26-type-qtip.raw): a "?" on the type row hints what the type does. Only Number's
+  // text was recorded, so only Number has one. The hint waits Blok's 500ms, on hover only.
+  describe('type help', () => {
+    const help = (type: string): HTMLElement | null =>
+      document.querySelector<HTMLElement>(`[data-blok-database-property-type-option="${type}"] [data-blok-database-property-type-help]`);
+
+    it('puts a "?" on the Number row only, and hints its description after the delay', () => {
+      destroyTooltip();
+      vi.useFakeTimers();
+      try {
+        const i18n = { t: vi.fn((key: string) => key), has: vi.fn(() => true), getEnglishTranslation: vi.fn(() => ''), getLocale: vi.fn(() => 'en') } as unknown as I18n;
+        const withHelp = new DatabasePropertyTypePopover({ onSelect, i18n });
+
+        withHelp.open(anchor);
+        expect(help('number')).not.toBeNull();
+        expect(help('text')).toBeNull();
+        expect(document.querySelectorAll('[data-blok-database-property-type-help]')).toHaveLength(1);
+
+        help('number')?.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+        vi.advanceTimersByTime(HINT_DELAY);
+        expect(shownHint()).toBeNull();
+
+        hover(help('number'));
+        vi.advanceTimersByTime(HINT_DELAY - 1);
+        expect(shownHint()).toBeNull();
+        vi.advanceTimersByTime(1);
+        expect(shownHint()).toEqual({ text: 'tools.database.propertyTypeHelpNumber', placement: 'right' });
+        withHelp.destroy();
+      } finally {
+        vi.useRealTimers();
+        destroyTooltip();
+      }
+    });
+
+    it('gives the header "+" grid no "?"', () => {
+      const grid = new DatabasePropertyTypePopover({ onSelect, layout: 'grid' });
+
+      grid.open(anchor);
+      expect(document.querySelector('[data-blok-database-property-type-help]')).toBeNull();
+      grid.destroy();
+    });
   });
 
   describe('open()', () => {

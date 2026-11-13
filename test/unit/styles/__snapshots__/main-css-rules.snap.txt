@@ -7901,7 +7901,7 @@ button[data-blok-database-column-count]:hover {
   overflow: hidden;
 }
 
-[data-blok-database-list-row-property] {
+[data-blok-database-list-row-property], [data-blok-database-list-row-ghost] {
   display: inline-flex;
   align-items: center;
   flex: none;
@@ -7914,6 +7914,18 @@ button[data-blok-database-column-count]:hover {
   line-height: 21px;
   color: var(--blok-database-ink);
   outline: none;
+}
+
+[data-blok-database-list-row-ghost] {
+  gap: var(--blok-space-1-5);
+  color: var(--blok-database-ink-tertiary);
+  cursor: pointer;
+}
+
+[data-blok-database-list-row-ghost] svg {
+  width: 16.8px;
+  height: 16.8px;
+  color: var(--blok-database-peek-label-icon);
 }
 
 [data-blok-database-list-row-property][data-type="multiSelect"], [data-blok-database-list-row-property][data-type="select"], [data-blok-database-list-row-property][data-type="files"] {
@@ -9571,6 +9583,23 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 [data-blok-database-property-type-option-icon] svg {
   width: 20px;
   height: 20px;
+}
+
+[data-blok-database-property-type-help] {
+  display: flex;
+  margin-inline-start: auto;
+  color: var(--blok-database-peek-label-icon);
+  opacity: 0;
+  transition: opacity 200ms ease-in-out;
+}
+
+[data-blok-database-property-type-option]:hover > [data-blok-database-property-type-help] {
+  opacity: 1;
+}
+
+[data-blok-database-property-type-help] svg {
+  width: 14px;
+  height: 14px;
 }
 
 [data-blok-database-property-type-list-heading] {

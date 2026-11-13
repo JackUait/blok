@@ -5,6 +5,7 @@ import type { I18n } from '../../../../types';
 import { createDefaultStatusSettings } from '../../../../src/tools/database/property-values';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { hover, shownHint } from './hint-harness';
+import { IconExpandDiagonal, IconPeekCenter, IconPeekSide, IconPencilLine } from '../../../../src/components/icons';
 
 const makeRow = (overrides: Partial<DatabaseRow> = {}): DatabaseRow => ({
   id: 'row-1', position: 'a0', properties: { title: 'Fix bug' }, ...overrides,
@@ -910,6 +911,110 @@ describe('DatabaseListView', () => {
       expect(onOpenRow).toHaveBeenCalledWith('row-1');
       expect(opened).not.toHaveBeenCalled();
       expect(list.querySelector('[data-blok-database-list-title-input]')).toBeNull();
+    });
+  });
+
+  // notion-motion.md Round 26 §4 (r26-list-edit-ghost.raw): with direct edit on, an empty Date shows "Add Date" while the title is edited.
+  describe('Add ghost while the title is edited', () => {
+    const make = (directTitleEdit: boolean, due?: string): { view: DatabaseListView; list: HTMLElement; onPropertyEdit: ReturnType<typeof vi.fn> } => {
+      const onPropertyEdit = vi.fn();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, titlePropertyId: 'title', directTitleEdit, onPropertyEdit,
+        rows: [makeRow({ properties: { title: 'Gamma', ...(due !== undefined ? { 'prop-0': due } : {}) } })],
+        schema: makeSchema([{ name: 'Due', type: 'date' }, { name: 'Notes', type: 'text' }]),
+        visiblePropertyIds: ['prop-0', 'prop-1'],
+      });
+      const list = view.createView();
+
+      document.body.appendChild(list);
+      onTestFinished(() => list.remove());
+
+      return { view, list, onPropertyEdit };
+    };
+    const ghosts = (list: HTMLElement): HTMLElement[] => [...list.querySelectorAll<HTMLElement>('[data-blok-database-list-row-ghost]')];
+
+    it('shows one for the empty Date only, and drops it when the edit ends', () => {
+      const { view, list } = make(true);
+
+      expect(ghosts(list)).toEqual([]);
+      view.editTitle('row-1');
+      expect(ghosts(list).map((g) => [g.getAttribute('data-property-id'), g.textContent?.trim()])).toEqual([['prop-0', 'tools.database.cardAddProperty']]);
+      expect(i18n.t).toHaveBeenCalledWith('tools.database.cardAddProperty', { property: 'Due' });
+      expect(ghosts(list)[0].getAttribute('role')).toBe('button');
+
+      list.querySelector<HTMLInputElement>('[data-blok-database-list-title-input]')?.blur();
+      expect(ghosts(list)).toEqual([]);
+    });
+
+    it('shows none for a filled Date, or with direct edit off', () => {
+      const filled = make(true, '2026-11-14');
+
+      filled.view.editTitle('row-1');
+      expect(ghosts(filled.list)).toEqual([]);
+
+      const off = make(false);
+
+      off.view.editTitle('row-1');
+      expect(ghosts(off.list)).toEqual([]);
+    });
+
+    it('a click saves the title, then opens that Date\'s editor', () => {
+      const { view, list, onPropertyEdit } = make(true);
+
+      view.editTitle('row-1');
+      const ghost = ghosts(list)[0];
+      const down = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+
+      ghost.dispatchEvent(down);
+      expect(down.defaultPrevented).toBe(true);
+      ghost.click();
+
+      expect(onPropertyEdit).toHaveBeenCalledWith('row-1', 'prop-0', expect.any(HTMLElement));
+      expect(list.querySelector('[data-blok-database-list-title-input]')).toBeNull();
+    });
+  });
+
+  // notion-motion.md Round 26 §4 (r26-list-hover.raw, r26-list-chip-center.raw): the chip's label and icon follow
+  // Open pages in, and with the setting off the hover button is a 16px pencilLine "Edit".
+  describe('Open in chip follows Open pages in', () => {
+    const chip = (openPagesIn: 'side' | 'center' | 'full' | undefined, directTitleEdit = true): HTMLElement | null => {
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [makeRow({ properties: { title: 'Zed' } })], titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [],
+        directTitleEdit, openPagesIn,
+      });
+      const list = view.createView();
+
+      document.body.appendChild(list);
+      onTestFinished(() => list.remove());
+      if (!directTitleEdit) view.editTitle('row-1');
+
+      return list.querySelector<HTMLElement>('[data-blok-database-list-row-edit]');
+    };
+    const icon = (svg: string): string => Object.assign(document.createElement('span'), { innerHTML: svg }).innerHTML;
+
+    it.each([
+      ['side', 'tools.page.openInSidePeek', IconPeekSide],
+      [undefined, 'tools.page.openInSidePeek', IconPeekSide],
+      ['center', 'tools.database.openInCenterPeek', IconPeekCenter],
+      ['full', 'tools.database.openAsPage', IconExpandDiagonal],
+    ] as const)('with %s, reads %s', (mode, label, svg) => {
+      const button = chip(mode);
+
+      expect(button?.getAttribute('aria-label')).toBe(label);
+      expect(button?.innerHTML).toBe(icon(svg));
+    });
+
+    it('follows the mode while a title is edited with direct edit off', () => {
+      expect(chip('center', false)?.getAttribute('aria-label')).toBe('tools.database.openInCenterPeek');
+    });
+
+    it('draws the pencilLine for Edit with direct edit off', () => {
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [makeRow()], titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [],
+      });
+      const list = view.createView();
+
+      expect(list.querySelector('[data-blok-database-list-row-edit]')?.innerHTML).toBe(icon(IconPencilLine));
     });
   });
 

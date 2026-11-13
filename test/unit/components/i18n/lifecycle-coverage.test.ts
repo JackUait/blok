@@ -295,7 +295,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2196 + 147 + 567 + 9 closure for all 2919 keys', () => {
+  it('rebuilds a disjoint 2199 + 147 + 567 + 9 closure for all 2922 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -309,7 +309,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2919);
+    expect(lifecycle.size).toBe(2922);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -558,7 +558,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the pinned group modal's search field calls tools.database.searchPlaceholder by literal.
       // -1: tools.database.galleryFitImage is now catalog-only (the board says "Fit media").
       // -1: tools.database.timelineEndBy is now catalog-only (Start date and End date rows).
-      'executable-literal': 2196,
+      // +3: the list's open button (openInCenterPeek, openAsPage) and the type menu's Number "?" (propertyTypeHelpNumber).
+      'executable-literal': 2199,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

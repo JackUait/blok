@@ -1,4 +1,5 @@
-import { IconGlobe, IconSearch } from '../../components/icons';
+import { IconGlobe, IconHelp, IconSearch } from '../../components/icons';
+import { onHover } from '../../components/utils/tooltip';
 import { syncPortalDirection } from '../../components/utils/portal-direction';
 import { overlayMountFor } from '../../components/utils/top-layer';
 import { markEscapeConsumed } from '../../components/utils/consumed-escape';
@@ -23,6 +24,13 @@ const VIEWPORT_BOTTOM_MARGIN = 11;
 const ABOVE_GAP = 1;
 /** Notion's gap below the button is unmeasured. */
 const BELOW_GAP = 4;
+/**
+ * notion-motion.md Round 26 §5: each type row's "?" hint. Only Number's text was recorded (r26-type-qtip.raw);
+ * a type joins once its text is read from Notion.
+ */
+const TYPE_HELP: Partial<Record<PropertyType, string>> = {
+  number: 'tools.database.propertyTypeHelpNumber',
+};
 /** Past the 200ms close motion. */
 const CLOSE_FALLBACK_MS = 300;
 
@@ -154,6 +162,18 @@ export class DatabasePropertyTypePopover {
       const label = document.createElement('span');
       label.textContent = this.i18n?.t(meta.labelKey) ?? meta.labelKey;
       item.appendChild(label);
+
+      const helpKey = this.grid ? undefined : TYPE_HELP[type];
+
+      if (helpKey !== undefined) {
+        const help = document.createElement('span');
+
+        help.setAttribute('data-blok-database-property-type-help', '');
+        help.setAttribute('aria-hidden', 'true');
+        help.innerHTML = IconHelp;
+        onHover(help, this.i18n?.t(helpKey) ?? helpKey, { placement: 'right' });
+        item.appendChild(help);
+      }
 
       item.addEventListener('click', () => {
         this.onSelect(type, nameField?.value.trim() ?? '');

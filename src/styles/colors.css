@@ -392,7 +392,7 @@
   --blok-radius-control: var(--blok-radius-6);
   --blok-radius-control-sm: var(--blok-radius-4);
   --blok-radius-mark: var(--blok-radius-2);
-  /* The database checkbox: Notion's 3 (notion-motion.md Round 26 §5), off the scale on purpose. */
+  /* Database checkbox: Notion's 3, off the scale. */
   --blok-radius-checkbox: 0.1875rem;
   --blok-radius-floor: var(--blok-radius-4);
   /* Below the scale on purpose: chevron and caret stroke ends, and the find lens. */

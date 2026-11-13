@@ -2125,6 +2125,28 @@ describe('view settings panel', () => {
       expect(q('database-filter-value-picker')).not.toBeNull();
     });
 
+    // notion-motion.md Round 20 §4 (r20-cc-new.raw): the property list is a 258-wide flyout with a focused search.
+    it('picks a new rule\'s property from a flyout and stays on the color page', () => {
+      const h = harness();
+      const panel = h.open();
+
+      click('database-settings-color');
+      click('database-color-add');
+      const flyout = q('database-color-property-picker');
+
+      expect(flyout).not.toBeNull();
+      expect(panel.root.contains(flyout)).toBe(false);
+      expect(flyout?.style.width).toBe('258px');
+      expect(flyout?.querySelector('[data-blok-testid="database-property-picker-search"]')).toHaveFocus();
+
+      click('database-pick-property-num');
+      const [rule] = h.state.view.colorRules ?? [];
+
+      expect(q('database-color-property-picker')).toBeNull();
+      expect(q(`database-color-rule-${rule.id}`)).not.toBeNull();
+      expect(panel.root.contains(q('database-color-add'))).toBe(true);
+    });
+
     // notion-motion.md Round 20 §4 (r20-cc-selval.raw): the value flyout is 240 wide, not the advanced filter's 260.
     it('opens a 240-wide value flyout', () => {
       harness({ colorRules: [{ id: 'c1', propertyId: 'stage', operator: 'equals', value: null, color: 'match' }] }).open();

@@ -3001,6 +3001,22 @@ export class ViewSettingsPages {
           return { id: rule.id, element: card };
         });
 
+        // notion-motion.md Round 20 §4 (r20-cc-new.raw): the property list is a 258-wide flyout, its search focused.
+        // Notion keeps it 4px off the button.
+        const add: HTMLElement = marked(panelRow({
+          label: this.t(cards.length === 0 ? 'colorNew' : 'colorAddAnother'),
+          testId: 'database-color-add',
+          icon: IconPlus,
+          disabled,
+          onClick: () => openFlyout(add, panel, 'database-color-property-picker', COLOR_PROPERTY_FLYOUT_WIDTH, (pick) => this.propertyPicker(queryState(), COLOR_RULE_TYPES, (property) => pick(() => {
+            // notion-motion.md Round 20 §4: a Select rule starts on Match option. Other types keep gray: one Number rule read Green.
+            const color = property.type === 'select' ? MATCH_OPTION_COLOR : 'gray';
+
+            write([...rules(), { id: nanoid(), propertyId: property.id, operator: 'is_not_empty', value: null, color }]);
+            panel.refresh();
+          })), { gap: COLOR_PROPERTY_FLYOUT_GAP }),
+        }), cards.length === 0 ? 'data-blok-database-color-new' : 'data-blok-database-color-add-another');
+
         // notion-motion.md Round 20 §4: the intro text shows only while there is no rule.
         return [
           ...(cards.length === 0 ? [panelText(this.t('colorBlurb'))] : []),
@@ -3020,19 +3036,7 @@ export class ViewSettingsPages {
               if (moving !== undefined) write([...rest.slice(0, at), moving, ...rest.slice(at)]);
             },
           }), 'data-blok-database-color-rules')]),
-          marked(panelRow({
-            label: this.t(cards.length === 0 ? 'colorNew' : 'colorAddAnother'),
-            testId: 'database-color-add',
-            icon: IconPlus,
-            disabled,
-            onClick: () => panel.push(this.pickProperty(this.t('colorNew'), COLOR_RULE_TYPES, (property) => {
-              // notion-motion.md Round 20 §4: a Select rule starts on Match option. Other types keep gray: one Number rule read Green.
-              const color = property.type === 'select' ? MATCH_OPTION_COLOR : 'gray';
-
-              write([...rules(), { id: nanoid(), propertyId: property.id, operator: 'is_not_empty', value: null, color }]);
-              panel.back();
-            })),
-          }), cards.length === 0 ? 'data-blok-database-color-new' : 'data-blok-database-color-add-another'),
+          add,
         ];
       },
     };
@@ -3074,6 +3078,10 @@ const marked = <T extends HTMLElement>(element: T, attribute: string): T => {
 
   return element;
 };
+
+/** notion-motion.md Round 20 §4 (r20-cc-new.raw, r20-cc-srch.raw): the property list is 258 wide, 4px off its button. */
+const COLOR_PROPERTY_FLYOUT_WIDTH = 258;
+const COLOR_PROPERTY_FLYOUT_GAP = 4;
 
 /** notion-motion.md Round 20 §4 (r20-cc-selval.raw): a colour rule's value flyout is 240 wide. */
 const COLOR_VALUE_FLYOUT_WIDTH = 240;

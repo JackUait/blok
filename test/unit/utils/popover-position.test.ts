@@ -907,6 +907,37 @@ describe('resolvePosition', () => {
 
       expect(result.top).toBe(717 - 12 - 600);
       expect(result.openTop).toBe(false);
+      expect(result.maxHeight).toBeUndefined();
+    });
+
+    // notion-motion.md Round 22 §6 (r22-flip-df.raw): the Date filter popover fit neither side and opened above, cut to fit.
+    describe('with coverShrinkAbove', () => {
+      it('opens above, cut to the room there, when it fits neither side and above is roomier', () => {
+        const result = resolvePosition({ ...base, coverShrinkAbove: true, popoverSize: { width: 258, height: 600 } });
+
+        expect(result.top).toBe(12);
+        expect(result.openTop).toBe(true);
+        expect(result.maxHeight).toBe(574 - 12);
+      });
+
+      it('slides when below is roomier', () => {
+        const result = resolvePosition({
+          ...base,
+          anchor: rect({ top: 100, bottom: 100, left: 1226, right: 1484, width: 258, height: 0 }),
+          coverShrinkAbove: true,
+          popoverSize: { width: 258, height: 700 },
+        });
+
+        expect(result.openTop).toBe(false);
+        expect(result.maxHeight).toBeUndefined();
+      });
+
+      it('stays below when it fits below', () => {
+        const result = resolvePosition({ ...base, coverShrinkAbove: true, popoverSize: { width: 258, height: 84 } });
+
+        expect(result.top).toBe(610);
+        expect(result.maxHeight).toBeUndefined();
+      });
     });
   });
 });

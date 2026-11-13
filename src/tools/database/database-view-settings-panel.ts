@@ -2816,7 +2816,8 @@ export class ViewSettingsPages {
       chevron.setAttribute('aria-hidden', 'true');
       chevron.innerHTML = IconChevronDown;
       button.append(text, chevron);
-      button.addEventListener('click', () => openFlyout(button, panel, flyoutId, OPERATOR_FLYOUT_WIDTH, rows));
+      // notion-motion.md Round 22 §6 (r22-flip-cc-op.raw): above the button, its bottom on the button's top, when it does not fit below.
+      button.addEventListener('click', () => openFlyout(button, panel, flyoutId, OPERATOR_FLYOUT_WIDTH, rows, { flip: true }));
 
       return button;
     };
@@ -2988,7 +2989,8 @@ export class ViewSettingsPages {
         checked: current() === MATCH_OPTION_COLOR,
         onToggle: (on) => pick(() => write(on ? MATCH_OPTION_COLOR : 'default')),
       }), panelSeparator(), grid];
-    });
+    // notion-motion.md Round 22 §6 (r22-flip-cc-bg.raw, r22-flip-cc-bg2.raw): above the value when it does not fit below.
+    }, { flip: true });
 
     picker.root.querySelector<HTMLElement>('[data-blok-testid="database-color-match-option"]')?.focus();
   }
@@ -3041,7 +3043,8 @@ export class ViewSettingsPages {
                   patch(rule.id, { applyTo });
                   panel.refresh();
                 }),
-              })), { fit: true }),
+              // notion-motion.md Round 22 §6 (r22-flip-cc-apply.raw): above the value when it does not fit below.
+              })), { fit: true, flip: true }),
             }));
           }
           return { id: rule.id, element: card };

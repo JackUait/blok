@@ -363,6 +363,33 @@ test.describe('database view settings', () => {
     expect((await settled())?.top).toBeGreaterThan(full?.top ?? 0);
   });
 
+  // notion-motion.md Round 22 §6 (r22-flip-cc-op.raw): a rule's operator list opens above its button, its bottom on the
+  // button's top, when it does not fit below.
+  test('opens a color rule\'s operator list above its button when it does not fit below', async ({ page }) => {
+    await page.setViewportSize({ width: 1512, height: 530 });
+    await mount(page, blocks({ colorRules: [
+      { id: 'c1', propertyId: 'p-stage', operator: 'is_not_empty', value: null, color: 'match' },
+      { id: 'c2', propertyId: 'p-amount', operator: 'is_not_empty', value: null, color: 'green' },
+      { id: 'c3', propertyId: 'p-stage', operator: 'is_not_empty', value: null, color: 'match' },
+      { id: 'c4', propertyId: 'p-title', operator: 'is_not_empty', value: null, color: 'green' },
+    ] }));
+    await byTestId(page, 'database-toolbar-settings').click();
+    await byTestId(page, 'database-settings-color').click();
+    await byTestId(page, 'database-color-apply-c4').scrollIntoViewIfNeeded();
+    await byTestId(page, 'database-color-operator-c4').click();
+    await expect(byTestId(page, 'database-filter-operator-picker')).toBeVisible();
+    const placed = await page.evaluate(async () => {
+      await Promise.all(document.getAnimations().map((animation) => animation.finished));
+      const list = document.querySelector('[data-blok-testid="database-filter-operator-picker"]')?.getBoundingClientRect();
+      const button = document.querySelector('[data-blok-testid="database-color-operator-c4"]')?.getBoundingClientRect();
+
+      return list === undefined || button === undefined ? null : { bottom: list.bottom, button: button.top, belowEnd: button.bottom + list.height };
+    });
+
+    expect(placed?.belowEnd).toBeGreaterThan(530 - 12);
+    expect(placed?.bottom).toBeCloseTo(placed?.button ?? 0, 0);
+  });
+
   test('searches rows by title and property text', async ({ page }) => {
     await mount(page, blocks());
     await byTestId(page, 'database-toolbar-search').click();

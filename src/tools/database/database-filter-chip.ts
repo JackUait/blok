@@ -413,7 +413,8 @@ class FilterChipPages {
         // notion-motion.md Round 20 §3: after "is on or after" the focus went to the date field (the other day operators share it).
         return panel.root.querySelector<HTMLElement>('[data-blok-database-chip-date-input]');
       }),
-    })));
+    // notion-motion.md Round 22 §6 (r22-flip-tf-op.raw): above the button, its bottom on the button's top, when it does not fit below.
+    })), { flip: true });
   }
 
   /** notion-motion.md Round 18 §2 (r18-filter-more.raw): 240x65, left on the button's right + 2, top on its top. */
@@ -1082,6 +1083,9 @@ export const openFilterChip = (anchor: HTMLElement, ctx: ViewSettingsContext, fi
     width: listed ? LIST_FILTER_WIDTH : VALUE_FIELD_FILTER_WIDTH,
     backLabel: ctx.i18n.t('tools.database.settingsBack'),
     gap: CHIP_POPOVER_GAP,
+    // notion-motion.md Round 22 §6 (r22-flip-df.raw): above the chip, its bottom 4 over it, when it does not fit below;
+    // cut to fit above when it fits neither side and the room above is larger.
+    flip: 'shrink',
     onClose: () => {
       pages.dispose();
       release?.();

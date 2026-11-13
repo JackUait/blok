@@ -136,6 +136,8 @@ export type PopoverDesktopParams = PopoverParams & {
    * above the virtual position's top. Once above, it stays above while open.
    */
   coverFlipOffset?: number;
+  /** With `coverFlipOffset`: when it fits neither side, open above if there is more room there, cut to fit. */
+  coverShrinkAbove?: boolean;
 };
 
 export class PopoverDesktop extends PopoverAbstract {
@@ -345,6 +347,8 @@ export class PopoverDesktop extends PopoverAbstract {
   /** It opened above: it stays there while open, so a shrinking list keeps its bottom. */
   private coverAbove = false;
 
+  private coverShrinkAbove = false;
+
   /**
    * Updates the element whose left edge is used for horizontal positioning.
    * @param element - new element to align against, or undefined to fall back to trigger
@@ -403,6 +407,7 @@ export class PopoverDesktop extends PopoverAbstract {
     super(params, itemsRenderParams);
 
     this.coverFlipOffset = params.coverFlipOffset;
+    this.coverShrinkAbove = params.coverShrinkAbove === true;
 
     if (params.trigger) {
       this.trigger = params.trigger;
@@ -914,9 +919,13 @@ export class PopoverDesktop extends PopoverAbstract {
       cover: this.cover,
       coverFlipOffset: this.coverFlipOffset,
       coverStayAbove: this.coverAbove,
+      coverShrinkAbove: this.coverShrinkAbove,
     });
 
     this.coverAbove = resolved.openTop && this.cover && this.coverFlipOffset !== undefined;
+    if (this.coverShrinkAbove) {
+      this.nodes.popoverContainer.style.maxHeight = resolved.maxHeight === undefined ? '' : `${resolved.maxHeight}px`;
+    }
 
     return resolved;
   }

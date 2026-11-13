@@ -25,8 +25,11 @@ export interface CellPopoverOptions {
   gap?: number;
   /** Opens beside the anchor instead: this far right of it, top level with it. */
   beside?: number;
-  /** Opens above the anchor, `gap` over it, when it fits there and not below. */
-  flip?: boolean;
+  /**
+   * Opens above the anchor, `gap` over it, when it fits there and not below. `'shrink'`: also when it fits
+   * neither side and there is more room above, its height cut to that room.
+   */
+  flip?: boolean | 'shrink';
   /** Escape pressed while open. The owner decides: close, or step back a panel. */
   onEscape: () => void;
   /** The popover closed itself: an outside press, or focus moved away. */
@@ -78,7 +81,7 @@ const PANEL_GAP = 8;
  * panel that would run past the window slides up to stay inside it, as view
  * settings does (side-by-side-v1.md "Filter / Sort popovers").
  */
-const fitPlacement = (anchor: HTMLElement, gap = PANEL_GAP, flip = false): Pick<PopoverDesktopParams, 'cover' | 'viewportMargin' | 'coverFlipOffset'> & { position: DOMRect; positionContext: HTMLElement } => {
+const fitPlacement = (anchor: HTMLElement, gap = PANEL_GAP, flip: boolean | 'shrink' = false): Pick<PopoverDesktopParams, 'cover' | 'viewportMargin' | 'coverFlipOffset' | 'coverShrinkAbove'> & { position: DOMRect; positionContext: HTMLElement } => {
   const rect = anchor.getBoundingClientRect();
 
   return {
@@ -87,7 +90,8 @@ const fitPlacement = (anchor: HTMLElement, gap = PANEL_GAP, flip = false): Pick<
     position: new DOMRect(rect.x, rect.bottom + gap, rect.width, 0),
     positionContext: anchor,
     // Above, its bottom sits `gap` over the anchor's top (r21-cc-date-val.raw, r21-cc-add3.raw).
-    ...(flip ? { coverFlipOffset: rect.height + 2 * gap } : {}),
+    ...(flip !== false ? { coverFlipOffset: rect.height + 2 * gap } : {}),
+    ...(flip === 'shrink' ? { coverShrinkAbove: true } : {}),
   };
 };
 

@@ -433,6 +433,8 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
     labels: resolvePreviewLabels(opts.labels),
     header,
     body,
+    typeName,
+    size: opts.size,
     setFacts: (facts) => {
       meta.textContent = metaText(typeName, facts, opts.size);
     },

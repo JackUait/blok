@@ -1,7 +1,6 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { mountPager } from '../../../../src/tools/file/page-pager';
-import { DEFAULT_PREVIEW_LABELS } from '../../../../src/tools/file/preview-labels';
-import type { PreviewChrome } from '../../../../src/tools/file/preview-chrome';
+import { detachedChrome, type PreviewChrome } from '../../../../src/tools/file/preview-chrome';
 
 interface Harness {
   chrome: PreviewChrome;
@@ -40,17 +39,7 @@ function harness(count: number, viewport = { width: 1000, height: 600 }): Harnes
   }) as typeof scroller.scrollTo;
 
   const facts: string[][] = [];
-  const chrome: PreviewChrome = {
-    labels: DEFAULT_PREVIEW_LABELS,
-    header: document.createElement('div'),
-    body,
-    setFacts: (next) => facts.push(next),
-    setBar: () => undefined,
-    addOverlay: (overlay) => body.appendChild(overlay),
-    isClosed: () => false,
-    onRelease: () => undefined,
-    onKey: () => undefined,
-  };
+  const chrome: PreviewChrome = { ...detachedChrome(body), setFacts: (next) => facts.push(next) };
   const pill = (): HTMLElement => {
     const found = body.querySelector<HTMLElement>('[data-role="file-preview-pill"]');
     if (found === null) {

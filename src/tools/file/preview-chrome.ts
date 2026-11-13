@@ -10,6 +10,10 @@ export interface PreviewChrome {
   readonly labels: PreviewLabels;
   readonly header: HTMLElement;
   readonly body: HTMLElement;
+  /** The type name the header shows: "Word", "TypeScript". */
+  readonly typeName: string;
+  /** Bytes, when known. */
+  readonly size: number | undefined;
   /** Facts counted after load ("2 pages"). Shown between the type and the size. */
   setFacts(facts: string[]): void;
   /** The status bar under the body, or null to take it away. */
@@ -32,6 +36,8 @@ export function detachedChrome(
     labels: DEFAULT_PREVIEW_LABELS,
     header: document.createElement('div'),
     body,
+    typeName: '',
+    size: undefined,
     setFacts: () => undefined,
     setBar: () => undefined,
     addOverlay: (overlay) => body.appendChild(overlay),

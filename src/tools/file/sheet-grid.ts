@@ -16,6 +16,12 @@ export interface GridSheet {
 
 type Point = [row: number, column: number];
 
+/**
+ * Most cells one sheet draws. Short rows are padded to the widest one, so the
+ * drawn count is rows × width, not the number of cells the file holds.
+ */
+export const MAX_GRID_CELLS = 50_000;
+
 const EDGE_COLOR = 'var(--blok-text-primary)';
 const EDGE = '1.5px';
 
@@ -161,8 +167,9 @@ export function mountSheetGrid(container: HTMLElement, sheets: GridSheet[], chro
   const tabs = sheets.map((sheet, index) => barButton(sheet.name, 'preview-sheet', () => open(index), { pressed: index === 0 }));
 
   const open = (index: number): void => {
-    const sheet = sheets[index];
-    const width = Math.max(0, ...sheet.rows.map((row) => row.length));
+    const full = sheets[index];
+    const width = full.rows.reduce((max, row) => Math.max(max, row.length), 0);
+    const sheet = { name: full.name, rows: full.rows.slice(0, Math.floor(MAX_GRID_CELLS / Math.max(1, width))) };
     const head = document.createElement('thead');
     const letters = document.createElement('tr');
     letters.appendChild(document.createElement('th'));

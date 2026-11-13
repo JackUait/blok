@@ -14,8 +14,7 @@ vi.mock('../../../../src/tools/file/office-loaders', () => ({
 import { fillOfficeBody, renderXlsxInto } from '../../../../src/tools/file/office-preview';
 import { loadBinaryPreview } from '../../../../src/tools/file/binary-preview';
 import { loadDocxRenderer, loadPptxRenderer, loadZipReader } from '../../../../src/tools/file/office-loaders';
-import { DEFAULT_PREVIEW_LABELS } from '../../../../src/tools/file/preview-labels';
-import type { PreviewChrome } from '../../../../src/tools/file/preview-chrome';
+import { detachedChrome, type PreviewChrome } from '../../../../src/tools/file/preview-chrome';
 
 const OPTS = { url: 'blob:x', fileName: 'a.docx', labels: { close: 'Close', error: 'Error', download: 'Download' } };
 
@@ -75,17 +74,7 @@ describe('fillOfficeBody — docx controls', () => {
     });
     const body = document.createElement('div');
     const facts: string[][] = [];
-    const chrome: PreviewChrome = {
-      labels: DEFAULT_PREVIEW_LABELS,
-      header: document.createElement('div'),
-      body,
-      setFacts: (next) => facts.push(next),
-      setBar: () => undefined,
-      addOverlay: (overlay) => body.appendChild(overlay),
-      isClosed: () => false,
-      onRelease: () => undefined,
-      onKey: () => undefined,
-    };
+    const chrome: PreviewChrome = { ...detachedChrome(body), setFacts: (next) => facts.push(next) };
 
     await fillOfficeBody(body, OPTS, 'docx', () => false, () => undefined, chrome);
 

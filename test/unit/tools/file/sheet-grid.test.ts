@@ -1,7 +1,6 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
-import { columnName, mountSheetGrid, type GridSheet } from '../../../../src/tools/file/sheet-grid';
-import { DEFAULT_PREVIEW_LABELS } from '../../../../src/tools/file/preview-labels';
-import type { PreviewChrome } from '../../../../src/tools/file/preview-chrome';
+import { MAX_GRID_CELLS, columnName, mountSheetGrid, type GridSheet } from '../../../../src/tools/file/sheet-grid';
+import { detachedChrome, type PreviewChrome } from '../../../../src/tools/file/preview-chrome';
 
 const text = (value: string): { text: string; value: null } => ({ text: value, value: null });
 const num = (value: number, shown = String(value)): { text: string; value: number } => ({ text: shown, value });
@@ -35,15 +34,9 @@ function harness(sheets: GridSheet[]): Harness {
   const slots: { bar: HTMLElement | null } = { bar: null };
   const facts: string[][] = [];
   const chrome: PreviewChrome = {
-    labels: DEFAULT_PREVIEW_LABELS,
-    header: document.createElement('div'),
-    body,
+    ...detachedChrome(body),
     setFacts: (next) => facts.push(next),
     setBar: (bar) => { slots.bar = bar; },
-    addOverlay: () => undefined,
-    isClosed: () => false,
-    onRelease: () => undefined,
-    onKey: () => undefined,
   };
   mountSheetGrid(container, sheets, chrome);
   const bar = (): HTMLElement => {
@@ -246,6 +239,16 @@ describe('mountSheetGrid', () => {
 
     expect(h.cell('A1').textContent).toBe('<b>x</b>');
     expect(h.cell('A1').querySelector('b')).toBeNull();
+  });
+
+  it('never draws more cells than the cap, however far one wide row pads the others', () => {
+    // 400 one-cell rows under a 1000-cell row: padded, that is 401,000 cells.
+    const wide = Array.from({ length: 1000 }, () => text('w'));
+    const h = harness([{ name: 'x', rows: [wide, ...Array.from({ length: 400 }, () => [text('n')])] }]);
+
+    expect(h.container.querySelectorAll('td').length).toBeLessThanOrEqual(MAX_GRID_CELLS);
+    // Whole rows are kept: 50 rows of 1000 cells.
+    expect(h.container.querySelectorAll('tbody tr')).toHaveLength(50);
   });
 
   it('shows an empty grid for a workbook with no sheets', () => {

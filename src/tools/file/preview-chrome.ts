@@ -1,3 +1,4 @@
+import { onHover } from '../../components/utils/tooltip';
 import { LANGUAGES } from '../code/constants';
 import { extToPrismLang } from './code-languages';
 import { resolveFileIcon, type FileIconCategory } from './file-icon';
@@ -120,6 +121,15 @@ export function iconButton(icon: string, label: string, action: string, onClick:
   button.title = label;
   button.innerHTML = icon;
   button.addEventListener('click', onClick);
+
+  return button;
+}
+
+/** An icon button whose name shows as a delayed hover hint, not a native title. */
+export function hintButton(icon: string, label: string, action: string, onClick: () => void): HTMLButtonElement {
+  const button = iconButton(icon, label, action, onClick);
+  button.removeAttribute('title');
+  onHover(button, label);
 
   return button;
 }

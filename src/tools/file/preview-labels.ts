@@ -45,6 +45,11 @@ export interface PreviewLabels {
   pdfPasswordWrong: string;
   pdfOpen: string;
   pdfPageN: string;
+  findPlaceholder: string;
+  findNoResults: string;
+  findPrevious: string;
+  findNext: string;
+  findClose: string;
 }
 
 export const DEFAULT_PREVIEW_LABELS: PreviewLabels = {
@@ -89,6 +94,11 @@ export const DEFAULT_PREVIEW_LABELS: PreviewLabels = {
   pdfPasswordWrong: 'That password is wrong. Try again.',
   pdfOpen: 'Open',
   pdfPageN: 'Page {number}',
+  findPlaceholder: 'Find in page',
+  findNoResults: 'No results',
+  findPrevious: 'Previous match',
+  findNext: 'Next match',
+  findClose: 'Close',
 };
 
 /** Labels a caller left out fall back to English. */

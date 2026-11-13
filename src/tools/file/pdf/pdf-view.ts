@@ -1,6 +1,7 @@
 import { JUMP_PAD, mountPager, type PagedView } from '../page-pager';
 import type { PreviewChrome } from '../preview-chrome';
 import { fill } from '../preview-labels';
+import { mountPdfFind } from './pdf-find';
 import { renderPdfLinks } from './pdf-links';
 import type { PdfDocumentLike, PdfPageLike, PdfRenderTask, PdfViewport } from './pdf-types';
 
@@ -325,7 +326,14 @@ export async function mountPdfView(
   };
 
   // The pager sets the fitted scale first, so pages never draw at a throwaway size.
-  mountPager(scroller, view, chrome);
+  const pager = mountPager(scroller, view, chrome);
+  const find = pager === null ? null : mountPdfFind(doc, {
+    scroller,
+    pageBox: (index) => slots[index]?.box,
+    currentPage: view.currentPage,
+    isVisible: (index) => visible.has(index),
+    scrollToPage: view.scrollToPage,
+  }, pager.pill, chrome);
 
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
@@ -346,6 +354,7 @@ export async function mountPdfView(
         return;
       }
       state.destroyed = true;
+      find?.destroy();
       observer.disconnect();
       slots.forEach((_, i) => free(i));
     },

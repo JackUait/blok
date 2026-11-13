@@ -628,7 +628,12 @@ export class Find extends Module {
   private ownsKeyTarget(target: EventTarget | null, inHostField: boolean): boolean {
     const { wrapper } = this.Blok.UI.nodes;
 
-    const isInBar = target instanceof Node && (this.bar?.element.contains(target) === true || this.pending?.field === target);
+    // A modal over the editor inerts it; its keys belong to the modal.
+    if (wrapper.closest('[inert]') !== null) {
+      return false;
+    }
+
+    const isInBar =target instanceof Node && (this.bar?.element.contains(target) === true || this.pending?.field === target);
 
     if (isInBar) {
       return !inHostField;

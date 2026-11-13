@@ -585,6 +585,19 @@
   background: var(--blok-border-primary);
 }
 
+/* Find in a PDF (pdf-find.ts): the field, its count and the match arrows. */
+.blok-file-preview-find {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-0-5);
+}
+.blok-file-preview-find-field {
+  width: 160px;
+}
+.blok-file-preview-find [data-action="preview-find-prev"] svg {
+  transform: rotate(180deg);
+}
+
 /* Scroll haze: gradient strips pinned to the body edges, faded in (by JS) only
    while the active view has hidden content past that edge. `--blok-haze-color`
    is set inline to the scrolling surface's own background so the haze melts into

@@ -107,6 +107,32 @@ test.describe('PDF preview', () => {
     await expect(counter).toHaveText('Page 2 / 3');
   });
 
+  test('Cmd/Ctrl+F finds words across pages and Enter jumps to the next page', async ({ page }) => {
+    const dialog = await openPdf(page, 'three-pages.pdf');
+    const counter = dialog.locator('[data-role="file-preview-page"]');
+    await expect(dialog.getByRole('region', { name: 'Page 1', exact: true }).getByText('Blok PDF page 1')).toBeVisible();
+
+    await page.keyboard.press('ControlOrMeta+f');
+    const find = dialog.getByRole('textbox', { name: 'Find in page' });
+    await expect(find).toBeFocused();
+    await find.fill('blok pdf');
+
+    const count = dialog.locator('[data-role="file-preview-find-count"]');
+    await expect(count).toHaveText('1 / 3');
+    // The current match is painted over page 1's text layer.
+    await expect.poll(() => page.evaluate(() => [...CSS.highlights.get('blok-find-match-active') ?? []].map((range) => (range instanceof Range ? range.toString() : ''))))
+      .toEqual(['Blok PDF']);
+    await find.press('Enter');
+    await expect(count).toHaveText('2 / 3');
+    await expect(counter).toHaveText('Page 2 / 3');
+    await find.press('Shift+Enter');
+    await expect(count).toHaveText('1 / 3');
+
+    await find.press('Escape');
+    await expect(find).toHaveCount(0);
+    await expect(dialog).toBeVisible();
+  });
+
   test('a link inside the PDF scrolls to its page', async ({ page }) => {
     const dialog = await openPdf(page, 'three-pages.pdf');
     const first = dialog.getByRole('region', { name: 'Page 1', exact: true });

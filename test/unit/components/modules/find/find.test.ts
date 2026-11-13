@@ -590,6 +590,23 @@ describe('Find module', () => {
     expect(document.querySelector('[data-blok-find]')).toBeNull();
   });
 
+  it('leaves Cmd+F to a modal open over the editor', async () => {
+    const { wrapper } = editor([{ id: 'a', text: 'hello' }]);
+    const modal = document.createElement('div');
+    const button = document.createElement('button');
+    const field = document.createElement('input');
+
+    modal.append(button, field);
+    document.body.appendChild(modal);
+    // What modal-dialog.ts does to every other subtree of <body> while a dialog is open.
+    wrapper.setAttribute('inert', '');
+
+    expect(press(button, { key: 'f', code: 'KeyF', metaKey: true }).defaultPrevented).toBe(false);
+    expect(press(field, { key: 'f', code: 'KeyF', metaKey: true }).defaultPrevented).toBe(false);
+    await settle();
+    expect(document.querySelector('[data-blok-find]')).toBeNull();
+  });
+
   describe('a key outside every editor, with several on the page', () => {
     const showOnScreen = (wrapper: HTMLElement): void => {
       vi.spyOn(wrapper, 'getClientRects').mockReturnValue([new DOMRect(0, 0, 100, 100)] as unknown as DOMRectList);

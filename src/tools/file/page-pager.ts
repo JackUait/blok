@@ -23,6 +23,16 @@ export interface PagedView {
   setScale(scale: number): void;
 }
 
+/** What a view can do with its pager after mounting it. */
+export interface Pager {
+  /** The pill, for views that add controls of their own. */
+  pill: HTMLElement;
+  /** 1 = fits the view. */
+  zoom(): number;
+  /** Any zoom in range, not only the button steps (a pinch). */
+  setZoom(zoom: number): void;
+}
+
 /** A page's width at 100%, in px. The docx renderer writes it inline in pt. */
 function docxPageWidth(page: HTMLElement): number {
   return (parseFloat(page.style.width) || 0) * PX_PER_PT;
@@ -61,9 +71,9 @@ export function docxPagedView(scroller: HTMLElement): PagedView | null {
  * scroll; the arrows jump a page; zoom scales the pages. 100% means "fits the
  * view", never larger than the real page.
  */
-export function mountPager(scroller: HTMLElement, view: PagedView, chrome: PreviewChrome): void {
+export function mountPager(scroller: HTMLElement, view: PagedView, chrome: PreviewChrome): Pager | null {
   if (view.count === 0) {
-    return;
+    return null;
   }
   const { labels } = chrome;
   const state = { current: 0, zoom: 1, frame: 0, released: false };
@@ -102,11 +112,12 @@ export function mountPager(scroller: HTMLElement, view: PagedView, chrome: Previ
     zoomText.textContent = `${Math.round(state.zoom * 100)}%`;
   };
 
-  const zoomBy = (delta: number): void => {
-    state.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round((state.zoom + delta) / ZOOM_STEP) * ZOOM_STEP));
+  const setZoom = (zoom: number): void => {
+    state.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom));
     applyZoom();
     track();
   };
+  const zoomBy = (delta: number): void => setZoom(Math.round((state.zoom + delta) / ZOOM_STEP) * ZOOM_STEP);
 
   scroller.addEventListener('scroll', onScroll, { passive: true });
   chrome.onRelease(() => {
@@ -121,7 +132,7 @@ export function mountPager(scroller: HTMLElement, view: PagedView, chrome: Previ
   }
 
   chrome.setFacts([counted(view.count, labels.pagesOne, labels.pages)]);
-  chrome.addOverlay(buildPill([
+  const pill = buildPill([
     iconButton(IconChevronLeft, labels.prevPage, 'preview-prev-page', () => go(state.current - 1)),
     pageText,
     iconButton(IconChevronRight, labels.nextPage, 'preview-next-page', () => go(state.current + 1)),
@@ -129,7 +140,10 @@ export function mountPager(scroller: HTMLElement, view: PagedView, chrome: Previ
     iconButton(IconMinus, labels.zoomOut, 'preview-zoom-out', () => zoomBy(-ZOOM_STEP)),
     zoomText,
     iconButton(IconPlus, labels.zoomIn, 'preview-zoom-in', () => zoomBy(ZOOM_STEP)),
-  ]));
+  ]);
+  chrome.addOverlay(pill);
   applyZoom();
   track();
+
+  return { pill, zoom: () => state.zoom, setZoom };
 }

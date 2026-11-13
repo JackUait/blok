@@ -28013,6 +28013,20 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   background: var(--blok-border-primary);
 }
 
+.blok-file-preview-find {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-0-5);
+}
+
+.blok-file-preview-find-field {
+  width: 160px;
+}
+
+.blok-file-preview-find [data-action="preview-find-prev"] svg {
+  transform: rotate(180deg);
+}
+
 .blok-file-preview-haze {
   position: absolute;
   z-index: 2;

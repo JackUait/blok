@@ -143,6 +143,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/file/md-outline.ts': exempt('view-only', 'Scrolls a Markdown preview to a heading; nothing is saved.'),
   'ui-file:src/tools/file/pdf/pdf-password.ts': exempt('view-only', 'Unlocks a password PDF for the preview; the password is never saved.'),
   'ui-file:src/tools/file/pdf/pdf-links.ts': exempt('view-only', 'A link inside a PDF preview scrolls the preview to a page or opens a web page; nothing is saved.'),
+  'ui-file:src/tools/file/pdf/pdf-find.ts': exempt('view-only', 'Finds words in a PDF preview and scrolls to them; nothing is saved.'),
   'ui-file:src/tools/file/preview-chrome.ts': exempt('view-only', 'Buttons of the file preview (page, zoom, copy); nothing is saved.'),
   'ui-file:src/tools/file/preview-modal.ts': exempt('view-only', 'Shows a preview of the file; nothing is saved.'),
   'ui-file:src/tools/file/sheet-grid.ts': exempt('view-only', 'Selects cells in a spreadsheet preview to read their sum; nothing is saved.'),

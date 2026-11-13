@@ -2,7 +2,15 @@ import type { WorkspaceRef } from './workspace-registry';
 
 /** Ce que le serveur accorde sur une page précise. */
 export type PageLevel = 'view' | 'edit' | 'full';
-export interface PageAccessEntry { level: PageLevel; sharedRoot?: boolean }
+export interface PageAccessEntry {
+  level: PageLevel;
+  /** Visibilité effective, héritée comprise : ce qui range la page dans sa section. */
+  visibility?: 'inherit' | 'private' | 'workspace';
+  /** Quelqu'un d'autre que moi a un droit sur cette page ou l'un de ses ancêtres. */
+  shared?: boolean;
+  /** Son parent réel est hors d'atteinte : elle s'affiche détachée. */
+  sharedRoot?: boolean;
+}
 export type PageAccessMap = Record<string, PageAccessEntry>;
 
 export interface PageAccess {

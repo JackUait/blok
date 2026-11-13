@@ -4,6 +4,8 @@ export interface ShellPage {
   icon?: string;
   parentId: string | null;
   favorite?: boolean;
+  /** Titre de section, dérivé de l'état de partage par l'hôte. */
+  section?: string;
 }
 export type SidebarAction =
   | { id: string; type: 'rename'; title: string }

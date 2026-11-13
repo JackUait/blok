@@ -28,7 +28,7 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 			problem(w, 500, "Read failed")
 			return
 		}
-		levels, parents, e := s.workspaceLevels(r.Context(), tx, u.ID, ws.ID)
+		standings, parents, e := s.workspaceStandings(r.Context(), tx, u.ID, ws.ID)
 		if e != nil {
 			problem(w, 500, "Read failed")
 			return
@@ -50,16 +50,18 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 				problem(w, 500, "Read failed")
 				return
 			}
-			granted := levels[id]
-			if granted < levelView {
+			standing := standings[id]
+			if standing.Level < levelView {
 				continue
 			}
-			entry := map[string]any{"level": granted.String()}
+			// La barre latérale range une page sous « Privé », « Partagé » ou
+			// « Espace » ; le niveau seul ne permet pas de les distinguer.
+			entry := map[string]any{"level": standing.Level.String(), "visibility": standing.Visibility, "shared": standing.Shared}
 			// Une page accessible sous un parent qui ne l'est pas ne peut pas
 			// s'afficher sous un nœud que l'appelant ne reçoit pas. Elle remonte,
 			// et le signalement empêche l'enregistrement de lire ce détachement
 			// comme un déplacement vers la racine.
-			if parent := parents[id]; parent != "" && levels[parent] < levelView {
+			if parent := parents[id]; parent != "" && standings[parent].Level < levelView {
 				detached, failure := detachParent(meta)
 				if failure != nil {
 					rows.Close()

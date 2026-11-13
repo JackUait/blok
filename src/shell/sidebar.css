@@ -503,3 +503,16 @@
   margin-inline: auto;
   padding: 48px var(--blok-space-6) 64px;
 }
+
+/* Un titre de section n'est pas une ligne cliquable : encre secondaire, pas de
+   surface, pas d'état sélectionné. Il sépare, il ne se choisit pas. */
+[data-blok-sidebar-section] {
+  margin: 12px 0 2px;
+  padding: 0 8px;
+  color: var(--blok-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+[data-blok-sidebar-section]:first-child { margin-top: 0; }

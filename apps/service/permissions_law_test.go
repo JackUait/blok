@@ -23,7 +23,8 @@ var permissionExemptions = map[string]string{
 	"chainOf":                  "implémente la résolution",
 	"effectiveLevel":           "implémente la résolution",
 	"effectiveLevelForSession": "implémente la résolution",
-	"workspaceLevels":          "implémente la résolution",
+	"workspaceChains":          "implémente la résolution",
+	"workspaceStandings":       "implémente la résolution",
 
 	// Pas de contenu : des identifiants, ou un drapeau posé après autorisation.
 	"recheckWorkspace": "ne lit que des identifiants pour relancer une revérification",

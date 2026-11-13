@@ -8,6 +8,7 @@ import { type DesktopPage, type WorkspaceIndex } from './storage';
 import { workspaceRepository } from './workspace-repository';
 import { pageAccess } from './page-access';
 import { openPageSharing } from './cloud/page-sharing';
+import { groupPagesBySection, sectionNames } from './page-section';
 import { activeWorkspace, workspaceKey, type WorkspaceRef } from './workspace-registry';
 import { createDesktopFooter, readAppearance } from './settings';
 import { COVER_GALLERY, readCoverFile, createAddCoverButton, createPageCover, isPageCover, trackPageHeaderHover, type PageCover } from './cover';
@@ -65,6 +66,18 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     index = value;
     access = pageAccess(ref, value.access);
     return value;
+  };
+  /**
+   * Étiquette chaque page racine avec sa section. La section est dérivée de
+   * l'état de partage, jamais rangée dans la page : inviter quelqu'un fait
+   * basculer la page tout seul, au prochain index reçu.
+   */
+  const withSections = (pages: DesktopPage[]): DesktopPage[] => {
+    if (ref.kind !== 'remote' || !index?.access) return pages;
+    const roots = pages.filter((page) => !page.parentId);
+    const labelled = new Map(groupPagesBySection(roots, index.access)
+      .flatMap((group) => group.pages.map((page) => [page.id, sectionNames[group.section]] as const)));
+    return pages.map((page) => labelled.has(page.id) ? { ...page, section: labelled.get(page.id) } : page);
   };
   const readOnly = (pageId: string): boolean => !access.canEdit(pageId);
   const canCreateUnder = (parentId: string | null): boolean =>
@@ -134,7 +147,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         updated.pages = updated.pages.map((page) => page.id === currentId ? live : page);
       }
       adoptIndex(updated);
-      frame.setPages(index.pages, index.activeId);
+      frame.setPages(withSections(index.pages), index.activeId);
       pageToolbar?.setBreadcrumbs(breadcrumbs(currentId));
       for (const id of new Set([...original.pages.map((page) => page.id), ...index.pages.map((page) => page.id)])) notifyPage(id);
       refreshPagePresentation?.();
@@ -155,7 +168,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       notifyPage(page.id);
     }
     if (!changed) return;
-    frame.setPages(index.pages, index.activeId);
+    frame.setPages(withSections(index.pages), index.activeId);
     pageToolbar?.setBreadcrumbs(breadcrumbs(currentId));
     const active = index.pages.find((page) => page.id === currentId);
     if (active?.titleDate && editor) {
@@ -217,7 +230,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     const next = icon?.type === 'emoji' ? icon.value : icon?.type === 'image' ? icon.url : undefined;
     if (page.icon !== next) {
       page.icon = next;
-      frame.setPages(index.pages, index.activeId);
+      frame.setPages(withSections(index.pages), index.activeId);
       pageToolbar?.setBreadcrumbs(breadcrumbs(currentId));
       if (persist) saveManifest();
       notifyPage(page.id);
@@ -258,7 +271,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       const page: DesktopPage = { id: pageId, title: title?.trim() || 'Nouvelle page', parentId: parentId ?? currentId };
       if (initialDocument && ref.kind === 'local') await repository.writePage(pageId, JSON.stringify(initialDocument));
       index.pages.push(page);
-      frame.setPages(index.pages, index.activeId);
+      frame.setPages(withSections(index.pages), index.activeId);
       saveManifest();
       await saveOrder;
       if (initialDocument && ref.kind === 'remote') await repository.seedPage(pageId, initialDocument);
@@ -276,7 +289,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     if (selection !== request) return;
     index.activeId = id;
     if (ref.kind === 'local') saveManifest();
-    frame.setPages(index.pages, id);
+    frame.setPages(withSections(index.pages), id);
     onPageIcon(id, page.icon ?? '');
     if (currentId === id) {
       pageToolbar?.setBreadcrumbs(breadcrumbs(id));
@@ -401,7 +414,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
           toolbar.setBreadcrumbs(breadcrumbs(id));
           notifyPage(id);
           document.title = next;
-          frame.setPages(index.pages, id);
+          frame.setPages(withSections(index.pages), id);
           if (ref.kind === 'local' || change.source !== 'remote') saveManifest();
         },
         onIconChange(icon, change) {
@@ -515,7 +528,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         await saveOrder;
         await repository.duplicatePage(page.id, copy);
         const refreshed = adoptIndex(await repository.loadIndex());
-        frame.setPages(refreshed.pages, refreshed.activeId);
+        frame.setPages(withSections(refreshed.pages), refreshed.activeId);
         navigate(copy.id);
         return;
       }
@@ -556,7 +569,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     } else {
       return;
     }
-    frame.setPages(index.pages, index.activeId);
+    frame.setPages(withSections(index.pages), index.activeId);
     saveManifest();
     } finally { frame.element.inert = wasInert; metadataAction = false; }
   };
@@ -645,7 +658,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       try {
         const loaded = adoptIndex(await repository.loadIndex());
         refreshDateTitles();
-        frame.setPages(loaded.pages, loaded.activeId);
+        frame.setPages(withSections(loaded.pages), loaded.activeId);
         onRoute();
         scheduleDateRefresh();
         window.addEventListener('focus', refreshDateTitles);

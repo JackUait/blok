@@ -14,6 +14,12 @@ export interface ShellPage {
   parentId: string | null;
   /** Toggled from the page menu. A filled star is the on state. */
   favorite?: boolean;
+  /**
+   * Section heading this page belongs under. Derived by the host from sharing
+   * state and never stored: a page moves out of its section on its own when
+   * someone is invited. Absent means one flat list, as before.
+   */
+  section?: string;
 }
 
 export interface PageFrame {
@@ -308,7 +314,23 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
       tree.append(empty);
       return;
     }
-    roots.forEach((page) => tree.append(...rows(page, 0, needle !== '')));
+    // Les sections ne sont pas des conteneurs : les pages restent une seule
+    // liste et conservent leur ordre. Un titre s'intercale quand la section
+    // change, ce qui laisse le glisser-déposer et la hiérarchie intacts.
+    let shown = '';
+    roots.forEach((page) => {
+      const section = page.section ?? '';
+      if (section !== shown) {
+        shown = section;
+        if (section !== '') {
+          const heading = document.createElement('p');
+          heading.setAttribute('data-blok-sidebar-section', '');
+          heading.textContent = section;
+          tree.append(heading);
+        }
+      }
+      tree.append(...rows(page, 0, needle !== ''));
+    });
   }
 
   function rows(page: ShellPage, depth: number, forceOpen: boolean): HTMLElement[] {

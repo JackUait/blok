@@ -204,24 +204,84 @@ func (s *Service) effectiveLevelForSession(ctx context.Context, q querier, sessi
 	return resolve(role, chain), nil
 }
 
+// Ce que la barre latérale doit savoir d'une page, au-delà du droit qu'on y a :
+// sous quelle section la ranger. Une page ouverte à l'espace, une page privée
+// qu'on a ouverte à quelqu'un, et une page privée à soi seul se rangent
+// différemment, et le niveau ne les distingue pas.
+type pageStanding struct {
+	Level      level
+	Visibility string
+	Shared     bool
+}
+
 // workspaceLevels résout toutes les pages d'un espace en une passe, et rend aussi
 // la hiérarchie telle que la base la décrit. Interroger la base page par page
 // ferait deux requêtes par page : un espace de mille pages en paierait deux mille
 // à chaque affichage de la barre latérale.
+func (s *Service) workspaceStandings(ctx context.Context, q querier, userID, workspaceID string) (map[string]pageStanding, map[string]string, error) {
+	levels, parents, nodes, e := s.workspaceChains(ctx, q, userID, workspaceID)
+	if e != nil || len(nodes) == 0 {
+		return map[string]pageStanding{}, parents, e
+	}
+	// Un partage qui n'est pas le mien est ce qui fait passer une page de
+	// « Privé » à « Partagé ». Le mien ne compte pas : l'auteur d'une page en
+	// détient toujours un.
+	rows, e := q.Query(ctx, `SELECT DISTINCT sh.page_id FROM page_shares sh JOIN pages p ON p.id=sh.page_id
+	 WHERE p.workspace_id=$1 AND sh.user_id<>$2`, workspaceID, userID)
+	if e != nil {
+		return nil, nil, e
+	}
+	defer rows.Close()
+	sharedDirectly := map[string]bool{}
+	for rows.Next() {
+		var id string
+		if e = rows.Scan(&id); e != nil {
+			return nil, nil, e
+		}
+		sharedDirectly[id] = true
+	}
+	if e = rows.Err(); e != nil {
+		return nil, nil, e
+	}
+	standings := make(map[string]pageStanding, len(nodes))
+	for id := range nodes {
+		standing := pageStanding{Level: levels[id], Visibility: visPrivate}
+		for current, depth := id, 0; current != "" && depth < maxPageDepth; current, depth = parents[current], depth+1 {
+			node, known := nodes[current]
+			if !known {
+				break
+			}
+			if sharedDirectly[current] {
+				standing.Shared = true
+			}
+			if standing.Visibility == visPrivate && node.Visibility != visInherit {
+				standing.Visibility = node.Visibility
+			}
+		}
+		standings[id] = standing
+	}
+	return standings, parents, nil
+}
+
 func (s *Service) workspaceLevels(ctx context.Context, q querier, userID, workspaceID string) (map[string]level, map[string]string, error) {
+	levels, parents, _, e := s.workspaceChains(ctx, q, userID, workspaceID)
+	return levels, parents, e
+}
+
+func (s *Service) workspaceChains(ctx context.Context, q querier, userID, workspaceID string) (map[string]level, map[string]string, map[string]pageNode, error) {
 	var role string
 	e := q.QueryRow(ctx, `SELECT role FROM memberships WHERE workspace_id=$1 AND user_id=$2`, workspaceID, userID).Scan(&role)
 	if errors.Is(e, pgx.ErrNoRows) {
-		return map[string]level{}, map[string]string{}, nil
+		return map[string]level{}, map[string]string{}, map[string]pageNode{}, nil
 	}
 	if e != nil {
-		return nil, nil, e
+		return nil, nil, nil, e
 	}
 	rows, e := q.Query(ctx, `SELECT p.id, coalesce(nullif(p.metadata->>'parentId',''),''), p.visibility, coalesce(sh.level,'')
 	  FROM pages p LEFT JOIN page_shares sh ON sh.page_id=p.id AND sh.user_id=$2
 	 WHERE p.workspace_id=$1 AND NOT p.deleted`, workspaceID, userID)
 	if e != nil {
-		return nil, nil, e
+		return nil, nil, nil, e
 	}
 	defer rows.Close()
 	parents := map[string]string{}
@@ -229,13 +289,13 @@ func (s *Service) workspaceLevels(ctx context.Context, q querier, userID, worksp
 	for rows.Next() {
 		var id, parent, visibility, share string
 		if e = rows.Scan(&id, &parent, &visibility, &share); e != nil {
-			return nil, nil, e
+			return nil, nil, nil, e
 		}
 		parents[id] = parent
 		nodes[id] = pageNode{ID: id, Visibility: visibility, Share: parseLevel(share)}
 	}
 	if e = rows.Err(); e != nil {
-		return nil, nil, e
+		return nil, nil, nil, e
 	}
 	levels := make(map[string]level, len(nodes))
 	for id := range nodes {
@@ -249,5 +309,5 @@ func (s *Service) workspaceLevels(ctx context.Context, q querier, userID, worksp
 		}
 		levels[id] = resolve(role, chain)
 	}
-	return levels, parents, nil
+	return levels, parents, nodes, nil
 }

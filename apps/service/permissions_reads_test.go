@@ -399,3 +399,36 @@ func TestMCPDocumentAuthorizationFollowsPermissions(t *testing.T) {
 		}
 	}
 }
+
+// La barre latérale doit pouvoir ranger chaque page sous « Privé », « Partagé »
+// ou « Espace ». Le niveau ne suffit pas à le dire : il faut la visibilité
+// effective, et savoir si quelqu'un d'autre a un droit dessus.
+func TestIndexReportsVisibilityAndSharing(t *testing.T) {
+	w := newReadsWorld(t)
+	w.page(t, "mienne", "", visPrivate)
+	if _, e := w.service.DB.Exec(w.ctx, `INSERT INTO page_shares(page_id,user_id,level,granted_by) VALUES('mienne','bob','full','bob'),('prive','zoe','view','bob')`); e != nil {
+		t.Fatal(e)
+	}
+	_, payload := w.get(t, tokenBob, "/api/workspaces/equipe/index")
+	access, _ := payload["access"].(map[string]any)
+	for page, want := range map[string]struct {
+		visibility string
+		shared     bool
+	}{
+		"public": {visWorkspace, false},
+		"prive":  {visPrivate, true},  // partagée avec Zoé
+		"enfant": {visPrivate, true},  // hérite du partage de son parent
+		"mienne": {visPrivate, false}, // privée, personne d'autre
+	} {
+		entry, _ := access[page].(map[string]any)
+		if entry == nil {
+			t.Fatalf("%s absente de la feuille d'accès", page)
+		}
+		if entry["visibility"] != want.visibility {
+			t.Errorf("visibilité de %s = %v, attendu %s", page, entry["visibility"], want.visibility)
+		}
+		if (entry["shared"] == true) != want.shared {
+			t.Errorf("partage de %s = %v, attendu %v", page, entry["shared"], want.shared)
+		}
+	}
+}

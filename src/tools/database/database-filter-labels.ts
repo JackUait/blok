@@ -260,6 +260,22 @@ const THIS_LABEL_KEYS: Record<RelativeDateUnit, string> = {
   year: 'tools.database.filterDateThisYear',
 };
 
+/** "Past week", not "Past 1 weeks" (Round 19 §2). One key per unit, so each locale can agree its words. */
+const ONE_SPAN_LABEL_KEYS: Record<'past' | 'next', Record<RelativeDateUnit, string>> = {
+  past: {
+    day: 'tools.database.filterRelativePastDay',
+    week: 'tools.database.filterRelativePastWeek',
+    month: 'tools.database.filterRelativePastMonth',
+    year: 'tools.database.filterRelativePastYear',
+  },
+  next: {
+    day: 'tools.database.filterRelativeNextDay',
+    week: 'tools.database.filterRelativeNextWeek',
+    month: 'tools.database.filterRelativeNextMonth',
+    year: 'tools.database.filterRelativeNextYear',
+  },
+};
+
 /** A saved day (or instant) the chip prints short: "Nov 10" (Round 19 §2). */
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}(T|$)/;
 
@@ -287,6 +303,7 @@ export const filterValueText = (
 
     if (span === undefined) return '';
     if (span.direction === 'this') return t(THIS_LABEL_KEYS[span.unit]);
+    if (span.count === 1) return t(ONE_SPAN_LABEL_KEYS[span.direction][span.unit]);
 
     return t(`tools.database.filterRelative${span.direction === 'past' ? 'Past' : 'Next'}`, { count: span.count, unit: t(`tools.database.filterUnit${span.unit.charAt(0).toUpperCase()}${span.unit.slice(1)}`) });
   }

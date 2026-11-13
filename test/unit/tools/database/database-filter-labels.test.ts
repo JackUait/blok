@@ -246,6 +246,8 @@ describe('filter chip text, as Notion prints it', () => {
     ['Date: On or after Nov 10', { operator: 'on_or_after', value: '2026-11-10' }, date],
     ['Date: Nov 3 → Nov 10', { operator: 'is_between', value: '2026-11-03/2026-11-10' }, date],
     ['Date: This week', { operator: 'relative_to_today', value: 'this:1:week' }, date],
+    ['Date: Past week', { operator: 'relative_to_today', value: 'past:1:week' }, date],
+    ['Date: Past month', { operator: 'relative_to_today', value: 'past:1:month' }, date],
     ['Date: Past 3 months', { operator: 'relative_to_today', value: 'past:3:month' }, date],
     ['Date: Next 3 months', { operator: 'relative_to_today', value: 'next:3:month' }, date],
     ['Date: Is empty', { operator: 'is_empty', value: null }, date],

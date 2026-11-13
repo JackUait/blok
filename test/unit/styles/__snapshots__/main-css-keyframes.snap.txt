@@ -480,7 +480,7 @@
 
 @keyframes blok-media-preview-flap {
   0%, 100% { transform: rotate(45deg) scaleY(1) rotate(-45deg) }
-  40% { transform: rotate(45deg) scaleY(-0.45) rotate(-45deg) }
+  40% { transform: rotate(45deg) scaleY(0.45) rotate(-45deg) }
   70% { transform: rotate(45deg) scaleY(1.12) rotate(-45deg) }
 }
 

@@ -2091,7 +2091,7 @@ export class ViewSettingsPages {
           label: this.t('filterAddRule'),
           testId: 'database-filter-add-rule',
           onClick: () => pick(() => {
-            write(addFilterRule(tree(), group.id, this.firstRule()));
+            write(addFilterRule(tree(), group.id, this.firstRule(group, tree())));
             panel.refresh();
           }),
         }),
@@ -2101,7 +2101,7 @@ export class ViewSettingsPages {
           testId: 'database-filter-add-group',
           onClick: () => pick(() => {
             // Round 19 §1 (r19-adv-group.raw): a new group holds one rule. Round 20 §5: its And/Or is the opposite of its parent's.
-            write(addFilterGroup(tree(), group.id, { id: nanoid(), conjunction: group.conjunction === 'and' ? 'or' : 'and', filterRules: [this.firstRule()] }));
+            write(addFilterGroup(tree(), group.id, { id: nanoid(), conjunction: group.conjunction === 'and' ? 'or' : 'and', filterRules: [this.firstRule(group, tree())] }));
             panel.refresh();
           }),
         })] : []),
@@ -2266,10 +2266,14 @@ export class ViewSettingsPages {
     return more;
   }
 
-  /** A new advanced rule: "Name · Contains", empty. */
-  private firstRule(): FilterConfig & { id: string } {
+  /**
+   * A new advanced rule, empty, on the property already in use: the last rule in `group`, else the
+   * tree's first rule, else Name (Round 19 §1, Round 20 §2). Which rule Notion copies is unread.
+   */
+  private firstRule(group: FilterGroup, tree: FilterGroup): FilterConfig & { id: string } {
     const filterable = this.ctx.schema().filter((p) => FILTERABLE_TYPES.includes(p.type));
-    const property = filterable.find((p) => p.type === 'title') ?? filterable[0];
+    const seed = rulesOf(group).at(-1) ?? rulesOf(tree)[0];
+    const property = filterable.find((p) => p.id === seed?.propertyId) ?? filterable.find((p) => p.type === 'title') ?? filterable[0];
     const { id: _id, ...condition } = defaultFilterFor(property);
 
     return { id: nanoid(), ...condition };
@@ -2874,6 +2878,9 @@ export class ViewSettingsPages {
     };
   }
 }
+
+const rulesOf = (group: FilterGroup): FilterRule[] =>
+  group.filterRules.flatMap((node) => (isFilterGroup(node) ? rulesOf(node) : [node]));
 
 const findRule = (group: FilterGroup, id: string): FilterRule | undefined => {
   for (const node of group.filterRules) {

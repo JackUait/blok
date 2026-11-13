@@ -409,6 +409,24 @@ describe('DatabaseViewControls', () => {
       }));
     });
 
+    // notion-motion.md Round 20 §2 (r20-g-two.raw, r20-g-grp-parts.raw): a new rule takes the property in use.
+    it('seeds a new rule and a new group with the property of the rule above, not always Name', () => {
+      const { controls, saved, ruleId } = openAdvanced();
+      const tree = (): DatabaseViewConfig['filterTree'] => controls.effective(saved.view).filterTree;
+
+      click(`database-filter-rule-property-${ruleId()}`);
+      click('database-pick-property-num');
+      click(`database-filter-add-rule-${tree()?.id ?? ''}`);
+      click('database-filter-add-rule');
+      expect(tree()?.filterRules[1]).toEqual(expect.objectContaining({ propertyId: 'num', operator: 'equals', value: null }));
+
+      click(`database-filter-add-rule-${tree()?.id ?? ''}`);
+      click('database-filter-add-group');
+      expect(tree()?.filterRules[2]).toEqual(expect.objectContaining({
+        filterRules: [expect.objectContaining({ propertyId: 'num', operator: 'equals', value: null })],
+      }));
+    });
+
     // notion-motion.md Round 20 §5 (r20-g-inner2-parts.raw, r20-g-lvl3add-parts.raw): the opposite of the parent's And/Or.
     it('gives a new group the opposite And/Or of its parent', () => {
       const { controls, saved } = openAdvanced();

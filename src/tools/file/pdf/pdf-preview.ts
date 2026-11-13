@@ -60,9 +60,15 @@ function textLayerOf(lib: PdfJs): PdfViewLib['renderTextLayer'] {
 
 /**
  * Opens a PDF with pdf.js into the preview body. Rejects when pdf.js cannot
- * load or read it; the modal then shows the error card.
+ * load or read it; the modal then shows the error card. `pdfHref` is the
+ * error card's link to the bytes (see createTypedPdfUrl).
  */
-export async function fillPdfBody(opts: FilePreviewOptions, chrome: PreviewChrome, source: PdfSource): Promise<void> {
+export async function fillPdfBody(
+  opts: FilePreviewOptions,
+  chrome: PreviewChrome,
+  source: PdfSource,
+  pdfHref?: string,
+): Promise<void> {
   const lib = await loadPdfJs();
   if (chrome.isClosed()) {
     return;
@@ -94,7 +100,7 @@ export async function fillPdfBody(opts: FilePreviewOptions, chrome: PreviewChrom
     }
     askPdfPassword(chrome.body, chrome.labels, reason, (password) => {
       if (password instanceof Error) {
-        buildErrorInto(chrome.body, opts);
+        buildErrorInto(chrome.body, opts, pdfHref);
       } else {
         showLoading(chrome);
       }
@@ -115,7 +121,7 @@ export async function fillPdfBody(opts: FilePreviewOptions, chrome: PreviewChrom
       }
       failed.done = true;
       held.view?.destroy();
-      buildErrorInto(chrome.body, opts);
+      buildErrorInto(chrome.body, opts, pdfHref);
     },
   });
   held.view = view;

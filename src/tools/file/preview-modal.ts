@@ -6,14 +6,13 @@ import { extToPrismLang } from './code-languages';
 import { tokenizePrism } from '../code/prism-loader';
 import { applyPrismHighlight, ensurePrismStyles } from '../code/prism-applier';
 import { IconCross, IconDownload, IconLinkExternal } from '../../components/icons';
-import { buildErrorInto } from './preview-error';
+import { buildErrorInto, createTypedPdfUrl } from './preview-error';
 import { renderCode, splitLines } from './code-view';
 import { renderCsv } from './csv-view';
 import { renderLog, renderPlainText } from './log-view';
 import { mountOutline } from './md-outline';
 import { fillOfficeBody, isOfficeKind } from './office-preview';
 import { ScrollHaze } from './preview-scroll-haze';
-import { createSafeObjectUrl } from '../../shared/safe-object-url';
 import { counted, resolvePreviewLabels, type PreviewLabels } from './preview-labels';
 import { supportsPdfJs } from './pdf/pdf-loader';
 import { fillPdfBody } from './pdf/pdf-preview';
@@ -137,14 +136,20 @@ async function fillPdfBlobBody(
   if (chrome.isClosed()) {
     return;
   }
-  const src = createSafeObjectUrl(new Blob([bytes], { type: 'application/pdf' }));
-  chrome.onRelease(() => URL.revokeObjectURL(src));
+  const { url: src, release } = createTypedPdfUrl(bytes);
+  chrome.onRelease(release);
   const open = buildOpenTabLink(opts);
   open.href = src;
   actions.prepend(buildSaveLink(opts, src), open);
 
   if (supportsPdfJs()) {
-    await fillPdfBody(opts, chrome, { kind: 'data', data: new Uint8Array(await bytes.arrayBuffer()) });
+    const data = new Uint8Array(await bytes.arrayBuffer());
+    // Caught here, not by the caller, so the error card can link the re-typed bytes.
+    await fillPdfBody(opts, chrome, { kind: 'data', data }, src).catch(() => {
+      if (!chrome.isClosed()) {
+        buildErrorInto(chrome.body, opts, src);
+      }
+    });
 
     return;
   }

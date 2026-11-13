@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { buildErrorInto } from '../../../../src/tools/file/preview-error';
+import { buildErrorInto, createTypedPdfUrl } from '../../../../src/tools/file/preview-error';
 
 const lines = (body: HTMLElement): { title: string | null; detail: string | null } => ({
   title: body.querySelector('[data-role="file-preview-error-title"]')?.textContent ?? null,
@@ -51,5 +51,44 @@ describe('buildErrorInto', () => {
 
     expect(lines(withLink)).toEqual({ title: "Couldn't load preview", detail: 'Download the file to open it.' });
     expect(lines(withoutLink)).toEqual({ title: "Couldn't load preview", detail: 'Check the link and try again.' });
+  });
+
+  describe('pdf bytes', () => {
+    const OWN = 'blob:https://example.com/own';
+    const actions = (body: HTMLElement): Array<string | null> => Array.from(
+      body.querySelectorAll('a'),
+      (link) => link.getAttribute('data-action')
+    );
+
+    it('links a blob url Blok made from bytes re-typed as application/pdf', () => {
+      const create = vi.spyOn(URL, 'createObjectURL').mockReturnValue(OWN);
+      vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+      const typed = createTypedPdfUrl(new Blob(['<script>'], { type: 'text/html' }));
+      const body = document.createElement('div');
+
+      buildErrorInto(body, { url: 'blob:https://example.com/raw', fileName: 'a.pdf', labels: { close: 'Close' } }, typed.url);
+
+      const made = create.mock.calls[0]?.[0];
+      expect(made instanceof Blob && made.type).toBe('application/pdf');
+      expect(actions(body)).toEqual(['preview-download', 'preview-error-open-tab']);
+      expect(lines(body).detail).toBe('Download the file to open it.');
+      typed.release();
+    });
+
+    it('links no blob url it did not make, and none once released', () => {
+      vi.spyOn(URL, 'createObjectURL').mockReturnValue(OWN);
+      vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+      const foreign = document.createElement('div');
+      const released = document.createElement('div');
+      const typed = createTypedPdfUrl(new Blob(['%PDF-1.7']));
+      typed.release();
+
+      buildErrorInto(foreign, { url: 'blob:https://example.com/raw', labels: { close: 'Close' } }, 'blob:https://example.com/raw');
+      buildErrorInto(released, { url: 'blob:https://example.com/raw', labels: { close: 'Close' } }, OWN);
+
+      expect(actions(foreign)).toEqual([]);
+      expect(actions(released)).toEqual([]);
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith(OWN);
+    });
   });
 });

@@ -308,6 +308,82 @@ describe('blob PDFs open with pdf.js', () => {
     expect(warn).toHaveBeenCalled();
   });
 
+  describe('error card links', () => {
+    const errorLinks = (): { download: Element | null; open: Element | null } => {
+      const card = body().querySelector('[data-role="file-preview-error"]');
+
+      return {
+        download: card?.querySelector('[data-action="preview-download"]') ?? null,
+        open: card?.querySelector('[data-action="preview-error-open-tab"]') ?? null,
+      };
+    };
+
+    const expectPdfLinks = (): void => {
+      const { download, open } = errorLinks();
+      expect(download?.getAttribute('href')).toBe(WRAPPED);
+      expect(download?.getAttribute('download')).toBe('a.pdf');
+      expect(download?.hasAttribute('target')).toBe(false);
+      expect(open?.getAttribute('href')).toBe(WRAPPED);
+      expect(open?.getAttribute('target')).toBe('_blank');
+      expect(open?.getAttribute('rel')).toBe('noopener noreferrer');
+      expect(body().querySelector(`[href="${RAW}"]`)).toBeNull();
+    };
+
+    it('offers the re-typed bytes when pdf.js cannot read the file', async () => {
+      openFilePreview({ url: RAW, fileName: 'a.pdf', labels: LABELS });
+      await flush();
+
+      task.reject(Object.assign(new Error('Invalid PDF structure.'), { name: 'InvalidPDFException' }));
+      await flush();
+
+      expectPdfLinks();
+    });
+
+    it('offers the re-typed bytes when a page fails to draw', async () => {
+      vi.stubGlobal('IntersectionObserver', ShowAllObserver);
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      openFilePreview({ url: RAW, fileName: 'a.pdf', labels: LABELS });
+      await flush();
+
+      task.resolve(fakeDoc(fakePage(() => Promise.reject(new Error('bad page')))));
+      await flush();
+
+      expectPdfLinks();
+    });
+
+    it('offers the re-typed bytes when the password prompt is cancelled', async () => {
+      openFilePreview({ url: RAW, fileName: 'a.pdf', labels: LABELS });
+      await flush();
+      task.onPassword?.((value) => {
+        if (value instanceof Error) {
+          task.reject(Object.assign(new Error('No password given'), { name: 'PasswordException' }));
+        }
+      }, 1);
+
+      body().querySelector<HTMLButtonElement>('[data-action="preview-pdf-password-cancel"]')?.click();
+      await flush();
+
+      expectPdfLinks();
+    });
+
+    it('offers the re-typed bytes when pdf.js itself fails to load', async () => {
+      loader.loadPdfJs.mockRejectedValue(new Error('chunk failed'));
+      openFilePreview({ url: RAW, fileName: 'a.pdf', labels: LABELS });
+      await flush();
+
+      expectPdfLinks();
+    });
+
+    it('offers no link when the blob could not be read', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }));
+      openFilePreview({ url: RAW, fileName: 'a.pdf', labels: LABELS });
+      await flush();
+
+      expect(body().querySelector('[data-role="file-preview-error"]')).not.toBeNull();
+      expect(errorLinks()).toEqual({ download: null, open: null });
+    });
+  });
+
   it('destroys the loading task when closed mid-load, with no unhandled rejection', async () => {
     const teardown = openFilePreview({ url: RAW, fileName: 'a.pdf', labels: LABELS });
     await flush();

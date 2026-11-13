@@ -38,12 +38,16 @@ import {
   MAX_FILTER_DEPTH,
   addFilterGroup,
   addFilterRule,
+  canGroupFilterNode,
   countFilterRules,
+  duplicateFilterNode,
   emptyFilterTree,
   filterGroupDepth,
+  groupFilterNode,
   isFilterGroup,
   removeFilterNode,
   setFilterConjunction,
+  unwrapFilterGroup,
   updateFilterRule,
   withEntryIds,
 } from './filter-tree';
@@ -88,7 +92,7 @@ import { CARD_LAYOUTS, resolveSubItemsDisplay, resolveSubItemsFilter } from './s
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { automationListPage } from './database-automations-panel';
 import { PROPERTY_FLYOUT_WIDTH, openFlyout, openSortDirectionFlyout, openSortPropertyFlyout, sortChevron } from './database-sort-flyouts';
-import { MORE_FLYOUT_GAP, MORE_FLYOUT_WIDTH, OPERATOR_FLYOUT_WIDTH, dateRuleControls, filterChip, openFilterChip, operatorPick } from './database-filter-chip';
+import { OPERATOR_FLYOUT_WIDTH, dateRuleControls, filterChip, openFilterChip, operatorPick } from './database-filter-chip';
 import { VIEW_ICONS } from './database-tab-bar';
 import type { AutomationSettings } from './database-automations-panel';
 import { offersAutofill } from './property-values';
@@ -2039,9 +2043,30 @@ export class ViewSettingsPages {
       if (isFilterGroup(node)) {
         const box = document.createElement('div');
 
+        // notion-motion.md Round 19 §1 (r19-adv-groupmore.raw).
+        const more = this.nodeMore(panel, node.id, { button: `database-filter-group-more-${node.id}`, menu: 'database-filter-group-more-menu', width: GROUP_MORE_WIDTH }, tree, write, (act) => [
+          panelRow({
+            label: this.t('filterTurnIntoFilter'),
+            testId: 'database-filter-turn-into-filter',
+            icon: IconReplace,
+            // Notion's was read on a group of one. Blok never drops rules, so a bigger group cannot turn.
+            disabled: node.filterRules.length !== 1,
+            onClick: () => act(() => unwrapFilterGroup(tree(), node.id)),
+          }),
+          panelRow({
+            label: this.t('filterWrapInGroup'),
+            description: this.t('filterWrapInGroupDescription'),
+            testId: 'database-filter-wrap-in-group',
+            icon: IconReplace,
+            disabled: !canGroupFilterNode(tree(), node.id),
+            onClick: () => act(() => groupFilterNode(tree(), node.id, { id: nanoid(), conjunction: NEW_GROUP_CONJUNCTION })),
+          }),
+        ]);
+
+        more.setAttribute('data-blok-database-filter-group-more', '');
         box.setAttribute('data-blok-database-filter-group', '');
         box.setAttribute('data-blok-testid', `database-filter-group-${node.id}`);
-        box.append(prefix, ...this.groupRows(panel, node, layer + 1, tree, write), panelRow({
+        box.append(more, prefix, ...this.groupRows(panel, node, layer + 1, tree, write), panelRow({
           label: this.t('filterDeleteGroup'),
           testId: `database-filter-delete-group-${node.id}`,
           icon: IconTrash,
@@ -2118,24 +2143,20 @@ export class ViewSettingsPages {
 
       return self;
     };
-    const more = document.createElement('button');
+    // notion-motion.md Round 19 §1 (r19-adv-rulemore.raw): the menu sits under the ⋯.
+    const more = this.nodeMore(panel, id, { button: `database-filter-rule-more-${id}`, menu: 'database-filter-rule-more-menu', width: RULE_MORE_WIDTH }, tree, write, (act) => [
+      panelRow({
+        label: this.t('filterTurnIntoGroup'),
+        testId: 'database-filter-turn-into-group',
+        icon: IconReplace,
+        disabled: !canGroupFilterNode(tree(), id),
+        onClick: () => act(() => groupFilterNode(tree(), id, { id: nanoid(), conjunction: NEW_GROUP_CONJUNCTION })),
+      }),
+    ]);
 
+    more.setAttribute('data-blok-database-filter-rule-more', '');
     line.setAttribute('data-blok-database-filter-rule', '');
     line.setAttribute('data-blok-testid', `database-filter-rule-${id}`);
-    more.type = 'button';
-    more.setAttribute('data-blok-database-filter-rule-more', '');
-    more.setAttribute('data-blok-testid', `database-filter-rule-more-${id}`);
-    more.setAttribute('aria-label', this.t('tableMoreActions'));
-    more.innerHTML = IconDotsHorizontal;
-    more.addEventListener('click', () => openFlyout(more, panel, 'database-filter-rule-more-menu', MORE_FLYOUT_WIDTH, (pick) => [panelRow({
-      label: this.t('filterDelete'),
-      testId: 'database-filter-delete',
-      icon: IconTrash,
-      onClick: () => pick(() => {
-        write(removeFilterNode(tree(), id));
-        panel.refresh();
-      }),
-    })], { beside: MORE_FLYOUT_GAP }));
 
     if (property === undefined) {
       line.append(prefix, panelText(this.t('filterGone')), more);
@@ -2185,6 +2206,48 @@ export class ViewSettingsPages {
     line.append(more);
 
     return line;
+  }
+
+  /** A rule's or group's ⋯: Remove (red), Duplicate, then the rows `extra` gives. A pick saves and redraws. */
+  private nodeMore(
+    panel: DatabasePanel,
+    nodeId: string,
+    ids: { button: string; menu: string; width: number },
+    tree: () => FilterGroup,
+    write: (next: FilterGroup) => void,
+    extra: (act: (next: () => FilterGroup) => void) => HTMLElement[]
+  ): HTMLElement {
+    const more = document.createElement('button');
+
+    more.type = 'button';
+    more.setAttribute('data-blok-testid', ids.button);
+    more.setAttribute('aria-label', this.t('tableMoreActions'));
+    more.innerHTML = IconDotsHorizontal;
+    more.addEventListener('click', () => openFlyout(more, panel, ids.menu, ids.width, (pick) => {
+      const act = (next: () => FilterGroup): void => pick(() => {
+        write(next());
+        panel.refresh();
+      });
+
+      return [
+        panelRow({
+          label: this.t('filterRemove'),
+          testId: 'database-filter-remove',
+          icon: IconTrash,
+          danger: true,
+          onClick: () => act(() => removeFilterNode(tree(), nodeId)),
+        }),
+        panelRow({
+          label: this.t('filterDuplicate'),
+          testId: 'database-filter-duplicate',
+          icon: IconCopy,
+          onClick: () => act(() => duplicateFilterNode(tree(), nodeId)),
+        }),
+        ...extra(act),
+      ];
+    }));
+
+    return more;
   }
 
   /** A new advanced rule: "Name · Contains", empty. */
@@ -2908,6 +2971,12 @@ export const openFilterList = (anchor: HTMLElement, ctx: ViewSettingsContext, te
 
   return panel;
 };
+
+/** notion-motion.md Round 19 §1 (r19-adv-rulemore.raw, r19-adv-groupmore.raw): the rule and group ⋯ menus. */
+const RULE_MORE_WIDTH = 150.8;
+const GROUP_MORE_WIDTH = 232.4;
+/** A group Blok makes (add, turn into, wrap). Round 19 §1 saw "Or" in a new group once (r19-adv-group2.raw). */
+const NEW_GROUP_CONJUNCTION = 'and';
 
 /** notion-motion.md Round 18 §2 (r18-adv-addrule.raw): the "+ Add filter rule ⌄" menu. */
 const ADD_MENU_WIDTH = 206.9;

@@ -63,4 +63,59 @@ export const updateFilterRule = (
 export const setFilterConjunction = (tree: FilterGroup, groupId: string, conjunction: FilterConjunction): FilterGroup =>
   mapGroups(tree, (group) => (group.id === groupId ? { ...group, conjunction } : group));
 
+/** Puts `make(node)` where the node with `nodeId` was. */
+const replaceFilterNode = (tree: FilterGroup, nodeId: string, make: (node: FilterNode) => FilterNode[]): FilterGroup =>
+  mapGroups(tree, (group) => (group.filterRules.some((child) => child.id === nodeId)
+    ? { ...group, filterRules: group.filterRules.flatMap((child) => (child.id === nodeId ? make(child) : [child])) }
+    : group));
+
+const withFreshIds = (node: FilterNode): FilterNode => (isFilterGroup(node)
+  ? { ...node, id: nanoid(), filterRules: node.filterRules.map(withFreshIds) }
+  : { ...node, id: nanoid() });
+
+/** Group layers inside a node: 0 for a rule, 1 for a group of rules. */
+const groupHeight = (node: FilterNode): number => (isFilterGroup(node)
+  ? 1 + Math.max(0, ...node.filterRules.map(groupHeight))
+  : 0);
+
+const parentOf = (tree: FilterGroup, nodeId: string): FilterGroup | undefined => {
+  if (tree.filterRules.some((child) => child.id === nodeId)) return tree;
+
+  for (const child of tree.filterRules) {
+    const found = isFilterGroup(child) ? parentOf(child, nodeId) : undefined;
+
+    if (found !== undefined) return found;
+  }
+
+  return undefined;
+};
+
+/** A copy right after the node, with new ids all the way down so edits keep the two apart. */
+export const duplicateFilterNode = (tree: FilterGroup, nodeId: string): FilterGroup =>
+  replaceFilterNode(tree, nodeId, (node) => [node, withFreshIds(node)]);
+
+/** Whether the node can go into a new group without passing MAX_FILTER_DEPTH. */
+export const canGroupFilterNode = (tree: FilterGroup, nodeId: string): boolean => {
+  const parent = parentOf(tree, nodeId);
+  const node = parent?.filterRules.find((child) => child.id === nodeId);
+
+  return parent !== undefined && node !== undefined && filterGroupDepth(tree, parent.id) + 1 + groupHeight(node) <= MAX_FILTER_DEPTH;
+};
+
+/** Turn a rule into a group, or wrap a group in one: a new group holding the node, in its place. */
+export const groupFilterNode = (tree: FilterGroup, nodeId: string, group: Omit<FilterGroup, 'filterRules'>): FilterGroup => {
+  if (!canGroupFilterNode(tree, nodeId)) return tree;
+
+  return replaceFilterNode(tree, nodeId, (node) => [{ ...group, filterRules: [node] }]);
+};
+
+/** A group of one item becomes that item. A bigger group stays, so no rule is lost. */
+export const unwrapFilterGroup = (tree: FilterGroup, groupId: string): FilterGroup => {
+  const group = parentOf(tree, groupId)?.filterRules.find((child) => child.id === groupId);
+
+  if (group === undefined || !isFilterGroup(group) || group.filterRules.length !== 1) return tree;
+
+  return replaceFilterNode(tree, groupId, () => group.filterRules);
+};
+
 export { withEntryIds } from '../../shared/database/view-changes';

@@ -409,15 +409,70 @@ describe('DatabaseViewControls', () => {
       }));
     });
 
-    it('deletes the rule from its ⋯ flyout', () => {
+    const rowsOf = (menu: string): Array<[string | undefined, boolean]> => [...(q(menu)?.querySelectorAll('[data-blok-database-panel-row]') ?? [])]
+      .map((row) => [text(row.querySelector('[data-blok-database-panel-label]')), row.hasAttribute('data-danger')]);
+
+    // notion-motion.md Round 19 §1 (r19-adv-rulemore.raw): 150.8 wide under the ⋯; Remove (red), Duplicate, Turn into group.
+    it('opens the rule ⋯ as Remove, Duplicate and Turn into group', () => {
+      const { ruleId } = openAdvanced();
+
+      click(`database-filter-rule-more-${ruleId()}`);
+
+      expect(panelDepthIsOne()).toBe(true);
+      expect(q('database-filter-rule-more-menu')?.style.width).toBe('150.8px');
+      expect(rowsOf('database-filter-rule-more-menu')).toEqual([
+        ['tools.database.filterRemove', true],
+        ['tools.database.filterDuplicate', false],
+        ['tools.database.filterTurnIntoGroup', false],
+      ]);
+    });
+
+    it('removes, duplicates and groups the rule from its ⋯', () => {
       const { ruleId, controls, saved } = openAdvanced();
       const id = ruleId();
+      const rules = (): NonNullable<DatabaseViewConfig['filterTree']>['filterRules'] => controls.effective(saved.view).filterTree?.filterRules ?? [];
 
       click(`database-filter-rule-more-${id}`);
-      expect(panelDepthIsOne()).toBe(true);
-      click('database-filter-delete');
+      click('database-filter-duplicate');
+      expect(rules()).toHaveLength(2);
+      expect(rules()[1]).toEqual(expect.objectContaining({ propertyId: 'title', operator: 'contains' }));
+      expect(rules()[1].id).not.toBe(id);
 
-      expect(controls.effective(saved.view).filterTree?.filterRules).toEqual([]);
+      click(`database-filter-rule-more-${id}`);
+      click('database-filter-turn-into-group');
+      expect(rules()[0]).toEqual(expect.objectContaining({ filterRules: [expect.objectContaining({ id })] }));
+
+      click(`database-filter-rule-more-${id}`);
+      click('database-filter-remove');
+      expect(rules()[0]).toEqual(expect.objectContaining({ filterRules: [] }));
+    });
+
+    // notion-motion.md Round 19 §1 (r19-adv-groupmore.raw): 232.4 wide; Remove, Duplicate, Turn into filter, Wrap in group.
+    it('gives a group its own ⋯: Remove, Duplicate, Turn into filter and Wrap in group', () => {
+      const { controls, saved } = setup();
+      const inner = { id: 'a', propertyId: 'num', operator: 'is_empty', value: null } as const;
+      const rules = (): NonNullable<DatabaseViewConfig['filterTree']>['filterRules'] => controls.effective(saved.view).filterTree?.filterRules ?? [];
+
+      saved.view = { ...saved.view, filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'g', conjunction: 'or', filterRules: [inner] }] } };
+      controls.refresh();
+      click('database-advanced-pill');
+      click('database-filter-group-more-g');
+
+      expect(q('database-filter-group-more-menu')?.style.width).toBe('232.4px');
+      expect(rowsOf('database-filter-group-more-menu')).toEqual([
+        ['tools.database.filterRemove', true],
+        ['tools.database.filterDuplicate', false],
+        ['tools.database.filterTurnIntoFilter', false],
+        ['tools.database.filterWrapInGroup', false],
+      ]);
+      expect(text(q('database-filter-wrap-in-group')?.querySelector('[data-blok-database-panel-description]'))).toBe('tools.database.filterWrapInGroupDescription');
+
+      click('database-filter-wrap-in-group');
+      expect(rules()[0]).toEqual(expect.objectContaining({ filterRules: [expect.objectContaining({ id: 'g' })] }));
+
+      click('database-filter-group-more-g');
+      click('database-filter-turn-into-filter');
+      expect(rules()[0]).toEqual(expect.objectContaining({ filterRules: [inner] }));
     });
   });
 

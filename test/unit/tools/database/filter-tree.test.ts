@@ -4,11 +4,14 @@ import {
   addFilterGroup,
   addFilterRule,
   countFilterRules,
+  duplicateFilterNode,
   filterGroupDepth,
+  groupFilterNode,
   isFilterGroup,
   removeFilterNode,
   rowMatchesFilterTree,
   setFilterConjunction,
+  unwrapFilterGroup,
   updateFilterRule,
   withEntryIds,
 } from '../../../../src/tools/database/filter-tree';
@@ -133,6 +136,60 @@ describe('filter-tree', () => {
 
       expect(withEntryIds(entries).map((entry) => entry.id)).toEqual(first);
       expect(new Set(first).size).toBe(3);
+    });
+  });
+
+  // notion-motion.md Round 19 §1 (r19-adv-rulemore.raw, r19-adv-groupmore.raw): the ⋯ menus' tree edits.
+  describe('⋯ menu edits', () => {
+    const rule = (id: string): FilterGroup['filterRules'][number] => ({ id, propertyId: 'num', operator: 'equals', value: 1 });
+
+    it('duplicates a rule right after it, with a fresh id the edits keep apart', () => {
+      const tree = group('root', 'and', [rule('a'), rule('b')]);
+      const next = duplicateFilterNode(tree, 'a');
+      const copy = next.filterRules[1];
+
+      expect(next.filterRules.map((node) => node.id)).toEqual(['a', copy.id, 'b']);
+      expect(copy.id).not.toBe('a');
+      expect(updateFilterRule(next, copy.id, { value: 9 }).filterRules[0]).toEqual(rule('a'));
+    });
+
+    it('duplicates a group with fresh ids all the way down', () => {
+      const tree = group('root', 'and', [group('g', 'or', [rule('a'), group('h', 'and', [rule('b')])])]);
+      const next = duplicateFilterNode(tree, 'g');
+      const ids = (node: FilterGroup['filterRules'][number]): string[] => (isFilterGroup(node) ? [node.id, ...node.filterRules.flatMap(ids)] : [node.id]);
+      const copied = ids(next.filterRules[1]);
+
+      expect(next.filterRules).toHaveLength(2);
+      expect(copied).toHaveLength(4);
+      expect(copied.some((id) => ['g', 'h', 'a', 'b'].includes(id))).toBe(false);
+      expect(removeFilterNode(next, copied[2]).filterRules[0]).toEqual(tree.filterRules[0]);
+    });
+
+    it('turns a rule into a group that holds it, in its place', () => {
+      const tree = group('root', 'and', [rule('a'), rule('b')]);
+      const next = groupFilterNode(tree, 'a', { id: 'g', conjunction: 'or' });
+
+      expect(next.filterRules).toEqual([group('g', 'or', [rule('a')]), rule('b')]);
+    });
+
+    it('wraps a group in a new group, but not past the deepest layer', () => {
+      const inner = group('g', 'and', [rule('a')]);
+      const tree = group('root', 'and', [inner]);
+
+      expect(groupFilterNode(tree, 'g', { id: 'w', conjunction: 'or' }).filterRules).toEqual([group('w', 'or', [inner])]);
+      expect(MAX_FILTER_DEPTH).toBe(3);
+      const deep = group('root', 'and', [group('g', 'and', [group('h', 'and', [rule('a')])])]);
+
+      expect(groupFilterNode(deep, 'g', { id: 'w', conjunction: 'or' })).toBe(deep);
+      expect(groupFilterNode(deep, 'a', { id: 'w', conjunction: 'or' })).toBe(deep);
+    });
+
+    it('turns a one-rule group back into its rule, and leaves a bigger group whole', () => {
+      const tree = group('root', 'and', [group('g', 'or', [rule('a')]), group('h', 'or', [rule('b'), rule('c')])]);
+      const next = unwrapFilterGroup(tree, 'g');
+
+      expect(next.filterRules[0]).toEqual(rule('a'));
+      expect(unwrapFilterGroup(next, 'h')).toBe(next);
     });
   });
 });

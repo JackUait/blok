@@ -203,3 +203,51 @@ func (s *Service) effectiveLevelForSession(ctx context.Context, q querier, sessi
 	}
 	return resolve(role, chain), nil
 }
+
+// workspaceLevels résout toutes les pages d'un espace en une passe, et rend aussi
+// la hiérarchie telle que la base la décrit. Interroger la base page par page
+// ferait deux requêtes par page : un espace de mille pages en paierait deux mille
+// à chaque affichage de la barre latérale.
+func (s *Service) workspaceLevels(ctx context.Context, q querier, userID, workspaceID string) (map[string]level, map[string]string, error) {
+	var role string
+	e := q.QueryRow(ctx, `SELECT role FROM memberships WHERE workspace_id=$1 AND user_id=$2`, workspaceID, userID).Scan(&role)
+	if errors.Is(e, pgx.ErrNoRows) {
+		return map[string]level{}, map[string]string{}, nil
+	}
+	if e != nil {
+		return nil, nil, e
+	}
+	rows, e := q.Query(ctx, `SELECT p.id, coalesce(nullif(p.metadata->>'parentId',''),''), p.visibility, coalesce(sh.level,'')
+	  FROM pages p LEFT JOIN page_shares sh ON sh.page_id=p.id AND sh.user_id=$2
+	 WHERE p.workspace_id=$1 AND NOT p.deleted`, workspaceID, userID)
+	if e != nil {
+		return nil, nil, e
+	}
+	defer rows.Close()
+	parents := map[string]string{}
+	nodes := map[string]pageNode{}
+	for rows.Next() {
+		var id, parent, visibility, share string
+		if e = rows.Scan(&id, &parent, &visibility, &share); e != nil {
+			return nil, nil, e
+		}
+		parents[id] = parent
+		nodes[id] = pageNode{ID: id, Visibility: visibility, Share: parseLevel(share)}
+	}
+	if e = rows.Err(); e != nil {
+		return nil, nil, e
+	}
+	levels := make(map[string]level, len(nodes))
+	for id := range nodes {
+		chain := []pageNode{}
+		for current := id; current != ""; current = parents[current] {
+			node, known := nodes[current]
+			if !known || len(chain) >= maxPageDepth {
+				break
+			}
+			chain = append(chain, node)
+		}
+		levels[id] = resolve(role, chain)
+	}
+	return levels, parents, nil
+}

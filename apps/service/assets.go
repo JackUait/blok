@@ -116,10 +116,22 @@ func (s *Service) blokHandler(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+// Un fichier rattaché à une page suit les permissions de cette page : masquer une
+// page ne protège rien si l'URL de son image reste servie à tout l'espace. Un
+// fichier sans page — emoji, couverture d'espace — reste commun aux membres.
 func (s *Service) assetAllowed(r *http.Request, session, name string) bool {
-	var ok bool
-	e := s.DB.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM assets a JOIN memberships m ON m.workspace_id=a.workspace_id JOIN sessions s ON s.user_id=m.user_id WHERE a.name=$1 AND s.id=$2 AND s.expires_at>now())`, name, session).Scan(&ok)
-	return e == nil && ok
+	var document *string
+	var member bool
+	e := s.DB.QueryRow(r.Context(), `SELECT a.document_id, EXISTS(SELECT 1 FROM memberships m JOIN sessions s ON s.user_id=m.user_id WHERE m.workspace_id=a.workspace_id AND s.id=$2 AND s.expires_at>now()) FROM assets a WHERE a.name=$1`, name, session).Scan(&document, &member)
+	if e != nil || !member {
+		return false
+	}
+	if document == nil {
+		return true
+	}
+	granted, e := s.effectiveLevelForSession(r.Context(), s.DB, session, *document)
+	return e == nil && granted >= levelView
 }
 func (s *Service) grant(session, name, expires string) string {
 	mac := hmac.New(sha256.New, []byte(s.Config.InternalSecret))

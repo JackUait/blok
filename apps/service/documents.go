@@ -26,21 +26,48 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 			problem(w, 500, "Read failed")
 			return
 		}
-		rows, e := tx.Query(r.Context(), "SELECT metadata,trashed FROM pages WHERE workspace_id=$1 AND NOT deleted ORDER BY (metadata->>'position')::numeric NULLS LAST,id", ws.ID)
+		levels, parents, e := s.workspaceLevels(r.Context(), tx, u.ID, ws.ID)
+		if e != nil {
+			problem(w, 500, "Read failed")
+			return
+		}
+		rows, e := tx.Query(r.Context(), "SELECT id,metadata,trashed FROM pages WHERE workspace_id=$1 AND NOT deleted ORDER BY (metadata->>'position')::numeric NULLS LAST,id", ws.ID)
 		if e != nil {
 			problem(w, 500, "Read failed")
 			return
 		}
 		pages := []json.RawMessage{}
 		trash := []json.RawMessage{}
+		access := map[string]any{}
 		for rows.Next() {
+			var id string
 			var meta []byte
 			var tr bool
-			if e = rows.Scan(&meta, &tr); e != nil {
+			if e = rows.Scan(&id, &meta, &tr); e != nil {
 				rows.Close()
 				problem(w, 500, "Read failed")
 				return
 			}
+			granted := levels[id]
+			if granted < levelView {
+				continue
+			}
+			entry := map[string]any{"level": granted.String()}
+			// Une page accessible sous un parent qui ne l'est pas ne peut pas
+			// s'afficher sous un nœud que l'appelant ne reçoit pas. Elle remonte,
+			// et le signalement empêche l'enregistrement de lire ce détachement
+			// comme un déplacement vers la racine.
+			if parent := parents[id]; parent != "" && levels[parent] < levelView {
+				detached, failure := detachParent(meta)
+				if failure != nil {
+					rows.Close()
+					problem(w, 500, "Read failed")
+					return
+				}
+				meta = detached
+				entry["sharedRoot"] = true
+			}
+			access[id] = entry
 			if tr {
 				trash = append(trash, json.RawMessage(meta))
 			} else {
@@ -53,7 +80,7 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 			problem(w, 500, "Read failed")
 			return
 		}
-		jsonOut(w, 200, map[string]any{"pages": pages, "trash": trash, "revision": revision})
+		jsonOut(w, 200, map[string]any{"pages": pages, "trash": trash, "revision": revision, "access": access})
 		return
 	}
 	if r.Method != "PUT" {
@@ -121,7 +148,16 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 	for i, p := range all {
 		encoded, _ := json.Marshal(p)
 		id := p["id"].(string)
-		tag, e := tx.Exec(r.Context(), `INSERT INTO pages(id,workspace_id,metadata,trashed) VALUES($1,$2,$3,$4) ON CONFLICT(id) DO UPDATE SET metadata=$3,trashed=$4,deleted=false WHERE pages.workspace_id=$2`, id, ws.ID, encoded, i >= len(in.Pages))
+		// Une page naît ouverte à l'espace quand elle est à la racine, et héritière
+		// sinon. Sans cela une page neuve naîtrait privée sans que personne ne
+		// l'ait demandé — invisible y compris pour son auteur, qui ne détient
+		// encore aucun partage. La visibilité d'une page existante n'est jamais
+		// réécrite ici : l'index transporte l'arborescence, pas les accès.
+		visibility := visInherit
+		if parent, _ := p["parentId"].(string); parent == "" {
+			visibility = visWorkspace
+		}
+		tag, e := tx.Exec(r.Context(), `INSERT INTO pages(id,workspace_id,metadata,trashed,visibility) VALUES($1,$2,$3,$4,$5) ON CONFLICT(id) DO UPDATE SET metadata=$3,trashed=$4,deleted=false WHERE pages.workspace_id=$2`, id, ws.ID, encoded, i >= len(in.Pages), visibility)
 		if e != nil {
 			problem(w, 500, "Save failed")
 			return
@@ -155,8 +191,19 @@ func (s *Service) page(w http.ResponseWriter, r *http.Request, u identity, ws Wo
 		problem(w, 405, "Use Blok collaboration to edit document content")
 		return
 	}
+	// Refuser par 404 : un 403 confirmerait l'existence de la page, ce qui est
+	// déjà une fuite quand elle est privée.
+	granted, e := s.effectiveLevel(r.Context(), s.DB, u.ID, r.PathValue("id"))
+	if e != nil {
+		problem(w, 503, "Database unavailable")
+		return
+	}
+	if granted < levelView {
+		problem(w, 404, "Page not found")
+		return
+	}
 	var content []byte
-	e := s.DB.QueryRow(r.Context(), "SELECT content FROM pages WHERE id=$1 AND workspace_id=$2 AND NOT deleted", r.PathValue("id"), ws.ID).Scan(&content)
+	e = s.DB.QueryRow(r.Context(), "SELECT content FROM pages WHERE id=$1 AND workspace_id=$2 AND NOT deleted", r.PathValue("id"), ws.ID).Scan(&content)
 	if e != nil {
 		problem(w, 404, "Page not found")
 		return
@@ -178,7 +225,16 @@ func (s *Service) ticket(w http.ResponseWriter, r *http.Request, u identity, ws 
 		problem(w, 404, "Page not found")
 		return
 	}
-	s.mintTicket(w, r, u, doc, ws.Role != "viewer")
+	granted, e := s.effectiveLevel(r.Context(), s.DB, u.ID, doc)
+	if e != nil {
+		problem(w, 503, "Database unavailable")
+		return
+	}
+	if granted < levelView {
+		problem(w, 404, "Page not found")
+		return
+	}
+	s.mintTicket(w, r, u, doc, granted >= levelEdit)
 }
 func (s *Service) getTicket(w http.ResponseWriter, r *http.Request) {
 	u, ok := s.require(w, r)
@@ -336,7 +392,8 @@ func (s *Service) duplicate(w http.ResponseWriter, r *http.Request, u identity, 
 		}
 	}
 	var meta []byte
-	if e = tx.QueryRow(r.Context(), "SELECT metadata FROM pages WHERE id=$1 AND workspace_id=$2 AND NOT deleted AND NOT trashed", source, ws.ID).Scan(&meta); e != nil {
+	var sourceVisibility string
+	if e = tx.QueryRow(r.Context(), "SELECT metadata,visibility FROM pages WHERE id=$1 AND workspace_id=$2 AND NOT deleted AND NOT trashed", source, ws.ID).Scan(&meta, &sourceVisibility); e != nil {
 		problem(w, 404, "Source page not found")
 		return
 	}
@@ -352,8 +409,15 @@ func (s *Service) duplicate(w http.ResponseWriter, r *http.Request, u identity, 
 	}
 	metadata["position"] = position
 	meta, _ = json.Marshal(metadata)
-	if _, e = tx.Exec(r.Context(), "INSERT INTO pages(id,workspace_id,metadata,content) VALUES($1,$2,$3,$4)", in.ID, ws.ID, meta, encoded); e != nil {
+	// La copie reprend la visibilité de la source : dupliquer ne doit jamais
+	// élargir un accès. Le duplicateur en reçoit la maîtrise, faute de quoi la
+	// copie d'une page privée naîtrait hors d'atteinte de qui l'a demandée.
+	if _, e = tx.Exec(r.Context(), "INSERT INTO pages(id,workspace_id,metadata,content,visibility) VALUES($1,$2,$3,$4,$5)", in.ID, ws.ID, meta, encoded, sourceVisibility); e != nil {
 		problem(w, 409, "Duplicate page ID already exists")
+		return
+	}
+	if _, e = tx.Exec(r.Context(), "INSERT INTO page_shares(page_id,user_id,level,granted_by) VALUES($1,$2,'full',$2) ON CONFLICT DO NOTHING", in.ID, u.ID); e != nil {
+		problem(w, 500, "Duplicate failed")
 		return
 	}
 	if _, e = tx.Exec(r.Context(), "UPDATE workspaces SET revision=revision+1 WHERE id=$1", ws.ID); e != nil {
@@ -397,4 +461,15 @@ func (s *Service) seed(w http.ResponseWriter, r *http.Request, u identity, ws Wo
 		return
 	}
 	jsonOut(w, 200, map[string]bool{"ok": true})
+}
+
+// detachParent retire le lien de parenté d'une métadonnée de page sans toucher au
+// reste : l'appelant reçoit la page, pas l'existence de son parent.
+func detachParent(meta []byte) ([]byte, error) {
+	var page map[string]any
+	if e := json.Unmarshal(meta, &page); e != nil {
+		return nil, e
+	}
+	page["parentId"] = nil
+	return json.Marshal(page)
 }

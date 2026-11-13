@@ -30,12 +30,8 @@ func (s *Service) initMCP() error {
 		return err
 	}
 	attached, err := blokmcp.Embed(blokmcp.Options{
-		Rooms: rooms,
-		Authorize: func(ctx context.Context, principal, documentID string, write bool) (bool, error) {
-			var allowed bool
-			err := s.DB.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pages p JOIN memberships m ON m.workspace_id=p.workspace_id WHERE p.id=$1 AND m.user_id=$2 AND NOT p.deleted AND NOT p.trashed AND (NOT $3 OR m.role IN ('admin','member')))`, documentID, principal, write).Scan(&allowed)
-			return allowed, err
-		},
+		Rooms:     rooms,
+		Authorize: s.authorizeMCPDocument,
 	}, blokmcp.EmbedOptions{Caller: func(ctx context.Context, _ *mcp.CallToolRequest) (*blokmcp.CallerIdentity, error) {
 		u, ok := ctx.Value(mcpUserKey{}).(identity)
 		if !ok {
@@ -73,6 +69,28 @@ func (s *Service) initMCP() error {
 		sdk.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), mcpUserKey{}, u)))
 	})
 	return nil
+}
+
+// La porte des outils d'édition MCP. Elle est distincte de celle du temps réel
+// et de celle des routes HTTP, et doit répondre comme elles : un jeton MCP porte
+// l'identité de son propriétaire, jamais davantage.
+func (s *Service) authorizeMCPDocument(ctx context.Context, principal, documentID string, write bool) (bool, error) {
+	var trashed bool
+	e := s.DB.QueryRow(ctx, `SELECT trashed FROM pages WHERE id=$1 AND NOT deleted`, documentID).Scan(&trashed)
+	if errors.Is(e, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if e != nil || trashed {
+		return false, e
+	}
+	granted, e := s.effectiveLevel(ctx, s.DB, principal, documentID)
+	if e != nil {
+		return false, e
+	}
+	if write {
+		return granted >= levelEdit, nil
+	}
+	return granted >= levelView, nil
 }
 
 func (s *Service) mcpIdentity(r *http.Request) (identity, error) {
@@ -224,16 +242,24 @@ func (s *Service) mcpListPages(ctx context.Context, req *mcp.CallToolRequest) (*
 	if !ok {
 		return mcpError("Workspace unavailable"), nil
 	}
-	rows, err := s.DB.Query(ctx, `SELECT metadata FROM pages WHERE workspace_id=$1 AND NOT deleted AND NOT trashed ORDER BY (metadata->>'position')::numeric NULLS LAST,id`, ws.ID)
+	levels, _, err := s.workspaceLevels(ctx, s.DB, ctx.Value(mcpUserKey{}).(identity).ID, ws.ID)
+	if err != nil {
+		return mcpError("Could not list pages"), nil
+	}
+	rows, err := s.DB.Query(ctx, `SELECT id,metadata FROM pages WHERE workspace_id=$1 AND NOT deleted AND NOT trashed ORDER BY (metadata->>'position')::numeric NULLS LAST,id`, ws.ID)
 	if err != nil {
 		return mcpError("Could not list pages"), nil
 	}
 	defer rows.Close()
 	pages := []json.RawMessage{}
 	for rows.Next() {
+		var id string
 		var raw json.RawMessage
-		if rows.Scan(&raw) != nil {
+		if rows.Scan(&id, &raw) != nil {
 			return mcpError("Could not list pages"), nil
+		}
+		if levels[id] < levelView {
+			continue
 		}
 		pages = append(pages, raw)
 	}
@@ -284,7 +310,11 @@ func (s *Service) mcpCreatePage(ctx context.Context, req *mcp.CallToolRequest) (
 		parent = args.ParentID
 	}
 	meta, _ := json.Marshal(map[string]any{"id": pageID, "title": args.Title, "parentId": parent, "position": position})
-	if _, err = tx.Exec(ctx, `INSERT INTO pages(id,workspace_id,metadata,content) VALUES($1,$2,$3,$4)`, pageID, ws.ID, meta, []byte(`{"blocks":[]}`)); err != nil {
+	visibility := visInherit
+	if args.ParentID == "" {
+		visibility = visWorkspace
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO pages(id,workspace_id,metadata,content,visibility) VALUES($1,$2,$3,$4,$5)`, pageID, ws.ID, meta, []byte(`{"blocks":[]}`), visibility); err != nil {
 		return mcpError("Could not create page"), nil
 	}
 	if _, err = tx.Exec(ctx, `UPDATE workspaces SET revision=revision+1 WHERE id=$1`, ws.ID); err != nil || tx.Commit(ctx) != nil {

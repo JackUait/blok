@@ -311,9 +311,24 @@ func (s *Service) CanWriteDocument(ctx context.Context, u blokserver.User, doc s
 	return s.authorizeDoc(ctx, u.ID, doc, true)
 }
 func (s *Service) authorizeDoc(ctx context.Context, session, doc string, write bool) (bool, error) {
-	var ok bool
-	e := s.DB.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM sessions s JOIN memberships m ON m.user_id=s.user_id JOIN pages p ON p.workspace_id=m.workspace_id WHERE s.id=$1 AND s.expires_at>now() AND p.id=$2 AND NOT p.deleted AND NOT p.trashed AND (NOT $3 OR m.role IN ('admin','member')))`, session, doc, write).Scan(&ok)
-	return ok, e
+	// La corbeille ferme le temps réel sans être une permission : une page mise à
+	// la corbeille garde ses partages, elle n'est simplement plus éditable.
+	var trashed bool
+	e := s.DB.QueryRow(ctx, `SELECT trashed FROM pages WHERE id=$1 AND NOT deleted`, doc).Scan(&trashed)
+	if errors.Is(e, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if e != nil || trashed {
+		return false, e
+	}
+	granted, e := s.effectiveLevelForSession(ctx, s.DB, session, doc)
+	if e != nil {
+		return false, e
+	}
+	if write {
+		return granted >= levelEdit, nil
+	}
+	return granted >= levelView, nil
 }
 func internalAuth(r *http.Request, secret string) bool {
 	return subtle.ConstantTimeCompare([]byte(r.Header.Get("Authorization")), []byte("Bearer "+secret)) == 1

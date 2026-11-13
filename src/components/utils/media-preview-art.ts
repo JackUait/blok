@@ -338,8 +338,8 @@ const embedScenes: Record<EmbedScene, (id: string) => string> = {
       ${drop(id)}`)}
     ${layer(7, `
       <g id="${id}-f">
-        ${rect('frame', 128, 76, 30, 30, 9)}
-        ${path('tick', 'M135.5 91.5l5 5 10-11')}
+        ${rect('frame', 134, 80, 18, 18, 6)}
+        ${path('tick', 'M138.8 89.2l3 3 5.6-6.2')}
       </g>`)}`,
   code: (id) => {
     const rows: Array<[number, number, boolean]> = [[0, 46, false], [12, 52, true], [12, 38, false], [24, 30, true], [12, 44, false], [0, 22, false]];
@@ -359,10 +359,10 @@ const embedScenes: Record<EmbedScene, (id: string) => string> = {
       ${drop(id)}`)}
     ${layer(7, `
       <g id="${id}-f">
-        ${rect('frame', 124, 74, 46, 26, 9)}
-        ${path('tick', 'M139 81l-6 6 6 6')}
-        ${path('tick', 'M155 81l6 6-6 6')}
-        ${path('tick', 'M149.5 80l-5 14')}
+        ${rect('frame', 128, 74, 40, 22, 6)}
+        ${path('tick', 'M141 80l-5 5 5 5')}
+        ${path('tick', 'M155 80l5 5-5 5')}
+        ${path('tick', 'M150 79l-4 12')}
       </g>`)}`;
   },
   design: (id) => `
@@ -379,7 +379,6 @@ const embedScenes: Record<EmbedScene, (id: string) => string> = {
     ${layer(8, `
       <g id="${id}-f">
         ${path('pointer', 'M138 70v22l6-5.5 4.5 9.5 4-1.8-4.5-9.5h8z')}
-        ${rect('tag', 152, 92, 26, 11, 5.5)}
       </g>`)}`,
   chart: (id) => {
     const bars = [22, 36, 28, 48, 40, 58].map((h, i) => rect('chart-bar', 40 + i * 19, 92 - h, 11, h, 2.5)).join('');
@@ -412,6 +411,7 @@ const embedScenes: Record<EmbedScene, (id: string) => string> = {
         ${path('road road--minor', 'M88 12L112 100')}
         ${path('road road--minor', 'M28 34C60 40 80 30 100 36')}
       </g>
+      ${rect('screen-edge', 32, 16, 136, 80, 6)}
       ${drop(id)}`)}
     ${layer(9, `
       <g id="${id}-f">
@@ -433,10 +433,10 @@ const embedScenes: Record<EmbedScene, (id: string) => string> = {
       ${drop(id)}`)}
     ${layer(7, `
       <g id="${id}-f">
-        ${rect('frame', 110, 80, 62, 22, 7)}
-        ${rect('glyph', 115, 85, 3, 12, 1.5)}
-        ${rect('line line--title', 123, 86, 34, 4, 2)}
-        ${rect('line line--soft', 123, 93, 24, 3, 1.5)}
+        ${rect('frame', 78, 68, 62, 22, 7)}
+        ${rect('glyph', 83, 73, 3, 12, 1.5)}
+        ${rect('line line--title', 91, 74, 34, 4, 2)}
+        ${rect('line line--soft', 91, 81, 24, 3, 1.5)}
       </g>`)}`;
   },
 };

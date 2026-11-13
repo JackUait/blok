@@ -232,8 +232,7 @@
 .blok-media-preview__frame.blok-media-preview__dashed { fill: var(--blok-bg-primary); }
 .blok-media-preview__link { fill: none; stroke-width: 1.6; }
 .blok-media-preview__select { stroke-width: 1.8; }
-.blok-media-preview__button,
-.blok-media-preview__tag { fill: currentColor; stroke: none; opacity: .55; }
+.blok-media-preview__button { fill: currentColor; stroke: none; opacity: .55; }
 .blok-media-preview__band { fill: currentColor; stroke: none; opacity: .22; }
 .blok-media-preview__tick,
 .blok-media-preview__trend { fill: none; stroke-width: 1.8; }

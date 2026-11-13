@@ -26684,7 +26684,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   stroke-width: 1.8;
 }
 
-.blok-media-preview__button, .blok-media-preview__tag {
+.blok-media-preview__button {
   fill: currentColor;
   stroke: none;
   opacity: .55;

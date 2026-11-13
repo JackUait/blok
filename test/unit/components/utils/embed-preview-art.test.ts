@@ -126,6 +126,69 @@ describe('embed preview scenes', () => {
     expect(stage.querySelector('.blok-media-preview__screen-edge')).not.toBeNull();
   });
 
+  interface Box { left: number; top: number; right: number; bottom: number }
+
+  const boxOf = (el: Element | null): Box => ({
+    left: num(el, 'x'),
+    top: num(el, 'y'),
+    right: num(el, 'x') + num(el, 'width'),
+    bottom: num(el, 'y') + num(el, 'height'),
+  });
+
+  const floatTile = (stage: HTMLElement): Box => boxOf(stage.querySelector('[id$="-f"] > rect.blok-media-preview__frame'));
+
+  // A tile that almost touches the card edge reads as a mistake: it sits inside, off the edges.
+  it.each(['form', 'code'] as const)('%s keeps its floating tile inside the card, with the same gap to the side and the bottom', (kind) => {
+    const stage = render(kind);
+    const card = boxOf(stage.querySelector('[id$="-s"]'));
+    const tile = floatTile(stage);
+
+    expect(card.right - tile.right).toBeGreaterThanOrEqual(5);
+    expect(card.bottom - tile.bottom).toBe(card.right - tile.right);
+  });
+
+  it('form keeps the tick tile clear of the fields and the button', () => {
+    const stage = render('form');
+    const tile = floatTile(stage);
+    const parts = Array.from(stage.querySelectorAll('rect.blok-media-preview__screen, rect.blok-media-preview__button')).map(boxOf);
+
+    expect(parts.length).toBeGreaterThan(0);
+    for (const part of parts) {
+      const apart = part.right + 4 <= tile.left || tile.right + 4 <= part.left || part.bottom + 4 <= tile.top || tile.bottom + 4 <= part.top;
+
+      expect(apart).toBe(true);
+    }
+  });
+
+  it('design draws no tag beside the pointer', () => {
+    expect(render('design').querySelector('.blok-media-preview__tag')).toBeNull();
+  });
+
+  it('calendar opens the event chip right under its day, inside the card', () => {
+    const stage = render('calendar');
+    const card = boxOf(stage.querySelector('[id$="-s"]'));
+    const day = boxOf(stage.querySelector('.blok-media-preview__layer > rect.blok-media-preview__glyph'));
+    const chip = floatTile(stage);
+
+    expect(chip.top - day.bottom).toBeGreaterThanOrEqual(2);
+    expect(chip.top - day.bottom).toBeLessThanOrEqual(5);
+    expect(chip.left).toBeLessThanOrEqual(day.left);
+    expect(chip.right).toBeGreaterThan(day.right);
+    expect(card.right - chip.right).toBeGreaterThanOrEqual(5);
+    expect(card.bottom - chip.bottom).toBeGreaterThanOrEqual(5);
+  });
+
+  // Roads and the park are clipped on the screen's edge line, so they cover the inner half of its outline.
+  it('map draws the screen outline again over the roads', () => {
+    const stage = render('map');
+    const clipped = stage.querySelector('g[clip-path]');
+    const edge = stage.querySelector('.blok-media-preview__screen-edge');
+
+    expect(edge).not.toBeNull();
+    expect(clipped?.compareDocumentPosition(edge as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(boxOf(edge)).toEqual(boxOf(stage.querySelector('rect.blok-media-preview__screen')));
+  });
+
   it.each(EMBED_SCENE_KINDS)('%s gives its ids a per-instance suffix', (kind) => {
     const ids = [render(kind), render(kind)]
       .flatMap((stage) => Array.from(stage.querySelectorAll('[id]')).map((el) => el.id));

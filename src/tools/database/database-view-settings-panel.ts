@@ -1473,7 +1473,15 @@ export class ViewSettingsPages {
       button.setAttribute('aria-label', this.t(pin.pinned ? 'groupUnpin' : 'groupPin'));
       button.setAttribute('data-blok-database-group-pin', '');
       button.setAttribute('data-blok-testid', `database-group-pin-${group.key}`);
-      button.innerHTML = pin.pinned ? IconPinFilled : IconPin;
+      // notion-motion.md Round 25 §2 (r25-grp-pinbtn-hover.raw): hover swaps the glyph to the filled pin (database.css).
+      const rest = document.createElement('span');
+      const hover = document.createElement('span');
+
+      rest.setAttribute('data-blok-database-group-pin-glyph', 'rest');
+      rest.innerHTML = pin.pinned ? IconPinFilled : IconPin;
+      hover.setAttribute('data-blok-database-group-pin-glyph', 'hover');
+      hover.innerHTML = IconPinFilled;
+      button.append(rest, hover);
       button.disabled = disabled;
       button.addEventListener('click', pin.onToggle);
       row.append(button);

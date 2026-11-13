@@ -5,7 +5,7 @@ import type { ViewSettingsContext, ViewSettingsStart } from '../../../../src/too
 import type { DatabasePanel } from '../../../../src/tools/database/database-panel';
 import type { ColorRule, DatabaseViewConfig, FilterGroup, FilterRule, PropertyDefinition } from '../../../../src/tools/database/types';
 import { COLOR_RULE_TYPES } from '../../../../src/tools/database/view-data';
-import { IconTable, IconViewBoard } from '../../../../src/components/icons';
+import { IconPin, IconPinFilled, IconTable, IconViewBoard } from '../../../../src/components/icons';
 import { PopoverItemType } from '../../../../src/components/utils/popover/components/popover-item';
 import type { PopoverItemParams } from '../../../../types/utils/popover/popover-item';
 import { PAGE_LIST_ROLLUP } from '../../../../src/shared/database/value-helpers';
@@ -1713,14 +1713,20 @@ describe('view settings panel', () => {
 
     h.open('group');
     const pin = (): Element | null => document.querySelector('[data-blok-testid="database-group-pin-o1"]');
+    const parsed = (svg: string): string => Object.assign(document.createElement('span'), { innerHTML: svg }).innerHTML;
 
     expect(pin()?.nextElementSibling?.getAttribute('data-blok-testid')).toBe('database-group-visible-o1');
     expect(pin()?.getAttribute('aria-label')).toBe('tools.database.groupPin');
+    // notion-motion.md Round 25 §2 (r25-grp-pinbtn-hover.raw): the outline pin swaps to the filled one on hover.
+    expect(pin()?.querySelector('[data-blok-database-group-pin-glyph="rest"]')?.innerHTML).toBe(parsed(IconPin));
+    expect(pin()?.querySelector('[data-blok-database-group-pin-glyph="hover"]')?.innerHTML).toBe(parsed(IconPinFilled));
 
     click('database-group-pin-o1');
 
     expect(h.state.view.pinnedGroups).toEqual([{ id: 'o1' }]);
     expect(pin()?.getAttribute('aria-label')).toBe('tools.database.groupUnpin');
+    // Pinned: the filled pin at rest and on hover.
+    expect(pin()?.querySelector('[data-blok-database-group-pin-glyph="rest"]')?.innerHTML).toBe(parsed(IconPinFilled));
 
     click('database-group-pin-o1');
 

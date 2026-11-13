@@ -15882,9 +15882,31 @@ input[data-blok-database-picker-search]:focus {
   cursor: default;
 }
 
-[data-blok-database-property-eye] svg, [data-blok-database-group-pin] svg {
+[data-blok-database-property-eye] svg {
   width: 20px;
   height: 20px;
+}
+
+[data-blok-database-group-pin] {
+  color: var(--blok-database-table-header-icon);
+  transition: background-color 0.1s ease-in-out;
+}
+
+[data-blok-database-group-pin] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-group-pin-glyph] {
+  display: flex;
+}
+
+[data-blok-database-group-pin-glyph="hover"], [data-blok-database-group-pin]:hover:not(:disabled) > [data-blok-database-group-pin-glyph="rest"] {
+  display: none;
+}
+
+[data-blok-database-group-pin]:hover:not(:disabled) > [data-blok-database-group-pin-glyph="hover"] {
+  display: flex;
 }
 
 [data-blok-database-group-visibility-row][data-hidden] > [data-blok-database-panel-label] {

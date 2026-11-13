@@ -359,4 +359,19 @@ describe('Settings › Group pin button', () => {
   it('sits right against the eye', () => {
     expect(ruleBody(database, '[data-blok-database-group-pin] + [data-blok-database-property-eye]')).toContain('margin-inline-start: calc(-1 * var(--blok-space-2))');
   });
+
+  // notion-motion.md Round 25 §2 (r25-grp-pinbtn-rest.raw, -hover.raw): a 16×16 pin in rgb(142,139,134), fill over 0.1s
+  // ease-in-out, and the glyph swaps to the filled pin on hover.
+  it('draws a 16px pin in the header icon gray that fills on hover', () => {
+    const pin = ruleBody(database, '[data-blok-database-group-pin]');
+
+    expect(pin).toContain('color: var(--blok-database-table-header-icon)');
+    expect(pin).toContain('transition: background-color 0.1s ease-in-out');
+    expect(ruleBody(database, '[data-blok-database-group-pin] svg')).toContain('width: 16px');
+    expect(ruleBody(database, '[data-blok-database-group-pin] svg')).toContain('height: 16px');
+    expect(ruleBody(database, '[data-blok-database-property-eye] svg')).toContain('width: 20px');
+    expect(ruleBody(database, '[data-blok-database-group-pin-glyph="hover"]')).toContain('display: none');
+    expect(ruleBody(database, '[data-blok-database-group-pin]:hover:not(:disabled) > [data-blok-database-group-pin-glyph="rest"]')).toContain('display: none');
+    expect(ruleBody(database, '[data-blok-database-group-pin]:hover:not(:disabled) > [data-blok-database-group-pin-glyph="hover"]')).toContain('display: flex');
+  });
 });

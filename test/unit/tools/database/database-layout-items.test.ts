@@ -163,7 +163,8 @@ describe('database layout items', () => {
     });
 
     // notion-motion.md Round 24 §4 Timeline: a "Separate start and end dates" switch, off, after Show timeline by.
-    it('turns separate start and end dates on with the next date property, and off again', () => {
+    // Round 25 §4: on, Start date and End date replace Show timeline by, both on the same property at first.
+    it('turns separate start and end dates on with the start property as the end, and off again', () => {
       const update = vi.fn();
       const off = flat(timelineLayoutItems(view({ type: 'timeline' }), schema, i18n, update));
       const toggle = find(off, 'tools.database.timelineSeparateDates');
@@ -174,31 +175,34 @@ describe('database layout items', () => {
       expect(toggle.isActive).toBe(false);
       expect(toggle.children).toBeUndefined();
       toggle.onActivate?.();
-      expect(update).toHaveBeenLastCalledWith({ timelineEndBy: 'p-start' });
+      expect(update).toHaveBeenLastCalledWith({ timelineEndBy: 'p-due' });
 
-      const on = flat(timelineLayoutItems(view({ type: 'timeline', timelineEndBy: 'p-start' }), schema, i18n, update));
+      const on = flat(timelineLayoutItems(view({ type: 'timeline', timelineEndBy: 'p-due' }), schema, i18n, update));
 
       expect(find(on, 'tools.database.timelineSeparateDates').isActive).toBe(true);
       find(on, 'tools.database.timelineSeparateDates').onActivate?.();
       expect(update).toHaveBeenLastCalledWith({ timelineEndBy: '' });
     });
 
-    it('lets a separate end property be picked only while the switch is on', () => {
+    it('puts Start date and End date in place of Show timeline by while the switch is on', () => {
       const update = vi.fn();
+      const on = flat(timelineLayoutItems(view({ type: 'timeline', timelineBy: 'p-due', timelineEndBy: 'p-due' }), schema, i18n, update));
 
-      expect(flat(timelineLayoutItems(view({ type: 'timeline' }), schema, i18n, update)).some((item) => item.title === 'tools.database.timelineEndBy')).toBe(false);
-
-      const on = flat(timelineLayoutItems(view({ type: 'timeline', timelineEndBy: 'p-start' }), schema, i18n, update));
-      const endBy = find(on, 'tools.database.timelineEndBy');
-
-      expect(on.map((item) => item.title).indexOf('tools.database.timelineEndBy')).toBe(2);
-      expect(endBy.children?.map((c) => [c.title, c.isActive])).toEqual([['Start', true]]);
+      expect(on.map((item) => item.title).slice(0, 4)).toEqual([
+        'tools.database.dateStart', 'tools.database.dateEnd', 'tools.database.timelineSeparateDates', 'tools.database.timelineShowTable',
+      ]);
+      expect(find(on, 'tools.database.dateStart').children?.map((c) => [c.title, c.isActive])).toEqual([['Due', true], ['Start', false]]);
+      expect(find(on, 'tools.database.dateEnd').children?.map((c) => [c.title, c.isActive])).toEqual([['Due', true], ['Start', false]]);
+      find(find(on, 'tools.database.dateEnd').children ?? [], 'Start').onActivate?.();
+      expect(update).toHaveBeenLastCalledWith({ timelineEndBy: 'p-start' });
+      find(find(on, 'tools.database.dateStart').children ?? [], 'Start').onActivate?.();
+      expect(update).toHaveBeenLastCalledWith({ timelineBy: 'p-start' });
     });
 
-    it('has no switch when no second date property exists', () => {
+    it('offers the switch with only one date property', () => {
       const oneDate = schema.filter((p) => p.id !== 'p-start');
 
-      expect(flat(timelineLayoutItems(view({ type: 'timeline' }), oneDate, i18n, vi.fn())).some((item) => item.title === 'tools.database.timelineSeparateDates')).toBe(false);
+      expect(flat(timelineLayoutItems(view({ type: 'timeline' }), oneDate, i18n, vi.fn())).some((item) => item.title === 'tools.database.timelineSeparateDates')).toBe(true);
     });
 
     it('toggles the table panel', () => {

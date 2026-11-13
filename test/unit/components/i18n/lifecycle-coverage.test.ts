@@ -38,6 +38,9 @@ const CATALOG_ONLY_KEYS = new Set([
   // The board's Layout page says "Fit media", as the gallery does.
   // Kept for public BlokMessageKey compatibility: it shipped in 2.1.0.
   'tools.database.galleryFitImage',
+  // The timeline's "Separate end date" row became Start date and End date.
+  // Kept for public BlokMessageKey compatibility: it shipped in 2.1.0.
+  'tools.database.timelineEndBy',
 ]);
 
 const sourceFiles = (directory: string): string[] => {
@@ -292,7 +295,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2197 + 147 + 565 + 8 closure for all 2917 keys', () => {
+  it('rebuilds a disjoint 2196 + 147 + 565 + 9 closure for all 2917 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -554,7 +557,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: the board's pinned strip calls tools.database.pinnedGroups and groupUnpin by literal.
       // +1: the pinned group modal's search field calls tools.database.searchPlaceholder by literal.
       // -1: tools.database.galleryFitImage is now catalog-only (the board says "Fit media").
-      'executable-literal': 2197,
+      // -1: tools.database.timelineEndBy is now catalog-only (Start date and End date rows).
+      'executable-literal': 2196,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -660,8 +664,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -1: tools.database.searchPlaceholder is now called by literal (the pinned group modal).
       'registered-namespace-compatible': 565,
       // +1: Settings › Group's pin button names itself with groupPin through the panel's tools.database. prefix.
-      // +1: tools.database.galleryFitImage, above.
-      'catalog-only': 8,
+      // +1: tools.database.galleryFitImage, above. +1: tools.database.timelineEndBy, above.
+      'catalog-only': 9,
     });
     expect(
       [...lifecycle.entries()]

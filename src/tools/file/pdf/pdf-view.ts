@@ -13,6 +13,12 @@ const MAX_CANVAS_AREA = 16_777_216;
 const MAX_CANVAS_SIDE = 32_767;
 /** Pages kept drawn on each side of the ones on screen. */
 const NEIGHBOURS = 2;
+/** A pinch counts as over after this long without a move; only then do pages redraw. */
+const GESTURE_REST_MS = 150;
+/** Zoom factor per px of Ctrl+wheel: a trackpad pinch sends a few px per frame. */
+const WHEEL_ZOOM_RATE = 0.01;
+/** A wheel in lines (Firefox with a mouse) moves about this many px per line. */
+const LINE_PX = 16;
 
 /** What the viewer needs from pdf.js besides the document. Both hooks are optional. */
 export interface PdfViewLib {
@@ -250,8 +256,10 @@ export async function mountPdfView(
   };
 
   const visible = new Set<number>();
+  // While a pinch runs the boxes resize at once and the old canvases stretch with them.
+  const gesture: { active: boolean; timer: ReturnType<typeof setTimeout> | undefined } = { active: false, timer: undefined };
   const sync = (): void => {
-    if (visible.size === 0 || state.destroyed) {
+    if (visible.size === 0 || state.destroyed || gesture.active) {
       return;
     }
     const low = Math.min(...visible) - NEIGHBOURS;
@@ -335,6 +343,105 @@ export async function mountPdfView(
     scrollToPage: view.scrollToPage,
   }, pager.pill, chrome);
 
+  const endGesture = (): void => {
+    clearTimeout(gesture.timer);
+    gesture.active = false;
+    sync();
+  };
+
+  /** Zooms to `zoom`, keeping the page point under (clientX, clientY) where it is. */
+  const zoomAround = (zoom: number, clientX: number, clientY: number): void => {
+    if (pager === null) {
+      return;
+    }
+    const frame = scroller.getBoundingClientRect();
+    const x = clientX - frame.left;
+    const y = clientY - frame.top;
+    const before = state.scale;
+    const startTops = tops();
+    const at = scroller.scrollTop + y;
+    const index = startTops.reduce((found, top, i) => (top <= at ? i : found), 0);
+    // Gaps and padding do not scale, so the anchor is a spot within a page.
+    const into = (at - startTops[index]) / (slots[index].height * before);
+    const left = scroller.scrollLeft + x;
+    gesture.active = true;
+    pager.setZoom(zoom);
+    scroller.scrollTop = tops()[index] + into * slots[index].height * state.scale - y;
+    scroller.scrollLeft = left * (state.scale / before) - x;
+    clearTimeout(gesture.timer);
+    gesture.timer = setTimeout(endGesture, GESTURE_REST_MS);
+  };
+
+  const listening = new AbortController();
+  const on = <K extends keyof HTMLElementEventMap>(type: K, handler: (event: HTMLElementEventMap[K]) => void, passive = true): void =>
+    scroller.addEventListener(type, handler, { signal: listening.signal, passive });
+
+  // Chrome and Firefox send a trackpad pinch as a wheel with Ctrl held.
+  on('wheel', (event) => {
+    if (pager === null || !(event.ctrlKey || event.metaKey)) {
+      return;
+    }
+    event.preventDefault();
+    const delta = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? event.deltaY * LINE_PX : event.deltaY;
+    zoomAround(pager.zoom() * Math.exp(-delta * WHEEL_ZOOM_RATE), event.clientX, event.clientY);
+  }, false);
+
+  // Safari sends its own gesture events, with the scale since the pinch began.
+  const safari = { from: 1 };
+  const gestureOf = (event: Event): { scale: number; clientX: number; clientY: number } | null =>
+    'scale' in event && typeof event.scale === 'number' && 'clientX' in event && typeof event.clientX === 'number'
+      && 'clientY' in event && typeof event.clientY === 'number'
+      ? { scale: event.scale, clientX: event.clientX, clientY: event.clientY }
+      : null;
+  scroller.addEventListener('gesturestart', (event) => {
+    event.preventDefault();
+    safari.from = pager?.zoom() ?? 1;
+  }, { signal: listening.signal, passive: false });
+  scroller.addEventListener('gesturechange', (event) => {
+    event.preventDefault();
+    const pinch = gestureOf(event);
+    if (pinch !== null) {
+      zoomAround(safari.from * pinch.scale, pinch.clientX, pinch.clientY);
+    }
+  }, { signal: listening.signal, passive: false });
+  scroller.addEventListener('gestureend', endGesture, { signal: listening.signal });
+
+  // Touch screens: two fingers. One finger still scrolls (touch-action in file.css).
+  const fingers = new Map<number, { x: number; y: number }>();
+  const pinch: { distance: number; zoom: number } = { distance: 0, zoom: 1 };
+  const spread = (): { distance: number; x: number; y: number } => {
+    const [a, b] = [...fingers.values()];
+
+    return { distance: Math.hypot(a.x - b.x, a.y - b.y), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  };
+  on('pointerdown', (event) => {
+    if (event.pointerType !== 'touch') {
+      return;
+    }
+    fingers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (fingers.size === 2) {
+      Object.assign(pinch, { distance: spread().distance, zoom: pager?.zoom() ?? 1 });
+    }
+  });
+  on('pointermove', (event) => {
+    if (!fingers.has(event.pointerId)) {
+      return;
+    }
+    fingers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (fingers.size === 2 && pinch.distance > 0) {
+      const now = spread();
+      zoomAround(pinch.zoom * (now.distance / pinch.distance), now.x, now.y);
+    }
+  });
+  const lift = (event: PointerEvent): void => {
+    if (fingers.delete(event.pointerId) && fingers.size < 2 && pinch.distance > 0) {
+      pinch.distance = 0;
+      endGesture();
+    }
+  };
+  on('pointerup', lift);
+  on('pointercancel', lift);
+
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
       const index = slots.findIndex((slot) => slot.box === entry.target);
@@ -356,6 +463,8 @@ export async function mountPdfView(
       state.destroyed = true;
       find?.destroy();
       observer.disconnect();
+      listening.abort();
+      clearTimeout(gesture.timer);
       slots.forEach((_, i) => free(i));
     },
   };

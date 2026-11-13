@@ -133,6 +133,22 @@ test.describe('PDF preview', () => {
     await expect(dialog).toBeVisible();
   });
 
+  test('Ctrl+wheel zooms the pages, not the page', async ({ page }) => {
+    const dialog = await openPdf(page, 'three-pages.pdf');
+    const first = dialog.getByRole('region', { name: 'Page 1', exact: true });
+    await expect.poll(() => inkedPixels(first)).toBeGreaterThan(100);
+    const before = await first.evaluate((box) => box.getBoundingClientRect().width);
+
+    await first.hover();
+    await page.keyboard.down('Control');
+    await page.mouse.wheel(0, -100);
+    await page.keyboard.up('Control');
+
+    await expect(dialog.locator('[data-role="file-preview-zoom"]')).not.toHaveText('100%');
+    await expect.poll(() => first.evaluate((box) => box.getBoundingClientRect().width)).toBeGreaterThan(before);
+    await expect.poll(() => inkedPixels(first)).toBeGreaterThan(100);
+  });
+
   test('a link inside the PDF scrolls to its page', async ({ page }) => {
     const dialog = await openPdf(page, 'three-pages.pdf');
     const first = dialog.getByRole('region', { name: 'Page 1', exact: true });

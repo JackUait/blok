@@ -28793,6 +28793,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 .blok-file-preview-pdf {
   --blok-pdf-paper: #ffffff;
+  touch-action: pan-x pan-y;
 }
 
 .blok-file-preview-pdf-pages {

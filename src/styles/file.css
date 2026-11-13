@@ -1469,6 +1469,8 @@
    keeps white in both themes, like docx: a page's own colours assume it. */
 .blok-file-preview-pdf {
   --blok-pdf-paper: #ffffff;
+  /* Two fingers reach pdf-view.ts as pointer events, which zoom the pages instead of the page. */
+  touch-action: pan-x pan-y;
 }
 
 .blok-file-preview-pdf-pages {

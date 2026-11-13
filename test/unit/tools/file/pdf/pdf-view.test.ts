@@ -551,4 +551,139 @@ describe('mountPdfView', () => {
     expect(onError).not.toHaveBeenCalled();
     expect(h.pages()[0].querySelector('canvas')?.width).toBeGreaterThan(0);
   });
+
+  describe('pinch and Ctrl+wheel zoom', () => {
+    const zoomText = (h: Harness): string => h.container.querySelector('[data-role="file-preview-zoom"]')?.textContent ?? '';
+    const wheel = (h: Harness, init: WheelEventInit): WheelEvent => {
+      const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, ...init });
+      h.scroller().dispatchEvent(event);
+
+      return event;
+    };
+    const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+    /** jsdom keeps no scroll offset; this one remembers what is set. */
+    const scrollable = (scroller: HTMLElement): { top: number; left: number } => {
+      const at = { top: 0, left: 0 };
+      Object.defineProperty(scroller, 'scrollTop', { configurable: true, get: () => at.top, set: (value: number) => { at.top = value; } });
+      Object.defineProperty(scroller, 'scrollLeft', { configurable: true, get: () => at.left, set: (value: number) => { at.left = value; } });
+
+      return at;
+    };
+
+    it('zooms in on Ctrl+wheel up and keeps the page from scrolling', async () => {
+      const h = harness();
+      await mountPdfView(h.container, fakeDoc(5), {}, h.chrome);
+
+      const event = wheel(h, { deltaY: -20, ctrlKey: true });
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(parseInt(zoomText(h), 10)).toBeGreaterThan(100);
+      expect(parseFloat(h.pages()[0].style.width)).toBeGreaterThan(612 * PX_PER_PT);
+    });
+
+    it('zooms out on Cmd+wheel down', async () => {
+      const h = harness();
+      await mountPdfView(h.container, fakeDoc(5), {}, h.chrome);
+
+      wheel(h, { deltaY: 20, metaKey: true });
+
+      expect(parseInt(zoomText(h), 10)).toBeLessThan(100);
+    });
+
+    it('leaves a plain wheel to scroll', async () => {
+      const h = harness();
+      await mountPdfView(h.container, fakeDoc(5), {}, h.chrome);
+
+      const event = wheel(h, { deltaY: -20 });
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(zoomText(h)).toBe('100%');
+    });
+
+    it('stays between 50% and 200%', async () => {
+      const h = harness();
+      await mountPdfView(h.container, fakeDoc(5), {}, h.chrome);
+
+      wheel(h, { deltaY: -5000, ctrlKey: true });
+      expect(zoomText(h)).toBe('200%');
+      wheel(h, { deltaY: 5000, ctrlKey: true });
+      expect(zoomText(h)).toBe('50%');
+    });
+
+    it('redraws only the pages on screen, once the gesture rests', async () => {
+      const h = harness();
+      const doc = fakeDoc(50);
+      await mountPdfView(h.container, doc, {}, h.chrome);
+      observer().show(1, 1);
+      await settle();
+      doc.renders.length = 0;
+
+      wheel(h, { deltaY: -10, ctrlKey: true });
+      wheel(h, { deltaY: -10, ctrlKey: true });
+      await settle();
+      expect(doc.renders).toHaveLength(0);
+
+      await wait(300);
+      expect(renderedPages(doc)).toEqual([1, 2, 3]);
+      expect(doc.renders).toHaveLength(3);
+    });
+
+    it('keeps the point under the pointer in place', async () => {
+      const h = harness();
+      await mountPdfView(h.container, fakeDoc(5), {}, h.chrome);
+      const at = scrollable(h.scroller());
+      at.top = 1100;
+      const page = 792 * PX_PER_PT;
+      // 1200 px down the pages: 1200 - page px into page 2.
+      const into = (1100 + 100 - page) / page;
+
+      wheel(h, { deltaY: -20, ctrlKey: true, clientX: 0, clientY: 100 });
+
+      const scale = parseFloat(h.pages()[1].style.height) / 792;
+      // Without a zoom the anchor holds trivially.
+      expect(scale).toBeGreaterThan(PX_PER_PT);
+      expect(at.top).toBeCloseTo(792 * scale + into * 792 * scale - 100, 5);
+    });
+
+    it('follows a Safari trackpad pinch', async () => {
+      const h = harness();
+      await mountPdfView(h.container, fakeDoc(5), {}, h.chrome);
+
+      const start = Object.assign(new Event('gesturestart', { cancelable: true }), { scale: 1, clientX: 0, clientY: 0 });
+      h.scroller().dispatchEvent(start);
+      const change = Object.assign(new Event('gesturechange', { cancelable: true }), { scale: 1.5, clientX: 0, clientY: 0 });
+      h.scroller().dispatchEvent(change);
+
+      expect(start.defaultPrevented).toBe(true);
+      expect(change.defaultPrevented).toBe(true);
+      expect(zoomText(h)).toBe('150%');
+    });
+
+    it('follows a two-finger pinch', async () => {
+      const h = harness();
+      await mountPdfView(h.container, fakeDoc(5), {}, h.chrome);
+      const touch = (type: string, pointerId: number, clientX: number): void => {
+        h.scroller().dispatchEvent(Object.assign(new Event(type, { bubbles: true, cancelable: true }), { pointerId, pointerType: 'touch', clientX, clientY: 0 }));
+      };
+
+      touch('pointerdown', 1, 100);
+      touch('pointerdown', 2, 200);
+      touch('pointermove', 2, 300);
+      expect(zoomText(h)).toBe('200%');
+
+      touch('pointerup', 2, 300);
+      touch('pointermove', 1, 0);
+      expect(zoomText(h)).toBe('200%');
+    });
+
+    it('ignores the wheel after destroy()', async () => {
+      const h = harness();
+      const view = await mountPdfView(h.container, fakeDoc(5), {}, h.chrome);
+
+      view.destroy();
+      wheel(h, { deltaY: -20, ctrlKey: true });
+
+      expect(zoomText(h)).toBe('100%');
+    });
+  });
 });

@@ -109,11 +109,12 @@ interface Mounted {
   speedWrap: HTMLElement;
   menu: HTMLElement;
   readout: HTMLElement;
-  sliderRow: HTMLElement;
+  stepperRow: HTMLElement;
+  wire: HTMLElement;
   slider: HTMLInputElement;
   steppers: HTMLButtonElement[];
-  chipRow: HTMLElement;
-  chips: HTMLButtonElement[];
+  presetRow: HTMLElement;
+  presets: HTMLButtonElement[];
   loop: HTMLButtonElement;
 }
 
@@ -149,11 +150,12 @@ const mount = (options: MountOptions): Mounted => {
     speedWrap: must<HTMLElement>(root, '.blok-audio-controls__speed-wrap'),
     menu: must<HTMLElement>(root, '.blok-audio-controls__speed-menu'),
     readout: must<HTMLElement>(root, '.blok-audio-controls__speed-readout'),
-    sliderRow: must<HTMLElement>(root, '.blok-audio-controls__speed-slider-row'),
+    stepperRow: must<HTMLElement>(root, '.blok-audio-controls__speed-stepper'),
+    wire: must<HTMLElement>(root, '.blok-audio-controls__speed-wire'),
     slider: must<HTMLInputElement>(root, '.blok-audio-controls__speed-slider'),
     steppers: [...root.querySelectorAll<HTMLButtonElement>('.blok-audio-controls__speed-step')],
-    chipRow: must<HTMLElement>(root, '.blok-audio-controls__speed-chips'),
-    chips: [...root.querySelectorAll<HTMLButtonElement>('.blok-audio-controls__speed-chip')],
+    presetRow: must<HTMLElement>(root, '.blok-audio-controls__speed-presets'),
+    presets: [...root.querySelectorAll<HTMLButtonElement>('.blok-audio-controls__speed-preset')],
     loop: must<HTMLButtonElement>(root, '[data-role="audio-loop"]'),
   };
 };
@@ -289,16 +291,19 @@ describe('attachControls — rendered contract', () => {
     ui.handle.destroy();
   });
 
-  it('renders the speed menu rows: readout, steppers around the slider, then the presets', () => {
+  it('renders the speed menu rows: steppers around the readout, the wire, then the presets', () => {
     const ui = mount({ media: makeMedia() });
 
-    expect([...ui.menu.children]).toStrictEqual([ui.readout, ui.sliderRow, ui.chipRow]);
+    expect([...ui.menu.children]).toStrictEqual([ui.stepperRow, ui.wire, ui.presetRow]);
     expect(ui.readout.className).toBe('blok-audio-controls__speed-readout');
     expect(ui.readout.getAttribute('aria-hidden')).toBe('true');
     expect(ui.readout.textContent).toBe('1×');
+    expect([...ui.readout.children].map((child) => child.className))
+      .toStrictEqual(['blok-audio-controls__speed-readout-digits', 'blok-audio-controls__speed-readout-unit']);
 
-    expect(ui.sliderRow.className).toBe('blok-audio-controls__speed-slider-row');
-    expect([...ui.sliderRow.children]).toStrictEqual([ui.steppers[0], ui.slider, ui.steppers[1]]);
+    expect(ui.stepperRow.className).toBe('blok-audio-controls__speed-stepper');
+    expect([...ui.stepperRow.children]).toStrictEqual([ui.steppers[0], ui.readout, ui.steppers[1]]);
+    expect(ui.wire.contains(ui.slider)).toBe(true);
     expect(ui.steppers.map((step) => step.type)).toStrictEqual(['button', 'button']);
     expect(ui.steppers.map((step) => step.className))
       .toStrictEqual(['blok-audio-controls__speed-step', 'blok-audio-controls__speed-step']);
@@ -308,9 +313,10 @@ describe('attachControls — rendered contract', () => {
       .toStrictEqual([iconMarkup(IconMinus), iconMarkup(IconPlus)]);
     expect(ui.steppers.map((step) => step.disabled)).toStrictEqual([false, false]);
 
-    expect(ui.chipRow.className).toBe('blok-audio-controls__speed-chips');
-    expect(ui.chips.map((chip) => chip.textContent)).toStrictEqual(['0.5×', '1×', '1.5×', '2×']);
-    expect(ui.chips.map((chip) => chip.type)).toStrictEqual(['button', 'button', 'button', 'button']);
+    expect(ui.presetRow.className).toBe('blok-audio-controls__speed-presets');
+    expect(ui.presets.map((preset) => preset.className)).toStrictEqual(ui.presets.map(() => 'blok-audio-controls__speed-preset'));
+    expect(ui.presets.map((preset) => preset.textContent)).toStrictEqual(['0.25×', '0.5×', '1×', '1.5×', '2×']);
+    expect(ui.presets.map((preset) => preset.type)).toStrictEqual(ui.presets.map(() => 'button'));
     ui.handle.destroy();
   });
 
@@ -325,8 +331,6 @@ describe('attachControls — rendered contract', () => {
     expect(ui.slider.className).toBe('blok-audio-controls__speed-slider');
     expect(ui.slider.getAttribute('aria-label')).toBe('Playback speed');
     expect(ui.slider.getAttribute('aria-valuetext')).toBe('1×');
-    // audio.css paints the elapsed fill from this property; any other name freezes it.
-    expect(ui.slider.style.getPropertyValue('--blok-audio-speed-pct')).toBe('42.857142857142854%');
     ui.handle.destroy();
   });
 
@@ -892,19 +896,18 @@ describe('attachControls — speed menu', () => {
 });
 
 describe('attachControls — playback speed', () => {
-  it('applies a preset chip to the element, the readout, the slider and storage', () => {
+  it('applies a preset to the element, the readout, the slider and storage', () => {
     const storage = memoryStorage();
     const media = makeMedia();
     const ui = mount({ media, storage });
 
     ui.gear.click();
-    ui.chips[3].click();
+    ui.presets[4].click();
 
     expect(media.playbackRate).toBe(2);
     expect(ui.readout.textContent).toBe('2×');
     expect(ui.slider.value).toBe('2');
     expect(ui.slider.getAttribute('aria-valuetext')).toBe('2×');
-    expect(ui.slider.style.getPropertyValue('--blok-audio-speed-pct')).toBe('100%');
     expect(ui.steppers[0].disabled).toBe(false);
     expect(ui.steppers[1].disabled).toBe(true);
     expect(storage.entries.get(RATE_KEY)).toBe('2');
@@ -912,15 +915,14 @@ describe('attachControls — playback speed', () => {
     ui.handle.destroy();
   });
 
-  it('applies the slowest chip and paints the fill down the track', () => {
+  it('applies a slow preset', () => {
     const media = makeMedia();
     const ui = mount({ media });
 
-    ui.chips[0].click();
+    ui.presets[1].click();
 
     expect(media.playbackRate).toBe(0.5);
     expect(ui.readout.textContent).toBe('0.5×');
-    expect(ui.slider.style.getPropertyValue('--blok-audio-speed-pct')).toBe('14.285714285714285%');
     expect(ui.steppers[0].disabled).toBe(false);
     ui.handle.destroy();
   });
@@ -933,7 +935,6 @@ describe('attachControls — playback speed', () => {
 
     expect(media.playbackRate).toBe(0.25);
     expect(ui.readout.textContent).toBe('0.25×');
-    expect(ui.slider.style.getPropertyValue('--blok-audio-speed-pct')).toBe('0%');
     expect(ui.steppers[0].disabled).toBe(true);
     expect(ui.steppers[1].disabled).toBe(false);
     ui.handle.destroy();
@@ -974,7 +975,6 @@ describe('attachControls — playback speed', () => {
     expect(ui.slider.value).toBe('1.5');
     expect(ui.readout.textContent).toBe('1.5×');
     expect(ui.slider.getAttribute('aria-valuetext')).toBe('1.5×');
-    expect(ui.slider.style.getPropertyValue('--blok-audio-speed-pct')).toBe('71.42857142857143%');
     ui.handle.destroy();
   });
 

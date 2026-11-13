@@ -124,8 +124,8 @@ describe('attachControls', () => {
     const menu = h.element.querySelector('.blok-audio-controls__speed-menu') as HTMLElement;
     expect(menu.hidden).toBe(false);
 
-    const chips = h.element.querySelectorAll('.blok-audio-controls__speed-chip');
-    (chips[3] as HTMLButtonElement).click(); // 2× preset
+    const presets = h.element.querySelectorAll('.blok-audio-controls__speed-preset');
+    (presets[4] as HTMLButtonElement).click(); // 2× preset
 
     expect(media.playbackRate).toBe(2);
     expect(menu.hidden).toBe(false); // stays open — the user may keep adjusting
@@ -206,8 +206,8 @@ describe('attachControls', () => {
     const storage = memoryStorage();
     const a = makeMedia();
     const ha = attachControls({ media: a, figure: document.createElement('figure'), data: { url: 'u' }, storage });
-    const chips = ha.element.querySelectorAll('.blok-audio-controls__speed-chip');
-    (chips[2] as HTMLButtonElement).click(); // 1.5× preset
+    const presets = ha.element.querySelectorAll('.blok-audio-controls__speed-preset');
+    (presets[3] as HTMLButtonElement).click(); // 1.5× preset
     expect(storage.getItem('blok:audio:rate')).toBe('1.5');
     ha.destroy();
 
@@ -423,5 +423,200 @@ describe('attachControls', () => {
 
       expect(media.currentTime).toBe(0);
     });
+  });
+});
+
+// The speed card is the video player's: a big value between − and +, a bead on a
+// wire with a peg per preset, and one plain button under each peg.
+describe('attachControls — speed card', () => {
+  const one = <T extends Element>(root: Element, selector: string): T => {
+    const found = root.querySelector<T>(selector);
+
+    if (!found) throw new Error(`missing ${selector}`);
+
+    return found;
+  };
+  const open = (storage = memoryStorage()) => {
+    const media = makeMedia();
+    const figure = document.createElement('figure');
+
+    document.body.appendChild(figure);
+
+    const h = attachControls({ media, figure, data: { url: 'u' }, storage });
+
+    figure.appendChild(h.element);
+
+    const menu = one<HTMLElement>(h.element, '.blok-audio-controls__speed-menu');
+    const wire = one<HTMLElement>(menu, '.blok-audio-controls__speed-wire');
+    const [dec, inc] = [...menu.querySelectorAll<HTMLButtonElement>('.blok-audio-controls__speed-step')];
+
+    return {
+      h, media, menu, wire, dec, inc,
+      gear: one<HTMLButtonElement>(h.element, '[data-role="audio-speed"]'),
+      stepper: one<HTMLElement>(menu, '.blok-audio-controls__speed-stepper'),
+      readout: one<HTMLElement>(menu, '.blok-audio-controls__speed-readout'),
+      digits: (): HTMLElement[] => [...menu.querySelectorAll<HTMLElement>('.blok-audio-controls__speed-digit')],
+      slider: one<HTMLInputElement>(wire, '.blok-audio-controls__speed-slider'),
+      presetRow: one<HTMLElement>(menu, '.blok-audio-controls__speed-presets'),
+      presets: [...menu.querySelectorAll<HTMLButtonElement>('.blok-audio-controls__speed-preset')],
+    };
+  };
+  const press = (target: Element, type: string): void => {
+    target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, button: 0 }));
+  };
+
+  afterEach(() => {
+    vi.useRealTimers();
+    document.body.replaceChildren();
+  });
+
+  it('stacks the value line, the wire and the presets', () => {
+    const ui = open();
+
+    expect([...ui.menu.children]).toEqual([ui.stepper, ui.wire, ui.presetRow]);
+    expect([...ui.stepper.children]).toEqual([ui.dec, ui.readout, ui.inc]);
+    expect(ui.readout.textContent).toBe('1×');
+    expect(one(ui.readout, '.blok-audio-controls__speed-readout-unit').textContent).toBe('×');
+    expect(ui.wire.querySelectorAll('.blok-audio-controls__wire-peg')).toHaveLength(5);
+    expect(one(ui.wire, '.blok-audio-controls__wire-bead')).toBeTruthy();
+    ui.h.destroy();
+  });
+
+  it('puts one preset under each of the five pegs, evenly spaced', () => {
+    const ui = open();
+
+    expect(ui.presets.map((preset) => preset.textContent)).toEqual(['0.25×', '0.5×', '1×', '1.5×', '2×']);
+    expect(ui.presets.map((preset) => preset.style.getPropertyValue('--blok-audio-speed-at')))
+      .toEqual(['0', '0.25', '0.5', '0.75', '1']);
+    expect(ui.presetRow.dir).toBe('ltr');
+    ui.h.destroy();
+  });
+
+  it('sets the slowest preset and never marks a preset as selected', () => {
+    const ui = open();
+
+    ui.presets[0].click();
+
+    expect(ui.media.playbackRate).toBe(0.25);
+    expect(ui.presets.map((preset) => preset.getAttributeNames().filter((name) => /pressed|selected|checked|current/.test(name))))
+      .toEqual([[], [], [], [], []]);
+    ui.h.destroy();
+  });
+
+  it('follows a drag along the wire', () => {
+    const ui = open();
+
+    ui.gear.click();
+    vi.spyOn(ui.wire, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 240, 62));
+    // 26 + 0.75 * 188: the 1.5× peg in the wire's 240-wide drawing.
+    ui.wire.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, cancelable: true, button: 0, clientX: 167, clientY: 31 }));
+
+    expect(ui.media.playbackRate).toBe(1.5);
+    expect(ui.readout.textContent).toBe('1.5×');
+    ui.h.destroy();
+  });
+
+  it('rolls in only the digits that changed, from the side the value came from', () => {
+    const ui = open();
+
+    expect(ui.digits().map((digit) => digit.getAttribute('data-roll'))).toEqual([null]);
+
+    ui.presets[3].click();
+    expect(ui.digits().map((digit) => [digit.textContent, digit.getAttribute('data-roll')]))
+      .toEqual([['1', null], ['.', 'up'], ['5', 'up']]);
+
+    ui.presets[1].click();
+    expect(ui.digits().map((digit) => [digit.textContent, digit.getAttribute('data-roll')]))
+      .toEqual([['0', 'down'], ['.', null], ['5', null]]);
+    ui.h.destroy();
+  });
+
+  it('steps once on a press and keeps stepping while the button is held', () => {
+    vi.useFakeTimers();
+
+    const ui = open();
+
+    press(ui.inc, 'pointerdown');
+    expect(ui.media.playbackRate).toBe(1.05);
+
+    vi.advanceTimersByTime(349);
+    expect(ui.media.playbackRate).toBe(1.05);
+
+    vi.advanceTimersByTime(1 + 70 * 3);
+    expect(ui.media.playbackRate).toBe(1.2);
+
+    press(ui.inc, 'pointerup');
+    // The click that ends a pointer press must not step again.
+    ui.inc.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+    vi.advanceTimersByTime(1000);
+    expect(ui.media.playbackRate).toBe(1.2);
+    ui.h.destroy();
+  });
+
+  it('ends a hold at the end of the range, when the menu closes and on destroy', () => {
+    vi.useFakeTimers();
+
+    const ui = open();
+
+    ui.presets[4].click();
+    ui.presets[3].click();
+    press(ui.inc, 'pointerdown');
+    vi.advanceTimersByTime(5000);
+    expect(ui.media.playbackRate).toBe(2);
+    expect(vi.getTimerCount()).toBe(0);
+
+    ui.gear.click();
+    press(ui.dec, 'pointerdown');
+    ui.gear.click();
+    vi.advanceTimersByTime(5000);
+    expect(ui.media.playbackRate).toBe(1.95);
+
+    press(ui.dec, 'pointerdown');
+    ui.h.destroy();
+    vi.advanceTimersByTime(5000);
+    expect(ui.media.playbackRate).toBe(1.9);
+  });
+
+  it('moves the wire only while the card is open', () => {
+    vi.useFakeTimers();
+
+    const frames = vi.spyOn(globalThis, 'requestAnimationFrame');
+    const ui = open();
+
+    ui.presets[4].click();
+    expect(frames).not.toHaveBeenCalled();
+
+    ui.gear.click();
+    ui.presets[2].click();
+    expect(frames).toHaveBeenCalled();
+
+    ui.gear.click();
+    frames.mockClear();
+    vi.advanceTimersByTime(1000);
+    ui.presets[4].click();
+    expect(frames).not.toHaveBeenCalled();
+    ui.h.destroy();
+  });
+
+  it('slides the card back inside the window when it would cross an edge', () => {
+    const ui = open();
+
+    Object.defineProperty(document.documentElement, 'clientWidth', { value: 400, configurable: true });
+    const box = vi.spyOn(ui.menu, 'getBoundingClientRect').mockReturnValue(new DOMRect(200, 0, 264, 160));
+
+    ui.gear.click();
+    expect(ui.menu.style.getPropertyValue('translate')).toBe('-72px');
+
+    ui.gear.click();
+    box.mockReturnValue(new DOMRect(-30, 0, 264, 160));
+    ui.gear.click();
+    expect(ui.menu.style.getPropertyValue('translate')).toBe('38px');
+
+    ui.gear.click();
+    box.mockReturnValue(new DOMRect(50, 0, 264, 160));
+    ui.gear.click();
+    expect(ui.menu.style.getPropertyValue('translate')).toBe('');
+    ui.h.destroy();
+    Reflect.deleteProperty(document.documentElement, 'clientWidth');
   });
 });

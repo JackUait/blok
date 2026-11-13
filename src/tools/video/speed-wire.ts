@@ -24,6 +24,8 @@ export interface SpeedWire {
 export interface SpeedWireOptions {
   label: string;
   reducedMotion: boolean;
+  /** Class prefix of the player the wire sits in. Its stylesheet styles the parts under this prefix. */
+  classPrefix?: string;
   onRate(rate: number): void;
 }
 
@@ -54,13 +56,13 @@ const SWELL = { size: 3.5, held: 1.5, decay: 3.2 };
 
 const ids = { next: 0 };
 
-const svg = (name: string, attrs: Record<string, string | number>, role?: string): SVGElement => {
+const svg = (name: string, attrs: Record<string, string | number>, role?: string, prefix?: string): SVGElement => {
   const node = document.createElementNS(SVG_NS, name);
 
   Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, String(value)));
   if (role) {
     node.setAttribute('data-role', role);
-    node.setAttribute('class', `blok-video-controls__${role}`);
+    node.setAttribute('class', `${prefix}__${role}`);
   }
 
   return node;
@@ -81,10 +83,12 @@ const fade = (id: string, from: number, to: number, stops: Array<[number, number
  * The speed control: a bead on a wire with a peg at each preset. The bead follows
  * the pointer, pegs grab it, and the wire bends and hums like a plucked string.
  */
-export const createSpeedWire = ({ label, reducedMotion, onRate }: SpeedWireOptions): SpeedWire => {
+export const createSpeedWire = ({ label, reducedMotion, classPrefix = 'blok-video-controls', onRate }: SpeedWireOptions): SpeedWire => {
   const element = document.createElement('div');
+  const part = (name: string, attrs: Record<string, string | number>, role: string): SVGElement =>
+    svg(name, attrs, role, classPrefix);
 
-  element.className = 'blok-video-controls__speed-wire';
+  element.className = `${classPrefix}__speed-wire`;
   element.setAttribute('data-role', 'speed-wire');
   // Every slider in the player reads left to right, in RTL too.
   element.dir = 'ltr';
@@ -92,7 +96,7 @@ export const createSpeedWire = ({ label, reducedMotion, onRate }: SpeedWireOptio
   const uid = `blok-speed-wire-${ids.next++}`;
   const art = svg('svg', { viewBox: `0 0 ${WIDTH} ${HEIGHT}`, 'aria-hidden': 'true', focusable: 'false' });
 
-  art.setAttribute('class', 'blok-video-controls__speed-wire-art');
+  art.setAttribute('class', `${classPrefix}__speed-wire-art`);
 
   const defs = svg('defs', {});
 
@@ -101,18 +105,18 @@ export const createSpeedWire = ({ label, reducedMotion, onRate }: SpeedWireOptio
     fade(`${uid}-end`, WIDTH - PAD, WIDTH - PAD + TAIL, [[0, 1], [0.45, 0.73], [1, 0]])
   );
 
-  const tailStart = svg('line', { x1: PAD - TAIL, y1: MID, x2: PAD, y2: MID, stroke: `url(#${uid}-start)` }, 'wire-tail-start');
-  const tailEnd = svg('line', { x1: WIDTH - PAD, y1: MID, x2: WIDTH - PAD + TAIL, y2: MID, stroke: `url(#${uid}-end)` }, 'wire-tail-end');
-  const ghost = svg('polyline', { points: '' }, 'wire-ghost');
-  const dim = svg('line', { x1: PAD, y1: MID, x2: WIDTH - PAD, y2: MID }, 'wire-dim');
-  const glow = svg('line', { x1: PAD, y1: MID, x2: PAD, y2: MID }, 'wire-glow');
-  const lit = svg('line', { x1: PAD, y1: MID, x2: PAD, y2: MID }, 'wire-lit');
+  const tailStart = part('line', { x1: PAD - TAIL, y1: MID, x2: PAD, y2: MID, stroke: `url(#${uid}-start)` }, 'wire-tail-start');
+  const tailEnd = part('line', { x1: WIDTH - PAD, y1: MID, x2: WIDTH - PAD + TAIL, y2: MID, stroke: `url(#${uid}-end)` }, 'wire-tail-end');
+  const ghost = part('polyline', { points: '' }, 'wire-ghost');
+  const dim = part('line', { x1: PAD, y1: MID, x2: WIDTH - PAD, y2: MID }, 'wire-dim');
+  const glow = part('line', { x1: PAD, y1: MID, x2: PAD, y2: MID }, 'wire-glow');
+  const lit = part('line', { x1: PAD, y1: MID, x2: PAD, y2: MID }, 'wire-lit');
   const pegs = SPEED_PEGS.map((rate) => {
-    const peg = svg('circle', { cx: PAD + rateToFraction(rate) * SPAN, cy: MID, r: PEG }, 'wire-peg');
+    const peg = part('circle', { cx: PAD + rateToFraction(rate) * SPAN, cy: MID, r: PEG }, 'wire-peg');
 
     return { rate, peg, at: rateToFraction(rate) };
   });
-  const bead = svg('circle', { cx: PAD, cy: MID, r: BEAD }, 'wire-bead');
+  const bead = part('circle', { cx: PAD, cy: MID, r: BEAD }, 'wire-bead');
 
   art.append(defs, tailStart, tailEnd, ghost, dim, glow, lit, ...pegs.map(({ peg }) => peg), bead);
 
@@ -120,7 +124,7 @@ export const createSpeedWire = ({ label, reducedMotion, onRate }: SpeedWireOptio
 
   slider.type = 'range';
   slider.dir = 'ltr';
-  slider.className = 'blok-video-controls__speed-slider';
+  slider.className = `${classPrefix}__speed-slider`;
   slider.setAttribute('data-role', 'speed-slider');
   slider.min = String(SPEED_MIN);
   slider.max = String(SPEED_MAX);
@@ -298,6 +302,7 @@ export const createSpeedWire = ({ label, reducedMotion, onRate }: SpeedWireOptio
   };
   // Wheel and trackpad: the larger axis wins, one step per WHEEL_STEP_PX of travel.
   const onWheel = (event: WheelEvent): void => {
+    if (state.dead) return;
     event.preventDefault();
     state.wheel += Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
 
@@ -307,7 +312,9 @@ export const createSpeedWire = ({ label, reducedMotion, onRate }: SpeedWireOptio
     state.wheel -= steps * WHEEL_STEP_PX;
     onRate(snapRate(state.rate + steps * SPEED_SLIDER_STEP));
   };
-  const onSliderInput = (): void => onRate(Number(slider.value));
+  const onSliderInput = (): void => {
+    if (!state.dead) onRate(Number(slider.value));
+  };
   const dropPointerFocus = (): void => element.removeAttribute('data-pointer-focus');
 
   element.addEventListener('pointerdown', onDown);

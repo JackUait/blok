@@ -134,6 +134,16 @@
   to { opacity: 1; transform: translateY(0) }
 }
 
+@keyframes blok-audio-speed-roll-down {
+  from { opacity: 0; transform: translateY(-0.45em) }
+  to { opacity: 1; transform: translateY(0) }
+}
+
+@keyframes blok-audio-speed-roll-up {
+  from { opacity: 0; transform: translateY(0.45em) }
+  to { opacity: 1; transform: translateY(0) }
+}
+
 @keyframes blok-block-target-pulse {
   0% { background-color: var(--blok-selection) }
   60% { background-color: var(--blok-selection) }

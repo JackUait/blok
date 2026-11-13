@@ -180,6 +180,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/toggle/dom-builder.ts': exempt('cut-v1', 'Toggle arrow opens and closes. View-state control is cut from v1 by D6 (user can revisit).'),
   'ui-file:src/tools/toggle/index.ts': exempt('cut-v1', 'Opens and closes the toggle. View-state control is cut from v1 by D6 (user can revisit).'),
   'ui-file:src/tools/video/controls.ts': exempt('view-only', PLAYBACK),
+  'ui-file:src/tools/video/speed-wire.ts': exempt('view-only', PLAYBACK),
   'ui-file:src/tools/video/ui.ts': cmds(['video.uploadFile', 'video.setSource', 'block.update'], 'Upload/URL and caption: video.caption.'),
 };
 

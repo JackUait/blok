@@ -26,7 +26,7 @@
   /* each ridge is filled with the card colour to hide the rows behind it */
   --blok-audio-ridge-fill: var(--blok-bg-primary);
   --blok-audio-bar-height: 4px;
-  /* lift the slim slider thumbs (volume + speed) off the track so they read as
+  /* lift the slim slider thumb (volume) off the track so they read as
      tactile pucks rather than flat dots */
   --blok-audio-thumb-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
   --blok-audio-ctrl-size: 30px;
@@ -38,7 +38,11 @@
   --blok-audio-bar-head: var(--blok-audio-bar-played);
   --blok-audio-seek-pct: 0%;
   --blok-audio-vol-pct: 100%;
-  --blok-audio-speed-pct: 50%;
+  /* Speed card: where a preset sits along the wire (0 to 1, set per button),
+     the − / + hover fill, and the shadow under the bead. */
+  --blok-audio-speed-at: 0;
+  --blok-audio-speed-step-hover: color-mix(in srgb, var(--blok-text-primary) 14%, transparent);
+  --blok-audio-speed-bead-shadow: rgba(0, 0, 0, 0.28);
 
   /* no-cover ink drop, painted on a canvas by cover-ink.ts. Plain colours only:
      the canvas reads these as strings. */
@@ -434,7 +438,6 @@
 [data-blok-tool="audio"] .blok-audio-controls {
   --blok-audio-seek-pct: 0%;
   --blok-audio-vol-pct: 100%;
-  --blok-audio-speed-pct: 50%;
   grid-column: 1 / -1;
   grid-row: 4;
   display: flex;
@@ -624,124 +627,223 @@
   }
 }
 
-/* ----- speed menu ----------------------------------------- */
+/* ----- speed menu -----------------------------------------
+   The video player's speed card on paper: a big value between − and +, a bead
+   on a wire with a peg per preset, and one plain button under each peg. */
 [data-blok-tool="audio"] .blok-audio-controls__speed-menu {
   position: absolute;
   bottom: calc(100% + var(--blok-space-2));
   inset-inline-start: 0;
-  min-width: 132px;
-  padding: var(--blok-space-2);
+  /* The wire and the presets under it are sized for this width. */
+  width: 264px;
+  max-width: calc(100vw - 2 * var(--blok-space-2));
+  box-sizing: border-box;
+  padding: var(--blok-space-1-5);
   background: var(--blok-bg-primary);
   border: 1px solid var(--blok-border-subtle);
-  border-radius: var(--blok-radius-surface);
-  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-border-width-hairline) - var(--blok-space-2)));
+  border-radius: var(--blok-radius-glass);
   box-shadow: var(--blok-image-shadow-popover);
   z-index: var(--blok-z-popover);
 }
 [data-blok-tool="audio"] .blok-audio-controls__speed-menu[hidden] { display: none; }
 
-[data-blok-tool="audio"] .blok-audio-controls__speed-readout {
-  font-size: var(--blok-font-size-ui-label);
-  font-weight: var(--blok-font-weight-semibold);
-  font-variant-numeric: tabular-nums;
-  color: var(--blok-text-primary);
-  text-align: center;
-  margin-bottom: var(--blok-space-2);
-}
-
-/* − [slider] ＋ — flat icon steppers flank a flexible track (mirrors the video
-   player's speed control). */
-[data-blok-tool="audio"] .blok-audio-controls__speed-slider-row {
+[data-blok-tool="audio"] .blok-audio-controls__speed-stepper {
   display: flex;
   align-items: center;
-  gap: var(--blok-space-1-5);
-  margin-bottom: var(--blok-space-2);
+  justify-content: space-between;
+  padding: var(--blok-space-2) var(--blok-space-2-5) 0;
 }
 [data-blok-tool="audio"] .blok-audio-controls__speed-step {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   border: 0;
-  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
-  background: transparent;
-  color: var(--blok-text-tertiary);
-  cursor: pointer;
-  transition: background var(--blok-duration-base) ease, color var(--blok-duration-base) ease, transform var(--blok-duration-base) ease, opacity var(--blok-duration-base) ease;
-}
-[data-blok-tool="audio"] .blok-audio-controls__speed-step:hover {
-  background: var(--blok-bg-hover);
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-item-hover-bg);
   color: var(--blok-text-primary);
+  cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease, opacity 160ms ease;
 }
-[data-blok-tool="audio"] .blok-audio-controls__speed-step:active {
-  transform: scale(0.92);
-}
+[data-blok-tool="audio"] .blok-audio-controls__speed-step svg { width: 18px; height: 18px; }
+[data-blok-tool="audio"] .blok-audio-controls__speed-step:hover { background: var(--blok-audio-speed-step-hover); }
+[data-blok-tool="audio"] .blok-audio-controls__speed-step:active { transform: scale(0.92); }
 [data-blok-tool="audio"] .blok-audio-controls__speed-step:disabled {
   opacity: 0.35;
   cursor: default;
   transform: none;
 }
-[data-blok-tool="audio"] .blok-audio-controls__speed-step svg {
-  width: 15px;
-  height: 15px;
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="audio"] .blok-audio-controls__speed-step:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
+}
+/* The live value: large and tabular, so the digits don't jitter as they change. */
+[data-blok-tool="audio"] .blok-audio-controls__speed-readout {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--blok-space-0-5);
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--blok-text-primary);
+}
+[data-blok-tool="audio"] .blok-audio-controls__speed-readout-digits { display: inline-flex; }
+[data-blok-tool="audio"] .blok-audio-controls__speed-digit { display: inline-block; }
+[data-blok-tool="audio"] .blok-audio-controls__speed-readout-unit {
+  font-size: 0.52em;
+  font-weight: 500;
+  color: var(--blok-text-secondary);
+}
+/* A changed digit rolls in from the side the value came from. */
+@keyframes blok-audio-speed-roll-up {
+  from { opacity: 0; transform: translateY(0.45em); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes blok-audio-speed-roll-down {
+  from { opacity: 0; transform: translateY(-0.45em); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-blok-tool="audio"] .blok-audio-controls__speed-digit[data-roll="up"] {
+    animation: blok-audio-speed-roll-up 180ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  }
+  [data-blok-tool="audio"] .blok-audio-controls__speed-digit[data-roll="down"] {
+    animation: blok-audio-speed-roll-down 180ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  }
 }
 
+/* The wire. speed-wire.ts (video) draws into a 240 × 62 viewBox; the box keeps
+   that ratio so pegs and preset buttons stay aligned. */
+[data-blok-tool="audio"] .blok-audio-controls__speed-wire {
+  position: relative;
+  aspect-ratio: 240 / 62;
+  margin: 0 var(--blok-space-1-5);
+  color: var(--blok-text-primary);
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+}
+[data-blok-tool="audio"] .blok-audio-controls__speed-wire-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: none;
+}
+[data-blok-tool="audio"] .blok-audio-controls__wire-lit {
+  stroke: currentColor;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+}
+/* The lit wire's glow. A wide faint line: a filter on a flat line has no box to draw in. */
+[data-blok-tool="audio"] .blok-audio-controls__wire-glow {
+  stroke: currentColor;
+  stroke-width: 8;
+  stroke-linecap: round;
+  opacity: 0.14;
+}
+[data-blok-tool="audio"] .blok-audio-controls__wire-dim {
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  opacity: 0.3;
+}
+[data-blok-tool="audio"] .blok-audio-controls__wire-tail-start { stroke-width: 2.25; }
+[data-blok-tool="audio"] .blok-audio-controls__wire-tail-end {
+  stroke-width: 1.5;
+  opacity: 0.3;
+}
+[data-blok-tool="audio"] .blok-audio-controls__wire-ghost {
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+}
+[data-blok-tool="audio"] .blok-audio-controls__wire-ghost[data-active] { opacity: 0.14; }
+/* A peg is a ring: its inside is the card's own surface. */
+[data-blok-tool="audio"] .blok-audio-controls__wire-peg {
+  fill: var(--blok-bg-primary);
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-opacity: 0.45;
+}
+[data-blok-tool="audio"] .blok-audio-controls__wire-peg[data-passed] { stroke-opacity: 1; }
+[data-blok-tool="audio"] .blok-audio-controls__wire-bead {
+  fill: currentColor;
+  filter: drop-shadow(0 2px 4px var(--blok-audio-speed-bead-shadow));
+}
+/* The real range: invisible, covering the wire, keyboard-only. Pointer input goes
+   to the wire (pointer-events: none here). The bead rings only after keyboard use. */
 [data-blok-tool="audio"] .blok-audio-controls__speed-slider {
-  flex: 1 1 auto;
-  min-width: 0;
-  height: var(--blok-audio-bar-height);
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   margin: 0;
   -webkit-appearance: none;
   appearance: none;
-  background: linear-gradient(
-    to right,
-    var(--blok-audio-bar-played) var(--blok-audio-speed-pct),
-    var(--blok-audio-bar) var(--blok-audio-speed-pct)
-  );
-  border-radius: var(--blok-radius-pill);
-  cursor: pointer;
+  background: transparent;
+  pointer-events: none;
 }
 [data-blok-tool="audio"] .blok-audio-controls__speed-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 12px;
-  height: 12px;
-  border-radius: var(--blok-radius-pill);
-  background: var(--blok-text-primary);
-  box-shadow: var(--blok-audio-thumb-shadow);
+  width: 0;
+  height: 0;
 }
 [data-blok-tool="audio"] .blok-audio-controls__speed-slider::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
+  width: 0;
+  height: 0;
   border: 0;
-  border-radius: var(--blok-radius-pill);
-  background: var(--blok-text-primary);
-  box-shadow: var(--blok-audio-thumb-shadow);
+}
+[data-blok-tool="audio"] .blok-audio-controls__speed-slider:focus-visible { outline: none; }
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="audio"] .blok-audio-controls__speed-wire:not([data-pointer-focus]) .blok-audio-controls__speed-slider:focus-visible ~ .blok-audio-controls__speed-wire-art .blok-audio-controls__wire-bead {
+  stroke: var(--blok-focus-ring);
+  stroke-width: 2.5;
+  paint-order: stroke;
 }
 
-[data-blok-tool="audio"] .blok-audio-controls__speed-chips {
-  display: flex;
-  gap: var(--blok-space-1);
+/* Presets: one button under each peg. They set a value and nothing else, so there is
+   no selected state to paint. Every button is the same pill whatever its label. */
+[data-blok-tool="audio"] .blok-audio-controls__speed-presets {
+  position: relative;
+  height: 30px;
+  margin: calc(-1 * var(--blok-space-1-5)) var(--blok-space-1-5) var(--blok-space-1-5);
 }
-[data-blok-tool="audio"] .blok-audio-controls__speed-chip {
-  flex: 1 1 0;
-  padding: var(--blok-space-1) 0;
+[data-blok-tool="audio"] .blok-audio-controls__speed-preset {
+  position: absolute;
+  top: 3px;
+  /* 26 and 188 are the wire's pad and span in its 240-wide viewBox (speed-wire.ts).
+     controls.ts sets --blok-audio-speed-at per button. */
+  left: calc((26 + var(--blok-audio-speed-at) * 188) / 240 * 100%);
+  width: 42px;
+  height: 24px;
+  padding: 0;
   border: 0;
-  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
+  border-radius: var(--blok-radius-pill);
   background: transparent;
   color: var(--blok-text-secondary);
-  font-size: var(--blok-font-size-ui-compact);
-  font-weight: var(--blok-font-weight-medium);
+  font-size: 11.5px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  text-align: center;
   cursor: pointer;
-  transition: background var(--blok-duration-base) ease, color var(--blok-duration-base) ease;
+  transform: translateX(-50%);
+  transition: background 140ms ease, color 140ms ease, transform 160ms cubic-bezier(0.3, 1.35, 0.5, 1);
 }
-[data-blok-tool="audio"] .blok-audio-controls__speed-chip:hover {
-  background: var(--blok-bg-hover);
+[data-blok-tool="audio"] .blok-audio-controls__speed-preset:hover {
+  background: var(--blok-item-hover-bg);
   color: var(--blok-text-primary);
+}
+[data-blok-tool="audio"] .blok-audio-controls__speed-preset:active { transform: translateX(-50%) scale(0.92); }
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="audio"] .blok-audio-controls__speed-preset:focus-visible {
+  outline: none;
+  color: var(--blok-text-primary);
+  box-shadow: inset 0 0 0 1.5px var(--blok-focus-ring);
 }
 
 /* ----- caption row (full-width footer) --------------------

@@ -331,6 +331,24 @@ describe('speed wire', () => {
   });
 });
 
+describe('speed wire — after destroy', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+  afterEach(() => { document.body.innerHTML = ''; vi.restoreAllMocks(); });
+
+  it('reports nothing more from the keyboard, the wheel or the pointer', () => {
+    const h = mount(true);
+
+    h.wire.sync(1);
+    h.wire.destroy();
+    h.wire.slider.value = '2';
+    h.wire.slider.dispatchEvent(new Event('input', { bubbles: true }));
+    h.wire.element.dispatchEvent(new WheelEvent('wheel', { deltaY: 90, bubbles: true, cancelable: true }));
+    h.wire.element.dispatchEvent(at('pointerdown', 0.75));
+
+    expect(h.rates).toEqual([]);
+  });
+});
+
 describe('speed wire — reduced motion', () => {
   beforeEach(() => { vi.clearAllMocks(); vi.useFakeTimers(); });
   afterEach(() => { document.body.innerHTML = ''; vi.useRealTimers(); vi.restoreAllMocks(); });
@@ -348,5 +366,36 @@ describe('speed wire — reduced motion', () => {
     expect(num(part(h, 'wire-bead'), 'cy')).toBe(MID);
     expect(num(part(h, 'wire-bead'), 'r')).toBe(8);
     h.wire.destroy();
+  });
+});
+
+describe('speed wire — class prefix', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  const classes = (wire: SpeedWire): string[] =>
+    [wire.element, wire.slider, ...wire.element.querySelectorAll('svg, [data-role]')]
+      .map((node) => node.getAttribute('class') ?? '');
+
+  it('names its parts for the video player by default', () => {
+    const wire = createSpeedWire({ label: 'Playback speed', reducedMotion: true, onRate: () => undefined });
+
+    expect(classes(wire).every((name) => name.startsWith('blok-video-controls__'))).toBe(true);
+    wire.destroy();
+  });
+
+  it('names every part with the prefix of the player that hosts it', () => {
+    const wire = createSpeedWire({
+      label: 'Playback speed',
+      reducedMotion: true,
+      classPrefix: 'blok-audio-controls',
+      onRate: () => undefined,
+    });
+
+    expect(wire.element.className).toBe('blok-audio-controls__speed-wire');
+    expect(wire.slider.className).toBe('blok-audio-controls__speed-slider');
+    expect(wire.element.querySelector('[data-role="wire-bead"]')?.getAttribute('class')).toBe('blok-audio-controls__wire-bead');
+    expect(classes(wire).every((name) => name.startsWith('blok-audio-controls__'))).toBe(true);
+    wire.destroy();
   });
 });

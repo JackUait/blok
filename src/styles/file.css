@@ -477,6 +477,12 @@
   background: var(--blok-bg-primary);
 }
 
+/* These set a display of their own, which would beat the `hidden` attribute. */
+.blok-file-preview-bar[hidden],
+.blok-file-preview-rail[hidden] {
+  display: none;
+}
+
 /* Status bar under the body: quiet facts on one side, text buttons on the other. */
 .blok-file-preview-bar {
   flex: 0 0 auto;

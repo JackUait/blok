@@ -2,7 +2,7 @@
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { createZip } from '../../../../scripts/lib/zip-writer.mjs';
@@ -502,14 +502,66 @@ test('pptx preview shows the last slide of a deck longer than one batch', async 
 
   const preview = page.getByRole('dialog').locator('[data-role="file-preview-pptx"]');
 
-  await expect(preview).toContainText('Long deck slide 1');
-  const lastSlide = preview.getByText(`Long deck slide ${LONG_DECK_SLIDES}`, { exact: true });
+  const stage = preview.locator('[data-role="file-preview-stage"]');
+  const film = preview.locator('[data-role="file-preview-film"]');
 
-  // Slides after the first batch are drawn on later frames.
-  await expect(lastSlide).toBeAttached();
-  await lastSlide.scrollIntoViewIfNeeded();
-  await expect(lastSlide).toBeInViewport();
-  await expect(preview.getByText(/^Long deck slide \d+$/)).toHaveCount(LONG_DECK_SLIDES);
+  await expect(stage).toContainText('Long deck slide 1');
+  // Slides after the first batch are drawn on later frames; each lands in the filmstrip.
+  await expect(film.getByText(/^Long deck slide \d+$/)).toHaveCount(LONG_DECK_SLIDES);
+
+  const lastThumb = preview.getByRole('button', { name: `Slide ${LONG_DECK_SLIDES}`, exact: true });
+
+  await lastThumb.click();
+  await expect(lastThumb).toBeInViewport();
+  await expect(lastThumb).toHaveAttribute('aria-current', 'true');
+  await expect(stage.getByText(`Long deck slide ${LONG_DECK_SLIDES}`, { exact: true })).toBeInViewport();
+});
+
+test('pptx preview turns slides with the arrow keys and a click on either half', async ({ page }) => {
+  await uploadFixture(page, {
+    name: 'long.pptx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    buffer: await longDeck(),
+  });
+  await page.getByRole('button', { name: /long\.pptx/i }).click();
+
+  const dialog = page.getByRole('dialog');
+  const stage = dialog.locator('[data-role="file-preview-stage"]');
+  const slideBox = dialog.locator('[data-role="file-preview-stage-frame"]');
+  const sheets = stage.locator('[data-role="file-preview-stage-sheet"]');
+  // Two sheets overlap while one slides out; the newest is the last.
+  const shown = sheets.last();
+
+  await expect(shown).toHaveText('Long deck slide 1');
+  await expect(dialog.locator('[data-role="file-preview-meta"]')).toContainText(`${LONG_DECK_SLIDES} slides`);
+
+  await page.keyboard.press('ArrowRight');
+  await expect(shown).toHaveText('Long deck slide 2');
+  // The sheet that slid out is taken away.
+  await expect(sheets).toHaveCount(1);
+
+  await page.keyboard.press('ArrowLeft');
+  await expect(shown).toHaveText('Long deck slide 1');
+
+  const box = await slideBox.boundingBox();
+
+  if (box === null) {
+    throw new Error('the slide frame has no box');
+  }
+  await slideBox.click({ position: { x: box.width * 0.9, y: box.height * 0.9 } });
+  await expect(shown).toHaveText('Long deck slide 2');
+  await slideBox.click({ position: { x: box.width * 0.1, y: box.height * 0.9 } });
+  await expect(shown).toHaveText('Long deck slide 1');
+
+  // The slide fits the stage: nothing of it is cut off.
+  const fit = await slideBox.evaluate((el) => {
+    const inner = el.getBoundingClientRect();
+    const outer = el.parentElement?.getBoundingClientRect();
+
+    return outer !== undefined && inner.left >= outer.left && inner.right <= outer.right && inner.top >= outer.top && inner.bottom <= outer.bottom;
+  });
+
+  expect(fit).toBe(true);
 });
 
 test('pptx preview draws text, tables and charts from a real deck', async ({ page }) => {
@@ -518,11 +570,14 @@ test('pptx preview draws text, tables and charts from a real deck', async ({ pag
 
   const preview = page.getByRole('dialog').locator('[data-role="file-preview-pptx"]');
 
-  await expect(preview).toContainText('Dashboard: Monthly KPIs');
-  await expect(preview.getByRole('cell', { name: 'Revenue' })).toBeVisible();
-  await expect(preview.locator('[data-pptx-chart="category-axis"]')).toContainText('Wed');
+  // The filmstrip holds every real slide; the stage holds a copy of the current one.
+  const film = preview.locator('[data-role="file-preview-film"]');
+
+  await expect(film).toContainText('Dashboard: Monthly KPIs');
+  await expect(film.getByText('Revenue', { exact: true }).first()).toBeVisible();
+  await expect(film.locator('[data-pptx-chart="category-axis"]')).toContainText('Wed');
   // Five weekdays of visits, one bar each.
-  await expect(preview.locator('[data-pptx-chart="series"] rect')).toHaveCount(5);
+  await expect(film.locator('[data-pptx-chart="series"] rect')).toHaveCount(5);
 });
 
 /** sample.pptx plus one embedded picture. */
@@ -554,7 +609,8 @@ test('closing a pptx preview frees the pictures it decoded', async ({ page }) =>
   await page.getByRole('button', { name: /picture\.pptx/i }).click();
 
   const dialog = page.getByRole('dialog');
-  const picture = dialog.locator('[data-role="file-preview-pptx"] img');
+  // The real slide's picture; the stage shows a copy of it with the same url.
+  const picture = dialog.locator('[data-role="file-preview-film"] img');
 
   await expect(picture).toHaveCount(1);
   const pictureUrl = await picture.getAttribute('src') ?? '';
@@ -572,3 +628,194 @@ test('closing a pptx preview frees the pictures it decoded', async ({ page }) =>
   expect(stillReadable).toBe(false);
 });
 
+
+// ---------------------------------------------------------------------------
+// 6. Preview controls: header facts, page and zoom, grid selection, code tools,
+//    log filters, the Markdown outline
+// ---------------------------------------------------------------------------
+
+/** Uploads text as a file and opens its preview. */
+const openTextPreview = async (page: Page, name: string, mimeType: string, text: string): Promise<Locator> => {
+  await uploadFixture(page, { name, mimeType, buffer: Buffer.from(text) });
+  await page.getByRole('button', { name: new RegExp(name.replace('.', '\\.'), 'i') }).click();
+  const dialog = page.getByRole('dialog');
+
+  await expect(dialog).toBeVisible();
+
+  return dialog;
+};
+
+test('preview header names the file type, counts its pages and offers a download', async ({ page }) => {
+  await uploadFixture(page, 'sample.docx');
+  await page.getByRole('button', { name: /sample\.docx/i }).click();
+
+  const dialog = page.getByRole('dialog');
+
+  await expect(dialog.locator('[data-role="file-preview-badge"]')).toHaveText('DOC');
+  await expect(dialog.locator('[data-role="file-preview-meta"]')).toContainText('Word');
+  await expect(dialog.locator('[data-role="file-preview-meta"]')).toContainText('1 page');
+  await expect(dialog.getByRole('link', { name: 'Download' })).toHaveAttribute('download', 'sample.docx');
+});
+
+test('docx preview shows the page in view and zooms the page', async ({ page }) => {
+  await uploadFixture(page, 'sample.docx');
+  await page.getByRole('button', { name: /sample\.docx/i }).click();
+
+  const dialog = page.getByRole('dialog');
+  const paper = dialog.locator('[data-role="file-preview-docx"]');
+  /** Size of the first page on screen. */
+  const pageBox = (): Promise<{ width: number; height: number }> => paper.evaluate((el) => {
+    const box = el.querySelector('section')?.getBoundingClientRect();
+
+    return { width: box?.width ?? 0, height: box?.height ?? 0 };
+  });
+
+  await expect(dialog.locator('[data-role="file-preview-page"]')).toHaveText('Page 1 / 1');
+  await expect(dialog.locator('[data-role="file-preview-zoom"]')).toHaveText('100%');
+  await dialog.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)));
+
+  const widthOf = async (): Promise<number> => (await pageBox()).width;
+  const before = await widthOf();
+
+  // The fixture page is at least as tall as its paper, not as short as its text.
+  expect((await pageBox()).height / before).toBeGreaterThan(1.2);
+
+  await dialog.getByRole('button', { name: 'Zoom in' }).click();
+  await expect(dialog.locator('[data-role="file-preview-zoom"]')).toHaveText('125%');
+  await expect.poll(widthOf).toBeCloseTo(before * 1.25, 0);
+
+  await dialog.getByRole('button', { name: 'Zoom out' }).click();
+  await expect.poll(widthOf).toBeCloseTo(before, 0);
+});
+
+test('csv preview is a grid: dragging over numbers shows their sum, average and count', async ({ page }) => {
+  const dialog = await openTextPreview(page, 'seats.csv', 'text/csv', 'Team,Seats\nDesign,4\nPlatform,12\nMobile,8\n');
+  const status = dialog.locator('[data-role="file-preview-grid-status"]');
+
+  await expect(dialog.locator('[data-role="file-preview-meta"]')).toContainText('3 rows');
+  await expect(dialog.locator('[data-col]')).toHaveText(['A', 'B']);
+  await expect(status).toHaveText('A1');
+
+  await dialog.locator('[data-ref="B2"]').hover();
+  await page.mouse.down();
+  await dialog.locator('[data-ref="B4"]').hover();
+  await page.mouse.up();
+
+  await expect(status).toContainText('B2:B4');
+  await expect(status).toContainText('Sum 24');
+  await expect(status).toContainText('Average 8');
+  await expect(status).toContainText('Count 3');
+  await expect(dialog.locator('[data-selected]')).toHaveCount(3);
+
+  await dialog.getByRole('button', { name: 'Source' }).click();
+  await expect(dialog.locator('[data-role="file-preview-csv-raw"]')).toContainText('Platform,12');
+  await expect(dialog.locator('[data-role="file-preview-csv"]')).toBeHidden();
+  // The status bar belongs to the table.
+  await expect(dialog.locator('[data-role="file-preview-bar"]')).toBeHidden();
+});
+
+test('code preview: the hover band sits on the pointer line, Wrap lines off scrolls sideways, the minimap scrolls the code', async ({ page }) => {
+  const source = [
+    'function first() {',
+    `  const long = '${'x'.repeat(600)}';`,
+    ...Array.from({ length: 300 }, (_, i) => `  const value${i} = ${i};`),
+    '}',
+  ].join('\n');
+  const dialog = await openTextPreview(page, 'long.ts', 'text/plain', source);
+  const pre = dialog.locator('[data-role="file-preview-code"]');
+  const gutter = dialog.locator('[data-role="file-preview-gutter"]');
+  const lineThree = gutter.getByText('3', { exact: true });
+
+  await expect.poll(() => pre.evaluate((el) => el.querySelector('code')?.childElementCount ?? 0)).toBeGreaterThan(0);
+  await dialog.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)));
+  await expect(dialog.locator('[data-role="file-preview-bar"]')).toContainText('303 lines');
+
+  // Hover: the band covers the same rows as the number of the line under the pointer.
+  const third = await lineThree.boundingBox();
+
+  if (third === null) {
+    throw new Error('line 3 has no box');
+  }
+  await page.mouse.move(third.x + 200, third.y + third.height / 2);
+  await expect(lineThree).toHaveAttribute('data-hover', '');
+  const band = await dialog.locator('[data-role="file-preview-line-hover"]').boundingBox();
+
+  expect(Math.abs((band?.y ?? 0) - third.y)).toBeLessThan(1);
+  expect(Math.abs((band?.height ?? 0) - third.height)).toBeLessThan(1);
+
+  // An indented line has a guide strip as wide as its indent; an unindented one has none.
+  const guideWidths = await dialog.locator('[data-role="file-preview-guides"]').evaluate(
+    (el) => Array.from(el.children, (strip) => strip.getBoundingClientRect().width)
+  );
+
+  expect(guideWidths[0]).toBe(0);
+  expect(guideWidths[2]).toBeGreaterThan(0);
+
+  // Wrap lines off: the long line no longer wraps, so the code scrolls sideways.
+  expect(await pre.evaluate((el) => el.scrollWidth - el.clientWidth)).toBe(0);
+  await dialog.getByRole('button', { name: 'Wrap lines' }).click();
+  await expect.poll(() => pre.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeGreaterThan(100);
+  await dialog.getByRole('button', { name: 'Wrap lines' }).click();
+
+  // Minimap: a press near its end scrolls the code down, and the window follows.
+  const map = dialog.locator('[data-role="file-preview-minimap-bars"]');
+  const mapBox = await map.boundingBox();
+
+  if (mapBox === null) {
+    throw new Error('the minimap has no box');
+  }
+  await page.mouse.click(mapBox.x + mapBox.width / 2, mapBox.y + mapBox.height * 0.9);
+  await expect.poll(() => pre.evaluate((el) => el.scrollTop)).toBeGreaterThan(1000);
+  const windowTop = await dialog.locator('[data-role="file-preview-minimap-window"]').evaluate((el) => parseFloat((el as HTMLElement).style.top));
+
+  expect(windowTop).toBeGreaterThan(mapBox.height * 0.5);
+});
+
+test('log preview colours levels and filters to the errors', async ({ page }) => {
+  const log = [
+    '2026-11-13 09:14:02 INFO  server listening on :4444',
+    '2026-11-13 09:14:31 WARN  slow write took=412ms',
+    '2026-11-13 09:16:10 ERROR upload failed status=413',
+  ].join('\n');
+  const dialog = await openTextPreview(page, 'server.log', 'text/plain', log);
+  const lines = dialog.locator('[data-line]');
+
+  await expect(lines).toHaveCount(3);
+  const colourOf = (index: number): Promise<string> =>
+    lines.nth(index).locator('[data-part="level"]').evaluate((el) => getComputedStyle(el).color);
+
+  expect(await colourOf(2)).not.toBe(await colourOf(0));
+  expect(await colourOf(1)).not.toBe(await colourOf(0));
+
+  await dialog.getByRole('button', { name: 'Errors 1' }).click();
+  await expect(lines.nth(0)).toBeHidden();
+  await expect(lines.nth(2)).toBeVisible();
+  // The one line left keeps its number from the file.
+  expect(await lines.nth(2).evaluate((el) => getComputedStyle(el, '::before').content)).toBe('"3"');
+
+  await dialog.getByRole('button', { name: 'All 3' }).click();
+  await expect(lines.nth(0)).toBeVisible();
+});
+
+test('Markdown preview outline opens on hover, follows the scroll and jumps to a heading', async ({ page }) => {
+  const filler = Array.from({ length: 40 }, (_, i) => `Paragraph ${i}.`).join('\n\n');
+  const dialog = await openTextPreview(page, 'guide.md', 'text/markdown', `# Guide\n\n${filler}\n\n## Install\n\n${filler}\n\n## License\n\n${filler}\n`);
+  const rail = dialog.locator('[data-role="file-preview-outline"]');
+  const view = dialog.locator('[data-role="file-preview-md-render"]');
+
+  await expect(rail.getByRole('button')).toHaveCount(3);
+  await expect(rail.locator('[aria-current="true"]')).toHaveText('Guide');
+  // At rest the rail is dashes only.
+  await expect(rail.getByText('Install')).toBeHidden();
+
+  await rail.hover();
+  await expect(rail.getByText('Install')).toBeVisible();
+  await rail.getByRole('button', { name: 'Install' }).click();
+
+  await expect(view.getByRole('heading', { name: 'Install' })).toBeInViewport();
+  await expect(rail.locator('[aria-current="true"]')).toHaveText('Install');
+
+  // The rail belongs to the rendered view only.
+  await dialog.getByRole('button', { name: 'Source' }).click();
+  await expect(rail).toBeHidden();
+});

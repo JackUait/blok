@@ -27201,6 +27201,10 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   background: var(--blok-bg-primary);
 }
 
+.blok-file-preview-bar[hidden], .blok-file-preview-rail[hidden] {
+  display: none;
+}
+
 .blok-file-preview-bar {
   flex: 0 0 auto;
   display: flex;

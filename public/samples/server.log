@@ -1,0 +1,20 @@
+2026-11-13 09:14:02 INFO  server listening on :4444
+2026-11-13 09:14:02 INFO  store opened path=./data/blok.db
+2026-11-13 09:14:07 INFO  room joined doc=q3-review peer=a41f
+2026-11-13 09:14:09 INFO  room joined doc=q3-review peer=7c20
+2026-11-13 09:14:31 WARN  slow write doc=q3-review took=412ms
+2026-11-13 09:15:02 INFO  snapshot saved doc=q3-review ops=318
+2026-11-13 09:15:44 WARN  peer lagging peer=7c20 behind=96
+2026-11-13 09:16:10 ERROR upload failed file=budget.xlsx status=413 limit=25MB
+2026-11-13 09:16:11 INFO  upload retry file=budget.xlsx attempt=1
+2026-11-13 09:16:12 ERROR upload failed file=budget.xlsx status=413 limit=25MB
+2026-11-13 09:17:30 INFO  room left doc=q3-review peer=7c20
+2026-11-13 09:18:05 WARN  slow write doc=roadmap took=388ms
+2026-11-13 09:19:48 INFO  snapshot saved doc=roadmap ops=77
+2026-11-13 09:21:16 WARN  journal near limit used=91%
+2026-11-13 09:21:17 INFO  journal compacted freed=38MB
+2026-11-13 09:24:53 ERROR socket closed peer=a41f code=1006
+2026-11-13 09:24:55 INFO  room joined doc=q3-review peer=a41f
+2026-11-13 09:25:40 WARN  slow write doc=q3-review took=530ms
+2026-11-13 09:26:02 INFO  snapshot saved doc=q3-review ops=402
+2026-11-13 09:30:00 INFO  health ok rooms=2 peers=3

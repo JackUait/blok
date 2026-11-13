@@ -38,9 +38,15 @@ const ref = ([row, column]: Point): string => `${columnName(column)}${row + 1}`;
  * A read-only spreadsheet in `container`: lettered columns, numbered rows, a
  * frozen first row, drag-to-select, and a status bar with the sheet tabs and
  * the Sum, Average and Count of the selected numbers. Only the open sheet is
- * in the DOM.
+ * in the DOM. `tabs: false` (a one-table file) leaves out the tabs and the
+ * sheet count. Returns the status bar, or null when there is no sheet.
  */
-export function mountSheetGrid(container: HTMLElement, sheets: GridSheet[], chrome: PreviewChrome): void {
+export function mountSheetGrid(
+  container: HTMLElement,
+  sheets: GridSheet[],
+  chrome: PreviewChrome,
+  opts: { tabs?: boolean } = {},
+): HTMLElement | null {
   const { labels } = chrome;
   const view = document.createElement('div');
   view.className = 'blok-file-preview-grid-view';
@@ -50,7 +56,7 @@ export function mountSheetGrid(container: HTMLElement, sheets: GridSheet[], chro
   view.appendChild(table);
   container.appendChild(view);
   if (sheets.length === 0) {
-    return;
+    return null;
   }
 
   const status = document.createElement('span');
@@ -227,7 +233,13 @@ export function mountSheetGrid(container: HTMLElement, sheets: GridSheet[], chro
   tabList.className = 'blok-file-preview-grid-tabs';
   tabList.append(...tabs);
 
-  chrome.setFacts([counted(sheets.length, labels.sheetsOne, labels.sheets)]);
-  chrome.setBar(buildBar([tabList, barSpacer(), status]));
+  const withTabs = opts.tabs !== false;
+  if (withTabs) {
+    chrome.setFacts([counted(sheets.length, labels.sheetsOne, labels.sheets)]);
+  }
+  const bar = buildBar(withTabs ? [tabList, barSpacer(), status] : [barSpacer(), status]);
+  chrome.setBar(bar);
   open(0);
+
+  return bar;
 }

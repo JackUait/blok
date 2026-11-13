@@ -212,3 +212,53 @@ export function copyButton(text: () => string, labels: PreviewLabels, icon: stri
     void navigator.clipboard?.writeText(text()).then(done, () => undefined);
   }, { icon });
 }
+
+/**
+ * The segmented switch in the header's centre: a rendered view and its source.
+ * `onChange(true)` asks for the source. Returns `show`, to switch from code.
+ */
+export function mountViewToggle(
+  header: HTMLElement,
+  renderLabel: string,
+  rawLabel: string,
+  onChange: (raw: boolean) => void,
+): (raw: boolean) => void {
+  const toggle = el('div', 'blok-file-preview-toggle');
+  toggle.setAttribute('role', 'group');
+  toggle.setAttribute('aria-label', `${renderLabel} / ${rawLabel}`);
+  const button = (label: string, action: string): HTMLButtonElement => {
+    const node = document.createElement('button');
+    node.type = 'button';
+    node.setAttribute('data-action', action);
+    node.textContent = label;
+
+    return node;
+  };
+  const renderBtn = button(renderLabel, 'preview-render');
+  const rawBtn = button(rawLabel, 'preview-raw');
+  // The pill glides under the active segment. JS measures it: the two labels
+  // differ in width across locales, so a fixed 50/50 split would misalign.
+  const indicator = el('span', 'blok-file-preview-toggle-indicator');
+  indicator.setAttribute('aria-hidden', 'true');
+  toggle.append(indicator, renderBtn, rawBtn);
+  header.appendChild(toggle);
+
+  const show = (raw: boolean): void => {
+    const target = raw ? rawBtn : renderBtn;
+    renderBtn.setAttribute('aria-pressed', String(!raw));
+    rawBtn.setAttribute('aria-pressed', String(raw));
+    indicator.style.width = `${target.offsetWidth}px`;
+    indicator.style.transform = `translateX(${target.offsetLeft}px)`;
+    onChange(raw);
+  };
+  renderBtn.addEventListener('click', () => show(false));
+  rawBtn.addEventListener('click', () => show(true));
+
+  // No transition for the first placement, or the pill slides in from the track's edge on open.
+  indicator.style.transition = 'none';
+  show(false);
+  indicator.getBoundingClientRect();
+  indicator.style.transition = '';
+
+  return show;
+}

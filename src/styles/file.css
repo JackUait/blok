@@ -852,6 +852,49 @@
   }
 }
 
+/* Log files: a numbered row per line. log-view.ts wraps the timestamp, the
+   level word and each `key=` so they can be dimmed or coloured. */
+.blok-file-preview-log {
+  padding-inline: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.blok-file-preview-log-line {
+  position: relative;
+  padding-inline: calc(var(--blok-space-14) + var(--blok-space-5)) var(--blok-space-6);
+}
+/* The number comes from data-line, so a filtered list keeps the file's numbers. */
+.blok-file-preview-log-line::before {
+  content: attr(data-line);
+  position: absolute;
+  inset-inline-start: 0;
+  width: var(--blok-space-14);
+  text-align: right;
+  color: var(--blok-text-tertiary);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+.blok-file-preview-log-line:hover {
+  background: var(--blok-bg-hover);
+}
+.blok-file-preview-log-line [data-part="time"],
+.blok-file-preview-log-line [data-part="key"] {
+  color: var(--blok-text-tertiary);
+}
+.blok-file-preview-log-line [data-part="level"] {
+  font-weight: var(--blok-font-weight-medium);
+  color: var(--blok-text-secondary);
+}
+.blok-file-preview-log-line[data-level="error"] [data-part="level"] {
+  color: var(--blok-color-red-text);
+}
+.blok-file-preview-log-line[data-level="warn"] [data-part="level"] {
+  color: var(--blok-color-orange-text);
+}
+.blok-file-preview-log-line[data-level="error"] {
+  background: color-mix(in srgb, var(--blok-color-red-text) 7%, transparent);
+}
+
 /* Markdown source is prose, not code: soft-wrap it so long lines stop
    clipping off the right edge, and centre it in the same reading column
    as the rendered view so toggling Rendered ⇄ Raw feels continuous. */
@@ -1061,6 +1104,92 @@
 .blok-file-preview-md th {
   background: var(--blok-bg-tertiary);
   font-weight: var(--blok-font-weight-semibold);
+}
+
+/* Outline rail: a dash per heading on the body's edge. md-outline.ts sets
+   data-open while the pointer is over it or the keyboard is in it, and that
+   opens it into the list of headings. */
+.blok-file-preview-rail {
+  position: absolute;
+  top: 50%;
+  inset-inline-end: var(--blok-space-3-5);
+  z-index: var(--blok-z-relative);
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  max-height: 80%;
+  padding: var(--blok-space-2);
+  border-radius: var(--blok-radius-surface);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.blok-file-preview-rail button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--blok-space-2-5);
+  width: 100%;
+  padding: var(--blok-space-1-25) 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: var(--blok-font-size-ui-compact);
+  color: var(--blok-text-secondary);
+  text-align: start;
+  cursor: pointer;
+  appearance: none;
+}
+.blok-file-preview-rail-dash {
+  flex: none;
+  width: 16px;
+  height: 2px;
+  border-radius: var(--blok-radius-mark);
+  background: var(--blok-text-tertiary);
+  transition: background-color var(--blok-duration-standard) var(--blok-ease-standard);
+}
+.blok-file-preview-rail [data-level="3"] .blok-file-preview-rail-dash {
+  width: 10px;
+}
+.blok-file-preview-rail-label {
+  display: none;
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.blok-file-preview-rail [aria-current="true"] {
+  font-weight: var(--blok-font-weight-medium);
+  color: var(--blok-text-primary);
+}
+.blok-file-preview-rail [aria-current="true"] .blok-file-preview-rail-dash {
+  background: var(--blok-text-primary);
+}
+.blok-file-preview-rail button:hover {
+  color: var(--blok-text-primary);
+}
+.blok-file-preview-rail[data-open] {
+  align-items: stretch;
+  padding: var(--blok-space-2) var(--blok-space-3);
+  background: var(--blok-bg-primary);
+  box-shadow: var(--blok-image-shadow-resting), 0 0 0 1px var(--blok-border-subtle);
+}
+.blok-file-preview-rail[data-open] button {
+  justify-content: flex-start;
+}
+.blok-file-preview-rail[data-open] .blok-file-preview-rail-label {
+  display: block;
+}
+.blok-file-preview-rail[data-open] .blok-file-preview-rail-dash {
+  display: none;
+}
+.blok-file-preview-rail[data-open] [data-level="3"] {
+  padding-inline-start: var(--blok-space-3);
+}
+@media (max-width: 700px) {
+  .blok-file-preview-rail {
+    display: none;
+  }
 }
 
 /* Segmented Rendered / Raw switch — a pill track in the header's centre

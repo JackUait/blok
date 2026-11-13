@@ -7,12 +7,15 @@ import { tokenizePrism } from '../code/prism-loader';
 import { applyPrismHighlight, ensurePrismStyles } from '../code/prism-applier';
 import { IconCross, IconDownload, IconLinkExternal } from '../../components/icons';
 import { buildErrorInto } from './preview-error';
-import { renderCode } from './code-view';
+import { renderCode, splitLines } from './code-view';
+import { renderCsv } from './csv-view';
+import { renderLog, renderPlainText } from './log-view';
+import { mountOutline } from './md-outline';
 import { fillOfficeBody, isOfficeKind } from './office-preview';
 import { ScrollHaze } from './preview-scroll-haze';
 import { createSafeObjectUrl } from '../../shared/safe-object-url';
-import { resolvePreviewLabels, type PreviewLabels } from './preview-labels';
-import { describePreviewType, metaText, OVERLAY_ATTR, type PreviewChrome } from './preview-chrome';
+import { counted, resolvePreviewLabels, type PreviewLabels } from './preview-labels';
+import { describePreviewType, isCsv, isLog, metaText, mountViewToggle, OVERLAY_ATTR, type PreviewChrome } from './preview-chrome';
 
 export interface FilePreviewOptions {
   url: string;
@@ -148,45 +151,9 @@ async function fillPdfBlobBody(
   actions.prepend(buildSaveLink(opts, src), open);
 }
 
-function renderPlainText(body: HTMLElement, text: string): void {
+async function renderMarkdown(chrome: PreviewChrome, text: string, opts: FilePreviewOptions): Promise<void> {
+  const { body, labels } = chrome;
   body.replaceChildren();
-  const pre = document.createElement('pre');
-  pre.className = 'blok-file-preview-pre';
-  pre.setAttribute('data-role', 'file-preview-text');
-  pre.textContent = text;
-  body.appendChild(pre);
-}
-
-async function renderMarkdown(
-  body: HTMLElement,
-  header: HTMLElement,
-  text: string,
-  opts: FilePreviewOptions,
-): Promise<void> {
-  body.replaceChildren();
-
-  // The Preview/Source switch lives in the header (centre slot), not in a
-  // band of its own — see buildElements for the header grid.
-  const toolbar = document.createElement('div');
-  toolbar.className = 'blok-file-preview-toggle';
-  toolbar.setAttribute('role', 'group');
-  toolbar.setAttribute('aria-label', `${opts.labels.render ?? 'Preview'} / ${opts.labels.raw ?? 'Source'}`);
-  const renderBtn = document.createElement('button');
-  renderBtn.type = 'button';
-  renderBtn.setAttribute('data-action', 'preview-render');
-  renderBtn.textContent = opts.labels.render ?? 'Preview';
-  const rawBtn = document.createElement('button');
-  rawBtn.type = 'button';
-  rawBtn.setAttribute('data-action', 'preview-raw');
-  rawBtn.textContent = opts.labels.raw ?? 'Source';
-  // Sliding pill that glides under the active segment. Sits behind the labels
-  // (the buttons paint above it) and is measured/moved in JS because the two
-  // labels have different widths across locales — a fixed 50/50 split would
-  // misalign.
-  const indicator = document.createElement('span');
-  indicator.className = 'blok-file-preview-toggle-indicator';
-  indicator.setAttribute('aria-hidden', 'true');
-  toolbar.append(indicator, renderBtn, rawBtn);
 
   const renderView = document.createElement('div');
   renderView.className = 'blok-file-preview-md';
@@ -199,33 +166,19 @@ async function renderMarkdown(
   rawCode.textContent = text;
   rawView.appendChild(rawCode);
   rawView.hidden = true;
-
-  header.appendChild(toolbar);
   body.append(renderView, rawView);
 
-  // Glide the pill to the active segment.
-  const moveIndicator = (raw: boolean): void => {
-    const target = raw ? rawBtn : renderBtn;
-    indicator.style.width = `${target.offsetWidth}px`;
-    indicator.style.transform = `translateX(${target.offsetLeft}px)`;
-  };
-
-  const show = (raw: boolean): void => {
+  // The Preview/Source switch lives in the header (centre slot), not in a
+  // band of its own — see buildElements for the header grid.
+  const views: { rail: HTMLElement | null } = { rail: null };
+  mountViewToggle(chrome.header, labels.render, labels.raw, (raw) => {
     rawView.hidden = !raw;
     renderView.hidden = raw;
-    renderBtn.setAttribute('aria-pressed', String(!raw));
-    rawBtn.setAttribute('aria-pressed', String(raw));
-    moveIndicator(raw);
-  };
-  renderBtn.addEventListener('click', () => show(false));
-  rawBtn.addEventListener('click', () => show(true));
-
-  // Position the pill without a transition so it doesn't slide in from the
-  // track's left edge on open, then restore the transition for later moves.
-  indicator.style.transition = 'none';
-  show(false);
-  indicator.offsetWidth;
-  indicator.style.transition = '';
+    if (views.rail !== null) {
+      views.rail.hidden = raw;
+    }
+  });
+  chrome.setFacts([counted(splitLines(text).length, labels.linesOne, labels.lines)]);
 
   ensurePrismStyles();
   const { markdownToHtml } = await import('../../markdown/markdownToHtml');
@@ -233,6 +186,12 @@ async function renderMarkdown(
     baseUrl: opts.url,
     backToContentLabel: opts.labels.backToContent,
   });
+  if (!chrome.isClosed()) {
+    views.rail = mountOutline(renderView, chrome);
+    if (views.rail !== null) {
+      views.rail.hidden = renderView.hidden;
+    }
+  }
 
   const mdRaw = await tokenizePrism(text, 'markdown');
   if (mdRaw !== null) {
@@ -242,8 +201,6 @@ async function renderMarkdown(
 
 /** Fetch and render a text/code/markdown body, unless the modal was torn down. */
 async function fillTextBody(
-  body: HTMLElement,
-  header: HTMLElement,
   opts: FilePreviewOptions,
   kind: Exclude<PreviewKind, 'pdf'>,
   chrome: PreviewChrome,
@@ -253,18 +210,22 @@ async function fillTextBody(
     return;
   }
   if (!result.ok) {
-    buildErrorInto(body, opts);
+    buildErrorInto(chrome.body, opts);
 
     return;
   }
 
   if (kind === 'markdown') {
-    await renderMarkdown(body, header, result.text, opts);
+    await renderMarkdown(chrome, result.text, opts);
   } else if (kind === 'code') {
     const ext = extOf(opts.fileName ?? opts.url);
     await renderCode(chrome, result.text, extToPrismLang(ext) ?? 'plain');
+  } else if (isCsv(opts)) {
+    renderCsv(chrome, result.text);
+  } else if (isLog(opts)) {
+    renderLog(chrome, result.text);
   } else {
-    renderPlainText(body, result.text);
+    renderPlainText(chrome, result.text);
   }
 }
 
@@ -429,7 +390,7 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
       return fillOfficeBody(body, opts, officeKind, () => state.closed, (release) => releases.push(release), chrome);
     }
     if (textualKind !== null) {
-      return fillTextBody(body, header, opts, textualKind, chrome);
+      return fillTextBody(opts, textualKind, chrome);
     }
 
     return Promise.resolve();

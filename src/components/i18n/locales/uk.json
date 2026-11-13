@@ -1667,6 +1667,7 @@
   "tools.database.placeCurrentLocation": "Поточне розташування",
   "tools.database.dashboardUnavailable": "Дашборди тут поки недоступні.",
   "tools.database.viewTypeDashboard": "Дашборд",
+  "tools.database.tabView": "Подання {layout}",
   "tools.database.tabViewOf": "Подання {layout} бази {database}",
   "tools.database.dashboardAddWidget": "Додати віджет",
   "tools.database.dashboardEmpty": "Додайте діаграми, числа, таблиці та списки.",

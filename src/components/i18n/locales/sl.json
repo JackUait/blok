@@ -1667,6 +1667,7 @@
   "tools.database.placeCurrentLocation": "Trenutna lokacija",
   "tools.database.dashboardUnavailable": "Nadzorne plošče tukaj še niso na voljo.",
   "tools.database.viewTypeDashboard": "Nadzorna plošča",
+  "tools.database.tabView": "Pogled {layout}",
   "tools.database.tabViewOf": "Pogled {layout} za {database}",
   "tools.database.dashboardAddWidget": "Dodaj pripomoček",
   "tools.database.dashboardEmpty": "Dodajte grafikone, števila, tabele in sezname.",

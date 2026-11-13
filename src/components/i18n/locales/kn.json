@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "ಪ್ರಸ್ತುತ ಸ್ಥಳ",
   "tools.database.dashboardUnavailable": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ಗಳು ಇಲ್ಲಿ ಇನ್ನೂ ಲಭ್ಯವಿಲ್ಲ.",
   "tools.database.viewTypeDashboard": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
+  "tools.database.tabView": "{layout} ವೀಕ್ಷಣೆ",
   "tools.database.tabViewOf": "{database} ನ {layout} ವೀಕ್ಷಣೆ",
   "tools.database.dashboardAddWidget": "ವಿಜೆಟ್ ಸೇರಿಸಿ",
   "tools.database.dashboardEmpty": "ಚಾರ್ಟ್‌ಗಳು, ಸಂಖ್ಯೆಗಳು, ಕೋಷ್ಟಕಗಳು ಮತ್ತು ಪಟ್ಟಿಗಳನ್ನು ಸೇರಿಸಿ.",

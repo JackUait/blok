@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "વર્તમાન સ્થાન",
   "tools.database.dashboardUnavailable": "ડેશબોર્ડ હજી અહીં ઉપલબ્ધ નથી.",
   "tools.database.viewTypeDashboard": "ડેશબોર્ડ",
+  "tools.database.tabView": "{layout} દૃશ્ય",
   "tools.database.tabViewOf": "{database} નું {layout} દૃશ્ય",
   "tools.database.dashboardAddWidget": "વિજેટ ઉમેરો",
   "tools.database.dashboardEmpty": "ચાર્ટ, નંબર, કોષ્ટકો અને સૂચિઓ ઉમેરો.",

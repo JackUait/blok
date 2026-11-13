@@ -458,11 +458,14 @@ export class DatabaseTabBar {
     return tab;
   }
 
-  /** notion-motion.md Round 14, Round 15 §A: the name, then "Table view of New database", under the tab. */
+  /**
+   * notion-motion.md Round 14, Round 15 §A: the name, then "Table view of New database", under the tab.
+   * Round 23 §7: a dashboard has no source, so it reads "Dashboard view".
+   */
   private bindTabHint(tab: HTMLElement, view: DatabaseViewConfig): void {
     const { api, sourceTitle } = this.options;
 
-    if (api === undefined || sourceTitle === undefined || view.type === 'dashboard') {
+    if (api === undefined || sourceTitle === undefined) {
       return;
     }
     const layout = api.i18n.t(VIEW_LABEL_KEYS[view.type]);
@@ -470,7 +473,11 @@ export class DatabaseTabBar {
 
     // The title can change while the tabs stay, so the hint is rebuilt on each hover.
     tab.addEventListener('mouseenter', () => {
-      hint.replaceChildren(propertyHint(view.name, api.i18n.t('tools.database.tabViewOf', { layout, database: sourceTitle() })));
+      const detail = view.type === 'dashboard'
+        ? api.i18n.t('tools.database.tabView', { layout })
+        : api.i18n.t('tools.database.tabViewOf', { layout, database: sourceTitle() });
+
+      hint.replaceChildren(propertyHint(view.name, detail));
     });
     onHover(tab, hint, { bare: true, placement: 'bottom' });
   }

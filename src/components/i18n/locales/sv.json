@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "Aktuell plats",
   "tools.database.dashboardUnavailable": "Instrumentpaneler är inte tillgängliga här än.",
   "tools.database.viewTypeDashboard": "Instrumentpanel",
+  "tools.database.tabView": "{layout}-vy",
   "tools.database.tabViewOf": "{layout}-vy av {database}",
   "tools.database.dashboardAddWidget": "Lägg till widget",
   "tools.database.dashboardEmpty": "Lägg till diagram, tal, tabeller och listor.",

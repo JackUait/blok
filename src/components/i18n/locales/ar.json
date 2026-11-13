@@ -1679,6 +1679,7 @@
   "tools.database.placeCurrentLocation": "الموقع الحالي",
   "tools.database.dashboardUnavailable": "لوحات المعلومات غير متاحة هنا بعد.",
   "tools.database.viewTypeDashboard": "لوحة معلومات",
+  "tools.database.tabView": "عرض {layout}",
   "tools.database.tabViewOf": "عرض {layout} من {database}",
   "tools.database.dashboardAddWidget": "إضافة أداة",
   "tools.database.dashboardEmpty": "أضف مخططات وأرقامًا وجداول وقوائم.",

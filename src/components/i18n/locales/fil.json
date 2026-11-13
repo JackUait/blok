@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "Kasalukuyang lokasyon",
   "tools.database.dashboardUnavailable": "Hindi pa available dito ang mga dashboard.",
   "tools.database.viewTypeDashboard": "Dashboard",
+  "tools.database.tabView": "{layout} na view",
   "tools.database.tabViewOf": "{layout} na view ng {database}",
   "tools.database.dashboardAddWidget": "Magdagdag ng widget",
   "tools.database.dashboardEmpty": "Magdagdag ng mga tsart, numero, talahanayan at listahan.",

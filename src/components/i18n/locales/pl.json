@@ -1667,6 +1667,7 @@
   "tools.database.placeCurrentLocation": "Bieżąca lokalizacja",
   "tools.database.dashboardUnavailable": "Pulpity nawigacyjne nie są tu jeszcze dostępne.",
   "tools.database.viewTypeDashboard": "Pulpit",
+  "tools.database.tabView": "Widok {layout}",
   "tools.database.tabViewOf": "Widok {layout} bazy {database}",
   "tools.database.dashboardAddWidget": "Dodaj widżet",
   "tools.database.dashboardEmpty": "Dodaj wykresy, liczby, tabele i listy.",

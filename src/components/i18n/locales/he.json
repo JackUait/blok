@@ -1661,6 +1661,7 @@
   "tools.database.placeCurrentLocation": "המיקום הנוכחי",
   "tools.database.dashboardUnavailable": "לוחות מחוונים עדיין אינם זמינים כאן.",
   "tools.database.viewTypeDashboard": "לוח מחוונים",
+  "tools.database.tabView": "תצוגת {layout}",
   "tools.database.tabViewOf": "תצוגת {layout} של {database}",
   "tools.database.dashboardAddWidget": "הוסף רכיב",
   "tools.database.dashboardEmpty": "הוסף תרשימים, מספרים, טבלאות ורשימות.",

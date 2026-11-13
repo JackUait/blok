@@ -1661,6 +1661,7 @@
   "tools.database.placeCurrentLocation": "Position actuelle",
   "tools.database.dashboardUnavailable": "Les tableaux de bord ne sont pas encore disponibles ici.",
   "tools.database.viewTypeDashboard": "Tableau de bord",
+  "tools.database.tabView": "Vue {layout}",
   "tools.database.tabViewOf": "Vue {layout} de {database}",
   "tools.database.dashboardAddWidget": "Ajouter un widget",
   "tools.database.dashboardEmpty": "Ajoutez des graphiques, des nombres, des tableaux et des listes.",

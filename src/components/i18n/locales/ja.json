@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "現在地",
   "tools.database.dashboardUnavailable": "ダッシュボードはここではまだ利用できません。",
   "tools.database.viewTypeDashboard": "ダッシュボード",
+  "tools.database.tabView": "{layout}ビュー",
   "tools.database.tabViewOf": "{database} の{layout}ビュー",
   "tools.database.dashboardAddWidget": "ウィジェットを追加",
   "tools.database.dashboardEmpty": "グラフ、数値、表、リストを追加します。",

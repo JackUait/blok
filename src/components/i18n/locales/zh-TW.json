@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "目前位置",
   "tools.database.dashboardUnavailable": "此處尚無法使用儀表板。",
   "tools.database.viewTypeDashboard": "儀表板",
+  "tools.database.tabView": "{layout}檢視",
   "tools.database.tabViewOf": "{database} 的{layout}檢視",
   "tools.database.dashboardAddWidget": "新增小工具",
   "tools.database.dashboardEmpty": "新增圖表、數字、表格和清單。",

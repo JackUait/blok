@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "Praegune asukoht",
   "tools.database.dashboardUnavailable": "Armatuurlauad pole siin veel saadaval.",
   "tools.database.viewTypeDashboard": "Armatuurlaud",
+  "tools.database.tabView": "Vaade {layout}",
   "tools.database.tabViewOf": "{database}: vaade {layout}",
   "tools.database.dashboardAddWidget": "Lisa vidin",
   "tools.database.dashboardEmpty": "Lisa diagramme, arve, tabeleid ja loendeid.",

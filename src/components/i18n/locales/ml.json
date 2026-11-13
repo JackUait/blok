@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "നിലവിലെ സ്ഥാനം",
   "tools.database.dashboardUnavailable": "ഡാഷ്ബോർഡുകൾ ഇവിടെ ഇതുവരെ ലഭ്യമല്ല.",
   "tools.database.viewTypeDashboard": "ഡാഷ്ബോർഡ്",
+  "tools.database.tabView": "{layout} കാഴ്ച",
   "tools.database.tabViewOf": "{database} ന്റെ {layout} കാഴ്ച",
   "tools.database.dashboardAddWidget": "വിജറ്റ് ചേർക്കുക",
   "tools.database.dashboardEmpty": "ചാർട്ടുകൾ, നമ്പറുകൾ, പട്ടികകൾ, ലിസ്റ്റുകൾ എന്നിവ ചേർക്കുക.",

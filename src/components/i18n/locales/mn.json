@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "Одоогийн байршил",
   "tools.database.dashboardUnavailable": "Хяналтын самбарууд энд одоогоор боломжгүй байна.",
   "tools.database.viewTypeDashboard": "Хяналтын самбар",
+  "tools.database.tabView": "{layout} харагдац",
   "tools.database.tabViewOf": "{database}-ийн {layout} харагдац",
   "tools.database.dashboardAddWidget": "Виджет нэмэх",
   "tools.database.dashboardEmpty": "Диаграм, тоо, хүснэгт, жагсаалт нэмнэ үү.",

@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "Lokasi Semasa",
   "tools.database.dashboardUnavailable": "Papan pemuka belum tersedia di sini.",
   "tools.database.viewTypeDashboard": "Papan pemuka",
+  "tools.database.tabView": "Paparan {layout}",
   "tools.database.tabViewOf": "Paparan {layout} bagi {database}",
   "tools.database.dashboardAddWidget": "Tambah widget",
   "tools.database.dashboardEmpty": "Tambah carta, nombor, jadual dan senarai.",

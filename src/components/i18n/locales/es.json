@@ -1661,6 +1661,7 @@
   "tools.database.placeCurrentLocation": "Ubicación actual",
   "tools.database.dashboardUnavailable": "Los paneles aún no están disponibles aquí.",
   "tools.database.viewTypeDashboard": "Panel",
+  "tools.database.tabView": "Vista de {layout}",
   "tools.database.tabViewOf": "Vista de {layout} de {database}",
   "tools.database.dashboardAddWidget": "Añadir widget",
   "tools.database.dashboardEmpty": "Añade gráficos, números, tablas y listas.",

@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "현재 위치",
   "tools.database.dashboardUnavailable": "대시보드는 아직 여기에서 사용할 수 없습니다.",
   "tools.database.viewTypeDashboard": "대시보드",
+  "tools.database.tabView": "{layout} 보기",
   "tools.database.tabViewOf": "{database}의 {layout} 보기",
   "tools.database.dashboardAddWidget": "위젯 추가",
   "tools.database.dashboardEmpty": "차트, 숫자, 표, 목록을 추가하세요.",

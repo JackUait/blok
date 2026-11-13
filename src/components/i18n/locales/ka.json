@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "მიმდინარე მდებარეობა",
   "tools.database.dashboardUnavailable": "დაფები აქ ჯერ ხელმისაწვდომი არ არის.",
   "tools.database.viewTypeDashboard": "დაფა",
+  "tools.database.tabView": "{layout} ხედი",
   "tools.database.tabViewOf": "{database}-ის {layout} ხედი",
   "tools.database.dashboardAddWidget": "ვიჯეტის დამატება",
   "tools.database.dashboardEmpty": "დაამატეთ დიაგრამები, რიცხვები, ცხრილები და სიები.",

@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "איצטיקער אָרט",
   "tools.database.dashboardUnavailable": "איבערבליק־טאָוולען זײַנען דאָ נאָך נישט צוטריטלעך.",
   "tools.database.viewTypeDashboard": "איבערבליק־טאָוול",
+  "tools.database.tabView": "{layout}־אויסשטעל",
   "tools.database.tabViewOf": "{layout}־אויסשטעל פֿון {database}",
   "tools.database.dashboardAddWidget": "לייג צו אַ וויזשעט",
   "tools.database.dashboardEmpty": "לייג צו דיאַגראַמען, נומערן, טאַבעלעס און רשימות.",

@@ -1667,6 +1667,7 @@
   "tools.database.placeCurrentLocation": "Dabartinė vieta",
   "tools.database.dashboardUnavailable": "Prietaisų skydeliai čia dar nepasiekiami.",
   "tools.database.viewTypeDashboard": "Prietaisų skydelis",
+  "tools.database.tabView": "Rodinys {layout}",
   "tools.database.tabViewOf": "{database} rodinys {layout}",
   "tools.database.dashboardAddWidget": "Pridėti valdiklį",
   "tools.database.dashboardEmpty": "Pridėkite diagramų, skaičių, lentelių ir sąrašų.",

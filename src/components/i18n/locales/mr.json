@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "सध्याचे स्थान",
   "tools.database.dashboardUnavailable": "डॅशबोर्ड अद्याप येथे उपलब्ध नाहीत.",
   "tools.database.viewTypeDashboard": "डॅशबोर्ड",
+  "tools.database.tabView": "{layout} दृश्य",
   "tools.database.tabViewOf": "{database} चे {layout} दृश्य",
   "tools.database.dashboardAddWidget": "विजेट जोडा",
   "tools.database.dashboardEmpty": "चार्ट, संख्या, तक्ते आणि याद्या जोडा.",

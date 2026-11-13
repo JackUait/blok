@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "वर्तमान स्थान",
   "tools.database.dashboardUnavailable": "डैशबोर्ड अभी यहाँ उपलब्ध नहीं हैं।",
   "tools.database.viewTypeDashboard": "डैशबोर्ड",
+  "tools.database.tabView": "{layout} दृश्य",
   "tools.database.tabViewOf": "{database} का {layout} दृश्य",
   "tools.database.dashboardAddWidget": "विजेट जोड़ें",
   "tools.database.dashboardEmpty": "चार्ट, संख्याएँ, तालिकाएँ और सूचियाँ जोड़ें।",

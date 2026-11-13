@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "Nykyinen sijainti",
   "tools.database.dashboardUnavailable": "Koontinäytöt eivät ole vielä käytettävissä täällä.",
   "tools.database.viewTypeDashboard": "Koontinäyttö",
+  "tools.database.tabView": "Näkymä {layout}",
   "tools.database.tabViewOf": "{database}: näkymä {layout}",
   "tools.database.dashboardAddWidget": "Lisää pienoisohjelma",
   "tools.database.dashboardEmpty": "Lisää kaavioita, lukuja, taulukoita ja luetteloita.",

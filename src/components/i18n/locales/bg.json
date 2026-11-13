@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "Текущо местоположение",
   "tools.database.dashboardUnavailable": "Таблата за управление все още не са налични тук.",
   "tools.database.viewTypeDashboard": "Табло за управление",
+  "tools.database.tabView": "Изглед {layout}",
   "tools.database.tabViewOf": "Изглед {layout} на {database}",
   "tools.database.dashboardAddWidget": "Добави уиджет",
   "tools.database.dashboardEmpty": "Добавете диаграми, числа, таблици и списъци.",

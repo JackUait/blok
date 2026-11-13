@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "موجوده جاءِ",
   "tools.database.dashboardUnavailable": "ڊيش بورڊ اڃا هتي دستياب ناهن.",
   "tools.database.viewTypeDashboard": "ڊيش بورڊ",
+  "tools.database.tabView": "{layout} ويو",
   "tools.database.tabViewOf": "{database} جو {layout} ويو",
   "tools.database.dashboardAddWidget": "وجيٽ شامل ڪريو",
   "tools.database.dashboardEmpty": "چارٽ، نمبر، ٽيبل ۽ لسٽون شامل ڪريو.",

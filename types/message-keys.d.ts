@@ -2284,6 +2284,7 @@ export type BlokMessageKey =
   | 'tools.database.tabDisplayBoth'
   | 'tools.database.tabDisplayIcon'
   | 'tools.database.tabDisplayText'
+  | 'tools.database.tabView'
   | 'tools.database.tabViewOf'
   | 'tools.database.tableAddBelow'
   | 'tools.database.tableAddProperty'

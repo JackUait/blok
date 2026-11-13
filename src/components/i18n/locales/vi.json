@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "Vị trí hiện tại",
   "tools.database.dashboardUnavailable": "Bảng điều khiển chưa khả dụng ở đây.",
   "tools.database.viewTypeDashboard": "Bảng điều khiển",
+  "tools.database.tabView": "Chế độ xem {layout}",
   "tools.database.tabViewOf": "Chế độ xem {layout} của {database}",
   "tools.database.dashboardAddWidget": "Thêm tiện ích",
   "tools.database.dashboardEmpty": "Thêm biểu đồ, số, bảng và danh sách.",

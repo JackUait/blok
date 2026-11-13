@@ -266,6 +266,23 @@ describe('DatabaseTabBar', () => {
       expect(shownHint()?.placement).toBe('bottom');
       el.remove();
     });
+
+    // notion-motion.md Round 23 §7: a dashboard has no source, so its hint reads "Dashboard" / "Dashboard view".
+    it('names a dashboard, then its layout with no database', () => {
+      destroyTooltip();
+      vi.useFakeTimers();
+      const view = makeView({ type: 'dashboard', name: 'Dashboard' });
+      const el = new DatabaseTabBar({
+        views: [view], activeViewId: view.id, onTabClick, onAddView, onRename, onDuplicate, onDelete, onReorder, api,
+        sourceTitle: () => 'Projects',
+      }).render();
+
+      document.body.appendChild(el);
+      hover(el.querySelector('[data-blok-database-tab]'));
+      vi.advanceTimersByTime(HINT_DELAY);
+      expect(shownHint()?.text).toBe('Dashboardtools.database.tabView:{"layout":"tools.database.viewTypeDashboard"}');
+      el.remove();
+    });
   });
 
   describe('render()', () => {

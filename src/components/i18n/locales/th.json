@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "ตำแหน่งปัจจุบัน",
   "tools.database.dashboardUnavailable": "ยังไม่สามารถใช้แดชบอร์ดที่นี่ได้",
   "tools.database.viewTypeDashboard": "แดชบอร์ด",
+  "tools.database.tabView": "มุมมอง{layout}",
   "tools.database.tabViewOf": "มุมมอง{layout}ของ {database}",
   "tools.database.dashboardAddWidget": "เพิ่มวิดเจ็ต",
   "tools.database.dashboardEmpty": "เพิ่มแผนภูมิ ตัวเลข ตาราง และรายการ",

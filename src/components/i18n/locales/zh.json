@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "当前位置",
   "tools.database.dashboardUnavailable": "此处暂不支持仪表板。",
   "tools.database.viewTypeDashboard": "仪表板",
+  "tools.database.tabView": "{layout}视图",
   "tools.database.tabViewOf": "{database} 的{layout}视图",
   "tools.database.dashboardAddWidget": "添加小组件",
   "tools.database.dashboardEmpty": "添加图表、数字、表格和列表。",

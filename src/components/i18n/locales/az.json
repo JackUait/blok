@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "Cari məkan",
   "tools.database.dashboardUnavailable": "İdarə panelləri hələ burada mövcud deyil.",
   "tools.database.viewTypeDashboard": "İdarə paneli",
+  "tools.database.tabView": "{layout} görünüşü",
   "tools.database.tabViewOf": "{database} üçün {layout} görünüşü",
   "tools.database.dashboardAddWidget": "Vidjet əlavə et",
   "tools.database.dashboardEmpty": "Diaqramlar, ədədlər, cədvəllər və siyahılar əlavə edin.",

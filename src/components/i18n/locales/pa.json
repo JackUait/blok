@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "ਮੌਜੂਦਾ ਟਿਕਾਣਾ",
   "tools.database.dashboardUnavailable": "ਡੈਸ਼ਬੋਰਡ ਹਾਲੇ ਇੱਥੇ ਉਪਲਬਧ ਨਹੀਂ ਹਨ।",
   "tools.database.viewTypeDashboard": "ਡੈਸ਼ਬੋਰਡ",
+  "tools.database.tabView": "{layout} ਦ੍ਰਿਸ਼",
   "tools.database.tabViewOf": "{database} ਦਾ {layout} ਦ੍ਰਿਸ਼",
   "tools.database.dashboardAddWidget": "ਵਿਜੇਟ ਸ਼ਾਮਲ ਕਰੋ",
   "tools.database.dashboardEmpty": "ਚਾਰਟ, ਨੰਬਰ, ਟੇਬਲ ਅਤੇ ਸੂਚੀਆਂ ਸ਼ਾਮਲ ਕਰੋ।",

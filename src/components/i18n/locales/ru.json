@@ -1667,6 +1667,7 @@
   "tools.database.placeCurrentLocation": "Текущее местоположение",
   "tools.database.dashboardUnavailable": "Дашборды здесь пока недоступны.",
   "tools.database.viewTypeDashboard": "Дашборд",
+  "tools.database.tabView": "Представление {layout}",
   "tools.database.tabViewOf": "Представление {layout} базы {database}",
   "tools.database.dashboardAddWidget": "Добавить виджет",
   "tools.database.dashboardEmpty": "Добавьте диаграммы, числа, таблицы и списки.",

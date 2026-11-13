@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "نۆۋەتتىكى ئورۇن",
   "tools.database.dashboardUnavailable": "باشقۇرۇش تاختىلىرى بۇ يەردە ھازىرچە ئىشلەتكىلى بولمايدۇ.",
   "tools.database.viewTypeDashboard": "باشقۇرۇش تاختىسى",
+  "tools.database.tabView": "{layout} كۆرۈنۈشى",
   "tools.database.tabViewOf": "{database} نىڭ {layout} كۆرۈنۈشى",
   "tools.database.dashboardAddWidget": "كىچىك قورال قوشۇش",
   "tools.database.dashboardEmpty": "دىئاگرامما، سان، جەدۋەل ۋە تىزىملىك قوشۇڭ.",

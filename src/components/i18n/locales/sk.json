@@ -1667,6 +1667,7 @@
   "tools.database.placeCurrentLocation": "Aktuálna poloha",
   "tools.database.dashboardUnavailable": "Ovládacie panely tu zatiaľ nie sú k dispozícii.",
   "tools.database.viewTypeDashboard": "Ovládací panel",
+  "tools.database.tabView": "Zobrazenie {layout}",
   "tools.database.tabViewOf": "Zobrazenie {layout} databázy {database}",
   "tools.database.dashboardAddWidget": "Pridať miniaplikáciu",
   "tools.database.dashboardEmpty": "Pridajte grafy, čísla, tabuľky a zoznamy.",

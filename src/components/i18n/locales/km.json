@@ -1655,6 +1655,7 @@
   "tools.database.placeCurrentLocation": "ទីតាំងបច្ចុប្បន្ន",
   "tools.database.dashboardUnavailable": "ផ្ទាំងគ្រប់គ្រងមិនទាន់អាចប្រើបាននៅទីនេះទេ។",
   "tools.database.viewTypeDashboard": "ផ្ទាំងគ្រប់គ្រង",
+  "tools.database.tabView": "ទិដ្ឋភាព {layout}",
   "tools.database.tabViewOf": "ទិដ្ឋភាព {layout} នៃ {database}",
   "tools.database.dashboardAddWidget": "បន្ថែមវិជិត",
   "tools.database.dashboardEmpty": "បន្ថែមគំនូសតាង លេខ តារាង និងបញ្ជី។",

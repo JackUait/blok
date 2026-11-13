@@ -1,6 +1,8 @@
 import { nanoid } from 'nanoid';
 import { matchCondition } from './database-query';
+import { optionColorOf } from './cells/option-colors';
 import type {
+  ColorRule,
   DatabaseRow,
   DatabaseViewConfig,
   GroupRef,
@@ -21,6 +23,22 @@ export const COLOR_RULE_TYPES: readonly PropertyType[] = [
 
 /** Layouts Notion colors (research/05 §6.2; map measured in research/20 §1f). */
 export const COLOR_RULE_LAYOUTS: readonly ViewType[] = ['table', 'list', 'board', 'calendar', 'timeline', 'feed', 'map'];
+
+/**
+ * A Select rule's colour that follows the row's option (Notion's "Match option",
+ * notion-motion.md Round 20 §4). Saved in `color` so older clients keep it as is.
+ */
+export const MATCH_OPTION_COLOR = 'match';
+
+/** A rule's colour on one row. A "Match option" rule with no option paints nothing (unmeasured). */
+const ruleColor = (rule: ColorRule, row: DatabaseRow, schema: PropertyDefinition[]): string | undefined => {
+  if (rule.color !== MATCH_OPTION_COLOR) return rule.color;
+  const property = schema.find((p) => p.id === rule.propertyId);
+  const value = row.properties[rule.propertyId];
+  const option = property?.type === 'select' ? property.config?.options?.find((o) => o.id === value) : undefined;
+
+  return option === undefined ? undefined : optionColorOf(option);
+};
 
 export interface RowColor {
   row?: string;
@@ -53,11 +71,13 @@ export const resolveRowColors = (
 
     for (const rule of matching) {
       const isCell = rule.applyTo === 'property' && view.type === 'table';
+      const fill = ruleColor(rule, row, schema);
 
+      if (fill === undefined) continue;
       if (!isCell) {
-        color.row ??= rule.color;
+        color.row ??= fill;
       } else if (color.row === undefined) {
-        color.cells[rule.propertyId] ??= rule.color;
+        color.cells[rule.propertyId] ??= fill;
       }
     }
 

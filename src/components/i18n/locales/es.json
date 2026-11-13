@@ -1496,6 +1496,7 @@
   "tools.database.colorNew": "Nueva configuración de color",
   "tools.database.colorAddAnother": "Añadir otra",
   "tools.database.colorPageBackground": "Fondo de página",
+  "tools.database.colorMatchOption": "Según la opción",
   "tools.database.colorApplyTo": "Aplicar a",
   "tools.database.colorApplyRow": "Fila completa",
   "tools.database.colorApplyProperty": "Esta propiedad",

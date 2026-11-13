@@ -1496,6 +1496,7 @@
   "tools.database.colorNew": "Nouveau paramètre de couleur",
   "tools.database.colorAddAnother": "Ajouter un autre",
   "tools.database.colorPageBackground": "Arrière-plan de la page",
+  "tools.database.colorMatchOption": "Selon l’option",
   "tools.database.colorApplyTo": "Appliquer à",
   "tools.database.colorApplyRow": "Ligne entière",
   "tools.database.colorApplyProperty": "Cette propriété",

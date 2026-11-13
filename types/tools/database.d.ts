@@ -808,7 +808,7 @@ export interface ColorRule {
   propertyId: string;
   operator: string;
   value: PropertyValue;
-  /** An option color name, such as `green`. */
+  /** An option color name, such as `green`, or `match`: a Select rule takes the row's option color. */
   color: string;
   /** Table only. Default 'row'. */
   applyTo?: 'row' | 'property';

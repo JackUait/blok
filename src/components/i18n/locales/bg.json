@@ -1490,6 +1490,7 @@
   "tools.database.colorNew": "Нова настройка за цвят",
   "tools.database.colorAddAnother": "Добави още",
   "tools.database.colorPageBackground": "Фон на страницата",
+  "tools.database.colorMatchOption": "Като опцията",
   "tools.database.colorApplyTo": "Приложи към",
   "tools.database.colorApplyRow": "Целия ред",
   "tools.database.colorApplyProperty": "Това свойство",

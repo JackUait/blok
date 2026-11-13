@@ -1490,6 +1490,7 @@
   "tools.database.colorNew": "新しいカラー設定",
   "tools.database.colorAddAnother": "さらに追加",
   "tools.database.colorPageBackground": "ページの背景",
+  "tools.database.colorMatchOption": "オプションに合わせる",
   "tools.database.colorApplyTo": "適用先",
   "tools.database.colorApplyRow": "行全体",
   "tools.database.colorApplyProperty": "このプロパティ",

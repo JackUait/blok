@@ -4,6 +4,7 @@ import {
   isGroupCollapsed,
   isGroupHidden,
   COLOR_RULE_LAYOUTS,
+  MATCH_OPTION_COLOR,
   resolveRowColors,
   sortFromHeader,
   withGroupFlags,
@@ -86,6 +87,21 @@ describe('view-data', () => {
 
       expect(resolveRowColors([row], view({ colorRules: [rowRule, cellRule] }), typed).get('a')).toEqual({ row: 'green', cells: {} });
       expect(resolveRowColors([row], view({ colorRules: [cellRule, rowRule] }), typed).get('a')).toEqual({ row: 'green', cells: { sel: 'blue' } });
+    });
+
+    it('paints a "Match option" Select rule with the row\'s option colour (notion-motion.md Round 20 §4)', () => {
+      const typed: PropertyDefinition[] = [...schema, {
+        id: 'sel', name: 'Select', type: 'select', position: 'a2',
+        config: { options: [{ id: 'o1', label: 'Red', color: 'yellow', position: 'a0' }, { id: 'o2', label: 'Plain', position: 'a1' }] },
+      }];
+      const rule = { id: 'c', propertyId: 'sel', operator: 'is_not_empty', value: null, color: MATCH_OPTION_COLOR };
+      const one: DatabaseRow = { id: 'a', position: 'a0', properties: { sel: 'o1' } };
+      const two: DatabaseRow = { id: 'b', position: 'a1', properties: { sel: 'o2' } };
+      const colors = resolveRowColors([one, two], view({ colorRules: [rule] }), typed);
+
+      expect(colors.get('a')).toEqual({ row: 'yellow', cells: {} });
+      expect(colors.get('b')).toEqual({ row: 'default', cells: {} });
+      expect(resolveRowColors([one], view({ colorRules: [{ ...rule, applyTo: 'property' }] }), typed).get('a')).toEqual({ cells: { sel: 'yellow' } });
     });
 
     it('colors by status, person, relation, formula and rollup, as Notion does (research/05 §6.2)', () => {

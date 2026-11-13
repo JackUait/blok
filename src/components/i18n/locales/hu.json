@@ -1490,6 +1490,7 @@
   "tools.database.colorNew": "Új színbeállítás",
   "tools.database.colorAddAnother": "Újabb hozzáadása",
   "tools.database.colorPageBackground": "Oldal háttere",
+  "tools.database.colorMatchOption": "Opcióhoz igazítás",
   "tools.database.colorApplyTo": "Alkalmazás erre",
   "tools.database.colorApplyRow": "Teljes sor",
   "tools.database.colorApplyProperty": "Ez a tulajdonság",

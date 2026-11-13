@@ -1490,6 +1490,7 @@
   "tools.database.colorNew": "การตั้งค่าสีใหม่",
   "tools.database.colorAddAnother": "เพิ่มอีก",
   "tools.database.colorPageBackground": "พื้นหลังหน้า",
+  "tools.database.colorMatchOption": "ตามตัวเลือก",
   "tools.database.colorApplyTo": "ใช้กับ",
   "tools.database.colorApplyRow": "ทั้งแถว",
   "tools.database.colorApplyProperty": "คุณสมบัตินี้",

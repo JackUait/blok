@@ -1979,6 +1979,20 @@ describe('view settings panel', () => {
     expect(en['tools.database.colorApplyProperty']).toBe('This property');
   });
 
+  // notion-motion.md Round 20 §4: a new Select rule starts on "Match option"; other types keep gray (unmeasured).
+  it('starts a new Select rule on "Match option"', () => {
+    const h = harness();
+
+    h.open();
+    click('database-settings-color');
+    click('database-color-add');
+    click('database-pick-property-stage');
+    const [rule] = h.state.view.colorRules ?? [];
+
+    expect(rule).toMatchObject({ propertyId: 'stage', color: 'match' });
+    expect(q(`database-color-background-${rule.id}`)?.textContent?.trim()).toBe('tools.database.colorMatchOption');
+  });
+
   it('blocks shared edits while locked, but not personal filters', () => {
     const h = harness();
 

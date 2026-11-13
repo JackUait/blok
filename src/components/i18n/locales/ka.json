@@ -1490,6 +1490,7 @@
   "tools.database.colorNew": "ფერის ახალი პარამეტრი",
   "tools.database.colorAddAnother": "კიდევ ერთის დამატება",
   "tools.database.colorPageBackground": "გვერდის ფონი",
+  "tools.database.colorMatchOption": "ვარიანტის მიხედვით",
   "tools.database.colorApplyTo": "გამოყენების არე",
   "tools.database.colorApplyRow": "მთელი მწკრივი",
   "tools.database.colorApplyProperty": "ეს თვისება",

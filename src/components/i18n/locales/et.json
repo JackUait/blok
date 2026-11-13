@@ -1490,6 +1490,7 @@
   "tools.database.colorNew": "Uus värviseade",
   "tools.database.colorAddAnother": "Lisa veel üks",
   "tools.database.colorPageBackground": "Lehe taust",
+  "tools.database.colorMatchOption": "Valiku järgi",
   "tools.database.colorApplyTo": "Rakenda",
   "tools.database.colorApplyRow": "Kogu reale",
   "tools.database.colorApplyProperty": "Sellele omadusele",

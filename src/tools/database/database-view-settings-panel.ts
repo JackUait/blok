@@ -55,7 +55,7 @@ import {
 import { DEFAULT_RANGE, GROUPABLE_TYPES, defaultGroupSort, groupByChange, rangeOf, subGroupByChange } from './group-keys';
 import { RELATIVE_DATE_UNITS, RELATIVE_DATE_VALUES, formatRelativeSpan, parseRelativeSpan } from './relative-dates';
 import { ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from './database-query';
-import { COLOR_RULE_LAYOUTS, COLOR_RULE_TYPES, isGroupHidden, withGroupFlags } from './view-data';
+import { COLOR_RULE_LAYOUTS, COLOR_RULE_TYPES, MATCH_OPTION_COLOR, isGroupHidden, withGroupFlags } from './view-data';
 import {
   LOAD_LIMITS,
   resolveCardLayout,
@@ -2815,7 +2815,7 @@ export class ViewSettingsPages {
             colorSetting({
               label: this.t('colorPageBackground'),
               testId: `database-color-background-${rule.id}`,
-              value: this.t(`color${capital(rule.color)}`),
+              value: this.t(rule.color === MATCH_OPTION_COLOR ? 'colorMatchOption' : `color${capital(rule.color)}`),
               disabled,
               onClick: () => panel.push({
                 title: this.t('colorPageBackground'),
@@ -2878,7 +2878,10 @@ export class ViewSettingsPages {
             icon: IconPlus,
             disabled,
             onClick: () => panel.push(this.pickProperty(this.t('colorNew'), COLOR_RULE_TYPES, (property) => {
-              write([...rules(), { id: nanoid(), propertyId: property.id, operator: 'is_not_empty', value: null, color: 'gray' }]);
+              // notion-motion.md Round 20 §4: a Select rule starts on Match option. Other types keep gray: one Number rule read Green.
+              const color = property.type === 'select' ? MATCH_OPTION_COLOR : 'gray';
+
+              write([...rules(), { id: nanoid(), propertyId: property.id, operator: 'is_not_empty', value: null, color }]);
               panel.back();
             })),
           }),

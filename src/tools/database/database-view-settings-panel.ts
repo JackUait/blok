@@ -2901,7 +2901,7 @@ export class ViewSettingsPages {
     // r20-cc-is.raw, r20-cc-red.png: a Select rule reads "Select..." while empty and shows its picks as tokens.
     // Other types are unmeasured and keep "Value" and plain text.
     if (property.type === 'select') {
-      const picked = Array.isArray(rule.value) ? rule.value : [];
+      const picked: unknown[] = Array.isArray(rule.value) ? rule.value : [];
       const tokens = (property.config?.options ?? []).filter((option) => picked.includes(option.id)).map((option) => createOptionPill(option));
 
       button.toggleAttribute('data-empty', tokens.length === 0);

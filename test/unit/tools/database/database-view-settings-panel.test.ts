@@ -1993,6 +1993,25 @@ describe('view settings panel', () => {
     expect(q(`database-color-background-${rule.id}`)?.textContent?.trim()).toBe('tools.database.colorMatchOption');
   });
 
+  // notion-motion.md Round 20 §4: a ⠿ handle on each card reorders the rules; the order is their priority.
+  it('reorders conditional color rules by their handle', () => {
+    const h = harness({
+      colorRules: [
+        { id: 'c1', propertyId: 'num', operator: 'is_not_empty', value: null, color: 'gray' },
+        { id: 'c2', propertyId: 'stage', operator: 'is_not_empty', value: null, color: 'green' },
+      ],
+    });
+
+    h.open();
+    click('database-settings-color');
+    const handle = q('database-color-rules-handle-c1');
+
+    expect(handle?.getAttribute('aria-label')).toBe('tools.database.settingsDragToReorder');
+    handle?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', altKey: true, bubbles: true }));
+
+    expect(h.state.view.colorRules?.map((rule) => rule.id)).toEqual(['c2', 'c1']);
+  });
+
   it('blocks shared edits while locked, but not personal filters', () => {
     const h = harness();
 

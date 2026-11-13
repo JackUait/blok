@@ -367,3 +367,19 @@ describe('conditional color card lines (notion-motion.md Round 20 §4)', () => {
     expect(ruleBody(database, '[data-blok-database-color-setting-value] svg')).toContain('width: 16px');
   });
 });
+
+describe('conditional color rule handle (notion-motion.md Round 20 §4)', () => {
+  const HANDLE = '[data-blok-database-color-rules] [data-blok-database-panel-handle]';
+
+  it('is a 12x22 hover handle straddling the card\'s left edge, in the icon ink', () => {
+    const body = ruleBody(database, HANDLE);
+
+    expect(body).toContain('position: absolute');
+    expect(body).toContain('inset-inline-start: -8px');
+    expect(body).toContain('width: 12px');
+    expect(body).toContain('height: 22px');
+    expect(body).toContain('opacity: 0');
+    expect(body).toContain('color: var(--blok-database-table-header-icon)');
+    expect(ruleBody(database, '[data-blok-database-color-rules] [data-blok-database-panel-list-item]:hover > [data-blok-database-panel-handle]')).toContain('opacity: 1');
+  });
+});

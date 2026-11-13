@@ -2866,12 +2866,25 @@ export class ViewSettingsPages {
             },
           }));
 
-          return card;
+          return { id: rule.id, element: card };
         });
 
         return [
           panelText(this.t('colorBlurb')),
-          ...cards,
+          // notion-motion.md Round 20 §4: the list order is each cell's priority; a ⠿ handle reorders it.
+          ...(cards.length === 0 ? [] : [colorRuleList(panelReorderList({
+            testId: 'database-color-rules',
+            handleLabel: this.t('settingsDragToReorder'),
+            items: cards,
+            onMove: (id, beforeId) => {
+              const all = rules();
+              const moving = all.find((r) => r.id === id);
+              const rest = all.filter((r) => r.id !== id);
+              const at = beforeId === null ? rest.length : rest.findIndex((r) => r.id === beforeId);
+
+              if (moving !== undefined) write([...rest.slice(0, at), moving, ...rest.slice(at)]);
+            },
+          }))]),
           panelRow({
             label: this.t(cards.length === 0 ? 'colorNew' : 'colorAddAnother'),
             testId: 'database-color-add',
@@ -2910,6 +2923,13 @@ const ISO_DAY_VALUE = /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2})?$/;
 
 const rulesOf = (group: FilterGroup): FilterRule[] =>
   group.filterRules.flatMap((node) => (isFilterGroup(node) ? rulesOf(node) : [node]));
+
+/** Marks the rule list for database.css: its handles sit on the cards' left edge. */
+const colorRuleList = (list: HTMLElement): HTMLElement => {
+  list.setAttribute('data-blok-database-color-rules', '');
+
+  return list;
+};
 
 /** notion-motion.md Round 20 §4 (r20-cc-apply.raw): 112.6 wide in English; a longer label widens it. */
 const APPLY_FLYOUT_WIDTH = 112;

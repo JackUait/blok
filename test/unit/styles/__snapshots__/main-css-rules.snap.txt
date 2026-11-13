@@ -15555,6 +15555,25 @@ input[data-blok-database-picker-search]:focus {
   height: 14px;
 }
 
+[data-blok-database-color-rules] [data-blok-database-panel-list-item] {
+  position: relative;
+}
+
+[data-blok-database-color-rules] [data-blok-database-panel-handle] {
+  position: absolute;
+  inset-block-start: var(--blok-space-1);
+  inset-inline-start: -8px;
+  z-index: 1;
+  width: 12px;
+  height: 22px;
+  color: var(--blok-database-table-header-icon);
+  opacity: 0;
+}
+
+[data-blok-database-color-rules] [data-blok-database-panel-list-item]:hover > [data-blok-database-panel-handle], [data-blok-database-color-rules] [data-blok-database-panel-handle]:focus-visible {
+  opacity: 1;
+}
+
 [data-blok-database-property-visibility-header] {
   display: flex;
   align-items: center;

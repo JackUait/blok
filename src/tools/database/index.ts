@@ -7280,10 +7280,23 @@ export class DatabaseTool implements BlockTool {
       const resume = modal.handOff(this.element);
 
       this.handleRowClick(rowId, 'center');
-      if (this.cardDrawer?.isOpen === true && this.cardDrawer.openRowId === rowId) {
+      const peek = this.element.querySelector('[data-blok-database-drawer][data-peek-mode="center"]');
+
+      if (this.cardDrawer?.isOpen === true && this.cardDrawer.openRowId === rowId && peek !== null) {
+        // A full page or side peek would sit under the modal's overlay, so leaving center mode closes the modal.
+        const leaves = new MutationObserver(() => {
+          if (peek.getAttribute('data-peek-mode') === 'center') return;
+          leaves.disconnect();
+          this.pinnedGroupModal?.close();
+        });
+
+        leaves.observe(peek, { attributeFilter: ['data-peek-mode'] });
         // The slot runs as the peek closes or its drawer is destroyed.
         this.endRelatedPeek();
-        this.relatedPeekClosed = resume;
+        this.relatedPeekClosed = () => {
+          leaves.disconnect();
+          resume();
+        };
 
         return;
       }

@@ -4472,6 +4472,53 @@ describe('DatabaseTool', () => {
         tool.destroy();
       });
 
+      // A full page or side peek cannot sit under the modal's overlay, so leaving center mode closes the modal.
+      it('closes the pinned group modal when its peek opens as a full page', async () => {
+        const { tool, element } = board(false, boardView({ pinnedGroups: [{ id: 'opt-todo' }] }));
+
+        queryByData(element, 'data-blok-database-pinned-group-open')?.click();
+        document.querySelector<HTMLElement>('[data-blok-database-group-modal-panel] [data-blok-database-table-open]')?.click();
+        document.querySelector<HTMLElement>('[data-blok-database-peek-expand]')?.click();
+        await Promise.resolve();
+
+        expect(document.querySelector('[data-blok-database-drawer]')?.getAttribute('data-peek-mode')).toBe('full');
+        expect(document.querySelector('[data-blok-database-group-modal-panel]')).toBeNull();
+
+        tool.destroy();
+      });
+
+      // The modal is under the peek while the row is edited; the peek's close shows the edit there.
+      it('shows an edit made in the peek once the peek over the modal closes', () => {
+        const row = groupRow('row-1', { 'prop-title': 'One', 'prop-status': 'opt-todo' }, 'a0');
+        const data = row.preservedData as DatabaseRowData;
+
+        vi.mocked(row.call).mockImplementation((method: string, params?: unknown) => {
+          const update = params as { title?: string; titlePropertyId?: string } | undefined;
+
+          if (method === 'updateTitle' && update?.titlePropertyId !== undefined) data.properties[update.titlePropertyId] = update.title ?? '';
+        });
+        const tool = new DatabaseTool(createDatabaseOptions(boardView({ pinnedGroups: [{ id: 'opt-todo' }] }), {}, { childBlocks: [row] }));
+        const element = tool.render();
+
+        document.body.appendChild(element);
+        tool.rendered();
+
+        queryByData(element, 'data-blok-database-pinned-group-open')?.click();
+        document.querySelector<HTMLElement>('[data-blok-database-group-modal-panel] [data-blok-database-table-open]')?.click();
+        const title = document.querySelector<HTMLTextAreaElement>('[data-blok-database-drawer-title]');
+
+        if (title === null) throw new Error('no peek title');
+        const rowId = document.querySelector('[data-blok-database-group-modal-panel] [role="row"][data-row-id]')?.getAttribute('data-row-id');
+
+        title.value = 'Renamed';
+        title.dispatchEvent(new Event('input', { bubbles: true }));
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+        expect(document.querySelector(`[data-blok-database-group-modal-panel] [role="row"][data-row-id="${rowId ?? ''}"]`)?.textContent).toContain('Renamed');
+
+        tool.destroy();
+      });
+
       // Round 25 §1 (r25-modal-celledit.raw, r25-modal-nameclick.raw): a click on a cell does nothing.
       it('selects no cell on a click inside the pinned group modal', () => {
         const { tool, element } = board(false, boardView({ pinnedGroups: [{ id: 'opt-todo' }] }));

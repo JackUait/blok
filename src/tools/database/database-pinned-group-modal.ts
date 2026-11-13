@@ -231,5 +231,17 @@ export const openPinnedGroupModal = (options: PinnedGroupModalOptions): PinnedGr
     },
   });
 
-  return { close: dismiss, handOff: (other) => state.handle?.handOff(other) ?? ((): void => undefined) };
+  return {
+    close: dismiss,
+    handOff: (other) => {
+      const resume = state.handle?.handOff(other);
+
+      // The rows may have changed in the peek; the table only redraws on search and Load more.
+      return () => {
+        if (resume === undefined || !panel.isConnected) return;
+        resume();
+        draw();
+      };
+    },
+  };
 };

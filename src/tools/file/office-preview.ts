@@ -5,7 +5,9 @@ import { ZipParts } from './zip-parts';
 import { loadDocxRenderer, loadPptxRenderer } from './office-loaders';
 import { buildErrorInto } from './preview-error';
 import { mountPager } from './page-pager';
-import type { PreviewChrome } from './preview-chrome';
+import { detachedChrome, type PreviewChrome } from './preview-chrome';
+import { mountSheetGrid, type GridCell, type GridSheet } from './sheet-grid';
+import { formatNumber, readStyles, type CellStyle } from './xlsx-format';
 
 export type OfficeKind = Extract<PreviewKind, 'docx' | 'xlsx' | 'pptx'>;
 
@@ -76,14 +78,28 @@ function isNumericCell(cell: Element, text: string): boolean {
   return text.trim() !== '' && Number.isFinite(Number(text));
 }
 
-/** Build one `<tr>` from a `<row>` element, placing cells at their A1 column. */
-function buildRow(rowEl: Element, shared: string[]): HTMLTableRowElement {
+const EMPTY_CELL: GridCell = { text: '', value: null };
+
+/** One `<c>` as a grid cell: a number is shown the way its style's format asks. */
+function readCell(cell: Element, shared: string[], styles: CellStyle[]): GridCell {
+  const text = cellText(cell, shared);
+  const style = styles[Number(cell.getAttribute('s') ?? '-1')];
+  const bold = style?.bold ? { bold: true } : {};
+  if (!isNumericCell(cell, text)) {
+    return { text, value: null, ...bold };
+  }
+  const value = Number(text);
+
+  return { text: style === undefined ? text : formatNumber(value, style.code), value, ...bold };
+}
+
+/** The cells of a `<row>`, each at its A1 column, gaps filled with empty cells. */
+function readRow(rowEl: Element, shared: string[], styles: CellStyle[]): GridCell[] {
   const cells = childrenNamed(rowEl, 'c');
-  const byColumn = new Map<number, { text: string; numeric: boolean }>();
+  const byColumn = new Map<number, GridCell>();
   cells.forEach((cell, i) => {
     const ref = cell.getAttribute('r');
-    const text = cellText(cell, shared);
-    byColumn.set(ref === null ? i + 1 : columnIndex(ref), { text, numeric: isNumericCell(cell, text) });
+    byColumn.set(ref === null ? i + 1 : columnIndex(ref), readCell(cell, shared, styles));
   });
   const lastColumn = cells.reduce((max, cell) => {
     const ref = cell.getAttribute('r');
@@ -91,64 +107,91 @@ function buildRow(rowEl: Element, shared: string[]): HTMLTableRowElement {
     return ref === null ? max : Math.max(max, columnIndex(ref));
   }, cells.length);
 
-  const tr = document.createElement('tr');
-  for (const col of range(lastColumn)) {
-    const td = document.createElement('td');
-    const value = byColumn.get(col);
-    td.textContent = value?.text ?? '';
-    if (value?.numeric === true) {
-      td.className = 'blok-file-preview-xlsx-num';
-    }
-    tr.appendChild(td);
-  }
-
-  return tr;
+  return range(lastColumn).map((col) => byColumn.get(col) ?? EMPTY_CELL);
 }
 
-/** Build one worksheet `<table>` from a parsed sheet document, with at most `cellsLeft` cells. */
-function buildSheetTable(doc: Document, shared: string[], cellsLeft: number): { table: HTMLTableElement; cells: number } {
-  const table = document.createElement('table');
-  table.className = 'blok-file-preview-xlsx-table';
+/** The rows of one worksheet document, with at most `cellsLeft` cells; later rows are left out. */
+function readRows(doc: Document, shared: string[], styles: CellStyle[], cellsLeft: number): GridCell[][] {
   const sheetData = childrenNamed(doc.documentElement, 'sheetData')[0];
-  const rows = sheetData === undefined ? [] : childrenNamed(sheetData, 'row');
+  const rows: GridCell[][] = [];
   const used = { cells: 0 };
-  for (const rowEl of rows) {
-    const tr = buildRow(rowEl, shared);
-    if (used.cells + tr.cells.length > cellsLeft) {
+  for (const rowEl of sheetData === undefined ? [] : childrenNamed(sheetData, 'row')) {
+    const row = readRow(rowEl, shared, styles);
+    if (used.cells + row.length > cellsLeft) {
       break;
     }
-    used.cells += tr.cells.length;
-    table.appendChild(tr);
+    used.cells += row.length;
+    rows.push(row);
   }
 
-  return { table, cells: used.cells };
+  return rows;
+}
+
+const REL_ID_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+
+/** Worksheet part path → the tab name the workbook gives it. */
+async function readSheetNames(parts: ZipParts): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  const workbook = await parts.optionalXml('xl/workbook.xml');
+  const rels = await parts.optionalXml('xl/_rels/workbook.xml.rels');
+  if (workbook === null || rels === null) {
+    return names;
+  }
+  const targets = new Map(childrenNamed(rels.documentElement, 'Relationship').map((rel) => {
+    const target = rel.getAttribute('Target') ?? '';
+
+    return [rel.getAttribute('Id') ?? '', target.startsWith('/') ? target.slice(1) : `xl/${target}`] as const;
+  }));
+  for (const sheet of childrenNamed(childrenNamed(workbook.documentElement, 'sheets')[0], 'sheet')) {
+    const target = targets.get(sheet.getAttributeNS(REL_ID_NS, 'id') ?? sheet.getAttribute('r:id') ?? '');
+    const name = sheet.getAttribute('name');
+    if (target !== undefined && name !== null) {
+      names.set(target, name);
+    }
+  }
+
+  return names;
 }
 
 /**
- * Render an .xlsx as DOM tables by parsing the OOXML zip directly (in-house
- * zip reader + DOMParser) — textContent only, never innerHTML. One table per worksheet; cells
- * are placed at their A1 column so sparse rows stay aligned. Parts are read
- * through the same guards as the docx renderer: inflate limits, no DOCTYPE.
+ * Read an .xlsx into sheets of cells by parsing the OOXML zip directly
+ * (in-house zip reader + DOMParser). Cells are placed at their A1 column so
+ * sparse rows stay aligned. Parts are read through the same guards as the docx
+ * renderer: inflate limits, no DOCTYPE.
  */
-export async function renderXlsxInto(buf: ArrayBuffer, container: HTMLElement): Promise<void> {
+export async function readWorkbook(buf: ArrayBuffer): Promise<GridSheet[]> {
   const parts = await ZipParts.open(buf);
   const sharedDoc = await parts.optionalXml('xl/sharedStrings.xml');
   const shared = sharedDoc === null ? [] : childrenNamed(sharedDoc.documentElement, 'si').map(sharedString);
+  const styles = readStyles(await parts.optionalXml('xl/styles.xml'));
+  const names = await readSheetNames(parts);
 
   const sheetPaths = parts.paths()
     .filter((path) => /^xl\/worksheets\/sheet\d+\.xml$/.test(path))
     .sort((a, b) => sheetNumber(a) - sheetNumber(b));
 
+  const sheets: GridSheet[] = [];
   const spent = { cells: 0 };
   for (const path of sheetPaths) {
     // A sheet that fails to parse is left out; the others still show.
     const doc = await parts.optionalXml(path);
     if (doc !== null) {
-      const { table, cells } = buildSheetTable(doc, shared, MAX_CELLS - spent.cells);
-      spent.cells += cells;
-      container.appendChild(table);
+      const rows = readRows(doc, shared, styles, MAX_CELLS - spent.cells);
+      spent.cells += rows.reduce((total, row) => total + row.length, 0);
+      sheets.push({ name: names.get(path) ?? `Sheet ${sheetNumber(path)}`, rows });
     }
   }
+
+  return sheets;
+}
+
+/** Render an .xlsx into `container` as a spreadsheet grid. Cell text is set as text, never as markup. */
+export async function renderXlsxInto(
+  buf: ArrayBuffer,
+  container: HTMLElement,
+  chrome: PreviewChrome = detachedChrome(container),
+): Promise<void> {
+  mountSheetGrid(container, await readWorkbook(buf), chrome);
 }
 
 /** Render into `container`; resolves with a function that frees what the render holds. */
@@ -157,6 +200,7 @@ async function renderInto(
   container: HTMLElement,
   kind: OfficeKind,
   isClosed: () => boolean,
+  chrome: PreviewChrome,
 ): Promise<(() => void) | null> {
   if (kind === 'docx') {
     const render = await loadDocxRenderer();
@@ -164,7 +208,7 @@ async function renderInto(
     return render(buf, container);
   }
   if (kind === 'xlsx') {
-    await renderXlsxInto(buf, container);
+    await renderXlsxInto(buf, container, chrome);
 
     return null;
   }
@@ -192,7 +236,7 @@ export async function fillOfficeBody(
   kind: OfficeKind,
   isClosed: () => boolean,
   onRelease: (release: () => void) => void = () => undefined,
-  chrome?: PreviewChrome,
+  chrome: PreviewChrome = detachedChrome(body, isClosed, onRelease),
 ): Promise<void> {
   const result = await loadBinaryPreview(opts.url);
   if (isClosed()) {
@@ -210,13 +254,13 @@ export async function fillOfficeBody(
   body.replaceChildren(container);
 
   try {
-    const release = await renderInto(result.buf, container, kind, isClosed);
+    const release = await renderInto(result.buf, container, kind, isClosed, chrome);
     if (release !== null && isClosed()) {
       release();
     } else if (release !== null) {
       onRelease(release);
     }
-    if (chrome !== undefined && !isClosed()) {
+    if (!isClosed()) {
       mountKindChrome(container, kind, chrome);
     }
   } catch (e) {

@@ -354,6 +354,8 @@ function buildElements(opts: FilePreviewOptions): PreviewElements {
   const kind = getPreviewKind({ url: opts.url, fileName: opts.fileName, mimeType: opts.mimeType });
   const type = describePreviewType(opts, kind ?? 'text', resolvePreviewLabels(opts.labels));
 
+  dialog.setAttribute('data-preview-kind', kind ?? 'text');
+
   const badge = document.createElement('span');
   badge.className = 'blok-file-preview-badge';
   badge.setAttribute('data-role', 'file-preview-badge');

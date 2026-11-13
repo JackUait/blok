@@ -3,7 +3,7 @@ import { extToPrismLang } from './code-languages';
 import { resolveFileIcon, type FileIconCategory } from './file-icon';
 import { humanFileSize } from './format';
 import { extOf, type PreviewKind } from './preview';
-import type { PreviewLabels } from './preview-labels';
+import { DEFAULT_PREVIEW_LABELS, type PreviewLabels } from './preview-labels';
 
 /** What a preview body can ask of the modal around it. */
 export interface PreviewChrome {
@@ -20,6 +20,25 @@ export interface PreviewChrome {
   onRelease(release: () => void): void;
   /** Keys pressed anywhere in the open preview. */
   onKey(handler: (event: KeyboardEvent) => void): void;
+}
+
+/** A chrome with no modal around it: facts and the bar go nowhere, overlays land in `body`. */
+export function detachedChrome(
+  body: HTMLElement,
+  isClosed: () => boolean = () => false,
+  onRelease: (release: () => void) => void = () => undefined,
+): PreviewChrome {
+  return {
+    labels: DEFAULT_PREVIEW_LABELS,
+    header: document.createElement('div'),
+    body,
+    setFacts: () => undefined,
+    setBar: () => undefined,
+    addOverlay: (overlay) => body.appendChild(overlay),
+    isClosed,
+    onRelease,
+    onKey: () => undefined,
+  };
 }
 
 /** Marks a layer over the body, so the scroll haze does not take it for the view. */

@@ -93,6 +93,11 @@ writeFileSync(join(OUT, 'service-agreement.docx'), zip(docx));
 // 2D grid; strings become shared strings, numbers stay inline numeric. The
 // data rows are generated deterministically (no RNG, so the fixture is stable)
 // across many teams and metric columns to exercise a realistically wide sheet.
+// Two files from one grid. `quarterly-budget.xlsx` is plain: its bytes are
+// pinned by test/unit/tools/file/zip (frozen JSZip goldens), so it must not
+// change. `quarterly-budget-formatted.xlsx` adds what a real workbook has:
+// number formats, bold rows and a second sheet. The playground shows that one.
+function buildBudgetWorkbook(styled) {
 const HEADER = ['Department', 'Q1', 'Q2', 'Q3', 'Q4', 'FY Total', 'Prior FY', 'YoY %', 'Headcount'];
 const DEPARTMENTS = [
   'Engineering', 'Platform', 'Mobile', 'Data & ML', 'Security',
@@ -106,7 +111,8 @@ const dataRows = DEPARTMENTS.map((name, i) => {
   const quarters = [0, 1, 2, 3].map((q) => base + q * 3200 + ((i * (q + 1) * 131) % 9000));
   const fyTotal = quarters.reduce((a, b) => a + b, 0);
   const priorFY = Math.round(fyTotal / (1.05 + (i % 6) * 0.015));
-  const yoy = Math.round(((fyTotal - priorFY) / priorFY) * 1000) / 10;
+  // Styled: a fraction, which the cell's percent format shows as 6.5%.
+  const yoy = Math.round(((fyTotal - priorFY) / priorFY) * 1000) / (styled ? 1000 : 10);
   const headcount = 5 + ((i * 7) % 48);
   return [name, ...quarters, fyTotal, priorFY, yoy, headcount];
 });
@@ -115,7 +121,7 @@ const totalFy = sumCol(5);
 const totalPrior = sumCol(6);
 const totalRow = [
   'Total', sumCol(1), sumCol(2), sumCol(3), sumCol(4), totalFy, totalPrior,
-  Math.round(((totalFy - totalPrior) / totalPrior) * 1000) / 10, sumCol(8),
+  Math.round(((totalFy - totalPrior) / totalPrior) * 1000) / (styled ? 1000 : 10), sumCol(8),
 ];
 const grid = [HEADER, ...dataRows, totalRow];
 
@@ -129,18 +135,30 @@ const internString = (s) => {
   return id;
 };
 const colLetter = (i) => String.fromCharCode(65 + i);
-const rows = grid
+// Cell styles (cellXfs index): 0 plain, 1 thousands, 2 percent; +3 for bold.
+const PERCENT_COLUMN = 7;
+const COUNT_COLUMN = 8;
+const budgetStyle = (c, bold) => (c === PERCENT_COLUMN ? 2 : c === COUNT_COLUMN ? 0 : 1) + (bold ? 3 : 0);
+const sheetRows = (cells, boldRow, style) => cells
   .map((row, r) => {
-    const cells = row
+    const out = row
       .map((value, c) => {
         const ref = `${colLetter(c)}${r + 1}`;
-        if (typeof value === 'number') return `<c r="${ref}"><v>${value}</v></c>`;
-        return `<c r="${ref}" t="s"><v>${internString(value)}</v></c>`;
+        const bold = boldRow(r);
+        const s = (index) => (styled ? ` s="${index}"` : '');
+        if (typeof value === 'number') return `<c r="${ref}"${s(style(c, bold))}><v>${value}</v></c>`;
+        return `<c r="${ref}" t="s"${s(bold ? 3 : 0)}><v>${internString(value)}</v></c>`;
       })
       .join('');
-    return `<row r="${r + 1}">${cells}</row>`;
+    return `<row r="${r + 1}">${out}</row>`;
   })
   .join('');
+const rows = sheetRows(grid, (r) => r === 0 || r === grid.length - 1, budgetStyle);
+const headcountGrid = [
+  ['Department', 'Headcount', 'Open roles', 'Lead'],
+  ...dataRows.map((row, i) => [row[0], row[8], i % 4, ['A. Okafor', 'J. Lindqvist', 'M. Tanaka'][i % 3]]),
+];
+const headcountRows = styled ? sheetRows(headcountGrid, (r) => r === 0, (_c, bold) => (bold ? 3 : 0)) : '';
 const sharedStrings = sharedList.map((s) => `<si><t xml:space="preserve">${esc(s)}</t></si>`).join('');
 
 const xlsx = new Map();
@@ -152,7 +170,9 @@ xlsx.set(
 <Default Extension="xml" ContentType="application/xml"/>
 <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
 <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
-<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
+${styled ? `<Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+` : ''}<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
 </Types>`,
 );
 xlsx.set(
@@ -166,7 +186,7 @@ xlsx.set(
   'xl/workbook.xml',
   `${XML}
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-<sheets><sheet name="Budget" sheetId="1" r:id="rId1"/></sheets>
+<sheets><sheet name="Budget" sheetId="1" r:id="rId1"/>${styled ? '<sheet name="Headcount" sheetId="2" r:id="rId3"/>' : ''}</sheets>
 </workbook>`,
 );
 xlsx.set(
@@ -175,7 +195,9 @@ xlsx.set(
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
 <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
-</Relationships>`,
+${styled ? `<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>
+<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+` : ''}</Relationships>`,
 );
 xlsx.set(
   'xl/sharedStrings.xml',
@@ -191,7 +213,33 @@ xlsx.set(
 <sheetData>${rows}</sheetData>
 </worksheet>`,
 );
-writeFileSync(join(OUT, 'quarterly-budget.xlsx'), zip(xlsx));
+if (styled) {
+  xlsx.set(
+    'xl/worksheets/sheet2.xml',
+    `${XML}
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<sheetData>${headcountRows}</sheetData>
+</worksheet>`,
+  );
+  const xf = (numFmtId, fontId) => `<xf numFmtId="${numFmtId}" fontId="${fontId}" fillId="0" borderId="0" xfId="0"/>`;
+  xlsx.set(
+    'xl/styles.xml',
+    `${XML}
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<numFmts count="1"><numFmt numFmtId="164" formatCode="0.0%"/></numFmts>
+<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>
+<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>
+<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="6">${xf(0, 0)}${xf(3, 0)}${xf(164, 0)}${xf(0, 1)}${xf(3, 1)}${xf(164, 1)}</cellXfs>
+</styleSheet>`,
+  );
+}
+
+return zip(xlsx);
+}
+writeFileSync(join(OUT, 'quarterly-budget.xlsx'), buildBudgetWorkbook(false));
+writeFileSync(join(OUT, 'quarterly-budget-formatted.xlsx'), buildBudgetWorkbook(true));
 
 // ---- pptx: a designed pitch deck -----------------------------------------
 // A short, opinionated product deck so the inline preview shows a real story:

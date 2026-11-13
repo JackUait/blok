@@ -20,7 +20,7 @@ vi.mock('../../../../src/tools/file/office-loaders', () => ({
   loadPptxRenderer: loaders.loadPptxRenderer,
 }));
 
-import { fillOfficeBody, isOfficeKind, renderXlsxInto } from '../../../../src/tools/file/office-preview';
+import { fillOfficeBody, isOfficeKind, readWorkbook, renderXlsxInto } from '../../../../src/tools/file/office-preview';
 import type { FilePreviewOptions } from '../../../../src/tools/file/preview-modal';
 
 
@@ -49,8 +49,15 @@ const renderSheet = async (files: Record<string, string>): Promise<HTMLElement> 
 };
 
 const rowTexts = (container: HTMLElement): string[][] =>
-  Array.from(container.querySelectorAll('tr')).map((tr) =>
+  Array.from(container.querySelectorAll('tbody tr')).map((tr) =>
     Array.from(tr.querySelectorAll('td')).map((td) => td.textContent ?? ''));
+
+/** The text of every cell, without the grid's letters and numbers. */
+const cellsText = (container: HTMLElement): string =>
+  Array.from(container.querySelectorAll('td')).map((td) => td.textContent ?? '').join('');
+
+const firstCells = async (files: Record<string, string>): Promise<string[]> =>
+  (await readWorkbook(workbook(files))).map((sheet) => sheet.rows[0]?.[0]?.text ?? '');
 
 describe('office preview mutants', () => {
   beforeEach(() => {
@@ -84,65 +91,70 @@ describe('office preview mutants', () => {
   });
 
   describe('rendering a workbook', () => {
-    it('builds one table per worksheet', async () => {
-      const container = await renderSheet({
+    it('reads one sheet per worksheet and draws the first', async () => {
+      const files = {
         'xl/worksheets/sheet1.xml': sheetXml('<row><c r="A1" t="inlineStr"><is><t>one</t></is></c></row>'),
         'xl/worksheets/sheet2.xml': sheetXml('<row><c r="A1" t="inlineStr"><is><t>two</t></is></c></row>'),
-      });
+      };
 
-      expect(container.querySelectorAll('table')).toHaveLength(2);
-      expect(container.querySelectorAll('table')[0].textContent).toBe('one');
-      expect(container.querySelectorAll('table')[1].textContent).toBe('two');
+      expect(await firstCells(files)).toEqual(['one', 'two']);
+      const container = await renderSheet(files);
+      expect(container.querySelectorAll('table')).toHaveLength(1);
+      expect(cellsText(container)).toBe('one');
     });
 
     it('orders sheets numerically, not as strings', async () => {
-      const container = await renderSheet({
+      expect(await firstCells({
         'xl/worksheets/sheet10.xml': sheetXml('<row><c r="A1" t="inlineStr"><is><t>ten</t></is></c></row>'),
         'xl/worksheets/sheet2.xml': sheetXml('<row><c r="A1" t="inlineStr"><is><t>two</t></is></c></row>'),
-      });
-
-      const tables = container.querySelectorAll('table');
-
-      expect(tables[0].textContent).toBe('two');
-      expect(tables[1].textContent).toBe('ten');
+      })).toEqual(['two', 'ten']);
     });
 
     it('ignores files that are not worksheets', async () => {
-      const container = await renderSheet({
+      expect(await firstCells({
         'xl/worksheets/sheet1.xml': sheetXml('<row><c r="A1" t="inlineStr"><is><t>one</t></is></c></row>'),
         'xl/workbook.xml': '<workbook/>',
         'docProps/core.xml': '<props/>',
-      });
-
-      expect(container.querySelectorAll('table')).toHaveLength(1);
+      })).toEqual(['one']);
     });
 
     it('ignores an archive entry whose name only starts like a worksheet', async () => {
-      const container = await renderSheet({
+      expect(await firstCells({
         'xl/worksheets/sheet1.xml': sheetXml('<row><c r="A1" t="inlineStr"><is><t>one</t></is></c></row>'),
         'xl/worksheets/sheet1.xml.bak': sheetXml('<row><c r="A1" t="inlineStr"><is><t>bak</t></is></c></row>'),
-      });
-
-      expect(container.querySelectorAll('table')).toHaveLength(1);
-      expect(container.querySelector('table')?.textContent).toBe('one');
+      })).toEqual(['one']);
     });
 
     it('ignores a worksheet path nested below the archive root', async () => {
-      const container = await renderSheet({
+      expect(await firstCells({
         'xl/worksheets/sheet1.xml': sheetXml('<row><c r="A1" t="inlineStr"><is><t>one</t></is></c></row>'),
         'backup/xl/worksheets/sheet2.xml': sheetXml('<row><c r="A1" t="inlineStr"><is><t>nested</t></is></c></row>'),
-      });
-
-      expect(container.querySelectorAll('table')).toHaveLength(1);
-      expect(container.querySelector('table')?.textContent).toBe('one');
+      })).toEqual(['one']);
     });
 
-    it('class-names every worksheet table', async () => {
-      const container = await renderSheet({
-        'xl/worksheets/sheet1.xml': sheetXml('<row><c r="A1" t="inlineStr"><is><t>one</t></is></c></row>'),
-      });
+    it('names a sheet by its workbook tab, or by its number without one', async () => {
+      const REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+      const sheets = await readWorkbook(workbook({
+        'xl/workbook.xml': `<workbook xmlns="${SHEET_NS}" xmlns:r="${REL}"><sheets><sheet name="Budget" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+        'xl/_rels/workbook.xml.rels': '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>',
+        'xl/worksheets/sheet1.xml': sheetXml('<row><c r="A1"><v>1</v></c></row>'),
+        'xl/worksheets/sheet2.xml': sheetXml('<row><c r="A1"><v>2</v></c></row>'),
+      }));
 
-      expect(container.querySelector('table')?.className).toBe('blok-file-preview-xlsx-table');
+      expect(sheets.map((sheet) => sheet.name)).toEqual(['Budget', 'Sheet 2']);
+    });
+
+    it('shows a number the way its cell style formats it, and keeps the raw number for totals', async () => {
+      const [sheet] = await readWorkbook(workbook({
+        'xl/styles.xml': `<styleSheet xmlns="${SHEET_NS}"><fonts><font/><font><b/></font></fonts><cellXfs><xf numFmtId="0" fontId="0"/><xf numFmtId="3" fontId="1"/></cellXfs></styleSheet>`,
+        'xl/worksheets/sheet1.xml': sheetXml('<row><c r="A1" s="1"><v>40000</v></c><c r="B1" s="0"><v>40000</v></c><c r="C1"><v>40000</v></c></row>'),
+      }));
+
+      expect(sheet.rows[0]).toEqual([
+        { text: (40000).toLocaleString(undefined, { useGrouping: true }), value: 40000, bold: true },
+        { text: '40000', value: 40000 },
+        { text: '40000', value: 40000 },
+      ]);
     });
   });
 
@@ -153,7 +165,7 @@ describe('office preview mutants', () => {
         'xl/worksheets/sheet1.xml': sheetXml('<row><c r="A1" t="s"><v>1</v></c></row>'),
       });
 
-      expect(container.textContent).toBe('one');
+      expect(cellsText(container)).toBe('one');
     });
 
     it('joins the runs of a shared string', async () => {
@@ -162,7 +174,7 @@ describe('office preview mutants', () => {
         'xl/worksheets/sheet1.xml': sheetXml('<row><c r="A1" t="s"><v>0</v></c></row>'),
       });
 
-      expect(container.textContent).toBe('ab');
+      expect(cellsText(container)).toBe('ab');
     });
 
     it('renders an empty cell for a shared index that is not there', async () => {
@@ -179,7 +191,7 @@ describe('office preview mutants', () => {
         'xl/worksheets/sheet1.xml': sheetXml('<row><c r="A1" t="inlineStr"><is><t>a</t><t>b</t></is></c></row>'),
       });
 
-      expect(container.textContent).toBe('ab');
+      expect(cellsText(container)).toBe('ab');
     });
 
     it('reads a plain value cell', async () => {
@@ -187,7 +199,7 @@ describe('office preview mutants', () => {
         'xl/worksheets/sheet1.xml': sheetXml('<row><c r="A1"><v>42</v></c></row>'),
       });
 
-      expect(container.textContent).toBe('42');
+      expect(cellsText(container)).toBe('42');
     });
 
     it('renders an empty cell when there is no value at all', async () => {
@@ -315,8 +327,8 @@ describe('office preview mutants', () => {
 
       await renderXlsxInto(await workbook({ 'xl/worksheets/sheet1.xml': bomb }), container);
 
-      expect(container.querySelector('table')).toBeNull();
-      expect(container.textContent).toBe('');
+      expect(container.querySelector('td')).toBeNull();
+      expect(cellsText(container)).toBe('');
     });
 
     it('still shows the good sheets when one sheet is not well-formed XML', async () => {
@@ -371,7 +383,7 @@ describe('office preview mutants', () => {
       expect(body.children).toHaveLength(1);
       expect(container?.className).toBe('blok-file-preview-office blok-file-preview-xlsx');
       expect(container?.getAttribute('data-role')).toBe('file-preview-xlsx');
-      expect(container?.querySelector('table')?.textContent).toBe('one');
+      expect(container === null || container === undefined ? null : cellsText(container)).toBe('one');
       expect(loaders.loadPptxRenderer).not.toHaveBeenCalled();
     });
 

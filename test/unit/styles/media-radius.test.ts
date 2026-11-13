@@ -145,7 +145,6 @@ const RADII: Array<[string, string, string]> = [
   ['styles/file.css', '.blok-file-preview-md img', role('block')],
   ['styles/file.css', '.blok-md-alert', role('block')],
   ['styles/file.css', '.blok-file-preview-docx .blok-docx', role('mark')],
-  ['styles/file.css', '.blok-file-preview-xlsx-table', role('surface')],
   ['styles/file.css', '.blok-file-preview-pptx > *', role('surface')],
   ['styles/media-empty.css', '.blok-media-empty__card', role('block')],
   ['styles/media-empty.css', '.blok-media-empty__glyph', role('control-lg')],

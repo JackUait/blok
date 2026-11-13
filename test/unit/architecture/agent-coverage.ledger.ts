@@ -139,6 +139,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/file/pptx/renderer/navigation.ts': exempt('view-only', 'A link in a PowerPoint preview scrolls to a slide or opens a web page; nothing is saved.'),
   'ui-file:src/tools/file/preview-chrome.ts': exempt('view-only', 'Buttons of the file preview (page, zoom, copy); nothing is saved.'),
   'ui-file:src/tools/file/preview-modal.ts': exempt('view-only', 'Shows a preview of the file; nothing is saved.'),
+  'ui-file:src/tools/file/sheet-grid.ts': exempt('view-only', 'Selects cells in a spreadsheet preview to read their sum; nothing is saved.'),
   'ui-file:src/tools/file/ui.ts': cmds(['block.update'], 'Rename and caption: file.fileName, file.caption.'),
   'ui-file:src/tools/header/index.ts': exempt('cut-v1', 'Opens and closes a toggle heading. View-state control is cut from v1 by D6 (user can revisit).'),
   'ui-file:src/tools/image/alt-popover.ts': cmds(['block.update'], 'Alt text: image.alt.'),

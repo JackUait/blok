@@ -1201,60 +1201,118 @@
   border-top: 1px solid currentColor;
 }
 
-/* --- xlsx: a single crisp data card, centred on the desk ------------------ */
-/* A small sheet centres in the modal instead of stranding in the top-left; the
-   `safe` keyword makes a sheet larger than the viewport fall back to start
-   alignment (scrollable) rather than clipping its first rows/columns. */
+/* --- xlsx and csv: a spreadsheet grid that fills the body ----------------- */
+/* sheet-grid.ts builds the table. Letters and numbers stick to the top and the
+   start edge; the sheet's own first row sticks under the letters. */
 .blok-file-preview-xlsx {
-  display: flex;
-  align-items: safe center;
-  justify-content: safe center;
-  padding: var(--blok-space-6);
+  background: var(--blok-bg-primary);
+  scrollbar-gutter: auto;
 }
 
-.blok-file-preview-xlsx-table {
+.blok-file-preview-grid {
+  /* Height of the letters row; the frozen first row sticks right under it. */
+  --blok-file-grid-head: 26px;
+  /* Sticky cells sit over scrolling ones, so their fill must be opaque. */
+  --blok-file-grid-chrome: color-mix(in srgb, var(--blok-text-primary) 4%, var(--blok-bg-primary));
+
+  min-width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 0.8125rem;
-  line-height: var(--blok-line-height-tight);
-  background: var(--blok-bg-primary);
-  border: 1px solid var(--blok-border-subtle);
-  border-radius: var(--blok-radius-surface);
-  box-shadow: var(--blok-image-shadow-resting);
-  overflow: hidden;
+  font-size: var(--blok-font-size-ui-label);
+  line-height: 1.25;
+  user-select: none;
 }
 
-.blok-file-preview-xlsx-table td {
-  min-width: 3rem;
-  padding: var(--blok-space-2) var(--blok-space-3);
+.blok-file-preview-grid td,
+.blok-file-preview-grid th {
+  min-width: 84px;
+  padding: var(--blok-space-1-75) var(--blok-space-3);
   border-inline-end: 1px solid var(--blok-border-subtle);
   border-bottom: 1px solid var(--blok-border-subtle);
-  white-space: pre;
+  font-weight: var(--blok-font-weight-regular);
+  text-align: start;
+  white-space: nowrap;
+  background: var(--blok-bg-primary);
+}
+
+.blok-file-preview-grid td {
+  cursor: cell;
 }
 
 /* Numbers right-align with tabular figures so columns read like a spreadsheet. */
-.blok-file-preview-xlsx-table td.blok-file-preview-xlsx-num {
-  text-align: right;
+.blok-file-preview-grid td.blok-file-preview-xlsx-num {
+  text-align: end;
   font-variant-numeric: tabular-nums;
 }
 
-.blok-file-preview-xlsx-table td:last-child {
-  border-inline-end: 0;
+.blok-file-preview-grid td[data-bold] {
+  font-weight: var(--blok-font-weight-semibold);
 }
 
-.blok-file-preview-xlsx-table tr:last-child td {
-  border-bottom: 0;
+.blok-file-preview-grid th {
+  position: sticky;
+  z-index: 2;
+  padding: var(--blok-space-1) var(--blok-space-2);
+  font-size: var(--blok-font-size-ui-small);
+  text-align: center;
+  color: var(--blok-text-tertiary);
+  background: var(--blok-file-grid-chrome);
 }
 
-/* First row reads as the header band; alternating rows aid horizontal scanning. */
-.blok-file-preview-xlsx-table tr:first-child td {
-  font-weight: 600;
+.blok-file-preview-grid thead th {
+  top: 0;
+  height: var(--blok-file-grid-head);
+}
+
+.blok-file-preview-grid tbody th,
+.blok-file-preview-grid thead th:first-child {
+  inset-inline-start: 0;
+  width: 40px;
+  min-width: 40px;
+}
+
+/* The corner stays over both the letters and the numbers. */
+.blok-file-preview-grid thead th:first-child {
+  z-index: 4;
+}
+
+/* Selected range: its letters and numbers go to primary ink on a gray fill. */
+.blok-file-preview-grid th[data-active] {
+  font-weight: var(--blok-font-weight-semibold);
   color: var(--blok-text-primary);
-  background: var(--blok-bg-secondary);
+  background: color-mix(in srgb, var(--blok-text-primary) 10%, var(--blok-bg-primary));
 }
 
-.blok-file-preview-xlsx-table tr:nth-child(even) td {
-  background: var(--blok-bg-secondary);
+.blok-file-preview-grid tr[data-grid-head] td {
+  position: sticky;
+  top: var(--blok-file-grid-head);
+  z-index: 1;
+  font-weight: var(--blok-font-weight-semibold);
+  border-bottom-color: var(--blok-border-primary);
+}
+
+.blok-file-preview-grid tr[data-grid-head] th {
+  top: var(--blok-file-grid-head);
+  z-index: 3;
+}
+
+/* sheet-grid.ts draws the range outline as inline inset shadows. */
+.blok-file-preview-grid td[data-selected] {
+  background: color-mix(in srgb, var(--blok-text-primary) 7%, var(--blok-bg-primary));
+}
+
+.blok-file-preview-grid-tabs {
+  display: inline-flex;
+  gap: var(--blok-space-0-5);
+}
+
+.blok-file-preview-grid-status {
+  display: contents;
+}
+
+/* A sheet is wide: its modal takes more of the screen. */
+.blok-file-preview[data-preview-kind="xlsx"] {
+  width: min(1120px, 100%);
 }
 
 /* --- pptx: stacked slide cards -------------------------------------------- */

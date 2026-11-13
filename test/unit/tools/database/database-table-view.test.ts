@@ -753,6 +753,18 @@ describe('DatabaseTableView', () => {
   });
 
   describe('cell keyboard model', () => {
+    it('commits and dismisses the cell editor when a row page opens', () => {
+      const { root, state, handlers, view } = mount();
+      cell(root, 'r1', 'p-notes').click();
+      editorField().value = 'Saved before peek';
+      editorField().dispatchEvent(new Event('input', { bubbles: true }));
+      view.rowPageOpened();
+      expect(editor()).toBeNull();
+      expect(state.editing).toBe(false);
+      expect(handlers.commitCell).toHaveBeenCalledWith('r1', 'p-notes', 'Saved before peek');
+      view.destroy();
+    });
+
     it('a click opens the cell editor at once and selects the cell', () => {
       const { root, state } = mount();
 

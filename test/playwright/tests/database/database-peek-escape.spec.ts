@@ -102,3 +102,43 @@ test('Escape on a center peek from the gallery closes it and gives the card back
   await expect(card).toHaveAttribute('data-blok-database-row-selected', '');
   await expect(page.locator('[data-blok-database-gallery]')).toBeFocused();
 });
+
+// The side peek overlays the page: a background + must not open a second editor/menu.
+test('side peek blocks background pointer and keyboard interactions, then restores them', async ({ page }) => {
+  await mount(page, blocks({ type: 'table' }));
+  await page.evaluate(() => {
+    const add = document.createElement('button');
+    add.id = 'background-add';
+    add.textContent = '+';
+    add.style.cssText = 'position:fixed;left:10px;top:10px;width:40px;height:40px';
+    add.dataset.presses = '0';
+    add.onclick = () => { add.dataset.presses = String(Number(add.dataset.presses) + 1); };
+    document.body.append(add);
+  });
+  const row = page.locator('[data-blok-database-table-row][data-row-id="r1"]');
+  await row.hover();
+  const opener = row.locator('[data-blok-database-table-open]');
+  await opener.click();
+  await expect(peek(page)).toBeVisible();
+  await expect(peek(page)).toHaveAttribute('aria-modal', 'true');
+  const title = page.getByRole('textbox', { name: 'Card title' });
+  await title.fill('Edited in peek');
+  // Tab from the title opens the peek's own property editor (a body portal).
+  await page.keyboard.press('Tab');
+  await expect(page.locator('[data-blok-database-select-search]')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(peek(page)).toBeVisible();
+  await peek(page).locator('[data-blok-database-drawer-close]').focus();
+  await page.keyboard.press('Shift+Tab');
+  await expect(peek(page).locator('[data-blok-database-peek-resize]')).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(peek(page).locator('[data-blok-database-drawer-close]')).toBeFocused();
+  // Hit the real screen coordinates, not a forced click that bypasses the backdrop.
+  await page.mouse.click(30, 30);
+  await expect(peek(page)).toHaveCount(0);
+  await expect(page.locator('#background-add')).toHaveAttribute('data-presses', '0');
+  await expect(page.locator('#background-add')).not.toHaveAttribute('inert', '');
+  await page.locator('#background-add').click();
+  await expect(page.locator('#background-add')).toHaveAttribute('data-presses', '1');
+  await expect(row).toContainText('Edited in peek');
+});

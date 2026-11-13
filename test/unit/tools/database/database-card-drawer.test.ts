@@ -695,7 +695,7 @@ describe('DatabaseCardDrawer', () => {
   });
 
   describe('accessibility', () => {
-    it('drawer has role="complementary" and aria-label', () => {
+    it('drawer has modal dialog semantics and aria-label', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
       const row = makeRow();
@@ -704,7 +704,8 @@ describe('DatabaseCardDrawer', () => {
 
       const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
 
-      expect(el.getAttribute('role')).toBe('complementary');
+      expect(el.getAttribute('role')).toBe('dialog');
+      expect(el.getAttribute('aria-modal')).toBe('true');
       expect(el.getAttribute('aria-label')).toBeTruthy();
     });
 

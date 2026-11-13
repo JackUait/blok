@@ -644,6 +644,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
   /** The tool calls it when a row page opens in a peek. */
   rowPageOpened(): void {
+    this.grid?.finishEditing();
+    this.bulkEditor?.close();
+    this.menu?.hide();
     this.repaintOpen();
   }
 

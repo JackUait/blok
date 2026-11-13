@@ -1860,6 +1860,10 @@
   max-height: calc(100vh - 144px);
 }
 
+[data-blok-database-peek-backdrop][data-peek-mode="side"] {
+  background-color: transparent;
+}
+
 [data-blok-database-peek-backdrop][data-blok-top-layer][popover] {
   inset: 0;
 }

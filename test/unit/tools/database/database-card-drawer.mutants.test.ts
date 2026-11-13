@@ -467,8 +467,7 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
   });
 
   describe('outside click', () => {
-    // notion-motion.md Round 4 re-checks: a click in the database beside a side peek keeps it; R31 was such a click.
-    it('stays open when mousedown lands in the database beside a side peek', () => {
+    it('dismisses for an outside press even inside the source database', () => {
       const options = createOptions();
       const drawer = makeDrawer(options);
 
@@ -479,7 +478,7 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
       options.wrapper.appendChild(beside);
       beside.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
 
-      expect(drawer.isOpen).toBe(true);
+      expect(drawer.isOpen).toBe(false);
     });
 
     it('stays open when mousedown lands inside the drawer', () => {

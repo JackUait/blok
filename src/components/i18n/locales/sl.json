@@ -935,6 +935,7 @@
   "tools.file.previewPdfPasswordWrong": "Geslo je napačno. Poskusite znova.",
   "tools.file.previewPdfOpen": "Odpri",
   "tools.file.previewPdfPageN": "Stran {number}",
+  "tools.file.previewThumbnails": "Sličice strani",
   "tools.video.alignment": "Poravnava",
   "tools.video.alignmentLeft": "Levo",
   "tools.video.alignmentCenter": "Sredina",

@@ -931,6 +931,7 @@
   "tools.file.previewPdfPasswordWrong": "પાસવર્ડ ખોટો છે. ફરી પ્રયાસ કરો.",
   "tools.file.previewPdfOpen": "ખોલો",
   "tools.file.previewPdfPageN": "પૃષ્ઠ {number}",
+  "tools.file.previewThumbnails": "પૃષ્ઠ થંબનેલ",
   "tools.video.alignment": "સંરેખણ",
   "tools.video.alignmentLeft": "ડાબે સંરેખિત કરો",
   "tools.video.alignmentCenter": "મધ્યમાં સંરેખિત કરો",

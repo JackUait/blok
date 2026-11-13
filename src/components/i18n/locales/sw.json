@@ -931,6 +931,7 @@
   "tools.file.previewPdfPasswordWrong": "Nenosiri si sahihi. Jaribu tena.",
   "tools.file.previewPdfOpen": "Fungua",
   "tools.file.previewPdfPageN": "Ukurasa {number}",
+  "tools.file.previewThumbnails": "Picha ndogo za kurasa",
   "toolNames.video": "Video",
   "toolNames.audio": "Sauti",
   "tools.video.alignment": "Mpangilio",

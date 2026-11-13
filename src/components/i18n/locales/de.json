@@ -933,6 +933,7 @@
   "tools.file.previewPdfPasswordWrong": "Das Passwort ist falsch. Bitte erneut versuchen.",
   "tools.file.previewPdfOpen": "Öffnen",
   "tools.file.previewPdfPageN": "Seite {number}",
+  "tools.file.previewThumbnails": "Seitenminiaturen",
   "tools.video.alignment": "Ausrichtung",
   "tools.video.alignmentLeft": "Linksbündig ausrichten",
   "tools.video.alignmentCenter": "Zentriert ausrichten",

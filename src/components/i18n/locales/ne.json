@@ -951,6 +951,7 @@
   "tools.file.previewPdfPasswordWrong": "पासवर्ड गलत छ। फेरि प्रयास गर्नुहोस्।",
   "tools.file.previewPdfOpen": "खोल्नुहोस्",
   "tools.file.previewPdfPageN": "पृष्ठ {number}",
+  "tools.file.previewThumbnails": "पृष्ठ थम्बनेलहरू",
   "toolNames.video": "भिडियो",
   "toolNames.audio": "अडियो",
   "tools.video.alignment": "पङ्क्तिबद्धता",

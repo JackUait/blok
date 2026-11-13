@@ -951,6 +951,7 @@
   "tools.file.previewPdfPasswordWrong": "पासवर्ड चुकीचा आहे. पुन्हा प्रयत्न करा.",
   "tools.file.previewPdfOpen": "उघडा",
   "tools.file.previewPdfPageN": "पृष्ठ {number}",
+  "tools.file.previewThumbnails": "पृष्ठ लघुप्रतिमा",
   "toolNames.video": "व्हिडिओ",
   "toolNames.audio": "ऑडिओ",
   "tools.video.alignment": "संरेखन",

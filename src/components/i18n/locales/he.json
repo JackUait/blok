@@ -932,6 +932,7 @@
   "tools.file.previewPdfPasswordWrong": "הסיסמה שגויה. נסו שוב.",
   "tools.file.previewPdfOpen": "פתח",
   "tools.file.previewPdfPageN": "עמוד {number}",
+  "tools.file.previewThumbnails": "תמונות ממוזערות של עמודים",
   "tools.video.alignment": "יישור",
   "tools.video.alignmentLeft": "שמאל",
   "tools.video.alignmentCenter": "מרכז",

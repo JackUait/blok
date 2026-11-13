@@ -931,6 +931,7 @@
   "tools.file.previewPdfPasswordWrong": "Mật khẩu không đúng. Vui lòng thử lại.",
   "tools.file.previewPdfOpen": "Mở",
   "tools.file.previewPdfPageN": "Trang {number}",
+  "tools.file.previewThumbnails": "Hình thu nhỏ của trang",
   "toolNames.video": "Video",
   "toolNames.audio": "Audio",
   "tools.video.alignment": "Căn chỉnh",

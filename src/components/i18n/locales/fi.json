@@ -931,6 +931,7 @@
   "tools.file.previewPdfPasswordWrong": "Salasana on väärä. Yritä uudelleen.",
   "tools.file.previewPdfOpen": "Avaa",
   "tools.file.previewPdfPageN": "Sivu {number}",
+  "tools.file.previewThumbnails": "Sivujen pikkukuvat",
   "tools.video.alignment": "Tasaus",
   "tools.video.alignmentLeft": "Tasaa vasemmalle",
   "tools.video.alignmentCenter": "Tasaa keskelle",

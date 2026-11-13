@@ -773,6 +773,7 @@
   "tools.file.previewPdfPasswordWrong": "That password is wrong. Try again.",
   "tools.file.previewPdfOpen": "Open",
   "tools.file.previewPdfPageN": "Page {number}",
+  "tools.file.previewThumbnails": "Page thumbnails",
   "tools.video.alignment": "Alignment",
   "tools.video.alignmentLeft": "Align left",
   "tools.video.alignmentCenter": "Align center",

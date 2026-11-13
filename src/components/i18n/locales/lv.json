@@ -954,6 +954,7 @@
   "tools.file.previewPdfPasswordWrong": "Parole nav pareiza. Mēģiniet vēlreiz.",
   "tools.file.previewPdfOpen": "Atvērt",
   "tools.file.previewPdfPageN": "Lappuse {number}",
+  "tools.file.previewThumbnails": "Lappušu sīktēli",
   "toolNames.video": "Video",
   "toolNames.audio": "Audio",
   "tools.video.alignment": "Līdzinājums",

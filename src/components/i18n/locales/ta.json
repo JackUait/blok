@@ -931,6 +931,7 @@
   "tools.file.previewPdfPasswordWrong": "கடவுச்சொல் தவறு. மீண்டும் முயலவும்.",
   "tools.file.previewPdfOpen": "திற",
   "tools.file.previewPdfPageN": "பக்கம் {number}",
+  "tools.file.previewThumbnails": "பக்கச் சிறுபடங்கள்",
   "toolNames.video": "வீடியோ",
   "toolNames.audio": "ஆடியோ",
   "tools.video.alignment": "சீரமைப்பு",

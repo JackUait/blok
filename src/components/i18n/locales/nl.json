@@ -931,6 +931,7 @@
   "tools.file.previewPdfPasswordWrong": "Dat wachtwoord is onjuist. Probeer het opnieuw.",
   "tools.file.previewPdfOpen": "Openen",
   "tools.file.previewPdfPageN": "Pagina {number}",
+  "tools.file.previewThumbnails": "Paginaminiaturen",
   "toolNames.video": "Video",
   "toolNames.audio": "Audio",
   "tools.video.alignment": "Uitlijning",

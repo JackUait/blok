@@ -934,6 +934,7 @@
   "tools.file.previewPdfPasswordWrong": "Лозинка није тачна. Покушајте поново.",
   "tools.file.previewPdfOpen": "Отвори",
   "tools.file.previewPdfPageN": "Страница {number}",
+  "tools.file.previewThumbnails": "Сличице страница",
   "tools.video.alignment": "Поравнање",
   "tools.video.alignmentLeft": "Лево",
   "tools.video.alignmentCenter": "Средина",

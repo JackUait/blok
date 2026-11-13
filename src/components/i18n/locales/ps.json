@@ -933,6 +933,7 @@
   "tools.file.previewPdfPasswordWrong": "پټنوم ناسم دی. بیا هڅه وکړئ.",
   "tools.file.previewPdfOpen": "خلاص کړئ",
   "tools.file.previewPdfPageN": "پاڼه {number}",
+  "tools.file.previewThumbnails": "د پاڼو کوچني انځورونه",
   "tools.video.alignment": "سمون",
   "tools.video.alignmentLeft": "کیڼ لوري ته برابر کړئ",
   "tools.video.alignmentCenter": "منځ ته برابر کړئ",

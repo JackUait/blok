@@ -931,6 +931,7 @@
   "tools.file.previewPdfPasswordWrong": "Parola yanlış. Yeniden deneyin.",
   "tools.file.previewPdfOpen": "Aç",
   "tools.file.previewPdfPageN": "Sayfa {number}",
+  "tools.file.previewThumbnails": "Sayfa küçük resimleri",
   "toolNames.video": "Video",
   "toolNames.audio": "Ses",
   "tools.video.alignment": "Hizalama",

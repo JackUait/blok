@@ -951,6 +951,7 @@
   "tools.file.previewPdfPasswordWrong": "Лозинката е погрешна. Обидете се повторно.",
   "tools.file.previewPdfOpen": "Отвори",
   "tools.file.previewPdfPageN": "Страница {number}",
+  "tools.file.previewThumbnails": "Сликички на страниците",
   "toolNames.video": "Видео",
   "toolNames.audio": "Аудио",
   "tools.video.alignment": "Порамнување",

@@ -931,6 +931,7 @@
   "tools.file.previewPdfPasswordWrong": "A jelszó helytelen. Próbálja újra.",
   "tools.file.previewPdfOpen": "Megnyitás",
   "tools.file.previewPdfPageN": "{number}. oldal",
+  "tools.file.previewThumbnails": "Oldalbélyegképek",
   "tools.video.alignment": "Igazítás",
   "tools.video.alignmentLeft": "Balra",
   "tools.video.alignmentCenter": "Középre",

@@ -953,6 +953,7 @@
   "tools.file.previewPdfPasswordWrong": "وشەی نهێنی هەڵەیە. دووبارە هەوڵ بدەوە.",
   "tools.file.previewPdfOpen": "کردنەوە",
   "tools.file.previewPdfPageN": "پەڕەی {number}",
+  "tools.file.previewThumbnails": "وێنۆچکەی پەڕەکان",
   "tools.video.alignment": "ڕیزبەندی",
   "tools.video.alignmentLeft": "چەپ",
   "tools.video.alignmentCenter": "ناوەڕاست",

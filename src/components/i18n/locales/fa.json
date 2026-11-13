@@ -931,6 +931,7 @@
   "tools.file.previewPdfPasswordWrong": "رمز عبور اشتباه است. دوباره امتحان کنید.",
   "tools.file.previewPdfOpen": "باز کردن",
   "tools.file.previewPdfPageN": "صفحه {number}",
+  "tools.file.previewThumbnails": "تصاویر کوچک صفحه‌ها",
   "tools.video.alignment": "تراز",
   "tools.video.alignmentLeft": "چپ",
   "tools.video.alignmentCenter": "وسط",

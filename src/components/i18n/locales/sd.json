@@ -933,6 +933,7 @@
   "tools.file.previewPdfPasswordWrong": "پاسورڊ غلط آهي. ٻيهر ڪوشش ڪريو.",
   "tools.file.previewPdfOpen": "کوليو",
   "tools.file.previewPdfPageN": "صفحو {number}",
+  "tools.file.previewThumbnails": "صفحن جا ننڍا عڪس",
   "tools.video.alignment": "ترتيب",
   "tools.video.alignmentLeft": "کاٻي پاسي ترتيب ڏيو",
   "tools.video.alignmentCenter": "وچ ۾ ترتيب ڏيو",

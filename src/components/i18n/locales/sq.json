@@ -933,6 +933,7 @@
   "tools.file.previewPdfPasswordWrong": "Fjalëkalimi është i gabuar. Provoni sërish.",
   "tools.file.previewPdfOpen": "Hap",
   "tools.file.previewPdfPageN": "Faqja {number}",
+  "tools.file.previewThumbnails": "Miniaturat e faqeve",
   "tools.video.alignment": "Rreshtimi",
   "tools.video.alignmentLeft": "Majtas",
   "tools.video.alignmentCenter": "Në qendër",

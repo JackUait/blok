@@ -931,6 +931,7 @@
   "tools.file.previewPdfPasswordWrong": "पासवर्ड गलत है। फिर से कोशिश करें।",
   "tools.file.previewPdfOpen": "खोलें",
   "tools.file.previewPdfPageN": "पृष्ठ {number}",
+  "tools.file.previewThumbnails": "पृष्ठ थंबनेल",
   "tools.video.alignment": "संरेखण",
   "tools.video.alignmentLeft": "बाएं संरेखित करें",
   "tools.video.alignmentCenter": "बीच में संरेखित करें",

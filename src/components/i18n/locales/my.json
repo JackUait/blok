@@ -951,6 +951,7 @@
   "tools.file.previewPdfPasswordWrong": "စကားဝှက် မှားနေသည်။ ထပ်မံကြိုးစားပါ။",
   "tools.file.previewPdfOpen": "ဖွင့်ရန်",
   "tools.file.previewPdfPageN": "စာမျက်နှာ {number}",
+  "tools.file.previewThumbnails": "စာမျက်နှာ ပုံသေးများ",
   "toolNames.video": "ဗီဒီယို",
   "toolNames.audio": "အသံ",
   "tools.video.alignment": "တန်းညှိခြင်း",

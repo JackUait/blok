@@ -2529,6 +2529,7 @@ export type BlokMessageKey =
   | 'tools.file.previewSlidesOne'
   | 'tools.file.previewSum'
   | 'tools.file.previewTable'
+  | 'tools.file.previewThumbnails'
   | 'tools.file.previewTypeText'
   | 'tools.file.previewWrap'
   | 'tools.file.previewZoomIn'

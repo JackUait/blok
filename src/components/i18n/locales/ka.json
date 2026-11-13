@@ -933,6 +933,7 @@
   "tools.file.previewPdfPasswordWrong": "პაროლი არასწორია. სცადეთ ხელახლა.",
   "tools.file.previewPdfOpen": "გახსნა",
   "tools.file.previewPdfPageN": "გვერდი {number}",
+  "tools.file.previewThumbnails": "გვერდების მინიატურები",
   "tools.video.alignment": "სწორება",
   "tools.video.alignmentLeft": "მარცხნივ",
   "tools.video.alignmentCenter": "ცენტრში",

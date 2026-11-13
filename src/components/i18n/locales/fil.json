@@ -931,6 +931,7 @@
   "tools.file.previewPdfPasswordWrong": "Mali ang password. Subukan ulit.",
   "tools.file.previewPdfOpen": "Buksan",
   "tools.file.previewPdfPageN": "Pahina {number}",
+  "tools.file.previewThumbnails": "Mga thumbnail ng pahina",
   "tools.video.alignment": "Pag-align",
   "tools.video.alignmentLeft": "Kaliwa",
   "tools.video.alignmentCenter": "Gitna",

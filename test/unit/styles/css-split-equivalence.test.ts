@@ -1688,6 +1688,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const PDF_FIND_FIELD_BYTES = 329;
     // file.css: two-finger pinch zooms the PDF pages, not the page.
     const PDF_PINCH_BYTES = 128;
+    // file.css: the PDF thumbnail rail, its current page ring and the pressed toggle.
+    const PDF_THUMBNAILS_BYTES = 1_793;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -2104,6 +2106,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + PDF_PASSWORD_FORM_BYTES
       + PDF_FIND_FIELD_BYTES
       + PDF_PINCH_BYTES
+      + PDF_THUMBNAILS_BYTES
       + DATABASE_ROW_GUTTER_EASE_BYTES
       + DATABASE_TITLE_ROW_FOLD_PROBE_BYTES
       + DATABASE_TITLE_ROW_TOOLBAR_MARKS_BYTES

@@ -953,6 +953,7 @@
   "tools.file.previewPdfPasswordWrong": "ಪಾಸ್‌ವರ್ಡ್ ತಪ್ಪಾಗಿದೆ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
   "tools.file.previewPdfOpen": "ತೆರೆಯಿರಿ",
   "tools.file.previewPdfPageN": "ಪುಟ {number}",
+  "tools.file.previewThumbnails": "ಪುಟದ ಥಂಬ್‌ನೇಲ್‌ಗಳು",
   "tools.video.alignment": "ಹೊಂದಾಣಿಕೆ",
   "tools.video.alignmentLeft": "ಎಡಕ್ಕೆ ಹೊಂದಿಸಿ",
   "tools.video.alignmentCenter": "ಕೇಂದ್ರಕ್ಕೆ ಹೊಂದಿಸಿ",

@@ -953,6 +953,7 @@
   "tools.file.previewPdfPasswordWrong": "ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ. ລອງໃໝ່ອີກຄັ້ງ.",
   "tools.file.previewPdfOpen": "ເປີດ",
   "tools.file.previewPdfPageN": "ໜ້າ {number}",
+  "tools.file.previewThumbnails": "ຮູບຕົວຢ່າງຂອງໜ້າ",
   "tools.video.alignment": "ການຈັດວາງ",
   "tools.video.alignmentLeft": "ຊ້າຍ",
   "tools.video.alignmentCenter": "ກາງ",

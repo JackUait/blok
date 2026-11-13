@@ -932,6 +932,7 @@
   "tools.file.previewPdfPasswordWrong": "Lozinka nije točna. Pokušajte ponovno.",
   "tools.file.previewPdfOpen": "Otvori",
   "tools.file.previewPdfPageN": "Stranica {number}",
+  "tools.file.previewThumbnails": "Minijature stranica",
   "tools.video.alignment": "Poravnanje",
   "tools.video.alignmentLeft": "Lijevo",
   "tools.video.alignmentCenter": "Sredina",

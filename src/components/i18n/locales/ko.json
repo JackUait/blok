@@ -953,6 +953,7 @@
   "tools.file.previewPdfPasswordWrong": "암호가 올바르지 않습니다. 다시 시도해 주세요.",
   "tools.file.previewPdfOpen": "열기",
   "tools.file.previewPdfPageN": "{number}페이지",
+  "tools.file.previewThumbnails": "페이지 썸네일",
   "tools.video.alignment": "정렬",
   "tools.video.alignmentLeft": "왼쪽",
   "tools.video.alignmentCenter": "가운데",

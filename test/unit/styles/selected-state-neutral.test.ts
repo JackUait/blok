@@ -119,4 +119,21 @@ describe('selected-state tokens are neutral', () => {
     expect(rule?.[1]).toContain('background-color: var(--blok-icon-active-bg)');
     expect(rule?.[1]).toContain('color: var(--blok-icon-active-text)');
   });
+
+  it('the current PDF thumbnail is ringed in primary ink with no fill, not blue', () => {
+    const label = css.match(/\.blok-file-preview-pdf-thumb\[aria-current="true"\]\s*\{([^}]*)\}/)?.[1];
+    const ring = css.match(/\.blok-file-preview-pdf-thumb\[aria-current="true"\] > canvas\s*\{([^}]*)\}/)?.[1];
+
+    expect(label).toContain('color: var(--blok-icon-active-text)');
+    expect(label).not.toContain('background');
+    expect(ring).toContain('outline: 2px solid var(--blok-icon-active-text)');
+    expect(`${label}${ring}`).not.toMatch(/rgb|#[0-9a-f]{3,6}/i);
+  });
+
+  it('a pressed file preview toggle is gray with primary ink, not blue', () => {
+    const rule = css.match(/\.blok-file-preview-icon-button\[aria-pressed="true"\]\s*\{([^}]*)\}/)?.[1];
+
+    expect(rule).toContain('background: var(--blok-icon-active-bg)');
+    expect(rule).toContain('color: var(--blok-icon-active-text)');
+  });
 });

@@ -931,6 +931,7 @@
   "tools.file.previewPdfPasswordWrong": "Passordet er feil. Prøv igjen.",
   "tools.file.previewPdfOpen": "Åpne",
   "tools.file.previewPdfPageN": "Side {number}",
+  "tools.file.previewThumbnails": "Sideminiatyrer",
   "toolNames.video": "Video",
   "toolNames.audio": "Lyd",
   "tools.video.alignment": "Justering",

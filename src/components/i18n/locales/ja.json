@@ -933,6 +933,7 @@
   "tools.file.previewPdfPasswordWrong": "パスワードが違います。もう一度お試しください。",
   "tools.file.previewPdfOpen": "開く",
   "tools.file.previewPdfPageN": "{number} ページ",
+  "tools.file.previewThumbnails": "ページのサムネイル",
   "tools.video.alignment": "配置",
   "tools.video.alignmentLeft": "左揃え",
   "tools.video.alignmentCenter": "中央揃え",

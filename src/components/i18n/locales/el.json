@@ -933,6 +933,7 @@
   "tools.file.previewPdfPasswordWrong": "Ο κωδικός πρόσβασης είναι λάθος. Δοκιμάστε ξανά.",
   "tools.file.previewPdfOpen": "Άνοιγμα",
   "tools.file.previewPdfPageN": "Σελίδα {number}",
+  "tools.file.previewThumbnails": "Μικρογραφίες σελίδων",
   "tools.video.alignment": "Στοίχιση",
   "tools.video.alignmentLeft": "Στοίχιση αριστερά",
   "tools.video.alignmentCenter": "Στοίχιση στο κέντρο",

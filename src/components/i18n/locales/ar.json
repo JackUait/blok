@@ -937,6 +937,7 @@
   "tools.file.previewPdfPasswordWrong": "كلمة المرور غير صحيحة. حاول مرة أخرى.",
   "tools.file.previewPdfOpen": "فتح",
   "tools.file.previewPdfPageN": "الصفحة {number}",
+  "tools.file.previewThumbnails": "صور الصفحات المصغّرة",
   "tools.video.alignment": "المحاذاة",
   "tools.video.alignmentLeft": "محاذاة إلى اليسار",
   "tools.video.alignmentCenter": "توسيط",

@@ -951,6 +951,7 @@
   "tools.file.previewPdfPasswordWrong": "Kata laluan salah. Cuba lagi.",
   "tools.file.previewPdfOpen": "Buka",
   "tools.file.previewPdfPageN": "Halaman {number}",
+  "tools.file.previewThumbnails": "Lakaran kecil halaman",
   "toolNames.video": "Video",
   "toolNames.audio": "Audio",
   "tools.video.alignment": "Penjajaran",

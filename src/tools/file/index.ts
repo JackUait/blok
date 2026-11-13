@@ -572,6 +572,7 @@ export class FileTool implements BlockTool {
         findPrevious: this.api.i18n.t('find.previous'),
         findNext: this.api.i18n.t('find.next'),
         findClose: this.api.i18n.t('find.close'),
+        thumbnails: this.api.i18n.t('tools.file.previewThumbnails'),
       },
       size: this.data.size,
       directionSource: this.root,

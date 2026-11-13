@@ -933,6 +933,7 @@
   "tools.file.previewPdfPasswordWrong": "የይለፍ ቃሉ ትክክል አይደለም። እንደገና ይሞክሩ።",
   "tools.file.previewPdfOpen": "ክፈት",
   "tools.file.previewPdfPageN": "ገጽ {number}",
+  "tools.file.previewThumbnails": "የገጽ ድንክዬዎች",
   "tools.video.alignment": "አሰላለፍ",
   "tools.video.alignmentLeft": "ወደ ግራ አሰልፍ",
   "tools.video.alignmentCenter": "ወደ መሃል አሰልፍ",

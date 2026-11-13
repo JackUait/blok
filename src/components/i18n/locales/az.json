@@ -933,6 +933,7 @@
   "tools.file.previewPdfPasswordWrong": "Parol yanlışdır. Yenidən cəhd edin.",
   "tools.file.previewPdfOpen": "Aç",
   "tools.file.previewPdfPageN": "Səhifə {number}",
+  "tools.file.previewThumbnails": "Səhifə miniatürləri",
   "tools.video.alignment": "Düzləndirmə",
   "tools.video.alignmentLeft": "Sola düzləndir",
   "tools.video.alignmentCenter": "Mərkəzə düzləndir",

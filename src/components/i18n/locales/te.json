@@ -931,6 +931,7 @@
   "tools.file.previewPdfPasswordWrong": "పాస్‌వర్డ్ తప్పు. మళ్లీ ప్రయత్నించండి.",
   "tools.file.previewPdfOpen": "తెరవండి",
   "tools.file.previewPdfPageN": "పేజీ {number}",
+  "tools.file.previewThumbnails": "పేజీ థంబ్‌నెయిల్‌లు",
   "toolNames.video": "వీడియో",
   "toolNames.audio": "ఆడియో",
   "tools.video.alignment": "సమలేఖనం",

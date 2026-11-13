@@ -773,6 +773,7 @@
   "tools.file.previewPdfPasswordWrong": "密碼錯誤。請再試一次。",
   "tools.file.previewPdfOpen": "開啟",
   "tools.file.previewPdfPageN": "第 {number} 頁",
+  "tools.file.previewThumbnails": "頁面縮圖",
   "tools.video.alignment": "對齊",
   "tools.video.alignmentLeft": "靠左對齊",
   "tools.video.alignmentCenter": "置中對齊",

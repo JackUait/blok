@@ -933,6 +933,7 @@
   "tools.file.previewPdfPasswordWrong": "ޕާސްވޯޑް ރަނގަޅެއް ނޫން. އަލުން މަސައްކަތް ކުރައްވާ.",
   "tools.file.previewPdfOpen": "ހުޅުވާ",
   "tools.file.previewPdfPageN": "ޞަފްޙާ {number}",
+  "tools.file.previewThumbnails": "ޞަފްޙާތަކުގެ ކުޑަ ފޮޓޯ",
   "tools.video.alignment": "އެލައިންމަންޓް",
   "tools.video.alignmentLeft": "ވާތްފަޅި",
   "tools.video.alignmentCenter": "މެދު",

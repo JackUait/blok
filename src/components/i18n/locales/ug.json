@@ -931,6 +931,7 @@
   "tools.file.previewPdfPasswordWrong": "ئىم ئاچقۇچ خاتا. قايتا سىناڭ.",
   "tools.file.previewPdfOpen": "ئېچىش",
   "tools.file.previewPdfPageN": "بەت {number}",
+  "tools.file.previewThumbnails": "بەت كىچىك سۈرەتلىرى",
   "toolNames.video": "سىن",
   "toolNames.audio": "ئاۋاز",
   "tools.video.alignment": "توغرىلاش",

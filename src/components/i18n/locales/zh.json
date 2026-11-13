@@ -931,6 +931,7 @@
   "tools.file.previewPdfPasswordWrong": "密码错误。请重试。",
   "tools.file.previewPdfOpen": "打开",
   "tools.file.previewPdfPageN": "第 {number} 页",
+  "tools.file.previewThumbnails": "页面缩略图",
   "toolNames.video": "视频",
   "toolNames.audio": "音频",
   "tools.video.alignment": "对齐",

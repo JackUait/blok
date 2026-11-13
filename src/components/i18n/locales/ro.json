@@ -934,6 +934,7 @@
   "tools.file.previewPdfPasswordWrong": "Parola este greșită. Încercați din nou.",
   "tools.file.previewPdfOpen": "Deschide",
   "tools.file.previewPdfPageN": "Pagina {number}",
+  "tools.file.previewThumbnails": "Miniaturi pagini",
   "tools.video.alignment": "Aliniere",
   "tools.video.alignmentLeft": "Aliniază la stânga",
   "tools.video.alignmentCenter": "Aliniază la centru",

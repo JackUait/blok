@@ -933,6 +933,7 @@
   "tools.file.previewPdfPasswordWrong": "Adgangskoden er forkert. Prøv igen.",
   "tools.file.previewPdfOpen": "Åbn",
   "tools.file.previewPdfPageN": "Side {number}",
+  "tools.file.previewThumbnails": "Sideminiaturer",
   "tools.video.alignment": "Justering",
   "tools.video.alignmentLeft": "Venstrejustér",
   "tools.video.alignmentCenter": "Centrér",

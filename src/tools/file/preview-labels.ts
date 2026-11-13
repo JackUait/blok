@@ -50,6 +50,7 @@ export interface PreviewLabels {
   findPrevious: string;
   findNext: string;
   findClose: string;
+  thumbnails: string;
 }
 
 export const DEFAULT_PREVIEW_LABELS: PreviewLabels = {
@@ -99,6 +100,7 @@ export const DEFAULT_PREVIEW_LABELS: PreviewLabels = {
   findPrevious: 'Previous match',
   findNext: 'Next match',
   findClose: 'Close',
+  thumbnails: 'Page thumbnails',
 };
 
 /** Labels a caller left out fall back to English. */

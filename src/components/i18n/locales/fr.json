@@ -932,6 +932,7 @@
   "tools.file.previewPdfPasswordWrong": "Ce mot de passe est incorrect. Réessayez.",
   "tools.file.previewPdfOpen": "Ouvrir",
   "tools.file.previewPdfPageN": "Page {number}",
+  "tools.file.previewThumbnails": "Miniatures des pages",
   "tools.video.alignment": "Alignement",
   "tools.video.alignmentLeft": "Aligner à gauche",
   "tools.video.alignmentCenter": "Aligner au centre",

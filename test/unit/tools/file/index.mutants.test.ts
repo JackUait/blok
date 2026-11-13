@@ -951,6 +951,7 @@ describe('FileTool mutants', () => {
           findPrevious: 'find.previous',
           findNext: 'find.next',
           findClose: 'find.close',
+          thumbnails: 'tools.file.previewThumbnails',
         },
         size: undefined,
         directionSource: root,

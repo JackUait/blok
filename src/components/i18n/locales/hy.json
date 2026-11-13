@@ -933,6 +933,7 @@
   "tools.file.previewPdfPasswordWrong": "Գաղտնաբառը սխալ է։ Կրկին փորձեք։",
   "tools.file.previewPdfOpen": "Բացել",
   "tools.file.previewPdfPageN": "Էջ {number}",
+  "tools.file.previewThumbnails": "Էջերի մանրապատկերներ",
   "tools.video.alignment": "Հավասարեցում",
   "tools.video.alignmentLeft": "Ձախ",
   "tools.video.alignmentCenter": "Կենտրոն",

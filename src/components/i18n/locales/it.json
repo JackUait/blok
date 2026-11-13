@@ -934,6 +934,7 @@
   "tools.file.previewPdfPasswordWrong": "La password è errata. Riprova.",
   "tools.file.previewPdfOpen": "Apri",
   "tools.file.previewPdfPageN": "Pagina {number}",
+  "tools.file.previewThumbnails": "Miniature delle pagine",
   "tools.video.alignment": "Allineamento",
   "tools.video.alignmentLeft": "Allinea a sinistra",
   "tools.video.alignmentCenter": "Allinea al centro",

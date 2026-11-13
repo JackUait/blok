@@ -933,6 +933,7 @@
   "tools.file.previewPdfPasswordWrong": "পাসওয়ার্ডটি ভুল। আবার চেষ্টা করুন।",
   "tools.file.previewPdfOpen": "খুলুন",
   "tools.file.previewPdfPageN": "পৃষ্ঠা {number}",
+  "tools.file.previewThumbnails": "পৃষ্ঠার থাম্বনেইল",
   "tools.video.alignment": "সারিবদ্ধকরণ",
   "tools.video.alignmentLeft": "বামে সারিবদ্ধ করুন",
   "tools.video.alignmentCenter": "মাঝখানে সারিবদ্ধ করুন",

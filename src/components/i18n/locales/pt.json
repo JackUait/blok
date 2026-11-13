@@ -934,6 +934,7 @@
   "tools.file.previewPdfPasswordWrong": "A senha está incorreta. Tente novamente.",
   "tools.file.previewPdfOpen": "Abrir",
   "tools.file.previewPdfPageN": "Página {number}",
+  "tools.file.previewThumbnails": "Miniaturas das páginas",
   "tools.video.alignment": "Alinhamento",
   "tools.video.alignmentLeft": "Alinhar à esquerda",
   "tools.video.alignmentCenter": "Alinhar ao centro",

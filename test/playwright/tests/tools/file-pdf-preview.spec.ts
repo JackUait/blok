@@ -149,6 +149,31 @@ test.describe('PDF preview', () => {
     await expect.poll(() => inkedPixels(first)).toBeGreaterThan(100);
   });
 
+  test('the thumbnail rail jumps to a page by click or Enter', async ({ page }) => {
+    const dialog = await openPdf(page, 'three-pages.pdf');
+    const counter = dialog.locator('[data-role="file-preview-page"]');
+    const toggle = dialog.getByRole('button', { name: 'Page thumbnails' });
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    const rail = dialog.getByRole('group', { name: 'Page thumbnails' });
+    const thumbs = rail.getByRole('button', { name: /^Page \d$/ });
+    await expect(thumbs).toHaveCount(3);
+    await expect(thumbs.first()).toHaveAttribute('aria-current', 'true');
+    await expect.poll(() => thumbs.nth(2).evaluate((thumb) => thumb.querySelector('canvas')?.width ?? 0)).toBeGreaterThan(0);
+
+    await thumbs.nth(2).click();
+    await expect(counter).toHaveText('Page 3 / 3');
+    await expect(thumbs.nth(2)).toHaveAttribute('aria-current', 'true');
+
+    await thumbs.nth(1).focus();
+    await page.keyboard.press('Enter');
+    await expect(counter).toHaveText('Page 2 / 3');
+
+    await toggle.click();
+    await expect(rail).toBeHidden();
+  });
+
   test('a link inside the PDF scrolls to its page', async ({ page }) => {
     const dialog = await openPdf(page, 'three-pages.pdf');
     const first = dialog.getByRole('region', { name: 'Page 1', exact: true });

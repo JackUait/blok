@@ -935,6 +935,7 @@
   "tools.file.previewPdfPasswordWrong": "Неверный пароль. Попробуйте ещё раз.",
   "tools.file.previewPdfOpen": "Открыть",
   "tools.file.previewPdfPageN": "Страница {number}",
+  "tools.file.previewThumbnails": "Миниатюры страниц",
   "tools.video.alignment": "Выравнивание",
   "tools.video.alignmentLeft": "Выровнять по левому краю",
   "tools.video.alignmentCenter": "Выровнять по центру",

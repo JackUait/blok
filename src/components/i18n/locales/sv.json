@@ -931,6 +931,7 @@
   "tools.file.previewPdfPasswordWrong": "Lösenordet är fel. Försök igen.",
   "tools.file.previewPdfOpen": "Öppna",
   "tools.file.previewPdfPageN": "Sida {number}",
+  "tools.file.previewThumbnails": "Sidminiatyrer",
   "toolNames.video": "Video",
   "toolNames.audio": "Ljud",
   "tools.video.alignment": "Justering",

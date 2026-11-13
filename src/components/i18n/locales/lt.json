@@ -959,6 +959,7 @@
   "tools.file.previewPdfPasswordWrong": "Slaptažodis neteisingas. Bandykite dar kartą.",
   "tools.file.previewPdfOpen": "Atidaryti",
   "tools.file.previewPdfPageN": "Puslapis {number}",
+  "tools.file.previewThumbnails": "Puslapių miniatiūros",
   "tools.video.alignment": "Lygiuotė",
   "tools.video.alignmentLeft": "Lygiuoti kairėn",
   "tools.video.alignmentCenter": "Lygiuoti per vidurį",

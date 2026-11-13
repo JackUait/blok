@@ -933,6 +933,7 @@
   "tools.file.previewPdfPasswordWrong": "Паролата е грешна. Опитайте отново.",
   "tools.file.previewPdfOpen": "Отвори",
   "tools.file.previewPdfPageN": "Страница {number}",
+  "tools.file.previewThumbnails": "Миниатюри на страниците",
   "tools.video.alignment": "Подравняване",
   "tools.video.alignmentLeft": "Подравни вляво",
   "tools.video.alignmentCenter": "Подравни в центъра",

@@ -931,6 +931,7 @@
   "tools.file.previewPdfPasswordWrong": "ਪਾਸਵਰਡ ਗਲਤ ਹੈ। ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
   "tools.file.previewPdfOpen": "ਖੋਲ੍ਹੋ",
   "tools.file.previewPdfPageN": "ਪੰਨਾ {number}",
+  "tools.file.previewThumbnails": "ਪੰਨਾ ਥੰਬਨੇਲ",
   "toolNames.video": "ਵੀਡੀਓ",
   "toolNames.audio": "ਆਡੀਓ",
   "tools.video.alignment": "ਇਕਸਾਰਤਾ",

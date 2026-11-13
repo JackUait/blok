@@ -931,6 +931,7 @@
   "tools.file.previewPdfPasswordWrong": "پاس ورڈ غلط ہے۔ دوبارہ کوشش کریں۔",
   "tools.file.previewPdfOpen": "کھولیں",
   "tools.file.previewPdfPageN": "صفحہ {number}",
+  "tools.file.previewThumbnails": "صفحات کے تھمب نیلز",
   "toolNames.video": "ویڈیو",
   "toolNames.audio": "آڈیو",
   "tools.video.alignment": "سیدھ",

@@ -3,6 +3,7 @@ import type { PreviewChrome } from '../preview-chrome';
 import { fill } from '../preview-labels';
 import { mountPdfFind } from './pdf-find';
 import { renderPdfLinks } from './pdf-links';
+import { mountPdfThumbs } from './pdf-thumbs';
 import type { PdfDocumentLike, PdfPageLike, PdfRenderTask, PdfViewport } from './pdf-types';
 
 /** pdf.js sizes pages in pt; the screen counts CSS px. */
@@ -342,6 +343,13 @@ export async function mountPdfView(
     isVisible: (index) => visible.has(index),
     scrollToPage: view.scrollToPage,
   }, pager.pill, chrome);
+  const thumbs = pager === null ? null : mountPdfThumbs(doc, {
+    scroller,
+    width: base.width,
+    height: base.height,
+    currentPage: view.currentPage,
+    scrollToPage: view.scrollToPage,
+  }, pager.pill, chrome);
 
   const endGesture = (): void => {
     clearTimeout(gesture.timer);
@@ -462,6 +470,7 @@ export async function mountPdfView(
       }
       state.destroyed = true;
       find?.destroy();
+      thumbs?.destroy();
       observer.disconnect();
       listening.abort();
       clearTimeout(gesture.timer);

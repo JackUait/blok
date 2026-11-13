@@ -935,6 +935,7 @@
   "tools.file.previewPdfPasswordWrong": "Heslo je nesprávné. Zkuste to znovu.",
   "tools.file.previewPdfOpen": "Otevřít",
   "tools.file.previewPdfPageN": "Stránka {number}",
+  "tools.file.previewThumbnails": "Miniatury stránek",
   "tools.video.alignment": "Zarovnání",
   "tools.video.alignmentLeft": "Zarovnat vlevo",
   "tools.video.alignmentCenter": "Zarovnat na střed",

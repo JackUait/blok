@@ -951,6 +951,7 @@
   "tools.file.previewPdfPasswordWrong": "പാസ്‌വേഡ് തെറ്റാണ്. വീണ്ടും ശ്രമിക്കുക.",
   "tools.file.previewPdfOpen": "തുറക്കുക",
   "tools.file.previewPdfPageN": "പേജ് {number}",
+  "tools.file.previewThumbnails": "പേജ് ലഘുചിത്രങ്ങൾ",
   "toolNames.video": "വീഡിയോ",
   "toolNames.audio": "ഓഡിയോ",
   "tools.video.alignment": "അലൈൻമെന്റ്",

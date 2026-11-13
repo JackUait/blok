@@ -933,6 +933,7 @@
   "tools.file.previewPdfPasswordWrong": "Kata sandi salah. Coba lagi.",
   "tools.file.previewPdfOpen": "Buka",
   "tools.file.previewPdfPageN": "Halaman {number}",
+  "tools.file.previewThumbnails": "Gambar mini halaman",
   "tools.video.alignment": "Perataan",
   "tools.video.alignmentLeft": "Kiri",
   "tools.video.alignmentCenter": "Tengah",

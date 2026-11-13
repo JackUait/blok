@@ -935,6 +935,7 @@
   "tools.file.previewPdfPasswordWrong": "Hasło jest nieprawidłowe. Spróbuj ponownie.",
   "tools.file.previewPdfOpen": "Otwórz",
   "tools.file.previewPdfPageN": "Strona {number}",
+  "tools.file.previewThumbnails": "Miniatury stron",
   "tools.video.alignment": "Wyrównanie",
   "tools.video.alignmentLeft": "Wyrównaj do lewej",
   "tools.video.alignmentCenter": "Wyśrodkuj",

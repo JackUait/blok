@@ -951,6 +951,7 @@
   "tools.file.previewPdfPasswordWrong": "Нууц үг буруу байна. Дахин оролдоно уу.",
   "tools.file.previewPdfOpen": "Нээх",
   "tools.file.previewPdfPageN": "Хуудас {number}",
+  "tools.file.previewThumbnails": "Хуудасны жижиг зургууд",
   "toolNames.video": "Видео",
   "toolNames.audio": "Аудио",
   "tools.video.alignment": "Зэрэгцүүлэлт",

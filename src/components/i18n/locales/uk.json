@@ -933,6 +933,7 @@
   "tools.file.previewPdfPasswordWrong": "Неправильний пароль. Спробуйте ще раз.",
   "tools.file.previewPdfOpen": "Відкрити",
   "tools.file.previewPdfPageN": "Сторінка {number}",
+  "tools.file.previewThumbnails": "Мініатюри сторінок",
   "toolNames.video": "Відео",
   "toolNames.audio": "Аудіо",
   "tools.video.alignment": "Вирівнювання",

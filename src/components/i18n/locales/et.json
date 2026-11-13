@@ -931,6 +931,7 @@
   "tools.file.previewPdfPasswordWrong": "Parool on vale. Proovi uuesti.",
   "tools.file.previewPdfOpen": "Ava",
   "tools.file.previewPdfPageN": "Lehekülg {number}",
+  "tools.file.previewThumbnails": "Lehekülgede pisipildid",
   "tools.video.alignment": "Joondus",
   "tools.video.alignmentLeft": "Joonda vasakule",
   "tools.video.alignmentCenter": "Joonda keskele",

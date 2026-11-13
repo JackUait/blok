@@ -28721,6 +28721,105 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   border-top: 1px solid currentColor;
 }
 
+.blok-file-preview-pdf {
+  --blok-pdf-paper: #ffffff;
+}
+
+.blok-file-preview-pdf-pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  align-items: safe center;
+  gap: var(--blok-space-5);
+  min-width: min-content;
+  padding: var(--blok-space-6) var(--blok-space-6) calc(var(--blok-space-14) + var(--blok-space-6));
+}
+
+.blok-file-preview-pdf-page {
+  position: relative;
+  flex: none;
+  overflow: hidden;
+  background: var(--blok-pdf-paper);
+  border-radius: var(--blok-radius-mark);
+  box-shadow: var(--blok-image-shadow-resting);
+}
+
+.blok-file-preview-pdf-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.blok-file-preview-pdf-text {
+  --scale-round-x: 1px;
+  --scale-round-y: var(--scale-round-x);
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: clip;
+  color-scheme: only light;
+  line-height: 1;
+  text-align: initial;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  caret-color: CanvasText;
+}
+
+.blok-file-preview-pdf-text :is(span, br) {
+  position: absolute;
+  color: transparent;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+  user-select: text;
+}
+
+.blok-file-preview-pdf-text > :not(.markedContent), .blok-file-preview-pdf-text .markedContent span:not(.markedContent) {
+  --font-height: 0;
+  --scale-x: 1;
+  --rotate: 0deg;
+  z-index: 1;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+
+.blok-file-preview-pdf-text .markedContent {
+  display: contents;
+}
+
+.blok-file-preview-pdf-text span[role="img"] {
+  cursor: default;
+  user-select: none;
+}
+
+.blok-file-preview-pdf-text ::selection {
+  color: transparent;
+  background: var(--blok-selection-inline);
+}
+
+.blok-file-preview-pdf-text br::selection {
+  background: transparent;
+}
+
+.blok-file-preview-pdf-links {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.blok-file-preview-pdf-links > * {
+  pointer-events: auto;
+}
+
 .blok-file-preview-xlsx {
   background: var(--blok-bg-primary);
   scrollbar-gutter: auto;

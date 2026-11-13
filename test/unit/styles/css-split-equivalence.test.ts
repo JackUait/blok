@@ -1676,6 +1676,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const EMOJI_COMPACT_GRID_BYTES = 886;
     // main.css: a nested block's centred or right-aligned column moves one full indent step.
     const NESTED_INDENT_COLUMN_BYTES = 1_892;
+    // file.css: PDF pages on the desk, white paper in both themes, and the pdf.js text layer.
+    const PDF_PAGE_VIEW_BYTES = 2_945;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -2088,6 +2090,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + EMOJI_STAGE_FLOOR_BYTES
       + EMOJI_COMPACT_GRID_BYTES
       + NESTED_INDENT_COLUMN_BYTES
+      + PDF_PAGE_VIEW_BYTES
       + DATABASE_ROW_GUTTER_EASE_BYTES
       + DATABASE_TITLE_ROW_FOLD_PROBE_BYTES
       + DATABASE_TITLE_ROW_TOOLBAR_MARKS_BYTES

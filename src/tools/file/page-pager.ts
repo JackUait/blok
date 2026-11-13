@@ -5,7 +5,7 @@ import { counted, fill } from './preview-labels';
 /** Space kept on both sides of a fitted page, in px. */
 const FIT_GUTTER = 48;
 /** How far above a page's top edge a jump lands, so the edge stays in view. */
-const JUMP_PAD = 20;
+export const JUMP_PAD = 20;
 const ZOOM_STEP = 0.25;
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2;

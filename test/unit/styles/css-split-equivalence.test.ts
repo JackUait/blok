@@ -1652,6 +1652,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Round 22 lane r22: the simple Date filter's day field, its ⊗ and presets ⌄, and the calendar's 32px columns.
     // ... and Round 21's calendar 20 under the field, 24px ‹ › and ⊗, and the note with no rule.
     const DATABASE_R22_BYTES = 1_979;
+    // Round 21 lane r23: the colour rule head (name outside the operator), the Text/Number value box and its "=".
+    const DATABASE_R23_BYTES = 1_224;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2131,6 +2133,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R20A_BYTES
       + DATABASE_R21_BYTES
       + DATABASE_R22_BYTES
+      + DATABASE_R23_BYTES;
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

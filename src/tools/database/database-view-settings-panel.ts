@@ -2800,7 +2800,7 @@ export class ViewSettingsPages {
     const lead = document.createElement('span');
     const trash = document.createElement('button');
     // A flyout list under the button, 190 wide, as the filter popover's operator (Round 18 §2).
-    const headerButton = (testId: string, label: string, flyoutId: string, rows: (pick: (write: () => void) => void) => HTMLElement[], name?: string): HTMLButtonElement => {
+    const headerButton = (testId: string, label: string, flyoutId: string, rows: (pick: (write: () => void) => void) => HTMLElement[]): HTMLButtonElement => {
       const button = document.createElement('button');
       const text = document.createElement('span');
       const chevron = document.createElement('span');
@@ -2813,7 +2813,6 @@ export class ViewSettingsPages {
       text.textContent = label;
       chevron.setAttribute('aria-hidden', 'true');
       chevron.innerHTML = IconChevronDown;
-      if (name !== undefined) button.append(name, ' ');
       button.append(text, chevron);
       button.addEventListener('click', () => openFlyout(button, panel, flyoutId, OPERATOR_FLYOUT_WIDTH, rows));
 
@@ -2829,24 +2828,39 @@ export class ViewSettingsPages {
       }),
     });
 
+    // notion-motion.md Round 21 §1: the name is plain text before the buttons, not inside one.
+    const name = (): HTMLElement => {
+      const span = marked(document.createElement('span'), 'data-blok-database-color-rule-name');
+
+      span.textContent = property?.name ?? '';
+
+      return span;
+    };
+
     header.setAttribute('data-blok-database-chip-header', '');
     header.setAttribute('data-blok-database-color-rule-header', '');
+    lead.setAttribute('data-blok-database-color-rule-lead', '');
     if (property === undefined) {
       lead.textContent = this.t('filterGone');
     } else {
       const { lead: part, operator: inner } = splitOperator(rule.operator);
       const opKey = operatorLabelKey(property.type, rule.operator);
-      const plain = property.type !== 'date' && !isQuantifiedText(property, rule.operator);
+      // r21-cc-date-cc.raw: "Date is not empty" until the operator takes a value; an End date side keeps its button.
+      const plainDate = property.type === 'date' && part !== 'end' && !operatorNeedsValue(rule.operator);
 
-      if (property.type === 'date') {
+      header.toggleAttribute('data-blok-database-color-rule-plain-date', plainDate);
+      if (plainDate) {
+        lead.append(name());
+      } else if (property.type === 'date') {
         lead.append(headerButton(`database-color-side-${rule.id}`, this.t(part === 'end' ? 'dateEnd' : 'dateStart'), 'database-filter-side-picker', (pick) => (['start', 'end'] as const).map((side) =>
           choice(`database-filter-side-${side}`, this.t(side === 'end' ? 'dateEnd' : 'dateStart'), (part === 'end') === (side === 'end'), { operator: joinOperator(side === 'end' ? 'end' : undefined, inner) }, pick))));
-      } else if (!plain) {
-        lead.append(property.name, ' ', headerButton(`database-color-quantifier-${rule.id}`, this.ctx.i18n.t(`tools.database.filterOperator.${part ?? 'any'}`).toLocaleLowerCase(), 'database-filter-quantifier-picker', (pick) => quantifierChoices().map((q) =>
+      } else if (isQuantifiedText(property, rule.operator)) {
+        lead.append(headerButton(`database-color-quantifier-${rule.id}`, this.ctx.i18n.t(`tools.database.filterOperator.${part ?? 'any'}`).toLocaleLowerCase(), 'database-filter-quantifier-picker', (pick) => quantifierChoices().map((q) =>
           choice(`database-filter-quantifier-${q.operator}`, this.ctx.i18n.t(q.labelKey), (part ?? 'any') === q.operator, { operator: joinOperator(q.operator, inner) }, pick))));
       }
       lead.append(headerButton(`database-color-operator-${rule.id}`, (opKey === undefined ? rule.operator : this.ctx.i18n.t(opKey)).toLocaleLowerCase(), 'database-filter-operator-picker', (pick) => colorRuleOperatorChoices(property, rule.operator).map((c) =>
-        choice(`database-filter-op-${c.operator}`, this.ctx.i18n.t(c.labelKey), menuOperatorOf(rule.operator) === c.operator, operatorPick(property, c.operator, rule), pick)), plain ? property.name : undefined));
+        choice(`database-filter-op-${c.operator}`, this.ctx.i18n.t(c.labelKey), menuOperatorOf(rule.operator) === c.operator, operatorPick(property, c.operator, rule), pick))));
+      if (property.type !== 'date') lead.prepend(name());
     }
     trash.type = 'button';
     trash.disabled = disabled;
@@ -2878,13 +2892,25 @@ export class ViewSettingsPages {
     const [only] = controls;
 
     if (controls.length === 0) return [];
+    // r21-cc-num-field.raw: Text and Number type into a 232x28 box; Number "=" puts a "=" before the input.
     if (controls.length === 1 && only instanceof HTMLInputElement) {
+      const box = marked(marked(document.createElement('label'), 'data-blok-database-color-rule-field'), 'data-blok-database-color-rule-box');
+
       only.disabled = disabled;
       only.setAttribute('data-blok-testid', `database-color-value-${rule.id}`);
       only.setAttribute('data-blok-database-color-rule-value', '');
-      only.setAttribute('data-blok-database-color-rule-field', '');
+      only.setAttribute('data-blok-database-color-rule-input', '');
+      // Only "=" was read (r21-cc-num-eq-cc.raw); the other Number operators are unmeasured.
+      if (property.type === 'number' && menuOperatorOf(rule.operator) === 'equals') {
+        const prefix = marked(document.createElement('span'), 'data-blok-database-color-rule-prefix');
 
-      return [only];
+        prefix.setAttribute('aria-hidden', 'true');
+        prefix.textContent = '=';
+        box.append(prefix);
+      }
+      box.append(only);
+
+      return [box];
     }
     // r20-cc-is.raw: a 240×34 button holds the 232×30 field, and the flyout opens under the button.
     const button = document.createElement('button');

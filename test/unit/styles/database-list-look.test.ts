@@ -455,6 +455,28 @@ describe('conditional color page (notion-motion.md Round 20 §4, r20-cc-intro.ra
     expect(field).toContain('box-shadow: inset 0 0 0 1px var(--blok-database-table-control-border)');
   });
 
+  // notion-motion.md Round 21 §1: name outside the button, 4 from name text to operator text, 6 between two buttons.
+  it('pads the rule head\'s operator 0 2px and starts it 2px after the name', () => {
+    const op = ruleBody(database, '[data-blok-database-color-rule-header] [data-blok-database-chip-operator]');
+
+    expect(op).toContain('padding-inline: var(--blok-space-0-5)');
+    expect(op).toContain('margin-inline-start: var(--blok-space-0-5)');
+    expect(op).toContain('gap: var(--blok-space-1)');
+    expect(ruleBody(database, '[data-blok-database-color-rule-header] [data-blok-database-chip-operator] + [data-blok-database-chip-operator]')).toContain('margin-inline-start: var(--blok-space-1-5)');
+    expect(ruleBody(database, '[data-blok-database-color-rule-header][data-blok-database-color-rule-plain-date]')).toContain('padding-block-start: var(--blok-space-1)');
+  });
+
+  // notion-motion.md Round 21 §1 (r21-cc-num-field.raw): a 232x28 box, padding 3px 6px; Number's "=" before the input.
+  it('types Text and Number values into a 28-tall box padded 3px 6px', () => {
+    const box = ruleBody(database, 'label[data-blok-database-color-rule-box]');
+
+    expect(box).toContain('height: 28px');
+    expect(box).toContain('padding: var(--blok-space-0-75) var(--blok-space-1-5)');
+    expect(box).toContain('gap: var(--blok-space-1-5)');
+    expect(ruleBody(database, 'label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-prefix])')).toContain('margin-block-end: calc(var(--blok-space-0-75) + var(--blok-space-1))');
+    expect(ruleBody(database, '[data-blok-database-color-rule-box] > [data-blok-database-panel-input]')).toContain('height: 20px');
+  });
+
   it('makes "New color setting" a blue button and "Add another" a bordered one, both 28 tall', () => {
     const fresh = ruleBody(database, '[data-blok-database-panel-row][data-blok-database-color-new]');
 

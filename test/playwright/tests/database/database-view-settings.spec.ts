@@ -266,16 +266,18 @@ test.describe('database view settings', () => {
     await byTestId(page, 'database-color-add').click();
     await byTestId(page, 'database-pick-property-p-amount').click();
 
-    await expect(page.locator('[data-row-id="r1"][data-blok-database-color="gray"]')).toHaveCount(1);
+    // notion-motion.md Round 21 §1: a new Number rule starts on Green.
+    await expect(page.locator('[data-row-id="r1"][data-blok-database-color="green"]')).toHaveCount(1);
     await expect(page.locator('[data-row-id="r3"][data-blok-database-color]')).toHaveCount(0);
   });
 
-  // notion-motion.md Round 20 §4 (r20-cc-list-style.raw, r20-cc-is.raw, r20-cc-selval.raw).
+  // notion-motion.md Round 20 §4 (r20-cc-list-style.raw, r20-cc-is.raw, r20-cc-selval.raw), Round 21 §1 (r21-cc-*-cc.raw).
   test('lays out conditional color cards and the value field at Notion\'s sizes', async ({ page }) => {
     await mount(page, blocks({ colorRules: [
       { id: 'c1', propertyId: 'p-stage', operator: 'is_not_empty', value: null, color: 'match' },
       { id: 'c2', propertyId: 'p-stage', operator: 'equals', value: null, color: 'match' },
       { id: 'c3', propertyId: 'p-amount', operator: 'equals', value: null, color: 'gray' },
+      { id: 'c4', propertyId: 'p-title', operator: 'contains', value: null, color: 'gray' },
     ] }));
     await byTestId(page, 'database-toolbar-settings').click();
     await byTestId(page, 'database-settings-color').click();
@@ -291,25 +293,42 @@ test.describe('database view settings', () => {
       const field = rect('[data-blok-testid="database-color-value-c2"] [data-blok-database-color-rule-field]');
       const flyout = rect('[data-blok-testid="database-filter-value-picker"]');
       const three = rect('[data-blok-testid="database-color-rule-c3"]');
-      const input = rect('[data-blok-testid="database-color-value-c3"]');
+      const input = rect('[data-blok-testid="database-color-rule-c3"] [data-blok-database-color-rule-box]');
+      const four = rect('[data-blok-testid="database-color-rule-c4"]');
+      const name = document.querySelector('[data-blok-testid="database-color-rule-c1"] [data-blok-database-color-rule-name]');
+      const label = document.querySelector('[data-blok-testid="database-color-operator-c1"] [data-blok-database-chip-operator-label]');
+      const textRect = (node: Element | null | undefined): DOMRect | undefined => {
+        if (!node) return undefined;
+        const range = document.createRange();
 
-      if (!one || !two || !wrapper || !field || !flyout || !three || !input) return null;
+        range.selectNodeContents(node);
+
+        return range.getBoundingClientRect();
+      };
+      const nameText = textRect(name);
+      const labelText = textRect(label);
+
+      if (!one || !two || !wrapper || !field || !flyout || !three || !input || !four || !nameText || !labelText) return null;
 
       return {
         card: [one.width, one.height],
         wrapper: [wrapper.x - two.x, wrapper.y - two.y, wrapper.width, wrapper.height],
         field: [field.x - two.x, field.y - two.y, field.width, field.height],
         flyout: [flyout.x - wrapper.x, flyout.y - wrapper.bottom, flyout.width],
-        input: [input.x - three.x, input.width, input.height],
+        input: [input.x - three.x, input.y - three.y, input.width, input.height],
+        heights: [two.height, three.height, four.height],
+        gap: Math.round((labelText.x - nameText.right) * 10) / 10,
       };
     });
 
     expect(box?.card).toEqual([258, 100]);
+    expect(box?.heights).toEqual([143, 141, 137]);
+    expect(box?.gap).toBe(4);
     expect(box?.wrapper).toEqual([9, 36, 240, 34]);
     expect(box?.field).toEqual([13, 38, 232, 30]);
     expect(box?.flyout).toEqual([0, 4, 240]);
-    // A text value is the field itself, in the same place.
-    expect(box?.input).toEqual([13, 232, 30]);
+    // r21-cc-num-field.raw: a 232x28 box 36 down the card.
+    expect(box?.input).toEqual([13, 36, 232, 28]);
   });
 
   test('searches rows by title and property text', async ({ page }) => {

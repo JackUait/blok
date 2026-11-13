@@ -15710,7 +15710,27 @@ input[data-blok-database-picker-search]:focus {
 }
 
 [data-blok-database-color-rule-header] {
-  padding: 0 0 0 var(--blok-space-1);
+  padding: 0 0 0 var(--blok-space-2);
+}
+
+[data-blok-database-color-rule-header][data-blok-database-color-rule-plain-date] {
+  padding-block-start: var(--blok-space-1);
+}
+
+[data-blok-database-color-rule-lead] {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+[data-blok-database-color-rule-header] [data-blok-database-chip-operator] {
+  gap: var(--blok-space-1);
+  margin-inline-start: var(--blok-space-0-5);
+  padding-inline: var(--blok-space-0-5);
+}
+
+[data-blok-database-color-rule-header] [data-blok-database-chip-operator] + [data-blok-database-chip-operator] {
+  margin-inline-start: var(--blok-space-1-5);
 }
 
 [data-blok-database-color-rule-delete] {
@@ -15740,7 +15760,7 @@ button[data-blok-database-color-rule-value] {
   display: block;
   width: calc(100% - 2 * var(--blok-space-1));
   height: 34px;
-  margin: var(--blok-space-1-5) var(--blok-space-1) 0;
+  margin: var(--blok-space-1-5) var(--blok-space-1) var(--blok-space-0-75);
   padding: var(--blok-space-0-5) var(--blok-space-1);
   border: none;
   border-radius: var(--blok-radius-control);
@@ -15753,9 +15773,35 @@ button[data-blok-database-color-rule-value]:hover:not(:disabled) {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
-input[data-blok-database-color-rule-field] {
+label[data-blok-database-color-rule-box] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
   width: calc(100% - 2 * var(--blok-space-2));
-  margin: var(--blok-space-2) var(--blok-space-2) var(--blok-space-1);
+  height: 28px;
+  margin: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-0-75);
+  padding: var(--blok-space-0-75) var(--blok-space-1-5);
+  cursor: text;
+}
+
+label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-prefix]) {
+  margin-block-end: calc(var(--blok-space-0-75) + var(--blok-space-1));
+}
+
+[data-blok-database-color-rule-prefix] {
+  flex: none;
+  color: var(--blok-database-panel-value-text);
+}
+
+[data-blok-database-color-rule-box] > [data-blok-database-panel-input] {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  background-color: transparent;
 }
 
 [data-blok-database-color-rule-field] {

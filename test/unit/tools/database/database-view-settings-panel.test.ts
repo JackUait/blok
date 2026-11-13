@@ -2193,7 +2193,10 @@ describe('view settings panel', () => {
       expect(note()).toBeNull();
       expect(q('database-color-add')?.hasAttribute('data-blok-database-color-add-another')).toBe(true);
       expect(q('database-color-rule-c1')?.querySelector('[data-blok-database-chip-header]')?.contains(operator)).toBe(true);
-      expect(operator?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Stage tools.database.filteroperator.isnotempty');
+      // notion-motion.md Round 21 §1: the property name is plain text outside the operator button.
+      expect(operator?.textContent?.trim()).toBe('tools.database.filteroperator.isnotempty');
+      expect(operator?.previousElementSibling?.textContent).toBe('Stage');
+      expect(operator?.previousElementSibling?.hasAttribute('data-blok-database-color-rule-name')).toBe(true);
       expect(q('database-color-delete-c1')?.getAttribute('aria-label')).toBe('tools.database.colorDelete');
       expect(q('database-color-condition-c1')).toBeNull();
     });
@@ -2241,6 +2244,48 @@ describe('view settings panel', () => {
 
       expect(token?.textContent).toBe('Idea');
       expect(q('database-color-value-c1')?.hasAttribute('data-empty')).toBe(false);
+    });
+
+    // notion-motion.md Round 21 §1 (r21-cc-date-cc.raw, r21-cc-date-is-cc.raw): "Date is not empty" until the operator
+    // takes a value, then "Start date ⌄ is ⌄".
+    it('heads a Date rule with its name until the operator takes a value', () => {
+      const h = harness({ colorRules: [{ id: 'c1', propertyId: 'due', operator: 'is_not_empty', value: null, color: 'green' }] });
+      const header = (): Element | null | undefined => q('database-color-rule-c1')?.querySelector('[data-blok-database-color-rule-header]');
+
+      h.open();
+      click('database-settings-color');
+
+      expect(q('database-color-side-c1')).toBeNull();
+      expect(header()?.querySelector('[data-blok-database-color-rule-name]')?.textContent).toBe('Due');
+      expect(header()?.hasAttribute('data-blok-database-color-rule-plain-date')).toBe(true);
+
+      h.ctx.updateView({ colorRules: [{ id: 'c1', propertyId: 'due', operator: 'equals', value: null, color: 'green' }] });
+
+      expect(q('database-color-side-c1')?.textContent?.trim()).toBe('tools.database.dateStart');
+      expect(header()?.querySelector('[data-blok-database-color-rule-name]')).toBeNull();
+      expect(header()?.hasAttribute('data-blok-database-color-rule-plain-date')).toBe(false);
+
+      // An End date side stays visible, or the rule would look like it reads the start.
+      h.ctx.updateView({ colorRules: [{ id: 'c1', propertyId: 'due', operator: 'end:is_empty', value: null, color: 'green' }] });
+
+      expect(q('database-color-side-c1')?.textContent?.trim()).toBe('tools.database.dateEnd');
+    });
+
+    // notion-motion.md Round 21 §1 (r21-cc-num-eq-cc.raw): Number "=" shows the "=" inside the value box.
+    it('puts a "=" before a Number rule\'s value only on "="', () => {
+      const h = harness({ colorRules: [{ id: 'c1', propertyId: 'num', operator: 'equals', value: null, color: 'green' }] });
+      const prefix = (): Element | null | undefined => q('database-color-rule-c1')?.querySelector('[data-blok-database-color-rule-prefix]');
+
+      h.open();
+      click('database-settings-color');
+
+      expect(prefix()?.textContent).toBe('=');
+      expect(prefix()?.parentElement?.contains(q('database-color-value-c1'))).toBe(true);
+
+      h.ctx.updateView({ colorRules: [{ id: 'c1', propertyId: 'num', operator: 'greater_than', value: null, color: 'green' }] });
+
+      expect(prefix()).toBeNull();
+      expect(q('database-color-value-c1')).not.toBeNull();
     });
 
     // notion-motion.md Round 21 §1: "Select..." on Status, Multi-select, Date, Checkbox and Person too.

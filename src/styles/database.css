@@ -12640,8 +12640,32 @@ input[data-blok-database-picker-search]:focus {
   background-color: var(--blok-database-color-rule-bg);
 }
 
+/* r21-cc-*-cc.raw: the name's text starts 13 in from the card, as the lines below it. */
 [data-blok-database-color-rule-header] {
-  padding: 0 0 0 var(--blok-space-1);
+  padding: 0 0 0 var(--blok-space-2);
+}
+
+/* r21-cc-date-cc.raw: "Date is not empty" sits 4px lower; the card is 104, not 100. */
+[data-blok-database-color-rule-header][data-blok-database-color-rule-plain-date] {
+  padding-block-start: var(--blok-space-1);
+}
+
+[data-blok-database-color-rule-lead] {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+/* notion-motion.md Round 21 §1: the operator button is padded 0 2px and starts 2px after the name,
+   so name text to operator text is 4; its ⌄ sits 4 after the text (29.6 wide for "is"). Two buttons stand 6 apart ("Start date ⌄ is ⌄", r21-cc-date-is-cc.raw). */
+[data-blok-database-color-rule-header] [data-blok-database-chip-operator] {
+  gap: var(--blok-space-1);
+  margin-inline-start: var(--blok-space-0-5);
+  padding-inline: var(--blok-space-0-5);
+}
+
+[data-blok-database-color-rule-header] [data-blok-database-chip-operator] + [data-blok-database-chip-operator] {
+  margin-inline-start: var(--blok-space-1-5);
 }
 
 [data-blok-database-color-rule-delete] {
@@ -12669,11 +12693,12 @@ input[data-blok-database-picker-search]:focus {
 }
 
 /* r20-cc-is.raw: a 240x34 button 9 in and 36 down, holding the 232x30 field 13 in and 38 down. */
+/* r21-cc-st-is-cc.raw: the card with a field is 143. */
 button[data-blok-database-color-rule-value] {
   display: block;
   width: calc(100% - 2 * var(--blok-space-1));
   height: 34px;
-  margin: var(--blok-space-1-5) var(--blok-space-1) 0;
+  margin: var(--blok-space-1-5) var(--blok-space-1) var(--blok-space-0-75);
   padding: var(--blok-space-0-5) var(--blok-space-1);
   border: none;
   border-radius: var(--blok-radius-control);
@@ -12686,9 +12711,38 @@ button[data-blok-database-color-rule-value]:hover:not(:disabled) {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
-input[data-blok-database-color-rule-field] {
+/* r21-cc-num-field.raw, r21-cc-text-contains-cc.raw: a 232x28 box, padding 3px 6px, 36 down the card;
+   the card is 137 for Text and 141 for Number "=". */
+label[data-blok-database-color-rule-box] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
   width: calc(100% - 2 * var(--blok-space-2));
-  margin: var(--blok-space-2) var(--blok-space-2) var(--blok-space-1);
+  height: 28px;
+  margin: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-0-75);
+  padding: var(--blok-space-0-75) var(--blok-space-1-5);
+  cursor: text;
+}
+
+label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-prefix]) {
+  margin-block-end: calc(var(--blok-space-0-75) + var(--blok-space-1));
+}
+
+/* r21-cc-num-eq-cc.raw: "=" 14px 400 rgb(161, 158, 153), Blok's placeholder ink. */
+[data-blok-database-color-rule-prefix] {
+  flex: none;
+  color: var(--blok-database-panel-value-text);
+}
+
+[data-blok-database-color-rule-box] > [data-blok-database-panel-input] {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  background-color: transparent;
 }
 
 /* r20-cc-is.raw: 232x30, radius 6, padding 4px 6px. */

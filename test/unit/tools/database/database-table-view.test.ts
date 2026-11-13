@@ -1437,6 +1437,18 @@ describe('DatabaseTableView', () => {
         expect(open.hasAttribute('data-compact')).toBe(false);
       });
 
+      it('fits again when the pointer leaves the table and comes back to the same row', () => {
+        const { root } = mount();
+        const open = sized(root, 100, 88);
+
+        over(cell(root, 'r1', 'p-title'));
+        expect(open.hasAttribute('data-compact')).toBe(false);
+        vi.spyOn(open, 'getBoundingClientRect').mockImplementation(() => new DOMRect(0, 0, open.hasAttribute('data-compact') ? 30 : 120, 24));
+        grid(root).dispatchEvent(new PointerEvent('pointerleave'));
+        over(cell(root, 'r1', 'p-title'));
+        expect(open.hasAttribute('data-compact')).toBe(true);
+      });
+
       it('fits the selected title cell too, where OPEN shows without a hover', () => {
         const { root } = mount();
         const open = sized(root, 100, 120);

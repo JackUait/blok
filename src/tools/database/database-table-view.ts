@@ -542,6 +542,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     gridEl.addEventListener('pointerdown', this.handlePress);
     gridEl.addEventListener('blok-database-table-repaint', this.handleRepaint);
     gridEl.addEventListener('pointerover', this.handleOver);
+    gridEl.addEventListener('pointerleave', () => {
+      this.overRow = null;
+    });
 
     if (this.editable) {
       this.resize = new DatabaseTableColumnResize({

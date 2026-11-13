@@ -48,7 +48,8 @@ interface Shape {
   closed: boolean;
 }
 
-type Lean = (leanX: number, leanY: number) => void;
+type TiltListener = (tiltX: number, tiltY: number) => void;
+type Lean = (leanX: number, leanY: number, onTilt?: TiltListener) => void;
 
 const depths = new WeakMap<HTMLElement, Lean | null>();
 
@@ -103,6 +104,7 @@ function draw(shapes: Shape[], leanX: number, leanY: number): void {
 // shadows in media-empty.css move with the light.
 function springTilt(shapes: Shape[], stage: HTMLElement): Lean {
   const tilt = { x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0, frame: 0, last: 0 };
+  const listener: { onTilt?: TiltListener } = {};
 
   const step = (now: number): void => {
     const dt = Math.min(1 / 30, tilt.last ? (now - tilt.last) / 1000 : 1 / 60);
@@ -121,10 +123,12 @@ function springTilt(shapes: Shape[], stage: HTMLElement): Lean {
     draw(shapes, tilt.x, tilt.y);
     stage.style.setProperty('--tilt-x', String(Math.round(tilt.x * 1000) / 1000));
     stage.style.setProperty('--tilt-y', String(Math.round(tilt.y * 1000) / 1000));
+    listener.onTilt?.(tilt.x, tilt.y);
     tilt.frame = settled ? 0 : requestAnimationFrame(step);
   };
 
-  return (leanX, leanY) => {
+  return (leanX, leanY, onTilt) => {
+    listener.onTilt = onTilt;
     tilt.tx = leanX;
     tilt.ty = leanY;
     if (tilt.frame) return;
@@ -136,14 +140,15 @@ function springTilt(shapes: Shape[], stage: HTMLElement): Lean {
 /**
  * Tilts the preview toward `leanX`/`leanY` (each -1 to 1) on a spring. The
  * drawing is converted to projected paths on the first real lean, and the
- * frame loop stops once the tilt settles.
+ * frame loop stops once the tilt settles. `onTilt` gets the live tilt on every
+ * frame, for a part outside the drawing that should ride along.
  */
-export function leanPreview(stage: HTMLElement, leanX: number, leanY: number): void {
+export function leanPreview(stage: HTMLElement, leanX: number, leanY: number, onTilt?: TiltListener): void {
   if (!depths.has(stage)) {
     if (leanX === 0 && leanY === 0) return;
     const svg = stage.querySelector('svg');
     const shapes = svg ? toShapes(svg) : null;
     depths.set(stage, shapes ? springTilt(shapes, stage) : null);
   }
-  depths.get(stage)?.(leanX, leanY);
+  depths.get(stage)?.(leanX, leanY, onTilt);
 }

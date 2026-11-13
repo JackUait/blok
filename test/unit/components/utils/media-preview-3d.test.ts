@@ -113,6 +113,19 @@ describe('leanPreview', () => {
     expect(stage.style.getPropertyValue('--tilt-y')).toBe('-1');
   });
 
+  it('reports its live tilt each frame, so a part outside the drawing can ride along', () => {
+    const stage = makePreview('video');
+    const seen: Array<[number, number]> = [];
+
+    leanPreview(stage, 1, -1, (x, y) => seen.push([x, y]));
+    runFrames(2000);
+
+    expect(seen.length).toBeGreaterThan(2);
+    expect(seen[0][0]).toBeGreaterThan(0);
+    expect(seen[0][0]).toBeLessThan(1);
+    expect(seen[seen.length - 1]).toEqual([1, -1]);
+  });
+
   it('does nothing when a never-tilted drawing is told to rest', () => {
     const stage = makePreview('video');
 

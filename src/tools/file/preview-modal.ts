@@ -1,3 +1,4 @@
+import type { FileConfig } from '../../../types/tools/file';
 import { openModalDialog } from '../../components/utils/modal-dialog';
 import { safeHttpHref, safePreviewSrc } from './url';
 import { extOf, getPreviewKind, type PreviewKind } from './preview';
@@ -6,7 +7,7 @@ import { extToPrismLang } from './code-languages';
 import { tokenizePrism } from '../code/prism-loader';
 import { applyPrismHighlight, ensurePrismStyles } from '../code/prism-applier';
 import { IconCross, IconDownload, IconLinkExternal } from '../../components/icons';
-import { buildErrorInto, createTypedPdfUrl } from './preview-error';
+import { buildErrorInto, buildExternalNoticeInto, createTypedPdfUrl } from './preview-error';
 import { renderCode, splitLines } from './code-view';
 import { renderCsv } from './csv-view';
 import { renderLog, renderPlainText } from './log-view';
@@ -15,7 +16,7 @@ import { fillOfficeBody, isOfficeKind } from './office-preview';
 import { ScrollHaze } from './preview-scroll-haze';
 import { counted, resolvePreviewLabels, type PreviewLabels } from './preview-labels';
 import { supportsPdfJs } from './pdf/pdf-loader';
-import { fillPdfBody } from './pdf/pdf-preview';
+import { fillPdfBody, fillRemotePdfBody } from './pdf/pdf-preview';
 import { describePreviewType, isCsv, isLog, metaText, mountViewToggle, OVERLAY_ATTR, type PreviewChrome } from './preview-chrome';
 
 export interface FilePreviewOptions {
@@ -27,6 +28,10 @@ export interface FilePreviewOptions {
   labels: Partial<PreviewLabels> & { close: string };
   /** Element whose direction the preview takes (it mounts outside the editor). */
   directionSource?: Element | null;
+  /** See FileConfig.fetchPreview. */
+  fetchPreview?: FileConfig['fetchPreview'];
+  /** See FileConfig.pdfAssetsUrl. */
+  pdfAssetsUrl?: string;
 }
 
 interface PreviewElements {
@@ -53,20 +58,10 @@ function buildBody(opts: FilePreviewOptions, kind: PreviewKind): HTMLElement {
       return body;
     }
     // Chrome blocks its PDF viewer in any sandboxed frame, and an unsandboxed
-    // http(s) frame runs whatever HTML the server sends. So no http(s) frame.
-    if (!src.startsWith('blob:')) {
-      const notice = document.createElement('div');
-      notice.className = 'blok-file-preview-error';
-      notice.setAttribute('data-role', 'file-preview-external');
-      const link = document.createElement('a');
-      link.className = 'blok-file-preview-download';
-      link.setAttribute('data-action', 'preview-open-external');
-      link.href = src;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      link.textContent = opts.labels.openInNewTab ?? 'Open in new tab';
-      notice.appendChild(link);
-      body.appendChild(notice);
+    // http(s) frame runs whatever HTML the server sends. So no http(s) frame:
+    // pdf.js reads the bytes, or the user gets a link.
+    if (!src.startsWith('blob:') && !supportsPdfJs()) {
+      buildExternalNoticeInto(body, opts, src);
 
       return body;
     }
@@ -396,6 +391,9 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
   const startFill = (): Promise<void> => {
     if (kind === 'pdf' && safePreviewSrc(opts.url)?.startsWith('blob:') === true) {
       return fillPdfBlobBody(chrome, actions, opts);
+    }
+    if (kind === 'pdf' && safeHttpHref(opts.url) !== null && supportsPdfJs()) {
+      return fillRemotePdfBody(opts, chrome);
     }
     if (officeKind !== null) {
       return fillOfficeBody(body, opts, officeKind, () => state.closed, (release) => releases.push(release), chrome);

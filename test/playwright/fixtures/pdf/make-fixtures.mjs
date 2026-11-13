@@ -1,4 +1,5 @@
-// Writes the PDF fixtures for file-pdf-preview.spec.ts.
+// Writes the PDF fixtures for file-pdf-preview.spec.ts. The spec imports
+// manyPagesPdf to build its large file at run time instead of committing it.
 // Run: node test/playwright/fixtures/pdf/make-fixtures.mjs
 // Output is byte-stable: rerunning it must leave git clean.
 
@@ -146,6 +147,30 @@ function passwordPdf() {
 /** A PDF header over bytes that are no PDF at all. */
 const corruptPdf = () => Buffer.from('%PDF-1.7\nthis file was cut off before any object\n', 'latin1');
 
-writeFileSync(join(OUT, 'three-pages.pdf'), textPdf());
-writeFileSync(join(OUT, 'password-blok.pdf'), passwordPdf());
-writeFileSync(join(OUT, 'corrupt.pdf'), corruptPdf());
+/**
+ * `count` Letter pages titled "Blok PDF page N", each padded with `padding`
+ * bytes of comment, so the file spans several 1 MiB server chunks.
+ */
+export function manyPagesPdf(count, padding) {
+  const filler = `${'% padding '.repeat(Math.ceil(padding / 10)).slice(0, padding - 1)}\n`;
+  const pageNum = (index) => 3 + index * 2;
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    `<< /Type /Pages /Kids [${Array.from({ length: count }, (_, i) => `${pageNum(i)} 0 R`).join(' ')}] /Count ${count} >>`,
+  ];
+  for (let i = 0; i < count; i++) {
+    objects.push(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 ${pageNum(count)} 0 R >> >> /Contents ${pageNum(i) + 1} 0 R >>`,
+      stream('', `${filler}${text([[72, 700, 28, `Blok PDF page ${i + 1}`]])}`),
+    );
+  }
+  objects.push(FONT);
+
+  return buildPdf(objects);
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  writeFileSync(join(OUT, 'three-pages.pdf'), textPdf());
+  writeFileSync(join(OUT, 'password-blok.pdf'), passwordPdf());
+  writeFileSync(join(OUT, 'corrupt.pdf'), corruptPdf());
+}

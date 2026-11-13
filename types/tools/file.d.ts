@@ -96,6 +96,18 @@ export interface FileConfig {
   sources?: MediaSource;
   /** Caption placeholder. */
   captionPlaceholder?: string;
+  /**
+   * Fetches a file's bytes for the preview when the browser cannot read the
+   * url itself (no CORS). Blok calls it before trying the url directly. Throw
+   * or answer with an error status to let Blok try the next way.
+   */
+  fetchPreview?: (url: string, init: { signal: AbortSignal }) => Promise<Blob | ArrayBuffer | Response>;
+  /**
+   * Base url that holds pdf.js's `cmaps/`, `wasm/` and `iccs/` folders. Without
+   * it, PDFs with CJK text and no embedded font, JPEG 2000 or JBIG2 images
+   * show with gaps. Blok ships none of these files.
+   */
+  pdfAssetsUrl?: string;
 }
 
 /**

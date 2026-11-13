@@ -1,12 +1,13 @@
 import type { FilePreviewOptions } from '../preview-modal';
 import type { PreviewChrome } from '../preview-chrome';
-import { buildErrorInto } from '../preview-error';
+import { buildErrorInto, buildExternalNoticeInto } from '../preview-error';
 import { loadPdfJs, type PdfJs } from './pdf-loader';
 import { askPdfPassword } from './pdf-password';
 import type { PdfDocumentLike, PdfPageLike, PdfViewport } from './pdf-types';
 import { mountPdfView, type PdfViewLib } from './pdf-view';
+import { resolvePdfSources } from './pdf-source';
 
-/** Where the PDF's bytes come from. Only `data` has a producer yet. */
+/** Where the PDF's bytes come from. */
 export type PdfSource =
   | { kind: 'data'; data: Uint8Array }
   | { kind: 'url'; url: string }
@@ -27,6 +28,26 @@ function sourceParams(source: PdfSource): Record<string, unknown> {
   }
 
   return { range: source.transport, length: source.length };
+}
+
+/** Bytes arrived but are no readable PDF: the chain stops on the error card. */
+class PdfUnreadableError extends Error {
+  public override readonly name = 'PdfUnreadableError';
+}
+
+const isUnreadable = (error: unknown): boolean =>
+  error instanceof PdfUnreadableError ||
+  (error instanceof Error && error.name === 'InvalidPDFException');
+
+/** pdf.js needs a trailing slash on each folder url. */
+function assetParams(base: string | undefined): Record<string, unknown> {
+  if (base === undefined || base === '') {
+    return { useWasm: false };
+  }
+  const root = base.endsWith('/') ? base : `${base}/`;
+
+  // wasm decoders need 'wasm-unsafe-eval', so they run only when the host serves them.
+  return { cMapUrl: `${root}cmaps/`, cMapPacked: true, wasmUrl: `${root}wasm/`, iccUrl: `${root}iccs/`, useWasm: true };
 }
 
 const loadingText = (chrome: PreviewChrome, percent: number | null): string =>
@@ -75,11 +96,11 @@ export async function fillPdfBody(
   }
   const task = lib.getDocument({
     ...sourceParams(source),
+    ...assetParams(opts.pdfAssetsUrl),
     useSystemFonts: true,
-    useWasm: false,
     canvasMaxAreaInBytes: CANVAS_MAX_AREA_IN_BYTES,
   });
-  const held: { view: { destroy(): void } | null } = { view: null };
+  const held: { view: { destroy(): void } | null; carded: boolean } = { view: null, carded: false };
   chrome.onRelease(() => {
     held.view?.destroy();
     // destroy() rejects when the worker is already gone; nothing is left to free then.
@@ -100,6 +121,7 @@ export async function fillPdfBody(
     }
     askPdfPassword(chrome.body, chrome.labels, reason, (password) => {
       if (password instanceof Error) {
+        held.carded = true;
         buildErrorInto(chrome.body, opts, pdfHref);
       } else {
         showLoading(chrome);
@@ -108,7 +130,13 @@ export async function fillPdfBody(
     });
   };
 
-  const doc = await task.promise;
+  const doc = await task.promise.catch((error: unknown) => {
+    // Free this attempt's worker now: the next source opens its own. A close already did.
+    if (!chrome.isClosed()) {
+      task.destroy().catch(() => undefined);
+    }
+    throw held.carded || isUnreadable(error) ? new PdfUnreadableError('unreadable PDF', { cause: error }) : error;
+  });
   if (chrome.isClosed()) {
     return;
   }
@@ -132,4 +160,44 @@ export async function fillPdfBody(
   }
   // The loading line stays until the first page is read, so the body is never blank.
   chrome.body.querySelector('[data-role="file-preview-loading"]')?.remove();
+}
+
+/** True once a source opened (or the preview closed); throws on bytes that are no readable PDF. */
+async function openFirstSource(opts: FilePreviewOptions, chrome: PreviewChrome, signal: AbortSignal): Promise<boolean> {
+  for await (const source of resolvePdfSources(opts.url, opts.fetchPreview, signal)) {
+    if (chrome.isClosed()) {
+      return true;
+    }
+    const opened = await fillPdfBody(opts, chrome, source).then(() => true, (error: unknown) => {
+      if (isUnreadable(error)) {
+        throw error;
+      }
+
+      return false;
+    });
+    if (opened) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Opens an http(s) PDF from the first source that gives readable bytes.
+ * Bytes that are no PDF end on the error card; no bytes at all end on the
+ * open-in-new-tab link.
+ */
+export async function fillRemotePdfBody(opts: FilePreviewOptions, chrome: PreviewChrome): Promise<void> {
+  const controller = new AbortController();
+  chrome.onRelease(() => controller.abort());
+  const opened = await openFirstSource(opts, chrome, controller.signal).catch(() => null);
+  if (chrome.isClosed() || opened === true) {
+    return;
+  }
+  if (opened === null) {
+    buildErrorInto(chrome.body, opts);
+  } else {
+    buildExternalNoticeInto(chrome.body, opts, opts.url);
+  }
 }

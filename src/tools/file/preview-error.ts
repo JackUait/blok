@@ -83,3 +83,22 @@ export function buildErrorInto(body: HTMLElement, opts: FilePreviewOptions, pdfH
   }
   body.appendChild(error);
 }
+
+/** Replace a preview body with a link that opens an http(s) file in a new tab. */
+export function buildExternalNoticeInto(body: HTMLElement, opts: FilePreviewOptions, href: string): void {
+  const notice = document.createElement('div');
+  notice.className = 'blok-file-preview-error';
+  notice.setAttribute('data-role', 'file-preview-external');
+  const link = document.createElement('a');
+  link.className = 'blok-file-preview-download';
+  link.setAttribute('data-action', 'preview-open-external');
+  const safe = safeHttpHref(href);
+  if (safe !== null) {
+    link.href = safe;
+  }
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = opts.labels.openInNewTab ?? 'Open in new tab';
+  notice.appendChild(link);
+  body.replaceChildren(notice);
+}

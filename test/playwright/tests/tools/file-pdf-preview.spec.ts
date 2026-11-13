@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Locator, Page } from '@playwright/test';
 import type { Blok } from '@/types';
@@ -151,5 +152,115 @@ test.describe('PDF preview', () => {
     await expect(card.getByRole('link', { name: 'Download' })).toHaveAttribute('href', /^blob:/);
     await expect(card.getByRole('link', { name: 'Open in new tab' })).toHaveAttribute('target', '_blank');
     await expect(dialog.getByRole('region', { name: 'Page 1', exact: true })).toHaveCount(0);
+  });
+});
+
+const REMOTE = 'https://pdfs.blok.test';
+const THREE_PAGES = readFileSync(join(PDF_FIXTURES, 'three-pages.pdf'));
+// The test server's own file under another origin (the page runs on localhost):
+// a real cross-origin answer without CORS headers. A route would not do, as
+// the browser does not apply CORS to a fulfilled route.
+const NO_CORS = 'http://127.0.0.1:4444/test/playwright/fixtures/pdf/three-pages.pdf';
+
+interface RemoteOptions {
+  /** Give the File tool a fetchPreview hook that reads through this same-origin proxy path. */
+  proxy?: string;
+}
+
+/** An editor holding one File block for `url`, with its preview open. */
+const openRemotePdf = async (page: Page, url: string, options: RemoteOptions = {}): Promise<Locator> => {
+  await page.waitForFunction(() => typeof window.Blok === 'function');
+  await page.evaluate(async ({ holder, url: fileUrl, proxy }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
+    }
+    document.getElementById(holder)?.remove();
+    const container = document.createElement('div');
+    container.id = holder;
+    document.body.appendChild(container);
+    // @ts-expect-error built bundle has no TS types — runtime-only dynamic import
+    const { File: FileTool } = await import('/dist/tools.mjs?_v=1') as Record<string, new (...args: unknown[]) => unknown>;
+    const config = proxy === undefined
+      ? {}
+      : { fetchPreview: (target: string) => fetch(`${proxy}?url=${encodeURIComponent(target)}`) };
+    const blok = new window.Blok({
+      holder,
+      tools: { file: { class: FileTool, config } },
+      data: { blocks: [{ type: 'file', data: { url: fileUrl, fileName: 'remote.pdf', mimeType: 'application/pdf' } }] },
+    });
+    window.blokInstance = blok;
+    await blok.isReady;
+  }, { holder: HOLDER_ID, url, proxy: options.proxy });
+  await page.getByRole('button', { name: /remote\.pdf/i }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+
+  return dialog;
+};
+
+test.describe('PDF preview of an http(s) file', () => {
+  test('draws a PDF its host shares with CORS', async ({ page }) => {
+    await page.route(`${REMOTE}/cors.pdf`, (route) => route.fulfill({
+      status: 200,
+      headers: { 'Content-Type': 'application/pdf', 'Access-Control-Allow-Origin': '*' },
+      body: THREE_PAGES,
+    }));
+    const dialog = await openRemotePdf(page, `${REMOTE}/cors.pdf`);
+    const first = dialog.getByRole('region', { name: 'Page 1', exact: true });
+
+    await expect(dialog.getByRole('region', { name: /^Page \d$/ })).toHaveCount(3);
+    await expect.poll(() => inkedPixels(first)).toBeGreaterThan(100);
+    expect(await dialog.evaluate((node) => node.querySelectorAll('iframe').length)).toBe(0);
+  });
+
+  test('offers the link when the host shares no CORS and no hook can help', async ({ page }) => {
+    const asked = { count: 0 };
+    const onRequest = (request: { url(): string }): void => {
+      if (request.url() === NO_CORS) {
+        asked.count += 1;
+      }
+    };
+    page.on('request', onRequest);
+    const dialog = await openRemotePdf(page, NO_CORS);
+    const link = dialog.locator('[data-role="file-preview-external"]').getByRole('link', { name: 'Open in new tab' });
+
+    await expect(link).toHaveAttribute('href', NO_CORS);
+    await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    page.off('request', onRequest);
+    // The browser did ask and then blocked the answer: the link is the fallback, not a skipped try.
+    expect(asked.count).toBeGreaterThan(0);
+    await expect(dialog.getByRole('region', { name: 'Page 1', exact: true })).toHaveCount(0);
+  });
+
+  test('draws a PDF without CORS through the host\'s fetchPreview hook', async ({ page }) => {
+    const proxied: string[] = [];
+    await page.route('**/__pdf-proxy?*', (route) => {
+      proxied.push(new URL(route.request().url()).searchParams.get('url') ?? '');
+
+      return route.fulfill({ status: 200, headers: { 'Content-Type': 'application/pdf' }, body: THREE_PAGES });
+    });
+    const dialog = await openRemotePdf(page, NO_CORS, { proxy: '/__pdf-proxy' });
+    const first = dialog.getByRole('region', { name: 'Page 1', exact: true });
+
+    await expect(dialog.getByRole('region', { name: /^Page \d$/ })).toHaveCount(3);
+    await expect.poll(() => inkedPixels(first)).toBeGreaterThan(100);
+    expect(proxied).toEqual([NO_CORS]);
+  });
+
+  test('ends on the error card, with nothing framed, when the url sends HTML', async ({ page }) => {
+    await page.route(`${REMOTE}/page.pdf`, (route) => route.fulfill({
+      status: 200,
+      headers: { 'Content-Type': 'text/html', 'Access-Control-Allow-Origin': '*' },
+      body: '<!doctype html><html><body><script>top.__pdfHtmlRan = true</script>Not a PDF</body></html>',
+    }));
+    const dialog = await openRemotePdf(page, `${REMOTE}/page.pdf`);
+    const card = dialog.locator('[data-role="file-preview-error"]');
+
+    await expect(card).toBeVisible();
+    await expect(card.getByRole('link', { name: 'Download' })).toHaveAttribute('href', `${REMOTE}/page.pdf`);
+    expect(await page.evaluate(() => document.querySelectorAll('iframe, object, embed').length)).toBe(0);
+    expect(await page.evaluate(() => (window as unknown as { __pdfHtmlRan?: boolean }).__pdfHtmlRan)).toBeUndefined();
+    await expect(dialog.locator('[data-role="file-preview-external"]')).toHaveCount(0);
   });
 });

@@ -474,3 +474,197 @@ describe('blob PDFs open with pdf.js', () => {
     expect(loader.loadPdfJs).not.toHaveBeenCalled();
   });
 });
+
+describe('http(s) PDFs open with pdf.js when Blok can get the bytes', () => {
+  const HTTP = 'https://files.example.com/a.pdf';
+  const REMOTE_LABELS = { ...LABELS, openInNewTab: 'Open in new tab' };
+  let tasks: FakeTask[];
+  let getDocument: ReturnType<typeof vi.fn>;
+  const unhandled: unknown[] = [];
+  const onUnhandled = (reason: unknown): void => {
+    unhandled.push(reason);
+  };
+  const params = (call: number): Record<string, unknown> => getDocument.mock.calls[call]?.[0] as Record<string, unknown>;
+  const invalidPdf = (): Error => Object.assign(new Error('Invalid PDF structure.'), { name: 'InvalidPDFException' });
+  // What pdf.js reports when the browser blocks a fetch without CORS headers.
+  const blocked = (): Error => Object.assign(new Error('Failed to fetch'), { name: 'UnknownErrorException' });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    unhandled.length = 0;
+    process.on('unhandledRejection', onUnhandled);
+    tasks = [];
+    getDocument = vi.fn(() => {
+      const made = fakeTask();
+      tasks.push(made);
+
+      return made;
+    });
+    loader.supportsPdfJs.mockReturnValue(true);
+    loader.loadPdfJs.mockResolvedValue({ getDocument, TextLayer: undefined });
+    vi.stubGlobal('IntersectionObserver', QuietObserver);
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function getContext(this: HTMLCanvasElement) {
+      return { canvas: this } as unknown as CanvasRenderingContext2D;
+    });
+  });
+
+  afterEach(() => {
+    process.off('unhandledRejection', onUnhandled);
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+    document.body.style.overflow = '';
+  });
+
+  it('reads the url directly, without cookies for other sites', async () => {
+    openFilePreview({ url: HTTP, fileName: 'a.pdf', labels: REMOTE_LABELS });
+    await flush();
+
+    expect(params(0)).toMatchObject({ url: HTTP, withCredentials: false, useWasm: false });
+    tasks[0].resolve(fakeDoc());
+    await flush();
+
+    expect(body().querySelectorAll('[data-role="file-preview-pdf-page"]')).toHaveLength(3);
+    expect(document.body.querySelector('[data-role="file-preview-external"]')).toBeNull();
+  });
+
+  it('shows a loading line, not the link, while the bytes come', async () => {
+    openFilePreview({ url: HTTP, fileName: 'a.pdf', labels: REMOTE_LABELS });
+
+    expect(body().querySelector('[data-role="file-preview-loading"]')).not.toBeNull();
+    expect(body().querySelector('[data-role="file-preview-external"]')).toBeNull();
+  });
+
+  it('ends on the error card, never a frame, when the url sends HTML', async () => {
+    openFilePreview({ url: HTTP, fileName: 'a.pdf', labels: REMOTE_LABELS });
+    await flush();
+
+    tasks[0].reject(invalidPdf());
+    await flush();
+
+    expect(body().querySelector('[data-role="file-preview-error"]')).not.toBeNull();
+    expect(body().querySelector('[data-role="file-preview-external"]')).toBeNull();
+    expect(document.body.querySelector('iframe')).toBeNull();
+    expect(getDocument).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to the open-in-new-tab link when the browser cannot read the url', async () => {
+    openFilePreview({ url: HTTP, fileName: 'a.pdf', labels: REMOTE_LABELS });
+    await flush();
+
+    tasks[0].reject(blocked());
+    await flush();
+
+    const link = body().querySelector<HTMLAnchorElement>('[data-role="file-preview-external"] [data-action="preview-open-external"]');
+    expect(link?.getAttribute('href')).toBe(HTTP);
+    expect(link?.rel).toBe('noopener noreferrer');
+    expect(body().querySelector('[data-role="file-preview-error"]')).toBeNull();
+    expect(unhandled).toEqual([]);
+  });
+
+  it('frees a source\'s task before trying the next one', async () => {
+    openFilePreview({
+      url: HTTP,
+      fileName: 'a.pdf',
+      labels: REMOTE_LABELS,
+      fetchPreview: () => Promise.reject(new Error('down')),
+    });
+    await flush();
+
+    tasks[0].reject(blocked());
+    await flush();
+
+    expect(tasks[0].destroyed).toBe(1);
+  });
+
+  it('opens the hook\'s bytes first', async () => {
+    const fetchPreview = vi.fn(() => Promise.resolve(new Blob(['%PDF-hook'])));
+    openFilePreview({ url: HTTP, fileName: 'a.pdf', labels: REMOTE_LABELS, fetchPreview });
+    await flush();
+
+    expect(new TextDecoder().decode(params(0).data as Uint8Array)).toBe('%PDF-hook');
+    tasks[0].resolve(fakeDoc());
+    await flush();
+
+    expect(getDocument).toHaveBeenCalledTimes(1);
+    expect(body().querySelectorAll('[data-role="file-preview-pdf-page"]')).toHaveLength(3);
+  });
+
+  it('tries the url when the hook\'s bytes cannot be fetched', async () => {
+    openFilePreview({
+      url: HTTP,
+      fileName: 'a.pdf',
+      labels: REMOTE_LABELS,
+      fetchPreview: () => Promise.reject(new Error('no proxy')),
+    });
+    await flush();
+
+    expect(params(0)).toMatchObject({ url: HTTP });
+  });
+
+  it('shows the error card when the hook\'s bytes are not a PDF', async () => {
+    openFilePreview({
+      url: HTTP,
+      fileName: 'a.pdf',
+      labels: REMOTE_LABELS,
+      fetchPreview: () => Promise.resolve(new Blob(['<html>'])),
+    });
+    await flush();
+
+    tasks[0].reject(invalidPdf());
+    await flush();
+
+    expect(getDocument).toHaveBeenCalledTimes(1);
+    expect(body().querySelector('[data-role="file-preview-error"]')).not.toBeNull();
+  });
+
+  it('stops the hook when the preview closes', async () => {
+    const seen: { signal: AbortSignal | null } = { signal: null };
+    const teardown = openFilePreview({
+      url: HTTP,
+      fileName: 'a.pdf',
+      labels: REMOTE_LABELS,
+      fetchPreview: (_url, init) => {
+        seen.signal = init.signal;
+
+        return new Promise(() => undefined);
+      },
+    });
+    await flush();
+
+    teardown();
+
+    expect(seen.signal?.aborted).toBe(true);
+  });
+
+  it('loads cmaps, wasm and icc data from the assets url when one is set', async () => {
+    openFilePreview({ url: HTTP, fileName: 'a.pdf', labels: REMOTE_LABELS, pdfAssetsUrl: 'https://cdn.example.com/pdfjs' });
+    await flush();
+
+    expect(params(0)).toMatchObject({
+      cMapUrl: 'https://cdn.example.com/pdfjs/cmaps/',
+      cMapPacked: true,
+      wasmUrl: 'https://cdn.example.com/pdfjs/wasm/',
+      iccUrl: 'https://cdn.example.com/pdfjs/iccs/',
+      useWasm: true,
+    });
+  });
+
+  it('asks for no assets without an assets url', async () => {
+    openFilePreview({ url: HTTP, fileName: 'a.pdf', labels: REMOTE_LABELS });
+    await flush();
+
+    expect(params(0)).not.toHaveProperty('cMapUrl');
+    expect(params(0)).not.toHaveProperty('wasmUrl');
+    expect(params(0)).not.toHaveProperty('iccUrl');
+  });
+
+  it('keeps the link without pdf.js', async () => {
+    loader.supportsPdfJs.mockReturnValue(false);
+    openFilePreview({ url: HTTP, fileName: 'a.pdf', labels: REMOTE_LABELS });
+    await flush();
+
+    expect(body().querySelector('[data-action="preview-open-external"]')?.getAttribute('href')).toBe(HTTP);
+    expect(loader.loadPdfJs).not.toHaveBeenCalled();
+  });
+});

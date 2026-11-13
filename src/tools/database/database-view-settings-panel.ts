@@ -1168,7 +1168,7 @@ export class ViewSettingsPages {
 
   /**
    * notion-motion.md Round 25 §7: the board's Layout page names its grouping.
-   * What Notion's Group by row opens is unread; it opens the Group page's property list.
+   * Round 26 §3: its Group by row opens the Group page.
    */
   private boardGroupRows(panel: DatabasePanel): HTMLElement[] {
     const view = this.ctx.view();
@@ -1180,10 +1180,7 @@ export class ViewSettingsPages {
       value: property?.name ?? this.t('settingsNone'),
       opensPage: true,
       disabled: !this.shared,
-      onClick: () => panel.push(this.pickProperty(this.t('groupBy'), GROUPABLE_TYPES, (picked) => {
-        this.ctx.updateView(groupByChange(this.ctx.view(), picked));
-        panel.back();
-      }, { measured: true })),
+      onClick: () => panel.push(this.group(false)),
     });
     // The same rule as the Group page's Color columns.
     const colored = property !== undefined && (property.type === 'select' || property.type === 'multiSelect' || property.type === 'status');

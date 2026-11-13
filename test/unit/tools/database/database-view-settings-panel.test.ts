@@ -676,15 +676,25 @@ describe('view settings panel', () => {
       expect(q('database-settings-group-by')?.textContent).toContain('Stage');
     });
 
-    it('lets the board\'s Group by row pick the property, and Color columns write the group setting', () => {
+    it('lets Color columns write the group setting', () => {
       const h = harness({ type: 'board', groupBy: 'stage' });
 
       h.open('layout');
       click('database-settings-color-columns');
       expect(h.ctx.updateView).toHaveBeenLastCalledWith({ groupSettings: { colorColumns: false } });
+    });
+
+    // notion-motion.md Round 26 §3: the Layout page's Group by opens the Group page, and Back returns to Layout.
+    it('opens the Group page from the board\'s Group by row, and Back returns to Layout', () => {
+      harness({ type: 'board', groupBy: 'stage' }).open('layout');
       click('database-settings-group-by');
-      click('database-pick-property-prog');
-      expect(h.state.view.groupBy).toBe('prog');
+
+      expect(exists('database-group-hide-all')).toBe(true);
+      expect(exists('database-pick-property-prog')).toBe(false);
+
+      click('database-panel-back');
+      expect(exists('database-settings-color-columns')).toBe(true);
+      expect(exists('database-group-hide-all')).toBe(false);
     });
 
     it('gives no Color columns row when the board groups by a property without colors', () => {

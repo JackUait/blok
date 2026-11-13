@@ -245,6 +245,18 @@
   --blok-database-starter-tile-purple-ink: var(--blok-color-purple-text);
   --blok-database-starter-tile-pink-bg: var(--blok-color-pink-bg);
   --blok-database-starter-tile-pink-ink: var(--blok-color-pink-text);
+  /* Conditional color on a table row or cell: Notion's opaque swatch fills (notion-motion.md Round 20 §4).
+     Gray, green and blue equal the measured starter tiles, so they follow those into dark. */
+  --blok-database-rule-default-bg: transparent;
+  --blok-database-rule-gray-bg: var(--blok-database-starter-tile-gray-bg);
+  --blok-database-rule-brown-bg: rgb(245, 237, 233);
+  --blok-database-rule-orange-bg: rgb(251, 235, 222);
+  --blok-database-rule-yellow-bg: rgb(249, 243, 220);
+  --blok-database-rule-green-bg: var(--blok-database-starter-tile-green-bg);
+  --blok-database-rule-blue-bg: var(--blok-database-starter-tile-blue-bg);
+  --blok-database-rule-purple-bg: rgb(243, 235, 249);
+  --blok-database-rule-pink-bg: rgb(250, 233, 241);
+  --blok-database-rule-red-bg: rgb(252, 233, 231);
   /* "More templates" (research/26 §2): modal bg, source card fill. Dark is unmeasured. */
   --blok-database-tpl-gallery-bg: rgb(249, 248, 247);
   --blok-database-tpl-gallery-card-bg: rgba(66, 35, 3, 0.03);
@@ -630,6 +642,13 @@
     --blok-database-starter-tile-blue-ink: var(--blok-database-option-blue-text);
     --blok-database-starter-tile-gray-bg: rgb(56, 56, 54);
     --blok-database-starter-tile-gray-ink: var(--blok-database-option-gray-text);
+    /* Unmeasured in dark: the conditional fills take Blok's block colours. */
+    --blok-database-rule-brown-bg: var(--blok-color-brown-bg);
+    --blok-database-rule-orange-bg: var(--blok-color-orange-bg);
+    --blok-database-rule-yellow-bg: var(--blok-color-yellow-bg);
+    --blok-database-rule-purple-bg: var(--blok-color-purple-bg);
+    --blok-database-rule-pink-bg: var(--blok-color-pink-bg);
+    --blok-database-rule-red-bg: var(--blok-color-red-bg);
     --blok-database-tpl-gallery-bg: rgb(25, 25, 25);
     --blok-database-tpl-gallery-card-bg: rgba(255, 255, 255, 0.03);
     --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.64) 0 24px 48px, rgba(25, 25, 25, 0.56) 0 4px 12px;
@@ -979,6 +998,13 @@
   --blok-database-starter-tile-blue-ink: var(--blok-database-option-blue-text);
   --blok-database-starter-tile-gray-bg: rgb(56, 56, 54);
   --blok-database-starter-tile-gray-ink: var(--blok-database-option-gray-text);
+  /* Unmeasured in dark: the conditional fills take Blok's block colours. */
+  --blok-database-rule-brown-bg: var(--blok-color-brown-bg);
+  --blok-database-rule-orange-bg: var(--blok-color-orange-bg);
+  --blok-database-rule-yellow-bg: var(--blok-color-yellow-bg);
+  --blok-database-rule-purple-bg: var(--blok-color-purple-bg);
+  --blok-database-rule-pink-bg: var(--blok-color-pink-bg);
+  --blok-database-rule-red-bg: var(--blok-color-red-bg);
   --blok-database-tpl-gallery-bg: rgb(25, 25, 25);
   --blok-database-tpl-gallery-card-bg: rgba(255, 255, 255, 0.03);
   --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.64) 0 24px 48px, rgba(25, 25, 25, 0.56) 0 4px 12px;
@@ -12755,6 +12781,18 @@ input[data-blok-database-picker-search]:focus {
 [data-blok-database-color="purple"] { --_blok-database-rule-bg: var(--blok-database-option-purple-bg); background-color: var(--_blok-database-rule-bg); }
 [data-blok-database-color="pink"] { --_blok-database-rule-bg: var(--blok-database-option-pink-bg); background-color: var(--_blok-database-rule-bg); }
 [data-blok-database-color="red"] { --_blok-database-rule-bg: var(--blok-database-option-red-bg); background-color: var(--_blok-database-rule-bg); }
+
+/* A table row or cell takes the opaque swatch fill (notion-motion.md Round 20 §4); the other layouts are unmeasured. */
+[data-blok-database-table] [data-blok-database-color="default"] { --_blok-database-rule-bg: var(--blok-database-rule-default-bg); }
+[data-blok-database-table] [data-blok-database-color="gray"] { --_blok-database-rule-bg: var(--blok-database-rule-gray-bg); }
+[data-blok-database-table] [data-blok-database-color="brown"] { --_blok-database-rule-bg: var(--blok-database-rule-brown-bg); }
+[data-blok-database-table] [data-blok-database-color="orange"] { --_blok-database-rule-bg: var(--blok-database-rule-orange-bg); }
+[data-blok-database-table] [data-blok-database-color="yellow"] { --_blok-database-rule-bg: var(--blok-database-rule-yellow-bg); }
+[data-blok-database-table] [data-blok-database-color="green"] { --_blok-database-rule-bg: var(--blok-database-rule-green-bg); }
+[data-blok-database-table] [data-blok-database-color="blue"] { --_blok-database-rule-bg: var(--blok-database-rule-blue-bg); }
+[data-blok-database-table] [data-blok-database-color="purple"] { --_blok-database-rule-bg: var(--blok-database-rule-purple-bg); }
+[data-blok-database-table] [data-blok-database-color="pink"] { --_blok-database-rule-bg: var(--blok-database-rule-pink-bg); }
+[data-blok-database-table] [data-blok-database-color="red"] { --_blok-database-rule-bg: var(--blok-database-rule-red-bg); }
 
 @media (prefers-reduced-motion: reduce) {
   [data-blok-database-view-toolbar] > button,

@@ -315,3 +315,43 @@ describe('conditional color on calendar, timeline and feed (research/05 §6.2)',
     expect(ruleBody(database, '[data-blok-database-color="green"]')).toContain('--_blok-database-rule-bg: var(--blok-database-option-green-bg)');
   });
 });
+
+describe('conditional color fill on a table (notion-motion.md Round 20 §4)', () => {
+  /** The opaque swatch fills Notion paints on a row or cell, light theme. */
+  const LIGHT: Record<string, string> = {
+    brown: 'rgb(245, 237, 233)',
+    orange: 'rgb(251, 235, 222)',
+    yellow: 'rgb(249, 243, 220)',
+    purple: 'rgb(243, 235, 249)',
+    pink: 'rgb(250, 233, 241)',
+    red: 'rgb(252, 233, 231)',
+  };
+  /** These three match the measured starter tiles, light and dark (research/26 §6). */
+  const TILE = ['gray', 'green', 'blue'];
+  const COLORS = ['default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'];
+  const lightRoot = ruleBody(database, ':where([data-blok-interface])');
+  const darkMedia = ruleBody(database, ':where(:root:not([data-blok-theme="light"]) [data-blok-interface])');
+  const darkTheme = ruleBody(database, ':where([data-blok-theme="dark"] [data-blok-interface])');
+
+  it('paints a table row or cell with the opaque swatch fill, not the option tag colour', () => {
+    for (const color of COLORS) {
+      expect(ruleBody(database, `[data-blok-database-table] [data-blok-database-color="${color}"]`), color)
+        .toContain(`--_blok-database-rule-bg: var(--blok-database-rule-${color}-bg)`);
+    }
+    for (const [color, fill] of Object.entries(LIGHT)) {
+      expect(lightRoot, color).toContain(`--blok-database-rule-${color}-bg: ${fill}`);
+    }
+    for (const color of TILE) {
+      expect(lightRoot, color).toContain(`--blok-database-rule-${color}-bg: var(--blok-database-starter-tile-${color}-bg)`);
+    }
+    expect(lightRoot).toContain('--blok-database-rule-default-bg: transparent');
+  });
+
+  it('has a dark fill for every colour, in both dark blocks', () => {
+    for (const body of [darkMedia, darkTheme]) {
+      for (const color of Object.keys(LIGHT)) {
+        expect(body, color).toContain(`--blok-database-rule-${color}-bg: var(--blok-color-${color}-bg)`);
+      }
+    }
+  });
+});

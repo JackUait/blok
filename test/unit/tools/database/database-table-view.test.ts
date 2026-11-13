@@ -1454,8 +1454,9 @@ describe('DatabaseTableView', () => {
         const { root, view } = mount({ peek: { rowId: () => peeked.id, close: vi.fn() } });
         const open = sized(root, 100, 60);
 
-        vi.spyOn(open, 'getBoundingClientRect').mockImplementation(() => new DOMRect(0, 0,
-          open.hasAttribute('data-compact') ? 30 : (open.lastElementChild?.textContent === 'tools.database.close' ? 120 : 60), 24));
+        const labelled = (): number => (open.lastElementChild?.textContent === 'tools.database.close' ? 120 : 60);
+
+        vi.spyOn(open, 'getBoundingClientRect').mockImplementation(() => new DOMRect(0, 0, open.hasAttribute('data-compact') ? 30 : labelled(), 24));
         over(cell(root, 'r1', 'p-title'));
         expect(open.hasAttribute('data-compact')).toBe(false);
 

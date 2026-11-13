@@ -151,7 +151,7 @@ describe('database filter labels', () => {
     expect(operatorLabelKey('date', 'does_not_equal')).toBe('tools.database.filterOperator.isNot');
     expect(operatorLabelKey('date', 'past_month')).toBe('tools.database.filterOperator.isRelativeToToday');
     expect(menuOperatorOf('this_week')).toBe('relative_to_today');
-    expect(filterPillLabel({ operator: 'does_not_equal', value: 'today' }, prop('date'), t)).toBe('Due: tools.database.filterDateToday');
+    expect(filterPillLabel({ operator: 'does_not_equal', value: 'today' }, prop('date'), t)).toBe('Due: tools.database.filterPillNot(tools.database.filterDateToday)');
     expect(filterPillLabel({ operator: 'past_month', value: null }, prop('date'), t)).toBe('Due: tools.database.filterDatePastMonth');
   });
 
@@ -159,7 +159,7 @@ describe('database filter labels', () => {
     expect(filterPillLabel({ operator: 'relative_to_today', value: 'this:1:month' }, prop('date'), t)).toBe('Due: tools.database.filterDateThisMonth');
     expect(filterPillLabel({ operator: 'relative_to_today', value: 'this:1:week' }, prop('date'), t)).toBe('Due: tools.database.filterDateThisWeek');
     expect(filterPillLabel({ operator: 'relative_to_today', value: 'this:1:day' }, prop('date'), t)).toBe('Due: tools.database.filterDateToday');
-    expect(filterPillLabel({ operator: 'is_between', value: '2026-10-01/2026-10-07' }, prop('date'), t)).toBe('Due: 2026-10-01 → 2026-10-07');
+    expect(filterPillLabel({ operator: 'is_between', value: '2026-10-01/2026-10-07' }, prop('date'), t, undefined, undefined, 'en-US')).toBe('Due: Oct 1 → Oct 7');
     expect(filterPillLabel({ operator: 'is_between', value: null }, prop('date'), t)).toBe('Due');
   });
 
@@ -239,6 +239,12 @@ describe('filter chip text, as Notion prints it', () => {
     ['Select: Is not empty', { operator: 'is_not_empty', value: null }, sel],
     ['Multi-select: Contains One, OTwo', { operator: 'contains', value: ['o1', 'o2'] }, ms],
     ['Multi-select: Does not contain One, OTwo', { operator: 'does_not_contain', value: ['o1', 'o2'] }, ms],
+    ['Date: Nov 10', { operator: 'equals', value: '2026-11-10' }, date],
+    ['Date: Before Nov 10', { operator: 'before', value: '2026-11-10' }, date],
+    ['Date: After Nov 10', { operator: 'after', value: '2026-11-10' }, date],
+    ['Date: On or before Nov 10', { operator: 'on_or_before', value: '2026-11-10' }, date],
+    ['Date: On or after Nov 10', { operator: 'on_or_after', value: '2026-11-10' }, date],
+    ['Date: Nov 3 → Nov 10', { operator: 'is_between', value: '2026-11-03/2026-11-10' }, date],
     ['Date: This week', { operator: 'relative_to_today', value: 'this:1:week' }, date],
     ['Date: Past 3 months', { operator: 'relative_to_today', value: 'past:3:month' }, date],
     ['Date: Next 3 months', { operator: 'relative_to_today', value: 'next:3:month' }, date],
@@ -255,6 +261,6 @@ describe('filter chip text, as Notion prints it', () => {
 
     await i18n.prepare();
 
-    expect(filterPillLabel(filter as FilterConfig, property, (key, vars) => i18n.t(key, vars))).toBe(want);
+    expect(filterPillLabel(filter as FilterConfig, property, (key, vars) => i18n.t(key, vars), undefined, undefined, 'en-US')).toBe(want);
   });
 });

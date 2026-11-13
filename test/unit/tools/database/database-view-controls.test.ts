@@ -990,6 +990,17 @@ describe('DatabaseViewControls', () => {
       select.dispatchEvent(new Event('change'));
     };
 
+    // notion-motion.md Round 19 §2 (r19-date-is-before-bar.raw): "Date: Before Nov 10", in the editor's language.
+    it('prints a dated chip as a short date in the editor\'s language', () => {
+      const env = setup({ schema: () => [...schema, date], levers: { i18n: { t: (key: string, vars?: Record<string, string | number>) => (vars === undefined ? key : `${key}(${String(vars.value)})`), getLocale: () => 'de' } } });
+
+      env.saved.view = { ...env.saved.view, filters: [{ id: 'f1', propertyId: 'due', operator: 'before', value: '2026-11-10' }] };
+      env.controls.refresh();
+      const day = new Intl.DateTimeFormat('de', { month: 'short', day: 'numeric' }).format(new Date(2026, 10, 10));
+
+      expect(q('database-filter-pill-f1')?.getAttribute('aria-label')).toBe(`Due: tools.database.filterPillBefore(${day})`);
+    });
+
     // notion-motion.md Round 19 §2 (r19-date-is.raw): after a relative rule, "is" leaves the day empty and the chip goes gray.
     it('switches a relative date filter to "is" with no day', () => {
       const { controls, saved } = open({ operator: 'relative_to_today', value: 'this:1:week' });

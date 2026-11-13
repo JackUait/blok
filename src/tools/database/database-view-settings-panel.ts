@@ -12,6 +12,7 @@ import {
   panelText,
 } from './database-panel';
 import type { PanelPage } from './database-panel';
+import { editorLocale } from './cells/date-format';
 import { propertyTypeMeta } from './database-property-types';
 import {
   FILTERABLE_TYPES,
@@ -102,7 +103,8 @@ export interface ViewGroupEntry {
 
 /** What the panels ask of the database tool. */
 export interface ViewSettingsContext {
-  i18n: Pick<I18n, 't'>;
+  /** `getLocale` dates the filter chips in the editor's language. */
+  i18n: Pick<I18n, 't'> & Partial<Pick<I18n, 'getLocale'>>;
   /** The view as this person sees it: the saved view plus their unsaved filters and sorts. */
   view: () => DatabaseViewConfig;
   /** Localized schema. */
@@ -1581,9 +1583,10 @@ export class ViewSettingsPages {
 
           const translate = (key: string, vars?: Record<string, string | number>): string => this.ctx.i18n.t(key, vars);
           const rowTitle = (id: string): string | undefined => this.ctx.relatedRows?.(property).find((row) => row.id === id)?.title;
-          const parts = filterPillParts(filter, property, translate, (id) => this.personName(id), rowTitle);
+          const locale = editorLocale(this.ctx.i18n);
+          const parts = filterPillParts(filter, property, translate, (id) => this.personName(id), rowTitle, locale);
           // notion-motion.md Round 18 §2: each filter is its chip; a click opens its rule popover under it, the page stays.
-          const chip = filterChip(`database-filter-row-${filter.id}`, filterPillLabel(filter, property, translate, (id) => this.personName(id), rowTitle), {
+          const chip = filterChip(`database-filter-row-${filter.id}`, filterPillLabel(filter, property, translate, (id) => this.personName(id), rowTitle, locale), {
             glyph: propertyTypeMeta(property.type).icon,
             ...parts,
           });

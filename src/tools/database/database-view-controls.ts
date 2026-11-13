@@ -8,6 +8,7 @@ import type { I18n } from '../../../types';
 import { DatabasePanel, panelInput, panelReorderList, panelRow, panelSeparator, panelText } from './database-panel';
 import { PersonalViewEdits } from './database-view-state';
 import type { ViewStateFallback } from './database-view-state';
+import { editorLocale } from './cells/date-format';
 import { FILTERABLE_TYPES, defaultFilterFor, filterPillLabel, filterPillParts, sortDirectionLabelKey } from './database-filter-labels';
 import { addFilterRule, countFilterRules, emptyFilterTree, withEntryIds } from './filter-tree';
 import { openAdvancedFilter, openViewSettings } from './database-view-settings-panel';
@@ -43,7 +44,8 @@ export const SEARCH_MIN_ROWS = 3;
 
 /** What the controls ask of the database tool. */
 export interface ViewControlsHost {
-  i18n: Pick<I18n, 't'>;
+  /** `getLocale` dates the filter chips in the editor's language. */
+  i18n: Pick<I18n, 't'> & Partial<Pick<I18n, 'getLocale'>>;
   store?: DatabaseViewStateStore;
   fallback: ViewStateFallback;
   savedView: () => DatabaseViewConfig | undefined;
@@ -1136,14 +1138,16 @@ export class DatabaseViewControls {
       pill.addEventListener('click', () => this.openSettings(pill, 'filter'));
       pills.push(pill);
     }
+    const locale = editorLocale(this.host.i18n);
+
     for (const filter of withEntryIds(view.filters)) {
       const property = schema.find((p) => p.id === filter.propertyId);
 
       if (property === undefined) continue;
       const personName = (id: string): string | undefined => this.host.people?.().find((person) => person.id === id)?.name;
       const rowTitle = (id: string): string | undefined => this.host.relatedRows?.(property).find((row) => row.id === id)?.title;
-      const label = filterPillLabel(filter, property, t, personName, rowTitle);
-      const { name, value } = filterPillParts(filter, property, t, personName, rowTitle);
+      const label = filterPillLabel(filter, property, t, personName, rowTitle, locale);
+      const { name, value } = filterPillParts(filter, property, t, personName, rowTitle, locale);
       const pill = filterChip(`database-filter-pill-${filter.id}`, label, { glyph: propertyTypeMeta(property.type).icon, name, value });
 
       pill.setAttribute('data-filter-id', filter.id);

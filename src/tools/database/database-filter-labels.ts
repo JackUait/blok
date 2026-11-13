@@ -3,6 +3,7 @@ import { RELATIVE_DATE_OPERATORS, RELATIVE_DATE_VALUES, parseRelativeSpan } from
 import type { RelativeDateUnit } from './relative-dates';
 import { ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from './database-query';
 import { isPageListRollup } from '../../shared/database/value-helpers';
+import { formatShortDatePart, resolveLocale } from './cells/date-format';
 import type { FilterConfig, PropertyDefinition, PropertyType, SortConfig } from './types';
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
@@ -259,6 +260,9 @@ const THIS_LABEL_KEYS: Record<RelativeDateUnit, string> = {
   year: 'tools.database.filterDateThisYear',
 };
 
+/** A saved day (or instant) the chip prints short: "Nov 10" (Round 19 §2). */
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}(T|$)/;
+
 const isRelativeValue = (value: unknown): value is typeof RELATIVE_DATE_VALUES[number] =>
   typeof value === 'string' && (RELATIVE_DATE_VALUES as readonly string[]).includes(value);
 
@@ -268,7 +272,8 @@ export const filterValueText = (
   property: PropertyDefinition,
   t: Translate,
   personName: (id: string) => string | undefined = () => undefined,
-  rowTitle: (id: string) => string | undefined = () => undefined
+  rowTitle: (id: string) => string | undefined = () => undefined,
+  locale: string = resolveLocale(undefined)
 ): string => {
   const { value } = filter;
   const operator = splitOperator(filter.operator).operator;
@@ -288,7 +293,7 @@ export const filterValueText = (
   if (operator === 'is_between') {
     const range = typeof value === 'string' ? value.split('/') : [];
 
-    return range.length === 2 ? `${range[0]} → ${range[1]}` : '';
+    return range.length === 2 ? `${formatShortDatePart(range[0], locale)} → ${formatShortDatePart(range[1], locale)}` : '';
   }
   if (property.type === 'checkbox') {
     if (typeof value !== 'boolean') return '';
@@ -309,6 +314,7 @@ export const filterValueText = (
     return ids.map((id) => options.find((o) => o.id === id)?.label ?? '').filter((label) => label !== '').join(', ');
   }
   if (['date', 'createdTime', 'lastEditedTime'].includes(property.type) && isRelativeValue(value)) return t(relativeValueLabelKey(value));
+  if (isDateType(property.type) && typeof value === 'string' && ISO_DAY.test(value)) return formatShortDatePart(value, locale);
 
   return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
 };
@@ -316,12 +322,16 @@ export const filterValueText = (
 /** Types whose pill names the operator (notion-motion.md Round 18 §2, Round 19 §2). */
 const PILL_OPERATOR_TYPES: ReadonlySet<PropertyType> = new Set([
   'title', 'text', 'url', 'email', 'phone', 'number', 'uniqueId', 'select', 'status', 'checkbox',
-  'multiSelect', 'person', 'createdBy', 'lastEditedBy', 'relation',
+  'multiSelect', 'person', 'createdBy', 'lastEditedBy', 'relation', 'date', 'createdTime', 'lastEditedTime',
 ]);
 
-/** Operators whose words wrap the value: "Not Red" (Round 19 §2). */
+/** Operators whose words wrap the value: "Not Red", "Before Nov 10" (Round 19 §2). */
 const PILL_TEMPLATE_KEYS: Readonly<Record<string, string>> = {
   does_not_equal: 'tools.database.filterPillNot',
+  before: 'tools.database.filterPillBefore',
+  after: 'tools.database.filterPillAfter',
+  on_or_before: 'tools.database.filterPillOnOrBefore',
+  on_or_after: 'tools.database.filterPillOnOrAfter',
 };
 
 /** How a pill shows its operator: a template around the value, a word before it, or nothing. */
@@ -349,9 +359,10 @@ export const filterPillParts = (
   property: PropertyDefinition,
   t: Translate,
   personName?: (id: string) => string | undefined,
-  rowTitle?: (id: string) => string | undefined
+  rowTitle?: (id: string) => string | undefined,
+  locale?: string
 ): { name: string; value: string } => {
-  const value = filterValueText(filter, property, t, personName, rowTitle);
+  const value = filterValueText(filter, property, t, personName, rowTitle, locale);
 
   if (value === '') return { name: property.name, value };
   const { lead, operator } = splitOperator(filter.operator);
@@ -370,9 +381,10 @@ export const filterPillLabel = (
   property: PropertyDefinition,
   t: Translate,
   personName?: (id: string) => string | undefined,
-  rowTitle?: (id: string) => string | undefined
+  rowTitle?: (id: string) => string | undefined,
+  locale?: string
 ): string => {
-  const { name, value } = filterPillParts(filter, property, t, personName, rowTitle);
+  const { name, value } = filterPillParts(filter, property, t, personName, rowTitle, locale);
 
   return value === '' ? name : `${name} ${value}`;
 };

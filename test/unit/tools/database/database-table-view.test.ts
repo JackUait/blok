@@ -1400,6 +1400,52 @@ describe('DatabaseTableView', () => {
       expect(open?.lastElementChild?.textContent).toBe('tools.database.tableOpen');
     });
 
+    // notion-motion.md Round 27 §2 "Narrow title column": a narrow title column shows an icon-only OPEN. Notion's switch
+    // width is unread, so Blok switches where the labelled button no longer fits with 6px clear on each side.
+    describe('narrow title column', () => {
+      const sized = (root: HTMLElement, cellWidth: number, buttonWidth: number): HTMLElement => {
+        const titleCell = cell(root, 'r1', 'p-title');
+        const open = titleCell.querySelector<HTMLElement>('[data-blok-database-table-open]');
+
+        if (open === null) {
+          throw new Error('no OPEN');
+        }
+        vi.spyOn(titleCell, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, cellWidth, 37));
+        // Only the labelled form is measured: a compact button reads 30.
+        vi.spyOn(open, 'getBoundingClientRect').mockImplementation(() => new DOMRect(0, 0, open.hasAttribute('data-compact') ? 30 : buttonWidth, 24));
+
+        return open;
+      };
+      const over = (target: Element): void => {
+        target.dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
+      };
+
+      it('turns OPEN into the icon pill when the labelled button does not fit', () => {
+        const { root } = mount();
+        const open = sized(root, 100, 89);
+
+        over(cell(root, 'r1', 'p-notes'));
+        expect(open.hasAttribute('data-compact')).toBe(true);
+        expect(open.lastElementChild?.textContent).toBe('tools.database.tableOpen');
+      });
+
+      it('keeps the label when it fits', () => {
+        const { root } = mount();
+        const open = sized(root, 100, 88);
+
+        over(cell(root, 'r1', 'p-title'));
+        expect(open.hasAttribute('data-compact')).toBe(false);
+      });
+
+      it('fits the selected title cell too, where OPEN shows without a hover', () => {
+        const { root } = mount();
+        const open = sized(root, 100, 120);
+
+        selectCell(root, 'r1', 'p-title');
+        expect(open.hasAttribute('data-compact')).toBe(true);
+      });
+    });
+
     it('the OPEN button opens the row', () => {
       const { root, handlers } = mount();
 

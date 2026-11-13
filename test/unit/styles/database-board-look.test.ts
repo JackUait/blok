@@ -431,4 +431,11 @@ describe('pinned group modal', () => {
     expect(ruleBody(database, '[data-blok-database-group-modal-body]')).toContain('overflow: auto');
     expect(ruleBody(database, '[data-blok-database-group-modal-body] [data-blok-database-table-scroller]')).toContain('overflow: visible');
   });
+
+  // notion-motion.md Round 27 §2 "Chip row layout": the sort and filter groups sit 25 apart, chips 6 apart.
+  // 6 gap + 6 margin + the 1px divider + 6 margin + 6 gap = 25.
+  it('sets the divider 6px clear of the 6px chip gap on each side', () => {
+    expect(ruleBody(database, '[data-blok-database-group-modal-chips]')).toContain('gap: var(--blok-space-1-5)');
+    expect(ruleBody(database, '[data-blok-database-group-modal-chips] > [data-blok-database-chip-divider]')).toContain('margin-inline: var(--blok-space-1-5)');
+  });
 });

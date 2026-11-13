@@ -2395,6 +2395,7 @@
   --blok-radius-control-sm: var(--blok-radius-4);
   --blok-radius-mark: var(--blok-radius-2);
   --blok-radius-checkbox: 0.1875rem;
+  --blok-radius-selection-bar: 0.3125rem;
   --blok-radius-floor: var(--blok-radius-4);
   --blok-radius-notch: 0.09375rem;
   --blok-radius-table: var(--blok-radius-2);
@@ -12951,6 +12952,21 @@ textarea[data-blok-database-cell-input] {
   display: inline-flex;
 }
 
+[data-blok-database-table-open][data-compact] {
+  justify-content: center;
+  width: 30px;
+  padding: 0;
+}
+
+[data-blok-database-table-open][data-compact] > span:last-child {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 [data-blok-database-table-open]:hover {
   background-image: linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg));
 }
@@ -13780,9 +13796,9 @@ button[data-blok-database-table-group-count]:hover {
   z-index: 5;
   display: inline-flex;
   align-items: center;
-  gap: var(--blok-space-0-25);
+  gap: 0;
   height: 32px;
-  border-radius: var(--blok-radius-control);
+  border-radius: var(--blok-radius-selection-bar);
   background-color: var(--blok-database-popover-bg);
   box-shadow: var(--blok-database-table-selection-shadow);
 }
@@ -13849,6 +13865,18 @@ button[data-blok-database-table-group-count]:hover {
   cursor: pointer;
 }
 
+[data-blok-database-table-selection-bar] [data-blok-database-table-selection-delete], [data-blok-database-table-selection-bar-leaving] [data-blok-database-table-selection-delete] {
+  width: 28px;
+}
+
+[data-blok-database-table-selection-bar] [data-blok-database-table-selection-more], [data-blok-database-table-selection-bar-leaving] [data-blok-database-table-selection-more] {
+  width: 30px;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  border-start-end-radius: var(--blok-radius-selection-bar);
+  border-end-end-radius: var(--blok-radius-selection-bar);
+}
+
 [data-blok-database-table-selection-bar] button:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }
@@ -13856,6 +13884,11 @@ button[data-blok-database-table-group-count]:hover {
 [data-blok-database-table-selection-bar] svg, [data-blok-database-table-selection-bar-leaving] svg {
   width: 16px;
   height: 16px;
+}
+
+[data-blok-database-table-selection-bar] [data-blok-database-table-selection-delete] svg, [data-blok-database-table-selection-bar-leaving] [data-blok-database-table-selection-delete] svg {
+  width: 20px;
+  height: 20px;
 }
 
 [data-blok-database-row-selected] {
@@ -19656,6 +19689,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   height: 44px;
   margin-block-start: var(--blok-space-1);
   padding: var(--blok-space-3) var(--blok-space-6) 0;
+}
+
+[data-blok-database-group-modal-chips] > [data-blok-database-chip-divider] {
+  margin-inline: var(--blok-space-1-5);
 }
 
 [data-blok-database-group-modal-body] {

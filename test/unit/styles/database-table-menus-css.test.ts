@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 const strip = (css: string): string => css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ');
 const database = strip(readFileSync(resolve(__dirname, '../../../src/styles/database.css'), 'utf8'));
+const colors = strip(readFileSync(resolve(__dirname, '../../../src/styles/colors.css'), 'utf8'));
 
 const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -199,6 +200,21 @@ describe('selection bar (T13)', () => {
 
     expect(declared(rule, 'visibility')).toEqual(['hidden']);
     expect(declared('[data-blok-database-view-bar][data-blok-database-selecting] > :not([data-blok-database-table-selection-bar])', 'visibility')).toEqual([]);
+  });
+
+  // notion-motion.md Round 27 §3 "Row gutter and selection": gap 0, radius 5, Trash 28x32 with a 20 glyph, ⋯ 30x32.
+  it('draws the bar with abutting segments, a 5px radius, a 28-wide Trash with a 20px glyph and a 30-wide ⋯', () => {
+    for (const bar of ['[data-blok-database-table-selection-bar]', '[data-blok-database-table-selection-bar-leaving]']) {
+      expect(declared(bar, 'gap')).toEqual(['0']);
+      expect(declared(bar, 'border-radius')).toEqual(['var(--blok-radius-selection-bar)']);
+      expect(declared(`${bar} [data-blok-database-table-selection-delete]`, 'width')).toEqual(['28px']);
+      expect(declared(`${bar} [data-blok-database-table-selection-delete] svg`, 'width')).toEqual(['20px']);
+      expect(declared(`${bar} [data-blok-database-table-selection-delete] svg`, 'height')).toEqual(['20px']);
+      expect(declared(`${bar} [data-blok-database-table-selection-more]`, 'width')).toEqual(['30px']);
+      expect(declared(`${bar} [data-blok-database-table-selection-more]`, 'border-start-end-radius')).toEqual(['var(--blok-radius-selection-bar)']);
+      expect(declared(`${bar} [data-blok-database-table-selection-more]`, 'border-end-end-radius')).toEqual(['var(--blok-radius-selection-bar)']);
+    }
+    expect(colors).toMatch(/--blok-radius-selection-bar: 0\.3125rem;/);
   });
 
   it('still hides the whole toolbar under the uncapped board and list bar', () => {
@@ -541,5 +557,17 @@ describe('"+ New group" name popover', () => {
     expect(declared('[data-blok-database-new-group-enter] svg', 'width')).toEqual(['12px']);
     expect(declared('[data-blok-database-new-group-enter] svg', 'height')).toEqual(['16px']);
     expect(declared('[data-blok-database-new-group] input', 'line-height')).toEqual(['21px']);
+  });
+});
+
+// notion-motion.md Round 27 §2 "Narrow title column": the icon-only OPEN is 30x24 and keeps its label as its name.
+describe('icon-only OPEN', () => {
+  it('is 30 wide with no padding, and hides the label without removing it', () => {
+    const open = '[data-blok-database-table-open][data-compact]';
+
+    expect(declared(open, 'width')).toEqual(['30px']);
+    expect(declared(open, 'padding')).toEqual(['0']);
+    expect(declared(`${open} > span:last-child`, 'clip-path')).toEqual(['inset(50%)']);
+    expect(declared(`${open} > span:last-child`, 'display')).toEqual([]);
   });
 });

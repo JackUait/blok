@@ -69,6 +69,32 @@ export const DEFAULT_TITLE_WIDTH = 280;
 export const DEFAULT_COLUMN_WIDTH = 200;
 export { MIN_COLUMN_WIDTH };
 
+/** The OPEN button's inset from the title cell's end (database.css). */
+const OPEN_INSET = 6;
+
+/**
+ * notion-motion.md Round 27 §2 "Narrow title column": a narrow title column shows an icon-only OPEN. Notion's switch
+ * width is unread, so the label goes where the labelled button no longer fits with its inset clear on both sides.
+ * The label stays in the DOM, hidden by CSS, as the button's name. No layout (a hidden button) leaves it as it is.
+ */
+const fitOpen = (open: HTMLElement): void => {
+  const cell = open.parentElement;
+
+  if (cell === null) return;
+  const { style } = open;
+  const display = style.display;
+
+  open.removeAttribute('data-compact');
+  // Measured shown: row hover may not apply yet when the pointer arrives.
+  style.display = 'inline-flex';
+  const width = open.getBoundingClientRect().width;
+  const room = cell.getBoundingClientRect().width;
+
+  style.display = display;
+  if (width === 0 || room === 0) return;
+  open.toggleAttribute('data-compact', width + 2 * OPEN_INSET > room);
+};
+
 export interface TableGroup {
   /** Group key; the model's no-value key for "No ⟨property⟩". */
   key: string;
@@ -515,6 +541,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     // whose outside press closes the open editor and asks for a redraw.
     gridEl.addEventListener('pointerdown', this.handlePress);
     gridEl.addEventListener('blok-database-table-repaint', this.handleRepaint);
+    gridEl.addEventListener('pointerover', this.handleOver);
 
     if (this.editable) {
       this.resize = new DatabaseTableColumnResize({
@@ -616,6 +643,20 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       if (typeof rowId === 'string') this.paintOpen(button, rowId);
     });
   }
+
+  /** The row the pointer is over: moving between its cells fires pointerover again. */
+  private overRow: Element | null = null;
+
+  /** OPEN shows on row hover: fit it to its title cell as the pointer comes into the row. */
+  private readonly handleOver = (event: PointerEvent): void => {
+    const row = event.target instanceof Element ? event.target.closest('[data-blok-database-table-row]') : null;
+
+    if (row === this.overRow) return;
+    this.overRow = row;
+    const open = row?.querySelector<HTMLElement>('[data-blok-database-table-open]');
+
+    if (open !== null && open !== undefined) fitOpen(open);
+  };
 
   /** CLOSE on the peeked row closes the peek; OPEN opens the row. */
   private pressOpen(button: Element, rowId: string, open: (rowId: string) => void): void {
@@ -1463,6 +1504,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     if (gridEl === null || root === null) {
       return;
     }
+    const anchorOpen = gridEl.querySelector<HTMLElement>('[data-blok-database-table-cell-anchor] > [data-blok-database-table-open]');
+
+    if (anchorOpen !== null) fitOpen(anchorOpen);
     const selection = this.state.selection;
     const rowIds = selection?.kind === 'rows' ? selection.rowIds : [];
     const total = gridEl.querySelectorAll('[data-blok-database-table-row]').length;

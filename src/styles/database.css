@@ -9574,6 +9574,23 @@ textarea[data-blok-database-cell-input] {
   display: inline-flex;
 }
 
+/* notion-motion.md Round 27 §2 "Narrow title column": a 30x24 icon-only pill where the label does not fit
+   (database-table-view.ts fitOpen). The label stays, hidden, as the button's name. */
+[data-blok-database-table-open][data-compact] {
+  justify-content: center;
+  width: 30px;
+  padding: 0;
+}
+
+[data-blok-database-table-open][data-compact] > span:last-child {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 [data-blok-database-table-open]:hover {
   background-image: linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg));
 }
@@ -10503,9 +10520,10 @@ button[data-blok-database-table-group-count]:hover {
   z-index: 5;
   display: inline-flex;
   align-items: center;
-  gap: var(--blok-space-0-25);
+  /* notion-motion.md Round 27 §3 "Row gutter and selection": segments abut, radius 5. */
+  gap: 0;
   height: 32px;
-  border-radius: var(--blok-radius-control);
+  border-radius: var(--blok-radius-selection-bar);
   background-color: var(--blok-database-popover-bg);
   box-shadow: var(--blok-database-table-selection-shadow);
 }
@@ -10555,7 +10573,7 @@ button[data-blok-database-table-group-count]:hover {
   visibility: hidden;
 }
 
-/* research/26 §3b, §4a: segments sit 1px apart; a shadow on the end side divides them. */
+/* research/26 §3b, §4a: a shadow on the end side divides the segments. */
 [data-blok-database-table-selection-bar] > :not(:last-child),
 [data-blok-database-table-selection-bar-leaving] > :not(:last-child) {
   box-shadow: var(--blok-database-table-border) 1px 0 0 0;
@@ -10590,6 +10608,21 @@ button[data-blok-database-table-group-count]:hover {
   cursor: pointer;
 }
 
+/* Round 27 §3: Move to Trash 28x32 with a 20px glyph; ⋯ 30x32 with the bar's end corners. */
+[data-blok-database-table-selection-bar] [data-blok-database-table-selection-delete],
+[data-blok-database-table-selection-bar-leaving] [data-blok-database-table-selection-delete] {
+  width: 28px;
+}
+
+[data-blok-database-table-selection-bar] [data-blok-database-table-selection-more],
+[data-blok-database-table-selection-bar-leaving] [data-blok-database-table-selection-more] {
+  width: 30px;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  border-start-end-radius: var(--blok-radius-selection-bar);
+  border-end-end-radius: var(--blok-radius-selection-bar);
+}
+
 [data-blok-database-table-selection-bar] button:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }
@@ -10598,6 +10631,12 @@ button[data-blok-database-table-group-count]:hover {
 [data-blok-database-table-selection-bar-leaving] svg {
   width: 16px;
   height: 16px;
+}
+
+[data-blok-database-table-selection-bar] [data-blok-database-table-selection-delete] svg,
+[data-blok-database-table-selection-bar-leaving] [data-blok-database-table-selection-delete] svg {
+  width: 20px;
+  height: 20px;
 }
 
 /* A picked board card or list row: gray, never blue (D3). */
@@ -16887,6 +16926,11 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   height: 44px;
   margin-block-start: var(--blok-space-1);
   padding: var(--blok-space-3) var(--blok-space-6) 0;
+}
+
+/* Round 27 §2 (r27-pm-open.png): the sort chip and the rules chip sit 25 apart across the divider. */
+[data-blok-database-group-modal-chips] > [data-blok-database-chip-divider] {
+  margin-inline: var(--blok-space-1-5);
 }
 
 /* r25-pinmodal-row.raw: one scroller under the chips that scrolls both ways; the table starts 24 in. */

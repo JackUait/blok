@@ -45,8 +45,9 @@ describe('sort panel buttons (research/26 §3a, §4a)', () => {
 });
 
 describe('selection bar dividers (research/26 §3b, §4a)', () => {
-  it('draw a 1px shadow on the end side of every segment but the last, 1px apart', () => {
-    expect(ruleBody('[data-blok-database-table-selection-bar]')).toContain('gap: var(--blok-space-0-25)');
+  // notion-motion.md Round 27 §3: the segments abut (gap 0); the shadow alone divides them.
+  it('draw a 1px shadow on the end side of every segment but the last, with no gap', () => {
+    expect(ruleBody('[data-blok-database-table-selection-bar]')).toContain('gap: 0');
     expect(ruleBody('[data-blok-database-table-selection-bar] > :not(:last-child)')).toContain('box-shadow: var(--blok-database-table-border) 1px 0 0 0');
     expect(ruleBody('[dir="rtl"] [data-blok-database-table-selection-bar] > :not(:last-child)')).toContain('box-shadow: var(--blok-database-table-border) -1px 0 0 0');
     expect(tokenValues('--blok-database-table-border')).toEqual([ 'rgba(42, 28, 0, 0.07)', 'rgba(255, 255, 243, 0.082)', 'rgba(255, 255, 243, 0.082)' ]);

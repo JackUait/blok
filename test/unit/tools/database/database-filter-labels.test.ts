@@ -137,7 +137,9 @@ describe('database filter labels', () => {
   it('names "This page" and known rows on a relation pill (research/13 §1c)', () => {
     const rows = (id: string): string | undefined => (id === 'r1' ? 'One' : undefined);
 
-    expect(filterPillLabel({ operator: 'contains', value: ['this_page', 'r1'] }, prop('relation'), t, undefined, rows)).toBe('Due: tools.database.filterOperator.contains tools.database.filterThisPage, One');
+    expect(filterPillLabel({ operator: 'contains', value: ['this_page', 'r1'] }, prop('relation'), t, undefined, rows)).toBe('Due: tools.database.filterThisPage, One');
+    // Notion's "This page" chip is unmeasured, so it keeps its older form with no operator word.
+    expect(filterPillLabel({ operator: 'contains', value: ['this_page'] }, prop('relation'), t)).toBe('Due: tools.database.filterThisPage');
   });
 
   it('labels sort directions per type (research/08)', () => {

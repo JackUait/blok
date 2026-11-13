@@ -255,6 +255,51 @@ describe('view tabs (feel/findings-toolbar)', () => {
 
       expect(await viewIds(api)).toEqual(['v1']);
     });
+
+    // notion-motion.md Round 27 §3 (r27-tab-delete-dlg.raw): "Delete view" has focus on open.
+    it('focuses Delete view when the confirm opens', async () => {
+      await make(doc());
+
+      tab('v2').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+      await quiet();
+      menuItem('database-view-delete').click();
+      await quiet();
+
+      expect(document.activeElement).toBe(document.querySelector('[data-blok-database-confirm-action="confirm"]'));
+    });
+  });
+
+  // notion-motion.md Round 27 §3 (r27-tab-dup-after.raw): the copy of "Table" is "Table (1)", and View settings
+  // opens with "View name" focused and its text fully selected.
+  describe('Duplicate view', () => {
+    const duplicate = async (): Promise<void> => {
+      tab('v1').click();
+      await quiet();
+      menuItem('database-view-duplicate').click();
+      await quiet();
+    };
+
+    it('names the copy "<name> (1)"', async () => {
+      const api = await make(doc());
+
+      await duplicate();
+
+      const views = ((await api.save()).blocks.find((b) => b.id === 'db')?.data as DatabaseData | undefined)?.views ?? [];
+
+      expect(views.map((v) => v.name)).toEqual(['Table', 'Table', 'Table (1)']);
+    });
+
+    it('opens View settings with the name selected', async () => {
+      await make(doc());
+
+      await duplicate();
+
+      const name = settingsPanel()?.querySelector<HTMLInputElement>('[data-blok-testid="database-settings-view-name"]');
+
+      expect(name).toBeInstanceOf(HTMLInputElement);
+      expect(document.activeElement).toBe(name);
+      expect([name?.selectionStart, name?.selectionEnd]).toEqual([0, 'Table (1)'.length]);
+    });
   });
   describe('V03: the title row "…" with one view', () => {
     const titleMore = (): HTMLElement | null => parentRoot().querySelector<HTMLElement>('[data-blok-database-title-row] [data-blok-database-title-more]');

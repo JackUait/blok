@@ -5840,7 +5840,9 @@ describe('DatabaseTool', () => {
 
       tool.duplicateView('view-table');
 
-      const { id: _sourceId, position: _sourcePosition, ...settings } = source;
+      // notion-motion.md Round 27 §3: the copy is named "<name> (1)".
+      const { id: _sourceId, position: _sourcePosition, ...rest } = source;
+      const settings = { ...rest, name: 'Table (1)' };
       const copy = tool.save(element).views[1];
 
       expect(copy).toMatchObject(settings);

@@ -4935,7 +4935,8 @@ export class DatabaseTool implements BlockTool {
     }
 
     const { id: _id, name, type, position: _position, ...settings } = sourceView;
-    const newView = this.model.addView(name, type, settings);
+    // notion-motion.md Round 27 §3: "Table" copies as "Table (1)". A second copy's number is unmeasured.
+    const newView = this.model.addView(`${name} (1)`, type, settings);
 
     void this.sync.syncCreateView(structuredClone(newView));
     // A copied dashboard gets copies of its widgets, so the two never share one.
@@ -4956,6 +4957,15 @@ export class DatabaseTool implements BlockTool {
       void this.sync.syncUpdateView({ viewId: newView.id, changes: { dashboard: { rows: structuredClone(copied.rows) } } });
     }
     this.switchView(newView.id);
+  }
+
+  /** The tab menu's Duplicate view: the copy, then its settings with the name selected (notion-motion.md Round 27 §3). */
+  private duplicateViewWithSettings(viewId: string): void {
+    const before = this.activeViewId;
+
+    this.duplicateView(viewId);
+    if (this.activeViewId === before || this.element === null) return;
+    this.editView(this.activeViewId, this.titleRowElement ?? this.element, 'rename');
   }
 
   /**
@@ -4980,6 +4990,8 @@ export class DatabaseTool implements BlockTool {
         confirmLabel: t('tools.database.layoutDeleteView'),
         cancelLabel: t('tools.database.layoutCancel'),
         destructive: true,
+        // notion-motion.md Round 27 §3: Notion focuses "Delete view".
+        focusConfirm: true,
         directionSource: this.element,
       }).then((ok) => {
         if (!ok || this.destroyed || this.model.getView(viewId) === undefined) return false;
@@ -5190,7 +5202,7 @@ export class DatabaseTool implements BlockTool {
       onTabClick: (viewId) => this.switchView(viewId),
       onAddView: (type) => this.addViewWithSettings(type),
       onRename: (viewId, name) => this.renameView(viewId, name),
-      onDuplicate: (viewId) => this.duplicateView(viewId),
+      onDuplicate: (viewId) => this.duplicateViewWithSettings(viewId),
       onDelete: (viewId) => this.requestDeleteView(viewId),
       onReorder: (viewId, newPosition) => this.reorderView(viewId, newPosition),
       onEditView: (viewId, anchor) => this.editView(viewId, anchor),

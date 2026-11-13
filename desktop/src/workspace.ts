@@ -76,11 +76,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   const withSections = (pages: DesktopPage[]): DesktopPage[] => {
     if (ref.kind !== 'remote' || !index?.access) return pages;
     const roots = pages.filter((page) => !page.parentId);
-    // Le titre de la section d'espace est le nom de l'espace : « Espace » tout
-    // court ne désigne rien, et c'est le nom que Notion affiche pour un teamspace.
-    const names = sectionNames(ref.name);
     const labelled = new Map(groupPagesBySection(roots, index.access)
-      .flatMap((group) => group.pages.map((page) => [page.id, names[group.section]] as const)));
+      .flatMap((group) => group.pages.map((page) => [page.id, sectionNames[group.section]] as const)));
     return pages.map((page) => labelled.has(page.id) ? { ...page, section: labelled.get(page.id) } : page);
   };
   const readOnly = (pageId: string): boolean => !access.canEdit(pageId);
@@ -583,6 +580,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   };
 
   frame = createPageFrame({
+    teamspace: ref.kind === 'remote' ? { name: ref.name } : undefined,
     pages: [], activeId: '',
     onOpen: (id) => navigate(id),
     onCreate: (parentId) => createPage(parentId),

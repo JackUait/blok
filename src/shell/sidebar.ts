@@ -41,6 +41,8 @@ export type SidebarAction =
   | { id: string; type: 'open-peek' };
 
 export interface PageFrameOptions {
+  /** L'espace courant, rendu comme une ligne sous « Espaces » plutôt qu'un titre. */
+  teamspace?: { name: string };
   pages: ShellPage[];
   activeId: string;
   onOpen: (id: string) => void;
@@ -176,6 +178,20 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
   create.addEventListener('click', () => options.onCreate(null));
   header.append(title, create);
 
+  // Notion met « New page » sur une ligne de la barre, pas seulement derrière le
+  // + de l'en-tête : c'est l'action la plus fréquente, elle mérite sa place.
+  const shortcuts = document.createElement('div');
+  shortcuts.setAttribute('data-blok-sidebar-shortcuts', '');
+  const newPage = document.createElement('button');
+  newPage.type = 'button';
+  newPage.setAttribute('data-blok-sidebar-shortcut', '');
+  newPage.append(plus());
+  const newPageLabel = document.createElement('span');
+  newPageLabel.textContent = 'Nouvelle page';
+  newPage.append(newPageLabel);
+  newPage.addEventListener('click', () => options.onCreate(null));
+  shortcuts.append(newPage);
+
   const searchLabel = document.createElement('label');
   searchLabel.setAttribute('data-blok-sidebar-search', '');
   searchLabel.append(search());
@@ -294,7 +310,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     setCollapsed(!sidebar.hasAttribute('data-collapsed'));
   });
 
-  sidebar.append(header, searchLabel, tree, edge);
+  sidebar.append(header, searchLabel, shortcuts, tree, edge);
 
   const canvas = document.createElement('main');
   canvas.setAttribute('data-blok-sidebar-canvas', '');
@@ -348,11 +364,46 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
         tree.append(...rows(page, 0, needle !== ''));
         return;
       }
-      const body = opened.get(section) ?? appendSection(section, section);
+      const body = opened.get(section) ?? openSection(section);
       opened.set(section, body);
       if (collapsed.has(section)) return;
       body.append(...rows(page, 0, needle !== ''));
     });
+  }
+
+  /**
+   * L'espace n'est pas un titre : chez Notion c'est une ligne avec son icône,
+   * sous l'en-tête « Espaces », et ses pages sont indentées dessous. Les autres
+   * sections restent de simples titres.
+   */
+  function openSection(section: string): HTMLElement {
+    const teamspace = options.teamspace;
+    if (section !== 'workspace' || !teamspace) return appendSection(section, section);
+    const group = appendSection('Espaces', 'workspace');
+    const row = document.createElement('div');
+    row.setAttribute('data-blok-sidebar-teamspace', '');
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.setAttribute('aria-expanded', String(!collapsed.has('teamspace')));
+    const mark = document.createElement('span');
+    mark.setAttribute('data-blok-sidebar-teamspace-mark', '');
+    mark.setAttribute('aria-hidden', 'true');
+    mark.textContent = teamspace.name.slice(0, 1).toLocaleUpperCase();
+    const label = document.createElement('span');
+    label.textContent = teamspace.name;
+    toggle.append(mark, label);
+    toggle.addEventListener('click', () => {
+      if (collapsed.has('teamspace')) collapsed.delete('teamspace');
+      else collapsed.add('teamspace');
+      paint();
+    });
+    row.append(toggle);
+    group.append(row);
+    if (collapsed.has('teamspace')) return document.createElement('div');
+    const nested = document.createElement('div');
+    nested.setAttribute('data-blok-sidebar-teamspace-pages', '');
+    group.append(nested);
+    return nested;
   }
 
   /** Un titre de section, repliable d'un clic comme chez Notion. */

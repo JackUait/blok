@@ -45,10 +45,12 @@ describe('sidebar sections', () => {
     expect(groups.some((group) => group.pages.length === 0)).toBe(false);
   });
 
-  // « Espace » ne désigne rien ; Notion affiche le nom du teamspace.
-  it('names the workspace section after the workspace itself', () => {
-    expect(sectionNames('Tousambassadeurs').workspace).toBe('Tousambassadeurs');
-    expect(sectionNames('Tousambassadeurs').private).toBe('Privé');
+  // L'espace traverse comme une clé : la barre latérale en fait une ligne avec
+  // son nom et son icône, pas un titre en capitales.
+  it('passes the workspace section through as a key, and names the others', () => {
+    expect(sectionNames.workspace).toBe('workspace');
+    expect(sectionNames.private).toBe('Privé');
+    expect(sectionNames.shared).toBe('Partagé');
   });
 
   it('keeps every page in exactly one section', () => {

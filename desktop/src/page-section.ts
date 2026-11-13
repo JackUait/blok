@@ -16,9 +16,13 @@ export const sectionOrder: PageSection[] = ['workspace', 'shared', 'private'];
  * La section de l'espace porte le nom de l'espace — c'est ce que Notion affiche
  * pour un teamspace, et « Espace » tout court ne désigne rien.
  */
-export function sectionNames(workspaceName: string): Record<PageSection, string> {
-  return { workspace: workspaceName, shared: 'Partagé', private: 'Privé' };
-}
+// L'espace n'est pas un titre mais une ligne : la barre latérale reçoit la clé
+// brute et la rend elle-même avec la pastille et le nom de l'espace.
+export const sectionNames: Record<PageSection, string> = {
+  workspace: 'workspace',
+  shared: 'Partagé',
+  private: 'Privé',
+};
 
 /**
  * La section se déduit, elle ne se stocke pas.

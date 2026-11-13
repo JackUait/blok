@@ -73,3 +73,55 @@ describe('sidebar sections', () => {
     expect(headings()).toEqual(['Privé']);
   });
 });
+
+describe('teamspace row', () => {
+  // Chez Notion, l'espace n'est pas un titre : c'est une ligne avec son icône,
+  // sous un en-tête « Espaces », et les pages sont indentées dessous.
+  it('puts the workspace on a row of its own under Espaces', () => {
+    const frame = createPageFrame({
+      pages: [page('a', { section: 'workspace' })],
+      activeId: '', onOpen: () => {}, onCreate: () => {},
+      teamspace: { name: 'Tousambassadeurs' },
+    });
+    document.body.append(frame.element);
+    expect(headings()).toContain('Espaces');
+    expect(document.querySelector('[data-blok-sidebar-teamspace]')?.textContent).toContain('Tousambassadeurs');
+    expect(document.querySelectorAll('[data-blok-sidebar-row]')).toHaveLength(1);
+  });
+
+  it('collapses the workspace row, hiding its pages but not the other sections', () => {
+    const frame = createPageFrame({
+      pages: [page('a', { section: 'workspace' }), page('b', { section: 'Privé' })],
+      activeId: '', onOpen: () => {}, onCreate: () => {},
+      teamspace: { name: 'Tousambassadeurs' },
+    });
+    document.body.append(frame.element);
+    expect(document.querySelectorAll('[data-blok-sidebar-row]')).toHaveLength(2);
+    document.querySelector<HTMLButtonElement>('[data-blok-sidebar-teamspace] button')?.click();
+    expect(document.querySelectorAll('[data-blok-sidebar-row]')).toHaveLength(1);
+  });
+
+  it('stays a plain heading when there is no workspace to name', () => {
+    mount([page('a', { section: 'Privé' })]);
+    expect(headings()).toEqual(['Privé']);
+    expect(document.querySelector('[data-blok-sidebar-teamspace]')).toBeNull();
+  });
+});
+
+describe('sidebar shortcuts', () => {
+  // Notion met « New page » sur une ligne de la barre, pas seulement derrière
+  // un + dans l'en-tête.
+  it('offers New page as a row, not only as a header button', () => {
+    mount([page('a')]);
+    const shortcut = document.querySelector<HTMLButtonElement>('[data-blok-sidebar-shortcut]');
+    expect(shortcut?.textContent).toContain('Nouvelle page');
+  });
+
+  it('creates at the root from that shortcut', () => {
+    const created: (string | null)[] = [];
+    const frame = createPageFrame({ pages: [page('a')], activeId: '', onOpen: () => {}, onCreate: (parent) => created.push(parent) });
+    document.body.append(frame.element);
+    document.querySelector<HTMLButtonElement>('[data-blok-sidebar-shortcut]')?.click();
+    expect(created).toEqual([null]);
+  });
+});

@@ -1449,11 +1449,41 @@ describe('DatabaseTableView', () => {
         expect(open.hasAttribute('data-compact')).toBe(true);
       });
 
+      it('fits again when OPEN turns into CLOSE under the pointer', () => {
+        const peeked = { id: null as string | null };
+        const { root, view } = mount({ peek: { rowId: () => peeked.id, close: vi.fn() } });
+        const open = sized(root, 100, 60);
+
+        vi.spyOn(open, 'getBoundingClientRect').mockImplementation(() => new DOMRect(0, 0,
+          open.hasAttribute('data-compact') ? 30 : (open.lastElementChild?.textContent === 'tools.database.close' ? 120 : 60), 24));
+        over(cell(root, 'r1', 'p-title'));
+        expect(open.hasAttribute('data-compact')).toBe(false);
+
+        peeked.id = 'r1';
+        view.rowPageOpened();
+        expect(open.hasAttribute('data-compact')).toBe(true);
+      });
+
       it('fits the selected title cell too, where OPEN shows without a hover', () => {
         const { root } = mount();
         const open = sized(root, 100, 120);
 
         selectCell(root, 'r1', 'p-title');
+        expect(open.hasAttribute('data-compact')).toBe(true);
+      });
+
+      it('measures the selected title cell once, not on every repaint of the same selection', () => {
+        const { root } = mount();
+        const open = sized(root, 100, 120);
+
+        selectCell(root, 'r1', 'p-title');
+        const reads = vi.mocked(open.getBoundingClientRect).mock.calls.length;
+
+        // A range grows and shrinks; the anchor stays on the title cell, and each step repaints.
+        press(grid(root), 'ArrowRight', { shiftKey: true });
+        press(grid(root), 'ArrowLeft', { shiftKey: true });
+        expect(cell(root, 'r1', 'p-title').hasAttribute('data-blok-database-table-cell-anchor')).toBe(true);
+        expect(vi.mocked(open.getBoundingClientRect).mock.calls.length).toBe(reads);
         expect(open.hasAttribute('data-compact')).toBe(true);
       });
     });

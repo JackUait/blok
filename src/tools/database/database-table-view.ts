@@ -645,10 +645,19 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
       if (typeof rowId === 'string') this.paintOpen(button, rowId);
     });
+    // OPEN and CLOSE differ in width; only the buttons on screen now need a new fit.
+    [this.overRow, this.gridEl?.querySelector('[data-blok-database-table-cell-anchor]')].forEach((holder) => {
+      const open = holder?.querySelector<HTMLElement>('[data-blok-database-table-open]');
+
+      if (open !== null && open !== undefined) fitOpen(open);
+    });
   }
 
   /** The row the pointer is over: moving between its cells fires pointerover again. */
   private overRow: Element | null = null;
+
+  /** The selected title cell's OPEN, last fitted. */
+  private anchorOpen: HTMLElement | null = null;
 
   /** OPEN shows on row hover: fit it to its title cell as the pointer comes into the row. */
   private readonly handleOver = (event: PointerEvent): void => {
@@ -1509,7 +1518,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     }
     const anchorOpen = gridEl.querySelector<HTMLElement>('[data-blok-database-table-cell-anchor] > [data-blok-database-table-open]');
 
-    if (anchorOpen !== null) fitOpen(anchorOpen);
+    // Paint runs on every selection change: measure only when the anchor's OPEN is a new one.
+    if (anchorOpen !== null && anchorOpen !== this.anchorOpen) fitOpen(anchorOpen);
+    this.anchorOpen = anchorOpen;
     const selection = this.state.selection;
     const rowIds = selection?.kind === 'rows' ? selection.rowIds : [];
     const total = gridEl.querySelectorAll('[data-blok-database-table-row]').length;

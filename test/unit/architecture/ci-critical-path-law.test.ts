@@ -566,6 +566,29 @@ describe('CI critical-path law', () => {
         name: 'Test Go module consumer and release build',
         run: 'node scripts/test-server-go-module.mjs',
       },
+      // apps/service had no gate at all: its existing tests ran nowhere. Its
+      // PostgreSQL is started inside the step rather than as a job `services:`
+      // container, so it is not attached to the other steps of this job.
+      {
+        name: 'Test cloud service',
+        'working-directory': 'apps/service',
+        run: [
+          'docker run -d --name cloud-test-pg \\',
+          '  -e POSTGRES_PASSWORD=password -e POSTGRES_DB=blok_test \\',
+          '  -p 5432:5432 postgres:17-alpine',
+          'for _ in $(seq 1 30); do',
+          '  docker exec cloud-test-pg pg_isready -U postgres >/dev/null 2>&1 && break',
+          '  sleep 1',
+          'done',
+          'unformatted="$(gofmt -l .)"',
+          'if [ -n "$unformatted" ]; then',
+          '  echo "$unformatted"',
+          '  exit 1',
+          'fi',
+          'go vet ./...',
+          "TEST_DATABASE_URL='postgres://postgres:password@127.0.0.1:5432/blok_test?sslmode=disable' go test ./...",
+        ].join('\n'),
+      },
     ]);
   });
 

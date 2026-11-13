@@ -37,7 +37,7 @@ describe('DatabasePropertyTypePopover', () => {
     const help = (type: string): HTMLElement | null =>
       document.querySelector<HTMLElement>(`[data-blok-database-property-type-option="${type}"] [data-blok-database-property-type-help]`);
 
-    it('puts a "?" on the Number row only, and hints its description after the delay', () => {
+    it('hints Number\'s description after the delay, on hover only', () => {
       destroyTooltip();
       vi.useFakeTimers();
       try {
@@ -46,8 +46,6 @@ describe('DatabasePropertyTypePopover', () => {
 
         withHelp.open(anchor);
         expect(help('number')).not.toBeNull();
-        expect(help('text')).toBeNull();
-        expect(document.querySelectorAll('[data-blok-database-property-type-help]')).toHaveLength(1);
 
         help('number')?.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
         vi.advanceTimersByTime(HINT_DELAY);
@@ -58,8 +56,42 @@ describe('DatabasePropertyTypePopover', () => {
         expect(shownHint()).toBeNull();
         vi.advanceTimersByTime(1);
         expect(shownHint()).toEqual({ text: 'tools.database.propertyTypeHelpNumber', placement: 'right' });
+        // notion-motion.md Round 27 §1: the box's left edge sits 6 after the "?" (hover() puts its right edge at 720).
+        expect(document.querySelector<HTMLElement>('[data-blok-testid="tooltip"]')?.style.left).toBe('726px');
         withHelp.destroy();
       } finally {
+        vi.useRealTimers();
+        destroyTooltip();
+      }
+    });
+
+    // notion-motion.md Round 27 §1 (r27-tip-*.raw) recorded the text of every type but ID. Blok's Verification is not in Notion's list.
+    it('puts a "?" with its own text on every type Round 27 read, and none on ID or Verification', () => {
+      const keyed = new DatabasePropertyTypePopover({ onSelect, hasPeople: true, i18n: { t: (key: string) => key } as unknown as I18n });
+      const read: Array<[string, string]> = [
+        ['text', 'Text'], ['number', 'Number'], ['select', 'Select'], ['multiSelect', 'MultiSelect'], ['status', 'Status'],
+        ['date', 'Date'], ['person', 'Person'], ['files', 'Files'], ['checkbox', 'Checkbox'], ['url', 'Url'], ['email', 'Email'],
+        ['phone', 'Phone'], ['formula', 'Formula'], ['relation', 'Relation'], ['rollup', 'Rollup'], ['createdTime', 'CreatedTime'],
+        ['createdBy', 'CreatedBy'], ['lastEditedTime', 'LastEditedTime'], ['lastEditedBy', 'LastEditedBy'], ['button', 'Button'],
+        ['place', 'Place'],
+      ];
+
+      destroyTooltip();
+      vi.useFakeTimers();
+      try {
+        keyed.open(anchor);
+        for (const [type] of read) expect(help(type), type).not.toBeNull();
+        expect(help('uniqueId')).toBeNull();
+        expect(help('verification')).toBeNull();
+        for (const [type, suffix] of read) {
+          hover(help(type));
+          vi.advanceTimersByTime(HINT_DELAY);
+          expect(shownHint()?.text, type).toBe(`tools.database.propertyTypeHelp${suffix}`);
+          help(type)?.dispatchEvent(new MouseEvent('mouseleave'));
+          vi.advanceTimersByTime(HINT_DELAY);
+        }
+      } finally {
+        keyed.destroy();
         vi.useRealTimers();
         destroyTooltip();
       }

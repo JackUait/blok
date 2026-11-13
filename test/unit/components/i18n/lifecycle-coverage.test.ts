@@ -295,7 +295,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2193 + 146 + 578 + 9 closure for all 2926 keys', () => {
+  it('rebuilds a disjoint 2213 + 146 + 578 + 9 closure for all 2946 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -309,7 +309,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2926);
+    expect(lifecycle.size).toBe(2946);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -563,7 +563,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -2: tools.file.cardFiles and cardFilesOne are gone (see registered-namespace-compatible).
       // -8: the file preview header shows no counts, so tools.file.previewPages, previewSheets, previewSlides,
       // previewRows and their One forms are gone.
-      'executable-literal': 2193,
+      // +20: the type menu's "?" on every other type Round 27 read (tools.database.propertyTypeHelp*).
+      'executable-literal': 2213,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

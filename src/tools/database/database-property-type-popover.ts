@@ -25,11 +25,31 @@ const ABOVE_GAP = 1;
 /** Notion's gap below the button is unmeasured. */
 const BELOW_GAP = 4;
 /**
- * notion-motion.md Round 26 §5: each type row's "?" hint. Only Number's text was recorded (r26-type-qtip.raw);
- * a type joins once its text is read from Notion.
+ * Each type row's "?" hint, with Notion's texts (notion-motion.md Round 26 §5, Round 27 §1).
+ * ID is left out: Notion's text for it is unread. Notion has no Verification.
  */
 const TYPE_HELP: Partial<Record<PropertyType, string>> = {
+  text: 'tools.database.propertyTypeHelpText',
   number: 'tools.database.propertyTypeHelpNumber',
+  select: 'tools.database.propertyTypeHelpSelect',
+  multiSelect: 'tools.database.propertyTypeHelpMultiSelect',
+  status: 'tools.database.propertyTypeHelpStatus',
+  date: 'tools.database.propertyTypeHelpDate',
+  person: 'tools.database.propertyTypeHelpPerson',
+  files: 'tools.database.propertyTypeHelpFiles',
+  checkbox: 'tools.database.propertyTypeHelpCheckbox',
+  url: 'tools.database.propertyTypeHelpUrl',
+  email: 'tools.database.propertyTypeHelpEmail',
+  phone: 'tools.database.propertyTypeHelpPhone',
+  formula: 'tools.database.propertyTypeHelpFormula',
+  relation: 'tools.database.propertyTypeHelpRelation',
+  rollup: 'tools.database.propertyTypeHelpRollup',
+  createdTime: 'tools.database.propertyTypeHelpCreatedTime',
+  createdBy: 'tools.database.propertyTypeHelpCreatedBy',
+  lastEditedTime: 'tools.database.propertyTypeHelpLastEditedTime',
+  lastEditedBy: 'tools.database.propertyTypeHelpLastEditedBy',
+  button: 'tools.database.propertyTypeHelpButton',
+  place: 'tools.database.propertyTypeHelpPlace',
 };
 /** Past the 200ms close motion. */
 const CLOSE_FALLBACK_MS = 300;
@@ -171,7 +191,8 @@ export class DatabasePropertyTypePopover {
         help.setAttribute('data-blok-database-property-type-help', '');
         help.setAttribute('aria-hidden', 'true');
         help.innerHTML = IconHelp;
-        onHover(help, this.i18n?.t(helpKey) ?? helpKey, { placement: 'right' });
+        // notion-motion.md Round 27 §1: 6 right of the "?".
+        onHover(help, this.i18n?.t(helpKey) ?? helpKey, { placement: 'right', gap: 6 });
         item.appendChild(help);
       }
 

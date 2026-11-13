@@ -2243,12 +2243,39 @@ describe('view settings panel', () => {
       expect(q('database-color-value-c1')?.hasAttribute('data-empty')).toBe(false);
     });
 
-    // Only a Select rule's value is measured; the others keep "Value".
-    it('keeps "Value" for an empty Status rule', () => {
-      harness({ colorRules: [{ id: 'c1', propertyId: 'prog', operator: 'equals', value: null, color: 'gray' }] }).open();
+    // notion-motion.md Round 21 §1: "Select..." on Status, Multi-select, Date, Checkbox and Person too.
+    it('reads "Select..." on every measured picker type while empty', () => {
+      const h = harness({ colorRules: [
+        { id: 'c1', propertyId: 'prog', operator: 'equals', value: null, color: 'match' },
+        { id: 'c2', propertyId: 'tags', operator: 'contains', value: null, color: 'match' },
+        { id: 'c3', propertyId: 'due', operator: 'equals', value: null, color: 'green' },
+        { id: 'c4', propertyId: 'cb', operator: 'equals', value: null, color: 'green' },
+        { id: 'c5', propertyId: 'owner', operator: 'contains', value: null, color: 'green' },
+      ] });
+
+      h.ctx.schema = () => [...schema,
+        { id: 'tags', name: 'Tags', type: 'multiSelect', position: 'b0', config: { options: [{ id: 'm1', label: 'One', position: 'a0' }] } },
+        { id: 'cb', name: 'Done', type: 'checkbox', position: 'b1' }];
+      h.open();
       click('database-settings-color');
 
-      expect(q('database-color-value-c1')?.textContent).toBe('tools.database.filterValue');
+      for (const id of ['c1', 'c2', 'c3', 'c4', 'c5']) {
+        const value = q(`database-color-value-${id}`);
+
+        expect(value?.textContent, id).toBe('tools.database.colorValuePlaceholder');
+        expect(value?.hasAttribute('data-empty'), id).toBe(true);
+      }
+    });
+
+    // notion-motion.md Round 21 §1 (r21-cc-st-picked.png): a Status pick shows as its option token.
+    it('shows a Status pick as its option token', () => {
+      const h = harness({ colorRules: [{ id: 'c1', propertyId: 'prog', operator: 'equals', value: ['s1'], color: 'match' }] });
+
+      h.open();
+      click('database-settings-color');
+
+      expect(q('database-color-value-c1')?.querySelector('[data-blok-database-option-pill]')?.textContent).toBe('Not started');
+      expect(q('database-color-value-c1')?.hasAttribute('data-empty')).toBe(false);
     });
 
     // notion-motion.md Round 20 §4 (r20-cc-new.raw): the property list is a 258-wide flyout with a focused search.

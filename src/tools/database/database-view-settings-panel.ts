@@ -2898,16 +2898,15 @@ export class ViewSettingsPages {
     button.setAttribute('data-blok-testid', `database-color-value-${rule.id}`);
     button.toggleAttribute('data-empty', text === '');
     field.setAttribute('data-blok-database-color-rule-field', '');
-    field.textContent = text === '' ? this.t('filterValue') : text;
-    // r20-cc-is.raw, r20-cc-red.png: a Select rule reads "Select..." while empty and shows its picks as tokens.
-    // Other types are unmeasured and keep "Value" and plain text.
-    if (property.type === 'select') {
+    // r20-cc-is.raw, notion-motion.md Round 21 §1: the measured picker types read "Select..." while empty.
+    // Other types are unmeasured and keep "Value".
+    field.textContent = text !== '' ? text : this.t(SELECT_PLACEHOLDER_TYPES.includes(property.type) ? 'colorValuePlaceholder' : 'filterValue');
+    // r20-cc-red.png, r21-cc-st-picked.png: Select and Status picks show as option tokens.
+    if (property.type === 'select' || property.type === 'status') {
       const picked: unknown[] = Array.isArray(rule.value) ? rule.value : [];
       const tokens = (property.config?.options ?? []).filter((option) => picked.includes(option.id)).map((option) => createOptionPill(option));
 
-      button.toggleAttribute('data-empty', tokens.length === 0);
-      if (tokens.length === 0) field.textContent = this.t('colorValuePlaceholder');
-      else field.replaceChildren(...tokens);
+      if (tokens.length > 0) field.replaceChildren(...tokens);
     }
     button.append(field);
     button.addEventListener('click', () => openRuleValueFlyout(button, panel, scoped, read, save, COLOR_VALUE_FLYOUT_WIDTH, COLOR_VALUE_FLYOUT_GAP));
@@ -3109,6 +3108,9 @@ const newColorRule = (type: PropertyType): Pick<ColorRule, 'operator' | 'value' 
     color: MATCH_OPTION_TYPES.includes(type) ? MATCH_OPTION_COLOR : plain,
   };
 };
+
+/** notion-motion.md Round 20 §4, Round 21 §1: the colour rule value types measured reading "Select...". */
+const SELECT_PLACEHOLDER_TYPES: readonly PropertyType[] = ['select', 'status', 'multiSelect', 'date', 'checkbox', 'person'];
 
 /** notion-motion.md Round 21 §1 (r21-cc-ms-bg.raw): Multi-select's switch reads "Match first option". */
 const matchOptionLabelKey = (property: PropertyDefinition | undefined): string =>

@@ -72,6 +72,17 @@ test.describe('boot loading skeleton', () => {
     await expect(page.getByText('Loaded text!')).toBeVisible();
   });
 
+  test('the page title stays hidden until loading and its skeleton handoff finish', async ({ page }) => {
+    await bootSlow(page, { pageTitle: { placeholder: 'Nouvelle page' } });
+    const header = page.locator('[data-blok-page-header]');
+
+    await expect(page.getByTestId('loading-skeleton')).toBeVisible();
+    await expect(header).toBeHidden();
+    await page.evaluate(() => window.releaseLoad?.());
+    await expect(page.getByTestId('loading-skeleton')).toHaveCount(0);
+    await expect(header).toBeVisible();
+  });
+
   test('an empty paragraph loaded under the skeleton keeps its line height', async ({ page }) => {
     await bootSlow(page);
     await expect(page.getByTestId('loading-skeleton')).toBeVisible();

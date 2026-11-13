@@ -26,6 +26,12 @@ interface CaretSnapshot {
  * @returns the snapshot, or null when the caret is elsewhere
  */
 const captureCaretWithin = (holder: HTMLElement): CaretSnapshot | null => {
+  // Boot mounts hundreds of connected holders under the inert loading redactor.
+  // There is no user caret there; getSelection would force layout after every move.
+  if (!holder.isConnected || holder.closest('[inert]') !== null) {
+    return null;
+  }
+
   const ownerDocument = holder.ownerDocument;
   const activeElement = ownerDocument.activeElement;
   const focused =

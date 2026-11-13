@@ -17,6 +17,12 @@
   opacity: 0;
 }
 
+/* The title is a sibling of the redactor, not one of its blocks. Keep it
+   hidden through the handoff so its empty placeholder never overlaps the bars. */
+[aria-busy="true"] > [data-blok-page-header] {
+  visibility: hidden;
+}
+
 /* The overlay box IS the content column. Insets mirror the redactor gutter
    padding, max-width and margins mirror [data-blok-element-content]
    (max-w-blok-content mx-auto + the content-align rules in main.css). The

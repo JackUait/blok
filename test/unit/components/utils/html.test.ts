@@ -216,6 +216,21 @@ describe('html', () => {
       expect(node.parentNode).toBe(parent);
     });
 
+    it('does not force a selection read while moving connected loading content', () => {
+      const root = document.createElement('div');
+      root.setAttribute('inert', '');
+      const node = document.createElement('div');
+      const target = document.createElement('div');
+      root.append(node, target);
+      document.body.append(root);
+      const getSelection = vi.spyOn(window, 'getSelection');
+
+      moveElementToEnd(target, node);
+
+      expect(getSelection).not.toHaveBeenCalled();
+      expect(node.parentNode).toBe(target);
+    });
+
     it('is a no-op when the reference is the node itself', () => {
       const moveBefore = vi.fn();
 

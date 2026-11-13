@@ -295,6 +295,7 @@ body[data-blok-theme="light"] [data-desktop-floating-toc] {
 [data-desktop-cover-actions] > [data-cover-download]:disabled { opacity: .5; cursor: wait; }
 [data-desktop-cover-actions] > button:hover { background: var(--desktop-hover); color: var(--desktop-ink); }
 [data-desktop-cover-gallery] {
+  --desktop-cover-gallery-height: 350px;
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 4;
   width: min(540px, calc(100vw - 24px)); max-height: min(450px, calc(100vh - 24px));
   overflow: hidden; border: 1px solid var(--desktop-border); border-radius: 10px;

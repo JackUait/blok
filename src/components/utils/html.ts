@@ -98,7 +98,8 @@ const moveNode = (parent: StatefulMoveParent, node: Node, reference: Node | null
 const selectionInside = (node: Node): { anchorNode: Node; anchorOffset: number; focusNode: Node; focusOffset: number } | null => {
   // A detached node cannot hold the selection. Checked first because Chrome
   // forces a whole-page layout on each selection read while nothing is selected.
-  if (!node.isConnected) {
+  // The loading redactor is inert: it cannot carry a user caret either.
+  if (!node.isConnected || (node instanceof Element && node.closest('[inert]') !== null)) {
     return null;
   }
 

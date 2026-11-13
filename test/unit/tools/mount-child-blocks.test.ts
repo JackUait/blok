@@ -43,6 +43,24 @@ describe('mountChildBlocks', () => {
     expect(container.contains(holderB)).toBe(true);
   });
 
+  it('mounts connected loading children without reading a caret for every child', async () => {
+    const { mountChildBlocks } = await import('../../../src/tools/nested-blocks');
+    const redactor = document.createElement('div');
+    redactor.setAttribute('inert', '');
+    const target = createContainer();
+    const children = Array.from({ length: 30 }, (_, index) => ({ holder: createHolder(`row-${index}`) }));
+    redactor.append(target, ...children.map(child => child.holder));
+    document.body.append(redactor);
+    const getSelection = vi.spyOn(window, 'getSelection');
+
+    mountChildBlocks(target, children);
+
+    expect([...target.children]).toEqual(children.map(child => child.holder));
+    expect(getSelection).not.toHaveBeenCalled();
+    getSelection.mockRestore();
+    redactor.remove();
+  });
+
   it('should skip children already mounted in the same container', async () => {
     const { mountChildBlocks } = await import('../../../src/tools/nested-blocks');
 

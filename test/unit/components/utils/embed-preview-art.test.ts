@@ -86,10 +86,22 @@ describe('embed preview scenes', () => {
     const card = stage.querySelector('[id$="-s"]');
     const { cx, cy, r } = floatCircle(stage);
 
-    expect(cx - r - num(card, 'x')).toBeGreaterThanOrEqual(5);
-    expect(cy - r - num(card, 'y')).toBeGreaterThanOrEqual(5);
-    expect(num(card, 'x') + num(card, 'width') - (cx + r)).toBeGreaterThanOrEqual(5);
-    expect(num(card, 'y') + num(card, 'height') - (cy + r)).toBeGreaterThanOrEqual(5);
+    expect(cx - r - num(card, 'x')).toBeGreaterThanOrEqual(4);
+    expect(cy - r - num(card, 'y')).toBeGreaterThanOrEqual(4);
+    expect(num(card, 'x') + num(card, 'width') - (cx + r)).toBeGreaterThanOrEqual(4);
+    expect(num(card, 'y') + num(card, 'height') - (cy + r)).toBeGreaterThanOrEqual(4);
+  });
+
+  it('social tucks the heart button into the card\'s bottom corner, past the picture\'s edge', () => {
+    const stage = render('social');
+    const card = stage.querySelector('[id$="-s"]');
+    const picture = stage.querySelector('rect.blok-media-preview__screen');
+    const { cx, cy, r } = floatCircle(stage);
+    const rightGap = num(card, 'x') + num(card, 'width') - (cx + r);
+    const bottomGap = num(card, 'y') + num(card, 'height') - (cy + r);
+
+    expect(cx + r).toBeGreaterThan(num(picture, 'x') + num(picture, 'width'));
+    expect(rightGap).toBe(bottomGap);
   });
 
   it('social keeps the heart badge clear of the picture and the text', () => {

@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { BRAND_MARK_HOST_SLUGS, BRAND_MARK_SERVICES, brandMarkSlug, brandMarkSlugForUrl } from '../../../../src/components/utils/brand-mark-services';
-import { BRAND_MARK_SLUGS, brandMarkSvg } from '../../../../src/components/utils/brand-marks';
+import { describe, it, expect, vi } from 'vitest';
+import { BRAND_MARK_HOST_SLUGS, BRAND_MARK_SERVICES, brandMarkElement, brandMarkSlug, brandMarkSlugForUrl } from '../../../../src/components/utils/brand-mark-services';
+import { BRAND_MARK_SLUGS, brandMarkSvg, brandMarkTile } from '../../../../src/components/utils/brand-marks';
 import { EMBED_SERVICES } from '../../../../src/tools/link/registry';
 
 const slugFor = (href: string): string | null => brandMarkSlugForUrl(new URL(href));
@@ -30,6 +30,46 @@ describe('brand mark library', () => {
     expect(brandMarkSvg('tiktok')).toContain('fill="currentColor"');
     expect(brandMarkSvg('x')).toContain('fill="currentColor"');
     expect(brandMarkSvg('youtube')).toContain('fill="#FF0000"');
+  });
+});
+
+describe('brand mark as an app icon tile', () => {
+  it('fills the tile with the brand colour and asks for a white mark', () => {
+    expect(brandMarkTile('youtube')).toEqual({ tone: 'dark', color: '#FF0000' });
+    expect(brandMarkTile('airtable')?.tone).toBe('dark');
+    expect(brandMarkTile('spotify')?.tone).toBe('dark');
+  });
+
+  // A white mark on these would vanish.
+  it.each(['snapchat', 'tldraw', 'kick', 'beatport'])('asks for a dark mark on the light %s colour', (slug) => {
+    expect(brandMarkTile(slug)?.tone).toBe('light');
+  });
+
+  it('gives near-black brands an ink tile that follows the theme', () => {
+    expect(brandMarkTile('x')).toEqual({ tone: 'ink' });
+    expect(brandMarkTile('tiktok')).toEqual({ tone: 'ink' });
+  });
+
+  it('has no tile for full-colour artwork or an unknown slug', () => {
+    expect(brandMarkTile('rutube')).toBeNull();
+    expect(brandMarkTile('no-such-brand')).toBeNull();
+  });
+
+  it('stamps the tile on the mark element once the mark arrives', async () => {
+    const mark = brandMarkElement('youtube', '<svg></svg>');
+
+    await vi.waitFor(() => expect(mark?.querySelector('[data-brand="youtube"]')).not.toBeNull());
+
+    expect(mark?.getAttribute('data-brand-tone')).toBe('dark');
+    expect(mark?.style.getPropertyValue('--blok-brand-mark-color')).toBe('#FF0000');
+  });
+
+  it('leaves a full-colour mark element without a tile', async () => {
+    const mark = brandMarkElement('rutube', '<svg></svg>');
+
+    await vi.waitFor(() => expect(mark?.querySelector('[data-brand="rutube"]')).not.toBeNull());
+
+    expect(mark?.hasAttribute('data-brand-tone')).toBe(false);
   });
 });
 

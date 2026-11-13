@@ -244,9 +244,16 @@ export function brandMarkElement(service: string, fallback: string): HTMLElement
   const slot = document.createElement('span');
   slot.className = 'blok-brand-mark';
   slot.innerHTML = fallback;
-  void import('./brand-marks').then(({ brandMarkSvg }) => {
+  void import('./brand-marks').then(({ brandMarkSvg, brandMarkTile }) => {
     const svg = brandMarkSvg(slug);
-    if (svg) slot.innerHTML = svg;
+    if (!svg) return;
+    slot.innerHTML = svg;
+
+    // Read by embed.css to draw the mark as an app icon tile.
+    const tile = brandMarkTile(slug);
+    if (!tile) return;
+    slot.setAttribute('data-brand-tone', tile.tone);
+    if (tile.tone !== 'ink') slot.style.setProperty('--blok-brand-mark-color', tile.color);
   });
   return slot;
 }

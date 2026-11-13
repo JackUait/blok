@@ -1704,6 +1704,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const PDF_PINCH_BYTES = 128;
     // file.css: the PDF thumbnail rail, its current page ring and the pressed toggle.
     const PDF_THUMBNAILS_BYTES = 1_793;
+    // embed.css: the provider logo as an app icon tile in its brand colour (measured embed.css growth).
+    const EMBED_BRAND_APP_ICON_BYTES = 1_141;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -2185,7 +2187,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + AUDIO_COMPACT_WIRE_BYTES
       + AUDIO_INK_WELL_BYTES
       + FILE_PREVIEW_FINISHED_BYTES
-      + MEDIA_SPEED_ENTRY_BYTES;
+      + MEDIA_SPEED_ENTRY_BYTES
+      + EMBED_BRAND_APP_ICON_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

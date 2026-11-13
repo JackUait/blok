@@ -128,5 +128,36 @@ export function brandMarkSvg(slug: string): string | null {
   return `<svg viewBox="0 0 24 24" width="14" height="14" focusable="false" data-brand="${slug}"><path fill="${fill}" d="${mark.d}"/></svg>`;
 }
 
+export type BrandMarkTile = { tone: 'dark' | 'light'; color: string } | { tone: 'ink' };
+
+// WCAG relative luminance of an RRGGBB colour.
+const luminance = (hex: string): number => {
+  const [r, g, b] = [0, 2, 4].map((at) => {
+    const channel = parseInt(hex.slice(at, at + 2), 16) / 255;
+
+    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
+// Above this a white mark is lost on the brand colour (Snapchat yellow, Kick
+// green). Spotify green (0.5) sits just under it and keeps its white mark.
+const LIGHT_TILE_LUMINANCE = 0.55;
+
+/**
+ * How a one-colour mark shows as an app icon: a tile in the brand colour with
+ * a white mark (`dark`) or a dark mark (`light`), or an ink tile for
+ * near-black brands. Null for full-colour artwork and unknown slugs.
+ */
+export function brandMarkTile(slug: string): BrandMarkTile | null {
+  const mark = Object.hasOwn(PATHS, slug) ? PATHS[slug] : undefined;
+
+  if (!mark) return null;
+  if (mark.ink) return { tone: 'ink' };
+
+  return { tone: luminance(mark.hex) > LIGHT_TILE_LUMINANCE ? 'light' : 'dark', color: `#${mark.hex}` };
+}
+
 /** Every bundled slug, for the playground gallery. */
 export const BRAND_MARK_SLUGS: readonly string[] = [...Object.keys(PATHS), ...Object.keys(ARTWORK)];

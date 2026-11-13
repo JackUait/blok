@@ -26722,14 +26722,14 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 .blok-embed-window__brand {
   position: absolute;
-  inset-inline-start: calc(50% + var(--_badge-x));
-  top: var(--_badge-y);
+  inset-inline-start: calc(50% + var(--_badge-x) + 9px);
+  top: calc(var(--_badge-y) - 8px);
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   background: var(--blok-bg-primary);
-  border-radius: var(--blok-radius-control);
+  border-radius: var(--blok-radius-control-lg);
   box-shadow: 0 0 0 var(--blok-border-width-hairline) var(--blok-overlay-ring), 0 6px 14px -4px color-mix(in srgb, var(--blok-media-preview-shadow) 45%, transparent), 0 1px 2px color-mix(in srgb, var(--blok-media-preview-shadow) 25%, transparent);
 }
 
@@ -26738,10 +26738,35 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   height: 18px;
 }
 
-.blok-embed-window__brand-mark {
+.blok-embed-window__brand-mark, .blok-embed-window__brand .blok-brand-mark {
   grid-area: 1 / 1;
   display: grid;
   place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.blok-embed-window__brand [data-brand-tone] {
+  background: var(--blok-brand-mark-color, var(--blok-text-primary));
+  box-shadow: inset 0 0 0 var(--blok-border-width-hairline) color-mix(in srgb, var(--blok-dark) 8%, transparent), inset 0 1px 0 color-mix(in srgb, var(--blok-text-on-dark) 30%, transparent), 0 8px 14px -6px color-mix(in srgb, var(--blok-brand-mark-color, var(--blok-media-preview-shadow)) 60%, transparent), 0 1px 2px color-mix(in srgb, var(--blok-media-preview-shadow) 30%, transparent);
+}
+
+.blok-embed-window__brand [data-brand-tone] svg path {
+  fill: var(--blok-text-on-dark);
+}
+
+.blok-embed-window__brand [data-brand-tone='light'] svg path {
+  fill: var(--blok-dark);
+}
+
+.blok-embed-window__brand [data-brand-tone='ink'] svg path {
+  fill: var(--blok-bg-primary);
+}
+
+.blok-embed-window__brand:has([data-brand-tone]) {
+  background: none;
+  box-shadow: none;
 }
 
 .blok-embed-window {

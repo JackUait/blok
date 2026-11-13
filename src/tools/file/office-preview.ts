@@ -5,7 +5,7 @@ import { ZipParts } from './zip-parts';
 import { loadDocxRenderer, loadPptxRenderer } from './office-loaders';
 import { buildErrorInto } from './preview-error';
 import { openDeckStage } from './deck-stage';
-import { mountPager } from './page-pager';
+import { docxPagedView, mountPager } from './page-pager';
 import { detachedChrome, type PreviewChrome } from './preview-chrome';
 import { mountSheetGrid, type GridCell, type GridSheet } from './sheet-grid';
 import { formatNumber, readStyles, type CellStyle } from './xlsx-format';
@@ -220,8 +220,9 @@ async function renderInto(
 
 /** The controls a rendered office body gets: page and zoom for a document. */
 function mountKindChrome(container: HTMLElement, kind: OfficeKind, chrome: PreviewChrome): void {
-  if (kind === 'docx') {
-    mountPager(container, chrome);
+  const view = kind === 'docx' ? docxPagedView(container) : null;
+  if (view !== null) {
+    mountPager(container, view, chrome);
   }
 }
 

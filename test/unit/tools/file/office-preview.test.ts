@@ -110,7 +110,7 @@ describe('fillOfficeBody pptx lifecycle', () => {
 
     await fillOfficeBody(document.createElement('div'), PPTX, 'pptx', isClosed, () => undefined);
 
-    expect(open).toHaveBeenCalledWith(expect.any(ArrayBuffer), expect.any(HTMLElement), isClosed);
+    expect(open).toHaveBeenCalledWith(expect.any(ArrayBuffer), expect.any(HTMLElement), isClosed, expect.any(Object));
   });
 
   it('destroys a deck that finished opening after the modal closed', async () => {

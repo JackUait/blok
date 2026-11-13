@@ -1558,24 +1558,80 @@
   width: min(1120px, 100%);
 }
 
-/* --- pptx: stacked slide cards -------------------------------------------- */
-/* The viewer sizes each card to its slide scaled to the container width, so the
-   column only stacks the cards with vertical room and centres them. */
+/* --- pptx: a stage and a filmstrip ----------------------------------------- */
+/* deck-stage.ts builds both. The strip holds the real slides at thumbnail
+   size; the stage shows a copy of the current one and sizes its own frame. */
 .blok-file-preview-pptx {
+  /* Behind a slide that draws no background of its own. */
+  --blok-pptx-paper: #ffffff;
+
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Nothing scrolls here but the strip, so no gutter is kept at the sides. */
+  scrollbar-gutter: auto;
+}
+
+.blok-file-preview-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.blok-file-preview-stage-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--blok-radius-control);
+  background: var(--blok-pptx-paper);
+  box-shadow: var(--blok-image-shadow-resting);
+  cursor: pointer;
+}
+
+/* Two sheets overlap while one slides out and the next slides in. */
+.blok-file-preview-stage-sheet {
+  position: absolute;
+  inset: 0;
+  background: var(--blok-pptx-paper);
+}
+
+.blok-file-preview-film {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: safe center;
+  gap: var(--blok-space-1-5);
+  padding: var(--blok-space-2-5) var(--blok-space-3);
+  border-top: 1px solid var(--blok-border-subtle);
+  background: var(--blok-bg-primary);
+  overflow-x: auto;
+}
+
+.blok-file-preview-thumb {
+  flex: none;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--blok-space-6);
-  padding: var(--blok-space-6) 0;
+  gap: var(--blok-space-1);
+  padding: var(--blok-space-1);
+  border-radius: var(--blok-radius-control-lg);
+  font-size: var(--blok-font-size-ui-small);
+  font-weight: var(--blok-font-weight-medium);
+  color: var(--blok-text-tertiary);
+  cursor: pointer;
 }
-
-/* flex-shrink: 0 is load-bearing — a tall deck overflows the modal, and without
-   it the flex column would compress each slide wrapper below its real height,
-   then `overflow: hidden` (for the rounded corners) would clip the slide body
-   down to just its title band. The shadow + radius carry the card framing. */
-.blok-file-preview-pptx > * {
-  flex-shrink: 0;
-  border-radius: var(--blok-radius-surface);
-  box-shadow: var(--blok-image-shadow-resting);
-  overflow: hidden;
+.blok-file-preview-thumb:hover {
+  background: var(--blok-bg-hover);
+}
+.blok-file-preview-thumb > div {
+  border-radius: var(--blok-radius-mark);
+  outline: 1px solid var(--blok-border-primary);
+}
+/* The current slide: primary ink, never blue. */
+.blok-file-preview-thumb[aria-current="true"] {
+  color: var(--blok-text-primary);
+}
+.blok-file-preview-thumb[aria-current="true"] > div {
+  outline: 2px solid var(--blok-text-primary);
+  outline-offset: 1px;
 }

@@ -444,7 +444,9 @@ describe('office preview mutants', () => {
 
       expect(open).toHaveBeenCalledTimes(1);
       expect(open.mock.calls[0][0]).toBe(buf);
-      expect(open.mock.calls[0][1].getAttribute('data-role')).toBe('file-preview-pptx');
+      // The viewer draws into the filmstrip, inside the pptx container.
+      expect(open.mock.calls[0][1].getAttribute('data-role')).toBe('file-preview-film');
+      expect(open.mock.calls[0][1].parentElement?.getAttribute('data-role')).toBe('file-preview-pptx');
       expect(loaders.loadDocxRenderer).not.toHaveBeenCalled();
     });
 

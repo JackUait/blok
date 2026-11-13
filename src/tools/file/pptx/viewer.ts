@@ -6,6 +6,20 @@ import { isAllowedExternalUrl } from './utils/urlSafety';
 /** An open deck in a container. */
 export interface DeckView {
   destroy(): void;
+  /** Slides in the deck, drawn or not yet. */
+  readonly count: number;
+  /** Slide size in px. */
+  readonly width: number;
+  readonly height: number;
+}
+
+export interface DeckOptions {
+  /** The width slides are scaled to. Default: the container's width. */
+  fitWidth?: () => number;
+  /** Wraps a drawn slide card; the result is what goes into the container. */
+  wrap?: (card: HTMLElement, index: number) => HTMLElement;
+  /** Called when a link on a slide points at another slide. */
+  onGoToSlide?: (index: number) => void;
 }
 
 /** Slides drawn before yielding a frame, so a long deck does not freeze the page. */
@@ -31,11 +45,12 @@ export async function openDeck(
   buf: ArrayBuffer,
   container: HTMLElement,
   isCancelled: () => boolean = () => false,
+  options: DeckOptions = {},
 ): Promise<DeckView> {
   const files = await parseZip(buf, RECOMMENDED_ZIP_LIMITS);
 
   if (isCancelled()) {
-    return { destroy: () => undefined };
+    return { destroy: () => undefined, count: 0, width: 0, height: 0 };
   }
   const presentation = buildPresentation(files);
   const mediaUrlCache = new Map<string, string>();
@@ -44,7 +59,8 @@ export async function openDeck(
   const cards: HTMLElement[] = [];
   const state = { destroyed: false };
 
-  const scale = (): number => (container.clientWidth || presentation.width) / presentation.width;
+  const fitWidth = options.fitWidth ?? ((): number => container.clientWidth);
+  const scale = (): number => (fitWidth() || presentation.width) / presentation.width;
 
   const fit = (card: HTMLElement, factor: number): void => {
     Object.assign(card.style, {
@@ -61,6 +77,7 @@ export async function openDeck(
   const goTo = (target: { slideIndex?: number; url?: string }): void => {
     if (target.slideIndex !== undefined) {
       cards[target.slideIndex]?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      options.onGoToSlide?.(target.slideIndex);
 
       return;
     }
@@ -115,7 +132,11 @@ export async function openDeck(
     const fragment = document.createDocumentFragment();
     const count = Math.min(BATCH_SIZE, presentation.slides.length - from);
 
-    Array.from({ length: count }, (_, offset) => fragment.appendChild(drawSlide(from + offset)));
+    Array.from({ length: count }, (_, offset) => {
+      const card = drawSlide(from + offset);
+
+      return fragment.appendChild(options.wrap?.(card, from + offset) ?? card);
+    });
     container.appendChild(fragment);
   };
 
@@ -136,5 +157,5 @@ export async function openDeck(
   observer.observe(container);
   void drawRest(presentation, BATCH_SIZE);
 
-  return { destroy };
+  return { destroy, count: presentation.slides.length, width: presentation.width, height: presentation.height };
 }

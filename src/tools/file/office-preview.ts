@@ -4,6 +4,7 @@ import { loadBinaryPreview } from './binary-preview';
 import { ZipParts } from './zip-parts';
 import { loadDocxRenderer, loadPptxRenderer } from './office-loaders';
 import { buildErrorInto } from './preview-error';
+import { openDeckStage } from './deck-stage';
 import { mountPager } from './page-pager';
 import { detachedChrome, type PreviewChrome } from './preview-chrome';
 import { mountSheetGrid, type GridCell, type GridSheet } from './sheet-grid';
@@ -199,7 +200,6 @@ async function renderInto(
   buf: ArrayBuffer,
   container: HTMLElement,
   kind: OfficeKind,
-  isClosed: () => boolean,
   chrome: PreviewChrome,
 ): Promise<(() => void) | null> {
   if (kind === 'docx') {
@@ -213,7 +213,7 @@ async function renderInto(
     return null;
   }
   const pptx = await loadPptxRenderer();
-  const deck = await pptx.open(buf, container, isClosed);
+  const deck = await openDeckStage(buf, container, chrome, pptx.open);
 
   return () => deck.destroy();
 }
@@ -254,7 +254,7 @@ export async function fillOfficeBody(
   body.replaceChildren(container);
 
   try {
-    const release = await renderInto(result.buf, container, kind, isClosed, chrome);
+    const release = await renderInto(result.buf, container, kind, chrome);
     if (release !== null && isClosed()) {
       release();
     } else if (release !== null) {

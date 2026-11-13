@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "새 색상 설정",
   "tools.database.colorAddAnother": "하나 더 추가",
   "tools.database.colorPageBackground": "페이지 배경",
+  "tools.database.colorCardBackground": "카드 배경",
   "tools.database.colorMatchOption": "옵션과 일치",
   "tools.database.colorMatchFirstOption": "첫 번째 옵션과 일치",
   "tools.database.colorBackgroundHint": "{color} 배경",

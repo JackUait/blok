@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "Нова настройка за цвят",
   "tools.database.colorAddAnother": "Добави още",
   "tools.database.colorPageBackground": "Фон на страницата",
+  "tools.database.colorCardBackground": "Фон на картата",
   "tools.database.colorMatchOption": "Като опцията",
   "tools.database.colorMatchFirstOption": "Като първата опция",
   "tools.database.colorBackgroundHint": "Фон: {color}",

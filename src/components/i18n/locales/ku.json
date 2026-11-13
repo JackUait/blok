@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "ڕێکخستنی ڕەنگی نوێ",
   "tools.database.colorAddAnother": "زیادکردنی یەکێکی تر",
   "tools.database.colorPageBackground": "پاشبنەمای پەڕە",
+  "tools.database.colorCardBackground": "پاشبنەمای کارت",
   "tools.database.colorMatchOption": "گونجاندن لەگەڵ هەڵبژاردە",
   "tools.database.colorMatchFirstOption": "گونجاندن لەگەڵ یەکەم هەڵبژاردە",
   "tools.database.colorBackgroundHint": "پاشبنەمای {color}",

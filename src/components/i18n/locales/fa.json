@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "تنظیم رنگ جدید",
   "tools.database.colorAddAnother": "افزودن مورد دیگر",
   "tools.database.colorPageBackground": "پس‌زمینه صفحه",
+  "tools.database.colorCardBackground": "پس‌زمینه کارت",
   "tools.database.colorMatchOption": "مطابق گزینه",
   "tools.database.colorMatchFirstOption": "مطابق گزینه اول",
   "tools.database.colorBackgroundHint": "پس‌زمینه {color}",

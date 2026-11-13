@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "ಹೊಸ ಬಣ್ಣದ ಸೆಟ್ಟಿಂಗ್",
   "tools.database.colorAddAnother": "ಇನ್ನೊಂದು ಸೇರಿಸಿ",
   "tools.database.colorPageBackground": "ಪುಟದ ಹಿನ್ನೆಲೆ",
+  "tools.database.colorCardBackground": "ಕಾರ್ಡ್ ಹಿನ್ನೆಲೆ",
   "tools.database.colorMatchOption": "ಆಯ್ಕೆಗೆ ಹೊಂದಿಸಿ",
   "tools.database.colorMatchFirstOption": "ಮೊದಲ ಆಯ್ಕೆಗೆ ಹೊಂದಿಸಿ",
   "tools.database.colorBackgroundHint": "{color} ಹಿನ್ನೆಲೆ",

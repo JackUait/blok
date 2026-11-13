@@ -1498,6 +1498,7 @@
   "tools.database.colorNew": "Nova postavka boje",
   "tools.database.colorAddAnother": "Dodaj još",
   "tools.database.colorPageBackground": "Pozadina stranice",
+  "tools.database.colorCardBackground": "Pozadina kartice",
   "tools.database.colorMatchOption": "Uskladi s opcijom",
   "tools.database.colorMatchFirstOption": "Uskladi s prvom opcijom",
   "tools.database.colorBackgroundHint": "{color} pozadina",

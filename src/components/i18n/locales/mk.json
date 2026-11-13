@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "Нова поставка за боја",
   "tools.database.colorAddAnother": "Додај уште",
   "tools.database.colorPageBackground": "Позадина на страницата",
+  "tools.database.colorCardBackground": "Позадина на картичката",
   "tools.database.colorMatchOption": "Според опцијата",
   "tools.database.colorMatchFirstOption": "Според првата опција",
   "tools.database.colorBackgroundHint": "Позадина: {color}",

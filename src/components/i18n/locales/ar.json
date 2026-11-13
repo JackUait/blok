@@ -1516,6 +1516,7 @@
   "tools.database.colorNew": "إعداد لون جديد",
   "tools.database.colorAddAnother": "إضافة آخر",
   "tools.database.colorPageBackground": "خلفية الصفحة",
+  "tools.database.colorCardBackground": "خلفية البطاقة",
   "tools.database.colorMatchOption": "مطابقة الخيار",
   "tools.database.colorMatchFirstOption": "مطابقة الخيار الأول",
   "tools.database.colorBackgroundHint": "خلفية {color}",

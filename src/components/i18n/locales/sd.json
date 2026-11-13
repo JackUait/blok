@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "نئين رنگ سيٽنگ",
   "tools.database.colorAddAnother": "ٻيو شامل ڪريو",
   "tools.database.colorPageBackground": "صفحي جو پس منظر",
+  "tools.database.colorCardBackground": "ڪارڊ جو پس منظر",
   "tools.database.colorMatchOption": "آپشن سان ملايو",
   "tools.database.colorMatchFirstOption": "پهرين آپشن سان ملايو",
   "tools.database.colorBackgroundHint": "{color} پس منظر",

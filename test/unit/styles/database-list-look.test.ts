@@ -347,6 +347,17 @@ describe('conditional color fill on a table (notion-motion.md Round 20 §4)', ()
     expect(lightRoot).toContain('--blok-database-rule-default-bg: transparent');
   });
 
+  // notion-motion.md Round 21 §2 (r21-board-cards.raw, r21-list-rows.raw): a board card and a list row take the
+  // same opaque fill, green rgb(232, 241, 236). Default stays as before: an unmatched card is white.
+  it('paints a board card and a list row with the opaque swatch fill too', () => {
+    for (const color of COLORS.filter((c) => c !== 'default')) {
+      for (const scope of ['[data-blok-database-board] [data-blok-database-card]', '[data-blok-database-list] [data-blok-database-list-row]']) {
+        expect(ruleBody(database, `${scope}[data-blok-database-color="${color}"]`), `${scope} ${color}`)
+          .toContain(`--_blok-database-rule-bg: var(--blok-database-rule-${color}-bg)`);
+      }
+    }
+  });
+
   it('has a dark fill for every colour, in both dark blocks', () => {
     for (const body of [darkMedia, darkTheme]) {
       for (const color of Object.keys(LIGHT)) {

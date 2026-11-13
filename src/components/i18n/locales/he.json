@@ -1498,6 +1498,7 @@
   "tools.database.colorNew": "הגדרת צבע חדשה",
   "tools.database.colorAddAnother": "הוסף עוד",
   "tools.database.colorPageBackground": "רקע הדף",
+  "tools.database.colorCardBackground": "רקע הכרטיס",
   "tools.database.colorMatchOption": "התאמה לאפשרות",
   "tools.database.colorMatchFirstOption": "התאמה לאפשרות הראשונה",
   "tools.database.colorBackgroundHint": "רקע {color}",

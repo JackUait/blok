@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "Шинэ өнгөний тохиргоо",
   "tools.database.colorAddAnother": "Дахин нэмэх",
   "tools.database.colorPageBackground": "Хуудасны дэвсгэр",
+  "tools.database.colorCardBackground": "Картын дэвсгэр",
   "tools.database.colorMatchOption": "Сонголтыг дагах",
   "tools.database.colorMatchFirstOption": "Эхний сонголтыг дагах",
   "tools.database.colorBackgroundHint": "{color} дэвсгэр",

@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "Tetapan warna baharu",
   "tools.database.colorAddAnother": "Tambah lagi",
   "tools.database.colorPageBackground": "Latar belakang halaman",
+  "tools.database.colorCardBackground": "Latar belakang kad",
   "tools.database.colorMatchOption": "Padankan pilihan",
   "tools.database.colorMatchFirstOption": "Padankan pilihan pertama",
   "tools.database.colorBackgroundHint": "Latar belakang: {color}",

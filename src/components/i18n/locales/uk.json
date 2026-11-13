@@ -1504,6 +1504,7 @@
   "tools.database.colorNew": "Нове налаштування кольору",
   "tools.database.colorAddAnother": "Додати ще",
   "tools.database.colorPageBackground": "Фон сторінки",
+  "tools.database.colorCardBackground": "Фон картки",
   "tools.database.colorMatchOption": "Як у варіанта",
   "tools.database.colorMatchFirstOption": "Як у першого варіанта",
   "tools.database.colorBackgroundHint": "Фон: {color}",

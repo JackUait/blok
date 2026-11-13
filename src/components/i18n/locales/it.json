@@ -1498,6 +1498,7 @@
   "tools.database.colorNew": "Nuova impostazione colore",
   "tools.database.colorAddAnother": "Aggiungi un’altra",
   "tools.database.colorPageBackground": "Sfondo pagina",
+  "tools.database.colorCardBackground": "Sfondo della scheda",
   "tools.database.colorMatchOption": "Come l’opzione",
   "tools.database.colorMatchFirstOption": "Come la prima opzione",
   "tools.database.colorBackgroundHint": "Sfondo: {color}",

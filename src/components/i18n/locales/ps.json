@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "نوی رنګ تنظیم",
   "tools.database.colorAddAnother": "بل اضافه کړئ",
   "tools.database.colorPageBackground": "د پاڼې شالید",
+  "tools.database.colorCardBackground": "د کارت شالید",
   "tools.database.colorMatchOption": "له انتخاب سره سمون",
   "tools.database.colorMatchFirstOption": "له لومړي انتخاب سره سمون",
   "tools.database.colorBackgroundHint": "{color} شالید",

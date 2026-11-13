@@ -1504,6 +1504,7 @@
   "tools.database.colorNew": "Naujas spalvos nustatymas",
   "tools.database.colorAddAnother": "Pridėti dar vieną",
   "tools.database.colorPageBackground": "Puslapio fonas",
+  "tools.database.colorCardBackground": "Kortelės fonas",
   "tools.database.colorMatchOption": "Pagal parinktį",
   "tools.database.colorMatchFirstOption": "Pagal pirmą parinktį",
   "tools.database.colorBackgroundHint": "Fonas: {color}",

@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "Uusi väriasetus",
   "tools.database.colorAddAnother": "Lisää toinen",
   "tools.database.colorPageBackground": "Sivun tausta",
+  "tools.database.colorCardBackground": "Kortin tausta",
   "tools.database.colorMatchOption": "Vaihtoehdon mukaan",
   "tools.database.colorMatchFirstOption": "Ensimmäisen vaihtoehdon mukaan",
   "tools.database.colorBackgroundHint": "{color} tausta",

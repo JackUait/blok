@@ -2288,6 +2288,20 @@ describe('view settings panel', () => {
       expect(q('database-color-value-c1')).not.toBeNull();
     });
 
+    // notion-motion.md Round 21 §2 (r21-board-cc-cc.raw, r21-list-cc-cc.raw): a board says "Card background", a list
+    // "Page background"; neither has "Apply to".
+    it.each([
+      ['board', 'tools.database.colorCardBackground'],
+      ['list', 'tools.database.colorPageBackground'],
+      ['table', 'tools.database.colorPageBackground'],
+    ] as const)('labels a %s rule\'s background %s', (type, label) => {
+      harness({ type, colorRules: [{ id: 'c1', propertyId: 'num', operator: 'is_not_empty', value: null, color: 'green' }] }).open();
+      click('database-settings-color');
+
+      expect(q('database-color-rule-c1')?.querySelector('[data-blok-database-color-setting-label]')?.textContent).toBe(label);
+      expect(exists('database-color-apply-c1')).toBe(type === 'table');
+    });
+
     // notion-motion.md Round 21 §1: "Select..." on Status, Multi-select, Date, Checkbox and Person too.
     it('reads "Select..." on every measured picker type while empty', () => {
       const h = harness({ colorRules: [

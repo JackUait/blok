@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "Bagong setting ng kulay",
   "tools.database.colorAddAnother": "Magdagdag pa",
   "tools.database.colorPageBackground": "Background ng pahina",
+  "tools.database.colorCardBackground": "Background ng card",
   "tools.database.colorMatchOption": "Itugma sa opsyon",
   "tools.database.colorMatchFirstOption": "Itugma sa unang opsyon",
   "tools.database.colorBackgroundHint": "{color} na background",

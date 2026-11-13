@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "Yeni renk ayarı",
   "tools.database.colorAddAnother": "Bir tane daha ekle",
   "tools.database.colorPageBackground": "Sayfa arka planı",
+  "tools.database.colorCardBackground": "Kart arka planı",
   "tools.database.colorMatchOption": "Seçeneğe uydur",
   "tools.database.colorMatchFirstOption": "İlk seçeneğe uydur",
   "tools.database.colorBackgroundHint": "{color} arka plan",

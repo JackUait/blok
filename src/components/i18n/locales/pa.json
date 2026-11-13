@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "ਨਵੀਂ ਰੰਗ ਸੈਟਿੰਗ",
   "tools.database.colorAddAnother": "ਇੱਕ ਹੋਰ ਜੋੜੋ",
   "tools.database.colorPageBackground": "ਪੰਨੇ ਦਾ ਪਿਛੋਕੜ",
+  "tools.database.colorCardBackground": "ਕਾਰਡ ਦਾ ਪਿਛੋਕੜ",
   "tools.database.colorMatchOption": "ਵਿਕਲਪ ਨਾਲ ਮਿਲਾਓ",
   "tools.database.colorMatchFirstOption": "ਪਹਿਲੇ ਵਿਕਲਪ ਨਾਲ ਮਿਲਾਓ",
   "tools.database.colorBackgroundHint": "{color} ਪਿਛੋਕੜ",

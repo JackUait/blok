@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "ການຕັ້ງຄ່າສີໃໝ່",
   "tools.database.colorAddAnother": "ເພີ່ມອີກ",
   "tools.database.colorPageBackground": "ພື້ນຫຼັງໜ້າ",
+  "tools.database.colorCardBackground": "ພື້ນຫຼັງບັດ",
   "tools.database.colorMatchOption": "ຕາມຕົວເລືອກ",
   "tools.database.colorMatchFirstOption": "ຕາມຕົວເລືອກທຳອິດ",
   "tools.database.colorBackgroundHint": "ພື້ນຫຼັງ{color}",

@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "አዲስ የቀለም ቅንብር",
   "tools.database.colorAddAnother": "ሌላ አክል",
   "tools.database.colorPageBackground": "የገጽ ዳራ",
+  "tools.database.colorCardBackground": "የካርድ ዳራ",
   "tools.database.colorMatchOption": "ከአማራጩ ጋር አዛምድ",
   "tools.database.colorMatchFirstOption": "ከመጀመሪያው አማራጭ ጋር አዛምድ",
   "tools.database.colorBackgroundHint": "{color} ዳራ",

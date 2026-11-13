@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "Mpangilio mpya wa rangi",
   "tools.database.colorAddAnother": "Ongeza nyingine",
   "tools.database.colorPageBackground": "Mandharinyuma ya ukurasa",
+  "tools.database.colorCardBackground": "Mandharinyuma ya kadi",
   "tools.database.colorMatchOption": "Linganisha na chaguo",
   "tools.database.colorMatchFirstOption": "Linganisha na chaguo la kwanza",
   "tools.database.colorBackgroundHint": "Mandharinyuma: {color}",

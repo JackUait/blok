@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "အရောင် ဆက်တင်အသစ်",
   "tools.database.colorAddAnother": "နောက်တစ်ခု ထည့်ရန်",
   "tools.database.colorPageBackground": "စာမျက်နှာ နောက်ခံ",
+  "tools.database.colorCardBackground": "ကတ် နောက်ခံ",
   "tools.database.colorMatchOption": "ရွေးချယ်မှုနှင့် ကိုက်ညီစေ",
   "tools.database.colorMatchFirstOption": "ပထမ ရွေးချယ်မှုနှင့် ကိုက်ညီစေ",
   "tools.database.colorBackgroundHint": "{color} နောက်ခံ",

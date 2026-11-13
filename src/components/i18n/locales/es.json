@@ -1498,6 +1498,7 @@
   "tools.database.colorNew": "Nueva configuración de color",
   "tools.database.colorAddAnother": "Añadir otra",
   "tools.database.colorPageBackground": "Fondo de página",
+  "tools.database.colorCardBackground": "Fondo de la tarjeta",
   "tools.database.colorMatchOption": "Según la opción",
   "tools.database.colorMatchFirstOption": "Según la primera opción",
   "tools.database.colorBackgroundHint": "Fondo: {color}",

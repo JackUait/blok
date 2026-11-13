@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "New color setting",
   "tools.database.colorAddAnother": "Add another",
   "tools.database.colorPageBackground": "Page background",
+  "tools.database.colorCardBackground": "Card background",
   "tools.database.colorMatchOption": "Match option",
   "tools.database.colorMatchFirstOption": "Match first option",
   "tools.database.colorBackgroundHint": "{color} background",

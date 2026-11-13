@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "新增色彩設定",
   "tools.database.colorAddAnother": "再新增一個",
   "tools.database.colorPageBackground": "頁面背景",
+  "tools.database.colorCardBackground": "卡片背景",
   "tools.database.colorMatchOption": "符合選項",
   "tools.database.colorMatchFirstOption": "符合第一個選項",
   "tools.database.colorBackgroundHint": "{color}背景",

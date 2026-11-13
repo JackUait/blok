@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "נײַע קאָליר־באַשטימונג",
   "tools.database.colorAddAnother": "צולייגן נאָך איינס",
   "tools.database.colorPageBackground": "בלאט־הינטערגרונט",
+  "tools.database.colorCardBackground": "קאַרטל־הינטערגרונט",
   "tools.database.colorMatchOption": "לויט דער אָפּציע",
   "tools.database.colorMatchFirstOption": "לויט דער ערשטער אָפּציע",
   "tools.database.colorBackgroundHint": "הינטערגרונט: {color}",

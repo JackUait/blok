@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "ការកំណត់ពណ៌ថ្មី",
   "tools.database.colorAddAnother": "បន្ថែមមួយទៀត",
   "tools.database.colorPageBackground": "ផ្ទៃខាងក្រោយទំព័រ",
+  "tools.database.colorCardBackground": "ផ្ទៃខាងក្រោយកាត",
   "tools.database.colorMatchOption": "ផ្គូផ្គងជម្រើស",
   "tools.database.colorMatchFirstOption": "ផ្គូផ្គងជម្រើសដំបូង",
   "tools.database.colorBackgroundHint": "ផ្ទៃខាងក្រោយ{color}",

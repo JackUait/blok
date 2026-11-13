@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "Cài đặt màu mới",
   "tools.database.colorAddAnother": "Thêm cái khác",
   "tools.database.colorPageBackground": "Nền trang",
+  "tools.database.colorCardBackground": "Nền thẻ",
   "tools.database.colorMatchOption": "Theo tùy chọn",
   "tools.database.colorMatchFirstOption": "Theo tùy chọn đầu tiên",
   "tools.database.colorBackgroundHint": "Nền: {color}",

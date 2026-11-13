@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "புதிய வண்ண அமைப்பு",
   "tools.database.colorAddAnother": "இன்னொன்றைச் சேர்",
   "tools.database.colorPageBackground": "பக்கப் பின்னணி",
+  "tools.database.colorCardBackground": "அட்டைப் பின்னணி",
   "tools.database.colorMatchOption": "விருப்பத்துடன் பொருத்து",
   "tools.database.colorMatchFirstOption": "முதல் விருப்பத்துடன் பொருத்து",
   "tools.database.colorBackgroundHint": "{color} பின்னணி",

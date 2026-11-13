@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "Pengaturan warna baru",
   "tools.database.colorAddAnother": "Tambah lagi",
   "tools.database.colorPageBackground": "Latar halaman",
+  "tools.database.colorCardBackground": "Latar kartu",
   "tools.database.colorMatchOption": "Sesuaikan opsi",
   "tools.database.colorMatchFirstOption": "Sesuaikan opsi pertama",
   "tools.database.colorBackgroundHint": "Latar: {color}",

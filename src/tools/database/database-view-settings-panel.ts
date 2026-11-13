@@ -3015,7 +3015,8 @@ export class ViewSettingsPages {
             }),
             ...(property === undefined ? [] : this.colorRuleValue(panel, rule, property, disabled, () => rules().find((r) => r.id === rule.id), (change) => patch(rule.id, change))),
             colorSetting({
-              label: this.t('colorPageBackground'),
+              // notion-motion.md Round 21 §2 (r21-board-cc-cc.raw): a board's rule colours the card.
+              label: this.t(view.type === 'board' ? 'colorCardBackground' : 'colorPageBackground'),
               testId: `database-color-background-${rule.id}`,
               value: this.t(rule.color === MATCH_OPTION_COLOR ? matchOptionLabelKey(property) : `color${capital(rule.color)}`),
               chip: rule.color === MATCH_OPTION_COLOR ? undefined : rule.color,

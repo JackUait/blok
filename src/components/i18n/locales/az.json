@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "Yeni rəng ayarı",
   "tools.database.colorAddAnother": "Daha birini əlavə et",
   "tools.database.colorPageBackground": "Səhifə fonu",
+  "tools.database.colorCardBackground": "Kart fonu",
   "tools.database.colorMatchOption": "Seçimə uyğunlaşdır",
   "tools.database.colorMatchFirstOption": "İlk seçimə uyğunlaşdır",
   "tools.database.colorBackgroundHint": "{color} arxa fon",

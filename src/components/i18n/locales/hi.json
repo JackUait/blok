@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "नई रंग सेटिंग",
   "tools.database.colorAddAnother": "एक और जोड़ें",
   "tools.database.colorPageBackground": "पृष्ठ की पृष्ठभूमि",
+  "tools.database.colorCardBackground": "कार्ड की पृष्ठभूमि",
   "tools.database.colorMatchOption": "विकल्प से मिलाएँ",
   "tools.database.colorMatchFirstOption": "पहले विकल्प से मिलाएँ",
   "tools.database.colorBackgroundHint": "{color} पृष्ठभूमि",

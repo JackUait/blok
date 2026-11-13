@@ -16280,39 +16280,39 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   --_blok-database-rule-bg: var(--blok-database-rule-default-bg);
 }
 
-[data-blok-database-table] [data-blok-database-color="gray"] {
+[data-blok-database-table] [data-blok-database-color="gray"], [data-blok-database-board] [data-blok-database-card][data-blok-database-color="gray"], [data-blok-database-list] [data-blok-database-list-row][data-blok-database-color="gray"] {
   --_blok-database-rule-bg: var(--blok-database-rule-gray-bg);
 }
 
-[data-blok-database-table] [data-blok-database-color="brown"] {
+[data-blok-database-table] [data-blok-database-color="brown"], [data-blok-database-board] [data-blok-database-card][data-blok-database-color="brown"], [data-blok-database-list] [data-blok-database-list-row][data-blok-database-color="brown"] {
   --_blok-database-rule-bg: var(--blok-database-rule-brown-bg);
 }
 
-[data-blok-database-table] [data-blok-database-color="orange"] {
+[data-blok-database-table] [data-blok-database-color="orange"], [data-blok-database-board] [data-blok-database-card][data-blok-database-color="orange"], [data-blok-database-list] [data-blok-database-list-row][data-blok-database-color="orange"] {
   --_blok-database-rule-bg: var(--blok-database-rule-orange-bg);
 }
 
-[data-blok-database-table] [data-blok-database-color="yellow"] {
+[data-blok-database-table] [data-blok-database-color="yellow"], [data-blok-database-board] [data-blok-database-card][data-blok-database-color="yellow"], [data-blok-database-list] [data-blok-database-list-row][data-blok-database-color="yellow"] {
   --_blok-database-rule-bg: var(--blok-database-rule-yellow-bg);
 }
 
-[data-blok-database-table] [data-blok-database-color="green"] {
+[data-blok-database-table] [data-blok-database-color="green"], [data-blok-database-board] [data-blok-database-card][data-blok-database-color="green"], [data-blok-database-list] [data-blok-database-list-row][data-blok-database-color="green"] {
   --_blok-database-rule-bg: var(--blok-database-rule-green-bg);
 }
 
-[data-blok-database-table] [data-blok-database-color="blue"] {
+[data-blok-database-table] [data-blok-database-color="blue"], [data-blok-database-board] [data-blok-database-card][data-blok-database-color="blue"], [data-blok-database-list] [data-blok-database-list-row][data-blok-database-color="blue"] {
   --_blok-database-rule-bg: var(--blok-database-rule-blue-bg);
 }
 
-[data-blok-database-table] [data-blok-database-color="purple"] {
+[data-blok-database-table] [data-blok-database-color="purple"], [data-blok-database-board] [data-blok-database-card][data-blok-database-color="purple"], [data-blok-database-list] [data-blok-database-list-row][data-blok-database-color="purple"] {
   --_blok-database-rule-bg: var(--blok-database-rule-purple-bg);
 }
 
-[data-blok-database-table] [data-blok-database-color="pink"] {
+[data-blok-database-table] [data-blok-database-color="pink"], [data-blok-database-board] [data-blok-database-card][data-blok-database-color="pink"], [data-blok-database-list] [data-blok-database-list-row][data-blok-database-color="pink"] {
   --_blok-database-rule-bg: var(--blok-database-rule-pink-bg);
 }
 
-[data-blok-database-table] [data-blok-database-color="red"] {
+[data-blok-database-table] [data-blok-database-color="red"], [data-blok-database-board] [data-blok-database-card][data-blok-database-color="red"], [data-blok-database-list] [data-blok-database-list-row][data-blok-database-color="red"] {
   --_blok-database-rule-bg: var(--blok-database-rule-red-bg);
 }
 

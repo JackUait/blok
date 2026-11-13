@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "Գույնի նոր կարգավորում",
   "tools.database.colorAddAnother": "Ավելացնել ևս մեկը",
   "tools.database.colorPageBackground": "Էջի ֆոն",
+  "tools.database.colorCardBackground": "Քարտի ֆոն",
   "tools.database.colorMatchOption": "Ըստ տարբերակի",
   "tools.database.colorMatchFirstOption": "Ըստ առաջին տարբերակի",
   "tools.database.colorBackgroundHint": "{color} ֆոն",

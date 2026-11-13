@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "Νέα ρύθμιση χρώματος",
   "tools.database.colorAddAnother": "Προσθήκη άλλης",
   "tools.database.colorPageBackground": "Φόντο σελίδας",
+  "tools.database.colorCardBackground": "Φόντο κάρτας",
   "tools.database.colorMatchOption": "Αντιστοίχιση επιλογής",
   "tools.database.colorMatchFirstOption": "Αντιστοίχιση πρώτης επιλογής",
   "tools.database.colorBackgroundHint": "Φόντο: {color}",

@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "નવી રંગ સેટિંગ",
   "tools.database.colorAddAnother": "બીજું ઉમેરો",
   "tools.database.colorPageBackground": "પૃષ્ઠની પૃષ્ઠભૂમિ",
+  "tools.database.colorCardBackground": "કાર્ડની પૃષ્ઠભૂમિ",
   "tools.database.colorMatchOption": "વિકલ્પ સાથે મેળવો",
   "tools.database.colorMatchFirstOption": "પ્રથમ વિકલ્પ સાથે મેળવો",
   "tools.database.colorBackgroundHint": "{color} પૃષ્ઠભૂમિ",

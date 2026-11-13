@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "نئی رنگ ترتیب",
   "tools.database.colorAddAnother": "ایک اور شامل کریں",
   "tools.database.colorPageBackground": "صفحے کا پس منظر",
+  "tools.database.colorCardBackground": "کارڈ کا پس منظر",
   "tools.database.colorMatchOption": "آپشن سے میل",
   "tools.database.colorMatchFirstOption": "پہلے آپشن سے میل",
   "tools.database.colorBackgroundHint": "{color} پس منظر",

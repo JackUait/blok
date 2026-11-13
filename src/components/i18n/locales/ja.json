@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "新しいカラー設定",
   "tools.database.colorAddAnother": "さらに追加",
   "tools.database.colorPageBackground": "ページの背景",
+  "tools.database.colorCardBackground": "カードの背景",
   "tools.database.colorMatchOption": "オプションに合わせる",
   "tools.database.colorMatchFirstOption": "最初のオプションに合わせる",
   "tools.database.colorBackgroundHint": "{color}の背景",

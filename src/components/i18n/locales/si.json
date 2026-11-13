@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "නව වර්ණ සැකසුම",
   "tools.database.colorAddAnother": "තවත් එකක් එක් කරන්න",
   "tools.database.colorPageBackground": "පිටු පසුබිම",
+  "tools.database.colorCardBackground": "කාඩ්පත් පසුබිම",
   "tools.database.colorMatchOption": "විකල්පයට ගළපන්න",
   "tools.database.colorMatchFirstOption": "පළමු විකල්පයට ගළපන්න",
   "tools.database.colorBackgroundHint": "{color} පසුබිම",

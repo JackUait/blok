@@ -1504,6 +1504,7 @@
   "tools.database.colorNew": "Nové nastavenie farby",
   "tools.database.colorAddAnother": "Pridať ďalšie",
   "tools.database.colorPageBackground": "Pozadie stránky",
+  "tools.database.colorCardBackground": "Pozadie karty",
   "tools.database.colorMatchOption": "Podľa možnosti",
   "tools.database.colorMatchFirstOption": "Podľa prvej možnosti",
   "tools.database.colorBackgroundHint": "Pozadie: {color}",

@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "Ny farveindstilling",
   "tools.database.colorAddAnother": "Tilføj en til",
   "tools.database.colorPageBackground": "Sidebaggrund",
+  "tools.database.colorCardBackground": "Kortbaggrund",
   "tools.database.colorMatchOption": "Følg valgmulighed",
   "tools.database.colorMatchFirstOption": "Følg første valgmulighed",
   "tools.database.colorBackgroundHint": "{color} baggrund",

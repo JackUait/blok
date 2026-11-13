@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "নতুন রঙের সেটিং",
   "tools.database.colorAddAnother": "আরেকটি যোগ করুন",
   "tools.database.colorPageBackground": "পৃষ্ঠার পটভূমি",
+  "tools.database.colorCardBackground": "কার্ডের পটভূমি",
   "tools.database.colorMatchOption": "বিকল্পের সাথে মেলান",
   "tools.database.colorMatchFirstOption": "প্রথম বিকল্পের সাথে মেলান",
   "tools.database.colorBackgroundHint": "{color} পটভূমি",

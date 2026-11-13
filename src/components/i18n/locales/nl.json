@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "Nieuwe kleurinstelling",
   "tools.database.colorAddAnother": "Nog een toevoegen",
   "tools.database.colorPageBackground": "Paginaachtergrond",
+  "tools.database.colorCardBackground": "Kaartachtergrond",
   "tools.database.colorMatchOption": "Optie volgen",
   "tools.database.colorMatchFirstOption": "Eerste optie volgen",
   "tools.database.colorBackgroundHint": "Achtergrond: {color}",

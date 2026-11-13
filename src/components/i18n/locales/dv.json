@@ -1492,6 +1492,7 @@
   "tools.database.colorNew": "އައު ކުލައިގެ ސެޓިންގް",
   "tools.database.colorAddAnother": "އަނެއްކާ އެއް އިތުރުކުރޭ",
   "tools.database.colorPageBackground": "ޞަފްޙާގެ ފަސްބިން",
+  "tools.database.colorCardBackground": "ކާޑުގެ ފަސްބިން",
   "tools.database.colorMatchOption": "އޮޕްޝަނާ އެއްގޮތްކުރޭ",
   "tools.database.colorMatchFirstOption": "ފުރަތަމަ އޮޕްޝަނާ އެއްގޮތްކުރޭ",
   "tools.database.colorBackgroundHint": "ބެކްގްރައުންޑް: {color}",

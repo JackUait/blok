@@ -1498,6 +1498,7 @@
   "tools.database.colorNew": "Jauns krāsas iestatījums",
   "tools.database.colorAddAnother": "Pievienot vēl vienu",
   "tools.database.colorPageBackground": "Lapas fons",
+  "tools.database.colorCardBackground": "Kartītes fons",
   "tools.database.colorMatchOption": "Atbilstoši opcijai",
   "tools.database.colorMatchFirstOption": "Atbilstoši pirmajai opcijai",
   "tools.database.colorBackgroundHint": "{color} fons",

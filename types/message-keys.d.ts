@@ -777,6 +777,7 @@ export type BlokMessageKey =
   | 'tools.database.colorBlue'
   | 'tools.database.colorBlurb'
   | 'tools.database.colorBrown'
+  | 'tools.database.colorCardBackground'
   | 'tools.database.colorDefault'
   | 'tools.database.colorDelete'
   | 'tools.database.colorGray'

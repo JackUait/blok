@@ -1498,6 +1498,7 @@
   "tools.database.colorNew": "Setare nouă de culoare",
   "tools.database.colorAddAnother": "Adaugă încă una",
   "tools.database.colorPageBackground": "Fundalul paginii",
+  "tools.database.colorCardBackground": "Fundalul cardului",
   "tools.database.colorMatchOption": "Ca opțiunea",
   "tools.database.colorMatchFirstOption": "Ca prima opțiune",
   "tools.database.colorBackgroundHint": "Fundal: {color}",

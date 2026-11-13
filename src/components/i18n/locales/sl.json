@@ -1504,6 +1504,7 @@
   "tools.database.colorNew": "Nova nastavitev barve",
   "tools.database.colorAddAnother": "Dodaj še eno",
   "tools.database.colorPageBackground": "Ozadje strani",
+  "tools.database.colorCardBackground": "Ozadje kartice",
   "tools.database.colorMatchOption": "Ujemanje z možnostjo",
   "tools.database.colorMatchFirstOption": "Ujemanje s prvo možnostjo",
   "tools.database.colorBackgroundHint": "Ozadje: {color}",

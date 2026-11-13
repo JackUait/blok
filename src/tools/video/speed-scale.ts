@@ -1,9 +1,14 @@
-export const SPEED_MIN = 0.25;
-export const SPEED_MAX = 2;
+/** Any speed, typed or stepped. The wire covers less: see WIRE_MIN and WIRE_MAX. */
+export const SPEED_MIN = 0.1;
+export const SPEED_MAX = 3;
 export const SPEED_SLIDER_STEP = 0.05;
 
 /** The presets. They sit at equal distances along the wire, not at their true ratios. */
 export const SPEED_PEGS: readonly number[] = [0.25, 0.5, 1, 1.5, 2];
+
+/** The wire's ends are its first and last pegs. A faster or slower speed rests the bead at an end. */
+export const WIRE_MIN = SPEED_PEGS[0];
+export const WIRE_MAX = SPEED_PEGS[SPEED_PEGS.length - 1];
 
 // Shares of the wire's length, not speeds: between 0.25× and 0.5× a speed-based
 // reach would cover the whole stretch and no value there could be dragged to.
@@ -20,7 +25,7 @@ export const snapRate = (rate: number): number =>
 
 /** Where a speed sits along the wire, 0 to 1. */
 export const rateToFraction = (rate: number): number => {
-  const clamped = Math.min(SPEED_MAX, Math.max(SPEED_MIN, rate));
+  const clamped = Math.min(WIRE_MAX, Math.max(WIRE_MIN, rate));
   const upper = SPEED_PEGS.findIndex((peg, index) => index > 0 && clamped <= peg);
   const from = SPEED_PEGS[upper - 1];
 

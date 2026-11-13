@@ -1,8 +1,8 @@
 import {
-  SPEED_MAX,
-  SPEED_MIN,
   SPEED_PEGS,
   SPEED_SLIDER_STEP,
+  WIRE_MAX,
+  WIRE_MIN,
   rateToFraction,
   resolveDrag,
   snapRate,
@@ -126,8 +126,8 @@ export const createSpeedWire = ({ label, reducedMotion, classPrefix = 'blok-vide
   slider.dir = 'ltr';
   slider.className = `${classPrefix}__speed-slider`;
   slider.setAttribute('data-role', 'speed-slider');
-  slider.min = String(SPEED_MIN);
-  slider.max = String(SPEED_MAX);
+  slider.min = String(WIRE_MIN);
+  slider.max = String(WIRE_MAX);
   slider.step = String(SPEED_SLIDER_STEP);
   slider.setAttribute('aria-label', label);
 
@@ -310,7 +310,8 @@ export const createSpeedWire = ({ label, reducedMotion, classPrefix = 'blok-vide
 
     if (!steps) return;
     state.wheel -= steps * WHEEL_STEP_PX;
-    onRate(snapRate(state.rate + steps * SPEED_SLIDER_STEP));
+    // The wheel turns along the wire, so it stays on it.
+    onRate(Math.min(WIRE_MAX, Math.max(WIRE_MIN, snapRate(state.rate + steps * SPEED_SLIDER_STEP))));
   };
   const onSliderInput = (): void => {
     if (!state.dead) onRate(Number(slider.value));

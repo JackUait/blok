@@ -296,7 +296,7 @@ describe('attachControls — rendered contract', () => {
 
     expect([...ui.menu.children]).toStrictEqual([ui.stepperRow, ui.wire, ui.presetRow]);
     expect(ui.readout.className).toBe('blok-audio-controls__speed-readout');
-    expect(ui.readout.getAttribute('aria-hidden')).toBe('true');
+    expect(ui.readout.getAttribute('role')).toBe('button');
     expect(ui.readout.textContent).toBe('1×');
     expect([...ui.readout.children].map((child) => child.className))
       .toStrictEqual(['blok-audio-controls__speed-readout-digits', 'blok-audio-controls__speed-readout-unit']);
@@ -909,7 +909,7 @@ describe('attachControls — playback speed', () => {
     expect(ui.slider.value).toBe('2');
     expect(ui.slider.getAttribute('aria-valuetext')).toBe('2×');
     expect(ui.steppers[0].disabled).toBe(false);
-    expect(ui.steppers[1].disabled).toBe(true);
+    expect(ui.steppers[1].disabled).toBe(false);
     expect(storage.entries.get(RATE_KEY)).toBe('2');
     expect(ui.menu.hidden).toBe(false);
     ui.handle.destroy();
@@ -927,7 +927,7 @@ describe('attachControls — playback speed', () => {
     ui.handle.destroy();
   });
 
-  it('drives the rate from the slider and parks the stepper at the floor', () => {
+  it('drives the rate from the slider, whose floor is above the typed floor', () => {
     const media = makeMedia();
     const ui = mount({ media });
 
@@ -935,7 +935,7 @@ describe('attachControls — playback speed', () => {
 
     expect(media.playbackRate).toBe(0.25);
     expect(ui.readout.textContent).toBe('0.25×');
-    expect(ui.steppers[0].disabled).toBe(true);
+    expect(ui.steppers[0].disabled).toBe(false);
     expect(ui.steppers[1].disabled).toBe(false);
     ui.handle.destroy();
   });
@@ -979,22 +979,22 @@ describe('attachControls — playback speed', () => {
   });
 
   it('keeps the decrease stepper disabled when the restored rate is the floor', () => {
-    const storage = memoryStorage({ [RATE_KEY]: '0.25' });
+    const storage = memoryStorage({ [RATE_KEY]: '0.1' });
     const media = makeMedia();
     const ui = mount({ media, storage });
 
-    expect(media.playbackRate).toBe(0.25);
+    expect(media.playbackRate).toBe(0.1);
     expect(ui.steppers[0].disabled).toBe(true);
     expect(ui.steppers[1].disabled).toBe(false);
     ui.handle.destroy();
   });
 
   it('keeps the increase stepper disabled when the restored rate is the ceiling', () => {
-    const storage = memoryStorage({ [RATE_KEY]: '2' });
+    const storage = memoryStorage({ [RATE_KEY]: '3' });
     const media = makeMedia();
     const ui = mount({ media, storage });
 
-    expect(media.playbackRate).toBe(2);
+    expect(media.playbackRate).toBe(3);
     expect(ui.steppers[0].disabled).toBe(false);
     expect(ui.steppers[1].disabled).toBe(true);
     ui.handle.destroy();

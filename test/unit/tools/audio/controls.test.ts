@@ -562,19 +562,115 @@ describe('attachControls — speed card', () => {
     ui.presets[3].click();
     press(ui.inc, 'pointerdown');
     vi.advanceTimersByTime(5000);
-    expect(ui.media.playbackRate).toBe(2);
+    expect(ui.media.playbackRate).toBe(3);
+    expect(ui.inc.disabled).toBe(true);
     expect(vi.getTimerCount()).toBe(0);
 
     ui.gear.click();
     press(ui.dec, 'pointerdown');
     ui.gear.click();
     vi.advanceTimersByTime(5000);
-    expect(ui.media.playbackRate).toBe(1.95);
+    expect(ui.media.playbackRate).toBe(2.95);
 
     press(ui.dec, 'pointerdown');
     ui.h.destroy();
     vi.advanceTimersByTime(5000);
-    expect(ui.media.playbackRate).toBe(1.9);
+    expect(ui.media.playbackRate).toBe(2.9);
+  });
+
+  describe('typing a speed into the big number', () => {
+    const typeSpeed = (ui: ReturnType<typeof open>, text: string): HTMLInputElement => {
+      ui.readout.click();
+      const field = one<HTMLInputElement>(ui.menu, '.blok-audio-controls__speed-entry-input');
+      field.value = text;
+      return field;
+    };
+    const enter = (el: Element): void => {
+      el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    };
+
+    it('takes a typed speed past the presets, from 0.1x up to 3x', () => {
+      const ui = open();
+
+      ui.gear.click();
+      enter(typeSpeed(ui, '2.7'));
+      expect(ui.media.playbackRate).toBe(2.7);
+      expect(ui.readout.textContent).toBe('2.7×');
+      expect(ui.slider.value).toBe('2');
+
+      enter(typeSpeed(ui, '0,1'));
+      expect(ui.media.playbackRate).toBe(0.1);
+      expect(ui.dec.disabled).toBe(true);
+
+      enter(typeSpeed(ui, '9'));
+      expect(ui.media.playbackRate).toBe(3);
+      expect(ui.inc.disabled).toBe(true);
+      ui.h.destroy();
+    });
+
+    it('lets digits be typed: the player\'s 0-9 seek keys stay out of the field', () => {
+      const ui = open();
+
+      Object.defineProperty(ui.media, 'duration', { value: 100, configurable: true });
+      ui.media.currentTime = 10;
+      ui.gear.click();
+
+      const field = typeSpeed(ui, '');
+      const digit = new KeyboardEvent('keydown', { key: '2', bubbles: true, cancelable: true });
+
+      field.dispatchEvent(digit);
+
+      expect(digit.defaultPrevented).toBe(false);
+      expect(ui.media.currentTime).toBe(10);
+      ui.h.destroy();
+    });
+
+    it('keeps a typed speed when the card closes from a click outside', () => {
+      const ui = open();
+
+      ui.gear.click();
+      typeSpeed(ui, '2.5');
+      document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+
+      expect(ui.menu.hidden).toBe(true);
+      expect(ui.media.playbackRate).toBe(2.5);
+      ui.h.destroy();
+    });
+
+    it('keeps a typed speed when the gear closes the card', () => {
+      const ui = open();
+
+      ui.gear.click();
+      typeSpeed(ui, '2.5');
+      ui.gear.click();
+
+      expect(ui.menu.hidden).toBe(true);
+      expect(ui.media.playbackRate).toBe(2.5);
+      ui.h.destroy();
+    });
+
+    it('steps from the typed speed when minus is pressed while the field is open', () => {
+      const ui = open();
+
+      ui.gear.click();
+      typeSpeed(ui, '2.5');
+      press(ui.dec, 'pointerdown');
+      press(ui.dec, 'pointerup');
+
+      expect(ui.media.playbackRate).toBe(2.45);
+      ui.h.destroy();
+    });
+
+    it('remembers a typed speed for the next player', () => {
+      const storage = memoryStorage();
+      const ui = open(storage);
+
+      ui.gear.click();
+      enter(typeSpeed(ui, '2.75'));
+      ui.h.destroy();
+
+      expect(open(storage).media.playbackRate).toBe(2.75);
+    });
   });
 
   it('moves the wire only while the card is open', () => {

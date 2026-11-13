@@ -23,6 +23,7 @@ import { getElementDirection } from '../../components/utils/direction';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { tr } from './i18n';
 import { SPEED_MAX, SPEED_MIN, SPEED_PEGS, SPEED_SLIDER_STEP, clampRate, rateToFraction, snapRate } from './speed-scale';
+import { createSpeedEntry } from './speed-entry';
 import { createSpeedWire } from './speed-wire';
 import type { I18nInstance } from '../../components/utils/tools';
 import type { VideoGlow } from '../../../types/tools/video';
@@ -806,13 +807,19 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   const speedDecrease = stepButton('speed-decrease', i18nLabel('speedDecrease', 'Decrease playback speed'), IconMinus);
   const speedIncrease = stepButton('speed-increase', i18nLabel('speedIncrease', 'Increase playback speed'), IconPlus);
 
-  // The live value. The range input inside the wire carries it for assistive tech.
+  // The live value. Clicking it opens a field to type any speed from 0.1× to 3×.
   const speedReadout = document.createElement('div');
   speedReadout.className = 'blok-video-controls__speed-readout';
   speedReadout.setAttribute('data-role', 'speed-readout');
-  speedReadout.setAttribute('aria-hidden', 'true');
   const readoutDigits = menuText('blok-video-controls__speed-readout-digits');
   speedReadout.append(readoutDigits, menuText('blok-video-controls__speed-readout-unit', '×'));
+  const speedEntry = createSpeedEntry({
+    readout: speedReadout,
+    classPrefix: 'blok-video-controls',
+    label: i18nLabel('playbackSpeed', 'Playback speed'),
+    rate: () => state.selectedRate,
+    onRate: (rate) => setRate(rate),
+  });
 
   const speedStepper = document.createElement('div');
   speedStepper.className = 'blok-video-controls__speed-stepper';
@@ -847,6 +854,11 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   });
 
   speedPane.append(backRow, menuDivider, speedStepper, speedWire.element, speedPresets);
+  // A press anywhere else in the card sets a typed speed first, so a step or a drag
+  // starts from it. Capture: the stepper acts on its own pointerdown.
+  speedPane.addEventListener('pointerdown', (event) => {
+    if (!(event.target instanceof Element && event.target.closest('.blok-video-controls__speed-entry'))) speedEntry.commit();
+  }, true);
   menu.append(mainPane, speedPane);
 
   // Only the characters that changed roll in: up for a faster speed, down for a slower one.
@@ -926,6 +938,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     const from = { height: menu.offsetHeight, width: menu.offsetWidth };
     const entering = pane === 'speed' && menu.getAttribute('data-pane') !== 'speed';
     endMenuResize();
+    speedEntry.commit();
     menu.setAttribute('data-pane', pane);
     speedRow.setAttribute('aria-expanded', String(pane === 'speed'));
     mainPane.inert = pane !== 'main';
@@ -1007,6 +1020,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   };
   const closeMenu = (): void => {
     if (menu.hidden) return;
+    speedEntry.commit();
     menu.hidden = true;
     stopStepHold();
     endMenuResize();

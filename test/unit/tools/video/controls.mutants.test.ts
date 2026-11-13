@@ -396,7 +396,7 @@ describe('video controls — menu structure', () => {
     expect(preset.type).toBe('button');
     expect(preset.getAttribute('class')).toBe('blok-video-controls__speed-preset');
     expect(q(h.figure, '[data-role="speed-presets"]').getAttribute('dir')).toBe('ltr');
-    expect(q(h.figure, '[data-role="speed-readout"]').getAttribute('aria-hidden')).toBe('true');
+    expect(q(h.figure, '[data-role="speed-readout"]').getAttribute('role')).toBe('button');
     expect(q(h.figure, '[data-role="speed-readout"]').lastElementChild?.getAttribute('class')).toBe('blok-video-controls__speed-readout-unit');
   });
 });

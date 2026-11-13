@@ -695,6 +695,29 @@
   color: var(--blok-text-primary);
 }
 [data-blok-tool="audio"] .blok-audio-controls__speed-readout-digits { display: inline-flex; }
+/* Click the number to type a speed. The field takes its place at the same size. */
+[data-blok-tool="audio"] .blok-audio-controls__speed-readout[role="button"] {
+  cursor: text;
+  border-radius: var(--blok-radius-control);
+}
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="audio"] .blok-audio-controls__speed-readout[role="button"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
+}
+[data-blok-tool="audio"] .blok-audio-controls__speed-entry-input {
+  /* Four characters fit "0.25" and "2.75"; tabular digits keep them one width. */
+  width: 4ch;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  font-variant-numeric: inherit;
+  text-align: end;
+  outline: none;
+}
 [data-blok-tool="audio"] .blok-audio-controls__speed-digit { display: inline-block; }
 [data-blok-tool="audio"] .blok-audio-controls__speed-readout-unit {
   font-size: 0.52em;

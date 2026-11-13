@@ -569,18 +569,18 @@ describe('video controls — keyboard navigation', () => {
     expect(h.video.currentTime).toBe(0);
   });
 
-  it('Shift+. and Shift+, step playback speed by 0.25, clamped to [0.25, 2]', () => {
+  it('Shift+. and Shift+, step playback speed by 0.25, clamped to [0.1, 3]', () => {
     setProp(h.video, 'playbackRate', 1);
     key('>', { shiftKey: true });
     expect(h.video.playbackRate).toBe(1.25);
     key('<', { shiftKey: true });
     expect(h.video.playbackRate).toBe(1);
-    setProp(h.video, 'playbackRate', 1.9);
+    setProp(h.video, 'playbackRate', 2.9);
     key('>', { shiftKey: true });
-    expect(h.video.playbackRate).toBe(2);
+    expect(h.video.playbackRate).toBe(3);
     setProp(h.video, 'playbackRate', 0.25);
     key('<', { shiftKey: true });
-    expect(h.video.playbackRate).toBe(0.25);
+    expect(h.video.playbackRate).toBe(0.1);
   });
 
   it('speed keys do not activate the press-and-hold speed badge', () => {
@@ -1208,16 +1208,84 @@ describe('video controls — playback gear menu', () => {
 
     press(plus());
     vi.advanceTimersByTime(3000);
-    expect(h.video.playbackRate).toBe(2);
+    expect(h.video.playbackRate).toBe(3);
     expect(plus().disabled).toBe(true);
 
     // The hold is over: a step down is not undone by a leftover timer.
     minus().click();
     vi.advanceTimersByTime(3000);
-    expect(h.video.playbackRate).toBe(1.95);
+    expect(h.video.playbackRate).toBe(2.95);
 
     dragSlider(0.25);
+    expect(minus().disabled).toBe(false);
+    press(minus());
+    vi.advanceTimersByTime(3000);
+    expect(h.video.playbackRate).toBe(0.1);
     expect(minus().disabled).toBe(true);
+  });
+
+  // --- typing a speed into the big number ---
+  const typeSpeed = (text: string): HTMLInputElement => {
+    readout().click();
+    const field = q<HTMLInputElement>(h.figure, '.blok-video-controls__speed-entry-input');
+    field.value = text;
+    return field;
+  };
+  const enter = (el: HTMLElement): void => {
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  };
+
+  it('takes a typed speed past the presets, from 0.1x up to 3x', () => {
+    gear().click();
+    speedRow().click();
+
+    enter(typeSpeed('2.7'));
+    expect(h.video.playbackRate).toBe(2.7);
+    expect(readout().textContent).toBe('2.7×');
+    expect(values()).toContain('2.7×');
+    expect(slider().value).toBe('2');
+
+    enter(typeSpeed('0.1'));
+    expect(h.video.playbackRate).toBe(0.1);
+    expect(minus().disabled).toBe(true);
+
+    enter(typeSpeed('9'));
+    expect(h.video.playbackRate).toBe(3);
+    expect(plus().disabled).toBe(true);
+  });
+
+  it('Escape in the field closes only the field, not the speed pane', () => {
+    gear().click();
+    speedRow().click();
+
+    escape(typeSpeed('2.5'));
+
+    expect(h.video.playbackRate).toBe(1);
+    expect(pane()).toBe('speed');
+    expect(isOpen()).toBe(true);
+    expect(readout()).toHaveFocus();
+  });
+
+  it('keeps a typed speed when the card closes from a click outside', () => {
+    gear().click();
+    speedRow().click();
+    typeSpeed('2.5');
+
+    document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+
+    expect(isOpen()).toBe(false);
+    expect(h.video.playbackRate).toBe(2.5);
+  });
+
+  it('steps from the typed speed when minus is pressed while the field is open', () => {
+    gear().click();
+    speedRow().click();
+    typeSpeed('2.5');
+
+    press(minus());
+    press(minus(), 'pointerup');
+
+    expect(h.video.playbackRate).toBe(2.45);
   });
 
   it('offers five presets, one under each peg', () => {

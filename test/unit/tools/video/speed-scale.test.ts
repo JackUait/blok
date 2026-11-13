@@ -6,6 +6,8 @@ import {
   SPEED_MIN,
   SPEED_PEGS,
   SPEED_SLIDER_STEP,
+  WIRE_MAX,
+  WIRE_MIN,
   clampRate,
   fractionToRate,
   rateToFraction,
@@ -14,8 +16,8 @@ import {
 } from '../../../../src/tools/video/speed-scale';
 
 const everyStep = (): number[] =>
-  Array.from({ length: Math.round((SPEED_MAX - SPEED_MIN) / SPEED_SLIDER_STEP) + 1 }, (_, i) =>
-    Math.round((SPEED_MIN + i * SPEED_SLIDER_STEP) * 100) / 100);
+  Array.from({ length: Math.round((WIRE_MAX - WIRE_MIN) / SPEED_SLIDER_STEP) + 1 }, (_, i) =>
+    Math.round((WIRE_MIN + i * SPEED_SLIDER_STEP) * 100) / 100);
 
 describe('speed scale — pegs', () => {
   it('has five pegs from the slowest speed to the fastest', () => {
@@ -42,8 +44,8 @@ describe('speed scale — rate and fraction', () => {
   });
 
   it('keeps a pointer past either end of the wire inside the range', () => {
-    expect(fractionToRate(-1)).toBe(SPEED_MIN);
-    expect(fractionToRate(2)).toBe(SPEED_MAX);
+    expect(fractionToRate(-1)).toBe(WIRE_MIN);
+    expect(fractionToRate(2)).toBe(WIRE_MAX);
     expect(rateToFraction(0)).toBe(0);
     expect(rateToFraction(9)).toBe(1);
   });
@@ -60,7 +62,7 @@ describe('speed scale — clamp and snap', () => {
   it('snaps to the nearest 0.05 inside the range', () => {
     expect(snapRate(1.33)).toBe(1.35);
     expect(snapRate(1.32)).toBe(1.3);
-    expect(snapRate(0.1)).toBe(SPEED_MIN);
+    expect(snapRate(0.04)).toBe(SPEED_MIN);
     expect(snapRate(7)).toBe(SPEED_MAX);
   });
 
@@ -68,6 +70,22 @@ describe('speed scale — clamp and snap', () => {
     expect(clampRate(9)).toBe(SPEED_MAX);
     expect(clampRate(0)).toBe(SPEED_MIN);
     expect(clampRate(1.333)).toBe(1.33);
+  });
+});
+
+describe('speed scale — a typed speed reaches past the wire', () => {
+  it('runs from 0.1x to 3x, wider than the wire\'s 0.25x to 2x', () => {
+    expect([SPEED_MIN, SPEED_MAX]).toEqual([0.1, 3]);
+    expect([WIRE_MIN, WIRE_MAX]).toEqual([0.25, 2]);
+    expect(clampRate(2.7)).toBe(2.7);
+    expect(clampRate(0.1)).toBe(0.1);
+  });
+
+  it('rests the bead at the end of the wire for a speed past it', () => {
+    expect(rateToFraction(3)).toBe(1);
+    expect(rateToFraction(2.5)).toBe(1);
+    expect(rateToFraction(0.1)).toBe(0);
+    expect(rateToFraction(0.15)).toBe(0);
   });
 });
 
@@ -120,7 +138,7 @@ describe('speed scale — a peg grabs and holds the bead', () => {
   });
 
   it('grabs at both ends of the wire', () => {
-    expect(resolveDrag(0, null)).toEqual({ rate: SPEED_MIN, held: SPEED_MIN });
-    expect(resolveDrag(1, null)).toEqual({ rate: SPEED_MAX, held: SPEED_MAX });
+    expect(resolveDrag(0, null)).toEqual({ rate: WIRE_MIN, held: WIRE_MIN });
+    expect(resolveDrag(1, null)).toEqual({ rate: WIRE_MAX, held: WIRE_MAX });
   });
 });

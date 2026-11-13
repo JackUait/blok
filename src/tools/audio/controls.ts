@@ -11,6 +11,7 @@ import {
 import { createVolumeIcon } from '../../components/utils/volume-icon';
 import { tr } from './i18n';
 import { SPEED_MAX, SPEED_MIN, SPEED_PEGS, SPEED_SLIDER_STEP, clampRate, rateToFraction, snapRate } from '../video/speed-scale';
+import { createSpeedEntry } from '../video/speed-entry';
 import { createSpeedWire } from '../video/speed-wire';
 import type { I18nInstance } from '../../components/utils/tools';
 import type { AudioData } from '../../../types/tools/audio';
@@ -288,12 +289,18 @@ export function attachControls({
     return span;
   };
 
-  // The live value. The range input inside the wire carries it for assistive tech.
+  // The live value. Clicking it opens a field to type any speed from 0.1× to 3×.
   const speedReadout = document.createElement('div');
   speedReadout.className = 'blok-audio-controls__speed-readout';
-  speedReadout.setAttribute('aria-hidden', 'true');
   const readoutDigits = speedSpan('blok-audio-controls__speed-readout-digits');
   speedReadout.append(readoutDigits, speedSpan('blok-audio-controls__speed-readout-unit', '×'));
+  const speedEntry = createSpeedEntry({
+    readout: speedReadout,
+    classPrefix: 'blok-audio-controls',
+    label: i18nLabel('playbackSpeed', 'Playback speed'),
+    rate: () => state.selectedRate,
+    onRate: (rate) => setRate(rate),
+  });
 
   // Identified by class only (no data-role) so the generic button[data-role]
   // control-button rule doesn't size them into 30px pills.
@@ -402,6 +409,11 @@ export function attachControls({
   });
 
   speedMenu.append(speedStepperRow, speedWire.element, speedPresets);
+  // A press anywhere else in the card sets a typed speed first, so a step or a drag
+  // starts from it. Capture: the stepper acts on its own pointerdown.
+  speedMenu.addEventListener('pointerdown', (event) => {
+    if (!(event.target instanceof Element && event.target.closest('.blok-audio-controls__speed-entry'))) speedEntry.commit();
+  }, true);
 
   // Gear + menu share a positioned wrapper so the menu anchors directly above
   // the gear button (rather than the card corner).
@@ -431,6 +443,7 @@ export function attachControls({
   const closeSpeedMenu = (): void => {
     stopStepHold();
     if (speedMenu.hidden) return;
+    speedEntry.commit();
     speedMenu.hidden = true;
     gearBtn.setAttribute('aria-expanded', 'false');
     speedWire.rest();

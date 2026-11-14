@@ -1692,6 +1692,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R41_BYTES = 2221;
     // Lane r42: the view tab menu's pressed tab, the type grid's "?" and rules, the template menu's row. Net database.css growth against origin/main.
     const DATABASE_R42_BYTES = 1265;
+    // Lane r43: Round 30 gaps; the band body drops its square top corners and the band count shares the column count rule. Net database.css change against origin/main (a shrink).
+    const DATABASE_R43_BYTES = -226;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2210,6 +2212,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R40_BYTES
       + DATABASE_R41_BYTES
       + DATABASE_R42_BYTES
+      + DATABASE_R43_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "စာမျက်နှာအသစ်",
   "tools.database.tableNewProperty": "ဂုဏ်သတ္တိ",
   "tools.database.tableLoadMore": "ထပ်မံ တင်ရန်",
+  "tools.database.tableShowOnFirstLoad": "ပထမဆုံး တင်ချိန်တွင် ပြရန်",
   "tools.database.tableEditFilters": "စစ်ထုတ်မှုများ တည်းဖြတ်ရန်",
   "tools.database.tableAddProperty": "ဂုဏ်သတ္တိ ထည့်ရန်",
   "tools.database.tableOpen": "ဖွင့်ရန်",

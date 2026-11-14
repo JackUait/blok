@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "Шинэ хуудас",
   "tools.database.tableNewProperty": "Шинж",
   "tools.database.tableLoadMore": "Цааш ачаалах",
+  "tools.database.tableShowOnFirstLoad": "Анх ачаалахад харуулах",
   "tools.database.tableEditFilters": "Шүүлтүүрүүдийг засах",
   "tools.database.tableAddProperty": "Шинж нэмэх",
   "tools.database.tableOpen": "Нээх",

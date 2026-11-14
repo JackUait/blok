@@ -1223,6 +1223,7 @@
   "tools.database.tableNewPage": "Nova stran",
   "tools.database.tableNewProperty": "Lastnost",
   "tools.database.tableLoadMore": "Naloži več",
+  "tools.database.tableShowOnFirstLoad": "Prikaži ob prvem nalaganju",
   "tools.database.tableEditFilters": "Uredi filtre",
   "tools.database.tableAddProperty": "Dodaj lastnost",
   "tools.database.tableOpen": "Odpri",

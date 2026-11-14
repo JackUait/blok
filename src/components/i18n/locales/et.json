@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "Uus leht",
   "tools.database.tableNewProperty": "Omadus",
   "tools.database.tableLoadMore": "Laadi rohkem",
+  "tools.database.tableShowOnFirstLoad": "Näita esimesel laadimisel",
   "tools.database.tableEditFilters": "Muuda filtreid",
   "tools.database.tableAddProperty": "Lisa omadus",
   "tools.database.tableOpen": "Ava",

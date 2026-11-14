@@ -1241,6 +1241,7 @@
   "tools.database.tableNewPage": "صفحة جديدة",
   "tools.database.tableNewProperty": "خاصية",
   "tools.database.tableLoadMore": "تحميل المزيد",
+  "tools.database.tableShowOnFirstLoad": "العرض عند التحميل الأول",
   "tools.database.tableEditFilters": "تعديل الفلاتر",
   "tools.database.tableAddProperty": "إضافة خاصية",
   "tools.database.tableOpen": "فتح",

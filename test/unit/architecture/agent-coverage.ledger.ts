@@ -464,6 +464,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/database-calc-*': cmd('database.updateView'),
   'menu:database/database-calc-cap-counts': cmd('database.updateView'),
   'menu:database/database-calc-none': cmd('database.updateView'),
+  'menu:database/database-load-limit-*': cmd('database.updateView'),
   'menu:database/database-group-calc-*': cmd('database.updateView'),
   'menu:database/database-group-calc-count': cmd('database.updateView'),
   'menu:database/database-group-calc-cap-counts': cmd('database.updateView'),

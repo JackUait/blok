@@ -1223,6 +1223,7 @@
   "tools.database.tableNewPage": "Naujas puslapis",
   "tools.database.tableNewProperty": "Savybė",
   "tools.database.tableLoadMore": "Įkelti daugiau",
+  "tools.database.tableShowOnFirstLoad": "Rodyti pirmą kartą įkeliant",
   "tools.database.tableEditFilters": "Redaguoti filtrus",
   "tools.database.tableAddProperty": "Pridėti savybę",
   "tools.database.tableOpen": "Atidaryti",

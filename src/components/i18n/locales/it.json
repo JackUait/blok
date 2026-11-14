@@ -1214,6 +1214,7 @@
   "tools.database.tableNewPage": "Nuova pagina",
   "tools.database.tableNewProperty": "Proprietà",
   "tools.database.tableLoadMore": "Carica altro",
+  "tools.database.tableShowOnFirstLoad": "Mostra al primo caricamento",
   "tools.database.tableEditFilters": "Modifica filtri",
   "tools.database.tableAddProperty": "Aggiungi proprietà",
   "tools.database.tableOpen": "Apri",

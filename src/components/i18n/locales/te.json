@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "కొత్త పేజీ",
   "tools.database.tableNewProperty": "ప్రాపర్టీ",
   "tools.database.tableLoadMore": "మరిన్ని లోడ్ చేయండి",
+  "tools.database.tableShowOnFirstLoad": "మొదటి లోడ్‌లో చూపించు",
   "tools.database.tableEditFilters": "ఫిల్టర్‌లను సవరించండి",
   "tools.database.tableAddProperty": "ప్రాపర్టీని జోడించండి",
   "tools.database.tableOpen": "తెరవండి",

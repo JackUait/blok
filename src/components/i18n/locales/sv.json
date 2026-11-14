@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "Ny sida",
   "tools.database.tableNewProperty": "Egenskap",
   "tools.database.tableLoadMore": "Läs in fler",
+  "tools.database.tableShowOnFirstLoad": "Visa vid första inläsningen",
   "tools.database.tableEditFilters": "Redigera filter",
   "tools.database.tableAddProperty": "Lägg till egenskap",
   "tools.database.tableOpen": "Öppna",

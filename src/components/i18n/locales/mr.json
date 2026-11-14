@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "नवीन पृष्ठ",
   "tools.database.tableNewProperty": "गुणधर्म",
   "tools.database.tableLoadMore": "आणखी लोड करा",
+  "tools.database.tableShowOnFirstLoad": "पहिल्या लोडवर दाखवा",
   "tools.database.tableEditFilters": "फिल्टर संपादित करा",
   "tools.database.tableAddProperty": "गुणधर्म जोडा",
   "tools.database.tableOpen": "उघडा",

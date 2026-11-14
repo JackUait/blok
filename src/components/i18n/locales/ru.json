@@ -1223,6 +1223,7 @@
   "tools.database.tableNewPage": "Новая страница",
   "tools.database.tableNewProperty": "Свойство",
   "tools.database.tableLoadMore": "Загрузить ещё",
+  "tools.database.tableShowOnFirstLoad": "Показывать при первой загрузке",
   "tools.database.tableEditFilters": "Изменить фильтры",
   "tools.database.tableAddProperty": "Добавить свойство",
   "tools.database.tableOpen": "Открыть",

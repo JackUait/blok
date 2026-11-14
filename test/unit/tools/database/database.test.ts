@@ -4593,6 +4593,40 @@ describe('DatabaseTool', () => {
         tool.destroy();
       });
 
+      // notion-motion.md Round 29 §1: the Load more row's ⋯ sets the view's load limit; a locked database has no ⋯.
+      it('sets the table\'s load limit from the Load more row\'s ⋯, and leaves the ⋯ out when locked', () => {
+        const rows = Array.from({ length: 11 }, (_, i) => groupRow(`row-${i}`, { 'prop-title': `Row ${i}` }, `a${i.toString(36)}`));
+        const table = (locked: boolean): DatabaseTool => {
+          const schema = makeDefaultData().schema;
+
+          return new DatabaseTool(createDatabaseOptions({
+            ...(locked ? { schema: [{ ...schema[0], databaseLocked: true }, ...schema.slice(1)] } : {}),
+            views: [{ id: 'view-1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [], loadLimit: 10 }],
+          }, {}, { childBlocks: rows }));
+        };
+        const tool = table(false);
+        const element = tool.render();
+
+        document.body.appendChild(element);
+        tool.rendered();
+        queryByData(element, 'data-blok-database-table-load-limit-menu')?.click();
+        // The mock popover keys rows by title, and every row shares one key here: 10, 25, 50, 100.
+        document.querySelectorAll<HTMLElement>('[data-mock-popover-action="tools.database.settingsloadlimitpages"]')[1]?.click();
+
+        expect(tool.save(element).views[0].loadLimit).toBe(25);
+        expect(element.querySelectorAll('[data-blok-database-table-row]')).toHaveLength(11);
+        tool.destroy();
+
+        const locked = table(true);
+        const lockedElement = locked.render();
+
+        document.body.appendChild(lockedElement);
+        locked.rendered();
+        expect(queryByData(lockedElement, 'data-blok-database-table-load-more')).not.toBeNull();
+        expect(queryByData(lockedElement, 'data-blok-database-table-load-limit-menu')).toBeNull();
+        locked.destroy();
+      });
+
       // The empty state's Edit filters needs the view's filter handlers, which a read-only modal has not.
       it('shows no dead Edit filters button for an empty filtered group', () => {
         const { tool, element } = board(false, boardView({

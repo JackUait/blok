@@ -6,6 +6,7 @@ import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import {
   IconArrowDiagonal,
+  IconCheck,
   IconCopy,
   IconExpandFullscreen,
   IconEmojiSmile,
@@ -29,7 +30,8 @@ import {
 } from '../../components/icons';
 import { beautifyShortcut } from '../../components/utils/string';
 import { CALCULATIONS_FOR_TYPE } from './database-calculations';
-import type { CalculationFn, DatabaseRow, OpenPagesIn, PropertyDefinition } from './types';
+import type { CalculationFn, DatabaseRow, LoadLimit, OpenPagesIn, PropertyDefinition } from './types';
+import { LOAD_LIMITS } from './view-settings';
 import { formatClock, formatRelativeStamp } from './cells/date-format';
 import { toLocalDay } from './relative-dates';
 
@@ -562,6 +564,33 @@ export const rowActionItems = (ctx: RowActionContext, options: { trashShortcut: 
         onActivate: onDelete,
       }]
       : []),
+  ];
+};
+
+/**
+ * The Load more row's ⋯ (notion-motion.md Round 29 §1): "Show on first load", then 10/25/50/100 pages.
+ * The current limit carries the checkmark.
+ */
+export const loadLimitItems = (i18n: T, current: LoadLimit, onPick: (limit: LoadLimit) => void): PopoverItemParams[] => {
+  const heading = document.createElement('div');
+
+  // The row menu heading's look. Presentation: the menu's list may only own items.
+  heading.className = 'pl-2 pr-3 pt-0.5 pb-1 text-xs font-medium text-menu-section-label cursor-default select-none';
+  heading.setAttribute('role', 'presentation');
+  heading.setAttribute('data-blok-database-load-limit-heading', '');
+  heading.textContent = i18n.t('tools.database.tableShowOnFirstLoad');
+
+  return [
+    { type: PopoverItemType.Html, element: heading },
+    ...LOAD_LIMITS.map((limit): PopoverItemParams => ({
+      type: PopoverItemType.Default,
+      name: `database-load-limit-${limit}`,
+      title: i18n.t('tools.database.settingsLoadLimitPages', { count: limit }),
+      isActive: limit === current,
+      ...(limit === current ? { trailingIcon: IconCheck } : {}),
+      closeOnActivate: true,
+      onActivate: () => onPick(limit),
+    })),
   ];
 };
 

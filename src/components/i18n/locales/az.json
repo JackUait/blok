@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "Yeni səhifə",
   "tools.database.tableNewProperty": "Xüsusiyyət",
   "tools.database.tableLoadMore": "Daha çox yüklə",
+  "tools.database.tableShowOnFirstLoad": "İlk yükləmədə göstər",
   "tools.database.tableEditFilters": "Filtrləri redaktə et",
   "tools.database.tableAddProperty": "Xüsusiyyət əlavə et",
   "tools.database.tableOpen": "Aç",

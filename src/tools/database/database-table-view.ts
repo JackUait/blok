@@ -1,7 +1,7 @@
 import type { I18n } from '../../../types';
 import { DATA_ATTR, KEYBOARD_OWNER_SELECT_ALL } from '../../components/constants/data-attributes';
 import type { DatabaseViewRenderer } from './database-view-renderer';
-import type { DatabaseRow, DatabaseViewConfig, DateReminderOffset, NumberDisplay, OpenPagesIn, PropertyDefinition, PropertyValue, SelectOption, CalculationFn } from './types';
+import type { DatabaseRow, DatabaseViewConfig, DateReminderOffset, LoadLimit, NumberDisplay, OpenPagesIn, PropertyDefinition, PropertyValue, SelectOption, CalculationFn } from './types';
 import type { ViewChanges } from './database-model';
 import { bindFileNameHint, renderCellValue, createOptionPill, openCellEditor } from './cells';
 import { rowCellContext } from './reminders';
@@ -30,7 +30,7 @@ import { cellText } from './database-table-clipboard';
 import type { CellChange, TableState } from './database-table-grid';
 import { fileChipIcon, pageIconElement, pagePlaceholderIcon, showsPageIcon } from './page-icon';
 
-import { CALCULATION_LABEL_KEYS, calcMenuAt, calculationItems, headerViewItems, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
+import { CALCULATION_LABEL_KEYS, calcMenuAt, calculationItems, headerViewItems, loadLimitItems, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
 import type { CountCap, OpenMenuOptions, RowFavorite } from './database-table-menus';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { DatabaseTableColumnResize, MIN_COLUMN_WIDTH } from './database-table-resize';
@@ -53,6 +53,7 @@ import {
   IconPeekSide,
   IconTrash,
   IconDotsHorizontal,
+  IconMoveDown,
   IconCopy,
   IconMessage,
   IconPencilLine,
@@ -137,6 +138,8 @@ export interface TableHandlers {
   moveRowTo?: (rowId: string, databaseId: string) => void;
   editRowIcon: (rowId: string) => void;
   updateView: (changes: ViewChanges) => void;
+  /** The Load more row's ⋯. The tool leaves it out when the view cannot change. */
+  setLoadLimit?: (limit: LoadLimit) => void;
   openPropertyMenu: (propertyId: string, anchor: HTMLElement) => void;
   addProperty: (anchor: HTMLElement, placement?: { propertyId: string; side: 'left' | 'right' }) => void;
   viewAction: (action: 'filter' | 'sort' | 'group', propertyId: string, anchor: HTMLElement) => void;
@@ -954,13 +957,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       return fragment;
     }
     if (shown < rows.length) {
-      const more = document.createElement('button');
-
-      more.type = 'button';
-      more.setAttribute('data-blok-database-table-load-more', '');
-      more.setAttribute('data-group-key', groupKey);
-      more.textContent = this.t('tools.database.tableLoadMore');
-      fragment.appendChild(more);
+      fragment.appendChild(this.createLoadMore(groupKey));
     }
     if (this.editable) {
       fragment.appendChild(this.createAddRow(groupKey));
@@ -971,6 +968,46 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     }
 
     return fragment;
+  }
+
+  /**
+   * notion-motion.md Round 29 §1: a full-width row, the ↓ and "Load more", then a ⋯ for the load limit.
+   * The ⋯ sits beside the button, not in it, so a click on it loads nothing.
+   */
+  private createLoadMore(groupKey: string): HTMLElement {
+    const line = document.createElement('div');
+    const more = document.createElement('button');
+    const icon = document.createElement('span');
+
+    line.setAttribute('data-blok-database-table-load-more-row', '');
+    more.type = 'button';
+    more.setAttribute('data-blok-database-table-load-more', '');
+    more.setAttribute('data-group-key', groupKey);
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = IconMoveDown;
+    more.append(icon, this.t('tools.database.tableLoadMore'));
+    line.appendChild(more);
+    if (this.handlers?.setLoadLimit !== undefined && !this.options.readOnly) {
+      const dots = document.createElement('button');
+
+      dots.type = 'button';
+      dots.setAttribute('data-blok-database-table-load-limit-menu', '');
+      dots.setAttribute('aria-label', this.t('tools.database.settingsLoadLimit'));
+      dots.setAttribute('aria-haspopup', 'menu');
+      dots.innerHTML = IconDotsHorizontal;
+      line.appendChild(dots);
+    }
+
+    return line;
+  }
+
+  private openLoadLimitMenu(anchor: HTMLElement): void {
+    const setLoadLimit = this.handlers?.setLoadLimit;
+
+    if (setLoadLimit === undefined) {
+      return;
+    }
+    openMenu(anchor, loadLimitItems(this.options.i18n, resolveLoadLimit(this.options.view), setLoadLimit), { kind: 'calc' });
   }
 
   private hasShownCalculation(): boolean {
@@ -1851,6 +1888,13 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       if (section !== null) {
         this.toggleGroup(section);
       }
+
+      return;
+    }
+    const loadLimitMenu = closest('[data-blok-database-table-load-limit-menu]');
+
+    if (loadLimitMenu !== null) {
+      this.openLoadLimitMenu(loadLimitMenu);
 
       return;
     }

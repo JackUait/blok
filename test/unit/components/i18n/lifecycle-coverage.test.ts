@@ -295,7 +295,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2215 + 146 + 578 + 9 closure for all 2948 keys', () => {
+  it('rebuilds a disjoint 2218 + 146 + 576 + 9 closure for all 2949 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -309,7 +309,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2948);
+    expect(lifecycle.size).toBe(2949);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -565,7 +565,8 @@ describe('current English catalog lifecycle coverage', () => {
       // previewRows and their One forms are gone.
       // +20: the type menu's "?" on every other type Round 27 read (tools.database.propertyTypeHelp*).
       // +1: ID's "?" (tools.database.propertyTypeHelpUniqueId), read in Round 28.
-      'executable-literal': 2215,
+      // +3: the table's Load more ⋯ calls tableShowOnFirstLoad (new), settingsLoadLimit and settingsLoadLimitPages by literal.
+      'executable-literal': 2218,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -674,7 +675,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -1: tools.database.sortCount (see executable-literal).
       // +12: the file card's counts (tools.file.cardPages, cardLines, cardSheets, cardSlides, cardFiles, cardRows, each _one/_other);
       // the file tool picks the base key from a map, so no call names one by literal.
-      'registered-namespace-compatible': 578,
+      // -2: settingsLoadLimit and settingsLoadLimitPages are now called by literal (see executable-literal).
+      'registered-namespace-compatible': 576,
       // +1: Settings › Group's pin button names itself with groupPin through the panel's tools.database. prefix.
       // +1: tools.database.galleryFitImage, above. +1: tools.database.timelineEndBy, above.
       'catalog-only': 9,

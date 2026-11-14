@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "نیا صفحہ",
   "tools.database.tableNewProperty": "پراپرٹی",
   "tools.database.tableLoadMore": "مزید لوڈ کریں",
+  "tools.database.tableShowOnFirstLoad": "پہلے لوڈ پر دکھائیں",
   "tools.database.tableEditFilters": "فلٹرز میں ترمیم کریں",
   "tools.database.tableAddProperty": "پراپرٹی شامل کریں",
   "tools.database.tableOpen": "کھولیں",

@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "نئون صفحو",
   "tools.database.tableNewProperty": "پراپرٽي",
   "tools.database.tableLoadMore": "وڌيڪ لوڊ ڪريو",
+  "tools.database.tableShowOnFirstLoad": "پهرين لوڊ تي ڏيکاريو",
   "tools.database.tableEditFilters": "فلٽر تبديل ڪريو",
   "tools.database.tableAddProperty": "پراپرٽي شامل ڪريو",
   "tools.database.tableOpen": "کوليو",

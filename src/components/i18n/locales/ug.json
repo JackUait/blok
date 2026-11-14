@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "يېڭى بەت",
   "tools.database.tableNewProperty": "خاسلىق",
   "tools.database.tableLoadMore": "تېخىمۇ كۆپ يۈكلەش",
+  "tools.database.tableShowOnFirstLoad": "تۇنجى يۈكلىگەندە كۆرسىتىش",
   "tools.database.tableEditFilters": "سۈزگۈچلەرنى تەھرىرلەش",
   "tools.database.tableAddProperty": "خاسلىق قوشۇش",
   "tools.database.tableOpen": "ئېچىش",

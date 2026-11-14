@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "Nieuwe pagina",
   "tools.database.tableNewProperty": "Eigenschap",
   "tools.database.tableLoadMore": "Meer laden",
+  "tools.database.tableShowOnFirstLoad": "Tonen bij eerste keer laden",
   "tools.database.tableEditFilters": "Filters bewerken",
   "tools.database.tableAddProperty": "Eigenschap toevoegen",
   "tools.database.tableOpen": "Openen",

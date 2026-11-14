@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "አዲስ ገጽ",
   "tools.database.tableNewProperty": "ንብረት",
   "tools.database.tableLoadMore": "ተጨማሪ ጫን",
+  "tools.database.tableShowOnFirstLoad": "በመጀመሪያ ጭነት አሳይ",
   "tools.database.tableEditFilters": "ማጣሪያዎችን አርትዕ",
   "tools.database.tableAddProperty": "ንብረት አክል",
   "tools.database.tableOpen": "ክፈት",

@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "Halaman baru",
   "tools.database.tableNewProperty": "Properti",
   "tools.database.tableLoadMore": "Muat lainnya",
+  "tools.database.tableShowOnFirstLoad": "Tampilkan saat pertama dimuat",
   "tools.database.tableEditFilters": "Edit filter",
   "tools.database.tableAddProperty": "Tambah properti",
   "tools.database.tableOpen": "Buka",

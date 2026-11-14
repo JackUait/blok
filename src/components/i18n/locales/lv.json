@@ -1214,6 +1214,7 @@
   "tools.database.tableNewPage": "Jauna lapa",
   "tools.database.tableNewProperty": "Rekvizīts",
   "tools.database.tableLoadMore": "Ielādēt vairāk",
+  "tools.database.tableShowOnFirstLoad": "Rādīt pirmajā ielādē",
   "tools.database.tableEditFilters": "Rediģēt filtrus",
   "tools.database.tableAddProperty": "Pievienot rekvizītu",
   "tools.database.tableOpen": "Atvērt",

@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "New page",
   "tools.database.tableNewProperty": "Property",
   "tools.database.tableLoadMore": "Load more",
+  "tools.database.tableShowOnFirstLoad": "Show on first load",
   "tools.database.tableEditFilters": "Edit filters",
   "tools.database.tableAddProperty": "Add property",
   "tools.database.tableOpen": "Open",

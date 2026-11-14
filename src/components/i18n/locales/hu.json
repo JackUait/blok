@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "Új oldal",
   "tools.database.tableNewProperty": "Tulajdonság",
   "tools.database.tableLoadMore": "Továbbiak betöltése",
+  "tools.database.tableShowOnFirstLoad": "Megjelenítés az első betöltéskor",
   "tools.database.tableEditFilters": "Szűrők szerkesztése",
   "tools.database.tableAddProperty": "Tulajdonság hozzáadása",
   "tools.database.tableOpen": "Megnyitás",

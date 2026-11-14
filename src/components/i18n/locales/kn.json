@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "ಹೊಸ ಪುಟ",
   "tools.database.tableNewProperty": "ಗುಣಲಕ್ಷಣ",
   "tools.database.tableLoadMore": "ಇನ್ನಷ್ಟು ಲೋಡ್ ಮಾಡಿ",
+  "tools.database.tableShowOnFirstLoad": "ಮೊದಲ ಲೋಡ್‌ನಲ್ಲಿ ತೋರಿಸಿ",
   "tools.database.tableEditFilters": "ಫಿಲ್ಟರ್‌ಗಳನ್ನು ಸಂಪಾದಿಸಿ",
   "tools.database.tableAddProperty": "ಗುಣಲಕ್ಷಣ ಸೇರಿಸಿ",
   "tools.database.tableOpen": "ತೆರೆಯಿರಿ",

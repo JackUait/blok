@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "নতুন পৃষ্ঠা",
   "tools.database.tableNewProperty": "বৈশিষ্ট্য",
   "tools.database.tableLoadMore": "আরও লোড করুন",
+  "tools.database.tableShowOnFirstLoad": "প্রথম লোডে দেখান",
   "tools.database.tableEditFilters": "ফিল্টার সম্পাদনা করুন",
   "tools.database.tableAddProperty": "বৈশিষ্ট্য যোগ করুন",
   "tools.database.tableOpen": "খুলুন",

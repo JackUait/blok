@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "ਨਵਾਂ ਪੰਨਾ",
   "tools.database.tableNewProperty": "ਵਿਸ਼ੇਸ਼ਤਾ",
   "tools.database.tableLoadMore": "ਹੋਰ ਲੋਡ ਕਰੋ",
+  "tools.database.tableShowOnFirstLoad": "ਪਹਿਲੇ ਲੋਡ 'ਤੇ ਦਿਖਾਓ",
   "tools.database.tableEditFilters": "ਫਿਲਟਰ ਸੰਪਾਦਿਤ ਕਰੋ",
   "tools.database.tableAddProperty": "ਵਿਸ਼ੇਸ਼ਤਾ ਜੋੜੋ",
   "tools.database.tableOpen": "ਖੋਲ੍ਹੋ",

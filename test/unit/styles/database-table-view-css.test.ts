@@ -534,4 +534,35 @@ describe('database table frozen edge', () => {
   it('turns the shadow to face the other way in right-to-left text', () => {
     expect(ruleBody('[dir="rtl"] [data-blok-database-table-scroller][data-scrolled] [data-frozen-edge]')).toMatch(/-1px 0 0[\s\S]*-2px 0 0[\s\S]*-3px 0 0/);
   });
+  // notion-motion.md Round 29 §1: a full-width 37px row; the whole row fills 0.024 on hover; ↓ 16, label at +24, ⋯ 24x24 12 after.
+  it('draws Load more as a full-width 37px row that fills as a whole on hover', () => {
+    const line = ruleBody('[data-blok-database-table-load-more-row]');
+    const more = ruleBody('[data-blok-database-table-load-more]');
+    const dots = ruleBody('[data-blok-database-table-load-limit-menu]');
+
+    expect(css.match(/--blok-database-table-load-more-hover-bg:/g)?.length).toBe(3);
+    expect(css).toMatch(/--blok-database-table-load-more-hover-bg:\s*rgba\(55, 53, 47, 0\.024\)/);
+    expect(colors).not.toContain('--blok-database-table-load-more-hover-bg:');
+    expect(line).toMatch(/display:\s*flex/);
+    expect(line).toMatch(/align-self:\s*stretch/);
+    expect(line).toMatch(/min-height:\s*37px/);
+    expect(line).toMatch(/position:\s*relative/);
+    expect(line).toMatch(/transition:\s*background-color 20ms ease-in/);
+    expect(ruleBody('[data-blok-database-table-load-more-row]:hover')).toMatch(/background-color:\s*var\(--blok-database-table-load-more-hover-bg\)/);
+    expect(more).not.toMatch(/align-self:\s*flex-start/);
+    expect(more).toMatch(/gap:\s*var\(--blok-space-2\)/);
+    expect(more).toMatch(/background:\s*transparent/);
+    expect(more).toMatch(/color:\s*var\(--blok-database-table-muted-text\)/);
+    // The whole row is the button: its overlay covers the row, under the ⋯.
+    expect(ruleBody('[data-blok-database-table-load-more]::after')).toMatch(/inset:\s*0/);
+    expect(ruleBody('[data-blok-database-table-load-more] > span')).toMatch(/color:\s*var\(--blok-database-table-gutter-icon\)/);
+    expect(ruleBody('[data-blok-database-table-load-more] svg')).toMatch(/width:\s*16px/);
+    expect(dots).toMatch(/width:\s*24px/);
+    expect(dots).toMatch(/height:\s*24px/);
+    expect(dots).toMatch(/margin-inline-start:\s*var\(--blok-space-3\)/);
+    expect(dots).toMatch(/z-index:\s*1/);
+    expect(dots).toMatch(/color:\s*var\(--blok-database-table-header-icon\)/);
+    expect(ruleBody('[data-blok-database-table-load-limit-menu]:hover')).toMatch(/background-color:\s*var\(--blok-database-table-header-hover-bg\)/);
+    expect(ruleBody('[data-blok-database-table-load-more-row]:hover')).not.toBe('');
+  });
 });

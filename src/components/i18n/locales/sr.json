@@ -1214,6 +1214,7 @@
   "tools.database.tableNewPage": "Нова страница",
   "tools.database.tableNewProperty": "Својство",
   "tools.database.tableLoadMore": "Учитај још",
+  "tools.database.tableShowOnFirstLoad": "Прикажи при првом учитавању",
   "tools.database.tableEditFilters": "Уреди филтере",
   "tools.database.tableAddProperty": "Додај својство",
   "tools.database.tableOpen": "Отвори",

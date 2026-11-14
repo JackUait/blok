@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "އައު ޞަފްޙާ",
   "tools.database.tableNewProperty": "ޕްރޮޕަރޓީ",
   "tools.database.tableLoadMore": "އިތުރަށް ލޯޑްކުރޭ",
+  "tools.database.tableShowOnFirstLoad": "ފުރަތަމަ ލޯޑްކުރާއިރު ދައްކާ",
   "tools.database.tableEditFilters": "ފިލްޓަރުތައް ބަދަލުކުރޭ",
   "tools.database.tableAddProperty": "ޕްރޮޕަރޓީ އިތުރުކުރޭ",
   "tools.database.tableOpen": "ހުޅުވާ",

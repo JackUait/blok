@@ -1214,6 +1214,7 @@
   "tools.database.tableNewPage": "Pagină nouă",
   "tools.database.tableNewProperty": "Proprietate",
   "tools.database.tableLoadMore": "Încarcă mai multe",
+  "tools.database.tableShowOnFirstLoad": "Afișează la prima încărcare",
   "tools.database.tableEditFilters": "Editează filtrele",
   "tools.database.tableAddProperty": "Adaugă proprietate",
   "tools.database.tableOpen": "Deschide",

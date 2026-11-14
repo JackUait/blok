@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "新しいページ",
   "tools.database.tableNewProperty": "プロパティ",
   "tools.database.tableLoadMore": "さらに読み込む",
+  "tools.database.tableShowOnFirstLoad": "初回読み込み時に表示",
   "tools.database.tableEditFilters": "フィルターを編集",
   "tools.database.tableAddProperty": "プロパティを追加",
   "tools.database.tableOpen": "開く",

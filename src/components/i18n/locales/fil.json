@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "Bagong pahina",
   "tools.database.tableNewProperty": "Bagong property",
   "tools.database.tableLoadMore": "Mag-load pa",
+  "tools.database.tableShowOnFirstLoad": "Ipakita sa unang pag-load",
   "tools.database.tableEditFilters": "I-edit ang mga filter",
   "tools.database.tableAddProperty": "Magdagdag ng property",
   "tools.database.tableOpen": "Buksan",

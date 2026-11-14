@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "નવું પૃષ્ઠ",
   "tools.database.tableNewProperty": "ગુણધર્મ",
   "tools.database.tableLoadMore": "વધુ લોડ કરો",
+  "tools.database.tableShowOnFirstLoad": "પ્રથમ લોડ પર બતાવો",
   "tools.database.tableEditFilters": "ફિલ્ટર સંપાદિત કરો",
   "tools.database.tableAddProperty": "ગુણધર્મ ઉમેરો",
   "tools.database.tableOpen": "ખોલો",

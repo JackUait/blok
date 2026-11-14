@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "Ny side",
   "tools.database.tableNewProperty": "Egenskap",
   "tools.database.tableLoadMore": "Last inn flere",
+  "tools.database.tableShowOnFirstLoad": "Vis ved første lasting",
   "tools.database.tableEditFilters": "Rediger filtre",
   "tools.database.tableAddProperty": "Legg til egenskap",
   "tools.database.tableOpen": "Åpne",

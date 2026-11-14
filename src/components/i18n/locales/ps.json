@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "نوې پاڼه",
   "tools.database.tableNewProperty": "ځانګړتیا",
   "tools.database.tableLoadMore": "نور بار کړئ",
+  "tools.database.tableShowOnFirstLoad": "په لومړي بارولو کې ښودل",
   "tools.database.tableEditFilters": "فلټرونه سم کړئ",
   "tools.database.tableAddProperty": "ځانګړتیا اضافه کړئ",
   "tools.database.tableOpen": "خلاص کړئ",

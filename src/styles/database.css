@@ -175,6 +175,8 @@
   --blok-database-table-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-table-calc-value: var(--blok-database-ink-secondary);
   --blok-database-table-gutter-icon: rgb(173, 169, 163);
+  /* notion-motion.md Round 29 §1: the Load more row's hover fill. */
+  --blok-database-table-load-more-hover-bg: rgba(55, 53, 47, 0.024);
   --blok-database-table-control-border: rgba(28, 19, 1, 0.11);
   /* research/22 §3. Dark is unmeasured: the table control border's dark value. */
   --blok-database-cell-link-underline: rgba(28, 19, 1, 0.11);
@@ -565,6 +567,8 @@
     --blok-database-table-muted-text: var(--blok-database-ink-tertiary);
     --blok-database-table-calc-value: rgb(173, 169, 163);
     --blok-database-table-gutter-icon: rgb(125, 122, 117);
+    /* Dark is unmeasured: the header hover fill. */
+    --blok-database-table-load-more-hover-bg: var(--blok-database-table-header-hover-bg);
     --blok-database-table-control-border: rgba(255, 255, 235, 0.1);
     --blok-database-cell-link-underline: rgba(255, 255, 235, 0.1);
     /* research/26 §4a. */
@@ -921,6 +925,8 @@
   --blok-database-table-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-table-calc-value: rgb(173, 169, 163);
   --blok-database-table-gutter-icon: rgb(125, 122, 117);
+  /* Dark is unmeasured: the header hover fill. */
+  --blok-database-table-load-more-hover-bg: var(--blok-database-table-header-hover-bg);
   --blok-database-table-control-border: rgba(255, 255, 235, 0.1);
   --blok-database-cell-link-underline: rgba(255, 255, 235, 0.1);
   /* research/26 §4a. */
@@ -10225,19 +10231,70 @@ textarea[data-blok-database-cell-input] {
   border-inline-end: 1px solid var(--blok-database-table-border);
 }
 
+/* notion-motion.md Round 29 §1: a full-width row as tall as a data row; the whole row fills on hover. */
+[data-blok-database-table-load-more-row] {
+  position: relative;
+  display: flex;
+  align-self: stretch;
+  align-items: center;
+  min-height: 37px;
+  transition: background-color 20ms ease-in;
+}
+
+[data-blok-database-table-load-more-row]:hover {
+  background-color: var(--blok-database-table-load-more-hover-bg);
+}
+
+/* The ↓ at the row's start, the label 24 from it. */
 [data-blok-database-table-load-more] {
-  align-self: flex-start;
-  height: 32px;
-  padding-inline: var(--blok-space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  padding: 0;
   border: none;
-  border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-database-table-header-text);
+  color: var(--blok-database-table-muted-text);
   font-size: 14px;
+  line-height: 20px;
   cursor: pointer;
 }
 
-[data-blok-database-table-load-more]:hover {
+/* Notion's whole row is the button; the ⋯ sits above this overlay. */
+[data-blok-database-table-load-more]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+[data-blok-database-table-load-more] > span {
+  display: inline-flex;
+  color: var(--blok-database-table-gutter-icon);
+}
+
+[data-blok-database-table-load-more] svg,
+[data-blok-database-table-load-limit-menu] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-table-load-limit-menu] {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-inline-start: var(--blok-space-3);
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-table-header-icon);
+  cursor: pointer;
+}
+
+[data-blok-database-table-load-limit-menu]:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 

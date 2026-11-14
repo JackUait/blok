@@ -536,6 +536,43 @@ describe('DatabaseTableView', () => {
       expect(handlers.rerender).toHaveBeenCalled();
     });
 
+    // notion-motion.md Round 29 §1: one full-width row, the ↓ icon and "Load more", then a ⋯ for the load limit.
+    it('draws Load more as a row with the down arrow, the label and a ⋯ that sets the load limit', () => {
+      const many = Array.from({ length: 12 }, (_, i) => row(`r${String(i).padStart(2, '0')}`, `Row ${i}`));
+      const setLoadLimit = vi.fn();
+      const { root, state } = mount({ rows: many, view: tableView({ loadLimit: 10 }), handlers: { ...makeHandlers(), setLoadLimit } });
+      const line = root.querySelector<HTMLElement>('[data-blok-database-table-load-more-row]');
+      const more = line?.querySelector<HTMLElement>('[data-blok-database-table-load-more]');
+      const dots = line?.querySelector<HTMLElement>('[data-blok-database-table-load-limit-menu]');
+
+      expect(more?.textContent?.trim()).toBe('tools.database.tableLoadMore');
+      expect(more?.querySelector('svg')).not.toBeNull();
+      expect(dots?.getAttribute('aria-label')).toBe('tools.database.settingsLoadLimit');
+      expect(more?.contains(dots ?? null)).toBe(false);
+
+      dots?.click();
+      expect(state.loaded.has('')).toBe(false);
+      const heading = document.querySelector('[data-blok-database-load-limit-heading]');
+      const options = [10, 25, 50, 100].map((n) => document.querySelector<HTMLElement>(`[data-blok-item-name="database-load-limit-${n}"]`));
+
+      expect(heading?.textContent).toBe('tools.database.tableShowOnFirstLoad');
+      expect(options.map((item) => item?.textContent?.trim())).toEqual([10, 25, 50, 100].map((n) => `tools.database.settingsLoadLimitPages:${n}`));
+      expect(options[0]?.hasAttribute('data-blok-popover-item-active')).toBe(true);
+      expect(options[0]?.querySelector('[data-blok-testid="popover-item-trailing-icon"] svg')).not.toBeNull();
+      expect(options[1]?.hasAttribute('data-blok-popover-item-active')).toBe(false);
+
+      options[1]?.click();
+      expect(setLoadLimit).toHaveBeenCalledWith(25);
+    });
+
+    it('keeps Load more but leaves out the ⋯ when the view cannot change its load limit', () => {
+      const many = Array.from({ length: 12 }, (_, i) => row(`r${String(i).padStart(2, '0')}`, `Row ${i}`));
+      const { root } = mount({ rows: many, view: tableView({ loadLimit: 10 }) });
+
+      expect(root.querySelector('[data-blok-database-table-load-more]')).not.toBeNull();
+      expect(root.querySelector('[data-blok-database-table-load-limit-menu]')).toBeNull();
+    });
+
     it('shows Edit filters and New page when filters hide every row', () => {
       const { root, handlers } = mount({ rows: [], view: tableView({ filters: [{ propertyId: 'p-amount', operator: 'is_not_empty', value: null }] }) });
       const empty = root.querySelector<HTMLElement>('[data-blok-database-table-empty]');

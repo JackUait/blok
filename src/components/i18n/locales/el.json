@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "Νέα σελίδα",
   "tools.database.tableNewProperty": "Ιδιότητα",
   "tools.database.tableLoadMore": "Φόρτωση περισσότερων",
+  "tools.database.tableShowOnFirstLoad": "Εμφάνιση στην πρώτη φόρτωση",
   "tools.database.tableEditFilters": "Επεξεργασία φίλτρων",
   "tools.database.tableAddProperty": "Προσθήκη ιδιότητας",
   "tools.database.tableOpen": "Άνοιγμα",

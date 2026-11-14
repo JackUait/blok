@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "Faqe e re",
   "tools.database.tableNewProperty": "Veti",
   "tools.database.tableLoadMore": "Ngarko më shumë",
+  "tools.database.tableShowOnFirstLoad": "Shfaq në ngarkimin e parë",
   "tools.database.tableEditFilters": "Ndrysho filtrat",
   "tools.database.tableAddProperty": "Shto veti",
   "tools.database.tableOpen": "Hap",

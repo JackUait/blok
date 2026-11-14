@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "새 페이지",
   "tools.database.tableNewProperty": "속성",
   "tools.database.tableLoadMore": "더 불러오기",
+  "tools.database.tableShowOnFirstLoad": "처음 불러올 때 표시",
   "tools.database.tableEditFilters": "필터 편집",
   "tools.database.tableAddProperty": "속성 추가",
   "tools.database.tableOpen": "열기",

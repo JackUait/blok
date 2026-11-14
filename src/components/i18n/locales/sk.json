@@ -1223,6 +1223,7 @@
   "tools.database.tableNewPage": "Nová stránka",
   "tools.database.tableNewProperty": "Vlastnosť",
   "tools.database.tableLoadMore": "Načítať ďalšie",
+  "tools.database.tableShowOnFirstLoad": "Zobraziť pri prvom načítaní",
   "tools.database.tableEditFilters": "Upraviť filtre",
   "tools.database.tableAddProperty": "Pridať vlastnosť",
   "tools.database.tableOpen": "Otvoriť",

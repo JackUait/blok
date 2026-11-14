@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "Ukurasa mpya",
   "tools.database.tableNewProperty": "Sifa",
   "tools.database.tableLoadMore": "Pakia zaidi",
+  "tools.database.tableShowOnFirstLoad": "Onyesha kwenye upakiaji wa kwanza",
   "tools.database.tableEditFilters": "Hariri vichujio",
   "tools.database.tableAddProperty": "Ongeza sifa",
   "tools.database.tableOpen": "Fungua",

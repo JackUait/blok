@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "ໜ້າໃໝ່",
   "tools.database.tableNewProperty": "ຄຸນສົມບັດ",
   "tools.database.tableLoadMore": "ໂຫຼດເພີ່ມ",
+  "tools.database.tableShowOnFirstLoad": "ສະແດງເມື່ອໂຫຼດຄັ້ງທຳອິດ",
   "tools.database.tableEditFilters": "ແກ້ໄຂຕົວກອງ",
   "tools.database.tableAddProperty": "ເພີ່ມຄຸນສົມບັດ",
   "tools.database.tableOpen": "ເປີດ",

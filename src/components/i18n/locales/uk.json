@@ -1223,6 +1223,7 @@
   "tools.database.tableNewPage": "Нова сторінка",
   "tools.database.tableNewProperty": "Властивість",
   "tools.database.tableLoadMore": "Завантажити ще",
+  "tools.database.tableShowOnFirstLoad": "Показувати під час першого завантаження",
   "tools.database.tableEditFilters": "Редагувати фільтри",
   "tools.database.tableAddProperty": "Додати властивість",
   "tools.database.tableOpen": "Відкрити",

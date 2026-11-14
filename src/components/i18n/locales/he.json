@@ -1214,6 +1214,7 @@
   "tools.database.tableNewPage": "דף חדש",
   "tools.database.tableNewProperty": "מאפיין",
   "tools.database.tableLoadMore": "טען עוד",
+  "tools.database.tableShowOnFirstLoad": "הצגה בטעינה הראשונה",
   "tools.database.tableEditFilters": "ערוך מסננים",
   "tools.database.tableAddProperty": "הוסף מאפיין",
   "tools.database.tableOpen": "פתח",

@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "नयाँ पृष्ठ",
   "tools.database.tableNewProperty": "गुण",
   "tools.database.tableLoadMore": "थप लोड गर्नुहोस्",
+  "tools.database.tableShowOnFirstLoad": "पहिलो लोडमा देखाउनुहोस्",
   "tools.database.tableEditFilters": "फिल्टरहरू सम्पादन गर्नुहोस्",
   "tools.database.tableAddProperty": "गुण थप्नुहोस्",
   "tools.database.tableOpen": "खोल्नुहोस्",

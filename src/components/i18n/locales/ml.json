@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "പുതിയ പേജ്",
   "tools.database.tableNewProperty": "പ്രോപ്പർട്ടി",
   "tools.database.tableLoadMore": "കൂടുതൽ ലോഡ് ചെയ്യുക",
+  "tools.database.tableShowOnFirstLoad": "ആദ്യ ലോഡിൽ കാണിക്കുക",
   "tools.database.tableEditFilters": "ഫിൽട്ടറുകൾ എഡിറ്റ് ചെയ്യുക",
   "tools.database.tableAddProperty": "പ്രോപ്പർട്ടി ചേർക്കുക",
   "tools.database.tableOpen": "തുറക്കുക",

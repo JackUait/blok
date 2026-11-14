@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "புதிய பக்கம்",
   "tools.database.tableNewProperty": "பண்பு",
   "tools.database.tableLoadMore": "மேலும் ஏற்று",
+  "tools.database.tableShowOnFirstLoad": "முதல் ஏற்றத்தில் காட்டு",
   "tools.database.tableEditFilters": "வடிப்பான்களைத் திருத்து",
   "tools.database.tableAddProperty": "பண்பைச் சேர்",
   "tools.database.tableOpen": "திற",

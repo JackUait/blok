@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "پەڕەی نوێ",
   "tools.database.tableNewProperty": "تایبەتمەندی",
   "tools.database.tableLoadMore": "بارکردنی زیاتر",
+  "tools.database.tableShowOnFirstLoad": "پیشاندان لە یەکەم بارکردندا",
   "tools.database.tableEditFilters": "دەستکاریکردنی فلتەرەکان",
   "tools.database.tableAddProperty": "زیادکردنی تایبەتمەندی",
   "tools.database.tableOpen": "کردنەوە",

@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "หน้าใหม่",
   "tools.database.tableNewProperty": "คุณสมบัติ",
   "tools.database.tableLoadMore": "โหลดเพิ่มเติม",
+  "tools.database.tableShowOnFirstLoad": "แสดงเมื่อโหลดครั้งแรก",
   "tools.database.tableEditFilters": "แก้ไขตัวกรอง",
   "tools.database.tableAddProperty": "เพิ่มคุณสมบัติ",
   "tools.database.tableOpen": "เปิด",

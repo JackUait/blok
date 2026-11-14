@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "Yeni sayfa",
   "tools.database.tableNewProperty": "Özellik",
   "tools.database.tableLoadMore": "Daha fazla yükle",
+  "tools.database.tableShowOnFirstLoad": "İlk yüklemede göster",
   "tools.database.tableEditFilters": "Filtreleri düzenle",
   "tools.database.tableAddProperty": "Özellik ekle",
   "tools.database.tableOpen": "Aç",

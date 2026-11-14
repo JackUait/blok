@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "Нова страница",
   "tools.database.tableNewProperty": "Свойство",
   "tools.database.tableLoadMore": "Зареди още",
+  "tools.database.tableShowOnFirstLoad": "Показване при първо зареждане",
   "tools.database.tableEditFilters": "Редактирай филтрите",
   "tools.database.tableAddProperty": "Добави свойство",
   "tools.database.tableOpen": "Отвори",

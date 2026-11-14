@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "صفحه جدید",
   "tools.database.tableNewProperty": "ویژگی",
   "tools.database.tableLoadMore": "بارگیری بیشتر",
+  "tools.database.tableShowOnFirstLoad": "نمایش در اولین بارگیری",
   "tools.database.tableEditFilters": "ویرایش فیلترها",
   "tools.database.tableAddProperty": "افزودن ویژگی",
   "tools.database.tableOpen": "باز کردن",

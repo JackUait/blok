@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "Trang mới",
   "tools.database.tableNewProperty": "Thuộc tính",
   "tools.database.tableLoadMore": "Tải thêm",
+  "tools.database.tableShowOnFirstLoad": "Hiển thị ở lần tải đầu",
   "tools.database.tableEditFilters": "Chỉnh sửa bộ lọc",
   "tools.database.tableAddProperty": "Thêm thuộc tính",
   "tools.database.tableOpen": "Mở",

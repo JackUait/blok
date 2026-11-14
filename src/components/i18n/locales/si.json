@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "නව පිටුව",
   "tools.database.tableNewProperty": "ගුණාංගය",
   "tools.database.tableLoadMore": "තවත් පූරණය කරන්න",
+  "tools.database.tableShowOnFirstLoad": "පළමු පූරණයේදී පෙන්වන්න",
   "tools.database.tableEditFilters": "පෙරහන් සංස්කරණය කරන්න",
   "tools.database.tableAddProperty": "ගුණාංගයක් එක් කරන්න",
   "tools.database.tableOpen": "විවෘත කරන්න",

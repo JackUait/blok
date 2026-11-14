@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "Uusi sivu",
   "tools.database.tableNewProperty": "Ominaisuus",
   "tools.database.tableLoadMore": "Lataa lisää",
+  "tools.database.tableShowOnFirstLoad": "Näytä ensimmäisellä latauksella",
   "tools.database.tableEditFilters": "Muokkaa suodattimia",
   "tools.database.tableAddProperty": "Lisää ominaisuus",
   "tools.database.tableOpen": "Avaa",

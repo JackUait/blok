@@ -1205,6 +1205,7 @@
   "tools.database.tableNewPage": "新增頁面",
   "tools.database.tableNewProperty": "屬性",
   "tools.database.tableLoadMore": "載入更多",
+  "tools.database.tableShowOnFirstLoad": "首次載入時顯示",
   "tools.database.tableEditFilters": "編輯篩選條件",
   "tools.database.tableAddProperty": "新增屬性",
   "tools.database.tableOpen": "開啟",

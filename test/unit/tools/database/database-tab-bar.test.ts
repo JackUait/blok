@@ -481,7 +481,7 @@ describe('DatabaseTabBar', () => {
       document.body.appendChild(el);
       const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
       tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
-      expect(document.querySelector('[data-blok-database-tab-context]')?.getAttribute('data-mock-popover-class')).toBe('blok-database-menu');
+      expect(document.querySelector('[data-blok-database-tab-context]')?.getAttribute('data-mock-popover-class')?.split(' ')).toContain('blok-database-menu');
       el.remove();
     });
 

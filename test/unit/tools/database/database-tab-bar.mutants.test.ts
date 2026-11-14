@@ -21,6 +21,8 @@ interface RecordedPopoverParams {
   width?: string;
   minWidth?: string;
   autoFocusFirstItem?: boolean;
+  class?: string;
+  offset?: number;
 }
 
 interface ContextPopoverProbe {
@@ -702,9 +704,19 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
 
       expect(probe.params.trigger).toBe(tabOf(el, 'v2'));
       expect(probe.params.width).toBe('auto');
-      expect(probe.params.minWidth).toBe('160px');
       expect(probe.params.autoFocusFirstItem).toBe(false);
       expect(probe.shownCount).toBe(1);
+    });
+
+    it('draws the view menu as Notion does: 28-tall rows in a 220-wide box, 4 under the tab (notion-motion.md Round 27 §3)', () => {
+      const { el } = mount(threeViews(), 'v1');
+      const probe = openContextOn(tabOf(el, 'v2'));
+      const classes = probe.params.class?.split(' ') ?? [];
+
+      // header-menu: 28-tall rows, 14px text; column-menu: 20px icon at +8, rules 12 in.
+      expect(classes).toEqual(expect.arrayContaining(['blok-database-header-menu', 'blok-database-column-menu']));
+      expect(probe.params.minWidth).toBe('220px');
+      expect(probe.params.offset).toBe(4);
     });
 
     it('routes duplicate and delete to the tab that was right-clicked', () => {

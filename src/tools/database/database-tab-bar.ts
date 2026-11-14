@@ -1,6 +1,7 @@
 import { IconChevronDown, IconViewBoard, IconChart, IconGallery, IconListBulleted, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconForm, IconViewTimeline, IconViewDashboard, IconLink, IconDotsHorizontal, IconPageLayout, IconEyeSlash, IconExpandDiagonal } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
 import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
+import { DATABASE_HEADER_MENU_CLASS } from './database-table-menus';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { OverflowList } from '../../components/utils/overflow-list';
@@ -570,17 +571,23 @@ export class DatabaseTabBar {
       .filter((group) => group.length > 0)
       .flatMap((group, index) => index === 0 ? group : [{ type: PopoverItemType.Separator as const }, ...group]);
 
-    this.showMenu(trigger, items);
+    // notion-motion.md Round 27 §3: 220 wide, rows 28 at pitch 29, 20px icon at +8, rules 12 in, 4 under the tab.
+    this.showMenu(trigger, items, { class: `${DATABASE_HEADER_MENU_CLASS} blok-database-column-menu`, minWidth: '220px', offset: 4 });
   }
 
-  private showMenu(trigger: HTMLElement, items: PopoverItemParams[]): void {
+  private showMenu(
+    trigger: HTMLElement,
+    items: PopoverItemParams[],
+    look: { class: string; minWidth: string; offset?: number } = { class: DATABASE_MENU_CLASS, minWidth: '160px' }
+  ): void {
     this.closeContextPopover();
     this.contextPopover = new PopoverDesktop({
-      class: DATABASE_MENU_CLASS,
+      class: look.class,
       animateClose: true,
       trigger,
       width: 'auto',
-      minWidth: '160px',
+      minWidth: look.minWidth,
+      ...(look.offset === undefined ? {} : { offset: look.offset }),
       autoFocusFirstItem: false,
       items,
     });

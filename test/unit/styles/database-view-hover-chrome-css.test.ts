@@ -175,7 +175,8 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(gap).toContain('inset-block-start: -24px');
     expect(add).toContain('inline-size: 32px');
     expect(add).toContain('block-size: 32px');
-    expect(add).toContain('border-radius: 50% 50% var(--blok-radius-checkbox) 50%');
+    expect(add).toContain('border-radius: 50%');
+    expect(add).toContain('border-bottom-right-radius: var(--blok-radius-checkbox)');
     expect(add).toContain('rotate: 45deg');
     expect(add).toContain('opacity: 0');
     expect(add).toContain('transition: opacity 0.2s');
@@ -197,6 +198,12 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(icon).toContain('border-radius: var(--blok-radius-control-sm)');
     expect(icon).toContain('border: 1px solid var(--blok-database-form-type-frame)');
     expect(tokenValues('--blok-database-form-type-frame')[0]).toBe('rgba(84, 72, 49, 0.15)');
+  });
+
+  // The view box clips; the "+" sits left of the column, so the form bleeds into the gutter as the table does.
+  it('the view box bleeds into the gutter for a form, so the "+" is not clipped', () => {
+    expect(ruleBody('[data-blok-database-board-container]:has(> [data-blok-database-table], > [data-blok-database-list], > [data-blok-database-form])'))
+      .toContain('padding-inline-start');
   });
 
   it('a card does not light up while the pointer is on the "+" above it', () => {

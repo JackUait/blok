@@ -99,7 +99,7 @@ const THEMES = [
     // research/26 §4d.
     chipHover: 'rgb(56, 56, 54)',
     questionBg: 'rgb(255, 255, 255)',
-    questionRing: 'rgb(182, 212, 243) 0px 0px 0px 0.5px inset',
+    questionRing: 'rgb(182, 212, 243) 0px 0px 0px 0px, rgb(182, 212, 243) 0px 0px 0px 0.5px inset',
     // research/21 §1k.
     answerBorder: 'rgb(240, 239, 237)',
   },
@@ -113,7 +113,7 @@ const THEMES = [
     chipBorder: 'rgb(25, 25, 25)',
     chipHover: 'rgb(230, 229, 227)',
     questionBg: 'rgb(25, 25, 25)',
-    questionRing: 'rgb(53, 95, 139) 0px 0px 0px 0.5px inset',
+    questionRing: 'rgb(53, 95, 139) 0px 0px 0px 0px, rgb(53, 95, 139) 0px 0px 0px 0.5px inset',
     // research/21 §1k.
     answerBorder: 'rgb(44, 44, 43)',
   },
@@ -216,7 +216,7 @@ for (const theme of THEMES) {
 
       await expect(question).toHaveCSS('background-color', theme.questionBg);
       await expect(question).toHaveCSS('box-shadow', theme.questionRing);
-      await expect(question.getByRole('textbox').first()).toHaveCSS('border-top-color', theme.answerBorder);
+      await expect(question.getByRole('textbox', { name: 'Name', exact: true })).toHaveCSS('border-top-color', theme.answerBorder);
       await expect(question).toHaveCSS('border-top-left-radius', '12px');
       await expect(question).toHaveCSS('padding-top', '12px');
       await expect(chip).toHaveAccessibleName('Edit question');

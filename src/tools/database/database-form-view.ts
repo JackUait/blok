@@ -105,6 +105,8 @@ export class DatabaseFormView implements DatabaseViewRenderer {
   private panel: DatabasePanel | null = null;
   private editor: CellEditorHandle | null = null;
   private building = false;
+  /** A press inside the form: a redraw before its click would take the clicked control away. */
+  private pressing = false;
   private destroying = false;
 
   constructor(private readonly options: DatabaseFormViewOptions) {
@@ -114,7 +116,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
   get interacting(): boolean {
     const active = document.activeElement;
 
-    return this.building || this.panel !== null || this.editor?.isOpen === true
+    return this.building || this.pressing || this.panel !== null || this.editor?.isOpen === true
       || (active?.matches('[data-blok-database-form-question-name], input[data-blok-database-form-header-title], input[data-blok-database-form-header-description]') === true
         && this.root?.contains(active) === true);
   }
@@ -187,6 +189,12 @@ export class DatabaseFormView implements DatabaseViewRenderer {
 
     root.setAttribute('data-blok-database-form', '');
     root.setAttribute('data-blok-keyboard-owner', '');
+    root.addEventListener('pointerdown', () => {
+      this.pressing = true;
+      document.addEventListener('pointerup', () => setTimeout(() => {
+        this.pressing = false;
+      }), { once: true, capture: true });
+    }, true);
     this.root = root;
     this.fill(root);
 
@@ -266,6 +274,26 @@ export class DatabaseFormView implements DatabaseViewRenderer {
   }
 
   /**
+   * A write from a box in the form. Chrome fires "change" after the box lost
+   * focus, so the redraw must wait for the next control to settle.
+   */
+  private write(save: () => void): void {
+    this.building = true;
+    try {
+      save();
+    } finally {
+      this.building = false;
+    }
+  }
+
+  /** Ends a header or name edit, unless focus moves on inside the form: a redraw then would drop that control. */
+  private endEdit(event: FocusEvent): void {
+    if (this.destroying) return;
+    if (event.relatedTarget instanceof Node && this.root?.contains(event.relatedTarget) === true) return;
+    this.options.onInteractionEnd?.();
+  }
+
+  /**
    * The form's title and description (notion-motion.md Round 31 §1), kept in
    * the view's form settings beside its other texts. The builder edits them;
    * a respondent reads them, and sees nothing when both are unset.
@@ -310,16 +338,14 @@ export class DatabaseFormView implements DatabaseViewRenderer {
 
         if (value === state.saved) return;
         state.saved = value;
-        share.update({ [part]: value === '' ? undefined : value });
+        this.write(() => share.update({ [part]: value === '' ? undefined : value }));
       });
       input.addEventListener('keydown', (event) => {
         if (event.key !== 'Enter' || event.isComposing) return;
         event.preventDefault();
         input.blur();
       });
-      input.addEventListener('focusout', () => {
-        if (!this.destroying) this.options.onInteractionEnd?.();
-      });
+      input.addEventListener('focusout', (event) => this.endEdit(event));
 
       return input;
     };
@@ -751,11 +777,11 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       if (name === state.saved || isTaken(name)) return;
       state.saved = name;
       if (!synced) {
-        this.options.setQuestionSetting?.(state.property.id, { questionName: name });
+        this.write(() => this.options.setQuestionSetting?.(state.property.id, { questionName: name }));
 
         return;
       }
-      this.options.renameProperty?.(state.property.id, name);
+      this.write(() => this.options.renameProperty?.(state.property.id, name));
       state.property = { ...state.property, name };
     };
 
@@ -778,9 +804,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       commit();
       input.blur();
     });
-    input.addEventListener('focusout', () => {
-      if (!this.destroying) this.options.onInteractionEnd?.();
-    });
+    input.addEventListener('focusout', (event) => this.endEdit(event));
 
     return { input, error: taken.element };
   }

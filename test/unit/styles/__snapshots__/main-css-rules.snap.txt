@@ -12616,7 +12616,7 @@ textarea[data-blok-database-cell-input] {
   padding-block-end: var(--blok-space-3);
 }
 
-[data-blok-database-board-container]:has(> [data-blok-database-table], > [data-blok-database-list]) {
+[data-blok-database-board-container]:has(> [data-blok-database-table], > [data-blok-database-list], > [data-blok-database-form]) {
   margin-inline-start: calc(-1 * max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))));
   padding-inline-start: max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)));
 }
@@ -20921,7 +20921,8 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   block-size: 32px;
   padding: 0;
   border: none;
-  border-radius: 50% 50% var(--blok-radius-checkbox) 50%;
+  border-radius: 50%;
+  border-bottom-right-radius: var(--blok-radius-checkbox);
   rotate: 45deg;
   background: var(--blok-database-hover-bg);
   color: var(--blok-block-control);

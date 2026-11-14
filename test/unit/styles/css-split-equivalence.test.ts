@@ -1698,7 +1698,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Net database.css growth against origin/main.
     const DATABASE_R45_BYTES = 432;
     // Lane r44: Round 31 form builder: header, in-card question name, card hover ring, gap "+", slot, Select type rows. Net database.css growth against origin/main.
-    const DATABASE_R44_BYTES = 4064;
+    const DATABASE_R44_BYTES = 4148;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

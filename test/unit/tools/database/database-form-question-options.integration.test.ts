@@ -119,6 +119,66 @@ describe('form "+" between cards (notion-motion.md Round 31 §1)', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     await vi.waitFor(() => expect(q(byTestId('database-form-question-settings'))).toBeNull());
     (editor as unknown as { history: { undo: () => void } }).history.undo();
+    await vi.waitFor(async () => {
+      const undone = (await editor?.save())?.blocks.find((block) => block.id === 'db')?.data as DatabaseData | undefined;
+
+      expect(undone?.schema.map((property) => property.id)).toEqual(['title', 'email', 'notes']);
+    });
     await vi.waitFor(() => expect(questionIds()).toEqual(['title', 'email', 'notes']));
+  });
+});
+
+describe('form header and name edits keep focus (notion-motion.md Round 31 §1)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+  });
+
+  afterEach(() => {
+    editor?.destroy();
+    editor = undefined;
+    holder?.remove();
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  it('a saved title does not redraw the form under the next box; leaving the form does', async () => {
+    await mount();
+    const title = q<HTMLInputElement>('input[data-blok-database-form-header-title]');
+    const description = q<HTMLInputElement>('input[data-blok-database-form-header-description]');
+
+    if (title === null || description === null) throw new Error('no header');
+    // Chrome's order on Tab: the box blurs, then "change" fires, then the next box takes focus.
+    title.focus();
+    title.value = 'Signup';
+    title.blur();
+    title.dispatchEvent(new Event('change', { bubbles: true }));
+    description.focus();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(description.isConnected).toBe(true);
+    expect(description).toHaveFocus();
+    description.blur();
+    await vi.waitFor(() => expect(description.isConnected).toBe(false));
+    expect(q<HTMLInputElement>('input[data-blok-database-form-header-title]')?.value).toBe('Signup');
+  });
+
+  it('a rename then a click on that card\'s ⋯ opens Question options: no redraw takes the ⋯ away first', async () => {
+    await mount();
+    const name = q<HTMLInputElement>(`[data-blok-database-form-question="notes"] ${byTestId('database-form-question-name')}`);
+    const menu = q(`[data-blok-database-form-question="notes"] ${byTestId('database-form-question-menu')}`);
+
+    if (name === null || menu === null) throw new Error('no card');
+    name.focus();
+    name.value = 'Details';
+    menu.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    name.blur();
+    name.dispatchEvent(new Event('change', { bubbles: true }));
+    document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    expect(menu.isConnected).toBe(true);
+    menu.click();
+
+    expect(q(byTestId('database-form-question-settings'))).not.toBeNull();
   });
 });

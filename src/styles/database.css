@@ -9199,8 +9199,8 @@ textarea[data-blok-database-cell-input] {
 }
 
 /* It clips too (overflow set inline), so it bleeds the same way. The list's
-   narrower gutter fits in the table's. */
-[data-blok-database-board-container]:has(> [data-blok-database-table], > [data-blok-database-list]) {
+   narrower gutter fits in the table's, and so does the form's gap "+". */
+[data-blok-database-board-container]:has(> [data-blok-database-table], > [data-blok-database-list], > [data-blok-database-form]) {
   margin-inline-start: calc(-1 * max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))));
   padding-inline-start: max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)));
 }
@@ -18293,7 +18293,8 @@ button[data-blok-database-feed-reaction]:hover,
   padding: 0;
   border: none;
   /* Notion's 100% 100% 6px on a 32 box: the browser halves every corner, so 16 16 3 16. */
-  border-radius: 50% 50% var(--blok-radius-checkbox) 50%;
+  border-radius: 50%;
+  border-bottom-right-radius: var(--blok-radius-checkbox);
   rotate: 45deg;
   background: var(--blok-database-hover-bg);
   color: var(--blok-block-control);

@@ -5460,7 +5460,7 @@ export class DatabaseTool implements BlockTool {
         },
         respondent: () => this.respondent(),
         responseActions: () => this.formResponseActions(this.submittedForms.get(viewId)),
-        onSubmit: (values) => this.submitForm(viewId, values),
+        onSubmit: (values) => this.submitForm(viewId, values) !== undefined,
         ...(this.readOnly || this.structureLocked() ? {} : {
           share: {
             ...(this.config.forms === undefined ? {} : {

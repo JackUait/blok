@@ -457,6 +457,28 @@ describe('DatabaseFormView in-card question name', () => {
     expect(formView.interacting).toBe(false);
     expect(onInteractionEnd).toHaveBeenCalled();
   });
+
+  // A redraw on the way to the next control would drop that control: Tab, or a click on ⋯ or "+".
+  it('moving focus on to another control of the form does not end the edit yet', () => {
+    const onInteractionEnd = vi.fn();
+    const formView = new DatabaseFormView({
+      i18n: { t: (key: string) => key }, view: view(), schema, readOnly: false, onSubmit: vi.fn(),
+      setQuestionSetting: vi.fn(), renameProperty: vi.fn(), onInteractionEnd,
+      share: { settings: () => ({}), update: vi.fn(), copyLink: vi.fn() },
+    });
+    const root = formView.createView();
+
+    document.body.appendChild(root);
+    const title = root.querySelector<HTMLInputElement>('[data-blok-database-form-header-title]');
+    const description = root.querySelector<HTMLInputElement>('[data-blok-database-form-header-description]');
+    const menu = question(root, 'email')?.querySelector<HTMLButtonElement>('[data-blok-testid="database-form-question-menu"]');
+
+    title?.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: description }));
+    nameOf(root, 'email')?.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: menu }));
+    expect(onInteractionEnd).not.toHaveBeenCalled();
+    description?.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }));
+    expect(onInteractionEnd).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('DatabaseFormView question chip name', () => {

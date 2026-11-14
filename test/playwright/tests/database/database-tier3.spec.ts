@@ -144,6 +144,12 @@ const savedRows = async (page: Page): Promise<Array<{ id: string; properties: Re
 });
 
 const question = (page: Page, propertyId: string): Locator => page.locator(`[data-blok-database-form-question="${propertyId}"]`);
+const previewQuestion = (preview: Locator, propertyId: string): Locator => preview.locator(`[data-blok-database-form-question="${propertyId}"]`);
+const openPreview = async (page: Page): Promise<Locator> => {
+  await page.getByRole('button', { name: 'Preview' }).click();
+
+  return page.getByRole('dialog', { name: 'Preview' });
+};
 const cell = (page: Page, rowId: string, propertyId: string): Locator =>
   page.locator(`[data-blok-database-table-row][data-row-id="${rowId}"] [role="gridcell"][data-property-id="${propertyId}"]`);
 
@@ -156,15 +162,19 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('form view', () => {
-  test('a submit adds the answers as a page and hands them to the host', async ({ page }) => {
+  // notion-motion.md Round 31 §1: the builder has no Submit; the Preview answers.
+  test('a submit in the Preview adds the answers as a page and hands them to the host', async ({ page }) => {
     await mount(page, blocks({ type: 'form' }), 'forms');
 
-    await question(page, 'p-title').getByRole('textbox').fill('Ada');
-    await question(page, 'p-email').getByRole('textbox').fill('ada@example.com');
-    await question(page, 'p-where').getByRole('textbox').fill('1 Main St');
-    await page.getByRole('button', { name: 'Submit' }).click();
+    await expect(page.getByRole('button', { name: 'Submit' })).toHaveCount(0);
+    const preview = await openPreview(page);
 
-    await expect(page.locator('[data-blok-database-form-confirmation]')).toBeVisible();
+    await previewQuestion(preview, 'p-title').getByRole('textbox').fill('Ada');
+    await previewQuestion(preview, 'p-email').getByRole('textbox').fill('ada@example.com');
+    await previewQuestion(preview, 'p-where').getByRole('textbox').fill('1 Main St');
+    await preview.getByRole('button', { name: 'Submit' }).click();
+
+    await expect(preview.locator('[data-blok-database-form-confirmation]')).toBeVisible();
     const rows = await savedRows(page);
     const added = rows.find((row) => row.properties['p-title'] === 'Ada');
 
@@ -180,13 +190,102 @@ test.describe('form view', () => {
   test('a required question left empty blocks the submit', async ({ page }) => {
     await mount(page, blocks({ type: 'form', properties: [{ id: 'p-email', visible: true, required: true }] }), 'forms');
 
-    await question(page, 'p-title').getByRole('textbox').fill('Ada');
-    await page.getByRole('button', { name: 'Submit' }).click();
+    const preview = await openPreview(page);
 
-    await expect(question(page, 'p-email')).toHaveAttribute('data-invalid', '');
-    await expect(question(page, 'p-email').getByRole('textbox')).toBeFocused();
+    await previewQuestion(preview, 'p-title').getByRole('textbox').fill('Ada');
+    await preview.getByRole('button', { name: 'Submit' }).click();
+
+    await expect(previewQuestion(preview, 'p-email')).toHaveAttribute('data-invalid', '');
+    await expect(previewQuestion(preview, 'p-email').getByRole('textbox')).toBeFocused();
     expect(await savedRows(page)).toHaveLength(1);
     expect(await page.evaluate(() => window.tier3Log)).toEqual([]);
+  });
+});
+
+// notion-motion.md Round 31 §1: the builder's geometry and its focus flows, in a real browser.
+test.describe('form builder, Round 31', () => {
+  test('cards are 600 wide and 24 apart, the name is 24/700/30 and the title 40/700/48', async ({ page }) => {
+    await mount(page, blocks({ type: 'form' }), 'forms');
+    const first = await question(page, 'p-title').boundingBox();
+    const second = await question(page, 'p-email').boundingBox();
+
+    expect(first?.width).toBe(600);
+    expect(Math.round((second?.y ?? 0) - ((first?.y ?? 0) + (first?.height ?? 0)))).toBe(24);
+    const name = question(page, 'p-email').getByTestId('database-form-question-name');
+
+    await expect(name).toHaveCSS('font-size', '24px');
+    await expect(name).toHaveCSS('font-weight', '700');
+    await expect(name).toHaveCSS('line-height', '30px');
+    const title = page.locator('input[data-blok-database-form-header-title]');
+
+    await expect(title).toHaveAttribute('placeholder', 'Form title');
+    await expect(title).toHaveCSS('font-size', '40px');
+    await expect(title).toHaveCSS('line-height', '48px');
+    await expect(page.locator('input[data-blok-database-form-header-description]')).toHaveCSS('font-size', '16px');
+  });
+
+  test('hover grows the ring to 1.25px over 0.3s; the gap "+" sits 8 left of the card, centred on the gap', async ({ page }) => {
+    await mount(page, blocks({ type: 'form' }), 'forms');
+    const card = question(page, 'p-email');
+
+    await card.hover();
+    await page.waitForTimeout(400);
+    await expect(card).toHaveCSS('box-shadow', /1\.25px, .* 0px 0px 0px 1\.25px inset/);
+    const gap = card.locator('[data-blok-database-form-gap]');
+
+    await gap.hover({ position: { x: 60, y: 12 } });
+    const add = card.getByTestId('database-form-insert-question');
+
+    await expect(add).toHaveCSS('opacity', '1');
+    const box = await card.boundingBox();
+    const prev = await question(page, 'p-title').boundingBox();
+    const plus = await add.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+
+      return { cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+    });
+
+    // A 32 box turned 45° spans 32√2; its centre is 16 + 8 left of the card.
+    expect(Math.round((box?.x ?? 0) - plus.cx)).toBe(24);
+    expect(Math.round(plus.cy - ((prev?.y ?? 0) + (prev?.height ?? 0) + 12))).toBe(0);
+    await add.click();
+    await expect(page.locator('[data-blok-database-form-slot]')).toHaveCSS('height', '36px');
+    const row = page.getByTestId('database-form-new-text');
+
+    // The panel scales in as it opens: read the sizes once it has settled.
+    await expect.poll(async () => (await row.boundingBox())?.height).toBe(44);
+    expect((await row.locator('[data-blok-database-panel-icon]').boundingBox())?.width).toBe(32);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-blok-database-form-slot]')).toHaveCount(0);
+  });
+
+  test('Tab from the title into the description keeps focus there, and both are saved', async ({ page }) => {
+    await mount(page, blocks({ type: 'form' }), 'forms');
+    const title = page.locator('input[data-blok-database-form-header-title]');
+
+    await title.click();
+    await page.keyboard.type('Signup');
+    await page.keyboard.press('Tab');
+    await expect(page.locator('input[data-blok-database-form-header-description]')).toBeFocused();
+    await page.keyboard.type('Tell us');
+    await page.keyboard.press('Enter');
+    const form = await page.evaluate(async () => {
+      const saved = await window.blokInstance?.save();
+
+      return (saved?.blocks.find((block) => block.id === 'db-1')?.data as { views: Array<{ form?: unknown }> }).views[0].form;
+    });
+
+    expect(form).toMatchObject({ title: 'Signup', description: 'Tell us' });
+  });
+
+  test('a rename in the card, then a click on its ⋯, opens Question options at once', async ({ page }) => {
+    await mount(page, blocks({ type: 'form' }), 'forms');
+    const name = question(page, 'p-email').getByTestId('database-form-question-name');
+
+    await name.fill('Work email');
+    await question(page, 'p-email').getByTestId('database-form-question-menu').click();
+    await expect(page.getByTestId('database-form-question-settings')).toBeVisible();
+    await expect(page.getByTestId('database-form-question-settings')).toContainText('Question options');
   });
 });
 
@@ -208,10 +307,11 @@ test.describe('form view, research/23 §6', () => {
 
   test('an anonymous answer is a row with no author, and the thank-you screen opens it and emails a copy', async ({ page }) => {
     await mount(page, anonymous(), 'forms', { user: 'u-ada' });
+    const preview = await openPreview(page);
 
-    await question(page, 'p-title').getByRole('textbox').fill('FormResp1');
-    await page.getByRole('button', { name: 'Submit' }).click();
-    await page.getByRole('button', { name: 'Email me a copy' }).click();
+    await previewQuestion(preview, 'p-title').getByRole('textbox').fill('FormResp1');
+    await preview.getByRole('button', { name: 'Submit' }).click();
+    await preview.getByRole('button', { name: 'Email me a copy' }).click();
 
     const log = await page.evaluate(() => window.tier3Log);
 
@@ -225,7 +325,7 @@ test.describe('form view, research/23 §6', () => {
     expect(added?.createdBy).toBeUndefined();
     expect(added?.data).toMatchObject({ anonymous: true });
 
-    await page.getByRole('button', { name: 'View my response' }).click();
+    await preview.getByRole('button', { name: 'View my response' }).click();
     await expect(page.locator('[data-blok-database-drawer] [data-blok-database-drawer-title]')).toHaveValue('FormResp1');
   });
 });
@@ -321,7 +421,8 @@ test.describe('form view, research/19 §3', () => {
     await page.keyboard.press('Escape');
 
     await expect(page.getByText('Only members at Personal can fill out this form.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Submit' })).toBeVisible();
+    await expect(page.locator('[data-blok-database-form-closed]')).toHaveCount(0);
+    await expect(question(page, 'p-title')).toBeVisible();
   });
 });
 

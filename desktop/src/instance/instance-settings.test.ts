@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {must, requestBody} from '../test-helpers';
 import { rememberWorkspace, workspaceKey, type RemoteWorkspace } from '../workspace-registry';
 import { createDesktopFooter } from '../settings';
 
@@ -34,7 +35,7 @@ function stubSession(instanceAdmin: boolean): ReturnType<typeof vi.fn> {
       return response(settingsPayload);
     }
     if (path.endsWith('/api/admin/settings') && init?.method === 'PATCH') {
-      const body = JSON.parse(String(init.body ?? '{}')) as Record<string, unknown>;
+      const body = JSON.parse(requestBody(init)) as Record<string, unknown>;
       return response({ ...settingsPayload, ...body });
     }
     if (path.includes('/api/admin/users')) {
@@ -68,10 +69,10 @@ function openRemoteSettings(instanceAdmin: boolean): { footer: HTMLElement; dial
   localStorage.setItem('blok:desktop:active-workspace:v1', workspaceKey(ref));
   const footer = createDesktopFooter(() => undefined);
   document.body.append(footer);
-  footer.querySelector<HTMLButtonElement>('[data-desktop-switcher]')!.click();
-  [...footer.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
-    .find((node) => node.textContent === 'Paramètres')!.click();
-  const dialog = document.querySelector<HTMLElement>('[data-desktop-settings-dialog]')!;
+  must(footer.querySelector<HTMLButtonElement>('[data-desktop-switcher]')).click();
+  must([...footer.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
+    .find((node) => node.textContent === 'Paramètres')).click();
+  const dialog = must(document.querySelector<HTMLElement>('[data-desktop-settings-dialog]'));
   return { footer, dialog, fetch };
 }
 
@@ -122,33 +123,33 @@ describe('instance access and health panels', () => {
   it('saves signupPolicy immediately via PATCH and reverts on failure', async () => {
     const { dialog, fetch } = openRemoteSettings(true);
     await vi.waitFor(() => expect(dialog.textContent).toContain('Accès'));
-    [...dialog.querySelectorAll<HTMLButtonElement>('[data-desktop-settings-nav-item]')]
-      .find((node) => node.textContent === 'Accès')!.click();
+    must([...dialog.querySelectorAll<HTMLButtonElement>('[data-desktop-settings-nav-item]')]
+      .find((node) => node.textContent === 'Accès')).click();
     await vi.waitFor(() => expect(dialog.querySelector('[data-desktop-instance-signup]')).toBeTruthy());
-    const choice = dialog.querySelector<HTMLButtonElement>('[data-desktop-instance-signup]')!;
+    const choice = must(dialog.querySelector<HTMLButtonElement>('[data-desktop-instance-signup]'));
     choice.click();
     await vi.waitFor(() => expect(document.querySelector('[data-blok-item-name=open]')).toBeTruthy());
-    document.querySelector<HTMLElement>('[data-blok-item-name=open]')!.click();
+    must(document.querySelector<HTMLElement>('[data-blok-item-name=open]')).click();
     await vi.waitFor(() => {
       const patch = fetch.mock.calls.find(([url, init]) => String(url).endsWith('/api/admin/settings') && (init as RequestInit | undefined)?.method === 'PATCH');
       expect(patch).toBeTruthy();
-      expect(JSON.parse(String((patch![1] as RequestInit).body))).toEqual({ signupPolicy: 'open' });
+      expect(JSON.parse(requestBody(must(patch)[1]))).toEqual({ signupPolicy: 'open' });
     });
   });
 
   it('sends a test email through POST /api/admin/email-test', async () => {
     const { dialog, fetch } = openRemoteSettings(true);
     await vi.waitFor(() => expect(dialog.textContent).toContain('Santé et e-mail'));
-    [...dialog.querySelectorAll<HTMLButtonElement>('[data-desktop-settings-nav-item]')]
-      .find((node) => node.textContent === 'Santé et e-mail')!.click();
+    must([...dialog.querySelectorAll<HTMLButtonElement>('[data-desktop-settings-nav-item]')]
+      .find((node) => node.textContent === 'Santé et e-mail')).click();
     await vi.waitFor(() => expect(dialog.querySelector('[data-desktop-instance-email-test]')).toBeTruthy());
-    const email = dialog.querySelector<HTMLInputElement>('[data-desktop-instance-email-input]')!;
+    const email = must(dialog.querySelector<HTMLInputElement>('[data-desktop-instance-email-input]'));
     email.value = 'probe@example.org';
-    dialog.querySelector<HTMLButtonElement>('[data-desktop-instance-email-test]')!.click();
+    must(dialog.querySelector<HTMLButtonElement>('[data-desktop-instance-email-test]')).click();
     await vi.waitFor(() => {
       const call = fetch.mock.calls.find(([url, init]) => String(url).endsWith('/api/admin/email-test') && (init as RequestInit | undefined)?.method === 'POST');
       expect(call).toBeTruthy();
-      expect(JSON.parse(String((call![1] as RequestInit).body))).toEqual({ email: 'probe@example.org' });
+      expect(JSON.parse(requestBody(must(call)[1]))).toEqual({ email: 'probe@example.org' });
     });
     await vi.waitFor(() => expect(dialog.textContent).toMatch(/envoyé|développement|réussi/i));
   });

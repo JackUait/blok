@@ -491,6 +491,34 @@ describe('DatabaseTableView', () => {
       expect(cell(root, 'r1', 'p-amount').hasAttribute('data-frozen')).toBe(false);
     });
 
+    // notion-motion.md Round 28 §5: a darker line after the last frozen column, header included.
+    it('marks the last frozen column, header included, as the frozen edge', () => {
+      const view = tableView({ frozenColumnCount: 2, properties: [{ id: 'p-title', visible: true, width: 250 }, { id: 'p-notes', visible: true, width: 100 }] });
+      const { root } = mount({ view });
+      const header = root.querySelector('[role="columnheader"][data-property-id="p-notes"]');
+
+      expect(cell(root, 'r1', 'p-notes').hasAttribute('data-frozen-edge')).toBe(true);
+      expect(header?.hasAttribute('data-frozen-edge')).toBe(true);
+      expect(cell(root, 'r1', 'p-title').hasAttribute('data-frozen-edge')).toBe(false);
+      expect(cell(root, 'r1', 'p-amount').hasAttribute('data-frozen-edge')).toBe(false);
+    });
+
+    // notion-motion.md Round 28 §5: the frozen edge casts a shadow only while the table is scrolled sideways.
+    it('marks the scroller while it is scrolled sideways, and clears it back at the start', () => {
+      const view = tableView({ frozenColumnCount: 1 });
+      const { root } = mount({ view });
+      const scroller = root.querySelector<HTMLElement>('[data-blok-database-table-scroller]');
+
+      if (scroller === null) throw new Error('no scroller');
+      expect(scroller.hasAttribute('data-scrolled')).toBe(false);
+      scroller.scrollLeft = 400;
+      scroller.dispatchEvent(new Event('scroll'));
+      expect(scroller.hasAttribute('data-scrolled')).toBe(true);
+      scroller.scrollLeft = 0;
+      scroller.dispatchEvent(new Event('scroll'));
+      expect(scroller.hasAttribute('data-scrolled')).toBe(false);
+    });
+
     it('right-aligns number cells', () => {
       const { root } = mount();
 

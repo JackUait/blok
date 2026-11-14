@@ -9517,6 +9517,32 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-table-bg);
 }
 
+/* notion-motion.md Round 28 §5: rgb(230,229,227) after the last frozen column, header included.
+   Three attributes, so it beats the vertical-lines rule above. */
+[data-blok-database-table-grid] [data-frozen][data-frozen-edge] {
+  border-inline-end: 1px solid var(--blok-database-table-control-border);
+}
+
+/* Round 28 §5: about 3px of shadow (239, 243, 250 on white) while scrolled. Its motion is unread, so none.
+   Stacked box-shadows, not a pseudo-element: cells clip their overflow. They overlap, so pixel 1 sums all three. */
+[data-blok-database-table-scroller][data-scrolled] [data-frozen-edge] {
+  --blok-database-frozen-shadow: 1px 0 0 color-mix(in srgb, var(--blok-database-table-border) 30%, transparent), 2px 0 0 color-mix(in srgb, var(--blok-database-table-border) 50%, transparent), 3px 0 0 color-mix(in srgb, var(--blok-database-table-border) 30%, transparent);
+  box-shadow: var(--blok-database-frozen-shadow);
+}
+
+[dir="rtl"] [data-blok-database-table-scroller][data-scrolled] [data-frozen-edge] {
+  --blok-database-frozen-shadow: -1px 0 0 color-mix(in srgb, var(--blok-database-table-border) 30%, transparent), -2px 0 0 color-mix(in srgb, var(--blok-database-table-border) 50%, transparent), -3px 0 0 color-mix(in srgb, var(--blok-database-table-border) 30%, transparent);
+}
+
+/* These two keep their own inset lines under the shadow. */
+[data-blok-database-table-scroller][data-scrolled] [data-blok-database-table-column-header][data-frozen-edge] {
+  box-shadow: inset 0 -1px 0 var(--blok-database-table-border), var(--blok-database-frozen-shadow);
+}
+
+[data-blok-database-table-scroller][data-scrolled] [data-blok-database-table-cell-anchor][data-frozen-edge] {
+  box-shadow: inset 0 0 0 2px var(--blok-database-table-cell-ring), var(--blok-database-frozen-shadow);
+}
+
 /* Selection is gray (D3). A cell keeps a ring only on the anchor; the
    rest of a range gets the fill alone (research/08). */
 [data-blok-database-table-cell][aria-selected="true"] {

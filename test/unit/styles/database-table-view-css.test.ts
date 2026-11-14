@@ -504,3 +504,34 @@ describe('database table calculation footer', () => {
     });
   });
 });
+
+// notion-motion.md Round 28 §5: the frozen columns' edge and their scroll shadow.
+describe('database table frozen edge', () => {
+  it('draws a 1px line after the last frozen column in the control border, rgb(230,229,227) on white', () => {
+    const edge = ruleBody('[data-blok-database-table-grid] [data-frozen][data-frozen-edge]');
+
+    expect(edge).toMatch(/border-inline-end:\s*1px solid var\(--blok-database-table-control-border\)/);
+    expect(css).toMatch(/--blok-database-table-control-border:\s*rgba\(28, 19, 1, 0\.11\)/);
+  });
+
+  it('casts a 3px shadow only while the table is scrolled, shown and hidden without motion', () => {
+    const shadow = ruleBody('[data-blok-database-table-scroller][data-scrolled] [data-frozen-edge]');
+    const steps = /--blok-database-frozen-shadow:\s*1px 0 0 [^;]*?30%[^;]*?2px 0 0 [^;]*?50%[^;]*?3px 0 0 [^;]*?30%/;
+
+    expect(ruleBody('[data-blok-database-table-grid] [data-frozen][data-frozen-edge]')).not.toMatch(/box-shadow|transition|animation/);
+    expect(shadow).toMatch(steps);
+    expect(shadow).toMatch(/box-shadow:\s*var\(--blok-database-frozen-shadow\)/);
+    expect(shadow).not.toMatch(/transition|animation/);
+  });
+
+  it('keeps the header line and the anchor ring under the shadow', () => {
+    expect(ruleBody('[data-blok-database-table-scroller][data-scrolled] [data-blok-database-table-column-header][data-frozen-edge]'))
+      .toMatch(/box-shadow:\s*inset 0 -1px 0 var\(--blok-database-table-border\),\s*var\(--blok-database-frozen-shadow\)/);
+    expect(ruleBody('[data-blok-database-table-scroller][data-scrolled] [data-blok-database-table-cell-anchor][data-frozen-edge]'))
+      .toMatch(/box-shadow:\s*inset 0 0 0 2px var\(--blok-database-table-cell-ring\),\s*var\(--blok-database-frozen-shadow\)/);
+  });
+
+  it('turns the shadow to face the other way in right-to-left text', () => {
+    expect(ruleBody('[dir="rtl"] [data-blok-database-table-scroller][data-scrolled] [data-frozen-edge]')).toMatch(/-1px 0 0[\s\S]*-2px 0 0[\s\S]*-3px 0 0/);
+  });
+});

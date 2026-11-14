@@ -230,6 +230,8 @@ interface Column {
   wrap: boolean;
   /** Inline-start offset when frozen. */
   frozenAt?: number;
+  /** The last frozen column: the darker line and the scroll shadow go after it. */
+  frozenEdge?: boolean;
 }
 
 /** notion-motion.md Round 11 "Footer labels": footer labels that differ from the menu item name. A percent takes its count's label. */
@@ -448,7 +450,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     return sized.map((column, index) => {
       const frozenAt = sized.slice(0, index).reduce((sum, c) => sum + c.width, 0);
 
-      return index < frozen ? { ...column, frozenAt } : column;
+      return index < frozen ? { ...column, frozenAt, frozenEdge: index === Math.min(frozen, sized.length) - 1 } : column;
     });
   }
 
@@ -463,6 +465,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     const scroller = document.createElement('div');
 
     scroller.setAttribute('data-blok-database-table-scroller', '');
+    // RTL scrolls to negative values, so any non-zero offset counts.
+    scroller.addEventListener('scroll', () => scroller.toggleAttribute('data-scrolled', scroller.scrollLeft !== 0), { passive: true });
 
     const gridEl = document.createElement('div');
 
@@ -860,6 +864,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       cell.setAttribute('data-frozen', '');
       style.insetInlineStart = `${column.frozenAt}px`;
     }
+    // A blank cell is not sticky: its line and shadow would scroll away.
+    if (column.frozenEdge === true && !cell.hasAttribute('data-blok-database-table-blank-cell')) cell.setAttribute('data-frozen-edge', '');
   }
 
   private createFiller(): HTMLElement {

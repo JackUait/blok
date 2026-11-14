@@ -1679,6 +1679,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Round 27 lane r35: the icon-only OPEN, the selection bar's sizes and the pinned group modal's chip divider.
     // Net database.css growth against origin/main.
     const DATABASE_R35_BYTES = 1670;
+    // Lane r37: the frozen columns' darker edge line and their scroll shadow (measured database.css growth).
+    const DATABASE_R37_BYTES = 1_788;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2191,6 +2193,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R33_BYTES
       + DATABASE_R32_BYTES
       + DATABASE_R35_BYTES
+      + DATABASE_R37_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

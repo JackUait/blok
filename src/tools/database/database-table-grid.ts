@@ -1103,13 +1103,13 @@ export class DatabaseTableGrid {
     switch (event.key) {
       case 'Tab': {
         event.preventDefault();
+        // notion-motion.md Round 29 §3: Shift+Tab on a selected cell does nothing.
         if (event.shiftKey) {
-          this.state.selection = { ...selection, focus: this.offset(selection.focus, 0, -1) };
-        } else {
-          const next = this.offset(selection.anchor, 0, 1);
-
-          this.state.selection = { kind: 'cell', anchor: next, focus: next };
+          return;
         }
+        const next = this.offset(selection.anchor, 0, 1);
+
+        this.state.selection = { kind: 'cell', anchor: next, focus: next };
         this.paint();
 
         return;

@@ -762,7 +762,7 @@ describe('DatabaseTableView', () => {
       expect(handlers.commitCell).toHaveBeenCalledWith('r2', 'p-amount', 42);
     });
 
-    // Shift+Tab is not measured in Notion: it mirrors Tab.
+    // notion-motion.md Round 29 §3: in an editor, Shift+Tab commits and selects the cell to the left.
     it('Shift+Tab in a cell editor saves and selects the cell to the left', () => {
       const { root } = mount();
 
@@ -936,15 +936,18 @@ describe('DatabaseTableView', () => {
       expect(editor()).toBeNull();
     });
 
-    it('Tab moves right; Shift+Tab extends the range left and keeps the anchor', () => {
+    // notion-motion.md Round 29 §3: Shift+Tab on a selected cell is swallowed and the selection stays.
+    it('Tab moves right; Shift+Tab on a selected cell keeps the selection where it is', () => {
       const { root } = mount();
 
       selectCell(root, 'r1', 'p-amount');
       press(grid(root), 'Tab');
       expect(anchorCell(root)).toBe('r1/p-stage');
-      press(grid(root), 'Tab', { shiftKey: true });
+      const event = press(grid(root), 'Tab', { shiftKey: true });
+
+      expect(selectedCells(root)).toEqual(['r1/p-stage']);
       expect(anchorCell(root)).toBe('r1/p-stage');
-      expect(selectedCells(root)).toEqual(['r1/p-amount', 'r1/p-stage']);
+      expect(event.defaultPrevented).toBe(true);
     });
 
     it('Enter opens the editor; Enter in the editor commits and moves down', () => {

@@ -228,13 +228,19 @@ describe('DatabaseTool — map view (research/20 §1)', () => {
     expect(document.querySelector('[data-blok-database-map-no-place]')).toBeNull();
   });
 
-  it('a writable map shows the "No place" chip for rows without a place', async () => {
+  it('a writable map shows the "No place" chip in the toolbar for rows without a place (notion-motion.md Round 31 §2)', async () => {
     const rows = [fakeRow('a', 'db', { title: 'Nowhere' }, 'a0')];
 
     buildTool(makeDoc(rows), { map: { render: vi.fn() } }, dataWith(withPlace, { type: 'map' }));
     await settle();
 
-    expect(document.querySelector('[data-blok-database-map-no-place]')).not.toBeNull();
+    const chip = document.querySelector<HTMLButtonElement>('[data-blok-database-view-toolbar] [data-blok-database-map-no-place]');
+
+    expect(chip?.hidden).toBe(false);
+    expect(chip?.getAttribute('aria-haspopup')).toBe('dialog');
+    expect(document.querySelector('[data-blok-database-map] [data-blok-database-map-no-place]')).toBeNull();
+    chip?.click();
+    expect(document.querySelector('[data-blok-database-map-no-place-search]')).not.toBeNull();
     expect(document.querySelector('[data-blok-database-map-add-pin]')).not.toBeNull();
   });
 });

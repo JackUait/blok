@@ -21,6 +21,7 @@ import { sortFromHeader } from './view-data';
 import type { ViewChanges } from './database-model';
 import { GROUPABLE_TYPES, groupByChange } from './group-keys';
 import type { AutomationSettings } from './database-automations-panel';
+import type { NoDateControl } from './database-no-date';
 import type {
   DatabaseViewConfig,
   DatabaseViewStateStore,
@@ -77,8 +78,8 @@ export interface ViewControlsHost {
   duplicateView: () => void;
   deleteView: () => void;
   copyViewLink: () => void;
-  /** A calendar or timeline's "No date (N)": undefined hides it. */
-  noDate?: () => { count: number; label: string; open: (anchor: HTMLElement) => void } | undefined;
+  /** A calendar or timeline's "No date (N)", or a map's "No place (N)": undefined hides it. */
+  noDate?: () => NoDateControl | undefined;
   /** "Manage in Calendar": only when the host gave `config.calendar`. */
   manageInCalendar?: { label: string; onClick: () => void };
   groups: (sub: boolean) => ViewGroupEntry[];
@@ -158,6 +159,7 @@ export class DatabaseViewControls {
   private readonly personal: PersonalViewEdits;
   private readonly filterButton: HTMLButtonElement;
   private readonly noDateButton: HTMLButtonElement;
+  private noDateAttributes: Readonly<Record<string, string>> = {};
   private readonly minimizeButton: HTMLButtonElement;
   /** « Expand: shown in place of » while the view's toolbar is minimized. */
   private readonly expandButton: HTMLButtonElement;
@@ -430,6 +432,7 @@ export class DatabaseViewControls {
 
     this.noDateButton.hidden = noDate === undefined;
     this.noDateButton.textContent = noDate?.label ?? '';
+    this.syncNoDateAttributes(noDate?.attributes ?? {});
     this.sortButton.hidden = titleOnly;
     this.automationsButton.hidden = titleOnly || this.host.automations === undefined;
     this.automationsButton.disabled = this.host.automations?.writable() !== true;
@@ -448,6 +451,13 @@ export class DatabaseViewControls {
     }
     this.renderFilterBar(view);
     this.panel?.refresh();
+  }
+
+  /** Swaps the attributes the last control put on the "No date" button for this one's. */
+  private syncNoDateAttributes(next: Readonly<Record<string, string>>): void {
+    for (const name of Object.keys(this.noDateAttributes)) this.noDateButton.removeAttribute(name);
+    for (const [name, value] of Object.entries(next)) this.noDateButton.setAttribute(name, value);
+    this.noDateAttributes = next;
   }
 
   /** notion-motion Round 15 A: a dashboard's toolbar is only ⤢ and ⚙. Its widgets filter themselves. */

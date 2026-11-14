@@ -2,6 +2,7 @@ import type { I18n } from '../../../types';
 import { IconCross, IconMap } from '../../components/icons';
 import { onHover } from '../../components/utils/tooltip';
 import { CellPopover } from './cells/cell-popover';
+import type { NoDateControl } from './database-no-date';
 import { drawMapLibreMap } from './database-maplibre';
 import type { MapFailure } from './database-maplibre';
 import type { DatabaseViewRenderer } from './database-view-renderer';
@@ -83,13 +84,7 @@ export class DatabaseMapView implements DatabaseViewRenderer {
     const frame = document.createElement('div');
     const canvas = document.createElement('div');
     const height = MAP_HEIGHT_PX[resolveMapHeight(this.options.view)];
-    // Newest first, not the view's order (research/23 §5c).
-    const unplaced = this.options.rows.filter((row) => !hasPlace(row.properties[placeBy.id]))
-      .sort((a, b) => (b.meta?.createdAt ?? 0) - (a.meta?.createdAt ?? 0));
 
-    if (this.options.writable === true && unplaced.length > 0) {
-      root.appendChild(this.noPlaceChip(unplaced));
-    }
     frame.setAttribute('data-blok-database-map-frame', '');
     canvas.setAttribute('data-blok-database-map-canvas', '');
     canvas.style.height = `${height}px`;
@@ -215,17 +210,26 @@ export class DatabaseMapView implements DatabaseViewRenderer {
     return button;
   }
 
-  /** Measured: a grey chip, a 320-wide list with "Search for a page..." (research/20 §1e). */
-  private noPlaceChip(unplaced: DatabaseRow[]): HTMLButtonElement {
-    const chip = document.createElement('button');
+  /**
+   * The toolbar's "No place (N)", before the filter icon (notion-motion.md Round 31 §2);
+   * its list is 320 wide with "Search for a page..." (research/20 §1e). Undefined hides it.
+   */
+  noPlaceControl(): NoDateControl | undefined {
+    const placeBy = resolveMapBy(this.options.view, this.options.schema);
 
-    chip.type = 'button';
-    chip.setAttribute('data-blok-database-map-no-place', '');
-    chip.setAttribute('aria-haspopup', 'dialog');
-    chip.textContent = this.options.i18n.t('tools.database.mapNoPlaceCount', { count: unplaced.length });
-    chip.addEventListener('click', () => this.openNoPlaceList(chip, unplaced));
+    if (this.options.writable !== true || placeBy === undefined || this.drawer() === undefined) return undefined;
+    // Newest first, not the view's order (research/23 §5c).
+    const unplaced = this.options.rows.filter((row) => !hasPlace(row.properties[placeBy.id]))
+      .sort((a, b) => (b.meta?.createdAt ?? 0) - (a.meta?.createdAt ?? 0));
 
-    return chip;
+    if (unplaced.length === 0) return undefined;
+
+    return {
+      count: unplaced.length,
+      label: this.options.i18n.t('tools.database.mapNoPlaceCount', { count: unplaced.length }),
+      open: (anchor) => this.openNoPlaceList(anchor, unplaced),
+      attributes: { 'data-blok-database-map-no-place': '', 'aria-haspopup': 'dialog' },
+    };
   }
 
   private openNoPlaceList(anchor: HTMLElement, unplaced: DatabaseRow[], query = ''): void {

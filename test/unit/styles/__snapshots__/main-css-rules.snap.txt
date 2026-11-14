@@ -21212,20 +21212,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   block-size: 16px;
 }
 
-[data-blok-database-map-no-place] {
-  display: inline-flex;
-  align-items: center;
-  margin-block-end: var(--blok-space-2);
-  padding: var(--blok-space-1) var(--blok-space-1-5);
-  border: 0;
-  border-radius: var(--blok-radius-control);
-  background-color: var(--blok-database-hover-bg);
-  color: var(--blok-database-ink-secondary);
-  font: inherit;
-  font-size: 14px;
-  cursor: pointer;
-}
-
 [data-blok-database-map-no-place-list] {
   display: flex;
   flex-direction: column;
@@ -21248,11 +21234,11 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   background-color: var(--blok-database-hover-bg);
 }
 
-[data-blok-database-map-add-pin], [data-blok-database-map-no-place], [data-blok-database-map-no-place-row] {
+[data-blok-database-map-add-pin], [data-blok-database-map-no-place-row] {
   outline: none;
 }
 
-:where(:root:not([data-blok-modality="pointer"])) [data-blok-database-map-add-pin]:focus-visible, :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-map-no-place]:focus-visible, :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-map-no-place-row]:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-database-map-add-pin]:focus-visible, :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-map-no-place-row]:focus-visible {
   box-shadow: inset 0 0 0 2px var(--blok-focus-ring);
 }
 

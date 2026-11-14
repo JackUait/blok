@@ -3,11 +3,13 @@ import { DatabasePanel, panelInput, panelText } from './database-panel';
 import { pageIconElement, pagePlaceholderIcon } from './page-icon';
 import type { DatabaseRow } from './types';
 
-/** What the database toolbar's "No date (N)" button needs from a calendar or timeline view. */
+/** What the database toolbar's "No date (N)" button needs from a calendar or timeline view, or a map's "No place (N)". */
 export interface NoDateControl {
   count: number;
   label: string;
   open: (anchor: HTMLElement) => void;
+  /** Extra attributes the button carries while this control owns it. */
+  attributes?: Readonly<Record<string, string>>;
 }
 
 export interface NoDatePanelOptions {

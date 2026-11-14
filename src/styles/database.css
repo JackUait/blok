@@ -15538,7 +15538,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 /* Measured (research/08): "No date (2)" is 28px, 6px padding, 6px radius, muted ink. The list is unmeasured. */
-/* findings C03/C04: "No date (N)" in the database toolbar. Icon-gray words at the AA step (research/21:139). */
+/* findings C03/C04: "No date (N)" in the database toolbar, and a map's "No place (N)" (notion-motion.md Round 31 §2: same 28, 6, 14px). Icon-gray words at the AA step (research/21:139). */
 [data-blok-database-view-toolbar] [data-blok-database-no-date-button] {
   block-size: 28px;
   padding: var(--blok-space-1-5);
@@ -18572,21 +18572,6 @@ button[data-blok-database-feed-reaction]:hover,
   block-size: 16px;
 }
 
-/* Measured (research/20 §1e): 14px, muted ink, gray fill. */
-[data-blok-database-map-no-place] {
-  display: inline-flex;
-  align-items: center;
-  margin-block-end: var(--blok-space-2);
-  padding: var(--blok-space-1) var(--blok-space-1-5);
-  border: 0;
-  border-radius: var(--blok-radius-control);
-  background-color: var(--blok-database-hover-bg);
-  color: var(--blok-database-ink-secondary);
-  font: inherit;
-  font-size: 14px;
-  cursor: pointer;
-}
-
 [data-blok-database-map-no-place-list] {
   display: flex;
   flex-direction: column;
@@ -18610,13 +18595,11 @@ button[data-blok-database-feed-reaction]:hover,
 }
 
 [data-blok-database-map-add-pin],
-[data-blok-database-map-no-place],
 [data-blok-database-map-no-place-row] {
   outline: none;
 }
 
 :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-map-add-pin]:focus-visible,
-:where(:root:not([data-blok-modality="pointer"])) [data-blok-database-map-no-place]:focus-visible,
 :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-map-no-place-row]:focus-visible {
   box-shadow: inset 0 0 0 2px var(--blok-focus-ring);
 }

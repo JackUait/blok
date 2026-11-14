@@ -39,6 +39,11 @@ describe('view tabs (research/07:45-50, 222)', () => {
     expect(ruleBody('[data-blok-database-tab] svg')).toContain('width: 20px');
   });
 
+  it('take the 0.076 pressed fill while their menu is open (notion-motion.md Round 27 §3)', () => {
+    expect(ruleBody('[data-blok-database-tab][aria-expanded="true"]')).toContain('background-color: var(--blok-database-button-pressed-bg)');
+    expect(tokenValues('--blok-database-button-pressed-bg')[0]).toBe('rgba(33, 27, 23, 0.076)');
+  });
+
   it('take Notion ink and fill in light and dark', () => {
     expect(tokenValues('--blok-database-tab-bg-active')).toEqual(['rgba(33, 27, 23, 0.05)', 'rgba(255, 255, 255, 0.055)', 'rgba(255, 255, 255, 0.055)']);
     // Light points at the AA step of Notion's rgb(125, 122, 117).

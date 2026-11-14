@@ -591,8 +591,11 @@ export class DatabaseTabBar {
       autoFocusFirstItem: false,
       items,
     });
+    // database.css gives an expanded tab the pressed fill (notion-motion.md Round 27 §3).
+    trigger.setAttribute('aria-expanded', 'true');
 
     this.contextPopover.on(PopoverEvent.Closed, () => {
+      trigger.setAttribute('aria-expanded', 'false');
       if (this.contextPopover !== null) {
         const p = this.contextPopover;
         this.contextPopover = null;

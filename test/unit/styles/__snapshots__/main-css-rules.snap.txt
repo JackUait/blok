@@ -7116,6 +7116,10 @@ button[data-blok-database-column-count]:hover {
   color: var(--blok-database-tab-text-active);
 }
 
+[data-blok-database-tab][aria-expanded="true"] {
+  background-color: var(--blok-database-button-pressed-bg);
+}
+
 [data-blok-database-tab][data-blok-database-tab-was-active] {
   background-color: var(--blok-database-tab-bg-active);
 }

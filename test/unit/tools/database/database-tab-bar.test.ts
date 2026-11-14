@@ -485,6 +485,19 @@ describe('DatabaseTabBar', () => {
       el.remove();
     });
 
+    it('marks the tab expanded while its menu is open, so it takes the pressed fill (notion-motion.md Round 27 §3)', () => {
+      const bar = createTabBar([makeView({ id: 'v1' })], 'v1');
+      const el = bar.render();
+      document.body.appendChild(el);
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+
+      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+      expect(tab.getAttribute('aria-expanded')).toBe('true');
+      bar.destroy();
+      expect(tab.getAttribute('aria-expanded')).toBe('false');
+      el.remove();
+    });
+
     it('shows Rename, Duplicate, and Delete options when multiple views exist', () => {
       const views = [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a1' })];
       const bar = createTabBar(views, 'v1');

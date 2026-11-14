@@ -3041,6 +3041,11 @@ button[data-blok-database-column-count]:hover {
   color: var(--blok-database-tab-text-active);
 }
 
+/* notion-motion.md Round 27 §3: a tab's fill deepens to 0.076 while its menu is open. */
+[data-blok-database-tab][aria-expanded="true"] {
+  background-color: var(--blok-database-button-pressed-bg);
+}
+
 /* The start of a tab switch; index.ts drops both marks a frame later. */
 [data-blok-database-tab][data-blok-database-tab-was-active] {
   background-color: var(--blok-database-tab-bg-active);

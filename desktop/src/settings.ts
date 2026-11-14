@@ -212,6 +212,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
         name: 'version',
         title: `Blok ${CORE_VERSION} · App ${APP_VERSION}`,
         isDisabled: true,
+        onActivate: () => undefined,
       },
     ];
     const popup = new PopoverDesktop({

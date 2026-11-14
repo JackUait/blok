@@ -1183,6 +1183,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       const icon = document.createElement('span');
 
       icon.setAttribute('aria-hidden', 'true');
+      icon.setAttribute('data-blok-database-table-open-icon', '');
       icon.innerHTML = IconPeekSide;
       open.append(icon, document.createElement('span'));
       this.paintOpen(open, rowId);

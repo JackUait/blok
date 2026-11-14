@@ -56,7 +56,7 @@ const mount = async (page: Page): Promise<void> => {
 };
 
 const open = (page: Page): Locator => page.locator('[data-row-id="r1"] [data-blok-database-table-open]');
-const inner = (page: Page): Locator => open(page).locator('> span[aria-hidden="true"]');
+const inner = (page: Page): Locator => open(page).locator('[data-blok-database-table-open-icon]');
 
 const box = async (locator: Locator): Promise<{ x: number; y: number; width: number; height: number }> => {
   const b = await locator.boundingBox();

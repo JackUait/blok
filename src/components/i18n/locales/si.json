@@ -719,6 +719,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "අයිතමය අවසන් වරට සංස්කරණය කළ පුද්ගලයා සටහන් කරයි. ස්වයංක්‍රීයව යාවත්කාලීන වන අතර සංස්කරණය කළ නොහැක.",
   "tools.database.propertyTypeHelpButton": "අයිතමයේ ගුණාංග මත පදනම්ව ක්‍රියා ක්‍රියාත්මක කරන්න.",
   "tools.database.propertyTypeHelpPlace": "භෞතික ස්ථානයක් සිතියමක් මත පෙන්වයි.",
+  "tools.database.propertyTypeHelpUniqueId": "එක් එක් අයිතමය සඳහා ස්වයංක්‍රීයව සංඛ්‍යාත්මක හැඳුනුම් අංකයක් සාදයි. හැඳුනුම් අංක අනන්‍ය වන අතර ඒවා අතින් වෙනස් කළ නොහැක.",
   "tools.database.propertyTypeSelect": "තේරීම",
   "tools.database.propertyTypeMultiSelect": "බහුතේරීම",
   "tools.database.propertyTypeDate": "දිනය",

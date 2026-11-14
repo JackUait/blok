@@ -719,6 +719,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "شيءِ ۾ آخري تبديلي ڪندڙ فرد کي رڪارڊ ڪري ٿو. پاڻمرادو اپڊيٽ ٿئي ٿو ۽ تبديل نٿو ٿي سگهي.",
   "tools.database.propertyTypeHelpButton": "شيءِ جي پراپرٽين جي بنياد تي عمل شروع ڪريو.",
   "tools.database.propertyTypeHelpPlace": "نقشي تي حقيقي جاءِ ڏيکاريو.",
+  "tools.database.propertyTypeHelpUniqueId": "هر شيءِ لاءِ پاڻمرادو هڪ انگن واري سڃاڻپ ٺاهي ٿو. سڃاڻپون منفرد هونديون آهن ۽ هٿ سان بدلائي نٿيون سگهجن.",
   "tools.database.propertyTypeSelect": "چونڊ",
   "tools.database.propertyTypeMultiSelect": "گهڻن جي چونڊ",
   "tools.database.propertyTypeDate": "تاريخ",

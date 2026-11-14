@@ -719,6 +719,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Mencatat orang yang terakhir mengedit item. Diperbarui otomatis dan tidak dapat diedit.",
   "tools.database.propertyTypeHelpButton": "Jalankan tindakan berdasarkan properti item.",
   "tools.database.propertyTypeHelpPlace": "Tampilkan lokasi fisik di peta.",
+  "tools.database.propertyTypeHelpUniqueId": "Otomatis membuat ID berupa angka untuk setiap item. ID bersifat unik dan tidak dapat diubah secara manual.",
   "tools.database.propertyTypeSelect": "Pilih",
   "tools.database.propertyTypeMultiSelect": "Pilih banyak",
   "tools.database.propertyTypeDate": "Tanggal",

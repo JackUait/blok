@@ -717,6 +717,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Hurekodi mtu aliyehariri kipengee mwisho. Husasishwa kiotomatiki na haiwezi kuhaririwa.",
   "tools.database.propertyTypeHelpButton": "Anzisha vitendo kulingana na sifa za kipengee.",
   "tools.database.propertyTypeHelpPlace": "Huonyesha mahali halisi kwenye ramani.",
+  "tools.database.propertyTypeHelpUniqueId": "Huunda kitambulisho cha nambari kiotomatiki kwa kila kipengee. Vitambulisho ni vya kipekee na haviwezi kubadilishwa kwa mkono.",
   "tools.database.propertyTypeSelect": "Chaguo",
   "tools.database.propertyTypeMultiSelect": "Chaguo nyingi",
   "tools.database.propertyTypeDate": "Tarehe",

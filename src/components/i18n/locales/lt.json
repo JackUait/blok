@@ -745,6 +745,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Įrašo asmenį, paskutinį redagavusį elementą. Atnaujinama automatiškai ir redaguoti negalima.",
   "tools.database.propertyTypeHelpButton": "Paleidžia veiksmus pagal elemento savybes.",
   "tools.database.propertyTypeHelpPlace": "Rodo fizinę vietą žemėlapyje.",
+  "tools.database.propertyTypeHelpUniqueId": "Kiekvienam elementui automatiškai sukuria skaitinį identifikatorių. Identifikatoriai yra unikalūs ir jų negalima pakeisti rankiniu būdu.",
   "tools.database.propertyTypeSelect": "Pasirinkimas",
   "tools.database.propertyTypeMultiSelect": "Keli pasirinkimai",
   "tools.database.propertyTypeDate": "Data",

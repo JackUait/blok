@@ -723,6 +723,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "يسجّل الشخص الذي عدّل العنصر آخر مرة. يُحدَّث تلقائيًا ولا يمكن تعديله.",
   "tools.database.propertyTypeHelpButton": "شغّل إجراءات بناءً على خصائص العنصر.",
   "tools.database.propertyTypeHelpPlace": "اعرض موقعًا فعليًا على خريطة.",
+  "tools.database.propertyTypeHelpUniqueId": "ينشئ معرّفًا رقميًا لكل عنصر تلقائيًا. المعرّفات فريدة ولا يمكن تغييرها يدويًا.",
   "tools.database.propertyTypeSelect": "اختيار",
   "tools.database.propertyTypeMultiSelect": "اختيار متعدد",
   "tools.database.propertyTypeDate": "تاريخ",

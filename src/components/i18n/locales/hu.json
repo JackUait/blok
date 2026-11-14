@@ -717,6 +717,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Rögzíti, ki szerkesztette utoljára az elemet. Automatikusan frissül, nem szerkeszthető.",
   "tools.database.propertyTypeHelpButton": "Műveletek indítása az elem tulajdonságai alapján.",
   "tools.database.propertyTypeHelpPlace": "Valós hely megjelenítése térképen.",
+  "tools.database.propertyTypeHelpUniqueId": "Minden elemhez automatikusan létrehoz egy számazonosítót. Az azonosítók egyediek, és kézzel nem módosíthatók.",
   "tools.database.propertyTypeSelect": "Választás",
   "tools.database.propertyTypeMultiSelect": "Többszörös választás",
   "tools.database.propertyTypeDate": "Dátum",

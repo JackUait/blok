@@ -737,6 +737,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Го бележи лицето што последно ја уредило ставката. Се ажурира автоматски и не може да се уредува.",
   "tools.database.propertyTypeHelpButton": "Активирајте дејства врз основа на својствата на ставката.",
   "tools.database.propertyTypeHelpPlace": "Прикажува физичка локација на мапа.",
+  "tools.database.propertyTypeHelpUniqueId": "Автоматски создава броен идентификатор за секоја ставка. Идентификаторите се единствени и не може рачно да се менуваат.",
   "tools.database.propertyTypeSelect": "Избор",
   "tools.database.propertyTypeMultiSelect": "Повеќекратен избор",
   "tools.database.propertyTypeDate": "Датум",

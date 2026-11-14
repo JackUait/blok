@@ -717,6 +717,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "פֿאַרשרײַבט ווער עס האָט לעצט רעדאַקטירט די זאַך. ווערט אויטאָמאַטיש דערהײַנטיקט און מע קען עס ניט רעדאַקטירן.",
   "tools.database.propertyTypeHelpButton": "לאָזט לויפֿן אַקציעס לויט די אייגנשאַפֿטן פֿון דער זאַך.",
   "tools.database.propertyTypeHelpPlace": "ווײַזט אַן אמתן אָרט אויף אַ מאַפּע.",
+  "tools.database.propertyTypeHelpUniqueId": "שאַפֿט אויטאָמאַטיש אַ נומערישן אידענטיפֿיקאַטאָר פֿאַר יעדן עלעמענט. די אידענטיפֿיקאַטאָרן זענען יחידיש און מע קען זיי נישט ענדערן מיט דער האַנט.",
   "tools.database.propertyTypeSelect": "אויסקלײַב",
   "tools.database.propertyTypeMultiSelect": "מערפֿאַכער אויסקלײַב",
   "tools.database.propertyTypeDate": "דאטום",

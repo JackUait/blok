@@ -719,6 +719,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Elementi sonuncu redaktə edən şəxsi qeyd edir. Avtomatik yenilənir və redaktə edilə bilməz.",
   "tools.database.propertyTypeHelpButton": "Elementin xüsusiyyətlərinə əsaslanan əməliyyatları işə salın.",
   "tools.database.propertyTypeHelpPlace": "Fiziki məkanı xəritədə göstərir.",
+  "tools.database.propertyTypeHelpUniqueId": "Hər element üçün avtomatik rəqəmsal identifikator yaradır. İdentifikatorlar unikaldır və əl ilə dəyişdirilə bilməz.",
   "tools.database.propertyTypeSelect": "Seçim",
   "tools.database.propertyTypeMultiSelect": "Çoxlu seçim",
   "tools.database.propertyTypeDate": "Tarix",

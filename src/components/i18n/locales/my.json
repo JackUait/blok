@@ -737,6 +737,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "အရာကို နောက်ဆုံးပြင်ဆင်ခဲ့သူကို မှတ်တမ်းတင်သည်။ အလိုအလျောက် အပ်ဒိတ်ဖြစ်ပြီး ပြင်ဆင်၍မရပါ။",
   "tools.database.propertyTypeHelpButton": "အရာ၏ ဂုဏ်သတ္တိများကို အခြေခံ၍ လုပ်ဆောင်ချက်များကို စတင်ပါ။",
   "tools.database.propertyTypeHelpPlace": "မြေပုံပေါ်တွင် တည်နေရာအစစ်ကို ပြပါ။",
+  "tools.database.propertyTypeHelpUniqueId": "အရာတစ်ခုစီအတွက် ဂဏန်းအိုင်ဒီကို အလိုအလျောက် ဖန်တီးပေးသည်။ အိုင်ဒီများသည် တစ်ခုနှင့်တစ်ခု မတူဘဲ ကိုယ်တိုင် ပြောင်း၍ မရပါ။",
   "tools.database.propertyTypeSelect": "ရွေးချယ်မှု",
   "tools.database.propertyTypeMultiSelect": "အများအပြားရွေးချယ်မှု",
   "tools.database.propertyTypeDate": "ရက်စွဲ",

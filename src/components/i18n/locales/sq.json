@@ -719,6 +719,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Regjistron personin që e ndryshoi elementin së fundi. Përditësohet automatikisht dhe nuk mund të ndryshohet.",
   "tools.database.propertyTypeHelpButton": "Nisni veprime bazuar në vetitë e elementit.",
   "tools.database.propertyTypeHelpPlace": "Shfaqni një vendndodhje fizike në hartë.",
+  "tools.database.propertyTypeHelpUniqueId": "Krijon automatikisht një ID numerike për çdo element. ID-të janë unike dhe nuk mund të ndryshohen me dorë.",
   "tools.database.propertyTypeSelect": "Zgjedhje",
   "tools.database.propertyTypeMultiSelect": "Zgjedhje të shumta",
   "tools.database.propertyTypeDate": "Data",

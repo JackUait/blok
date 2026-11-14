@@ -720,6 +720,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Bilježi osobu koja je posljednja izmijenila stavku. Ažurira se automatski i ne može se uređivati.",
   "tools.database.propertyTypeHelpButton": "Pokrećite radnje na osnovu svojstava stavke.",
   "tools.database.propertyTypeHelpPlace": "Prikažite stvarnu lokaciju na karti.",
+  "tools.database.propertyTypeHelpUniqueId": "Automatski stvara brojčani identifikator za svaku stavku. Identifikatori su jedinstveni i ne mogu se ručno mijenjati.",
   "tools.database.propertyTypeSelect": "Izbor",
   "tools.database.propertyTypeMultiSelect": "Višestruki izbor",
   "tools.database.propertyTypeDate": "Datum",

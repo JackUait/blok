@@ -914,6 +914,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Records the person who edited the item last. Auto-updated and not editable.",
   "tools.database.propertyTypeHelpButton": "Trigger actions based on the item properties.",
   "tools.database.propertyTypeHelpPlace": "Display a physical location on a map.",
+  "tools.database.propertyTypeHelpUniqueId": "Automatically creates a numerical ID for each item. IDs are unique and cannot be manually changed.",
   "tools.database.propertyTypeSelect": "Select",
   "tools.database.propertyTypeMultiSelect": "Multi-select",
   "tools.database.propertyTypeDate": "Date",

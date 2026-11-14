@@ -719,6 +719,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "アイテムを最後に編集したユーザーを記録します。自動で更新され、編集できません。",
   "tools.database.propertyTypeHelpButton": "アイテムのプロパティに基づいてアクションを実行します。",
   "tools.database.propertyTypeHelpPlace": "実際の場所を地図上に表示します。",
+  "tools.database.propertyTypeHelpUniqueId": "各アイテムに数値の ID を自動で作成します。ID は一意で、手動で変更することはできません。",
   "tools.database.propertyTypeSelect": "セレクト",
   "tools.database.propertyTypeMultiSelect": "マルチセレクト",
   "tools.database.propertyTypeDate": "日付",

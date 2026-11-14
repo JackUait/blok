@@ -737,6 +737,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "आयटमचे शेवटचे संपादन करणाऱ्या व्यक्तीची नोंद करते. आपोआप अपडेट होते आणि संपादित करता येत नाही.",
   "tools.database.propertyTypeHelpButton": "आयटमच्या गुणधर्मांवर आधारित क्रिया सुरू करा.",
   "tools.database.propertyTypeHelpPlace": "नकाशावर प्रत्यक्ष ठिकाण दाखवा.",
+  "tools.database.propertyTypeHelpUniqueId": "प्रत्येक आयटमसाठी आपोआप एक संख्यात्मक आयडी तयार करते. आयडी अद्वितीय असतात आणि ते हाताने बदलता येत नाहीत.",
   "tools.database.propertyTypeSelect": "निवड",
   "tools.database.propertyTypeMultiSelect": "बहु-निवड",
   "tools.database.propertyTypeDate": "तारीख",

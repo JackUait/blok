@@ -718,6 +718,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Registra a la última persona que editó el elemento. Se actualiza automáticamente y no se puede editar.",
   "tools.database.propertyTypeHelpButton": "Ejecuta acciones según las propiedades del elemento.",
   "tools.database.propertyTypeHelpPlace": "Muestra una ubicación física en un mapa.",
+  "tools.database.propertyTypeHelpUniqueId": "Crea automáticamente un ID numérico para cada elemento. Los ID son únicos y no se pueden cambiar manualmente.",
   "tools.database.propertyTypeSelect": "Selección",
   "tools.database.propertyTypeMultiSelect": "Selección múltiple",
   "tools.database.propertyTypeDate": "Fecha",

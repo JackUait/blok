@@ -719,6 +719,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "აღრიცხავს ადამიანს, ვინც ელემენტი ბოლოს დაარედაქტირა. ახლდება ავტომატურად და მისი რედაქტირება შეუძლებელია.",
   "tools.database.propertyTypeHelpButton": "გაუშვით მოქმედებები ელემენტის თვისებების საფუძველზე.",
   "tools.database.propertyTypeHelpPlace": "აჩვენებს ფიზიკურ მდებარეობას რუკაზე.",
+  "tools.database.propertyTypeHelpUniqueId": "ყოველი ელემენტისთვის ავტომატურად ქმნის რიცხვით იდენტიფიკატორს. იდენტიფიკატორები უნიკალურია და ხელით ვერ შეიცვლება.",
   "tools.database.propertyTypeSelect": "არჩევანი",
   "tools.database.propertyTypeMultiSelect": "მრავლობითი არჩევანი",
   "tools.database.propertyTypeDate": "თარიღი",

@@ -1620,6 +1620,7 @@ export type BlokMessageKey =
   | 'tools.database.propertyTypeHelpSelect'
   | 'tools.database.propertyTypeHelpStatus'
   | 'tools.database.propertyTypeHelpText'
+  | 'tools.database.propertyTypeHelpUniqueId'
   | 'tools.database.propertyTypeHelpUrl'
   | 'tools.database.propertyTypeLastEditedBy'
   | 'tools.database.propertyTypeLastEditedTime'

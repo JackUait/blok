@@ -719,6 +719,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Գրանցում է տարրը վերջին անգամ խմբագրած անձին։ Թարմացվում է ավտոմատ և խմբագրելի չէ։",
   "tools.database.propertyTypeHelpButton": "Գործարկեք գործողություններ տարրի հատկությունների հիման վրա։",
   "tools.database.propertyTypeHelpPlace": "Ցուցադրում է ֆիզիկական վայրը քարտեզի վրա։",
+  "tools.database.propertyTypeHelpUniqueId": "Յուրաքանչյուր տարրի համար ինքնաշխատ ստեղծում է թվային նույնացուցիչ։ Նույնացուցիչները եզակի են և ձեռքով չեն փոխվում։",
   "tools.database.propertyTypeSelect": "Ընտրություն",
   "tools.database.propertyTypeMultiSelect": "Բազմընտրություն",
   "tools.database.propertyTypeDate": "Ամսաթիվ",

@@ -65,15 +65,16 @@ describe('DatabasePropertyTypePopover', () => {
       }
     });
 
-    // notion-motion.md Round 27 §1 (r27-tip-*.raw) recorded the text of every type but ID. Blok's Verification is not in Notion's list.
-    it('puts a "?" with its own text on every type Round 27 read, and none on ID or Verification', () => {
+    // notion-motion.md Round 27 §1 (r27-tip-*.raw) recorded the text of every type but ID; Round 28 §3 (r28-idtip.raw) read ID's.
+    // Blok's Verification is not in Notion's list.
+    it('puts a "?" with its own text on every type Notion has, and none on Verification', () => {
       const keyed = new DatabasePropertyTypePopover({ onSelect, hasPeople: true, i18n: { t: (key: string) => key } as unknown as I18n });
       const read: Array<[string, string]> = [
         ['text', 'Text'], ['number', 'Number'], ['select', 'Select'], ['multiSelect', 'MultiSelect'], ['status', 'Status'],
         ['date', 'Date'], ['person', 'Person'], ['files', 'Files'], ['checkbox', 'Checkbox'], ['url', 'Url'], ['email', 'Email'],
         ['phone', 'Phone'], ['formula', 'Formula'], ['relation', 'Relation'], ['rollup', 'Rollup'], ['createdTime', 'CreatedTime'],
         ['createdBy', 'CreatedBy'], ['lastEditedTime', 'LastEditedTime'], ['lastEditedBy', 'LastEditedBy'], ['button', 'Button'],
-        ['place', 'Place'],
+        ['place', 'Place'], ['uniqueId', 'UniqueId'],
       ];
 
       destroyTooltip();
@@ -81,7 +82,6 @@ describe('DatabasePropertyTypePopover', () => {
       try {
         keyed.open(anchor);
         for (const [type] of read) expect(help(type), type).not.toBeNull();
-        expect(help('uniqueId')).toBeNull();
         expect(help('verification')).toBeNull();
         for (const [type, suffix] of read) {
           hover(help(type));
@@ -90,6 +90,28 @@ describe('DatabasePropertyTypePopover', () => {
           help(type)?.dispatchEvent(new MouseEvent('mouseleave'));
           vi.advanceTimersByTime(HINT_DELAY);
         }
+      } finally {
+        keyed.destroy();
+        vi.useRealTimers();
+        destroyTooltip();
+      }
+    });
+
+    // notion-motion.md Round 28 §3 (r28-idtip.raw): the type help box is `text-align: start`.
+    it('lines its help text up at the start', () => {
+      const keyed = new DatabasePropertyTypePopover({ onSelect, i18n: { t: (key: string) => key } as unknown as I18n });
+      const lines = (): Element | null | undefined => document.querySelector('[data-blok-testid="tooltip-content"]')?.firstElementChild;
+
+      destroyTooltip();
+      vi.useFakeTimers();
+      try {
+        keyed.open(anchor);
+        hover(help('uniqueId'));
+        vi.advanceTimersByTime(HINT_DELAY);
+        expect(lines()?.classList.contains('text-start')).toBe(true);
+        expect(lines()?.textContent).toBe('tools.database.propertyTypeHelpUniqueId');
+        help('uniqueId')?.dispatchEvent(new MouseEvent('mouseleave'));
+        vi.advanceTimersByTime(HINT_DELAY);
       } finally {
         keyed.destroy();
         vi.useRealTimers();

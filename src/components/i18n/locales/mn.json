@@ -737,6 +737,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Зүйлийг сүүлд засварласан хүнийг бүртгэнэ. Автоматаар шинэчлэгддэг бөгөөд засах боломжгүй.",
   "tools.database.propertyTypeHelpButton": "Зүйлийн шинжүүдэд тулгуурлан үйлдэл гүйцэтгэнэ.",
   "tools.database.propertyTypeHelpPlace": "Бодит байршлыг газрын зураг дээр харуулна.",
+  "tools.database.propertyTypeHelpUniqueId": "Зүйл бүрт тоон таних дугаарыг автоматаар үүсгэнэ. Таних дугаар давтагдашгүй бөгөөд гараар өөрчлөх боломжгүй.",
   "tools.database.propertyTypeSelect": "Сонголт",
   "tools.database.propertyTypeMultiSelect": "Олон сонголт",
   "tools.database.propertyTypeDate": "Огноо",

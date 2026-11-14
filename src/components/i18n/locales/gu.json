@@ -717,6 +717,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "આઇટમને છેલ્લે સંપાદિત કરનાર વ્યક્તિને નોંધે છે. આપમેળે અપડેટ થાય છે અને સંપાદિત કરી શકાતું નથી.",
   "tools.database.propertyTypeHelpButton": "આઇટમના ગુણધર્મોના આધારે ક્રિયાઓ ચલાવો.",
   "tools.database.propertyTypeHelpPlace": "નકશા પર વાસ્તવિક સ્થળ બતાવો.",
+  "tools.database.propertyTypeHelpUniqueId": "દરેક આઇટમ માટે આપમેળે એક સંખ્યાત્મક આઈડી બનાવે છે. આઈડી અનન્ય હોય છે અને હાથથી બદલી શકાતા નથી.",
   "tools.database.propertyTypeSelect": "પસંદગી",
   "tools.database.propertyTypeMultiSelect": "બહુ-પસંદગી",
   "tools.database.propertyTypeDate": "તારીખ",

@@ -719,6 +719,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "هغه کس ثبتوي چې توکی یې وروستی ځل سم کړی. په اتومات ډول تازه کېږي او نه سمېږي.",
   "tools.database.propertyTypeHelpButton": "د توکي د ځانګړتیاوو پر بنسټ کړنې پیل کړئ.",
   "tools.database.propertyTypeHelpPlace": "یو واقعي ځای په نقشه کې وښایئ.",
+  "tools.database.propertyTypeHelpUniqueId": "د هر توکي لپاره په اوتومات ډول یو شمېري پېژند جوړوي. پېژندونه ځانګړي دي او په لاس نه بدلېږي.",
   "tools.database.propertyTypeSelect": "غوراوی",
   "tools.database.propertyTypeMultiSelect": "څوګونی غوراوی",
   "tools.database.propertyTypeDate": "نېټه",

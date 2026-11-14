@@ -717,6 +717,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "تۈرنى ئاخىرقى قېتىم تەھرىرلىگەن كىشىنى خاتىرىلەيدۇ. ئاپتوماتىك يېڭىلىنىدۇ، تەھرىرلىگىلى بولمايدۇ.",
   "tools.database.propertyTypeHelpButton": "تۈرنىڭ خاسلىقلىرىغا ئاساسەن مەشغۇلاتلارنى قوزغىتىڭ.",
   "tools.database.propertyTypeHelpPlace": "خەرىتىدە ئەمەلىي ئورۇننى كۆرسىتىڭ.",
+  "tools.database.propertyTypeHelpUniqueId": "ھەر بىر تۈرگە ئاپتوماتىك سانلىق كىملىك قۇرىدۇ. كىملىكلەر بىردىنبىر بولۇپ، قولدا ئۆزگەرتكىلى بولمايدۇ.",
   "tools.database.propertyTypeSelect": "تاللاش",
   "tools.database.propertyTypeMultiSelect": "كۆپ تاللاش",
   "tools.database.propertyTypeDate": "چېسلا",

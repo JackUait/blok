@@ -720,6 +720,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Registra a pessoa que editou o item por último. Atualizado automaticamente e não editável.",
   "tools.database.propertyTypeHelpButton": "Acione ações com base nas propriedades do item.",
   "tools.database.propertyTypeHelpPlace": "Mostra um local físico em um mapa.",
+  "tools.database.propertyTypeHelpUniqueId": "Cria automaticamente um ID numérico para cada item. Os IDs são únicos e não podem ser alterados manualmente.",
   "tools.database.propertyTypeSelect": "Selecionar",
   "tools.database.propertyTypeMultiSelect": "Seleção múltipla",
   "tools.database.propertyTypeDate": "Data",

@@ -737,6 +737,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Merekodkan orang yang terakhir menyunting item. Dikemas kini secara automatik dan tidak boleh disunting.",
   "tools.database.propertyTypeHelpButton": "Cetuskan tindakan berdasarkan sifat item.",
   "tools.database.propertyTypeHelpPlace": "Memaparkan lokasi fizikal pada peta.",
+  "tools.database.propertyTypeHelpUniqueId": "Mencipta ID berangka secara automatik untuk setiap item. ID adalah unik dan tidak boleh diubah secara manual.",
   "tools.database.propertyTypeSelect": "Pilihan",
   "tools.database.propertyTypeMultiSelect": "Berbilang pilihan",
   "tools.database.propertyTypeDate": "Tarikh",

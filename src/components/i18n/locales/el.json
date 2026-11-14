@@ -719,6 +719,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Καταγράφει το άτομο που επεξεργάστηκε τελευταίο το στοιχείο. Ενημερώνεται αυτόματα και δεν αλλάζει.",
   "tools.database.propertyTypeHelpButton": "Ενεργοποιήστε ενέργειες με βάση τις ιδιότητες του στοιχείου.",
   "tools.database.propertyTypeHelpPlace": "Εμφανίζει μια φυσική τοποθεσία σε χάρτη.",
+  "tools.database.propertyTypeHelpUniqueId": "Δημιουργεί αυτόματα ένα αριθμητικό αναγνωριστικό για κάθε στοιχείο. Τα αναγνωριστικά είναι μοναδικά και δεν αλλάζουν χειροκίνητα.",
   "tools.database.propertyTypeSelect": "Επιλογή",
   "tools.database.propertyTypeMultiSelect": "Πολλαπλή επιλογή",
   "tools.database.propertyTypeDate": "Ημερομηνία",

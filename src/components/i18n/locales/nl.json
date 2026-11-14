@@ -717,6 +717,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Legt vast wie het item als laatste heeft bewerkt. Wordt automatisch bijgewerkt en is niet te bewerken.",
   "tools.database.propertyTypeHelpButton": "Start acties op basis van de eigenschappen van het item.",
   "tools.database.propertyTypeHelpPlace": "Toon een fysieke locatie op een kaart.",
+  "tools.database.propertyTypeHelpUniqueId": "Maakt automatisch een numerieke ID voor elk item. ID's zijn uniek en kunnen niet handmatig worden gewijzigd.",
   "tools.database.propertyTypeSelect": "Selecteren",
   "tools.database.propertyTypeMultiSelect": "Meerdere selecteren",
   "tools.database.propertyTypeDate": "Datum",

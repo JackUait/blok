@@ -717,6 +717,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Registrerer personen som sist redigerte elementet. Oppdateres automatisk og kan ikke redigeres.",
   "tools.database.propertyTypeHelpButton": "Utløs handlinger basert på elementets egenskaper.",
   "tools.database.propertyTypeHelpPlace": "Viser et fysisk sted på et kart.",
+  "tools.database.propertyTypeHelpUniqueId": "Lager automatisk en numerisk ID for hvert element. ID-er er unike og kan ikke endres manuelt.",
   "tools.database.propertyTypeSelect": "Valg",
   "tools.database.propertyTypeMultiSelect": "Flervalg",
   "tools.database.propertyTypeDate": "Dato",

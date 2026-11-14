@@ -717,6 +717,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "记录最后编辑条目的人。自动更新，不可编辑。",
   "tools.database.propertyTypeHelpButton": "根据条目属性触发操作。",
   "tools.database.propertyTypeHelpPlace": "在地图上显示实际位置。",
+  "tools.database.propertyTypeHelpUniqueId": "自动为每个条目创建数字编号。编号唯一，且无法手动更改。",
   "tools.database.propertyTypeSelect": "单选",
   "tools.database.propertyTypeMultiSelect": "多选",
   "tools.database.propertyTypeDate": "日期",

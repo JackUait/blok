@@ -739,6 +739,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "ಐಟಂ ಅನ್ನು ಕೊನೆಯದಾಗಿ ಸಂಪಾದಿಸಿದ ವ್ಯಕ್ತಿಯನ್ನು ದಾಖಲಿಸುತ್ತದೆ. ಸ್ವಯಂಚಾಲಿತವಾಗಿ ನವೀಕರಣಗೊಳ್ಳುತ್ತದೆ ಮತ್ತು ಸಂಪಾದಿಸಲಾಗುವುದಿಲ್ಲ.",
   "tools.database.propertyTypeHelpButton": "ಐಟಂನ ಗುಣಲಕ್ಷಣಗಳ ಆಧಾರದ ಮೇಲೆ ಕ್ರಿಯೆಗಳನ್ನು ಪ್ರಚೋದಿಸಿ.",
   "tools.database.propertyTypeHelpPlace": "ನಕ್ಷೆಯಲ್ಲಿ ಭೌತಿಕ ಸ್ಥಳವನ್ನು ತೋರಿಸುತ್ತದೆ.",
+  "tools.database.propertyTypeHelpUniqueId": "ಪ್ರತಿ ಐಟಂಗೆ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಸಂಖ್ಯಾತ್ಮಕ ಐಡಿಯನ್ನು ರಚಿಸುತ್ತದೆ. ಐಡಿಗಳು ಅನನ್ಯವಾಗಿರುತ್ತವೆ ಮತ್ತು ಕೈಯಾರೆ ಬದಲಾಯಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ.",
   "tools.database.propertyTypeSelect": "ಆಯ್ಕೆ",
   "tools.database.propertyTypeMultiSelect": "ಬಹು-ಆಯ್ಕೆ",
   "tools.database.propertyTypeDate": "ದಿನಾಂಕ",

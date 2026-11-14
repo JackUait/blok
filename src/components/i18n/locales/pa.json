@@ -717,6 +717,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "ਆਈਟਮ ਨੂੰ ਆਖਰੀ ਵਾਰ ਸੰਪਾਦਿਤ ਕਰਨ ਵਾਲੇ ਵਿਅਕਤੀ ਨੂੰ ਦਰਜ ਕਰਦਾ ਹੈ। ਆਪਣੇ-ਆਪ ਅੱਪਡੇਟ ਹੁੰਦਾ ਹੈ ਅਤੇ ਸੰਪਾਦਿਤ ਨਹੀਂ ਕੀਤਾ ਜਾ ਸਕਦਾ।",
   "tools.database.propertyTypeHelpButton": "ਆਈਟਮ ਦੀਆਂ ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ ਦੇ ਆਧਾਰ ’ਤੇ ਕਾਰਵਾਈਆਂ ਚਲਾਓ।",
   "tools.database.propertyTypeHelpPlace": "ਨਕਸ਼ੇ ’ਤੇ ਕੋਈ ਭੌਤਿਕ ਟਿਕਾਣਾ ਦਿਖਾਓ।",
+  "tools.database.propertyTypeHelpUniqueId": "ਹਰ ਆਈਟਮ ਲਈ ਆਪਣੇ-ਆਪ ਇੱਕ ਅੰਕੀ ਆਈਡੀ ਬਣਾਉਂਦਾ ਹੈ। ਆਈਡੀ ਵਿਲੱਖਣ ਹੁੰਦੀਆਂ ਹਨ ਅਤੇ ਹੱਥੀਂ ਬਦਲੀਆਂ ਨਹੀਂ ਜਾ ਸਕਦੀਆਂ।",
   "tools.database.propertyTypeSelect": "ਚੋਣ",
   "tools.database.propertyTypeMultiSelect": "ਬਹੁ-ਚੋਣ",
   "tools.database.propertyTypeDate": "ਮਿਤੀ",

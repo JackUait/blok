@@ -719,6 +719,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "កត់ត្រាអ្នកដែលបានកែធាតុចុងក្រោយ។ ធ្វើបច្ចុប្បន្នភាពដោយស្វ័យប្រវត្តិ និងមិនអាចកែបាន។",
   "tools.database.propertyTypeHelpButton": "ដំណើរការសកម្មភាពដោយផ្អែកលើលក្ខណៈរបស់ធាតុ។",
   "tools.database.propertyTypeHelpPlace": "បង្ហាញទីតាំងជាក់ស្ដែងនៅលើផែនទី។",
+  "tools.database.propertyTypeHelpUniqueId": "បង្កើតលេខសម្គាល់ជាលេខដោយស្វ័យប្រវត្តិសម្រាប់ធាតុនីមួយៗ។ លេខសម្គាល់មិនដូចគ្នា ហើយមិនអាចប្ដូរដោយដៃបានទេ។",
   "tools.database.propertyTypeSelect": "ជម្រើស",
   "tools.database.propertyTypeMultiSelect": "ជម្រើសច្រើន",
   "tools.database.propertyTypeDate": "កាលបរិច្ឆេទ",

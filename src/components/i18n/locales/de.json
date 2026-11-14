@@ -719,6 +719,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Speichert die Person, die den Eintrag zuletzt bearbeitet hat. Wird automatisch aktualisiert und kann nicht bearbeitet werden.",
   "tools.database.propertyTypeHelpButton": "Löst Aktionen anhand der Eigenschaften des Eintrags aus.",
   "tools.database.propertyTypeHelpPlace": "Zeigt einen realen Ort auf einer Karte an.",
+  "tools.database.propertyTypeHelpUniqueId": "Erstellt automatisch eine numerische ID für jeden Eintrag. IDs sind eindeutig und können nicht manuell geändert werden.",
   "tools.database.propertyTypeSelect": "Auswahl",
   "tools.database.propertyTypeMultiSelect": "Mehrfachauswahl",
   "tools.database.propertyTypeDate": "Datum",

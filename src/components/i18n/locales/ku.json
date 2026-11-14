@@ -739,6 +739,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "ئەو کەسە تۆمار دەکات کە دوایین جار دەستکاریی بابەتەکەی کردووە. بە شێوەی خۆکار نوێ دەبێتەوە و دەستکاری ناکرێت.",
   "tools.database.propertyTypeHelpButton": "کردارەکان لەسەر بنەمای تایبەتمەندییەکانی بابەتەکە دەستپێبکە.",
   "tools.database.propertyTypeHelpPlace": "شوێنێکی فیزیکی لەسەر نەخشە پیشان دەدات.",
+  "tools.database.propertyTypeHelpUniqueId": "بۆ هەر بڕگەیەک بە شێوەی خۆکار ناسنامەیەکی ژمارەیی دروست دەکات. ناسنامەکان تاکن و ناتوانرێت بە دەست بگۆڕدرێن.",
   "tools.database.propertyTypeSelect": "هەڵبژاردن",
   "tools.database.propertyTypeMultiSelect": "هەڵبژاردنی چەندانە",
   "tools.database.propertyTypeDate": "بەروار",

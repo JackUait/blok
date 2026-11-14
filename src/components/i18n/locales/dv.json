@@ -719,6 +719,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "އައިޓަމް އެންމެ ފަހުން އެޑިޓްކުރި މީހާ ރެކޯޑުކުރެއެވެ. އޮޓޮމެޓިކުން އަޕްޑޭޓްވާއިރު އެޑިޓެއް ނުކުރެވޭނެއެވެ.",
   "tools.database.propertyTypeHelpButton": "އައިޓަމްގެ ޕްރޮޕަރޓީތަކުގެ މައްޗަށް އެކްޝަންތައް ފަށާ.",
   "tools.database.propertyTypeHelpPlace": "ޙަޤީޤީ ތަނެއް މެޕެއްގައި ދައްކާ.",
+  "tools.database.propertyTypeHelpUniqueId": "ކޮންމެ އައިޓަމަކަށް ނަންބަރުން ހެދޭ އައިޑީއެއް އަމިއްލައަށް ހަދައިދެއެވެ. އައިޑީތައް ތަފާތުވާއިރު، އަތުން ބަދަލެއް ނުކުރެވޭނެއެވެ.",
   "tools.database.propertyTypeSelect": "ސިލެކްޓް",
   "tools.database.propertyTypeMultiSelect": "މަލްޓި-ސިލެކްޓް",
   "tools.database.propertyTypeDate": "ތާރީޚް",

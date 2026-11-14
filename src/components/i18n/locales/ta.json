@@ -717,6 +717,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "உருப்படியைக் கடைசியாகத் திருத்தியவரைப் பதிவுசெய்யும். தானாகப் புதுப்பிக்கப்படும், திருத்த முடியாது.",
   "tools.database.propertyTypeHelpButton": "உருப்படியின் பண்புகளின் அடிப்படையில் செயல்களைத் தொடங்கவும்.",
   "tools.database.propertyTypeHelpPlace": "ஒரு உண்மையான இடத்தை வரைபடத்தில் காட்டவும்.",
+  "tools.database.propertyTypeHelpUniqueId": "ஒவ்வொரு உருப்படிக்கும் தானாக ஓர் எண் ஐடியை உருவாக்கும். ஐடிகள் தனித்துவமானவை, அவற்றைக் கைமுறையாக மாற்ற முடியாது.",
   "tools.database.propertyTypeSelect": "தேர்வு",
   "tools.database.propertyTypeMultiSelect": "பல தேர்வு",
   "tools.database.propertyTypeDate": "தேதி",

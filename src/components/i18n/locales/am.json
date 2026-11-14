@@ -719,6 +719,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "ንጥሉን መጨረሻ ያስተካከለውን ሰው ይመዘግባል። በራስ-ሰር ይዘመናል፤ ሊስተካከል አይችልም።",
   "tools.database.propertyTypeHelpButton": "በንጥሉ ንብረቶች ላይ ተመሥርተው እርምጃዎችን ያስጀምሩ።",
   "tools.database.propertyTypeHelpPlace": "አካላዊ አካባቢን በካርታ ላይ ያሳያል።",
+  "tools.database.propertyTypeHelpUniqueId": "ለእያንዳንዱ ንጥል የቁጥር መለያ በራስ-ሰር ይፈጥራል። መለያዎች ልዩ ናቸው፣ በእጅም ሊቀየሩ አይችሉም።",
   "tools.database.propertyTypeSelect": "ምርጫ",
   "tools.database.propertyTypeMultiSelect": "ብዙ ምርጫ",
   "tools.database.propertyTypeDate": "ቀን",

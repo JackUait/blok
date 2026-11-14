@@ -717,6 +717,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Salvestab üksuse viimase muutja. Uuendatakse automaatselt ega ole muudetav.",
   "tools.database.propertyTypeHelpButton": "Käivitab toiminguid üksuse omaduste põhjal.",
   "tools.database.propertyTypeHelpPlace": "Kuvab füüsilise asukoha kaardil.",
+  "tools.database.propertyTypeHelpUniqueId": "Loob igale üksusele automaatselt numbrilise tunnuse. Tunnused on unikaalsed ja neid ei saa käsitsi muuta.",
   "tools.database.propertyTypeSelect": "Valik",
   "tools.database.propertyTypeMultiSelect": "Mitmikvalik",
   "tools.database.propertyTypeDate": "Kuupäev",

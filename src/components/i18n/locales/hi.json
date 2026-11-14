@@ -717,6 +717,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "आइटम को अंतिम बार संपादित करने वाले व्यक्ति को दर्ज करता है। अपने आप अपडेट होता है और संपादित नहीं किया जा सकता।",
   "tools.database.propertyTypeHelpButton": "आइटम की प्रॉपर्टी के आधार पर कार्रवाइयाँ चलाएँ।",
   "tools.database.propertyTypeHelpPlace": "मानचित्र पर कोई भौतिक स्थान दिखाएँ।",
+  "tools.database.propertyTypeHelpUniqueId": "हर आइटम के लिए अपने-आप एक संख्यात्मक आईडी बनाता है। आईडी अद्वितीय होती हैं और इन्हें हाथ से बदला नहीं जा सकता।",
   "tools.database.propertyTypeSelect": "चयन",
   "tools.database.propertyTypeMultiSelect": "बहु-चयन",
   "tools.database.propertyTypeDate": "तिथि",

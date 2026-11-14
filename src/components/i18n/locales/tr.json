@@ -717,6 +717,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Öğeyi en son düzenleyen kişiyi kaydeder. Otomatik güncellenir ve düzenlenemez.",
   "tools.database.propertyTypeHelpButton": "Öğenin özelliklerine göre eylemleri tetikleyin.",
   "tools.database.propertyTypeHelpPlace": "Fiziksel bir konumu haritada gösterir.",
+  "tools.database.propertyTypeHelpUniqueId": "Her öğe için otomatik olarak sayısal bir kimlik oluşturur. Kimlikler benzersizdir ve elle değiştirilemez.",
   "tools.database.propertyTypeSelect": "Seçim",
   "tools.database.propertyTypeMultiSelect": "Çoklu seçim",
   "tools.database.propertyTypeDate": "Tarih",

@@ -740,6 +740,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Reģistrē personu, kas pēdējā rediģēja vienumu. Tiek atjaunināts automātiski un nav rediģējams.",
   "tools.database.propertyTypeHelpButton": "Palaidiet darbības, pamatojoties uz vienuma rekvizītiem.",
   "tools.database.propertyTypeHelpPlace": "Parādiet reālu atrašanās vietu kartē.",
+  "tools.database.propertyTypeHelpUniqueId": "Katram vienumam automātiski izveido skaitlisku identifikatoru. Identifikatori ir unikāli, un tos nevar mainīt manuāli.",
   "tools.database.propertyTypeSelect": "Izvēle",
   "tools.database.propertyTypeMultiSelect": "Vairākas izvēles",
   "tools.database.propertyTypeDate": "Datums",

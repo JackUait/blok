@@ -717,6 +717,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "บันทึกผู้ที่แก้ไขรายการครั้งล่าสุด อัปเดตโดยอัตโนมัติและแก้ไขไม่ได้",
   "tools.database.propertyTypeHelpButton": "เรียกใช้การดำเนินการตามคุณสมบัติของรายการ",
   "tools.database.propertyTypeHelpPlace": "แสดงสถานที่จริงบนแผนที่",
+  "tools.database.propertyTypeHelpUniqueId": "สร้างรหัสตัวเลขให้แต่ละรายการโดยอัตโนมัติ รหัสไม่ซ้ำกันและเปลี่ยนเองไม่ได้",
   "tools.database.propertyTypeSelect": "เลือกหนึ่ง",
   "tools.database.propertyTypeMultiSelect": "เลือกหลายรายการ",
   "tools.database.propertyTypeDate": "วันที่",

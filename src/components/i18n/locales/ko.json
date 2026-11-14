@@ -739,6 +739,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "항목을 마지막으로 편집한 사람을 기록합니다. 자동으로 업데이트되며 편집할 수 없습니다.",
   "tools.database.propertyTypeHelpButton": "항목 속성을 바탕으로 작업을 실행합니다.",
   "tools.database.propertyTypeHelpPlace": "실제 위치를 지도에 표시합니다.",
+  "tools.database.propertyTypeHelpUniqueId": "각 항목에 숫자 ID를 자동으로 만듭니다. ID는 고유하며 직접 변경할 수 없습니다.",
   "tools.database.propertyTypeSelect": "선택",
   "tools.database.propertyTypeMultiSelect": "다중 선택",
   "tools.database.propertyTypeDate": "날짜",

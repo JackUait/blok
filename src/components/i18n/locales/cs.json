@@ -721,6 +721,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Zaznamenává osobu, která položku naposledy upravila. Aktualizuje se automaticky a nedá se upravit.",
   "tools.database.propertyTypeHelpButton": "Spouštějte akce na základě vlastností položky.",
   "tools.database.propertyTypeHelpPlace": "Zobrazí fyzické místo na mapě.",
+  "tools.database.propertyTypeHelpUniqueId": "Automaticky vytvoří číselný identifikátor pro každou položku. Identifikátory jsou jedinečné a nelze je ručně změnit.",
   "tools.database.propertyTypeSelect": "Výběr",
   "tools.database.propertyTypeMultiSelect": "Vícenásobný výběr",
   "tools.database.propertyTypeDate": "Datum",

@@ -717,6 +717,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Registrerar personen som senast redigerade objektet. Uppdateras automatiskt och kan inte redigeras.",
   "tools.database.propertyTypeHelpButton": "Utlös åtgärder baserat på objektets egenskaper.",
   "tools.database.propertyTypeHelpPlace": "Visa en fysisk plats på en karta.",
+  "tools.database.propertyTypeHelpUniqueId": "Skapar automatiskt ett numeriskt ID för varje objekt. ID:n är unika och kan inte ändras manuellt.",
   "tools.database.propertyTypeSelect": "Val",
   "tools.database.propertyTypeMultiSelect": "Flerval",
   "tools.database.propertyTypeDate": "Datum",

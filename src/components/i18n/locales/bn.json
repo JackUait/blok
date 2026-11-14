@@ -719,6 +719,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "আইটেমটি সর্বশেষ কে সম্পাদনা করেছেন, তা রেকর্ড করে। স্বয়ংক্রিয়ভাবে আপডেট হয় এবং সম্পাদনা করা যায় না।",
   "tools.database.propertyTypeHelpButton": "আইটেমের বৈশিষ্ট্যের ভিত্তিতে অ্যাকশন চালু করুন।",
   "tools.database.propertyTypeHelpPlace": "মানচিত্রে একটি বাস্তব অবস্থান দেখায়।",
+  "tools.database.propertyTypeHelpUniqueId": "প্রতিটি আইটেমের জন্য স্বয়ংক্রিয়ভাবে একটি সংখ্যাসূচক আইডি তৈরি করে। আইডিগুলো অনন্য এবং হাতে বদলানো যায় না।",
   "tools.database.propertyTypeSelect": "নির্বাচন",
   "tools.database.propertyTypeMultiSelect": "বহু-নির্বাচন",
   "tools.database.propertyTypeDate": "তারিখ",

@@ -721,6 +721,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Beleži osebo, ki je element nazadnje uredila. Posodablja se samodejno in ga ni mogoče urejati.",
   "tools.database.propertyTypeHelpButton": "Sproži dejanja na podlagi lastnosti elementa.",
   "tools.database.propertyTypeHelpPlace": "Prikaže fizično lokacijo na zemljevidu.",
+  "tools.database.propertyTypeHelpUniqueId": "Samodejno ustvari številski identifikator za vsak element. Identifikatorji so edinstveni in jih ni mogoče ročno spremeniti.",
   "tools.database.propertyTypeSelect": "Izbor",
   "tools.database.propertyTypeMultiSelect": "Več izbir",
   "tools.database.propertyTypeDate": "Datum",

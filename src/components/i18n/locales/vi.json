@@ -717,6 +717,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Ghi lại người chỉnh sửa mục lần cuối. Tự động cập nhật và không thể chỉnh sửa.",
   "tools.database.propertyTypeHelpButton": "Kích hoạt hành động dựa trên các thuộc tính của mục.",
   "tools.database.propertyTypeHelpPlace": "Hiển thị một vị trí thực tế trên bản đồ.",
+  "tools.database.propertyTypeHelpUniqueId": "Tự động tạo mã định danh dạng số cho mỗi mục. Mã định danh là duy nhất và không thể thay đổi thủ công.",
   "tools.database.propertyTypeSelect": "Chọn một",
   "tools.database.propertyTypeMultiSelect": "Chọn nhiều",
   "tools.database.propertyTypeDate": "Ngày",

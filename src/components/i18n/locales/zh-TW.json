@@ -914,6 +914,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "記錄最後編輯項目的人員。自動更新，無法編輯。",
   "tools.database.propertyTypeHelpButton": "根據項目屬性觸發動作。",
   "tools.database.propertyTypeHelpPlace": "在地圖上顯示實際地點。",
+  "tools.database.propertyTypeHelpUniqueId": "自動為每個項目建立數字編號。編號不會重複，也無法手動變更。",
   "tools.database.propertyTypeSelect": "單一選取",
   "tools.database.propertyTypeMultiSelect": "多重選取",
   "tools.database.propertyTypeDate": "日期",

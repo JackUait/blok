@@ -717,6 +717,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "شخصی را که آخرین بار مورد را ویرایش کرده ثبت می‌کند. خودکار به‌روز می‌شود و قابل ویرایش نیست.",
   "tools.database.propertyTypeHelpButton": "بر پایه ویژگی‌های مورد، کنش‌هایی را اجرا کنید.",
   "tools.database.propertyTypeHelpPlace": "یک مکان واقعی را روی نقشه نمایش دهید.",
+  "tools.database.propertyTypeHelpUniqueId": "برای هر مورد به‌طور خودکار یک شناسهٔ عددی می‌سازد. شناسه‌ها یکتا هستند و نمی‌توان آن‌ها را دستی تغییر داد.",
   "tools.database.propertyTypeSelect": "انتخاب",
   "tools.database.propertyTypeMultiSelect": "چندانتخابی",
   "tools.database.propertyTypeDate": "تاریخ",

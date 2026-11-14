@@ -717,6 +717,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "అంశాన్ని చివరిగా సవరించిన వ్యక్తిని నమోదు చేస్తుంది. స్వయంచాలకంగా నవీకరించబడుతుంది, సవరించలేరు.",
   "tools.database.propertyTypeHelpButton": "అంశం ప్రాపర్టీల ఆధారంగా చర్యలను ప్రారంభించండి.",
   "tools.database.propertyTypeHelpPlace": "భౌతిక స్థానాన్ని మ్యాప్‌లో చూపుతుంది.",
+  "tools.database.propertyTypeHelpUniqueId": "ప్రతి అంశానికి స్వయంచాలకంగా ఒక సంఖ్యా ఐడిని సృష్టిస్తుంది. ఐడిలు ప్రత్యేకమైనవి, వాటిని చేతితో మార్చలేరు.",
   "tools.database.propertyTypeSelect": "ఎంపిక",
   "tools.database.propertyTypeMultiSelect": "బహుళ ఎంపిక",
   "tools.database.propertyTypeDate": "తేదీ",

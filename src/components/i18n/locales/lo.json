@@ -739,6 +739,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "ບັນທຶກຜູ້ທີ່ແກ້ໄຂລາຍການຄັ້ງສຸດທ້າຍ. ອັບເດດອັດຕະໂນມັດ ແລະ ແກ້ໄຂບໍ່ໄດ້.",
   "tools.database.propertyTypeHelpButton": "ເປີດໃຊ້ການດຳເນີນການຕາມຄຸນສົມບັດຂອງລາຍການ.",
   "tools.database.propertyTypeHelpPlace": "ສະແດງສະຖານທີ່ຕົວຈິງເທິງແຜນທີ່.",
+  "tools.database.propertyTypeHelpUniqueId": "ສ້າງລະຫັດເປັນຕົວເລກໃຫ້ແຕ່ລະລາຍການໂດຍອັດຕະໂນມັດ. ລະຫັດບໍ່ຊ້ຳກັນ ແລະ ບໍ່ສາມາດປ່ຽນດ້ວຍຕົນເອງໄດ້.",
   "tools.database.propertyTypeSelect": "ເລືອກ",
   "tools.database.propertyTypeMultiSelect": "ເລືອກຫຼາຍ",
   "tools.database.propertyTypeDate": "ວັນທີ",

@@ -737,6 +737,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "वस्तु अन्तिम पटक सम्पादन गर्ने व्यक्तिलाई रेकर्ड गर्छ। स्वतः अद्यावधिक हुन्छ र सम्पादन गर्न मिल्दैन।",
   "tools.database.propertyTypeHelpButton": "वस्तुका गुणहरूका आधारमा कार्यहरू सुरु गर्नुहोस्।",
   "tools.database.propertyTypeHelpPlace": "नक्सामा भौतिक स्थान देखाउँछ।",
+  "tools.database.propertyTypeHelpUniqueId": "प्रत्येक वस्तुका लागि स्वचालित रूपमा एउटा संख्यात्मक आईडी बनाउँछ। आईडीहरू अद्वितीय हुन्छन् र हातैले बदल्न सकिँदैन।",
   "tools.database.propertyTypeSelect": "छनोट",
   "tools.database.propertyTypeMultiSelect": "बहु-छनोट",
   "tools.database.propertyTypeDate": "मिति",

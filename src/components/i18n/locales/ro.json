@@ -720,6 +720,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Înregistrează persoana care a editat ultima elementul. Actualizat automat și nu poate fi editat.",
   "tools.database.propertyTypeHelpButton": "Declanșați acțiuni pe baza proprietăților elementului.",
   "tools.database.propertyTypeHelpPlace": "Afișează o locație fizică pe o hartă.",
+  "tools.database.propertyTypeHelpUniqueId": "Creează automat un ID numeric pentru fiecare element. ID-urile sunt unice și nu pot fi modificate manual.",
   "tools.database.propertyTypeSelect": "Selecție",
   "tools.database.propertyTypeMultiSelect": "Selecție multiplă",
   "tools.database.propertyTypeDate": "Dată",

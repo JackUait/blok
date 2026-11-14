@@ -737,6 +737,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "ഇനം അവസാനം എഡിറ്റ് ചെയ്ത വ്യക്തിയെ രേഖപ്പെടുത്തുന്നു. സ്വയമേവ അപ്ഡേറ്റ് ചെയ്യപ്പെടുന്നു, എഡിറ്റ് ചെയ്യാനാവില്ല.",
   "tools.database.propertyTypeHelpButton": "ഇനത്തിന്റെ പ്രോപ്പർട്ടികളെ അടിസ്ഥാനമാക്കി പ്രവർത്തനങ്ങൾ ആരംഭിക്കുക.",
   "tools.database.propertyTypeHelpPlace": "ഒരു ഭൗതിക സ്ഥലം മാപ്പിൽ കാണിക്കുക.",
+  "tools.database.propertyTypeHelpUniqueId": "ഓരോ ഇനത്തിനും സ്വയമേവ ഒരു സംഖ്യാ ഐഡി സൃഷ്ടിക്കുന്നു. ഐഡികൾ അദ്വിതീയമാണ്, അവ സ്വമേധയാ മാറ്റാനാവില്ല.",
   "tools.database.propertyTypeSelect": "തിരഞ്ഞെടുക്കൽ",
   "tools.database.propertyTypeMultiSelect": "ബഹു-തിരഞ്ഞെടുക്കൽ",
   "tools.database.propertyTypeDate": "തീയതി",

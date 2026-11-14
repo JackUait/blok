@@ -719,6 +719,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Фіксує особу, яка востаннє редагувала елемент. Оновлюється автоматично й не редагується.",
   "tools.database.propertyTypeHelpButton": "Запускайте дії на основі властивостей елемента.",
   "tools.database.propertyTypeHelpPlace": "Показує фізичне місце на мапі.",
+  "tools.database.propertyTypeHelpUniqueId": "Автоматично створює числовий ідентифікатор для кожного елемента. Ідентифікатори унікальні, і їх не можна змінити вручну.",
   "tools.database.propertyTypeSelect": "Вибір",
   "tools.database.propertyTypeMultiSelect": "Множинний вибір",
   "tools.database.propertyTypeDate": "Дата",

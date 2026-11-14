@@ -717,6 +717,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Tallentaa henkilön, joka muokkasi kohdetta viimeksi. Päivittyy automaattisesti, eikä sitä voi muokata.",
   "tools.database.propertyTypeHelpButton": "Käynnistä toimintoja kohteen ominaisuuksien perusteella.",
   "tools.database.propertyTypeHelpPlace": "Näyttää fyysisen sijainnin kartalla.",
+  "tools.database.propertyTypeHelpUniqueId": "Luo jokaiselle kohteelle automaattisesti numeerisen tunnisteen. Tunnisteet ovat yksilöllisiä, eikä niitä voi muuttaa käsin.",
   "tools.database.propertyTypeSelect": "Valinta",
   "tools.database.propertyTypeMultiSelect": "Monivalinta",
   "tools.database.propertyTypeDate": "Päivämäärä",

@@ -717,6 +717,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "آئٹم میں آخری بار ترمیم کرنے والے شخص کو ریکارڈ کرتا ہے۔ خودکار طور پر اپ ڈیٹ ہوتا ہے اور اس میں ترمیم نہیں کی جا سکتی۔",
   "tools.database.propertyTypeHelpButton": "آئٹم کی پراپرٹیز کی بنیاد پر کارروائیاں چلائیں۔",
   "tools.database.propertyTypeHelpPlace": "نقشے پر کوئی حقیقی مقام دکھائیں۔",
+  "tools.database.propertyTypeHelpUniqueId": "ہر آئٹم کے لیے خود بخود ایک عددی آئی ڈی بناتا ہے۔ آئی ڈیز منفرد ہوتی ہیں اور انہیں ہاتھ سے بدلا نہیں جا سکتا۔",
   "tools.database.propertyTypeSelect": "انتخاب",
   "tools.database.propertyTypeMultiSelect": "متعدد انتخاب",
   "tools.database.propertyTypeDate": "تاریخ",

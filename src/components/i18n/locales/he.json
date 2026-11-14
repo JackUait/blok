@@ -718,6 +718,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "מתעד את האדם האחרון שערך את הפריט. מתעדכן אוטומטית ואינו ניתן לעריכה.",
   "tools.database.propertyTypeHelpButton": "הפעלת פעולות על סמך מאפייני הפריט.",
   "tools.database.propertyTypeHelpPlace": "הצגת מיקום פיזי על מפה.",
+  "tools.database.propertyTypeHelpUniqueId": "יוצר אוטומטית מזהה מספרי לכל פריט. המזהים ייחודיים ואי אפשר לשנות אותם ידנית.",
   "tools.database.propertyTypeSelect": "בחירה",
   "tools.database.propertyTypeMultiSelect": "בחירה מרובה",
   "tools.database.propertyTypeDate": "תאריך",

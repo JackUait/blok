@@ -717,6 +717,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Itinatala ang taong huling nag-edit ng item. Awtomatikong naa-update at hindi mae-edit.",
   "tools.database.propertyTypeHelpButton": "Magpatakbo ng mga aksyon batay sa mga property ng item.",
   "tools.database.propertyTypeHelpPlace": "Ipakita ang isang pisikal na lokasyon sa mapa.",
+  "tools.database.propertyTypeHelpUniqueId": "Awtomatikong gumagawa ng numerong ID para sa bawat item. Natatangi ang mga ID at hindi mababago nang mano-mano.",
   "tools.database.propertyTypeSelect": "Isahang pagpili",
   "tools.database.propertyTypeMultiSelect": "Maramihang pagpili",
   "tools.database.propertyTypeDate": "Petsa",

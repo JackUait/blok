@@ -721,6 +721,7 @@
   "tools.database.propertyTypeHelpLastEditedBy": "Фиксирует, кто последним изменил элемент. Обновляется автоматически, изменить нельзя.",
   "tools.database.propertyTypeHelpButton": "Запускает действия на основе свойств элемента.",
   "tools.database.propertyTypeHelpPlace": "Показывает реальное место на карте.",
+  "tools.database.propertyTypeHelpUniqueId": "Автоматически создаёт числовой идентификатор для каждого элемента. Идентификаторы уникальны, и их нельзя изменить вручную.",
   "tools.database.propertyTypeSelect": "Выбор",
   "tools.database.propertyTypeMultiSelect": "Множественный выбор",
   "tools.database.propertyTypeDate": "Дата",

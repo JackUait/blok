@@ -25,12 +25,13 @@ export interface GroupMenuParams {
   /** The no-value group has no option, so it has no color. */
   isNoValue: boolean;
   color: OptionColor | undefined;
-  aggregationHidden: boolean;
+  aggregationHidden?: boolean;
   /** A status option's group: Notion lists no colours for it (findings-board B13). */
   isStatus: boolean;
   /** Opens the view settings Group page (findings-board B14). */
   onEditGroups: () => void;
-  onToggleAggregation: () => void;
+  /** Without it there is no aggregation row: a sub-group band shows no count. */
+  onToggleAggregation?: () => void;
   onHide: () => void;
   onTrash: () => void;
   onRecolor: (color: OptionColor) => void;
@@ -51,13 +52,13 @@ export const groupMenuItems = (params: GroupMenuParams): PopoverItemParams[] => 
       closeOnActivate: true,
       onActivate: params.onEditGroups,
     },
-    {
+    ...(params.onToggleAggregation === undefined ? [] : [{
       name: 'toggle-aggregation',
-      title: t(params.aggregationHidden ? 'tools.database.groupShowAggregation' : 'tools.database.groupHideAggregation'),
-      icon: params.aggregationHidden ? IconPreview : IconEyeSlash,
+      title: t(params.aggregationHidden === true ? 'tools.database.groupShowAggregation' : 'tools.database.groupHideAggregation'),
+      icon: params.aggregationHidden === true ? IconPreview : IconEyeSlash,
       closeOnActivate: true,
       onActivate: params.onToggleAggregation,
-    },
+    }]),
     {
       name: 'hide-group',
       title: t('tools.database.groupHide'),

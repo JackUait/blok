@@ -4,6 +4,7 @@ import { simulateKeydown } from '../../../helpers/simulate';
 import type { SelectOption, DatabaseRow, DatabaseViewConfig } from '../../../../src/tools/database/types';
 import type { I18n } from '../../../../types';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
+import { IconPlayerPlay } from '../../../../src/components/icons';
 
 const makeOption = (overrides: Partial<SelectOption> = {}): SelectOption => ({
   id: 'opt-1', label: 'To Do', position: 'a0', ...overrides,
@@ -108,6 +109,44 @@ describe('DatabaseBoardView', () => {
       expect(header?.textContent?.trim()).toBe('High');
       toggleOf(board, 'l1')?.click();
       expect(header?.textContent?.trim()).toBe('High');
+    });
+
+    // notion-motion.md Round 29 §6: the band toggle holds the table group's filled caret.
+    it('draws the filled caret in the toggle', () => {
+      const caret = new DOMParser().parseFromString(IconPlayerPlay, 'image/svg+xml').querySelector('path')?.getAttribute('d');
+
+      expect(toggleOf(lanesView([{ key: 'l1', label: 'High' }]), 'l1')?.querySelector('path')?.getAttribute('d')).toBe(caret);
+    });
+
+    // Round 29 §6: "Show group options" ⋯ then "Add new page in group" +, after the label.
+    it('puts ⋯ and + after the band label, naming the band', () => {
+      const header = laneOf(lanesView([{ key: 'l1', label: 'High' }]), 'l1')?.querySelector('[data-blok-database-board-lane-header]');
+      const label = header?.querySelector('[data-blok-database-board-lane-label]');
+      const actions = header?.querySelector('[data-blok-database-board-lane-actions]');
+      const menu = actions?.querySelector('button[data-blok-database-board-lane-menu]');
+      const add = actions?.querySelector('button[data-blok-database-board-lane-add]');
+
+      expect(label?.textContent).toBe('High');
+      expect(label?.nextElementSibling).toBe(actions);
+      expect(menu?.getAttribute('aria-label')).toBe('tools.database.groupMenuLabel');
+      expect(menu?.getAttribute('aria-haspopup')).toBe('menu');
+      expect(menu?.getAttribute('data-sub-group')).toBe('l1');
+      expect(add?.getAttribute('aria-label')).toBe('tools.database.newPage');
+      expect(add?.getAttribute('data-sub-group')).toBe('l1');
+      expect(menu?.nextElementSibling).toBe(add);
+    });
+
+    // Round 29 §6 (r29-subgroup-body.raw): a band's first card sits 8 under the band header.
+    it('starts a band column\'s cards 8px down', () => {
+      const cards = laneOf(lanesView([{ key: 'l1', label: 'High' }]), 'l1')?.querySelector<HTMLElement>('[data-blok-database-cards]');
+
+      expect(cards?.style.paddingTop).toBe('8px');
+    });
+
+    it('has no ⋯ or + in read-only mode', () => {
+      const board = lanesView([{ key: 'l1', label: 'High' }], undefined, true);
+
+      expect(board.querySelector('[data-blok-database-board-lane-actions]')).toBeNull();
     });
 
     it('still folds a band in read-only mode', () => {

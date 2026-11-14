@@ -9449,6 +9449,28 @@ export class DatabaseTool implements BlockTool {
         return;
       }
 
+      const laneMenu = target.closest<HTMLElement>('[data-blok-database-board-lane-menu]');
+      const laneHeader = laneMenu?.closest<HTMLElement>('[data-blok-database-board-lane-header]') ?? null;
+      const laneKey = laneMenu?.getAttribute('data-sub-group') ?? null;
+
+      if (laneMenu !== null && laneHeader !== null && laneKey !== null) {
+        event.stopPropagation();
+        this.openLaneMenu(laneMenu, laneKey, laneHeader);
+
+        return;
+      }
+
+      // Which column Notion's band + fills is unread: the band's first column.
+      const laneAdd = target.closest<HTMLElement>('[data-blok-database-board-lane-add]');
+      const laneAddKey = laneAdd?.getAttribute('data-sub-group') ?? null;
+      const firstColumn = laneAdd?.closest('[data-blok-database-board-lane]')?.querySelector('[data-blok-database-column]')?.getAttribute('data-option-id') ?? null;
+
+      if (laneAddKey !== null && firstColumn !== null) {
+        this.handleAddRow(firstColumn, boardEl, laneAddKey);
+
+        return;
+      }
+
       const headerNewPage = target.closest('[data-blok-database-column-new-page]');
 
       if (headerNewPage !== null) {
@@ -9867,6 +9889,47 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
+   * A sub-group band's ⋯ (notion-motion.md Round 29 §6; what Notion lists there is unread): the group menu,
+   * acting on the sub-group. Its keys are `sub:`-prefixed on the view, so a band never touches the column with the same id.
+   */
+  private openLaneMenu(anchor: HTMLElement, key: string, header: HTMLElement): void {
+    const view = this.shownView();
+    const subGroupBy = view?.subGroupBy;
+    const property = subGroupBy === undefined ? undefined : this.model.getProperty(subGroupBy);
+
+    if (view === undefined || subGroupBy === undefined || property === undefined) {
+      return;
+    }
+    const option = key === NO_VALUE_GROUP_KEY ? undefined : property.config?.options?.find((o) => o.id === key);
+
+    this.showGroupPopover(anchor, groupMenuItems({
+      i18n: this.api.i18n,
+      isNoValue: option === undefined,
+      color: option === undefined ? undefined : optionColorOf(option),
+      isStatus: property.type === 'status',
+      onEditGroups: () => this.controls.openSettingsPage('group', anchor),
+      onHide: () => this.toggleGroupHidden(`sub:${key}`),
+      onTrash: () => this.trashGroup(key, (shown) => this.laneRows(shown, key)),
+      onRecolor: (color) => this.recolorGroup(key, color, subGroupBy),
+    }), header, {
+      minWidth: '180px',
+      offset: 0,
+      class: DATABASE_GROUP_MENU_CLASS,
+    });
+  }
+
+  /** The rows a band shows: every shown column's rows in that sub-group. */
+  private laneRows(view: DatabaseViewConfig, key: string): DatabaseRow[] {
+    const lanes = this.boardLanes(view);
+
+    if (lanes === null || view.groupBy === undefined) return [];
+    const shown = this.groupOptions(view.groupBy, view).filter((option) => !hasGroup(view.hiddenGroups, option.id));
+    const rows = new Map([...this.queryGroupRows(view, shown.map((o) => o.id)).values()].flat().map((row) => [row.id, row]));
+
+    return [...rows.values()].filter((row) => lanes.keysOf(row).includes(key));
+  }
+
+  /**
    * The count's calculation menu. The pick is the view's, so every column shows it.
    * `tableHeader`: a table group header's count (notion-motion.md Round 11: 200 wide, flush under the count).
    */
@@ -9924,8 +9987,8 @@ export class DatabaseTool implements BlockTool {
     this.updateActiveView({ hiddenGroups });
   }
 
-  private recolorGroup(optionId: string, color: OptionColor): void {
-    const groupBy = this.shownView()?.groupBy;
+  /** `groupBy`: whose option to recolour; a sub-group band passes the view's subGroupBy. */
+  private recolorGroup(optionId: string, color: OptionColor, groupBy = this.shownView()?.groupBy): void {
     const options = groupBy === undefined ? undefined : this.model.getProperty(groupBy)?.config?.options;
 
     if (this.readOnly || groupBy === undefined || options === undefined) {
@@ -9940,7 +10003,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** "Move to Trash" on a group deletes the rows the view shows in it, after a confirm (research/08). */
-  private trashGroup(groupId: string): void {
+  private trashGroup(groupId: string, rowsOf: (view: DatabaseViewConfig) => DatabaseRow[] = (view) => this.queryGroupRows(view, [groupId]).get(groupId) ?? []): void {
     const viewId = this.activeViewId;
 
     void openDatabaseConfirm({
@@ -9956,7 +10019,7 @@ export class DatabaseTool implements BlockTool {
         return;
       }
       // Read at confirm time: a peer may have changed the group while the dialog was open.
-      const rows = this.queryGroupRows(view, [groupId]).get(groupId) ?? [];
+      const rows = rowsOf(view);
       const remove = (): void => rows.forEach((row) => this.deleteRowBlock(row.id));
 
       if (this.api.blocks.transact !== undefined) {

@@ -52,6 +52,14 @@ describe('groupMenuItems', () => {
     expect(named(items, 'move-to-trash').isDestructive).toBe(true);
   });
 
+  // A board's sub-group band shows no count, so its menu has no aggregation row.
+  it('leaves out the aggregation row when there is no count to toggle', () => {
+    const { onToggleAggregation: _omit, ...rest } = params();
+    const names = (groupMenuItems(rest) as Item[]).map((item) => item.name ?? item.type);
+
+    expect(names.slice(0, 3)).toEqual(['edit-groups', 'hide-group', 'move-to-trash']);
+  });
+
   // notion-motion.md Round 10 "Group header ⋯ menu": a "Colors" label under the line, over the swatches.
   it('heads the colors with a Colors label', () => {
     const items = groupMenuItems(params()) as Item[];

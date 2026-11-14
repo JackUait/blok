@@ -12,7 +12,7 @@ import { createCardPreview } from './database-card-preview';
 import type { BodyBlock } from './row-body';
 import { resolveBoardCardPreview, resolveCardLayout, resolveCardSize, resolveFitImage, resolveViewProperties } from './view-settings';
 import { getElementDirection } from '../../components/utils/direction';
-import { IconPlus, IconPencilLine, IconDotsHorizontal, IconChevronDown, IconPage, IconPin, IconPinFilled, IconSidebarRight } from '../../components/icons';
+import { IconPlus, IconPencilLine, IconDotsHorizontal, IconPlayerPlay, IconPage, IconPin, IconPinFilled, IconSidebarRight } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
 import { onHover } from '../../components/utils/tooltip';
 import { onPropertyHover } from './property-hint';
@@ -377,19 +377,46 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     section.setAttribute('aria-label', lane.label);
     header.setAttribute('data-blok-database-board-lane-header', '');
     header.appendChild(this.createLaneToggle(section, lane));
-    if (lane.option !== undefined) {
-      header.appendChild(createGroupPill(lane.option, this.settings.schema?.find((p) => p.id === this.settings.view?.subGroupBy)));
-    } else {
-      const label = document.createElement('span');
+    const label = document.createElement('span');
 
+    label.setAttribute('data-blok-database-board-lane-label', '');
+    if (lane.option !== undefined) {
+      label.appendChild(createGroupPill(lane.option, this.settings.schema?.find((p) => p.id === this.settings.view?.subGroupBy)));
+    } else {
       label.textContent = lane.label;
-      header.appendChild(label);
+    }
+    header.appendChild(label);
+    if (!this.readOnly) {
+      header.appendChild(this.createLaneActions(lane.key));
     }
     columns.setAttribute('data-blok-database-board-lane-columns', '');
     columns.append(...columnEls);
     section.append(header, columns);
 
     return section;
+  }
+
+  /** notion-motion.md Round 29 §6: ⋯ then +, shown while the band header is hovered (database.css). The owner handles the clicks. */
+  private createLaneActions(key: string): HTMLElement {
+    const actions = document.createElement('span');
+    const menu = document.createElement('button');
+    const add = document.createElement('button');
+
+    actions.setAttribute('data-blok-database-board-lane-actions', '');
+    menu.type = 'button';
+    menu.setAttribute('data-blok-database-board-lane-menu', '');
+    menu.setAttribute('data-sub-group', key);
+    menu.setAttribute('aria-label', this.i18n.t('tools.database.groupMenuLabel'));
+    menu.setAttribute('aria-haspopup', 'menu');
+    menu.innerHTML = IconDotsHorizontal;
+    add.type = 'button';
+    add.setAttribute('data-blok-database-board-lane-add', '');
+    add.setAttribute('data-sub-group', key);
+    add.setAttribute('aria-label', this.i18n.t('tools.database.newPage'));
+    add.innerHTML = IconPlus;
+    actions.append(menu, add);
+
+    return actions;
   }
 
   /** research/31 §3: only the arrow turns; the cards hide at once. */
@@ -403,7 +430,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
 
     toggle.type = 'button';
     toggle.setAttribute('data-blok-database-board-lane-toggle', '');
-    toggle.innerHTML = IconChevronDown;
+    toggle.innerHTML = IconPlayerPlay;
     setCollapsed(lane.collapsed === true);
     toggle.addEventListener('click', () => {
       const collapsed = !section.hasAttribute('data-collapsed');
@@ -602,7 +629,8 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     cardsContainer.setAttribute('data-blok-keyboard-owner', '');
     cardsContainer.style.display = 'flex';
     cardsContainer.style.flexDirection = 'column';
-    cardsContainer.style.paddingTop = '3px';
+    // notion-motion.md Round 29 §6: under a band header (no column header) the first card sits 8 down.
+    cardsContainer.style.paddingTop = withHeader ? '3px' : '8px';
 
     for (const row of rows) {
       const cardEl = this.createCardElement(row, titlePropertyId);

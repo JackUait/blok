@@ -7295,6 +7295,84 @@ describe('DatabaseTool — board sub-group lanes', () => {
     tool.destroy();
   });
 
+  // notion-motion.md Round 29 §6: the band's ⋯ and +. What Notion's ⋯ lists is unread; it is the group menu, acting on the sub-group.
+  describe('a band\'s ⋯ and +', () => {
+    const openLaneMenu = (element: HTMLElement, key: string): void => {
+      lane(element, key)?.querySelector<HTMLButtonElement>('[data-blok-database-board-lane-menu]')?.click();
+    };
+    const pick = (title: string): void => {
+      queryByData(document.body, 'data-mock-popover-action', title.toLowerCase())?.click();
+    };
+
+    it('opens the group menu with no aggregation row', () => {
+      const { tool, element } = mount();
+
+      openLaneMenu(element, 'team-a');
+
+      expect(queryByData(document.body, 'data-mock-popover-class', 'blok-database-menu blok-database-header-menu blok-database-group-menu')).not.toBeNull();
+      expect(queryByData(document.body, 'data-mock-popover-action', 'tools.database.grouphideaggregation')).toBeNull();
+      expect(queryByData(document.body, 'data-mock-popover-action', 'tools.database.groupshowaggregation')).toBeNull();
+      expect(lane(element, 'team-a')?.querySelector('[data-blok-database-board-lane-header]')?.hasAttribute('data-popover-open')).toBe(true);
+
+      tool.destroy();
+    });
+
+    it('Hide group hides the band under its sub: key, not the column with the same id', () => {
+      const { tool, element } = mount();
+
+      openLaneMenu(element, 'team-a');
+      pick('tools.database.groupHide');
+
+      expect(lane(element, 'team-a')).toBeUndefined();
+      expect(tool.save(element).views[0].hiddenGroups).toEqual([{ id: 'sub:team-a' }]);
+
+      tool.destroy();
+    });
+
+    it('Move to Trash deletes only the band\'s pages', async () => {
+      const { tool, element, options } = mount();
+
+      vi.mocked(options.api.blocks.getBlockIndex).mockImplementation((id: string) => ['row-1', 'row-2'].indexOf(id) + 1);
+      openLaneMenu(element, 'team-a');
+      pick('tools.database.groupMoveToTrash');
+      document.querySelector<HTMLButtonElement>('[data-blok-database-confirm-action="confirm"]')?.click();
+      await Promise.resolve();
+
+      expect(vi.mocked(options.api.blocks.getBlockIndex).mock.calls.map(([id]) => id)).toEqual(['row-1']);
+      expect(options.api.blocks.delete).toHaveBeenCalledTimes(1);
+
+      tool.destroy();
+    });
+
+    it('a colour recolours the sub-group\'s option', () => {
+      const { tool, element } = mount();
+
+      openLaneMenu(element, 'team-b');
+      pick('tools.colorPicker.color.pink');
+
+      const saved = tool.save(element).schema;
+
+      expect(saved.find((p) => p.id === 'prop-team')?.config?.options.find((o) => o.id === 'team-b')?.color).toBe('pink');
+      expect(saved.find((p) => p.id === 'prop-status')?.config?.options.some((o) => o.color === 'pink')).toBe(false);
+
+      tool.destroy();
+    });
+
+    // Which column Notion's + fills is unread: Blok uses the first column shown.
+    it('+ adds a page in the band, in the first column', () => {
+      const { tool, element, options } = mount();
+
+      lane(element, 'team-b')?.querySelector<HTMLButtonElement>('[data-blok-database-board-lane-add]')?.click();
+
+      const data = vi.mocked(options.api.blocks.insertAt).mock.calls[0]?.[1] as DatabaseRowData | undefined;
+
+      expect(data?.properties['prop-team']).toBe('team-b');
+      expect(data?.properties['prop-status']).toBe('opt-todo');
+
+      tool.destroy();
+    });
+  });
+
   // Unmeasured in Notion: the sub-group value is a change of value, not of place, so it is kept.
   it('a sorted drop into another lane of the same column writes the sub-group value only, without asking', () => {
     const children = rows();

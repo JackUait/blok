@@ -10473,16 +10473,18 @@ button[data-blok-database-table-calc] > [data-blok-database-table-calc-box]:hove
   transition: transform 200ms ease-out;
 }
 
-/* Notion's filled caret (research/07:85): IconPlayerPlay points right, so
-   `rotate` turns it down. `transform` stays free for the collapse turn. */
-[data-blok-database-table-group-toggle] svg {
+/* Notion's filled caret (research/07:85; the board band's too, notion-motion.md Round 29 §6): IconPlayerPlay
+   points right, so `rotate` turns it down. `transform` stays free for the collapse turn. */
+[data-blok-database-table-group-toggle] svg,
+[data-blok-database-board-lane-toggle] svg {
   width: 20px;
   height: 20px;
   rotate: 90deg;
 }
 
-/* notion-motion.md Round 9: the caret's hover fill. The board lane toggle is unmeasured. */
-[data-blok-database-table-group-toggle] {
+/* notion-motion.md Round 9: the caret's hover fill; Round 29 §6 (r29-subgroup-band-rest.raw) the band's. */
+[data-blok-database-table-group-toggle],
+[data-blok-database-board-lane-toggle] {
   transition: background-color 20ms ease-in;
 }
 
@@ -10501,15 +10503,18 @@ button[data-blok-database-table-calc] > [data-blok-database-table-calc-box]:hove
   transform: rotate(90deg);
 }
 
-/* notion-motion.md Round 9: the pill sits 3px into its slot, at header x+27. */
-[data-blok-database-table-group-label] {
+/* notion-motion.md Round 9: the pill sits 3px into its slot, at header x+27; Round 29 §6 the band's too. */
+[data-blok-database-table-group-label],
+[data-blok-database-board-lane-label] {
   padding-inline: var(--blok-space-0-75);
   font-weight: 500;
 }
 
 /* notion-motion.md Round 10: ⋯ then + right after the pill (6px), 24px, radius 6, only on this header's hover.
-   Hidden ones take no clicks; opacity keeps them in the tab order so :focus-visible shows them. */
-[data-blok-database-table-group-actions] {
+   Hidden ones take no clicks; opacity keeps them in the tab order so :focus-visible shows them.
+   Round 29 §6: the board band's ⋯ and + are the same. */
+[data-blok-database-table-group-actions],
+[data-blok-database-board-lane-actions] {
   display: flex;
   margin-inline-start: var(--blok-space-0-75);
   opacity: 0;
@@ -10519,12 +10524,16 @@ button[data-blok-database-table-calc] > [data-blok-database-table-calc-box]:hove
 
 [data-blok-database-table-group-header]:hover > [data-blok-database-table-group-actions],
 [data-blok-database-table-group-header][data-popover-open] > [data-blok-database-table-group-actions],
-[data-blok-database-table-group-actions]:has(:focus-visible) {
+[data-blok-database-table-group-actions]:has(:focus-visible),
+[data-blok-database-board-lane-header]:hover > [data-blok-database-board-lane-actions],
+[data-blok-database-board-lane-header][data-popover-open] > [data-blok-database-board-lane-actions],
+[data-blok-database-board-lane-actions]:has(:focus-visible) {
   opacity: 1;
   pointer-events: auto;
 }
 
-[data-blok-database-table-group-actions] button {
+[data-blok-database-table-group-actions] button,
+[data-blok-database-board-lane-actions] button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -10538,11 +10547,13 @@ button[data-blok-database-table-calc] > [data-blok-database-table-calc-box]:hove
   cursor: pointer;
 }
 
-[data-blok-database-table-group-actions] button:hover {
+[data-blok-database-table-group-actions] button:hover,
+[data-blok-database-board-lane-actions] button:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
-[data-blok-database-table-group-actions] svg {
+[data-blok-database-table-group-actions] svg,
+[data-blok-database-board-lane-actions] svg {
   width: 16px;
   height: 16px;
 }
@@ -10814,6 +10825,7 @@ button[data-blok-database-table-group-count]:hover {
   [data-blok-database-table-row-add],
   [data-blok-database-table-row-handle],
   [data-blok-database-table-group-toggle],
+  [data-blok-database-board-lane-toggle],
   [data-blok-database-table-group-toggle] svg,
   [data-blok-database-board-lane-toggle] svg,
   [data-blok-database-table-drop-line],
@@ -15441,11 +15453,21 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   flex-direction: column;
 }
 
+/* notion-motion.md Round 29 §6: a 36px header, the body right under it (first card 8 in: database-board-view.ts).
+   Collapsed, the band is its header alone; the margin takes back the board's 12px gap (set inline, database-board-view.ts). */
 [data-blok-database-board-lane] {
   display: flex;
   flex-direction: column;
-  gap: var(--blok-space-2);
+  gap: 0;
   padding-block-end: var(--blok-space-4);
+}
+
+[data-blok-database-board-lane][data-collapsed] {
+  padding-block-end: 0;
+}
+
+[data-blok-database-board-lane][data-collapsed]:not(:last-child) {
+  margin-block-end: calc(-1 * var(--blok-space-3));
 }
 
 [data-blok-database-board-lane-header] {
@@ -15453,7 +15475,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   inset-inline-start: 0;
   display: flex;
   align-items: center;
-  gap: var(--blok-space-2);
+  gap: 0;
+  height: 36px;
   font-size: 14px;
   font-weight: 500;
 }

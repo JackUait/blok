@@ -430,6 +430,29 @@ describe('gallery and calendar in dark (research/21 §1g, §1h)', () => {
   });
 });
 
+// notion-motion.md Round 32 §3 Calendar (r32-b-calendar-geom.raw): the weekday row is at y 349.2 and 24 tall, the digits at 378.2.
+// A day number is its text, right-aligned 10px in ("2" ends at 726.4); only today's is a 24px circle, 4px in (1202–1226).
+describe('calendar day digits and weekday row (Round 32)', () => {
+  it('sets the weekday row 2px lower with 24px cells over its 1px line', () => {
+    const body = ruleBody('[data-blok-database-calendar-weekdays]');
+
+    expect(body).toContain('min-height: 25px');
+    expect(body).toContain('margin-block-start: var(--blok-space-0-5)');
+  });
+
+  it('sizes a day number to its text, and only today to a 24px circle 4px in', () => {
+    const number = ruleBody('[data-blok-database-calendar-day-number]');
+    const today = ruleBody('[data-blok-database-calendar-day][data-today] [data-blok-database-calendar-day-number]');
+
+    expect(number).not.toContain('min-inline-size');
+    expect(number).not.toContain('padding-inline');
+    expect(number).toContain('inset-inline-end: 10px');
+    expect(today).toContain('min-inline-size: 24px');
+    expect(today).toContain('padding-inline: var(--blok-space-1)');
+    expect(today).toContain('inset-inline-end: 4px');
+  });
+});
+
 describe('content inset (side-by-side-4 #2)', () => {
   const inset = 'padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))';
 

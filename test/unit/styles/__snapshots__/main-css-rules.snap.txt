@@ -6010,12 +6010,14 @@ span[data-blok-slash-search] {
   flex: 0 0 auto;
   min-width: 0;
   width: fit-content;
+  margin-inline-start: var(--blok-space-0-75);
 }
 
 [data-blok-database-no-value-group] [data-blok-database-column-pill] {
   background-color: transparent;
   padding: 0;
   margin-inline-start: var(--blok-space-1);
+  margin-inline-end: var(--blok-space-0-75);
 }
 
 [data-blok-database-column-dot] {
@@ -8124,6 +8126,10 @@ button[data-blok-database-board-lane-count]:hover {
 [data-blok-database-add-row] > span[aria-hidden="true"] svg {
   width: 16px;
   height: 16px;
+}
+
+[data-blok-database-list] > [data-blok-database-add-row] > span[aria-hidden="true"] {
+  margin-inline-start: var(--blok-space-0-25);
 }
 
 [data-blok-database-list-group] {
@@ -17240,7 +17246,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 [data-blok-database-calendar-weekdays] {
-  min-height: 24px;
+  min-height: 25px;
+  margin-block-start: var(--blok-space-0-5);
   border-block-end: 1px solid var(--blok-database-calendar-border);
 }
 
@@ -17283,9 +17290,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   position: absolute;
   inset-block-start: 4px;
   inset-inline-end: 10px;
-  min-inline-size: 24px;
   block-size: 24px;
-  padding-inline: var(--blok-space-1);
   font-size: 14px;
   line-height: 24px;
   text-align: center;
@@ -17307,6 +17312,9 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 [data-blok-database-calendar-day][data-today] [data-blok-database-calendar-day-number] {
+  inset-inline-end: 4px;
+  min-inline-size: 24px;
+  padding-inline: var(--blok-space-1);
   background-color: var(--blok-database-today);
   color: var(--blok-database-calendar-day-today-text);
 }

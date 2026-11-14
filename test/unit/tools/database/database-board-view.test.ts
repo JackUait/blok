@@ -1172,6 +1172,16 @@ describe('DatabaseBoardView', () => {
       expect(header.style.gap).toBeTruthy();
     });
 
+    // notion-motion.md Round 32 §3 Board: the count sits 3px after the group pill.
+    it('puts the count 3px after the group pill', () => {
+      const options = [makeOption({ id: 'opt-1', position: 'a0' })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
+      const header = board.querySelector('[data-blok-database-column-header]') as HTMLElement;
+
+      expect(header.style.gap).toBe('3px');
+    });
+
     it('board area has vertical padding set inline', () => {
       const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });
       const board = view.createView();

@@ -795,7 +795,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     header.style.display = 'flex';
     header.style.alignItems = 'center';
     header.style.padding = '0';
-    header.style.gap = '6px';
+    header.style.gap = '3px';
     header.style.cursor = 'grab';
 
     const pill = document.createElement('div');

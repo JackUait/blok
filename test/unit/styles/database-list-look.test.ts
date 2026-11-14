@@ -545,3 +545,10 @@ describe('conditional color page (notion-motion.md Round 20 §4, r20-cc-intro.ra
     expect(ruleBody(database, '[data-blok-database-panel-row][data-blok-database-color-add-another]')).toContain('border: 1px solid var(--blok-database-feed-actions-border)');
   });
 });
+
+// notion-motion.md Round 32 §3 List: Notion's "+ New page" icon is at x 546 and its text at 570, 7px left of Blok's 553/577.
+describe('list "+ New page" in line with the row titles (Round 32)', () => {
+  it('starts the plus 1px into the row, so the text lines up with the titles', () => {
+    expect(ruleBody(database, '[data-blok-database-list] > [data-blok-database-add-row] > span[aria-hidden="true"]')).toContain('margin-inline-start: var(--blok-space-0-25)');
+  });
+});

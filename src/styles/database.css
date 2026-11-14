@@ -1686,13 +1686,16 @@
   flex: 0 0 auto;
   min-width: 0;
   width: fit-content;
+  /* notion-motion.md Round 32 §3 Board: the pill is 3px into the header, the count 3px after it. */
+  margin-inline-start: var(--blok-space-0-75);
 }
 
-/* The no-value group's name is plain text, no pill. */
+/* The no-value group's name is plain text, no pill. Its end margin keeps the 6px before the count. */
 [data-blok-database-no-value-group] [data-blok-database-column-pill] {
   background-color: transparent;
   padding: 0;
   margin-inline-start: var(--blok-space-1);
+  margin-inline-end: var(--blok-space-0-75);
 }
 
 /* Notion's select pill has no dot. The element stays for hosts that style it. */
@@ -4222,6 +4225,11 @@ button[data-blok-database-board-lane-count]:hover {
 [data-blok-database-add-row] > span[aria-hidden="true"] svg {
   width: 16px;
   height: 16px;
+}
+
+/* notion-motion.md Round 32 §3 List: plus at x 546, text at 570, in line with the row titles. */
+[data-blok-database-list] > [data-blok-database-add-row] > span[aria-hidden="true"] {
+  margin-inline-start: var(--blok-space-0-25);
 }
 
 /**
@@ -14260,8 +14268,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   grid-template-columns: repeat(var(--blok-database-calendar-columns, 7), minmax(0, 1fr));
 }
 
+/* notion-motion.md Round 32 §3 Calendar: 24px cells at y 349.2, over the 1px line. */
 [data-blok-database-calendar-weekdays] {
-  min-height: 24px;
+  min-height: 25px;
+  margin-block-start: var(--blok-space-0-5);
   border-block-end: 1px solid var(--blok-database-calendar-border);
 }
 
@@ -14305,13 +14315,12 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   background-color: var(--blok-icon-active-bg);
 }
 
+/* notion-motion.md Round 32 §3 Calendar: a number is its text, 10px in ("2" ends at 726.4). */
 [data-blok-database-calendar-day-number] {
   position: absolute;
   inset-block-start: 4px;
   inset-inline-end: 10px;
-  min-inline-size: 24px;
   block-size: 24px;
-  padding-inline: var(--blok-space-1);
   font-size: 14px;
   line-height: 24px;
   text-align: center;
@@ -14333,7 +14342,11 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-calendar-muted-text);
 }
 
+/* Round 32 §3: today's circle is 24px, 4px in (1202–1226), read on a Saturday only. */
 [data-blok-database-calendar-day][data-today] [data-blok-database-calendar-day-number] {
+  inset-inline-end: 4px;
+  min-inline-size: 24px;
+  padding-inline: var(--blok-space-1);
   background-color: var(--blok-database-today);
   color: var(--blok-database-calendar-day-today-text);
 }

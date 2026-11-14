@@ -451,3 +451,17 @@ describe('pinned group modal', () => {
     expect(ruleBody(database, '[data-blok-database-group-modal-chips] > [data-blok-database-chip-divider]')).toContain('margin-inline: var(--blok-space-1-5)');
   });
 });
+
+// notion-motion.md Round 32 §3 Board: the group pill starts 3px into the header (x 550) and the count sits 3px after it.
+describe('board group header pill (Round 32)', () => {
+  it('starts the pill 3px into the header', () => {
+    expect(ruleBody(database, '[data-blok-database-column-pill]')).toContain('margin-inline-start: var(--blok-space-0-75)');
+  });
+
+  it('keeps the no-value group name where it was: 4px in, 6px before the count', () => {
+    const body = ruleBody(database, '[data-blok-database-no-value-group] [data-blok-database-column-pill]');
+
+    expect(body).toContain('margin-inline-start: var(--blok-space-1)');
+    expect(body).toContain('margin-inline-end: var(--blok-space-0-75)');
+  });
+});

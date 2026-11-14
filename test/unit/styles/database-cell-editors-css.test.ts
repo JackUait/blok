@@ -831,6 +831,17 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // research/26 §2: the docked "New database" panel keeps its own glyphs: a 16px plus, tinted 17px template glyphs.
+  describe('docked panel glyphs', () => {
+    const OWN = '[data-blok-database-panel][data-docked]:not([data-blok-database-creation-panel]) [data-blok-database-panel-icon]';
+
+    it('paint View settings glyphs 20px in primary ink, and leave the creation panel alone', () => {
+      expect(declared(OWN, 'color')).toEqual(['var(--blok-database-ink)']);
+      expect(declared(`${OWN} svg`, 'width')).toEqual(['20px']);
+      expect(declared('[data-blok-database-panel][data-docked] [data-blok-database-panel-icon]', 'color')).toEqual([]);
+    });
+  });
+
   // notion-motion.md Round 9 (r9-vs-filter.raw, r9-vs-sort.raw): the empty Filter and Sort pages put the search box
   // 266x28 at x+12, y+54, the first option at y+94, options on a 29px step with the name at x+44.
   describe('view settings property picker page', () => {

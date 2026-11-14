@@ -1684,6 +1684,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Round 28 lane r38: the narrow OPEN's 26x20 inner button takes the hover and the press, not its 2px frame.
     // Net database.css growth against origin/main.
     const DATABASE_R38_BYTES = 824;
+    // Lane r39: fixes on surfaces no round had compared. Net database.css growth against origin/main.
+    const DATABASE_R39_BYTES = 82;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2198,6 +2200,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R35_BYTES
       + DATABASE_R37_BYTES
       + DATABASE_R38_BYTES
+      + DATABASE_R39_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

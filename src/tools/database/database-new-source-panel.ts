@@ -276,6 +276,8 @@ export const openNewSourcePanel = (options: NewSourcePanelOptions): DatabasePane
     },
     testId: newDatabase ? 'database-new-database-panel' : 'database-new-source-panel',
     width: 290,
+    // research/26 §2: Notion opens it at the window's right edge (x 1210), where View settings docks.
+    docked: true,
     backLabel: t('tools.database.peekBack'),
     ...(options.onClose !== undefined ? { onClose: options.onClose } : {}),
   });

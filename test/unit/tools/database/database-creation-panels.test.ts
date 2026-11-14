@@ -183,4 +183,11 @@ describe('"New database" panel (N03)', () => {
 
     expect(byTestId(panel, 'database-new-database-starter-tasks').hasAttribute('data-blok-database-panel-tiled')).toBe(true);
   });
+
+  // research/26 §2: a right-hand panel at x 1210, where View settings docks, not under the block.
+  it('docks at the window edge like View settings', () => {
+    const panel = openNewDatabase();
+
+    expect(panel.hasAttribute('data-docked')).toBe(true);
+  });
 });

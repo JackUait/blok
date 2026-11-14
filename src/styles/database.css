@@ -12448,11 +12448,11 @@ button[data-blok-database-table-group-count]:hover {
 }
 
 /* findings V11: view settings rows carry a 20px glyph in near-primary ink (Notion rgb(56, 56, 54)). */
-[data-blok-database-panel][data-docked] [data-blok-database-panel-icon] {
+[data-blok-database-panel][data-docked]:not([data-blok-database-creation-panel]) [data-blok-database-panel-icon] {
   color: var(--blok-database-ink);
 }
 
-[data-blok-database-panel][data-docked] [data-blok-database-panel-icon] svg {
+[data-blok-database-panel][data-docked]:not([data-blok-database-creation-panel]) [data-blok-database-panel-icon] svg {
   width: 20px;
   height: 20px;
 }

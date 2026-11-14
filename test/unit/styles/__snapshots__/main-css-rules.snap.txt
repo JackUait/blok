@@ -9534,6 +9534,10 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   width: 400px;
 }
 
+[data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-body] {
+  padding-inline: var(--blok-space-1);
+}
+
 [data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-grid] {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   row-gap: var(--blok-space-0-5);

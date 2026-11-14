@@ -86,6 +86,13 @@ describe('add property menu (T12)', () => {
 
   // notion-motion.md Round 28 §3 (r28-addprop.raw, r28-idtip.png): across a rule the cell pitch is 48, not 34. The line is
   // rgb(240,239,237) on white, 4 in from the cells, 7 under the row above and 8 over the next. The 2px row gap counts twice.
+  // notion-motion.md Round 28 §3: the box is 808–1207 (its ring at 807 and 1208, r28-idtip.png), the cells start at 816 and
+  // the "?" of both columns sit at 986 and 1178 (r28-addprop.raw): 8 in and 192-wide cells. The AI rows line up with them.
+  it('insets the grid\'s body 8 from the box, so its cells are 192 wide', () => {
+    expect(declared("[data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-body]", 'padding-inline'))
+      .toEqual(['var(--blok-space-1)']);
+  });
+
   it('draws the grid\'s rules full width, 1px, with the 16px break Notion has', () => {
     const rule = '[data-blok-database-property-type-rule]';
 

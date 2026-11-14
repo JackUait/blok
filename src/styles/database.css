@@ -5802,6 +5802,11 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   width: 400px;
 }
 
+/* notion-motion.md Round 28 §3: the cells sit 8 in from the box (the popover pads 4), so they are 192 wide. */
+[data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-body] {
+  padding-inline: var(--blok-space-1);
+}
+
 /* notion-spec-2 §19.11: 32px cells at a 34px row pitch. */
 [data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-grid] {
   grid-template-columns: repeat(2, minmax(0, 1fr));

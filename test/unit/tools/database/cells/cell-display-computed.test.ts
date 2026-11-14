@@ -106,7 +106,9 @@ describe('renderCellValue — computed property types', () => {
 
     expect(icon?.hasAttribute('data-blok-database-relation-chip-icon')).toBe(true);
     expect(icon?.getAttribute('aria-hidden')).toBe('true');
-    expect(icon?.querySelectorAll('path')).toHaveLength(2);
+    // IconPageEmpty is the Keyline page: one rect, no fold (src/components/icons/README.md).
+    expect(icon?.querySelectorAll('rect')).toHaveLength(1);
+    expect(icon?.querySelectorAll('path')).toHaveLength(0);
     expect(title?.hasAttribute('data-blok-database-relation-chip-title')).toBe(true);
     expect(title?.textContent).toBe('Alpha');
   });

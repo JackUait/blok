@@ -743,7 +743,11 @@ describe('DatabaseCardDrawer', () => {
       const closeBtn = options.wrapper.querySelector('[data-blok-database-drawer-close]') as HTMLElement;
 
       expect(closeBtn.querySelectorAll('svg')).toHaveLength(1);
-      expect(closeBtn.querySelectorAll('svg path')).toHaveLength(2);
+      const paths = closeBtn.querySelectorAll('svg path');
+
+      // Keyline draws both chevrons as one path with two strokes.
+      expect(paths).toHaveLength(1);
+      expect(paths[0]?.getAttribute('d')?.match(/M/g)).toHaveLength(2);
     });
 
     // feel/findings-rowpage R25: Notion's empty row page title reads "New page".

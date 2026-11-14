@@ -5799,6 +5799,14 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   min-height: 32px;
 }
 
+/* notion-motion.md Round 28 §3: across a rule the pitch is 48; with the 2px row gap on each side the break is 16. */
+[data-blok-database-property-type-rule] {
+  grid-column: 1 / -1;
+  height: 1px;
+  margin: var(--blok-space-1-25) var(--blok-space-1) var(--blok-space-1-5);
+  background-color: var(--blok-database-table-border);
+}
+
 /* notion-spec-2 §19.11: the table header "+" grid shows half the window; its last 34px fade. */
 [data-blok-database-property-type-name-over-anchor] {
   max-height: 50dvh;

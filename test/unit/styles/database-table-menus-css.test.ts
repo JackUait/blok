@@ -84,6 +84,17 @@ describe('add property menu (T12)', () => {
     expect(declared(`[data-blok-database-property-type-option]:hover > ${help}`, 'opacity')).toEqual(['1']);
   });
 
+  // notion-motion.md Round 28 §3 (r28-addprop.raw, r28-idtip.png): across a rule the cell pitch is 48, not 34. The line is
+  // rgb(240,239,237) on white, 4 in from the cells, 7 under the row above and 8 over the next. The 2px row gap counts twice.
+  it('draws the grid\'s rules full width, 1px, with the 16px break Notion has', () => {
+    const rule = '[data-blok-database-property-type-rule]';
+
+    expect(declared(rule, 'grid-column')).toEqual(['1 / -1']);
+    expect(declared(rule, 'height')).toEqual(['1px']);
+    expect(declared(rule, 'margin')).toEqual(['var(--blok-space-1-25) var(--blok-space-1) var(--blok-space-1-5)']);
+    expect(declared(rule, 'background-color')).toEqual(['var(--blok-database-table-border)']);
+  });
+
   it('has 28px rows of 14px text with 20px glyphs and a sentence-case label', () => {
     expect(declared('[data-blok-database-property-type-option]', 'min-height')).toEqual(['28px']);
     expect(declared('[data-blok-database-property-type-option]', 'font-size')).toEqual(['14px']);

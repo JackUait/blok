@@ -9531,6 +9531,13 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   min-height: 32px;
 }
 
+[data-blok-database-property-type-rule] {
+  grid-column: 1 / -1;
+  height: 1px;
+  margin: var(--blok-space-1-25) var(--blok-space-1) var(--blok-space-1-5);
+  background-color: var(--blok-database-table-border);
+}
+
 [data-blok-database-property-type-name-over-anchor] {
   max-height: 50dvh;
 }

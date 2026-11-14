@@ -16,6 +16,32 @@ import {
 /** Top margin; it matches the CSS max-height margin. Notion's is unmeasured. */
 const VIEWPORT_MARGIN = 12;
 /** Every row the arrows walk, top to bottom. */
+/** notion-motion.md Round 28 §3 (r28-addprop.raw): the header grid's rules sit before these types. */
+const GRID_GROUP_STARTS: readonly PropertyType[] = ['relation', 'createdTime'];
+
+/**
+ * Where each shown type sits in the two-column grid: a shown rule starts a new line at the first column.
+ * AI rows (before `typeStart`) get no cell.
+ */
+const gridCells = (shown: HTMLElement[], typeStart: number): Array<{ line: number; column: number } | undefined> => {
+  const place = { line: -1, column: 1 };
+
+  return shown.map((row, index) => {
+    if (index < typeStart) return undefined;
+    const rule = row.previousElementSibling;
+    const parted = rule instanceof HTMLElement && rule.hasAttribute('data-blok-database-property-type-rule') && !rule.hidden;
+
+    if (parted || place.column === 1) {
+      place.line += 1;
+      place.column = 0;
+    } else {
+      place.column = 1;
+    }
+
+    return { line: place.line, column: place.column };
+  });
+};
+
 const ROWS = '[data-blok-database-property-autofill-option], [data-blok-database-property-type-option]';
 /** The type row the arrows are on. */
 const OPTION_ACTIVE = 'data-blok-database-property-type-option-active';
@@ -171,6 +197,12 @@ export class DatabasePropertyTypePopover {
     popover.appendChild(body);
 
     for (const type of this.grid ? headerPickerTypes(this.hasPeople) : addablePropertyTypes(this.hasPeople)) {
+      if (this.grid && GRID_GROUP_STARTS.includes(type)) {
+        const rule = document.createElement('div');
+
+        rule.setAttribute('data-blok-database-property-type-rule', '');
+        grid.appendChild(rule);
+      }
       const meta = propertyTypeMeta(type);
       const item = document.createElement('div');
       item.setAttribute('data-blok-database-property-type-option', type);
@@ -319,25 +351,34 @@ export class DatabasePropertyTypePopover {
     const firstType = shown.findIndex((row) => row.hasAttribute('data-blok-database-property-type-option'));
     const typeStart = firstType === -1 ? shown.length : firstType;
     const inTypes = current >= typeStart;
-    const column = (current - typeStart) % 2;
+    const cells = gridCells(shown, typeStart);
+    const at = cells[current];
+    const find = (line: number, column: number): number => cells.findIndex((cell) => cell?.line === line && cell.column === column);
+    // A rule can leave a group's last row with one cell: the move then lands on that cell.
+    const onLine = (line: number, column: number): number => {
+      const same = find(line, column);
+
+      return same === -1 ? find(line, 0) : same;
+    };
 
     if (key === 'ArrowDown') {
-      if (!inTypes) return Math.min(current + 1, last);
+      if (!inTypes || at === undefined) return Math.min(current + 1, last);
+      const below = onLine(at.line + 1, at.column);
 
-      return current + 2 <= last ? current + 2 : current;
+      return below === -1 ? current : below;
     }
     if (key === 'ArrowUp') {
-      if (!inTypes) return Math.max(current - 1, 0);
-      if (current - 2 >= typeStart) return current - 2;
+      if (!inTypes || at === undefined) return Math.max(current - 1, 0);
+      if (at.line > 0) return onLine(at.line - 1, at.column);
 
       // The first row of types goes up to the last AI row.
       return typeStart > 0 ? typeStart - 1 : current;
     }
     // Off the types, Left and Right stay the name field's caret keys.
-    if ((key !== 'ArrowLeft' && key !== 'ArrowRight') || !inTypes) return null;
-    const other = column === 0 ? current + 1 : current - 1;
+    if ((key !== 'ArrowLeft' && key !== 'ArrowRight') || !inTypes || at === undefined) return null;
+    const other = find(at.line, 1 - at.column);
 
-    return other <= last ? other : current;
+    return other === -1 ? current : other;
   }
 
   private typeListHeading(grid: HTMLElement): HTMLElement {
@@ -353,6 +394,8 @@ export class DatabasePropertyTypePopover {
         option.hidden = !(option.textContent ?? '').toLowerCase().includes(query);
         option.removeAttribute(OPTION_ACTIVE);
       }
+      // A search shows one flat list of matches.
+      for (const rule of grid.querySelectorAll<HTMLElement>('[data-blok-database-property-type-rule]')) rule.hidden = query !== '';
     }, !this.grid);
 
     // notion-spec-2 §19.8: opening "Search types" drops the highlight, so the next ArrowDown starts at the menu's top.

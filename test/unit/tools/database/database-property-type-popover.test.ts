@@ -119,6 +119,25 @@ describe('DatabasePropertyTypePopover', () => {
       }
     });
 
+    // notion-motion.md Round 28 §3 (r28-addprop.raw): the grid's "?" rows step 34 within a group and 48 across a rule,
+    // so the rules part Text…Email, Relation…Place and the four automatic types.
+    it('parts the header "+" grid into three groups with a rule before Relation and before Created time', () => {
+      const grid = new DatabasePropertyTypePopover({ onSelect, layout: 'grid', hasPeople: true });
+
+      grid.open(anchor);
+      const body = document.querySelector('[data-blok-database-property-type-grid]');
+      const after = [...(body?.querySelectorAll('[data-blok-database-property-type-rule]') ?? [])]
+        .map((rule) => rule.nextElementSibling?.getAttribute('data-blok-database-property-type-option'));
+
+      expect(after).toEqual(['relation', 'createdTime']);
+      grid.destroy();
+    });
+
+    it('keeps the list layout without rules', () => {
+      popover.open(anchor);
+      expect(document.querySelector('[data-blok-database-property-type-rule]')).toBeNull();
+    });
+
     // notion-motion.md Round 28 §3 (r28-addprop.raw, r28-idtip.png): the header "+" grid has a 14px "?" in every cell too.
     it('puts the "?" in the header "+" grid as well', () => {
       const grid = new DatabasePropertyTypePopover({ onSelect, layout: 'grid', i18n: { t: (key: string) => key } as unknown as I18n });
@@ -521,6 +540,27 @@ describe('DatabasePropertyTypePopover', () => {
         press('Enter');
 
         expect(named).toHaveBeenCalledWith('multiSelect', '');
+        flow.destroy();
+      });
+
+      // Without Person, Email is alone on its line before the rule; Relation starts the next group at the first column.
+      it('walks across a rule by line, not by count', () => {
+        const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true, layout: 'grid' });
+
+        flow.open(anchor);
+        for (const _ of [1, 2, 3, 4]) press('ArrowDown');
+        press('ArrowRight');
+        expect(active()).toEqual(['phone']);
+        press('ArrowDown');
+        expect(active()).toEqual(['email']);
+        press('ArrowRight');
+        expect(active()).toEqual(['email']);
+        press('ArrowDown');
+        expect(active()).toEqual(['relation']);
+        press('ArrowRight');
+        expect(active()).toEqual(['rollup']);
+        press('ArrowUp');
+        expect(active()).toEqual(['email']);
         flow.destroy();
       });
 

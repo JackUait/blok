@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "Setidaknya satu filter harus cocok",
   "tools.database.filterValue": "Nilai",
   "tools.database.filterValuePlaceholder": "Ketik nilai…",
+  "tools.database.filterOptionsPlaceholder": "Pilih satu atau beberapa opsi…",
   "tools.database.filterSelectOption": "Pilih opsi",
   "tools.database.filterSelectValue": "Pilih nilai",
   "tools.database.filterSelectPeople": "Pilih sebanyak yang Anda mau",

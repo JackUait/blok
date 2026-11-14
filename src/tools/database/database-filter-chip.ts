@@ -557,6 +557,7 @@ class FilterChipPages {
             label: option.label,
             testId: `database-filter-option-${option.id}`,
             checked: ids.includes(option.id),
+            checkbox: true,
             onClick: () => {
               this.query = '';
               this.update({ value: toggled(ids, option.id) });
@@ -591,6 +592,7 @@ class FilterChipPages {
     search.value = this.query;
     search.setAttribute('data-blok-database-select-search', '');
     search.setAttribute('data-blok-testid', 'database-filter-option-search');
+    search.placeholder = this.t('filterOptionsPlaceholder');
     search.setAttribute('aria-label', this.t('filterValue'));
     search.addEventListener('input', () => {
       this.query = search.value;

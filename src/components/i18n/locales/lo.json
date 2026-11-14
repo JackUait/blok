@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "ຕ້ອງກົງກັບຕົວກອງຢ່າງໜ້ອຍໜຶ່ງອັນ",
   "tools.database.filterValue": "ຄ່າ",
   "tools.database.filterValuePlaceholder": "ພິມຄ່າ…",
+  "tools.database.filterOptionsPlaceholder": "ເລືອກໜຶ່ງ ຫຼື ຫຼາຍຕົວເລືອກ…",
   "tools.database.filterSelectOption": "ເລືອກຕົວເລືອກ",
   "tools.database.filterSelectValue": "ເລືອກຄ່າ",
   "tools.database.filterSelectPeople": "ເລືອກໄດ້ຫຼາຍຄົນ",

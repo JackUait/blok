@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "ਘੱਟੋ-ਘੱਟ ਇੱਕ ਫਿਲਟਰ ਮੇਲ ਖਾਣਾ ਚਾਹੀਦਾ ਹੈ",
   "tools.database.filterValue": "ਮੁੱਲ",
   "tools.database.filterValuePlaceholder": "ਕੋਈ ਮੁੱਲ ਟਾਈਪ ਕਰੋ…",
+  "tools.database.filterOptionsPlaceholder": "ਇੱਕ ਜਾਂ ਵੱਧ ਵਿਕਲਪ ਚੁਣੋ…",
   "tools.database.filterSelectOption": "ਕੋਈ ਵਿਕਲਪ ਚੁਣੋ",
   "tools.database.filterSelectValue": "ਕੋਈ ਮੁੱਲ ਚੁਣੋ",
   "tools.database.filterSelectPeople": "ਜਿੰਨੇ ਚਾਹੋ ਚੁਣੋ",

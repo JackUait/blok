@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "دست‌کم یک فیلتر باید مطابقت داشته باشد",
   "tools.database.filterValue": "مقدار",
   "tools.database.filterValuePlaceholder": "یک مقدار تایپ کنید…",
+  "tools.database.filterOptionsPlaceholder": "یک یا چند گزینه را انتخاب کنید…",
   "tools.database.filterSelectOption": "یک گزینه انتخاب کنید",
   "tools.database.filterSelectValue": "یک مقدار انتخاب کنید",
   "tools.database.filterSelectPeople": "هر تعداد که می‌خواهید انتخاب کنید",

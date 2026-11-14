@@ -14428,6 +14428,25 @@ button[data-blok-database-table-group-count]:hover {
   background-color: var(--blok-database-select-head-bg);
 }
 
+[data-blok-database-chip-options] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-0-25);
+}
+
+[data-blok-database-chip-options] [data-blok-database-checkbox] {
+  flex: none;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  margin-inline: var(--blok-space-1) var(--blok-space-0-5);
+}
+
+[data-blok-database-chip-options] [data-blok-database-checkbox] svg {
+  width: 12px;
+  height: 12px;
+}
+
 [data-blok-database-chip-relative], [data-blok-database-chip-between] {
   display: flex;
   gap: var(--blok-space-1-5);

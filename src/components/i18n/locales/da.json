@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "Mindst ét filter skal matche",
   "tools.database.filterValue": "Værdi",
   "tools.database.filterValuePlaceholder": "Skriv en værdi…",
+  "tools.database.filterOptionsPlaceholder": "Vælg én eller flere muligheder…",
   "tools.database.filterSelectOption": "Vælg en mulighed",
   "tools.database.filterSelectValue": "Vælg en værdi",
   "tools.database.filterSelectPeople": "Vælg så mange, du vil",

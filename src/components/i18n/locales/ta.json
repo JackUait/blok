@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "குறைந்தது ஒரு வடிப்பானாவது பொருந்த வேண்டும்",
   "tools.database.filterValue": "மதிப்பு",
   "tools.database.filterValuePlaceholder": "ஒரு மதிப்பைத் தட்டச்சு செய்…",
+  "tools.database.filterOptionsPlaceholder": "ஒன்று அல்லது அதற்கு மேற்பட்ட விருப்பங்களைத் தேர்ந்தெடுக்கவும்…",
   "tools.database.filterSelectOption": "ஒரு விருப்பத்தைத் தேர்ந்தெடு",
   "tools.database.filterSelectValue": "ஒரு மதிப்பைத் தேர்ந்தெடு",
   "tools.database.filterSelectPeople": "விரும்பும் அளவுக்குத் தேர்ந்தெடுக்கவும்",

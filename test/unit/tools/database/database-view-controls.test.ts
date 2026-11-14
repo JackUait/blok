@@ -1120,6 +1120,23 @@ describe('DatabaseViewControls', () => {
       expect(controls.effective(saved.view).filters[0]?.value).toEqual([]);
     });
 
+    // notion-motion.md Round 32 §3 Filter chip (r32-b-filterchip.raw): the field says "Select one or more options…",
+    // and each option has a 14px checkbox before its pill. The box carries the tick, so the row has no trailing ✓.
+    it('puts a checkbox before each option pill and a placeholder in the token field', () => {
+      open();
+      const red = q('database-filter-option-red');
+      const blue = q('database-filter-option-blue');
+      const box = (row: HTMLElement | null): Element | null | undefined => row?.firstElementChild;
+
+      expect((q('database-filter-option-search') as HTMLInputElement).placeholder).toBe('tools.database.filterOptionsPlaceholder');
+      expect(box(red)?.hasAttribute('data-blok-database-checkbox')).toBe(true);
+      expect(box(red)?.getAttribute('data-state')).toBe('checked');
+      expect(box(red)?.getAttribute('aria-hidden')).toBe('true');
+      expect(box(blue)?.getAttribute('data-state')).toBe('unchecked');
+      expect(red?.querySelector('[data-blok-database-panel-check]')).toBeNull();
+      expect(red?.getAttribute('aria-checked')).toBe('true');
+    });
+
     it('narrows the options as the person types in the token field', () => {
       open();
       const search = q('database-filter-option-search') as HTMLInputElement;

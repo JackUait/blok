@@ -1017,6 +1017,7 @@ export type BlokMessageKey =
   | 'tools.database.filterOperator.onOrAfter'
   | 'tools.database.filterOperator.onOrBefore'
   | 'tools.database.filterOperator.startsWith'
+  | 'tools.database.filterOptionsPlaceholder'
   | 'tools.database.filterOr'
   | 'tools.database.filterOrDescription'
   | 'tools.database.filterPillAfter'

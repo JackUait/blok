@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "하나 이상의 필터와 일치해야 함",
   "tools.database.filterValue": "값",
   "tools.database.filterValuePlaceholder": "값 입력…",
+  "tools.database.filterOptionsPlaceholder": "옵션을 하나 이상 선택…",
   "tools.database.filterSelectOption": "옵션 선택",
   "tools.database.filterSelectValue": "값 선택",
   "tools.database.filterSelectPeople": "여러 명을 선택할 수 있습니다",

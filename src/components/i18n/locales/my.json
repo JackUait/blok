@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "အနည်းဆုံး စစ်ထုတ်မှု တစ်ခုနှင့် ကိုက်ညီရမည်",
   "tools.database.filterValue": "တန်ဖိုး",
   "tools.database.filterValuePlaceholder": "တန်ဖိုးတစ်ခု ရိုက်ပါ…",
+  "tools.database.filterOptionsPlaceholder": "ရွေးစရာတစ်ခု သို့မဟုတ် တစ်ခုထက်ပို၍ ရွေးပါ…",
   "tools.database.filterSelectOption": "ရွေးချယ်စရာ ရွေးပါ",
   "tools.database.filterSelectValue": "တန်ဖိုး ရွေးပါ",
   "tools.database.filterSelectPeople": "လိုသလောက် ရွေးနိုင်ပါသည်",

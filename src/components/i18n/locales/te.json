@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "కనీసం ఒక ఫిల్టర్ సరిపోలాలి",
   "tools.database.filterValue": "విలువ",
   "tools.database.filterValuePlaceholder": "విలువను టైప్ చేయండి…",
+  "tools.database.filterOptionsPlaceholder": "ఒకటి లేదా అంతకంటే ఎక్కువ ఎంపికలను ఎంచుకోండి…",
   "tools.database.filterSelectOption": "ఎంపికను ఎంచుకోండి",
   "tools.database.filterSelectValue": "విలువను ఎంచుకోండి",
   "tools.database.filterSelectPeople": "మీకు కావలసినన్ని ఎంచుకోండి",

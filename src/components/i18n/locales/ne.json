@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "कम्तीमा एउटा फिल्टर मिल्नुपर्छ",
   "tools.database.filterValue": "मान",
   "tools.database.filterValuePlaceholder": "मान टाइप गर्नुहोस्…",
+  "tools.database.filterOptionsPlaceholder": "एक वा बढी विकल्प छान्नुहोस्…",
   "tools.database.filterSelectOption": "विकल्प छान्नुहोस्",
   "tools.database.filterSelectValue": "मान छान्नुहोस्",
   "tools.database.filterSelectPeople": "जति चाहनुहुन्छ त्यति छान्नुहोस्",

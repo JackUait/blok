@@ -178,3 +178,28 @@ describe('sort and rule control chevrons', () => {
     expect(declared(glyph, 'height')).toEqual(['14px']);
   });
 });
+
+// notion-motion.md Round 32 §3 Filter chip (r32-b-filterchip.raw, r32-b-filterchip.png): options at a 29px pitch
+// (28px rows), each with a 14×14 checkbox 12px into the row (x 555) and its pill 10px after the box (x 579).
+describe('select filter option rows', () => {
+  const options = '[data-blok-database-chip-options]';
+  const box = `${options} [data-blok-database-checkbox]`;
+
+  it('stacks the options 1px apart', () => {
+    expect(declared(options, 'gap')).toEqual(['var(--blok-space-0-25)']);
+  });
+
+  it('draws a 14px checkbox 12px into the row and 10px before the pill', () => {
+    expect(declared(box, 'width')).toEqual(['14px']);
+    expect(declared(box, 'height')).toEqual(['14px']);
+    expect(declared(box, 'margin-inline')).toEqual(['var(--blok-space-1) var(--blok-space-0-5)']);
+  });
+
+  // CLAUDE.md "No blue selected states": the tick is the only mark. A ticked row keeps the unticked row's fill and ink.
+  it('gives a ticked row no fill or ink of its own', () => {
+    const ticked = [...database.matchAll(/(?<=^|[{}])\s*([^{}@]+?)\s*\{([^{}]*)\}/g)]
+      .filter((rule) => rule[1].includes('aria-checked') && /chip-options|panel-row/.test(rule[1]));
+
+    expect(ticked.filter((rule) => /(?:^|[;\s])(?:background(?:-color)?|color) ?:/.test(rule[2])).map((rule) => rule[1])).toEqual([]);
+  });
+});

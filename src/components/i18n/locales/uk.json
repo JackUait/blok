@@ -1446,6 +1446,7 @@
   "tools.database.filterOrDescription": "Має збігатися хоча б один фільтр",
   "tools.database.filterValue": "Значення",
   "tools.database.filterValuePlaceholder": "Введіть значення…",
+  "tools.database.filterOptionsPlaceholder": "Виберіть один або кілька варіантів…",
   "tools.database.filterSelectOption": "Виберіть варіант",
   "tools.database.filterSelectValue": "Виберіть значення",
   "tools.database.filterSelectPeople": "Виберіть скільки завгодно",

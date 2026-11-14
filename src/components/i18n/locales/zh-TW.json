@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "至少須符合一個篩選條件",
   "tools.database.filterValue": "值",
   "tools.database.filterValuePlaceholder": "輸入值…",
+  "tools.database.filterOptionsPlaceholder": "選取一或多個選項…",
   "tools.database.filterSelectOption": "選取選項",
   "tools.database.filterSelectValue": "選取值",
   "tools.database.filterSelectPeople": "可選取多人",

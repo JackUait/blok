@@ -300,6 +300,8 @@ export interface PanelRowOptions {
   external?: boolean;
   /** A checkmark marks the chosen option, never a fill (no-blue law). */
   checked?: boolean;
+  /** `checked` shows as a checkbox before the label instead of a trailing ✓ (Round 32 §3, the select filter). */
+  checkbox?: boolean;
   danger?: boolean;
   /** Secondary ink, as Notion's "Add sort" and "Delete sort" (research/21 §1c). */
   muted?: boolean;
@@ -319,6 +321,15 @@ export const panelRow = (options: PanelRowOptions): HTMLButtonElement => {
   if (options.checked !== undefined) {
     row.setAttribute('role', 'menuitemradio');
     row.setAttribute('aria-checked', String(options.checked));
+  }
+  if (options.checkbox === true) {
+    const box = document.createElement('span');
+
+    box.setAttribute('data-blok-database-checkbox', '');
+    box.setAttribute('data-state', options.checked === true ? 'checked' : 'unchecked');
+    box.setAttribute('aria-hidden', 'true');
+    if (options.checked === true) box.innerHTML = IconCheck;
+    row.appendChild(box);
   }
   if (options.icon !== undefined || options.iconText !== undefined) {
     const icon = document.createElement('span');
@@ -354,7 +365,7 @@ export const panelRow = (options: PanelRowOptions): HTMLButtonElement => {
     value.textContent = options.value;
     row.appendChild(value);
   }
-  if (options.checked === true) {
+  if (options.checked === true && options.checkbox !== true) {
     const check = document.createElement('span');
 
     check.setAttribute('data-blok-database-panel-check', '');

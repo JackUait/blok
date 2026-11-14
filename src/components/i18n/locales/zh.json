@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "至少一个筛选器必须匹配",
   "tools.database.filterValue": "值",
   "tools.database.filterValuePlaceholder": "输入值…",
+  "tools.database.filterOptionsPlaceholder": "选择一个或多个选项…",
   "tools.database.filterSelectOption": "选择选项",
   "tools.database.filterSelectValue": "选择值",
   "tools.database.filterSelectPeople": "可选择多人",

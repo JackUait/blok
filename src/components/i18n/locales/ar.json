@@ -1470,6 +1470,7 @@
   "tools.database.filterOrDescription": "يجب أن يتطابق فلتر واحد على الأقل",
   "tools.database.filterValue": "القيمة",
   "tools.database.filterValuePlaceholder": "اكتب قيمة…",
+  "tools.database.filterOptionsPlaceholder": "اختر خيارًا واحدًا أو أكثر…",
   "tools.database.filterSelectOption": "اختر خيارًا",
   "tools.database.filterSelectValue": "اختر قيمة",
   "tools.database.filterSelectPeople": "اختر أي عدد تريده",

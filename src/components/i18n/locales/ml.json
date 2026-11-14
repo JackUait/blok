@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "കുറഞ്ഞത് ഒരു ഫിൽട്ടറെങ്കിലും പൊരുത്തപ്പെടണം",
   "tools.database.filterValue": "മൂല്യം",
   "tools.database.filterValuePlaceholder": "ഒരു മൂല്യം ടൈപ്പ് ചെയ്യുക…",
+  "tools.database.filterOptionsPlaceholder": "ഒന്നോ അതിലധികമോ ഓപ്ഷനുകൾ തിരഞ്ഞെടുക്കുക…",
   "tools.database.filterSelectOption": "ഒരു ഓപ്ഷൻ തിരഞ്ഞെടുക്കുക",
   "tools.database.filterSelectValue": "ഒരു മൂല്യം തിരഞ്ഞെടുക്കുക",
   "tools.database.filterSelectPeople": "ആവശ്യമുള്ളത്ര തിരഞ്ഞെടുക്കുക",

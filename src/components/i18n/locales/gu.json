@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "ઓછામાં ઓછો એક ફિલ્ટર મેળ ખાવો જોઈએ",
   "tools.database.filterValue": "મૂલ્ય",
   "tools.database.filterValuePlaceholder": "મૂલ્ય ટાઇપ કરો…",
+  "tools.database.filterOptionsPlaceholder": "એક અથવા વધુ વિકલ્પો પસંદ કરો…",
   "tools.database.filterSelectOption": "વિકલ્પ પસંદ કરો",
   "tools.database.filterSelectValue": "મૂલ્ય પસંદ કરો",
   "tools.database.filterSelectPeople": "તમે ઇચ્છો તેટલા પસંદ કરો",

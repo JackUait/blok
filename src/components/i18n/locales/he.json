@@ -1434,6 +1434,7 @@
   "tools.database.filterOrDescription": "לפחות מסנן אחד חייב להתאים",
   "tools.database.filterValue": "ערך",
   "tools.database.filterValuePlaceholder": "הקלד ערך…",
+  "tools.database.filterOptionsPlaceholder": "בחירת אפשרות אחת או יותר…",
   "tools.database.filterSelectOption": "בחירת אפשרות",
   "tools.database.filterSelectValue": "בחירת ערך",
   "tools.database.filterSelectPeople": "בחר כמה שתרצה",

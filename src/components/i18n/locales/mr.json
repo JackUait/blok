@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "किमान एक फिल्टर जुळला पाहिजे",
   "tools.database.filterValue": "मूल्य",
   "tools.database.filterValuePlaceholder": "मूल्य टाइप करा…",
+  "tools.database.filterOptionsPlaceholder": "एक किंवा अधिक पर्याय निवडा…",
   "tools.database.filterSelectOption": "पर्याय निवडा",
   "tools.database.filterSelectValue": "मूल्य निवडा",
   "tools.database.filterSelectPeople": "हवे तितके निवडा",

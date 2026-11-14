@@ -1434,6 +1434,7 @@
   "tools.database.filterOrDescription": "Jāatbilst vismaz vienam filtram",
   "tools.database.filterValue": "Vērtība",
   "tools.database.filterValuePlaceholder": "Ierakstiet vērtību…",
+  "tools.database.filterOptionsPlaceholder": "Izvēlieties vienu vai vairākas opcijas…",
   "tools.database.filterSelectOption": "Izvēlieties opciju",
   "tools.database.filterSelectValue": "Izvēlieties vērtību",
   "tools.database.filterSelectPeople": "Atlasiet, cik vēlaties",

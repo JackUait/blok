@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "Vähemalt üks filter peab sobima",
   "tools.database.filterValue": "Väärtus",
   "tools.database.filterValuePlaceholder": "Sisesta väärtus…",
+  "tools.database.filterOptionsPlaceholder": "Vali üks või mitu valikut…",
   "tools.database.filterSelectOption": "Vali valik",
   "tools.database.filterSelectValue": "Vali väärtus",
   "tools.database.filterSelectPeople": "Valida saab mitu",

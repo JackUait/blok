@@ -1446,6 +1446,7 @@
   "tools.database.filterOrDescription": "Должен совпасть хотя бы один фильтр",
   "tools.database.filterValue": "Значение",
   "tools.database.filterValuePlaceholder": "Введите значение…",
+  "tools.database.filterOptionsPlaceholder": "Выберите один или несколько вариантов…",
   "tools.database.filterSelectOption": "Выберите вариант",
   "tools.database.filterSelectValue": "Выберите значение",
   "tools.database.filterSelectPeople": "Выберите сколько угодно",

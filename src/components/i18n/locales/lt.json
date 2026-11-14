@@ -1446,6 +1446,7 @@
   "tools.database.filterOrDescription": "Turi atitikti bent vienas filtras",
   "tools.database.filterValue": "Reikšmė",
   "tools.database.filterValuePlaceholder": "Įveskite reikšmę…",
+  "tools.database.filterOptionsPlaceholder": "Pasirinkite vieną ar kelias parinktis…",
   "tools.database.filterSelectOption": "Pasirinkite parinktį",
   "tools.database.filterSelectValue": "Pasirinkite reikšmę",
   "tools.database.filterSelectPeople": "Pasirinkite kiek norite",

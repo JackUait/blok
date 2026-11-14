@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "Առնվազն մեկ ֆիլտր պետք է համապատասխանի",
   "tools.database.filterValue": "Արժեք",
   "tools.database.filterValuePlaceholder": "Մուտքագրեք արժեք…",
+  "tools.database.filterOptionsPlaceholder": "Ընտրեք մեկ կամ մի քանի տարբերակ…",
   "tools.database.filterSelectOption": "Ընտրեք տարբերակ",
   "tools.database.filterSelectValue": "Ընտրեք արժեք",
   "tools.database.filterSelectPeople": "Ընտրեք որքան ցանկանում եք",

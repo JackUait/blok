@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "Mindestens ein Filter muss zutreffen",
   "tools.database.filterValue": "Wert",
   "tools.database.filterValuePlaceholder": "Wert eingeben…",
+  "tools.database.filterOptionsPlaceholder": "Eine oder mehrere Optionen auswählen…",
   "tools.database.filterSelectOption": "Option auswählen",
   "tools.database.filterSelectValue": "Wert auswählen",
   "tools.database.filterSelectPeople": "Beliebig viele auswählen",

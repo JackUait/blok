@@ -11307,6 +11307,26 @@ button[data-blok-database-table-group-count]:hover {
   background-color: var(--blok-database-select-head-bg);
 }
 
+/* notion-motion.md Round 32 §3 Filter chip: 28px options at a 29px pitch, a 14px box at x 555, the pill at 579. */
+[data-blok-database-chip-options] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-0-25);
+}
+
+[data-blok-database-chip-options] [data-blok-database-checkbox] {
+  flex: none;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  margin-inline: var(--blok-space-1) var(--blok-space-0-5);
+}
+
+[data-blok-database-chip-options] [data-blok-database-checkbox] svg {
+  width: 12px;
+  height: 12px;
+}
+
 [data-blok-database-chip-relative],
 [data-blok-database-chip-between] {
   display: flex;

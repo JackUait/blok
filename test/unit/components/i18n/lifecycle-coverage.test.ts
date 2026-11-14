@@ -295,7 +295,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2227 + 146 + 576 + 9 closure for all 2958 keys', () => {
+  it('rebuilds a disjoint 2227 + 146 + 577 + 9 closure for all 2959 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -309,7 +309,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2958);
+    expect(lifecycle.size).toBe(2959);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -676,7 +676,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +12: the file card's counts (tools.file.cardPages, cardLines, cardSheets, cardSlides, cardFiles, cardRows, each _one/_other);
       // the file tool picks the base key from a map, so no call names one by literal.
       // -2: settingsLoadLimit and settingsLoadLimitPages are now called by literal (see executable-literal).
-      'registered-namespace-compatible': 576,
+      // +1: the select filter's token field calls filterOptionsPlaceholder through the chip's tools.database. prefix.
+      'registered-namespace-compatible': 577,
       // +1: Settings › Group's pin button names itself with groupPin through the panel's tools.database. prefix.
       // +1: tools.database.galleryFitImage, above. +1: tools.database.timelineEndBy, above.
       'catalog-only': 9,

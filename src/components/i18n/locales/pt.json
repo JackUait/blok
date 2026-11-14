@@ -1434,6 +1434,7 @@
   "tools.database.filterOrDescription": "Pelo menos um filtro deve corresponder",
   "tools.database.filterValue": "Valor",
   "tools.database.filterValuePlaceholder": "Digite um valor…",
+  "tools.database.filterOptionsPlaceholder": "Selecione uma ou mais opções…",
   "tools.database.filterSelectOption": "Selecione uma opção",
   "tools.database.filterSelectValue": "Selecione um valor",
   "tools.database.filterSelectPeople": "Selecione quantas quiser",

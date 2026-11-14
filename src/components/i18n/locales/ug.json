@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "كەم دېگەندە بىر سۈزگۈچ ماس كېلىشى كېرەك",
   "tools.database.filterValue": "قىممەت",
   "tools.database.filterValuePlaceholder": "قىممەت كىرگۈزۈڭ…",
+  "tools.database.filterOptionsPlaceholder": "بىر ياكى بىر قانچە تاللانمىنى تاللاڭ…",
   "tools.database.filterSelectOption": "بىر تاللانما تاللاڭ",
   "tools.database.filterSelectValue": "قىممەت تاللاڭ",
   "tools.database.filterSelectPeople": "خالىغانچە تاللاڭ",

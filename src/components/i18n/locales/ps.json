@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "لږ تر لږه یو فلټر باید سمون ولري",
   "tools.database.filterValue": "ارزښت",
   "tools.database.filterValuePlaceholder": "یو ارزښت ولیکئ…",
+  "tools.database.filterOptionsPlaceholder": "یو یا څو انتخابونه وټاکئ…",
   "tools.database.filterSelectOption": "یو انتخاب وټاکئ",
   "tools.database.filterSelectValue": "یو ارزښت وټاکئ",
   "tools.database.filterSelectPeople": "څومره چې غواړئ وټاکئ",

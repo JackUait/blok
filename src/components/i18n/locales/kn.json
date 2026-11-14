@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "ಕನಿಷ್ಠ ಒಂದು ಫಿಲ್ಟರ್ ಹೊಂದಿಕೆಯಾಗಬೇಕು",
   "tools.database.filterValue": "ಮೌಲ್ಯ",
   "tools.database.filterValuePlaceholder": "ಮೌಲ್ಯವನ್ನು ಟೈಪ್ ಮಾಡಿ…",
+  "tools.database.filterOptionsPlaceholder": "ಒಂದು ಅಥವಾ ಹೆಚ್ಚು ಆಯ್ಕೆಗಳನ್ನು ಆರಿಸಿ…",
   "tools.database.filterSelectOption": "ಆಯ್ಕೆಯನ್ನು ಆರಿಸಿ",
   "tools.database.filterSelectValue": "ಮೌಲ್ಯವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
   "tools.database.filterSelectPeople": "ಬೇಕಾದಷ್ಟು ಆಯ್ಕೆಮಾಡಿ",

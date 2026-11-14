@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "ត្រូវតែត្រូវនឹងតម្រងយ៉ាងហោចណាស់មួយ",
   "tools.database.filterValue": "តម្លៃ",
   "tools.database.filterValuePlaceholder": "វាយតម្លៃ…",
+  "tools.database.filterOptionsPlaceholder": "ជ្រើសជម្រើសមួយ ឬច្រើន…",
   "tools.database.filterSelectOption": "ជ្រើសរើសជម្រើស",
   "tools.database.filterSelectValue": "ជ្រើសរើសតម្លៃ",
   "tools.database.filterSelectPeople": "អាចជ្រើសរើសបានច្រើននាក់",

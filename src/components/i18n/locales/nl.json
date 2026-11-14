@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "Minstens één filter moet overeenkomen",
   "tools.database.filterValue": "Waarde",
   "tools.database.filterValuePlaceholder": "Typ een waarde…",
+  "tools.database.filterOptionsPlaceholder": "Kies een of meer opties…",
   "tools.database.filterSelectOption": "Selecteer een optie",
   "tools.database.filterSelectValue": "Selecteer een waarde",
   "tools.database.filterSelectPeople": "Selecteer er zoveel als je wilt",

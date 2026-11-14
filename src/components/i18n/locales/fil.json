@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "Dapat tumugma ang kahit isang filter",
   "tools.database.filterValue": "Halaga",
   "tools.database.filterValuePlaceholder": "Mag-type ng halaga…",
+  "tools.database.filterOptionsPlaceholder": "Pumili ng isa o higit pang opsyon…",
   "tools.database.filterSelectOption": "Pumili ng opsyon",
   "tools.database.filterSelectValue": "Pumili ng halaga",
   "tools.database.filterSelectPeople": "Pumili ng kahit ilan",

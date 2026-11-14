@@ -1446,6 +1446,7 @@
   "tools.database.filterOrDescription": "Musí platit alespoň jeden filtr",
   "tools.database.filterValue": "Hodnota",
   "tools.database.filterValuePlaceholder": "Zadejte hodnotu…",
+  "tools.database.filterOptionsPlaceholder": "Vyberte jednu nebo více možností…",
   "tools.database.filterSelectOption": "Vyberte možnost",
   "tools.database.filterSelectValue": "Vyberte hodnotu",
   "tools.database.filterSelectPeople": "Vyberte libovolný počet",

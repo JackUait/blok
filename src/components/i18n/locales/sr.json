@@ -1434,6 +1434,7 @@
   "tools.database.filterOrDescription": "Бар један филтер мора да се подудара",
   "tools.database.filterValue": "Вредност",
   "tools.database.filterValuePlaceholder": "Унесите вредност…",
+  "tools.database.filterOptionsPlaceholder": "Изаберите једну или више опција…",
   "tools.database.filterSelectOption": "Изаберите опцију",
   "tools.database.filterSelectValue": "Изаберите вредност",
   "tools.database.filterSelectPeople": "Изаберите колико желите",

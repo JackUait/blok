@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "අවම වශයෙන් එක් පෙරහනක් ගැළපිය යුතුය",
   "tools.database.filterValue": "අගය",
   "tools.database.filterValuePlaceholder": "අගයක් ටයිප් කරන්න…",
+  "tools.database.filterOptionsPlaceholder": "විකල්ප එකක් හෝ කිහිපයක් තෝරන්න…",
   "tools.database.filterSelectOption": "විකල්පයක් තෝරන්න",
   "tools.database.filterSelectValue": "අගයක් තෝරන්න",
   "tools.database.filterSelectPeople": "ඔබට අවශ්‍ය තරම් තෝරන්න",

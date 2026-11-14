@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "މަދުވެގެން އެއް ފިލްޓަރު ދިމާވާން ޖެހޭ",
   "tools.database.filterValue": "އަގު",
   "tools.database.filterValuePlaceholder": "އަގެއް ލިޔޭ…",
+  "tools.database.filterOptionsPlaceholder": "އެއް ނުވަތަ އެއަށްވުރެ ގިނަ އޮޕްޝަން ހޮވާ…",
   "tools.database.filterSelectOption": "އިޚްތިޔާރެއް ހޮވާ",
   "tools.database.filterSelectValue": "އަގެއް ހޮވާ",
   "tools.database.filterSelectPeople": "ބޭނުން ވަރަކަށް ހޮވާ",

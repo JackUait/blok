@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "Duhet të përputhet të paktën një filtër",
   "tools.database.filterValue": "Vlera",
   "tools.database.filterValuePlaceholder": "Shkruaj një vlerë…",
+  "tools.database.filterOptionsPlaceholder": "Zgjidhni një ose më shumë opsione…",
   "tools.database.filterSelectOption": "Zgjidh një opsion",
   "tools.database.filterSelectValue": "Zgjidh një vlerë",
   "tools.database.filterSelectPeople": "Zgjidh sa të duash",

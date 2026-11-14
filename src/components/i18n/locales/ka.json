@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "ერთი ფილტრი მაინც უნდა დაემთხვეს",
   "tools.database.filterValue": "მნიშვნელობა",
   "tools.database.filterValuePlaceholder": "აკრიფეთ მნიშვნელობა…",
+  "tools.database.filterOptionsPlaceholder": "აირჩიეთ ერთი ან მეტი ვარიანტი…",
   "tools.database.filterSelectOption": "აირჩიეთ ვარიანტი",
   "tools.database.filterSelectValue": "აირჩიეთ მნიშვნელობა",
   "tools.database.filterSelectPeople": "აირჩიეთ რამდენიც გსურთ",

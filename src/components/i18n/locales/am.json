@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "ቢያንስ አንድ ማጣሪያ መዛመድ አለበት",
   "tools.database.filterValue": "እሴት",
   "tools.database.filterValuePlaceholder": "እሴት ይተይቡ…",
+  "tools.database.filterOptionsPlaceholder": "አንድ ወይም ከዚያ በላይ አማራጮችን ይምረጡ…",
   "tools.database.filterSelectOption": "አማራጭ ይምረጡ",
   "tools.database.filterSelectValue": "እሴት ይምረጡ",
   "tools.database.filterSelectPeople": "የፈለጉትን ያህል ይምረጡ",

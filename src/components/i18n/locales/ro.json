@@ -1434,6 +1434,7 @@
   "tools.database.filterOrDescription": "Cel puțin un filtru trebuie să se potrivească",
   "tools.database.filterValue": "Valoare",
   "tools.database.filterValuePlaceholder": "Tastați o valoare…",
+  "tools.database.filterOptionsPlaceholder": "Selectați una sau mai multe opțiuni…",
   "tools.database.filterSelectOption": "Selectați o opțiune",
   "tools.database.filterSelectValue": "Selectați o valoare",
   "tools.database.filterSelectPeople": "Selectați oricâte doriți",

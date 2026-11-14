@@ -1446,6 +1446,7 @@
   "tools.database.filterOrDescription": "Co najmniej jeden filtr musi być spełniony",
   "tools.database.filterValue": "Wartość",
   "tools.database.filterValuePlaceholder": "Wpisz wartość…",
+  "tools.database.filterOptionsPlaceholder": "Wybierz jedną lub więcej opcji…",
   "tools.database.filterSelectOption": "Wybierz opcję",
   "tools.database.filterSelectValue": "Wybierz wartość",
   "tools.database.filterSelectPeople": "Wybierz dowolną liczbę",

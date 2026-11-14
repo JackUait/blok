@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "Дор хаяж нэг шүүлтүүр тохирох ёстой",
   "tools.database.filterValue": "Утга",
   "tools.database.filterValuePlaceholder": "Утга оруулна уу…",
+  "tools.database.filterOptionsPlaceholder": "Нэг буюу хэд хэдэн сонголт сонгоно уу…",
   "tools.database.filterSelectOption": "Сонголт сонгох",
   "tools.database.filterSelectValue": "Утга сонгох",
   "tools.database.filterSelectPeople": "Хүссэн хэдийгээ сонгож болно",

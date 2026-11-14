@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "कम से कम एक फ़िल्टर मेल खाना चाहिए",
   "tools.database.filterValue": "मान",
   "tools.database.filterValuePlaceholder": "कोई मान लिखें…",
+  "tools.database.filterOptionsPlaceholder": "एक या अधिक विकल्प चुनें…",
   "tools.database.filterSelectOption": "कोई विकल्प चुनें",
   "tools.database.filterSelectValue": "कोई मान चुनें",
   "tools.database.filterSelectPeople": "जितने चाहें उतने चुनें",

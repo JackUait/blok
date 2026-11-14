@@ -1422,6 +1422,7 @@
   "tools.database.filterOrDescription": "کم از کم ایک فلٹر پورا ہونا چاہیے",
   "tools.database.filterValue": "قدر",
   "tools.database.filterValuePlaceholder": "کوئی قدر ٹائپ کریں…",
+  "tools.database.filterOptionsPlaceholder": "ایک یا زیادہ اختیارات منتخب کریں…",
   "tools.database.filterSelectOption": "اختیار منتخب کریں",
   "tools.database.filterSelectValue": "قدر منتخب کریں",
   "tools.database.filterSelectPeople": "جتنے چاہیں منتخب کریں",

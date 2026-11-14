@@ -82,7 +82,7 @@ import { DatabaseCalendarView } from './database-calendar-view';
 import { addDays, eventSpan } from './calendar-dates';
 import { formatDateValue } from '../../shared/database/date-value';
 import { freePropertyName } from '../../shared/database/schema-ops';
-import { OPTION_GROUP_TYPES, layoutChange } from '../../shared/database/view-changes';
+import { DEFAULT_VIEW_NAMES, OPTION_GROUP_TYPES, layoutChange } from '../../shared/database/view-changes';
 import { DatabaseTimelineView, timelineZoomLabelKey } from './database-timeline-view';
 import type { TimelineGroup, TimelineOrigin } from './database-timeline-view';
 import type { BarWrite } from './timeline-dates';
@@ -4635,18 +4635,6 @@ export class DatabaseTool implements BlockTool {
     if (this.structureLocked()) return;
     const schema = this.model.getSchema();
     const statusProp = schema.find((p) => p.type === 'select') ?? schema.find((p) => p.type === 'status');
-    const defaultNames: Partial<Record<ViewType, string>> = {
-      list: DATABASE_DEFAULT_TEXT.viewTypeList,
-      table: DATABASE_DEFAULT_TEXT.viewTypeTable,
-      gallery: DATABASE_DEFAULT_TEXT.viewTypeGallery,
-      calendar: DATABASE_DEFAULT_TEXT.viewTypeCalendar,
-      timeline: DATABASE_DEFAULT_TEXT.viewTypeTimeline,
-      chart: DATABASE_DEFAULT_TEXT.viewTypeChart,
-      feed: DATABASE_DEFAULT_TEXT.viewTypeFeed,
-      form: DATABASE_DEFAULT_TEXT.viewTypeForm,
-      map: DATABASE_DEFAULT_TEXT.viewTypeMap,
-      dashboard: DATABASE_DEFAULT_TEXT.viewTypeDashboard,
-    };
     if (type === 'map') this.ensurePlaceProperty();
     // notion-motion.md Round 28 §4, Round 29 §8: a new Board, Calendar or Timeline creates the Status or Date it needs.
     if ((type === 'calendar' || type === 'timeline') && !schema.some((p) => p.type === 'date')) this.addProperty({ name: '', type: 'date' });
@@ -4655,7 +4643,7 @@ export class DatabaseTool implements BlockTool {
     const groupBy = type === 'board'
       ? boardProp?.id ?? this.addProperty({ name: '', type: 'status' })?.id
       : statusProp?.id;
-    const newView = this.model.addView(defaultNames[type] ?? DATABASE_DEFAULT_TEXT.viewTypeBoard, type, {
+    const newView = this.model.addView(DEFAULT_VIEW_NAMES[type] ?? DATABASE_DEFAULT_TEXT.viewTypeBoard, type, {
       groupBy: type === 'board' || type === 'chart' ? groupBy : undefined,
     });
     void this.sync.syncCreateView(structuredClone(newView));
@@ -7054,18 +7042,28 @@ export class DatabaseTool implements BlockTool {
     }));
   }
 
-  /** A board needs a grouping: the first select-like property, else the first property it can group by. */
+  /**
+   * notion-motion.md Round 30 §1: a Board groups by a Status, else a Select, else a new Status;
+   * a Calendar or Timeline with no Date gets one. Both as Add view does.
+   */
   private setActiveLayout(type: ViewType): void {
     const view = this.shownView();
 
-    if (view === undefined || view.type === type) return;
+    if (view === undefined || view.type === type || this.readOnly || this.structureLocked()) return;
     // The grouping and the place property come from the rows the view shows.
     const data = this.activeSource();
-    const change = layoutChange(view, type, data.model.getSchema());
+    const schema = data.model.getSchema();
+    const groupBy = type === 'board' && view.groupBy === undefined
+      ? (schema.find((p) => p.type === 'status') ?? schema.find((p) => p.type === 'select') ?? data.addProperty({ name: '', type: 'status' }))?.id
+      : view.groupBy;
+
+    if (type === 'board' && groupBy === undefined) return;
+    if ((type === 'calendar' || type === 'timeline') && !schema.some((p) => p.type === 'date')) data.addProperty({ name: '', type: 'date' });
+    const change = layoutChange({ ...view, groupBy }, type, data.model.getSchema());
 
     if (change === undefined) return;
     if (change.needsPlace) data.ensurePlaceProperty();
-    this.updateActiveView(change.changes);
+    this.updateActiveView(groupBy === view.groupBy ? change.changes : { ...change.changes, groupBy });
     this.rebuildTabBar();
   }
 

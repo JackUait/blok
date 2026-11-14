@@ -1,3 +1,4 @@
+import { DATABASE_DEFAULT_TEXT } from './default-text';
 import { visibleRowPropertyIds } from './view-properties';
 
 import type { DatabaseViewConfig, DatabaseViewSettingKey, PropertyDefinition, PropertyType, ViewType } from './types';
@@ -75,6 +76,21 @@ export const subGroupByChange = (
   return { subGroupBy: property.id, subGroupSettings: { hideEmptyGroups: true } };
 };
 
+/** The name Add view gives each layout; stored in English and shown translated (database-localization.ts). */
+export const DEFAULT_VIEW_NAMES: Readonly<Partial<Record<ViewType, string>>> = {
+  table: DATABASE_DEFAULT_TEXT.viewTypeTable,
+  board: DATABASE_DEFAULT_TEXT.viewTypeBoard,
+  list: DATABASE_DEFAULT_TEXT.viewTypeList,
+  gallery: DATABASE_DEFAULT_TEXT.viewTypeGallery,
+  calendar: DATABASE_DEFAULT_TEXT.viewTypeCalendar,
+  timeline: DATABASE_DEFAULT_TEXT.viewTypeTimeline,
+  chart: DATABASE_DEFAULT_TEXT.viewTypeChart,
+  feed: DATABASE_DEFAULT_TEXT.viewTypeFeed,
+  form: DATABASE_DEFAULT_TEXT.viewTypeForm,
+  map: DATABASE_DEFAULT_TEXT.viewTypeMap,
+  dashboard: DATABASE_DEFAULT_TEXT.viewTypeDashboard,
+};
+
 export interface LayoutChange {
   changes: ViewChanges;
   /** A map needs a place property; the caller adds one when the schema has none. */
@@ -84,7 +100,8 @@ export interface LayoutChange {
 /**
  * The write when people switch a view's layout. A board needs a grouping: the
  * first select-like property, else the first property it can group by. Undefined
- * when a board has nothing to group by. A timeline's table columns are born
+ * when a board has nothing to group by. A view still named after its old layout
+ * takes the new layout's name. A timeline's table columns are born
  * empty with the switch: two peers adding the first column would race to create the key.
  */
 export const layoutChange = (view: DatabaseViewConfig, type: ViewType, schema: PropertyDefinition[]): LayoutChange | undefined => {
@@ -95,9 +112,13 @@ export const layoutChange = (view: DatabaseViewConfig, type: ViewType, schema: P
 
   if (type === 'board' && view.groupBy === undefined && groupBy === undefined) return undefined;
 
+  // notion-motion.md Round 30 §1: "Table" became "Calendar". A custom name is kept (Notion unread).
+  const renamed = view.name === DEFAULT_VIEW_NAMES[view.type] ? DEFAULT_VIEW_NAMES[type] : undefined;
+
   return {
     changes: {
       type,
+      ...(renamed !== undefined ? { name: renamed } : {}),
       ...(groupBy !== undefined ? { groupBy } : {}),
       ...(type === 'timeline' && !Array.isArray(view.tableProperties) ? { tableProperties: [] } : {}),
     },

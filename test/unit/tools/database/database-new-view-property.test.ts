@@ -140,3 +140,92 @@ describe('DatabaseTool — a new view creates the property it needs', () => {
     expect(tool.save(el).schema.map((p) => p.id)).toEqual(['title']);
   });
 });
+
+const pickLayout = (type: string): void => {
+  const click = (id: string): void => document.querySelector<HTMLElement>(`[data-blok-testid="${id}"]`)?.click();
+
+  click('database-toolbar-settings');
+  click('database-settings-layout');
+  click(`database-layout-${type}`);
+};
+
+// notion-motion.md Round 30 §1: switching a view's layout creates the Status or Date the layout needs.
+describe('DatabaseTool — a layout switch creates the property it needs', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('a switch to Board on a database with only a title adds a Status and groups by it', () => {
+    const { tool, el } = buildTool(makeDoc([]), {}, dataWith(titleOnly));
+
+    document.body.appendChild(el);
+    pickLayout('board');
+
+    const saved = tool.save(el);
+    const statuses = saved.schema.filter((p) => p.type === 'status');
+
+    expect(saved.views[0].type).toBe('board');
+    expect(statuses).toHaveLength(1);
+    expect(saved.views[0].groupBy).toBe(statuses[0].id);
+  });
+
+  it('a switch to Board on a Select-only database groups by the Select and adds no Status', () => {
+    const schema: PropertyDefinition[] = [...titleOnly, { id: 'sel', name: 'Kind', type: 'select', position: 'a1', config: { options: [] } }];
+    const { tool, el } = buildTool(makeDoc([]), {}, dataWith(schema));
+
+    document.body.appendChild(el);
+    pickLayout('board');
+
+    const saved = tool.save(el);
+
+    expect(saved.views[0].groupBy).toBe('sel');
+    expect(saved.schema.some((p) => p.type === 'status')).toBe(false);
+  });
+
+  it('a switch to Calendar on a database with no Date adds a Date and draws the month', () => {
+    const { tool, el } = buildTool(makeDoc([]), {}, dataWith(titleOnly));
+
+    document.body.appendChild(el);
+    pickLayout('calendar');
+
+    expect(tool.save(el).schema.filter((p) => p.type === 'date')).toHaveLength(1);
+    expect(el.querySelector('[data-blok-database-calendar-empty]')).toBeNull();
+  });
+
+  it('a switch to Timeline on a database with no Date adds a Date', () => {
+    const { tool, el } = buildTool(makeDoc([]), {}, dataWith(titleOnly));
+
+    document.body.appendChild(el);
+    pickLayout('timeline');
+
+    expect(tool.save(el).schema.filter((p) => p.type === 'date')).toHaveLength(1);
+    expect(el.querySelector('[data-blok-database-timeline-empty]')).toBeNull();
+  });
+
+  it('a switch to Calendar on a database that has a Date adds none', () => {
+    const schema: PropertyDefinition[] = [...titleOnly, { id: 'due', name: 'Due', type: 'date', position: 'a1' }];
+    const { tool, el } = buildTool(makeDoc([]), {}, dataWith(schema));
+
+    document.body.appendChild(el);
+    pickLayout('calendar');
+
+    expect(tool.save(el).schema.map((p) => p.id)).toEqual(['title', 'due']);
+  });
+
+  // Round 30 §1: the view named "Table" read "Calendar" after the switch.
+  it('a view still named after its old layout takes the new layout\'s name', () => {
+    const schema: PropertyDefinition[] = [...titleOnly, { id: 'due', name: 'Due', type: 'date', position: 'a1' }];
+    const { tool, el } = buildTool(makeDoc([]), {}, dataWith(schema));
+
+    document.body.appendChild(el);
+    pickLayout('calendar');
+
+    expect(tool.save(el).views[0].name).toBe('Calendar');
+  });
+});
+

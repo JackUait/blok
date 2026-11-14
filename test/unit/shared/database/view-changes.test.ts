@@ -42,14 +42,20 @@ describe('applyViewChanges', () => {
 
 describe('layoutChange', () => {
   it('a board groups by the first select-like property, else the first groupable one', () => {
-    expect(layoutChange(table(), 'board', schema)?.changes).toEqual({ type: 'board', groupBy: 's' });
-    expect(layoutChange(table(), 'board', schema.filter(p => p.type !== 'status'))?.changes).toEqual({ type: 'board', groupBy: 'n' });
+    expect(layoutChange(table(), 'board', schema)?.changes).toEqual({ type: 'board', name: 'Board', groupBy: 's' });
+    expect(layoutChange(table(), 'board', schema.filter(p => p.type !== 'status'))?.changes).toEqual({ type: 'board', name: 'Board', groupBy: 'n' });
     expect(layoutChange(table(), 'board', schema.filter(p => p.type === 'title'))).toBeUndefined();
   });
 
   it('a timeline gets empty table columns, and a map asks for a place property when there is none', () => {
-    expect(layoutChange(table(), 'timeline', schema)?.changes).toEqual({ type: 'timeline', tableProperties: [] });
+    expect(layoutChange(table(), 'timeline', schema)?.changes).toEqual({ type: 'timeline', name: 'Timeline', tableProperties: [] });
     expect(layoutChange(table(), 'map', schema)?.needsPlace).toBe(true);
     expect(layoutChange(table(), 'map', [...schema, { id: 'p', name: 'Place', type: 'place', position: 'a3' }])?.needsPlace).toBe(false);
+  });
+
+  // notion-motion.md Round 30 §1: "Table" read "Calendar" after the switch. Whether Notion keeps a custom name is unread.
+  it('renames a view still named after its old layout, and keeps any other name', () => {
+    expect(layoutChange(table(), 'calendar', schema)?.changes.name).toBe('Calendar');
+    expect(layoutChange({ ...table(), name: 'Roadmap' }, 'calendar', schema)?.changes).not.toHaveProperty('name');
   });
 });

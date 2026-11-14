@@ -5615,11 +5615,6 @@ span[data-blok-slash-search] {
   padding: 0 var(--blok-space-2) var(--blok-space-2);
 }
 
-[data-blok-database-column][data-sub-group] {
-  border-start-start-radius: 0;
-  border-start-end-radius: 0;
-}
-
 [data-blok-database-column-header] {
   min-height: 40px;
   box-sizing: border-box;

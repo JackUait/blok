@@ -85,11 +85,9 @@ describe('board column, card and header look (research/08)', () => {
     expect(body).toContain('padding: 0 var(--blok-space-2) var(--blok-space-2)');
   });
 
-  it('rounds only the bottom of a column body below the shared heads, as Notion measured 0 0 10px 10px', () => {
-    const body = ruleBody(database, '[data-blok-database-column][data-sub-group]');
-
-    expect(body).toContain('border-start-start-radius: 0');
-    expect(body).toContain('border-start-end-radius: 0');
+  // notion-motion.md Round 30 §2: each band cell is its own box, radius 10 on all four corners, apart from the heads.
+  it('keeps all four corners on a sub-grouped column body', () => {
+    expect(database).not.toMatch(/\[data-blok-database-column\]\[data-sub-group\][^{]*\{[^}]*border-start-(start|end)-radius/);
   });
 
   it('uses the measured tints, rings and accents, light and dark', () => {

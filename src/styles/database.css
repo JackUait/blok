@@ -1224,12 +1224,6 @@
   padding: 0 var(--blok-space-2) var(--blok-space-2);
 }
 
-/* Measured (research/08): the tinted body is 0 0 10px 10px. A column with its own header keeps all four, since there header and body are one element. */
-[data-blok-database-column][data-sub-group] {
-  border-start-start-radius: 0;
-  border-start-end-radius: 0;
-}
-
 /**
  * Column header — grab cursor to indicate draggable area.
  */

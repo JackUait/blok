@@ -241,7 +241,7 @@ describe('DatabaseBoardView — mutation coverage', () => {
         headerDisplay: 'flex',
         headerAlignItems: 'center',
         headerPadding: '0px',
-        headerGap: '6px',
+        headerGap: '3px',
         headerCursor: 'grab',
         cardsDisplay: 'flex',
         cardsFlexDirection: 'column',

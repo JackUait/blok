@@ -4648,9 +4648,13 @@ export class DatabaseTool implements BlockTool {
       dashboard: DATABASE_DEFAULT_TEXT.viewTypeDashboard,
     };
     if (type === 'map') this.ensurePlaceProperty();
-    // notion-motion.md Round 28 §4: a new Board or Calendar creates the Status or Date it needs.
-    if (type === 'calendar' && !schema.some((p) => p.type === 'date')) this.addProperty({ name: '', type: 'date' });
-    const groupBy = type === 'board' && statusProp === undefined ? this.addProperty({ name: '', type: 'status' })?.id : statusProp?.id;
+    // notion-motion.md Round 28 §4, Round 29 §8: a new Board, Calendar or Timeline creates the Status or Date it needs.
+    if ((type === 'calendar' || type === 'timeline') && !schema.some((p) => p.type === 'date')) this.addProperty({ name: '', type: 'date' });
+    // Round 29 §9: a Board picks a Status before a Select. A Select-only database is unmeasured, so it keeps the Select.
+    const boardProp = schema.find((p) => p.type === 'status') ?? statusProp;
+    const groupBy = type === 'board'
+      ? boardProp?.id ?? this.addProperty({ name: '', type: 'status' })?.id
+      : statusProp?.id;
     const newView = this.model.addView(defaultNames[type] ?? DATABASE_DEFAULT_TEXT.viewTypeBoard, type, {
       groupBy: type === 'board' || type === 'chart' ? groupBy : undefined,
     });

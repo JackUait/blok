@@ -72,6 +72,45 @@ describe('DatabaseTool — a new view creates the property it needs', () => {
     expect(saved.views[1].groupBy).toBe('sel');
   });
 
+  // notion-motion.md Round 29 §9 note: Notion grouped a new Board by Status on a database that also has a Select.
+  it('a new Board on a database that has a Select and a Status groups by the Status', () => {
+    const schema: PropertyDefinition[] = [
+      ...titleOnly,
+      { id: 'sel', name: 'Kind', type: 'select', position: 'a1', config: { options: [] } },
+      { id: 'st', name: 'Stage', type: 'status', position: 'a2', config: { options: [] } },
+    ];
+    const { tool, el } = buildTool(makeDoc([]), {}, dataWith(schema));
+
+    tool.addView('board');
+
+    const saved = tool.save(el);
+
+    expect(saved.views[1].groupBy).toBe('st');
+    expect(saved.schema.filter((p) => p.type === 'status').map((p) => p.id)).toEqual(['st']);
+  });
+
+  // notion-motion.md Round 29 §8: a new Timeline on a database without a Date creates one and draws the grid.
+  it('a new Timeline on a database with no Date adds a Date property and draws the grid with + New', () => {
+    const { tool, el } = buildTool(makeDoc([]), {}, dataWith(titleOnly));
+
+    tool.addView('timeline');
+
+    const dates = tool.save(el).schema.filter((p) => p.type === 'date');
+
+    expect(dates.map((p) => p.name)).toEqual(['tools.database.propertyTypeDate']);
+    expect(el.querySelector('[data-blok-database-timeline-empty]')).toBeNull();
+    expect(el.querySelector('[data-blok-database-timeline-new]')).not.toBeNull();
+  });
+
+  it('a new Timeline on a database that has a Date adds none', () => {
+    const schema: PropertyDefinition[] = [...titleOnly, { id: 'due', name: 'Due', type: 'date', position: 'a1' }];
+    const { tool, el } = buildTool(makeDoc([]), {}, dataWith(schema));
+
+    tool.addView('timeline');
+
+    expect(tool.save(el).schema.filter((p) => p.type === 'date').map((p) => p.id)).toEqual(['due']);
+  });
+
   it('a new Calendar on a database with no Date adds a Date property and draws the month', () => {
     const { tool, el } = buildTool(makeDoc([]), {}, dataWith(titleOnly));
 

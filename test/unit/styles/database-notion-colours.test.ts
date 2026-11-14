@@ -601,6 +601,14 @@ describe('round 13: research/35 §1.1-§1.3, §1.8', () => {
     expect(ruleBody(ROW)).toContain('padding-block: 0');
     expect(ruleBody("[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-item]")).not.toMatch(/height|padding/);
   });
+
+  // notion-motion.md Round 27 §3: "+ New template" reads in the header's gray, its plus in the icon gray 142,139,134.
+  it('"New template" is gray: secondary text, gray plus', () => {
+    const ADD = "[data-blok-database-template-menu] [data-blok-item-name='template-add']";
+
+    expect(ruleBody(ADD)).toContain('color: var(--blok-database-ink-secondary)');
+    expect(ruleBody(`${ADD} [data-blok-popover-item-icon]`)).toContain('color: var(--blok-database-table-header-icon)');
+  });
 });
 
 describe('research/35 §9 and 36 §7: the place editor after a pick', () => {

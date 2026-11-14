@@ -7158,6 +7158,14 @@ button[data-blok-database-column-count]:hover {
   padding-block: 0;
 }
 
+[data-blok-database-template-menu] [data-blok-item-name='template-add'] {
+  color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-template-menu] [data-blok-item-name='template-add'] [data-blok-popover-item-icon] {
+  color: var(--blok-database-table-header-icon);
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover][data-blok-nested][popover] {
   transition: display 200ms allow-discrete, overlay 200ms allow-discrete;
 }

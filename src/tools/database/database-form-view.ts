@@ -41,6 +41,8 @@ export interface DatabaseFormViewOptions {
   openLinkedProperty?: (propertyId: string, anchor: HTMLElement) => void;
   /** Puts the question before `beforeId`; null makes it last. */
   moveQuestion?: (propertyId: string, beforeId: string | null) => void;
+  /** The schema now, for a form that stays open across schema changes without redrawing. */
+  liveSchema?: () => PropertyDefinition[];
   cellContext?: Partial<CellContext>;
   hasPeople?: boolean;
   onInteractionEnd?: () => void;
@@ -1193,8 +1195,14 @@ export class DatabaseFormView implements DatabaseViewRenderer {
 
   private submit(): void {
     if (this.destroying || this.options.view.form?.closed === true) return;
-    const answers = [...this.fields].map(([propertyId, { property, field, required, maxSelections }]) => {
-      const value = this.answer(property, field);
+    const answers = [...this.fields].map(([propertyId, { property: asked, field, required, maxSelections }]) => {
+      // A form that does not redraw (Preview) checks against the schema as it is now.
+      const property = this.options.liveSchema?.().find((entry) => entry.id === propertyId) ?? asked;
+      const retargeted = property.type === 'relation'
+        && (property.relation?.targetDatabaseId !== asked.relation?.targetDatabaseId
+          || property.relation?.targetDocumentId !== asked.relation?.targetDocumentId);
+      // Pages picked from the old target are not pages of the new one.
+      const value = retargeted ? [] : this.answer(asked, field);
       // The same checks an agent's database.submitForm runs, plus the browser's own email check.
       const invalid = formAnswerProblem({ property, setting: { id: propertyId, required, maxSelections } }, value) !== undefined
         || (property.type === 'email' && value !== undefined && field instanceof HTMLInputElement && field.validity.typeMismatch);

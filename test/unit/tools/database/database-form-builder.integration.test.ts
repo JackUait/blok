@@ -720,4 +720,61 @@ describe('local form question builder', () => {
     expect(submitted.blocks.find((block) => block.id === 'db')?.content).toContain(response?.id);
     expect(submitted.blocks.filter((block) => block.type === 'database-row')).toHaveLength(3);
   });
+
+  // Preview stays open across schema changes, so its submit must check the live schema.
+  it('preview rejects two relation answers once the relation narrows to one page', async () => {
+    const onSubmit = vi.fn();
+
+    await mount(blocksFor([{
+      id: 'related', name: 'Related', type: 'relation', position: 'a1',
+      relation: { targetDatabaseId: 'db' },
+    }]), false, { onSubmit });
+    openPreview();
+    requireElement<HTMLButtonElement>(`${PREVIEW} [id="blok-form-form-related"]`).click();
+    requireElement('[data-blok-database-relation-option="first"]').click();
+    requireElement('[data-blok-database-relation-option="second"]').click();
+    const selected = (await save()).blocks.find((block) => block.id === 'db')?.data as DatabaseData | undefined;
+
+    if (editor === undefined || selected === undefined) throw new Error('Missing selected form');
+    await editor.blocks.update('db', {
+      ...selected,
+      schema: selected.schema.map((property) => property.id === 'related'
+        ? { ...property, relation: { targetDatabaseId: 'db', limit: 1 } }
+        : property),
+    });
+    dismiss();
+    submit();
+    const saved = await save();
+
+    expect(saved.blocks.filter((block) => block.type === 'database-row' && block.id !== 'first' && block.id !== 'second')).toEqual([]);
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(requireElement(`${PREVIEW} [id="blok-form-form-related"]`).getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('preview does not save a relation answer after the relation changes target', async () => {
+    const onSubmit = vi.fn();
+
+    await mount(blocksFor([{
+      id: 'related', name: 'Related', type: 'relation', position: 'a1',
+      relation: { targetDatabaseId: 'db' },
+    }]), false, { onSubmit });
+    openPreview();
+    requireElement<HTMLButtonElement>(`${PREVIEW} [id="blok-form-form-related"]`).click();
+    requireElement('[data-blok-database-relation-option="first"]').click();
+    const selected = (await save()).blocks.find((block) => block.id === 'db')?.data as DatabaseData | undefined;
+
+    if (editor === undefined || selected === undefined) throw new Error('Missing selected form');
+    await editor.blocks.update('db', {
+      ...selected,
+      schema: selected.schema.map((property) => property.id === 'related'
+        ? { ...property, relation: { targetDatabaseId: 'other' } }
+        : property),
+    });
+    dismiss();
+    submit();
+    const saved = await save();
+    const response = saved.blocks.find((block) => block.type === 'database-row' && block.id !== 'first' && block.id !== 'second');
+
+    expect(response?.data.properties).toEqual({ title: 'Response', related: [] });
+  });
 });

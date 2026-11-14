@@ -5684,6 +5684,7 @@ export class DatabaseTool implements BlockTool {
       i18n: this.api.i18n,
       view,
       schema: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
+      liveSchema: () => this.model.getSchema(),
       readOnly: false,
       source: this.source,
       cellContext: { ...this.cellContext(), openEditors: undefined, relationCreator: undefined, relationScope: (property: PropertyDefinition) => this.relatedDatabaseName(property) },

@@ -473,8 +473,13 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     const scroller = document.createElement('div');
 
     scroller.setAttribute('data-blok-database-table-scroller', '');
-    // RTL scrolls to negative values, so any non-zero offset counts.
-    scroller.addEventListener('scroll', () => scroller.toggleAttribute('data-scrolled', scroller.scrollLeft !== 0), { passive: true });
+    // notion-motion.md Round 29 §5: the frozen shadow shows once content slides under the frozen block.
+    // That block sticks once the leading padding has scrolled away. RTL scrolls to negative values.
+    scroller.addEventListener('scroll', () => {
+      const lead = parseFloat(getComputedStyle(scroller).paddingInlineStart) || 0;
+
+      scroller.toggleAttribute('data-scrolled', Math.abs(scroller.scrollLeft) > lead);
+    }, { passive: true });
 
     const gridEl = document.createElement('div');
 

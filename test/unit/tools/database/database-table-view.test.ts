@@ -519,6 +519,28 @@ describe('DatabaseTableView', () => {
       expect(scroller.hasAttribute('data-scrolled')).toBe(false);
     });
 
+    // notion-motion.md Round 29 §5: the shadow waits until content slides under the frozen block,
+    // which sticks once the scroller's leading padding has scrolled away.
+    it('marks the scroller only once scrolled past its leading padding, both ways', () => {
+      const { root } = mount({ view: tableView({ frozenColumnCount: 1 }) });
+      const scroller = root.querySelector<HTMLElement>('[data-blok-database-table-scroller]');
+      const scrollTo = (left: number): boolean => {
+        if (scroller === null) throw new Error('no scroller');
+        scroller.scrollLeft = left;
+        scroller.dispatchEvent(new Event('scroll'));
+
+        return scroller.hasAttribute('data-scrolled');
+      };
+
+      if (scroller === null) throw new Error('no scroller');
+      scroller.style.paddingInlineStart = '96px';
+      expect(scrollTo(96)).toBe(false);
+      expect(scrollTo(97)).toBe(true);
+      expect(scrollTo(96)).toBe(false);
+      // RTL scrolls to negative offsets.
+      expect(scrollTo(-97)).toBe(true);
+    });
+
     it('right-aligns number cells', () => {
       const { root } = mount();
 

@@ -1689,7 +1689,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r40: the table's Load more row with its ⋯ and a hover token. Net database.css growth against origin/main.
     const DATABASE_R40_BYTES = 2155;
     // Lane r41: the view search inset, the freeze shadow fade and the board's sub-group band. Net database.css growth against origin/main.
-    const DATABASE_R41_BYTES = 151;
+    const DATABASE_R41_BYTES = 1038;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

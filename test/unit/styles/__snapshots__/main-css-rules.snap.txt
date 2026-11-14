@@ -12924,20 +12924,26 @@ textarea[data-blok-database-cell-input] {
   border-inline-end: 1px solid var(--blok-database-table-control-border);
 }
 
-[data-blok-database-table-scroller][data-scrolled] [data-frozen-edge] {
-  --blok-database-frozen-shadow: 1px 0 0 color-mix(in srgb, var(--blok-database-table-border) 30%, transparent), 2px 0 0 color-mix(in srgb, var(--blok-database-table-border) 50%, transparent), 3px 0 0 color-mix(in srgb, var(--blok-database-table-border) 30%, transparent);
+[data-blok-database-table-scroller] [data-frozen-edge] {
+  --blok-database-frozen-shadow: 1px 0 0 color-mix(in srgb, var(--blok-database-table-border) calc(30% * var(--blok-database-frozen-shadow-on)), transparent), 2px 0 0 color-mix(in srgb, var(--blok-database-table-border) calc(50% * var(--blok-database-frozen-shadow-on)), transparent), 3px 0 0 color-mix(in srgb, var(--blok-database-table-border) calc(30% * var(--blok-database-frozen-shadow-on)), transparent);
   box-shadow: var(--blok-database-frozen-shadow);
+  transition: --blok-database-frozen-shadow-on 200ms ease;
 }
 
-[dir="rtl"] [data-blok-database-table-scroller][data-scrolled] [data-frozen-edge] {
-  --blok-database-frozen-shadow: -1px 0 0 color-mix(in srgb, var(--blok-database-table-border) 30%, transparent), -2px 0 0 color-mix(in srgb, var(--blok-database-table-border) 50%, transparent), -3px 0 0 color-mix(in srgb, var(--blok-database-table-border) 30%, transparent);
+[data-blok-database-table-scroller][data-scrolled] [data-frozen-edge] {
+  --blok-database-frozen-shadow-on: 1;
 }
 
-[data-blok-database-table-scroller][data-scrolled] [data-blok-database-table-column-header][data-frozen-edge] {
+[dir="rtl"] [data-blok-database-table-scroller] [data-frozen-edge] {
+  --blok-database-frozen-shadow: -1px 0 0 color-mix(in srgb, var(--blok-database-table-border) calc(30% * var(--blok-database-frozen-shadow-on)), transparent), -2px 0 0 color-mix(in srgb, var(--blok-database-table-border) calc(50% * var(--blok-database-frozen-shadow-on)), transparent), -3px 0 0 color-mix(in srgb, var(--blok-database-table-border) calc(30% * var(--blok-database-frozen-shadow-on)), transparent);
+}
+
+[data-blok-database-table-scroller] [data-blok-database-table-column-header][data-frozen-edge] {
   box-shadow: inset 0 -1px 0 var(--blok-database-table-border), var(--blok-database-frozen-shadow);
+  transition: background-color 20ms ease-in, --blok-database-header-tint 20ms ease-in, --blok-database-frozen-shadow-on 200ms ease;
 }
 
-[data-blok-database-table-scroller][data-scrolled] [data-blok-database-table-cell-anchor][data-frozen-edge] {
+[data-blok-database-table-scroller] [data-blok-database-table-cell-anchor][data-frozen-edge] {
   box-shadow: inset 0 0 0 2px var(--blok-database-table-cell-ring), var(--blok-database-frozen-shadow);
 }
 
@@ -14021,7 +14027,7 @@ button[data-blok-database-table-group-count]:hover {
   cursor: ns-resize;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-database-table-row]::before, [data-blok-database-table-row]::after, [data-blok-database-table-resize], [data-blok-database-table-row-checkbox], [data-blok-database-table-select-all], [data-blok-database-table-row-add], [data-blok-database-table-row-handle], [data-blok-database-table-group-toggle], [data-blok-database-table-group-toggle] svg, [data-blok-database-board-lane-toggle] svg, [data-blok-database-table-drop-line], [data-blok-database-table-grid][data-column-dragging] [data-blok-database-table-column-header], [data-blok-database-table-calc-box], [data-blok-database-table-calc-placeholder], [data-blok-database-table-column-header], [data-blok-database-table-open], [data-blok-database-table-open] > span[aria-hidden="true"], [data-blok-database-table-add-property] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-table-row]::before, [data-blok-database-table-row]::after, [data-blok-database-table-resize], [data-blok-database-table-row-checkbox], [data-blok-database-table-select-all], [data-blok-database-table-row-add], [data-blok-database-table-row-handle], [data-blok-database-table-group-toggle], [data-blok-database-table-group-toggle] svg, [data-blok-database-board-lane-toggle] svg, [data-blok-database-table-drop-line], [data-blok-database-table-grid][data-column-dragging] [data-blok-database-table-column-header], [data-blok-database-table-calc-box], [data-blok-database-table-calc-placeholder], [data-blok-database-table-column-header], [data-blok-database-table-open], [data-blok-database-table-open] > span[aria-hidden="true"], [data-blok-database-table-scroller] [data-frozen-edge], [data-blok-database-table-scroller] [data-blok-database-table-column-header][data-frozen-edge], [data-blok-database-table-add-property] {
   transition: none;
 }
 

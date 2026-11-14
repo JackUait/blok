@@ -514,25 +514,31 @@ describe('database table frozen edge', () => {
     expect(css).toMatch(/--blok-database-table-control-border:\s*rgba\(28, 19, 1, 0\.11\)/);
   });
 
-  it('casts a 3px shadow only while the table is scrolled, shown and hidden without motion', () => {
-    const shadow = ruleBody('[data-blok-database-table-scroller][data-scrolled] [data-frozen-edge]');
-    const steps = /--blok-database-frozen-shadow:\s*1px 0 0 [^;]*?30%[^;]*?2px 0 0 [^;]*?50%[^;]*?3px 0 0 [^;]*?30%/;
+  // notion-motion.md Round 29 §5: the shadow fades in and out, opacity 0↔1 over 200ms ease.
+  // Only its strength moves, so the anchor ring and the header line still snap.
+  it('casts a 3px shadow while scrolled, fading its strength in and out over 200ms ease', () => {
+    const shadow = ruleBody('[data-blok-database-table-scroller] [data-frozen-edge]');
+    const steps = /--blok-database-frozen-shadow:\s*1px 0 0 [^;]*?calc\(30% \* var\(--blok-database-frozen-shadow-on\)\)[^;]*?2px 0 0 [^;]*?calc\(50% \* var\(--blok-database-frozen-shadow-on\)\)[^;]*?3px 0 0 [^;]*?calc\(30% \* var\(--blok-database-frozen-shadow-on\)\)/;
 
-    expect(ruleBody('[data-blok-database-table-grid] [data-frozen][data-frozen-edge]')).not.toMatch(/box-shadow|transition|animation/);
+    expect(css).toMatch(/@property --blok-database-frozen-shadow-on\s*\{\s*syntax: '<number>';\s*inherits: false;\s*initial-value: 0;/);
     expect(shadow).toMatch(steps);
     expect(shadow).toMatch(/box-shadow:\s*var\(--blok-database-frozen-shadow\)/);
-    expect(shadow).not.toMatch(/transition|animation/);
+    expect(shadow).toMatch(/transition:\s*--blok-database-frozen-shadow-on 200ms ease(;|$)/);
+    expect(ruleBody('[data-blok-database-table-scroller][data-scrolled] [data-frozen-edge]')).toMatch(/--blok-database-frozen-shadow-on:\s*1(;|$)/);
+    expect(ruleBody('[data-blok-database-table-grid] [data-frozen][data-frozen-edge]')).not.toMatch(/box-shadow|transition|animation/);
   });
 
-  it('keeps the header line and the anchor ring under the shadow', () => {
-    expect(ruleBody('[data-blok-database-table-scroller][data-scrolled] [data-blok-database-table-column-header][data-frozen-edge]'))
-      .toMatch(/box-shadow:\s*inset 0 -1px 0 var\(--blok-database-table-border\),\s*var\(--blok-database-frozen-shadow\)/);
-    expect(ruleBody('[data-blok-database-table-scroller][data-scrolled] [data-blok-database-table-cell-anchor][data-frozen-edge]'))
+  it('keeps the header line, its hover tint and the anchor ring under the shadow', () => {
+    const header = ruleBody('[data-blok-database-table-scroller] [data-blok-database-table-column-header][data-frozen-edge]');
+
+    expect(header).toMatch(/box-shadow:\s*inset 0 -1px 0 var\(--blok-database-table-border\),\s*var\(--blok-database-frozen-shadow\)/);
+    expect(header).toMatch(/transition:\s*background-color 20ms ease-in, --blok-database-header-tint 20ms ease-in, --blok-database-frozen-shadow-on 200ms ease/);
+    expect(ruleBody('[data-blok-database-table-scroller] [data-blok-database-table-cell-anchor][data-frozen-edge]'))
       .toMatch(/box-shadow:\s*inset 0 0 0 2px var\(--blok-database-table-cell-ring\),\s*var\(--blok-database-frozen-shadow\)/);
   });
 
   it('turns the shadow to face the other way in right-to-left text', () => {
-    expect(ruleBody('[dir="rtl"] [data-blok-database-table-scroller][data-scrolled] [data-frozen-edge]')).toMatch(/-1px 0 0[\s\S]*-2px 0 0[\s\S]*-3px 0 0/);
+    expect(ruleBody('[dir="rtl"] [data-blok-database-table-scroller] [data-frozen-edge]')).toMatch(/-1px 0 0[\s\S]*-2px 0 0[\s\S]*-3px 0 0/);
   });
   // notion-motion.md Round 29 §1: a full-width 37px row; the whole row fills 0.024 on hover; ↓ 16, label at +24, ⋯ 24x24 12 after.
   it('draws Load more as a full-width 37px row that fills as a whole on hover', () => {

@@ -9548,23 +9548,36 @@ textarea[data-blok-database-cell-input] {
   border-inline-end: 1px solid var(--blok-database-table-control-border);
 }
 
-/* Round 28 §5: about 3px of shadow (239, 243, 250 on white) while scrolled. Its motion is unread, so none.
-   Stacked box-shadows, not a pseudo-element: cells clip their overflow. They overlap, so pixel 1 sums all three. */
-[data-blok-database-table-scroller][data-scrolled] [data-frozen-edge] {
-  --blok-database-frozen-shadow: 1px 0 0 color-mix(in srgb, var(--blok-database-table-border) 30%, transparent), 2px 0 0 color-mix(in srgb, var(--blok-database-table-border) 50%, transparent), 3px 0 0 color-mix(in srgb, var(--blok-database-table-border) 30%, transparent);
+@property --blok-database-frozen-shadow-on {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
+/* Round 28 §5: about 3px of shadow (239, 243, 250 on white). Stacked box-shadows, not a pseudo-element:
+   cells clip their overflow. They overlap, so pixel 1 sums all three.
+   Round 29 §5: it fades 200ms ease both ways. Only its strength moves, so the anchor ring still snaps. */
+[data-blok-database-table-scroller] [data-frozen-edge] {
+  --blok-database-frozen-shadow: 1px 0 0 color-mix(in srgb, var(--blok-database-table-border) calc(30% * var(--blok-database-frozen-shadow-on)), transparent), 2px 0 0 color-mix(in srgb, var(--blok-database-table-border) calc(50% * var(--blok-database-frozen-shadow-on)), transparent), 3px 0 0 color-mix(in srgb, var(--blok-database-table-border) calc(30% * var(--blok-database-frozen-shadow-on)), transparent);
   box-shadow: var(--blok-database-frozen-shadow);
+  transition: --blok-database-frozen-shadow-on 200ms ease;
 }
 
-[dir="rtl"] [data-blok-database-table-scroller][data-scrolled] [data-frozen-edge] {
-  --blok-database-frozen-shadow: -1px 0 0 color-mix(in srgb, var(--blok-database-table-border) 30%, transparent), -2px 0 0 color-mix(in srgb, var(--blok-database-table-border) 50%, transparent), -3px 0 0 color-mix(in srgb, var(--blok-database-table-border) 30%, transparent);
+[data-blok-database-table-scroller][data-scrolled] [data-frozen-edge] {
+  --blok-database-frozen-shadow-on: 1;
 }
 
-/* These two keep their own inset lines under the shadow. */
-[data-blok-database-table-scroller][data-scrolled] [data-blok-database-table-column-header][data-frozen-edge] {
+[dir="rtl"] [data-blok-database-table-scroller] [data-frozen-edge] {
+  --blok-database-frozen-shadow: -1px 0 0 color-mix(in srgb, var(--blok-database-table-border) calc(30% * var(--blok-database-frozen-shadow-on)), transparent), -2px 0 0 color-mix(in srgb, var(--blok-database-table-border) calc(50% * var(--blok-database-frozen-shadow-on)), transparent), -3px 0 0 color-mix(in srgb, var(--blok-database-table-border) calc(30% * var(--blok-database-frozen-shadow-on)), transparent);
+}
+
+/* These two keep their own inset lines under the shadow; the header keeps its hover tint's motion. */
+[data-blok-database-table-scroller] [data-blok-database-table-column-header][data-frozen-edge] {
   box-shadow: inset 0 -1px 0 var(--blok-database-table-border), var(--blok-database-frozen-shadow);
+  transition: background-color 20ms ease-in, --blok-database-header-tint 20ms ease-in, --blok-database-frozen-shadow-on 200ms ease;
 }
 
-[data-blok-database-table-scroller][data-scrolled] [data-blok-database-table-cell-anchor][data-frozen-edge] {
+[data-blok-database-table-scroller] [data-blok-database-table-cell-anchor][data-frozen-edge] {
   box-shadow: inset 0 0 0 2px var(--blok-database-table-cell-ring), var(--blok-database-frozen-shadow);
 }
 
@@ -10810,6 +10823,8 @@ button[data-blok-database-table-group-count]:hover {
   [data-blok-database-table-column-header],
   [data-blok-database-table-open],
   [data-blok-database-table-open] > span[aria-hidden="true"],
+  [data-blok-database-table-scroller] [data-frozen-edge],
+  [data-blok-database-table-scroller] [data-blok-database-table-column-header][data-frozen-edge],
   [data-blok-database-table-add-property] {
     transition: none;
   }

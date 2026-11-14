@@ -35,6 +35,13 @@ export const rowAutoScrollSpeed = VERTICAL;
  */
 export const cardAutoScrollSpeed = ramp([[1, 1.83], [4, 1.64], [9, 1.3], [19, 0.82], [34, 0.37], [49, 0.076], [51, 0]]);
 
+/**
+ * Board cards near the page's top or bottom. notion-motion.md Round 30 §5: about
+ * 1.46 px/ms at 17px and 1.5 px/ms at 16px. Notion's zone width is unread, so
+ * it takes the rows' 35px zone (Round 17 §1).
+ */
+export const cardVerticalAutoScrollSpeed = (distance: number): number => (distance <= 35 ? 1.5 : 0);
+
 type Where = 'zone' | 'out' | 'past';
 
 /**

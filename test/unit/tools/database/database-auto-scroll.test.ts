@@ -276,6 +276,55 @@ describe('database drags scroll near an edge', () => {
     expect(board.scrollLeft).toBe(at);
   });
 
+  /** The board inside a page that scrolls up and down, its frame from y 44 to the window bottom. */
+  const pagedBoard = (): { page: HTMLElement; card: HTMLElement; drag: DatabaseCardDrag } => {
+    const page = document.createElement('div');
+    const { board, card, drag } = boardFixture();
+
+    makeScroller(page, 'y', 1749);
+    stubRect(page, () => rect(0, 44, 900, 406));
+    page.appendChild(board);
+    document.body.appendChild(page);
+
+    return { page, card, drag };
+  };
+
+  // notion-motion.md Round 30 §5: 17px above the window bottom the page scrolled about 1.46 px/ms.
+  it('a board card held 17px above the window bottom scrolls the page down at about 1.5 px/ms', () => {
+    const { page, card, drag } = pagedBoard();
+
+    drag.beginTracking('c1', 300, 170, card);
+    enter(400, 433);
+    runFrames(0, 104);
+
+    expect(page.scrollTop).toBeGreaterThan(1.4 * 96);
+    expect(page.scrollTop).toBeLessThan(1.6 * 104);
+  });
+
+  // Round 30 §5: 16px under the frame top it scrolled back at about 1.5 px/ms.
+  it('a board card held 16px under the page frame\'s top scrolls the page up', () => {
+    const { page, card, drag } = pagedBoard();
+
+    page.scrollTop = 900;
+    drag.beginTracking('c1', 300, 170, card);
+    enter(400, 60);
+    runFrames(0, 104);
+
+    expect(900 - page.scrollTop).toBeGreaterThan(1.4 * 96);
+    expect(900 - page.scrollTop).toBeLessThan(1.6 * 104);
+  });
+
+  // The zone width is unread in Notion; the cards take the rows' 35px zone (Round 17 §1).
+  it('a board card held 40px above the window bottom does not scroll the page', () => {
+    const { page, card, drag } = pagedBoard();
+
+    drag.beginTracking('c1', 300, 170, card);
+    enter(400, 410);
+    runFrames(0, 240);
+
+    expect(page.scrollTop).toBe(0);
+  });
+
   const listFixture = (): { scroller: HTMLElement; drag: DatabaseListRowDrag; onDrop: ReturnType<typeof vi.fn> } => {
     const scroller = document.createElement('div');
     const list = document.createElement('div');

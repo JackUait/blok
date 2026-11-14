@@ -1,6 +1,6 @@
 import type { AutoScroll } from '../../components/modules/drag/utils/AutoScroll';
 import { copyGhostContext, copyGhostRadius, mountGhost } from './copy-ghost-radius';
-import { cardAutoScrollSpeed, createDatabaseAutoScroll } from './database-auto-scroll';
+import { cardAutoScrollSpeed, cardVerticalAutoScrollSpeed, createDatabaseAutoScroll } from './database-auto-scroll';
 import { DatabaseDropLine } from './database-drop-line';
 
 const DRAG_THRESHOLD = 10;
@@ -47,6 +47,7 @@ export class DatabaseCardDrag {
   private origin: Omit<CardDragResult, 'rowId'> | null = null;
   private readonly dropLine: DatabaseDropLine;
   private autoScroll: AutoScroll | null = null;
+  private pageAutoScroll: AutoScroll | null = null;
   private lastPointer: PointerEvent | null = null;
 
   private readonly boundPointerMove: (e: PointerEvent) => void;
@@ -91,6 +92,8 @@ export class DatabaseCardDrag {
 
     this.autoScroll?.destroy();
     this.autoScroll = null;
+    this.pageAutoScroll?.destroy();
+    this.pageAutoScroll = null;
     this.lastPointer = null;
 
     this.ghostEl?.remove();
@@ -135,6 +138,7 @@ export class DatabaseCardDrag {
       this.updateGhostPosition(e);
       this.updateDropIndicator(e);
       this.autoScroll?.start(e.clientX);
+      this.pageAutoScroll?.start(e.clientY);
     }
   }
 
@@ -171,11 +175,14 @@ export class DatabaseCardDrag {
 
     this.wrapper.setAttribute('data-blok-database-dragging', '');
     this.createGhost(e);
-    this.autoScroll = createDatabaseAutoScroll(this.sourceCard ?? this.wrapper, 'x', cardAutoScrollSpeed, () => {
+    const follow = (): void => {
       if (this.lastPointer !== null) {
         this.updateDropIndicator(this.lastPointer);
       }
-    });
+    };
+
+    this.autoScroll = createDatabaseAutoScroll(this.sourceCard ?? this.wrapper, 'x', cardAutoScrollSpeed, follow);
+    this.pageAutoScroll = createDatabaseAutoScroll(this.sourceCard ?? this.wrapper, 'y', cardVerticalAutoScrollSpeed, follow);
   }
 
   private createGhost(e: PointerEvent): void {

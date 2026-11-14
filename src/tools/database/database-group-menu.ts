@@ -1,7 +1,7 @@
 import type { I18n } from '../../../types';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
-import { IconCheck, IconEyeSlash, IconPreview, IconSliders, IconTrash } from '../../components/icons';
+import { IconCheck, IconEyeSlash, IconGroup, IconPreview, IconTrash } from '../../components/icons';
 import { OPTION_COLORS, optionColorLabelKey, optionSwatch, type OptionColor } from './cells/option-colors';
 
 /**
@@ -48,7 +48,7 @@ export const groupMenuItems = (params: GroupMenuParams): PopoverItemParams[] => 
     {
       name: 'edit-groups',
       title: t('tools.database.groupEditGroups'),
-      icon: IconSliders,
+      icon: IconGroup,
       closeOnActivate: true,
       onActivate: params.onEditGroups,
     },

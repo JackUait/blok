@@ -4,7 +4,7 @@ import type { I18n } from '../../../../types';
 import type { PopoverItemParams } from '../../../../types/utils/popover/popover-item';
 import { groupMenuItems, type GroupMenuParams } from '../../../../src/tools/database/database-group-menu';
 import { OPTION_COLORS } from '../../../../src/tools/database/cells/option-colors';
-import { IconCheck, IconEyeSlash } from '../../../../src/components/icons';
+import { IconCheck, IconEyeSlash, IconGroup } from '../../../../src/components/icons';
 import { PopoverItemType } from '../../../../src/components/utils/popover/components/popover-item';
 
 const i18n = { t: (key: string) => key, has: () => true } as unknown as I18n;
@@ -91,6 +91,11 @@ describe('groupMenuItems', () => {
     const names = (groupMenuItems(params({ isNoValue: true, color: undefined })) as Item[]).map((item) => item.name);
 
     expect(names.some((name) => name?.startsWith('color-'))).toBe(false);
+  });
+
+  // notion-motion.md Round 30 §2: Edit groups draws `squareGridBelowLines`, the glyph of the header menu's Group (IconGroup).
+  it('draws Edit groups with the Group glyph', () => {
+    expect(named(groupMenuItems(params()), 'edit-groups').icon).toBe(IconGroup);
   });
 
   // findings-board B14: Edit groups opens the view settings Group page.

@@ -3621,7 +3621,9 @@ button[data-blok-database-column-count]:hover {
 }
 
 /* Overflow dropdown items */
+/* notion-motion.md Round 29 §4: 258 wide, 16 in from the panel. Fill and radius stay the shared field look. */
 [data-blok-database-tab-overflow-dropdown] > [data-blok-field="search"] {
+  margin-inline: var(--blok-space-3);
   margin-bottom: var(--blok-space-1);
 }
 

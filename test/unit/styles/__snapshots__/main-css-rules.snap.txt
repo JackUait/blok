@@ -7600,6 +7600,7 @@ button[data-blok-database-column-count]:hover {
 }
 
 [data-blok-database-tab-overflow-dropdown] > [data-blok-field="search"] {
+  margin-inline: var(--blok-space-3);
   margin-bottom: var(--blok-space-1);
 }
 

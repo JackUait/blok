@@ -319,6 +319,15 @@ describe('view overflow list (research/13:81, notion-measure5/51-one-more.json)'
     expect(buttons).not.toBe('');
     expect(buttons).not.toContain('opacity: 0');
   });
+
+  // notion-motion.md Round 29 §4: the search box is 258 wide, 16 in from the panel (4 padding + 12).
+  // Its fill and radius stay the shared field look (src/styles/field.css), a user rule.
+  it('insets the view search 12px each side, so it is 258 wide in the 290 panel', () => {
+    const search = ruleBody('[data-blok-database-tab-overflow-dropdown] > [data-blok-field="search"]');
+
+    expect(search).toContain('margin-inline: var(--blok-space-3)');
+    expect(search).not.toMatch(/border-radius|background/);
+  });
 });
 
 describe('row page tab bar "N more…" (research/13 §3a)', () => {

@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "ಫಾರ್ಮ್ ಶೀರ್ಷಿಕೆ",
   "tools.database.formDescriptionPlaceholder": "ವಿವರಣೆ (ಐಚ್ಛಿಕ)",
   "tools.database.formAnswerPlaceholder": "ಪ್ರತಿಕ್ರಿಯಿಸಿದವರ ಉತ್ತರ",
+  "tools.database.formIcon": "ಫಾರ್ಮ್ ಐಕಾನ್",
+  "tools.database.formCover": "ಫಾರ್ಮ್ ಕವರ್",
   "tools.database.formChooseAnswer": "ಉತ್ತರ ಆಯ್ಕೆಮಾಡಿ",
   "tools.database.formAutoCreateTitle": "ಈಗಿರುವ ಗುಣಲಕ್ಷಣಗಳ ಆಧಾರದಲ್ಲಿ ಫಾರ್ಮ್ ಪ್ರಶ್ನೆಗಳನ್ನು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ರಚಿಸಬೇಕೆ?",
   "tools.database.formAutoCreateDescription": "ಬೆಂಬಲಿತ ಗುಣಲಕ್ಷಣ ಪ್ರಕಾರಗಳು ಮಾತ್ರ ಹೊಸ ಪ್ರಶ್ನೆಗಳನ್ನು ರಚಿಸುತ್ತವೆ.",

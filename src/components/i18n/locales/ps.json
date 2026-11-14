@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "د فورمې سرلیک",
   "tools.database.formDescriptionPlaceholder": "تشریح (اختیاري)",
   "tools.database.formAnswerPlaceholder": "د ځواب ورکوونکي ځواب",
+  "tools.database.formIcon": "د فورمې آیکون",
+  "tools.database.formCover": "د فورمې پوښ",
   "tools.database.formChooseAnswer": "ځواب وټاکئ",
   "tools.database.formAutoCreateTitle": "د شته ځانګړتیاوو پر بنسټ د فورمې پوښتنې په اوتومات ډول جوړې شي؟",
   "tools.database.formAutoCreateDescription": "یوازې د ملاتړ شویو ځانګړتیا ډولونو څخه نوې پوښتنې جوړېږي.",

@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "ফর্মের শিরোনাম",
   "tools.database.formDescriptionPlaceholder": "বিবরণ (ঐচ্ছিক)",
   "tools.database.formAnswerPlaceholder": "উত্তরদাতার উত্তর",
+  "tools.database.formIcon": "ফর্মের আইকন",
+  "tools.database.formCover": "ফর্মের প্রচ্ছদ",
   "tools.database.formChooseAnswer": "উত্তর নির্বাচন করুন",
   "tools.database.formAutoCreateTitle": "বিদ্যমান বৈশিষ্ট্যের ভিত্তিতে ফর্মের প্রশ্ন স্বয়ংক্রিয়ভাবে তৈরি করবেন?",
   "tools.database.formAutoCreateDescription": "শুধু সমর্থিত বৈশিষ্ট্যের ধরন থেকেই নতুন প্রশ্ন তৈরি হবে।",

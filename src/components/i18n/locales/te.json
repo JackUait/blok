@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "ఫారమ్ శీర్షిక",
   "tools.database.formDescriptionPlaceholder": "వివరణ (ఐచ్ఛికం)",
   "tools.database.formAnswerPlaceholder": "ప్రతిస్పందనదారు సమాధానం",
+  "tools.database.formIcon": "ఫారమ్ చిహ్నం",
+  "tools.database.formCover": "ఫారమ్ కవర్",
   "tools.database.formChooseAnswer": "సమాధానాన్ని ఎంచుకోండి",
   "tools.database.formAutoCreateTitle": "ఇప్పటికే ఉన్న ప్రాపర్టీల ఆధారంగా ఫారమ్ ప్రశ్నలను స్వయంచాలకంగా సృష్టించాలా?",
   "tools.database.formAutoCreateDescription": "మద్దతు ఉన్న ప్రాపర్టీ రకాలు మాత్రమే కొత్త ప్రశ్నలను సృష్టిస్తాయి.",

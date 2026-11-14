@@ -1658,6 +1658,8 @@
   "tools.database.formTitlePlaceholder": "Titlul formularului",
   "tools.database.formDescriptionPlaceholder": "Descriere (opțional)",
   "tools.database.formAnswerPlaceholder": "Răspunsul respondentului",
+  "tools.database.formIcon": "Pictograma formularului",
+  "tools.database.formCover": "Coperta formularului",
   "tools.database.formChooseAnswer": "Alege un răspuns",
   "tools.database.formAutoCreateTitle": "Creezi automat întrebări în formular pe baza proprietăților existente?",
   "tools.database.formAutoCreateDescription": "Doar tipurile de proprietăți acceptate vor crea întrebări noi.",

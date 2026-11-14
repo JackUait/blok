@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "表單標題",
   "tools.database.formDescriptionPlaceholder": "描述（選填）",
   "tools.database.formAnswerPlaceholder": "填答者的回答",
+  "tools.database.formIcon": "表單圖示",
+  "tools.database.formCover": "表單封面",
   "tools.database.formChooseAnswer": "選擇回答",
   "tools.database.formAutoCreateTitle": "要依據現有屬性自動建立表單問題嗎？",
   "tools.database.formAutoCreateDescription": "只有支援的屬性類型會建立新問題。",

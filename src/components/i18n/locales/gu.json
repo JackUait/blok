@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "ફોર્મનું શીર્ષક",
   "tools.database.formDescriptionPlaceholder": "વર્ણન (વૈકલ્પિક)",
   "tools.database.formAnswerPlaceholder": "ઉત્તરદાતાનો જવાબ",
+  "tools.database.formIcon": "ફોર્મનું આઇકન",
+  "tools.database.formCover": "ફોર્મનું કવર",
   "tools.database.formChooseAnswer": "જવાબ પસંદ કરો",
   "tools.database.formAutoCreateTitle": "હાલના ગુણધર્મોના આધારે ફોર્મના પ્રશ્નો આપમેળે બનાવીએ?",
   "tools.database.formAutoCreateDescription": "ફક્ત સમર્થિત ગુણધર્મ પ્રકારો જ નવા પ્રશ્નો બનાવશે.",

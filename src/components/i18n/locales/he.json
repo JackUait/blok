@@ -1658,6 +1658,8 @@
   "tools.database.formTitlePlaceholder": "כותרת הטופס",
   "tools.database.formDescriptionPlaceholder": "תיאור (אופציונלי)",
   "tools.database.formAnswerPlaceholder": "תשובת המשיב",
+  "tools.database.formIcon": "סמל הטופס",
+  "tools.database.formCover": "תמונת הכיסוי של הטופס",
   "tools.database.formChooseAnswer": "בחר תשובה",
   "tools.database.formAutoCreateTitle": "ליצור באופן אוטומטי שאלות לטופס על סמך המאפיינים הקיימים?",
   "tools.database.formAutoCreateDescription": "רק סוגי מאפיינים נתמכים ייצרו שאלות חדשות.",

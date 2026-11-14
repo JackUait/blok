@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "Formulartitel",
   "tools.database.formDescriptionPlaceholder": "Beschreibung (optional)",
   "tools.database.formAnswerPlaceholder": "Antwort der befragten Person",
+  "tools.database.formIcon": "Formularsymbol",
+  "tools.database.formCover": "Formular-Titelbild",
   "tools.database.formChooseAnswer": "Antwort auswählen",
   "tools.database.formAutoCreateTitle": "Formularfragen automatisch aus vorhandenen Eigenschaften erstellen?",
   "tools.database.formAutoCreateDescription": "Nur unterstützte Eigenschaftstypen erzeugen neue Fragen.",

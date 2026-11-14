@@ -1670,6 +1670,8 @@
   "tools.database.formTitlePlaceholder": "Formos pavadinimas",
   "tools.database.formDescriptionPlaceholder": "Aprašas (neprivalomas)",
   "tools.database.formAnswerPlaceholder": "Respondento atsakymas",
+  "tools.database.formIcon": "Formos piktograma",
+  "tools.database.formCover": "Formos viršelis",
   "tools.database.formChooseAnswer": "Pasirinkti atsakymą",
   "tools.database.formAutoCreateTitle": "Automatiškai sukurti formos klausimus pagal esamas savybes?",
   "tools.database.formAutoCreateDescription": "Naujus klausimus sukurs tik palaikomų tipų savybės.",

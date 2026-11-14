@@ -295,7 +295,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2230 + 146 + 577 + 9 closure for all 2962 keys', () => {
+  it('rebuilds a disjoint 2232 + 146 + 577 + 9 closure for all 2964 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -309,7 +309,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2962);
+    expect(lifecycle.size).toBe(2964);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -566,7 +566,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +20: the type menu's "?" on every other type Round 27 read (tools.database.propertyTypeHelp*).
       // +1: ID's "?" (tools.database.propertyTypeHelpUniqueId), read in Round 28.
       // +3: the table's Load more ⋯ calls tableShowOnFirstLoad (new), settingsLoadLimit and settingsLoadLimitPages by literal.
-      'executable-literal': 2230,
+      'executable-literal': 2232,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

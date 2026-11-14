@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "Form başlığı",
   "tools.database.formDescriptionPlaceholder": "Açıklama (isteğe bağlı)",
   "tools.database.formAnswerPlaceholder": "Yanıtlayanın yanıtı",
+  "tools.database.formIcon": "Form simgesi",
+  "tools.database.formCover": "Form kapağı",
   "tools.database.formChooseAnswer": "Yanıt seç",
   "tools.database.formAutoCreateTitle": "Form soruları mevcut özelliklere göre otomatik oluşturulsun mu?",
   "tools.database.formAutoCreateDescription": "Yalnızca desteklenen özellik türleri yeni soru oluşturur.",

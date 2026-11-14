@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "Ձևի վերնագիր",
   "tools.database.formDescriptionPlaceholder": "Նկարագրություն (ըստ ցանկության)",
   "tools.database.formAnswerPlaceholder": "Պատասխանողի պատասխանը",
+  "tools.database.formIcon": "Ձևի պատկերակ",
+  "tools.database.formCover": "Ձևի շապիկ",
   "tools.database.formChooseAnswer": "Ընտրել պատասխան",
   "tools.database.formAutoCreateTitle": "Ստեղծե՞լ ձևի հարցերն ավտոմատ՝ առկա հատկությունների հիման վրա",
   "tools.database.formAutoCreateDescription": "Նոր հարցեր կստեղծվեն միայն աջակցվող հատկությունների տեսակներից։",

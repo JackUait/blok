@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "ชื่อฟอร์ม",
   "tools.database.formDescriptionPlaceholder": "คำอธิบาย (ไม่บังคับ)",
   "tools.database.formAnswerPlaceholder": "คำตอบของผู้ตอบ",
+  "tools.database.formIcon": "ไอคอนฟอร์ม",
+  "tools.database.formCover": "ภาพปกฟอร์ม",
   "tools.database.formChooseAnswer": "เลือกคำตอบ",
   "tools.database.formAutoCreateTitle": "สร้างคำถามในฟอร์มโดยอัตโนมัติจากคุณสมบัติที่มีอยู่หรือไม่",
   "tools.database.formAutoCreateDescription": "เฉพาะประเภทคุณสมบัติที่รองรับเท่านั้นที่จะสร้างคำถามใหม่",

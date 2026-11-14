@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "טיטל פֿון פֿאָרמולאַר",
   "tools.database.formDescriptionPlaceholder": "באַשרײַבונג (אָפּציאָנעל)",
   "tools.database.formAnswerPlaceholder": "דעם ענטפֿערערס ענטפֿער",
+  "tools.database.formIcon": "בילדל פֿון פֿאָרמולאַר",
+  "tools.database.formCover": "הילע פֿון פֿאָרמולאַר",
   "tools.database.formChooseAnswer": "קלײַב אויס אַן ענטפֿער",
   "tools.database.formAutoCreateTitle": "אויטאָמאַטיש שאַפֿן פֿאָרמולאַר־פֿראַגעס לויט די עקזיסטירנדיקע אייגנשאַפֿטן?",
   "tools.database.formAutoCreateDescription": "נאָר געשטיצטע אייגנשאַפֿט־טיפּן וועלן שאַפֿן נײַע פֿראַגעס.",

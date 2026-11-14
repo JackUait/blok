@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "Маягтын гарчиг",
   "tools.database.formDescriptionPlaceholder": "Тайлбар (заавал биш)",
   "tools.database.formAnswerPlaceholder": "Хариулагчийн хариулт",
+  "tools.database.formIcon": "Маягтын дүрс",
+  "tools.database.formCover": "Маягтын хавтас",
   "tools.database.formChooseAnswer": "Хариулт сонгох",
   "tools.database.formAutoCreateTitle": "Одоо байгаа шинжүүд дээр үндэслэн маягтын асуултуудыг автоматаар үүсгэх үү?",
   "tools.database.formAutoCreateDescription": "Зөвхөн дэмжигдсэн төрлийн шинжүүдээс шинэ асуулт үүснэ.",

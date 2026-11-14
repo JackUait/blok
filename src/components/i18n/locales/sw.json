@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "Kichwa cha fomu",
   "tools.database.formDescriptionPlaceholder": "Maelezo (si lazima)",
   "tools.database.formAnswerPlaceholder": "Jibu la mjibuji",
+  "tools.database.formIcon": "Ikoni ya fomu",
+  "tools.database.formCover": "Jalada la fomu",
   "tools.database.formChooseAnswer": "Chagua jibu",
   "tools.database.formAutoCreateTitle": "Unda maswali ya fomu kiotomatiki kulingana na sifa zilizopo?",
   "tools.database.formAutoCreateDescription": "Ni aina za sifa zinazotumika pekee zitakazounda maswali mapya.",

@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "Titulli i formularit",
   "tools.database.formDescriptionPlaceholder": "Përshkrim (opsional)",
   "tools.database.formAnswerPlaceholder": "Përgjigjja e të anketuarit",
+  "tools.database.formIcon": "Ikona e formularit",
+  "tools.database.formCover": "Kopertina e formularit",
   "tools.database.formChooseAnswer": "Zgjidh një përgjigje",
   "tools.database.formAutoCreateTitle": "Të krijohen automatikisht pyetjet e formularit bazuar në vetitë ekzistuese?",
   "tools.database.formAutoCreateDescription": "Vetëm llojet e mbështetura të vetive do të krijojnë pyetje të reja.",

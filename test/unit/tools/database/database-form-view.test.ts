@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DatabaseFormView } from '../../../../src/tools/database/database-form-view';
 import type { DatabaseFormViewOptions } from '../../../../src/tools/database/database-form-view';
 import { IconChevronUpDown } from '../../../../src/components/icons';
-import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
+import type { DatabaseViewConfig, FormSettings, PropertyDefinition } from '../../../../src/tools/database/types';
 
 /** An icon string as the DOM serializes it once it is set as innerHTML. */
 const markup = (svg: string): string => Object.assign(document.createElement('span'), { innerHTML: svg }).innerHTML;
@@ -743,6 +743,53 @@ describe('DatabaseFormView header', () => {
     expect(update).toHaveBeenLastCalledWith({ description: 'Bring a friend' });
     type(box(root, 'title'), '  ');
     expect(update).toHaveBeenLastCalledWith({ title: undefined });
+  });
+
+  // notion-motion.md Round 31 §1, Round 32 §4: a "Form icon" and "Form cover" row above the title.
+  it('the builder has a Form icon and Form cover row above the title', () => {
+    const { root } = builder();
+    const row = root.querySelector('[data-blok-database-form-header] > [data-blok-database-form-header-row]');
+
+    expect(row).not.toBeNull();
+    expect(row?.nextElementSibling?.hasAttribute('data-blok-database-form-header-title')).toBe(true);
+    expect(row?.querySelector('[data-blok-page-add-icon] > span')?.textContent).toBe('tools.database.formIcon');
+    expect(row?.querySelector('[data-blok-page-add-cover] > span')?.textContent).toBe('tools.database.formCover');
+  });
+
+  it('Form cover saves a gallery cover in the form settings and draws it above the header', () => {
+    const settings: FormSettings = {};
+    const update = vi.fn((patch: Partial<FormSettings>) => Object.assign(settings, patch));
+    const { root } = mount({ view: view({ form: settings }), share: { settings: () => settings, update, copyLink: vi.fn() } });
+
+    root.querySelector<HTMLButtonElement>('[data-blok-page-add-cover]')?.click();
+
+    expect(update).toHaveBeenLastCalledWith({ cover: { type: 'gallery', id: expect.any(String) } });
+    expect(root.querySelector('[data-blok-database-form-header] > [data-blok-page-cover]')).not.toBeNull();
+    expect(root.querySelector<HTMLButtonElement>('[data-blok-page-add-cover]')?.hidden).toBe(true);
+  });
+
+  it('a saved icon shows in place of Form icon', () => {
+    const { root } = builder({ icon: { type: 'emoji', value: '🎉' } });
+
+    expect(root.querySelector('[data-blok-database-form-header-row] [data-blok-page-icon]')?.textContent).toBe('🎉');
+    expect(root.querySelector('[data-blok-page-add-icon]')).toBeNull();
+  });
+
+  it('draws nothing for a malformed saved icon or cover', () => {
+    const { root } = builder({ icon: 'x', cover: { type: 'gallery' } } as unknown as DatabaseViewConfig['form']);
+
+    expect(root.querySelector('[data-blok-page-icon]')).toBeNull();
+    expect(root.querySelector('[data-blok-page-add-icon]')).not.toBeNull();
+    expect(root.querySelector('[data-blok-page-cover]')).toBeNull();
+  });
+
+  it('a respondent sees the saved icon and cover, with no buttons', () => {
+    const { root } = mount({ view: view({ form: { icon: { type: 'emoji', value: '🎉' }, cover: { type: 'gallery', id: 'blue' } } }) });
+
+    expect(root.querySelector('[data-blok-page-icon]')?.textContent).toBe('🎉');
+    expect(root.querySelector<HTMLButtonElement>('[data-blok-page-icon]')?.disabled).toBe(true);
+    expect(root.querySelector('[data-blok-page-cover]')).not.toBeNull();
+    expect(root.querySelector('[data-blok-page-add-icon], [data-blok-page-add-cover]:not([hidden])')).toBeNull();
   });
 
   it('a respondent reads the title as a heading and the description under it; none when unset', () => {

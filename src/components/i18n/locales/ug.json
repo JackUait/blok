@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "ئانكېتا ماۋزۇسى",
   "tools.database.formDescriptionPlaceholder": "چۈشەندۈرۈش (ئىختىيارى)",
   "tools.database.formAnswerPlaceholder": "جاۋاب بەرگۈچىنىڭ جاۋابى",
+  "tools.database.formIcon": "ئانكېتا سىنبەلگىسى",
+  "tools.database.formCover": "ئانكېتا مۇقاۋىسى",
   "tools.database.formChooseAnswer": "جاۋاب تاللاش",
   "tools.database.formAutoCreateTitle": "بار خاسلىقلارغا ئاساسەن ئانكېتا سوئاللىرىنى ئاپتوماتىك قۇرامسىز؟",
   "tools.database.formAutoCreateDescription": "پەقەت قوللىنىدىغان خاسلىق تىپلىرىلا يېڭى سوئال قۇرىدۇ.",

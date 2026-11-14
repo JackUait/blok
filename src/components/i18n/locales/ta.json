@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "படிவத் தலைப்பு",
   "tools.database.formDescriptionPlaceholder": "விளக்கம் (விருப்பத்தேர்வு)",
   "tools.database.formAnswerPlaceholder": "பதிலளித்தவரின் பதில்",
+  "tools.database.formIcon": "படிவ ஐகான்",
+  "tools.database.formCover": "படிவ அட்டைப்படம்",
   "tools.database.formChooseAnswer": "பதிலைத் தேர்ந்தெடு",
   "tools.database.formAutoCreateTitle": "ஏற்கனவே உள்ள பண்புகளின் அடிப்படையில் படிவக் கேள்விகளைத் தானாக உருவாக்கவா?",
   "tools.database.formAutoCreateDescription": "ஆதரிக்கப்படும் பண்பு வகைகள் மட்டுமே புதிய கேள்விகளை உருவாக்கும்.",

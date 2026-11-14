@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "Vormi pealkiri",
   "tools.database.formDescriptionPlaceholder": "Kirjeldus (valikuline)",
   "tools.database.formAnswerPlaceholder": "Vastaja vastus",
+  "tools.database.formIcon": "Vormi ikoon",
+  "tools.database.formCover": "Vormi kaanepilt",
   "tools.database.formChooseAnswer": "Vali vastus",
   "tools.database.formAutoCreateTitle": "Kas luua vormi küsimused olemasolevate omaduste põhjal automaatselt?",
   "tools.database.formAutoCreateDescription": "Uusi küsimusi loovad ainult toetatud omadusetüübid.",

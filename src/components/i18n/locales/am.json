@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "የቅጽ ርዕስ",
   "tools.database.formDescriptionPlaceholder": "መግለጫ (አማራጭ)",
   "tools.database.formAnswerPlaceholder": "የመላሹ መልስ",
+  "tools.database.formIcon": "የቅጽ አዶ",
+  "tools.database.formCover": "የቅጽ ሽፋን",
   "tools.database.formChooseAnswer": "መልስ ምረጥ",
   "tools.database.formAutoCreateTitle": "የቅጽ ጥያቄዎች ካሉት ንብረቶች በራስ-ሰር ይፈጠሩ?",
   "tools.database.formAutoCreateDescription": "አዲስ ጥያቄዎችን የሚፈጥሩት የሚደገፉ የንብረት አይነቶች ብቻ ናቸው።",

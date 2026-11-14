@@ -1670,6 +1670,8 @@
   "tools.database.formTitlePlaceholder": "Názov formulára",
   "tools.database.formDescriptionPlaceholder": "Popis (voliteľné)",
   "tools.database.formAnswerPlaceholder": "Odpoveď respondenta",
+  "tools.database.formIcon": "Ikona formulára",
+  "tools.database.formCover": "Obálka formulára",
   "tools.database.formChooseAnswer": "Vybrať odpoveď",
   "tools.database.formAutoCreateTitle": "Automaticky vytvoriť otázky formulára na základe existujúcich vlastností?",
   "tools.database.formAutoCreateDescription": "Nové otázky vzniknú iba z podporovaných typov vlastností.",

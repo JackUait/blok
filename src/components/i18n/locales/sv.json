@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "Formulärtitel",
   "tools.database.formDescriptionPlaceholder": "Beskrivning (valfritt)",
   "tools.database.formAnswerPlaceholder": "Svarandens svar",
+  "tools.database.formIcon": "Formulärikon",
+  "tools.database.formCover": "Formulärets omslagsbild",
   "tools.database.formChooseAnswer": "Välj ett svar",
   "tools.database.formAutoCreateTitle": "Skapa formulärfrågor automatiskt utifrån befintliga egenskaper?",
   "tools.database.formAutoCreateDescription": "Endast egenskapstyper som stöds skapar nya frågor.",

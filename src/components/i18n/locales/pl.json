@@ -1670,6 +1670,8 @@
   "tools.database.formTitlePlaceholder": "Tytuł formularza",
   "tools.database.formDescriptionPlaceholder": "Opis (opcjonalnie)",
   "tools.database.formAnswerPlaceholder": "Odpowiedź osoby odpowiadającej",
+  "tools.database.formIcon": "Ikona formularza",
+  "tools.database.formCover": "Okładka formularza",
   "tools.database.formChooseAnswer": "Wybierz odpowiedź",
   "tools.database.formAutoCreateTitle": "Czy automatycznie utworzyć pytania formularza na podstawie istniejących właściwości?",
   "tools.database.formAutoCreateDescription": "Nowe pytania powstaną tylko z obsługiwanych typów właściwości.",

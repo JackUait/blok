@@ -1,6 +1,8 @@
 import { CONVERTIBLE_TYPES } from '../database/property-conversion';
 import { DATABASE_COMMENT_ACTIONS } from './database-comments';
 import { DATABASE_ROW_DATA } from './database-row';
+import { PAGE_ICON_SCHEMA } from './page';
+import { COVER_GALLERY } from '../page-cover';
 
 import type { BlockToolDescription, BlokSchema, ToolActionDeclaration } from '../../../types/tools/tool-description';
 
@@ -358,6 +360,15 @@ const GROUP_SETTINGS = {
   },
 };
 
+/** A form's cover, as doc.setCover takes a page's: an image URL or a built-in gallery fill. */
+const FORM_COVER_SCHEMA = {
+  description: 'The cover above the form header. position is the image\'s vertical position in percent, default 50.',
+  oneOf: [
+    { type: 'object', additionalProperties: false, required: ['type', 'url'], properties: { type: { const: 'image' }, url: { type: 'string' }, position: { type: 'integer', minimum: 0, maximum: 100 } } },
+    { type: 'object', additionalProperties: false, required: ['type', 'id'], properties: { type: { const: 'gallery' }, id: { enum: [...COVER_GALLERY] }, position: { type: 'integer', minimum: 0, maximum: 100 } } },
+  ],
+} as const;
+
 /** Tier 3 (D6) view slots. Blok stores them; the host levers act on them. */
 const TIER3_VIEW_FIELDS = {
   form: {
@@ -374,6 +385,8 @@ const TIER3_VIEW_FIELDS = {
       },
       title: { type: 'string', description: 'The heading above the questions.' },
       description: { type: 'string', description: 'The line under the title.' },
+      icon: { ...PAGE_ICON_SCHEMA, description: 'The icon above the title.' },
+      cover: FORM_COVER_SCHEMA,
       submitLabel: { type: 'string' },
       confirmation: { type: 'string', description: 'Text shown after a submit.' },
     },
@@ -689,7 +702,7 @@ export const DATABASE_DATA = {
                 questionName: { type: 'string', description: 'Form: a detached question label; absent follows the property name.' },
                 longAnswer: { type: 'boolean', description: 'Form: a multi-line text answer; absent means a one-line answer.' },
                 maxSelections: { type: 'integer', minimum: 1, description: 'Form: maximum multi-select, people or relation selections.' },
-                showOptionsAs: { type: 'string', enum: ['list', 'dropdown'], description: 'Form: how a choice question lists its options; absent is list for multi-select, dropdown for select and status.' },
+                showOptionsAs: { type: 'string', enum: ['list', 'dropdown'], description: 'Form: how a choice question lists its options; absent is list for select and multi-select, dropdown for status.' },
               },
             },
           },
@@ -873,6 +886,8 @@ const VIEW_SETTING_ARGS: Record<string, unknown> = {
       }),
       title: nullable({ type: 'string' }),
       description: nullable({ type: 'string' }),
+      icon: nullable({ ...PAGE_ICON_SCHEMA, description: 'The icon above the title.' }),
+      cover: nullable(FORM_COVER_SCHEMA),
       submitLabel: nullable({ type: 'string' }),
       confirmation: nullable({ type: 'string' }),
     },

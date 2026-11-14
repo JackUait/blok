@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "양식 제목",
   "tools.database.formDescriptionPlaceholder": "설명(선택 사항)",
   "tools.database.formAnswerPlaceholder": "응답자의 답변",
+  "tools.database.formIcon": "양식 아이콘",
+  "tools.database.formCover": "양식 커버",
   "tools.database.formChooseAnswer": "답변 선택",
   "tools.database.formAutoCreateTitle": "기존 속성을 바탕으로 양식 질문을 자동으로 만들까요?",
   "tools.database.formAutoCreateDescription": "지원되는 속성 유형만 새 질문으로 만들어집니다.",

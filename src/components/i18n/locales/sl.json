@@ -1670,6 +1670,8 @@
   "tools.database.formTitlePlaceholder": "Naslov obrazca",
   "tools.database.formDescriptionPlaceholder": "Opis (neobvezno)",
   "tools.database.formAnswerPlaceholder": "Odgovor anketiranca",
+  "tools.database.formIcon": "Ikona obrazca",
+  "tools.database.formCover": "Naslovnica obrazca",
   "tools.database.formChooseAnswer": "Izberi odgovor",
   "tools.database.formAutoCreateTitle": "Želite samodejno ustvariti vprašanja obrazca na podlagi obstoječih lastnosti?",
   "tools.database.formAutoCreateDescription": "Nova vprašanja bodo ustvarjena samo za podprte vrste lastnosti.",

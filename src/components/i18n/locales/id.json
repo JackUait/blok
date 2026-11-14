@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "Judul formulir",
   "tools.database.formDescriptionPlaceholder": "Deskripsi (opsional)",
   "tools.database.formAnswerPlaceholder": "Jawaban responden",
+  "tools.database.formIcon": "Ikon formulir",
+  "tools.database.formCover": "Sampul formulir",
   "tools.database.formChooseAnswer": "Pilih jawaban",
   "tools.database.formAutoCreateTitle": "Buat pertanyaan formulir otomatis berdasarkan properti yang ada?",
   "tools.database.formAutoCreateDescription": "Hanya tipe properti yang didukung yang akan membuat pertanyaan baru.",

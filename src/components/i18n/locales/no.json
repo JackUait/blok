@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "Skjematittel",
   "tools.database.formDescriptionPlaceholder": "Beskrivelse (valgfritt)",
   "tools.database.formAnswerPlaceholder": "Respondentens svar",
+  "tools.database.formIcon": "Skjemaikon",
+  "tools.database.formCover": "Omslagsbilde for skjema",
   "tools.database.formChooseAnswer": "Velg et svar",
   "tools.database.formAutoCreateTitle": "Vil du opprette skjemaspørsmål automatisk basert på eksisterende egenskaper?",
   "tools.database.formAutoCreateDescription": "Bare støttede egenskapstyper gir nye spørsmål.",

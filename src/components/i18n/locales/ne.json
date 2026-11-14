@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "फारमको शीर्षक",
   "tools.database.formDescriptionPlaceholder": "विवरण (वैकल्पिक)",
   "tools.database.formAnswerPlaceholder": "उत्तरदाताको जवाफ",
+  "tools.database.formIcon": "फारमको आइकन",
+  "tools.database.formCover": "फारमको कभर",
   "tools.database.formChooseAnswer": "जवाफ छान्नुहोस्",
   "tools.database.formAutoCreateTitle": "विद्यमान गुणहरूका आधारमा फारमका प्रश्नहरू स्वतः बनाउने?",
   "tools.database.formAutoCreateDescription": "समर्थित गुण प्रकारहरूबाट मात्र नयाँ प्रश्नहरू बनिनेछन्।",

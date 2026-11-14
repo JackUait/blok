@@ -259,6 +259,46 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(ruleBody('[data-blok-database-form-header] :is(h1, p, input)')).toContain('border: none');
   });
 
+  // notion-motion.md Round 32 §4 (r32-b-form-geom.raw): the builder's 600 column is centred in the database,
+  // the Form icon / Form cover row sits 50 under the toolbar, the title 4 under the row and 19 in from the column,
+  // the description 16 under the title, the access bar (600x48, padding 10 22) 24 under it and the first card 34 under that.
+  describe('builder column', () => {
+    const builder = '[data-blok-database-form]:has(> [data-blok-database-form-access])';
+
+    it('centres the header, the access bar and the cards', () => {
+      expect(ruleBody(`${builder} > :is([data-blok-database-form-header], [data-blok-database-form-access], form)`)).toContain('margin-inline: auto');
+    });
+
+    it('spaces the header as measured', () => {
+      const header = ruleBody(`${builder} > [data-blok-database-form-header]`);
+
+      expect(header).toContain('padding-block-start: 32px');
+      expect(header).toContain('padding-inline-start: var(--_blok-form-header-inset)');
+      expect(ruleBody(builder)).toContain('--_blok-form-header-inset: 19px');
+      expect(header).toContain('margin-block-end: var(--blok-space-6)');
+      expect(ruleBody('[data-blok-database-form-header-row]')).toContain('min-block-size: 28px');
+      expect(ruleBody('[data-blok-database-form-header-row]')).toContain('margin-block-end: var(--blok-space-1)');
+      // Notion's Form cover starts where Form icon ends (703.3 = 603 + 100.3).
+      expect(ruleBody('[data-blok-database-form-header-row] [data-blok-page-add-cover]')).toContain('margin-inline-start: 0');
+      expect(ruleBody(`${builder} [data-blok-database-form-header-description]`)).toContain('margin-block-start: var(--blok-space-4)');
+    });
+
+    it('draws the access bar 600 wide, 48 tall, 34 above the first card', () => {
+      const access = ruleBody(`${builder} > [data-blok-database-form-access]`);
+
+      expect(access).toContain('max-inline-size: 600px');
+      expect(access).toContain('min-block-size: 48px');
+      expect(access).toContain('padding: var(--blok-space-2-5) var(--_blok-form-access-inset)');
+      expect(access).toContain('--_blok-form-access-inset: 22px');
+      expect(access).toContain('margin-block-end: 34px');
+    });
+
+    // Round 31 §1: the ghost buttons show while the pointer is on the header, and fade out over 100ms.
+    it('shows Form icon and Form cover while the pointer is on the header', () => {
+      expect(ruleBody('[data-blok-database-form-header]:hover :is([data-blok-page-add-icon], [data-blok-page-add-cover])')).toContain('opacity: 1');
+    });
+  });
+
   // Round 31 §1: the column is 600 wide and builder cards sit 24 apart.
   it('lays the form out 600 wide, with builder cards 24 apart', () => {
     expect(ruleBody('[data-blok-database-form] form')).toContain('max-inline-size: 600px');

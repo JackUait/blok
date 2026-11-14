@@ -1658,6 +1658,8 @@
   "tools.database.formTitlePlaceholder": "Veidlapas nosaukums",
   "tools.database.formDescriptionPlaceholder": "Apraksts (neobligāts)",
   "tools.database.formAnswerPlaceholder": "Respondenta atbilde",
+  "tools.database.formIcon": "Veidlapas ikona",
+  "tools.database.formCover": "Veidlapas vāka attēls",
   "tools.database.formChooseAnswer": "Izvēlēties atbildi",
   "tools.database.formAutoCreateTitle": "Automātiski izveidot veidlapas jautājumus, pamatojoties uz esošajiem rekvizītiem?",
   "tools.database.formAutoCreateDescription": "Jaunus jautājumus izveidos tikai atbalstītie rekvizītu tipi.",

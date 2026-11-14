@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "පෝරමයේ මාතෘකාව",
   "tools.database.formDescriptionPlaceholder": "විස්තරය (විකල්ප)",
   "tools.database.formAnswerPlaceholder": "ප්‍රතිචාර දැක්වූ තැනැත්තාගේ පිළිතුර",
+  "tools.database.formIcon": "පෝරමයේ නිරූපකය",
+  "tools.database.formCover": "පෝරමයේ කවරය",
   "tools.database.formChooseAnswer": "පිළිතුරක් තෝරන්න",
   "tools.database.formAutoCreateTitle": "පවතින ගුණාංග මත පදනම්ව පෝරම ප්‍රශ්න ස්වයංක්‍රීයව සාදන්නද?",
   "tools.database.formAutoCreateDescription": "සහාය දක්වන ගුණාංග වර්ග පමණක් නව ප්‍රශ්න සාදනු ඇත.",

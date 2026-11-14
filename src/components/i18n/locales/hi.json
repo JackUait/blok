@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "फ़ॉर्म का शीर्षक",
   "tools.database.formDescriptionPlaceholder": "विवरण (वैकल्पिक)",
   "tools.database.formAnswerPlaceholder": "उत्तरदाता का उत्तर",
+  "tools.database.formIcon": "फ़ॉर्म का आइकन",
+  "tools.database.formCover": "फ़ॉर्म का कवर",
   "tools.database.formChooseAnswer": "उत्तर चुनें",
   "tools.database.formAutoCreateTitle": "मौजूदा प्रॉपर्टी के आधार पर फ़ॉर्म के प्रश्न अपने-आप बनाएँ?",
   "tools.database.formAutoCreateDescription": "केवल समर्थित प्रॉपर्टी प्रकारों से ही नए प्रश्न बनेंगे।",

@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "ناونیشانی فۆرم",
   "tools.database.formDescriptionPlaceholder": "وەسف (ئارەزوومەندانە)",
   "tools.database.formAnswerPlaceholder": "وەڵامی وەڵامدەر",
+  "tools.database.formIcon": "ئایکۆنی فۆرم",
+  "tools.database.formCover": "بەرگی فۆرم",
   "tools.database.formChooseAnswer": "وەڵام هەڵبژێرە",
   "tools.database.formAutoCreateTitle": "پرسیارەکانی فۆرم بە شێوەی خۆکار لەسەر بنەمای تایبەتمەندییە هەبووەکان دروست بکرێن؟",
   "tools.database.formAutoCreateDescription": "تەنها جۆرە پشتگیریکراوەکانی تایبەتمەندی پرسیاری نوێ دروست دەکەن.",

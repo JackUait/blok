@@ -1,3 +1,4 @@
+import { PageCover, PageIcon } from './page';
 import { SanitizerConfig } from '../configs';
 import { BlockTool, BlockToolConstructorOptions } from './block-tool';
 import { BaseToolConstructable } from './tool';
@@ -1175,7 +1176,7 @@ export interface ViewPropertySetting {
   maxSelections?: number;
   /**
    * Form: how a choice question lists its options. Absent: `'list'` for
-   * multi-select, `'dropdown'` for select and status.
+   * select and multi-select, `'dropdown'` for status.
    */
   showOptionsAs?: 'list' | 'dropdown';
 }
@@ -1199,6 +1200,10 @@ export interface FormSettings {
   title?: string;
   /** The line under the title. */
   description?: string;
+  /** The icon above the title. */
+  icon?: PageIcon;
+  /** The cover above the header. */
+  cover?: PageCover;
   submitLabel?: string;
   /** Text shown after a submit. */
   confirmation?: string;

@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "ចំណងជើងទម្រង់",
   "tools.database.formDescriptionPlaceholder": "ការពិពណ៌នា (ស្រេចចិត្ត)",
   "tools.database.formAnswerPlaceholder": "ចម្លើយរបស់អ្នកឆ្លើយ",
+  "tools.database.formIcon": "រូបតំណាងទម្រង់",
+  "tools.database.formCover": "រូបគម្របទម្រង់",
   "tools.database.formChooseAnswer": "ជ្រើសចម្លើយ",
   "tools.database.formAutoCreateTitle": "បង្កើតសំណួរទម្រង់ដោយស្វ័យប្រវត្តិ ដោយផ្អែកលើលក្ខណៈដែលមានស្រាប់ឬ?",
   "tools.database.formAutoCreateDescription": "មានតែប្រភេទលក្ខណៈដែលគាំទ្រប៉ុណ្ណោះ ដែលនឹងបង្កើតសំណួរថ្មី។",

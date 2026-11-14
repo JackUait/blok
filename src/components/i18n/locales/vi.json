@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "Tiêu đề biểu mẫu",
   "tools.database.formDescriptionPlaceholder": "Mô tả (không bắt buộc)",
   "tools.database.formAnswerPlaceholder": "Câu trả lời của người trả lời",
+  "tools.database.formIcon": "Biểu tượng biểu mẫu",
+  "tools.database.formCover": "Ảnh bìa biểu mẫu",
   "tools.database.formChooseAnswer": "Chọn câu trả lời",
   "tools.database.formAutoCreateTitle": "Tự động tạo câu hỏi biểu mẫu dựa trên các thuộc tính hiện có?",
   "tools.database.formAutoCreateDescription": "Chỉ các loại thuộc tính được hỗ trợ mới tạo câu hỏi mới.",

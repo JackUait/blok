@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "Űrlap címe",
   "tools.database.formDescriptionPlaceholder": "Leírás (nem kötelező)",
   "tools.database.formAnswerPlaceholder": "A válaszadó válasza",
+  "tools.database.formIcon": "Űrlap ikonja",
+  "tools.database.formCover": "Űrlap borítóképe",
   "tools.database.formChooseAnswer": "Válasz kiválasztása",
   "tools.database.formAutoCreateTitle": "Létrejöjjenek automatikusan az űrlap kérdései a meglévő tulajdonságok alapján?",
   "tools.database.formAutoCreateDescription": "Csak a támogatott tulajdonságtípusokból jönnek létre új kérdések.",

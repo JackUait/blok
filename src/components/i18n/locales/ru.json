@@ -1670,6 +1670,8 @@
   "tools.database.formTitlePlaceholder": "Название формы",
   "tools.database.formDescriptionPlaceholder": "Описание (необязательно)",
   "tools.database.formAnswerPlaceholder": "Ответ респондента",
+  "tools.database.formIcon": "Значок формы",
+  "tools.database.formCover": "Обложка формы",
   "tools.database.formChooseAnswer": "Выбрать ответ",
   "tools.database.formAutoCreateTitle": "Автоматически создать вопросы формы на основе существующих свойств?",
   "tools.database.formAutoCreateDescription": "Новые вопросы будут созданы только для поддерживаемых типов свойств.",

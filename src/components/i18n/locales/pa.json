@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "ਫਾਰਮ ਦਾ ਸਿਰਲੇਖ",
   "tools.database.formDescriptionPlaceholder": "ਵੇਰਵਾ (ਵਿਕਲਪਿਕ)",
   "tools.database.formAnswerPlaceholder": "ਜਵਾਬਦਾਤਾ ਦਾ ਜਵਾਬ",
+  "tools.database.formIcon": "ਫਾਰਮ ਦਾ ਆਈਕਨ",
+  "tools.database.formCover": "ਫਾਰਮ ਦਾ ਕਵਰ",
   "tools.database.formChooseAnswer": "ਜਵਾਬ ਚੁਣੋ",
   "tools.database.formAutoCreateTitle": "ਮੌਜੂਦਾ ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ ਦੇ ਆਧਾਰ 'ਤੇ ਫਾਰਮ ਦੇ ਸਵਾਲ ਆਪਣੇ-ਆਪ ਬਣਾਉਣੇ ਹਨ?",
   "tools.database.formAutoCreateDescription": "ਸਿਰਫ਼ ਸਮਰਥਿਤ ਵਿਸ਼ੇਸ਼ਤਾ ਕਿਸਮਾਂ ਤੋਂ ਹੀ ਨਵੇਂ ਸਵਾਲ ਬਣਨਗੇ।",

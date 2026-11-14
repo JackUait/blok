@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "フォームのタイトル",
   "tools.database.formDescriptionPlaceholder": "説明（任意）",
   "tools.database.formAnswerPlaceholder": "回答者の回答",
+  "tools.database.formIcon": "フォームのアイコン",
+  "tools.database.formCover": "フォームのカバー",
   "tools.database.formChooseAnswer": "回答を選択",
   "tools.database.formAutoCreateTitle": "既存のプロパティからフォームの質問を自動作成しますか？",
   "tools.database.formAutoCreateDescription": "対応しているプロパティの種類からのみ、新しい質問が作成されます。",

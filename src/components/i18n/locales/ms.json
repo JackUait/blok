@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "Tajuk borang",
   "tools.database.formDescriptionPlaceholder": "Perihalan (pilihan)",
   "tools.database.formAnswerPlaceholder": "Jawapan responden",
+  "tools.database.formIcon": "Ikon borang",
+  "tools.database.formCover": "Muka depan borang",
   "tools.database.formChooseAnswer": "Pilih jawapan",
   "tools.database.formAutoCreateTitle": "Cipta soalan borang secara automatik berdasarkan sifat sedia ada?",
   "tools.database.formAutoCreateDescription": "Hanya jenis sifat yang disokong akan mencipta soalan baharu.",

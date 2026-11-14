@@ -18324,6 +18324,59 @@ button[data-blok-database-feed-reaction]:hover,
   line-height: 24px;
 }
 
+/* notion-motion.md Round 32 §4 (r32-b-form-geom.raw): the builder's 600 column is centred in the database.
+   The icon row sits 50 under the toolbar, the title 4 under the row and 19 in, the description 16 under the
+   title, the access bar 24 under that and the first card 34 under the bar. */
+[data-blok-database-form]:has(> [data-blok-database-form-access]) > :is([data-blok-database-form-header], [data-blok-database-form-access], form) {
+  margin-inline: auto;
+}
+
+[data-blok-database-form]:has(> [data-blok-database-form-access]) {
+  --_blok-form-header-inset: 19px;
+}
+
+[data-blok-database-form]:has(> [data-blok-database-form-access]) > [data-blok-database-form-header] {
+  box-sizing: border-box;
+  padding-block-start: 32px;
+  padding-inline-start: var(--_blok-form-header-inset);
+  margin-block-end: var(--blok-space-6);
+}
+
+[data-blok-database-form]:has(> [data-blok-database-form-access]) [data-blok-database-form-header-description] {
+  margin-block-start: var(--blok-space-4);
+}
+
+/* Round 31 §1: "Form icon" and "Form cover", 28 tall; the page title's own buttons. */
+[data-blok-database-form-header-row] {
+  display: flex;
+  align-items: flex-end;
+  min-block-size: 28px;
+  margin-block-end: var(--blok-space-1);
+  padding-inline-start: var(--blok-space-1-25);
+}
+
+/* A saved icon and cover take the page's look (unmeasured in a Notion form); the cover spans the column. */
+[data-blok-database-form-header] {
+  --blok-page-icon-box: 92px;
+  --blok-page-icon-glyph: 78px;
+}
+
+[data-blok-database-form-header] > [data-blok-page-cover] {
+  margin-inline: 0;
+}
+
+[data-blok-database-form]:has(> [data-blok-database-form-access]) > [data-blok-database-form-header] > [data-blok-page-cover] {
+  margin-inline-start: calc(var(--_blok-form-header-inset) * -1);
+}
+
+[data-blok-database-form-header-row] [data-blok-page-add-cover] {
+  margin-inline-start: 0;
+}
+
+[data-blok-database-form-header]:hover :is([data-blok-page-add-icon], [data-blok-page-add-cover]) {
+  opacity: 1;
+}
+
 /* Round 31 §1: the 24px gap above a card; its "+" is a 32px teardrop centred on it, 8 left of the card.
    Notion tints it blue: neutral here (CLAUDE.md "No blue selected states"). */
 [data-blok-database-form-gap] {
@@ -18540,6 +18593,16 @@ button[data-blok-database-feed-reaction]:hover,
   background-color: var(--blok-database-column-bg);
   color: var(--blok-database-ink-secondary);
   font-size: 14px;
+}
+
+[data-blok-database-form]:has(> [data-blok-database-form-access]) > [data-blok-database-form-access] {
+  box-sizing: border-box;
+  max-inline-size: 600px;
+  --_blok-form-access-inset: 22px;
+
+  min-block-size: 48px;
+  padding: var(--blok-space-2-5) var(--_blok-form-access-inset);
+  margin-block-end: 34px;
 }
 
 [data-blok-database-form-access] > span:first-child {

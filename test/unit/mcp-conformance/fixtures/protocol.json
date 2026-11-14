@@ -12026,7 +12026,7 @@
                                                       "list",
                                                       "dropdown"
                                                     ],
-                                                    "description": "Form: how a choice question lists its options; absent is list for multi-select, dropdown for select and status."
+                                                    "description": "Form: how a choice question lists its options; absent is list for select and multi-select, dropdown for status."
                                                   }
                                                 }
                                               }
@@ -13142,6 +13142,111 @@
                                               "anyOf": [
                                                 {
                                                   "type": "string"
+                                                },
+                                                {
+                                                  "type": "null"
+                                                }
+                                              ]
+                                            },
+                                            "icon": {
+                                              "anyOf": [
+                                                {
+                                                  "description": "The icon above the title.",
+                                                  "oneOf": [
+                                                    {
+                                                      "type": "object",
+                                                      "required": [
+                                                        "type",
+                                                        "value"
+                                                      ],
+                                                      "properties": {
+                                                        "type": {
+                                                          "const": "emoji"
+                                                        },
+                                                        "value": {
+                                                          "type": "string"
+                                                        }
+                                                      }
+                                                    },
+                                                    {
+                                                      "type": "object",
+                                                      "required": [
+                                                        "type",
+                                                        "url"
+                                                      ],
+                                                      "properties": {
+                                                        "type": {
+                                                          "const": "image"
+                                                        },
+                                                        "url": {
+                                                          "type": "string"
+                                                        }
+                                                      }
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "type": "null"
+                                                }
+                                              ]
+                                            },
+                                            "cover": {
+                                              "anyOf": [
+                                                {
+                                                  "description": "The cover above the form header. position is the image's vertical position in percent, default 50.",
+                                                  "oneOf": [
+                                                    {
+                                                      "type": "object",
+                                                      "additionalProperties": false,
+                                                      "required": [
+                                                        "type",
+                                                        "url"
+                                                      ],
+                                                      "properties": {
+                                                        "type": {
+                                                          "const": "image"
+                                                        },
+                                                        "url": {
+                                                          "type": "string"
+                                                        },
+                                                        "position": {
+                                                          "type": "integer",
+                                                          "minimum": 0,
+                                                          "maximum": 100
+                                                        }
+                                                      }
+                                                    },
+                                                    {
+                                                      "type": "object",
+                                                      "additionalProperties": false,
+                                                      "required": [
+                                                        "type",
+                                                        "id"
+                                                      ],
+                                                      "properties": {
+                                                        "type": {
+                                                          "const": "gallery"
+                                                        },
+                                                        "id": {
+                                                          "enum": [
+                                                            "red",
+                                                            "orange",
+                                                            "yellow",
+                                                            "green",
+                                                            "blue",
+                                                            "purple",
+                                                            "pink",
+                                                            "gray"
+                                                          ]
+                                                        },
+                                                        "position": {
+                                                          "type": "integer",
+                                                          "minimum": 0,
+                                                          "maximum": 100
+                                                        }
+                                                      }
+                                                    }
+                                                  ]
                                                 },
                                                 {
                                                   "type": "null"

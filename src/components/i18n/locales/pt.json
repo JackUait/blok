@@ -1658,6 +1658,8 @@
   "tools.database.formTitlePlaceholder": "Título do formulário",
   "tools.database.formDescriptionPlaceholder": "Descrição (opcional)",
   "tools.database.formAnswerPlaceholder": "Resposta do respondente",
+  "tools.database.formIcon": "Ícone do formulário",
+  "tools.database.formCover": "Capa do formulário",
   "tools.database.formChooseAnswer": "Escolher uma resposta",
   "tools.database.formAutoCreateTitle": "Criar perguntas do formulário automaticamente com base nas propriedades existentes?",
   "tools.database.formAutoCreateDescription": "Somente os tipos de propriedade compatíveis criarão novas perguntas.",

@@ -1,3 +1,7 @@
+import { createCoverControl } from '../../components/modules/pageTitle/cover-control';
+import { createIconControl } from '../../components/modules/pageTitle/icon-control';
+import { isPageCover } from '../../shared/page-cover';
+import { readIcon } from '../page/page-values';
 import { IconChevronUpDown, IconDotsHorizontal, IconLock, IconPlus } from '../../components/icons';
 import { formatBytes } from '../../components/utils/format-bytes';
 import type { I18n } from '../../../types';
@@ -19,7 +23,9 @@ import { resolveViewProperties, withPropertySetting } from './view-settings';
 import type { ViewPropertyPatch } from './view-settings';
 
 export interface DatabaseFormViewOptions {
-  i18n: Pick<I18n, 't'>;
+  i18n: Pick<I18n, 't'> & Partial<Pick<I18n, 'getLocale'>>;
+  /** Uploads a picked cover file and gives its URL. Without it, a cover comes from the gallery or a link. */
+  uploadCover?: (file: File) => Promise<string>;
   view: DatabaseViewConfig;
   schema: PropertyDefinition[];
   readOnly: boolean;
@@ -116,15 +122,24 @@ export class DatabaseFormView implements DatabaseViewRenderer {
   /** A press inside the form: a redraw before its click would take the clicked control away. */
   private pressing = false;
   private destroying = false;
+  /** The header's icon and cover controls: their pickers live in <body> and close with them. */
+  private headerControls: Array<{ destroy(): void }> = [];
 
   constructor(private readonly options: DatabaseFormViewOptions) {
     this.submitted = options.submitted === true;
+  }
+
+  private dropHeaderControls(): void {
+    this.headerControls.forEach((control) => control.destroy());
+    this.headerControls = [];
   }
 
   get interacting(): boolean {
     const active = document.activeElement;
 
     return this.building || this.pressing || this.panel !== null || this.editor?.isOpen === true
+      // The icon and cover pickers mark their button while open.
+      || this.root?.querySelector('[data-blok-database-form-header] [aria-expanded="true"]') != null
       || (active?.matches('[data-blok-database-form-question-name], input[data-blok-database-form-header-title], input[data-blok-database-form-header-description]') === true
         && this.root?.contains(active) === true);
   }
@@ -186,6 +201,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
 
   destroy(): void {
     this.destroying = true;
+    this.dropHeaderControls();
     this.panel?.close();
     this.panel = null;
     this.editor?.cancel();
@@ -214,6 +230,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
 
     this.editor?.cancel();
     this.editor = null;
+    this.dropHeaderControls();
     root.replaceChildren();
     this.fields.clear();
     this.answers.clear();
@@ -302,9 +319,9 @@ export class DatabaseFormView implements DatabaseViewRenderer {
   }
 
   /**
-   * The form's title and description (notion-motion.md Round 31 §1), kept in
+   * The form's icon, cover, title and description (notion-motion.md Round 31 §1), kept in
    * the view's form settings beside its other texts. The builder edits them;
-   * a respondent reads them, and sees nothing when both are unset.
+   * a respondent reads them, and sees nothing when all are unset.
    */
   private header(builder: boolean): HTMLElement | null {
     const { i18n } = this.options;
@@ -314,7 +331,8 @@ export class DatabaseFormView implements DatabaseViewRenderer {
 
     header.setAttribute('data-blok-database-form-header', '');
     if (!builder || share === undefined) {
-      if (form?.title === undefined && form?.description === undefined) return null;
+      if (form?.title === undefined && form?.description === undefined && form?.icon === undefined && form?.cover === undefined) return null;
+      this.headerArt(header, null);
       if (form?.title !== undefined) {
         const title = document.createElement('h1');
 
@@ -358,12 +376,77 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       return input;
     };
 
+    this.headerArt(header, share);
     header.append(
       box('title', i18n.t('tools.database.formTitlePlaceholder')),
       box('description', i18n.t('tools.database.formDescriptionPlaceholder')),
     );
 
     return header;
+  }
+
+  /**
+   * The icon row and the cover, through the page title's own controls. With `share` the
+   * row offers "Form icon" and "Form cover" (Round 31 §1); without it, it only shows what is saved.
+   */
+  private headerArt(header: HTMLElement, share: DatabaseFormViewOptions['share'] | null): void {
+    const { i18n } = this.options;
+    const saved = (): FormSettings => share?.settings() ?? this.options.view.form ?? {};
+    const readOnly = (): boolean => share === null;
+    const row = document.createElement('div');
+    const t = (key: string): string => i18n.t(key);
+    const cover = createCoverControl(header, {
+      // Saved data may be malformed: draw only a well-formed cover or icon.
+      getCover: () => {
+        const cover = saved().cover;
+
+        return isPageCover(cover) ? cover : null;
+      },
+      setCover: (next) => {
+        this.write(() => share?.update({ cover: next ?? undefined }));
+        cover.redraw();
+      },
+      isReadOnly: readOnly,
+      upload: () => (share === null ? null : this.options.uploadCover ?? null),
+      labels: () => ({
+        add: t('tools.database.formCover'),
+        change: t('title.changeCover'),
+        changeAria: t('title.changeCoverAria'),
+        reposition: t('title.repositionCover'),
+        repositionAria: t('title.repositionCoverAria'),
+        savePosition: t('title.saveCoverPosition'),
+        cancel: t('title.cancelCoverPosition'),
+        dragHint: t('title.coverDragHint'),
+        gallery: t('title.coverGallery'),
+        upload: t('title.coverUpload'),
+        link: t('title.coverLink'),
+        remove: t('title.coverRemove'),
+        uploadFile: t('title.coverUploadFile'),
+        noUpload: t('title.coverNoUpload'),
+        linkPlaceholder: t('title.coverLinkPlaceholder'),
+        submit: t('title.coverSubmit'),
+        linkNote: t('title.coverLinkNote'),
+        invalid: t('title.coverInvalid'),
+        uploadFailed: t('title.coverUploadFailed'),
+        pickerAria: t('title.coverPickerAria'),
+        galleryName: (id) => t(`tools.colorPicker.color.${id}`),
+      }),
+    });
+    const icon = createIconControl(row, {
+      getIcon: () => readIcon(saved().icon) ?? null,
+      setIcon: (next) => {
+        this.write(() => share?.update({ icon: next ?? undefined }));
+        icon.redraw();
+      },
+      isReadOnly: readOnly,
+      labels: () => ({ add: t('tools.database.formIcon'), change: t('title.changeIcon') }),
+      picker: () => ({ i18n, locale: this.options.i18n.getLocale?.() ?? 'en' }),
+    }, () => [cover.addButton]);
+
+    row.setAttribute('data-blok-database-form-header-row', '');
+    this.headerControls.push(icon, cover);
+    // A respondent with no icon gets no empty row.
+    if (share !== null || readIcon(saved().icon) !== undefined) header.appendChild(row);
   }
 
   /** "🔒 Only members at <workspace> can fill out this form." + "Change" (research/19 §3d). */

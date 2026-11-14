@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "Наслов на формуларот",
   "tools.database.formDescriptionPlaceholder": "Опис (опционално)",
   "tools.database.formAnswerPlaceholder": "Одговор на испитаникот",
+  "tools.database.formIcon": "Икона на формуларот",
+  "tools.database.formCover": "Насловна слика на формуларот",
   "tools.database.formChooseAnswer": "Избери одговор",
   "tools.database.formAutoCreateTitle": "Автоматски да се создадат прашања во формуларот врз основа на постојните својства?",
   "tools.database.formAutoCreateDescription": "Нови прашања ќе се создадат само за поддржаните типови својства.",

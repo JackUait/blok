@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "Τίτλος φόρμας",
   "tools.database.formDescriptionPlaceholder": "Περιγραφή (προαιρετικά)",
   "tools.database.formAnswerPlaceholder": "Απάντηση ερωτώμενου",
+  "tools.database.formIcon": "Εικονίδιο φόρμας",
+  "tools.database.formCover": "Εξώφυλλο φόρμας",
   "tools.database.formChooseAnswer": "Επιλογή απάντησης",
   "tools.database.formAutoCreateTitle": "Αυτόματη δημιουργία ερωτήσεων φόρμας από τις υπάρχουσες ιδιότητες;",
   "tools.database.formAutoCreateDescription": "Νέες ερωτήσεις θα δημιουργηθούν μόνο από υποστηριζόμενους τύπους ιδιοτήτων.",

@@ -1658,6 +1658,8 @@
   "tools.database.formTitlePlaceholder": "Titolo del modulo",
   "tools.database.formDescriptionPlaceholder": "Descrizione (facoltativa)",
   "tools.database.formAnswerPlaceholder": "Risposta del rispondente",
+  "tools.database.formIcon": "Icona del modulo",
+  "tools.database.formCover": "Copertina del modulo",
   "tools.database.formChooseAnswer": "Scegli una risposta",
   "tools.database.formAutoCreateTitle": "Creare automaticamente le domande del modulo in base alle proprietà esistenti?",
   "tools.database.formAutoCreateDescription": "Solo i tipi di proprietà supportati creeranno nuove domande.",

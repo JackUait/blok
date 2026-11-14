@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "عنوان فرم",
   "tools.database.formDescriptionPlaceholder": "توضیحات (اختیاری)",
   "tools.database.formAnswerPlaceholder": "پاسخ پاسخ‌دهنده",
+  "tools.database.formIcon": "نماد فرم",
+  "tools.database.formCover": "جلدنگاره فرم",
   "tools.database.formChooseAnswer": "انتخاب پاسخ",
   "tools.database.formAutoCreateTitle": "پرسش‌های فرم به‌طور خودکار از ویژگی‌های موجود ساخته شوند؟",
   "tools.database.formAutoCreateDescription": "فقط انواع ویژگی پشتیبانی‌شده پرسش جدید می‌سازند.",

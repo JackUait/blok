@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "فارم کا عنوان",
   "tools.database.formDescriptionPlaceholder": "تفصیل (اختیاری)",
   "tools.database.formAnswerPlaceholder": "جواب دہندہ کا جواب",
+  "tools.database.formIcon": "فارم کا آئیکن",
+  "tools.database.formCover": "فارم کا کور",
   "tools.database.formChooseAnswer": "جواب منتخب کریں",
   "tools.database.formAutoCreateTitle": "موجودہ پراپرٹیز کی بنیاد پر فارم کے سوالات خودکار طور پر بنائیں؟",
   "tools.database.formAutoCreateDescription": "صرف معاون پراپرٹی اقسام سے ہی نئے سوالات بنیں گے۔",

@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "Lomakkeen otsikko",
   "tools.database.formDescriptionPlaceholder": "Kuvaus (valinnainen)",
   "tools.database.formAnswerPlaceholder": "Vastaajan vastaus",
+  "tools.database.formIcon": "Lomakkeen kuvake",
+  "tools.database.formCover": "Lomakkeen kansikuva",
   "tools.database.formChooseAnswer": "Valitse vastaus",
   "tools.database.formAutoCreateTitle": "Luodaanko lomakkeen kysymykset automaattisesti olemassa olevista ominaisuuksista?",
   "tools.database.formAutoCreateDescription": "Uusia kysymyksiä luodaan vain tuetuista ominaisuustyypeistä.",

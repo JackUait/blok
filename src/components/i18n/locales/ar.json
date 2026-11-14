@@ -1694,6 +1694,8 @@
   "tools.database.formTitlePlaceholder": "عنوان النموذج",
   "tools.database.formDescriptionPlaceholder": "الوصف (اختياري)",
   "tools.database.formAnswerPlaceholder": "إجابة المُجيب",
+  "tools.database.formIcon": "أيقونة النموذج",
+  "tools.database.formCover": "غلاف النموذج",
   "tools.database.formChooseAnswer": "اختيار إجابة",
   "tools.database.formAutoCreateTitle": "هل تريد إنشاء أسئلة النموذج تلقائيًا استنادًا إلى الخصائص الحالية؟",
   "tools.database.formAutoCreateDescription": "لن تُنشئ أسئلة جديدة إلا أنواع الخصائص المدعومة.",

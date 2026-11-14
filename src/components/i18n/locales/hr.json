@@ -1658,6 +1658,8 @@
   "tools.database.formTitlePlaceholder": "Naslov obrasca",
   "tools.database.formDescriptionPlaceholder": "Opis (neobavezno)",
   "tools.database.formAnswerPlaceholder": "Odgovor ispitanika",
+  "tools.database.formIcon": "Ikona obrasca",
+  "tools.database.formCover": "Naslovnica obrasca",
   "tools.database.formChooseAnswer": "Odaberi odgovor",
   "tools.database.formAutoCreateTitle": "Automatski izraditi pitanja obrasca na temelju postojećih svojstava?",
   "tools.database.formAutoCreateDescription": "Nova pitanja izradit će samo podržane vrste svojstava.",

@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "ຫົວຂໍ້ແບບຟອມ",
   "tools.database.formDescriptionPlaceholder": "ຄຳອະທິບາຍ (ບໍ່ບັງຄັບ)",
   "tools.database.formAnswerPlaceholder": "ຄຳຕອບຂອງຜູ້ຕອບ",
+  "tools.database.formIcon": "ໄອຄອນແບບຟອມ",
+  "tools.database.formCover": "ຮູບປົກແບບຟອມ",
   "tools.database.formChooseAnswer": "ເລືອກຄຳຕອບ",
   "tools.database.formAutoCreateTitle": "ສ້າງຄຳຖາມຂອງແບບຟອມອັດຕະໂນມັດຈາກຄຸນສົມບັດທີ່ມີຢູ່ບໍ?",
   "tools.database.formAutoCreateDescription": "ມີແຕ່ປະເພດຄຸນສົມບັດທີ່ຮອງຮັບເທົ່ານັ້ນທີ່ຈະສ້າງຄຳຖາມໃໝ່.",

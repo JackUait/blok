@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "Formanın başlığı",
   "tools.database.formDescriptionPlaceholder": "Təsvir (istəyə bağlı)",
   "tools.database.formAnswerPlaceholder": "Cavablayanın cavabı",
+  "tools.database.formIcon": "Formanın simvolu",
+  "tools.database.formCover": "Formanın üz qabığı",
   "tools.database.formChooseAnswer": "Cavab seç",
   "tools.database.formAutoCreateTitle": "Forma sualları mövcud xüsusiyyətlər əsasında avtomatik yaradılsın?",
   "tools.database.formAutoCreateDescription": "Yalnız dəstəklənən xüsusiyyət növləri yeni suallar yaradacaq.",

@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "فارم جو عنوان",
   "tools.database.formDescriptionPlaceholder": "وضاحت (اختياري)",
   "tools.database.formAnswerPlaceholder": "جواب ڏيندڙ جو جواب",
+  "tools.database.formIcon": "فارم جو آئڪن",
+  "tools.database.formCover": "فارم جو ڪور",
   "tools.database.formChooseAnswer": "جواب چونڊيو",
   "tools.database.formAutoCreateTitle": "موجوده پراپرٽين جي بنياد تي فارم جا سوال پاڻمرادو ٺاهيو؟",
   "tools.database.formAutoCreateDescription": "صرف سهڪار ٿيل پراپرٽي قسمن مان ئي نوان سوال ٺهندا.",

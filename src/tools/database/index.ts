@@ -5441,8 +5441,11 @@ export class DatabaseTool implements BlockTool {
         this.updateActiveView({ properties });
       }, undefined);
 
+      const uploadCover = this.coverUploader();
+
       this.view = new DatabaseFormView({
         i18n: this.api.i18n,
+        ...(uploadCover === undefined ? {} : { uploadCover }),
         view: viewConfig,
         schema,
         readOnly: this.readOnly,

@@ -1646,6 +1646,8 @@
   "tools.database.formTitlePlaceholder": "Formularens titel",
   "tools.database.formDescriptionPlaceholder": "Beskrivelse (valgfri)",
   "tools.database.formAnswerPlaceholder": "Respondentens svar",
+  "tools.database.formIcon": "Formularens ikon",
+  "tools.database.formCover": "Formularens coverbillede",
   "tools.database.formChooseAnswer": "Vælg et svar",
   "tools.database.formAutoCreateTitle": "Vil du oprette formularspørgsmål automatisk ud fra eksisterende egenskaber?",
   "tools.database.formAutoCreateDescription": "Kun understøttede egenskabstyper opretter nye spørgsmål.",

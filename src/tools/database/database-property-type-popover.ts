@@ -270,7 +270,10 @@ export class DatabasePropertyTypePopover {
         const box = anchor.getBoundingClientRect();
 
         header.style.top = `${box.top - parseFloat(popover.style.top)}px`;
-        header.style.left = `${box.left - parseFloat(popover.style.left)}px`;
+        // Pushed in from the window's edge, the menu keeps the box in its top row (notion-motion.md Round 32 §3 Type menu).
+        const room = Math.max(0, popover.offsetWidth - header.offsetWidth);
+
+        header.style.left = `${Math.min(Math.max(0, box.left - parseFloat(popover.style.left)), room)}px`;
       }
     };
 

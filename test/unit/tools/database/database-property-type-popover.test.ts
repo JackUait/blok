@@ -495,6 +495,28 @@ describe('DatabasePropertyTypePopover', () => {
         flow.destroy();
       });
 
+      // notion-motion.md Round 32 §3 Type menu: at the window's right the menu clamps, and the name box stays inside its top row.
+      it('keeps the name box inside the menu when the menu is pushed in from the window edge', () => {
+        const widths = new Map([['data-blok-database-property-type-popover', 400], ['data-blok-database-property-type-header', 378]]);
+
+        vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+          return [...widths].find(([attr]) => this.hasAttribute(attr))?.[1] ?? 0;
+        });
+        vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(rect({ x: 900, left: 900, y: 170.4, top: 170.4, width: 28, height: 28, right: 928, bottom: 198.4 }));
+        const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true, layout: 'grid', nameOverAnchor: true });
+
+        flow.open(anchor);
+        const root = document.querySelector<HTMLElement>('[data-blok-database-property-type-popover]');
+        const header = root?.querySelector<HTMLElement>(':scope > [data-blok-database-property-type-header]');
+        const menuLeft = parseFloat(root?.style.left ?? '');
+        const headerLeft = parseFloat(header?.style.left ?? '');
+
+        expect(menuLeft + 400).toBeLessThanOrEqual(window.innerWidth);
+        expect(headerLeft).toBe(400 - 378);
+        expect(header?.style.top).toBe('-32px');
+        flow.destroy();
+      });
+
       it('opens with the first row highlighted, and Enter on an empty name makes it', () => {
         const named = vi.fn<(type: PropertyType, name: string) => void>();
         const flow = new DatabasePropertyTypePopover({ onSelect: named, withNameField: true, layout: 'grid', nameOverAnchor: true });

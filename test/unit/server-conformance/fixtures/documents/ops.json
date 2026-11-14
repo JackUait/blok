@@ -9,13 +9,13 @@
     "name": "schema",
     "op": "schema",
     "input": "{}",
-    "outputSha256": "111ed333477640cedebe5166c1c68c52bb6769a9f688a50afeb460cde571f11a"
+    "outputSha256": "1445efae7bd3c78d6dcae849e94c651fe26486e5c0b245b3d9db393958ff24b0"
   },
   {
     "name": "manifest",
     "op": "manifest",
     "input": "{}",
-    "outputSha256": "96bdac6e4ddf9d19d74e3263e463ccf0d1a58a7a857c6b338d263260ab52f55e"
+    "outputSha256": "b6e8c0a60fdb5697166c8dcd8012bfd0fa86c72ecbf05ac44dc5407029a613a4"
   },
   {
     "name": "article.markdown",
@@ -2295,13 +2295,13 @@
     "name": "mcp.surface.default",
     "op": "mcpSurface",
     "input": "{\"source\":true}",
-    "outputSha256": "09d93d1d7f8e0f9d1db739fd30fbfe2be3d432ff443461245f80335b2b62a0f1"
+    "outputSha256": "017e9ef8c475c41e007e4783b1dcd690dffbc0cec4512485acee7f6b8f1cdd3d"
   },
   {
     "name": "mcp.surface.pageMap.live",
     "op": "mcpSurface",
     "input": "{\"pageTitles\":\"page-map\",\"sync\":true,\"source\":true,\"uploads\":true,\"comments\":false,\"schema\":\"full\",\"handleIdleMs\":90500}",
-    "outputSha256": "1978babe1fd9d07c6ab3a56e05cadad90e9cc13c151554e66ded839a7f0f305f"
+    "outputSha256": "5cac4c69e7d2ab3610b2f5418c0a9b896f57692ce7675b4f14e2c784a00bf694"
   },
   {
     "name": "mcp.prompt",

@@ -206,6 +206,42 @@ describe('DatabaseFeedView', () => {
     expect(card(el, 'r3')?.querySelector('[data-blok-database-feed-author]')?.textContent).toBe('tools.database.personAnonymous');
   });
 
+  // notion-motion.md Round 32 §3 Feed: the byline starts with the author's round avatar.
+  describe('byline avatar', () => {
+    const avatarOf = (el: HTMLElement, rowId: string): Element | null | undefined =>
+      card(el, rowId)?.querySelector('[data-blok-database-feed-byline]')?.firstElementChild;
+
+    it('draws the author\'s initial before the name when there is no picture', () => {
+      const avatar = avatarOf(render(), 'r1');
+
+      expect(avatar?.getAttribute('data-blok-database-person-initial')).toBe('A');
+      expect(avatar?.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('shows the author\'s picture when the host has one', () => {
+      const avatar = avatarOf(render({ personAvatar: (id) => (id === 'u1' ? 'https://example.com/ada.png' : undefined) }), 'r1');
+
+      expect(avatar?.tagName).toBe('IMG');
+      expect(avatar?.getAttribute('src')).toBe('https://example.com/ada.png');
+      expect(avatar?.getAttribute('alt')).toBe('');
+      expect(avatar?.hasAttribute('data-blok-database-person-avatar')).toBe(true);
+    });
+
+    it('drops an unsafe picture URL and keeps the initial', () => {
+      const avatar = avatarOf(render({ personAvatar: () => 'javascript:alert(1)' }), 'r1');
+
+      expect(avatar?.tagName).toBe('SPAN');
+      expect(avatar?.getAttribute('data-blok-database-person-initial')).toBe('A');
+    });
+
+    it('draws a blank avatar for an anonymous answer', () => {
+      const anonymous: DatabaseRow = { id: 'r3', position: 'a2', properties: { 'p-title': 'Resp' }, meta: { anonymous: true } };
+      const avatar = avatarOf(render({ rows: [anonymous], total: 1 }), 'r3');
+
+      expect(avatar?.getAttribute('data-blok-database-person-initial')).toBe('');
+    });
+  });
+
   it('shows the title, the author byline and only the visible properties', () => {
     const first = card(render(), 'r1');
 

@@ -6028,6 +6028,7 @@ export class DatabaseTool implements BlockTool {
       locale: editorLocale(this.api.i18n),
       bodyOf: (rowId) => this.rowBodyBlocks(rowId, descriptionId),
       personName: (id) => this.people?.find((person) => person.id === id)?.name,
+      personAvatar: (id) => this.people?.find((person) => person.id === id)?.avatarUrl,
       handlers: {
         openRow: (rowId) => this.handleRowClick(rowId),
         loadMore: () => {

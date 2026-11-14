@@ -17212,7 +17212,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--blok-space-4);
+  /* notion-motion.md Round 32 §3 Feed: cards at a 200 pitch, 175.5 tall. */
+  gap: var(--blok-space-6);
   padding-block: var(--blok-space-4);
 }
 
@@ -17234,12 +17235,26 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   box-shadow: var(--blok-database-feed-card-hover-shadow);
 }
 
+/* notion-motion.md Round 32 §3 Feed (notion-live/r32-b-feed-geom.raw): avatar, name 8 after it, time 6 after the name, all centred. */
 [data-blok-database-feed-byline] {
   display: flex;
-  align-items: baseline;
-  gap: var(--blok-space-2);
+  align-items: center;
+  gap: var(--blok-space-1-5);
   font-size: 14px;
   line-height: 21px;
+}
+
+[data-blok-database-feed-byline] > [data-blok-database-person-avatar],
+[data-blok-database-feed-byline] > [data-blok-database-person-initial] {
+  width: 24px;
+  height: 24px;
+  margin-inline-end: var(--blok-space-0-5);
+}
+
+/* The title starts under the name. Without a byline the indent is unmeasured. */
+[data-blok-database-feed-byline] + [data-blok-database-feed-title],
+[data-blok-database-feed-byline] + [data-blok-database-feed-head] {
+  margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-2));
 }
 
 [data-blok-database-feed-author] {
@@ -17250,6 +17265,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 /* Tertiary ink, research/21 §1j. */
 [data-blok-database-feed-time] {
   color: var(--blok-database-table-muted-text);
+  font-size: 12px;
+  line-height: 14px;
 }
 
 [data-blok-database-feed-title] {

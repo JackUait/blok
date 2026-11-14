@@ -50,6 +50,22 @@ describe('database chart and feed styles', () => {
     expect(ruleBody('[data-blok-database-feed-author]')).toMatch(/font-weight:\s*500/);
   });
 
+  // notion-motion.md Round 32 §3 Feed (notion-live/r32-b-feed-geom.raw): avatar 24 at 555, name at 587, time 12px 6 after it, title at 587, cards 24 apart.
+  it('lays out the byline and cards as Notion\'s feed', () => {
+    const avatar = ruleBody('[data-blok-database-feed-byline] > [data-blok-database-person-avatar]');
+
+    expect(avatar).toContain('width: 24px');
+    expect(avatar).toContain('height: 24px');
+    expect(ruleBody('[data-blok-database-feed-byline] > [data-blok-database-person-initial]')).toBe(avatar);
+    expect(avatar).toContain('margin-inline-end: var(--blok-space-0-5)');
+    expect(ruleBody('[data-blok-database-feed-byline]')).toContain('align-items: center');
+    expect(ruleBody('[data-blok-database-feed-byline]')).toContain('gap: var(--blok-space-1-5)');
+    expect(ruleBody('[data-blok-database-feed-time]')).toMatch(/font-size:\s*12px/);
+    expect(ruleBody('[data-blok-database-feed-byline] + [data-blok-database-feed-title]')).toContain('margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-2))');
+    expect(ruleBody('[data-blok-database-feed-byline] + [data-blok-database-feed-head]')).toContain('margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-2))');
+    expect(ruleBody('[data-blok-database-feed]')).toContain('gap: var(--blok-space-6)');
+  });
+
   it('marks a turned-off legend entry with muted ink, never a fill', () => {
     const off = ruleBody('[data-blok-database-chart-legend-entry][aria-pressed="false"]');
 

@@ -63,6 +63,8 @@ export interface FeedViewOptions {
   locale: string;
   bodyOf: (rowId: string) => BodyBlock[];
   personName?: (id: string) => string | undefined;
+  /** The author's picture URL; without one the byline draws the name's initial. */
+  personAvatar?: (id: string) => string | undefined;
   handlers: {
     openRow: (rowId: string) => void;
     loadMore: () => void;
@@ -385,7 +387,7 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
     name.textContent = author === undefined
       ? this.options.i18n.t('tools.database.personAnonymous')
       : this.options.personName?.(author) ?? author;
-    byline.appendChild(name);
+    byline.append(this.createAvatar(author, name.textContent), name);
     const at = row.meta?.createdAt;
 
     if (at !== undefined) {
@@ -400,6 +402,29 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
     }
 
     return byline;
+  }
+
+  /** notion-motion.md Round 32 §3 Feed: a round avatar before the name; an anonymous author's is blank. */
+  private createAvatar(author: string | undefined, name: string): HTMLElement {
+    const raw = author === undefined ? undefined : this.options.personAvatar?.(author);
+    const url = raw === undefined ? null : safeImageSrc(raw);
+
+    if (url !== null) {
+      const img = document.createElement('img');
+
+      img.src = url;
+      img.alt = '';
+      img.setAttribute('data-blok-database-person-avatar', '');
+
+      return img;
+    }
+    const initial = document.createElement('span');
+
+    // Drawn by CSS from the attribute, so the byline's text stays the name.
+    initial.setAttribute('data-blok-database-person-initial', author === undefined ? '' : [...name][0]?.toUpperCase() ?? '');
+    initial.setAttribute('aria-hidden', 'true');
+
+    return initial;
   }
 
   private refreshAges(): void {

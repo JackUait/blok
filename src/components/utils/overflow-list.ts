@@ -31,8 +31,8 @@ export interface OverflowListOptions {
   onReorder?: (id: string, afterId: string | null, beforeId: string | null) => void;
   /** "•••" on a row. The caller's menu lives outside the list. Omitted: no "•••". */
   onMenu?: (button: HTMLElement, id: string, row: HTMLElement) => void;
-  /** Omitted: no new-item row. Gets the row, for a menu that opens beside it. */
-  onNew?: (row: HTMLElement) => void;
+  /** Omitted: no new-item row. Gets the row, for a menu that opens beside it, and whether a key picked it. */
+  onNew?: (row: HTMLElement, byKeyboard: boolean) => void;
   /** The list stays open when the new-item row opens something beside it. */
   keepOpenOnNew?: boolean;
   /** A second new-item row below the first ("New data source"). */
@@ -41,6 +41,8 @@ export interface OverflowListOptions {
   ownsNode: (target: Node) => boolean;
   /** Escape closes the caller's top layer first; true when it closed one. */
   closeLayer: () => boolean;
+  /** A menu over the list (Add view beside it) takes the arrows and Enter while it is open. */
+  yieldsKeys?: () => boolean;
   /** An element whose own Escape must not close the list (a rename field). */
   ownsEscape: (target: EventTarget | null) => boolean;
   onClose?: () => void;
@@ -202,7 +204,7 @@ export class OverflowList {
     const input = this.search?.getInput();
 
     // Only the search field steers the highlight: a rename field or a row menu keeps its own keys.
-    if (input !== undefined && event.target === input && !event.isComposing && this.handleNavigation(event)) {
+    if (input !== undefined && event.target === input && !event.isComposing && this.options.yieldsKeys?.() !== true && this.handleNavigation(event)) {
       event.preventDefault();
       event.stopPropagation();
 
@@ -220,6 +222,9 @@ export class OverflowList {
       return;
     }
     if (this.options.closeLayer()) {
+      // A layer that took the focus with it hands it back to the search field.
+      if (!(document.activeElement instanceof Node) || this.element?.contains(document.activeElement) !== true) this.search?.focus();
+
       return;
     }
     this.close();
@@ -328,16 +333,16 @@ export class OverflowList {
     return item;
   }
 
-  private createNewRow(onNew: (row: HTMLElement) => void, second?: { label: string; icon: string; suffix: string }): DocumentFragment {
+  private createNewRow(onNew: (row: HTMLElement, byKeyboard: boolean) => void, second?: { label: string; icon: string; suffix: string }): DocumentFragment {
     const { prefix, labels } = this.options;
     const fragment = document.createDocumentFragment();
     const separator = document.createElement('div');
     const button = document.createElement('div');
     const icon = document.createElement('span');
     const label = document.createElement('span');
-    const activate = (): void => {
+    const activate = (byKeyboard: boolean): void => {
       if (second !== undefined || this.options.keepOpenOnNew !== true) this.close();
-      onNew(button);
+      onNew(button, byKeyboard);
     };
 
     separator.setAttribute(`${prefix}-separator`, '');
@@ -353,11 +358,12 @@ export class OverflowList {
     icon.innerHTML = second?.icon ?? IconPlus;
     label.textContent = second?.label ?? labels.newItem;
     button.append(icon, label);
-    button.addEventListener('click', activate);
+    // Enter in the search field clicks the row with no pointer: detail 0.
+    button.addEventListener('click', (event) => activate(event.detail === 0));
     button.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
-        activate();
+        activate(true);
       }
     });
     // The second row shares the first one's separator.

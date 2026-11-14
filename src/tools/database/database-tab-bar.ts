@@ -723,7 +723,7 @@ export class DatabaseTabBar {
     });
   }
 
-  private openViewPopover(anchor: HTMLElement, placement: 'below' | 'aside' = 'below'): void {
+  private openViewPopover(anchor: HTMLElement, placement: 'below' | 'aside' = 'below', focusFirst = false): void {
     if (this.viewPopover !== null) {
       this.viewPopover.destroy();
     }
@@ -744,7 +744,7 @@ export class DatabaseTabBar {
       ...(this.options.hiddenViewTypes !== undefined ? { hidden: this.options.hiddenViewTypes } : {}),
       ...(this.options.onNewDataSource !== undefined && !this.readOnly ? { onNewSource: this.options.onNewDataSource } : {}),
     });
-    this.viewPopover.open(anchor, placement);
+    this.viewPopover.open(anchor, placement, focusFirst);
   }
 
   private closeViewPopover(): boolean {
@@ -859,12 +859,12 @@ export class DatabaseTabBar {
       },
       // notion-motion.md Round 31 §3: Add view opens beside the New view row and the list stays open.
       keepOpenOnNew: !this.readOnly,
-      onNew: (row) => {
+      onNew: (row, byKeyboard) => {
         const addBtn = this.element?.querySelector<HTMLElement>('[data-blok-database-add-view]');
 
         if (this.readOnly || addBtn === null || addBtn === undefined) return;
         if (row.getBoundingClientRect().right + ADD_VIEW_MENU_WIDTH <= window.innerWidth) {
-          this.openViewPopover(row, 'aside');
+          this.openViewPopover(row, 'aside', byKeyboard);
 
           return;
         }
@@ -889,6 +889,7 @@ export class DatabaseTabBar {
       onClose: () => {
         this.closeViewPopover();
       },
+      yieldsKeys: () => this.viewPopover !== null,
       // A row rename owns its Escape (it restores the old name).
       ownsEscape: (target) => target instanceof HTMLInputElement && target.hasAttribute('data-blok-database-tab-rename-input'),
     });

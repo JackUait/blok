@@ -68,7 +68,7 @@ export class DatabaseViewPopover {
    * `aside`: beside a menu row, vertically centred on it, its left on the row's
    * right (notion-motion.md Round 31 §3: the fold menu's right − 4, its padding).
    */
-  open(anchor: HTMLElement, placement: 'below' | 'aside' = 'below'): void {
+  open(anchor: HTMLElement, placement: 'below' | 'aside' = 'below', focusFirst = false): void {
     this.close();
 
     const headingEl = document.createElement('div');
@@ -110,7 +110,8 @@ export class DatabaseViewPopover {
       offset: placement === 'aside' ? 0 : 4,
       ...(placement === 'aside' ? { placeLeftOfAnchor: true, asideSide: 'right' as const } : {}),
       width: `${ADD_VIEW_MENU_WIDTH}px`,
-      autoFocusFirstItem: false,
+      // A keyboard user lands on the first tile.
+      autoFocusFirstItem: focusFirst,
     });
 
     this.popover.on(PopoverEvent.Closed, () => {

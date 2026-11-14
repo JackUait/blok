@@ -311,6 +311,40 @@ test.describe('database view overflow list', () => {
     await expect(list).toBeVisible();
   });
 
+  // Blok moves focus into a popover for a keyboard user (user-approved difference).
+  test('from the keyboard, the flyout takes the keys, Enter adds a view, and Escape gives them back to the search', async ({ page }) => {
+    await page.setViewportSize({ width: 1512, height: 717 });
+    await mount(page);
+    const list = await openList(page);
+    const search = list.getByPlaceholder('Search for a view...');
+
+    await search.press('ArrowUp');
+    await search.press('ArrowUp');
+    await expect(list.locator('[data-highlighted]')).toHaveText('New view');
+    await search.press('Enter');
+
+    const table = page.locator('[data-blok-database-view-option="table"]');
+    const board = page.locator('[data-blok-database-view-option="board"]');
+
+    // The popover's keyboard highlight, not DOM focus.
+    await expect(table).toHaveAttribute('data-blok-focused', 'true');
+    await expect(list).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(table).toBeHidden();
+    await expect(list).toBeVisible();
+    await expect(search).toBeFocused();
+    await expect(list.locator('[data-highlighted]')).toHaveText('New view');
+
+    await search.press('Enter');
+    await expect(table).toHaveAttribute('data-blok-focused', 'true');
+    await page.keyboard.press('ArrowDown');
+    await expect(board).toHaveAttribute('data-blok-focused', 'true');
+    await expect(list.locator('[data-highlighted]')).toHaveText('New view');
+    await page.keyboard.press('Enter');
+    await expect(list).toBeHidden();
+    await expect.poll(async () => (await savedViewNames(page)).length).toBe(NAMES.length + 1);
+  });
+
   test('arrows inside an open row menu do not move the list highlight', async ({ page }) => {
     await mount(page);
     const list = await openList(page);

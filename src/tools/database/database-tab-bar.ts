@@ -595,7 +595,7 @@ export class DatabaseTabBar {
     trigger.setAttribute('aria-expanded', 'true');
 
     this.contextPopover.on(PopoverEvent.Closed, () => {
-      trigger.setAttribute('aria-expanded', 'false');
+      trigger.removeAttribute('aria-expanded');
       if (this.contextPopover !== null) {
         const p = this.contextPopover;
         this.contextPopover = null;

@@ -494,7 +494,8 @@ describe('DatabaseTabBar', () => {
       tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
       expect(tab.getAttribute('aria-expanded')).toBe('true');
       bar.destroy();
-      expect(tab.getAttribute('aria-expanded')).toBe('false');
+      // A role=tab with aria-expanded="false" reads "collapsed"; a closed menu leaves no mark.
+      expect(tab.hasAttribute('aria-expanded')).toBe(false);
       el.remove();
     });
 

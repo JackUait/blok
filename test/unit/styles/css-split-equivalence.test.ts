@@ -1694,6 +1694,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R42_BYTES = 1265;
     // Lane r43: Round 30 gaps; the band body drops its square top corners and the band count shares the column count rule. Net database.css change against origin/main (a shrink).
     const DATABASE_R43_BYTES = -226;
+    // Lane r45: Round 31 map and band count; the band count button, the Add pin pill, the stacked pin card and
+    // --blok-radius-map. Net database.css (477) + colors.css (132) growth against origin/main.
+    const DATABASE_R45_BYTES = 609;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2213,6 +2216,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R41_BYTES
       + DATABASE_R42_BYTES
       + DATABASE_R43_BYTES
+      + DATABASE_R45_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

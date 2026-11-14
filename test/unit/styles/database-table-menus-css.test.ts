@@ -560,13 +560,16 @@ describe('"+ New group" name popover', () => {
   });
 });
 
-// notion-motion.md Round 27 §2 "Narrow title column": the icon-only OPEN is 30x24 and keeps its label as its name.
+// notion-motion.md Round 27 §2 "Narrow title column", Round 28 §1: the icon-only OPEN is a 30x24 frame with 2px padding
+// around a 26x20 button, and keeps its label as its name.
 describe('icon-only OPEN', () => {
-  it('is 30 wide with no padding, and hides the label without removing it', () => {
+  it('is 30 wide with a 2px frame, and hides the label without removing it', () => {
     const open = '[data-blok-database-table-open][data-compact]';
 
     expect(declared(open, 'width')).toEqual(['30px']);
-    expect(declared(open, 'padding')).toEqual(['0']);
+    expect(declared(open, 'padding')).toEqual(['var(--blok-space-0-5)']);
+    expect(declared(`${open} > span[aria-hidden="true"]`, 'width')).toEqual(['26px']);
+    expect(declared(`${open} > span[aria-hidden="true"]`, 'height')).toEqual(['20px']);
     expect(declared(`${open} > span:last-child`, 'clip-path')).toEqual(['inset(50%)']);
     expect(declared(`${open} > span:last-child`, 'display')).toEqual([]);
   });

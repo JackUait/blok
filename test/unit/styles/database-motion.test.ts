@@ -247,7 +247,7 @@ describe('side peek', () => {
   });
 
   it('darkens the OPEN button while it is pressed, then drops back to the hover fill (notion-motion.md "Side peek")', () => {
-    const pressed = body(outsideReducedMotion, '[data-blok-database-table-open]:active');
+    const pressed = body(outsideReducedMotion, '[data-blok-database-table-open]:not([data-compact]):active');
 
     expect(pressed).toContain('linear-gradient(var(--blok-database-pressed-bg), var(--blok-database-pressed-bg))');
   });

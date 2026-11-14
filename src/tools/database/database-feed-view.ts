@@ -118,6 +118,22 @@ const HOUR_MS = 60 * MINUTE_MS;
 /** research/36 §10: Notion re-reads every byline age on a 30 s tick. */
 const AGE_TICK_MS = 30_000;
 
+/** research/36 §10: one tick for every feed on the page, so their bylines change on the same second. */
+const ageTick: { listeners: Set<() => void>; timer: ReturnType<typeof setInterval> | null } = { listeners: new Set(), timer: null };
+
+const onAgeTick = (listener: () => void): void => {
+  ageTick.listeners.add(listener);
+  ageTick.timer ??= setInterval(() => ageTick.listeners.forEach((run) => run()), AGE_TICK_MS);
+};
+
+/** The last feed to leave stops the timer. */
+const offAgeTick = (listener: () => void): void => {
+  ageTick.listeners.delete(listener);
+  if (ageTick.listeners.size > 0 || ageTick.timer === null) return;
+  clearInterval(ageTick.timer);
+  ageTick.timer = null;
+};
+
 /**
  * research/36 §10: "Just now" under a minute, then "1m" … "59m", then "1h",
  * floored; research/33 "5h". Older posts keep "Yesterday" / "3 days ago"
@@ -138,7 +154,7 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
   private readonly cleanups: Array<() => void> = [];
   /** Every shown byline age, re-read by one shared timer. */
   private readonly ages = new Map<HTMLElement, number>();
-  private ageTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly tickAges = (): void => this.refreshAges();
 
   constructor(options: FeedViewOptions) {
     this.options = options;
@@ -199,8 +215,7 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
 
   destroy(): void {
     this.cleanups.splice(0).forEach((cleanup) => cleanup());
-    if (this.ageTimer !== null) clearInterval(this.ageTimer);
-    this.ageTimer = null;
+    offAgeTick(this.tickAges);
     this.ages.clear();
   }
 
@@ -379,7 +394,7 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
       time.setAttribute('data-blok-database-feed-time', '');
       time.textContent = this.age(at);
       this.ages.set(time, at);
-      this.ageTimer ??= setInterval(() => this.refreshAges(), AGE_TICK_MS);
+      onAgeTick(this.tickAges);
       onHover(time, this.createdHint(at));
       byline.appendChild(time);
     }

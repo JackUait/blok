@@ -40,8 +40,11 @@ const bodies: Record<string, Array<{ type: string; data: unknown }>> = {
 const openRow = vi.fn();
 const footer = vi.fn();
 
+/** Feeds share one age timer, so every test destroys its views. */
+const rendered: DatabaseFeedView[] = [];
+
 const render = (overrides: Partial<FeedViewOptions> = {}): HTMLElement => {
-  const el = new DatabaseFeedView({
+  const feed = new DatabaseFeedView({
     view,
     schema,
     rows,
@@ -53,8 +56,10 @@ const render = (overrides: Partial<FeedViewOptions> = {}): HTMLElement => {
     personName: (id) => (id === 'u1' ? 'Ada' : undefined),
     handlers: { openRow, loadMore: vi.fn() },
     ...overrides,
-  }).createView();
+  });
+  const el = feed.createView();
 
+  rendered.push(feed);
   document.body.appendChild(el);
 
   return el;
@@ -69,6 +74,7 @@ describe('DatabaseFeedView', () => {
   });
 
   afterEach(() => {
+    rendered.splice(0).forEach((feed) => feed.destroy());
     vi.restoreAllMocks();
   });
 
@@ -135,7 +141,7 @@ describe('DatabaseFeedView', () => {
       feed.destroy();
     });
 
-    it('runs one timer per view and stops it on destroy', () => {
+    it('runs one shared timer and stops it with the last view', () => {
       const base = vi.getTimerCount();
       const { feed, time } = live(55_000);
 

@@ -12407,6 +12407,11 @@ button[data-blok-database-table-group-count]:hover {
 }
 
 /* "New empty data source" and the templates (findings-creation N03, N19): 44px rows, the glyph in a 30px tile. */
+/* research/26 §2: the New database list's plain rows (More templates, Link to existing data source) are 32 tall. */
+[data-blok-database-new-database-list] > [data-blok-database-panel-row]:not([data-blok-database-panel-tiled]) {
+  min-height: 32px;
+}
+
 [data-blok-database-panel-tiled] {
   min-height: 44px;
 }

@@ -831,6 +831,11 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // research/26 §2: More templates and Link to existing data source are 32 tall; the tile rows keep their 44.
+  it('creation panel plain rows are 32 tall', () => {
+    expect(declared('[data-blok-database-new-database-list] > [data-blok-database-panel-row]:not([data-blok-database-panel-tiled])', 'min-height')).toEqual(['32px']);
+  });
+
   // research/26 §2: the docked "New database" panel keeps its own glyphs: a 16px plus, tinted 17px template glyphs.
   describe('docked panel glyphs', () => {
     const OWN = '[data-blok-database-panel][data-docked]:not([data-blok-database-creation-panel]) [data-blok-database-panel-icon]';

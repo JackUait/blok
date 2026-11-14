@@ -107,6 +107,8 @@ export const openNewSourcePanel = (options: NewSourcePanelOptions): DatabasePane
   const untitled = t('tools.database.relationUntitledDatabase');
   const state = { query: '', linkQuery: '', prompt: '' };
   const list = document.createElement('div');
+
+  if (options.newDatabase === true) list.setAttribute('data-blok-database-new-database-list', '');
   const linkList = document.createElement('div');
   const matches = (label: string, query: string): boolean => label.toLowerCase().includes(query.trim().toLowerCase());
 

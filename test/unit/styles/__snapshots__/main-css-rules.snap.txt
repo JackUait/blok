@@ -15500,6 +15500,10 @@ button[data-blok-database-table-group-count]:hover {
   color: var(--blok-database-table-header-icon);
 }
 
+[data-blok-database-new-database-list] > [data-blok-database-panel-row]:not([data-blok-database-panel-tiled]) {
+  min-height: 32px;
+}
+
 [data-blok-database-panel-tiled] {
   min-height: 44px;
 }

@@ -184,6 +184,18 @@ describe('"New database" panel (N03)', () => {
     expect(byTestId(panel, 'database-new-database-starter-tasks').hasAttribute('data-blok-database-panel-tiled')).toBe(true);
   });
 
+  // research/26 §2: "More templates" and "Link to existing data source" are 32 tall; database.css sizes the list's plain rows.
+  it('keeps More templates and Link as plain rows of the creation list', () => {
+    const panel = openNewDatabase();
+
+    for (const id of ['database-new-database-more-templates', 'database-new-source-link']) {
+      const row = byTestId(panel, id);
+
+      expect(row.parentElement?.hasAttribute('data-blok-database-new-database-list')).toBe(true);
+      expect(row.hasAttribute('data-blok-database-panel-tiled')).toBe(false);
+    }
+  });
+
   // research/26 §2: a right-hand panel at x 1210, where View settings docks, not under the block.
   it('docks at the window edge like View settings', () => {
     const panel = openNewDatabase();

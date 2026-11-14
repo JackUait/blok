@@ -474,12 +474,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
     scroller.setAttribute('data-blok-database-table-scroller', '');
     // notion-motion.md Round 29 §5: the frozen shadow shows once content slides under the frozen block.
-    // That block sticks once the leading padding has scrolled away. RTL scrolls to negative values.
-    scroller.addEventListener('scroll', () => {
-      const lead = parseFloat(getComputedStyle(scroller).paddingInlineStart) || 0;
-
-      scroller.toggleAttribute('data-scrolled', Math.abs(scroller.scrollLeft) > lead);
-    }, { passive: true });
+    // Here that is any offset: sticky insets count from the padded edge, so the block sticks at once. RTL scrolls negative.
+    scroller.addEventListener('scroll', () => scroller.toggleAttribute('data-scrolled', scroller.scrollLeft !== 0), { passive: true });
 
     const gridEl = document.createElement('div');
 

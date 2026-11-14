@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { IconChangeType, IconColumnInsertLeft, IconColumnInsertRight, IconGroup } from '../../../../src/components/icons';
+import { IconArrowRightLine, IconChangeType, IconColumnInsertLeft, IconColumnInsertRight, IconGroup, IconInsertLeft } from '../../../../src/components/icons';
 
 const svgOf = (markup: string): Element => {
   const svg = new DOMParser().parseFromString(markup, 'image/svg+xml').documentElement;
@@ -120,3 +120,24 @@ describe('change type glyph', () => {
     }
   });
 });
+
+// notion-motion.md Round 29 §2, r29-wrapmenu.png: Unwrap is an arrow pointing right into a line (→|).
+describe('unwrap glyph', () => {
+  it('keeps IconInsertLeft\'s line and shaft span, with the head at the line end', () => {
+    const [shaft, line] = paths(IconArrowRightLine);
+    const [insertShaft, insertLine] = paths(IconInsertLeft);
+
+    expect(line).toBe(insertLine);
+    const ends = (d: string): number[] => (/M(\d+(?:\.\d+)?) 10h(-?\d+(?:\.\d+)?)/.exec(d) ?? []).slice(1).map(Number);
+    const [start, run] = ends(shaft);
+    const [insertStart, insertRun] = ends(insertShaft);
+
+    // An 8-unit short arrow over the same span.
+    expect(run).toBe(8);
+    expect([start, start + run].sort()).toEqual([insertStart + insertRun, insertStart].sort());
+    // The head points right, at the tip, one stroke and more clear of the line.
+    expect(shaft).toMatch(/M9 6\.5l3\.5 3\.5L9 13\.5/);
+    expect(15.5 - (start + run)).toBeGreaterThanOrEqual(2.25);
+  });
+});
+

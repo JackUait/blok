@@ -386,6 +386,15 @@ export const IconInsertLeft = `
 </svg>
 `;
 
+// An arrow pointing right into a line (→|): Unwrap content (Notion's `arrowLineRight`).
+// IconInsertLeft's line and shaft span, with the head moved to the line end.
+export const IconArrowRightLine = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M4.5 10h8M9 6.5l3.5 3.5L9 13.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M15.5 4v12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Insert column right icon
 export const IconInsertRight = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
@@ -509,6 +518,14 @@ export const IconPinFilled = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path d="M8.25 3.5v4.25L5.5 11.5h9l-2.75-3.75V3.5Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M6.75 3.5h6.5M10 11.5v5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// IconPin struck by IconEyeSlash's slash: Unfreeze (Notion's `pinSlash`).
+export const IconPinSlash = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M6.75 3.5h6.5M8.25 3.5v4.25L5.5 11.5h9l-2.75-3.75V3.5M10 11.5v5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4.5 4.5l11 11" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 

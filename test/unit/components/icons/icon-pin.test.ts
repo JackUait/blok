@@ -4,7 +4,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { IconPin, IconPinFilled } from '../../../../src/components/icons';
+import { IconEyeSlash, IconPin, IconPinFilled, IconPinSlash } from '../../../../src/components/icons';
 
 const paths = (markup: string): Array<{ d: string; fill: string | null }> =>
   [...new DOMParser().parseFromString(markup, 'image/svg+xml').querySelectorAll('path')]
@@ -96,5 +96,13 @@ describe('pin icons', () => {
       expect(n).toBeGreaterThanOrEqual(3);
       expect(n).toBeLessThanOrEqual(17);
     }
+  });
+
+  // notion-motion.md Round 29 §5: Unfreeze is Notion's `pinSlash`. The same pin, struck by IconEyeSlash's slash.
+  it('draws the struck-out pin as the pin plus the eye slash\'s stroke', () => {
+    const slash = paths(IconEyeSlash).map((p) => p.d).find((d) => /^M4\.5 4\.5l11 11$/.test(d));
+
+    expect(slash).toBeDefined();
+    expect(paths(IconPinSlash).map((p) => p.d).sort()).toEqual([paths(IconPin)[0].d, slash].sort());
   });
 });

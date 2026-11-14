@@ -6,6 +6,7 @@ import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import {
   IconArrowDiagonal,
+  IconArrowRightLine,
   IconCheck,
   IconCopy,
   IconExpandFullscreen,
@@ -21,12 +22,13 @@ import {
   IconMessage,
   IconPageLayout,
   IconPin,
+  IconPinSlash,
   IconPreview,
-  IconReturn,
   IconSigma,
   IconSort,
   IconSplitView,
   IconTrash,
+  IconUTurnLeft,
 } from '../../components/icons';
 import { beautifyShortcut } from '../../components/utils/string';
 import { CALCULATIONS_FOR_TYPE } from './database-calculations';
@@ -375,18 +377,18 @@ export const headerViewItems = (ctx: HeaderMenuContext): PopoverItemParams[] => 
     ...lead,
     ...queries,
     ctx.frozenHere
-      ? item('database-header-unfreeze', 'tools.database.tableUnfreeze', ctx.onUnfreeze, IconPin)
+      ? item('database-header-unfreeze', 'tools.database.tableUnfreeze', ctx.onUnfreeze, IconPinSlash)
       : item('database-header-freeze', 'tools.database.tableFreeze', ctx.onFreeze, IconPin),
   ];
 
   if (!isTitle) {
     items.push(item('database-header-hide', 'tools.database.tableHide', ctx.onHide, IconEyeSlash));
   }
-  // Notion offers no wrap toggle on a checkbox or a button column.
+  // Notion offers no wrap toggle on a checkbox or a button column. Round 29 §2: each state has its own glyph.
   if (property.type !== 'checkbox' && property.type !== 'button') {
     items.push(ctx.wrapped
-      ? item('database-header-unwrap', 'tools.database.tableUnwrap', () => ctx.onWrap(false), IconReturn)
-      : item('database-header-wrap', 'tools.database.tableWrap', () => ctx.onWrap(true), IconReturn));
+      ? item('database-header-unwrap', 'tools.database.tableUnwrap', () => ctx.onWrap(false), IconArrowRightLine)
+      : item('database-header-wrap', 'tools.database.tableWrap', () => ctx.onWrap(true), IconUTurnLeft));
   }
   items.push(
     item('database-header-insert-left', 'tools.database.tableInsertLeft', () => ctx.onInsert('left'), IconColumnInsertLeft),

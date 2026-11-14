@@ -23,7 +23,7 @@ import type { HeaderMenuContext } from '../../../../src/tools/database/database-
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import type { PropertyDefinition } from '../../../../src/tools/database/types';
 import en from '../../../../src/components/i18n/locales/en.json';
-import { IconColumnInsertLeft, IconColumnInsertRight, IconGroup } from '../../../../src/components/icons';
+import { IconArrowRightLine, IconColumnInsertLeft, IconColumnInsertRight, IconGroup, IconPin, IconPinSlash, IconUTurnLeft } from '../../../../src/components/icons';
 
 describe('table view menus', () => {
   beforeEach(() => {
@@ -231,5 +231,19 @@ describe('column header menu glyphs', () => {
     expect(icon('database-header-group')).toBe(IconGroup);
     expect(icon('database-header-insert-left')).toBe(IconColumnInsertLeft);
     expect(icon('database-header-insert-right')).toBe(IconColumnInsertRight);
+  });
+
+  // notion-motion.md Round 29 §2 and §5: Wrap and Unwrap differ, and Unfreeze crosses out Freeze's pin.
+  it('draws different glyphs for Wrap and Unwrap, and a crossed-out pin for Unfreeze', () => {
+    const icon = (over: Partial<HeaderMenuContext>, name: string): unknown => {
+      const found = headerViewItems(ctx('text', over)).find((item) => 'name' in item && item.name === name);
+
+      return found !== undefined && 'icon' in found ? found.icon : undefined;
+    };
+
+    expect(icon({ wrapped: false }, 'database-header-wrap')).toBe(IconUTurnLeft);
+    expect(icon({ wrapped: true }, 'database-header-unwrap')).toBe(IconArrowRightLine);
+    expect(icon({ frozenHere: false }, 'database-header-freeze')).toBe(IconPin);
+    expect(icon({ frozenHere: true }, 'database-header-unfreeze')).toBe(IconPinSlash);
   });
 });

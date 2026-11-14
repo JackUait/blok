@@ -262,3 +262,53 @@ test('picking a sub-group shows a band per value with cards, and no band for an 
   expect(columns).toBeGreaterThan(1);
   await expect(lanes.nth(0).locator('[data-blok-database-add-card]')).toHaveCount(columns);
 });
+
+// notion-motion.md Round 31 §3: the band count is a 24px button (padding 0 8, radius 6, 14px 500) opening the calculation menu.
+test('a band count opens the calculation menu; its pick sets every band and leaves the column counts alone', async ({ page }) => {
+  const priority = {
+    id: 'p-priority',
+    name: 'Priority',
+    type: 'select',
+    position: 'a4',
+    config: { options: [{ id: 'o-high', label: 'High', color: 'red', position: 'a0' }, { id: 'o-low', label: 'Low', color: 'green', position: 'a1' }] },
+  };
+  const [db, ...rows] = blocks();
+  const ranked = rows.map((row, i) => ({
+    ...row,
+    data: { ...row.data, properties: { ...(row.data.properties as Record<string, unknown>), 'p-priority': i === 0 ? 'o-high' : 'o-low' } },
+  }));
+  const view = { ...(db.data.views as Array<Record<string, unknown>>)[0], subGroupBy: 'p-priority', subGroupSettings: { showAggregation: true } };
+
+  await mount(page, [{ ...db, data: { ...db.data, schema: [...SCHEMA, priority], views: [view] } }, ...ranked]);
+  const band = (key: string): Locator => page.locator(`[data-blok-database-board-lane][data-sub-group="${key}"] [data-blok-database-board-lane-count]`);
+
+  await expect(band('o-high')).toHaveText('1');
+  await expect(band('o-low')).toHaveText('2');
+  const look = await band('o-high').evaluate((button) => {
+    const style = getComputedStyle(button);
+
+    return { tag: button.tagName, height: button.getBoundingClientRect().height, padding: style.padding, radius: style.borderRadius, size: style.fontSize, weight: style.fontWeight };
+  });
+
+  expect(look).toEqual({ tag: 'BUTTON', height: 24, padding: '0px 8px', radius: '6px', size: '14px', weight: '500' });
+
+  await band('o-high').click();
+  await menuItem(page, 'More options').click();
+  await menuItem(page, 'Sum').click();
+  // The sub-group property is left out of the lists, as the group property is for columns.
+  await expect(anyItem(page, 'Priority')).toHaveCount(0);
+  await menuItem(page, 'Points').click();
+
+  await expect(band('o-high')).toHaveText('3');
+  await expect(band('o-low')).toHaveText('12');
+  await expect(page.locator('[data-blok-database-board-column-head][data-option-id="o-todo"]').getByTestId('database-column-count')).toHaveText('3');
+
+  const saved = await page.evaluate(async () => {
+    const output = await window.blokInstance?.save();
+
+    return (output?.blocks.find((block) => block.id === 'db-1')?.data as { views: Array<Record<string, unknown>> } | undefined)?.views[0];
+  });
+
+  expect(saved?.subGroupCalculation).toEqual({ id: 'p-points', fn: 'sum', capCounts: false });
+  expect(saved?.groupCalculation).toBeUndefined();
+});

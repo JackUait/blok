@@ -2052,7 +2052,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     const cellEl = closest('[role="gridcell"]');
     const propertyId = cellEl?.getAttribute('data-property-id');
 
-    if (ROW_SELECT_TYPES.has(cellEl?.getAttribute('data-type') ?? '') && !event.shiftKey) {
+    // notion-motion.md Round 30 §4: Shift+click selects the row; Shift+Arrow still extends a range.
+    if (cellEl !== null && (event.shiftKey || ROW_SELECT_TYPES.has(cellEl.getAttribute('data-type') ?? ''))) {
       this.grid?.selectRows([rowId]);
 
       return;

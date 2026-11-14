@@ -1214,6 +1214,20 @@ describe('DatabaseTableView', () => {
       expect([...root.querySelectorAll('[data-blok-database-table-row][aria-selected="true"]')].map((el) => el.getAttribute('data-row-id'))).toEqual(['r1', 'r2']);
     });
 
+    // notion-motion.md Round 30 §4: Shift+click on another cell selects that row; it does not extend a range.
+    it('Shift+click on a cell selects its row, not a range', () => {
+      const { root } = mount();
+      const rowsSelected = (): Array<string | null> =>
+        [...root.querySelectorAll('[data-blok-database-table-row][aria-selected="true"]')].map((el) => el.getAttribute('data-row-id'));
+
+      selectCell(root, 'r1', 'p-notes');
+      cell(root, 'r2', 'p-amount').dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
+
+      expect(rowsSelected()).toEqual(['r2']);
+      expect(selectedCells(root)).toEqual([]);
+      expect(editor()).toBeNull();
+    });
+
     it('points aria-activedescendant at the selected cell, so a screen reader follows it', () => {
       const { root } = mount();
 

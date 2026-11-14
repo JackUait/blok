@@ -184,7 +184,7 @@ export class DatabasePropertyTypePopover {
       label.textContent = this.i18n?.t(meta.labelKey) ?? meta.labelKey;
       item.appendChild(label);
 
-      const helpKey = this.grid ? undefined : TYPE_HELP[type];
+      const helpKey = TYPE_HELP[type];
 
       if (helpKey !== undefined) {
         const help = document.createElement('span');

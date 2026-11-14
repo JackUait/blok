@@ -119,12 +119,26 @@ describe('DatabasePropertyTypePopover', () => {
       }
     });
 
-    it('gives the header "+" grid no "?"', () => {
-      const grid = new DatabasePropertyTypePopover({ onSelect, layout: 'grid' });
+    // notion-motion.md Round 28 §3 (r28-addprop.raw, r28-idtip.png): the header "+" grid has a 14px "?" in every cell too.
+    it('puts the "?" in the header "+" grid as well', () => {
+      const grid = new DatabasePropertyTypePopover({ onSelect, layout: 'grid', i18n: { t: (key: string) => key } as unknown as I18n });
 
-      grid.open(anchor);
-      expect(document.querySelector('[data-blok-database-property-type-help]')).toBeNull();
-      grid.destroy();
+      destroyTooltip();
+      vi.useFakeTimers();
+      try {
+        grid.open(anchor);
+        expect(help('text')).not.toBeNull();
+        expect(help('uniqueId')).not.toBeNull();
+        hover(help('uniqueId'));
+        vi.advanceTimersByTime(HINT_DELAY);
+        expect(shownHint()).toEqual({ text: 'tools.database.propertyTypeHelpUniqueId', placement: 'right' });
+        help('uniqueId')?.dispatchEvent(new MouseEvent('mouseleave'));
+        vi.advanceTimersByTime(HINT_DELAY);
+      } finally {
+        grid.destroy();
+        vi.useRealTimers();
+        destroyTooltip();
+      }
     });
   });
 

@@ -4633,7 +4633,8 @@ export class DatabaseTool implements BlockTool {
 
   addView(type: ViewType): void {
     if (this.structureLocked()) return;
-    const statusProp = this.model.getSchema().find((p) => p.type === 'select');
+    const schema = this.model.getSchema();
+    const statusProp = schema.find((p) => p.type === 'select') ?? schema.find((p) => p.type === 'status');
     const defaultNames: Partial<Record<ViewType, string>> = {
       list: DATABASE_DEFAULT_TEXT.viewTypeList,
       table: DATABASE_DEFAULT_TEXT.viewTypeTable,
@@ -4647,8 +4648,11 @@ export class DatabaseTool implements BlockTool {
       dashboard: DATABASE_DEFAULT_TEXT.viewTypeDashboard,
     };
     if (type === 'map') this.ensurePlaceProperty();
+    // notion-motion.md Round 28 §4: a new Board or Calendar creates the Status or Date it needs.
+    if (type === 'calendar' && !schema.some((p) => p.type === 'date')) this.addProperty({ name: '', type: 'date' });
+    const groupBy = type === 'board' && statusProp === undefined ? this.addProperty({ name: '', type: 'status' })?.id : statusProp?.id;
     const newView = this.model.addView(defaultNames[type] ?? DATABASE_DEFAULT_TEXT.viewTypeBoard, type, {
-      groupBy: type === 'board' || type === 'chart' ? statusProp?.id : undefined,
+      groupBy: type === 'board' || type === 'chart' ? groupBy : undefined,
     });
     void this.sync.syncCreateView(structuredClone(newView));
     this.switchView(newView.id);

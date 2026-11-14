@@ -521,11 +521,12 @@ export const IconPinFilled = `
 </svg>
 `;
 
-// IconPin struck by IconEyeSlash's slash: Unfreeze (Notion's `pinSlash`).
+// Unfreeze (Notion's `pinSlash`, notion-motion.md Round 30 §6): a wide-based pin cut by a steep slash.
+// The pin's strokes stop short of the slash on both sides; icon-pin.test.ts checks the gap.
 export const IconPinSlash = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M6.75 3.5h6.5M8.25 3.5v4.25L5.5 11.5h9l-2.75-3.75V3.5M10 11.5v5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M4.5 4.5l11 11" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7.25 3.5h5.5M7.75 3.5 8 5.25M7.5 9.5 5 12.75h5.25M14.25 12.75H15l-3.5-4.5-.75-4.75M10 12.75V17" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4.5 3.25 15.5 16.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 

@@ -4,7 +4,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { IconEyeSlash, IconPin, IconPinFilled, IconPinSlash } from '../../../../src/components/icons';
+import { IconPin, IconPinFilled, IconPinSlash } from '../../../../src/components/icons';
 
 const paths = (markup: string): Array<{ d: string; fill: string | null }> =>
   [...new DOMParser().parseFromString(markup, 'image/svg+xml').querySelectorAll('path')]
@@ -98,11 +98,35 @@ describe('pin icons', () => {
     }
   });
 
-  // notion-motion.md Round 29 §5: Unfreeze is Notion's `pinSlash`. The same pin, struck by IconEyeSlash's slash.
-  it('draws the struck-out pin as the pin plus the eye slash\'s stroke', () => {
-    const slash = paths(IconEyeSlash).map((p) => p.d).find((d) => /^M4\.5 4\.5l11 11$/.test(d));
+  // notion-motion.md Round 30 §6: Notion's `pinSlash` has a wide base, a long needle and a steep slash that breaks the pin.
+  describe('struck-out pin (Unfreeze)', () => {
+    const [pin, slash] = paths(IconPinSlash).map((p) => subpathsOf(p.d));
+    const [[a, b]] = slash;
+    const side = ([x, y]: Point): number => ((b[0] - a[0]) * (y - a[1]) - (b[1] - a[1]) * (x - a[0])) / Math.hypot(b[0] - a[0], b[1] - a[1]);
 
-    expect(slash).toBeDefined();
-    expect(paths(IconPinSlash).map((p) => p.d).sort()).toEqual([paths(IconPin)[0].d, slash].sort());
+    it('draws a 10-wide base low on the pin and a needle on the centre line down to 17', () => {
+      const flat = pin.flatMap((stroke) => stroke.slice(1).map((end, i) => [stroke[i], end] as const));
+      const base = flat.filter(([p, q]) => p[1] === 12.75 && q[1] === 12.75);
+      const needle = pin.find((stroke) => stroke.every(([x]) => x === 10));
+
+      expect(Math.min(...base.flat().map(([x]) => x))).toBe(5);
+      expect(Math.max(...base.flat().map(([x]) => x))).toBe(15);
+      expect(needle?.map(([, y]) => y)).toEqual([12.75, 17]);
+    });
+
+    it('runs the slash from the top left to the bottom right, steeper than 45°', () => {
+      expect(slash).toEqual([[[4.5, 3.25], [15.5, 16.75]]]);
+    });
+
+    it('breaks the pin where the slash crosses: no stroke crosses it and every end keeps clear of it', () => {
+      for (const stroke of pin) {
+        const sides = stroke.map(side);
+
+        expect(sides.every((d) => d > 0) || sides.every((d) => d < 0)).toBe(true);
+        for (const d of sides) {
+          expect(Math.abs(d)).toBeGreaterThanOrEqual(1.4);
+        }
+      }
+    });
   });
 });

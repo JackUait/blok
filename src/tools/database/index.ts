@@ -8115,9 +8115,9 @@ export class DatabaseTool implements BlockTool {
       moveRowTo: (rowId, databaseId) => { if (writable()) this.moveRowTo({ rowId, databaseId }); },
       editRowIcon: (rowId) => { if (writable()) this.editRowIcon(rowId, context); },
       updateView: (changes) => { if (writable()) this.updateActiveView(changes, context); },
-      // notion-motion.md Round 29 §1: the Load more row's ⋯. A locked view has no load limit to change.
-      ...((context === undefined ? !this.readOnly && !this.structureLocked() : context.writable())
-        ? { setLoadLimit: (limit: LoadLimit) => this.updateActiveView({ loadLimit: limit }, context) }
+      // notion-motion.md Round 29 §1: the Load more row's ⋯. Round 30 §3: a locked database keeps it working.
+      ...((context === undefined ? !this.readOnly : context.writable())
+        ? { setLoadLimit: (limit: LoadLimit) => this.updateActiveView({ loadLimit: limit }, context, { pastLock: true }) }
         : {}),
       editFormula: (propertyId, cell) => { if (writable() && !this.structureLocked()) this.openFormulaEditor(propertyId, cell); },
       openPropertyMenu: (propertyId, anchor) => { if (writable()) this.openPropertyMenu(propertyId, anchor, table?.(), context); },
@@ -9274,12 +9274,13 @@ export class DatabaseTool implements BlockTool {
     );
   }
 
-  private updateActiveView(changes: ViewChanges, explicit?: NativeWidgetContext): void {
+  /** `pastLock`: a write a locked database still allows, as the load limit (notion-motion.md Round 30 §3). */
+  private updateActiveView(changes: ViewChanges, explicit?: NativeWidgetContext, { pastLock = false } = {}): void {
     const context = explicit ?? this.binding ?? undefined;
     const owner = context?.owner ?? this;
     const viewId = context?.viewId ?? this.activeViewId;
 
-    if (owner.readOnly || owner.destroyed || owner.structureLocked() || (context !== undefined && !context.authority.writable())) return;
+    if (owner.readOnly || owner.destroyed || (!pastLock && owner.structureLocked()) || (context !== undefined && !context.authority.writable())) return;
     owner.model.updateView(viewId, changes);
     owner.block.dispatchChange();
     void owner.sync.syncUpdateView({ viewId, changes: structuredClone(changes) });

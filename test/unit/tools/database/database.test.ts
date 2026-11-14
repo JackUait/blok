@@ -4593,8 +4593,9 @@ describe('DatabaseTool', () => {
         tool.destroy();
       });
 
-      // notion-motion.md Round 29 §1: the Load more row's ⋯ sets the view's load limit; a locked database has no ⋯.
-      it('sets the table\'s load limit from the Load more row\'s ⋯, and leaves the ⋯ out when locked', () => {
+      // notion-motion.md Round 29 §1: the Load more row's ⋯ sets the view's load limit.
+      // Round 30 §3: a locked database keeps the ⋯ and its menu, every row enabled.
+      it('sets the table\'s load limit from the Load more row\'s ⋯, locked or not', () => {
         const rows = Array.from({ length: 11 }, (_, i) => groupRow(`row-${i}`, { 'prop-title': `Row ${i}` }, `a${i.toString(36)}`));
         const table = (locked: boolean): DatabaseTool => {
           const schema = makeDefaultData().schema;
@@ -4623,7 +4624,11 @@ describe('DatabaseTool', () => {
         document.body.appendChild(lockedElement);
         locked.rendered();
         expect(queryByData(lockedElement, 'data-blok-database-table-load-more')).not.toBeNull();
-        expect(queryByData(lockedElement, 'data-blok-database-table-load-limit-menu')).toBeNull();
+        expect(queryByData(lockedElement, 'data-blok-database-table-load-limit-menu')).not.toBeNull();
+        queryByData(lockedElement, 'data-blok-database-table-load-limit-menu')?.click();
+        // The first table's mock menu is still in the body: this menu's rows are the last four.
+        [...document.querySelectorAll<HTMLElement>('[data-mock-popover-action="tools.database.settingsloadlimitpages"]')].slice(-4)[2]?.click();
+        expect(locked.save(lockedElement).views[0].loadLimit).toBe(50);
         locked.destroy();
       });
 

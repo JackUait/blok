@@ -946,4 +946,26 @@ describe('resolvePosition', () => {
       });
     });
   });
+
+  // notion-motion.md Round 30 §3: the Load more menu's right edge sits on the ⋯'s right edge.
+  describe('alignEnd', () => {
+    const input = {
+      anchor: rect({ top: 300, bottom: 324, left: 651.4, right: 675.4 }),
+      popoverSize: { width: 200, height: 153 },
+      scopeBounds: rect({ top: 0, bottom: 717, left: 0, right: 1512 }),
+      viewportSize: { width: 1512, height: 717 },
+      scrollOffset: { x: 0, y: 0 },
+      offset: 8,
+    };
+
+    it('puts the popover\'s end edge on the anchor\'s end edge', () => {
+      expect(resolvePosition({ ...input, alignEnd: true }).left).toBeCloseTo(475.4, 5);
+      expect(resolvePosition(input).left).toBeCloseTo(651.4, 5);
+    });
+
+    it('still keeps the popover inside the window', () => {
+      expect(resolvePosition({ ...input, anchor: rect({ top: 300, bottom: 324, left: 20, right: 44 }), alignEnd: true }).left).toBe(0);
+    });
+  });
 });
+

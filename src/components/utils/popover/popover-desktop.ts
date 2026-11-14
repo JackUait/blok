@@ -318,6 +318,9 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   private leftAlignElement: HTMLElement | undefined;
 
+  /** Opt-in, set before show(): the popover's end edge sits on the trigger's end edge. */
+  public alignEnd = false;
+
   /**
    * When true, places the popover to the left of the trigger, vertically
    * centered on the trigger and shifted only as needed to stay on screen.
@@ -912,6 +915,7 @@ export class PopoverDesktop extends PopoverAbstract {
       scrollOffset: { x: window.scrollX, y: window.scrollY },
       offset: this.offset,
       leftAlignRect,
+      alignEnd: this.alignEnd,
       direction: getElementDirection(this.nodes.popover),
       placeLeftOfAnchor: this.placeLeftOfAnchor,
       asideSide: this.asideSide,

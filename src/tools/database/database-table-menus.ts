@@ -218,6 +218,10 @@ export interface OpenMenuOptions {
   at?: { position: DOMRect; positionContext: HTMLElement };
   /** The least gap to the window's edges, instead of the kind's own. */
   viewportMargin?: number;
+  /** The gap to the anchor, instead of the kind's own. */
+  offset?: number;
+  /** The menu's end edge on the anchor's end edge. */
+  alignEnd?: boolean;
 }
 
 const MENU_CLASS = {
@@ -266,6 +270,7 @@ export const openMenu = (
     ...(options.searchable === true ? { searchable: true } : {}),
     ...(options.searchPlaceholder !== undefined ? { messages: { search: options.searchPlaceholder } } : {}),
     ...(options.viewportMargin !== undefined ? { viewportMargin: options.viewportMargin } : {}),
+    ...(options.offset !== undefined ? { offset: options.offset } : {}),
   };
   const at = options.at;
   const popover = new PopoverDesktop(at === undefined ? params : { ...params, position: at.position, positionContext: at.positionContext });
@@ -275,6 +280,7 @@ export const openMenu = (
     popover.escapeClosesSubmenuFirst = true;
   }
   popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
+  popover.alignEnd = options.alignEnd === true;
 
   const state = { closed: false };
 

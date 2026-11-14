@@ -565,6 +565,26 @@ describe('DatabaseTableView', () => {
       expect(setLoadLimit).toHaveBeenCalledWith(25);
     });
 
+    // notion-motion.md Round 30 §3: the menu opens 8px below the ⋯, its right edge on the ⋯'s right edge.
+    it('opens the load limit menu 8px below the ⋯ with their right edges aligned', () => {
+      const many = Array.from({ length: 12 }, (_, i) => row(`r${String(i).padStart(2, '0')}`, `Row ${i}`));
+      const { root } = mount({ rows: many, view: tableView({ loadLimit: 10 }), handlers: { ...makeHandlers(), setLoadLimit: vi.fn() } });
+      const dots = root.querySelector<HTMLElement>('[data-blok-database-table-load-limit-menu]');
+
+      if (dots === null) throw new Error('no ⋯');
+      Object.defineProperty(dots, 'getBoundingClientRect', {
+        configurable: true,
+        value: () => ({ left: 651, right: 675, top: 300, bottom: 324, width: 24, height: 24, x: 651, y: 300, toJSON: () => ({}) }),
+      });
+      dots.click();
+      const menu = document.querySelector<HTMLElement>('[data-blok-popover]');
+      const width = menu?.offsetWidth ?? 0;
+
+      expect(menu?.style.top).toBe('332px');
+      expect(menu?.style.left).toBe(`${675 - width}px`);
+      document.querySelector<HTMLElement>('[data-blok-item-name="database-load-limit-10"]')?.click();
+    });
+
     it('keeps Load more but leaves out the ⋯ when the view cannot change its load limit', () => {
       const many = Array.from({ length: 12 }, (_, i) => row(`r${String(i).padStart(2, '0')}`, `Row ${i}`));
       const { root } = mount({ rows: many, view: tableView({ loadLimit: 10 }) });

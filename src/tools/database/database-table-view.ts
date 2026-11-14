@@ -1008,7 +1008,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     if (setLoadLimit === undefined) {
       return;
     }
-    openMenu(anchor, loadLimitItems(this.options.i18n, resolveLoadLimit(this.options.view), setLoadLimit), { kind: 'calc' });
+    // notion-motion.md Round 30 §3: 8px below the ⋯, right edges aligned.
+    openMenu(anchor, loadLimitItems(this.options.i18n, resolveLoadLimit(this.options.view), setLoadLimit), { kind: 'calc', offset: 8, alignEnd: true });
   }
 
   private hasShownCalculation(): boolean {

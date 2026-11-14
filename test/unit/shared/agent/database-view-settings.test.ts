@@ -211,6 +211,20 @@ describe.each(sessions)('database view settings on a %s session', (_name, open) 
     }
   });
 
+  // notion-motion.md Round 31 §1: the form header's title and description.
+  it('form title and description are form texts too', async () => {
+    const session = open(seedOf(databaseBlock([{ ...baseView, type: 'form', form: { public: true } }])));
+
+    try {
+      expect(errorOf(await update(session, { form: { title: 'Signup', description: 'Tell us' } }))).toBeUndefined();
+      expect((await viewOf(session)).form).toEqual({ public: true, title: 'Signup', description: 'Tell us' });
+      expect(errorOf(await update(session, { form: { description: null } }))).toBeUndefined();
+      expect((await viewOf(session)).form).toEqual({ public: true, title: 'Signup' });
+    } finally {
+      await session.close();
+    }
+  });
+
   it('a board keeps its grouping', async () => {
     const session = open(seedOf(databaseBlock([{ ...baseView, type: 'board', groupBy: 'st' }])));
 

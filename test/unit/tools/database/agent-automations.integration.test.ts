@@ -725,8 +725,11 @@ describe('an agent submits a form as the person\'s Submit does', { timeout: 60_0
 
   it('makes the row and calls onSubmit the way the person\'s Submit does', async () => {
     const person = await boot(formSeed(), undefined, { config: forms });
+
+    // The builder has no Submit: the person submits from the Preview, whose fields reuse the builder's ids.
+    document.querySelector<HTMLButtonElement>('[data-blok-testid="database-toolbar-preview-form"]')?.click();
     const field = (id: string): HTMLInputElement | HTMLTextAreaElement => {
-      const element = document.getElementById(`blok-form-f1-${id}`);
+      const element = document.querySelector(`[data-blok-database-form-preview] [id="blok-form-f1-${id}"]`);
 
       if (!(element instanceof HTMLInputElement) && !(element instanceof HTMLTextAreaElement)) throw new Error(`missing field ${id}`);
 
@@ -735,7 +738,7 @@ describe('an agent submits a form as the person\'s Submit does', { timeout: 60_0
 
     field('t').value = 'Ask';
     field('notes').value = 'Please';
-    document.querySelector<HTMLButtonElement>('[data-blok-database-form-submit]')?.click();
+    document.querySelector<HTMLButtonElement>('[data-blok-database-form-preview] [data-blok-database-form-submit]')?.click();
     await settled();
     const personRows = await savedRows(person.instance);
     const personSubmitted = structuredClone(submitted);

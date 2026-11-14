@@ -1222,6 +1222,10 @@ export interface FormSettings {
   public?: boolean;
   /** Default `'none'`. The host enforces it. */
   submissionAccess?: FormSubmissionAccess;
+  /** The heading above the questions. */
+  title?: string;
+  /** The line under the title. */
+  description?: string;
   submitLabel?: string;
   /** Text shown after a submit. */
   confirmation?: string;

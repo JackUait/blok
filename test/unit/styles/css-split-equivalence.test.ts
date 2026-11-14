@@ -1697,6 +1697,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r45: Round 31 map and band count; the band count button, the Add pin pill and the stacked pin card.
     // Net database.css growth against origin/main.
     const DATABASE_R45_BYTES = 432;
+    // Lane r44: Round 31 form builder: header, in-card question name, card hover ring, gap "+", slot, Select type rows. Net database.css growth against origin/main.
+    const DATABASE_R44_BYTES = 4064;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2217,6 +2219,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R42_BYTES
       + DATABASE_R43_BYTES
       + DATABASE_R45_BYTES
+      + DATABASE_R44_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

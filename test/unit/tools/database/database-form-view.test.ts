@@ -57,7 +57,7 @@ const mount = (overrides: Partial<DatabaseFormViewOptions> = {}): { root: HTMLEl
 
 const question = (root: HTMLElement, id: string): HTMLElement | null => root.querySelector(`[data-blok-database-form-question="${id}"]`);
 const field = <T extends HTMLElement>(root: HTMLElement, id: string): T => {
-  const el = question(root, id)?.querySelector<T>('input, textarea, select');
+  const el = question(root, id)?.querySelector<T>('input:not([data-blok-database-form-question-name]), textarea, select');
 
   if (el === null || el === undefined) throw new Error(`no field for ${id}`);
 
@@ -145,6 +145,21 @@ describe('DatabaseFormView', () => {
 
     expect(root.querySelector('[data-blok-database-form-closed]')).not.toBeNull();
     expect(root.querySelector('[data-blok-database-form-submit]')).toBeNull();
+  });
+
+  // notion-motion.md Round 31 §1: the builder has no Submit; only the preview does.
+  it('the builder draws no Submit, and Enter in its lone answer makes no response', () => {
+    const { root, submit } = mount({
+      view: view({ properties: [{ id: 'title', visible: true }] }),
+      share: { settings: () => ({}), update: vi.fn(), copyLink: vi.fn() },
+    });
+
+    expect(root.querySelector('[data-blok-database-form-submit]')).toBeNull();
+    field<HTMLInputElement>(root, 'title').value = 'Ada';
+    root.querySelector('form')?.requestSubmit();
+
+    expect(submit).not.toHaveBeenCalled();
+    expect(root.querySelector('[data-blok-database-form-confirmation]')).toBeNull();
   });
 
   it('in edit mode, the Required toggle writes the view property setting', () => {
@@ -295,8 +310,8 @@ describe('DatabaseFormView question rename to a taken name', () => {
       isNameTaken: (propertyId: string, name: string) => propertyId === 'email' && name === 'Team size',
     });
 
-    question(root, 'email')?.querySelector<HTMLButtonElement>('[data-blok-testid="database-form-question-menu"]')?.click();
-    const input = document.querySelector<HTMLInputElement>('[data-blok-testid="database-form-question-name"]');
+    // notion-motion.md Round 31 §1: the name is edited in the card.
+    const input = question(root, 'email')?.querySelector<HTMLInputElement>('[data-blok-testid="database-form-question-name"]') ?? null;
 
     if (input === null) throw new Error('no question name input');
     const type = (value: string): void => {
@@ -335,7 +350,7 @@ describe('DatabaseFormView question rename to a taken name', () => {
     expect(renameProperty).toHaveBeenCalledWith('email', 'Team');
   });
 
-  it('Enter on a taken name neither renames nor closes; on a free name it renames and closes', () => {
+  it('Enter on a taken name does not rename; on a free name it renames and leaves the field', () => {
     const { input, renameProperty, type } = open();
     const enter = (): KeyboardEvent => {
       const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
@@ -345,23 +360,102 @@ describe('DatabaseFormView question rename to a taken name', () => {
       return event;
     };
 
+    input.focus();
     type('Team size');
     expect(enter().defaultPrevented).toBe(true);
     expect(renameProperty).not.toHaveBeenCalled();
-    expect(document.querySelector('[data-blok-testid="database-form-question-settings"]')).not.toBeNull();
+    expect(input).toHaveFocus();
     type('Team');
     enter();
+    expect(renameProperty).toHaveBeenCalledTimes(1);
     expect(renameProperty).toHaveBeenCalledWith('email', 'Team');
-    expect(document.querySelector('[data-blok-testid="database-form-question-settings"]')).toBeNull();
+    expect(input).not.toHaveFocus();
+  });
+});
+
+// notion-motion.md Round 31 §1: the question name is a 24px 700 textbox in the card.
+describe('DatabaseFormView in-card question name', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it('turning name sync off after a refused name keeps the real name as the label', () => {
-    const { type, setQuestionSetting } = open();
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
 
-    type('Team size');
-    document.querySelector<HTMLButtonElement>('[data-blok-testid="database-form-question-sync-name"]')?.click();
+  const nameOf = (root: HTMLElement, id: string): HTMLInputElement | null =>
+    question(root, id)?.querySelector<HTMLInputElement>('[data-blok-testid="database-form-question-name"]') ?? null;
 
-    expect(setQuestionSetting).toHaveBeenCalledWith('email', { questionName: 'Email' });
+  it('the builder card holds a "Question name" textbox; the panel no longer does', () => {
+    const { root } = mount({ setQuestionSetting: vi.fn(), renameProperty: vi.fn() });
+    const name = nameOf(root, 'email');
+
+    expect(name?.value).toBe('Email');
+    expect(name?.placeholder).toBe('tools.database.formQuestionNamePlaceholder');
+    expect(name?.getAttribute('aria-label')).toBe('tools.database.formQuestionName');
+    expect(field<HTMLInputElement>(root, 'email').getAttribute('aria-label')).toBe('Email');
+    question(root, 'email')?.querySelector<HTMLButtonElement>('[data-blok-testid="database-form-question-menu"]')?.click();
+    expect(document.querySelector('[data-blok-testid="database-form-question-settings"] [data-blok-testid="database-form-question-name"]')).toBeNull();
+  });
+
+  it('a respondent sees the name as a label, not a textbox', () => {
+    const { root } = mount({ readOnly: true });
+
+    expect(nameOf(root, 'email')).toBeNull();
+    expect(question(root, 'email')?.querySelector('label[data-blok-database-form-label]')?.textContent).toContain('Email');
+  });
+
+  it('with sync off, a change writes the question name, not the property', () => {
+    const setQuestionSetting = vi.fn();
+    const renameProperty = vi.fn();
+    const { root } = mount({
+      view: view({ properties: [{ id: 'email', visible: true, questionName: 'Your email' }] }),
+      setQuestionSetting,
+      renameProperty,
+    });
+    const name = nameOf(root, 'email');
+
+    if (name === null) throw new Error('no name');
+    expect(name.value).toBe('Your email');
+    name.value = 'Work email';
+    name.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(setQuestionSetting).not.toHaveBeenCalled();
+    name.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(setQuestionSetting).toHaveBeenCalledWith('email', { questionName: 'Work email' });
+    expect(renameProperty).not.toHaveBeenCalled();
+  });
+
+  it('an emptied name goes back to the current one and writes nothing', () => {
+    const renameProperty = vi.fn();
+    const { root } = mount({ setQuestionSetting: vi.fn(), renameProperty });
+    const name = nameOf(root, 'email');
+
+    if (name === null) throw new Error('no name');
+    name.value = '  ';
+    name.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(renameProperty).not.toHaveBeenCalled();
+    expect(name.value).toBe('Email');
+  });
+
+  it('keeps the view from redrawing while the name has focus, and ends the edit on leaving it', () => {
+    const onInteractionEnd = vi.fn();
+    const formView = new DatabaseFormView({
+      i18n: { t: (key: string) => key }, view: view(), schema, readOnly: false, onSubmit: vi.fn(),
+      setQuestionSetting: vi.fn(), renameProperty: vi.fn(), onInteractionEnd,
+    });
+    const root = formView.createView();
+
+    document.body.appendChild(root);
+    const name = nameOf(root, 'email');
+
+    name?.focus();
+    expect(formView.interacting).toBe(true);
+    name?.blur();
+    expect(formView.interacting).toBe(false);
+    expect(onInteractionEnd).toHaveBeenCalled();
   });
 });
 
@@ -380,5 +474,221 @@ describe('DatabaseFormView question chip name', () => {
     const chip = question(root, 'email')?.querySelector<HTMLButtonElement>('[data-blok-testid="database-form-question-menu"]');
 
     expect(chip?.getAttribute('aria-label')).toBe('tools.database.formEditQuestion');
+  });
+});
+
+// notion-motion.md Round 31 §1 (r31-form-qmenu.raw): Question options rows and their order.
+describe('DatabaseFormView question options rows', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  const open = (id: string, overrides: Partial<DatabaseFormViewOptions> = {}): DatabaseFormViewOptions => {
+    const { root, options } = mount({ setQuestionSetting: vi.fn(), ...overrides });
+
+    question(root, id)?.querySelector<HTMLButtonElement>('[data-blok-testid="database-form-question-menu"]')?.click();
+
+    return options;
+  };
+  const panel = (): HTMLElement | null => document.querySelector('[data-blok-testid="database-form-question-settings"]');
+  const row = (testId: string): HTMLButtonElement | null => document.querySelector(`[data-blok-testid="${testId}"]`);
+  const labels = (): string[] => [...(panel()?.querySelectorAll('[data-blok-database-panel-label]') ?? [])].map((el) => el.textContent ?? '');
+
+  it('is headed "Question options" and lists Notion\'s rows in Notion\'s order', () => {
+    open('size', { openLinkedProperty: vi.fn(), moveQuestion: vi.fn() });
+
+    expect(panel()?.textContent).toContain('tools.database.formQuestionOptions');
+    expect(labels()).toEqual([
+      'tools.database.formRequiredToggle',
+      'tools.database.formQuestionType',
+      'tools.database.formViewLinkedProperty',
+      'tools.database.formSyncPropertyName',
+      'tools.database.formMoveQuestion',
+      'tools.database.formDuplicateQuestion',
+      'tools.database.formDeleteQuestion',
+    ]);
+  });
+
+  it('View linked property closes the panel and opens the property\'s own menu', () => {
+    const openLinkedProperty = vi.fn();
+
+    open('size', { openLinkedProperty });
+    row('database-form-question-linked-property')?.click();
+
+    expect(openLinkedProperty).toHaveBeenCalledWith('size', expect.any(HTMLElement));
+    expect(panel()).toBeNull();
+  });
+
+  it('Move question moves it up or down among the questions, and not past either end', () => {
+    const moveQuestion = vi.fn();
+
+    // Questions in order: email, title, size, agree, pick.
+    open('title', { moveQuestion });
+    row('database-form-question-move')?.click();
+    expect(row('database-form-question-move-up')?.disabled).toBe(false);
+    row('database-form-question-move-up')?.click();
+    expect(moveQuestion).toHaveBeenLastCalledWith('title', 'email');
+    expect(panel()).toBeNull();
+
+    document.body.innerHTML = '';
+    open('title', { moveQuestion });
+    row('database-form-question-move')?.click();
+    row('database-form-question-move-down')?.click();
+    expect(moveQuestion).toHaveBeenLastCalledWith('title', 'agree');
+
+    document.body.innerHTML = '';
+    open('email', { moveQuestion });
+    row('database-form-question-move')?.click();
+    expect(row('database-form-question-move-up')?.disabled).toBe(true);
+
+    document.body.innerHTML = '';
+    open('pick', { moveQuestion });
+    row('database-form-question-move')?.click();
+    expect(row('database-form-question-move-down')?.disabled).toBe(true);
+  });
+
+  it('moving the second-to-last question down puts it last', () => {
+    const moveQuestion = vi.fn();
+
+    open('agree', { moveQuestion });
+    row('database-form-question-move')?.click();
+    row('database-form-question-move-down')?.click();
+
+    expect(moveQuestion).toHaveBeenCalledWith('agree', null);
+  });
+});
+
+// notion-motion.md Round 31 §1: "+" in the gap between cards adds a question there.
+describe('DatabaseFormView add question between cards', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  const ids = (root: HTMLElement): Array<string | null> =>
+    [...root.querySelectorAll('[data-blok-database-form-question]')].map((el) => el.getAttribute('data-blok-database-form-question'));
+  const insertAbove = (root: HTMLElement, id: string): HTMLButtonElement | null =>
+    question(root, id)?.querySelector<HTMLButtonElement>('[data-blok-testid="database-form-insert-question"]') ?? null;
+  const notes: PropertyDefinition = { id: 'notes', name: 'Notes', type: 'text', position: 'a9' };
+
+  it('draws a "+" in every gap between cards, none above the first', () => {
+    const { root } = mount({ setQuestionSetting: vi.fn(), addQuestion: vi.fn() });
+
+    expect(insertAbove(root, 'email')).toBeNull();
+    expect(insertAbove(root, 'title')?.getAttribute('aria-label')).toBe('tools.database.formAddQuestion');
+    expect(insertAbove(root, 'pick')).not.toBeNull();
+  });
+
+  it('a click opens a slot and Select type there; Escape removes the slot', () => {
+    const { root } = mount({ setQuestionSetting: vi.fn(), addQuestion: vi.fn() });
+
+    insertAbove(root, 'size')?.click();
+    const slot = root.querySelector('[data-blok-database-form-slot]');
+
+    expect(slot?.nextElementSibling).toBe(question(root, 'size'));
+    expect(document.querySelector('[data-blok-testid="database-form-select-type"]')).not.toBeNull();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(document.querySelector('[data-blok-testid="database-form-select-type"]')).toBeNull();
+    expect(root.querySelector('[data-blok-database-form-slot]')).toBeNull();
+  });
+
+  it('a picked type becomes a question in that gap', () => {
+    const addQuestion = vi.fn((): PropertyDefinition => notes);
+    const { root } = mount({ setQuestionSetting: vi.fn(), addQuestion });
+
+    insertAbove(root, 'size')?.click();
+    document.querySelector<HTMLElement>('[data-blok-testid="database-form-new-text"]')?.click();
+
+    expect(addQuestion).toHaveBeenCalledWith('text', 'size');
+    expect(ids(root)).toEqual(['email', 'title', 'notes', 'size', 'agree', 'pick']);
+    expect(root.querySelector('[data-blok-database-form-slot]')).toBeNull();
+  });
+
+  it('the end row still adds a question last', () => {
+    const addQuestion = vi.fn((): PropertyDefinition => notes);
+    const { root } = mount({ setQuestionSetting: vi.fn(), addQuestion });
+
+    root.querySelector<HTMLElement>('[data-blok-testid="database-form-add-question"]')?.click();
+    document.querySelector<HTMLElement>('[data-blok-testid="database-form-new-text"]')?.click();
+
+    expect(addQuestion).toHaveBeenCalledWith('text', undefined);
+    expect(ids(root).at(-1)).toBe('notes');
+  });
+
+  // Round 31 §1: Select type rows are 44 tall with a framed 32px icon.
+  it('marks Select type\'s new question rows for their framed-icon look', () => {
+    const { root } = mount({ setQuestionSetting: vi.fn(), addQuestion: vi.fn() });
+
+    root.querySelector<HTMLElement>('[data-blok-testid="database-form-add-question"]')?.click();
+
+    expect(document.querySelector('[data-blok-testid="database-form-new-text"]')?.hasAttribute('data-blok-database-form-type-row')).toBe(true);
+  });
+});
+
+// notion-motion.md Round 31 §1: the form header, a 40px "Form title" and "Description (optional)".
+describe('DatabaseFormView header', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  const builder = (form: DatabaseViewConfig['form'] = {}): { root: HTMLElement; update: ReturnType<typeof vi.fn> } => {
+    const update = vi.fn();
+    const { root } = mount({ view: view({ form }), share: { settings: () => form ?? {}, update, copyLink: vi.fn() } });
+
+    return { root, update };
+  };
+  const box = (root: HTMLElement, part: 'title' | 'description'): HTMLInputElement | HTMLTextAreaElement | null =>
+    root.querySelector(`[data-blok-database-form-header-${part}]`);
+  const type = (field: HTMLInputElement | HTMLTextAreaElement | null, value: string): void => {
+    if (field === null) throw new Error('no field');
+    Object.assign(field, { value });
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+
+  it('the builder starts with the title and description boxes, above the access line', () => {
+    const { root } = builder({ title: 'Signup', description: 'Tell us about you' });
+
+    expect(box(root, 'title')?.value).toBe('Signup');
+    expect(box(root, 'title')?.placeholder).toBe('tools.database.formTitlePlaceholder');
+    expect(box(root, 'description')?.value).toBe('Tell us about you');
+    expect(box(root, 'description')?.placeholder).toBe('tools.database.formDescriptionPlaceholder');
+    expect(root.firstElementChild?.hasAttribute('data-blok-database-form-header')).toBe(true);
+    expect(root.firstElementChild?.nextElementSibling?.hasAttribute('data-blok-database-form-access')).toBe(true);
+  });
+
+  it('a change saves the title or description in the form settings; an empty one removes it', () => {
+    const { root, update } = builder({ title: 'Signup' });
+
+    type(box(root, 'title'), ' Event signup ');
+    expect(update).toHaveBeenLastCalledWith({ title: 'Event signup' });
+    type(box(root, 'description'), 'Bring a friend');
+    expect(update).toHaveBeenLastCalledWith({ description: 'Bring a friend' });
+    type(box(root, 'title'), '  ');
+    expect(update).toHaveBeenLastCalledWith({ title: undefined });
+  });
+
+  it('a respondent reads the title as a heading and the description under it; none when unset', () => {
+    const { root } = mount({ view: view({ form: { title: 'Signup', description: 'Tell us' } }) });
+
+    expect(root.querySelector('h1[data-blok-database-form-header-title]')?.textContent).toBe('Signup');
+    expect(root.querySelector('p[data-blok-database-form-header-description]')?.textContent).toBe('Tell us');
+    document.body.innerHTML = '';
+    expect(mount().root.querySelector('[data-blok-database-form-header]')).toBeNull();
   });
 });

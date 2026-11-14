@@ -105,7 +105,7 @@ describe('database schema: Tier 3 (D6) data slots', () => {
           id: 'form',
           type: 'form',
           properties: [{ id: 'where', visible: true, required: true, description: 'Your office' }],
-          form: { closed: false, anonymous: true, submitLabel: 'Send', confirmation: 'Thanks' },
+          form: { closed: false, anonymous: true, title: 'Signup', description: 'Tell us', submitLabel: 'Send', confirmation: 'Thanks' },
         }),
         view({ id: 'map', type: 'map', mapBy: 'where' }),
         view({

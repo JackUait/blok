@@ -386,6 +386,8 @@
   /* Form builder question card (research/21 §1k). */
   --blok-database-form-question-bg: #ffffff;
   --blok-database-form-question-ring: rgb(182, 212, 243);
+  /* Select type's icon frame (notion-motion.md Round 31 §1). Dark is unmeasured: the dark answer ring. */
+  --blok-database-form-type-frame: rgba(84, 72, 49, 0.15);
   /* "New" split button: research/08's blue rgb(39,131,222) is 3.7:1 against its
      text, below AA for 14px words; a darker step of it is used in both themes.
      Dark hover goes lighter like Notion's (research/21 §1b), clamped to stay AA. */
@@ -755,6 +757,7 @@
     --blok-database-feed-actions-border: rgb(44, 44, 43);
     --blok-database-form-question-bg: rgb(25, 25, 25);
     --blok-database-form-question-ring: rgb(53, 95, 139);
+    --blok-database-form-type-frame: var(--blok-database-form-answer-border);
     --blok-database-new-bg: rgb(30, 110, 195);
     --blok-database-new-hover-bg: rgb(36, 115, 201);
     /* Notion's lighter pressed blue fails AA; no lighter step passes, so pressed equals hover. */
@@ -1112,6 +1115,7 @@
   --blok-database-feed-actions-border: rgb(44, 44, 43);
   --blok-database-form-question-bg: rgb(25, 25, 25);
   --blok-database-form-question-ring: rgb(53, 95, 139);
+  --blok-database-form-type-frame: var(--blok-database-form-answer-border);
   --blok-database-new-bg: rgb(30, 110, 195);
   --blok-database-new-hover-bg: rgb(36, 115, 201);
   /* Notion's lighter pressed blue fails AA; no lighter step passes, so pressed equals hover. */
@@ -18184,7 +18188,12 @@ button[data-blok-database-feed-reaction]:hover,
   display: flex;
   flex-direction: column;
   gap: var(--blok-space-4);
-  max-inline-size: 560px;
+  max-inline-size: 600px;
+}
+
+/* Builder cards sit 24 apart (notion-motion.md Round 31 §1). */
+[data-blok-database-form] form:has([data-blok-database-form-question-header]) {
+  gap: var(--blok-space-6);
 }
 
 [data-blok-database-form-question] {
@@ -18193,9 +18202,26 @@ button[data-blok-database-feed-reaction]:hover,
   gap: var(--blok-space-1);
 }
 
+/* notion-motion.md Round 31 §1: the preview's question is an H2 24px 700. */
 [data-blok-database-form-label] {
-  font-weight: 500;
+  font-size: 24px;
+  font-weight: 700;
   color: var(--blok-database-ink);
+}
+
+/* Round 31 §1: the builder edits the name in the card, 24px 700 / 30. */
+[data-blok-database-form-question-name] {
+  flex: 1;
+  min-inline-size: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--blok-database-ink);
+  font: inherit;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 30px;
+  outline: none;
 }
 
 /* Builder only: the respondent's form has no card (research/19 82-form-preview). research/21 §1k. */
@@ -18203,7 +18229,114 @@ button[data-blok-database-feed-reaction]:hover,
   padding: var(--blok-space-3);
   border-radius: var(--blok-radius-dialog);
   background-color: var(--blok-database-form-question-bg);
-  box-shadow: var(--blok-database-form-question-ring) 0 0 0 0.5px inset;
+  box-shadow: var(--blok-database-form-question-ring) 0 0 0 0, var(--blok-database-form-question-ring) 0 0 0 0.5px inset;
+  transition: box-shadow 0.3s;
+  position: relative;
+}
+
+/* Round 31 §1: the ring grows to 1.25 out and in. Gray, not Notion's blue. The "+" above is not the card. */
+[data-blok-database-form-question]:has(> [data-blok-database-form-question-header]):hover:not(:has([data-blok-database-form-gap]:hover)) {
+  box-shadow: var(--blok-border-strong) 0 0 0 1.25px, var(--blok-border-strong) 0 0 0 1.25px inset;
+}
+
+/* notion-motion.md Round 31 §1: the form's title and description, in the 600 column. */
+[data-blok-database-form-header] {
+  display: flex;
+  flex-direction: column;
+  max-inline-size: 600px;
+  margin-block-end: var(--blok-space-3);
+}
+
+[data-blok-database-form-header] :is(h1, p, input) {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--blok-database-ink);
+  font: inherit;
+  outline: none;
+}
+
+[data-blok-database-form-header] input::placeholder {
+  color: var(--blok-database-title-placeholder);
+}
+
+[data-blok-database-form-header] [data-blok-database-form-header-title] {
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 48px;
+}
+
+[data-blok-database-form-header] [data-blok-database-form-header-description] {
+  font-size: 16px;
+  line-height: 24px;
+}
+
+/* Round 31 §1: the 24px gap above a card; its "+" is a 32px teardrop centred on it, 8 left of the card.
+   Notion tints it blue: neutral here (CLAUDE.md "No blue selected states"). */
+[data-blok-database-form-gap] {
+  position: absolute;
+  inset-block-start: -24px;
+  inset-inline: -40px 0;
+  block-size: 24px;
+}
+
+[data-blok-database-form-insert] {
+  position: absolute;
+  inset-block-start: -4px;
+  inset-inline-start: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 32px;
+  block-size: 32px;
+  padding: 0;
+  border: none;
+  /* Notion's 100% 100% 6px on a 32 box: the browser halves every corner, so 16 16 3 16. */
+  border-radius: 50% 50% var(--blok-radius-checkbox) 50%;
+  rotate: 45deg;
+  background: var(--blok-database-hover-bg);
+  color: var(--blok-block-control);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+[data-blok-database-form-insert]:hover {
+  background: var(--blok-database-pressed-bg);
+}
+
+[data-blok-database-form-gap]:hover > [data-blok-database-form-insert],
+[data-blok-database-form-insert]:focus-visible {
+  opacity: 1;
+}
+
+/* The box turns 45° for its point; the plus turns back. */
+[data-blok-database-form-insert] svg {
+  inline-size: 20px;
+  block-size: 20px;
+  rotate: -45deg;
+}
+
+[data-blok-database-form-slot] {
+  block-size: 36px;
+  border-radius: var(--blok-radius-dialog);
+  background: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-form-type-row] {
+  min-height: 44px;
+}
+
+[data-blok-database-form-type-row] > [data-blok-database-panel-icon] {
+  inline-size: 32px;
+  block-size: 32px;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--blok-database-form-type-frame);
+  border-radius: var(--blok-radius-control-sm);
+  background-color: var(--blok-database-form-question-bg);
 }
 
 [data-blok-database-form-question-header] {
@@ -18269,7 +18402,7 @@ button[data-blok-database-feed-reaction]:hover,
   font-size: 0.875em;
 }
 
-[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"]), textarea, select, [data-blok-database-form-provider-answer]) {
+[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name]), textarea, select, [data-blok-database-form-provider-answer]) {
   padding-block: var(--blok-space-1);
   padding-inline: var(--blok-space-2);
   border: 1px solid var(--blok-database-form-answer-border);

@@ -86,10 +86,15 @@ export const DEFAULT_VIEW_NAMES: Readonly<Partial<Record<ViewType, string>>> = {
   timeline: DATABASE_DEFAULT_TEXT.viewTypeTimeline,
   chart: DATABASE_DEFAULT_TEXT.viewTypeChart,
   feed: DATABASE_DEFAULT_TEXT.viewTypeFeed,
-  form: DATABASE_DEFAULT_TEXT.viewTypeForm,
+  // notion-motion.md Round 31 §1.
+  form: DATABASE_DEFAULT_TEXT.viewFormBuilder,
   map: DATABASE_DEFAULT_TEXT.viewTypeMap,
   dashboard: DATABASE_DEFAULT_TEXT.viewTypeDashboard,
 };
+
+/** Form views made before "Form builder" were named "Form". */
+const isDefaultName = (view: DatabaseViewConfig): boolean =>
+  view.name === DEFAULT_VIEW_NAMES[view.type] || (view.type === 'form' && view.name === DATABASE_DEFAULT_TEXT.viewTypeForm);
 
 export interface LayoutChange {
   changes: ViewChanges;
@@ -113,7 +118,7 @@ export const layoutChange = (view: DatabaseViewConfig, type: ViewType, schema: P
   if (type === 'board' && view.groupBy === undefined && groupBy === undefined) return undefined;
 
   // notion-motion.md Round 30 §1: "Table" became "Calendar". A custom name is kept (Notion unread).
-  const renamed = view.name === DEFAULT_VIEW_NAMES[view.type] ? DEFAULT_VIEW_NAMES[type] : undefined;
+  const renamed = isDefaultName(view) ? DEFAULT_VIEW_NAMES[type] : undefined;
 
   return {
     changes: {

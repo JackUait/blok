@@ -70,20 +70,27 @@ const mount = async (
   await vi.waitFor(() => expect(q('[data-blok-database-form]')).not.toBeNull());
 };
 
-const openAnswer = (id: string): void => {
-  const question = q(`[data-blok-database-form-question="${id}"]`);
+// The builder has no Submit: answers go through Preview, whose fields reuse the builder's ids.
+const PREVIEW = '[data-blok-database-form-preview]';
+const openPreview = (): void => {
+  requireElement('[data-blok-testid="database-toolbar-preview-form"]').click();
+  requireElement(PREVIEW);
+};
+
+const openAnswer = (id: string, scope = PREVIEW): void => {
+  const question = q(`${scope} [data-blok-database-form-question="${id}"]`);
 
   expect(question).not.toBeNull();
-  requireElement(`[id="blok-form-form-${id}"]`).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  requireElement(`${scope} [id="blok-form-form-${id}"]`).dispatchEvent(new MouseEvent('click', { bubbles: true }));
 };
 
 const finishAnswer = (): void => {
   window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 };
 
-const submit = (): void => {
-  requireElement<HTMLInputElement>('[id="blok-form-form-title"]').value = 'Response';
-  requireElement<HTMLButtonElement>('[data-blok-database-form-submit]').click();
+const submit = (scope = PREVIEW): void => {
+  requireElement<HTMLInputElement>(`${scope} [id="blok-form-form-title"]`).value = 'Response';
+  requireElement<HTMLButtonElement>(`${scope} [data-blok-database-form-submit]`).click();
 };
 
 describe('provider-backed form questions', () => {
@@ -108,6 +115,7 @@ describe('provider-backed form questions', () => {
       { id: 'assignee', name: 'Assignee', type: 'person', position: 'a1' },
       { people: { list: async () => [{ id: 'ada', name: 'Ada' }] }, forms: { onSubmit } },
     );
+    openPreview();
     openAnswer('assignee');
     await vi.waitFor(() => expect(q('[data-blok-database-person-option="ada"]')).not.toBeNull());
     requireElement('[data-blok-database-person-option="ada"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -135,6 +143,7 @@ describe('provider-backed form questions', () => {
       id: 'related', name: 'Related', type: 'relation', position: 'a1',
       relation: { targetDatabaseId: 'db' },
     });
+    openPreview();
     openAnswer('related');
     requireElement('[data-blok-database-relation-option="target"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
     finishAnswer();
@@ -169,7 +178,7 @@ describe('provider-backed form questions', () => {
     await editor.blocks.update('db', {
       ...initial, source: { databaseId: 'source-db', documentId: 'source-document' },
     });
-    openAnswer('assignee');
+    openAnswer('assignee', '');
     await vi.waitFor(() => expect(q('[data-blok-database-person-option="ada"]')).not.toBeNull());
     requireElement('[data-blok-database-person-option="ada"]').click();
     const selected = (await save()).blocks.find((block) => block.id === 'db')?.data as DatabaseData | undefined;
@@ -179,7 +188,7 @@ describe('provider-backed form questions', () => {
 
     expect(q('[data-blok-database-person-editor]')).toBeNull();
     finishAnswer();
-    submit();
+    submit('');
     const saved = await save();
 
     expect(onSubmit).toHaveBeenCalledWith({ databaseId: 'db', viewId: 'form', values: { title: 'Response' }, sharing: { public: false, anonymous: false, submissionAccess: 'none' } });
@@ -188,11 +197,11 @@ describe('provider-backed form questions', () => {
     expect(saved.blocks.find((block) => block.id === 'db')?.data.source).toEqual(source);
   });
 
+  // The preview snapshots the schema on open, so this redraw belongs to the builder alone.
   it.each([
     { targetDatabaseId: 'other' },
     { targetDatabaseId: 'db', targetDocumentId: 'other-document' },
-  ])('does not save a prior answer after the same relation changes target to %j', async (relation) => {
-    const onSubmit = vi.fn();
+  ])('drops the builder\'s prior answer after the same relation changes target to %j', async (relation) => {
     const otherBlocks: OutputBlockData[] = [{
       id: 'other', type: 'database', content: ['other-target'],
       data: {
@@ -211,8 +220,8 @@ describe('provider-backed form questions', () => {
     await mount({
       id: 'related', name: 'Related', type: 'relation', position: 'a1',
       relation: { targetDatabaseId: 'db' },
-    }, { forms: { onSubmit } }, undefined, otherBlocks);
-    openAnswer('related');
+    }, {}, undefined, otherBlocks);
+    openAnswer('related', '');
     requireElement('[data-blok-database-relation-option="target"]').click();
     const selected = (await save()).blocks.find((block) => block.id === 'db')?.data as DatabaseData | undefined;
 
@@ -222,21 +231,15 @@ describe('provider-backed form questions', () => {
       schema: selected.schema.map((property) => property.id === 'related' ? { ...property, relation } : property),
     });
     finishAnswer();
-    submit();
-    const saved = await save();
-    const response = saved.blocks.find((block) => block.type === 'database-row' && block.id !== 'target' && block.id !== 'other-target');
+    openAnswer('related', '');
 
-    expect(response?.data.properties).toEqual({ title: 'Response', related: [] });
-    if (response === undefined || response.id === undefined || response.id === '') throw new Error('Missing response id');
-    expect(onSubmit).toHaveBeenCalledWith({
-      databaseId: 'db', viewId: 'form', rowId: response.id, values: { title: 'Response' },
-      sharing: { public: false, anonymous: false, submissionAccess: 'none' },
-    });
-    expect(response.parent).toBe('db');
-    expect(saved.blocks.find((block) => block.id === 'db')?.content).toEqual(['target', response.id]);
+    expect(q('[data-blok-database-relation-editor]')).not.toBeNull();
+    expect(document.querySelectorAll('[data-blok-database-relation-option][aria-selected="true"], [data-blok-database-relation-chip]')).toHaveLength(0);
+    expect(q('[data-blok-database-form-submit]')).toBeNull();
+    const saved = await save();
+
+    expect(saved.blocks.find((block) => block.id === 'db')?.content).toEqual(['target']);
     expect(saved.blocks.find((block) => block.id === 'other')?.content).toEqual(['other-target']);
-    expect(saved.blocks.find((block) => block.id === 'target')?.data.properties).toMatchObject({ title: 'Existing target' });
-    expect(saved.blocks.find((block) => block.id === 'other-target')?.data.properties).toMatchObject({ title: 'Other target' });
   });
 
   it('uses the existing uploader for a file answer and saves a FileValue list', async () => {
@@ -249,6 +252,7 @@ describe('provider-backed form questions', () => {
       {},
       { uploadByFile },
     );
+    openPreview();
     openAnswer('attachment');
     const input = requireElement<HTMLInputElement>('[data-blok-database-files-input]');
     const file = new File(['brief'], 'brief.pdf', { type: 'application/pdf' });

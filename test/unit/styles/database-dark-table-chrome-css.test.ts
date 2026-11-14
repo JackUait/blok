@@ -227,7 +227,7 @@ describe('"+ Filter" in dark (research/21 §1c)', () => {
 
 describe('form answer field in dark (research/21 §1k)', () => {
   it('rings the field with the measured value in both themes', () => {
-    expect(ruleBody('[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"]), textarea, select, [data-blok-database-form-provider-answer])'))
+    expect(ruleBody('[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name]), textarea, select, [data-blok-database-form-provider-answer])'))
       .toContain('border: 1px solid var(--blok-database-form-answer-border)');
     expect(tokenValues('--blok-database-form-answer-border')).toEqual(['rgb(240, 239, 237)', 'rgb(44, 44, 43)', 'rgb(44, 44, 43)']);
   });

@@ -58,4 +58,11 @@ describe('layoutChange', () => {
     expect(layoutChange(table(), 'calendar', schema)?.changes.name).toBe('Calendar');
     expect(layoutChange({ ...table(), name: 'Roadmap' }, 'calendar', schema)?.changes).not.toHaveProperty('name');
   });
+
+  // Round 31 §1: a new form view is named "Form builder". Older form views were named "Form".
+  it('a form takes and gives up "Form builder", and an older "Form" still counts as a default name', () => {
+    expect(layoutChange(table(), 'form', schema)?.changes.name).toBe('Form builder');
+    expect(layoutChange({ ...table(), type: 'form', name: 'Form builder' }, 'table', schema)?.changes.name).toBe('Table');
+    expect(layoutChange({ ...table(), type: 'form', name: 'Form' }, 'table', schema)?.changes.name).toBe('Table');
+  });
 });

@@ -68,11 +68,15 @@ describe('public form email validity', () => {
 
   it('does not create or deliver a response with a malformed nonempty email answer', async () => {
     const onSubmit = vi.fn();
-    const email = await mount({ forms: { onSubmit } });
-    const title = document.querySelector<HTMLInputElement>('[id="blok-form-form-title"]');
-    const submit = document.querySelector<HTMLButtonElement>('[data-blok-database-form-submit]');
 
-    if (title === null || submit === null || editor === undefined) throw new Error('Missing public form');
+    await mount({ forms: { onSubmit } });
+    // The builder has no Submit: answer in the Preview, whose fields reuse the builder's ids.
+    document.querySelector<HTMLButtonElement>('[data-blok-testid="database-toolbar-preview-form"]')?.click();
+    const email = document.querySelector<HTMLInputElement>('[data-blok-database-form-preview] [id="blok-form-form-email"]');
+    const title = document.querySelector<HTMLInputElement>('[data-blok-database-form-preview] [id="blok-form-form-title"]');
+    const submit = document.querySelector<HTMLButtonElement>('[data-blok-database-form-preview] [data-blok-database-form-submit]');
+
+    if (email === null || title === null || submit === null || editor === undefined) throw new Error('Missing form preview');
 
     title.value = 'Response';
     email.value = 'not-an-email';

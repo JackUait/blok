@@ -5061,6 +5061,14 @@
                     ],
                     "description": "What a respondent may do with the page their answer becomes. Default none."
                   },
+                  "title": {
+                    "type": "string",
+                    "description": "The heading above the questions."
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "The line under the title."
+                  },
                   "submitLabel": {
                     "type": "string"
                   },

@@ -5489,7 +5489,7 @@ export class DatabaseTool implements BlockTool {
           : {
             setRequired: (propertyId: string, required: boolean) => setQuestionSetting(propertyId, { required }),
             setQuestionSetting,
-            addQuestion: (type: PropertyType) => editQuestion(() => this.addProperty({ name: '', type }), null),
+            addQuestion: (type: PropertyType, beforeId?: string) => editQuestion(() => this.addProperty({ name: '', type, ...(beforeId === undefined ? {} : { beforeId }) }), null),
             showQuestion: (propertyId: string) => editQuestion(() => {
               const current = this.viewOf(viewId);
 
@@ -5503,6 +5503,12 @@ export class DatabaseTool implements BlockTool {
             changePropertyType: (propertyId: string, type: PropertyType) => editQuestion(() => this.changePropertyType(propertyId, type), undefined),
             duplicateProperty: (propertyId: string) => editQuestion(() => this.duplicateProperty(propertyId), null),
             deleteProperty: (propertyId: string) => editQuestion(() => this.deleteProperty(propertyId), undefined),
+            openLinkedProperty: (propertyId: string, anchor: HTMLElement) => this.openPropertyMenu(propertyId, anchor),
+            moveQuestion: (propertyId: string, beforeId: string | null) => editQuestion(() => {
+              const current = this.viewOf(viewId);
+
+              if (current !== undefined) this.updateActiveView({ properties: withPropertyOrder(current, this.model.getSchema(), propertyId, beforeId) });
+            }, undefined),
           }),
       });
     } else if (viewConfig.type === 'map') {
@@ -5662,7 +5668,14 @@ export class DatabaseTool implements BlockTool {
    */
   private openFormPreview(viewId: string): void {
     const view = this.viewOf(viewId);
+    const sourceId = view === undefined ? undefined : this.otherSourceId(view);
 
+    // A view of a second source asks that source's questions and makes its rows.
+    if (sourceId !== undefined) {
+      this.dashboardOwner(sourceId)?.openFormPreview(viewId);
+
+      return;
+    }
     if (this.destroyed || this.readOnly || view?.type !== 'form' || this.formPreview !== null) return;
     const backdrop = document.createElement('div');
     const surface = document.createElement('div');
@@ -5682,6 +5695,8 @@ export class DatabaseTool implements BlockTool {
       responseActions: () => this.formResponseActions(state.submission, () => handle.close()),
       onSubmit: (values) => {
         state.submission = this.submitForm(viewId, values, false);
+
+        return state.submission !== undefined;
       },
     });
 

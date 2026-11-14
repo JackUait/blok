@@ -248,9 +248,15 @@ describe('New data source: every layout on a second source', () => {
     expect(layoutRoot('[data-blok-database-timeline]').getAttribute('data-zoom')).toBe('year');
   });
 
-  it('a form answer becomes a source row', async () => {
+  it('a form answer in the Preview becomes a source row', async () => {
     const api = await make(doc('vb', {}, { type: 'form' }));
-    const root = layoutRoot('[data-blok-database-form]');
+
+    layoutRoot('[data-blok-database-form]');
+    // The builder has no Submit: the Preview dialog answers, on body.
+    await click(own('[data-blok-testid="database-toolbar-preview-form"]'));
+    const root = document.querySelector<HTMLElement>('[data-blok-database-form-preview]');
+
+    if (root === null) throw new Error('no Preview');
     const size = root.querySelector<HTMLInputElement>('[data-blok-database-form-question="size"] input');
 
     if (size === null) throw new Error('no Size field');

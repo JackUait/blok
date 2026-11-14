@@ -137,9 +137,90 @@ describe('form builder question card (research/21 §1k)', () => {
     const body = ruleBody(card);
 
     expect(body).toContain('background-color: var(--blok-database-form-question-bg)');
-    expect(body).toContain('box-shadow: var(--blok-database-form-question-ring) 0 0 0 0.5px inset');
+    expect(body).toContain('box-shadow: var(--blok-database-form-question-ring) 0 0 0 0, var(--blok-database-form-question-ring) 0 0 0 0.5px inset');
     expect(body).toContain('border-radius: var(--blok-radius-dialog)');
     expect(body).toContain('padding: var(--blok-space-3)');
+  });
+
+  // notion-motion.md Round 31 §1: hover grows the ring to 1.25 out + 1.25 in over 0.3s.
+  it('on hover grows the ring to 1.25px outside and inside in 0.3s, in gray', () => {
+    const hover = ruleBody(`${card}:hover:not(:has([data-blok-database-form-gap]:hover))`);
+
+    expect(ruleBody(card)).toContain('transition: box-shadow 0.3s');
+    expect(hover).toContain('box-shadow: var(--blok-border-strong) 0 0 0 1.25px, var(--blok-border-strong) 0 0 0 1.25px inset');
+    expect(hover).not.toMatch(/35, 131, 226|39, 131, 222|182, 212, 243/);
+  });
+
+  // Round 31 §1: the builder's name is a 24px 700 / 30 textbox; the preview's an H2 24px 700.
+  it('draws the question name 24px bold, as a bare textbox in the builder', () => {
+    const name = ruleBody('[data-blok-database-form-question-name]');
+    const label = ruleBody('[data-blok-database-form-label]');
+
+    expect(name).toContain('font-size: 24px');
+    expect(name).toContain('font-weight: 700');
+    expect(name).toContain('line-height: 30px');
+    expect(name).toContain('border: none');
+    expect(name).toContain('background: transparent');
+    expect(label).toContain('font-size: 24px');
+    expect(label).toContain('font-weight: 700');
+  });
+
+  // Round 31 §1: the "+" is a 32px teardrop centred on the gap, 8 left of the card; neutral, not blue.
+  it('draws the gap "+" as a 32px teardrop left of the card that fades in over 0.2s', () => {
+    const gap = ruleBody('[data-blok-database-form-gap]');
+    const add = ruleBody('[data-blok-database-form-insert]');
+
+    expect(gap).toContain('position: absolute');
+    expect(gap).toContain('block-size: 24px');
+    expect(gap).toContain('inset-block-start: -24px');
+    expect(add).toContain('inline-size: 32px');
+    expect(add).toContain('block-size: 32px');
+    expect(add).toContain('border-radius: 50% 50% var(--blok-radius-checkbox) 50%');
+    expect(add).toContain('rotate: 45deg');
+    expect(add).toContain('opacity: 0');
+    expect(add).toContain('transition: opacity 0.2s');
+    expect(ruleBody('[data-blok-database-form-gap]:hover > [data-blok-database-form-insert]')).toContain('opacity: 1');
+    expect(ruleBody('[data-blok-database-form-insert]:focus-visible')).toContain('opacity: 1');
+    expect(`${gap}${add}`).not.toMatch(/35, 131, 226/);
+  });
+
+  it('draws the insert slot 36 tall and 12 round, and Select type rows 44 tall with a framed 32px icon', () => {
+    const slot = ruleBody('[data-blok-database-form-slot]');
+    const icon = ruleBody('[data-blok-database-form-type-row] > [data-blok-database-panel-icon]');
+
+    expect(slot).toContain('block-size: 36px');
+    expect(slot).toContain('border-radius: var(--blok-radius-dialog)');
+    expect(slot).not.toMatch(/35, 131, 226/);
+    expect(ruleBody('[data-blok-database-form-type-row]')).toContain('min-height: 44px');
+    expect(icon).toContain('inline-size: 32px');
+    expect(icon).toContain('block-size: 32px');
+    expect(icon).toContain('border-radius: var(--blok-radius-control-sm)');
+    expect(icon).toContain('border: 1px solid var(--blok-database-form-type-frame)');
+    expect(tokenValues('--blok-database-form-type-frame')[0]).toBe('rgba(84, 72, 49, 0.15)');
+  });
+
+  it('a card does not light up while the pointer is on the "+" above it', () => {
+    expect(database).toContain(`${card}:hover:not(:has([data-blok-database-form-gap]:hover))`);
+  });
+
+  // Round 31 §1: "Form title" H1 40px 700 / 48 and "Description (optional)" 16px / 24, 600 wide.
+  it('draws the form title 40px bold and the description 16px, as bare boxes', () => {
+    const title = ruleBody('[data-blok-database-form-header] [data-blok-database-form-header-title]');
+    const description = ruleBody('[data-blok-database-form-header] [data-blok-database-form-header-description]');
+
+    expect(title).toContain('font-size: 40px');
+    expect(title).toContain('font-weight: 700');
+    expect(title).toContain('line-height: 48px');
+    expect(description).toContain('font-size: 16px');
+    expect(description).toContain('line-height: 24px');
+    expect(ruleBody('[data-blok-database-form-header]')).toContain('max-inline-size: 600px');
+    expect(ruleBody('[data-blok-database-form-header] :is(h1, p, input)')).toContain('border: none');
+  });
+
+  // Round 31 §1: the column is 600 wide and builder cards sit 24 apart.
+  it('lays the form out 600 wide, with builder cards 24 apart', () => {
+    expect(ruleBody('[data-blok-database-form] form')).toContain('max-inline-size: 600px');
+    expect(ruleBody('[data-blok-database-form] form:has([data-blok-database-form-question-header])')).toContain('gap: var(--blok-space-6)');
   });
 
   it('draws the Edit question chip 24px square with a 16px icon and a neutral hover', () => {

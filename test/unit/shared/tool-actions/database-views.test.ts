@@ -77,6 +77,14 @@ describe('database view actions', () => {
     expect(validateAgainst(DATABASE_DATA, data())).toEqual([]);
   });
 
+  // notion-motion.md Round 31 §1: a new form view's tab reads "Form builder".
+  it('names a new form view "Form builder", as the editor does', () => {
+    const { doc, id, data } = make();
+    const { viewId } = run(doc, id, 'addView', { type: 'form' }) as { viewId: string };
+
+    expect(data().views.find(view => view.id === viewId)?.name).toBe('Form builder');
+  });
+
   it('a new board groups by the first select property, as the editor does, or by the one given', () => {
     const { doc, id, data } = make();
     const status = data().schema[1].id;

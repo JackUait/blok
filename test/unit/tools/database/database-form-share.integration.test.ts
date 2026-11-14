@@ -87,6 +87,14 @@ const share = (): HTMLElement => {
   return need(byTestId('database-form-share'));
 };
 
+// The builder has no Submit: an editor answers through Preview, a dialog whose fields reuse the builder's ids.
+const PREVIEW = '[data-blok-database-form-preview]';
+const preview = (): HTMLElement => {
+  need(byTestId('database-toolbar-preview-form')).click();
+
+  return need(byTestId('database-form-preview'));
+};
+
 describe('form Share panel (research/19 §3d)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -192,8 +200,9 @@ describe('form Share panel (research/19 §3d)', () => {
 
     expect(await savedForm()).toEqual({ anonymous: true, submissionAccess: 'comment' });
     await vi.waitFor(() => expect(q(byTestId('database-form-share'))).toBeNull());
-    need<HTMLInputElement>('[id="blok-form-form-title"]').value = 'Ada';
-    need('[data-blok-database-form-submit]').click();
+    preview();
+    need<HTMLInputElement>(`${PREVIEW} [id="blok-form-form-title"]`).value = 'Ada';
+    need(`${PREVIEW} [data-blok-database-form-submit]`).click();
 
     expect(forms.onSubmit).toHaveBeenCalledWith(expect.objectContaining({
       sharing: { public: false, anonymous: true, submissionAccess: 'comment' },
@@ -236,14 +245,17 @@ describe('form Share panel (research/19 §3d)', () => {
 
   // research/23 §6: the thank-you screen offers "View my response" and "Email me a copy".
   describe('thank-you screen', () => {
-    const submitAs = (name: string): void => {
-      need<HTMLInputElement>('[id="blok-form-form-title"]').value = name;
-      need('[data-blok-database-form-submit]').click();
+    // A respondent (read-only) answers inline; an editor answers in the Preview.
+    const submitAs = (name: string, readOnly = false): void => {
+      const scope = readOnly ? '' : (preview(), `${PREVIEW} `);
+
+      need<HTMLInputElement>(`${scope}[id="blok-form-form-title"]`).value = name;
+      need(`${scope}[data-blok-database-form-submit]`).click();
     };
     const viewResponse = (): HTMLButtonElement | null => q<HTMLButtonElement>(byTestId('database-form-view-response'));
     const emailCopy = (): HTMLButtonElement | null => q<HTMLButtonElement>(byTestId('database-form-email-copy'));
 
-    it('"View my response" opens the row the answer became', async () => {
+    it('"View my response" opens the row the answer became as a full page', async () => {
       await mount(blocks(), host());
       submitAs('Ada');
 
@@ -257,7 +269,7 @@ describe('form Share panel (research/19 §3d)', () => {
 
     it('offers no "View my response" in read-only, where Blok stores no row', async () => {
       await mount(blocks(), host(), true);
-      submitAs('Ada');
+      submitAs('Ada', true);
 
       expect(q('[data-blok-database-form-done]')).not.toBeNull();
       expect(viewResponse()).toBeNull();
@@ -267,7 +279,7 @@ describe('form Share panel (research/19 §3d)', () => {
       const emailCopyHook = vi.fn();
 
       await mount(blocks({ anonymous: true }), host({ emailCopy: emailCopyHook }), true);
-      submitAs('Ada');
+      submitAs('Ada', true);
 
       expect(emailCopy()?.textContent).toBe('Email me a copy');
       emailCopy()?.click();
@@ -290,7 +302,7 @@ describe('form Share panel (research/19 §3d)', () => {
     it('drops both after "Submit another response"', async () => {
       await mount(blocks(), host({ emailCopy: vi.fn() }));
       submitAs('Ada');
-      need('[data-blok-database-form-again]').click();
+      need(`${PREVIEW} [data-blok-database-form-again]`).click();
 
       expect(viewResponse()).toBeNull();
       expect(emailCopy()).toBeNull();
@@ -313,8 +325,9 @@ describe('form Share panel (research/19 §3d)', () => {
     const people = { list: async () => [{ id: 'u-ada', name: 'Ada' }], me: () => 'u-ada' };
     const submitAndSave = async (form?: FormSettings): Promise<OutputBlockData | undefined> => {
       await mount(withAuthorColumns(form), host(), false, { user: { id: 'u-ada' }, config: { people } });
-      need<HTMLInputElement>('[id="blok-form-form-title"]').value = 'Resp';
-      need('[data-blok-database-form-submit]').click();
+      preview();
+      need<HTMLInputElement>(`${PREVIEW} [id="blok-form-form-title"]`).value = 'Resp';
+      need(`${PREVIEW} [data-blok-database-form-submit]`).click();
       const saved = await editor?.save();
 
       return saved?.blocks.find((block) => block.type === 'database-row');
@@ -437,11 +450,6 @@ describe('form Share panel (research/19 §3d)', () => {
   // research/36 §13: "Preview" shows the form as a respondent sees it, and its answer is a real row.
   describe('Preview', () => {
     const people = { list: async () => [{ id: 'u-ada', name: 'Ada' }], me: () => 'u-ada' };
-    const preview = (): HTMLElement => {
-      need(byTestId('database-toolbar-preview-form')).click();
-
-      return need(byTestId('database-form-preview'));
-    };
 
     it('sits in a form view\'s toolbar beside "Share form", and not in read-only', async () => {
       await mount(blocks(), host());

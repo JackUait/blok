@@ -70,6 +70,8 @@ export const makeDoc = (rows: FakeRow[]): Doc => {
       transact: vi.fn((fn: () => void) => fn()),
     },
     notifier: { show: vi.fn() },
+    // The form Preview reads config.user for its respondent chip.
+    config: {},
     viewState: { get: vi.fn(), set: vi.fn() },
     tools: { getBlockTools: vi.fn(() => []), getToolsConfig: vi.fn(() => ({ tools: undefined })) },
   } as unknown as API;

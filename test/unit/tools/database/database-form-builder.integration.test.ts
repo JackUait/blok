@@ -89,9 +89,39 @@ const edit = (id: string, value: string): void => {
   input.dispatchEvent(new Event('input', { bubbles: true }));
 };
 
+// The builder has no Submit: answers go through Preview, whose fields reuse the builder's ids.
+const PREVIEW = '[data-blok-database-form-preview]';
+const openPreview = (): void => {
+  requireElement(byTestId('database-toolbar-preview-form')).click();
+  requireElement(PREVIEW);
+};
+
 const submit = (): void => {
-  requireElement<HTMLInputElement>('[id="blok-form-form-title"]').value = 'Response';
-  requireElement<HTMLButtonElement>('[data-blok-database-form-submit]').click();
+  requireElement<HTMLInputElement>(`${PREVIEW} [id="blok-form-form-title"]`).value = 'Response';
+  requireElement<HTMLButtonElement>(`${PREVIEW} [data-blok-database-form-submit]`).click();
+};
+
+// notion-motion.md Round 31 §1: a question's name is edited in its card; it saves on change.
+const nameBox = (id: string): HTMLInputElement => requireElement<HTMLInputElement>(`${question(id)} ${byTestId('database-form-question-name')}`);
+const typeName = (id: string, value: string): void => {
+  const box = nameBox(id);
+
+  box.value = value;
+  box.dispatchEvent(new Event('input', { bubbles: true }));
+};
+const commitName = (id: string): void => {
+  nameBox(id).dispatchEvent(new Event('change', { bubbles: true }));
+};
+const rename = (id: string, value: string): void => {
+  typeName(id, value);
+  commitName(id);
+};
+/** Closing the options panel redraws the cards; wait for the new name box. */
+const closeOptions = async (id: string): Promise<void> => {
+  const before = nameBox(id);
+
+  dismiss();
+  await vi.waitFor(() => expect(nameBox(id)).not.toBe(before));
 };
 
 const setSwitch = (id: string, checked: boolean): void => {
@@ -128,9 +158,7 @@ describe('local form question builder', () => {
 
   it('syncs a question rename by default, but a detached question label survives property renames and reloads', async () => {
     await mount(blocksFor([notes]));
-    openQuestionMenu('notes');
-    edit('database-form-question-name', 'Project details');
-    dismiss();
+    rename('notes', 'Project details');
     const synced = await save();
 
     expect(synced.blocks.find((block) => block.id === 'db')?.data.schema).toEqual(expect.arrayContaining([
@@ -139,8 +167,8 @@ describe('local form question builder', () => {
     await mount(synced.blocks);
     openQuestionMenu('notes');
     setSwitch('database-form-question-sync-name', false);
-    edit('database-form-question-name', 'What should we know?');
-    dismiss();
+    await closeOptions('notes');
+    rename('notes', 'What should we know?');
     const detached = await save();
 
     expect(detached.blocks.find((block) => block.id === 'db')?.data.schema).toEqual(expect.arrayContaining([
@@ -149,7 +177,8 @@ describe('local form question builder', () => {
     await mount(detached.blocks);
     if (database === undefined) throw new Error('Missing database');
     database.renameProperty('notes', 'Internal notes');
-    await vi.waitFor(() => expect(q(`${question('notes')} [data-blok-database-form-label]`)?.textContent).toBe('What should we know?'));
+    await vi.waitFor(() => expect(q(`${question('notes')} [data-blok-database-form-question-name]`)).not.toBeNull());
+    expect(nameBox('notes').value).toBe('What should we know?');
     const renamed = await save();
 
     await mount(renamed.blocks, true);
@@ -160,15 +189,16 @@ describe('local form question builder', () => {
   // research/14 §3: a taken name is refused with the property menu's error; the real name stays.
   it('shows the taken-name error for another property\'s name and keeps the property name', async () => {
     await mount(blocksFor([notes, tags]));
-    openQuestionMenu('notes');
-    edit('database-form-question-name', 'Tags');
-    const input = requireElement<HTMLInputElement>(byTestId('database-form-question-name'));
-    const error = requireElement('[data-blok-database-form-question-name-error]');
+    typeName('notes', 'Tags');
+    const input = nameBox('notes');
+    const error = requireElement(`${question('notes')} [data-blok-database-form-question-name-error]`);
 
     expect(error.hidden).toBe(false);
     expect(error.textContent).toBe('A property named Tags already exists in this database.');
     expect(input.getAttribute('aria-invalid')).toBe('true');
     expect(input.value).toBe('Tags');
+    commitName('notes');
+    openQuestionMenu('notes');
     setSwitch('database-form-question-sync-name', false);
     dismiss();
     const saved = await save();
@@ -184,21 +214,18 @@ describe('local form question builder', () => {
     const owner: PropertyDefinition = { id: 'owner', name: 'Owner', type: 'text', position: 'a1' };
     const status: PropertyDefinition = { id: 'status', name: 'Status', type: 'text', position: 'a2' };
     const typeKeys = (word: string): void => {
-      for (let end = 1; end <= word.length; end += 1) edit('database-form-question-name', word.slice(0, end));
+      for (let end = 1; end <= word.length; end += 1) typeName('owner', word.slice(0, end));
+      commitName('owner');
     };
     const nameOf = (output: OutputData): string | undefined =>
       (output.blocks.find((block) => block.id === 'db')?.data as DatabaseData | undefined)?.schema.find((property) => property.id === 'owner')?.name;
 
     await mount(blocksFor([owner, status]));
-    openQuestionMenu('owner');
     typeKeys('Status');
-    expect(requireElement('[data-blok-database-form-question-name-error]').hidden).toBe(false);
-    dismiss();
+    expect(requireElement(`${question('owner')} [data-blok-database-form-question-name-error]`).hidden).toBe(false);
     expect(nameOf(await save())).toBe('Owner');
 
-    openQuestionMenu('owner');
     typeKeys('Statusx');
-    dismiss();
     expect(nameOf(await save())).toBe('Statusx');
   });
 
@@ -206,8 +233,8 @@ describe('local form question builder', () => {
     await mount(blocksFor([notes]));
     openQuestionMenu('notes');
     setSwitch('database-form-question-sync-name', false);
-    edit('database-form-question-name', 'Detached question');
-    dismiss();
+    await closeOptions('notes');
+    rename('notes', 'Detached question');
     const detached = await save();
     const detachedDefinition = detached.blocks.find((block) => block.id === 'db')?.data as DatabaseData | undefined;
     const detachedSetting = detachedDefinition?.views.find((view) => view.id === 'form')?.properties?.find((entry) => entry.id === 'notes');
@@ -306,29 +333,19 @@ describe('local form question builder', () => {
       schema: original.schema.map((property) => property.id === 'notes' ? { ...property, name: 'Details' } : property),
     });
     dismiss();
-    const label = q(`${question('notes')} [data-blok-database-form-label]`)?.textContent;
+    requireElement<HTMLButtonElement>('[id="blok-form-form-people"]').click();
+    await vi.waitFor(() => expect(q('[data-blok-database-person-chip="ada"]')).not.toBeNull());
 
-    submit();
-    const saved = await save();
-    const response = saved.blocks.find((block) => block.type === 'database-row' && block.id !== 'first' && block.id !== 'second');
-
-    const properties = response?.data.properties;
-    const isProperties = (value: unknown): value is Record<string, unknown> =>
-      typeof value === 'object' && value !== null && !Array.isArray(value);
-
-    if (!isProperties(properties)) throw new Error('Missing response properties');
-    expect(properties.people).toEqual([{ id: 'ada' }]);
-    expect(label).toBe('Details');
-    expect(response?.parent).toBe('db');
+    expect(q('[data-blok-database-person-option="ada"]')).toBeNull();
+    expect(nameBox('notes').value).toBe('Details');
   });
 
-  it('rejects a relation narrowed to one page without discarding its two selected answers', async () => {
-    const onSubmit = vi.fn();
-
+  // The preview snapshots the schema on open, so this redraw belongs to the builder alone.
+  it('keeps both selected answers when a relation narrows to one page under the builder', async () => {
     await mount(blocksFor([{
       id: 'related', name: 'Related', type: 'relation', position: 'a1',
       relation: { targetDatabaseId: 'db' },
-    }]), false, { onSubmit });
+    }]));
     requireElement<HTMLButtonElement>('[id="blok-form-form-related"]').click();
     requireElement('[data-blok-database-relation-option="first"]').click();
     requireElement('[data-blok-database-relation-option="second"]').click();
@@ -342,27 +359,16 @@ describe('local form question builder', () => {
         : property),
     });
     dismiss();
-    submit();
-    const saved = await save();
 
-    expect(saved.blocks.filter((block) => block.type === 'database-row' && block.id !== 'first' && block.id !== 'second')).toEqual([]);
-    expect(onSubmit).not.toHaveBeenCalled();
-    const answer = requireElement<HTMLButtonElement>('[id="blok-form-form-related"]');
-
-    expect(answer.getAttribute('aria-invalid')).toBe('true');
-    expect(q('[data-blok-database-form-done]')).toBeNull();
-    answer.click();
+    expect(q('[data-blok-database-form-submit]')).toBeNull();
+    requireElement<HTMLButtonElement>('[id="blok-form-form-related"]').click();
     expect(requireElement('[data-blok-database-relation-option="first"]').getAttribute('aria-selected')).toBe('true');
     expect(requireElement('[data-blok-database-relation-option="second"]').getAttribute('aria-selected')).toBe('true');
   });
 
-  it('rejects a stale submit when the same form closes while its native picker is open', async () => {
-    const onSubmit = vi.fn();
-
-    await mount(blocksFor([{ id: 'people', name: 'People', type: 'person', position: 'a1' }]), false, { onSubmit });
+  it('keeps the builder\'s answers when the same form closes and reopens while its native picker is open', async () => {
+    await mount(blocksFor([{ id: 'people', name: 'People', type: 'person', position: 'a1' }]));
     requireElement<HTMLInputElement>('[id="blok-form-form-title"]').value = 'Response';
-    const staleSubmit = requireElement<HTMLButtonElement>('[data-blok-database-form-submit]');
-
     requireElement<HTMLButtonElement>('[id="blok-form-form-people"]').click();
     await vi.waitFor(() => expect(q('[data-blok-database-person-option="ada"]')).not.toBeNull());
     requireElement('[data-blok-database-person-option="ada"]').click();
@@ -375,11 +381,8 @@ describe('local form question builder', () => {
         ? { ...view, form: { ...view.form, closed: true } }
         : view),
     });
-    staleSubmit.click();
     const saved = await save();
 
-    expect(saved.blocks.filter((block) => block.type === 'database-row' && block.id !== 'first' && block.id !== 'second')).toEqual([]);
-    expect(onSubmit).not.toHaveBeenCalled();
     expect(q('[data-blok-database-person-editor]')).toBeNull();
     expect(q('[data-blok-database-form-closed]')).not.toBeNull();
     expect(q('[data-blok-database-form-submit]')).toBeNull();
@@ -400,11 +403,32 @@ describe('local form question builder', () => {
     expect(q('[data-blok-database-person-option="ada"]')).toBeNull();
     expect(requireElement('[data-blok-database-person-option="grace"]').getAttribute('aria-selected')).toBe('false');
     dismiss();
-    staleSubmit.click();
-    const reopened = await save();
 
-    expect(reopened.blocks.filter((block) => block.type === 'database-row' && block.id !== 'first' && block.id !== 'second')).toEqual([]);
+    expect(q('[data-blok-database-form-closed]')).toBeNull();
+    expect(q('[data-blok-database-form-submit]')).toBeNull();
+  });
+
+  it('rejects a stale preview submit once the form it previews has closed, with no thank-you screen', async () => {
+    const onSubmit = vi.fn();
+
+    await mount(blocksFor([notes]), false, { onSubmit });
+    const original = (await save()).blocks.find((block) => block.id === 'db')?.data as DatabaseData | undefined;
+
+    openPreview();
+    if (editor === undefined || original === undefined) throw new Error('Missing database');
+    await editor.blocks.update('db', {
+      ...original,
+      views: original.views.map((view) => view.id === 'form'
+        ? { ...view, form: { ...view.form, closed: true } }
+        : view),
+    });
+    submit();
+    const saved = await save();
+
+    expect(saved.blocks.filter((block) => block.type === 'database-row' && block.id !== 'first' && block.id !== 'second')).toEqual([]);
     expect(onSubmit).not.toHaveBeenCalled();
+    expect(q(`${PREVIEW} [data-blok-database-form-done]`)).toBeNull();
+    expect(saved.blocks.find((block) => block.id === 'db')?.content).toEqual(['first', 'second']);
   });
 
   it.each(['source', 'lock'] as const)('closes a builder on a same-form public %s permission replacement', async (replacement) => {
@@ -566,7 +590,8 @@ describe('local form question builder', () => {
       expect.objectContaining({ id: 'notes', type: 'number' }),
     ]));
     await mount(changed.blocks);
-    requireElement<HTMLInputElement>(`${question('notes')} input[type="number"]`).value = '12';
+    openPreview();
+    requireElement<HTMLInputElement>(`${PREVIEW} ${question('notes')} input[type="number"]`).value = '12';
     submit();
     const saved = await save();
     const response = saved.blocks.find((block) => block.type === 'database-row' && block.id !== 'first' && block.id !== 'second');
@@ -583,12 +608,15 @@ describe('local form question builder', () => {
     if (add === null) throw new Error('Missing add-question control');
     add.click();
     requireElement(byTestId('database-form-new-text')).click();
-    edit('database-form-question-name', 'Project budget');
+    const newId = [...document.querySelectorAll<HTMLElement>('[data-blok-database-form] [data-blok-database-form-question]')].at(-1)
+      ?.getAttribute('data-blok-database-form-question') ?? '';
+
     requireElement(byTestId('database-form-question-type')).click();
     requireElement(byTestId('database-form-question-type-number')).click();
-    dismiss();
+    await closeOptions(newId);
+    rename(newId, 'Project budget');
     const added = [...document.querySelectorAll<HTMLElement>('[data-blok-database-form-question]')]
-      .find((element) => element.querySelector('[data-blok-database-form-label]')?.textContent === 'Project budget');
+      .find((element) => element.querySelector<HTMLInputElement>('[data-blok-database-form-question-name]')?.value === 'Project budget');
     const id = added?.getAttribute('data-blok-database-form-question');
     const saved = await save();
 
@@ -638,8 +666,8 @@ describe('local form question builder', () => {
       property: { id: 'tags', name: 'Tags', type: 'multiSelect', position: 'a1', config: {
         options: [{ id: 'one', label: 'One', position: 'a0' }, { id: 'two', label: 'Two', position: 'a1' }],
       } } satisfies PropertyDefinition,
-      first: '[data-blok-database-form-question="tags"] input[value="one"]',
-      second: '[data-blok-database-form-question="tags"] input[value="two"]',
+      first: `${PREVIEW} [data-blok-database-form-question="tags"] input[value="one"]`,
+      second: `${PREVIEW} [data-blok-database-form-question="tags"] input[value="two"]`,
       allowedAnswers: [['one'], ['two']],
     },
     {
@@ -669,8 +697,9 @@ describe('local form question builder', () => {
     requireElement(byTestId('database-form-question-max-selection')).click();
     expect(q<HTMLInputElement>(byTestId('database-form-question-max-selections'))?.value).toBe('1');
     dismiss();
+    openPreview();
     if (property.type !== 'multiSelect') {
-      requireElement(`[id="blok-form-form-${property.id}"]`).click();
+      requireElement(`${PREVIEW} [id="blok-form-form-${property.id}"]`).click();
       await vi.waitFor(() => expect(q(first)).not.toBeNull());
     }
     requireElement(first).click();

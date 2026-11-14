@@ -1,4 +1,4 @@
-import { IconChevronUpDown, IconDotsHorizontal, IconLock } from '../../components/icons';
+import { IconChevronUpDown, IconDotsHorizontal, IconLock, IconPlus } from '../../components/icons';
 import { formatBytes } from '../../components/utils/format-bytes';
 import type { I18n } from '../../../types';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
@@ -23,11 +23,12 @@ export interface DatabaseFormViewOptions {
   schema: PropertyDefinition[];
   readOnly: boolean;
   source?: DatabaseSourceRef;
-  onSubmit: (values: Record<string, PropertyValue>) => void;
+  /** False: the answer was refused (say, the form closed meanwhile), so no thank-you screen. */
+  onSubmit: (values: Record<string, PropertyValue>) => boolean | void;
   setRequired?: (propertyId: string, required: boolean) => void;
   setQuestionSetting?: (propertyId: string, changes: ViewPropertyPatch) => void;
   /** A new property of this type, asked as the last question. */
-  addQuestion?: (type: PropertyType) => PropertyDefinition | null;
+  addQuestion?: (type: PropertyType, beforeId?: string) => PropertyDefinition | null;
   /** Makes an existing property the last question. */
   showQuestion?: (propertyId: string) => void;
   renameProperty?: (propertyId: string, name: string) => void;
@@ -36,6 +37,10 @@ export interface DatabaseFormViewOptions {
   changePropertyType?: (propertyId: string, type: PropertyType) => void;
   duplicateProperty?: (propertyId: string) => PropertyDefinition | null;
   deleteProperty?: (propertyId: string) => void;
+  /** "View linked property": the property's own menu, at the question's ⋯. */
+  openLinkedProperty?: (propertyId: string, anchor: HTMLElement) => void;
+  /** Puts the question before `beforeId`; null makes it last. */
+  moveQuestion?: (propertyId: string, beforeId: string | null) => void;
   cellContext?: Partial<CellContext>;
   hasPeople?: boolean;
   onInteractionEnd?: () => void;
@@ -107,7 +112,11 @@ export class DatabaseFormView implements DatabaseViewRenderer {
   }
 
   get interacting(): boolean {
-    return this.building || this.panel !== null || this.editor?.isOpen === true;
+    const active = document.activeElement;
+
+    return this.building || this.panel !== null || this.editor?.isOpen === true
+      || (active?.matches('[data-blok-database-form-question-name], input[data-blok-database-form-header-title], input[data-blok-database-form-header-description]') === true
+        && this.root?.contains(active) === true);
   }
 
   captureDraft(): FormDraft | undefined {
@@ -194,6 +203,9 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     this.answers.clear();
     const builder = this.options.share !== undefined && !this.options.readOnly;
 
+    const header = this.header(builder);
+
+    if (header !== null) root.appendChild(header);
     if (builder) root.appendChild(this.accessBar());
     if (view.form?.closed === true) {
       // Detached fields keep draft transfer's schema checks while closed.
@@ -224,9 +236,13 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     form.noValidate = true;
     form.addEventListener('submit', (event) => {
       event.preventDefault();
-      this.submit();
+      // Enter in a lone answer submits a form even with no Submit button.
+      if (!builder) this.submit();
     });
-    this.questions().forEach((question) => form.appendChild(question));
+    this.questions().forEach((question, index) => {
+      if (index > 0 && !this.options.readOnly && this.options.addQuestion !== undefined) question.appendChild(this.gapControl(question));
+      form.appendChild(question);
+    });
     if (!this.options.readOnly && this.options.addQuestion !== undefined) {
       const add = panelRow({
         label: i18n.t('tools.database.formAddQuestion'),
@@ -237,13 +253,83 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       form.appendChild(add);
     }
 
-    const submit = document.createElement('button');
+    // notion-motion.md Round 31 §1: only the preview has Submit.
+    if (!builder) {
+      const submit = document.createElement('button');
 
-    submit.type = 'submit';
-    submit.setAttribute('data-blok-database-form-submit', '');
-    submit.textContent = view.form?.submitLabel ?? i18n.t('tools.database.formSubmit');
-    form.appendChild(submit);
+      submit.type = 'submit';
+      submit.setAttribute('data-blok-database-form-submit', '');
+      submit.textContent = view.form?.submitLabel ?? i18n.t('tools.database.formSubmit');
+      form.appendChild(submit);
+    }
     root.appendChild(form);
+  }
+
+  /**
+   * The form's title and description (notion-motion.md Round 31 §1), kept in
+   * the view's form settings beside its other texts. The builder edits them;
+   * a respondent reads them, and sees nothing when both are unset.
+   */
+  private header(builder: boolean): HTMLElement | null {
+    const { i18n } = this.options;
+    const form = this.options.view.form;
+    const share = this.options.share;
+    const header = document.createElement('div');
+
+    header.setAttribute('data-blok-database-form-header', '');
+    if (!builder || share === undefined) {
+      if (form?.title === undefined && form?.description === undefined) return null;
+      if (form?.title !== undefined) {
+        const title = document.createElement('h1');
+
+        title.setAttribute('data-blok-database-form-header-title', '');
+        title.textContent = form.title;
+        header.appendChild(title);
+      }
+      if (form?.description !== undefined) {
+        const description = document.createElement('p');
+
+        description.setAttribute('data-blok-database-form-header-description', '');
+        description.textContent = form.description;
+        header.appendChild(description);
+      }
+
+      return header;
+    }
+    const box = (part: 'title' | 'description', placeholder: string): HTMLInputElement => {
+      const input = document.createElement('input');
+      const state = { saved: form?.[part] ?? '' };
+
+      input.type = 'text';
+      input.value = state.saved;
+      input.placeholder = placeholder;
+      input.setAttribute('aria-label', placeholder);
+      input.setAttribute(`data-blok-database-form-header-${part}`, '');
+      input.addEventListener('change', () => {
+        const value = input.value.trim();
+
+        if (value === state.saved) return;
+        state.saved = value;
+        share.update({ [part]: value === '' ? undefined : value });
+      });
+      input.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' || event.isComposing) return;
+        event.preventDefault();
+        input.blur();
+      });
+      input.addEventListener('focusout', () => {
+        if (!this.destroying) this.options.onInteractionEnd?.();
+      });
+
+      return input;
+    };
+
+    header.append(
+      box('title', i18n.t('tools.database.formTitlePlaceholder')),
+      box('description', i18n.t('tools.database.formDescriptionPlaceholder')),
+    );
+
+    return header;
   }
 
   /** "🔒 Only members at <workspace> can fill out this form." + "Change" (research/19 §3d). */
@@ -406,7 +492,10 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     if (!this.options.readOnly && this.options.setQuestionSetting !== undefined) {
       const header = document.createElement('div');
       const menu = document.createElement('button');
+      const name = this.nameField(property, setting);
 
+      // The name is a textbox now: the answer needs its own name.
+      field.setAttribute('aria-label', setting.questionName ?? property.name);
       header.setAttribute('data-blok-database-form-question-header', '');
       menu.type = 'button';
       menu.setAttribute('data-blok-database-form-question-menu', '');
@@ -414,8 +503,8 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       menu.setAttribute('aria-label', i18n.t('tools.database.formEditQuestion'));
       menu.innerHTML = IconDotsHorizontal;
       menu.addEventListener('click', () => this.openQuestionMenu(property, menu));
-      header.append(label, menu);
-      wrapper.appendChild(header);
+      header.append(name.input, menu);
+      wrapper.append(header, name.error);
     } else {
       wrapper.appendChild(label);
     }
@@ -638,8 +727,93 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     };
   }
 
+  /**
+   * The question name, edited in the card (notion-motion.md Round 31 §1). With
+   * sync on it renames the property; a taken name is refused (research/14 §3).
+   * Writes land on change or Enter, never per key.
+   */
+  private nameField(initial: PropertyDefinition, setting: ViewPropertySetting): { input: HTMLInputElement; error: HTMLElement } {
+    const { i18n } = this.options;
+    const input = document.createElement('input');
+    const synced = setting.questionName === undefined;
+    const state = { property: initial, saved: setting.questionName ?? initial.name };
+    const taken = nameTakenError(input, 'data-blok-database-form-question-name-error', i18n);
+    const isTaken = (name: string): boolean => synced && name !== state.property.name && this.options.isNameTaken?.(state.property.id, name) === true;
+    const commit = (): void => {
+      const name = input.value.trim();
+
+      if (name === '') {
+        input.value = state.saved;
+        taken.show(null);
+
+        return;
+      }
+      if (name === state.saved || isTaken(name)) return;
+      state.saved = name;
+      if (!synced) {
+        this.options.setQuestionSetting?.(state.property.id, { questionName: name });
+
+        return;
+      }
+      this.options.renameProperty?.(state.property.id, name);
+      state.property = { ...state.property, name };
+    };
+
+    input.type = 'text';
+    input.value = state.saved;
+    input.placeholder = i18n.t('tools.database.formQuestionNamePlaceholder');
+    input.setAttribute('aria-label', i18n.t('tools.database.formQuestionName'));
+    input.setAttribute('data-blok-database-form-question-name', '');
+    input.setAttribute('data-blok-testid', 'database-form-question-name');
+    input.addEventListener('input', () => {
+      const name = input.value.trim();
+
+      taken.show(isTaken(name) ? name : null);
+    });
+    input.addEventListener('change', commit);
+    input.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || event.isComposing) return;
+      event.preventDefault();
+      if (!taken.element.hidden) return;
+      commit();
+      input.blur();
+    });
+    input.addEventListener('focusout', () => {
+      if (!this.destroying) this.options.onInteractionEnd?.();
+    });
+
+    return { input, error: taken.element };
+  }
+
+  /**
+   * The "+" in the gap above a card (notion-motion.md Round 31 §1). A click
+   * opens a slot there and Select type; Escape removes the slot.
+   */
+  private gapControl(card: HTMLElement): HTMLElement {
+    const gap = document.createElement('div');
+    const add = document.createElement('button');
+    const beforeId = card.getAttribute('data-blok-database-form-question') ?? undefined;
+
+    gap.setAttribute('data-blok-database-form-gap', '');
+    add.type = 'button';
+    add.setAttribute('data-blok-database-form-insert', '');
+    add.setAttribute('data-blok-testid', 'database-form-insert-question');
+    add.setAttribute('aria-label', this.options.i18n.t('tools.database.formAddQuestion'));
+    add.innerHTML = IconPlus;
+    add.addEventListener('click', () => {
+      const slot = document.createElement('div');
+
+      slot.setAttribute('data-blok-database-form-slot', '');
+      card.before(slot);
+      this.openSelectType(slot, card, beforeId);
+    });
+    gap.appendChild(add);
+
+    return gap;
+  }
+
   /** Notion's "Select type" (research/19 §3b): existing properties that are not questions yet, then new question types. */
-  private openSelectType(anchor: HTMLElement): void {
+  private openSelectType(anchor: HTMLElement, before: HTMLElement = anchor, beforeId?: string): void {
     if (this.destroying) return;
     this.building = true;
     this.panel?.close();
@@ -651,6 +825,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       width: 290,
       backLabel: i18n.t('tools.database.peekBack'),
       onClose: () => {
+        if (anchor.hasAttribute('data-blok-database-form-slot')) anchor.remove();
         if (this.panel === panel) this.panel = null;
         if (!this.destroying) this.options.onInteractionEnd?.();
       },
@@ -677,15 +852,22 @@ export class DatabaseFormView implements DatabaseViewRenderer {
           return [
             ...rows,
             panelLabel(i18n.t('tools.database.formNewQuestion')),
-            ...NEW_QUESTION_TYPES.filter((type) => type !== 'person' || this.options.hasPeople === true).map((type) => panelRow({
-              label: this.typeLabel(type),
-              icon: propertyTypeMeta(type).icon,
-              testId: `database-form-new-${type}`,
-              onClick: () => {
-                panel.close();
-                this.addQuestion(anchor, type);
-              },
-            })),
+            ...NEW_QUESTION_TYPES.filter((type) => type !== 'person' || this.options.hasPeople === true).map((type) => {
+              const row = panelRow({
+                label: this.typeLabel(type),
+                icon: propertyTypeMeta(type).icon,
+                testId: `database-form-new-${type}`,
+                onClick: () => {
+                  panel.close();
+                  this.addQuestion(before, type, beforeId);
+                },
+              });
+
+              // Round 31 §1: 44 tall, the glyph in a framed 32px box.
+              row.setAttribute('data-blok-database-form-type-row', '');
+
+              return row;
+            }),
           ];
         },
       },
@@ -696,10 +878,10 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     this.building = false;
   }
 
-  private addQuestion(anchor: HTMLElement, type: PropertyType): void {
+  private addQuestion(anchor: HTMLElement, type: PropertyType, beforeId?: string): void {
     if (this.destroying) return;
     this.building = true;
-    const property = this.options.addQuestion?.(type);
+    const property = this.options.addQuestion?.(type, beforeId);
 
     if (property === undefined || property === null) {
       this.building = false;
@@ -721,7 +903,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     if (this.destroying) return;
     this.building = true;
     this.panel?.close();
-    const state: { property: PropertyDefinition; setting: ViewPropertySetting; typedName?: string } = {
+    const state: { property: PropertyDefinition; setting: ViewPropertySetting } = {
       property: initial,
       setting: withPropertySetting(this.options.view, this.options.schema, initial.id, {})
         .find((entry) => entry.id === initial.id) ?? { id: initial.id, visible: true },
@@ -731,17 +913,6 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       state.setting = { ...state.setting, ...patch };
       this.options.setQuestionSetting?.(state.property.id, patch);
     };
-    // Like the property menu: the rename lands on change, Enter or close, never per key,
-    // so a refused last key cannot leave a half-typed name (research/14 §3).
-    const commitName = (): void => {
-      const name = state.typedName?.trim();
-
-      state.typedName = undefined;
-      if (name === undefined || name === '' || name === state.property.name || state.setting.questionName !== undefined) return;
-      if (this.options.isNameTaken?.(state.property.id, name) === true) return;
-      this.options.renameProperty?.(state.property.id, name);
-      state.property = { ...state.property, name };
-    };
     const panel = new DatabasePanel({
       anchor,
       testId: 'database-form-question-settings',
@@ -750,38 +921,11 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       onClose: () => {
         this.panel = null;
         if (this.destroying) return;
-        commitName();
         this.options.onInteractionEnd?.();
       },
       root: {
+        title: i18n.t('tools.database.formQuestionOptions'),
         build: () => {
-          const name = panelInput({
-            value: state.setting.questionName ?? state.property.name,
-            placeholder: '',
-            label: i18n.t('tools.database.formQuestionName'),
-            testId: 'database-form-question-name',
-            onInput: (value) => {
-              if (state.setting.questionName !== undefined) {
-                if (value.trim() !== '') change({ questionName: value });
-
-                return;
-              }
-              const typed = value.trim();
-
-              state.typedName = value;
-              takenError.show(typed !== state.property.name && this.options.isNameTaken?.(state.property.id, typed) === true ? typed : null);
-            },
-          });
-          const takenError = nameTakenError(name, 'data-blok-database-form-question-name-error', i18n);
-
-          name.addEventListener('change', commitName);
-          name.addEventListener('keydown', (event) => {
-            if (event.key !== 'Enter' || event.isComposing) return;
-            event.preventDefault();
-            if (!takenError.element.hidden) return;
-            commitName();
-            panel.close();
-          });
           const description = panelInput({
             value: state.setting.description ?? '',
             placeholder: i18n.t('tools.database.propertyDescriptionPlaceholder'),
@@ -789,56 +933,50 @@ export class DatabaseFormView implements DatabaseViewRenderer {
             testId: 'database-form-question-description',
             onInput: (value) => change({ description: value }),
           });
-          const rows: HTMLElement[] = [
-            name,
-            takenError.element,
-            panelSwitch({
-              label: i18n.t('tools.database.formSyncPropertyName'),
-              testId: 'database-form-question-sync-name',
-              checked: state.setting.questionName === undefined,
-              onToggle: (checked) => {
-                commitName();
-                change({ questionName: checked ? undefined : state.property.name });
-                panel.refresh();
-              },
-            }),
-            description,
-            panelSwitch({
-              label: i18n.t('tools.database.formRequiredToggle'),
-              testId: 'database-form-question-required',
-              checked: state.setting.required === true,
-              onToggle: (required) => change({ required }),
-            }),
-            panelRow({
-              label: i18n.t('tools.database.changeType'),
-              value: this.typeLabel(state.property.type),
-              testId: 'database-form-question-type',
-              disabled: state.property.type === 'title',
-              opensPage: true,
-              onClick: () => {
-                commitName();
-                panel.push({
-                  title: i18n.t('tools.database.changeType'),
-                  build: () => NEW_QUESTION_TYPES
-                    .filter((type) => type !== 'person' || this.options.hasPeople === true)
-                    .map((type) => panelRow({
-                      label: this.typeLabel(type),
-                      testId: `database-form-question-type-${type}`,
-                      icon: propertyTypeMeta(type).icon,
-                      checked: this.typeLabel(type) === this.typeLabel(state.property.type),
-                      onClick: () => {
-                        // A Select already reads "Multiple choice": the checked row must not convert it.
-                        if (this.typeLabel(type) !== this.typeLabel(state.property.type)) {
-                          this.options.changePropertyType?.(state.property.id, type);
-                          state.property = { ...state.property, type };
-                        }
-                        panel.back();
-                      },
-                    })),
-                });
-              },
-            }),
-          ];
+          const required = panelSwitch({
+            label: i18n.t('tools.database.formRequiredToggle'),
+            testId: 'database-form-question-required',
+            checked: state.setting.required === true,
+            onToggle: (on) => change({ required: on }),
+          });
+          const sync = panelSwitch({
+            label: i18n.t('tools.database.formSyncPropertyName'),
+            testId: 'database-form-question-sync-name',
+            checked: state.setting.questionName === undefined,
+            onToggle: (checked) => {
+              change({ questionName: checked ? undefined : state.property.name });
+              panel.refresh();
+            },
+          });
+          const questionType = panelRow({
+            label: i18n.t('tools.database.formQuestionType'),
+            value: this.typeLabel(state.property.type),
+            testId: 'database-form-question-type',
+            disabled: state.property.type === 'title',
+            opensPage: true,
+            onClick: () => {
+              panel.push({
+                title: i18n.t('tools.database.formQuestionType'),
+                build: () => NEW_QUESTION_TYPES
+                  .filter((type) => type !== 'person' || this.options.hasPeople === true)
+                  .map((type) => panelRow({
+                    label: this.typeLabel(type),
+                    testId: `database-form-question-type-${type}`,
+                    icon: propertyTypeMeta(type).icon,
+                    checked: this.typeLabel(type) === this.typeLabel(state.property.type),
+                    onClick: () => {
+                      // A Select already reads "Multiple choice": the checked row must not convert it.
+                      if (this.typeLabel(type) !== this.typeLabel(state.property.type)) {
+                        this.options.changePropertyType?.(state.property.id, type);
+                        state.property = { ...state.property, type };
+                      }
+                      panel.back();
+                    },
+                  })),
+              });
+            },
+          });
+          const rows: HTMLElement[] = [required, description];
 
           if (state.property.type === 'text' || state.property.type === 'richText') {
             rows.push(panelSwitch({
@@ -916,10 +1054,26 @@ export class DatabaseFormView implements DatabaseViewRenderer {
               }),
             }));
           }
+          rows.push(questionType);
+          if (this.options.openLinkedProperty !== undefined) {
+            const openLinked = this.options.openLinkedProperty;
+
+            rows.push(panelRow({
+              label: i18n.t('tools.database.formViewLinkedProperty'),
+              testId: 'database-form-question-linked-property',
+              opensPage: true,
+              onClick: () => {
+                panel.close();
+                openLinked(state.property.id, anchor);
+              },
+            }));
+          }
+          rows.push(sync);
+          if (this.options.moveQuestion !== undefined) rows.push(this.moveRow(state.property.id, panel));
           // Notion offers no "Duplicate question" on a relation (research/19 §3b).
           if (state.property.type !== 'relation') {
             rows.push(panelRow({
-              label: i18n.t('blockSettings.duplicate'),
+              label: i18n.t('tools.database.formDuplicateQuestion'),
               testId: 'database-form-duplicate-question',
               disabled: state.property.type === 'title',
               onClick: () => {
@@ -936,7 +1090,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
           }
           rows.push(
             panelRow({
-              label: i18n.t('blockSettings.delete'),
+              label: i18n.t('tools.database.formDeleteQuestion'),
               testId: 'database-form-delete-question',
               danger: true,
               disabled: state.property.type === 'title',
@@ -955,6 +1109,40 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     this.panel = panel;
     panel.open();
     this.building = false;
+  }
+
+  /** "Move question ›". What Notion's submenu holds is unread: Blok offers Move up and Move down. */
+  private moveRow(propertyId: string, panel: DatabasePanel): HTMLElement {
+    const { i18n } = this.options;
+    const ids = formQuestions(this.options.view, this.options.schema).map(({ property }) => property.id);
+    const index = ids.indexOf(propertyId);
+    const move = (beforeId: string | null): void => {
+      panel.close();
+      this.options.moveQuestion?.(propertyId, beforeId);
+    };
+
+    return panelRow({
+      label: i18n.t('tools.database.formMoveQuestion'),
+      testId: 'database-form-question-move',
+      opensPage: true,
+      onClick: () => panel.push({
+        title: i18n.t('tools.database.formMoveQuestion'),
+        build: () => [
+          panelRow({
+            label: i18n.t('tools.database.layoutMoveUp'),
+            testId: 'database-form-question-move-up',
+            disabled: index <= 0,
+            onClick: () => move(ids[index - 1]),
+          }),
+          panelRow({
+            label: i18n.t('tools.database.layoutMoveDown'),
+            testId: 'database-form-question-move-down',
+            disabled: index < 0 || index >= ids.length - 1,
+            onClick: () => move(ids[index + 2] ?? null),
+          }),
+        ],
+      }),
+    });
   }
 
   private answer(property: PropertyDefinition, field: Field): PropertyValue | undefined {
@@ -999,7 +1187,8 @@ export class DatabaseFormView implements DatabaseViewRenderer {
 
       return;
     }
-    this.options.onSubmit(Object.fromEntries(answers.flatMap(({ propertyId, value }) => (value === undefined ? [] : [[propertyId, value]]))));
-    this.setSubmitted(true);
+    const accepted = this.options.onSubmit(Object.fromEntries(answers.flatMap(({ propertyId, value }) => (value === undefined ? [] : [[propertyId, value]]))));
+
+    if (accepted !== false) this.setSubmitted(true);
   }
 }

@@ -170,7 +170,7 @@ const VIEW_NAMES: Partial<Record<ViewType, string>> = {
   timeline: DATABASE_DEFAULT_TEXT.viewTypeTimeline,
   chart: DATABASE_DEFAULT_TEXT.viewTypeChart,
   feed: DATABASE_DEFAULT_TEXT.viewTypeFeed,
-  form: DATABASE_DEFAULT_TEXT.viewTypeForm,
+  form: DATABASE_DEFAULT_TEXT.viewFormBuilder,
   map: DATABASE_DEFAULT_TEXT.viewTypeMap,
   dashboard: DATABASE_DEFAULT_TEXT.viewTypeDashboard,
 };

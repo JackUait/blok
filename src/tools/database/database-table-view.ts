@@ -69,30 +69,19 @@ export const DEFAULT_TITLE_WIDTH = 280;
 export const DEFAULT_COLUMN_WIDTH = 200;
 export { MIN_COLUMN_WIDTH };
 
-/** The OPEN button's inset from the title cell's end (database.css). */
-const OPEN_INSET = 6;
+/** notion-motion.md Round 28 §1: Notion's title column shows OPEN from 102 and the icon pill at 100. 101 is unread. */
+const OPEN_LABEL_MIN_WIDTH = 102;
 
 /**
- * notion-motion.md Round 27 §2 "Narrow title column": a narrow title column shows an icon-only OPEN. Notion's switch
- * width is unread, so the label goes where the labelled button no longer fits with its inset clear on both sides.
- * The label stays in the DOM, hidden by CSS, as the button's name. No layout (a hidden button) leaves it as it is.
+ * A narrow title column shows an icon-only OPEN (notion-motion.md Round 27 §2, Round 28 §1). The switch reads the
+ * column, not the label, so every locale switches at the same width. The label stays in the DOM, hidden by CSS,
+ * as the button's name. No layout (a hidden table) leaves it as it is.
  */
 const fitOpen = (open: HTMLElement): void => {
-  const cell = open.parentElement;
+  const room = open.parentElement?.getBoundingClientRect().width ?? 0;
 
-  if (cell === null) return;
-  const { style } = open;
-  const display = style.display;
-
-  open.removeAttribute('data-compact');
-  // Measured shown: row hover may not apply yet when the pointer arrives.
-  style.display = 'inline-flex';
-  const width = open.getBoundingClientRect().width;
-  const room = cell.getBoundingClientRect().width;
-
-  style.display = display;
-  if (width === 0 || room === 0) return;
-  open.toggleAttribute('data-compact', width + 2 * OPEN_INSET > room);
+  if (room === 0) return;
+  open.toggleAttribute('data-compact', room < OPEN_LABEL_MIN_WIDTH);
 };
 
 export interface TableGroup {
@@ -648,12 +637,6 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       const rowId = button.closest('[data-row-id]')?.getAttribute('data-row-id');
 
       if (typeof rowId === 'string') this.paintOpen(button, rowId);
-    });
-    // OPEN and CLOSE differ in width; only the buttons on screen now need a new fit.
-    [this.overRow, this.gridEl?.querySelector('[data-blok-database-table-cell-anchor]')].forEach((holder) => {
-      const open = holder?.querySelector<HTMLElement>('[data-blok-database-table-open]');
-
-      if (open !== null && open !== undefined) fitOpen(open);
     });
   }
 

@@ -1428,10 +1428,10 @@ describe('DatabaseTableView', () => {
       expect(open?.lastElementChild?.textContent).toBe('tools.database.tableOpen');
     });
 
-    // notion-motion.md Round 27 §2 "Narrow title column": a narrow title column shows an icon-only OPEN. Notion's switch
-    // width is unread, so Blok switches where the labelled button no longer fits with 6px clear on each side.
+    // notion-motion.md Round 28 §1 (r28-narrowpill-threshold.raw): the title column shows the icon pill at 100 and OPEN
+    // from 102, whatever the label's width (Notion's 102 OPEN overlaps the title). 101 is unread; Blok counts it as narrow.
     describe('narrow title column', () => {
-      const sized = (root: HTMLElement, cellWidth: number, buttonWidth: number): HTMLElement => {
+      const sized = (root: HTMLElement, cellWidth: number): HTMLElement => {
         const titleCell = cell(root, 'r1', 'p-title');
         const open = titleCell.querySelector<HTMLElement>('[data-blok-database-table-open]');
 
@@ -1439,8 +1439,6 @@ describe('DatabaseTableView', () => {
           throw new Error('no OPEN');
         }
         vi.spyOn(titleCell, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, cellWidth, 37));
-        // Only the labelled form is measured: a compact button reads 30.
-        vi.spyOn(open, 'getBoundingClientRect').mockImplementation(() => new DOMRect(0, 0, open.hasAttribute('data-compact') ? 30 : buttonWidth, 24));
 
         return open;
       };
@@ -1448,54 +1446,39 @@ describe('DatabaseTableView', () => {
         target.dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
       };
 
-      it('turns OPEN into the icon pill when the labelled button does not fit', () => {
+      it.each([100, 101])('turns OPEN into the icon pill in a %ipx title column', (width) => {
         const { root } = mount();
-        const open = sized(root, 100, 89);
+        const open = sized(root, width);
 
         over(cell(root, 'r1', 'p-notes'));
         expect(open.hasAttribute('data-compact')).toBe(true);
         expect(open.lastElementChild?.textContent).toBe('tools.database.tableOpen');
       });
 
-      it('keeps the label when it fits', () => {
+      it('keeps the label from 102, however wide the label is', () => {
         const { root } = mount();
-        const open = sized(root, 100, 88);
+        const open = sized(root, 102);
 
+        vi.spyOn(open, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 97, 24));
         over(cell(root, 'r1', 'p-title'));
         expect(open.hasAttribute('data-compact')).toBe(false);
       });
 
       it('fits again when the pointer leaves the table and comes back to the same row', () => {
         const { root } = mount();
-        const open = sized(root, 100, 88);
+        const open = sized(root, 102);
 
         over(cell(root, 'r1', 'p-title'));
         expect(open.hasAttribute('data-compact')).toBe(false);
-        vi.spyOn(open, 'getBoundingClientRect').mockImplementation(() => new DOMRect(0, 0, open.hasAttribute('data-compact') ? 30 : 120, 24));
+        sized(root, 100);
         grid(root).dispatchEvent(new PointerEvent('pointerleave'));
         over(cell(root, 'r1', 'p-title'));
         expect(open.hasAttribute('data-compact')).toBe(true);
       });
 
-      it('fits again when OPEN turns into CLOSE under the pointer', () => {
-        const peeked = { id: null as string | null };
-        const { root, view } = mount({ peek: { rowId: () => peeked.id, close: vi.fn() } });
-        const open = sized(root, 100, 60);
-
-        const labelled = (): number => (open.lastElementChild?.textContent === 'tools.database.close' ? 120 : 60);
-
-        vi.spyOn(open, 'getBoundingClientRect').mockImplementation(() => new DOMRect(0, 0, open.hasAttribute('data-compact') ? 30 : labelled(), 24));
-        over(cell(root, 'r1', 'p-title'));
-        expect(open.hasAttribute('data-compact')).toBe(false);
-
-        peeked.id = 'r1';
-        view.rowPageOpened();
-        expect(open.hasAttribute('data-compact')).toBe(true);
-      });
-
       it('fits the selected title cell too, where OPEN shows without a hover', () => {
         const { root } = mount();
-        const open = sized(root, 100, 120);
+        const open = sized(root, 100);
 
         selectCell(root, 'r1', 'p-title');
         expect(open.hasAttribute('data-compact')).toBe(true);
@@ -1503,16 +1486,18 @@ describe('DatabaseTableView', () => {
 
       it('measures the selected title cell once, not on every repaint of the same selection', () => {
         const { root } = mount();
-        const open = sized(root, 100, 120);
+        const open = sized(root, 100);
+        const titleCell = cell(root, 'r1', 'p-title');
 
         selectCell(root, 'r1', 'p-title');
-        const reads = vi.mocked(open.getBoundingClientRect).mock.calls.length;
+        const reads = vi.mocked(titleCell.getBoundingClientRect).mock.calls.length;
 
+        expect(reads).toBeGreaterThan(0);
         // A range grows and shrinks; the anchor stays on the title cell, and each step repaints.
         press(grid(root), 'ArrowRight', { shiftKey: true });
         press(grid(root), 'ArrowLeft', { shiftKey: true });
-        expect(cell(root, 'r1', 'p-title').hasAttribute('data-blok-database-table-cell-anchor')).toBe(true);
-        expect(vi.mocked(open.getBoundingClientRect).mock.calls.length).toBe(reads);
+        expect(titleCell.hasAttribute('data-blok-database-table-cell-anchor')).toBe(true);
+        expect(vi.mocked(titleCell.getBoundingClientRect).mock.calls.length).toBe(reads);
         expect(open.hasAttribute('data-compact')).toBe(true);
       });
     });

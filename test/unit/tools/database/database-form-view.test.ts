@@ -392,6 +392,7 @@ describe('DatabaseFormView in-card question name', () => {
     const name = nameOf(root, 'email');
 
     expect(name?.value).toBe('Email');
+    expect(name?.getAttribute('value')).toBe('Email');
     expect(name?.placeholder).toBe('tools.database.formQuestionNamePlaceholder');
     expect(name?.getAttribute('aria-label')).toBe('tools.database.formQuestionName');
     expect(field<HTMLInputElement>(root, 'email').getAttribute('aria-label')).toBe('Email');
@@ -687,6 +688,8 @@ describe('DatabaseFormView header', () => {
     const { root } = builder({ title: 'Signup', description: 'Tell us about you' });
 
     expect(box(root, 'title')?.value).toBe('Signup');
+    // The saved text is in the markup too, so a snapshot of the page shows it.
+    expect(box(root, 'title')?.getAttribute('value')).toBe('Signup');
     expect(box(root, 'title')?.placeholder).toBe('tools.database.formTitlePlaceholder');
     expect(box(root, 'description')?.value).toBe('Tell us about you');
     expect(box(root, 'description')?.placeholder).toBe('tools.database.formDescriptionPlaceholder');

@@ -216,12 +216,12 @@ test.describe('form builder, Round 31', () => {
     await expect(name).toHaveCSS('font-size', '24px');
     await expect(name).toHaveCSS('font-weight', '700');
     await expect(name).toHaveCSS('line-height', '30px');
-    const title = page.locator('input[data-blok-database-form-header-title]');
+    const title = page.getByRole('textbox', { name: 'Form title' });
 
     await expect(title).toHaveAttribute('placeholder', 'Form title');
     await expect(title).toHaveCSS('font-size', '40px');
     await expect(title).toHaveCSS('line-height', '48px');
-    await expect(page.locator('input[data-blok-database-form-header-description]')).toHaveCSS('font-size', '16px');
+    await expect(page.getByRole('textbox', { name: 'Description (optional)' })).toHaveCSS('font-size', '16px');
   });
 
   test('hover grows the ring to 1.25px over 0.3s; the gap "+" sits 8 left of the card, centred on the gap', async ({ page }) => {
@@ -229,7 +229,7 @@ test.describe('form builder, Round 31', () => {
     const card = question(page, 'p-email');
 
     await card.hover();
-    await page.waitForTimeout(400);
+    // toHaveCSS retries until the 0.3s transition has ended.
     await expect(card).toHaveCSS('box-shadow', /1\.25px, .* 0px 0px 0px 1\.25px inset/);
     const gap = card.locator('[data-blok-database-form-gap]');
 
@@ -261,12 +261,12 @@ test.describe('form builder, Round 31', () => {
 
   test('Tab from the title into the description keeps focus there, and both are saved', async ({ page }) => {
     await mount(page, blocks({ type: 'form' }), 'forms');
-    const title = page.locator('input[data-blok-database-form-header-title]');
+    const title = page.getByRole('textbox', { name: 'Form title' });
 
     await title.click();
     await page.keyboard.type('Signup');
     await page.keyboard.press('Tab');
-    await expect(page.locator('input[data-blok-database-form-header-description]')).toBeFocused();
+    await expect(page.getByRole('textbox', { name: 'Description (optional)' })).toBeFocused();
     await page.keyboard.type('Tell us');
     await page.keyboard.press('Enter');
     const form = await page.evaluate(async () => {

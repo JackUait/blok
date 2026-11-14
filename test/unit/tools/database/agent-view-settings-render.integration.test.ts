@@ -296,8 +296,10 @@ const CASES: Case[] = [
   { setting: 'showDataSourceTitle', view: 'table', ui: () => ({ showDataSourceTitle: false }), agent: { showDataSourceTitle: false }, drawn: false },
   { setting: 'groupByStatus', view: 'board', ui: () => ({ groupByStatus: 'group' }), agent: { groupByStatus: 'group' }, drawn: false },
   {
+    // The builder draws no Submit (notion-motion.md Round 31 §1); its title and description are what it draws.
     setting: 'form', view: 'form',
-    ui: () => ({ form: { submitLabel: 'Send', confirmation: 'Thanks' } }), agent: { form: { submitLabel: 'Send', confirmation: 'Thanks' } },
+    ui: () => ({ form: { title: 'Signup', description: 'Tell us', submitLabel: 'Send', confirmation: 'Thanks' } }),
+    agent: { form: { title: 'Signup', description: 'Tell us', submitLabel: 'Send', confirmation: 'Thanks' } },
   },
   {
     setting: 'form questions', view: 'form',

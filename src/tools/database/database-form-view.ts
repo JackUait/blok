@@ -331,7 +331,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       const state = { saved: form?.[part] ?? '' };
 
       input.type = 'text';
-      input.value = state.saved;
+      input.defaultValue = state.saved;
       input.placeholder = placeholder;
       input.setAttribute('aria-label', placeholder);
       input.setAttribute(`data-blok-database-form-header-${part}`, '');
@@ -788,7 +788,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     };
 
     input.type = 'text';
-    input.value = state.saved;
+    input.defaultValue = state.saved;
     input.placeholder = i18n.t('tools.database.formQuestionNamePlaceholder');
     input.setAttribute('aria-label', i18n.t('tools.database.formQuestionName'));
     input.setAttribute('data-blok-database-form-question-name', '');

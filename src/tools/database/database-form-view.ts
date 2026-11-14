@@ -825,7 +825,11 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     add.setAttribute('data-blok-database-form-insert', '');
     add.setAttribute('data-blok-testid', 'database-form-insert-question');
     add.setAttribute('aria-label', this.options.i18n.t('tools.database.formAddQuestion'));
-    add.innerHTML = IconPlus;
+    const box = document.createElement('span');
+
+    box.setAttribute('data-blok-database-form-insert-box', '');
+    box.innerHTML = IconPlus;
+    add.appendChild(box);
     add.addEventListener('click', () => {
       const slot = document.createElement('div');
 

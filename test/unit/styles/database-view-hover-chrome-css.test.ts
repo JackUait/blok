@@ -166,23 +166,46 @@ describe('form builder question card (research/21 §1k)', () => {
   });
 
   // Round 31 §1: the "+" is a 32px teardrop centred on the gap, 8 left of the card; neutral, not blue.
-  it('draws the gap "+" as a 32px teardrop left of the card that fades in over 0.2s', () => {
+  it('draws the gap "+" as a 32px teardrop left of the card', () => {
     const gap = ruleBody('[data-blok-database-form-gap]');
     const add = ruleBody('[data-blok-database-form-insert]');
+    const box = ruleBody('[data-blok-database-form-insert-box]');
 
     expect(gap).toContain('position: absolute');
     expect(gap).toContain('block-size: 24px');
     expect(gap).toContain('inset-block-start: -24px');
     expect(add).toContain('inline-size: 32px');
     expect(add).toContain('block-size: 32px');
-    expect(add).toContain('border-radius: 50%');
-    expect(add).toContain('border-bottom-right-radius: var(--blok-radius-checkbox)');
-    expect(add).toContain('rotate: 45deg');
+    expect(box).toContain('inline-size: 32px');
+    expect(box).toContain('block-size: 32px');
+    expect(`${gap}${add}${box}`).not.toMatch(/35, 131, 226/);
+  });
+
+  // notion-motion.md Round 32 §1 (r32-a-gapplus-*.raw): Notion's box is rotate(-45deg) with radius 100% 100% 6px,
+  // so its sharp corner points right, at the card; the plus inside turns +45deg and stands upright.
+  it('points the teardrop at the card, the plus upright', () => {
+    const box = ruleBody('[data-blok-database-form-insert-box]');
+
+    expect(box).toContain('rotate: -45deg');
+    expect(box).toContain('border-radius: 50%');
+    expect(box).toContain('border-bottom-right-radius: var(--blok-radius-checkbox)');
+    expect(ruleBody('[data-blok-database-form-insert-box] svg')).toContain('rotate: 45deg');
+  });
+
+  // Round 32 §1: the wrapper scales 0.3 → 1 and fades in over 200ms ease from its right-middle (32px 16px).
+  // The exit is unread: it keeps Blok's fade at full size, the scale dropping back only once the fade ends.
+  it('scales in from its right-middle and fades over 200ms ease; fades out at full size', () => {
+    const add = ruleBody('[data-blok-database-form-insert]');
+    const shown = ruleBody('[data-blok-database-form-gap]:hover > [data-blok-database-form-insert]');
+
     expect(add).toContain('opacity: 0');
-    expect(add).toContain('transition: opacity 0.2s');
-    expect(ruleBody('[data-blok-database-form-gap]:hover > [data-blok-database-form-insert]')).toContain('opacity: 1');
+    expect(add).toContain('transform: scale(0.3)');
+    expect(add).toContain('transform-origin: 32px 16px');
+    expect(add).toContain('transition: opacity 0.2s, transform 0s 0.2s');
+    expect(shown).toContain('opacity: 1');
+    expect(shown).toContain('transform: none');
+    expect(shown).toContain('transition: opacity 0.2s ease, transform 0.2s ease');
     expect(ruleBody('[data-blok-database-form-insert]:focus-visible')).toContain('opacity: 1');
-    expect(`${gap}${add}`).not.toMatch(/35, 131, 226/);
   });
 
   it('draws the insert slot 36 tall and 12 round, and Select type rows 44 tall with a framed 32px icon', () => {

@@ -20859,10 +20859,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   height: 20px;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-database-new] > button, [data-blok-database-subitem-toggle] svg {
-  transition: none;
-}
-
 [data-blok-database-form], [data-blok-database-map], [data-blok-database-dashboard-placeholder] {
   padding-block: var(--blok-space-3);
 }
@@ -20961,34 +20957,54 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   inset-block-start: -4px;
   inset-inline-start: 0;
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
   inline-size: 32px;
   block-size: 32px;
   padding: 0;
   border: none;
-  border-radius: 50%;
-  border-bottom-right-radius: var(--blok-radius-checkbox);
-  rotate: 45deg;
-  background: var(--blok-database-hover-bg);
+  background: none;
   color: var(--blok-block-control);
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.2s;
-}
-
-[data-blok-database-form-insert]:hover {
-  background: var(--blok-database-pressed-bg);
+  transform: scale(0.3);
+  transform-origin: 32px 16px;
+  transition: opacity 0.2s, transform 0s 0.2s;
 }
 
 [data-blok-database-form-gap]:hover > [data-blok-database-form-insert], [data-blok-database-form-insert]:focus-visible {
   opacity: 1;
+  transform: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-[data-blok-database-form-insert] svg {
+[data-blok-database-form-insert-box] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: 50%;
+  border-bottom-right-radius: var(--blok-radius-checkbox);
+  rotate: -45deg;
+  background: var(--blok-database-hover-bg);
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-new] > button, [data-blok-database-subitem-toggle] svg {
+  transition: none;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-form-insert], [data-blok-database-form-gap]:hover > [data-blok-database-form-insert], [data-blok-database-form-insert]:focus-visible {
+  transform: none;
+  transition: none;
+}
+
+[data-blok-database-form-insert]:hover > [data-blok-database-form-insert-box] {
+  background: var(--blok-database-pressed-bg);
+}
+
+[data-blok-database-form-insert-box] svg {
   inline-size: 20px;
   block-size: 20px;
-  rotate: -45deg;
+  rotate: 45deg;
 }
 
 [data-blok-database-form-slot] {

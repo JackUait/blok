@@ -1703,6 +1703,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R46_BYTES = 1233;
     // Lane r48: Round 32 offsets (list plus, board pill, calendar digits and weekday row) and the filter value checkboxes. Net database.css growth against origin/main.
     const DATABASE_R48_BYTES = 1537;
+    // Lane r47: Round 32 form builder: the gap "+" scale-in and its box turned toward the card. Net database.css growth against origin/main.
+    const DATABASE_R47_BYTES = 782;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2226,6 +2228,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R44_BYTES
       + DATABASE_R46_BYTES
       + DATABASE_R48_BYTES
+      + DATABASE_R47_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

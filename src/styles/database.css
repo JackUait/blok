@@ -18228,13 +18228,6 @@ button[data-blok-database-feed-reaction]:hover,
   height: 20px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  [data-blok-database-new] > button,
-  [data-blok-database-subitem-toggle] svg {
-    transition: none;
-  }
-}
-
 /* ── Tier 3 (D6): form, map and dashboard views. Sizes are unmeasured: Blok tokens. ── */
 
 [data-blok-database-form],
@@ -18340,42 +18333,69 @@ button[data-blok-database-feed-reaction]:hover,
   block-size: 24px;
 }
 
+/* Round 32 §1: the 32px wrapper scales 0.3 → 1 and fades in over 200ms ease from its right-middle, toward
+   the card. The exit is unread: it fades at full size and drops back to 0.3 only once hidden. */
 [data-blok-database-form-insert] {
   position: absolute;
   inset-block-start: -4px;
   inset-inline-start: 0;
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
   inline-size: 32px;
   block-size: 32px;
   padding: 0;
   border: none;
-  /* Notion's 100% 100% 6px on a 32 box: the browser halves every corner, so 16 16 3 16. */
-  border-radius: 50%;
-  border-bottom-right-radius: var(--blok-radius-checkbox);
-  rotate: 45deg;
-  background: var(--blok-database-hover-bg);
+  background: none;
   color: var(--blok-block-control);
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.2s;
-}
-
-[data-blok-database-form-insert]:hover {
-  background: var(--blok-database-pressed-bg);
+  transform: scale(0.3);
+  transform-origin: 32px 16px;
+  transition: opacity 0.2s, transform 0s 0.2s;
 }
 
 [data-blok-database-form-gap]:hover > [data-blok-database-form-insert],
 [data-blok-database-form-insert]:focus-visible {
   opacity: 1;
+  transform: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-/* The box turns 45° for its point; the plus turns back. */
-[data-blok-database-form-insert] svg {
+/* Round 32 §1: rotate(-45deg) puts the sharp corner on the right, at the card; the plus turns back upright.
+   Notion's 100% 100% 6px on a 32 box: the browser halves every corner, so 16 16 3 16. */
+[data-blok-database-form-insert-box] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: 50%;
+  border-bottom-right-radius: var(--blok-radius-checkbox);
+  rotate: -45deg;
+  background: var(--blok-database-hover-bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-database-new] > button,
+  [data-blok-database-subitem-toggle] svg {
+    transition: none;
+  }
+
+  [data-blok-database-form-insert],
+  [data-blok-database-form-gap]:hover > [data-blok-database-form-insert],
+  [data-blok-database-form-insert]:focus-visible {
+    transform: none;
+    transition: none;
+  }
+}
+
+[data-blok-database-form-insert]:hover > [data-blok-database-form-insert-box] {
+  background: var(--blok-database-pressed-bg);
+}
+
+[data-blok-database-form-insert-box] svg {
   inline-size: 20px;
   block-size: 20px;
-  rotate: -45deg;
+  rotate: 45deg;
 }
 
 [data-blok-database-form-slot] {

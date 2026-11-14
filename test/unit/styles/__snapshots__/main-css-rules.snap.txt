@@ -6886,7 +6886,7 @@ span[data-blok-slash-search] {
   height: 18.67px;
 }
 
-[data-blok-database-column-count] {
+[data-blok-database-column-count], [data-blok-database-board-lane-count] {
   box-sizing: border-box;
   height: 20px;
   padding: 0 var(--blok-space-1-5);

@@ -30,7 +30,7 @@ export interface GroupMenuParams {
   isStatus: boolean;
   /** Opens the view settings Group page (findings-board B14). */
   onEditGroups: () => void;
-  /** Without it there is no aggregation row: a sub-group band shows no count. */
+  /** Without it there is no aggregation row. */
   onToggleAggregation?: () => void;
   onHide: () => void;
   onTrash: () => void;

@@ -810,6 +810,8 @@ export interface GroupSettings {
   hideEmptyGroups?: boolean;
   /** Board only: tint each column with its option color. Default on. */
   colorColumns?: boolean;
+  /** A board's sub-groups only: each band shows its page count. Default off. */
+  showAggregation?: boolean;
 }
 
 /** A conditional color rule. The rule tints rows whose property matches it. */

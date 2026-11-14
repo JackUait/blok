@@ -4824,6 +4824,10 @@
                   "colorColumns": {
                     "type": "boolean",
                     "description": "Board only. Default true."
+                  },
+                  "showAggregation": {
+                    "type": "boolean",
+                    "description": "Board subGroupSettings only: each sub-group band shows its page count. Default false."
                   }
                 }
               },
@@ -4891,6 +4895,10 @@
                   "colorColumns": {
                     "type": "boolean",
                     "description": "Board only. Default true."
+                  },
+                  "showAggregation": {
+                    "type": "boolean",
+                    "description": "Board subGroupSettings only: each sub-group band shows its page count. Default false."
                   }
                 }
               },

@@ -354,6 +354,7 @@ const GROUP_SETTINGS = {
     textBy: { type: 'string', enum: ['exact', 'alphabet'] },
     hideEmptyGroups: { type: 'boolean' },
     colorColumns: { type: 'boolean', description: 'Board only. Default true.' },
+    showAggregation: { type: 'boolean', description: 'Board subGroupSettings only: each sub-group band shows its page count. Default false.' },
   },
 };
 

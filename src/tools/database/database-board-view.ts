@@ -86,6 +86,8 @@ export interface BoardLane {
   option?: SelectOption;
   /** The view saved this band collapsed. */
   collapsed?: boolean;
+  /** Its page count, set while the band shows its aggregation. */
+  count?: number;
 }
 
 /** Card widths per card size (research/07; feel findings B30: Small 180, Large 320). */
@@ -360,7 +362,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     return heads;
   }
 
-  /** One sub-group: its label (no count, research/31 §3), then a row of every column holding only its cards. */
+  /** One sub-group: its label, its count only once Show aggregation is picked (research/31 §3), then a row of every column holding only its cards. */
   private createLane(lane: BoardLane): HTMLElement {
     const section = document.createElement('section');
     const header = document.createElement('div');
@@ -386,6 +388,13 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       label.textContent = lane.label;
     }
     header.appendChild(label);
+    if (lane.count !== undefined) {
+      const count = document.createElement('span');
+
+      count.setAttribute('data-blok-database-board-lane-count', '');
+      count.textContent = String(lane.count);
+      header.appendChild(count);
+    }
     if (!this.readOnly) {
       header.appendChild(this.createLaneActions(lane.key));
     }

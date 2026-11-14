@@ -74,6 +74,7 @@ import { DATABASE_GROUP_MENU_CLASS, DATABASE_MENU_CLASS, DATABASE_SUBMENU_OPEN_D
 import { groupCalculationHint, groupCalculationItems, groupCalculationText } from './database-board-calculation';
 import { optionColorOf, type OptionColor } from './cells/option-colors';
 import { DatabaseBoardView } from './database-board-view';
+import type { BoardLane } from './database-board-view';
 import { DatabaseListView, pointerAnchor } from './database-list-view';
 import { DatabaseTableView, createTableState } from './database-table-view';
 import { DatabaseGalleryView } from './database-gallery-view';
@@ -7359,7 +7360,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** Board sub-groups (Phase 3 `subGroupBy`): the lanes in order and each row's lane keys. */
-  private boardLanes(view: DatabaseViewConfig): { lanes: Array<{ key: string; label: string; option?: SelectOption; collapsed: boolean }>; keysOf: (row: DatabaseRow) => string[] } | null {
+  private boardLanes(view: DatabaseViewConfig): { lanes: BoardLane[]; keysOf: (row: DatabaseRow) => string[] } | null {
     const subGroupBy = view.subGroupBy;
 
     if (subGroupBy === undefined || subGroupBy === view.groupBy || this.model.getProperty(subGroupBy) === undefined) {
@@ -7368,6 +7369,11 @@ export class DatabaseTool implements BlockTool {
 
     const subView = { ...view, groupBy: subGroupBy, groupSettings: view.subGroupSettings };
     const optionGroup = this.isOptionGroup(subGroupBy);
+    const keysOf = this.model.groupKeysOf(subGroupBy, { settings: view.subGroupSettings ?? {} });
+    const counted = view.subGroupSettings?.showAggregation === true && view.groupBy !== undefined;
+    const shown = counted ? this.groupOptions(view.groupBy ?? '', view).filter((option) => !hasGroup(view.hiddenGroups, option.id)) : [];
+    const rows = counted ? new Map([...this.queryGroupRows(view, shown.map((o) => o.id)).values()].flat().map((row) => [row.id, row])) : new Map<string, DatabaseRow>();
+    const countOf = (key: string): number => [...rows.values()].filter((row) => keysOf(row).includes(key)).length;
 
     return {
       lanes: this.groupOptions(subGroupBy, subView).filter((option) => !hasGroup(view.hiddenGroups, `sub:${option.id}`)).map((option) => ({
@@ -7375,8 +7381,9 @@ export class DatabaseTool implements BlockTool {
         label: option.label,
         collapsed: hasGroup(view.collapsedGroups, `sub:${option.id}`),
         ...(optionGroup && option.id !== NO_VALUE_GROUP_KEY ? { option } : {}),
+        ...(counted ? { count: countOf(option.id) } : {}),
       })),
-      keysOf: this.model.groupKeysOf(subGroupBy, { settings: view.subGroupSettings ?? {} }),
+      keysOf,
     };
   }
 
@@ -9890,7 +9897,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
-   * A sub-group band's ⋯ (notion-motion.md Round 29 §6; what Notion lists there is unread): the group menu,
+   * A sub-group band's ⋯ (notion-motion.md Round 29 §6, its rows Round 30 §2): the group menu,
    * acting on the sub-group. Its keys are `sub:`-prefixed on the view, so a band never touches the column with the same id.
    */
   private openLaneMenu(anchor: HTMLElement, key: string, header: HTMLElement): void {
@@ -9902,13 +9909,17 @@ export class DatabaseTool implements BlockTool {
       return;
     }
     const option = key === NO_VALUE_GROUP_KEY ? undefined : property.config?.options?.find((o) => o.id === key);
+    const aggregationHidden = view.subGroupSettings?.showAggregation !== true;
 
     this.showGroupPopover(anchor, groupMenuItems({
       i18n: this.api.i18n,
       isNoValue: option === undefined,
       color: option === undefined ? undefined : optionColorOf(option),
+      aggregationHidden,
       isStatus: property.type === 'status',
       onEditGroups: () => this.controls.openSettingsPage('group', anchor),
+      // notion-motion.md Round 30 §2: every band of the view shows or hides its count together.
+      onToggleAggregation: () => this.updateActiveView({ subGroupSettings: { ...view.subGroupSettings, showAggregation: aggregationHidden ? true : undefined } }),
       onHide: () => this.toggleGroupHidden(`sub:${key}`),
       onTrash: () => this.trashGroup(key, (shown) => this.laneRows(shown, key)),
       onRecolor: (color) => this.recolorGroup(key, color, subGroupBy),

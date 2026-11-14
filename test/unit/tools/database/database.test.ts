@@ -7309,15 +7309,26 @@ describe('DatabaseTool — board sub-group lanes', () => {
       queryByData(document.body, 'data-mock-popover-action', title.toLowerCase())?.click();
     };
 
-    it('opens the group menu with no aggregation row', () => {
+    // notion-motion.md Round 30 §2: the band's ⋯ lists Show aggregation; Round 29 §6: the band shows no count until then.
+    it('opens the group menu, whose Show aggregation shows the band\'s count until Hide aggregation', () => {
       const { tool, element } = mount();
+      const count = (): string | null | undefined =>
+        lane(element, 'team-a')?.querySelector('[data-blok-database-board-lane-count]')?.textContent;
 
+      expect(count()).toBeUndefined();
       openLaneMenu(element, 'team-a');
 
       expect(queryByData(document.body, 'data-mock-popover-class', 'blok-database-menu blok-database-header-menu blok-database-group-menu')).not.toBeNull();
       expect(queryByData(document.body, 'data-mock-popover-action', 'tools.database.grouphideaggregation')).toBeNull();
-      expect(queryByData(document.body, 'data-mock-popover-action', 'tools.database.groupshowaggregation')).toBeNull();
       expect(lane(element, 'team-a')?.querySelector('[data-blok-database-board-lane-header]')?.hasAttribute('data-popover-open')).toBe(true);
+      pick('tools.database.groupShowAggregation');
+
+      expect(count()).toBe('1');
+      expect(tool.save(element).views[0].subGroupSettings?.showAggregation).toBe(true);
+
+      openLaneMenu(element, 'team-a');
+      pick('tools.database.groupHideAggregation');
+      expect(count()).toBeUndefined();
 
       tool.destroy();
     });

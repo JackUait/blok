@@ -800,6 +800,8 @@ export interface GroupSettings {
   hideEmptyGroups?: boolean;
   /** Board only. Default true. */
   colorColumns?: boolean;
+  /** A board's sub-groups only: each band shows its page count. Default false. */
+  showAggregation?: boolean;
 }
 
 /** A conditional color rule: rows whose property matches it get the color. */

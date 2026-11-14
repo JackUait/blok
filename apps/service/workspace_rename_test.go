@@ -17,9 +17,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Un espace porte le nom que son administrateur lui donne. Le bootstrap en cree
-// un d'office ("Tousambassadeurs") : sans renommage, tout deploiement herite du
-// nom d'un autre client, sans recours autre qu'un UPDATE SQL a la main.
+// Un espace porte le nom que son administrateur lui donne. Sans renommage, le
+// nom bootstrap reste celui choisi au déploiement — à corriger dans l'UI.
 func TestWorkspaceRename(t *testing.T) {
 	raw := os.Getenv("TEST_DATABASE_URL")
 	if raw == "" {
@@ -44,7 +43,7 @@ func TestWorkspaceRename(t *testing.T) {
 	q.Set("search_path", schemaName)
 	parsed.RawQuery = q.Encode()
 
-	cfg := Config{DatabaseURL: parsed.String(), PublicURL: "http://localhost:8080", InternalURL: "http://localhost:8080", DataDirectory: t.TempDir(), AdminEmail: "admin@example.test", Development: true, TicketSecret: strings.Repeat("t", 40), InternalSecret: strings.Repeat("i", 40), Deliver: func(string, string, string) error { return nil }}
+	cfg := Config{DatabaseURL: parsed.String(), PublicURL: "http://localhost:8080", InternalURL: "http://localhost:8080", DataDirectory: t.TempDir(), AdminEmail: "admin@example.test", BootstrapWorkspaceSlug: "acme", BootstrapWorkspaceName: "Acme", Development: true, TicketSecret: strings.Repeat("t", 40), InternalSecret: strings.Repeat("i", 40), Deliver: func(string, string, string) error { return nil }}
 	s, e := New(ctx, cfg)
 	if e != nil {
 		t.Fatal(e)
@@ -54,10 +53,14 @@ func TestWorkspaceRename(t *testing.T) {
 	defer server.Close()
 
 	var wsID, adminID string
-	if e = s.DB.QueryRow(ctx, "SELECT id FROM workspaces WHERE slug='tousambassadeurs'").Scan(&wsID); e != nil {
+	if e = s.DB.QueryRow(ctx, "SELECT id FROM workspaces WHERE slug='acme'").Scan(&wsID); e != nil {
 		t.Fatal(e)
 	}
 	if e = s.DB.QueryRow(ctx, "SELECT id FROM users WHERE email='admin@example.test'").Scan(&adminID); e != nil {
+		t.Fatal(e)
+	}
+	// AdminEmail grants instance admin only; seed workspace membership for this suite.
+	if _, e = s.DB.Exec(ctx, `INSERT INTO memberships VALUES($1,$2,'admin') ON CONFLICT DO NOTHING`, wsID, adminID); e != nil {
 		t.Fatal(e)
 	}
 	newSession := func(uid string) string {
@@ -110,7 +113,7 @@ func TestWorkspaceRename(t *testing.T) {
 		return out
 	}
 
-	const path = "/api/workspaces/tousambassadeurs"
+	const path = "/api/workspaces/acme"
 
 	// Le defaut d'abord : un administrateur renomme son espace.
 	renamed := request("PATCH", path, admin, map[string]any{"name": "Jocehome"}, 200)
@@ -125,8 +128,8 @@ func TestWorkspaceRename(t *testing.T) {
 		t.Fatalf("nom en base: %q want Jocehome", stored)
 	}
 	// Le slug est l'URL de l'espace et la cible du bootstrap : renommer ne le touche pas.
-	if slug != "tousambassadeurs" {
-		t.Fatalf("slug modifie: %q want tousambassadeurs", slug)
+	if slug != "acme" {
+		t.Fatalf("slug modifie: %q want acme", slug)
 	}
 	if got := request("GET", path, admin, nil, 200); got["name"] != "Jocehome" {
 		t.Fatalf("GET apres renommage: name=%v want Jocehome", got["name"])

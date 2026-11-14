@@ -32,25 +32,30 @@ import (
 var schema string
 
 type Service struct {
-	DB           *pgxpool.Pool
-	aiCipher     cipher.AEAD
-	aiClient     *http.Client
-	aiInFlight   map[string]int
-	aiMu         sync.Mutex
-	Config       Config
-	Blok         *blokserver.Server
-	MCP          *blokmcp.Attached
-	mcpHandler   http.Handler
-	mux          *http.ServeMux
-	observed     map[string]int
-	observedMu   sync.Mutex
-	draining     atomic.Bool
-	accessCancel context.CancelFunc
-	accessDone   chan struct{}
+	DB             *pgxpool.Pool
+	aiCipher       cipher.AEAD
+	aiClient       *http.Client
+	aiInFlight     map[string]int
+	aiMu           sync.Mutex
+	Config         Config
+	Blok           *blokserver.Server
+	MCP            *blokmcp.Attached
+	mcpHandler     http.Handler
+	mux            *http.ServeMux
+	observed       map[string]int
+	observedMu     sync.Mutex
+	draining       atomic.Bool
+	accessCancel   context.CancelFunc
+	accessDone     chan struct{}
+	settingsValue  atomic.Pointer[InstanceSettings]
+	settingsCancel context.CancelFunc
+	settingsDone   chan struct{}
 }
 type User struct {
-	ID    string `json:"id"`
-	Email string `json:"email"`
+	ID            string `json:"id"`
+	Email         string `json:"email"`
+	Name          string `json:"name"`
+	InstanceAdmin bool   `json:"instanceAdmin"`
 }
 type identity struct {
 	User
@@ -99,28 +104,28 @@ func New(ctx context.Context, c Config) (*Service, error) {
 	if _, e = tx.Exec(ctx, schema); e != nil {
 		return fail(e)
 	}
-	if _, e = tx.Exec(ctx, "INSERT INTO workspaces(id,slug,name) VALUES($1,'tousambassadeurs','Tousambassadeurs') ON CONFLICT(slug) DO NOTHING", opaque()); e != nil {
-		return fail(e)
-	}
-	if c.AdminEmail != "" {
-		marker, e := tx.Exec(ctx, "INSERT INTO bootstrap_markers(name) VALUES('default-admin') ON CONFLICT DO NOTHING")
-		if e != nil {
+	// Optional deploy bootstrap: AdminEmail + workspace couple inserts one space
+	// ON CONFLICT DO NOTHING (§5.3). Membership is applied in bootstrapInstance
+	// after the admin user exists — also ON CONFLICT DO NOTHING, so a deliberate
+	// demotion survives restart (§5.1).
+	if c.AdminEmail != "" && c.BootstrapWorkspaceSlug != "" && c.BootstrapWorkspaceName != "" {
+		if _, e = tx.Exec(ctx, `INSERT INTO workspaces(id,slug,name) VALUES($1,$2,$3) ON CONFLICT(slug) DO NOTHING`,
+			opaque(), c.BootstrapWorkspaceSlug, c.BootstrapWorkspaceName); e != nil {
 			return fail(e)
 		}
-		if marker.RowsAffected() == 1 {
-			if _, e = normalizeEmail(c.AdminEmail); e != nil {
-				return fail(e)
-			}
-			if _, e = tx.Exec(ctx, "INSERT INTO users(id,email) VALUES($1,$2) ON CONFLICT(email) DO NOTHING", opaque(), c.AdminEmail); e != nil {
-				return fail(e)
-			}
-			if _, e = tx.Exec(ctx, "INSERT INTO memberships SELECT w.id,u.id,'admin' FROM workspaces w,users u WHERE w.slug='tousambassadeurs' AND u.email=$1 ON CONFLICT(workspace_id,user_id) DO NOTHING", c.AdminEmail); e != nil {
-				return fail(e)
-			}
-		}
+	}
+	// bootstrap_markers is unused since instance admins (§5.1); keep the empty table.
+	needSetupToken, e := s.bootstrapInstance(ctx, tx)
+	if e != nil {
+		return fail(e)
 	}
 	if e = tx.Commit(ctx); e != nil {
 		return fail(e)
+	}
+	if needSetupToken {
+		if e = s.ensureSetupToken(ctx); e != nil {
+			return fail(e)
+		}
 	}
 	if e = os.MkdirAll(filepath.Join(c.DataDirectory, "uploads"), 0700); e != nil {
 		return fail(e)
@@ -149,11 +154,16 @@ func New(ctx context.Context, c Config) (*Service, error) {
 	if e = s.initMCP(); e != nil {
 		return fail(e)
 	}
+	if e = s.refreshSettings(ctx); e != nil {
+		return fail(e)
+	}
 	s.routes()
 	s.startAccessSweep()
+	s.startSettingsSweep()
 	return s, nil
 }
 func (s *Service) Close() {
+	s.stopSettingsSweep()
 	s.stopAccessSweep()
 	if s.MCP != nil {
 		s.MCP.Close()
@@ -162,6 +172,7 @@ func (s *Service) Close() {
 }
 func (s *Service) Drain(ctx context.Context) error {
 	s.draining.Store(true)
+	s.stopSettingsSweep()
 	s.stopAccessSweep()
 	return s.Blok.Drain(ctx)
 }
@@ -199,7 +210,10 @@ func (s *Service) session(r *http.Request) (identity, error) {
 		return u, errors.New("missing session")
 	}
 	u.Session = hash(token)
-	e := s.DB.QueryRow(r.Context(), "SELECT u.id,u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id=$1 AND s.expires_at>now()", u.Session).Scan(&u.ID, &u.Email)
+	e := s.DB.QueryRow(r.Context(), `SELECT u.id, u.email, u.name, ia.user_id IS NOT NULL
+		FROM sessions s JOIN users u ON u.id=s.user_id
+		LEFT JOIN instance_admins ia ON ia.user_id=u.id
+		WHERE s.id=$1 AND s.expires_at>now()`, u.Session).Scan(&u.ID, &u.Email, &u.Name, &u.InstanceAdmin)
 	return u, e
 }
 func (s *Service) require(w http.ResponseWriter, r *http.Request) (identity, bool) {
@@ -257,6 +271,18 @@ func (s *Service) routes() {
 		}
 		jsonOut(w, 200, map[string]bool{"ok": true})
 	})
+	s.mux.HandleFunc("GET /api/instance", s.getInstance)
+	s.mux.HandleFunc("POST /api/setup/claim", s.claimSetup)
+	s.mux.HandleFunc("POST /api/setup/email-test", s.setupEmailTest)
+	s.mux.HandleFunc("GET /api/admin/settings", s.getAdminSettings)
+	s.mux.HandleFunc("PATCH /api/admin/settings", s.patchAdminSettings)
+	s.mux.HandleFunc("GET /api/admin/users", s.listAdminUsers)
+	s.mux.HandleFunc("POST /api/admin/users", s.createAdminUser)
+	s.mux.HandleFunc("PATCH /api/admin/users/{id}", s.patchAdminUser)
+	s.mux.HandleFunc("DELETE /api/admin/users/{id}", s.deleteAdminUser)
+	s.mux.HandleFunc("GET /api/admin/workspaces", s.listAdminWorkspaces)
+	s.mux.HandleFunc("POST /api/admin/workspaces", s.createAdminWorkspace)
+	s.mux.HandleFunc("POST /api/admin/email-test", s.adminEmailTest)
 	s.mux.HandleFunc("POST /api/auth/request-code", s.requestCode)
 	s.mux.HandleFunc("POST /api/auth/verify-code", s.verifyCode)
 	s.mux.HandleFunc("GET /api/session", s.getSession)

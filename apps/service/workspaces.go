@@ -27,6 +27,30 @@ func (s *Service) createWorkspace(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	switch s.settings().WorkspaceCreation {
+	case "disabled":
+		problem(w, 403, "Workspace creation is disabled on this instance")
+		return
+	case "admins_only":
+		if !u.InstanceAdmin {
+			problem(w, 403, "Instance administrator required")
+			return
+		}
+	}
+	s.insertWorkspace(w, r, u)
+}
+
+// createAdminWorkspace lets instance admins create a workspace even when
+// WorkspaceCreation is disabled (B5/B6).
+func (s *Service) createAdminWorkspace(w http.ResponseWriter, r *http.Request) {
+	u, ok := s.requireInstanceAdmin(w, r)
+	if !ok {
+		return
+	}
+	s.insertWorkspace(w, r, u)
+}
+
+func (s *Service) insertWorkspace(w http.ResponseWriter, r *http.Request, u identity) {
 	var in struct {
 		Name string `json:"name"`
 		Slug string `json:"slug"`
@@ -60,6 +84,11 @@ func (s *Service) createWorkspace(w http.ResponseWriter, r *http.Request) {
 	if e = tx.Commit(r.Context()); e != nil {
 		problem(w, 500, "Creation failed")
 		return
+	}
+	var n int
+	if s.DB.QueryRow(r.Context(), `SELECT count(*) FROM workspaces`).Scan(&n) == nil && n == 1 {
+		id := out.ID
+		_, _ = s.applySettings(r.Context(), SettingsPatch{DefaultWorkspaceID: &id, UpdatedBy: &u.ID})
 	}
 	jsonOut(w, 201, out)
 }

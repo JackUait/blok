@@ -16,7 +16,7 @@ MAIL_DIRECTORY = Path(os.environ.get("MAIL_DIRECTORY", "/mail"))
 ADMIN_EMAIL = os.environ.get("BOOTSTRAP_ADMIN_EMAIL", "admin@example.test").strip().lower()
 MEMBER_EMAIL = os.environ.get("DEMO_MEMBER_EMAIL", "membre@example.test").strip().lower()
 REQUESTER_EMAIL = os.environ.get("DEMO_REQUESTER_EMAIL", "demandeur@example.test").strip().lower()
-WORKSPACE = os.environ.get("DEMO_WORKSPACE", "tousambassadeurs")
+WORKSPACE = os.environ.get("DEMO_WORKSPACE", "equipe")
 CODE = re.compile(r"(?<!\d)\d{6}(?!\d)")
 
 

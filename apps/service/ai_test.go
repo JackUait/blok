@@ -140,7 +140,7 @@ func TestAIIntegration(t *testing.T) {
 		clone.URL = &copyURL
 		return http.DefaultTransport.RoundTrip(clone)
 	})
-	cfg := Config{DatabaseURL: parsed.String(), PublicURL: "http://localhost:8080", InternalURL: "http://localhost:8080", DataDirectory: t.TempDir(), AdminEmail: "admin@example.test", Development: true, TicketSecret: strings.Repeat("t", 40), InternalSecret: strings.Repeat("i", 40), Deliver: func(string, string, string) error { return nil }, AITransport: transport}
+	cfg := Config{DatabaseURL: parsed.String(), PublicURL: "http://localhost:8080", InternalURL: "http://localhost:8080", DataDirectory: t.TempDir(), AdminEmail: "admin@example.test", BootstrapWorkspaceSlug: "acme", BootstrapWorkspaceName: "Acme", Development: true, TicketSecret: strings.Repeat("t", 40), InternalSecret: strings.Repeat("i", 40), Deliver: func(string, string, string) error { return nil }, AITransport: transport}
 	s, e := New(ctx, cfg)
 	if e != nil {
 		t.Fatal(e)
@@ -149,10 +149,17 @@ func TestAIIntegration(t *testing.T) {
 	server := httptest.NewServer(s.Handler())
 	defer server.Close()
 	var wsID, adminID string
-	if e = s.DB.QueryRow(ctx, "SELECT id FROM workspaces WHERE slug='tousambassadeurs'").Scan(&wsID); e != nil {
+	if e = s.DB.QueryRow(ctx, "SELECT id FROM workspaces WHERE slug='acme'").Scan(&wsID); e != nil {
 		t.Fatal(e)
 	}
 	if e = s.DB.QueryRow(ctx, "SELECT id FROM users WHERE email='admin@example.test'").Scan(&adminID); e != nil {
+		t.Fatal(e)
+	}
+	// AdminEmail grants instance admin only; seed workspace membership for this suite.
+	if _, e = s.DB.Exec(ctx, `INSERT INTO memberships VALUES($1,$2,'admin') ON CONFLICT DO NOTHING`, wsID, adminID); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = s.applySettings(ctx, SettingsPatch{WorkspaceCreation: strPtr("anyone")}); e != nil {
 		t.Fatal(e)
 	}
 	newSession := func(uid string) string {
@@ -206,7 +213,7 @@ func TestAIIntegration(t *testing.T) {
 		json.Unmarshal(raw, &out)
 		return out
 	}
-	base := "/api/workspaces/tousambassadeurs/ai"
+	base := "/api/workspaces/acme/ai"
 	request("GET", base, "", nil, 401)
 	request("GET", base, other, nil, 403)
 	config := request("GET", base, member, nil, 200)

@@ -1,6 +1,6 @@
-# Blok pour Tousambassadeurs
+# Blok self-host
 
-Ce déploiement sert le navigateur et les clients Tauri sur `https://blok.tousamba.cloud`.
+Ce déploiement sert le navigateur et les clients Tauri sur ton domaine HTTPS.
 Il comprend Caddy (interface + proxy HTTP interne), le service Go et PostgreSQL 17. Le proxy déjà présent sur le VPS termine HTTPS. Un seul service Go doit utiliser le volume de collaboration.
 
 ## Démonstration sur ton ordinateur
@@ -19,11 +19,11 @@ Cette pile distincte (`blok-local`) est limitée à l'ordinateur via `127.0.0.1`
 ## Construire les images sur ton VPS
 
 Prérequis : Git, Docker avec Compose v2, OpenSSL et un proxy HTTPS existant pour le domaine.
-Fais pointer le DNS A de `blok.tousamba.cloud` vers le VPS choisi ; retire un éventuel AAAA qui pointe ailleurs.
-Le seul port publié par Blok est `127.0.0.1:18088`, absent des ports déjà occupés fournis pour ce VPS. Configure ton proxy existant pour transmettre `blok.tousamba.cloud` vers `http://127.0.0.1:18088`, en conservant Host et les connexions WebSocket. Le port 18088 est local uniquement ; les ports 80, 443 et 5432 existants ne sont pas utilisés par Blok.
+Fais pointer le DNS A de ton domaine vers le VPS choisi ; retire un éventuel AAAA qui pointe ailleurs.
+Le seul port publié par Blok est `127.0.0.1:18088`. Configure ton proxy existant pour transmettre ton domaine vers `http://127.0.0.1:18088`, en conservant Host et les connexions WebSocket. Le port 18088 est local uniquement ; les ports 80, 443 et 5432 existants ne sont pas utilisés par Blok.
 
 ```sh
-git clone --branch feat/tousambassadeurs-cloud https://github.com/joceqo/blok.git
+git clone https://github.com/joceqo/blok.git
 cd blok
 ./deploy/install.sh
 ```
@@ -32,20 +32,23 @@ Le premier lancement crée `deploy/.env` et trois secrets aléatoires, puis s'ar
 Édite ce fichier sur le serveur :
 
 ```dotenv
-DOMAIN=blok.tousamba.cloud
+DOMAIN=blok.example.com
 BOOTSTRAP_ADMIN_EMAIL=ton-adresse@example.com
-MAILER_HOST=smtprelay.nexenture.fr
+# Optional: seed one workspace at first boot (both or neither).
+BOOTSTRAP_WORKSPACE_SLUG=equipe
+BOOTSTRAP_WORKSPACE_NAME=Équipe
+MAILER_HOST=smtp.example.com
 MAILER_PORT=465
 MAILER_USER=
 MAILER_PASSWORD=
-MAILER_FROM_EMAIL=blok@nexenture.fr
+MAILER_FROM_EMAIL=blok@example.com
 MAILER_FROM_NAME=blok
 ```
 
 Ne remplace pas les trois secrets générés. Le mot de passe PostgreSQL doit rester hexadécimal pour son utilisation dans l'URL de connexion.
 Le fichier `.env` est ignoré par Git. Garde-en une copie privée hors du VPS.
 
-Le port **465** utilise TLS dès la connexion, avec validation du certificat. Renseigne `MAILER_USER` et `MAILER_PASSWORD` si ton relais exige une authentification ; laisse les deux vides uniquement si le relais autorise ton serveur sans identifiants. L’expéditeur `blok@nexenture.fr` doit être autorisé par le relais. Aucun envoi réel n’est effectué par le script d’installation : la première demande de connexion permet de vérifier la livraison.
+Le port **465** utilise TLS dès la connexion, avec validation du certificat. Renseigne `MAILER_USER` et `MAILER_PASSWORD` si ton relais exige une authentification ; laisse les deux vides uniquement si le relais autorise ton serveur sans identifiants. L’expéditeur `MAILER_FROM_EMAIL` doit être autorisé par le relais. Aucun envoi réel n’est effectué par le script d’installation : la première demande de connexion permet de vérifier la livraison.
 
 Dans `.env`, une ligne par variable, **sans antislash final**. Un mot de passe contenant `$` ou `#` doit être entouré d’apostrophes pour rester littéral, par exemple `MAILER_PASSWORD='valeur-à-remplacer'`. Ne publie pas ce fichier.
 
@@ -59,8 +62,7 @@ sudo docker compose logs --tail 100 app web
 ```
 
 Le proxy existant gère le certificat HTTPS public. Caddy écoute en HTTP sur le port 80 du conteneur, publié uniquement sur `127.0.0.1:18088`. `PUBLIC_URL` reste l’adresse HTTPS du domaine. Vérifie la pile depuis le VPS avec `curl http://127.0.0.1:18088/healthz`.
-Ouvre le site, entre l'adresse `BOOTSTRAP_ADMIN_EMAIL` et le code reçu : cet utilisateur est administrateur de Tousambassadeurs.
-L'attribution initiale ne se produit qu'une fois ; modifier cette variable après installation ne promeut pas un nouveau compte.
+Sans `BOOTSTRAP_ADMIN_EMAIL`, le premier démarrage ouvre l'assistant de setup (jeton dans `/data/setup-token`). Avec cette variable seule, l'adresse devient administrateur d'instance sans membership d'espace. Le couple `BOOTSTRAP_WORKSPACE_*` (avec l'admin) sème un espace et une membership admin une fois chacun (`ON CONFLICT DO NOTHING` — une rétrogradation volontaire survit au redémarrage).
 
 Si le réseau Docker `172.30.87.0/24` existe déjà, change ensemble `BLOK_NETWORK_SUBNET`, `BLOK_NETWORK_DYNAMIC_RANGE` et `CADDY_IP` dans `.env`. L'adresse fixe de Caddy doit rester hors de la plage dynamique.
 Seul Caddy est un proxy de confiance ; PostgreSQL et le service Go n'exposent aucun port sur le VPS.
@@ -69,7 +71,7 @@ Seul Caddy est un proxy de confiance ; PostgreSQL et le service Go n'exposent au
 
 `compose.images.yaml` lance les mêmes trois services sans aucune compilation et sans checkout du code. Charge d’abord les images Blok adaptées à l’architecture du VPS avec `docker load`, puis utilise ce fichier comme `compose.yaml`. Renseigne `APP_IMAGE` et `WEB_IMAGE` avec les tags chargés dans `.env` ; les deux services utilisent `pull_policy: never`. PostgreSQL utilise toujours l’image officielle.
 
-Le paquet exporté pour `debian@sandbox-tousamba-cloud` est en **linux/amd64 (x86_64)**. Il contient `images.tar`, `compose.yaml`, `.env.example`, `prepare.sh` et les scripts de sauvegarde/restauration. Après extraction :
+Le paquet d'images préconstruites est en **linux/amd64 (x86_64)**. Il contient `images.tar`, `compose.yaml`, `.env.example`, `prepare.sh` et les scripts de sauvegarde/restauration. Après extraction :
 
 ```sh
 cd blok-vps-amd64
@@ -83,7 +85,7 @@ Le script `prepare.sh` crée les secrets, sans démarrer les conteneurs. Renseig
 
 ## Membres et administration
 
-Un nouvel utilisateur vérifie son e-mail, puis demande à rejoindre Tousambassadeurs.
+Un nouvel utilisateur vérifie son e-mail, puis demande à rejoindre un espace (ou reçoit une invitation).
 Un administrateur peut approuver/refuser la demande, inviter par e-mail, changer un rôle ou retirer un membre.
 L'invitation devient effective à la prochaine connexion avec l'adresse invitée.
 

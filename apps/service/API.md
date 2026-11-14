@@ -1,12 +1,24 @@
 # Cloud API contract
 All paths relative to configured HTTPS API origin. JSON errors `{error:string}`. Web uses HttpOnly SameSite=Lax cookie; native uses `Authorization: Bearer <token>` in OS secure storage. Send `client:"desktop"` only for native code verification. Mutating web requests require same origin (Origin checked). IDs opaque strings. Workspace route identifier is slug. Roles `admin`, `member`, `viewer`.
 
-- POST `/api/auth/request-code` `{email}` → `{ok:true}`; SMTP delivery; code expires in 10 minutes.
-- POST `/api/auth/verify-code` `{email,code,client?:"desktop"}` → `{user:{id,email},workspaces:Workspace[],token?:string}`. Desktop token returned only for desktop, web cookie otherwise.
-- GET `/api/session` → `{user,workspaces}`; 401 when logged out.
+- GET `/api/instance` → `{name,setupRequired,signupPolicy,workspaceCreation,defaultWorkspace:null|{slug,name}}`. Anonymous. Does not expose administrators. A setting changed by another process takes effect in under ten seconds.
+- POST `/api/setup/claim` `{token,email,name,instanceName?,workspace?:{slug,name}}` → `{ok:true}`. One-time first-run claim (token from `DATA_DIRECTORY/setup-token`). Creates the instance administrator and optional first workspace, then sends a normal login code — **no session**. 403 invalid token · 409 already claimed · 429 rate limited.
+- POST `/api/setup/email-test` `{token,email}` → `{ok:true,backend}` or 503 `{error,backend}`. Token-gated deliverability probe while setup is open; refused once setup is completed.
+- POST `/api/auth/request-code` `{email}` → `{ok:true}` for every syntactically valid address that passes rate limits. A login code is mailed only when signup is allowed under the instance policy (existing account, pending invite, `open`, or `domain` exact match after `@`); otherwise the response is still `{ok:true}` with no `login_codes` row and no mail. Code expires in 10 minutes. Verify refuses a code if policy no longer allows that address (`401 Invalid or expired code`).
+- POST `/api/auth/verify-code` `{email,code,client?:"desktop"}` → `{user:{id,email,name,instanceAdmin},workspaces:Workspace[],token?:string}`. Desktop token returned only for desktop, web cookie otherwise.
+- GET `/api/session` → `{user:{id,email,name,instanceAdmin},workspaces}`; 401 when logged out.
+- GET `/api/admin/settings` → instance settings (instance administrator).
+- PATCH `/api/admin/settings` `{name?,signupPolicy?,signupDomains?,workspaceCreation?,defaultWorkspaceId?}` → updated settings. Absent fields are unchanged. Instance administrator only.
+- GET `/api/admin/users?limit&offset` → `{users:[{id,email,name,createdAt,workspaceCount,instanceAdmin}],total,limit,offset}`. Metadata only — never page ids or titles. Instance administrator only.
+- POST `/api/admin/users` `{email,name?}` → created user (201). Creates an account with no workspace membership or invite. 409 if the email is already used. Instance administrator only.
+- PATCH `/api/admin/users/:id` `{instanceAdmin?,name?}` → updated user. Demoting or deleting the last instance administrator answers 409 `"Keep at least one instance administrator"`. Instance administrator only.
+- DELETE `/api/admin/users/:id` → `{ok:true}`. Transactional: sessions, MCP tokens, memberships, join requests, page shares owned by the user, and AI credentials are removed; `page_shares.granted_by` and `workspace_emojis.created_by` are reassigned to the deleting administrator. Same last-admin 409. Instance administrator only.
+- GET `/api/admin/workspaces` → `{workspaces:[{id,slug,name,memberCount,createdAt}]}`. Metadata only — no `pageCount`, page ids or titles (permissions law). Instance administrator only.
+- POST `/api/admin/workspaces` `{name,slug}` → Workspace (creator admin). Instance administrator only. Never governed by `workspaceCreation` — a disabled instance can still get a first workspace here.
+- POST `/api/admin/email-test` `{email}` → `{ok:true,backend}` or 503 `{error,backend}`. Instance administrator; rate limit 10/hour per account. `backend` is `injected` | `development` | `smtp` | `resend` | `""` and mirrors `send()` selection (SMTP wins over a residual Resend key).
 - POST `/api/auth/logout` → `{ok:true}` revokes current session.
 - GET `/api/workspaces` → `{workspaces:Workspace[]}` (signed in memberships).
-- POST `/api/workspaces` `{name,slug}` → Workspace (creator admin).
+- POST `/api/workspaces` `{name,slug}` → Workspace (creator admin). Subject to instance `workspaceCreation`: `anyone` (any signed-in user), `admins_only` (instance administrator; 403 otherwise), or `disabled` (403 for everyone, including instance administrators — use `POST /api/admin/workspaces` instead). Rate limit 10/hour per account.
 - GET `/api/workspaces/:slug` → `{id,slug,name,role:null|Role,joinStatus:null|"pending"|"approved"|"rejected"}`. Anonymous permitted.
 - POST `/api/workspaces/:slug/join-requests` `{message?:string}` → `{ok:true,status:"pending"}`.
 - GET `/api/workspaces/:slug/members` → `{members:[{id,email,role}]}` (members).
@@ -34,7 +46,7 @@ Writing. Duplicating needs `view` on the source **and** `edit` on the target par
 
 Page permissions. Each page carries a `visibility` of `inherit`, `private` or `workspace`, and may grant named people a `view`, `edit` or `full` level. A page resolves to `min(role ceiling, max(inherited workspace base, shares along its parent chain))`. The ceiling is `view` for a viewer and `full` otherwise; the workspace base is `edit` for a member and `full` for an admin. A ceiling grants nothing on its own, so an admin does not reach other people's private pages. A new page is `workspace` at the root and `inherit` under a parent. A duplicate keeps its source's visibility and grants the duplicator `full`. Private files follow their page: `/files/` and `/api/assets/url` refuse an asset whose `document_id` the caller cannot view, while an asset with no page — workspace emoji or cover — stays shared with members.
 
-Workspace = `{id,slug,name,role}`. Default slug `tousambassadeurs`.
+Workspace = `{id,slug,name,role}`. A fresh instance starts with zero workspaces; optional `BOOTSTRAP_WORKSPACE_SLUG` / `BOOTSTRAP_WORKSPACE_NAME` (with `BOOTSTRAP_ADMIN_EMAIL`) may seed one at startup.
 
 ## Hosted MCP
 

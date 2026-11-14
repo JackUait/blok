@@ -23,11 +23,14 @@ WORKDIR /build
 COPY packages/server/go packages/server/go
 COPY apps/service apps/service
 WORKDIR /build/apps/service
-RUN go mod download && CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -o /out/blok-cloud ./cmd/server
+RUN go mod download \
+ && CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -o /out/blok-cloud ./cmd/server \
+ && CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -o /out/blokctl ./cmd/blokctl
 
 FROM alpine:3.22 AS service
 RUN apk add --no-cache ca-certificates wget && addgroup -g 65532 app && adduser -D -u 65532 -G app app && mkdir /data && chown app:app /data
 COPY --from=service-build /out/blok-cloud /usr/local/bin/blok-cloud
+COPY --from=service-build /out/blokctl /usr/local/bin/blokctl
 USER 65532:65532
 WORKDIR /data
 EXPOSE 8080

@@ -9,11 +9,12 @@ The hosted MCP endpoint is `https://<PUBLIC_URL host>/mcp`. Every signed-in user
 Required production environment:
 
 - `DATABASE_URL`: PostgreSQL connection string, with TLS when crossing a host/network trust boundary.
-- `PUBLIC_URL`: canonical HTTPS application origin, such as `https://blok.tousamba.cloud`.
+- `PUBLIC_URL`: canonical HTTPS application origin, such as `https://blok.example.com`.
 - `INTERNAL_URL`: self-reachable application URL, default `http://127.0.0.1:8080`. Internal document endpoints require `INTERNAL_SECRET` independently of public user authentication; keep them blocked at the public reverse proxy.
 - `TICKET_SECRET`, `INTERNAL_SECRET`: independent cryptographically random values of at least 32 characters.
 - `RESEND_API_KEY`, `MAIL_FROM`: verified Resend sender. SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`) is an alternative.
-- `BOOTSTRAP_ADMIN_EMAIL`: verified through the same email login as every account. The first configured bootstrap creates the default workspace admin once. Changing this environment variable never overrides subsequent role changes.
+- `BOOTSTRAP_ADMIN_EMAIL`: optional. Upserts that address as an instance administrator. Alone, it never touches workspace memberships.
+- `BOOTSTRAP_WORKSPACE_SLUG` / `BOOTSTRAP_WORKSPACE_NAME`: optional couple (both set or both empty). With `BOOTSTRAP_ADMIN_EMAIL`, inserts that workspace and seeds the admin membership once each (`ON CONFLICT DO NOTHING` — a deliberate demotion survives restart).
 - `DATA_DIRECTORY`: persistent directory containing `collab/` and private `uploads/`.
 
 Optional `LISTEN_ADDR` defaults to `:8080`. `TRUSTED_PROXY_CIDRS` allows forwarded client IPs only from the specified direct proxy peers (for example Caddy’s dedicated `/32` address); forwarded chains are read from right to left and direct callers cannot spoof them. The resolved IP is also passed to Blok’s rate limiter. `ALLOWED_ORIGINS` is a comma separated exact allowlist for native origins. Never configure `*`. Browser UI and API should share an origin. Native app origins must be included for Blok's own ticket guard.

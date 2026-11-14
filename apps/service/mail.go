@@ -73,6 +73,24 @@ func (c Config) validateSMTP() error {
 	_, e = smtpSender(c)
 	return e
 }
+// mailBackend names the backend send() would pick, in the same order:
+// injected → development → smtp → resend → "". SMTP wins over a residual Resend key.
+func (c Config) mailBackend() string {
+	if c.Deliver != nil {
+		return "injected"
+	}
+	if c.Development && c.DevelopmentMailDirectory != "" {
+		return "development"
+	}
+	if c.SMTPHost != "" {
+		return "smtp"
+	}
+	if c.ResendAPIKey != "" {
+		return "resend"
+	}
+	return ""
+}
+
 func (s *Service) send(to, subject, text string) error {
 	if invalidMailHeader(subject) || invalidMailHeader(to) {
 		return errors.New("invalid mail header")

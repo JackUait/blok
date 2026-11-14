@@ -44,14 +44,14 @@ func TestSMTPEnvironmentAliasesAndDefaults(t *testing.T) {
 	if c.SMTPHost != "legacy.example.test" || c.SMTPUsername != "old-user" || c.SMTPFrom != "legacy@example.test" || c.SMTPFromName != "Legacy" {
 		t.Fatal("legacy SMTP aliases no longer work")
 	}
-	t.Setenv("MAILER_HOST", "smtprelay.nexenture.fr")
+	t.Setenv("MAILER_HOST", "smtp.example.com")
 	t.Setenv("MAILER_PORT", "465")
 	t.Setenv("MAILER_USER", "")
 	t.Setenv("MAILER_PASSWORD", "")
-	t.Setenv("MAILER_FROM_EMAIL", "blok@nexenture.fr")
+	t.Setenv("MAILER_FROM_EMAIL", "blok@example.com")
 	t.Setenv("MAILER_FROM_NAME", "blok")
 	c = ConfigFromEnv()
-	if c.SMTPHost != "smtprelay.nexenture.fr" || c.SMTPPort != "465" || c.SMTPFrom != "blok@nexenture.fr" || c.SMTPFromName != "blok" || c.SMTPUsername != "" || c.SMTPPassword != "" {
+	if c.SMTPHost != "smtp.example.com" || c.SMTPPort != "465" || c.SMTPFrom != "blok@example.com" || c.SMTPFromName != "blok" || c.SMTPUsername != "" || c.SMTPPassword != "" {
 		t.Fatal("preferred MAILER aliases or explicit blank auth overrides failed")
 	}
 	if e := c.validateSMTP(); e != nil {
@@ -223,7 +223,7 @@ func mockSMTP(t *testing.T, implicit, advertiseSTARTTLS bool) (string, *x509.Cer
 }
 func smtpTestConfig(t *testing.T, address, port string, roots *x509.CertPool) Config {
 	t.Helper()
-	return Config{SMTPHost: "smtp.test", SMTPPort: port, SMTPFrom: "blok@nexenture.fr", SMTPFromName: "blok équipe", SMTPRootCAs: roots, SMTPDialContext: func(ctx context.Context, network, target string) (net.Conn, error) {
+	return Config{SMTPHost: "smtp.test", SMTPPort: port, SMTPFrom: "blok@example.com", SMTPFromName: "blok équipe", SMTPRootCAs: roots, SMTPDialContext: func(ctx context.Context, network, target string) (net.Conn, error) {
 		if target != net.JoinHostPort("smtp.test", port) || network != "tcp" {
 			t.Error("wrong configured SMTP dial target")
 		}
@@ -254,7 +254,7 @@ func TestSMTP465ImplicitTLSWithoutAuthentication(t *testing.T) {
 	if !capture.TLS || capture.Version < tls.VersionTLS12 || capture.Auth {
 		t.Fatal("implicit TLS or optional authentication behavior wrong")
 	}
-	if !strings.HasPrefix(capture.Sender, "MAIL FROM:<blok@nexenture.fr>") || strings.Contains(capture.Sender, "équipe") || !strings.HasPrefix(capture.Recipient, "RCPT TO:<member@example.test>") {
+	if !strings.HasPrefix(capture.Sender, "MAIL FROM:<blok@example.com>") || strings.Contains(capture.Sender, "équipe") || !strings.HasPrefix(capture.Recipient, "RCPT TO:<member@example.test>") {
 		t.Fatal("SMTP envelope did not use pure addresses")
 	}
 	message, e := mail.ReadMessage(bytes.NewReader(capture.Message))
@@ -262,7 +262,7 @@ func TestSMTP465ImplicitTLSWithoutAuthentication(t *testing.T) {
 		t.Fatal(e)
 	}
 	from, e := mail.ParseAddress(message.Header.Get("From"))
-	if e != nil || from.Name != "blok équipe" || from.Address != "blok@nexenture.fr" {
+	if e != nil || from.Name != "blok équipe" || from.Address != "blok@example.com" {
 		t.Fatal("display name or From header encoded incorrectly")
 	}
 	subject, e := new(mime.WordDecoder).DecodeHeader(message.Header.Get("Subject"))

@@ -72,7 +72,7 @@ func TestCloudIntegration(t *testing.T) {
 		}
 		return nil
 	}
-	cfg := Config{DatabaseURL: parsed.String(), PublicURL: "http://localhost:8080", InternalURL: "http://localhost:8080", DataDirectory: t.TempDir(), AdminEmail: "admin@example.test", Development: true, TicketSecret: strings.Repeat("t", 40), InternalSecret: strings.Repeat("i", 40), Deliver: deliver}
+	cfg := Config{DatabaseURL: parsed.String(), PublicURL: "http://localhost:8080", InternalURL: "http://localhost:8080", DataDirectory: t.TempDir(), AdminEmail: "admin@example.test", BootstrapWorkspaceSlug: "tousambassadeurs", BootstrapWorkspaceName: "Tousambassadeurs", Development: true, TicketSecret: strings.Repeat("t", 40), InternalSecret: strings.Repeat("i", 40), Deliver: deliver}
 	server := httptest.NewUnstartedServer(nil)
 	cfg.InternalURL = "http://" + server.Listener.Addr().String()
 	s, e := New(ctx, cfg)
@@ -80,6 +80,19 @@ func TestCloudIntegration(t *testing.T) {
 		t.Fatal(e)
 	}
 	defer s.Close()
+	// AdminEmail grants instance admin only and never touches memberships.
+	var bootstrapAdminID string
+	if e = s.DB.QueryRow(ctx, `SELECT id FROM users WHERE email=$1`, cfg.AdminEmail).Scan(&bootstrapAdminID); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = s.DB.Exec(ctx, `INSERT INTO memberships SELECT id,$1,'admin' FROM workspaces WHERE slug='tousambassadeurs' ON CONFLICT DO NOTHING`, bootstrapAdminID); e != nil {
+		t.Fatal(e)
+	}
+	// Integration covers free signup and open workspace creation; AdminEmail
+	// leaves the strict invite/admins_only defaults (no memberships at migrate).
+	if _, e = s.applySettings(ctx, SettingsPatch{SignupPolicy: strPtr("open"), WorkspaceCreation: strPtr("anyone")}); e != nil {
+		t.Fatal(e)
+	}
 	server.Config.Handler = s.Handler()
 	server.Start()
 	defer server.Close()
@@ -479,7 +492,7 @@ func TestCloudIntegration(t *testing.T) {
 		t.Fatal("MCP non-member created page", denied)
 	}
 	mcpCall(applicant, "blok_list_workspaces", map[string]any{}, 401)
-	// A second service run must not restore an intentionally downgraded bootstrap admin.
+	// AdminEmail is idempotent for instance_admins and never rewrites memberships.
 	if _, e = s.DB.Exec(ctx, "UPDATE memberships SET role='viewer' WHERE workspace_id=$1 AND user_id=$2", public["id"], adminID); e != nil {
 		t.Fatal(e)
 	}

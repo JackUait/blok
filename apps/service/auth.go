@@ -2,11 +2,10 @@ package cloud
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/subtle"
-	"encoding/binary"
-	"fmt"
+	"errors"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -15,6 +14,47 @@ func (s *Service) rate(ctx context.Context, key string, max int) bool {
 	e := s.DB.QueryRow(ctx, `INSERT INTO email_rate_limits(key,count) VALUES($1,1) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN email_rate_limits.window_start < now()-interval '1 hour' THEN 1 ELSE email_rate_limits.count+1 END,window_start=CASE WHEN email_rate_limits.window_start < now()-interval '1 hour' THEN now() ELSE email_rate_limits.window_start END RETURNING count`, key).Scan(&count)
 	return e == nil && count <= max
 }
+
+// signupAllowed decides whether a login code may be issued (and later redeemed
+// into a new account) for email under the current instance signup policy.
+// Existing users and holders of a pending non-expired invite are always allowed;
+// otherwise the policy is open → allow, domain → exact match of the part after
+// the last '@' against signup_domains (never a suffix match), invite → refuse.
+func (s *Service) signupAllowed(ctx context.Context, q querier, email string) (bool, error) {
+	var exists bool
+	if e := q.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE email=$1)`, email).Scan(&exists); e != nil {
+		return false, e
+	}
+	if exists {
+		return true, nil
+	}
+	if e := q.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM invites WHERE email=$1 AND status='pending' AND expires_at>now())`, email).Scan(&exists); e != nil {
+		return false, e
+	}
+	if exists {
+		return true, nil
+	}
+	cfg := s.settings()
+	switch cfg.SignupPolicy {
+	case "open":
+		return true, nil
+	case "domain":
+		at := strings.LastIndexByte(email, '@')
+		if at < 0 || at+1 >= len(email) {
+			return false, nil
+		}
+		domain := email[at+1:]
+		for _, listed := range cfg.SignupDomains {
+			if domain == strings.ToLower(strings.TrimSpace(listed)) {
+				return true, nil
+			}
+		}
+		return false, nil
+	default: // invite
+		return false, nil
+	}
+}
+
 func (s *Service) requestCode(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Email string `json:"email"`
@@ -28,29 +68,32 @@ func (s *Service) requestCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ip := s.clientIP(r)
+	// Rate limits are consumed for every syntactically valid address — refused
+	// signups must not be a free probe channel.
 	if !s.rate(r.Context(), "login-ip:"+ip, 30) || !s.rate(r.Context(), "login-email:"+email, 8) {
 		problem(w, 429, "Too many attempts; try again later")
 		return
 	}
-	b := make([]byte, 4)
-	if _, e = rand.Read(b); e != nil {
-		problem(w, 500, "Could not generate code")
-		return
-	}
-	code := fmt.Sprintf("%06d", binary.BigEndian.Uint32(b)%1000000)
-	var sent string
-	e = s.DB.QueryRow(r.Context(), `INSERT INTO login_codes(email,digest,expires_at) VALUES($1,$2,now()+interval '10 minutes') ON CONFLICT(email) DO UPDATE SET digest=$2,expires_at=now()+interval '10 minutes',attempts=0,sent_at=now() WHERE login_codes.sent_at<now()-interval '45 seconds' RETURNING email`, email, hash(email+":"+code+":"+s.Config.InternalSecret)).Scan(&sent)
+	allowed, e := s.signupAllowed(r.Context(), s.DB, email)
 	if e != nil {
-		problem(w, 429, "Wait before requesting another code")
+		problem(w, 503, "Database unavailable")
 		return
 	}
-	if e = s.send(email, "Votre code de connexion Blok", fmt.Sprintf("Votre code de connexion : %s\n\nIl expire dans 10 minutes. Si vous n’avez pas demandé ce code, ignorez cet email.\n%s", code, s.Config.PublicURL)); e != nil {
-		s.DB.Exec(r.Context(), "DELETE FROM login_codes WHERE email=$1 AND digest=$2", email, hash(email+":"+code+":"+s.Config.InternalSecret))
+	if !allowed {
+		jsonOut(w, 200, map[string]bool{"ok": true})
+		return
+	}
+	if e = s.deliverLoginCode(r.Context(), email); e != nil {
+		if errors.Is(e, errLoginRateLimited) {
+			problem(w, 429, "Too many attempts; try again later")
+			return
+		}
 		problem(w, 503, "Email delivery unavailable")
 		return
 	}
 	jsonOut(w, 200, map[string]bool{"ok": true})
 }
+
 func (s *Service) verifyCode(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Email  string `json:"email"`
@@ -89,8 +132,17 @@ func (s *Service) verifyCode(w http.ResponseWriter, r *http.Request) {
 		problem(w, 500, "Sign in failed")
 		return
 	}
+	allowed, e := s.signupAllowed(r.Context(), tx, email)
+	if e != nil {
+		problem(w, 500, "Sign in failed")
+		return
+	}
+	if !allowed {
+		problem(w, 401, "Invalid or expired code")
+		return
+	}
 	var u User
-	e = tx.QueryRow(r.Context(), "INSERT INTO users(id,email) VALUES($1,$2) ON CONFLICT(email) DO UPDATE SET email=excluded.email RETURNING id,email", opaque(), email).Scan(&u.ID, &u.Email)
+	e = tx.QueryRow(r.Context(), "INSERT INTO users(id,email) VALUES($1,$2) ON CONFLICT(email) DO UPDATE SET email=excluded.email RETURNING id,email,name", opaque(), email).Scan(&u.ID, &u.Email, &u.Name)
 	if e != nil {
 		problem(w, 500, "Sign in failed")
 		return
@@ -112,6 +164,7 @@ func (s *Service) verifyCode(w http.ResponseWriter, r *http.Request) {
 		problem(w, 500, "Sign in failed")
 		return
 	}
+	_ = s.DB.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM instance_admins WHERE user_id=$1)`, u.ID).Scan(&u.InstanceAdmin)
 	workspaces, e := s.workspaces(r.Context(), u.ID)
 	if e != nil {
 		problem(w, 503, "Database unavailable")
@@ -125,6 +178,7 @@ func (s *Service) verifyCode(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonOut(w, 200, out)
 }
+
 func (s *Service) getSession(w http.ResponseWriter, r *http.Request) {
 	u, ok := s.require(w, r)
 	if !ok {
@@ -137,6 +191,7 @@ func (s *Service) getSession(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonOut(w, 200, map[string]any{"user": u.User, "workspaces": list})
 }
+
 func (s *Service) logout(w http.ResponseWriter, r *http.Request) {
 	u, e := s.session(r)
 	if e == nil {

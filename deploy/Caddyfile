@@ -1,4 +1,4 @@
-{$DOMAIN:blok.tousamba.cloud} {
+{$DOMAIN} {
   encode zstd gzip
   @private path /internal/*
   respond @private 404

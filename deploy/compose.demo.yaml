@@ -33,6 +33,8 @@ services:
       APP_ENV: development
       DEV_MAIL_DIRECTORY: /data/mail
       BOOTSTRAP_ADMIN_EMAIL: admin@example.test
+      BOOTSTRAP_WORKSPACE_SLUG: equipe
+      BOOTSTRAP_WORKSPACE_NAME: Équipe
       TICKET_SECRET: ${TICKET_SECRET:?Run demo.sh first}
       INTERNAL_SECRET: ${INTERNAL_SECRET:?Run demo.sh first}
       ALLOWED_ORIGINS: tauri://localhost,http://tauri.localhost,https://tauri.localhost

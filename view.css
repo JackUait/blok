@@ -810,6 +810,7 @@
   --blok-radius-floor: var(--blok-radius-4);
   --blok-radius-notch: 0.09375rem;
   --blok-radius-table: var(--blok-radius-2);
+  --blok-radius-map: var(--blok-radius-6);
   --blok-handle-bg-default: rgba(15, 15, 15, 0.6);
   --blok-handle-bg-hover: rgba(15, 15, 15, 0.85);
   --blok-handle-bg-active: rgba(15, 15, 15, 1);

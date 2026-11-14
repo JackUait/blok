@@ -587,3 +587,41 @@ describe('database checkbox', () => {
     expect(colors).toContain('--blok-radius-checkbox: 0.1875rem;');
   });
 });
+
+// notion-motion.md Round 31 §2.
+describe('map view chrome', () => {
+  it('rounds the map 6', () => {
+    expect(ruleBody('[data-blok-database-map-canvas]')).toContain('border-radius: var(--blok-radius-map)');
+    expect(colors).toContain('--blok-radius-map: var(--blok-radius-6);');
+  });
+
+  it('holds Add pin in a 28px white pill, radius 6, padding 2, 8 in from the corner', () => {
+    const pill = ruleBody('[data-blok-database-map-add-pin-pill]');
+
+    expect(pill).toContain('position: absolute');
+    expect(pill).toContain('inset-block-start: var(--blok-space-2)');
+    expect(pill).toContain('inset-inline-end: var(--blok-space-2)');
+    expect(pill).toContain('padding: var(--blok-space-0-5)');
+    expect(pill).toContain('border-radius: var(--blok-radius-control)');
+    expect(pill).toContain('background-color: var(--blok-bg-primary)');
+    expect(pill).toContain('box-shadow: var(--blok-database-popover-shadow)');
+    const button = ruleBody('[data-blok-database-map-add-pin]');
+
+    expect(button).toContain('inline-size: 24px');
+    expect(button).toContain('block-size: 24px');
+    expect(button).toContain('border-radius: var(--blok-radius-control-sm)');
+    expect(button).not.toContain('box-shadow');
+    expect(button).not.toContain('position: absolute');
+  });
+
+  it('stacks the pin card: a 26px page icon over the crumb and a 13px 600 title', () => {
+    expect(ruleBody('[data-blok-database-map-pin-card]')).toContain('flex-direction: column');
+    expect(ruleBody('[data-blok-database-map-pin-card-icon] svg')).toContain('inline-size: 26px');
+    expect(ruleBody('[data-blok-database-map-pin-card-icon] svg')).toContain('block-size: 26px');
+    const title = ruleBody('[data-blok-database-map-pin-card-title]');
+
+    expect(title).toContain('font-size: 13px');
+    expect(title).toContain('font-weight: 600');
+    expect(title).toContain('line-height: 14.95px');
+  });
+});

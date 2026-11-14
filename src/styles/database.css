@@ -18476,8 +18476,9 @@ button[data-blok-database-feed-reaction]:hover,
   position: relative;
 }
 
+/* notion-motion.md Round 31 §2: radius 6. */
 [data-blok-database-map-canvas] {
-  border-radius: var(--blok-radius-block);
+  border-radius: var(--blok-radius-map);
   overflow: hidden;
 }
 
@@ -18535,11 +18536,12 @@ button[data-blok-database-feed-reaction]:hover,
 [data-blok-database-map-pin][data-color="pink"] { --_blok-database-map-pin: var(--blok-color-pink-text); }
 [data-blok-database-map-pin][data-color="red"] { --_blok-database-map-pin: var(--blok-color-red-text); }
 
-/* Measured (research/20 §1e): 260 wide, page icon, "<page> / <database>" crumb over the row title. */
+/* Measured (research/20 §1e): 260 wide; Round 31 §2: a 26px page icon stacked over the crumb and the row title. */
 [data-blok-database-map-pin-card] {
   display: flex;
+  flex-direction: column;
   align-items: flex-start;
-  gap: var(--blok-space-2);
+  gap: var(--blok-space-1);
   inline-size: 260px;
   max-inline-size: 100%;
   text-align: start;
@@ -18550,8 +18552,9 @@ button[data-blok-database-feed-reaction]:hover,
 }
 
 [data-blok-database-map-pin-card-icon] svg {
-  inline-size: 20px;
-  block-size: 20px;
+  display: block;
+  inline-size: 26px;
+  block-size: 26px;
 }
 
 [data-blok-database-map-pin-card-crumb] {
@@ -18563,14 +18566,25 @@ button[data-blok-database-feed-reaction]:hover,
 }
 
 [data-blok-database-map-pin-card-title] {
+  font-size: 13px;
   font-weight: 600;
+  line-height: 14.95px;
 }
 
-/* Measured (research/20 §1b): 24x24, 4px radius, muted glyph, top right of the map. */
-[data-blok-database-map-add-pin] {
+/* notion-motion.md Round 31 §2: a 28px white pill, radius 6, padding 2, 8 in from the top right. */
+[data-blok-database-map-add-pin-pill] {
   position: absolute;
   inset-block-start: var(--blok-space-2);
   inset-inline-end: var(--blok-space-2);
+  display: flex;
+  padding: var(--blok-space-0-5);
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-bg-primary);
+  box-shadow: var(--blok-database-popover-shadow);
+}
+
+/* Measured (research/20 §1b): 24x24, 4px radius, muted glyph. */
+[data-blok-database-map-add-pin] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -18580,7 +18594,6 @@ button[data-blok-database-feed-reaction]:hover,
   border: 0;
   border-radius: var(--blok-radius-control-sm);
   background-color: var(--blok-bg-primary);
-  box-shadow: var(--blok-database-popover-shadow);
   color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }

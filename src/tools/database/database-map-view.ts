@@ -1,5 +1,5 @@
 import type { I18n } from '../../../types';
-import { IconCross, IconMap } from '../../components/icons';
+import { IconCross, IconEmojiMap } from '../../components/icons';
 import { onHover } from '../../components/utils/tooltip';
 import { CellPopover } from './cells/cell-popover';
 import type { NoDateControl } from './database-no-date';
@@ -90,7 +90,7 @@ export class DatabaseMapView implements DatabaseViewRenderer {
     canvas.style.height = `${height}px`;
     frame.appendChild(canvas);
     if (this.options.writable === true && this.options.addPin !== undefined) {
-      frame.appendChild(this.addPinButton(canvas));
+      frame.appendChild(this.addPinPill(canvas));
     }
     root.appendChild(frame);
     const ctx: DatabaseMapContext = {
@@ -190,15 +190,17 @@ export class DatabaseMapView implements DatabaseViewRenderer {
     this.syncAddPin?.();
   }
 
-  /** Top-right of the map (research/20 §1b, §1e). */
-  private addPinButton(canvas: HTMLElement): HTMLButtonElement {
+  /** Top-right of the map: a white pill holding the button (notion-motion.md Round 31 §2). */
+  private addPinPill(canvas: HTMLElement): HTMLElement {
+    const pill = document.createElement('div');
     const button = document.createElement('button');
     const t = (key: string): string => this.options.i18n.t(key);
 
     button.type = 'button';
     button.setAttribute('data-blok-database-map-add-pin', '');
     this.syncAddPin = () => {
-      button.innerHTML = this.addingPin ? IconCross : IconMap;
+      // The Place property's pin glyph.
+      button.innerHTML = this.addingPin ? IconCross : IconEmojiMap;
       button.setAttribute('aria-label', this.addingPin ? t('tools.database.mapCancelAddPin') : t('tools.database.mapEnableAddPin'));
       button.toggleAttribute('data-active', this.addingPin);
       canvas.toggleAttribute('data-blok-database-map-adding-pin', this.addingPin);
@@ -206,8 +208,10 @@ export class DatabaseMapView implements DatabaseViewRenderer {
     };
     this.syncAddPin();
     button.addEventListener('click', () => this.setAddingPin(!this.addingPin));
+    pill.setAttribute('data-blok-database-map-add-pin-pill', '');
+    pill.appendChild(button);
 
-    return button;
+    return pill;
   }
 
   /**

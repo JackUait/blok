@@ -4,6 +4,7 @@ const draw = vi.hoisted(() => vi.fn());
 
 vi.mock('../../../../src/tools/database/database-maplibre', () => ({ drawMapLibreMap: draw }));
 
+import { IconCross, IconEmojiMap } from '../../../../src/components/icons';
 import { DatabaseMapView } from '../../../../src/tools/database/database-map-view';
 import type { DatabaseMapViewOptions } from '../../../../src/tools/database/database-map-view';
 import type { DatabaseMapContext, DatabaseMapItem, DatabaseRow, DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
@@ -50,6 +51,16 @@ const anchor = (): HTMLButtonElement => {
   document.body.appendChild(button);
 
   return button;
+};
+
+
+/** An icon string as the DOM serializes it. */
+const asHtml = (svg: string): string => {
+  const box = document.createElement('div');
+
+  box.innerHTML = svg;
+
+  return box.innerHTML;
 };
 
 describe('DatabaseMapView', () => {
@@ -341,6 +352,20 @@ describe('DatabaseMapView', () => {
     expect(ctx.addingPin()).toBe(false);
     expect(button?.getAttribute('aria-label')).toBe('tools.database.mapEnableAddPin');
     expect(canvas?.hasAttribute('data-blok-database-map-adding-pin')).toBe(false);
+  });
+
+  // notion-motion.md Round 31 §2: a 28px white pill holds the 24px button; a pin glyph, × while adding.
+  it('draws Add pin as a button in a pill, with the place pin glyph and a × while adding', async () => {
+    const { root } = mount({ render: vi.fn(), writable: true, addPin: vi.fn() });
+
+    await flush();
+    const pill = root.querySelector<HTMLElement>('[data-blok-database-map-add-pin-pill]');
+    const button = pill?.querySelector<HTMLButtonElement>(':scope > [data-blok-database-map-add-pin]');
+
+    expect(pill?.parentElement?.hasAttribute('data-blok-database-map-frame')).toBe(true);
+    expect(button?.innerHTML).toBe(asHtml(IconEmojiMap));
+    button?.click();
+    expect(button?.innerHTML).toBe(asHtml(IconCross));
   });
 
   it('pressing the button again cancels Add pin mode', async () => {

@@ -1,6 +1,6 @@
 import type { I18n } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { IconPage } from '../../components/icons';
+import { IconPageEmpty } from '../../components/icons';
 import { MIN_HINT_DELAY, onHover } from '../../components/utils/tooltip';
 import { loadMapLibre, supportsWebGL } from './maplibre-loader';
 import type { MapLibreModule } from './maplibre-loader';
@@ -65,7 +65,7 @@ const pinElement = (tag: 'a' | 'span', color?: string): HTMLElement => {
   return pin;
 };
 
-/** Measured: page icon, "<page> / <database>" crumb, row title (research/20 §1e). */
+/** Measured: page icon, "<page> / <database>" crumb, row title (research/20 §1e), stacked (notion-motion.md Round 31 §2). */
 const pinCard = (item: DatabaseMapItem, breadcrumb: string): HTMLElement => {
   const card = document.createElement('div');
   const icon = document.createElement('span');
@@ -75,7 +75,7 @@ const pinCard = (item: DatabaseMapItem, breadcrumb: string): HTMLElement => {
 
   card.setAttribute('data-blok-database-map-pin-card', '');
   icon.setAttribute('data-blok-database-map-pin-card-icon', '');
-  icon.innerHTML = IconPage;
+  icon.innerHTML = IconPageEmpty;
   crumb.setAttribute('data-blok-database-map-pin-card-crumb', '');
   crumb.textContent = breadcrumb;
   title.setAttribute('data-blok-database-map-pin-card-title', '');

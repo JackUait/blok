@@ -38,6 +38,7 @@ export const RADIUS_ROLES: RadiusRole[] = [
   { token: '--blok-radius-pill', specimen: 'pill' },
   { token: '--blok-radius-notch', specimen: 'caret' },
   { token: '--blok-radius-table', specimen: 'table' },
+  { token: '--blok-radius-map', specimen: 'callout' },
   { token: '--blok-radius-floor', specimen: 'floor' },
 ];
 

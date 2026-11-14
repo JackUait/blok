@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { IconPageEmpty } from '../../../../src/components/icons';
 import type { DatabaseMapContext, DatabaseMapItem } from '../../../../src/tools/database/types';
 
 type Handler = (event?: unknown) => void;
@@ -122,6 +123,16 @@ const settle = async (): Promise<void> => {
   await Promise.resolve();
 };
 
+
+/** An icon string as the DOM serializes it. */
+const asHtml = (svg: string): string => {
+  const box = document.createElement('div');
+
+  box.innerHTML = svg;
+
+  return box.innerHTML;
+};
+
 describe('Blok\'s own map (MapLibre)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -232,6 +243,9 @@ describe('Blok\'s own map (MapLibre)', () => {
     expect(element).toBe(env.markers[0].element);
     expect(card.querySelector('[data-blok-database-map-pin-card-crumb]')?.textContent).toBe('Trips');
     expect(card.querySelector('[data-blok-database-map-pin-card-title]')?.textContent).toBe('Eiffel Tower');
+    // notion-motion.md Round 31 §2: the empty page glyph, first, above the crumb and title.
+    expect(card.firstElementChild?.hasAttribute('data-blok-database-map-pin-card-icon')).toBe(true);
+    expect(card.querySelector('[data-blok-database-map-pin-card-icon]')?.innerHTML).toBe(asHtml(IconPageEmpty));
   });
 
   // research/23 §5a: Notion shows the card ≈160ms after hover and hides it ≈55ms after leaving. The hint law keeps 300ms as the show floor.

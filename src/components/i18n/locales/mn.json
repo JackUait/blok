@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (хуулбар)",
   "tools.database.deleteProperty": "Шинжийг устгах",
   "tools.database.deletePropertyConfirm": "Энэ шинжийг устгах уу?",
+  "tools.database.deletePropertyFromConfirm": "Энэ шинжийг {name}-с устгах уу? Бүх харагдацаас хасагдана.",
   "tools.database.idPrefix": "Угтвар",
   "tools.database.dateFormat": "Огнооны формат",
   "tools.database.dateFormat.full": "Бүтэн огноо",

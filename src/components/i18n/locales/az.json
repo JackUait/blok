@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (surəti)",
   "tools.database.deleteProperty": "Xüsusiyyəti sil",
   "tools.database.deletePropertyConfirm": "Bu xüsusiyyət silinsin?",
+  "tools.database.deletePropertyFromConfirm": "Bu xüsusiyyət {name} bazasından silinsin? O, bütün görünüşlərdən silinəcək.",
   "tools.database.idPrefix": "Prefiks",
   "tools.database.dateFormat": "Tarix formatı",
   "tools.database.dateFormat.full": "Tam tarix",

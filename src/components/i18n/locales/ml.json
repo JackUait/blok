@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (പകർപ്പ്)",
   "tools.database.deleteProperty": "പ്രോപ്പർട്ടി ഇല്ലാതാക്കുക",
   "tools.database.deletePropertyConfirm": "ഈ പ്രോപ്പർട്ടി ഇല്ലാതാക്കണോ?",
+  "tools.database.deletePropertyFromConfirm": "{name}-ൽ നിന്ന് ഈ പ്രോപ്പർട്ടി ഇല്ലാതാക്കണോ? എല്ലാ വ്യൂകളിൽ നിന്നും ഇത് നീക്കം ചെയ്യപ്പെടും.",
   "tools.database.idPrefix": "ഉപസർഗം",
   "tools.database.dateFormat": "തീയതി ഫോർമാറ്റ്",
   "tools.database.dateFormat.full": "പൂർണ്ണ തീയതി",

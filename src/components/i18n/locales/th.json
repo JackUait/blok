@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (สำเนา)",
   "tools.database.deleteProperty": "ลบคุณสมบัติ",
   "tools.database.deletePropertyConfirm": "ลบคุณสมบัตินี้หรือไม่?",
+  "tools.database.deletePropertyFromConfirm": "ลบคุณสมบัตินี้ออกจาก {name} หรือไม่? คุณสมบัตินี้จะถูกนำออกจากทุกมุมมอง",
   "tools.database.idPrefix": "คำนำหน้า",
   "tools.database.dateFormat": "รูปแบบวันที่",
   "tools.database.dateFormat.full": "วันที่แบบเต็ม",

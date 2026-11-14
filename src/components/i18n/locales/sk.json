@@ -1878,6 +1878,7 @@
   "tools.database.duplicatePropertyName": "{name} (kópia)",
   "tools.database.deleteProperty": "Odstrániť vlastnosť",
   "tools.database.deletePropertyConfirm": "Odstrániť túto vlastnosť?",
+  "tools.database.deletePropertyFromConfirm": "Odstrániť túto vlastnosť z {name}? Bude odstránená zo všetkých zobrazení.",
   "tools.database.idPrefix": "Predpona",
   "tools.database.dateFormat": "Formát dátumu",
   "tools.database.dateFormat.full": "Úplný dátum",

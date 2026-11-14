@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (kopie)",
   "tools.database.deleteProperty": "Eigenschap verwijderen",
   "tools.database.deletePropertyConfirm": "Deze eigenschap verwijderen?",
+  "tools.database.deletePropertyFromConfirm": "Deze eigenschap uit {name} verwijderen? Ze verdwijnt uit alle weergaven.",
   "tools.database.idPrefix": "Voorvoegsel",
   "tools.database.dateFormat": "Datumnotatie",
   "tools.database.dateFormat.full": "Volledige datum",

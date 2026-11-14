@@ -1866,6 +1866,7 @@
   "tools.database.duplicatePropertyName": "{name} (kopija)",
   "tools.database.deleteProperty": "Dzēst rekvizītu",
   "tools.database.deletePropertyConfirm": "Vai dzēst šo rekvizītu?",
+  "tools.database.deletePropertyFromConfirm": "Vai dzēst šo rekvizītu no {name}? Tas tiks noņemts no visiem skatiem.",
   "tools.database.idPrefix": "Prefikss",
   "tools.database.dateFormat": "Datuma formāts",
   "tools.database.dateFormat.full": "Pilns datums",

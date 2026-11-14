@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (நகல்)",
   "tools.database.deleteProperty": "பண்பை நீக்கு",
   "tools.database.deletePropertyConfirm": "இந்தப் பண்பை நீக்கவா?",
+  "tools.database.deletePropertyFromConfirm": "{name} இலிருந்து இந்தப் பண்பை நீக்கவா? இது எல்லாக் காட்சிகளிலிருந்தும் அகற்றப்படும்.",
   "tools.database.idPrefix": "முன்னொட்டு",
   "tools.database.dateFormat": "தேதி வடிவம்",
   "tools.database.dateFormat.full": "முழுத் தேதி",

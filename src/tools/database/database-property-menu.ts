@@ -181,6 +181,8 @@ export interface PropertyMenuOptions extends PropertyMenuCallbacks {
   isNameTaken?: (propertyId: string, name: string) => boolean;
   /** The column header the menu stands on now: a write redraws the board and replaces the one it opened from. */
   liveAnchor?: () => HTMLElement | null;
+  /** The database's shown title, named in Delete property's question (notion-motion.md Round 14). */
+  databaseName?: () => string;
 }
 
 const SHOW_AS: readonly NumberShowAs[] = ['number', 'bar', 'ring'];
@@ -315,7 +317,9 @@ export class DatabasePropertyMenu {
   /** Notion asks in a modal (notion-motion.md Round 14), not in the menu. */
   private confirmDelete(id: string): void {
     void openDatabaseConfirm({
-      title: this.t('tools.database.deletePropertyConfirm'),
+      title: this.options.databaseName === undefined
+        ? this.t('tools.database.deletePropertyConfirm')
+        : this.options.i18n.t('tools.database.deletePropertyFromConfirm', { name: this.options.databaseName() }),
       confirmLabel: this.t('blockSettings.delete'),
       cancelLabel: this.t('tools.database.layoutCancel'),
       destructive: true,

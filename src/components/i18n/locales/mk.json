@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (копија)",
   "tools.database.deleteProperty": "Избриши својство",
   "tools.database.deletePropertyConfirm": "Да се избрише ли ова својство?",
+  "tools.database.deletePropertyFromConfirm": "Да се избрише ли ова својство од {name}? Ќе биде отстрането од сите прикази.",
   "tools.database.idPrefix": "Префикс",
   "tools.database.dateFormat": "Формат на датум",
   "tools.database.dateFormat.full": "Целосен датум",

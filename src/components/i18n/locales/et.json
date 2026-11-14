@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (koopia)",
   "tools.database.deleteProperty": "Kustuta omadus",
   "tools.database.deletePropertyConfirm": "Kas kustutada see omadus?",
+  "tools.database.deletePropertyFromConfirm": "Kas kustutada see omadus andmebaasist {name}? See eemaldatakse kõigist vaadetest.",
   "tools.database.idPrefix": "Eesliide",
   "tools.database.dateFormat": "Kuupäeva vorming",
   "tools.database.dateFormat.full": "Täielik kuupäev",

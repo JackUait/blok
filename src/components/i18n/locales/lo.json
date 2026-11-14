@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (ສຳເນົາ)",
   "tools.database.deleteProperty": "ລຶບຄຸນສົມບັດ",
   "tools.database.deletePropertyConfirm": "ລຶບຄຸນສົມບັດນີ້ບໍ່?",
+  "tools.database.deletePropertyFromConfirm": "ລຶບຄຸນສົມບັດນີ້ອອກຈາກ {name} ບໍ່? ມັນຈະຖືກລຶບອອກຈາກທຸກມຸມມອງ.",
   "tools.database.idPrefix": "ຄຳນຳໜ້າ",
   "tools.database.dateFormat": "ຮູບແບບວັນທີ",
   "tools.database.dateFormat.full": "ວັນທີເຕັມ",

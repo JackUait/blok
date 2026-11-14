@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (másolat)",
   "tools.database.deleteProperty": "Tulajdonság törlése",
   "tools.database.deletePropertyConfirm": "Törli ezt a tulajdonságot?",
+  "tools.database.deletePropertyFromConfirm": "Törli ezt a tulajdonságot innen: {name}? Minden nézetből eltűnik.",
   "tools.database.idPrefix": "Előtag",
   "tools.database.dateFormat": "Dátumformátum",
   "tools.database.dateFormat.full": "Teljes dátum",

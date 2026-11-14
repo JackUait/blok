@@ -1866,6 +1866,7 @@
   "tools.database.duplicatePropertyName": "{name} (copie)",
   "tools.database.deleteProperty": "Supprimer la propriété",
   "tools.database.deletePropertyConfirm": "Supprimer cette propriété ?",
+  "tools.database.deletePropertyFromConfirm": "Supprimer cette propriété de {name} ? Elle sera retirée de toutes les vues.",
   "tools.database.idPrefix": "Préfixe",
   "tools.database.dateFormat": "Format de date",
   "tools.database.dateFormat.full": "Date complète",

@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (ನಕಲು)",
   "tools.database.deleteProperty": "ಗುಣಲಕ್ಷಣ ಅಳಿಸಿ",
   "tools.database.deletePropertyConfirm": "ಈ ಗುಣಲಕ್ಷಣವನ್ನು ಅಳಿಸಬೇಕೆ?",
+  "tools.database.deletePropertyFromConfirm": "{name} ನಿಂದ ಈ ಗುಣಲಕ್ಷಣವನ್ನು ಅಳಿಸಬೇಕೆ? ಇದನ್ನು ಎಲ್ಲಾ ವೀಕ್ಷಣೆಗಳಿಂದ ತೆಗೆದುಹಾಕಲಾಗುತ್ತದೆ.",
   "tools.database.idPrefix": "ಪೂರ್ವಪ್ರತ್ಯಯ",
   "tools.database.dateFormat": "ದಿನಾಂಕ ಸ್ವರೂಪ",
   "tools.database.dateFormat.full": "ಪೂರ್ಣ ದಿನಾಂಕ",

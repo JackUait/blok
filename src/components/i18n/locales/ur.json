@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (نقل)",
   "tools.database.deleteProperty": "پراپرٹی حذف کریں",
   "tools.database.deletePropertyConfirm": "یہ پراپرٹی حذف کریں؟",
+  "tools.database.deletePropertyFromConfirm": "{name} سے یہ پراپرٹی حذف کریں؟ اسے تمام منظروں سے ہٹا دیا جائے گا۔",
   "tools.database.idPrefix": "سابقہ",
   "tools.database.dateFormat": "تاریخ کا فارمیٹ",
   "tools.database.dateFormat.full": "مکمل تاریخ",

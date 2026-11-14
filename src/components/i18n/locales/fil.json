@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (kopya)",
   "tools.database.deleteProperty": "Tanggalin ang property",
   "tools.database.deletePropertyConfirm": "Tanggalin ang property na ito?",
+  "tools.database.deletePropertyFromConfirm": "Tanggalin ang property na ito sa {name}? Aalisin ito sa lahat ng view.",
   "tools.database.idPrefix": "Unlapi",
   "tools.database.dateFormat": "Format ng petsa",
   "tools.database.dateFormat.full": "Buong petsa",

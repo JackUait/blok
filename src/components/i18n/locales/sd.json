@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (نقل)",
   "tools.database.deleteProperty": "پراپرٽي ختم ڪريو",
   "tools.database.deletePropertyConfirm": "هي پراپرٽي ختم ڪجي؟",
+  "tools.database.deletePropertyFromConfirm": "هي پراپرٽي {name} مان ختم ڪجي؟ اها سڀني ڏيکن مان هٽائي ويندي.",
   "tools.database.idPrefix": "اڳياڙي",
   "tools.database.dateFormat": "تاريخ جو فارميٽ",
   "tools.database.dateFormat.full": "مڪمل تاريخ",

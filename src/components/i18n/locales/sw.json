@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (nakala)",
   "tools.database.deleteProperty": "Futa sifa",
   "tools.database.deletePropertyConfirm": "Ungependa kufuta sifa hii?",
+  "tools.database.deletePropertyFromConfirm": "Ungependa kufuta sifa hii kutoka {name}? Itaondolewa kwenye mionekano yote.",
   "tools.database.idPrefix": "Kiambishi awali",
   "tools.database.dateFormat": "Muundo wa tarehe",
   "tools.database.dateFormat.full": "Tarehe kamili",

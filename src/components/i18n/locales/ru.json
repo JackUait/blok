@@ -1878,6 +1878,7 @@
   "tools.database.duplicatePropertyName": "{name} (копия)",
   "tools.database.deleteProperty": "Удалить свойство",
   "tools.database.deletePropertyConfirm": "Удалить это свойство?",
+  "tools.database.deletePropertyFromConfirm": "Удалить это свойство из «{name}»? Оно пропадёт из всех представлений.",
   "tools.database.idPrefix": "Префикс",
   "tools.database.dateFormat": "Формат даты",
   "tools.database.dateFormat.full": "Полная дата",

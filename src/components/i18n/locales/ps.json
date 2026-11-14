@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (کاپي)",
   "tools.database.deleteProperty": "ځانګړتیا ړنګه کړئ",
   "tools.database.deletePropertyConfirm": "دا ځانګړتیا ړنګه شي؟",
+  "tools.database.deletePropertyFromConfirm": "دا ځانګړتیا له {name} څخه ړنګه شي؟ له ټولو لیدونو به لرې شي.",
   "tools.database.idPrefix": "مختاړی",
   "tools.database.dateFormat": "د نېټې بڼه",
   "tools.database.dateFormat.full": "بشپړه نېټه",

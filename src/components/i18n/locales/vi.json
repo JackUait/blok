@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (bản sao)",
   "tools.database.deleteProperty": "Xóa thuộc tính",
   "tools.database.deletePropertyConfirm": "Xóa thuộc tính này?",
+  "tools.database.deletePropertyFromConfirm": "Xóa thuộc tính này khỏi {name}? Thuộc tính sẽ bị gỡ khỏi mọi chế độ xem.",
   "tools.database.idPrefix": "Tiền tố",
   "tools.database.dateFormat": "Định dạng ngày",
   "tools.database.dateFormat.full": "Ngày đầy đủ",

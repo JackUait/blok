@@ -907,6 +907,7 @@ export type BlokMessageKey =
   | 'tools.database.deleteLastViewTitle'
   | 'tools.database.deleteProperty'
   | 'tools.database.deletePropertyConfirm'
+  | 'tools.database.deletePropertyFromConfirm'
   | 'tools.database.deleteRow'
   | 'tools.database.deleteView'
   | 'tools.database.dependenciesBlockedByName'

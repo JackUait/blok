@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name}（コピー）",
   "tools.database.deleteProperty": "プロパティを削除",
   "tools.database.deletePropertyConfirm": "このプロパティを削除しますか？",
+  "tools.database.deletePropertyFromConfirm": "{name} からこのプロパティを削除しますか？すべてのビューから削除されます。",
   "tools.database.idPrefix": "接頭辞",
   "tools.database.dateFormat": "日付形式",
   "tools.database.dateFormat.full": "完全な日付",

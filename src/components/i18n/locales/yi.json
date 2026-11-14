@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (קאָפּיע)",
   "tools.database.deleteProperty": "אויסמעקן אייגנשאפט",
   "tools.database.deletePropertyConfirm": "אויסמעקן די אייגנשאפט?",
+  "tools.database.deletePropertyFromConfirm": "אויסמעקן די אייגנשאַפֿט פֿון {name}? זי וועט אַוועקגענומען ווערן פֿון אַלע מראות.",
   "tools.database.idPrefix": "פּרעפֿיקס",
   "tools.database.dateFormat": "דאטום פֿאָרמאַט",
   "tools.database.dateFormat.full": "פֿולע דאטום",

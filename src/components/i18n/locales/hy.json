@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (պատճեն)",
   "tools.database.deleteProperty": "Ջնջել հատկությունը",
   "tools.database.deletePropertyConfirm": "Ջնջե՞լ այս հատկությունը",
+  "tools.database.deletePropertyFromConfirm": "Ջնջե՞լ այս հատկությունը {name}-ից։ Այն կհեռացվի բոլոր դիտումներից։",
   "tools.database.idPrefix": "Նախածանց",
   "tools.database.dateFormat": "Ամսաթվի ձևաչափ",
   "tools.database.dateFormat.full": "Ամբողջական ամսաթիվ",

@@ -1878,6 +1878,7 @@
   "tools.database.duplicatePropertyName": "{name} (kopia)",
   "tools.database.deleteProperty": "Usuń właściwość",
   "tools.database.deletePropertyConfirm": "Usunąć tę właściwość?",
+  "tools.database.deletePropertyFromConfirm": "Usunąć tę właściwość z {name}? Zostanie usunięta ze wszystkich widoków.",
   "tools.database.idPrefix": "Prefiks",
   "tools.database.dateFormat": "Format daty",
   "tools.database.dateFormat.full": "Pełna data",

@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (کۆپی)",
   "tools.database.deleteProperty": "سڕینەوەی تایبەتمەندی",
   "tools.database.deletePropertyConfirm": "ئەم تایبەتمەندییە بسڕدرێتەوە؟",
+  "tools.database.deletePropertyFromConfirm": "ئەم تایبەتمەندییە لە {name} بسڕدرێتەوە؟ لە هەموو دیمەنەکان لادەبرێت.",
   "tools.database.idPrefix": "پێشگر",
   "tools.database.dateFormat": "شێوازی بەروار",
   "tools.database.dateFormat.full": "بەرواری تەواو",

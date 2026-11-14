@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (नक्कल)",
   "tools.database.deleteProperty": "गुण मेट्नुहोस्",
   "tools.database.deletePropertyConfirm": "यो गुण मेटाउने हो?",
+  "tools.database.deletePropertyFromConfirm": "{name} बाट यो गुण मेटाउने हो? यसलाई सबै दृश्यहरूबाट हटाइनेछ।",
   "tools.database.idPrefix": "उपसर्ग",
   "tools.database.dateFormat": "मिति ढाँचा",
   "tools.database.dateFormat.full": "पूरा मिति",

@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (αντίγραφο)",
   "tools.database.deleteProperty": "Διαγραφή ιδιότητας",
   "tools.database.deletePropertyConfirm": "Διαγραφή αυτής της ιδιότητας;",
+  "tools.database.deletePropertyFromConfirm": "Διαγραφή αυτής της ιδιότητας από το {name}; Θα αφαιρεθεί από όλες τις προβολές.",
   "tools.database.idPrefix": "Πρόθεμα",
   "tools.database.dateFormat": "Μορφή ημερομηνίας",
   "tools.database.dateFormat.full": "Πλήρης ημερομηνία",

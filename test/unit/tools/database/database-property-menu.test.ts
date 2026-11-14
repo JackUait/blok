@@ -451,6 +451,24 @@ describe('DatabasePropertyMenu', () => {
     await vi.waitFor(() => expect(cb.onDelete).toHaveBeenCalledWith('p'));
   });
 
+  // notion-motion.md Round 14 (r14-confirm-geom.raw): "Delete this property from New database? It will be removed from all views."
+  it('names the database in the question and says every view loses it', () => {
+    const cb = callbacks();
+    const menu = new DatabasePropertyMenu({
+      i18n: { t: (key: string, params?: Record<string, string>) => `${key}:${params?.name ?? ''}`, getLocale: () => 'en' } as never,
+      hasPeople: false,
+      ...cb,
+      databaseName: () => 'Tasks',
+    });
+
+    menu.open(prop('text'), document.createElement('button'));
+    const del = byName(lastItems(), 'delete');
+
+    del.onActivate?.(del);
+
+    expect(document.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('tools.database.deletePropertyFromConfirm:Tasks');
+  });
+
   it('keeps the property when the dialog is cancelled', async () => {
     const cb = open(prop('text'));
     const del = byName(lastItems(), 'delete');

@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (ច្បាប់ចម្លង)",
   "tools.database.deleteProperty": "លុបលក្ខណៈ",
   "tools.database.deletePropertyConfirm": "លុបលក្ខណៈនេះឬ?",
+  "tools.database.deletePropertyFromConfirm": "លុបលក្ខណៈនេះចេញពី {name} ឬ? វានឹងត្រូវដកចេញពីទិដ្ឋភាពទាំងអស់។",
   "tools.database.idPrefix": "បុព្វបទ",
   "tools.database.dateFormat": "ទម្រង់កាលបរិច្ឆេទ",
   "tools.database.dateFormat.full": "កាលបរិច្ឆេទពេញ",

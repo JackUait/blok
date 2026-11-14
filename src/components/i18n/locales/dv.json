@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (ކޮޕީ)",
   "tools.database.deleteProperty": "ޕްރޮޕަރޓީ ފޮހެލާ",
   "tools.database.deletePropertyConfirm": "މި ޕްރޮޕަރޓީ ފޮހެލަންތޯ؟",
+  "tools.database.deletePropertyFromConfirm": "މި ޕްރޮޕަރޓީ {name} އިން ފޮހެލަންތޯ؟ ހުރިހާ ވިއުތަކުން މިއީ ނައްތާލެވޭނެ.",
   "tools.database.idPrefix": "ޕްރީފިކްސް",
   "tools.database.dateFormat": "ތާރީޚުގެ ފޯމެޓް",
   "tools.database.dateFormat.full": "ފުރިހަމަ ތާރީޚް",

@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (မိတ္တူ)",
   "tools.database.deleteProperty": "ဂုဏ်သတ္တိ ဖျက်ရန်",
   "tools.database.deletePropertyConfirm": "ဤဂုဏ်သတ္တိကို ဖျက်မလား။",
+  "tools.database.deletePropertyFromConfirm": "ဤဂုဏ်သတ္တိကို {name} မှ ဖျက်မလား။ မြင်ကွင်းအားလုံးမှ ဖယ်ရှားပါမည်။",
   "tools.database.idPrefix": "ရှေ့ဆက်",
   "tools.database.dateFormat": "ရက်စွဲပုံစံ",
   "tools.database.dateFormat.full": "ရက်စွဲ အပြည့်အစုံ",

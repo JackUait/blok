@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (kopi)",
   "tools.database.deleteProperty": "Slet egenskab",
   "tools.database.deletePropertyConfirm": "Vil du slette denne egenskab?",
+  "tools.database.deletePropertyFromConfirm": "Vil du slette denne egenskab fra {name}? Den fjernes fra alle visninger.",
   "tools.database.idPrefix": "Præfiks",
   "tools.database.dateFormat": "Datoformat",
   "tools.database.dateFormat.full": "Fuld dato",

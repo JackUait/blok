@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (사본)",
   "tools.database.deleteProperty": "속성 삭제",
   "tools.database.deletePropertyConfirm": "이 속성을 삭제하시겠습니까?",
+  "tools.database.deletePropertyFromConfirm": "{name}에서 이 속성을 삭제하시겠습니까? 모든 보기에서 제거됩니다.",
   "tools.database.idPrefix": "접두사",
   "tools.database.dateFormat": "날짜 형식",
   "tools.database.dateFormat.full": "전체 날짜",

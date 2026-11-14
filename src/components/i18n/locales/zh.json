@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name}（副本）",
   "tools.database.deleteProperty": "删除属性",
   "tools.database.deletePropertyConfirm": "要删除此属性吗？",
+  "tools.database.deletePropertyFromConfirm": "要从 {name} 中删除此属性吗？它将从所有视图中移除。",
   "tools.database.idPrefix": "前缀",
   "tools.database.dateFormat": "日期格式",
   "tools.database.dateFormat.full": "完整日期",

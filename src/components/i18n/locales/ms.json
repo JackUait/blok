@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (salinan)",
   "tools.database.deleteProperty": "Padam sifat",
   "tools.database.deletePropertyConfirm": "Padam sifat ini?",
+  "tools.database.deletePropertyFromConfirm": "Padam sifat ini daripada {name}? Sifat ini akan dialih keluar daripada semua paparan.",
   "tools.database.idPrefix": "Awalan",
   "tools.database.dateFormat": "Format tarikh",
   "tools.database.dateFormat.full": "Tarikh penuh",

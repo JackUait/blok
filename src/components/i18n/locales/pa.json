@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (ਨਕਲ)",
   "tools.database.deleteProperty": "ਵਿਸ਼ੇਸ਼ਤਾ ਮਿਟਾਓ",
   "tools.database.deletePropertyConfirm": "ਕੀ ਇਹ ਵਿਸ਼ੇਸ਼ਤਾ ਮਿਟਾਉਣੀ ਹੈ?",
+  "tools.database.deletePropertyFromConfirm": "ਕੀ {name} ਤੋਂ ਇਹ ਵਿਸ਼ੇਸ਼ਤਾ ਮਿਟਾਉਣੀ ਹੈ? ਇਸਨੂੰ ਸਾਰੇ ਦ੍ਰਿਸ਼ਾਂ ਤੋਂ ਹਟਾ ਦਿੱਤਾ ਜਾਵੇਗਾ।",
   "tools.database.idPrefix": "ਅਗੇਤਰ",
   "tools.database.dateFormat": "ਮਿਤੀ ਫਾਰਮੈਟ",
   "tools.database.dateFormat.full": "ਪੂਰੀ ਮਿਤੀ",

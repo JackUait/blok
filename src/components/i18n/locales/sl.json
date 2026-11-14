@@ -1878,6 +1878,7 @@
   "tools.database.duplicatePropertyName": "{name} (kopija)",
   "tools.database.deleteProperty": "Izbriši lastnost",
   "tools.database.deletePropertyConfirm": "Želite izbrisati to lastnost?",
+  "tools.database.deletePropertyFromConfirm": "Želite izbrisati to lastnost iz {name}? Odstranjena bo iz vseh pogledov.",
   "tools.database.idPrefix": "Predpona",
   "tools.database.dateFormat": "Oblika datuma",
   "tools.database.dateFormat.full": "Polni datum",

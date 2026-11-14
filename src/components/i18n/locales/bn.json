@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (প্রতিলিপি)",
   "tools.database.deleteProperty": "বৈশিষ্ট্য মুছুন",
   "tools.database.deletePropertyConfirm": "এই বৈশিষ্ট্যটি মুছবেন?",
+  "tools.database.deletePropertyFromConfirm": "{name} থেকে এই বৈশিষ্ট্যটি মুছবেন? এটি সব ভিউ থেকে সরানো হবে।",
   "tools.database.idPrefix": "উপসর্গ",
   "tools.database.dateFormat": "তারিখের বিন্যাস",
   "tools.database.dateFormat.full": "পূর্ণ তারিখ",

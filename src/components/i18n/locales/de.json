@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (Kopie)",
   "tools.database.deleteProperty": "Eigenschaft löschen",
   "tools.database.deletePropertyConfirm": "Diese Eigenschaft löschen?",
+  "tools.database.deletePropertyFromConfirm": "Diese Eigenschaft aus {name} löschen? Sie wird aus allen Ansichten entfernt.",
   "tools.database.idPrefix": "Präfix",
   "tools.database.dateFormat": "Datumsformat",
   "tools.database.dateFormat.full": "Vollständiges Datum",

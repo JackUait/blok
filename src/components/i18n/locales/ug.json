@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (كۆپەيتىلمە)",
   "tools.database.deleteProperty": "خاسلىقنى ئۆچۈرۈش",
   "tools.database.deletePropertyConfirm": "بۇ خاسلىقنى ئۆچۈرەمسىز؟",
+  "tools.database.deletePropertyFromConfirm": "بۇ خاسلىقنى {name} دىن ئۆچۈرەمسىز؟ ئۇ بارلىق كۆرۈنۈشلەردىن چىقىرىۋېتىلىدۇ.",
   "tools.database.idPrefix": "ئالدى قوشۇمچە",
   "tools.database.dateFormat": "چېسلا فورماتى",
   "tools.database.dateFormat.full": "تولۇق چېسلا",

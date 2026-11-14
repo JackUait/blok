@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (నకలు)",
   "tools.database.deleteProperty": "ప్రాపర్టీని తొలగించు",
   "tools.database.deletePropertyConfirm": "ఈ ప్రాపర్టీని తొలగించాలా?",
+  "tools.database.deletePropertyFromConfirm": "{name} నుండి ఈ ప్రాపర్టీని తొలగించాలా? ఇది అన్ని వీక్షణల నుండి తీసివేయబడుతుంది.",
   "tools.database.idPrefix": "ఉపసర్గ",
   "tools.database.dateFormat": "తేదీ ఆకృతి",
   "tools.database.dateFormat.full": "పూర్తి తేదీ",

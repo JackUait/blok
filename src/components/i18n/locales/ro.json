@@ -1866,6 +1866,7 @@
   "tools.database.duplicatePropertyName": "{name} (copie)",
   "tools.database.deleteProperty": "Șterge proprietatea",
   "tools.database.deletePropertyConfirm": "Ștergeți această proprietate?",
+  "tools.database.deletePropertyFromConfirm": "Ștergeți această proprietate din {name}? Va fi eliminată din toate vizualizările.",
   "tools.database.idPrefix": "Prefix",
   "tools.database.dateFormat": "Formatul datei",
   "tools.database.dateFormat.full": "Data completă",

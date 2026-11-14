@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (ასლი)",
   "tools.database.deleteProperty": "თვისების წაშლა",
   "tools.database.deletePropertyConfirm": "წაიშალოს ეს თვისება?",
+  "tools.database.deletePropertyFromConfirm": "წაიშალოს ეს თვისება {name}-დან? ის ყველა ხედიდან წაიშლება.",
   "tools.database.idPrefix": "პრეფიქსი",
   "tools.database.dateFormat": "თარიღის ფორმატი",
   "tools.database.dateFormat.full": "სრული თარიღი",

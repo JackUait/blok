@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (प्रतिलिपि)",
   "tools.database.deleteProperty": "प्रॉपर्टी हटाएं",
   "tools.database.deletePropertyConfirm": "यह प्रॉपर्टी हटाएं?",
+  "tools.database.deletePropertyFromConfirm": "{name} से यह प्रॉपर्टी हटाएं? इसे सभी व्यू से हटा दिया जाएगा।",
   "tools.database.idPrefix": "उपसर्ग",
   "tools.database.dateFormat": "तिथि प्रारूप",
   "tools.database.dateFormat.full": "पूरी तिथि",

@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (kopio)",
   "tools.database.deleteProperty": "Poista ominaisuus",
   "tools.database.deletePropertyConfirm": "Poistetaanko tämä ominaisuus?",
+  "tools.database.deletePropertyFromConfirm": "Poistetaanko tämä ominaisuus tietokannasta {name}? Se poistetaan kaikista näkymistä.",
   "tools.database.idPrefix": "Etuliite",
   "tools.database.dateFormat": "Päivämäärän muoto",
   "tools.database.dateFormat.full": "Koko päivämäärä",

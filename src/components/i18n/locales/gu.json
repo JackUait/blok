@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (નકલ)",
   "tools.database.deleteProperty": "ગુણધર્મ કાઢી નાખો",
   "tools.database.deletePropertyConfirm": "આ ગુણધર્મ કાઢી નાખવો છે?",
+  "tools.database.deletePropertyFromConfirm": "{name} માંથી આ ગુણધર્મ કાઢી નાખવો છે? તે બધા દૃશ્યોમાંથી દૂર થશે.",
   "tools.database.idPrefix": "ઉપસર્ગ",
   "tools.database.dateFormat": "તારીખ ફોર્મેટ",
   "tools.database.dateFormat.full": "પૂર્ણ તારીખ",

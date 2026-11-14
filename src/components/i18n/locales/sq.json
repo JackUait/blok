@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (kopje)",
   "tools.database.deleteProperty": "Fshi vetinë",
   "tools.database.deletePropertyConfirm": "Të fshihet kjo veti?",
+  "tools.database.deletePropertyFromConfirm": "Të fshihet kjo veti nga {name}? Do të hiqet nga të gjitha pamjet.",
   "tools.database.idPrefix": "Parashtesë",
   "tools.database.dateFormat": "Formati i datës",
   "tools.database.dateFormat.full": "Data e plotë",

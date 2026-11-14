@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (පිටපත)",
   "tools.database.deleteProperty": "ගුණාංගය මකන්න",
   "tools.database.deletePropertyConfirm": "මෙම ගුණාංගය මකන්නද?",
+  "tools.database.deletePropertyFromConfirm": "{name} වෙතින් මෙම ගුණාංගය මකන්නද? එය සියලු දසුන්වලින් ඉවත් කෙරේ.",
   "tools.database.idPrefix": "උපසර්ගය",
   "tools.database.dateFormat": "දින ආකෘතිය",
   "tools.database.dateFormat.full": "සම්පූර්ණ දිනය",

@@ -1878,6 +1878,7 @@
   "tools.database.duplicatePropertyName": "{name} (kopija)",
   "tools.database.deleteProperty": "Ištrinti savybę",
   "tools.database.deletePropertyConfirm": "Ištrinti šią savybę?",
+  "tools.database.deletePropertyFromConfirm": "Ištrinti šią savybę iš {name}? Ji bus pašalinta iš visų rodinių.",
   "tools.database.idPrefix": "Priešdėlis",
   "tools.database.dateFormat": "Datos formatas",
   "tools.database.dateFormat.full": "Visa data",

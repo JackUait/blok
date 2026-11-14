@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (ቅጂ)",
   "tools.database.deleteProperty": "ንብረት ሰርዝ",
   "tools.database.deletePropertyConfirm": "ይህ ንብረት ይሰረዝ?",
+  "tools.database.deletePropertyFromConfirm": "ይህ ንብረት ከ{name} ይሰረዝ? ከሁሉም እይታዎች ይወገዳል።",
   "tools.database.idPrefix": "ቅድመ ቅጥያ",
   "tools.database.dateFormat": "የቀን ቅርጸት",
   "tools.database.dateFormat.full": "ሙሉ ቀን",

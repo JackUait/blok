@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (प्रत)",
   "tools.database.deleteProperty": "गुणधर्म हटवा",
   "tools.database.deletePropertyConfirm": "हा गुणधर्म हटवायचा?",
+  "tools.database.deletePropertyFromConfirm": "{name} मधून हा गुणधर्म हटवायचा? तो सर्व दृश्यांमधून काढला जाईल.",
   "tools.database.idPrefix": "उपसर्ग",
   "tools.database.dateFormat": "तारीख स्वरूप",
   "tools.database.dateFormat.full": "पूर्ण तारीख",

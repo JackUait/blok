@@ -1866,6 +1866,7 @@
   "tools.database.duplicatePropertyName": "{name} (עותק)",
   "tools.database.deleteProperty": "מחק מאפיין",
   "tools.database.deletePropertyConfirm": "למחוק את המאפיין הזה?",
+  "tools.database.deletePropertyFromConfirm": "למחוק את המאפיין הזה מ{name}? הוא יוסר מכל התצוגות.",
   "tools.database.idPrefix": "קידומת",
   "tools.database.dateFormat": "תבנית תאריך",
   "tools.database.dateFormat.full": "תאריך מלא",

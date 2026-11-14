@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (salinan)",
   "tools.database.deleteProperty": "Hapus properti",
   "tools.database.deletePropertyConfirm": "Hapus properti ini?",
+  "tools.database.deletePropertyFromConfirm": "Hapus properti ini dari {name}? Properti akan dihapus dari semua tampilan.",
   "tools.database.idPrefix": "Awalan",
   "tools.database.dateFormat": "Format tanggal",
   "tools.database.dateFormat.full": "Tanggal lengkap",

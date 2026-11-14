@@ -1902,6 +1902,7 @@
   "tools.database.duplicatePropertyName": "{name} (نسخة)",
   "tools.database.deleteProperty": "حذف الخاصية",
   "tools.database.deletePropertyConfirm": "حذف هذه الخاصية؟",
+  "tools.database.deletePropertyFromConfirm": "حذف هذه الخاصية من {name}؟ ستُزال من جميع طرق العرض.",
   "tools.database.idPrefix": "البادئة",
   "tools.database.dateFormat": "تنسيق التاريخ",
   "tools.database.dateFormat.full": "التاريخ الكامل",

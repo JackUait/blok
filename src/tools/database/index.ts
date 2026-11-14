@@ -12851,6 +12851,7 @@ export class DatabaseTool implements BlockTool {
     const menu = new DatabasePropertyMenu({
       i18n: this.api.i18n,
       hasPeople: this.hasPeople,
+      databaseName: () => (this.title.trim() === '' ? this.api.i18n.t('tools.database.titlePlaceholder') : this.title.trim()),
       ...(onCustomizeLayout === undefined ? {} : { onCustomizeLayout }),
       ...(rowPage === undefined ? { liveAnchor: () => this.liveColumnHeader(propertyId, context, groupKey) } : {}),
       onClose: () => {

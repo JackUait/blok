@@ -1854,6 +1854,7 @@
   "tools.database.duplicatePropertyName": "{name} (رونوشت)",
   "tools.database.deleteProperty": "حذف ویژگی",
   "tools.database.deletePropertyConfirm": "این ویژگی حذف شود؟",
+  "tools.database.deletePropertyFromConfirm": "این ویژگی از {name} حذف شود؟ از همه نماها حذف خواهد شد.",
   "tools.database.idPrefix": "پیشوند",
   "tools.database.dateFormat": "قالب تاریخ",
   "tools.database.dateFormat.full": "تاریخ کامل",

@@ -74,4 +74,22 @@ describe('CellPopover placement', () => {
     expect(params.position?.y).toBe(313);
     popover.close();
   });
+  // notion-motion.md Round 32 §1 (r32-a-movequestion-*): Move question's flyout sits on the panel's left, its right
+  // edge on the row's left (the panel's left + 4), centred on the row, kept 12px inside the window.
+  it('opens on the anchor\'s left, centred on it, when asked for the left aside', () => {
+    const anchor = anchorAt(new DOMRect(1153, 617, 282, 28));
+    const popover = new CellPopover({ anchor, content: document.createElement('div'), aside: { side: 'left', gap: 0 }, onEscape: vi.fn(), onDismiss: vi.fn() });
+
+    popover.show();
+
+    const params = seen[0];
+
+    expect(params.placeLeftOfAnchor).toBe(true);
+    expect(params.asideSide).toBe('left');
+    expect(params.offset).toBe(0);
+    expect(params.viewportMargin).toBe(12);
+    expect(params.cover).toBeUndefined();
+    expect(params.position).toBeUndefined();
+    popover.close();
+  });
 });

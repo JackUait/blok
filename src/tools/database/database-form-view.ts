@@ -332,7 +332,8 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     header.setAttribute('data-blok-database-form-header', '');
     if (!builder || share === undefined) {
       if (form?.title === undefined && form?.description === undefined && form?.icon === undefined && form?.cover === undefined) return null;
-      this.headerArt(header, null);
+      // The controls load the emoji picker: a respondent gets them only for something saved.
+      if (form?.icon !== undefined || form?.cover !== undefined) this.headerArt(header, null);
       if (form?.title !== undefined) {
         const title = document.createElement('h1');
 

@@ -18373,6 +18373,11 @@ button[data-blok-database-feed-reaction]:hover,
   margin-inline-start: 0;
 }
 
+/* Round 31 §1: both buttons fade out over 100ms; page-title.css gives Add icon 100ms only in its own row. */
+[data-blok-database-form-header-row] [data-blok-page-add-icon] {
+  transition: opacity 100ms ease, background-color 120ms ease, color 120ms ease;
+}
+
 [data-blok-database-form-header]:hover :is([data-blok-page-add-icon], [data-blok-page-add-cover]) {
   opacity: 1;
 }

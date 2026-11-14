@@ -296,6 +296,8 @@ describe('form builder question card (research/21 §1k)', () => {
     // Round 31 §1: the ghost buttons show while the pointer is on the header, and fade out over 100ms.
     it('shows Form icon and Form cover while the pointer is on the header', () => {
       expect(ruleBody('[data-blok-database-form-header]:hover :is([data-blok-page-add-icon], [data-blok-page-add-cover])')).toContain('opacity: 1');
+      // The page title's 100ms fade reaches Add icon only inside its own row; Form icon needs it here.
+      expect(ruleBody('[data-blok-database-form-header-row] [data-blok-page-add-icon]')).toContain('transition: opacity 100ms ease');
     });
   });
 

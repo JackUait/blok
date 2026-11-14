@@ -20989,6 +20989,10 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   margin-inline-start: 0;
 }
 
+[data-blok-database-form-header-row] [data-blok-page-add-icon] {
+  transition: opacity 100ms ease, background-color 120ms ease, color 120ms ease;
+}
+
 [data-blok-database-form-header]:hover :is([data-blok-page-add-icon], [data-blok-page-add-cover]) {
   opacity: 1;
 }

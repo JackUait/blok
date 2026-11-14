@@ -590,9 +590,10 @@ describe('database checkbox', () => {
 
 // notion-motion.md Round 31 §2.
 describe('map view chrome', () => {
-  it('rounds the map 6', () => {
-    expect(ruleBody('[data-blok-database-map-canvas]')).toContain('border-radius: var(--blok-radius-map)');
-    expect(colors).toContain('--blok-radius-map: var(--blok-radius-6);');
+  // Notion's map is 6; the user's "media frames = block 10" decision keeps Blok's block role.
+  it('rounds the map with the block role, not a map token', () => {
+    expect(ruleBody('[data-blok-database-map-canvas]')).toContain('border-radius: var(--blok-radius-block)');
+    expect(colors).not.toContain('--blok-radius-map');
   });
 
   it('holds Add pin in a 28px white pill, radius 6, padding 2, 8 in from the corner', () => {

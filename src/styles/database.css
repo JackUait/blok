@@ -18476,9 +18476,8 @@ button[data-blok-database-feed-reaction]:hover,
   position: relative;
 }
 
-/* notion-motion.md Round 31 §2: radius 6. */
 [data-blok-database-map-canvas] {
-  border-radius: var(--blok-radius-map);
+  border-radius: var(--blok-radius-block);
   overflow: hidden;
 }
 

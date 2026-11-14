@@ -749,6 +749,20 @@ describe('table bulk actions and clipboard', () => {
       expect(cell(root, 'r1', 'p-notes').querySelector('[data-blok-database-table-fill-handle]')).not.toBeNull();
     });
 
+    // notion-motion.md Round 30 §4: the handle sits on the moving cell's corner, and only on a one-row range.
+    it('puts the fill handle on the moving cell of a one-row range, and none on a taller range', () => {
+      const { root } = mount();
+      const handles = (): string[] => [...root.querySelectorAll('[data-blok-database-table-fill-handle]')]
+        .map((el) => `${el.closest('[data-row-id]')?.getAttribute('data-row-id') ?? ''}/${el.closest('[role="gridcell"]')?.getAttribute('data-property-id') ?? ''}`);
+
+      selectCell(root, 'r1', 'p-amount');
+      press(grid(root), 'ArrowLeft', { shiftKey: true });
+      expect(handles()).toEqual(['r1/p-notes']);
+
+      press(grid(root), 'ArrowDown', { shiftKey: true });
+      expect(handles()).toEqual([]);
+    });
+
     // A touch scroll cancels the press; the next release anywhere must not fill.
     it('a cancelled fill-handle drag fills nothing', () => {
       const { root, handlers } = mount();

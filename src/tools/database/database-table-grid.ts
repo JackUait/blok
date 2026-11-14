@@ -796,17 +796,16 @@ export class DatabaseTableGrid {
     }
   }
 
-  /** The fill handle: a small circle at the bottom-end corner of the selected range (research/08). */
+  /** The fill handle: a small circle on the moving cell's corner, for a one-row range only (notion-motion.md Round 30 §4). */
   private paintFillHandle(): void {
     this.root.querySelectorAll('[data-blok-database-table-fill-handle]').forEach((el) => el.remove());
     const bounds = this.bounds();
+    const selection = this.state.selection;
 
-    if (bounds === null || this.readOnly || this.callbacks.commitCells === undefined) {
+    if (bounds === null || bounds.r0 !== bounds.r1 || selection?.kind !== 'cell' || this.readOnly || this.callbacks.commitCells === undefined) {
       return;
     }
-    const rowId = this.rowIds()[bounds.r1];
-    const propertyId = this.columnIds()[bounds.c1];
-    const cellEl = rowId === undefined || propertyId === undefined ? null : this.cellEl({ rowId, propertyId });
+    const cellEl = this.cellEl(selection.focus);
     const handle = document.createElement('span');
 
     handle.setAttribute('data-blok-database-table-fill-handle', '');

@@ -14637,7 +14637,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   position: relative;
   /* Above the table panel, which runs up behind « and the month. */
   z-index: 2;
+  /* notion-motion.md Round 32 §3 Timeline: Today at y 319.7, 5.7px lower; the grid under it stays put. */
+  box-sizing: border-box;
   min-block-size: 42px;
+  padding-block-start: var(--blok-space-2-75);
   /* The toolbar starts at the text column; the grid below stays as wide as the view (side-by-side-4 #2). */
   padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }

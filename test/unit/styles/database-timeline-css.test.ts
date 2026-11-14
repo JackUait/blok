@@ -352,3 +352,15 @@ describe('"+ New" lane (Round 24)', () => {
     expect(ruleBody('[data-blok-database-timeline-new-lane]:hover [data-blok-database-timeline-new-ghost][data-day]')).toMatch(/opacity:\s*1/);
   });
 });
+
+// notion-motion.md Round 32 §3 Timeline (r32-b-timeline-geom.raw): Today at y 319.7 and the month at 320.7 sit 5.7px lower
+// than Blok's (314, 315.5). The grid below stays where it is, so the 42px toolbar keeps its height and pads its top.
+describe('timeline toolbar row (Round 32)', () => {
+  it('centres its controls 11px lower in the same 42px', () => {
+    const body = ruleBody('[data-blok-database-timeline-toolbar]');
+
+    expect(body).toContain('min-block-size: 42px');
+    expect(body).toContain('box-sizing: border-box');
+    expect(body).toContain('padding-block-start: var(--blok-space-2-75)');
+  });
+});

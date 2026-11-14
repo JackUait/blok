@@ -17574,7 +17574,9 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   gap: var(--blok-space-1);
   position: relative;
   z-index: 2;
+  box-sizing: border-box;
   min-block-size: 42px;
+  padding-block-start: var(--blok-space-2-75);
   padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
 

@@ -1702,7 +1702,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r46: Round 32 toolbar end at the text column and the feed byline avatar. Net database.css growth against origin/main.
     const DATABASE_R46_BYTES = 1233;
     // Lane r48: Round 32 offsets (list plus, board pill, calendar digits and weekday row) and the filter value checkboxes. Net database.css growth against origin/main.
-    const DATABASE_R48_BYTES = 1356;
+    const DATABASE_R48_BYTES = 1537;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

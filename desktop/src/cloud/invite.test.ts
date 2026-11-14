@@ -1,5 +1,6 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {WORKSPACE_ROLES} from '../access-vocabulary';
+import {must} from '../test-helpers';
 import {CloudClient} from './client';
 import {mountInviteScreen} from './invite';
 
@@ -72,7 +73,7 @@ describe('invite acceptance screen', () => {
     });
     await vi.waitFor(() => expect(host.textContent).toContain('Mauvais compte'));
     expect(host.textContent).toContain('Cette invitation est pour autre@x.fr, vous êtes connecté comme vous@x.fr');
-    [...host.querySelectorAll('button')].find((item) => item.textContent === 'Changer de compte')!.click();
+    must([...host.querySelectorAll('button')].find((item) => item.textContent === 'Changer de compte')).click();
     await vi.waitFor(() => expect(switchAccount).toHaveBeenCalled());
   });
 

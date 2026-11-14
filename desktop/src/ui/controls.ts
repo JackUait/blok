@@ -29,42 +29,44 @@ export function createChoice<T extends string>(options: ChoiceOptions<T>): Choic
   element.append(text,arrow);
   const id = `desktop-choice-${crypto.randomUUID()}`;
   text.id=`${id}-value`; element.setAttribute('aria-describedby',text.id);
-  let value = options.value;
-  let popover: PopoverDesktop | null = null;
-  let destroyed = false;
+  const state = {
+    value: options.value,
+    popover: null as PopoverDesktop | null,
+    destroyed: false,
+  };
   function render(): void {
-    text.textContent = options.options.find((option)=>option.value === value)?.label ?? value;
+    text.textContent = options.options.find((option)=>option.value === state.value)?.label ?? state.value;
     element.setAttribute('aria-label',options.label);
   }
-  const close = (): void => { popover?.hide(); };
+  const close = (): void => { state.popover?.hide(); };
   function open(last = false): void {
-    if (element.disabled || destroyed) return;
-    if (popover?.isShown) { close(); return; }
+    if (element.disabled || state.destroyed) return;
+    if (state.popover?.isShown) { close(); return; }
     const searchable = options.searchable ?? options.options.length > 8;
     const menu = new PopoverDesktop({
       trigger: element, class: 'desktop-choice-popover', width:'auto', minWidth:`${Math.max(180,element.getBoundingClientRect().width)}px`,
       autoFocusFirstItem:searchable, searchable, messages:{search:"Rechercher…"}, flippable:true,
       items:options.options.map((option)=>({
-        name:option.value, title:option.label, description:option.description, toggle:id, isActive:()=>option.value === value,
-        isDisabled:option.disabled, trailingIcon:option.value === value ? IconCheck : undefined, closeOnActivate:true,
-        onActivate:()=>{ if(option.disabled) return; value=option.value;render();options.onChange(value); },
+        name:option.value, title:option.label, description:option.description, toggle:id, isActive:()=>option.value === state.value,
+        isDisabled:option.disabled, trailingIcon:option.value === state.value ? IconCheck : undefined, closeOnActivate:true,
+        onActivate:()=>{ if(option.disabled) return; state.value=option.value;render();options.onChange(state.value); },
       })),
     });
-    popover = menu;
+    state.popover = menu;
     const root = menu.getElement(); root.id=id; root.setAttribute('data-desktop-choice-popover',''); root.setAttribute('aria-label',options.label);
     const style=getComputedStyle(element); for(const token of palette) { const color=style.getPropertyValue(token); if(color) root.style.setProperty(token,color); }
     element.setAttribute('aria-controls',id); element.setAttribute('aria-expanded','true');
-    let settled = false;
+    const closed = { settled: false };
     menu.on('closed',()=>{
-      if (settled) return;
-      settled = true;
-      if(popover === menu) { popover=null;element.setAttribute('aria-expanded','false');element.removeAttribute('aria-controls'); }
-      if(element.isConnected && !element.disabled && !destroyed) element.focus();
+      if (closed.settled) return;
+      closed.settled = true;
+      if(state.popover === menu) { state.popover=null;element.setAttribute('aria-expanded','false');element.removeAttribute('aria-controls'); }
+      if(element.isConnected && !element.disabled && !state.destroyed) element.focus();
       queueMicrotask(()=>menu.destroy());
     });
     menu.show();
     const enabled=options.options.filter((option)=>!option.disabled);
-    const focused=last ? enabled.at(-1)?.value : enabled.find((option)=>option.value === value)?.value ?? enabled[0]?.value;
+    const focused=last ? enabled.at(-1)?.value : enabled.find((option)=>option.value === state.value)?.value ?? enabled[0]?.value;
     if(!searchable && focused !== undefined) menu.focusItemByName(focused);
   }
   const click=():void=>open();
@@ -77,11 +79,11 @@ export function createChoice<T extends string>(options: ChoiceOptions<T>): Choic
   render();
   return {
     element,
-    get value(){return value;},
-    setValue(next){value=next;render();close();},
+    get value(){return state.value;},
+    setValue(next){state.value=next;render();close();},
     get disabled(){return element.disabled;},
     set disabled(next){element.disabled=next;if(next)close();},
-    destroy(){if(destroyed)return;destroyed=true;observer.disconnect();element.removeEventListener('click',click);element.removeEventListener('keydown',key);popover?.destroy();popover=null;element.setAttribute('aria-expanded','false');element.removeAttribute('aria-controls');},
+    destroy(){if(state.destroyed)return;state.destroyed=true;observer.disconnect();element.removeEventListener('click',click);element.removeEventListener('keydown',key);state.popover?.destroy();state.popover=null;element.setAttribute('aria-expanded','false');element.removeAttribute('aria-controls');},
   };
 }
 

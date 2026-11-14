@@ -48,13 +48,21 @@ export function mountShareSheet(container: HTMLElement, options: ShareSheetOptio
   panel.append(invitation, list, el('h3', 'Accès général', 'data-cloud-share-heading'), visibility, cumulative, error);
   container.append(panel);
 
-  const state: { alive: boolean; sheet: PageAccessSheet | null } = { alive: true, sheet: null };
+  const state = {
+    alive: true,
+    sheet: null as PageAccessSheet | null,
+    people: null as ChoiceControl<string> | null,
+    members: [] as { id: string; email: string }[],
+    membersLoaded: false,
+    adding: false,
+  };
   const controls: ChoiceControl<PageLevel>[] = [];
-  let people: ChoiceControl<string> | null = null;
-  let members: { id: string; email: string }[] = [];
-  let membersLoaded = false;
-  let adding = false;
-  const dispose = (): void => { people?.destroy(); people = null; for (const control of controls) control.destroy(); controls.length = 0; };
+  const dispose = (): void => {
+    state.people?.destroy();
+    state.people = null;
+    for (const control of controls) control.destroy();
+    controls.length = 0;
+  };
 
   function fail(cause: unknown): void {
     error.textContent = cause instanceof Error ? cause.message : 'La demande n’a pas pu aboutir. Réessayez.';
@@ -140,33 +148,46 @@ export function mountShareSheet(container: HTMLElement, options: ShareSheetOptio
 
   function renderInvitation(): void {
     const existing = new Set([...(state.sheet?.shares ?? []), ...(state.sheet?.inherited ?? [])].map((entry) => entry.userId));
-    const candidates = members.filter((member) => !existing.has(member.id));
+    const candidates = state.members.filter((member) => !existing.has(member.id));
     const add = el('button', 'Ajouter', 'data-cloud-share-add');
     add.type = 'button'; add.disabled = true;
-    people = createChoice<string>({
+    state.people = createChoice<string>({
       label: 'Ajouter une personne', value: '', searchable: true,
-      options: [{ value: '', label: membersLoaded ? 'Nom ou e-mail d’un membre…' : 'Chargement des membres…', disabled: true },
+      options: [{ value: '', label: state.membersLoaded ? 'Nom ou e-mail d’un membre…' : 'Chargement des membres…', disabled: true },
         ...candidates.map((member) => ({ value: member.id, label: member.email }))],
-      onChange: () => { add.disabled = adding; },
+      onChange: () => { add.disabled = state.adding; },
     });
-    people.disabled = adding || !candidates.length;
+    state.people.disabled = state.adding || !candidates.length;
     const personRow = el('div', undefined, 'data-cloud-share-person-picker');
-    personRow.append(people.element, add);
+    personRow.append(state.people.element, add);
     const level = createChoice<PageLevel>({ label: 'Accès à accorder', value: 'view',
       options: pageLevelOptions(), onChange() {},
     });
-    level.disabled = adding;
+    level.disabled = state.adding;
     controls.push(level);
     const accessRow = el('div', undefined, 'data-cloud-share-invite-level');
     accessRow.append(el('span', 'Droit sur cette page'), level.element);
-    const note = el('p', membersLoaded && !candidates.length ? 'Tous les membres ont déjà un accès individuel.' : 'Choisissez un membre de cet espace.', 'data-cloud-share-invite-note');
+    const note = el('p', state.membersLoaded && !candidates.length ? 'Tous les membres ont déjà un accès individuel.' : 'Choisissez un membre de cet espace.', 'data-cloud-share-invite-note');
     invitation.append(personRow, accessRow, note);
     add.addEventListener('click', () => {
+      const people = state.people;
       const id = people?.value;
-      if (!id || adding || state.sheet?.myLevel !== 'full') return;
-      adding = true; add.disabled = true; people!.disabled = true; level.disabled = true;
-      void change(id, level.value).finally(() => { adding = false; if (state.alive) render(); });
+      if (!id || !people || state.adding || state.sheet?.myLevel !== 'full') return;
+      state.adding = true; add.disabled = true; people.disabled = true; level.disabled = true;
+      void change(id, level.value).finally(() => { state.adding = false; if (state.alive) render(); });
     });
+  }
+
+  async function loadMembers(): Promise<void> {
+    try {
+      const result = await options.client.request<{ members: { id: string; email: string }[] }>(`/api/workspaces/${encodeURIComponent(options.slug)}/members`);
+      if (!state.alive) return;
+      state.members = result.members;
+      state.membersLoaded = true;
+      render();
+    } catch (cause) {
+      if (state.alive) fail(cause);
+    }
   }
 
   async function refresh(): Promise<void> {
@@ -175,13 +196,7 @@ export function mountShareSheet(container: HTMLElement, options: ShareSheetOptio
       if (!state.alive) return;
       state.sheet = value;
       render();
-      if (value.myLevel === 'full' && !membersLoaded) {
-        try {
-          const result = await options.client.request<{ members: { id: string; email: string }[] }>(`/api/workspaces/${encodeURIComponent(options.slug)}/members`);
-          if (!state.alive) return;
-          members = result.members; membersLoaded = true; render();
-        } catch (cause) { if (state.alive) fail(cause); }
-      }
+      if (value.myLevel === 'full' && !state.membersLoaded) await loadMembers();
     } catch (cause) {
       if (state.alive) fail(cause);
     }

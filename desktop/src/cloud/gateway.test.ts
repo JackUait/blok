@@ -1,4 +1,5 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
+import {must} from '../test-helpers';
 import {mountCloudGateway, CloudClient} from './index';
 const user = {id:'u1', email:'alice@example.com'};
 const workspace = {id:'w1', slug:'acme', name:'Acme', role:'admin'};
@@ -13,7 +14,7 @@ const instance = {
   defaultWorkspace: {slug: workspace.slug, name: workspace.name},
 };
 function response(data: unknown, status = 200): Response { return {ok:status < 400, status, json:async () => data} as Response; }
-function click(text: string): void { const button = [...document.querySelectorAll('button')].find(item => item.textContent === text); expect(button).toBeTruthy(); button!.click(); }
+function click(text: string): void { const button = [...document.querySelectorAll('button')].find(item => item.textContent === text); expect(button).toBeTruthy(); must(button).click(); }
 async function settle(): Promise<void> {await vi.waitFor(() => {expect(document.querySelector('button:disabled')).toBeNull();});}
 function stubFetch(handler: (url: string, init?: RequestInit) => Response | Promise<Response>): void {
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
@@ -65,8 +66,8 @@ describe('cloud gateway', () => {
   });
   it('keeps email and OTP semantics while using the shared editor fields',async()=>{
     stubFetch(async(url)=>url.endsWith('/api/session')?response({error:'Unauthorized'},401):response({ok:true}));
-    await mountCloudGateway(document.body,{onOpenWorkspace:vi.fn()});const email=document.querySelector<HTMLInputElement>('#cloud-email')!;expect(email.type).toBe('email');expect(email.autocomplete).toBe('email');expect(email.getAttribute('data-blok-field')).toBe('text');email.value='alice@example.test';email.form!.dispatchEvent(new Event('submit',{cancelable:true}));await settle();
-    const code=document.querySelector<HTMLInputElement>('#cloud-code')!;expect(code.autocomplete).toBe('one-time-code');expect(code.inputMode).toBe('numeric');expect(code.pattern).toBe('[0-9]{6}');expect(code.getAttribute('data-blok-field')).toBe('text');
+    await mountCloudGateway(document.body,{onOpenWorkspace:vi.fn()});const email=must(document.querySelector<HTMLInputElement>('#cloud-email'));expect(email.type).toBe('email');expect(email.autocomplete).toBe('email');expect(email.getAttribute('data-blok-field')).toBe('text');email.value='alice@example.test';must(email.form).dispatchEvent(new Event('submit',{cancelable:true}));await settle();
+    const code=must(document.querySelector<HTMLInputElement>('#cloud-code'));expect(code.autocomplete).toBe('one-time-code');expect(code.inputMode).toBe('numeric');expect(code.pattern).toBe('[0-9]{6}');expect(code.getAttribute('data-blok-field')).toBe('text');
   });
   it('opens a workspace only on explicit selection when several are available', async () => {
     const open = vi.fn(); stubFetch(async (url) => response(url.endsWith('/api/session') ? {user,workspaces:[workspace,second]} : {...workspace,joinStatus:'approved'}));
@@ -116,15 +117,15 @@ describe('cloud account and server selection', () => {
   it('prefills the server origin and normalizes a new HTTPS server', async () => {
     stubFetch(async () => response({error:'Unauthorized'},401));
     const change = vi.fn(); await mountCloudGateway(document.body,{apiOrigin:'https://current.example.test',onOpenWorkspace:vi.fn(),onServerChange:change});
-    const input = document.querySelector<HTMLInputElement>('#cloud-server')!;
+    const input = must(document.querySelector<HTMLInputElement>('#cloud-server'));
     expect(input.value).toBe('https://current.example.test'); input.value = 'https://new.example.test/path';
-    input.form!.dispatchEvent(new Event('submit',{cancelable:true})); await settle(); expect(change).toHaveBeenCalledWith('https://new.example.test');
+    must(input.form).dispatchEvent(new Event('submit',{cancelable:true})); await settle(); expect(change).toHaveBeenCalledWith('https://new.example.test');
   });
   it('rejects a credentialed server without changing the connection', async () => {
     stubFetch(async () => response({error:'Unauthorized'},401));
     const change = vi.fn(); await mountCloudGateway(document.body,{onOpenWorkspace:vi.fn(),onServerChange:change});
-    const input = document.querySelector<HTMLInputElement>('#cloud-server')!; input.value = 'https://alice:secret@example.test';
-    input.form!.dispatchEvent(new Event('submit',{cancelable:true})); await settle(); expect(change).not.toHaveBeenCalled(); expect(document.querySelector('[role="alert"]')?.textContent).toContain('sans identifiants');
+    const input = must(document.querySelector<HTMLInputElement>('#cloud-server')); input.value = 'https://alice:secret@example.test';
+    must(input.form).dispatchEvent(new Event('submit',{cancelable:true})); await settle(); expect(change).not.toHaveBeenCalled(); expect(document.querySelector('[role="alert"]')?.textContent).toContain('sans identifiants');
   });
 });
 describe('direct workspace administration', () => {

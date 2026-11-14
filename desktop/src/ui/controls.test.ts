@@ -1,5 +1,6 @@
 import {afterEach,describe,expect,it,vi} from 'vitest';
 import {openModalDialog} from '@blok/modal-dialog';
+import {must} from '../test-helpers';
 import {createChoice,styleTextField,wrapSearchField} from './controls';
 const dispose: Array<()=>void> = [];
 afterEach(()=>{dispose.splice(0).reverse().forEach(fn=>fn());document.body.replaceChildren();});
@@ -13,8 +14,8 @@ describe('shared editor design-system controls',()=>{
     const {control,changed}=choice();control.element.click();
     expect(document.querySelector('[data-blok-item-name=dark]')?.getAttribute('role')).toBe('menuitemradio');
     expect(document.querySelector('[data-blok-item-name=dark]')?.getAttribute('aria-checked')).toBe('true');
-    document.querySelector<HTMLElement>('[data-blok-item-name=auto]')!.click();expect(changed).not.toHaveBeenCalled();
-    document.querySelector<HTMLElement>('[data-blok-item-name=light]')!.click();
+    must(document.querySelector<HTMLElement>('[data-blok-item-name=auto]')).click();expect(changed).not.toHaveBeenCalled();
+    must(document.querySelector<HTMLElement>('[data-blok-item-name=light]')).click();
     expect(control.value).toBe('light');expect(control.element.textContent).toContain('Clair');expect(changed).toHaveBeenCalledExactlyOnceWith('light');
     await vi.waitFor(()=>expect(document.querySelector('[data-desktop-choice-popover]')).toBeNull());
   });
@@ -26,11 +27,11 @@ describe('shared editor design-system controls',()=>{
   });
   it('closes only the menu on Escape inside a real repository modal',()=>{
     const {control}=choice();const overlay=document.createElement('div');const surface=document.createElement('section');surface.append(control.element);overlay.append(surface);
-    let closed=false;const modal=openModalDialog({content:overlay,surface,label:'Paramètres',onDismiss:()=>modal.close(),onClose:()=>{closed=true;}});dispose.push(()=>modal.close());
+    const closed={value:false};const modal=openModalDialog({content:overlay,surface,label:'Paramètres',onDismiss:()=>modal.close(),onClose:()=>{closed.value=true;}});dispose.push(()=>modal.close());
     control.element.click();expect(control.element.getAttribute('aria-expanded')).toBe('true');
     document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
-    expect(control.element.getAttribute('aria-expanded')).toBe('false');expect(closed).toBe(false);expect(document.activeElement).toBe(control.element);
-    document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));expect(closed).toBe(true);
+    expect(control.element.getAttribute('aria-expanded')).toBe('false');expect(closed.value).toBe(false);expect(document.activeElement).toBe(control.element);
+    document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));expect(closed.value).toBe(true);
   });
   it('closes a portal when disabled or destroyed and never exposes a native select',async()=>{
     const {control}=choice();control.element.click();control.disabled=true;

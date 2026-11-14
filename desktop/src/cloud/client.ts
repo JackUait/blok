@@ -51,6 +51,13 @@ export class CloudApiError extends Error {
   constructor(public status: number, message: string) { super(message); this.name = 'CloudApiError'; }
 }
 export interface CloudClientOptions { origin?: string; sessionAdapter?: CloudSessionAdapter }
+
+async function fetchResponse(url: string, init: RequestInit): Promise<Response> {
+  return fetch(url, init).catch(() => {
+    throw new CloudApiError(0, 'Connexion au serveur impossible. Vérifiez votre connexion puis réessayez.');
+  });
+}
+
 export class CloudClient {
   currentSession: CloudSession | null = null;
   readonly origin: string;
@@ -64,10 +71,8 @@ export class CloudClient {
     if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
     const token = await this.sessionAdapter?.getToken();
     if (token) headers.set('Authorization', `Bearer ${token}`);
-    let response: Response;
-    try { response = await fetch(`${this.origin}${path}`, { ...init, headers, credentials: 'include' }); }
-    catch { throw new CloudApiError(0, 'Connexion au serveur impossible. Vérifiez votre connexion puis réessayez.'); }
-    const data = await response.json().catch(() => null);
+    const response = await fetchResponse(`${this.origin}${path}`, { ...init, headers, credentials: 'include' });
+    const data = await response.json().catch(() => null) as { error?: unknown } | null;
     if (!response.ok) throw new CloudApiError(response.status, typeof data?.error === 'string' ? data.error : 'La demande n’a pas pu aboutir. Réessayez.');
     return data as T;
   }
@@ -123,14 +128,9 @@ export class CloudClient {
     const headers = new Headers({ 'Content-Type': 'application/json' });
     const token = await this.sessionAdapter?.getToken();
     if (token) headers.set('Authorization', `Bearer ${token}`);
-    let response: Response;
-    try {
-      response = await fetch(`${this.origin}/api/admin/email-test`, {
-        method: 'POST', headers, credentials: 'include', body: JSON.stringify({ email }),
-      });
-    } catch {
-      throw new CloudApiError(0, 'Connexion au serveur impossible. Vérifiez votre connexion puis réessayez.');
-    }
+    const response = await fetchResponse(`${this.origin}/api/admin/email-test`, {
+      method: 'POST', headers, credentials: 'include', body: JSON.stringify({ email }),
+    });
     const data = await response.json().catch(() => null) as { ok?: boolean; backend?: string; error?: string } | null;
     const backend = (data?.backend ?? '') as CloudMailBackend;
     if (response.ok) return { ok: true, backend };

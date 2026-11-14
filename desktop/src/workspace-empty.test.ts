@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { must } from './test-helpers';
 import { createEmptyWorkspaceState } from './workspace-empty';
 
 describe('empty remote workspace', () => {
@@ -7,7 +8,7 @@ describe('empty remote workspace', () => {
     const element = createEmptyWorkspaceState(false, create);
     expect(element.textContent).toContain('Cet espace est vide. Créez votre première page.');
     expect(create).not.toHaveBeenCalled();
-    element.querySelector<HTMLButtonElement>('button')!.click();
+    must(element.querySelector<HTMLButtonElement>('button')).click();
     expect(create).toHaveBeenCalledOnce();
   });
 
@@ -39,10 +40,10 @@ describe('empty remote workspace', () => {
     ]);
     const links = [...element.querySelectorAll('[data-desktop-empty-link]')].map((node) => node.textContent);
     expect(links).toEqual(['Importer', 'Premiers pas']);
-    element.querySelector<HTMLButtonElement>('[data-desktop-empty-card="template"]')!.click();
-    element.querySelector<HTMLButtonElement>('[data-desktop-empty-card="invite"]')!.click();
-    element.querySelector<HTMLButtonElement>('[data-desktop-empty-link="import"]')!.click();
-    element.querySelector<HTMLButtonElement>('[data-desktop-empty-link="getting-started"]')!.click();
+    must(element.querySelector<HTMLButtonElement>('[data-desktop-empty-card="template"]')).click();
+    must(element.querySelector<HTMLButtonElement>('[data-desktop-empty-card="invite"]')).click();
+    must(element.querySelector<HTMLButtonElement>('[data-desktop-empty-link="import"]')).click();
+    must(element.querySelector<HTMLButtonElement>('[data-desktop-empty-link="getting-started"]')).click();
     expect(template).toHaveBeenCalledOnce();
     expect(invite).toHaveBeenCalledOnce();
     expect(importPage).toHaveBeenCalledOnce();

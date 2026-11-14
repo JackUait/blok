@@ -449,6 +449,12 @@ export class DatabaseViewControls {
 
       return;
     }
+    if (saved.type === 'form') {
+      this.trimForForm();
+      this.panel?.refresh();
+
+      return;
+    }
     this.renderFilterBar(view);
     this.panel?.refresh();
   }
@@ -469,6 +475,15 @@ export class DatabaseViewControls {
       if (control !== null) control.hidden = true;
     }
     this.toolbar.removeAttribute('data-minimized');
+    this.filterBar.hidden = true;
+    this.filterBar.replaceChildren();
+  }
+
+  /** notion-motion.md Round 31 §1, Round 32 §4: a form takes answers, so it has no Filter, Sort, Search or New. */
+  private trimForForm(): void {
+    for (const control of [this.filterButton, this.sortButton, this.searchButton, this.newSplit]) {
+      if (control !== null) control.hidden = true;
+    }
     this.filterBar.hidden = true;
     this.filterBar.replaceChildren();
   }

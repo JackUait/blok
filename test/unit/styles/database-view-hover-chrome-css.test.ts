@@ -208,6 +208,18 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(ruleBody('[data-blok-database-form-insert]:focus-visible')).toContain('opacity: 1');
   });
 
+  // notion-motion.md Round 31 §1, Round 32 §4: the answer box is 38 tall (Blok drew 28).
+  it('draws the answer box 38 tall', () => {
+    const answer = ruleBody('[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name]), textarea, select, [data-blok-database-form-provider-answer])');
+
+    expect(answer).toContain('box-sizing: border-box');
+    expect(answer).toContain('min-block-size: 38px');
+  });
+
+  it('has no rule for the in-card Required checkbox, which is gone', () => {
+    expect(database).not.toContain('[data-blok-database-form-required-toggle]');
+  });
+
   it('draws the insert slot 36 tall and 12 round, and Select type rows 44 tall with a framed 32px icon', () => {
     const slot = ruleBody('[data-blok-database-form-slot]');
     const icon = ruleBody('[data-blok-database-form-type-row] > [data-blok-database-panel-icon]');

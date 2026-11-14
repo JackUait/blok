@@ -10,6 +10,7 @@ import type { FormShareHost } from './database-form-share';
 import { nameTakenError } from './database-name-taken-error';
 import { DatabasePanel, panelInput, panelLabel, panelRow, panelSwitch } from './database-panel';
 import { propertyTypeMeta } from './database-property-types';
+import { openFlyout } from './database-sort-flyouts';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { isReadOnlyType } from './property-values';
 import { FORM_ASKABLE, formAnswerProblem, formQuestions } from '../../shared/database/form-questions';
@@ -25,7 +26,6 @@ export interface DatabaseFormViewOptions {
   source?: DatabaseSourceRef;
   /** False: the answer was refused (say, the form closed meanwhile), so no thank-you screen. */
   onSubmit: (values: Record<string, PropertyValue>) => boolean | void;
-  setRequired?: (propertyId: string, required: boolean) => void;
   setQuestionSetting?: (propertyId: string, changes: ViewPropertyPatch) => void;
   /** A new property of this type, asked as the last question. */
   addQuestion?: (type: PropertyType, beforeId?: string) => PropertyDefinition | null;
@@ -82,9 +82,15 @@ const INPUT_TYPES: Partial<Record<PropertyType, string>> = {
 /** Notion's "Max selection" presets (research/12 §4); any other count goes in the custom field. */
 const MAX_SELECTION_PRESETS = [1, 2, 3, 4, 5, 10] as const;
 
-/** Multi-select defaults to a list (measured). Select keeps a dropdown: Notion's choice there is unmeasured. */
+/** notion-motion.md Round 32 §1 (r32-a-movequestion-*): the Move question flyout is 280 wide. */
+const MOVE_FLYOUT_WIDTH = 280;
+
+/**
+ * Multi-select and select default to a list (measured; select: notion-motion.md Round 32 §4).
+ * Status keeps a dropdown: Notion's choice there is unmeasured.
+ */
 const showOptionsAs = (property: PropertyDefinition, setting: ViewPropertySetting): 'list' | 'dropdown' =>
-  setting.showOptionsAs ?? (property.type === 'multiSelect' ? 'list' : 'dropdown');
+  setting.showOptionsAs ?? (property.type === 'multiSelect' || property.type === 'select' ? 'list' : 'dropdown');
 
 type Field = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | HTMLFieldSetElement | HTMLButtonElement;
 
@@ -575,20 +581,6 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     }
     wrapper.appendChild(field);
 
-    if (!this.options.readOnly && this.options.setRequired !== undefined) {
-      const toggle = document.createElement('label');
-      const box = document.createElement('input');
-      const setRequired = this.options.setRequired;
-
-      toggle.setAttribute('data-blok-database-form-required-toggle', '');
-      box.type = 'checkbox';
-      box.checked = required;
-      box.setAttribute('data-blok-database-form-required', property.id);
-      box.addEventListener('change', () => setRequired(property.id, box.checked));
-      toggle.append(box, document.createTextNode(i18n.t('tools.database.formRequiredToggle')));
-      wrapper.appendChild(toggle);
-    }
-
     const maxSelections = PICKS_MANY.includes(property.type) ? setting.maxSelections : undefined;
 
     this.fields.set(property.id, { property, field, required, maxSelections });
@@ -634,6 +626,10 @@ export class DatabaseFormView implements DatabaseViewRenderer {
 
     if (field instanceof HTMLInputElement) field.type = INPUT_TYPES[property.type] ?? 'text';
     field.id = id;
+    // notion-motion.md Round 31 §1: the builder's answer box reads "Respondent's answer".
+    if (this.options.share !== undefined && !this.options.readOnly && field.type !== 'checkbox' && field.type !== 'date') {
+      field.placeholder = this.options.i18n.t('tools.database.formAnswerPlaceholder');
+    }
 
     return field;
   }
@@ -1141,38 +1137,37 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     this.building = false;
   }
 
-  /** "Move question ›". What Notion's submenu holds is unread: Blok offers Move up and Move down. */
+  /**
+   * "Move question ›": a 280-wide flyout on the panel's left, centred on the row, listing only
+   * the moves the question can make (notion-motion.md Round 32 §1). A form has one group: the whole form.
+   */
   private moveRow(propertyId: string, panel: DatabasePanel): HTMLElement {
     const { i18n } = this.options;
     const ids = formQuestions(this.options.view, this.options.schema).map(({ property }) => property.id);
     const index = ids.indexOf(propertyId);
-    const move = (beforeId: string | null): void => {
-      panel.close();
-      this.options.moveQuestion?.(propertyId, beforeId);
-    };
-
-    return panelRow({
+    const moves: Array<{ key: string; testId: string; shown: boolean; beforeId: () => string | null }> = [
+      { key: 'tools.database.layoutMoveUp', testId: 'up', shown: index > 0, beforeId: () => ids[index - 1] },
+      { key: 'tools.database.layoutMoveDown', testId: 'down', shown: index >= 0 && index < ids.length - 1, beforeId: () => ids[index + 2] ?? null },
+      { key: 'tools.database.formMoveToTop', testId: 'top', shown: index > 0, beforeId: () => ids[0] },
+      { key: 'tools.database.formMoveToBottom', testId: 'bottom', shown: index >= 0 && index < ids.length - 1, beforeId: () => null },
+    ];
+    const row: HTMLButtonElement = panelRow({
       label: i18n.t('tools.database.formMoveQuestion'),
       testId: 'database-form-question-move',
       opensPage: true,
-      onClick: () => panel.push({
-        title: i18n.t('tools.database.formMoveQuestion'),
-        build: () => [
-          panelRow({
-            label: i18n.t('tools.database.layoutMoveUp'),
-            testId: 'database-form-question-move-up',
-            disabled: index <= 0,
-            onClick: () => move(ids[index - 1]),
+      onClick: () => openFlyout(row, panel, 'database-form-question-move-menu', MOVE_FLYOUT_WIDTH, (pick) => moves
+        .filter((move) => move.shown)
+        .map((move) => panelRow({
+          label: i18n.t(move.key),
+          testId: `database-form-question-move-${move.testId}`,
+          onClick: () => pick(() => {
+            panel.close();
+            this.options.moveQuestion?.(propertyId, move.beforeId());
           }),
-          panelRow({
-            label: i18n.t('tools.database.layoutMoveDown'),
-            testId: 'database-form-question-move-down',
-            disabled: index < 0 || index >= ids.length - 1,
-            onClick: () => move(ids[index + 2] ?? null),
-          }),
-        ],
-      }),
+        })), { aside: { side: 'left', gap: 0 } }),
     });
+
+    return row;
   }
 
   private answer(property: PropertyDefinition, field: Field): PropertyValue | undefined {

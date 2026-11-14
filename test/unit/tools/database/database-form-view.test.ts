@@ -104,7 +104,7 @@ describe('DatabaseFormView', () => {
     field<HTMLInputElement>(root, 'title').value = 'Ada';
     field<HTMLInputElement>(root, 'size').value = '12';
     field<HTMLInputElement>(root, 'agree').checked = true;
-    field<HTMLSelectElement>(root, 'pick').value = 'o2';
+    question(root, 'pick')?.querySelector<HTMLInputElement>('input[value="o2"]')?.click();
     submitForm(root);
 
     expect(submit).toHaveBeenCalledWith({ email: 'a@b.co', title: 'Ada', size: 12, agree: true, pick: 'o2' });
@@ -162,13 +162,24 @@ describe('DatabaseFormView', () => {
     expect(root.querySelector('[data-blok-database-form-confirmation]')).toBeNull();
   });
 
-  it('in edit mode, the Required toggle writes the view property setting', () => {
-    const setRequired = vi.fn();
-    const { root } = mount({ setRequired });
+  // notion-motion.md Round 32 §4: Required lives only in Question options; the card has no checkbox.
+  it('in edit mode, a card has no Required checkbox', () => {
+    const { root } = mount({ setQuestionSetting: vi.fn() });
 
-    root.querySelector<HTMLInputElement>('[data-blok-database-form-required="title"]')?.click();
+    expect(root.querySelector('[data-blok-database-form-required]')).toBeNull();
+    expect(root.querySelector('[data-blok-database-form-required-toggle]')).toBeNull();
+  });
 
-    expect(setRequired).toHaveBeenCalledWith('title', true);
+  // Round 31 §1, Round 32 §4: the builder's answer box reads "Respondent's answer".
+  it('the builder\'s answer boxes show the respondent placeholder; a respondent\'s do not', () => {
+    const builder = mount({ setQuestionSetting: vi.fn(), share: { settings: () => ({}), update: vi.fn(), copyLink: vi.fn() } }).root;
+
+    expect(field<HTMLInputElement>(builder, 'title').placeholder).toBe('tools.database.formAnswerPlaceholder');
+    expect(field<HTMLInputElement>(builder, 'email').placeholder).toBe('tools.database.formAnswerPlaceholder');
+    document.body.innerHTML = '';
+    const respondent = mount().root;
+
+    expect(field<HTMLInputElement>(respondent, 'title').placeholder).toBe('');
   });
 
   describe('question options', () => {
@@ -211,8 +222,16 @@ describe('DatabaseFormView', () => {
       expect(submit).toHaveBeenCalledWith({ pick: 'o2' });
     });
 
-    it('a select question is a dropdown by default', () => {
+    // notion-motion.md Round 32 §4: Notion's Select question defaults to List view (radio rows).
+    it('a select question is a radio list by default', () => {
       const { root } = ask([{ id: 'pick', visible: true }]);
+
+      expect(question(root, 'pick')?.querySelector('select')).toBeNull();
+      expect(question(root, 'pick')?.querySelectorAll('input[type="radio"]')).toHaveLength(2);
+    });
+
+    it('a select question shown as a dropdown is a select', () => {
+      const { root } = ask([{ id: 'pick', visible: true, showOptionsAs: 'dropdown' }]);
 
       expect(question(root, 'pick')?.querySelector('select')).not.toBeNull();
     });
@@ -282,11 +301,6 @@ describe('DatabaseFormView', () => {
     });
   });
 
-  it('read-only shows no Required toggles', () => {
-    const { root } = mount({ readOnly: true, setRequired: vi.fn() });
-
-    expect(root.querySelector('[data-blok-database-form-required]')).toBeNull();
-  });
 });
 
 // research/14 §3: the question name field refuses a taken name the way the property menu does.
@@ -547,32 +561,55 @@ describe('DatabaseFormView question options rows', () => {
     expect(panel()).toBeNull();
   });
 
-  it('Move question moves it up or down among the questions, and not past either end', () => {
-    const moveQuestion = vi.fn();
+  const flyout = (): HTMLElement | null => document.querySelector('[data-blok-testid="database-form-question-move-menu"]');
+  const flyoutRows = (): Array<string | null> =>
+    [...(flyout()?.querySelectorAll('[data-blok-database-panel-row]') ?? [])].map((el) => el.getAttribute('data-blok-testid'));
 
+  // notion-motion.md Round 32 §1 (r32-a-movequestion-*): a 280-wide flyout beside Question options, which stays open.
+  // The first question lists Move down and Move to bottom of group; a middle one all four; the last mirrors the first.
+  it('Move question opens a flyout with only the moves the question can make', () => {
     // Questions in order: email, title, size, agree, pick.
-    open('title', { moveQuestion });
+    open('email', { moveQuestion: vi.fn() });
     row('database-form-question-move')?.click();
-    expect(row('database-form-question-move-up')?.disabled).toBe(false);
-    row('database-form-question-move-up')?.click();
+    expect(flyout()?.style.width).toBe('280px');
+    expect(panel()).not.toBeNull();
+    expect(flyoutRows()).toEqual(['database-form-question-move-down', 'database-form-question-move-bottom']);
+
+    document.body.innerHTML = '';
+    open('size', { moveQuestion: vi.fn() });
+    row('database-form-question-move')?.click();
+    expect(flyoutRows()).toEqual([
+      'database-form-question-move-up',
+      'database-form-question-move-down',
+      'database-form-question-move-top',
+      'database-form-question-move-bottom',
+    ]);
+
+    document.body.innerHTML = '';
+    open('pick', { moveQuestion: vi.fn() });
+    row('database-form-question-move')?.click();
+    expect(flyoutRows()).toEqual(['database-form-question-move-up', 'database-form-question-move-top']);
+  });
+
+  it('each move puts the question where its row says and closes both menus', () => {
+    const moveQuestion = vi.fn();
+    const pick = (testId: string): void => {
+      document.body.innerHTML = '';
+      open('title', { moveQuestion });
+      row('database-form-question-move')?.click();
+      row(testId)?.click();
+    };
+
+    pick('database-form-question-move-up');
     expect(moveQuestion).toHaveBeenLastCalledWith('title', 'email');
     expect(panel()).toBeNull();
-
-    document.body.innerHTML = '';
-    open('title', { moveQuestion });
-    row('database-form-question-move')?.click();
-    row('database-form-question-move-down')?.click();
+    expect(flyout()).toBeNull();
+    pick('database-form-question-move-down');
     expect(moveQuestion).toHaveBeenLastCalledWith('title', 'agree');
-
-    document.body.innerHTML = '';
-    open('email', { moveQuestion });
-    row('database-form-question-move')?.click();
-    expect(row('database-form-question-move-up')?.disabled).toBe(true);
-
-    document.body.innerHTML = '';
-    open('pick', { moveQuestion });
-    row('database-form-question-move')?.click();
-    expect(row('database-form-question-move-down')?.disabled).toBe(true);
+    pick('database-form-question-move-top');
+    expect(moveQuestion).toHaveBeenLastCalledWith('title', 'email');
+    pick('database-form-question-move-bottom');
+    expect(moveQuestion).toHaveBeenLastCalledWith('title', null);
   });
 
   it('moving the second-to-last question down puts it last', () => {

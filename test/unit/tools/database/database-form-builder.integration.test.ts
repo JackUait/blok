@@ -156,6 +156,24 @@ describe('local form question builder', () => {
     vi.restoreAllMocks();
   });
 
+  // notion-motion.md Round 31 §1, Round 32 §4: a form view's toolbar has no Filter, Sort, Search or New.
+  it('hides Filter, Sort, Search and New in the form builder toolbar', async () => {
+    await mount(blocksFor([notes, tags]));
+    const shown = (selector: string): boolean => {
+      const el = q(selector);
+
+      return el instanceof HTMLElement && !el.hidden;
+    };
+
+    expect(shown(byTestId('database-toolbar-settings'))).toBe(true);
+    expect(shown(byTestId('database-toolbar-preview-form'))).toBe(true);
+    expect(shown(byTestId('database-toolbar-filter'))).toBe(false);
+    expect(shown(byTestId('database-toolbar-sort'))).toBe(false);
+    expect(shown(byTestId('database-toolbar-search'))).toBe(false);
+    expect(shown('[data-blok-database-new]')).toBe(false);
+    expect(shown('[data-blok-database-filter-bar]')).toBe(false);
+  });
+
   it('syncs a question rename by default, but a detached question label survives property renames and reloads', async () => {
     await mount(blocksFor([notes]));
     rename('notes', 'Project details');

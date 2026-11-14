@@ -79,15 +79,6 @@ describe('DatabaseTool — form, map and dashboard views', () => {
     expect(onSubmit).toHaveBeenCalledWith({ databaseId: 'db', viewId: 'v', values: { title: 'Ada' }, sharing: { public: false, anonymous: false, submissionAccess: 'none' } });
   });
 
-  it('the form builder\'s Required toggle saves on the view property', () => {
-    const doc = makeDoc([]);
-    const { tool, el } = buildTool(doc, {}, dataWith({ type: 'form' }));
-
-    el.querySelector<HTMLInputElement>('[data-blok-database-form-required="where"]')?.click();
-
-    expect(tool.save(el).views[0].properties?.find((entry) => entry.id === 'where')?.required).toBe(true);
-  });
-
   it('a map without a style or host map says a style is needed; with a host map the host draws the rows', async () => {
     const rows = [fakeRow('a', 'db', { title: 'HQ', where: { address: '1 Main St' } }, 'a0')];
     const plain = buildTool(makeDoc(rows), {}, dataWith({ type: 'map' })).el;

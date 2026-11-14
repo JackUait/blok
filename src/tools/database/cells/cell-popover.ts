@@ -25,6 +25,8 @@ export interface CellPopoverOptions {
   gap?: number;
   /** Opens beside the anchor instead: this far right of it, top level with it. */
   beside?: number;
+  /** Opens on this side of the anchor, `gap` from it, vertically centred on it. */
+  aside?: { side: 'left' | 'right'; gap: number };
   /** Opens above the anchor, `gap` over it, when it fits there and not below. */
   flip?: boolean;
   /** The gap to the window's top and bottom, when it is not the usual 12. */
@@ -106,6 +108,14 @@ const besidePlacement = (anchor: HTMLElement, gap: number): Pick<PopoverParams, 
   };
 };
 
+/** Beside the anchor and centred on it, as a menu's submenu flyout (notion-motion.md Round 32 §1). */
+const asidePlacement = (aside: { side: 'left' | 'right'; gap: number }): Pick<PopoverDesktopParams, 'placeLeftOfAnchor' | 'asideSide' | 'offset' | 'viewportMargin'> => ({
+  placeLeftOfAnchor: true,
+  asideSide: aside.side,
+  offset: aside.gap,
+  viewportMargin: COVER_VIEWPORT_MARGIN,
+});
+
 /**
  * An editor's min-width: the cell's width, never under `floor`. Over a row
  * page value the box starts 1px left and still ends on the value's right edge.
@@ -170,7 +180,11 @@ export class CellPopover {
       class: [CELL_EDITOR_CLASS, ...(panel === true ? [PANEL_CLASS] : []), ...(docked !== undefined && docked !== false ? [DOCKED_CLASS] : []), ...(docked === 'page' ? [DOCKED_PAGE_CLASS] : []), ...(cover === 'value' ? [VALUE_EDITOR_CLASS] : []), ...(cover === true ? [TABLE_EDITOR_CLASS] : [])].join(' '),
       ...(this.options.minWidth !== undefined ? { minWidth: this.options.minWidth } : {}),
     };
-    const fit = this.options.beside !== undefined ? besidePlacement(anchor, this.options.beside) : fitPlacement(anchor, this.options.gap, this.options.flip, this.options.verticalMargin);
+    const { aside, beside } = this.options;
+    const below = (): ReturnType<typeof fitPlacement> | ReturnType<typeof besidePlacement> => (beside !== undefined
+      ? besidePlacement(anchor, beside)
+      : fitPlacement(anchor, this.options.gap, this.options.flip, this.options.verticalMargin));
+    const fit = aside !== undefined ? asidePlacement(aside) : below();
     const coverOrFit = cover === true || cover === 'value' ? coverPlacement(anchor, cover === 'value', cover === true && this.options.below === true) : fit;
     const docks = {
       page: () => dockPlacement(anchor, (this.options.dockRow ?? anchor).getBoundingClientRect().bottom, 0),

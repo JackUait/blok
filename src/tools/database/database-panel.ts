@@ -38,6 +38,8 @@ export interface DatabasePanelOptions {
   gap?: number;
   /** Opens beside the anchor, this far right of it, top level with it. */
   beside?: number;
+  /** Opens on this side of the anchor, `gap` from it, centred on it. */
+  aside?: { side: 'left' | 'right'; gap: number };
   /** Opens above the anchor, `gap` over it, when it does not fit below (notion-motion.md Round 21 §1). */
   flip?: boolean;
   /** The gap to the window's top and bottom, when it is not the usual 12. */
@@ -95,6 +97,7 @@ export class DatabasePanel {
       ...(dock ?? {}),
       ...(options.gap !== undefined ? { gap: options.gap } : {}),
       ...(options.beside !== undefined ? { beside: options.beside } : {}),
+      ...(options.aside !== undefined ? { aside: options.aside } : {}),
       ...(options.flip === true ? { flip: true } : {}),
       ...(options.verticalMargin !== undefined ? { verticalMargin: options.verticalMargin } : {}),
       onEscape: () => this.back(true),

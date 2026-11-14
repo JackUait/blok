@@ -21088,6 +21088,8 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name]), textarea, select, [data-blok-database-form-provider-answer]) {
+  box-sizing: border-box;
+  min-block-size: 38px;
   padding-block: var(--blok-space-1);
   padding-inline: var(--blok-space-2);
   border: 1px solid var(--blok-database-form-answer-border);
@@ -21114,14 +21116,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   margin: 0;
   padding: 0;
   border: none;
-}
-
-[data-blok-database-form-required-toggle] {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--blok-space-1);
-  color: var(--blok-database-ink-secondary);
-  font-size: 0.875em;
 }
 
 [data-blok-database-form-submit], [data-blok-database-form-again] {

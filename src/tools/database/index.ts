@@ -5487,7 +5487,6 @@ export class DatabaseTool implements BlockTool {
         ...(this.structureLocked()
           ? {}
           : {
-            setRequired: (propertyId: string, required: boolean) => setQuestionSetting(propertyId, { required }),
             setQuestionSetting,
             addQuestion: (type: PropertyType, beforeId?: string) => editQuestion(() => this.addProperty({ name: '', type, ...(beforeId === undefined ? {} : { beforeId }) }), null),
             showQuestion: (propertyId: string) => editQuestion(() => {

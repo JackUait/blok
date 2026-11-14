@@ -78,7 +78,7 @@
 }
 
 @keyframes blok-assistant-draw {
-  from { stroke-dashoffset: 16 }
+  from { stroke-dashoffset: 17 }
 }
 
 @keyframes blok-assistant-in {

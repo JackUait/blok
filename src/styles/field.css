@@ -87,7 +87,7 @@ textarea[data-blok-field] {
   height: 16px;
   content: '';
   background-color: var(--blok-text-secondary);
-  --_blok-search-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.25' stroke-linecap='round'%3E%3Ccircle cx='9' cy='9' r='5'/%3E%3Cpath d='m12.75 12.75 3.25 3.25'/%3E%3C/svg%3E");
+  --_blok-search-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.25' stroke-linecap='round'%3E%3Ccircle cx='9' cy='9' r='5.5'/%3E%3Cpath d='m13 13 3.5 3.5'/%3E%3C/svg%3E");
   -webkit-mask: var(--_blok-search-glyph) center / contain no-repeat;
   mask: var(--_blok-search-glyph) center / contain no-repeat;
 }

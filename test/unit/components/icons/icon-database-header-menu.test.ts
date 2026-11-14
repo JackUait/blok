@@ -45,10 +45,10 @@ describe('column insert glyphs', () => {
     expect(tip - (bar.x + bar.width) - STROKE).toBeGreaterThanOrEqual(STROKE);
   });
 
-  it('use the bar of the panel height (y 4 to 16)', () => {
+  it('use a bar as tall as the Keyline square frame (y 3.5 to 16.5)', () => {
     const [bar] = rects(IconColumnInsertLeft);
 
-    expect([bar.y, bar.y + bar.height]).toEqual([4, 16]);
+    expect([bar.y, bar.y + bar.height]).toEqual([3.5, 16.5]);
   });
 });
 
@@ -90,9 +90,21 @@ describe('group glyph', () => {
 
 describe('change type glyph', () => {
   it('draws two arrows whose tips sit on opposite sides of the loop', () => {
-    const heads = paths(IconChangeType).filter((d) => /^M[\d.]+ [\d.]+l/.test(d));
+    const heads = paths(IconChangeType)
+      .flatMap((d) => d.match(/M[^M]+/g) ?? [])
+      .filter((d) => /^M[\d.]+ [\d.]+l/.test(d));
 
     expect(heads).toHaveLength(2);
+    // A head is "M x y l dx1 dy1 dx2 dy2"; its tip is the middle point.
+    const tips = heads.map((d) => {
+      const [x = 0, y = 0, dx = 0, dy = 0] = (d.match(/-?(?:\d*\.)?\d+/g) ?? []).map(Number);
+
+      return [x + dx, y + dy];
+    });
+    const [first = [], second = []] = tips;
+
+    // Opposite sides: the tips are a half turn apart about the canvas centre.
+    expect([(first[0] ?? 0) + (second[0] ?? 0), (first[1] ?? 0) + (second[1] ?? 0)]).toEqual([20, 20]);
   });
 
   it('stays inside the 3 to 17 content box', () => {

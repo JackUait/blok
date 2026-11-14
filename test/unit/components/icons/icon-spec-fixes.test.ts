@@ -39,16 +39,21 @@ describe('icon house-spec fixes', () => {
       expect(svg.querySelectorAll('circle')).toHaveLength(0);
       expect(rows.map((row) => row.getAttribute('x'))).toEqual(['3', '3']);
       expect(rows.map((row) => row.getAttribute('width'))).toEqual(['14', '14']);
-      expect(rows.map((row) => row.getAttribute('height'))).toEqual(['4.5', '4.5']);
+      expect(rows.map((row) => row.getAttribute('height'))).toEqual(['4.25', '4.25']);
+      expect(rows.map((row) => row.getAttribute('rx'))).toEqual(['1.5', '1.5']);
 
       const topBottom = Number(rows[0].getAttribute('y')) + Number(rows[0].getAttribute('height'));
+      const stroke = Number(rows[0].getAttribute('stroke-width'));
 
-      expect(Number(rows[1].getAttribute('y')) - topBottom).toBe(3);
+      // The pair fills the landscape panel band, y 4.5-15.5.
+      expect(Number(rows[0].getAttribute('y'))).toBe(4.5);
+      expect(Number(rows[1].getAttribute('y')) + Number(rows[1].getAttribute('height'))).toBe(15.5);
+      expect(Number(rows[1].getAttribute('y')) - topBottom - stroke).toBeGreaterThanOrEqual(1);
     });
 
     it('should be visually distinct from IconListBulleted', () => {
       expect(IconList).not.toBe(IconListBulleted);
-      expect(parseSvg(IconListBulleted).querySelectorAll('circle')).toHaveLength(2);
+      expect(parseSvg(IconListBulleted).querySelectorAll('circle')).toHaveLength(3);
       expect(parseSvg(IconListBulleted).querySelectorAll('rect')).toHaveLength(0);
     });
   });
@@ -63,7 +68,7 @@ describe('icon house-spec fixes', () => {
       const [left, baseline, width] = line?.slice(1).map(Number) ?? [];
       const halfStroke = Number(rule?.getAttribute('stroke-width')) / 2;
 
-      expect(baseline).toBe(15);
+      expect(baseline).toBe(15.5);
       expect(left - halfStroke).toBeGreaterThanOrEqual(3);
       expect(left + width + halfStroke).toBeLessThanOrEqual(17);
       expect(left + width / 2).toBe(10);
@@ -86,7 +91,7 @@ describe('icon house-spec fixes', () => {
   });
 
   describe('IconText', () => {
-    it('should center the T stem on its cap and keep the heading height (5-15)', () => {
+    it('should center the T stem on its cap and keep the heading height (4.5-15.5)', () => {
       const path = parseSvg(IconText).querySelector('path');
       const geometry = path?.getAttribute('d')?.match(/^M([\d.]+) ([\d.]+)V([\d.]+)h([\d.]+)v([\d.]+)M([\d.]+) ([\d.]+)v([\d.]+)$/);
 
@@ -94,9 +99,9 @@ describe('icon house-spec fixes', () => {
 
       const [left, terminalY, capY, width, terminalHeight, stemX, stemY, stemHeight] = geometry?.slice(1).map(Number) ?? [];
 
-      expect(capY).toBe(5);
+      expect(capY).toBe(4.5);
       expect(stemY).toBe(capY);
-      expect(stemY + stemHeight).toBe(15);
+      expect(stemY + stemHeight).toBe(15.5);
       expect(stemX).toBe(left + width / 2);
       expect(capY + terminalHeight).toBe(terminalY);
       expect(terminalHeight).toBeGreaterThan(0);

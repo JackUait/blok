@@ -18,11 +18,84 @@ const svgOf = (name: string): SVGSVGElement => {
   return svg;
 };
 
-const numbers = (element: Element | null | undefined, attribute = 'd'): number[] =>
-  (element?.getAttribute(attribute)?.match(/-?(?:\d*\.)?\d+/g) ?? []).map(Number);
+type Point = [number, number];
+
+interface Segment {
+  cmd: string;
+  from: Point;
+  points: Point[];
+  arc?: { rx: number; ry: number; large: number; sweep: number };
+}
+
+const ARITY: Record<string, number> = { M: 2, L: 2, H: 1, V: 1, C: 6, S: 4, Q: 4, T: 2, A: 7, Z: 0 };
+
+// Every command made absolute: H/V become L, S/T get their reflected control point.
+const segmentsOf = (d: string): Segment[] => {
+  const tokens = d.match(/[a-zA-Z]|-?(?:\d*\.\d+|\d+)(?:e-?\d+)?/g) ?? [];
+  const out: Segment[] = [];
+  let pen: Point = [0, 0];
+  let start: Point = [0, 0];
+  let cmd = '';
+  let index = 0;
+
+  while (index < tokens.length) {
+    if (/[a-zA-Z]/.test(tokens[index])) {
+      cmd = tokens[index];
+      index += 1;
+    }
+    const upper = cmd.toUpperCase();
+    const relative = cmd !== upper;
+    const args = tokens.slice(index, index + ARITY[upper]).map(Number);
+
+    index += ARITY[upper];
+    const at = (x: number, y: number): Point => relative ? [pen[0] + x, pen[1] + y] : [x, y];
+    const previous = out[out.length - 1];
+    const reflect = (): Point => {
+      const control = previous !== undefined && ['C', 'Q'].includes(previous.cmd) ? previous.points[previous.points.length - 2] : pen;
+
+      return [2 * pen[0] - control[0], 2 * pen[1] - control[1]];
+    };
+    let segment: Segment;
+
+    switch (upper) {
+      case 'M': segment = { cmd: 'M', from: pen, points: [at(args[0], args[1])] }; start = segment.points[0]; cmd = relative ? 'l' : 'L'; break;
+      case 'L': segment = { cmd: 'L', from: pen, points: [at(args[0], args[1])] }; break;
+      case 'H': segment = { cmd: 'L', from: pen, points: [[relative ? pen[0] + args[0] : args[0], pen[1]]] }; break;
+      case 'V': segment = { cmd: 'L', from: pen, points: [[pen[0], relative ? pen[1] + args[0] : args[0]]] }; break;
+      case 'C': segment = { cmd: 'C', from: pen, points: [at(args[0], args[1]), at(args[2], args[3]), at(args[4], args[5])] }; break;
+      case 'S': segment = { cmd: 'C', from: pen, points: [reflect(), at(args[0], args[1]), at(args[2], args[3])] }; break;
+      case 'Q': segment = { cmd: 'Q', from: pen, points: [at(args[0], args[1]), at(args[2], args[3])] }; break;
+      case 'T': segment = { cmd: 'Q', from: pen, points: [reflect(), at(args[0], args[1])] }; break;
+      case 'A': segment = { cmd: 'A', from: pen, points: [at(args[5], args[6])], arc: { rx: args[0], ry: args[1], large: args[3], sweep: args[4] } }; break;
+      default: segment = { cmd: 'Z', from: pen, points: [start] };
+    }
+    out.push(segment);
+    pen = segment.points[segment.points.length - 1];
+  }
+
+  return out;
+};
+
+// Each subpath's corners (end points), absolute; a closing Z adds nothing.
+const subpathsOf = (element: Element | null | undefined): Point[][] =>
+  segmentsOf(element?.getAttribute('d') ?? '').reduce<Point[][]>((all, segment) => {
+    if (segment.cmd === 'M') {
+      all.push([]);
+    }
+    if (segment.cmd !== 'Z') {
+      all[all.length - 1].push(segment.points[segment.points.length - 1]);
+    }
+
+    return all;
+  }, []);
 
 const num = (element: Element | null | undefined, attribute: string): number =>
   Number(element?.getAttribute(attribute));
+
+const box = (element: Element | null | undefined): number[] => ['x', 'y', 'width', 'height'].map(attribute => num(element, attribute));
+
+// The Keyline landscape panel, read from the Table icon that defines it.
+const panel = (): Element | null => svgOf('IconTable').querySelector('rect');
 
 const STROKE = 1.25;
 
@@ -35,12 +108,13 @@ describe('Blok Line markup tool icons', () => {
     vi.restoreAllMocks();
   });
 
-  it('rectangle is exactly the Panel key shape', () => {
+  it('rectangle is the Panel box with corners tighter than the Panel, so it reads as square-cornered', () => {
     const svg = svgOf('IconRectangle');
     const rect = svg.querySelector('rect');
 
     expect(svg.children).toHaveLength(1);
-    expect(['x', 'y', 'width', 'height', 'rx'].map(attribute => num(rect, attribute))).toEqual([3, 4, 14, 12, 2]);
+    expect(box(rect)).toEqual(box(panel()));
+    expect(num(rect, 'rx')).toBeLessThan(num(panel(), 'rx'));
   });
 
   it('rounded rectangle is the Panel frame with corners round enough to tell it from the rectangle', () => {
@@ -49,34 +123,34 @@ describe('Blok Line markup tool icons', () => {
     const plain = svgOf('IconRectangle').querySelector('rect');
 
     expect(svg.children).toHaveLength(1);
-    expect(['x', 'y', 'width', 'height'].map(attribute => num(rect, attribute))).toEqual([3, 4, 14, 12]);
+    expect(box(rect)).toEqual(box(panel()));
     expect(num(rect, 'rx')).toBeGreaterThanOrEqual(2 * num(plain, 'rx'));
     expect(num(rect, 'rx')).toBeLessThanOrEqual(6);
   });
 
-  it('spotlight is the Panel frame around a centred inner box, one stroke clear of it', () => {
-    const [outer, inner] = Array.from(svgOf('IconSpotlight').querySelectorAll('rect'));
-    const box = (r: Element | undefined): number[] => ['x', 'y', 'width', 'height'].map(attribute => num(r, attribute));
-    const [ox, oy, ow, oh] = box(outer);
-    const [ix, iy, iw, ih] = box(inner);
+  it('spotlight is the Panel frame around a centred inner circle, one stroke clear of it', () => {
+    const svg = svgOf('IconSpotlight');
+    const outer = svg.querySelector('rect');
+    const inner = svg.querySelector('circle');
+    const [ox, oy] = box(outer);
+    const [cx, cy, r] = ['cx', 'cy', 'r'].map(attribute => num(inner, attribute));
 
-    expect([ox, oy, ow, oh]).toEqual([3, 4, 14, 12]);
-    expect(ix + iw / 2).toBe(10);
-    expect(iy + ih / 2).toBe(10);
-    expect(ix - ox).toBeGreaterThanOrEqual(2 * STROKE);
-    expect(iy - oy).toBeGreaterThanOrEqual(2 * STROKE);
+    expect(box(outer)).toEqual(box(panel()));
+    expect([cx, cy]).toEqual([10, 10]);
+    expect(cx - r - ox).toBeGreaterThanOrEqual(2 * STROKE);
+    expect(cy - r - oy).toBeGreaterThanOrEqual(2 * STROKE);
   });
 
-  it('hexagon sits on the standalone circle, point up', () => {
+  it('hexagon sits on the Keyline circle, point up', () => {
     const svg = svgOf('IconHexagon');
-    const pts = numbers(svg.querySelector('path'));
-    const corners = Array.from({ length: pts.length / 2 }, (_, i) => ({ x: pts[i * 2], y: pts[i * 2 + 1] }));
+    const [corners] = subpathsOf(svg.querySelector('path'));
+    const radius = num(svgOf('IconInfo').querySelector('circle'), 'r');
 
     expect(svg.children).toHaveLength(1);
     expect(corners).toHaveLength(6);
-    expect(corners[0]).toEqual({ x: 10, y: 3.5 });
-    for (const c of corners) {
-      expect(Math.hypot(c.x - 10, c.y - 10)).toBeCloseTo(6.5, 1);
+    expect(corners[0]).toEqual([10, 10 - radius]);
+    for (const [x, y] of corners) {
+      expect(Math.hypot(x - 10, y - 10)).toBeCloseTo(radius, 1);
     }
   });
 
@@ -92,7 +166,7 @@ describe('Blok Line markup tool icons', () => {
 
   it('line runs at 45 degrees from bottom-left to top-right, centered on the canvas', () => {
     const paths = svgOf('IconLineDiagonal').querySelectorAll('path');
-    const [x0, y0, x1, y1] = numbers(paths[0]);
+    const [[[x0, y0], [x1, y1]]] = subpathsOf(paths[0]);
 
     expect(paths).toHaveLength(1);
     expect(x0).toBeLessThan(x1);
@@ -103,12 +177,12 @@ describe('Blok Line markup tool icons', () => {
   });
 
   it('arrow reuses the line as its shaft and lands an equal-armed square head on its top end', () => {
-    const line = svgOf('IconLineDiagonal').querySelector('path');
-    const [shaft, head] = Array.from(svgOf('IconArrowDiagonal').querySelectorAll('path'));
-    const [, , tipX, tipY] = numbers(shaft);
-    const [ax, ay, hx, hy, bx, by] = numbers(head);
+    const [line] = subpathsOf(svgOf('IconLineDiagonal').querySelector('path'));
+    const [shaft, [[ax, ay], [hx, hy], [bx, by]]] = subpathsOf(svgOf('IconArrowDiagonal').querySelector('path'));
+    const [tipX, tipY] = shaft[1];
 
-    expect(shaft.getAttribute('d')).toBe(line?.getAttribute('d'));
+    // The rail shows line and arrow side by side, so they must share one shaft.
+    expect(shaft).toEqual(line);
     expect([hx, hy]).toEqual([tipX, tipY]);
     // One arm horizontal, one vertical, same length.
     expect(ay).toBe(tipY);
@@ -118,18 +192,13 @@ describe('Blok Line markup tool icons', () => {
 
   it('cursor is a closed pointer mirrored across the diagonal through its tip', () => {
     const paths = svgOf('IconCursor').querySelectorAll('path');
-    const points = numbers(paths[0]);
-    const [tipX, tipY] = points;
-    const rest = [];
-
-    for (let index = 2; index < points.length; index += 2) {
-      rest.push([points[index] - tipX, points[index + 1] - tipY]);
-    }
+    const [[[tipX, tipY], ...others]] = subpathsOf(paths[0]);
+    const rest = others.map(([x, y]) => [x - tipX, y - tipY]);
 
     expect(paths).toHaveLength(1);
     expect(paths[0].getAttribute('d')).toMatch(/z$/i);
-    expect(Math.min(...points.filter((_value, position) => position % 2 === 0))).toBe(tipX);
-    expect(Math.min(...points.filter((_value, position) => position % 2 === 1))).toBe(tipY);
+    expect(Math.min(...others.map(([x]) => x))).toBeGreaterThan(tipX);
+    expect(Math.min(...others.map(([, y]) => y))).toBeGreaterThan(tipY);
 
     const mirrored = rest.map(([dx, dy]) => [dy, dx]).reverse();
 
@@ -142,27 +211,27 @@ describe('Blok Line markup tool icons', () => {
     const svg = svgOf('IconHighlighter');
     const paths = Array.from(svg.querySelectorAll('path'));
     const mark = paths.at(-1);
-    const [markX, markY] = numbers(mark);
-    const drawn = paths.slice(0, -1).flatMap(path => numbers(path));
-    const lowest = Math.max(...drawn.filter((_value, position) => position % 2 === 1));
+    const [[[markX, markY], [, markEndY]]] = subpathsOf(mark);
+    const lowest = Math.max(...paths.slice(0, -1).flatMap(path => subpathsOf(path).flat()).map(([, y]) => y));
 
     expect(paths).toHaveLength(3);
-    expect(mark?.getAttribute('d')).toMatch(/^M[\d.]+ [\d.]+H[\d.]+$/);
+    expect(markEndY).toBe(markY);
     expect(markY - lowest - STROKE).toBeGreaterThanOrEqual(STROKE);
     expect(markX).toBeGreaterThanOrEqual(3);
   });
 
   it('eraser body is a rectangle with a divider parallel to its short sides, standing on a baseline', () => {
-    const [body, divider] = Array.from(svgOf('IconEraser').querySelectorAll('path'));
-    // M p4 L p1 L p2 L p3 L p4 H baseEnd
-    const [x4, y4, x1, y1, x2, y2, x3, y3, x4b, y4b, baseEnd] = numbers(body);
+    const paths = svgOf('IconEraser').querySelectorAll('path');
+    // p4 p1 p2 p3 p4 then the baseline end; the divider is its own subpath.
+    const [[[x4, y4], [x1, y1], [x2, y2], [x3, y3], [x4b, y4b], [baseEnd, baseY]], [[dx0, dy0], [dx1, dy1]]] = subpathsOf(paths[0]);
     const short = [x1 - x4, y1 - y4];
     const long = [x2 - x1, y2 - y1];
-    const [dx0, dy0, dx1, dy1] = numbers(divider);
 
+    expect(paths).toHaveLength(1);
     expect([x4b, y4b]).toEqual([x4, y4]);
     expect([x3 - x2, y3 - y2]).toEqual([-short[0], -short[1]]);
     expect(short[0] * long[0] + short[1] * long[1]).toBe(0);
+    expect(baseY).toBe(y4);
     expect(baseEnd).toBeGreaterThan(x4);
     expect((dx1 - dx0) / (dy1 - dy0)).toBe(short[0] / short[1]);
     // Divider ends sit on the two long sides.
@@ -170,23 +239,24 @@ describe('Blok Line markup tool icons', () => {
     expect((dx1 - x4) * long[1] - (dy1 - y4) * long[0]).toBe(0);
   });
 
-  it('fill is a droplet whose lower half is filled from the same arc circle', () => {
+  it('fill is a droplet with a level line across the widest point of its round body, and no solid fill', () => {
     const svg = svgOf('IconFill');
-    const outline = svg.querySelector('path[stroke="currentColor"]');
-    const fill = svg.querySelector('path[fill="currentColor"]');
-    // M apex L right A r r 0 1 1 left Z
-    const [, , rightX, rightY, radius, , , , , leftX] = numbers(outline);
-    // M left A r r 0 0 0 right Z
-    const [fx0, fy0, fr, , , , , fx1, fy1] = numbers(fill);
+    const [outline, level] = Array.from(svg.querySelectorAll('path'));
+    const segments = segmentsOf(outline.getAttribute('d') ?? '');
+    const arc = segments.find(segment => segment.cmd === 'A');
+    const [rightX, rightY] = arc?.from ?? [0, 0];
+    const [leftX] = arc?.points[0] ?? [0, 0];
+    const radius = arc?.arc?.rx ?? 0;
     const centerX = (rightX + leftX) / 2;
     const centerY = rightY + Math.sqrt(radius ** 2 - ((rightX - leftX) / 2) ** 2);
+    const [[[x0, y0], [x1, y1]]] = subpathsOf(level);
 
-    expect(outline?.getAttribute('d')).toMatch(/z$/i);
-    expect(fr).toBe(radius);
-    expect(fy0).toBe(fy1);
-    expect(fx1 - fx0).toBe(2 * radius);
-    expect((fx0 + fx1) / 2).toBe(centerX);
-    expect(fy0).toBeCloseTo(centerY, 1);
+    expect(svg.querySelector('[fill="currentColor"]')).toBeNull();
+    expect(outline.getAttribute('d')).toMatch(/z$/i);
+    expect(arc?.arc?.large).toBe(1);
+    expect(y1).toBe(y0);
+    expect(y0).toBeCloseTo(centerY, 1);
+    expect([x0, x1]).toEqual([centerX - radius, centerX + radius]);
   });
 
   it('lists the whole markup tool rail together in the playground gallery', () => {

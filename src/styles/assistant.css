@@ -506,15 +506,15 @@
   transform: scale(1.04);
 }
 
-/* 16 covers the check's path length, so the stroke starts fully hidden. */
+/* 17 covers IconCheck's path length, so the stroke starts fully hidden. */
 [data-blok-assistant-keep]:hover svg path {
-  stroke-dasharray: 16;
+  stroke-dasharray: 17;
   animation: blok-assistant-draw 0.45s cubic-bezier(0.6, 0, 0.2, 1) both;
 }
 
 @keyframes blok-assistant-draw {
   from {
-    stroke-dashoffset: 16;
+    stroke-dashoffset: 17;
   }
 }
 

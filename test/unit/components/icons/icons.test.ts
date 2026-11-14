@@ -16,8 +16,8 @@ describe('IconListNumbered', () => {
     expect(IconListNumbered).toContain('</svg>');
   });
 
-  it('should draw the list rules on the shared Blok Line rows', () => {
-    expect(IconListNumbered).toContain('M8.5 6.5H16.5M8.5 13.5H16.5');
+  it('should draw the list rules on the two numbered-list rows', () => {
+    expect(IconListNumbered).toContain('M9 6.5h7.5M9 13.5h7.5');
   });
 
   it('should render digit glyphs as stroked paths, never as text', () => {
@@ -30,7 +30,7 @@ describe('IconListNumbered', () => {
 
     // Digits are stroked hairlines (not solid glyphs) so they match the rule weight.
     const digitPaths = Array.from(svg?.querySelectorAll('path') ?? []).filter(
-      (p) => p.getAttribute('stroke') === 'currentColor' && !(p.getAttribute('d') ?? '').startsWith('M8.5 6.5')
+      (p) => p.getAttribute('stroke') === 'currentColor' && !(p.getAttribute('d') ?? '').startsWith('M9 6.5')
     );
 
     expect(digitPaths).toHaveLength(1);

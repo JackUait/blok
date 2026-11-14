@@ -43,13 +43,14 @@ describe('heading icon weight', () => {
     }
   });
 
-  it.each(Object.entries(family))('%s uses a 1.25 main glyph and a lighter 1.1 digit', (name, icon) => {
-    const paths = letterformsOf(name, icon);
+  it.each(Object.entries(family))('%s draws the H and its digit at the 1.25 house stroke', (name, icon) => {
+    const shapes = Array.from(new DOMParser().parseFromString(icon, 'image/svg+xml').querySelectorAll('path, circle'))
+      .slice(name.startsWith('IconToggle') ? 1 : 0);
 
-    expect(paths[0]?.getAttribute('stroke-width')).toBe('1.25');
+    expect(shapes.length).toBeGreaterThanOrEqual(1);
 
-    for (const digit of paths.slice(1)) {
-      expect(digit.getAttribute('stroke-width')).toBe('1.1');
+    for (const shape of shapes) {
+      expect(shape.getAttribute('stroke-width')).toBe('1.25');
     }
   });
 });

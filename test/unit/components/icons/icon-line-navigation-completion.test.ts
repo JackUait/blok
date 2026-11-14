@@ -19,6 +19,7 @@ import {
   IconMoveDown,
   IconMoveLeft,
   IconMoveRight,
+  IconPageEmpty,
   IconPencil,
   IconPlus,
   IconReturn,
@@ -39,13 +40,72 @@ const svgOf = (icon: string): Document => new DOMParser().parseFromString(icon, 
 const pathOf = (icon: string, index = 0): string =>
   svgOf(icon).querySelectorAll('path')[index]?.getAttribute('d') ?? '';
 
-const numbersOf = (path: string): number[] => (path.match(/-?(?:\d*\.)?\d+/g) ?? []).map(Number);
-
 const attributesOf = (element: Element | null, attributes: string[]): number[] =>
   attributes.map(attribute => Number(element?.getAttribute(attribute) ?? Number.NaN));
 
 const dotsOf = (icon: string): number[][] =>
   Array.from(svgOf(icon).querySelectorAll('circle'), dot => attributesOf(dot, ['cx', 'cy', 'r']));
+
+type Point = [number, number];
+
+const SIZES: Record<string, number> = { m: 2, l: 2, h: 1, v: 1, a: 7, c: 6 };
+
+/** The point one path command lands on; h and v keep the other coordinate. */
+const stepTo = (lower: string, relative: boolean, chunk: number[], [x, y]: Point): Point => {
+  const [ox, oy] = relative ? [x, y] : [0, 0];
+
+  if (lower === 'h') {
+    return [ox + chunk[0], y];
+  }
+  if (lower === 'v') {
+    return [x, oy + chunk[0]];
+  }
+
+  return [ox + chunk[chunk.length - 2], oy + chunk[chunk.length - 1]];
+};
+
+/** Absolute end points of every subpath (M/L/H/V/A/C, curve handles left out). */
+const subpathsOf = (d: string): Point[][] => {
+  const subpaths: Point[][] = [];
+  let current: Point[] = [];
+  let point: Point = [0, 0];
+
+  for (const [, letter, args] of d.matchAll(/([MLHVACZmlhvacz])([^MLHVACZmlhvacz]*)/g)) {
+    const lower = letter.toLowerCase();
+    const size = SIZES[lower] ?? 0;
+    const values = (args.match(/-?(?:\d*\.)?\d+/g) ?? []).map(Number);
+
+    if (lower === 'z') {
+      point = current[0] ?? point;
+      continue;
+    }
+    if (lower === 'm') {
+      current = [];
+      subpaths.push(current);
+    }
+    for (let i = 0; i + size <= values.length; i += size) {
+      point = stepTo(lower, letter === lower, values.slice(i, i + size), point);
+      current.push(point);
+    }
+  }
+
+  return subpaths;
+};
+
+/** Every subpath of every path in the icon, in document order. */
+const strokesOf = (icon: string): Point[][] =>
+  Array.from(svgOf(icon).querySelectorAll('path')).flatMap(path => subpathsOf(path.getAttribute('d') ?? ''));
+
+/** An arrowhead as its two arms, measured from the tip, in a fixed order. */
+const armsOf = ([a, tip, b]: Point[]): number[][] =>
+  [[a[0] - tip[0], a[1] - tip[1]], [b[0] - tip[0], b[1] - tip[1]]].sort((p, q) => p[0] - q[0] || p[1] - q[1]);
+
+const sorted = (points: number[][]): number[][] => [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+
+const unique = (points: Point[]): Point[] =>
+  points.filter((point, index) => points.findIndex(([x, y]) => x === point[0] && y === point[1]) === index);
+
+const length = ([a, b]: Point[]): number => Math.hypot(b[0] - a[0], b[1] - a[1]);
 
 describe('Blok Line navigation completion', () => {
   beforeEach(() => {
@@ -74,36 +134,39 @@ describe('Blok Line navigation completion', () => {
     }
   });
 
-  it('uses the same light dots on a square grip grid and an evenly spaced ellipsis', () => {
+  it('uses the same dots on a square grip grid and an evenly spaced ellipsis', () => {
     const grip = dotsOf(IconMenu);
     const ellipsis = dotsOf(IconDotsHorizontal);
+    const pitch = ellipsis[1][0] - ellipsis[0][0];
 
     expect(ellipsis.map(dot => dot[2])).toEqual(grip.slice(0, 3).map(dot => dot[2]));
-    expect(grip).toEqual([
-      [8, 6, 1], [12, 6, 1],
-      [8, 10, 1], [12, 10, 1],
-      [8, 14, 1], [12, 14, 1],
-    ]);
-    expect(ellipsis).toEqual([[6, 10, 1], [10, 10, 1], [14, 10, 1]]);
-    expect(ellipsis[1][0] - ellipsis[0][0]).toBe(grip[1][0] - grip[0][0]);
-    expect(grip[2][1] - grip[0][1]).toBe(grip[1][0] - grip[0][0]);
-    expect(ellipsis[1][0] - ellipsis[0][0] - 2 * ellipsis[0][2]).toBeGreaterThanOrEqual(1.25);
+    expect(ellipsis.map(dot => dot[1])).toEqual([10, 10, 10]);
+    expect(ellipsis[2][0] - ellipsis[1][0]).toBe(pitch);
+    expect(ellipsis[1][0]).toBe(10);
+    // table-grip-visuals.ts rotates IconMenu about (10, 10).
+    expect(sorted(grip.map(([cx, cy]) => [20 - cx, 20 - cy]))).toEqual(sorted(grip.map(([cx, cy]) => [cx, cy])));
+    expect(grip[1][0] - grip[0][0]).toBe(pitch);
+    expect(grip[2][1] - grip[0][1]).toBe(pitch);
+    expect(pitch - 2 * ellipsis[0][2]).toBeGreaterThanOrEqual(1.25);
   });
 
-  it('keeps plus and minus on one compact ten-unit cross', () => {
-    const minus = pathOf(IconMinus);
+  it('builds plus from minus and one equal, centred upright arm', () => {
+    const [bar] = subpathsOf(pathOf(IconMinus));
+    const plus = subpathsOf(pathOf(IconPlus));
 
-    expect(minus).toBe('M5 10h10');
-    expect(pathOf(IconPlus)).toBe(`${minus}M10 5v10`);
+    expect(bar).toEqual([[4, 10], [16, 10]]);
+    expect(plus).toEqual([bar, [[10, 4], [10, 16]]]);
   });
 
-  it('shares four-unit chevron arms across the move arrows', () => {
-    const head = numbersOf(pathOf(IconArrowUp, 1));
-    const chevron = numbersOf(pathOf(IconChevronRight));
+  it('shares the 3.5-unit chevron arms across the arrowheads', () => {
+    const [shaft, head] = subpathsOf(pathOf(IconArrowUp));
+    const [chevron] = subpathsOf(pathOf(IconChevronRight));
 
-    expect(head).toEqual([chevron[1], 17 - chevron[0], chevron[3], 17 - chevron[2], chevron[5], 17 - chevron[4]]);
-    expect(head).toEqual([6, 9, 10, 5, 14, 9]);
-    expect(numbersOf(pathOf(IconArrowUp))).toEqual([10, 15, 10, 5]);
+    // The arrow-up head is the right chevron turned to point up.
+    expect(armsOf(head)).toEqual(armsOf(chevron.map(([x, y]): Point => [y, 20 - x])));
+    expect(armsOf(head)).toEqual([[-3.5, 3.5], [3.5, 3.5]]);
+    expect(shaft).toEqual([[10, 16], [10, 4]]);
+    expect(shaft[1]).toEqual(head[1]);
   });
 
   it.each([
@@ -111,14 +174,13 @@ describe('Blok Line navigation completion', () => {
     ['left', IconMoveLeft, (x: number, y: number): number[] => [y, 20 - x]],
     ['right', IconMoveRight, (x: number, y: number): number[] => [20 - y, x]],
   ] as const)('rotates the complete up arrow to point %s', (_direction, icon, rotate) => {
-    for (const index of [0, 1]) {
-      const up = numbersOf(pathOf(IconArrowUp, index));
-      const rotated = up.reduce<number[]>((points, value, offset) =>
-        offset % 2 === 0 ? [...points, ...rotate(value, up[offset + 1])] : points, []);
+    const up = strokesOf(IconArrowUp);
+    const turned = strokesOf(icon);
 
-      expect(numbersOf(pathOf(icon, index))).toEqual(rotated);
-    }
-    expect(svgOf(icon).querySelectorAll('path')).toHaveLength(2);
+    expect(turned).toHaveLength(up.length);
+    up.forEach((stroke, index) => {
+      expect(sorted(turned[index])).toEqual(sorted(stroke.map(([x, y]) => rotate(x, y))));
+    });
   });
 
   it.each([
@@ -127,150 +189,181 @@ describe('Blok Line navigation completion', () => {
     ['left', IconInsertLeft, IconMoveLeft, 0],
     ['right', IconInsertRight, IconMoveRight, 0],
   ] as const)('reuses the %s arrowhead and separates its shaft from the insertion boundary', (_direction, insert, move, axis) => {
-    const shaft = numbersOf(pathOf(insert));
-    const head = numbersOf(pathOf(insert, 1));
-    const boundary = numbersOf(pathOf(insert, 2));
+    const [shaft, head, boundary] = strokesOf(insert);
+    const [, moveHead] = strokesOf(move);
 
-    expect(head).toEqual(numbersOf(pathOf(move, 1)));
-    expect(shaft).toHaveLength(4);
-    expect(boundary).toHaveLength(4);
-    expect(Math.abs(shaft[axis] - shaft[axis + 2])).toBe(7.5);
-    expect(Math.abs(boundary[axis] - shaft[axis]) - 1.25).toBeGreaterThanOrEqual(1.25);
-    expect(boundary[axis]).toBe(boundary[axis + 2]);
-    expect(Math.abs(boundary[1 - axis] - boundary[3 - axis])).toBe(10);
-    expect(shaft.slice(2)).toEqual(head.slice(2, 4));
+    expect(armsOf(head)).toEqual(armsOf(moveHead));
+    expect(shaft).toHaveLength(2);
+    expect(boundary).toHaveLength(2);
+    // Keyline's short arrow: an 8-unit shaft that ends at the head's tip.
+    expect(length(shaft)).toBe(8);
+    expect(shaft[1]).toEqual(head[1]);
+    // The boundary is a minus-length rule, square to the shaft, one stroke clear of its tail.
+    expect(boundary[0][axis]).toBe(boundary[1][axis]);
+    expect(length(boundary)).toBe(length(subpathsOf(pathOf(IconMinus))[0]));
+    expect(Math.abs(boundary[0][axis] - shaft[0][axis]) - 1.25).toBeGreaterThanOrEqual(1.25);
+    expect((boundary[0][1 - axis] + boundary[1][1 - axis]) / 2).toBe(10);
   });
 
-  it('leaves a stroke-width gap between the warning stem and dot', () => {
-    const document = svgOf(IconWarning);
-    const dot = attributesOf(document.querySelector('circle'), ['cx', 'cy', 'r']);
-    const stem = numbersOf(pathOf(IconWarning, 1));
+  it('leaves a clear unit between the warning stem and dot', () => {
+    const dot = attributesOf(svgOf(IconWarning).querySelector('circle'), ['cx', 'cy', 'r']);
+    const [stem] = subpathsOf(pathOf(IconWarning, 1));
 
-    expect(dot[1] - dot[2] - stem[1] - stem[2] - 1.25 / 2).toBeGreaterThanOrEqual(1.25);
-    expect(dot).toEqual([10, 13.25, 0.75]);
+    expect(stem).toEqual([[10, 8], [10, 10.5]]);
+    expect(dot).toEqual([10, 13.25, 1]);
+    expect(dot[1] - dot[2] - stem[1][1] - 1.25 / 2).toBeGreaterThanOrEqual(1);
     expect(pathOf(IconWarning)).toContain('a1.5 1.5');
-    expect(stem).toEqual([10, 8, 2.5]);
   });
 
   it('opens the pencil barrel with a perpendicular cap seam and a symmetric nib', () => {
-    const seam = numbersOf(pathOf(IconPencil, 1));
+    const [barrel] = subpathsOf(pathOf(IconPencil));
+    const [seam] = subpathsOf(pathOf(IconPencil, 1));
+    const [start, top, cap, bottom, nib, base] = barrel;
+    const along = ([x, y]: number[]): number => x - y;
+    const across = ([x, y]: number[]): number => x + y;
 
-    expect(seam).toEqual([11.5, 5.5, 14.5, 8.5]);
-    expect(seam[2] - seam[0]).toBe(seam[3] - seam[1]);
-    expect(Math.hypot(seam[2] - seam[0], seam[3] - seam[1]) - 1.25).toBeGreaterThanOrEqual(2.75);
-    expect(pathOf(IconPencil)).toContain('M4.5 12.5L13 4');
-    expect(pathOf(IconPencil)).toContain('L7.5 15.5l-4 1 1-4Z');
-    expect(seam[0] + seam[1]).toBe(4.5 + 12.5);
-    expect(seam[2] + seam[3]).toBe(7.5 + 15.5);
+    // The barrel's long edges run on x + y = 17 and x + y = 23; the seam crosses square from one to the other.
+    expect(across(start)).toBe(17);
+    expect(across(top)).toBe(17);
+    expect(across(cap)).toBe(23);
+    expect(across(bottom)).toBe(23);
+    expect(across(seam[0])).toBe(17);
+    expect(across(seam[1])).toBe(23);
+    expect(along(seam[0])).toBe(along(seam[1]));
+    expect(length(seam) - 1.25).toBeGreaterThanOrEqual(2.75);
+    // The nib tip sits on the barrel's centre line, its two corners level with each other along it.
+    expect(across(nib)).toBe(20);
+    expect(along(bottom)).toBe(along(base));
+    expect(base).toEqual(start);
   });
 
-  it('uses the standalone circle keyline and one open meridian on the globe', () => {
+  it('uses the keyline circle and one open meridian on the globe', () => {
     const document = svgOf(IconGlobe);
     const circle = attributesOf(document.querySelector('circle'), ['cx', 'cy', 'r']);
     const meridian = attributesOf(document.querySelector('ellipse'), ['cx', 'cy', 'rx', 'ry']);
 
-    expect(circle).toEqual([10, 10, 6.5]);
+    expect(circle).toEqual([10, 10, 7]);
     expect(meridian).toEqual([circle[0], circle[1], 3, circle[2]]);
-    expect(pathOf(IconGlobe)).toBe(`M${circle[0] - circle[2]} 10H${circle[0] + circle[2]}`);
+    expect(subpathsOf(pathOf(IconGlobe))).toEqual([[[circle[0] - circle[2], 10], [circle[0] + circle[2], 10]]]);
     expect(circle[2] - meridian[2] - 1.25).toBeGreaterThanOrEqual(1.25);
     expect(document.querySelectorAll('path, circle, ellipse')).toHaveLength(3);
   });
 
-  it('gives the bookmark two panel-radius shoulders and a centered open notch', () => {
+  it('gives the bookmark two page-radius shoulders and a centered open notch', () => {
     const outline = pathOf(IconBookmark);
+    const page = attributesOf(svgOf(IconPageEmpty).querySelector('rect'), ['y', 'height', 'rx']);
+    const points = unique(subpathsOf(outline)[0]);
+    const notch = points.find(([, y]) => y > page[0] + 1 && y < page[0] + page[1] - 1 && points.filter(p => p[1] === y).length === 1);
 
-    expect(outline.match(/a2 2/g)).toHaveLength(2);
-    expect(outline).toBe('M7 3.5h6a2 2 0 0 1 2 2v11l-5-3-5 3v-11a2 2 0 0 1 2-2Z');
+    expect(outline.match(new RegExp(`a${page[2]} ${page[2]}`, 'g'))).toHaveLength(2);
+    // Same height as the Blok page frame.
+    expect(Math.min(...points.map(([, y]) => y))).toBe(page[0]);
+    expect(Math.max(...points.map(([, y]) => y))).toBe(page[0] + page[1]);
+    expect(notch?.[0]).toBe(10);
+    expect(sorted(points.map(([x, y]) => [20 - x, y]))).toEqual(sorted(points));
   });
 
-  it('shares the approved panel frame for mail and gives its flap a clear V', () => {
+  it('shares the panel frame for mail and centres its flap V inside it', () => {
     const frameAttributes = ['x', 'y', 'width', 'height', 'rx'];
-    const mail = svgOf(IconMail);
-    const frame = attributesOf(mail.querySelector('rect'), frameAttributes);
-    const flap = numbersOf(pathOf(IconMail));
+    const frame = attributesOf(svgOf(IconMail).querySelector('rect'), frameAttributes);
+    const [flap] = subpathsOf(pathOf(IconMail));
+    const [left, apex, right] = flap;
 
     expect(frame).toEqual(attributesOf(svgOf(IconTable).querySelector('rect'), frameAttributes));
-    expect(flap).toEqual([3, 6, 10, 11, 17, 6]);
-    expect(flap[0]).toBe(frame[0]);
-    expect(flap[4]).toBe(frame[0] + frame[2]);
-    expect(flap[2]).toBe(frame[0] + frame[2] / 2);
-    expect(flap[3] - flap[1]).toBe(5);
+    expect(flap).toHaveLength(3);
+    expect(apex[0]).toBe(frame[0] + frame[2] / 2);
+    expect(left[1]).toBe(right[1]);
+    expect(left[0] + right[0]).toBe(2 * apex[0]);
+    expect(apex[1] - left[1]).toBeGreaterThanOrEqual(3);
+    // The flap stays one stroke clear of the frame's sides.
+    expect(left[0] - frame[0] - 1.25).toBeGreaterThanOrEqual(1.25);
   });
 
   it('leans the hash stems in parallel and keeps both crossbars centered on them', () => {
-    const stems = numbersOf(pathOf(IconHash));
-    const bars = numbersOf(pathOf(IconHash, 1));
+    const [stemA, stemB, barA, barB] = subpathsOf(pathOf(IconHash));
 
-    expect(stems).toHaveLength(8);
-    expect(bars).toHaveLength(8);
     // Both stems run top to bottom over the same span with the same lean.
-    expect(stems[1]).toBe(stems[5]);
-    expect(stems[3]).toBe(stems[7]);
-    expect(stems[2] - stems[0]).toBe(stems[6] - stems[4]);
-    expect(stems[2] - stems[0]).toBeLessThan(0);
-    const gap = stems[4] - stems[0];
+    expect(stemA[0][1]).toBe(stemB[0][1]);
+    expect(stemA[1][1]).toBe(stemB[1][1]);
+    expect(stemA[1][0] - stemA[0][0]).toBe(stemB[1][0] - stemB[0][0]);
+    expect(stemA[1][0] - stemA[0][0]).toBeLessThan(0);
+    const gap = stemB[0][0] - stemA[0][0];
 
-    expect(stems[6] - stems[2]).toBe(gap);
+    expect(stemB[1][0] - stemA[1][0]).toBe(gap);
 
     // Crossbars are level, equal in length, and centered on the stems they cross.
-    expect(bars[1]).toBe(bars[3]);
-    expect(bars[5]).toBe(bars[7]);
-    expect(bars[2] - bars[0]).toBe(bars[6] - bars[4]);
+    expect(barA[0][1]).toBe(barA[1][1]);
+    expect(barB[0][1]).toBe(barB[1][1]);
+    expect(length(barA)).toBe(length(barB));
     const stemAt = (y: number): number =>
-      stems[0] + (stems[2] - stems[0]) * (y - stems[1]) / (stems[3] - stems[1]);
+      stemA[0][0] + (stemA[1][0] - stemA[0][0]) * (y - stemA[0][1]) / (stemA[1][1] - stemA[0][1]);
 
-    for (const [left, y, right] of [[bars[0], bars[1], bars[2]], [bars[4], bars[5], bars[6]]]) {
+    for (const [[left, y], [right]] of [barA, barB]) {
       expect((left + right) / 2).toBeCloseTo(stemAt(y) + gap / 2, 2);
     }
 
     // A hash reads squashed when its counter is wider than tall, or when the
     // crossbars carry the ink box wider than the stems carry it tall.
-    expect(bars[5] - bars[1]).toBe(gap);
-    expect(stems[3] - stems[1]).toBeGreaterThanOrEqual(Math.max(bars[2], bars[6]) - Math.min(bars[0], bars[4]));
+    expect(barB[0][1] - barA[0][1]).toBe(gap);
+    expect(stemA[1][1] - stemA[0][1]).toBeGreaterThanOrEqual(
+      Math.max(barA[1][0], barB[1][0]) - Math.min(barA[0][0], barB[0][0])
+    );
   });
 
   it('reuses the left arrowhead for Return and the panel radius for its turn', () => {
-    const left = numbersOf(pathOf(IconMoveLeft, 1));
+    const [, leftHead] = subpathsOf(pathOf(IconMoveLeft));
+    const [shaft, head] = subpathsOf(pathOf(IconReturn));
+    const panelRadius = Number(svgOf(IconTable).querySelector('rect')?.getAttribute('rx'));
 
-    expect(numbersOf(pathOf(IconReturn, 1))).toEqual(left.map((value, index) => value + (index % 2 === 1 ? 1 : 0)));
-    expect(pathOf(IconReturn)).toBe('M15 5V9a2 2 0 0 1-2 2H5');
-    expect(numbersOf(pathOf(IconReturn, 1)).slice(2, 4)).toEqual([5, 11]);
+    expect(armsOf(head)).toEqual(armsOf(leftHead));
+    expect(shaft[shaft.length - 1]).toEqual(head[1]);
+    expect(pathOf(IconReturn)).toMatch(new RegExp(`a${panelRadius} ${panelRadius} 0 0 1`));
   });
 
   it('gives the trifold map equal-width panels with folds attached to their corners', () => {
-    const outline = numbersOf(pathOf(IconMap));
-    const leftFold = numbersOf(pathOf(IconMap, 1));
-    const rightFold = numbersOf(pathOf(IconMap, 2));
-    const top = outline.slice(0, 8);
+    const [outline, leftFold, rightFold] = strokesOf(IconMap);
+    const top = outline.slice(0, 4);
+    const bottom = outline.slice(4, 8);
 
-    expect(top[2] - top[0]).toBe(top[4] - top[2]);
-    expect(top[4] - top[2]).toBe(top[6] - top[4]);
-    expect(top).toEqual([3.25, 5.5, 7.75, 3.5, 12.25, 5.5, 16.75, 3.5]);
-    expect(leftFold).toEqual([...top.slice(2, 4), ...outline.slice(12, 14)]);
-    expect(rightFold).toEqual([...top.slice(4, 6), ...outline.slice(10, 12)]);
-    expect(leftFold[3] - leftFold[1]).toBe(rightFold[3] - rightFold[1]);
+    expect(top[1][0] - top[0][0]).toBe(top[2][0] - top[1][0]);
+    expect(top[2][0] - top[1][0]).toBe(top[3][0] - top[2][0]);
+    expect(leftFold).toEqual([top[1], bottom[2]]);
+    expect(rightFold).toEqual([top[2], bottom[1]]);
+    expect(leftFold[1][1] - leftFold[0][1]).toBe(rightFold[1][1] - rightFold[0][1]);
   });
 
   it('anchors the chart with open axes and evenly spaced bars above the baseline', () => {
-    const axes = numbersOf(pathOf(IconChart));
-    const bars = numbersOf(pathOf(IconChart, 1));
+    const [axes] = subpathsOf(pathOf(IconChart));
+    const bars = subpathsOf(pathOf(IconChart, 1));
+    const [top, corner, end] = axes;
 
-    expect(pathOf(IconChart)).toBe('M3.5 4.5V16H16.5');
-    expect(bars).toEqual([7, 13, 7, 10, 10.5, 13, 10.5, 5, 14, 13, 14, 8]);
-    expect(bars[4] - bars[0]).toBe(bars[8] - bars[4]);
-    expect(bars[1]).toBe(bars[5]);
-    expect(bars[5]).toBe(bars[9]);
-    expect(axes[2] - bars[1] - 1.25).toBeGreaterThanOrEqual(1.25);
-    expect(bars[0] - axes[0] - 1.25).toBeGreaterThanOrEqual(1.25);
+    expect(axes).toHaveLength(3);
+    // Open axes: an L, square with the keyline square's 13-unit sides.
+    expect(top[0]).toBe(corner[0]);
+    expect(corner[1]).toBe(end[1]);
+    expect(corner[1] - top[1]).toBe(13);
+    expect(end[0] - corner[0]).toBe(13);
+    expect(bars).toHaveLength(3);
+    expect(bars[1][0][0] - bars[0][0][0]).toBe(bars[2][0][0] - bars[1][0][0]);
+    bars.forEach(([base, tip]) => {
+      expect(base[0]).toBe(tip[0]);
+      expect(base[1]).toBe(bars[0][0][1]);
+      expect(tip[1]).toBeLessThan(base[1]);
+    });
+    expect(corner[1] - bars[0][0][1] - 1.25).toBeGreaterThanOrEqual(1.25);
+    expect(bars[0][0][0] - corner[0] - 1.25).toBeGreaterThanOrEqual(1.25);
   });
 
   it('uses four panel-radius corners and one integral tail for the message outline', () => {
     const outline = pathOf(IconMessage);
-    const panel = attributesOf(svgOf(IconTable).querySelector('rect'), ['x', 'y', 'width', 'rx']);
+    const [x, , width, rx] = attributesOf(svgOf(IconTable).querySelector('rect'), ['x', 'y', 'width', 'rx']);
+    const [points] = subpathsOf(outline);
+    const xs = points.map(([px]) => px);
 
-    expect(outline.match(/a2 2/g)).toHaveLength(4);
-    expect(outline).toContain(`M${panel[0] + panel[3]} ${panel[1]}h${panel[2] - 2 * panel[3]}`);
-    expect(outline).toContain('H9l-4 3v-3');
+    expect(outline.match(new RegExp(`[aA]${rx} ${rx} `, 'g'))).toHaveLength(4);
+    expect(Math.min(...xs)).toBe(x);
+    expect(Math.max(...xs)).toBe(x + width);
     expect(svgOf(IconMessage).querySelectorAll('path')).toHaveLength(1);
+    expect(subpathsOf(outline)).toHaveLength(1);
   });
 });

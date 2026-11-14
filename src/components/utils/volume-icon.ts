@@ -12,8 +12,8 @@ interface WaveSpec {
 
 // Full sizes mirror the two wave paths of IconPlayerVolume. Change them together.
 const WAVES: WaveSpec[] = [
-  { x: 12, half: 2.5, radius: 3.5, startRadius: 2.4, startSweep: 30 },
-  { x: 14.5, half: 4.5, radius: 6.5, startRadius: 5.5, startSweep: 22 },
+  { x: 12.25, half: 2.25, radius: 3.25, startRadius: 2.5, startSweep: 32 },
+  { x: 14.75, half: 4.5, radius: 6.5, startRadius: 5.5, startSweep: 22 },
 ];
 
 /** A wave is fully opaque once it is this far into its own range. */

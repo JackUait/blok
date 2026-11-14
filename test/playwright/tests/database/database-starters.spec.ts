@@ -508,12 +508,12 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
   // research/33 §3.13: the first path of each glyph Blok drew for Notion's ticket, feed, currency, card,
   // paint brush, package and fan deck. The database glyph used to stand in for all seven.
   const TEMPLATE_GLYPHS: Array<[string, string]> = [
-    ['events', 'M5 5h10a2 2 0 0 1 2 2v1.5a1.5 1.5 0 0 0 0 3V13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1.5a1.5 1.5 0 0 0 0-3V7a2 2 0 0 1 2-2Z'],
-    ['socialMedia', 'M5 4h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H9l-4 3v-3a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z'],
-    ['fundraising', 'M12.25 8.1c-.3-.7-1.2-1.1-2.25-1.1-1.25 0-2.25.6-2.25 1.5 0 2 4.5 1 4.5 3 0 .9-1 1.5-2.25 1.5-1.05 0-1.95-.4-2.25-1.1M10 6v1M10 13v1'],
-    ['accounts', 'M3 8.5h14M6 12h2.5'],
-    ['creative', 'M8.75 8V4.25a1.25 1.25 0 0 1 2.5 0V8'],
-    ['inventory', 'M10 2.75 16.5 6.25v7.5L10 17.25 3.5 13.75v-7.5L10 2.75Z'],
+    ['events', 'M5.5 4.5h9A2.5 2.5 0 0 1 17 7v1.5a1.5 1.5 0 0 0 0 3V13a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 3 13v-1.5a1.5 1.5 0 0 0 0-3V7a2.5 2.5 0 0 1 2.5-2.5Z'],
+    ['socialMedia', 'M5.5 3.5h9A2.5 2.5 0 0 1 17 6v5.5a2.5 2.5 0 0 1-2.5 2.5H10l-3.5 2.75V14h-1A2.5 2.5 0 0 1 3 11.5V6a2.5 2.5 0 0 1 2.5-2.5Z'],
+    ['fundraising', 'M12.5 7.75c-.35-.75-1.3-1.25-2.5-1.25-1.4 0-2.5.7-2.5 1.75 0 2.25 5 1.25 5 3.5 0 1.05-1.1 1.75-2.5 1.75-1.2 0-2.15-.5-2.5-1.25M10 5.25V6.5M10 13.5v1.25'],
+    ['accounts', 'M3 8.25h14M6 12.25h2.5'],
+    ['creative', 'M8.75 8.5V4.25a1.25 1.25 0 0 1 2.5 0V8.5'],
+    ['inventory', 'M10 3 16.5 6.5v7L10 17l-6.5-3.5v-7Z'],
     ['assets', 'M3.5 14.75V4.5A1.5 1.5 0 0 1 5 3h1.5A1.5 1.5 0 0 1 8 4.5v10.25a2.25 2.25 0 0 1-4.5 0Z'],
   ];
 

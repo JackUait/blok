@@ -74,6 +74,9 @@ const frameOf = (icon: string): number[] => {
 
 type Point = [number, number];
 
+// Keyline's landscape panel: x, y, width, height, rx.
+const PANEL = [3, 4.5, 14, 11, 2.5];
+
 const linePoints = (path: Element): Point[][] => {
   const commands = path.getAttribute('d')?.match(/[MLHVmlhv][^MLHVmlhv]*/g) ?? [];
   const contours: Point[][] = [];
@@ -175,22 +178,39 @@ describe('Blok Line layout geometry', () => {
   it.each(Object.entries({ IconImage, IconTable, IconHeaderRow, IconHeaderColumn, IconColumns, IconCallout, IconCalendar, IconSelect }))(
     '%s shares the panel keyline instead of changing size between menu rows',
     (_name, icon) => {
-      expect(frameOf(icon)).toStrictEqual([3, 4, 14, 12, 2]);
+      expect(frameOf(icon)).toStrictEqual(PANEL);
     }
   );
 
-  it('gives the table two columns and three equally spaced rows, shared by both headers', () => {
-    const grid = required(svgOf(IconTable), 'path[stroke="currentColor"]');
-    const contours = linePoints(grid);
+  it('gives the table a header band over two equal body rows, shared by both header icons', () => {
+    const contours = linePoints(required(svgOf(IconTable), 'path[stroke="currentColor"]'));
+    const [x, y, width, height] = PANEL;
+    const [band, row, column] = contours;
 
-    expect(contours).toStrictEqual([
-      [[3, 8], [17, 8]],
-      [[3, 12], [17, 12]],
-      [[8, 4], [8, 16]],
-    ]);
-    for (const icon of [IconHeaderRow, IconHeaderColumn]) {
-      expect(linePoints(required(svgOf(icon), 'path[stroke="currentColor"]'))).toStrictEqual(contours);
-      expect(svgOf(icon).querySelectorAll('path[fill="currentColor"]')).toHaveLength(1);
+    expect(contours).toHaveLength(3);
+    expect(band).toStrictEqual([[x, band[0][1]], [x + width, band[0][1]]]);
+    expect(row).toStrictEqual([[x, row[0][1]], [x + width, row[0][1]]]);
+    expect(column).toStrictEqual([[column[0][0], y], [column[0][0], y + height]]);
+    expect(row[0][1] - band[0][1]).toBe(y + height - row[0][1]);
+    expect(band[0][1] - y).toBeGreaterThan(row[0][1] - band[0][1]);
+
+    // A header is a text rule centred in its band; the grid lines stop at the band. No fills.
+    const headerRow = linePoints(required(svgOf(IconHeaderRow), 'path[stroke="currentColor"]'));
+
+    expect(headerRow.slice(0, 2)).toStrictEqual([band, row]);
+    expect(headerRow[2]).toStrictEqual([[column[0][0], band[0][1]], column[1]]);
+    expect(headerRow[3][0][1]).toBe((y + band[0][1]) / 2);
+    expect(headerRow[3][1][1]).toBe(headerRow[3][0][1]);
+
+    const headerColumn = linePoints(required(svgOf(IconHeaderColumn), 'path[stroke="currentColor"]'));
+
+    expect(headerColumn[0]).toStrictEqual(column);
+    expect(headerColumn.slice(1, 3)).toStrictEqual([band, row].map(([, end]) => [[column[0][0], end[1]], end]));
+    expect(headerColumn[3][0][0]).toBe((x + column[0][0]) / 2);
+    expect(headerColumn[3][1][0]).toBe(headerColumn[3][0][0]);
+
+    for (const icon of [IconTable, IconHeaderRow, IconHeaderColumn]) {
+      expect(svgOf(icon).querySelectorAll('[fill="currentColor"]')).toHaveLength(0);
     }
   });
 
@@ -210,7 +230,7 @@ describe('Blok Line layout geometry', () => {
     expect(coordinates).toHaveLength(14);
   });
 
-  it('layers a small hill on the big slope and keeps the sun clear of both at 16px', () => {
+  it('layers a small hill on the big slope and keeps the sun one unit clear of both', () => {
     const svg = svgOf(IconImage);
     const sun = required(svg, 'circle');
     const center: Point = [numberOf(sun, 'cx'), numberOf(sun, 'cy')];
@@ -219,15 +239,18 @@ describe('Blok Line layout geometry', () => {
     const gaps = [mountain, hill].flatMap(ridge =>
       ridge.slice(1).map((point, index) => distanceToSegment(center, ridge[index], point) - radius - 1.25 / 2));
 
-    expect(radius).toBe(0.85);
-    expect(Math.min(...gaps) * 16 / 20).toBeGreaterThanOrEqual(0.9);
+    // Keyline's accent dot, one clear unit from both ridges.
+    expect(radius).toBe(1);
+    expect(Math.min(...gaps)).toBeGreaterThanOrEqual(1);
     // The hill starts on the mountain's far slope, so it reads as standing in front.
     expect(distanceToSegment(hill[0], mountain[1], mountain[2])).toBeCloseTo(0, 5);
     // Both ridges end on the panel: the left and bottom edges, then the right edge above the corner.
-    expect(mountain[0][0]).toBe(3);
-    expect(mountain[2][1]).toBe(16);
-    expect(hill[2][0]).toBe(17);
-    expect(hill[2][1]).toBeLessThanOrEqual(16 - 2);
+    const [x, y, width, height, rx] = frameOf(IconImage);
+
+    expect(mountain[0][0]).toBe(x);
+    expect(mountain[2][1]).toBe(y + height);
+    expect(hill[2][0]).toBe(x + width);
+    expect(hill[2][1]).toBeLessThanOrEqual(y + height - rx);
   });
 
 
@@ -235,30 +258,32 @@ describe('Blok Line layout geometry', () => {
     const icon = buildIconColumnsCount(count);
     const svg = svgOf(icon);
     const dividers = Array.from(svg.querySelectorAll('line'));
-    const edges = [3, ...dividers.map(line => numberOf(line, 'x1')), 17];
+    const [x, y, width, height] = PANEL;
+    const edges = [x, ...dividers.map(line => numberOf(line, 'x1')), x + width];
 
-    expect(frameOf(icon)).toStrictEqual([3, 4, 14, 12, 2]);
+    expect(frameOf(icon)).toStrictEqual(PANEL);
     expect(dividers).toHaveLength(count - 1);
     dividers.forEach(line => {
       expect(numberOf(line, 'x1')).toBe(numberOf(line, 'x2'));
-      expect(numberOf(line, 'y1')).toBe(4);
-      expect(numberOf(line, 'y2')).toBe(16);
+      expect(numberOf(line, 'y1')).toBe(y);
+      expect(numberOf(line, 'y2')).toBe(y + height);
       expect(line.getAttribute('stroke')).toBe('currentColor');
       expect(line.getAttribute('stroke-width')).toBe('1.25');
     });
     edges.slice(1).forEach((edge, index) => {
-      expect(Math.abs(edge - edges[index] - 14 / count)).toBeLessThanOrEqual(0.01);
+      expect(Math.abs(edge - edges[index] - width / count)).toBeLessThanOrEqual(0.01);
     });
   });
 
-  it('draws the timeline as three open bars that start later as they go down', () => {
+  it('draws the timeline as three open pill bars that start later as they go down', () => {
     const bars = Array.from(svgOf(IconTimeline).querySelectorAll('rect'));
     const at = (bar: Element, attribute: string): number => numberOf(bar, attribute);
 
     expect(bars).toHaveLength(3);
     bars.forEach(bar => {
-      expect(at(bar, 'rx')).toBe(1);
-      expect(at(bar, 'height') - 1.25).toBeGreaterThanOrEqual(1.75);
+      expect(at(bar, 'rx')).toBe(at(bar, 'height') / 2);
+      // One clear unit inside keeps the bar open.
+      expect(at(bar, 'height') - 1.25).toBeGreaterThanOrEqual(1);
       expect(at(bar, 'x')).toBeGreaterThanOrEqual(3);
       expect(at(bar, 'x') + at(bar, 'width')).toBeLessThanOrEqual(17);
     });
@@ -266,7 +291,7 @@ describe('Blok Line layout geometry', () => {
       const previous = bars[index];
 
       expect(at(bar, 'x')).toBeGreaterThan(at(previous, 'x'));
-      expect((at(bar, 'y') - at(previous, 'y') - at(previous, 'height') - 1.25) * 16 / 20).toBeGreaterThanOrEqual(1);
+      expect(at(bar, 'y') - at(previous, 'y') - at(previous, 'height') - 1.25).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -297,7 +322,8 @@ describe('Blok Line layout geometry', () => {
 
       expect(cards.length).toBeGreaterThanOrEqual(2);
       cards.forEach(card => {
-        expect(numberOf(card, 'rx')).toBe(1);
+        // Keyline's small inset rect.
+        expect(numberOf(card, 'rx')).toBe(1.5);
         expect(numberOf(card, 'height') - 1.25).toBeGreaterThanOrEqual(3);
         expect(numberOf(card, 'width') - 1.25).toBeGreaterThanOrEqual(3);
       });
@@ -308,28 +334,31 @@ describe('Blok Line layout geometry', () => {
           const gapY = Math.max(numberOf(other, 'y') - numberOf(card, 'y') - numberOf(card, 'height'),
             numberOf(card, 'y') - numberOf(other, 'y') - numberOf(other, 'height'));
 
-          expect((Math.max(gapX, gapY) - 1.25) * 16 / 20).toBeGreaterThanOrEqual(1);
+          expect(Math.max(gapX, gapY) - 1.25).toBeGreaterThanOrEqual(1.25);
         }
       }
     }
   );
 
-  it('uses two roomy full-width list rows, distinct from gallery tiles and split panels', () => {
+  it('uses two full-width list rows on the gallery tile rows, distinct from gallery tiles and split panels', () => {
     const rows = Array.from(svgOf(IconList).querySelectorAll('rect'));
+    const tiles = Array.from(svgOf(IconGallery).querySelectorAll('rect'));
+    const [x, , width] = PANEL;
 
     expect(rows).toHaveLength(2);
     rows.forEach(row => {
-      expect(numberOf(row, 'x')).toBe(3);
-      expect(numberOf(row, 'width')).toBe(14);
-      expect(numberOf(row, 'height')).toBeGreaterThanOrEqual(4.5);
+      expect(numberOf(row, 'x')).toBe(x);
+      expect(numberOf(row, 'width')).toBe(width);
+      expect(numberOf(row, 'height')).toBe(numberOf(tiles[0], 'height'));
     });
+    expect(rows.map(row => numberOf(row, 'y'))).toStrictEqual([...new Set(tiles.map(tile => numberOf(tile, 'y')))]);
   });
 
   it('keeps circular category keylines aligned and removes the crowded ball polygon', () => {
     for (const icon of [IconEmojiSmile, IconEmojiBall]) {
       const outline = required(svgOf(icon), 'circle[stroke="currentColor"]');
 
-      expect(['cx', 'cy', 'r'].map(attribute => numberOf(outline, attribute))).toStrictEqual([10, 10, 6.5]);
+      expect(['cx', 'cy', 'r'].map(attribute => numberOf(outline, attribute))).toStrictEqual([10, 10, 7]);
     }
     const ball = svgOf(IconEmojiBall);
     const seams = Array.from(ball.querySelectorAll('path'))
@@ -344,40 +373,45 @@ describe('Blok Line layout geometry', () => {
 
   it('keeps placement dots lighter than the gaps between them', () => {
     const dots = Array.from(svgOf(IconPlacement).querySelectorAll('circle'));
+    const xs = [...new Set(dots.map(dot => numberOf(dot, 'cx')))].sort((a, b) => a - b);
+    const ys = [...new Set(dots.map(dot => numberOf(dot, 'cy')))].sort((a, b) => a - b);
+    const radius = numberOf(dots[0], 'r');
 
     expect(dots).toHaveLength(9);
     dots.forEach(dot => {
-      expect(numberOf(dot, 'r')).toBeLessThanOrEqual(0.85);
+      expect(numberOf(dot, 'r')).toBe(radius);
       expect(dot.getAttribute('fill')).toBe('currentColor');
     });
-    expect(new Set(dots.map(dot => numberOf(dot, 'cx'))).size).toBe(3);
-    expect(new Set(dots.map(dot => numberOf(dot, 'cy'))).size).toBe(3);
+    expect(xs).toHaveLength(3);
+    expect(ys).toHaveLength(3);
+    expect(xs[1]).toBe(10);
+    expect(ys[1]).toBe(10);
+    // Each gap is wider than a dot, so the grid reads as points, not a block.
+    expect(xs[1] - xs[0] - 2 * radius).toBeGreaterThan(2 * radius);
+    expect(ys[1] - ys[0] - 2 * radius).toBeGreaterThan(2 * radius);
   });
-  it('lights the open tab and curves the floor up into its edge, unlike the calendar header', () => {
+  it('cuts the open tab as a notch whose floor curves into its edge, unlike the calendar header', () => {
     const svg = svgOf(IconTabs);
-    const floor = required(svg, 'path:not([fill])');
-    const tab = required(svg, 'path[fill="currentColor"]');
-    const floorPoints = arcAwarePoints(floor);
-    const tabPoints = arcAwarePoints(tab);
-    const [floorStart] = floorPoints;
-    const floorEnd = floorPoints[floorPoints.length - 1];
-    const floorY = floorStart[1];
+    const notch = required(svg, 'path');
+    const points = arcAwarePoints(notch);
+    const [start] = points;
+    const end = points[points.length - 1];
+    const [x, y, width] = PANEL;
+    const calendarHeader = linePoints(required(svgOf(IconCalendar), 'path'))[0];
 
-    expect(frameOf(IconTabs)).toStrictEqual(frameOf(IconTable));
-    // The floor starts on the panel's right edge and ends on its top edge.
-    expect(floorStart[0]).toBe(17);
-    expect(floorEnd[1]).toBe(4);
+    expect(frameOf(IconTabs)).toStrictEqual(PANEL);
+    expect(svg.querySelectorAll('path')).toHaveLength(1);
+    expect(svg.querySelector('[fill="currentColor"]')).toBeNull();
+    // The tab edge drops from the panel's top, turns, and the floor runs out to the right edge.
+    expect(start[1]).toBe(y);
+    expect(end[0]).toBe(x + width);
+    expect(notch.getAttribute('d')).toMatch(/A/i);
     // It stops at the open tab, so it is not the calendar's full-width line.
-    expect(Math.min(...floorPoints.map(([x]) => x))).toBeGreaterThan(3);
-    expect(floor.getAttribute('d')).toMatch(/A/i);
-    // The lit tab fills the corner up to the floor and follows its curve.
-    expect(Math.min(...tabPoints.map(([x]) => x))).toBe(3);
-    expect(Math.min(...tabPoints.map(([, y]) => y))).toBe(4);
-    expect(Math.max(...tabPoints.map(([, y]) => y))).toBe(floorY);
-    expect(floorPoints.filter(([x, y]) => y < floorY || x === floorEnd[0])
-      .every(point => tabPoints.some(([x, y]) => x === point[0] && y === point[1]))).toBe(true);
-    // Nothing sticks out above the panel the way calendar rings do.
-    expect(Math.min(...[...floorPoints, ...tabPoints].map(([, y]) => y))).toBe(4);
+    expect(calendarHeader[0][0]).toBe(x);
+    expect(Math.min(...points.map(([px]) => px))).toBeGreaterThan(x);
+    // The open tab is at least a third of the panel wide.
+    expect(start[0] - x).toBeGreaterThanOrEqual(width / 3);
+    expect(Math.min(...points.map(([, py]) => py))).toBe(y);
   });
 
   it('steps each table of contents row right by the same amount, as a dash then a rule', () => {
@@ -416,6 +450,8 @@ describe('Blok Line layout geometry', () => {
     const [panel, ...squares] = rectsOf(IconPageLayout);
 
     expect(panel).toBe(rectsOf(IconSplitView)[0]);
-    expect(squares).toEqual(rectsOf(IconGallery).filter(rect => rect.startsWith('11.5 ')));
+    const galleryXs = Array.from(svgOf(IconGallery).querySelectorAll('rect')).map(rect => numberOf(rect, 'x'));
+
+    expect(squares).toEqual(rectsOf(IconGallery).filter(rect => rect.startsWith(`${Math.max(...galleryXs)} `)));
   });
 });

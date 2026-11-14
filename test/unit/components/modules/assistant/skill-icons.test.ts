@@ -101,7 +101,7 @@ describe('Ask AI skill icons', () => {
     ['actionItems', ['actionItems-box', 'actionItems-box2', '', 'actionItems-tick', 'actionItems-tick2']],
     ['proofread', ['', 'proofread-wave', 'proofread-flat', 'proofread-ok']],
     ['continue', ['', '', 'continue-dot', 'continue-dot2', 'continue-dot3', 'continue-trail']],
-    ['improve', ['improve-rough', 'improve-cut', 'improve-facet', 'improve-spark']],
+    ['improve', ['', '', 'improve-facet', 'improve-spark']],
     ['shorter', ['shorter-top', 'shorter-mid', 'shorter-bottom', 'shorter-top', 'shorter-bottom']],
     ['longer', ['longer-top', 'longer-bottom', 'longer-top', 'longer-bottom', 'longer-mid']],
     ['simplify', ['simplify-tangle', 'simplify-line']],

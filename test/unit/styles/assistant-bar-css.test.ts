@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { IconCheck } from '../../../src/components/icons';
+
 import { readMainCss } from './helpers/read-main-css';
 
 /*
@@ -153,6 +155,24 @@ describe('Ask AI bar colours', () => {
     expect(bodyOf('[data-blok-assistant-undo]')).toMatch(/border-radius:\s*var\(--blok-radius-pill\)/);
     expect(bodyOf('[data-blok-assistant-keep]::after')).toMatch(/background:\s*var\(--blok-text-primary\)/);
     expect(bodyOf('[data-blok-assistant-keep]:hover svg path')).toMatch(/animation:[^;]*blok-assistant-draw/);
+  });
+
+  // The check starts hidden only if the dash covers the whole IconCheck stroke.
+  it('Keep hides the whole check before redrawing it', () => {
+    const d = new DOMParser().parseFromString(IconCheck, 'image/svg+xml').querySelector('path')?.getAttribute('d') ?? '';
+    const points = (d.match(/-?\d*\.?\d+/g) ?? []).map(Number);
+    let length = 0;
+
+    for (let i = 2; i + 1 < points.length; i += 2) {
+      length += Math.hypot(points[i] - points[i - 2], points[i + 1] - points[i - 1]);
+    }
+
+    const dash = Number(bodyOf('[data-blok-assistant-keep]:hover svg path').match(/stroke-dasharray:\s*([\d.]+)/)?.[1]);
+    const offset = Number(ASSISTANT_CSS.match(/@keyframes blok-assistant-draw\s*\{\s*from\s*\{\s*stroke-dashoffset:\s*([\d.]+)/)?.[1]);
+
+    expect(points.length).toBe(6);
+    expect(dash).toBeGreaterThanOrEqual(length);
+    expect(offset).toBe(dash);
   });
 
   const reducedRule = (selector: string): string => {

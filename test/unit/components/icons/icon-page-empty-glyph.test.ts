@@ -1,33 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { IconPageEmpty } from '../../../../src/components/icons';
+import { IconPage, IconPageEmpty } from '../../../../src/components/icons';
 
-const pathsOf = (icon: string): SVGPathElement[] => {
+const parse = (icon: string): Document => {
   const doc = new DOMParser().parseFromString(icon, 'image/svg+xml');
 
   if (doc.querySelector('svg') === null || doc.querySelector('parsererror') !== null) {
     throw new Error('invalid svg');
   }
 
-  return Array.from(doc.querySelectorAll('path'));
+  return doc;
 };
 
-/**
- * Notion's `pageEmpty` (notion-spec-2 §18.1, §19.15): a bare folded sheet with no text lines,
- * 14x17 of its 18px box. The sheet runs 13 wide and 17 tall on the 20 grid, so it renders at
- * about that size.
- */
+const framesOf = (icon: string): string[][] =>
+  Array.from(parse(icon).querySelectorAll('rect'), rect => ['x', 'y', 'width', 'height', 'rx'].map(name => rect.getAttribute(name) ?? ''));
+
+/** Notion's `pageEmpty`: a bare page with no text lines. */
 describe('IconPageEmpty', () => {
-  it('is a sheet and its fold, with no text lines', () => {
-    expect(pathsOf(IconPageEmpty)).toHaveLength(2);
+  it('is the page frame alone, with no text lines and no fold', () => {
+    expect(parse(IconPageEmpty).querySelectorAll('path')).toHaveLength(0);
+    expect(framesOf(IconPageEmpty)).toHaveLength(1);
   });
 
-  it('draws the sheet 13 wide and 17 tall, centred on the canvas', () => {
-    const sheet = pathsOf(IconPageEmpty)[0].getAttribute('d');
+  it('draws the same portrait frame as IconPage, centred on the canvas', () => {
+    const [frame] = framesOf(IconPageEmpty);
+    const [x, y, width, height] = (frame ?? []).map(Number);
 
-    expect(sheet).toBe('M3.5 3.5a2 2 0 0 1 2-2h5l6 6v9a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-13Z');
-  });
-
-  it('meets the fold where the sheet bends', () => {
-    expect(pathsOf(IconPageEmpty)[1].getAttribute('d')).toBe('M10.5 1.5v6h6');
+    expect(framesOf(IconPageEmpty)).toEqual(framesOf(IconPage));
+    expect(2 * (x ?? 0) + (width ?? 0)).toBe(20);
+    expect(2 * (y ?? 0) + (height ?? 0)).toBe(20);
   });
 });

@@ -11,8 +11,120 @@ const svgOf = (icon: string): SVGSVGElement => {
   return svg;
 };
 
+type Point = [number, number];
+
+interface Segment {
+  cmd: string;
+  from: Point;
+  points: Point[];
+  arc?: { rx: number; ry: number; large: number; sweep: number };
+}
+
+const ARITY: Record<string, number> = { M: 2, L: 2, H: 1, V: 1, C: 6, S: 4, Q: 4, T: 2, A: 7, Z: 0 };
+
+// Every command made absolute: H/V become L, S/T get their reflected control point.
+const segmentsOf = (d: string): Segment[] => {
+  const tokens = d.match(/[a-zA-Z]|-?(?:\d*\.\d+|\d+)(?:e-?\d+)?/g) ?? [];
+  const out: Segment[] = [];
+  let pen: Point = [0, 0];
+  let start: Point = [0, 0];
+  let cmd = '';
+  let index = 0;
+
+  while (index < tokens.length) {
+    if (/[a-zA-Z]/.test(tokens[index])) {
+      cmd = tokens[index];
+      index += 1;
+    }
+    const upper = cmd.toUpperCase();
+    const relative = cmd !== upper;
+    const args = tokens.slice(index, index + ARITY[upper]).map(Number);
+
+    index += ARITY[upper];
+    const at = (x: number, y: number): Point => relative ? [pen[0] + x, pen[1] + y] : [x, y];
+    const previous = out[out.length - 1];
+    const reflect = (): Point => {
+      const control = previous !== undefined && ['C', 'Q'].includes(previous.cmd) ? previous.points[previous.points.length - 2] : pen;
+
+      return [2 * pen[0] - control[0], 2 * pen[1] - control[1]];
+    };
+    let segment: Segment;
+
+    switch (upper) {
+      case 'M': segment = { cmd: 'M', from: pen, points: [at(args[0], args[1])] }; start = segment.points[0]; cmd = relative ? 'l' : 'L'; break;
+      case 'L': segment = { cmd: 'L', from: pen, points: [at(args[0], args[1])] }; break;
+      case 'H': segment = { cmd: 'L', from: pen, points: [[relative ? pen[0] + args[0] : args[0], pen[1]]] }; break;
+      case 'V': segment = { cmd: 'L', from: pen, points: [[pen[0], relative ? pen[1] + args[0] : args[0]]] }; break;
+      case 'C': segment = { cmd: 'C', from: pen, points: [at(args[0], args[1]), at(args[2], args[3]), at(args[4], args[5])] }; break;
+      case 'S': segment = { cmd: 'C', from: pen, points: [reflect(), at(args[0], args[1]), at(args[2], args[3])] }; break;
+      case 'Q': segment = { cmd: 'Q', from: pen, points: [at(args[0], args[1]), at(args[2], args[3])] }; break;
+      case 'T': segment = { cmd: 'Q', from: pen, points: [reflect(), at(args[0], args[1])] }; break;
+      case 'A': segment = { cmd: 'A', from: pen, points: [at(args[5], args[6])], arc: { rx: args[0], ry: args[1], large: args[3], sweep: args[4] } }; break;
+      default: segment = { cmd: 'Z', from: pen, points: [start] };
+    }
+    out.push(segment);
+    pen = segment.points[segment.points.length - 1];
+  }
+
+  return out;
+};
+
+// Each subpath's end points, absolute; a closing Z adds nothing.
+const subpathsOf = (element: Element | undefined): Point[][] =>
+  segmentsOf(element?.getAttribute('d') ?? '').reduce<Point[][]>((all, segment) => {
+    if (segment.cmd === 'M') {
+      all.push([]);
+    }
+    if (segment.cmd !== 'Z') {
+      all[all.length - 1].push(segment.points[segment.points.length - 1]);
+    }
+
+    return all;
+  }, []);
+
 const numbers = (element: Element, attribute = 'd'): number[] =>
   (element.getAttribute(attribute)?.match(/-?(?:\d*\.)?\d+/g) ?? []).map(Number);
+
+const close = (a: Point, b: Point): boolean => Math.abs(a[0] - b[0]) < 0.01 && Math.abs(a[1] - b[1]) < 0.01;
+
+// Points along every straight and arc stroke of a path, for clearance checks.
+const inkOf = (d: string): Point[] => segmentsOf(d).filter(({ cmd }) => cmd !== 'M').flatMap((segment): Point[] => {
+  const end = segment.points[segment.points.length - 1];
+  const steps = 24;
+
+  if (segment.cmd === 'A' && segment.arc !== undefined) {
+    const { rx: r, large, sweep } = segment.arc;
+    const [x1, y1] = segment.from;
+    const mid: Point = [(x1 + end[0]) / 2, (y1 + end[1]) / 2];
+    const half = Math.hypot(end[0] - x1, end[1] - y1) / 2;
+    const rise = Math.sqrt(Math.max(0, r ** 2 - half ** 2));
+    const side = large === sweep ? -1 : 1;
+    const center: Point = [mid[0] + side * rise * -(end[1] - y1) / (2 * half), mid[1] + side * rise * (end[0] - x1) / (2 * half)];
+    const from = Math.atan2(y1 - center[1], x1 - center[0]);
+    let turn = Math.atan2(end[1] - center[1], end[0] - center[0]) - from;
+
+    if (sweep === 1 && turn < 0) {
+      turn += 2 * Math.PI;
+    }
+    if (sweep === 0 && turn > 0) {
+      turn -= 2 * Math.PI;
+    }
+
+    return Array.from({ length: steps + 1 }, (_, i): Point => [
+      center[0] + r * Math.cos(from + turn * i / steps),
+      center[1] + r * Math.sin(from + turn * i / steps),
+    ]);
+  }
+
+  return Array.from({ length: steps + 1 }, (_, i): Point => [
+    segment.from[0] + (end[0] - segment.from[0]) * i / steps,
+    segment.from[1] + (end[1] - segment.from[1]) * i / steps,
+  ]);
+});
+
+const STROKE = 1.25;
+// Keyline: neighbouring strokes keep one unit of clear space between their ink.
+const CLEAR = 1;
 
 describe('Blok Line media completion', () => {
   beforeEach(() => {
@@ -23,86 +135,106 @@ describe('Blok Line media completion', () => {
     vi.restoreAllMocks();
   });
 
-  it('crop leaves a clear break at both crossing rails', () => {
-    const scale = 1;
+  it('crop is two rounded L rails, a half turn apart, crossing near each corner', () => {
     const paths = Array.from(svgOf(Icons.IconCrop).querySelectorAll('path'));
+    const [first, second] = subpathsOf(paths[0]);
+    const corners = segmentsOf(paths[0].getAttribute('d') ?? '').filter(({ cmd }) => cmd === 'A');
 
-    expect(paths).toHaveLength(4);
+    expect(paths).toHaveLength(1);
+    expect(corners.map(({ arc }) => arc?.rx)).toEqual([1, 1]);
+    expect([...second].reverse()).toEqual(first.map(([x, y]) => [20 - x, 20 - y]));
+    // The first rail's stem crosses the second rail's bar and runs a full stroke past it.
+    const [[stemX, stemTop]] = first;
+    const [[barStart, barY], [barEnd]] = second;
 
-    const vertical = numbers(paths[0]);
-    const upperCorner = numbers(paths[1]);
-    const lowerTail = numbers(paths[3]);
-    const stroke = Number(paths[0].getAttribute('stroke-width'));
-
-    expect(upperCorner[0] - vertical[0] - stroke).toBeGreaterThanOrEqual(stroke);
-    expect(lowerTail[1] - upperCorner[upperCorner.length - 1] - stroke).toBeGreaterThanOrEqual(stroke);
-    for (const path of paths.slice(0, 2)) {
-      const radii = path.getAttribute('d')?.match(/a([\d.]+) ([\d.]+)/);
-
-      expect(radii?.slice(1).map(Number)).toEqual([scale, scale]);
-    }
+    expect(stemX).toBeGreaterThan(barStart);
+    expect(stemX).toBeLessThan(barEnd);
+    expect(barY - stemTop).toBeGreaterThanOrEqual(2 * STROKE);
+    expect(stemX - barStart).toBeGreaterThanOrEqual(2 * STROKE);
   });
 
   it('reverses four equal fullscreen corners without adding diagonal shafts', () => {
-    const expanded = Array.from(svgOf(Icons.IconExpandFullscreen).querySelectorAll('path'));
-    const contracted = Array.from(svgOf(Icons.IconCollapseFullscreen).querySelectorAll('path'));
+    const [expandedPath] = Array.from(svgOf(Icons.IconExpandFullscreen).querySelectorAll('path'));
+    const [contractedPath] = Array.from(svgOf(Icons.IconCollapseFullscreen).querySelectorAll('path'));
+    const expanded = subpathsOf(expandedPath);
+    const contracted = subpathsOf(contractedPath);
+    const boxOf = (points: Point[]): number[] => {
+      const xs = points.map(([x]) => x);
+      const ys = points.map(([, y]) => y);
+
+      return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+    };
 
     expect(expanded).toHaveLength(4);
     expect(contracted).toHaveLength(4);
-    expanded.forEach((path, index) => {
-      const points = numbers(path);
-      const x = points.filter((_value, position) => position % 2 === 0);
-      const y = points.filter((_value, position) => position % 2 === 1);
-      const sums = [Math.min(...x) + Math.max(...x), Math.min(...y) + Math.max(...y)];
+    // Outward corners turn on the frame radius; inward ones are sharp.
+    segmentsOf(expandedPath.getAttribute('d') ?? '').filter(({ cmd }) => cmd === 'A')
+      .forEach(({ arc }) => expect(arc?.rx).toBe(2.5));
+    [expandedPath, contractedPath].forEach((path) => {
+      segmentsOf(path.getAttribute('d') ?? '').filter(({ cmd }) => cmd === 'L').forEach(({ from, points: [[x, y]] }) => {
+        expect(x === from[0] || y === from[1]).toBe(true);
+      });
+    });
+    expanded.forEach((corner, index) => {
+      const box = boxOf(corner);
+      const inner: Point = [
+        Math.abs(box[0] - 10) < Math.abs(box[2] - 10) ? box[0] : box[2],
+        Math.abs(box[1] - 10) < Math.abs(box[3] - 10) ? box[1] : box[3],
+      ];
+      const reverse = contracted[index];
 
-      expect(points).toHaveLength(6);
-      expect(Math.max(...x) - Math.min(...x)).toBe(Math.max(...y) - Math.min(...y));
-      expect(numbers(contracted[index])).toEqual(points.map((value, position) => sums[position % 2] - value));
+      expect(box[2] - box[0]).toBe(box[3] - box[1]);
+      expect(boxOf(reverse)).toEqual(box);
+      expect(reverse).toHaveLength(3);
+      expect(reverse[1]).toEqual(inner);
+      expect(new Set([reverse[0], reverse[2]].map(String))).toEqual(new Set([corner[0], corner[corner.length - 1]].map(String)));
     });
   });
 
-  it('mirrors filled seek triangles with a full stroke of space between them', () => {
+  it('mirrors filled seek triangles with a Keyline gap between them', () => {
     const forward = Array.from(svgOf(Icons.IconPlayerForward).querySelectorAll('path'));
     const backward = Array.from(svgOf(Icons.IconPlayerBackward).querySelectorAll('path'));
 
     expect(forward).toHaveLength(2);
     expect(backward).toHaveLength(2);
 
-    const first = numbers(forward[0]);
-    const second = numbers(forward[1]);
-    const stroke = Number(forward[0].getAttribute('stroke-width'));
+    const [[first], [second]] = forward.map((path) => subpathsOf(path));
 
-    expect(first).toHaveLength(6);
-    expect(second).toHaveLength(6);
-    expect(Math.min(second[0], second[2], second[4]) - Math.max(first[0], first[2], first[4]) - stroke)
-      .toBeGreaterThanOrEqual(stroke);
+    expect(first).toHaveLength(3);
+    expect(second).toHaveLength(3);
+    expect(Math.min(...second.map(([x]) => x)) - Math.max(...first.map(([x]) => x)) - STROKE)
+      .toBeGreaterThanOrEqual(CLEAR);
     forward.forEach((path, index) => {
-      const points = numbers(path);
-
       expect(path.getAttribute('fill')).toBe('currentColor');
       expect(backward[index].getAttribute('fill')).toBe('currentColor');
-      expect(numbers(backward[index])).toEqual(points.map((value, position) => position % 2 === 0 ? 20 - value : value));
+      expect(subpathsOf(backward[index])).toEqual(subpathsOf(path).map((points) => points.map(([x, y]) => [20 - x, y])));
     });
   });
 
-  it('balances the filled pause bars against the play outline weight', () => {
+  it('paints the pause bars like the play triangle: filled and stroked, equal and centred', () => {
     const play = svgOf(Icons.IconPlayerPlay).querySelector('path');
-    const bars = Array.from(svgOf(Icons.IconPlayerPause).querySelectorAll('rect'));
+    const bars = Array.from(svgOf(Icons.IconPlayerPause).querySelectorAll('path'));
+    const paint = (element: Element | null): (string | null)[] =>
+      ['fill', 'stroke', 'stroke-width', 'stroke-linejoin'].map((name) => element?.getAttribute(name) ?? null);
 
-    expect(play?.getAttribute('stroke-width')).toBe('1.25');
     expect(play?.getAttribute('fill')).toBe('currentColor');
     expect(bars).toHaveLength(2);
-    const width = Number(bars[0].getAttribute('width'));
-    const height = Number(bars[0].getAttribute('height'));
+    const boxes = bars.map((bar) => {
+      const [points] = subpathsOf(bar);
+      const xs = points.map(([x]) => x);
+      const ys = points.map(([, y]) => y);
 
-    expect(width).toBe(2 * Number(play?.getAttribute('stroke-width')));
-    expect(Number(bars[0].getAttribute('x')) + Number(bars[1].getAttribute('x')) + width).toBe(20);
-    bars.forEach(bar => {
-      expect(Number(bar.getAttribute('y')) + height / 2).toBe(10);
-      expect(Number(bar.getAttribute('width'))).toBe(width);
-      expect(Number(bar.getAttribute('height'))).toBe(height);
-      expect(bar.getAttribute('rx')).toBe('1');
+      expect(paint(bar)).toEqual(paint(play));
+
+      return [Math.min(...xs), Math.min(...ys), Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)];
     });
+    const [[x0, y0, width, height], [x1]] = boxes;
+
+    expect(boxes[1].slice(1)).toEqual(boxes[0].slice(1));
+    expect(x0 + x1 + width).toBe(20);
+    expect(y0 + height / 2).toBe(10);
+    // The bars' ink stays two strokes wide or less, so they do not outweigh the play triangle.
+    expect(width + STROKE).toBeLessThanOrEqual(2 * STROKE + 0.25);
   });
 
   it('shares a closed speaker cone with space before either sound or mute marks', () => {
@@ -131,64 +263,62 @@ describe('Blok Line media completion', () => {
     }
     expect(hub.getAttribute('r')).toBe(imageAccent?.getAttribute('r'));
 
-    const center = [Number(hub.getAttribute('cx')), Number(hub.getAttribute('cy'))];
-    const segments = (dial.getAttribute('d') ?? '').split(/(?=M)/).map(part => part.match(/-?(?:\d*\.)?\d+/g)?.map(Number) ?? []);
-    const angle = ([x, y]: number[]): number => Math.atan2(y - center[1], x - center[0]);
-    const sweeps = segments.map(([x1, y1, radius, , , , , x2, y2]) => {
-      expect(Math.hypot(x1 - center[0], y1 - center[1])).toBeCloseTo(radius, 1);
-      expect(Math.hypot(x2 - center[0], y2 - center[1])).toBeCloseTo(radius, 1);
+    const center: Point = [Number(hub.getAttribute('cx')), Number(hub.getAttribute('cy'))];
+    const arcs = segmentsOf(dial.getAttribute('d') ?? '').filter(({ cmd }) => cmd === 'A');
+    const radius = arcs[0].arc?.rx ?? 0;
+    const angle = ([x, y]: Point): number => Math.atan2(y - center[1], x - center[0]);
+    const sweeps = arcs.map(({ from, points: [to], arc }) => {
+      expect(arc?.rx).toBe(radius);
+      expect(Math.hypot(from[0] - center[0], from[1] - center[1])).toBeCloseTo(radius, 1);
+      expect(Math.hypot(to[0] - center[0], to[1] - center[1])).toBeCloseTo(radius, 1);
 
-      return [angle([x1, y1]), angle([x2, y2])];
+      return [angle(from), angle(to)];
     });
     const lengths = sweeps.map(([from, to]) => (to - from + 2 * Math.PI) % (2 * Math.PI));
     const gaps = sweeps.slice(1).map(([from], index) => (from - sweeps[index][1] + 2 * Math.PI) % (2 * Math.PI));
-    const [first] = segments;
-    const last = segments[segments.length - 1];
+    const [[needleStart, needleTip]] = subpathsOf(needle);
 
-    expect(segments).toHaveLength(3);
-    lengths.forEach(length => expect(length).toBeCloseTo(lengths[0], 2));
+    expect(arcs).toHaveLength(3);
+    // Arc ends are rounded to two decimals, so equal sweeps differ by about half a degree.
+    lengths.forEach(length => expect(length).toBeCloseTo(lengths[0], 1));
     expect(gaps[0]).toBeCloseTo(gaps[1], 2);
-    // Neighbouring segments stay one stroke apart.
-    expect(2 * first[2] * Math.sin(gaps[0] / 2) - 1.25).toBeGreaterThanOrEqual(1.25);
-    expect(first[0] + last[7]).toBeCloseTo(20, 5);
+    expect(2 * radius * Math.sin(gaps[0] / 2) - STROKE).toBeGreaterThanOrEqual(CLEAR);
+    expect(arcs[0].from[0] + arcs[2].points[0][0]).toBeCloseTo(20, 5);
     // The dial opens at the bottom, so centre the visible arc, not the hub.
-    expect((center[1] - first[2] + first[1]) / 2).toBeCloseTo(10, 5);
-    expect(numbers(needle).slice(0, 2)).toEqual(center);
+    expect((center[1] - radius + arcs[0].from[1]) / 2).toBeCloseTo(10, 1);
+    expect(needleStart).toEqual(center);
     // The needle tip stays a full stroke inside the dial.
-    expect(first[2] - Math.hypot(numbers(needle)[2] - center[0], numbers(needle)[3] - center[1]) - 1.25).toBeGreaterThanOrEqual(1.25);
+    expect(radius - Math.hypot(needleTip[0] - center[0], needleTip[1] - center[1]) - STROKE).toBeGreaterThanOrEqual(STROKE);
   });
-
 
   it('draws the loop as a racetrack whose arrowheads chase each other with a clear gap', () => {
-    const [firstTrack, firstHead, secondTrack, secondHead] = Array.from(svgOf(Icons.IconPlayerLoop).querySelectorAll('path'));
-    const track = numbers(firstTrack);
-    const head = numbers(firstHead);
-    const stroke = Number(firstTrack.getAttribute('stroke-width'));
+    const paths = Array.from(svgOf(Icons.IconPlayerLoop).querySelectorAll('path'));
+    const [[track, head], [secondTrack, secondHead]] = paths.map((path) => subpathsOf(path));
+    const [bend] = segmentsOf(paths[0].getAttribute('d') ?? '').filter(({ cmd }) => cmd === 'A');
+    const half = ([x, y]: Point): Point => [20 - x, 20 - y];
+    const tip = track[track.length - 1];
 
-    expect(track).toHaveLength(10);
-    // Semicircular ends: the arc radius is half the track height.
-    expect(track[2]).toBe(-track[8] / 2);
-    expect(numbers(secondHead)).toEqual(head.map(value => 20 - value));
-    expect(numbers(secondTrack).slice(0, 2)).toEqual(track.slice(0, 2).map(value => 20 - value));
-    expect(numbers(secondTrack).slice(2)).toEqual([...track.slice(2, 7), ...track.slice(7).map(value => 0 - value)]);
+    expect(paths).toHaveLength(2);
+    // Semicircular end: the arc radius is half the track height.
+    expect(bend.arc?.rx).toBe(Math.abs(track[1][1] - track[0][1]) / 2);
+    // The second run is the first turned a half turn about the centre.
+    expect(secondTrack).toEqual(track.map(half));
+    const turnedHead = [...secondHead].reverse();
 
-    const tip = [track[0] + track[7] + track[9], track[1] + track[8]];
-    const nextTrackStart = 20 - track[0];
-
-    expect(head.slice(2, 4)).toEqual(tip);
-    expect(head[4] - head[0]).toBe(0);
+    expect(turnedHead).toEqual(head.map(half));
+    expect(head[1]).toEqual(tip);
+    expect(head[2][0] - head[0][0]).toBe(0);
     // The two inner arms, one above the other at the centre, stay a stroke apart.
-    expect(Math.hypot(numbers(secondHead)[4] - head[4], numbers(secondHead)[5] - head[5]) - stroke).toBeGreaterThanOrEqual(stroke);
-    expect(nextTrackStart - tip[0] - stroke).toBeGreaterThanOrEqual(stroke);
+    expect(Math.hypot(turnedHead[2][0] - head[2][0], turnedHead[2][1] - head[2][1]) - STROKE).toBeGreaterThanOrEqual(STROKE);
+    expect(secondTrack[0][0] - tip[0] - STROKE).toBeGreaterThanOrEqual(CLEAR);
     // The rounded ends stay inside the 3–17 drawing area.
-    expect(track[0] - track[2]).toBeGreaterThanOrEqual(3);
-    expect(nextTrackStart + track[2]).toBeLessThanOrEqual(17);
+    expect(track[0][0] - (bend.arc?.rx ?? 0)).toBeGreaterThanOrEqual(3);
+    expect(secondTrack[0][0] + (bend.arc?.rx ?? 0)).toBeLessThanOrEqual(17);
   });
 
-
-  it('keeps music noteheads equal and both stems parallel to the beam spacing', () => {
+  it('keeps music noteheads equal outlined rings and both stems parallel to the beam spacing', () => {
     const svg = svgOf(Icons.IconMusic);
-    const heads = Array.from(svg.querySelectorAll('ellipse'));
+    const heads = Array.from(svg.querySelectorAll('circle'));
     const beam = svg.querySelector('path');
 
     expect(heads).toHaveLength(2);
@@ -197,68 +327,50 @@ describe('Blok Line media completion', () => {
       throw new Error('Missing music beam');
     }
 
-    const [leftX, leftBottom, leftTop, rightX, rightTop, rightBottom] = numbers(beam);
+    const [[[leftX, leftBottom], [, leftTop], [rightX, rightTop], [, rightBottom]]] = subpathsOf(beam);
 
     expect(leftBottom - leftTop).toBe(rightBottom - rightTop);
     expect(Number(heads[0].getAttribute('cy')) - Number(heads[1].getAttribute('cy'))).toBe(leftTop - rightTop);
     heads.forEach((head, index) => {
-      expect(head.getAttribute('rx')).toBe(heads[0].getAttribute('rx'));
-      expect(head.getAttribute('ry')).toBe(heads[0].getAttribute('ry'));
-      expect(head.getAttribute('fill')).toBe('currentColor');
-      expect(Number(head.getAttribute('cx')) + Number(head.getAttribute('rx'))).toBe(index === 0 ? leftX : rightX);
+      expect(head.getAttribute('r')).toBe(heads[0].getAttribute('r'));
+      expect(head.getAttribute('fill')).toBeNull();
+      expect(head.getAttribute('stroke')).toBe('currentColor');
+      expect(Number(head.getAttribute('cx')) + Number(head.getAttribute('r'))).toBe(index === 0 ? leftX : rightX);
       expect(Number(head.getAttribute('cy'))).toBe(index === 0 ? leftBottom : rightBottom);
     });
   });
 
-  it('cuts the cloud open around a round badge that carries the failure cross', () => {
+  it('closes the cloud and centres the failure cross inside it, clear of every edge', () => {
     const svg = svgOf(Icons.IconUploadFailed);
     const [cloud, cross] = Array.from(svg.querySelectorAll('path'));
-    const badge = svg.querySelector('circle');
+    // Overlay icons are the 20-grid drawing scaled x1.2.
+    const scale = 1.2;
 
-    if (cloud === undefined || cross === undefined || badge === null) {
+    if (cloud === undefined || cross === undefined) {
       throw new Error('Missing upload failure parts');
     }
 
     const stroke = Number(cloud.getAttribute('stroke-width'));
-    const [cx, cy, radius] = ['cx', 'cy', 'r'].map(name => Number(badge.getAttribute(name)));
-    const commands = Array.from((cloud.getAttribute('d') ?? '').matchAll(/([MHa])([^MHa]*)/g));
-    const ends: number[][] = [];
-    let point = [0, 0];
+    const arms = subpathsOf(cross);
+    const outline = inkOf(cloud.getAttribute('d') ?? '');
+    const crossInk = inkOf(cross.getAttribute('d') ?? '');
+    const mid = (arm: Point[]): Point => [(arm[0][0] + arm[1][0]) / 2, (arm[0][1] + arm[1][1]) / 2];
 
-    for (const [, command, args] of commands) {
-      const values = args.match(/-?(?:\d*\.)?\d+/g)?.map(Number) ?? [];
+    expect(svg.querySelector('circle')).toBeNull();
+    expect(cloud.getAttribute('d')).toMatch(/z$/i);
+    expect(arms).toHaveLength(2);
+    expect(close(mid(arms[0]), mid(arms[1]))).toBe(true);
+    expect(mid(arms[0])[0]).toBeCloseTo(12, 5);
+    arms.forEach(([[x0, y0], [x1, y1]]) => expect(Math.abs(x1 - x0)).toBeCloseTo(Math.abs(y1 - y0), 5));
+    // Everything stays inside the overlay drawing area (3–17 at 20 units); the slack covers
+    // two-decimal rounding of the scaled arcs.
+    [...outline, ...crossInk].forEach(([x, y]) => {
+      expect(Math.min(x, y)).toBeGreaterThanOrEqual(3 * scale - 0.05);
+      expect(Math.max(x, y)).toBeLessThanOrEqual(17 * scale + 0.05);
+    });
+    // The cross keeps a scaled Keyline gap from the cloud outline.
+    const gap = Math.min(...crossInk.flatMap(([x, y]) => outline.map(([ox, oy]) => Math.hypot(x - ox, y - oy))));
 
-      if (command === 'M') {
-        point = values;
-      } else if (command === 'H') {
-        point = [values[0], point[1]];
-      } else {
-        point = [point[0] + values[5], point[1] + values[6]];
-      }
-      ends.push(point);
-    }
-
-    const crossPoints = cross.getAttribute('d')?.split(/(?=M)/).map(part => part.match(/-?(?:\d*\.)?\d+/g)?.map(Number) ?? []) ?? [];
-
-    expect(badge.getAttribute('stroke')).toBe('currentColor');
-    expect(badge.getAttribute('stroke-width')).toBe(String(stroke));
-    // Both open ends of the cloud stop a full stroke short of the badge.
-    for (const [x, y] of [ends[0], ends[ends.length - 1]]) {
-      expect(Math.hypot(x - cx, y - cy) - radius - stroke).toBeGreaterThanOrEqual(stroke);
-    }
-    // The badge stays inside the overlay drawing area (3–17 at 20 units = 3.6–20.4 here).
-    expect(cy + radius).toBeLessThanOrEqual(20.4);
-    expect(cx + radius).toBeLessThanOrEqual(20.4);
-    for (const [x, y, dx, dy] of crossPoints) {
-      expect(x + dx / 2).toBeCloseTo(cx, 5);
-      expect(y + dy / 2).toBeCloseTo(cy, 5);
-      // Two thirds of a stroke between the cross and the ring: a full stroke shrinks
-      // the cross to a dot at this badge size, and the badge cannot grow past 20.4.
-      const gap = radius - stroke / 2 - (Math.hypot(dx, dy) / 2 + stroke / 2);
-
-      expect(gap).toBeGreaterThanOrEqual(stroke * 2 / 3);
-      expect(gap).toBeLessThan(stroke);
-    }
+    expect(gap - stroke).toBeGreaterThanOrEqual(CLEAR * scale - 0.05);
   });
-
 });

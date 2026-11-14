@@ -44,13 +44,17 @@ describe('IconSidebarRight', () => {
   it('splits off a narrow panel at the inline end with one full-height divider', () => {
     const paths = [...svgOf(iconOf('IconSidebarRight')).querySelectorAll('path')];
 
+    const [frameStart, top, width, height] = frameOf(iconOf('IconSidebarRight')).slice(0, 4).map(Number);
+    const frameEnd = frameStart + width;
+
     expect(paths).toHaveLength(1);
-    const match = /^M([\d.]+) 4v12$/.exec(paths[0].getAttribute('d') ?? '');
+    // One divider from the frame's top edge to its bottom edge.
+    const match = /^M([\d.]+) ([\d.]+)v([\d.]+)$/.exec(paths[0].getAttribute('d') ?? '');
 
     expect(match).not.toBeNull();
     const x = Number(match?.[1]);
-    const frameEnd = 17;
-    const frameStart = 3;
+
+    expect([Number(match?.[2]), Number(match?.[3])]).toEqual([top, height]);
 
     // Narrower than half: a side panel, not IconColumns' two equal columns.
     expect(frameEnd - x).toBeLessThan(x - frameStart);

@@ -22,13 +22,22 @@ describe('IconViewBoard', () => {
   });
 
   it('cuts the panel into three equal columns with two full-height dividers', () => {
+    const [panel] = [...parse(icons.IconViewBoard).querySelectorAll('rect')].map(rect => ['x', 'y', 'width', 'height'].map(name => Number(rect.getAttribute(name))));
+    const [x = 0, y = 0, width = 0, height = 0] = panel ?? [];
     const d = [...parse(icons.IconViewBoard).querySelectorAll('path')].map((path) => path.getAttribute('d')).join(' ');
-    const dividers = [...d.matchAll(/M([\d.]+) 4v12/g)].map((match) => Number(match[1]));
+    const dividers = [...d.matchAll(/M([\d.]+) ([\d.]+)v([\d.]+)/g)].map(([, left, top, length]) => [Number(left), Number(top), Number(length)]);
 
     expect(dividers).toHaveLength(2);
-    // The panel runs x 3 to 17: columns 14/3 wide.
-    expect(dividers[0]).toBeCloseTo(3 + 14 / 3, 1);
-    expect(dividers[1]).toBeCloseTo(3 + 28 / 3, 1);
+    for (const [, top, length] of dividers) {
+      expect(top).toBe(y);
+      expect(length).toBe(height);
+    }
+    const [first = 0, second = 0] = dividers.map(([left]) => left ?? 0);
+
+    // Keyline snaps to 0.25, so a divider sits within half a snap of the exact third.
+    expect(Math.abs(first - (x + width / 3))).toBeLessThanOrEqual(0.125);
+    expect(Math.abs(second - (x + 2 * width / 3))).toBeLessThanOrEqual(0.125);
+    expect(first + second).toBe(2 * x + width);
   });
 
   it('is the board tab glyph, and differs from the dashboard columns glyph', () => {

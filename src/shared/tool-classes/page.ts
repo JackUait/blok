@@ -70,17 +70,17 @@ export const PAGE_TITLE_MUTED_CLASSES: readonly string[] = ['text-text-secondary
  */
 export const PAGE_FALLBACK_ICON = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M5 5a2 2 0 0 1 2-2h4l4 4v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M11 3v4h4Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M7.5 10.5h5M7.5 13.5h3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <rect x="4.5" y="3" width="11" height="14" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7.5 7h5M7.5 10h5M7.5 13h3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
+/** Must equal `IconLock` (a test pins it); copied for the same reason as above. */
 export const PAGE_LOCK_ICON = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path d="M7 8V6.5a3 3 0 0 1 6 0V8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="5" y="8" width="10" height="9" rx="2" stroke="currentColor" stroke-width="1.25"/>
-  <circle cx="10" cy="12.5" r="0.75" fill="currentColor"/>
+  <rect x="4.5" y="8" width="11" height="8.5" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="10" cy="12.25" r="1" fill="currentColor"/>
 </svg>
 `;
 

@@ -36,19 +36,18 @@ const SKILLS = new Map<string, Skill>([
   [IconAskAiProofread, {
     act: 'proofread',
     parts: [[''], ['proofread-wave', 'out']],
-    extras: [line('M3 13.5H13', ['proofread-flat', 'in']), line('M14.5 13.4l1 1 2-2.2', ['proofread-ok', 'in'])],
+    extras: [line('M3.5 13.5H13', ['proofread-flat', 'in']), line('M14.5 13.4l1 1 2-2.2', ['proofread-ok', 'in'])],
   }],
   [IconAskAiContinue, {
     act: 'continue',
     parts: [[''], [''], ['continue-dot'], ['continue-dot2'], ['continue-dot3']],
-    extras: [line('M8 13.5H17', ['continue-trail', 'in'])],
+    extras: [line('M7 13.5H16.5', ['continue-trail', 'in'])],
   }],
   [IconAskAiImprove, {
     act: 'improve',
-    parts: [['improve-rough', 'out']],
+    parts: [[''], ['']],
     extras: [
-      line('M6.5 4.5H13.5L17 8.5L10 16.5L3 8.5Z', ['improve-cut', 'in']),
-      line('M3 8.5H17M8.25 4.5L7.25 8.5L10 16.5L12.75 8.5L11.75 4.5', ['improve-facet', 'in']),
+      line('M8.5 4.5L7.5 8L10 15.5L12.5 8L11.5 4.5', ['improve-facet', 'in']),
       ['circle', { cx: '16.5', cy: '3.5', r: '0.8', fill: 'currentColor' }, ['improve-spark']],
     ],
   }],
@@ -59,9 +58,9 @@ const SKILLS = new Map<string, Skill>([
   [IconAskAiLonger, {
     act: 'longer',
     parts: [['longer-top'], ['longer-bottom'], ['longer-top'], ['longer-bottom']],
-    extras: [line('M3 10H12', ['longer-mid', 'in'])],
+    extras: [line('M3.5 10h7', ['longer-mid', 'in'])],
   }],
-  [IconAskAiSimplify, { act: 'simplify', parts: [['simplify-tangle', 'out']], extras: [line('M3 10H17', ['simplify-line', 'in'])] }],
+  [IconAskAiSimplify, { act: 'simplify', parts: [['simplify-tangle', 'out']], extras: [line('M3.5 10h13', ['simplify-line', 'in'])] }],
   [IconAskAiExplain, {
     act: 'explain',
     parts: [['explain-bubble'], ['explain-q'], ['explain-q']],

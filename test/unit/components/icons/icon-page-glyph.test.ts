@@ -1,49 +1,48 @@
 import { describe, expect, it } from 'vitest';
 import { IconFile, IconFileDoc, IconPage } from '../../../../src/components/icons';
 
-const pathsOf = (icon: string): SVGPathElement[] => {
+const parse = (icon: string): Document => {
   const doc = new DOMParser().parseFromString(icon, 'image/svg+xml');
 
   if (doc.querySelector('svg') === null || doc.querySelector('parsererror') !== null) {
     throw new Error('invalid svg');
   }
 
-  return Array.from(doc.querySelectorAll('path'));
+  return doc;
 };
 
-const dOf = (path: SVGPathElement | undefined): string => path?.getAttribute('d') ?? '';
+const pathsOf = (icon: string): string[] => Array.from(parse(icon).querySelectorAll('path'), path => path.getAttribute('d') ?? '');
+
+const FOLD = 'M11 3v2.5a2 2 0 0 0 2 2h2.5';
 
 /**
- * The page block and the File block sit next to each other in the toolbox,
- * and both are drawn as a folded sheet. The page shares the file family's
- * frame but paints its fold solid, so the two read apart at 16 px.
+ * The page block and the File block sit next to each other in the toolbox.
+ * A fold means a file on disk; a Blok page is the portrait frame with no fold,
+ * so the two read apart at 16 px.
  */
 describe('IconPage', () => {
   it('is a 20-unit standard icon', () => {
     expect(IconPage).toContain('width="20" height="20" viewBox="0 0 20 20"');
   });
 
-  it('shares the file family sheet outline', () => {
-    expect(dOf(pathsOf(IconPage)[0])).toBe(dOf(pathsOf(IconFile)[0]));
+  it('is the Keyline portrait page frame', () => {
+    const frames = Array.from(parse(IconPage).querySelectorAll('rect'), rect => ['x', 'y', 'width', 'height', 'rx'].map(name => rect.getAttribute(name)));
+
+    expect(frames).toEqual([['4.5', '3', '11', '14', '2']]);
   });
 
-  it('paints its folded corner solid, unlike the file glyphs', () => {
-    const fold = pathsOf(IconPage)[1];
-
-    expect(fold.getAttribute('fill')).toBe('currentColor');
-    expect(fold.getAttribute('stroke')).toBe('currentColor');
-    expect(fold.getAttribute('stroke-width')).toBe('1.25');
+  it('has no fold, unlike the file glyphs', () => {
+    expect(pathsOf(IconPage)).not.toContain(FOLD);
 
     [IconFile, IconFileDoc].forEach((icon) => {
-      expect(pathsOf(icon)[1].getAttribute('fill')).toBeNull();
+      expect(pathsOf(icon)).toContain(FOLD);
     });
   });
 
   it('keeps text lines of its own', () => {
-    const lines = dOf(pathsOf(IconPage)[2]);
+    const [lines] = pathsOf(IconPage);
 
-    expect(lines).not.toBe('');
-    expect(lines).not.toBe(dOf(pathsOf(IconFile)[2]));
-    expect(lines).not.toBe(dOf(pathsOf(IconFileDoc)[2]));
+    expect(lines).toMatch(/^(M[\d. ]+h[\d.]+)+$/);
+    expect(lines).not.toBe(pathsOf(IconFileDoc)[2]);
   });
 });

@@ -364,7 +364,7 @@ test.describe('timeline', () => {
     await expect(arrow).toBeVisible();
 
     expect(await arrow.evaluate((el) => [...el.querySelectorAll('svg path')].map((path) => path.getAttribute('d'))))
-      .toEqual(['M3.75 10L16.25 10', 'M10.75 4.5L16.25 10L10.75 15.5']);
+      .toEqual(['M3.75 10h12.5M10.75 4.5 16.25 10l-5.5 5.5']);
     const box = await arrow.evaluate((el) => {
       const rects = [...el.querySelectorAll('svg path')].map((path) => path.getBoundingClientRect());
 

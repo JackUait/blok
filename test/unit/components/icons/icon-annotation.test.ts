@@ -32,7 +32,7 @@ describe('IconAnnotation', () => {
   it('draws the card on the standard panel width and radius', () => {
     const card = svgOf(IconAnnotation).querySelector('rect');
 
-    expect([num(card, 'x'), num(card, 'width'), num(card, 'rx')]).toEqual([3, 14, 2]);
+    expect([num(card, 'x'), num(card, 'width'), num(card, 'rx')]).toEqual([3, 14, 2.5]);
   });
 
   // The dotted word spans Underline's rule and uses the (i) dot.
@@ -49,7 +49,8 @@ describe('IconAnnotation', () => {
     expect(new Set(dots.map((d) => d.getAttribute('cy'))).size).toBe(1);
     expect(new Set(dots.map((d) => d.getAttribute('r')))).toEqual(new Set([infoDot?.getAttribute('r')]));
     expect([xs[0], xs[xs.length - 1]]).toEqual([ruleStart, ruleStart + ruleLength]);
-    expect(new Set(steps).size).toBe(1);
+    // Thirds of the rule are not exact in two decimals.
+    steps.forEach((step) => expect(step).toBeCloseTo(steps[0], 1));
     // Neighbouring dots stay one stroke apart, so the row reads as dots at 16 px.
     expect(steps[0] - 2 * num(dots[0], 'r')).toBeGreaterThanOrEqual(1.25);
   });

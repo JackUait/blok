@@ -54,11 +54,11 @@
 }
 
 :is([data-blok-assistant-action]:hover, [data-blok-assistant-action]:focus-visible, [data-blok-ask-ai-skill]:hover, [data-blok-ask-ai-skill][data-blok-focused="true"]) :is([data-blok-ask-ai-part="shorter-top"], [data-blok-ask-ai-part="longer-bottom"]) {
-  transform: translateY(2.25px);
+  transform: translateY(2.5px);
 }
 
 :is([data-blok-assistant-action]:hover, [data-blok-assistant-action]:focus-visible, [data-blok-ask-ai-skill]:hover, [data-blok-ask-ai-skill][data-blok-focused="true"]) :is([data-blok-ask-ai-part="shorter-bottom"], [data-blok-ask-ai-part="longer-top"]) {
-  transform: translateY(-2.25px);
+  transform: translateY(-2.5px);
 }
 
 /* Only motion below. Reduced motion keeps everything above, still. */
@@ -188,18 +188,9 @@
     animation-delay: 500ms;
   }
 
-  /* Improve writing: the rough outline is cut into a gem, and it sparkles. */
-  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="improve-rough"] {
-    animation-duration: 350ms;
-  }
-
-  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="improve-cut"] {
-    animation-duration: 450ms;
-    animation-delay: 200ms;
-  }
-
+  /* Improve writing: facets are cut into the gem, and it sparkles. */
   [data-blok-ask-ai-hue] [data-blok-ask-ai-part="improve-facet"] {
-    animation-delay: 450ms;
+    animation-duration: 450ms;
   }
 
   [data-blok-ask-ai-hue] [data-blok-ask-ai-part="improve-spark"] {

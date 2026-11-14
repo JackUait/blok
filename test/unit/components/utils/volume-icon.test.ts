@@ -18,12 +18,14 @@ const paths = (svg: string): Element[] => {
 };
 
 /** Reads `M x y A r r 0 0 1 x y2` back into numbers. */
-const waves = (level: number): Wave[] =>
-  paths(volumeLevelIcon(level)).slice(1).map((path) => {
+const wavesOf = (svg: string): Wave[] =>
+  paths(svg).slice(1).map((path) => {
     const n = (path.getAttribute('d') ?? '').match(/-?\d+(\.\d+)?/g)?.map(Number) ?? [];
 
     return { x: n[0], top: n[1], r: n[2], bottom: n[8], opacity: Number(path.getAttribute('opacity') ?? '1') };
   });
+
+const waves = (level: number): Wave[] => wavesOf(volumeLevelIcon(level));
 
 /** Rightmost point of a wave: its centre sits left of the chord. */
 const peak = (w: Wave): number => {
@@ -34,10 +36,11 @@ const peak = (w: Wave): number => {
 
 describe('volumeLevelIcon', () => {
   it('lands on the published two-wave drawing at full volume', () => {
-    const [inner, outer] = waves(1);
-
-    expect(inner).toEqual({ x: 12, top: 7.5, bottom: 12.5, r: 3.5, opacity: 1 });
-    expect(outer).toEqual({ x: 14.5, top: 5.5, bottom: 14.5, r: 6.5, opacity: 1 });
+    expect(waves(1)).toEqual(wavesOf(IconPlayerVolume));
+    expect(waves(1)).toEqual([
+      { x: 12.25, top: 7.75, bottom: 12.25, r: 3.25, opacity: 1 },
+      { x: 14.75, top: 5.5, bottom: 14.5, r: 6.5, opacity: 1 },
+    ]);
   });
 
   it('keeps the published speaker body and svg root', () => {
@@ -49,17 +52,17 @@ describe('volumeLevelIcon', () => {
   });
 
   it('shows only the full inner wave at half volume', () => {
-    expect(waves(0.5)).toEqual([{ x: 12, top: 7.5, bottom: 12.5, r: 3.5, opacity: 1 }]);
+    expect(waves(0.5)).toEqual([wavesOf(IconPlayerVolume)[0]]);
   });
 
   it('draws a smaller, closer inner wave when quiet', () => {
     const [quiet, ...rest] = waves(0.25);
 
     expect(rest).toEqual([]);
-    expect(quiet.r).toBeLessThan(3.5);
-    expect(quiet.r).toBeGreaterThan(2.4);
+    expect(quiet.r).toBeLessThan(wavesOf(IconPlayerVolume)[0].r);
+    expect(quiet.r).toBeGreaterThan(2.25);
     expect(peak(quiet)).toBeLessThan(peak(waves(0.5)[0]));
-    expect(quiet.bottom - quiet.top).toBeLessThan(5);
+    expect(quiet.bottom - quiet.top).toBeLessThan(4.5);
   });
 
   it('grows each wave as the volume rises', () => {
@@ -115,7 +118,7 @@ describe('volumeLevelIcon — muted', () => {
     const drawn = paths(volumeLevelIcon(0.4, true)).map((path) => path.getAttribute('d'));
 
     expect(drawn).toHaveLength(3);
-    expect(drawn[2]).toBe('M13 8L17 12M17 8L13 12');
+    expect(drawn[2]).toBe(paths(IconPlayerVolumeMute)[1].getAttribute('d'));
     expect(drawn[1]).toBe(paths(volumeLevelIcon(0.4))[1].getAttribute('d'));
   });
 });
@@ -176,7 +179,7 @@ describe('createVolumeIcon', () => {
     icon.paint(1, true);
 
     expect(host.querySelectorAll('path')).toHaveLength(4);
-    expect(host.querySelector('path:last-of-type')?.getAttribute('d')).toBe('M13 8L17 12M17 8L13 12');
+    expect(host.querySelector('path:last-of-type')?.getAttribute('d')).toBe(paths(IconPlayerVolumeMute)[1].getAttribute('d'));
 
     vi.advanceTimersByTime(1000);
     expect(host.innerHTML).toBe(markup(IconPlayerVolumeMute));

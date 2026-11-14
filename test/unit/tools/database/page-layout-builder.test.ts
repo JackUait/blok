@@ -245,7 +245,7 @@ describe('PageLayoutBuilder', () => {
 
       previewButton()?.click();
 
-      const check = 'M4.5 10.25l3.5 3.5 7.5-7.5';
+      const check = 'M4 10 8 14 16 6';
 
       expect(pageItem('row-1')?.innerHTML).toContain(check);
       expect(pageItem('row-1')?.hasAttribute('data-blok-popover-item-active')).toBe(false);

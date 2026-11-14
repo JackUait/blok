@@ -31,10 +31,7 @@ import * as icons from '../../../src/components/icons';
  * broadcast caused.
  */
 const FILL_ONLY_ICONS: Readonly<Record<string, string>> = {
-  IconHeaderRow: 'solid header band drawn with fill; the grid lines beside it are stroked separately',
-  IconHeaderColumn: 'solid header band drawn with fill; the grid lines beside it are stroked separately',
-  IconEmojiHearts: 'the small heart is solid on purpose so it survives 16px; the large one is stroked',
-  IconFill: 'the droplet has a solid lower half; its outline is stroked separately',
+  IconCheckboxFilled: 'the inset square is solid with the check cut out of it; the outer square is stroked',
   IconQuote: 'quotation marks are solid punctuation; an outlined pair reads as the digits "66"',
 };
 

@@ -20,6 +20,58 @@ const parse = (markup: string): SVGSVGElement => {
   return svg;
 };
 
+type Point = [number, number];
+
+const SIZES: Record<string, number> = { m: 2, l: 2, h: 1, v: 1, a: 7, c: 6 };
+
+/** The point one path command lands on; h and v keep the other coordinate. */
+const stepTo = (lower: string, relative: boolean, chunk: number[], [x, y]: Point): Point => {
+  const [ox, oy] = relative ? [x, y] : [0, 0];
+
+  if (lower === 'h') {
+    return [ox + chunk[0], y];
+  }
+  if (lower === 'v') {
+    return [x, oy + chunk[0]];
+  }
+
+  return [ox + chunk[chunk.length - 2], oy + chunk[chunk.length - 1]];
+};
+
+/** Absolute end points of every subpath (M/L/H/V/A/C, curve handles left out). */
+const subpathsOf = (d: string): Point[][] => {
+  const subpaths: Point[][] = [];
+  let current: Point[] = [];
+  let point: Point = [0, 0];
+
+  for (const [, letter, args] of d.matchAll(/([MLHVACZmlhvacz])([^MLHVACZmlhvacz]*)/g)) {
+    const lower = letter.toLowerCase();
+    const size = SIZES[lower] ?? 0;
+    const values = (args.match(/-?(?:\d*\.)?\d+/g) ?? []).map(Number);
+
+    if (lower === 'z') {
+      point = current[0] ?? point;
+      continue;
+    }
+    if (lower === 'm') {
+      current = [];
+      subpaths.push(current);
+    }
+    for (let i = 0; i + size <= values.length; i += size) {
+      point = stepTo(lower, letter === lower, values.slice(i, i + size), point);
+      current.push(point);
+    }
+  }
+
+  return subpaths;
+};
+
+const pathPoints = (d: string): Point[] => subpathsOf(d).flat();
+
+const pointsOf = (markup: string): Point[] => pathPoints(parse(markup).querySelector('path')?.getAttribute('d') ?? '');
+
+const sorted = (points: number[][]): number[][] => [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+
 describe('Blok Line authoring contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -49,21 +101,14 @@ describe('Blok Line authoring contract', () => {
     }
   });
 
-  it.each(entries)('%s uses the family weight, with named small-size corrections only', (name, markup) => {
+  it.each(entries)('%s uses the Keyline weight: 1.25 on the 20 grid, 1.5 on 24-grid overlays and the emoji category row', (name, markup) => {
     const svg = parse(markup);
     const widths = [svg, ...svg.querySelectorAll('[stroke-width]')]
       .map(node => node.getAttribute('stroke-width'))
       .filter((width): width is string => width !== null)
       .map(Number);
-    let allowed = [overlays.has(name) ? 1.5 : 1.25];
-
-    if (name.match(/^Icon(?:Toggle)?H[1-6]$/) !== null || ['IconSuperscript', 'IconSubscript'].includes(name)) {
-      allowed = [1.25, 1.1, 1.05];
-    } else if (name === 'IconListNumbered') {
-      allowed = [1.25, 1.05];    } else if (name.startsWith('IconEmojiNav')) {
-      // The emoji picker's category row is read at 18-20 px only; 1.25 smudges there.
-      allowed = [1.5];
-    }
+    // The emoji picker's category row is read at 18-20 px only; 1.25 smudges there.
+    const allowed = overlays.has(name) || name.startsWith('IconEmojiNav') ? [1.5] : [1.25];
 
     const solidControls = [
       'IconMenu', 'IconRowGrip', 'IconDotsHorizontal', 'IconPlacement',
@@ -82,15 +127,12 @@ describe('Blok Line authoring contract', () => {
   });
 
   it('uses rotationally equivalent disclosure chevrons', () => {
-    const expected = [
-      [icons.IconChevronRight, 'M8 6L12 10L8 14'],
-      [icons.IconChevronLeft, 'M12 6L8 10L12 14'],
-      [icons.IconChevronDown, 'M6 8L10 12L14 8'],
-    ];
+    const right = pointsOf(icons.IconChevronRight);
 
-    for (const [markup, path] of expected) {
-      expect(parse(markup).querySelector('path')?.getAttribute('d')).toBe(path);
-    }
+    expect(right).toEqual([[8.25, 6.5], [11.75, 10], [8.25, 13.5]]);
+    // Left mirrors right across x 10; down is right turned a quarter about (10, 10).
+    expect(sorted(pointsOf(icons.IconChevronLeft))).toEqual(sorted(right.map(([x, y]) => [20 - x, y])));
+    expect(sorted(pointsOf(icons.IconChevronDown))).toEqual(sorted(right.map(([x, y]) => [20 - y, x])));
   });
 
   it('rounds the exposed ends of the rear copy sheet', () => {
@@ -101,14 +143,22 @@ describe('Blok Line authoring contract', () => {
   });
 
   it('keeps a full stroke of space between the trash ribs and body', () => {
-    const paths = Array.from(parse(icons.IconTrash).querySelectorAll('path'));
-    const body = paths.find(path => path.getAttribute('d')?.startsWith('M5.5 6'));
-    const ribs = paths.find(path => path.getAttribute('d')?.startsWith('M8.5 9.5'));
+    const svg = parse(icons.IconTrash);
+    const body = svg.querySelector(':scope > path');
+    const ribs = svg.querySelector(':scope > path:last-of-type');
 
-    expect(body).toBeDefined();
-    expect(ribs).toBeDefined();
-    // Upright sides at 5.5 / 14.5 leave 1.75 units of clear space around the ribs.
-    expect(body?.getAttribute('d')).toContain('h5');
-    expect(ribs?.getAttribute('d')).toBe('M8.5 9.5v3.5M11.5 9.5v3.5');
+    // The lid group is what the delete animation lifts.
+    expect(svg.querySelector('g[data-blok-icon-lid]')).not.toBeNull();
+    expect(body).not.toBe(ribs);
+
+    const sides = [...new Set(pathPoints(body?.getAttribute('d') ?? '').map(([x]) => x))];
+    const ribXs = pathPoints(ribs?.getAttribute('d') ?? '').map(([x]) => x);
+    const left = Math.min(...sides);
+    const right = Math.max(...sides);
+
+    expect(ribXs).toHaveLength(4);
+    for (const x of ribXs) {
+      expect(Math.min(x - left, right - x) - 1.25).toBeGreaterThanOrEqual(1.25);
+    }
   });
 });

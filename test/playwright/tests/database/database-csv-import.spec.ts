@@ -195,7 +195,7 @@ test.describe('database CSV import', () => {
         paths: [...el.querySelectorAll('path')].map((path) => path.getAttribute('d')),
         size: [svg?.getBoundingClientRect().width, svg?.getBoundingClientRect().height],
       };
-    })).toEqual({ paths: ['M5.5 8L10 3.5L14.5 8', 'M5.5 12L10 16.5L14.5 12'], size: [20, 20] });
+    })).toEqual({ paths: ['M6.5 7.5 10 4l3.5 3.5M6.5 12.5 10 16l3.5-3.5'], size: [20, 20] });
     // research/31 §5a: the merge dialog says it can merge.
     await expect(dialog.getByText('Create a new database with your CSV or merge it into an existing one', { exact: true })).toBeVisible();
     await dialog.locator('[data-blok-database-csv-input]').setInputFiles({ name: 'merge.csv', mimeType: 'text/csv', buffer: Buffer.from('Name,Due,Extra\nR1,2026-03-04,x1\nR9,2026-03-05,x9') });

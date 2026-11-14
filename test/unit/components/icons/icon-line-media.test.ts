@@ -22,40 +22,89 @@ const required = (element: Element, attribute: string): string => {
   return value;
 };
 
-const commands = (path: Element): { command: string; values: number[] }[] =>
-  Array.from(required(path, 'd').matchAll(/([MLHVCSQTAZ])([^MLHVCSQTAZ]*)/gi), (match) => ({
-    command: match[1],
-    values: (match[2].match(/-?(?:\d*\.)?\d+/g) ?? []).map(Number),
-  }));
+type Point = [number, number];
 
-const pointsOf = (path: Element): { x: number; y: number }[] => {
-  let x = 0;
-  let y = 0;
-  const points: { x: number; y: number }[] = [];
+interface Segment {
+  cmd: string;
+  from: Point;
+  points: Point[];
+  arc?: { rx: number; ry: number; large: number; sweep: number };
+}
 
-  commands(path).forEach(({ command, values }) => {
-    const relative = command === command.toLowerCase();
+const ARITY: Record<string, number> = { M: 2, L: 2, H: 1, V: 1, C: 6, S: 4, Q: 4, T: 2, A: 7, Z: 0 };
 
-    for (let index = 0; index < values.length;) {
-      const horizontal = command.toUpperCase() === 'H';
-      const vertical = command.toUpperCase() === 'V';
+// Every command made absolute: H/V become L, S/T get their reflected control point.
+const segmentsOf = (d: string): Segment[] => {
+  const tokens = d.match(/[a-zA-Z]|-?(?:\d*\.\d+|\d+)(?:e-?\d+)?/g) ?? [];
+  const out: Segment[] = [];
+  let pen: Point = [0, 0];
+  let start: Point = [0, 0];
+  let cmd = '';
+  let index = 0;
 
-      if (horizontal) {
-        x = values[index] + (relative ? x : 0);
-      } else if (vertical) {
-        y = values[index] + (relative ? y : 0);
-      } else {
-        x = values[index] + (relative ? x : 0);
-        y = values[index + 1] + (relative ? y : 0);
-      }
-
-      points.push({ x, y });
-      index += horizontal || vertical ? 1 : 2;
+  while (index < tokens.length) {
+    if (/[a-zA-Z]/.test(tokens[index])) {
+      cmd = tokens[index];
+      index += 1;
     }
-  });
+    const upper = cmd.toUpperCase();
+    const relative = cmd !== upper;
+    const args = tokens.slice(index, index + ARITY[upper]).map(Number);
 
-  return points;
+    index += ARITY[upper];
+    const at = (x: number, y: number): Point => relative ? [pen[0] + x, pen[1] + y] : [x, y];
+    const previous = out[out.length - 1];
+    const reflect = (): Point => {
+      const control = previous !== undefined && ['C', 'Q'].includes(previous.cmd) ? previous.points[previous.points.length - 2] : pen;
+
+      return [2 * pen[0] - control[0], 2 * pen[1] - control[1]];
+    };
+    let segment: Segment;
+
+    switch (upper) {
+      case 'M': segment = { cmd: 'M', from: pen, points: [at(args[0], args[1])] }; start = segment.points[0]; cmd = relative ? 'l' : 'L'; break;
+      case 'L': segment = { cmd: 'L', from: pen, points: [at(args[0], args[1])] }; break;
+      case 'H': segment = { cmd: 'L', from: pen, points: [[relative ? pen[0] + args[0] : args[0], pen[1]]] }; break;
+      case 'V': segment = { cmd: 'L', from: pen, points: [[pen[0], relative ? pen[1] + args[0] : args[0]]] }; break;
+      case 'C': segment = { cmd: 'C', from: pen, points: [at(args[0], args[1]), at(args[2], args[3]), at(args[4], args[5])] }; break;
+      case 'S': segment = { cmd: 'C', from: pen, points: [reflect(), at(args[0], args[1]), at(args[2], args[3])] }; break;
+      case 'Q': segment = { cmd: 'Q', from: pen, points: [at(args[0], args[1]), at(args[2], args[3])] }; break;
+      case 'T': segment = { cmd: 'Q', from: pen, points: [reflect(), at(args[0], args[1])] }; break;
+      case 'A': segment = { cmd: 'A', from: pen, points: [at(args[5], args[6])], arc: { rx: args[0], ry: args[1], large: args[3], sweep: args[4] } }; break;
+      default: segment = { cmd: 'Z', from: pen, points: [start] };
+    }
+    out.push(segment);
+    pen = segment.points[segment.points.length - 1];
+  }
+
+  return out;
 };
+
+const subpathsOf = (path: Element): Point[][] => segmentsOf(required(path, 'd')).reduce<Point[][]>((all, segment) => {
+  if (segment.cmd === 'M') {
+    all.push([]);
+  }
+  if (segment.cmd !== 'Z') {
+    all[all.length - 1].push(segment.points[segment.points.length - 1]);
+  }
+
+  return all;
+}, []);
+
+const boxOf = (rect: Element): number[] => ['x', 'y', 'width', 'height', 'rx'].map((attribute) => Number(required(rect, attribute)));
+
+const imageFrame = (): Element => {
+  const frame = svgOf(Icons.IconImage).querySelector('rect');
+
+  if (frame === null) {
+    throw new Error('Missing image frame');
+  }
+
+  return frame;
+};
+
+// Keyline: neighbouring strokes keep one unit of clear space between their ink.
+const CLEAR = 1;
 
 /**
  * No icon is a rescaled copy of another any more. The overlay family exists
@@ -110,37 +159,31 @@ describe('Blok Line media family', () => {
       return;
     }
 
-    expect(['x', 'y', 'width', 'height', 'rx'].map((attribute) => Number(required(frame, attribute))))
-      .toEqual([3, 4, 14, 12, 2]);
+    expect(boxOf(frame)).toEqual(boxOf(imageFrame()));
   });
 
-  it('opens the picture-in-picture frame corner around a floating window', () => {
+  it('floats a small window inside the image frame, clear of its inline-end and bottom edges', () => {
     const svg = svgOf(Icons.IconPlayerPip);
-    const frame = svg.querySelector('path');
-    const window = svg.querySelector('rect');
+    const [frame, window] = Array.from(svg.querySelectorAll('rect'));
 
-    if (frame === null || window === null) {
+    if (frame === undefined || window === undefined) {
       throw new Error('Missing picture-in-picture parts');
     }
 
-    const outline = required(frame, 'd').match(/^M17 ([\d.]+)V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h([\d.]+)$/);
-    const [x, y, width, height] = ['x', 'y', 'width', 'height'].map(name => Number(required(window, name)));
+    const [frameX, frameY, frameWidth, frameHeight] = boxOf(frame);
+    const [x, y, width, height] = boxOf(window);
     const stroke = Number(required(frame, 'stroke-width'));
 
-    // The image-family panel (x 3–17, y 4–16, radius 2) with its bottom-right corner left open.
-    expect(outline).not.toBeNull();
-
-    const rightEndY = Number(outline?.[1]);
-    const bottomEndX = 5 + Number(outline?.[2]);
-
+    expect(svg.children).toHaveLength(2);
+    expect(boxOf(frame)).toEqual(boxOf(imageFrame()));
     expect(window.getAttribute('rx')).toBe('1');
     expect(window.getAttribute('stroke')).toBe('currentColor');
     expect(window.getAttribute('fill')).toBeNull();
-    // The window fills the open corner up to the panel edge, and both open ends clear it by a stroke.
-    expect(x + width).toBe(17);
-    expect(y + height).toBe(16);
-    expect(y - rightEndY - stroke).toBeGreaterThanOrEqual(stroke);
-    expect(x - bottomEndX - stroke).toBeGreaterThanOrEqual(stroke);
+    // The window sits in the bottom-right quarter, one Keyline gap inside the frame.
+    expect(x + width / 2).toBeGreaterThan(frameX + frameWidth / 2);
+    expect(y + height / 2).toBeGreaterThan(frameY + frameHeight / 2);
+    expect(frameX + frameWidth - (x + width) - stroke).toBeGreaterThanOrEqual(CLEAR);
+    expect(frameY + frameHeight - (y + height) - stroke).toBeGreaterThanOrEqual(CLEAR);
   });
 
   it('slides one outlined block between two text lines to show alignment', () => {
@@ -244,80 +287,74 @@ describe('Blok Line media family', () => {
     const frame = svg.querySelector('rect');
     const sun = svg.querySelector('circle');
     const paths = Array.from(svg.querySelectorAll('path'));
+    const image = svgOf(Icons.IconImage);
+    const imageSun = image.querySelector('circle');
+    const imageRidge = image.querySelector('path');
 
     expect(paths).toHaveLength(2);
 
-    if (frame === null || sun === null) {
+    if (frame === null || sun === null || imageSun === null || imageRidge === null) {
       throw new Error('Missing caption image');
     }
 
-    const ridge = pointsOf(paths[0]);
-    const caption = pointsOf(paths[1]);
-    const captionStart = caption[0];
-    const captionEnd = caption[1];
-    const frameBottom = Number(required(frame, 'y')) + Number(required(frame, 'height'));
+    const ridges = subpathsOf(paths[0]);
+    const [[captionStart, captionEnd], ...extra] = subpathsOf(paths[1]);
+    const [frameX, frameTop, frameWidth, frameHeight, frameRadius] = boxOf(frame);
     const sunX = Number(required(sun, 'cx'));
     const sunY = Number(required(sun, 'cy'));
     const sunRadius = Number(required(sun, 'r'));
 
-    expect(caption).toHaveLength(2);
-    expect(captionStart.x).toBe(Number(required(frame, 'x')));
-    expect(captionStart.y).toBe(captionEnd.y);
-    expect(captionStart.y - frameBottom - 1.25).toBeGreaterThanOrEqual(1.5);
-    expect(captionEnd.x - captionStart.x).toBeLessThan(Number(required(frame, 'width')));
-    expect(Number(required(frame, 'rx'))).toBe(2);
-    expect(sunRadius).toBe(0.85);
-    const image = svgOf(Icons.IconImage);
-    const imageFrame = image.querySelector('rect');
-    const imageSun = image.querySelector('circle');
-    const imageRidge = image.querySelector('path');
-
-    if (imageFrame === null || imageSun === null || imageRidge === null) {
-      throw new Error('Missing image landscape');
-    }
-
-    // The same landscape as IconImage, squeezed into the shorter panel so the sun keeps its clearance.
-    const imageTop = Number(required(imageFrame, 'y'));
-    const frameTop = Number(required(frame, 'y'));
-    const squeeze = Number(required(frame, 'height')) / Number(required(imageFrame, 'height'));
-    const toCaption = (y: number): number => frameTop + (y - imageTop) * squeeze;
-
-    pointsOf(imageRidge).forEach(({ x, y }, index) => {
-      expect(ridge[index].x).toBe(x);
-      expect(ridge[index].y).toBeCloseTo(toCaption(y), 2);
+    expect(extra).toHaveLength(0);
+    expect(captionStart[0]).toBe(frameX);
+    expect(captionStart[1]).toBe(captionEnd[1]);
+    expect(captionStart[1] - (frameTop + frameHeight) - 1.25).toBeGreaterThanOrEqual(1.5);
+    expect(captionEnd[0] - captionStart[0]).toBeLessThan(frameWidth);
+    // A shorter IconImage: same frame width and radius, same accent sun, same 45-degree hills.
+    expect([frameX, frameWidth, frameRadius]).toEqual([0, 2, 4].map((index) => boxOf(imageFrame())[index]));
+    expect(sunRadius).toBe(Number(required(imageSun, 'r')));
+    expect(sun.getAttribute('fill')).toBe(imageSun.getAttribute('fill'));
+    [...ridges, ...subpathsOf(imageRidge)].forEach((ridge) => {
+      ridge.slice(1).forEach(([x, y], index) => {
+        expect(Math.abs(x - ridge[index][0])).toBeCloseTo(Math.abs(y - ridge[index][1]), 5);
+      });
     });
-    expect(sunX).toBe(Number(required(imageSun, 'cx')));
-    expect(sunY).toBeCloseTo(toCaption(Number(required(imageSun, 'cy'))), 2);
-    // A full stroke between the sun and the panel top.
-    expect(sunY - sunRadius - (frameTop + 1.25 / 2)).toBeGreaterThanOrEqual(1.25);
+    expect(ridges[0][0][0]).toBe(frameX);
+    // One Keyline gap between the sun and the panel top.
+    expect(sunY - sunRadius - (frameTop + 1.25 / 2)).toBeGreaterThanOrEqual(CLEAR);
 
-    for (let index = 1; index < ridge.length; index++) {
-      const start = ridge[index - 1];
-      const end = ridge[index];
-      const dx = end.x - start.x;
-      const dy = end.y - start.y;
-      const projection = Math.max(0, Math.min(1, ((sunX - start.x) * dx + (sunY - start.y) * dy) / (dx * dx + dy * dy)));
-      const distance = Math.hypot(sunX - start.x - projection * dx, sunY - start.y - projection * dy);
+    ridges.forEach((ridge) => {
+      for (let index = 1; index < ridge.length; index++) {
+        const [startX, startY] = ridge[index - 1];
+        const dx = ridge[index][0] - startX;
+        const dy = ridge[index][1] - startY;
+        const projection = Math.max(0, Math.min(1, ((sunX - startX) * dx + (sunY - startY) * dy) / (dx * dx + dy * dy)));
+        const distance = Math.hypot(sunX - startX - projection * dx, sunY - startY - projection * dy);
 
-      expect(distance - sunRadius - 1.25 / 2).toBeGreaterThanOrEqual(1.25);
-    }
+        expect(distance - sunRadius - 1.25 / 2).toBeGreaterThanOrEqual(CLEAR);
+      }
+    });
   });
 
-  it('uses the approved download shaft and rounded tray with clear bottom spacing', () => {
-    const svg = svgOf(Icons.IconDownload);
-    const path = svg.querySelector('path');
-
-    expect(path?.getAttribute('d')).toBe('M10 3.5v9m-3-3 3 3 3-3M3.5 13v1.5a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V13');
+  it('draws download as the Keyline arrow over a rounded tray, with clear bottom spacing', () => {
+    const path = svgOf(Icons.IconDownload).querySelector('path');
 
     if (path === null) {
       throw new Error('Missing download path');
     }
 
-    const geometry = commands(path);
-    const arrowTipY = geometry[0].values[1] + geometry[1].values[0];
-    const trayBottomY = geometry[3].values[1] + geometry[4].values[0] + geometry[5].values[6];
+    const d = required(path, 'd');
+    const [shaft, head, tray] = subpathsOf(path);
+    const [, tip] = shaft;
 
-    expect(trayBottomY - arrowTipY - Number(required(path, 'stroke-width'))).toBeGreaterThanOrEqual(2.5);
+    // src/tools/file/ui.ts splits this one path at the tray's move command.
+    expect(d.split('M3.5 13')).toHaveLength(2);
+    expect(tray[0]).toEqual([3.5, 13]);
+    // Keyline arrowhead: 3.5 arms meeting at the shaft's end.
+    expect(head).toEqual([[tip[0] - 3.5, tip[1] - 3.5], tip, [tip[0] + 3.5, tip[1] - 3.5]]);
+
+    const trayBottomY = Math.max(...tray.map(([, y]) => y));
+
+    expect(trayBottomY - tip[1] - Number(required(path, 'stroke-width'))).toBeGreaterThanOrEqual(2.5);
   });
 
   it('shares the page frame and fold between the generic file and document glyphs', () => {
@@ -332,24 +369,30 @@ describe('Blok Line media family', () => {
       throw new Error('Missing page frame');
     }
 
-    const corners = commands(frame).filter(({ command }) => command.toUpperCase() === 'A');
+    const corners = segmentsOf(required(frame, 'd')).filter(({ cmd }) => cmd === 'A');
 
     expect(corners).toHaveLength(3);
-    expect(corners.map(({ values }) => values.slice(0, 2))).toEqual([[2, 2], [2, 2], [2, 2]]);
+    expect(corners.map(({ arc }) => [arc?.rx, arc?.ry])).toEqual([[2, 2], [2, 2], [2, 2]]);
   });
 
   it.each([
     ['sheet', Icons.IconFileSheet],
     ['slides', Icons.IconFileSlides],
     ['archive', Icons.IconFileArchive],
-    ['theater', Icons.IconPlayerTheater],
-  ])('%s retains its distinct frame proportions with family corners', (_name, icon) => {
-    const rectangles = Array.from(svgOf(icon).querySelectorAll('rect'));
+  ])('%s keeps the folded file frame and a family-cornered inset mark', (_name, icon) => {
+    const svg = svgOf(icon);
+    const file = Array.from(svgOf(Icons.IconFile).querySelectorAll('path'), (path) => required(path, 'd'));
+    const rectangles = Array.from(svg.querySelectorAll('rect'));
 
-    expect(rectangles[0].getAttribute('rx')).toBe('2');
-    rectangles.slice(1).forEach((rectangle) => {
-      expect(rectangle.getAttribute('rx')).toBe('1');
-    });
+    expect(Array.from(svg.querySelectorAll('path'), (path) => required(path, 'd')).slice(0, 2)).toEqual(file);
+    expect(rectangles).toHaveLength(1);
+    expect(rectangles[0].getAttribute('rx')).toBe('1');
+  });
+
+  it('theater retains its wide screen with the image frame corners', () => {
+    const screen = svgOf(Icons.IconPlayerTheater).querySelector('rect');
+
+    expect(screen?.getAttribute('rx')).toBe(imageFrame().getAttribute('rx'));
   });
 
   it('keeps speaker outlines identical between audible and muted states', () => {
@@ -374,11 +417,11 @@ describe('Blok Line media family', () => {
     };
     /** Where each straight or curved stroke of the rim ends, as distance and angle from the middle. */
     const corners = (): { radius: number; angle: number }[] =>
-      commands(gear().rim)
+      segmentsOf(required(gear().rim, 'd'))
         // The start point is also where the last curve ends, so it is not counted twice.
-        .filter(({ command }) => command !== 'Z' && command !== 'M')
-        .map(({ values }) => {
-          const [x, y] = values.slice(-2);
+        .filter(({ cmd }) => cmd !== 'Z' && cmd !== 'M')
+        .map(({ points }) => {
+          const [x, y] = points[points.length - 1];
 
           return { radius: Math.hypot(x - 10, y - 10), angle: (Math.atan2(y - 10, x - 10) * 180 / Math.PI + 450) % 360 };
         });

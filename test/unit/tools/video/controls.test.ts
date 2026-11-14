@@ -268,8 +268,8 @@ describe('video controls — centre burst', () => {
     h.video.click();
     const burst = q(h.controls, '[data-role="play-burst"]');
     expect(burst.classList.contains('is-active')).toBe(true);
-    // Pause glyph is two vertical <rect> bars.
-    expect(burst.querySelectorAll('rect')).toHaveLength(2);
+    // Pause glyph is two vertical bars.
+    expect(burst.querySelectorAll('path')).toHaveLength(2);
   });
 
   it('clears the burst once its animation ends', () => {

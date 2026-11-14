@@ -48,12 +48,12 @@ describe('convert-menu icon weight', () => {
     expect(filledRects).toHaveLength(0);
   });
 
-  it('numbered-list markers are lighter than their text lines and never filled', () => {
+  it('numbered-list markers match their text lines and are never filled', () => {
     const paths = Array.from(svgOf(IconListNumbered).querySelectorAll('path'));
 
     expect(paths).toHaveLength(2);
     expect(paths[0]?.getAttribute('stroke-width')).toBe('1.25');
-    expect(paths[1]?.getAttribute('stroke-width')).toBe('1.05');
+    expect(paths[1]?.getAttribute('stroke-width')).toBe('1.25');
 
     for (const path of paths) {
       expect(path.getAttribute('fill')).not.toBe('currentColor');

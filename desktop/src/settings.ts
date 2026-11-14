@@ -1,5 +1,7 @@
+import { WORKSPACE_ROLES } from './access-vocabulary';
 import { createChoice, styleTextField, wrapSearchField } from './ui/controls';
 import { openModalDialog, type ModalDialogHandle } from '@blok/modal-dialog';
+import { PopoverDesktop } from '@blok/popover';
 import { CloudClient } from './cloud/client';
 import { nativeSessionAdapter } from './native-session';
 import { mountWorkspaceMembers, openWorkspaceInvitation } from './cloud/workspace-settings';
@@ -11,6 +13,8 @@ import { mountAiSettings } from './ai-settings';
 import { mountCustomEmojiSettings } from './custom-emoji-settings';
 import { mountMcpSettings } from './mcp-settings';
 import {loadReactGrab, reactGrabAvailable} from './react-grab';
+import { mountInstanceSettings, type InstancePanel } from './instance/instance-settings';
+import { welcomePageId, welcomeRightsPageId } from './welcome-seed';
 
 export type Appearance = 'dark' | 'light' | 'auto';
 
@@ -71,7 +75,7 @@ function chevron(): SVGSVGElement {
   return svg;
 }
 
-type MenuIcon = 'profile' | 'settings' | 'ai' | 'storage' | 'connections' | 'emoji';
+type MenuIcon = 'profile' | 'settings' | 'ai' | 'storage' | 'connections' | 'emoji' | 'help';
 
 function menuIcon(kind: MenuIcon): SVGSVGElement {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -87,6 +91,7 @@ function menuIcon(kind: MenuIcon): SVGSVGElement {
     connections: 'M8 12l4-4M7 13l-1 1a3 3 0 0 1-4-4l3-3a3 3 0 0 1 4 0M13 7l1-1a3 3 0 0 1 4 4l-3 3a3 3 0 0 1-4 0',
     emoji: 'M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0ZM7 8h.01M13 8h.01M7 12c1.5 2 4.5 2 6 0',
     storage: 'M3 5.2h5l1.3 1.5H17v8.1H3V5.2Z',
+    help: 'M10 17.5a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15ZM10 14.2h.01M8.4 7.6a1.8 1.8 0 1 1 2.5 1.6c-.5.3-.9.7-.9 1.3v.4',
   };
   path.setAttribute('d', paths[kind]);
   path.setAttribute('fill', 'none');
@@ -111,6 +116,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   const admin = currentWorkspace.kind === 'remote' && currentWorkspace.role === 'admin';
   const client = currentWorkspace.kind === 'remote' ? new CloudClient({origin: currentWorkspace.server, sessionAdapter: native ? nativeSessionAdapter(currentWorkspace.server) : undefined}) : null;
   let members: ReturnType<typeof mountWorkspaceMembers> | null = null;
+  let instancePanel: ReturnType<typeof mountInstanceSettings> | null = null;
   let modal: ModalDialogHandle | null = null;
   let choices: Array<{destroy(): void}> = [];
   let panelGeneration = 0;
@@ -139,6 +145,99 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   account.append(accountText);
   const preferences = actionButton('data-desktop-menu-item', 'Paramètres', 'settings');
   preferences.setAttribute('role', 'menuitem');
+  const help = actionButton('data-desktop-menu-help', 'Aide', 'help');
+  help.setAttribute('data-desktop-menu-item', '');
+  help.setAttribute('role', 'menuitem');
+  help.setAttribute('aria-haspopup', 'menu');
+  let helpPopup: PopoverDesktop | null = null;
+  let supportEmail: string | null = null;
+  if (client) {
+    void client.session().then((session) => {
+      if (session.user.instanceAdmin) supportEmail = session.user.email;
+    }).catch(() => { /* no support address */ });
+  }
+  const openHelp = (): void => {
+    if (helpPopup?.isShown) { helpPopup.hide(); return; }
+    const workspaceId = currentWorkspace.kind === 'remote' ? currentWorkspace.workspaceId : currentWorkspace.id;
+    const items = [
+      {
+        name: 'getting-started',
+        title: 'Premiers pas',
+        closeOnActivate: true,
+        onActivate: () => {
+          footer.dispatchEvent(new CustomEvent('blok:desktop-open-page', {
+            bubbles: true,
+            detail: { pageId: welcomePageId(workspaceId), seedWelcome: true },
+          }));
+        },
+      },
+      {
+        name: 'who-sees',
+        title: 'Qui peut voir quoi',
+        closeOnActivate: true,
+        onActivate: () => {
+          footer.dispatchEvent(new CustomEvent('blok:desktop-open-page', {
+            bubbles: true,
+            detail: { pageId: welcomeRightsPageId(workspaceId), seedWelcome: true },
+          }));
+        },
+      },
+      {
+        name: 'shortcuts',
+        title: 'Raccourcis',
+        closeOnActivate: true,
+        onActivate: () => {
+          window.alert([
+            'Raccourcis Blok',
+            '',
+            '/ — boîte à outils',
+            'Tab / Maj+Tab — imbriquer / désimbriquer',
+            '@ — mentionner une page ou une date',
+            '⌘/Ctrl+K — rechercher une page',
+            '⌘/Ctrl+Z — annuler',
+          ].join('\n'));
+        },
+      },
+      {
+        name: 'report',
+        title: 'Signaler un problème',
+        closeOnActivate: true,
+        isDisabled: !supportEmail,
+        onActivate: () => {
+          if (!supportEmail) return;
+          location.href = `mailto:${encodeURIComponent(supportEmail)}?subject=${encodeURIComponent('Signaler un problème — Blok')}`;
+        },
+      },
+      {
+        name: 'version',
+        title: `Blok ${CORE_VERSION} · App ${APP_VERSION}`,
+        isDisabled: true,
+      },
+    ];
+    const popup = new PopoverDesktop({
+      trigger: help,
+      width: 'auto',
+      minWidth: '220px',
+      items,
+      class: 'desktop-help-popover',
+    });
+    popup.getElement().setAttribute('data-desktop-help-popover', '');
+    const palette = getComputedStyle(help);
+    for (const token of ['--blok-popover-bg', '--blok-popover-border', '--blok-text-primary', '--blok-text-secondary', '--blok-item-hover-bg']) {
+      const value = palette.getPropertyValue(token);
+      if (value) popup.getElement().style.setProperty(token, value);
+    }
+    helpPopup = popup;
+    let settled = false;
+    popup.on('closed', () => {
+      if (settled) return;
+      settled = true;
+      if (helpPopup === popup) helpPopup = null;
+      queueMicrotask(() => popup.destroy());
+    });
+    popup.show();
+  };
+  help.addEventListener('click', () => { openHelp(); });
   const emitCloud = (section: 'settings' | 'invites' | 'account'): void => {
     closeMenu();
     footer.dispatchEvent(new CustomEvent('blok:desktop-connect-cloud', {bubbles: true, detail: {section}}));
@@ -150,7 +249,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
     if (currentWorkspace.kind === 'remote') openSettings('account');
     else emitCloud('account');
   });
-  menu.append(account, preferences);
+  menu.append(account, preferences, help);
   if (admin) {
     const invite = actionButton('data-desktop-menu-invite', 'Inviter des membres', 'profile');
     invite.setAttribute('data-desktop-menu-item', '');
@@ -240,11 +339,18 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   const membersTab = actionButton('data-desktop-settings-nav-item', 'Membres', 'profile');
   navList.append(el('div', 'data-desktop-settings-nav-heading', 'Espace'), generalTab, emojiTab);
   if (admin) navList.append(membersTab);
-  const navEntries = [
+  const navEntries: Array<[HTMLButtonElement, string]> = [
     [accountTab, 'compte profil identité email'], [connectionsTab, 'connexion mcp jeton compte serveur espace'],
     [prefsTab, 'préférences apparence thème clair sombre'], [aiTab, 'assistant ia openai modèle clé api'],
     [generalTab, 'général espace nom stockage'], [emojiTab, 'émoji emoji image icône logo'], [membersTab, 'membres invitations accès rôles'],
-  ] as const;
+  ];
+  type SettingsPanel =
+    | 'account' | 'preferences' | 'ai' | 'general' | 'members' | 'emojis' | 'connections'
+    | 'instance-general' | 'instance-access' | 'instance-accounts' | 'instance-workspaces' | 'instance-health';
+  const panelTabs = new Map<SettingsPanel, HTMLButtonElement>([
+    ['account', accountTab], ['connections', connectionsTab], ['preferences', prefsTab], ['ai', aiTab],
+    ['general', generalTab], ['emojis', emojiTab], ['members', membersTab],
+  ]);
   const normalize = (value: string): string => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase();
   const filterNav = (): void => {
     const query = normalize(search.value.trim());
@@ -260,6 +366,39 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
     }
     noResults.hidden = Boolean(navList.querySelector('[data-desktop-settings-nav-item]:not([hidden])'));
   };
+  if (client) {
+    void client.session().then((session) => {
+      if (!session.user.instanceAdmin) return;
+      const instanceHeading = el('div', 'data-desktop-settings-nav-heading', 'Instance');
+      const instanceGeneralTab = actionButton('data-desktop-settings-nav-item', 'Général', 'storage');
+      const instanceAccessTab = actionButton('data-desktop-settings-nav-item', 'Accès', 'settings');
+      const instanceAccountsTab = actionButton('data-desktop-settings-nav-item', 'Comptes', 'profile');
+      const instanceWorkspacesTab = actionButton('data-desktop-settings-nav-item', 'Espaces', 'storage');
+      const instanceHealthTab = actionButton('data-desktop-settings-nav-item', 'Santé et e-mail', 'connections');
+      for (const tab of [instanceGeneralTab, instanceAccessTab, instanceAccountsTab, instanceWorkspacesTab, instanceHealthTab]) {
+        tab.setAttribute('data-instance-panel', '');
+      }
+      navList.append(instanceHeading, instanceGeneralTab, instanceAccessTab, instanceAccountsTab, instanceWorkspacesTab, instanceHealthTab);
+      panelTabs.set('instance-general', instanceGeneralTab);
+      panelTabs.set('instance-access', instanceAccessTab);
+      panelTabs.set('instance-accounts', instanceAccountsTab);
+      panelTabs.set('instance-workspaces', instanceWorkspacesTab);
+      panelTabs.set('instance-health', instanceHealthTab);
+      navEntries.push(
+        [instanceGeneralTab, 'instance général nom adresse versions'],
+        [instanceAccessTab, 'instance accès inscription signup politique espaces'],
+        [instanceAccountsTab, 'instance comptes utilisateurs administrateurs'],
+        [instanceWorkspacesTab, 'instance espaces workspaces métadonnées'],
+        [instanceHealthTab, 'instance santé email smtp test livraison'],
+      );
+      instanceGeneralTab.addEventListener('click', () => showPanel('instance-general'));
+      instanceAccessTab.addEventListener('click', () => showPanel('instance-access'));
+      instanceAccountsTab.addEventListener('click', () => showPanel('instance-accounts'));
+      instanceWorkspacesTab.addEventListener('click', () => showPanel('instance-workspaces'));
+      instanceHealthTab.addEventListener('click', () => showPanel('instance-health'));
+      filterNav();
+    }).catch(() => { /* Session unavailable: no Instance rubrique. */ });
+  }
   search.addEventListener('input', filterNav);
   search.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') { event.preventDefault(); navList.querySelector<HTMLButtonElement>('button:not([hidden])')?.click(); }
@@ -324,23 +463,37 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   const closeSettings = (): void => { modal?.close(); };
   close.addEventListener('click', closeSettings);
 
-  type SettingsPanel = 'account' | 'preferences' | 'ai' | 'general' | 'members' | 'emojis' | 'connections';
   const showPanel = (panel: SettingsPanel): void => {
-    accountTab.setAttribute('aria-current', panel === 'account' ? 'page' : 'false');
-    connectionsTab.setAttribute('aria-current', panel === 'connections' ? 'page' : 'false');
-    prefsTab.setAttribute('aria-current', panel === 'preferences' ? 'page' : 'false');
-    aiTab.setAttribute('aria-current', panel === 'ai' ? 'page' : 'false');
-    generalTab.setAttribute('aria-current', panel === 'general' ? 'page' : 'false');
-    emojiTab.setAttribute('aria-current', panel === 'emojis' ? 'page' : 'false');
-    membersTab.setAttribute('aria-current', panel === 'members' ? 'page' : 'false');
+    for (const [name, tab] of panelTabs) {
+      tab.setAttribute('aria-current', panel === name ? 'page' : 'false');
+    }
     members?.destroy(); members = null;
+    instancePanel?.destroy(); instancePanel = null;
     choices.splice(0).forEach((choice) => choice.destroy());
     ++panelGeneration;
     main.querySelector('[data-desktop-settings-content]')?.remove();
     const content = el('div', 'data-desktop-settings-content');
-    const panelSource = panel === 'emojis' ? 'custom-emoji-settings.ts' : panel === 'connections' ? 'mcp-settings.ts' : panel === 'ai' ? 'ai-settings.ts' : panel === 'members' ? 'cloud/workspace-settings.ts' : 'settings.ts';
+    const panelSource = panel === 'emojis' ? 'custom-emoji-settings.ts'
+      : panel === 'connections' ? 'mcp-settings.ts'
+      : panel === 'ai' ? 'ai-settings.ts'
+      : panel === 'members' ? 'cloud/workspace-settings.ts'
+      : panel.startsWith('instance-') ? 'instance/instance-settings.ts'
+      : 'settings.ts';
     content.dataset.settingsSource = `desktop/src/${panelSource}`;
     nav.dataset.settingsSource = 'desktop/src/settings.ts';
+    if (panel.startsWith('instance-') && client) {
+      const kind = panel.slice('instance-'.length) as InstancePanel;
+      content.dataset.settingsSource = 'desktop/src/instance/instance-settings.ts';
+      main.append(content);
+      instancePanel = mountInstanceSettings(content, kind, {
+        client,
+        dialog,
+        publicUrl: currentWorkspace.kind === 'remote' ? currentWorkspace.server : '',
+        coreVersion: CORE_VERSION,
+        appVersion: APP_VERSION,
+      });
+      return;
+    }
     if (panel === 'connections') {
       content.append(el('h1', 'data-desktop-settings-title', 'Connexions'), el('p', 'data-desktop-settings-intro', 'Gérez vos comptes et connectez vos outils à Blok.'));
       const accounts = el('section', 'data-desktop-connections-accounts');
@@ -378,7 +531,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
       const workspaceRow = el('div', 'data-desktop-settings-row');
       workspaceRow.append(el('strong', 'data-desktop-settings-row-title', 'Nom'), el('span', 'data-desktop-settings-row-value', currentWorkspace.name));
       const roleRow = el('div', 'data-desktop-settings-row');
-      roleRow.append(el('strong', 'data-desktop-settings-row-title', 'Rôle'), el('span', 'data-desktop-settings-row-value', currentWorkspace.role === 'admin' ? 'Administrateur' : currentWorkspace.role === 'viewer' ? 'Lecture seule' : 'Membre'));
+      roleRow.append(el('strong', 'data-desktop-settings-row-title', 'Rôle'), el('span', 'data-desktop-settings-row-value', WORKSPACE_ROLES[currentWorkspace.role ?? 'member']));
       workspace.append(workspaceRow, roleRow);
       const accounts = actionButton('data-desktop-settings-copy', 'Comptes et espaces', 'profile');
       accounts.addEventListener('click', () => { closeSettings(); emitCloud('account'); });
@@ -474,7 +627,13 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
         if (reason === 'escape' && document.activeElement === search && search.value) { search.value = ''; filterNav(); return; }
         closeSettings();
       },
-      onClose: () => { overlay.hidden = true; ++panelGeneration; choices.splice(0).forEach((choice) => choice.destroy()); members?.destroy(); members = null; modal = null; },
+      onClose: () => {
+        overlay.hidden = true; ++panelGeneration;
+        choices.splice(0).forEach((choice) => choice.destroy());
+        members?.destroy(); members = null;
+        instancePanel?.destroy(); instancePanel = null;
+        modal = null;
+      },
     });
   };
   footer.addEventListener('blok:desktop-open-ai-settings', () => openSettings('ai'));
@@ -494,6 +653,13 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   if (currentWorkspace.kind === 'remote') {
     account.querySelector('[data-desktop-menu-subtitle]')!.textContent = currentWorkspace.userName ?? 'Compte en ligne';
     switcher.setAttribute('aria-label', 'Espaces et réglages');
+  }
+  const pendingSettings = sessionStorage.getItem('blok:desktop:pending-settings');
+  if (pendingSettings) {
+    sessionStorage.removeItem('blok:desktop:pending-settings');
+    queueMicrotask(() => {
+      footer.dispatchEvent(new CustomEvent('blok:desktop-open-settings', {detail: pendingSettings}));
+    });
   }
   return footer;
 }

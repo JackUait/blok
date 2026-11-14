@@ -1,4 +1,5 @@
 import type { CloudClient } from './client';
+import { PAGE_LEVELS, PAGE_RIGHTS_CUMULATIVE, pageLevelOptions } from '../access-vocabulary';
 import { createChoice, type ChoiceControl } from '../ui/controls';
 import type { PageLevel } from '../page-access';
 
@@ -13,7 +14,7 @@ export interface PageAccessSheet {
 export interface ShareSheetOptions { client: CloudClient; slug: string; pageId: string; pageTitle: string; onChanged?: () => Promise<void> | void }
 export interface ShareSheetHandle { destroy(): void; refresh(): Promise<void> }
 
-const levelNames: Record<PageLevel, string> = { view: 'Peut voir', edit: 'Peut modifier', full: 'Accès complet' };
+const levelNames = PAGE_LEVELS;
 const visibilityNames: Record<PageAccessSheet['visibility'], string> = {
   private: 'Personnes invitées uniquement',
   workspace: 'Ouverte à l’espace — tous les membres y accèdent',
@@ -43,7 +44,8 @@ export function mountShareSheet(container: HTMLElement, options: ShareSheetOptio
   error.hidden = true;
   panel.setAttribute('aria-busy', 'true');
   visibility.textContent = 'Chargement des accès…';
-  panel.append(invitation, list, el('h3', 'Accès général', 'data-cloud-share-heading'), visibility, error);
+  const cumulative = el('p', PAGE_RIGHTS_CUMULATIVE, 'data-cloud-share-cumulative');
+  panel.append(invitation, list, el('h3', 'Accès général', 'data-cloud-share-heading'), visibility, cumulative, error);
   container.append(panel);
 
   const state: { alive: boolean; sheet: PageAccessSheet | null } = { alive: true, sheet: null };
@@ -107,7 +109,7 @@ export function mountShareSheet(container: HTMLElement, options: ShareSheetOptio
     const control = createChoice<PageLevel>({
       label: `Niveau d’accès de ${entry.email}`,
       value: entry.level,
-      options: (['view', 'edit', 'full'] as PageLevel[]).map((value) => ({ value, label: levelNames[value] })),
+      options: pageLevelOptions(),
       onChange: (value) => { void change(entry.userId, value); },
     });
     control.element.disabled = !governs;
@@ -151,7 +153,7 @@ export function mountShareSheet(container: HTMLElement, options: ShareSheetOptio
     const personRow = el('div', undefined, 'data-cloud-share-person-picker');
     personRow.append(people.element, add);
     const level = createChoice<PageLevel>({ label: 'Accès à accorder', value: 'view',
-      options: (['view', 'edit', 'full'] as PageLevel[]).map((value) => ({ value, label: levelNames[value] })), onChange() {},
+      options: pageLevelOptions(), onChange() {},
     });
     level.disabled = adding;
     controls.push(level);

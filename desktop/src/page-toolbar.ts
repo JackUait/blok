@@ -1,5 +1,6 @@
 import { promoteToTopLayer, removeFromTopLayer } from '../../src/components/utils/top-layer';
 import { renderPageIcon } from '../../src/shell/page-icon';
+import { WORKSPACE_ROLES } from './access-vocabulary';
 export interface PageToolbar {
   element: HTMLElement;
   setBreadcrumbs(items: PageBreadcrumbItem[]): void;
@@ -112,7 +113,7 @@ export function createPageToolbar(
   if (options.readOnly) {
     const badge = document.createElement('span');
     badge.setAttribute('data-desktop-page-readonly', '');
-    badge.textContent = 'Lecture seule';
+    badge.textContent = WORKSPACE_ROLES.viewer;
     identity.append(badge);
   }
 

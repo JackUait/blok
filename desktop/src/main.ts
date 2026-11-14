@@ -18,20 +18,24 @@ async function boot(root: HTMLElement): Promise<void> {
   const params = new URLSearchParams(location.search);
   const selected = activeWorkspace();
   const explicitGateway = params.get('cloud') === '1';
-  const origin = serverOrigin(native ? params.get('server') ?? (selected.kind === 'remote' ? selected.server : 'https://blok.tousamba.cloud') : location.origin);
-  const adapter = native ? nativeSessionAdapter(origin) : undefined;
+  const configured = native
+    ? params.get('server') ?? (selected.kind === 'remote' ? selected.server : '')
+    : location.origin;
+  const origin = configured ? serverOrigin(configured) : '';
+  const adapter = native && origin ? nativeSessionAdapter(origin) : undefined;
   const client = new CloudClient({origin, sessionAdapter: adapter});
+  const manageSlug = params.get('manage');
+  const manageSection = manageSlug
+    ? (params.get('section') === 'invites' ? 'invites' as const : 'members' as const)
+    : undefined;
 
   const showGateway = async (): Promise<void> => {
-    document.title = 'Tousambassadeurs — Connexion';
+    document.title = 'Connexion';
     await mountCloudGateway(root, {
-      apiOrigin: origin,
+      apiOrigin: origin || undefined,
       sessionAdapter: adapter,
       allowLocal: native,
-      initialManage: params.has('manage') ? {
-        slug: params.get('manage')!,
-        section: params.get('section') === 'invites' ? 'invites' : 'members',
-      } : undefined,
+      initialManage: manageSlug && manageSection ? {slug: manageSlug, section: manageSection} : undefined,
       onOpenWorkspace: async (workspace, source) => {
         const session = source.currentSession ?? await source.session();
         const ref: RemoteWorkspace = {
@@ -39,6 +43,10 @@ async function boot(root: HTMLElement): Promise<void> {
           server: serverOrigin(source.origin || location.origin), accountId: session.user.id,
           workspaceId: workspace.slug, userName: session.user.email, role: workspace.role,
         };
+        // ?manage= opens the workspace then the settings modal (admin screen removed).
+        if (manageSlug && manageSection && workspace.slug === manageSlug) {
+          sessionStorage.setItem('blok:desktop:pending-settings', manageSection);
+        }
         selectWorkspace(ref);
       },
       onOpenLocal: () => selectWorkspace(selected.kind === 'local' ? selected : initialWorkspace),
@@ -76,17 +84,21 @@ async function boot(root: HTMLElement): Promise<void> {
   }
   const {mountDesktop, flushDesktop} = await import('./shell');
   root.addEventListener('blok:desktop-connect-cloud', (event) => {
+    const section = (event as CustomEvent<{section?: string}>).detail?.section;
+    // Already inside a remote workspace: open settings in place instead of the old gateway admin screen.
+    if (selected.kind === 'remote' && (section === 'settings' || section === 'invites' || section === 'members')) {
+      const footer = root.querySelector('[data-desktop-footer]');
+      footer?.dispatchEvent(new CustomEvent('blok:desktop-open-settings', {
+        detail: section === 'invites' ? 'invites' : section === 'members' ? 'members' : 'general',
+      }));
+      return;
+    }
     void flushDesktop().then(() => {
       const url = new URL(location.href);
       url.searchParams.set('cloud', '1');
       url.searchParams.delete('page');
       url.searchParams.delete('manage');
       url.searchParams.delete('section');
-      const section = (event as CustomEvent<{section?: string}>).detail?.section;
-      if (selected.kind === 'remote' && (section === 'settings' || section === 'invites' || section === 'members')) {
-        url.searchParams.set('manage', selected.workspaceId);
-        url.searchParams.set('section', section === 'invites' ? 'invites' : 'members');
-      }
       location.assign(url.href);
     }).catch(showError);
   });

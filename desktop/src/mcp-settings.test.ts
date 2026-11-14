@@ -14,7 +14,7 @@ it('creates, rotates and revokes a personal MCP token without listing its secret
     throw new Error(`unexpected request ${path}`);
   });
   const content = document.createElement('div'); document.body.append(content);
-  mountMcpSettings(content, {origin:'https://blok.tousamba.cloud',request} as unknown as CloudClient);
+  mountMcpSettings(content, {origin:'https://cloud.example.test',request} as unknown as CloudClient);
   await vi.waitFor(() => expect(content.querySelector('[data-desktop-mcp-list]')?.textContent).toContain('Aucun jeton'));
   content.querySelector<HTMLInputElement>('[data-desktop-mcp-name]')!.value = 'Codex';
   [...content.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent === 'Créer un jeton')!.click();

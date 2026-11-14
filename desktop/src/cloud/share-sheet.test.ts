@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { PAGE_LEVELS, PAGE_RIGHTS_CUMULATIVE } from '../access-vocabulary';
 import { mountShareSheet, type PageAccessSheet } from './share-sheet';
 import { CloudClient } from './client';
 
@@ -82,14 +83,20 @@ describe('share sheet', () => {
     const { host } = await mount(instance);
     const row = host.querySelector('[data-cloud-share-row]:not([data-cloud-share-inherited])');
     const control = row?.querySelector<HTMLButtonElement>('[data-desktop-choice]');
-    expect(control?.textContent).toContain('Peut modifier');
+    expect(control?.textContent).toContain(PAGE_LEVELS.edit);
     await (host.querySelector('[data-cloud-share-sheet]') as HTMLElement & { testChange?: (u: string, l: string) => Promise<void> }).testChange?.('alice', 'view');
     await vi.waitFor(() => expect(host.querySelector('[data-cloud-share-error]')?.textContent).toBeTruthy());
-    expect(control?.textContent).toContain('Peut modifier');
+    expect(control?.textContent).toContain(PAGE_LEVELS.edit);
   });
 
   it('says who the page is open to, in plain words', async () => {
     const { host } = await mount(client({ get: sheet({ visibility: 'workspace', effectiveVisibility: 'workspace' }) }));
     expect(host.querySelector('[data-cloud-share-visibility]')?.textContent).toContain('espace');
+  });
+
+  it('names the cumulative ceiling so a workspace viewer is not promised edit', async () => {
+    const { host } = await mount(client());
+    const line = host.querySelector('[data-cloud-share-cumulative]');
+    expect(line?.textContent).toBe(PAGE_RIGHTS_CUMULATIVE);
   });
 });

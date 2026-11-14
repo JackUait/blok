@@ -173,6 +173,40 @@ func TestSetupClaimTwiceConflicts(t *testing.T) {
 	}
 }
 
+// L'assistant envoie les politiques choisies à l'étape 4 ; le claim doit les
+// persister, sinon l'instance reste sur invite/admins_only quoi qu'on ait dit.
+func TestSetupClaimPersistsPolicies(t *testing.T) {
+	_, _, open := setupFixture(t)
+	dataDir := t.TempDir()
+	s := open(dataDir)
+	token := readSetupToken(t, dataDir)
+
+	server := httptest.NewServer(s.Handler())
+	t.Cleanup(server.Close)
+	status, out := setupRequest(t, server, s.Config.PublicURL, "POST", "/api/setup/claim", map[string]any{
+		"token":              token,
+		"email":              "owner@example.test",
+		"name":               "Owner",
+		"instanceName":       "Acme",
+		"signupPolicy":       "open",
+		"workspaceCreation":  "disabled",
+		"workspace":          map[string]string{"slug": "equipe", "name": "Équipe"},
+	})
+	if status != 200 {
+		t.Fatalf("claim status %d body %#v, want 200", status, out)
+	}
+	got := s.settings()
+	if got.SignupPolicy != "open" {
+		t.Fatalf("signupPolicy = %q, want open", got.SignupPolicy)
+	}
+	if got.WorkspaceCreation != "disabled" {
+		t.Fatalf("workspaceCreation = %q, want disabled", got.WorkspaceCreation)
+	}
+	if got.Name != "Acme" {
+		t.Fatalf("name = %q, want Acme", got.Name)
+	}
+}
+
 // Instance héritée (membres avant redémarrage) ⇒ setupRequired:false et
 // promotion des admins de l'espace par défaut.
 func TestSetupInheritedInstanceSkipsAssistant(t *testing.T) {

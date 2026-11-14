@@ -216,11 +216,13 @@ func (s *Service) setupTokenValid(ctx context.Context, tx pgx.Tx, token string) 
 
 func (s *Service) claimSetup(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		Token        string `json:"token"`
-		Email        string `json:"email"`
-		Name         string `json:"name"`
-		InstanceName string `json:"instanceName"`
-		Workspace    *struct {
+		Token             string `json:"token"`
+		Email             string `json:"email"`
+		Name              string `json:"name"`
+		InstanceName      string `json:"instanceName"`
+		SignupPolicy      string `json:"signupPolicy"`
+		WorkspaceCreation string `json:"workspaceCreation"`
+		Workspace         *struct {
 			Slug string `json:"slug"`
 			Name string `json:"name"`
 		} `json:"workspace"`
@@ -241,6 +243,30 @@ func (s *Service) claimSetup(w http.ResponseWriter, r *http.Request) {
 	instanceName := strings.TrimSpace(in.InstanceName)
 	if instanceName != "" && (utf8.RuneCountInString(instanceName) < 1 || utf8.RuneCountInString(instanceName) > 120) {
 		problem(w, 400, "Invalid instanceName")
+		return
+	}
+	signupPolicy := in.SignupPolicy
+	if signupPolicy == "" {
+		signupPolicy = "invite"
+	}
+	switch signupPolicy {
+	case "invite", "domain", "open":
+	default:
+		problem(w, 400, "Invalid signupPolicy")
+		return
+	}
+	workspaceCreation := in.WorkspaceCreation
+	if workspaceCreation == "" {
+		workspaceCreation = "admins_only"
+	}
+	switch workspaceCreation {
+	case "anyone", "admins_only", "disabled":
+	default:
+		problem(w, 400, "Invalid workspaceCreation")
+		return
+	}
+	if workspaceCreation == "disabled" && in.Workspace == nil {
+		problem(w, 400, "First workspace required when creation is disabled")
 		return
 	}
 	if in.Workspace != nil {
@@ -320,11 +346,13 @@ func (s *Service) claimSetup(w http.ResponseWriter, r *http.Request) {
 	if _, e = tx.Exec(r.Context(), `
 		UPDATE instance_settings SET
 		  name=$1,
-		  default_workspace_id=coalesce($2, default_workspace_id),
+		  signup_policy=$2,
+		  workspace_creation=$3,
+		  default_workspace_id=coalesce($4, default_workspace_id),
 		  setup_completed_at=now(),
 		  updated_at=now(),
-		  updated_by=$3
-		WHERE id`, instanceName, workspaceID, userID); e != nil {
+		  updated_by=$5
+		WHERE id`, instanceName, signupPolicy, workspaceCreation, workspaceID, userID); e != nil {
 		problem(w, 500, "Could not complete setup")
 		return
 	}

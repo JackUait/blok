@@ -15,6 +15,7 @@
 [data-cloud-share-title] { margin: 12px 16px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
 [data-cloud-share-sheet] { display: flex; flex-direction: column; gap: 12px; padding: 0 16px 16px; }
 [data-cloud-share-visibility] { margin: 0; color: var(--desktop-muted); font-size: 12px; }
+[data-cloud-share-cumulative] { margin: 0; color: var(--desktop-muted); font-size: 11px; line-height: 1.4; }
 [data-cloud-share-list] { display: flex; flex-direction: column; }
 [data-cloud-share-row] { display: flex; align-items: center; gap: 8px; padding: 8px 0; }
 [data-cloud-share-avatar] { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border: 1px solid var(--desktop-border); border-radius: 50%; color: var(--desktop-muted); background: var(--desktop-hover); }

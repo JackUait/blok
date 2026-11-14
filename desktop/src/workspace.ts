@@ -15,6 +15,13 @@ import { groupPagesBySection, sectionNames } from './page-section';
 import { describeAccessLoss } from './access-friction';
 import { activeWorkspace, workspaceKey, type WorkspaceRef } from './workspace-registry';
 import { createDesktopFooter, readAppearance } from './settings';
+import {
+  buildWelcomeDocuments,
+  hasWelcomeSeeded,
+  markWelcomeSeeded,
+  shouldSeedWelcome,
+  welcomePageId,
+} from './welcome-seed';
 import { COVER_GALLERY, readCoverFile, createAddCoverButton, createPageCover, isPageCover, trackPageHeaderHover, type PageCover } from './cover';
 import { mountAgentAssistant, type AgentAssistantHandle } from '@blok/agent-assistant';
 import { bindAssistantButton, createAssistantButton, createWorkspaceAssistant } from './assistant';
@@ -675,11 +682,63 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   frame.canvas.append(assistantButton);
   bindAssistantButton(assistantButton, panel);
   footer = createDesktopFooter((mode) => editor?.theme.set(mode));
+  footer.addEventListener('blok:desktop-open-page', (event) => {
+    const detail = (event as CustomEvent<{ pageId: string; seedWelcome?: boolean }>).detail;
+    if (!detail?.pageId) return;
+    const open = async (): Promise<void> => {
+      if (index?.pages.some((page) => page.id === detail.pageId)) {
+        navigate(detail.pageId);
+        return;
+      }
+      if (detail.seedWelcome) {
+        const id = await seedWelcomeWorkspace();
+        if (!id) return;
+        const target = index?.pages.some((page) => page.id === detail.pageId) ? detail.pageId : id;
+        navigate(target);
+      }
+    };
+    void open().catch(() => undefined);
+  });
   sidebar.insertBefore(footer, sidebar.querySelector('[data-blok-sidebar-edge]'));
   const observer = new ResizeObserver(() => onLayout(sidebar.getBoundingClientRect().width));
   observer.observe(sidebar);
   frame.element.setAttribute('data-desktop-workspace', '');
   frame.element.toggleAttribute('data-desktop-read-only', access.readOnlyWorkspace);
+
+  async function seedWelcomeWorkspace(): Promise<string | null> {
+    if (!index || access.readOnlyWorkspace) return null;
+    const workspaceId = ref.kind === 'remote' ? ref.workspaceId : ref.id;
+    const key = workspaceKey(ref);
+    const existing = index.pages.find((page) => page.id === welcomePageId(workspaceId));
+    if (existing) {
+      markWelcomeSeeded(key);
+      return existing.id;
+    }
+    const docs = buildWelcomeDocuments(workspaceId);
+    for (const page of docs.pages) {
+      if (!index.pages.some((item) => item.id === page.id)) index.pages.push(page);
+    }
+    frame.setPages(withSections(index.pages), docs.pages[0]!.id);
+    saveManifest();
+    try {
+      await saveOrder;
+      if (ref.kind === 'remote') {
+        await repository.seedPage(docs.pages[0]!.id, docs.welcome);
+        await repository.seedPage(docs.pages[1]!.id, docs.rights);
+      } else {
+        await repository.writePage(docs.pages[0]!.id, JSON.stringify(docs.welcome));
+        await repository.writePage(docs.pages[1]!.id, JSON.stringify(docs.rights));
+      }
+      markWelcomeSeeded(key);
+      return docs.pages[0]!.id;
+    } catch {
+      index.pages = index.pages.filter((page) => !docs.pages.some((seeded) => seeded.id === page.id));
+      frame.setPages(withSections(index.pages), index.activeId);
+      saveManifest();
+      try { await saveOrder; } catch { /* keep empty */ }
+      return null;
+    }
+  }
 
   async function showEmptyWorkspace(): Promise<void> {
     if (editor) {
@@ -687,6 +746,19 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       if (ref.kind === 'remote') await editor.saver.flush();
     }
     if (index?.pages.length) { onRoute(); return; }
+    const key = workspaceKey(ref);
+    if (shouldSeedWelcome({
+      empty: true,
+      seeded: hasWelcomeSeeded(key),
+      viewer: access.readOnlyWorkspace,
+      remote: ref.kind === 'remote',
+    })) {
+      const seededId = await seedWelcomeWorkspace();
+      if (seededId) {
+        navigate(seededId);
+        return;
+      }
+    }
     generation++;
     selection++;
     coverRowObserver?.disconnect(); coverRowObserver = null;
@@ -698,7 +770,19 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     currentId = '';
     status.textContent = '';
     status.removeAttribute('data-error');
-    pageCanvas.replaceChildren(createEmptyWorkspaceState(access.readOnlyWorkspace, () => createPage()));
+    pageCanvas.replaceChildren(createEmptyWorkspaceState(access.readOnlyWorkspace, () => createPage(), {
+      onTemplate: () => chooseNewPage(),
+      onInvite: () => {
+        footer.dispatchEvent(new CustomEvent('blok:desktop-open-settings', { detail: 'invites' }));
+      },
+      onImport: () => chooseNewPage(),
+      onGettingStarted: () => {
+        void (async () => {
+          const id = await seedWelcomeWorkspace();
+          if (id) navigate(id);
+        })().catch(() => undefined);
+      },
+    }));
     const url = new URL(location.href);
     if (url.searchParams.has('page')) { url.searchParams.delete('page'); history.replaceState(null, '', url); }
     document.title = ref.name;

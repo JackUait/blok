@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { WORKSPACE_ROLES } from './access-vocabulary';
 import { rememberWorkspace, workspaceKey, type RemoteWorkspace } from './workspace-registry';
 import { applyAppearance, createDesktopFooter, readAppearance } from './settings';
 
@@ -76,7 +77,7 @@ describe('desktop sidebar footer', () => {
   });
 });
 
-const remoteRef: RemoteWorkspace = {kind:'remote',id:'team',name:'Tousambassadeurs',server:'http://localhost:1420',accountId:'user',userName:'member@example.org',workspaceId:'tousambassadeurs',role:'admin'};
+const remoteRef: RemoteWorkspace = {kind:'remote',id:'team',name:'Acme',server:'http://localhost:1420',accountId:'user',userName:'member@example.org',workspaceId:'acme',role:'admin'};
 function remoteFooter(role: 'admin'|'member'|'viewer' = 'admin'): HTMLElement {
   const ref = {...remoteRef,role}; rememberWorkspace(ref);
   localStorage.setItem('blok:desktop:active-workspace:v1',workspaceKey(ref));
@@ -88,13 +89,13 @@ describe('workspace menu hierarchy',()=>{
   it('shows three primary admin actions and account-grouped workspaces without browser local data controls',()=>{
     const footer=remoteFooter();const menu=footer.querySelector('[data-desktop-footer-menu]')!;
     const primary=[...menu.children].filter((node)=>node.getAttribute('role')==='menuitem');
-    // The identity header is separately styled; only three command rows follow it.
-    expect(primary.map(node=>node.textContent)).toEqual(['Paramètres','Inviter des membres','Gérer mon compte']);
+    // The identity header is separately styled; command rows follow it.
+    expect(primary.map(node=>node.textContent)).toEqual(['Paramètres','Aide','Inviter des membres','Gérer mon compte']);
     expect(menu.textContent).not.toContain('localhost');
     expect(menu.textContent).not.toContain('Créer un espace local');
     expect(menu.textContent).not.toContain('Copier le chemin');
     expect(menu.querySelector('[aria-label="Sur cet appareil"]')).toBeNull();
-    expect(menu.querySelector('[role="menuitemradio"][aria-current="true"]')?.textContent).toContain('Tousambassadeurs');
+    expect(menu.querySelector('[role="menuitemradio"][aria-current="true"]')?.textContent).toContain('Acme');
   });
   it('opens settings, invitations and account management in place; only the explicit account chooser navigates',()=>{
     const footer=remoteFooter();const events: unknown[]=[];const href=location.href;
@@ -105,7 +106,7 @@ describe('workspace menu hierarchy',()=>{
     expect(location.href).toBe(href); expect(events).toEqual([]);
     document.querySelector<HTMLButtonElement>('[data-desktop-settings-close]')!.click();
     footer.querySelector<HTMLButtonElement>('[data-desktop-menu-invite]')!.click();
-    expect(childUi.invite).toHaveBeenCalledWith(expect.objectContaining({slug:'tousambassadeurs',workspaceName:'Tousambassadeurs'}));
+    expect(childUi.invite).toHaveBeenCalledWith(expect.objectContaining({slug:'acme',workspaceName:'Acme'}));
     footer.querySelector<HTMLButtonElement>('[data-desktop-menu-connect]')!.click();
     const dialog=document.querySelector<HTMLElement>('[data-desktop-settings-dialog]')!;
     expect(dialog.querySelector('[data-desktop-settings-title]')?.textContent).toBe('Mon compte');
@@ -120,7 +121,7 @@ describe('workspace menu hierarchy',()=>{
     [...footer.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find(node=>node.textContent==='Paramètres')!.click();
     const dialog=document.querySelector<HTMLElement>('[data-desktop-settings-dialog]')!;
     [...dialog.querySelectorAll<HTMLButtonElement>('[data-desktop-settings-nav-item]')].find(node=>node.textContent==='Membres')!.click();
-    expect(childUi.mount).toHaveBeenCalledWith(expect.any(HTMLElement),expect.objectContaining({slug:'tousambassadeurs'}));
+    expect(childUi.mount).toHaveBeenCalledWith(expect.any(HTMLElement),expect.objectContaining({slug:'acme'}));
     childUi.mount.mock.calls[0]![1].onInvite();
     expect(childUi.invite).toHaveBeenLastCalledWith(expect.objectContaining({container:dialog}));
     dialog.querySelector<HTMLButtonElement>('[data-desktop-settings-close]')!.click();
@@ -133,7 +134,7 @@ describe('workspace menu hierarchy',()=>{
     const dialog=document.querySelector<HTMLElement>('[data-desktop-settings-dialog]')!;
     [...dialog.querySelectorAll<HTMLButtonElement>('[data-desktop-settings-nav-item]')].find(node=>node.textContent==='member@example.org')!.click();
     expect(dialog.querySelector('[data-desktop-settings-content]')?.textContent).toContain('member@example.org');
-    expect(dialog.querySelector('[data-desktop-settings-content]')?.textContent).toContain('Administrateur');
+    expect(dialog.querySelector('[data-desktop-settings-content]')?.textContent).toContain(WORKSPACE_ROLES.admin);
     expect(dialog.querySelector('[data-desktop-settings-name]')).toBeNull();
   });
   it.each(['member','viewer'] as const)('keeps invitations out of the %s menu and opens appearance preferences',role=>{
@@ -151,6 +152,23 @@ describe('workspace menu hierarchy',()=>{
     expect(footer.querySelector('[data-desktop-footer-menu]')?.textContent).not.toContain('Copier le chemin');
     [...footer.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find(node=>node.textContent==='Paramètres')!.click();
     expect(document.querySelector('details [data-desktop-settings-path]')).not.toBeNull();
+  });
+});
+
+describe('help menu', () => {
+  it('offers an Aide entry next to Paramètres that opens the help popover', () => {
+    const footer = remoteFooter('member');
+    const help = [...footer.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
+      .find((node) => node.textContent === 'Aide');
+    expect(help).toBeTruthy();
+    expect(help?.previousElementSibling?.textContent).toContain('Paramètres');
+    help!.click();
+    const popover = document.querySelector('[data-desktop-help-popover], [data-blok-popover]');
+    expect(popover?.textContent).toMatch(/Premiers pas/);
+    expect(popover?.textContent).toMatch(/Qui peut voir quoi/);
+    expect(popover?.textContent).toMatch(/Raccourcis/);
+    expect(popover?.textContent).toMatch(/Signaler un problème/);
+    expect(popover?.textContent).toMatch(/Blok /);
   });
 });
 

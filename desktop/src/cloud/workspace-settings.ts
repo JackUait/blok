@@ -1,6 +1,7 @@
 import {openModalDialog, type ModalDialogHandle} from '@blok/modal-dialog';
 import {PopoverDesktop} from '@blok/popover';
 import {IconPeople, IconDotsHorizontal, IconTrash} from '../../../src/components/icons';
+import {MEMBERS_ROLES_INTRO, roleOptions, WORKSPACE_ROLES} from '../access-vocabulary';
 import {CloudClient, type CloudRole} from './client';
 import './workspace-settings.css';
 import {createChoice, styleTextField, wrapSearchField, type ChoiceControl} from '../ui/controls';
@@ -19,7 +20,7 @@ interface Member {id: string; email: string; role: CloudRole}
 interface JoinRequest {id: string; email: string; message?: string; status: string}
 interface Invite {id: string; email: string; role: CloudRole; status: string}
 type Tab = 'members' | 'requests' | 'invites';
-const roleNames: Record<CloudRole,string> = {admin:'Administrateur',member:'Membre',viewer:'Lecture seule'};
+const roleNames = WORKSPACE_ROLES;
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, attribute?: string): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (attribute) node.setAttribute(attribute,''); return node;
 }
@@ -27,7 +28,7 @@ function action(label: string, callback: () => void, primary = false): HTMLButto
   const node = el('button',label,'data-cloud-settings-button'); node.type = 'button'; node.classList.add('blok-button'); if (primary) node.setAttribute('data-cloud-settings-primary',''); node.addEventListener('click',callback); return node;
 }
 function rolePicker(role: CloudRole, label: string, admin = false, onChange: (value: CloudRole) => void = () => {}): ChoiceControl<CloudRole> {
-  return createChoice({label,value:role,options: (admin ? ['member','viewer','admin'] : ['member','viewer']).map(value => ({value:value as CloudRole,label:roleNames[value as CloudRole]})),onChange});
+  return createChoice({label,value:role,options: roleOptions(admin),onChange});
 }
 function message(error: unknown): string {return error instanceof Error ? error.message : 'La demande n’a pas pu aboutir. Réessayez.';}
 
@@ -36,7 +37,7 @@ export function mountWorkspaceMembers(container: HTMLElement, options: Workspace
   const base = `/api/workspaces/${encodeURIComponent(options.slug)}`;
   const panel = el('div',undefined,'data-cloud-members-panel'); container.append(panel);
   const toolbar = el('div',undefined,'data-cloud-members-toolbar');
-  toolbar.append(el('p','Gérez les personnes qui ont accès à cet espace de travail.','data-cloud-settings-muted'));
+  toolbar.append(el('p', MEMBERS_ROLES_INTRO, 'data-cloud-settings-muted'));
   let alive = true; let busy = false; let generation = 0; let read: AbortController | undefined;
   const choices: ChoiceControl<CloudRole>[] = [];
   const rowMenus: {destroy():void}[] = [];

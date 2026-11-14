@@ -2,7 +2,7 @@ import {PopoverDesktop} from '@blok/popover';
 import {IconCheck, IconChevronDown} from '../../../src/components/icons';
 import './controls.css';
 
-export interface ChoiceOption<T extends string> {value: T; label: string; disabled?: boolean}
+export interface ChoiceOption<T extends string> {value: T; label: string; description?: string; disabled?: boolean}
 export interface ChoiceControl<T extends string> {
   element: HTMLButtonElement;
   readonly value: T;
@@ -45,7 +45,7 @@ export function createChoice<T extends string>(options: ChoiceOptions<T>): Choic
       trigger: element, class: 'desktop-choice-popover', width:'auto', minWidth:`${Math.max(180,element.getBoundingClientRect().width)}px`,
       autoFocusFirstItem:searchable, searchable, messages:{search:"Rechercher…"}, flippable:true,
       items:options.options.map((option)=>({
-        name:option.value, title:option.label, toggle:id, isActive:()=>option.value === value,
+        name:option.value, title:option.label, description:option.description, toggle:id, isActive:()=>option.value === value,
         isDisabled:option.disabled, trailingIcon:option.value === value ? IconCheck : undefined, closeOnActivate:true,
         onActivate:()=>{ if(option.disabled) return; value=option.value;render();options.onChange(value); },
       })),

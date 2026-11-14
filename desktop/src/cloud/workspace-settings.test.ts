@@ -1,4 +1,5 @@
 import {afterEach,describe,expect,it,vi} from 'vitest';
+import {WORKSPACE_ROLES} from '../access-vocabulary';
 import {CloudClient} from './client';
 import {mountWorkspaceMembers,openWorkspaceInvitation} from './workspace-settings';
 import {openModalDialog} from '@blok/modal-dialog';
@@ -10,7 +11,10 @@ function submit():void{document.querySelector('form')!.dispatchEvent(new Event('
 async function choose(label:string,value:string):Promise<void>{
  const trigger=[...document.querySelectorAll<HTMLButtonElement>('[data-desktop-choice]')].find(item=>item.getAttribute('aria-label')===label);expect(trigger).toBeTruthy();trigger!.click();
  await vi.waitFor(()=>expect(document.querySelector('[data-desktop-choice-popover]')).toBeTruthy());
- const option=[...document.querySelectorAll<HTMLElement>('[data-desktop-choice-popover] [role=menuitemradio]')].find(item=>item.textContent?.trim()===value);expect(option).toBeTruthy();option!.click();
+ const option=[...document.querySelectorAll<HTMLElement>('[data-desktop-choice-popover] [role=menuitemradio]')].find(item=>{
+  const title=item.querySelector('[data-blok-popover-item-title]')?.textContent?.trim();
+  return title===value || item.textContent?.trim()===value || item.textContent?.trim().startsWith(value);
+ });expect(option).toBeTruthy();option!.click();
 }
 function mockAccess(){
  let approved=false;let revoked=false;let role='member';
@@ -26,8 +30,8 @@ function mockAccess(){
 describe('embedded workspace access panel',()=>{
  it('loads actual API data, changes member roles, approves requests and revokes invitations',async()=>{
   const fetch=mockAccess();const handle=mountWorkspaceMembers(document.body,{client:new CloudClient(),slug:'team'});await loaded('member@example.test');expect(document.querySelector('table th')?.textContent).toBe('Utilisateur');expect(document.querySelectorAll('table tbody tr')).toHaveLength(1);expect(document.querySelector('[role=tab]:nth-child(3)')?.textContent).toContain('Invitations 1');
-  await choose('Rôle de member@example.test','Lecture seule');await vi.waitFor(()=>expect(fetch.mock.calls.some(([,init])=>init?.method==='PATCH')).toBe(true));await vi.waitFor(()=>expect(document.querySelector('button:disabled')).toBeNull());
-  document.querySelector<HTMLButtonElement>('[role=tab]:nth-child(2)')!.click();await loaded('applicant@example.test');await choose('Accès pour applicant@example.test','Lecture seule');click('Accepter');await loaded('Aucune demande en attente.');
+  await choose('Rôle de member@example.test',WORKSPACE_ROLES.viewer);await vi.waitFor(()=>expect(fetch.mock.calls.some(([,init])=>init?.method==='PATCH')).toBe(true));await vi.waitFor(()=>expect(document.querySelector('button:disabled')).toBeNull());
+  document.querySelector<HTMLButtonElement>('[role=tab]:nth-child(2)')!.click();await loaded('applicant@example.test');await choose('Accès pour applicant@example.test',WORKSPACE_ROLES.viewer);click('Accepter');await loaded('Aucune demande en attente.');
   document.querySelector<HTMLButtonElement>('[role=tab]:nth-child(3)')!.click();await loaded('invited@example.test');click('Révoquer');await loaded('Aucune invitation en attente.');handle.destroy();
  });
  it('keeps API failures visible without discarding the current access list',async()=>{
@@ -46,11 +50,11 @@ describe('compact workspace invitation dialog',()=>{
  it('uses the shared role menu and Escape dismisses that menu before its invitation',async()=>{
   const handle=openWorkspaceInvitation({client:new CloudClient(),slug:'team'});const trigger=document.querySelector<HTMLButtonElement>('[data-desktop-choice]')!;
   expect(document.querySelector('select')).toBeNull();expect(document.querySelector('input')?.getAttribute('data-blok-field')).toBe('text');expect(document.querySelector('textarea')?.getAttribute('data-blok-field')).toBe('text');
-  trigger.click();await vi.waitFor(()=>expect(document.querySelector('[data-desktop-choice-popover] [role=menuitemradio][aria-checked=true]')?.textContent).toContain('Membre'));
+  trigger.click();await vi.waitFor(()=>expect(document.querySelector('[data-desktop-choice-popover] [role=menuitemradio][aria-checked=true]')?.textContent).toContain(WORKSPACE_ROLES.member));
   document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));await vi.waitFor(()=>expect(trigger.getAttribute('aria-expanded')).toBe('false'));expect(document.querySelector('[data-cloud-invite-dialog]')).toBeTruthy();expect(document.activeElement).toBe(trigger);handle.close();
  });
  it('sends normalized unique addresses with role/message and closes after success',async()=>{
-  const fetch=vi.fn(async()=>reply({ok:true}));vi.stubGlobal('fetch',fetch);const done=vi.fn();openWorkspaceInvitation({client:new CloudClient(),slug:'team',onComplete:done});const email=document.querySelector<HTMLInputElement>('input')!;email.value='ALICE@example.test, bob@example.test, alice@example.test';await choose('Accès à l’espace','Lecture seule');document.querySelector<HTMLTextAreaElement>('textarea')!.value='Bienvenue !';submit();await vi.waitFor(()=>expect(document.querySelector('[data-cloud-invite-dialog]')).toBeNull());expect(fetch).toHaveBeenCalledTimes(2);expect(JSON.parse((fetch.mock.calls as unknown as [string,RequestInit][])[0][1].body as string)).toEqual({email:'alice@example.test',role:'viewer',message:'Bienvenue !'});expect(done).toHaveBeenCalledOnce();
+  const fetch=vi.fn(async()=>reply({ok:true}));vi.stubGlobal('fetch',fetch);const done=vi.fn();openWorkspaceInvitation({client:new CloudClient(),slug:'team',onComplete:done});const email=document.querySelector<HTMLInputElement>('input')!;email.value='ALICE@example.test, bob@example.test, alice@example.test';await choose('Accès à l’espace',WORKSPACE_ROLES.viewer);document.querySelector<HTMLTextAreaElement>('textarea')!.value='Bienvenue !';submit();await vi.waitFor(()=>expect(document.querySelector('[data-cloud-invite-dialog]')).toBeNull());expect(fetch).toHaveBeenCalledTimes(2);expect(JSON.parse((fetch.mock.calls as unknown as [string,RequestInit][])[0][1].body as string)).toEqual({email:'alice@example.test',role:'viewer',message:'Bienvenue !'});expect(done).toHaveBeenCalledOnce();
  });
  it('retains only failed addresses after partial success and retries only those',async()=>{
   let fail=true;const sent:string[]=[];vi.stubGlobal('fetch',vi.fn(async(_url:string,init:RequestInit)=>{const email=JSON.parse(init.body as string).email;sent.push(email);return email==='bob@example.test'&&fail?reply({error:'Delivery unavailable'},503):reply({ok:true});}));openWorkspaceInvitation({client:new CloudClient(),slug:'team'});document.querySelector<HTMLInputElement>('input')!.value='alice@example.test,bob@example.test';submit();await loaded('Delivery unavailable');expect(document.querySelector<HTMLInputElement>('input')!.value).toBe('bob@example.test');expect(document.querySelector('[role=status]')?.textContent).toContain('1 invitation envoyée');fail=false;submit();await vi.waitFor(()=>expect(document.querySelector('[data-cloud-invite-dialog]')).toBeNull());expect(sent).toEqual(['alice@example.test','bob@example.test','bob@example.test']);

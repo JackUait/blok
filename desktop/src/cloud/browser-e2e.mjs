@@ -1,7 +1,8 @@
 /**
  * Real cloud browser integration (never sends real mail).
  * Start the service with APP_ENV=development, DEV_MAIL_DIRECTORY=<absolute path>,
- * BOOTSTRAP_ADMIN_EMAIL=admin@example.test and an isolated test database.
+ * BOOTSTRAP_ADMIN_EMAIL=admin@example.test, BOOTSTRAP_WORKSPACE_SLUG/NAME, and an
+ * isolated test database.
  * Start/proxy the desktop app against that service, then run from repository root:
  * CLOUD_E2E_URL=http://localhost:1420 CLOUD_E2E_MAIL_DIR=/tmp/blok-test-mail \
  *   node desktop/src/cloud/browser-e2e.mjs
@@ -53,6 +54,17 @@ async function mailboxCode(email, requestedAt) {
   },{timeout:15000,message:`development login mail for ${email}`}).toBe(true);
   return code;
 }
+async function json(page,path,init) {
+  const response = await page.request.fetch(path,init);
+  return {status:response.status(),body:await response.json()};
+}
+async function workspaceSlug(page) {
+  if (process.env.CLOUD_E2E_WORKSPACE_SLUG) return process.env.CLOUD_E2E_WORKSPACE_SLUG;
+  const info = await json(page,'/api/instance');
+  const slug = info.body?.defaultWorkspace?.slug;
+  if (!slug) throw new Error('Set CLOUD_E2E_WORKSPACE_SLUG or BOOTSTRAP_WORKSPACE_SLUG on the service.');
+  return slug;
+}
 async function login(page,email) {
   await page.goto('/');
   await page.getByLabel('Adresse e-mail',{exact:true}).fill(email);
@@ -61,40 +73,37 @@ async function login(page,email) {
   await expect(page.getByLabel('Code de connexion')).toBeVisible();
   await page.getByLabel('Code de connexion').fill(await mailboxCode(email,requestedAt));
   await page.getByRole('button',{name:'Se connecter',exact:true}).click();
-  await expect(page.getByRole('heading',{name:'Où souhaitez-vous travailler ?'})).toBeVisible();
-}
-async function json(page,path,init) {
-  const response = await page.request.fetch(path,init);
-  return {status:response.status(),body:await response.json()};
+  // One membership enters the editor; zero memberships stay on the space list / join panel.
+  await expect.poll(async () =>
+    (await page.getByRole('heading',{name:'Où souhaitez-vous travailler ?'}).isVisible().catch(() => false))
+    || (await page.locator('[data-desktop-shell]').isVisible().catch(() => false))
+  ).toBe(true);
 }
 try {
+  const slug = await workspaceSlug(member);
   await login(member,applicantEmail);
   console.log('Member email login passed.');
   await member.getByLabel('Un mot pour l’équipe (facultatif)').fill('Demande du test navigateur isolé.');
   await member.getByRole('button',{name:'Demander à rejoindre',exact:true}).click();
   await expect(member.getByText('Votre demande est en attente',{exact:true})).toBeVisible();
   await expect(member.locator('[data-desktop-shell]')).toHaveCount(0);
-  expect((await json(member,'/api/workspaces/tousambassadeurs/index')).status).toBe(403);
+  expect((await json(member,`/api/workspaces/${slug}/index`)).status).toBe(403);
   console.log('Pending applicant denied document access.');
   await login(admin,adminEmail);
   console.log('Admin email login passed.');
-  await admin.getByRole('button',{name:'Gérer',exact:true}).first().click();
-  await admin.screenshot({path:'/tmp/blok-cloud-admin.png',fullPage:true});
-  await admin.setViewportSize({width:390,height:1000});
-  await admin.screenshot({path:'/tmp/blok-cloud-admin-mobile.png',fullPage:true});
-  expect(await admin.evaluate(() => document.querySelector('[data-cloud-gateway]').scrollWidth <= window.innerWidth)).toBe(true);
-  await admin.setViewportSize({width:1280,height:720});
-  const applicantRow = admin.locator('[data-cloud-row]').filter({has:admin.getByText(applicantEmail,{exact:true})});
-  await expect(applicantRow).toBeVisible();
-  await applicantRow.getByRole('button',{name:'Accepter',exact:true}).click();
-  await expect(admin.getByRole('button',{name:`Rôle de ${applicantEmail}`,exact:true})).toBeVisible();
-  console.log('Admin approved applicant through browser UI.');
+  // Membership administration lives in the workspace settings modal now (gateway admin() removed).
+  // Approve through the API under the admin session so the rest of the browser path stays covered.
+  const requests = await json(admin,`/api/workspaces/${slug}/join-requests`);
+  const pending = requests.body.requests?.find(item => item.email === applicantEmail && item.status === 'pending');
+  if (!pending) throw new Error('pending join request missing for applicant');
+  expect((await json(admin,`/api/workspaces/${slug}/join-requests/${pending.id}/approve`,{method:'POST',data:{role:'member'}})).status).toBe(200);
+  console.log('Admin approved applicant.');
   await member.getByRole('button',{name:'Actualiser le statut',exact:true}).click();
   await member.getByRole('button',{name:'Ouvrir l’espace',exact:true}).first().click();
   await expect(member.locator('[data-desktop-shell]')).toBeVisible();
   // Wait for the previous editor to finish mounting, then for its DOM to leave.
   // A visible old title must never satisfy the new-page editor assertion.
-  const initialIndex = await json(member,'/api/workspaces/tousambassadeurs/index');
+  const initialIndex = await json(member,`/api/workspaces/${slug}/index`);
   if (initialIndex.body.pages.length) await expect(member.locator('[data-blok-page-title]').first()).toBeVisible({timeout:20000});
   const previousTitle = initialIndex.body.pages.length ? await member.locator('[data-blok-page-title]').first().elementHandle() : null;
   const previousURL = member.url();
@@ -110,9 +119,9 @@ try {
   await expect(paragraph).toBeVisible();
   await paragraph.fill(`Texte partagé : ${text}`);
   await expect(member.locator('[data-desktop-status]')).toHaveAttribute('data-sync-state','connected',{timeout:20000});
-  const indexBefore = await json(member,'/api/workspaces/tousambassadeurs/index');
+  const indexBefore = await json(member,`/api/workspaces/${slug}/index`);
   expect(indexBefore.status).toBe(200);
-  await expect.poll(async () => (await json(member,'/api/workspaces/tousambassadeurs/index')).body.pages.some(page => page.title === text),{timeout:15000}).toBe(true);
+  await expect.poll(async () => (await json(member,`/api/workspaces/${slug}/index`)).body.pages.some(page => page.title === text),{timeout:15000}).toBe(true);
   await member.reload();
   // The app can restore the chosen workspace or return to the authenticated selector.
   await expect.poll(async () => (await member.locator('[data-desktop-shell]').isVisible()) || (await member.getByRole('button',{name:'Ouvrir l’espace',exact:true}).first().isVisible().catch(() => false))).toBe(true);
@@ -180,13 +189,11 @@ try {
 
   const memberInfo = await json(member,'/api/session');
   const memberId = memberInfo.body.user.id;
-  const role = admin.getByRole('button',{name:`Rôle de ${applicantEmail}`,exact:true});
-  await role.click();
-  await admin.getByRole('menuitemradio',{name:'Lecture seule',exact:true}).click();
-  await expect(admin.getByRole('heading',{name:'Où souhaitez-vous travailler ?'})).toBeVisible();
-  await expect.poll(async () => (await json(member,'/api/session')).body.workspaces.find(ws => ws.slug === 'tousambassadeurs')?.role).toBe('viewer');
-  expect((await json(member,'/api/workspaces/tousambassadeurs/index',{method:'PUT',data:{...indexBefore.body}})).status).toBe(403);
-  expect((await json(member,`/api/workspaces/tousambassadeurs/members/${memberId}`,{method:'PATCH',data:{role:'admin'}})).status).toBe(403);
+  expect((await json(admin,`/api/workspaces/${slug}/members/${memberId}`,{method:'PATCH',data:{role:'viewer'}})).status).toBe(200);
+  await expect.poll(async () => (await json(member,'/api/session')).body.workspaces.find(ws => ws.slug === slug)?.role).toBe('viewer');
+  expect((await json(member,`/api/workspaces/${slug}/index`,{method:'PUT',data:{...indexBefore.body}})).status).toBe(403);
+  expect((await json(member,`/api/workspaces/${slug}/members/${memberId}`,{method:'PATCH',data:{role:'admin'}})).status).toBe(403);
+  await admin.goto('/?cloud=1');
   await admin.getByRole('button',{name:'Changer de compte',exact:true}).click();
   await expect(admin.getByLabel('Adresse e-mail',{exact:true})).toHaveValue('');
   expect((await json(admin,'/api/session')).status).toBe(401);

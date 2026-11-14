@@ -16,7 +16,7 @@ vi.mock('../../../../src/blok', () => ({
 
 interface MockItem { name?: string; element?: HTMLElement; onActivate?: () => void }
 
-const popovers = vi.hoisted(() => ({ items: [] as MockItem[][], made: [] as Array<{ escapeClosesSubmenuFirst: boolean; arrowLeftClosesSubmenu: boolean; nestedOpenDelay: number; getElement: () => HTMLElement }> }));
+const popovers = vi.hoisted(() => ({ items: [] as MockItem[][], offsets: [] as Array<number | undefined>, made: [] as Array<{ escapeClosesSubmenuFirst: boolean; arrowLeftClosesSubmenu: boolean; nestedOpenDelay: number; getElement: () => HTMLElement }> }));
 
 vi.mock('../../../../src/components/utils/popover', () => {
   class MockPopoverDesktop {
@@ -26,8 +26,9 @@ vi.mock('../../../../src/components/utils/popover', () => {
 
     nestedOpenDelay = 100;
 
-    constructor(params?: { items?: MockItem[] }) {
+    constructor(params?: { items?: MockItem[]; offset?: number }) {
       popovers.items.push(params?.items ?? []);
+      popovers.offsets.push(params?.offset);
       popovers.made.push(this);
     }
 
@@ -285,6 +286,16 @@ describe('DatabaseTool — templates', () => {
     el.querySelector<HTMLButtonElement>('[data-blok-testid="database-toolbar-new-menu"]')?.click();
 
     expect(popovers.made.at(-1)?.getElement().hasAttribute('data-blok-database-template-menu')).toBe(true);
+  });
+
+  // notion-motion.md Round 27 §3 (r27-newchev-anat.raw): the ⌄ menu's top is the button's bottom + 4.
+  it('opens the New menu 4 under the button', () => {
+    const { el } = buildDatabase(seed(), 'db', data(), { people });
+
+    popovers.offsets.length = 0;
+    el.querySelector<HTMLButtonElement>('[data-blok-testid="database-toolbar-new-menu"]')?.click();
+
+    expect(popovers.offsets.at(-1)).toBe(4);
   });
 
   // research/36 §3.1: ArrowLeft leaves a template's "…" submenu open; only Escape closes it.

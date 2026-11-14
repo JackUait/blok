@@ -609,6 +609,18 @@ describe('round 13: research/35 §1.1-§1.3, §1.8', () => {
     expect(ruleBody(ADD)).toContain('color: var(--blok-database-ink-secondary)');
     expect(ruleBody(`${ADD} [data-blok-popover-item-icon]`)).toContain('color: var(--blok-database-table-header-icon)');
   });
+
+  // r27-newchev-anat.raw: the plus is 20 at +8, the text 14px 400 (line 16.8) at +36, and the rules sit 12 in.
+  it('"New template" has the menu row geometry and the rules sit 12 in', () => {
+    const ADD = "[data-blok-database-template-menu] [data-blok-item-name='template-add']";
+
+    expect(ruleBody(`${ADD} [data-blok-popover-item-icon]`)).toContain('width: 20px');
+    expect(ruleBody(`${ADD} [data-blok-popover-item-icon]`)).toContain('margin-inline-end: var(--blok-space-2)');
+    expect(ruleBody(`${ADD} [data-blok-popover-item-title]`)).toContain('font-size: 14px');
+    expect(ruleBody(`${ADD} [data-blok-popover-item-title]`)).toContain('font-weight: 400');
+    expect(ruleBody(`${ADD} [data-blok-popover-item-title]`)).toContain('line-height: 16.8px');
+    expect(ruleBody('[data-blok-database-template-menu] > [data-blok-popover-container] [data-blok-popover-item-separator]')).toContain('padding-inline: var(--blok-space-2)');
+  });
 });
 
 describe('research/35 §9 and 36 §7: the place editor after a pick', () => {

@@ -7020,6 +7020,8 @@ export class DatabaseTool implements BlockTool {
     }), anchor, {
       // Notion's panel is 360 wide and ends at the chevron: bounding it by the view bar flips it to end-align.
       minWidth: '360px',
+      // notion-motion.md Round 27 §3: its top is the button's bottom + 4.
+      offset: 4,
       scopeElement: anchor.closest<HTMLElement>('[data-blok-database-view-bar]') ?? undefined,
     });
     // research/35 §14, research/36 §3.1: in a template's "…" submenu only Escape closes it, one level.

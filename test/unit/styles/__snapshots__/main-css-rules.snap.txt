@@ -7170,7 +7170,19 @@ button[data-blok-database-column-count]:hover {
 }
 
 [data-blok-database-template-menu] [data-blok-item-name='template-add'] [data-blok-popover-item-icon] {
+  width: 20px;
+  margin-inline-end: var(--blok-space-2);
   color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-template-menu] [data-blok-item-name='template-add'] [data-blok-popover-item-title] {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 16.8px;
+}
+
+[data-blok-database-template-menu] > [data-blok-popover-container] [data-blok-popover-item-separator] {
+  padding-inline: var(--blok-space-2);
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover][data-blok-nested][popover] {

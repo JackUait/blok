@@ -1691,7 +1691,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r41: the view search inset, the freeze shadow fade and the board's sub-group band. Net database.css growth against origin/main.
     const DATABASE_R41_BYTES = 2221;
     // Lane r42: the view tab menu's pressed tab, the type grid's "?" and rules, the template menu's row. Net database.css growth against origin/main.
-    const DATABASE_R42_BYTES = 536;
+    const DATABASE_R42_BYTES = 1019;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

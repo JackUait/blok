@@ -7,13 +7,13 @@ import {
   signupPolicyOptions,
   workspaceCreationOptions,
 } from '../access-vocabulary';
-import {
+import type {
+  CloudAdminSettings,
+  CloudAdminUser,
+  CloudAdminWorkspace,
   CloudClient,
-  type CloudAdminSettings,
-  type CloudAdminUser,
-  type CloudAdminWorkspace,
-  type CloudSignupPolicy,
-  type CloudWorkspaceCreation,
+  CloudSignupPolicy,
+  CloudWorkspaceCreation,
 } from '../cloud/client';
 import { createChoice, styleTextField, type ChoiceControl } from '../ui/controls';
 import { button, el } from '../ui/dom';
@@ -46,6 +46,31 @@ function errorMessage(reason: unknown): string {
   return reason instanceof Error ? reason.message : 'La demande n’a pas pu aboutir. Réessayez.';
 }
 
+function applyEmailTestOutcome(
+  outcome: { ok: boolean; backend?: string; error?: string },
+  resultEl: HTMLElement,
+  detailsEl: HTMLDetailsElement,
+  mail: HTMLElement,
+  setPill: (row: HTMLElement, state: 'ok' | 'bad' | 'unknown', detail: string) => void,
+): void {
+  const result = resultEl;
+  const details = detailsEl;
+  const backendLabel = outcome.backend || 'inconnu';
+  if (outcome.ok) {
+    result.textContent = `E-mail de test envoyé (${backendLabel}).`;
+    result.setAttribute('data-kind', 'ok');
+    setPill(mail, 'ok', `Backend ${backendLabel}`);
+  } else {
+    result.textContent = `Échec de l’envoi (${backendLabel}).`;
+    result.setAttribute('data-kind', 'error');
+    setPill(mail, 'bad', `Backend ${backendLabel}`);
+    const pre = details.querySelector('pre');
+    if (pre) pre.textContent = outcome.error ?? 'Erreur inconnue';
+    details.hidden = false;
+  }
+  result.hidden = false;
+}
+
 function openConfirm(options: {
   title: string;
   message: string;
@@ -61,29 +86,28 @@ function openConfirm(options: {
     el('p', { text: options.message, attribute: 'data-cloud-settings-muted' }),
   );
   const actions = el('div', { attribute: 'data-desktop-instance-confirm-actions' });
-  let handle: ModalDialogHandle;
-  let busy = false;
-  const close = (): void => { if (!busy) handle.close(); };
+  const confirmState: { handle: ModalDialogHandle | null; busy: boolean } = { handle: null, busy: false };
+  const close = (): void => { if (!confirmState.busy) confirmState.handle?.close(); };
   const cancel = button({ label: 'Annuler', onClick: close });
   const confirm = button({
     label: options.confirmLabel,
     primary: true,
     attribute: 'data-desktop-instance-confirm-destructive',
     onClick: () => {
-      if (busy) return;
-      busy = true;
+      if (confirmState.busy) return;
+      confirmState.busy = true;
       cancel.disabled = true;
       confirm.disabled = true;
       void Promise.resolve(options.onConfirm()).finally(() => {
-        busy = false;
-        handle.close();
+        confirmState.busy = false;
+        confirmState.handle?.close();
       });
     },
   });
   actions.append(cancel, confirm);
   surface.append(actions);
   overlay.append(surface);
-  handle = openModalDialog({
+  confirmState.handle = openModalDialog({
     content: overlay,
     surface,
     label: options.title,
@@ -104,7 +128,7 @@ export function mountInstanceSettings(
   root.setAttribute('data-desktop-instance-kind', panel);
   content.append(root);
   const disposers: Array<() => void> = [];
-  let alive = true;
+  const life = { alive: true };
 
   const titles: Record<InstancePanel, string> = {
     general: 'Général',
@@ -134,9 +158,10 @@ export function mountInstanceSettings(
   function mountGeneral(): void {
     const status = el('p', { text: 'Chargement…', attribute: 'data-cloud-settings-muted' });
     root.append(status);
-    void options.client.adminSettings().then(async (settings) => {
-      if (!alive) return;
+    void options.client.adminSettings().then(async (payload) => {
+      if (!life.alive) return;
       status.remove();
+      const settings = payload;
       const nameRow = el('div', { attribute: 'data-desktop-settings-row' });
       const labels = el('div', { attribute: 'data-desktop-settings-row-labels' });
       labels.append(
@@ -158,12 +183,12 @@ export function mountInstanceSettings(
           return;
         }
         void options.client.patchAdminSettings({ name: next }).then((updated) => {
-          if (!alive) return;
+          if (!life.alive) return;
           settings.name = updated.name;
           name.value = updated.name;
           feedback.show('Nom enregistré');
         }).catch((reason) => {
-          if (!alive) return;
+          if (!life.alive) return;
           name.value = settings.name;
           feedback.show(errorMessage(reason), 'error');
         });
@@ -185,7 +210,7 @@ export function mountInstanceSettings(
       root.append(nameRow, feedback.element, urlRow, versionRow);
       try {
         const listed = await options.client.adminUsers({ limit: 100 });
-        if (!alive) return;
+        if (!life.alive) return;
         const admins = listed.users.filter((user) => user.instanceAdmin);
         const names = admins.map((user) => user.name?.trim() || user.email).join(', ');
         root.append(el('p', {
@@ -193,10 +218,10 @@ export function mountInstanceSettings(
           attribute: 'data-desktop-instance-admins',
         }));
       } catch {
-        if (alive) root.append(el('p', { text: 'Administrée par —.', attribute: 'data-desktop-instance-admins' }));
+        if (life.alive) root.append(el('p', { text: 'Administrée par —.', attribute: 'data-desktop-instance-admins' }));
       }
     }).catch((reason) => {
-      if (alive) status.textContent = errorMessage(reason);
+      if (life.alive) status.textContent = errorMessage(reason);
     });
   }
 
@@ -205,9 +230,10 @@ export function mountInstanceSettings(
     root.append(status);
     const choices: ChoiceControl<string>[] = [];
     disposers.push(() => { for (const choice of choices) choice.destroy(); });
-    void options.client.adminSettings().then((settings) => {
-      if (!alive) return;
+    void options.client.adminSettings().then((payload) => {
+      if (!life.alive) return;
       status.remove();
+      const settings = payload;
       const feedback = createFeedback({ attribute: 'data-desktop-instance-feedback' });
       disposers.push(() => feedback.destroy());
 
@@ -218,12 +244,12 @@ export function mountInstanceSettings(
         previous: CloudAdminSettings[K],
       ): void => {
         void options.client.patchAdminSettings({ [key]: value }).then((updated) => {
-          if (!alive) return;
+          if (!life.alive) return;
           settings[key] = updated[key];
           control.setValue(updated[key]);
           feedback.show('Enregistré');
         }).catch((reason) => {
-          if (!alive) return;
+          if (!life.alive) return;
           control.setValue(previous);
           feedback.show(errorMessage(reason), 'error');
         });
@@ -231,12 +257,13 @@ export function mountInstanceSettings(
 
       const signupRow = el('div', { attribute: 'data-desktop-settings-row' });
       const signupLabels = el('div', { attribute: 'data-desktop-settings-row-labels' });
+      const signupHelp = el('span', {
+        text: SIGNUP_POLICIES[settings.signupPolicy].consequence,
+        attribute: 'data-desktop-settings-row-help',
+      });
       signupLabels.append(
         el('strong', { text: 'Inscription', attribute: 'data-desktop-settings-row-title' }),
-        el('span', {
-          text: SIGNUP_POLICIES[settings.signupPolicy].consequence,
-          attribute: 'data-desktop-settings-row-help',
-        }),
+        signupHelp,
       );
       const signup = createChoice<CloudSignupPolicy>({
         label: 'Inscription',
@@ -245,7 +272,7 @@ export function mountInstanceSettings(
         onChange(value) {
           const previous = settings.signupPolicy;
           settings.signupPolicy = value;
-          signupLabels.querySelector('[data-desktop-settings-row-help]')!.textContent = SIGNUP_POLICIES[value].consequence;
+          signupHelp.textContent = SIGNUP_POLICIES[value].consequence;
           savePolicy('signupPolicy', value, signup, previous);
         },
       });
@@ -255,12 +282,13 @@ export function mountInstanceSettings(
 
       const creationRow = el('div', { attribute: 'data-desktop-settings-row' });
       const creationLabels = el('div', { attribute: 'data-desktop-settings-row-labels' });
+      const creationHelp = el('span', {
+        text: WORKSPACE_CREATION_POLICIES[settings.workspaceCreation].consequence,
+        attribute: 'data-desktop-settings-row-help',
+      });
       creationLabels.append(
         el('strong', { text: 'Création d’espaces', attribute: 'data-desktop-settings-row-title' }),
-        el('span', {
-          text: WORKSPACE_CREATION_POLICIES[settings.workspaceCreation].consequence,
-          attribute: 'data-desktop-settings-row-help',
-        }),
+        creationHelp,
       );
       const creation = createChoice<CloudWorkspaceCreation>({
         label: 'Création d’espaces',
@@ -269,7 +297,7 @@ export function mountInstanceSettings(
         onChange(value) {
           const previous = settings.workspaceCreation;
           settings.workspaceCreation = value;
-          creationLabels.querySelector('[data-desktop-settings-row-help]')!.textContent = WORKSPACE_CREATION_POLICIES[value].consequence;
+          creationHelp.textContent = WORKSPACE_CREATION_POLICIES[value].consequence;
           savePolicy('workspaceCreation', value, creation, previous);
         },
       });
@@ -279,7 +307,7 @@ export function mountInstanceSettings(
 
       root.append(signupRow, creationRow, feedback.element);
     }).catch((reason) => {
-      if (alive) status.textContent = errorMessage(reason);
+      if (life.alive) status.textContent = errorMessage(reason);
     });
   }
 
@@ -335,11 +363,10 @@ export function mountInstanceSettings(
       trigger.setAttribute('aria-label', `Actions pour ${user.email}`);
       trigger.setAttribute('aria-haspopup', 'menu');
       trigger.setAttribute('aria-expanded', 'false');
-      let popup: PopoverDesktop | null = null;
-      let destroyed = false;
+      const menuState: { popup: PopoverDesktop | null; destroyed: boolean } = { popup: null, destroyed: false };
       function open(): void {
-        if (trigger.disabled || destroyed) return;
-        if (popup?.isShown) { popup.hide(); return; }
+        if (trigger.disabled || menuState.destroyed) return;
+        if (menuState.popup?.isShown) { menuState.popup.hide(); return; }
         const items = [
           {
             name: 'promote',
@@ -349,7 +376,7 @@ export function mountInstanceSettings(
             onActivate: () => {
               if (user.instanceAdmin) return;
               void options.client.patchAdminUser(user.id, { instanceAdmin: true }).then(onChanged).catch((reason) => {
-                if (!alive) return;
+                if (!life.alive) return;
                 error.textContent = errorMessage(reason);
                 error.hidden = false;
               });
@@ -372,7 +399,7 @@ export function mountInstanceSettings(
                     await options.client.deleteAdminUser(user.id);
                     onChanged();
                   } catch (reason) {
-                    if (!alive) return;
+                    if (!life.alive) return;
                     error.textContent = errorMessage(reason);
                     error.hidden = false;
                   }
@@ -382,36 +409,36 @@ export function mountInstanceSettings(
           },
         ];
         const menu = new PopoverDesktop({ trigger, width: 'auto', minWidth: '220px', items });
-        popup = menu;
+        menuState.popup = menu;
         const palette = getComputedStyle(trigger);
         for (const token of ['--blok-popover-bg', '--blok-popover-border', '--blok-text-primary', '--blok-text-secondary', '--blok-item-hover-bg']) {
           menu.getElement().style.setProperty(token, palette.getPropertyValue(token));
         }
         trigger.setAttribute('aria-expanded', 'true');
-        let settled = false;
+        const closed = { settled: false };
         menu.on('closed', () => {
-          if (settled) return;
-          settled = true;
-          if (popup === menu) { popup = null; trigger.setAttribute('aria-expanded', 'false'); }
-          if (trigger.isConnected && !trigger.disabled && !destroyed) trigger.focus();
+          if (closed.settled) return;
+          closed.settled = true;
+          if (menuState.popup === menu) { menuState.popup = null; trigger.setAttribute('aria-expanded', 'false'); }
+          if (trigger.isConnected && !trigger.disabled && !menuState.destroyed) trigger.focus();
           queueMicrotask(() => menu.destroy());
         });
         menu.show();
       }
-      menus.push({ destroy() { destroyed = true; popup?.destroy(); popup = null; trigger.setAttribute('aria-expanded', 'false'); } });
+      menus.push({ destroy() { menuState.destroyed = true; menuState.popup?.destroy(); menuState.popup = null; trigger.setAttribute('aria-expanded', 'false'); } });
       return trigger;
     }
 
     async function refresh(): Promise<void> {
-      if (!alive) return;
+      if (!life.alive) return;
       error.hidden = true;
       try {
         const listed = await options.client.adminUsers({ limit: 100 });
-        if (!alive) return;
+        if (!life.alive) return;
         status.hidden = true;
         render(listed.users);
       } catch (reason) {
-        if (!alive) return;
+        if (!life.alive) return;
         status.textContent = errorMessage(reason);
         status.hidden = false;
       }
@@ -424,7 +451,7 @@ export function mountInstanceSettings(
     const list = el('div', { attribute: 'data-desktop-instance-workspaces' });
     root.append(status, list);
     void options.client.adminWorkspaces().then((payload) => {
-      if (!alive) return;
+      if (!life.alive) return;
       status.remove();
       const workspaces: CloudAdminWorkspace[] = payload.workspaces;
       if (!workspaces.length) {
@@ -455,7 +482,7 @@ export function mountInstanceSettings(
       table.append(head, body);
       list.append(table);
     }).catch((reason) => {
-      if (alive) status.textContent = errorMessage(reason);
+      if (life.alive) status.textContent = errorMessage(reason);
     });
   }
 
@@ -488,11 +515,11 @@ export function mountInstanceSettings(
     void (async () => {
       try {
         await options.client.request<{ ok: boolean }>('/healthz');
-        if (!alive) return;
+        if (!life.alive) return;
         setPill(base, 'ok', 'Joignable');
         setPill(files, 'ok', 'Volume accessible via le serveur');
       } catch {
-        if (!alive) return;
+        if (!life.alive) return;
         setPill(base, 'bad', 'Injoignable');
         setPill(files, 'bad', 'État inconnu');
       }
@@ -530,23 +557,10 @@ export function mountInstanceSettings(
         email.disabled = true;
         try {
           const outcome = await options.client.adminEmailTest(address);
-          if (!alive) return;
-          const backendLabel = outcome.backend || 'inconnu';
-          if (outcome.ok) {
-            result.textContent = `E-mail de test envoyé (${backendLabel}).`;
-            result.setAttribute('data-kind', 'ok');
-            setPill(mail, 'ok', `Backend ${backendLabel}`);
-          } else {
-            result.textContent = `Échec de l’envoi (${backendLabel}).`;
-            result.setAttribute('data-kind', 'error');
-            setPill(mail, 'bad', `Backend ${backendLabel}`);
-            const pre = details.querySelector('pre');
-            if (pre) pre.textContent = outcome.error ?? 'Erreur inconnue';
-            details.hidden = false;
-          }
-          result.hidden = false;
+          if (!life.alive) return;
+          applyEmailTestOutcome(outcome, result, details, mail, setPill);
         } catch (reason) {
-          if (!alive) return;
+          if (!life.alive) return;
           result.textContent = errorMessage(reason);
           result.setAttribute('data-kind', 'error');
           result.hidden = false;
@@ -562,7 +576,7 @@ export function mountInstanceSettings(
 
   return {
     destroy() {
-      alive = false;
+      life.alive = false;
       for (const dispose of disposers.splice(0)) dispose();
       root.remove();
     },

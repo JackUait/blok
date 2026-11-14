@@ -18,12 +18,14 @@ export function createFeedback(options: FeedbackOptions = {}): FeedbackHandle {
   const element = el('span', { attribute: options.attribute ?? 'data-desktop-feedback' });
   element.setAttribute('role', 'status');
   element.hidden = true;
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  let destroyed = false;
+  const state: { timer: ReturnType<typeof setTimeout> | undefined; destroyed: boolean } = {
+    timer: undefined,
+    destroyed: false,
+  };
 
   const clear = (): void => {
-    clearTimeout(timer);
-    timer = undefined;
+    clearTimeout(state.timer);
+    state.timer = undefined;
     element.hidden = true;
     element.textContent = '';
     element.removeAttribute('data-desktop-feedback-kind');
@@ -32,20 +34,20 @@ export function createFeedback(options: FeedbackOptions = {}): FeedbackHandle {
   return {
     element,
     show(message, kind = 'status') {
-      if (destroyed) return;
-      clearTimeout(timer);
+      if (state.destroyed) return;
+      clearTimeout(state.timer);
       element.textContent = message;
       element.setAttribute('data-desktop-feedback-kind', kind);
       element.setAttribute('role', kind === 'error' ? 'alert' : 'status');
       element.hidden = false;
       if (options.timeoutMs !== undefined) {
-        timer = setTimeout(clear, options.timeoutMs);
+        state.timer = setTimeout(clear, options.timeoutMs);
       }
     },
     clear,
     destroy() {
-      if (destroyed) return;
-      destroyed = true;
+      if (state.destroyed) return;
+      state.destroyed = true;
       clear();
       element.remove();
     },

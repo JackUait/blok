@@ -28,7 +28,7 @@ export function mountCreateWorkspace(options: CreateWorkspaceOptions): void {
     }),
   );
 
-  const policy = (options.instance?.workspaceCreation ?? 'anyone') as CloudWorkspaceCreation;
+  const policy: CloudWorkspaceCreation = options.instance?.workspaceCreation ?? 'anyone';
   if (policy === 'disabled') {
     main.append(el('div', {
       attribute: 'data-cloud-status',
@@ -55,12 +55,12 @@ export function mountCreateWorkspace(options: CreateWorkspaceOptions): void {
   slug.minLength = 2;
   slug.maxLength = 63;
   slug.placeholder = 'mon-equipe';
-  let slugTouched = false;
+  const slugState = { touched: false };
   name.addEventListener('input', () => {
-    if (slugTouched) return;
+    if (slugState.touched) return;
     slug.value = deriveWorkspaceSlug(name.value.trim());
   });
-  slug.addEventListener('input', () => { slugTouched = true; });
+  slug.addEventListener('input', () => { slugState.touched = true; });
 
   const submit = button({ label: 'Créer l’espace', primary: true, type: 'submit', onClick: () => {} });
   form.append(submit);

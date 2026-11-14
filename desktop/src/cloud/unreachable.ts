@@ -12,6 +12,23 @@ export interface UnreachableOptions {
   onServerChange?(origin: string): void | Promise<void>;
 }
 
+export function parseServerOrigin(value: string): string {
+  try {
+    const url = new URL(value);
+    if (
+      url.username
+      || url.password
+      || (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)))
+    ) {
+      throw new Error('Utilisez une adresse HTTPS sans identifiants.');
+    }
+    return url.origin;
+  } catch (reason) {
+    if (reason instanceof Error && reason.message.startsWith('Utilisez')) throw reason;
+    throw new Error('Saisissez l’adresse complète du serveur, par exemple https://votre-serveur.fr.');
+  }
+}
+
 /** Dedicated screen when the instance cannot be reached (plan §9.1 `unreachable`). */
 export function mountUnreachable(options: UnreachableOptions): void {
   const main = options.frame();
@@ -30,7 +47,8 @@ export function mountUnreachable(options: UnreachableOptions): void {
     onClick: () => { void options.run(async () => { await options.onRetry(); }); },
   }));
 
-  if (!options.onServerChange) return;
+  const onServerChange = options.onServerChange;
+  if (!onServerChange) return;
   const details = el('details', { attribute: 'data-cloud-section' });
   details.append(el('summary', { text: 'Se connecter à un autre serveur' }));
   const form = el('form');
@@ -49,20 +67,7 @@ export function mountUnreachable(options: UnreachableOptions): void {
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     void options.run(async () => {
-      let url: URL;
-      try {
-        url = new URL(server.value.trim());
-      } catch {
-        throw new Error('Saisissez l’adresse complète du serveur, par exemple https://votre-serveur.fr.');
-      }
-      if (
-        url.username
-        || url.password
-        || (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)))
-      ) {
-        throw new Error('Utilisez une adresse HTTPS sans identifiants.');
-      }
-      await options.onServerChange!(url.origin);
+      await onServerChange(parseServerOrigin(server.value.trim()));
     });
   });
   details.append(

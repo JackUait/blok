@@ -80,7 +80,7 @@ export function mountSetupAssistant(options: SetupAssistantOptions): void {
     signupPolicy: 'invite',
     workspaceCreation: 'admins_only',
   };
-  let step = 1;
+  const flow = { step: 1 };
   const choices: Array<ChoiceControl<CloudSignupPolicy> | ChoiceControl<CloudWorkspaceCreation>> = [];
 
   function disposeChoices(): void {
@@ -92,15 +92,15 @@ export function mountSetupAssistant(options: SetupAssistantOptions): void {
     disposeChoices();
     const main = options.frame();
     main.setAttribute('data-cloud-narrow', '');
-    main.setAttribute('data-cloud-setup-step', String(step));
+    main.setAttribute('data-cloud-setup-step', String(flow.step));
     main.append(
-      el('span', { text: `Étape ${step} sur 4`, attribute: 'data-cloud-eyebrow' }),
-      el('h1', { text: titles[step] }),
-      el('p', { text: leads[step], attribute: 'data-cloud-muted' }),
+      el('span', { text: `Étape ${flow.step} sur 4`, attribute: 'data-cloud-eyebrow' }),
+      el('h1', { text: titles[flow.step] }),
+      el('p', { text: leads[flow.step], attribute: 'data-cloud-muted' }),
     );
-    if (step === 1) stepOne(main);
-    else if (step === 2) stepTwo(main);
-    else if (step === 3) stepThree(main);
+    if (flow.step === 1) stepOne(main);
+    else if (flow.step === 2) stepTwo(main);
+    else if (flow.step === 3) stepThree(main);
     else stepFour(main);
   }
 
@@ -138,7 +138,7 @@ export function mountSetupAssistant(options: SetupAssistantOptions): void {
       event.preventDefault();
       sync();
       if (!draft.token || !draft.instanceName) return;
-      step = 2;
+      flow.step = 2;
       render();
     });
     token.addEventListener('input', sync);
@@ -185,13 +185,13 @@ export function mountSetupAssistant(options: SetupAssistantOptions): void {
       event.preventDefault();
       sync();
       if (next.disabled) return;
-      step = 3;
+      flow.step = 3;
       render();
     });
     adminName.addEventListener('input', sync);
     email.addEventListener('input', sync);
     main.append(form, status);
-    main.append(button({ label: 'Retour', onClick: () => { step = 1; render(); } }));
+    main.append(button({ label: 'Retour', onClick: () => { flow.step = 1; render(); } }));
   }
 
   function stepThree(main: HTMLElement): void {
@@ -260,11 +260,11 @@ export function mountSetupAssistant(options: SetupAssistantOptions): void {
       draft.workspaceName = workspaceName.value.trim();
       draft.slug = slug.value.trim();
       if (!(draft.workspaceName && SLUG_PATTERN.test(draft.slug))) return;
-      step = 4;
+      flow.step = 4;
       render();
     });
     main.append(form);
-    main.append(button({ label: 'Retour', onClick: () => { step = 2; render(); } }));
+    main.append(button({ label: 'Retour', onClick: () => { flow.step = 2; render(); } }));
   }
 
   function stepFour(main: HTMLElement): void {
@@ -310,7 +310,7 @@ export function mountSetupAssistant(options: SetupAssistantOptions): void {
 
     const actions = el('div', { attribute: 'data-cloud-actions' });
     actions.append(
-      button({ label: 'Retour', onClick: () => { step = 3; render(); } }),
+      button({ label: 'Retour', onClick: () => { flow.step = 3; render(); } }),
       button({
         label: 'Terminer la configuration',
         primary: true,

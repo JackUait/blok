@@ -13,6 +13,27 @@ if (reactGrabAvailable) void loadReactGrab().catch(() => { /* Settings lets the 
 const root = document.querySelector('#app');
 const native = '__TAURI_INTERNALS__' in window;
 
+function manageSectionFromParams(params: URLSearchParams): 'invites' | 'members' | undefined {
+  if (!params.get('manage')) return undefined;
+  return params.get('section') === 'invites' ? 'invites' : 'members';
+}
+
+function settingsOpenDetail(section: string): 'invites' | 'members' | 'general' {
+  if (section === 'invites') return 'invites';
+  if (section === 'members') return 'members';
+  return 'general';
+}
+
+function startupErrorNode(host: HTMLElement): HTMLElement {
+  const existing = host.querySelector<HTMLElement>('[data-startup-error]');
+  if (existing) return existing;
+  const message = document.createElement('p');
+  message.setAttribute('data-startup-error', '');
+  message.setAttribute('role', 'alert');
+  host.append(message);
+  return message;
+}
+
 async function boot(root: HTMLElement): Promise<void> {
   applyAppearance(root, readAppearance());
   const params = new URLSearchParams(location.search);
@@ -25,9 +46,7 @@ async function boot(root: HTMLElement): Promise<void> {
   const adapter = native && origin ? nativeSessionAdapter(origin) : undefined;
   const client = new CloudClient({origin, sessionAdapter: adapter});
   const manageSlug = params.get('manage');
-  const manageSection = manageSlug
-    ? (params.get('section') === 'invites' ? 'invites' as const : 'members' as const)
-    : undefined;
+  const manageSection = manageSectionFromParams(params);
 
   const showGateway = async (): Promise<void> => {
     document.title = 'Connexion';
@@ -68,19 +87,8 @@ async function boot(root: HTMLElement): Promise<void> {
     await showGateway();
     return;
   }
-  if (selected.kind === 'remote') {
-    try {
-      const session = await client.session();
-      const membership = session.workspaces.find(item => item.slug === selected.workspaceId);
-      if (session.user.id !== selected.accountId || !membership || selected.server !== origin) {
-        await showGateway();
-        return;
-      }
-      rememberWorkspace({...selected, role: membership.role, name: membership.name});
-    } catch {
-      await showGateway();
-      return;
-    }
+  if (selected.kind === 'remote' && !(await refreshRemoteMembership(client, selected, origin, showGateway))) {
+    return;
   }
   const {mountDesktop, flushDesktop} = await import('./shell');
   root.addEventListener('blok:desktop-connect-cloud', (event) => {
@@ -89,7 +97,7 @@ async function boot(root: HTMLElement): Promise<void> {
     if (selected.kind === 'remote' && (section === 'settings' || section === 'invites' || section === 'members')) {
       const footer = root.querySelector('[data-desktop-footer]');
       footer?.dispatchEvent(new CustomEvent('blok:desktop-open-settings', {
-        detail: section === 'invites' ? 'invites' : section === 'members' ? 'members' : 'general',
+        detail: settingsOpenDetail(section),
       }));
       return;
     }
@@ -104,15 +112,31 @@ async function boot(root: HTMLElement): Promise<void> {
   });
   mountDesktop(root);
 }
+
+async function refreshRemoteMembership(
+  client: CloudClient,
+  selected: Extract<ReturnType<typeof activeWorkspace>, { kind: 'remote' }>,
+  origin: string,
+  showGateway: () => Promise<void>,
+): Promise<boolean> {
+  try {
+    const session = await client.session();
+    const membership = session.workspaces.find(item => item.slug === selected.workspaceId);
+    if (session.user.id !== selected.accountId || !membership || selected.server !== origin) {
+      await showGateway();
+      return false;
+    }
+    rememberWorkspace({...selected, role: membership.role, name: membership.name});
+    return true;
+  } catch {
+    await showGateway();
+    return false;
+  }
+}
+
 function showError(error: unknown): void {
   if (!(root instanceof HTMLElement)) return;
-  let message = root.querySelector<HTMLElement>('[data-startup-error]');
-  if (!message) {
-    message = document.createElement('p');
-    message.setAttribute('data-startup-error', '');
-    message.setAttribute('role', 'alert');
-    root.append(message);
-  }
+  const message = startupErrorNode(root);
   message.textContent = error instanceof Error ? error.message : 'Impossible d’ouvrir cet espace. Rechargez pour réessayer.';
 }
 if (root instanceof HTMLElement) void boot(root).catch(showError);

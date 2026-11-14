@@ -90,16 +90,8 @@ async function paint(main: HTMLElement, options: InviteScreenOptions): Promise<v
     return;
   }
 
-  let workspace: CloudWorkspaceStatus;
-  try {
-    workspace = await options.client.workspace(invite.slug);
-  } catch (reason) {
-    if (reason instanceof CloudApiError && (reason.status === 404 || reason.status === 0)) {
-      paintExpired(main, invite);
-      return;
-    }
-    throw reason;
-  }
+  const workspace = await loadInviteWorkspace(options, invite, main);
+  if (!workspace) return;
 
   const membership = session.workspaces.find((item) => item.slug === invite.slug);
   const role = membership?.role ?? invite.role ?? (workspace.role ?? undefined);
@@ -122,6 +114,22 @@ async function paint(main: HTMLElement, options: InviteScreenOptions): Promise<v
   // Signed in as the right person but not a member: invite likely expired/revoked,
   // or auto-accept has not run (plan §6.1 gap — accept only happens in verifyCode).
   paintExpired(main, { ...invite, host: invite.host }, workspace.name);
+}
+
+async function loadInviteWorkspace(
+  options: InviteScreenOptions,
+  invite: InviteContext,
+  main: HTMLElement,
+): Promise<CloudWorkspaceStatus | null> {
+  try {
+    return await options.client.workspace(invite.slug);
+  } catch (reason) {
+    if (reason instanceof CloudApiError && (reason.status === 404 || reason.status === 0)) {
+      paintExpired(main, invite);
+      return null;
+    }
+    throw reason;
+  }
 }
 
 function paintExpired(main: HTMLElement, invite: InviteContext, workspaceName?: string): void {

@@ -301,7 +301,7 @@ func TestMailBackendMatchesSendSelection(t *testing.T) {
 		want string
 	}{
 		{"injected wins over everything", Config{
-			Deliver: func(string, string, string) error { return nil },
+			Deliver:     func(string, string, string) error { return nil },
 			Development: true, DevelopmentMailDirectory: "/tmp",
 			SMTPHost: "smtp.test", ResendAPIKey: "re_x",
 		}, "injected"},

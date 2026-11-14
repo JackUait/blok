@@ -1,7 +1,7 @@
 export type CloudRole = 'admin' | 'member' | 'viewer';
 export interface CloudWorkspace { id: string; slug: string; name: string; role: CloudRole }
 export interface CloudUser { id: string; email: string; name?: string; instanceAdmin?: boolean }
-export interface CloudSession { user: CloudUser; workspaces: CloudWorkspace[] }
+export interface CloudSession { user: CloudUser; workspaces: CloudWorkspace[]; supportEmail?: string | null }
 export type CloudSignupPolicy = 'invite' | 'domain' | 'open';
 export type CloudWorkspaceCreation = 'anyone' | 'admins_only' | 'disabled';
 export interface CloudInstance {

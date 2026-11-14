@@ -400,8 +400,9 @@ export async function mountCloudGateway(root: HTMLElement, options: CloudGateway
   async function boot(): Promise<void> {
     routers.boot();
     try {
-      // Never trust a cached setupRequired: re-check before rendering setup (plan §9.2).
-      state.instance = await client.instance();
+      // Nothing is cached at boot — one read is the read. The re-check that
+      // matters is in refresh(), which re-reads while the setup route is open
+      // so a claim completed in another tab stops showing the assistant.
       state.instance = await client.instance();
       if (state.instance.name) document.title = `${state.instance.name} — Connexion`;
       if (state.instance.setupRequired) {

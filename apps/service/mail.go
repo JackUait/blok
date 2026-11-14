@@ -73,6 +73,7 @@ func (c Config) validateSMTP() error {
 	_, e = smtpSender(c)
 	return e
 }
+
 // mailBackend names the backend send() would pick, in the same order:
 // injected → development → smtp → resend → "". SMTP wins over a residual Resend key.
 func (c Config) mailBackend() string {

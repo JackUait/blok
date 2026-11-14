@@ -56,4 +56,23 @@ describe('welcome seed', () => {
     expect(text).toMatch(/database/);
     expect(rights.title).toMatch(/Droits et partage/i);
   });
+
+  it('writes status options where every database reader looks for them', () => {
+    const { welcome } = buildWelcomeDocuments('acme');
+    const db = welcome.blocks.find((block) => block.type === 'database');
+    const schema = (db?.data as { schema?: Array<Record<string, unknown>> } | undefined)?.schema ?? [];
+    const status = schema.find((property) => property.type === 'status');
+    expect(status).toBeTruthy();
+    // PropertyDefinition.config?.options, with SelectOption = {id,label,color?,position}.
+    // A top-level `options` array of {id,name,color} is invisible to every reader
+    // in src/shared/database/, so the column renders empty.
+    expect(status).not.toHaveProperty('options');
+    const options = (status?.config as { options?: Array<Record<string, unknown>> } | undefined)?.options;
+    expect(options?.map((option) => option.id)).toEqual(['todo', 'doing', 'done']);
+    for (const option of options ?? []) {
+      expect(typeof option.label).toBe('string');
+      expect(typeof option.position).toBe('string');
+      expect(option).not.toHaveProperty('name');
+    }
+  });
 });

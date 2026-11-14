@@ -169,8 +169,25 @@ describe('help menu', () => {
     expect(popover?.textContent).toMatch(/Premiers pas/);
     expect(popover?.textContent).toMatch(/Qui peut voir quoi/);
     expect(popover?.textContent).toMatch(/Raccourcis/);
-    expect(popover?.textContent).toMatch(/Signaler un problème/);
     expect(popover?.textContent).toMatch(/Blok /);
+    // No address to write to, so no row: a permanently greyed entry reads as broken.
+    expect(popover?.textContent).not.toMatch(/Signaler un problème/);
+  });
+
+  it('offers the report row only once the instance names a support address, never the viewer', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ user: { id: 'u1', email: 'moi@example.test' }, workspaces: [], supportEmail: 'ops@example.test' }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )));
+    const footer = remoteFooter('member');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const help = [...footer.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
+      .find((node) => node.textContent === 'Aide');
+    must(help).click();
+    const popover = document.querySelector('[data-desktop-help-popover], [data-blok-popover]');
+    expect(popover?.textContent).toMatch(/Signaler un problème/);
+    expect(popover?.textContent).not.toMatch(/moi@example\.test/);
+    vi.unstubAllGlobals();
   });
 });
 

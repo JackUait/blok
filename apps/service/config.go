@@ -15,7 +15,7 @@ import (
 type Config struct {
 	DatabaseURL, Listen, PublicURL, InternalURL, DataDirectory, TicketSecret, InternalSecret, AdminEmail string
 	// BootstrapWorkspaceSlug/Name, with AdminEmail, optionally seed one workspace at startup (§5.3).
-	BootstrapWorkspaceSlug, BootstrapWorkspaceName string
+	BootstrapWorkspaceSlug, BootstrapWorkspaceName                         string
 	SMTPHost, SMTPPort, SMTPUsername, SMTPPassword, SMTPFrom, SMTPFromName string
 	SMTPAllowInsecureDevelopment                                           bool
 	// Optional trust roots and dialer are dependency injection for private-CA integration tests.

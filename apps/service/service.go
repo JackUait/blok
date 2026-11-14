@@ -276,6 +276,7 @@ func (s *Service) routes() {
 	s.mux.HandleFunc("POST /api/setup/email-test", s.setupEmailTest)
 	s.mux.HandleFunc("GET /api/admin/settings", s.getAdminSettings)
 	s.mux.HandleFunc("PATCH /api/admin/settings", s.patchAdminSettings)
+	s.mux.HandleFunc("GET /api/admin/health", s.adminHealth)
 	s.mux.HandleFunc("GET /api/admin/users", s.listAdminUsers)
 	s.mux.HandleFunc("POST /api/admin/users", s.createAdminUser)
 	s.mux.HandleFunc("PATCH /api/admin/users/{id}", s.patchAdminUser)

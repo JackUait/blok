@@ -130,11 +130,17 @@ export function buildWelcomeDocuments(workspaceId: string): WelcomeDocuments {
               name: 'Statut',
               type: 'status',
               position: 'a1',
-              options: [
-                { id: 'todo', name: 'À faire', color: 'gray' },
-                { id: 'doing', name: 'En cours', color: 'blue' },
-                { id: 'done', name: 'Terminé', color: 'green' },
-              ],
+              // SelectOption lives under config.options as {id,label,color?,position}
+              // (types/tools/database.d.ts). Every reader in src/shared/database/
+              // goes through property.config?.options, so a top-level array of
+              // {id,name,color} renders the column empty.
+              config: {
+                options: [
+                  { id: 'todo', label: 'À faire', color: 'gray', position: 'a0' },
+                  { id: 'doing', label: 'En cours', color: 'blue', position: 'a1' },
+                  { id: 'done', label: 'Terminé', color: 'green', position: 'a2' },
+                ],
+              },
             },
           ],
           views: [

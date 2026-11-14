@@ -543,7 +543,9 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       if (ws.generation !== turn) return;
       instance.on('collaboration:status', (raw) => {
         if (ws.generation !== turn) return;
-        const event = raw as { status?: string; save?: { pendingOperations?: number; pendingBytes?: number } };
+        // An emission with no payload must fall back to "not pending", not throw
+        // inside the listener and kill the rest of the handler.
+        const event = (raw ?? {}) as { status?: string; save?: { pendingOperations?: number; pendingBytes?: number } };
         const pendingOps = event.save?.pendingOperations ?? 0;
         const pendingBytes = event.save?.pendingBytes ?? 0;
         ws.remotePending = pendingOps > 0 || pendingBytes > 0;

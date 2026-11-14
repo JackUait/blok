@@ -514,14 +514,23 @@ export function mountInstanceSettings(
 
     void (async () => {
       try {
-        await options.client.request<{ ok: boolean }>('/healthz');
+        // /healthz only answers {"ok":true} and never touches DATA_DIRECTORY,
+        // so a green Fichiers pill derived from it is a claim nobody checked —
+        // exactly the state this panel exists to catch. /api/admin/health
+        // probes the uploads volume for real.
+        type Section = { ok: boolean; detail?: string; backend?: string };
+        const health = await options.client.request<{
+          database: Section; files: Section; mail: Section;
+        }>('/api/admin/health');
         if (!life.alive) return;
-        setPill(base, 'ok', 'Joignable');
-        setPill(files, 'ok', 'Volume accessible via le serveur');
+        setPill(base, health.database.ok ? 'ok' : 'bad', health.database.detail ?? '');
+        setPill(files, health.files.ok ? 'ok' : 'bad', health.files.detail ?? '');
+        setPill(mail, health.mail.ok ? 'ok' : 'bad', health.mail.detail ?? '');
       } catch {
         if (!life.alive) return;
         setPill(base, 'bad', 'Injoignable');
-        setPill(files, 'bad', 'État inconnu');
+        setPill(files, 'unknown', 'État inconnu');
+        setPill(mail, 'unknown', 'État inconnu');
       }
     })();
 

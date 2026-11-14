@@ -5,12 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -101,7 +104,11 @@ func (s *Service) createAdminUser(w http.ResponseWriter, r *http.Request) {
 		RETURNING id,email,name,created_at`, id, email, name,
 	).Scan(&created.ID, &created.Email, &created.Name, &created.CreatedAt)
 	if e != nil {
-		problem(w, 409, "Email already used")
+		if isUniqueViolation(e) {
+			problem(w, 409, "Email already used")
+			return
+		}
+		problem(w, 500, "Could not create user")
 		return
 	}
 	created.WorkspaceCount = 0
@@ -238,6 +245,15 @@ func (s *Service) deleteAdminUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	// After the last-admin invariant, which is the stronger refusal and keeps
+	// its own message. deleteUserTx reassigns page_shares.granted_by and
+	// workspace_emojis.created_by to the acting administrator; reassigning them
+	// to the account being deleted is a no-op, and the final DELETE then
+	// violates a NOT NULL foreign key — an opaque 500. Name the refusal instead.
+	if id == actor.ID {
+		problem(w, 409, "You cannot delete your own account")
+		return
+	}
 
 	if e = s.deleteUserTx(ctx, tx, id, email, actor.ID); e != nil {
 		problem(w, 500, "Could not delete user")
@@ -366,4 +382,50 @@ func adminPage(r *http.Request, def, max int) (limit, offset int) {
 		}
 	}
 	return limit, offset
+}
+
+// isUniqueViolation tells a duplicate key apart from every other database
+// fault, so a transient error is never reported to an administrator as
+// "Email already used" — a confident, wrong message that stops them retrying.
+func isUniqueViolation(e error) bool {
+	var pg *pgconn.PgError
+	return errors.As(e, &pg) && pg.Code == "23505"
+}
+
+// adminHealth probes what the panel claims. /healthz only answers {"ok":true};
+// it never touches DATA_DIRECTORY, so deriving a green "files" pill from it is
+// a claim nobody checked — exactly the state this panel exists to catch.
+func (s *Service) adminHealth(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireInstanceAdmin(w, r); !ok {
+		return
+	}
+	section := func(ok bool, detail string) map[string]any {
+		return map[string]any{"ok": ok, "detail": detail}
+	}
+	database := section(true, "Joignable")
+	if e := s.DB.Ping(r.Context()); e != nil {
+		database = section(false, "Injoignable")
+	}
+
+	uploads := filepath.Join(s.Config.DataDirectory, "uploads")
+	files := section(true, "Volume accessible en écriture")
+	if info, e := os.Stat(uploads); e != nil || !info.IsDir() {
+		files = section(false, "Volume introuvable")
+	} else {
+		probe := filepath.Join(uploads, ".health-probe")
+		if e := os.WriteFile(probe, []byte("ok"), 0600); e != nil {
+			files = section(false, "Volume en lecture seule")
+		} else {
+			_ = os.Remove(probe)
+		}
+	}
+
+	backend := s.Config.mailBackend()
+	mail := map[string]any{"ok": backend != "", "backend": backend}
+	if backend == "" {
+		mail["detail"] = "Aucun backend configuré"
+	} else {
+		mail["detail"] = "Configuré — utilisez l’e-mail de test pour vérifier la livraison"
+	}
+	jsonOut(w, 200, map[string]any{"database": database, "files": files, "mail": mail})
 }

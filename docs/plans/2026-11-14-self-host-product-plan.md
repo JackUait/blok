@@ -1,7 +1,9 @@
 # Blok self-host : un produit, pas un déploiement
 
-> **Statut :** conception. Aucune ligne de code écrite. §13 donne l'ordre de
-> livraison.
+> **Statut :** implémenté. §13 garde l'ordre de livraison d'origine, qui décrit
+> comment ce travail aurait dû se découper ; il a en fait été livré d'un seul
+> tenant. Les écarts relevés en revue sont corrigés, et §5.1 porte la correction
+> de fond que cette revue a mise au jour.
 >
 > **Périmètre :** `apps/service` (le backend cloud Go), le client `desktop/src`
 > et `deploy/`. La bibliothèque publiée n'est pas touchée : aucun type de
@@ -258,7 +260,7 @@ l'administrateur**. C'est le piège le plus coûteux du document (§14).
 
 | `BOOTSTRAP_ADMIN_EMAIL` | Comportement au démarrage |
 | --- | --- |
-| renseigné | upsert du compte, `INSERT INTO instance_admins … ON CONFLICT DO NOTHING`, `setup_completed_at = coalesce(…, now())`. **À chaque démarrage, idempotent.** |
+| renseigné | upsert du compte ; `INSERT INTO instance_admins …` **uniquement si la table est vide** ; `setup_completed_at = coalesce(…, now())`. **Correction du 15 novembre :** la première rédaction disait « à chaque démarrage, idempotent ». C'était faux pour `instance_admins`. `ON CONFLICT DO NOTHING` protège une rétrogradation d'adhésion parce que la ligne subsiste ; une révocation d'admin d'instance **supprime** la ligne, donc il n'y a plus rien avec quoi entrer en conflit et l'adresse revenait à chaque redémarrage. La variable est un filet de sécurité — elle rattrape une instance sans aucun administrateur — pas un moyen d'en ajouter : pour ça, `blokctl admin grant`. |
 | vide, des administrateurs d'instance existent | rien |
 | vide, aucun administrateur, instance héritée | promotion des `admin` de l'**espace par défaut** uniquement, journalisée nommément |
 | vide, aucun administrateur, setup en attente | frappe ou conserve un jeton, journalise l'URL à chaque démarrage |

@@ -184,13 +184,13 @@ func TestSetupClaimPersistsPolicies(t *testing.T) {
 	server := httptest.NewServer(s.Handler())
 	t.Cleanup(server.Close)
 	status, out := setupRequest(t, server, s.Config.PublicURL, "POST", "/api/setup/claim", map[string]any{
-		"token":              token,
-		"email":              "owner@example.test",
-		"name":               "Owner",
-		"instanceName":       "Acme",
-		"signupPolicy":       "open",
-		"workspaceCreation":  "disabled",
-		"workspace":          map[string]string{"slug": "equipe", "name": "Équipe"},
+		"token":             token,
+		"email":             "owner@example.test",
+		"name":              "Owner",
+		"instanceName":      "Acme",
+		"signupPolicy":      "open",
+		"workspaceCreation": "disabled",
+		"workspace":         map[string]string{"slug": "equipe", "name": "Équipe"},
 	})
 	if status != 200 {
 		t.Fatalf("claim status %d body %#v, want 200", status, out)

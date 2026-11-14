@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -16,26 +17,29 @@ var errLastInstanceAdmin = errors.New("Keep at least one instance administrator"
 // InstanceSettings is the singleton row that governs signup, workspace
 // creation and the first-run setup window for a self-hosted deployment.
 type InstanceSettings struct {
-	Name              string
-	SignupPolicy      string
-	SignupDomains     []string
-	WorkspaceCreation string
+	Name               string
+	SignupPolicy       string
+	SignupDomains      []string
+	WorkspaceCreation  string
 	DefaultWorkspaceID *string
-	SetupCompletedAt  *time.Time
-	UpdatedAt         time.Time
-	UpdatedBy         *string
+	SetupCompletedAt   *time.Time
+	UpdatedAt          time.Time
+	UpdatedBy          *string
 }
 
 // SettingsPatch carries optional fields for an atomic UPDATE … COALESCE.
 // A nil pointer means "leave unchanged"; an empty string pointer clears a
 // text field where that is meaningful (name).
 type SettingsPatch struct {
-	Name              *string
-	SignupPolicy      *string
-	SignupDomains     *[]string
-	WorkspaceCreation *string
+	Name               *string
+	SignupPolicy       *string
+	SignupDomains      *[]string
+	WorkspaceCreation  *string
 	DefaultWorkspaceID *string
-	UpdatedBy         *string
+	// ClearDefaultWorkspace distinguishes an explicit null from an absent
+	// field: coalesce() cannot express "unset it", so the two look the same.
+	ClearDefaultWorkspace bool
+	UpdatedBy             *string
 }
 
 func (s *Service) settings() InstanceSettings {
@@ -56,11 +60,11 @@ func (s *Service) storeSettings(v InstanceSettings) {
 
 func (s *Service) loadSettings(ctx context.Context) (InstanceSettings, error) {
 	var (
-		out               InstanceSettings
+		out                InstanceSettings
 		defaultWorkspaceID pgtype.Text
-		setupCompletedAt  pgtype.Timestamptz
-		updatedBy         pgtype.Text
-		domains           []string
+		setupCompletedAt   pgtype.Timestamptz
+		updatedBy          pgtype.Text
+		domains            []string
 	)
 	e := s.DB.QueryRow(ctx, `
 		SELECT name, signup_policy, coalesce(signup_domains,'{}'), workspace_creation,
@@ -102,11 +106,11 @@ func (s *Service) refreshSettings(ctx context.Context) error {
 
 func (s *Service) applySettings(ctx context.Context, patch SettingsPatch) (InstanceSettings, error) {
 	var (
-		out               InstanceSettings
+		out                InstanceSettings
 		defaultWorkspaceID pgtype.Text
-		setupCompletedAt  pgtype.Timestamptz
-		updatedBy         pgtype.Text
-		domains           []string
+		setupCompletedAt   pgtype.Timestamptz
+		updatedBy          pgtype.Text
+		domains            []string
 	)
 	var domainsArg any
 	if patch.SignupDomains != nil {
@@ -118,14 +122,15 @@ func (s *Service) applySettings(ctx context.Context, patch SettingsPatch) (Insta
 		  signup_policy = coalesce($2, signup_policy),
 		  signup_domains = coalesce($3, signup_domains),
 		  workspace_creation = coalesce($4, workspace_creation),
-		  default_workspace_id = coalesce($5, default_workspace_id),
+		  default_workspace_id = CASE WHEN $7 THEN NULL
+		                              ELSE coalesce($5, default_workspace_id) END,
 		  updated_by = coalesce($6, updated_by),
 		  updated_at = now()
 		WHERE id
 		RETURNING name, signup_policy, coalesce(signup_domains,'{}'), workspace_creation,
 		          default_workspace_id, setup_completed_at, updated_at, updated_by`,
 		patch.Name, patch.SignupPolicy, domainsArg, patch.WorkspaceCreation,
-		patch.DefaultWorkspaceID, patch.UpdatedBy,
+		patch.DefaultWorkspaceID, patch.UpdatedBy, patch.ClearDefaultWorkspace,
 	).Scan(
 		&out.Name, &out.SignupPolicy, &domains, &out.WorkspaceCreation,
 		&defaultWorkspaceID, &setupCompletedAt, &out.UpdatedAt, &updatedBy,
@@ -196,7 +201,7 @@ func (s *Service) getInstance(w http.ResponseWriter, r *http.Request) {
 		).Scan(&slug, &name)
 		if e == nil {
 			out["defaultWorkspace"] = map[string]string{"slug": slug, "name": name}
-		} else if e != pgx.ErrNoRows {
+		} else if !errors.Is(e, pgx.ErrNoRows) {
 			problem(w, 500, "Instance unavailable")
 			return
 		}
@@ -222,13 +227,13 @@ func settingsJSON(cfg InstanceSettings) map[string]any {
 		domains = []string{}
 	}
 	return map[string]any{
-		"name":              cfg.Name,
-		"signupPolicy":      cfg.SignupPolicy,
-		"signupDomains":     domains,
-		"workspaceCreation": cfg.WorkspaceCreation,
+		"name":               cfg.Name,
+		"signupPolicy":       cfg.SignupPolicy,
+		"signupDomains":      domains,
+		"workspaceCreation":  cfg.WorkspaceCreation,
 		"defaultWorkspaceId": cfg.DefaultWorkspaceID,
-		"setupCompletedAt":  cfg.SetupCompletedAt,
-		"updatedAt":         cfg.UpdatedAt,
+		"setupCompletedAt":   cfg.SetupCompletedAt,
+		"updatedAt":          cfg.UpdatedAt,
 	}
 }
 
@@ -249,10 +254,38 @@ func (s *Service) patchAdminSettings(w http.ResponseWriter, r *http.Request) {
 		SignupPolicy      *string   `json:"signupPolicy"`
 		SignupDomains     *[]string `json:"signupDomains"`
 		WorkspaceCreation *string   `json:"workspaceCreation"`
-		DefaultWorkspaceID *string  `json:"defaultWorkspaceId"`
+		// Raw, so an explicit null ("clear it") is distinguishable from an
+		// absent field ("leave it"). A *string collapses both to nil.
+		DefaultWorkspaceID json.RawMessage `json:"defaultWorkspaceId"`
 	}
 	if !body(w, r, &in) {
 		return
+	}
+	var defaultWorkspaceID *string
+	clearDefault := false
+	if len(in.DefaultWorkspaceID) > 0 {
+		if strings.TrimSpace(string(in.DefaultWorkspaceID)) == "null" {
+			clearDefault = true
+		} else {
+			var id string
+			if json.Unmarshal(in.DefaultWorkspaceID, &id) != nil || id == "" {
+				problem(w, 400, "Invalid defaultWorkspaceId")
+				return
+			}
+			// Validated like every sibling field, so an unknown id answers 400
+			// rather than letting the foreign key surface as a 500.
+			var exists bool
+			if e := s.DB.QueryRow(r.Context(),
+				`SELECT EXISTS(SELECT 1 FROM workspaces WHERE id=$1)`, id).Scan(&exists); e != nil {
+				problem(w, 503, "Database unavailable")
+				return
+			}
+			if !exists {
+				problem(w, 400, "Unknown defaultWorkspaceId")
+				return
+			}
+			defaultWorkspaceID = &id
+		}
 	}
 	if in.SignupPolicy != nil {
 		switch *in.SignupPolicy {
@@ -280,8 +313,8 @@ func (s *Service) patchAdminSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	updated, e := s.applySettings(r.Context(), SettingsPatch{
 		Name: in.Name, SignupPolicy: in.SignupPolicy, SignupDomains: in.SignupDomains,
-		WorkspaceCreation: in.WorkspaceCreation, DefaultWorkspaceID: in.DefaultWorkspaceID,
-		UpdatedBy: &u.ID,
+		WorkspaceCreation: in.WorkspaceCreation, DefaultWorkspaceID: defaultWorkspaceID,
+		ClearDefaultWorkspace: clearDefault, UpdatedBy: &u.ID,
 	})
 	if e != nil {
 		problem(w, 500, "Could not update settings")
@@ -350,4 +383,18 @@ func (s *Service) RevokeInstanceAdmin(ctx context.Context, email string) error {
 		return err
 	}
 	return tx.Commit(ctx)
+}
+
+// supportEmail is the address a member is told to contact: the longest-standing
+// instance administrator. Signed-in callers only — it must never reach the
+// anonymous GET /api/instance, where it would be a ready-made phishing target.
+func (s *Service) supportEmail(ctx context.Context) string {
+	var email string
+	if e := s.DB.QueryRow(ctx, `
+		SELECT u.email FROM instance_admins ia
+		  JOIN users u ON u.id=ia.user_id
+		 ORDER BY ia.created_at ASC, u.email ASC LIMIT 1`).Scan(&email); e != nil {
+		return ""
+	}
+	return email
 }

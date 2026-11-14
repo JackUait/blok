@@ -229,7 +229,11 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   help.setAttribute('aria-haspopup', 'menu');
   if (client) {
     void client.session().then((session) => {
-      if (session.user.instanceAdmin) ui.supportEmail = session.user.email;
+      // The address a member is told to contact, served by /api/session: the
+      // longest-standing instance administrator. Never the viewer's own inbox,
+      // and the entry is hidden rather than shown disabled when there is none.
+      const support = session.supportEmail ?? '';
+      ui.supportEmail = support && support !== session.user.email ? support : null;
     }).catch(() => { /* no support address */ });
   }
   const openHelp = (): void => {
@@ -266,16 +270,18 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
           showShortcutsDialog();
         },
       },
-      {
+      // Omitted when the instance has no address to offer: a permanently
+      // greyed row teaches nothing and reads as broken.
+      ...(ui.supportEmail ? [{
         name: 'report',
         title: 'Signaler un problème',
         closeOnActivate: true,
-        isDisabled: !ui.supportEmail,
         onActivate: () => {
-          if (!ui.supportEmail) return;
-          location.href = `mailto:${encodeURIComponent(ui.supportEmail)}?subject=${encodeURIComponent('Signaler un problème — Blok')}`;
+          const address = ui.supportEmail;
+          if (!address) return;
+          location.href = `mailto:${encodeURIComponent(address)}?subject=${encodeURIComponent('Signaler un problème — Blok')}`;
         },
-      },
+      }] : []),
       {
         name: 'version',
         title: `Blok ${CORE_VERSION} · App ${APP_VERSION}`,

@@ -189,7 +189,7 @@ func (s *Service) getSession(w http.ResponseWriter, r *http.Request) {
 		problem(w, 503, "Database unavailable")
 		return
 	}
-	jsonOut(w, 200, map[string]any{"user": u.User, "workspaces": list})
+	jsonOut(w, 200, map[string]any{"user": u.User, "workspaces": list, "supportEmail": s.supportEmail(r.Context())})
 }
 
 func (s *Service) logout(w http.ResponseWriter, r *http.Request) {

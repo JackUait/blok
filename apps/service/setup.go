@@ -38,9 +38,16 @@ func (s *Service) bootstrapInstance(ctx context.Context, tx pgx.Tx) (needSetupTo
 		if _, err = tx.Exec(ctx, `INSERT INTO users(id,email) VALUES($1,$2) ON CONFLICT(email) DO NOTHING`, opaque(), email); err != nil {
 			return false, err
 		}
+		// Only when the instance has nobody left. ON CONFLICT cannot protect a
+		// revocation here the way it protects a demoted membership: revoking
+		// DELETEs the row, so there is nothing to conflict with and the address
+		// would be reinstated on every restart. The variable exists so an
+		// instance is never left without an administrator — not so the .env can
+		// quietly undo a deliberate removal. Use `blokctl admin grant` to add one.
 		if _, err = tx.Exec(ctx, `
 			INSERT INTO instance_admins(user_id)
 			SELECT id FROM users WHERE email=$1
+			  AND NOT EXISTS(SELECT 1 FROM instance_admins)
 			ON CONFLICT DO NOTHING`, email); err != nil {
 			return false, err
 		}
@@ -360,14 +367,11 @@ func (s *Service) claimSetup(w http.ResponseWriter, r *http.Request) {
 		problem(w, 500, "Could not complete setup")
 		return
 	}
-	if e = tx.Commit(r.Context()); e != nil {
-		problem(w, 500, "Could not complete setup")
-		return
-	}
-	_ = os.Remove(filepath.Join(s.Config.DataDirectory, setupTokenFile))
-	_ = s.refreshSettings(r.Context())
 
-	// Possession of the mailbox still has to be proved — no session here.
+	// Possession of the mailbox still has to be proved — no session here. The
+	// code goes out BEFORE the commit: a typo or a dead relay must leave the
+	// instance claimable, token intact. Committing first would spend the setup
+	// on an address nobody can reach, with no way back but shell access.
 	if e = s.issueLoginCode(r.Context(), email, ip); e != nil {
 		if errors.Is(e, errLoginRateLimited) {
 			problem(w, 429, "Too many attempts; try again later")
@@ -376,6 +380,12 @@ func (s *Service) claimSetup(w http.ResponseWriter, r *http.Request) {
 		problem(w, 503, "Email delivery unavailable")
 		return
 	}
+	if e = tx.Commit(r.Context()); e != nil {
+		problem(w, 500, "Could not complete setup")
+		return
+	}
+	_ = os.Remove(filepath.Join(s.Config.DataDirectory, setupTokenFile))
+	_ = s.refreshSettings(r.Context())
 	jsonOut(w, 200, map[string]any{"ok": true})
 }
 
@@ -423,6 +433,14 @@ func (s *Service) setupEmailTest(w http.ResponseWriter, r *http.Request) {
 	}
 	backend := s.Config.mailBackend()
 
+	// Before the token check, so a guess consumes the quota — claimSetup
+	// already orders it this way.
+	ip := s.clientIP(r)
+	if !s.rate(r.Context(), "setup-email-test:"+ip, 10) {
+		problem(w, 429, "Too many attempts; try again later")
+		return
+	}
+
 	tx, e := s.DB.Begin(r.Context())
 	if e != nil {
 		problem(w, 503, "Database unavailable")
@@ -454,11 +472,6 @@ func (s *Service) setupEmailTest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ip := s.clientIP(r)
-	if !s.rate(r.Context(), "setup-email-test:"+ip, 10) {
-		problem(w, 429, "Too many attempts; try again later")
-		return
-	}
 	if e = s.send(email, "Test de livraison Blok", fmt.Sprintf("Ceci est un e-mail de test depuis %s.\nSi vous le recevez, la livraison fonctionne.", s.Config.PublicURL)); e != nil {
 		jsonOut(w, 503, map[string]any{"error": e.Error(), "backend": backend})
 		return

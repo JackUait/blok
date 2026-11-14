@@ -36,6 +36,9 @@ interface ContextPopoverProbe {
 interface ViewPopoverProbe {
   destroyCount: number;
   openedWith: HTMLElement | null;
+  placement: string | undefined;
+  /** Stands in for the popover's own DOM. */
+  surface: HTMLElement;
   select(type: string): void;
   fireClose(): void;
 }
@@ -105,6 +108,8 @@ vi.mock('../../../../src/tools/database/database-view-popover', () => {
       this.probe = {
         destroyCount: 0,
         openedWith: null,
+        placement: undefined,
+        surface: document.createElement('div'),
         select: (type: string): void => {
           options.onSelect(type);
         },
@@ -115,21 +120,29 @@ vi.mock('../../../../src/tools/database/database-view-popover', () => {
       probes.views.push(this.probe);
     }
 
-    open(anchor: HTMLElement): void {
+    open(anchor: HTMLElement, placement?: string): void {
       this.probe.openedWith = anchor;
+      this.probe.placement = placement;
+      document.body.appendChild(this.probe.surface);
+    }
+
+    contains(node: Node): boolean {
+      return this.probe.surface.contains(node);
     }
 
     close(): void {
+      this.probe.surface.remove();
       this.probe.fireClose();
     }
 
     destroy(): void {
       this.probe.destroyCount += 1;
+      this.probe.surface.remove();
       this.probe.fireClose();
     }
   }
 
-  return { DatabaseViewPopover: MockDatabaseViewPopover };
+  return { ADD_VIEW_MENU_WIDTH: 390, DatabaseViewPopover: MockDatabaseViewPopover };
 });
 
 /**
@@ -1228,14 +1241,71 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(newBtn.textContent?.trim()).toBe('New view');
     });
 
-    it('closes the dropdown and opens the add-view popover on the add button', () => {
-      const { el, dropdown } = openDropdown(threeViews(), 'v1');
+    // notion-motion.md Round 31 §3: Add view opens as a side flyout off the New view row; the list stays open.
+    it('keeps the dropdown open and opens Add view beside its New view row', () => {
+      const { dropdown } = openDropdown(threeViews(), 'v1');
+      const newRow = queryOne(dropdown, '[data-blok-database-tab-overflow-new]');
 
-      queryOne(dropdown, '[data-blok-database-tab-overflow-new]').click();
+      newRow.click();
+
+      expect(document.querySelector('[data-blok-database-tab-overflow-dropdown]')).toBe(dropdown);
+      expect(probes.views.length).toBe(1);
+      expect(lastViewPopover().openedWith).toBe(newRow);
+      expect(lastViewPopover().placement).toBe('aside');
+    });
+
+    // Notion with no room on the right is unmeasured: Blok then opens Add view under "+", as before.
+    it('with no room for the flyout on the right, closes the dropdown and opens Add view under the add button', () => {
+      const { el, dropdown } = openDropdown(threeViews(), 'v1');
+      const newRow = queryOne(dropdown, '[data-blok-database-tab-overflow-new]');
+
+      vi.spyOn(newRow, 'getBoundingClientRect').mockReturnValue(new DOMRect(window.innerWidth - 300, 100, 280, 28));
+      newRow.click();
 
       expect(document.querySelector('[data-blok-database-tab-overflow-dropdown]')).toBeNull();
-      expect(probes.views.length).toBe(1);
       expect(lastViewPopover().openedWith).toBe(queryOne(el, '[data-blok-database-add-view]'));
+      expect(lastViewPopover().placement).toBe('below');
+    });
+
+    it('a press inside the flyout keeps the dropdown open', () => {
+      const { dropdown } = openDropdown(threeViews(), 'v1');
+
+      queryOne(dropdown, '[data-blok-database-tab-overflow-new]').click();
+      lastViewPopover().surface.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+      expect(document.querySelector('[data-blok-database-tab-overflow-dropdown]')).toBe(dropdown);
+    });
+
+    it('Escape closes the flyout first, then the dropdown', () => {
+      const { dropdown } = openDropdown(threeViews(), 'v1');
+
+      queryOne(dropdown, '[data-blok-database-tab-overflow-new]').click();
+      window.dispatchEvent(key('Escape'));
+
+      expect(lastViewPopover().surface.isConnected).toBe(false);
+      expect(document.querySelector('[data-blok-database-tab-overflow-dropdown]')).toBe(dropdown);
+      window.dispatchEvent(key('Escape'));
+      expect(document.querySelector('[data-blok-database-tab-overflow-dropdown]')).toBeNull();
+    });
+
+    it('picking a layout in the flyout adds the view and closes the dropdown', () => {
+      const { dropdown } = openDropdown(threeViews(), 'v1');
+
+      queryOne(dropdown, '[data-blok-database-tab-overflow-new]').click();
+      lastViewPopover().select('board');
+
+      expect(onAddView).toHaveBeenCalledWith('board');
+      expect(document.querySelector('[data-blok-database-tab-overflow-dropdown]')).toBeNull();
+    });
+
+    it('closing the dropdown closes the flyout', () => {
+      const { dropdown } = openDropdown(threeViews(), 'v1');
+
+      queryOne(dropdown, '[data-blok-database-tab-overflow-new]').click();
+      document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+      expect(document.querySelector('[data-blok-database-tab-overflow-dropdown]')).toBeNull();
+      expect(lastViewPopover().surface.isConnected).toBe(false);
     });
 
     it('opens the add-view popover from Enter on the new-view action', () => {

@@ -31,6 +31,9 @@ const VIEW_TYPES: ViewTypeOption[] = [
   { type: 'form', labelKey: 'tools.database.viewTypeForm' },
 ];
 
+/** Notion's card of view layouts is 390 wide (feel/findings-toolbar V04). */
+export const ADD_VIEW_MENU_WIDTH = 390;
+
 export interface ViewPopoverOptions {
   onSelect: (type: ViewType) => void;
   onClose?: () => void;
@@ -61,7 +64,11 @@ export class DatabaseViewPopover {
     return this.api?.i18n.t(key) ?? fallback;
   }
 
-  open(anchor: HTMLElement): void {
+  /**
+   * `aside`: beside a menu row, vertically centred on it, its left on the row's
+   * right (notion-motion.md Round 31 §3: the fold menu's right − 4, its padding).
+   */
+  open(anchor: HTMLElement, placement: 'below' | 'aside' = 'below'): void {
     this.close();
 
     const headingEl = document.createElement('div');
@@ -100,8 +107,9 @@ export class DatabaseViewPopover {
       items,
       trigger: anchor,
       // motion-addview.json: Notion's card starts 4px under the "+".
-      offset: 4,
-      width: '390px',
+      offset: placement === 'aside' ? 0 : 4,
+      ...(placement === 'aside' ? { placeLeftOfAnchor: true, asideSide: 'right' as const } : {}),
+      width: `${ADD_VIEW_MENU_WIDTH}px`,
       autoFocusFirstItem: false,
     });
 
@@ -154,6 +162,11 @@ export class DatabaseViewPopover {
     item.addEventListener('click', () => onNewSource());
 
     return item;
+  }
+
+  /** A node of the open menu, or of a submenu. */
+  contains(node: Node): boolean {
+    return this.popover?.hasNode(node) === true;
   }
 
   close(): void {

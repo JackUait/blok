@@ -31,8 +31,10 @@ export interface OverflowListOptions {
   onReorder?: (id: string, afterId: string | null, beforeId: string | null) => void;
   /** "•••" on a row. The caller's menu lives outside the list. Omitted: no "•••". */
   onMenu?: (button: HTMLElement, id: string, row: HTMLElement) => void;
-  /** Omitted: no new-item row. */
-  onNew?: () => void;
+  /** Omitted: no new-item row. Gets the row, for a menu that opens beside it. */
+  onNew?: (row: HTMLElement) => void;
+  /** The list stays open when the new-item row opens something beside it. */
+  keepOpenOnNew?: boolean;
   /** A second new-item row below the first ("New data source"). */
   onNewSecond?: { label: string; icon: string; activate: () => void };
   /** A node outside the list that still belongs to it (the row menu). */
@@ -139,7 +141,7 @@ export class OverflowList {
     if (this.options.onNewSecond !== undefined) {
       const second = this.options.onNewSecond;
 
-      listbox.appendChild(this.createNewRow(second.activate, { label: second.label, icon: second.icon, suffix: 'new-second' }));
+      listbox.appendChild(this.createNewRow(() => second.activate(), { label: second.label, icon: second.icon, suffix: 'new-second' }));
     }
     // Outside the listbox: only options belong in it.
     dropdown.append(search.getElement(), empty, listbox);
@@ -326,7 +328,7 @@ export class OverflowList {
     return item;
   }
 
-  private createNewRow(onNew: () => void, second?: { label: string; icon: string; suffix: string }): DocumentFragment {
+  private createNewRow(onNew: (row: HTMLElement) => void, second?: { label: string; icon: string; suffix: string }): DocumentFragment {
     const { prefix, labels } = this.options;
     const fragment = document.createDocumentFragment();
     const separator = document.createElement('div');
@@ -334,8 +336,8 @@ export class OverflowList {
     const icon = document.createElement('span');
     const label = document.createElement('span');
     const activate = (): void => {
-      this.close();
-      onNew();
+      if (second !== undefined || this.options.keepOpenOnNew !== true) this.close();
+      onNew(button);
     };
 
     separator.setAttribute(`${prefix}-separator`, '');

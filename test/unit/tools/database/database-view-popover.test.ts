@@ -293,6 +293,18 @@ describe('DatabaseViewPopover', () => {
       expect((mockPopoverInstances.at(-1)?.params as { offset?: number }).offset).toBe(4);
     });
 
+    // notion-motion.md Round 31 §3: from "N more…" › New view, a flyout centred on the row, its left on the row's right.
+    it('opens beside a menu row with no gap when asked for the aside placement', () => {
+      popover.open(anchor, 'aside');
+
+      const opened = mockPopoverInstances.at(-1)?.params as { offset?: number; placeLeftOfAnchor?: boolean; asideSide?: string; width?: string };
+
+      expect(opened.placeLeftOfAnchor).toBe(true);
+      expect(opened.asideSide).toBe('right');
+      expect(opened.offset).toBe(0);
+      expect(opened.width).toBe('390px');
+    });
+
     it('is a 390px grid menu', () => {
       popover.open(anchor);
 

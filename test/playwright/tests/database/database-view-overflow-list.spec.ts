@@ -270,8 +270,45 @@ test.describe('database view overflow list', () => {
     await expect(list.locator('[data-highlighted]')).toHaveText('New view');
     await search.press('Enter');
 
+    // At 1200 wide there is no room beside the list, so Add view opens under "+".
     await expect(list).toBeHidden();
     await expect(page.locator('[data-blok-database-view-option="board"]')).toBeVisible();
+  });
+
+  // notion-motion.md Round 31 §3: a 390-wide flyout, its left on the list's right − 4, centred on the New view row; the list stays open.
+  test('New view opens Add view as a flyout beside the list, centred on its row', async ({ page }) => {
+    await page.setViewportSize({ width: 1512, height: 717 });
+    await mount(page);
+    const list = await openList(page);
+    const newRow = list.getByRole('option', { name: 'New view' });
+
+    await newRow.click();
+    const tile = page.locator('[data-blok-database-view-option="board"]');
+
+    await expect(tile).toBeVisible();
+    await expect(list).toBeVisible();
+    const box = await page.evaluate(async () => {
+      await Promise.all(document.getAnimations().map((animation) => animation.finished));
+      const surface = document.querySelector('[data-blok-database-view-option="board"]')?.closest('[data-blok-popover-container]');
+      const dropdown = document.querySelector('[data-blok-database-tab-overflow-dropdown]');
+      const row = document.querySelector('[data-blok-database-tab-overflow-new]');
+
+      if (!(surface instanceof HTMLElement) || dropdown === null || row === null) return null;
+      const flyout = surface.getBoundingClientRect();
+      const listRect = dropdown.getBoundingClientRect();
+      const rowRect = row.getBoundingClientRect();
+
+      return { left: flyout.left, width: flyout.width, centre: flyout.top + flyout.height / 2, listRight: listRect.right, rowCentre: rowRect.top + rowRect.height / 2 };
+    });
+
+    expect(box).not.toBeNull();
+    expect(box?.width).toBeCloseTo(390, 0);
+    expect(box?.left).toBeCloseTo((box?.listRight ?? 0) - 4, 0);
+    expect(box?.centre).toBeCloseTo(box?.rowCentre ?? 0, 0);
+
+    await page.keyboard.press('Escape');
+    await expect(tile).toBeHidden();
+    await expect(list).toBeVisible();
   });
 
   test('arrows inside an open row menu do not move the list highlight', async ({ page }) => {

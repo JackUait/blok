@@ -139,7 +139,7 @@ vi.mock('../../../../src/tools/database/database-view-popover', () => {
     }
   }
 
-  return { DatabaseViewPopover: MockDatabaseViewPopover };
+  return { ADD_VIEW_MENU_WIDTH: 390, DatabaseViewPopover: MockDatabaseViewPopover };
 });
 
 import { DatabaseTabBar } from '../../../../src/tools/database/database-tab-bar';

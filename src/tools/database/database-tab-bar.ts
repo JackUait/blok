@@ -1,5 +1,5 @@
 import { IconChevronDown, IconViewBoard, IconChart, IconGallery, IconListBulleted, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconForm, IconViewTimeline, IconViewDashboard, IconLink, IconDotsHorizontal, IconPageLayout, IconEyeSlash, IconExpandDiagonal } from '../../components/icons';
-import { DatabaseViewPopover } from './database-view-popover';
+import { ADD_VIEW_MENU_WIDTH, DatabaseViewPopover } from './database-view-popover';
 import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
 import { DATABASE_HEADER_MENU_CLASS } from './database-table-menus';
 import { PopoverDesktop } from '../../components/utils/popover';
@@ -723,7 +723,7 @@ export class DatabaseTabBar {
     });
   }
 
-  private openViewPopover(anchor: HTMLElement): void {
+  private openViewPopover(anchor: HTMLElement, placement: 'below' | 'aside' = 'below'): void {
     if (this.viewPopover !== null) {
       this.viewPopover.destroy();
     }
@@ -731,6 +731,9 @@ export class DatabaseTabBar {
     this.barEl?.setAttribute('data-popover-open', '');
     this.viewPopover = new DatabaseViewPopover({
       onSelect: (type) => {
+        // The menu closes itself after a pick; the list closing must not destroy it mid-pick.
+        this.viewPopover = null;
+        this.closeOverflowDropdown();
         this.options.onAddView(type);
       },
       onClose: () => {
@@ -741,7 +744,17 @@ export class DatabaseTabBar {
       ...(this.options.hiddenViewTypes !== undefined ? { hidden: this.options.hiddenViewTypes } : {}),
       ...(this.options.onNewDataSource !== undefined && !this.readOnly ? { onNewSource: this.options.onNewDataSource } : {}),
     });
-    this.viewPopover.open(anchor);
+    this.viewPopover.open(anchor, placement);
+  }
+
+  private closeViewPopover(): boolean {
+    if (this.viewPopover === null) return false;
+    const popover = this.viewPopover;
+
+    this.viewPopover = null;
+    popover.destroy();
+
+    return true;
   }
 
   /** Keeps the first `visibleCount` tabs and folds the rest. */
@@ -844,10 +857,19 @@ export class DatabaseTabBar {
           withDisplay: false,
         });
       },
-      onNew: () => {
+      // notion-motion.md Round 31 §3: Add view opens beside the New view row and the list stays open.
+      keepOpenOnNew: !this.readOnly,
+      onNew: (row) => {
         const addBtn = this.element?.querySelector<HTMLElement>('[data-blok-database-add-view]');
 
-        if (addBtn === null || addBtn === undefined) return;
+        if (this.readOnly || addBtn === null || addBtn === undefined) return;
+        if (row.getBoundingClientRect().right + ADD_VIEW_MENU_WIDTH <= window.innerWidth) {
+          this.openViewPopover(row, 'aside');
+
+          return;
+        }
+        // No room beside the list (Notion unmeasured): Add view opens under "+", as before.
+        this.closeOverflowDropdown();
         // A folded "+" has no box to hang the menu from.
         this.openViewPopover(this.element?.hasAttribute('data-blok-database-tab-folded') === true ? anchor : addBtn);
       },
@@ -855,14 +877,17 @@ export class DatabaseTabBar {
         onNewSecond: { label: this.t('tools.database.newDataSource', 'New data source'), icon: IconDatabase, activate: this.options.onNewDataSource },
       }),
       // The row menu mounts in <body>, outside the list, but belongs to it.
-      ownsNode: (target) => this.contextPopover?.hasNode(target) === true,
+      ownsNode: (target) => this.contextPopover?.hasNode(target) === true || this.viewPopover?.contains(target) === true,
       closeLayer: () => {
         if (this.contextPopover === null) {
-          return false;
+          return this.closeViewPopover();
         }
         this.closeContextPopover();
 
         return true;
+      },
+      onClose: () => {
+        this.closeViewPopover();
       },
       // A row rename owns its Escape (it restores the old name).
       ownsEscape: (target) => target instanceof HTMLInputElement && target.hasAttribute('data-blok-database-tab-rename-input'),

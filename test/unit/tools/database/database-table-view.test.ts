@@ -1455,13 +1455,24 @@ describe('DatabaseTableView', () => {
         expect(open.lastElementChild?.textContent).toBe('tools.database.tableOpen');
       });
 
-      it('keeps the label from 102, however wide the label is', () => {
+      // A labelled button that fits with the 6px end inset keeps its label from 102.
+      it('keeps the label from 102 when the labelled button fits', () => {
         const { root } = mount();
         const open = sized(root, 102);
 
-        vi.spyOn(open, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 97, 24));
+        vi.spyOn(open, 'getBoundingClientRect').mockImplementation(() => new DOMRect(0, 0, open.hasAttribute('data-compact') ? 30 : 96, 24));
         over(cell(root, 'r1', 'p-title'));
         expect(open.hasAttribute('data-compact')).toBe(false);
+      });
+
+      // Hungarian's labelled OPEN is 108 wide: at 102 it would spill past the cell's start edge.
+      it('turns into the icon pill at 102 when the labelled button would spill past the cell', () => {
+        const { root } = mount();
+        const open = sized(root, 102);
+
+        vi.spyOn(open, 'getBoundingClientRect').mockImplementation(() => new DOMRect(0, 0, open.hasAttribute('data-compact') ? 30 : 108, 24));
+        over(cell(root, 'r1', 'p-title'));
+        expect(open.hasAttribute('data-compact')).toBe(true);
       });
 
       it('fits again when the pointer leaves the table and comes back to the same row', () => {

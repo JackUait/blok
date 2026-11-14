@@ -223,6 +223,20 @@ describe('board column, card and header look (research/08)', () => {
     expect(ruleBody(database, 'button[data-blok-database-column-count]:hover')).toContain('background-color: var(--blok-database-hover-bg)');
   });
 
+  // notion-motion.md Round 31 §3: 24 tall, padding 0 8, radius 6, 14px 500, muted ink (AA), hover 0.051.
+  it('draws a sub-group band count as a 24px button with a gray hover', () => {
+    const body = ruleBody(database, '[data-blok-database-board-lane-count]');
+
+    expect(body).toContain('height: 24px');
+    expect(body).toContain('padding: 0 var(--blok-space-2)');
+    expect(body).toContain('border-radius: var(--blok-radius-control)');
+    expect(body).toContain('font-size: 14px');
+    expect(body).toContain('font-weight: 500');
+    expect(body).toContain('color: var(--blok-database-ink-secondary)');
+    expect(ruleBody(database, 'button[data-blok-database-board-lane-count]')).toContain('cursor: pointer');
+    expect(ruleBody(database, 'button[data-blok-database-board-lane-count]:hover')).toContain('background-color: var(--blok-database-hover-bg)');
+  });
+
   it('shows the no-value label as plain 14px/500 text, no pill', () => {
     const body = ruleBody(database, '[data-blok-database-no-value-group] [data-blok-database-column-pill]');
 

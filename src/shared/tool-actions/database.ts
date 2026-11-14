@@ -461,6 +461,7 @@ const namedProperties = (changes: Record<string, unknown>): string[] => {
     ...idsIn(changes.colorRules, 'propertyId'),
     ...idsIn(changes.calculations, 'id'),
     ...(isRecord(changes.groupCalculation) && typeof changes.groupCalculation.id === 'string' ? [changes.groupCalculation.id] : []),
+    ...(isRecord(changes.subGroupCalculation) && typeof changes.subGroupCalculation.id === 'string' ? [changes.subGroupCalculation.id] : []),
     ...filterRuleProperties(changes.filterTree),
     ...preview,
     ...measure,

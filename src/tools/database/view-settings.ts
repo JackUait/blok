@@ -271,9 +271,12 @@ export interface ResolvedGroupCalculation {
 
 const COUNT_ALL: ResolvedGroupCalculation = { fn: 'count', capCounts: true };
 
-/** Count all, capped, unless the view saves a function its property's type offers (`schema` as result types). */
-export const resolveGroupCalculation = (view: DatabaseViewConfig, schema: PropertyDefinition[]): ResolvedGroupCalculation => {
-  const entry = view.groupCalculation;
+/**
+ * Count all, capped, unless the view saves a function its property's type offers (`schema` as result types).
+ * `sub` reads the sub-group bands' calculation.
+ */
+export const resolveGroupCalculation = (view: DatabaseViewConfig, schema: PropertyDefinition[], sub = false): ResolvedGroupCalculation => {
+  const entry = sub ? view.subGroupCalculation : view.groupCalculation;
 
   if (entry === undefined) return COUNT_ALL;
   if (entry.fn === 'count') return { fn: 'count', capCounts: entry.capCounts === true };

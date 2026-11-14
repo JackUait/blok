@@ -780,6 +780,10 @@ export const DATABASE_DATA = {
             ...VIEW_CALCULATION,
             description: 'Board: the calculation beside every group name. Absent means count all rows, shown as "99+" above 99. fn count is saved only to keep that cap off.',
           },
+          subGroupCalculation: {
+            ...VIEW_CALCULATION,
+            description: 'Board with subGroupBy: the calculation beside every sub-group band name while subGroupSettings.showAggregation is on. Read like groupCalculation.',
+          },
           filterTree: { ...filterGroup(1), description: 'Advanced filter. Rows must match it and every simple filter. Older clients ignore it.' },
           groupSettings: GROUP_SETTINGS,
           subGroupBy: { type: 'string', description: 'Board only: property id of a second grouping inside each column. Its keys in hiddenGroups/collapsedGroups start with "sub:".' },

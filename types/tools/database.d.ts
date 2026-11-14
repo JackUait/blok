@@ -1006,6 +1006,11 @@ export interface DatabaseViewConfig {
    */
   groupCalculation?: ViewCalculation;
   /**
+   * A board's sub-group bands, while they show their aggregation: the calculation
+   * beside each band's name, the same on every band. Read like `groupCalculation`.
+   */
+  subGroupCalculation?: ViewCalculation;
+  /**
    * The advanced filter. Rows must match it AND every entry of `filters`.
    * Clients older than this field ignore it and show more rows.
    */
@@ -1043,7 +1048,7 @@ export interface GroupRef {
 /** View fields a caller may set when creating or changing a view. */
 export type DatabaseViewSettingKey =
   | 'properties' | 'wrapCells' | 'frozenColumnCount' | 'showVerticalLines' | 'loadLimit' | 'calculations' | 'openPagesIn'
-  | 'noValueGroupPosition' | 'groupOrder' | 'hiddenGroups' | 'collapsedGroups' | 'pinnedGroups' | 'hideGroupAggregation' | 'groupCalculation'
+  | 'noValueGroupPosition' | 'groupOrder' | 'hiddenGroups' | 'collapsedGroups' | 'pinnedGroups' | 'hideGroupAggregation' | 'groupCalculation' | 'subGroupCalculation'
   | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'colorRules' | 'showPageIcon' | 'showDataSourceTitle' | 'groupByStatus'
   | 'cardSize' | 'cardPreview' | 'fitImage' | 'cardLayout' | 'directTitleEdit' | 'calendarBy' | 'calendarRange' | 'showWeekends'
   | 'timelineBy' | 'timelineEndBy' | 'timelineZoom' | 'timelineCenter' | 'showTimelineTable' | 'tableProperties' | 'arrowsBy'

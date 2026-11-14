@@ -7333,6 +7333,78 @@ describe('DatabaseTool — board sub-group lanes', () => {
       tool.destroy();
     });
 
+    // notion-motion.md Round 31 §3: the band count is a button that opens the calculation menu (Count, Percent, More options, Date).
+    describe('the band count', () => {
+      const bandCount = (element: HTMLElement, key: string): HTMLElement | null =>
+        lane(element, key)?.querySelector<HTMLElement>('[data-blok-database-board-lane-count]') ?? null;
+      const columnCounts = (element: HTMLElement): string[] =>
+        queryAllByData(element, 'data-blok-database-column-count').map((el) => el.textContent ?? '');
+
+      it('is a button that opens the 200-wide calculation menu flush under it', () => {
+        const { tool, element } = mount({ subGroupSettings: { showAggregation: true } });
+        const count = bandCount(element, 'team-a');
+
+        expect(count?.tagName).toBe('BUTTON');
+        expect(count?.getAttribute('aria-haspopup')).toBe('menu');
+        count?.click();
+
+        const menu = document.querySelector('[data-mock-popover]');
+
+        expect(menu?.getAttribute('data-mock-popover-class')?.split(' ')).toContain('blok-database-calc-menu');
+        expect(menu?.getAttribute('data-mock-popover-min-width')).toBe('200px');
+        expect(menu?.getAttribute('data-mock-popover-offset')).toBe('0');
+        expect([...document.body.querySelectorAll('[data-mock-popover-action]')].map((el) => el.getAttribute('data-mock-popover-action')))
+          .toEqual(['tools.database.calccount', 'tools.database.calcpercent']);
+
+        tool.destroy();
+      });
+
+      it('shows the band calculation saved on the view, and leaves the column counts alone', () => {
+        const plain = mount({ subGroupSettings: { showAggregation: true } });
+        const baseline = columnCounts(plain.element);
+
+        plain.tool.destroy();
+        document.body.innerHTML = '';
+        const { tool, element } = mount({
+          subGroupSettings: { showAggregation: true },
+          subGroupCalculation: { id: 'prop-title', fn: 'empty', capCounts: false },
+        });
+
+        expect(bandCount(element, 'team-a')?.textContent).toBe('0');
+        expect(bandCount(element, 'team-b')?.textContent).toBe('0');
+        expect(columnCounts(element)).toEqual(baseline);
+        expect(baseline).toContain('2');
+
+        tool.destroy();
+      });
+
+      it('is plain text when read-only', () => {
+        const options = createDatabaseOptions({ schema, views: [{ ...board, subGroupSettings: { showAggregation: true } }], activeViewId: 'view-board' }, {}, { childBlocks: rows(), readOnly: true });
+        const tool = new DatabaseTool(options);
+        const element = tool.render();
+
+        document.body.appendChild(element);
+        tool.rendered();
+
+        expect(bandCount(element, 'team-a')?.tagName).toBe('SPAN');
+        expect(bandCount(element, 'team-a')?.textContent).toBe('1');
+
+        tool.destroy();
+      });
+
+      it('comes back as Count all when Show aggregation is picked again', () => {
+        const { tool, element } = mount({ subGroupCalculation: { id: 'prop-title', fn: 'empty', capCounts: false } });
+
+        openLaneMenu(element, 'team-a');
+        pick('tools.database.groupShowAggregation');
+
+        expect(tool.save(element).views[0].subGroupCalculation).toBeUndefined();
+        expect(bandCount(element, 'team-a')?.textContent).toBe('1');
+
+        tool.destroy();
+      });
+    });
+
     it('Hide group hides the band under its sub: key, not the column with the same id', () => {
       const { tool, element } = mount();
 

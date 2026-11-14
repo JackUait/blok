@@ -86,8 +86,10 @@ export interface BoardLane {
   option?: SelectOption;
   /** The view saved this band collapsed. */
   collapsed?: boolean;
-  /** Its page count, set while the band shows its aggregation. */
-  count?: number;
+  /** The band's calculation text, set while the band shows its aggregation. */
+  aggregate?: string;
+  /** "<calculation> in <property>"; none for Count all. */
+  aggregateHint?: string;
 }
 
 /** Card widths per card size (research/07; feel findings B30: Small 180, Large 320). */
@@ -388,12 +390,8 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       label.textContent = lane.label;
     }
     header.appendChild(label);
-    if (lane.count !== undefined) {
-      const count = document.createElement('span');
-
-      count.setAttribute('data-blok-database-board-lane-count', '');
-      count.textContent = String(lane.count);
-      header.appendChild(count);
+    if (lane.aggregate !== undefined) {
+      header.appendChild(this.createLaneCount(lane));
     }
     if (!this.readOnly) {
       header.appendChild(this.createLaneActions(lane.key));
@@ -403,6 +401,25 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     section.append(header, columns);
 
     return section;
+  }
+
+  /** notion-motion.md Round 31 §3: a button that opens the calculation menu. Read-only cannot change it, so it is text there. */
+  private createLaneCount(lane: BoardLane): HTMLElement {
+    const count = document.createElement(this.readOnly ? 'span' : 'button');
+
+    if (count instanceof HTMLButtonElement) {
+      count.type = 'button';
+      count.setAttribute('aria-haspopup', 'menu');
+    }
+    count.setAttribute('data-blok-database-board-lane-count', '');
+    count.setAttribute('data-sub-group', lane.key);
+    count.textContent = lane.aggregate ?? '';
+    count.hidden = count.textContent === '';
+    if (lane.aggregateHint !== undefined) {
+      onHover(count, lane.aggregateHint, { placement: 'top' });
+    }
+
+    return count;
   }
 
   /** notion-motion.md Round 29 §6: ⋯ then +, shown while the band header is hovered (database.css). The owner handles the clicks. */

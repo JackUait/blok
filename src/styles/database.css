@@ -2772,8 +2772,7 @@
 /**
  * Card count badge — muted counter after column title.
  */
-[data-blok-database-column-count],
-[data-blok-database-board-lane-count] {
+[data-blok-database-column-count] {
   box-sizing: border-box;
   height: 20px;
   padding: 0 var(--blok-space-1-5);
@@ -2794,6 +2793,30 @@ button[data-blok-database-column-count] {
 }
 
 button[data-blok-database-column-count]:hover {
+  background-color: var(--blok-database-hover-bg);
+}
+
+/* A sub-group band's count (notion-motion.md Round 31 §3): a 24px button, muted 14px 500. */
+[data-blok-database-board-lane-count] {
+  box-sizing: border-box;
+  flex-shrink: 0;
+  height: 24px;
+  padding: 0 var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: none;
+  color: var(--blok-database-ink-secondary);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 24px;
+}
+
+button[data-blok-database-board-lane-count] {
+  cursor: pointer;
+}
+
+button[data-blok-database-board-lane-count]:hover {
   background-color: var(--blok-database-hover-bg);
 }
 

@@ -11,7 +11,7 @@ import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolDa
 import type { AgentRun } from '../../../types/api';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
 import { HistoryDraftsCommit, type HistoryDraftsCommitPayload } from '../../components/events/HistoryDraftsCommit';
-import type { AutofillSettings, ButtonAction, ButtonCallbackAction, ButtonSendNotificationAction, DatabaseAdapter, DatabaseData, DatabaseIcon, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, DeletedPropertyDefinition, PropertyValue, DatabasePermissionAction, DashboardWidget, DashboardRow, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue, LoadLimit } from './types';
+import type { AutofillSettings, ButtonAction, ButtonCallbackAction, ButtonSendNotificationAction, DatabaseAdapter, DatabaseData, DatabaseIcon, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, DeletedPropertyDefinition, PropertyValue, DatabasePermissionAction, DashboardWidget, DashboardRow, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue, LoadLimit, ViewCalculation } from './types';
 import { countFilterRules } from './filter-tree';
 import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
 import { isOutputData, isPlaceValue } from './tier3-values';
@@ -7378,7 +7378,13 @@ export class DatabaseTool implements BlockTool {
     const counted = view.subGroupSettings?.showAggregation === true && view.groupBy !== undefined;
     const shown = counted ? this.groupOptions(view.groupBy ?? '', view).filter((option) => !hasGroup(view.hiddenGroups, option.id)) : [];
     const rows = counted ? new Map([...this.queryGroupRows(view, shown.map((o) => o.id)).values()].flat().map((row) => [row.id, row])) : new Map<string, DatabaseRow>();
-    const countOf = (key: string): number => [...rows.values()].filter((row) => keysOf(row).includes(key)).length;
+    const localSchema = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n);
+    const shownOf = (property: PropertyDefinition): PropertyDefinition => this.computedValues.valueProperty(property);
+    const calculation = resolveGroupCalculation(view, localSchema.map(shownOf), true);
+    const aggregateHint = groupCalculationHint(calculation, localSchema, this.api.i18n);
+    const aggregateOf = (key: string): string => groupCalculationText(
+      calculation, [...rows.values()].filter((row) => keysOf(row).includes(key)), localSchema, editorLocale(this.api.i18n), shownOf
+    );
 
     return {
       lanes: this.groupOptions(subGroupBy, subView).filter((option) => !hasGroup(view.hiddenGroups, `sub:${option.id}`)).map((option) => ({
@@ -7386,7 +7392,7 @@ export class DatabaseTool implements BlockTool {
         label: option.label,
         collapsed: hasGroup(view.collapsedGroups, `sub:${option.id}`),
         ...(optionGroup && option.id !== NO_VALUE_GROUP_KEY ? { option } : {}),
-        ...(counted ? { count: countOf(option.id) } : {}),
+        ...(counted ? { aggregate: aggregateOf(option.id), ...(aggregateHint !== undefined ? { aggregateHint } : {}) } : {}),
       })),
       keysOf,
     };
@@ -9462,6 +9468,15 @@ export class DatabaseTool implements BlockTool {
         return;
       }
 
+      const laneCount = target.closest<HTMLElement>('button[data-blok-database-board-lane-count]');
+
+      if (laneCount !== null) {
+        event.stopPropagation();
+        this.openGroupCalculationMenu(laneCount, undefined, true);
+
+        return;
+      }
+
       const laneMenu = target.closest<HTMLElement>('[data-blok-database-board-lane-menu]');
       const laneHeader = laneMenu?.closest<HTMLElement>('[data-blok-database-board-lane-header]') ?? null;
       const laneKey = laneMenu?.getAttribute('data-sub-group') ?? null;
@@ -9924,7 +9939,10 @@ export class DatabaseTool implements BlockTool {
       isStatus: property.type === 'status',
       onEditGroups: () => this.controls.openSettingsPage('group', anchor),
       // notion-motion.md Round 30 §2: every band of the view shows or hides its count together.
-      onToggleAggregation: () => this.updateActiveView({ subGroupSettings: { ...view.subGroupSettings, showAggregation: aggregationHidden ? true : undefined } }),
+      // Like a column's, the count comes back as Count all.
+      onToggleAggregation: () => this.updateActiveView(aggregationHidden
+        ? { subGroupSettings: { ...view.subGroupSettings, showAggregation: true }, subGroupCalculation: undefined }
+        : { subGroupSettings: { ...view.subGroupSettings, showAggregation: undefined } }),
       onHide: () => this.toggleGroupHidden(`sub:${key}`),
       onTrash: () => this.trashGroup(key, (shown) => this.laneRows(shown, key)),
       onRecolor: (color) => this.recolorGroup(key, color, subGroupBy),
@@ -9949,8 +9967,9 @@ export class DatabaseTool implements BlockTool {
   /**
    * The count's calculation menu. The pick is the view's, so every column shows it.
    * `tableHeader`: a table group header's count (notion-motion.md Round 11: 200 wide, flush under the count).
+   * `sub`: a sub-group band's count (Round 31 §3: the same 200-wide menu); its pick is every band's.
    */
-  private openGroupCalculationMenu(anchor: HTMLElement, tableHeader?: HTMLElement): void {
+  private openGroupCalculationMenu(anchor: HTMLElement, tableHeader?: HTMLElement, sub = false): void {
     const view = this.shownView();
 
     if (view === undefined) {
@@ -9958,24 +9977,25 @@ export class DatabaseTool implements BlockTool {
     }
 
     const schema = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).map((property) => this.computedValues.valueProperty(property));
-    const current = resolveGroupCalculation(view, schema);
+    const current = resolveGroupCalculation(view, schema, sub);
     const titleId = this.titlePropertyId();
+    const save = (entry: ViewCalculation | undefined): void => this.updateActiveView(sub ? { subGroupCalculation: entry } : { groupCalculation: entry });
 
     this.showGroupPopover(anchor, groupCalculationItems({
       i18n: this.api.i18n,
       schema,
-      groupBy: view.groupBy,
+      groupBy: sub ? view.subGroupBy : view.groupBy,
       current,
       // A leaf closes only its own list; the redraw drops the anchor, so close the whole menu.
       onPick: (fn, propertyId) => {
         this.groupMenuPopover?.hide();
-        this.updateActiveView({ groupCalculation: groupCalculationFor(fn, propertyId, titleId) });
+        save(groupCalculationFor(fn, propertyId, titleId));
       },
       onCapCounts: (cap) => {
         this.groupMenuPopover?.hide();
-        this.updateActiveView({ groupCalculation: groupCalculationCapped(current, cap, titleId) });
+        save(groupCalculationCapped(current, cap, titleId));
       },
-    }), tableHeader ?? anchor.closest<HTMLElement>('[data-blok-database-column-header]') ?? undefined, {
+    }), tableHeader ?? anchor.closest<HTMLElement>(sub ? '[data-blok-database-board-lane-header]' : '[data-blok-database-column-header]') ?? undefined, {
       // notion-motion.md Round 11: the footer's menu, 200x123, its top on the count's bottom.
       class: `${DATABASE_HEADER_MENU_CLASS} ${DATABASE_CALC_MENU_CLASS}`,
       minWidth: CALC_MENU_MIN_WIDTH,

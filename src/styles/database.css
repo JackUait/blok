@@ -6116,10 +6116,16 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+  transition: background-color 0.02s ease-in;
 }
 
 [data-blok-database-confirm-action]:hover {
   background-color: var(--blok-database-hover-bg);
+}
+
+/* notion-motion.md Round 14: Cancel presses to 0.076. A red press stays at the hover fill, which keeps the label AA. */
+[data-blok-database-confirm-action]:active:not([data-destructive], [data-primary]) {
+  background-color: var(--blok-database-button-pressed-bg);
 }
 
 /* research/37 §4.1. preflight.css cannot reach a box-shadow, so the ring carries the modality guard. */

@@ -9824,10 +9824,15 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+  transition: background-color 0.02s ease-in;
 }
 
 [data-blok-database-confirm-action]:hover {
   background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-confirm-action]:active:not([data-destructive], [data-primary]) {
+  background-color: var(--blok-database-button-pressed-bg);
 }
 
 [data-blok-database-confirm-action]:focus-visible {

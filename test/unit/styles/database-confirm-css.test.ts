@@ -113,6 +113,14 @@ describe('database confirm dialog css', () => {
     expect(body).toContain('font-weight: 500');
   });
 
+  // notion-motion.md Round 14 "Confirm dialog": Cancel's fill goes 0.051 → 0.076 on press and back, each over 20ms ease-in.
+  it('presses a plain button to the 0.076 fill over 20ms ease-in', () => {
+    expect(ruleBody(database, '[data-blok-database-confirm-action]')).toContain('transition: background-color 0.02s ease-in');
+    expect(ruleBody(database, '[data-blok-database-confirm-action]:active:not([data-destructive], [data-primary])'))
+      .toContain('background-color: var(--blok-database-button-pressed-bg)');
+    expect(tokenValues('--blok-database-button-pressed-bg')[0]).toBe('rgba(33, 27, 23, 0.076)');
+  });
+
   it('paints the destructive button with red text and a red hairline', () => {
     const body = ruleBody(database, '[data-blok-database-confirm-action][data-destructive]');
 

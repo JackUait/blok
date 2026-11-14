@@ -10450,7 +10450,10 @@ export class DatabaseTool implements BlockTool {
             this.sync.syncUpdateRow({ rowId, properties: { [property.id]: description } });
           }
         },
-        onShown: () => this.view?.rowPageOpened?.(),
+        onShown: () => {
+          this.api.toolbar?.close();
+          this.view?.rowPageOpened?.();
+        },
         onClose: () => {
           // Notion hides the page's block handle as the peek starts to close (Round 14): the page moves under a still pointer.
           // Mocked APIs in tests may have no toolbar.

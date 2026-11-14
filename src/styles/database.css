@@ -1860,6 +1860,10 @@
   max-height: calc(100vh - 144px);
 }
 
+[data-blok-database-peek-backdrop][data-peek-mode="side"] {
+  background-color: transparent;
+}
+
 [data-blok-database-peek-backdrop][data-blok-top-layer][popover] {
   inset: 0;
 }
@@ -2097,26 +2101,14 @@
 }
 
 /*
-  The page beside the side peek narrows to the part the peek leaves uncovered, as Notion's does.
-  The host is the editor wrapper. Its isolation reset is `all: initial !important`
-  (isolation.css), so only an !important rule with more specificity gets through.
+  The side peek floats over the page rather than pushing it aside. The drawer is
+  `position: fixed` with its own z-index, so it covers the page on its own, and
+  opening a row no longer reflows the whole document.
 */
-[data-blok-interface=blok][data-blok-database-peek] {
-  padding-inline-end: var(--_blok-peek-inset, 0px) !important;
-  transition: padding-inline-end 200ms ease !important;
-}
-
-[data-blok-interface=blok][data-blok-database-peek][data-blok-database-peek-resizing] {
-  transition: none !important;
-}
 
 /* The table runs up to the peek; the toolbar stops short of it (notion-live-8/62-close-hover.png).
    With one view the toolbar sits in the title row (peek-top.png). */
-[data-blok-database-peek] [data-blok-database-view-bar]:not([data-blok-database-drawer] *),
-[data-blok-database-peek] [data-blok-database-title-row][data-single-view]:not([data-blok-database-drawer] *) {
-  margin-inline-end: var(--_blok-peek-gap, 0px);
-  transition: margin-inline-end 200ms ease;
-}
+
 
 /**
  * Drawer toolbar — thin top bar with close button.

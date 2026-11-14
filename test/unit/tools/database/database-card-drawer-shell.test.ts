@@ -110,7 +110,7 @@ describe('DatabaseCardDrawer shell', () => {
 
       drawer.open(ROW, 'side');
 
-      expect(popover.shown).toEqual([q('[data-blok-database-drawer]')]);
+      expect(popover.shown).toEqual([q('[data-blok-database-peek-backdrop]'), q('[data-blok-database-drawer]')]);
       drawer.destroy();
     });
 
@@ -169,10 +169,9 @@ describe('DatabaseCardDrawer shell', () => {
     });
   });
 
-  // R31: the page beside a side peek stays usable; only the center peek's backdrop closes on a click.
+  // Overlay peeks suspend the page underneath; outside clicks only dismiss.
   describe('clicks outside the peek', () => {
-    // notion-motion.md Round 4 re-checks: a click inside the database view keeps the side peek.
-    it('inside the database leave a side peek open', () => {
+    it('suspends database controls until the side peek closes', () => {
       const options = createOptions();
       const cell = document.createElement('div');
 
@@ -180,9 +179,11 @@ describe('DatabaseCardDrawer shell', () => {
       const drawer = new DatabaseCardDrawer(options);
 
       drawer.open(ROW, 'side');
-      cell.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-
-      expect(drawer.isOpen).toBe(true);
+      expect(cell.hasAttribute('inert')).toBe(true);
+      expect(q('[data-blok-database-drawer]')?.closest('[inert]')).toBeNull();
+      q('[data-blok-database-peek-backdrop]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      expect(drawer.isOpen).toBe(false);
+      expect(cell.hasAttribute('inert')).toBe(false);
       drawer.destroy();
     });
 
@@ -219,12 +220,45 @@ describe('DatabaseCardDrawer shell', () => {
       drawer.destroy();
     });
 
+    it('restores only its own inert state on mode changes and destruction', () => {
+      const options = createOptions();
+      const page = document.createElement('button');
+      const disabled = document.createElement('div');
+      disabled.setAttribute('inert', '');
+      options.wrapper.append(page, disabled);
+      page.focus();
+      const drawer = new DatabaseCardDrawer(options);
+      drawer.open(ROW, 'side');
+      expect(page.hasAttribute('inert')).toBe(true);
+      drawer.open(ROW, 'full');
+      expect(page.hasAttribute('inert')).toBe(false);
+      drawer.open(ROW, 'side');
+      expect(page.hasAttribute('inert')).toBe(true);
+      drawer.close();
+      expect(document.activeElement).toBe(page);
+      drawer.destroy();
+      expect(page.hasAttribute('inert')).toBe(false);
+      expect(disabled.hasAttribute('inert')).toBe(true);
+    });
+
+    it('also suspends controls added by a background database redraw', async () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      drawer.open(ROW, 'side');
+      const button = document.createElement('button');
+      options.wrapper.append(button);
+      await Promise.resolve();
+      expect(button.hasAttribute('inert')).toBe(true);
+      drawer.destroy();
+      expect(button.hasAttribute('inert')).toBe(false);
+    });
+
     it('on the backdrop close a center peek', () => {
       const onClose = vi.fn();
       const drawer = new DatabaseCardDrawer(createOptions({ onClose }));
 
       drawer.open(ROW, 'center');
-      q('[data-blok-database-peek-backdrop]')?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      q('[data-blok-database-peek-backdrop]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
       expect(drawer.isOpen).toBe(false);
       expect(onClose).toHaveBeenCalledOnce();
@@ -349,7 +383,7 @@ describe('DatabaseCardDrawer shell', () => {
       first.destroy();
     });
 
-    it('keeps the page narrowed for the new peek when the old one finishes sliding out', () => {
+    it('keeps the page marked for the new peek when the old one finishes sliding out', () => {
       const { host, options } = shareHost();
       const firstOptions = options();
       const first = new DatabaseCardDrawer(firstOptions);
@@ -359,8 +393,10 @@ describe('DatabaseCardDrawer shell', () => {
       second.open({ ...ROW, id: 'row-2' }, 'side');
       firstOptions.wrapper.querySelector('[data-blok-database-drawer]')?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
 
+      // The mark stays with the live peek; the page itself never moves, since the
+      // drawer floats over it. See "side peek floats over the page".
       expect(host.hasAttribute('data-blok-database-peek')).toBe(true);
-      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('656px');
+      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('');
       second.destroy();
       first.destroy();
     });

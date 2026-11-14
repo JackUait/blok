@@ -502,6 +502,8 @@ describe('calculation Count list 99+ row', () => {
     const ON = "[data-blok-item-name$='calc-cap-counts'][aria-checked='true']";
 
     expect(declared(`${CALC} [data-blok-item-name$='calc-cap-counts'][data-blok-popover-item-active]:not(:hover, [data-blok-focused='true'])`, 'background-color')).toEqual(['transparent']);
+    // notion-motion.md Round 29 §1: the load limit's current row shows only its check, no fill.
+    expect(declared(`${CALC} [data-blok-item-name^='database-load-limit-'][data-blok-popover-item-active]:not(:hover, [data-blok-focused='true'])`, 'background-color')).toEqual(['transparent']);
     expect(declared(`${ON} [data-blok-database-switch-track]`, 'background-color')).toEqual(['var(--blok-database-switch-on-bg)']);
     expect(declared(`${ON} [data-blok-database-switch-track] > span`, 'transform')).toEqual(['translateX(12px)']);
   });

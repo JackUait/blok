@@ -468,6 +468,35 @@ test.describe('load more and groups', () => {
     await expect(page.locator('[data-blok-database-table-row]')).toHaveCount(14);
   });
 
+  // notion-motion.md Round 29 §1: the ⋯ menu marks the current limit with a check only, no fill; keyboard users land in it.
+  test('the Load more ⋯ sets the load limit, its current row has no fill, and the keyboard reaches its rows', async ({ page }) => {
+    const many = Array.from({ length: 30 }, (_, i) => ({ id: `m${i}`, properties: { 'p-title': `Row ${i}` } }));
+
+    await mount(page, blocks({ loadLimit: 10 }, many));
+    const dots = page.getByRole('button', { name: 'Load limit' });
+
+    await dots.focus();
+    await page.keyboard.press('Enter');
+    const current = page.getByRole('menuitemcheckbox', { name: '10 pages' });
+    const other = page.getByRole('menuitemcheckbox', { name: '25 pages' });
+
+    await expect(current).toBeVisible();
+    await expect(current).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(current.getByTestId('popover-item-trailing-icon')).toBeVisible();
+    await expect(other.getByTestId('popover-item-trailing-icon')).toHaveCount(0);
+    expect(await current.evaluate((el) => getComputedStyle(el).color)).toBe(await other.evaluate((el) => getComputedStyle(el).color));
+
+    // The menu's keyboard cursor is data-blok-focused, not DOM focus.
+    await page.keyboard.press('ArrowDown');
+    await expect(current).toHaveAttribute('data-blok-focused', 'true');
+    await page.keyboard.press('ArrowDown');
+    await expect(other).toHaveAttribute('data-blok-focused', 'true');
+    await page.keyboard.press('Enter');
+
+    await expect(page.locator('[data-blok-database-table-row]')).toHaveCount(25);
+    expect((await savedView(page)).loadLimit).toBe(25);
+  });
+
   test('a grouped table collapses a group with its caret', async ({ page }) => {
     await mount(page, blocks({ groupBy: 'p-stage' }));
     const groups = page.locator('[data-blok-database-table-group]');

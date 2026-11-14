@@ -7260,11 +7260,11 @@ button[data-blok-database-column-count]:hover {
   padding: var(--blok-space-2);
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-item-name$='calc-cap-counts'][data-blok-popover-item-active]:not(:hover, [data-blok-focused='true']) {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-item-name$='calc-cap-counts'][data-blok-popover-item-active]:not(:hover, [data-blok-focused='true']), [data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-item-name^='database-load-limit-'][data-blok-popover-item-active]:not(:hover, [data-blok-focused='true']) {
   background-color: transparent;
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-item-name$='calc-cap-counts'][data-blok-popover-item-active]:is(:hover, [data-blok-focused='true']) {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-item-name$='calc-cap-counts'][data-blok-popover-item-active]:is(:hover, [data-blok-focused='true']), [data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-item-name^='database-load-limit-'][data-blok-popover-item-active]:is(:hover, [data-blok-focused='true']) {
   background-color: var(--blok-database-hover-bg);
 }
 

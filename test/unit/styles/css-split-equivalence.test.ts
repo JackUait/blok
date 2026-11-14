@@ -1687,7 +1687,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r39: fixes on surfaces no round had compared. Net database.css growth against origin/main.
     const DATABASE_R39_BYTES = 1040;
     // Lane r40: the table's Load more row with its ⋯ and a hover token. Net database.css growth against origin/main.
-    const DATABASE_R40_BYTES = 1703;
+    const DATABASE_R40_BYTES = 2155;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

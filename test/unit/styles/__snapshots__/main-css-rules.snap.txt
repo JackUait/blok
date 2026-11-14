@@ -6974,6 +6974,7 @@ button[data-blok-database-board-lane-count]:hover {
 
 [data-blok-database-title-row][data-single-view] {
   padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
   min-height: 40px;
   margin-bottom: 0;
 }
@@ -14098,6 +14099,10 @@ button[data-blok-database-table-group-count]:hover {
   margin-inline-start: auto;
 }
 
+[data-blok-database-view-bar] > [data-blok-database-view-toolbar] {
+  margin-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+}
+
 [data-blok-database-view-toolbar] > :not([data-blok-database-toolbar-icon], [data-blok-database-new]) {
   margin-inline: var(--blok-border-width-hairline);
 }
@@ -19920,7 +19925,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--blok-space-4);
+  gap: var(--blok-space-6);
   padding-block: var(--blok-space-4);
 }
 
@@ -19944,10 +19949,20 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-feed-byline] {
   display: flex;
-  align-items: baseline;
-  gap: var(--blok-space-2);
+  align-items: center;
+  gap: var(--blok-space-1-5);
   font-size: 14px;
   line-height: 21px;
+}
+
+[data-blok-database-feed-byline] > [data-blok-database-person-avatar], [data-blok-database-feed-byline] > [data-blok-database-person-initial] {
+  width: 24px;
+  height: 24px;
+  margin-inline-end: var(--blok-space-0-5);
+}
+
+[data-blok-database-feed-byline] + [data-blok-database-feed-title], [data-blok-database-feed-byline] + [data-blok-database-feed-head] {
+  margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-2));
 }
 
 [data-blok-database-feed-author] {
@@ -19957,6 +19972,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-feed-time] {
   color: var(--blok-database-table-muted-text);
+  font-size: 12px;
+  line-height: 14px;
 }
 
 [data-blok-database-feed-title] {

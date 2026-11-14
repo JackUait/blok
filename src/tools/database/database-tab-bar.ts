@@ -1,5 +1,6 @@
 import { IconChevronDown, IconViewBoard, IconChart, IconGallery, IconListBulleted, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconForm, IconViewTimeline, IconViewDashboard, IconLink, IconDotsHorizontal, IconPageLayout, IconEyeSlash, IconExpandDiagonal } from '../../components/icons';
 import { ADD_VIEW_MENU_WIDTH, DatabaseViewPopover } from './database-view-popover';
+import type { ViewPopoverPlacement } from './database-view-popover';
 import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
 import { DATABASE_HEADER_MENU_CLASS } from './database-table-menus';
 import { PopoverDesktop } from '../../components/utils/popover';
@@ -726,7 +727,7 @@ export class DatabaseTabBar {
     });
   }
 
-  private openViewPopover(anchor: HTMLElement, placement: 'below' | 'aside' = 'below', focusFirst = false): void {
+  private openViewPopover(anchor: HTMLElement, placement: ViewPopoverPlacement = 'below', focusFirst = false): void {
     if (this.viewPopover !== null) {
       this.viewPopover.destroy();
     }
@@ -866,12 +867,20 @@ export class DatabaseTabBar {
         const addBtn = this.element?.querySelector<HTMLElement>('[data-blok-database-add-view]');
 
         if (this.readOnly || addBtn === null || addBtn === undefined) return;
-        if (row.getBoundingClientRect().right + ADD_VIEW_MENU_WIDTH <= window.innerWidth) {
+        const rect = row.getBoundingClientRect();
+
+        if (rect.right + ADD_VIEW_MENU_WIDTH <= window.innerWidth) {
           this.openViewPopover(row, 'aside', byKeyboard);
 
           return;
         }
-        // No room beside the list (Notion unmeasured): Add view opens under "+", as before.
+        // notion-motion.md Round 32 §1: no room on the right flips it to the left.
+        if (rect.left - ADD_VIEW_MENU_WIDTH >= 0) {
+          this.openViewPopover(row, 'aside-left', byKeyboard);
+
+          return;
+        }
+        // No room on either side (Notion unmeasured): Add view opens under "+", as before.
         this.closeOverflowDropdown();
         // A folded "+" has no box to hang the menu from.
         this.openViewPopover(this.element?.hasAttribute('data-blok-database-tab-folded') === true ? anchor : addBtn);

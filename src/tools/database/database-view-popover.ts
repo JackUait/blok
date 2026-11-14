@@ -34,6 +34,11 @@ const VIEW_TYPES: ViewTypeOption[] = [
 /** Notion's card of view layouts is 390 wide (feel/findings-toolbar V04). */
 export const ADD_VIEW_MENU_WIDTH = 390;
 
+/** notion-motion.md Round 32 §1 (r32-a-more-newview-narrow.*): the flyout stops 11.8 above the window bottom. */
+const ASIDE_WINDOW_MARGIN = 11.8;
+
+export type ViewPopoverPlacement = 'below' | 'aside' | 'aside-left';
+
 export interface ViewPopoverOptions {
   onSelect: (type: ViewType) => void;
   onClose?: () => void;
@@ -67,9 +72,12 @@ export class DatabaseViewPopover {
   /**
    * `aside`: beside a menu row, vertically centred on it, its left on the row's
    * right (notion-motion.md Round 31 §3: the fold menu's right − 4, its padding).
+   * `aside-left`: the mirror, its right on the row's left (Round 32 §1).
+   * Beside the fold menu it has no "New data source": the menu has its own (Round 31 §3).
    */
-  open(anchor: HTMLElement, placement: 'below' | 'aside' = 'below', focusFirst = false): void {
+  open(anchor: HTMLElement, placement: ViewPopoverPlacement = 'below', focusFirst = false): void {
     this.close();
+    const aside = placement !== 'below';
 
     const headingEl = document.createElement('div');
 
@@ -93,7 +101,7 @@ export class DatabaseViewPopover {
           closeOnActivate: true,
         };
       }),
-      ...(this.onNewSource === undefined ? [] : [{ type: PopoverItemType.Separator as const }, {
+      ...(this.onNewSource === undefined || aside ? [] : [{ type: PopoverItemType.Separator as const }, {
         type: PopoverItemType.Html as const,
         element: this.createNewSourceItem(this.onNewSource),
         closeOnActivate: true,
@@ -107,8 +115,8 @@ export class DatabaseViewPopover {
       items,
       trigger: anchor,
       // motion-addview.json: Notion's card starts 4px under the "+".
-      offset: placement === 'aside' ? 0 : 4,
-      ...(placement === 'aside' ? { placeLeftOfAnchor: true, asideSide: 'right' as const } : {}),
+      offset: aside ? 0 : 4,
+      ...(aside ? { placeLeftOfAnchor: true, asideSide: placement === 'aside' ? 'right' as const : 'left' as const, viewportMargin: ASIDE_WINDOW_MARGIN } : {}),
       width: `${ADD_VIEW_MENU_WIDTH}px`,
       // A keyboard user lands on the first tile.
       autoFocusFirstItem: focusFirst,

@@ -305,6 +305,37 @@ describe('DatabaseViewPopover', () => {
       expect(opened.width).toBe('390px');
     });
 
+    // notion-motion.md Round 32 §1 (r32-a-more-newview-narrow.*): with no room on the right it flips left,
+    // its right edge on the fold menu's left + 4, and either side stops 11.8 above the window bottom.
+    it('opens on the left of the row with the aside-left placement, 11.8 from the window edges', () => {
+      popover.open(anchor, 'aside-left');
+
+      const opened = mockPopoverInstances.at(-1)?.params as { offset?: number; placeLeftOfAnchor?: boolean; asideSide?: string; viewportMargin?: number };
+
+      expect(opened.placeLeftOfAnchor).toBe(true);
+      expect(opened.asideSide).toBe('left');
+      expect(opened.offset).toBe(0);
+      expect(opened.viewportMargin).toBe(11.8);
+    });
+
+    it('keeps the right-side flyout 11.8 from the window edges too', () => {
+      popover.open(anchor, 'aside');
+
+      expect((mockPopoverInstances.at(-1)?.params as { viewportMargin?: number }).viewportMargin).toBe(11.8);
+    });
+
+    // Round 31 §3: Notion's fold menu holds its own "New data source" row, right beside the flyout.
+    it('leaves "New data source" out of a flyout beside the fold menu, which has its own', () => {
+      const withSource = new DatabaseViewPopover({ onSelect, onNewSource: vi.fn() });
+
+      withSource.open(anchor, 'aside');
+      expect(params().items.some((item) => item.element?.hasAttribute('data-blok-database-view-new-source') === true)).toBe(false);
+      withSource.open(anchor, 'aside-left');
+      expect(params().items.some((item) => item.element?.hasAttribute('data-blok-database-view-new-source') === true)).toBe(false);
+      withSource.open(anchor);
+      expect(params().items.some((item) => item.element?.hasAttribute('data-blok-database-view-new-source') === true)).toBe(true);      withSource.close();
+    });
+
     it('is a 390px grid menu', () => {
       popover.open(anchor);
 

@@ -1254,12 +1254,24 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(lastViewPopover().placement).toBe('aside');
     });
 
-    // Notion with no room on the right is unmeasured: Blok then opens Add view under "+", as before.
-    it('with no room for the flyout on the right, closes the dropdown and opens Add view under the add button', () => {
-      const { el, dropdown } = openDropdown(threeViews(), 'v1');
+    // notion-motion.md Round 32 §1 (r32-a-more-newview-narrow.*): with no room on the right, Notion flips the flyout left.
+    it('with no room for the flyout on the right, opens it on the left of the New view row and keeps the dropdown', () => {
+      const { dropdown } = openDropdown(threeViews(), 'v1');
       const newRow = queryOne(dropdown, '[data-blok-database-tab-overflow-new]');
 
       vi.spyOn(newRow, 'getBoundingClientRect').mockReturnValue(new DOMRect(window.innerWidth - 300, 100, 280, 28));
+      newRow.click();
+
+      expect(document.querySelector('[data-blok-database-tab-overflow-dropdown]')).toBe(dropdown);
+      expect(lastViewPopover().openedWith).toBe(newRow);
+      expect(lastViewPopover().placement).toBe('aside-left');
+    });
+
+    it('with room on neither side, closes the dropdown and opens Add view under the add button', () => {
+      const { el, dropdown } = openDropdown(threeViews(), 'v1');
+      const newRow = queryOne(dropdown, '[data-blok-database-tab-overflow-new]');
+
+      vi.spyOn(newRow, 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 100, window.innerWidth - 200, 28));
       newRow.click();
 
       expect(document.querySelector('[data-blok-database-tab-overflow-dropdown]')).toBeNull();

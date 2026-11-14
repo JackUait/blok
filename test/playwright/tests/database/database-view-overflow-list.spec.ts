@@ -270,9 +270,38 @@ test.describe('database view overflow list', () => {
     await expect(list.locator('[data-highlighted]')).toHaveText('New view');
     await search.press('Enter');
 
-    // At 1200 wide there is no room beside the list, so Add view opens under "+".
-    await expect(list).toBeHidden();
+    // At 1200 wide there is no room on the list's right, so Add view opens on its left and the list stays.
     await expect(page.locator('[data-blok-database-view-option="board"]')).toBeVisible();
+    await expect(list).toBeVisible();
+  });
+
+  // notion-motion.md Round 32 §1 (r32-a-more-newview-narrow.*, 1150x717): with no room on the right the flyout
+  // flips left, its right edge on the list's left + 4, and stops 11.8 above the window bottom.
+  test('with no room on the right, New view opens Add view on the left of the list', async ({ page }) => {
+    // Short enough that a flyout centred on New view would run past the window bottom.
+    await page.setViewportSize({ width: 1150, height: 540 });
+    await mount(page);
+    const list = await openList(page);
+
+    await list.getByRole('option', { name: 'New view' }).click();
+    await expect(page.locator('[data-blok-database-view-option="board"]')).toBeVisible();
+    await expect(list).toBeVisible();
+    const box = await page.evaluate(async () => {
+      await Promise.all(document.getAnimations().map((animation) => animation.finished));
+      const surface = document.querySelector('[data-blok-database-view-option="board"]')?.closest('[data-blok-popover-container]');
+      const dropdown = document.querySelector('[data-blok-database-tab-overflow-dropdown]');
+
+      if (!(surface instanceof HTMLElement) || dropdown === null) return null;
+      const flyout = surface.getBoundingClientRect();
+
+      return { right: flyout.right, bottom: flyout.bottom, listLeft: dropdown.getBoundingClientRect().left, hasSource: surface.querySelector('[data-blok-database-view-new-source]') !== null };
+    });
+
+    expect(box).not.toBeNull();
+    expect(box?.right).toBeCloseTo((box?.listLeft ?? 0) + 4, 0);
+    expect(540 - (box?.bottom ?? 0)).toBeCloseTo(11.8, 0);
+    // Round 31 §3: the list beside it already has its own "New data source".
+    expect(box?.hasSource).toBe(false);
   });
 
   // notion-motion.md Round 31 §3: a 390-wide flyout, its left on the list's right − 4, centred on the New view row; the list stays open.

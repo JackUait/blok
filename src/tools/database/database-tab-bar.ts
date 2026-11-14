@@ -332,9 +332,12 @@ export class DatabaseTabBar {
     viewBar?.removeAttribute('data-blok-database-fold-icons');
 
     const barStyle = viewBar === null ? null : getComputedStyle(viewBar);
+    // The toolbar's end margin keeps it in the text column. Only the end side: the start margin is auto, so it reads as the free space.
+    const toolbarStyle = toolbar === null ? null : getComputedStyle(toolbar);
+    const toolbarEnd = toolbarStyle === null ? 0 : Number.parseFloat(toolbarStyle.direction === 'rtl' ? toolbarStyle.marginLeft : toolbarStyle.marginRight) || 0;
     const width = viewBar === null || barStyle === null
       ? bar.clientWidth - padding
-      : viewBar.clientWidth - (Number.parseFloat(barStyle.paddingLeft) || 0) - (Number.parseFloat(barStyle.paddingRight) || 0) - padding;
+      : viewBar.clientWidth - (Number.parseFloat(barStyle.paddingLeft) || 0) - (Number.parseFloat(barStyle.paddingRight) || 0) - padding - toolbarEnd;
     const gap = full > 0 ? Number.parseFloat(barStyle?.columnGap ?? '') || 0 : 0;
     // The 28px "+" and the 1px gaps before it and before "N more…";
     // each tab pays the 1px gap before it (database.css).

@@ -309,3 +309,16 @@ describe('full-page database: the toolbar icons show on hover', () => {
     expect(database.match(/\[data-blok-database-toolbar-foldable\]:not\(\[data-popover-open\]\) \{ opacity: 0; \}/g)).toHaveLength(1);
   });
 });
+
+// notion-motion.md Round 32 §3 Table and gap 0 (side-by-side-v1 X1): in a page-wide editor Notion's New ends at the text column.
+describe('the toolbar ends at the text column', () => {
+  const inset = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))';
+
+  it('stops the toolbar beside the tabs at the column end', () => {
+    expect(rule('[data-blok-database-view-bar] > [data-blok-database-view-toolbar]')).toContain(`margin-inline-end: ${inset}`);
+  });
+
+  it('stops the one-view title row at the column end', () => {
+    expect(rule('[data-blok-database-title-row][data-single-view]')).toContain(`padding-inline-end: ${inset}`);
+  });
+});

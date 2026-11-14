@@ -110,6 +110,17 @@ describe('DatabaseTabBar — the view bar folds like Notion (notion-spec-2 §26.
     expect(mounted.viewBar.hasAttribute('data-blok-database-fold-new')).toBe(false);
   });
 
+  // notion-motion.md Round 32 §3 Table: on a page-wide editor the toolbar ends at the text column, so its end margin is not room for tabs.
+  it('counts the toolbar\'s end margin as taken', () => {
+    const mounted = mount();
+
+    mounted.toolbar.style.marginRight = '457px';
+    layOut(mounted, 1000);
+    fire();
+
+    expect(shownTabs(mounted.el)).toEqual(['v1', 'v2']);
+  });
+
   it('folds tabs beside the full toolbar and drops "+" with the first fold', () => {
     const mounted = mount();
 

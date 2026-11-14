@@ -2874,6 +2874,7 @@ button[data-blok-database-board-lane-count]:hover {
    so the + button sits exactly 4px after the title text */
 [data-blok-database-title-row][data-single-view] {
   padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
   /* Notion's one-view title row is 40px, and the header starts right under it. */
   min-height: 40px;
   margin-bottom: 0;
@@ -10920,6 +10921,11 @@ button[data-blok-database-table-group-count]:hover {
   align-items: center;
   gap: 0;
   margin-inline-start: auto;
+}
+
+/* Notion's New ends at the text column in a page-wide editor (notion-motion.md Round 32 §3 Table). A margin, so the tab bar's start inset keeps the full width as its base. */
+[data-blok-database-view-bar] > [data-blok-database-view-toolbar] {
+  margin-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
 
 [data-blok-database-view-toolbar] > :not([data-blok-database-toolbar-icon], [data-blok-database-new]) {

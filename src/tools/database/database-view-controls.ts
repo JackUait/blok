@@ -34,9 +34,6 @@ import type {
 
 const SORT_PANEL_GAP = 4;
 
-/** Notion shows 🔍 once a database has at least three pages (research/05 §5). */
-export const SEARCH_MIN_ROWS = 3;
-
 /** What the controls ask of the database tool. */
 export interface ViewControlsHost {
   /** `getLocale` dates the filter chips in the editor's language. */
@@ -48,7 +45,6 @@ export interface ViewControlsHost {
   schema: () => PropertyDefinition[];
   /** A property's saved type: `schema` shows a formula or rollup as its result type. */
   storedType?: (propertyId: string) => PropertyType | undefined;
-  rowCount: () => number;
   locked: () => boolean;
   readOnly: () => boolean;
   viewCount: () => number;
@@ -432,7 +428,8 @@ export class DatabaseViewControls {
     this.automationsButton.disabled = this.host.automations?.writable() !== true;
     this.autofillButton.hidden = titleOnly || this.host.autofill === undefined;
     this.autofillButton.disabled = this.host.autofill?.writable() !== true;
-    this.searchButton.hidden = (titleOnly || this.host.rowCount() < SEARCH_MIN_ROWS) && this.query === '';
+    // notion-motion.md Round 41 Part B: 🔍 shows on a 0-row board; the help center's "three pages" is not the rule.
+    this.searchButton.hidden = titleOnly && this.query === '';
     this.minimized = this.host.savedView()?.toolbarMinimized === true;
     this.toolbar.toggleAttribute('data-minimized', this.minimized);
     this.expandButton.hidden = !this.minimized;
@@ -858,7 +855,7 @@ export class DatabaseViewControls {
     this.searchClear.remove();
     input.value = '';
     this.setSearch('');
-    this.searchButton.hidden = this.host.rowCount() < SEARCH_MIN_ROWS;
+    this.searchButton.hidden = this.host.schema().length <= 1;
     if (input.isConnected && !input.hasAttribute('data-closing') && hasTransition(input)) {
       // The field shrinks to nothing first; it leaves when that ends.
       input.setAttribute('data-closing', '');

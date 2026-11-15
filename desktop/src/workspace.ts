@@ -286,7 +286,13 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       scheduleDateRefresh();
     }, midnight.getTime() - now.getTime() + 50);
   };
-  const notifyPage = (id: string): void => { pageListeners.get(id)?.forEach((listener) => listener()); };
+  let libraryRefreshQueued = false;
+  const refreshLibrary = (): void => {
+    if (!library.dispose || libraryRefreshQueued) return;
+    libraryRefreshQueued = true;
+    queueMicrotask(() => { libraryRefreshQueued = false; library.dispose?.refresh(); });
+  };
+  const notifyPage = (id: string): void => { pageListeners.get(id)?.forEach((listener) => listener()); refreshLibrary(); };
   const breadcrumbMenuHeading = (parentId: string | null | undefined, byId: Map<string, ShellPage>): string => {
     if (parentId) return byId.get(parentId)?.title ?? 'Pages';
     return ref.kind === 'remote' ? workspaceName : 'Pages locales';
@@ -457,6 +463,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       favorite: favorites.has(id),
       onFavorite: (value) => {
         favorites.set(id, value);
+      refreshLibrary();
         if (ws.index) ws.frame.setPages(withSections(ws.index.pages), ws.currentId);
       },
       readOnly: readOnly(id),
@@ -783,7 +790,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     ...(ref.kind==='remote' ? {teamspaces:sidebarTeamspaces,teamspaceStatus:()=>teamspacesState.error} : {}),
     pages: [], activeId: '',
     recentIds: recentPages.ids,
-    onRecentsChange: (ids) => { library.recents = ids; recentPages.save(ids); },
+    onRecentsChange: (ids) => { library.recents = ids; recentPages.save(ids); refreshLibrary(); },
     onCreateNote: canCreateUnder(null) ? () => { void createNote().catch(showError); } : undefined,
     onLibrary: () => navigateLibrary('all'),
     onOpen: (id) => navigate(id),
@@ -803,6 +810,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     canCreate: canCreateUnder,
     onFavorite: (id, value) => {
       favorites.set(id, value);
+      refreshLibrary();
       if (ws.currentId === id) ws.pageToolbar?.setFavorite(value);
     },
   });

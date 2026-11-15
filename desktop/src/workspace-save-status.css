@@ -11,6 +11,14 @@
 [data-desktop-workspace] [data-desktop-page-toolbar] [data-desktop-status] {
   position: static; margin: 0; max-width: none;
 }
+/* Outside the page toolbar, status must not become a full-height flex column. */
+[data-desktop-workspace] > [data-desktop-status] {
+  position: absolute; top: 8px; right: 8px; bottom: auto;
+}
+/* Library has no open document to load or save; retain actual errors only. */
+[data-desktop-workspace][data-desktop-library] > [data-desktop-status]:not([data-error]) {
+  display: none;
+}
 [data-desktop-workspace] [data-desktop-status]::before {
   content: ''; width: 6px; height: 6px; flex: none; border-radius: 50%; background: currentColor;
 }

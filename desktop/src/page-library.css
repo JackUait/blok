@@ -1,4 +1,4 @@
-[data-page-library] { width: 100%; min-height: 100%; display: flex; flex-direction: column; background: var(--desktop-strip); color: var(--desktop-ink); padding: 48px clamp(24px, 5vw, 80px); box-sizing: border-box; }
+[data-page-library] { width: 100%; min-height: 100%; display: flex; flex-direction: column; background: var(--desktop-canvas); color: var(--desktop-ink); padding: 48px clamp(24px, 5vw, 80px); box-sizing: border-box; }
 [data-page-library] header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
 [data-page-library] h1 { font-size: 32px; margin: 0 auto 0 0; }
 [data-page-library] button, [data-page-library] input, [data-page-library] select { font: inherit; color: inherit; border: 1px solid var(--desktop-border); border-radius: 5px; background: transparent; padding: 8px 12px; }

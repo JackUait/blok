@@ -4873,6 +4873,7 @@ span[data-blok-slash-search] {
   --blok-database-timeline-weekend-bg: rgb(247, 247, 247);
   --blok-database-timeline-canvas-bg: rgb(253, 253, 253);
   --blok-database-timeline-now-text: #b93a35;
+  --blok-database-timeline-period-text: var(--blok-database-timeline-muted-text);
   --blok-database-timeline-panel-bg: rgb(255, 255, 255);
   --blok-database-timeline-panel-shadow: rgba(25, 25, 25, 0.027) 0 4px 12px 0, rgba(25, 25, 25, 0.02) 0 1px 2px 0;
   --blok-database-timeline-muted-text: var(--blok-database-ink-tertiary);
@@ -17959,6 +17960,17 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   font-weight: 500;
   line-height: 18px;
   color: var(--blok-database-timeline-now-text);
+}
+
+[data-blok-database-timeline-day-period] {
+  color: var(--blok-database-timeline-period-text);
+}
+
+[data-blok-database-timeline-tick-line] {
+  position: absolute;
+  inset-block: 0;
+  inline-size: 1px;
+  background-color: var(--blok-database-timeline-grid-line);
 }
 
 [data-blok-database-timeline-today-dot] {

@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "Εμφάνιση στην πρώτη φόρτωση",
   "tools.database.tableEditFilters": "Επεξεργασία φίλτρων",
   "tools.database.tableAddProperty": "Προσθήκη ιδιότητας",
+  "tools.database.tableShowHideProperties": "Εμφάνιση ή απόκρυψη ιδιοτήτων",
   "tools.database.tableOpen": "Άνοιγμα",
   "tools.database.tableAddBelow": "Κάντε κλικ για να προσθέσετε από κάτω",
   "tools.database.tableDragHandle": "Σύρετε για μετακίνηση, κάντε κλικ για να ανοίξετε το μενού",

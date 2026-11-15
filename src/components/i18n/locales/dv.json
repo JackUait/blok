@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "ފުރަތަމަ ލޯޑްކުރާއިރު ދައްކާ",
   "tools.database.tableEditFilters": "ފިލްޓަރުތައް ބަދަލުކުރޭ",
   "tools.database.tableAddProperty": "ޕްރޮޕަރޓީ އިތުރުކުރޭ",
+  "tools.database.tableShowHideProperties": "ޕްރޮޕަރޓީތައް ދައްކާ ނުވަތަ ފޮރުވާ",
   "tools.database.tableOpen": "ހުޅުވާ",
   "tools.database.tableAddBelow": "ތިރީގައި އިތުރުކުރަން ކްލިކް ކުރޭ",
   "tools.database.tableDragHandle": "ބަދަލުކުރަން ދަމާލާ، މެނޫ ހުޅުވަން ކްލިކް ކުރޭ",

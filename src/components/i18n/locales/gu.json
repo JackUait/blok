@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "પ્રથમ લોડ પર બતાવો",
   "tools.database.tableEditFilters": "ફિલ્ટર સંપાદિત કરો",
   "tools.database.tableAddProperty": "ગુણધર્મ ઉમેરો",
+  "tools.database.tableShowHideProperties": "ગુણધર્મો બતાવો અથવા છુપાવો",
   "tools.database.tableOpen": "ખોલો",
   "tools.database.tableAddBelow": "નીચે ઉમેરવા માટે ક્લિક કરો",
   "tools.database.tableDragHandle": "ખસેડવા માટે ખેંચો, મેનૂ ખોલવા માટે ક્લિક કરો",

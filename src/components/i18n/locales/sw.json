@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "Onyesha kwenye upakiaji wa kwanza",
   "tools.database.tableEditFilters": "Hariri vichujio",
   "tools.database.tableAddProperty": "Ongeza sifa",
+  "tools.database.tableShowHideProperties": "Onyesha au ficha sifa",
   "tools.database.tableOpen": "Fungua",
   "tools.database.tableAddBelow": "Bofya ili kuongeza chini",
   "tools.database.tableDragHandle": "Buruta ili kusogeza, bofya ili kufungua menyu",

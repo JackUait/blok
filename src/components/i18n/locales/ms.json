@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "Tunjukkan pada muatan pertama",
   "tools.database.tableEditFilters": "Sunting penapis",
   "tools.database.tableAddProperty": "Tambah sifat",
+  "tools.database.tableShowHideProperties": "Tunjukkan atau sembunyikan sifat",
   "tools.database.tableOpen": "Buka",
   "tools.database.tableAddBelow": "Klik untuk menambah di bawah",
   "tools.database.tableDragHandle": "Seret untuk mengalihkan, klik untuk membuka menu",

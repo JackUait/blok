@@ -1226,6 +1226,7 @@
   "tools.database.tableShowOnFirstLoad": "Rodyti pirmą kartą įkeliant",
   "tools.database.tableEditFilters": "Redaguoti filtrus",
   "tools.database.tableAddProperty": "Pridėti savybę",
+  "tools.database.tableShowHideProperties": "Rodyti arba slėpti savybes",
   "tools.database.tableOpen": "Atidaryti",
   "tools.database.tableAddBelow": "Spustelėkite, kad pridėtumėte žemiau",
   "tools.database.tableDragHandle": "Vilkite norėdami perkelti, spustelėkite norėdami atidaryti meniu",

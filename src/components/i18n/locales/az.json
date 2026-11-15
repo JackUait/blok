@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "İlk yükləmədə göstər",
   "tools.database.tableEditFilters": "Filtrləri redaktə et",
   "tools.database.tableAddProperty": "Xüsusiyyət əlavə et",
+  "tools.database.tableShowHideProperties": "Xüsusiyyətləri göstər və ya gizlət",
   "tools.database.tableOpen": "Aç",
   "tools.database.tableAddBelow": "Aşağıya əlavə etmək üçün klikləyin",
   "tools.database.tableDragHandle": "Köçürmək üçün dartın, menyunu açmaq üçün klikləyin",

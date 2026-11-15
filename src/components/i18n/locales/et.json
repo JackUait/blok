@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "Näita esimesel laadimisel",
   "tools.database.tableEditFilters": "Muuda filtreid",
   "tools.database.tableAddProperty": "Lisa omadus",
+  "tools.database.tableShowHideProperties": "Kuva või peida omadused",
   "tools.database.tableOpen": "Ava",
   "tools.database.tableAddBelow": "Klõpsa alla lisamiseks",
   "tools.database.tableDragHandle": "Lohista teisaldamiseks, klõpsa menüü avamiseks",

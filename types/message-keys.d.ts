@@ -2390,6 +2390,7 @@ export type BlokMessageKey =
   | 'tools.database.tableSelectRow'
   | 'tools.database.tableSelectedCount'
   | 'tools.database.tableSelectionActions'
+  | 'tools.database.tableShowHideProperties'
   | 'tools.database.tableShowOnFirstLoad'
   | 'tools.database.tableSidePeek'
   | 'tools.database.tableSort'

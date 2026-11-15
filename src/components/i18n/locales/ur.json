@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "پہلے لوڈ پر دکھائیں",
   "tools.database.tableEditFilters": "فلٹرز میں ترمیم کریں",
   "tools.database.tableAddProperty": "پراپرٹی شامل کریں",
+  "tools.database.tableShowHideProperties": "پراپرٹیز دکھائیں یا چھپائیں",
   "tools.database.tableOpen": "کھولیں",
   "tools.database.tableAddBelow": "نیچے شامل کرنے کے لیے کلک کریں",
   "tools.database.tableDragHandle": "منتقل کرنے کے لیے گھسیٹیں، مینو کھولنے کے لیے کلک کریں",

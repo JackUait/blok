@@ -1217,6 +1217,7 @@
   "tools.database.tableShowOnFirstLoad": "Rādīt pirmajā ielādē",
   "tools.database.tableEditFilters": "Rediģēt filtrus",
   "tools.database.tableAddProperty": "Pievienot rekvizītu",
+  "tools.database.tableShowHideProperties": "Rādīt vai paslēpt rekvizītus",
   "tools.database.tableOpen": "Atvērt",
   "tools.database.tableAddBelow": "Noklikšķiniet, lai pievienotu zemāk",
   "tools.database.tableDragHandle": "Velciet, lai pārvietotu, noklikšķiniet, lai atvērtu izvēlni",

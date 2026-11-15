@@ -9513,7 +9513,8 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-table-resize);
 }
 
-[data-blok-database-table-add-property] {
+[data-blok-database-table-add-property],
+[data-blok-database-table-property-visibility] {
   display: inline-flex;
   flex: none;
   align-items: center;
@@ -9540,8 +9541,20 @@ textarea[data-blok-database-cell-input] {
   white-space: nowrap;
 }
 
-[data-blok-database-table-add-property]:hover {
+[data-blok-database-table-add-property]:hover,
+[data-blok-database-table-property-visibility]:hover {
   background-color: var(--blok-database-table-header-hover-bg);
+}
+
+/* notion-motion.md Round 41 Part A: Notion's "Show or hide properties" sits flush after "+". */
+[data-blok-database-table-property-visibility] {
+  margin-inline-start: 0;
+}
+
+/* Notion's dots read 12 x 3 of ink; IconDotsHorizontal at 20px reads 13 x 3 at the same weight. */
+[data-blok-database-table-property-visibility] svg {
+  width: 20px;
+  height: 20px;
 }
 
 [data-blok-database-table-add-property] svg {
@@ -11145,7 +11158,8 @@ button[data-blok-database-table-group-count]:hover {
   [data-blok-database-table-open] > span[aria-hidden="true"],
   [data-blok-database-table-scroller] [data-frozen-edge],
   [data-blok-database-table-scroller] [data-blok-database-table-column-header][data-frozen-edge],
-  [data-blok-database-table-add-property] {
+  [data-blok-database-table-add-property],
+  [data-blok-database-table-property-visibility] {
     transition: none;
   }
 }

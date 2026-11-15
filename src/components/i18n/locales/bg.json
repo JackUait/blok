@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "Показване при първо зареждане",
   "tools.database.tableEditFilters": "Редактирай филтрите",
   "tools.database.tableAddProperty": "Добави свойство",
+  "tools.database.tableShowHideProperties": "Покажи или скрий свойства",
   "tools.database.tableOpen": "Отвори",
   "tools.database.tableAddBelow": "Щракнете за добавяне отдолу",
   "tools.database.tableDragHandle": "Плъзнете за преместване, щракнете за отваряне на менюто",

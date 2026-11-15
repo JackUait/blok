@@ -143,6 +143,8 @@ export interface TableHandlers {
   setLoadLimit?: (limit: LoadLimit) => void;
   openPropertyMenu: (propertyId: string, anchor: HTMLElement) => void;
   addProperty: (anchor: HTMLElement, placement?: { propertyId: string; side: 'left' | 'right' }) => void;
+  /** The header row's ⋯ after "+": Notion's "Show or hide properties". Left out when unset. */
+  propertyVisibility?: (anchor: HTMLElement) => void;
   viewAction: (action: 'filter' | 'sort' | 'group', propertyId: string, anchor: HTMLElement) => void;
   moveRow: (result: TableRowDropResult) => void;
   /** A drop in a sorted view. Notion asks to remove the sort (D7); the tool decides. */
@@ -802,10 +804,27 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         add.setAttribute('aria-label', this.t('tools.database.tableAddProperty'));
       }
       header.appendChild(add);
+      if (!add.hasAttribute('data-labelled') && this.handlers?.propertyVisibility !== undefined) {
+        header.appendChild(this.createPropertyVisibilityButton());
+      }
     }
     header.appendChild(this.createFiller());
 
     return header;
+  }
+
+  /** notion-motion.md Round 41 Part A: a 28px ⋯ right after "+", in the "+"'s ink. */
+  private createPropertyVisibilityButton(): HTMLButtonElement {
+    const more = document.createElement('button');
+    const label = this.t('tools.database.tableShowHideProperties');
+
+    more.type = 'button';
+    more.setAttribute('data-blok-database-table-property-visibility', '');
+    more.setAttribute('aria-label', label);
+    more.innerHTML = IconDotsHorizontal;
+    onHover(more, label);
+
+    return more;
   }
 
   private createHeaderCell(column: Column, index: number): HTMLElement {
@@ -2013,6 +2032,13 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     }
     if (closest('[data-blok-database-table-group-add]') !== null) {
       handlers.addGroupPage?.(groupKey);
+
+      return;
+    }
+    const visibility = closest('[data-blok-database-table-property-visibility]');
+
+    if (visibility !== null) {
+      handlers.propertyVisibility?.(visibility);
 
       return;
     }

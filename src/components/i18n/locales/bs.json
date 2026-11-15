@@ -1217,6 +1217,7 @@
   "tools.database.tableShowOnFirstLoad": "Prikaži pri prvom učitavanju",
   "tools.database.tableEditFilters": "Uredi filtere",
   "tools.database.tableAddProperty": "Dodaj svojstvo",
+  "tools.database.tableShowHideProperties": "Prikaži ili sakrij svojstva",
   "tools.database.tableOpen": "Otvori",
   "tools.database.tableAddBelow": "Kliknite za dodavanje ispod",
   "tools.database.tableDragHandle": "Prevucite za premještanje, kliknite za otvaranje menija",

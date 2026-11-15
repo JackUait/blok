@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "Shfaq në ngarkimin e parë",
   "tools.database.tableEditFilters": "Ndrysho filtrat",
   "tools.database.tableAddProperty": "Shto veti",
+  "tools.database.tableShowHideProperties": "Shfaq ose fshih vetitë",
   "tools.database.tableOpen": "Hap",
   "tools.database.tableAddBelow": "Kliko për të shtuar poshtë",
   "tools.database.tableDragHandle": "Tërhiq për të lëvizur, kliko për të hapur menynë",

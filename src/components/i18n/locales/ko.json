@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "처음 불러올 때 표시",
   "tools.database.tableEditFilters": "필터 편집",
   "tools.database.tableAddProperty": "속성 추가",
+  "tools.database.tableShowHideProperties": "속성 표시 또는 숨기기",
   "tools.database.tableOpen": "열기",
   "tools.database.tableAddBelow": "클릭하여 아래에 추가",
   "tools.database.tableDragHandle": "드래그하여 이동, 클릭하여 메뉴 열기",

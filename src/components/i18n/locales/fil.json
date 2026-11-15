@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "Ipakita sa unang pag-load",
   "tools.database.tableEditFilters": "I-edit ang mga filter",
   "tools.database.tableAddProperty": "Magdagdag ng property",
+  "tools.database.tableShowHideProperties": "Ipakita o itago ang mga property",
   "tools.database.tableOpen": "Buksan",
   "tools.database.tableAddBelow": "I-click para magdagdag sa ibaba",
   "tools.database.tableDragHandle": "I-drag para ilipat, i-click para buksan ang menu",

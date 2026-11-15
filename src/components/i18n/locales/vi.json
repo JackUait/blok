@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "Hiển thị ở lần tải đầu",
   "tools.database.tableEditFilters": "Chỉnh sửa bộ lọc",
   "tools.database.tableAddProperty": "Thêm thuộc tính",
+  "tools.database.tableShowHideProperties": "Hiện hoặc ẩn thuộc tính",
   "tools.database.tableOpen": "Mở",
   "tools.database.tableAddBelow": "Nhấp để thêm bên dưới",
   "tools.database.tableDragHandle": "Kéo để di chuyển, nhấp để mở menu",

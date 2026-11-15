@@ -8288,6 +8288,8 @@ export class DatabaseTool implements BlockTool {
       editFormula: (propertyId, cell) => { if (writable() && !this.structureLocked()) this.openFormulaEditor(propertyId, cell); },
       openPropertyMenu: (propertyId, anchor) => { if (writable()) this.openPropertyMenu(propertyId, anchor, table?.(), context); },
       addProperty: (anchor, placement) => { if (writable()) this.openAddProperty(anchor, placement, undefined, context); },
+      // notion-motion.md Round 41: the header row's ⋯. Where Notion opens it is unmeasured; it opens under the ⋯.
+      propertyVisibility: (anchor) => { if (writable()) (context?.controls ?? this.controls).openSettings(anchor, 'properties'); },
       viewAction: (action, propertyId, anchor) => { if (writable()) this.onTableViewAction(action, propertyId, anchor, context); },
       moveRow: (result) => this.handleTableRowDrop(result, context),
       sortedRowDrop: (result) => this.onSortedRowDrop(result, context),

@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "Vis ved første indlæsning",
   "tools.database.tableEditFilters": "Rediger filtre",
   "tools.database.tableAddProperty": "Tilføj egenskab",
+  "tools.database.tableShowHideProperties": "Vis eller skjul egenskaber",
   "tools.database.tableOpen": "Åbn",
   "tools.database.tableAddBelow": "Klik for at tilføje nedenfor",
   "tools.database.tableDragHandle": "Træk for at flytte, klik for at åbne menuen",

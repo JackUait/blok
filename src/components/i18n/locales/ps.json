@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "په لومړي بارولو کې ښودل",
   "tools.database.tableEditFilters": "فلټرونه سم کړئ",
   "tools.database.tableAddProperty": "ځانګړتیا اضافه کړئ",
+  "tools.database.tableShowHideProperties": "ځانګړتیاوې وښایئ یا پټې کړئ",
   "tools.database.tableOpen": "خلاص کړئ",
   "tools.database.tableAddBelow": "لاندې اضافه کولو لپاره کلیک وکړئ",
   "tools.database.tableDragHandle": "د لېږدولو لپاره کش کړئ، د مینو خلاصولو لپاره کلیک وکړئ",

@@ -1226,6 +1226,7 @@
   "tools.database.tableShowOnFirstLoad": "Zobraziť pri prvom načítaní",
   "tools.database.tableEditFilters": "Upraviť filtre",
   "tools.database.tableAddProperty": "Pridať vlastnosť",
+  "tools.database.tableShowHideProperties": "Zobraziť alebo skryť vlastnosti",
   "tools.database.tableOpen": "Otvoriť",
   "tools.database.tableAddBelow": "Kliknutím pridáte nižšie",
   "tools.database.tableDragHandle": "Potiahnutím presuniete, kliknutím otvoríte ponuku",

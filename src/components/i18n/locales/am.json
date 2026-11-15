@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "በመጀመሪያ ጭነት አሳይ",
   "tools.database.tableEditFilters": "ማጣሪያዎችን አርትዕ",
   "tools.database.tableAddProperty": "ንብረት አክል",
+  "tools.database.tableShowHideProperties": "ንብረቶችን አሳይ ወይም ደብቅ",
   "tools.database.tableOpen": "ክፈት",
   "tools.database.tableAddBelow": "ከታች ለመጨመር ጠቅ ያድርጉ",
   "tools.database.tableDragHandle": "ለማንቀሳቀስ ይጎትቱ፣ ምናሌውን ለመክፈት ጠቅ ያድርጉ",

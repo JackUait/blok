@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "แสดงเมื่อโหลดครั้งแรก",
   "tools.database.tableEditFilters": "แก้ไขตัวกรอง",
   "tools.database.tableAddProperty": "เพิ่มคุณสมบัติ",
+  "tools.database.tableShowHideProperties": "แสดงหรือซ่อนคุณสมบัติ",
   "tools.database.tableOpen": "เปิด",
   "tools.database.tableAddBelow": "คลิกเพื่อเพิ่มด้านล่าง",
   "tools.database.tableDragHandle": "ลากเพื่อย้าย คลิกเพื่อเปิดเมนู",

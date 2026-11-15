@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "პირველ ჩატვირთვაზე ჩვენება",
   "tools.database.tableEditFilters": "ფილტრების რედაქტირება",
   "tools.database.tableAddProperty": "თვისების დამატება",
+  "tools.database.tableShowHideProperties": "თვისებების ჩვენება ან დამალვა",
   "tools.database.tableOpen": "გახსნა",
   "tools.database.tableAddBelow": "დააწკაპუნეთ ქვემოთ დასამატებლად",
   "tools.database.tableDragHandle": "ჩავლებით გადაიტანეთ, დააწკაპუნეთ მენიუს გასახსნელად",

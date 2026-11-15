@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "ಮೊದಲ ಲೋಡ್‌ನಲ್ಲಿ ತೋರಿಸಿ",
   "tools.database.tableEditFilters": "ಫಿಲ್ಟರ್‌ಗಳನ್ನು ಸಂಪಾದಿಸಿ",
   "tools.database.tableAddProperty": "ಗುಣಲಕ್ಷಣ ಸೇರಿಸಿ",
+  "tools.database.tableShowHideProperties": "ಗುಣಲಕ್ಷಣಗಳನ್ನು ತೋರಿಸಿ ಅಥವಾ ಮರೆಮಾಡಿ",
   "tools.database.tableOpen": "ತೆರೆಯಿರಿ",
   "tools.database.tableAddBelow": "ಕೆಳಗೆ ಸೇರಿಸಲು ಕ್ಲಿಕ್ ಮಾಡಿ",
   "tools.database.tableDragHandle": "ಸರಿಸಲು ಎಳೆಯಿರಿ, ಮೆನು ತೆರೆಯಲು ಕ್ಲಿಕ್ ಮಾಡಿ",

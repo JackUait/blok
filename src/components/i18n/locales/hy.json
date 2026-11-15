@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "Ցույց տալ առաջին բեռնման ժամանակ",
   "tools.database.tableEditFilters": "Խմբագրել ֆիլտրերը",
   "tools.database.tableAddProperty": "Ավելացնել հատկություն",
+  "tools.database.tableShowHideProperties": "Ցուցադրել կամ թաքցնել հատկությունները",
   "tools.database.tableOpen": "Բացել",
   "tools.database.tableAddBelow": "Սեղմեք՝ ներքևում ավելացնելու համար",
   "tools.database.tableDragHandle": "Քաշեք՝ տեղափոխելու համար, սեղմեք՝ մենյուն բացելու համար",

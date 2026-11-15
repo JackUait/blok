@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "نمایش در اولین بارگیری",
   "tools.database.tableEditFilters": "ویرایش فیلترها",
   "tools.database.tableAddProperty": "افزودن ویژگی",
+  "tools.database.tableShowHideProperties": "نمایش یا پنهان کردن ویژگی‌ها",
   "tools.database.tableOpen": "باز کردن",
   "tools.database.tableAddBelow": "برای افزودن در پایین کلیک کنید",
   "tools.database.tableDragHandle": "برای جابه‌جایی بکشید، برای باز کردن منو کلیک کنید",

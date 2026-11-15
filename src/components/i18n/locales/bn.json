@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "প্রথম লোডে দেখান",
   "tools.database.tableEditFilters": "ফিল্টার সম্পাদনা করুন",
   "tools.database.tableAddProperty": "বৈশিষ্ট্য যোগ করুন",
+  "tools.database.tableShowHideProperties": "বৈশিষ্ট্য দেখান বা লুকান",
   "tools.database.tableOpen": "খুলুন",
   "tools.database.tableAddBelow": "নিচে যোগ করতে ক্লিক করুন",
   "tools.database.tableDragHandle": "সরাতে টেনে আনুন, মেনু খুলতে ক্লিক করুন",

@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "Анх ачаалахад харуулах",
   "tools.database.tableEditFilters": "Шүүлтүүрүүдийг засах",
   "tools.database.tableAddProperty": "Шинж нэмэх",
+  "tools.database.tableShowHideProperties": "Шинжүүдийг харуулах эсвэл нуух",
   "tools.database.tableOpen": "Нээх",
   "tools.database.tableAddBelow": "Доор нэмэхийн тулд дарна уу",
   "tools.database.tableDragHandle": "Зөөхийн тулд чирнэ үү, цэсийг нээхийн тулд дарна уу",

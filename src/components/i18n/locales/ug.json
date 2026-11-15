@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "تۇنجى يۈكلىگەندە كۆرسىتىش",
   "tools.database.tableEditFilters": "سۈزگۈچلەرنى تەھرىرلەش",
   "tools.database.tableAddProperty": "خاسلىق قوشۇش",
+  "tools.database.tableShowHideProperties": "خاسلىقلارنى كۆرسىتىش ياكى يوشۇرۇش",
   "tools.database.tableOpen": "ئېچىش",
   "tools.database.tableAddBelow": "ئاستىغا قوشۇش ئۈچۈن چېكىڭ",
   "tools.database.tableDragHandle": "يۆتكەش ئۈچۈن سۆرەڭ، تىزىملىكنى ئېچىش ئۈچۈن چېكىڭ",

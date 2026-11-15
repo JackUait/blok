@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "首次加载时显示",
   "tools.database.tableEditFilters": "编辑筛选器",
   "tools.database.tableAddProperty": "添加属性",
+  "tools.database.tableShowHideProperties": "显示或隐藏属性",
   "tools.database.tableOpen": "打开",
   "tools.database.tableAddBelow": "点击在下方添加",
   "tools.database.tableDragHandle": "拖动以移动，点击打开菜单",

@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "Show on first load",
   "tools.database.tableEditFilters": "Edit filters",
   "tools.database.tableAddProperty": "Add property",
+  "tools.database.tableShowHideProperties": "Show or hide properties",
   "tools.database.tableOpen": "Open",
   "tools.database.tableAddBelow": "Click to add below",
   "tools.database.tableDragHandle": "Drag to move, click to open menu",

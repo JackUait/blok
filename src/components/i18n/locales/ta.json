@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "முதல் ஏற்றத்தில் காட்டு",
   "tools.database.tableEditFilters": "வடிப்பான்களைத் திருத்து",
   "tools.database.tableAddProperty": "பண்பைச் சேர்",
+  "tools.database.tableShowHideProperties": "பண்புகளைக் காட்டு அல்லது மறை",
   "tools.database.tableOpen": "திற",
   "tools.database.tableAddBelow": "கீழே சேர்க்க கிளிக் செய்யவும்",
   "tools.database.tableDragHandle": "நகர்த்த இழுக்கவும், மெனுவைத் திறக்க கிளிக் செய்யவும்",

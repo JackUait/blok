@@ -1226,6 +1226,7 @@
   "tools.database.tableShowOnFirstLoad": "Показувати під час першого завантаження",
   "tools.database.tableEditFilters": "Редагувати фільтри",
   "tools.database.tableAddProperty": "Додати властивість",
+  "tools.database.tableShowHideProperties": "Показати або сховати властивості",
   "tools.database.tableOpen": "Відкрити",
   "tools.database.tableAddBelow": "Натиснути, щоб додати нижче",
   "tools.database.tableDragHandle": "Перетягніть для переміщення, клацніть, щоб відкрити меню",

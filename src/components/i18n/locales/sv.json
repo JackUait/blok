@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "Visa vid första inläsningen",
   "tools.database.tableEditFilters": "Redigera filter",
   "tools.database.tableAddProperty": "Lägg till egenskap",
+  "tools.database.tableShowHideProperties": "Visa eller dölj egenskaper",
   "tools.database.tableOpen": "Öppna",
   "tools.database.tableAddBelow": "Klicka för att lägga till nedanför",
   "tools.database.tableDragHandle": "Dra för att flytta, klicka för att öppna menyn",

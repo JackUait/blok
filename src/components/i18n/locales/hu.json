@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "Megjelenítés az első betöltéskor",
   "tools.database.tableEditFilters": "Szűrők szerkesztése",
   "tools.database.tableAddProperty": "Tulajdonság hozzáadása",
+  "tools.database.tableShowHideProperties": "Tulajdonságok megjelenítése vagy elrejtése",
   "tools.database.tableOpen": "Megnyitás",
   "tools.database.tableAddBelow": "Kattintással új blokkot szúrhat be alá",
   "tools.database.tableDragHandle": "Húzással áthelyezheti, kattintással megnyithatja a menüt",

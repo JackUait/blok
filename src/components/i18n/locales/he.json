@@ -1217,6 +1217,7 @@
   "tools.database.tableShowOnFirstLoad": "הצגה בטעינה הראשונה",
   "tools.database.tableEditFilters": "ערוך מסננים",
   "tools.database.tableAddProperty": "הוסף מאפיין",
+  "tools.database.tableShowHideProperties": "הצג או הסתר מאפיינים",
   "tools.database.tableOpen": "פתח",
   "tools.database.tableAddBelow": "לחץ להוספה מתחת",
   "tools.database.tableDragHandle": "גרור להזזה, לחץ לפתיחת התפריט",

@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "پیشاندان لە یەکەم بارکردندا",
   "tools.database.tableEditFilters": "دەستکاریکردنی فلتەرەکان",
   "tools.database.tableAddProperty": "زیادکردنی تایبەتمەندی",
+  "tools.database.tableShowHideProperties": "پیشاندان یان شاردنەوەی تایبەتمەندییەکان",
   "tools.database.tableOpen": "کردنەوە",
   "tools.database.tableAddBelow": "کلیک بکە بۆ زیادکردن لە خوارەوە",
   "tools.database.tableDragHandle": "ڕاکێشە بۆ گواستنەوە، کلیک بکە بۆ کردنەوەی مێنیو",

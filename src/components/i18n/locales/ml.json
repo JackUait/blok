@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "ആദ്യ ലോഡിൽ കാണിക്കുക",
   "tools.database.tableEditFilters": "ഫിൽട്ടറുകൾ എഡിറ്റ് ചെയ്യുക",
   "tools.database.tableAddProperty": "പ്രോപ്പർട്ടി ചേർക്കുക",
+  "tools.database.tableShowHideProperties": "പ്രോപ്പർട്ടികൾ കാണിക്കുക അല്ലെങ്കിൽ മറയ്ക്കുക",
   "tools.database.tableOpen": "തുറക്കുക",
   "tools.database.tableAddBelow": "താഴെ ചേർക്കാൻ ക്ലിക്ക് ചെയ്യുക",
   "tools.database.tableDragHandle": "നീക്കാൻ വലിച്ചിടുക, മെനു തുറക്കാൻ ക്ലിക്ക് ചെയ്യുക",

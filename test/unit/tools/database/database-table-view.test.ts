@@ -1929,6 +1929,30 @@ describe('DatabaseTableView', () => {
       expect(handlers.addProperty).toHaveBeenCalledWith(add);
     });
 
+    // notion-motion.md Round 41 Part A: Notion's header row ends with "+" and a "⋯" named "Show or hide properties".
+    it('the ⋯ after the header "+" opens property visibility under itself', () => {
+      const handlers = { ...makeHandlers(), propertyVisibility: vi.fn() };
+      const { root } = mount({ handlers });
+      const add = root.querySelector<HTMLElement>('[data-blok-database-table-add-property]');
+      const more = root.querySelector<HTMLElement>('[data-blok-database-table-property-visibility]');
+
+      expect(add?.nextElementSibling).toBe(more);
+      expect(more?.getAttribute('aria-label')).toBe('tools.database.tableShowHideProperties');
+      expect(more?.querySelector('svg')).not.toBeNull();
+      more?.click();
+      expect(handlers.propertyVisibility).toHaveBeenCalledWith(more);
+      expect(handlers.addProperty).not.toHaveBeenCalled();
+    });
+
+    // r41-n-empty-table.png: the title-only header shows the labelled "+ Add property" and no ⋯.
+    it('leaves the ⋯ out while the title is the only property, and when nothing opens property visibility', () => {
+      const lone = mount({ schema: [schema[0]], handlers: { ...makeHandlers(), propertyVisibility: vi.fn() } }).root;
+
+      expect(lone.querySelector('[data-blok-database-table-property-visibility]')).toBeNull();
+      document.body.innerHTML = '';
+      expect(mount().root.querySelector('[data-blok-database-table-property-visibility]')).toBeNull();
+    });
+
     it('header view items freeze, hide, wrap and insert through the view helpers', () => {
       const { view, handlers, root } = mount();
       const anchor = header(root, 'p-notes');

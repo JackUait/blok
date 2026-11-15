@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "पहले लोड पर दिखाएँ",
   "tools.database.tableEditFilters": "फ़िल्टर संपादित करें",
   "tools.database.tableAddProperty": "प्रॉपर्टी जोड़ें",
+  "tools.database.tableShowHideProperties": "प्रॉपर्टी दिखाएँ या छिपाएँ",
   "tools.database.tableOpen": "खोलें",
   "tools.database.tableAddBelow": "नीचे जोड़ने के लिए क्लिक करें",
   "tools.database.tableDragHandle": "खींचकर ले जाएं, मेनू खोलने के लिए क्लिक करें",

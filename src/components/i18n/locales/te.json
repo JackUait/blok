@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "మొదటి లోడ్‌లో చూపించు",
   "tools.database.tableEditFilters": "ఫిల్టర్‌లను సవరించండి",
   "tools.database.tableAddProperty": "ప్రాపర్టీని జోడించండి",
+  "tools.database.tableShowHideProperties": "ప్రాపర్టీలను చూపు లేదా దాచు",
   "tools.database.tableOpen": "తెరవండి",
   "tools.database.tableAddBelow": "క్రింద జోడించడానికి నొక్కండి",
   "tools.database.tableDragHandle": "తరలించడానికి లాగండి, మెనూ తెరవడానికి నొక్కండి",

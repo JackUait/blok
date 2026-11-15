@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "Näytä ensimmäisellä latauksella",
   "tools.database.tableEditFilters": "Muokkaa suodattimia",
   "tools.database.tableAddProperty": "Lisää ominaisuus",
+  "tools.database.tableShowHideProperties": "Näytä tai piilota ominaisuudet",
   "tools.database.tableOpen": "Avaa",
   "tools.database.tableAddBelow": "Napsauta lisätäksesi alle",
   "tools.database.tableDragHandle": "Vedä siirtääksesi, napsauta avataksesi valikon",

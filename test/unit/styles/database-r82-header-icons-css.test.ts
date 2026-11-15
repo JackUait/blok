@@ -68,3 +68,24 @@ describe('database Round 41 menu icon inks', () => {
     expect(tokenValues('--blok-database-peek-glyph-strong')[0]).toBe('rgb(56, 56, 54)');
   });
 });
+
+describe('database Round 41 header ⋯', () => {
+  const plusAndMore = '[data-blok-database-table-add-property], [data-blok-database-table-property-visibility]';
+
+  // Notion: "+" and "⋯" are both 28x28 in rgb(142, 139, 134), the ⋯ flush after the "+".
+  it('draws the ⋯ as the "+" button, flush after it', () => {
+    const body = ruleBody(plusAndMore);
+
+    expect(body).toContain('width: 28px');
+    expect(body).toContain('height: 28px');
+    expect(body).toContain('color: var(--blok-database-table-header-icon)');
+    expect(ruleBody('[data-blok-database-table-property-visibility]')).toContain('margin-inline-start: 0');
+    expect(ruleBody('[data-blok-database-table-add-property]:hover, [data-blok-database-table-property-visibility]:hover'))
+      .toContain('background-color: var(--blok-database-table-header-hover-bg)');
+  });
+
+  // Notion's dots read 12 x 3 of ink, area 15.1; IconDotsHorizontal at 20px reads 13 x 3, area 15.0.
+  it('draws the ⋯ dots at Notion size', () => {
+    expect(ruleBody('[data-blok-database-table-property-visibility] svg')).toContain('width: 20px');
+  });
+});

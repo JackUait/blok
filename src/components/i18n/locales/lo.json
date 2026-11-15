@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "ສະແດງເມື່ອໂຫຼດຄັ້ງທຳອິດ",
   "tools.database.tableEditFilters": "ແກ້ໄຂຕົວກອງ",
   "tools.database.tableAddProperty": "ເພີ່ມຄຸນສົມບັດ",
+  "tools.database.tableShowHideProperties": "ສະແດງ ຫຼື ເຊື່ອງຄຸນສົມບັດ",
   "tools.database.tableOpen": "ເປີດ",
   "tools.database.tableAddBelow": "ຄລິກເພື່ອເພີ່ມຂ້າງລຸ່ມ",
   "tools.database.tableDragHandle": "ລາກເພື່ອຍ້າຍ, ຄລິກເພື່ອເປີດເມນູ",

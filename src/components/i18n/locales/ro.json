@@ -1217,6 +1217,7 @@
   "tools.database.tableShowOnFirstLoad": "Afișează la prima încărcare",
   "tools.database.tableEditFilters": "Editează filtrele",
   "tools.database.tableAddProperty": "Adaugă proprietate",
+  "tools.database.tableShowHideProperties": "Afișează sau ascunde proprietățile",
   "tools.database.tableOpen": "Deschide",
   "tools.database.tableAddBelow": "Faceți clic pentru a adăuga dedesubt",
   "tools.database.tableDragHandle": "Trageți pentru a muta, faceți clic pentru a deschide meniul",

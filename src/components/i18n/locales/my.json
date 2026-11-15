@@ -1208,6 +1208,7 @@
   "tools.database.tableShowOnFirstLoad": "ပထမဆုံး တင်ချိန်တွင် ပြရန်",
   "tools.database.tableEditFilters": "စစ်ထုတ်မှုများ တည်းဖြတ်ရန်",
   "tools.database.tableAddProperty": "ဂုဏ်သတ္တိ ထည့်ရန်",
+  "tools.database.tableShowHideProperties": "ဂုဏ်သတ္တိများ ပြရန် သို့မဟုတ် ဖျောက်ရန်",
   "tools.database.tableOpen": "ဖွင့်ရန်",
   "tools.database.tableAddBelow": "အောက်တွင် ထည့်ရန် နှိပ်ပါ",
   "tools.database.tableDragHandle": "ရွှေ့ရန် ဆွဲယူပါ၊ မီနူးဖွင့်ရန် နှိပ်ပါ",

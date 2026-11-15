@@ -16021,7 +16021,11 @@ input[data-blok-database-picker-search]:focus {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
-[data-blok-database-manage-source-more] svg {
+[data-blok-database-manage-source-menu] [data-blok-database-panel-icon] {
+  color: var(--blok-database-ink);
+}
+
+[data-blok-database-manage-source-menu] [data-blok-database-panel-icon] svg, [data-blok-database-manage-source-more] svg {
   width: 20px;
   height: 20px;
 }

@@ -859,14 +859,19 @@ export class ViewSettingsPages {
     more.setAttribute('data-blok-testid', `database-manage-source-more-${choice.id}`);
     more.setAttribute('aria-label', this.t('manageSourcesActions'));
     more.innerHTML = IconDotsHorizontal;
-    more.addEventListener('click', () => openFlyout(more, panel, 'database-manage-source-menu', MANAGE_SOURCE_MENU_WIDTH, (pick) => [
-      panelRow({
-        label: this.t('manageSourcesCopyId'),
-        testId: 'database-manage-source-copy-id',
-        icon: IconCopy,
-        onClick: () => pick(() => manage.copyId(choice.id)),
-      }),
-    ], { alignEnd: true }));
+    more.addEventListener('click', () => {
+      const menu = openFlyout(more, panel, 'database-manage-source-menu', MANAGE_SOURCE_MENU_WIDTH, (pick) => [
+        panelRow({
+          label: this.t('manageSourcesCopyId'),
+          testId: 'database-manage-source-copy-id',
+          icon: IconCopy,
+          onClick: () => pick(() => manage.copyId(choice.id)),
+        }),
+      ], { alignEnd: true });
+
+      // database.css: Notion's 20px primary-ink glyphs, text at +40.
+      menu.root.setAttribute('data-blok-database-manage-source-menu', '');
+    });
     wrap.append(panelRow({
       label: this.sourceName(choice),
       testId: `database-manage-source-${choice.id}`,

@@ -13038,6 +13038,12 @@ input[data-blok-database-picker-search]:focus {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
+/* r38-manage-sources.raw: the ⋯ menu's glyphs are 20px in primary ink, text at +40. */
+[data-blok-database-manage-source-menu] [data-blok-database-panel-icon] {
+  color: var(--blok-database-ink);
+}
+
+[data-blok-database-manage-source-menu] [data-blok-database-panel-icon] svg,
 [data-blok-database-manage-source-more] svg {
   width: 20px;
   height: 20px;

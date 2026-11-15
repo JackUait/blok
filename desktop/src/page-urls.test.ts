@@ -1,5 +1,5 @@
 import {afterEach,describe,expect,it,vi} from 'vitest';
-import {pageDestination,publicPageUrl,resolvePageDestination,workspaceSwitchUrl,rememberPageLinks,pageIdForHref,copiedPageLink} from './page-urls';
+import {libraryUrl,libraryCategoryForHref,pageDestination,publicPageUrl,resolvePageDestination,workspaceSwitchUrl,rememberPageLinks,pageIdForHref,copiedPageLink} from './page-urls';
 import type {CloudSession} from './cloud/client';
 const uuid='2a7aee31-f541-41e8-9190-6eae552291b8';
 const workspace={id:'ws',slug:'new-workspace',name:'New name',role:'member' as const};
@@ -40,5 +40,20 @@ describe('stable public page URLs',()=>{
   rememberPageLinks(location.origin,'https://example.org',[]);
   expect(pageIdForHref(`${location.origin}/p/old-title-${uuid}`)).toBeNull();
   expect(copiedPageLink(`${location.origin}/?page=internal`)).toBe('blok://page/internal');
+ });
+});
+
+describe('library routes', () => {
+ it('drops public and legacy page destinations while preserving local workspace mode', () => {
+  const href = libraryUrl(`https://example.org/p/old-${uuid}?page=stale&local=1#block`, 'favorite');
+  expect(href).toBe('https://example.org/?local=1&library=favorite');
+  expect(pageDestination(href)).toEqual({ kind: 'none' });
+  expect(libraryCategoryForHref(href)).toBe('favorite');
+ });
+ it('restores categories from a fresh URL and defaults unknown categories safely', () => {
+  expect(libraryCategoryForHref('https://example.org/?library=recent')).toBe('recent');
+  expect(libraryCategoryForHref('https://example.org/?library=unknown')).toBe('all');
+  expect(libraryCategoryForHref('https://example.org/?page=abc')).toBeNull();
+  expect(workspaceSwitchUrl('https://example.org/?library=recent', false)).toBe('https://example.org/');
  });
 });

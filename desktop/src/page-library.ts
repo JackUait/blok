@@ -1,10 +1,10 @@
-import { openModalDialog, type ModalDialogHandle } from '@blok/modal-dialog';
-import { IconCross, IconFile, IconTable } from '../../src/components/icons';
+import { IconFile, IconTable, IconClock, IconEmojiStar, IconPeople, IconGlobe, IconLock, IconSidebarRight } from '../../src/components/icons';
 import { renderPageIcon } from '../../src/shell/page-icon';
 import { sectionOf } from './page-section';
 import type { PageAccessMap } from './page-access';
 import type { DesktopPage } from './storage';
 import type { PageOutline } from './page-outline';
+import type { LibraryCategory } from './page-urls';
 import './page-library.css';
 
 export function pageTimestamp(value?: string): string | null {
@@ -14,6 +14,10 @@ export function pageTimestamp(value?: string): string | null {
 
 /** The library only reads the current authorized index, never a second page store. */
 export function openPageLibrary(options: {
+  container: HTMLElement;
+  category?: LibraryCategory;
+  onCategoryChange?: (category: LibraryCategory) => void;
+  onToggleSidebar?: () => void;
   pages: () => DesktopPage[];
   access: () => PageAccessMap | undefined;
   recentIds: () => string[];
@@ -24,22 +28,24 @@ export function openPageLibrary(options: {
   canCreate?: boolean;
   loadChildren?: (pageId: string) => Promise<PageOutline[]>;
   onOpenBlock?: (pageId: string, blockId: string) => void;
-}): () => void {
-  const overlay = document.createElement('div'); overlay.setAttribute('data-desktop-settings-overlay', '');
+}): (() => void) & { refresh(): void } {
   const surface = document.createElement('section'); surface.setAttribute('data-page-library', ''); surface.tabIndex = -1;
-  const heading = document.createElement('h2'); heading.textContent = 'Bibliothèque';
-  const closeButton = document.createElement('button'); closeButton.type = 'button'; closeButton.setAttribute('data-library-close', ''); closeButton.setAttribute('aria-label', 'Fermer la bibliothèque'); closeButton.innerHTML = IconCross;
-  const modal: { handle: ModalDialogHandle | null } = { handle: null };
-  const close = (): void => modal.handle?.close(); closeButton.addEventListener('click', close);
-  const create = document.createElement('button'); create.type = 'button'; create.textContent = 'Nouvelle page'; create.disabled = options.canCreate === false; create.addEventListener('click', () => { close(); options.onCreate(); });
-  const header = document.createElement('header'); header.append(heading, create, closeButton);
+  surface.setAttribute('aria-label', 'Bibliothèque');
+  const heading = document.createElement('h1'); heading.textContent = 'Bibliothèque';
+  const close = (): void => surface.remove();
+  const create = document.createElement('button'); create.type = 'button'; create.textContent = 'Nouvelle page'; create.disabled = options.canCreate === false; create.addEventListener('click', options.onCreate);
+  const header = document.createElement('header'); header.append(heading, create);
+  if (options.onToggleSidebar) {
+    const toggle = document.createElement('button'); toggle.type = 'button'; toggle.innerHTML = IconSidebarRight; toggle.setAttribute('aria-label', 'Afficher ou masquer la barre latérale');
+    toggle.addEventListener('click', options.onToggleSidebar); header.prepend(toggle);
+  }
   if (options.onCreateNote) {
     const note = document.createElement('button'); note.type = 'button'; note.textContent = 'Nouvelle note'; note.disabled = options.canCreate === false;
-    note.addEventListener('click', () => { close(); options.onCreateNote?.(); }); header.insertBefore(note, create);
+    note.addEventListener('click', () => options.onCreateNote?.()); header.insertBefore(note, create);
   }
   const tabs = document.createElement('div'); tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', 'Catégories de pages');
-  const categories = [['all', 'Toutes'], ['teamspaces', 'Espaces d’équipe'], ['recent', 'Récents'], ['favorite', 'Favoris'], ['shared', 'Partagé'], ['private', 'Privé']] as const;
-  const view = { category: 'all' };
+  const categories = [['all', 'Toutes', IconTable], ['teamspaces', 'Espaces d’équipe', IconPeople], ['recent', 'Récents', IconClock], ['favorite', 'Favoris', IconEmojiStar], ['shared', 'Partagé', IconGlobe], ['private', 'Privé', IconLock]] as const;
+  const view = { category: options.category ?? 'all' };
   const expanded = new Set<string>();
   const outlines = new Map<string, PageOutline[]>();
   const loading = new Set<string>();
@@ -50,10 +56,14 @@ export function openPageLibrary(options: {
     const option = document.createElement('option'); option.value = value; option.textContent = label; sort.append(option);
   }
   const controls = document.createElement('div'); controls.setAttribute('data-library-controls', ''); controls.append(input, sort);
-  const columns = document.createElement('div'); columns.setAttribute('data-library-columns', '');
-  const nameColumn = document.createElement('span'); nameColumn.textContent = 'Nom de la page';
-  const dateColumn = document.createElement('span'); dateColumn.textContent = 'Dernière modification'; columns.append(nameColumn, dateColumn);
-  const results = document.createElement('div'); results.setAttribute('data-library-results', ''); results.setAttribute('role', 'tabpanel'); results.id = 'page-library-results'; results.setAttribute('aria-labelledby', 'page-library-tab-all');
+  const results = document.createElement('div'); results.setAttribute('data-library-results', ''); results.setAttribute('role', 'tabpanel'); results.id = 'page-library-results'; results.setAttribute('aria-labelledby', `page-library-tab-${view.category}`);
+  const table = document.createElement('table'); table.setAttribute('aria-label', 'Pages de la bibliothèque');
+  const columns = document.createElement('thead'); const columnRow = document.createElement('tr');
+  for (const label of ['Nom de la page', 'Dernière modification']) {
+    const column = document.createElement('th'); column.scope = 'col'; column.textContent = label; columnRow.append(column);
+  }
+  columns.append(columnRow);
+  const rows = document.createElement('tbody'); table.append(columns, rows); results.append(table);
   const empty = document.createElement('p'); empty.setAttribute('role', 'status');
   function render(): void {
     const focusedDisclosure = document.activeElement?.getAttribute('data-library-disclosure');
@@ -71,7 +81,7 @@ export function openPageLibrary(options: {
       const key = sort.value === 'updated' ? 'updatedAt' : 'createdAt';
       matches.sort((a, b) => (Date.parse(b[key] ?? '') || 0) - (Date.parse(a[key] ?? '') || 0));
     } else if (view.category === 'recent') matches.sort((a, b) => (recent.get(a.id) ?? 0) - (recent.get(b.id) ?? 0));
-    results.replaceChildren();
+    rows.replaceChildren();
     const byId = new Map(pages.map(page => [page.id, page]));
     const matchIds = new Set(matches.map(page => page.id));
     const searching = input.value.trim() !== '';
@@ -89,7 +99,8 @@ export function openPageLibrary(options: {
     const appendPage = (page: DesktopPage, depth: number): void => {
       if (rendered.has(page.id)) return;
       rendered.add(page.id);
-      const wrapper = document.createElement('div'); wrapper.setAttribute('data-library-row', ''); wrapper.style.paddingLeft = `${depth * 20}px`;
+      const wrapper = document.createElement('tr'); wrapper.setAttribute('data-library-row', '');
+      const nameCell = document.createElement('td'); const nameContent = document.createElement('div'); nameContent.setAttribute('data-library-name-cell', ''); nameContent.style.paddingLeft = `${depth * 20}px`; nameCell.append(nameContent);
       const children = pages.filter(child => child.parentId === page.id && child.id !== page.id);
       const disclosure = document.createElement('button'); disclosure.type = 'button'; disclosure.setAttribute('data-library-disclosure', page.id);
       disclosure.textContent = expanded.has(page.id) ? '⌄' : '›';
@@ -111,12 +122,12 @@ export function openPageLibrary(options: {
       const icon = document.createElement('span'); icon.setAttribute('data-library-icon', ''); icon.setAttribute('aria-hidden', 'true');
       if (page.icon) renderPageIcon(icon, page.icon); else icon.innerHTML = IconFile;
       const name = document.createElement('span'); name.setAttribute('data-library-page-title', ''); name.textContent = page.title || 'Nouvelle page';
-      const edited = document.createElement('span'); edited.setAttribute('data-library-date', '');
+      const edited = document.createElement('td'); edited.setAttribute('data-library-date', '');
       const timestamp = pageTimestamp(page.updatedAt); edited.textContent = timestamp ?? '—'; edited.setAttribute('aria-label', timestamp ? `Dernière modification : ${timestamp}` : 'Date de modification inconnue');
-      row.append(icon, name, edited); row.addEventListener('click', () => {
+      row.append(icon, name); row.addEventListener('click', () => {
         if (!options.pages().some(item => item.id === page.id)) { render(); return; }
-        close(); options.onOpen(page.id);
-      }); wrapper.append(disclosure, row); results.append(wrapper);
+        options.onOpen(page.id);
+      }); nameContent.append(disclosure, row); wrapper.append(nameCell, edited); rows.append(wrapper);
       if (!expanded.has(page.id) || searching) return;
       children.forEach(child => appendPage(child, depth + 1));
       for (const database of outlines.get(page.id) ?? []) {
@@ -126,21 +137,22 @@ export function openPageLibrary(options: {
         databaseRow.append(databaseIcon, databaseTitle);
         databaseRow.addEventListener('click', () => {
           if (!options.pages().some(item => item.id === page.id)) { render(); return; }
-          close(); options.onOpenBlock?.(page.id, database.blockId);
-        }); results.append(databaseRow);
+          options.onOpenBlock?.(page.id, database.blockId);
+        }); const databaseTr = document.createElement('tr'); const databaseCell = document.createElement('td'); databaseCell.colSpan = 2; databaseCell.append(databaseRow); databaseTr.append(databaseCell); rows.append(databaseTr);
       }
       if (loading.has(page.id) || errors.has(page.id)) {
         const message = document.createElement('p'); message.setAttribute('data-library-outline-status', ''); message.setAttribute('role', 'status');
-        message.textContent = loading.has(page.id) ? 'Chargement…' : 'Contenu indisponible. Réduisez puis développez pour réessayer.'; results.append(message);
+        message.textContent = loading.has(page.id) ? 'Chargement…' : 'Contenu indisponible. Réduisez puis développez pour réessayer.';
+        const statusRow = document.createElement('tr'); const statusCell = document.createElement('td'); statusCell.colSpan = 2; statusCell.append(message); statusRow.append(statusCell); rows.append(statusRow);
       }
     };
     matches.filter(page => searching || !hasListedAncestor(page)).forEach(page => appendPage(page, 0));
     if (focusedDisclosure) [...results.querySelectorAll<HTMLButtonElement>('[data-library-disclosure]')].find(button => button.getAttribute('data-library-disclosure') === focusedDisclosure)?.focus();
     empty.textContent = matches.length === 0 ? 'Aucune page à afficher.' : `${matches.length} page${matches.length === 1 ? '' : 's'}`;
   }
-  for (const [value, label] of categories) {
-    const tab = document.createElement('button'); tab.type = 'button'; tab.setAttribute('role', 'tab'); tab.textContent = label; tab.setAttribute('aria-selected', String(view.category === value)); tab.id = `page-library-tab-${value}`; tab.setAttribute('aria-controls', results.id); tab.tabIndex = view.category === value ? 0 : -1;
-    tab.addEventListener('click', () => { view.category = value; for (const sibling of tabs.querySelectorAll('button')) { sibling.setAttribute('aria-selected', String(sibling === tab)); sibling.tabIndex = sibling === tab ? 0 : -1; } results.setAttribute('aria-labelledby', tab.id); render(); }); tabs.append(tab);
+  for (const [value, label, icon] of categories) {
+    const tab = document.createElement('button'); tab.type = 'button'; tab.setAttribute('role', 'tab'); const tabIcon = document.createElement('span'); tabIcon.innerHTML = icon; tabIcon.setAttribute('aria-hidden', 'true'); const tabLabel = document.createElement('span'); tabLabel.textContent = label; tab.append(tabIcon, tabLabel); tab.setAttribute('aria-selected', String(view.category === value)); tab.id = `page-library-tab-${value}`; tab.setAttribute('aria-controls', results.id); tab.tabIndex = view.category === value ? 0 : -1;
+    tab.addEventListener('click', () => { view.category = value; for (const sibling of tabs.querySelectorAll('button')) { sibling.setAttribute('aria-selected', String(sibling === tab)); sibling.tabIndex = sibling === tab ? 0 : -1; } results.setAttribute('aria-labelledby', tab.id); render(); options.onCategoryChange?.(value); }); tabs.append(tab);
   }
   tabs.addEventListener('keydown', event => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
@@ -150,7 +162,6 @@ export function openPageLibrary(options: {
     event.preventDefault(); buttons[next]?.focus(); buttons[next]?.click();
   });
   input.addEventListener('input', render); sort.addEventListener('change', render);
-  surface.append(header, tabs, controls, columns, results, empty); overlay.append(surface); render();
-  modal.handle = openModalDialog({ content: overlay, surface, label: 'Bibliothèque', initialFocus: () => input, onDismiss: close });
-  return close;
+  surface.append(header, tabs, controls, results, empty); options.container.append(surface); render();
+  return Object.assign(close, { refresh: render });
 }

@@ -1,4 +1,4 @@
-import { pageDestination, pageIdForHref, publicPageUrl, legacyPageUrl, rememberPageLinks } from './page-urls';
+import { libraryUrl, libraryCategoryForHref, type LibraryCategory, pageDestination, pageIdForHref, publicPageUrl, legacyPageUrl, rememberPageLinks } from './page-urls';
 import { createWorkspaceSaveStatus } from './workspace-save-status';
 import './workspace-save-status.css';
 import { navigationFavorites, navigationRecents } from './navigation-preferences';
@@ -95,7 +95,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   const repository = workspaceRepository(ref);
   const favorites = navigationFavorites(ref);
   const recentPages = navigationRecents(ref);
-  const library = { recents: recentPages.ids, target: null as { pageId: string; blockId: string } | null };
+  const library = { dispose: null as ReturnType<typeof openPageLibrary> | null, category: null as LibraryCategory | null, recents: recentPages.ids, target: null as { pageId: string; blockId: string } | null };
   const initialHref=location.href;
   const routeLoad={pending:false};
   const pageUrl = (id:string):string => {
@@ -201,6 +201,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     const from=pageFromUrl();
     const url=ref.kind==='remote' && !('__TAURI_INTERNALS__' in window) ? new URL(pageUrl(id)) : new URL(location.href);
     if(ref.kind==='local' || '__TAURI_INTERNALS__' in window){url.pathname='/';url.searchParams.set('page',id);}
+    url.searchParams.delete('library');
     if (replace) history.replaceState(null, '', url);
     else history.pushState(null, '', url);
     onRoute();
@@ -244,7 +245,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       }
       adoptIndex(updated);
       saveStatus.saved('refresh');
-      ws.frame.setPages(withSections(ws.index.pages), ws.index.activeId);
+      ws.frame.setPages(withSections(ws.index.pages), library.dispose ? '' : ws.index.activeId);
       ws.pageToolbar?.setBreadcrumbs(breadcrumbs(ws.currentId));
       for (const id of new Set([...original.pages.map((page) => page.id), ...ws.index.pages.map((page) => page.id)])) notifyPage(id);
       ws.refreshPagePresentation?.();
@@ -265,7 +266,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       notifyPage(page.id);
     }
     if (!dateState.changed) return;
-    ws.frame.setPages(withSections(ws.index.pages), ws.index.activeId);
+    ws.frame.setPages(withSections(ws.index.pages), library.dispose ? '' : ws.index.activeId);
     ws.pageToolbar?.setBreadcrumbs(breadcrumbs(ws.currentId));
     const active = ws.index.pages.find((page) => page.id === ws.currentId);
     if (active?.titleDate && ws.editor) {
@@ -344,7 +345,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     const next = nextPageIcon(target.icon, iconValue(icon), { adoptOnly });
     if (target.icon !== next) {
       target.icon = next;
-      ws.frame.setPages(withSections(ws.index.pages), ws.index.activeId);
+      ws.frame.setPages(withSections(ws.index.pages), library.dispose ? '' : ws.index.activeId);
       ws.pageToolbar?.setBreadcrumbs(breadcrumbs(ws.currentId));
       if (persist) saveManifest();
       notifyPage(target.id);
@@ -384,7 +385,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       const page: DesktopPage = { ...(ref.kind === 'local' ? { createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : {}), id: pageId, title: title?.trim() || 'Nouvelle page', parentId: parentId ?? ws.currentId };
       if (initialDocument && ref.kind === 'local') await repository.writePage(pageId, JSON.stringify(initialDocument));
       ws.index.pages.push(page);
-      ws.frame.setPages(withSections(ws.index.pages), ws.index.activeId);
+      ws.frame.setPages(withSections(ws.index.pages), library.dispose ? '' : ws.index.activeId);
       saveManifest();
       await ws.saveOrder;
       if (initialDocument && ref.kind === 'remote') await repository.seedPage(pageId, initialDocument);
@@ -408,6 +409,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       ws.pageToolbar?.setBreadcrumbs(breadcrumbs(id));
       return;
     }
+    library.dispose?.(); library.dispose = null; library.category = null;
+    ws.frame.element.removeAttribute('data-desktop-library');
     ws.currentId = id;
     ws.frame.element.toggleAttribute('data-desktop-read-only', readOnly(id));
     const turn = ++ws.generation;
@@ -757,7 +760,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       else if (command.type === 'delete') deletePage(page);
       else if (command.type === 'open-tab') { openPageTab(page); return; }
       else return;
-      ws.frame.setPages(withSections(ws.index.pages), ws.index.activeId);
+      ws.frame.setPages(withSections(ws.index.pages), library.dispose ? '' : ws.index.activeId);
       saveManifest();
     } finally { ws.frame.element.inert = wasInert; ws.metadataAction = false; }
   };
@@ -782,19 +785,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     recentIds: recentPages.ids,
     onRecentsChange: (ids) => { library.recents = ids; recentPages.save(ids); },
     onCreateNote: canCreateUnder(null) ? () => { void createNote().catch(showError); } : undefined,
-    onLibrary: () => {
-      ws.closeSearch?.();
-      ws.closeSearch = openPageLibrary({ pages: () => ws.index?.pages ?? [], access: () => ws.index?.access, recentIds: () => library.recents, isFavorite: favorites.has,
-        loadChildren: (pageId) => repository.readPageOutline(pageId),
-        onOpenBlock: (pageId, blockId) => {
-          library.target = { pageId, blockId };
-          if (ws.currentId === pageId && ws.editor) {
-            const editor = ws.editor;
-            void editor.isReady.then(() => { if (ws.editor === editor) editor.blocks.getById(blockId)?.holder.scrollIntoView({ block: 'start', behavior: 'smooth' }); });
-            library.target = null;
-          } else navigate(pageId);
-        }, canCreate: canCreateUnder(null), onOpen: navigate, onCreateNote: () => { void createNote().catch(showError); }, onCreate: () => chooseNewPage(null) });
-    },
+    onLibrary: () => navigateLibrary('all'),
     onOpen: (id) => navigate(id),
     onCreate: (parentId) => chooseNewPage(parentId),
     onCreatePrivate: ref.kind === 'remote' ? () => chooseNewPage(null, true) : undefined,
@@ -979,8 +970,73 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     document.title = brandedTitle(workspaceName);
   }
 
+  function navigateLibrary(category: LibraryCategory): void {
+    const url = new URL(libraryUrl(location.href, category));
+    if (ref.kind === 'local') url.searchParams.set('local', '1');
+    if (url.href !== location.href) history.pushState(null, '', url);
+    onRoute();
+  }
+
+  async function showLibrary(category: LibraryCategory): Promise<void> {
+    if (!ws.index) return;
+    const request = ++ws.selection;
+    if (library.dispose && library.category === category) { library.dispose.refresh(); return; }
+    const editor = ws.editor;
+    const pageId = ws.currentId;
+    if (editor) {
+      await editor.isReady;
+      if (ws.selection !== request) return;
+      if (ref.kind === 'remote') await editor.saver.flush();
+      else if (!readOnly(pageId)) await repository.writePage(pageId, JSON.stringify(await editor.save()));
+    }
+    if (ws.selection !== request) return;
+    ws.closeSearch?.(); ws.closeSearch = undefined;
+    ws.generation++;
+    ws.coverRowObserver?.disconnect(); ws.coverRowObserver = null;
+    ws.pageToolbar?.destroy(); ws.pageToolbar = null;
+    ws.floatingToc?.destroy(); ws.floatingToc = null;
+    ws.titleDateMention?.destroy(); ws.titleDateMention = null;
+    ws.pageComments?.destroy(); ws.pageComments = null;
+    ws.refreshPagePresentation = null;
+    ws.editor?.destroy(); ws.editor = null; ws.currentId = '';
+    ws.remotePending = false;
+    saveStatus.resetPage();
+    ws.frame.element.append(status);
+    ws.frame.element.setAttribute('data-desktop-library', '');
+    ws.frame.element.toggleAttribute('data-desktop-read-only', ws.access.readOnlyWorkspace);
+    ws.frame.setPages(withSections(ws.index.pages), '');
+    ws.pageCanvas.removeAttribute('data-full-width');
+    library.dispose?.(); ws.pageCanvas.replaceChildren();
+    library.category = category;
+    library.dispose = openPageLibrary({
+      container: ws.pageCanvas, category,
+      onCategoryChange: value => {
+        library.category = value;
+        const url = libraryUrl(location.href, value);
+        if (url !== location.href) history.pushState(null, '', url);
+      },
+      onToggleSidebar: () => { ws.frame.toggleSidebar(); onLayout(sidebar.getBoundingClientRect().width); },
+      pages: () => ws.index?.pages ?? [], access: () => ws.index?.access,
+      recentIds: () => library.recents, isFavorite: favorites.has,
+      loadChildren: pageId => repository.readPageOutline(pageId),
+      onOpenBlock: (pageId, blockId) => { library.target = { pageId, blockId }; navigate(pageId); },
+      canCreate: canCreateUnder(null), onOpen: navigate,
+      onCreateNote: () => { void createNote().catch(showError); }, onCreate: () => chooseNewPage(null),
+    });
+    document.title = brandedTitle('Bibliothèque');
+    ws.pageCanvas.scrollTop = 0;
+  }
+
   function onRoute(): void {
     if (!ws.index) return;
+    const category = libraryCategoryForHref(location.href);
+    if (category !== null) {
+      void showLibrary(category).catch(error => {
+        if (ws.currentId && libraryCategoryForHref(location.href) !== null) navigate(ws.currentId, true);
+        showError(error);
+      });
+      return;
+    }
     const requested=pageDestination(location.href);
     const id=pageFromUrl();
     const explicit=requested.kind!=='none';
@@ -995,6 +1051,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
           if(location.href===destination)location.reload();
         })().catch(showError).finally(()=>{routeLoad.pending=false;ws.pageCanvas.removeAttribute('aria-busy');});return;
       }
+      library.dispose?.(); library.dispose = null; library.category = null;
+      ws.frame.element.removeAttribute('data-desktop-library');
       ws.generation++;ws.selection++;ws.pageComments?.destroy(); ws.pageComments = null;
       ws.editor?.destroy();ws.editor=null;ws.currentId='';
       const section=document.createElement('section');section.setAttribute('data-page-unavailable','');section.style.padding='48px';

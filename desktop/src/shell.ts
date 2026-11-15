@@ -1,4 +1,4 @@
-import { pageIdForHref, pageDestination } from './page-urls';
+import { libraryCategoryForHref, pageIdForHref, pageDestination } from './page-urls';
 import { renderPageIcon } from '../../src/shell/page-icon';
 import { activeWorkspace, workspaceKey } from './workspace-registry';
 import { createWorkspace, type Workspace } from './workspace';
@@ -167,19 +167,21 @@ function installMenu(): void {
 function boot(): Session {
   const restored = load(sessionStorage.getItem(tabKey()));
   const requested = new URL(location.href);
-  const page = pageIdForHref(requested.href) ?? (pageDestination(requested.href).kind==='public' ? requested.pathname : null);
+  const library = libraryCategoryForHref(requested.href);
+  const page = library !== null ? `library:${library}` : pageIdForHref(requested.href) ?? (pageDestination(requested.href).kind==='public' ? requested.pathname : null);
   if (!restored || !page) return restored ?? freshSession();
   // An explicit page link takes precedence over the previously selected tab.
   const existing = restored.tabs.find((tab) => {
     const url = new URL(tab.href);
-    return (pageIdForHref(url.href) ?? url.pathname) === page;
+    const category = libraryCategoryForHref(url.href);
+    return (category !== null ? `library:${category}` : pageIdForHref(url.href) ?? url.pathname) === page;
   });
   if (existing) {
     existing.href = requested.href;
     existing.entries[existing.index] = requested.href;
     restored.activeId = existing.id;
   } else {
-    const opened = freshTab(requested.href, 'Nouvelle page');
+    const opened = freshTab(requested.href, library !== null ? 'Bibliothèque' : 'Nouvelle page');
     restored.tabs.push(opened);
     restored.tabs = restored.tabs.slice(-MAX_TABS);
     restored.activeId = opened.id;

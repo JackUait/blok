@@ -231,7 +231,6 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     const library = document.createElement('button');
     library.type = 'button';
     library.setAttribute('data-blok-sidebar-shortcut', '');
-    library.setAttribute('aria-haspopup', 'dialog');
     library.append(svg(ICONS.wiki));
     const label = document.createElement('span'); label.textContent = 'Bibliothèque'; library.append(label);
     library.addEventListener('click', options.onLibrary);

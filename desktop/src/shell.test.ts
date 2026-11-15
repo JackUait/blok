@@ -523,6 +523,16 @@ describe('Tauri window', () => {
 });
 
 describe('explicit page links at startup',()=>{
+  it('honors an explicit Library category over a previously selected page tab', () => {
+    history.replaceState(null, '', '/?local=1&library=favorite');
+    sessionStorage.setItem(KEY, JSON.stringify({ tabs: [savedTab('first')], activeId: 'first' }));
+    mount();
+    expect(location.search).toBe('?local=1&library=favorite');
+    const session = readSession();
+    expect(session.tabs).toHaveLength(2);
+    expect(session.tabs.find(tab => tab.id === session.activeId)?.href).toContain('library=favorite');
+  });
+
   const savedTab=(id: string): StoredTab=>({id,href:`${location.origin}/?page=${id}`,title:`Saved ${id}`,icon:'',scrollY:0,entries:[`${location.origin}/?page=${id}`],scrollPositions:[0],index:0});
   it('selects a matching saved tab instead of overriding the requested page',()=>{
     history.replaceState(null,'','/?page=second');
@@ -555,4 +565,16 @@ describe('public page history',()=>{
   history.forward();await vi.waitFor(()=>expect(location.pathname).toBe(`/p/beta-${b}`));expect(routeCalls).toBe(calls+2);
   rememberPageLinks(location.origin,location.origin,[]);
  });
+});
+
+describe('Library history', () => {
+  it('returns between pages and Library categories with browser Back and Forward', async () => {
+    mount(false);
+    history.pushState(null, '', '/?local=1&page=alpha');
+    history.pushState(null, '', '/?local=1&library=recent');
+    history.pushState(null, '', '/?local=1&page=beta');
+    history.back(); await vi.waitFor(() => expect(location.search).toBe('?local=1&library=recent'));
+    history.back(); await vi.waitFor(() => expect(location.search).toBe('?local=1&page=alpha'));
+    history.forward(); await vi.waitFor(() => expect(location.search).toBe('?local=1&library=recent'));
+  });
 });

@@ -50,8 +50,21 @@ export function copiedPageLink(href:string):string|null {
 /** A voluntary switch drops the destination; only an explicit login continuation retains it. */
 export function workspaceSwitchUrl(href:string,local:boolean,resumePage=false):string {
   const url=new URL(href);
-  if(!resumePage){url.pathname='/';url.searchParams.delete('page');url.hash='';}
+  if(!resumePage){url.pathname='/';url.searchParams.delete('page');url.searchParams.delete('library');url.hash='';}
   for(const key of ['cloud','manage','section','server'])url.searchParams.delete(key);
   if(local)url.searchParams.set('local','1');else url.searchParams.delete('local');
+  return url.href;
+}
+
+export type LibraryCategory = 'all' | 'teamspaces' | 'recent' | 'favorite' | 'shared' | 'private';
+export function libraryCategoryForHref(href: string): LibraryCategory | null {
+  const value = new URL(href, location.href).searchParams.get('library');
+  if (value === null) return null;
+  return ['teamspaces', 'recent', 'favorite', 'shared', 'private'].includes(value) ? value as LibraryCategory : 'all';
+}
+export function libraryUrl(href: string, category: LibraryCategory = 'all'): string {
+  const url = new URL(href, location.href);
+  url.pathname = '/'; url.hash = ''; url.searchParams.delete('page');
+  url.searchParams.set('library', category);
   return url.href;
 }

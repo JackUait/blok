@@ -12855,6 +12855,11 @@ input[data-blok-database-picker-search]:focus {
   padding-block: 0;
 }
 
+/* notion-motion.md Round 35 (r35-propvis.raw): "Hidden in <layout>" text 12.3 under the last shown row. */
+[data-blok-database-panel-page="properties"] [data-blok-database-panel-list] + [data-blok-database-property-visibility-header] {
+  margin-block-start: var(--blok-space-1-5);
+}
+
 /* notion-motion.md Round 9 (r9-vs-propvis.raw): ⋮⋮ at x+12, the glyph at x+36.4, the name at x+62, the eye at x+250. */
 [data-blok-database-panel-page="properties"] [data-blok-database-panel-list-item] {
   margin-inline: var(--blok-space-1);

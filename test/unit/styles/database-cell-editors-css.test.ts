@@ -881,6 +881,11 @@ describe('cell editor CSS', () => {
       expect(declared(`${PAGE} [data-blok-database-property-visibility-row]`, 'padding-inline')).toEqual(['var(--blok-space-1-5) 0']);
       expect(declared(`${PAGE} [data-blok-database-property-visibility-row]`, 'gap')).toEqual(['var(--blok-space-1-5)']);
     });
+
+    // notion-motion.md Round 35 (r35-propvis.raw): "Hidden in table" text sits 12.3 under the last shown row, not the 18 + 6.8 the first header gets.
+    it('pulls the Hidden header 6px under the shown list', () => {
+      expect(declared(`${PAGE} [data-blok-database-panel-list] + [data-blok-database-property-visibility-header]`, 'margin-block-start')).toEqual(['var(--blok-space-1-5)']);
+    });
   });
 
   // notion-motion.md Round 10 "Add sort picker", "Filter by picker", "Add filter picker": the search box at (12,12),

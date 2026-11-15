@@ -519,7 +519,10 @@
 /* Les titres de section de Notion ne crient pas : casse normale, gris, petits.
    Des capitales espacées transforment un repère en bandeau. */
 [data-blok-sidebar-section-label] {
-  display: block;
+  /* Une rangée, pour que le chevron se centre sur le libellé : en bloc il
+     serait aligné sur la ligne de base de la police et tomberait trop bas. */
+  display: flex;
+  align-items: center;
   width: 100%;
   margin: 0 0 2px;
   padding: 6px 8px;
@@ -598,9 +601,13 @@
 [data-blok-sidebar-teamspace-mark] svg { width: 14px; height: 14px; }
 [data-blok-sidebar-teamspace-chevron] { flex: none; width: 12px; height: 12px; color: var(--blok-text-secondary); transform: rotate(90deg); }
 [data-blok-sidebar-teamspace] > button[aria-expanded="false"] [data-blok-sidebar-teamspace-chevron] { transform: none; }
-[data-blok-sidebar-section-label]::after { content: '⌄'; margin-inline-start: 6px; opacity: 0; }
-[data-blok-sidebar-section-label]:is(:hover, :focus-visible)::after { opacity: 1; }
-[data-blok-sidebar-section-label][aria-expanded="false"]::after { content: '›'; opacity: 1; }
+[data-blok-sidebar-section-chevron] {
+  flex: none; width: 12px; height: 12px; margin-inline-start: 6px; opacity: 0;
+  transform: rotate(90deg); transition: opacity 120ms ease, transform 120ms ease;
+}
+[data-blok-sidebar-section-label]:is(:hover, :focus-visible) [data-blok-sidebar-section-chevron] { opacity: 1; }
+/* Replié, la marque reste : c'est le seul indice que la section cache des pages. */
+[data-blok-sidebar-section-label][aria-expanded="false"] [data-blok-sidebar-section-chevron] { transform: none; opacity: 1; }
 [data-blok-sidebar-section-label]:focus-visible,
 [data-blok-sidebar-shortcut]:focus-visible,
 [data-blok-sidebar-teamspace] > button:focus-visible { outline: 2px solid var(--blok-focus-ring); outline-offset: -2px; }

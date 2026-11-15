@@ -489,6 +489,11 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     heading.setAttribute('data-blok-sidebar-section-label', '');
     heading.setAttribute('aria-expanded', String(!collapsed.has(key)));
     heading.textContent = label;
+    // Une seule icône, que le CSS fait pivoter : deux caractères qui se
+    // remplacent changeraient de chasse et de hauteur à chaque clic.
+    const mark = chevron();
+    mark.setAttribute('data-blok-sidebar-section-chevron', '');
+    heading.append(mark);
     heading.addEventListener('click', () => {
       if (collapsed.has(key)) collapsed.delete(key);
       else collapsed.add(key);

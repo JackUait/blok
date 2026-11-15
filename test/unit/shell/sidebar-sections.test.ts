@@ -1,4 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createPageFrame } from '../../../src/shell/sidebar';
 import type { ShellPage } from '../../../src/shell/sidebar';
 
@@ -66,6 +68,29 @@ describe('sidebar sections', () => {
     expect(after?.getAttribute('aria-expanded')).toBe('false');
     after?.click();
     expect(document.querySelectorAll('[data-blok-sidebar-row]')).toHaveLength(2);
+  });
+
+  // Le repli d'une section est une icône qui pivote, comme l'en-tête d'espace
+  // d'équipe juste au-dessus. Deux caractères typographiques qui se remplacent
+  // — « ⌄ » puis « › » — ont deux chasses et deux hauteurs : la marque saute et
+  // change de taille à chaque clic au lieu de tourner.
+  it('marks a section with one chevron that merely rotates', () => {
+    mount([page('a', { section: 'Équipe' })]);
+    const heading = document.querySelector<HTMLButtonElement>('[data-blok-sidebar-section-label]');
+    const mark = heading?.querySelector('[data-blok-sidebar-section-chevron]');
+    expect(mark?.tagName.toLowerCase()).toBe('svg');
+    const expanded = mark?.outerHTML;
+    heading?.click();
+    const collapsed = document.querySelector('[data-blok-sidebar-section-chevron]');
+    expect(collapsed?.outerHTML).toBe(expanded);
+    expect(document.querySelector('[data-blok-sidebar-section-label]')?.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  // Le README de la famille d'icônes l'interdit : « Do not use opacity tints,
+  // gradients, font glyphs, embedded images, or external SVG references. »
+  it('draws no disclosure mark out of the font', () => {
+    const css = readFileSync(join(__dirname, '../../../src/shell/sidebar.css'), 'utf8');
+    expect(css).not.toMatch(/\[data-blok-sidebar-section-label\][^{]*::after[^{]*\{[^}]*content:/);
   });
 
   it('drops a section that has nothing in it', () => {

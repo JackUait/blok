@@ -7434,6 +7434,17 @@ describe('DatabaseTool — board sub-group lanes', () => {
       tool.destroy();
     });
 
+    // notion-motion.md Round 39 §4 (r39-subgroup-menu.raw): the band's ⋯ menu opens with Edit groups filled, like a column's.
+    it('opens the group menu with its first row highlighted', () => {
+      const { tool, element } = mount();
+
+      openLaneMenu(element, 'team-a');
+
+      expect(queryByData(document.body, 'data-mock-popover-focused', 'edit-groups')).not.toBeNull();
+
+      tool.destroy();
+    });
+
     // notion-motion.md Round 31 §3: the band count is a button that opens the calculation menu (Count, Percent, More options, Date).
     describe('the band count', () => {
       const bandCount = (element: HTMLElement, key: string): HTMLElement | null =>

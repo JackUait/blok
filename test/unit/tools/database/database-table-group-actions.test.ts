@@ -72,6 +72,17 @@ describe('table group header ⋯ and +', () => {
     expect(document.querySelector('[data-blok-item-name="toggle-aggregation"]')?.textContent).toContain('tools.database.groupShowAggregation');
     expect(el.querySelector('[data-blok-database-table-group-count]')).toBeNull();
   });
+
+  // notion-motion.md Round 39 §4 (r39-tablegroup-menu.raw): the menu opens with Edit groups filled, and only it.
+  it('⋯ opens the group menu with its first row filled', () => {
+    const { el } = buildDatabase(seed(), 'db', data());
+
+    openMenu(el, 'red');
+
+    const filled = [...document.querySelectorAll('[data-blok-popover-item][data-blok-focused="true"]')];
+
+    expect(filled.map((row) => row.getAttribute('data-blok-item-name'))).toEqual(['edit-groups']);
+  });
 });
 
 const openMenu = (el: HTMLElement, key: string): void => {

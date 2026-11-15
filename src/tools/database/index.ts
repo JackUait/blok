@@ -10013,8 +10013,8 @@ export class DatabaseTool implements BlockTool {
       minWidth: '180px',
       offset: 0,
       class: DATABASE_GROUP_MENU_CLASS,
-      // Round 35 (r35-groupmenu.raw): a board's opens with its first row filled. The table group ⋯ is unmeasured.
-      ...(table === undefined ? { highlight: 'edit-groups' } : {}),
+      // notion-motion.md Round 35 and Round 39 §4: the board's and the table's open with their first row filled.
+      highlight: 'edit-groups',
     });
   }
 
@@ -10052,6 +10052,8 @@ export class DatabaseTool implements BlockTool {
       minWidth: '180px',
       offset: 0,
       class: DATABASE_GROUP_MENU_CLASS,
+      // notion-motion.md Round 39 §4 (r39-subgroup-menu.raw): opens with its first row filled, like a column's.
+      highlight: 'edit-groups',
     });
   }
 

@@ -13988,6 +13988,12 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   width: 165px;
 }
 
+/* notion-motion.md Round 39 §1 (r39-pm-rules.raw) and Round 20 §2 (r20-adv-st-two-parts.raw): one token fills 127.6,
+   two fill 179.4. Both fit 6 after each token; that 6 is derived from the fits, not read. */
+[data-blok-database-filter-rule-button] [data-blok-database-option-pill] {
+  margin-inline-end: var(--blok-space-1-5);
+}
+
 /* notion-motion.md Round 20 §1 (r20-st-rows.raw): a Status group row in 500 and its group's ink. Notion's inks
    (rgb(142,139,134), rgb(39,131,222), rgb(70,161,113)) fail AA at 14px, so the row takes the option ink. */
 [data-blok-database-filter-status-group] {

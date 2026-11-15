@@ -16898,6 +16898,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   width: 165px;
 }
 
+[data-blok-database-filter-rule-button] [data-blok-database-option-pill] {
+  margin-inline-end: var(--blok-space-1-5);
+}
+
 [data-blok-database-filter-status-group] {
   font-weight: 500;
 }

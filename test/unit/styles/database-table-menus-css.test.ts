@@ -94,6 +94,19 @@ describe('view tab menu Source row (Round 35)', () => {
   });
 });
 
+// notion-motion.md Round 35 (r35-tabmenu.raw): Display as ends in a 16x16 chevron at 731-747, the row ending at 755.
+describe('view tab menu Display as row (Round 35)', () => {
+  const ROW = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-column-menu'] [data-blok-item-name='database-tab-display']";
+
+  it('ends in a 16px chevron 8px from the row end', () => {
+    expect(declared(ROW, 'padding-inline-end')).toEqual(['var(--blok-space-2)']);
+    expect(declared(`${ROW} [data-blok-popover-item-icon-chevron-right]`, 'width')).toEqual(['16px']);
+    expect(declared(`${ROW} [data-blok-popover-item-icon-chevron-right]`, 'margin-inline-end')).toEqual(['0']);
+    expect(declared(`${ROW} [data-blok-popover-item-icon-chevron-right] svg`, 'width')).toEqual(['16px']);
+    expect(declared(`${ROW} [data-blok-popover-item-icon-chevron-right] svg`, 'height')).toEqual(['16px']);
+  });
+});
+
 describe('add property menu (T12)', () => {
   // Notion 2026-10-25: 290 wide, one column of types.
   it('is 290 wide with one column of types', () => {

@@ -518,6 +518,27 @@ describe('DatabasePropertyTypePopover', () => {
         flow.destroy();
       });
 
+      // notion-motion.md Round 34 §6 (r34-typemenu-plus-midscreen.raw): with no room below or above, the whole menu moves up,
+      // its bottom 12.3 above the window, and the name row rides up with it, right on the grid's top.
+      it('moves the name row up with the menu when there is no room below', () => {
+        // Taller than the room above or below the "+" in jsdom's 768 window.
+        const heights = new Map([['data-blok-database-property-type-popover', 400], ['data-blok-database-property-type-header', 28]]);
+
+        vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+          return [...heights].find(([attr]) => this.hasAttribute(attr))?.[1] ?? 0;
+        });
+        vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(rect({ x: 654, left: 654, y: 380, top: 380, width: 28, height: 28, right: 682, bottom: 408 }));
+        const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true, layout: 'grid', nameOverAnchor: true });
+
+        flow.open(anchor);
+        const root = document.querySelector<HTMLElement>('[data-blok-database-property-type-popover]');
+        const header = root?.querySelector<HTMLElement>(':scope > [data-blok-database-property-type-header]');
+
+        expect(header?.style.top).toBe('-28px');
+        expect(parseFloat(root?.style.top ?? '') + 400).toBeCloseTo(window.innerHeight - 12.3, 5);
+        flow.destroy();
+      });
+
       it('opens with the first row highlighted, and Enter on an empty name makes it', () => {
         const named = vi.fn<(type: PropertyType, name: string) => void>();
         const flow = new DatabasePropertyTypePopover({ onSelect: named, withNameField: true, layout: 'grid', nameOverAnchor: true });

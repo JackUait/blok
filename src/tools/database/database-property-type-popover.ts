@@ -47,6 +47,8 @@ const ROWS = '[data-blok-database-property-autofill-option], [data-blok-database
 const OPTION_ACTIVE = 'data-blok-database-property-type-option-active';
 /** notion-spec-2 §18.5 measured these two. */
 const VIEWPORT_BOTTOM_MARGIN = 11;
+/** notion-motion.md Round 34 §6: the header "+" menu, fitting neither side, ends 12.3 above the window. */
+const NAME_OVER_ANCHOR_BOTTOM_MARGIN = 12.3;
 const ABOVE_GAP = 1;
 /** Notion's gap below the button is unmeasured. */
 const BELOW_GAP = 4;
@@ -253,7 +255,7 @@ export class DatabasePropertyTypePopover {
       // notion-spec-2 §18.5: above, the bottom sits 1px over the button; fitting neither side, it covers the button, bottom pinned 11px up.
       const { top, bottom } = anchor.getBoundingClientRect();
       const height = popover.offsetHeight;
-      const bottomLimit = window.innerHeight - VIEWPORT_BOTTOM_MARGIN;
+      const bottomLimit = window.innerHeight - (this.nameOverAnchor ? NAME_OVER_ANCHOR_BOTTOM_MARGIN : VIEWPORT_BOTTOM_MARGIN);
       const fitsAbove = top - ABOVE_GAP - height >= VIEWPORT_MARGIN;
 
       const away = fitsAbove ? 'above' : 'cover';
@@ -261,7 +263,8 @@ export class DatabasePropertyTypePopover {
       picked.side ??= bottom + BELOW_GAP + height <= bottomLimit ? 'below' : away;
       const below = picked.side === 'below';
       const above = picked.side === 'above';
-      const covering = Math.max(VIEWPORT_MARGIN, bottomLimit - height);
+      // Room is kept above the menu for a name row that rides up with it.
+      const covering = Math.max(VIEWPORT_MARGIN + (this.nameOverAnchor ? header.offsetHeight : 0), bottomLimit - height);
       const awayTop = above ? top - ABOVE_GAP - height : covering;
 
       popover.style.top = `${below ? bottom + BELOW_GAP : awayTop}px`;
@@ -273,7 +276,8 @@ export class DatabasePropertyTypePopover {
         const pushed = box.left > edge;
 
         if (pushed) popover.style.left = `${Math.max(VIEWPORT_MARGIN, edge)}px`;
-        header.style.top = `${box.top - parseFloat(popover.style.top)}px`;
+        // notion-motion.md Round 34 §6: fitting neither side, the name row rides up with the menu, on its top.
+        header.style.top = picked.side === 'cover' ? `${-header.offsetHeight}px` : `${box.top - parseFloat(popover.style.top)}px`;
         const room = Math.max(0, popover.offsetWidth - header.offsetWidth);
 
         header.style.left = pushed ? '0px' : `${Math.min(Math.max(0, box.left - parseFloat(popover.style.left)), room)}px`;

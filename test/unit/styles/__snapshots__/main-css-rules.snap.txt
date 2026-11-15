@@ -12933,6 +12933,10 @@ textarea[data-blok-database-cell-input] {
   opacity: 1;
 }
 
+[data-blok-database-table-row][data-landed][aria-selected="true"]::after {
+  animation: blok-database-confirm-fade 200ms ease;
+}
+
 [data-blok-database-table-row][data-dragging]::after {
   opacity: 0;
 }
@@ -14115,7 +14119,11 @@ button[data-blok-database-table-group-count]:hover {
   animation: blok-database-confirm-fade 200ms ease both;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-database-selecting="table"] > [data-blok-database-table-selection-bar], [data-blok-database-table] > [data-blok-database-table-selection-bar] {
+[data-blok-database-table-selection-bar][data-still] {
+  animation: none;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-selecting="table"] > [data-blok-database-table-selection-bar], [data-blok-database-table] > [data-blok-database-table-selection-bar], [data-blok-database-table-row][data-landed][aria-selected="true"]::after {
   animation: none;
 }
 

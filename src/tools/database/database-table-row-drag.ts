@@ -214,7 +214,7 @@ export class DatabaseTableRowDrag {
 
     copy.showHorizontal({ left, centerY: box.top + box.height / 2, width: Math.max(0, Math.min(box.right, scroller.right) - left) });
     // Resolve the new line's style first, or the fade has no start.
-    void document.body.getBoundingClientRect();
+    void this.grid.getBoundingClientRect();
     copy.hide();
   }
 

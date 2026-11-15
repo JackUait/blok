@@ -988,6 +988,8 @@ export interface DatabaseViewConfig {
   showPageIcon?: boolean;
   /** Linked views only: show the "↗ source" title. Default on. */
   showDataSourceTitle?: boolean;
+  /** Feed only: the author and post time above each post. Default on. */
+  showAuthorByline?: boolean;
   /**
    * How sub-items show. Table, list and timeline: `nested` (in a toggle,
    * the default) or `flattened`. Board, calendar and gallery: `card` (the
@@ -1059,7 +1061,7 @@ export type DatabaseViewSettingKey =
   | 'properties' | 'wrapCells' | 'frozenColumnCount' | 'showVerticalLines' | 'loadLimit' | 'calculations' | 'openPagesIn'
   | 'noValueGroupPosition' | 'groupOrder' | 'hiddenGroups' | 'collapsedGroups' | 'pinnedGroups' | 'hideGroupAggregation' | 'groupCalculation' | 'subGroupCalculation'
   | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'colorRules' | 'showPageIcon' | 'showDataSourceTitle' | 'groupByStatus'
-  | 'cardSize' | 'cardPreview' | 'fitImage' | 'cardLayout' | 'directTitleEdit' | 'calendarBy' | 'calendarRange' | 'showWeekends'
+  | 'cardSize' | 'cardPreview' | 'fitImage' | 'cardLayout' | 'directTitleEdit' | 'calendarBy' | 'calendarRange' | 'showWeekends' | 'showAuthorByline'
   | 'timelineBy' | 'timelineEndBy' | 'timelineZoom' | 'timelineCenter' | 'showTimelineTable' | 'tableProperties' | 'arrowsBy'
   | 'toolbarMinimized'
   | 'chartType' | 'chartMeasure' | 'chartSort' | 'chartOmitZero' | 'chartCumulative' | 'chartColor' | 'chartHeight'

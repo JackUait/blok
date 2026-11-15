@@ -295,7 +295,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2232 + 146 + 577 + 9 closure for all 2964 keys', () => {
+  it('rebuilds a disjoint 2233 + 146 + 578 + 9 closure for all 2966 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -309,7 +309,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2964);
+    expect(lifecycle.size).toBe(2966);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -566,7 +566,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +20: the type menu's "?" on every other type Round 27 read (tools.database.propertyTypeHelp*).
       // +1: ID's "?" (tools.database.propertyTypeHelpUniqueId), read in Round 28.
       // +3: the table's Load more ⋯ calls tableShowOnFirstLoad (new), settingsLoadLimit and settingsLoadLimitPages by literal.
-      'executable-literal': 2232,
+      'executable-literal': 2233,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -677,7 +677,7 @@ describe('current English catalog lifecycle coverage', () => {
       // the file tool picks the base key from a map, so no call names one by literal.
       // -2: settingsLoadLimit and settingsLoadLimitPages are now called by literal (see executable-literal).
       // +1: the select filter's token field calls filterOptionsPlaceholder through the chip's tools.database. prefix.
-      'registered-namespace-compatible': 577,
+      'registered-namespace-compatible': 578,
       // +1: Settings › Group's pin button names itself with groupPin through the panel's tools.database. prefix.
       // +1: tools.database.galleryFitImage, above. +1: tools.database.timelineEndBy, above.
       'catalog-only': 9,

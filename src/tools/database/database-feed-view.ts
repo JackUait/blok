@@ -209,10 +209,25 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
     card?.remove();
   }
 
+  /** notion-motion.md Round 33 §5: a title edit counts as an edit, so the post gains "(edited)". */
   updateRowTitle(wrapper: HTMLElement, rowId: string, title: string): void {
-    const el = wrapper.querySelector(`[data-blok-database-feed-card][data-row-id="${CSS.escape(rowId)}"] [data-blok-database-feed-title]`);
+    const card = wrapper.querySelector(`[data-blok-database-feed-card][data-row-id="${CSS.escape(rowId)}"]`);
+    const el = card?.querySelector('[data-blok-database-feed-title]');
+    const time = card?.querySelector('[data-blok-database-feed-time]');
 
-    if (el !== null) el.textContent = title;
+    if (el !== null && el !== undefined) el.textContent = title;
+    if (time !== null && time !== undefined && card?.querySelector('[data-blok-database-feed-edited]') === null) {
+      time.after(this.createEdited());
+    }
+  }
+
+  private createEdited(): HTMLElement {
+    const edited = document.createElement('span');
+
+    edited.setAttribute('data-blok-database-feed-edited', '');
+    edited.textContent = this.options.i18n.t('tools.database.feedEdited');
+
+    return edited;
   }
 
   destroy(): void {
@@ -234,7 +249,7 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
 
     if (toolbar !== null) card.appendChild(toolbar);
 
-    const byline = this.createByline(row);
+    const byline = this.options.view.showAuthorByline === false ? null : this.createByline(row);
 
     if (byline !== null) card.appendChild(byline);
 
@@ -399,6 +414,8 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
       onAgeTick(this.tickAges);
       onHover(time, this.createdHint(at));
       byline.appendChild(time);
+      // notion-motion.md Round 33 §5: its own element after the time, which the age tick rewrites.
+      if ((row.meta?.lastEditedAt ?? at) > at) byline.appendChild(this.createEdited());
     }
 
     return byline;

@@ -822,6 +822,7 @@ export const DATABASE_DATA = {
           },
           showPageIcon: { type: 'boolean', description: 'Default true.' },
           showDataSourceTitle: { type: 'boolean', description: 'Linked views only: show the source title. Default true.' },
+          showAuthorByline: { type: 'boolean', description: 'Feed: show the author and post time above each post. Default true.' },
           subItemsDisplay: {
             type: 'string',
             enum: ['nested', 'card', 'flattened'],

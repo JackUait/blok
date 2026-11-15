@@ -13040,6 +13040,17 @@
                                             }
                                           ]
                                         },
+                                        "showAuthorByline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "boolean",
+                                              "description": "Feed: show the author and post time above each post. Default true."
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
                                         "subItemsDisplay": {
                                           "anyOf": [
                                             {

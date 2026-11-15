@@ -1075,6 +1075,14 @@ export class ViewSettingsPages {
           ...verticalLines,
           pageIcon,
           view.type === 'list' ? directEdit : wrap,
+          // notion-motion.md Round 33 §5: Feed's own switch, after the Wrap row.
+          ...(view.type === 'feed' ? [panelSwitch({
+            label: this.t('settingsShowAuthorByline'),
+            testId: 'database-settings-author-byline',
+            checked: view.showAuthorByline !== false,
+            disabled: !this.shared,
+            onToggle: (next) => this.ctx.updateView({ showAuthorByline: next }),
+          })] : []),
           ...(view.type === 'board' ? this.boardGroupRows(panel) : []),
           openPages,
           loadLimit,

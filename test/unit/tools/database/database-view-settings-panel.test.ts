@@ -640,6 +640,22 @@ describe('view settings panel', () => {
       expect(h.ctx.updateView).toHaveBeenLastCalledWith({ wrapCells: true });
     });
 
+    // notion-motion.md Round 33 §5: a Feed lists Show author byline (on) after the Wrap row.
+    it('gives a Feed "Show author byline", on, after Wrap', () => {
+      const h = harness({ type: 'feed' });
+
+      h.open('layout');
+
+      expect(ids()).toEqual([
+        'database-settings-page-icon', 'database-settings-wrap', 'database-settings-author-byline',
+        'database-settings-open-pages', 'database-settings-load-limit',
+      ]);
+      expect(q('database-settings-author-byline')?.textContent).toBe('tools.database.settingsShowAuthorByline');
+      expect(q('database-settings-author-byline')?.getAttribute('aria-checked')).toBe('true');
+      click('database-settings-author-byline');
+      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ showAuthorByline: false });
+    });
+
     it('gives a Timeline no Wrap, and puts its own rows before Open pages in and Load limit', () => {
       const h = harness({ type: 'timeline' });
 

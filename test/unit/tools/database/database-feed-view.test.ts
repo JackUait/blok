@@ -78,6 +78,29 @@ describe('DatabaseFeedView', () => {
     vi.restoreAllMocks();
   });
 
+  // notion-motion.md Round 33 §5 (r33-feed-*.raw): an edited post reads "12m (edited)"; "(edited)" is its own
+  // element after the time. An unedited post shows only the time.
+  it('marks an edited post "(edited)" after its time, and leaves an unedited one alone', () => {
+    const at = Date.parse('2026-10-09T10:00:00Z');
+    const el = render({
+      rows: [
+        { ...rows[0], meta: { createdBy: 'u1', createdAt: at, lastEditedAt: at + 60_000 } },
+        { id: 'r3', position: 'a2', properties: { 'p-title': 'Same' }, meta: { createdBy: 'u1', createdAt: at, lastEditedAt: at } },
+      ],
+      total: 2,
+    });
+    const edited = (rowId: string): Element | null | undefined => card(el, rowId)?.querySelector('[data-blok-database-feed-time] + [data-blok-database-feed-edited]');
+
+    expect(edited('r1')?.textContent).toBe('tools.database.feedEdited');
+    expect(card(el, 'r3')?.querySelector('[data-blok-database-feed-edited]')).toBeNull();
+  });
+
+  // notion-motion.md Round 33 §5: the Layout page's "Show author byline" switch, on by default.
+  it('draws no byline when the view turns the author byline off', () => {
+    expect(card(render(), 'r1')?.querySelector('[data-blok-database-feed-byline]')).not.toBeNull();
+    expect(card(render({ view: { ...view, showAuthorByline: false } }), 'r1')?.querySelector('[data-blok-database-feed-byline]')).toBeNull();
+  });
+
   // research/30 B6 measured the date cell only; the feed time keeps "N days ago".
   it('writes a post time three days back as "3 days ago"', () => {
     const el = render({ rows: [{ ...rows[0], meta: { createdBy: 'u1', createdAt: Date.now() - 3 * 86_400_000 } }], total: 1 });

@@ -10400,7 +10400,8 @@ export class DatabaseTool implements BlockTool {
             ?? this.viewRoot()?.querySelector<HTMLElement>('[data-blok-database-table]')
             ?? this.viewRoot()?.querySelector<HTMLElement>('[data-blok-database-gallery]')
             ?? this.viewRoot()?.querySelector<HTMLElement>('[data-blok-database-calendar]')
-            ?? this.viewRoot()?.querySelector<HTMLElement>('[data-blok-database-timeline]');
+            ?? this.viewRoot()?.querySelector<HTMLElement>('[data-blok-database-timeline]')
+            ?? this.viewRoot()?.querySelector<HTMLElement>('[data-blok-database-feed]');
 
           if (currentView !== null && currentView !== undefined) {
             this.view.updateRowTitle(currentView, rowId, title);

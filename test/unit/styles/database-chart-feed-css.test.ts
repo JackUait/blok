@@ -66,6 +66,20 @@ describe('database chart and feed styles', () => {
     expect(ruleBody('[data-blok-database-feed]')).toContain('gap: var(--blok-space-6)');
   });
 
+  // notion-motion.md Round 33 §5 (r33-feed-*.raw): "(edited)" is 12px, 3.3 after the time (a space). Its ink stays
+  // the time's AA ink, not Notion's rgb(161,158,153). With no byline the title sits at card x + 18, not indented.
+  it('sets "(edited)" as the time, a space after it, and starts a byline-less title 18 in', () => {
+    const edited = ruleBody('[data-blok-database-feed-edited]');
+
+    expect(edited).toMatch(/font-size:\s*12px/);
+    expect(edited).toContain('color: var(--blok-database-table-muted-text)');
+    expect(edited).toContain('margin-inline-start: -3px');
+    for (const part of ['title', 'head']) {
+      expect(ruleBody(`[data-blok-database-feed-card]:not(:has(> [data-blok-database-feed-byline])) > [data-blok-database-feed-${part}]`))
+        .toContain('margin-inline-start: 2px');
+    }
+  });
+
   it('marks a turned-off legend entry with muted ink, never a fill', () => {
     const off = ruleBody('[data-blok-database-chart-legend-entry][aria-pressed="false"]');
 

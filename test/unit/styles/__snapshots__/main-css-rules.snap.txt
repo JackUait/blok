@@ -20003,10 +20003,18 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-ink);
 }
 
-[data-blok-database-feed-time] {
+[data-blok-database-feed-time], [data-blok-database-feed-edited] {
   color: var(--blok-database-table-muted-text);
   font-size: 12px;
   line-height: 14px;
+}
+
+[data-blok-database-feed-edited] {
+  margin-inline-start: -3px;
+}
+
+[data-blok-database-feed-card]:not(:has(> [data-blok-database-feed-byline])) > [data-blok-database-feed-title], [data-blok-database-feed-card]:not(:has(> [data-blok-database-feed-byline])) > [data-blok-database-feed-head] {
+  margin-inline-start: 2px;
 }
 
 [data-blok-database-feed-title] {

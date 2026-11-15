@@ -17297,7 +17297,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   margin-inline-end: var(--blok-space-0-5);
 }
 
-/* The title starts under the name. Without a byline the indent is unmeasured. */
+/* The title starts under the name. */
 [data-blok-database-feed-byline] + [data-blok-database-feed-title],
 [data-blok-database-feed-byline] + [data-blok-database-feed-head] {
   margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-2));
@@ -17309,10 +17309,22 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 /* Tertiary ink, research/21 §1j. */
-[data-blok-database-feed-time] {
+[data-blok-database-feed-time],
+[data-blok-database-feed-edited] {
   color: var(--blok-database-table-muted-text);
   font-size: 12px;
   line-height: 14px;
+}
+
+/* Round 33 §5: "(edited)" sits a space (3.3) after the time, inside the byline's 6 gap. */
+[data-blok-database-feed-edited] {
+  margin-inline-start: -3px;
+}
+
+/* Round 33 §5: with no byline the title starts at card x + 18. */
+[data-blok-database-feed-card]:not(:has(> [data-blok-database-feed-byline])) > [data-blok-database-feed-title],
+[data-blok-database-feed-card]:not(:has(> [data-blok-database-feed-byline])) > [data-blok-database-feed-head] {
+  margin-inline-start: 2px;
 }
 
 [data-blok-database-feed-title] {

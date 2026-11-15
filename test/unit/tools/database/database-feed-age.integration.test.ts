@@ -85,3 +85,35 @@ describe('Feed byline age in the database', () => {
     expect(vi.getTimerCount()).toBe(base);
   });
 });
+
+// notion-motion.md Round 33 §5 (r33-feed-*.raw): a title edit in the peek renames the post and marks it "(edited)".
+describe('Feed rename from the peek', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('renames the post and marks it "(edited)"', () => {
+    const doc = makeDoc([fakeRow('a', 'db', { title: 'Gamma' }, 'a0')]);
+    const block = doc.rows.get('a')?.block as unknown as { createdBy?: string; createdAt?: number };
+
+    block.createdBy = 'u1';
+    block.createdAt = Date.now() - 60_000;
+    const { tool, el } = buildTool(doc, {}, tableData(SCHEMA, { type: 'feed' }));
+
+    el.querySelector<HTMLElement>('[data-blok-database-feed-title]')?.click();
+    const title = document.querySelector<HTMLTextAreaElement>('[data-blok-database-drawer-title]');
+
+    if (title === null) throw new Error('no peek title');
+    title.value = 'Gamma 2';
+    title.dispatchEvent(new Event('input'));
+
+    expect(el.querySelector('[data-blok-database-feed-title]')?.textContent).toBe('Gamma 2');
+    expect(el.querySelector('[data-blok-database-feed-time] + [data-blok-database-feed-edited]')).not.toBeNull();
+    tool.destroy();
+  });
+});

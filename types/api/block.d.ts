@@ -182,8 +182,14 @@ export interface BlockAPI {
    * size measured from the image at `url`). The change then joins the undo
    * step that wrote those values: undoing that step takes it back and redo
    * brings it back. Without `from` it stays out of the history entirely.
+   *
+   * Pass `{ edit: false }` when the change is an undo step but not an edit of
+   * the block's content, such as a new place in a manual order. It is saved
+   * and undoable, but it leaves `lastEditedAt` and `lastEditedBy` as they
+   * were. A buffered edit of the same block still stamps them. `derived`
+   * already implies it.
    */
-  dispatchChange(options?: { derived?: boolean; from?: readonly string[] }): void;
+  dispatchChange(options?: { derived?: boolean; from?: readonly string[]; edit?: boolean }): void;
 
   /**
    * Tool could specify several entries to be displayed at the Toolbox (for example, "Heading 1", "Heading 2", "Heading 3")

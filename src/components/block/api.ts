@@ -222,7 +222,7 @@ const buildSurface = (block: Block, api: ApiModules): BlockAPIInterface => {
      * Allows to say Blok that Block was changed. Used to manually trigger Blok's 'onChange' callback
      * Can be useful for block changes invisible for blok core.
      */
-    dispatchChange(options?: { derived?: boolean; from?: readonly string[] }): void {
+    dispatchChange(options?: { derived?: boolean; from?: readonly string[]; edit?: boolean }): void {
       block.dispatchChange(options);
     },
 

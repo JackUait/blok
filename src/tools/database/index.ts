@@ -4539,7 +4539,8 @@ export class DatabaseTool implements BlockTool {
 
     if (rowBlock !== undefined) {
       rowBlock.call('updatePosition', { position });
-      rowBlock.dispatchChange();
+      // notion-motion.md Round 34 §1: a reorder is undoable but is not an edit.
+      rowBlock.dispatchChange({ edit: false });
     }
 
     this.syncRowsFromBlocks();

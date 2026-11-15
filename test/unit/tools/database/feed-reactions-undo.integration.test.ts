@@ -139,8 +139,66 @@ describe('feed reactions and undo', () => {
   });
 });
 
-// Moving a post is not editing it: no "(edited)" (notion-motion.md Round 33 §5 counts a title edit only).
-describe('feed "(edited)" and moves', () => {
+// notion-motion.md Round 34 §1: a pure reorder stamps no edit (no "(edited)", Last edited time stays); a property edit does.
+describe('a move is not an edit', () => {
+  const EDITED_AT = Date.UTC(2026, 0, 2, 3, 4);
+
+  const tableData: DatabaseData = {
+    title: 'Posts',
+    schema: [
+      { id: 't', name: 'Name', type: 'title', position: 'a0' },
+      { id: 'n', name: 'Notes', type: 'text', position: 'a1' },
+      { id: 'le', name: 'Edited', type: 'lastEditedTime', position: 'a2' },
+    ],
+    views: [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+    activeViewId: 'v',
+  };
+
+  const rows = (): OutputBlockData[] => [
+    { id: 'db', type: 'database', data: tableData, content: ['r1', 'r2', 'r3'] },
+    ...['Alpha', 'Beta', 'Gamma'].map((title, i): OutputBlockData => ({
+      id: `r${i + 1}`, type: 'database-row', parent: 'db', createdAt: EDITED_AT - 1000, lastEditedAt: EDITED_AT,
+      data: { title, properties: { t: title }, position: `a${i}` },
+    })),
+  ];
+
+  const makeTable = async (): Promise<TestEditor> => {
+    editor = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: { class: DatabaseTool }, 'database-row': DatabaseRowTool },
+      data: { blocks: rows() },
+    } as never) as unknown as TestEditor;
+    await editor.isReady;
+    await quiet();
+
+    return editor;
+  };
+
+  const shownOrder = (): string[] =>
+    Array.from(holder?.querySelectorAll<HTMLElement>('[data-blok-database-table-row][data-row-id]') ?? []).map((el) => el.getAttribute('data-row-id') ?? '');
+
+  const editedCell = (rowId: string): string =>
+    holder?.querySelector(`[data-blok-database-table-row][data-row-id="${rowId}"] [data-property-id="le"]`)?.textContent ?? '';
+
+  const savedRow = async (id: string): Promise<OutputBlockData | undefined> =>
+    (await editor?.save())?.blocks.find((block) => block.id === id);
+
+  /** Drags the last row above the first by its handle, as a person would. */
+  const dragLastToTop = (): void => {
+    const rowEls = Array.from(holder?.querySelectorAll<HTMLElement>('[data-blok-database-table-row][data-row-id]') ?? []);
+
+    rowEls.forEach((el, i) => vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(
+      { top: i * 37, bottom: i * 37 + 37, left: 0, right: 600, width: 600, height: 37, x: 0, y: i * 37, toJSON: () => ({}) }
+    ));
+    const handle = rowEls[rowEls.length - 1]?.querySelector<HTMLElement>('[data-blok-database-table-row-handle]');
+
+    if (handle === null || handle === undefined) throw new Error('no row handle');
+    handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 5, clientY: 84, button: 0 }));
+    document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 5, clientY: 2 }));
+    document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 5, clientY: 2 }));
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     holder = document.createElement('div');
@@ -155,20 +213,81 @@ describe('feed "(edited)" and moves', () => {
     vi.restoreAllMocks();
   });
 
-  // Known gap: a move must stay undoable, and core's only lever that skips the edit stamp (`dispatchChange({ derived })`)
-  // also takes it out of history. Telling a move from an edit needs a new core lever; flip to `it` once it exists.
-  it.fails('a moved post stays unedited', async () => {
-    await make();
-    // The tool's own row move (moveRowBlock): a new position, then a change.
-    const block = editor?.blocks.getById('r1');
+  it('a dragged row keeps its Last edited time', async () => {
+    await makeTable();
+    const cellBefore = editedCell('r3');
 
-    block?.call('updatePosition', { position: 'a5' });
+    dragLastToTop();
+    await quiet();
+
+    expect((await savedRow('r3'))?.lastEditedAt).toBe(EDITED_AT);
+    expect(shownOrder()).toEqual(['r3', 'r1', 'r2']);
+    expect(cellBefore).not.toBe('');
+    expect(editedCell('r3')).toBe(cellBefore);
+  });
+
+  it('undo puts a dragged row back', async () => {
+    await makeTable();
+
+    dragLastToTop();
+    await quiet();
+    expect(shownOrder()).toEqual(['r3', 'r1', 'r2']);
+
+    editor?.history.undo();
+    await quiet();
+
+    expect(shownOrder()).toEqual(['r1', 'r2', 'r3']);
+    expect(((await savedRow('r3'))?.data as DatabaseRowData | undefined)?.position).toBe('a2');
+  });
+
+  it('a drop into another group is one undo step that stamps the row', async () => {
+    const grouped: DatabaseData = {
+      ...tableData,
+      schema: [...tableData.schema, {
+        id: 's', name: 'Stage', type: 'select', position: 'a3',
+        config: { options: [{ id: 'oa', label: 'A', color: 'gray', position: 'a0' }, { id: 'ob', label: 'B', color: 'blue', position: 'a1' }] },
+      }],
+      views: [{ ...tableData.views[0], groupBy: 's' }],
+    };
+    const stage = ['oa', 'oa', 'ob'];
+
+    editor = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: { class: DatabaseTool }, 'database-row': DatabaseRowTool },
+      data: { blocks: rows().map((block, i): OutputBlockData => (i === 0 ? { ...block, data: grouped } : {
+        ...block, data: { ...(block.data as DatabaseRowData), properties: { ...(block.data as DatabaseRowData).properties, s: stage[i - 1] } },
+      })) },
+    } as never) as unknown as TestEditor;
+    await editor.isReady;
+    await quiet();
+
+    dragLastToTop();
+    await quiet();
+
+    const moved = await savedRow('r3');
+
+    expect((moved?.data as DatabaseRowData | undefined)?.properties.s).toBe('oa');
+    expect(moved?.lastEditedAt).toBeGreaterThan(EDITED_AT);
+    expect(shownOrder()).toEqual(['r3', 'r1', 'r2']);
+
+    editor.history.undo();
+    await quiet();
+
+    const undone = (await savedRow('r3'))?.data as DatabaseRowData | undefined;
+
+    expect(undone?.properties.s).toBe('ob');
+    expect(undone?.position).toBe('a2');
+  });
+
+  it('a property edit still stamps the row', async () => {
+    await makeTable();
+    const block = editor?.blocks.getById('r2');
+
+    block?.call('updateProperties', { n: 'note' });
     block?.dispatchChange();
     await quiet();
 
-    const saved = (await editor?.save())?.blocks.find((b) => b.id === 'r1');
-
-    expect((saved?.data as DatabaseRowData | undefined)?.position).toBe('a5');
-    expect(saved?.lastEditedAt).toBeUndefined();
+    expect((await savedRow('r2'))?.lastEditedAt).toBeGreaterThan(EDITED_AT);
   });
 });

@@ -75,6 +75,8 @@ interface SyncBlockDataOptions {
   normalize?: 'all' | 'missing' | 'record';
   /** Data the tool worked out itself from these keys: it joins the undo step that wrote their values. */
   derivedFrom?: readonly string[];
+  /** An undo step that is not an edit (`dispatchChange({ edit: false })`): no lastEditedAt/By stamp. */
+  nonEdit?: boolean;
   /**
    * A user edit held in an open reconcile window, landed early (see
    * `BlockYjsSync.landHeldUserEdits`). Dropped only if a reconcile body runs
@@ -445,6 +447,9 @@ export class BlockManager extends Module {
    * these is the user's edit; removing any other key is normalisation.
    */
   private readonly emittedDataKeys = new WeakMap<Block, Set<string>>();
+
+  /** Blocks with a buffered write that is an edit, so its flush stamps lastEditedAt/By. */
+  private readonly editsAwaitingFlush = new Set<string>();
 
   /** True while `insertMany` renders a document; see `normalizeRenderedBlocks`. */
   private isRenderingDocument = false;
@@ -2333,11 +2338,22 @@ export class BlockManager extends Module {
       if (isEcho && source === 'mutation') {
         this.yjsSync.noteSuppressedMutation(block);
       } else if (!isEcho) {
-        void this.syncBlockDataToYjs(block, block.isDerivedChange ? { untracked: true, normalize: 'all', derivedFrom: block.derivedFrom } : undefined);
+        void this.syncBlockDataToYjs(block, this.mutationSyncOptions(block));
       }
     }
 
     return block;
+  }
+
+  /**
+   * How a block's own `dispatchChange` reaches the document.
+   * @param block - the block that reported the change
+   * @returns sync options, or undefined for an ordinary edit
+   */
+  private mutationSyncOptions(block: Block): SyncBlockDataOptions | undefined {
+    if (block.isDerivedChange) return { untracked: true, normalize: 'all', derivedFrom: block.derivedFrom };
+
+    return block.isNonEditChange ? { nonEdit: true } : undefined;
   }
 
   /**
@@ -2811,6 +2827,10 @@ export class BlockManager extends Module {
       return;
     }
 
+    // The buffer keeps only the newest flush callback, so the stamp is owed per
+    // block: a move coalesced with an edit of the same block still stamps.
+    if (!isMaterializing && options?.nonEdit !== true) this.editsAwaitingFlush.add(block.id);
+
     this.Blok.YjsManager.enqueueBlockDataWrite(block.id, data, (entries) => {
       return this.flushBlockDataWrites(block, entries, flushOptions);
     }, pending);
@@ -2919,11 +2939,13 @@ export class BlockManager extends Module {
       }
 
       // The editor's own write is not an edit.
-      if (!dataChangedRef.value || options.isMaterializing) {
+      if (options.isMaterializing) {
         return;
       }
 
-      this.stampBlockEdit(block);
+      const edited = this.editsAwaitingFlush.delete(block.id);
+
+      if (dataChangedRef.value && edited) this.stampBlockEdit(block);
     };
 
     if (options.derivedFrom !== undefined) {

@@ -333,6 +333,21 @@ describe('Block', () => {
       expect(seen).toEqual([true, false]);
       expect(block.isDerivedChange).toBe(false);
     });
+
+    it('reports an edit: false change as a non-edit only while its listeners run', () => {
+      const { block } = createBlock();
+      const seen: Array<[boolean, boolean]> = [];
+
+      block.on('didMutated', (changed) => {
+        seen.push([changed.isNonEditChange, changed.isDerivedChange]);
+      });
+
+      block.dispatchChange({ edit: false });
+      block.dispatchChange();
+
+      expect(seen).toEqual([[true, false], [false, false]]);
+      expect(block.isNonEditChange).toBe(false);
+    });
   });
 
   describe('setData', () => {

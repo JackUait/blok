@@ -44,6 +44,7 @@ interface BlockStub {
   save: ReturnType<typeof vi.fn>;
   isDerivedChange: boolean;
   derivedFrom: readonly string[];
+  isNonEditChange: boolean;
   lastEditedAt?: number;
   lastEditedBy?: string | null;
 }
@@ -64,6 +65,8 @@ interface Harness {
   readData: (blockId: string) => Record<string, unknown> | undefined;
   /** A tool reporting derived data (a measured size) whose save() yields exactly `data`. */
   derive: (blockId: string, data: Record<string, unknown>, from?: readonly string[]) => Promise<void>;
+  /** A change the tool reports with `edit: false` (a new place in a manual order). */
+  reorder: (blockId: string, data: Record<string, unknown>) => Promise<void>;
   /** The editor normalising `blockId` to a save() that yields exactly `data`. */
   normalize: (blockId: string, data: Record<string, unknown>, options?: { onlyMissingKeys?: boolean }) => Promise<void>;
 }
@@ -92,6 +95,7 @@ const createStubBlock = (seed: SeedBlock): BlockStub => {
     save: vi.fn(),
     isDerivedChange: false,
     derivedFrom: [],
+    isNonEditChange: false,
     setData: vi.fn(() => Promise.resolve(true)),
     call: vi.fn(),
     destroy: vi.fn(),
@@ -175,6 +179,20 @@ const createHarness = (seed: SeedBlock[]): Harness => {
       priv.blockDidMutated(BlockChangedMutationType, stub, { index: 0 });
       stub.isDerivedChange = false;
       stub.derivedFrom = [];
+
+      await drainMicrotasks();
+    },
+    reorder: async (blockId: string, data: Record<string, unknown>): Promise<void> => {
+      const stub = stubs.get(blockId);
+
+      if (stub === undefined) {
+        throw new Error(`test setup: block ${blockId} was never seeded`);
+      }
+
+      stub.save.mockResolvedValue({ data });
+      stub.isNonEditChange = true;
+      priv.blockDidMutated(BlockChangedMutationType, stub, { index: 0 });
+      stub.isNonEditChange = false;
 
       await drainMicrotasks();
     },
@@ -457,6 +475,52 @@ describe('which data writes are undo steps', () => {
     yjsManager.undo();
 
     expect(readData('p2')?.text).toBe('a');
+  });
+});
+
+describe('a change that is not an edit', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    document.body.replaceChildren();
+    vi.restoreAllMocks();
+  });
+
+  it('is an undo step that leaves lastEditedAt alone', async () => {
+    const { yjsManager, reorder, readData } = createHarness([
+      { id: 'r1', name: 'database-row', data: { position: 'a0' } },
+    ]);
+
+    yjsManager.clear();
+    await reorder('r1', { position: 'a5' });
+    await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout);
+    await drainMicrotasks();
+
+    expect(yjsManager.getBlockById('r1')?.get('lastEditedAt')).toBeUndefined();
+    expect(readData('r1')).toEqual({ position: 'a5' });
+
+    yjsManager.undo();
+
+    expect(readData('r1')).toEqual({ position: 'a0' });
+  });
+
+  it('still stamps an edit of the same block buffered in the same window', async () => {
+    const { yjsManager, mutate, reorder } = createHarness([
+      { id: 'r2', name: 'database-row', data: { title: 'a', position: 'a0' } },
+    ]);
+
+    await mutate('r2', { title: 'a', position: 'a1' });
+    yjsManager.getBlockById('r2')?.delete('lastEditedAt');
+    await mutate('r2', { title: 'ab', position: 'a1' });
+    await reorder('r2', { title: 'ab', position: 'a2' });
+    await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout);
+    await drainMicrotasks();
+
+    expect(yjsManager.getBlockById('r2')?.get('lastEditedAt')).toEqual(expect.any(Number));
   });
 });
 

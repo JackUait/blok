@@ -592,7 +592,8 @@ class FilterChipPages {
     search.value = this.query;
     search.setAttribute('data-blok-database-select-search', '');
     search.setAttribute('data-blok-testid', 'database-filter-option-search');
-    search.placeholder = this.t('filterOptionsPlaceholder');
+    // notion-motion.md Round 33 §2: Notion clears the placeholder once a token is chosen.
+    search.placeholder = field.childElementCount === 0 ? this.t('filterOptionsPlaceholder') : '';
     search.setAttribute('aria-label', this.t('filterValue'));
     search.addEventListener('input', () => {
       this.query = search.value;

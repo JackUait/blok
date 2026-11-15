@@ -1128,13 +1128,22 @@ describe('DatabaseViewControls', () => {
       const blue = q('database-filter-option-blue');
       const box = (row: HTMLElement | null): Element | null | undefined => row?.firstElementChild;
 
-      expect((q('database-filter-option-search') as HTMLInputElement).placeholder).toBe('tools.database.filterOptionsPlaceholder');
       expect(box(red)?.hasAttribute('data-blok-database-checkbox')).toBe(true);
       expect(box(red)?.getAttribute('data-state')).toBe('checked');
       expect(box(red)?.getAttribute('aria-hidden')).toBe('true');
       expect(box(blue)?.getAttribute('data-state')).toBe('unchecked');
       expect(red?.querySelector('[data-blok-database-panel-check]')).toBeNull();
       expect(red?.getAttribute('aria-checked')).toBe('true');
+    });
+
+    // notion-motion.md Round 33 §2 Select filter (r33-filter-*.raw): the placeholder is cleared once a token is chosen.
+    it('shows the placeholder only while no option is chosen', () => {
+      open();
+      const search = (): HTMLInputElement => q('database-filter-option-search') as HTMLInputElement;
+
+      expect(search().placeholder).toBe('');
+      click('database-filter-token-remove-red');
+      expect(search().placeholder).toBe('tools.database.filterOptionsPlaceholder');
     });
 
     it('narrows the options as the person types in the token field', () => {

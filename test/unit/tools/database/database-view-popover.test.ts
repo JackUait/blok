@@ -12,8 +12,7 @@ const { MockPopover, mockPopoverInstances } = vi.hoisted(() => {
     destroy: () => void;
     on: (event: string, cb: () => void) => void;
     triggerClosed: () => void;
-    moveCursor: (source: 'keyboard' | 'pointer') => void;
-    cursorListeners: Set<(current: { source: 'keyboard' | 'pointer' } | null) => void>;
+    focusedNames: string[];
     el: HTMLElement | null;
     closedCallbacks: Array<() => void>;
   }> = [];
@@ -52,17 +51,13 @@ const { MockPopover, mockPopoverInstances } = vi.hoisted(() => {
       }
     }
 
-    public cursorListeners = new Set<(current: { source: 'keyboard' | 'pointer' } | null) => void>();
+    /** Names the menu's keyboard cursor was put on, once shown. */
+    public focusedNames: string[] = [];
 
-    onCurrentItemChange(listener: (current: { source: 'keyboard' | 'pointer' } | null) => void): () => void {
-      this.cursorListeners.add(listener);
+    focusItemByName(name: string): boolean {
+      if (this.el !== null) this.focusedNames.push(name);
 
-      return () => this.cursorListeners.delete(listener);
-    }
-
-    /** The menu's cursor lands on an item, as arrows or the pointer move it. */
-    moveCursor(source: 'keyboard' | 'pointer'): void {
-      this.cursorListeners.forEach((listener) => listener({ source }));
+      return true;
     }
   }
 
@@ -258,32 +253,19 @@ describe('DatabaseViewPopover', () => {
     const option = (type: string): HTMLElement =>
       params().items.map((item) => item.element).find((el) => el?.getAttribute('data-blok-database-view-option') === type)!;
 
-    // notion-motion.md Round 9 / Round 15 §A, Round 41 Part A: Notion's Table tile is filled on open and keeps it while another is hovered.
-    it('fills the first tile on a pointer open until a key moves the keyboard cursor', () => {
+    // notion-motion.md Round 15 §A: the first tile's fill on open is the keyboard cursor, so the arrows move on from it.
+    it('puts the keyboard cursor on the first tile on a pointer open', () => {
       popover.open(anchor);
 
-      expect(option('table').hasAttribute('data-active')).toBe(true);
-      expect(option('board').hasAttribute('data-active')).toBe(false);
-      mockPopoverInstances.at(-1)?.moveCursor('pointer');
-      expect(option('table').hasAttribute('data-active')).toBe(true);
-      mockPopoverInstances.at(-1)?.moveCursor('keyboard');
+      expect(mockPopoverInstances.at(-1)?.focusedNames).toEqual(['database-view-tile']);
       expect(option('table').hasAttribute('data-active')).toBe(false);
     });
 
-    it('stops listening to the cursor once the menu closes', () => {
-      popover.open(anchor);
-      const menu = mockPopoverInstances.at(-1);
-
-      menu?.triggerClosed();
-
-      expect(menu?.cursorListeners.size).toBe(0);
-    });
-
-    // The keyboard open already puts the menu's cursor on the first tile.
-    it('leaves the fill to the keyboard cursor on a keyboard open', () => {
+    it('leaves the first tile to the menu\'s own focus on a keyboard open', () => {
       popover.open(anchor, 'below', true);
 
-      expect(option('table').hasAttribute('data-active')).toBe(false);
+      expect(mockPopoverInstances.at(-1)?.focusedNames).toEqual([]);
+      expect((mockPopoverInstances.at(-1)?.params as { autoFocusFirstItem?: boolean }).autoFocusFirstItem).toBe(true);
     });
 
     it('heads the menu "Add a new view"', () => {

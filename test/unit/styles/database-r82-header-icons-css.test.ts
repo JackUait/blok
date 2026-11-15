@@ -101,11 +101,3 @@ describe('database Round 41 type picker AI line', () => {
     expect(body).toContain('background-color: var(--blok-database-table-border)');
   });
 });
-
-describe('database Round 41 Add view first tile', () => {
-  // The fill is the tile hover tint, never a focus ring.
-  it('paints the first tile with the hover tint', () => {
-    expect(ruleBody('[data-blok-database-view-option]:hover, [data-blok-database-view-option][data-active], [data-blok-focused=\'true\'] > [data-blok-database-view-option], [data-blok-database-view-option][data-blok-focused=\'true\']'))
-      .toBe(' background-color: var(--blok-database-popover-hover); ');
-  });
-});

@@ -79,9 +79,9 @@ vi.mock('../../../../src/components/utils/popover', () => {
       }
     }
 
-    /** The view popover listens for the keyboard cursor to drop the first tile's open fill. */
-    onCurrentItemChange(): () => void {
-      return () => undefined;
+    /** The view popover puts the keyboard cursor on the first tile. */
+    focusItemByName(): boolean {
+      return true;
     }
   }
 

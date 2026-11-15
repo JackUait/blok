@@ -31,6 +31,8 @@ const VIEW_TYPES: ViewTypeOption[] = [
   { type: 'form', labelKey: 'tools.database.viewTypeForm' },
 ];
 
+const VIEW_TILE = 'database-view-tile';
+
 /** Notion's card of view layouts is 390 wide (feel/findings-toolbar V04). */
 export const ADD_VIEW_MENU_WIDTH = 390;
 
@@ -59,8 +61,6 @@ export class DatabaseViewPopover {
   private readonly hidden: readonly ViewType[];
   private readonly onNewSource: (() => void) | undefined;
   private popover: PopoverDesktop | null = null;
-  /** Clears the first tile's open fill. */
-  private releaseFirst: (() => void) | null = null;
 
   constructor(options: ViewPopoverOptions) {
     this.onSelect = options.onSelect;
@@ -102,7 +102,7 @@ export class DatabaseViewPopover {
 
         return {
           type: PopoverItemType.Html as const,
-          name: 'database-view-tile',
+          name: VIEW_TILE,
           element: el,
           closeOnActivate: true,
         };
@@ -130,7 +130,6 @@ export class DatabaseViewPopover {
     });
 
     this.popover.on(PopoverEvent.Closed, () => {
-      this.releaseFirst?.();
       if (this.popover !== null) {
         const p = this.popover;
         this.popover = null;
@@ -141,28 +140,8 @@ export class DatabaseViewPopover {
 
     this.popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
     this.popover.show();
-    if (!focusFirst) this.fillFirstTile(this.popover, items);
-  }
-
-  /**
-   * notion-motion.md Round 9, Round 15 §A: a pointer open fills the first tile with the hover tint, and it
-   * stays while another is hovered. It goes once the keyboard moves the menu's own cursor.
-   */
-  private fillFirstTile(popover: PopoverDesktop, items: Array<{ element?: HTMLElement }>): void {
-    const first = items.find((item) => item.element?.hasAttribute('data-blok-database-view-option') === true)?.element;
-
-    if (first === undefined) return;
-    const stop = popover.onCurrentItemChange((current) => {
-      if (current?.source === 'keyboard') release();
-    });
-    const release = (): void => {
-      first.removeAttribute('data-active');
-      stop();
-      this.releaseFirst = null;
-    };
-
-    first.setAttribute('data-active', '');
-    this.releaseFirst = release;
+    // notion-motion.md Round 15 §A: Table is filled on open, and stays filled while another tile is hovered: the keyboard cursor.
+    if (!focusFirst) this.popover.focusItemByName(VIEW_TILE);
   }
 
   /** A button, so the menu's arrow keys reach it and Enter picks it. */
@@ -209,7 +188,6 @@ export class DatabaseViewPopover {
   }
 
   close(): void {
-    this.releaseFirst?.();
     if (this.popover !== null) {
       const popover = this.popover;
       this.popover = null;

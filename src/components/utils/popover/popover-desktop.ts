@@ -1130,7 +1130,8 @@ export class PopoverDesktop extends PopoverAbstract {
   /**
    * Puts the cursor on the row named `name`: in the open submenu if it has
    * that row, else in this menu. A menu drawn again after a pick uses it to
-   * keep the row the pick came from highlighted.
+   * keep the row the pick came from highlighted. An HTML row carries its name
+   * on its wrapper, so the cursor goes to its first control.
    * @param name - the row's `name`
    * @returns false when no shown row has that name
    */
@@ -1138,7 +1139,7 @@ export class PopoverDesktop extends PopoverAbstract {
     if (this.nestedPopover?.focusItemByName(name) === true) {
       return true;
     }
-    const index = this.flippableElements.findIndex((item) => item.getAttribute(DATA_ATTR.itemName) === name);
+    const index = this.flippableElements.findIndex((item) => item.closest(`[${DATA_ATTR.itemName}]`)?.getAttribute(DATA_ATTR.itemName) === name);
 
     if (index < 0 || this.flipper === undefined) {
       return false;

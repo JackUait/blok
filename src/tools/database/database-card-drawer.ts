@@ -2390,8 +2390,8 @@ export class DatabaseCardDrawer {
     const all = [...layout.group, ...layout.sections.flatMap((s) => s.properties)];
     const hiddenCount = all.filter(hidden).length;
 
-    // notion-motion.md Round 33 §3: 8px more above 5 or more properties. Notion's count of hidden ones is unread.
-    propsSection.toggleAttribute('data-blok-database-drawer-props-spaced', all.filter(shown).length >= 5);
+    // notion-motion.md Round 33 §3 / Round 34 §2: 8px more above 5 or more properties set to show; unfolded hidden ones do not count.
+    propsSection.toggleAttribute('data-blok-database-drawer-props-spaced', all.length - hiddenCount >= 5);
 
     for (const def of layout.group.filter(shown)) {
       propsSection.appendChild(this.createPropertyRow(def, readPropertyValue(row, def) ?? null));

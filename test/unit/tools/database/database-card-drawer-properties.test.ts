@@ -130,9 +130,17 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
     expect(reveal()?.textContent).toBe('Hide 1 property');
   });
 
-  // notion-motion.md Round 33 §3 (r33-peek-*.raw): 8px more above the properties once a row shows 5 or more
-  // besides the title. Whether Notion counts hidden ones is unread, so this counts the shown ones.
-  it('spaces the properties out once 5 or more are shown', () => {
+  // notion-motion.md Round 33 §3: 8px more above the properties once 5 or more besides the title show.
+  // Round 34 §2: only properties set to show count, even while "N more properties" shows the hidden ones.
+  it('spaces the properties out once 5 or more are set to show', () => {
+    const options = createOptions({ schema: [...SCHEMA, { id: 'prop-notes', name: 'Notes', type: 'text', position: 'a6' }] });
+
+    createDrawer(options).open({ ...ROW, properties: { ...ROW.properties, 'prop-maybe': 'x' } });
+
+    expect(options.wrapper.querySelector('[data-blok-database-drawer-props]')?.hasAttribute('data-blok-database-drawer-props-spaced')).toBe(true);
+  });
+
+  it('does not count hidden properties toward the 5, even unfolded', () => {
     const options = createOptions();
 
     createDrawer(options).open({ ...ROW, properties: { ...ROW.properties, 'prop-maybe': 'x' } });
@@ -141,7 +149,8 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
     expect(props()?.hasAttribute('data-blok-database-drawer-props-spaced')).toBe(false);
     options.wrapper.querySelector<HTMLElement>('[data-blok-database-drawer-hidden-props]')?.click();
 
-    expect(props()?.hasAttribute('data-blok-database-drawer-props-spaced')).toBe(true);
+    expect(options.wrapper.querySelector('[data-blok-database-drawer-hidden-props]')?.textContent).toBe('Hide 1 property');
+    expect(props()?.hasAttribute('data-blok-database-drawer-props-spaced')).toBe(false);
   });
 
   it('shows a hide-when-empty property once it has a value', () => {

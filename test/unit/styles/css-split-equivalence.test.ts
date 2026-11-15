@@ -1714,7 +1714,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r54: Round 35 Hours zoom 15-minute lines and the day period's ink token. Net database.css growth against origin/main.
     const DATABASE_R54_BYTES = 458;
     // Lane r57: Round 35 chip bar at the text column and 4px lower, sort popover insets. Net database.css growth against origin/main.
-    const DATABASE_R57_BYTES = 510;
+    const DATABASE_R57_BYTES = 1205;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

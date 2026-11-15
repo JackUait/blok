@@ -277,3 +277,20 @@ describe('sort panel rule list (r35:497-509, r10-sort-popover.png)', () => {
     expect(ruleBody('[data-blok-database-panel-page="sort"]')).toContain('padding-block-end: var(--blok-space-1-25)');
   });
 });
+
+// notion-motion.md Round 35 gap 6 (r35-sort2.raw): a 351.1-wide popover at x 539 with a 16px handle glyph at 553 (+14),
+// the property button at 579 (+40), the × glyph 19.9 after the widest direction button and 18 from the edge.
+describe('sort panel insets (Round 35 gap 6)', () => {
+  const PAGE = '[data-blok-database-panel-page="sort"]';
+
+  it('draws a 16px handle glyph 14px in, and the property button 40px in', () => {
+    expect(ruleBody(`${PAGE} > [data-blok-database-panel-list]`)).toContain('padding-inline: var(--blok-space-2-25) var(--blok-space-2-5)');
+    expect(ruleBody(`${PAGE} [data-blok-database-panel-handle]`)).toContain('margin-inline-end: var(--blok-space-2-25)');
+    expect(ruleBody(`${PAGE} [data-blok-database-panel-handle] svg`)).toContain('width: 16px');
+    expect(ruleBody(`${PAGE} [data-blok-database-panel-handle] svg`)).toContain('height: 16px');
+  });
+
+  it('keeps the × glyph 20px after the direction button and 18px from the edge', () => {
+    expect(ruleBody('[data-blok-database-sort-row] > [data-blok-database-panel-row]:nth-child(2)')).toContain('margin-inline-end: var(--blok-space-2)');
+  });
+});

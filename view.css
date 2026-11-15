@@ -225,6 +225,9 @@
   .border-\(--blok-border-primary\) {
     border-color: var(--blok-border-primary);
   }
+  .border-border-secondary {
+    border-color: var(--blok-border-secondary);
+  }
   .border-current {
     border-color: currentcolor;
   }
@@ -242,6 +245,9 @@
   }
   .px-0\.5 {
     padding-inline: calc(var(--spacing) * 0.5);
+  }
+  .px-4 {
+    padding-inline: calc(var(--spacing) * 4);
   }
   .px-\[22px\] {
     padding-inline: 22px;

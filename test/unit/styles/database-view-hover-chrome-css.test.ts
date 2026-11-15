@@ -193,15 +193,15 @@ describe('form builder question card (research/21 §1k)', () => {
   });
 
   // Round 32 §1: the wrapper scales 0.3 → 1 and fades in over 200ms ease from its right-middle (32px 16px).
-  // The exit is unread: it keeps Blok's fade at full size, the scale dropping back only once the fade ends.
-  it('scales in from its right-middle and fades over 200ms ease; fades out at full size', () => {
+  // Round 33 §1 (r33-form-gapplus-exit*.raw): it leaves on the next frame, with no fade or scale.
+  it('scales in from its right-middle and fades over 200ms ease; leaves at once', () => {
     const add = ruleBody('[data-blok-database-form-insert]');
     const shown = ruleBody('[data-blok-database-form-gap]:hover > [data-blok-database-form-insert]');
 
     expect(add).toContain('opacity: 0');
     expect(add).toContain('transform: scale(0.3)');
     expect(add).toContain('transform-origin: 32px 16px');
-    expect(add).toContain('transition: opacity 0.2s, transform 0s 0.2s');
+    expect(add).not.toMatch(/transition: opacity/);
     expect(shown).toContain('opacity: 1');
     expect(shown).toContain('transform: none');
     expect(shown).toContain('transition: opacity 0.2s ease, transform 0.2s ease');

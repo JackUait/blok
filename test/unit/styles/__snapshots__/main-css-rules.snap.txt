@@ -21019,7 +21019,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   opacity: 0;
   transform: scale(0.3);
   transform-origin: 32px 16px;
-  transition: opacity 0.2s, transform 0s 0.2s;
 }
 
 [data-blok-database-form-gap]:hover > [data-blok-database-form-insert], [data-blok-database-form-insert]:focus-visible {

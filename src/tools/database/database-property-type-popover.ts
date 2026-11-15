@@ -268,12 +268,15 @@ export class DatabasePropertyTypePopover {
       popover.setAttribute('data-side', above ? 'top' : 'bottom');
       if (this.nameOverAnchor) {
         const box = anchor.getBoundingClientRect();
+        // r32-b-typemenu.raw: with no room on the right, Notion's menu ends 12 from the window and its name row starts at the menu's left.
+        const edge = window.innerWidth - VIEWPORT_MARGIN - popover.offsetWidth;
+        const pushed = box.left > edge;
 
+        if (pushed) popover.style.left = `${Math.max(VIEWPORT_MARGIN, edge)}px`;
         header.style.top = `${box.top - parseFloat(popover.style.top)}px`;
-        // Pushed in from the window's edge, the menu keeps the box in its top row (notion-motion.md Round 32 §3 Type menu).
         const room = Math.max(0, popover.offsetWidth - header.offsetWidth);
 
-        header.style.left = `${Math.min(Math.max(0, box.left - parseFloat(popover.style.left)), room)}px`;
+        header.style.left = pushed ? '0px' : `${Math.min(Math.max(0, box.left - parseFloat(popover.style.left)), room)}px`;
       }
     };
 

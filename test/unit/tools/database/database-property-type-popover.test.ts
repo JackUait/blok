@@ -511,8 +511,9 @@ describe('DatabasePropertyTypePopover', () => {
         const menuLeft = parseFloat(root?.style.left ?? '');
         const headerLeft = parseFloat(header?.style.left ?? '');
 
-        expect(menuLeft + 400).toBeLessThanOrEqual(window.innerWidth);
-        expect(headerLeft).toBe(400 - 378);
+        // r32-b-typemenu.raw: the menu ends 12 from the window (1111 + 389 = 1500 of 1512), and the name field sits 32 inside its left edge.
+        expect(menuLeft + 400).toBe(window.innerWidth - 12);
+        expect(headerLeft).toBe(0);
         expect(header?.style.top).toBe('-32px');
         flow.destroy();
       });

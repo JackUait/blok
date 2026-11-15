@@ -43,6 +43,8 @@ export interface OverflowListOptions {
   closeLayer: () => boolean;
   /** A menu over the list (Add view beside it) takes the arrows and Enter while it is open. */
   yieldsKeys?: () => boolean;
+  /** True while a layer over the list is open: an outside press closes only that layer, not the list. */
+  peelsOutsidePress?: () => boolean;
   /** An element whose own Escape must not close the list (a rename field). */
   ownsEscape: (target: EventTarget | null) => boolean;
   onClose?: () => void;
@@ -85,6 +87,8 @@ export class OverflowList {
   private tracker: PositionTracker | null = null;
   private drag: { id: string; row: HTMLElement; moved: boolean } | null = null;
   private highlighted: HTMLElement | null = null;
+  /** A layer was open when the press began; the popover registry closes it before mousedown. */
+  private pressPeeled = false;
   private readonly listId = `blok-overflow-list-${++listIds.next}`;
 
   constructor(options: OverflowListOptions) {
@@ -163,6 +167,8 @@ export class OverflowList {
     this.tracker = createPositionTracker(dropdown, reposition);
     this.tracker.attach();
 
+    // Capture: runs before the popover registry's pointerdown closes the layer.
+    document.addEventListener('pointerdown', this.handleOutsidePointerDown, true);
     document.addEventListener('mousedown', this.handleOutsideMouseDown);
     // Window capture runs before the popover registry's document-capture
     // Escape, so one press peels only the top layer.
@@ -182,6 +188,7 @@ export class OverflowList {
     this.search = null;
     this.highlighted = null;
     window.removeEventListener('keydown', this.handleKeyDown, true);
+    document.removeEventListener('pointerdown', this.handleOutsidePointerDown, true);
     document.removeEventListener('mousedown', this.handleOutsideMouseDown);
     removeFromTopLayer(this.element);
     this.element.remove();
@@ -189,10 +196,16 @@ export class OverflowList {
     this.options.onClose?.();
   }
 
+  private readonly handleOutsidePointerDown = (): void => {
+    this.pressPeeled = this.options.peelsOutsidePress?.() === true;
+  };
+
   private readonly handleOutsideMouseDown = (event: MouseEvent): void => {
     const target = event.target;
+    const peeled = this.pressPeeled;
 
-    if (!(target instanceof Node) || this.element === null) {
+    this.pressPeeled = false;
+    if (!(target instanceof Node) || this.element === null || peeled) {
       return;
     }
     if (!this.element.contains(target) && !this.options.anchor.contains(target) && !this.options.ownsNode(target)) {

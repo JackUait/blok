@@ -37,7 +37,10 @@ export const ADD_VIEW_MENU_WIDTH = 390;
 /** notion-motion.md Round 32 §1 (r32-a-more-newview-narrow.*): the flyout stops 11.8 above the window bottom. */
 const ASIDE_WINDOW_MARGIN = 11.8;
 
-export type ViewPopoverPlacement = 'below' | 'aside' | 'aside-left';
+/** notion-motion.md Round 38 §6 (r38-fold-card.raw): with room on neither side, the card's right edge is 12.2 from the window. */
+const ASIDE_OVER_WINDOW_MARGIN = 12.2;
+
+export type ViewPopoverPlacement = 'below' | 'aside' | 'aside-left' | 'aside-over';
 
 export interface ViewPopoverOptions {
   onSelect: (type: ViewType) => void;
@@ -73,6 +76,7 @@ export class DatabaseViewPopover {
    * `aside`: beside a menu row, vertically centred on it, its left on the row's
    * right (notion-motion.md Round 31 §3: the fold menu's right − 4, its padding).
    * `aside-left`: the mirror, its right on the row's left (Round 32 §1).
+   * `aside-over`: `aside` with no room on either side, slid in over the menu (Round 38 §6).
    * Beside the fold menu it has no "New data source": the menu has its own (Round 31 §3).
    */
   open(anchor: HTMLElement, placement: ViewPopoverPlacement = 'below', focusFirst = false): void {
@@ -116,7 +120,8 @@ export class DatabaseViewPopover {
       trigger: anchor,
       // motion-addview.json: Notion's card starts 4px under the "+".
       offset: aside ? 0 : 4,
-      ...(aside ? { placeLeftOfAnchor: true, asideSide: placement === 'aside' ? 'right' as const : 'left' as const, viewportMargin: ASIDE_WINDOW_MARGIN } : {}),
+      ...(aside ? { placeLeftOfAnchor: true, asideSide: placement === 'aside-left' ? 'left' as const : 'right' as const, viewportMargin: ASIDE_WINDOW_MARGIN } : {}),
+      ...(placement === 'aside-over' ? { asideStayMargin: ASIDE_OVER_WINDOW_MARGIN } : {}),
       width: `${ADD_VIEW_MENU_WIDTH}px`,
       // A keyboard user lands on the first tile.
       autoFocusFirstItem: focusFirst,

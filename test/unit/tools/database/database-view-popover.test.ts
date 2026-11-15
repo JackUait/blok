@@ -318,6 +318,27 @@ describe('DatabaseViewPopover', () => {
       expect(opened.viewportMargin).toBe(11.8);
     });
 
+    // notion-motion.md Round 38 §6: with room on neither side the card stays on the menu's right,
+    // slid in to 12.2 from the window, centred on the row.
+    it('stays on the right of the row, 12.2 from the window, with the aside-over placement', () => {
+      popover.open(anchor, 'aside-over');
+
+      const opened = mockPopoverInstances.at(-1)?.params as { offset?: number; placeLeftOfAnchor?: boolean; asideSide?: string; viewportMargin?: number; asideStayMargin?: number; items: Array<{ element?: HTMLElement }> };
+
+      expect(opened.placeLeftOfAnchor).toBe(true);
+      expect(opened.asideSide).toBe('right');
+      expect(opened.asideStayMargin).toBe(12.2);
+      expect(opened.offset).toBe(0);
+      expect(opened.viewportMargin).toBe(11.8);
+    });
+
+    it('slides no other placement in over its anchor', () => {
+      for (const placement of ['below', 'aside', 'aside-left'] as const) {
+        popover.open(anchor, placement);
+        expect((mockPopoverInstances.at(-1)?.params as { asideStayMargin?: number }).asideStayMargin).toBeUndefined();
+      }
+    });
+
     it('keeps the right-side flyout 11.8 from the window edges too', () => {
       popover.open(anchor, 'aside');
 

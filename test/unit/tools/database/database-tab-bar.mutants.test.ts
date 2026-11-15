@@ -1267,16 +1267,18 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(lastViewPopover().placement).toBe('aside-left');
     });
 
-    it('with room on neither side, closes the dropdown and opens Add view under the add button', () => {
-      const { el, dropdown } = openDropdown(threeViews(), 'v1');
+    // notion-motion.md Round 38 §6: with room on neither side Add view stays on the menu's right, slid over it,
+    // and the menu stays open.
+    it('with room on neither side, keeps the dropdown and opens Add view over the right of the New view row', () => {
+      const { dropdown } = openDropdown(threeViews(), 'v1');
       const newRow = queryOne(dropdown, '[data-blok-database-tab-overflow-new]');
 
       vi.spyOn(newRow, 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 100, window.innerWidth - 200, 28));
       newRow.click();
 
-      expect(document.querySelector('[data-blok-database-tab-overflow-dropdown]')).toBeNull();
-      expect(lastViewPopover().openedWith).toBe(queryOne(el, '[data-blok-database-add-view]'));
-      expect(lastViewPopover().placement).toBe('below');
+      expect(document.querySelector('[data-blok-database-tab-overflow-dropdown]')).toBe(dropdown);
+      expect(lastViewPopover().openedWith).toBe(newRow);
+      expect(lastViewPopover().placement).toBe('aside-over');
     });
 
     it('a press inside the flyout keeps the dropdown open', () => {
@@ -1307,6 +1309,36 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       lastViewPopover().select('board');
 
       expect(onAddView).toHaveBeenCalledWith('board');
+      expect(document.querySelector('[data-blok-database-tab-overflow-dropdown]')).toBeNull();
+    });
+
+    // notion-motion.md Round 38 §6: the first outside click closes only the Add view card, the second the menu.
+    it('an outside press with the flyout open leaves the dropdown open', () => {
+      const { dropdown } = openDropdown(threeViews(), 'v1');
+
+      queryOne(dropdown, '[data-blok-database-tab-overflow-new]').click();
+      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+      expect(document.querySelector('[data-blok-database-tab-overflow-dropdown]')).toBe(dropdown);
+    });
+
+    it('the press after the flyout closed itself closes the dropdown', () => {
+      const { dropdown } = openDropdown(threeViews(), 'v1');
+
+      queryOne(dropdown, '[data-blok-database-tab-overflow-new]').click();
+      lastViewPopover().fireClose();
+      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+      expect(document.querySelector('[data-blok-database-tab-overflow-dropdown]')).toBeNull();
+    });
+
+    it('an outside press with no flyout open closes the dropdown', () => {
+      openDropdown(threeViews(), 'v1');
+      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
       expect(document.querySelector('[data-blok-database-tab-overflow-dropdown]')).toBeNull();
     });
 

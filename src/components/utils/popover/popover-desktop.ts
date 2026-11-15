@@ -138,6 +138,8 @@ export type PopoverDesktopParams = PopoverParams & {
   coverFlipOffset?: number;
   /** With `cover`: the gap to the window's top and bottom edges, when it differs from `viewportMargin`. */
   coverVerticalMargin?: number;
+  /** With `placeLeftOfAnchor`: with no room on `asideSide`, stay there, slid in over the anchor to this gap from the window. */
+  asideStayMargin?: number;
 };
 
 export class PopoverDesktop extends PopoverAbstract {
@@ -352,6 +354,8 @@ export class PopoverDesktop extends PopoverAbstract {
 
   private coverVerticalMargin: number | undefined;
 
+  private asideStayMargin: number | undefined;
+
   /**
    * Updates the element whose left edge is used for horizontal positioning.
    * @param element - new element to align against, or undefined to fall back to trigger
@@ -411,6 +415,7 @@ export class PopoverDesktop extends PopoverAbstract {
 
     this.coverFlipOffset = params.coverFlipOffset;
     this.coverVerticalMargin = params.coverVerticalMargin;
+    this.asideStayMargin = params.asideStayMargin;
 
     if (params.trigger) {
       this.trigger = params.trigger;
@@ -920,6 +925,7 @@ export class PopoverDesktop extends PopoverAbstract {
       placeLeftOfAnchor: this.placeLeftOfAnchor,
       asideSide: this.asideSide,
       viewportMargin: this.viewportMargin,
+      asideStayMargin: this.asideStayMargin,
       cover: this.cover,
       coverFlipOffset: this.coverFlipOffset,
       coverStayAbove: this.coverAbove,

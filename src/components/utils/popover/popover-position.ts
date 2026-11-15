@@ -49,6 +49,12 @@ export interface PositionInput {
    */
   viewportMargin?: number;
   /**
+   * With `placeLeftOfAnchor`: when the popover does not fit on `asideSide`, it
+   * stays there anyway, slid in over the anchor until it is this far from the
+   * boundary, instead of falling back to below/above. Unset: it falls back.
+   */
+  asideStayMargin?: number;
+  /**
    * When true, the popover's start corner sits on the anchor's start corner
    * and slides only as far as needed to stay inside the viewport/scope.
    */
@@ -111,6 +117,7 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
     placeLeftOfAnchor = false,
     asideSide = 'left',
     viewportMargin = 0,
+    asideStayMargin,
     direction = 'ltr',
     cover = false,
     coverFlipOffset,
@@ -138,7 +145,7 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
     ? boundaryRight - anchor.right - offset
     : anchor.left - offset - boundaryLeft;
 
-  if (placeLeftOfAnchor && popoverSize.width <= asideSpace) {
+  if (placeLeftOfAnchor && (popoverSize.width <= asideSpace || asideStayMargin !== undefined)) {
     const anchorCenterInDocCoords = (anchor.top + anchor.bottom) / 2 + scrollOffset.y;
     const scopeBottomInDocCoords = scopeBounds.bottom + scrollOffset.y;
     // The viewport margin is an unconditional aesthetic gap: the menu must
@@ -168,9 +175,10 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
     const rawLeft = asideOnRight
       ? anchor.right + offset + scrollOffset.x
       : anchor.left - offset - popoverSize.width + scrollOffset.x;
+    const edgeGap = asideStayMargin ?? 0;
     const left = asideOnRight
-      ? Math.min(boundaryRight + scrollOffset.x - popoverSize.width, rawLeft)
-      : Math.max(boundaryLeft + scrollOffset.x, rawLeft);
+      ? Math.min(boundaryRight - edgeGap + scrollOffset.x - popoverSize.width, rawLeft)
+      : Math.max(boundaryLeft + edgeGap + scrollOffset.x, rawLeft);
 
     return { top, left, openTop: false, openLeft: !asideOnRight };
   }

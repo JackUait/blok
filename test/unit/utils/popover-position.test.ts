@@ -446,6 +446,46 @@ describe('resolvePosition', () => {
       expect(result.top).toBe(0);
     });
 
+    // notion-motion.md Round 38 §6: the Add view card stays on the fold menu's right with no room there,
+    // slid in over its anchor until its right edge is 12.2 from the window.
+    describe('asideStayMargin', () => {
+      const input = (asideSide: 'left' | 'right', anchorLeft: number, anchorRight: number): Parameters<typeof resolvePosition>[0] => ({
+        anchor: rect({ top: 478.2, bottom: 506.2, left: anchorLeft, right: anchorRight }),
+        popoverSize: { width: 390, height: 233.9 },
+        scopeBounds: rect({ top: 0, bottom: 717, left: 0, right: 800 }),
+        viewportSize: { width: 800, height: 717 },
+        scrollOffset: { x: 0, y: 0 },
+        offset: 0,
+        placeLeftOfAnchor: true,
+        asideSide,
+        viewportMargin: 11.8,
+        asideStayMargin: 12.2,
+      });
+
+      it('keeps a right-side popover with no room on the right, its right edge the margin from the window', () => {
+        const result = resolvePosition(input('right', 280.8, 562.8));
+
+        expect(result.left).toBeCloseTo(397.8);
+        expect(result.top).toBeCloseTo(492.2 - 233.9 / 2);
+        expect(result.openLeft).toBe(false);
+      });
+
+      it('keeps a left-side popover with no room on the left, its left edge the margin from the window', () => {
+        const result = resolvePosition(input('left', 200, 482));
+
+        expect(result.left).toBeCloseTo(12.2);
+        expect(result.openLeft).toBe(true);
+      });
+
+      it('changes nothing when the popover fits on its side', () => {
+        const fits = { ...input('right', 100, 300) };
+        const { asideStayMargin: _unused, ...plain } = fits;
+
+        expect(resolvePosition(fits)).toEqual(resolvePosition(plain));
+        expect(resolvePosition(fits).left).toBe(300);
+      });
+    });
+
     describe("asideSide: 'right' (toolbarPosition: 'right')", () => {
       it('places the popover to the right of the anchor, vertically centered', () => {
         const result = resolvePosition({

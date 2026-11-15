@@ -757,7 +757,7 @@ export class DatabaseTabBar {
     }
     anchor.setAttribute('data-popover-open', '');
     this.barEl?.setAttribute('data-popover-open', '');
-    this.viewPopover = new DatabaseViewPopover({
+    const viewPopover: DatabaseViewPopover = new DatabaseViewPopover({
       onSelect: (type) => {
         // The menu closes itself after a pick; the list closing must not destroy it mid-pick.
         this.viewPopover = null;
@@ -767,12 +767,17 @@ export class DatabaseTabBar {
       onClose: () => {
         anchor.removeAttribute('data-popover-open');
         this.barEl?.removeAttribute('data-popover-open');
+        // An outside click closes the card on its own; the fold list reads this to stay open for the next click.
+        if (this.viewPopover === viewPopover) {
+          this.viewPopover = null;
+        }
       },
       api: this.options.api,
       ...(this.options.hiddenViewTypes !== undefined ? { hidden: this.options.hiddenViewTypes } : {}),
       ...(this.options.onNewDataSource !== undefined && !this.readOnly ? { onNewSource: this.options.onNewDataSource } : {}),
     });
-    this.viewPopover.open(anchor, placement, focusFirst);
+    this.viewPopover = viewPopover;
+    viewPopover.open(anchor, placement, focusFirst);
   }
 
   private closeViewPopover(): boolean {
@@ -888,9 +893,7 @@ export class DatabaseTabBar {
       // notion-motion.md Round 31 §3: Add view opens beside the New view row and the list stays open.
       keepOpenOnNew: !this.readOnly,
       onNew: (row, byKeyboard) => {
-        const addBtn = this.element?.querySelector<HTMLElement>('[data-blok-database-add-view]');
-
-        if (this.readOnly || addBtn === null || addBtn === undefined) return;
+        if (this.readOnly) return;
         const rect = row.getBoundingClientRect();
 
         if (rect.right + ADD_VIEW_MENU_WIDTH <= window.innerWidth) {
@@ -904,10 +907,8 @@ export class DatabaseTabBar {
 
           return;
         }
-        // No room on either side (Notion unmeasured): Add view opens under "+", as before.
-        this.closeOverflowDropdown();
-        // A folded "+" has no box to hang the menu from.
-        this.openViewPopover(this.element?.hasAttribute('data-blok-database-tab-folded') === true ? anchor : addBtn);
+        // Round 38 §6: no room on either side keeps it on the right, slid in over the menu, which stays open.
+        this.openViewPopover(row, 'aside-over', byKeyboard);
       },
       ...(this.readOnly || this.options.onNewDataSource === undefined ? {} : {
         onNewSecond: { label: this.t('tools.database.newDataSource', 'New data source'), icon: IconDatabase, activate: this.options.onNewDataSource },
@@ -926,6 +927,8 @@ export class DatabaseTabBar {
         this.closeViewPopover();
       },
       yieldsKeys: () => this.viewPopover !== null,
+      // notion-motion.md Round 38 §6: the first outside click closes only the Add view card.
+      peelsOutsidePress: () => this.viewPopover !== null,
       // A row rename owns its Escape (it restores the old name).
       ownsEscape: (target) => target instanceof HTMLInputElement && target.hasAttribute('data-blok-database-tab-rename-input'),
     });

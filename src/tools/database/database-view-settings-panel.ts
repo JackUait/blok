@@ -1477,13 +1477,13 @@ export class ViewSettingsPages {
 
       if (shown.length > 0) {
         parts.push(
-          this.visibilityHeader(panel, SHOWN_IN_KEYS[type] ?? 'propertiesSection', query === '' ? hideable.filter((entry) => entry.visible) : [], false),
+          this.visibilityHeader(panel, SHOWN_IN_KEYS[type] ?? 'propertiesSection', query === '' ? hideable.filter((entry) => entry.visible) : null, false),
           reorderList('database-properties-list', shown)
         );
       }
       if (hidden.length > 0) {
         parts.push(
-          this.visibilityHeader(panel, HIDDEN_IN_KEYS[type] ?? 'settingsHiddenProperties', query === '' ? hideable.filter((entry) => !entry.visible) : [], true),
+          this.visibilityHeader(panel, HIDDEN_IN_KEYS[type] ?? 'settingsHiddenProperties', query === '' ? hideable.filter((entry) => !entry.visible) : null, true),
           reorderList('database-properties-hidden-list', hidden)
         );
       }
@@ -1604,14 +1604,15 @@ export class ViewSettingsPages {
   /**
    * research/35:197, 12-notion-propvis.png: "Shown in <layout>" with Hide all.
    * notion-motion.md Round 35 §1 (r35-propvis.raw): "Hidden in <layout>" with Show all.
-   * `targets` are the properties the action flips, in one view update.
+   * `targets` are the properties the action flips, in one view update; `null` while searching drops the button.
+   * Round 36 §1 (r36-pv-allhidden.raw): Hide all stays when only the title is left.
    */
-  private visibilityHeader(panel: DatabasePanel, labelKey: string, targets: ReturnType<typeof resolveViewProperties>, show: boolean): HTMLElement {
+  private visibilityHeader(panel: DatabasePanel, labelKey: string, targets: ReturnType<typeof resolveViewProperties> | null, show: boolean): HTMLElement {
     const header = document.createElement('div');
 
     header.setAttribute('data-blok-database-property-visibility-header', '');
     header.append(panelLabel(this.t(labelKey)));
-    if (targets.length === 0) return header;
+    if (targets === null) return header;
     const toggle = document.createElement('button');
 
     toggle.type = 'button';
@@ -1620,6 +1621,7 @@ export class ViewSettingsPages {
     toggle.textContent = this.t(show ? 'groupShowAll' : 'groupHideAll');
     toggle.disabled = !this.shared;
     toggle.addEventListener('click', () => {
+      if (targets.length === 0) return;
       this.ctx.updateView({ properties: withPropertyVisibility(this.ctx.view(), this.ctx.schema(), targets.map((entry) => entry.id), show) });
       panel.refresh();
       // notion-motion.md Round 36 §1: focus goes to the search.

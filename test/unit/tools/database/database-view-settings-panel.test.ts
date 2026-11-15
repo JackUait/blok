@@ -1048,8 +1048,21 @@ describe('view settings panel', () => {
         expect(h.ctx.updateView).toHaveBeenCalledTimes(1);
         expect(shownIds()).toEqual(['title']);
         expect(hiddenIds()).toEqual(expect.arrayContaining(['due', 'num']));
-        // Only the title is left, which cannot be hidden.
-        expect(exists('database-property-hide-all')).toBe(false);
+      });
+
+      // notion-motion.md Round 36 §1 (r36-pv-allhidden.raw): with only the title left, Hide all stays, enabled.
+      it('keeps Hide all once only the title is shown, and a click changes nothing', () => {
+        const h = harness({ properties: [{ id: 'due', visible: true }, { id: 'num', visible: false }] });
+
+        h.open('properties');
+        click('database-property-hide-all');
+        expect(shownIds()).toEqual(['title']);
+        expect(q('database-property-hide-all')?.textContent).toBe('tools.database.groupHideAll');
+        expect(q('database-property-hide-all')).toBeEnabled();
+        vi.mocked(h.ctx.updateView).mockClear();
+        click('database-property-hide-all');
+        expect(h.ctx.updateView).not.toHaveBeenCalled();
+        expect(hiddenIds()).toEqual(expect.arrayContaining(['due', 'num']));
       });
 
       // notion-motion.md Round 36 §1: focus goes to the search after Show all and after Hide all.

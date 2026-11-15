@@ -41,11 +41,15 @@ describe('table view menus', () => {
     expect(constructed[0]?.class).toBe('blok-database-menu');
   });
 
-  it('opens a row menu to the left of its handle, centred on it, with the row menu size', () => {
+  // notion-motion.md Round 35 "Table row ⋮⋮ menu": the card menu's look, 265 wide with 14px 400 text,
+  // its right edge 5px before the handle and centred on it.
+  it('opens the table row menu with the card menu look, 5px left of its handle and centred on it', () => {
     openMenu(document.createElement('button'), [], { kind: 'row' });
 
-    expect(String(constructed[0]?.class).split(' ')).toEqual(['blok-database-menu', 'blok-database-row-menu']);
+    expect(String(constructed[0]?.class).split(' ')).toEqual(['blok-database-menu', 'blok-database-row-menu', 'blok-database-card-menu']);
+    expect(constructed[0]?.minWidth).toBe('265px');
     expect(constructed[0]?.placeLeftOfAnchor).toBe(true);
+    expect(constructed[0]?.offset).toBe(5);
   });
 
   it('marks a column header menu, so only it takes the header row size', () => {
@@ -70,6 +74,13 @@ describe('table view menus', () => {
 
     expect(constructed[0]?.cover).toBe(true);
     expect(constructed[1]?.cover).toBeUndefined();
+  });
+
+  // notion-motion.md Round 35 "Board card ⋯ menu": a tall menu stops 12.1px above the window bottom.
+  it('keeps a card menu 12px from the window edge', () => {
+    openMenu(document.createElement('button'), [], { kind: 'card' });
+
+    expect(constructed[0]?.viewportMargin).toBe(12);
   });
 
   // notion-motion.md Round 10 "List view row menu anchor": the row menu opens left of the list row's handle,

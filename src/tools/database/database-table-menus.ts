@@ -196,9 +196,9 @@ export const calcMenuAt = (cell: HTMLElement): OpenMenuOptions['at'] => {
 
 /** A column header menu: 28px rows and no 400px cap (database.css). */
 export const DATABASE_HEADER_MENU_CLASS = `${DATABASE_MENU_CLASS} blok-database-header-menu`;
-/** The table row menu: 29px rows (database.css). */
+/** The row menu: 29px rows (database.css). */
 const DATABASE_ROW_MENU_CLASS = `${DATABASE_MENU_CLASS} blok-database-row-menu`;
-/** The same row menu from a card's "•••" or a right-click: 265 wide and no 400px cap (database.css, feel findings B15). */
+/** The row menu of every view: 265 wide and no 400px cap (database.css, feel findings B15). */
 const DATABASE_CARD_MENU_CLASS = `${DATABASE_ROW_MENU_CLASS} blok-database-card-menu`;
 /** The card menu opened from a list row's handle: beside the handle, scaling from its centre (database.css). */
 const DATABASE_HANDLE_MENU_CLASS = `${DATABASE_CARD_MENU_CLASS} blok-database-handle-menu`;
@@ -226,7 +226,7 @@ export interface OpenMenuOptions {
 
 const MENU_CLASS = {
   header: DATABASE_HEADER_MENU_CLASS,
-  row: DATABASE_ROW_MENU_CLASS,
+  row: DATABASE_CARD_MENU_CLASS,
   card: DATABASE_CARD_MENU_CLASS,
   handle: DATABASE_HANDLE_MENU_CLASS,
   calc: `${DATABASE_HEADER_MENU_CLASS} ${DATABASE_CALC_MENU_CLASS}`,
@@ -237,7 +237,7 @@ const MENU_CLASS = {
 const HANDLE_MENU_WIDTH = 265;
 const HANDLE_MENU_GAP = 5;
 
-const MENU_MIN_WIDTH: Partial<Record<NonNullable<OpenMenuOptions['kind']>, string>> = { card: '265px', handle: `${HANDLE_MENU_WIDTH}px`, calc: CALC_MENU_MIN_WIDTH, selection: '265px' };
+const MENU_MIN_WIDTH: Partial<Record<NonNullable<OpenMenuOptions['kind']>, string>> = { row: `${HANDLE_MENU_WIDTH}px`, card: '265px', handle: `${HANDLE_MENU_WIDTH}px`, calc: CALC_MENU_MIN_WIDTH, selection: '265px' };
 
 /** Left of the handle, or right when a 265px menu and its gap do not fit before the window's left edge. */
 const handleMenuSide = (anchor: HTMLElement): 'left' | 'right' =>
@@ -252,7 +252,8 @@ export const openMenu = (
   const menuClass = options.kind === undefined ? DATABASE_MENU_CLASS : MENU_CLASS[options.kind];
   const params = {
     class: menuClass,
-    ...(options.kind === 'row' ? { placeLeftOfAnchor: true, viewportMargin: 8 } : {}),
+    // notion-motion.md Round 35: the table's ⋮⋮ menu ends 5px before the handle, as the list's does.
+    ...(options.kind === 'row' ? { placeLeftOfAnchor: true, offset: HANDLE_MENU_GAP, viewportMargin: 8 } : {}),
     // notion-motion.md Round 10: the right edge 5px before the handle, centred on it; pushed up to ~12px over the window bottom.
     // Round 16 §7: with no room on the left it flips to the right, 5px past the handle.
     ...(options.kind === 'handle' ? { placeLeftOfAnchor: true, asideSide: handleMenuSide(anchor), offset: HANDLE_MENU_GAP, viewportMargin: 12 } : {}),
@@ -265,7 +266,8 @@ export const openMenu = (
     width: 'auto' as const,
     minWidth: (options.kind === undefined ? undefined : MENU_MIN_WIDTH[options.kind]) ?? '220px',
     // A card's menu opens over its "•••", shifted to stay in the window (feel findings B15, 09-notion-card-menu.png).
-    ...(options.kind === 'card' ? { cover: true } : {}),
+    // Round 35: a tall card menu stops 12px above the window bottom.
+    ...(options.kind === 'card' ? { cover: true, viewportMargin: 12 } : {}),
     autoFocusFirstItem: false,
     ...(options.searchable === true ? { searchable: true } : {}),
     ...(options.searchPlaceholder !== undefined ? { messages: { search: options.searchPlaceholder } } : {}),

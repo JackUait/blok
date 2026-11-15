@@ -326,6 +326,8 @@ describe('DatabaseModel — mutation coverage', () => {
         colorRules: [],
         groupSettings: {},
         subGroupSettings: {},
+        // A new table wraps (notion-motion.md Round 32 §3).
+        wrapCells: true,
       });
     });
 

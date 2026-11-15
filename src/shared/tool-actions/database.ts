@@ -26,7 +26,7 @@ import { applyViewChanges, GROUPABLE_TYPES, groupByChange, layoutChange, subGrou
 import { DATE_VALUE_FORMAT, parseDateValue } from '../database/date-value';
 import { isOutputData, isPlaceValue, isVerificationValue } from '../database/tier3-values';
 import { isFileValue, isReadOnlyType, personIdsOf } from '../database/value-helpers';
-import { revealedInLegacyView } from '../database/view-properties';
+import { resolveWrapCells, revealedInLegacyView } from '../database/view-properties';
 import { formAnswerProblem, formQuestions } from '../database/form-questions';
 import { MAX_NOTIFY_PEOPLE, runButtonActions } from '../database/button-actions';
 import { plainLine } from '../agent/approval';
@@ -370,7 +370,9 @@ const duplicateView: ToolActionImpl<{ viewId: string }, undefined, { viewId: str
     }
     // As the editor's duplicateView: every setting is copied, the copy goes last and opens.
     const { id: _id, position: _position, ...settings } = source;
-    const copy = savedView(newView({ ...settings, id: ctx.newId(), position: positionAround(ctx, state.views) }, state.schema));
+    // A table copy keeps its source's wrap even when the source stores none (a new table wraps).
+    const wrap = source.type === 'table' ? { wrapCells: resolveWrapCells(source) } : {};
+    const copy = savedView(newView({ ...settings, ...wrap, id: ctx.newId(), position: positionAround(ctx, state.views) }, state.schema));
 
     if (isWidgetView(source, state.views)) {
       // As the widget menu's Duplicate: the copy goes next to it on its dashboard, and the open view stays.

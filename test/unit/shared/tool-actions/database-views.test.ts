@@ -135,6 +135,25 @@ describe('database view actions', () => {
     expect(data().activeViewId).toBe(viewId);
   });
 
+  // notion-motion.md Round 32 §3: a new table starts with Wrap all content on; a copy keeps its source's look.
+  it('adds a new table with wrap on', () => {
+    const { doc, id, data } = make();
+    const { viewId } = run(doc, id, 'addView', { type: 'table' }) as { viewId: string };
+
+    expect(data().views.find(view => view.id === viewId)?.wrapCells).toBe(true);
+  });
+
+  it('copies a saved table with no wrap as an unwrapped table', () => {
+    const { doc, id, data } = make();
+    const { viewId } = run(doc, id, 'addView', { type: 'table' }) as { viewId: string };
+    const saved = data().views.find(view => view.id === viewId);
+
+    if (saved !== undefined) delete saved.wrapCells;
+    const { viewId: copyId } = run(doc, id, 'duplicateView', { viewId }) as { viewId: string };
+
+    expect(data().views.find(view => view.id === copyId)?.wrapCells).toBe(false);
+  });
+
   // The action writes sharing settings; the executor asks the person first (database-share-approval.test.ts).
   it.each([
     [{ form: { public: true } }, { form: { public: true } }],

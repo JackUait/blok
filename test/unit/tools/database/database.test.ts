@@ -5876,6 +5876,30 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
 
+    // notion-motion.md Round 32 §3: a new table starts with Wrap all content on; a copy keeps its source's look.
+    it('starts a new table view with wrap on', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const element = tool.render();
+
+      tool.addView('table');
+
+      expect(tool.save(element).views[1].wrapCells).toBe(true);
+
+      tool.destroy();
+    });
+
+    it('copies a saved table with no wrap as an unwrapped table', () => {
+      const { wrapCells: _wrap, ...unwrapped } = tableView;
+      const tool = new DatabaseTool(createDatabaseOptions({ views: [unwrapped], activeViewId: tableView.id }));
+      const element = tool.render();
+
+      tool.duplicateView(tableView.id);
+
+      expect(tool.save(element).views.map((view) => view.wrapCells)).toEqual([undefined, false]);
+
+      tool.destroy();
+    });
+
     // notion-motion.md Round 28 §2 (r28-dupnames.raw): a copy of "Table (1)" is "Table (2)", and a second
     // copy of "Table" is "Table (1)" again, so the source's own number goes up by one.
     it.each([

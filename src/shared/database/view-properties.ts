@@ -68,7 +68,7 @@ export const legacyEntries = (view: DatabaseViewConfig, schema: PropertyDefiniti
   ];
 };
 
-/** A new Notion board has "Wrap all content" on; a new table or gallery has it off (notion-spec-2 §21.1, §21.7). */
+/** A view with no stored wrap: a board wraps, the rest do not (notion-spec-2 §21.1, §21.7). New tables store `true` (`newView`). */
 export const resolveWrapCells = (view: DatabaseViewConfig): boolean =>
   typeof view.wrapCells === 'boolean' ? view.wrapCells : view.type === 'board';
 

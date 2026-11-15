@@ -90,6 +90,33 @@ describe('shared database building blocks', () => {
   });
 });
 
+// notion-motion.md Round 32 §3 (Settings → Layout): a new Notion table starts with "Wrap all content" on.
+describe('a new table view', () => {
+  const schema = [{ id: 't', name: 'Name', type: 'title' as const, position: 'a0' }];
+
+  it('starts with wrap on', () => {
+    expect(newView({ id: 'v', name: 'Table', type: 'table', position: 'a0' }, schema).wrapCells).toBe(true);
+    expect(createDefaultView('table', schema, (name) => name).wrapCells).toBe(true);
+  });
+
+  it('keeps the wrap it is given', () => {
+    expect(newView({ id: 'v', name: 'Table', type: 'table', position: 'a0', wrapCells: false }, schema).wrapCells).toBe(false);
+  });
+
+  it('stores no wrap on a new board, list or gallery', () => {
+    for (const type of ['board', 'list', 'gallery'] as const) {
+      expect(newView({ id: 'v', name: 'V', type, position: 'a0' }, schema)).not.toHaveProperty('wrapCells');
+    }
+  });
+
+  it('leaves a saved table with no wrap unwrapped when the model loads it', () => {
+    const saved = { id: 'v', name: 'Table', type: 'table' as const, position: 'a0', sorts: [], filters: [], visibleProperties: [] };
+    const model = new DatabaseModel({ schema, views: [saved], activeViewId: 'v' });
+
+    expect(model.getView('v')).not.toHaveProperty('wrapCells');
+  });
+});
+
 // notion-spec-2 §21.8 (list-row-default.png): a new List view shows the title and Status, the rest hidden.
 describe('a new list view', () => {
   const schema = [

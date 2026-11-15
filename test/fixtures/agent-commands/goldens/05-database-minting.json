@@ -176,6 +176,7 @@
               "colorRules": [],
               "groupSettings": {},
               "subGroupSettings": {},
+              "wrapCells": false,
               "properties": [
                 {
                   "id": "dbid1",

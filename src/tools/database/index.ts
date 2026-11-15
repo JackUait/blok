@@ -114,6 +114,7 @@ import {
   defaultVisible,
   revealedInLegacyView,
   resolveViewProperties,
+  resolveWrapCells,
   visibleRowPropertyIds,
   withCalculation,
   withCalculationCap,
@@ -4935,7 +4936,8 @@ export class DatabaseTool implements BlockTool {
     // notion-motion.md Round 28 §2: "Table" copies as "Table (1)", every time; "Table (1)" copies as "Table (2)".
     const numbered = / \((\d+)\)$/.exec(name);
     const copyName = numbered === null ? `${name} (1)` : `${name.slice(0, numbered.index)} (${Number(numbered[1]) + 1})`;
-    const newView = this.model.addView(copyName, type, settings);
+    // A table copy keeps its source's wrap even when the source stores none (a new table wraps).
+    const newView = this.model.addView(copyName, type, type === 'table' ? { ...settings, wrapCells: resolveWrapCells(sourceView) } : settings);
 
     void this.sync.syncCreateView(structuredClone(newView));
     // A copied dashboard gets copies of its widgets, so the two never share one.

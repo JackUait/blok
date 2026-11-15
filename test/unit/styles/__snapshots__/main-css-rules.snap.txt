@@ -6325,6 +6325,13 @@ span[data-blok-slash-search] {
   transform: rotate(180deg);
 }
 
+[data-blok-database-peek-prev] svg, [data-blok-database-peek-next] svg {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  max-height: none;
+}
+
 [dir="rtl"] [data-blok-database-peek-page-info] svg {
   transform: scaleX(var(--_blok-inline-sign, 1));
 }
@@ -17589,6 +17596,13 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   block-size: 16px;
 }
 
+[data-blok-database-calendar-nav] [data-blok-database-calendar-prev] svg, [data-blok-database-calendar-nav] [data-blok-database-calendar-next] svg {
+  flex: none;
+  inline-size: 28px;
+  block-size: 28px;
+  max-block-size: none;
+}
+
 [dir="rtl"] [data-blok-database-calendar-prev] svg, [dir="rtl"] [data-blok-database-calendar-next] svg {
   transform: scaleX(-1);
 }
@@ -20802,8 +20816,9 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-new] svg {
-  width: 16px;
-  height: 16px;
+  flex: none;
+  width: 24px;
+  height: 24px;
 }
 
 [data-blok-database-template-banner] {

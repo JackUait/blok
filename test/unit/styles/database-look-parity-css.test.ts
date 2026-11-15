@@ -232,9 +232,11 @@ describe('row page peek in dark (research/21 §1m)', () => {
     expect(tokenValues('--blok-database-peek-backdrop')).toEqual(['rgba(15, 15, 15, 0.6)', 'rgba(15, 15, 15, 0.8)', 'rgba(15, 15, 15, 0.8)']);
   });
 
-  // side-by-side #30, notion-live-3/raw/peek-1.png: same title ink (y 88-110), first label ink at y 147, not 142.
-  it('puts the side peek\'s first property 17px under the title', () => {
-    expect(ruleBody('[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-title]')).toContain('margin-bottom: 17px');
+  // notion-motion.md Round 33 §3: Notion's first label is at 133.4 with up to 4 properties and 141.4 with 5 or more,
+  // the title at 80 in both. Blok's label sits 7 into a row that starts 9 under the title (134), 8 more once spaced.
+  it('puts the side peek\'s first property 9px under the title, 8 more with 5 or more properties', () => {
+    expect(ruleBody('[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-title]')).toContain('margin-bottom: 9px');
+    expect(ruleBody('[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-props-spaced]')).toContain('padding-top: 8px');
   });
 
   it('inks the title in the database ink: rgb(44, 44, 43) light (research/26 §1e), rgb(240, 239, 237) dark', () => {

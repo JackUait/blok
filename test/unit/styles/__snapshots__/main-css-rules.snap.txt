@@ -6447,7 +6447,11 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-title] {
-  margin-bottom: 17px;
+  margin-bottom: 9px;
+}
+
+[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-props-spaced] {
+  padding-top: 8px;
 }
 
 [data-blok-database-drawer-title]::placeholder {

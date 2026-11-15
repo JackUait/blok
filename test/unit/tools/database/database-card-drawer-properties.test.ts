@@ -130,6 +130,20 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
     expect(reveal()?.textContent).toBe('Hide 1 property');
   });
 
+  // notion-motion.md Round 33 §3 (r33-peek-*.raw): 8px more above the properties once a row shows 5 or more
+  // besides the title. Whether Notion counts hidden ones is unread, so this counts the shown ones.
+  it('spaces the properties out once 5 or more are shown', () => {
+    const options = createOptions();
+
+    createDrawer(options).open({ ...ROW, properties: { ...ROW.properties, 'prop-maybe': 'x' } });
+    const props = (): HTMLElement | null => options.wrapper.querySelector<HTMLElement>('[data-blok-database-drawer-props]');
+
+    expect(props()?.hasAttribute('data-blok-database-drawer-props-spaced')).toBe(false);
+    options.wrapper.querySelector<HTMLElement>('[data-blok-database-drawer-hidden-props]')?.click();
+
+    expect(props()?.hasAttribute('data-blok-database-drawer-props-spaced')).toBe(true);
+  });
+
   it('shows a hide-when-empty property once it has a value', () => {
     const options = createOptions();
 

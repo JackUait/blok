@@ -3204,6 +3204,11 @@ button[data-blok-database-board-lane-count]:hover {
   transform: scale(0.96);
 }
 
+/* notion-motion.md Round 36 §4: the card ⋯ menu only fades. Same specificity as the rule above, so it must stay after it. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-fade-menu']:not([data-blok-popover-opened='true']) > [data-blok-popover-container] {
+  transform: none;
+}
+
 /* notion-motion.md "Popovers": a menu row's hover fill fades in over 20ms. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-item] {
   transition: background-color 20ms ease-in;
@@ -3224,6 +3229,7 @@ button[data-blok-database-board-lane-count]:hover {
    Round 9: the column menu and its Edit property flyout too. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-popover-item-icon],
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-popover-item-icon],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-page-actions-menu'] [data-blok-popover-item-icon],
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-column-menu'] [data-blok-popover-item-icon] {
   width: 20px;
   margin-inline-end: var(--blok-space-2);

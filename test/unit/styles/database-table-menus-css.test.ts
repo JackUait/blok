@@ -196,6 +196,15 @@ describe('row menu (T15)', () => {
 // notion-motion.md Round 35 (r35-rowmenu.raw, r35-cardmenu.raw, r35-peekmenu.raw): the row and card menus and the
 // peek's ⋯ menu share one inner layout. Only their own list: a submenu is a popover of its own.
 describe('row, card and peek ⋯ menus (Round 35)', () => {
+  // notion-motion.md Round 36 §6 (r36-peekmenu-x.raw): every peek ⋯ row has its icon at +12 and its text at +40,
+  // as the card menu: a 20px icon box and 8 to the text, from the row at +4 and its 8px padding.
+  it('puts the peek ⋯ menu icon at +12 and its text at +40, as the card menu', () => {
+    const icon = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-page-actions-menu'] [data-blok-popover-item-icon]";
+
+    expect(declared(icon, 'width')).toEqual(['20px']);
+    expect(declared(icon, 'margin-inline-end')).toEqual(['var(--blok-space-2)']);
+  });
+
   const MENUS = ['blok-database-card-menu', 'blok-database-page-actions-menu'].map((name) => `[data-blok-popover][data-blok-popover-custom-class~='${name}'] > [data-blok-popover-container]`);
 
   // Notion: the field 241 wide in a 265 box, 12 from its top and sides; the first row (peek) 12 under it.
@@ -634,5 +643,14 @@ describe('icon-only OPEN', () => {
     expect(declared(`${open} > span[aria-hidden="true"]`, 'height')).toEqual(['20px']);
     expect(declared(`${open} > span:last-child`, 'clip-path')).toEqual(['inset(50%)']);
     expect(declared(`${open} > span:last-child`, 'display')).toEqual([]);
+  });
+});
+
+// notion-motion.md Round 36 §4 (r36-rowmenu-*.raw, r36-cardmenu-*.raw).
+describe('row ⋮⋮ and card ⋯ menu motion (Round 36)', () => {
+  // Notion's card ⋯ menu fades in with transform none. The not-yet-opened selector must beat the
+  // database menus' 0.96 scale, which also carries :not([data-blok-popover-opened]).
+  it('fades the card ⋯ menu in with no scale', () => {
+    expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-fade-menu']:not([data-blok-popover-opened='true']) > [data-blok-popover-container]", 'transform')).toEqual(['none']);
   });
 });

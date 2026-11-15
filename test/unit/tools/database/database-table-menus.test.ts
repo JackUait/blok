@@ -46,10 +46,18 @@ describe('table view menus', () => {
   it('opens the table row menu with the card menu look, 5px left of its handle and centred on it', () => {
     openMenu(document.createElement('button'), [], { kind: 'row' });
 
-    expect(String(constructed[0]?.class).split(' ')).toEqual(['blok-database-menu', 'blok-database-row-menu', 'blok-database-card-menu']);
     expect(constructed[0]?.minWidth).toBe('265px');
     expect(constructed[0]?.placeLeftOfAnchor).toBe(true);
     expect(constructed[0]?.offset).toBe(5);
+  });
+
+  // notion-motion.md Round 36 §4: the table row menu scales in from its centre, as the list's handle menu
+  // (the handle class carries transform-origin: center), and stops about 12px above the window bottom.
+  it('opens the table row menu from its centre, 12px from the window top and bottom', () => {
+    openMenu(document.createElement('button'), [], { kind: 'row' });
+
+    expect(String(constructed[0]?.class).split(' ')).toEqual(['blok-database-menu', 'blok-database-row-menu', 'blok-database-card-menu', 'blok-database-handle-menu']);
+    expect(constructed[0]?.viewportMargin).toBe(12);
   });
 
   it('marks a column header menu, so only it takes the header row size', () => {
@@ -62,7 +70,8 @@ describe('table view menus', () => {
   it('opens a card menu 265 wide with the row menu size, marked so CSS lifts its height cap', () => {
     openMenu(document.createElement('button'), [], { kind: 'card' });
 
-    expect(String(constructed[0]?.class).split(' ')).toEqual(['blok-database-menu', 'blok-database-row-menu', 'blok-database-card-menu']);
+    // notion-motion.md Round 36 §4: the card ⋯ menu only fades in; the fade class drops the scale (database.css).
+    expect(String(constructed[0]?.class).split(' ')).toEqual(['blok-database-menu', 'blok-database-row-menu', 'blok-database-card-menu', 'blok-database-fade-menu']);
     expect(constructed[0]?.minWidth).toBe('265px');
     expect(constructed[0]?.placeLeftOfAnchor).toBeUndefined();
   });

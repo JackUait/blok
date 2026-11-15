@@ -227,8 +227,10 @@ export interface OpenMenuOptions {
 
 const MENU_CLASS = {
   header: DATABASE_HEADER_MENU_CLASS,
-  row: DATABASE_CARD_MENU_CLASS,
-  card: DATABASE_CARD_MENU_CLASS,
+  // notion-motion.md Round 36 §4: the table ⋮⋮ menu scales from its centre, as the list's handle menu.
+  row: DATABASE_HANDLE_MENU_CLASS,
+  // Round 36 §4: the card ⋯ menu fades in with no scale (database.css).
+  card: `${DATABASE_CARD_MENU_CLASS} blok-database-fade-menu`,
   handle: DATABASE_HANDLE_MENU_CLASS,
   calc: `${DATABASE_HEADER_MENU_CLASS} ${DATABASE_CALC_MENU_CLASS}`,
   selection: DATABASE_CARD_MENU_CLASS,
@@ -254,7 +256,8 @@ export const openMenu = (
   const params = {
     class: menuClass,
     // notion-motion.md Round 35: the table's ⋮⋮ menu ends 5px before the handle, as the list's does.
-    ...(options.kind === 'row' ? { placeLeftOfAnchor: true, offset: HANDLE_MENU_GAP, viewportMargin: 8 } : {}),
+    // Round 36 §4: pushed up to ~12px over the window bottom. The margin is top and bottom only here.
+    ...(options.kind === 'row' ? { placeLeftOfAnchor: true, offset: HANDLE_MENU_GAP, viewportMargin: 12 } : {}),
     // notion-motion.md Round 10: the right edge 5px before the handle, centred on it; pushed up to ~12px over the window bottom.
     // Round 16 §7: with no room on the left it flips to the right, 5px past the handle.
     ...(options.kind === 'handle' ? { placeLeftOfAnchor: true, asideSide: handleMenuSide(anchor), offset: HANDLE_MENU_GAP, viewportMargin: 12 } : {}),

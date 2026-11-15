@@ -522,4 +522,32 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       vi.unstubAllGlobals();
     });
   });
+
+  // notion-motion.md Round 36 §4 (r36-cardmenu-*.raw): a board card's ⋯ menu opens at the click x, not the button's
+  // left; a key press has no pointer, so it keeps the button.
+  describe('board card ⋯ menu placement', () => {
+    const openedAt = (x: number, detail: number): HTMLElement => {
+      const { el } = buildTool(oneRow(), {}, viewData('board'));
+
+      document.body.appendChild(el);
+      const button = el.querySelector<HTMLElement>('[data-blok-database-card-menu]');
+
+      if (button === null) throw new Error('no card ⋯');
+      button.getBoundingClientRect = () => new DOMRect(588, 338, 28, 24);
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: x, clientY: 350, detail }));
+      const popover = [...document.querySelectorAll<HTMLElement>('[data-blok-popover]')].at(-1);
+
+      if (popover === undefined) throw new Error('no menu');
+
+      return popover;
+    };
+
+    it('opens with its left edge on the click x', () => {
+      expect(openedAt(604, 1).style.left).toBe('604px');
+    });
+
+    it('opens from a key press on the button\'s left edge', () => {
+      expect(openedAt(0, 0).style.left).toBe('588px');
+    });
+  });
 });

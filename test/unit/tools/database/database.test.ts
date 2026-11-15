@@ -4242,8 +4242,8 @@ describe('DatabaseTool', () => {
       queryAllByData(document.body, 'data-mock-popover').forEach((el) => el.remove());
       queryByData(element, 'data-blok-database-card-menu')?.click();
 
-      // The row menu adds its own class on top (feel findings B15).
-      expect(queryByData(document.body, 'data-mock-popover-class', 'blok-database-menu blok-database-row-menu blok-database-card-menu')).not.toBeNull();
+      // The row menu adds its own class on top (feel findings B15); the card ⋯ one fades with no scale (Round 36 §4).
+      expect(queryByData(document.body, 'data-mock-popover-class', 'blok-database-menu blok-database-row-menu blok-database-card-menu blok-database-fade-menu')).not.toBeNull();
 
       tool.destroy();
     });

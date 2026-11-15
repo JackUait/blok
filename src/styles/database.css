@@ -3923,7 +3923,7 @@ button[data-blok-database-board-lane-count]:hover {
   flex-direction: column;
   padding-block-start: var(--blok-space-1);
   padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  padding-inline-end: 0;
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
 
 /**
@@ -14261,8 +14261,9 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   flex-direction: column;
   gap: var(--blok-space-4);
   padding-block: var(--blok-space-4) var(--blok-space-1);
-  /* Cards start at the text column like the table and run to the toolbar's end (side-by-side-4 #2). */
+  /* Cards keep to the text column, as the toolbar does (side-by-side-4 #2, notion-motion.md Round 41 Part B). */
   padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
 
 [data-blok-database-gallery][data-card-size="small"] {
@@ -14616,8 +14617,9 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   display: flex;
   flex-direction: column;
   padding-block-end: var(--blok-space-4);
-  /* The grid starts at the text column like the table and runs to the toolbar's end (side-by-side-4 #2). */
+  /* The grid and its nav keep to the text column, as the toolbar does (side-by-side-4 #2, notion-motion.md Round 41 Part B). */
   padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
 
 [data-blok-database-calendar-toolbar] {
@@ -15084,13 +15086,20 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   box-sizing: border-box;
   min-block-size: 42px;
   padding-block-start: var(--blok-space-2-75);
-  /* The toolbar starts at the text column; the grid below stays as wide as the view (side-by-side-4 #2). */
+  /* The toolbar keeps to the text column; the grid below stays as wide as the view (side-by-side-4 #2). */
   padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
 
 /* The panel starts at the view's edge, so its « and the month are placed from there. */
 [data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"]) {
   padding-inline-start: 0;
+  padding-inline-end: 0;
+}
+
+/* notion-motion.md Round 41 Part B: with the panel shut, a page-wide editor's timeline spans the column plus 8px each side. Round 6: open, it is full-bleed. */
+[data-blok-database-timeline]:not(:has(> [data-blok-database-timeline-toolbar] > [data-blok-database-timeline-table-toggle][aria-pressed="true"])) {
+  margin-inline: max(0px, calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)) - var(--blok-space-2)));
 }
 
 [data-blok-database-timeline-toolbar-spacer] {

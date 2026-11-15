@@ -96,3 +96,15 @@ describe('database structure styles', () => {
     }
   });
 });
+
+// notion-motion.md Round 35 (r35-newmenu.png ink rows): the description's text at 346-359, the rule at 370.2,
+// "New template" at 383, in a menu at 303.2.
+describe('templates menu description (Round 35)', () => {
+  it('sets the description 9px under the header and the rule 6px under it', () => {
+    expect(ruleBody('[data-blok-database-template-description]')).toContain('padding-block: var(--blok-space-2-25) var(--blok-space-0-5)');
+  });
+
+  it('leaves 4px between the rule and the first row', () => {
+    expect(ruleBody("[data-blok-item-name='template-description'] + [data-blok-popover-item-separator]")).toContain('padding-block-end: var(--blok-space-1)');
+  });
+});

@@ -20471,8 +20471,12 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-template-description] {
-  padding-block: var(--blok-space-0-5) var(--blok-space-1-5);
+  padding-block: var(--blok-space-2-25) var(--blok-space-0-5);
   color: var(--blok-database-ink-tertiary);
+}
+
+[data-blok-item-name='template-description'] + [data-blok-popover-item-separator] {
+  padding-block-end: var(--blok-space-1);
 }
 
 [data-blok-database-new] {

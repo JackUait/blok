@@ -30,6 +30,11 @@ describe('board column header actions', () => {
     expect(body).toContain('border-radius: var(--blok-radius-control)');
   });
 
+  // notion-motion.md Round 35 (r35-groupmenu.raw): ⋯ at x 1047 and + at 1071 touch, so the ⋯ menu opens at 1047.
+  it('sets the "⋯" and "+" side by side with no gap', () => {
+    expect(ruleBody(database, '[data-blok-database-column-actions]')).toContain('gap: 0');
+  });
+
   // research/36 §1.1: a hover anywhere in the column shows them. Sub-grouped heads sit outside the column, so they keep header hover.
   it('shows them while the column or its header is hovered, or holds focus or an open menu', () => {
     expect(ruleBody(database, '[data-blok-database-column-actions]')).toContain('opacity: 0');

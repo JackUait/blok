@@ -1527,11 +1527,12 @@
  * column hover (research/36 §1.1). Sub-grouped heads sit outside the column, so header hover stays.
  * Opacity, not visibility: a hidden button leaves the tab order and :focus-visible never reveals it.
  * Notion's hidden buttons take no clicks, so the pointer is off until they show.
+ * notion-motion.md Round 35 (r35-groupmenu.raw): the ⋯ and + touch.
  */
 [data-blok-database-column-actions] {
   display: flex;
   align-items: center;
-  gap: var(--blok-space-0-5);
+  gap: 0;
   margin-inline-start: auto;
   opacity: 0;
   pointer-events: none;
@@ -7941,6 +7942,18 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-select-chip-remove] svg {
   width: 20px;
   height: 20px;
+  margin: -2px;
+}
+
+/* notion-motion.md Round 35 (r35-cell-select.raw): Notion's × is a 16 box 4px from the chip end.
+   The 20px glyph above overhangs it 2px a side, so its 9px ink stays the same size. */
+[data-blok-database-select-chip-remove] {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-select-chip] {
+  padding-inline-end: var(--blok-space-1);
 }
 
 [data-blok-database-person-remove] svg {

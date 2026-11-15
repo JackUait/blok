@@ -576,6 +576,15 @@ describe('cell editor CSS', () => {
       expect(declared('[data-blok-database-person-remove] svg', 'height')).toEqual(['16px']);
     });
 
+    // notion-motion.md Round 35 (r35-cell-select.raw, .png): the × sits in a 16 box 4px from the chip's end, so a
+    // "Red" chip is 55.1 wide, not 57.1. Its ink stays 9px, at x 1250-1259 in both apps.
+    it('boxes the Select chip × 16px, 4px from the chip end, with the same 9px ink', () => {
+      expect(declared('[data-blok-database-select-chip-remove]', 'width')).toEqual(['16px']);
+      expect(declared('[data-blok-database-select-chip-remove]', 'height')).toEqual(['16px']);
+      expect(declared('[data-blok-database-select-chip-remove] svg', 'margin')).toEqual(['-2px']);
+      expect(declared('[data-blok-database-select-chip]', 'padding-inline-end').at(-1)).toBe('var(--blok-space-1)');
+    });
+
     // notion-motion.md Round 9 "Multi-select cell editor": the chip × and the option ⋯ round 6, not 4.
     it('rounds the chip × and the option ⋯ 6px', () => {
       expect(declared('[data-blok-database-select-chip-remove]', 'border-radius')).toEqual(['var(--blok-radius-control)']);

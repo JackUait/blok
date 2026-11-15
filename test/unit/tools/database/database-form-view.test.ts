@@ -512,6 +512,19 @@ describe('DatabaseFormView question chip name', () => {
 
     expect(chip?.getAttribute('aria-label')).toBe('tools.database.formEditQuestion');
   });
+
+  // The chip shows on hover only (Round 32 §4); it stays while its menu is open, which the CSS reads from aria-expanded.
+  it('marks the ••• chip expanded while its Question options are open', () => {
+    const { root } = mount({ setQuestionSetting: vi.fn(), openLinkedProperty: vi.fn() });
+    const chip = question(root, 'email')?.querySelector<HTMLButtonElement>('[data-blok-testid="database-form-question-menu"]');
+
+    expect(chip?.getAttribute('aria-expanded')).toBe('false');
+    chip?.click();
+    expect(chip?.getAttribute('aria-expanded')).toBe('true');
+    document.querySelector<HTMLElement>('[data-blok-testid="database-form-question-linked-property"]')?.click();
+    expect(document.querySelector('[data-blok-testid="database-form-question-settings"]')).toBeNull();
+    expect(chip?.getAttribute('aria-expanded')).toBe('false');
+  });
 });
 
 // notion-motion.md Round 31 §1 (r31-form-qmenu.raw): Question options rows and their order.

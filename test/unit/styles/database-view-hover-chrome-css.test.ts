@@ -317,4 +317,18 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(ruleBody('[data-blok-database-form-question-menu]:hover')).toContain('background: var(--blok-database-hover-bg)');
     expect(ruleBody('[data-blok-database-form-question-menu]:hover')).not.toMatch(/35, 131, 226/);
   });
+
+  // notion-motion.md Round 31 §1, Round 32 §4: Notion shows "Edit question" on hover only.
+  it('hides the Edit question chip until the card is hovered, keeping it for keyboard focus and an open menu', () => {
+    const hidden = ruleBody('[data-blok-database-form-question]:not(:hover) [data-blok-database-form-question-menu]:not(:focus-visible, [aria-expanded="true"])');
+
+    expect(hidden).toContain('opacity: 0');
+    expect(database).toMatch(/@media \(hover: hover\) \{ \[data-blok-database-form-question\]:not\(:hover\) \[data-blok-database-form-question-menu\]/);
+  });
+
+  // r32-b-form-geom.raw: the name ends at 617.2 and the answer starts at 635.2, 18 below. The card's gap gives 4 of it.
+  it('puts the answer 18px under the question name', () => {
+    expect(ruleBody('[data-blok-database-form-question-header]')).toContain('margin-block-end: var(--blok-space-3-5)');
+    expect(ruleBody('[data-blok-database-form-question]')).toContain('gap: var(--blok-space-1)');
+  });
 });

@@ -21085,6 +21085,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   align-items: center;
   justify-content: space-between;
   gap: var(--blok-space-2);
+  margin-block-end: var(--blok-space-3-5);
 }
 
 [data-blok-database-form-question-menu] {
@@ -21108,6 +21109,10 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 [data-blok-database-form-question-menu] svg {
   inline-size: 16px;
   block-size: 16px;
+}
+
+[@media (hover: hover)] [data-blok-database-form-question]:not(:hover) [data-blok-database-form-question-menu]:not(:focus-visible, [aria-expanded="true"]) {
+  opacity: 0;
 }
 
 [data-blok-database-form-provider-answer] {

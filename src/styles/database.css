@@ -18477,11 +18477,13 @@ button[data-blok-database-feed-reaction]:hover,
   background-color: var(--blok-database-form-question-bg);
 }
 
+/* r32-b-form-geom.raw: the answer starts 18 under the name; the card's 4px gap gives the rest. */
 [data-blok-database-form-question-header] {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--blok-space-2);
+  margin-block-end: var(--blok-space-3-5);
 }
 
 /* "Edit question" chip, 24px with a 16px icon (research/21 §1k). Notion's blue
@@ -18507,6 +18509,13 @@ button[data-blok-database-feed-reaction]:hover,
 [data-blok-database-form-question-menu] svg {
   inline-size: 16px;
   block-size: 16px;
+}
+
+/* notion-motion.md Round 31 §1: "Edit question" shows on hover. Kept for keyboard focus and while its menu is open. */
+@media (hover: hover) {
+  [data-blok-database-form-question]:not(:hover) [data-blok-database-form-question-menu]:not(:focus-visible, [aria-expanded="true"]) {
+    opacity: 0;
+  }
 }
 
 [data-blok-database-form-provider-answer] {

@@ -619,6 +619,8 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       menu.setAttribute('data-blok-database-form-question-menu', '');
       menu.setAttribute('data-blok-testid', 'database-form-question-menu');
       menu.setAttribute('aria-label', i18n.t('tools.database.formEditQuestion'));
+      // The CSS keeps the hover-only chip shown while its menu is open.
+      menu.setAttribute('aria-expanded', 'false');
       menu.innerHTML = IconDotsHorizontal;
       menu.addEventListener('click', () => this.openQuestionMenu(property, menu));
       header.append(name.input, menu);
@@ -1030,6 +1032,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       backLabel: i18n.t('tools.database.peekBack'),
       onClose: () => {
         this.panel = null;
+        anchor.setAttribute('aria-expanded', 'false');
         if (this.destroying) return;
         this.options.onInteractionEnd?.();
       },
@@ -1218,6 +1221,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
 
     this.panel = panel;
     panel.open();
+    anchor.setAttribute('aria-expanded', 'true');
     this.building = false;
   }
 

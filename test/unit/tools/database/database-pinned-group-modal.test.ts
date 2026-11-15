@@ -193,6 +193,13 @@ describe('openPinnedGroupModal chip editors', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  // Round 26 §1 (r26-pm-key-*.raw): Tab walks the header and the chips. The editor's own Tab handling must stand down.
+  it('owns its keyboard, so the editor\'s Tab handling leaves the modal alone', () => {
+    open(view({}));
+
+    expect(document.querySelector('[data-blok-database-group-modal]')?.hasAttribute('data-blok-keyboard-owner')).toBe(true);
+  });
+
   it('keeps the modal open on a press inside the editor', () => {
     open(view({ sorts: [{ id: 's', propertyId: 'title', direction: 'asc' }] }));
 

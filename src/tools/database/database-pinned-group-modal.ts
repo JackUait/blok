@@ -287,6 +287,8 @@ export const openPinnedGroupModal = (options: PinnedGroupModalOptions): PinnedGr
   // data-blok-popover gives the body-mounted dialog the database tokens and theme.
   backdrop.setAttribute('data-blok-popover', '');
   backdrop.setAttribute('data-blok-database-group-modal', '');
+  // Without it the editor's keydown takes Tab (block indent), and focus never leaves Search.
+  backdrop.setAttribute('data-blok-keyboard-owner', '');
   panel.setAttribute('data-blok-database-group-modal-panel', '');
   header.setAttribute('data-blok-database-group-modal-header', '');
   title.setAttribute('data-blok-database-group-modal-title', '');

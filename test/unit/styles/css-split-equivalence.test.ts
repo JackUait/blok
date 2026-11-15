@@ -1710,7 +1710,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r51: Round 33 feed "(edited)" and byline-less title, form icon and full-width cover, side peek spacing, gap "+" exit. Net database.css growth against origin/main.
     const DATABASE_R51_BYTES = 2796;
     // Lane r53: Round 34 Hours zoom now label, form cover-only row and preview cover, question ⋯ fade. Net database.css growth against origin/main.
-    const DATABASE_R53_BYTES = 3110;
+    const DATABASE_R53_BYTES = 3221;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

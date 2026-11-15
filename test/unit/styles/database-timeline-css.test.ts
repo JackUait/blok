@@ -387,7 +387,7 @@ describe('Hours zoom now label (Round 34)', () => {
     expect(text).toContain('font-size: 12px');
     expect(text).toContain('font-weight: 500');
     expect(text).toContain('line-height: 18px');
-    expect(text).toContain('padding-inline-end: 3px');
+    expect(text).toContain('padding-inline-end: var(--blok-space-0-75)');
     expect(text).toContain('color: var(--blok-database-timeline-now-text)');
   });
 

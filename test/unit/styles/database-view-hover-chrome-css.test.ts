@@ -138,7 +138,8 @@ describe('form preview cover and icon', () => {
 
   it('centres a 600 column in the preview', () => {
     expect(ruleBody(preview)).toContain('container-type: inline-size');
-    expect(ruleBody(`${preview} > [data-blok-database-form]`)).toContain('max-inline-size: 600px');
+    expect(ruleBody(preview)).toContain('--_blok-form-preview-column: 600px');
+    expect(ruleBody(`${preview} > [data-blok-database-form]`)).toContain('max-inline-size: var(--_blok-form-preview-column)');
     expect(ruleBody(`${preview} > [data-blok-database-form]`)).toContain('margin-inline: auto');
   });
 
@@ -149,7 +150,7 @@ describe('form preview cover and icon', () => {
     expect(body).toContain('block-size: 30vh');
     expect(body).toContain('max-block-size: 280px');
     expect(body).toContain('margin-block-start: calc((var(--blok-space-10) + var(--blok-space-3)) * -1)');
-    expect(body).toContain('margin-inline-start: calc(min(0px, (600px - 100cqi) / 2) - var(--blok-space-10))');
+    expect(body).toContain('margin-inline-start: calc(min(0px, (var(--_blok-form-preview-column) - 100cqi) / 2) - var(--blok-space-10))');
   });
 
   it('lays the icon 42 over the cover, 8 into the column', () => {

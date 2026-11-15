@@ -105,6 +105,22 @@ describe('database table view styles', () => {
     expect(exactRule('[data-blok-database-table-row][data-dragging]::after')).toContain('opacity: 0');
   });
 
+  // notion-motion.md Round 40 §1: on a drop the bar stays still and the dropped row's tint fades in, 200ms ease.
+  it('runs no bar entrance on a drop\'s redraw and fades the dropped row\'s tint in, both off for reduced motion', () => {
+    const landed = '[data-blok-database-table-row][data-landed][aria-selected="true"]::after';
+    const reduce = Array.from(tableCss.matchAll(/@media \(prefers-reduced-motion: reduce\) \{((?:[^{}]*\{[^{}]*\})*)\s*\}/g))
+      .flatMap((block) => Array.from((block[1] ?? '').matchAll(/([^{}]+)\{([^{}]*)\}/g)))
+      .filter((rule) => /animation:\s*none/.test(rule[2] ?? ''))
+      .flatMap((rule) => (rule[1] ?? '').split(',').map((part) => part.trim()));
+
+    // Comes after the entrance rule, so it wins at the same specificity; the leaving bar loses the attribute it matches on.
+    expect(exactRule('[data-blok-database-table-selection-bar][data-still]')).toContain('animation: none');
+    expect(css.indexOf('[data-blok-database-table-selection-bar][data-still]')).toBeGreaterThan(css.indexOf('[data-blok-database-table] > [data-blok-database-table-selection-bar] {'));
+    expect(exactRule(landed)).toContain('animation: blok-database-confirm-fade 200ms ease');
+    expect(exactRule(landed)).not.toMatch(/forwards|both/);
+    expect(reduce).toContain(landed);
+  });
+
   // notion-motion.md "Column header drag": coldrag-mid.png samples rgb(232,232,231), the pressed fill on white,
   // and the next header's icon and "S" show through the ghost.
   it('draws the column ghost as the header in its see-through pressed fill, unshadowed, and slides the other headers over 200ms ease', () => {

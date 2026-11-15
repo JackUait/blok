@@ -9568,6 +9568,11 @@ textarea[data-blok-database-cell-input] {
   opacity: 1;
 }
 
+/* notion-motion.md Round 40 §1: the row a drop redrew fades its tint in. No fill: the transition owns it after. */
+[data-blok-database-table-row][data-landed][aria-selected="true"]::after {
+  animation: blok-database-confirm-fade 200ms ease;
+}
+
 /* A press on ⋮⋮ selects the row, but the row being dragged stays painted as normal (notion-motion.md "Table row drag"). */
 [data-blok-database-table-row][data-dragging]::after {
   opacity: 0;
@@ -10923,9 +10928,15 @@ button[data-blok-database-table-group-count]:hover {
   animation: blok-database-confirm-fade 200ms ease both;
 }
 
+/* Round 40 §1: a drop's redraw re-creates the bar, and Notion's bar stays put. */
+[data-blok-database-table-selection-bar][data-still] {
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-blok-database-selecting="table"] > [data-blok-database-table-selection-bar],
-  [data-blok-database-table] > [data-blok-database-table-selection-bar] {
+  [data-blok-database-table] > [data-blok-database-table-selection-bar],
+  [data-blok-database-table-row][data-landed][aria-selected="true"]::after {
     animation: none;
   }
 }

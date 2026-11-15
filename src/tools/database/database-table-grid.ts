@@ -44,6 +44,8 @@ export interface TableState {
   freshRowId?: string;
   /** The grid had focus, so the redraw gives it back. */
   focused: boolean;
+  /** Row a drag just dropped. The redraw it asks for reads and clears it. */
+  droppedRowId?: string;
 }
 
 export const createTableState = (): TableState => ({

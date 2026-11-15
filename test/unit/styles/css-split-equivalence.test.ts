@@ -1748,7 +1748,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r80: Round 41 gallery, calendar, list and closed-panel timeline end at the text column. Net database.css growth against origin/main.
     const DATABASE_R80_BYTES = 915;
     // Lane r81: Round 41 form toolbar (blue Share form, bordered Preview) and the bordered no-results buttons. Net database.css growth against origin/main.
-    const DATABASE_R81_BYTES = 1756;
+    const DATABASE_R81_BYTES = 1996;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

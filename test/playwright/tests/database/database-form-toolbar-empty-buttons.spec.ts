@@ -109,6 +109,28 @@ test.describe('form toolbar and no-results buttons (notion-motion.md Round 41)',
     await expect(share).toHaveCSS('height', '28px');
   });
 
+  test('"Share form" stays blue while a key presses it', async ({ page }) => {
+    await mount(page, 'v-form');
+    const share = byTestId(page, 'database-toolbar-share-form');
+
+    await share.focus();
+    await page.keyboard.down('Space');
+    const pressed = await page.evaluate(() => {
+      const probe = document.createElement('div');
+
+      probe.style.background = 'var(--blok-database-new-active-bg)';
+      document.querySelector('[data-blok-interface]')?.appendChild(probe);
+      const value = getComputedStyle(probe).backgroundColor;
+
+      probe.remove();
+
+      return value;
+    });
+
+    await expect(share).toHaveCSS('background-color', pressed);
+    await page.keyboard.up('Space');
+  });
+
   test('"Preview" is a 28px bordered button with an eye and a label in primary ink', async ({ page }) => {
     await mount(page, 'v-form');
     const preview = byTestId(page, 'database-toolbar-preview-form');

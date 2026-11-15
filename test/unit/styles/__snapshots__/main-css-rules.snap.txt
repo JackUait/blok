@@ -20775,6 +20775,10 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   background-color: var(--blok-database-new-hover-bg);
 }
 
+[data-blok-database-view-toolbar] > [data-blok-database-toolbar-share-form]:active {
+  background-color: var(--blok-database-new-active-bg);
+}
+
 [data-blok-database-view-toolbar] > [data-blok-database-toolbar-preview-form] {
   gap: var(--blok-space-1-5);
   padding-inline: var(--blok-space-1-5) var(--blok-space-2);

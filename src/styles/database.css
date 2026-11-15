@@ -18217,6 +18217,11 @@ button[data-blok-database-feed-reaction]:hover,
   background-color: var(--blok-database-new-hover-bg);
 }
 
+/* After the hover rule; `> button:active` would paint the gray pressed fill on a key press. */
+[data-blok-database-view-toolbar] > [data-blok-database-toolbar-share-form]:active {
+  background-color: var(--blok-database-new-active-bg);
+}
+
 /* notion-motion.md Round 41 Part B (r41-n-empty-form.png): "Preview" is a 94x28 button, 1px border
    (230,229,227 on white = the control border), an eye and a label in primary ink. 500: the label's ink
    area matches Notion's at 500 (158 px² both) and not at 400 (136). */

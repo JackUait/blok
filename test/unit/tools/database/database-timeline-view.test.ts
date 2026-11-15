@@ -479,6 +479,15 @@ describe('DatabaseTimelineView', () => {
       expect(mount({ view: timelineView({ timelineZoom: 'year' }) }).root.querySelectorAll('[data-blok-database-timeline-weekend]')).toHaveLength(0);
     });
 
+    // notion-motion.md Round 35 Part B: on a Sunday, Notion's Hours body is rgb(253), the bare canvas.
+    it('does not shade a Sunday in Hours zoom', () => {
+      const sunday = '2026-11-15';
+      const { root } = mount({ view: timelineView({ timelineZoom: 'hours' }), center: sunday, today: sunday });
+
+      expect(root.querySelectorAll('[data-blok-database-timeline-weekend]')).toHaveLength(0);
+      expect(root.querySelector('[data-blok-database-timeline-background]')).not.toBeNull();
+    });
+
     it('says so when the database has no date property', () => {
       const { root } = mount({ startPropertyId: undefined });
 

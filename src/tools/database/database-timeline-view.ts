@@ -849,7 +849,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
     layer.setAttribute('data-blok-database-timeline-background', '');
     layer.setAttribute('aria-hidden', 'true');
-    const weekends = DAY_LEVEL.has(this.zoom)
+    // notion-motion.md Round 35 Part B: Notion's Hours body is the bare canvas on a Sunday too.
+    const weekends = DAY_LEVEL.has(this.zoom) && this.zoom !== 'hours'
       ? Array.from({ length: this.window.days }, (_, i) => i).filter((i) => isWeekend(addDays(this.window.start, i)))
       : [];
 

@@ -119,9 +119,9 @@ export class DatabaseCardDrag {
     return this.isDragging;
   }
 
+  /** A drop rebuilds the board and tears this down before the line fades, so the line is hidden, not destroyed. */
   public destroy(): void {
     this.cleanup();
-    this.dropLine.destroy();
   }
 
   private handlePointerMove(e: PointerEvent): void {

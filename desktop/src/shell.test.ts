@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { mountDesktop, setCanLeave } from './shell';
+import { BLOK_MARK_HREF, faviconHref } from './tab-identity';
 
 let routeCalls = 0;
 let reportPageIcon: (id: string, icon: string) => void = () => undefined;
@@ -132,8 +133,13 @@ function installScroll(): void {
   };
 }
 
+function favicon(): string {
+  return document.head.querySelector('link[rel~="icon"]')?.getAttribute('href') ?? '';
+}
+
 afterEach(() => {
   document.body.innerHTML = '';
+  document.head.replaceChildren();
   history.replaceState(null, '', '/');
   document.title = 'Nouvelle page';
   sessionStorage.clear();
@@ -283,6 +289,45 @@ describe('desktop tab strip', () => {
     expect(selected(root).querySelector('[data-desktop-tab-icon]')?.textContent).toBe('📘');
     reportPageIcon('beta', '');
     expect(selected(root).querySelector('[data-desktop-tab-icon="document"]')).not.toBeNull();
+  });
+
+  it('paints the icon of the page on screen onto the favicon', () => {
+    const root = mount();
+    history.pushState(null, '', '/?page=alpha');
+    reportPageIcon('alpha', '\u{1F331}');
+    expect(favicon()).toBe(faviconHref('\u{1F331}'));
+    // A page in a background tab is not what the tab bar shows.
+    button(root, 'Nouvel onglet').click();
+    history.pushState(null, '', '/?page=beta');
+    expect(favicon()).toBe(BLOK_MARK_HREF);
+    reportPageIcon('alpha', '\u{1F4D8}');
+    expect(favicon()).toBe(BLOK_MARK_HREF);
+    reportPageIcon('beta', '\u{1F4D8}');
+    expect(favicon()).toBe(faviconHref('\u{1F4D8}'));
+    reportPageIcon('beta', '');
+    expect(favicon()).toBe(BLOK_MARK_HREF);
+  });
+
+  it('switches the favicon with the tab', () => {
+    const root = mount();
+    history.pushState(null, '', '/?page=alpha');
+    reportPageIcon('alpha', '\u{1F331}');
+    button(root, 'Nouvel onglet').click();
+    history.pushState(null, '', '/?page=beta');
+    reportPageIcon('beta', '\u{1F4D8}');
+    clickTab(root, 0);
+    expect(favicon()).toBe(faviconHref('\u{1F331}'));
+    clickTab(root, 1);
+    expect(favicon()).toBe(faviconHref('\u{1F4D8}'));
+    closeTab(root, 1);
+    expect(favicon()).toBe(faviconHref('\u{1F331}'));
+  });
+
+  it('paints the favicon on the web too, where there is no tab strip', () => {
+    history.replaceState(null, '', '/?page=alpha');
+    mount(false);
+    reportPageIcon('alpha', '\u{1F331}');
+    expect(favicon()).toBe(faviconHref('\u{1F331}'));
   });
 
   it('hides the close control on the last tab and closes any other tab', () => {

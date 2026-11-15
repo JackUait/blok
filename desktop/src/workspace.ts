@@ -13,6 +13,7 @@ import { pageAccess } from './page-access';
 import { openPageSharing } from './cloud/page-sharing';
 import { groupPagesBySection, sectionNames } from './page-section';
 import { nextPageIcon } from './page-icon-sync';
+import { brandedTitle } from './tab-identity';
 import { describeAccessLoss } from './access-friction';
 import { activeWorkspace, workspaceKey, type WorkspaceRef } from './workspace-registry';
 import { createDesktopFooter, readAppearance } from './settings';
@@ -870,7 +871,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     }));
     const url = new URL(location.href);
     if (url.searchParams.has('page')) { url.searchParams.delete('page'); history.replaceState(null, '', url); }
-    document.title = ref.name;
+    document.title = brandedTitle(ref.name);
   }
 
   function onRoute(): void {

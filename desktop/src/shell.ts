@@ -4,6 +4,7 @@ import { createWorkspace, type Workspace } from './workspace';
 import { applyAppearance, readAppearance, watchSystemAppearance } from './settings';
 
 import { buildTabMenuItems, pageLinkFor, type TabMenuAction } from './tab-menu';
+import { applyFavicon } from './tab-identity';
 
 const tabKey = (): string => workspaceKey(activeWorkspace()) === 'local:default' ? 'blok:window-tabs:v1' : `blok:window-tabs:v1:${workspaceKey(activeWorkspace())}`;
 const MAX_TABS = 20;
@@ -71,6 +72,7 @@ export function mountDesktop(root: HTMLElement): void {
   const current = active();
   if (current && current.href !== location.href) nativeReplace(current.href);
   if (current && document.title !== current.title) document.title = current.title;
+  applyFavicon(current?.icon);
   box.workspace = createWorkspace((width) => {
     root.style.setProperty('--desktop-sidebar-width', `${Math.max(isTauri() ? 156 : 84, width)}px`);
   }, syncPageIcon);
@@ -344,6 +346,7 @@ function moveTo(id: string, check: boolean): void {
   nativeReplace(next.href);
   window.scrollTo(0, next.scrollY);
   if (document.title !== next.title) document.title = next.title;
+  applyFavicon(next.icon);
   persist();
   paint();
   box.workspace?.onRoute();
@@ -361,6 +364,7 @@ function createTab(): void {
   nativeReplace(href);
   window.scrollTo(0, 0);
   if (document.title !== 'Nouvelle page') document.title = 'Nouvelle page';
+  applyFavicon(tab.icon);
   persist();
   paint();
   box.workspace?.onRoute();
@@ -396,6 +400,7 @@ function reveal(next: Tab): void {
   nativeReplace(next.href);
   window.scrollTo(0, next.scrollY);
   if (document.title !== next.title) document.title = next.title;
+  applyFavicon(next.icon);
 }
 
 function openPage(): void {
@@ -413,6 +418,8 @@ function syncTitle(): void {
 }
 
 function syncPageIcon(pageId: string, icon: string): void {
+  // The web has no tab strip, so the URL — not a tab — says what is on screen.
+  if (pageId === pageOf(location.href)) applyFavicon(icon);
   let changed = false;
   const tabs = box.session.tabs.map((tab) => {
     if (new URL(tab.href).searchParams.get('page') !== pageId || tab.icon === icon) return tab;
@@ -423,6 +430,10 @@ function syncPageIcon(pageId: string, icon: string): void {
   box.session = { ...box.session, tabs };
   persist();
   paint();
+}
+
+function pageOf(href: string): string | null {
+  try { return new URL(href).searchParams.get('page'); } catch { return null; }
 }
 
 function onPop(): void {

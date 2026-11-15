@@ -5,6 +5,7 @@ import { activeWorkspace, initialWorkspace, rememberWorkspace, selectWorkspace, 
 import { nativeSessionAdapter } from './native-session';
 import { applyAppearance, readAppearance } from './settings';
 import { CloudClient, mountCloudGateway } from './cloud';
+import { brandedTitle } from './tab-identity';
 
 import {loadReactGrab, reactGrabAvailable} from './react-grab';
 
@@ -49,7 +50,7 @@ async function boot(root: HTMLElement): Promise<void> {
   const manageSection = manageSectionFromParams(params);
 
   const showGateway = async (): Promise<void> => {
-    document.title = 'Connexion';
+    document.title = brandedTitle('Connexion');
     await mountCloudGateway(root, {
       apiOrigin: origin || undefined,
       sessionAdapter: adapter,

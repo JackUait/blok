@@ -1,5 +1,6 @@
 import './cloud.css';
 import {WORKSPACE_ROLES} from '../access-vocabulary';
+import {brandedTitle} from '../tab-identity';
 import {styleTextField} from '../ui/controls';
 import {CloudApiError, CloudClient, type CloudInstance, type CloudSession, type CloudSessionAdapter, type CloudWorkspace, type CloudWorkspaceStatus} from './client';
 import {mountCreateWorkspace} from './create-workspace';
@@ -404,7 +405,7 @@ export async function mountCloudGateway(root: HTMLElement, options: CloudGateway
       // matters is in refresh(), which re-reads while the setup route is open
       // so a claim completed in another tab stops showing the assistant.
       state.instance = await client.instance();
-      if (state.instance.name) document.title = `${state.instance.name} — Connexion`;
+      document.title = brandedTitle('Connexion', state.instance.name);
       if (state.instance.setupRequired) {
         routers.setup();
         return;

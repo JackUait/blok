@@ -50,6 +50,10 @@ describe('welcome seed', () => {
     expect(pages[1]?.parentId).toBe('welcome-acme');
     expect(pages[2]?.parentId).toBeNull();
     expect(pages[0]?.icon).toBe('👋');
+    // The header icon comes from the document, not the index: opening a page
+    // syncs index.icon FROM the editor title, so an index-only icon is erased.
+    expect(welcome.icon).toEqual({ type: 'emoji', value: '👋' });
+    expect(rights.icon?.value).toBe('🔑');
     expect(welcome.title).toContain('Bienvenue');
     const text = JSON.stringify(welcome.blocks);
     expect(text).toMatch(/toolbox|boîte à outils|\//i);
@@ -76,14 +80,14 @@ describe('welcome seed', () => {
     // A top-level `options` array of {id,name,color} is invisible to every reader
     // in src/shared/database/, so the column renders empty.
     expect(status).not.toHaveProperty('options');
-    const options = (status?.config as { options?: Array<Record<string, unknown>> } | undefined)?.options;
-    expect(options?.map((option) => option.id)).toEqual(['todo', 'doing', 'done']);
-    for (const option of options ?? []) {
-      expect(typeof option.label).toBe('string');
-      expect(typeof option.position).toBe('string');
+    const options = (status?.config as { options?: Array<Record<string, unknown>> } | undefined)?.options ?? [];
+    expect(options.map((option) => option.label)).toEqual(['À faire', 'En cours', 'Terminé']);
+    for (const option of options) {
+      expect(typeof option.id).toBe('string');
       expect(option).not.toHaveProperty('name');
     }
   });
+
 });
 
 describe('seedWelcomeDocuments ordering', () => {
@@ -119,5 +123,30 @@ describe('seedWelcomeDocuments ordering', () => {
     });
     expect(ok).toBe(false);
     expect(calls).not.toContain('publish:welcome-acme');
+  });
+});
+
+describe('sample database fixture', () => {
+  it('is built by the core normalizers, not written by hand', () => {
+    const { tasks } = buildWelcomeDocuments('acme');
+    const db = tasks.blocks.find((block) => block.type === 'database');
+    const data = db?.data as { views?: Array<Record<string, unknown>>; schema?: Array<Record<string, unknown>> };
+    const view = data.views?.[0];
+    expect(view).toBeTruthy();
+    // queryRows dereferences these without guarding — an absent `sorts` throws
+    // "Cannot read properties of undefined (reading 'flatMap')" and the whole
+    // page renders empty. newView() fills every one of them.
+    for (const key of ['sorts', 'filters', 'visibleProperties', 'calculations', 'hiddenGroups',
+      'collapsedGroups', 'filterTree', 'colorRules', 'groupSettings', 'subGroupSettings', 'properties']) {
+      expect(view).toHaveProperty(key);
+    }
+    // A status column without group settings or without groupId on its options
+    // renders empty, whatever the labels say.
+    const status = data.schema?.find((property) => property.type === 'status');
+    expect(status?.status).toBeTruthy();
+    const options = (status?.config as { options?: Array<Record<string, unknown>> })?.options ?? [];
+    expect(options.length).toBeGreaterThan(0);
+    expect(options.every((option) => typeof option.groupId === 'string')).toBe(true);
+    expect(options.every((option) => typeof option.position === 'string')).toBe(true);
   });
 });

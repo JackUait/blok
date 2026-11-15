@@ -1,3 +1,5 @@
+import { newView, createDefaultStatusOptions, createDefaultStatusSettings } from '../../src/shared/database/schema-ops';
+import type { PropertyDefinition } from '../../types/tools/database';
 import { PAGE_LEVELS, WORKSPACE_ROLES } from './access-vocabulary';
 import type { DesktopPage } from './storage';
 
@@ -54,7 +56,9 @@ type Block = {
   content?: string[];
 };
 
-type WelcomeDocument = { title: string; blocks: Block[] };
+/** The icon lives in the document (OutputData.icon) and is saved with it;
+ *  the index copy is only a mirror that the editor rewrites on open. */
+type WelcomeDocument = { title: string; icon?: { type: 'emoji'; value: string }; blocks: Block[] };
 
 export interface WelcomeDocuments {
   welcome: WelcomeDocument;
@@ -89,6 +93,27 @@ export function buildWelcomeDocuments(workspaceId: string): WelcomeDocuments {
   const row3 = id('welcome-row', workspaceId, '3');
   const toggleId = id('welcome-toggle', workspaceId, 'tips');
 
+  // Built by the core's own normalizers, never by hand. A view written by hand
+  // is missing sorts/filters/filterTree/properties and queryRows throws on the
+  // first flatMap; a status property written by hand is missing its group
+  // settings and renders an empty column. Both happened.
+  let optionSeq = 0;
+  const mintOptionId = (): string => id('welcome-opt', workspaceId, String(optionSeq++));
+  const statusOptions = createDefaultStatusOptions(
+    { notStarted: 'À faire', inProgress: 'En cours', done: 'Terminé' }, mintOptionId);
+  const taskSchema: PropertyDefinition[] = [
+    { id: titleProp, name: 'Tâche', type: 'title', position: 'a0' },
+    {
+      id: statusProp, name: 'Statut', type: 'status', position: 'a1',
+      config: { options: statusOptions },
+      status: createDefaultStatusSettings(),
+    },
+  ];
+  const taskView = newView(
+    { id: viewId, name: 'Toutes les tâches', type: 'table', position: 'a0', visibleProperties: [statusProp] },
+    taskSchema,
+  );
+
   /** A checklist line. `depth` indents it, `checked` ticks and strikes it. */
   const check = (suffix: string, text: string, extra: { depth?: number; checked?: boolean } = {}): Block => ({
     id: id('welcome-check', workspaceId, suffix),
@@ -105,6 +130,7 @@ export function buildWelcomeDocuments(workspaceId: string): WelcomeDocuments {
 
   const welcome: WelcomeDocuments['welcome'] = {
     title: 'Bienvenue sur Blok',
+    icon: { type: 'emoji', value: '👋' },
     blocks: [
       // Already done by the time you read this — ticked, like Notion's first line.
       check('account', 'Créer votre compte', { checked: true }),
@@ -146,6 +172,7 @@ export function buildWelcomeDocuments(workspaceId: string): WelcomeDocuments {
 
   const tasks: WelcomeDocuments['tasks'] = {
     title: 'À faire',
+    icon: { type: 'emoji', value: '✅' },
     blocks: [
       {
         id: id('tasks-p', workspaceId, 'intro'),
@@ -157,36 +184,8 @@ export function buildWelcomeDocuments(workspaceId: string): WelcomeDocuments {
         type: 'database',
         data: {
           title: 'À faire',
-          starter: 'tasks',
-          schema: [
-            { id: titleProp, name: 'Tâche', type: 'title', position: 'a0' },
-            {
-              id: statusProp,
-              name: 'Statut',
-              type: 'status',
-              position: 'a1',
-              // SelectOption lives under config.options as {id,label,color?,position}
-              // (types/tools/database.d.ts). Every reader in src/shared/database/
-              // goes through property.config?.options, so a top-level array of
-              // {id,name,color} renders the column empty.
-              config: {
-                options: [
-                  { id: 'todo', label: 'À faire', color: 'gray', position: 'a0' },
-                  { id: 'doing', label: 'En cours', color: 'blue', position: 'a1' },
-                  { id: 'done', label: 'Terminé', color: 'green', position: 'a2' },
-                ],
-              },
-            },
-          ],
-          views: [
-            {
-              id: viewId,
-              name: 'Toutes les tâches',
-              type: 'table',
-              position: 'a0',
-              visibleProperties: [titleProp, statusProp],
-            },
-          ],
+          schema: taskSchema,
+          views: [taskView],
           activeViewId: viewId,
         },
         content: [row1, row2, row3],
@@ -194,19 +193,19 @@ export function buildWelcomeDocuments(workspaceId: string): WelcomeDocuments {
       {
         id: row1,
         type: 'database-row',
-        data: { title: 'Essayer la boîte à outils', properties: { [titleProp]: 'Essayer la boîte à outils', [statusProp]: 'todo' }, position: 'a0' },
+        data: { title: 'Essayer la boîte à outils', properties: { [titleProp]: 'Essayer la boîte à outils', [statusProp]: statusOptions[0]?.id }, position: 'a0' },
         parent: dbId,
       },
       {
         id: row2,
         type: 'database-row',
-        data: { title: 'Partager une page', properties: { [titleProp]: 'Partager une page', [statusProp]: 'doing' }, position: 'a1' },
+        data: { title: 'Partager une page', properties: { [titleProp]: 'Partager une page', [statusProp]: statusOptions[1]?.id }, position: 'a1' },
         parent: dbId,
       },
       {
         id: row3,
         type: 'database-row',
-        data: { title: 'Inviter un collègue', properties: { [titleProp]: 'Inviter un collègue', [statusProp]: 'done' }, position: 'a2' },
+        data: { title: 'Inviter un collègue', properties: { [titleProp]: 'Inviter un collègue', [statusProp]: statusOptions[2]?.id }, position: 'a2' },
         parent: dbId,
       },
     ],
@@ -214,6 +213,7 @@ export function buildWelcomeDocuments(workspaceId: string): WelcomeDocuments {
 
   const rights: WelcomeDocuments['rights'] = {
     title: 'Droits et partage',
+    icon: { type: 'emoji', value: '🔑' },
     blocks: [
       {
         id: id('rights-p', workspaceId, 'intro'),

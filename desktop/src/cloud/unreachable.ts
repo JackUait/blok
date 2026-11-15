@@ -51,7 +51,7 @@ export function mountUnreachable(options: UnreachableOptions): void {
   if (!onServerChange) return;
   const details = el('details', { attribute: 'data-cloud-section' });
   details.append(el('summary', { text: 'Se connecter à un autre serveur' }));
-  const form = el('form');
+  const form = el('form', { attribute: 'data-cloud-stack' });
   const server = field({
     form,
     label: 'Adresse du serveur',
@@ -62,7 +62,7 @@ export function mountUnreachable(options: UnreachableOptions): void {
   server.placeholder = 'https://votre-serveur.fr';
   server.setAttribute('autocomplete', 'url');
   server.spellcheck = false;
-  const submit = button({ label: 'Utiliser ce serveur', primary: true, type: 'submit', onClick: () => {} });
+  const submit = button({ label: 'Utiliser ce serveur', primary: true, block: true, type: 'submit', onClick: () => {} });
   form.append(submit);
   form.addEventListener('submit', (event) => {
     event.preventDefault();

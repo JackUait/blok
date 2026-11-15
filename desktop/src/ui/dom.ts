@@ -13,6 +13,10 @@ export interface ButtonOptions {
   label: string;
   onClick: () => void | Promise<void>;
   primary?: boolean;
+  /** Full width. Layout is opted into by name, never inferred from `primary`. */
+  block?: boolean;
+  /** Natural width, aligned to the start of a stack. */
+  inline?: boolean;
   attribute?: string;
   type?: 'button' | 'submit';
   className?: string;
@@ -50,6 +54,8 @@ export function button(options: ButtonOptions): HTMLButtonElement {
   });
   node.type = options.type ?? 'button';
   if (options.primary) node.setAttribute('data-cloud-primary', '');
+  if (options.block) node.setAttribute('data-cloud-block', '');
+  if (options.inline) node.setAttribute('data-cloud-inline', '');
   node.addEventListener('click', () => { void options.onClick(); });
   return node;
 }

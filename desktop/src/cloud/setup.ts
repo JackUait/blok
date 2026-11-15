@@ -64,7 +64,7 @@ export function mountSetupAssistant(options: SetupAssistantOptions): void {
     }),
   );
 
-  const form = el('form');
+  const form = el('form', { attribute: 'data-cloud-stack' });
   const adminName = field({ form, label: 'Votre nom', type: 'text', name: 'admin-name', value: draft.adminName });
   adminName.maxLength = 120;
   const email = field({ form, label: 'Adresse e-mail', type: 'email', name: 'admin-email', value: draft.email });
@@ -74,9 +74,11 @@ export function mountSetupAssistant(options: SetupAssistantOptions): void {
   status.setAttribute('role', 'status');
   status.hidden = true;
 
-  const finish = button({ label: 'Créer l’instance', primary: true, type: 'submit', onClick: () => {} });
+  const finish = button({ label: 'Créer l’instance', primary: true, block: true, type: 'submit', onClick: () => {} });
   const verify = button({
     label: 'Vérifier l’envoi',
+    attribute: 'data-cloud-link',
+    inline: true,
     onClick: () => {
       void options.run(async () => {
         sync();
@@ -119,6 +121,6 @@ export function mountSetupAssistant(options: SetupAssistantOptions): void {
   // Say what the defaults are, so nothing feels decided behind the user's back.
   main.append(el('p', {
     text: 'Votre espace et le nom de l’instance seront créés automatiquement, et l’inscription démarre sur invitation. Tout se change dans Réglages → Instance.',
-    attribute: 'data-cloud-muted',
+    attribute: 'data-cloud-setup-note',
   }));
 }

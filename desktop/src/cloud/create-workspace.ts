@@ -47,7 +47,7 @@ export function mountCreateWorkspace(options: CreateWorkspaceOptions): void {
     }));
   }
 
-  const form = el('form');
+  const form = el('form', { attribute: 'data-cloud-stack' });
   const name = field({ form, label: 'Nom de l’espace', type: 'text', name: 'workspace-name' });
   name.maxLength = 120;
   const slug = field({ form, label: 'Identifiant de l’espace', type: 'text', name: 'workspace-slug' });
@@ -62,7 +62,7 @@ export function mountCreateWorkspace(options: CreateWorkspaceOptions): void {
   });
   slug.addEventListener('input', () => { slugState.touched = true; });
 
-  const submit = button({ label: 'Créer l’espace', primary: true, type: 'submit', onClick: () => {} });
+  const submit = button({ label: 'Créer l’espace', primary: true, block: true, type: 'submit', onClick: () => {} });
   form.append(submit);
   form.addEventListener('submit', (event) => {
     event.preventDefault();

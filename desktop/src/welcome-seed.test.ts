@@ -43,8 +43,12 @@ describe('welcome seed', () => {
 
   it('builds a welcome document that teaches Blok gestures and links the rights subpage', () => {
     const { welcome, rights, pages } = buildWelcomeDocuments('acme');
-    expect(pages.map((page) => page.id)).toEqual(['welcome-acme', 'welcome-rights-acme']);
+    // Notion's shape: the welcome page, a rights subpage, and a separate
+    // "To Do List" page beside it rather than a database embedded in the body.
+    expect(pages.map((page) => page.id)).toEqual(['welcome-acme', 'welcome-rights-acme', 'welcome-tasks-acme']);
     expect(pages[1]?.parentId).toBe('welcome-acme');
+    expect(pages[2]?.parentId).toBeNull();
+    expect(pages[0]?.icon).toBe('👋');
     expect(welcome.title).toContain('Bienvenue');
     const text = JSON.stringify(welcome.blocks);
     expect(text).toMatch(/toolbox|boîte à outils|\//i);
@@ -53,13 +57,17 @@ describe('welcome seed', () => {
     expect(text).toMatch(/@|mention/i);
     expect(text).toMatch(/Partager/i);
     expect(text).toContain('welcome-rights-acme');
-    expect(text).toMatch(/database/);
+    expect(text).toContain('welcome-tasks-acme');
+    // The checklist is the page: no headings, and a toggle closes it, like Notion's.
+    expect(welcome.blocks.some((block) => block.type === 'header')).toBe(false);
+    expect(welcome.blocks.some((block) => block.type === 'toggle')).toBe(true);
+    expect(welcome.blocks[0]?.data.checked).toBe(true);
     expect(rights.title).toMatch(/Droits et partage/i);
   });
 
   it('writes status options where every database reader looks for them', () => {
-    const { welcome } = buildWelcomeDocuments('acme');
-    const db = welcome.blocks.find((block) => block.type === 'database');
+    const { tasks } = buildWelcomeDocuments('acme');
+    const db = tasks.blocks.find((block) => block.type === 'database');
     const schema = (db?.data as { schema?: Array<Record<string, unknown>> } | undefined)?.schema ?? [];
     const status = schema.find((property) => property.type === 'status');
     expect(status).toBeTruthy();

@@ -33,7 +33,7 @@ export function mountJoinWorkspace(options: JoinWorkspaceOptions): void {
     }));
   }
 
-  const form = el('form');
+  const form = el('form', { attribute: 'data-cloud-stack' });
   const slug = field({
     form,
     label: 'Identifiant de l’espace',
@@ -57,7 +57,7 @@ export function mountJoinWorkspace(options: JoinWorkspaceOptions): void {
   const statusBox = el('div', { attribute: 'data-cloud-status' });
   statusBox.hidden = true;
 
-  const submit = button({ label: 'Demander à rejoindre', primary: true, type: 'submit', onClick: () => {} });
+  const submit = button({ label: 'Demander à rejoindre', primary: true, block: true, type: 'submit', onClick: () => {} });
   form.append(submit);
   form.addEventListener('submit', (event) => {
     event.preventDefault();

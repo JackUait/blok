@@ -14,14 +14,14 @@ body[data-blok-theme="light"] [data-cloud-gateway] { --desktop-canvas:#fff; --de
 [data-cloud-eyebrow] { display:block; text-transform:uppercase; letter-spacing:1.5px; font-size:10px; font-weight:650; color:var(--desktop-muted,#73736e); margin-bottom:20px; }
 [data-cloud-gateway] button { font:inherit; }
 [data-cloud-gateway] button:not([aria-haspopup]) { border:1px solid var(--blok-popover-border); border-radius:var(--blok-radius-control); background:var(--blok-popover-bg); color:var(--blok-text-primary); padding:6px 11px; cursor:pointer; line-height:1.4; box-shadow:none; }
-[data-cloud-gateway] button:not([aria-haspopup]):hover { background:var(--blok-item-hover-bg); }
-[data-cloud-gateway] button[data-cloud-primary] { background:var(--desktop-ink,#252525); color:var(--desktop-canvas,#fff); border-color:transparent; font-weight:550; }
-[data-cloud-gateway] button[data-cloud-primary]:hover { opacity:.87; }
-[data-cloud-gateway] button[data-cloud-link] { border:0; padding:3px 0; color:var(--desktop-muted,#73736e); }
-[data-cloud-gateway] button:disabled { opacity:.5; cursor:wait; }
+[data-cloud-gateway] button:not([aria-haspopup]):not(:disabled):hover { background:var(--blok-item-hover-bg); }
+[data-cloud-primary] { background:var(--desktop-ink,#252525); color:var(--desktop-canvas,#fff); border-color:transparent; font-weight:550; }
+[data-cloud-primary]:not(:disabled):hover { opacity:.87; }
+[data-cloud-link] { border:0; padding:3px 0; color:var(--desktop-muted,#73736e); background:transparent; }
+[data-cloud-link]:not(:disabled):hover { background:transparent; color:var(--blok-text-primary); }
+[data-cloud-gateway] button:disabled { opacity:.45; cursor:not-allowed; }
 [data-cloud-gateway] button:not([aria-haspopup]):focus-visible { outline:2px solid var(--blok-focus-ring); outline-offset:2px; }
 [data-cloud-gateway] label { display:block; font-size:12px; font-weight:550; margin:17px 0 6px; }
-[data-cloud-gateway] form > button[data-cloud-primary] { width:100%; margin-top:16px; }
 [data-cloud-gateway] hr { border:0; border-top:1px solid var(--desktop-border,#eee); margin:28px 0; }
 [data-cloud-status] { padding:15px 17px; border:1px solid var(--desktop-border,#ddd); border-radius:7px; background:var(--desktop-strip,#f7f7f5); margin:22px 0; }
 [data-cloud-status] p { margin:5px 0 0; }
@@ -35,9 +35,7 @@ body[data-blok-theme="light"] [data-cloud-gateway] { --desktop-canvas:#fff; --de
 [data-cloud-note] { font-size:12px; color:var(--desktop-muted,#73736e); margin-top:20px!important; }
 [data-cloud-gateway] code { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px; }
 [data-cloud-setup-slug] { margin-top:8px; }
-[data-cloud-gateway] button[data-cloud-link] { margin:4px 0 12px; }
 [data-cloud-gateway] [data-desktop-choice] { display:flex; width:100%; margin:4px 0 8px; }
-[data-cloud-gateway] form > button + button[data-cloud-primary] { margin-top:10px; }
 [data-cloud-gateway] footer { max-width:1120px; margin:40px auto 0; padding:25px 40px; border-top:1px solid var(--desktop-border,#eee); color:var(--desktop-muted,#73736e); font-size:12px; }
 @media(max-width:600px) { [data-cloud-gateway] header { padding:22px; align-items:flex-start; } [data-cloud-gateway] main, [data-cloud-gateway] main[data-cloud-narrow] { margin-top:45px; padding:0 24px 30px; } [data-cloud-gateway] h1 { font-size:29px; } [data-cloud-row] { align-items:flex-start; flex-wrap:wrap; } [data-cloud-gateway] footer { padding:24px; } }
 [data-cloud-row] > [aria-haspopup] { width:auto; flex:none; min-width:145px; }
@@ -47,3 +45,14 @@ body[data-blok-theme="light"] [data-cloud-gateway] { --desktop-canvas:#fff; --de
   [data-cloud-gateway] header nav > span { flex-basis:100%; overflow-wrap:anywhere; }
   [data-cloud-row] > div:first-child { flex-basis:100%; }
 }
+
+/* Un sélecteur plat par rôle, aucun combinateur : une règle ne peut plus en
+   battre une autre par la position d'un élément dans l'arbre. Le look
+   (data-cloud-primary, -link) et la mise en page (-stack, -block) sont
+   séparés, sinon « bouton principal » finit par vouloir dire « pleine
+   largeur » partout où on ne le veut pas. */
+[data-cloud-stack] { display:flex; flex-direction:column; align-items:stretch; gap:14px; }
+[data-cloud-stack] label { margin-top:0; }
+[data-cloud-block] { width:100%; }
+[data-cloud-inline] { align-self:flex-start; width:auto; }
+[data-cloud-setup-note] { margin-top:26px!important; font-size:12px; color:var(--desktop-muted,#73736e); }

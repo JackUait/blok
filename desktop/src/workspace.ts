@@ -787,8 +787,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     }
     const docs = buildWelcomeDocuments(workspaceId);
     const welcomePage = docs.pages[0];
-    const rightsPage = docs.pages[1];
-    if (!welcomePage || !rightsPage) return null;
+    if (!welcomePage) return null;
     for (const page of docs.pages) {
       if (!ws.index.pages.some((item) => item.id === page.id)) ws.index.pages.push(page);
     }
@@ -796,12 +795,9 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     saveManifest();
     try {
       await ws.saveOrder;
-      if (ref.kind === 'remote') {
-        await repository.seedPage(welcomePage.id, docs.welcome);
-        await repository.seedPage(rightsPage.id, docs.rights);
-      } else {
-        await repository.writePage(welcomePage.id, JSON.stringify(docs.welcome));
-        await repository.writePage(rightsPage.id, JSON.stringify(docs.rights));
+      for (const { pageId, document } of docs.documents) {
+        if (ref.kind === 'remote') await repository.seedPage(pageId, document);
+        else await repository.writePage(pageId, JSON.stringify(document));
       }
       markWelcomeSeeded(key);
       return welcomePage.id;

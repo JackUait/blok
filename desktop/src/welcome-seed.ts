@@ -11,6 +11,11 @@ export function welcomeRightsPageId(workspaceId: string): string {
   return `welcome-rights-${workspaceId}`;
 }
 
+/** The sample database page, seeded beside the welcome page like Notion's To Do List. */
+export function welcomeTasksPageId(workspaceId: string): string {
+  return `welcome-tasks-${workspaceId}`;
+}
+
 export function welcomeSeedStorageKey(workspaceKey: string): string {
   return `blok:desktop:welcome-seeded:${workspaceKey}`;
 }
@@ -49,22 +54,32 @@ type Block = {
   content?: string[];
 };
 
+type WelcomeDocument = { title: string; blocks: Block[] };
+
 export interface WelcomeDocuments {
-  welcome: { title: string; blocks: Block[] };
-  rights: { title: string; blocks: Block[] };
+  welcome: WelcomeDocument;
+  rights: WelcomeDocument;
+  tasks: WelcomeDocument;
   pages: DesktopPage[];
+  /** Page id paired with its document, so the seeding loop stays generic. */
+  documents: Array<{ pageId: string; document: WelcomeDocument }>;
 }
 
 const id = (prefix: string, workspaceId: string, suffix: string): string =>
   `${prefix}-${workspaceId}-${suffix}`;
 
 /**
- * Client-side welcome fixture (plan §10.1), patterned after database-starters:
- * real blocks teaching Blok gestures, a rights subpage link, and a sample tasks database.
+ * Client-side welcome fixture (plan §10.1), patterned on Notion's own
+ * "Welcome to Notion" page: a 👋 page icon, one checklist whose first item is
+ * already ticked, nested sub-items, inline `code` for the slash commands, and a
+ * toggle at the end holding a few more tips. No headings — the checklist is the
+ * page. The sample database lives on its own page, the way Notion seeds a
+ * separate "To Do List" rather than embedding one.
  */
 export function buildWelcomeDocuments(workspaceId: string): WelcomeDocuments {
   const welcomeId = welcomePageId(workspaceId);
   const rightsId = welcomeRightsPageId(workspaceId);
+  const tasksId = welcomeTasksPageId(workspaceId);
   const dbId = id('welcome-db', workspaceId, 'tasks');
   const viewId = id('welcome-view', workspaceId, 'all');
   const titleProp = 'title';
@@ -72,35 +87,41 @@ export function buildWelcomeDocuments(workspaceId: string): WelcomeDocuments {
   const row1 = id('welcome-row', workspaceId, '1');
   const row2 = id('welcome-row', workspaceId, '2');
   const row3 = id('welcome-row', workspaceId, '3');
+  const toggleId = id('welcome-toggle', workspaceId, 'tips');
 
-  const checklist = (suffix: string, text: string): Block => ({
+  /** A checklist line. `depth` indents it, `checked` ticks and strikes it. */
+  const check = (suffix: string, text: string, extra: { depth?: number; checked?: boolean } = {}): Block => ({
     id: id('welcome-check', workspaceId, suffix),
     type: 'list',
-    data: { text, style: 'checklist', checked: false },
+    data: { text, style: 'checklist', checked: extra.checked ?? false, ...(extra.depth ? { depth: extra.depth } : {}) },
+  });
+
+  const tip = (suffix: string, text: string): Block => ({
+    id: id('welcome-tip', workspaceId, suffix),
+    type: 'paragraph',
+    data: { text },
+    parent: toggleId,
   });
 
   const welcome: WelcomeDocuments['welcome'] = {
     title: 'Bienvenue sur Blok',
     blocks: [
+      // Already done by the time you read this — ticked, like Notion's first line.
+      check('account', 'Créer votre compte', { checked: true }),
+      check('desktop', '<b>Installer l’application de bureau</b> pour travailler hors ligne et emporter Blok partout'),
+      check('slash', 'Cliquez n’importe où ci-dessous et <b>tapez</b> <code>/</code> pour voir ce que vous pouvez créer — titres, tableaux, cases à cocher, etc.'),
+      check('slash-page', 'Tapez <code>/page</code> pour ajouter une <b>nouvelle page</b> et imbriquer ce que vous voulez, où vous voulez', { depth: 1 }),
+      check('sidebar', '<b>Trouvez</b>, <b>organisez</b> et <b>ajoutez des pages</b> depuis la barre latérale, à gauche 👈'),
+      check('tasks', 'Jetez un œil à la page <b>À faire</b> ajoutée pour vous, avec d’autres astuces', { depth: 1 }),
+      check('drag', 'Glissez un bloc par sa poignée ☰ pour le déplacer, ou <code>Tab</code> pour l’imbriquer sous le précédent', { depth: 1 }),
+      check('share', 'Utilisez <b>Partager</b>, en haut de la page, pour choisir qui la voit'),
+      check('rights', 'Les trois rôles et les trois niveaux sont expliqués dans <b>Droits et partage</b>', { depth: 1 }),
+      // Notion links its seeded pages from the checklist; Blok's native
+      // construct for that is the page block, so the two land here.
       {
-        id: id('welcome-p', workspaceId, 'intro'),
-        type: 'paragraph',
-        data: { text: 'Quelques gestes pour démarrer — chacun se vérifie en une action.' },
-      },
-      checklist('slash', 'Tapez <code>/</code> dans un paragraphe vide pour ouvrir la boîte à outils'),
-      checklist('drag', 'Glissez un bloc par sa poignée ☰ pour le réordonner'),
-      checklist('tab', 'Appuyez sur <code>Tab</code> pour imbriquer un bloc sous le précédent'),
-      checklist('mention', 'Tapez <code>@</code> pour mentionner une page ou une date'),
-      checklist('share', 'Utilisez le bouton <b>Partager</b> pour choisir qui voit cette page'),
-      {
-        id: id('welcome-h', workspaceId, 'rights'),
-        type: 'header',
-        data: { text: 'Droits et partage', level: 2 },
-      },
-      {
-        id: id('welcome-p', workspaceId, 'rights'),
-        type: 'paragraph',
-        data: { text: 'Les rôles d’espace et les niveaux de page sont expliqués ici :' },
+        id: id('welcome-page', workspaceId, 'tasks-link'),
+        type: 'page',
+        data: { pageId: tasksId },
       },
       {
         id: id('welcome-page', workspaceId, 'rights-link'),
@@ -108,14 +129,28 @@ export function buildWelcomeDocuments(workspaceId: string): WelcomeDocuments {
         data: { pageId: rightsId },
       },
       {
-        id: id('welcome-h', workspaceId, 'db'),
-        type: 'header',
-        data: { text: 'Une base pour s’entraîner', level: 2 },
+        id: toggleId,
+        type: 'toggle',
+        data: { text: 'Ceci est un bloc dépliable. Cliquez sur le petit triangle pour quelques astuces de plus.' },
+        content: [
+          id('welcome-tip', workspaceId, 'mention'),
+          id('welcome-tip', workspaceId, 'search'),
+          id('welcome-tip', workspaceId, 'drop'),
+        ],
       },
+      tip('mention', 'Tapez <code>@</code> pour mentionner une page ou une date, où que vous soyez.'),
+      tip('search', '<code>Cmd</code>+<code>K</code> ouvre la recherche : retrouvez une page par son titre ou son chemin.'),
+      tip('drop', 'Glissez une image depuis votre bureau directement dans la page — elle s’y dépose.'),
+    ],
+  };
+
+  const tasks: WelcomeDocuments['tasks'] = {
+    title: 'À faire',
+    blocks: [
       {
-        id: id('welcome-p', workspaceId, 'db'),
+        id: id('tasks-p', workspaceId, 'intro'),
         type: 'paragraph',
-        data: { text: 'Exemple monté avec le modèle Tâches — modifiez-le librement.' },
+        data: { text: 'Cochez, renommez, ajoutez des colonnes — cette base est la vôtre.' },
       },
       {
         id: dbId,
@@ -198,9 +233,16 @@ export function buildWelcomeDocuments(workspaceId: string): WelcomeDocuments {
   };
 
   const pages: DesktopPage[] = [
-    { id: welcomeId, title: welcome.title, parentId: null },
-    { id: rightsId, title: rights.title, parentId: welcomeId },
+    { id: welcomeId, title: welcome.title, icon: '👋', parentId: null },
+    { id: rightsId, title: rights.title, icon: '🔑', parentId: welcomeId },
+    { id: tasksId, title: tasks.title, icon: '✅', parentId: null },
   ];
 
-  return { welcome, rights, pages };
+  const documents = [
+    { pageId: welcomeId, document: welcome },
+    { pageId: rightsId, document: rights },
+    { pageId: tasksId, document: tasks },
+  ];
+
+  return { welcome, rights, tasks, pages, documents };
 }

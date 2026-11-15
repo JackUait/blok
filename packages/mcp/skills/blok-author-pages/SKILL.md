@@ -7,6 +7,10 @@ description: Créer ou restructurer une page Blok via MCP à partir de sources o
 
 Faire une page que son lecteur peut comprendre et utiliser dès l'ouverture. Garder la conclusion, les décisions, les risques et la prochaine action visibles ; les détails secondaires peuvent se replier.
 
+## Comprendre le résultat attendu
+
+Avant de choisir les blocs, lire [le cadrage éditorial](references/intent.md). Déduire du contexte ce que le lecteur veut comprendre ou réussir, son niveau et les sources nécessaires. Poser une question ciblée seulement si une ambiguïté change substantiellement le résultat ; sinon annoncer une hypothèse raisonnable et avancer. Une simple question reçoit une réponse : elle ne demande pas automatiquement de créer une page. Une demande de documentation autorise sa rédaction dans la destination identifiée, sans validation supplémentaire du plan.
+
 ## Cible et contrat
 
 - Utiliser les outils Blok disponibles. Découvrir leur surface avant de promettre une fonctionnalité. Le paquet MCP local expose six outils de documents ; le service cloud peut ajouter `blok_list_workspaces`, `blok_list_pages`, `blok_create_page`, `blok_upload_image`.

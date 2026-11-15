@@ -6150,6 +6150,13 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   background-color: var(--blok-database-popover-hover);
 }
 
+/* notion-motion.md Round 41 Part A: Notion's line under the AI rows. In the grid it lands 12 in from the popover's sides. */
+[data-blok-database-property-autofill-rule] {
+  height: 1px;
+  margin: var(--blok-space-2) var(--blok-space-1);
+  background-color: var(--blok-database-table-border);
+}
+
 [data-blok-database-property-autofill-tag] {
   padding: 0 var(--blok-space-1);
   border-radius: var(--blok-radius-mark);

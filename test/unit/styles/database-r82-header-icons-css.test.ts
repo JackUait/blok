@@ -89,3 +89,15 @@ describe('database Round 41 header ⋯', () => {
     expect(ruleBody('[data-blok-database-table-property-visibility] svg')).toContain('width: 20px');
   });
 });
+
+describe('database Round 41 type picker AI line', () => {
+  // Notion: 1px in the table border ink, 12 in from the popover's sides, its top 7.5 under the Translate row
+  // and "Select type"'s text 20 under it. The grid body pads 4 and its section 4 more.
+  it('draws a 1px line between the AI rows and the types', () => {
+    const body = ruleBody('[data-blok-database-property-autofill-rule]');
+
+    expect(body).toContain('height: 1px');
+    expect(body).toContain('margin: var(--blok-space-2) var(--blok-space-1)');
+    expect(body).toContain('background-color: var(--blok-database-table-border)');
+  });
+});

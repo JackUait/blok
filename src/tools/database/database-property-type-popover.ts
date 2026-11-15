@@ -447,6 +447,11 @@ export class DatabasePropertyTypePopover {
       item.addEventListener('click', () => pick(preset.mode));
       section.appendChild(item);
     }
+    const rule = document.createElement('div');
+
+    // notion-motion.md Round 41 Part A: a line closes the AI rows.
+    rule.setAttribute('data-blok-database-property-autofill-rule', '');
+    section.appendChild(rule);
 
     return section;
   }

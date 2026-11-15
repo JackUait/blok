@@ -721,6 +721,23 @@ describe('DatabasePropertyTypePopover', () => {
       flow.destroy();
     });
 
+    // notion-motion.md Round 41 Part A: a 1px line closes the AI Autofill rows, before "Select type".
+    it('closes the AI Autofill rows with a line, and draws none without them', () => {
+      const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true, onAutofill: vi.fn() });
+
+      flow.open(anchor);
+      const translate = document.querySelector('[data-blok-database-property-autofill-option="translate"]');
+
+      expect(translate?.nextElementSibling?.hasAttribute('data-blok-database-property-autofill-rule')).toBe(true);
+      flow.destroy();
+
+      const plain = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true });
+
+      plain.open(anchor);
+      expect(document.querySelector('[data-blok-database-property-autofill-rule]')).toBeNull();
+      plain.destroy();
+    });
+
     it('draws Summarize with the Text lines glyph', () => {
       const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true, onAutofill: vi.fn() });
       const lines = document.createElement('div');

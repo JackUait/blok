@@ -9831,6 +9831,12 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   background-color: var(--blok-database-popover-hover);
 }
 
+[data-blok-database-property-autofill-rule] {
+  height: 1px;
+  margin: var(--blok-space-2) var(--blok-space-1);
+  background-color: var(--blok-database-table-border);
+}
+
 [data-blok-database-property-autofill-tag] {
   padding: 0 var(--blok-space-1);
   border-radius: var(--blok-radius-mark);

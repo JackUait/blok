@@ -3337,6 +3337,27 @@ button[data-blok-database-board-lane-count]:hover {
   color: var(--blok-database-value-chevron);
 }
 
+/* notion-motion.md Round 35 (r35-tabmenu.raw): the view tab menu's "Source", its name 8px after it, a 16 chevron
+   6px after the name and 8px from the row end, so "Source  New database ›" fits the 220 menu.
+   The chevron rule outranks the column menu's 20px icon slot. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-column-menu'] [data-blok-item-name='database-view-source'] {
+  padding-inline-end: var(--blok-space-2);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-column-menu'] [data-blok-item-name='database-view-source'] [data-blok-popover-item-value] {
+  padding-inline-start: var(--blok-space-2);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-column-menu'] [data-blok-item-name='database-view-source'] [data-blok-popover-item-icon-chevron-right] {
+  width: 16px;
+  margin-inline: var(--blok-space-1-5) 0;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-column-menu'] [data-blok-item-name='database-view-source'] [data-blok-popover-item-icon-chevron-right] svg {
+  width: 16px;
+  height: 16px;
+}
+
 /* notion-spec-2 §12: the Color list is 296 tall, rows full width with no gap. A row pads 8px and holds
    a 20px swatch slot, so its swatches line up with the button's. The ">" keeps the Edit property
    submenu, which holds the list's root, out. */

@@ -534,6 +534,50 @@ describe('New data source: a view bound to a second source in the same block', (
     expect(row?.textContent).toContain('Projects');
   });
 
+  const viewMenuSource = async (viewId: string): Promise<HTMLElement | null> => {
+    own(`[role="tab"][data-view-id="${viewId}"]`).click();
+    await quiet();
+
+    return document.querySelector<HTMLElement>('[data-blok-popover-opened="true"] [data-blok-item-name="database-view-source"]');
+  };
+
+  // notion-motion.md Round 35: the view tab menu has "Source › <name>" after Edit view.
+  it('the view menu\'s "Source" names the view\'s source and opens the Source picker', async () => {
+    await make(doc('v1'));
+    const row = await viewMenuSource('v1');
+
+    expect(row?.textContent).toContain('Source');
+    expect(row?.textContent).toContain('Projects');
+    expect(row?.getAttribute('aria-disabled')).toBeNull();
+    row?.click();
+    await quiet();
+
+    expect(byTestId('database-source-search')).not.toBeNull();
+    expect(byTestId('database-source-option-src-b')?.textContent).toContain('Src B');
+  });
+
+  it('the view menu\'s "Source" is greyed, as View settings\' is, with no second source', async () => {
+    await make(plainDoc());
+    const row = await viewMenuSource('v1');
+
+    expect(row?.textContent).toContain('Projects');
+    expect(row?.getAttribute('aria-disabled')).toBe('true');
+  });
+
+  // notion-motion.md Round 35: an untitled database's own source reads "New database", the title placeholder.
+  it('an untitled database\'s own source reads "New database" in the view menu and View settings', async () => {
+    const [database, ...rest] = plainDoc();
+
+    await make([{ ...database, data: { ...database.data, title: '' } }, ...rest]);
+
+    expect((await viewMenuSource('v1'))?.textContent).toContain('New database');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await quiet();
+    await openSettings();
+
+    expect(byTestId('database-settings-source')?.textContent).toContain('New database');
+  });
+
   it('a gallery view moves onto a second source: a second source draws every layout', async () => {
     const api = await make(doc('vgallery', { views: [table('v1', 'a0'), { ...table('vgallery', 'a1'), type: 'gallery', name: 'Gallery' }, table('vb', 'a2', { dataSourceId: 'src-b' })] }));
 

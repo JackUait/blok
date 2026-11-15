@@ -79,6 +79,21 @@ describe('column header menu name row (Round 35)', () => {
   });
 });
 
+// notion-motion.md Round 35 (r35-tabmenu.raw): "Source" ends at 624.9, "New database" starts at 632.9 and ends at 725,
+// a 16 chevron at 731-747, the row ending at 755: the row fits the 220 menu.
+describe('view tab menu Source row (Round 35)', () => {
+  const ROW = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-column-menu'] [data-blok-item-name='database-view-source']";
+
+  it('sets the source name 8px after "Source", then a 16px chevron 6px after it, 8px from the row end', () => {
+    expect(declared(ROW, 'padding-inline-end')).toEqual(['var(--blok-space-2)']);
+    expect(declared(`${ROW} [data-blok-popover-item-value]`, 'padding-inline-start')).toEqual(['var(--blok-space-2)']);
+    expect(declared(`${ROW} [data-blok-popover-item-icon-chevron-right]`, 'margin-inline')).toEqual(['var(--blok-space-1-5) 0']);
+    expect(declared(`${ROW} [data-blok-popover-item-icon-chevron-right]`, 'width')).toEqual(['16px']);
+    expect(declared(`${ROW} [data-blok-popover-item-icon-chevron-right] svg`, 'width')).toEqual(['16px']);
+    expect(declared(`${ROW} [data-blok-popover-item-icon-chevron-right] svg`, 'height')).toEqual(['16px']);
+  });
+});
+
 describe('add property menu (T12)', () => {
   // Notion 2026-10-25: 290 wide, one column of types.
   it('is 290 wide with one column of types', () => {

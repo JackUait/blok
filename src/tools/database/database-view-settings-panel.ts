@@ -719,13 +719,16 @@ export class ViewSettingsPages {
     });
   }
 
+  /** notion-motion.md Round 35: an untitled database's own source reads as the title placeholder, "New database". */
   private sourceName(choice: DataSourceChoice | undefined): string {
-    return choice === undefined || choice.title.trim() === '' ? this.t('newDataSource') : choice.title;
+    if (choice !== undefined && choice.title.trim() !== '') return choice.title;
+
+    return choice !== undefined && choice.id === this.ctx.dataSources?.list()[0]?.id ? this.t('titlePlaceholder') : this.t('newDataSource');
   }
 
   // ─── Source: the other sources of this database, under "Suggested" (research/23 §10) ───
 
-  private sourcePicker(sources: DataSourceSettings): PanelPage {
+  sourcePicker(sources: DataSourceSettings): PanelPage {
     const state = { query: '' };
     const list = document.createElement('div');
     const fill = (panel: DatabasePanel): void => {
@@ -3506,7 +3509,7 @@ const idList = (value: FilterConfig['value']): string[] => {
 };
 
 /** `rename` is the root with the name field focused and selected (findings V08). */
-export type ViewSettingsStart = 'root' | 'rename' | 'filter' | 'sort' | 'group' | 'layout' | 'properties' | 'automations' | 'autofill';
+export type ViewSettingsStart = 'root' | 'rename' | 'filter' | 'sort' | 'group' | 'layout' | 'properties' | 'automations' | 'autofill' | 'source';
 
 /** Opens the view settings panel under `anchor`, at `start`. */
 export const openViewSettings = (
@@ -3526,6 +3529,7 @@ export const openViewSettings = (
     properties: (): PanelPage => pages.properties(),
     automations: (): PanelPage => ctx.automations === undefined ? pages.root() : automationListPage(ctx.automations, ctx.i18n),
     autofill: (): PanelPage => ctx.autofill === undefined ? pages.root() : pages.autofillList(ctx.autofill),
+    source: (): PanelPage => ctx.dataSources === undefined ? pages.root() : pages.sourcePicker(ctx.dataSources),
   }[start]();
   const panel = new DatabasePanel({
     anchor,

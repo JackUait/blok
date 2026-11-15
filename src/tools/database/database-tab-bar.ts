@@ -83,6 +83,10 @@ export interface TabBarOptions {
   onEditView?: (viewId: string, anchor: HTMLElement) => void;
   /** "Rename" opens the view settings with the name field focused (findings V08). Without it, the tab renames inline. */
   onRenameView?: (viewId: string, anchor: HTMLElement) => void;
+  /** "Source ›": the view's data source, read when the menu opens; undefined leaves the row out. */
+  viewSource?: (viewId: string) => { name: string; enabled: boolean } | undefined;
+  /** "Source ›" pressed: opens the view settings' Source picker. */
+  onViewSource?: (viewId: string, anchor: HTMLElement) => void;
   /** "Copy link to view". */
   onCopyLink?: (viewId: string) => void;
   /** "Open as full page": read when the menu opens; undefined leaves the row out. */
@@ -535,6 +539,7 @@ export class DatabaseTabBar {
           onEditView(viewId, menu.editAnchor);
         },
       }]),
+      ...this.sourceItems(viewId, menu.editAnchor),
     ];
     const shareItems: PopoverItemParams[] = [
       ...(onCopyLink === undefined ? [] : [{
@@ -609,6 +614,25 @@ export class DatabaseTabBar {
 
     this.contextPopover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
     this.contextPopover.show();
+  }
+
+  /** notion-motion.md Round 35 (r35-tabmenu.raw): "Source" with the source's name in gray, then a chevron. */
+  private sourceItems(viewId: string, anchor: HTMLElement): PopoverItemParams[] {
+    const source = this.options.viewSource?.(viewId);
+    const onSource = this.options.onViewSource;
+
+    if (source === undefined || onSource === undefined) return [];
+
+    return [{
+      icon: IconDatabase,
+      name: 'database-view-source',
+      title: this.t('tools.database.settingsSource', 'Source'),
+      valueLabel: source.name,
+      chevron: true,
+      isDisabled: !source.enabled,
+      closeOnActivate: true,
+      onActivate: () => onSource(viewId, anchor),
+    }];
   }
 
   /** "Hide data source titles" (research/23 §10). The item stays with one source too. */

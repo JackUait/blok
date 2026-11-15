@@ -192,7 +192,7 @@ describe('view tabs (feel/findings-toolbar)', () => {
 
   describe("V07: the view menu takes Notion's order and labels", () => {
     // notion-motion.md Round 14: "Open as full page" sits between Copy link to view and Hide data source titles.
-    it('lists Rename, Display as, Edit view · Copy link to view, Open as full page, Hide data source titles · Duplicate view, Delete view', async () => {
+    it('lists Rename, Display as, Edit view, Source · Copy link to view, Open as full page, Hide data source titles · Duplicate view, Delete view', async () => {
       await make(doc());
 
       tab('v1').click();
@@ -202,6 +202,7 @@ describe('view tabs (feel/findings-toolbar)', () => {
         'database-view-rename',
         'database-tab-display',
         'database-view-edit',
+        'database-view-source',
         'database-view-copy-link',
         'database-view-full-page',
         'database-view-data-source-titles',

@@ -440,6 +440,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/decimals-default': cmd('database.updateProperty'),
   'menu:database/decimals-*': cmd('database.updateProperty'),
   'menu:database/database-view-edit': exempt('chrome', 'Opens the view settings panel; each setting in it has its own ledger row.'),
+  'menu:database/database-view-source': exempt('chrome', 'Opens the view settings panel at its Source page; the document does not change until a source is picked there.'),
   'menu:database/database-dashboard-add-*': cmds(['database.addView'], 'Add widget: a chart, number, table or list view on the dashboard, addView with dashboardViewId.'),
   'menu:database/database-dashboard-widget-edit': exempt('chrome', 'Opens the widget view\'s settings panel; each setting in it has its own ledger row.'),
   'menu:database/database-dashboard-widget-duplicate': cmds(['database.duplicateView'], 'Duplicate a widget: duplicateView of a widget view places the copy next to it.'),

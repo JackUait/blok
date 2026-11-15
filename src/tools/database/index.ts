@@ -5208,6 +5208,10 @@ export class DatabaseTool implements BlockTool {
       onDelete: (viewId) => this.requestDeleteView(viewId),
       onReorder: (viewId, newPosition) => this.reorderView(viewId, newPosition),
       onEditView: (viewId, anchor) => this.editView(viewId, anchor),
+      ...(this.linked ? {} : {
+        viewSource: (viewId: string) => this.viewSource(viewId),
+        onViewSource: (viewId: string, anchor: HTMLElement) => this.editView(viewId, anchor, 'source'),
+      }),
       onRenameView: (viewId, anchor) => this.editView(viewId, anchor, 'rename'),
       onCopyLink: (viewId) => this.copyViewLink(viewId),
       openFullPage: () => (this.fullPageOpener() === undefined ? undefined : (viewId) => this.openFullPage(viewId)),
@@ -5349,8 +5353,22 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** This block's own data, then its second sources: the child database blocks, whether a view shows them or not. */
-  private dataSourceChoices(): DataSourceChoice[] {
-    const type = this.model.getView(this.activeViewId)?.type;
+  /**
+   * The view tab menu's "Source" (notion-motion.md Round 35): the view's source name, as View settings
+   * names it, and whether there is another source to pick, as View settings enables its row.
+   */
+  private viewSource(viewId: string): { name: string; enabled: boolean } {
+    const current = this.model.getView(viewId)?.dataSourceId ?? this.dataId;
+    const choices = this.dataSourceChoices(viewId);
+    const choice = [...choices, ...this.existingSources()].find((option) => option.id === current);
+    const fallback = current === this.dataId ? 'tools.database.titlePlaceholder' : 'tools.database.newDataSource';
+    const name = choice === undefined || choice.title.trim() === '' ? this.api.i18n.t(fallback) : choice.title;
+
+    return { name, enabled: !this.structureLocked() && choices.some((option) => option.id !== current && option.fits) };
+  }
+
+  private dataSourceChoices(viewId = this.activeViewId): DataSourceChoice[] {
+    const type = this.model.getView(viewId)?.type;
     const fits = type !== undefined && RENDERED_LAYOUTS.includes(type);
     const titleOf = (tool: DatabaseTool): string => tool.titleElement?.textContent ?? tool.title;
     const sources = this.api.blocks.getChildren(this.dataId).flatMap((child): DataSourceChoice[] => {
@@ -7110,7 +7128,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** "Edit view" or "Rename" on a tab: show that view, then its settings. */
-  private editView(viewId: string, anchor: HTMLElement, start: 'root' | 'rename' = 'root'): void {
+  private editView(viewId: string, anchor: HTMLElement, start: 'root' | 'rename' | 'source' = 'root'): void {
     this.switchView(viewId);
     const tab = this.element?.querySelector<HTMLElement>(`[data-blok-database-tab][data-view-id="${CSS.escape(viewId)}"]`);
 

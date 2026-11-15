@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 import type { CodeData } from '../../../../types/tools/code';
 import { DATA_ATTR } from '../../../../src/components/constants/data-attributes';
+import { CARD_STYLES, HEADER_CONTROLS_STYLES, TAB_ROW_STYLES } from '../../../../src/tools/code/constants';
 import type { CodeTool as CodeToolClass } from '../../../../src/tools/code';
 
 vi.mock('../../../../src/shared/katex', () => ({
@@ -461,6 +462,40 @@ describe('code block header', () => {
       const el = new CodeTool(createOptions({ code: 'a' })).render();
 
       expect(query(el, 'code-gutter')?.getAttribute(DATA_ATTR.mutationFree)).toBe('true');
+    });
+  });
+
+  /**
+   * Notion shows nothing over a code block at rest: the language, the filename
+   * and the actions appear on hover. Blok's controls already did
+   * (HEADER_CONTROLS_STYLES), but the folder tab holding the language stayed
+   * lit on every snippet of a page — a permanent band over the content.
+   *
+   * The tab now follows the SAME three conditions as the controls and the
+   * filename slot, the third being what keeps it while the language picker is
+   * open: the picker mounts on <body>, so opening it ends hover and
+   * focus-within at once.
+   */
+  describe('tab row at rest', () => {
+    const REVEAL = [
+      'group-hover/code:opacity-100',
+      'group-focus-within/code:opacity-100',
+      'group-has-[[aria-expanded=true]]/code:opacity-100',
+    ];
+
+    it('hides the tab row until the block is hovered, focused or has a menu open', () => {
+      expect(TAB_ROW_STYLES).toContain('opacity-0');
+      REVEAL.forEach((rule) => expect(TAB_ROW_STYLES).toContain(rule));
+    });
+
+    it('reveals it on the same conditions as the controls beside it', () => {
+      REVEAL.forEach((rule) => expect(HEADER_CONTROLS_STYLES).toContain(rule));
+    });
+
+    // Square only while the tab is there to sit on it; round the rest of the time.
+    it('keeps the card corner round while no tab covers it', () => {
+      expect(CARD_STYLES).not.toMatch(/(?<!:)rounded-ss-none/);
+      expect(CARD_STYLES).toContain('group-hover/code:rounded-ss-none');
     });
   });
 });

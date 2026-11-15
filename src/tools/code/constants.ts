@@ -110,11 +110,23 @@ export const LANGUAGE_DOT_FALLBACK = 'var(--blok-gray-text)';
  * tab row controls, which a static view never renders.
  */
 export const WRAPPER_STYLES = ['group/code', '@container/code', ...CODE_WRAPPER_CLASSES].join(' ');
-/** The card's start corner is square because the tab sits on it. */
-export const CARD_STYLES = [...CODE_CARD_CLASSES, 'rounded-ss-none'].join(' ');
+/**
+ * The start corner goes square only while the tab is there to sit on it. At
+ * rest the card is a plain rounded panel, as Notion's is.
+ */
+export const CARD_STYLES = [
+  ...CODE_CARD_CLASSES,
+  'group-hover/code:rounded-ss-none group-focus-within/code:rounded-ss-none group-has-[[aria-expanded=true]]/code:rounded-ss-none',
+].join(' ');
 /** Below this block width the Copy button keeps only its icon, so the tab row never clips. */
 export const COPY_LABEL_STYLES = 'hidden @min-[26rem]/code:inline';
-export const TAB_ROW_STYLES = 'flex items-end gap-2 min-w-0';
+/**
+ * Nothing stands over a code block at rest. The row follows the same three
+ * conditions as the controls inside it, the third keeping it while the
+ * language picker is open: the picker mounts on <body>, so opening it ends
+ * hover and focus-within at once.
+ */
+export const TAB_ROW_STYLES = 'flex items-end gap-2 min-w-0 opacity-0 group-hover/code:opacity-100 group-focus-within/code:opacity-100 group-has-[[aria-expanded=true]]/code:opacity-100 transition-opacity';
 /**
  * A folder tab on the card's top edge. `-mb-px` lays its open bottom over the
  * card's top border, so tab and card read as one shape. Publishes the corner

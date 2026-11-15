@@ -1,5 +1,5 @@
 import type { PropertyDefinition, PropertyValue } from '../types';
-import { CellPopover, coverMinWidth } from './cell-popover';
+import { CellPopover, coverMinHeight, coverMinWidth } from './cell-popover';
 import { resolveLocale } from './date-format';
 import { formatNumberValue, parseNumberText } from './number-format';
 import type { CellEditorContext, CellEditorHandle } from './types';
@@ -71,6 +71,7 @@ export const openTextEditor = (
   if (header !== undefined) content.appendChild(header);
   content.appendChild(field);
   if (footer !== undefined) content.appendChild(footer);
+  if (ctx.coverCell === true) content.style.minHeight = coverMinHeight(anchor);
 
   const resolve = (): Outcome | null => {
     // The shown number may be rounded: left as shown, the stored value stays.

@@ -505,4 +505,26 @@ describe('checkbox cell', () => {
     press(field(), 'Enter');
     expect(ctx.onCommit).toHaveBeenCalledWith('Z');
   });
+  describe('a table cell editor on a tall row', () => {
+    const tallAnchor = (): HTMLButtonElement => {
+      const anchor = makeAnchor();
+
+      vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(new DOMRect(1278, 377, 200, 79));
+
+      return anchor;
+    };
+
+    // notion-motion.md Round 35: Notion's URL editor is 240x80 on a 79px row, from 1px over the cell to its bottom.
+    it('reaches down to the bottom of the cell it covers', () => {
+      openCellEditor(makeProperty('url'), '', tallAnchor(), makeEditorContext({ coverCell: true }));
+
+      expect(editorRoot()?.style.minHeight).toBe('80px');
+    });
+
+    it('keeps its own height over a row page value or below a trigger', () => {
+      openCellEditor(makeProperty('url'), '', tallAnchor(), makeEditorContext({ coverCell: 'value' }));
+
+      expect(editorRoot()?.style.minHeight).toBe('');
+    });
+  });
 });

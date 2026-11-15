@@ -126,6 +126,12 @@ export const coverMinWidth = (anchor: HTMLElement, cover: boolean | 'value' | un
   return `${Math.max(width, floor)}px`;
 };
 
+/**
+ * notion-motion.md Round 35: a table cell editor reaches from 1px over the
+ * cell down to its bottom line (240x80 on a 79px row), so it is never shorter.
+ */
+export const coverMinHeight = (anchor: HTMLElement): string => `${anchor.getBoundingClientRect().height + COVER_OUTSET}px`;
+
 /** research/26 §1a: the panel ends at x 1500 of a 1512 window. */
 const DOCK_VIEWPORT_MARGIN = 12;
 const DOCKED_CLASS = 'blok-database-docked-panel';

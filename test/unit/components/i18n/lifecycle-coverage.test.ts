@@ -295,7 +295,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2233 + 146 + 579 + 9 closure for all 2967 keys', () => {
+  it('rebuilds a disjoint 2233 + 146 + 587 + 9 closure for all 2975 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -309,7 +309,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2967);
+    expect(lifecycle.size).toBe(2975);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -678,7 +678,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -2: settingsLoadLimit and settingsLoadLimitPages are now called by literal (see executable-literal).
       // +1: the select filter's token field calls filterOptionsPlaceholder through the chip's tools.database. prefix.
       // +1: a Feed's Layout page "Wrap properties" (tools.database.settingsWrapProperties), through the panel's t().
-      'registered-namespace-compatible': 579,
+      // +8: Property visibility's "Hidden in <layout>" heads (settingsHiddenIn*, settingsHiddenProperties), picked from a map.
+      'registered-namespace-compatible': 587,
       // +1: Settings › Group's pin button names itself with groupPin through the panel's tools.database. prefix.
       // +1: tools.database.galleryFitImage, above. +1: tools.database.timelineEndBy, above.
       'catalog-only': 9,

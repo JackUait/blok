@@ -281,6 +281,17 @@ const SHOWN_IN_KEYS: Partial<Record<ViewType, string>> = {
   feed: 'settingsShownInFeed',
 };
 
+/** notion-motion.md Round 35 §1 (r35-propvis.raw): "Hidden in table" under the shown list. Other layouts read "Hidden properties". */
+const HIDDEN_IN_KEYS: Partial<Record<ViewType, string>> = {
+  table: 'settingsHiddenInTable',
+  board: 'settingsHiddenInBoard',
+  list: 'settingsHiddenInList',
+  gallery: 'settingsHiddenInGallery',
+  calendar: 'settingsHiddenInCalendar',
+  timeline: 'settingsHiddenInTimeline',
+  feed: 'settingsHiddenInFeed',
+};
+
 const DATE_LIKE_TYPES: readonly PropertyType[] = ['date', 'createdTime', 'lastEditedTime'];
 
 /** A picker's search text, kept across page redraws. */
@@ -1432,16 +1443,17 @@ export class ViewSettingsPages {
 
         return;
       }
-      const items = listed.flatMap((entry) => {
+      const titleId = schema.find((p) => p.type === 'title')?.id;
+      const section = (visible: boolean): Array<{ id: string; element: HTMLElement }> => listed.flatMap((entry) => {
         const property = schema.find((p) => p.id === entry.id);
+        const shown = entry.visible || entry.id === titleId;
 
-        if (property === undefined || !property.name.toLowerCase().includes(query)) return [];
+        if (property === undefined || shown !== visible || !property.name.toLowerCase().includes(query)) return [];
 
         return [{ id: property.id, element: this.propertyVisibilityRow(panel, property, entry.visible) }];
       });
-
-      list.replaceChildren(...this.shownHeader(panel, listed), panelReorderList({
-        testId: 'database-properties-list',
+      const reorderList = (testId: string, items: Array<{ id: string; element: HTMLElement }>): HTMLElement => panelReorderList({
+        testId,
         handleLabel: this.t('settingsDragToReorder'),
         items,
         onMove: (id, beforeId) => {
@@ -1450,7 +1462,26 @@ export class ViewSettingsPages {
           this.ctx.updateView({ properties: withPropertyOrder(this.ctx.view(), this.ctx.schema(), id, beforeId) });
           panel.refresh();
         },
-      }));
+      });
+      const hideable = listed.filter((entry) => entry.id !== titleId);
+      const shown = section(true);
+      const hidden = section(false);
+      const type = this.ctx.view().type;
+      const parts: HTMLElement[] = [];
+
+      if (shown.length > 0) {
+        parts.push(
+          this.visibilityHeader(panel, SHOWN_IN_KEYS[type] ?? 'propertiesSection', hideable.filter((entry) => entry.visible), false),
+          reorderList('database-properties-list', shown)
+        );
+      }
+      if (hidden.length > 0) {
+        parts.push(
+          this.visibilityHeader(panel, HIDDEN_IN_KEYS[type] ?? 'settingsHiddenProperties', hideable.filter((entry) => !entry.visible), true),
+          reorderList('database-properties-hidden-list', hidden)
+        );
+      }
+      list.replaceChildren(...(parts.length === 0 ? [panelText(this.ctx.i18n.t('find.noResults'))] : parts));
     };
 
     return {
@@ -1564,35 +1595,37 @@ export class ViewSettingsPages {
     return row;
   }
 
-  /** research/35:197, 12-notion-propvis.png: "Shown in <layout>" and Hide all (Show all once all are hidden). */
-  private shownHeader(panel: DatabasePanel, listed: ReturnType<typeof resolveViewProperties>): HTMLElement[] {
-    const titleId = this.ctx.schema().find((p) => p.type === 'title')?.id;
-    const hideable = listed.filter((entry) => entry.id !== titleId);
-
-    if (hideable.length === 0) return [];
-    const allHidden = hideable.every((entry) => !entry.visible);
+  /**
+   * research/35:197, 12-notion-propvis.png: "Shown in <layout>" with Hide all.
+   * notion-motion.md Round 35 §1 (r35-propvis.raw): "Hidden in <layout>" with Show all.
+   * `targets` are the properties the action flips, in one view update.
+   */
+  private visibilityHeader(panel: DatabasePanel, labelKey: string, targets: ReturnType<typeof resolveViewProperties>, show: boolean): HTMLElement {
     const header = document.createElement('div');
-    const toggle = document.createElement('button');
 
     header.setAttribute('data-blok-database-property-visibility-header', '');
+    header.append(panelLabel(this.t(labelKey)));
+    if (targets.length === 0) return header;
+    const toggle = document.createElement('button');
+
     toggle.type = 'button';
     toggle.setAttribute('data-blok-database-property-hide-all', '');
-    toggle.setAttribute('data-blok-testid', 'database-property-hide-all');
-    toggle.textContent = this.t(allHidden ? 'groupShowAll' : 'groupHideAll');
+    toggle.setAttribute('data-blok-testid', show ? 'database-property-show-all' : 'database-property-hide-all');
+    toggle.textContent = this.t(show ? 'groupShowAll' : 'groupHideAll');
     toggle.disabled = !this.shared;
     toggle.addEventListener('click', () => {
       const view = this.ctx.view();
-      const properties = hideable.reduce<ViewPropertySetting[] | undefined>(
-        (entries, entry) => withPropertySetting(entries === undefined ? view : { ...view, properties: entries }, this.ctx.schema(), entry.id, { visible: allHidden }),
+      const properties = targets.reduce<ViewPropertySetting[] | undefined>(
+        (entries, entry) => withPropertySetting(entries === undefined ? view : { ...view, properties: entries }, this.ctx.schema(), entry.id, { visible: show }),
         undefined
       ) ?? [];
 
       this.ctx.updateView({ properties });
       panel.refresh();
     });
-    header.append(panelLabel(this.t(SHOWN_IN_KEYS[this.ctx.view().type] ?? 'propertiesSection')), toggle);
+    header.append(toggle);
 
-    return [header];
+    return header;
   }
 
   // ─── Property picker ───

@@ -973,8 +973,136 @@ describe('view settings panel', () => {
   // findings V14 (12-notion-propvis.png): search, "Shown in <layout>" + Hide all, type glyphs, eye toggles.
   describe('Property visibility page', () => {
     const eye = (id: string): HTMLElement | null => document.querySelector(`[data-blok-testid="database-property-visible-${id}"]`);
-    const listed = (): string[] => [...document.querySelectorAll<HTMLElement>('[data-blok-testid="database-properties-list"] [data-item-id]')]
+    const idsIn = (testId: string): string[] => [...document.querySelectorAll<HTMLElement>(`[data-blok-testid="${testId}"] [data-item-id]`)]
       .map((row) => row.getAttribute('data-item-id') ?? '');
+    const listed = (): string[] => [...idsIn('database-properties-list'), ...idsIn('database-properties-hidden-list')];
+    const shownIds = (): string[] => idsIn('database-properties-list');
+    const hiddenIds = (): string[] => idsIn('database-properties-hidden-list');
+    const sections = (): string[] => [...document.querySelectorAll('[data-blok-database-property-visibility-header] [data-blok-database-panel-section]')]
+      .map((el) => el.textContent ?? '');
+
+    // notion-motion.md Round 35 §1 (r35-propvis.raw): "Shown in table" (9) with Hide all, then "Hidden in table" (8) with Show all.
+    describe('Shown and Hidden sections', () => {
+      it('lists shown properties under "Shown in table" and hidden ones under "Hidden in table", each in view order', () => {
+        harness({ properties: [{ id: 'title', visible: true }, { id: 'due', visible: false }, { id: 'num', visible: true }, { id: 'stage', visible: false }, { id: 'prog', visible: true }, { id: 'owner', visible: false }] }).open('properties');
+
+        expect(sections()).toEqual(['tools.database.settingsShownInTable', 'tools.database.settingsHiddenInTable']);
+        expect(shownIds()).toEqual(['title', 'num', 'prog']);
+        expect(hiddenIds()).toEqual(['due', 'stage', 'owner']);
+        expect(q('database-property-hide-all')?.textContent).toBe('tools.database.groupHideAll');
+        expect(q('database-property-show-all')?.textContent).toBe('tools.database.groupShowAll');
+      });
+
+      it('has no Hidden section while every property is shown', () => {
+        harness({ properties: [{ id: 'due', visible: true }, { id: 'num', visible: true }, { id: 'stage', visible: true }, { id: 'prog', visible: true }, { id: 'owner', visible: true }] }).open('properties');
+
+        expect(sections()).toEqual(['tools.database.settingsShownInTable']);
+        expect(exists('database-properties-hidden-list')).toBe(false);
+        expect(exists('database-property-show-all')).toBe(false);
+      });
+
+      it('moves a row to Hidden when its eye hides it, and back to Shown when shown, one view update each', () => {
+        const h = harness({ properties: [{ id: 'due', visible: true }, { id: 'num', visible: false }] });
+
+        h.open('properties');
+        vi.mocked(h.ctx.updateView).mockClear();
+        eye('due')?.click();
+        expect(h.ctx.updateView).toHaveBeenCalledTimes(1);
+        expect(shownIds()).not.toContain('due');
+        expect(hiddenIds()).toContain('due');
+
+        eye('due')?.click();
+        expect(h.ctx.updateView).toHaveBeenCalledTimes(2);
+        expect(shownIds()).toContain('due');
+        expect(hiddenIds()).not.toContain('due');
+      });
+
+      it('keeps focus on the eye after its row changes section', () => {
+        const h = harness({ properties: [{ id: 'due', visible: true }] });
+
+        h.open('properties');
+        eye('due')?.focus();
+        eye('due')?.click();
+        expect(eye('due')?.closest('[data-blok-testid="database-properties-hidden-list"]')).not.toBeNull();
+        expect(eye('due')).toHaveFocus();
+      });
+
+      it('Show all shows every hidden property in one view update', () => {
+        const h = harness({ properties: [{ id: 'due', visible: false }, { id: 'num', visible: false }, { id: 'stage', visible: true }] });
+
+        h.open('properties');
+        vi.mocked(h.ctx.updateView).mockClear();
+        click('database-property-show-all');
+        expect(h.ctx.updateView).toHaveBeenCalledTimes(1);
+        expect(hiddenIds()).toEqual([]);
+        expect(exists('database-property-show-all')).toBe(false);
+        expect(shownIds()).toEqual(expect.arrayContaining(['due', 'num', 'stage']));
+      });
+
+      it('Hide all moves every shown property but the title to Hidden in one view update', () => {
+        const h = harness({ properties: [{ id: 'due', visible: true }, { id: 'num', visible: false }] });
+
+        h.open('properties');
+        vi.mocked(h.ctx.updateView).mockClear();
+        click('database-property-hide-all');
+        expect(h.ctx.updateView).toHaveBeenCalledTimes(1);
+        expect(shownIds()).toEqual(['title']);
+        expect(hiddenIds()).toEqual(expect.arrayContaining(['due', 'num']));
+        // Only the title is left, which cannot be hidden.
+        expect(exists('database-property-hide-all')).toBe(false);
+      });
+
+      it('the search narrows both sections', () => {
+        harness({ properties: [{ id: 'due', visible: false }, { id: 'num', visible: true }, { id: 'stage', visible: true }, { id: 'prog', visible: false }, { id: 'owner', visible: true }] }).open('properties');
+        const search = q('database-property-search');
+
+        if (!(search instanceof HTMLInputElement)) throw new Error('no search');
+        search.value = 'r';
+        search.dispatchEvent(new Event('input', { bubbles: true }));
+        // Only "Progress" (hidden) and "Owner" (shown) carry an r.
+        expect(shownIds()).toEqual(['owner']);
+        expect(hiddenIds()).toEqual(['prog']);
+      });
+
+      it('drops a section whose rows the search filtered out', () => {
+        harness({ properties: [{ id: 'due', visible: false }, { id: 'num', visible: true }] }).open('properties');
+        const search = q('database-property-search');
+
+        if (!(search instanceof HTMLInputElement)) throw new Error('no search');
+        search.value = 'amou';
+        search.dispatchEvent(new Event('input', { bubbles: true }));
+        expect(sections()).toEqual(['tools.database.settingsShownInTable']);
+        expect(shownIds()).toEqual(['num']);
+      });
+
+      it('Alt+Arrow on a hidden row moves it among the hidden rows only', () => {
+        const h = harness({ properties: [{ id: 'title', visible: true }, { id: 'due', visible: false }, { id: 'num', visible: true }, { id: 'stage', visible: false }, { id: 'prog', visible: true }, { id: 'owner', visible: false }] });
+
+        h.open('properties');
+        const handle = q('database-properties-hidden-list-handle-stage');
+
+        handle?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', altKey: true, bubbles: true }));
+        expect(hiddenIds()).toEqual(['stage', 'due', 'owner']);
+        expect(shownIds()).toEqual(['title', 'num', 'prog']);
+        // At the top of its section it stays put: the move never crosses into Shown.
+        q('database-properties-hidden-list-handle-stage')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', altKey: true, bubbles: true }));
+        expect(hiddenIds()).toEqual(['stage', 'due', 'owner']);
+      });
+
+      it('Alt+Arrow on a shown row reorders the shown rows', () => {
+        harness({ properties: [{ id: 'title', visible: true }, { id: 'due', visible: true }, { id: 'num', visible: false }, { id: 'stage', visible: true }] }).open('properties');
+
+        q('database-properties-list-handle-stage')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', altKey: true, bubbles: true }));
+        expect(shownIds().slice(0, 3)).toEqual(['title', 'stage', 'due']);
+        expect(hiddenIds()).toEqual(['num']);
+      });
+
+      it('a chart reads "Properties" and "Hidden properties"', () => {
+        harness({ type: 'chart', properties: [{ id: 'due', visible: false }] }).open('properties');
+
+        expect(sections()).toEqual(['tools.database.propertiesSection', 'tools.database.settingsHiddenProperties']);
+      });
+    });
 
     it('opens with its search focused, and the search narrows the list without losing the field', () => {
       const h = harness();
@@ -1008,7 +1136,7 @@ describe('view settings panel', () => {
 
     it('draws each row as a type glyph, the name and an eye switch', () => {
       harness({ properties: [{ id: 'due', visible: false }] }).open('properties');
-      const row = document.querySelector('[data-blok-testid="database-properties-list"] [data-item-id="due"]');
+      const row = document.querySelector('[data-blok-testid="database-properties-hidden-list"] [data-item-id="due"]');
 
       expect(row?.querySelector('[data-blok-database-panel-icon] svg')).not.toBeNull();
       expect(row?.textContent).toContain('Due');
@@ -1075,7 +1203,7 @@ describe('view settings panel', () => {
 
       click('database-settings-properties');
       expect(exists('database-property-visible-due')).toBe(true);
-      expect(document.querySelector('[data-blok-testid="database-properties-list"]')?.textContent).not.toContain('Name');
+      expect(document.querySelector('[data-blok-database-panel-page="properties"]')?.textContent).not.toContain('Name');
     });
 
     // research/35:197: the page reads "Shown in feed | Hide all | Note".
@@ -1093,7 +1221,8 @@ describe('view settings panel', () => {
       expect(h.ctx.updateView).toHaveBeenCalledTimes(1);
       expect(h.state.view.properties?.filter((p) => p.visible).map((p) => p.id)).toEqual([]);
       expect(h.state.view.properties?.some((p) => p.id === 'title' && !p.visible)).toBe(false);
-      expect(document.querySelector('[data-blok-testid="database-property-hide-all"]')?.textContent).toContain('tools.database.groupShowAll');
+      expect(exists('database-property-hide-all')).toBe(false);
+      expect(document.querySelector('[data-blok-testid="database-property-show-all"]')?.textContent).toBe('tools.database.groupShowAll');
     });
 
     it('has no header when only the title exists', () => {

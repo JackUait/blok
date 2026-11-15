@@ -332,7 +332,7 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
 
     openMenu(el, 'board');
 
-    expect(document.querySelector('[data-blok-database-row-menu-footer]')?.textContent).toContain('tools.database.rowWordCount');
+    expect(document.querySelector('[data-blok-database-row-menu-footer-counts]')?.textContent).toBe('tools.database.rowCounts');
   });
 
   it.each(['board', 'gallery', 'list', 'feed'] as const)('the %s menu footer names who edited the row last, as the table menu does', async (type) => {
@@ -352,7 +352,7 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       // The people lever loads once, then the view redraws with the names.
       await vi.waitFor(() => {
         openMenu(el, view);
-        expect(document.querySelector('[data-blok-database-row-menu-footer]')?.textContent).toContain('tools.database.rowLastEditedBy');
+        expect(document.querySelector('[data-blok-database-row-menu-footer-person]')?.textContent).toBe('Jack Uait');
       });
       const text = document.querySelector('[data-blok-database-row-menu-footer]')?.textContent ?? '';
 

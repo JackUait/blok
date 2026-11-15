@@ -470,11 +470,15 @@ const createBodyChangeCheck = (initial: OutputData | undefined, fieldsOf: Fields
   };
 };
 
+/** notion-motion.md Round 35 (r35-peekmenu.raw): the page ⋯ menu's right edge is 12 from the window. */
+const PAGE_ACTIONS_MENU_WINDOW_GAP = 12;
+
 /**
  * Side drawer that opens when a kanban card is clicked.
  * Sits beside the board as a flex sibling, taking layout space.
  * Contains a title input, status property, and a nested Blok editor for the card description.
  */
+
 export class DatabaseCardDrawer {
   private readonly wrapper: HTMLElement;
   private readonly findPeekHost: (() => HTMLElement | null) | undefined;
@@ -1986,13 +1990,19 @@ export class DatabaseCardDrawer {
     if (items.length === 0) {
       return;
     }
+    const box = anchor.getBoundingClientRect();
+    // Opened to the left, the menu ends where this box ends.
+    const end = Math.min(box.right, window.innerWidth - PAGE_ACTIONS_MENU_WINDOW_GAP);
     const menu = new PopoverDesktop({
-      // Notion's 28px rows (feel/findings-rowpage R27).
-      class: DATABASE_HEADER_MENU_CLASS,
+      // Notion's 28px rows (feel/findings-rowpage R27); the row menus' search and lines (database.css).
+      class: `${DATABASE_HEADER_MENU_CLASS} blok-database-page-actions-menu`,
       animateClose: true,
       trigger: anchor,
+      position: DOMRect.fromRect({ x: end - box.width, y: box.top, width: box.width, height: box.height }),
+      positionContext: anchor,
       width: 'auto',
-      minWidth: '240px',
+      // notion-motion.md Round 35 (r35-peekmenu.raw): 256 wide.
+      minWidth: '256px',
       autoFocusFirstItem: false,
       searchable: true,
       messages: { search: this.label('tools.database.searchActions') },
@@ -2033,10 +2043,10 @@ export class DatabaseCardDrawer {
     const footer = this.pageFooter?.(row.id);
     const i18n = this.i18n;
 
-    // Notion ends the menu with "Last edited", the editor, the time and the word count.
-    return footer === undefined || i18n === undefined || (footer.lastEdited === undefined && footer.counts === undefined) || items.length === 0
+    // notion-motion.md Round 35 (r35-peekmenu.raw): "Last edited", the editor and the time; no word count.
+    return footer?.lastEdited === undefined || i18n === undefined || items.length === 0
       ? items
-      : [...items, { type: PopoverItemType.Separator }, rowFooter(i18n, footer.lastEdited, footer.counts)];
+      : [...items, { type: PopoverItemType.Separator }, rowFooter(i18n, footer.lastEdited, undefined)];
   }
 
   /** A switch: the page's own Full width, or the layout's while the page has none (research/09 §9). */

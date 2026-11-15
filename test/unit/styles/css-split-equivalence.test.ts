@@ -1717,6 +1717,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R57_BYTES = 1205;
     // Lane r56: Round 35 Property visibility, the "Hidden in <layout>" header 6px under the shown list. Net database.css growth against origin/main.
     const DATABASE_R56_BYTES = 285;
+    // Lane r55: Round 35 row, card and page ⋯ menus: search inset, 8px lines, "Page" label, footer layout. Net database.css growth against origin/main.
+    const DATABASE_R55_BYTES = 2159;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2247,6 +2249,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R54_BYTES
       + DATABASE_R57_BYTES
       + DATABASE_R56_BYTES
+      + DATABASE_R55_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

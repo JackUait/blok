@@ -41,6 +41,10 @@ const CATALOG_ONLY_KEYS = new Set([
   // The timeline's "Separate end date" row became Start date and End date.
   // Kept for public BlokMessageKey compatibility: it shipped in 2.1.0.
   'tools.database.timelineEndBy',
+  // The row menu footer reads "Last edited" over the person, and "1 word, 5 characters" from plurals.
+  // Kept for public BlokMessageKey compatibility: they shipped in 2.1.0.
+  'tools.database.rowLastEditedBy',
+  'tools.database.rowWordCount',
 ]);
 
 const sourceFiles = (directory: string): string[] => {
@@ -295,7 +299,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2233 + 146 + 587 + 9 closure for all 2975 keys', () => {
+  it('rebuilds a disjoint 2232 + 146 + 591 + 11 closure for all 2980 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -309,7 +313,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2975);
+    expect(lifecycle.size).toBe(2980);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -566,7 +570,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +20: the type menu's "?" on every other type Round 27 read (tools.database.propertyTypeHelp*).
       // +1: ID's "?" (tools.database.propertyTypeHelpUniqueId), read in Round 28.
       // +3: the table's Load more ⋯ calls tableShowOnFirstLoad (new), settingsLoadLimit and settingsLoadLimitPages by literal.
-      'executable-literal': 2233,
+      // -2 / +1: the row menu footer's rowLastEditedBy and rowWordCount went catalog-only; rowCounts joins its plurals.
+      'executable-literal': 2232,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -679,10 +684,12 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the select filter's token field calls filterOptionsPlaceholder through the chip's tools.database. prefix.
       // +1: a Feed's Layout page "Wrap properties" (tools.database.settingsWrapProperties), through the panel's t().
       // +8: Property visibility's "Hidden in <layout>" heads (settingsHiddenIn*, settingsHiddenProperties), picked from a map.
-      'registered-namespace-compatible': 587,
+      // +4: the row menu footer's tools.database.rowWords_one/_other and rowCharacters_one/_other, via a count.
+      'registered-namespace-compatible': 591,
       // +1: Settings › Group's pin button names itself with groupPin through the panel's tools.database. prefix.
       // +1: tools.database.galleryFitImage, above. +1: tools.database.timelineEndBy, above.
-      'catalog-only': 9,
+      // +2: tools.database.rowLastEditedBy and rowWordCount, above.
+      'catalog-only': 11,
     });
     expect(
       [...lifecycle.entries()]

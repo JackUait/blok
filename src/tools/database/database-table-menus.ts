@@ -36,6 +36,7 @@ import type { CalculationFn, DatabaseRow, LoadLimit, OpenPagesIn, PropertyDefini
 import { LOAD_LIMITS } from './view-settings';
 import { formatClock, formatRelativeStamp } from './cells/date-format';
 import { toLocalDay } from './relative-dates';
+import { safeImageSrc } from '../../components/utils/sanitize-url';
 
 type T = Pick<I18n, 't'>;
 
@@ -438,7 +439,7 @@ export interface RowMenuContext {
   moveTargets?: Array<{ id: string; title: string }>;
   onMoveTo?: (databaseId: string) => void;
   /** Who edited the row last, and when, already formatted. */
-  lastEdited?: { name?: string; time: string };
+  lastEdited?: { name?: string; avatarUrl?: string; time: string };
   /** Words and characters of the row. Without it or lastEdited there is no footer. */
   counts?: { words: number; characters: number };
 }
@@ -447,7 +448,7 @@ export interface RowMenuFooterSource {
   row: Pick<DatabaseRow, 'properties' | 'meta'> | undefined;
   titlePropertyId: string;
   locale: string;
-  people?: ReadonlyArray<{ id: string; name: string }>;
+  people?: ReadonlyArray<{ id: string; name: string; avatarUrl?: string }>;
   now?: Date;
   hourCycle?: 'h12' | 'h23';
   /** research/35 §19: an edit from today reads "Today at 4:54 AM". Without it, "Today 4:54 AM". */
@@ -474,9 +475,16 @@ export const rowMenuFooter = (source: RowMenuFooterSource): Pick<RowMenuContext,
   const time = source.i18n !== undefined && toLocalDay(new Date(at)) === toLocalDay(now)
     ? source.i18n.t('tools.database.rowEditedTodayAt', { time: formatClock(new Date(at), source.locale, source.hourCycle) })
     : formatRelativeStamp(at, source.locale, {}, now, source.hourCycle);
-  const name = meta?.lastEditedBy === undefined ? undefined : source.people?.find((person) => person.id === meta.lastEditedBy)?.name;
+  const person = meta?.lastEditedBy === undefined ? undefined : source.people?.find((candidate) => candidate.id === meta.lastEditedBy);
 
-  return { lastEdited: { ...(name !== undefined ? { name } : {}), time }, counts };
+  return {
+    lastEdited: {
+      ...(person !== undefined ? { name: person.name } : {}),
+      ...(person?.avatarUrl !== undefined ? { avatarUrl: person.avatarUrl } : {}),
+      time,
+    },
+    counts,
+  };
 };
 
 const OPEN_IN: ReadonlyArray<{ mode: OpenPagesIn; icon: string; key: string }> = [
@@ -485,25 +493,56 @@ const OPEN_IN: ReadonlyArray<{ mode: OpenPagesIn; icon: string; key: string }> =
   { mode: 'full', icon: IconExpandFullscreen, key: 'tools.database.openPagesFull' },
 ];
 
-/** research/08's footer: "Last edited by ⟨name⟩", the time, then "1 word, 5 characters". */
+/** The editor's photo, or the name's first letter in a circle (the person cell's look, database.css). */
+const footerAvatar = (name: string, avatarUrl: string | undefined): HTMLElement => {
+  const src = avatarUrl === undefined ? null : safeImageSrc(avatarUrl);
+
+  if (src !== null) {
+    const img = document.createElement('img');
+
+    img.src = src;
+    img.alt = '';
+    img.setAttribute('data-blok-database-person-avatar', '');
+
+    return img;
+  }
+  const initial = document.createElement('span');
+
+  initial.setAttribute('data-blok-database-person-initial', [...name][0]?.toUpperCase() ?? '');
+  initial.setAttribute('aria-hidden', 'true');
+
+  return initial;
+};
+
+/**
+ * notion-motion.md Round 35 (r35-rowmenu.raw): "Last edited", the avatar and name on their own line,
+ * the time, then "1 word, 5 characters".
+ */
 export const rowFooter = (i18n: T, lastEdited: RowMenuContext['lastEdited'], counts: RowMenuContext['counts']): PopoverItemParams => {
   const footer = document.createElement('div');
-  const line = (text: string): void => {
+  const line = (part: string, text: string): HTMLElement => {
     const el = document.createElement('div');
 
+    el.setAttribute(`data-blok-database-row-menu-footer-${part}`, '');
     el.textContent = text;
     footer.append(el);
+
+    return el;
   };
 
   footer.setAttribute('data-blok-database-row-menu-footer', '');
   if (lastEdited !== undefined) {
-    line(lastEdited.name === undefined
-      ? i18n.t('tools.database.rowLastEdited')
-      : i18n.t('tools.database.rowLastEditedBy', { name: lastEdited.name }));
-    line(lastEdited.time);
+    line('label', i18n.t('tools.database.rowLastEdited'));
+    if (lastEdited.name !== undefined) {
+      line('person', lastEdited.name).prepend(footerAvatar(lastEdited.name, lastEdited.avatarUrl));
+    }
+    line('time', lastEdited.time);
   }
   if (counts !== undefined) {
-    line(i18n.t('tools.database.rowWordCount', { words: counts.words, characters: counts.characters }));
+    line('counts', i18n.t('tools.database.rowCounts', {
+      words: i18n.t('tools.database.rowWords', { count: counts.words }),
+      characters: i18n.t('tools.database.rowCharacters', { count: counts.characters }),
+    }));
   }
 
   return { type: PopoverItemType.Html, element: footer, name: 'last-edited' };

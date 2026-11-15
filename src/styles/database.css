@@ -3408,11 +3408,54 @@ button[data-blok-database-board-lane-count]:hover {
   height: 28px;
 }
 
+/* notion-motion.md Round 35 (r35-rowmenu.raw): "Last edited" 12 under the line, the box's end 12 under the last line. */
 [data-blok-database-row-menu-footer] {
-  padding: var(--blok-space-1) var(--blok-space-2);
+  padding: var(--blok-space-2);
   font-size: 12px;
   line-height: 16px;
   color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-row-menu-footer-label] {
+  font-weight: 500;
+}
+
+/* The 16px avatar and the name, 4 under "Last edited"; the time and the count follow 2 apart. */
+[data-blok-database-row-menu-footer-person] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  margin-block-start: var(--blok-space-1);
+}
+
+[data-blok-database-row-menu-footer-person] > :is([data-blok-database-person-avatar], [data-blok-database-person-initial]) {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-row-menu-footer-time],
+[data-blok-database-row-menu-footer-counts] {
+  margin-block-start: var(--blok-space-0-5);
+}
+
+/* Round 35 (r35-rowmenu, r35-cardmenu, r35-peekmenu): the search field 12 from the box's top and sides, the first row
+   12 under it (the list pads 4). Only the menu's own list: a submenu is a popover of its own. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] > [data-blok-popover-container] > [data-blok-field='search'],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-page-actions-menu'] > [data-blok-popover-container] > [data-blok-field='search'] {
+  margin: var(--blok-space-3) var(--blok-space-2) var(--blok-space-2);
+}
+
+/* Round 35: a line takes 8px, 3 above and 4 below, and stops 12 from the box's sides. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item-separator],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-page-actions-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item-separator] {
+  padding-block: var(--blok-space-0-75) var(--blok-space-1);
+  padding-inline: var(--blok-space-2);
+}
+
+/* Round 35: "Page" (12px/14.4) starts 18 under the field; the first row 41 under it. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-database-row-menu-heading] {
+  padding-block: var(--blok-space-1-5) var(--blok-space-2-25);
+  line-height: 14.4px;
 }
 
 /* feel/findings-toolbar V26: 28px, a 16px glyph, 1px after the last tab. */

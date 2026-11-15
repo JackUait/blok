@@ -193,6 +193,48 @@ describe('row menu (T15)', () => {
   });
 });
 
+// notion-motion.md Round 35 (r35-rowmenu.raw, r35-cardmenu.raw, r35-peekmenu.raw): the row and card menus and the
+// peek's ⋯ menu share one inner layout. Only their own list: a submenu is a popover of its own.
+describe('row, card and peek ⋯ menus (Round 35)', () => {
+  const MENUS = ['blok-database-card-menu', 'blok-database-page-actions-menu'].map((name) => `[data-blok-popover][data-blok-popover-custom-class~='${name}'] > [data-blok-popover-container]`);
+
+  // Notion: the field 241 wide in a 265 box, 12 from its top and sides; the first row (peek) 12 under it.
+  // Blok's list pads 4 on each side and on top.
+  it('keeps 12px around the search field', () => {
+    for (const menu of MENUS) {
+      expect(declared(`${menu} > [data-blok-field='search']`, 'margin')).toEqual(['var(--blok-space-3) var(--blok-space-2) var(--blok-space-2)']);
+    }
+  });
+
+  // Notion: Edit property 275.3 to Open in 312.3, one 29px row plus 8; the line 4 under the row, 12 in from the sides.
+  it('takes 8px for a divider: 3 above, the 1px line, 4 below, inset 12 from the box', () => {
+    for (const menu of MENUS) {
+      expect(declared(`${menu} > [data-blok-popover-items] > [data-blok-popover-item-separator]`, 'padding-block')).toEqual(['var(--blok-space-0-75) var(--blok-space-1)']);
+      expect(declared(`${menu} > [data-blok-popover-items] > [data-blok-popover-item-separator]`, 'padding-inline')).toEqual(['var(--blok-space-2)']);
+    }
+  });
+
+  // Notion: "Page" (12px/14.4) starts 18.2 under the field, and the first row 41.9 under it.
+  it('sets the "Page" label 18px under the field and its first row 41px under it', () => {
+    const heading = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-database-row-menu-heading]";
+
+    expect(declared(heading, 'padding-block')).toEqual(['var(--blok-space-1-5) var(--blok-space-2-25)']);
+    expect(declared(heading, 'line-height')).toEqual(['14.4px']);
+  });
+
+  // Notion: "Last edited" 12 under the line in 500, then the 16px avatar and name 4 under it, then the time and
+  // the count 2 apart; the box ends 12 under the last line.
+  it('lays out the footer as Notion: "Last edited", the person, the time, the count', () => {
+    expect(declared('[data-blok-database-row-menu-footer]', 'padding')).toEqual(['var(--blok-space-2)']);
+    expect(declared('[data-blok-database-row-menu-footer-label]', 'font-weight')).toEqual(['500']);
+    expect(declared('[data-blok-database-row-menu-footer-person]', 'margin-block-start')).toEqual(['var(--blok-space-1)']);
+    expect(declared('[data-blok-database-row-menu-footer-person]', 'gap')).toEqual(['var(--blok-space-1)']);
+    expect(declared('[data-blok-database-row-menu-footer-person] > :is([data-blok-database-person-avatar], [data-blok-database-person-initial])', 'width')).toEqual(['16px']);
+    expect(declared('[data-blok-database-row-menu-footer-time]', 'margin-block-start')).toEqual(['var(--blok-space-0-5)']);
+    expect(declared('[data-blok-database-row-menu-footer-counts]', 'margin-block-start')).toEqual(['var(--blok-space-0-5)']);
+  });
+});
+
 describe('status cell popover (T17)', () => {
   it('lets its search field shrink, so the input\'s default size does not push it past 240', () => {
     expect(declared('[data-blok-database-select-editor="status"] [data-blok-database-select-search]', 'width')).toEqual(['0']);

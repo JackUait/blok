@@ -93,7 +93,7 @@ describe('row ⋮⋮ menu (research/08)', () => {
     const footer = list[list.length - 1];
 
     expect(footer.type).toBe('html');
-    expect(footer.element?.textContent).toContain('tools.database.rowWordCount:{"words":1,"characters":5}');
+    expect(footer.element?.textContent).toBe('tools.database.rowCounts:{"words":"tools.database.rowWords:{\\"count\\":1}","characters":"tools.database.rowCharacters:{\\"count\\":5}"}');
   });
 
   it('has no Add to Favorites without the host favorites lever', () => {
@@ -143,13 +143,22 @@ describe('row ⋮⋮ menu (research/08)', () => {
       .toBe(items(context()).findIndex((i) => i.type === 'separator'));
   });
 
-  it('ends with a "Last edited by" footer when the row knows who edited it', () => {
+  // notion-motion.md Round 35 (r35-rowmenu.raw): "Last edited", then the avatar and name on a line of their own, then the time.
+  it('ends with a "Last edited" footer: the label, the person, then the time', () => {
     const list = items(context({ lastEdited: { name: 'Jack', time: 'today 3:02 AM' } }));
     const footer = list[list.length - 1];
+    const part = (name: string): string | undefined => footer.element?.querySelector(`[data-blok-database-row-menu-footer-${name}]`)?.textContent ?? undefined;
 
     expect(footer.type).toBe('html');
-    expect(footer.element?.textContent).toContain('tools.database.rowLastEditedBy:Jack');
-    expect(footer.element?.textContent).toContain('today 3:02 AM');
+    expect([...footer.element?.children ?? []].map((el) => [...el.attributes].map((a) => a.name)[0])).toEqual([
+      'data-blok-database-row-menu-footer-label',
+      'data-blok-database-row-menu-footer-person',
+      'data-blok-database-row-menu-footer-time',
+    ]);
+    expect(part('label')).toBe('tools.database.rowLastEdited');
+    expect(part('person')).toBe('Jack');
+    expect(footer.element?.querySelector('[data-blok-database-row-menu-footer-person] > [data-blok-database-person-initial]')?.getAttribute('data-blok-database-person-initial')).toBe('J');
+    expect(part('time')).toBe('today 3:02 AM');
     expect(items(context()).some((i) => i.element?.hasAttribute('data-blok-database-row-menu-footer') === true)).toBe(false);
   });
 });
@@ -195,7 +204,7 @@ describe('row ⋮⋮ menu in the table', () => {
     const search = document.querySelector<HTMLInputElement>('[data-blok-popover-opened] input');
 
     expect(search?.placeholder).toBe('tools.database.searchActions');
-    expect(document.querySelector('[data-blok-database-row-menu-footer]')?.textContent).toContain('tools.database.rowLastEditedBy:Jack Uait');
+    expect(document.querySelector('[data-blok-database-row-menu-footer-person]')?.textContent).toBe('Jack Uait');
   });
 
   it('writes an edit from today as "Today at <time>" (research/35 §19)', () => {
@@ -207,12 +216,13 @@ describe('row ⋮⋮ menu in the table', () => {
     expect(document.querySelector('[data-blok-database-row-menu-footer]')?.textContent).toContain(`tools.database.rowEditedTodayAt:${time}`);
   });
 
+  // Round 35: "1 word, 5 characters", each a plural of its own count.
   it('the footer counts the words and characters of the row title', () => {
     const root = mount();
 
     root.querySelector<HTMLElement>('[data-row-id="r1"] [data-blok-database-table-row-handle]')?.click();
 
-    expect(document.querySelector('[data-blok-database-row-menu-footer]')?.textContent).toContain('tools.database.rowWordCount:1,5');
+    expect(document.querySelector('[data-blok-database-row-menu-footer-counts]')?.textContent).toBe('tools.database.rowCounts:tools.database.rowWords:1,tools.database.rowCharacters:5');
   });
 
   it('Add to Favorites asks the host on each open and hands it the next state', () => {

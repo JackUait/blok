@@ -104,6 +104,8 @@ const UNIVERSAL_EXACT_VALUES: Readonly<Record<string, string>> = {
   'tools.database.starterOptionAccount': '@Account{number}',
   'tools.database.starterOptionEffortRed': 'red',
   'tools.database.starterEventRow1': 'Make with Notion',
+  // Two placeholders and a comma: the row menu footer's "1 word, 5 characters".
+  'tools.database.rowCounts': '{words}, {characters}',
 };
 
 /**

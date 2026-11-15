@@ -721,7 +721,38 @@ describe('DatabaseCardDrawer shell', () => {
       const menu = q('[data-blok-popover-opened]');
 
       expect(menu?.getAttribute('data-blok-popover-custom-class')).toContain('blok-database-header-menu');
-      expect(menu?.querySelector('[data-blok-database-row-menu-footer]')?.textContent).toBe('tools.database.rowLastEditedByToday at 3:52 AMtools.database.rowWordCount');
+      // notion-motion.md Round 35 (r35-peekmenu.raw): "Last edited", the person and the time, with no word count.
+      expect(menu?.querySelector('[data-blok-database-row-menu-footer]')?.textContent).toBe('tools.database.rowLastEditedAdaToday at 3:52 AM');
+      expect(menu?.querySelector('[data-blok-database-row-menu-footer-counts]')).toBeNull();
+      drawer.destroy();
+    });
+
+    // notion-motion.md Round 35 (r35-peekmenu.raw): 256 wide, marked so CSS gives it the row menus' search and lines.
+    it('opens 256 wide as the page actions menu', () => {
+      const drawer = new DatabaseCardDrawer(createOptions({ i18n: i18n(), rowActions: () => ({ onOpenIn: vi.fn(), onCopyLink: vi.fn(), properties: [] }) }));
+
+      drawer.open(ROW, 'side');
+      q('[data-blok-database-peek-actions]')?.click();
+      const menu = q('[data-blok-popover-opened]');
+
+      expect(menu?.getAttribute('data-blok-popover-custom-class')?.split(' ')).toContain('blok-database-page-actions-menu');
+      expect(menu?.style.getPropertyValue('--width')).toBe('256px');
+      drawer.destroy();
+    });
+
+    // Round 35: Notion's menu ends 12px from the window's right edge; Blok's ⋯ ends 10 from it.
+    it('ends 12px from the window\'s right edge', () => {
+      const drawer = new DatabaseCardDrawer(createOptions({ i18n: i18n(), rowActions: () => ({ onOpenIn: vi.fn(), onCopyLink: vi.fn(), properties: [] }) }));
+
+      drawer.open(ROW, 'side');
+      const button = q('[data-blok-database-peek-actions]');
+
+      vi.spyOn(button as HTMLElement, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: window.innerWidth - 38, y: 8, width: 28, height: 28 }));
+      button?.click();
+      const menu = q('[data-blok-popover-opened]');
+
+      // jsdom measures the menu 0 wide, so it opens at the ⋯ box's start, moved in with the box.
+      expect(menu?.style.left).toBe(`${window.innerWidth - 12 - 28}px`);
       drawer.destroy();
     });
 

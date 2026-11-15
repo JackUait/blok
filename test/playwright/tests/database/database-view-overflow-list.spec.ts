@@ -366,7 +366,7 @@ test.describe('database view overflow list', () => {
 
     await search.press('Enter');
     await expect(table).toHaveAttribute('data-blok-focused', 'true');
-    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowRight');
     await expect(board).toHaveAttribute('data-blok-focused', 'true');
     await expect(list.locator('[data-highlighted]')).toHaveText('New view');
     await page.keyboard.press('Enter');

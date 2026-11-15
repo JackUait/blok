@@ -3,6 +3,7 @@ import { VIEW_ICONS } from './database-tab-bar';
 import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
+import type { ArrowTarget } from '../../components/flipper';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import type { API } from '../../../types';
 import type { ViewType } from './types';
@@ -32,6 +33,27 @@ const VIEW_TYPES: ViewTypeOption[] = [
 ];
 
 const VIEW_TILE = 'database-view-tile';
+
+/** The tiles' columns (feel/findings-toolbar V04). */
+const GRID_COLUMNS = 4;
+
+/**
+ * notion-motion.md Round 42 §5: Right and Left go in reading order and wrap; Down goes down the
+ * column, from the last row to "New data source"; Up from it goes to the last row's first tile.
+ * Up from the top row and Down from "New data source" were not measured: the cursor stays.
+ */
+const gridArrowTarget = (tiles: number): ArrowTarget => (arrow, index, count) => {
+  if (index < 0) return undefined;
+  if (arrow === 'right') return (index + 1) % count;
+  if (arrow === 'left') return (index - 1 + count) % count;
+  const newSource = count > tiles ? tiles : -1;
+
+  if (index === newSource) return arrow === 'up' ? Math.floor((tiles - 1) / GRID_COLUMNS) * GRID_COLUMNS : index;
+  if (arrow === 'up') return index >= GRID_COLUMNS ? index - GRID_COLUMNS : index;
+  if (index + GRID_COLUMNS < tiles) return index + GRID_COLUMNS;
+
+  return newSource >= 0 ? newSource : index;
+};
 
 /** Notion's card of view layouts is 390 wide (feel/findings-toolbar V04). */
 export const ADD_VIEW_MENU_WIDTH = 390;
@@ -95,9 +117,10 @@ export class DatabaseViewPopover {
       element: headingEl,
     };
 
+    const shown = VIEW_TYPES.filter((option) => !this.hidden.includes(option.type));
     const items = [
       headingItem,
-      ...VIEW_TYPES.filter((option) => !this.hidden.includes(option.type)).map((option) => {
+      ...shown.map((option) => {
         const el = this.createViewItem(option);
 
         return {
@@ -140,6 +163,7 @@ export class DatabaseViewPopover {
 
     this.popover.nestedOpenDelay = DATABASE_SUBMENU_OPEN_DELAY_MS;
     this.popover.show();
+    this.popover.setArrowTarget(gridArrowTarget(shown.length));
     // notion-motion.md Round 15 §A: Table is filled on open, and stays filled while another tile is hovered: the keyboard cursor.
     if (!focusFirst) this.popover.focusItemByName(VIEW_TILE);
   }

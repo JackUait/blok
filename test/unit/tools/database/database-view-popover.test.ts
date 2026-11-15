@@ -13,6 +13,7 @@ const { MockPopover, mockPopoverInstances } = vi.hoisted(() => {
     on: (event: string, cb: () => void) => void;
     triggerClosed: () => void;
     focusedNames: string[];
+    arrowTarget: ((arrow: 'up' | 'down' | 'left' | 'right', index: number, count: number) => number | undefined) | null;
     el: HTMLElement | null;
     closedCallbacks: Array<() => void>;
   }> = [];
@@ -53,6 +54,13 @@ const { MockPopover, mockPopoverInstances } = vi.hoisted(() => {
 
     /** Names the menu's keyboard cursor was put on, once shown. */
     public focusedNames: string[] = [];
+
+    /** The grid's arrow map, once shown. */
+    public arrowTarget: ((arrow: 'up' | 'down' | 'left' | 'right', index: number, count: number) => number | undefined) | null = null;
+
+    setArrowTarget(pick: (arrow: 'up' | 'down' | 'left' | 'right', index: number, count: number) => number | undefined): void {
+      this.arrowTarget = pick;
+    }
 
     focusItemByName(name: string): boolean {
       if (this.el !== null) this.focusedNames.push(name);
@@ -259,6 +267,28 @@ describe('DatabaseViewPopover', () => {
 
       expect(mockPopoverInstances.at(-1)?.focusedNames).toEqual(['database-view-tile']);
       expect(option('table').hasAttribute('data-active')).toBe(false);
+    });
+
+    // notion-motion.md Round 42 §5: 11 tiles in rows of 4, then New data source (index 11).
+    it('moves the arrows across the grid as Notion does', () => {
+      const withSource = new DatabaseViewPopover({ onSelect: vi.fn(), onNewSource: vi.fn() });
+
+      withSource.open(anchor);
+      const pick = mockPopoverInstances.at(-1)?.arrowTarget;
+      const move = (arrow: 'up' | 'down' | 'left' | 'right', from: number): number | undefined => pick?.(arrow, from, 12);
+
+      expect([move('right', 0), move('right', 10), move('right', 11)]).toEqual([1, 11, 0]);
+      expect([move('down', 1), move('down', 5), move('down', 9), move('down', 2)]).toEqual([5, 9, 11, 6]);
+      expect([move('up', 11), move('up', 5), move('left', 6)]).toEqual([8, 1, 5]);
+      withSource.destroy();
+    });
+
+    it('wraps Right from the last tile to the first when there is no New data source', () => {
+      popover.open(anchor);
+      const pick = mockPopoverInstances.at(-1)?.arrowTarget;
+
+      expect(pick?.('right', 10, 11)).toBe(0);
+      expect(pick?.('down', 9, 11)).toBe(9);
     });
 
     it('leaves the first tile to the menu\'s own focus on a keyboard open', () => {

@@ -2,6 +2,7 @@ import { DATA_ATTR } from '../../constants/data-attributes';
 import { loadSheet } from '../lazy-styles';
 import { PopoverRegistry } from './popover-registry';
 import { Flipper } from '../../flipper';
+import type { ArrowTarget } from '../../flipper';
 import { keyCodes } from '../../utils';
 import { generateId } from '../id-generator';
 import { isKeyboardModality, recordPointerGesture } from '../input-modality';
@@ -1125,6 +1126,15 @@ export class PopoverDesktop extends PopoverAbstract {
         this.flipper?.focusItem(index, { skipNextTab: false });
       }
     };
+  }
+
+  /**
+   * Lets a grid menu pick where each arrow moves the cursor.
+   * @param pick - see Flipper.setArrowTarget
+   */
+  public setArrowTarget(pick: ArrowTarget | null): void {
+    // The published Flipper type has no arrow target; only Blok's own flipper takes one.
+    if (this.flipper instanceof Flipper) this.flipper.setArrowTarget(pick);
   }
 
   /**

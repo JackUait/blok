@@ -80,6 +80,8 @@ vi.mock('../../../../src/components/utils/popover', () => {
     }
 
     /** The view popover puts the keyboard cursor on the first tile. */
+    setArrowTarget(): void {}
+
     focusItemByName(): boolean {
       return true;
     }

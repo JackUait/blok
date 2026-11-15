@@ -67,6 +67,16 @@ export interface FlipperOptions {
   typeAhead?: boolean;
 }
 
+/** Gets the physical arrow; RTL is not mapped. */
+export type ArrowTarget = (arrow: 'up' | 'down' | 'left' | 'right', index: number, count: number) => number | undefined;
+
+const ARROW_NAMES: Readonly<Record<number, 'up' | 'down' | 'left' | 'right'>> = {
+  [keyCodes.UP]: 'up',
+  [keyCodes.DOWN]: 'down',
+  [keyCodes.LEFT]: 'left',
+  [keyCodes.RIGHT]: 'right',
+};
+
 /**
  * Flipper is a component that iterates passed items array by TAB or Arrows and clicks it by ENTER
  * @internal
@@ -131,6 +141,8 @@ export class Flipper {
    * Used by nested popovers to close and return focus to parent.
    */
   private readonly onArrowLeftCallback?: () => void;
+
+  private arrowTarget: ArrowTarget | null = null;
 
   private readonly onOpenChildrenCallback?: (item: HTMLElement) => void;
 
@@ -286,6 +298,38 @@ export class Flipper {
   public flipRight(): void {
     this.moveCursor(() => this.iterator?.next());
     this.flipCallback();
+  }
+
+  /**
+   * Lets a grid menu pick where each arrow goes. `undefined` from it keeps the list move.
+   * @param pick - gets the arrow, the current index (-1 for none) and the item count
+   */
+  public setArrowTarget(pick: ArrowTarget | null): void {
+    this.arrowTarget = pick;
+  }
+
+  /**
+   * Moves the cursor to the item the arrow target picks.
+   * @param keyCode - an arrow key code
+   * @returns false when there is no target or it picked none
+   */
+  private moveToArrowTarget(keyCode: number): boolean {
+    const iterator = this.iterator;
+
+    if (this.arrowTarget === null || !iterator) {
+      return false;
+    }
+    const items = iterator.getItems();
+    const current = iterator.currentItem;
+    const next = this.arrowTarget(ARROW_NAMES[keyCode], current === null ? -1 : items.indexOf(current), items.length);
+
+    if (next === undefined) {
+      return false;
+    }
+    this.moveCursor(() => iterator.setCursor(next));
+    this.flipCallback();
+
+    return true;
   }
 
   /**
@@ -520,6 +564,10 @@ export class Flipper {
      */
     if (keyCode !== null && Flipper.usedKeys.includes(keyCode)) {
       event.preventDefault();
+    }
+
+    if (keyCode !== null && keyCode in ARROW_NAMES && this.moveToArrowTarget(keyCode)) {
+      return;
     }
 
     switch (keyCode) {

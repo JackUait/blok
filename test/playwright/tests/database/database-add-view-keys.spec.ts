@@ -81,7 +81,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('Add view menu opened with the pointer', () => {
-  test('ArrowDown moves the fill from the first tile to the next, and Enter adds that view', async ({ page }) => {
+  test('an arrow moves the fill on from the first tile, and Enter adds that view', async ({ page }) => {
     await mount(page);
     await page.getByRole('grid').hover();
     await page.getByRole('button', { name: 'Add view' }).click();
@@ -92,17 +92,46 @@ test.describe('Add view menu opened with the pointer', () => {
     expect(await ringedTiles(page)).toEqual([]);
 
     await page.keyboard.press('ArrowDown');
-    await expect.poll(() => filledTiles(page)).toEqual(['board']);
-
-    await page.keyboard.press('ArrowDown');
-    await expect.poll(() => filledTiles(page)).toEqual(['gallery']);
+    await expect.poll(() => filledTiles(page)).toEqual(['chart']);
 
     await page.keyboard.press('ArrowUp');
+    await expect.poll(() => filledTiles(page)).toEqual(['table']);
+
+    await page.keyboard.press('ArrowRight');
     await expect.poll(() => filledTiles(page)).toEqual(['board']);
 
     await page.keyboard.press('Enter');
     await expect(table).toBeHidden();
     await expect.poll(() => savedViewTypes(page)).toEqual(['table', 'board']);
+  });
+
+  // notion-motion.md Round 42 §5 (r42-av-open.raw): a 4-column grid; Right is reading order and wraps through New data source.
+  test('the arrows move the fill across the 4-column grid as in Notion', async ({ page }) => {
+    await mount(page);
+    await page.getByRole('grid').hover();
+    await page.getByRole('button', { name: 'Add view' }).click();
+    await expect.poll(() => filledTiles(page)).toEqual(['table']);
+    await page.mouse.move(5, 5);
+
+    const press = async (key: string, expected: string): Promise<void> => {
+      await page.keyboard.press(key);
+      await expect.poll(() => filledTiles(page), { message: `${key} → ${expected}` }).toEqual([expected]);
+    };
+
+    await press('ArrowRight', 'board');
+    await press('ArrowDown', 'dashboard');
+    await press('ArrowDown', 'calendar');
+    await press('ArrowDown', 'new-source');
+    await press('ArrowUp', 'map');
+    await press('ArrowRight', 'calendar');
+    await press('ArrowRight', 'form');
+    await press('ArrowRight', 'new-source');
+    await press('ArrowRight', 'table');
+    await press('ArrowRight', 'board');
+    await press('ArrowRight', 'gallery');
+    await press('ArrowDown', 'timeline');
+    await press('ArrowLeft', 'dashboard');
+    await press('ArrowUp', 'board');
   });
 
   test('the first tile keeps its fill while the pointer rests on another', async ({ page }) => {

@@ -115,17 +115,18 @@ func New(ctx context.Context, c Config) (*Service, error) {
 		}
 	}
 	// bootstrap_markers is unused since instance admins (§5.1); keep the empty table.
-	needSetupToken, e := s.bootstrapInstance(ctx, tx)
+	setupRequired, e := s.bootstrapInstance(ctx, tx)
 	if e != nil {
 		return fail(e)
 	}
 	if e = tx.Commit(ctx); e != nil {
 		return fail(e)
 	}
-	if needSetupToken {
-		if e = s.ensureSetupToken(ctx); e != nil {
-			return fail(e)
-		}
+	if setupRequired {
+		// Say it plainly at every start: until someone completes the assistant,
+		// whoever reaches this URL first becomes the administrator.
+		slog.Warn("setup required: the first visitor to this address will claim this instance",
+			"url", strings.TrimRight(c.PublicURL, "/")+"/")
 	}
 	if e = os.MkdirAll(filepath.Join(c.DataDirectory, "uploads"), 0700); e != nil {
 		return fail(e)

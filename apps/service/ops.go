@@ -76,10 +76,6 @@ func (o *Ops) SetSettings(ctx context.Context, patch SettingsPatch) (InstanceSet
 	return o.asService().applySettings(ctx, patch)
 }
 
-func (o *Ops) SetupToken(ctx context.Context, regenerate bool) (string, error) {
-	return o.asService().SetupToken(ctx, regenerate)
-}
-
 func (o *Ops) EmailTest(ctx context.Context, email string) (string, error) {
 	return o.asService().EmailTest(ctx, email)
 }

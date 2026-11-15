@@ -3,14 +3,11 @@ package cloud
 import (
 	"context"
 	"crypto/rand"
-	"crypto/subtle"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"unicode/utf8"
 
@@ -18,13 +15,11 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const setupTokenFile = "setup-token"
-
 // bootstrapInstance applies §5.1 after the schema (and optional bootstrap
-// workspace) exist. AdminEmail never touches memberships. Returns whether a
-// setup token must be minted or kept on disk after the surrounding transaction
-// commits.
-func (s *Service) bootstrapInstance(ctx context.Context, tx pgx.Tx) (needSetupToken bool, err error) {
+// workspace) exist. AdminEmail never touches memberships. Returns whether the
+// instance is still waiting for its first-run setup, so the caller can say so
+// in the start-up log.
+func (s *Service) bootstrapInstance(ctx context.Context, tx pgx.Tx) (setupRequired bool, err error) {
 	if _, err = tx.Exec(ctx, `
 		UPDATE instance_settings SET default_workspace_id=(SELECT id FROM workspaces)
 		 WHERE default_workspace_id IS NULL AND (SELECT count(*) FROM workspaces)=1`); err != nil {
@@ -124,65 +119,6 @@ func (s *Service) bootstrapInstance(ctx context.Context, tx pgx.Tx) (needSetupTo
 	return false, nil
 }
 
-func (s *Service) ensureSetupToken(ctx context.Context) error {
-	if _, e := s.SetupToken(ctx, false); e != nil {
-		return e
-	}
-	slog.Info("setup required", "url", strings.TrimRight(s.Config.PublicURL, "/"))
-	return nil
-}
-
-// SetupToken returns the first-run setup token. When regenerate is false it
-// reuses the on-disk token if still valid; otherwise it mints a new one.
-// Fails once setup has completed.
-func (s *Service) SetupToken(ctx context.Context, regenerate bool) (string, error) {
-	var completed pgtype.Timestamptz
-	if e := s.DB.QueryRow(ctx, `SELECT setup_completed_at FROM instance_settings WHERE id`).Scan(&completed); e != nil {
-		return "", e
-	}
-	if completed.Valid {
-		return "", errors.New("setup already completed")
-	}
-	path := filepath.Join(s.Config.DataDirectory, setupTokenFile)
-	if !regenerate {
-		if raw, e := os.ReadFile(path); e == nil {
-			token := strings.TrimSpace(string(raw))
-			if token != "" {
-				var ok bool
-				if e = s.DB.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM setup_tokens WHERE digest=$1)`, hash(token)).Scan(&ok); e != nil {
-					return "", e
-				}
-				if ok {
-					return token, nil
-				}
-			}
-		}
-	}
-	if e := os.MkdirAll(s.Config.DataDirectory, 0700); e != nil {
-		return "", e
-	}
-	token := opaque()
-	tx, e := s.DB.Begin(ctx)
-	if e != nil {
-		return "", e
-	}
-	defer tx.Rollback(ctx)
-	if _, e = tx.Exec(ctx, `DELETE FROM setup_tokens`); e != nil {
-		return "", e
-	}
-	if _, e = tx.Exec(ctx, `INSERT INTO setup_tokens(digest) VALUES($1)`, hash(token)); e != nil {
-		return "", e
-	}
-	if e = tx.Commit(ctx); e != nil {
-		return "", e
-	}
-	if e = os.WriteFile(path, []byte(token+"\n"), 0600); e != nil {
-		return "", e
-	}
-	_ = os.Chmod(path, 0600)
-	return token, nil
-}
-
 // EmailTest sends a delivery probe and returns the mail backend name.
 func (s *Service) EmailTest(ctx context.Context, email string) (string, error) {
 	_ = ctx
@@ -197,33 +133,8 @@ func (s *Service) EmailTest(ctx context.Context, email string) (string, error) {
 	return backend, nil
 }
 
-func (s *Service) setupTokenValid(ctx context.Context, tx pgx.Tx, token string) (bool, error) {
-	token = strings.TrimSpace(token)
-	if token == "" {
-		return false, nil
-	}
-	digest := hash(token)
-	rows, e := tx.Query(ctx, `SELECT digest FROM setup_tokens`)
-	if e != nil {
-		return false, e
-	}
-	defer rows.Close()
-	matched := false
-	for rows.Next() {
-		var stored string
-		if e = rows.Scan(&stored); e != nil {
-			return false, e
-		}
-		if subtle.ConstantTimeCompare([]byte(stored), []byte(digest)) == 1 {
-			matched = true
-		}
-	}
-	return matched, rows.Err()
-}
-
 func (s *Service) claimSetup(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		Token             string `json:"token"`
 		Email             string `json:"email"`
 		Name              string `json:"name"`
 		InstanceName      string `json:"instanceName"`
@@ -305,16 +216,6 @@ func (s *Service) claimSetup(w http.ResponseWriter, r *http.Request) {
 		problem(w, 409, "Setup already completed")
 		return
 	}
-	ok, e := s.setupTokenValid(r.Context(), tx, in.Token)
-	if e != nil {
-		problem(w, 500, "Setup unavailable")
-		return
-	}
-	if !ok {
-		problem(w, 403, "Invalid setup token")
-		return
-	}
-
 	userID := opaque()
 	e = tx.QueryRow(r.Context(), `
 		INSERT INTO users(id,email,name) VALUES($1,$2,$3)
@@ -363,10 +264,6 @@ func (s *Service) claimSetup(w http.ResponseWriter, r *http.Request) {
 		problem(w, 500, "Could not complete setup")
 		return
 	}
-	if _, e = tx.Exec(r.Context(), `DELETE FROM setup_tokens`); e != nil {
-		problem(w, 500, "Could not complete setup")
-		return
-	}
 
 	// Possession of the mailbox still has to be proved — no session here. The
 	// code goes out BEFORE the commit: a typo or a dead relay must leave the
@@ -384,7 +281,6 @@ func (s *Service) claimSetup(w http.ResponseWriter, r *http.Request) {
 		problem(w, 500, "Could not complete setup")
 		return
 	}
-	_ = os.Remove(filepath.Join(s.Config.DataDirectory, setupTokenFile))
 	_ = s.refreshSettings(r.Context())
 	jsonOut(w, 200, map[string]any{"ok": true})
 }
@@ -420,7 +316,6 @@ func (s *Service) deliverLoginCode(ctx context.Context, email string) error {
 
 func (s *Service) setupEmailTest(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		Token string `json:"token"`
 		Email string `json:"email"`
 	}
 	if !body(w, r, &in) {
@@ -456,15 +351,6 @@ func (s *Service) setupEmailTest(w http.ResponseWriter, r *http.Request) {
 	}
 	if completed.Valid {
 		problem(w, 403, "Setup already completed")
-		return
-	}
-	ok, e := s.setupTokenValid(r.Context(), tx, in.Token)
-	if e != nil {
-		problem(w, 500, "Setup unavailable")
-		return
-	}
-	if !ok {
-		problem(w, 403, "Invalid setup token")
 		return
 	}
 	if e = tx.Commit(r.Context()); e != nil {

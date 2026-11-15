@@ -276,43 +276,39 @@ Le fichier `.env` est déjà la racine de confiance du déploiement : il porte
 déjà lire la base. En faire un chemin de récupération assumé et documenté est
 honnête.
 
-### 5.2 Fermer la fenêtre entre `docker compose up` et la première visite
+### 5.2 La fenêtre entre `docker compose up` et la première visite
 
-Sans garde, le premier visiteur d'une instance fraîche en devient
-l'administrateur. Quatre couches, chacune utile seule.
+**Correction du 15 novembre.** La première rédaction fermait cette fenêtre avec
+un jeton de setup écrit dans `DATA_DIRECTORY/setup-token`. À l'usage, c'était
+une marche de trop : la référence assumée de ce document est l'assistant
+`/admin/setup` d'AFFiNE, qui n'en demande aucun — on ouvre l'adresse, on saisit
+nom et e-mail, c'est fini. Un jeton à aller chercher dans un volume Docker
+transforme un parcours de trois champs en une séance de terminal.
 
-**(a) Un jeton, pas un formulaire ouvert.** Le service frappe un `opaque()`,
-n'en stocke que le digest dans `setup_tokens`, et écrit le texte clair dans
-`DATA_DIRECTORY/setup-token`, mode `0600`. Les logs ne reçoivent que **l'URL**,
-jamais le jeton : les logs partent souvent vers un agrégateur lu par plus de
-monde que le volume de données. Le rituel est
-`docker compose exec app cat /data/setup-token`.
+**Le jeton est retiré.** L'assistant est ouvert tant que `setup_completed_at`
+est nul. Ce qui reste :
 
-**(b) Revendication une-seule-fois, transactionnelle.** `POST /api/setup/claim`,
-dans une seule transaction : `SELECT setup_completed_at … FOR UPDATE` → 409 si
-non nul → `subtle.ConstantTimeCompare` du digest → création du compte, de la
-ligne `instance_admins` et de l'espace initial → `setup_completed_at = now()` →
-`DELETE FROM setup_tokens`. Le verrou de ligne rend la course entre deux
-revendiquants impossible.
+- **La revendication est une-seule-fois**, sérialisée par
+  `SELECT setup_completed_at … FOR UPDATE` dans la transaction : deux
+  revendiquants simultanés ne peuvent pas gagner tous les deux, le second reçoit
+  409.
+- **Elle n'accorde aucune session.** Elle enregistre l'administrateur et
+  déclenche un code de connexion ; il faut donc contrôler la boîte pour entrer.
+- **Elle est limitée en débit** par IP.
+- **Le démarrage le dit** : tant que le setup n'est pas fait, le service
+  journalise à chaque lancement que le premier visiteur revendiquera l'instance.
 
-**(c) La possession de la boîte mail reste prouvée.** La revendication
-**n'accorde pas de session** : elle enregistre l'adresse comme administrateur et
-déclenche un code de connexion ordinaire. Un jeton fuité ne suffit donc pas sans
-la boîte, et une boîte ne suffit pas sans le jeton. C'est précisément pourquoi
-le test de délivrabilité doit être appelable **depuis l'assistant, avant la
-revendication** : `POST /api/setup/email-test`.
+**Le risque assumé, écrit noir sur blanc :** entre le `docker compose up` et la
+première visite de l'opérateur, qui atteint l'URL revendique l'instance. C'est
+le choix d'AFFiNE, la fenêtre se compte en secondes et l'hébergeur contrôle le
+DNS et le pare-feu. `deploy/README.md` doit le dire à l'endroit où l'on démarre
+la pile, pas en note de bas de page.
 
-> *Alternative écartée :* accorder la session directement contre le jeton. Plus
-> simple, mais cela fait du jeton un mot de passe — et un fichier `0600` dans un
-> volume Docker sauvegardé n'en est pas un. Le prix payé, « si le mail est
-> cassé, l'assistant est en impasse », est exactement ce que couvre `blokctl`.
-
-**(d) Les défauts rendent l'instance inerte par construction.**
+**Les défauts rendent l'instance inerte par construction.**
 `signup_policy='invite'` avec zéro compte et zéro invitation ⇒ `request-code`
 n'émet aucun code. `workspace_creation='admins_only'` avec zéro administrateur
 d'instance ⇒ toute création d'espace est refusée. Aucun garde supplémentaire à
-écrire : c'est une conséquence des valeurs par défaut, et c'est à tester comme
-telle.
+écrire : c'est une conséquence des valeurs par défaut.
 
 ### 5.3 Dé-câbler `tousambassadeurs`
 

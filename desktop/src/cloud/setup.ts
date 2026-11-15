@@ -9,7 +9,6 @@ import { button, el, field } from '../ui/dom';
 import { createChoice, type ChoiceControl } from '../ui/controls';
 import type { CloudClient, CloudSignupPolicy, CloudWorkspaceCreation } from './client';
 
-const SETUP_TOKEN_CMD = 'docker compose exec app cat /data/setup-token';
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,62}$/;
 
 export interface SetupAssistantOptions {
@@ -25,7 +24,6 @@ export interface SetupAssistantOptions {
 }
 
 export interface SetupDraft {
-  token: string;
   instanceName: string;
   adminName: string;
   email: string;
@@ -66,11 +64,10 @@ function previewHost(options: SetupAssistantOptions): string {
 /**
  * Four-step first-run assistant. Nothing is written until the final POST /api/setup/claim.
  *
- * Claim persists `{token,email,name,instanceName?,workspace?,signupPolicy,workspaceCreation}`.
+ * Claim persists `{email,name,instanceName?,workspace?,signupPolicy,workspaceCreation}`.
  */
 export function mountSetupAssistant(options: SetupAssistantOptions): void {
   const draft: SetupDraft = {
-    token: '',
     instanceName: '',
     adminName: '',
     email: '',
@@ -119,31 +116,24 @@ export function mountSetupAssistant(options: SetupAssistantOptions): void {
 
   function stepOne(main: HTMLElement): void {
     const form = el('form');
-    const token = field({ form, label: 'Jeton de setup', type: 'text', name: 'setup-token', value: draft.token });
-    token.autocomplete = 'off';
-    token.spellcheck = false;
     const name = field({ form, label: 'Nom de l’instance', type: 'text', name: 'instance-name', value: draft.instanceName });
     name.maxLength = 120;
-    const cmd = el('p', { attribute: 'data-cloud-note' });
-    cmd.append(document.createTextNode('Sur le serveur : '), el('code', { text: SETUP_TOKEN_CMD }));
     const next = button({ label: 'Continuer', primary: true, type: 'submit', onClick: () => {} });
     const sync = (): void => {
-      draft.token = token.value.trim();
       draft.instanceName = name.value.trim();
-      next.disabled = !(draft.token && draft.instanceName);
+      next.disabled = !draft.instanceName;
     };
     sync();
     form.append(next);
     form.addEventListener('submit', (event) => {
       event.preventDefault();
       sync();
-      if (!draft.token || !draft.instanceName) return;
+      if (!draft.instanceName) return;
       flow.step = 2;
       render();
     });
-    token.addEventListener('input', sync);
     name.addEventListener('input', sync);
-    main.append(form, cmd);
+    main.append(form);
   }
 
   function stepTwo(main: HTMLElement): void {
@@ -165,7 +155,7 @@ export function mountSetupAssistant(options: SetupAssistantOptions): void {
           status.hidden = true;
           await options.client.request('/api/setup/email-test', {
             method: 'POST',
-            body: JSON.stringify({ token: draft.token, email: draft.email }),
+            body: JSON.stringify({ email: draft.email }),
           });
           status.textContent = `Un e-mail de test a été envoyé à ${draft.email}.`;
           status.hidden = false;
@@ -177,7 +167,7 @@ export function mountSetupAssistant(options: SetupAssistantOptions): void {
       draft.email = email.value.trim();
       const ready = Boolean(draft.adminName && draft.email.includes('@'));
       next.disabled = !ready;
-      verify.disabled = !ready || !draft.token;
+      verify.disabled = !ready;
     };
     sync();
     form.append(verify, next);
@@ -319,7 +309,6 @@ export function mountSetupAssistant(options: SetupAssistantOptions): void {
             await options.client.request('/api/setup/claim', {
               method: 'POST',
               body: JSON.stringify({
-                token: draft.token,
                 email: draft.email,
                 name: draft.adminName,
                 instanceName: draft.instanceName,

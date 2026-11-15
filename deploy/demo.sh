@@ -22,12 +22,11 @@ case "$action" in
     compose build
     if [[ $setup_mode == 1 ]]; then
       # Instance vierge : pas d'amorçage par variable, donc l'assistant de
-      # premier démarrage prend la main et frappe un jeton dans /data.
+      # premier démarrage prend la main.
       BOOTSTRAP_ADMIN_EMAIL= BOOTSTRAP_WORKSPACE_SLUG= BOOTSTRAP_WORKSPACE_NAME= \
         compose up -d --wait --wait-timeout 180
       printf '%s\n' 'Blok: http://localhost:8088' 'E-mails de démonstration: http://localhost:8089' \
-        'Premier démarrage : l’assistant demande le jeton ci-dessous.' \
-        "Jeton: $(compose exec -T app cat /data/setup-token 2>/dev/null || echo '(pas encore frappé, réessayez)')"
+        'Premier démarrage : ouvrez l’adresse, l’assistant prend la main.' 
       exit 0
     fi
     compose up -d --wait --wait-timeout 180

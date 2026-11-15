@@ -54,8 +54,10 @@ CREATE TABLE IF NOT EXISTS instance_admins(
   user_id text PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   granted_by text REFERENCES users(id),
   created_at timestamptz NOT NULL DEFAULT now());
-CREATE TABLE IF NOT EXISTS setup_tokens(
-  digest text PRIMARY KEY, created_at timestamptz NOT NULL DEFAULT now());
+-- Pas de jeton de premier démarrage : l'assistant est ouvert tant que le setup
+-- n'est pas fait, comme celui d'AFFiNE. Le DROP rattrape les instances qui ont
+-- tourné sur la version intermédiaire qui en frappait un.
+DROP TABLE IF EXISTS setup_tokens;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS name text NOT NULL DEFAULT '';
 INSERT INTO instance_settings DEFAULT VALUES ON CONFLICT DO NOTHING;
 -- Une instance qui a déjà des membres n'attend pas d'assistant.

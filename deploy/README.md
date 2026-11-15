@@ -62,7 +62,10 @@ sudo docker compose logs --tail 100 app web
 ```
 
 Le proxy existant gère le certificat HTTPS public. Caddy écoute en HTTP sur le port 80 du conteneur, publié uniquement sur `127.0.0.1:18088`. `PUBLIC_URL` reste l’adresse HTTPS du domaine. Vérifie la pile depuis le VPS avec `curl http://127.0.0.1:18088/healthz`.
-Sans `BOOTSTRAP_ADMIN_EMAIL`, le premier démarrage ouvre l'assistant de setup (jeton dans `/data/setup-token`). Avec cette variable seule, l'adresse devient administrateur d'instance sans membership d'espace. Le couple `BOOTSTRAP_WORKSPACE_*` (avec l'admin) sème un espace et une membership admin une fois chacun (`ON CONFLICT DO NOTHING` — une rétrogradation volontaire survit au redémarrage).
+Sans `BOOTSTRAP_ADMIN_EMAIL`, le premier démarrage ouvre l'assistant de setup : ouvrez l'adresse de l'instance, saisissez le nom de l'instance, votre nom et votre adresse, et l'espace de départ. Il n'y a pas de jeton à aller chercher.
+
+> **Configurez l'instance tout de suite après l'avoir démarrée.** Tant que l'assistant n'a pas été complété, **la première personne qui atteint cette adresse revendique l'instance** et en devient l'administratrice. La revendication n'ouvre aucune session — un code de connexion part à l'adresse saisie, donc il faut en contrôler la boîte — mais ne laissez pas une instance fraîche exposée sans la configurer. Le service le rappelle dans ses logs à chaque démarrage tant que le setup est en attente.
+ Avec cette variable seule, l'adresse devient administrateur d'instance sans membership d'espace. Le couple `BOOTSTRAP_WORKSPACE_*` (avec l'admin) sème un espace et une membership admin une fois chacun (`ON CONFLICT DO NOTHING` — une rétrogradation volontaire survit au redémarrage).
 
 Si le réseau Docker `172.30.87.0/24` existe déjà, change ensemble `BLOK_NETWORK_SUBNET`, `BLOK_NETWORK_DYNAMIC_RANGE` et `CADDY_IP` dans `.env`. L'adresse fixe de Caddy doit rester hors de la plage dynamique.
 Seul Caddy est un proxy de confiance ; PostgreSQL et le service Go n'exposent aucun port sur le VPS.

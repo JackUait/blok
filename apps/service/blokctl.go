@@ -17,7 +17,6 @@ const BlokctlUsage = `usage: blokctl <command>
   blokctl admin revoke <email>
   blokctl settings show
   blokctl settings set key=value...
-  blokctl setup token [--regenerate]
   blokctl email test <address>
 
 Config is read from the environment (DATABASE_URL required).
@@ -30,7 +29,7 @@ func Blokctl(ctx context.Context, cfg Config, args []string, stdout, stderr io.W
 		return errors.New("missing command")
 	}
 	switch args[0] {
-	case "admin", "settings", "setup", "email":
+	case "admin", "settings", "email":
 	case "help", "-h", "--help":
 		fmt.Fprint(stdout, BlokctlUsage)
 		return nil
@@ -49,8 +48,6 @@ func Blokctl(ctx context.Context, cfg Config, args []string, stdout, stderr io.W
 		return blokctlAdmin(ctx, ops, args[1:], stdout, stderr)
 	case "settings":
 		return blokctlSettings(ctx, ops, args[1:], stdout, stderr)
-	case "setup":
-		return blokctlSetup(ctx, ops, args[1:], stdout, stderr)
 	case "email":
 		return blokctlEmail(ctx, ops, args[1:], stdout, stderr)
 	default:
@@ -199,29 +196,6 @@ func parseSettingsPairs(pairs []string) (SettingsPatch, error) {
 		}
 	}
 	return patch, nil
-}
-
-func blokctlSetup(ctx context.Context, ops *Ops, args []string, stdout, stderr io.Writer) error {
-	if len(args) == 0 || args[0] != "token" {
-		fmt.Fprint(stderr, BlokctlUsage)
-		return errors.New("usage: blokctl setup token [--regenerate]")
-	}
-	regenerate := false
-	for _, a := range args[1:] {
-		switch a {
-		case "--regenerate":
-			regenerate = true
-		default:
-			fmt.Fprint(stderr, BlokctlUsage)
-			return fmt.Errorf("unknown flag %q", a)
-		}
-	}
-	token, e := ops.SetupToken(ctx, regenerate)
-	if e != nil {
-		return e
-	}
-	fmt.Fprintln(stdout, token)
-	return nil
 }
 
 func blokctlEmail(ctx context.Context, ops *Ops, args []string, stdout, stderr io.Writer) error {

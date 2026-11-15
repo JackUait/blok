@@ -58,7 +58,7 @@ describe('cloud gateway', () => {
     expect(document.querySelector('input[type="email"]')).toBeNull();
     expect(document.body.textContent).toContain('Étape 1 sur 4');
     expect(document.body.textContent).toContain('Cette instance');
-    expect(document.body.textContent).toContain('docker compose exec app cat /data/setup-token');
+    expect(document.body.textContent).not.toContain('Jeton');
     expect(document.body.textContent).not.toMatch(/Coming soon/i);
     // Boot reads the instance once — nothing is cached yet, so a second
     // back-to-back read asserts an implementation artifact, not behaviour.

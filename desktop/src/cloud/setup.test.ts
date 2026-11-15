@@ -47,16 +47,14 @@ describe('setup assistant', () => {
     });
 
     expect(host.textContent).toContain('Étape 1 sur 4');
-    expect(host.textContent).toContain('docker compose exec app cat /data/setup-token');
+    // No setup token: the assistant is open while setup is pending, like AFFiNE's.
+    expect(host.querySelector('#cloud-setup-token')).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
 
-    const token = must(host.querySelector<HTMLInputElement>('#cloud-setup-token'));
     const instanceName = must(host.querySelector<HTMLInputElement>('#cloud-instance-name'));
-    token.value = 'setup-secret';
     instanceName.value = 'Acme';
-    token.dispatchEvent(new Event('input'));
     instanceName.dispatchEvent(new Event('input'));
-    must(token.form).dispatchEvent(new Event('submit', {cancelable: true}));
+    must(instanceName.form).dispatchEvent(new Event('submit', {cancelable: true}));
 
     expect(host.textContent).toContain('Étape 2 sur 4');
     expect(host.textContent).toMatch(/Blok n’a pas de mot de passe|Blok n'a pas de mot de passe/);
@@ -72,7 +70,6 @@ describe('setup assistant', () => {
     must(verify).click();
     await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
     expect(JSON.parse(requestBody(fetch.mock.calls[0]?.[1]))).toMatchObject({
-      token: 'setup-secret',
       email: 'alice@example.test',
     });
     must(email.form).dispatchEvent(new Event('submit', {cancelable: true}));
@@ -100,7 +97,6 @@ describe('setup assistant', () => {
     await vi.waitFor(() => expect(onClaimed).toHaveBeenCalledWith('alice@example.test'));
     const claimCall = fetch.mock.calls.find(([url]) => String(url).endsWith('/api/setup/claim'));
     expect(JSON.parse(requestBody(claimCall?.[1]))).toMatchObject({
-      token: 'setup-secret',
       email: 'alice@example.test',
       name: 'Alice',
       instanceName: 'Acme',
@@ -148,11 +144,9 @@ describe('setup assistant', () => {
 
     // Move to step 2 with values, then leave Continuer disabled until fields filled —
     // simulate empty email-test run restoration.
-    const token = must(host.querySelector<HTMLInputElement>('#cloud-setup-token'));
     const instanceName = must(host.querySelector<HTMLInputElement>('#cloud-instance-name'));
-    token.value = 'tok';
     instanceName.value = 'Acme';
-    token.dispatchEvent(new Event('input'));
+    instanceName.dispatchEvent(new Event('input'));
     must(instanceName.form).dispatchEvent(new Event('submit', {cancelable: true}));
 
     const verify = must([...host.querySelectorAll('button')].find((item) => item.textContent === 'Vérifier l’envoi'));

@@ -18,7 +18,7 @@ import (
 
 // isolatedConfig gives each restart test its own schema, so a second New() in
 // the same process sees the first one's rows and nothing else. DataDirectory is
-// a temp dir the caller can read the setup token from.
+// a temp dir.
 func isolatedConfig(t *testing.T, prefix string) Config {
 	t.Helper()
 	raw := os.Getenv("TEST_DATABASE_URL")
@@ -172,8 +172,8 @@ func TestAdminCannotDeleteTheirOwnAccount(t *testing.T) {
 }
 
 // Setup must not be spent before the address is proven reachable. A typo or a
-// dead relay would otherwise complete the instance, destroy the token, and
-// leave the only administrator unreachable.
+// dead relay would otherwise complete the instance and leave the only
+// administrator unreachable.
 func TestClaimSetupRollsBackWhenDeliveryFails(t *testing.T) {
 	ctx := context.Background()
 	cfg := isolatedConfig(t, "claim_mail")
@@ -184,12 +184,11 @@ func TestClaimSetupRollsBackWhenDeliveryFails(t *testing.T) {
 		t.Fatal(e)
 	}
 	t.Cleanup(s.Close)
-	token := readSetupToken(t, cfg.DataDirectory)
 
 	server := httptest.NewServer(s.Handler())
 	t.Cleanup(server.Close)
 	status, _ := setupRequest(t, server, s.Config.PublicURL, "POST", "/api/setup/claim", map[string]any{
-		"token": token, "email": "typo@example.test", "name": "Ops",
+		"email": "typo@example.test", "name": "Ops",
 		"instanceName": "Acme",
 		"workspace":    map[string]string{"name": "Acme", "slug": "acme"},
 	})
@@ -204,15 +203,14 @@ func TestClaimSetupRollsBackWhenDeliveryFails(t *testing.T) {
 	if completed != nil {
 		t.Fatal("setup was marked complete even though the code could not be delivered")
 	}
-	var tokens int
-	if e = s.DB.QueryRow(ctx, `SELECT count(*) FROM setup_tokens`).Scan(&tokens); e != nil {
+	// The assistant must still be claimable, so the operator can retry with a
+	// corrected address.
+	var stillRequired bool
+	if e = s.DB.QueryRow(ctx, `SELECT setup_completed_at IS NULL FROM instance_settings WHERE id`).Scan(&stillRequired); e != nil {
 		t.Fatal(e)
 	}
-	if tokens == 0 {
-		t.Fatal("the setup token was destroyed, leaving no way to retry")
-	}
-	if _, e = os.Stat(cfg.DataDirectory + "/setup-token"); e != nil {
-		t.Fatalf("the on-disk token was removed, leaving no way to retry: %v", e)
+	if !stillRequired {
+		t.Fatal("the instance stopped being claimable, leaving no way to retry")
 	}
 	var users int
 	if e = s.DB.QueryRow(ctx, `SELECT count(*) FROM users WHERE email='typo@example.test'`).Scan(&users); e != nil {
@@ -253,9 +251,9 @@ func TestPatchSettingsClearsDefaultWorkspace(t *testing.T) {
 	}
 }
 
-// Token guesses must consume the quota. claimSetup already rate limits before
-// checking; the e-mail probe checked first, leaving guesses unthrottled.
-func TestSetupEmailTestRateLimitsBeforeCheckingToken(t *testing.T) {
+// The delivery probe is unauthenticated while setup is open, so the quota is
+// the only thing standing between it and an open mail relay.
+func TestSetupEmailTestIsRateLimited(t *testing.T) {
 	ctx := context.Background()
 	cfg := isolatedConfig(t, "probe_rate")
 	s, e := New(ctx, cfg)
@@ -266,15 +264,15 @@ func TestSetupEmailTestRateLimitsBeforeCheckingToken(t *testing.T) {
 	_ = ctx
 	server := httptest.NewServer(s.Handler())
 	t.Cleanup(server.Close)
-	body := map[string]any{"token": "wrong", "email": "ops@example.test"}
+	body := map[string]any{"email": "ops@example.test"}
 	for i := 0; i < 10; i++ {
-		if status, _ := setupRequest(t, server, s.Config.PublicURL, "POST", "/api/setup/email-test", body); status != 403 {
-			t.Fatalf("probe %d status = %d, want 403", i, status)
+		if status, _ := setupRequest(t, server, s.Config.PublicURL, "POST", "/api/setup/email-test", body); status >= 500 {
+			t.Fatalf("probe %d status = %d, want a non-server status", i, status)
 		}
 	}
 	status, _ := setupRequest(t, server, s.Config.PublicURL, "POST", "/api/setup/email-test", body)
 	if status != 429 {
-		t.Fatalf("11th probe status = %d, want 429 — token guesses must consume the quota", status)
+		t.Fatalf("11th probe status = %d, want 429 — the probe must stay bounded", status)
 	}
 }
 

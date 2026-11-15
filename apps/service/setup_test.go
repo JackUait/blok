@@ -10,7 +10,6 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -87,29 +86,8 @@ func setupRequest(t *testing.T, server *httptest.Server, publicURL, method, path
 	return resp.StatusCode, out
 }
 
-func readSetupToken(t *testing.T, dataDir string) string {
-	t.Helper()
-	path := filepath.Join(dataDir, "setup-token")
-	info, e := os.Stat(path)
-	if e != nil {
-		t.Fatalf("setup-token missing: %v", e)
-	}
-	if info.Mode().Perm() != 0600 {
-		t.Fatalf("setup-token mode = %o, want 0600", info.Mode().Perm())
-	}
-	raw, e := os.ReadFile(path)
-	if e != nil {
-		t.Fatal(e)
-	}
-	token := strings.TrimSpace(string(raw))
-	if token == "" {
-		t.Fatal("setup-token is empty")
-	}
-	return token
-}
-
 // Base neuve sans AdminEmail ⇒ setupRequired et fichier jeton mode 0600.
-func TestSetupFreshDatabaseMintsToken(t *testing.T) {
+func TestSetupFreshDatabaseOpensTheAssistant(t *testing.T) {
 	_, _, open := setupFixture(t)
 	dataDir := t.TempDir()
 	s := open(dataDir)
@@ -123,39 +101,19 @@ func TestSetupFreshDatabaseMintsToken(t *testing.T) {
 	if out["setupRequired"] != true {
 		t.Fatalf("setupRequired = %v, want true", out["setupRequired"])
 	}
-	_ = readSetupToken(t, dataDir)
 }
 
 // Jeton faux ⇒ 403.
-func TestSetupClaimBadTokenForbidden(t *testing.T) {
-	_, _, open := setupFixture(t)
-	dataDir := t.TempDir()
-	s := open(dataDir)
-	_ = readSetupToken(t, dataDir)
-
-	server := httptest.NewServer(s.Handler())
-	t.Cleanup(server.Close)
-	status, out := setupRequest(t, server, s.Config.PublicURL, "POST", "/api/setup/claim", map[string]any{
-		"token": "not-the-real-token",
-		"email": "owner@example.test",
-		"name":  "Owner",
-	})
-	if status != 403 {
-		t.Fatalf("claim bad token status %d body %#v, want 403", status, out)
-	}
-}
 
 // Double revendication ⇒ 409.
 func TestSetupClaimTwiceConflicts(t *testing.T) {
 	_, _, open := setupFixture(t)
 	dataDir := t.TempDir()
 	s := open(dataDir)
-	token := readSetupToken(t, dataDir)
 
 	server := httptest.NewServer(s.Handler())
 	t.Cleanup(server.Close)
 	payload := map[string]any{
-		"token": token,
 		"email": "owner@example.test",
 		"name":  "Owner",
 		"workspace": map[string]string{
@@ -179,12 +137,10 @@ func TestSetupClaimPersistsPolicies(t *testing.T) {
 	_, _, open := setupFixture(t)
 	dataDir := t.TempDir()
 	s := open(dataDir)
-	token := readSetupToken(t, dataDir)
 
 	server := httptest.NewServer(s.Handler())
 	t.Cleanup(server.Close)
 	status, out := setupRequest(t, server, s.Config.PublicURL, "POST", "/api/setup/claim", map[string]any{
-		"token":             token,
 		"email":             "owner@example.test",
 		"name":              "Owner",
 		"instanceName":      "Acme",

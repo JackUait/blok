@@ -219,6 +219,7 @@ describe('workspace rename', () => {
     submit(must(openGeneral(footer)), '  Maison  ');
     await vi.waitFor(() => expect(activeWorkspace().name).toBe('Maison'));
     expect(footer.querySelector('[data-desktop-switcher-name]')?.textContent).toBe('Maison');
+    expect(document.querySelector('[data-desktop-workspace-icon]')?.textContent).toBe('M');
     must(document.querySelector<HTMLButtonElement>('[data-desktop-settings-close]')).click();
     footer.remove();
     const rebuilt = createDesktopFooter(() => undefined); document.body.append(rebuilt);
@@ -231,6 +232,9 @@ describe('workspace rename', () => {
     const footer = remoteFooter();
     const renamed = vi.fn(); footer.addEventListener('blok:desktop-workspace-renamed', renamed);
     const form = must(openGeneral(footer));
+    const input=must(form.querySelector('input'));input.value='  Maison  ';input.dispatchEvent(new Event('input',{bubbles:true}));
+    expect(document.querySelector('[data-desktop-workspace-icon]')?.textContent).toBe('M');
+    expect(activeWorkspace().name).toBe('Acme');
     submit(form, '  Maison  ');
     expect(rename).toHaveBeenCalledWith('acme', 'Maison');
     expect(form.querySelector('button')?.disabled).toBe(true);
@@ -240,6 +244,7 @@ describe('workspace rename', () => {
     finish({id: 'team', slug: 'acme', name: 'Maison', role: 'admin'});
     await vi.waitFor(() => expect(activeWorkspace().name).toBe('Maison'));
     expect(footer.querySelector('[data-desktop-switcher-name]')?.textContent).toBe('Maison');
+    expect(document.querySelector('[data-desktop-workspace-icon]')?.textContent).toBe('M');
     expect(footer.querySelector('[aria-current="true"] [data-desktop-menu-workspace-name]')?.textContent).toBe('Maison');
     expect(form.querySelector('[role="status"]')?.textContent).toContain('enregistré');
     expect(renamed).toHaveBeenCalledWith(expect.objectContaining({detail: {key: workspaceKey(remoteRef), name: 'Maison'}}));

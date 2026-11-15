@@ -28,13 +28,24 @@ describe('teamspace settings',()=>{
   expect(api.create).not.toHaveBeenCalled();
  });
 
- it('keeps workspace and teamspace identity separate, saves draft emoji/name/description only on submit',async()=>{
-  const {api}=setup();await openDetail();
+ it('saves the selected emoji immediately without committing draft name or description',async()=>{
+  const {api,changed}=setup();await openDetail();
+  api.update.mockResolvedValue({...team,icon:'👩🏽‍💻'});
   const name=must(document.querySelector<HTMLInputElement>('[aria-label="Nom de l’espace d’équipe"]'));name.value='  Rédaction  ';
   must(document.querySelector<HTMLTextAreaElement>('textarea')).value='Guide éditorial';
   must(document.querySelector<HTMLButtonElement>('[data-teamspace-icon]')).click();must(picker.options).onSelect('👩🏽‍💻');
-  expect(api.update).not.toHaveBeenCalled();click('Enregistrer');
+  await vi.waitFor(()=>expect(changed).toHaveBeenCalledOnce());
+  expect(api.update).toHaveBeenCalledWith('product',{name:'Produit',icon:'👩🏽‍💻',description:'Docs produit'});
+  expect(name.value).toBe('  Rédaction  ');
+  api.update.mockClear();click('Enregistrer');
   await vi.waitFor(()=>expect(api.update).toHaveBeenCalledExactlyOnceWith('product',{name:'Rédaction',icon:'👩🏽‍💻',description:'Guide éditorial'}));
+ });
+ it('keeps the saved emoji and reports failure when immediate saving fails',async()=>{
+  const {api,changed}=setup();await openDetail();api.update.mockRejectedValue(new Error('Connexion perdue'));
+  const icon=must(document.querySelector<HTMLButtonElement>('[data-teamspace-icon]'));
+  icon.click();must(picker.options).onSelect('🌳');
+  await vi.waitFor(()=>expect(document.querySelector('[role=status]')?.textContent).toBe('Connexion perdue'));
+  expect(icon.textContent).toBe('🛠️');expect(changed).not.toHaveBeenCalled();expect(icon.disabled).toBe(false);
  });
  it('creates only a closed teamspace and keeps creation out of member/viewer UI',async()=>{
   const {api,handle}=setup();await vi.waitFor(()=>expect(api.list).toHaveBeenCalled());click('Créer un espace d’équipe');

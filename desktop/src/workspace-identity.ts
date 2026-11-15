@@ -4,9 +4,9 @@ import type { WorkspaceRef } from './workspace-registry';
 import { rememberWorkspace, workspaceKey } from './workspace-registry';
 import type { CloudClient } from './cloud/client';
 
-export const workspaceGlyph = (ref: Pick<WorkspaceRef, 'name' | 'icon'>): string => ref.icon || [...ref.name][0]?.toLocaleUpperCase() || 'B';
+export const workspaceGlyph = (ref: Pick<WorkspaceRef, 'name' | 'icon'>): string => ref.icon || [...ref.name.trim()][0]?.toLocaleUpperCase() || 'B';
 
-export function mountWorkspaceIcon(container: HTMLElement, ref: WorkspaceRef, client: CloudClient | null, changed: () => void): {destroy(): void; dismiss(): boolean} {
+export function mountWorkspaceIcon(container: HTMLElement, ref: WorkspaceRef, client: CloudClient | null, changed: () => void): {destroy(): void; dismiss(): boolean; refresh(name?: string): void} {
   const identity=ref;
   const state={dead:false,saving:false,picker:null as EmojiPicker | null};
   const area=document.createElement('div');area.setAttribute('data-desktop-settings-row','');
@@ -47,7 +47,7 @@ export function mountWorkspaceIcon(container: HTMLElement, ref: WorkspaceRef, cl
   if(canEdit)controls.append(remove);
   else status.textContent='Seuls les administrateurs de cet espace peuvent modifier son identité.';
   area.append(status);container.append(area);render();
-  return {dismiss(){if(!state.picker || state.picker.getElement().hidden)return false;state.picker.close();return true;},destroy(){state.dead=true;state.picker?.close();state.picker?.getElement().remove();}};
+  return {refresh(name = identity.name){trigger.textContent=workspaceGlyph({...identity,name});},dismiss(){if(!state.picker || state.picker.getElement().hidden)return false;state.picker.close();return true;},destroy(){state.dead=true;state.picker?.close();state.picker?.getElement().remove();}};
 }
 
 /** The shared sidebar owns its chevron; decorate only its workspace mark. */

@@ -48,16 +48,25 @@ export function mountTeamspaceSettings(container:HTMLElement, options:Options):{
     const description=el('textarea');description.value=team?.description ?? '';description.rows=3;description.maxLength=4000;description.disabled=!editable;description.setAttribute('aria-label','Description de l’espace d’équipe');
     const draft={icon:team?.icon ?? null as string|null};
     const initial=():string=>([...name.value.trim()][0] || 'É').toLocaleUpperCase();
+    const select=(value:string|null):void=>{
+      if(!editable || state.busy || state.dead)return;
+      if(!team){draft.icon=value;icon.textContent=value || initial();return;}
+      // Persist the icon independently, preserving unsaved name and description edits.
+      void mutate(async()=>{
+        const saved=await options.api.update(team.id,{name:team.name,description:team.description,icon:value});
+        state.team=saved;draft.icon=saved.icon;
+        if(!state.dead)icon.textContent=draft.icon || initial();
+      },async()=>undefined);
+    };
     const icon=button(draft.icon || initial(),()=>{
       if(!editable || state.busy)return;
-      const select=(value:string|null):void=>{draft.icon=value;icon.textContent=value || initial();};
       state.picker??=new EmojiPicker({onSelect:select,onRemove:()=>select(null),i18n:{t:key=>(french as Record<string,string>)[key] ?? key},locale:'fr',curated:false,fitToAnchor:true,startInset:0});
       const node=state.picker.getElement();if(!node.isConnected)body.append(node);
       void state.picker.open(icon,undefined,{current:draft.icon ?? '',onSelect:select,onRemove:()=>select(null)}).catch(error=>{status.textContent=errorText(error);});
     });icon.setAttribute('data-teamspace-icon','');icon.setAttribute('aria-label','Choisir l’emoji de l’espace d’équipe');icon.disabled=!editable;
     name.addEventListener('input',()=>{if(!draft.icon)icon.textContent=initial();});
     const iconRow=el('div');iconRow.append(icon);
-    if(editable) iconRow.append(button('Supprimer l’icône',()=>{draft.icon=null;icon.textContent=initial();}));
+    if(editable) iconRow.append(button('Supprimer l’icône',()=>select(null)));
     form.append(field('Nom',name,'Nom affiché dans la barre latérale. Maximum 120 caractères.'),field('Icône',iconRow),field('Description',description,'Expliquez à votre équipe ce que cet espace contient.'));
     if(editable){const save=button(creating ? 'Créer l’espace d’équipe' : 'Enregistrer',()=>undefined);save.type='submit';form.append(save);}
     else form.append(el('p',team?.archived ? 'Cet espace d’équipe est archivé. Restaurez-le pour modifier son identité.' : 'Seuls ses propriétaires et les administrateurs du Workspace peuvent modifier ces informations.'));

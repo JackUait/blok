@@ -167,7 +167,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
     members: null as ReturnType<typeof mountWorkspaceMembers> | null,
     instancePanel: null as ReturnType<typeof mountInstanceSettings> | null,
     modal: null as ModalDialogHandle | null,
-    choices: [] as Array<{destroy(): void; dismiss?(): boolean}>,
+    choices: [] as Array<{destroy(): void; dismiss?(): boolean; refresh?(name?: string): void}>,
     panelGeneration: 0,
     teamspaceId: undefined as string | undefined,
     directory: 'Chargement…',
@@ -431,6 +431,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
 
   const updateWorkspaceName = (next: string): void => {
     currentWorkspace.name = next;
+    ui.choices.forEach(choice=>choice.refresh?.());
     rememberWorkspace(currentWorkspace);
     if (currentWorkspace.kind === 'local' && currentWorkspace.id === 'default') {
       localStorage.setItem('blok:desktop:profile-name', next);
@@ -597,6 +598,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
         const name = el('input', 'data-desktop-settings-name');
         name.type = 'text'; name.required = true; name.maxLength = 240;
         name.value = currentWorkspace.name;
+        name.addEventListener('input',()=>ui.choices.forEach(choice=>choice.refresh?.(name.value)));
         name.setAttribute('aria-label', 'Nom du Workspace');
         styleTextField(name);
         const save = el('button', 'data-desktop-settings-copy', 'Enregistrer');

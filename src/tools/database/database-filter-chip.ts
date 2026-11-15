@@ -1079,7 +1079,7 @@ const CHIP_POPOVER_WINDOW_MARGIN = 8;
  * Opens a filter chip's popover under the chip. With `host` it is a flyout
  * over that panel, which stays open under it (the settings Filters page).
  */
-export const openFilterChip = (anchor: HTMLElement, ctx: ViewSettingsContext, filterId: string, onClose?: () => void, host?: DatabasePanel): DatabasePanel => {
+export const openFilterChip = (anchor: HTMLElement, ctx: ViewSettingsContext, filterId: string, onClose?: (escape: boolean) => void, host?: DatabasePanel): DatabasePanel => {
   const filter = withEntryIds(ctx.view().filters).find((f) => f.id === filterId);
   const property = ctx.schema().find((p) => p.id === filter?.propertyId);
   // A rollup of the Name has a text field, as Notion's 220-wide popover shows (r13-filter-ops-rollup.png).
@@ -1100,7 +1100,7 @@ export const openFilterChip = (anchor: HTMLElement, ctx: ViewSettingsContext, fi
     onClose: (escape) => {
       pages.dispose(escape);
       release?.();
-      onClose?.();
+      onClose?.(escape);
     },
   });
   const release = host?.hold();

@@ -4418,6 +4418,40 @@ describe('DatabaseTool', () => {
         tool.destroy();
       });
 
+      // notion-motion.md Round 38 §1 (r38-pm-chips.raw): a sort edit in the modal re-sorts only its rows. The board and
+      // the saved view keep their sort, and closing the modal drops the edit.
+      it('keeps a sort edit in the pinned group modal out of the view, and drops it on close', () => {
+        const { tool, element, transact } = board(false, boardView({
+          pinnedGroups: [{ id: 'opt-todo' }],
+          sorts: [{ id: 's', propertyId: 'prop-title', direction: 'desc' }],
+        }));
+        const saved = structuredClone(tool.save(element));
+        const modalRows = (): Array<string | null> => [...new Set([...document.querySelectorAll('[data-blok-database-group-modal-panel] [role="row"][data-row-id]')]
+          .map((row) => row.getAttribute('data-row-id')))];
+        const sortChip = (): HTMLElement | null => document.querySelector('[data-blok-database-group-modal-panel] [data-blok-testid="database-group-modal-sort-chip"]');
+
+        queryByData(element, 'data-blok-database-pinned-group-open')?.click();
+        expect(modalRows()).toEqual(['row-2', 'row-1']);
+
+        sortChip()?.click();
+        document.querySelector<HTMLElement>('[data-blok-testid="database-sort-remove-s"]')?.click();
+
+        expect(modalRows()).toEqual(['row-1', 'row-2']);
+        expect(sortChip()).toBeNull();
+        expect(tool.save(element)).toEqual(saved);
+        expect(element.querySelector('[data-blok-testid="database-sort-pill"]')).not.toBeNull();
+        expect(transact).not.toHaveBeenCalled();
+
+        document.querySelector<HTMLElement>('[data-blok-database-group-modal-close]')?.click();
+        expect(tool.save(element)).toEqual(saved);
+
+        queryByData(element, 'data-blok-database-pinned-group-open')?.click();
+        expect(sortChip()?.getAttribute('data-direction')).toBe('desc');
+        expect(modalRows()).toEqual(['row-2', 'row-1']);
+
+        tool.destroy();
+      });
+
       // Round 26 §1 (r26-pm-more-leaf.raw): the board's cards show no property, yet every property is a modal column.
       it('shows the properties the board hides as modal columns', () => {
         const schema = makeDefaultData().schema;

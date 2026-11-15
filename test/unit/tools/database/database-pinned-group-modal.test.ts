@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { pinnedGroupChips } from '../../../../src/tools/database/database-pinned-group-modal';
+import { openPinnedGroupModal, pinnedGroupChips } from '../../../../src/tools/database/database-pinned-group-modal';
+import type { PinnedGroupModalHandle } from '../../../../src/tools/database/database-pinned-group-modal';
 import { filterPillLabel } from '../../../../src/tools/database/database-filter-labels';
 import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
 
@@ -52,7 +53,7 @@ describe('pinnedGroupChips', () => {
     const name = schema[0];
 
     expect(texts(chips)).toEqual(['tools.database.filterRuleCount(count=1)', filterPillLabel(filter, name, i18n.t)]);
-    expect(chips[1].getAttribute('aria-disabled')).toBe('true');
+    expect(chips[1].hasAttribute('aria-disabled')).toBe(false);
     expect(chips[1].hasAttribute('data-active')).toBe(true);
   });
 
@@ -64,10 +65,143 @@ describe('pinnedGroupChips', () => {
     expect(chips[1].hasAttribute('aria-disabled')).toBe(false);
   });
 
-  // Round 26 §1 (r26-pm-key-*.raw): Tab reaches the chips; inside the read-only modal they edit nothing.
-  it('draws read-only chips that Tab still reaches', () => {
-    const chips = pinnedGroupChips(view({}), schema, i18n);
+  // Round 26 §1 (r26-pm-key-*.raw): Tab reaches the chips. notion-motion.md Round 38 §1: the sort and filter chips
+  // open their editors; the group's "N rules" chip stays read-only here.
+  it('draws the sort and filter chips as live buttons, the rules chip read-only', () => {
+    const chips = pinnedGroupChips(view({
+      sorts: [{ id: 's', propertyId: 'title', direction: 'asc' }],
+      filters: [{ id: 'f', propertyId: 'title', operator: 'contains', value: 'a' }],
+    }), schema, i18n).filter((chip) => chip.tagName === 'BUTTON');
 
-    expect(chips.every((chip) => chip.tagName === 'BUTTON' && chip.getAttribute('aria-disabled') === 'true' && !chip.hasAttribute('disabled'))).toBe(true);
+    expect(chips.every((chip) => !chip.hasAttribute('disabled'))).toBe(true);
+    expect(chips.map((chip) => chip.getAttribute('aria-disabled'))).toEqual([null, 'true', null]);
+  });
+});
+
+/**
+ * notion-motion.md Round 38 §1 (r38-pm-chips.raw): the modal's sort and filter chips open the same editors as the
+ * toolbar. Edits re-sort and re-filter only the modal's rows and are dropped when it closes.
+ */
+describe('openPinnedGroupModal chip editors', () => {
+  const rows = [{ id: 'r1', title: 'Alpha' }, { id: 'r2', title: 'Gamma' }];
+  const q = (id: string): HTMLElement | null => document.querySelector(`[data-blok-testid="${id}"]`);
+  const escape = (): void => {
+    (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  };
+  const shown = (): string[] => [...document.querySelectorAll('[data-test-row]')].map((el) => el.textContent ?? '');
+  const state: { handle: PinnedGroupModalHandle | null } = { handle: null };
+
+  const open = (start: DatabaseViewConfig): { views: DatabaseViewConfig[]; onClose: ReturnType<typeof vi.fn> } => {
+    const views: DatabaseViewConfig[] = [];
+    const onClose = vi.fn();
+
+    state.handle = openPinnedGroupModal({
+      pill: document.createElement('span'),
+      label: 'Todo',
+      view: start,
+      schema,
+      i18n,
+      directionSource: null,
+      table: (search, local) => {
+        const root = document.createElement('div');
+        const filter = local.filters.find((f) => f.propertyId === 'title');
+        const needle = typeof filter?.value === 'string' ? filter.value : '';
+        const sorted = [...rows]
+          .filter((row) => row.title.toLowerCase().includes(needle.toLowerCase()) && row.title.includes(search))
+          .sort((a, b) => (local.sorts[0]?.direction === 'desc' ? b.title.localeCompare(a.title) : a.title.localeCompare(b.title)));
+
+        views.push(local);
+        root.append(...sorted.map((row) => {
+          const el = document.createElement('div');
+
+          el.setAttribute('data-test-row', '');
+          el.textContent = row.title;
+
+          return el;
+        }));
+
+        return { root, destroy: () => undefined };
+      },
+      onClose,
+    });
+
+    return { views, onClose };
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    state.handle?.close();
+    state.handle = null;
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  it('re-sorts the modal rows from the sort chip and never touches the view it was given', () => {
+    const start = view({ sorts: [{ id: 's', propertyId: 'title', direction: 'asc' }] });
+    const before = structuredClone(start);
+    const { views } = open(start);
+
+    expect(shown()).toEqual(['Alpha', 'Gamma']);
+    q('database-group-modal-sort-chip')?.click();
+    expect(q('database-sort-panel')).not.toBeNull();
+    q('database-sort-direction-s')?.click();
+    // The direction list is a flyout over the editor; the modal stays open under both.
+    expect(q('database-sort-direction-picker')).not.toBeNull();
+    expect(q('database-sort-direction-picker')?.contains(document.activeElement)).toBe(true);
+    q('database-sort-direction-desc')?.click();
+
+    expect(shown()).toEqual(['Gamma', 'Alpha']);
+    expect(views[views.length - 1].sorts[0].direction).toBe('desc');
+    expect(q('database-group-modal-sort-chip')?.getAttribute('data-direction')).toBe('desc');
+    expect(q('database-sort-panel')).not.toBeNull();
+    expect(document.querySelector('[data-blok-database-group-modal-panel]')).not.toBeNull();
+    expect(start).toEqual(before);
+  });
+
+  it('filters the modal rows from a filter chip', () => {
+    open(view({ filters: [{ id: 'f', propertyId: 'title', operator: 'contains', value: '' }] }));
+
+    q('database-group-modal-filter-chip-f')?.click();
+    const input = document.querySelector<HTMLInputElement>('[data-blok-testid="database-filter-popover"] input');
+
+    expect(input).not.toBeNull();
+    if (input === null) return;
+    input.value = 'gam';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(shown()).toEqual(['Gamma']);
+    expect(document.querySelector('[data-blok-database-group-modal-panel]')).not.toBeNull();
+  });
+
+  // Round 27 §2: Escape closes only the editor; the next Escape closes the modal.
+  it('peels the editor first on Escape, then the modal', () => {
+    const { onClose } = open(view({ sorts: [{ id: 's', propertyId: 'title', direction: 'asc' }] }));
+
+    q('database-group-modal-sort-chip')?.click();
+    escape();
+
+    expect(q('database-sort-panel')).toBeNull();
+    expect(document.querySelector('[data-blok-database-group-modal-panel]')).not.toBeNull();
+    expect(q('database-group-modal-sort-chip')).toHaveFocus();
+
+    escape();
+
+    expect(document.querySelector('[data-blok-database-group-modal-panel]')).toBeNull();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the modal open on a press inside the editor', () => {
+    open(view({ sorts: [{ id: 's', propertyId: 'title', direction: 'asc' }] }));
+
+    q('database-group-modal-sort-chip')?.click();
+    const panel = q('database-sort-panel');
+
+    panel?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+    expect(document.querySelector('[data-blok-database-group-modal-panel]')).not.toBeNull();
+    expect(q('database-sort-panel')).not.toBeNull();
   });
 });

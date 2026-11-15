@@ -181,6 +181,12 @@ export interface OpenModalDialogOptions {
   outside?: boolean;
 
   /**
+   * Focus outside the surface that the dialog still owns, such as a list opened from a popover the dialog opened.
+   * That popover holds itself open and leaves the popover registry, so the trigger check cannot see it.
+   */
+  ownsFocus?: (target: Node) => boolean;
+
+  /**
    * Element whose CSS animation is awaited by {@link ModalDialogHandle.closeAnimated}.
    * Defaults to {@link surface}.
    */
@@ -416,7 +422,7 @@ export const openModalDialog = (options: OpenModalDialogOptions): ModalDialogHan
     }
 
     // A menu the dialog opened lives on body. Pulling focus back closes it on mousedown, before its item's click.
-    if (target instanceof Node && ownsMenu(PopoverRegistry.instance.triggerOf(target))) {
+    if (target instanceof Node && (ownsMenu(PopoverRegistry.instance.triggerOf(target)) || options.ownsFocus?.(target) === true)) {
       return;
     }
 

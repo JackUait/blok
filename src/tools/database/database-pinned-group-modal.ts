@@ -4,11 +4,14 @@ import { IconArrowDiagonal, IconArrowUp, IconCross, IconDatabase, IconDotsHorizo
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { DATABASE_HEADER_MENU_CLASS } from './database-table-menus';
-import { chipPart, filterChip } from './database-filter-chip';
+import { chipPart, filterChip, openFilterChip } from './database-filter-chip';
+import type { DatabasePanel } from './database-panel';
+import { sortEditor } from './database-sort-panel';
+import type { ViewSettingsContext } from './database-view-settings-panel';
 import { filterPillLabel, filterPillParts, sortDirectionLabelKey } from './database-filter-labels';
 import { propertyTypeMeta } from './database-property-types';
 import { countFilterRules, withEntryIds } from './filter-tree';
-import type { DatabaseViewConfig, PropertyDefinition } from './types';
+import type { DatabaseViewConfig, PersonalViewPatch, PropertyDefinition } from './types';
 import { openModalDialog } from '../../components/utils/modal-dialog';
 import type { ModalDialogHandle } from '../../components/utils/modal-dialog';
 
@@ -17,13 +20,21 @@ export interface PinnedGroupModalOptions {
   pill: HTMLElement;
   /** The group's name, for the dialog's label. */
   label: string;
-  /** The view's rules as read-only chips, from {@link pinnedGroupChips}. */
-  chips: HTMLElement[];
+  /** The view as the board shows it. The modal edits its own copy and never writes it back. */
+  view: DatabaseViewConfig;
+  /** Localized schema. */
+  schema: PropertyDefinition[];
+  /** Names for the filter chips and their editors. */
+  names?: PinnedGroupChipNames;
+  /** People and related rows the filter editors list. */
+  people?: () => Array<{ id: string; name: string }>;
+  relatedRows?: (property: PropertyDefinition) => Array<{ id: string; title: string }>;
+  thisPageDatabase?: () => string | null;
   /** "Open <database>" in the ⋯ menu. Without it there is no ⋯: Blok has no "Save as view in…". */
   openDatabase?: { name: string; open: () => void };
-  /** The group's rows as a read-only table, narrowed by `search`. */
-  table: (search: string) => { root: HTMLElement; destroy: () => void };
-  i18n: Pick<I18n, 't'>;
+  /** The group's rows as a read-only table, narrowed by `search` and queried with the modal's copy of the view. */
+  table: (search: string, view: DatabaseViewConfig) => { root: HTMLElement; destroy: () => void };
+  i18n: Pick<I18n, 't'> & Partial<Pick<I18n, 'getLocale'>>;
   directionSource: Element | null;
   /** Runs after the dialog is gone, whatever closed it. */
   onClose: () => void;
@@ -40,7 +51,8 @@ export interface PinnedGroupChipNames {
  * notion-motion.md Round 25 §1 (r25-modal-inherit.raw): the view's sort chip, then one "N rules" chip. The modal adds
  * the group's own rule to the view's advanced rules ("1 rule" with none). Round 27 §2 (r27-pm-filtered.raw): a simple
  * filter keeps its own chip after the count, and a divider parts the sort chip from the filter chips (r27-pm-open.png).
- * Round 26 §1: Tab reaches the chips, so they stay buttons; the modal edits nothing, so they are aria-disabled.
+ * Round 26 §1: Tab reaches the chips. Round 38 §1: the sort and filter chips open their editors; the "N rules" chip
+ * holds the group's own rule, which the modal does not edit, so it is aria-disabled.
  */
 export const pinnedGroupChips = (
   view: DatabaseViewConfig,
@@ -67,6 +79,7 @@ export const pinnedGroupChips = (
   const rulesChip = filterChip('database-group-modal-rules-chip', rules, { glyph: IconFilter, name: rules });
 
   rulesChip.setAttribute('data-active', '');
+  rulesChip.setAttribute('aria-disabled', 'true');
   chips.push(rulesChip);
   const t = (key: string, vars?: Record<string, string | number>): string => i18n.t(key, vars);
 
@@ -79,14 +92,17 @@ export const pinnedGroupChips = (
     const parts = filterPillParts(filter, property, t, names.personName, rowTitle, names.locale);
     const chip = filterChip(`database-group-modal-filter-chip-${filter.id}`, label, { glyph: propertyTypeMeta(property.type).icon, ...parts });
 
+    chip.setAttribute('data-filter-id', filter.id);
     chip.toggleAttribute('data-active', parts.value !== '');
     chips.push(chip);
   }
-  chips.forEach((chip) => chip.setAttribute('aria-disabled', 'true'));
   if (view.sorts.length > 0) chips.splice(1, 0, chipPart('data-blok-database-chip-divider', {}));
 
   return chips;
 };
+
+/** notion-motion.md Round 38 §1 (r38-pm-chips.raw): a chip's editor opens 4 under the chip. */
+const EDITOR_GAP = 4;
 
 /** notion-motion.md Round 26 §1 (r26-pm-more-menu.raw): the ⋯ menu is 201.1 wide, centred under its button, top on its bottom. */
 const MORE_MENU_WIDTH = 201.1;
@@ -159,10 +175,100 @@ export const openPinnedGroupModal = (options: PinnedGroupModalOptions): PinnedGr
   const close = document.createElement('button');
   const chipRow = document.createElement('div');
   const body = document.createElement('div');
-  const state: { handle: ModalDialogHandle | null; table: { destroy: () => void } | null } = { handle: null, table: null };
+  const state: {
+    handle: ModalDialogHandle | null;
+    table: { destroy: () => void } | null;
+    /** Round 38 §1: the modal's own sorts and filters, dropped with it. Ids are fixed once, so chips and editors agree. */
+    view: DatabaseViewConfig;
+    editor: { panel: DatabasePanel; chip: string } | null;
+  } = {
+    handle: null,
+    table: null,
+    view: { ...options.view, sorts: withEntryIds(options.view.sorts), filters: withEntryIds(options.view.filters) },
+    editor: null,
+  };
   const dismiss = (): void => state.handle?.close();
+  const chipById = (testId: string): HTMLElement | null => chipRow.querySelector<HTMLElement>(`[data-blok-testid="${CSS.escape(testId)}"]`);
+  const update = (patch: PersonalViewPatch): void => {
+    state.view = {
+      ...state.view,
+      ...patch,
+      ...(patch.sorts !== undefined ? { sorts: withEntryIds(patch.sorts) } : {}),
+      ...(patch.filters !== undefined ? { filters: withEntryIds(patch.filters) } : {}),
+    };
+    drawChips();
+    draw();
+    state.editor?.panel.refresh();
+  };
+  const editorClosed = (chip: string, escape: boolean): void => {
+    if (state.editor?.chip === chip) state.editor = null;
+    const current = chipById(chip);
+
+    current?.removeAttribute('data-popover-open');
+    // A write redraws the chips, so focus goes back to the chip by its test id.
+    if (escape) current?.focus();
+  };
+  const showEditor = (chip: HTMLElement, open: (testId: string) => DatabasePanel): void => {
+    const testId = chip.getAttribute('data-blok-testid') ?? '';
+
+    state.editor?.panel.close();
+    chip.setAttribute('data-popover-open', '');
+    state.editor = { panel: open(testId), chip: testId };
+  };
+  const openSort = (chip: HTMLElement): void => showEditor(chip, (testId) => {
+    const panel = sortEditor({
+      anchor: chip,
+      i18n,
+      schema: () => options.schema,
+      sorts: () => state.view.sorts,
+      write: (sorts) => update({ sorts }),
+      // notion-motion.md Round 38 §1 (r38-pm-chips.raw): 290×107 at the chip's left, its bottom + 4.
+      gap: EDITOR_GAP,
+      onClose: (escape) => editorClosed(testId, escape),
+    });
+
+    panel.open();
+
+    return panel;
+  });
+  const filterContext = (): ViewSettingsContext => ({
+    i18n,
+    view: () => state.view,
+    schema: () => options.schema,
+    updatePersonal: update,
+    ...(options.people === undefined ? {} : { people: options.people }),
+    ...(options.relatedRows === undefined ? {} : { relatedRows: options.relatedRows }),
+    ...(options.thisPageDatabase === undefined ? {} : { thisPageDatabase: options.thisPageDatabase }),
+    // The filter editors read and write only the rules; nothing else here acts on the view.
+    locked: () => false,
+    layouts: [],
+    canDeleteView: () => false,
+    updateView: () => undefined,
+    setLayout: () => undefined,
+    setLocked: () => undefined,
+    duplicateView: () => undefined,
+    deleteView: () => undefined,
+    copyViewLink: () => undefined,
+    groups: () => [],
+  });
+  // Round 38 §1 (r38-pm-filter-edit.png): the Status rule editor, 260×244 at the chip's left, its bottom + 4.
+  const openFilter = (chip: HTMLElement, filterId: string): void => showEditor(chip, (testId) =>
+    openFilterChip(chip, filterContext(), filterId, (escape) => editorClosed(testId, escape)));
+  const drawChips = (): void => {
+    const chips = pinnedGroupChips(state.view, options.schema, i18n, options.names);
+
+    for (const chip of chips) {
+      const filterId = chip.getAttribute('data-filter-id');
+      const testId = chip.getAttribute('data-blok-testid');
+
+      if (testId !== null && testId === state.editor?.chip) chip.setAttribute('data-popover-open', '');
+      if (testId === 'database-group-modal-sort-chip') chip.addEventListener('click', () => openSort(chip));
+      if (filterId !== null) chip.addEventListener('click', () => openFilter(chip, filterId));
+    }
+    chipRow.replaceChildren(...chips);
+  };
   const draw = (): void => {
-    const table = options.table(input.value);
+    const table = options.table(input.value, state.view);
 
     state.table?.destroy();
     state.table = table;
@@ -214,7 +320,7 @@ export const openPinnedGroupModal = (options: PinnedGroupModalOptions): PinnedGr
   close.setAttribute('aria-label', i18n.t('tools.database.close'));
   close.innerHTML = IconCross;
   chipRow.setAttribute('data-blok-database-group-modal-chips', '');
-  chipRow.append(...options.chips);
+  drawChips();
   body.setAttribute('data-blok-database-group-modal-body', '');
   draw();
 
@@ -248,12 +354,17 @@ export const openPinnedGroupModal = (options: PinnedGroupModalOptions): PinnedGr
     role: 'dialog',
     label: options.label,
     directionSource: options.directionSource,
-    // The ⋯ menu lives on body, so a press on it reads as outside. While it is open, an outside press closes only the menu.
+    // A chip editor's lists open from the editor, not from the dialog.
+    ownsFocus: (target) => state.editor !== null && target instanceof Element && target.closest('[data-blok-database-panel]') !== null,
+    // The ⋯ menu and the chip editors live on body, so a press on them reads as outside. While one is open, an outside
+    // press closes only it.
     onDismiss: (reason) => {
-      if (reason === 'outside' && more?.getAttribute('aria-expanded') === 'true') return;
+      if (reason === 'outside' && (more?.getAttribute('aria-expanded') === 'true' || state.editor !== null)) return;
       dismiss();
     },
     onClose: () => {
+      state.editor?.panel.close();
+      state.editor = null;
       state.table?.destroy();
       state.table = null;
       options.onClose();

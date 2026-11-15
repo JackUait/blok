@@ -138,3 +138,37 @@ describe('feed reactions and undo', () => {
     expect(pill('👍')?.textContent).toBe('👍2');
   });
 });
+
+// Moving a post is not editing it: no "(edited)" (notion-motion.md Round 33 §5 counts a title edit only).
+describe('feed "(edited)" and moves', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+  });
+
+  afterEach(() => {
+    editor?.destroy();
+    editor = undefined;
+    holder?.remove();
+    holder = undefined;
+    vi.restoreAllMocks();
+  });
+
+  // Known gap: a move must stay undoable, and core's only lever that skips the edit stamp (`dispatchChange({ derived })`)
+  // also takes it out of history. Telling a move from an edit needs a new core lever; flip to `it` once it exists.
+  it.fails('a moved post stays unedited', async () => {
+    await make();
+    // The tool's own row move (moveRowBlock): a new position, then a change.
+    const block = editor?.blocks.getById('r1');
+
+    block?.call('updatePosition', { position: 'a5' });
+    block?.dispatchChange();
+    await quiet();
+
+    const saved = (await editor?.save())?.blocks.find((b) => b.id === 'r1');
+
+    expect((saved?.data as DatabaseRowData | undefined)?.position).toBe('a5');
+    expect(saved?.lastEditedAt).toBeUndefined();
+  });
+});

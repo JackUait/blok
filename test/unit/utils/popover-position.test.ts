@@ -907,6 +907,28 @@ describe('resolvePosition', () => {
       expect(result.top).toBe(3581); // 408 + 8 + 3165 = viewport 416
     });
   });
+  // notion-motion.md Round 38 §4 (r38-manage-sources.raw): the data source ⋯ menu's right edge is on the button's.
+  describe('cover placement with alignEnd', () => {
+    const base = {
+      anchor: rect({ top: 404.1, bottom: 404.1, left: 1470, right: 1494, width: 24, height: 0 }),
+      scopeBounds: rect({ top: 0, bottom: 717, left: 0, right: 1512 }),
+      viewportSize: { width: 1512, height: 717 },
+      scrollOffset: { x: 0, y: 0 },
+      viewportMargin: 12,
+      cover: true,
+      alignEnd: true,
+      popoverSize: { width: 200, height: 65 },
+    };
+
+    it('puts its right edge on the anchor\'s right edge', () => {
+      expect(resolvePosition(base).left).toBe(1294);
+    });
+
+    it('puts its left edge on the anchor\'s left edge in RTL', () => {
+      expect(resolvePosition({ ...base, direction: 'rtl' as const, anchor: rect({ top: 404.1, bottom: 404.1, left: 18, right: 42, width: 24, height: 0 }) }).left).toBe(18);
+    });
+  });
+
   // notion-motion.md Round 21 §1: a database colour flyout that does not fit below opens above its button,
   // bottom = button top - 4 (r21-cc-date-val.raw, r21-cc-add3.raw).
   describe('cover placement that flips above', () => {

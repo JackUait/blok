@@ -31,6 +31,8 @@ export interface CellPopoverOptions {
   flip?: boolean;
   /** The gap to the window's top and bottom, when it is not the usual 12. */
   verticalMargin?: number;
+  /** Under the anchor, its end edge on the anchor's end edge. */
+  alignEnd?: boolean;
   /** Escape pressed while open. The owner decides: close, or step back a panel. */
   onEscape: () => void;
   /** The popover closed itself: an outside press, or focus moved away. */
@@ -201,6 +203,7 @@ export class CellPopover {
     const popover = new PopoverDesktop({ ...base, ...placement });
 
     this.popover = popover;
+    popover.alignEnd = this.options.alignEnd === true;
     popover.on(PopoverEvent.Closed, () => {
       if (this.popover === popover) {
         this.teardown();

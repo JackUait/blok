@@ -185,7 +185,8 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
 
   if (cover) {
     const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(value, max));
-    const start = direction === 'rtl' ? anchor.right - popoverSize.width : anchor.left;
+    // `alignEnd` puts the end edge on the anchor's end edge instead of the start edges together.
+    const start = (direction === 'rtl') !== alignEnd ? anchor.right - popoverSize.width : anchor.left;
     const left = clamp(start, boundaryLeft + viewportMargin, boundaryRight - viewportMargin - popoverSize.width);
     const aboveBottom = coverFlipOffset === undefined ? undefined : anchor.top - coverFlipOffset;
     const fitsBelow = anchor.top + popoverSize.height <= boundaryBottom - coverVerticalMargin;

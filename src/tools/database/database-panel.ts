@@ -46,6 +46,8 @@ export interface DatabasePanelOptions {
   verticalMargin?: number;
   /** Never taller than half the window. */
   halfWindow?: boolean;
+  /** Under the anchor, its end edge on the anchor's end edge. */
+  alignEnd?: boolean;
   /** `escape` is true when Escape closed the first page. */
   onClose?: (escape: boolean) => void;
 }
@@ -100,6 +102,7 @@ export class DatabasePanel {
       ...(options.aside !== undefined ? { aside: options.aside } : {}),
       ...(options.flip === true ? { flip: true } : {}),
       ...(options.verticalMargin !== undefined ? { verticalMargin: options.verticalMargin } : {}),
+      ...(options.alignEnd === true ? { alignEnd: true } : {}),
       onEscape: () => this.back(true),
       onDismiss: () => this.finish(),
     });

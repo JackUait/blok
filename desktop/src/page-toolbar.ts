@@ -426,12 +426,16 @@ export function createPageToolbar(
       entry.setAttribute('data-page-id', item.id);
       if (content instanceof HTMLButtonElement) {
         content.type = 'button';
-        if (item.menu) {
+        // Going to the page wins over listing its siblings. Notion puts the
+        // dropdown on the workspace chip, not on a page crumb: clicking a page
+        // in the trail goes there. The current page has nowhere to go, so it
+        // keeps its menu.
+        if (item.onOpen) {
+          content.addEventListener('click', item.onOpen);
+        } else if (item.menu) {
           content.setAttribute('aria-haspopup', 'menu');
           content.setAttribute('aria-expanded', 'false');
           content.addEventListener('click', () => openBreadcrumbMenu(item, content));
-        } else if (item.onOpen) {
-          content.addEventListener('click', item.onOpen);
         }
       }
       if (current) content.setAttribute('aria-current', 'page');

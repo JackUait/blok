@@ -12,6 +12,7 @@ import { workspaceRepository } from './workspace-repository';
 import { pageAccess } from './page-access';
 import { openPageSharing } from './cloud/page-sharing';
 import { groupPagesBySection, sectionNames } from './page-section';
+import { nextPageIcon } from './page-icon-sync';
 import { describeAccessLoss } from './access-friction';
 import { activeWorkspace, workspaceKey, type WorkspaceRef } from './workspace-registry';
 import { createDesktopFooter, readAppearance } from './settings';
@@ -304,10 +305,15 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     if (icon?.type === 'image') return icon.url;
     return undefined;
   };
-  const syncPageIcon = (page: ShellPage, icon: ReturnType<Blok['title']['icon']['get']>, persist = true): void => {
+  const syncPageIcon = (
+    page: ShellPage,
+    icon: ReturnType<Blok['title']['icon']['get']>,
+    persist = true,
+    adoptOnly = false,
+  ): void => {
     if (!ws.index) return;
     const target = page;
-    const next = iconValue(icon);
+    const next = nextPageIcon(target.icon, iconValue(icon), { adoptOnly });
     if (target.icon !== next) {
       target.icon = next;
       ws.frame.setPages(withSections(ws.index.pages), ws.index.activeId);
@@ -596,7 +602,9 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
           i18n: instance.i18n,
         });
       }
-      syncPageIcon(page, instance.title.icon.get(), ref.kind === 'local');
+      // Load-time read only: on a remote page the document — and its icon —
+      // lands after the editor is ready, so this must never clear (flash).
+      syncPageIcon(page, instance.title.icon.get(), ref.kind === 'local', true);
       toolbar.setBreadcrumbs(breadcrumbs(id));
       document.title = page.title;
       if (ref.kind === 'local') status.textContent = '';

@@ -123,3 +123,27 @@ describe('page appearance toolbar', () => {
     toolbar.destroy();
   });
 });
+
+describe('breadcrumb navigation', () => {
+  it('opens the page when an ancestor crumb is clicked, rather than its menu', () => {
+    const open = vi.fn();
+    const toolbar = createPageToolbar([{ id: 'p', title: 'Page' }], false, vi.fn());
+    document.body.append(toolbar.element);
+    // An ancestor carries both: a menu to jump sideways, and onOpen to go to it.
+    // Notion goes to the page; the dropdown belongs to the workspace chip.
+    toolbar.setBreadcrumbs([
+      { id: 'parent', title: 'Bienvenue sur Blok', onOpen: open, menu: [{ id: 'sib', title: 'Autre', onOpen: vi.fn() }] },
+      { id: 'current', title: 'Droits et partage', menu: [{ id: 'sib', title: 'Autre', onOpen: vi.fn() }] },
+    ]);
+    const crumbs = [...toolbar.element.querySelectorAll<HTMLButtonElement>('[data-desktop-page-breadcrumb-item] button')];
+    const parent = crumbs.find((node) => node.textContent?.includes('Bienvenue'))!;
+    parent.click();
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(parent.getAttribute('aria-haspopup')).toBeNull();
+
+    // The current page has nowhere to go, so its crumb keeps the menu.
+    const current = crumbs.find((node) => node.textContent?.includes('Droits'))!;
+    expect(current.getAttribute('aria-haspopup')).toBe('menu');
+    toolbar.destroy();
+  });
+});

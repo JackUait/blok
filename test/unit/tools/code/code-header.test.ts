@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 import type { CodeData } from '../../../../types/tools/code';
 import { DATA_ATTR } from '../../../../src/components/constants/data-attributes';
-import { CARD_STYLES, HEADER_CONTROLS_STYLES, TAB_ROW_STYLES } from '../../../../src/tools/code/constants';
+import { CARD_STYLES, HEADER_CONTROLS_STYLES, TAB_ROW_STYLES, TAB_STYLES } from '../../../../src/tools/code/constants';
 import type { CodeTool as CodeToolClass } from '../../../../src/tools/code';
 
 vi.mock('../../../../src/shared/katex', () => ({
@@ -492,10 +492,17 @@ describe('code block header', () => {
       REVEAL.forEach((rule) => expect(HEADER_CONTROLS_STYLES).toContain(rule));
     });
 
-    // Square only while the tab is there to sit on it; round the rest of the time.
-    it('keeps the card corner round while no tab covers it', () => {
-      expect(CARD_STYLES).not.toMatch(/(?<!:)rounded-ss-none/);
-      expect(CARD_STYLES).toContain('group-hover/code:rounded-ss-none');
+    // Plus aucun onglet ne se pose sur la carte : aucun coin n'est carré.
+    it('never squares a corner off, with no tab to sit on it', () => {
+      expect(CARD_STYLES).not.toContain('rounded-ss-none');
+    });
+
+    /** notion.com/help/code-blocks : « at the top left of the code block ». */
+    it('lays the language out as plain text, not a bordered folder tab', () => {
+      expect(TAB_STYLES).not.toMatch(/\bborder\b/);
+      expect(TAB_STYLES).not.toContain('bg-code-bg');
+      expect(TAB_STYLES).not.toContain('rounded-t-');
+      expect(TAB_STYLES).toContain('px-4');
     });
   });
 });

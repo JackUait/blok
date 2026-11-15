@@ -1733,6 +1733,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R69_BYTES = 257;
     // Lane r71: Round 38 Manage data sources page offsets, the source row's ⋯ and view count. Net database.css growth against origin/main.
     const DATABASE_R71_BYTES = 2831;
+    // Lane r72: Round 38 Status filter rows 29 apart, sort rows 29 apart, the pinned modal's sort editor without a handle. Net database.css growth against origin/main.
+    const DATABASE_R72_BYTES = 943;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2271,6 +2273,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R67_BYTES
       + DATABASE_R69_BYTES
       + DATABASE_R71_BYTES
+      + DATABASE_R72_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

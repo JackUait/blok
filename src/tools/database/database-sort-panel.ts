@@ -133,6 +133,8 @@ export interface SortEditorOptions {
   write: (next: SortConfig[]) => void;
   /** Space under the anchor; the popover's usual gap when unset. */
   gap?: number;
+  /** The pinned group modal's editor (r27-pm-sortpop.raw): no drag handle, no ×, at least 290 wide. */
+  compact?: boolean;
   onClose: (escape: boolean) => void;
 }
 
@@ -197,16 +199,21 @@ export const sortEditor = (options: SortEditorOptions): DatabasePanel => {
 
           if (property === undefined) return [];
           const line = document.createElement('div');
-          const remove = panelRow({
-            label: t('sortRemove'),
-            testId: `database-sort-remove-${sort.id}`,
-            icon: IconCross,
-            onClick: () => write(all.filter((s) => s.id !== sort.id)),
-          });
+          const removeButton = (): HTMLElement => {
+            const remove = panelRow({
+              label: t('sortRemove'),
+              testId: `database-sort-remove-${sort.id}`,
+              icon: IconCross,
+              onClick: () => write(all.filter((s) => s.id !== sort.id)),
+            });
 
-          remove.querySelector('[data-blok-database-panel-label]')?.remove();
-          remove.setAttribute('aria-label', t('sortRemove'));
-          remove.setAttribute('data-blok-database-sort-remove', '');
+            remove.querySelector('[data-blok-database-panel-label]')?.remove();
+            remove.setAttribute('aria-label', t('sortRemove'));
+            remove.setAttribute('data-blok-database-sort-remove', '');
+
+            return remove;
+          };
+
           line.setAttribute('data-blok-database-sort-row', '');
           line.setAttribute('data-blok-testid', `database-sort-row-${sort.id}`);
           const propertyButton: HTMLElement = sortChevron(panelRow({
@@ -233,13 +240,12 @@ export const sortEditor = (options: SortEditorOptions): DatabasePanel => {
             ),
           }));
 
-          line.append(propertyButton, directionButton, remove);
+          line.append(propertyButton, directionButton, ...(options.compact === true ? [] : [removeButton()]));
 
           return [{ id: sort.id, element: line }];
         });
 
-        return [
-          panelReorderList({
+        const list = options.compact === true ? document.createElement('div') : panelReorderList({
             testId: 'database-sorts-list',
             handleLabel: t('settingsDragToReorder'),
             items,
@@ -250,7 +256,16 @@ export const sortEditor = (options: SortEditorOptions): DatabasePanel => {
 
               if (moving !== undefined) write([...rest.slice(0, at), moving, ...rest.slice(at)]);
             },
-          }),
+          });
+
+        if (options.compact === true) {
+          list.setAttribute('data-blok-database-panel-list', '');
+          list.setAttribute('data-blok-testid', 'database-sorts-list');
+          list.append(...items.map((item) => item.element));
+        }
+
+        return [
+          list,
           // notion-motion.md Round 17 §5: gone once every property is sorted.
           ...(schema.some((p) => SORTABLE_TYPES.includes(p.type) && !all.some((s) => s.propertyId === p.id)) ? [panelRow({
             label: t('sortAdd'),
@@ -284,6 +299,11 @@ export const sortEditor = (options: SortEditorOptions): DatabasePanel => {
 
   // Notion's panel sizes to its words, so no label is cut.
   panel.root.style.width = 'max-content';
+  if (options.compact === true) {
+    panel.root.setAttribute('data-blok-database-sort-compact', '');
+    // r27-pm-sortpop.raw: 290 wide, with room to spare after the direction button.
+    panel.root.style.minWidth = '290px';
+  }
 
   return panel;
 };

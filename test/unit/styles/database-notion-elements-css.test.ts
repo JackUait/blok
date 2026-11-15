@@ -274,7 +274,17 @@ describe('sort panel rule list (r35:497-509, r10-sort-popover.png)', () => {
 
   it('starts the first rule 8px down and Add sort 6px under the last rule, 107 tall with one rule', () => {
     expect(ruleBody('[data-blok-database-panel-page="sort"] > [data-blok-database-panel-list]')).toContain('margin-block: var(--blok-space-1) var(--blok-space-1-5)');
-    expect(ruleBody('[data-blok-database-panel-page="sort"]')).toContain('padding-block-end: var(--blok-space-1-25)');
+    expect(ruleBody('[data-blok-database-panel-page="sort"]')).toContain('padding-block-end: var(--blok-space-1)');
+  });
+
+  // r18-sort-one.raw (Add sort +46, Delete sort +75), r35-sort2.raw (441.8 / 470.8), r17-sort-one.raw (Delete alone: 78 tall).
+  it('puts Delete sort 29 under Add sort, as every Notion menu row', () => {
+    expect(ruleBody('[data-blok-database-panel-page="sort"] > [data-blok-database-panel-row] + [data-blok-database-panel-row]')).toContain('margin-block-start: var(--blok-space-0-25)');
+  });
+
+  // r27-pm-sortpop.raw: the pinned modal's editor has no handle, so its property button sits 12 in (392 - 380).
+  it('starts the property button 12px in when the rules have no handle', () => {
+    expect(ruleBody('[data-blok-database-sort-compact][data-blok-database-panel-page="sort"] > [data-blok-database-panel-list]')).toContain('padding-inline: var(--blok-space-2)');
   });
 });
 

@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { openPinnedGroupModal, pinnedGroupChips } from '../../../../src/tools/database/database-pinned-group-modal';
+import { openPinnedGroupModal, pinnedGroupChips, pinnedGroupRule } from '../../../../src/tools/database/database-pinned-group-modal';
 import type { PinnedGroupModalHandle } from '../../../../src/tools/database/database-pinned-group-modal';
 import { filterPillLabel } from '../../../../src/tools/database/database-filter-labels';
-import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
+import { NO_VALUE_GROUP_KEY } from '../../../../src/tools/database/group-keys';
+import type { DatabaseViewConfig, FilterRule, PropertyDefinition } from '../../../../src/tools/database/types';
 
 const i18n = {
   t: (key: string, vars?: Record<string, string | number>): string =>
@@ -91,7 +92,7 @@ describe('openPinnedGroupModal chip editors', () => {
   const shown = (): string[] => [...document.querySelectorAll('[data-test-row]')].map((el) => el.textContent ?? '');
   const state: { handle: PinnedGroupModalHandle | null } = { handle: null };
 
-  const open = (start: DatabaseViewConfig): { views: DatabaseViewConfig[]; onClose: ReturnType<typeof vi.fn> } => {
+  const open = (start: DatabaseViewConfig, groupRule?: FilterRule): { views: DatabaseViewConfig[]; onClose: ReturnType<typeof vi.fn> } => {
     const views: DatabaseViewConfig[] = [];
     const onClose = vi.fn();
 
@@ -102,6 +103,7 @@ describe('openPinnedGroupModal chip editors', () => {
       schema,
       i18n,
       directionSource: null,
+      ...(groupRule === undefined ? {} : { groupRule }),
       table: (search, local) => {
         const root = document.createElement('div');
         const filter = local.filters.find((f) => f.propertyId === 'title');
@@ -210,5 +212,133 @@ describe('openPinnedGroupModal chip editors', () => {
 
     expect(document.querySelector('[data-blok-database-group-modal-panel]')).not.toBeNull();
     expect(q('database-sort-panel')).not.toBeNull();
+  });
+
+  // notion-motion.md Round 27 §2 (r27-pm-sortpop.raw) and Round 38 §1 (r38-pm-sort-za.png): the modal's sort editor is
+  // 290×107 with Name at +12. It has no drag handle and no × on the rule; the toolbar's 304 editor keeps both.
+  it('opens the sort editor without a drag handle or a × on the rule, at least 290 wide', () => {
+    open(view({ sorts: [{ id: 's', propertyId: 'title', direction: 'asc' }] }));
+
+    q('database-group-modal-sort-chip')?.click();
+    const panel = q('database-sort-panel');
+
+    expect(panel?.querySelector('[data-blok-database-panel-handle]')).toBeNull();
+    expect(q('database-sort-remove-s')).toBeNull();
+    expect(q('database-sort-property-s')).not.toBeNull();
+    expect(panel?.hasAttribute('data-blok-database-sort-compact')).toBe(true);
+    expect(panel?.style.minWidth).toBe('290px');
+  });
+
+  // notion-motion.md Round 27 §2 (r27-pm-rulepop.raw): the "1 rule" chip opens the advanced rule editor under it,
+  // holding the group's own rule. Round 38 §1: edits stay in the modal.
+  it('opens the advanced rule editor from the rules chip, on the modal\'s own copy', () => {
+    const groupRule: FilterRule = { id: 'g', propertyId: 'sel', operator: 'equals', value: ['red'] };
+    const start = view({});
+    const before = structuredClone(start);
+    const { views } = open(start, groupRule);
+    const chip = q('database-group-modal-rules-chip');
+
+    expect(chip?.hasAttribute('aria-disabled')).toBe(false);
+    expect(views[views.length - 1].filterTree?.filterRules).toEqual([groupRule]);
+    chip?.click();
+
+    expect(q('database-advanced-filter')).not.toBeNull();
+    expect(q('database-filter-delete-advanced')).not.toBeNull();
+    expect(chip?.hasAttribute('data-popover-open')).toBe(true);
+
+    q('database-filter-delete-advanced')?.click();
+
+    expect(views[views.length - 1].filterTree?.filterRules).toEqual([]);
+    expect(q('database-group-modal-rules-chip')).toBeNull();
+    expect(q('database-advanced-filter')).toBeNull();
+    expect(document.querySelector('[data-blok-database-group-modal-panel]')).not.toBeNull();
+    expect(start).toEqual(before);
+  });
+
+  it('adds the group rule in front of the view\'s own "and" rules, and nests an "or" tree', () => {
+    const groupRule: FilterRule = { id: 'g', propertyId: 'sel', operator: 'equals', value: ['red'] };
+    const own: FilterRule = { id: 'r', propertyId: 'title', operator: 'is_not_empty', value: null };
+    const and = open(view({ filterTree: { id: 'root', conjunction: 'and', filterRules: [own] } }), groupRule);
+
+    expect(and.views[and.views.length - 1].filterTree).toEqual({ id: 'root', conjunction: 'and', filterRules: [groupRule, own] });
+    expect(q('database-group-modal-rules-chip')?.getAttribute('aria-label')).toBe('tools.database.filterRuleCount(count=2)');
+    state.handle?.close();
+
+    const orTree = { id: 'root', conjunction: 'or' as const, filterRules: [own, { ...own, id: 'r2' }] };
+    const or = open(view({ filterTree: orTree }), groupRule);
+    const tree = or.views[or.views.length - 1].filterTree;
+
+    expect(tree?.conjunction).toBe('and');
+    expect(tree?.filterRules).toEqual([groupRule, orTree]);
+  });
+
+  // notion-motion.md Round 27 §2 (r27-pm-rulepop.raw): a click on the modal's body closes the open editor, not the modal.
+  it('closes a chip editor on a press in the modal body', () => {
+    open(view({}), { id: 'g', propertyId: 'sel', operator: 'equals', value: ['red'] });
+
+    q('database-group-modal-rules-chip')?.click();
+    expect(q('database-advanced-filter')).not.toBeNull();
+    document.querySelector('[data-test-row]')?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+    expect(q('database-advanced-filter')).toBeNull();
+    expect(document.querySelector('[data-blok-database-group-modal-panel]')).not.toBeNull();
+  });
+
+  it('keeps the rules chip read-only when the group\'s rule cannot be written as a filter', () => {
+    const { views } = open(view({}));
+
+    expect(q('database-group-modal-rules-chip')?.getAttribute('aria-disabled')).toBe('true');
+    expect(views[views.length - 1].filterTree).toBeUndefined();
+    q('database-group-modal-rules-chip')?.click();
+    expect(q('database-advanced-filter')).toBeNull();
+  });
+});
+
+describe('pinnedGroupRule', () => {
+  const groups = [{ id: 'todo', kind: 'todo' as const, name: 'To-do', position: 'a0' }, { id: 'done', kind: 'complete' as const, name: 'Done', position: 'a1' }];
+  const status: PropertyDefinition = {
+    id: 'st', name: 'Status', type: 'status', position: 'a2', status: { groups },
+    config: { options: [{ id: 's1', label: 'Not started', groupId: 'todo', position: 'a0' }, { id: 's2', label: 'Later', groupId: 'todo', position: 'a1' }, { id: 's3', label: 'Done', groupId: 'done', position: 'a2' }] },
+  };
+  const strip = (rule: FilterRule | null): Omit<FilterRule, 'id'> | null => {
+    if (rule === null) return null;
+    const { id: _id, ...rest } = rule;
+
+    return rest;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('writes an option group as "is" that option, and the empty group as "is empty"', () => {
+    expect(strip(pinnedGroupRule(schema[1], 'red', undefined))).toEqual({ propertyId: 'sel', operator: 'equals', value: ['red'] });
+    expect(strip(pinnedGroupRule(schema[1], NO_VALUE_GROUP_KEY, undefined))).toEqual({ propertyId: 'sel', operator: 'is_empty', value: null });
+    expect(strip(pinnedGroupRule(status, 's1', undefined))).toEqual({ propertyId: 'st', operator: 'equals', value: ['s1'] });
+  });
+
+  it('writes a status group as its member options', () => {
+    expect(strip(pinnedGroupRule(status, 'todo', 'group'))).toEqual({ propertyId: 'st', operator: 'equals', value: ['s1', 's2'] });
+  });
+
+  it('writes a multi-select or person group as "contains"', () => {
+    const multi: PropertyDefinition = { id: 'ms', name: 'Tags', type: 'multiSelect', position: 'a3' };
+    const person: PropertyDefinition = { id: 'p', name: 'Owner', type: 'person', position: 'a4' };
+
+    expect(strip(pinnedGroupRule(multi, 'm1', undefined))).toEqual({ propertyId: 'ms', operator: 'contains', value: ['m1'] });
+    expect(strip(pinnedGroupRule(person, 'u1', undefined))).toEqual({ propertyId: 'p', operator: 'contains', value: ['u1'] });
+    expect(strip(pinnedGroupRule(person, NO_VALUE_GROUP_KEY, undefined))).toEqual({ propertyId: 'p', operator: 'is_empty', value: null });
+  });
+
+  it('has no rule for groups keyed by a bucket or a letter', () => {
+    const date: PropertyDefinition = { id: 'd', name: 'Due', type: 'date', position: 'a5' };
+    const text: PropertyDefinition = { id: 'tx', name: 'Text', type: 'text', position: 'a6' };
+
+    expect(pinnedGroupRule(date, '2026-11', undefined)).toBeNull();
+    expect(pinnedGroupRule(text, 'A', undefined)).toBeNull();
   });
 });

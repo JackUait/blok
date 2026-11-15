@@ -13952,6 +13952,15 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 [data-blok-database-filter-status-group][data-color="pink"] { color: var(--blok-database-option-pink-text); }
 [data-blok-database-filter-status-group][data-color="red"] { color: var(--blok-database-option-red-text); }
 
+/* Round 38 §1 (r38-pm-chips.raw): rows from +30 with a pitch of 29, so the box is 244 tall. */
+[data-blok-database-chip-header] + [data-blok-database-filter-status-group] {
+  margin-block-start: calc(-1 * var(--blok-space-0-25));
+}
+
+:is([data-blok-database-filter-status-group], [data-blok-database-filter-status-option]) + :is([data-blok-database-filter-status-group], [data-blok-database-filter-status-option]) {
+  margin-block-start: var(--blok-space-0-25);
+}
+
 /* Options sit 8px further in than their group (checkbox x 563 vs 555): 8 + 8. */
 [data-blok-database-filter-status-option] {
   padding-inline-start: var(--blok-space-4);
@@ -14005,9 +14014,19 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   height: 16px;
 }
 
-/* r35:497-509, r10-sort-popover.png: rules 40px apart, the first 8px down, Add sort 6px under the last, 5px under Delete sort. */
+/* r35:497-509, r10-sort-popover.png: rules 40px apart, the first 8px down, Add sort 6px under the last, 4px under Delete sort. */
 [data-blok-database-panel-page="sort"] {
-  padding-block-end: var(--blok-space-1-25);
+  padding-block-end: var(--blok-space-1);
+}
+
+/* r18-sort-one.raw, r35-sort2.raw: Delete sort sits 29 under Add sort. */
+[data-blok-database-panel-page="sort"] > [data-blok-database-panel-row] + [data-blok-database-panel-row] {
+  margin-block-start: var(--blok-space-0-25);
+}
+
+/* r27-pm-sortpop.raw: no handle in the pinned modal's editor, so the property button is 12 in. */
+[data-blok-database-sort-compact][data-blok-database-panel-page="sort"] > [data-blok-database-panel-list] {
+  padding-inline: var(--blok-space-2);
 }
 
 [data-blok-database-panel-page="sort"] > [data-blok-database-panel-list] {

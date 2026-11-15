@@ -196,7 +196,7 @@ import { resolveChartSettings } from './chart-settings';
 import { chartLayoutItems, chartMeasureLabel } from './chart-layout-items';
 import { DatabaseChartView } from './database-chart-view';
 import { openChartDrilldown } from './database-chart-drilldown';
-import { openPinnedGroupModal } from './database-pinned-group-modal';
+import { openPinnedGroupModal, pinnedGroupRule } from './database-pinned-group-modal';
 import type { PinnedGroupModalHandle } from './database-pinned-group-modal';
 import { DatabaseFeedView } from './database-feed-view';
 import type { FeedReactions } from './database-feed-view';
@@ -7342,6 +7342,8 @@ export class DatabaseTool implements BlockTool {
     // One state for the dialog's life, so "Load more" keeps its count across redraws.
     const state = createTableState();
     const opener = this.fullPageOpener();
+    const grouped = this.model.getProperty(groupBy);
+    const groupRule = grouped === undefined ? null : pinnedGroupRule(grouped, optionId, view.groupByStatus);
 
     this.pinnedGroupModal?.close();
     this.pinnedGroupModal = openPinnedGroupModal({
@@ -7358,17 +7360,18 @@ export class DatabaseTool implements BlockTool {
       relatedRows: (property) => this.activeSource().relationCandidates(property),
       thisPageDatabase: () => (this.thisPage === null ? null : this.api.blocks.getById(this.thisPage)?.parentId ?? null),
       ...(opener === undefined ? {} : { openDatabase: { name: this.title.trim() === '' ? this.api.i18n.t('tools.database.titlePlaceholder') : this.title.trim(), open: opener } }),
+      ...(groupRule === null ? {} : { groupRule }),
       i18n: this.api.i18n,
       directionSource: this.element,
       // Round 38 §1: the modal's own sorts and filters re-query its rows.
-      table: (search, local) => {
+      table: (search, local, byKey) => {
         const renderer = new DatabaseTableView({
           readOnly: true,
           i18n: this.api.i18n,
           locale: editorLocale(this.api.i18n),
           view: { ...tableView, sorts: local.sorts, filters: local.filters, filterTree: local.filterTree },
           schema,
-          rows: this.model.queryRows({ view: local, group: optionId, search }).rows,
+          rows: this.model.queryRows({ view: local, ...(byKey ? { group: optionId } : {}), search }).rows,
           titlePropertyId: titleId,
           state,
           cellContext: this.cellContext(),

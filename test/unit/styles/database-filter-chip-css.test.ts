@@ -33,6 +33,12 @@ describe('status filter rows', () => {
     expect(declared('[data-blok-database-filter-status-group][data-color="gray"]', 'color')).toEqual(['var(--blok-database-option-gray-text)']);
   });
 
+  // notion-motion.md Round 38 §1 (r38-pm-chips.raw) and Round 20 §1: 260×244, rows from +30 with a pitch of 29.
+  it('starts the rows 30 down and spaces them 29 apart', () => {
+    expect(declared('[data-blok-database-chip-header] + [data-blok-database-filter-status-group]', 'margin-block-start')).toEqual(['calc(-1 * var(--blok-space-0-25))']);
+    expect(declared(':is([data-blok-database-filter-status-group], [data-blok-database-filter-status-option]) + :is([data-blok-database-filter-status-group], [data-blok-database-filter-status-option])', 'margin-block-start')).toEqual(['var(--blok-space-0-25)']);
+  });
+
   it('sets an option row 8px in from its group', () => {
     expect(declared('[data-blok-database-filter-status-option]', 'padding-inline-start')).toEqual(['var(--blok-space-4)']);
   });

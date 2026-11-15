@@ -4434,7 +4434,8 @@ describe('DatabaseTool', () => {
         expect(modalRows()).toEqual(['row-2', 'row-1']);
 
         sortChip()?.click();
-        document.querySelector<HTMLElement>('[data-blok-testid="database-sort-remove-s"]')?.click();
+        // r27-pm-sortpop.raw: the modal's sort editor has no × on a rule, only "Delete sort".
+        document.querySelector<HTMLElement>('[data-blok-testid="database-sort-delete-all"]')?.click();
 
         expect(modalRows()).toEqual(['row-1', 'row-2']);
         expect(sortChip()).toBeNull();
@@ -4517,6 +4518,31 @@ describe('DatabaseTool', () => {
         expect(openFullPage).toHaveBeenCalledWith(expect.objectContaining({ viewId: 'view-1' }));
         expect(document.querySelector('[data-blok-database-group-modal-panel]')).toBeNull();
 
+        tool.destroy();
+      });
+
+      // notion-motion.md Round 27 §2 (r27-pm-rulepop.raw): the "1 rule" chip opens the rule editor on the group's own
+      // rule. Round 38 §1: the edit changes only the modal's rows and never the saved view.
+      it('edits the group\'s rule from the pinned group modal\'s rules chip, in the modal only', () => {
+        const { tool, element, transact } = board(false, boardView({ pinnedGroups: [{ id: 'opt-todo' }] }));
+        const saved = structuredClone(tool.save(element));
+        const modalRows = (): Array<string | null> => [...new Set([...document.querySelectorAll('[data-blok-database-group-modal-panel] [role="row"][data-row-id]')]
+          .map((row) => row.getAttribute('data-row-id')))];
+
+        queryByData(element, 'data-blok-database-pinned-group-open')?.click();
+        const chip = document.querySelector<HTMLElement>('[data-blok-testid="database-group-modal-rules-chip"]');
+
+        expect(modalRows()).toEqual(['row-1', 'row-2']);
+        expect(chip?.hasAttribute('aria-disabled')).toBe(false);
+        chip?.click();
+        expect(document.querySelector('[data-blok-testid="database-advanced-filter"]')).not.toBeNull();
+        document.querySelector<HTMLElement>('[data-blok-testid="database-filter-delete-advanced"]')?.click();
+
+        expect(modalRows()).toEqual(['row-1', 'row-2', 'row-3']);
+        expect(tool.save(element)).toEqual(saved);
+        expect(transact).not.toHaveBeenCalled();
+
+        document.querySelector<HTMLElement>('[data-blok-database-group-modal-close]')?.click();
         tool.destroy();
       });
 

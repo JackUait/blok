@@ -16899,6 +16899,14 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-option-red-text);
 }
 
+[data-blok-database-chip-header] + [data-blok-database-filter-status-group] {
+  margin-block-start: calc(-1 * var(--blok-space-0-25));
+}
+
+:is([data-blok-database-filter-status-group], [data-blok-database-filter-status-option]) + :is([data-blok-database-filter-status-group], [data-blok-database-filter-status-option]) {
+  margin-block-start: var(--blok-space-0-25);
+}
+
 [data-blok-database-filter-status-option] {
   padding-inline-start: var(--blok-space-4);
 }
@@ -16946,7 +16954,15 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 [data-blok-database-panel-page="sort"] {
-  padding-block-end: var(--blok-space-1-25);
+  padding-block-end: var(--blok-space-1);
+}
+
+[data-blok-database-panel-page="sort"] > [data-blok-database-panel-row] + [data-blok-database-panel-row] {
+  margin-block-start: var(--blok-space-0-25);
+}
+
+[data-blok-database-sort-compact][data-blok-database-panel-page="sort"] > [data-blok-database-panel-list] {
+  padding-inline: var(--blok-space-2);
 }
 
 [data-blok-database-panel-page="sort"] > [data-blok-database-panel-list] {

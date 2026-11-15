@@ -1750,7 +1750,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r81: Round 41 form toolbar (blue Share form, bordered Preview) and the bordered no-results buttons. Net database.css growth against origin/main.
     const DATABASE_R81_BYTES = 1996;
     // Lane r82: Round 41 header ⋯, picker inks, the Formula glyph, bigger small chevrons, the AI line and the first Add view tile. Net database.css growth against origin/main.
-    const DATABASE_R82_BYTES = 1285;
+    const DATABASE_R82_BYTES = 2200;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

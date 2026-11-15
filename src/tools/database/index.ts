@@ -9901,9 +9901,10 @@ export class DatabaseTool implements BlockTool {
     const comment = options.comment === false ? undefined : this.commentLever().comment;
     const writable = (): boolean => !this.readOnly && !this.destroyed;
     const listTargets = (): Array<{ id: string; title: string }> => this.moveTargets();
-    const view = this.shownView();
-    const visible = view === undefined ? [] : visibleRowPropertyIds(view, this.model.getSchema());
-    const properties = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).filter((p) => p.type !== 'title' && visible.includes(p.id));
+    // notion-motion.md Round 42 §2: Edit property › lists every property A→Z, shown or not; Created time and ID were not in it.
+    const properties = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n)
+      .filter((p) => !['title', 'createdTime', 'uniqueId'].includes(p.type))
+      .sort((a, b) => a.name.localeCompare(b.name));
     const edits = !writable() ? {} : {
       onEditIcon: () => this.editRowIcon(rowId),
       onEditProperty: (propertyId: string) => this.editRowProperty(rowId, propertyId),

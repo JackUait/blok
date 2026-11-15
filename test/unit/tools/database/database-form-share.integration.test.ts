@@ -455,6 +455,9 @@ describe('form Share panel (research/19 §3d)', () => {
       await mount(blocks(), host());
 
       expect(need(byTestId('database-toolbar-preview-form')).getAttribute('aria-label')).toBe('Preview');
+      // notion-motion.md Round 41 Part B: a labelled button, not a bare icon.
+      expect(need(byTestId('database-toolbar-preview-form')).textContent?.trim()).toBe('Preview');
+      expect(need(byTestId('database-toolbar-preview-form')).querySelector('svg')).not.toBeNull();
       expect(need(byTestId('database-toolbar-preview-form')).closest('[hidden]')).toBeNull();
       await mount(blocks(), host(), true);
       expect(q(byTestId('database-toolbar-preview-form'))?.closest('[hidden]') ?? null).not.toBeNull();

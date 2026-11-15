@@ -1580,6 +1580,44 @@ describe('view settings panel', () => {
       expect(q('database-filter-rule-value-a')?.textContent?.trim()).toBe('Idea');
       expect(q('database-filter-rule-value-b')?.textContent?.trim()).toBe('tools.database.filterMe');
     });
+
+    // notion-motion.md Round 20 §2 (r20-adv-st-val.raw, r20-adv-st-two.png), Round 39 §1 (r39-pm-nrules.png):
+    // picked options show as their tokens, with no status dot.
+    it('draws picked Select and Status values as option tokens on the value button', () => {
+      withFilter({ filterTree: { id: 'root', conjunction: 'and', filterRules: [
+        { id: 'a', propertyId: 'stage', operator: 'equals', value: ['o1'] },
+        { id: 'b', propertyId: 'prog', operator: 'equals', value: ['s1'] },
+      ] } });
+      click('database-filter-advanced-chip');
+
+      const select = q('database-filter-rule-value-a')?.querySelectorAll('[data-blok-database-option-pill]') ?? [];
+      const status = q('database-filter-rule-value-b')?.querySelectorAll('[data-blok-database-option-pill]') ?? [];
+
+      expect([...select].map((pill) => pill.textContent)).toEqual(['Idea']);
+      expect([...status].map((pill) => pill.textContent)).toEqual(['Not started']);
+      expect(status[0]?.hasAttribute('data-color')).toBe(true);
+      expect(status[0]?.hasAttribute('data-status-group')).toBe(false);
+      expect(q('database-filter-rule-value-a')?.getAttribute('aria-label')).toBe('Idea');
+    });
+
+    it('shows a picked token on the value button while its flyout stays open', () => {
+      withFilter({ filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'a', propertyId: 'stage', operator: 'equals', value: [] }] } });
+      click('database-filter-advanced-chip');
+      click('database-filter-rule-value-a');
+      click('database-filter-option-o1');
+
+      expect(q('database-filter-value-picker')).not.toBeNull();
+      expect(q('database-filter-rule-value-a')?.querySelector('[data-blok-database-option-pill]')?.textContent).toBe('Idea');
+      expect(q('database-filter-rule-value-a')?.hasAttribute('data-blok-database-filter-placeholder')).toBe(false);
+    });
+
+    it('keeps the placeholder as plain text when no option is picked', () => {
+      withFilter({ filterTree: { id: 'root', conjunction: 'and', filterRules: [{ id: 'a', propertyId: 'stage', operator: 'equals', value: [] }] } });
+      click('database-filter-advanced-chip');
+
+      expect(q('database-filter-rule-value-a')?.querySelector('[data-blok-database-option-pill]')).toBeNull();
+      expect(q('database-filter-rule-value-a')?.hasAttribute('data-blok-database-filter-placeholder')).toBe(true);
+    });
   });
 
   // notion-motion.md Round 17 §5: "Add sort" goes away once every property is sorted.

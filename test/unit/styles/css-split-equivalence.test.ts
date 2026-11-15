@@ -1739,6 +1739,16 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R74_BYTES = 1908;
     // Lane r76: Round 39 sort-count and rule-count chip glyphs in Notion's narrow boxes. Net database.css growth against origin/main.
     const DATABASE_R76_BYTES = 569;
+    // Lane r77: Round 20/39 option tokens on a filter rule's value button, 6px after each. Net database.css growth against origin/main.
+    const DATABASE_R77_BYTES = 336;
+    // Lane r78: Round 40 row drop: the bar keeps still and the dropped row's tint fades in. Net database.css growth against origin/main.
+    const DATABASE_R78_BYTES = 484;
+    // Lane r79: Round 40 dropped card and event selected with a fading halo, the drop day's tint fading out, drag cursors. Net database.css growth against origin/main.
+    const DATABASE_R79_BYTES = 1456;
+    // Lane r80: Round 41 gallery, calendar, list and closed-panel timeline end at the text column. Net database.css growth against origin/main.
+    const DATABASE_R80_BYTES = 915;
+    // Lane r81: Round 41 form toolbar (blue Share form, bordered Preview) and the bordered no-results buttons. Net database.css growth against origin/main.
+    const DATABASE_R81_BYTES = 1996;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2283,6 +2293,11 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R72_BYTES
       + DATABASE_R74_BYTES
       + DATABASE_R76_BYTES
+      + DATABASE_R77_BYTES
+      + DATABASE_R78_BYTES
+      + DATABASE_R79_BYTES
+      + DATABASE_R80_BYTES
+      + DATABASE_R81_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

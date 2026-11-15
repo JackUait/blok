@@ -34,9 +34,6 @@ import type {
 
 const SORT_PANEL_GAP = 4;
 
-/** Notion shows 🔍 once a database has at least three pages (research/05 §5). */
-export const SEARCH_MIN_ROWS = 3;
-
 /** What the controls ask of the database tool. */
 export interface ViewControlsHost {
   /** `getLocale` dates the filter chips in the editor's language. */
@@ -48,7 +45,6 @@ export interface ViewControlsHost {
   schema: () => PropertyDefinition[];
   /** A property's saved type: `schema` shows a formula or rollup as its result type. */
   storedType?: (propertyId: string) => PropertyType | undefined;
-  rowCount: () => number;
   locked: () => boolean;
   readOnly: () => boolean;
   viewCount: () => number;
@@ -302,7 +298,10 @@ export class DatabaseViewControls {
     this.shareFormButton.setAttribute('data-blok-database-toolbar-share-form', '');
     this.shareFormButton.addEventListener('click', () => this.host.shareForm?.(this.shareFormButton));
     // "Preview" reuses the file tool's word: the same in every locale.
-    this.previewFormButton = iconButton('database-toolbar-preview-form', this.host.i18n.t('tools.file.preview'), IconPreview);
+    const previewLabel = this.host.i18n.t('tools.file.preview');
+
+    this.previewFormButton = button('database-toolbar-preview-form', previewLabel, { icon: IconPreview, text: previewLabel });
+    this.previewFormButton.setAttribute('data-blok-database-toolbar-preview-form', '');
     this.previewFormButton.addEventListener('click', () => this.host.previewForm?.());
     this.toolbar.append(this.lockBadge, this.minimizeButton, this.noDateButton, this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton, this.expandButton, this.fullPageLink, this.settingsButton, this.previewFormButton, this.shareFormButton);
     if (host.newRow !== undefined) {
@@ -432,7 +431,8 @@ export class DatabaseViewControls {
     this.automationsButton.disabled = this.host.automations?.writable() !== true;
     this.autofillButton.hidden = titleOnly || this.host.autofill === undefined;
     this.autofillButton.disabled = this.host.autofill?.writable() !== true;
-    this.searchButton.hidden = (titleOnly || this.host.rowCount() < SEARCH_MIN_ROWS) && this.query === '';
+    // notion-motion.md Round 41 Part B: 🔍 shows on a 0-row board; the help center's "three pages" is not the rule.
+    this.searchButton.hidden = titleOnly && this.query === '';
     this.minimized = this.host.savedView()?.toolbarMinimized === true;
     this.toolbar.toggleAttribute('data-minimized', this.minimized);
     this.expandButton.hidden = !this.minimized;
@@ -858,7 +858,7 @@ export class DatabaseViewControls {
     this.searchClear.remove();
     input.value = '';
     this.setSearch('');
-    this.searchButton.hidden = this.host.rowCount() < SEARCH_MIN_ROWS;
+    this.searchButton.hidden = this.host.schema().length <= 1;
     if (input.isConnected && !input.hasAttribute('data-closing') && hasTransition(input)) {
       // The field shrinks to nothing first; it leaves when that ends.
       input.setAttribute('data-closing', '');

@@ -26,7 +26,6 @@ const click = (id: string): void => {
 };
 
 const setup = (options: {
-  rows?: number;
   readOnly?: boolean;
   locked?: boolean;
   schema?: () => PropertyDefinition[];
@@ -43,7 +42,6 @@ const setup = (options: {
     fallback: { get: (key) => storage.get(key), set: (key, value) => { storage.set(key, value); } },
     savedView: () => saved.view,
     schema: options.schema ?? (() => schema),
-    rowCount: () => options.rows ?? 5,
     locked: () => options.locked === true,
     readOnly: () => options.readOnly === true,
     viewCount: () => 1,
@@ -866,14 +864,29 @@ describe('DatabaseViewControls', () => {
     expect(controls.effective(saved.view).sorts).toEqual([expect.objectContaining({ propertyId: 'num', direction: 'asc' })]);
   });
 
-  it('shows search from three rows and redraws as the person types', () => {
-    const few = setup({ rows: 2 });
+  // notion-motion.md Round 41 Part B: Notion shows 🔍 on a 0-row board with Name + Status.
+  it('shows search on a database with no rows: only a property besides the title gates it', () => {
+    const { controls } = setup();
+
+    expect(q('database-toolbar-search')?.hidden).toBe(false);
+    click('database-toolbar-search');
+    const input = q('database-search-input') as HTMLInputElement;
+
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(q('database-toolbar-search')?.hidden).toBe(false);
+    controls.destroy();
+  });
+
+  // notion-motion.md:826: a brand-new title-only database shows no 🔍.
+  it('keeps search back on a title-only database', () => {
+    setup({ schema: () => schema.slice(0, 1) });
 
     expect(q('database-toolbar-search')?.hidden).toBe(true);
-    few.controls.destroy();
-    document.body.innerHTML = '';
+  });
 
-    const { controls, host } = setup({ rows: 3 });
+  it('redraws as the person types', () => {
+    const { controls, host } = setup();
 
     expect(q('database-toolbar-search')?.hidden).toBe(false);
     click('database-toolbar-search');
@@ -2222,7 +2235,7 @@ describe('DatabaseViewControls', () => {
   });
   describe('search box (Notion: the magnifier stays, a clear ×)', () => {
     it('keeps the magnifier in front of the input', () => {
-      setup({ rows: 3 });
+      setup();
       click('database-toolbar-search');
       const magnifier = q('database-toolbar-search');
 
@@ -2231,7 +2244,7 @@ describe('DatabaseViewControls', () => {
     });
 
     it('shows a clear × once there is a query, and the × empties the search and keeps the focus', () => {
-      const { controls, host } = setup({ rows: 3 });
+      const { controls, host } = setup();
 
       click('database-toolbar-search');
       const input = q('database-search-input') as HTMLInputElement;
@@ -2253,7 +2266,7 @@ describe('DatabaseViewControls', () => {
     });
 
     it('takes the magnifier and the × away on Escape', () => {
-      setup({ rows: 3 });
+      setup();
       click('database-toolbar-search');
       (q('database-search-input') as HTMLInputElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 
@@ -2266,7 +2279,7 @@ describe('DatabaseViewControls', () => {
   // It closes the search and minimizes the whole toolbar, saved with the view; « ("Expand") brings it back.
   describe('» minimizes the toolbar (Notion "Minimize")', () => {
     it('shows » left of the icons while the search is open, and » closes the search and minimizes the toolbar', () => {
-      const { controls, host } = setup({ rows: 3 });
+      const { controls, host } = setup();
 
       expect(q('database-toolbar-minimize')?.hidden).toBe(true);
       click('database-toolbar-search');
@@ -2286,7 +2299,7 @@ describe('DatabaseViewControls', () => {
     });
 
     it('opens a view saved minimized with only « and settings', () => {
-      const { controls, saved } = setup({ rows: 3 });
+      const { controls, saved } = setup();
 
       saved.view = { ...saved.view, toolbarMinimized: true };
       controls.refresh();
@@ -2302,7 +2315,7 @@ describe('DatabaseViewControls', () => {
     it('« brings every control back, and fades them in once', () => {
       vi.useFakeTimers();
       try {
-        const { controls, host, saved } = setup({ rows: 3 });
+        const { controls, host, saved } = setup();
 
         saved.view = { ...saved.view, toolbarMinimized: true };
         controls.refresh();
@@ -2328,7 +2341,7 @@ describe('DatabaseViewControls', () => {
     });
 
     it('shows « with no » while minimized, even with the search open', () => {
-      const { controls, saved } = setup({ rows: 3 });
+      const { controls, saved } = setup();
 
       click('database-toolbar-search');
       saved.view = { ...saved.view, toolbarMinimized: true };
@@ -2340,7 +2353,7 @@ describe('DatabaseViewControls', () => {
 
     // A blur on an empty query closes the search, so the press must not take the focus first.
     it('keeps the focus in the field on press, and gives it to settings, which stays, after', () => {
-      setup({ rows: 3 });
+      setup();
       click('database-toolbar-search');
       const press = new MouseEvent('pointerdown', { bubbles: true, cancelable: true });
 
@@ -2355,7 +2368,7 @@ describe('DatabaseViewControls', () => {
       destroyTooltip();
       vi.useFakeTimers();
       try {
-        setup({ rows: 3 });
+        setup();
         click('database-toolbar-search');
         hover(q('database-toolbar-minimize'));
         vi.advanceTimersByTime(HINT_DELAY - 1);
@@ -2369,7 +2382,7 @@ describe('DatabaseViewControls', () => {
 
     // Notion: the field goes width 150→0 and opacity 1→0 over 200ms ease, then leaves.
     it('keeps the field while it shrinks away, and drops it when the shrink ends', () => {
-      setup({ rows: 3 });
+      setup();
       click('database-toolbar-search');
       const input = q('database-search-input') as HTMLInputElement;
 
@@ -2390,7 +2403,7 @@ describe('DatabaseViewControls', () => {
     it('drops the field after the shrink time even when no transitionend comes', () => {
       vi.useFakeTimers();
       try {
-        setup({ rows: 3 });
+        setup();
         click('database-toolbar-search');
         const input = q('database-search-input') as HTMLInputElement;
 
@@ -2407,7 +2420,7 @@ describe('DatabaseViewControls', () => {
     it('opens again over a field that is still shrinking', () => {
       vi.useFakeTimers();
       try {
-        setup({ rows: 3 });
+        setup();
         click('database-toolbar-search');
         const input = q('database-search-input') as HTMLInputElement;
 
@@ -2469,7 +2482,7 @@ describe('DatabaseViewControls', () => {
     });
 
     it('Search', () => {
-      setup({ rows: 3 });
+      setup();
       click('database-toolbar-search');
       escape();
 
@@ -2507,7 +2520,7 @@ describe('DatabaseViewControls', () => {
     });
 
     it('paints every match in the view with the Highlight API and leaves the DOM as it was', () => {
-      const { controls } = setup({ rows: 3 });
+      const { controls } = setup();
       const root = document.createElement('div');
       const body = document.createElement('div');
 

@@ -278,3 +278,11 @@ describe('select filter option rows', () => {
     expect(ticked.filter((rule) => /(?:^|[;\s])(?:background(?:-color)?|color) ?:/.test(rule[2])).map((rule) => rule[1])).toEqual([]);
   });
 });
+
+// notion-motion.md Round 39 §1 (r39-pm-rules.raw): "Not started" fills a 127.6 button, its chevron 110 in. Round 20 §2
+// (r20-adv-st-two-parts.raw): "In progress", "Done" fill 179.4. Both fit a 6px pad each side and 6 after each token.
+describe('option tokens on a rule value button', () => {
+  it('puts 6px after each token', () => {
+    expect(declared('[data-blok-database-filter-rule-button] [data-blok-database-option-pill]', 'margin-inline-end')).toEqual(['var(--blok-space-1-5)']);
+  });
+});

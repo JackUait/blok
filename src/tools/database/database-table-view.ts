@@ -60,6 +60,7 @@ import {
   IconWand,
   IconWarning,
   IconInfo,
+  IconFilter,
 } from '../../components/icons';
 
 export { createTableState };
@@ -400,6 +401,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
   /** A pointer is down in the grid. */
   private pressing = false;
   private bar: HTMLElement | null = null;
+  /** This render follows a row drop: the bar shows without its entrance (notion-motion.md Round 40 §1). */
+  private afterDrop = false;
   /** The bar fading out after the selection cleared, and the timer that removes it. */
   private leavingBar: { el: HTMLElement; timer: number } | null = null;
   /** Unique per table, so two tables on a page never share a cell id. */
@@ -586,6 +589,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
           if (this.options.view.sorts.length > 0) {
             this.handlers?.sortedRowDrop(result);
           } else {
+            // Only here: a sorted drop asks first, so no redraw may follow.
+            this.state.droppedRowId = result.rowId;
             this.handlers?.moveRow(result);
           }
         },
@@ -598,9 +603,32 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         this.grid?.restore();
       }
     });
+    this.markDropped(gridEl);
     this.grid.paint();
+    this.afterDrop = false;
 
     return root;
+  }
+
+  /** notion-motion.md Round 40 §1: the dropped row's tint fades in (database.css, while data-landed is on). */
+  private markDropped(gridEl: HTMLElement): void {
+    const rowId = this.state.droppedRowId;
+
+    this.state.droppedRowId = undefined;
+    if (rowId === undefined) return;
+    this.afterDrop = true;
+    const rowEl = gridEl.querySelector<HTMLElement>(`[data-blok-database-table-row][data-row-id="${CSS.escape(rowId)}"]`);
+
+    if (rowEl === null) return;
+    rowEl.setAttribute('data-landed', '');
+    // Off when the fade ends, so a later select runs the usual transition. Cells bubble their own animationend.
+    const landed = (event: Event): void => {
+      if (event.target !== rowEl) return;
+      rowEl.removeAttribute('data-landed');
+      rowEl.removeEventListener('animationend', landed);
+    };
+
+    rowEl.addEventListener('animationend', landed);
   }
 
   appendRow(container: HTMLElement, row: DatabaseRow): void {
@@ -1097,7 +1125,12 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
     edit.type = 'button';
     edit.setAttribute(searching ? 'data-blok-database-table-clear-search' : 'data-blok-database-table-edit-filters', '');
-    edit.textContent = this.t(searching ? 'tools.database.searchClear' : 'tools.database.tableEditFilters');
+    if (searching) {
+      edit.textContent = this.t('tools.database.searchClear');
+    } else {
+      edit.innerHTML = IconFilter;
+      edit.append(this.t('tools.database.tableEditFilters'));
+    }
     empty.appendChild(edit);
     if (this.editable) {
       empty.appendChild(this.createAddRow(''));
@@ -1594,6 +1627,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       const slot = this.options.selectionBarSlot?.() ?? null;
 
       this.bar = this.createSelectionBar();
+      this.bar.toggleAttribute('data-still', this.afterDrop);
       if (slot === null) {
         root.insertBefore(this.bar, root.firstChild);
       } else {

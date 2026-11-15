@@ -272,6 +272,27 @@ describe('DatabaseCardDrag', () => {
     expect(lines.every((line) => line.style.opacity === '0')).toBe(true);
   });
 
+  // notion-motion.md Round 40 §2: the line fades 1→0 where it was, though the drop rebuilds the board.
+  it('lets the drop line finish its fade when the drop tears the drag down', () => {
+    // Earlier tests leave their own lines fading on real timers.
+    document.querySelectorAll('[data-blok-database-drop-line]').forEach((line) => line.remove());
+    vi.useFakeTimers();
+    onDrop.mockImplementation(() => drag.destroy());
+    drag.beginTracking('row-0-0', 50, 30);
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 250, clientY: 80 }));
+    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 250, clientY: 80 }));
+
+    const lines = Array.from(document.querySelectorAll<HTMLElement>('[data-blok-database-drop-line]'));
+
+    expect(onDrop).toHaveBeenCalledTimes(1);
+    expect(lines.map((line) => line.style.opacity)).toEqual(['0']);
+
+    vi.advanceTimersByTime(200);
+
+    expect(document.querySelector('[data-blok-database-drop-line]')).toBeNull();
+    vi.useRealTimers();
+  });
+
   it('sets dragging attribute on wrapper during active drag', () => {
     drag.beginTracking('row-0-0', 50, 30);
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 70, clientY: 30 }));

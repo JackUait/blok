@@ -1294,6 +1294,12 @@
 /**
  * During drag the source card stays in place with Notion's drag fill.
  */
+/* notion-motion.md Round 40 §2: the cursor reads `grabbing` while a card is held. */
+[data-blok-database-dragging],
+[data-blok-database-dragging] * {
+  cursor: grabbing;
+}
+
 [data-blok-database-card][data-blok-database-drag-source] {
   background-color: var(--blok-database-card-drag-source-bg, var(--_blok-group-card-hover, var(--blok-database-card-bg-hover)));
 }
@@ -3905,7 +3911,7 @@ button[data-blok-database-board-lane-count]:hover {
   flex-direction: column;
   padding-block-start: var(--blok-space-1);
   padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  padding-inline-end: 0;
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
 
 /**
@@ -9556,6 +9562,11 @@ textarea[data-blok-database-cell-input] {
   opacity: 1;
 }
 
+/* notion-motion.md Round 40 §1: the row a drop redrew fades its tint in. No fill: the transition owns it after. */
+[data-blok-database-table-row][data-landed][aria-selected="true"]::after {
+  animation: blok-database-confirm-fade 200ms ease;
+}
+
 /* A press on ⋮⋮ selects the row, but the row being dragged stays painted as normal (notion-motion.md "Table row drag"). */
 [data-blok-database-table-row][data-dragging]::after {
   opacity: 0;
@@ -10539,7 +10550,8 @@ textarea[data-blok-database-cell-input] {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--blok-space-2);
+  /* notion-motion.md Round 41 Part B: 12px between "Edit filters" and "+ New page". */
+  gap: var(--blok-space-3);
   width: 100cqi;
   padding-block: var(--blok-space-4);
 }
@@ -10548,8 +10560,14 @@ textarea[data-blok-database-cell-input] {
   width: auto;
 }
 
+/* notion-motion.md Round 41 Part B (r41-n-filter-nohit.png): both buttons are bordered, 14px 500, in one ink;
+   "Edit filters" leads with the filter icon. The body's "+ New page" row stays borderless. */
 [data-blok-database-table-edit-filters],
-[data-blok-database-table-clear-search] {
+[data-blok-database-table-clear-search],
+[data-blok-database-table-empty] [data-blok-database-table-add-row] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1-25);
   height: 28px;
   padding-inline: var(--blok-space-2);
   border: 1px solid var(--blok-database-table-control-border);
@@ -10559,6 +10577,22 @@ textarea[data-blok-database-cell-input] {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+}
+
+/* Notion's glyph ink sits 9px in from the border (r41-n-filter-nohit.png). */
+[data-blok-database-table-edit-filters],
+[data-blok-database-table-empty] [data-blok-database-table-add-row] {
+  padding-inline-start: var(--blok-space-1-5);
+}
+
+[data-blok-database-table-edit-filters] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-table-empty] [data-blok-database-table-add-row] > span {
+  margin-inline: 0;
+  color: inherit;
 }
 
 /* ─── Calculation footer ─── */
@@ -10911,9 +10945,15 @@ button[data-blok-database-table-group-count]:hover {
   animation: blok-database-confirm-fade 200ms ease both;
 }
 
+/* Round 40 §1: a drop's redraw re-creates the bar, and Notion's bar stays put. */
+[data-blok-database-table-selection-bar][data-still] {
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-blok-database-selecting="table"] > [data-blok-database-table-selection-bar],
-  [data-blok-database-table] > [data-blok-database-table-selection-bar] {
+  [data-blok-database-table] > [data-blok-database-table-selection-bar],
+  [data-blok-database-table-row][data-landed][aria-selected="true"]::after {
     animation: none;
   }
 }
@@ -10998,6 +11038,38 @@ button[data-blok-database-table-group-count]:hover {
 /* A picked board card or list row: gray, never blue (D3). */
 [data-blok-database-row-selected] {
   background-image: linear-gradient(var(--blok-icon-active-bg), var(--blok-icon-active-bg));
+}
+
+/* notion-motion.md Round 12 and Round 40 §2: a selected card keeps its fill under the gray halo, 2px in. */
+[data-blok-database-card][data-blok-database-row-selected] {
+  background-image: none;
+}
+
+/* A redraw re-creates the card: only the landed animation fades the halo in. */
+[data-blok-database-card][data-blok-database-row-selected]::after {
+  opacity: 1;
+  transition: none;
+}
+
+/* Round 40 §2–3: a dropped card or event's halo fades in. */
+[data-blok-database-row-landed]::after {
+  animation: blok-database-landed 200ms ease;
+}
+
+@keyframes blok-database-landed {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-database-row-landed]::after {
+    animation: none;
+  }
+
+  [data-blok-database-card]::after {
+    transition: none;
+  }
 }
 
 /* One button per property: its type glyph and name, sized to fit (research/08, feel/findings-table T13). */
@@ -13976,6 +14048,12 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   width: 165px;
 }
 
+/* notion-motion.md Round 39 §1 (r39-pm-rules.raw) and Round 20 §2 (r20-adv-st-two-parts.raw): one token fills 127.6,
+   two fill 179.4. Both fit 6 after each token; that 6 is derived from the fits, not read. */
+[data-blok-database-filter-rule-button] [data-blok-database-option-pill] {
+  margin-inline-end: var(--blok-space-1-5);
+}
+
 /* notion-motion.md Round 20 §1 (r20-st-rows.raw): a Status group row in 500 and its group's ink. Notion's inks
    (rgb(142,139,134), rgb(39,131,222), rgb(70,161,113)) fail AA at 14px, so the row takes the option ink. */
 [data-blok-database-filter-status-group] {
@@ -14194,8 +14272,9 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   flex-direction: column;
   gap: var(--blok-space-4);
   padding-block: var(--blok-space-4) var(--blok-space-1);
-  /* Cards start at the text column like the table and run to the toolbar's end (side-by-side-4 #2). */
+  /* Cards keep to the text column, as the toolbar does (side-by-side-4 #2, notion-motion.md Round 41 Part B). */
   padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
 
 [data-blok-database-gallery][data-card-size="small"] {
@@ -14549,8 +14628,9 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   display: flex;
   flex-direction: column;
   padding-block-end: var(--blok-space-4);
-  /* The grid starts at the text column like the table and runs to the toolbar's end (side-by-side-4 #2). */
+  /* The grid and its nav keep to the text column, as the toolbar does (side-by-side-4 #2, notion-motion.md Round 41 Part B). */
   padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
 
 [data-blok-database-calendar-toolbar] {
@@ -14693,6 +14773,17 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-calendar-day][data-drop] {
   background-color: var(--blok-icon-active-bg);
+}
+
+/* notion-motion.md Round 40 §3: the drop day's tint fades out. Notion's is blue; Blok's stays gray. */
+[data-blok-database-calendar-day][data-drop-leaving] {
+  animation: blok-database-calendar-drop-out 200ms ease;
+}
+
+@keyframes blok-database-calendar-drop-out {
+  from {
+    background-color: var(--blok-icon-active-bg);
+  }
 }
 
 /* notion-motion.md Round 32 §3 Calendar: a number is its text, 10px in ("2" ends at 726.4). */
@@ -14949,8 +15040,9 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   inset-inline-end: -6px;
 }
 
+/* notion-motion.md Round 40 §3: `default` over the day while an event is held. */
 [data-blok-database-calendar][data-dragging="move"] {
-  cursor: grabbing;
+  cursor: default;
 }
 
 [data-blok-database-calendar][data-dragging="start"],
@@ -14964,6 +15056,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   [data-blok-database-calendar-day-number],
   [data-blok-database-calendar-event] {
     transition: none;
+  }
+
+  [data-blok-database-calendar-day][data-drop-leaving] {
+    animation: none;
   }
 }
 
@@ -15001,13 +15097,20 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   box-sizing: border-box;
   min-block-size: 42px;
   padding-block-start: var(--blok-space-2-75);
-  /* The toolbar starts at the text column; the grid below stays as wide as the view (side-by-side-4 #2). */
+  /* The toolbar keeps to the text column; the grid below stays as wide as the view (side-by-side-4 #2). */
   padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
 
 /* The panel starts at the view's edge, so its « and the month are placed from there. */
 [data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"]) {
   padding-inline-start: 0;
+  padding-inline-end: 0;
+}
+
+/* notion-motion.md Round 41 Part B: with the panel shut, a page-wide editor's timeline spans the column plus 8px each side. Round 6: open, it is full-bleed. */
+[data-blok-database-timeline]:not(:has(> [data-blok-database-timeline-toolbar] > [data-blok-database-timeline-table-toggle][aria-pressed="true"])) {
+  margin-inline: max(0px, calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)) - var(--blok-space-2)));
 }
 
 [data-blok-database-timeline-toolbar-spacer] {
@@ -18082,10 +18185,12 @@ button[data-blok-database-feed-reaction]:hover,
   border-end-end-radius: 0;
 }
 
-/* A form view's "Share form" (research/19 §3d): Notion's blue toolbar button. */
-[data-blok-database-toolbar-share-form] {
+/* A form view's "Share form" (research/19 §3d): Notion's blue toolbar button.
+   The toolbar prefix outranks `[data-blok-database-view-toolbar] > button`, which would paint it gray.
+   6px + Preview's 1px hairline margin = Notion's 7px gap (r41-n-empty-form.png). */
+[data-blok-database-view-toolbar] > [data-blok-database-toolbar-share-form] {
   height: 28px;
-  margin-inline-start: var(--blok-space-1);
+  margin-inline-start: var(--blok-space-1-5);
   padding-inline: var(--blok-space-2);
   border: none;
   border-radius: var(--blok-radius-control);
@@ -18096,12 +18201,29 @@ button[data-blok-database-feed-reaction]:hover,
   cursor: pointer;
 }
 
-[data-blok-database-toolbar-share-form]:hover {
+[data-blok-database-view-toolbar] > [data-blok-database-toolbar-share-form]:hover {
   background-color: var(--blok-database-new-hover-bg);
 }
 
-[data-blok-database-toolbar-share-form][hidden] {
-  display: none;
+/* After the hover rule; `> button:active` would paint the gray pressed fill on a key press. */
+[data-blok-database-view-toolbar] > [data-blok-database-toolbar-share-form]:active {
+  background-color: var(--blok-database-new-active-bg);
+}
+
+/* notion-motion.md Round 41 Part B (r41-n-empty-form.png): "Preview" is a 94x28 button, 1px border
+   (230,229,227 on white = the control border), an eye and a label in primary ink. 500: the label's ink
+   area matches Notion's at 500 (158 px² both) and not at 400 (136). */
+[data-blok-database-view-toolbar] > [data-blok-database-toolbar-preview-form] {
+  gap: var(--blok-space-1-5);
+  padding-inline: var(--blok-space-1-5) var(--blok-space-2);
+  border: 1px solid var(--blok-database-table-control-border);
+  color: var(--blok-database-ink);
+  font-weight: 500;
+}
+
+[data-blok-database-view-toolbar] > [data-blok-database-toolbar-preview-form] svg {
+  width: 20px;
+  height: 20px;
 }
 
 [data-blok-database-new] > button:last-child {

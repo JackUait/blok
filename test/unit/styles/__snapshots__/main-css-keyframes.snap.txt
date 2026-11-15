@@ -197,6 +197,10 @@
   to { opacity: 1; transform: none }
 }
 
+@keyframes blok-database-calendar-drop-out {
+  from { background-color: var(--blok-icon-active-bg) }
+}
+
 @keyframes blok-database-confirm-fade {
   from { opacity: 0 }
   to { opacity: 1 }
@@ -215,6 +219,10 @@
 @keyframes blok-database-confirm-out {
   from { transform: none }
   to { transform: scale(0.97) }
+}
+
+@keyframes blok-database-landed {
+  from { opacity: 0 }
 }
 
 @keyframes blok-dice-impact {

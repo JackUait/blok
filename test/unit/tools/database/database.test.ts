@@ -1289,6 +1289,46 @@ describe('DatabaseTool', () => {
     });
   });
 
+  // notion-motion.md Round 40 §2: the dropped card is selected, and its halo fades in.
+  describe('a dropped board card', () => {
+    const dropOnBoard = (): { tool: DatabaseTool; element: HTMLElement } => {
+      const childBlocks = [
+        createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
+        createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Task 2', 'prop-status': 'opt-todo' }, position: 'a1' }),
+      ];
+      const options = createDatabaseOptions({}, {}, { childBlocks });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      tool.rendered();
+      (tool as unknown as { cardDrag: { onDrop: (r: CardDragResult) => void } }).cardDrag
+        .onDrop({ rowId: 'row-1', toOptionId: 'opt-doing', beforeRowId: null, afterRowId: null });
+
+      return { tool, element };
+    };
+
+    it('is the only selected card, marked as just landed', () => {
+      const { tool, element } = dropOnBoard();
+      const picked = Array.from(element.querySelectorAll('[data-blok-database-row-selected]'));
+
+      expect(picked.map((el) => el.getAttribute('data-row-id'))).toEqual(['row-1']);
+      expect(picked[0].hasAttribute('data-blok-database-row-landed')).toBe(true);
+
+      tool.destroy();
+    });
+
+    it('loses the landed mark at the next paint, so its fade never replays', () => {
+      const { tool, element } = dropOnBoard();
+
+      (tool as unknown as { paintRowSelection: () => void }).paintRowSelection();
+
+      expect(element.querySelector('[data-blok-database-row-landed]')).toBeNull();
+      expect(element.querySelector('[data-blok-database-row-selected]')?.getAttribute('data-row-id')).toBe('row-1');
+
+      tool.destroy();
+    });
+  });
+
   describe('rendered()', () => {
     it('sets block stretched to true', () => {
       const mockBlock = { id: 'test-block-id', stretched: false };

@@ -4,7 +4,7 @@ import { DatabaseTableView, createTableState } from '../../../../src/tools/datab
 import type { TableHandlers, TableState, DatabaseTableViewOptions, TableGroup } from '../../../../src/tools/database/database-table-view';
 import { calculationItems } from '../../../../src/tools/database/database-table-menus';
 import { PROPERTY_TYPE_META } from '../../../../src/tools/database/database-property-types';
-import { IconInfo, IconPeekSide, IconPlayerPlay, IconRowGrip } from '../../../../src/components/icons';
+import { IconFilter, IconInfo, IconPeekSide, IconPlayerPlay, IconRowGrip } from '../../../../src/components/icons';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { TOOLTIP_MUTED_INK } from '../../../../src/components/modules/toolbar/tooltip';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
@@ -598,7 +598,15 @@ describe('DatabaseTableView', () => {
       const empty = root.querySelector<HTMLElement>('[data-blok-database-table-empty]');
 
       expect(empty).not.toBeNull();
-      empty?.querySelector<HTMLElement>('[data-blok-database-table-edit-filters]')?.click();
+      // notion-motion.md Round 41 Part B: Notion's "Edit filters" leads with the filter icon.
+      const edit = empty?.querySelector<HTMLElement>('[data-blok-database-table-edit-filters]');
+
+      const filterIcon = document.createElement('div');
+
+      filterIcon.innerHTML = IconFilter;
+      expect(edit?.querySelector('svg')?.outerHTML).toBe(filterIcon.querySelector('svg')?.outerHTML);
+      expect(edit?.textContent?.trim()).toBe('tools.database.tableEditFilters');
+      edit?.click();
       expect(handlers.editFilters).toHaveBeenCalled();
     });
 
@@ -609,6 +617,8 @@ describe('DatabaseTableView', () => {
       const clear = empty?.querySelector<HTMLElement>('[data-blok-database-table-clear-search]');
 
       expect(clear?.textContent).toBe('tools.database.searchClear');
+      // notion-motion.md Round 41 Part B: "Clear search" has no icon.
+      expect(clear?.querySelector('svg')).toBeNull();
       expect(empty?.querySelector('[data-blok-database-table-edit-filters]')).toBeNull();
       expect(empty?.querySelector('[data-blok-database-table-add-row]')).not.toBeNull();
       clear?.click();
@@ -2147,6 +2157,93 @@ describe('DatabaseTableView', () => {
     });
 
     const rect = (top: number): DOMRect => ({ top, bottom: top + 37, left: 0, right: 600, width: 600, height: 37, x: 0, y: top, toJSON: () => ({}) });
+
+    /** Drags r1 below r3; the drop redraws the table the way the tool does. */
+    const dropWithRedraw = (): { handlers: TableHandlers; state: TableState; redrawn: () => HTMLElement } => {
+      const handlers = makeHandlers();
+      const state = createTableState();
+      const first = mount({ handlers, state });
+      const second: { root: HTMLElement | null } = { root: null };
+
+      vi.mocked(handlers.moveRow).mockImplementation(() => {
+        first.view.destroy();
+        first.root.remove();
+        second.root = mount({ handlers, state }).root;
+      });
+      const rowEls = [...first.root.querySelectorAll<HTMLElement>('[data-blok-database-table-row]')];
+
+      rowEls.forEach((el, i) => vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(rect(i * 37)));
+      rowEls[0].querySelector<HTMLElement>('[data-blok-database-table-row-handle]')
+        ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 5, clientY: 10, button: 0 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 5, clientY: 100 }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 5, clientY: 100 }));
+
+      return {
+        handlers,
+        state,
+        redrawn: () => {
+          if (second.root === null) throw new Error('no redraw');
+
+          return second.root;
+        },
+      };
+    };
+
+    // notion-motion.md Round 40 §1: Notion's selection bar stays put on a drop; it does not fade in again.
+    it('a drop that redraws the table shows the selection bar without its entrance', () => {
+      const { redrawn, handlers, state } = dropWithRedraw();
+      const bar = redrawn().querySelector('[data-blok-database-table-selection-bar]');
+
+      expect(bar?.hasAttribute('data-still')).toBe(true);
+
+      // Only the drop's own redraw skips it.
+      const later = mount({ handlers, state });
+
+      expect(later.root.querySelector('[data-blok-database-table-selection-bar]')?.hasAttribute('data-still')).toBe(false);
+    });
+
+    // notion-motion.md Round 40 §1: the dropped row's tint fades in, 200ms ease (database.css runs it while data-landed is on).
+    it('marks the dropped row so its tint fades in, and clears the mark when the fade ends', () => {
+      const { redrawn } = dropWithRedraw();
+      const dropped = redrawn().querySelector<HTMLElement>('[data-row-id="r1"]');
+
+      expect(dropped?.getAttribute('aria-selected')).toBe('true');
+      expect(dropped?.hasAttribute('data-landed')).toBe(true);
+      expect(redrawn().querySelectorAll('[data-landed]')).toHaveLength(1);
+
+      dropped?.dispatchEvent(new Event('animationend'));
+      expect(dropped?.hasAttribute('data-landed')).toBe(false);
+    });
+
+    // notion-motion.md Round 40 §1: the drop line fades 1→0 over 200ms where it was, though the table redraws.
+    it('leaves the drop line fading out on the page after the drop redraws the table', () => {
+      vi.useFakeTimers();
+      try {
+        dropWithRedraw();
+        const line = document.querySelector<HTMLElement>('[data-blok-database-drop-line]');
+
+        expect(line).not.toBeNull();
+        expect(line?.style.opacity).toBe('0');
+        expect(line?.style.height).toBe('4px');
+        vi.advanceTimersByTime(200);
+        expect(document.querySelector('[data-blok-database-drop-line]')).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('removes the drop line at once when the drag is cancelled', () => {
+      const { root } = mount();
+      const rowEls = [...root.querySelectorAll<HTMLElement>('[data-blok-database-table-row]')];
+
+      rowEls.forEach((el, i) => vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(rect(i * 37)));
+      rowEls[0].querySelector<HTMLElement>('[data-blok-database-table-row-handle]')
+        ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 5, clientY: 10, button: 0 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 5, clientY: 100 }));
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(document.querySelector('[data-blok-database-drop-line], [data-blok-database-table-drop-line]')).toBeNull();
+    });
 
     // feel/findings-table T15: Notion's row menu has its own row size and opens beside ⋮⋮.
     it('opens the row menu from ⋮⋮ as the row menu', () => {

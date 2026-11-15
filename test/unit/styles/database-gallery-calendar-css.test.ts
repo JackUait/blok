@@ -302,6 +302,21 @@ describe('database gallery and calendar styles', () => {
     expect(drop).not.toMatch(/focus-ring|rgb\(39,\s*131,\s*222\)/);
   });
 
+  // notion-motion.md Round 40 §3: the drop day's tint fades out over 200ms ease; reduced motion drops it at once.
+  it('fades a drop day\'s gray tint out over 200ms ease', () => {
+    expect(ruleBody('[data-blok-database-calendar-day][data-drop-leaving]')).toContain('animation: blok-database-calendar-drop-out 200ms ease');
+    expect(css).toMatch(/@keyframes blok-database-calendar-drop-out\s*\{\s*from\s*\{\s*background-color: var\(--blok-icon-active-bg\);\s*\}\s*\}/);
+    const off = /@media \(prefers-reduced-motion: reduce\) \{[^@]*\[data-blok-database-calendar-day\]\[data-drop-leaving\][^{]*\{\s*animation: none;/.exec(css);
+
+    // Same specificity: the off switch must come later in the file to win.
+    expect(off?.index ?? -1).toBeGreaterThan(css.search(/\[data-blok-database-calendar-day\]\[data-drop-leaving\] \{\s*animation: blok/));
+  });
+
+  // notion-motion.md Round 40 §3: the cursor over the day while an event is held reads `default`.
+  it('keeps the default cursor while an event is moved', () => {
+    expect(ruleBody('[data-blok-database-calendar][data-dragging="move"]')).toContain('cursor: default');
+  });
+
   // research/22 §1: the picked event's overlay is the card's own 6px shape, in the gray selected token (no blue).
   it('paints a picked calendar event with the shared gray selected token', () => {
     const picked = ruleBody('[data-blok-database-row-selected]');
@@ -454,19 +469,21 @@ describe('calendar day digits and weekday row (Round 32)', () => {
 });
 
 describe('content inset (side-by-side-4 #2)', () => {
-  const inset = 'padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))';
+  const inset = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))';
 
-  it('starts gallery cards at the text column, like the table, and runs them to the view toolbar\'s end', () => {
+  // notion-motion.md Round 41 Part B Gallery: in a page-wide editor Notion's grid is the 692 text column (2 cards of 338).
+  it('keeps gallery cards in the text column, like the toolbar', () => {
     const body = ruleBody('[data-blok-database-gallery]');
 
-    expect(body).toContain(inset);
-    expect(body).not.toMatch(/padding-inline-end|padding-right|padding-inline:/);
+    expect(body).toContain(`padding-inline-start: ${inset}`);
+    expect(body).toContain(`padding-inline-end: ${inset}`);
   });
 
-  it('starts the calendar grid at the text column, like the table, and runs it to the view toolbar\'s end', () => {
+  // notion-motion.md Round 41 Part B Calendar (r41-n-empty-cal.png): the grid spans x 539-1230.5 and ‹ Today › ends at the column.
+  it('keeps the calendar grid and its nav in the text column, like the toolbar', () => {
     const body = ruleBody('[data-blok-database-calendar]');
 
-    expect(body).toContain(inset);
-    expect(body).not.toMatch(/padding-inline-end|padding-right|padding-inline:/);
+    expect(body).toContain(`padding-inline-start: ${inset}`);
+    expect(body).toContain(`padding-inline-end: ${inset}`);
   });
 });

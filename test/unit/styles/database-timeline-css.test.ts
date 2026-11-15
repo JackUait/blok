@@ -322,6 +322,27 @@ describe('content inset (side-by-side-4 #2)', () => {
   });
 });
 
+// notion-motion.md Round 41 Part B Timeline (r41-n-empty-tl.png): in a page-wide editor the grid spans x 531-1238.5,
+// the text column plus 8 each side, and › ends with the column. Round 6: with the table panel open the view is full-bleed.
+describe('page-wide editor: the timeline keeps to the text column', () => {
+  const inset = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))';
+  const closed = '[data-blok-database-timeline]:not(:has(> [data-blok-database-timeline-toolbar] > [data-blok-database-timeline-table-toggle][aria-pressed="true"]))';
+  const open = '[data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"])';
+
+  it('narrows the closed-panel view to the column plus 8px each side', () => {
+    expect(ruleBody(closed)).toContain(`margin-inline: max(0px, calc(${inset} - var(--blok-space-2)))`);
+  });
+
+  it('ends the toolbar at the column', () => {
+    expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain(`padding-inline-end: ${inset}`);
+  });
+
+  it('keeps the open-panel toolbar full-bleed on both sides', () => {
+    expect(ruleBody(open)).toContain('padding-inline-start: 0');
+    expect(ruleBody(open)).toContain('padding-inline-end: 0');
+  });
+});
+
 // notion-motion.md Round 24 §4 Timeline: a plain "+ New" label at rest; a ghost bar on lane hover.
 describe('"+ New" lane (Round 24)', () => {
   const label = '[data-blok-database-timeline-new-lane] [data-blok-database-timeline-new]';

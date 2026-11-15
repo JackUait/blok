@@ -23,7 +23,6 @@ const setup = (): DatabaseViewControls => {
     fallback: { get: () => undefined, set: () => undefined },
     savedView: () => view,
     schema: () => [{ id: 't', name: 'Name', type: 'title', position: 'a0' }],
-    rowCount: () => 5,
     locked: () => false,
     readOnly: () => false,
     viewCount: () => 1,

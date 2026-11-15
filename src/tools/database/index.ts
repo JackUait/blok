@@ -778,6 +778,8 @@ export class DatabaseTool implements BlockTool {
   private calendarFocusDay: string | undefined;
   /** The range shown before the calendar redraws into a new one: its digits fade from their old ink. */
   private calendarInkFrom: string | undefined;
+  /** The day a calendar move just landed on, for the next draw only. */
+  private calendarDropDay: string | undefined;
   /** Per timeline view: the centre day, for when local storage is blocked. */
   private readonly timelineCenters = new Map<string, string>();
   /** Per timeline view: whether the last draw showed the table, so the next draw knows it was toggled. */
@@ -808,6 +810,8 @@ export class DatabaseTool implements BlockTool {
   private announcedPickCount = 0;
   /** A new board card left unnamed by Escape: selected alone, it shows no bar. Any other selection drops it. */
   private barlessRowId: string | null = null;
+  /** The row a drop just landed: the next paint marks it so its halo fades in once. */
+  private landedRowId: string | null = null;
   /** A row "+ New" just made, with the values it was born with. Escape deletes it while it stays so. */
   private freshRow: { id: string; properties: string } | null = null;
 
@@ -6556,9 +6560,11 @@ export class DatabaseTool implements BlockTool {
       : resolveWeekStart(locale);
     const focusDay = this.calendarFocusDay;
     const inkFrom = this.calendarInkFrom;
+    const dropDay = this.calendarDropDay;
 
     this.calendarFocusDay = undefined;
     this.calendarInkFrom = undefined;
+    this.calendarDropDay = undefined;
     this.view = new DatabaseCalendarView({
       readOnly: this.readOnly,
       i18n: this.api.i18n,
@@ -6576,6 +6582,7 @@ export class DatabaseTool implements BlockTool {
       ...this.calendarLever(this.dataId, viewConfig.id),
       ...(focusDay !== undefined ? { focusDay } : {}),
       ...(inkFrom !== undefined ? { inkFrom } : {}),
+      ...(dropDay !== undefined ? { dropDay } : {}),
       handlers: {
         openRow: (rowId) => this.handleRowClick(rowId),
         ...(this.readOnly || dateId === undefined ? {} : {
@@ -6588,10 +6595,13 @@ export class DatabaseTool implements BlockTool {
 
           if (open === true && rowId !== undefined) this.handleRowClick(rowId);
         },
-        setDate: (rowId, value) => {
+        setDate: (rowId, value, landedOn) => {
           if (dateId !== undefined) {
             this.commitTableCell(rowId, dateId, value);
+            this.calendarDropDay = landedOn;
             this.rerenderView({ keepDrawer: true });
+            this.calendarDropDay = undefined;
+            if (landedOn !== undefined) this.landRow(rowId);
           }
         },
         navigate: (anchor, focus) => {
@@ -6971,7 +6981,6 @@ export class DatabaseTool implements BlockTool {
       // Filters and sorts read a formula or rollup as its result type.
       schema: () => localizeDatabaseSchema(data().model.getValueSchema(), this.api.i18n),
       storedType: (propertyId) => data().model.getProperty(propertyId)?.type,
-      rowCount: () => data().model.getOrderedRows().length,
       locked: () => owner.structureLocked(),
       readOnly: () => context === undefined ? this.readOnly : !context.authority.writable(),
       viewCount: () => owner.model.getTabViews().length,
@@ -10992,7 +11001,7 @@ export class DatabaseTool implements BlockTool {
         Object.assign(sortedChanges, this.changedValues(rowId, { [groupByPropId]: this.droppedGroupValue(groupByPropId, rowId, toOptionId) }));
       }
       this.writeRowValues(rowId, sortedChanges);
-      this.selectRows([rowId]);
+      this.landRow(rowId);
 
       return;
     }
@@ -11005,6 +11014,7 @@ export class DatabaseTool implements BlockTool {
       sync: () => this.sync.syncUpdateRow({ rowId, properties: changes }),
     });
     this.rerenderView();
+    this.landRow(rowId);
   }
 
   /** The sorts this person sees: their own (D4) or the saved ones. */
@@ -11437,6 +11447,13 @@ export class DatabaseTool implements BlockTool {
     this.paintRowSelection();
   }
 
+  /** notion-motion.md Round 40 §2–3: a dropped card or event is left selected, its halo fading in. */
+  private landRow(rowId: string): void {
+    this.landedRowId = rowId;
+    this.selectRows([rowId]);
+    this.landedRowId = null;
+  }
+
   private clearRowSelection(): void {
     this.rowSelection.clear();
     this.selectionAnchor = null;
@@ -11472,6 +11489,7 @@ export class DatabaseTool implements BlockTool {
       const selected = this.rowSelection.has(el.getAttribute('data-row-id') ?? '');
 
       el.toggleAttribute('data-blok-database-row-selected', selected);
+      el.toggleAttribute('data-blok-database-row-landed', selected && el.getAttribute('data-row-id') === this.landedRowId);
       if (selected) {
         el.setAttribute('aria-selected', 'true');
       } else {

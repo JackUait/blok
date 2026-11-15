@@ -1,6 +1,7 @@
 import type { AutoScroll } from '../../components/modules/drag/utils/AutoScroll';
 import { copyGhostContext, mountGhost } from './copy-ghost-radius';
 import { createDatabaseAutoScroll, rowAutoScrollSpeed } from './database-auto-scroll';
+import { DatabaseDropLine } from './database-drop-line';
 import type { TableState } from './database-table-grid';
 
 const THRESHOLD = 5;
@@ -160,6 +161,7 @@ export class DatabaseTableRowDrag {
     const target = this.target;
     const dragged = this.ghost !== null;
 
+    this.fadeLine();
     this.stop();
     if (!dragged || press === null || target === null) {
       return;
@@ -196,6 +198,25 @@ export class DatabaseTableRowDrag {
       this.stop();
     }
   };
+
+  /**
+   * notion-motion.md Round 40 §1: on a drop the line fades out where it was.
+   * The drop redraws the grid, so a copy on the page does the fade.
+   */
+  private fadeLine(): void {
+    const line = this.line;
+
+    if (line === null || !line.hasAttribute('data-visible')) return;
+    const box = line.getBoundingClientRect();
+    const scroller = this.grid.closest('[data-blok-database-table-scroller]')?.getBoundingClientRect() ?? box;
+    const left = Math.max(box.left, scroller.left);
+    const copy = new DatabaseDropLine(this.grid, this.grid.closest('dialog') ?? undefined);
+
+    copy.showHorizontal({ left, centerY: box.top + box.height / 2, width: Math.max(0, Math.min(box.right, scroller.right) - left) });
+    // Resolve the new line's style first, or the fade has no start.
+    void this.grid.getBoundingClientRect();
+    copy.hide();
+  }
 
   private stop(): void {
     document.removeEventListener('pointermove', this.handleMove);

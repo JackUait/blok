@@ -20,12 +20,14 @@ const ruleBody = (css: string, selector: string): string =>
     .map((rule) => rule[2])
     .join(';');
 
-describe('list width (notion-spec-2 §21.8, side-by-side-3 #1)', () => {
-  it('starts rows at the text column and runs them to the view toolbar\'s end, so values reach the right edge', () => {
+// notion-motion.md Round 41 Part B List: in a page-wide editor Notion's "+ New page" row is 692 wide, the text column.
+describe('list width (notion-spec-2 §21.8, side-by-side-3 #1, Round 41)', () => {
+  it('starts rows at the text column and ends them with the view toolbar at the column\'s end', () => {
     const body = ruleBody(database, '[data-blok-database-list]');
+    const inset = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))';
 
-    expect(body).toContain('padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))');
-    expect(body).toContain('padding-inline-end: 0');
+    expect(body).toContain(`padding-inline-start: ${inset}`);
+    expect(body).toContain(`padding-inline-end: ${inset}`);
     expect(body).not.toMatch(/padding-(left|right)/);
   });
 });

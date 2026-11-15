@@ -35,8 +35,8 @@ export interface CalendarHandlers {
   openRow: (rowId: string) => void;
   /** Adds a row dated `day` (`YYYY-MM-DD`), and opens it when `open` is set. */
   addRow: (day: string, open?: boolean) => void;
-  /** The row's new date value, as a stored string. */
-  setDate: (rowId: string, value: string) => void;
+  /** The row's new date value, as a stored string. `landedOn` is the day a moved event was dropped on. */
+  setDate: (rowId: string, value: string, landedOn?: string) => void;
   /** Show the range around `anchor`, then focus `focusDay` when given. */
   navigate: (anchor: string, focusDay?: string) => void;
   /** Shift-click: select the event without opening it. Absent when read-only. */
@@ -69,6 +69,8 @@ export interface DatabaseCalendarViewOptions {
   focusDay?: string;
   /** The anchor shown before this draw. Days in both months start at their old ink and fade to the new one. */
   inkFrom?: string;
+  /** The day a move just landed on: its drop tint fades out once. */
+  dropDay?: string;
   commentBadges?: CommentBadges;
   /** The host's "Manage in Calendar" (`config.calendar`), a toolbar button. Read-only keeps it. */
   manageInCalendar?: { label: string; onClick: () => void };
@@ -378,6 +380,18 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
       }
       if (this.range === 'month' && !dayIso.startsWith(month)) {
         cell.setAttribute('data-outside', '');
+      }
+      if (dayIso === this.options.dropDay) {
+        cell.setAttribute('data-drop-leaving', '');
+        // The landed event's halo animation ends inside this cell too.
+        const settle = (event: Event): void => {
+          if (event.target === cell) {
+            cell.removeAttribute('data-drop-leaving');
+            cell.removeEventListener('animationend', settle);
+          }
+        };
+
+        cell.addEventListener('animationend', settle);
       }
       const before = this.inkBefore.get(dayIso);
 
@@ -996,7 +1010,9 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
       ? moveDateValue(value, addDays(span.start, daysBetween(drag.grabDay, drag.overDay)))
       : resizeDateValue(value, drag.mode, drag.overDay);
 
-    if (next !== null && next !== value) {
+    if (next !== null && next !== value && drag.mode === 'move') {
+      this.options.handlers?.setDate(drag.rowId, next, drag.overDay);
+    } else if (next !== null && next !== value) {
       this.options.handlers?.setDate(drag.rowId, next);
     }
   };

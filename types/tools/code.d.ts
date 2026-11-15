@@ -15,8 +15,12 @@ export interface CodeData extends BlockToolData {
   language: string;
   /** Whether to show line numbers in the gutter */
   lineNumbers?: boolean;
+  /** Wrap long lines; defaults to true for existing documents. */
+  wrapLines?: boolean;
   /** File name shown above the code, e.g. "block.ts". Omitted when empty. */
   filename?: string;
+  /** Show the saved filename above the code; hidden by default. */
+  showFilename?: boolean;
 }
 
 /**

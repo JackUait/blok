@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 import type { CodeData } from '../../../../types/tools/code';
 import { DATA_ATTR } from '../../../../src/components/constants/data-attributes';
-import { CARD_STYLES, HEADER_CONTROLS_STYLES, TAB_ROW_STYLES, TAB_STYLES } from '../../../../src/tools/code/constants';
+import { CARD_STYLES, LANGUAGE_BUTTON_STYLES, TAB_ROW_STYLES, TAB_STYLES } from '../../../../src/tools/code/constants';
 import type { CodeTool as CodeToolClass } from '../../../../src/tools/code';
 
 vi.mock('../../../../src/shared/katex', () => ({
@@ -30,6 +30,7 @@ const TRANSLATIONS: Record<string, string> = {
 };
 
 const dispatchChange = vi.fn();
+const toggleBlockSettings = vi.fn();
 
 const createOptions = (
   data: Partial<CodeData> = {},
@@ -38,6 +39,8 @@ const createOptions = (
   data: { code: data.code ?? '', language: data.language ?? 'plain text', ...data },
   config: {},
   api: {
+    toolbar: { toggleBlockSettings },
+    events: { on: vi.fn(), off: vi.fn() },
     i18n: { t: (k: string) => TRANSLATIONS[k] ?? k },
     blocks: { getCurrentBlockIndex: vi.fn().mockReturnValue(0), insert: vi.fn() },
   } as unknown as API,
@@ -329,7 +332,7 @@ describe('code block header', () => {
     it('reveal for keyboard focus inside the block, not only for hover', async () => {
       const CodeTool = await loadTool();
       const el = new CodeTool(createOptions({ code: 'x' })).render();
-      const controls = query(el, 'code-controls');
+      const controls = query(el, 'code-tab-row');
 
       expect(controls?.className).toContain('group-focus-within/code:opacity-100');
       expect(controls?.className).toContain('group-hover/code:opacity-100');
@@ -340,8 +343,7 @@ describe('code block header', () => {
       const CodeTool = await loadTool();
       const el = new CodeTool(createOptions({ code: 'x' })).render();
 
-      expect(query(el, 'code-controls')?.className).toContain('group-has-[[aria-expanded=true]]/code:opacity-100');
-      expect(query(el, 'code-filename-slot')?.className).toContain('group-has-[[aria-expanded=true]]/code:data-[empty=true]:flex');
+      expect(query(el, 'code-tab-row')?.className).toContain('group-has-[[aria-expanded=true]]/code:opacity-100');
     });
   });
 
@@ -361,72 +363,55 @@ describe('code block header', () => {
     });
   });
 
-  describe('breadcrumb', () => {
-    const CODE = 'function fib(n) {\n  if (n < 2) {\n    return n;\n  }\n}';
+  it('omits the caret breadcrumb from the panel', async () => {
+    const CodeTool = await loadTool();
+    const el = new CodeTool(createOptions({ code: 'function f() {\n  return 1;\n}' })).render();
 
-    const placeCaret = (code: HTMLElement, offset: number): void => {
-      const range = document.createRange();
-      const text = code.firstChild ?? code;
+    expect(query(el, 'code-breadcrumb')).toBeNull();
+  });
 
-      range.setStart(text, offset);
-      range.collapse(true);
-      document.getSelection()?.removeAllRanges();
-      document.getSelection()?.addRange(range);
-      document.dispatchEvent(new Event('selectionchange'));
-    };
+  it('opens the real block menu from the pocket', async () => {
+    const CodeTool = await loadTool();
+    const el = new CodeTool(createOptions()).render();
+    const more = query<HTMLButtonElement>(el, 'code-more-btn');
 
-    it('shows the blocks around the caret while the code is focused', async () => {
-      const CodeTool = await loadTool();
-      const el = new CodeTool(createOptions({ code: CODE })).render();
+    more?.click();
+    expect(toggleBlockSettings).toHaveBeenCalledWith(true, more);
+  });
 
-      document.body.appendChild(el);
-      const code = query(el, 'code-content')!;
+  it('toggles filename visibility without losing the saved filename', async () => {
+    const CodeTool = await loadTool();
+    const tool = new CodeTool(createOptions({ filename: 'src/main.ts' }));
+    const el = tool.render();
+    const settings = tool.renderSettings();
+    const option = Array.isArray(settings) ? settings.find((item) => 'name' in item && item.name === 'code-show-filename') : undefined;
 
-      code.focus();
-      placeCaret(code, CODE.indexOf('return'));
+    expect(query(el, 'code-filename-slot')?.hidden).toBe(true);
+    if (!option || !('onActivate' in option) || !option.onActivate) throw new Error('Missing filename option');
+    option.onActivate();
+    expect(query(el, 'code-filename-slot')?.hidden).toBe(false);
+    expect(tool.save(el)).toMatchObject({ filename: 'src/main.ts', showFilename: true });
+    option.onActivate();
+    expect(query(el, 'code-filename-slot')?.hidden).toBe(true);
+    expect(tool.save(el).filename).toBe('src/main.ts');
+  });
 
-      const crumb = query(el, 'code-breadcrumb');
+  it('toggles wrapping, saves it, and restores it through undo/redo', async () => {
+    const CodeTool = await loadTool();
+    const tool = new CodeTool(createOptions({ code: 'long line' }));
+    const el = tool.render();
+    const wrap = query<HTMLButtonElement>(el, 'code-wrap-btn');
 
-      expect(crumb?.hidden).toBe(false);
-      expect(crumb?.textContent).toBe('fib()›if (n < 2)');
-    });
+    expect(tool.save(el)).not.toHaveProperty('wrapLines');
+    wrap?.click();
+    expect(wrap).toHaveAttribute('aria-pressed', 'false');
+    expect(query(el, 'code-content')).toHaveClass('whitespace-pre');
+    expect(tool.save(el)).toMatchObject({ wrapLines: false });
+    expect(dispatchChange).toHaveBeenCalledTimes(1);
 
-    it('hides on a top-level line and after the code loses focus', async () => {
-      const CodeTool = await loadTool();
-      const el = new CodeTool(createOptions({ code: `${CODE}\nrun();` })).render();
-
-      document.body.appendChild(el);
-      const code = query(el, 'code-content')!;
-      const crumb = query(el, 'code-breadcrumb');
-
-      code.focus();
-      placeCaret(code, CODE.indexOf('return'));
-      expect(crumb?.hidden).toBe(false);
-
-      placeCaret(code, CODE.length + 2);
-      expect(crumb?.hidden).toBe(true);
-
-      placeCaret(code, CODE.indexOf('return'));
-      code.blur();
-      expect(crumb?.hidden).toBe(true);
-    });
-
-    it('treats code text as text, never markup', async () => {
-      const CodeTool = await loadTool();
-      const tricky = 'if (a <img src=x onerror=alert(1)>) {\n  b();\n}';
-      const el = new CodeTool(createOptions({ code: tricky })).render();
-
-      document.body.appendChild(el);
-      const code = query(el, 'code-content')!;
-
-      code.focus();
-      placeCaret(code, tricky.indexOf('b()'));
-
-      const crumb = query(el, 'code-breadcrumb');
-
-      expect(crumb?.querySelector('img')).toBeNull();
-      expect(crumb?.textContent).toContain('<img');
-    });
+    tool.setData({ code: 'long line', language: 'plain text' });
+    expect(wrap).toHaveAttribute('aria-pressed', 'true');
+    expect(query(el, 'code-content')).toHaveClass('whitespace-pre-wrap');
   });
 
   describe('active line', () => {
@@ -488,22 +473,19 @@ describe('code block header', () => {
       REVEAL.forEach((rule) => expect(TAB_ROW_STYLES).toContain(rule));
     });
 
-    it('reveals it on the same conditions as the controls beside it', () => {
-      REVEAL.forEach((rule) => expect(HEADER_CONTROLS_STYLES).toContain(rule));
-    });
 
     // Plus aucun onglet ne se pose sur la carte : aucun coin n'est carré.
     it('never squares a corner off, with no tab to sit on it', () => {
       expect(CARD_STYLES).not.toContain('rounded-ss-none');
     });
 
-    /** notion.com/help/code-blocks : « at the top left of the code block ». */
+    /** Product reference: language and icon actions in one top-right pocket. */
     it('puts the language in the toolbar at the top right, behind a filet', () => {
       expect(TAB_STYLES).not.toContain('border-b-0');
       expect(TAB_STYLES).not.toContain('bg-code-bg');
       expect(TAB_STYLES).not.toContain('rounded-t-');
       // Le filet qui sépare la langue des actions, dans la même pochette.
-      expect(TAB_STYLES).toContain('border-e');
+      expect(LANGUAGE_BUTTON_STYLES).toContain('border-e');
       expect(TAB_ROW_STYLES).toContain('justify-end');
     });
   });

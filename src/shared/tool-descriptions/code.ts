@@ -9,6 +9,8 @@ export const CODE_DATA = {
     code: { type: 'string' },
     language: { type: 'string', description: 'Language identifier, e.g. "javascript", "plain text".' },
     lineNumbers: { type: 'boolean' },
+    wrapLines: { type: 'boolean' },
+    showFilename: { type: 'boolean' },
     filename: { type: 'string', description: 'File name shown above the code, e.g. "block.ts". Omitted when empty.' },
   },
 };

@@ -14,12 +14,12 @@
  */
 export const CODE_AREA_CLASSES: readonly string[] = [
   'block',
-  'px-4',
-  'py-3',
+  'px-[22px]',
+  'py-6',
   'font-mono',
   /** Host font-size hook (`config.style.fontSize.code`); 0.875rem is `text-sm`. */
   'text-[length:var(--blok-code-font-size,0.875rem)]',
-  'leading-relaxed',
+  'leading-[1.5]',
   'whitespace-pre-wrap',
   /** Indent is a tab; 2 keeps it as wide as old two-space indents. */
   '[tab-size:2]',
@@ -27,21 +27,21 @@ export const CODE_AREA_CLASSES: readonly string[] = [
   'min-h-[1.5em]',
 ];
 
-/** The block root only stacks the editor's tab row over the card. */
+/** One panel surface shared by the editor and static view. */
 export const CODE_WRAPPER_CLASSES: readonly string[] = [
   'flex',
   'flex-col',
   'my-2',
+  'relative',
+  'rounded-[10px]',
+  'bg-code-bg',
 ];
 
-/** The box around the code: border, radius, background and corner clipping. */
+/** Inner layout only: the wrapper owns the single visible panel. */
 export const CODE_CARD_CLASSES: readonly string[] = [
   'flex',
   'flex-col',
-  'rounded-(--blok-radius-block)',
-  'border',
-  'border-border-secondary',
-  'bg-code-bg',
+  'rounded-[10px]',
   'overflow-hidden',
 ];
 

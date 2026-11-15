@@ -90,7 +90,7 @@ describe('buildCodeDOM — attributes the code tool reads back', () => {
     const controls = dom.copyButton.parentElement;
 
     expect(dom.filenameSlot.contains(dom.filenameElement)).toBe(true);
-    expect(controls?.className.split(' ')).toContain('ms-auto');
+    expect(controls?.parentElement).toBe(dom.languageButton.parentElement);
   });
 
   it('lets the pre element fill the code body width above the active-line band', () => {

@@ -4,9 +4,6 @@ import {
   TAB_ROW_STYLES,
   TAB_STYLES,
   FILENAME_SLOT_STYLES,
-  BREADCRUMB_STYLES,
-  BREADCRUMB_PART_STYLES,
-  BREADCRUMB_SEPARATOR_STYLES,
   LANGUAGE_BUTTON_STYLES,
   LANGUAGE_LABEL_STYLES,
   HEADER_CONTROLS_STYLES,
@@ -31,7 +28,7 @@ import {
 } from './constants';
 import type { CodeViewMode } from './constants';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { IconCopy, IconCode, IconPreview, IconSplitView, IconChevronDown } from '../../components/icons';
+import { IconCopy, IconCode, IconPreview, IconSplitView, IconChevronDown, IconDotsHorizontal, IconReturn } from '../../components/icons';
 
 export interface CodeDOMRefs {
   wrapper: HTMLElement;
@@ -40,7 +37,8 @@ export interface CodeDOMRefs {
   languageDot: HTMLElement;
   filenameElement: HTMLElement;
   filenameSlot: HTMLElement;
-  breadcrumb: HTMLElement | null;
+  moreButton: HTMLButtonElement | null;
+  wrapButton: HTMLButtonElement;
   copyButton: HTMLButtonElement;
   copyLabel: HTMLElement;
   activeLine: HTMLElement | null;
@@ -63,9 +61,12 @@ export interface BuildCodeDOMOptions {
   languageName: string;
   languageColor?: string;
   filename?: string;
+  showFilename?: boolean;
   filenamePlaceholder?: string;
   readOnly: boolean;
   copyLabel: string;
+  moreLabel?: string;
+  wrapLabel?: string;
   previewable?: boolean;
   viewModeLabels?: ViewModeLabels;
 }
@@ -192,7 +193,7 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   wrapper.className = WRAPPER_STYLES;
   wrapper.setAttribute(DATA_ATTR.tool, 'code');
 
-  // Tab row: [tab: language | filename] [breadcrumb] [controls]
+  // Floating row: [filename] [pocket: language | copy | more]
   const tabRow = document.createElement('div');
   tabRow.className = TAB_ROW_STYLES;
   tabRow.setAttribute(DATA_ATTR.chrome, '');
@@ -251,6 +252,7 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   filenameElement.setAttribute('data-blok-testid', 'code-filename');
   filenameSlot.appendChild(filenameElement);
   setFilenameDisplay(filenameElement, filename, filenamePlaceholder, readOnly);
+  filenameSlot.hidden = options.showFilename !== true || (readOnly && filename === '');
 
   // View mode segmented control — always built in edit mode, hidden for non-previewable languages
   const viewModeResult = !readOnly && viewModeLabels
@@ -315,22 +317,8 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   });
 
   tab.appendChild(languageButton);
-  tab.appendChild(filenameSlot);
+  tabRow.appendChild(filenameSlot);
   tabRow.appendChild(tab);
-
-  // Read-only has no caret, so no breadcrumb.
-  const breadcrumb = readOnly ? null : document.createElement('div');
-
-  if (breadcrumb) {
-    breadcrumb.className = BREADCRUMB_STYLES;
-    breadcrumb.hidden = true;
-    breadcrumb.setAttribute('aria-hidden', 'true');
-    breadcrumb.setAttribute(DATA_ATTR.chrome, '');
-    // Rewritten on every caret move; must never count as an edit.
-    breadcrumb.setAttribute(DATA_ATTR.mutationFree, 'true');
-    breadcrumb.setAttribute('data-blok-testid', 'code-breadcrumb');
-    tabRow.appendChild(breadcrumb);
-  }
 
   // Controls container — hidden by default, visible on wrapper hover
   const controls = document.createElement('div');
@@ -343,7 +331,29 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
 
   controls.appendChild(copyButton);
 
-  tabRow.appendChild(controls);
+  const wrapButton = document.createElement('button');
+  wrapButton.type = 'button';
+  wrapButton.className = HEADER_BUTTON_STYLES;
+  wrapButton.innerHTML = IconReturn;
+  wrapButton.setAttribute('aria-label', options.wrapLabel ?? 'Wrap lines');
+  wrapButton.setAttribute('aria-pressed', 'true');
+  wrapButton.setAttribute('data-blok-testid', 'code-wrap-btn');
+  controls.appendChild(wrapButton);
+
+  const moreButton = readOnly ? null : document.createElement('button');
+
+  if (moreButton) {
+    moreButton.type = 'button';
+    moreButton.className = HEADER_BUTTON_STYLES;
+    moreButton.innerHTML = IconDotsHorizontal;
+    moreButton.setAttribute('aria-label', options.moreLabel ?? 'Block settings');
+    moreButton.setAttribute('aria-haspopup', 'menu');
+    moreButton.setAttribute('aria-expanded', 'false');
+    moreButton.setAttribute('data-blok-testid', 'code-more-btn');
+    controls.appendChild(moreButton);
+  }
+
+  tab.appendChild(controls);
 
   // Pre wrapper for semantic HTML — flex-1 so it fills code body width,
   // so clicks on the right empty strip of a short line still land on the
@@ -392,37 +402,5 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
     card.appendChild(codeBody);
   }
 
-  return { wrapper, languageButton, languageChevron: chevronSpan, languageDot, filenameElement, filenameSlot, breadcrumb, copyButton, copyLabel: copyLabelElement, activeLine, preElement, codeElement, gutterElement, viewModeContainer, previewElement, splitContainer };
-}
-
-/**
- * Show the caret's enclosing blocks, outer first. An empty chain hides the
- * row. Built with `textContent`: the parts come from user code.
- */
-export function setBreadcrumb(element: HTMLElement, parts: string[]): void {
-  const key = parts.join('\u0000');
-
-  if (element.getAttribute('data-parts') === key) {
-    return;
-  }
-
-  element.setAttribute('data-parts', key);
-  Object.assign(element, { hidden: parts.length === 0 });
-  element.replaceChildren(...parts.flatMap((part, index) => {
-    const label = document.createElement('span');
-
-    label.className = BREADCRUMB_PART_STYLES;
-    label.textContent = part;
-
-    if (index === 0) {
-      return [label];
-    }
-
-    const separator = document.createElement('span');
-
-    separator.className = BREADCRUMB_SEPARATOR_STYLES;
-    separator.textContent = '›';
-
-    return [separator, label];
-  }));
+  return { wrapper, languageButton, languageChevron: chevronSpan, languageDot, filenameElement, filenameSlot, moreButton, wrapButton, copyButton, copyLabel: copyLabelElement, activeLine, preElement, codeElement, gutterElement, viewModeContainer, previewElement, splitContainer };
 }

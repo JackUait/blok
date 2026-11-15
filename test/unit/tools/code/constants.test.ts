@@ -148,9 +148,9 @@ describe('Code Block Constants', () => {
       const sizeUtility = 'text-[length:var(--blok-code-font-size,0.875rem)]';
 
       expect(GUTTER_STYLES).toContain(sizeUtility);
-      expect(GUTTER_STYLES).toContain('leading-relaxed');
+      expect(GUTTER_STYLES).toContain('leading-[1.5]');
       expect(CODE_AREA_STYLES).toContain(sizeUtility);
-      expect(CODE_AREA_STYLES).toContain('leading-relaxed');
+      expect(CODE_AREA_STYLES).toContain('leading-[1.5]');
     });
 
     it('CODE_AREA_STYLES shows a tab two columns wide, as wide as an indent step', () => {
@@ -166,13 +166,13 @@ describe('Code Block Constants', () => {
     // The copy button swaps its 20px icon for a text-xs "Copied!" label, which
     // would shrink the button. Pinning the box keeps both states the same size.
     it('HEADER_BUTTON_STYLES pins the button box so icon and text states match', () => {
-      expect(HEADER_BUTTON_STYLES).toContain('h-7');
-      expect(HEADER_BUTTON_STYLES).toContain('min-w-7');
+      expect(HEADER_BUTTON_STYLES).toContain('h-6');
+      expect(HEADER_BUTTON_STYLES).toContain('min-w-6');
     });
 
     it('HEADER_BUTTON_MATCHED_STYLES pins the button box so icon and text states match', () => {
-      expect(HEADER_BUTTON_MATCHED_STYLES).toContain('h-8.5');
-      expect(HEADER_BUTTON_MATCHED_STYLES).toContain('min-w-8.5');
+      expect(HEADER_BUTTON_MATCHED_STYLES).toContain('h-6');
+      expect(HEADER_BUTTON_MATCHED_STYLES).toContain('min-w-6');
     });
   });
 });

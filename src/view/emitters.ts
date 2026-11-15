@@ -613,13 +613,14 @@ export const builtinEmitters: Record<string, Emitter> = {
     const inner = `<code${languageAttr}>${env.escape(block.data.code)}</code>`;
 
     /**
-     * Under parity the block root holds a card, as in the editor: the box
-     * (border, radius, background, overflow clipping) is one level down because
-     * the editor's tab sits on the card from outside it. Collapsing the box onto
-     * the `<pre>` would mix it with the text padding.
+     * The root paints the single panel; the inner card only clips content.
+     * Keep text padding separate from that surface, as in the editor.
      */
     const filename = str(block.data, 'filename');
-    const hasFilename = filename.trim() !== '';
+    const hasFilename = block.data.showFilename === true && filename.trim() !== '';
+    const areaClasses = CODE_AREA_CLASSES.map((name) =>
+      name === 'whitespace-pre-wrap' && block.data.wrapLines === false ? 'whitespace-pre' : name
+    );
 
     if (env.classesEnabled) {
       const header = hasFilename
@@ -627,7 +628,7 @@ export const builtinEmitters: Record<string, Emitter> = {
         : '';
 
       return trail(
-        `<div${env.rootAttrs(block)}><div${env.classList(CODE_CARD_CLASSES)}>${header}<pre${env.classList(hasFilename ? [...CODE_AREA_CLASSES, ...CODE_CAPTIONED_AREA_CLASSES] : CODE_AREA_CLASSES)}${env.ltrAttr}>${inner}</pre></div></div>`,
+        `<div${env.rootAttrs(block)}><div${env.classList(CODE_CARD_CLASSES)}>${header}<pre${env.classList(hasFilename ? [...areaClasses, ...CODE_CAPTIONED_AREA_CLASSES] : areaClasses)}${env.ltrAttr}>${inner}</pre></div></div>`,
         block,
         env
       );

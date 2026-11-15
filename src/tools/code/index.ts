@@ -15,12 +15,12 @@ import type {
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import type { CodeData } from '../../../types/tools/code';
 import { IconCodeBlock, IconCheck, IconCopy, IconWand } from '../../components/icons';
-import { buildCodeDOM, setActiveViewMode, setBreadcrumb, setFilenameDisplay } from './dom-builder';
-import { codeBreadcrumb } from './breadcrumb';
+import { buildCodeDOM, setActiveViewMode, setFilenameDisplay } from './dom-builder';
 import { caretLineIndex, measureLineRows, rowHeight } from './line-geometry';
 import type { CodeDOMRefs } from './dom-builder';
 import { handleCodeKeydown } from './code-keyboard';
 import { PopoverDesktop } from '../../components/utils/popover';
+import { BlockSettingsClosed } from '../../components/events';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { onHover as tooltipOnHover } from '../../components/utils/tooltip';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
@@ -129,8 +129,6 @@ export class CodeTool implements BlockTool {
   private _highlightedLang: string | null = null;
   private _lineRows: number[] = [];
   private _activeLineIndex: number | null = null;
-  /** Set by edits: the caret line may not move while the blocks around it change. */
-  private _breadcrumbStale = false;
   private _rowHeight = 0;
   private _paddingTop = 0;
   private _geometryRafId: number | null = null;
@@ -138,6 +136,10 @@ export class CodeTool implements BlockTool {
   private _endFilenameEdit: (() => void) | null = null;
   private _resizeObserver: ResizeObserver | null = null;
   private _copiedTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private readonly onSettingsClosed = (): void => {
+    this._dom?.moreButton?.setAttribute('aria-expanded', 'false');
+    this.api.events?.off(BlockSettingsClosed, this.onSettingsClosed);
+  };
   private readonly onSelectionChange = (): void => this.updateActiveLine();
 
   constructor({ data, api, readOnly, block }: BlockToolConstructorOptions<CodeData>) {
@@ -148,6 +150,8 @@ export class CodeTool implements BlockTool {
       code: data?.code ?? '',
       language: data?.language ?? DEFAULT_LANGUAGE,
       lineNumbers: data?.lineNumbers,
+      ...(data?.wrapLines === false ? { wrapLines: false } : {}),
+      ...(data?.showFilename === true ? { showFilename: true } : {}),
       ...(data?.filename ? { filename: data.filename } : {}),
     };
     this._lineNumbers = data?.lineNumbers ?? CODE_LOAD_DEFAULTS.lineNumbers;
@@ -177,9 +181,12 @@ export class CodeTool implements BlockTool {
       languageName: this.getLanguageName(this._data.language),
       languageColor: CodeTool.languageColor(this._data.language),
       filename: this._data.filename ?? '',
+      showFilename: this._data.showFilename,
       filenamePlaceholder: this.api.i18n.t(FILENAME_KEY),
       readOnly: this.readOnly,
       copyLabel: this.api.i18n.t(COPY_CODE_KEY),
+      moreLabel: this.api.i18n.t('blockSettings.clickToOpenMenu'),
+      wrapLabel: this.api.i18n.t('tools.code.wrapLines'),
       previewable: this.readOnly ? false : isPreviewable,
       viewModeLabels: this.readOnly ? undefined : {
         code: this.api.i18n.t(CODE_TAB_KEY),
@@ -189,6 +196,22 @@ export class CodeTool implements BlockTool {
     });
 
     this._dom = dom;
+
+    dom.moreButton?.addEventListener('click', () => {
+      if (this.readOnly) return;
+      this.api.events?.off(BlockSettingsClosed, this.onSettingsClosed);
+      this.api.events?.on(BlockSettingsClosed, this.onSettingsClosed);
+      this.api.toolbar.toggleBlockSettings(true, dom.moreButton ?? undefined);
+      dom.moreButton?.setAttribute('aria-expanded', 'true');
+    });
+
+    this.renderWrap();
+    dom.wrapButton.addEventListener('click', () => {
+      this._data.wrapLines = this._data.wrapLines === false;
+      this.renderWrap();
+      this.updateGutter();
+      if (!this.readOnly) this.block.dispatchChange();
+    });
 
     // Line numbers gutter visibility
     dom.gutterElement.hidden = !this._lineNumbers;
@@ -262,7 +285,6 @@ export class CodeTool implements BlockTool {
       });
 
       dom.codeElement.addEventListener('input', () => {
-        this._breadcrumbStale = true;
         this.syncTrailingBr();
         this.updateGutter();
         this.scheduleHighlight();
@@ -469,6 +491,8 @@ export class CodeTool implements BlockTool {
     // Before the swap below: it needs the display back in the DOM.
     this._endFilenameEdit?.();
     this.readOnly = state;
+    this.onSettingsClosed();
+    if (this._dom?.moreButton) this._dom.moreButton.hidden = state;
 
     if (!this._dom) {
       return;
@@ -520,6 +544,7 @@ export class CodeTool implements BlockTool {
     }
 
     setFilenameDisplay(this._dom.filenameElement, this._data.filename ?? '', this.api.i18n.t(FILENAME_KEY), this.readOnly);
+    this._dom.filenameSlot.hidden = this._data.showFilename !== true || (this.readOnly && !this._data.filename);
   }
 
   private wireFilenameEditing(display: HTMLElement): void {
@@ -601,7 +626,7 @@ export class CodeTool implements BlockTool {
 
   private rebuildLanguagePicker(): PopoverDesktop | null {
     this._picker?.destroy();
-    this._picker = this._dom ? this.buildLanguagePicker(this._dom.languageButton, this._dom.wrapper) : null;
+    this._picker = this._dom ? this.buildLanguagePicker(this._dom.languageButton) : null;
 
     return this._picker;
   }
@@ -611,7 +636,16 @@ export class CodeTool implements BlockTool {
       return;
     }
 
-    this._picker = this.buildLanguagePicker(this._dom.languageButton, this._dom.wrapper);
+    this._picker = this.buildLanguagePicker(this._dom.languageButton);
+  }
+
+  private renderWrap(): void {
+    if (!this._dom) return;
+    const wrap = this._data.wrapLines !== false;
+
+    this._dom.codeElement.classList.toggle('whitespace-pre-wrap', wrap);
+    this._dom.codeElement.classList.toggle('whitespace-pre', !wrap);
+    this._dom.wrapButton.setAttribute('aria-pressed', String(wrap));
   }
 
   public save(_blockContent: HTMLElement): CodeData {
@@ -619,6 +653,8 @@ export class CodeTool implements BlockTool {
       code: this._dom?.codeElement.textContent ?? '',
       language: this._data.language,
       lineNumbers: this._lineNumbers,
+      ...(this._data.wrapLines === false ? { wrapLines: false } : {}),
+      ...(this._data.showFilename === true ? { showFilename: true } : {}),
       // Omitted when empty so documents without one keep their saved shape.
       ...(this._data.filename ? { filename: this._data.filename } : {}),
     };
@@ -634,6 +670,8 @@ export class CodeTool implements BlockTool {
       code: newData.code ?? '',
       language: newData.language ?? DEFAULT_LANGUAGE,
       lineNumbers: newData.lineNumbers,
+      ...(newData.wrapLines === false ? { wrapLines: false } : {}),
+      ...(newData.showFilename === true ? { showFilename: true } : {}),
       ...(newData.filename ? { filename: newData.filename } : {}),
     };
 
@@ -642,6 +680,7 @@ export class CodeTool implements BlockTool {
     }
 
     this.renderFilename();
+    this.renderWrap();
 
     this._dom.codeElement.textContent = this._data.code;
     this.syncTrailingBr();
@@ -695,7 +734,7 @@ export class CodeTool implements BlockTool {
     if (this._picker) {
       this._picker.destroy();
     }
-    this._picker = this.buildLanguagePicker(this._dom.languageButton, this._dom.wrapper);
+    this._picker = this.buildLanguagePicker(this._dom.languageButton);
   }
 
   /**
@@ -753,6 +792,17 @@ export class CodeTool implements BlockTool {
     })));
 
     return [
+      {
+        title: this.api.i18n.t('tools.code.showFilename'),
+        name: 'code-show-filename',
+        isActive: this._data.showFilename === true,
+        closeOnActivate: true,
+        onActivate: (): void => {
+          this._data.showFilename = this._data.showFilename !== true;
+          this.renderFilename();
+          this.block.dispatchChange();
+        },
+      },
       {
         icon: IconCodeBlock,
         title: this.api.i18n.t(LANGUAGE_KEY),
@@ -843,7 +893,7 @@ export class CodeTool implements BlockTool {
       if (this._picker) {
         this._picker.destroy();
       }
-      this._picker = this.buildLanguagePicker(this._dom.languageButton, this._dom.wrapper);
+      this._picker = this.buildLanguagePicker(this._dom.languageButton);
     }
 
     void this.highlightCode();
@@ -868,11 +918,11 @@ export class CodeTool implements BlockTool {
   /**
    * Creates a new PopoverDesktop instance for the language picker.
    */
-  private buildLanguagePicker(trigger: HTMLElement, leftAlignElement: HTMLElement): PopoverDesktop {
+  private buildLanguagePicker(trigger: HTMLElement): PopoverDesktop {
     const picker = new PopoverDesktop({
       items: this.buildLanguagePickerItems(),
       trigger,
-      leftAlignElement,
+      leftAlignElement: trigger,
       searchable: true,
       width: '240px',
       messages: {
@@ -1069,11 +1119,6 @@ export class CodeTool implements BlockTool {
     const isFocused = dom.codeElement.ownerDocument.activeElement === dom.codeElement;
     const index = isFocused && !this.readOnly ? caretLineIndex(dom.codeElement) : null;
 
-    if (dom.breadcrumb && (index !== this._activeLineIndex || this._breadcrumbStale)) {
-      this._breadcrumbStale = false;
-      setBreadcrumb(dom.breadcrumb, index === null ? [] : codeBreadcrumb(dom.codeElement.textContent ?? '', index));
-    }
-
     if (index !== this._activeLineIndex) {
       const rows = dom.gutterElement.children;
 
@@ -1197,7 +1242,7 @@ export class CodeTool implements BlockTool {
           if (this._picker) {
             this._picker.destroy();
           }
-          this._picker = this.buildLanguagePicker(this._dom.languageButton, this._dom.wrapper);
+          this._picker = this.buildLanguagePicker(this._dom.languageButton);
         }
       });
     }, 600);
@@ -1323,6 +1368,7 @@ export class CodeTool implements BlockTool {
   }
 
   public removed(): void {
+    this.onSettingsClosed();
     document.removeEventListener('selectionchange', this.onSelectionChange);
     this._resizeObserver?.disconnect();
 

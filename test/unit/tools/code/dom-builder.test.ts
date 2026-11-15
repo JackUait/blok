@@ -41,7 +41,7 @@ describe('buildCodeDOM', () => {
     expect(preElement.contains(codeElement)).toBe(true);
   });
 
-  it('puts the language and filename in the tab, and the controls beside it', async () => {
+  it('puts language and actions in one pocket, with the filename outside', async () => {
     const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
     const { wrapper, languageButton, filenameElement, copyButton } = buildCodeDOM({
       code: '',
@@ -56,10 +56,11 @@ describe('buildCodeDOM', () => {
     const controls = tabRow.querySelector('[data-blok-testid="code-controls"]');
 
     expect(tab?.contains(languageButton)).toBe(true);
-    expect(tab?.contains(filenameElement)).toBe(true);
-    expect(tab?.contains(copyButton)).toBe(false);
+    expect(tab?.contains(filenameElement)).toBe(false);
+    expect(tabRow.contains(filenameElement)).toBe(true);
+    expect(tab?.contains(copyButton)).toBe(true);
     expect(controls?.contains(copyButton)).toBe(true);
-    expect(controls?.parentElement).toBe(tabRow);
+    expect(controls?.parentElement).toBe(tab);
   });
 
   it('marks the filename slot empty so the tab can drop it at rest', async () => {
@@ -68,7 +69,7 @@ describe('buildCodeDOM', () => {
     const named = buildCodeDOM({ code: '', languageName: 'Python', filename: 'a.py', readOnly: false, copyLabel: 'Copy code' });
 
     expect(empty.filenameSlot.getAttribute('data-empty')).toBe('true');
-    expect(empty.filenameSlot.hidden).toBe(false);
+    expect(empty.filenameSlot.hidden).toBe(true);
     expect(named.filenameSlot.getAttribute('data-empty')).toBe('false');
   });
 
@@ -79,23 +80,12 @@ describe('buildCodeDOM', () => {
     expect(filenameSlot.hidden).toBe(true);
   });
 
-  it('builds a hidden breadcrumb in the tab row that never counts as content or an edit', async () => {
+  it('omits the breadcrumb and read-only block menu', async () => {
     const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
-    const { DATA_ATTR } = await import('../../../../src/components/constants/data-attributes');
-    const { wrapper, breadcrumb } = buildCodeDOM({ code: 'a', languageName: 'Go', readOnly: false, copyLabel: 'Copy code' });
+    const { wrapper, moreButton } = buildCodeDOM({ code: 'a', languageName: 'Go', readOnly: true, copyLabel: 'Copy code' });
 
-    expect(breadcrumb?.parentElement).toBe(wrapper.children[0]);
-    expect(breadcrumb?.hidden).toBe(true);
-    expect(breadcrumb?.getAttribute('aria-hidden')).toBe('true');
-    expect(breadcrumb?.hasAttribute(DATA_ATTR.chrome)).toBe(true);
-    expect(breadcrumb?.getAttribute(DATA_ATTR.mutationFree)).toBe('true');
-  });
-
-  it('builds no breadcrumb in read-only mode', async () => {
-    const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
-    const { breadcrumb } = buildCodeDOM({ code: 'a', languageName: 'Go', readOnly: true, copyLabel: 'Copy code' });
-
-    expect(breadcrumb).toBeNull();
+    expect(wrapper.querySelector('[data-blok-testid="code-breadcrumb"]')).toBeNull();
+    expect(moreButton).toBeNull();
   });
 
   it('pins the code body to LTR so source code and its gutter do not mirror in an RTL editor', async () => {
@@ -436,7 +426,7 @@ describe('buildCodeDOM', () => {
       expect(result.splitContainer).toBeNull();
     });
 
-    it('copy button has larger padding to match segmented control height', async () => {
+    it('copy button stays compact beside the preview control', async () => {
       const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
       const { copyButton } = buildCodeDOM({
         code: '',
@@ -448,7 +438,7 @@ describe('buildCodeDOM', () => {
       });
 
       // Taller copy button to visually match the segmented control
-      expect(copyButton.className).toContain('h-8.5');
+      expect(copyButton.className).toContain('h-6');
     });
 
     it('copy button keeps standard padding when not previewable', async () => {
@@ -461,7 +451,7 @@ describe('buildCodeDOM', () => {
       });
 
       expect(copyButton.className).not.toContain('h-8.5');
-      expect(copyButton.className).toContain('h-7');
+      expect(copyButton.className).toContain('h-6');
     });
 
     it('view mode container is in the controls before copy button', async () => {
@@ -486,16 +476,15 @@ describe('buildCodeDOM', () => {
   });
 
   describe('card styling', () => {
-    it('the card carries the shared card classes, the wrapper only lays out', async () => {
+    it('only the wrapper paints a panel surface', async () => {
       const { WRAPPER_STYLES, CARD_STYLES } = await import('../../../../src/tools/code/constants');
 
-      expect(CARD_STYLES).toContain('border');
-      expect(CARD_STYLES).toContain('border-border-secondary');
-      expect(CARD_STYLES).toContain('bg-code-bg');
-      expect(CARD_STYLES).toContain('rounded-(--blok-radius-block)');
+      expect(CARD_STYLES).not.toContain('border');
+      expect(CARD_STYLES).not.toContain('bg-code-bg');
+      expect(WRAPPER_STYLES).toContain('rounded-[10px]');
       expect(CARD_STYLES).toContain('overflow-hidden');
       expect(WRAPPER_STYLES).not.toContain('border');
-      expect(WRAPPER_STYLES).not.toContain('bg-code-bg');
+      expect(WRAPPER_STYLES).toContain('bg-code-bg');
     });
 
   });

@@ -81,11 +81,11 @@ describe('shared tool classes mutants', () => {
     it('gives the code area its full set', () => {
       expect(CODE_AREA_CLASSES).toStrictEqual([
         'block',
-        'px-4',
-        'py-3',
+        'px-[22px]',
+        'py-6',
         'font-mono',
         'text-[length:var(--blok-code-font-size,0.875rem)]',
-        'leading-relaxed',
+        'leading-[1.5]',
         'whitespace-pre-wrap',
         '[tab-size:2]',
         'overflow-x-auto',
@@ -93,15 +93,12 @@ describe('shared tool classes mutants', () => {
       ]);
     });
 
-    it('gives the wrapper only the block layout, and the card the box', () => {
-      expect(CODE_WRAPPER_CLASSES).toStrictEqual(['flex', 'flex-col', 'my-2']);
+    it('gives the wrapper the panel surface, and the card only clipping', () => {
+      expect(CODE_WRAPPER_CLASSES).toStrictEqual(['flex', 'flex-col', 'my-2', 'relative', 'rounded-[10px]', 'bg-code-bg']);
       expect(CODE_CARD_CLASSES).toStrictEqual([
         'flex',
         'flex-col',
-        'rounded-(--blok-radius-block)',
-        'border',
-        'border-border-secondary',
-        'bg-code-bg',
+        'rounded-[10px]',
         'overflow-hidden',
       ]);
     });

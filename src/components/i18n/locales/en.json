@@ -488,6 +488,7 @@
   "tools.code.previewTab": "Preview",
   "tools.code.sideBySide": "Side by side",
   "tools.code.lineNumbers": "Line numbers",
+  "tools.code.showFilename": "Show file name",
   "tools.code.filename": "File name",
   "tools.code.suggested": "Suggested",
   "tools.code.familyWeb": "Web",

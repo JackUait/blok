@@ -327,6 +327,15 @@ describe('view overflow list (research/13:81, notion-measure5/51-one-more.json)'
     expect(buttons).not.toContain('opacity: 0');
   });
 
+  // notion-motion.md Round 38 §5: the menu is capped at 50vh; its list scrolls, with New view in it.
+  it('caps the menu at half the window and scrolls its list, not the search', () => {
+    expect(ruleBody('[data-blok-database-tab-overflow-dropdown][data-blok-top-layer][popover]')).toContain('max-height: 50vh');
+    const list = ruleBody('[data-blok-database-tab-overflow-dropdown] > [role="listbox"]');
+
+    expect(list).toContain('overflow-y: auto');
+    expect(list).toContain('min-height: 0');
+  });
+
   // notion-motion.md Round 29 §4: the search box is 258 wide, 16 in from the panel (4 padding + 12).
   // Its fill and radius stay the shared field look (src/styles/field.css), a user rule.
   it('insets the view search 12px each side, so it is 258 wide in the 290 panel', () => {

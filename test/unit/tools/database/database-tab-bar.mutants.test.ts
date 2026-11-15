@@ -1133,6 +1133,22 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(dropdown.style.zIndex).toBe('1000');
     });
 
+    // notion-motion.md Round 38 §5: with room neither below nor above, the menu slides up over its button,
+    // its bottom 8.3 from the window.
+    it('slides the menu up over its button when it fits neither below nor above', () => {
+      vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+        if (this.hasAttribute('data-blok-database-tab-more')) {
+          return new DOMRect(801.9, 342.2, 80.6, 32);
+        }
+
+        return this.hasAttribute('data-blok-database-tab-overflow-dropdown') ? new DOMRect(0, 0, 290, 358.5) : new DOMRect();
+      });
+      const { dropdown } = openDropdown(threeViews(), 'v1');
+
+      expect(parseFloat(dropdown.style.top)).toBeCloseTo(350.2, 1);
+    });
+
     it('lists every view in position order, whatever order they were passed in', () => {      const views = [
         makeView({ id: 'v3', name: 'Three', position: 'a2' }),
         makeView({ id: 'v1', name: 'One', position: 'a0' }),

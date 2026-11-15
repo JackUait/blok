@@ -3649,6 +3649,15 @@ button[data-blok-database-board-lane-count]:hover {
 [data-blok-database-tab-overflow-dropdown][data-blok-top-layer][popover] {
   width: 290px;
   padding: var(--blok-space-1);
+  /* notion-motion.md Round 38 §5: capped at 50vh; the list scrolls under the search. */
+  max-height: 50vh;
+  display: flex;
+  flex-direction: column;
+}
+
+[data-blok-database-tab-overflow-dropdown] > [role="listbox"] {
+  min-height: 0;
+  overflow-y: auto;
 }
 
 /* Add view (feel/findings-toolbar V04): Notion's 390px menu, a 4-column grid of

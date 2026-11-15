@@ -156,6 +156,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'components/utils/notifier/dust.ts': 'Each frame the dust canvas subtracts the moving notifier wrapper rect from the closing card rect taken at close, so it stays where the card was; it is removed when the dust settles.',
   'components/utils/popover/anchored-position.ts': 'Shared coordinate-space engine and the only approved root anchored style writer.',
   'components/utils/popover/popover-desktop.ts': 'Shared root popover delegates boundary resolution and continuously tracks movement.',
+  'components/utils/overflow-list.ts': 'With placeTop, the fixed "N more…" list writes the top its caller computes from the live anchor rect and its own height, in viewport coordinates; the shared tracker re-runs it on scroll and resize.',
   'components/utils/tooltip.ts': 'Fixed tooltip uses viewport coordinates and intentionally dismisses on capture-phase scroll.',
   'tools/callout/emoji-landing.ts': 'Landing ghosts and dots read the picked glyph, icon and callout rects once at the start and fly in viewport coordinates inside a fixed inset-0 overlay; each is removed within about two seconds and never tracks movement.',
   'tools/callout/emoji-picker/index.ts': 'Fixed-backdrop picker continuously repositions from its live callout anchor.',

@@ -1729,6 +1729,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R63_BYTES = 666;
     // Lane r67: Round 35 view tab menu Display as chevron, a 16 glyph 8px from the row end. Net database.css growth against origin/main.
     const DATABASE_R67_BYTES = 601;
+    // Lane r69: Round 38 "N more…" menu capped at 50vh, its list scrolls. Net database.css growth against origin/main.
+    const DATABASE_R69_BYTES = 257;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2265,6 +2267,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R58_BYTES
       + DATABASE_R63_BYTES
       + DATABASE_R67_BYTES
+      + DATABASE_R69_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

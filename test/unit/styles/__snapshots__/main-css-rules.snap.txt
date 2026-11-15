@@ -7613,6 +7613,14 @@ button[data-blok-database-board-lane-count]:hover {
 [data-blok-database-tab-overflow-dropdown][data-blok-top-layer][popover] {
   width: 290px;
   padding: var(--blok-space-1);
+  max-height: 50vh;
+  display: flex;
+  flex-direction: column;
+}
+
+[data-blok-database-tab-overflow-dropdown] > [role="listbox"] {
+  min-height: 0;
+  overflow-y: auto;
 }
 
 [data-blok-popover-custom-class~='blok-database-add-view-menu'] [data-blok-popover-items] {

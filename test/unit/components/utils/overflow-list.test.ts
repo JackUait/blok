@@ -66,6 +66,25 @@ describe('OverflowList keyboard (research/21 §2)', () => {
     expect(document.querySelector(`[${P}-dropdown]`)?.getAttribute('data-blok-top-layer')).toBe('true');
   });
 
+  // notion-motion.md Round 38 §5: the capped list opens scrolled so the current view shows; arrows keep the highlight in view.
+  it('scrolls the highlighted row into view, on open and on an arrow key', () => {
+    const scrolled: Array<{ id: string | null; options: unknown }> = [];
+
+    list.close();
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value(this: HTMLElement, options: unknown) {
+        scrolled.push({ id: this.getAttribute('data-id'), options });
+      },
+    });
+    list = make();
+    list.open();
+    press('ArrowDown');
+
+    expect(scrolled).toEqual([{ id: 'b', options: { block: 'nearest' } }, { id: 'c', options: { block: 'nearest' } }]);
+    Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
+  });
+
   it('focuses the search and highlights the current view, not the first row', () => {
     expect(input()).toHaveFocus();
     expect(highlighted()).toBe('b');

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { planViewBarFold, type ViewBarParts } from '../../../../src/tools/database/database-view-bar-fold';
+import { planViewBarFold, foldMenuTop, type ViewBarParts } from '../../../../src/tools/database/database-view-bar-fold';
 
 /**
  * Notion's own parts (notion-spec-2 §26.1, tb-1512-closed.txt): six tabs with
@@ -85,5 +85,19 @@ describe('planViewBarFold: Notion order as the bar narrows (notion-spec-2 §26.1
     expect(icons.icons).toBe(true);
     expect(withNew.newButton).toBe(true);
     expect(planViewBarFold({ ...notion(538), gap: 4 }).tabs).toEqual([0, 1]);
+  });
+});
+
+// notion-motion.md Round 38 §5 (r38-fold-flyout.raw): the "N more…" menu, 358.5 tall (50vh of 717), at five bar heights.
+describe('foldMenuTop', () => {
+  it.each([
+    // [button top, button bottom, menu top]
+    [269.2, 301.2, 305.2],
+    [389.2, 421.2, 26.7],
+    [369.2, 401.2, 350.2],
+    [342.2, 374.2, 350.2],
+    [323.2, 355.2, 350.2],
+  ])('puts the menu of a button at %f–%f at top %f', (top, bottom, menuTop) => {
+    expect(foldMenuTop({ top, bottom }, 358.5, 717)).toBeCloseTo(menuTop, 1);
   });
 });

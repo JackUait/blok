@@ -43,6 +43,8 @@ export interface OverflowListOptions {
   closeLayer: () => boolean;
   /** A menu over the list (Add view beside it) takes the arrows and Enter while it is open. */
   yieldsKeys?: () => boolean;
+  /** The list's top in the window, from the anchor's box and the list's height; unset: below the anchor, flipped by room. */
+  placeTop?: (anchor: DOMRect, height: number) => number;
   /** True while a layer over the list is open: an outside press closes only that layer, not the list. */
   peelsOutsidePress?: () => boolean;
   /** An element whose own Escape must not close the list (a rename field). */
@@ -157,6 +159,11 @@ export class OverflowList {
     promoteToTopLayer(dropdown);
     const reposition = (): void => {
       positionFixedAnchored(dropdown, anchor, { side: 'bottom', offset: 4 });
+      const placeTop = this.options.placeTop;
+
+      if (placeTop !== undefined) {
+        dropdown.style.setProperty('top', `${placeTop(anchor.getBoundingClientRect(), dropdown.getBoundingClientRect().height)}px`);
+      }
     };
 
     // The anchor mirrors with the editor, so a flip re-places the dropdown.
@@ -283,6 +290,8 @@ export class OverflowList {
       input?.removeAttribute('aria-activedescendant');
     } else {
       input?.setAttribute('aria-activedescendant', target.id);
+      // The list scrolls once capped (database.css); jsdom has no scrollIntoView.
+      target.scrollIntoView?.({ block: 'nearest' });
     }
   }
 

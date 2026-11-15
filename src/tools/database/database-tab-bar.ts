@@ -6,7 +6,7 @@ import { DATABASE_HEADER_MENU_CLASS } from './database-table-menus';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { OverflowList } from '../../components/utils/overflow-list';
-import { planViewBarFold } from './database-view-bar-fold';
+import { foldMenuTop, planViewBarFold } from './database-view-bar-fold';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { startInlineRename } from '../../components/utils/inline-rename';
@@ -929,6 +929,7 @@ export class DatabaseTabBar {
       yieldsKeys: () => this.viewPopover !== null,
       // notion-motion.md Round 38 §6: the first outside click closes only the Add view card.
       peelsOutsidePress: () => this.viewPopover !== null,
+      placeTop: (box, height) => foldMenuTop(box, height, window.innerHeight),
       // A row rename owns its Escape (it restores the old name).
       ownsEscape: (target) => target instanceof HTMLInputElement && target.hasAttribute('data-blok-database-tab-rename-input'),
     });

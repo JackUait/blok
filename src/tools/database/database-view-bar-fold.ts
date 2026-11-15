@@ -99,3 +99,26 @@ export const foldTitleRow = (row: HTMLElement): void => {
   toolbar.toggleAttribute('data-blok-database-fold-icons', !fold.icons);
   toolbar.toggleAttribute('data-blok-database-fold-new', !fold.newButton);
 };
+
+/** notion-motion.md Round 38 §5: the gap under the "N more…" menu once it slides up. */
+const FOLD_MENU_WINDOW_MARGIN = 8.3;
+
+/**
+ * The "N more…" menu's top in the window (notion-motion.md Round 38 §5, r38-fold-flyout.raw):
+ * below the button + 4 when it fits; else above it, its bottom 4 over the button, when it fits there;
+ * else below, slid up until its bottom is 8.3 from the window, over the button.
+ * The above side reuses the 8.3 gap: an assumption. Notion only bounds it (365.2 of room did not flip, 385.2 did).
+ */
+export const foldMenuTop = (button: { top: number; bottom: number }, height: number, windowHeight: number): number => {
+  const below = button.bottom + 4;
+  const above = button.top - 4 - height;
+
+  if (below + height <= windowHeight - FOLD_MENU_WINDOW_MARGIN) {
+    return below;
+  }
+  if (above >= FOLD_MENU_WINDOW_MARGIN) {
+    return above;
+  }
+
+  return Math.max(FOLD_MENU_WINDOW_MARGIN, windowHeight - FOLD_MENU_WINDOW_MARGIN - height);
+};

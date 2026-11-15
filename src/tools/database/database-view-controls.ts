@@ -1,11 +1,11 @@
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { nanoid } from 'nanoid';
-import { IconSearch, IconSliders, IconLock, IconPlus, IconChevronDown, IconFilter, IconSort, IconPreview, IconBolt, IconWand, IconArrowUp, IconCross, IconTrash, IconChevronDoubleRight, IconPageLayout, IconExpandDiagonal } from '../../components/icons';
+import { IconSearch, IconSliders, IconLock, IconPlus, IconChevronDown, IconFilter, IconSort, IconPreview, IconBolt, IconWand, IconArrowUp, IconCross, IconChevronDoubleRight, IconPageLayout, IconExpandDiagonal } from '../../components/icons';
 import { openDatabaseConfirm } from './database-confirm-dialog';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { propertyTypeMeta } from './database-property-types';
 import type { I18n } from '../../../types';
-import { DatabasePanel, panelInput, panelReorderList, panelRow, panelSeparator, panelText } from './database-panel';
+import { DatabasePanel, panelRow } from './database-panel';
 import { PersonalViewEdits } from './database-view-state';
 import type { ViewStateFallback } from './database-view-state';
 import { editorLocale } from './cells/date-format';
@@ -13,13 +13,13 @@ import { FILTERABLE_TYPES, defaultFilterFor, filterPillLabel, filterPillParts, s
 import { addFilterRule, countFilterRules, emptyFilterTree, withEntryIds } from './filter-tree';
 import { openAdvancedFilter, openViewSettings } from './database-view-settings-panel';
 import { chipPart, filterChip, openFilterChip } from './database-filter-chip';
-import { openSortDirectionFlyout, openSortPropertyFlyout, sortChevron } from './database-sort-flyouts';
+import { SORTABLE_TYPES, propertyPicker, sortEditor } from './database-sort-panel';
 import { clearSearchMatches, paintSearchMatches } from './database-search-highlight';
 import { onHover } from '../../components/utils/tooltip';
 import type { AutofillPanelSettings, DataSourceSettings, EditPropertiesSettings, StarterRow, StructureSettings, ViewGroupEntry, ViewSettingsAction, ViewSettingsContext, ViewSettingsStart } from './database-view-settings-panel';
 import { sortFromHeader } from './view-data';
 import type { ViewChanges } from './database-model';
-import { GROUPABLE_TYPES, groupByChange } from './group-keys';
+import { groupByChange } from './group-keys';
 import type { AutomationSettings } from './database-automations-panel';
 import type { NoDateControl } from './database-no-date';
 import type {
@@ -32,13 +32,7 @@ import type {
   ViewType,
 } from './types';
 
-/** notion-motion.md Round 10: the "Add sort" picker box. */
-const ADD_SORT_PICKER_WIDTH = 280;
-const ADD_SORT_PICKER_HEIGHT = 287;
 const SORT_PANEL_GAP = 4;
-
-/** Notion's sort list adds files and ID to the groupable types (findings V20, shot 19). */
-const SORTABLE_TYPES: readonly PropertyType[] = [...GROUPABLE_TYPES, 'files', 'uniqueId'];
 
 /** Notion shows 🔍 once a database has at least three pages (research/05 §5). */
 export const SEARCH_MIN_ROWS = 3;
@@ -191,8 +185,6 @@ export class DatabaseViewControls {
   private readonly previewFormButton: HTMLButtonElement;
   private newSplit: HTMLElement | null = null;
   private panel: DatabasePanel | null = null;
-  /** The "Add sort" picker over the sort panel, closed with it. */
-  private addSortPicker: DatabasePanel | null = null;
   private query = '';
   /** Repaints the match tint when the rows redraw after a search (lazy rows, remote edits). */
   private matchObserver: MutationObserver | null = null;
@@ -765,10 +757,7 @@ export class DatabaseViewControls {
     anchor.setAttribute('data-popover-open', '');
   }
 
-  /**
-   * Notion's property list: 290 wide, a search on top, the first option
-   * highlighted, Name first and then A→Z, each with its type glyph.
-   */
+  /** The property list (see {@link propertyPicker}). */
   private openPropertyPicker(
     anchor: HTMLElement,
     testId: string,
@@ -778,99 +767,19 @@ export class DatabaseViewControls {
       placeholder: string;
       footer?: (close: () => void) => HTMLElement;
       used?: string[];
-      /** Opens over the open panel, which stays; gets the close instead of panelClosed. */
-      over?: { width: number; maxHeight: number; onClose: (escape: boolean) => void };
     }
   ): DatabasePanel {
-    const state = { query: '', active: 0 };
-    const list = document.createElement('div');
-
-    list.setAttribute('data-blok-database-picker-list', '');
-    const matches = (): PropertyDefinition[] => {
-      const needle = state.query.trim().toLowerCase();
-      const shown = this.host.schema()
-        .filter((p) => types.includes(p.type) && options.used?.includes(p.id) !== true)
-        .filter((p) => needle === '' || p.name.toLowerCase().includes(needle));
-
-      return [
-        ...shown.filter((p) => p.type === 'title'),
-        ...shown.filter((p) => p.type !== 'title').sort((a, b) => a.name.localeCompare(b.name)),
-      ];
-    };
-    const pick = (property: PropertyDefinition): void => {
-      panel.close();
-      onPick(property);
-    };
-    const fill = (): void => {
-      const rows = matches().map((property, index) => {
-        const row = panelRow({
-          label: property.name,
-          icon: propertyTypeMeta(property.type).icon,
-          testId: `database-pick-property-${property.id}`,
-          onClick: () => pick(property),
-        });
-
-        row.toggleAttribute('data-active', index === state.active);
-
-        return row;
-      });
-
-      // notion-motion.md Round 18 §2 (r18-bar-addfilter-allused.raw): an empty list says "No results".
-      list.replaceChildren(...(rows.length === 0 ? [panelText(this.host.i18n.t('find.noResults'))] : rows));
-    };
-    const panel = new DatabasePanel({
+    const panel = propertyPicker({
       anchor,
-      root: {
-        // database.css: the measured picker layout (notion-motion.md Round 10).
-        name: 'picker',
-        build: () => {
-          const search = panelInput({
-            value: state.query,
-            placeholder: options.placeholder,
-            label: options.placeholder,
-            testId: `${testId}-search`,
-            // Only the list redraws, so the field keeps its caret.
-            onInput: (value) => {
-              state.query = value;
-              state.active = 0;
-              fill();
-            },
-          });
-
-          search.addEventListener('keydown', (event) => {
-            const shown = matches();
-
-            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-              event.preventDefault();
-              if (shown.length === 0) return;
-              state.active = (state.active + (event.key === 'ArrowDown' ? 1 : -1) + shown.length) % shown.length;
-              fill();
-            } else if (event.key === 'Enter' && !event.isComposing) {
-              event.preventDefault();
-              const property = shown[state.active];
-
-              if (property !== undefined) pick(property);
-            }
-          });
-          search.setAttribute('data-blok-database-picker-search', '');
-          fill();
-
-          return options.footer === undefined ? [search, list] : [search, list, panelSeparator(), options.footer(() => panel.close())];
-        },
-      },
       testId,
-      width: options.over?.width ?? 290,
-      backLabel: this.t('settingsBack'),
-      ...(options.over !== undefined ? { gap: 0 } : {}),
-      onClose: options.over?.onClose ?? ((escape) => this.panelClosed(anchor, escape)),
+      types,
+      schema: () => this.host.schema(),
+      i18n: this.host.i18n,
+      onPick,
+      ...options,
+      onClose: (escape) => this.panelClosed(anchor, escape),
     });
 
-    if (options.over !== undefined) {
-      panel.root.style.maxHeight = `${options.over.maxHeight}px`;
-      panel.open();
-
-      return panel;
-    }
     anchor.setAttribute('data-popover-open', '');
     this.showPanel(panel);
 
@@ -906,155 +815,20 @@ export class DatabaseViewControls {
     this.openSortPanel(chip !== null && chip.isConnected && !this.filterBar.hidden ? chip : this.sortButton, this.sortButton);
   }
 
-  /**
-   * Notion's sort panel (findings V19): no title, sized to its words. Each rule
-   * has a drag handle, a property button and a direction button that open
-   * lists, and a ×. Then "+ Add sort" and "Delete sort".
-   */
   private openSortPanel(anchor: HTMLElement, opener: HTMLElement = anchor): void {
-    const sorts = (): Array<SortConfig & { id: string }> => withEntryIds(this.view()?.sorts ?? []);
-    const write = (next: SortConfig[]): void => this.updatePersonal({ sorts: next });
-    const panel = new DatabasePanel({
+    const panel = sortEditor({
       anchor,
-      root: {
-        // database.css: the measured rule spacing (r35:497-509).
-        name: 'sort',
-        build: (current) => {
-          const schema = this.host.schema();
-          const all = sorts();
-          const items = all.flatMap((sort) => {
-            const property = schema.find((p) => p.id === sort.propertyId);
-
-            if (property === undefined) return [];
-            const line = document.createElement('div');
-            const remove = panelRow({
-              label: this.t('sortRemove'),
-              testId: `database-sort-remove-${sort.id}`,
-              icon: IconCross,
-              onClick: () => write(all.filter((s) => s.id !== sort.id)),
-            });
-
-            remove.querySelector('[data-blok-database-panel-label]')?.remove();
-            remove.setAttribute('aria-label', this.t('sortRemove'));
-            remove.setAttribute('data-blok-database-sort-remove', '');
-            line.setAttribute('data-blok-database-sort-row', '');
-            line.setAttribute('data-blok-testid', `database-sort-row-${sort.id}`);
-            const propertyButton: HTMLElement = sortChevron(panelRow({
-              label: property.name,
-              testId: `database-sort-property-${sort.id}`,
-              icon: propertyTypeMeta(property.type).icon,
-              onClick: () => openSortPropertyFlyout(
-                propertyButton,
-                current,
-                schema.filter((p) => SORTABLE_TYPES.includes(p.type)),
-                (picked) => write(sorts().map((s) => (s.id === sort.id ? { ...s, propertyId: picked.id } : s)))
-              ),
-            }));
-            const directionButton: HTMLElement = sortChevron(panelRow({
-              label: this.host.i18n.t(sortDirectionLabelKey(property.type, sort.direction)),
-              testId: `database-sort-direction-${sort.id}`,
-              onClick: () => openSortDirectionFlyout(
-                directionButton,
-                current,
-                (key) => this.host.i18n.t(key),
-                property,
-                sort.direction,
-                (direction) => write(sorts().map((s) => (s.id === sort.id ? { ...s, direction } : s)))
-              ),
-            }));
-
-            line.append(
-              propertyButton,
-              directionButton,
-              remove
-            );
-
-            return [{ id: sort.id, element: line }];
-          });
-
-          return [
-            panelReorderList({
-              testId: 'database-sorts-list',
-              handleLabel: this.t('settingsDragToReorder'),
-              items,
-              onMove: (id, beforeId) => {
-                const moving = all.find((s) => s.id === id);
-                const rest = all.filter((s) => s.id !== id);
-                const at = beforeId === null ? rest.length : rest.findIndex((s) => s.id === beforeId);
-
-                if (moving !== undefined) write([...rest.slice(0, at), moving, ...rest.slice(at)]);
-              },
-            }),
-            // notion-motion.md Round 17 §5: gone once every property is sorted.
-            ...(schema.some((p) => SORTABLE_TYPES.includes(p.type) && !all.some((s) => s.propertyId === p.id)) ? [panelRow({
-              label: this.t('sortAdd'),
-              testId: 'database-sort-add',
-              muted: true,
-              icon: IconPlus,
-              onClick: () => this.openAddSortPicker(current),
-            })] : []),
-            panelRow({
-              label: this.t('sortDeleteAll'),
-              testId: 'database-sort-delete-all',
-              muted: true,
-              icon: IconTrash,
-              onClick: () => {
-                write([]);
-                current.close();
-              },
-            }),
-          ];
-        },
-      },
-      testId: 'database-sort-panel',
-      width: 290,
-      backLabel: this.t('settingsBack'),
+      i18n: this.host.i18n,
+      schema: () => this.host.schema(),
+      sorts: () => this.view()?.sorts ?? [],
+      write: (next) => this.updatePersonal({ sorts: next }),
       // notion-motion.md Round 17 §5: chip bottom 301, panel top 305.
       ...(anchor === this.sortButton ? {} : { gap: SORT_PANEL_GAP }),
-      onClose: (escape) => {
-        this.addSortPicker?.close();
-        this.panelClosed(anchor, escape, opener);
-      },
+      onClose: (escape) => this.panelClosed(anchor, escape, opener),
     });
 
-    // Notion's panel sizes to its words, so no label is cut.
-    panel.root.style.width = 'max-content';
     anchor.setAttribute('data-popover-open', '');
     this.showPanel(panel);
-  }
-
-  /**
-   * notion-motion.md Rounds 10-11: "Add sort" opens a 280x287 picker of its
-   * own, flush under the row and left-aligned to it, with its search focused.
-   * The sort panel stays open under it; a property already sorted is left out.
-   */
-  private openAddSortPicker(sortPanel: DatabasePanel): void {
-    const row = sortPanel.root.querySelector<HTMLElement>('[data-blok-testid="database-sort-add"]');
-
-    if (row === null) return;
-    const release = sortPanel.hold();
-    const sorts = withEntryIds(this.view()?.sorts ?? []);
-    // "Add sort" goes once every property is sorted; "Delete sort" takes its place.
-    const focusAdd = (): void => (sortPanel.root.querySelector<HTMLElement>('[data-blok-testid="database-sort-add"]')
-      ?? sortPanel.root.querySelector<HTMLElement>('[data-blok-testid="database-sort-delete-all"]'))?.focus();
-
-    this.addSortPicker = this.openPropertyPicker(row, 'database-sort-add-picker', SORTABLE_TYPES, (property) => {
-      this.updatePersonal({ sorts: [...withEntryIds(this.view()?.sorts ?? []), { id: nanoid(), propertyId: property.id, direction: 'asc' }] });
-      focusAdd();
-    }, {
-      placeholder: this.t('settingsSearchProperty'),
-      used: sorts.map((sort) => sort.propertyId),
-      over: {
-        width: ADD_SORT_PICKER_WIDTH,
-        maxHeight: ADD_SORT_PICKER_HEIGHT,
-        // An outside press keeps the focus it made.
-        onClose: (escape) => {
-          this.addSortPicker = null;
-          release();
-          if (escape) focusAdd();
-        },
-      },
-    });
   }
 
   private showSearch(): void {

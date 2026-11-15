@@ -115,6 +115,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/database-group-toggle.ts': cmds(['database.updateView'], 'Opening or closing a group writes the view\'s collapsedGroups, saved for everyone.'),
   'ui-file:src/tools/database/database-panel.ts': exempt('chrome', 'Shell of the settings panels: back, rows and toggles call the handlers of the menu that opened it.'),
   'ui-file:src/tools/database/database-sort-flyouts.ts': exempt('chrome', 'A sort or filter rule\'s lists (property, direction, operator): a pick calls the handler of the panel that opened it.'),
+  'ui-file:src/tools/database/database-sort-panel.ts': cmds(['database.updateView'], 'The sort editor and the property list: a write goes to the handler of the surface that opened it (the toolbar\'s personal sorts, or the pinned group modal\'s own copy).'),
   'ui-file:src/tools/database/database-property-menu.ts': cmds(['database.updateProperty'], 'Rename a property and pick its icon.'),
   'ui-file:src/tools/database/database-selection-bar.ts': cmds(['database.setRowValues', 'block.delete'], 'Edit a property on the selected rows, or delete them.'),
   'ui-file:src/tools/database/database-table-column-drag.ts': cmds(['database.updateView'], 'A column drag writes the order of the view\'s properties list.'),

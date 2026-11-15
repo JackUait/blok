@@ -46,6 +46,14 @@ describe('pinnedGroupChips', () => {
     expect(chips[0].getAttribute('data-direction')).toBe('asc');
   });
 
+  // Round 39 §1 (r39-pm-nrules.raw): a 2-rule view filter is one wrapped group, so the chip still reads "2 rules".
+  it('counts the view\'s rules as one group beside the group rule', () => {
+    const rule = { id: 'r', propertyId: 'title', operator: 'is_not_empty', value: null };
+    const chips = pinnedGroupChips(view({ filterTree: { id: 'root', conjunction: 'and', filterRules: [rule, { ...rule, id: 'r2' }] } }), schema, i18n);
+
+    expect(texts(chips)).toEqual(['tools.database.filterRuleCount(count=2)']);
+  });
+
   // notion-motion.md Round 27 §2 "Rule count with a simple filter" (r27-pm-filtered.raw): the count stays 1 and the
   // simple filter keeps its own chip after it, as the toolbar draws it.
   it('keeps a simple filter as its own chip, out of the rule count', () => {
@@ -255,21 +263,36 @@ describe('openPinnedGroupModal chip editors', () => {
     expect(start).toEqual(before);
   });
 
-  it('adds the group rule in front of the view\'s own "and" rules, and nests an "or" tree', () => {
+  // notion-motion.md Round 39 §1 (r39-pm-nrules.raw): the view's rules come first, wrapped in one group, and the
+  // group's rule is last at the top level. The chip counts top-level items: "2 rules".
+  it('wraps the view\'s own rules in a group and puts the group rule last', () => {
     const groupRule: FilterRule = { id: 'g', propertyId: 'sel', operator: 'equals', value: ['red'] };
     const own: FilterRule = { id: 'r', propertyId: 'title', operator: 'is_not_empty', value: null };
-    const and = open(view({ filterTree: { id: 'root', conjunction: 'and', filterRules: [own] } }), groupRule);
 
-    expect(and.views[and.views.length - 1].filterTree).toEqual({ id: 'root', conjunction: 'and', filterRules: [groupRule, own] });
-    expect(q('database-group-modal-rules-chip')?.getAttribute('aria-label')).toBe('tools.database.filterRuleCount(count=2)');
-    state.handle?.close();
+    for (const conjunction of ['and', 'or'] as const) {
+      const tree = { id: 'root', conjunction, filterRules: [own, { ...own, id: 'r2' }] };
+      const { views } = open(view({ filterTree: tree }), groupRule);
+      const local = views[views.length - 1].filterTree;
 
-    const orTree = { id: 'root', conjunction: 'or' as const, filterRules: [own, { ...own, id: 'r2' }] };
-    const or = open(view({ filterTree: orTree }), groupRule);
-    const tree = or.views[or.views.length - 1].filterTree;
+      expect(local?.conjunction).toBe('and');
+      expect(local?.filterRules).toEqual([tree, groupRule]);
+      expect(q('database-group-modal-rules-chip')?.getAttribute('aria-label')).toBe('tools.database.filterRuleCount(count=2)');
+      state.handle?.close();
+    }
+  });
 
-    expect(tree?.conjunction).toBe('and');
-    expect(tree?.filterRules).toEqual([groupRule, orTree]);
+  // Round 39 §1: removing the group rule leaves the view's own rules in force (the modal shows what the view allows).
+  it('keeps the view\'s rules after the group rule is removed', () => {
+    const groupRule: FilterRule = { id: 'g', propertyId: 'sel', operator: 'equals', value: ['red'] };
+    const tree = { id: 'root', conjunction: 'and' as const, filterRules: [{ id: 'r', propertyId: 'title', operator: 'is_not_empty', value: null }] };
+    const { views } = open(view({ filterTree: tree }), groupRule);
+
+    q('database-group-modal-rules-chip')?.click();
+    q('database-filter-rule-more-g')?.click();
+    document.querySelector<HTMLElement>('[data-blok-testid="database-filter-remove"]')?.click();
+
+    expect(views[views.length - 1].filterTree?.filterRules).toEqual([tree]);
+    expect(q('database-group-modal-rules-chip')?.getAttribute('aria-label')).toBe('tools.database.filterRuleCount(count=1)');
   });
 
   // notion-motion.md Round 27 §2 (r27-pm-rulepop.raw): a click on the modal's body closes the open editor, not the modal.

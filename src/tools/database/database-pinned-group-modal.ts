@@ -87,7 +87,8 @@ export const pinnedGroupChips = (
     chips.push(chip);
   }
   const advanced = countFilterRules(view.filterTree) > 0 ? view.filterTree?.filterRules.length ?? 0 : 0;
-  const count = ruleInTree ? advanced : advanced + 1;
+  // Round 39 §1: without the rule in the tree, the view's rules count as one wrapped group beside it.
+  const count = ruleInTree ? advanced : Math.min(advanced, 1) + 1;
 
   if (count > 0) {
     const rules = i18n.t('tools.database.filterRuleCount', { count });
@@ -145,13 +146,12 @@ const treeDepth = (group: FilterGroup): number =>
   1 + Math.max(0, ...group.filterRules.filter((node): node is FilterGroup => isFilterGroup(node)).map(treeDepth));
 
 /**
- * The modal's tree: the group rule first, then the view's rules. An "or" tree is nested so its meaning holds; null
- * when that would pass the depth limit.
+ * The modal's tree (notion-motion.md Round 39 §1, r39-pm-nrules.raw): the view's rules wrapped in one group, then the
+ * group rule last at the top level. Null when the wrap would pass the depth limit.
  */
 const withGroupRule = (tree: FilterGroup | undefined, rule: FilterRule): FilterGroup | null => {
   if (tree === undefined || countFilterRules(tree) === 0) return { id: nanoid(), conjunction: 'and', filterRules: [rule] };
-  if (tree.conjunction === 'and') return { ...tree, filterRules: [rule, ...tree.filterRules] };
-  const nodes: FilterNode[] = [rule, tree];
+  const nodes: FilterNode[] = [tree, rule];
 
   return treeDepth(tree) < MAX_FILTER_DEPTH ? { id: nanoid(), conjunction: 'and', filterRules: nodes } : null;
 };

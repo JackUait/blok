@@ -189,6 +189,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   private scroller: HTMLElement | null = null;
   private drag: BarDrag | RowDrag | LinkDrag | null = null;
   private suppressClick = false;
+  private nowTimer: ReturnType<typeof setTimeout> | undefined;
+  private nowLine: HTMLElement | null = null;
   private selectionAnchor: HTMLElement | null = null;
   private recentring = false;
   private noDatePanel: DatabasePanel | null = null;
@@ -809,12 +811,14 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
     const todayIndex = daysBetween(this.window.start, this.options.today);
 
+    clearTimeout(this.nowTimer);
     if (todayIndex >= 0 && todayIndex < this.window.days) {
       const line = document.createElement('div');
 
       line.setAttribute('data-blok-database-timeline-today-line', '');
-      line.style.insetInlineStart = `${todayIndex * this.dayWidth + this.dayWidth / 2}px`;
       layer.appendChild(line);
+      this.nowLine = line;
+      this.placeNowLine(todayIndex);
     }
 
     return layer;
@@ -1688,7 +1692,19 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
   }
 
+  /** notion-motion.md Round 33 §4: the line marks the time of day and moves a minute at a time. */
+  private placeNowLine(todayIndex: number): void {
+    const now = Date.now();
+    const share = Math.min(Math.max((now - toLocalDate(this.options.today).getTime()) / (DAY_MINUTES * 60_000), 0), 1);
+
+    if (this.nowLine !== null) this.nowLine.style.insetInlineStart = `${(todayIndex + share) * this.dayWidth}px`;
+    clearTimeout(this.nowTimer);
+    this.nowTimer = setTimeout(() => this.placeNowLine(todayIndex), 60_000 - (now % 60_000));
+  }
+
   destroy(): void {
+    clearTimeout(this.nowTimer);
+    this.nowTimer = undefined;
     this.endDrag();
     this.noDatePanel?.close();
     this.scroller?.removeEventListener('scroll', this.onScroll);

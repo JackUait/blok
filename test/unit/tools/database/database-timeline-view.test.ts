@@ -240,11 +240,41 @@ describe('DatabaseTimelineView', () => {
         .toBe(new Intl.DateTimeFormat('ar-EG', { day: 'numeric' }).format(new Date(2026, 9, 9)));
     });
 
-    it('marks today on the date axis', () => {
-      const { root } = mount();
-      const marker = root.querySelector<HTMLElement>('[data-blok-database-timeline-today-line]');
+    // notion-motion.md Round 33 §4 (r33-timeline-*.raw): at 15:11 the line sits 25/40 into today's column,
+    // and it moves with the clock, a minute at a time.
+    describe('today line', () => {
+      const lineAt = (root: HTMLElement): number =>
+        parseFloat(root.querySelector<HTMLElement>('[data-blok-database-timeline-today-line]')?.style.insetInlineStart ?? '');
 
-      expect(marker?.style.insetInlineStart).toBe(`${px(CENTER) + 20}px`);
+      beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+        vi.setSystemTime(new Date(2026, 9, 9, 15, 11));
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it('marks the time of day in today\'s column', () => {
+        expect(lineAt(mount().root)).toBeCloseTo(px(CENTER) + 40 * (15 * 60 + 11) / 1440, 3);
+      });
+
+      it('moves as the minutes pass', () => {
+        const { root } = mount();
+
+        vi.advanceTimersByTime(2 * 60_000);
+
+        expect(lineAt(root)).toBeCloseTo(px(CENTER) + 40 * (15 * 60 + 13) / 1440, 3);
+      });
+
+      it('stops its clock on destroy', () => {
+        const { view } = mount();
+
+        expect(vi.getTimerCount()).toBeGreaterThan(0);
+        view.destroy();
+
+        expect(vi.getTimerCount()).toBe(0);
+      });
     });
 
     it('shades weekends at day-level zoom and not at year zoom', () => {

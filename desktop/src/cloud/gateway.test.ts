@@ -55,9 +55,12 @@ describe('cloud gateway', () => {
     vi.stubGlobal('fetch', fetch);
     await mountCloudGateway(document.body,{onOpenWorkspace:vi.fn()});
     expect(document.querySelector('[data-cloud-route]')?.getAttribute('data-cloud-route')).toBe('setup');
-    expect(document.querySelector('input[type="email"]')).toBeNull();
-    expect(document.body.textContent).toContain('Étape 1 sur 3');
-    expect(document.body.textContent).toContain('Cette instance');
+    // The assistant has its own address field, so the login form is identified
+    // by its own id rather than by the input type.
+    expect(document.querySelector('#cloud-email')).toBeNull();
+    expect(document.querySelector('#cloud-admin-email')).not.toBeNull();
+    expect(document.body.textContent).toContain('Bienvenue sur Blok');
+    expect(document.body.textContent).not.toMatch(/Étape \d/);
     expect(document.body.textContent).not.toContain('Jeton');
     expect(document.body.textContent).not.toMatch(/Coming soon/i);
     // Boot reads the instance once — nothing is cached yet, so a second

@@ -537,33 +537,38 @@ déjà ce chemin d'événement.
 
 ### 9.2 L'assistant
 
-**Correction du 15 novembre.** La première rédaction demandait le nom du premier
-espace à l'étape 3. Personne n'a quoi que ce soit à nommer à ce moment-là :
-Notion dérive l'espace de l'adresse — *queau.j's Workspace* — et on le renomme
-ensuite. L'étape disparaît, le serveur dérive, et le cas « création désactivée
-sans espace » (§14, piège 3) s'évapore : la revendication laisse **toujours**
-exactement un espace.
+**Corrigé deux fois, le 15 novembre.** Première rédaction : quatre étapes et un
+jeton de setup. Deuxième : trois étapes. Troisième et dernière : **un seul
+écran, votre nom et votre adresse.**
 
-Trois cartes, « Étape n sur 3 », retour arrière qui conserve la saisie, et
-**rien n'est écrit côté serveur avant la dernière** — un seul POST.
+Ce qui a motivé la réduction est simple à vérifier. AFFiNE demande un nom, une
+adresse et un mot de passe — pas de nom d'instance. Notion ne demande que
+l'adresse et dérive tout le reste. À chaque fois que l'assistant posait une
+question de plus, il demandait une décision à quelqu'un qui n'avait encore rien
+vu du produit.
 
-| Étape | Demande | Phrase affichée |
-| --- | --- | --- |
-| 1 · Cette instance | Nom | « Ce nom s'affiche sur l'écran de connexion et dans les e-mails. » |
-| 2 · Administrateur | Nom, adresse | « Cette adresse recevra un code de connexion. **Blok n'a pas de mot de passe.** » Sans cette phrase, l'absence du champ ressemble à un bug. Bouton « Vérifier l'envoi ». |
-| 3 · Qui peut entrer | `signupPolicy` puis `workspaceCreation`, défauts pré-sélectionnés | « Invitation seule — personne ne crée de compte sans y être invité. Modifiable à tout moment dans Réglages → Instance → Accès. » |
+| Ce qu'on demandait | Ce qu'on fait maintenant |
+| --- | --- |
+| Jeton de setup | supprimé (§5.2) |
+| Nom de l'instance | « Blok » par défaut, renommé dans Réglages → Instance → Général |
+| Nom et identifiant du premier espace | dérivés de l'adresse : `queau.j@gmail.com` → « Espace de queau.j », slug `queau-j`. Renommé dans Réglages → Espace |
+| Politique d'inscription | `invite` par défaut, changée dans Réglages → Instance → Accès |
+| Politique de création d'espaces | `admins_only` par défaut, même endroit |
 
-Le premier espace est `firstWorkspaceName(email)` / `firstWorkspaceSlug(email)` :
-`queau.j@gmail.com` donne « Espace de queau.j » et le slug `queau-j`, avec un
-repli sur `espace` quand l'adresse ne porte rien d'utilisable.
+L'écran porte donc deux champs, un bouton **« Vérifier l'envoi »** qui prouve la
+délivrabilité avant de rien créer, et une ligne qui nomme les défauts — rien ne
+doit être décidé dans le dos de la personne :
 
-Au terme : « Un code a été envoyé à … », et **enchaînement direct sur l'étape
-code de la connexion**, adresse pré-remplie. Pas de page de félicitations.
+> Votre espace et le nom de l'instance seront créés automatiquement, et
+> l'inscription démarre sur invitation. Tout se change dans Réglages → Instance.
 
-Deux pièges : ne jamais faire confiance à un `setupRequired` mis en cache
-(re-fetch avant de rendre) ; et `run()` (`cloud/index.ts`) désactive *tous* les
-boutons puis les réactive *tous* — avec un assistant qui en a de légitimement
-désactivés, il les ressuscite. Mémoriser l'état avant, le restaurer après.
+`POST /api/setup/claim` ne reçoit plus que `{email, name}`. Au terme, un code
+part et l'écran enchaîne sur l'étape code de la connexion, adresse pré-remplie.
+
+Piège conservé : `run()` (`cloud/index.ts`) désactive *tous* les boutons puis les
+réactive *tous*. L'assistant en a de légitimement désactivés tant que les champs
+sont vides — il faut mémoriser l'état avant et le restaurer après, pas les
+ressusciter.
 
 ### 9.3 La rubrique « Instance » des réglages
 

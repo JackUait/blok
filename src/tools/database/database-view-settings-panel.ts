@@ -1622,6 +1622,13 @@ export class ViewSettingsPages {
 
       this.ctx.updateView({ properties });
       panel.refresh();
+      // The click removes this button. Focus must stay in the panel, or its arrow keys stop working.
+      if ((document.activeElement?.closest('[data-blok-testid="database-view-settings"]') ?? null) === null) {
+        const other = show ? 'database-property-hide-all' : 'database-property-show-all';
+
+        (document.querySelector<HTMLElement>(`[data-blok-testid="${other}"]`)
+          ?? document.querySelector<HTMLElement>('[data-blok-testid="database-property-search"]'))?.focus();
+      }
     });
     header.append(toggle);
 

@@ -1052,6 +1052,22 @@ describe('view settings panel', () => {
         expect(exists('database-property-hide-all')).toBe(false);
       });
 
+      it('keeps focus in the panel when Show all removes its own section', () => {
+        harness({ properties: [{ id: 'due', visible: false }] }).open('properties');
+        q('database-property-show-all')?.focus();
+        click('database-property-show-all');
+        expect(exists('database-property-show-all')).toBe(false);
+        expect(document.activeElement?.closest('[data-blok-testid="database-view-settings"]')).not.toBeNull();
+      });
+
+      it('keeps focus in the panel when Hide all leaves only the title', () => {
+        harness({ properties: [{ id: 'title', visible: true }, { id: 'due', visible: true }, { id: 'num', visible: false }, { id: 'stage', visible: false }, { id: 'prog', visible: false }, { id: 'owner', visible: false }] }).open('properties');
+        q('database-property-hide-all')?.focus();
+        click('database-property-hide-all');
+        expect(exists('database-property-hide-all')).toBe(false);
+        expect(document.activeElement?.closest('[data-blok-testid="database-view-settings"]')).not.toBeNull();
+      });
+
       it('the search narrows both sections', () => {
         harness({ properties: [{ id: 'due', visible: false }, { id: 'num', visible: true }, { id: 'stage', visible: true }, { id: 'prog', visible: false }, { id: 'owner', visible: true }] }).open('properties');
         const search = q('database-property-search');

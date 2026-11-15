@@ -334,6 +334,18 @@ describe('form builder question card (research/21 §1k)', () => {
         expect(ruleBody(`${withCover} > [data-blok-database-form-header-row]:has(> [data-blok-page-icon])`)).toContain('padding-block-start: 0');
         expect(ruleBody(`${withCover} > [data-blok-database-form-header-row]:has(> [data-blok-page-icon])`)).toContain('margin-block-end: var(--blok-space-3)');
       });
+
+      // notion-motion.md Round 34 §4: with a cover and no icon, the row starts 24 under the cover with padding
+      // 16 0 4, so "Form icon" is at cover + 40 and the title at cover + 72; the button shows at rest.
+      it('with a cover but no icon, puts "Form icon" 40 under the cover, the title 72, and shows it at rest', () => {
+        const noIcon = `${withCover} > [data-blok-database-form-header-row]:not(:has(> [data-blok-page-icon]))`;
+        const row = ruleBody(noIcon);
+
+        // The cover keeps its 8 (page-title.css); the row adds 16.
+        expect(row).toContain('margin-block: var(--blok-space-4) 0');
+        expect(row).toContain('padding-block: var(--blok-space-4) var(--blok-space-1)');
+        expect(ruleBody(`${noIcon} > [data-blok-page-add-icon]`)).toContain('opacity: 1');
+      });
     });
 
     // Round 31 §1: the ghost buttons show while the pointer is on the header, and fade out over 100ms.

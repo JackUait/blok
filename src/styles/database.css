@@ -18429,6 +18429,17 @@ button[data-blok-database-feed-reaction]:hover,
   margin-block-end: var(--blok-space-3);
 }
 
+/* Round 34 §4: a cover and no icon. The row starts 24 under the cover (its own 8 + 16), so "Form icon" sits
+   40 under the cover and the title 72; it shows at rest. A nested :has() is invalid, so the row takes the gap. */
+[data-blok-database-form]:has(> [data-blok-database-form-access]) > [data-blok-database-form-header]:has(> [data-blok-page-cover]) > [data-blok-database-form-header-row]:not(:has(> [data-blok-page-icon])) {
+  padding-block: var(--blok-space-4) var(--blok-space-1);
+  margin-block: var(--blok-space-4) 0;
+}
+
+[data-blok-database-form]:has(> [data-blok-database-form-access]) > [data-blok-database-form-header]:has(> [data-blok-page-cover]) > [data-blok-database-form-header-row]:not(:has(> [data-blok-page-icon])) > [data-blok-page-add-icon] {
+  opacity: 1;
+}
+
 [data-blok-database-form-header-row] [data-blok-page-add-cover] {
   margin-inline-start: 0;
 }

@@ -12,6 +12,7 @@ const { MockPopover, mockPopoverInstances } = vi.hoisted(() => {
     destroy: () => void;
     on: (event: string, cb: () => void) => void;
     triggerClosed: () => void;
+    moveCursor: (source: 'keyboard' | 'pointer') => void;
     el: HTMLElement | null;
     closedCallbacks: Array<() => void>;
   }> = [];
@@ -48,6 +49,19 @@ const { MockPopover, mockPopoverInstances } = vi.hoisted(() => {
       for (const cb of this.closedCallbacks) {
         cb();
       }
+    }
+
+    public cursorListeners = new Set<(current: { source: 'keyboard' | 'pointer' } | null) => void>();
+
+    onCurrentItemChange(listener: (current: { source: 'keyboard' | 'pointer' } | null) => void): () => void {
+      this.cursorListeners.add(listener);
+
+      return () => this.cursorListeners.delete(listener);
+    }
+
+    /** The menu's cursor lands on an item, as arrows or the pointer move it. */
+    moveCursor(source: 'keyboard' | 'pointer'): void {
+      this.cursorListeners.forEach((listener) => listener({ source }));
     }
   }
 
@@ -242,6 +256,34 @@ describe('DatabaseViewPopover', () => {
       mockPopoverInstances.at(-1)!.params as { class?: string; width?: string; items: Array<{ type?: string; element?: HTMLElement }> };
     const option = (type: string): HTMLElement =>
       params().items.map((item) => item.element).find((el) => el?.getAttribute('data-blok-database-view-option') === type)!;
+
+    // notion-motion.md Round 9 / Round 15 §A, Round 41 Part A: Notion's Table tile is filled on open and keeps it while another is hovered.
+    it('fills the first tile on a pointer open until a key moves the keyboard cursor', () => {
+      popover.open(anchor);
+
+      expect(option('table').hasAttribute('data-active')).toBe(true);
+      expect(option('board').hasAttribute('data-active')).toBe(false);
+      mockPopoverInstances.at(-1)?.moveCursor('pointer');
+      expect(option('table').hasAttribute('data-active')).toBe(true);
+      mockPopoverInstances.at(-1)?.moveCursor('keyboard');
+      expect(option('table').hasAttribute('data-active')).toBe(false);
+    });
+
+    it('stops listening to the cursor once the menu closes', () => {
+      popover.open(anchor);
+      const menu = mockPopoverInstances.at(-1);
+
+      menu?.triggerClosed();
+
+      expect(menu?.cursorListeners.size).toBe(0);
+    });
+
+    // The keyboard open already puts the menu's cursor on the first tile.
+    it('leaves the fill to the keyboard cursor on a keyboard open', () => {
+      popover.open(anchor, 'below', true);
+
+      expect(option('table').hasAttribute('data-active')).toBe(false);
+    });
 
     it('heads the menu "Add a new view"', () => {
       popover.open(anchor);

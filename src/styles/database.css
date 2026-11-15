@@ -3733,7 +3733,9 @@ button[data-blok-database-board-lane-count]:hover {
   transition: background-color 20ms ease-in;
 }
 
+/* data-active: the first tile's fill on open (notion-motion.md Round 9, Round 15 §A). */
 [data-blok-database-view-option]:hover,
+[data-blok-database-view-option][data-active],
 [data-blok-focused='true'] > [data-blok-database-view-option],
 [data-blok-database-view-option][data-blok-focused='true'] {
   background-color: var(--blok-database-popover-hover);

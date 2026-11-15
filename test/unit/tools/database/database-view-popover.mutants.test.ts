@@ -78,6 +78,11 @@ vi.mock('../../../../src/components/utils/popover', () => {
         this.closedHandlers.push(handler);
       }
     }
+
+    /** The view popover listens for the keyboard cursor to drop the first tile's open fill. */
+    onCurrentItemChange(): () => void {
+      return () => undefined;
+    }
   }
 
   return {

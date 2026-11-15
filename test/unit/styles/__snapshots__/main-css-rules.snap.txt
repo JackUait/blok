@@ -14305,6 +14305,10 @@ button[data-blok-database-table-group-count]:hover {
   align-items: center;
   gap: var(--blok-space-2);
   min-block-size: 45px;
+  margin-block-start: var(--blok-space-1);
+  margin-inline: max(0px, calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)) - var(--blok-space-2)));
+  padding-block-start: var(--blok-space-1);
+  padding-inline-start: min(var(--blok-space-2), max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)));
   border-block-start: 1px solid var(--blok-database-table-border);
 }
 

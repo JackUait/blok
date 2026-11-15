@@ -322,3 +322,25 @@ describe('the toolbar ends at the text column', () => {
     expect(rule('[data-blok-database-title-row][data-single-view]')).toContain(`padding-inline-end: ${inset}`);
   });
 });
+
+// notion-motion.md Round 35 gap 5 (r35-sort2.raw, .png): in a page-wide editor the bar's line spans x 531-1238 (the column and 8 each side) at y 309, 4 under Blok's,
+// and the "2 sorts" chip sits at (539, 322.2), 13 under the line.
+describe('the sort and filter chip bar keeps to the text column', () => {
+  const inset = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))';
+
+  it('stops the line 8px outside the column on both sides', () => {
+    expect(rule('[data-blok-database-filter-bar]')).toContain(`margin-inline: max(0px, calc(${inset} - var(--blok-space-2)))`);
+  });
+
+  it('starts the first chip at the column', () => {
+    expect(rule('[data-blok-database-filter-bar]')).toContain(`padding-inline-start: min(var(--blok-space-2), ${inset})`);
+  });
+
+  it('puts the line 4px lower and the chips 13px under it, in the same 45px bar', () => {
+    const body = rule('[data-blok-database-filter-bar]');
+
+    expect(body).toContain('margin-block-start: var(--blok-space-1)');
+    expect(body).toContain('padding-block-start: var(--blok-space-1)');
+    expect(body).toContain('min-block-size: 45px');
+  });
+});

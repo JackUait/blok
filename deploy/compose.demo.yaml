@@ -31,7 +31,12 @@ services:
       DATA_DIRECTORY: /data
       AI_ENCRYPTION_KEY: ${AI_ENCRYPTION_KEY:-}
       APP_ENV: development
-      DEV_MAIL_DIRECTORY: /data/mail
+      # Le backend développement gagne AVANT Resend dans l'ordre de sélection
+      # (mail.go), donc demo.sh le vide quand une clé Resend est présente —
+      # sinon un vrai envoi serait impossible à observer ici.
+      DEV_MAIL_DIRECTORY: ${DEV_MAIL_DIRECTORY-/data/mail}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-onboarding@resend.dev}
       # Vide avec `demo.sh start --setup` : l'instance démarre « setup requis »
       # et sert l'assistant. Sinon l'amorçage par variable, comme en production.
       BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL-admin@example.test}

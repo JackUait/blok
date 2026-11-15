@@ -1707,6 +1707,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R47_BYTES = 3257;
     // Lane r50: Round 32 form leftovers: the answer 18 under the question name, and "Edit question" on hover only. Net database.css growth against origin/main.
     const DATABASE_R50_BYTES = 445;
+    // Lane r51: Round 33 feed "(edited)" and byline-less title, form icon and full-width cover, side peek spacing, gap "+" exit. Net database.css growth against origin/main.
+    const DATABASE_R51_BYTES = 2796;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2232,6 +2234,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R48_BYTES
       + DATABASE_R47_BYTES
       + DATABASE_R50_BYTES
+      + DATABASE_R51_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

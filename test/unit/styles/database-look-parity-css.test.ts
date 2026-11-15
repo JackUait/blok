@@ -236,7 +236,7 @@ describe('row page peek in dark (research/21 §1m)', () => {
   // the title at 80 in both. Blok's label sits 7 into a row that starts 9 under the title (134), 8 more once spaced.
   it('puts the side peek\'s first property 9px under the title, 8 more with 5 or more properties', () => {
     expect(ruleBody('[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-title]')).toContain('margin-bottom: 9px');
-    expect(ruleBody('[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-props-spaced]')).toContain('padding-top: 8px');
+    expect(ruleBody('[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-props-spaced]')).toContain('padding-top: var(--blok-space-2)');
   });
 
   it('inks the title in the database ink: rgb(44, 44, 43) light (research/26 §1e), rgb(240, 239, 237) dark', () => {

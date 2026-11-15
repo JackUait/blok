@@ -272,7 +272,8 @@ describe('form builder question card (research/21 §1k)', () => {
     it('spaces the header as measured', () => {
       const header = ruleBody(`${builder} > [data-blok-database-form-header]`);
 
-      expect(header).toContain('padding-block-start: 32px');
+      expect(header).toContain('padding-block-start: var(--_blok-form-header-top)');
+      expect(ruleBody(builder)).toContain('--_blok-form-header-top: 32px');
       expect(header).toContain('padding-inline-start: var(--_blok-form-header-inset)');
       expect(ruleBody(builder)).toContain('--_blok-form-header-inset: 19px');
       expect(header).toContain('margin-block-end: var(--blok-space-6)');
@@ -291,6 +292,43 @@ describe('form builder question card (research/21 §1k)', () => {
       expect(access).toContain('padding: var(--blok-space-2-5) var(--_blok-form-access-inset)');
       expect(access).toContain('--_blok-form-access-inset: 22px');
       expect(access).toContain('margin-block-end: 34px');
+    });
+
+    // notion-motion.md Round 33 §1 (r33-form-*.raw): the icon is a 78 box (radius 4, no hover fill) where the title
+    // was, 8 right of the title; "Form cover" sits alone in a 40 row under it. A cover is 160 tall across the whole
+    // database at the header's top; the icon overlaps its bottom by 18 and the title sits 12 under the icon.
+    describe('form icon and cover', () => {
+      const header = `${builder} > [data-blok-database-form-header]`;
+      const withIcon = `${header} > [data-blok-database-form-header-row]:has(> [data-blok-page-icon])`;
+      const withCover = `${header}:has(> [data-blok-page-cover])`;
+
+      it('draws the icon as a 78 box with radius 4 and no hover fill, 8 right of the title', () => {
+        expect(ruleBody('[data-blok-database-form-header]')).toContain('--blok-page-icon-box: 78px');
+        expect(ruleBody('[data-blok-database-form-header] [data-blok-page-icon]')).toContain('border-radius: var(--blok-radius-control-sm)');
+        expect(ruleBody('[data-blok-database-form-header] [data-blok-page-icon]:hover:not(:disabled)')).toContain('background: transparent');
+        expect(ruleBody(`${withIcon} > [data-blok-page-icon]`)).toContain('margin-inline-start: calc(var(--blok-space-2) - var(--blok-space-1-25))');
+      });
+
+      it('puts the icon where the title was and "Form cover" alone in a 40 row under it', () => {
+        const row = ruleBody(withIcon);
+
+        expect(row).toContain('flex-direction: column');
+        expect(row).toContain('padding-block-start: var(--_blok-form-header-top)');
+        expect(ruleBody(`${withIcon} > [data-blok-page-add-cover]`)).toContain('margin-block-start: var(--blok-space-2)');
+      });
+
+      it('spans the cover 160 tall across the database from the header top, under an 18 overlap and a 12 gap', () => {
+        const cover = ruleBody(`${header} > [data-blok-page-cover]`);
+
+        expect(ruleBody(builder)).toContain('container-type: inline-size');
+        expect(cover).toContain('block-size: 160px');
+        expect(cover).toContain('inline-size: 100cqi');
+        expect(cover).toContain('margin-block-start: calc(var(--_blok-form-header-top) * -1)');
+        expect(cover).toContain('margin-inline-start: calc(min(0px, (600px - 100cqi) / 2) - var(--_blok-form-header-inset))');
+        expect(ruleBody(`${withCover} > [data-blok-page-cover]:has(~ [data-blok-database-form-header-row] > [data-blok-page-icon])`)).toContain('margin-block-end: calc(var(--blok-space-4-5) * -1)');
+        expect(ruleBody(`${withCover} > [data-blok-database-form-header-row]:has(> [data-blok-page-icon])`)).toContain('padding-block-start: 0');
+        expect(ruleBody(`${withCover} > [data-blok-database-form-header-row]:has(> [data-blok-page-icon])`)).toContain('margin-block-end: var(--blok-space-3)');
+      });
     });
 
     // Round 31 §1: the ghost buttons show while the pointer is on the header, and fade out over 100ms.

@@ -73,10 +73,10 @@ describe('database chart and feed styles', () => {
 
     expect(edited).toMatch(/font-size:\s*12px/);
     expect(edited).toContain('color: var(--blok-database-table-muted-text)');
-    expect(edited).toContain('margin-inline-start: -3px');
+    expect(edited).toContain('margin-inline-start: calc(var(--blok-space-0-75) * -1)');
     for (const part of ['title', 'head']) {
       expect(ruleBody(`[data-blok-database-feed-card]:not(:has(> [data-blok-database-feed-byline])) > [data-blok-database-feed-${part}]`))
-        .toContain('margin-inline-start: 2px');
+        .toContain('margin-inline-start: var(--blok-space-0-5)');
     }
   });
 

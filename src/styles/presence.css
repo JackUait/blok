@@ -119,11 +119,6 @@
     animation: none;
   }
 
-  /* The face still steps aside — it just arrives there at once. */
-  [data-blok-presence-gutter] {
-    transition: none;
-  }
-
   /* The name still comes and goes; it just does not fade. */
   [data-blok-presence-caret-label],
   [data-blok-agent-marker-label] {
@@ -142,7 +137,6 @@
   align-items: center;
   min-height: var(--blok-presence-face-line);
   margin-inline-end: var(--blok-presence-gap);
-  transition: transform var(--blok-presence-slide) cubic-bezier(0.2, 0.7, 0.3, 1);
   pointer-events: none;
   user-select: none;
 }

@@ -35262,10 +35262,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   animation: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-presence-gutter] {
-  transition: none;
-}
-
 [@media (prefers-reduced-motion: reduce)] [data-blok-presence-caret-label], [data-blok-agent-marker-label] {
   transition: none;
 }
@@ -35280,7 +35276,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   align-items: center;
   min-height: var(--blok-presence-face-line);
   margin-inline-end: var(--blok-presence-gap);
-  transition: transform var(--blok-presence-slide) cubic-bezier(0.2, 0.7, 0.3, 1);
   pointer-events: none;
   user-select: none;
 }

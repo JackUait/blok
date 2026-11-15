@@ -246,3 +246,43 @@ export function buildWelcomeDocuments(workspaceId: string): WelcomeDocuments {
 
   return { welcome, rights, tasks, pages, documents };
 }
+
+export interface SeedWelcomeOptions {
+  docs: WelcomeDocuments;
+  /**
+   * Put the seeded pages in the index and the sidebar. `selectId` opens that
+   * page; `null` leaves the current selection alone.
+   */
+  publishPages(selectId: string | null): void;
+  /** Flush the index so the server has created the page rows. */
+  flushOrder(): Promise<void>;
+  seedDocument(pageId: string, document: { title: string; blocks: unknown[] }): Promise<void>;
+}
+
+/**
+ * Order matters, and it is the whole point of this function.
+ *
+ * Opening a page starts collaboration on it, and collaboration reads the
+ * checkpoint ONCE, when it admits the document. Selecting the welcome page
+ * before the seed lands admits an empty document; the seed then writes a
+ * checkpoint nobody will ever read again, and the page stays blank for good —
+ * `pages.content` full, `admission_started` true, `version` still 0.
+ *
+ * So: publish the pages without selecting any, flush so the rows exist, seed
+ * every document, and only then open the welcome page.
+ */
+export async function seedWelcomeDocuments(options: SeedWelcomeOptions): Promise<boolean> {
+  const welcome = options.docs.pages[0];
+  if (!welcome) return false;
+  options.publishPages(null);
+  try {
+    await options.flushOrder();
+    for (const { pageId, document } of options.docs.documents) {
+      await options.seedDocument(pageId, document);
+    }
+  } catch {
+    return false;
+  }
+  options.publishPages(welcome.id);
+  return true;
+}

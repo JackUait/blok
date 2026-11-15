@@ -17,6 +17,7 @@ import { activeWorkspace, workspaceKey, type WorkspaceRef } from './workspace-re
 import { createDesktopFooter, readAppearance } from './settings';
 import {
   buildWelcomeDocuments,
+  seedWelcomeDocuments,
   hasWelcomeSeeded,
   markWelcomeSeeded,
   shouldSeedWelcome,
@@ -788,26 +789,32 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     const docs = buildWelcomeDocuments(workspaceId);
     const welcomePage = docs.pages[0];
     if (!welcomePage) return null;
-    for (const page of docs.pages) {
-      if (!ws.index.pages.some((item) => item.id === page.id)) ws.index.pages.push(page);
-    }
-    ws.frame.setPages(withSections(ws.index.pages), welcomePage.id);
-    saveManifest();
-    try {
-      await ws.saveOrder;
-      for (const { pageId, document } of docs.documents) {
+    // Captured so the callbacks below keep the non-null narrowing from the guard.
+    const index = ws.index;
+    const seeded = await seedWelcomeDocuments({
+      docs,
+      publishPages: (selectId) => {
+        for (const page of docs.pages) {
+          if (!index.pages.some((item) => item.id === page.id)) index.pages.push(page);
+        }
+        ws.frame.setPages(withSections(index.pages), selectId ?? index.activeId);
+        saveManifest();
+      },
+      flushOrder: () => ws.saveOrder,
+      seedDocument: async (pageId, document) => {
         if (ref.kind === 'remote') await repository.seedPage(pageId, document);
         else await repository.writePage(pageId, JSON.stringify(document));
-      }
+      },
+    });
+    if (seeded) {
       markWelcomeSeeded(key);
       return welcomePage.id;
-    } catch {
-      ws.index.pages = ws.index.pages.filter((page) => !docs.pages.some((seeded) => seeded.id === page.id));
-      ws.frame.setPages(withSections(ws.index.pages), ws.index.activeId);
-      saveManifest();
-      try { await ws.saveOrder; } catch { /* keep empty */ }
-      return null;
     }
+    index.pages = index.pages.filter((page) => !docs.pages.some((item) => item.id === page.id));
+    ws.frame.setPages(withSections(index.pages), index.activeId);
+    saveManifest();
+    try { await ws.saveOrder; } catch { /* keep empty */ }
+    return null;
   }
 
   async function showEmptyWorkspace(): Promise<void> {

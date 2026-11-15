@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   buildWelcomeDocuments,
+  seedWelcomeDocuments,
   hasWelcomeSeeded,
   markWelcomeSeeded,
   shouldSeedWelcome,
@@ -82,5 +83,41 @@ describe('welcome seed', () => {
       expect(typeof option.position).toBe('string');
       expect(option).not.toHaveProperty('name');
     }
+  });
+});
+
+describe('seedWelcomeDocuments ordering', () => {
+  it('seeds every document before the welcome page is opened', async () => {
+    const calls: string[] = [];
+    const docs = buildWelcomeDocuments('acme');
+    await seedWelcomeDocuments({
+      docs,
+      publishPages: (selectId) => { calls.push(`publish:${selectId ?? 'none'}`); },
+      flushOrder: async () => { calls.push('flush'); },
+      seedDocument: async (pageId) => { calls.push(`seed:${pageId}`); },
+    });
+    // Selecting the welcome page opens it, which starts collaboration on an
+    // empty document. Admission before the seed leaves the editor empty for
+    // good: the server keeps the checkpoint, the live doc never sees it.
+    const open = calls.indexOf('publish:welcome-acme');
+    const lastSeed = calls.map((c) => c.startsWith('seed:')).lastIndexOf(true);
+    expect(lastSeed).toBeGreaterThan(-1);
+    expect(open).toBeGreaterThan(lastSeed);
+    // The page rows must exist before seeding, so the index flush comes first.
+    expect(calls.indexOf('flush')).toBeLessThan(lastSeed);
+    expect(calls.filter((c) => c.startsWith('seed:'))).toHaveLength(docs.documents.length);
+  });
+
+  it('reports failure without opening the welcome page', async () => {
+    const calls: string[] = [];
+    const docs = buildWelcomeDocuments('acme');
+    const ok = await seedWelcomeDocuments({
+      docs,
+      publishPages: (selectId) => { calls.push(`publish:${selectId ?? 'none'}`); },
+      flushOrder: async () => { calls.push('flush'); },
+      seedDocument: async () => { throw new Error('seed refused'); },
+    });
+    expect(ok).toBe(false);
+    expect(calls).not.toContain('publish:welcome-acme');
   });
 });

@@ -15,9 +15,21 @@ seed() {
 }
 action="${1:-start}"
 [[ $# == 0 ]] || shift
+setup_mode=0
+[[ "${1:-}" == "--setup" ]] && { setup_mode=1; shift; }
 case "$action" in
   start)
     compose build
+    if [[ $setup_mode == 1 ]]; then
+      # Instance vierge : pas d'amorçage par variable, donc l'assistant de
+      # premier démarrage prend la main et frappe un jeton dans /data.
+      BOOTSTRAP_ADMIN_EMAIL= BOOTSTRAP_WORKSPACE_SLUG= BOOTSTRAP_WORKSPACE_NAME= \
+        compose up -d --wait --wait-timeout 180
+      printf '%s\n' 'Blok: http://localhost:8088' 'E-mails de démonstration: http://localhost:8089' \
+        'Premier démarrage : l’assistant demande le jeton ci-dessous.' \
+        "Jeton: $(compose exec -T app cat /data/setup-token 2>/dev/null || echo '(pas encore frappé, réessayez)')"
+      exit 0
+    fi
     compose up -d --wait --wait-timeout 180
     if ! compose exec -T app test -f /data/.demo-seeded; then seed; fi
     printf '%s\n' 'Blok: http://localhost:8088' 'E-mails de démonstration: http://localhost:8089' 'Admin: admin@example.test' 'Membre ajouté: membre@example.test' 'Demande d’accès: demandeur@example.test'

@@ -129,6 +129,11 @@ def main():
     workspace = api("GET", base, token=admin)
     if workspace.get("role") != "admin":
         raise RuntimeError("Bootstrap demo account is not an administrator; no role changes made")
+    # A fresh instance defaults to invite-only, which is right for a real
+    # deployment and makes the join-request persona impossible: an unknown
+    # address gets no login code at all. The demo opens signup on purpose,
+    # through the same admin API the Instance settings panel uses.
+    api("PATCH", "/api/admin/settings", {"signupPolicy": "open"}, admin)
     members = api("GET", base + "/members", token=admin)["members"]
     existing = next((person for person in members if person["email"] == MEMBER_EMAIL), None)
     if not existing:

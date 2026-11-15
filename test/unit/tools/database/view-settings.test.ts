@@ -236,7 +236,9 @@ describe('view-settings', () => {
     });
 
     it('keeps unknown fields and entries for properties a peer added', () => {
-      const start = view({ properties: [{ id: 'p-due', width: 90, future: 'x' }, { id: 'p-new-from-peer', visible: true }] });
+      // A variable, not a literal: data saved by a newer version may carry fields the type does not know.
+      const saved = { id: 'p-due', width: 90, future: 'x' };
+      const start = view({ properties: [saved, { id: 'p-new-from-peer', visible: true }] });
       const next = withPropertyVisibility(start, schema, ['p-due'], false);
 
       expect(next).toContainEqual({ id: 'p-due', width: 90, future: 'x', visible: false });

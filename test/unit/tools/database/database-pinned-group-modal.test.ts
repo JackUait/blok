@@ -295,6 +295,21 @@ describe('openPinnedGroupModal chip editors', () => {
     expect(q('database-group-modal-rules-chip')?.getAttribute('aria-label')).toBe('tools.database.filterRuleCount(count=1)');
   });
 
+  // The wrapped group is the view's own tree; an edit to one of its rules must stay in the modal.
+  it('leaves the view untouched when a wrapped view rule is removed', () => {
+    const rule: FilterRule = { id: 'r', propertyId: 'title', operator: 'is_not_empty', value: null };
+    const start = view({ filterTree: { id: 'root', conjunction: 'and', filterRules: [rule, { ...rule, id: 'r2' }] } });
+    const before = structuredClone(start);
+    const { views } = open(start, { id: 'g', propertyId: 'sel', operator: 'equals', value: ['red'] });
+
+    q('database-group-modal-rules-chip')?.click();
+    q('database-filter-rule-more-r')?.click();
+    document.querySelector<HTMLElement>('[data-blok-testid="database-filter-remove"]')?.click();
+
+    expect(views[views.length - 1].filterTree?.filterRules[0]).toMatchObject({ filterRules: [{ ...rule, id: 'r2' }] });
+    expect(start).toEqual(before);
+  });
+
   // notion-motion.md Round 27 §2 (r27-pm-rulepop.raw): a click on the modal's body closes the open editor, not the modal.
   it('closes a chip editor on a press in the modal body', () => {
     open(view({}), { id: 'g', propertyId: 'sel', operator: 'equals', value: ['red'] });

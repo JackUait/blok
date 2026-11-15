@@ -398,3 +398,23 @@ describe('Hours zoom now label (Round 34)', () => {
     expect(colors).not.toContain('--blok-database-timeline-now-text:');
   });
 });
+
+// notion-motion.md Round 35 Part B (r35-timeline-hours-grid.raw, r35-timeline-hours.png): a 1px line every
+// 15 minutes in the body, at Notion's rgba(42, 28, 0, 0.07), which is the grid-line token in light.
+describe('Hours zoom 15-minute lines and day period (Round 35)', () => {
+  it('draws each line 1px wide, full body height, in the grid-line token', () => {
+    const body = ruleBody('[data-blok-database-timeline-tick-line]');
+
+    expect(body).toContain('position: absolute');
+    expect(body).toContain('inset-block: 0');
+    expect(body).toContain('inline-size: 1px');
+    expect(body).toContain('background-color: var(--blok-database-timeline-grid-line)');
+  });
+
+  // Notion's lighter rgb(161, 158, 154) is 2.6:1 on the canvas; tick text keeps Blok's AA ink (user-approved).
+  it('inks the day period with its own token, held at the tick ink', () => {
+    expect(ruleBody('[data-blok-database-timeline-day-period]')).toContain('color: var(--blok-database-timeline-period-text)');
+    expect(css).toContain('--blok-database-timeline-period-text: var(--blok-database-timeline-muted-text);');
+    expect(colors).not.toContain('--blok-database-timeline-period-text:');
+  });
+});

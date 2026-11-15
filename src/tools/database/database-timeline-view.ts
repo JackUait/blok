@@ -131,6 +131,8 @@ const EDGE_SHARE = 0.1;
 const DAY_LEVEL: ReadonlySet<TimelineZoom> = new Set(['hours', 'day', 'week', 'bi_week', 'month']);
 /** Zooms whose header shows day numbers only: the month is named in the toolbar. */
 const MONTH_IN_TOOLBAR: ReadonlySet<TimelineZoom> = new Set(['day', 'week', 'bi_week', 'month']);
+/** notion-motion.md Round 35 Part B: Hours zoom has only its tick row; the toolbar names the day. */
+const ONE_HEADER_ROW: ReadonlySet<TimelineZoom> = new Set([...MONTH_IN_TOOLBAR, 'hours']);
 
 const ZOOM_KEYS: Record<TimelineZoom, string> = {
   hours: 'tools.database.timelineZoomHours',
@@ -235,7 +237,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
     root.setAttribute('data-blok-database-timeline', '');
     root.setAttribute('data-zoom', this.zoom);
-    root.style.setProperty('--blok-database-timeline-header-rows', MONTH_IN_TOOLBAR.has(this.zoom) ? '1' : '2');
+    root.style.setProperty('--blok-database-timeline-header-rows', ONE_HEADER_ROW.has(this.zoom) ? '1' : '2');
     root.setAttribute('role', 'region');
     root.setAttribute('aria-label', this.t('tools.database.timelineLabel'));
     this.root = root;
@@ -276,6 +278,12 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       if (origin?.start === this.window.start) {
         this.recentring = true;
         this.scrollStart = Math.max(0, this.chartInset() - origin.at);
+        this.recentring = false;
+        this.refreshOffscreen();
+      } else if (this.zoom === 'hours' && this.options.center === this.options.today) {
+        // notion-motion.md Round 35 Part B: Hours zoom opens with the now-line in the middle.
+        this.recentring = true;
+        this.scrollStart = Math.max(0, this.nowOffset() - (this.scroller?.clientWidth ?? 0) / 2);
         this.recentring = false;
         this.refreshOffscreen();
       } else {
@@ -408,7 +416,12 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   }
 
   private monthLabel(day: string): string {
-    return new Intl.DateTimeFormat(resolveLocale(this.options.locale), { month: 'long', year: 'numeric' }).format(toLocalDate(day));
+    // notion-motion.md Round 35 Part B: Hours zoom names the whole date ("November 15, 2026").
+    const parts: Intl.DateTimeFormatOptions = this.zoom === 'hours'
+      ? { month: 'long', day: 'numeric', year: 'numeric' }
+      : { month: 'long', year: 'numeric' };
+
+    return new Intl.DateTimeFormat(resolveLocale(this.options.locale), parts).format(toLocalDate(day));
   }
 
   /** Every group with its rows, in drawing order, so the table panel and the canvas line up. */
@@ -768,7 +781,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         label.style.insetInlineStart = `${centred ? item.offset - item.width / 2 : item.offset}px`;
         label.style.width = `${item.width}px`;
         if (centred) {
-          label.appendChild(document.createElement('span')).textContent = item.label;
+          label.appendChild(this.tickText(item.label, item.period));
         } else {
           label.textContent = item.label;
         }
@@ -781,7 +794,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     header.setAttribute('data-blok-database-timeline-header', '');
     header.setAttribute('aria-hidden', 'true');
     // findings C06: at day-level zooms the toolbar names the month, so the header has no month row.
-    if (!MONTH_IN_TOOLBAR.has(this.zoom)) {
+    if (!ONE_HEADER_ROW.has(this.zoom)) {
       header.append(line('data-blok-database-timeline-groups', groups));
     }
     const unitsRow = line('data-blok-database-timeline-units', units, ticks);
@@ -811,6 +824,25 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     return header;
   }
 
+  /** A tick's text. Its "AM"/"PM" gets its own span; `hideCoveredTicks` measures the outer one. */
+  private tickText(label: string, period: string | undefined): HTMLElement {
+    const text = document.createElement('span');
+    const at = period === undefined ? -1 : label.lastIndexOf(period);
+
+    if (period === undefined || at < 0) {
+      text.textContent = label;
+
+      return text;
+    }
+    const mark = document.createElement('span');
+
+    mark.setAttribute('data-blok-database-timeline-day-period', '');
+    mark.textContent = period;
+    text.append(label.slice(0, at), mark, label.slice(at + period.length));
+
+    return text;
+  }
+
   /** Weekend columns and the today line, behind the rows. */
   private createBackground(): HTMLElement {
     const layer = document.createElement('div');
@@ -827,6 +859,20 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       column.setAttribute('data-blok-database-timeline-weekend', '');
       column.style.insetInlineStart = `${i * this.dayWidth}px`;
       layer.appendChild(column);
+    }
+
+    // notion-motion.md Round 35 Part B (r35-timeline-hours-grid.raw): a line on every 15-minute tick, body only.
+    if (this.zoom === 'hours') {
+      const tick = this.dayWidth / 96;
+
+      layer.append(...Array.from({ length: this.window.days * 96 }, (_, i) => {
+        const line = document.createElement('div');
+
+        line.setAttribute('data-blok-database-timeline-tick-line', '');
+        line.style.insetInlineStart = `${i * tick}px`;
+
+        return line;
+      }));
     }
 
     const todayIndex = daysBetween(this.window.start, this.options.today);
@@ -1713,11 +1759,16 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   }
 
   /** notion-motion.md Round 33 §4: the line marks the time of day and moves a minute at a time. */
-  private placeNowLine(todayIndex: number): void {
-    const now = Date.now();
+  /** The now-line's x on the canvas. */
+  private nowOffset(now = Date.now()): number {
     const share = Math.min(Math.max((now - toLocalDate(this.options.today).getTime()) / (DAY_MINUTES * 60_000), 0), 1);
 
-    const at = `${(todayIndex + share) * this.dayWidth}px`;
+    return (daysBetween(this.window.start, this.options.today) + share) * this.dayWidth;
+  }
+
+  private placeNowLine(todayIndex: number): void {
+    const now = Date.now();
+    const at = `${this.nowOffset(now)}px`;
 
     if (this.nowLine !== null) this.nowLine.style.insetInlineStart = at;
     const text = this.nowLabel?.firstElementChild;

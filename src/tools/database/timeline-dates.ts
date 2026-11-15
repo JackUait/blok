@@ -286,6 +286,8 @@ export interface HeaderUnit {
   width: number;
   /** The unit's first day. */
   day: string;
+  /** Hours zoom: the "AM"/"PM" inside `label`, drawn in its own ink. */
+  period?: string;
 }
 
 type Unit = 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
@@ -334,14 +336,16 @@ const unitsOf = (window: TimelineWindow, unit: Unit, dayWidth: number, format: I
   if (unit === 'hour') {
     const tickWidth = dayWidth / TICKS_PER_DAY;
     const { locale } = format.resolvedOptions();
+    const periodFormat = new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' });
 
     return Array.from({ length: window.days * TICKS_PER_DAY }, (_, i) => {
       const day = addDays(window.start, Math.floor(i / TICKS_PER_DAY));
       const date = toLocalDate(day);
 
       date.setMinutes((i % TICKS_PER_DAY) * 15);
+      const period = periodFormat.formatToParts(date).find((part) => part.type === 'dayPeriod')?.value;
 
-      return { label: formatClock(date, locale, undefined), offset: i * tickWidth, width: tickWidth, day };
+      return { label: formatClock(date, locale, undefined), offset: i * tickWidth, width: tickWidth, day, ...(period !== undefined ? { period } : {}) };
     });
   }
 

@@ -379,6 +379,100 @@ describe('DatabaseTimelineView', () => {
       });
     });
 
+    // notion-motion.md Round 35 Part B (r35-timeline-hours-open.raw, r35-timeline-hours-grid.raw).
+    describe('hours zoom opens at now (Round 35)', () => {
+      const VIEWPORT = 708;
+      const hoursStart = timelineWindow(CENTER, 'hours').start;
+      const nowX = (hour: number, minute: number): number =>
+        (daysBetween(hoursStart, CENTER) + (hour * 60 + minute) / 1440) * TIMELINE_DAY_WIDTH.hours;
+      /** Mounts, gives the scroller a width, then lets the first draw scroll. */
+      const open = (overrides: Partial<DatabaseTimelineViewOptions> = {}): HTMLElement => {
+        const { root } = mount(overrides);
+
+        Object.defineProperty(scroller(root), 'clientWidth', { value: VIEWPORT, configurable: true });
+        vi.runAllTicks();
+
+        return root;
+      };
+
+      beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date', 'queueMicrotask'] });
+        vi.setSystemTime(new Date(2026, 9, 9, 19, 46));
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it('centres the now-line in the viewport, and again when the view opens a second time', () => {
+        const first = open({ view: timelineView({ timelineZoom: 'hours' }) });
+        const line = first.querySelector<HTMLElement>('[data-blok-database-timeline-today-line]');
+
+        expect(scroller(first).scrollLeft).toBeCloseTo(nowX(19, 46) - VIEWPORT / 2, 5);
+        expect(parseFloat(line?.style.insetInlineStart ?? '')).toBeCloseTo(nowX(19, 46), 5);
+        document.body.innerHTML = '';
+        expect(scroller(open({ view: timelineView({ timelineZoom: 'hours' }) })).scrollLeft).toBeCloseTo(nowX(19, 46) - VIEWPORT / 2, 5);
+      });
+
+      it('centres on the stored day\'s start when that day is not today', () => {
+        const root = open({ view: timelineView({ timelineZoom: 'hours' }), today: '2026-10-08' });
+
+        expect(scroller(root).scrollLeft).toBeCloseTo(nowX(0, 0) - VIEWPORT / 2, 5);
+      });
+
+      it('keeps the day\'s start in the middle at other zooms', () => {
+        const root = open();
+        const start = timelineWindow(CENTER, 'month').start;
+
+        expect(scroller(root).scrollLeft).toBe(daysBetween(start, CENTER) * TIMELINE_DAY_WIDTH.month - VIEWPORT / 2);
+      });
+
+      it('draws a line every 15 minutes in the body, on the ticks, and none at other zooms', () => {
+        const root = open({ view: timelineView({ timelineZoom: 'hours' }) });
+        const lines = [...root.querySelectorAll<HTMLElement>('[data-blok-database-timeline-background] > [data-blok-database-timeline-tick-line]')];
+        const ticks = [...root.querySelectorAll<HTMLElement>('[data-blok-database-timeline-units] > [data-day]')];
+
+        expect(lines).toHaveLength(timelineWindow(CENTER, 'hours').days * 96);
+        expect(lines.map((el) => parseFloat(el.style.insetInlineStart))).toEqual(
+          ticks.map((el) => parseFloat(el.style.insetInlineStart) + parseFloat(el.style.width) / 2)
+        );
+        document.body.innerHTML = '';
+        expect(open().querySelector('[data-blok-database-timeline-tick-line]')).toBeNull();
+      });
+
+      it('has one tick row under a toolbar that reads the full date', () => {
+        const root = open({ view: timelineView({ timelineZoom: 'hours' }) });
+
+        expect(root.querySelector('[data-blok-database-timeline-groups]')).toBeNull();
+        expect(root.style.getPropertyValue('--blok-database-timeline-header-rows')).toBe('1');
+        expect(root.querySelector('[data-blok-database-timeline-month]')?.textContent).toBe('October 9, 2026');
+        document.body.innerHTML = '';
+        expect(open().querySelector('[data-blok-database-timeline-month]')?.textContent).toMatch(/^[A-Z][a-z]+ 2026$/);
+      });
+
+      it('reads the full date in the editor\'s locale', () => {
+        const root = open({ view: timelineView({ timelineZoom: 'hours' }), locale: 'de-DE' });
+
+        expect(root.querySelector('[data-blok-database-timeline-month]')?.textContent).toBe('9. Oktober 2026');
+      });
+
+      it('sets the day period of a tick apart, inside the text the now label measures', () => {
+        const root = open({ view: timelineView({ timelineZoom: 'hours' }) });
+        const index = daysBetween(hoursStart, CENTER) * 96 + 17 * 4 + 1;
+        const tick = root.querySelectorAll<HTMLElement>('[data-blok-database-timeline-units] > [data-day]')[index];
+        const period = tick?.firstElementChild?.querySelector('[data-blok-database-timeline-day-period]');
+
+        expect(period?.textContent).toBe('PM');
+        expect(tick?.textContent).toMatch(/^5:15\sPM$/);
+      });
+
+      it('has no day period span in a 24-hour locale', () => {
+        const root = open({ view: timelineView({ timelineZoom: 'hours' }), locale: 'de-DE' });
+
+        expect(root.querySelector('[data-blok-database-timeline-day-period]')).toBeNull();
+      });
+    });
+
     it('shades weekends at day-level zoom and not at year zoom', () => {
       expect(mount().root.querySelectorAll('[data-blok-database-timeline-weekend]').length).toBeGreaterThan(0);
       document.body.innerHTML = '';

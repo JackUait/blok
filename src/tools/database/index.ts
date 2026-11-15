@@ -4154,7 +4154,8 @@ export class DatabaseTool implements BlockTool {
 
     const currentView = this.boardContainer.querySelector<HTMLElement>('[data-blok-database-board]')
       ?? this.boardContainer.querySelector<HTMLElement>('[data-blok-database-list]')
-      ?? this.boardContainer.querySelector<HTMLElement>('[data-blok-database-table]');
+      ?? this.boardContainer.querySelector<HTMLElement>('[data-blok-database-table]')
+      ?? this.boardContainer.querySelector<HTMLElement>('[data-blok-database-feed]');
     const titlePropId = this.titlePropertyId();
 
     if (currentView === null) {

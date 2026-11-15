@@ -116,4 +116,22 @@ describe('Feed rename from the peek', () => {
     expect(el.querySelector('[data-blok-database-feed-time] + [data-blok-database-feed-edited]')).not.toBeNull();
     tool.destroy();
   });
+
+  // An undo or a collaborator's rename reaches the feed as a block change, not through the peek.
+  it('renames the post when its row block changes', async () => {
+    const doc = makeDoc([fakeRow('a', 'db', { title: 'Gamma' }, 'a0')]);
+    const row = doc.rows.get('a');
+    const { tool, el } = buildTool(doc, {}, tableData(SCHEMA, { type: 'feed' }));
+
+    if (row === undefined) throw new Error('no row');
+    row.data = { ...row.data, properties: { ...row.data.properties, title: 'Gamma 2' } };
+    doc.api.events.emit('block changed', {
+      event: new CustomEvent('block-changed', { detail: { target: row.block, index: 0, origin: 'local' } }),
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(el.querySelector('[data-blok-database-feed-title]')?.textContent).toBe('Gamma 2');
+    tool.destroy();
+  });
 });

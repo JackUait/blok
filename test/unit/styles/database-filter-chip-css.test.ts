@@ -69,7 +69,7 @@ describe('advanced filter popover', () => {
     expect(declared(group, 'border')).toEqual(['none']);
     expect(declared(group, 'background-color')).toEqual(['var(--blok-database-column-bg)']);
     expect(declared(group, 'border-radius')).toEqual(['var(--blok-radius-control)']);
-    expect(declared(group, 'padding')).toEqual(['var(--blok-space-2) var(--blok-space-2) 0']);
+    expect(declared(group, 'padding')).toEqual(['var(--blok-space-2) var(--blok-space-2) var(--blok-space-1)']);
     expect(declared(group, 'gap')).toEqual(['var(--blok-space-2)']);
   });
 
@@ -82,7 +82,10 @@ describe('advanced filter popover', () => {
   it('spaces a rule\'s buttons 4, then 8, then 16 before the ⋯', () => {
     expect(declared('[data-blok-database-filter-rule]', 'gap')).toEqual(['var(--blok-space-2)']);
     expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-side]', 'margin-inline-start')).toEqual(['calc(-1 * var(--blok-space-1))']);
-    expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-button] + [data-blok-database-filter-rule-more]', 'margin-inline-start')).toEqual(['var(--blok-space-2)']);
+    // r36-filter-adv1.raw: the value field also ends 16 before the ⋯. An empty item before the ⋯ adds the second 8.
+    expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-button] + [data-blok-database-filter-rule-more]', 'margin-inline-start')).toEqual([]);
+    expect(declared('[data-blok-database-filter-rule]::after', 'content')).toEqual(["''"]);
+    expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-more]', 'order')).toEqual(['1']);
   });
 
   // notion-motion.md Round 23 §2 (r23-adv-btns.raw): "Select a date" is a fixed 165, its text left and its chevron right.
@@ -98,6 +101,55 @@ describe('advanced filter popover', () => {
   // r19-adv-groupmore.raw: with a group present the outer Value field grew 164 → 215.5, so every ⋯ shares one column.
   it('lets a rule\'s value field grow so the ⋯ buttons line up', () => {
     expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-value]', 'flex')).toEqual(['1 0 auto']);
+  });
+
+  // notion-motion.md Round 36 §2 (r36-filter-adv1.raw): the value field is 170, its text 164 at +6, nothing after.
+  it('makes an empty value field 170 wide', () => {
+    expect(declared('[data-blok-database-filter-rule] > [data-blok-database-filter-rule-value]', 'padding-inline')).toEqual(['var(--blok-space-1-5) 0']);
+  });
+
+  // Round 36 §2 (r36-filter-group.raw) and Round 19 §1 (r19-adv-group.raw): with a group, the outer property button
+  // grows to 120 and the rest of the room splits evenly between the value field and the space before the ⋯.
+  it('grows the outer property button to 120 and splits the rest between the value and the ⋯ gap', () => {
+    const property = '[data-blok-database-filter-rule] > [data-blok-database-filter-rule-button]:nth-child(2)';
+
+    expect(declared(property, 'flex-grow')).toEqual(['1']);
+    expect(declared(property, 'max-width')).toEqual(['120px']);
+    // A longer name keeps its width: min-width wins over max-width.
+    expect(declared(property, 'min-width')).toEqual(['max-content']);
+    expect(declared('[data-blok-database-filter-rule]::after', 'flex')).toEqual(['1 0 0']);
+  });
+
+  // r36-filter-group.raw: the box is at +77 and 89 down, 9 before its ⋯, and the popover 247 tall: 1px all round.
+  it('sets a filter group box 1px in from its line', () => {
+    expect(declared('[data-blok-database-filter-group]', 'margin')).toEqual(['var(--blok-space-0-25)']);
+  });
+
+  // r36-filter-group.raw, r19-adv-group2.raw: the group's "+ Add filter rule" is 4 under its last rule and 4 in from the box.
+  it('tucks a group\'s Add filter rule 4 under its last rule and 4 in from the box', () => {
+    expect(declared('[data-blok-database-filter-group] > [data-blok-database-filter-add-rule]', 'margin')).toEqual(['calc(-1 * var(--blok-space-1)) calc(-1 * var(--blok-space-1)) 0']);
+    // A panel row's 100% would keep it 8 short of the box's width.
+    expect(declared('[data-blok-database-filter-group] > [data-blok-database-filter-add-rule]', 'width')).toEqual(['auto']);
+  });
+
+  // notion-motion.md Round 36 §2: "And ⌄" is 61 wide at +7, so it must not widen its 60 column and push the property to +77.
+  it('lets And overhang its 60 column on the left', () => {
+    expect(declared('[data-blok-database-filter-conjunction-cell]', 'min-width')).toEqual(['0']);
+  });
+});
+
+// notion-motion.md Round 36 §2 (r36-filter1.raw): one rule from a chip is 220×71. The head and the 20×20 ⋯ are both
+// 8 down, the ⋯ 12 from the right edge, the value field at (12,35).
+describe('filter chip popover head', () => {
+  it('sets the head 8 down and the field 35 down', () => {
+    expect(declared('[data-blok-database-chip-header]', 'padding')).toEqual(['var(--blok-space-1) var(--blok-space-1) var(--blok-space-0-75)']);
+    expect(declared('[data-blok-database-chip-header]:not([data-blok-database-color-rule-header])', 'align-items')).toEqual(['flex-start']);
+  });
+
+  it('makes the ⋯ 20 wide and 12 from the edge', () => {
+    // The later rule wins over the 4px shared with the operator button.
+    expect(declared('[data-blok-database-chip-more]', 'padding-inline').at(-1)).toBe('var(--blok-space-0-5)');
+    expect(declared('[data-blok-database-chip-more]', 'margin-inline-end')).toEqual(['var(--blok-space-1)']);
   });
 });
 

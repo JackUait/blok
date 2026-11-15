@@ -1721,6 +1721,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R55_BYTES = 2159;
     // Lane r60: Round 36 card ⋯ menu fades with no scale, peek ⋯ icon at +12. Net database.css growth against origin/main.
     const DATABASE_R60_BYTES = 421;
+    // Lane r61: Round 36 filter popovers: the chip head and ⋯, value field 170, property up to 120, group box and its Add filter rule. Net database.css growth against origin/main.
+    const DATABASE_R61_BYTES = 1400;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2253,6 +2255,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R56_BYTES
       + DATABASE_R55_BYTES
       + DATABASE_R60_BYTES
+      + DATABASE_R61_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

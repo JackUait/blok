@@ -184,10 +184,15 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   const pageFromUrl = (): string | null => new URL(location.href).searchParams.get('page');
   const navigate = (id: string, replace = false): void => {
     const url = new URL(location.href);
+    const from = url.searchParams.get('page');
     url.searchParams.set('page', id);
     if (replace) history.replaceState(null, '', url);
     else history.pushState(null, '', url);
     onRoute();
+    // Notion ouvre une autre page à son début. Seul un vrai changement de page
+    // remonte : corriger l'URL de la page courante laisse le lecteur où il est,
+    // et la position par onglet, restaurée par shell.ts, n'est pas concernée.
+    if (from !== id) window.scrollTo(0, 0);
   };
   const saveManifest = (): void => {
     if (!ws.index) return;

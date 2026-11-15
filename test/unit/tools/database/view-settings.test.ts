@@ -28,6 +28,7 @@ import {
   resolveCountCaps,
   withPropertyOrder,
   withPropertySetting,
+  withPropertyVisibility,
 } from '../../../../src/tools/database/view-settings';
 import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
 
@@ -220,6 +221,26 @@ describe('view-settings', () => {
       withPropertySetting(original, schema, 'p-due', { width: 2 });
 
       expect(original.properties).toEqual([{ id: 'p-due', width: 1 }]);
+    });
+  });
+
+  // notion-motion.md Round 36 §1: one ordered list; a toggle moves the property to the Shown/Hidden boundary.
+  describe('withPropertyVisibility', () => {
+    it('puts a hidden property first among the hidden ones, and a shown one last among the shown', () => {
+      const start = view({ properties: [{ id: 'p-title', visible: true }, { id: 'p-status', visible: true }, { id: 'p-due', visible: false }, { id: 'p-done', visible: true }] });
+
+      expect(withPropertyVisibility(start, schema, ['p-status'], false).map((p) => [p.id, p.visible])).toEqual([
+        ['p-title', true], ['p-done', true], ['p-status', false], ['p-due', false],
+      ]);
+      expect(withPropertyVisibility(start, schema, ['p-due'], true).map((p) => p.id)).toEqual(['p-title', 'p-status', 'p-done', 'p-due']);
+    });
+
+    it('keeps unknown fields and entries for properties a peer added', () => {
+      const start = view({ properties: [{ id: 'p-due', width: 90, future: 'x' }, { id: 'p-new-from-peer', visible: true }] });
+      const next = withPropertyVisibility(start, schema, ['p-due'], false);
+
+      expect(next).toContainEqual({ id: 'p-due', width: 90, future: 'x', visible: false });
+      expect(next).toContainEqual({ id: 'p-new-from-peer', visible: true });
     });
   });
 

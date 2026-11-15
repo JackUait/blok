@@ -68,7 +68,7 @@ import {
   resolveViewProperties,
   resolveWrapCells,
   withPropertyOrder,
-  withPropertySetting,
+  withPropertyVisibility,
 } from './view-settings';
 import type { ViewChanges } from './database-model';
 import type {
@@ -87,7 +87,6 @@ import type {
   SortConfig,
   SubItemsDisplay,
   SubItemsFilter,
-  ViewPropertySetting,
   ViewType,
 } from './types';
 import { nanoid } from 'nanoid';
@@ -337,6 +336,10 @@ const filterValue = (view: DatabaseViewConfig, schema: PropertyDefinition[]): { 
 };
 
 const capital = (word: string): string => `${word.charAt(0).toUpperCase()}${word.slice(1)}`;
+
+/** Whether `query`'s letters appear in `text` in order: Notion's "te" finds "Multi-select" (notion-motion.md Round 36 §1). */
+const inSequence = (text: string, query: string): boolean =>
+  [...query].reduce((at, letter) => (at === -1 ? -1 : text.indexOf(letter, at) + 1 || -1), 0) !== -1;
 
 /** Builds the pages. One instance per open panel; every page reads `ctx` afresh on refresh. */
 export class ViewSettingsPages {
@@ -1448,7 +1451,7 @@ export class ViewSettingsPages {
         const property = schema.find((p) => p.id === entry.id);
         const shown = entry.visible || entry.id === titleId;
 
-        if (property === undefined || shown !== visible || !property.name.toLowerCase().includes(query)) return [];
+        if (property === undefined || shown !== visible || !inSequence(property.name.toLowerCase(), query)) return [];
 
         return [{ id: property.id, element: this.propertyVisibilityRow(panel, property, entry.visible) }];
       });
@@ -1471,13 +1474,13 @@ export class ViewSettingsPages {
 
       if (shown.length > 0) {
         parts.push(
-          this.visibilityHeader(panel, SHOWN_IN_KEYS[type] ?? 'propertiesSection', hideable.filter((entry) => entry.visible), false),
+          this.visibilityHeader(panel, SHOWN_IN_KEYS[type] ?? 'propertiesSection', query === '' ? hideable.filter((entry) => entry.visible) : [], false),
           reorderList('database-properties-list', shown)
         );
       }
       if (hidden.length > 0) {
         parts.push(
-          this.visibilityHeader(panel, HIDDEN_IN_KEYS[type] ?? 'settingsHiddenProperties', hideable.filter((entry) => !entry.visible), true),
+          this.visibilityHeader(panel, HIDDEN_IN_KEYS[type] ?? 'settingsHiddenProperties', query === '' ? hideable.filter((entry) => !entry.visible) : [], true),
           reorderList('database-properties-hidden-list', hidden)
         );
       }
@@ -1533,7 +1536,7 @@ export class ViewSettingsPages {
     eye.innerHTML = shown ? IconPreview : IconEyeSlash;
     eye.disabled = isTitle || !this.shared;
     eye.addEventListener('click', () => {
-      this.ctx.updateView({ properties: withPropertySetting(this.ctx.view(), this.ctx.schema(), property.id, { visible: !shown }) });
+      this.ctx.updateView({ properties: withPropertyVisibility(this.ctx.view(), this.ctx.schema(), [property.id], !shown) });
       panel.refresh();
     });
     row.append(icon, name, eye);
@@ -1614,21 +1617,10 @@ export class ViewSettingsPages {
     toggle.textContent = this.t(show ? 'groupShowAll' : 'groupHideAll');
     toggle.disabled = !this.shared;
     toggle.addEventListener('click', () => {
-      const view = this.ctx.view();
-      const properties = targets.reduce<ViewPropertySetting[] | undefined>(
-        (entries, entry) => withPropertySetting(entries === undefined ? view : { ...view, properties: entries }, this.ctx.schema(), entry.id, { visible: show }),
-        undefined
-      ) ?? [];
-
-      this.ctx.updateView({ properties });
+      this.ctx.updateView({ properties: withPropertyVisibility(this.ctx.view(), this.ctx.schema(), targets.map((entry) => entry.id), show) });
       panel.refresh();
-      // The click removes this button. Focus must stay in the panel, or its arrow keys stop working.
-      if ((document.activeElement?.closest('[data-blok-testid="database-view-settings"]') ?? null) === null) {
-        const other = show ? 'database-property-hide-all' : 'database-property-show-all';
-
-        (document.querySelector<HTMLElement>(`[data-blok-testid="${other}"]`)
-          ?? document.querySelector<HTMLElement>('[data-blok-testid="database-property-search"]'))?.focus();
-      }
+      // notion-motion.md Round 36 §1: focus goes to the search.
+      document.querySelector<HTMLElement>('[data-blok-testid="database-property-search"]')?.focus();
     });
     header.append(toggle);
 

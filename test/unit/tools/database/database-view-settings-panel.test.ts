@@ -1052,20 +1052,57 @@ describe('view settings panel', () => {
         expect(exists('database-property-hide-all')).toBe(false);
       });
 
-      it('keeps focus in the panel when Show all removes its own section', () => {
-        harness({ properties: [{ id: 'due', visible: false }] }).open('properties');
+      // notion-motion.md Round 36 §1: focus goes to the search after Show all and after Hide all.
+      it('focuses the search after Show all', () => {
+        harness({ properties: [{ id: 'due', visible: false }, { id: 'num', visible: true }] }).open('properties');
         q('database-property-show-all')?.focus();
         click('database-property-show-all');
-        expect(exists('database-property-show-all')).toBe(false);
-        expect(document.activeElement?.closest('[data-blok-testid="database-view-settings"]')).not.toBeNull();
+        expect(q('database-property-search')).toHaveFocus();
       });
 
-      it('keeps focus in the panel when Hide all leaves only the title', () => {
-        harness({ properties: [{ id: 'title', visible: true }, { id: 'due', visible: true }, { id: 'num', visible: false }, { id: 'stage', visible: false }, { id: 'prog', visible: false }, { id: 'owner', visible: false }] }).open('properties');
+      it('focuses the search after Hide all', () => {
+        harness({ properties: [{ id: 'title', visible: true }, { id: 'due', visible: true }, { id: 'num', visible: false }] }).open('properties');
         q('database-property-hide-all')?.focus();
         click('database-property-hide-all');
-        expect(exists('database-property-hide-all')).toBe(false);
-        expect(document.activeElement?.closest('[data-blok-testid="database-view-settings"]')).not.toBeNull();
+        expect(q('database-property-search')).toHaveFocus();
+      });
+
+      // notion-motion.md Round 36 §1: one ordered list; every toggle moves the property to the Shown/Hidden boundary.
+      it('lists the most recently hidden property first under Hidden', () => {
+        const h = harness({ properties: ['title', 'due', 'num', 'stage', 'prog', 'owner'].map((id) => ({ id, visible: true })) });
+
+        h.open('properties');
+        vi.mocked(h.ctx.updateView).mockClear();
+        eye('owner')?.click();
+        eye('num')?.click();
+        eye('prog')?.click();
+        expect(hiddenIds()).toEqual(['prog', 'num', 'owner']);
+        expect(shownIds()).toEqual(['title', 'due', 'stage']);
+        expect(h.ctx.updateView).toHaveBeenCalledTimes(3);
+      });
+
+      it('puts a re-shown property at the end of Shown, and its column last', () => {
+        const h = harness({ properties: [{ id: 'title', visible: true }, { id: 'due', visible: true }, { id: 'stage', visible: false }, { id: 'num', visible: true }, { id: 'prog', visible: true }, { id: 'owner', visible: true }] });
+
+        h.open('properties');
+        eye('stage')?.click();
+        expect(shownIds()).toEqual(['title', 'due', 'num', 'prog', 'owner', 'stage']);
+        expect(h.state.view.properties?.filter((p) => p.visible).map((p) => p.id)).toEqual(['title', 'due', 'num', 'prog', 'owner', 'stage']);
+      });
+
+      it('Show all appends the hidden properties after the shown ones, in their Hidden order', () => {
+        const h = harness({ properties: [{ id: 'title', visible: true }, { id: 'due', visible: false }, { id: 'num', visible: true }, { id: 'stage', visible: false }, { id: 'prog', visible: true }, { id: 'owner', visible: false }] });
+
+        h.open('properties');
+        click('database-property-show-all');
+        expect(shownIds()).toEqual(['title', 'num', 'prog', 'due', 'stage', 'owner']);
+        expect(h.state.view.properties?.map((p) => p.id)).toEqual(['title', 'num', 'prog', 'due', 'stage', 'owner']);
+      });
+
+      it('Hide all keeps the shown order at the top of Hidden', () => {
+        harness({ properties: [{ id: 'title', visible: true }, { id: 'stage', visible: true }, { id: 'due', visible: true }, { id: 'num', visible: false }] }).open('properties');
+        click('database-property-hide-all');
+        expect(hiddenIds()).toEqual(['stage', 'due', 'prog', 'owner', 'num']);
       });
 
       it('the search narrows both sections', () => {
@@ -1078,6 +1115,42 @@ describe('view settings panel', () => {
         // Only "Progress" (hidden) and "Owner" (shown) carry an r.
         expect(shownIds()).toEqual(['owner']);
         expect(hiddenIds()).toEqual(['prog']);
+      });
+
+      // notion-motion.md Round 36 §1: "te" matched Multi-select, so letters match in sequence.
+      it('the search matches letters in sequence, ignoring case', () => {
+        harness({ properties: [{ id: 'due', visible: true }, { id: 'num', visible: true }, { id: 'stage', visible: false }] }).open('properties');
+        const search = q('database-property-search');
+
+        if (!(search instanceof HTMLInputElement)) throw new Error('no search');
+        search.value = 'AE';
+        search.dispatchEvent(new Event('input', { bubbles: true }));
+        // "Name" and "Stage" hold an a then an e; "Amount" has no e after its a.
+        expect(shownIds()).toEqual(['title']);
+        expect(hiddenIds()).toEqual(['stage']);
+      });
+
+      it('hides Hide all and Show all while a query is present', () => {
+        harness({ properties: [{ id: 'due', visible: false }, { id: 'num', visible: true }, { id: 'stage', visible: true }, { id: 'prog', visible: false }, { id: 'owner', visible: true }] }).open('properties');
+        const search = q('database-property-search');
+
+        if (!(search instanceof HTMLInputElement)) throw new Error('no search');
+        search.value = 'r';
+        search.dispatchEvent(new Event('input', { bubbles: true }));
+        expect(sections()).toEqual(['tools.database.settingsShownInTable', 'tools.database.settingsHiddenInTable']);
+        expect(exists('database-property-hide-all')).toBe(false);
+        expect(exists('database-property-show-all')).toBe(false);
+      });
+
+      it('reads "No results" with no headers when nothing matches', () => {
+        harness({ properties: [{ id: 'due', visible: false }] }).open('properties');
+        const search = q('database-property-search');
+
+        if (!(search instanceof HTMLInputElement)) throw new Error('no search');
+        search.value = 'zzz';
+        search.dispatchEvent(new Event('input', { bubbles: true }));
+        expect(sections()).toEqual([]);
+        expect(document.querySelector('[data-blok-database-panel-page="properties"] [data-blok-database-panel-note]')?.textContent).toBe('find.noResults');
       });
 
       it('drops a section whose rows the search filtered out', () => {
@@ -1235,7 +1308,7 @@ describe('view settings panel', () => {
       click('database-property-hide-all');
 
       expect(h.ctx.updateView).toHaveBeenCalledTimes(1);
-      expect(h.state.view.properties?.filter((p) => p.visible).map((p) => p.id)).toEqual([]);
+      expect(h.state.view.properties?.filter((p) => p.id !== 'title' && p.visible).map((p) => p.id)).toEqual([]);
       expect(h.state.view.properties?.some((p) => p.id === 'title' && !p.visible)).toBe(false);
       expect(exists('database-property-hide-all')).toBe(false);
       expect(document.querySelector('[data-blok-testid="database-property-show-all"]')?.textContent).toBe('tools.database.groupShowAll');

@@ -69,13 +69,8 @@ export const withPropertySetting = (
   return [...entries, { id: propertyId, visible: current?.visible ?? true, ...patch }];
 };
 
-/** The `properties` list after moving one column before another, or to the end when `beforeId` is null. */
-export const withPropertyOrder = (
-  view: DatabaseViewConfig,
-  schema: PropertyDefinition[],
-  propertyId: string,
-  beforeId: string | null
-): ViewPropertySetting[] => {
+/** Every stored entry plus the resolved properties the store lacks, in column order. */
+const orderedEntries = (view: DatabaseViewConfig, schema: PropertyDefinition[]): ViewPropertySetting[] => {
   const stored = storedOrMaterialised(view, schema);
   const storedIds = new Set(stored.map((entry) => entry.id));
   const resolved = resolveViewProperties(view, schema);
@@ -83,12 +78,45 @@ export const withPropertyOrder = (
     .filter((p) => !storedIds.has(p.id))
     .map((p) => ({ id: p.id, visible: p.visible }));
   // Alphabetical: the move starts from the columns as shown, not with the unlisted ones last.
-  const entries = view.propertyOrder === 'alphabetical'
+  return view.propertyOrder === 'alphabetical'
     ? [
       ...resolved.map((p) => stored.find((entry) => entry.id === p.id) ?? { id: p.id, visible: p.visible }),
       ...stored.filter((entry) => !resolved.some((p) => p.id === entry.id)),
     ]
     : [...stored, ...missing];
+};
+
+/**
+ * The `properties` list after showing or hiding `ids`. Shown entries go first, then the
+ * moved ones in the given order, then the other hidden ones: a re-shown column lands
+ * last, and a hidden one tops the hidden list (notion-motion.md Round 36 §1).
+ */
+export const withPropertyVisibility = (
+  view: DatabaseViewConfig,
+  schema: PropertyDefinition[],
+  ids: readonly string[],
+  visible: boolean
+): ViewPropertySetting[] => {
+  const entries = orderedEntries(view, schema);
+  const visibleById = new Map(resolveViewProperties(view, schema).map((p) => [p.id, p.visible]));
+  const titleIds = new Set(schema.filter((p) => p.type === 'title').map((p) => p.id));
+  const moving = new Set(ids);
+  const shown = (entry: ViewPropertySetting): boolean =>
+    titleIds.has(entry.id) || (visibleById.get(entry.id) ?? entry.visible !== false);
+  const rest = entries.filter((entry) => !moving.has(entry.id));
+  const moved = ids.flatMap((id) => entries.filter((entry) => entry.id === id).map((entry) => ({ ...entry, visible })));
+
+  return [...rest.filter(shown), ...moved, ...rest.filter((entry) => !shown(entry))];
+};
+
+/** The `properties` list after moving one column before another, or to the end when `beforeId` is null. */
+export const withPropertyOrder = (
+  view: DatabaseViewConfig,
+  schema: PropertyDefinition[],
+  propertyId: string,
+  beforeId: string | null
+): ViewPropertySetting[] => {
+  const entries = orderedEntries(view, schema);
   const moving = entries.find((entry) => entry.id === propertyId);
 
   if (moving === undefined || propertyId === beforeId) {

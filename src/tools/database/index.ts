@@ -1763,7 +1763,7 @@ export class DatabaseTool implements BlockTool {
 
       return;
     }
-    const name = source.titleElement?.textContent ?? source.title;
+    const typed = source.titleElement?.textContent ?? source.title;
     const shown = this.sourceTitleElement?.getAttribute('data-database-id') === source.block.id ? this.sourceTitleElement : null;
     const el = shown ?? this.createSourceTitle(source);
 
@@ -1772,8 +1772,10 @@ export class DatabaseTool implements BlockTool {
       this.sourceTitleElement = el;
       titleEl.after(el);
     }
-    // A linked database's name sits after its ↗, in its own span.
-    const text = el.querySelector<HTMLElement>('[data-blok-database-source-name]') ?? el;
+    // A linked database's name sits after its ↗, in its own span. Untitled, it reads as its link does.
+    const linkedName = el.querySelector<HTMLElement>('[data-blok-database-source-name]');
+    const text = linkedName ?? el;
+    const name = linkedName !== null && typed.trim() === '' ? this.api.i18n.t('tools.database.relationUntitledDatabase') : typed;
 
     // Never under the caret: a redraw while typing would move it.
     if (text.textContent !== name && document.activeElement !== el) {

@@ -13058,6 +13058,20 @@ input[data-blok-database-picker-search]:focus {
   position: relative;
 }
 
+/*
+ * r39-mds-after-link.raw, from the panel top: "New table view" row at 46, "Views on" text at 88.3,
+ * "Table" text at 117.5, panel 143.9 tall. Only in View settings: the linked picker's copy is unmeasured.
+ */
+[data-blok-database-panel][data-docked]:not([data-blok-database-creation-panel])[data-blok-database-panel-page="linked-new-view"] > [data-blok-database-panel-header] + [data-blok-database-panel-row] {
+  --blok-database-new-view-first-row-gap: 7px;
+
+  margin-block-start: var(--blok-database-new-view-first-row-gap);
+}
+
+[data-blok-database-panel][data-docked]:not([data-blok-database-creation-panel])[data-blok-database-panel-page="linked-new-view"] > [data-blok-database-panel-section] {
+  padding-block: 15.3px 8.2px;
+}
+
 /* r38-manage-sources.raw: the ⋯ menu's glyphs are 20px in primary ink, text at +40. */
 [data-blok-database-manage-source-menu] [data-blok-database-panel-icon] {
   color: var(--blok-database-ink);

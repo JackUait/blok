@@ -380,4 +380,28 @@ describe('View settings "Manage data sources" (notion-motion.md Round 38 §4)', 
     await vi.waitFor(() => expect(region?.textContent).toBe('Src B ID copied'), { timeout: 2000 });
     expect(region?.getAttribute('aria-live')).toBe('assertive');
   });
+
+  it('with no host lever, a linked row opens that database as a full page in place', async () => {
+    history.replaceState(null, '', '/editor');
+    await make(doc());
+    await openManage();
+    byTestId('database-manage-source-other')?.click();
+    await quiet();
+
+    expect(holder?.querySelector('[data-blok-id="other"]')?.hasAttribute('data-blok-database-full-open-target')).toBe(true);
+    expect(window.location.hash).toBe('#other?full');
+    history.replaceState(null, '', '/editor');
+  });
+
+  // The linked view's own title falls back the same way (paintLinkedTitle).
+  it('an untitled linked database is titled "↗ Untitled database", never a bare arrow', async () => {
+    await make(doc().map((b) => (b.id === 'spare' ? { ...b, data: { ...(b.data as DatabaseData), title: '' } } : b)));
+    await openManage();
+    byTestId('database-manage-sources-link')?.click();
+    await quiet();
+    byTestId('database-manage-link-option-spare')?.click();
+    await quiet();
+
+    expect(own('[data-blok-database-source-title]').textContent?.trim()).toBe('Untitled database');
+  });
 });

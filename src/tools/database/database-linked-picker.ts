@@ -51,6 +51,7 @@ export const newViewPage = (
   copyView: (view: DatabaseViewConfig) => void
 ): PanelPage => ({
   title: t('tools.database.newView'),
+  name: 'linked-new-view',
   build: (panel) => [
     panelRow({
       label: fresh.label,

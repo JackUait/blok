@@ -16038,6 +16038,15 @@ input[data-blok-database-picker-search]:focus {
   position: relative;
 }
 
+[data-blok-database-panel][data-docked]:not([data-blok-database-creation-panel])[data-blok-database-panel-page="linked-new-view"] > [data-blok-database-panel-header] + [data-blok-database-panel-row] {
+  --blok-database-new-view-first-row-gap: 7px;
+  margin-block-start: var(--blok-database-new-view-first-row-gap);
+}
+
+[data-blok-database-panel][data-docked]:not([data-blok-database-creation-panel])[data-blok-database-panel-page="linked-new-view"] > [data-blok-database-panel-section] {
+  padding-block: 15.3px 8.2px;
+}
+
 [data-blok-database-manage-source-menu] [data-blok-database-panel-icon] {
   color: var(--blok-database-ink);
 }

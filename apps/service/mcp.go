@@ -46,8 +46,9 @@ func (s *Service) initMCP() error {
 	sdk := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server {
 		server := mcp.NewServer(&mcp.Implementation{Name: "blok-cloud", Version: "1.0.0"}, &mcp.ServerOptions{Instructions: "Workspace pages are listed and created with workspace tools. Document content is edited with blok_open, blok_read and blok_execute.\n\n" + attached.Instructions()})
 		server.AddTool(&mcp.Tool{Name: "blok_list_workspaces", Description: "List workspaces available to the signed-in user.", InputSchema: json.RawMessage(`{"type":"object","properties":{}}`)}, s.mcpListWorkspaces)
+		server.AddTool(&mcp.Tool{Name: "blok_list_teamspaces", Description: "List real closed teamspaces nested in a workspace; metadata does not grant content access.", InputSchema: json.RawMessage(`{"type":"object","properties":{"workspace":{"type":"string"},"includeArchived":{"type":"boolean"}},"required":["workspace"]}`)}, s.mcpListTeamspaces)
 		server.AddTool(&mcp.Tool{Name: "blok_list_pages", Description: "List pages in a workspace by slug.", InputSchema: json.RawMessage(`{"type":"object","properties":{"workspace":{"type":"string"}},"required":["workspace"]}`)}, s.mcpListPages)
-		server.AddTool(&mcp.Tool{Name: "blok_create_page", Description: "Create a page in a workspace. Members and admins may create pages.", InputSchema: json.RawMessage(`{"type":"object","properties":{"workspace":{"type":"string"},"title":{"type":"string"},"parentId":{"type":"string"}},"required":["workspace","title"]}`)}, s.mcpCreatePage)
+		server.AddTool(&mcp.Tool{Name: "blok_create_page", Description: "Create a page. Root pages are private by default; with teamspaceId roots are shared only with that teamspace. Children inherit parent access. Use visibility=workspace explicitly for a shared root. Members and admins may create pages.", InputSchema: json.RawMessage(`{"type":"object","properties":{"workspace":{"type":"string"},"title":{"type":"string"},"parentId":{"type":"string"},"teamspaceId":{"type":"string"},"visibility":{"type":"string","enum":["private","workspace","inherit"]}},"required":["workspace","title"]}`)}, s.mcpCreatePage)
 		server.AddTool(&mcp.Tool{Name: "blok_upload_image", Description: "Upload a private workspace image (PNG, JPEG, GIF or WebP, up to 5 MiB). Returns a persistent /files/ URL to use in document content. Requires workspace write access.", InputSchema: json.RawMessage(`{"type":"object","properties":{"workspace":{"type":"string"},"dataUrl":{"type":"string"}},"required":["workspace","dataUrl"],"additionalProperties":false}`)}, s.mcpUploadImage)
 		if err := attached.Attach(server); err != nil {
 			return nil
@@ -242,26 +243,36 @@ func (s *Service) mcpListPages(ctx context.Context, req *mcp.CallToolRequest) (*
 	if !ok {
 		return mcpError("Workspace unavailable"), nil
 	}
-	levels, _, err := s.workspaceLevels(ctx, s.DB, ctx.Value(mcpUserKey{}).(identity).ID, ws.ID)
+	standings, _, err := s.workspaceStandings(ctx, s.DB, ctx.Value(mcpUserKey{}).(identity).ID, ws.ID)
 	if err != nil {
 		return mcpError("Could not list pages"), nil
 	}
-	rows, err := s.DB.Query(ctx, `SELECT id,metadata FROM pages WHERE workspace_id=$1 AND NOT deleted AND NOT trashed ORDER BY (metadata->>'position')::numeric NULLS LAST,id`, ws.ID)
+	rows, err := s.DB.Query(ctx, `SELECT id,metadata,public_id::text FROM pages WHERE workspace_id=$1 AND NOT deleted AND NOT trashed ORDER BY (metadata->>'position')::numeric NULLS LAST,id`, ws.ID)
 	if err != nil {
 		return mcpError("Could not list pages"), nil
 	}
 	defer rows.Close()
 	pages := []json.RawMessage{}
 	for rows.Next() {
-		var id string
+		var id, publicID string
 		var raw json.RawMessage
-		if rows.Scan(&id, &raw) != nil {
+		if rows.Scan(&id, &raw, &publicID) != nil {
 			return mcpError("Could not list pages"), nil
 		}
-		if levels[id] < levelView {
+		if standings[id].Level < levelView {
 			continue
 		}
-		pages = append(pages, raw)
+		var metadata map[string]any
+		if json.Unmarshal(raw, &metadata) != nil {
+			return mcpError("Invalid metadata"), nil
+		}
+		metadata["publicId"] = publicID
+		metadata["teamspaceId"] = nil
+		if standings[id].TeamspaceID != "" {
+			metadata["teamspaceId"] = standings[id].TeamspaceID
+		}
+		encoded, _ := json.Marshal(metadata)
+		pages = append(pages, encoded)
 	}
 	if rows.Err() != nil {
 		return mcpError("Could not list pages"), nil
@@ -270,64 +281,19 @@ func (s *Service) mcpListPages(ctx context.Context, req *mcp.CallToolRequest) (*
 }
 
 func (s *Service) mcpCreatePage(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	var args struct{ Workspace, Title, ParentID string }
-	if json.Unmarshal(req.Params.Arguments, &args) != nil || args.Title == "" || len(args.Title) > 4096 {
-		return mcpError("Invalid page title or arguments"), nil
+	var args struct{ Workspace, Title, ParentID, TeamspaceID, Visibility string }
+	if json.Unmarshal(req.Params.Arguments, &args) != nil {
+		return mcpError("Invalid arguments"), nil
 	}
 	ws, ok := s.mcpWorkspace(ctx, args.Workspace)
-	if !ok || ws.Role == "viewer" {
-		return mcpError("Write access required"), nil
+	if !ok {
+		return mcpError("Workspace unavailable"), nil
 	}
-	if args.ParentID != "" && !pageIDPattern.MatchString(args.ParentID) {
-		return mcpError("Invalid parent page"), nil
+	out, e := s.createScopedPage(ctx, ctx.Value(mcpUserKey{}).(identity), ws, args.Title, args.ParentID, args.TeamspaceID, args.Visibility)
+	if e != nil {
+		return mcpError(e.Error()), nil
 	}
-	tx, err := s.DB.Begin(ctx)
-	if err != nil {
-		return mcpError("Could not create page"), nil
-	}
-	defer tx.Rollback(ctx)
-	var revision int64
-	if err = tx.QueryRow(ctx, `SELECT revision FROM workspaces WHERE id=$1 FOR UPDATE`, ws.ID).Scan(&revision); err != nil {
-		return mcpError("Could not create page"), nil
-	}
-	var role string
-	if err = tx.QueryRow(ctx, `SELECT role FROM memberships WHERE workspace_id=$1 AND user_id=$2`, ws.ID, ctx.Value(mcpUserKey{}).(identity).ID).Scan(&role); err != nil || role == "viewer" {
-		return mcpError("Write access required"), nil
-	}
-	if args.ParentID != "" {
-		var exists bool
-		if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pages WHERE id=$1 AND workspace_id=$2 AND NOT deleted AND NOT trashed)`, args.ParentID, ws.ID).Scan(&exists); err != nil || !exists {
-			return mcpError("Parent page unavailable"), nil
-		}
-		granted, err := s.effectiveLevel(ctx, tx, ctx.Value(mcpUserKey{}).(identity).ID, args.ParentID)
-		if err != nil || granted < levelEdit {
-			return mcpError("Parent page unavailable"), nil
-		}
-	}
-	var position int
-	if err = tx.QueryRow(ctx, `SELECT count(*) FROM pages WHERE workspace_id=$1 AND NOT deleted AND NOT trashed`, ws.ID).Scan(&position); err != nil {
-		return mcpError("Could not create page"), nil
-	}
-	pageID := opaque()
-	var parent any
-	if args.ParentID != "" {
-		parent = args.ParentID
-	}
-	meta, _ := json.Marshal(map[string]any{"id": pageID, "title": args.Title, "parentId": parent, "position": position})
-	visibility := visInherit
-	if args.ParentID == "" {
-		visibility = visWorkspace
-	}
-	if _, err = tx.Exec(ctx, `INSERT INTO pages(id,workspace_id,metadata,content,visibility) VALUES($1,$2,$3,$4,$5)`, pageID, ws.ID, meta, []byte(`{"blocks":[]}`), visibility); err != nil {
-		return mcpError("Could not create page"), nil
-	}
-	if _, err = tx.Exec(ctx, `INSERT INTO page_shares(page_id,user_id,level,granted_by) VALUES($1,$2,'full',$2)`, pageID, ctx.Value(mcpUserKey{}).(identity).ID); err != nil {
-		return mcpError("Could not create page"), nil
-	}
-	if _, err = tx.Exec(ctx, `UPDATE workspaces SET revision=revision+1 WHERE id=$1`, ws.ID); err != nil || tx.Commit(ctx) != nil {
-		return mcpError("Could not create page"), nil
-	}
-	return mcpText(map[string]any{"id": pageID, "title": args.Title, "workspace": ws.Slug, "revision": revision + 1}), nil
+	return mcpText(out), nil
 }
 
 func (s *Service) mcpUploadImage(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -350,4 +316,23 @@ func (s *Service) mcpUploadImage(ctx context.Context, req *mcp.CallToolRequest) 
 		return mcpError("Could not save image"), nil
 	}
 	return mcpText(map[string]string{"url": imageURL}), nil
+}
+
+func (s *Service) mcpListTeamspaces(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	var args struct {
+		Workspace       string
+		IncludeArchived bool
+	}
+	if json.Unmarshal(req.Params.Arguments, &args) != nil {
+		return mcpError("Invalid arguments"), nil
+	}
+	ws, ok := s.mcpWorkspace(ctx, args.Workspace)
+	if !ok {
+		return mcpError("Workspace unavailable"), nil
+	}
+	list, e := s.listTeamspaces(ctx, s.DB, ctx.Value(mcpUserKey{}).(identity).ID, ws.ID, args.IncludeArchived)
+	if e != nil {
+		return mcpError("Could not list teamspaces"), nil
+	}
+	return mcpText(map[string]any{"teamspaces": list}), nil
 }

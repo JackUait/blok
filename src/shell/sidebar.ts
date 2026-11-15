@@ -22,6 +22,8 @@ export interface ShellPage {
   section?: string;
 }
 
+export interface SidebarTeamspace {id:string;name:string;icon?:string|null;canCreate:boolean}
+
 export interface PageFrame {
   element: HTMLElement;
   canvas: HTMLElement;
@@ -43,6 +45,10 @@ export type SidebarAction =
 export interface PageFrameOptions {
   /** L'espace courant, rendu comme une ligne sous « Espaces » plutôt qu'un titre. */
   teamspace?: { name: string };
+  teamspaces?: SidebarTeamspace[];
+  teamspaceStatus?: () => string | null;
+  onCreateTeamspacePage?: (id:string) => void;
+  onManageTeamspaces?: () => void;
   pages: ShellPage[];
   activeId: string;
   onOpen: (id: string) => void;
@@ -53,7 +59,7 @@ export interface PageFrameOptions {
   onSearch?: (recentIds?: string[]) => void;
   recentIds?: string[];
   onRecentsChange?: (ids: string[]) => void;
-  onTeamspaceMenu?: (anchor: HTMLButtonElement) => void;
+  onTeamspaceMenu?: (anchor: HTMLButtonElement, id?:string) => void;
   pageUrl?: (id: string) => string;
   availableActions?: SidebarAction['type'][];
   canEdit?: (id: string) => boolean;
@@ -378,7 +384,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     create.hidden = newPage.hidden = options.canCreate?.(null) === false;
     const needle = view.query;
     const roots = childrenOf(view.pages, null).filter((page) => needle === '' || matches(view.pages, page, needle));
-    if (roots.length === 0) {
+    if (roots.length === 0 && options.teamspaces === undefined) {
       const empty = document.createElement('p');
       empty.setAttribute('data-blok-sidebar-empty', '');
       empty.textContent = 'Aucune page';
@@ -397,6 +403,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
       .filter((page): page is ShellPage => page !== undefined && (needle === '' || matches(view.pages, page, needle)));
     if (needle === '' && recent.length > 0) appendShortcutSection('Récents', 'recents', recent);
     if (needle === '' && favorites.length > 0) appendShortcutSection('Favoris', 'favorites', favorites);
+    if (options.teamspaces !== undefined) { paintTeamspaceTree(roots,needle); return; }
     if (needle === '' && options.teamspace && !roots.some((page) => page.section === 'workspace')) openSection('workspace');
 
     // Les sections d'accès ne sont pas des conteneurs : les pages restent une
@@ -429,6 +436,50 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
    * sous l'en-tête « Espaces », et ses pages sont indentées dessous. Les autres
    * sections restent de simples titres.
    */
+  function paintTeamspaceTree(roots:ShellPage[],needle:string):void {
+    const appendRoots=(label:string,key:string,pages:ShellPage[],showEmpty=false):void=>{
+      if(!pages.length && !showEmpty)return;
+      const group=appendSection(label,key);
+      if(collapsed.has(key))return;
+      pages.forEach(page=>group.append(...rows(page,0,needle!=='')));
+      if(key==='Privé' && !pages.length && options.onCreatePrivate && options.canCreate?.(null)!==false)appendPrivateAdd(group);
+    };
+    appendRoots('Privé','Privé',roots.filter(page=>page.section==='Privé'),needle==='' && !!options.onCreatePrivate);
+    appendRoots('Partagé','Partagé',roots.filter(page=>page.section==='Partagé'));
+    const teams=(options.teamspaces ?? []).filter(team=>needle==='' || roots.some(page=>page.section===`teamspace:${team.id}`));
+    if(teams.length || needle===''){
+      const group=appendSection('Espaces d’équipe','teamspaces');
+      if(!collapsed.has('teamspaces')){
+        teams.forEach(team=>appendTeamspace(group,team,roots.filter(page=>page.section===`teamspace:${team.id}`),needle));
+        const status=options.teamspaceStatus?.();
+        if(!teams.length || status){const empty=document.createElement('p');empty.setAttribute('data-blok-sidebar-teamspaces-empty','');empty.textContent=status || 'Aucun espace d’équipe rejoint';group.append(empty);}
+      }
+    }
+    const known=new Set((options.teamspaces ?? []).map(team=>`teamspace:${team.id}`));
+    appendRoots('Pages communes du Workspace','workspace',roots.filter(page=>page.section==='workspace' || !page.section));
+    // An explicitly shared page may be accessible before membership metadata refreshes.
+    appendRoots('Autres pages accessibles','accessible',roots.filter(page=>!!page.section && !['workspace','Privé','Partagé'].includes(page.section) && !known.has(page.section)));
+  }
+
+  function appendTeamspace(group:HTMLElement,team:SidebarTeamspace,pages:ShellPage[],needle:string):void {
+    const key=`teamspace:${team.id}`;
+    const row=document.createElement('div');row.setAttribute('data-blok-sidebar-teamspace',team.id);
+    const toggle=document.createElement('button');toggle.type='button';toggle.setAttribute('aria-expanded',String(!collapsed.has(key)));toggle.setAttribute('aria-label',team.name);
+    const mark=document.createElement('span');mark.setAttribute('data-blok-sidebar-teamspace-mark','');mark.setAttribute('aria-hidden','true');
+    const icon=document.createElement('span');icon.textContent=team.icon || [...team.name][0]?.toLocaleUpperCase() || 'É';
+    const arrow=chevron();arrow.setAttribute('data-blok-sidebar-teamspace-chevron','');mark.append(icon,arrow);
+    const label=document.createElement('span');label.textContent=team.name;toggle.append(mark,label);
+    toggle.addEventListener('click',()=>{if(collapsed.has(key))collapsed.delete(key);else collapsed.add(key);paint();});row.append(toggle);
+    if(team.canCreate && options.onCreateTeamspacePage){
+      const add=document.createElement('button');add.type='button';add.setAttribute('data-blok-sidebar-teamspace-add','');add.setAttribute('aria-label',`Créer dans ${team.name}`);add.append(plus());add.addEventListener('click',()=>options.onCreateTeamspacePage?.(team.id));row.append(add);
+    }
+    if(options.onTeamspaceMenu){
+      const more=document.createElement('button');more.type='button';more.setAttribute('data-blok-sidebar-teamspace-more','');more.setAttribute('aria-label',`Paramètres de ${team.name}`);more.setAttribute('aria-haspopup','dialog');more.append(dots());more.addEventListener('click',()=>options.onTeamspaceMenu?.(more,team.id));row.append(more);
+    }group.append(row);
+    if(collapsed.has(key))return;
+    const nested=document.createElement('div');nested.setAttribute('data-blok-sidebar-teamspace-pages',team.id);pages.forEach(page=>nested.append(...rows(page,2,needle!=='')));group.append(nested);
+  }
+
   function openSection(section: string): HTMLElement {
     const teamspace = options.teamspace;
     if (section !== 'workspace' || !teamspace) return appendSection(section, section);
@@ -514,6 +565,9 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
       addPrivate.append(plus());
       addPrivate.addEventListener('click', () => { collapsed.delete('Privé'); options.onCreatePrivate?.(); });
       sectionHeader.append(addPrivate);
+    }
+    if(key==='teamspaces' && options.onManageTeamspaces){
+      const manage=document.createElement('button');manage.type='button';manage.setAttribute('data-blok-sidebar-icon','');manage.setAttribute('aria-label','Gérer les espaces d’équipe');manage.append(dots());manage.addEventListener('click',()=>options.onManageTeamspaces?.());sectionHeader.append(manage);
     }
     group.append(sectionHeader);
     tree.append(group);

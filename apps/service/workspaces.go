@@ -2,8 +2,10 @@ package cloud
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"regexp"
+	"strings"
 	"time"
 	"unicode/utf8"
 )
@@ -72,7 +74,7 @@ func (s *Service) insertWorkspace(w http.ResponseWriter, r *http.Request, u iden
 		return
 	}
 	defer tx.Rollback(r.Context())
-	out := Workspace{opaque(), in.Slug, in.Name, "admin"}
+	out := Workspace{ID: opaque(), Slug: in.Slug, Name: in.Name, Role: "admin"}
 	if _, e = tx.Exec(r.Context(), "INSERT INTO workspaces(id,slug,name) VALUES($1,$2,$3)", out.ID, out.Slug, out.Name); e != nil {
 		problem(w, 409, "Slug already used")
 		return
@@ -94,7 +96,7 @@ func (s *Service) insertWorkspace(w http.ResponseWriter, r *http.Request, u iden
 }
 func (s *Service) lookupWorkspace(ctx context.Context, slug, user string) (Workspace, error) {
 	var out Workspace
-	e := s.DB.QueryRow(ctx, `SELECT w.id,w.slug,w.name,coalesce(m.role,'') FROM workspaces w LEFT JOIN memberships m ON m.workspace_id=w.id AND m.user_id=$2 WHERE w.slug=$1 OR w.id=$1`, slug, user).Scan(&out.ID, &out.Slug, &out.Name, &out.Role)
+	e := s.DB.QueryRow(ctx, `SELECT w.id,w.slug,w.name,coalesce(m.role,''),w.icon FROM workspaces w LEFT JOIN memberships m ON m.workspace_id=w.id AND m.user_id=$2 WHERE w.slug=$1 OR w.id=$1`, slug, user).Scan(&out.ID, &out.Slug, &out.Name, &out.Role, &out.Icon)
 	return out, e
 }
 func (s *Service) workspace(w http.ResponseWriter, r *http.Request) {
@@ -123,7 +125,7 @@ func (s *Service) workspace(w http.ResponseWriter, r *http.Request) {
 	if ws.Role != "" {
 		role = &ws.Role
 	}
-	jsonOut(w, 200, map[string]any{"id": ws.ID, "slug": ws.Slug, "name": ws.Name, "role": role, "joinStatus": status})
+	jsonOut(w, 200, map[string]any{"id": ws.ID, "slug": ws.Slug, "name": ws.Name, "role": role, "joinStatus": status, "icon": ws.Icon})
 }
 func (s *Service) renameWorkspace(w http.ResponseWriter, r *http.Request) {
 	u, ok := s.require(w, r)
@@ -140,24 +142,51 @@ func (s *Service) renameWorkspace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in struct {
-		Name string `json:"name"`
+		Name json.RawMessage `json:"name"`
+		Icon json.RawMessage `json:"icon"`
 	}
 	if !body(w, r, &in) {
 		return
 	}
-	// Memes bornes qu'a la creation : un nom renommable doit rester creable.
-	if len(in.Name) < 1 || len(in.Name) > 120 {
-		problem(w, 400, "Invalid workspace name")
+	if len(in.Name) == 0 && len(in.Icon) == 0 {
+		problem(w, 400, "Workspace name or icon required")
 		return
 	}
-	// Le slug n'est pas touche : il porte l'URL de l'espace, et le bootstrap
-	// recreerait un espace vide si le sien disparaissait. La revision non plus,
-	// elle arbitre les ecritures concurrentes de l'index des pages.
-	if _, e = s.DB.Exec(r.Context(), "UPDATE workspaces SET name=$1 WHERE id=$2", in.Name, ws.ID); e != nil {
-		problem(w, 503, "Database unavailable")
+	var name *string
+	if len(in.Name) > 0 {
+		var value string
+		if string(in.Name) == "null" || json.Unmarshal(in.Name, &value) != nil {
+			problem(w, 400, "Invalid workspace name")
+			return
+		}
+		value = strings.TrimSpace(value)
+		if value == "" || utf8.RuneCountInString(value) > 120 {
+			problem(w, 400, "Invalid workspace name")
+			return
+		}
+		name = &value
+	}
+	var icon *string
+	if len(in.Icon) > 0 && string(in.Icon) != "null" {
+		var value string
+		if json.Unmarshal(in.Icon, &value) != nil || !validWorkspaceEmoji(value) {
+			problem(w, 400, "Invalid workspace emoji")
+			return
+		}
+		icon = &value
+	}
+	// Patch individual fields in SQL: concurrent name/icon edits cannot erase
+	// one another. Recheck the admin role at the write, not just at lookup.
+	e = s.DB.QueryRow(r.Context(), `UPDATE workspaces w
+        SET name=coalesce($2,name),icon=CASE WHEN $3 THEN $4::text ELSE icon END
+        WHERE w.id=$1 AND EXISTS(SELECT 1 FROM memberships m WHERE m.workspace_id=w.id AND m.user_id=$5 AND m.role='admin')
+        RETURNING name,icon`, ws.ID, name, len(in.Icon) > 0, icon, u.ID).Scan(&ws.Name, &ws.Icon)
+	if e != nil {
+		problem(w, 503, "Workspace update unavailable")
 		return
 	}
-	jsonOut(w, 200, map[string]any{"id": ws.ID, "slug": ws.Slug, "name": in.Name, "role": ws.Role})
+	// ID, slug and index revision never change when editing workspace identity.
+	jsonOut(w, 200, ws)
 }
 func (s *Service) workspaceResource(w http.ResponseWriter, r *http.Request) {
 	u, ok := s.require(w, r)
@@ -200,6 +229,9 @@ func (s *Service) workspaceResource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch resource {
+	case "teamspaces":
+		s.teamspacesRoute(w, r, u, ws, id)
+		return
 	case "emojis":
 		s.emojis(w, r, u, ws, id)
 		return
@@ -307,6 +339,18 @@ func (s *Service) mutateMember(w http.ResponseWriter, r *http.Request, u identit
 		if count <= 1 {
 			problem(w, 409, "Keep at least one administrator")
 			return
+		}
+	}
+	if r.Method == "DELETE" || in.Role == "viewer" {
+		if e = s.protectTeamspaceOwnerMembership(r.Context(), tx, id, ws.ID); e != nil {
+			problem(w, 409, e.Error())
+			return
+		}
+		if in.Role == "viewer" {
+			if _, e = tx.Exec(r.Context(), `UPDATE teamspace_memberships SET role='member' WHERE workspace_id=$1 AND user_id=$2`, ws.ID, id); e != nil {
+				problem(w, 500, "Update failed")
+				return
+			}
 		}
 	}
 	if r.Method == "DELETE" {

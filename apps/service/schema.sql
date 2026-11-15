@@ -74,3 +74,37 @@ UPDATE instance_settings SET signup_policy='open', workspace_creation='anyone'
 UPDATE instance_settings SET default_workspace_id=(SELECT id FROM workspaces)
  WHERE default_workspace_id IS NULL AND (SELECT count(*) FROM workspaces)=1;
 INSERT INTO schema_migrations(version) VALUES(5) ON CONFLICT DO NOTHING;
+
+-- Workspace identity: Unicode emoji only through the public API. NULL removes it.
+ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS icon text CHECK(icon IS NULL OR (length(icon) BETWEEN 1 AND 64 AND octet_length(icon)<=256));
+INSERT INTO schema_migrations(version) VALUES(6) ON CONFLICT DO NOTHING;
+
+-- True nested teamspaces: additive; legacy/private pages remain unassigned.
+CREATE TABLE IF NOT EXISTS teamspaces(
+ id text PRIMARY KEY,workspace_id text NOT NULL REFERENCES workspaces(id),
+ name text NOT NULL CHECK(length(name) BETWEEN 1 AND 120),icon text CHECK(icon IS NULL OR (length(icon) BETWEEN 1 AND 64 AND octet_length(icon)<=256)),
+ description text NOT NULL DEFAULT '' CHECK(length(description)<=2000),
+ mode text NOT NULL DEFAULT 'closed' CHECK(mode='closed'),archived boolean NOT NULL DEFAULT false,
+ created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(id,workspace_id));
+CREATE TABLE IF NOT EXISTS teamspace_memberships(
+ teamspace_id text NOT NULL,workspace_id text NOT NULL,user_id text NOT NULL,
+ role text NOT NULL CHECK(role IN ('owner','member')),
+ PRIMARY KEY(teamspace_id,user_id),
+ FOREIGN KEY(teamspace_id,workspace_id) REFERENCES teamspaces(id,workspace_id),
+ FOREIGN KEY(workspace_id,user_id) REFERENCES memberships(workspace_id,user_id) ON DELETE CASCADE);
+ALTER TABLE pages ADD COLUMN IF NOT EXISTS teamspace_id text;
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conname='pages_teamspace_workspace' AND conrelid='pages'::regclass) THEN
+  ALTER TABLE pages ADD CONSTRAINT pages_teamspace_workspace FOREIGN KEY(teamspace_id,workspace_id) REFERENCES teamspaces(id,workspace_id);
+  ALTER TABLE pages ADD CONSTRAINT pages_teamspace_root CHECK(teamspace_id IS NULL OR coalesce(metadata->>'parentId','')='');
+ END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS teamspaces_workspace ON teamspaces(workspace_id);
+CREATE INDEX IF NOT EXISTS pages_teamspace ON pages(teamspace_id) WHERE teamspace_id IS NOT NULL;
+INSERT INTO schema_migrations(version) VALUES(7) ON CONFLICT DO NOTHING;
+
+-- Stable public URLs are aliases, never authentication credentials. Existing
+-- internal IDs and page metadata remain intact; duplicates get a fresh UUID.
+ALTER TABLE pages ADD COLUMN IF NOT EXISTS public_id uuid NOT NULL DEFAULT gen_random_uuid();
+CREATE UNIQUE INDEX IF NOT EXISTS pages_public_id ON pages(public_id);
+INSERT INTO schema_migrations(version) VALUES(8) ON CONFLICT DO NOTHING;

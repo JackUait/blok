@@ -1,3 +1,4 @@
+import { copiedPageLink } from './page-urls';
 /**
  * The tab strip's own context menu.
  *
@@ -29,22 +30,9 @@ export interface TabMenuContext {
   href: string;
 }
 
-/**
- * The link to copy for a tab, or null when it shows no page.
- *
- * `blok_open` takes a document id, and a tab's href carries it as `?page=<id>`,
- * so the id is handed over verbatim: an agent given this link can open the very
- * page the tab shows.
- */
-export function pageLinkFor(href: string): string | null {
-  let id: string | null = null;
-  try {
-    id = new URL(href, 'http://localhost').searchParams.get('page');
-  } catch {
-    return null;
-  }
-  return id ? `blok://page/${id}` : null;
-}
+/** Copy a remote public URL when known; local/native legacy documents retain
+ * their internal blok://page/ identity for MCP compatibility. */
+export function pageLinkFor(href: string): string | null { return copiedPageLink(href); }
 
 export function buildTabMenuItems(context: TabMenuContext): TabMenuItem[] {
   const index = context.tabIds.indexOf(context.tabId);

@@ -893,6 +893,25 @@ describe('createToolDispatcher', () => {
     expect(deps.list).not.toHaveBeenCalled();
   });
 
+  it.each([NaN, Infinity, -Infinity])('refuses non-finite listing limit %s before listing', async (limit) => {
+    const { deps, dispatch } = fixture();
+
+    expectFailure(await invoke(dispatch, 'blok_list_documents', { limit }), 'INVALID_ARGS');
+    expect(deps.list).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['blok_list_documents', { query: 'x'.repeat(201) }],
+    ['blok_open', { query: 'x'.repeat(201), write: true }],
+    ['blok_open', { documentId: 'doc-1', query: 7, write: true }],
+  ])('refuses malformed query on %s before any host IO', async (name, args) => {
+    const { deps, dispatch } = fixture();
+
+    expectFailure(await invoke(dispatch, name as string, args as Record<string, unknown>), 'INVALID_ARGS');
+    expect(deps.list).not.toHaveBeenCalled();
+    expect(deps.open).not.toHaveBeenCalled();
+  });
+
   it('preserves listing filters and an unsupported empty listing result', async () => {
     const { deps, dispatch } = fixture();
     vi.mocked(deps.list).mockResolvedValueOnce({ documents: [], nextCursor: null, supported: false });

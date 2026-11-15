@@ -27,6 +27,14 @@ Agents write rich text with commands. They never write Markdown or HTML into blo
 - How to reach a sub-page: open the page block's `data.pageId` with `blok_open`.
 - How to make a sub-page, where the server can: insert a page block. See `--page-titles page-map`.
 
+## Authoring useful pages
+
+Use the French [Blok page authoring skill](skills/blok-author-pages/SKILL.md) for source summaries, headings and toggles, images, diagrams, and choosing a simple table versus a database. Its [tested demo](examples/authoring/README.md) runs against temporary local documents without touching a personal workspace.
+
+The six tools above are the core MCP package surface. The cloud host may add workspace listing, page creation and image upload tools; discover those on the connected host rather than assuming the CLI has them. Database actions and block data come from the current handle's `blok_describe`, including availability restrictions.
+
+Creation is not inherently idempotent. Keep returned page and block ids. After a lost response, read the chosen target and reconcile it before retrying; an `expectRevision` check alone does not prevent duplicate creation. After authoring, call `blok_read` with full detail and follow pagination/subtrees to verify the whole result. Report delivery separately from read-back; neither a visible page nor a successful remote write establishes durable offline persistence.
+
 ## Prompts
 
 The server also offers the built-in Ask AI buttons as MCP prompts. A client lists them with `prompts/list` and shows them, for example as slash commands. The prompt text is the one Ask AI sends.

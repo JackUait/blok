@@ -54,7 +54,6 @@
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
   --leading-normal: 1.5;
-  --leading-relaxed: 1.625;
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
   --default-transition-duration: 150ms;
   --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
@@ -190,9 +189,8 @@
   .rounded-\(--blok-radius-control\) {
     border-radius: var(--blok-radius-control);
   }
-  .border {
-    border-style: var(--tw-border-style);
-    border-width: 1px;
+  .rounded-\[10px\] {
+    border-radius: 10px;
   }
   .border-s-\[3px\] {
     border-inline-start-style: var(--tw-border-style);
@@ -227,9 +225,6 @@
   .border-\(--blok-border-primary\) {
     border-color: var(--blok-border-primary);
   }
-  .border-border-secondary {
-    border-color: var(--blok-border-secondary);
-  }
   .border-current {
     border-color: currentcolor;
   }
@@ -248,14 +243,17 @@
   .px-0\.5 {
     padding-inline: calc(var(--spacing) * 0.5);
   }
-  .px-4 {
-    padding-inline: calc(var(--spacing) * 4);
+  .px-\[22px\] {
+    padding-inline: 22px;
   }
   .px-\[var\(--blok-block-padding-inline\,2px\)\] {
     padding-inline: var(--blok-block-padding-inline,2px);
   }
   .py-3 {
     padding-block: calc(var(--spacing) * 3);
+  }
+  .py-6 {
+    padding-block: calc(var(--spacing) * 6);
   }
   .ps-0\.5 {
     padding-inline-start: calc(var(--spacing) * 0.5);
@@ -362,10 +360,6 @@
   .leading-normal {
     --tw-leading: var(--leading-normal);
     line-height: var(--leading-normal);
-  }
-  .leading-relaxed {
-    --tw-leading: var(--leading-relaxed);
-    line-height: var(--leading-relaxed);
   }
   .font-medium {
     --tw-font-weight: var(--font-weight-medium);

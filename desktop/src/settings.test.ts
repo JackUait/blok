@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {must} from './test-helpers';
 import { WORKSPACE_ROLES } from './access-vocabulary';
-import { rememberWorkspace, workspaceKey, type RemoteWorkspace } from './workspace-registry';
+import { CloudClient } from './cloud/client';
+import { activeWorkspace, listWorkspaces, rememberWorkspace, workspaceKey, type RemoteWorkspace } from './workspace-registry';
 import { applyAppearance, createDesktopFooter, readAppearance } from './settings';
 
 const childUi = vi.hoisted(() => ({
@@ -91,7 +92,7 @@ describe('workspace menu hierarchy',()=>{
     const footer=remoteFooter();const menu=must(footer.querySelector('[data-desktop-footer-menu]'));
     const primary=[...menu.children].filter((node)=>node.getAttribute('role')==='menuitem');
     // The identity header is separately styled; command rows follow it.
-    expect(primary.map(node=>node.textContent)).toEqual(['Paramètres','Aide','Inviter des membres','Gérer mon compte']);
+    expect(primary.map(node=>node.textContent)).toEqual(['Paramètres','Inviter des membres','Gérer mon compte']);
     expect(menu.textContent).not.toContain('localhost');
     expect(menu.textContent).not.toContain('Créer un espace local');
     expect(menu.textContent).not.toContain('Copier le chemin');
@@ -157,37 +158,12 @@ describe('workspace menu hierarchy',()=>{
   });
 });
 
-describe('help menu', () => {
-  it('offers an Aide entry next to Paramètres that opens the help popover', () => {
-    const footer = remoteFooter('member');
-    const help = [...footer.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
-      .find((node) => node.textContent === 'Aide');
-    expect(help).toBeTruthy();
-    expect(help?.previousElementSibling?.textContent).toContain('Paramètres');
-    must(help).click();
-    const popover = document.querySelector('[data-desktop-help-popover], [data-blok-popover]');
-    expect(popover?.textContent).toMatch(/Premiers pas/);
-    expect(popover?.textContent).toMatch(/Qui peut voir quoi/);
-    expect(popover?.textContent).toMatch(/Raccourcis/);
-    expect(popover?.textContent).toMatch(/Blok /);
-    // No address to write to, so no row: a permanently greyed entry reads as broken.
-    expect(popover?.textContent).not.toMatch(/Signaler un problème/);
-  });
-
-  it('offers the report row only once the instance names a support address, never the viewer', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(
-      JSON.stringify({ user: { id: 'u1', email: 'moi@example.test' }, workspaces: [], supportEmail: 'ops@example.test' }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
-    )));
-    const footer = remoteFooter('member');
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const help = [...footer.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
-      .find((node) => node.textContent === 'Aide');
-    must(help).click();
-    const popover = document.querySelector('[data-desktop-help-popover], [data-blok-popover]');
-    expect(popover?.textContent).toMatch(/Signaler un problème/);
-    expect(popover?.textContent).not.toMatch(/moi@example\.test/);
-    vi.unstubAllGlobals();
+describe('workspace menu without help', () => {
+  it('does not expose the removed Help entry or report popup', () => {
+    const footer=remoteFooter('member');
+    expect(footer.querySelector('[data-desktop-menu-help]')).toBeNull();
+    expect(footer.querySelector('[data-desktop-footer-menu]')?.textContent).not.toContain('Aide');
+    expect(document.querySelector('[data-desktop-help-popover]')).toBeNull();
   });
 });
 
@@ -221,5 +197,93 @@ describe('settings discovery', () => {
     must(document.querySelector<HTMLButtonElement>('[data-desktop-settings-close]')).click();
     open.click();
     expect(must(document.querySelector<HTMLElement>('[data-desktop-settings-no-results]')).hidden).toBe(true);
+  });
+});
+
+
+describe('workspace rename', () => {
+  afterEach(() => vi.restoreAllMocks());
+  function openGeneral(footer: HTMLElement): HTMLFormElement | null {
+    footer.dispatchEvent(new CustomEvent('blok:desktop-open-settings', {detail: 'general'}));
+    return document.querySelector<HTMLFormElement>('[data-desktop-workspace-rename]');
+  }
+  function submit(form: HTMLFormElement, value: string): void {
+    must(form.querySelector<HTMLInputElement>('input')).value = value;
+    form.dispatchEvent(new Event('submit', {bubbles: true, cancelable: true}));
+  }
+  it.each(['default', 'personal'])('persists the %s local workspace name across footer reconstruction', async (id) => {
+    const ref = {kind: 'local' as const, id, name: 'Mes notes'};
+    rememberWorkspace(ref);
+    localStorage.setItem('blok:desktop:active-workspace:v1', workspaceKey(ref));
+    const footer = createDesktopFooter(() => undefined); document.body.append(footer);
+    submit(must(openGeneral(footer)), '  Maison  ');
+    await vi.waitFor(() => expect(activeWorkspace().name).toBe('Maison'));
+    expect(footer.querySelector('[data-desktop-switcher-name]')?.textContent).toBe('Maison');
+    must(document.querySelector<HTMLButtonElement>('[data-desktop-settings-close]')).click();
+    footer.remove();
+    const rebuilt = createDesktopFooter(() => undefined); document.body.append(rebuilt);
+    expect(must(openGeneral(rebuilt)).querySelector('input')?.value).toBe('Maison');
+    expect(listWorkspaces().find((item) => item.id === id)?.name).toBe('Maison');
+  });
+  it('saves a remote name on the server before changing the local labels', async () => {
+    let finish!: (value: {id: string; slug: string; name: string; role: 'admin'}) => void;
+    const rename = vi.spyOn(CloudClient.prototype, 'renameWorkspace').mockImplementation(() => new Promise((resolve) => {finish = resolve;}));
+    const footer = remoteFooter();
+    const renamed = vi.fn(); footer.addEventListener('blok:desktop-workspace-renamed', renamed);
+    const form = must(openGeneral(footer));
+    submit(form, '  Maison  ');
+    expect(rename).toHaveBeenCalledWith('acme', 'Maison');
+    expect(form.querySelector('button')?.disabled).toBe(true);
+    expect(activeWorkspace().name).toBe('Acme');
+    submit(form, 'Duplicate');
+    expect(rename).toHaveBeenCalledOnce();
+    finish({id: 'team', slug: 'acme', name: 'Maison', role: 'admin'});
+    await vi.waitFor(() => expect(activeWorkspace().name).toBe('Maison'));
+    expect(footer.querySelector('[data-desktop-switcher-name]')?.textContent).toBe('Maison');
+    expect(footer.querySelector('[aria-current="true"] [data-desktop-menu-workspace-name]')?.textContent).toBe('Maison');
+    expect(form.querySelector('[role="status"]')?.textContent).toContain('enregistré');
+    expect(renamed).toHaveBeenCalledWith(expect.objectContaining({detail: {key: workspaceKey(remoteRef), name: 'Maison'}}));
+    must(document.querySelector<HTMLButtonElement>('[data-desktop-settings-close]')).click();
+    must(footer.querySelector<HTMLButtonElement>('[data-desktop-menu-invite]')).click();
+    expect(childUi.invite).toHaveBeenLastCalledWith(expect.objectContaining({workspaceName: 'Maison'}));
+  });
+  it('sends an authenticated PATCH through the cloud client', async () => {
+    const fetch = vi.fn(async (_url: string, init?: RequestInit) => new Response(JSON.stringify(
+      init?.method === 'PATCH' ? {id: 'team', slug: 'acme', name: 'Maison', role: 'admin'}
+        : {user: {id: 'user', email: 'member@example.org'}, workspaces: []},
+    ), {status: 200}));
+    vi.stubGlobal('fetch', fetch);
+    try {
+      const form = must(openGeneral(remoteFooter()));
+      submit(form, 'Maison');
+      await vi.waitFor(() => expect(activeWorkspace().name).toBe('Maison'));
+      expect(fetch).toHaveBeenCalledWith('http://localhost:1420/api/workspaces/acme', expect.objectContaining({
+        method: 'PATCH', credentials: 'include', body: JSON.stringify({name: 'Maison'}),
+      }));
+    } finally { vi.unstubAllGlobals(); }
+  });
+  it('keeps the saved name on failure and allows retrying', async () => {
+    const rename = vi.spyOn(CloudClient.prototype, 'renameWorkspace').mockRejectedValue(new Error('Administrator required'));
+    const footer = remoteFooter();
+    const form = must(openGeneral(footer));
+    submit(form, 'Lost');
+    await vi.waitFor(() => expect(form.querySelector('[role="status"]')?.textContent).toBe('Administrator required'));
+    expect(activeWorkspace().name).toBe('Acme');
+    expect(form.querySelector('button')?.disabled).toBe(false);
+    rename.mockResolvedValue({id: 'team', slug: 'acme', name: 'Retried', role: 'admin'});
+    submit(form, 'Retried');
+    await vi.waitFor(() => expect(activeWorkspace().name).toBe('Retried'));
+  });
+  it('rejects a blank name before contacting the server', () => {
+    const rename = vi.spyOn(CloudClient.prototype, 'renameWorkspace');
+    const form = must(openGeneral(remoteFooter()));
+    submit(form, '   ');
+    expect(rename).not.toHaveBeenCalled();
+    expect(form.querySelector('[role="status"]')?.textContent).toContain('1 et 120');
+    expect(activeWorkspace().name).toBe('Acme');
+  });
+  it.each(['member', 'viewer'] as const)('shows the %s workspace name read only', (role) => {
+    expect(openGeneral(remoteFooter(role))).toBeNull();
+    expect(document.querySelector('[data-desktop-settings-content]')?.textContent).toContain('Acme');
   });
 });

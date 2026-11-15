@@ -178,6 +178,7 @@ export async function mountCloudGateway(root: HTMLElement, options: CloudGateway
       onRetry: () => boot(),
       onServerChange: options.onServerChange,
     });
+    appendLocalOpen(state.currentMain, 'Continuer avec un espace local');
   }
 
   function invite(): void {
@@ -270,7 +271,12 @@ export async function mountCloudGateway(root: HTMLElement, options: CloudGateway
     const main = frame(codeStep ? 'login-code' : 'login-email'); main.setAttribute('data-cloud-narrow', '');
     const welcome = state.instance?.name ? `Bienvenue sur\n${state.instance.name}.` : 'Bienvenue.';
     main.append(node('span', 'Votre espace de travail partagé', 'data-cloud-eyebrow'), node('h1', codeStep ? 'Consultez votre boîte mail.' : welcome));
-    main.append(node('p', codeStep ? `Saisissez le code envoyé à ${state.email}. Il est valable 10 minutes.` : 'Retrouvez votre équipe, partagez vos connaissances et faites avancer vos projets.', 'data-cloud-muted'));
+    main.append(node('p', codeStep ? `Si votre adresse est autorisée, un code a été envoyé à ${state.email}. Il est valable 10 minutes.` : 'Retrouvez votre équipe, partagez vos connaissances et faites avancer vos projets.', 'data-cloud-muted'));
+    if (state.instance?.signupPolicy === 'invite') {
+      main.append(node('p', 'Les nouveaux comptes nécessitent une invitation d’un administrateur de l’espace. Si vous avez déjà un compte, connectez-vous avec votre adresse habituelle.', 'data-cloud-note'));
+    } else if (state.instance?.signupPolicy === 'domain') {
+      main.append(node('p', 'Les nouveaux comptes sont réservés aux domaines e-mail autorisés par l’administrateur du serveur.', 'data-cloud-note'));
+    }
     const form = node('form', undefined, 'data-cloud-stack');
     const input = field(form, codeStep ? 'Code de connexion' : 'Adresse e-mail', codeStep ? 'text' : 'email', codeStep ? 'code' : 'email', codeStep ? '' : state.email);
     input.autocomplete = codeStep ? 'one-time-code' : 'email';
@@ -295,11 +301,11 @@ export async function mountCloudGateway(root: HTMLElement, options: CloudGateway
       main.append(button('Renvoyer un code', () => run(async () => {
         await client.request('/api/auth/request-code', {method:'POST', body:JSON.stringify({email: state.email})});
         login(true);
-        const status = node('p', 'Un nouveau code a été envoyé.', 'data-cloud-note');
+        const status = node('p', 'Si votre adresse est autorisée, un nouveau code a été envoyé.', 'data-cloud-note');
         status.setAttribute('role', 'status');
         state.currentMain.append(status);
       })), document.createTextNode(' '), button('Modifier l’adresse e-mail', () => login()));
-    } else main.append(node('p', 'Pas de mot de passe. Un code de connexion vous sera envoyé.', 'data-cloud-note'));
+    } else main.append(node('p', 'Pas de mot de passe. Les adresses autorisées reçoivent un code de connexion.', 'data-cloud-note'));
     appendLocalOpen(main, 'Continuer avec un espace local');
     serverSection(main);
   }
@@ -338,10 +344,11 @@ export async function mountCloudGateway(root: HTMLElement, options: CloudGateway
     }
     if (status && !status.role) joinSection(main, status);
     const actions = node('div', undefined, 'data-cloud-actions');
-    actions.append(
-      button('Créer un espace de travail', () => routers['create-workspace'](), true),
-      button('Rejoindre un espace', () => routers.join()),
-    );
+    const creation = state.instance?.workspaceCreation;
+    if (creation === 'anyone' || (creation === 'admins_only' && active.user.instanceAdmin)) {
+      actions.append(button('Créer un espace de travail', () => routers['create-workspace'](), true));
+    }
+    actions.append(button('Rejoindre un espace', () => routers.join()));
     main.append(actions);
     appendLocalOpen(main, 'Ouvrir un espace local');
     serverSection(main);

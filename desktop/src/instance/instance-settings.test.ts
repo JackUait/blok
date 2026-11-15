@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {must, requestBody} from '../test-helpers';
 import { rememberWorkspace, workspaceKey, type RemoteWorkspace } from '../workspace-registry';
 import { createDesktopFooter } from '../settings';
+import { INSTANCE_ROLES } from '../access-vocabulary';
 
 const remoteRef: RemoteWorkspace = {
   kind: 'remote', id: 'team', name: 'Acme', server: 'http://localhost:1420',
@@ -32,7 +33,7 @@ function stubSession(instanceAdmin: boolean): ReturnType<typeof vi.fn> {
       });
     }
     if (path.endsWith('/api/admin/settings') && (!init?.method || init.method === 'GET')) {
-      return response(settingsPayload);
+      return response({ ...settingsPayload });
     }
     if (path.endsWith('/api/admin/settings') && init?.method === 'PATCH') {
       const body = JSON.parse(requestBody(init)) as Record<string, unknown>;
@@ -93,26 +94,26 @@ describe('instance settings nav', () => {
     await vi.waitFor(() => {
       expect(dialog.querySelector('[data-desktop-settings-nav-heading]')).toBeTruthy();
     });
-    // Give the async session resolution a turn; Instance must still be absent.
+    // Give the async session resolution a turn; Server administration must still be absent.
     await Promise.resolve();
     await Promise.resolve();
     const headings = [...dialog.querySelectorAll('[data-desktop-settings-nav-heading]')].map((node) => node.textContent);
-    expect(headings).not.toContain('Instance');
+    expect(headings).not.toContain('Serveur');
     expect(dialog.querySelector('[data-desktop-settings-nav-item][data-instance-panel]')).toBeNull();
     expect(dialog.textContent).not.toContain('Santé et e-mail');
   });
 
-  it('adds the Instance heading and entries only for an instanceAdmin', async () => {
+  it('adds the Serveur heading and entries only for an instanceAdmin', async () => {
     const { dialog } = openRemoteSettings(true);
     await vi.waitFor(() => {
-      expect([...dialog.querySelectorAll('[data-desktop-settings-nav-heading]')].some((node) => node.textContent === 'Instance')).toBe(true);
+      expect([...dialog.querySelectorAll('[data-desktop-settings-nav-heading]')].some((node) => node.textContent === 'Serveur')).toBe(true);
     });
     const labels = [...dialog.querySelectorAll<HTMLButtonElement>('[data-desktop-settings-nav-item]')]
       .map((node) => node.textContent);
-    expect(labels).toEqual(expect.arrayContaining(['Général', 'Accès', 'Comptes', 'Espaces', 'Santé et e-mail']));
+    expect(labels).toEqual(expect.arrayContaining(['Général', 'Accès', 'Comptes', 'Workspaces', 'Santé et e-mail']));
     const headings = [...dialog.querySelectorAll('[data-desktop-settings-nav-heading]')];
-    const espace = headings.find((node) => node.textContent === 'Espace');
-    const instance = headings.find((node) => node.textContent === 'Instance');
+    const espace = headings.find((node) => node.textContent === 'Workspace');
+    const instance = headings.find((node) => node.textContent === 'Serveur');
     expect(espace).toBeTruthy();
     expect(instance).toBeTruthy();
     expect(Boolean(espace && instance && Boolean(espace.compareDocumentPosition(instance) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
@@ -120,7 +121,7 @@ describe('instance settings nav', () => {
 });
 
 describe('instance access and health panels', () => {
-  it('saves signupPolicy immediately via PATCH and reverts on failure', async () => {
+  it('saves signupPolicy immediately via PATCH', async () => {
     const { dialog, fetch } = openRemoteSettings(true);
     await vi.waitFor(() => expect(dialog.textContent).toContain('Accès'));
     must([...dialog.querySelectorAll<HTMLButtonElement>('[data-desktop-settings-nav-item]')]
@@ -134,6 +135,47 @@ describe('instance access and health panels', () => {
       const patch = fetch.mock.calls.find(([url, init]) => String(url).endsWith('/api/admin/settings') && (init as RequestInit | undefined)?.method === 'PATCH');
       expect(patch).toBeTruthy();
       expect(JSON.parse(requestBody(must(patch)[1]))).toEqual({ signupPolicy: 'open' });
+    });
+  });
+
+  it('keeps the confirmed policy and help after a failed save, then allows retry', async () => {
+    const { dialog, fetch } = openRemoteSettings(true);
+    await vi.waitFor(() => expect(dialog.textContent).toContain('Accès'));
+    must([...dialog.querySelectorAll<HTMLButtonElement>('[data-desktop-settings-nav-item]')]
+      .find((node) => node.textContent === 'Accès')).click();
+    await vi.waitFor(() => expect(dialog.querySelector('[data-desktop-instance-signup]')).toBeTruthy());
+    const choice = must(dialog.querySelector<HTMLButtonElement>('[data-desktop-instance-signup]'));
+    let finish: ((value: Response) => void) | undefined;
+    fetch.mockImplementationOnce(() => new Promise<Response>((resolve) => { finish = resolve; }));
+    choice.click();
+    must(document.querySelector<HTMLElement>('[data-blok-item-name=open]')).click();
+    expect(choice.disabled).toBe(true);
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'));
+    must(finish)(response({ error: 'Accès refusé' }, 403));
+    await vi.waitFor(() => {
+      expect(choice.disabled).toBe(false);
+      expect(choice.textContent).toContain('Sur invitation');
+      expect(dialog.textContent).toContain('Invitation seule');
+      expect(dialog.textContent).not.toContain('Toute adresse e-mail peut créer');
+      expect(dialog.textContent).toContain('Accès refusé');
+    });
+    choice.click();
+    must(document.querySelector<HTMLElement>('[data-blok-item-name=open]')).click();
+    await vi.waitFor(() => {
+      expect(choice.disabled).toBe(false);
+      expect(dialog.textContent).toContain('Toute adresse e-mail peut créer');
+    });
+  });
+
+  it('identifies instance administrators in accounts independently of workspace roles', async () => {
+    const { dialog } = openRemoteSettings(true);
+    await vi.waitFor(() => expect(dialog.textContent).toContain('Comptes'));
+    must([...dialog.querySelectorAll<HTMLButtonElement>('[data-desktop-settings-nav-item]')]
+      .find((node) => node.textContent === 'Comptes')).click();
+    await vi.waitFor(() => {
+      const row = must(dialog.querySelector('[data-desktop-instance-table] tbody tr'));
+      expect(row.textContent).toContain('admin@example.org');
+      expect(row.textContent).toContain(INSTANCE_ROLES.admin);
     });
   });
 

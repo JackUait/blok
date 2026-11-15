@@ -255,6 +255,14 @@ func (s *Service) deleteAdminUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, e = tx.Exec(ctx, `SELECT w.id FROM workspaces w JOIN memberships m ON m.workspace_id=w.id WHERE m.user_id=$1 ORDER BY w.id FOR UPDATE OF w`, id); e != nil {
+		problem(w, 503, "Database unavailable")
+		return
+	}
+	if e = s.protectTeamspaceOwnerMembership(ctx, tx, id, ""); e != nil {
+		problem(w, 409, e.Error())
+		return
+	}
 	if e = s.deleteUserTx(ctx, tx, id, email, actor.ID); e != nil {
 		problem(w, 500, "Could not delete user")
 		return

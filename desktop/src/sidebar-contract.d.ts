@@ -11,6 +11,8 @@ export type SidebarAction =
   | { id: string; type: 'rename'; title: string }
   | { id: string; type: 'duplicate' | 'delete' | 'move' | 'wiki' | 'open-tab' | 'open-window' | 'open-peek' }
   | { id: string; type: 'offline'; on: boolean };
+export interface SidebarTeamspace {id:string;name:string;icon?:string|null;canCreate:boolean}
+
 export interface PageFrame {
   element: HTMLElement;
   canvas: HTMLElement;
@@ -22,6 +24,10 @@ export function createPageFrame(options: {
   activeId: string;
   /** L'espace courant, rendu comme une ligne sous « Espaces » plutôt qu'un titre. */
   teamspace?: { name: string };
+  teamspaces?: SidebarTeamspace[];
+  teamspaceStatus?: () => string | null;
+  onCreateTeamspacePage?: (id:string) => void;
+  onManageTeamspaces?: () => void;
   onOpen(id: string): void;
   onCreate(parentId: string | null): void;
   onAction?(action: SidebarAction): void;
@@ -30,7 +36,7 @@ export function createPageFrame(options: {
   onSearch?(recentIds?: string[]): void;
   recentIds?: string[];
   onRecentsChange?(ids: string[]): void;
-  onTeamspaceMenu?(anchor: HTMLButtonElement): void;
+  onTeamspaceMenu?(anchor: HTMLButtonElement, id?:string): void;
   pageUrl?(id: string): string;
   availableActions?: SidebarAction['type'][];
   canEdit?(id: string): boolean;

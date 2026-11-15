@@ -10,11 +10,11 @@ import (
 // docs/plans/2026-11-13-page-permissions-design.md
 
 const ancestryQuery = `WITH RECURSIVE chain AS (
-  SELECT p.id, p.visibility, nullif(p.metadata->>'parentId','') AS parent, 0 AS depth
+  SELECT p.id, p.workspace_id, p.visibility, nullif(p.metadata->>'parentId','') AS parent, 0 AS depth
     FROM pages p WHERE p.id=$1 AND NOT p.deleted
   UNION ALL
-  SELECT p.id, p.visibility, nullif(p.metadata->>'parentId',''), c.depth+1
-    FROM pages p JOIN chain c ON p.id=c.parent
+  SELECT p.id, p.workspace_id, p.visibility, nullif(p.metadata->>'parentId',''), c.depth+1
+    FROM pages p JOIN chain c ON p.id=c.parent AND p.workspace_id=c.workspace_id
    WHERE c.depth+1 < $2 AND NOT p.deleted)
 SELECT id, visibility FROM chain ORDER BY depth`
 
@@ -115,9 +115,19 @@ func (s *Service) pageAccess(w http.ResponseWriter, r *http.Request, u identity,
 		problem(w, 503, "Database unavailable")
 		return
 	}
+	tsID, e := s.pageTeamspace(r.Context(), s.DB, u.ID, page)
+	if e != nil {
+		problem(w, 503, "Database unavailable")
+		return
+	}
+	var teamspaceID any
+	if tsID != "" {
+		teamspaceID = tsID
+	}
 	jsonOut(w, 200, map[string]any{
 		"visibility":          ownVisibility,
 		"effectiveVisibility": visibility,
+		"teamspaceId":         teamspaceID,
 		"myLevel":             granted.String(),
 		"shares":              own,
 		"inherited":           inherited,
@@ -146,7 +156,37 @@ func (s *Service) setPageVisibility(w http.ResponseWriter, r *http.Request, u id
 		problem(w, 400, "Invalid visibility")
 		return
 	}
-	if _, e = s.DB.Exec(r.Context(), "UPDATE pages SET visibility=$2 WHERE id=$1 AND workspace_id=$3", page, in.Visibility, ws.ID); e != nil {
+	tx, e := s.DB.Begin(r.Context())
+	if e != nil {
+		problem(w, 503, "Database unavailable")
+		return
+	}
+	defer tx.Rollback(r.Context())
+	if _, e = tx.Exec(r.Context(), "SELECT id FROM workspaces WHERE id=$1 FOR UPDATE", ws.ID); e != nil {
+		problem(w, 503, "Database unavailable")
+		return
+	}
+	granted, e = s.effectiveLevel(r.Context(), tx, u.ID, page)
+	if e != nil || granted < levelFull {
+		problem(w, 403, "Full access required")
+		return
+	}
+	// Closing a workspace page must preserve its governor's access atomically.
+	if in.Visibility != visWorkspace {
+		if _, e = tx.Exec(r.Context(), `INSERT INTO page_shares(page_id,user_id,level,granted_by) VALUES($1,$2,'full',$2) ON CONFLICT(page_id,user_id) DO UPDATE SET level='full'`, page, u.ID); e != nil {
+			problem(w, 500, "Update failed")
+			return
+		}
+	}
+	if _, e = tx.Exec(r.Context(), "UPDATE pages SET visibility=$2 WHERE id=$1 AND workspace_id=$3", page, in.Visibility, ws.ID); e != nil {
+		problem(w, 500, "Update failed")
+		return
+	}
+	if _, e = tx.Exec(r.Context(), `UPDATE workspaces SET revision=revision+1 WHERE id=$1`, ws.ID); e != nil {
+		problem(w, 500, "Update failed")
+		return
+	}
+	if e = tx.Commit(r.Context()); e != nil {
 		problem(w, 500, "Update failed")
 		return
 	}
@@ -182,6 +222,18 @@ func (s *Service) pageShare(w http.ResponseWriter, r *http.Request, u identity, 
 		return
 	}
 	defer tx.Rollback(r.Context())
+	// Serialize with other sharing and membership changes: two governors must
+	// not each remove the other's last full access using stale snapshots.
+	if _, e = tx.Exec(r.Context(), "SELECT id FROM workspaces WHERE id=$1 FOR UPDATE", ws.ID); e != nil {
+		problem(w, 503, "Database unavailable")
+		return
+	}
+	granted, e = s.effectiveLevel(r.Context(), tx, u.ID, page)
+	if e != nil || granted < levelFull {
+		problem(w, 403, "Full access required")
+		return
+	}
+
 	if r.Method == "DELETE" {
 		if e = s.refuseOrphaningThePage(r.Context(), tx, page, target); e != nil {
 			problem(w, 409, e.Error())
@@ -202,12 +254,29 @@ func (s *Service) pageShare(w http.ResponseWriter, r *http.Request, u identity, 
 			problem(w, 400, "Invalid level")
 			return
 		}
+		if in.Level != "full" {
+			if e = s.refuseOrphaningThePage(r.Context(), tx, page, target); e != nil {
+				problem(w, 409, e.Error())
+				return
+			}
+		}
 		// Partager avec quelqu'un qui n'est pas de l'espace écrirait une ligne
 		// sans effet : son plafond est nul, donc son accès aussi.
 		var member bool
 		if e = tx.QueryRow(r.Context(), "SELECT EXISTS(SELECT 1 FROM memberships WHERE workspace_id=$1 AND user_id=$2)", ws.ID, target).Scan(&member); e != nil {
 			problem(w, 503, "Database unavailable")
 			return
+		}
+		tsID, e := s.pageTeamspace(r.Context(), tx, u.ID, page)
+		if e != nil {
+			problem(w, 503, "Database unavailable")
+			return
+		}
+		if tsID != "" {
+			if e = tx.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM teamspace_memberships WHERE teamspace_id=$1 AND user_id=$2)`, tsID, target).Scan(&member); e != nil {
+				problem(w, 503, "Database unavailable")
+				return
+			}
 		}
 		if !member {
 			problem(w, 404, "Member not found")
@@ -218,6 +287,10 @@ func (s *Service) pageShare(w http.ResponseWriter, r *http.Request, u identity, 
 			problem(w, 500, "Update failed")
 			return
 		}
+	}
+	if _, e = tx.Exec(r.Context(), `UPDATE workspaces SET revision=revision+1 WHERE id=$1`, ws.ID); e != nil {
+		problem(w, 500, "Update failed")
+		return
 	}
 	if e = tx.Commit(r.Context()); e != nil {
 		problem(w, 500, "Update failed")
@@ -241,7 +314,7 @@ func (s *Service) refuseOrphaningThePage(ctx context.Context, q querier, page, t
 		return nil
 	}
 	var remaining int
-	if e = q.QueryRow(ctx, `SELECT count(*) FROM page_shares WHERE page_id=ANY($1) AND level='full' AND user_id<>$2`, chain, target).Scan(&remaining); e != nil {
+	if e = q.QueryRow(ctx, `SELECT count(*) FROM page_shares sh JOIN pages p ON p.id=sh.page_id JOIN memberships m ON m.workspace_id=p.workspace_id AND m.user_id=sh.user_id WHERE sh.page_id=ANY($1) AND sh.level='full' AND sh.user_id<>$2 AND m.role IN ('admin','member')`, chain, target).Scan(&remaining); e != nil {
 		return e
 	}
 	if remaining > 0 {

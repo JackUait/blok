@@ -22,13 +22,30 @@ describe('workspace OpenAI assistant adapter',()=>{
  });
  it('adapts history to plain text without treating tool blocks as user prompts and forwards cancellation',async()=>{
   const adapter=createWorkspaceAssistant(ref),progress=vi.fn(),signal=new AbortController().signal;
-  const request={system:'System',messages:[{role:'user',content:[{type:'text',text:'Question'},{type:'tool_use',id:'tool',name:'blok_read',input:{secret:'private'}}]},{role:'assistant',content:'Earlier answer'}],tools:[],signal} as unknown as AgentModelRequest;
+  const request={system:'System',messages:[{role:'user',content:[{type:'text',text:'Question'},{type:'tool_use',id:'tool',name:'blok_read',input:{secret:'private'}}]}],tools:[],signal} as unknown as AgentModelRequest;
   const result=await adapter.modelFor('openai:gpt-other',progress)(request);
-  expect(ai.respond).toHaveBeenCalledWith({model:'gpt-other',system:'System',messages:[{role:'user',content:expect.stringMatching(/^Question\s*$/)},{role:'assistant',content:'Earlier answer'}]},signal);
+  expect(ai.respond).toHaveBeenCalledWith({model:'gpt-other',system:'System',messages:[{role:'user',content:expect.stringMatching(/^Question\s*$/)}]},signal);
   expect(result.content).toEqual([{type:'text',text:'Answer'}]);expect(progress).toHaveBeenCalledWith(expect.stringContaining('gpt-other'));
  });
  it('propagates config and response failures instead of silently choosing another credential',async()=>{
   ai.config.mockRejectedValue(new Error('Session expirée'));const adapter=createWorkspaceAssistant(ref);await expect(adapter.listProviders(new AbortController().signal)).rejects.toThrow('Session expirée');
   ai.respond.mockRejectedValue(new Error('Clé refusée'));await expect(adapter.modelFor('openai:gpt-other',()=>undefined)({system:'',messages:[],tools:[],signal:new AbortController().signal})).rejects.toThrow('Clé refusée');
+ });
+});
+
+describe('provider context boundary',()=>{
+ it('does not forward old provider history after switching, including later turns',async()=>{
+  const adapter=createWorkspaceAssistant(ref),signal=new AbortController().signal;
+  const request=(messages:AgentModelRequest['messages']):AgentModelRequest=>({system:'Instructions',messages,tools:[],signal});
+  const old={role:'user' as const,content:'Contenu personnel envoyé au premier modèle'};
+  await adapter.modelFor('openai:first',()=>undefined)(request([old]));
+  const next={role:'user' as const,content:'Nouvelle demande'};
+  await adapter.modelFor('openai:second',()=>undefined)(request([old,{role:'assistant',content:'Ancienne réponse'},next]));
+  const switched = ai.respond.mock.calls[1][0] as {messages:unknown[]};
+  expect(switched.messages).toEqual([next]);
+  await adapter.modelFor('openai:second',()=>undefined)(request([old,{role:'assistant',content:'Ancienne réponse'},next,{role:'assistant',content:'Answer'},{role:'user',content:'Suite'}]));
+  const later = ai.respond.mock.calls[2][0] as {messages:unknown[]};
+  expect(JSON.stringify(later.messages)).not.toContain('personnel');
+  expect(later.messages).toHaveLength(3);
  });
 });

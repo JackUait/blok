@@ -125,6 +125,28 @@
   border-color: var(--color-gray-200, currentcolor);
 }
 
+/* Code controls retain their theme border despite the legacy border reset above. */
+.blok-code-toolbar {
+  border-color: var(--blok-border-secondary);
+}
+
+/* A separate straight divider must not follow the language button's radius. */
+.blok-code-language {
+  position: relative;
+  border-inline-end-width: 0;
+}
+
+.blok-code-language::after {
+  content: '';
+  position: absolute;
+  inset-inline-end: 0;
+  top: 5px;
+  bottom: 5px;
+  width: 1px;
+  background: var(--blok-border-secondary);
+  pointer-events: none;
+}
+
 /* Trash icons draw their lid closed; any control holding one lifts it. */
 [data-blok-icon-lid] {
   transform-box: fill-box;

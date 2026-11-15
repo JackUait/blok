@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sectionOf, groupPagesBySection, sectionNames, type PageSection } from './page-section';
+import { sectionOf, sidebarSectionOf, groupPagesBySection, sectionNames, type PageSection } from './page-section';
 import type { PageAccessEntry } from './page-access';
 
 const entry = (over: Partial<PageAccessEntry>): PageAccessEntry => ({ level: 'edit', visibility: 'private', shared: false, ...over });
@@ -58,4 +58,14 @@ describe('sidebar sections', () => {
     const groups = groupPagesBySection(pages, { a: entry({ visibility: 'workspace' }) });
     expect(groups.flatMap((group) => group.pages.map((page) => page.id)).sort()).toEqual(['a', 'b', 'c']);
   });
+});
+
+
+describe('backend teamspace section boundary',()=>{
+ it('uses the effective teamspace for common pages while preserving private and directly shared roots',()=>{
+  expect(sidebarSectionOf(entry({visibility:'workspace',teamspaceId:'product'}))).toBe('teamspace:product');
+  expect(sidebarSectionOf(entry({visibility:'private',teamspaceId:'product'}))).toBe('Privé');
+  expect(sidebarSectionOf(entry({visibility:'workspace',teamspaceId:'product',sharedRoot:true}))).toBe('Partagé');
+  expect(sidebarSectionOf(entry({visibility:'workspace',teamspaceId:null}))).toBe('workspace');
+ });
 });

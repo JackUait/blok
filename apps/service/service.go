@@ -62,10 +62,11 @@ type identity struct {
 	Session string
 }
 type Workspace struct {
-	ID   string `json:"id"`
-	Slug string `json:"slug"`
-	Name string `json:"name"`
-	Role string `json:"role"`
+	ID   string  `json:"id"`
+	Slug string  `json:"slug"`
+	Name string  `json:"name"`
+	Role string  `json:"role"`
+	Icon *string `json:"icon"`
 }
 
 func opaque() string {
@@ -293,6 +294,7 @@ func (s *Service) routes() {
 	s.mux.HandleFunc("POST /api/mcp/tokens", s.mcpTokens)
 	s.mux.HandleFunc("DELETE /api/mcp/tokens/{id}", s.revokeMCPToken)
 	s.mux.HandleFunc("POST /api/mcp/tokens/{id}/rotate", s.rotateMCPToken)
+	s.mux.HandleFunc("GET /api/pages/{kind}/{id}", s.resolvePageURL)
 	s.mux.HandleFunc("GET /api/workspaces", s.listWorkspaces)
 	s.mux.HandleFunc("POST /api/workspaces", s.createWorkspace)
 	s.mux.HandleFunc("/api/workspaces/{slug}", s.workspace)
@@ -318,7 +320,7 @@ func normalizeEmail(v string) (string, error) {
 	return v, nil
 }
 func (s *Service) workspaces(ctx context.Context, uid string) ([]Workspace, error) {
-	rows, e := s.DB.Query(ctx, "SELECT w.id,w.slug,w.name,m.role FROM workspaces w JOIN memberships m ON m.workspace_id=w.id WHERE m.user_id=$1 ORDER BY w.name", uid)
+	rows, e := s.DB.Query(ctx, "SELECT w.id,w.slug,w.name,m.role,w.icon FROM workspaces w JOIN memberships m ON m.workspace_id=w.id WHERE m.user_id=$1 ORDER BY w.name", uid)
 	if e != nil {
 		return nil, e
 	}
@@ -326,7 +328,7 @@ func (s *Service) workspaces(ctx context.Context, uid string) ([]Workspace, erro
 	out := []Workspace{}
 	for rows.Next() {
 		var w Workspace
-		if e = rows.Scan(&w.ID, &w.Slug, &w.Name, &w.Role); e != nil {
+		if e = rows.Scan(&w.ID, &w.Slug, &w.Name, &w.Role, &w.Icon); e != nil {
 			return nil, e
 		}
 		out = append(out, w)

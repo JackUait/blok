@@ -4,6 +4,8 @@ import type { WorkspaceRef } from './workspace-registry';
 export type PageLevel = 'view' | 'edit' | 'full';
 export interface PageAccessEntry {
   level: PageLevel;
+  teamspaceId?: string | null;
+  publicId?: string;
   /** Visibilité effective, héritée comprise : ce qui range la page dans sa section. */
   visibility?: 'inherit' | 'private' | 'workspace';
   /** Quelqu'un d'autre que moi a un droit sur cette page ou l'un de ses ancêtres. */

@@ -27,10 +27,11 @@ var permissionExemptions = map[string]string{
 	"workspaceStandings":       "implémente la résolution",
 
 	// Pas de contenu : des identifiants, ou un drapeau posé après autorisation.
-	"recheckWorkspace": "ne lit que des identifiants pour relancer une revérification",
-	"currentIndex":     "ne lit que des identifiants et leur ordre ; l'appelant résout les niveaux",
-	"ancestry":         "remonte la chaîne des parents ; c'est une brique du résolveur, pas un accès au contenu",
-	"mintTicket":       "marque l'admission d'un document déjà autorisé par l'appelant",
+	"recheckWorkspace":       "ne lit que des identifiants pour relancer une revérification",
+	"currentIndex":           "ne lit que des identifiants et leur ordre ; l'appelant résout les niveaux",
+	"refuseOrphaningThePage": "garde de mutation appelé après full dans une transaction verrouillant le workspace ; compte les gouverneurs actifs de la chaîne sans lire de contenu",
+	"ancestry":               "remonte la chaîne des parents ; c'est une brique du résolveur, pas un accès au contenu",
+	"mintTicket":             "marque l'admission d'un document déjà autorisé par l'appelant",
 
 	// Authentification propre, hors du modèle de permissions par page.
 	"document":            "point interne, authentifié par INTERNAL_SECRET et bloqué au proxy public",
@@ -39,7 +40,7 @@ var permissionExemptions = map[string]string{
 
 var permissionGuards = []string{
 	"effectiveLevel", "effectiveLevelForSession", "workspaceLevels",
-	"authorizeDoc", "authorizeMCPDocument", "assetAllowed", "chainOf",
+	"authorizeDoc", "authorizeMCPDocument", "assetAllowed", "chainOf", "workspaceStandings",
 }
 
 var guardedTables = []string{

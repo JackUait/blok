@@ -2,6 +2,7 @@ import { openModalDialog, type ModalDialogHandle } from '@blok/modal-dialog';
 import { PopoverDesktop } from '@blok/popover';
 import { IconDotsHorizontal, IconTrash } from '../../../src/components/icons';
 import {
+  INSTANCE_ROLES,
   SIGNUP_POLICIES,
   WORKSPACE_CREATION_POLICIES,
   signupPolicyOptions,
@@ -134,14 +135,14 @@ export function mountInstanceSettings(
     general: 'Général',
     access: 'Accès',
     accounts: 'Comptes',
-    workspaces: 'Espaces',
+    workspaces: 'Workspaces',
     health: 'Santé et e-mail',
   };
   const intros: Record<InstancePanel, string> = {
     general: 'Nom et identité de cette instance.',
     access: 'Qui peut créer un compte et un espace sur ce serveur.',
-    accounts: 'Comptes de l’instance. Métadonnées seules — aucun contenu de page.',
-    workspaces: 'Espaces hébergés sur cette instance. Métadonnées seules — aucun accès au contenu.',
+    accounts: 'Comptes du serveur. Métadonnées seules — aucun contenu de page.',
+    workspaces: 'Workspaces hébergés sur ce serveur. Métadonnées seules — aucun accès au contenu.',
     health: 'État du serveur et délivrabilité des e-mails.',
   };
   root.append(
@@ -165,7 +166,7 @@ export function mountInstanceSettings(
       const nameRow = el('div', { attribute: 'data-desktop-settings-row' });
       const labels = el('div', { attribute: 'data-desktop-settings-row-labels' });
       labels.append(
-        el('strong', { text: 'Nom de l’instance', attribute: 'data-desktop-settings-row-title' }),
+        el('strong', { text: 'Nom du serveur', attribute: 'data-desktop-settings-row-title' }),
         el('span', { text: 'Affiché sur l’écran de connexion et dans les e-mails.', attribute: 'data-desktop-settings-row-help' }),
       );
       const name = el('input', { attribute: 'data-desktop-instance-name' });
@@ -173,7 +174,7 @@ export function mountInstanceSettings(
       styleTextField(name);
       name.maxLength = 120;
       name.value = settings.name;
-      name.setAttribute('aria-label', 'Nom de l’instance');
+      name.setAttribute('aria-label', 'Nom du serveur');
       const feedback = createFeedback({ attribute: 'data-desktop-instance-feedback' });
       disposers.push(() => feedback.destroy());
       name.addEventListener('change', () => {
@@ -212,7 +213,7 @@ export function mountInstanceSettings(
         const listed = await options.client.adminUsers({ limit: 100 });
         if (!life.alive) return;
         const admins = listed.users.filter((user) => user.instanceAdmin);
-        const names = admins.map((user) => user.name?.trim() || user.email).join(', ');
+        const names = admins.map((user) => user.name?.trim() ? `${user.name.trim()} (${user.email})` : user.email).join(', ');
         root.append(el('p', {
           text: names ? `Administrée par ${names}.` : 'Administrée par —.',
           attribute: 'data-desktop-instance-admins',
@@ -241,17 +242,23 @@ export function mountInstanceSettings(
         key: K,
         value: CloudAdminSettings[K],
         control: ChoiceControl<string>,
-        previous: CloudAdminSettings[K],
+        help: HTMLElement,
+        consequence: (value: CloudAdminSettings[K]) => string,
       ): void => {
+        control.disabled = true;
         void options.client.patchAdminSettings({ [key]: value }).then((updated) => {
           if (!life.alive) return;
           settings[key] = updated[key];
           control.setValue(updated[key]);
+          help.textContent = consequence(updated[key]);
           feedback.show('Enregistré');
         }).catch((reason) => {
           if (!life.alive) return;
-          control.setValue(previous);
+          control.setValue(settings[key]);
+          help.textContent = consequence(settings[key]);
           feedback.show(errorMessage(reason), 'error');
+        }).finally(() => {
+          if (life.alive) control.disabled = false;
         });
       };
 
@@ -270,10 +277,7 @@ export function mountInstanceSettings(
         value: settings.signupPolicy,
         options: signupPolicyOptions(),
         onChange(value) {
-          const previous = settings.signupPolicy;
-          settings.signupPolicy = value;
-          signupHelp.textContent = SIGNUP_POLICIES[value].consequence;
-          savePolicy('signupPolicy', value, signup, previous);
+          savePolicy('signupPolicy', value, signup, signupHelp, (policy) => SIGNUP_POLICIES[policy].consequence);
         },
       });
       signup.element.setAttribute('data-desktop-instance-signup', '');
@@ -295,17 +299,18 @@ export function mountInstanceSettings(
         value: settings.workspaceCreation,
         options: workspaceCreationOptions(),
         onChange(value) {
-          const previous = settings.workspaceCreation;
-          settings.workspaceCreation = value;
-          creationHelp.textContent = WORKSPACE_CREATION_POLICIES[value].consequence;
-          savePolicy('workspaceCreation', value, creation, previous);
+          savePolicy('workspaceCreation', value, creation, creationHelp, (policy) => WORKSPACE_CREATION_POLICIES[policy].consequence);
         },
       });
       creation.element.setAttribute('data-desktop-instance-workspace-creation', '');
       choices.push(creation);
       creationRow.append(creationLabels, creation.element);
 
-      root.append(signupRow, creationRow, feedback.element);
+      const invitationHelp = el('p', {
+        text: `Pour un serveur privé, choisissez « ${SIGNUP_POLICIES.invite.label} » et « ${WORKSPACE_CREATION_POLICIES.admins_only.label} ». Les comptes existants conservent leur accès. Pour inviter une nouvelle personne, ouvrez les paramètres du Workspace, puis Membres. Les administrateurs du Workspace peuvent envoyer ces invitations ; ce rôle est distinct de l’administration du serveur.`,
+        attribute: 'data-desktop-settings-row-help',
+      });
+      root.append(signupRow, creationRow, feedback.element, invitationHelp);
     }).catch((reason) => {
       if (life.alive) status.textContent = errorMessage(reason);
     });
@@ -334,8 +339,9 @@ export function mountInstanceSettings(
       heading.append(
         el('th', { text: 'Adresse' }),
         el('th', { text: 'Nom' }),
+        el('th', { text: 'Rôle d’instance' }),
         el('th', { text: 'Date' }),
-        el('th', { text: 'Espaces' }),
+        el('th', { text: 'Workspaces' }),
         el('th', { text: 'Actions' }),
       );
       head.append(heading);
@@ -345,6 +351,7 @@ export function mountInstanceSettings(
         row.append(
           el('td', { text: user.email }),
           el('td', { text: user.name || '—' }),
+          el('td', { text: user.instanceAdmin ? INSTANCE_ROLES.admin : INSTANCE_ROLES.account }),
           el('td', { text: formatDate(user.createdAt) }),
           el('td', { text: String(user.workspaceCount) }),
         );
@@ -391,7 +398,7 @@ export function mountInstanceSettings(
             onActivate: () => {
               openConfirm({
                 title: 'Supprimer ce compte ?',
-                message: `${user.email} sera retiré de l’instance. Sessions, jetons et accès seront effacés. Cette action est définitive.`,
+                message: `${user.email} sera retiré du serveur. Sessions, jetons et accès seront effacés. Cette action est définitive.`,
                 confirmLabel: 'Supprimer',
                 container: options.dialog,
                 onConfirm: async () => {

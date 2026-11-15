@@ -1,0 +1,12 @@
+# Suivi serveur à transmettre à la tâche teamspaces
+
+Observation du 15 novembre 2026, checkout partagé en cours de modification par d'autres tâches. Aucun fichier `apps/service` ou `desktop/src` modifié ici. Vérifier ces points sur leur version finale avant de conclure à un défaut restant.
+
+- **Création idempotente** : `blok_create_page` n'expose pas de clé de requête durable. Une réponse HTTP perdue peut laisser une page créée ; le client doit relister et inspecter avant retry. Envisager une clé bornée à l'identité + workspace + payload, stockée transactionnellement avec la page ; tester replay et réutilisation avec payload différent. Même enjeu pour upload (fichiers orphelins). Ce n'est pas corrigé par `expectRevision` sur le document.
+- **Schémas cloud et erreurs** : les outils workspace ajoutés par le service ont des schémas moins riches que les outils core (notamment pas d'outputSchema structuré). Ajouter des erreurs identifiables et des champs de cible explicites faciliterait la reprise ; respecter les permissions effectives dans listing/création/upload. Le checkout actuel annonce déjà visibilité privée par défaut pour racines et héritage pour enfants : ne pas écraser ce travail concurrent.
+- **Écart de versions** : l'outil connecté de cette session n'annonce pas encore le paramètre de visibilité observé dans le checkout. Recontrôler `tools/list` et un handle de test après installation du build final. Ne pas déduire les capacités de production du code local.
+- **Taille des listings** : `blok_list_pages` inspecté rend toutes les pages autorisées sans pagination. Vérifier le besoin de pagination avant un gros espace équipe ; la skill suit la pagination seulement lorsqu'elle existe.
+- **Équipe et médias** : vérifier en tests serveur temporaires qu'un viewer ne peut ni créer ni uploader, qu'une perte d'accès interdit une écriture sur handle déjà ouvert, et qu'une image privée n'est pas accessible par un autre workspace. Les tests MCP Node ne prouvent pas les règles SQL du service.
+- **Distribution** : régénérer les runtimes serveur depuis les sources partagées dans le périmètre d'intégration, puis exécuter la conformance des builds concernés. Aucun patch service requis pour les améliorations core de ce lot ; ces pistes demandent une conception serveur, pas un patch aveugle.
+
+Aucune invitation ou notification réelle n'a été envoyée. Ne pas annoncer de persistance hors ligne durable des espaces distants.

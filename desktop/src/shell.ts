@@ -1,3 +1,4 @@
+import { pageIdForHref, pageDestination } from './page-urls';
 import { renderPageIcon } from '../../src/shell/page-icon';
 import { activeWorkspace, workspaceKey } from './workspace-registry';
 import { createWorkspace, type Workspace } from './workspace';
@@ -166,12 +167,12 @@ function installMenu(): void {
 function boot(): Session {
   const restored = load(sessionStorage.getItem(tabKey()));
   const requested = new URL(location.href);
-  const page = requested.searchParams.get('page');
+  const page = pageIdForHref(requested.href) ?? (pageDestination(requested.href).kind==='public' ? requested.pathname : null);
   if (!restored || !page) return restored ?? freshSession();
   // An explicit page link takes precedence over the previously selected tab.
   const existing = restored.tabs.find((tab) => {
     const url = new URL(tab.href);
-    return url.pathname === requested.pathname && url.searchParams.get('page') === page;
+    return (pageIdForHref(url.href) ?? url.pathname) === page;
   });
   if (existing) {
     existing.href = requested.href;
@@ -422,7 +423,7 @@ function syncPageIcon(pageId: string, icon: string): void {
   if (pageId === pageOf(location.href)) applyFavicon(icon);
   let changed = false;
   const tabs = box.session.tabs.map((tab) => {
-    if (new URL(tab.href).searchParams.get('page') !== pageId || tab.icon === icon) return tab;
+    if (pageIdForHref(tab.href) !== pageId || tab.icon === icon) return tab;
     changed = true;
     return { ...tab, icon };
   });
@@ -433,7 +434,7 @@ function syncPageIcon(pageId: string, icon: string): void {
 }
 
 function pageOf(href: string): string | null {
-  try { return new URL(href).searchParams.get('page'); } catch { return null; }
+  return pageIdForHref(href);
 }
 
 function onPop(): void {

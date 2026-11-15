@@ -1,0 +1,22 @@
+/* Keep save feedback beside the breadcrumbs, clear of the assistant button. */
+[data-desktop-workspace] [data-desktop-status] {
+  position: sticky; top: 8px; bottom: auto; right: auto;
+  display: inline-flex; align-items: center; flex: none; gap: 6px;
+  max-width: min(280px, calc(100% - 16px)); margin: 0 8px;
+  padding: 4px 7px; border-radius: 5px;
+  background: var(--desktop-hover); color: var(--desktop-muted);
+  font-size: 12px; line-height: 18px; white-space: nowrap;
+  pointer-events: auto; z-index: 13;
+}
+[data-desktop-workspace] [data-desktop-page-toolbar] [data-desktop-status] {
+  position: static; margin: 0; max-width: none;
+}
+[data-desktop-workspace] [data-desktop-status]::before {
+  content: ''; width: 6px; height: 6px; flex: none; border-radius: 50%; background: currentColor;
+}
+[data-desktop-workspace] [data-desktop-status][data-sync-state="offline"],
+[data-desktop-workspace] [data-desktop-status][data-error] { color: light-dark(#8a4806, #ffc078); }
+@media (max-width: 640px) {
+  [data-desktop-workspace] [data-desktop-page-toolbar]:has([data-desktop-status]) { height: auto; min-height: 44px; flex-wrap: wrap; padding-block: 6px; }
+  [data-desktop-workspace] [data-desktop-page-toolbar] [data-desktop-status] { order: 3; }
+}

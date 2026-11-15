@@ -1,0 +1,118 @@
+{
+  "commands": [
+    {
+      "name": "block.insert",
+      "args": {
+        "id": "demo-heading",
+        "type": "header",
+        "data": {
+          "text": "Préparer un accueil utile",
+          "level": 1
+        },
+        "position": "end"
+      }
+    },
+    {
+      "name": "block.insert",
+      "args": {
+        "id": "demo-summary",
+        "type": "paragraph",
+        "data": {
+          "text": "Décision proposée : tester le parcours sur une page temporaire avant de préparer un espace équipe."
+        },
+        "position": "end"
+      }
+    },
+    {
+      "name": "block.insert",
+      "args": {
+        "id": "demo-uncertainty",
+        "type": "paragraph",
+        "data": {
+          "text": "À confirmer : aucun nombre de participants, responsable ou délai n’est fourni dans les notes. Ceci est une fixture fictive, pas un état réel de Tousambassadeurs."
+        },
+        "position": "end"
+      }
+    },
+    {
+      "name": "block.insert",
+      "args": {
+        "id": "demo-details",
+        "type": "toggle",
+        "data": {
+          "text": "Détails des notes fictives"
+        },
+        "position": "end"
+      }
+    },
+    {
+      "name": "block.insert",
+      "args": {
+        "id": "demo-child",
+        "type": "paragraph",
+        "data": {
+          "text": "Les notes fictives demandent un accueil court, une page de ressources et un suivi des questions."
+        },
+        "parentId": "demo-details",
+        "position": "end"
+      }
+    },
+    {
+      "name": "block.insert",
+      "args": {
+        "id": "demo-source",
+        "type": "paragraph",
+        "data": {
+          "text": "Source : notes synthétiques de démonstration, auteur/date non indiqués. Aucun fait externe ne leur est attribué."
+        },
+        "position": "end"
+      }
+    },
+    {
+      "name": "block.insert",
+      "args": {
+        "id": "demo-diagram",
+        "type": "code",
+        "data": {
+          "language": "mermaid",
+          "code": "flowchart LR\n  A[Lire] --> B[Préparer]\n  B --> C[Vérifier]"
+        },
+        "position": "end"
+      }
+    },
+    {
+      "name": "block.insert",
+      "args": {
+        "id": "demo-image",
+        "type": "image",
+        "data": {
+          "url": "https://example.invalid/fixture.png",
+          "alt": "Illustration fictive du parcours lire, préparer et vérifier.",
+          "caption": "Image de test uniquement — aucun média chargé.",
+          "captionVisible": true
+        },
+        "position": "end"
+      }
+    },
+    {
+      "name": "block.insert",
+      "args": {
+        "id": "demo-credit",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Source image de test (URL volontairement non chargeable)",
+              "marks": {
+                "link": {
+                  "href": "https://example.invalid/fixture.png"
+                }
+              }
+            }
+          ]
+        },
+        "position": "end"
+      }
+    }
+  ]
+}

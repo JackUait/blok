@@ -33,7 +33,7 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 			problem(w, 500, "Read failed")
 			return
 		}
-		rows, e := tx.Query(r.Context(), "SELECT id,metadata,trashed FROM pages WHERE workspace_id=$1 AND NOT deleted ORDER BY (metadata->>'position')::numeric NULLS LAST,id", ws.ID)
+		rows, e := tx.Query(r.Context(), "SELECT id,metadata,trashed,public_id::text FROM pages WHERE workspace_id=$1 AND NOT deleted ORDER BY (metadata->>'position')::numeric NULLS LAST,id", ws.ID)
 		if e != nil {
 			problem(w, 500, "Read failed")
 			return
@@ -42,10 +42,10 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 		trash := []json.RawMessage{}
 		access := map[string]any{}
 		for rows.Next() {
-			var id string
+			var id, publicID string
 			var meta []byte
 			var tr bool
-			if e = rows.Scan(&id, &meta, &tr); e != nil {
+			if e = rows.Scan(&id, &meta, &tr, &publicID); e != nil {
 				rows.Close()
 				problem(w, 500, "Read failed")
 				return
@@ -56,7 +56,11 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 			}
 			// La barre latérale range une page sous « Privé », « Partagé » ou
 			// « Espace » ; le niveau seul ne permet pas de les distinguer.
-			entry := map[string]any{"level": standing.Level.String(), "visibility": standing.Visibility, "shared": standing.Shared}
+			var teamspaceID any
+			if standing.TeamspaceID != "" {
+				teamspaceID = standing.TeamspaceID
+			}
+			entry := map[string]any{"level": standing.Level.String(), "visibility": standing.Visibility, "shared": standing.Shared, "teamspaceId": teamspaceID, "publicId": publicID}
 			// Une page accessible sous un parent qui ne l'est pas ne peut pas
 			// s'afficher sous un nœud que l'appelant ne reçoit pas. Elle remonte,
 			// et le signalement empêche l'enregistrement de lire ce détachement
@@ -170,6 +174,10 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 			return
 		}
 	}
+	if e = s.validateTeamspaceIndex(r.Context(), tx, u.ID, ws.ID, all, known, realParents, levels); e != nil {
+		problem(w, 409, e.Error())
+		return
+	}
 	// L'appelant n'a pu envoyer que ce qu'il voit. Tombstoner sur cette seule
 	// base effacerait les pages des autres ; la suppression ne porte donc que sur
 	// ce qu'il peut écrire.
@@ -195,6 +203,8 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 			continue
 		}
 		p := slot.page
+		delete(p, "publicId")
+		delete(p, "teamspaceId")
 		p["position"] = position
 		// L'index détache une page de son parent caché pour pouvoir l'afficher.
 		// La réécrire telle quelle la déracinerait. Un parent explicitement
@@ -230,13 +240,13 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 			delete(p, "initialVisibility")
 		}
 		encoded, _ := json.Marshal(p)
-		tag, e := tx.Exec(r.Context(), `INSERT INTO pages(id,workspace_id,metadata,trashed,visibility) VALUES($1,$2,$3,$4,$5) ON CONFLICT(id) DO UPDATE SET metadata=$3,trashed=$4,deleted=false WHERE pages.workspace_id=$2`, slot.id, ws.ID, encoded, slot.trashed, visibility)
+		tag, e := tx.Exec(r.Context(), `INSERT INTO pages(id,workspace_id,metadata,trashed,visibility) VALUES($1,$2,$3,$4,$5) ON CONFLICT(id) DO UPDATE SET metadata=$3,trashed=$4,deleted=false WHERE pages.workspace_id=$2 AND NOT pages.deleted`, slot.id, ws.ID, encoded, slot.trashed, visibility)
 		if e != nil {
 			problem(w, 500, "Save failed")
 			return
 		}
 		if tag.RowsAffected() != 1 {
-			problem(w, 409, "Page ID already belongs to another workspace")
+			problem(w, 409, "Page ID unavailable")
 			return
 		}
 		// Sans cela, partager serait réservé aux administrateurs — y compris la
@@ -261,6 +271,16 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 	jsonOut(w, 200, map[string]any{"revision": rev + 1})
 }
 func (s *Service) page(w http.ResponseWriter, r *http.Request, u identity, ws Workspace) {
+	// IDs are global; every page action must also match the workspace in the URL.
+	var belongs bool
+	if e := s.DB.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM pages WHERE id=$1 AND workspace_id=$2 AND NOT deleted)`, r.PathValue("id"), ws.ID).Scan(&belongs); e != nil {
+		problem(w, 503, "Database unavailable")
+		return
+	}
+	if !belongs {
+		problem(w, 404, "Page not found")
+		return
+	}
 	if r.Method == "POST" && r.PathValue("action") == "seed" {
 		s.seed(w, r, u, ws)
 		return
@@ -270,6 +290,9 @@ func (s *Service) page(w http.ResponseWriter, r *http.Request, u identity, ws Wo
 		return
 	}
 	switch r.PathValue("action") {
+	case "teamspace":
+		s.bindPageTeamspace(w, r, u, ws, r.PathValue("id"))
+		return
 	case "access":
 		s.pageAccess(w, r, u, ws)
 		return
@@ -504,6 +527,40 @@ func (s *Service) duplicate(w http.ResponseWriter, r *http.Request, u identity, 
 			return
 		}
 	}
+	granted, e = s.effectiveLevel(r.Context(), tx, u.ID, source)
+	if e != nil || granted < levelView {
+		problem(w, 404, "Source page unavailable")
+		return
+	}
+	sourceTS, e := s.pageTeamspace(r.Context(), tx, u.ID, source)
+	if e != nil {
+		problem(w, 503, "Read failed")
+		return
+	}
+	var rootTS *string
+	if in.ParentID != nil && *in.ParentID != "" {
+		target, e := s.effectiveLevel(r.Context(), tx, u.ID, *in.ParentID)
+		if e != nil || target < levelEdit {
+			problem(w, 404, "Parent unavailable")
+			return
+		}
+		chain, e := s.chainOf(r.Context(), tx, u.ID, *in.ParentID)
+		if e != nil || len(chain) >= maxPageDepth {
+			problem(w, 409, "Maximum page depth reached")
+			return
+		}
+		targetTS, e := s.pageTeamspace(r.Context(), tx, u.ID, *in.ParentID)
+		if e != nil || sourceTS != targetTS {
+			problem(w, 409, "Duplicate must remain in the same teamspace")
+			return
+		}
+	} else if sourceTS != "" {
+		if !s.teamspaceWritable(r.Context(), tx, u.ID, ws.ID, sourceTS) {
+			problem(w, 403, "Teamspace write access required")
+			return
+		}
+		rootTS = &sourceTS
+	}
 	var meta []byte
 	var sourceVisibility string
 	if e = tx.QueryRow(r.Context(), "SELECT metadata,visibility FROM pages WHERE id=$1 AND workspace_id=$2 AND NOT deleted AND NOT trashed", source, ws.ID).Scan(&meta, &sourceVisibility); e != nil {
@@ -512,6 +569,8 @@ func (s *Service) duplicate(w http.ResponseWriter, r *http.Request, u identity, 
 	}
 	var metadata map[string]any
 	json.Unmarshal(meta, &metadata)
+	delete(metadata, "publicId")
+	delete(metadata, "teamspaceId")
 	metadata["id"] = in.ID
 	metadata["title"] = in.Title
 	metadata["parentId"] = in.ParentID
@@ -525,7 +584,7 @@ func (s *Service) duplicate(w http.ResponseWriter, r *http.Request, u identity, 
 	// La copie reprend la visibilité de la source : dupliquer ne doit jamais
 	// élargir un accès. Le duplicateur en reçoit la maîtrise, faute de quoi la
 	// copie d'une page privée naîtrait hors d'atteinte de qui l'a demandée.
-	if _, e = tx.Exec(r.Context(), "INSERT INTO pages(id,workspace_id,metadata,content,visibility) VALUES($1,$2,$3,$4,$5)", in.ID, ws.ID, meta, encoded, sourceVisibility); e != nil {
+	if _, e = tx.Exec(r.Context(), "INSERT INTO pages(id,workspace_id,metadata,content,visibility,teamspace_id) VALUES($1,$2,$3,$4,$5,$6)", in.ID, ws.ID, meta, encoded, sourceVisibility, rootTS); e != nil {
 		problem(w, 409, "Duplicate page ID already exists")
 		return
 	}

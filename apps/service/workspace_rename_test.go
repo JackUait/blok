@@ -116,7 +116,7 @@ func TestWorkspaceRename(t *testing.T) {
 	const path = "/api/workspaces/acme"
 
 	// Le defaut d'abord : un administrateur renomme son espace.
-	renamed := request("PATCH", path, admin, map[string]any{"name": "Jocehome"}, 200)
+	renamed := request("PATCH", path, admin, map[string]any{"name": "  Jocehome  "}, 200)
 	if renamed["name"] != "Jocehome" {
 		t.Fatalf("reponse du renommage: name=%v want Jocehome", renamed["name"])
 	}
@@ -143,6 +143,7 @@ func TestWorkspaceRename(t *testing.T) {
 
 	// Memes bornes qu'a la creation : 1 a 120 caracteres.
 	request("PATCH", path, admin, map[string]any{"name": ""}, 400)
+	request("PATCH", path, admin, map[string]any{"name": " \t\n "}, 400)
 	request("PATCH", path, admin, map[string]any{"name": strings.Repeat("a", 121)}, 400)
 
 	// Aucun refus n'a altere le nom.
@@ -152,4 +153,9 @@ func TestWorkspaceRename(t *testing.T) {
 	if stored != "Jocehome" {
 		t.Fatalf("nom altere par une requete refusee: %q want Jocehome", stored)
 	}
+	unicodeName := strings.Repeat("é", 120)
+	if got := request("PATCH", path, admin, map[string]any{"name": unicodeName}, 200); got["name"] != unicodeName {
+		t.Fatalf("Unicode name was not preserved: %v", got["name"])
+	}
+	request("PATCH", path, admin, map[string]any{"name": unicodeName + "é"}, 400)
 }

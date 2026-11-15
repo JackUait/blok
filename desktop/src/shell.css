@@ -413,6 +413,11 @@ body[data-blok-theme="light"] [data-desktop-floating-toc] {
   flex: none; min-height: 32px; padding: 4px 10px; border: 1px solid var(--desktop-border); border-radius: 6px;
   background: var(--desktop-strip); color: var(--desktop-ink); font: inherit; font-size: 14px; cursor: pointer;
 }
+[data-desktop-workspace-rename] { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; width: min(100%, 360px); min-width: 0; }
+[data-desktop-workspace-rename] [data-desktop-settings-name] { width: 100%; min-width: 0; }
+[data-desktop-workspace-rename] [data-desktop-settings-copy] { margin-top: 0; }
+[data-desktop-workspace-rename] [role="status"] { grid-column: 1 / -1; margin: 0; }
+[data-desktop-workspace-rename] [role="status"]:empty { display: none; }
 [data-desktop-settings-path] { display: block; overflow-wrap: anywhere; padding: 12px; border: 1px solid var(--desktop-border); border-radius: 6px; font-size: 13px; }
 [data-desktop-settings-copy] { margin-top: 16px; }
 [data-desktop-mcp-actions] { display: inline-flex; gap: 8px; }
@@ -679,3 +684,32 @@ button[data-desktop-page-workspace]:focus-visible { outline: 2px solid var(--blo
 @media (max-width: 640px) {
   [data-desktop-empty-cards] { grid-template-columns: 1fr; }
 }
+
+/* Settings use one consistent reading column and explicit field groups. */
+[data-desktop-settings-main] { padding: 44px clamp(24px, 5vw, 72px); }
+[data-desktop-settings-title] { font-weight: 650; letter-spacing: -.025em; }
+[data-desktop-settings-intro] { margin-bottom: 40px; }
+[data-desktop-settings-section] { font-weight: 600; padding-bottom: 14px; margin-bottom: 8px; }
+[data-desktop-settings-row-help] { line-height: 1.5; }
+[data-desktop-settings-field] { display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 22px 0; }
+[data-desktop-settings-field] > p { margin: 0; }
+[data-desktop-settings-field] > [role="status"]:empty { display: none; }
+[data-desktop-settings-field] [data-desktop-workspace-rename] { margin-top: 6px; width: min(100%, 560px); }
+[data-desktop-settings-field] [data-desktop-settings-name] { min-height: 38px; }
+[data-desktop-workspace-icon-controls] { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
+[data-desktop-workspace-icon-controls] [data-desktop-settings-copy] { margin: 0; }
+[data-desktop-workspace-icon-controls] [data-desktop-workspace-icon] { width: 72px; height: 72px; padding: 8px; font-size: 42px; line-height: 1; background: transparent; border-radius: 8px; }
+[data-desktop-workspace-icon-controls] [data-desktop-workspace-icon]:hover:not(:disabled) { background: var(--desktop-hover); }
+@media (max-width: 680px) {
+  [data-desktop-settings-main] { padding: 44px 20px 28px; }
+  [data-desktop-workspace-rename] { grid-template-columns: minmax(0, 1fr); }
+  [data-desktop-workspace-rename] button { justify-self: start; }
+}
+
+/* Workspace navigation and reading column, distinct from teamspace detail tabs. */
+@media (min-width: 900px) {
+  [data-desktop-settings-nav] { flex-basis:240px; }
+  [data-desktop-settings-main] { padding:48px clamp(28px,5vw,76px); }
+}
+[data-desktop-settings-content] { max-width:760px; }
+[data-blok-sidebar-teamspaces-empty] { margin:6px 14px 10px; color:var(--desktop-muted); font-size:12px; line-height:1.5; }

@@ -626,7 +626,7 @@
 [data-blok-sidebar-teamspace-mark] { position: relative; }
 [data-blok-sidebar-teamspace-chevron] { position: absolute; opacity: 0; }
 [data-blok-sidebar-teamspace]:is(:hover, :focus-within) [data-blok-sidebar-teamspace-mark] { background: transparent; }
-[data-blok-sidebar-teamspace]:is(:hover, :focus-within) [data-blok-sidebar-teamspace-mark] > svg:first-child { opacity: 0; }
+[data-blok-sidebar-teamspace]:is(:hover, :focus-within) [data-blok-sidebar-teamspace-mark] > :first-child:not([data-blok-sidebar-teamspace-chevron]) { opacity: 0; }
 [data-blok-sidebar-teamspace]:is(:hover, :focus-within) [data-blok-sidebar-teamspace-chevron] { opacity: 1; }
 [data-blok-sidebar-teamspace-add], [data-blok-sidebar-teamspace-more] {
   display: grid; place-items: center; flex: none; width: 24px; height: 24px;
@@ -667,3 +667,7 @@ button[data-blok-sidebar-search]:hover { background: var(--blok-item-hover-bg); 
   background: #f7f7f5; --blok-sidebar-label: #5f5e5b; --blok-sidebar-heading: #91918e; --blok-sidebar-selected: #37352f;
   --blok-item-hover-bg: #ebebea; --blok-icon-active-bg: #e8e8e6;
 }
+
+/* Real teamspaces: each row owns its own expansion, pages remain a compact tree. */
+[data-blok-sidebar-teamspace-mark] > span:first-child { display:grid; place-items:center; width:18px; height:18px; font-size:15px; }
+[data-blok-sidebar-teamspace] > button:first-child { min-height:30px; font-size:13px; }

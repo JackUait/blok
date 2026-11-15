@@ -93,7 +93,17 @@ const CORE_SCOPES: Readonly<Record<AgentToolName, 'blok.read' | 'blok.write'>> =
 
 const isCoreTool = (name: string): name is AgentToolName => Object.hasOwn(CORE_SCOPES, name);
 
+const checkQuery = (query: unknown): void => {
+  if (query !== undefined && (typeof query !== 'string' || query.length > 200)) {
+    throw surfaceError('INVALID_ARGS', 'query must be a string of at most 200 characters.');
+  }
+};
+
 const listRequestOf = (args: Record<string, unknown>): ListRequest => {
+  checkQuery(args.query);
+  if (typeof args.limit === 'number' && !Number.isFinite(args.limit)) {
+    throw surfaceError('INVALID_ARGS', 'limit must be a finite number.');
+  }
   if ((args.limit !== undefined && typeof args.limit !== 'number')
     || (args.query !== undefined && typeof args.query !== 'string')
     || (args.cursor !== undefined && typeof args.cursor !== 'string')) {
@@ -118,9 +128,7 @@ const openStep = (args: Record<string, unknown>, scopes: readonly string[] | nul
     && (typeof args.documentId !== 'string' || args.documentId === '' || args.documentId.length > 512)) {
     throw surfaceError('INVALID_ARGS', 'documentId must be a string of 1 to 512 characters.');
   }
-  if (args.documentId === undefined && args.query !== undefined && typeof args.query !== 'string') {
-    throw surfaceError('INVALID_ARGS', 'query must be a string.');
-  }
+  checkQuery(args.query);
   if (args.mode !== undefined && !MODES.has(args.mode)) {
     throw surfaceError('INVALID_ARGS', 'mode must be "auto", "live" or "stored".');
   }

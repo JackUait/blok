@@ -4,6 +4,7 @@ import { WORKSPACE_ROLES } from './access-vocabulary';
 export interface PageToolbar {
   element: HTMLElement;
   setBreadcrumbs(items: PageBreadcrumbItem[]): void;
+  setWorkspaceName(name: string): void;
   setTitle(title: string): void;
   setIcon(icon: string | undefined): void;
   setFavorite(favorite: boolean): void;
@@ -466,6 +467,15 @@ export function createPageToolbar(
   return {
     element: toolbar,
     setBreadcrumbs(value) { resetFeedback(); items = value.map((item) => ({ ...item })); paint(); },
+    setWorkspaceName(value) {
+      options.workspaceName = value;
+      const workspace = identity.querySelector<HTMLButtonElement>('[data-desktop-page-workspace]');
+      if (!workspace) return;
+      workspace.title = value;
+      const name = workspace.querySelector('span');
+      if (name) name.textContent = value;
+      closeBreadcrumbMenu();
+    },
     setTitle(value) { updateCurrent({ title: value }); },
     setIcon(value) { updateCurrent({ icon: value }); },
     setFavorite,

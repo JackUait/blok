@@ -1,5 +1,6 @@
 import { openModalDialog } from '@blok/modal-dialog';
 import { promoteToTopLayer, removeFromTopLayer } from '../../../src/components/utils/top-layer';
+import { publicPageUrl, type ResolvedPage } from '../page-urls';
 import { CloudClient } from './client';
 import { mountShareSheet } from './share-sheet';
 import type { RemoteWorkspace } from '../workspace-registry';
@@ -9,7 +10,7 @@ import './share-sheet.css';
 let active: { anchor?: HTMLElement; close: () => void } | undefined;
 
 /** Same access sheet in a toolbar popover, or a modal for callers without an anchor. */
-export function openPageSharing(ref: RemoteWorkspace, pageId: string, pageTitle: string, anchor?: HTMLButtonElement, onChanged?: () => Promise<void> | void): () => void {
+export function openPageSharing(ref: RemoteWorkspace, pageId: string, pageTitle: string, anchor?: HTMLButtonElement, onChanged?: () => Promise<void> | void, pageHref?:string): () => void {
   const same = active?.anchor === anchor && active !== undefined;
   active?.close();
   if (same) return () => {};
@@ -40,8 +41,8 @@ export function openPageSharing(ref: RemoteWorkspace, pageId: string, pageTitle:
   const copy = document.createElement('button');
   copy.type = 'button'; copy.textContent = 'Copier le lien';
   copy.addEventListener('click', () => {
-    const url = new URL('/', ref.server); url.searchParams.set('page', pageId);
-    void navigator.clipboard.writeText(url.href).then(() => { copy.textContent = 'Lien copié'; }, () => { hint.textContent = 'La copie du lien a échoué.'; });
+    const href=pageHref ? Promise.resolve(pageHref) : new CloudClient({origin:ref.server,...('__TAURI_INTERNALS__' in window ? {sessionAdapter:nativeSessionAdapter(ref.server)} : {})}).request<ResolvedPage>(`/api/pages/resolve-id/${encodeURIComponent(pageId)}`).then(page=>publicPageUrl(ref.server,page.title,page.publicId));
+    void href.then(value=>navigator.clipboard.writeText(value)).then(() => { copy.textContent = 'Lien copié'; }, () => { hint.textContent = 'La copie du lien a échoué.'; });
   });
   hint.setAttribute('role', 'status');
   footer.append(hint, copy); surface.append(footer);

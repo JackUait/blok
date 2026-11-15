@@ -36,7 +36,10 @@
   "files": [
     "bin",
     "dist",
-    "types"
+    "types",
+    "skills",
+    "examples/authoring",
+    "docs"
   ],
   "engines": {
     "node": ">=20.19.0"

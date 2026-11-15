@@ -1,0 +1,21 @@
+[data-teamspace-settings] { max-width:760px; margin:0 auto; color:var(--desktop-ink); }
+[data-teamspace-settings] h1 { margin:20px 0 10px; font-size:27px; letter-spacing:-.6px; }
+[data-teamspace-settings] h2 { font-size:16px; margin:20px 0 8px; }
+[data-teamspace-settings] p { color:var(--desktop-muted); font-size:13px; line-height:1.6; }
+[data-teamspace-settings] > nav { display:flex; gap:12px; margin:24px 0 8px; border-bottom:1px solid var(--desktop-border); padding-bottom:12px; }
+[data-teamspace-settings] nav [aria-current=page] { background:var(--desktop-hover); color:var(--desktop-ink); }
+[data-teamspace-settings] table { width:100%; border-collapse:collapse; margin:24px 0; font-size:13px; }
+[data-teamspace-settings] th { text-align:left; color:var(--desktop-muted); font-size:12px; font-weight:500; }
+[data-teamspace-settings] td, [data-teamspace-settings] th { padding:12px 4px; border-bottom:1px solid var(--desktop-border); }
+[data-teamspace-field] { display:flex; flex-direction:column; align-items:flex-start; gap:10px; padding:24px 0; border-bottom:1px solid var(--desktop-border); font-size:14px; }
+[data-teamspace-field] small, [data-teamspace-add-member] small { font-size:12px; color:var(--desktop-muted); line-height:1.5; }
+[data-teamspace-field] input, [data-teamspace-field] textarea { width:100%; max-width:540px; color:var(--desktop-ink); background:var(--desktop-strip); border:1px solid var(--desktop-border); border-radius:5px; padding:9px 12px; font:inherit; }
+[data-teamspace-field] textarea { resize:vertical; }
+[data-teamspace-settings] button { cursor:pointer; }
+[data-teamspace-settings] [data-teamspace-icon] { width:72px; height:72px; padding:0; font-size:42px; line-height:1; vertical-align:middle; margin-right:16px; }
+[data-teamspace-settings] form > button { margin-top:18px; }
+[data-teamspace-settings] button:disabled { opacity:.45; cursor:default; }
+[data-teamspace-add-member] { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-top:26px; }
+[data-teamspace-add-member] small { flex-basis:100%; }
+[data-teamspace-add-member] select { max-width:100%; font:inherit; color:var(--desktop-ink); background:var(--desktop-strip); border:1px solid var(--desktop-border); border-radius:5px; padding:8px; }
+[data-teamspace-archive] { margin-top:30px; padding-top:16px; border-top:1px solid var(--desktop-border); }

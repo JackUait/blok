@@ -103,7 +103,7 @@ export function openPageSearch(options: {
   return modal.close;
 }
 
-export type CreationDestination = { value: string; label: string; parentId: string | null; privatePage?: boolean };
+export type CreationDestination = { value: string; label: string; parentId: string | null; privatePage?: boolean; teamspaceId?:string };
 export function openPageCreation(options: {
   destinations: CreationDestination[];
   destination: string;

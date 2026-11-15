@@ -9,6 +9,15 @@ export const WORKSPACE_ROLES: Record<CloudRole, string> = {
   viewer: 'Lecture seule',
 };
 
+/** Rôles propres aux espaces d’équipe, indépendants du Workspace. */
+export const TEAMSPACE_ROLES = {owner:'Propriétaire',member:'Membre',none:'Non membre'} as const;
+
+/** Le rôle global du serveur est distinct du rôle dans chaque espace. */
+export const INSTANCE_ROLES = {
+  admin: 'Administrateur du serveur',
+  account: 'Compte',
+} as const;
+
 /** Conséquences affichées en seconde ligne des sélecteurs de rôle. */
 export const WORKSPACE_ROLE_DESCRIPTIONS: Record<CloudRole, string> = {
   admin: 'Gère les membres, les réglages et toutes les pages de l’espace.',
@@ -53,7 +62,7 @@ export const SIGNUP_POLICIES: Record<CloudSignupPolicy, {label: string; conseque
   },
   open: {
     label: 'Ouverte',
-    consequence: 'Toute adresse e-mail peut créer un compte sur cette instance.',
+    consequence: 'Toute adresse e-mail peut créer un compte sur ce serveur.',
   },
 };
 
@@ -64,8 +73,8 @@ export const WORKSPACE_CREATION_POLICIES: Record<CloudWorkspaceCreation, {label:
     consequence: 'Chaque personne connectée peut créer un espace de travail.',
   },
   admins_only: {
-    label: 'Administrateurs d’instance',
-    consequence: 'Seuls les administrateurs d’instance peuvent créer un espace.',
+    label: 'Administrateurs du serveur',
+    consequence: 'Seuls les administrateurs du serveur peuvent créer un espace.',
   },
   disabled: {
     label: 'Désactivée',

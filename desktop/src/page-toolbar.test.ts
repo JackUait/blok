@@ -39,6 +39,21 @@ describe('page appearance toolbar', () => {
     expect(onOpen).toHaveBeenCalledOnce();
     toolbar.destroy();
   });
+  it('refreshes workspace names and menu headings without rebuilding the page toolbar', () => {
+    const toolbar = createPageToolbar([{id: 'p', title: 'Draft'}], false, vi.fn(), undefined, undefined, {
+      workspaceName: 'Old name', workspacePages: () => [],
+    });
+    document.body.append(toolbar.element);
+    const chip = toolbar.element.querySelector<HTMLButtonElement>('[data-desktop-page-workspace]')!;
+    chip.click();
+    toolbar.setWorkspaceName('Maison');
+    expect(chip.title).toBe('Maison');
+    expect(chip.textContent).toBe('Maison');
+    chip.click();
+    expect(toolbar.element.querySelector('[data-desktop-breadcrumb-menu-heading]')?.textContent).toBe('Maison');
+    expect(toolbar.element.querySelector('[data-desktop-page-toolbar-title]')?.textContent).toBe('Draft');
+    toolbar.destroy();
+  });
   it('changes a page to full width and keeps the choice visible in the menu', () => {
     const onFullWidthChange = vi.fn();
     const toolbar = createPageToolbar([{ id: 'plan', title: 'Plan', icon: '🏈' }], false, onFullWidthChange);

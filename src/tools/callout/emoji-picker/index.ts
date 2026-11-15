@@ -71,6 +71,8 @@ interface EmojiPickerOptions {
   curated?: boolean;
   /** How far the picker starts before the anchor's start edge, in px. Defaults to 8. */
   startInset?: number;
+  /** Shrink the scrollable grid to keep the picker beside its trigger. */
+  fitToAnchor?: boolean;
   /** No Random and no Remove: the pick is the whole job, as for a reaction. */
   pickOnly?: boolean;
   /** Image emojis scoped to the workspace that owns this picker. */
@@ -203,6 +205,7 @@ export class EmojiPicker {
   private readonly _inline: boolean;
   private readonly _curated: boolean;
   private readonly _startInset: number;
+  private readonly _fitToAnchor: boolean;
   private readonly _pickOnly: boolean;
   private readonly _label: string | undefined;
   private _localeData: EmojiLocaleData | null = null;
@@ -280,6 +283,7 @@ export class EmojiPicker {
     this._inline = options.inline ?? false;
     this._curated = options.curated ?? !this._inline;
     this._startInset = options.startInset ?? 8;
+    this._fitToAnchor = options.fitToAnchor ?? false;
     this._pickOnly = options.pickOnly ?? false;
     this._label = options.label;
     this.customEmojis = options.customEmojis;
@@ -2218,6 +2222,13 @@ export class EmojiPicker {
 
   private position(anchor: HTMLElement): void {
     const rect = this._anchorRectOverride ?? anchor.getBoundingClientRect();
+    if (this._fitToAnchor) {
+      this._body.style.maxHeight = '';
+      const chromeHeight = this._element.offsetHeight - this._body.offsetHeight;
+      const available = Math.max(rect.top - 12, window.innerHeight - rect.bottom - 12);
+      this._body.style.maxHeight = `${Math.max(40, available - chromeHeight)}px`;
+      this._element.style.maxWidth = 'calc(100vw - 16px)';
+    }
     const pickerRect = this._element.getBoundingClientRect();
     // Layout sizes stay stable while the opening transform is running.
     const height = this._element.offsetHeight || pickerRect.height;

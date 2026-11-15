@@ -122,16 +122,16 @@ export const COPY_LABEL_STYLES = 'sr-only';
  */
 export const TAB_ROW_STYLES = 'absolute inset-x-1 top-1 z-1 flex items-center justify-end gap-2 min-w-0 opacity-0 pointer-events-none group-hover/code:opacity-100 group-hover/code:pointer-events-auto group-focus-within/code:opacity-100 group-focus-within/code:pointer-events-auto group-has-[[aria-expanded=true]]/code:opacity-100 group-has-[[aria-expanded=true]]/code:pointer-events-auto transition-opacity';
 /** Language, separator and actions share one 30px bordered pocket. */
-export const TAB_STYLES = 'flex min-w-0 items-center h-[30px] p-0.5 border border-border-secondary rounded-[7px] bg-popover-bg [--blok-radius-inner:5px]';
+export const TAB_STYLES = 'blok-code-toolbar flex min-w-0 items-center h-[30px] p-0.5 border border-border-secondary rounded-[7px] bg-popover-bg [--blok-radius-inner:5px]';
 /**
  * An empty filename takes no room at rest; it shows while the block is hovered or focused.
  * The `group-has-[[aria-expanded=true]]` rule keeps it while the language picker is open:
  * the picker mounts on <body>, so opening it ends both hover and focus-within.
  */
 export const FILENAME_SLOT_STYLES = 'flex flex-1 min-w-0 items-center overflow-hidden';
-export const LANGUAGE_BUTTON_STYLES = 'inline-flex min-w-[70px] max-w-40 h-6 items-center justify-between gap-1 px-2 rounded-[5px] cursor-pointer bg-transparent border-0 border-e border-border-secondary text-xs text-gray-text font-medium transition-colors can-hover:hover:bg-item-hover-bg select-none';
+export const LANGUAGE_BUTTON_STYLES = 'blok-code-language inline-flex min-w-[70px] max-w-40 h-6 items-center justify-between gap-1 px-2 rounded-[5px] cursor-pointer bg-transparent border-0 border-e border-border-secondary text-xs text-gray-text font-medium transition-colors can-hover:hover:bg-item-hover-bg select-none';
 /** Read-only has no picker to open. */
-export const LANGUAGE_LABEL_STYLES = 'inline-flex min-w-[70px] max-w-40 h-6 items-center gap-1 px-2 bg-transparent border-0 border-e border-border-secondary text-xs text-gray-text font-medium';
+export const LANGUAGE_LABEL_STYLES = 'blok-code-language inline-flex min-w-[70px] max-w-40 h-6 items-center gap-1 px-2 bg-transparent border-0 border-e border-border-secondary text-xs text-gray-text font-medium';
 export const LANGUAGE_DOT_STYLES = 'hidden size-2 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)]';
 /** The label and its edit field share one box and font, so clicking in only adds a caret. */
 const FILENAME_TEXT_STYLES = 'min-w-0 max-w-64 truncate px-1.5 py-0.5 font-mono text-xs text-text-primary';

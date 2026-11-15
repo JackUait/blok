@@ -1,23 +1,12 @@
 import type { PageAccessEntry, PageAccessMap } from './page-access';
 
-/**
- * Les sections d'accès de la barre latérale, dans l'ordre où elles s'affichent.
- *
- * Trois, comme Notion : l'espace lui-même, ce qui est partagé avec des personnes
- * précises, et ce qui n'appartient qu'à soi. « Partagé avec moi » n'est pas une
- * quatrième section : une page que quelqu'un m'a ouverte et une page que j'ai
- * ouverte à quelqu'un sont toutes deux « Partagé ».
- */
+/** Audience categories for roots. Teamspaces are separate backend boundaries;
+ * legacy common pages without a teamspace retain the workspace category. */
 export type PageSection = 'workspace' | 'shared' | 'private';
 
 export const sectionOrder: PageSection[] = ['workspace', 'shared', 'private'];
 
-/**
- * La section de l'espace porte le nom de l'espace — c'est ce que Notion affiche
- * pour un teamspace, et « Espace » tout court ne désigne rien.
- */
-// L'espace n'est pas un titre mais une ligne : la barre latérale reçoit la clé
-// brute et la rend elle-même avec la pastille et le nom de l'espace.
+/** Stable section keys consumed by the sidebar. */
 export const sectionNames: Record<PageSection, string> = {
   workspace: 'workspace',
   shared: 'Partagé',
@@ -58,4 +47,12 @@ export function groupPagesBySection<T extends { id: string }>(pages: T[], access
   return sectionOrder
     .filter((section) => (buckets.get(section)?.length ?? 0) > 0)
     .map((section) => ({ section, pages: buckets.get(section) ?? [] }));
+}
+
+
+/** The effective teamspace comes from access metadata, never a client page label. */
+export function sidebarSectionOf(access: PageAccessEntry | undefined): string {
+  const section=sectionOf(access);
+  if(section==='workspace' && access?.teamspaceId)return `teamspace:${access.teamspaceId}`;
+  return sectionNames[section];
 }

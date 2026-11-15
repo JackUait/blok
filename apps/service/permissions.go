@@ -10,8 +10,7 @@ import (
 // Le modèle de permissions par page. Conception :
 // docs/plans/2026-11-13-page-permissions-design.md
 //
-// Rien n'appelle encore ce fichier : il est posé et prouvé avant d'être branché,
-// pour que la justesse de la résolution se démontre seule.
+// Résolveur partagé par les routes HTTP, les sessions temps réel et MCP.
 
 // Les niveaux sont totalement ordonnés : c'est ce qui rend « le droit le plus
 // large l'emporte » exprimable comme un max, sans table de correspondance.
@@ -84,9 +83,13 @@ const (
 // Un maillon de la chaîne d'une page vers sa racine : sa visibilité propre et le
 // partage que l'appelant détient sur cette page précise.
 type pageNode struct {
-	ID         string
-	Visibility string
-	Share      level
+	ID                string
+	Visibility        string
+	Share             level
+	ParentID          string
+	TeamspaceID       string
+	TeamspaceRole     string
+	TeamspaceArchived bool
 }
 
 // Les hiérarchies profondes ne doivent pas pouvoir faire tourner une résolution
@@ -99,8 +102,22 @@ const maxPageDepth = 64
 // chain va de la page vers la racine.
 func resolve(role string, chain []pageNode) level {
 	ceiling := capOf(role)
-	if ceiling == levelNone || len(chain) == 0 {
+	if ceiling == levelNone || len(chain) == 0 || chain[len(chain)-1].ParentID != "" {
 		return levelNone
+	}
+	// A closed teamspace is a hard boundary above named page grants.
+	// Owners govern common pages; private visibility still needs a page grant.
+	base := baseOf(role)
+	for _, node := range chain {
+		if node.TeamspaceID != "" {
+			if node.TeamspaceArchived || node.TeamspaceRole == "" {
+				return levelNone
+			}
+			base = levelEdit
+			if node.TeamspaceRole == "owner" {
+				base = levelFull
+			}
+		}
 	}
 	visibility := ""
 	granted := levelNone
@@ -115,7 +132,7 @@ func resolve(role string, chain []pageNode) level {
 	// Une chaîne sans visibilité explicite est une chaîne incomplète — tronquée,
 	// cyclique, ou coupée par un ancêtre supprimé. On se referme.
 	best := granted
-	if base := baseOf(role); visibility == visWorkspace && base > best {
+	if visibility == visWorkspace && base > best {
 		best = base
 	}
 	if best > ceiling {
@@ -131,14 +148,16 @@ type querier interface {
 }
 
 const chainQuery = `WITH RECURSIVE chain AS (
-  SELECT p.id, p.visibility, nullif(p.metadata->>'parentId','') AS parent, 0 AS depth
+  SELECT p.id, p.workspace_id, p.teamspace_id, p.visibility, nullif(p.metadata->>'parentId','') AS parent, 0 AS depth
     FROM pages p WHERE p.id=$1 AND NOT p.deleted
   UNION ALL
-  SELECT p.id, p.visibility, nullif(p.metadata->>'parentId',''), c.depth+1
-    FROM pages p JOIN chain c ON p.id=c.parent
+  SELECT p.id, p.workspace_id, p.teamspace_id, p.visibility, nullif(p.metadata->>'parentId',''), c.depth+1
+    FROM pages p JOIN chain c ON p.id=c.parent AND p.workspace_id=c.workspace_id
    WHERE c.depth+1 < $3 AND NOT p.deleted)
-SELECT c.id, c.visibility, coalesce(sh.level,'')
+SELECT c.id, c.visibility, coalesce(sh.level,''),coalesce(c.teamspace_id,''),coalesce(tm.role,''),coalesce(ts.archived,false),coalesce(c.parent,'')
   FROM chain c LEFT JOIN page_shares sh ON sh.page_id=c.id AND sh.user_id=$2
+ LEFT JOIN teamspaces ts ON ts.id=c.teamspace_id
+ LEFT JOIN teamspace_memberships tm ON tm.teamspace_id=ts.id AND tm.user_id=$2
  ORDER BY c.depth`
 
 // chainOf charge la page et ses ancêtres, de la page vers la racine, avec le
@@ -153,7 +172,7 @@ func (s *Service) chainOf(ctx context.Context, q querier, userID, pageID string)
 	for rows.Next() {
 		var node pageNode
 		var share string
-		if e = rows.Scan(&node.ID, &node.Visibility, &share); e != nil {
+		if e = rows.Scan(&node.ID, &node.Visibility, &share, &node.TeamspaceID, &node.TeamspaceRole, &node.TeamspaceArchived, &node.ParentID); e != nil {
 			return nil, e
 		}
 		node.Share = parseLevel(share)
@@ -209,9 +228,10 @@ func (s *Service) effectiveLevelForSession(ctx context.Context, q querier, sessi
 // qu'on a ouverte à quelqu'un, et une page privée à soi seul se rangent
 // différemment, et le niveau ne les distingue pas.
 type pageStanding struct {
-	Level      level
-	Visibility string
-	Shared     bool
+	Level       level
+	Visibility  string
+	Shared      bool
+	TeamspaceID string
 }
 
 // workspaceLevels résout toutes les pages d'un espace en une passe, et rend aussi
@@ -245,18 +265,24 @@ func (s *Service) workspaceStandings(ctx context.Context, q querier, userID, wor
 	}
 	standings := make(map[string]pageStanding, len(nodes))
 	for id := range nodes {
-		standing := pageStanding{Level: levels[id], Visibility: visPrivate}
+		standing := pageStanding{Level: levels[id]}
 		for current, depth := id, 0; current != "" && depth < maxPageDepth; current, depth = parents[current], depth+1 {
 			node, known := nodes[current]
 			if !known {
 				break
 			}
+			if node.TeamspaceID != "" {
+				standing.TeamspaceID = node.TeamspaceID
+			}
 			if sharedDirectly[current] {
 				standing.Shared = true
 			}
-			if standing.Visibility == visPrivate && node.Visibility != visInherit {
+			if standing.Visibility == "" && node.Visibility != visInherit {
 				standing.Visibility = node.Visibility
 			}
+		}
+		if standing.Visibility == "" {
+			standing.Visibility = visPrivate
 		}
 		standings[id] = standing
 	}
@@ -277,8 +303,10 @@ func (s *Service) workspaceChains(ctx context.Context, q querier, userID, worksp
 	if e != nil {
 		return nil, nil, nil, e
 	}
-	rows, e := q.Query(ctx, `SELECT p.id, coalesce(nullif(p.metadata->>'parentId',''),''), p.visibility, coalesce(sh.level,'')
+	rows, e := q.Query(ctx, `SELECT p.id, coalesce(nullif(p.metadata->>'parentId',''),''), p.visibility, coalesce(sh.level,''),coalesce(p.teamspace_id,''),coalesce(tm.role,''),coalesce(ts.archived,false)
 	  FROM pages p LEFT JOIN page_shares sh ON sh.page_id=p.id AND sh.user_id=$2
+ LEFT JOIN teamspaces ts ON ts.id=p.teamspace_id
+ LEFT JOIN teamspace_memberships tm ON tm.teamspace_id=ts.id AND tm.user_id=$2
 	 WHERE p.workspace_id=$1 AND NOT p.deleted`, workspaceID, userID)
 	if e != nil {
 		return nil, nil, nil, e
@@ -287,12 +315,13 @@ func (s *Service) workspaceChains(ctx context.Context, q querier, userID, worksp
 	parents := map[string]string{}
 	nodes := map[string]pageNode{}
 	for rows.Next() {
-		var id, parent, visibility, share string
-		if e = rows.Scan(&id, &parent, &visibility, &share); e != nil {
+		var id, parent, visibility, share, tsID, tsRole string
+		var archived bool
+		if e = rows.Scan(&id, &parent, &visibility, &share, &tsID, &tsRole, &archived); e != nil {
 			return nil, nil, nil, e
 		}
 		parents[id] = parent
-		nodes[id] = pageNode{ID: id, Visibility: visibility, Share: parseLevel(share)}
+		nodes[id] = pageNode{ID: id, ParentID: parent, Visibility: visibility, Share: parseLevel(share), TeamspaceID: tsID, TeamspaceRole: tsRole, TeamspaceArchived: archived}
 	}
 	if e = rows.Err(); e != nil {
 		return nil, nil, nil, e

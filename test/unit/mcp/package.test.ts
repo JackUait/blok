@@ -46,7 +46,7 @@ describe('@bloklabs/mcp package boundary', () => {
     expect(pkg.name).toBe('@bloklabs/mcp');
     expect(pkg.type).toBe('module');
     expect(pkg.bin).toEqual({ 'blok-mcp': 'bin/blok-mcp.mjs' });
-    expect(pkg.files).toEqual(['bin', 'dist', 'types']);
+    expect(pkg.files).toEqual(['bin', 'dist', 'types', 'skills', 'examples/authoring', 'docs']);
     expect(pkg.publishConfig).toEqual({ access: 'public' });
     expect(existsSync(resolve(ROOT, 'packages/mcp/bin/blok-mcp.mjs'))).toBe(true);
   });

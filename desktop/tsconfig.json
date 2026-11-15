@@ -38,6 +38,9 @@
       ],
       "@blok/agent-assistant": [
         "./src/agent-assistant-contract.d.ts"
+      ],
+      "@blok/emoji-picker": [
+        "./src/emoji-picker-contract.d.ts"
       ]
     }
   },

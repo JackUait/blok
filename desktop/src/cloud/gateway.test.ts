@@ -24,6 +24,33 @@ function stubFetch(handler: (url: string, init?: RequestInit) => Response | Prom
 }
 afterEach(() => {vi.unstubAllGlobals(); document.body.replaceChildren();});
 describe('cloud gateway', () => {
+  it('explains invitation-only access without claiming a code was sent to an unknown address', async () => {
+    stubFetch(async url => url.endsWith('/api/session') ? response({error:'Unauthorized'},401) : response({ok:true}));
+    await mountCloudGateway(document.body, {onOpenWorkspace:vi.fn()});
+    expect(document.body.textContent).toContain('Les nouveaux comptes nécessitent une invitation');
+    const email = must(document.querySelector<HTMLInputElement>('#cloud-email'));
+    email.value = 'unknown@example.test';
+    must(email.form).dispatchEvent(new Event('submit', {cancelable:true}));
+    await settle();
+    expect(document.body.textContent).toContain('Si votre adresse est autorisée');
+    expect(document.body.textContent).not.toContain('Saisissez le code envoyé');
+    click('Renvoyer un code');
+    await settle();
+    expect(document.body.textContent).not.toContain('Un nouveau code a été envoyé.');
+  });
+  it.each([
+    ['admins_only', false, false], ['admins_only', true, true],
+    ['disabled', true, false], ['anyone', false, true],
+  ])('respects workspace creation policy %s for instance admin %s', async (policy, admin, visible) => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url.endsWith('/api/instance')) return response({...instance, workspaceCreation:policy});
+      if (url.endsWith('/api/session')) return response({user:{...user,instanceAdmin:admin},workspaces:[workspace,second]});
+      return response({...workspace,joinStatus:'approved'});
+    }));
+    await mountCloudGateway(document.body, {onOpenWorkspace:vi.fn()});
+    expect([...document.querySelectorAll('button')].some(button => button.textContent === 'Créer un espace de travail')).toBe(visible);
+  });
+
   it('keeps a pending applicant outside the editor and refreshes status', async () => {
     const open = vi.fn();
     stubFetch(async (url) => response(url.endsWith('/api/session') ? {user, workspaces:[]} : {...workspace, role:null, joinStatus:'pending'}));
@@ -46,6 +73,14 @@ describe('cloud gateway', () => {
     expect(document.body.textContent).toContain('Serveur injoignable');
     expect(document.querySelector('input[type="email"]')).toBeNull();
     expect([...document.querySelectorAll('button')].some(item => item.textContent === 'Réessayer')).toBe(true);
+  });
+  it('lets native users return to local documents when their server is unreachable', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')));
+    const local = vi.fn();
+    await mountCloudGateway(document.body, {onOpenWorkspace:vi.fn(), onOpenLocal:local, allowLocal:true});
+    click('Continuer avec un espace local');
+    await settle();
+    expect(local).toHaveBeenCalledOnce();
   });
   it('routes setupRequired to the setup assistant and never shows the login form', async () => {
     const fetch = vi.fn(async (url: string) => {

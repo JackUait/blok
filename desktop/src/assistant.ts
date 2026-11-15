@@ -123,6 +123,7 @@ export function createWorkspaceAssistant(ref: WorkspaceRef) {
   let fallback: string | null = null;
   let cachedModels: string[] = [];
   let catalogFor = '';
+  const knownMessages = new Map<string, Set<string>>();
   return {
     async listProviders(signal: AbortSignal): Promise<{id:string;label:string}[]> {
       const result: {id:string;label:string}[] = [];
@@ -153,14 +154,25 @@ export function createWorkspaceAssistant(ref: WorkspaceRef) {
     preferredProvider: (): string | null => localStorage.getItem(key) ?? fallback ?? selectedProvider(),
     onProviderSelected: (id: string): void => { localStorage.setItem(key,id); },
     modelFor: (id: string, onProgress: (status:string)=>void): AgentModel => {
-      if(id === 'codex' || id === 'claude') return nativeAgentModel(id,onProgress);
-      return async(request)=>{
+      const model: AgentModel = id === 'codex' || id === 'claude' ? nativeAgentModel(id,onProgress) : async(request)=>{
         if(!id.startsWith('openai:')) throw new Error('Fournisseur indisponible.');
         const model=id.slice('openai:'.length);
         onProgress(`OpenAI · ${model} prépare la réponse…`);
         const result=await client.respond({model, system:request.system, messages:request.messages.slice(-20).map(message=>({role:message.role as 'user'|'assistant',content:plain(message.content)}))},request.signal);
         request.signal.throwIfAborted();
         return {content:[{type:'text',text:result.text}],stop_reason:'end_turn'};
+      };
+      return async (request) => {
+        // Only the latest message is a fresh disclosure. Earlier messages must
+        // already have been sent to, or returned by, this exact provider/model.
+        const known = knownMessages.get(id) ?? new Set<string>();
+        const keyOf = (message: typeof request.messages[number]): string => `${message.role}:${plain(message.content)}`;
+        const messages = request.messages.filter((message, index) => index === request.messages.length - 1 || known.has(keyOf(message)));
+        for (const message of messages) known.add(keyOf(message));
+        knownMessages.set(id, known);
+        const response = await model({...request, messages});
+        known.add(`assistant:${plain(response.content)}`);
+        return response;
       };
     },
   };

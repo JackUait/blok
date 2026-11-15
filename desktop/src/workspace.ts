@@ -1,17 +1,19 @@
+import { pageDestination, pageIdForHref, publicPageUrl, legacyPageUrl, rememberPageLinks } from './page-urls';
+import { createWorkspaceSaveStatus } from './workspace-save-status';
+import './workspace-save-status.css';
 import { navigationFavorites, navigationRecents } from './navigation-preferences';
 import { openPageSearch, openPageCreation, type CreationDestination } from './navigation-dialogs';
-import { PopoverDesktop } from '@blok/popover';
 import { customEmojiStore } from './custom-emojis';
 import { createEmptyWorkspaceState } from './workspace-empty';
 import { mountRemoteAssets } from './remote-assets';
 import { Blok, defaultTools, type OutputData } from '@bloklabs/core/full';
 import { Audio, Bookmark, File, Video, Callout, Code, Database, DatabaseComment, DatabaseRow, Divider, Image, Page, Quote, Table, TableOfContents, Toggle, type PageConfig } from '@bloklabs/core/tools';
-import { createPageFrame, type PageFrame, type ShellPage, type SidebarAction } from '@blok/sidebar';
+import { createPageFrame, type PageFrame, type ShellPage, type SidebarAction, type SidebarTeamspace } from '@blok/sidebar';
 import { type DesktopPage, type WorkspaceIndex } from './storage';
 import { workspaceRepository } from './workspace-repository';
 import { pageAccess } from './page-access';
 import { openPageSharing } from './cloud/page-sharing';
-import { groupPagesBySection, sectionNames } from './page-section';
+import { sidebarSectionOf } from './page-section';
 import { nextPageIcon } from './page-icon-sync';
 import { brandedTitle } from './tab-identity';
 import { describeAccessLoss } from './access-friction';
@@ -28,6 +30,11 @@ import {
 import { COVER_GALLERY, readCoverFile, createAddCoverButton, createPageCover, isPageCover, trackPageHeaderHover, type PageCover } from './cover';
 import { mountAgentAssistant, type AgentAssistantHandle } from '@blok/agent-assistant';
 import { bindAssistantButton, createAssistantButton, createWorkspaceAssistant } from './assistant';
+import { readAiPageSource } from './ai-page-source';
+import { openAiSummary, appendSummaryBlocks } from './ai-summary';
+import { CloudClient } from './cloud/client';
+import { nativeSessionAdapter } from './native-session';
+import { teamspaceClient } from './cloud/teamspaces';
 import { createPageToolbar, type PageBreadcrumbChoice, type PageBreadcrumbItem, type PageToolbar } from './page-toolbar';
 import { bindTitleDateMention, titleDateLabel, type TitleDateMentionBinding } from './title-date-mention';
 import { createFloatingToc, type FloatingToc } from './floating-toc';
@@ -75,25 +82,24 @@ function adoptRemoteFields(live: DesktopPage, remote: DesktopPage): void {
   Object.assign(live, remote);
 }
 
-function syncStatusLabel(synced: boolean, pending: boolean): string {
-  if (synced) return '';
-  return pending ? 'Synchronisation…' : 'Connexion au serveur…';
-}
-
-function syncStatusState(synced: boolean, pending: boolean): string {
-  if (synced) return 'connected';
-  return pending ? 'pending' : 'connecting';
-}
-
 export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (id: string, icon: string) => void, options: { ref?: WorkspaceRef } = {}): Workspace {
   const ref = Object.freeze({... (options.ref ?? activeWorkspace())});
+  let workspaceName = ref.name;
+  const sidebarTeamspaces:SidebarTeamspace[]=[];
+  const teamspacesState={refreshing:false,pending:0,error:'Chargement…' as string|null};
+  const teamspacesApi=ref.kind==='remote' ? teamspaceClient(new CloudClient({origin:ref.server,...('__TAURI_INTERNALS__' in window ? {sessionAdapter:nativeSessionAdapter(ref.server)} : {})}),ref.workspaceId) : null;
   const repository = workspaceRepository(ref);
   const favorites = navigationFavorites(ref);
   const recentPages = navigationRecents(ref);
-  const pageUrl = (id: string): string => {
-    const url = new URL('/', ref.kind === 'remote' ? ref.server : location.href);
-    url.searchParams.set('page', id);
-    return url.href;
+  const initialHref=location.href;
+  const routeLoad={pending:false};
+  const pageUrl = (id:string):string => {
+    const page=ws.index?.pages.find(item=>item.id===id);
+    const publicId=ws.index?.access?.[id]?.publicId;
+    if(ref.kind==='remote' && publicId)return publicPageUrl(ref.server,page?.title || 'Page',publicId);
+    const fallback=new URL(legacyPageUrl(ref.kind==='remote' ? ref.server : location.href,id));
+    if(ref.kind==='local')fallback.searchParams.set('local','1');
+    return fallback.href;
   };
   const emojis = customEmojiStore(ref);
   const pageIcon = (value: string) => /^(https?:|data:image\/|\/files\/)/i.test(value) ? {type: 'image' as const, url: value} : {type: 'emoji' as const, value};
@@ -161,13 +167,11 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
    * basculer la page tout seul, au prochain index reçu.
    */
   const withSections = (pages: DesktopPage[]): DesktopPage[] => {
+    if(ref.kind==='remote')rememberPageLinks(location.origin,ref.server,pages.map(page=>({id:page.id,title:page.title,publicId:ws.index?.access?.[page.id]?.publicId})));
     const tagged = pages.map((page) => ({ ...page, favorite: favorites.has(page.id) }));
     if (ref.kind !== 'remote') return tagged;
     if (!ws.index?.access) return tagged.map((page) => ({ ...page, section: page.parentId ? undefined : 'workspace' }));
-    const roots = tagged.filter((page) => !page.parentId);
-    const labelled = new Map(groupPagesBySection(roots, ws.index.access)
-      .flatMap((group) => group.pages.map((page) => [page.id, sectionNames[group.section]] as const)));
-    return tagged.map((page) => labelled.has(page.id) ? { ...page, section: labelled.get(page.id) } : page);
+    return tagged.map(page=>page.parentId ? page : {...page,section:sidebarSectionOf(ws.index?.access?.[page.id])});
   };
   const readOnly = (pageId: string): boolean => !ws.access.canEdit(pageId);
   const canCreateUnder = (parentId: string | null): boolean =>
@@ -176,16 +180,17 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   // WebKit keeps `:hover` latched on a node moved under the cursor. See trackPageHeaderHover.
   trackPageHeaderHover(document);
   const pageListeners = new Map<string, Set<() => void>>();
-  const status = document.createElement('div');
-  status.setAttribute('data-desktop-status', '');
-  status.setAttribute('role', 'status');
-  status.textContent = 'Ouverture des pages…';
+  const saveStatus = createWorkspaceSaveStatus(ref.kind === 'remote');
+  const status = saveStatus.element;
+  let localWrites = 0;
+  let remoteConnection = 'connecting';
+  const updatePending = (): void => saveStatus.pending(ws.pendingManifests + localWrites + teamspacesState.pending);
 
-  const pageFromUrl = (): string | null => new URL(location.href).searchParams.get('page');
+  const pageFromUrl = (): string | null => pageIdForHref(location.href);
   const navigate = (id: string, replace = false): void => {
-    const url = new URL(location.href);
-    const from = url.searchParams.get('page');
-    url.searchParams.set('page', id);
+    const from=pageFromUrl();
+    const url=ref.kind==='remote' && !('__TAURI_INTERNALS__' in window) ? new URL(pageUrl(id)) : new URL(location.href);
+    if(ref.kind==='local' || '__TAURI_INTERNALS__' in window){url.pathname='/';url.searchParams.set('page',id);}
     if (replace) history.replaceState(null, '', url);
     else history.pushState(null, '', url);
     onRoute();
@@ -198,10 +203,12 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     if (!ws.index) return;
     const snapshot = JSON.stringify(ws.index);
     ws.pendingManifests++;
+    updatePending();
     ws.saveOrder = ws.saveOrder.catch(() => undefined).then(async () => {
       await repository.saveIndex(JSON.parse(snapshot) as WorkspaceIndex);
       ws.manifestFailed = false;
-    }).catch((error) => { ws.manifestFailed = true; showError(error); throw error; }).finally(() => { ws.pendingManifests--; });
+      saveStatus.saved('manifest');
+    }).catch((error) => { ws.manifestFailed = true; showError(error, 'manifest'); throw error; }).finally(() => { ws.pendingManifests--; updatePending(); });
     void ws.saveOrder.catch(() => undefined);
   };
   const refreshRemoteManifest = async (): Promise<void> => {
@@ -220,12 +227,13 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         updated.pages = updated.pages.map((page) => page.id === ws.currentId ? live : page);
       }
       adoptIndex(updated);
+      saveStatus.saved('refresh');
       ws.frame.setPages(withSections(ws.index.pages), ws.index.activeId);
       ws.pageToolbar?.setBreadcrumbs(breadcrumbs(ws.currentId));
       for (const id of new Set([...original.pages.map((page) => page.id), ...ws.index.pages.map((page) => page.id)])) notifyPage(id);
       ws.refreshPagePresentation?.();
       if (!ws.index.pages.some((page) => page.id === ws.currentId)) onRoute();
-    } catch (error) { showError(error); }
+    } catch (error) { showError(error, 'refresh'); }
     finally { ws.refreshingManifest = false; }
   };
   const refreshDateTitles = (): void => {
@@ -264,7 +272,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   const notifyPage = (id: string): void => { pageListeners.get(id)?.forEach((listener) => listener()); };
   const breadcrumbMenuHeading = (parentId: string | null | undefined, byId: Map<string, ShellPage>): string => {
     if (parentId) return byId.get(parentId)?.title ?? 'Pages';
-    return ref.kind === 'remote' ? ref.name : 'Pages locales';
+    return ref.kind === 'remote' ? workspaceName : 'Pages locales';
   };
   const breadcrumbs = (pageId: string): PageBreadcrumbItem[] => {
     if (!ws.index) return [];
@@ -297,14 +305,12 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       menu: choicesFor(item.parentId, item.id),
     }));
   };
-  const showError = (error: unknown): void => {
+  const showError = (error: unknown, source = 'operation'): void => {
     // Un retrait d'accès ferme la session en moins de cinq secondes côté
     // serveur. Le présenter comme une panne d'enregistrement laisserait croire
     // à un incident, et pousserait à réessayer pour rien.
     const refusal = describeAccessLoss(error);
-    status.textContent = refusal ?? `Enregistrement impossible : ${String(error)}`;
-    status.setAttribute('data-error', '');
-    status.setAttribute('data-sync-state', refusal ? 'denied' : 'error');
+    saveStatus.error(error, refusal, source);
   };
   const iconValue = (icon: ReturnType<Blok['title']['icon']['get']>): string | undefined => {
     if (icon?.type === 'emoji') return icon.value;
@@ -350,11 +356,10 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       pageListeners.set(id, listeners);
       return () => { listeners.delete(listener); if (listeners.size === 0) pageListeners.delete(id); };
     },
-    href: (id) => `?page=${encodeURIComponent(id)}`,
+    href: (id) => ref.kind==='remote' && !('__TAURI_INTERNALS__' in window) ? pageUrl(id) : `?page=${encodeURIComponent(id)}`,
     pageIdFromHref: (href) => {
       const url = new URL(href);
-      return url.protocol === location.protocol && url.host === location.host && url.pathname === location.pathname
-        ? url.searchParams.get('page') : null;
+      return url.origin === location.origin ? pageIdForHref(url.href) : null;
     },
     open: (id) => { if (ws.index?.pages.some((page) => page.id === id)) navigate(id); },
     create: async ({ pageId, title, parentId, document: initialDocument }) => {
@@ -399,8 +404,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     ws.titleDateMention = null;
     ws.editor?.destroy();
     ws.editor = null;
-    status.textContent = 'Ouverture de la page…';
-    status.removeAttribute('data-error');
+    remoteConnection = 'connecting';
+    saveStatus.resetPage();
     const article = document.createElement('article');
     article.setAttribute('data-desktop-document', '');
     const applyFullWidth = (): void => {
@@ -417,8 +422,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     }, '__TAURI_INTERNALS__' in window ? undefined : () => {
       ws.frame.toggleSidebar();
       onLayout(sidebar.getBoundingClientRect().width);
-    }, ref.kind === 'remote' ? (anchor) => openPageSharing(ref, id, page.title, anchor, refreshRemoteManifest) : undefined, {
-      workspaceName: ref.name,
+    }, ref.kind === 'remote' ? (anchor) => openPageSharing(ref, id, page.title, anchor, refreshRemoteManifest, pageUrl(id)) : undefined, {
+      workspaceName,
       workspacePages: () => {
         const pages = withSections(ws.index?.pages ?? []);
         const choice = (page: DesktopPage): PageBreadcrumbChoice => ({
@@ -444,6 +449,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       onDelete: () => { void action({ id, type: 'delete' }).catch(showError); },
     });
     ws.pageToolbar = toolbar;
+    toolbar.element.insertBefore(status, toolbar.element.querySelector('[data-desktop-page-actions]'));
     applyFullWidth();
     const holder = document.createElement('div');
     article.append(holder);
@@ -544,9 +550,14 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
           return raw ? JSON.parse(raw) as OutputData : null;
         },
         async save(data) {
-          await repository.writePage(id, JSON.stringify(data));
+          localWrites++;
+          updatePending();
+          try {
+            await repository.writePage(id, JSON.stringify(data));
+            saveStatus.saved('document');
+          } finally { localWrites--; updatePending(); }
         },
-        onError: showError,
+        onError: (error) => showError(error, 'document'),
       } }),
     });
     ws.editor = instance;
@@ -558,15 +569,15 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         if (ws.generation !== turn) return;
         // An emission with no payload must fall back to "not pending", not throw
         // inside the listener and kill the rest of the handler.
-        const event = (raw ?? {}) as { status?: string; save?: { pendingOperations?: number; pendingBytes?: number } };
-        const pendingOps = event.save?.pendingOperations ?? 0;
-        const pendingBytes = event.save?.pendingBytes ?? 0;
+        const event = (raw ?? {}) as Parameters<typeof saveStatus.connection>[0];
+        const pendingOps = event?.save?.pendingOperations ?? 0;
+        const pendingBytes = event?.save?.pendingBytes ?? 0;
         ws.remotePending = pendingOps > 0 || pendingBytes > 0;
-        if (ref.kind === 'remote' && !ws.manifestFailed) {
-          const synced = !ws.remotePending && event.status === 'connected';
-          status.textContent = syncStatusLabel(synced, ws.remotePending);
-          status.setAttribute('data-sync-state', syncStatusState(synced, ws.remotePending));
-          status.removeAttribute('data-error');
+        if (ref.kind === 'remote') {
+          const reconnected = event?.status === 'connected' && remoteConnection !== 'connected';
+          if (event?.status) remoteConnection = event.status;
+          if (reconnected && navigator.onLine && ws.manifestFailed && ws.pendingManifests === 0) saveManifest();
+          saveStatus.connection(event);
         }
       });
 
@@ -613,7 +624,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       syncPageIcon(page, instance.title.icon.get(), ref.kind === 'local', true);
       toolbar.setBreadcrumbs(breadcrumbs(id));
       document.title = page.title;
-      if (ref.kind === 'local') status.textContent = '';
+      saveStatus.ready();
     }).catch(showError);
   };
 
@@ -664,9 +675,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       navigate(page.id, true);
       return;
     }
-    const url = new URL(location.href);
-    url.searchParams.set('page', page.id);
-    window.open(url.href, '_blank', 'noopener,noreferrer');
+    window.open(pageUrl(page.id), '_blank', 'noopener,noreferrer');
   };
 
   const renamePage = (page: DesktopPage, title: string): void => {
@@ -706,8 +715,22 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     } finally { ws.frame.element.inert = wasInert; ws.metadataAction = false; }
   };
 
+  const refreshTeamspaces = async ():Promise<void> => {
+    if(!teamspacesApi || teamspacesState.refreshing)return;
+    teamspacesState.refreshing=true;
+    try {
+      const result=await teamspacesApi.list();
+      teamspacesState.error=null;
+      sidebarTeamspaces.splice(0,sidebarTeamspaces.length,...result.teamspaces.filter(team=>!!team.myRole && !team.archived).map(team=>({id:team.id,name:team.name,icon:team.icon,canCreate:ref.kind==='remote' && ref.role!=='viewer'})));
+      if(ws.index)ws.frame.setPages(withSections(ws.index.pages),ws.currentId);
+    }catch(error){
+      teamspacesState.error=`Espaces d’équipe indisponibles : ${error instanceof Error ? error.message : 'réessayez depuis les paramètres'}`;
+      if(ws.index)ws.frame.setPages(withSections(ws.index.pages),ws.currentId);
+    }
+    finally{teamspacesState.refreshing=false;}
+  };
   ws.frame = createPageFrame({
-    teamspace: ref.kind === 'remote' ? { name: ref.name } : undefined,
+    ...(ref.kind==='remote' ? {teamspaces:sidebarTeamspaces,teamspaceStatus:()=>teamspacesState.error} : {}),
     pages: [], activeId: '',
     recentIds: recentPages.ids,
     onRecentsChange: recentPages.save,
@@ -716,31 +739,11 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     onCreatePrivate: ref.kind === 'remote' ? () => chooseNewPage(null, true) : undefined,
     onSearch: (recentIds) => {
       ws.closeSearch?.();
-      ws.closeSearch = openPageSearch({ workspaceName: ref.name, pages: () => ws.index?.pages ?? [], onOpen: navigate, recentIds });
+      ws.closeSearch = openPageSearch({ workspaceName, pages: () => ws.index?.pages ?? [], onOpen: navigate, recentIds });
     },
-    onTeamspaceMenu: (anchor) => {
-      const menuState = { requestedPanel: undefined as 'invites' | 'general' | undefined, settled: false };
-      const menu = new PopoverDesktop({ trigger: anchor, autoFocusFirstItem: true,
-        items: [
-          ...(ref.kind === 'remote' && ref.role === 'admin' ? [{ name: 'invite', title: 'Inviter des membres', closeOnActivate: true,
-            onActivate: () => { menuState.requestedPanel = 'invites'; } }] : []),
-          { name: 'settings', title: 'Paramètres de l’espace', closeOnActivate: true,
-            onActivate: () => { menuState.requestedPanel = 'general'; } },
-        ],
-      });
-      anchor.setAttribute('aria-expanded', 'true');
-      menu.on('closed', () => {
-        if (menuState.settled) return;
-        menuState.settled = true;
-        anchor.setAttribute('aria-expanded', 'false');
-        // Release the menu's focus manager before handing focus to a modal.
-        queueMicrotask(() => {
-          menu.destroy();
-          if (menuState.requestedPanel) ws.footer.dispatchEvent(new CustomEvent('blok:desktop-open-settings', { detail: menuState.requestedPanel }));
-        });
-      });
-      menu.show();
-    },
+    onManageTeamspaces: ref.kind==='remote' ? ()=>ws.footer.dispatchEvent(new CustomEvent('blok:desktop-open-teamspace',{detail:{}})) : undefined,
+    onCreateTeamspacePage: (id)=>chooseNewPage(null,false,id),
+    onTeamspaceMenu: (_anchor,id)=>{if(id)ws.footer.dispatchEvent(new CustomEvent('blok:desktop-open-teamspace',{detail:{id}}));},
     onAction: (command) => { void action(command).catch(showError); },
     pageUrl,
     availableActions: ['rename', 'duplicate', 'delete', 'open-tab'],
@@ -752,10 +755,20 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     },
   });
   ws.frame.element.append(status);
+  const getAiSource = () => {
+    const editor=ws.editor, id=ws.currentId;
+    return readAiPageSource(editor ? {id,editor} : null, () => ws.editor===editor && ws.currentId===id && !!ws.index?.pages.some(page=>page.id===id));
+  };
+  const workspaceAssistant = createWorkspaceAssistant(ref);
   ws.assistant = mountAgentAssistant({
-    getPageText: () => ws.pageCanvas.querySelector('[data-desktop-document]')?.textContent?.slice(0, 100_000) ?? '',
+    getPageText: async () => {
+      if(!ws.editor)return '';
+      const source=await getAiSource();
+      if(!source)throw new Error('La page a changé ou son accès a été retiré. Réessayez depuis la page ouverte.');
+      return source.text.slice(0,100_000);
+    },
     openSettings: () => ws.footer.dispatchEvent(new Event('blok:desktop-open-ai-settings')),
-    ...createWorkspaceAssistant(ref),
+    ...workspaceAssistant,
   });
   ws.pageCanvas = ws.assistant.editorSlot;
   ws.frame.canvas.append(ws.assistant.element);
@@ -767,6 +780,21 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   });
   ws.frame.canvas.append(assistantButton);
   if (panel) bindAssistantButton(assistantButton, panel);
+  const summaryButton = document.createElement('button');
+  summaryButton.type = 'button';
+  summaryButton.textContent = 'Résumer et structurer';
+  summaryButton.setAttribute('data-ai-summary-trigger', '');
+  summaryButton.addEventListener('click', () => openAiSummary({
+    ...createWorkspaceAssistant(ref),
+    remote: ref.kind === 'remote',
+    openSettings: () => ws.footer.dispatchEvent(new Event('blok:desktop-open-ai-settings')),
+    getSource: getAiSource,
+    targetId: ws.currentId,
+    append: async (sourceId, blocks) => {
+      appendSummaryBlocks({editor:ws.editor?.blocks ?? null,currentId:ws.currentId,sourceId,editable:!readOnly(sourceId)},blocks);
+    },
+  }));
+  ws.frame.canvas.append(summaryButton);
   ws.footer = createDesktopFooter((mode) => ws.editor?.theme.set(mode));
   ws.footer.addEventListener('blok:desktop-open-page', (event) => {
     const detail = (event as CustomEvent<{ pageId: string; seedWelcome?: boolean }>).detail;
@@ -785,7 +813,17 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     };
     void open().catch(() => undefined);
   });
+  ws.footer.addEventListener('blok:desktop-teamspaces-changed',()=>{void refreshTeamspaces().then(()=>refreshRemoteManifest());});
   sidebar.insertBefore(ws.footer, sidebar.querySelector('[data-blok-sidebar-edge]'));
+  ws.frame.element.addEventListener('blok:desktop-workspace-renamed', (event) => {
+    const detail = (event as CustomEvent<{key: string; name: string}>).detail;
+    if (detail?.key !== workspaceKey(ref) || !detail.name) return;
+    workspaceName = detail.name;
+    if (ws.index) ws.frame.setPages(withSections(ws.index.pages), ws.currentId);
+    ws.pageToolbar?.setWorkspaceName(workspaceName);
+    ws.pageToolbar?.setBreadcrumbs(breadcrumbs(ws.currentId));
+    if (!ws.currentId) document.title = brandedTitle(workspaceName);
+  });
   const observer = new ResizeObserver(() => onLayout(sidebar.getBoundingClientRect().width));
   observer.observe(sidebar);
   ws.frame.element.setAttribute('data-desktop-workspace', '');
@@ -859,8 +897,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     ws.refreshPagePresentation = null;
     ws.editor?.destroy(); ws.editor = null;
     ws.currentId = '';
-    status.textContent = '';
-    status.removeAttribute('data-error');
+    ws.frame.element.append(status);
+    saveStatus.resetPage();
     ws.pageCanvas.replaceChildren(createEmptyWorkspaceState(ws.access.readOnlyWorkspace, () => createPage(), {
       onTemplate: () => chooseNewPage(),
       onInvite: () => {
@@ -876,21 +914,40 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     }));
     const url = new URL(location.href);
     if (url.searchParams.has('page')) { url.searchParams.delete('page'); history.replaceState(null, '', url); }
-    document.title = brandedTitle(ref.name);
+    document.title = brandedTitle(workspaceName);
   }
 
   function onRoute(): void {
     if (!ws.index) return;
-    if (!ws.index.pages.length) { void showEmptyWorkspace().catch(showError); return; }
-    const id = pageFromUrl();
-    const target = ws.index.pages.find((page) => page.id === id)?.id ?? ws.index.activeId;
+    const requested=pageDestination(location.href);
+    const id=pageFromUrl();
+    const explicit=requested.kind!=='none';
+    const found=ws.index.pages.find(page=>page.id===id);
+    if(explicit && !found){
+      if(ref.kind==='remote' && location.href!==initialHref && !('__TAURI_INTERNALS__' in window)){
+        if(routeLoad.pending)return;
+        routeLoad.pending=true;const destination=location.href;ws.pageCanvas.setAttribute('aria-busy','true');
+        void (async()=>{
+          if(ws.editor){await ws.editor.isReady;await ws.editor.saver.flush();}
+          await ws.saveOrder;
+          if(location.href===destination)location.reload();
+        })().catch(showError).finally(()=>{routeLoad.pending=false;ws.pageCanvas.removeAttribute('aria-busy');});return;
+      }
+      ws.generation++;ws.selection++;ws.editor?.destroy();ws.editor=null;ws.currentId='';
+      const section=document.createElement('section');section.setAttribute('data-page-unavailable','');section.style.padding='48px';
+      const heading=document.createElement('h1');heading.textContent='Page indisponible';
+      const message=document.createElement('p');message.textContent='Cette page est introuvable ou vous n’y avez plus accès.';
+      section.append(heading,message);ws.pageCanvas.replaceChildren(section);document.title=brandedTitle('Page indisponible');return;
+    }
+    if(!ws.index.pages.length){void showEmptyWorkspace().catch(showError);return;}
+    const target=found?.id ?? ws.index.activeId;
     if (id !== target) {
       navigate(target, true);
       return;
     }
     void select(target).catch((error) => {
       if (ws.currentId && pageFromUrl() !== ws.currentId) {
-        const url = new URL(location.href); url.searchParams.set('page', ws.currentId);
+        const url = new URL(ref.kind==='remote' && !('__TAURI_INTERNALS__' in window) ? pageUrl(ws.currentId) : location.href); if(ref.kind==='local' || '__TAURI_INTERNALS__' in window)url.searchParams.set('page', ws.currentId);
         history.replaceState(null, '', url);
       }
       showError(error);
@@ -902,23 +959,41 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey || event.key.toLowerCase() !== 'k') return;
     event.preventDefault();
     ws.closeSearch?.();
-    ws.closeSearch = openPageSearch({ workspaceName: ref.name, pages: () => ws.index?.pages ?? [], onOpen: navigate });
+    ws.closeSearch = openPageSearch({ workspaceName, pages: () => ws.index?.pages ?? [], onOpen: navigate });
   });
-  function chooseNewPage(parentId: string | null = null, privatePage = false): void {
+  function chooseNewPage(parentId: string | null = null, privatePage = false, teamspaceId?:string): void {
     if (!ws.index || !canCreateUnder(parentId)) return;
     const destinations: CreationDestination[] = [];
     if (canCreateUnder(null)) {
-      destinations.push({ value: 'workspace', label: ref.name, parentId: null });
+      destinations.push({ value: 'workspace', label: 'Pages communes du Workspace', parentId: null });
       if (ref.kind === 'remote') destinations.push({ value: 'private', label: 'Privé · Vous uniquement', parentId: null, privatePage: true });
     }
+    destinations.push(...sidebarTeamspaces.filter(team=>team.canCreate).map(team=>({value:`teamspace:${team.id}`,label:`${team.icon || ''} ${team.name}`,parentId:null,teamspaceId:team.id})));
     destinations.push(...ws.index.pages.filter((page) => canCreateUnder(page.id)).map((page) => ({ value: page.id, label: page.title, parentId: page.id })));
-    openPageCreation({ destinations, destination: parentId ?? (privatePage ? 'private' : 'workspace'),
-      onCreate: (target, database) => createPage(target.parentId, target.privatePage, database),
+    openPageCreation({ destinations, destination: teamspaceId ? `teamspace:${teamspaceId}` : parentId ?? (ref.kind==='remote' || privatePage ? 'private' : 'workspace'),
+      onCreate: (target, database) => createPage(target.parentId, target.privatePage, database, target.teamspaceId),
     });
   }
 
-  function createPage(parentId: string | null = null, privatePage = false, database = false): void {
+  function createPage(parentId: string | null = null, privatePage = false, database = false, teamspaceId?:string): void {
     if (!ws.index || ws.metadataAction || !canCreateUnder(parentId)) return;
+    if(teamspaceId && teamspacesApi){
+      if(!sidebarTeamspaces.some(team=>team.id===teamspaceId && team.canCreate))return;
+      ws.metadataAction=true;
+      const wasInert=ws.frame.element.inert;ws.frame.element.inert=true;
+      teamspacesState.pending++;updatePending();
+      void (async()=>{
+        try{
+          // Flush pending index work before the dedicated route advances its revision.
+          await ws.saveOrder;
+          if(ws.manifestFailed)return;
+          const created=await teamspacesApi.createPage(teamspaceId,database ? 'Nouvelle base de données' : 'Nouvelle page');
+          if(database)await repository.seedPage(created.id,{title:created.title,blocks:[{type:'database',data:{initialView:'table',fullPage:true}}]});
+          ws.metadataAction=false;
+          await refreshRemoteManifest();navigate(created.id);
+        }catch(error){showError(error);}finally{ws.metadataAction=false;ws.frame.element.inert=wasInert;teamspacesState.pending--;updatePending();}
+      })();return;
+    }
     const page: DesktopPage = { id: crypto.randomUUID(), title: database ? 'Nouvelle base de données' : 'Nouvelle page', parentId, ...(privatePage ? { initialVisibility: 'private' as const } : {}) };
     ws.index.pages.push(page);
     saveManifest();
@@ -929,7 +1004,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         if (ref.kind === 'remote') await repository.seedPage(page.id, document);
         else await repository.writePage(page.id, JSON.stringify(document));
       }
-      if (privatePage) await refreshRemoteManifest();
+      if (ref.kind==='remote') await refreshRemoteManifest();
       navigate(page.id);
     }).catch(showError);
   }
@@ -939,14 +1014,23 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     async start() {
       try {
         const loaded = adoptIndex(await repository.loadIndex());
+        await refreshTeamspaces();
         refreshDateTitles();
         ws.frame.setPages(withSections(loaded.pages), loaded.activeId);
         onRoute();
         scheduleDateRefresh();
         window.addEventListener('focus', refreshDateTitles);
         if (ref.kind === 'remote') {
-          window.addEventListener('focus', () => { void refreshRemoteManifest(); });
-          window.setInterval(() => { void refreshRemoteManifest(); }, 15_000);
+          const reconnect = (): void => {
+            saveStatus.online(navigator.onLine);
+            if (!navigator.onLine) return;
+            if (ws.manifestFailed && ws.pendingManifests === 0) saveManifest();
+            else void refreshTeamspaces().then(()=>refreshRemoteManifest());
+          };
+          window.addEventListener('offline', () => saveStatus.online(false));
+          window.addEventListener('online', reconnect);
+          window.addEventListener('focus', reconnect);
+          window.setInterval(reconnect, 15_000);
           window.addEventListener('beforeunload', (event) => { if (ws.pendingManifests > 0 || ws.manifestFailed) event.preventDefault(); });
         }
       } catch (error) { showError(error); }

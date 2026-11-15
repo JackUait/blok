@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { mountDesktop, setCanLeave } from './shell';
+import {rememberPageLinks} from './page-urls';
 import { BLOK_MARK_HREF, faviconHref } from './tab-identity';
 
 let routeCalls = 0;
@@ -540,4 +541,18 @@ describe('explicit page links at startup',()=>{
     expect(session.tabs).toHaveLength(2);
     expect(new URL(session.tabs.find(tab=>tab.id===session.activeId)!.href).searchParams.get('page')).toBe('requested');
   });
+});
+
+
+describe('public page history',()=>{
+ it('keeps back/forward on their UUID pages after cosmetic title changes',async()=>{
+  const a='2a7aee31-f541-41e8-9190-6eae552291b8',b='71c2e0d9-c69a-4bbf-bfc1-5cb12e3aa2b1';
+  rememberPageLinks(location.origin,location.origin,[{id:'alpha',title:'Renamed alpha',publicId:a},{id:'beta',title:'Beta',publicId:b}]);
+  mount(false);const length=history.length;
+  history.pushState(null,'',`/p/old-alpha-${a}`);history.pushState(null,'',`/p/beta-${b}`);
+  expect(history.length).toBe(length+2);const calls=routeCalls;
+  history.back();await vi.waitFor(()=>expect(location.pathname).toBe(`/p/old-alpha-${a}`));expect(routeCalls).toBe(calls+1);
+  history.forward();await vi.waitFor(()=>expect(location.pathname).toBe(`/p/beta-${b}`));expect(routeCalls).toBe(calls+2);
+  rememberPageLinks(location.origin,location.origin,[]);
+ });
 });

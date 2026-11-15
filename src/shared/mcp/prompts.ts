@@ -17,7 +17,8 @@ export type McpPromptResult = {
 /** What an MCP client's model does on top of a skill's request; Ask AI's editor does this for its model. */
 export const MCP_SKILL_STEPS = 'Use the Blok tools: open the document with blok_open (pass write: true if you will edit it), '
   + 'read it with blok_read, find the text the request is about with the doc.find command in blok_execute, '
-  + 'and make every edit with blok_execute.';
+  + 'and make every edit with blok_execute. After editing, read the affected structure with blok_read to verify it. '
+  + 'After a timeout or lost response, read first and reconcile existing blocks before retrying; do not duplicate inserts.';
 
 const argumentsOf = (skill: AgentSkill): McpPrompt['arguments'] => [
   { name: 'documentId', description: 'The Blok document to work on. Without it, blok_open lists the documents to choose from.', required: false },

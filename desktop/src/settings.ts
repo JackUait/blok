@@ -1,7 +1,9 @@
+import { mountTeamspaceSettings } from './cloud/teamspace-settings';
+import { teamspaceClient } from './cloud/teamspaces';
+import { mountWorkspaceIcon, workspaceGlyph } from './workspace-identity';
 import { WORKSPACE_ROLES } from './access-vocabulary';
 import { createChoice, styleTextField, wrapSearchField } from './ui/controls';
 import { openModalDialog, type ModalDialogHandle } from '@blok/modal-dialog';
-import { PopoverDesktop } from '@blok/popover';
 import { CloudClient } from './cloud/client';
 import { nativeSessionAdapter } from './native-session';
 import { mountWorkspaceMembers, openWorkspaceInvitation } from './cloud/workspace-settings';
@@ -14,7 +16,6 @@ import { mountCustomEmojiSettings } from './custom-emoji-settings';
 import { mountMcpSettings } from './mcp-settings';
 import {loadReactGrab, reactGrabAvailable} from './react-grab';
 import { mountInstanceSettings, type InstancePanel } from './instance/instance-settings';
-import { welcomePageId, welcomeRightsPageId } from './welcome-seed';
 
 export type Appearance = 'dark' | 'light' | 'auto';
 
@@ -38,37 +39,11 @@ function resolved(mode: Appearance): 'dark' | 'light' {
 
 function settingsPanelSource(panel: string): string {
   if (panel === 'emojis') return 'custom-emoji-settings.ts';
-  if (panel === 'connections') return 'mcp-settings.ts';
+  if (panel === 'mcp') return 'mcp-settings.ts';
   if (panel === 'ai') return 'ai-settings.ts';
   if (panel === 'members') return 'cloud/workspace-settings.ts';
   if (panel.startsWith('instance-')) return 'instance/instance-settings.ts';
   return 'settings.ts';
-}
-
-function showShortcutsDialog(): void {
-  const overlay = el('div', 'data-desktop-settings-overlay');
-  overlay.setAttribute('data-desktop-shortcuts-dialog', '');
-  const surface = el('section', 'data-desktop-shortcuts-surface');
-  surface.append(
-    el('h2', 'data-desktop-settings-title', 'Raccourcis Blok'),
-    el('p', 'data-desktop-settings-intro', '/ — boîte à outils'),
-    el('p', 'data-desktop-settings-intro', 'Tab / Maj+Tab — imbriquer / désimbriquer'),
-    el('p', 'data-desktop-settings-intro', '@ — mentionner une page ou une date'),
-    el('p', 'data-desktop-settings-intro', '⌘/Ctrl+K — rechercher une page'),
-    el('p', 'data-desktop-settings-intro', '⌘/Ctrl+Z — annuler'),
-  );
-  const close = el('button', 'data-desktop-settings-copy', 'Fermer');
-  close.type = 'button';
-  surface.append(close);
-  overlay.append(surface);
-  const handle = openModalDialog({
-    content: overlay,
-    surface,
-    label: 'Raccourcis Blok',
-    initialFocus: () => close,
-    onDismiss: () => handle.close(),
-  });
-  close.addEventListener('click', () => handle.close());
 }
 
 function openLocalWorkspaceDialog(onCreate: (name: string) => void): void {
@@ -79,7 +54,7 @@ function openLocalWorkspaceDialog(onCreate: (name: string) => void): void {
   const name = el('input', 'data-desktop-settings-name');
   name.type = 'text';
   styleTextField(name);
-  name.placeholder = 'Nom de l’espace';
+  name.placeholder = 'Nom du Workspace';
   name.required = true;
   name.maxLength = 80;
   const actions = el('div', 'data-desktop-account-actions');
@@ -192,10 +167,9 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
     members: null as ReturnType<typeof mountWorkspaceMembers> | null,
     instancePanel: null as ReturnType<typeof mountInstanceSettings> | null,
     modal: null as ModalDialogHandle | null,
-    choices: [] as Array<{destroy(): void}>,
+    choices: [] as Array<{destroy(): void; dismiss?(): boolean}>,
     panelGeneration: 0,
-    helpPopup: null as PopoverDesktop | null,
-    supportEmail: null as string | null,
+    teamspaceId: undefined as string | undefined,
     directory: 'Chargement…',
   };
   const openInvitation = (container?: HTMLElement): void => {
@@ -209,7 +183,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   switcher.setAttribute('aria-label', 'Espace local et réglages');
   switcher.setAttribute('aria-haspopup', 'menu');
   switcher.setAttribute('aria-expanded', 'false');
-  switcher.append(el('span', 'data-desktop-avatar', 'B'), el('span', 'data-desktop-switcher-name', 'Espace local'), chevron());
+  switcher.append(el('span', 'data-desktop-avatar', workspaceGlyph(currentWorkspace)), el('span', 'data-desktop-switcher-name', 'Espace local'), chevron());
   footer.append(switcher);
 
   const menu = el('div', 'data-desktop-footer-menu');
@@ -217,102 +191,12 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   menu.hidden = true;
   const account = currentWorkspace.kind === 'remote' ? el('div', 'data-desktop-menu-account') : el('button', 'data-desktop-menu-account');
   if (account instanceof HTMLButtonElement) { account.type = 'button'; account.setAttribute('role', 'menuitem'); }
-  account.append(el('span', 'data-desktop-menu-avatar', currentWorkspace.name.charAt(0).toLocaleUpperCase()));
+  account.append(el('span', 'data-desktop-menu-avatar', workspaceGlyph(currentWorkspace)));
   const accountText = el('span', 'data-desktop-menu-account-text');
   accountText.append(el('strong', 'data-desktop-menu-title', 'Espace local'), el('small', 'data-desktop-menu-subtitle', 'Données sur cet appareil'));
   account.append(accountText);
   const preferences = actionButton('data-desktop-menu-item', 'Paramètres', 'settings');
   preferences.setAttribute('role', 'menuitem');
-  const help = actionButton('data-desktop-menu-help', 'Aide', 'help');
-  help.setAttribute('data-desktop-menu-item', '');
-  help.setAttribute('role', 'menuitem');
-  help.setAttribute('aria-haspopup', 'menu');
-  if (client) {
-    void client.session().then((session) => {
-      // The address a member is told to contact, served by /api/session: the
-      // longest-standing instance administrator. Never the viewer's own inbox,
-      // and the entry is hidden rather than shown disabled when there is none.
-      const support = session.supportEmail ?? '';
-      ui.supportEmail = support && support !== session.user.email ? support : null;
-    }).catch(() => { /* no support address */ });
-  }
-  const openHelp = (): void => {
-    if (ui.helpPopup?.isShown) { ui.helpPopup.hide(); return; }
-    const workspaceId = currentWorkspace.kind === 'remote' ? currentWorkspace.workspaceId : currentWorkspace.id;
-    const items = [
-      {
-        name: 'getting-started',
-        title: 'Premiers pas',
-        closeOnActivate: true,
-        onActivate: () => {
-          footer.dispatchEvent(new CustomEvent('blok:desktop-open-page', {
-            bubbles: true,
-            detail: { pageId: welcomePageId(workspaceId), seedWelcome: true },
-          }));
-        },
-      },
-      {
-        name: 'who-sees',
-        title: 'Qui peut voir quoi',
-        closeOnActivate: true,
-        onActivate: () => {
-          footer.dispatchEvent(new CustomEvent('blok:desktop-open-page', {
-            bubbles: true,
-            detail: { pageId: welcomeRightsPageId(workspaceId), seedWelcome: true },
-          }));
-        },
-      },
-      {
-        name: 'shortcuts',
-        title: 'Raccourcis',
-        closeOnActivate: true,
-        onActivate: () => {
-          showShortcutsDialog();
-        },
-      },
-      // Omitted when the instance has no address to offer: a permanently
-      // greyed row teaches nothing and reads as broken.
-      ...(ui.supportEmail ? [{
-        name: 'report',
-        title: 'Signaler un problème',
-        closeOnActivate: true,
-        onActivate: () => {
-          const address = ui.supportEmail;
-          if (!address) return;
-          location.href = `mailto:${encodeURIComponent(address)}?subject=${encodeURIComponent('Signaler un problème — Blok')}`;
-        },
-      }] : []),
-      {
-        name: 'version',
-        title: `Blok ${CORE_VERSION} · App ${APP_VERSION}`,
-        isDisabled: true,
-        onActivate: () => undefined,
-      },
-    ];
-    const popup = new PopoverDesktop({
-      trigger: help,
-      width: 'auto',
-      minWidth: '220px',
-      items,
-      class: 'desktop-help-popover',
-    });
-    popup.getElement().setAttribute('data-desktop-help-popover', '');
-    const palette = getComputedStyle(help);
-    for (const token of ['--blok-popover-bg', '--blok-popover-border', '--blok-text-primary', '--blok-text-secondary', '--blok-item-hover-bg']) {
-      const value = palette.getPropertyValue(token);
-      if (value) popup.getElement().style.setProperty(token, value);
-    }
-    ui.helpPopup = popup;
-    const closed = { settled: false };
-    popup.on('closed', () => {
-      if (closed.settled) return;
-      closed.settled = true;
-      if (ui.helpPopup === popup) ui.helpPopup = null;
-      queueMicrotask(() => popup.destroy());
-    });
-    popup.show();
-  };
-  help.addEventListener('click', () => { openHelp(); });
   const emitCloud = (section: 'settings' | 'invites' | 'account'): void => {
     closeMenu();
     footer.dispatchEvent(new CustomEvent('blok:desktop-connect-cloud', {bubbles: true, detail: {section}}));
@@ -324,7 +208,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
     if (currentWorkspace.kind === 'remote') openSettings('account');
     else emitCloud('account');
   });
-  menu.append(account, preferences, help);
+  menu.append(account, preferences);
   if (admin) {
     const invite = actionButton('data-desktop-menu-invite', 'Inviter des membres', 'profile');
     invite.setAttribute('data-desktop-menu-item', '');
@@ -344,7 +228,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   const addChoice = (ref: (typeof all)[number], group: HTMLElement): void => {
     const choice = actionButton('data-desktop-menu-workspace', ref.name, 'storage');
     const label = el('span', 'data-desktop-menu-workspace-name', ref.name);
-    choice.replaceChildren(el('span', 'data-desktop-workspace-avatar', ref.name.charAt(0).toLocaleUpperCase()), label);
+    choice.replaceChildren(el('span', 'data-desktop-workspace-avatar', workspaceGlyph(ref)), label);
     choice.setAttribute('role', 'menuitemradio');
     choice.setAttribute('data-desktop-menu-item', '');
     const current = workspaceKey(ref) === workspaceKey(currentWorkspace);
@@ -405,25 +289,31 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   const connectionsTab = actionButton('data-desktop-settings-nav-item', 'Connexions', 'connections');
   navList.append(accountTab);
   navList.append(connectionsTab);
-  navList.append(el('div', 'data-desktop-settings-nav-heading', 'Application'));
   const prefsTab = actionButton('data-desktop-settings-nav-item', 'Préférences', 'settings');
   const aiTab = actionButton('data-desktop-settings-nav-item', 'Assistant IA', 'ai');
-  navList.append(prefsTab, aiTab);
+  navList.append(prefsTab);
+  const mcpTab = actionButton('data-desktop-settings-nav-item', 'MCP', 'connections');
   const generalTab = actionButton('data-desktop-settings-nav-item', 'Général', 'storage');
   const emojiTab = actionButton('data-desktop-settings-nav-item', 'Émojis', 'emoji');
+  const teamspacesTab = actionButton('data-desktop-settings-nav-item', 'Espaces d’équipe', 'storage');
   const membersTab = actionButton('data-desktop-settings-nav-item', 'Membres', 'profile');
-  navList.append(el('div', 'data-desktop-settings-nav-heading', 'Espace'), generalTab, emojiTab);
+  navList.append(el('div', 'data-desktop-settings-nav-heading', 'Workspace'), generalTab, emojiTab);
   if (admin) navList.append(membersTab);
+  if (client) navList.append(teamspacesTab);
+  navList.append(el('div', 'data-desktop-settings-nav-heading', 'Fonctionnalités'), aiTab);
+  if (client) navList.append(mcpTab);
   const navEntries: Array<[HTMLButtonElement, string]> = [
-    [accountTab, 'compte profil identité email'], [connectionsTab, 'connexion mcp jeton compte serveur espace'],
+    [accountTab, 'compte profil identité email'], [connectionsTab, client ? 'connexion compte serveur espace' : 'connexion mcp jeton compte serveur espace'],
+    ...(client ? [[mcpTab, 'mcp jeton accès outils'] as [HTMLButtonElement, string]] : []),
     [prefsTab, 'préférences apparence thème clair sombre'], [aiTab, 'assistant ia openai modèle clé api'],
-    [generalTab, 'général espace nom stockage'], [emojiTab, 'émoji emoji image icône logo'], [membersTab, 'membres invitations accès rôles'],
+    ...(client ? [[teamspacesTab, 'équipe teamspace membres accès workspace'] as [HTMLButtonElement,string]] : []),
+    [generalTab, 'général workspace espace nom stockage'], [emojiTab, 'émoji emoji image icône logo'], [membersTab, 'membres invitations accès rôles'],
   ];
   type SettingsPanel =
-    | 'account' | 'preferences' | 'ai' | 'general' | 'members' | 'emojis' | 'connections'
+    | 'teamspaces' | 'account' | 'preferences' | 'ai' | 'mcp' | 'general' | 'members' | 'emojis' | 'connections'
     | 'instance-general' | 'instance-access' | 'instance-accounts' | 'instance-workspaces' | 'instance-health';
   const panelTabs = new Map<SettingsPanel, HTMLButtonElement>([
-    ['account', accountTab], ['connections', connectionsTab], ['preferences', prefsTab], ['ai', aiTab],
+    ['teamspaces',teamspacesTab], ['mcp', mcpTab], ['account', accountTab], ['connections', connectionsTab], ['preferences', prefsTab], ['ai', aiTab],
     ['general', generalTab], ['emojis', emojiTab], ['members', membersTab],
   ]);
   const normalize = (value: string): string => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase();
@@ -446,11 +336,11 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   if (client) {
     void client.session().then((session) => {
       if (!session.user.instanceAdmin) return;
-      const instanceHeading = el('div', 'data-desktop-settings-nav-heading', 'Instance');
+      const instanceHeading = el('div', 'data-desktop-settings-nav-heading', 'Serveur');
       const instanceGeneralTab = actionButton('data-desktop-settings-nav-item', 'Général', 'storage');
       const instanceAccessTab = actionButton('data-desktop-settings-nav-item', 'Accès', 'settings');
       const instanceAccountsTab = actionButton('data-desktop-settings-nav-item', 'Comptes', 'profile');
-      const instanceWorkspacesTab = actionButton('data-desktop-settings-nav-item', 'Espaces', 'storage');
+      const instanceWorkspacesTab = actionButton('data-desktop-settings-nav-item', 'Workspaces', 'storage');
       const instanceHealthTab = actionButton('data-desktop-settings-nav-item', 'Santé et e-mail', 'connections');
       for (const tab of [instanceGeneralTab, instanceAccessTab, instanceAccountsTab, instanceWorkspacesTab, instanceHealthTab]) {
         tab.setAttribute('data-instance-panel', '');
@@ -539,6 +429,28 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   const closeSettings = (): void => { ui.modal?.close(); };
   close.addEventListener('click', closeSettings);
 
+  const updateWorkspaceName = (next: string): void => {
+    currentWorkspace.name = next;
+    rememberWorkspace(currentWorkspace);
+    if (currentWorkspace.kind === 'local' && currentWorkspace.id === 'default') {
+      localStorage.setItem('blok:desktop:profile-name', next);
+    }
+    const switcherName = switcher.querySelector('[data-desktop-switcher-name]');
+    if (switcherName) switcherName.textContent = next;
+    const accountTitle = account.querySelector('[data-desktop-menu-title]');
+    if (accountTitle) accountTitle.textContent = next;
+    const switcherAvatar = switcher.querySelector('[data-desktop-avatar]');
+    if (switcherAvatar) switcherAvatar.textContent = workspaceGlyph(currentWorkspace);
+    const avatar = account.querySelector('[data-desktop-menu-avatar]');
+    if (avatar) avatar.textContent = workspaceGlyph(currentWorkspace);
+    const choice = menu.querySelector('[data-desktop-menu-workspace][aria-current="true"]');
+    const label = choice?.querySelector('[data-desktop-menu-workspace-name]');
+    if (label) label.textContent = next;
+    const choiceAvatar = choice?.querySelector('[data-desktop-workspace-avatar]');
+    if (choiceAvatar) choiceAvatar.textContent = workspaceGlyph(currentWorkspace);
+    footer.dispatchEvent(new CustomEvent('blok:desktop-workspace-renamed', {bubbles: true, detail: {key: workspaceKey(currentWorkspace), name: next}}));
+  };
+
   const showPanel = (panel: SettingsPanel): void => {
     for (const [name, tab] of panelTabs) {
       tab.setAttribute('aria-current', panel === name ? 'page' : 'false');
@@ -565,6 +477,20 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
       });
       return;
     }
+    if (panel === 'teamspaces' && client && currentWorkspace.kind === 'remote') {
+      ui.choices.push(mountTeamspaceSettings(content, {
+        api:teamspaceClient(client,currentWorkspace.workspaceId), canCreate:admin, initialId:ui.teamspaceId,
+        onChanged:()=>footer.dispatchEvent(new CustomEvent('blok:desktop-teamspaces-changed',{bubbles:true})),
+      }));
+      ui.teamspaceId=undefined;
+      main.append(content);
+      return;
+    }
+    if (panel === 'mcp' && client) {
+      main.append(content);
+      mountMcpSettings(content, client);
+      return;
+    }
     if (panel === 'connections') {
       content.append(el('h1', 'data-desktop-settings-title', 'Connexions'), el('p', 'data-desktop-settings-intro', 'Gérez vos comptes et connectez vos outils à Blok.'));
       const accounts = el('section', 'data-desktop-connections-accounts');
@@ -574,7 +500,6 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
       manage.addEventListener('click', () => { closeSettings(); emitCloud('account'); });
       accounts.append(labels, manage); content.append(accounts);
       main.append(content);
-      if (client) mountMcpSettings(content, client, {embedded: true});
       return;
     }
     if (panel === 'emojis') {
@@ -625,12 +550,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
       name.setAttribute('aria-label', 'Nom du profil local');
       name.addEventListener('change', () => {
         const next = name.value.trim() || 'Espace local';
-        if (currentWorkspace.kind === 'local' && currentWorkspace.id === 'default') localStorage.setItem('blok:desktop:profile-name', next);
-        else rememberWorkspace({...currentWorkspace, name: next});
-        const switcherName = switcher.querySelector('[data-desktop-switcher-name]');
-        if (switcherName) switcherName.textContent = next;
-        const accountTitle = account.querySelector('[data-desktop-menu-title]');
-        if (accountTitle) accountTitle.textContent = next;
+        updateWorkspaceName(next);
       });
       row.append(labels, name);
       content.append(row, el('p', 'data-desktop-settings-explanation', 'Pour partager et modifier des pages à plusieurs via Internet, il faudra connecter l’app à un service avec comptes et droits d’accès. Utilisez « Connecter un espace en ligne » dans le menu des espaces.'));
@@ -665,10 +585,56 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
     } else if (panel === 'ai') {
       ui.choices.push(mountAiSettings(content, currentWorkspace));
     } else if (panel === 'general') {
-      content.append(el('h1', 'data-desktop-settings-title', 'Général'), el('p', 'data-desktop-settings-intro', 'Informations sur votre espace.'));
+      content.append(el('h1', 'data-desktop-settings-title', 'Général'), el('p', 'data-desktop-settings-intro', 'Personnalisez le nom et l’icône de votre espace.'));
+      content.append(el('h2', 'data-desktop-settings-section', 'Identité de l’espace'));
       const nameRow = el('div', 'data-desktop-settings-row');
-      nameRow.append(el('strong', 'data-desktop-settings-row-title', 'Nom de l’espace'), el('span', 'data-desktop-settings-row-value', currentWorkspace.name));
+      nameRow.setAttribute('data-desktop-settings-field', '');
+      nameRow.append(el('strong', 'data-desktop-settings-row-title', 'Nom du Workspace'));
+      nameRow.append(el('p', 'data-desktop-settings-row-help', 'Un nom reconnaissable pour retrouver cet espace. Jusqu’à 120 caractères.'));
+      if (currentWorkspace.kind === 'local' || admin) {
+        const form = document.createElement('form');
+        form.setAttribute('data-desktop-workspace-rename', '');
+        const name = el('input', 'data-desktop-settings-name');
+        name.type = 'text'; name.required = true; name.maxLength = 240;
+        name.value = currentWorkspace.name;
+        name.setAttribute('aria-label', 'Nom du Workspace');
+        styleTextField(name);
+        const save = el('button', 'data-desktop-settings-copy', 'Enregistrer');
+        save.type = 'submit';
+        const status = el('p', 'data-desktop-settings-row-help');
+        status.setAttribute('role', 'status');
+        form.append(name, save, status);
+        form.addEventListener('submit', (event) => {
+          event.preventDefault();
+          if (save.disabled) return;
+          const next = name.value.trim();
+          if (!next || [...next].length > 120) {
+            status.textContent = 'Le nom doit contenir entre 1 et 120 caractères.';
+            name.focus();
+            return;
+          }
+          save.disabled = true; name.disabled = true;
+          status.textContent = 'Enregistrement…';
+          const renamed = currentWorkspace.kind === 'remote' && client
+            ? client.renameWorkspace(currentWorkspace.workspaceId, next).then((workspace) => workspace.name)
+            : Promise.resolve(next);
+          void renamed.then((saved) => {
+            updateWorkspaceName(saved);
+            name.value = saved;
+            status.textContent = 'Nom du Workspace enregistré.';
+          }).catch((error: unknown) => {
+            status.textContent = error instanceof Error ? error.message : 'Le renommage a échoué. Réessayez.';
+          }).finally(() => { save.disabled = false; name.disabled = false; });
+        });
+        nameRow.append(form);
+      } else nameRow.append(el('span', 'data-desktop-settings-row-value', currentWorkspace.name));
       content.append(nameRow);
+      ui.choices.push(mountWorkspaceIcon(content, currentWorkspace, client, () => {
+        for (const selector of ['[data-desktop-avatar]', '[data-desktop-menu-avatar]', '[data-desktop-menu-workspace][aria-current="true"] [data-desktop-workspace-avatar]']) {
+          const glyph=footer.querySelector(selector);if(glyph)glyph.textContent=workspaceGlyph(currentWorkspace);
+        }
+        footer.dispatchEvent(new CustomEvent('blok:desktop-workspace-renamed', {bubbles:true,detail:{key:workspaceKey(currentWorkspace),name:currentWorkspace.name,icon:currentWorkspace.icon ?? null}}));
+      }));
       if (currentWorkspace.kind === 'remote') {
         const serverRow = el('div', 'data-desktop-settings-row');
         serverRow.append(el('strong', 'data-desktop-settings-row-title', 'Serveur'), el('span', 'data-desktop-settings-row-value', currentWorkspace.server));
@@ -684,6 +650,8 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   accountTab.addEventListener('click', () => showPanel('account'));
   prefsTab.addEventListener('click', () => showPanel('preferences'));
   aiTab.addEventListener('click', () => showPanel('ai'));
+  mcpTab.addEventListener('click', () => showPanel('mcp'));
+  teamspacesTab.addEventListener('click', () => {ui.teamspaceId=undefined;showPanel('teamspaces');});
   generalTab.addEventListener('click', () => showPanel('general'));
   emojiTab.addEventListener('click', () => showPanel('emojis'));
   connectionsTab.addEventListener('click', () => showPanel('connections'));
@@ -697,6 +665,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
     ui.modal = openModalDialog({
       content: overlay, surface: dialog, label: 'Paramètres', initialFocus: () => dialog,
       onDismiss: (reason) => {
+        if (ui.choices.some(choice => choice.dismiss?.())) return;
         if (reason === 'escape' && document.activeElement === search && search.value) { search.value = ''; filterNav(); return; }
         closeSettings();
       },
@@ -728,8 +697,13 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   if (currentWorkspace.kind === 'remote') {
     const accountSubtitle = account.querySelector('[data-desktop-menu-subtitle]');
     if (accountSubtitle) accountSubtitle.textContent = currentWorkspace.userName ?? 'Compte en ligne';
-    switcher.setAttribute('aria-label', 'Espaces et réglages');
+    switcher.setAttribute('aria-label', 'Workspaces et réglages');
   }
+  footer.addEventListener('blok:desktop-open-teamspace',(event)=>{
+    if(!client)return;
+    ui.teamspaceId=(event as CustomEvent<{id?:string}>).detail?.id;
+    openSettings('teamspaces');
+  });
   const pendingSettings = sessionStorage.getItem('blok:desktop:pending-settings');
   if (pendingSettings) {
     sessionStorage.removeItem('blok:desktop:pending-settings');

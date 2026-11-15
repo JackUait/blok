@@ -1,5 +1,5 @@
 export type CloudRole = 'admin' | 'member' | 'viewer';
-export interface CloudWorkspace { id: string; slug: string; name: string; role: CloudRole }
+export interface CloudWorkspace { id: string; slug: string; name: string; role: CloudRole; icon?: string | null }
 export interface CloudUser { id: string; email: string; name?: string; instanceAdmin?: boolean }
 export interface CloudSession { user: CloudUser; workspaces: CloudWorkspace[]; supportEmail?: string | null }
 export type CloudSignupPolicy = 'invite' | 'domain' | 'open';
@@ -46,7 +46,7 @@ export interface CloudSessionAdapter {
   getToken(): Promise<string | null>;
   setToken(token: string | null): Promise<void>;
 }
-export interface CloudWorkspaceStatus { id: string; slug: string; name: string; role: CloudRole | null; joinStatus: 'pending' | 'approved' | 'rejected' | null }
+export interface CloudWorkspaceStatus { id: string; slug: string; name: string; icon?: string | null; role: CloudRole | null; joinStatus: 'pending' | 'approved' | 'rejected' | null }
 export class CloudApiError extends Error {
   constructor(public status: number, message: string) { super(message); this.name = 'CloudApiError'; }
 }
@@ -93,6 +93,8 @@ export class CloudClient {
     this.currentSession = null;
   }
   workspace(slug: string): Promise<CloudWorkspaceStatus> { return this.request(`/api/workspaces/${encodeURIComponent(slug)}`); }
+  updateWorkspaceIdentity(slug: string, value: {name?: string; icon?: string | null}): Promise<CloudWorkspace> { return this.request(`/api/workspaces/${encodeURIComponent(slug)}`, {method: 'PATCH', body: JSON.stringify(value)}); }
+  renameWorkspace(slug: string, name: string): Promise<CloudWorkspace> { return this.request(`/api/workspaces/${encodeURIComponent(slug)}`, {method: 'PATCH', body: JSON.stringify({name})}); }
   async ticket(slug: string, doc: string): Promise<string> {
     const result = await this.request<{ticket: string}>(`/api/workspaces/${encodeURIComponent(slug)}/ticket?doc=${encodeURIComponent(doc)}`);
     return result.ticket;

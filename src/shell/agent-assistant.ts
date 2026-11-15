@@ -18,7 +18,7 @@ export interface AgentAssistantProvider { id: string; label: string }
 
 export interface AgentAssistantOptions {
   /** Visible text of the open page, included when "Cette page" is checked. */
-  getPageText: () => string;
+  getPageText: () => string | Promise<string>;
   /** Closes the panel, then the host opens provider settings. */
   openSettings: () => void;
   /** Host-specific provider inspection, e.g. Tauri's native CLI bridge. */
@@ -486,10 +486,10 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     paintMessages();
   };
 
-  const composed = (question: string): string => {
+  const composed = async (question: string): Promise<string> => {
     if (!session.includePage) return question;
 
-    const page = options.getPageText().trim();
+    const page = (await options.getPageText()).trim();
 
     return page === '' ? question : `${question}\n\nPage:\n${page}`;
   };
@@ -501,7 +501,7 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
 
     if (text === '' || session.run !== null || command === null || conversation === undefined) return;
 
-    const sent = composed(text);
+    const sent = text;
     const label = session.providers.find((item) => item.id === command)?.label ?? (isCliCommand(command) ? providerLabel(command) : command);
     const turn: Turn = { question: text, sent, command, label, answer: '', pending: true, status: runningLabel(label) };
     const prior: AgentModelMessage[] = conversation.turns.flatMap((item) => (
@@ -522,14 +522,17 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     composerHandle.setText('');
     render();
 
-    void Promise.resolve().then(() => {
+    void composed(text).then((context) => {
+      controller.signal.throwIfAborted();
+      if (session.token !== token) throw new Error('Requête arrêtée.');
+      turn.sent=context;
       const model = options.modelFor?.(command, (status) => {
         if (session.token !== token || !turn.pending || turn.status === status) return;
         turn.status = status; paintMessages();
       }) ?? (isCliCommand(command) ? createCliAgentModel({command}) : null);
       if (!model) throw new Error('Ce modèle nécessite un adaptateur fourni par l’application.');
       return model({
-        system: SYSTEM, messages: [...prior, {role:'user',content:sent}], tools:[], signal:controller.signal,
+        system: SYSTEM, messages: [...prior, {role:'user',content:context}], tools:[], signal:controller.signal,
       });
     }).then((response) => {
       if (session.token !== token) return;

@@ -163,7 +163,7 @@ test.describe('form toolbar and no-results buttons (notion-motion.md Round 41)',
     const add = empty.locator('[data-blok-database-table-add-row]');
 
     await expect(edit).toBeVisible();
-    await expect(edit.locator('svg')).toHaveCSS('width', '16px');
+    expect(await edit.evaluate((el) => el.querySelector('svg')?.getBoundingClientRect().width)).toBe(16);
     await expect(add).toHaveCSS('border-top-width', '1px');
     await expect(add).toHaveCSS('border-top-color', await token(page, '--blok-database-table-control-border'));
     await expect(add).toHaveCSS('font-size', '14px');

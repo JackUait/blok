@@ -133,6 +133,48 @@ func (s *Service) EmailTest(ctx context.Context, email string) (string, error) {
 	return backend, nil
 }
 
+// firstWorkspaceName and firstWorkspaceSlug derive the space the assistant
+// creates, from the administrator's address. Nobody has anything to name at
+// setup time; Notion derives it the same way and lets you rename afterwards.
+func firstWorkspaceName(email string) string {
+	local := email
+	if at := strings.LastIndex(email, "@"); at > 0 {
+		local = email[:at]
+	}
+	return "Espace de " + local
+}
+
+func firstWorkspaceSlug(email string) string {
+	local := email
+	if at := strings.LastIndex(email, "@"); at > 0 {
+		local = email[:at]
+	}
+	var b strings.Builder
+	for _, r := range strings.ToLower(local) {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+		default:
+			b.WriteRune('-')
+		}
+	}
+	slug := strings.Trim(b.String(), "-")
+	for strings.Contains(slug, "--") {
+		slug = strings.ReplaceAll(slug, "--", "-")
+	}
+	if slug == "" {
+		return "espace"
+	}
+	// slugPattern wants at least two characters and a leading alphanumeric.
+	if len(slug) < 2 {
+		return slug + "-espace"
+	}
+	if len(slug) > 63 {
+		slug = strings.Trim(slug[:63], "-")
+	}
+	return slug
+}
+
 func (s *Service) claimSetup(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Email             string `json:"email"`
@@ -183,10 +225,6 @@ func (s *Service) claimSetup(w http.ResponseWriter, r *http.Request) {
 		problem(w, 400, "Invalid workspaceCreation")
 		return
 	}
-	if workspaceCreation == "disabled" && in.Workspace == nil {
-		problem(w, 400, "First workspace required when creation is disabled")
-		return
-	}
 	if in.Workspace != nil {
 		if !slugPattern.MatchString(in.Workspace.Slug) || len(strings.TrimSpace(in.Workspace.Name)) < 1 || utf8.RuneCountInString(in.Workspace.Name) > 120 {
 			problem(w, 400, "Invalid workspace")
@@ -231,10 +269,16 @@ func (s *Service) claimSetup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var workspaceID *string
+	// The claim always leaves exactly one space, so an instance can never land
+	// on an empty selector — and `workspace_creation=disabled` can never brick
+	// a fresh install.
+	wsSlug, wsName := firstWorkspaceSlug(email), firstWorkspaceName(email)
 	if in.Workspace != nil {
-		wsName := strings.TrimSpace(in.Workspace.Name)
+		wsSlug, wsName = in.Workspace.Slug, strings.TrimSpace(in.Workspace.Name)
+	}
+	{
 		id := opaque()
-		if _, e = tx.Exec(r.Context(), `INSERT INTO workspaces(id,slug,name) VALUES($1,$2,$3)`, id, in.Workspace.Slug, wsName); e != nil {
+		if _, e = tx.Exec(r.Context(), `INSERT INTO workspaces(id,slug,name) VALUES($1,$2,$3)`, id, wsSlug, wsName); e != nil {
 			problem(w, 409, "Slug already used")
 			return
 		}

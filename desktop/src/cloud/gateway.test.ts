@@ -56,7 +56,7 @@ describe('cloud gateway', () => {
     await mountCloudGateway(document.body,{onOpenWorkspace:vi.fn()});
     expect(document.querySelector('[data-cloud-route]')?.getAttribute('data-cloud-route')).toBe('setup');
     expect(document.querySelector('input[type="email"]')).toBeNull();
-    expect(document.body.textContent).toContain('Étape 1 sur 4');
+    expect(document.body.textContent).toContain('Étape 1 sur 3');
     expect(document.body.textContent).toContain('Cette instance');
     expect(document.body.textContent).not.toContain('Jeton');
     expect(document.body.textContent).not.toMatch(/Coming soon/i);

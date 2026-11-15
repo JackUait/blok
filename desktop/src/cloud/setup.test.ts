@@ -21,7 +21,7 @@ describe('deriveWorkspaceSlug', () => {
 });
 
 describe('setup assistant', () => {
-  it('walks four steps and claims only on the final submit', async () => {
+  it('walks three steps and claims only on the final submit', async () => {
     const fetch = vi.fn(async (url: string, _init?: RequestInit) => {
       if (String(url).endsWith('/api/setup/email-test')) return response({ok: true, backend: 'development'});
       if (String(url).endsWith('/api/setup/claim')) return response({ok: true});
@@ -46,7 +46,7 @@ describe('setup assistant', () => {
       onClaimed,
     });
 
-    expect(host.textContent).toContain('Étape 1 sur 4');
+    expect(host.textContent).toContain('Étape 1 sur 3');
     // No setup token: the assistant is open while setup is pending, like AFFiNE's.
     expect(host.querySelector('#cloud-setup-token')).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
@@ -56,7 +56,7 @@ describe('setup assistant', () => {
     instanceName.dispatchEvent(new Event('input'));
     must(instanceName.form).dispatchEvent(new Event('submit', {cancelable: true}));
 
-    expect(host.textContent).toContain('Étape 2 sur 4');
+    expect(host.textContent).toContain('Étape 2 sur 3');
     expect(host.textContent).toMatch(/Blok n’a pas de mot de passe|Blok n'a pas de mot de passe/);
 
     const adminName = must(host.querySelector<HTMLInputElement>('#cloud-admin-name'));
@@ -74,23 +74,10 @@ describe('setup assistant', () => {
     });
     must(email.form).dispatchEvent(new Event('submit', {cancelable: true}));
 
-    expect(host.textContent).toContain('Étape 3 sur 4');
-    const workspaceName = must(host.querySelector<HTMLInputElement>('#cloud-workspace-name'));
-    workspaceName.value = 'Mon Équipe';
-    workspaceName.dispatchEvent(new Event('input'));
-    expect(host.textContent).toContain('blok.example.test/mon-equipe');
-    const edit = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Modifier');
-    must(edit).click();
-    const slug = must(host.querySelector<HTMLInputElement>('#cloud-workspace-slug'));
-    expect(slug.value).toBe('mon-equipe');
-    slug.value = 'equipe-acme';
-    slug.dispatchEvent(new Event('input'));
-    workspaceName.value = 'Autre nom';
-    workspaceName.dispatchEvent(new Event('input'));
-    expect(slug.value).toBe('equipe-acme');
-    must(workspaceName.form).dispatchEvent(new Event('submit', {cancelable: true}));
-
-    expect(host.textContent).toContain('Étape 4 sur 4');
+    // No workspace step: the first space is derived from the address server
+    // side, Notion-style, and renamed afterwards.
+    expect(host.textContent).toContain('Étape 3 sur 3');
+    expect(host.querySelector('#cloud-workspace-name')).toBeNull();
     expect(host.textContent).toContain('Invitation seule');
     const finish = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Terminer la configuration');
     must(finish).click();
@@ -100,7 +87,6 @@ describe('setup assistant', () => {
       email: 'alice@example.test',
       name: 'Alice',
       instanceName: 'Acme',
-      workspace: {slug: 'equipe-acme', name: 'Autre nom'},
       signupPolicy: 'invite',
       workspaceCreation: 'admins_only',
     });

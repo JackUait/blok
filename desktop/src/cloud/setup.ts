@@ -9,32 +9,11 @@ import { button, el, field } from '../ui/dom';
 import { createChoice, type ChoiceControl } from '../ui/controls';
 import type { CloudClient, CloudSignupPolicy, CloudWorkspaceCreation } from './client';
 
-const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,62}$/;
-
-export interface SetupAssistantOptions {
-  client: CloudClient;
-  /** Called after a successful claim with the admin email (for login(code)). */
-  onClaimed(email: string): void;
-  /** Frame the setup route and return its main element. */
-  frame(): HTMLElement;
-  run(action: () => Promise<void>): Promise<void>;
-  showError(reason: unknown): void;
-  /** Prefer the live origin hostname for the slug preview. */
-  hostPreview?: string;
-}
-
-export interface SetupDraft {
-  instanceName: string;
-  adminName: string;
-  email: string;
-  workspaceName: string;
-  slug: string;
-  slugTouched: boolean;
-  signupPolicy: CloudSignupPolicy;
-  workspaceCreation: CloudWorkspaceCreation;
-}
-
-/** Derive a workspace slug from a display name (plan §9.2 step 3). */
+/**
+ * Derive a workspace slug from a display name. Used by the create-workspace
+ * screen; the assistant no longer asks for one — the server derives the first
+ * space from the administrator's address, Notion-style.
+ */
 export function deriveWorkspaceSlug(name: string): string {
   const base = name
     .normalize('NFD')
@@ -49,31 +28,38 @@ export function deriveWorkspaceSlug(name: string): string {
   return base;
 }
 
-function previewHost(options: SetupAssistantOptions): string {
-  if (options.hostPreview) return options.hostPreview;
-  try {
-    if (options.client.origin) return new URL(options.client.origin).host;
-  } catch { /* fall through */ }
-  try {
-    return window.location.host || 'votre-serveur.fr';
-  } catch {
-    return 'votre-serveur.fr';
-  }
+
+export interface SetupAssistantOptions {
+  client: CloudClient;
+  /** Called after a successful claim with the admin email (for login(code)). */
+  onClaimed(email: string): void;
+  /** Frame the setup route and return its main element. */
+  frame(): HTMLElement;
+  run(action: () => Promise<void>): Promise<void>;
+  showError(reason: unknown): void;
+  hostPreview?: string;
 }
+
+export interface SetupDraft {
+  instanceName: string;
+  adminName: string;
+  email: string;
+  signupPolicy: CloudSignupPolicy;
+  workspaceCreation: CloudWorkspaceCreation;
+}
+
 
 /**
  * Four-step first-run assistant. Nothing is written until the final POST /api/setup/claim.
  *
- * Claim persists `{email,name,instanceName?,workspace?,signupPolicy,workspaceCreation}`.
+ * Claim persists `{email,name,instanceName?,signupPolicy,workspaceCreation}`. The
+ * first space is derived server side from the address, Notion-style.
  */
 export function mountSetupAssistant(options: SetupAssistantOptions): void {
   const draft: SetupDraft = {
     instanceName: '',
     adminName: '',
     email: '',
-    workspaceName: '',
-    slug: '',
-    slugTouched: false,
     signupPolicy: 'invite',
     workspaceCreation: 'admins_only',
   };
@@ -91,27 +77,24 @@ export function mountSetupAssistant(options: SetupAssistantOptions): void {
     main.setAttribute('data-cloud-narrow', '');
     main.setAttribute('data-cloud-setup-step', String(flow.step));
     main.append(
-      el('span', { text: `Étape ${flow.step} sur 4`, attribute: 'data-cloud-eyebrow' }),
+      el('span', { text: `Étape ${flow.step} sur 3`, attribute: 'data-cloud-eyebrow' }),
       el('h1', { text: titles[flow.step] }),
       el('p', { text: leads[flow.step], attribute: 'data-cloud-muted' }),
     );
     if (flow.step === 1) stepOne(main);
     else if (flow.step === 2) stepTwo(main);
-    else if (flow.step === 3) stepThree(main);
-    else stepFour(main);
+    else stepThree(main);
   }
 
   const titles: Record<number, string> = {
     1: 'Cette instance',
     2: WORKSPACE_ROLES.admin,
-    3: 'Premier espace',
-    4: 'Qui peut entrer',
+    3: 'Qui peut entrer',
   };
   const leads: Record<number, string> = {
     1: 'Ce nom s’affiche sur l’écran de connexion et dans les e-mails.',
     2: 'Cette adresse recevra un code de connexion. Blok n’a pas de mot de passe.',
-    3: 'L’espace où vous travaillerez en premier. Vous pourrez en créer d’autres plus tard.',
-    4: 'Modifiable à tout moment dans Réglages → Instance → Accès.',
+    3: 'Modifiable à tout moment dans Réglages → Instance → Accès.',
   };
 
   function stepOne(main: HTMLElement): void {
@@ -185,79 +168,6 @@ export function mountSetupAssistant(options: SetupAssistantOptions): void {
   }
 
   function stepThree(main: HTMLElement): void {
-    const form = el('form');
-    const workspaceName = field({
-      form,
-      label: 'Nom de l’espace',
-      type: 'text',
-      name: 'workspace-name',
-      value: draft.workspaceName,
-    });
-    workspaceName.maxLength = 120;
-    if (!draft.slugTouched && draft.workspaceName) draft.slug = deriveWorkspaceSlug(draft.workspaceName);
-
-    const preview = el('p', { attribute: 'data-cloud-note' });
-    const previewValue = el('code', { text: `${previewHost(options)}/${draft.slug || '…'}` });
-    preview.append(el('span', { text: 'Identifiant : ' }), previewValue);
-
-    const slugWrap = el('div', { attribute: 'data-cloud-setup-slug' });
-    slugWrap.hidden = !draft.slugTouched;
-    const slug = field({
-      form: slugWrap,
-      label: 'Identifiant de l’espace',
-      type: 'text',
-      name: 'workspace-slug',
-      value: draft.slug,
-    });
-    slug.pattern = '[a-z0-9][a-z0-9-]{1,62}';
-    slug.minLength = 2;
-    slug.maxLength = 63;
-
-    const edit = button({
-      label: 'Modifier',
-      attribute: 'data-cloud-link',
-      onClick: () => {
-        slugWrap.hidden = false;
-        edit.hidden = true;
-        slug.focus();
-      },
-    });
-    edit.hidden = draft.slugTouched;
-
-    const next = button({ label: 'Continuer', primary: true, type: 'submit', onClick: () => {} });
-    const syncPreview = (): void => {
-      previewValue.textContent = `${previewHost(options)}/${draft.slug || '…'}`;
-      next.disabled = !(draft.workspaceName && SLUG_PATTERN.test(draft.slug));
-    };
-    workspaceName.addEventListener('input', () => {
-      draft.workspaceName = workspaceName.value.trim();
-      if (!draft.slugTouched) {
-        draft.slug = deriveWorkspaceSlug(draft.workspaceName);
-        slug.value = draft.slug;
-      }
-      syncPreview();
-    });
-    slug.addEventListener('input', () => {
-      draft.slugTouched = true;
-      draft.slug = slug.value.trim();
-      syncPreview();
-    });
-    syncPreview();
-
-    form.append(preview, edit, slugWrap, next);
-    form.addEventListener('submit', (event) => {
-      event.preventDefault();
-      draft.workspaceName = workspaceName.value.trim();
-      draft.slug = slug.value.trim();
-      if (!(draft.workspaceName && SLUG_PATTERN.test(draft.slug))) return;
-      flow.step = 4;
-      render();
-    });
-    main.append(form);
-    main.append(button({ label: 'Retour', onClick: () => { flow.step = 2; render(); } }));
-  }
-
-  function stepFour(main: HTMLElement): void {
     const signupLabel = el('label', { text: 'Qui peut créer un compte' });
     const signupConsequence = el('p', {
       text: SIGNUP_POLICIES[draft.signupPolicy].consequence,
@@ -312,7 +222,6 @@ export function mountSetupAssistant(options: SetupAssistantOptions): void {
                 email: draft.email,
                 name: draft.adminName,
                 instanceName: draft.instanceName,
-                workspace: { slug: draft.slug, name: draft.workspaceName },
                 signupPolicy: draft.signupPolicy,
                 workspaceCreation: draft.workspaceCreation,
               }),

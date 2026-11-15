@@ -537,24 +537,33 @@ déjà ce chemin d'événement.
 
 ### 9.2 L'assistant
 
-Quatre cartes, « Étape n sur 4 », retour arrière qui conserve la saisie, et
+**Correction du 15 novembre.** La première rédaction demandait le nom du premier
+espace à l'étape 3. Personne n'a quoi que ce soit à nommer à ce moment-là :
+Notion dérive l'espace de l'adresse — *queau.j's Workspace* — et on le renomme
+ensuite. L'étape disparaît, le serveur dérive, et le cas « création désactivée
+sans espace » (§14, piège 3) s'évapore : la revendication laisse **toujours**
+exactement un espace.
+
+Trois cartes, « Étape n sur 3 », retour arrière qui conserve la saisie, et
 **rien n'est écrit côté serveur avant la dernière** — un seul POST.
 
 | Étape | Demande | Phrase affichée |
 | --- | --- | --- |
-| 1 · Cette instance | Jeton de setup, nom | « Ce nom s'affiche sur l'écran de connexion et dans les e-mails. » L'écran donne la commande `docker compose exec app cat /data/setup-token` à copier. |
+| 1 · Cette instance | Nom | « Ce nom s'affiche sur l'écran de connexion et dans les e-mails. » |
 | 2 · Administrateur | Nom, adresse | « Cette adresse recevra un code de connexion. **Blok n'a pas de mot de passe.** » Sans cette phrase, l'absence du champ ressemble à un bug. Bouton « Vérifier l'envoi ». |
-| 3 · Premier espace | Nom ; identifiant **dérivé**, avec aperçu `votre-serveur.fr/mon-equipe` et un « Modifier » qui révèle le champ | Un drapeau `touched` pour qu'un identifiant édité à la main cesse de suivre le nom. |
-| 4 · Qui peut entrer | `signupPolicy` puis `workspaceCreation`, défauts pré-sélectionnés | « Invitation seule — personne ne crée de compte sans y être invité. Modifiable à tout moment dans Réglages → Instance → Accès. » |
+| 3 · Qui peut entrer | `signupPolicy` puis `workspaceCreation`, défauts pré-sélectionnés | « Invitation seule — personne ne crée de compte sans y être invité. Modifiable à tout moment dans Réglages → Instance → Accès. » |
+
+Le premier espace est `firstWorkspaceName(email)` / `firstWorkspaceSlug(email)` :
+`queau.j@gmail.com` donne « Espace de queau.j » et le slug `queau-j`, avec un
+repli sur `espace` quand l'adresse ne porte rien d'utilisable.
 
 Au terme : « Un code a été envoyé à … », et **enchaînement direct sur l'étape
 code de la connexion**, adresse pré-remplie. Pas de page de félicitations.
 
 Deux pièges : ne jamais faire confiance à un `setupRequired` mis en cache
-(re-fetch avant de rendre) ; et `run()` (`cloud/index.ts:73-78`) désactive *tous*
-les boutons puis les réactive *tous* — avec un assistant qui en a de
-légitimement désactivés, il les ressuscite. Mémoriser l'état avant, le restaurer
-après.
+(re-fetch avant de rendre) ; et `run()` (`cloud/index.ts`) désactive *tous* les
+boutons puis les réactive *tous* — avec un assistant qui en a de légitimement
+désactivés, il les ressuscite. Mémoriser l'état avant, le restaurer après.
 
 ### 9.3 La rubrique « Instance » des réglages
 

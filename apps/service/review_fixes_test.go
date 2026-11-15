@@ -328,3 +328,67 @@ func TestAdminHealthProbesTheUploadsVolume(t *testing.T) {
 		t.Fatal("files.ok stayed true with an unreachable data directory")
 	}
 }
+
+// Nobody has anything to name at setup time. Notion derives the first space
+// from the address — "queau.j's Workspace" — and you rename it afterwards. So
+// the assistant stops asking, and the claim always leaves exactly one space.
+func TestClaimDerivesFirstWorkspaceFromTheAddress(t *testing.T) {
+	ctx := context.Background()
+	cfg := isolatedConfig(t, "derive_ws")
+	s, e := New(ctx, cfg)
+	if e != nil {
+		t.Fatal(e)
+	}
+	t.Cleanup(s.Close)
+	server := httptest.NewServer(s.Handler())
+	t.Cleanup(server.Close)
+
+	status, _ := setupRequest(t, server, s.Config.PublicURL, "POST", "/api/setup/claim", map[string]any{
+		"email": "queau.j@gmail.com", "name": "Joceqo", "instanceName": "joceqo space",
+	})
+	if status != 200 {
+		t.Fatalf("claim status = %d, want 200 without naming a workspace", status)
+	}
+
+	var slug, name string
+	if e = s.DB.QueryRow(ctx, `SELECT slug, name FROM workspaces`).Scan(&slug, &name); e != nil {
+		t.Fatalf("the claim left no workspace: %v", e)
+	}
+	if slug != "queau-j" {
+		t.Fatalf("slug = %q, want it derived from the address local part", slug)
+	}
+	if !strings.Contains(name, "queau.j") {
+		t.Fatalf("name = %q, want it to name the address local part", name)
+	}
+	var role string
+	if e = s.DB.QueryRow(ctx, `
+		SELECT m.role FROM memberships m JOIN users u ON u.id=m.user_id
+		 WHERE u.email='queau.j@gmail.com'`).Scan(&role); e != nil || role != "admin" {
+		t.Fatalf("membership role=%q err=%v, want admin", role, e)
+	}
+	if s.settings().DefaultWorkspaceID == nil {
+		t.Fatal("the derived workspace should become the default")
+	}
+}
+
+// The derivation has to survive addresses that carry nothing usable, and a slug
+// already taken — a global unique index, so a second instance can collide.
+func TestFirstWorkspaceDerivation(t *testing.T) {
+	for _, c := range []struct{ email, slug string }{
+		{"queau.j@gmail.com", "queau-j"},
+		{"a.b.c@example.test", "a-b-c"},
+		{"Ops+Blok@example.test", "ops-blok"},
+		{"____@example.test", "espace"},
+		{"x@example.test", "x-espace"},
+	} {
+		if got := firstWorkspaceSlug(c.email); got != c.slug {
+			t.Errorf("firstWorkspaceSlug(%q) = %q, want %q", c.email, got, c.slug)
+		}
+		if !slugPattern.MatchString(firstWorkspaceSlug(c.email)) {
+			t.Errorf("firstWorkspaceSlug(%q) = %q, which the slug pattern refuses", c.email, firstWorkspaceSlug(c.email))
+		}
+	}
+	if name := firstWorkspaceName("queau.j@gmail.com"); !strings.Contains(name, "queau.j") {
+		t.Errorf("firstWorkspaceName = %q, want it to name the local part", name)
+	}
+}

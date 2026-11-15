@@ -364,3 +364,37 @@ describe('timeline toolbar row (Round 32)', () => {
     expect(body).toContain('padding-block-start: var(--blok-space-2-75)');
   });
 });
+
+// notion-motion.md Round 34 §5 (r34-timeline-hours-nowlabel.raw): a 12px 500 / 18 label, 3 end padding, centred on the
+// now-line in the tick row. Notion's rgb(229, 100, 88) is 3.3:1 on the canvas; Blok keeps AA ink (user-approved).
+describe('Hours zoom now label (Round 34)', () => {
+  const label = '[data-blok-database-timeline-units] > [data-blok-database-timeline-now-label]';
+
+  it('centres a zero-width box on the line, over the ticks', () => {
+    const body = ruleBody(label);
+
+    expect(body).toContain('inline-size: 0');
+    expect(body).toContain('display: flex');
+    expect(body).toContain('justify-content: center');
+    expect(body).toContain('align-items: center');
+    expect(body).toContain('overflow: visible');
+  });
+
+  it('draws the time 12px 500 / 18 in an AA red, 3 end padding', () => {
+    const text = ruleBody(`${label} > span`);
+
+    expect(text).toContain('flex: none');
+    expect(text).toContain('font-size: 12px');
+    expect(text).toContain('font-weight: 500');
+    expect(text).toContain('line-height: 18px');
+    expect(text).toContain('padding-inline-end: 3px');
+    expect(text).toContain('color: var(--blok-database-timeline-now-text)');
+  });
+
+  // 5.55:1 on rgb(253, 253, 253); 6.79:1 on rgb(25, 25, 25).
+  it('takes the AA reds in light and both darks, outside colors.css', () => {
+    expect(css).toContain('--blok-database-timeline-now-text: #b93a35;');
+    expect(darkValues('--blok-database-timeline-now-text')).toEqual(['#ea8480', '#ea8480']);
+    expect(colors).not.toContain('--blok-database-timeline-now-text:');
+  });
+});

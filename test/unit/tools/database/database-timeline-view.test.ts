@@ -277,6 +277,108 @@ describe('DatabaseTimelineView', () => {
       });
     });
 
+    // notion-motion.md Round 34 §5 (r34-timeline-hours-nowlabel.raw, r33-timeline-nowline-hours-1.raw): Hours zoom
+    // names the time on the now-line in the tick row, centres each tick on its time, has no day pill,
+    // and drops the ticks the label would cover.
+    describe('hours zoom now label', () => {
+      const NOW_LABEL = '[data-blok-database-timeline-now-label]';
+      const hours = (): HTMLElement => mount({ view: timelineView({ timelineZoom: 'hours' }) }).root;
+      const hoursStart = timelineWindow(CENTER, 'hours').start;
+      const tickAt = (root: HTMLElement, hour: number, minute: number): HTMLElement => {
+        const index = daysBetween(hoursStart, CENTER) * 96 + hour * 4 + minute / 15;
+        const tick = root.querySelectorAll<HTMLElement>('[data-blok-database-timeline-units] > [data-day]')[index];
+
+        if (tick === undefined) throw new Error('no tick');
+
+        return tick;
+      };
+      const xOf = (el: HTMLElement | null): number => parseFloat(el?.style.insetInlineStart ?? '');
+
+      /** Lays out the label 48.58 wide on its x and each tick's text 44 wide on its time. */
+      const layout = (): void => {
+        vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+          const owner = this.parentElement;
+          const isLabel = owner?.matches(NOW_LABEL) === true;
+
+          // A hidden tick has no box.
+          if (owner?.hidden === true) return { left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) };
+          const center = owner === null ? 0 : xOf(owner) + (isLabel ? 0 : parseFloat(owner.style.width) / 2);
+          const width = isLabel ? 48.58 : 44;
+
+          return { left: center - width / 2, right: center + width / 2, top: 0, bottom: 14, width, height: 14, x: center - width / 2, y: 0, toJSON: () => ({}) };
+        });
+      };
+
+      beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date', 'queueMicrotask'] });
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it('reads the time in the locale\'s clock, on the now-line, with no day pill', () => {
+        vi.setSystemTime(new Date(2026, 9, 9, 17, 38));
+        const root = hours();
+        const label = root.querySelector<HTMLElement>(`[data-blok-database-timeline-units] > ${NOW_LABEL}`);
+
+        expect(label?.textContent).toMatch(/^5:38\sPM$/);
+        expect(xOf(label)).toBeCloseTo(xOf(root.querySelector<HTMLElement>('[data-blok-database-timeline-today-line]')), 5);
+        expect(root.querySelector('[data-blok-database-timeline-today-dot]')).toBeNull();
+        vi.advanceTimersByTime(60_000);
+        expect(label?.textContent).toMatch(/^5:39\sPM$/);
+      });
+
+      it('centres each tick on its time', () => {
+        vi.setSystemTime(new Date(2026, 9, 9, 17, 38));
+        const tick = tickAt(hours(), 17, 15);
+        const time = (daysBetween(hoursStart, CENTER) + (17 * 60 + 15) / 1440) * TIMELINE_DAY_WIDTH.hours;
+
+        expect(xOf(tick) + parseFloat(tick.style.width) / 2).toBeCloseTo(time, 5);
+        expect(tick.textContent).toMatch(/^5:15\sPM$/);
+      });
+
+      // At 5:38 Notion drops 5:30 and 5:45 (39 and 34 px away) and keeps 5:15 and 6:00 (112 and 107).
+      it('hides the ticks the label covers, and keeps the rest', () => {
+        vi.setSystemTime(new Date(2026, 9, 9, 17, 38));
+        layout();
+        const root = hours();
+
+        vi.runAllTicks();
+        expect([[17, 15], [17, 30], [17, 45], [18, 0]].map(([h, m]) => tickAt(root, h, m).hidden)).toEqual([false, true, true, false]);
+      });
+
+      // At 3:29 Notion drops 3:30 and keeps 3:15 and 3:45 (68 and 78 px away).
+      it('keeps a tick 68 px away', () => {
+        vi.setSystemTime(new Date(2026, 9, 9, 15, 29));
+        layout();
+        const root = hours();
+
+        vi.runAllTicks();
+        expect([[15, 15], [15, 30], [15, 45]].map(([h, m]) => tickAt(root, h, m).hidden)).toEqual([false, true, false]);
+      });
+
+      it('keeps a tick hidden while the label still covers it', () => {
+        vi.setSystemTime(new Date(2026, 9, 9, 17, 38));
+        layout();
+        const root = hours();
+
+        vi.runAllTicks();
+        vi.advanceTimersByTime(60_000);
+        expect(tickAt(root, 17, 30).hidden).toBe(true);
+      });
+
+      it('brings a tick back once the line has moved off it', () => {
+        vi.setSystemTime(new Date(2026, 9, 9, 17, 38));
+        layout();
+        const root = hours();
+
+        vi.runAllTicks();
+        vi.advanceTimersByTime(3 * 60_000);
+        expect(tickAt(root, 17, 30).hidden).toBe(false);
+      });
+    });
+
     it('shades weekends at day-level zoom and not at year zoom', () => {
       expect(mount().root.querySelectorAll('[data-blok-database-timeline-weekend]').length).toBeGreaterThan(0);
       document.body.innerHTML = '';
@@ -1100,9 +1202,12 @@ describe('DatabaseTimelineView', () => {
 
   describe('hours zoom: 15-minute snap (research/22 §9)', () => {
     const hoursStart = timelineWindow(CENTER, 'hours').start;
-    /** Canvas pixels to midnight of CENTER; hours zoom draws one pixel per minute. */
+    /** Canvas pixels to midnight of CENTER. */
     const midnight = daysBetween(hoursStart, CENTER) * TIMELINE_DAY_WIDTH.hours;
-    const at = (minutes: number): number => midnight + minutes;
+    const perMinute = TIMELINE_DAY_WIDTH.hours / 1440;
+    const at = (minutes: number): number => midnight + minutes * perMinute;
+    const startOf = (el: HTMLElement): number => parseFloat(el.style.insetInlineStart);
+    const widthOf = (el: HTMLElement): number => parseFloat(el.style.width);
     const mountHours = (overrides: Partial<DatabaseTimelineViewOptions> = {}): Mounted => {
       const mounted = mount({
         view: timelineView({ timelineZoom: 'hours' }),
@@ -1152,8 +1257,8 @@ describe('DatabaseTimelineView', () => {
       pointer('pointerdown', bar(root, 'r1'), at(200), 50);
       pointer('pointermove', document, at(208), 50);
 
-      expect(bar(root, 'r1').style.insetInlineStart).toBe(`${at(188)}px`);
-      expect(bar(root, 'r1').style.width).toBe('60px');
+      expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(188), 5);
+      expect(widthOf(bar(root, 'r1'))).toBeCloseTo(60 * perMinute, 5);
       expect(bar(root, 'r1').hasAttribute('data-dragging')).toBe(true);
       expect(showReadout).not.toHaveBeenCalled();
     });
@@ -1165,8 +1270,8 @@ describe('DatabaseTimelineView', () => {
       pointer('pointerdown', handle, at(181), 50);
       pointer('pointermove', document, at(173), 50);
 
-      expect(bar(root, 'r1').style.insetInlineStart).toBe(`${at(165)}px`);
-      expect(bar(root, 'r1').style.width).toBe('75px');
+      expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(165), 5);
+      expect(widthOf(bar(root, 'r1'))).toBeCloseTo(75 * perMinute, 5);
       expect(showReadout).toHaveBeenLastCalledWith(handle, 'Oct 9, 2:45 AM', expect.objectContaining({ placement: 'left' }));
 
       pointer('pointerup', document, at(173), 50);
@@ -1194,7 +1299,7 @@ describe('DatabaseTimelineView', () => {
       pointer('pointerdown', handle, at(239), 50);
       pointer('pointermove', document, at(247), 50);
 
-      expect(bar(root, 'r1').style.width).toBe('75px');
+      expect(widthOf(bar(root, 'r1'))).toBeCloseTo(75 * perMinute, 5);
       expect(showReadout).toHaveBeenLastCalledWith(handle, 'Oct 9, 4:15 AM', expect.objectContaining({ placement: 'right' }));
       pointer('pointerup', document, at(247), 50);
 
@@ -1208,8 +1313,8 @@ describe('DatabaseTimelineView', () => {
       pointer('pointermove', document, at(150), 50);
       key(document, 'Escape');
 
-      expect(bar(root, 'r1').style.insetInlineStart).toBe(`${at(180)}px`);
-      expect(bar(root, 'r1').style.width).toBe('60px');
+      expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(180), 5);
+      expect(widthOf(bar(root, 'r1'))).toBeCloseTo(60 * perMinute, 5);
       expect(hide).toHaveBeenCalled();
       expect(handlers.writeDates).not.toHaveBeenCalled();
     });

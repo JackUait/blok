@@ -216,6 +216,8 @@ test.describe('timeline', () => {
 
   test.describe('hours zoom (research/22 §9)', () => {
     const timed = [{ id: 'r1', properties: { 'p-title': 'Call', 'p-due': '2026-10-09T03:00/2026-10-09T04:00' } }];
+    /** notion-motion.md Round 34 §5: 7000 px per day. */
+    const PER_MINUTE = 7000 / 1440;
     const mountHours = async (page: Page): Promise<{ x: number; y: number; width: number }> => {
       await mount(page, blocks({ type: 'timeline', timelineZoom: 'hours' }, timed));
       await bar(page, 'r1').scrollIntoViewIfNeeded();
@@ -229,12 +231,11 @@ test.describe('timeline', () => {
     test('a move follows the pointer as a ghost and rounds to the nearest 15 minutes on drop', async ({ page }) => {
       const box = await mountHours(page);
 
-      // Hours zoom draws one pixel per minute.
-      expect(box.width).toBeCloseTo(60, 0);
+      expect(box.width).toBeCloseTo(60 * PER_MINUTE, 0);
       await page.mouse.move(box.x + 30, box.y);
       await page.mouse.down();
-      await page.mouse.move(box.x + 40, box.y, { steps: 5 });
-      expect((await bar(page, 'r1').boundingBox())?.x).toBeCloseTo(box.x + 10, 0);
+      await page.mouse.move(box.x + 30 + 10 * PER_MINUTE, box.y, { steps: 5 });
+      expect((await bar(page, 'r1').boundingBox())?.x).toBeCloseTo(box.x + 10 * PER_MINUTE, 0);
       await expect(page.getByRole('tooltip')).toBeHidden();
       await page.mouse.up();
 
@@ -247,9 +248,9 @@ test.describe('timeline', () => {
       // research/23 §3b: the handle reaches 6px outside the bar.
       await page.mouse.move(box.x - 4, box.y);
       await page.mouse.down();
-      await page.mouse.move(box.x - 14, box.y, { steps: 5 });
+      await page.mouse.move(box.x - 4 - 14 * PER_MINUTE, box.y, { steps: 5 });
       await expect(page.getByRole('tooltip')).toHaveText('Oct 9, 2:45 AM');
-      expect((await bar(page, 'r1').boundingBox())?.x).toBeCloseTo(box.x - 15, 0);
+      expect((await bar(page, 'r1').boundingBox())?.x).toBeCloseTo(box.x - 15 * PER_MINUTE, 0);
       await page.mouse.up();
 
       await expect.poll(async () => (await savedRow(page, 'r1'))['p-due']).toBe('2026-10-09T02:45/2026-10-09T04:00');
@@ -262,7 +263,7 @@ test.describe('timeline', () => {
       // research/23 §3b: the handle reaches 6px outside the bar.
       await page.mouse.move(box.x + box.width + 4, box.y);
       await page.mouse.down();
-      await page.mouse.move(box.x + box.width + 14, box.y, { steps: 5 });
+      await page.mouse.move(box.x + box.width + 4 + 14 * PER_MINUTE, box.y, { steps: 5 });
       await expect(page.getByRole('tooltip')).toHaveText('Oct 9, 4:15 AM');
       // The readout sits to the right of the dragged end edge.
       const edge = await bar(page, 'r1').boundingBox();

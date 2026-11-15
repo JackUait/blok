@@ -1,7 +1,7 @@
 import { addDays, daysBetween, eventSpan, moveDateValue, resizeDateValue, weekdayOf } from './calendar-dates';
 import type { EventSpan } from './calendar-dates';
 import { parseDateValue } from './cells/date-value';
-import { toLocalDate } from './cells/date-format';
+import { formatClock, toLocalDate } from './cells/date-format';
 import type { PropertyValue, TimelineZoom } from './types';
 import { TIMELINE_ZOOMS } from './view-settings';
 
@@ -11,9 +11,9 @@ import { TIMELINE_ZOOMS } from './view-settings';
  * shift a bar.
  */
 
-/** Pixels per day. Month (40) is measured in Notion (research/08); the rest are unmeasured. */
+/** Pixels per day. Month (40) and Hours (7000) are measured in Notion (research/08, notion-motion.md Round 34 §5); the rest are unmeasured. */
 export const TIMELINE_DAY_WIDTH: Readonly<Record<TimelineZoom, number>> = {
-  hours: 1440,
+  hours: 7000,
   day: 280,
   week: 140,
   bi_week: 80,
@@ -298,6 +298,8 @@ const UNIT_OF: Record<TimelineZoom, Unit> = {
   hours: 'hour', day: 'day', week: 'day', bi_week: 'day', month: 'day', quarter: 'week', year: 'month', '5_years': 'quarter',
 };
 
+const TICKS_PER_DAY = 96;
+
 const FORMAT: Record<Unit, Intl.DateTimeFormatOptions> = {
   hour: { hour: 'numeric' },
   day: { day: 'numeric' },
@@ -328,16 +330,18 @@ const startsUnit = (unit: Unit, day: string): boolean => {
 };
 
 const unitsOf = (window: TimelineWindow, unit: Unit, dayWidth: number, format: Intl.DateTimeFormat): HeaderUnit[] => {
+  // notion-motion.md Round 34 §5: Hours zoom ticks every 15 minutes, in the locale's clock.
   if (unit === 'hour') {
-    const hourWidth = dayWidth / 24;
+    const tickWidth = dayWidth / TICKS_PER_DAY;
+    const { locale } = format.resolvedOptions();
 
-    return Array.from({ length: window.days * 24 }, (_, i) => {
-      const day = addDays(window.start, Math.floor(i / 24));
+    return Array.from({ length: window.days * TICKS_PER_DAY }, (_, i) => {
+      const day = addDays(window.start, Math.floor(i / TICKS_PER_DAY));
       const date = toLocalDate(day);
 
-      date.setHours(i % 24);
+      date.setMinutes((i % TICKS_PER_DAY) * 15);
 
-      return { label: format.format(date), offset: i * hourWidth, width: hourWidth, day };
+      return { label: formatClock(date, locale, undefined), offset: i * tickWidth, width: tickWidth, day };
     });
   }
 

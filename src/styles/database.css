@@ -332,6 +332,8 @@
   --blok-database-timeline-weekend-bg: rgb(247, 247, 247);
   /* findings C20 (r26 §4d, r33 §4.6): the canvas fill. */
   --blok-database-timeline-canvas-bg: rgb(253, 253, 253);
+  /* Hours zoom now label: Notion's rgb(229, 100, 88) fails AA as text; this red is 5.55:1 on the canvas. */
+  --blok-database-timeline-now-text: #b93a35;
   /* motion-r6-timelinepanel.json: the table panel card. */
   --blok-database-timeline-panel-bg: rgb(255, 255, 255);
   --blok-database-timeline-panel-shadow: rgba(25, 25, 25, 0.027) 0 4px 12px 0, rgba(25, 25, 25, 0.02) 0 1px 2px 0;
@@ -715,6 +717,7 @@
     --blok-database-timeline-header-line: rgb(56, 56, 54);
     --blok-database-timeline-weekend-bg: rgba(255, 255, 255, 0.03);
     --blok-database-timeline-canvas-bg: rgb(25, 25, 25);
+    --blok-database-timeline-now-text: #ea8480;
     /* r9-timeline-dark.raw: the panel shadow and the "Name" header ink. */
     --blok-database-timeline-panel-bg: var(--blok-bg-primary);
     --blok-database-timeline-panel-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px 0;
@@ -1074,6 +1077,7 @@
   --blok-database-timeline-header-line: rgb(56, 56, 54);
   --blok-database-timeline-weekend-bg: rgba(255, 255, 255, 0.03);
   --blok-database-timeline-canvas-bg: rgb(25, 25, 25);
+  --blok-database-timeline-now-text: #ea8480;
   /* r9-timeline-dark.raw: the panel shadow and the "Name" header ink. */
   --blok-database-timeline-panel-bg: var(--blok-bg-primary);
   --blok-database-timeline-panel-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px 0;
@@ -15049,6 +15053,26 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   line-height: var(--blok-database-timeline-line);
   text-align: center;
   color: var(--blok-database-timeline-muted-text);
+}
+
+/* notion-motion.md Round 34 §5: Hours zoom names the time on the now-line. A zero-width box on the line
+   centres the text over it; the ticks it would cover are hidden by the view. */
+[data-blok-database-timeline-units] > [data-blok-database-timeline-now-label] {
+  z-index: 1;
+  inline-size: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+[data-blok-database-timeline-units] > [data-blok-database-timeline-now-label] > span {
+  flex: none;
+  padding-inline-end: 3px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--blok-database-timeline-now-text);
 }
 
 [data-blok-database-timeline-today-dot] {

@@ -154,13 +154,21 @@ describe('timeline-dates', () => {
       expect(moveBar({ start: '2026-10-05T15:00:00.000Z', end: undefined }, 0, 2 * 60)).toEqual({ start: '2026-10-05T17:00:00.000Z' });
     });
 
+    // notion-motion.md Round 34 §5: 7000 px per day, so 4.861 px per minute.
+    const perMinute = 7000 / 1440;
+    const geometry = (offset: number, width: number): { offset: number; width: number } => ({ offset: offset * perMinute, width: width * perMinute });
+
+    it('draws 7000 px per day, as measured in Notion', () => {
+      expect(TIMELINE_DAY_WIDTH.hours).toBe(7000);
+    });
+
     it('places a timed bar at its hour, one hour wide when it has no end time', () => {
-      expect(hourBarGeometry({ start: '2026-10-01T09:30', end: undefined }, '2026-10-01')).toEqual({ offset: 570, width: 60 });
+      expect(hourBarGeometry({ start: '2026-10-01T09:30', end: undefined }, '2026-10-01')).toEqual(geometry(570, 60));
     });
 
     it('spans a timed range from its start time to its end time', () => {
-      expect(hourBarGeometry({ start: '2026-10-01T09:00/2026-10-01T12:00', end: undefined }, '2026-10-01')).toEqual({ offset: 540, width: 180 });
-      expect(hourBarGeometry({ start: '2026-10-02T01:00', end: '2026-10-02T03:00' }, '2026-10-01')).toEqual({ offset: 1500, width: 120 });
+      expect(hourBarGeometry({ start: '2026-10-01T09:00/2026-10-01T12:00', end: undefined }, '2026-10-01')).toEqual(geometry(540, 180));
+      expect(hourBarGeometry({ start: '2026-10-02T01:00', end: '2026-10-02T03:00' }, '2026-10-01')).toEqual(geometry(1500, 120));
     });
 
     it('leaves a value with no time to the day geometry', () => {
@@ -278,12 +286,18 @@ describe('timeline-dates', () => {
       expect(units[1]).toMatchObject({ offset: 31 * TIMELINE_DAY_WIDTH.year, day: '2026-02-01' });
     });
 
-    it('labels hours under days at hours zoom', () => {
+    // notion-motion.md Round 34 §5: a tick every 15 minutes, 72.92 apart, read "h:mm PM" in en-US.
+    it('labels quarter hours under days at hours zoom, in the locale\'s time', () => {
       const { groups, units } = headerUnits({ start: '2026-10-01', days: 2 }, 'hours', 'en-US');
 
       expect(groups).toHaveLength(2);
-      expect(units).toHaveLength(48);
-      expect(units[1].offset).toBe(TIMELINE_DAY_WIDTH.hours / 24);
+      expect(units).toHaveLength(2 * 96);
+      expect(units[1].offset).toBeCloseTo(72.92, 2);
+      expect(units[1].width).toBeCloseTo(72.92, 2);
+      expect(units[1].day).toBe('2026-10-01');
+      expect(units[96].day).toBe('2026-10-02');
+      expect(units[69].label).toMatch(/^5:15\sPM$/);
+      expect(headerUnits({ start: '2026-10-01', days: 1 }, 'hours', 'de-DE').units[69].label).toBe('17:15');
     });
   });
 });

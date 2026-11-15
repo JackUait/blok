@@ -10,7 +10,7 @@ import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
 import { readPropertyValue } from './property-values';
 import { addDays, daysBetween, isWeekend } from './calendar-dates';
-import { formatShortDatePart, resolveLocale, toLocalDate } from './cells/date-format';
+import { formatClock, formatShortDatePart, resolveLocale, toLocalDate } from './cells/date-format';
 import { hide as hideReadout, showReadout } from '../../components/utils/tooltip';
 import type { EventSpan } from './calendar-dates';
 import {
@@ -191,6 +191,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   private suppressClick = false;
   private nowTimer: ReturnType<typeof setTimeout> | undefined;
   private nowLine: HTMLElement | null = null;
+  /** Hours zoom: the time on the now-line, in the tick row. */
+  private nowLabel: HTMLElement | null = null;
   private selectionAnchor: HTMLElement | null = null;
   private recentring = false;
   private noDatePanel: DatabasePanel | null = null;
@@ -279,6 +281,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       } else {
         this.scrollToDay(this.options.center, 'center');
       }
+      this.hideCoveredTicks();
     });
 
     return root;
@@ -752,7 +755,9 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   private createHeader(): HTMLElement {
     const header = document.createElement('div');
     const { groups, units } = headerUnits(this.window, this.zoom, this.options.locale ?? 'en-US');
-    const line = (attr: string, items: typeof groups): HTMLElement => {
+    // notion-motion.md Round 34 §5: Hours zoom centres each tick on its time; the text sits in a span the now label measures against.
+    const ticks = this.zoom === 'hours';
+    const line = (attr: string, items: typeof groups, centred = false): HTMLElement => {
       const el = document.createElement('div');
 
       el.setAttribute(attr, '');
@@ -760,9 +765,13 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         const label = document.createElement('div');
 
         label.setAttribute('data-day', item.day);
-        label.style.insetInlineStart = `${item.offset}px`;
+        label.style.insetInlineStart = `${centred ? item.offset - item.width / 2 : item.offset}px`;
         label.style.width = `${item.width}px`;
-        label.textContent = item.label;
+        if (centred) {
+          label.appendChild(document.createElement('span')).textContent = item.label;
+        } else {
+          label.textContent = item.label;
+        }
         el.appendChild(label);
       }
 
@@ -775,11 +784,22 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     if (!MONTH_IN_TOOLBAR.has(this.zoom)) {
       header.append(line('data-blok-database-timeline-groups', groups));
     }
-    header.append(line('data-blok-database-timeline-units', units));
+    const unitsRow = line('data-blok-database-timeline-units', units, ticks);
+
+    header.append(unitsRow);
 
     const todayIndex = daysBetween(this.window.start, this.options.today);
 
-    if (todayIndex >= 0 && todayIndex < this.window.days) {
+    this.nowLabel = null;
+    // r33-timeline-nowline-hours-1.raw: Notion's Hours header has the now label and no day pill.
+    if (ticks && todayIndex >= 0 && todayIndex < this.window.days) {
+      const label = document.createElement('div');
+
+      label.setAttribute('data-blok-database-timeline-now-label', '');
+      label.appendChild(document.createElement('span'));
+      unitsRow.appendChild(label);
+      this.nowLabel = label;
+    } else if (todayIndex >= 0 && todayIndex < this.window.days) {
       const dot = document.createElement('div');
 
       dot.setAttribute('data-blok-database-timeline-today-dot', '');
@@ -1697,9 +1717,41 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     const now = Date.now();
     const share = Math.min(Math.max((now - toLocalDate(this.options.today).getTime()) / (DAY_MINUTES * 60_000), 0), 1);
 
-    if (this.nowLine !== null) this.nowLine.style.insetInlineStart = `${(todayIndex + share) * this.dayWidth}px`;
+    const at = `${(todayIndex + share) * this.dayWidth}px`;
+
+    if (this.nowLine !== null) this.nowLine.style.insetInlineStart = at;
+    const text = this.nowLabel?.firstElementChild;
+
+    if (this.nowLabel !== null && text instanceof HTMLElement) {
+      this.nowLabel.style.insetInlineStart = at;
+      text.textContent = formatClock(new Date(now), resolveLocale(this.options.locale), undefined);
+      this.hideCoveredTicks();
+    }
     clearTimeout(this.nowTimer);
     this.nowTimer = setTimeout(() => this.placeNowLine(todayIndex), 60_000 - (now % 60_000));
+  }
+
+  /**
+   * notion-motion.md Round 34 §5: a tick the now label would overlap is not drawn. Notion's exact
+   * rule is unread; a box overlap drops the ticks it dropped (34, 39 px off) and keeps the ones it kept (68+).
+   * Needs layout, so it waits until the view is in the page.
+   */
+  private hideCoveredTicks(): void {
+    const text = this.nowLabel?.firstElementChild;
+
+    if (this.nowLabel?.isConnected !== true || !(text instanceof HTMLElement)) return;
+    const ticks = [...this.nowLabel.parentElement?.querySelectorAll<HTMLElement>(':scope > [data-day]') ?? []];
+
+    // A hidden tick has no box: show them all, then read every box in one layout.
+    ticks.forEach((tick) => tick.toggleAttribute('hidden', false));
+    const label = text.getBoundingClientRect();
+    const covered = ticks.map((tick) => {
+      const box = tick.firstElementChild?.getBoundingClientRect();
+
+      return box !== undefined && box.right > label.left && box.left < label.right;
+    });
+
+    ticks.forEach((tick, i) => tick.toggleAttribute('hidden', covered[i]));
   }
 
   destroy(): void {

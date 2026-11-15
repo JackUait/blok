@@ -13,6 +13,7 @@ const { MockPopover, mockPopoverInstances } = vi.hoisted(() => {
     on: (event: string, cb: () => void) => void;
     triggerClosed: () => void;
     moveCursor: (source: 'keyboard' | 'pointer') => void;
+    cursorListeners: Set<(current: { source: 'keyboard' | 'pointer' } | null) => void>;
     el: HTMLElement | null;
     closedCallbacks: Array<() => void>;
   }> = [];

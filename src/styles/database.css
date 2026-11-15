@@ -7581,9 +7581,17 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   inline-size: 24px;
 }
 
-/* research/14 §3: the taken-name error sits on its own line under the name input. */
+/* research/14 §3: the taken-name error sits on its own line under the name input.
+   notion-motion.md Round 35 (r35-colmenu-top.raw): the icon box 4px in, the field 8px after it. */
 [data-blok-database-property-menu-name] {
   flex-wrap: wrap;
+  gap: var(--blok-space-2);
+  padding-inline: var(--blok-space-1);
+}
+
+/* Round 35: the (i) sits inside the field, 6px from its end. -29px = the 8px gap + 15px glyph + 6px. */
+[data-blok-database-property-menu-name] > [data-blok-database-property-menu-name-input]:has(+ [data-blok-database-property-menu-description-button]) {
+  padding-inline-end: 27px;
 }
 
 /* findings K04: Notion's field box, beside the icon. The ring is the field's
@@ -7635,7 +7643,7 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
 
 [data-blok-database-property-menu-name-error] {
   flex-basis: 100%;
-  padding-inline-start: calc(28px + var(--blok-space-1-5));
+  padding-inline-start: calc(28px + var(--blok-space-2));
   font-size: 14px;
   color: var(--blok-color-danger);
 }
@@ -7668,8 +7676,10 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   flex: none;
   align-items: center;
   justify-content: center;
+  position: relative;
   width: 15px;
   height: 20px;
+  margin-inline: -29px var(--blok-space-1-5);
   padding: 0;
   border: none;
   background: transparent;

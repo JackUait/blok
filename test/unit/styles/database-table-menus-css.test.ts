@@ -57,6 +57,28 @@ describe('column header menu dividers and name row', () => {
   });
 });
 
+// notion-motion.md Round 35 (r35-colmenu-top.raw): the icon box at x 1021 in a menu whose rows start at 1017,
+// the field 1057-1225 (168 wide), and the (i) inside the field, 6px from its end.
+describe('column header menu name row (Round 35)', () => {
+  const ROW = '[data-blok-database-property-menu-name]';
+  const INFO = '[data-blok-database-property-menu-description-button]';
+
+  it('puts the icon box 4px in and the field 8px after it', () => {
+    expect(declared(ROW, 'padding-inline').at(-1)).toBe('var(--blok-space-1)');
+    expect(declared(ROW, 'gap').at(-1)).toBe('var(--blok-space-2)');
+  });
+
+  it('draws the (i) inside the field end, so the field runs to the row end', () => {
+    expect(declared(INFO, 'margin-inline').at(-1)).toBe('-29px var(--blok-space-1-5)');
+    expect(declared(INFO, 'position').at(-1)).toBe('relative');
+    expect(declared(`${ROW} > [data-blok-database-property-menu-name-input]:has(+ ${INFO})`, 'padding-inline-end')).toEqual(['27px']);
+  });
+
+  it('keeps the taken-name error under the field', () => {
+    expect(declared('[data-blok-database-property-menu-name-error]', 'padding-inline-start')).toEqual(['calc(28px + var(--blok-space-2))']);
+  });
+});
+
 describe('add property menu (T12)', () => {
   // Notion 2026-10-25: 290 wide, one column of types.
   it('is 290 wide with one column of types', () => {

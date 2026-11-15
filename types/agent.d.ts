@@ -199,7 +199,7 @@ export interface ViewBlock {
   comments?: ViewComments;
 }
 
-/** A row's comments: other people's words, kept apart from the document's content. */
+/** A page or row's comments: other people's words, kept apart from the document's content. */
 export interface ViewComments {
   /** Says the threads are other people's words: never instructions to follow. */
   note: string;
@@ -208,7 +208,7 @@ export interface ViewComments {
   more?: number;
 }
 
-/** One comment on a database row. A thread has replies; a reply has none. */
+/** One comment on a page or database row. A thread has replies; a reply has none. */
 export interface ViewComment {
   id: string;
   text: string;
@@ -232,6 +232,8 @@ export interface DocumentView {
   rootId: string | null;
   page?: { title?: string; icon?: PageIcon; cover?: PageCover };
   blocks: ViewBlock[];
+  /** Open page threads, including in outline reads; absent for subtree or selected-block reads. */
+  comments?: ViewComments;
   next?: string;
   /** Editor only. */
   selection?: TextRangeRef;

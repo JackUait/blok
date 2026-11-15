@@ -2,6 +2,10 @@ import { pageDestination, pageIdForHref, publicPageUrl, legacyPageUrl, rememberP
 import { createWorkspaceSaveStatus } from './workspace-save-status';
 import './workspace-save-status.css';
 import { navigationFavorites, navigationRecents } from './navigation-preferences';
+import { commentAuthor } from './comment-author';
+import { mountPageComments } from './page-comments';
+import { createNotesDocument, readNotesCollection, rememberNotesCollection, addNote } from './notes-collection';
+import { openPageLibrary, pageTimestamp } from './page-library';
 import { openPageSearch, openPageCreation, type CreationDestination } from './navigation-dialogs';
 import { customEmojiStore } from './custom-emojis';
 import { createEmptyWorkspaceState } from './workspace-empty';
@@ -91,6 +95,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   const repository = workspaceRepository(ref);
   const favorites = navigationFavorites(ref);
   const recentPages = navigationRecents(ref);
+  const library = { recents: recentPages.ids, target: null as { pageId: string; blockId: string } | null };
   const initialHref=location.href;
   const routeLoad={pending:false};
   const pageUrl = (id:string):string => {
@@ -119,6 +124,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     pageCanvas: HTMLElement;
     footer: HTMLElement;
     pageToolbar: PageToolbar | null;
+    pageComments: { element: HTMLElement; destroy(): void } | null;
     refreshPagePresentation: (() => void) | null;
     titleDateMention: TitleDateMentionBinding | null;
     floatingToc: FloatingToc | null;
@@ -143,6 +149,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     pageCanvas: null as unknown as HTMLElement,
     footer: null as unknown as HTMLElement,
     pageToolbar: null,
+    pageComments: null,
     refreshPagePresentation: null,
     titleDateMention: null,
     floatingToc: null,
@@ -156,7 +163,10 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     metadataAction: false,
     closeSearch: undefined,
   };
+  const localMetadata = new Map<string, string>();
+  const metadataOf = (page: DesktopPage): string => JSON.stringify({ ...page, createdAt: undefined, updatedAt: undefined });
   const adoptIndex = (value: WorkspaceIndex): WorkspaceIndex => {
+    if (ref.kind === 'local') for (const page of value.pages) localMetadata.set(page.id, metadataOf(page));
     ws.index = value;
     ws.access = pageAccess(ref, value.access);
     return value;
@@ -201,6 +211,12 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   };
   const saveManifest = (): void => {
     if (!ws.index) return;
+    if (ref.kind === 'local') ws.index.pages.forEach(candidate => {
+      const page = candidate;
+      const metadata = metadataOf(page);
+      if (localMetadata.has(page.id) && localMetadata.get(page.id) !== metadata) page.updatedAt = new Date().toISOString();
+      localMetadata.set(page.id, metadata);
+    });
     const snapshot = JSON.stringify(ws.index);
     ws.pendingManifests++;
     updatePending();
@@ -365,7 +381,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     create: async ({ pageId, title, parentId, document: initialDocument }) => {
       if (!ws.index || !canCreateUnder(parentId ?? ws.currentId ?? null)) throw new Error('Espace indisponible ou en lecture seule');
       if (ws.index.pages.some((page) => page.id === pageId)) throw new Error('Cette page existe déjà');
-      const page: DesktopPage = { id: pageId, title: title?.trim() || 'Nouvelle page', parentId: parentId ?? ws.currentId };
+      const page: DesktopPage = { ...(ref.kind === 'local' ? { createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : {}), id: pageId, title: title?.trim() || 'Nouvelle page', parentId: parentId ?? ws.currentId };
       if (initialDocument && ref.kind === 'local') await repository.writePage(pageId, JSON.stringify(initialDocument));
       ws.index.pages.push(page);
       ws.frame.setPages(withSections(ws.index.pages), ws.index.activeId);
@@ -402,6 +418,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     ws.floatingToc = null;
     ws.titleDateMention?.destroy();
     ws.titleDateMention = null;
+    ws.pageComments?.destroy(); ws.pageComments = null;
     ws.editor?.destroy();
     ws.editor = null;
     remoteConnection = 'connecting';
@@ -500,13 +517,26 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         attachCoverAction();
       }
     };
-    ws.refreshPagePresentation = () => { applyFullWidth(); renderCover(); ws.titleDateMention?.refresh(); };
+    const createdProperty = document.createElement('div');
+    createdProperty.setAttribute('data-desktop-page-created', '');
+    const renderCreatedProperty = (): void => {
+      const value = pageTimestamp(page.createdAt);
+      createdProperty.replaceChildren();
+      if (!value) { createdProperty.remove(); return; }
+      const label = document.createElement('span'); label.textContent = 'Date de création';
+      const time = document.createElement('time'); time.dateTime = page.createdAt ?? ''; time.textContent = value;
+      createdProperty.append(label, time);
+      holder.querySelector('[data-blok-page-title]')?.after(createdProperty);
+    };
+    ws.refreshPagePresentation = () => { applyFullWidth(); renderCover(); renderCreatedProperty(); ws.titleDateMention?.refresh(); };
     ws.pageCanvas.replaceChildren(toolbar.element, article);
     renderCover();
+    const persisted = { content: null as string | null };
+    const contentSignature = (data: OutputData): string => JSON.stringify({ ...data, time: undefined, version: undefined });
     const instance = new Blok({
       holder,
       readOnly: readOnly(id),
-      tools: { ...desktopTools, database: {class: Database, config: {customEmojis: () => emojis.list(), coverGallery: COVER_GALLERY, uploadCover: (file: globalThis.File) => readCoverFile(file).then(repository.uploadImage)}}, page: { class: Page, config: { ...pageConfig } } },
+      tools: { ...desktopTools, database: {class: Database, config: {people: { me: () => commentAuthor(ref).authorId, list: async () => { const author = commentAuthor(ref); return [{ id: author.authorId, name: author.authorName }]; } }, customEmojis: () => emojis.list(), coverGallery: COVER_GALLERY, uploadCover: (file: globalThis.File) => readCoverFile(file).then(repository.uploadImage)}}, page: { class: Page, config: { ...pageConfig } } },
       theme: readAppearance(),
       pageTitle: {
         customEmojis: () => emojis.list(),
@@ -547,13 +577,21 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       } : { persistence: {
         async load() {
           const raw = await repository.readPage(id);
-          return raw ? JSON.parse(raw) as OutputData : null;
+          const data = raw ? JSON.parse(raw) as OutputData : null;
+          persisted.content = data ? contentSignature(data) : null;
+          return data;
         },
         async save(data) {
           localWrites++;
           updatePending();
           try {
             await repository.writePage(id, JSON.stringify(data));
+            const signature = contentSignature(data);
+            if (persisted.content !== signature) {
+              page.updatedAt = new Date().toISOString();
+              saveManifest();
+            }
+            persisted.content = signature;
             saveStatus.saved('document');
           } finally { localWrites--; updatePending(); }
         },
@@ -561,10 +599,18 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       } }),
     });
     ws.editor = instance;
+    void instance.isReady.then(() => {
+      const target = library.target;
+      if (ws.editor !== instance || target?.pageId !== id) return;
+      instance.blocks.getById(target.blockId)?.holder.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      library.target = null;
+    });
     ws.remotePending = false;
     instance.width.set(page.fullWidth === true ? 'full' : 'narrow');
     void instance.isReady.then(() => {
       if (ws.generation !== turn) return;
+      ws.pageComments = mountPageComments({ editor: instance, author: () => commentAuthor(ref), canComment: () => !readOnly(id) && ws.editor === instance });
+      article.append(ws.pageComments.element);
       instance.on('collaboration:status', (raw) => {
         if (ws.generation !== turn) return;
         // An emission with no payload must fall back to "not pending", not throw
@@ -585,6 +631,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       if (redactor) ws.floatingToc = createFloatingToc(ws.pageCanvas, redactor);
       attachCoverAction();
       if (ref.kind === 'local' && (!instance.title.get() || page.titleDate)) instance.title.set(page.title, { record: false });
+      renderCreatedProperty();
       const title = holder.querySelector<HTMLElement>('[data-blok-page-title]');
       if (title) {
         const updateDateTitle = (): void => {
@@ -640,7 +687,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       return 'navigated';
     }
     if (!ws.index) return 'navigated';
-    const copy: DesktopPage = { ...page, id: crypto.randomUUID(), title: `${page.title} (copie)`, titleDate: undefined, titleDateDisplay: undefined, titleDateSuffix: undefined };
+    const copy: DesktopPage = { ...page, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), id: crypto.randomUUID(), title: `${page.title} (copie)`, titleDate: undefined, titleDateDisplay: undefined, titleDateSuffix: undefined };
     ws.index.pages.push(copy);
     saveManifest();
     void repository.readPage(page.id).then(async (raw) => {
@@ -733,7 +780,21 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     ...(ref.kind==='remote' ? {teamspaces:sidebarTeamspaces,teamspaceStatus:()=>teamspacesState.error} : {}),
     pages: [], activeId: '',
     recentIds: recentPages.ids,
-    onRecentsChange: recentPages.save,
+    onRecentsChange: (ids) => { library.recents = ids; recentPages.save(ids); },
+    onCreateNote: canCreateUnder(null) ? () => { void createNote().catch(showError); } : undefined,
+    onLibrary: () => {
+      ws.closeSearch?.();
+      ws.closeSearch = openPageLibrary({ pages: () => ws.index?.pages ?? [], access: () => ws.index?.access, recentIds: () => library.recents, isFavorite: favorites.has,
+        loadChildren: (pageId) => repository.readPageOutline(pageId),
+        onOpenBlock: (pageId, blockId) => {
+          library.target = { pageId, blockId };
+          if (ws.currentId === pageId && ws.editor) {
+            const editor = ws.editor;
+            void editor.isReady.then(() => { if (ws.editor === editor) editor.blocks.getById(blockId)?.holder.scrollIntoView({ block: 'start', behavior: 'smooth' }); });
+            library.target = null;
+          } else navigate(pageId);
+        }, canCreate: canCreateUnder(null), onOpen: navigate, onCreateNote: () => { void createNote().catch(showError); }, onCreate: () => chooseNewPage(null) });
+    },
     onOpen: (id) => navigate(id),
     onCreate: (parentId) => chooseNewPage(parentId),
     onCreatePrivate: ref.kind === 'remote' ? () => chooseNewPage(null, true) : undefined,
@@ -895,6 +956,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     ws.floatingToc?.destroy(); ws.floatingToc = null;
     ws.titleDateMention?.destroy(); ws.titleDateMention = null;
     ws.refreshPagePresentation = null;
+    ws.pageComments?.destroy(); ws.pageComments = null;
     ws.editor?.destroy(); ws.editor = null;
     ws.currentId = '';
     ws.frame.element.append(status);
@@ -933,7 +995,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
           if(location.href===destination)location.reload();
         })().catch(showError).finally(()=>{routeLoad.pending=false;ws.pageCanvas.removeAttribute('aria-busy');});return;
       }
-      ws.generation++;ws.selection++;ws.editor?.destroy();ws.editor=null;ws.currentId='';
+      ws.generation++;ws.selection++;ws.pageComments?.destroy(); ws.pageComments = null;
+      ws.editor?.destroy();ws.editor=null;ws.currentId='';
       const section=document.createElement('section');section.setAttribute('data-page-unavailable','');section.style.padding='48px';
       const heading=document.createElement('h1');heading.textContent='Page indisponible';
       const message=document.createElement('p');message.textContent='Cette page est introuvable ou vous n’y avez plus accès.';
@@ -961,6 +1024,36 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     ws.closeSearch?.();
     ws.closeSearch = openPageSearch({ workspaceName, pages: () => ws.index?.pages ?? [], onOpen: navigate });
   });
+  const notesAction = { busy: false };
+  async function initializeNotesCollection(identity: { pageId: string; databaseId: string }): Promise<void> {
+    if (!ws.index) throw new Error('Espace indisponible.');
+    const timestamp = new Date().toISOString();
+    const page: DesktopPage = { id: identity.pageId, title: 'Notes', parentId: null, ...(ref.kind === 'remote' ? { initialVisibility: 'private' as const } : { createdAt: timestamp, updatedAt: timestamp }) };
+    ws.index.pages.push(page); saveManifest(); await ws.saveOrder;
+    if (ws.manifestFailed) throw new Error('La collection Notes n’a pas pu être enregistrée.');
+    rememberNotesCollection(ref, identity);
+    const document = createNotesDocument(identity.databaseId);
+    if (ref.kind === 'remote') await repository.seedPage(page.id, document);
+    else await repository.writePage(page.id, JSON.stringify(document));
+    if (ref.kind === 'remote') await refreshRemoteManifest();
+  }
+  async function createNote(): Promise<void> {
+    if (notesAction.busy || !ws.index || !canCreateUnder(null)) return;
+    notesAction.busy = true;
+    try {
+      const registered = readNotesCollection(ref);
+      const identity = registered ?? { pageId: crypto.randomUUID(), databaseId: crypto.randomUUID() };
+      if (registered && (!ws.index.pages.some(page => page.id === registered.pageId) || readOnly(registered.pageId))) throw new Error('La collection Notes est indisponible ou en lecture seule.');
+      if (!registered) await initializeNotesCollection(identity);
+      await select(identity.pageId);
+      const editor = ws.editor;
+      if (!editor || ws.currentId !== identity.pageId || readOnly(identity.pageId)) throw new Error('La collection Notes est indisponible.');
+      navigate(identity.pageId);
+      await addNote(editor, identity.databaseId, () => ws.editor === editor && ws.currentId === identity.pageId && !readOnly(identity.pageId));
+      await editor.saver.flush();
+    } finally { notesAction.busy = false; }
+  }
+
   function chooseNewPage(parentId: string | null = null, privatePage = false, teamspaceId?:string): void {
     if (!ws.index || !canCreateUnder(parentId)) return;
     const destinations: CreationDestination[] = [];
@@ -994,7 +1087,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         }catch(error){showError(error);}finally{ws.metadataAction=false;ws.frame.element.inert=wasInert;teamspacesState.pending--;updatePending();}
       })();return;
     }
-    const page: DesktopPage = { id: crypto.randomUUID(), title: database ? 'Nouvelle base de données' : 'Nouvelle page', parentId, ...(privatePage ? { initialVisibility: 'private' as const } : {}) };
+    const page: DesktopPage = { ...(ref.kind === 'local' ? { createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : {}), id: crypto.randomUUID(), title: database ? 'Nouvelle base de données' : 'Nouvelle page', parentId, ...(privatePage ? { initialVisibility: 'private' as const } : {}) };
     ws.index.pages.push(page);
     saveManifest();
     void ws.saveOrder.then(async () => {

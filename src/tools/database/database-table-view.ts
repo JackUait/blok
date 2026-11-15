@@ -933,6 +933,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     box.setAttribute('aria-checked', 'false');
     box.setAttribute('aria-label', label);
     box.tabIndex = -1;
+    onHover(box, label);
 
     return box;
   }

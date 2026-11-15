@@ -170,6 +170,29 @@ describe('DatabaseTableView', () => {
     view.destroy();
   });
 
+  it('explains row selection only after the hover delay', () => {
+    destroyTooltip();
+    vi.useFakeTimers();
+    try {
+      const { root } = mount();
+      const checkbox = root.querySelector<HTMLElement>('[data-blok-database-table-row-checkbox]');
+
+      if (checkbox === null) throw new Error('missing row selection');
+      expect(checkbox.getAttribute('aria-label')).toBe('tools.database.tableSelectRow');
+      checkbox.dispatchEvent(new FocusEvent('focus'));
+      vi.advanceTimersByTime(HINT_DELAY);
+      expect(shownHint()).toBeNull();
+      hover(checkbox);
+      vi.advanceTimersByTime(HINT_DELAY - 1);
+      expect(shownHint()).toBeNull();
+      vi.advanceTimersByTime(1);
+      expect(shownHint()?.text).toBe('tools.database.tableSelectRow');
+    } finally {
+      destroyTooltip();
+      vi.useRealTimers();
+    }
+  });
+
   describe('layout', () => {
     it('draws each header with the icon the property type menu uses', () => {
       const types = ['status', 'email', 'phone', 'person', 'files', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy', 'uniqueId'] as const;

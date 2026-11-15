@@ -108,3 +108,32 @@ INSERT INTO schema_migrations(version) VALUES(7) ON CONFLICT DO NOTHING;
 ALTER TABLE pages ADD COLUMN IF NOT EXISTS public_id uuid NOT NULL DEFAULT gen_random_uuid();
 CREATE UNIQUE INDEX IF NOT EXISTS pages_public_id ON pages(public_id);
 INSERT INTO schema_migrations(version) VALUES(8) ON CONFLICT DO NOTHING;
+
+-- Page dates are server-owned. Adding nullable columns before setting defaults
+-- deliberately leaves historical creation/modification dates unknown.
+ALTER TABLE pages ADD COLUMN IF NOT EXISTS created_at timestamptz;
+ALTER TABLE pages ADD COLUMN IF NOT EXISTS updated_at timestamptz;
+ALTER TABLE pages ALTER COLUMN created_at SET DEFAULT now();
+ALTER TABLE pages ALTER COLUMN updated_at SET DEFAULT now();
+CREATE OR REPLACE FUNCTION maintain_page_timestamps() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ NEW.metadata := NEW.metadata - 'createdAt' - 'updatedAt';
+ IF TG_OP = 'UPDATE' THEN
+  NEW.created_at := OLD.created_at;
+  NEW.updated_at := OLD.updated_at;
+  -- Global index renumbering can move hidden/read-only pages' positions.
+  -- It is not an edit to those pages.
+  IF (NEW.metadata - 'position') IS DISTINCT FROM (OLD.metadata - 'position' - 'createdAt' - 'updatedAt')
+     OR NEW.content IS DISTINCT FROM OLD.content
+     OR NEW.trashed IS DISTINCT FROM OLD.trashed
+     OR NEW.deleted IS DISTINCT FROM OLD.deleted
+     OR NEW.visibility IS DISTINCT FROM OLD.visibility
+     OR NEW.teamspace_id IS DISTINCT FROM OLD.teamspace_id THEN
+   NEW.updated_at := clock_timestamp();
+  END IF;
+ END IF;
+ RETURN NEW;
+END $$;
+CREATE OR REPLACE TRIGGER pages_timestamps BEFORE INSERT OR UPDATE ON pages
+ FOR EACH ROW EXECUTE FUNCTION maintain_page_timestamps();
+INSERT INTO schema_migrations(version) VALUES(9) ON CONFLICT DO NOTHING;

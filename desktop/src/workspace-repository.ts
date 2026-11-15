@@ -1,3 +1,4 @@
+import { extractPageOutline } from './page-outline';
 import { mergeWorkspaceIndex } from './workspace-merge';
 import { loadIndex, readFile, writeFile, type WorkspaceIndex } from './storage';
 import { nativeSessionAdapter } from './native-session';
@@ -57,6 +58,13 @@ export function workspaceRepository(workspace: WorkspaceRef) {
         }
       }
       throw new Error('L’espace change trop rapidement. Réessayez.');
+    },
+    /** Lazy read-only discovery; remote editing still exclusively uses collaboration. */
+    async readPageOutline(id: string) {
+      if (ref.kind === 'remote') return extractPageOutline(id, await request<unknown>(`${base}/pages/${encodeURIComponent(id)}`));
+      await (pageWrites.get(id) ?? Promise.resolve());
+      const raw = await readFile(id, ref);
+      return extractPageOutline(id, raw === null ? null : JSON.parse(raw) as unknown);
     },
     readPage(id: string) {
       if (ref.kind !== 'local') throw new Error('Remote documents require collaboration');

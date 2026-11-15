@@ -33,7 +33,7 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 			problem(w, 500, "Read failed")
 			return
 		}
-		rows, e := tx.Query(r.Context(), "SELECT id,metadata,trashed,public_id::text FROM pages WHERE workspace_id=$1 AND NOT deleted ORDER BY (metadata->>'position')::numeric NULLS LAST,id", ws.ID)
+		rows, e := tx.Query(r.Context(), "SELECT id,(metadata - 'createdAt' - 'updatedAt') || jsonb_strip_nulls(jsonb_build_object('createdAt',created_at,'updatedAt',updated_at)),trashed,public_id::text FROM pages WHERE workspace_id=$1 AND NOT deleted ORDER BY (metadata->>'position')::numeric NULLS LAST,id", ws.ID)
 		if e != nil {
 			problem(w, 500, "Read failed")
 			return
@@ -204,6 +204,8 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 		}
 		p := slot.page
 		delete(p, "publicId")
+		delete(p, "createdAt")
+		delete(p, "updatedAt")
 		delete(p, "teamspaceId")
 		p["position"] = position
 		// L'index détache une page de son parent caché pour pouvoir l'afficher.

@@ -32,15 +32,22 @@ const readComment = (api: CommentApi, id: string): DatabaseCommentData | undefin
   return box.data;
 };
 
-const commentsUnder = (api: CommentApi, parentId: string): StoredComment[] =>
-  api.blocks.getChildren(parentId).flatMap((child) => {
+const commentsUnder = (api: CommentApi, parentId: string | null): StoredComment[] => {
+  const children = parentId === null
+    ? Array.from({ length: api.blocks.getBlocksCount() }, (_, index) => api.blocks.getBlockByIndex(index))
+      .filter(child => child?.parentId === null)
+    : api.blocks.getChildren(parentId);
+
+  return children.flatMap((child) => {
+    if (child === undefined) return [];
     const data = child.name === COMMENT_TOOL ? readComment(api, child.id) : undefined;
 
     return data === undefined ? [] : [{ id: child.id, data }];
   });
+};
 
 /**
- * Built-in comments: thread blocks under each row (design 18, option A).
+ * Built-in comments: thread blocks under each row or at the document root (design 18, option A).
  * Writes skip document undo, like the layout tabs do: comments are not page edits.
  */
 export class BuiltInComments {
@@ -60,19 +67,19 @@ export class BuiltInComments {
       && this.api.tools.getBlockTools().some((tool) => tool.name === COMMENT_TOOL);
   }
 
-  public threads(rowId: string): StoredThread[] {
+  public threads(rowId: string | null): StoredThread[] {
     return commentsUnder(this.api, rowId).map((thread) => ({ ...thread, replies: commentsUnder(this.api, thread.id) }));
   }
 
   /** What a badge shows: the comments in threads that are still open. */
-  public count(rowId: string): number {
+  public count(rowId: string | null): number {
     return this.threads(rowId)
       .filter((thread) => thread.data.resolved !== true)
       .reduce((sum, thread) => sum + 1 + thread.replies.length, 0);
   }
 
   /** Starts a thread on the row, or on one of its cells. Returns its id. */
-  public add(rowId: string, text: string, propertyId?: string): string | undefined {
+  public add(rowId: string | null, text: string, propertyId?: string): string | undefined {
     return this.insert(rowId, text, propertyId);
   }
 
@@ -105,10 +112,10 @@ export class BuiltInComments {
     });
   }
 
-  private insert(parentId: string, text: string, propertyId: string | undefined): string | undefined {
+  private insert(parentId: string | null, text: string, propertyId: string | undefined): string | undefined {
     const trimmed = text.trim();
 
-    if (trimmed === '' || this.api.blocks.getById(parentId) === null) return undefined;
+    if (trimmed === '' || (parentId !== null && this.api.blocks.getById(parentId) === null)) return undefined;
     const data: DatabaseCommentData = {
       text: trimmed,
       createdAt: this.now(),

@@ -247,7 +247,7 @@ func (s *Service) mcpListPages(ctx context.Context, req *mcp.CallToolRequest) (*
 	if err != nil {
 		return mcpError("Could not list pages"), nil
 	}
-	rows, err := s.DB.Query(ctx, `SELECT id,metadata,public_id::text FROM pages WHERE workspace_id=$1 AND NOT deleted AND NOT trashed ORDER BY (metadata->>'position')::numeric NULLS LAST,id`, ws.ID)
+	rows, err := s.DB.Query(ctx, `SELECT id,(metadata - 'createdAt' - 'updatedAt') || jsonb_strip_nulls(jsonb_build_object('createdAt',created_at,'updatedAt',updated_at)),public_id::text FROM pages WHERE workspace_id=$1 AND NOT deleted AND NOT trashed ORDER BY (metadata->>'position')::numeric NULLS LAST,id`, ws.ID)
 	if err != nil {
 		return mcpError("Could not list pages"), nil
 	}

@@ -123,6 +123,34 @@ describe('built-in comment storage', () => {
     expect(saved.map((block) => block.parent)).toEqual(['r1', thread]);
   });
 
+  it('persists page-root threads and replies separately from row threads', async () => {
+    const blok = await make();
+    const store = storeOf(blok);
+    const thread = store.add(null, 'Page discussion') ?? '';
+    const reply = store.reply(thread, 'Reply');
+
+    store.add('r1', 'Row discussion');
+    await quiet();
+    expect(store.threads(null).map(item => item.id)).toEqual([thread]);
+    expect(store.threads(null)[0]?.replies[0]?.id).toBe(reply);
+    const saved = await commentsIn(blok);
+
+    expect(saved.find(block => block.id === thread)?.parent ?? null).toBeNull();
+    expect(saved.find(block => block.id === thread)?.data.text).toBe('Page discussion');
+    expect(saved.find(block => block.id === reply)?.parent).toBe(thread);
+    const document = await blok.save();
+
+    await blok.blocks.render(document);
+    await quiet();
+    expect(store.threads(null)[0]?.data.text).toBe('Page discussion');
+    expect(store.threads(null)[0]?.replies[0]?.data.text).toBe('Reply');
+    expect(await blok.blocks.exportMarkdown()).not.toContain('Page discussion');
+    store.resolve(thread, true);
+    expect(store.count(null)).toBe(0);
+    store.resolve(thread, false);
+    expect(store.count(null)).toBe(2);
+  });
+
   it('never writes an empty comment', async () => {
     const store = storeOf(await make());
 

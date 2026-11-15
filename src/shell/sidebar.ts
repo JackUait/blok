@@ -57,6 +57,8 @@ export interface PageFrameOptions {
   onFavorite?: (id: string, favorite: boolean) => void;
   onCreatePrivate?: () => void;
   onSearch?: (recentIds?: string[]) => void;
+  onLibrary?: () => void;
+  onCreateNote?: () => void;
   recentIds?: string[];
   onRecentsChange?: (ids: string[]) => void;
   onTeamspaceMenu?: (anchor: HTMLButtonElement, id?:string) => void;
@@ -220,6 +222,21 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
   newPage.append(newPageLabel);
   newPage.addEventListener('click', () => options.onCreate(null));
   shortcuts.append(newPage);
+  if (options.onCreateNote) {
+    const note = document.createElement('button'); note.type = 'button'; note.setAttribute('data-blok-sidebar-shortcut', ''); note.append(svg(ICONS.page));
+    const label = document.createElement('span'); label.textContent = 'Nouvelle note'; note.append(label);
+    note.addEventListener('click', options.onCreateNote); shortcuts.append(note);
+  }
+  if (options.onLibrary) {
+    const library = document.createElement('button');
+    library.type = 'button';
+    library.setAttribute('data-blok-sidebar-shortcut', '');
+    library.setAttribute('aria-haspopup', 'dialog');
+    library.append(svg(ICONS.wiki));
+    const label = document.createElement('span'); label.textContent = 'Bibliothèque'; library.append(label);
+    library.addEventListener('click', options.onLibrary);
+    shortcuts.append(library);
+  }
 
   const searchLabel = document.createElement(options.onSearch ? 'button' : 'label');
   searchLabel.setAttribute('data-blok-sidebar-search', '');

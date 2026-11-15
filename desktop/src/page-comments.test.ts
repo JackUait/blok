@@ -1,0 +1,67 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Blok } from '../../types';
+import type { StoredThread } from '../../src/tools/database/database-comments-store';
+import { mountPageComments } from './page-comments';
+
+const state = vi.hoisted(() => ({ threads: [] as StoredThread[], add: vi.fn(), reply: vi.fn(), edit: vi.fn(), resolve: vi.fn(), remove: vi.fn() }));
+vi.mock('../../src/tools/database/database-comments-store', () => ({ BuiltInComments: class {
+  available = () => true;
+  threads = () => state.threads;
+  add = state.add; reply = state.reply; edit = state.edit; resolve = state.resolve; remove = state.remove;
+} }));
+const handles: Array<{ destroy(): void }> = [];
+function mount(writable = { value: true }) {
+  const events = { on: vi.fn(), off: vi.fn() };
+  const editor = { blocks: {}, tools: {}, events, i18n: { t: (key: string) => key } } as unknown as Pick<Blok, 'blocks' | 'tools' | 'events' | 'i18n'>;
+  const panel = mountPageComments({ editor, author: () => ({ authorId: 'me', authorName: 'Moi' }), canComment: () => writable.value });
+  document.body.append(panel.element); handles.push(panel);
+  return { ...panel, events };
+}
+function send(text: string): void {
+  const input = document.querySelector('textarea');
+  if (!input) throw new Error('Missing composer');
+  input.value = text; input.dispatchEvent(new Event('input', { bubbles: true }));
+  document.querySelector<HTMLButtonElement>('[data-blok-database-comment-send]')?.click();
+}
+beforeEach(() => { vi.clearAllMocks(); state.threads = []; });
+afterEach(() => { handles.splice(0).forEach(handle => handle.destroy()); document.body.replaceChildren(); vi.restoreAllMocks(); });
+describe('page comment controls', () => {
+  it('adds a page thread and checks current permission again when sending', () => {
+    const permission = { value: true }; mount(permission);
+    send('Hello'); expect(state.add).toHaveBeenCalledWith(null, 'Hello');
+    permission.value = false; send('No longer allowed'); expect(state.add).toHaveBeenCalledTimes(1);
+  });
+  it('shows threads without a composer or editing controls to a viewer', () => {
+    state.threads = [{ id: 'thread', data: { text: 'Visible', authorId: 'me', createdAt: 1 }, replies: [] }];
+    mount({ value: false });
+    expect(document.body.textContent).toContain('Visible');
+    expect(document.querySelector('textarea')).toBeNull();
+    expect(document.querySelector('[data-blok-database-comment-actions]')).toBeNull();
+  });
+  it('does not offer edit/delete for another author with the same display name', () => {
+    state.threads = [{ id: 'thread', data: { text: 'Their words', authorId: 'other', authorName: 'Moi', createdAt: 1 }, replies: [] }];
+    mount();
+    expect(document.querySelector('[data-blok-database-comment-actions]')).toBeNull();
+  });
+  it('shows resolved threads and reopens one using the existing store', () => {
+    state.threads = [{ id: 'thread', data: { text: 'Resolved words', resolved: true, authorId: 'me', createdAt: 1 }, replies: [] }];
+    mount();
+    [...document.querySelectorAll('button')].find(button => button.textContent === 'Résolus')?.click();
+    expect(document.body.textContent).toContain('Resolved words');
+    [...document.querySelectorAll('button')].find(button => button.textContent === 'Rouvrir')?.click();
+    expect(state.resolve).toHaveBeenCalledWith('thread', false);
+  });
+  it('preserves an unsent draft when switching thread filters', () => {
+    mount();
+    const input = document.querySelector('textarea');
+    if (!input) throw new Error('Missing composer');
+    input.value = 'Unsent correction';
+    [...document.querySelectorAll('button')].find(button => button.textContent === 'Résolus')?.click();
+    [...document.querySelectorAll('button')].find(button => button.textContent === 'Ouverts')?.click();
+    expect(document.querySelector('textarea')?.value).toBe('Unsent correction');
+  });
+  it('unsubscribes on destruction', () => {
+    const panel = mount(); panel.destroy();
+    expect(panel.events.off).toHaveBeenCalledWith('block changed', expect.any(Function));
+  });
+});

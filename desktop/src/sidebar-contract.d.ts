@@ -34,6 +34,8 @@ export function createPageFrame(options: {
   onFavorite?(id: string, favorite: boolean): void;
   onCreatePrivate?(): void;
   onSearch?(recentIds?: string[]): void;
+  onLibrary?(): void;
+  onCreateNote?(): void;
   recentIds?: string[];
   onRecentsChange?(ids: string[]): void;
   onTeamspaceMenu?(anchor: HTMLButtonElement, id?:string): void;

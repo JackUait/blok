@@ -1,0 +1,11 @@
+[data-desktop-page-comments] { margin: 24px auto; padding: 16px 0; max-width: 760px; color: var(--desktop-ink); border-top: 1px solid var(--desktop-border); }
+[data-page-comments-filters] { display: flex; gap: 16px; margin: 8px 0 16px; border-bottom: 1px solid var(--desktop-border); }
+[data-page-comments-filters] button, [data-page-comment-reopen] { font: inherit; font-size: 13px; color: inherit; background: transparent; border: 0; border-radius: 0; padding: 8px 0; cursor: pointer; }
+[data-page-comments-filters] button { border-bottom: 2px solid transparent; }
+[data-page-comments-filters] button[aria-pressed=true] { border-bottom-color: currentColor; }
+[data-page-comments-filters] button:hover, [data-page-comment-reopen]:hover { background: var(--desktop-hover); }
+[data-page-comment-reopen] { border: 1px solid var(--desktop-border); border-radius: 5px; padding: 4px 10px; margin: 8px 0; }
+[data-page-comments-filters] button:focus-visible, [data-page-comment-reopen]:focus-visible { outline: 2px solid var(--blok-focus-ring); outline-offset: 2px; }
+@media (max-width: 800px) { [data-desktop-page-comments] { margin-inline: 16px; } }
+/* A database/row takeover has its own discussion; keep the parent page's thread out of that view. */
+[data-desktop-document]:has([data-blok-database-row-page], [data-blok-database-full-open]) > [data-desktop-page-comments] { display: none; }

@@ -1,5 +1,13 @@
 # CLAUDE.md
 
+## Host resource budget (user instruction, 2026-11-16)
+
+- Run only one memory-heavy check or build at a time across all agents and worktrees. Never overlap ESLint, test suites, frontend builds, Docker builds, or Rust compilation.
+- Use `python3 scripts/low-memory.py` for desktop tests, selected core tests, web/runtime builds and Tauri builds. The host-wide lock prevents overlapping invocations; test/Cargo workers and Node heap are bounded.
+- Do not launch the global test/lint suite on this Mac without a fresh explicit request. Prefer relevant tests. This user resource constraint supersedes the general full-suite checklist below.
+- Do not increase heap/worker limits or spawn parallel verification agents to recover from a failure. Diagnose one failure category at a time. Build Tauri only after a successful web build; its wrapper reuses that frontend.
+- The wrapper is not an OS-wide memory sandbox: other applications and commands outside it can still consume RAM. Check for other heavy work before starting Docker, and keep Docker stopped during native checks/builds when it is unnecessary.
+
 Project guidance for Claude Code (claude.ai/code) working with this repository.
 
 ---

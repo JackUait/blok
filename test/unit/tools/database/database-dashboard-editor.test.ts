@@ -273,6 +273,17 @@ describe('DatabaseTool — dashboard editing', () => {
       expect(tabIds(el)).toEqual(['table', 'dash', 'stale']);
     });
 
+    // notion-motion.md Round 32 §3: a new table wraps, but a copy keeps its source's look.
+    it('Duplicate keeps an old table widget with no stored wrap unwrapped', () => {
+      const { tool, el } = mount(withWidgets());
+
+      openMenu(el, 'w-legacy');
+      menuItem('database-dashboard-widget-duplicate').click();
+      const rows = dashboardOf(tool, el);
+
+      expect(savedView(tool, el, rows[0][2]?.viewId ?? '')?.wrapCells).toBe(false);
+    });
+
     it('Delete removes an owned widget view with its widget', () => {
       const { tool, el } = mount(withWidgets());
 
@@ -343,6 +354,24 @@ describe('DatabaseTool — dashboard editing', () => {
       expect(widgetIds[1]).toBe('table');
       expect(saved.views.find((entry) => entry.id === widgetIds[0])?.dashboardViewId).toBe(copyId);
       expect(el.querySelectorAll('[data-blok-database-dashboard-widget-error]')).toHaveLength(0);
+    });
+  });
+
+  describe('duplicating a dashboard with a table widget', () => {
+    it('keeps an old table widget with no stored wrap unwrapped in the copy', () => {
+      const data = withWidgets();
+
+      data.views.push(view('owned-table', { name: 'Owned', position: 'a4', dashboardViewId: 'dash' }));
+      data.views[1] = { ...data.views[1], dashboard: { rows: [{ id: 'r1', widgets: [{ id: 'w-owned', viewId: 'owned-table', width: 12 }] }] } };
+      const { tool, el } = mount(data);
+
+      tool.duplicateView('dash');
+      const saved = tool.save(el);
+      const copy = saved.views.find((entry) => entry.id === saved.activeViewId);
+      const widgetId = copy?.dashboard?.rows[0]?.widgets[0]?.viewId;
+
+      expect(widgetId).not.toBe('owned-table');
+      expect(saved.views.find((entry) => entry.id === widgetId)?.wrapCells).toBe(false);
     });
   });
 

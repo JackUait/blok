@@ -83,6 +83,7 @@ import { DatabaseCalendarView } from './database-calendar-view';
 import { addDays, eventSpan } from './calendar-dates';
 import { formatDateValue } from '../../shared/database/date-value';
 import { freePropertyName } from '../../shared/database/schema-ops';
+import type { ViewCreateConfig } from '../../shared/database/schema-ops';
 import { DEFAULT_VIEW_NAMES, OPTION_GROUP_TYPES, layoutChange } from '../../shared/database/view-changes';
 import { DatabaseTimelineView, timelineZoomLabelKey } from './database-timeline-view';
 import type { TimelineGroup, TimelineOrigin } from './database-timeline-view';
@@ -4932,12 +4933,11 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    const { id: _id, name, type, position: _position, ...settings } = sourceView;
+    const { name, type } = sourceView;
     // notion-motion.md Round 28 §2: "Table" copies as "Table (1)", every time; "Table (1)" copies as "Table (2)".
     const numbered = / \((\d+)\)$/.exec(name);
     const copyName = numbered === null ? `${name} (1)` : `${name.slice(0, numbered.index)} (${Number(numbered[1]) + 1})`;
-    // A table copy keeps its source's wrap even when the source stores none (a new table wraps).
-    const newView = this.model.addView(copyName, type, type === 'table' ? { ...settings, wrapCells: resolveWrapCells(sourceView) } : settings);
+    const newView = this.addViewCopy(copyName, sourceView);
 
     void this.sync.syncCreateView(structuredClone(newView));
     // A copied dashboard gets copies of its widgets, so the two never share one.
@@ -4945,8 +4945,7 @@ export class DatabaseTool implements BlockTool {
       const copied = copyDashboardWidgets(this.model.getViews(), sourceView, newView.id, nanoid);
 
       for (const widget of copied.widgets) {
-        const { id: _widgetId, name: widgetName, type: widgetType, position: _widgetPosition, ...widgetSettings } = widget;
-        const made = this.model.addView(widgetName, widgetType, widgetSettings);
+        const made = this.addViewCopy(widget.name, widget);
 
         copied.rows = copied.rows.map((row) => ({
           ...row,
@@ -7569,6 +7568,13 @@ export class DatabaseTool implements BlockTool {
     return view.id;
   }
 
+  /** A new view with every setting of `source`. A table copy keeps its source's wrap even when the source stores none (a new table wraps). */
+  private addViewCopy(name: string, source: DatabaseViewConfig, extra: ViewCreateConfig = {}): DatabaseViewConfig {
+    const { id: _id, name: _name, type, position: _position, ...settings } = source;
+
+    return this.model.addView(name, type, { ...settings, ...(type === 'table' ? { wrapCells: resolveWrapCells(source) } : {}), ...extra });
+  }
+
   /** "Duplicate": a copy of the widget's view, owned by this dashboard, placed after it. */
   private duplicateDashboardWidget(dashboardId: string, widgetId: string): void {
     const dashboard = this.dashboardWritable(dashboardId);
@@ -7580,8 +7586,7 @@ export class DatabaseTool implements BlockTool {
     const source = widget === undefined || widget.databaseId !== undefined ? undefined : this.model.getView(widget.viewId);
 
     if (row === undefined || widget === undefined || source === undefined) return;
-    const { id: _id, name, type, position: _position, ...settings } = source;
-    const view = this.model.addView(name, type, { ...settings, dashboardViewId: dashboardId });
+    const view = this.addViewCopy(source.name, source, { dashboardViewId: dashboardId });
     const placement: WidgetPlacement = row.widgets.length < MAX_WIDGETS_PER_ROW ? { rowId: row.id, index: index + 1 } : { newRowAt: rowIndex + 1 };
 
     void this.sync.syncCreateView(structuredClone(view));

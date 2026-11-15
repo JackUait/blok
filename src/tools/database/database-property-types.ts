@@ -22,7 +22,7 @@ import {
   IconTextLines,
   IconUserCircle,
 } from '../../components/icons';
-import type { PropertyType } from './types';
+import type { PropertyDefinition, PropertyType } from './types';
 
 export interface PropertyTypeMeta {
   icon: string;
@@ -79,6 +79,13 @@ export const headerPickerTypes = (hasPeople: boolean): PropertyType[] =>
 /** Types a person can add or change to. Person needs the host's people directory. */
 export const addablePropertyTypes = (hasPeople: boolean): PropertyType[] =>
   ADDABLE_ORDER.filter((type) => hasPeople || type !== 'person');
+
+/**
+ * A property's glyph. Filters and sorts read the value schema, where a formula or
+ * rollup takes its result type; `storedType` gives back the type it was made as.
+ */
+export const propertyGlyph = (property: PropertyDefinition, storedType?: (propertyId: string) => PropertyType | undefined): string =>
+  propertyTypeMeta(storedType?.(property.id) ?? property.type).icon;
 
 /** The meta of a type, or text's for a type from a newer client. */
 export const propertyTypeMeta = (type: PropertyType): PropertyTypeMeta =>

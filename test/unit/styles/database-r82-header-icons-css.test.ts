@@ -10,6 +10,9 @@ const database = readFileSync(resolve(__dirname, '../../../src/styles/database.c
   .replace(/\/\*[\s\S]*?\*\//g, '')
   .replace(/\s+/g, ' ');
 
+const tokenValues = (name: string): string[] =>
+  [...database.matchAll(new RegExp(`${name}: ([^;]+);`, 'g'))].map((m) => m[1].trim());
+
 const ruleBody = (selector: string): string => {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const match = database.match(new RegExp(`(?:^|[{}])\\s*${escaped}\\s*\\{([^{}]*)\\}`));
@@ -45,5 +48,23 @@ describe('database Round 41 small chevrons', () => {
     expect(body).toContain('width: 24px');
     expect(body).toContain('height: 24px');
     expect(body).toContain('flex: none');
+  });
+});
+
+describe('database Round 41 menu icon inks', () => {
+  // Light: Notion's type picker icons are rgb(142, 139, 134). Dark keeps the measured rgb(230, 229, 227) (recon r21 §1m).
+  it('draws the type picker icons gray in light and keeps the bright dark ink', () => {
+    expect(ruleBody('[data-blok-database-property-type-option-icon]')).toContain('color: var(--blok-database-type-icon)');
+    expect(tokenValues('--blok-database-type-icon')).toEqual([
+      'var(--blok-database-table-header-icon)',
+      'var(--blok-database-glyph)',
+      'var(--blok-database-glyph)',
+    ]);
+  });
+
+  // Notion's filter picker icons are rgb(56, 56, 54). The sort picker's ink is unmeasured, so it keeps the gray.
+  it('draws the filter picker icons in the strong ink, and only there', () => {
+    expect(ruleBody('[data-blok-database-picker-list="filter"] [data-blok-database-panel-icon]')).toContain('color: var(--blok-database-peek-glyph-strong)');
+    expect(tokenValues('--blok-database-peek-glyph-strong')[0]).toBe('rgb(56, 56, 54)');
   });
 });

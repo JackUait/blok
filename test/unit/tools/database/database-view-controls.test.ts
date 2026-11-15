@@ -6,6 +6,7 @@ import type { DatabaseViewConfig, FilterRule, PropertyDefinition } from '../../.
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { hover, shownHint } from './hint-harness';
 import { PAGE_LIST_ROLLUP } from '../../../../src/shared/database/value-helpers';
+import { IconSigma } from '../../../../src/components/icons';
 
 const schema: PropertyDefinition[] = [
   { id: 'title', name: 'Name', type: 'title', position: 'a0' },
@@ -229,6 +230,49 @@ describe('DatabaseViewControls', () => {
     controls.groupBy('num', document.body.appendChild(document.createElement('button')));
 
     expect(host.updateView).toHaveBeenCalledWith({ groupBy: 'num', groupSettings: { hideEmptyGroups: true } });
+  });
+
+  // notion-motion.md Round 41 Part A: the filter picker draws Formula as Σ. The host reads a formula as its result type.
+  describe('a formula read as its text result', () => {
+    const withFormula = (): ReturnType<typeof setup> => setup({
+      schema: () => [...schema, { id: 'fo', name: 'Formula', type: 'text', position: 'a3' }],
+      levers: { storedType: (id) => (id === 'fo' ? 'formula' : undefined) },
+    });
+    const glyph = (row: Element | null | undefined): string | undefined => row?.querySelector('svg path')?.getAttribute('d') ?? undefined;
+    const sigma = /d="([^"]+)"/.exec(IconSigma)?.[1];
+
+    it('draws Σ in the Filter picker', () => {
+      withFormula();
+      click('database-toolbar-filter');
+
+      expect(glyph(q('database-pick-property-fo'))).toBe(sigma);
+    });
+
+    // notion-motion.md Round 41: only the filter picker takes the strong ink; its list says which picker it is.
+    it('names the Filter picker list "filter" and leaves the Sort picker list unnamed', () => {
+      setup();
+      click('database-toolbar-filter');
+      expect(q('database-filter-picker')?.querySelector('[data-blok-database-picker-list]')?.getAttribute('data-blok-database-picker-list')).toBe('filter');
+      document.body.innerHTML = '';
+      setup();
+      click('database-toolbar-sort');
+      expect(q('database-sort-picker')?.querySelector('[data-blok-database-picker-list]')?.getAttribute('data-blok-database-picker-list')).toBe('');
+    });
+
+    it('draws Σ in the Sort picker', () => {
+      withFormula();
+      click('database-toolbar-sort');
+
+      expect(glyph(q('database-pick-property-fo'))).toBe(sigma);
+    });
+
+    it('draws Σ on the Property visibility page', () => {
+      withFormula();
+      click('database-toolbar-settings');
+      click('database-settings-properties');
+
+      expect(glyph(q('database-property-visible-fo')?.closest('[data-blok-database-property-visibility-row]'))).toBe(sigma);
+    });
   });
 
   it('never offers a button property in "+ Filter"', () => {

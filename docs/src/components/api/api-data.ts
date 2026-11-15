@@ -1441,7 +1441,7 @@ block.call('showNotification', { message: 'Hello' });`,
       {
         name: "block.dispatchChange()",
         returnType: "void",
-        description: "Manually trigger the onChange callback for this block.\n\nPass `{ derived: true }` when the change is data the tool worked out itself (a measured size, a fetched preview), not a user edit. It is saved but adds no undo step and keeps redo. Add `from` with the data keys it came from (`{ derived: true, from: ['url'] }`): it then joins the undo step that wrote those values.",
+        description: "Manually trigger the onChange callback for this block.\n\nPass `{ derived: true }` when the change is data the tool worked out itself (a measured size, a fetched preview), not a user edit. It is saved but adds no undo step and keeps redo. Add `from` with the data keys it came from (`{ derived: true, from: ['url'] }`): it then joins the undo step that wrote those values.\n\nPass `{ edit: false }` when the change is an undo step but not an edit of the content, such as a new place in a manual order. It is saved and undoable, but `lastEditedAt` and `lastEditedBy` stay as they were.",
         example: `const block = editor.blocks.getById('block-123');
 // Trigger change after invisible modification
 block.dispatchChange();`,

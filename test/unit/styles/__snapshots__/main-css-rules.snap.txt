@@ -4872,6 +4872,7 @@ span[data-blok-slash-search] {
   --blok-database-timeline-header-line: rgb(230, 229, 227);
   --blok-database-timeline-weekend-bg: rgb(247, 247, 247);
   --blok-database-timeline-canvas-bg: rgb(253, 253, 253);
+  --blok-database-timeline-now-text: #b93a35;
   --blok-database-timeline-panel-bg: rgb(255, 255, 255);
   --blok-database-timeline-panel-shadow: rgba(25, 25, 25, 0.027) 0 4px 12px 0, rgba(25, 25, 25, 0.02) 0 1px 2px 0;
   --blok-database-timeline-muted-text: var(--blok-database-ink-tertiary);
@@ -5181,6 +5182,7 @@ span[data-blok-slash-search] {
   --blok-database-timeline-header-line: rgb(56, 56, 54);
   --blok-database-timeline-weekend-bg: rgba(255, 255, 255, 0.03);
   --blok-database-timeline-canvas-bg: rgb(25, 25, 25);
+  --blok-database-timeline-now-text: #ea8480;
   --blok-database-timeline-panel-bg: var(--blok-bg-primary);
   --blok-database-timeline-panel-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px 0;
   --blok-database-timeline-muted-text: var(--blok-database-ink-tertiary);
@@ -5490,6 +5492,7 @@ span[data-blok-slash-search] {
   --blok-database-timeline-header-line: rgb(56, 56, 54);
   --blok-database-timeline-weekend-bg: rgba(255, 255, 255, 0.03);
   --blok-database-timeline-canvas-bg: rgb(25, 25, 25);
+  --blok-database-timeline-now-text: #ea8480;
   --blok-database-timeline-panel-bg: var(--blok-bg-primary);
   --blok-database-timeline-panel-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px 0;
   --blok-database-timeline-muted-text: var(--blok-database-ink-tertiary);
@@ -9785,6 +9788,32 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   border-radius: var(--blok-radius-dialog);
   background-color: var(--blok-database-confirm-bg);
   box-shadow: var(--blok-database-confirm-shadow);
+  container-type: inline-size;
+}
+
+[data-blok-database-form-preview] > [data-blok-database-form] {
+  max-inline-size: 600px;
+  margin-inline: auto;
+}
+
+[data-blok-database-form-preview] [data-blok-database-form-header] > [data-blok-page-cover] {
+  inline-size: calc(100cqi + 2 * var(--blok-space-10));
+  block-size: 30vh;
+  max-block-size: 280px;
+  margin-block-start: calc((var(--blok-space-10) + var(--blok-space-3)) * -1);
+  margin-inline-start: calc(min(0px, (600px - 100cqi) / 2) - var(--blok-space-10));
+}
+
+[data-blok-database-form-preview] [data-blok-database-form-header] > [data-blok-page-cover]:has(~ [data-blok-database-form-header-row] > [data-blok-page-icon]) {
+  margin-block-end: -42px;
+}
+
+[data-blok-database-form-preview] [data-blok-database-form-header-row] {
+  position: relative;
+}
+
+[data-blok-database-form-preview] [data-blok-database-form-header-row] > [data-blok-page-icon] {
+  margin-inline-start: calc(var(--blok-space-2) - var(--blok-space-1-25));
 }
 
 [data-blok-database-confirm-dialog] {
@@ -17913,6 +17942,24 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-timeline-muted-text);
 }
 
+[data-blok-database-timeline-units] > [data-blok-database-timeline-now-label] {
+  z-index: 1;
+  inline-size: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+[data-blok-database-timeline-units] > [data-blok-database-timeline-now-label] > span {
+  flex: none;
+  padding-inline-end: 3px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--blok-database-timeline-now-text);
+}
+
 [data-blok-database-timeline-today-dot] {
   position: absolute;
   z-index: 1;
@@ -21037,6 +21084,15 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   margin-block-end: var(--blok-space-3);
 }
 
+[data-blok-database-form]:has(> [data-blok-database-form-access]) > [data-blok-database-form-header]:has(> [data-blok-page-cover]) > [data-blok-database-form-header-row]:not(:has(> [data-blok-page-icon])) {
+  padding-block: var(--blok-space-4) var(--blok-space-1);
+  margin-block: var(--blok-space-4) 0;
+}
+
+[data-blok-database-form]:has(> [data-blok-database-form-access]) > [data-blok-database-form-header]:has(> [data-blok-page-cover]) > [data-blok-database-form-header-row]:not(:has(> [data-blok-page-icon])) > [data-blok-page-add-icon] {
+  opacity: 1;
+}
+
 [data-blok-database-form-header-row] [data-blok-page-add-cover] {
   margin-inline-start: 0;
 }
@@ -21151,6 +21207,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   background: transparent;
   color: var(--blok-database-ink-secondary);
   cursor: pointer;
+  transition: opacity 0.2s ease;
 }
 
 [data-blok-database-form-question-menu]:hover {

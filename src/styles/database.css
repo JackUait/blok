@@ -10562,7 +10562,8 @@ textarea[data-blok-database-cell-input] {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--blok-space-2);
+  /* notion-motion.md Round 41 Part B: 12px between "Edit filters" and "+ New page". */
+  gap: var(--blok-space-3);
   width: 100cqi;
   padding-block: var(--blok-space-4);
 }
@@ -10571,8 +10572,14 @@ textarea[data-blok-database-cell-input] {
   width: auto;
 }
 
+/* notion-motion.md Round 41 Part B (r41-n-filter-nohit.png): both buttons are bordered, 14px 500, in one ink;
+   "Edit filters" leads with the filter icon. The body's "+ New page" row stays borderless. */
 [data-blok-database-table-edit-filters],
-[data-blok-database-table-clear-search] {
+[data-blok-database-table-clear-search],
+[data-blok-database-table-empty] [data-blok-database-table-add-row] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1-25);
   height: 28px;
   padding-inline: var(--blok-space-2);
   border: 1px solid var(--blok-database-table-control-border);
@@ -10582,6 +10589,22 @@ textarea[data-blok-database-cell-input] {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+}
+
+/* Notion's glyph ink sits 9px in from the border (r41-n-filter-nohit.png). */
+[data-blok-database-table-edit-filters],
+[data-blok-database-table-empty] [data-blok-database-table-add-row] {
+  padding-inline-start: var(--blok-space-1-5);
+}
+
+[data-blok-database-table-edit-filters] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-table-empty] [data-blok-database-table-add-row] > span {
+  margin-inline: 0;
+  color: inherit;
 }
 
 /* ─── Calculation footer ─── */
@@ -18174,10 +18197,12 @@ button[data-blok-database-feed-reaction]:hover,
   border-end-end-radius: 0;
 }
 
-/* A form view's "Share form" (research/19 §3d): Notion's blue toolbar button. */
-[data-blok-database-toolbar-share-form] {
+/* A form view's "Share form" (research/19 §3d): Notion's blue toolbar button.
+   The toolbar prefix outranks `[data-blok-database-view-toolbar] > button`, which would paint it gray.
+   6px + Preview's 1px hairline margin = Notion's 7px gap (r41-n-empty-form.png). */
+[data-blok-database-view-toolbar] > [data-blok-database-toolbar-share-form] {
   height: 28px;
-  margin-inline-start: var(--blok-space-1);
+  margin-inline-start: var(--blok-space-1-5);
   padding-inline: var(--blok-space-2);
   border: none;
   border-radius: var(--blok-radius-control);
@@ -18188,12 +18213,24 @@ button[data-blok-database-feed-reaction]:hover,
   cursor: pointer;
 }
 
-[data-blok-database-toolbar-share-form]:hover {
+[data-blok-database-view-toolbar] > [data-blok-database-toolbar-share-form]:hover {
   background-color: var(--blok-database-new-hover-bg);
 }
 
-[data-blok-database-toolbar-share-form][hidden] {
-  display: none;
+/* notion-motion.md Round 41 Part B (r41-n-empty-form.png): "Preview" is a 94x28 button, 1px border
+   (230,229,227 on white = the control border), an eye and a label in primary ink. 500: the label's ink
+   area matches Notion's at 500 (158 px² both) and not at 400 (136). */
+[data-blok-database-view-toolbar] > [data-blok-database-toolbar-preview-form] {
+  gap: var(--blok-space-1-5);
+  padding-inline: var(--blok-space-1-5) var(--blok-space-2);
+  border: 1px solid var(--blok-database-table-control-border);
+  color: var(--blok-database-ink);
+  font-weight: 500;
+}
+
+[data-blok-database-view-toolbar] > [data-blok-database-toolbar-preview-form] svg {
+  width: 20px;
+  height: 20px;
 }
 
 [data-blok-database-new] > button:last-child {

@@ -60,6 +60,7 @@ import {
   IconWand,
   IconWarning,
   IconInfo,
+  IconFilter,
 } from '../../components/icons';
 
 export { createTableState };
@@ -1121,7 +1122,12 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
     edit.type = 'button';
     edit.setAttribute(searching ? 'data-blok-database-table-clear-search' : 'data-blok-database-table-edit-filters', '');
-    edit.textContent = this.t(searching ? 'tools.database.searchClear' : 'tools.database.tableEditFilters');
+    if (searching) {
+      edit.textContent = this.t('tools.database.searchClear');
+    } else {
+      edit.innerHTML = IconFilter;
+      edit.append(this.t('tools.database.tableEditFilters'));
+    }
     empty.appendChild(edit);
     if (this.editable) {
       empty.appendChild(this.createAddRow(''));

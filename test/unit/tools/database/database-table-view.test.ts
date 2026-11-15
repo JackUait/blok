@@ -4,7 +4,7 @@ import { DatabaseTableView, createTableState } from '../../../../src/tools/datab
 import type { TableHandlers, TableState, DatabaseTableViewOptions, TableGroup } from '../../../../src/tools/database/database-table-view';
 import { calculationItems } from '../../../../src/tools/database/database-table-menus';
 import { PROPERTY_TYPE_META } from '../../../../src/tools/database/database-property-types';
-import { IconInfo, IconPeekSide, IconPlayerPlay, IconRowGrip } from '../../../../src/components/icons';
+import { IconFilter, IconInfo, IconPeekSide, IconPlayerPlay, IconRowGrip } from '../../../../src/components/icons';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { TOOLTIP_MUTED_INK } from '../../../../src/components/modules/toolbar/tooltip';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
@@ -598,7 +598,15 @@ describe('DatabaseTableView', () => {
       const empty = root.querySelector<HTMLElement>('[data-blok-database-table-empty]');
 
       expect(empty).not.toBeNull();
-      empty?.querySelector<HTMLElement>('[data-blok-database-table-edit-filters]')?.click();
+      // notion-motion.md Round 41 Part B: Notion's "Edit filters" leads with the filter icon.
+      const edit = empty?.querySelector<HTMLElement>('[data-blok-database-table-edit-filters]');
+
+      const filterIcon = document.createElement('div');
+
+      filterIcon.innerHTML = IconFilter;
+      expect(edit?.querySelector('svg')?.outerHTML).toBe(filterIcon.querySelector('svg')?.outerHTML);
+      expect(edit?.textContent?.trim()).toBe('tools.database.tableEditFilters');
+      edit?.click();
       expect(handlers.editFilters).toHaveBeenCalled();
     });
 
@@ -609,6 +617,8 @@ describe('DatabaseTableView', () => {
       const clear = empty?.querySelector<HTMLElement>('[data-blok-database-table-clear-search]');
 
       expect(clear?.textContent).toBe('tools.database.searchClear');
+      // notion-motion.md Round 41 Part B: "Clear search" has no icon.
+      expect(clear?.querySelector('svg')).toBeNull();
       expect(empty?.querySelector('[data-blok-database-table-edit-filters]')).toBeNull();
       expect(empty?.querySelector('[data-blok-database-table-add-row]')).not.toBeNull();
       clear?.click();

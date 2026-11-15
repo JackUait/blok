@@ -298,7 +298,10 @@ export class DatabaseViewControls {
     this.shareFormButton.setAttribute('data-blok-database-toolbar-share-form', '');
     this.shareFormButton.addEventListener('click', () => this.host.shareForm?.(this.shareFormButton));
     // "Preview" reuses the file tool's word: the same in every locale.
-    this.previewFormButton = iconButton('database-toolbar-preview-form', this.host.i18n.t('tools.file.preview'), IconPreview);
+    const previewLabel = this.host.i18n.t('tools.file.preview');
+
+    this.previewFormButton = button('database-toolbar-preview-form', previewLabel, { icon: IconPreview, text: previewLabel });
+    this.previewFormButton.setAttribute('data-blok-database-toolbar-preview-form', '');
     this.previewFormButton.addEventListener('click', () => this.host.previewForm?.());
     this.toolbar.append(this.lockBadge, this.minimizeButton, this.noDateButton, this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton, this.expandButton, this.fullPageLink, this.settingsButton, this.previewFormButton, this.shareFormButton);
     if (host.newRow !== undefined) {

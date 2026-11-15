@@ -181,6 +181,23 @@ describe('a move is not an edit', () => {
   const editedCell = (rowId: string): string =>
     holder?.querySelector(`[data-blok-database-table-row][data-row-id="${rowId}"] [data-property-id="le"]`)?.textContent ?? '';
 
+  /** The cell in a new editor opened on the saved document: the open view does not redraw it when a stamp lands. */
+  const reloadedEditedCell = async (rowId: string): Promise<string> => {
+    const saved = await editor?.save();
+
+    editor?.destroy();
+    editor = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: { class: DatabaseTool }, 'database-row': DatabaseRowTool },
+      data: saved,
+    } as never) as unknown as TestEditor;
+    await editor.isReady;
+    await quiet();
+
+    return editedCell(rowId);
+  };
+
   const savedRow = async (id: string): Promise<OutputBlockData | undefined> =>
     (await editor?.save())?.blocks.find((block) => block.id === id);
 
@@ -223,7 +240,7 @@ describe('a move is not an edit', () => {
     expect((await savedRow('r3'))?.lastEditedAt).toBe(EDITED_AT);
     expect(shownOrder()).toEqual(['r3', 'r1', 'r2']);
     expect(cellBefore).not.toBe('');
-    expect(editedCell('r3')).toBe(cellBefore);
+    expect(await reloadedEditedCell('r3')).toBe(cellBefore);
   });
 
   it('undo puts a dragged row back', async () => {
@@ -283,11 +300,13 @@ describe('a move is not an edit', () => {
   it('a property edit still stamps the row', async () => {
     await makeTable();
     const block = editor?.blocks.getById('r2');
+    const cellBefore = editedCell('r2');
 
     block?.call('updateProperties', { n: 'note' });
     block?.dispatchChange();
     await quiet();
 
     expect((await savedRow('r2'))?.lastEditedAt).toBeGreaterThan(EDITED_AT);
+    expect(await reloadedEditedCell('r2')).not.toBe(cellBefore);
   });
 });

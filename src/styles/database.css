@@ -18559,6 +18559,8 @@ button[data-blok-database-feed-reaction]:hover,
   background: transparent;
   color: var(--blok-database-ink-secondary);
   cursor: pointer;
+  /* notion-motion.md Round 34 §6: fades both ways. */
+  transition: opacity 0.2s ease;
 }
 
 [data-blok-database-form-question-menu]:hover {

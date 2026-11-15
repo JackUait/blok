@@ -151,6 +151,11 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(hover).not.toMatch(/35, 131, 226|39, 131, 222|182, 212, 243/);
   });
 
+  // notion-motion.md Round 34 §6: the "Edit question" ⋯ fades in and out over 0.2s ease, no delay.
+  it('fades the "Edit question" chip in and out over 0.2s ease', () => {
+    expect(ruleBody('[data-blok-database-form-question-menu]')).toContain('transition: opacity 0.2s ease');
+  });
+
   // Round 31 §1: the builder's name is a 24px 700 / 30 textbox; the preview's an H2 24px 700.
   it('draws the question name 24px bold, as a bare textbox in the builder', () => {
     const name = ruleBody('[data-blok-database-form-question-name]');

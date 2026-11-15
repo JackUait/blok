@@ -74,6 +74,24 @@ describe('pinnedGroupChips', () => {
     expect(chips[1].hasAttribute('aria-disabled')).toBe(false);
   });
 
+  // notion-motion.md Round 39 §1: "2 sorts" is 94 wide and "1 rule" 83.8. Their glyphs are narrow: arrowUpDownSmall
+  // 12.7×16 (r35-sort2.raw) and filterSmall 12.6×16 (r26-pm-modal.raw). A property glyph keeps its 16 box.
+  it('marks the sort-count and rule-count glyphs so they take Notion\'s narrow boxes', () => {
+    const chips = pinnedGroupChips(view({
+      sorts: [{ id: 's', propertyId: 'title', direction: 'asc' }, { id: 's2', propertyId: 'sel', direction: 'asc' }],
+      filters: [{ id: 'f', propertyId: 'title', operator: 'contains', value: 'a' }],
+    }), schema, i18n).filter((chip) => chip.tagName === 'BUTTON');
+    const glyphs = chips.map((chip) => chip.querySelector('[data-blok-database-chip-glyph]')?.getAttribute('data-blok-database-chip-glyph'));
+
+    expect(glyphs).toEqual(['sort', 'filter', '']);
+  });
+
+  it('keeps the one-sort arrow glyph unmarked', () => {
+    const [chip] = pinnedGroupChips(view({ sorts: [{ id: 's', propertyId: 'title', direction: 'asc' }] }), schema, i18n);
+
+    expect(chip.querySelector('[data-blok-database-chip-glyph]')?.getAttribute('data-blok-database-chip-glyph')).toBe('');
+  });
+
   // Round 26 §1 (r26-pm-key-*.raw): Tab reaches the chips. notion-motion.md Round 38 §1: the sort and filter chips
   // open their editors; the group's "N rules" chip stays read-only here.
   it('draws the sort and filter chips as live buttons, the rules chip read-only', () => {

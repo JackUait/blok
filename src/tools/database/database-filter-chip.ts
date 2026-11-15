@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
-import { IconChevronDown, IconCross, IconDotsHorizontal, IconTrash } from '../../components/icons';
+import { IconChevronDown, IconCross, IconDotsHorizontal, IconFilter, IconSort, IconTrash } from '../../components/icons';
 import { DatabasePanel, panelInput, panelRow, panelSeparator, panelText } from './database-panel';
 import type { PanelPage } from './database-panel';
 import type { ViewSettingsContext } from './database-view-settings-panel';
@@ -126,7 +126,12 @@ export const filterChip = (testId: string, label: string, parts: { glyph: string
   el.setAttribute('data-blok-testid', testId);
   el.setAttribute('aria-label', label);
   el.setAttribute('data-blok-database-filter-pill', '');
-  el.append(chipPart('data-blok-database-chip-glyph', { icon: parts.glyph }));
+  const glyph = chipPart('data-blok-database-chip-glyph', { icon: parts.glyph });
+
+  // database.css gives these two Notion's narrow glyph boxes (filterSmall, arrowUpDownSmall).
+  if (parts.glyph === IconFilter) glyph.setAttribute('data-blok-database-chip-glyph', 'filter');
+  if (parts.glyph === IconSort) glyph.setAttribute('data-blok-database-chip-glyph', 'sort');
+  el.append(glyph);
   text.append(chipPart('data-blok-database-chip-name', { text: parts.name }));
   if (parts.value !== undefined && parts.value !== '') {
     text.append(`${parts.colon === true ? ':' : ''} `, chipPart('data-blok-database-chip-value', { text: parts.value }));

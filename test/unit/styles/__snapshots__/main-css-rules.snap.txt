@@ -14473,6 +14473,23 @@ button[data-blok-database-table-group-count]:hover {
   max-height: none;
 }
 
+[data-blok-database-chip-glyph="sort"] {
+  width: 12.7px;
+}
+
+[data-blok-database-chip-glyph="filter"] {
+  width: 12.6px;
+}
+
+:is([data-blok-database-chip-glyph="sort"], [data-blok-database-chip-glyph="filter"]) {
+  justify-content: center;
+}
+
+:is([data-blok-database-chip-glyph="sort"], [data-blok-database-chip-glyph="filter"]) svg {
+  flex: none;
+  max-width: none;
+}
+
 [data-blok-database-filter-pill][data-direction="desc"] > [data-blok-database-chip-glyph] svg {
   transform: rotate(180deg);
 }

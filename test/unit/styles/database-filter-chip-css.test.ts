@@ -235,6 +235,16 @@ describe('sort and rule control chevrons', () => {
     expect(declared(glyph, 'width')).toEqual(['8px']);
     expect(declared(glyph, 'height')).toEqual(['14px']);
   });
+
+  // notion-motion.md Round 39 §1: "2 sorts" 94 wide, "1 rule" 83.8. r35-sort2.raw: arrowUpDownSmall is 12.7×16;
+  // r26-pm-modal.raw: filterSmall is 12.6×16. Each sits 8 in and 6 before the text, as a 16 glyph does.
+  it('puts the sort-count and rule-count glyphs in Notion\'s narrow boxes', () => {
+    expect(declared('[data-blok-database-chip-glyph="sort"]', 'width')).toEqual(['12.7px']);
+    expect(declared('[data-blok-database-chip-glyph="filter"]', 'width')).toEqual(['12.6px']);
+    // The 16px drawing overflows the box evenly, so its ink stays centred.
+    expect(declared(':is([data-blok-database-chip-glyph="sort"], [data-blok-database-chip-glyph="filter"])', 'justify-content')).toEqual(['center']);
+    expect(declared(':is([data-blok-database-chip-glyph="sort"], [data-blok-database-chip-glyph="filter"]) svg', 'max-width')).toEqual(['none']);
+  });
 });
 
 // notion-motion.md Round 32 §3 Filter chip (r32-b-filterchip.raw, r32-b-filterchip.png): options at a 29px pitch

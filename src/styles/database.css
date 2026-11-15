@@ -11377,6 +11377,25 @@ button[data-blok-database-table-group-count]:hover {
   max-height: none;
 }
 
+/* notion-motion.md Round 39 §1: "2 sorts" is 94 wide, "1 rule" 83.8. arrowUpDownSmall is 12.7×16 (r35-sort2.raw),
+   filterSmall 12.6×16 (r26-pm-modal.raw). The 16px drawing overflows evenly. */
+[data-blok-database-chip-glyph="sort"] {
+  width: 12.7px;
+}
+
+[data-blok-database-chip-glyph="filter"] {
+  width: 12.6px;
+}
+
+:is([data-blok-database-chip-glyph="sort"], [data-blok-database-chip-glyph="filter"]) {
+  justify-content: center;
+}
+
+:is([data-blok-database-chip-glyph="sort"], [data-blok-database-chip-glyph="filter"]) svg {
+  flex: none;
+  max-width: none;
+}
+
 /* One arrow glyph: a descending sort turns it over. */
 [data-blok-database-filter-pill][data-direction="desc"] > [data-blok-database-chip-glyph] svg {
   transform: rotate(180deg);

@@ -1737,6 +1737,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R72_BYTES = 943;
     // Lane r74: Round 39 linked source row's ↗ badge and × "Delete linked views", the "↗ <name>" source title, the New view page offsets. Net database.css growth against origin/main.
     const DATABASE_R74_BYTES = 1908;
+    // Lane r76: Round 39 sort-count and rule-count chip glyphs in Notion's narrow boxes. Net database.css growth against origin/main.
+    const DATABASE_R76_BYTES = 569;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2277,6 +2279,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R71_BYTES
       + DATABASE_R72_BYTES
       + DATABASE_R74_BYTES
+      + DATABASE_R76_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

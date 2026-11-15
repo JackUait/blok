@@ -1356,6 +1356,7 @@
   "tools.database.settingsNone": "Asnjë",
   "tools.database.settingsWrapAll": "Mbështill gjithë përmbajtjen",
   "tools.database.settingsWrapPageTitles": "Mbështill titujt e faqeve",
+  "tools.database.settingsWrapProperties": "Mbështill vetitë",
   "tools.database.settingsDirectEditPageName": "Redakto drejtpërdrejt emrin e faqes",
   "tools.database.settingsVerticalLines": "Shfaq vijat vertikale",
   "tools.database.settingsShowPageIcon": "Shfaq ikonën e faqes",

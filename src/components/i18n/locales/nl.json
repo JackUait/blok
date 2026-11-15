@@ -1356,6 +1356,7 @@
   "tools.database.settingsNone": "Geen",
   "tools.database.settingsWrapAll": "Alle inhoud laten teruglopen",
   "tools.database.settingsWrapPageTitles": "Paginatitels laten teruglopen",
+  "tools.database.settingsWrapProperties": "Eigenschappen laten teruglopen",
   "tools.database.settingsDirectEditPageName": "Paginanaam direct bewerken",
   "tools.database.settingsVerticalLines": "Verticale lijnen tonen",
   "tools.database.settingsShowPageIcon": "Paginapictogram tonen",

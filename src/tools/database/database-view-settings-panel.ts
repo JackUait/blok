@@ -1030,7 +1030,8 @@ export class ViewSettingsPages {
           })]
           : [];
         const wrap = panelSwitch({
-          label: this.t('settingsWrapAll'),
+          // notion-motion.md Round 34 §3: a Feed's row reads "Wrap properties".
+          label: this.t(view.type === 'feed' ? 'settingsWrapProperties' : 'settingsWrapAll'),
           testId: 'database-settings-wrap',
           checked: resolveWrapCells(view),
           disabled: !this.shared,

@@ -1356,6 +1356,7 @@
   "tools.database.settingsNone": "Không có",
   "tools.database.settingsWrapAll": "Ngắt dòng mọi nội dung",
   "tools.database.settingsWrapPageTitles": "Ngắt dòng tiêu đề trang",
+  "tools.database.settingsWrapProperties": "Ngắt dòng thuộc tính",
   "tools.database.settingsDirectEditPageName": "Sửa trực tiếp tên trang",
   "tools.database.settingsVerticalLines": "Hiện đường kẻ dọc",
   "tools.database.settingsShowPageIcon": "Hiện biểu tượng trang",

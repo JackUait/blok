@@ -1356,6 +1356,7 @@
   "tools.database.settingsNone": "هېڅ",
   "tools.database.settingsWrapAll": "ټوله منځپانګه ونغاړئ",
   "tools.database.settingsWrapPageTitles": "د پاڼو سرلیکونه ونغاړئ",
+  "tools.database.settingsWrapProperties": "ځانګړتیاوې ونغاړئ",
   "tools.database.settingsDirectEditPageName": "د پاڼې نوم مستقیم سم کړئ",
   "tools.database.settingsVerticalLines": "عمودي کرښې وښایئ",
   "tools.database.settingsShowPageIcon": "د پاڼې آیکون وښایئ",

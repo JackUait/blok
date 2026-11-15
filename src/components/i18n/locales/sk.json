@@ -1378,6 +1378,7 @@
   "tools.database.settingsNone": "Žiadne",
   "tools.database.settingsWrapAll": "Zalamovať všetok obsah",
   "tools.database.settingsWrapPageTitles": "Zalamovať názvy stránok",
+  "tools.database.settingsWrapProperties": "Zalamovať vlastnosti",
   "tools.database.settingsDirectEditPageName": "Upravovať názov stránky priamo",
   "tools.database.settingsVerticalLines": "Zobraziť zvislé čiary",
   "tools.database.settingsShowPageIcon": "Zobraziť ikonu stránky",

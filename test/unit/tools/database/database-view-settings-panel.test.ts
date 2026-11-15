@@ -656,6 +656,16 @@ describe('view settings panel', () => {
       expect(h.ctx.updateView).toHaveBeenLastCalledWith({ showAuthorByline: false });
     });
 
+    // notion-motion.md Round 34 §3: a Feed's Wrap row reads "Wrap properties", off.
+    it('calls a Feed\'s Wrap row "Wrap properties"', () => {
+      const h = harness({ type: 'feed' });
+
+      h.open('layout');
+
+      expect(q('database-settings-wrap')?.textContent).toBe('tools.database.settingsWrapProperties');
+      expect(q('database-settings-wrap')?.getAttribute('aria-checked')).toBe('false');
+    });
+
     it('gives a Timeline no Wrap, and puts its own rows before Open pages in and Load limit', () => {
       const h = harness({ type: 'timeline' });
 

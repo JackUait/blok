@@ -1367,6 +1367,7 @@
   "tools.database.settingsNone": "Ништа",
   "tools.database.settingsWrapAll": "Преломи сав садржај",
   "tools.database.settingsWrapPageTitles": "Преломи наслове страница",
+  "tools.database.settingsWrapProperties": "Преломи својства",
   "tools.database.settingsDirectEditPageName": "Директно уреди назив странице",
   "tools.database.settingsVerticalLines": "Прикажи вертикалне линије",
   "tools.database.settingsShowPageIcon": "Прикажи икону странице",

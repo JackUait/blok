@@ -1356,6 +1356,7 @@
   "tools.database.settingsNone": "يوق",
   "tools.database.settingsWrapAll": "بارلىق مەزمۇننى ئوراش",
   "tools.database.settingsWrapPageTitles": "بەت ماۋزۇلىرىنى ئوراش",
+  "tools.database.settingsWrapProperties": "خاسلىقلارنى ئوراش",
   "tools.database.settingsDirectEditPageName": "بەت نامىنى بىۋاسىتە تەھرىرلەش",
   "tools.database.settingsVerticalLines": "تىك سىزىقلارنى كۆرسىتىش",
   "tools.database.settingsShowPageIcon": "بەت سىنبەلگىسىنى كۆرسىتىش",

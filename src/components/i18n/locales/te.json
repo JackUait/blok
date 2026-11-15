@@ -1356,6 +1356,7 @@
   "tools.database.settingsNone": "ఏదీ లేదు",
   "tools.database.settingsWrapAll": "మొత్తం కంటెంట్‌ను చుట్టు",
   "tools.database.settingsWrapPageTitles": "పేజీ శీర్షికలను చుట్టు",
+  "tools.database.settingsWrapProperties": "ప్రాపర్టీలను చుట్టు",
   "tools.database.settingsDirectEditPageName": "పేజీ పేరును నేరుగా సవరించు",
   "tools.database.settingsVerticalLines": "నిలువు గీతలను చూపు",
   "tools.database.settingsShowPageIcon": "పేజీ చిహ్నాన్ని చూపు",

@@ -1378,6 +1378,7 @@
   "tools.database.settingsNone": "Немає",
   "tools.database.settingsWrapAll": "Переносити весь вміст",
   "tools.database.settingsWrapPageTitles": "Переносити назви сторінок",
+  "tools.database.settingsWrapProperties": "Переносити властивості",
   "tools.database.settingsDirectEditPageName": "Редагувати назву сторінки безпосередньо",
   "tools.database.settingsVerticalLines": "Показувати вертикальні лінії",
   "tools.database.settingsShowPageIcon": "Показувати іконку сторінки",

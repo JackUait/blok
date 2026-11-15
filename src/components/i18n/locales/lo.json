@@ -1356,6 +1356,7 @@
   "tools.database.settingsNone": "ບໍ່ມີ",
   "tools.database.settingsWrapAll": "ຕັດແຖວເນື້ອຫາທັງໝົດ",
   "tools.database.settingsWrapPageTitles": "ຕັດແຖວຫົວຂໍ້ໜ້າ",
+  "tools.database.settingsWrapProperties": "ຕັດແຖວຄຸນສົມບັດ",
   "tools.database.settingsDirectEditPageName": "ແກ້ໄຂຊື່ໜ້າໂດຍກົງ",
   "tools.database.settingsVerticalLines": "ສະແດງເສັ້ນຕັ້ງ",
   "tools.database.settingsShowPageIcon": "ສະແດງໄອຄອນໜ້າ",

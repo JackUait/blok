@@ -1378,6 +1378,7 @@
   "tools.database.settingsNone": "Nėra",
   "tools.database.settingsWrapAll": "Laužyti visą turinį",
   "tools.database.settingsWrapPageTitles": "Laužyti puslapių pavadinimus",
+  "tools.database.settingsWrapProperties": "Laužyti savybes",
   "tools.database.settingsDirectEditPageName": "Redaguoti puslapio pavadinimą tiesiogiai",
   "tools.database.settingsVerticalLines": "Rodyti vertikalias linijas",
   "tools.database.settingsShowPageIcon": "Rodyti puslapio piktogramą",

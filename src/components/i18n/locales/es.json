@@ -1367,6 +1367,7 @@
   "tools.database.settingsNone": "Ninguno",
   "tools.database.settingsWrapAll": "Ajustar todo el contenido",
   "tools.database.settingsWrapPageTitles": "Ajustar títulos de página",
+  "tools.database.settingsWrapProperties": "Ajustar propiedades",
   "tools.database.settingsDirectEditPageName": "Editar el nombre de la página directamente",
   "tools.database.settingsVerticalLines": "Mostrar líneas verticales",
   "tools.database.settingsShowPageIcon": "Mostrar icono de página",

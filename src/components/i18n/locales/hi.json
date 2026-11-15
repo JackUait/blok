@@ -1356,6 +1356,7 @@
   "tools.database.settingsNone": "कोई नहीं",
   "tools.database.settingsWrapAll": "सभी सामग्री रैप करें",
   "tools.database.settingsWrapPageTitles": "पृष्ठ शीर्षक रैप करें",
+  "tools.database.settingsWrapProperties": "प्रॉपर्टीज़ रैप करें",
   "tools.database.settingsDirectEditPageName": "पृष्ठ का नाम सीधे संपादित करें",
   "tools.database.settingsVerticalLines": "लंबवत रेखाएँ दिखाएँ",
   "tools.database.settingsShowPageIcon": "पृष्ठ आइकन दिखाएँ",

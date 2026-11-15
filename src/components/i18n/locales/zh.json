@@ -1356,6 +1356,7 @@
   "tools.database.settingsNone": "无",
   "tools.database.settingsWrapAll": "所有内容自动换行",
   "tools.database.settingsWrapPageTitles": "页面标题自动换行",
+  "tools.database.settingsWrapProperties": "属性自动换行",
   "tools.database.settingsDirectEditPageName": "直接编辑页面名称",
   "tools.database.settingsVerticalLines": "显示竖线",
   "tools.database.settingsShowPageIcon": "显示页面图标",

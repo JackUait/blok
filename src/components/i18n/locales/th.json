@@ -1356,6 +1356,7 @@
   "tools.database.settingsNone": "ไม่มี",
   "tools.database.settingsWrapAll": "ตัดบรรทัดเนื้อหาทั้งหมด",
   "tools.database.settingsWrapPageTitles": "ตัดบรรทัดชื่อหน้า",
+  "tools.database.settingsWrapProperties": "ตัดบรรทัดคุณสมบัติ",
   "tools.database.settingsDirectEditPageName": "แก้ไขชื่อหน้าโดยตรง",
   "tools.database.settingsVerticalLines": "แสดงเส้นแนวตั้ง",
   "tools.database.settingsShowPageIcon": "แสดงไอคอนหน้า",

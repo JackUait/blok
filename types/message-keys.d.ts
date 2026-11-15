@@ -1808,6 +1808,7 @@ export type BlokMessageKey =
   | 'tools.database.settingsVerticalLines'
   | 'tools.database.settingsWrapAll'
   | 'tools.database.settingsWrapPageTitles'
+  | 'tools.database.settingsWrapProperties'
   | 'tools.database.showAs'
   | 'tools.database.showAs.bar'
   | 'tools.database.showAs.number'

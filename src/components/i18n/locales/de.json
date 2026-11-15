@@ -1356,6 +1356,7 @@
   "tools.database.settingsNone": "Keine",
   "tools.database.settingsWrapAll": "Gesamten Inhalt umbrechen",
   "tools.database.settingsWrapPageTitles": "Seitentitel umbrechen",
+  "tools.database.settingsWrapProperties": "Eigenschaften umbrechen",
   "tools.database.settingsDirectEditPageName": "Seitennamen direkt bearbeiten",
   "tools.database.settingsVerticalLines": "Vertikale Linien anzeigen",
   "tools.database.settingsShowPageIcon": "Seitensymbol anzeigen",

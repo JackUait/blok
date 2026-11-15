@@ -1356,6 +1356,7 @@
   "tools.database.settingsNone": "არცერთი",
   "tools.database.settingsWrapAll": "მთელი შიგთავსის გადატანა",
   "tools.database.settingsWrapPageTitles": "გვერდის სათაურების გადატანა",
+  "tools.database.settingsWrapProperties": "თვისებების გადატანა",
   "tools.database.settingsDirectEditPageName": "გვერდის სახელის პირდაპირ რედაქტირება",
   "tools.database.settingsVerticalLines": "ვერტიკალური ხაზების ჩვენება",
   "tools.database.settingsShowPageIcon": "გვერდის ხატულის ჩვენება",

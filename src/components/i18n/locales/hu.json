@@ -1356,6 +1356,7 @@
   "tools.database.settingsNone": "Nincs",
   "tools.database.settingsWrapAll": "Teljes tartalom tördelése",
   "tools.database.settingsWrapPageTitles": "Oldalcímek tördelése",
+  "tools.database.settingsWrapProperties": "Tulajdonságok tördelése",
   "tools.database.settingsDirectEditPageName": "Oldalnév közvetlen szerkesztése",
   "tools.database.settingsVerticalLines": "Függőleges vonalak megjelenítése",
   "tools.database.settingsShowPageIcon": "Oldalikon megjelenítése",

@@ -1356,6 +1356,7 @@
   "tools.database.settingsNone": "Hakuna",
   "tools.database.settingsWrapAll": "Kunja maudhui yote",
   "tools.database.settingsWrapPageTitles": "Kunja mada za kurasa",
+  "tools.database.settingsWrapProperties": "Kunja sifa",
   "tools.database.settingsDirectEditPageName": "Hariri jina la ukurasa moja kwa moja",
   "tools.database.settingsVerticalLines": "Onyesha mistari wima",
   "tools.database.settingsShowPageIcon": "Onyesha aikoni ya ukurasa",

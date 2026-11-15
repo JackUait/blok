@@ -1356,6 +1356,7 @@
   "tools.database.settingsNone": "केही पनि होइन",
   "tools.database.settingsWrapAll": "सबै सामग्री र्‍याप गर्नुहोस्",
   "tools.database.settingsWrapPageTitles": "पृष्ठ शीर्षकहरू र्‍याप गर्नुहोस्",
+  "tools.database.settingsWrapProperties": "गुणहरू र्‍याप गर्नुहोस्",
   "tools.database.settingsDirectEditPageName": "पृष्ठको नाम सिधै सम्पादन गर्नुहोस्",
   "tools.database.settingsVerticalLines": "ठाडो रेखाहरू देखाउनुहोस्",
   "tools.database.settingsShowPageIcon": "पृष्ठ आइकन देखाउनुहोस्",

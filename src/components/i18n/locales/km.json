@@ -1356,6 +1356,7 @@
   "tools.database.settingsNone": "គ្មាន",
   "tools.database.settingsWrapAll": "រុំខ្លឹមសារទាំងអស់",
   "tools.database.settingsWrapPageTitles": "រុំចំណងជើងទំព័រ",
+  "tools.database.settingsWrapProperties": "រុំលក្ខណៈ",
   "tools.database.settingsDirectEditPageName": "កែឈ្មោះទំព័រដោយផ្ទាល់",
   "tools.database.settingsVerticalLines": "បង្ហាញបន្ទាត់បញ្ឈរ",
   "tools.database.settingsShowPageIcon": "បង្ហាញរូបតំណាងទំព័រ",

@@ -1356,6 +1356,7 @@
   "tools.database.settingsNone": "Ingen",
   "tools.database.settingsWrapAll": "Ombryd alt indhold",
   "tools.database.settingsWrapPageTitles": "Ombryd sidetitler",
+  "tools.database.settingsWrapProperties": "Ombryd egenskaber",
   "tools.database.settingsDirectEditPageName": "Rediger sidenavn direkte",
   "tools.database.settingsVerticalLines": "Vis lodrette linjer",
   "tools.database.settingsShowPageIcon": "Vis sideikon",

@@ -1356,6 +1356,7 @@
   "tools.database.settingsNone": "Ништо",
   "tools.database.settingsWrapAll": "Преломи ја целата содржина",
   "tools.database.settingsWrapPageTitles": "Преломи ги насловите на страниците",
+  "tools.database.settingsWrapProperties": "Преломи ги својствата",
   "tools.database.settingsDirectEditPageName": "Директно уреди го името на страницата",
   "tools.database.settingsVerticalLines": "Прикажи вертикални линии",
   "tools.database.settingsShowPageIcon": "Прикажи икона на страницата",

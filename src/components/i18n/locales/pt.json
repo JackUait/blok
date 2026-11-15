@@ -1367,6 +1367,7 @@
   "tools.database.settingsNone": "Nenhum",
   "tools.database.settingsWrapAll": "Quebrar todo o conteúdo",
   "tools.database.settingsWrapPageTitles": "Quebrar títulos de página",
+  "tools.database.settingsWrapProperties": "Quebrar propriedades",
   "tools.database.settingsDirectEditPageName": "Editar o nome da página diretamente",
   "tools.database.settingsVerticalLines": "Mostrar linhas verticais",
   "tools.database.settingsShowPageIcon": "Mostrar ícone da página",

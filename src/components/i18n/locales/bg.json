@@ -1356,6 +1356,7 @@
   "tools.database.settingsNone": "Няма",
   "tools.database.settingsWrapAll": "Пренасяй цялото съдържание",
   "tools.database.settingsWrapPageTitles": "Пренасяй заглавията на страниците",
+  "tools.database.settingsWrapProperties": "Пренасяй свойствата",
   "tools.database.settingsDirectEditPageName": "Редактирай името на страницата директно",
   "tools.database.settingsVerticalLines": "Показвай вертикални линии",
   "tools.database.settingsShowPageIcon": "Показвай иконата на страницата",

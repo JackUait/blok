@@ -1367,6 +1367,7 @@
   "tools.database.settingsNone": "Nessuno",
   "tools.database.settingsWrapAll": "A capo automatico ovunque",
   "tools.database.settingsWrapPageTitles": "A capo nei titoli delle pagine",
+  "tools.database.settingsWrapProperties": "A capo nelle proprietà",
   "tools.database.settingsDirectEditPageName": "Modifica direttamente il nome della pagina",
   "tools.database.settingsVerticalLines": "Mostra linee verticali",
   "tools.database.settingsShowPageIcon": "Mostra icona pagina",

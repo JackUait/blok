@@ -1356,6 +1356,7 @@
   "tools.database.settingsNone": "Yok",
   "tools.database.settingsWrapAll": "Tüm içeriği kaydır",
   "tools.database.settingsWrapPageTitles": "Sayfa başlıklarını kaydır",
+  "tools.database.settingsWrapProperties": "Özellikleri kaydır",
   "tools.database.settingsDirectEditPageName": "Sayfa adını doğrudan düzenle",
   "tools.database.settingsVerticalLines": "Dikey çizgileri göster",
   "tools.database.settingsShowPageIcon": "Sayfa simgesini göster",

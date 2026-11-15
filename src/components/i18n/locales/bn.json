@@ -1356,6 +1356,7 @@
   "tools.database.settingsNone": "কোনোটি নয়",
   "tools.database.settingsWrapAll": "সব বিষয়বস্তু মোড়ান",
   "tools.database.settingsWrapPageTitles": "পৃষ্ঠার শিরোনাম মোড়ান",
+  "tools.database.settingsWrapProperties": "বৈশিষ্ট্যগুলি মোড়ান",
   "tools.database.settingsDirectEditPageName": "পৃষ্ঠার নাম সরাসরি সম্পাদনা করুন",
   "tools.database.settingsVerticalLines": "উল্লম্ব রেখা দেখান",
   "tools.database.settingsShowPageIcon": "পৃষ্ঠার আইকন দেখান",

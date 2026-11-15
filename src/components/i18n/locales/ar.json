@@ -1400,6 +1400,7 @@
   "tools.database.settingsNone": "بلا",
   "tools.database.settingsWrapAll": "التفاف كل المحتوى",
   "tools.database.settingsWrapPageTitles": "التفاف عناوين الصفحات",
+  "tools.database.settingsWrapProperties": "التفاف الخصائص",
   "tools.database.settingsDirectEditPageName": "تحرير اسم الصفحة مباشرة",
   "tools.database.settingsVerticalLines": "إظهار الخطوط العمودية",
   "tools.database.settingsShowPageIcon": "إظهار أيقونة الصفحة",

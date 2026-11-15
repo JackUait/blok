@@ -299,7 +299,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2233 + 146 + 590 + 11 closure for all 2980 keys', () => {
+  it('rebuilds a disjoint 2233 + 146 + 598 + 11 closure for all 2988 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -313,7 +313,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2980);
+    expect(lifecycle.size).toBe(2988);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -687,7 +687,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +8: Property visibility's "Hidden in <layout>" heads (settingsHiddenIn*, settingsHiddenProperties), picked from a map.
       // +4: the row menu footer's tools.database.rowWords_one/_other and rowCharacters_one/_other, via a count.
       // -1: tools.database.settingsSource is now called by literal (see executable-literal).
-      'registered-namespace-compatible': 590,
+      // +8: View settings "Manage data sources" (settingsManageSources, manageSources*, manageSourcesViews_one/_other), through the panel's t().
+      'registered-namespace-compatible': 598,
       // +1: Settings › Group's pin button names itself with groupPin through the panel's tools.database. prefix.
       // +1: tools.database.galleryFitImage, above. +1: tools.database.timelineEndBy, above.
       // +2: tools.database.rowLastEditedBy and rowWordCount, above.

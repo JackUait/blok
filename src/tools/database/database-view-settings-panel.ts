@@ -194,6 +194,20 @@ export interface DataSourceSettings {
   pick: (id: string) => void;
   /** Other databases of the document, under "Existing data sources". They do not make Source active. */
   existing?: () => DataSourceChoice[];
+  /** "Manage data sources" (notion-motion.md Round 38 §4). Without it there is no such row. */
+  manage?: ManageDataSources;
+}
+
+export interface ManageDataSources {
+  /** How many of this block's views show the source. */
+  viewCount: (id: string) => number;
+  /** Other databases a view of this block shows, under "Linked". */
+  linked: () => DataSourceChoice[];
+  /** "New data source", as the view menu runs it. The panel is closed first. */
+  add: () => void;
+  /** A new Table view of that database. The panel is closed first. */
+  link: (id: string) => void;
+  copyId: (id: string) => void;
 }
 
 export interface AutofillPanelSettings {
@@ -586,8 +600,18 @@ export class ViewSettingsPages {
         if (rows.length > sourceGroupAt) rows.splice(sourceGroupAt, 0, panelSeparator(), panelLabel(this.t('settingsDataSourceSettings')));
         const manageInCalendar = this.ctx.manageInCalendar;
 
+        const manage = sources?.manage;
+
         rows.push(
           panelSeparator(),
+          // r10-vs-root-r10.raw: Manage data sources sits right above Lock database.
+          ...(sources === undefined || manage === undefined ? [] : [panelRow({
+            label: this.t('settingsManageSources'),
+            testId: 'database-settings-manage-sources',
+            icon: IconDatabase,
+            opensPage: true,
+            onClick: () => panel.push(this.manageSources(sources, manage)),
+          })]),
           panelSwitch({
             label: this.t(this.ctx.linked?.() === true ? 'settingsLockViews' : 'settingsLockDatabase'),
             testId: 'database-settings-lock',
@@ -767,6 +791,123 @@ export class ViewSettingsPages {
           label: this.t('layoutLinkDataSourceSearch'),
           testId: 'database-source-search',
           // Only the list redraws, so the field keeps its caret.
+          onInput: (value) => {
+            state.query = value;
+            fill(panel);
+          },
+        });
+
+        fill(panel);
+
+        return [search, list];
+      },
+    };
+  }
+
+  // ─── Manage data sources (notion-motion.md Round 38 §4, r38-manage-sources.raw) ───
+
+  /**
+   * Source: this block's sources, then Add data source; Linked: other databases its views show,
+   * then Link existing data source. Notion's help row is a host link, so there is none.
+   */
+  private manageSources(sources: DataSourceSettings, manage: ManageDataSources): PanelPage {
+    return {
+      title: this.t('settingsManageSources'),
+      name: 'manage-sources',
+      returnFocus: 'database-settings-manage-sources',
+      build: (panel) => {
+        const act = (run: () => void): void => {
+          panel.close();
+          run();
+        };
+
+        return [
+          panelLabel(this.t('settingsSource')),
+          ...sources.list().map((choice) => this.manageSourceRow(panel, choice, manage)),
+          panelRow({
+            label: this.t('manageSourcesAdd'),
+            testId: 'database-manage-sources-add',
+            icon: IconPlus,
+            muted: true,
+            disabled: !this.shared,
+            onClick: () => act(manage.add),
+          }),
+          panelSeparator(),
+          panelLabel(this.t('manageSourcesLinked')),
+          ...manage.linked().map((choice) => this.manageSourceRow(panel, choice, manage)),
+          panelRow({
+            label: this.t('manageSourcesLink'),
+            testId: 'database-manage-sources-link',
+            icon: IconPlus,
+            muted: true,
+            disabled: !this.shared || (sources.existing?.() ?? []).length === 0,
+            onClick: () => panel.push(this.linkSourcePage(sources, manage)),
+          }),
+        ];
+      },
+    };
+  }
+
+  /** A source with its view count and a ⋯. What a click on the row itself does in Notion is unread, so it does nothing. */
+  private manageSourceRow(panel: DatabasePanel, choice: DataSourceChoice, manage: ManageDataSources): HTMLElement {
+    const wrap = document.createElement('div');
+    const more = document.createElement('button');
+
+    wrap.setAttribute('data-blok-database-manage-source', '');
+    more.type = 'button';
+    more.setAttribute('data-blok-database-manage-source-more', '');
+    more.setAttribute('data-blok-testid', `database-manage-source-more-${choice.id}`);
+    more.setAttribute('aria-label', this.t('manageSourcesActions'));
+    more.innerHTML = IconDotsHorizontal;
+    more.addEventListener('click', () => openFlyout(more, panel, 'database-manage-source-menu', MANAGE_SOURCE_MENU_WIDTH, (pick) => [
+      panelRow({
+        label: this.t('manageSourcesCopyId'),
+        testId: 'database-manage-source-copy-id',
+        icon: IconCopy,
+        onClick: () => pick(() => manage.copyId(choice.id)),
+      }),
+    ], { alignEnd: true }));
+    wrap.append(panelRow({
+      label: this.sourceName(choice),
+      testId: `database-manage-source-${choice.id}`,
+      icon: IconDatabase,
+      value: this.t('manageSourcesViews', { count: manage.viewCount(choice.id) }),
+      onClick: () => undefined,
+    }), more);
+
+    return wrap;
+  }
+
+  /** The page's other databases, searchable, as the Source picker lists them. */
+  private linkSourcePage(sources: DataSourceSettings, manage: ManageDataSources): PanelPage {
+    const state = { query: '' };
+    const list = document.createElement('div');
+    const fill = (panel: DatabasePanel): void => {
+      const query = state.query.trim().toLowerCase();
+
+      list.replaceChildren(...(sources.existing?.() ?? [])
+        .filter((choice) => this.sourceName(choice).toLowerCase().includes(query))
+        .map((choice) => panelRow({
+          label: this.sourceName(choice),
+          ...(choice.parent === undefined ? {} : { description: choice.parent }),
+          testId: `database-manage-link-option-${choice.id}`,
+          icon: IconDatabase,
+          onClick: () => {
+            panel.close();
+            manage.link(choice.id);
+          },
+        })));
+    };
+
+    return {
+      title: this.t('manageSourcesLink'),
+      returnFocus: 'database-manage-sources-link',
+      build: (panel) => {
+        const search = panelInput({
+          value: state.query,
+          placeholder: this.t('layoutLinkDataSourceSearch'),
+          label: this.t('layoutLinkDataSourceSearch'),
+          testId: 'database-manage-link-search',
           onInput: (value) => {
             state.query = value;
             fill(panel);
@@ -3585,6 +3726,8 @@ export const openFilterList = (anchor: HTMLElement, ctx: ViewSettingsContext, te
   return panel;
 };
 
+/** notion-motion.md Round 38 §4 (r38-manage-sources.raw): the data source ⋯ menu. */
+const MANAGE_SOURCE_MENU_WIDTH = 200;
 /** notion-motion.md Round 19 §1 (r19-adv-rulemore.raw, r19-adv-groupmore.raw): the rule and group ⋯ menus. */
 const RULE_MORE_WIDTH = 150.8;
 /** notion-motion.md Round 19 §1 (r19-adv-andor.raw). */

@@ -4750,6 +4750,27 @@ export class DatabaseTool implements BlockTool {
     return this.linkableSources().map((source) => ({ id: source.id, title: source.title, parent: source.parent, fits }));
   }
 
+  /** Manage data sources "Linked": the other databases this block's views show, in tab order. */
+  private linkedSources(): DataSourceChoice[] {
+    const shown = new Set(this.model.getTabViews().map((view) => view.dataSourceId));
+
+    return this.existingSources().filter((source) => shown.has(source.id));
+  }
+
+  /** Manage data sources "Link existing data source": a Table view of that database, selected. One undo removes it. */
+  private linkExistingSource(databaseId: string): void {
+    if (this.readOnly || this.linked || this.structureLocked() || !this.linkableSources().some((source) => source.id === databaseId)) return;
+    const view = this.model.addView(DATABASE_DEFAULT_TEXT.viewTypeTable, 'table');
+
+    this.model.updateView(view.id, { dataSourceId: databaseId });
+    this.inOneStep(() => this.block.dispatchChange());
+    void this.sync.syncCreateView(structuredClone({ ...view, dataSourceId: databaseId }));
+    this.mountRows();
+    this.switchView(view.id);
+    this.paintLinkedTitle();
+    this.controls.refresh();
+  }
+
   /** "Import CSV" from the panel: the new source takes the file's columns and rows. One undo empties it again. */
   private importCsvIntoSource(sourceId: string, text: string, targets?: CsvColumnTarget[], settings?: CsvImportSettings): void {
     const source = this.dashboardOwner(sourceId);
@@ -7007,6 +7028,13 @@ export class DatabaseTool implements BlockTool {
           current: () => data().dataId,
           pick: (id: string) => this.pickDataSource(id),
           existing: () => this.existingSources(),
+          manage: {
+            viewCount: (id: string) => this.model.getTabViews().filter((view) => (view.dataSourceId ?? this.dataId) === id).length,
+            linked: () => this.linkedSources(),
+            add: () => this.newDataSourceWithPanel(),
+            link: (id: string) => this.linkExistingSource(id),
+            copyId: (id: string) => void navigator.clipboard?.writeText(id).catch(() => undefined),
+          },
         },
       } : {}),
       newRow: () => {

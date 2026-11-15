@@ -15965,6 +15965,67 @@ input[data-blok-database-picker-search]:focus {
   line-height: 15px;
 }
 
+[data-blok-database-panel-page="manage-sources"] {
+  --blok-database-settings-row-gap: 1px;
+}
+
+[data-blok-database-panel-page="manage-sources"] > [data-blok-database-panel-section] {
+  padding-block: 13.3px 9.2px;
+}
+
+[data-blok-database-panel-page="manage-sources"] > [data-blok-database-panel-separator] + [data-blok-database-panel-section] {
+  padding-block-start: 12.3px;
+}
+
+[data-blok-database-panel-page="manage-sources"] > :is([data-blok-database-panel-row], [data-blok-database-manage-source]) + :is([data-blok-database-panel-row], [data-blok-database-manage-source]) {
+  margin-block-start: var(--blok-database-settings-row-gap);
+}
+
+[data-blok-database-panel-page="manage-sources"] > [data-blok-database-panel-separator] {
+  margin: calc(var(--blok-space-2) + var(--blok-database-settings-row-gap)) var(--blok-space-2) 0;
+}
+
+[data-blok-database-panel][data-docked][data-blok-database-panel-page="manage-sources"] [data-blok-database-panel-icon] {
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-manage-source] {
+  --blok-database-manage-source-more-size: 24px;
+  --blok-database-manage-source-more-inset: 2px;
+  position: relative;
+  flex: none;
+}
+
+[data-blok-database-manage-source] > [data-blok-database-panel-row] {
+  padding-inline-end: calc(var(--blok-database-manage-source-more-size) + var(--blok-database-manage-source-more-inset) + var(--blok-space-2));
+}
+
+[data-blok-database-manage-source-more] {
+  position: absolute;
+  inset-block-start: var(--blok-database-manage-source-more-inset);
+  inset-inline-end: var(--blok-database-manage-source-more-inset);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--blok-database-manage-source-more-size);
+  height: var(--blok-database-manage-source-more-size);
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-table-header-icon);
+  cursor: pointer;
+}
+
+[data-blok-database-manage-source-more]:hover {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-manage-source-more] svg {
+  width: 20px;
+  height: 20px;
+}
+
 [data-blok-database-panel-page="properties"] > [data-blok-database-panel-input] {
   margin-block: var(--blok-database-settings-gap) 0;
 }

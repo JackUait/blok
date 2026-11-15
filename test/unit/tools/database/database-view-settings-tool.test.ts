@@ -41,6 +41,8 @@ const createApi = (children: BlockAPI[]): API => ({
     delete: vi.fn(),
     getById: vi.fn(),
     getBlockIndex: vi.fn().mockReturnValue(0),
+    getBlocksCount: vi.fn().mockReturnValue(0),
+    getBlockByIndex: vi.fn(),
   },
   notifier: { show: vi.fn() },
   tools: { getBlockTools: vi.fn(() => []), getToolsConfig: vi.fn(() => ({ tools: undefined })) },

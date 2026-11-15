@@ -498,11 +498,13 @@ describe('code block header', () => {
     });
 
     /** notion.com/help/code-blocks : « at the top left of the code block ». */
-    it('lays the language out as plain text, not a bordered folder tab', () => {
-      expect(TAB_STYLES).not.toMatch(/\bborder\b/);
+    it('puts the language in the toolbar at the top right, behind a filet', () => {
+      expect(TAB_STYLES).not.toContain('border-b-0');
       expect(TAB_STYLES).not.toContain('bg-code-bg');
       expect(TAB_STYLES).not.toContain('rounded-t-');
-      expect(TAB_STYLES).toContain('px-4');
+      // Le filet qui sépare la langue des actions, dans la même pochette.
+      expect(TAB_STYLES).toContain('border-e');
+      expect(TAB_ROW_STYLES).toContain('justify-end');
     });
   });
 });

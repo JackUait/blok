@@ -120,15 +120,15 @@ export const COPY_LABEL_STYLES = 'hidden @min-[26rem]/code:inline';
  * language picker is open: the picker mounts on <body>, so opening it ends
  * hover and focus-within at once.
  */
-export const TAB_ROW_STYLES = 'flex items-end gap-2 min-w-0 opacity-0 group-hover/code:opacity-100 group-focus-within/code:opacity-100 group-has-[[aria-expanded=true]]/code:opacity-100 transition-opacity';
+export const TAB_ROW_STYLES = 'flex items-center justify-end gap-0 min-w-0 px-2 pt-2 opacity-0 group-hover/code:opacity-100 group-focus-within/code:opacity-100 group-has-[[aria-expanded=true]]/code:opacity-100 transition-opacity';
 /**
- * Notion puts the language name "at the top left of the code block" — plain
- * text, not a folder tab stitched onto the card's edge. `px-4` lines it up
- * with the code below it.
+ * The language sits in the toolbar at the TOP RIGHT, a filet separating it
+ * from the actions — what the product does. (The help page still says "top
+ * left"; it is stale, and trusting it over the product cost a round.)
  */
 export const TAB_STYLES = [
-  'relative z-1 flex min-w-0 max-w-[75%] items-center gap-0.5 px-4 pb-1',
-  'text-xs text-gray-text',
+  'relative z-1 flex min-w-0 max-w-[75%] items-center gap-0.5 ps-2 pe-1.5 py-0.5',
+  'border-e border-border-secondary text-xs text-gray-text',
   '[--blok-radius-inner:var(--blok-radius-control)]',
 ].join(' ');
 /**

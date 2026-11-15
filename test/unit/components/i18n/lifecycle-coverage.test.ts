@@ -299,7 +299,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2232 + 146 + 591 + 11 closure for all 2980 keys', () => {
+  it('rebuilds a disjoint 2233 + 146 + 590 + 11 closure for all 2980 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -571,7 +571,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: ID's "?" (tools.database.propertyTypeHelpUniqueId), read in Round 28.
       // +3: the table's Load more ⋯ calls tableShowOnFirstLoad (new), settingsLoadLimit and settingsLoadLimitPages by literal.
       // -2 / +1: the row menu footer's rowLastEditedBy and rowWordCount went catalog-only; rowCounts joins its plurals.
-      'executable-literal': 2232,
+      // +1: the view tab menu's Source row calls tools.database.settingsSource by literal.
+      'executable-literal': 2233,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -685,7 +686,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: a Feed's Layout page "Wrap properties" (tools.database.settingsWrapProperties), through the panel's t().
       // +8: Property visibility's "Hidden in <layout>" heads (settingsHiddenIn*, settingsHiddenProperties), picked from a map.
       // +4: the row menu footer's tools.database.rowWords_one/_other and rowCharacters_one/_other, via a count.
-      'registered-namespace-compatible': 591,
+      // -1: tools.database.settingsSource is now called by literal (see executable-literal).
+      'registered-namespace-compatible': 590,
       // +1: Settings › Group's pin button names itself with groupPin through the panel's tools.database. prefix.
       // +1: tools.database.galleryFitImage, above. +1: tools.database.timelineEndBy, above.
       // +2: tools.database.rowLastEditedBy and rowWordCount, above.

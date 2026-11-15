@@ -110,14 +110,8 @@ export const LANGUAGE_DOT_FALLBACK = 'var(--blok-gray-text)';
  * tab row controls, which a static view never renders.
  */
 export const WRAPPER_STYLES = ['group/code', '@container/code', ...CODE_WRAPPER_CLASSES].join(' ');
-/**
- * The start corner goes square only while the tab is there to sit on it. At
- * rest the card is a plain rounded panel, as Notion's is.
- */
-export const CARD_STYLES = [
-  ...CODE_CARD_CLASSES,
-  'group-hover/code:rounded-ss-none group-focus-within/code:rounded-ss-none group-has-[[aria-expanded=true]]/code:rounded-ss-none',
-].join(' ');
+/** No tab sits on the card any more, so no corner is ever squared off. */
+export const CARD_STYLES = [...CODE_CARD_CLASSES].join(' ');
 /** Below this block width the Copy button keeps only its icon, so the tab row never clips. */
 export const COPY_LABEL_STYLES = 'hidden @min-[26rem]/code:inline';
 /**
@@ -128,14 +122,14 @@ export const COPY_LABEL_STYLES = 'hidden @min-[26rem]/code:inline';
  */
 export const TAB_ROW_STYLES = 'flex items-end gap-2 min-w-0 opacity-0 group-hover/code:opacity-100 group-focus-within/code:opacity-100 group-has-[[aria-expanded=true]]/code:opacity-100 transition-opacity';
 /**
- * A folder tab on the card's top edge. `-mb-px` lays its open bottom over the
- * card's top border, so tab and card read as one shape. Publishes the corner
- * radius for its controls: the block radius minus its 1px border and `pt-1`.
+ * Notion puts the language name "at the top left of the code block" — plain
+ * text, not a folder tab stitched onto the card's edge. `px-4` lines it up
+ * with the code below it.
  */
 export const TAB_STYLES = [
-  'relative z-1 -mb-px flex min-w-0 max-w-[75%] items-center gap-0.5 px-1 pt-1 pb-0.75',
-  'border border-b-0 border-border-secondary bg-code-bg rounded-t-(--blok-radius-block) text-xs text-gray-text',
-  '[--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-block)-var(--blok-border-width-hairline)-var(--blok-space-1)))]',
+  'relative z-1 flex min-w-0 max-w-[75%] items-center gap-0.5 px-4 pb-1',
+  'text-xs text-gray-text',
+  '[--blok-radius-inner:var(--blok-radius-control)]',
 ].join(' ');
 /**
  * An empty filename takes no room at rest; it shows while the block is hovered or focused.

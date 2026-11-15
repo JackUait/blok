@@ -1294,6 +1294,12 @@
 /**
  * During drag the source card stays in place with Notion's drag fill.
  */
+/* notion-motion.md Round 40 §2: the cursor reads `grabbing` while a card is held. */
+[data-blok-database-dragging],
+[data-blok-database-dragging] * {
+  cursor: grabbing;
+}
+
 [data-blok-database-card][data-blok-database-drag-source] {
   background-color: var(--blok-database-card-drag-source-bg, var(--_blok-group-card-hover, var(--blok-database-card-bg-hover)));
 }
@@ -11023,6 +11029,38 @@ button[data-blok-database-table-group-count]:hover {
   background-image: linear-gradient(var(--blok-icon-active-bg), var(--blok-icon-active-bg));
 }
 
+/* notion-motion.md Round 12 and Round 40 §2: a selected card keeps its fill under the gray halo, 2px in. */
+[data-blok-database-card][data-blok-database-row-selected] {
+  background-image: none;
+}
+
+/* A redraw re-creates the card: only the landed animation fades the halo in. */
+[data-blok-database-card][data-blok-database-row-selected]::after {
+  opacity: 1;
+  transition: none;
+}
+
+/* Round 40 §2–3: a dropped card or event's halo fades in. */
+[data-blok-database-row-landed]::after {
+  animation: blok-database-landed 200ms ease;
+}
+
+@keyframes blok-database-landed {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-database-row-landed]::after {
+    animation: none;
+  }
+
+  [data-blok-database-card]::after {
+    transition: none;
+  }
+}
+
 /* One button per property: its type glyph and name, sized to fit (research/08, feel/findings-table T13). */
 [data-blok-database-table-selection-bar] [data-blok-database-table-selection-property] {
   width: auto;
@@ -14724,6 +14762,17 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   background-color: var(--blok-icon-active-bg);
 }
 
+/* notion-motion.md Round 40 §3: the drop day's tint fades out. Notion's is blue; Blok's stays gray. */
+[data-blok-database-calendar-day][data-drop-leaving] {
+  animation: blok-database-calendar-drop-out 200ms ease;
+}
+
+@keyframes blok-database-calendar-drop-out {
+  from {
+    background-color: var(--blok-icon-active-bg);
+  }
+}
+
 /* notion-motion.md Round 32 §3 Calendar: a number is its text, 10px in ("2" ends at 726.4). */
 [data-blok-database-calendar-day-number] {
   position: absolute;
@@ -14978,8 +15027,9 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   inset-inline-end: -6px;
 }
 
+/* notion-motion.md Round 40 §3: `default` over the day while an event is held. */
 [data-blok-database-calendar][data-dragging="move"] {
-  cursor: grabbing;
+  cursor: default;
 }
 
 [data-blok-database-calendar][data-dragging="start"],
@@ -14993,6 +15043,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   [data-blok-database-calendar-day-number],
   [data-blok-database-calendar-event] {
     transition: none;
+  }
+
+  [data-blok-database-calendar-day][data-drop-leaving] {
+    animation: none;
   }
 }
 

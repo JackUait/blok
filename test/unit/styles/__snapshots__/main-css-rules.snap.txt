@@ -5670,6 +5670,10 @@ span[data-blok-slash-search] {
   outline-offset: -1px;
 }
 
+[data-blok-database-dragging], [data-blok-database-dragging] * {
+  cursor: grabbing;
+}
+
 [data-blok-database-card][data-blok-database-drag-source] {
   background-color: var(--blok-database-card-drag-source-bg, var(--_blok-group-card-hover, var(--blok-database-card-bg-hover)));
 }
@@ -14197,6 +14201,27 @@ button[data-blok-database-table-group-count]:hover {
   background-image: linear-gradient(var(--blok-icon-active-bg), var(--blok-icon-active-bg));
 }
 
+[data-blok-database-card][data-blok-database-row-selected] {
+  background-image: none;
+}
+
+[data-blok-database-card][data-blok-database-row-selected]::after {
+  opacity: 1;
+  transition: none;
+}
+
+[data-blok-database-row-landed]::after {
+  animation: blok-database-landed 200ms ease;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-row-landed]::after {
+  animation: none;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-card]::after {
+  transition: none;
+}
+
 [data-blok-database-table-selection-bar] [data-blok-database-table-selection-property] {
   width: auto;
   gap: var(--blok-space-1-5);
@@ -17620,6 +17645,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   background-color: var(--blok-icon-active-bg);
 }
 
+[data-blok-database-calendar-day][data-drop-leaving] {
+  animation: blok-database-calendar-drop-out 200ms ease;
+}
+
 [data-blok-database-calendar-day-number] {
   position: absolute;
   inset-block-start: 4px;
@@ -17860,7 +17889,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 [data-blok-database-calendar][data-dragging="move"] {
-  cursor: grabbing;
+  cursor: default;
 }
 
 [data-blok-database-calendar][data-dragging="start"], [data-blok-database-calendar][data-dragging="end"] {
@@ -17869,6 +17898,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [@media (prefers-reduced-motion: reduce)] [data-blok-database-calendar-nav] button, [data-blok-database-calendar-add], [data-blok-database-calendar-day-number], [data-blok-database-calendar-event] {
   transition: none;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-calendar-day][data-drop-leaving] {
+  animation: none;
 }
 
 [data-blok-database-timeline] {

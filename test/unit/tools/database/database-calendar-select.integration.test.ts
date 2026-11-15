@@ -156,6 +156,28 @@ describe('DatabaseTool — calendar event selection (research/22 §1)', () => {
     expect(open).not.toHaveBeenCalled();
   });
 
+  // notion-motion.md Round 40 §3: the moved event is selected and its halo fades in; the next draw fades the day's tint.
+  it('a moved event lands selected, and its new day fades its tint out', () => {
+    const { el, tool } = buildTool(doc(), {}, calendarData());
+    const handlers = (tool as unknown as { view: { options: { handlers: { setDate: (rowId: string, value: string, day?: string) => void } } } }).view.options.handlers;
+
+    handlers.setDate('delta', '2026-10-22', '2026-10-22');
+
+    expect(selected(el)).toEqual(['delta']);
+    expect(eventOf(el, 'delta').hasAttribute('data-blok-database-row-landed')).toBe(true);
+    expect(dayCell(el, '2026-10-22').hasAttribute('data-drop-leaving')).toBe(true);
+  });
+
+  it('a resized event is not selected and no day fades', () => {
+    const { el, tool } = buildTool(doc(), {}, calendarData());
+    const handlers = (tool as unknown as { view: { options: { handlers: { setDate: (rowId: string, value: string) => void } } } }).view.options.handlers;
+
+    handlers.setDate('delta', '2026-10-20/2026-10-22');
+
+    expect(selected(el)).toEqual([]);
+    expect(el.querySelector('[data-drop-leaving]')).toBeNull();
+  });
+
   it('a plain click opens the row and selects nothing', () => {
     const { el, tool } = buildTool(doc(), {}, calendarData());
     const open = vi.spyOn(tool as unknown as Opener, 'handleRowClick');

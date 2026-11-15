@@ -3,7 +3,7 @@ import type { CompileResult, EvaluationBudget, FormulaErrorCode, FormulaErrorPar
 import { propertyFormulaValue } from './formula/properties';
 import type { TextContext } from './formula/values';
 import { isDate, isRef } from './formula/types';
-import { MIXED_FORMULA, PAGE_LIST_ROLLUP, readPropertyValue } from './value-helpers';
+import { MIXED_FORMULA, NUMBER_LIST_ROLLUP, PAGE_LIST_ROLLUP, readPropertyValue } from './value-helpers';
 import { relationIdsOf } from './relation-values';
 import { computeRollup, isNumberList, isPageList, rollupHasFormat, rollupResultType } from './rollup';
 import type { DatabaseRow, NumberDisplay, PropertyDefinition, PropertyValue } from './types';
@@ -203,7 +203,7 @@ export class ComputedProperties {
       const shape = rollupResultType(settings.function, target);
 
       // A Show original or Show unique of a Number marks itself by carrying `number` (notion-spec-2 §13, §14.5); other lists drop any left behind.
-      if (isNumberList(settings.function, target)) return { ...property, ...shape, number: property.number ?? {} };
+      if (isNumberList(settings.function, target)) return Object.assign({ ...property, ...shape, number: property.number ?? {} }, { [NUMBER_LIST_ROLLUP]: true });
       if (shape.type !== 'number') {
         const { number: _stale, ...rest } = property;
         const via = isPageList(settings.function, target) ? this.schema.find((p) => p.id === settings.relationPropertyId)?.relation : undefined;

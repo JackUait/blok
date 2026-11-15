@@ -85,6 +85,14 @@ export const PAGE_LIST_ROLLUP = Symbol('page-list rollup');
 
 export const isPageListRollup = (property: PropertyDefinition): boolean => PAGE_LIST_ROLLUP in property;
 
+/**
+ * Marks the shown property of a Show original / Show unique rollup of a Number (computed-properties.ts).
+ * It shows as text, so a colour rule could not offer it number operators without it.
+ */
+export const NUMBER_LIST_ROLLUP = Symbol('number-list rollup');
+
+export const isNumberListRollup = (property: PropertyDefinition): boolean => NUMBER_LIST_ROLLUP in property;
+
 // ─── Status ───
 
 const byPosition = <T extends { position: string }>(a: T, b: T): number => {

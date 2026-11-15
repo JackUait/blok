@@ -8,7 +8,7 @@ import { COLOR_RULE_TYPES } from '../../../../src/tools/database/view-data';
 import { IconPin, IconPinFilled, IconTable, IconViewBoard } from '../../../../src/components/icons';
 import { PopoverItemType } from '../../../../src/components/utils/popover/components/popover-item';
 import type { PopoverItemParams } from '../../../../types/utils/popover/popover-item';
-import { PAGE_LIST_ROLLUP } from '../../../../src/shared/database/value-helpers';
+import { NUMBER_LIST_ROLLUP, PAGE_LIST_ROLLUP } from '../../../../src/shared/database/value-helpers';
 
 const schema: PropertyDefinition[] = [
   { id: 'title', name: 'Name', type: 'title', position: 'a0' },
@@ -2615,6 +2615,51 @@ describe('view settings panel', () => {
       expect(add(h, 'fn')).toMatchObject({ operator: 'equals', value: null, color: 'green' });
       expect(q(`database-color-value-${h.state.view.colorRules?.[0]?.id ?? ''}`)).toBeInstanceOf(HTMLInputElement);
       expect(add(h, 'num')).toMatchObject({ operator: 'is_not_empty' });
+    });
+
+    // notion-motion.md Round 22 §3, §4: a Number rollup shown as is reads "Rollup any ⌄ = ⌄" with a "=" input.
+    it('starts a Number Show original rollup on "any" and "=", with the number operators', () => {
+      const h = open();
+      const hours = Object.assign(
+        { id: 'hrs', name: 'Hours', type: 'text', position: 'c1', number: {}, rollup: { relationPropertyId: 'rel', targetPropertyId: 'n', function: 'show_original' } } as PropertyDefinition,
+        { [NUMBER_LIST_ROLLUP]: true }
+      );
+
+      h.ctx.schema = () => [...typed, hours];
+      h.ctx.storedType = (id) => (id === 'hrs' ? 'rollup' : typed.find((p) => p.id === id)?.type);
+
+      const rule = add(h, 'hrs');
+
+      expect(rule).toMatchObject({ operator: 'any:equals', value: null, color: 'green' });
+      expect(q(`database-color-quantifier-${rule.id}`)?.querySelector('[data-blok-database-chip-operator-label]')?.textContent).toBe('tools.database.filteroperator.any');
+      expect(q(`database-color-operator-${rule.id}`)?.querySelector('[data-blok-database-chip-operator-label]')?.textContent).toBe('tools.database.filteroperator.numberequals');
+      expect(q(`database-color-rule-${rule.id}`)?.querySelector('[data-blok-database-color-rule-prefix]')?.textContent).toBe('=');
+      expect(q(`database-color-value-${rule.id}`)).toBeInstanceOf(HTMLInputElement);
+
+      click(`database-color-operator-${rule.id}`);
+      expect([...document.querySelectorAll('[data-blok-testid="database-filter-operator-picker"] [data-blok-testid^="database-filter-op-"]')].map((el) => el.getAttribute('data-blok-testid')))
+        .toEqual(['equals', 'does_not_equal', 'greater_than', 'less_than', 'greater_than_or_equal_to', 'less_than_or_equal_to', 'is_empty', 'is_not_empty'].map((op) => `database-filter-op-${op}`));
+      click('database-filter-op-greater_than');
+      expect(h.state.view.colorRules?.[0]).toMatchObject({ operator: 'any:greater_than' });
+
+      click(`database-color-quantifier-${rule.id}`);
+      click('database-filter-quantifier-every');
+      expect(h.state.view.colorRules?.[0]).toMatchObject({ operator: 'every:greater_than' });
+    });
+
+    it('gives a Number rollup rule saved without a quantifier "any" once a number operator is picked', () => {
+      const h = harness({ colorRules: [{ id: 'c1', propertyId: 'hrs', operator: 'is_not_empty', value: null, color: 'green' }] });
+      const hours = Object.assign(
+        { id: 'hrs', name: 'Hours', type: 'text', position: 'c1', number: {}, rollup: { relationPropertyId: 'rel', targetPropertyId: 'n', function: 'show_original' } } as PropertyDefinition,
+        { [NUMBER_LIST_ROLLUP]: true }
+      );
+
+      h.ctx.schema = () => [...typed, hours];
+      h.open();
+      click('database-settings-color');
+      click('database-color-operator-c1');
+      click('database-filter-op-greater_than');
+      expect(h.state.view.colorRules?.[0]).toMatchObject({ operator: 'any:greater_than' });
     });
 
     it('never starts a rule on an operator its own flyout cannot offer', () => {

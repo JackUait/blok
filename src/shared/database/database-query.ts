@@ -10,7 +10,7 @@ import type {
   SortConfig,
 } from './types';
 import { parseDateValue } from './date-value';
-import { filesOf, MIXED_FORMULA, orderedStatusOptions, personIdsOf, readPropertyValue, statusGroupsOf } from './value-helpers';
+import { filesOf, isNumberListRollup, MIXED_FORMULA, orderedStatusOptions, personIdsOf, readPropertyValue, statusGroupsOf } from './value-helpers';
 import { RELATIVE_DATE_OPERATORS, relativeWindow, resolveDay } from './relative-dates';
 import { scopeSubItems } from './sub-items';
 import { isEmptyObjectValue, isOutputData, placeText } from './tier3-values';
@@ -407,6 +407,22 @@ const matchQuantifiedText = (value: PropertyValue | undefined, quantifier: strin
   return hits.length > 0 && hits.every(Boolean);
 };
 
+/**
+ * `any:equals` on a Number Show original rollup (notion-motion.md Round 22 §3): each number of its
+ * ", "-joined value is matched as a Number. Every on an empty list is false, as for the titles.
+ */
+const matchQuantifiedNumber = (value: PropertyValue | undefined, quantifier: string, operator: string, target: PropertyValue): boolean | undefined => {
+  if (!(NUMBER_OPERATORS as readonly string[]).includes(operator)) return undefined;
+  if (operator !== 'is_empty' && operator !== 'is_not_empty' && toNumber(target) === undefined) return undefined;
+  const items = typeof value === 'string' ? value.split(', ').filter((item) => item.trim() !== '') : [];
+  const hits = items.map((item) => matchNumber(item, operator, target) === true);
+
+  if (quantifier === 'any') return hits.some(Boolean);
+  if (quantifier === 'none') return !hits.some(Boolean);
+
+  return hits.length > 0 && hits.every(Boolean);
+};
+
 const PERSON_TYPES: readonly PropertyType[] = ['person', 'createdBy', 'lastEditedBy'];
 
 /** Stands in for "Me" when nobody is signed in: no person has this id. */
@@ -471,6 +487,11 @@ export const matchCondition = (
     return (QUANTIFIERS as readonly string[]).includes(condition.operator) || condition.operator === 'is_empty' || condition.operator === 'is_not_empty'
       ? matchQuantified(value, condition.operator, condition.value)
       : undefined;
+  }
+  const quantifiedNumber = property !== undefined && isNumberListRollup(property) ? QUANTIFIED_TEXT.exec(condition.operator) : null;
+
+  if (property !== undefined && quantifiedNumber !== null) {
+    return matchQuantifiedNumber(readPropertyValue(row, property), quantifiedNumber[1], quantifiedNumber[2], condition.value);
   }
   // "This page" is a relation tab's only filter: with its property gone or no longer a relation it
   // must show no row, not every row.

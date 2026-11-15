@@ -23,6 +23,7 @@ import {
   filterPillParts,
   filterValueText,
   longDay,
+  isQuantifiedNumber,
   isQuantifiedText,
   joinOperator,
   keepLead,
@@ -98,6 +99,7 @@ import { OPERATOR_FLYOUT_WIDTH, dateRuleControls, filterChip, openFilterChip, op
 import { VIEW_ICONS } from './database-tab-bar';
 import type { AutomationSettings } from './database-automations-panel';
 import { offersAutofill } from './property-values';
+import { isNumberListRollup } from '../../shared/database/value-helpers';
 import { createOptionPill } from './cells/display';
 import { MAP_HEIGHTS, resolveMapBy, resolveMapHeight } from './database-map-view';
 
@@ -3088,12 +3090,12 @@ export class ViewSettingsPages {
       } else if (property.type === 'date') {
         lead.append(headerButton(`database-color-side-${rule.id}`, this.t(part === 'end' ? 'dateEnd' : 'dateStart'), 'database-filter-side-picker', (pick) => (['start', 'end'] as const).map((side) =>
           choice(`database-filter-side-${side}`, this.t(side === 'end' ? 'dateEnd' : 'dateStart'), (part === 'end') === (side === 'end'), { operator: joinOperator(side === 'end' ? 'end' : undefined, inner) }, pick))));
-      } else if (isQuantifiedText(property, rule.operator)) {
+      } else if (isQuantifiedText(property, rule.operator) || isQuantifiedNumber(property, rule.operator)) {
         lead.append(headerButton(`database-color-quantifier-${rule.id}`, this.ctx.i18n.t(`tools.database.filterOperator.${part ?? 'any'}`).toLocaleLowerCase(), 'database-filter-quantifier-picker', (pick) => quantifierChoices().map((q) =>
           choice(`database-filter-quantifier-${q.operator}`, this.ctx.i18n.t(q.labelKey), (part ?? 'any') === q.operator, { operator: joinOperator(q.operator, inner) }, pick))));
       }
       lead.append(headerButton(`database-color-operator-${rule.id}`, (opKey === undefined ? rule.operator : this.ctx.i18n.t(opKey)).toLocaleLowerCase(), 'database-filter-operator-picker', (pick) => colorRuleOperatorChoices(property, rule.operator).map((c) =>
-        choice(`database-filter-op-${c.operator}`, this.ctx.i18n.t(c.labelKey), menuOperatorOf(rule.operator) === c.operator, operatorPick(property, c.operator, rule), pick))));
+        choice(`database-filter-op-${c.operator}`, this.ctx.i18n.t(c.labelKey), menuOperatorOf(rule.operator) === c.operator, quantified(property, operatorPick(property, c.operator, rule)), pick))));
       if (property.type !== 'date') lead.prepend(name());
     }
     trash.type = 'button';
@@ -3239,7 +3241,7 @@ export class ViewSettingsPages {
         const schema = this.ctx.schema();
         const disabled = !this.shared;
         const cards = rules().map((rule) => {
-          const property = schema.find((p) => p.id === rule.propertyId);
+          const property = asColorRuleProperty(schema.find((p) => p.id === rule.propertyId));
           const card = document.createElement('div');
 
           card.setAttribute('data-blok-database-color-rule', '');
@@ -3289,7 +3291,7 @@ export class ViewSettingsPages {
           icon: IconPlus,
           disabled,
           onClick: () => openFlyout(add, panel, 'database-color-property-picker', COLOR_PROPERTY_FLYOUT_WIDTH, (pick) => this.propertyPicker(queryState(), COLOR_RULE_TYPES, (property) => pick(() => {
-            write([...rules(), { id: nanoid(), propertyId: property.id, ...newColorRule(property.type, this.ctx.storedType?.(property.id)) }]);
+            write([...rules(), { id: nanoid(), propertyId: property.id, ...newColorRule(property, this.ctx.storedType?.(property.id)) }]);
             panel.refresh();
           })), { gap: COLOR_PROPERTY_FLYOUT_GAP, flip: true }),
         }), cards.length === 0 ? 'data-blok-database-color-new' : 'data-blok-database-color-add-another');
@@ -3370,12 +3372,16 @@ const GREEN_RULE_TYPES: readonly PropertyType[] = [
 ];
 
 /**
- * `type` is the shown one: a formula comes as its result type. Round 22 §3: a Number formula starts on "="
- * with its input. A Number rollup (Sum and the like) is unmeasured and keeps "is not empty".
+ * `property` is the shown one: a formula comes as its result type. Round 22 §3: a Number formula starts on "="
+ * with its input, and a Number Show original rollup on "any" and "=". A Number rollup (Sum and the like) is
+ * unmeasured and keeps "is not empty".
  */
-const newColorRule = (type: PropertyType, storedType: PropertyType | undefined): Pick<ColorRule, 'operator' | 'value' | 'color'> => {
-  const plain = GREEN_RULE_TYPES.includes(type) ? 'green' : 'gray';
+const newColorRule = (property: PropertyDefinition, storedType: PropertyType | undefined): Pick<ColorRule, 'operator' | 'value' | 'color'> => {
+  const { type } = property;
+  const plain = GREEN_RULE_TYPES.includes(type) || isNumberListRollup(property) ? 'green' : 'gray';
   const numberFormula = type === 'number' && storedType === 'formula';
+
+  if (isNumberListRollup(property)) return { operator: 'any:equals', value: null, color: plain };
 
   return {
     operator: type === 'checkbox' || numberFormula ? 'equals' : 'is_not_empty',
@@ -3383,6 +3389,14 @@ const newColorRule = (type: PropertyType, storedType: PropertyType | undefined):
     color: MATCH_OPTION_TYPES.includes(type) ? MATCH_OPTION_COLOR : plain,
   };
 };
+
+/** A Number rollup rule saved before its quantifier (a bare `is_not_empty`) takes "any" with its next operator: the engine reads only the quantified form. */
+const quantified = (property: PropertyDefinition, change: Pick<FilterConfig, 'operator' | 'value'>): Pick<FilterConfig, 'operator' | 'value'> =>
+  (isNumberListRollup(property) && splitOperator(change.operator).lead === undefined ? { ...change, operator: joinOperator('any', change.operator) } : change);
+
+/** A colour rule reads a Number Show original rollup as a Number: its operators, its "=" box (Round 22 §3, §4). */
+const asColorRuleProperty = (property: PropertyDefinition | undefined): PropertyDefinition | undefined =>
+  (property !== undefined && isNumberListRollup(property) ? { ...property, type: 'number' } : property);
 
 /** notion-motion.md Round 22 §4 (r22-cc-num-*-cc.raw): a Number value box leads with its operator's symbol. */
 const COMPARE_SYMBOLS: Partial<Record<string, string>> = {

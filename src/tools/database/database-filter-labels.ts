@@ -2,7 +2,7 @@ import { nanoid } from 'nanoid';
 import { RELATIVE_DATE_OPERATORS, RELATIVE_DATE_VALUES, parseRelativeSpan } from './relative-dates';
 import type { RelativeDateUnit } from './relative-dates';
 import { ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from './database-query';
-import { isPageListRollup, statusGroupOf } from '../../shared/database/value-helpers';
+import { isNumberListRollup, isPageListRollup, statusGroupOf } from '../../shared/database/value-helpers';
 import { formatDatePart, formatShortDatePart, resolveLocale, toLocalDate } from './cells/date-format';
 import type { FilterConfig, PropertyDefinition, PropertyType, SortConfig } from './types';
 
@@ -122,6 +122,13 @@ export const isQuantifiedText = (property: PropertyDefinition, operator: string)
   const { lead } = splitOperator(operator);
 
   return isPageListRollup(property) && lead !== undefined && lead !== 'end';
+};
+
+/** notion-motion.md Round 22 §3: a Number rollup shown as is leads with a quantifier, then a number operator. */
+export const isQuantifiedNumber = (property: PropertyDefinition, operator: string): boolean => {
+  const { lead } = splitOperator(operator);
+
+  return isNumberListRollup(property) && lead !== undefined && lead !== 'end';
 };
 
 /** `next` with the lead part `current` carries, unless `next` brings its own. */

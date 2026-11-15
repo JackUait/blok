@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ComputedProperties } from '../../../../src/tools/database/computed-properties';
 import type { DatabaseSource } from '../../../../src/tools/database/computed-properties';
 import { readPropertyValue } from '../../../../src/tools/database/property-values';
-import { isPageListRollup } from '../../../../src/shared/database/value-helpers';
-import { FILTER_OPERATORS, rowMatchesFilters, rowMatchesSearch, sortRows } from '../../../../src/tools/database/database-query';
+import { isNumberListRollup, isPageListRollup } from '../../../../src/shared/database/value-helpers';
+import { FILTER_OPERATORS, matchCondition, rowMatchesFilters, rowMatchesSearch, sortRows } from '../../../../src/tools/database/database-query';
 import { calculationItems } from '../../../../src/tools/database/database-table-menus';
 import type { DatabaseRow, PropertyDefinition, PropertyValue } from '../../../../src/tools/database/types';
 
@@ -408,6 +408,37 @@ describe('ComputedProperties', () => {
       // No text yet: the filter hides nothing.
       expect(filtered('any:contains', '')).toEqual(['p1', 'p2', 'p3']);
       expect(filtered('most:contains', 'design')).toEqual(['p1', 'p2', 'p3']);
+    });
+
+    // notion-motion.md Round 22 §3: a Number rollup shown as is takes "any ⌄" and the number operators.
+    it('matches a Number Show original rollup with any, none and every over its numbers', () => {
+      const all = rollup('all', 'tasks', 'hours', 'show_original');
+      const sum = rollup('sum', 'tasks', 'hours', 'sum');
+      const schema = [title, tasks, all, sum];
+      const engine = new ComputedProperties('db');
+      const tasksSource: DatabaseSource = {
+        schema: otherSchema,
+        rows: [row('t1', { title: 'Design', hours: 2 }), row('t2', { title: 'Build', hours: 5 })],
+      };
+      const rows = engine.apply(schema, [
+        row('p1', { title: 'One', tasks: [{ id: 't1' }, { id: 't2' }] }),
+        row('p2', { title: 'Two', tasks: [{ id: 't2' }] }),
+        row('p3', { title: 'Three' }),
+      ], { databaseId: 'db', now: NOW, resolveDatabase: (id) => (id === 'db-tasks' ? tasksSource : undefined) });
+      const shown = schema.map((p) => engine.valueProperty(p));
+      const filtered = (operator: string, value: PropertyValue): string[] =>
+        rows.filter((r) => matchCondition(r, { propertyId: 'all', operator, value }, shown) === true).map((r) => r.id);
+
+      expect(filtered('any:equals', 2)).toEqual(['p1']);
+      expect(filtered('any:equals', 5)).toEqual(['p1', 'p2']);
+      expect(filtered('none:equals', 2)).toEqual(['p2', 'p3']);
+      expect(filtered('every:greater_than', 3)).toEqual(['p2']);
+      expect(filtered('any:less_than_or_equal_to', 2)).toEqual(['p1']);
+      expect(filtered('any:is_not_empty', null)).toEqual(['p1', 'p2']);
+      expect(isNumberListRollup(shown[2])).toBe(true);
+      expect(isNumberListRollup(shown[3])).toBe(false);
+      // No number yet: the rule reads nothing.
+      expect(rows.map((r) => matchCondition(r, { propertyId: 'all', operator: 'any:equals', value: null }, shown))).toEqual([undefined, undefined, undefined]);
     });
 
     it('marks only a rollup of the Name as a page list', () => {

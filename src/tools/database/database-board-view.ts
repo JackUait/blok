@@ -857,6 +857,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     const actions = document.createElement('div');
 
     actions.setAttribute('data-blok-database-column-actions', '');
+    actions.toggleAttribute('data-status', this.isStatusBoard);
 
     const newPage = document.createElement('button');
 

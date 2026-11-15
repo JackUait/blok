@@ -1725,6 +1725,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R61_BYTES = 1400;
     // Lane r58: Round 35 column menu name field, templates description, select chip ×, group ⋯, tab menu Source row. Net database.css growth against origin/main.
     const DATABASE_R58_BYTES = 2311;
+    // Lane r63: Round 33 select filter field and option offset, Round 28 status board ⋯ and + gray, Round 35 group menu first-row fill. Net database.css growth against origin/main.
+    const DATABASE_R63_BYTES = 666;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2259,6 +2261,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R60_BYTES
       + DATABASE_R61_BYTES
       + DATABASE_R58_BYTES
+      + DATABASE_R63_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

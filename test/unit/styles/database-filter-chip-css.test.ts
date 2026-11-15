@@ -237,6 +237,13 @@ describe('select filter option rows', () => {
   const options = '[data-blok-database-chip-options]';
   const box = `${options} [data-blok-database-checkbox]`;
 
+  // notion-motion.md Round 33 §2 (r33-filter-multi-rest.raw, r33-filter-select-rest.raw): the field is 236 wide at x+12,
+  // and the first option starts at y+77, 16 under the field. The panel's own 4px padding makes the rest.
+  it('sets the field 12px in and the options 16px under it', () => {
+    expect(declared('[data-blok-database-chip-tokens]', 'margin-inline')).toEqual(['var(--blok-space-2)']);
+    expect(declared('[data-blok-database-chip-tokens]', 'margin-block-end')).toEqual(['var(--blok-space-4)']);
+  });
+
   it('stacks the options 1px apart', () => {
     expect(declared(options, 'gap')).toEqual(['var(--blok-space-0-25)']);
   });

@@ -9900,7 +9900,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** `owner` keeps `data-popover-open` while the menu is up, so its hover-only buttons stay shown. */
-  private showGroupPopover(anchor: HTMLElement, items: ReturnType<typeof groupMenuItems>, owner?: HTMLElement, layout: { minWidth?: string; scopeElement?: HTMLElement; class?: string; offset?: number } = {}): void {
+  private showGroupPopover(anchor: HTMLElement, items: ReturnType<typeof groupMenuItems>, owner?: HTMLElement, layout: { minWidth?: string; scopeElement?: HTMLElement; class?: string; offset?: number; highlight?: string } = {}): void {
     this.groupMenuPopover?.destroy();
 
     const popover = new PopoverDesktop({
@@ -9928,6 +9928,19 @@ export class DatabaseTool implements BlockTool {
     });
     this.groupMenuPopover = popover;
     popover.show();
+    if (layout.highlight !== undefined) {
+      popover.focusItemByName(layout.highlight);
+      // The fill follows the pointer, so one row is filled at a time. pointermove, not mouseover:
+      // a menu opening under a resting pointer keeps the first row.
+      popover.getElement().addEventListener('pointermove', (event) => {
+        const row = event.target instanceof Element ? event.target.closest(`[${DATA_ATTR.itemName}]`) : null;
+        const name = row?.getAttribute(DATA_ATTR.itemName);
+
+        if (row !== null && row !== undefined && name !== null && name !== undefined && row.getAttribute(DATA_ATTR.focused) !== 'true') {
+          popover.focusItemByName(name);
+        }
+      });
+    }
   }
 
   /** `table`: the table group header, which keeps its buttons shown. Its count is off until "Show aggregation". */
@@ -9963,6 +9976,8 @@ export class DatabaseTool implements BlockTool {
       minWidth: '180px',
       offset: 0,
       class: DATABASE_GROUP_MENU_CLASS,
+      // Round 35 (r35-groupmenu.raw): a board's opens with its first row filled. The table group ⋯ is unmeasured.
+      ...(table === undefined ? { highlight: 'edit-groups' } : {}),
     });
   }
 

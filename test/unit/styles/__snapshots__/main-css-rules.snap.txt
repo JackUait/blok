@@ -5894,6 +5894,10 @@ span[data-blok-slash-search] {
   cursor: pointer;
 }
 
+[data-blok-database-column-actions][data-status] button {
+  color: var(--blok-database-table-header-icon);
+}
+
 [data-blok-database-column-actions] button:hover {
   background-color: var(--blok-database-hover-bg);
 }
@@ -7297,6 +7301,10 @@ button[data-blok-database-board-lane-count]:hover {
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-testid='popover-item-trailing-icon'] svg {
   width: 16px;
   height: 16px;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-popover-item][data-blok-focused='true']:not([data-blok-popover-item-destructive]) {
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-popover-item]:last-child {
@@ -14542,8 +14550,8 @@ button[data-blok-database-table-group-count]:hover {
   align-items: center;
   gap: var(--blok-space-1-5);
   min-block-size: 30px;
-  margin-inline: var(--blok-space-1);
-  margin-block-end: var(--blok-space-1);
+  margin-inline: var(--blok-space-2);
+  margin-block-end: var(--blok-space-4);
   padding: var(--blok-space-1) var(--blok-space-1-5);
   border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);

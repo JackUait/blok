@@ -140,6 +140,12 @@ vi.mock('../../../../src/components/utils/popover', () => {
     getElement(): HTMLElement {
       return this.container ?? document.createElement('div');
     }
+
+    focusItemByName(name: string): boolean {
+      this.container?.setAttribute('data-mock-popover-focused', name);
+
+      return this.container !== null;
+    }
   }
 
   return { PopoverDesktop: MockPopoverDesktop, PopoverMobile: MockPopoverDesktop, PopoverItemType };
@@ -4244,6 +4250,17 @@ describe('DatabaseTool', () => {
 
       // The row menu adds its own class on top (feel findings B15); the card ⋯ one fades with no scale (Round 36 §4).
       expect(queryByData(document.body, 'data-mock-popover-class', 'blok-database-menu blok-database-row-menu blok-database-card-menu blok-database-fade-menu')).not.toBeNull();
+
+      tool.destroy();
+    });
+
+    // notion-motion.md Round 35 (r35-groupmenu.raw): the board group ⋯ menu opens with "Edit groups" filled.
+    it('opens the board group menu with its first row highlighted', () => {
+      const { tool, element } = board();
+
+      openMenu(element, 'opt-todo');
+
+      expect(queryByData(document.body, 'data-mock-popover-focused', 'edit-groups')).not.toBeNull();
 
       tool.destroy();
     });

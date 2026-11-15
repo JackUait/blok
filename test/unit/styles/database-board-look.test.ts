@@ -64,6 +64,12 @@ describe('board column header actions', () => {
     expect(ruleBody(database, '[data-blok-database-column-actions] button:hover')).toContain('background-color: var(--blok-database-hover-bg)');
   });
 
+  // notion-motion.md Round 28 (r28-empty-Board.raw), Round 35 (r35-groupmenu.raw): a status board draws them gray
+  // (142,139,134) in every group, while its count keeps the group's colour.
+  it('draws a status board\'s ⋯ and + gray', () => {
+    expect(ruleBody(database, '[data-blok-database-column-actions][data-status] button')).toContain('color: var(--blok-database-table-header-icon)');
+  });
+
   // research/36 §1.1, §11: the column fill never changes on hover.
   it('never repaints the column itself on hover', () => {
     const hovers = [ ...database.matchAll(/(?<=^|[{}])\s*([^{}@]+?)\s*\{([^{}]*)\}/g) ]

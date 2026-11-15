@@ -106,3 +106,41 @@ test('the header holds only the count, ⋯ and +', async ({ page }) => {
   await expect(header.getByRole('button')).toHaveCount(3);
   await expect(page.getByRole('button', { name: 'Delete column' })).toHaveCount(0);
 });
+
+// notion-motion.md Round 35 (r35-groupmenu.raw): the menu opens with "Edit groups" in the hover tint, with no ring.
+// The tint then follows the pointer, so one row is filled at a time.
+test('the group ⋯ menu opens with its first row filled, and the fill follows the pointer', async ({ page }) => {
+  await mount(page);
+  const column = page.locator('[data-blok-database-column][data-option-id="o-doing"]');
+
+  await column.locator('[data-blok-database-column-header]').hover();
+  await column.getByRole('button', { name: 'More group options' }).click();
+
+  const menu = page.locator('[data-blok-popover-custom-class~="blok-database-group-menu"][data-blok-popover-opened="true"]');
+  const rows = menu.locator('[data-blok-popover-item]:visible');
+  const filled = menu.locator('[data-blok-popover-item][data-blok-focused="true"]');
+
+  await expect(filled).toHaveCount(1);
+  await expect(filled).toHaveAttribute('data-blok-item-name', 'edit-groups');
+  await expect(filled).toHaveCSS('outline-style', 'none');
+
+  const hoverFill = await rows.nth(2).evaluate((el) => {
+    const probe = document.createElement('div');
+
+    probe.style.backgroundColor = 'var(--blok-item-hover-bg)';
+    el.appendChild(probe);
+    const color = getComputedStyle(probe).backgroundColor;
+
+    probe.remove();
+
+    return color;
+  });
+
+  await expect(filled).toHaveCSS('background-color', hoverFill);
+
+  await rows.nth(2).hover();
+
+  await expect(filled).toHaveCount(1);
+  await expect(rows.nth(2)).toHaveAttribute('data-blok-focused', 'true');
+  await expect(rows.nth(0)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+});

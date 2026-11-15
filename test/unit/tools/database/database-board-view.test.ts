@@ -5,6 +5,7 @@ import type { SelectOption, DatabaseRow, DatabaseViewConfig } from '../../../../
 import type { I18n } from '../../../../types';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { IconPlayerPlay } from '../../../../src/components/icons';
+import { NO_VALUE_GROUP_KEY } from '../../../../src/tools/database/group-keys';
 
 const makeOption = (overrides: Partial<SelectOption> = {}): SelectOption => ({
   id: 'opt-1', label: 'To Do', position: 'a0', ...overrides,
@@ -201,6 +202,19 @@ describe('DatabaseBoardView', () => {
       expect(pill?.style.backgroundColor).toBe('var(--blok-database-option-gray-bg)');
       expect(pill?.querySelector<HTMLElement>('[data-blok-database-column-dot]')?.style.backgroundColor).toBe('var(--blok-database-status-dot-gray)');
       expect(board.querySelector('[data-blok-database-column][data-option-id="ns"]')?.hasAttribute('data-color')).toBe(false);
+    });
+
+    // notion-motion.md Round 28 (r28-empty-Board.raw): every status group draws its ⋯ and + gray, whatever the group's colour.
+    it('marks the header ⋯ and + of every status column, including No status, and of no select column', () => {
+      const board = statusView([makeOption({ id: 'ip', label: 'In progress', color: 'blue' }), makeOption({ id: NO_VALUE_GROUP_KEY, label: 'No Status' })]);
+      const select = new DatabaseBoardView({
+        readOnly: false, i18n, options: [makeOption({ id: 'r', color: 'red' })], getRows: () => [], titlePropertyId: 'title',
+      }).createView();
+      const actions = [...board.querySelectorAll('[data-blok-database-column-actions]')];
+
+      expect(actions).toHaveLength(2);
+      expect(actions.every((el) => el.hasAttribute('data-status'))).toBe(true);
+      expect(select.querySelector('[data-blok-database-column-actions]')?.hasAttribute('data-status')).toBe(false);
     });
 
     // findings-board B04: nothing after the last column of a Status board.

@@ -75,6 +75,8 @@ export interface ViewControlsHost {
   setLocked: (locked: boolean) => void;
   /** A linked view: its lock reads "Lock views". */
   linked?: () => boolean;
+  /** The block's "Show data source titles" (Layout page). */
+  dataSourceTitles?: { shown: () => boolean; toggle: () => void };
   duplicateView: () => void;
   deleteView: () => void;
   copyViewLink: () => void;
@@ -645,6 +647,7 @@ export class DatabaseViewControls {
         this.refresh();
       },
       ...(this.host.linked !== undefined ? { linked: this.host.linked } : {}),
+      ...(this.host.dataSourceTitles !== undefined ? { dataSourceTitles: this.host.dataSourceTitles } : {}),
       duplicateView: () => this.host.duplicateView(),
       deleteView: () => this.host.deleteView(),
       copyViewLink: () => this.host.copyViewLink(),

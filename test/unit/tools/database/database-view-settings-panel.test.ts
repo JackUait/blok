@@ -842,6 +842,26 @@ describe('view settings panel', () => {
 
       expect(exists('database-settings-data-source-title')).toBe(false);
     });
+
+    // notion-motion.md Round 32 §3 (Settings → Layout): a database with its own rows lists "Show data source titles" first.
+    // research/30 §B17: it is the tab menu's block-wide setting.
+    it('is the first row on a database with its own rows when the block offers its titles switch, and toggles it', () => {
+      const h = harness();
+      const toggle = vi.fn();
+
+      h.ctx.dataSourceTitles = { shown: () => false, toggle };
+      h.open();
+      click('database-settings-layout');
+
+      const row = document.querySelector('[data-blok-testid="database-settings-data-source-title"]');
+
+      expect(rowsAfterTiles()[0]).toBe('database-settings-data-source-title');
+      expect(row?.textContent).toContain('tools.database.showDataSourceTitles');
+      expect(row?.getAttribute('aria-checked')).toBe('false');
+      click('database-settings-data-source-title');
+      expect(toggle).toHaveBeenCalledTimes(1);
+      expect(h.ctx.updateView).not.toHaveBeenCalled();
+    });
   });
 
   describe('a board\'s "Card layout" (research/30 §10d, §10f; shots 22, 24)', () => {

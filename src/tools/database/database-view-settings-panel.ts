@@ -132,6 +132,8 @@ export interface ViewSettingsContext {
   setLocked: (locked: boolean) => void;
   /** A linked view: its lock reads "Lock views" (research 20 §2b). */
   linked?: () => boolean;
+  /** The block's "Show data source titles", as the tab menu toggles it (research/30 §B17). Without it a database with its own rows has no such row. */
+  dataSourceTitles?: { shown: () => boolean; toggle: () => void };
   duplicateView: () => void;
   deleteView: () => void;
   copyViewLink: () => void;
@@ -331,6 +333,19 @@ export class ViewSettingsPages {
 
   constructor(ctx: ViewSettingsContext) {
     this.ctx = ctx;
+  }
+
+  /** notion-motion.md Round 32 §3: a database with its own rows lists "Show data source titles" first. */
+  private ownSourceTitle(): HTMLButtonElement[] {
+    const titles = this.ctx.dataSourceTitles;
+
+    return titles === undefined ? [] : [panelSwitch({
+      label: this.t('showDataSourceTitles'),
+      testId: 'database-settings-data-source-title',
+      checked: titles.shown(),
+      disabled: !this.shared,
+      onToggle: () => titles.toggle(),
+    })];
   }
 
   private t(key: string, vars?: Record<string, string | number>): string {
@@ -965,7 +980,7 @@ export class ViewSettingsPages {
             disabled: !this.shared,
             onToggle: (next) => this.ctx.updateView({ showDataSourceTitle: next }),
           })]
-          : [];
+          : this.ownSourceTitle();
         const pageIcon = panelSwitch({
           label: this.t('settingsShowPageIcon'),
           testId: 'database-settings-page-icon',

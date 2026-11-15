@@ -65,6 +65,15 @@ const titlesItem = (el: HTMLElement, viewId = 'v1'): MenuItem | undefined => {
 
 const title = (el: HTMLElement): HTMLElement | null => el.querySelector('[data-blok-database-title]');
 
+type HtmlItem = { element?: HTMLElement };
+
+/** The newest panel the popover mock was handed, by its test id. */
+const panelById = (testId: string): HTMLElement | undefined => (popovers.items as HtmlItem[][])
+  .flat()
+  .map((item) => item.element)
+  .filter((element): element is HTMLElement => element instanceof HTMLElement && element.getAttribute('data-blok-testid') === testId)
+  .at(-1);
+
 describe('DatabaseTool — "Hide data source titles" (research/23 §10)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -134,6 +143,24 @@ describe('DatabaseTool — "Hide data source titles" (research/23 §10)', () => 
 
     expect(title(el)?.hidden).toBe(false);
     expect('hideDataSourceTitles' in tool.save(document.createElement('div'))).toBe(false);
+  });
+
+  // notion-motion.md Round 32 §3 (Settings → Layout): the Layout page lists the same switch first (research/30 §B17).
+  it('the Layout page\'s "Show data source titles" switch hides the line and flips the tab menu to "Show"', () => {
+    const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }]);
+    const { tool, el } = buildDatabase(doc, 'db', data());
+
+    popovers.items.length = 0;
+    (tool as unknown as { controls: { openSettings: (a: HTMLElement, p: string) => void } }).controls.openSettings(el, 'root');
+    panelById('database-view-settings')?.querySelector<HTMLElement>('[data-blok-testid="database-settings-layout"]')?.click();
+    const row = panelById('database-view-settings')?.querySelector<HTMLElement>('[data-blok-testid="database-settings-data-source-title"]');
+
+    expect(row?.getAttribute('aria-checked')).toBe('true');
+    row?.click();
+
+    expect(title(el)?.hidden).toBe(true);
+    expect(tool.save(document.createElement('div')).hideDataSourceTitles).toBe(true);
+    expect(titlesItem(el)?.title).toBe('tools.database.showDataSourceTitles');
   });
 
   it('follows the saved flag when data is set again, as undo and peers do', () => {

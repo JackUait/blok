@@ -6915,6 +6915,10 @@ export class DatabaseTool implements BlockTool {
       setLayout: (type) => (context?.widget === undefined ? this.setActiveLayout(type) : this.setWidgetLayout(context, type)),
       setLocked: (locked) => this.setDatabaseLocked(locked),
       linked: () => owner.linked,
+      // The tab menu's switch: the main toolbar only, and not on a full page, where the title never shows.
+      ...(context === undefined && !this.fullPage ? {
+        dataSourceTitles: { shown: () => !this.dataSourceTitlesHidden, toggle: () => this.toggleDataSourceTitles() },
+      } : {}),
       noDate: () => {
         if (context !== undefined) return undefined;
         if (this.view instanceof DatabaseMapView) return this.view.noPlaceControl();

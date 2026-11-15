@@ -299,7 +299,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2233 + 146 + 598 + 11 closure for all 2988 keys', () => {
+  it('rebuilds a disjoint 2234 + 146 + 599 + 11 closure for all 2990 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -313,7 +313,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2988);
+    expect(lifecycle.size).toBe(2990);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -572,7 +572,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +3: the table's Load more ⋯ calls tableShowOnFirstLoad (new), settingsLoadLimit and settingsLoadLimitPages by literal.
       // -2 / +1: the row menu footer's rowLastEditedBy and rowWordCount went catalog-only; rowCounts joins its plurals.
       // +1: the view tab menu's Source row calls tools.database.settingsSource by literal.
-      'executable-literal': 2233,
+      'executable-literal': 2234,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -688,7 +688,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +4: the row menu footer's tools.database.rowWords_one/_other and rowCharacters_one/_other, via a count.
       // -1: tools.database.settingsSource is now called by literal (see executable-literal).
       // +8: View settings "Manage data sources" (settingsManageSources, manageSources*, manageSourcesViews_one/_other), through the panel's t().
-      'registered-namespace-compatible': 598,
+      'registered-namespace-compatible': 599,
       // +1: Settings › Group's pin button names itself with groupPin through the panel's tools.database. prefix.
       // +1: tools.database.galleryFitImage, above. +1: tools.database.timelineEndBy, above.
       // +2: tools.database.rowLastEditedBy and rowWordCount, above.

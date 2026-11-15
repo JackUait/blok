@@ -1391,6 +1391,8 @@
   "tools.database.manageSourcesLink": "Susieti esamą duomenų šaltinį",
   "tools.database.manageSourcesActions": "Duomenų šaltinio veiksmai",
   "tools.database.manageSourcesCopyId": "Kopijuoti duomenų šaltinio ID",
+  "tools.database.manageSourcesDeleteLinked": "Ištrinti susietus rodinius",
+  "tools.database.manageSourcesIdCopied": "{name} ID nukopijuotas",
   "tools.database.manageSourcesViews_one": "{count} rodinys",
   "tools.database.manageSourcesViews_few": "{count} rodiniai",
   "tools.database.manageSourcesViews_many": "{count} rodinio",

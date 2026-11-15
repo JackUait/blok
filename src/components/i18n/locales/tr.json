@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "Mevcut veri kaynağını bağla",
   "tools.database.manageSourcesActions": "Veri kaynağı eylemleri",
   "tools.database.manageSourcesCopyId": "Veri kaynağı kimliğini kopyala",
+  "tools.database.manageSourcesDeleteLinked": "Bağlantılı görünümleri sil",
+  "tools.database.manageSourcesIdCopied": "{name} kimliği kopyalandı",
   "tools.database.manageSourcesViews_one": "{count} görünüm",
   "tools.database.manageSourcesViews_other": "{count} görünüm",
   "tools.database.settingsGroup": "Grupla",

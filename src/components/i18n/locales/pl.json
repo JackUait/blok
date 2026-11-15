@@ -1391,6 +1391,8 @@
   "tools.database.manageSourcesLink": "Połącz istniejące źródło danych",
   "tools.database.manageSourcesActions": "Działania źródła danych",
   "tools.database.manageSourcesCopyId": "Kopiuj ID źródła danych",
+  "tools.database.manageSourcesDeleteLinked": "Usuń połączone widoki",
+  "tools.database.manageSourcesIdCopied": "Skopiowano ID źródła {name}",
   "tools.database.manageSourcesViews_one": "{count} widok",
   "tools.database.manageSourcesViews_few": "{count} widoki",
   "tools.database.manageSourcesViews_many": "{count} widoków",

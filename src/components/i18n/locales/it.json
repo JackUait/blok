@@ -1378,6 +1378,8 @@
   "tools.database.manageSourcesLink": "Collega origine dati esistente",
   "tools.database.manageSourcesActions": "Azioni origine dati",
   "tools.database.manageSourcesCopyId": "Copia ID origine dati",
+  "tools.database.manageSourcesDeleteLinked": "Elimina viste collegate",
+  "tools.database.manageSourcesIdCopied": "ID di {name} copiato",
   "tools.database.manageSourcesViews_one": "{count} vista",
   "tools.database.manageSourcesViews_many": "{count} di viste",
   "tools.database.manageSourcesViews_other": "{count} viste",

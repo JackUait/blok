@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "Unganisha chanzo cha data kilichopo",
   "tools.database.manageSourcesActions": "Vitendo vya chanzo cha data",
   "tools.database.manageSourcesCopyId": "Nakili kitambulisho cha chanzo cha data",
+  "tools.database.manageSourcesDeleteLinked": "Futa mionekano iliyounganishwa",
+  "tools.database.manageSourcesIdCopied": "Kitambulisho cha {name} kimenakiliwa",
   "tools.database.manageSourcesViews_one": "Mwonekano: {count}",
   "tools.database.manageSourcesViews_other": "Mionekano: {count}",
   "tools.database.settingsGroup": "Panga katika vikundi",

@@ -43,7 +43,7 @@ const sourceRow = (options: Parameters<typeof panelRow>[0]): HTMLButtonElement =
 const FIRST_ROWS = 3;
 
 /** The "New view" page: a fresh view first, then the views it can copy. */
-const newViewPage = (
+export const newViewPage = (
   t: LinkedPickerOptions['t'],
   source: LinkedPickerSource,
   fresh: { label: string; testId: string; onClick: () => void },

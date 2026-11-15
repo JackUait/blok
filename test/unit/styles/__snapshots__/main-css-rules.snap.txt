@@ -16000,7 +16000,7 @@ input[data-blok-database-picker-search]:focus {
   padding-inline-end: calc(var(--blok-database-manage-source-more-size) + var(--blok-database-manage-source-more-inset) + var(--blok-space-2));
 }
 
-[data-blok-database-manage-source-more] {
+:is([data-blok-database-manage-source-more], [data-blok-database-manage-source-unlink]) {
   position: absolute;
   inset-block-start: var(--blok-database-manage-source-more-inset);
   inset-inline-end: var(--blok-database-manage-source-more-inset);
@@ -16017,15 +16017,32 @@ input[data-blok-database-picker-search]:focus {
   cursor: pointer;
 }
 
-[data-blok-database-manage-source-more]:hover {
+:is([data-blok-database-manage-source-more], [data-blok-database-manage-source-unlink]):hover {
   background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-manage-source-badge] {
+  position: absolute;
+  inset-inline-start: 8px;
+  inset-block-end: 0;
+  display: inline-flex;
+  color: var(--blok-database-ink);
+}
+
+[data-blok-database-panel-page="manage-sources"] [data-blok-database-manage-source] [data-blok-database-panel-icon] > [data-blok-database-manage-source-badge] > svg {
+  width: 14px;
+  height: 14px;
+}
+
+[data-blok-database-panel-icon]:has(> [data-blok-database-manage-source-badge]) {
+  position: relative;
 }
 
 [data-blok-database-manage-source-menu] [data-blok-database-panel-icon] {
   color: var(--blok-database-ink);
 }
 
-[data-blok-database-manage-source-menu] [data-blok-database-panel-icon] svg, [data-blok-database-manage-source-more] svg {
+[data-blok-database-manage-source-menu] [data-blok-database-panel-icon] svg, :is([data-blok-database-manage-source-more], [data-blok-database-manage-source-unlink]) svg {
   width: 20px;
   height: 20px;
 }
@@ -21153,6 +21170,12 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 [data-blok-database-linked-arrow] {
   display: inline-flex;
   flex-shrink: 0;
+}
+
+[data-blok-database-source-title]:has(> [data-blok-database-linked-arrow]) {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1);
 }
 
 [data-blok-database-linked-arrow] svg {

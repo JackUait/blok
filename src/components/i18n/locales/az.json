@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "Mövcud verilənlər mənbəyini bağla",
   "tools.database.manageSourcesActions": "Verilənlər mənbəyi əməliyyatları",
   "tools.database.manageSourcesCopyId": "Verilənlər mənbəyinin ID-sini kopyala",
+  "tools.database.manageSourcesDeleteLinked": "Əlaqəli görünüşləri sil",
+  "tools.database.manageSourcesIdCopied": "{name} ID-si kopyalandı",
   "tools.database.manageSourcesViews_one": "{count} görünüş",
   "tools.database.manageSourcesViews_other": "{count} görünüş",
   "tools.database.settingsGroup": "Qruplaşdır",

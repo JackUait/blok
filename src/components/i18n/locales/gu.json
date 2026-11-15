@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "હાલનો ડેટા સ્રોત લિંક કરો",
   "tools.database.manageSourcesActions": "ડેટા સ્રોત ક્રિયાઓ",
   "tools.database.manageSourcesCopyId": "ડેટા સ્રોત ID કૉપિ કરો",
+  "tools.database.manageSourcesDeleteLinked": "લિંક કરેલા વ્યૂ કાઢી નાખો",
+  "tools.database.manageSourcesIdCopied": "{name} નો ID કૉપિ થયો",
   "tools.database.manageSourcesViews_one": "{count} દૃશ્ય",
   "tools.database.manageSourcesViews_other": "{count} દૃશ્યો",
   "tools.database.settingsGroup": "જૂથબદ્ધ કરો",

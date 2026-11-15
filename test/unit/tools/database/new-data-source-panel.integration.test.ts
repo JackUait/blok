@@ -577,7 +577,8 @@ describe('"New data source" side panel (research/23 §10, research/20 §1a)', ()
     await quiet();
     const title = own('[data-blok-database-source-title]');
 
-    expect(title.textContent).toBe('Stock');
+    // "↗ Stock" (r39-mds-linked.png): the arrow is an svg, so only the name is text.
+    expect(title.textContent?.trim()).toBe('Stock');
     expect(title.getAttribute('contenteditable')).toBeNull();
     title.textContent = 'Renamed';
     title.dispatchEvent(new Event('input', { bubbles: true }));

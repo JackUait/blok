@@ -1735,6 +1735,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R71_BYTES = 2831;
     // Lane r72: Round 38 Status filter rows 29 apart, sort rows 29 apart, the pinned modal's sort editor without a handle. Net database.css growth against origin/main.
     const DATABASE_R72_BYTES = 943;
+    // Lane r74: Round 39 linked source row's ↗ badge and × "Delete linked views", the "↗ <name>" source title. Net database.css growth against origin/main.
+    const DATABASE_R74_BYTES = 1172;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2274,6 +2276,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R69_BYTES
       + DATABASE_R71_BYTES
       + DATABASE_R72_BYTES
+      + DATABASE_R74_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

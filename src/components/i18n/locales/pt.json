@@ -1378,6 +1378,8 @@
   "tools.database.manageSourcesLink": "Vincular fonte de dados existente",
   "tools.database.manageSourcesActions": "Ações da fonte de dados",
   "tools.database.manageSourcesCopyId": "Copiar ID da fonte de dados",
+  "tools.database.manageSourcesDeleteLinked": "Excluir visualizações vinculadas",
+  "tools.database.manageSourcesIdCopied": "ID de {name} copiado",
   "tools.database.manageSourcesViews_one": "{count} visualização",
   "tools.database.manageSourcesViews_many": "{count} de visualizações",
   "tools.database.manageSourcesViews_other": "{count} visualizações",

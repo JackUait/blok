@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "連結現有資料來源",
   "tools.database.manageSourcesActions": "資料來源動作",
   "tools.database.manageSourcesCopyId": "複製資料來源 ID",
+  "tools.database.manageSourcesDeleteLinked": "刪除連結的檢視",
+  "tools.database.manageSourcesIdCopied": "已複製 {name} 的 ID",
   "tools.database.manageSourcesViews_one": "{count} 個檢視",
   "tools.database.manageSourcesViews_other": "{count} 個檢視",
   "tools.database.settingsGroup": "分組",

@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "Lidh një burim ekzistues të dhënash",
   "tools.database.manageSourcesActions": "Veprimet e burimit të të dhënave",
   "tools.database.manageSourcesCopyId": "Kopjo ID-në e burimit të të dhënave",
+  "tools.database.manageSourcesDeleteLinked": "Fshi pamjet e lidhura",
+  "tools.database.manageSourcesIdCopied": "ID-ja e {name} u kopjua",
   "tools.database.manageSourcesViews_one": "{count} pamje",
   "tools.database.manageSourcesViews_other": "{count} pamje",
   "tools.database.settingsGroup": "Grupo",

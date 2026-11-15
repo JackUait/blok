@@ -1391,6 +1391,8 @@
   "tools.database.manageSourcesLink": "Propojit existující zdroj dat",
   "tools.database.manageSourcesActions": "Akce zdroje dat",
   "tools.database.manageSourcesCopyId": "Kopírovat ID zdroje dat",
+  "tools.database.manageSourcesDeleteLinked": "Smazat propojená zobrazení",
+  "tools.database.manageSourcesIdCopied": "ID zdroje {name} zkopírováno",
   "tools.database.manageSourcesViews_one": "{count} zobrazení",
   "tools.database.manageSourcesViews_few": "{count} zobrazení",
   "tools.database.manageSourcesViews_many": "{count} zobrazení",

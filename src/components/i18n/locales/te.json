@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "ఇప్పటికే ఉన్న డేటా మూలాన్ని లింక్ చేయి",
   "tools.database.manageSourcesActions": "డేటా మూలం చర్యలు",
   "tools.database.manageSourcesCopyId": "డేటా మూలం IDని కాపీ చేయి",
+  "tools.database.manageSourcesDeleteLinked": "లింక్ చేసిన వీక్షణలను తొలగించు",
+  "tools.database.manageSourcesIdCopied": "{name} ID కాపీ అయింది",
   "tools.database.manageSourcesViews_one": "{count} వీక్షణ",
   "tools.database.manageSourcesViews_other": "{count} వీక్షణలు",
   "tools.database.settingsGroup": "సమూహపరచు",

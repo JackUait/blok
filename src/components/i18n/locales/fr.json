@@ -1378,6 +1378,8 @@
   "tools.database.manageSourcesLink": "Lier une source de données existante",
   "tools.database.manageSourcesActions": "Actions de la source de données",
   "tools.database.manageSourcesCopyId": "Copier l’ID de la source de données",
+  "tools.database.manageSourcesDeleteLinked": "Supprimer les vues liées",
+  "tools.database.manageSourcesIdCopied": "ID de {name} copié",
   "tools.database.manageSourcesViews_one": "{count} vue",
   "tools.database.manageSourcesViews_many": "{count} de vues",
   "tools.database.manageSourcesViews_other": "{count} vues",

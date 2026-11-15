@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "مەۋجۇت سانلىق مەلۇمات مەنبەسىنى ئۇلاش",
   "tools.database.manageSourcesActions": "سانلىق مەلۇمات مەنبەسى مەشغۇلاتلىرى",
   "tools.database.manageSourcesCopyId": "سانلىق مەلۇمات مەنبەسى ID سىنى كۆچۈرۈش",
+  "tools.database.manageSourcesDeleteLinked": "ئۇلانغان كۆرۈنۈشلەرنى ئۆچۈرۈش",
+  "tools.database.manageSourcesIdCopied": "{name} نىڭ كىملىكى كۆچۈرۈلدى",
   "tools.database.manageSourcesViews_one": "{count} كۆرۈنۈش",
   "tools.database.manageSourcesViews_other": "{count} كۆرۈنۈش",
   "tools.database.settingsGroup": "گۇرۇپپىلاش",

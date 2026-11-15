@@ -1391,6 +1391,8 @@
   "tools.database.manageSourcesLink": "Poveži obstoječi vir podatkov",
   "tools.database.manageSourcesActions": "Dejanja vira podatkov",
   "tools.database.manageSourcesCopyId": "Kopiraj ID vira podatkov",
+  "tools.database.manageSourcesDeleteLinked": "Izbriši povezane poglede",
+  "tools.database.manageSourcesIdCopied": "ID vira {name} je kopiran",
   "tools.database.manageSourcesViews_one": "{count} pogled",
   "tools.database.manageSourcesViews_two": "{count} pogleda",
   "tools.database.manageSourcesViews_few": "{count} pogledi",

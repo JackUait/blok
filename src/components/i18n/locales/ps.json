@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "شته ډیټا سرچینه وتړئ",
   "tools.database.manageSourcesActions": "د ډیټا سرچینې کړنې",
   "tools.database.manageSourcesCopyId": "د ډیټا سرچینې ID کاپي کړئ",
+  "tools.database.manageSourcesDeleteLinked": "تړل شوي لیدونه ړنګ کړئ",
+  "tools.database.manageSourcesIdCopied": "د {name} پېژند کاپي شو",
   "tools.database.manageSourcesViews_one": "{count} لید",
   "tools.database.manageSourcesViews_other": "{count} لیدونه",
   "tools.database.settingsGroup": "ګروپ کړئ",

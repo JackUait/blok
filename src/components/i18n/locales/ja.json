@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "既存のデータソースをリンク",
   "tools.database.manageSourcesActions": "データソースのアクション",
   "tools.database.manageSourcesCopyId": "データソースIDをコピー",
+  "tools.database.manageSourcesDeleteLinked": "リンクされたビューを削除",
+  "tools.database.manageSourcesIdCopied": "{name} のIDをコピーしました",
   "tools.database.manageSourcesViews_one": "ビュー{count}件",
   "tools.database.manageSourcesViews_other": "ビュー{count}件",
   "tools.database.settingsGroup": "グループ化",

@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "ਮੌਜੂਦਾ ਡਾਟਾ ਸਰੋਤ ਲਿੰਕ ਕਰੋ",
   "tools.database.manageSourcesActions": "ਡਾਟਾ ਸਰੋਤ ਕਾਰਵਾਈਆਂ",
   "tools.database.manageSourcesCopyId": "ਡਾਟਾ ਸਰੋਤ ID ਕਾਪੀ ਕਰੋ",
+  "tools.database.manageSourcesDeleteLinked": "ਲਿੰਕ ਕੀਤੇ ਵਿਊ ਮਿਟਾਓ",
+  "tools.database.manageSourcesIdCopied": "{name} ਦੀ ID ਕਾਪੀ ਹੋਈ",
   "tools.database.manageSourcesViews_one": "{count} ਦ੍ਰਿਸ਼",
   "tools.database.manageSourcesViews_other": "{count} ਦ੍ਰਿਸ਼",
   "tools.database.settingsGroup": "ਸਮੂਹ ਬਣਾਓ",

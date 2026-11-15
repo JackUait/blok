@@ -1,4 +1,4 @@
-import { IconBolt, IconCalendar, IconCheck, IconChevronDown, IconChevronRight, IconChevronUpDown, IconCopy, IconCross, IconDatabase, IconDotsHorizontal, IconEyeSlash, IconFilter, IconGallery, IconLink, IconListBulleted, IconLock, IconPaintRoller, IconPin, IconPinFilled, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
+import { IconArrowDiagonal, IconBolt, IconCalendar, IconCheck, IconChevronDown, IconChevronRight, IconChevronUpDown, IconCopy, IconCross, IconDatabase, IconDotsHorizontal, IconEyeSlash, IconFilter, IconGallery, IconLink, IconListBulleted, IconLock, IconPaintRoller, IconPin, IconPinFilled, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
 import type { I18n } from '../../../types';
 import { onHover } from '../../components/utils/tooltip';
 import {
@@ -14,6 +14,7 @@ import {
 } from './database-panel';
 import type { PanelPage } from './database-panel';
 import { editorLocale } from './cells/date-format';
+import { newViewPage } from './database-linked-picker';
 import { propertyTypeMeta } from './database-property-types';
 import {
   FILTERABLE_TYPES,
@@ -205,9 +206,20 @@ export interface ManageDataSources {
   linked: () => DataSourceChoice[];
   /** "New data source", as the view menu runs it. The panel is closed first. */
   add: () => void;
-  /** A new Table view of that database. The panel is closed first. */
-  link: (id: string) => void;
-  copyId: (id: string) => void;
+  /** A new Table view of that database, selected. Returns what the "New view" page lists, or undefined when refused. */
+  link: (id: string) => LinkedSourceViews | undefined;
+  /** Removes every view that shows that database, in one undo step. */
+  unlink: (id: string) => void;
+  /** Opens that database's own page. The panel is closed first. */
+  open: (id: string) => void;
+  /** `name` is what the row shows: the screen reader hears "<name> ID copied". */
+  copyId: (id: string, name: string) => void;
+}
+
+/** The "New view" page after a link: the database's views, which the new view may copy. */
+export interface LinkedSourceViews {
+  views: DatabaseViewConfig[];
+  copy: (view: DatabaseViewConfig) => void;
 }
 
 export interface AutofillPanelSettings {
@@ -834,7 +846,7 @@ export class ViewSettingsPages {
           }),
           panelSeparator(),
           panelLabel(this.t('manageSourcesLinked')),
-          ...manage.linked().map((choice) => this.manageSourceRow(panel, choice, manage)),
+          ...manage.linked().map((choice) => this.linkedSourceRow(panel, choice, manage)),
           panelRow({
             label: this.t('manageSourcesLink'),
             testId: 'database-manage-sources-link',
@@ -848,7 +860,7 @@ export class ViewSettingsPages {
     };
   }
 
-  /** A source with its view count and a ⋯. What a click on the row itself does in Notion is unread, so it does nothing. */
+  /** A source with its view count and a ⋯. A click on the row does nothing, as in Notion (r39-mds-sourceclick.raw). */
   private manageSourceRow(panel: DatabasePanel, choice: DataSourceChoice, manage: ManageDataSources): HTMLElement {
     const wrap = document.createElement('div');
     const more = document.createElement('button');
@@ -865,7 +877,7 @@ export class ViewSettingsPages {
           label: this.t('manageSourcesCopyId'),
           testId: 'database-manage-source-copy-id',
           icon: IconCopy,
-          onClick: () => pick(() => manage.copyId(choice.id)),
+          onClick: () => pick(() => manage.copyId(choice.id, this.sourceName(choice))),
         }),
       ], { alignEnd: true });
 
@@ -879,6 +891,44 @@ export class ViewSettingsPages {
       value: this.t('manageSourcesViews', { count: manage.viewCount(choice.id) }),
       onClick: () => undefined,
     }), more);
+
+    return wrap;
+  }
+
+  /**
+   * Another database a view shows (r39-mds-linked.raw): the icon takes a ↗ badge, an × removes those
+   * views, and there is no ⋯. A click opens that database's own page.
+   */
+  private linkedSourceRow(panel: DatabasePanel, choice: DataSourceChoice, manage: ManageDataSources): HTMLElement {
+    const wrap = document.createElement('div');
+    const unlink = document.createElement('button');
+    const row = panelRow({
+      label: this.sourceName(choice),
+      testId: `database-manage-source-${choice.id}`,
+      icon: IconDatabase,
+      value: this.t('manageSourcesViews', { count: manage.viewCount(choice.id) }),
+      onClick: () => {
+        panel.close();
+        manage.open(choice.id);
+      },
+    });
+    const badge = document.createElement('span');
+
+    badge.setAttribute('data-blok-database-manage-source-badge', '');
+    badge.innerHTML = IconArrowDiagonal;
+    row.querySelector('[data-blok-database-panel-icon]')?.append(badge);
+    wrap.setAttribute('data-blok-database-manage-source', '');
+    unlink.type = 'button';
+    unlink.setAttribute('data-blok-database-manage-source-unlink', '');
+    unlink.setAttribute('data-blok-testid', `database-manage-source-unlink-${choice.id}`);
+    unlink.setAttribute('aria-label', this.t('manageSourcesDeleteLinked'));
+    unlink.disabled = !this.shared;
+    unlink.innerHTML = IconCross;
+    unlink.addEventListener('click', () => {
+      manage.unlink(choice.id);
+      panel.refresh();
+    });
+    wrap.append(row, unlink);
 
     return wrap;
   }
@@ -898,8 +948,21 @@ export class ViewSettingsPages {
           testId: `database-manage-link-option-${choice.id}`,
           icon: IconDatabase,
           onClick: () => {
-            panel.close();
-            manage.link(choice.id);
+            const made = manage.link(choice.id);
+
+            // r39-mds-after-link.raw: the panel turns into "New view"; its Back comes here.
+            if (made === undefined) {
+              panel.close();
+
+              return;
+            }
+            panel.push(newViewPage(
+              (key, vars) => this.ctx.i18n.t(key, vars),
+              { id: choice.id, title: this.sourceName(choice), parent: choice.parent ?? '' },
+              { label: this.t('linkedNewTableView'), testId: 'database-manage-new-table-view', onClick: () => undefined },
+              made.views,
+              made.copy
+            ));
           },
         })));
     };

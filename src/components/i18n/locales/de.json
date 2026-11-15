@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "Vorhandene Datenquelle verknüpfen",
   "tools.database.manageSourcesActions": "Datenquellenaktionen",
   "tools.database.manageSourcesCopyId": "Datenquellen-ID kopieren",
+  "tools.database.manageSourcesDeleteLinked": "Verknüpfte Ansichten löschen",
+  "tools.database.manageSourcesIdCopied": "ID von {name} kopiert",
   "tools.database.manageSourcesViews_one": "{count} Ansicht",
   "tools.database.manageSourcesViews_other": "{count} Ansichten",
   "tools.database.settingsGroup": "Gruppieren",

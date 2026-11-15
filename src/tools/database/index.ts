@@ -1772,9 +1772,12 @@ export class DatabaseTool implements BlockTool {
       this.sourceTitleElement = el;
       titleEl.after(el);
     }
+    // A linked database's name sits after its ↗, in its own span.
+    const text = el.querySelector<HTMLElement>('[data-blok-database-source-name]') ?? el;
+
     // Never under the caret: a redraw while typing would move it.
-    if (el.textContent !== name && document.activeElement !== el) {
-      el.textContent = name;
+    if (text.textContent !== name && document.activeElement !== el) {
+      text.textContent = name;
       DatabaseTool.syncTitleDirection(el);
     }
     el.hidden = hidden;
@@ -1794,6 +1797,16 @@ export class DatabaseTool implements BlockTool {
 
     if (!ownSource || !source.titleEditable()) el.removeAttribute('contenteditable');
     if (ownSource) el.addEventListener('input', () => source.renameAsSource(el.textContent ?? ''));
+    if (!ownSource) {
+      // r39-mds-linked.png: "↗ r39 src B", as a linked view titles its source.
+      const arrow = document.createElement('span');
+      const name = document.createElement('span');
+
+      arrow.setAttribute('data-blok-database-linked-arrow', '');
+      arrow.innerHTML = IconArrowDiagonal;
+      name.setAttribute('data-blok-database-source-name', '');
+      el.replaceChildren(arrow, name);
+    }
 
     return el;
   }
@@ -4758,8 +4771,8 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** Manage data sources "Link existing data source": a Table view of that database, selected. One undo removes it. */
-  private linkExistingSource(databaseId: string): void {
-    if (this.readOnly || this.linked || this.structureLocked() || !this.linkableSources().some((source) => source.id === databaseId)) return;
+  private linkExistingSource(databaseId: string): string | undefined {
+    if (this.readOnly || this.linked || this.structureLocked() || !this.linkableSources().some((source) => source.id === databaseId)) return undefined;
     const view = this.model.addView(DATABASE_DEFAULT_TEXT.viewTypeTable, 'table');
 
     this.model.updateView(view.id, { dataSourceId: databaseId });
@@ -4769,6 +4782,29 @@ export class DatabaseTool implements BlockTool {
     this.switchView(view.id);
     this.paintLinkedTitle();
     this.controls.refresh();
+
+    return view.id;
+  }
+
+  /** Manage data sources × "Delete linked views": every view on that database goes, in one undo step. */
+  private unlinkSource(databaseId: string): void {
+    if (this.readOnly || this.structureLocked()) return;
+    const views = this.model.getTabViews().filter((view) => view.dataSourceId === databaseId);
+
+    this.inOneStep(() => views.forEach((view) => this.deleteView(view.id)));
+    this.paintLinkedTitle();
+  }
+
+  /** A linked row opens that database's own page, or scrolls to it when it has none here. */
+  private openSourcePage(databaseId: string): void {
+    const open = this.dashboardOwner(databaseId)?.fullPageOpener();
+
+    if (open !== undefined) {
+      open();
+
+      return;
+    }
+    this.api.blocks.scrollToBlock?.(databaseId, { select: false });
   }
 
   /** "Import CSV" from the panel: the new source takes the file's columns and rows. One undo empties it again. */
@@ -7032,8 +7068,22 @@ export class DatabaseTool implements BlockTool {
             viewCount: (id: string) => this.model.getTabViews().filter((view) => (view.dataSourceId ?? this.dataId) === id).length,
             linked: () => this.linkedSources(),
             add: () => this.newDataSourceWithPanel(),
-            link: (id: string) => this.linkExistingSource(id),
-            copyId: (id: string) => void navigator.clipboard?.writeText(id).catch(() => undefined),
+            link: (id: string) => {
+              const viewId = this.linkExistingSource(id);
+
+              return viewId === undefined ? undefined : {
+                views: this.sourceViews(id).filter((view) => view.type !== 'form' && view.type !== 'dashboard'),
+                // The copy keeps showing the linked database.
+                copy: (view: DatabaseViewConfig) => this.copyIntoView(viewId, { ...view, dataSourceId: id }),
+              };
+            },
+            unlink: (id: string) => this.unlinkSource(id),
+            open: (id: string) => this.openSourcePage(id),
+            // r39-mds-copyid.raw: no toast, only an assertive announcement.
+            copyId: (id: string, name: string) => void navigator.clipboard?.writeText(id).then(
+              () => announce(this.api.i18n.t('tools.database.manageSourcesIdCopied', { name }), { politeness: 'assertive' }),
+              () => undefined
+            ),
           },
         },
       } : {}),

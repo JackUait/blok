@@ -1378,6 +1378,8 @@
   "tools.database.manageSourcesLink": "Повежи постојећи извор података",
   "tools.database.manageSourcesActions": "Радње извора података",
   "tools.database.manageSourcesCopyId": "Копирај ID извора података",
+  "tools.database.manageSourcesDeleteLinked": "Избриши повезане приказе",
+  "tools.database.manageSourcesIdCopied": "ID за {name} је копиран",
   "tools.database.manageSourcesViews_one": "{count} приказ",
   "tools.database.manageSourcesViews_few": "{count} приказа",
   "tools.database.manageSourcesViews_other": "{count} приказа",

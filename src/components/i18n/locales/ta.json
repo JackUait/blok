@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "ஏற்கனவே உள்ள தரவு மூலத்தை இணை",
   "tools.database.manageSourcesActions": "தரவு மூலச் செயல்கள்",
   "tools.database.manageSourcesCopyId": "தரவு மூல ID-ஐ நகலெடு",
+  "tools.database.manageSourcesDeleteLinked": "இணைக்கப்பட்ட காட்சிகளை நீக்கு",
+  "tools.database.manageSourcesIdCopied": "{name} ஐடி நகலெடுக்கப்பட்டது",
   "tools.database.manageSourcesViews_one": "{count} காட்சி",
   "tools.database.manageSourcesViews_other": "{count} காட்சிகள்",
   "tools.database.settingsGroup": "குழுவாக்கு",

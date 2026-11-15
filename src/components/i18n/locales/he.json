@@ -1378,6 +1378,8 @@
   "tools.database.manageSourcesLink": "קשר מקור נתונים קיים",
   "tools.database.manageSourcesActions": "פעולות מקור נתונים",
   "tools.database.manageSourcesCopyId": "העתק מזהה מקור נתונים",
+  "tools.database.manageSourcesDeleteLinked": "מחיקת תצוגות מקושרות",
+  "tools.database.manageSourcesIdCopied": "המזהה של {name} הועתק",
   "tools.database.manageSourcesViews_one": "{count} תצוגה",
   "tools.database.manageSourcesViews_two": "{count} תצוגות",
   "tools.database.manageSourcesViews_other": "{count} תצוגות",

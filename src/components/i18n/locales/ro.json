@@ -1378,6 +1378,8 @@
   "tools.database.manageSourcesLink": "Leagă o sursă de date existentă",
   "tools.database.manageSourcesActions": "Acțiuni pentru sursa de date",
   "tools.database.manageSourcesCopyId": "Copiază ID-ul sursei de date",
+  "tools.database.manageSourcesDeleteLinked": "Șterge vizualizările conectate",
+  "tools.database.manageSourcesIdCopied": "ID-ul pentru {name} a fost copiat",
   "tools.database.manageSourcesViews_one": "{count} vizualizare",
   "tools.database.manageSourcesViews_few": "{count} vizualizări",
   "tools.database.manageSourcesViews_other": "{count} de vizualizări",

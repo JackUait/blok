@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "سەرچاوەی داتای هەبوو ببەستەوە",
   "tools.database.manageSourcesActions": "کردارەکانی سەرچاوەی داتا",
   "tools.database.manageSourcesCopyId": "ناسنامەی سەرچاوەی داتا لەبەر بگرەوە",
+  "tools.database.manageSourcesDeleteLinked": "Dîtinên girêdayî jê bibe",
+  "tools.database.manageSourcesIdCopied": "IDya {name} hate kopîkirin",
   "tools.database.manageSourcesViews_one": "{count} بینین",
   "tools.database.manageSourcesViews_other": "{count} بینین",
   "tools.database.settingsGroup": "گرووپکردن",

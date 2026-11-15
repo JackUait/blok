@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "ಅಸ್ತಿತ್ವದಲ್ಲಿರುವ ಡೇಟಾ ಮೂಲವನ್ನು ಲಿಂಕ್ ಮಾಡಿ",
   "tools.database.manageSourcesActions": "ಡೇಟಾ ಮೂಲದ ಕ್ರಿಯೆಗಳು",
   "tools.database.manageSourcesCopyId": "ಡೇಟಾ ಮೂಲದ ID ನಕಲಿಸಿ",
+  "tools.database.manageSourcesDeleteLinked": "ಲಿಂಕ್ ಮಾಡಿದ ವೀಕ್ಷಣೆಗಳನ್ನು ಅಳಿಸಿ",
+  "tools.database.manageSourcesIdCopied": "{name} ಐಡಿ ನಕಲಿಸಲಾಗಿದೆ",
   "tools.database.manageSourcesViews_one": "{count} ವೀಕ್ಷಣೆ",
   "tools.database.manageSourcesViews_other": "{count} ವೀಕ್ಷಣೆಗಳು",
   "tools.database.settingsGroup": "ಗುಂಪು ಮಾಡಿ",

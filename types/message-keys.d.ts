@@ -1482,6 +1482,8 @@ export type BlokMessageKey =
   | 'tools.database.manageSourcesActions'
   | 'tools.database.manageSourcesAdd'
   | 'tools.database.manageSourcesCopyId'
+  | 'tools.database.manageSourcesDeleteLinked'
+  | 'tools.database.manageSourcesIdCopied'
   | 'tools.database.manageSourcesLink'
   | 'tools.database.manageSourcesLinked'
   | 'tools.database.manageSourcesViews_one'

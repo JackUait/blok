@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "Tilknyt eksisterende datakilde",
   "tools.database.manageSourcesActions": "Handlinger for datakilde",
   "tools.database.manageSourcesCopyId": "Kopiér datakilde-id",
+  "tools.database.manageSourcesDeleteLinked": "Slet linkede visninger",
+  "tools.database.manageSourcesIdCopied": "ID for {name} er kopieret",
   "tools.database.manageSourcesViews_one": "{count} visning",
   "tools.database.manageSourcesViews_other": "{count} visninger",
   "tools.database.settingsGroup": "Grupper",

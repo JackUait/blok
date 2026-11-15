@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "Σύνδεση υπάρχουσας πηγής δεδομένων",
   "tools.database.manageSourcesActions": "Ενέργειες πηγής δεδομένων",
   "tools.database.manageSourcesCopyId": "Αντιγραφή ID πηγής δεδομένων",
+  "tools.database.manageSourcesDeleteLinked": "Διαγραφή συνδεδεμένων προβολών",
+  "tools.database.manageSourcesIdCopied": "Το αναγνωριστικό του {name} αντιγράφηκε",
   "tools.database.manageSourcesViews_one": "{count} προβολή",
   "tools.database.manageSourcesViews_other": "{count} προβολές",
   "tools.database.settingsGroup": "Ομαδοποίηση",

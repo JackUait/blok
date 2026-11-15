@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "پیوند منبع داده موجود",
   "tools.database.manageSourcesActions": "اقدامات منبع داده",
   "tools.database.manageSourcesCopyId": "کپی شناسه منبع داده",
+  "tools.database.manageSourcesDeleteLinked": "حذف نماهای پیوندشده",
+  "tools.database.manageSourcesIdCopied": "شناسهٔ {name} کپی شد",
   "tools.database.manageSourcesViews_one": "{count} نما",
   "tools.database.manageSourcesViews_other": "{count} نما",
   "tools.database.settingsGroup": "گروه‌بندی",

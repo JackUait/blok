@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "Meglévő adatforrás csatolása",
   "tools.database.manageSourcesActions": "Adatforrás-műveletek",
   "tools.database.manageSourcesCopyId": "Adatforrás-azonosító másolása",
+  "tools.database.manageSourcesDeleteLinked": "Csatolt nézetek törlése",
+  "tools.database.manageSourcesIdCopied": "{name} azonosítója kimásolva",
   "tools.database.manageSourcesViews_one": "{count} nézet",
   "tools.database.manageSourcesViews_other": "{count} nézet",
   "tools.database.settingsGroup": "Csoportosítás",

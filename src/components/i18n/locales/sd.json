@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "موجوده ڊيٽا ماخذ ڳنڍيو",
   "tools.database.manageSourcesActions": "ڊيٽا ماخذ جا عمل",
   "tools.database.manageSourcesCopyId": "ڊيٽا ماخذ جي ID ڪاپي ڪريو",
+  "tools.database.manageSourcesDeleteLinked": "ڳنڍيل منظر ختم ڪريو",
+  "tools.database.manageSourcesIdCopied": "{name} جي سڃاڻپ ڪاپي ٿي",
   "tools.database.manageSourcesViews_one": "{count} ويو",
   "tools.database.manageSourcesViews_other": "{count} ويو",
   "tools.database.settingsGroup": "گروپ ڪريو",

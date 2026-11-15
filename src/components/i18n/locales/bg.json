@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "Свържи съществуващ източник на данни",
   "tools.database.manageSourcesActions": "Действия с източника на данни",
   "tools.database.manageSourcesCopyId": "Копирай ID на източника на данни",
+  "tools.database.manageSourcesDeleteLinked": "Изтриване на свързаните изгледи",
+  "tools.database.manageSourcesIdCopied": "ID на {name} е копиран",
   "tools.database.manageSourcesViews_one": "{count} изглед",
   "tools.database.manageSourcesViews_other": "{count} изгледа",
   "tools.database.settingsGroup": "Групирай",

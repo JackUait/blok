@@ -56,13 +56,13 @@ const doc = (title = 'Projects'): OutputBlockData[] => [
   { id: 'spare', type: 'database', data: { title: 'Spare', schema: [{ id: 'st', name: 'Name', type: 'title', position: 'a0' }], views: [table('sv', 'a0')], activeViewId: 'sv' } },
 ];
 
-const make = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
+const make = async (blocks: OutputBlockData[], config: Record<string, unknown> = {}): Promise<TestEditor> => {
   if (holder === undefined) throw new Error('missing editor holder');
   let ready: TestEditor | undefined;
 
   editor = new Blok({
     holder, dataModel: 'hierarchical',
-    tools: { paragraph: Paragraph, database: { class: DatabaseTool }, 'database-row': DatabaseRowTool },
+    tools: { paragraph: Paragraph, database: { class: DatabaseTool, config }, 'database-row': DatabaseRowTool },
     data: { blocks },
     onReady: (api) => { ready = api; },
   });
@@ -240,7 +240,6 @@ describe('View settings "Manage data sources" (notion-motion.md Round 38 §4)', 
     await quiet();
     stopCapturing();
 
-    expect(settings()).toBeNull();
     const views = (await dataOf(api, 'db'))?.views ?? [];
     const linked = views.find((view) => view.dataSourceId === 'spare');
 
@@ -253,5 +252,132 @@ describe('View settings "Manage data sources" (notion-motion.md Round 38 §4)', 
     await quiet();
 
     expect((await dataOf(api, 'db'))?.views.map((view) => view.id)).toEqual(['v1', 'v2', 'vb', 'vo']);
+  });
+
+  // r39-mds-sourceclick.raw: 0 mutations, the page stays; focus moves to the row.
+  it('clicking the own source row does nothing: the page stays', async () => {
+    await make(doc());
+    await openManage();
+    const before = pageText();
+
+    byTestId('database-manage-source-db')?.click();
+    await quiet();
+
+    expect(pageText()).toEqual(before);
+  });
+
+  // r39-mds-linked.raw: collection icon with an arrowDiagonalUpRightSmall badge, "1 view", an × "Delete linked views", no ⋯.
+  it('a linked row has the ↗ badge on its icon and an × "Delete linked views" instead of a ⋯', async () => {
+    await make(doc());
+    await openManage();
+    const row = byTestId('database-manage-source-other');
+    const wrap = row?.parentElement;
+
+    expect(row?.querySelector('[data-blok-database-panel-icon] [data-blok-database-manage-source-badge] svg')).not.toBeNull();
+    expect(byTestId('database-manage-source-more-other')).toBeNull();
+    const unlink = byTestId('database-manage-source-unlink-other');
+
+    expect(unlink?.parentElement).toBe(wrap);
+    expect(unlink?.getAttribute('aria-label')).toBe('Delete linked views');
+    // Own sources keep their ⋯ and no badge.
+    expect(byTestId('database-manage-source-more-db')).not.toBeNull();
+    expect(byTestId('database-manage-source-db')?.querySelector('[data-blok-database-manage-source-badge]')).toBeNull();
+  });
+
+  it('the × removes every view that shows that database, in one undo step', async () => {
+    const api = await make(doc().map((b) => (b.id === 'db'
+      ? { ...b, data: { ...(b.data as DatabaseData), views: [...(b.data as DatabaseData).views, table('vo2', 'a4', { dataSourceId: 'other' })] } }
+      : b)));
+
+    stopCapturing();
+    await openManage();
+    byTestId('database-manage-source-unlink-other')?.click();
+    await quiet();
+    stopCapturing();
+
+    expect((await dataOf(api, 'db'))?.views.map((view) => view.id)).toEqual(['v1', 'v2', 'vb']);
+    expect(byTestId('database-manage-source-other')).toBeNull();
+    expect(api.blocks.getById('other')).not.toBeNull();
+
+    api.history.undo();
+    await quiet();
+
+    expect((await dataOf(api, 'db'))?.views.map((view) => view.id)).toEqual(['v1', 'v2', 'vb', 'vo', 'vo2']);
+  });
+
+  // r39-mds-linkedclick.raw: the click opens the linked database's own page.
+  it('clicking a linked row opens that database\'s own page', async () => {
+    const openFullPage = vi.fn();
+
+    await make(doc(), { openFullPage });
+    await openManage();
+    byTestId('database-manage-source-other')?.click();
+    await quiet();
+
+    expect(openFullPage).toHaveBeenCalledWith({ databaseId: 'other', viewId: 'ov' });
+    expect(settings()).toBeNull();
+  });
+
+  // r39-mds-after-link.raw: the panel turns into "New view"; its Back goes to the link picker.
+  it('after a link the panel shows "New view": New table view, then the views on that database', async () => {
+    const api = await make(doc());
+
+    await openManage();
+    byTestId('database-manage-sources-link')?.click();
+    await quiet();
+    byTestId('database-manage-link-option-spare')?.click();
+    await quiet();
+
+    expect(pageText()).toEqual(['New view', 'New table view', 'Views on Spare', 'Table']);
+    const linked = (await dataOf(api, 'db'))?.views.find((view) => view.dataSourceId === 'spare');
+
+    byTestId('database-linked-view-sv')?.click();
+    await quiet();
+
+    expect(settings()).toBeNull();
+    const copied = (await dataOf(api, 'db'))?.views.find((view) => view.id === linked?.id);
+
+    expect(copied?.dataSourceId).toBe('spare');
+  });
+
+  it('Back from "New view" returns to the link picker', async () => {
+    await make(doc());
+    await openManage();
+    byTestId('database-manage-sources-link')?.click();
+    await quiet();
+    byTestId('database-manage-link-option-spare')?.click();
+    await quiet();
+    document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await quiet();
+
+    expect(pageText()[0]).toBe('Link existing data source');
+  });
+
+  // r39-mds-linked.png: the title reads "↗ r39 src B".
+  it('a view on a linked database titles it with the ↗ arrow', async () => {
+    await make(doc());
+    await openManage();
+    byTestId('database-manage-sources-link')?.click();
+    await quiet();
+    byTestId('database-manage-link-option-spare')?.click();
+    await quiet();
+    const title = own('[data-blok-database-source-title]');
+
+    expect(title.textContent?.trim()).toBe('Spare');
+    expect(title.querySelector('[data-blok-database-linked-arrow] svg')).not.toBeNull();
+  });
+
+  // r39-mds-copyid.raw: no toast; "<name> ID copied" in an assertive live region.
+  it('Copy data source ID announces "<name> ID copied" to screen readers', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: vi.fn(async () => undefined) }, configurable: true });
+    await make(doc());
+    await openManage();
+    byTestId('database-manage-source-more-src-b')?.click();
+    await quiet();
+    byTestId('database-manage-source-copy-id')?.click();
+    const region = document.getElementById('blok-announcer-assertive');
+
+    await vi.waitFor(() => expect(region?.textContent).toBe('Src B ID copied'), { timeout: 2000 });
+    expect(region?.getAttribute('aria-live')).toBe('assertive');
   });
 });

@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "ရှိပြီးသား ဒေတာရင်းမြစ် ချိတ်ဆက်ရန်",
   "tools.database.manageSourcesActions": "ဒေတာရင်းမြစ် လုပ်ဆောင်ချက်များ",
   "tools.database.manageSourcesCopyId": "ဒေတာရင်းမြစ် ID ကူးယူရန်",
+  "tools.database.manageSourcesDeleteLinked": "ချိတ်ဆက်ထားသော မြင်ကွင်းများကို ဖျက်ရန်",
+  "tools.database.manageSourcesIdCopied": "{name} ID ကို ကူးယူပြီး",
   "tools.database.manageSourcesViews_one": "မြင်ကွင်း {count} ခု",
   "tools.database.manageSourcesViews_other": "မြင်ကွင်း {count} ခု",
   "tools.database.settingsGroup": "အုပ်စုဖွဲ့ရန်",

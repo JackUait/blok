@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "기존 데이터 소스 연결",
   "tools.database.manageSourcesActions": "데이터 소스 작업",
   "tools.database.manageSourcesCopyId": "데이터 소스 ID 복사",
+  "tools.database.manageSourcesDeleteLinked": "연결된 보기 삭제",
+  "tools.database.manageSourcesIdCopied": "{name} ID 복사됨",
   "tools.database.manageSourcesViews_one": "뷰 {count}개",
   "tools.database.manageSourcesViews_other": "뷰 {count}개",
   "tools.database.settingsGroup": "그룹화",

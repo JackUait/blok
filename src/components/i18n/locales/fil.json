@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "Mag-link ng umiiral na data source",
   "tools.database.manageSourcesActions": "Mga aksyon sa data source",
   "tools.database.manageSourcesCopyId": "Kopyahin ang ID ng data source",
+  "tools.database.manageSourcesDeleteLinked": "Burahin ang mga naka-link na view",
+  "tools.database.manageSourcesIdCopied": "Nakopya ang ID ng {name}",
   "tools.database.manageSourcesViews_one": "View: {count}",
   "tools.database.manageSourcesViews_other": "Mga view: {count}",
   "tools.database.settingsGroup": "Pangkatin",

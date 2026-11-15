@@ -1391,6 +1391,8 @@
   "tools.database.manageSourcesLink": "Зв’язати наявне джерело даних",
   "tools.database.manageSourcesActions": "Дії з джерелом даних",
   "tools.database.manageSourcesCopyId": "Копіювати ID джерела даних",
+  "tools.database.manageSourcesDeleteLinked": "Видалити пов’язані подання",
+  "tools.database.manageSourcesIdCopied": "ID джерела «{name}» скопійовано",
   "tools.database.manageSourcesViews_one": "{count} подання",
   "tools.database.manageSourcesViews_few": "{count} подання",
   "tools.database.manageSourcesViews_many": "{count} подань",

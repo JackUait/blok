@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "Länka befintlig datakälla",
   "tools.database.manageSourcesActions": "Åtgärder för datakälla",
   "tools.database.manageSourcesCopyId": "Kopiera datakällans ID",
+  "tools.database.manageSourcesDeleteLinked": "Ta bort länkade vyer",
+  "tools.database.manageSourcesIdCopied": "ID för {name} kopierat",
   "tools.database.manageSourcesViews_one": "{count} vy",
   "tools.database.manageSourcesViews_other": "{count} vyer",
   "tools.database.settingsGroup": "Gruppera",

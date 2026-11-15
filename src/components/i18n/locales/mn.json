@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "Одоо байгаа өгөгдлийн эх сурвалж холбох",
   "tools.database.manageSourcesActions": "Өгөгдлийн эх сурвалжийн үйлдлүүд",
   "tools.database.manageSourcesCopyId": "Өгөгдлийн эх сурвалжийн ID хуулах",
+  "tools.database.manageSourcesDeleteLinked": "Холбосон харагдацуудыг устгах",
+  "tools.database.manageSourcesIdCopied": "{name}-ийн ID хуулагдлаа",
   "tools.database.manageSourcesViews_one": "{count} харагдац",
   "tools.database.manageSourcesViews_other": "{count} харагдац",
   "tools.database.settingsGroup": "Бүлэглэх",

@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "Lingi olemasolev andmeallikas",
   "tools.database.manageSourcesActions": "Andmeallika toimingud",
   "tools.database.manageSourcesCopyId": "Kopeeri andmeallika ID",
+  "tools.database.manageSourcesDeleteLinked": "Kustuta lingitud vaated",
+  "tools.database.manageSourcesIdCopied": "Allika {name} ID kopeeriti",
   "tools.database.manageSourcesViews_one": "{count} vaade",
   "tools.database.manageSourcesViews_other": "{count} vaadet",
   "tools.database.settingsGroup": "Rühmita",

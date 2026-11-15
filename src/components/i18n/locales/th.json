@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "ลิงก์แหล่งข้อมูลที่มีอยู่",
   "tools.database.manageSourcesActions": "การดำเนินการของแหล่งข้อมูล",
   "tools.database.manageSourcesCopyId": "คัดลอก ID แหล่งข้อมูล",
+  "tools.database.manageSourcesDeleteLinked": "ลบมุมมองที่ลิงก์",
+  "tools.database.manageSourcesIdCopied": "คัดลอก ID ของ {name} แล้ว",
   "tools.database.manageSourcesViews_one": "{count} มุมมอง",
   "tools.database.manageSourcesViews_other": "{count} มุมมอง",
   "tools.database.settingsGroup": "จัดกลุ่ม",

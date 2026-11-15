@@ -1391,6 +1391,8 @@
   "tools.database.manageSourcesLink": "Связать существующий источник данных",
   "tools.database.manageSourcesActions": "Действия с источником данных",
   "tools.database.manageSourcesCopyId": "Копировать ID источника данных",
+  "tools.database.manageSourcesDeleteLinked": "Удалить связанные представления",
+  "tools.database.manageSourcesIdCopied": "ID источника «{name}» скопирован",
   "tools.database.manageSourcesViews_one": "{count} представление",
   "tools.database.manageSourcesViews_few": "{count} представления",
   "tools.database.manageSourcesViews_many": "{count} представлений",

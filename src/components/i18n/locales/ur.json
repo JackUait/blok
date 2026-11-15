@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "موجودہ ڈیٹا ماخذ منسلک کریں",
   "tools.database.manageSourcesActions": "ڈیٹا ماخذ کی کارروائیاں",
   "tools.database.manageSourcesCopyId": "ڈیٹا ماخذ کی ID کاپی کریں",
+  "tools.database.manageSourcesDeleteLinked": "منسلک ویوز حذف کریں",
+  "tools.database.manageSourcesIdCopied": "{name} کی ID کاپی ہو گئی",
   "tools.database.manageSourcesViews_one": "{count} ویو",
   "tools.database.manageSourcesViews_other": "{count} ویو",
   "tools.database.settingsGroup": "گروپ کریں",

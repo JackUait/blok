@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "ነባር የውሂብ ምንጭ አገናኝ",
   "tools.database.manageSourcesActions": "የውሂብ ምንጭ እርምጃዎች",
   "tools.database.manageSourcesCopyId": "የውሂብ ምንጭ መታወቂያ ቅዳ",
+  "tools.database.manageSourcesDeleteLinked": "የተገናኙ እይታዎችን ሰርዝ",
+  "tools.database.manageSourcesIdCopied": "የ{name} መታወቂያ ተቀድቷል",
   "tools.database.manageSourcesViews_one": "{count} ዕይታ",
   "tools.database.manageSourcesViews_other": "{count} ዕይታዎች",
   "tools.database.settingsGroup": "በቡድን አደራጅ",

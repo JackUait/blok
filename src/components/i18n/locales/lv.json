@@ -1378,6 +1378,8 @@
   "tools.database.manageSourcesLink": "Saistīt esošu datu avotu",
   "tools.database.manageSourcesActions": "Datu avota darbības",
   "tools.database.manageSourcesCopyId": "Kopēt datu avota ID",
+  "tools.database.manageSourcesDeleteLinked": "Dzēst saistītos skatus",
+  "tools.database.manageSourcesIdCopied": "{name} ID nokopēts",
   "tools.database.manageSourcesViews_zero": "{count} skatu",
   "tools.database.manageSourcesViews_one": "{count} skats",
   "tools.database.manageSourcesViews_other": "{count} skati",

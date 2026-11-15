@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "Pautkan sumber data sedia ada",
   "tools.database.manageSourcesActions": "Tindakan sumber data",
   "tools.database.manageSourcesCopyId": "Salin ID sumber data",
+  "tools.database.manageSourcesDeleteLinked": "Padam paparan dipautkan",
+  "tools.database.manageSourcesIdCopied": "ID {name} disalin",
   "tools.database.manageSourcesViews_one": "{count} paparan",
   "tools.database.manageSourcesViews_other": "{count} paparan",
   "tools.database.settingsGroup": "Kumpulkan",

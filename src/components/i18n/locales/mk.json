@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "Поврзи постоечки извор на податоци",
   "tools.database.manageSourcesActions": "Дејства за изворот на податоци",
   "tools.database.manageSourcesCopyId": "Копирај ID на изворот на податоци",
+  "tools.database.manageSourcesDeleteLinked": "Избриши поврзани прикази",
+  "tools.database.manageSourcesIdCopied": "ID на {name} е копиран",
   "tools.database.manageSourcesViews_one": "{count} приказ",
   "tools.database.manageSourcesViews_other": "{count} прикази",
   "tools.database.settingsGroup": "Групирај",

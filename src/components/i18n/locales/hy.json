@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "Կապել առկա տվյալների աղբյուր",
   "tools.database.manageSourcesActions": "Տվյալների աղբյուրի գործողություններ",
   "tools.database.manageSourcesCopyId": "Պատճենել տվյալների աղբյուրի ID-ն",
+  "tools.database.manageSourcesDeleteLinked": "Ջնջել կապված դիտումները",
+  "tools.database.manageSourcesIdCopied": "{name}-ի ID-ն պատճենվեց",
   "tools.database.manageSourcesViews_one": "{count} տեսք",
   "tools.database.manageSourcesViews_other": "{count} տեսք",
   "tools.database.settingsGroup": "Խմբավորել",

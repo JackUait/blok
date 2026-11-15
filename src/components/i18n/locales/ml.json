@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "നിലവിലുള്ള ഡാറ്റാ ഉറവിടം ലിങ്ക് ചെയ്യുക",
   "tools.database.manageSourcesActions": "ഡാറ്റാ ഉറവിട പ്രവർത്തനങ്ങൾ",
   "tools.database.manageSourcesCopyId": "ഡാറ്റാ ഉറവിട ID പകർത്തുക",
+  "tools.database.manageSourcesDeleteLinked": "ലിങ്ക് ചെയ്ത കാഴ്ചകൾ ഇല്ലാതാക്കുക",
+  "tools.database.manageSourcesIdCopied": "{name} ഐഡി പകർത്തി",
   "tools.database.manageSourcesViews_one": "{count} കാഴ്ച",
   "tools.database.manageSourcesViews_other": "{count} കാഴ്ചകൾ",
   "tools.database.settingsGroup": "ഗ്രൂപ്പ് ചെയ്യുക",

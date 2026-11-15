@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "Tautkan sumber data yang ada",
   "tools.database.manageSourcesActions": "Tindakan sumber data",
   "tools.database.manageSourcesCopyId": "Salin ID sumber data",
+  "tools.database.manageSourcesDeleteLinked": "Hapus tampilan tertaut",
+  "tools.database.manageSourcesIdCopied": "ID {name} disalin",
   "tools.database.manageSourcesViews_one": "{count} tampilan",
   "tools.database.manageSourcesViews_other": "{count} tampilan",
   "tools.database.settingsGroup": "Kelompokkan",

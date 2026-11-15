@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "Link existing data source",
   "tools.database.manageSourcesActions": "Data source actions",
   "tools.database.manageSourcesCopyId": "Copy data source ID",
+  "tools.database.manageSourcesDeleteLinked": "Delete linked views",
+  "tools.database.manageSourcesIdCopied": "{name} ID copied",
   "tools.database.manageSourcesViews_one": "{count} view",
   "tools.database.manageSourcesViews_other": "{count} views",
   "tools.database.settingsGroup": "Group",

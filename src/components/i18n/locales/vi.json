@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "Liên kết nguồn dữ liệu hiện có",
   "tools.database.manageSourcesActions": "Thao tác với nguồn dữ liệu",
   "tools.database.manageSourcesCopyId": "Sao chép ID nguồn dữ liệu",
+  "tools.database.manageSourcesDeleteLinked": "Xóa chế độ xem được liên kết",
+  "tools.database.manageSourcesIdCopied": "Đã sao chép ID của {name}",
   "tools.database.manageSourcesViews_one": "{count} chế độ xem",
   "tools.database.manageSourcesViews_other": "{count} chế độ xem",
   "tools.database.settingsGroup": "Nhóm",

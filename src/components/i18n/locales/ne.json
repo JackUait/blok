@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "विद्यमान डेटा स्रोत लिंक गर्नुहोस्",
   "tools.database.manageSourcesActions": "डेटा स्रोत कार्यहरू",
   "tools.database.manageSourcesCopyId": "डेटा स्रोत ID प्रतिलिपि गर्नुहोस्",
+  "tools.database.manageSourcesDeleteLinked": "लिङ्क गरिएका दृश्यहरू मेटाउनुहोस्",
+  "tools.database.manageSourcesIdCopied": "{name} को ID प्रतिलिपि भयो",
   "tools.database.manageSourcesViews_one": "{count} दृश्य",
   "tools.database.manageSourcesViews_other": "{count} दृश्य",
   "tools.database.settingsGroup": "समूह बनाउनुहोस्",

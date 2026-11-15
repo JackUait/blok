@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "मौजूदा डेटा स्रोत लिंक करें",
   "tools.database.manageSourcesActions": "डेटा स्रोत कार्रवाइयाँ",
   "tools.database.manageSourcesCopyId": "डेटा स्रोत ID कॉपी करें",
+  "tools.database.manageSourcesDeleteLinked": "लिंक किए गए व्यू हटाएं",
+  "tools.database.manageSourcesIdCopied": "{name} की ID कॉपी हो गई",
   "tools.database.manageSourcesViews_one": "{count} दृश्य",
   "tools.database.manageSourcesViews_other": "{count} दृश्य",
   "tools.database.settingsGroup": "समूह बनाएं",

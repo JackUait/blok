@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "বিদ্যমান ডেটা সোর্স লিঙ্ক করুন",
   "tools.database.manageSourcesActions": "ডেটা সোর্সের কাজ",
   "tools.database.manageSourcesCopyId": "ডেটা সোর্স আইডি কপি করুন",
+  "tools.database.manageSourcesDeleteLinked": "লিঙ্ক করা ভিউ মুছুন",
+  "tools.database.manageSourcesIdCopied": "{name}-এর আইডি কপি হয়েছে",
   "tools.database.manageSourcesViews_one": "{count}টি ভিউ",
   "tools.database.manageSourcesViews_other": "{count}টি ভিউ",
   "tools.database.settingsGroup": "গোষ্ঠীবদ্ধ করুন",

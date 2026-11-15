@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "පවතින දත්ත මූලාශ්‍රයක් සම්බන්ධ කරන්න",
   "tools.database.manageSourcesActions": "දත්ත මූලාශ්‍ර ක්‍රියා",
   "tools.database.manageSourcesCopyId": "දත්ත මූලාශ්‍ර ID පිටපත් කරන්න",
+  "tools.database.manageSourcesDeleteLinked": "සබැඳි දසුන් මකන්න",
+  "tools.database.manageSourcesIdCopied": "{name} හි ID පිටපත් විය",
   "tools.database.manageSourcesViews_one": "දසුන් {count}",
   "tools.database.manageSourcesViews_other": "දසුන් {count}",
   "tools.database.settingsGroup": "සමූහගත කරන්න",

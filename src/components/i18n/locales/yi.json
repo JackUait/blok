@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "פֿאַרבינדן אַן עקזיסטירנדיקן דאַטן־מקור",
   "tools.database.manageSourcesActions": "דאַטן־מקור אַקציעס",
   "tools.database.manageSourcesCopyId": "קאָפּירן דאַטן־מקור ID",
+  "tools.database.manageSourcesDeleteLinked": "מעקן פֿאַרבונדענע מיינונגען",
+  "tools.database.manageSourcesIdCopied": "ID פֿון {name} קאָפּירט",
   "tools.database.manageSourcesViews_one": "{count} אויסשטעל",
   "tools.database.manageSourcesViews_other": "אויסשטעלן: {count}",
   "tools.database.settingsGroup": "גרופּירן",

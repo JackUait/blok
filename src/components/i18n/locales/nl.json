@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "Bestaande gegevensbron koppelen",
   "tools.database.manageSourcesActions": "Acties voor gegevensbron",
   "tools.database.manageSourcesCopyId": "ID van gegevensbron kopiëren",
+  "tools.database.manageSourcesDeleteLinked": "Gekoppelde weergaven verwijderen",
+  "tools.database.manageSourcesIdCopied": "ID van {name} gekopieerd",
   "tools.database.manageSourcesViews_one": "{count} weergave",
   "tools.database.manageSourcesViews_other": "{count} weergaven",
   "tools.database.settingsGroup": "Groeperen",

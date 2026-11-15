@@ -1417,6 +1417,8 @@
   "tools.database.manageSourcesLink": "ربط مصدر بيانات موجود",
   "tools.database.manageSourcesActions": "إجراءات مصدر البيانات",
   "tools.database.manageSourcesCopyId": "نسخ معرّف مصدر البيانات",
+  "tools.database.manageSourcesDeleteLinked": "حذف طرق العرض المرتبطة",
+  "tools.database.manageSourcesIdCopied": "تم نسخ معرّف {name}",
   "tools.database.manageSourcesViews_zero": "العروض: {count}",
   "tools.database.manageSourcesViews_one": "عرض: {count}",
   "tools.database.manageSourcesViews_two": "العروض: {count}",

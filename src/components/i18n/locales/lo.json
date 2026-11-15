@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "ເຊື່ອມໂຍງແຫຼ່ງຂໍ້ມູນທີ່ມີຢູ່",
   "tools.database.manageSourcesActions": "ຄຳສັ່ງແຫຼ່ງຂໍ້ມູນ",
   "tools.database.manageSourcesCopyId": "ສຳເນົາ ID ແຫຼ່ງຂໍ້ມູນ",
+  "tools.database.manageSourcesDeleteLinked": "ລຶບມຸມມອງທີ່ເຊື່ອມໂຍງ",
+  "tools.database.manageSourcesIdCopied": "ສຳເນົາ ID ຂອງ {name} ແລ້ວ",
   "tools.database.manageSourcesViews_one": "{count} ມຸມມອງ",
   "tools.database.manageSourcesViews_other": "{count} ມຸມມອງ",
   "tools.database.settingsGroup": "ຈັດກຸ່ມ",

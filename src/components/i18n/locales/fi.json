@@ -1365,6 +1365,8 @@
   "tools.database.manageSourcesLink": "Linkitä olemassa oleva tietolähde",
   "tools.database.manageSourcesActions": "Tietolähteen toiminnot",
   "tools.database.manageSourcesCopyId": "Kopioi tietolähteen tunnus",
+  "tools.database.manageSourcesDeleteLinked": "Poista linkitetyt näkymät",
+  "tools.database.manageSourcesIdCopied": "Lähteen {name} tunnus kopioitu",
   "tools.database.manageSourcesViews_one": "{count} näkymä",
   "tools.database.manageSourcesViews_other": "{count} näkymää",
   "tools.database.settingsGroup": "Ryhmittele",

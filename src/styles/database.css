@@ -6082,6 +6082,36 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   border-radius: var(--blok-radius-dialog);
   background-color: var(--blok-database-confirm-bg);
   box-shadow: var(--blok-database-confirm-shadow);
+  container-type: inline-size;
+}
+
+/* notion-motion.md Round 34 §4: the preview centres a 600 column. The cover spans the surface from its
+   top-left corner, 30vh up to 280; the 78 icon sits 8 into the column and 42 over the cover.
+   100cqi is the surface's content box; the 40 padding and the form's 12 top padding are pulled back. */
+[data-blok-database-form-preview] > [data-blok-database-form] {
+  max-inline-size: 600px;
+  margin-inline: auto;
+}
+
+[data-blok-database-form-preview] [data-blok-database-form-header] > [data-blok-page-cover] {
+  inline-size: calc(100cqi + 2 * var(--blok-space-10));
+  block-size: 30vh;
+  max-block-size: 280px;
+  margin-block-start: calc((var(--blok-space-10) + var(--blok-space-3)) * -1);
+  margin-inline-start: calc(min(0px, (600px - 100cqi) / 2) - var(--blok-space-10));
+}
+
+[data-blok-database-form-preview] [data-blok-database-form-header] > [data-blok-page-cover]:has(~ [data-blok-database-form-header-row] > [data-blok-page-icon]) {
+  margin-block-end: -42px;
+}
+
+/* The cover is positioned: the row must be too, or the icon paints under it. */
+[data-blok-database-form-preview] [data-blok-database-form-header-row] {
+  position: relative;
+}
+
+[data-blok-database-form-preview] [data-blok-database-form-header-row] > [data-blok-page-icon] {
+  margin-inline-start: calc(var(--blok-space-2) - var(--blok-space-1-25));
 }
 
 [data-blok-database-confirm-dialog] {

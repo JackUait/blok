@@ -130,6 +130,37 @@ describe('timeline (research/21 §1i)', () => {
   });
 });
 
+// notion-motion.md Round 34 §4 (r34-form-preview-icon.raw): in the 960 preview the cover is 960 wide and
+// 30vh (max 280) tall from the modal's top-left; the 600 column is centred, the 78 icon 8 into it and 42 over the cover.
+describe('form preview cover and icon', () => {
+  const preview = '[data-blok-database-form-preview]';
+  const cover = `${preview} [data-blok-database-form-header] > [data-blok-page-cover]`;
+
+  it('centres a 600 column in the preview', () => {
+    expect(ruleBody(preview)).toContain('container-type: inline-size');
+    expect(ruleBody(`${preview} > [data-blok-database-form]`)).toContain('max-inline-size: 600px');
+    expect(ruleBody(`${preview} > [data-blok-database-form]`)).toContain('margin-inline: auto');
+  });
+
+  it('spans the cover edge to edge, 30vh tall up to 280', () => {
+    const body = ruleBody(cover);
+
+    expect(body).toContain('inline-size: calc(100cqi + 2 * var(--blok-space-10))');
+    expect(body).toContain('block-size: 30vh');
+    expect(body).toContain('max-block-size: 280px');
+    expect(body).toContain('margin-block-start: calc((var(--blok-space-10) + var(--blok-space-3)) * -1)');
+    expect(body).toContain('margin-inline-start: calc(min(0px, (600px - 100cqi) / 2) - var(--blok-space-10))');
+  });
+
+  it('lays the icon 42 over the cover, 8 into the column', () => {
+    // The cover is positioned: without this the icon paints under it.
+    expect(ruleBody(`${preview} [data-blok-database-form-header-row]`)).toContain('position: relative');
+    expect(ruleBody(`${cover}:has(~ [data-blok-database-form-header-row] > [data-blok-page-icon])`)).toContain('margin-block-end: -42px');
+    expect(ruleBody(`${preview} [data-blok-database-form-header-row] > [data-blok-page-icon]`))
+      .toContain('margin-inline-start: calc(var(--blok-space-2) - var(--blok-space-1-25))');
+  });
+});
+
 describe('form builder question card (research/21 §1k)', () => {
   const card = '[data-blok-database-form-question]:has(> [data-blok-database-form-question-header])';
 

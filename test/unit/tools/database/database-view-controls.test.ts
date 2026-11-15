@@ -2342,6 +2342,28 @@ describe('DatabaseViewControls', () => {
       expect(controls.filterBar.hidden).toBe(true);
     });
 
+    // notion-motion.md Round 41 Part B (r41-n-empty-form.png): a form view's toolbar has no ».
+    it('shows no » on a form view', () => {
+      const form = { id: 'v1', name: 'Form builder', type: 'form', position: 'a0', sorts: [], filters: [], visibleProperties: [] } as DatabaseViewConfig;
+
+      setup({ levers: { savedView: () => form } });
+
+      expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+    });
+
+    it('takes » away when a sorted view switches to a form', () => {
+      const { controls, saved } = setup();
+
+      saved.view = { ...saved.view, sorts: [{ propertyId: 'title', direction: 'asc' }] };
+      controls.refresh();
+      expect(q('database-toolbar-minimize')?.hidden).toBe(false);
+
+      saved.view = { ...saved.view, type: 'form' };
+      controls.refresh();
+
+      expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+    });
+
     it('opens a view saved minimized with only « and settings', () => {
       const { controls, saved } = setup();
 

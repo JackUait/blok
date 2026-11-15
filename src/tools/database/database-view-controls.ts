@@ -480,6 +480,9 @@ export class DatabaseViewControls {
     }
     this.filterBar.hidden = true;
     this.filterBar.replaceChildren();
+    // notion-motion.md Round 41 Part B: a form has no filter bar, so » has nothing to fold.
+    this.barMinimizable = false;
+    this.syncMinimize();
   }
 
   destroy(): void {

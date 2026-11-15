@@ -581,7 +581,7 @@ describe('cell editor CSS', () => {
     it('boxes the Select chip × 16px, 4px from the chip end, with the same 9px ink', () => {
       expect(declared('[data-blok-database-select-chip-remove]', 'width')).toEqual(['16px']);
       expect(declared('[data-blok-database-select-chip-remove]', 'height')).toEqual(['16px']);
-      expect(declared('[data-blok-database-select-chip-remove] svg', 'margin')).toEqual(['-2px']);
+      expect(declared('[data-blok-database-select-chip-remove] svg', 'margin')).toEqual(['calc(-1 * var(--blok-space-0-5))']);
       expect(declared('[data-blok-database-select-chip]', 'padding-inline-end').at(-1)).toBe('var(--blok-space-1)');
     });
 

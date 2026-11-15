@@ -7963,7 +7963,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-select-chip-remove] svg {
   width: 20px;
   height: 20px;
-  margin: -2px;
+  margin: calc(-1 * var(--blok-space-0-5));
 }
 
 /* notion-motion.md Round 35 (r35-cell-select.raw): Notion's × is a 16 box 4px from the chip end.

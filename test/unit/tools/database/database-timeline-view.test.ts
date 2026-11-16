@@ -1911,7 +1911,7 @@ describe('DatabaseTimelineView', () => {
       pointer('pointerdown', handle, at(510), 50);
       pointer('pointermove', document, at(510) + 18, 50);
 
-      expect(showReadout).toHaveBeenLastCalledWith(handle, 'Oct 9, 8:45 AM', expect.objectContaining({ placement: 'right' }));
+      expect(bar(root, 'r1').querySelector('[data-blok-database-timeline-edge-readout="end"]')?.textContent).toBe('Oct 9, 8:45 AM');
       pointer('pointerup', document, at(510) + 18, 50);
     });
 

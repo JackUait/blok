@@ -6,6 +6,7 @@ import {
   IconPlayerBackward,
   IconPlayerForward,
   IconCollapseFullscreen,
+  IconDotsHorizontal,
   IconPlayerLoop,
   IconPlayerPause,
   IconPlayerPip,
@@ -102,6 +103,21 @@ export function timeAtRatio(ratio: number, duration: number): number {
 export function ratioFromPointer(clientX: number, rect: { left: number; width: number }): number {
   if (!rect.width) return 0;
   return Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+}
+
+export type PlayerTier = 'full' | 'compact' | 'small' | 'tiny';
+
+// The full bar needs about 370px. Each tier below shows fewer controls; none of them scale.
+const TIER_COMPACT_BELOW = 400;
+const TIER_SMALL_BELOW = 260;
+const TIER_TINY_BELOW = 180;
+
+/** Size tier for a player's rendered width. An unmeasured player (0) counts as full. */
+export function playerTier(width: number): PlayerTier {
+  if (width <= 0 || width >= TIER_COMPACT_BELOW) return 'full';
+  if (width >= TIER_SMALL_BELOW) return 'compact';
+  if (width >= TIER_TINY_BELOW) return 'small';
+  return 'tiny';
 }
 
 const playedSources = new Set<string>();
@@ -233,7 +249,14 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   time.setAttribute('data-role', 'time');
   // Named by the time it shows: an aria-label would hide it (WCAG 2.5.3).
   time.setAttribute('aria-description', i18nLabel('toggleTimeDisplay', 'Switch between elapsed and remaining time'));
-  time.textContent = '0:00 / 0:00';
+  // Two parts, so a narrow player can hide the total.
+  const timeCurrent = document.createElement('span');
+  timeCurrent.setAttribute('data-role', 'time-current');
+  timeCurrent.textContent = '0:00';
+  const timeTotal = document.createElement('span');
+  timeTotal.setAttribute('data-role', 'time-total');
+  timeTotal.textContent = ' / 0:00';
+  time.append(timeCurrent, timeTotal);
 
   const muteToggle = button('mute-toggle', i18nLabel('mute', 'Mute'), IconPlayerVolume);
   muteToggle.setAttribute('aria-pressed', 'false');
@@ -328,9 +351,11 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     setSeekValueText();
     if (state.timeMode === 'remaining') {
       const dur = Number.isFinite(video.duration) ? video.duration : 0;
-      time.textContent = `-${formatTime(Math.max(0, dur - video.currentTime))}`;
+      timeCurrent.textContent = `-${formatTime(Math.max(0, dur - video.currentTime))}`;
+      timeTotal.textContent = '';
     } else {
-      time.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
+      timeCurrent.textContent = formatTime(video.currentTime);
+      timeTotal.textContent = ` / ${formatTime(video.duration)}`;
     }
   };
   // Click / Enter / Space on the time label flips elapsed ↔ remaining.
@@ -1267,6 +1292,13 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   theaterBtn.addEventListener('click', () => setTheater(!theater.on));
   bar.insertBefore(theaterBtn, fullscreen);
 
+  // A narrow player has no room for the view-mode buttons, so the settings card
+  // carries them too. CSS shows these rows only there.
+  const theaterRow = menuRow('menu-theater');
+  theaterRow.append(menuIcon(IconPlayerTheater), menuText('blok-video-controls__menu-label', i18nLabel('theater', 'Theater mode')));
+  theaterRow.addEventListener('click', () => { closeMenu(); setTheater(true); });
+  mainPane.append(theaterRow);
+
   // Picture-in-picture — only mounted when the browser supports it.
   const pipSupported = Boolean(document.pictureInPictureEnabled);
   const pipBtn = pipSupported ? button('picture-in-picture', i18nLabel('pip', 'Picture-in-Picture'), IconPlayerPip) : null;
@@ -1279,8 +1311,29 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
       else void video.requestPictureInPicture?.();
     });
     bar.insertBefore(pipBtn, fullscreen);
+    const pipRow = menuRow('menu-pip');
+    pipRow.append(menuIcon(IconPlayerPip), menuText('blok-video-controls__menu-label', i18nLabel('pip', 'Picture-in-Picture')));
+    pipRow.addEventListener('click', () => { closeMenu(); pipBtn.click(); });
+    mainPane.append(pipRow);
     video.addEventListener('enterpictureinpicture', onEnterPip);
     video.addEventListener('leavepictureinpicture', onLeavePip);
+  }
+
+  // ----- size tier -----
+  const tierState: { current: PlayerTier | null; observer: ResizeObserver | null } = { current: null, observer: null };
+  const syncTier = (): void => {
+    const tier = playerTier(figure.clientWidth);
+    if (tier === tierState.current) return;
+    tierState.current = tier;
+    closeMenu();
+    figure.setAttribute('data-tier', tier);
+    figure.toggleAttribute('data-capsule', tier !== 'full');
+    gear.innerHTML = tier === 'full' ? IconPlayerSettings : IconDotsHorizontal;
+  };
+  syncTier();
+  if (typeof ResizeObserver !== 'undefined') {
+    tierState.observer = new ResizeObserver(syncTier);
+    tierState.observer.observe(figure);
   }
 
   // ----- idle auto-hide -----
@@ -1523,6 +1576,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   updateCenter();
 
   const destroy = (): void => {
+    tierState.observer?.disconnect();
     if (hold.timer) clearTimeout(hold.timer);
     if (state.idleTimer) clearTimeout(state.idleTimer);
     document.removeEventListener('mousedown', onMenuOutside);

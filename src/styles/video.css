@@ -560,6 +560,8 @@
   box-shadow: var(--blok-video-island-shadow);
   pointer-events: auto;
   opacity: 0;
+  /* 0 hidden, 1 shown. A capsule has no bar box, so its parts read this instead. */
+  --blok-video-bar-on: 0;
   transform: translateY(18px) scale(0.94);
   transform-origin: 50% 100%;
   transition: opacity 180ms ease, transform 420ms var(--blok-ease-spring-island);
@@ -581,11 +583,13 @@
 [data-blok-tool="video"] .blok-video-controls:has(:focus-visible) .blok-video-controls__bar,
 [data-blok-tool="video"] .blok-video-controls__bar:has([aria-expanded="true"]) {
   opacity: 1;
+  --blok-video-bar-on: 1;
   transform: none;
 }
 /* theater scales the whole card, island included; hide it until the card lands */
 [data-blok-tool="video"] .blok-video-inner[data-theater-morphing="true"] .blok-video-controls__bar {
   opacity: 0;
+  --blok-video-bar-on: 0;
   transition: none;
 }
 
@@ -1463,6 +1467,7 @@
 /* idle auto-hide — fade the bar + hide the cursor during playback */
 [data-blok-tool="video"] .blok-video-inner[data-controls-hidden="true"] .blok-video-controls__bar {
   opacity: 0;
+  --blok-video-bar-on: 0;
   transform: translateY(18px) scale(0.94);
   pointer-events: none;
 }
@@ -1564,4 +1569,180 @@
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   pointer-events: none;
+}
+
+/* ---------- capsule: the player below 400px ----------
+   controls.ts stamps data-capsule and data-tier (compact, small, tiny) from the
+   player's width. The full bar needs about 370px, so a narrower player swaps it
+   for one glass capsule that is the scrubber, with the other buttons in the top
+   corner. Nothing here applies to a wider player. */
+[data-blok-tool="video"] .blok-video-controls__menu-row[data-action="menu-theater"],
+[data-blok-tool="video"] .blok-video-controls__menu-row[data-action="menu-pip"] { display: none; }
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__menu-row[data-action="menu-theater"],
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__menu-row[data-action="menu-pip"] { display: flex; }
+
+/* the bar keeps its states but gives up its box; each part is placed on the frame */
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar { display: contents; }
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar > * {
+  position: absolute;
+  margin: 0;
+  opacity: var(--blok-video-bar-on, 0);
+  translate: 0 calc((1 - var(--blok-video-bar-on, 0)) * 18px);
+  transition: opacity 180ms ease, translate 420ms var(--blok-ease-spring-island), background 120ms ease, transform 120ms ease;
+}
+
+/* the capsule is the scrubber: a fill grows across it and a drag anywhere on it seeks */
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar .blok-video-controls__seek-wrap {
+  inset-inline: var(--blok-space-2-5);
+  bottom: var(--blok-space-2-5);
+  height: 36px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-video-island-bg);
+  -webkit-backdrop-filter: blur(22px) saturate(1.9);
+  backdrop-filter: blur(22px) saturate(1.9);
+  box-shadow: var(--blok-video-island-shadow);
+  scale: calc(0.94 + 0.06 * var(--blok-video-bar-on, 0));
+  transform-origin: 50% 100%;
+  cursor: pointer;
+  transition:
+    opacity 180ms ease,
+    translate 420ms var(--blok-ease-spring-island),
+    scale 420ms var(--blok-ease-spring-island),
+    height 260ms var(--blok-ease-spring-island),
+    inset 260ms var(--blok-ease-spring-island);
+}
+/* it swells under the pointer while held */
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar .blok-video-controls__seek-wrap:active {
+  height: 44px;
+  inset-inline: var(--blok-space-1-5);
+  bottom: var(--blok-space-1-5);
+}
+/* The fill is the capsule's own shape, cut straight at the playhead. A clip here,
+   not overflow on the capsule: overflow beside backdrop-filter drops the clip. */
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar .blok-video-controls__seek-wrap::before {
+  inset: 0;
+  height: auto;
+  transform: none;
+  border-radius: inherit;
+  background: var(--blok-video-buffered);
+  clip-path: inset(0 calc(100% - var(--blok-seek-pct, 0%)) 0 0);
+  transition: none;
+}
+/* the range covers the whole capsule, unseen, so pointer and keyboard seeking stay native */
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar .blok-video-controls__seek-wrap .blok-video-controls__seek {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+}
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__seek::-webkit-slider-thumb { width: 1px; }
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__seek::-moz-range-thumb { width: 1px; }
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__seek-wrap:has(.blok-video-controls__seek:focus-visible) {
+  box-shadow: var(--blok-video-island-shadow), 0 0 0 3px var(--blok-video-focus-ring);
+}
+
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__buffered,
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__seek-tooltip,
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__volume,
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__btn[data-action="theater"],
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__btn[data-action="picture-in-picture"],
+[data-blok-tool="video"] .blok-video-inner[data-capsule] [data-role="time-total"] { display: none; }
+
+/* play and the time ride on the capsule. The capsule comes later in the DOM, so they need the lift. */
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__btn[data-action="play-toggle"] {
+  inset-inline-start: calc(var(--blok-space-2-5) + 3px);
+  bottom: calc(var(--blok-space-2-5) + 3px);
+  width: 30px; height: 30px;
+  background: transparent;
+  color: var(--blok-video-control-fg);
+  z-index: 1;
+}
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__btn[data-action="play-toggle"]:hover {
+  background: var(--blok-video-control-bg-hover);
+}
+/* a drag that starts on the time still scrubs */
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__time {
+  inset-inline-end: calc(var(--blok-space-2-5) + var(--blok-space-3));
+  bottom: var(--blok-space-2-5);
+  height: 36px;
+  display: flex;
+  align-items: center;
+  color: var(--blok-video-control-fg);
+  font-weight: 600;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* the top corner: settings, mute, full screen. They come down, the capsule comes up. */
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__btn[data-action="fullscreen"],
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__volume-wrap,
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__menu-wrap {
+  top: var(--blok-space-2);
+  translate: 0 calc((1 - var(--blok-video-bar-on, 0)) * -6px);
+}
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar > .blok-video-controls__btn[data-action="fullscreen"] { inset-inline-end: var(--blok-space-2); }
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar > .blok-video-controls__volume-wrap { inset-inline-end: calc(var(--blok-space-2) + 34px); }
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar > .blok-video-controls__menu-wrap { inset-inline-end: calc(var(--blok-space-2) + 68px); }
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__btn[data-action="fullscreen"],
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__btn[data-action="mute-toggle"],
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__btn[data-action="gear"] {
+  width: 30px; height: 30px;
+  background: var(--blok-video-island-bg);
+  -webkit-backdrop-filter: blur(18px) saturate(1.8);
+  backdrop-filter: blur(18px) saturate(1.8);
+  box-shadow: var(--blok-video-island-shadow);
+}
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__btn[data-action="fullscreen"]:hover,
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__btn[data-action="mute-toggle"]:hover,
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__btn[data-action="gear"]:hover {
+  background: var(--blok-video-burst-bg);
+}
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__btn[data-action="fullscreen"] svg,
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__btn[data-action="mute-toggle"] svg,
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__btn[data-action="gear"] svg { width: 16px; height: 16px; }
+/* three dots stand in for the gear here, and dots do not turn */
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__btn[data-action="gear"][aria-expanded="true"] svg { transform: none; }
+/* the hold-to-speed badge clears the corner buttons */
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__speed { top: calc(2 * var(--blok-space-2) + 30px); }
+
+/* the centre play steps down by tier, and steps aside whenever the capsule is up */
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__center { width: 48px; height: 48px; }
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__center svg { width: 24px; height: 24px; }
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls:has(:focus-visible) .blok-video-controls__center:not(:focus-visible),
+[data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls:has([aria-expanded="true"]) .blok-video-controls__center {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* below 260px: no settings button */
+[data-blok-tool="video"] .blok-video-inner[data-tier="small"] .blok-video-controls__menu-wrap,
+[data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__menu-wrap { display: none; }
+[data-blok-tool="video"] .blok-video-inner[data-tier="small"] .blok-video-controls__center { width: 40px; height: 40px; }
+[data-blok-tool="video"] .blok-video-inner[data-tier="small"] .blok-video-controls__center svg { width: 20px; height: 20px; }
+
+/* below 180px: play, the capsule and full screen only */
+[data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__time,
+[data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__volume-wrap { display: none; }
+[data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__center { width: 32px; height: 32px; }
+[data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__center svg { width: 18px; height: 18px; }
+[data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__bar .blok-video-controls__seek-wrap {
+  height: 32px;
+  inset-inline: var(--blok-space-2);
+  bottom: var(--blok-space-2);
+}
+[data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__bar .blok-video-controls__seek-wrap:active {
+  height: 38px;
+  inset-inline: 5px;
+  bottom: 5px;
+}
+[data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__btn[data-action="play-toggle"] {
+  inset-inline-start: var(--blok-space-2-5);
+  bottom: var(--blok-space-2-5);
+  width: 28px; height: 28px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar > *,
+  [data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar .blok-video-controls__seek-wrap { transition: none; }
 }

@@ -75,7 +75,7 @@ describe('video island controls', () => {
   });
 
   it('keeps the island out of a resting player: only hover or keyboard focus shows it', () => {
-    const shown = css.match(/([^{}]+)\{\s*opacity: 1;\s*transform: none;\s*\}/g) ?? [];
+    const shown = css.match(/([^{}]+)\{\s*opacity: 1;\s*--blok-video-bar-on: 1;\s*transform: none;\s*\}/g) ?? [];
     const barShowRules = shown.filter((rule) => rule.includes('.blok-video-controls__bar'));
 
     expect(barShowRules.length).toBeGreaterThan(0);

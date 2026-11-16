@@ -1060,8 +1060,8 @@ describe('video controls — playback gear menu', () => {
     el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
   };
 
-  it('lists Playback speed then Loop on the main pane, with nothing between them', () => {
-    expect(actions('menu-main')).toEqual(['open-speed', 'loop']);
+  it('lists Playback speed then Loop on the main pane, then the view mode a narrow player folds in', () => {
+    expect(actions('menu-main')).toEqual(['open-speed', 'loop', 'menu-theater']);
     expect(pane()).toBe('main');
   });
 

@@ -331,3 +331,94 @@ test('persists video data across save and reload', async ({ page }) => {
   expect((saved?.data as { url?: string })?.url).toBe(SAMPLE_VIDEO_URL);
   expect((saved?.data as { caption?: string })?.caption).toBe('My clip');
 });
+
+test.describe('a narrow player (capsule)', () => {
+  const figureOf = (page: Page) => page.locator(`${VIDEO_BLOCK_SELECTOR} [data-role="video-figure"]`);
+
+  const playThenPause = async (page: Page): Promise<void> => {
+    const block = page.locator(VIDEO_BLOCK_SELECTOR);
+
+    await block.locator('[data-role="center-play"]').click();
+    await expect(figureOf(page)).toHaveAttribute('data-played', 'true');
+    await block.getByTestId('video-player').evaluate((el) => (el as HTMLVideoElement).pause());
+  };
+
+  test('keeps every control it shows inside the frame', async ({ page }) => {
+    await createBlok(page, { blocks: [{ type: 'video', data: { url: SAMPLE_VIDEO_URL, width: 30 } }] });
+    const block = page.locator(VIDEO_BLOCK_SELECTOR);
+
+    await expect(block).toHaveAttribute('data-state', 'rendered');
+    await expect(figureOf(page)).toHaveAttribute('data-capsule', '');
+    await playThenPause(page);
+    await page.mouse.move(0, 0);
+    await block.getByTestId('video-player').hover({ position: { x: 20, y: 20 } });
+
+    const capsule = block.locator('[data-role="seek-wrap"]');
+
+    await expect.poll(() => capsule.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+
+    const outside = await block.evaluate((root) => {
+      const frame = root.querySelector('[data-role="video-media"]')?.getBoundingClientRect();
+
+      if (!frame) return ['no frame'];
+      const parts = [...root.querySelectorAll<HTMLElement>('[data-role="video-controls"] button, [data-role="seek-wrap"]')];
+
+      return parts
+        .filter((el) => el.closest('[data-role="playback-menu"]') === null && el.getClientRects().length > 0)
+        .filter((el) => {
+          const box = el.getBoundingClientRect();
+
+          return box.left < frame.left || box.right > frame.right || box.top < frame.top || box.bottom > frame.bottom;
+        })
+        .map((el) => el.getAttribute('data-action') ?? el.getAttribute('data-role') ?? el.tagName);
+    });
+
+    expect(outside).toEqual([]);
+    // The centre button steps aside for the capsule.
+    await expect.poll(() => block.locator('[data-role="center-play"]').evaluate((el) => getComputedStyle(el).opacity)).toBe('0');
+  });
+
+  test('seeks to where the capsule is pressed, and swells while held', async ({ page }) => {
+    await createBlok(page, { blocks: [{ type: 'video', data: { url: SAMPLE_VIDEO_URL, width: 30 } }] });
+    const block = page.locator(VIDEO_BLOCK_SELECTOR);
+    const player = block.getByTestId('video-player');
+
+    await expect(block).toHaveAttribute('data-state', 'rendered');
+    await playThenPause(page);
+    await page.mouse.move(0, 0);
+    await player.hover({ position: { x: 20, y: 20 } });
+
+    const capsule = block.locator('[data-role="seek-wrap"]');
+
+    await expect.poll(() => capsule.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+    await expect.poll(async () => (await capsule.boundingBox())?.height).toBe(36);
+
+    const box = await capsule.boundingBox();
+
+    if (!box) throw new Error('capsule has no box');
+    const duration = await player.evaluate((el) => (el as HTMLVideoElement).duration);
+
+    await page.mouse.move(box.x + box.width * 0.5, box.y + box.height / 2);
+    await page.mouse.down();
+    await expect.poll(() => player.evaluate((el) => (el as HTMLVideoElement).currentTime / (el as HTMLVideoElement).duration)).toBeGreaterThan(0.42);
+    expect(await player.evaluate((el) => (el as HTMLVideoElement).currentTime)).toBeLessThan(duration * 0.58);
+    await expect.poll(async () => (await capsule.boundingBox())?.height).toBe(44);
+    await page.mouse.up();
+    await expect.poll(async () => (await capsule.boundingBox())?.height).toBe(36);
+  });
+
+  test('a wide player keeps the full bar', async ({ page }) => {
+    await createBlok(page, { blocks: [{ type: 'video', data: { url: SAMPLE_VIDEO_URL } }] });
+    const block = page.locator(VIDEO_BLOCK_SELECTOR);
+
+    await expect(block).toHaveAttribute('data-state', 'rendered');
+    await expect(figureOf(page)).toHaveAttribute('data-tier', 'full');
+    await expect(figureOf(page)).not.toHaveAttribute('data-capsule', /.*/);
+
+    const bar = block.locator('[data-role="video-controls"] [data-action="play-toggle"]').locator('xpath=..');
+
+    await expect(bar).toHaveCSS('display', 'flex');
+    await expect(block.locator('[data-action="theater"]')).toHaveCSS('display', 'grid');
+    await expect(block.locator('[data-action="menu-theater"]')).toHaveCSS('display', 'none');
+  });
+});

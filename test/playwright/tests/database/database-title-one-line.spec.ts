@@ -72,6 +72,10 @@ const setRowWidth = async (page: Page, width: number): Promise<void> => {
       return row.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight);
     };
 
+    // The row caps its content at the text column (720), so a wider holder gives no
+    // feedback: start at the target, where the row tracks the holder 1:1.
+    container.style.width = `${target}px`;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     for (let i = 0; i < 6 && inner() !== target; i++) {
       container.style.width = `${Number.parseFloat(container.style.width) + target - inner()}px`;
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));

@@ -758,10 +758,8 @@ public sealed class CollabRoomTests
             SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "!"))),
             CancellationToken.None)
         .AsTask();
-    var finished = await Task.WhenAny(receive, Task.Delay(TimeSpan.FromSeconds(5)));
 
-    Assert.Same(receive, finished);
-    await receive;
+    await receive.WaitAsync(TimeSpan.FromSeconds(5));
     Assert.Single(other.Received);
     Assert.Equal("hello!", await ExportedTextAsync(manager));
 
@@ -4411,10 +4409,8 @@ public sealed class CollabRoomTests
         DocId,
         [Appending("b-1", "!")],
         CancellationToken.None).AsTask();
-    var finished = await Task.WhenAny(edit, Task.Delay(TimeSpan.FromSeconds(5)));
 
-    Assert.Same(edit, finished);
-    Assert.Equal(CollabEditStatus.Applied, (await edit).Status);
+    Assert.Equal(CollabEditStatus.Applied, (await edit.WaitAsync(TimeSpan.FromSeconds(5))).Status);
     Assert.Equal(2, operations.Committed(DocId).Count);
 
     endpoint.LoadGate.SetResult();

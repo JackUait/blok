@@ -16,7 +16,7 @@ public sealed class HostCollabLogTests
   {
     var data = new TheoryData<string, string, string, string>();
 
-    foreach (var entry in JsonDocument.Parse(File.ReadAllText(Locate())).RootElement.EnumerateArray())
+    foreach (var entry in JsonElement.Parse(File.ReadAllText(Locate())).EnumerateArray())
     {
       data.Add(
           entry.GetProperty("name").GetString() ?? "",

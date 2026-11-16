@@ -406,7 +406,7 @@ internal sealed class McpServerCore : IAsyncDisposable
       await DrainAsync();
     });
 
-    await Task.WhenAny(work, Task.Delay(StopDrain));
+    await work.WaitAsync(StopDrain).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
   }
 
   // Work in flight can add more, so it looks again until nothing new is left.

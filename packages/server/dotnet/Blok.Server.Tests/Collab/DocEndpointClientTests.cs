@@ -452,10 +452,8 @@ public sealed class DocEndpointClientTests
     using var client = CreateClient(recorder, timeout: TimeSpan.FromMilliseconds(200));
 
     var load = client.LoadAsync("doc", CancellationToken.None);
-    var finished = await Task.WhenAny(load, Task.Delay(Deadline));
 
-    Assert.Same(load, finished);
-    var error = await Assert.ThrowsAsync<DocEndpointException>(() => load);
+    var error = await Assert.ThrowsAsync<DocEndpointException>(() => load.WaitAsync(Deadline));
     Assert.Contains("timed out", error.Message, StringComparison.Ordinal);
     Assert.Null(error.StatusCode);
   }
@@ -474,10 +472,8 @@ public sealed class DocEndpointClientTests
 
     var load = client.LoadAsync("doc", cancellation.Token);
     cancellation.Cancel();
-    var finished = await Task.WhenAny(load, Task.Delay(Deadline));
 
-    Assert.Same(load, finished);
-    await Assert.ThrowsAnyAsync<OperationCanceledException>(() => load);
+    await Assert.ThrowsAnyAsync<OperationCanceledException>(() => load.WaitAsync(Deadline));
   }
 
   /// <summary>

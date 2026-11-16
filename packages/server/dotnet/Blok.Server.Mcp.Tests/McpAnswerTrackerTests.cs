@@ -52,7 +52,16 @@ public sealed class McpAnswerTrackerTests : IAsyncDisposable
   {
     var drain = tracker.DrainAsync(TimeSpan.FromSeconds(30));
 
-    return await Task.WhenAny(drain, Task.Delay(TimeSpan.FromMilliseconds(500))) == drain;
+    try
+    {
+      await drain.WaitAsync(TimeSpan.FromMilliseconds(500));
+
+      return true;
+    }
+    catch (TimeoutException)
+    {
+      return false;
+    }
   }
 
   [Fact]

@@ -96,7 +96,7 @@ internal sealed class McpAnswerTracker
   {
     var pending = open.Values.Select(waiter => waiter.Task).ToArray();
 
-    await Task.WhenAny(Task.WhenAll(pending), Task.Delay(limit));
+    await Task.WhenAll(pending).WaitAsync(limit).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
   }
 
   private bool Done(string id)

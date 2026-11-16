@@ -1031,9 +1031,7 @@ public sealed class CollabRoomManagerTests
     time.Advance(TimeSpan.FromSeconds(2));
     await Waits.UntilAsync(() => endpoint.Saves.Count == 1, "the export to start");
 
-    var reset = manager.ResetAsync(DocId, CancellationToken.None).AsTask();
-    var finished = await Task.WhenAny(reset, Task.Delay(TimeSpan.FromSeconds(10)));
-    Assert.Same(reset, finished);
+    await manager.ResetAsync(DocId, CancellationToken.None).AsTask().WaitAsync(TimeSpan.FromSeconds(10));
     endpoint.SaveGate.SetResult();
     endpoint.SaveGate = null;
     time.Advance(TimeSpan.FromMinutes(1));

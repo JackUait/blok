@@ -93,7 +93,7 @@ internal sealed class RoomConnection
           await socket.CloseOutputAsync(item.Code is { } code ? (WebSocketCloseStatus)code : WebSocketCloseStatus.Empty, null, CancellationToken.None);
         }
         // The host answers our close; give it time before the TCP goes.
-        await Task.WhenAny(closed.Task, Task.Delay(CloseWait));
+        await closed.Task.WaitAsync(CloseWait).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         socket.Abort();
         socket.Dispose();
 

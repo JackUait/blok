@@ -291,6 +291,8 @@ test.describe('dependencies', () => {
     await page.clock.setFixedTime(new Date('2026-10-09T12:00:00'));
     await mount(page, blocks());
     await expect(page.locator('[data-blok-database-timeline-arrow][data-from="a"][data-to="b"]')).toHaveCount(1);
+    // Week zoom is 180px a day, so Ship opens past the chart's end.
+    await page.locator('[data-blok-database-timeline-scroller]').evaluate((el) => el.scrollBy({ left: 360 }));
 
     await bar(page, 'b').hover();
     const handle = bar(page, 'b').locator('[data-blok-database-timeline-link-handle]');

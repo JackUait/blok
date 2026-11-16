@@ -758,6 +758,8 @@ export class DatabaseCardDrawer {
     const toolbar = document.createElement('div');
 
     toolbar.setAttribute('data-blok-database-drawer-toolbar', '');
+    // The peek sits in the database's block holder, whose Tab would nest the database instead of moving focus.
+    toolbar.setAttribute('data-blok-keyboard-owner', '');
 
     const closeBtn = document.createElement('button');
 

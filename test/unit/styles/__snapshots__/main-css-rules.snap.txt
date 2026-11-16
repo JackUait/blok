@@ -4786,7 +4786,6 @@ span[data-blok-slash-search] {
   --blok-database-column-gray-ring: var(--blok-database-card-ring);
   --blok-database-column-gray-accent: rgb(110, 107, 102);
   --blok-database-column-default-glyph: var(--blok-database-column-accent);
-  --blok-database-column-gray-glyph: var(--blok-database-column-accent);
   --blok-database-column-glyph-off: var(--blok-popover-search-suffix-text);
   --blok-database-column-yellow-card-hover-bg: rgba(194, 164, 0, 0.063);
   --blok-database-card-lift: rgba(25, 25, 25, 0.027) 0 4px 12px, rgba(25, 25, 25, 0.02) 0 1px 2px;
@@ -6252,7 +6251,7 @@ span[data-blok-slash-search] {
   transition: opacity 150ms linear;
 }
 
-[@media (hover: hover)] [data-blok-database-drawer]:not(:hover) [data-blok-database-drawer-toolbar]:not(:has(:focus-visible)):not(:has([data-blok-database-peek-mode][aria-expanded="true"])) :is([data-blok-database-peek-mode], [data-blok-database-peek-separator], [data-blok-database-peek-prev], [data-blok-database-peek-next]) {
+[@media (hover: hover)] :is([data-blok-database-drawer]:not(:hover), [data-peek-mode="center"]) [data-blok-database-drawer-toolbar]:not(:hover):not(:has(:focus-visible)):not(:has([data-blok-database-peek-mode][aria-expanded="true"])) :is([data-blok-database-peek-mode], [data-blok-database-peek-separator], [data-blok-database-peek-prev], [data-blok-database-peek-next]) {
   opacity: 0;
 }
 
@@ -6331,6 +6330,13 @@ span[data-blok-slash-search] {
   flex: none;
   width: 28px;
   height: 28px;
+  max-height: none;
+}
+
+[data-peek-mode="center"] [data-blok-database-peek-expand] svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
   max-height: none;
 }
 

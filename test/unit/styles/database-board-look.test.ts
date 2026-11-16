@@ -63,7 +63,11 @@ describe('board column header actions', () => {
   it('draws them in the group colour, or gray with Color columns off, with the neutral hover', () => {
     expect(ruleBody(database, '[data-blok-database-column-actions] button')).toContain('color: var(--_blok-group-glyph, var(--blok-database-column-glyph-off))');
     expect(database).toMatch(/--blok-database-column-glyph-off: var\(--blok-popover-search-suffix-text\)/);
-    expect(database).toMatch(/--blok-database-column-gray-glyph: var\(--blok-database-column-accent\)/);
+    // notion-motion.md Round 44 §7: Gray falls to its status dot, rgb(142,139,134); Default stays rgb(95,94,89).
+    expect(database).not.toMatch(/--blok-database-column-gray-glyph:/);
+    expect(database).toMatch(/--blok-database-status-dot-gray: rgb\(142, 139, 134\)/);
+    expect(database).toMatch(/--blok-database-column-default-glyph: var\(--blok-database-column-accent\)/);
+    expect(database).toMatch(/--blok-database-column-accent: rgb\(95, 94, 89\)/);
     expect(ruleBody(database, '[data-blok-database-column-actions] button:hover')).toContain('background-color: var(--blok-database-hover-bg)');
   });
 

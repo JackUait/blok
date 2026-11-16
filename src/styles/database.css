@@ -226,10 +226,9 @@
   --blok-database-column-gray-bg: var(--blok-database-column-bg);
   --blok-database-column-gray-ring: var(--blok-database-card-ring);
   --blok-database-column-gray-accent: rgb(110, 107, 102);
-  /* notion-motion.md Round 42 §1: board ⋯ and + inks. A colourless group gives 95,94,89; gray is unmeasured and
-     takes the same. Off is 161,158,153 in every group; dark is unmeasured and follows that popover ink. */
+  /* notion-motion.md Round 42 §1, Round 44 §7: board ⋯ and + inks. A colourless or Default group gives 95,94,89;
+     Gray falls to its status dot, 142,139,134. Off is 161,158,153 in every group; dark is unmeasured and follows that popover ink. */
   --blok-database-column-default-glyph: var(--blok-database-column-accent);
-  --blok-database-column-gray-glyph: var(--blok-database-column-accent);
   --blok-database-column-glyph-off: var(--blok-popover-search-suffix-text);
   --blok-database-column-yellow-card-hover-bg: rgba(194, 164, 0, 0.063);
   --blok-database-card-lift: rgba(25, 25, 25, 0.027) 0 4px 12px, rgba(25, 25, 25, 0.02) 0 1px 2px;
@@ -1990,8 +1989,9 @@
   transition: opacity 150ms linear;
 }
 
+/* notion-motion.md Round 44 §5: a center peek shows them only while the pointer is on its header. */
 @media (hover: hover) {
-  [data-blok-database-drawer]:not(:hover) [data-blok-database-drawer-toolbar]:not(:has(:focus-visible)):not(:has([data-blok-database-peek-mode][aria-expanded="true"])) :is([data-blok-database-peek-mode], [data-blok-database-peek-separator], [data-blok-database-peek-prev], [data-blok-database-peek-next]) {
+  :is([data-blok-database-drawer]:not(:hover), [data-peek-mode="center"]) [data-blok-database-drawer-toolbar]:not(:hover):not(:has(:focus-visible)):not(:has([data-blok-database-peek-mode][aria-expanded="true"])) :is([data-blok-database-peek-mode], [data-blok-database-peek-separator], [data-blok-database-peek-prev], [data-blok-database-peek-next]) {
     opacity: 0;
   }
 }
@@ -2101,6 +2101,14 @@
   flex: none;
   width: 28px;
   height: 28px;
+  max-height: none;
+}
+
+/* notion-motion.md Round 44 §5: the center peek's ⤢ is 11 x 11 of ink; Keyline's at 22px is 11.3. */
+[data-peek-mode="center"] [data-blok-database-peek-expand] svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
   max-height: none;
 }
 

@@ -46,7 +46,7 @@ const SCHEMA = [
   { id: 's', name: 'Stage', type: 'select', position: 'a2', config: { options: [{ id: 'o1', label: 'One', color: 'gray', position: 'a0' }] } },
 ];
 
-const doc = (layout: Layout): OutputBlockData[] => [
+const doc = (layout: Layout, extra: OutputBlockData[] = []): OutputBlockData[] => [
   {
     id: 'db',
     type: 'database',
@@ -55,13 +55,23 @@ const doc = (layout: Layout): OutputBlockData[] => [
       views: [{ id: 'v', name: 'View', type: layout, ...(layout === 'board' ? { groupBy: 's' } : {}), position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
       activeViewId: 'v',
     },
-    content: ['body', 'blank', 'emoji'],
+    content: ['body', 'blank', 'emoji', ...extra.filter((block) => block.type === 'database-row').map((block) => block.id ?? '')],
   },
   { id: 'body', type: 'database-row', parent: 'db', content: ['p1'], data: { properties: { t: 'Body', due: today(), s: 'o1' }, position: 'a0' } },
   { id: 'p1', type: 'paragraph', parent: 'body', data: { text: 'A body line' } },
   { id: 'blank', type: 'database-row', parent: 'db', data: { properties: { t: 'Blank', due: today(), s: 'o1' }, position: 'a1' } },
   { id: 'emoji', type: 'database-row', parent: 'db', content: ['p2'], data: { properties: { t: 'Emoji', due: today(), s: 'o1' }, position: 'a2', icon: '🥌' } },
   { id: 'p2', type: 'paragraph', parent: 'emoji', data: { text: 'Another body' } },
+  ...extra,
+];
+
+/** notion-motion.md Round 46 §C.1: Notion's rows with one and with two empty lines. */
+const EMPTY_LINES: OutputBlockData[] = [
+  { id: 'one', type: 'database-row', parent: 'db', content: ['e1'], data: { properties: { t: 'One empty line', due: today(), s: 'o1' }, position: 'a3' } },
+  { id: 'e1', type: 'paragraph', parent: 'one', data: { text: '' } },
+  { id: 'two', type: 'database-row', parent: 'db', content: ['e2', 'e3'], data: { properties: { t: 'Two empty lines', due: today(), s: 'o1' }, position: 'a4' } },
+  { id: 'e2', type: 'paragraph', parent: 'two', data: { text: '' } },
+  { id: 'e3', type: 'paragraph', parent: 'two', data: { text: '' } },
 ];
 
 const ROW_SELECTOR: Record<Layout, string> = {
@@ -75,12 +85,12 @@ const ROW_SELECTOR: Record<Layout, string> = {
 let editor: TestEditor | undefined;
 let holder: HTMLDivElement | undefined;
 
-const make = async (layout: Layout): Promise<TestEditor> => {
+const make = async (layout: Layout, extra: OutputBlockData[] = []): Promise<TestEditor> => {
   editor = new Blok({
     holder,
     dataModel: 'hierarchical',
     tools: { paragraph: Paragraph, database: { class: DatabaseTool, config: {} }, 'database-row': DatabaseRowTool },
-    data: { blocks: doc(layout) },
+    data: { blocks: doc(layout, extra) },
   } as never) as unknown as TestEditor;
   await editor.isReady;
   await quiet();
@@ -154,6 +164,24 @@ describe('content page glyph', () => {
     await blok.blocks.delete(blok.blocks.getBlockIndex('p1'));
     await quiet();
     expect(glyphOf(layout, 'body')).toBe(layout === 'list' ? 'blank' : 'none');
+  });
+
+  // notion-motion.md Round 46 §C.1: one empty line shows the blank page; two empty lines show the lines glyph.
+  it.each(['table', 'list'] as const)('%s: one empty line is no body, two empty lines are', async (layout) => {
+    await make(layout, EMPTY_LINES);
+
+    expect(glyphOf(layout, 'one')).toBe('blank');
+    expect(glyphOf(layout, 'two')).toBe('content');
+  });
+
+  it('typing into the one empty line shows the lines glyph', async () => {
+    const blok = await make('list', EMPTY_LINES);
+
+    expect(glyphOf('list', 'one')).toBe('blank');
+    await blok.blocks.update('e1', { text: 'Typed' });
+    await quiet();
+
+    expect(glyphOf('list', 'one')).toBe('content');
   });
 
   it('a second body block redraws nothing', async () => {

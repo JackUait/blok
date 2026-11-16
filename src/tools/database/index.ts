@@ -293,6 +293,14 @@ const isFormSubmission = (value: unknown): value is DatabaseFormSubmission =>
   typeof value === 'object' && value !== null && 'databaseId' in value && typeof value.databaseId === 'string'
   && 'viewId' in value && typeof value.viewId === 'string' && 'values' in value && typeof value.values === 'object';
 
+/** A paragraph with no text. `<br>` is what an emptied contenteditable can leave. */
+const isEmptyParagraph = (block: { type: string; data: unknown } | undefined): boolean => {
+  if (block?.type !== 'paragraph') return false;
+  const text = (block.data as { text?: unknown } | undefined)?.text;
+
+  return text === undefined || (typeof text === 'string' && text.replace(/<br\s*\/?>/gi, '') === '');
+};
+
 /** The block a 'block changed' payload is about, if the payload carries one. */
 const changedBlock = (payload: unknown): ChangedBlock | undefined =>
   (payload as { event?: { detail?: { target?: ChangedBlock } } } | undefined)?.event?.detail?.target;
@@ -950,8 +958,12 @@ export class DatabaseTool implements BlockTool {
   private readonly handleBodyShape = (payload: unknown): void => {
     const type = (payload as { event?: { type?: unknown } } | undefined)?.event?.type;
 
-    if (this.bodyRows.size === 0 || this.bodyCheckQueued || changedBlock(payload)?.name === 'database-row'
-      || (type !== 'block-added' && type !== 'block-removed' && type !== 'block-moved')) return;
+    const block = changedBlock(payload);
+    // A lone line's text decides its row's glyph, so a typed change counts, but only under a drawn row.
+    const typed = type === 'block-changed' && typeof block?.parentId === 'string' && this.bodyRows.has(block.parentId);
+
+    if (this.bodyRows.size === 0 || this.bodyCheckQueued || block?.name === 'database-row'
+      || (!typed && type !== 'block-added' && type !== 'block-removed' && type !== 'block-moved')) return;
     this.bodyCheckQueued = true;
     queueMicrotask(() => {
       this.bodyCheckQueued = false;
@@ -962,8 +974,11 @@ export class DatabaseTool implements BlockTool {
     });
   };
 
+  /** notion-motion.md Round 46 §C.1: one empty line is no body in Notion; two empty lines are. */
   private readRowHasBody(rowId: string): boolean {
-    return this.rowBodyBlocks(rowId, this.model.getSchema().find((p) => p.type === 'richText')?.id).length > 0;
+    const body = this.rowBodyBlocks(rowId, this.model.getSchema().find((p) => p.type === 'richText')?.id);
+
+    return body.length > 1 || (body.length === 1 && !isEmptyParagraph(body[0]));
   }
 
   /** Cached per redraw: a view asks for every row it draws. */

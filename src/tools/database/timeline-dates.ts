@@ -334,7 +334,8 @@ const startsUnit = (unit: Unit, day: string): boolean => {
 const hourOnly = (parts: Intl.DateTimeFormatPart[]): string => {
   const minute = parts.findIndex((part) => part.type === 'minute');
 
-  return parts.filter((_, i) => i !== minute && i !== minute - 1).map((part) => part.value).join('');
+  // formatToParts puts U+202F before AM/PM; format(), which the Hours ticks use, gives a plain space.
+  return parts.filter((_, i) => i !== minute && i !== minute - 1).map((part) => part.value.replace(/\u202F/g, ' ')).join('');
 };
 
 const unitsOf = (window: TimelineWindow, unit: Unit, dayWidth: number, format: Intl.DateTimeFormat, ticksPerDay = 1): HeaderUnit[] => {

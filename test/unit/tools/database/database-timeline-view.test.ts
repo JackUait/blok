@@ -1120,6 +1120,26 @@ describe('DatabaseTimelineView', () => {
       expect(el.scrollLeft).toBe(px('2026-10-22') - 400);
     });
 
+    // A Day zoom day (1250) is wider than the screen: a jump lands the bar's edge on the screen edge, with no day of room.
+    it('brings a bar onto the screen at day zoom, where a day is wider than the screen', () => {
+      const view = timelineView({ timelineZoom: 'day' });
+      const { root, view: timeline } = mount({ view, groups: single([row('r1', 'Early', '2026-10-07'), row('r2', 'Long', '2026-10-06/2026-10-11')]) });
+      const el = scroller(root);
+      const start = timelineWindow(CENTER, 'day').start;
+      const at = (day: string): number => daysBetween(start, day) * TIMELINE_DAY_WIDTH.day;
+
+      Object.defineProperty(el, 'clientWidth', { value: 708, configurable: true });
+      el.scrollLeft = at('2026-10-09');
+      timeline.refreshOffscreen();
+      root.querySelector<HTMLElement>('[data-blok-database-timeline-row][data-row-id="r1"] [data-blok-database-timeline-offscreen="before"]')?.click();
+      expect(el.scrollLeft).toBe(at('2026-10-07'));
+
+      el.scrollLeft = at('2026-10-09');
+      timeline.refreshOffscreen();
+      bar(root, 'r2').querySelector<HTMLElement>('[data-blok-database-timeline-bar-chip="end"]')?.click();
+      expect(el.scrollLeft).toBe(at('2026-10-12') - 708);
+    });
+
     // research/26 §4d: Notion draws a straight arrow in the chip, not a chevron.
     it('draws a straight arrow pointing to the side the bar is on', () => {
       const { root } = mount({ groups: single([row('r1', 'Early', '2026-09-02')]) });

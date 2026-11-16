@@ -313,7 +313,8 @@ describe('timeline-dates', () => {
       expect(units[5].offset).toBeCloseTo(5 * 52.08, 1);
       expect(units[5].width).toBeCloseTo(52.08, 1);
       expect(units[5]).toMatchObject({ day: '2026-10-01', period: 'AM' });
-      expect(units[5].label).toMatch(/^5\sAM$/);
+      // Same plain space as the Hours zoom's ticks, which come from format(), not formatToParts().
+      expect(units[5].label).toBe('5 AM');
       expect(units[24].day).toBe('2026-10-02');
       expect(headerUnits({ start: '2026-10-01', days: 1 }, 'day', 'de-DE').units[17].label).toBe('17');
     });

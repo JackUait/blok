@@ -1124,10 +1124,12 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   private scrollToDay(day: string, align: 'center' | 'start' | 'end'): void {
     const offset = daysBetween(this.window.start, day) * this.dayWidth;
     const viewport = this.scroller?.clientWidth ?? 0;
+    // A day of room beside the day, unless the two would not fit on screen (Day and Hours zooms). Blok's own choice: Notion's Day jump is unmeasured.
+    const room = 2 * this.dayWidth <= viewport ? this.dayWidth : 0;
     const target = {
       center: offset - viewport / 2,
-      start: offset - this.dayWidth,
-      end: offset + 2 * this.dayWidth - viewport,
+      start: offset - room,
+      end: offset + this.dayWidth + room - viewport,
     }[align];
 
     this.recentring = true;

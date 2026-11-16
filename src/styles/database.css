@@ -15379,14 +15379,15 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   background-color: var(--blok-bg-primary);
 }
 
-/* Covers the toolbar gap. The next control paints over the overlap where controls touch. :where keeps it under the open « rule below. */
-[data-blok-database-timeline-toolbar] > :not([data-blok-database-timeline-toolbar-spacer]):where(:not(:last-child):not(:has(+ [data-blok-database-timeline-toolbar-spacer])))::before {
+/* Covers the toolbar gap. The next control paints over the overlap where controls touch. */
+[data-blok-database-timeline-toolbar] > :not([data-blok-database-timeline-toolbar-spacer]):not(:last-child):not(:has(+ [data-blok-database-timeline-toolbar-spacer]))::before {
   inset-inline-end: calc(-1 * var(--blok-space-1));
 }
 
-/* With the panel open, « keeps a margin before the month. The box runs across it. */
-[data-blok-database-timeline-toolbar] > [data-blok-database-timeline-table-toggle][aria-pressed="true"]::before {
-  inset-inline-end: calc(-1 * (var(--blok-space-6) + var(--blok-space-1)));
+/* With the panel open the month starts 16 into the chart (the « rule below). Its box reaches back to the chart's start,
+   not over the panel, whose border and shadow show through in Notion (r48-pair-quarter-p.png). */
+[data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"]) > [data-blok-database-timeline-month]::before {
+  inset-inline-start: calc(-1 * var(--blok-space-4));
 }
 
 /* The toolbar's padding, in cqi so it resolves here (the view is the container). Keep in step with its padding. */

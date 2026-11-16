@@ -588,18 +588,19 @@ describe('timeline toolbar controls hide the group labels under them', () => {
   });
 
   it('covers the 4px gap after a control, so each group is one box', () => {
-    const gap = ruleBody('[data-blok-database-timeline-toolbar] > :not([data-blok-database-timeline-toolbar-spacer]):where(:not(:last-child):not(:has(+ [data-blok-database-timeline-toolbar-spacer])))::before');
+    const gap = ruleBody('[data-blok-database-timeline-toolbar] > :not([data-blok-database-timeline-toolbar-spacer]):not(:last-child):not(:has(+ [data-blok-database-timeline-toolbar-spacer]))::before');
 
     expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain('gap: var(--blok-space-1)');
     expect(gap).toContain('inset-inline-end: calc(-1 * var(--blok-space-1))');
   });
 
-  // r48-n-quarter-phdr.raw: with the panel open the label box runs on from « to the month's end (264..748.6).
-  it('joins « to the month across its margin while the panel is open', () => {
-    const open = '[data-blok-database-timeline-toolbar] > [data-blok-database-timeline-table-toggle][aria-pressed="true"]::before';
+  // r48-n-quarter-phdr.raw: with the panel open the label box runs on to the month's end (264..748.6),
+  // but the panel's border and shadow still show over it (r48-pair-quarter-p.png, 240 at x 639 in the toolbar row).
+  it('backs the chart from its start to the month while the panel is open, clear of the panel', () => {
+    const open = '[data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"]) > [data-blok-database-timeline-month]::before';
 
-    expect(ruleBody('[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"]')).toContain('margin-inline-end: var(--blok-space-6)');
-    expect(ruleBody(open)).toContain('inset-inline-end: calc(-1 * (var(--blok-space-6) + var(--blok-space-1)))');
+    expect(ruleBody(open)).toContain('inset-inline-start: calc(-1 * var(--blok-space-4))');
+    expect(ruleBody('[data-blok-database-timeline-toolbar] > [data-blok-database-timeline-table-toggle][aria-pressed="true"]::before')).toBe('');
   });
 
   it('runs the outer boxes to the chart edges while the panel is shut', () => {

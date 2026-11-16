@@ -18144,12 +18144,12 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   background-color: var(--blok-bg-primary);
 }
 
-[data-blok-database-timeline-toolbar] > :not([data-blok-database-timeline-toolbar-spacer]):where(:not(:last-child):not(:has(+ [data-blok-database-timeline-toolbar-spacer])))::before {
+[data-blok-database-timeline-toolbar] > :not([data-blok-database-timeline-toolbar-spacer]):not(:last-child):not(:has(+ [data-blok-database-timeline-toolbar-spacer]))::before {
   inset-inline-end: calc(-1 * var(--blok-space-1));
 }
 
-[data-blok-database-timeline-toolbar] > [data-blok-database-timeline-table-toggle][aria-pressed="true"]::before {
-  inset-inline-end: calc(-1 * (var(--blok-space-6) + var(--blok-space-1)));
+[data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"]) > [data-blok-database-timeline-month]::before {
+  inset-inline-start: calc(-1 * var(--blok-space-4));
 }
 
 [data-blok-database-timeline-toolbar]:not(:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"])) > :first-child::before {

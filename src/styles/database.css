@@ -15320,8 +15320,9 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   --blok-database-timeline-header-block: calc(var(--blok-database-timeline-line) + var(--blok-database-timeline-header-under));
   /* The view sets the day width inline on the canvas. */
   --blok-database-timeline-day: 40px;
-  /* notion-motion.md Round 6: 376 with the border, at 1512 and 1100. The toolbar's « and month are placed from it. */
-  --blok-database-timeline-table-width: 376px;
+  /* notion-motion.md Round 6: 376 with the border, at 1512 and 1100. Round 48 A7: its first 6px sit under Notion's sidebar,
+     so 370 show (the page edge to 640). The toolbar's « and month are placed from it. */
+  --blok-database-timeline-table-width: 370px;
   /* "+ New" reads the view's width (cqi) from inside the wide canvas. */
   container-type: inline-size;
   display: flex;
@@ -15553,8 +15554,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 [data-blok-database-timeline-table] {
   flex: none;
   inline-size: var(--blok-database-timeline-table-width);
-  /* Notion keeps 96 before the Name column at every width; it does not follow the text column. */
-  padding-inline-start: 96px;
+  /* Notion keeps 96 before the Name column at every width (90 of it visible); it does not follow the text column. */
+  padding-inline-start: 90px;
   /*
    * The card starts 4 under the toolbar top (motion-r6-timelinepanel.json; notion-motion.md Round 47 A4).
    * Tied to the toolbar's 40px height. The padding keeps the rows where they were.

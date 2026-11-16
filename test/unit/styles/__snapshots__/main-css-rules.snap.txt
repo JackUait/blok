@@ -18097,7 +18097,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   --blok-database-timeline-header-under: 4px;
   --blok-database-timeline-header-block: calc(var(--blok-database-timeline-line) + var(--blok-database-timeline-header-under));
   --blok-database-timeline-day: 40px;
-  --blok-database-timeline-table-width: 376px;
+  --blok-database-timeline-table-width: 370px;
   container-type: inline-size;
   display: flex;
   flex-direction: column;
@@ -18296,7 +18296,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 [data-blok-database-timeline-table] {
   flex: none;
   inline-size: var(--blok-database-timeline-table-width);
-  padding-inline-start: 96px;
+  padding-inline-start: 90px;
   --blok-database-timeline-panel-reach: 36px;
   position: relative;
   z-index: 1;

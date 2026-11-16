@@ -392,7 +392,8 @@ test.describe('timeline', () => {
   });
 
   // notion-motion.md Round 6: the panel is 376 wide and its Name column starts 96 in, at both 1512 and 1100.
-  test('the table panel is 376 wide with its Name column 96 in, whatever the window width', async ({ page }) => {
+  // Round 48 A7: its first 6px sit under Notion's sidebar, so 370 and 90 of it show.
+  test('the table panel is 370 wide with its Name column 90 in, whatever the window width', async ({ page }) => {
     await mount(page, blocks({ type: 'timeline', showTimelineTable: true }));
 
     for (const width of [1512, 1100]) {
@@ -401,8 +402,8 @@ test.describe('timeline', () => {
       const name = await page.locator('[data-blok-database-timeline-table-header]').boundingBox();
 
       if (panel === null || name === null) throw new Error('no layout');
-      expect(panel.width).toBeCloseTo(376, 0);
-      expect(name.x - panel.x).toBeCloseTo(96, 0);
+      expect(panel.width).toBeCloseTo(370, 0);
+      expect(name.x - panel.x).toBeCloseTo(90, 0);
     }
   });
 

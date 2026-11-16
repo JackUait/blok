@@ -169,11 +169,12 @@ describe('database timeline styles', () => {
   });
 
   // notion-motion.md Round 6 "Timeline left table panel": 376 wide with 96 of it padding before the Name column, at 1512 and 1100.
+  // Round 48 A7: Notion's first 6px sit under its sidebar, so it shows 370, from the page edge to 640, rows at 90.
   // Its « sits at the panel's end, beside the month.
-  it('draws the table panel 376px wide, 96 of it padding, and turns the toggle into « at its end while it shows', () => {
-    expect(ruleBody('[data-blok-database-timeline]')).toContain('--blok-database-timeline-table-width: 376px');
+  it('draws the table panel 370px wide, 90 of it padding, and turns the toggle into « at its end while it shows', () => {
+    expect(ruleBody('[data-blok-database-timeline]')).toContain('--blok-database-timeline-table-width: 370px');
     expect(ruleBody('[data-blok-database-timeline-table]')).toContain('inline-size: var(--blok-database-timeline-table-width)');
-    expect(ruleBody('[data-blok-database-timeline-table]')).toContain('padding-inline-start: 96px');
+    expect(ruleBody('[data-blok-database-timeline-table]')).toContain('padding-inline-start: 90px');
     const shown = '[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"]';
 
     expect(ruleBody(shown)).toContain('margin-inline-start: calc(var(--blok-database-timeline-table-width) - var(--blok-space-6) - var(--blok-space-3))');

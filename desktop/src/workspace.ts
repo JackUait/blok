@@ -178,7 +178,6 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     ready: boolean;
     destroyed: boolean;
     nodes: Node[];
-    scrollTop: number;
     resume(): void;
     suspend(): void;
     destroy(): void;
@@ -266,17 +265,12 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
 
   const pageFromUrl = (): string | null => pageIdForHref(location.href);
   const navigate = (id: string, replace = false): void => {
-    const from=pageFromUrl();
     const url=ref.kind==='remote' && !('__TAURI_INTERNALS__' in window) ? new URL(pageUrl(id)) : new URL(location.href);
     if(ref.kind==='local' || '__TAURI_INTERNALS__' in window){url.pathname='/';url.searchParams.set('page',id);}
     url.searchParams.delete('library');
     if (replace) history.replaceState(null, '', url);
     else history.pushState(null, '', url);
     onRoute();
-    // Notion ouvre une autre page à son début. Seul un vrai changement de page
-    // remonte : corriger l'URL de la page courante laisse le lecteur où il est,
-    // et la position par onglet, restaurée par shell.ts, n'est pas concernée.
-    if (from !== id) window.scrollTo(0, 0);
   };
   const saveManifest = (): void => {
     if (!ws.index) return;
@@ -684,12 +678,6 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       } }),
     });
     ws.editor = instance;
-    void instance.isReady.then(() => {
-      const target = library.target;
-      if (ws.editor !== instance || target?.pageId !== id) return;
-      instance.blocks.getById(target.blockId)?.holder.scrollIntoView({ block: 'start', behavior: 'smooth' });
-      library.target = null;
-    });
     ws.remotePending = false;
     instance.width.set(page.fullWidth === true ? 'full' : 'narrow');
     const mountPresentation = (): void => {
@@ -745,6 +733,9 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       document.title = page.title;
       saveStatus.ready();
       if (connectionState.value && ref.kind === 'remote') saveStatus.connection(connectionState.value);
+      // Run after the outgoing save and the incoming mount, including cached pages.
+      ws.pageCanvas.scrollTop = 0;
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       const target = library.target;
       if (target?.pageId === id) {
         instance.blocks.getById(target.blockId)?.holder.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -757,9 +748,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       get active() { return life.active; }, set active(value) { life.active = value; },
       get ready() { return life.ready; }, set ready(value) { life.ready = value; },
       get destroyed() { return life.destroyed; }, set destroyed(value) { life.destroyed = value; },
-      nodes: [], scrollTop: 0,
+      nodes: [],
       suspend() {
-        session.scrollTop = ws.pageCanvas.scrollTop;
         if (article.contains(document.activeElement)) (document.activeElement as HTMLElement).blur();
         const selection = window.getSelection();
         if (selection?.anchorNode && article.contains(selection.anchorNode)) selection.removeAllRanges();
@@ -784,7 +774,6 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         refreshPresentation();
         if (ref.kind === 'local' && page.titleDate) instance.title.set(page.title, { record: false });
         mountPresentation();
-        ws.pageCanvas.scrollTop = session.scrollTop;
       },
       destroy() {
         if (life.destroyed) return;

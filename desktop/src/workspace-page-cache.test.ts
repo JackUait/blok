@@ -210,3 +210,30 @@ it('disposes a warm remote editor when its page disappears from the accessible m
   await workspace.flush();
   expect(server.index.pages.some(page => page.id === 'a')).toBe(false);
 });
+
+it.each([false, true])('opens a different page at the top after mounting (cached: %s)', async cached => {
+  const canvas = editorAt(0).holder.closest('article')?.parentElement;
+  if (!canvas) throw new Error('Missing page canvas');
+  if (cached) { canvas.scrollTop = 420; await go('b'); }
+  canvas.scrollTop = 870;
+  vi.mocked(window.scrollTo).mockClear();
+
+  await go(cached ? 'a' : 'b');
+
+  expect(canvas.scrollTop).toBe(0);
+  expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' });
+  expect(state.editors).toHaveLength(2);
+});
+
+it('does not reset scrolling when routing to the page already open', async () => {
+  const canvas = editorAt(0).holder.closest('article')?.parentElement;
+  if (!canvas) throw new Error('Missing page canvas');
+  canvas.scrollTop = 870;
+  vi.mocked(window.scrollTo).mockClear();
+
+  workspace.onRoute();
+  await workspace.flush();
+
+  expect(canvas.scrollTop).toBe(870);
+  expect(window.scrollTo).not.toHaveBeenCalled();
+});

@@ -317,12 +317,26 @@ describe('timeline-dates', () => {
     });
 
     // notion-motion.md Round 47 A1b (r47-n-tl-year-today.raw): Year ticks are weeks from Monday, 35 wide, read "3", "10".
-    it('labels Monday weeks under years at year zoom', () => {
-      const { groups, units } = headerUnits({ start: '2026-08-01', days: 40 }, 'year', 'en-US');
+    it('labels Monday weeks under months at year zoom', () => {
+      const { units } = headerUnits({ start: '2026-08-01', days: 40 }, 'year', 'en-US');
 
-      expect(groups[0].label).toBe(new Intl.DateTimeFormat('en-US', { year: 'numeric' }).format(new Date(2026, 0, 1)));
       expect(units[1]).toMatchObject({ label: '3', day: '2026-08-03', offset: 2 * 5, width: 35 });
       expect(units[2]).toMatchObject({ label: '10', day: '2026-08-10', offset: 9 * 5 });
+    });
+
+    // notion-motion.md Round 48 A1: Quarter and Year name each month with no year, from its first Monday
+    // (Year: "October" at the Oct 5 line, "November" at Nov 2, "December" at Dec 7, "January" at Jan 4).
+    it.each(['quarter', 'year'] as const)('names each month from its first Monday at %s zoom', (zoom) => {
+      const { groups } = headerUnits({ start: '2026-10-01', days: 120 }, zoom, 'en-US');
+      const width = TIMELINE_DAY_WIDTH[zoom];
+
+      expect(groups.map((group) => [group.label, group.day, group.offset])).toEqual([
+        ['October', '2026-10-05', 4 * width],
+        ['November', '2026-11-02', 32 * width],
+        ['December', '2026-12-07', 67 * width],
+        ['January', '2027-01-04', 95 * width],
+      ]);
+      expect(groups[0].width).toBe(28 * width);
     });
 
     // notion-motion.md Round 47 A1b (r47-n-tl-5y-today.raw): 5 Years ticks are months, read as numbers "1".."12".

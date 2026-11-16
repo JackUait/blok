@@ -394,6 +394,105 @@ describe('DatabaseTimelineView', () => {
       vi.useRealTimers();
     });
 
+    // notion-motion.md Round 48 A1, A2, A4 (r48-n-<zoom>-hdr.raw): Quarter, Year and 5 Years put each label on its
+    // unit's start line, the today circle on today's start, hide the ticks the circle covers, and draw month lines in the body.
+    describe('far zoom header (Round 48)', () => {
+      const MONDAY = '2026-11-16';
+      const xOf = (el: Element | null | undefined): number => parseFloat((el as HTMLElement | null)?.style.insetInlineStart ?? '');
+      const far = (zoom: 'quarter' | 'year' | '5_years' | 'month'): HTMLElement =>
+        mount({ view: timelineView({ timelineZoom: zoom }), center: MONDAY, today: MONDAY }).root;
+      const ticks = (root: HTMLElement): HTMLElement[] => [...root.querySelectorAll<HTMLElement>('[data-blok-database-timeline-units] > [data-day]')];
+      const tickOn = (root: HTMLElement, day: string): HTMLElement => {
+        const tick = ticks(root).find((el) => el.getAttribute('data-day') === day);
+
+        if (tick === undefined) throw new Error(`no tick ${day}`);
+
+        return tick;
+      };
+      const px = (root: HTMLElement, day: string, zoom: 'quarter' | 'year' | '5_years' | 'month'): number =>
+        daysBetween(timelineWindow(MONDAY, zoom).start, day) * TIMELINE_DAY_WIDTH[zoom];
+
+      /** The dot is 22 wide on its x; a tick's text is 7 a digit, centred in its box. */
+      const layout = (): void => {
+        vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+          const owner = this.parentElement;
+          const isDot = this.hasAttribute('data-blok-database-timeline-today-dot');
+          const hidden = owner?.hidden === true;
+          const tickCenter = owner === null ? 0 : xOf(owner) + parseFloat(owner.style.width) / 2;
+          const center = isDot ? xOf(this) : tickCenter;
+          const textWidth = isDot ? 22 : 7 * (this.textContent ?? '').length;
+          const width = hidden ? 0 : textWidth;
+
+          return { left: center - width / 2, right: center + width / 2, top: 0, bottom: 14, width, height: 14, x: center - width / 2, y: 0, toJSON: () => ({}) };
+        });
+      };
+
+      beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date', 'queueMicrotask'] });
+        vi.setSystemTime(new Date(2026, 10, 16, 18, 27));
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it.each([
+        ['quarter', '2026-11-02'],
+        ['year', '2026-11-02'],
+        ['5_years', '2026-12-01'],
+      ] as const)('%s zoom centres each tick label on its start line', (zoom, day) => {
+        const root = far(zoom);
+        const tick = tickOn(root, day);
+
+        expect(xOf(tick) + parseFloat(tick.style.width) / 2).toBeCloseTo(px(root, day, zoom), 5);
+      });
+
+      it.each(['quarter', 'year', '5_years'] as const)('%s zoom keeps the today circle, on the start of today, and has no now label', (zoom) => {
+        const root = far(zoom);
+
+        expect(xOf(root.querySelector('[data-blok-database-timeline-today-dot]'))).toBeCloseTo(px(root, MONDAY, zoom), 5);
+        expect(root.querySelector('[data-blok-database-timeline-now-label]')).toBeNull();
+      });
+
+      it('month zoom keeps the circle in the middle of today', () => {
+        const root = far('month');
+
+        expect(xOf(root.querySelector('[data-blok-database-timeline-today-dot]'))).toBe(px(root, MONDAY, 'month') + TIMELINE_DAY_WIDTH.month / 2);
+      });
+
+      it.each([
+        ['quarter', ['2026-11-16'], ['2026-11-09', '2026-11-23']],
+        ['year', ['2026-11-16'], ['2026-11-09', '2026-11-23']],
+        ['5_years', ['2026-11-01', '2026-12-01'], ['2026-10-01', '2027-01-01']],
+      ] as const)('%s zoom hides the tick labels the today circle covers', (zoom, covered, kept) => {
+        layout();
+        const root = far(zoom);
+
+        vi.runAllTicks();
+        expect(covered.map((day) => tickOn(root, day).hidden)).toEqual(covered.map(() => true));
+        expect(kept.map((day) => tickOn(root, day).hidden)).toEqual(kept.map(() => false));
+      });
+
+      it.each(['quarter', 'year', '5_years'] as const)('%s zoom draws a body line on the 1st of every month', (zoom) => {
+        const root = far(zoom);
+        const window = timelineWindow(MONDAY, zoom);
+        const firsts = Array.from({ length: window.days }, (_, i) => i).filter((i) => {
+          const date = new Date(2026, 0, 1);
+
+          date.setFullYear(Number(window.start.slice(0, 4)), Number(window.start.slice(5, 7)) - 1, Number(window.start.slice(8)) + i);
+
+          return date.getDate() === 1;
+        });
+        const lines = [...root.querySelectorAll('[data-blok-database-timeline-background] > [data-blok-database-timeline-month-line]')];
+
+        expect(lines.map(xOf)).toEqual(firsts.map((i) => i * TIMELINE_DAY_WIDTH[zoom]));
+      });
+
+      it('draws no month lines at month zoom', () => {
+        expect(far('month').querySelector('[data-blok-database-timeline-month-line]')).toBeNull();
+      });
+    });
+
     // notion-motion.md Round 35 Part B (r35-timeline-hours-open.raw, r35-timeline-hours-grid.raw).
     describe('hours zoom opens at now (Round 35)', () => {
       const VIEWPORT = 708;

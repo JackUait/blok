@@ -331,10 +331,12 @@ export interface HeaderUnit {
   period?: string;
 }
 
-type Unit = 'hour' | 'day' | 'week' | 'month' | 'year';
+/** `monday-month`: a month counted from its first Monday. */
+type Unit = 'hour' | 'day' | 'week' | 'month' | 'monday-month' | 'year';
 
+/** notion-motion.md Round 48 A1: Quarter and Year name each month from its first Monday line. */
 const GROUP_OF: Record<TimelineZoom, Unit> = {
-  hours: 'day', day: 'month', week: 'month', bi_week: 'month', month: 'month', quarter: 'month', year: 'year', '5_years': 'year',
+  hours: 'day', day: 'month', week: 'month', bi_week: 'month', month: 'month', quarter: 'monday-month', year: 'monday-month', '5_years': 'year',
 };
 
 const UNIT_OF: Record<TimelineZoom, Unit> = {
@@ -349,12 +351,15 @@ const FORMAT: Record<Unit, Intl.DateTimeFormatOptions> = {
   day: { day: 'numeric' },
   week: { day: 'numeric' },
   month: { month: 'numeric' },
+  'monday-month': { month: 'numeric' },
   year: { year: 'numeric' },
 };
 
 const GROUP_FORMAT: Partial<Record<Unit, Intl.DateTimeFormatOptions>> = {
   day: { weekday: 'short', month: 'short', day: 'numeric' },
   month: { month: 'long', year: 'numeric' },
+  // notion-motion.md Round 48 A1: "November", no year.
+  'monday-month': { month: 'long' },
   year: { year: 'numeric' },
 };
 
@@ -365,6 +370,7 @@ const startsUnit = (unit: Unit, day: string): boolean => {
   switch (unit) {
     case 'week': return weekdayOf(day) === 1;
     case 'month': return firstOfMonth;
+    case 'monday-month': return weekdayOf(day) === 1 && Number(day.slice(8)) <= 7;
     case 'year': return firstOfMonth && month === 1;
     case 'day':
     case 'hour': return true;
@@ -400,7 +406,9 @@ const unitsOf = (window: TimelineWindow, unit: Unit, dayWidth: number, format: I
     });
   }
 
-  const starts = Array.from({ length: window.days }, (_, i) => i).filter((i) => i === 0 || startsUnit(unit, addDays(window.start, i)));
+  // A month before its first Monday belongs to the month before, which this window does not name.
+  const starts = Array.from({ length: window.days }, (_, i) => i)
+    .filter((i) => (i === 0 && unit !== 'monday-month') || startsUnit(unit, addDays(window.start, i)));
 
   return starts.map((i, n) => {
     const day = addDays(window.start, i);

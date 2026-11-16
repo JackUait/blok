@@ -135,7 +135,7 @@ describe('database timeline styles', () => {
   // findings C19/C20 (r26 §4d, r33 §4.6): no line under the toolbar; a near-white canvas with a bottom line.
   it('draws no line under the toolbar, and fills the canvas with a line under it', () => {
     expect(ruleBody('[data-blok-database-timeline-body]')).not.toContain('border-block-start');
-    expect(ruleBody('[data-blok-database-timeline-scroller]')).toContain('var(--blok-database-timeline-canvas-bg) var(--blok-database-timeline-header-band))');
+    expect(ruleBody('[data-blok-database-timeline-scroller]')).toContain('var(--blok-database-timeline-canvas-bg) 0)');
     expect(ruleBody('[data-blok-database-timeline-scroller]')).toContain('border-block-end: 1px solid var(--blok-database-calendar-border)');
     expect(css).toContain('--blok-database-timeline-canvas-bg: rgb(253, 253, 253);');
     expect(darkValues('--blok-database-timeline-canvas-bg')).toEqual(['rgb(25, 25, 25)', 'rgb(25, 25, 25)']);
@@ -521,11 +521,12 @@ describe('timeline group labels share the toolbar row (Round 47 A2)', () => {
     expect(ruleBody('[data-blok-database-timeline]')).toContain('--blok-database-timeline-header-band: calc((var(--blok-database-timeline-header-rows) - 1) * 36px)');
   });
 
-  it('pulls the chart up under the toolbar by the band, painting no fill there', () => {
+  // notion-motion.md Round 48 A4: the tick row is white (255), not the canvas tint.
+  it('pulls the chart up under the toolbar by the band, painting no fill there or in the tick row', () => {
     const scroller = ruleBody('[data-blok-database-timeline-scroller]');
 
     expect(scroller).toContain('margin-block-start: calc(-1 * var(--blok-database-timeline-header-band))');
-    expect(scroller).toContain('background: linear-gradient(transparent var(--blok-database-timeline-header-band), var(--blok-database-timeline-canvas-bg) var(--blok-database-timeline-header-band))');
+    expect(scroller).toContain('background: linear-gradient(transparent calc(var(--blok-database-timeline-header-band) + var(--blok-database-timeline-header-block)), var(--blok-database-timeline-canvas-bg) 0)');
   });
 
   it('puts the group row in the band, over the day row', () => {
@@ -537,6 +538,24 @@ describe('timeline group labels share the toolbar row (Round 47 A2)', () => {
 
   it('keeps the table panel header to the day row alone', () => {
     expect(ruleBody('[data-blok-database-timeline-table-header]')).toContain('block-size: var(--blok-database-timeline-header-block)');
+  });
+
+  // notion-motion.md Round 48 A1, A2: a group label starts on its line with no inset, and the header draws no divider.
+  it('starts each group label on its line, with no divider in the band', () => {
+    const group = ruleBody('[data-blok-database-timeline-groups] > *');
+
+    expect(group).not.toMatch(/padding-inline-start/);
+    expect(group).not.toMatch(/border-inline-end/);
+  });
+
+  // notion-motion.md Round 48 A2, A3: month lines in the body only, 1px rgba(42, 28, 0, 0.07).
+  it('draws each month line 1px wide, full body height, in the grid-line token', () => {
+    const body = ruleBody('[data-blok-database-timeline-month-line]');
+
+    expect(body).toContain('position: absolute');
+    expect(body).toContain('inset-block: 0');
+    expect(body).toContain('inline-size: 1px');
+    expect(body).toContain('background-color: var(--blok-database-timeline-grid-line)');
   });
 
   it('puts the today dot on the day line under the band', () => {

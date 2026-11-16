@@ -134,6 +134,8 @@ const NEW_BAR_DAYS = 5;
 const NEW_BAR_DAY_ZOOM_MINUTES = 3 * 60;
 /** Within this share of either canvas end, a scroll redraws around a new centre. */
 const EDGE_SHARE = 0.1;
+/** notion-motion.md Round 48 A2-A4: zooms whose labels and today circle sit on start lines, with month lines in the body. */
+const ON_START_LINE: ReadonlySet<TimelineZoom> = new Set(['quarter', 'year', '5_years']);
 /** Zooms whose days are wide enough to shade weekends one by one. */
 const DAY_LEVEL: ReadonlySet<TimelineZoom> = new Set(['hours', 'day', 'week', 'bi_week', 'month']);
 /** Zooms whose header shows day numbers only: the month is named in the toolbar. */
@@ -206,6 +208,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   private nowLine: HTMLElement | null = null;
   /** Hours zoom: the time on the now-line, in the tick row. */
   private nowLabel: HTMLElement | null = null;
+  private todayDot: HTMLElement | null = null;
   private selectionAnchor: HTMLElement | null = null;
   private recentring = false;
   private noDatePanel: DatabasePanel | null = null;
@@ -588,7 +591,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     canvas.style.width = `${this.window.days * this.dayWidth}px`;
     canvas.style.setProperty('--blok-database-timeline-day', `${this.dayWidth}px`);
     canvas.appendChild(this.createHeader());
-    canvas.appendChild(this.createBackground());
+    const background = this.createBackground();
+
+    canvas.appendChild(background);
+    this.drawMonthLines(background);
 
     const firstDated = this.sections.flatMap((group) => group.rows).find((row) => this.spanOf(row) !== null)?.id;
     const tableShown = resolveShowTimelineTable(this.options.view);
@@ -809,6 +815,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     const { groups, units } = headerUnits(this.window, this.zoom, this.options.locale ?? 'en-US');
     // notion-motion.md Round 34 §5 and Round 47 A1b: Hours and Day zooms centre each tick on its time; the text sits in a span the now label measures against.
     const ticks = this.zoom === 'hours' || this.zoom === 'day';
+    // Round 48 A4: Quarter, Year and 5 Years centre each label on its unit's start line too.
+    const centred = ticks || ON_START_LINE.has(this.zoom);
     const line = (attr: string, items: typeof groups, centred = false): HTMLElement => {
       const el = document.createElement('div');
 
@@ -836,13 +844,14 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     if (!ONE_HEADER_ROW.has(this.zoom)) {
       header.append(line('data-blok-database-timeline-groups', groups));
     }
-    const unitsRow = line('data-blok-database-timeline-units', units, ticks);
+    const unitsRow = line('data-blok-database-timeline-units', units, centred);
 
     header.append(unitsRow);
 
     const todayIndex = daysBetween(this.window.start, this.options.today);
 
     this.nowLabel = null;
+    this.todayDot = null;
     // r33-timeline-nowline-hours-1.raw: Notion's Hours header has the now label and no day pill.
     if (ticks && todayIndex >= 0 && todayIndex < this.window.days) {
       const label = document.createElement('div');
@@ -855,9 +864,11 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       const dot = document.createElement('div');
 
       dot.setAttribute('data-blok-database-timeline-today-dot', '');
-      dot.style.insetInlineStart = `${todayIndex * this.dayWidth + this.dayWidth / 2}px`;
+      // notion-motion.md Round 48 A4: on today's start line in Quarter, Year and 5 Years; mid-day in Month.
+      dot.style.insetInlineStart = `${todayIndex * this.dayWidth + (ON_START_LINE.has(this.zoom) ? 0 : this.dayWidth / 2)}px`;
       dot.textContent = new Intl.DateTimeFormat(this.options.locale ?? 'en-US', { day: 'numeric' }).format(toLocalDate(this.options.today));
       header.appendChild(dot);
+      this.todayDot = dot;
     }
 
     return header;
@@ -1843,20 +1854,36 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     this.nowTimer = setTimeout(() => this.placeNowLine(todayIndex), 60_000 - (now % 60_000));
   }
 
+  /** notion-motion.md Round 48 A2, A3: a body line on the 1st of every month in Quarter, Year and 5 Years. */
+  private drawMonthLines(layer: HTMLElement): void {
+    if (!ON_START_LINE.has(this.zoom)) return;
+    const firsts = Array.from({ length: this.window.days }, (_, i) => i).filter((i) => addDays(this.window.start, i).endsWith('-01'));
+
+    layer.append(...firsts.map((i) => {
+      const line = document.createElement('div');
+
+      line.setAttribute('data-blok-database-timeline-month-line', '');
+      line.style.insetInlineStart = `${i * this.dayWidth}px`;
+
+      return line;
+    }));
+  }
+
   /**
-   * notion-motion.md Round 34 §5: a tick the now label would overlap is not drawn. Notion's exact
+   * notion-motion.md Round 34 §5, Round 48 A4: a tick the now label or the today circle would overlap is not drawn. Notion's exact
    * rule is unread; a box overlap drops the ticks it dropped (34, 39 px off) and keeps the ones it kept (68+).
    * Needs layout, so it waits until the view is in the page.
    */
   private hideCoveredTicks(): void {
-    const text = this.nowLabel?.firstElementChild;
+    const cover = this.nowLabel?.firstElementChild ?? this.todayDot;
+    const row = this.root?.querySelector('[data-blok-database-timeline-units]');
 
-    if (this.nowLabel?.isConnected !== true || !(text instanceof HTMLElement)) return;
-    const ticks = [...this.nowLabel.parentElement?.querySelectorAll<HTMLElement>(':scope > [data-day]') ?? []];
+    if (cover?.isConnected !== true || row === null || row === undefined) return;
+    const ticks = [...row.querySelectorAll<HTMLElement>(':scope > [data-day]')];
 
     // A hidden tick has no box: show them all, then read every box in one layout.
     ticks.forEach((tick) => tick.toggleAttribute('hidden', false));
-    const label = text.getBoundingClientRect();
+    const label = cover.getBoundingClientRect();
     const covered = ticks.map((tick) => {
       const box = tick.firstElementChild?.getBoundingClientRect();
 

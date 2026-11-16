@@ -15715,12 +15715,12 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   position: relative;
   flex: 1 1 auto;
   min-inline-size: 0;
-  /* Runs up under the toolbar so the group labels scroll in its band. The band stays unfilled. */
+  /* Runs up under the toolbar so the group labels scroll in its band. The band and the tick row stay unfilled (Round 48 A4). */
   margin-block-start: calc(-1 * var(--blok-database-timeline-header-band));
   overflow-x: auto;
   overflow-y: hidden;
   outline-offset: -2px;
-  background: linear-gradient(transparent var(--blok-database-timeline-header-band), var(--blok-database-timeline-canvas-bg) var(--blok-database-timeline-header-band));
+  background: linear-gradient(transparent calc(var(--blok-database-timeline-header-band) + var(--blok-database-timeline-header-block)), var(--blok-database-timeline-canvas-bg) 0);
   border-block-end: 1px solid var(--blok-database-calendar-border);
 }
 
@@ -15760,13 +15760,12 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 [data-blok-database-timeline-groups] > * {
-  /* notion-motion.md Round 47 A2: the label box starts at the band top with 13 above the text. */
+  /* notion-motion.md Round 47 A2: the label box starts at the band top with 13 above the text.
+     Round 48 A1, A2: the text starts on its line; month lines are drawn in the body only. */
   padding-block-start: var(--blok-space-3-25);
-  padding-inline-start: var(--blok-space-4);
   font-size: 14px;
   line-height: 21px;
   font-weight: 500;
-  border-inline-end: 1px solid var(--blok-database-timeline-grid-line);
 }
 
 [data-blok-database-timeline-units] > * {
@@ -15800,7 +15799,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-timeline-period-text);
 }
 
-[data-blok-database-timeline-tick-line] {
+[data-blok-database-timeline-tick-line],
+[data-blok-database-timeline-month-line] {
   position: absolute;
   inset-block: 0;
   inline-size: 1px;

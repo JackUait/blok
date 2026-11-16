@@ -2954,6 +2954,26 @@
   border-color: var(--color-gray-200, currentcolor);
 }
 
+.blok-code-toolbar {
+  border-color: var(--blok-border-secondary);
+}
+
+.blok-code-language {
+  position: relative;
+  border-inline-end-width: 0;
+}
+
+.blok-code-language::after {
+  content: '';
+  position: absolute;
+  inset-inline-end: 0;
+  top: 5px;
+  bottom: 5px;
+  width: 1px;
+  background: var(--blok-border-secondary);
+  pointer-events: none;
+}
+
 [data-blok-icon-lid] {
   transform-box: fill-box;
   transform-origin: center;

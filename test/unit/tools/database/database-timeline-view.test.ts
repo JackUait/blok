@@ -379,6 +379,20 @@ describe('DatabaseTimelineView', () => {
       });
     });
 
+    // notion-motion.md Round 47 A1b (r47-n-tl-day-today.raw): Day zoom names the time on the now-line ("2:58 PM"),
+    // centres each hour tick on its hour, and draws no 22px day pill.
+    it('day zoom names the time on the now-line, centres hour ticks and draws no day pill', () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date', 'queueMicrotask'] });
+      vi.setSystemTime(new Date(2026, 9, 9, 14, 58));
+      const root = mount({ view: timelineView({ timelineZoom: 'day' }) }).root;
+      const ticks = root.querySelectorAll<HTMLElement>('[data-blok-database-timeline-units] > [data-day]');
+      const width = TIMELINE_DAY_WIDTH.day / 24;
+
+      expect(root.querySelector('[data-blok-database-timeline-units] > [data-blok-database-timeline-now-label]')?.textContent).toMatch(/^2:58\sPM$/);
+      expect(root.querySelector('[data-blok-database-timeline-today-dot]')).toBeNull();
+      expect(parseFloat(ticks[1].style.insetInlineStart)).toBeCloseTo(width - width / 2, 5);
+      vi.useRealTimers();
+    });
 
     // notion-motion.md Round 35 Part B (r35-timeline-hours-open.raw, r35-timeline-hours-grid.raw).
     describe('hours zoom opens at now (Round 35)', () => {

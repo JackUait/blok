@@ -771,8 +771,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   private createHeader(): HTMLElement {
     const header = document.createElement('div');
     const { groups, units } = headerUnits(this.window, this.zoom, this.options.locale ?? 'en-US');
-    // notion-motion.md Round 34 §5: Hours zoom centres each tick on its time; the text sits in a span the now label measures against.
-    const ticks = this.zoom === 'hours';
+    // notion-motion.md Round 34 §5 and Round 47 A1b: Hours and Day zooms centre each tick on its time; the text sits in a span the now label measures against.
+    const ticks = this.zoom === 'hours' || this.zoom === 'day';
     const line = (attr: string, items: typeof groups, centred = false): HTMLElement => {
       const el = document.createElement('div');
 

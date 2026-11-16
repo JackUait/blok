@@ -11,15 +11,15 @@ import { TIMELINE_ZOOMS } from './view-settings';
  * shift a bar.
  */
 
-/** Pixels per day. Month (40) and Hours (7000) are measured in Notion (research/08, notion-motion.md Round 34 §5); the rest are unmeasured. */
+/** Pixels per day, measured in Notion (notion-motion.md Round 47 A1b). Day is 24 hour cells of 52.1. */
 export const TIMELINE_DAY_WIDTH: Readonly<Record<TimelineZoom, number>> = {
   hours: 7000,
-  day: 280,
-  week: 140,
+  day: 1250,
+  week: 180,
   bi_week: 80,
   month: 40,
   quarter: 12,
-  year: 4,
+  year: 5,
   '5_years': 1,
 };
 
@@ -290,24 +290,24 @@ export interface HeaderUnit {
   period?: string;
 }
 
-type Unit = 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
+type Unit = 'hour' | 'day' | 'week' | 'month' | 'year';
 
 const GROUP_OF: Record<TimelineZoom, Unit> = {
   hours: 'day', day: 'month', week: 'month', bi_week: 'month', month: 'month', quarter: 'month', year: 'year', '5_years': 'year',
 };
 
 const UNIT_OF: Record<TimelineZoom, Unit> = {
-  hours: 'hour', day: 'day', week: 'day', bi_week: 'day', month: 'day', quarter: 'week', year: 'month', '5_years': 'quarter',
+  hours: 'hour', day: 'hour', week: 'day', bi_week: 'day', month: 'day', quarter: 'week', year: 'week', '5_years': 'month',
 };
 
-const TICKS_PER_DAY = 96;
+/** Hour ticks a day: Hours zoom every 15 minutes, Day zoom every hour (notion-motion.md Round 34 §5, Round 47 A1b). */
+const TICKS_PER_DAY: Partial<Record<TimelineZoom, number>> = { hours: 96, day: 24 };
 
 const FORMAT: Record<Unit, Intl.DateTimeFormatOptions> = {
   hour: { hour: 'numeric' },
   day: { day: 'numeric' },
   week: { day: 'numeric' },
-  month: { month: 'short' },
-  quarter: { month: 'short' },
+  month: { month: 'numeric' },
   year: { year: 'numeric' },
 };
 
@@ -324,28 +324,37 @@ const startsUnit = (unit: Unit, day: string): boolean => {
   switch (unit) {
     case 'week': return weekdayOf(day) === 1;
     case 'month': return firstOfMonth;
-    case 'quarter': return firstOfMonth && month % 3 === 1;
     case 'year': return firstOfMonth && month === 1;
     case 'day':
     case 'hour': return true;
   }
 };
 
-const unitsOf = (window: TimelineWindow, unit: Unit, dayWidth: number, format: Intl.DateTimeFormat): HeaderUnit[] => {
-  // notion-motion.md Round 34 §5: Hours zoom ticks every 15 minutes, in the locale's clock.
+/** The hour tick's text without its minutes: "5 PM", or "17" on a 24 hour clock. */
+const hourOnly = (parts: Intl.DateTimeFormatPart[]): string => {
+  const minute = parts.findIndex((part) => part.type === 'minute');
+
+  return parts.filter((_, i) => i !== minute && i !== minute - 1).map((part) => part.value).join('');
+};
+
+const unitsOf = (window: TimelineWindow, unit: Unit, dayWidth: number, format: Intl.DateTimeFormat, ticksPerDay = 1): HeaderUnit[] => {
+  // notion-motion.md Round 34 §5: Hours zoom ticks every 15 minutes, in the locale's clock. Round 47 A1b: Day zoom every hour, "5 AM".
   if (unit === 'hour') {
-    const tickWidth = dayWidth / TICKS_PER_DAY;
+    const tickWidth = dayWidth / ticksPerDay;
+    const minutesPerTick = DAY_MINUTES / ticksPerDay;
     const { locale } = format.resolvedOptions();
     const periodFormat = new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' });
 
-    return Array.from({ length: window.days * TICKS_PER_DAY }, (_, i) => {
-      const day = addDays(window.start, Math.floor(i / TICKS_PER_DAY));
+    return Array.from({ length: window.days * ticksPerDay }, (_, i) => {
+      const day = addDays(window.start, Math.floor(i / ticksPerDay));
       const date = toLocalDate(day);
 
-      date.setMinutes((i % TICKS_PER_DAY) * 15);
-      const period = periodFormat.formatToParts(date).find((part) => part.type === 'dayPeriod')?.value;
+      date.setMinutes((i % ticksPerDay) * minutesPerTick);
+      const parts = periodFormat.formatToParts(date);
+      const period = parts.find((part) => part.type === 'dayPeriod')?.value;
+      const label = minutesPerTick === HOUR_MINUTES ? hourOnly(parts) : formatClock(date, locale, undefined);
 
-      return { label: formatClock(date, locale, undefined), offset: i * tickWidth, width: tickWidth, day, ...(period !== undefined ? { period } : {}) };
+      return { label, offset: i * tickWidth, width: tickWidth, day, ...(period !== undefined ? { period } : {}) };
     });
   }
 
@@ -371,6 +380,6 @@ export const headerUnits = (window: TimelineWindow, zoom: TimelineZoom, locale: 
 
   return {
     groups: unitsOf(window, group, width, new Intl.DateTimeFormat(locale, GROUP_FORMAT[group])),
-    units: unitsOf(window, unit, width, new Intl.DateTimeFormat(locale, FORMAT[unit])),
+    units: unitsOf(window, unit, width, new Intl.DateTimeFormat(locale, FORMAT[unit]), TICKS_PER_DAY[zoom]),
   };
 };

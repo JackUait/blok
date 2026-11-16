@@ -31,6 +31,13 @@ describe('timeline-dates', () => {
       expect(TIMELINE_DAY_WIDTH.month).toBe(40);
     });
 
+    // notion-motion.md Round 47 A1b: Day 52.1 per hour cell (about 1250 a day), Week 180, Year 35 per week cell.
+    it('draws Day, Week and Year at Notion\'s widths', () => {
+      expect(TIMELINE_DAY_WIDTH.day).toBe(1250);
+      expect(TIMELINE_DAY_WIDTH.week).toBe(180);
+      expect(TIMELINE_DAY_WIDTH.year).toBe(5);
+    });
+
     it('gets wider for each closer zoom level', () => {
       const order = ['5_years', 'year', 'quarter', 'month', 'bi_week', 'week', 'day', 'hours'] as const;
       const widths = order.map((zoom) => TIMELINE_DAY_WIDTH[zoom]);
@@ -279,11 +286,36 @@ describe('timeline-dates', () => {
       expect(units[0].label).toBe(new Intl.DateTimeFormat('en-US', { day: 'numeric' }).format(new Date(2026, 9, 1)));
     });
 
-    it('labels months under years at year zoom', () => {
-      const { groups, units } = headerUnits({ start: '2026-01-01', days: 400 }, 'year', 'en-US');
+    // notion-motion.md Round 47 A1b (r47-n-tl-year-today.raw): Year ticks are weeks from Monday, 35 wide, read "3", "10".
+    it('labels Monday weeks under years at year zoom', () => {
+      const { groups, units } = headerUnits({ start: '2026-08-01', days: 40 }, 'year', 'en-US');
 
       expect(groups[0].label).toBe(new Intl.DateTimeFormat('en-US', { year: 'numeric' }).format(new Date(2026, 0, 1)));
-      expect(units[1]).toMatchObject({ offset: 31 * TIMELINE_DAY_WIDTH.year, day: '2026-02-01' });
+      expect(units[1]).toMatchObject({ label: '3', day: '2026-08-03', offset: 2 * 5, width: 35 });
+      expect(units[2]).toMatchObject({ label: '10', day: '2026-08-10', offset: 9 * 5 });
+    });
+
+    // notion-motion.md Round 47 A1b (r47-n-tl-5y-today.raw): 5 Years ticks are months, read as numbers "1".."12".
+    it('labels numbered months under years at 5 years zoom', () => {
+      const { groups, units } = headerUnits({ start: '2026-01-01', days: 400 }, '5_years', 'en-US');
+
+      expect(groups[0].label).toBe('2026');
+      expect(units[0]).toMatchObject({ label: '1', day: '2026-01-01', offset: 0, width: 31 });
+      expect(units[1]).toMatchObject({ label: '2', day: '2026-02-01', offset: 31, width: 28 });
+      expect(units[11].label).toBe('12');
+    });
+
+    // notion-motion.md Round 47 A1b (r47-n-hdr-day.raw, r47-n-tl-day-today.raw): Day ticks are hours, 52.1 apart, read "5 AM".
+    it('labels hours under days at day zoom, in the locale\'s clock', () => {
+      const { units } = headerUnits({ start: '2026-10-01', days: 2 }, 'day', 'en-US');
+
+      expect(units).toHaveLength(2 * 24);
+      expect(units[5].offset).toBeCloseTo(5 * 52.08, 1);
+      expect(units[5].width).toBeCloseTo(52.08, 1);
+      expect(units[5]).toMatchObject({ day: '2026-10-01', period: 'AM' });
+      expect(units[5].label).toMatch(/^5\sAM$/);
+      expect(units[24].day).toBe('2026-10-02');
+      expect(headerUnits({ start: '2026-10-01', days: 1 }, 'day', 'de-DE').units[17].label).toBe('17');
     });
 
     // notion-motion.md Round 34 §5: a tick every 15 minutes, 72.92 apart, read "h:mm PM" in en-US.

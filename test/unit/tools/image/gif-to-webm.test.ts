@@ -10,17 +10,28 @@ class FakeFrame {
   displayWidth = 4;
   displayHeight = 4;
   close = vi.fn();
+  // All white.
+  copyTo = vi.fn(async (dest: Uint8Array, _opts?: { format: string }) => { dest.fill(255); });
   constructor(private readonly stamp: number, public duration: number) {}
   get timestamp(): number { return this.stamp; }
 }
 
 const makeFrame = (timestamp = 0, duration = 100_000): FakeFrame => new FakeFrame(timestamp, duration);
 
-interface Fakes { decoded: FakeFrame[]; copies: FakeFrame[]; encoded: FakeFrame[] }
+interface FrameInit {
+  format: string;
+  codedWidth: number;
+  codedHeight: number;
+  timestamp: number;
+  duration: number;
+  colorSpace: Record<string, unknown>;
+}
+
+interface Fakes { decoded: FakeFrame[]; copies: FakeFrame[]; encoded: FakeFrame[]; inits: Array<{ data: Uint8Array; init: FrameInit }> }
 
 const installWebCodecs = (
   frameCount: number,
-  fakes: Fakes = { decoded: [], copies: [], encoded: [] },
+  fakes: Fakes = { decoded: [], copies: [], encoded: [], inits: [] },
   throwOnEncode = -1,
 ): Fakes => {
   class FakeImageDecoder {
@@ -54,10 +65,11 @@ const installWebCodecs = (
     close = vi.fn();
   }
   class FakeVideoFrame {
-    constructor(_source: FakeFrame, init: { timestamp: number; duration: number }) {
+    constructor(data: Uint8Array, init: FrameInit) {
       const copy = makeFrame(init.timestamp, init.duration);
 
       fakes.copies.push(copy);
+      fakes.inits.push({ data, init });
 
       return copy;
     }
@@ -126,6 +138,24 @@ describe('convertGifToWebm', () => {
     await convertGifToWebm(new ArrayBuffer(8));
     expect(fakes.encoded.map((f) => f.timestamp)).toEqual([0, 100_000, 200_000]);
     expect(fakes.encoded).toEqual(fakes.copies);
+  });
+
+  it('hands the encoder limited-range I420 frames, because it marks RGB frames as full range', async () => {
+    const fakes = installWebCodecs(2);
+
+    await convertGifToWebm(new ArrayBuffer(8));
+
+    expect(fakes.decoded.map((f) => f.copyTo.mock.calls[0][1])).toEqual([{ format: 'RGBA' }, { format: 'RGBA' }]);
+    expect(fakes.inits.map(({ init }) => init)).toEqual([0, 100_000].map((timestamp) => ({
+      format: 'I420',
+      codedWidth: 4,
+      codedHeight: 4,
+      timestamp,
+      duration: 100_000,
+      colorSpace: { matrix: 'bt709', primaries: 'bt709', transfer: 'bt709', fullRange: false },
+    })));
+    // 4×4 white: 16 luma samples at 235, then 4 + 4 chroma samples at 128.
+    expect(Array.from(fakes.inits[0].data)).toEqual([...Array.from({ length: 16 }, () => 235), ...Array.from({ length: 8 }, () => 128)]);
   });
 
   it('closes a decoded frame whose encode throws', async () => {

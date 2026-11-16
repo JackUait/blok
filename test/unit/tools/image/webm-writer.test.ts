@@ -76,6 +76,23 @@ describe('writeWebm', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
 
+  it('starts with the short EBML header ffmpeg writes, so Safari can sniff the file', () => {
+    const bytes = writeWebm({ codec: 'V_VP9', width: 4, height: 4 }, framesOf([100, 100], [0]));
+
+    // Safari sniffs a URL with no .webm extension. It plays DocType at byte 21 and rejects it at byte 56.
+    expect(Array.from(bytes.slice(0, 36))).toEqual([
+      0x1a, 0x45, 0xdf, 0xa3, 0x9f,
+      0x42, 0x86, 0x81, 0x01,
+      0x42, 0xf7, 0x81, 0x01,
+      0x42, 0xf2, 0x81, 0x04,
+      0x42, 0xf3, 0x81, 0x08,
+      0x42, 0x82, 0x84, 0x77, 0x65, 0x62, 0x6d,
+      0x42, 0x87, 0x81, 0x02,
+      0x42, 0x85, 0x81, 0x02,
+    ]);
+    expect(Array.from(bytes.slice(36, 40))).toEqual([0x18, 0x53, 0x80, 0x67]);
+  });
+
   it('writes a VP9 track whose packets, key frames, size and duration match the frames', async () => {
     const delays = Array.from({ length: 20 }, () => 100);
     const parsed = await parse(writeWebm({ codec: 'V_VP9', width: 160, height: 120 }, framesOf(delays, [0])));

@@ -1,3 +1,4 @@
+import { rgbaToI420 } from './rgba-to-i420';
 import { writeWebm } from './webm-writer';
 import type { WebmFrame, WebmTrack } from './webm-writer';
 
@@ -8,10 +9,20 @@ interface DecodedFrame {
   displayHeight: number;
   duration: number | null;
   timestamp: number;
+  copyTo(destination: Uint8Array, options: { format: 'RGBA' }): Promise<unknown>;
   close(): void;
 }
 
-type VideoFrameCtor = new (source: DecodedFrame, init: { timestamp: number; duration: number }) => DecodedFrame;
+interface I420FrameInit {
+  format: 'I420';
+  codedWidth: number;
+  codedHeight: number;
+  timestamp: number;
+  duration: number;
+  colorSpace: { matrix: string; primaries: string; transfer: string; fullRange: boolean };
+}
+
+type VideoFrameCtor = new (data: Uint8Array, init: I420FrameInit) => DecodedFrame;
 
 interface ImageDecoderLike {
   tracks: { ready: Promise<void>; selectedTrack?: { frameCount: number } };
@@ -119,7 +130,7 @@ export async function convertGifToWebm(
       const frame = await getFrame(i, first.image, decoder);
       // Tracked before encoding, so a throw still closes it.
       collectFrame(openFrames, frame, i);
-      cursor.timestamp = encodeFrame(encoder, frame, i, cursor.timestamp);
+      cursor.timestamp = await encodeFrame(encoder, frame, { index: i, timestamp: cursor.timestamp, width, height });
       opts.onProgress?.(Math.round(((i + 1) / frameCount) * 100));
     }
 
@@ -161,16 +172,28 @@ async function getFrame(
  * Encode one frame at the given timestamp and return the timestamp for the
  * next frame (current + this frame's GIF delay, in µs).
  */
-function encodeFrame(
+async function encodeFrame(
   encoder: VideoEncoderLike,
   frame: DecodedFrame,
-  index: number,
-  timestamp: number,
-): number {
+  at: { index: number; timestamp: number; width: number; height: number },
+): Promise<number> {
+  const { index, timestamp, width, height } = at;
   const duration = frame.duration ?? 100_000;
-  // VideoFrame.timestamp is getter-only, so a re-stamped copy is encoded instead.
+  const rgba = new Uint8Array(width * height * 4);
+
+  await frame.copyTo(rgba, { format: 'RGBA' });
+
   const Frame = (globalThis as Record<string, unknown>).VideoFrame as VideoFrameCtor;
-  const stamped = new Frame(frame, { timestamp, duration });
+  // Never encode the decoded RGB frame itself: the encoder marks RGB input as full range,
+  // and Chrome's hardware VP9 decoder on a Mac (VideoToolbox) fails on full-range video.
+  const stamped = new Frame(rgbaToI420(rgba, width, height), {
+    format: 'I420',
+    codedWidth: width,
+    codedHeight: height,
+    timestamp,
+    duration,
+    colorSpace: { matrix: 'bt709', primaries: 'bt709', transfer: 'bt709', fullRange: false },
+  });
 
   try {
     encoder.encode(stamped, { keyFrame: index % KEYFRAME_INTERVAL === 0 });

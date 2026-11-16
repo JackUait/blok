@@ -2163,6 +2163,18 @@ describe('DatabaseViewControls', () => {
       expect(q(picker)?.closest<HTMLElement>('[data-blok-popover]')?.style.top).toBe('303px');
     });
 
+    // notion-motion.md Round 47 §D: the bar's "+ Filter" chip opens its picker 4 under it, as the toolbar button does.
+    it('opens the "+ Filter" chip\'s picker 4px under the chip', () => {
+      withSort();
+      const add = q('database-filter-bar-add');
+
+      if (add === null) throw new Error('no chip');
+      add.getBoundingClientRect = () => new DOMRect(700, 301, 60, 24);
+      click('database-filter-bar-add');
+
+      expect(q('database-filter-picker')?.closest<HTMLElement>('[data-blok-popover]')?.style.top).toBe('329px');
+    });
+
     it('opens 4px under the chip', () => {
       withSort();
       const chip = q('database-sort-pill');
@@ -2303,6 +2315,17 @@ describe('DatabaseViewControls', () => {
 
       expect(controls.effective(saved.view).sorts).toEqual([expect.objectContaining({ propertyId: 'alpha', direction: 'asc' })]);
       expect(q('database-sort-picker')).toBeNull();
+    });
+
+    // notion-motion.md Round 47 §D: picking a property opens the new sort's panel under its chip.
+    it('opens the new sort\'s panel under its chip after a pick', () => {
+      setup({ schema: () => many });
+
+      click('database-toolbar-sort');
+      click('database-pick-property-alpha');
+
+      expect(q('database-sort-panel')).not.toBeNull();
+      expect(q('database-sort-pill')?.hasAttribute('data-popover-open')).toBe(true);
     });
   });
   describe('search box (Notion: the magnifier stays, a clear ×)', () => {

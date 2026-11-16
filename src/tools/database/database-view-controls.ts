@@ -33,7 +33,7 @@ import type {
 } from './types';
 
 const SORT_PANEL_GAP = 4;
-/** notion-motion.md Round 46 §C.5: the filter and sort pickers open 4 under their toolbar button. */
+/** notion-motion.md Round 46 §C.5 and Round 47 §D: the filter and sort pickers open 4 under their toolbar button or the "+ Filter" chip. */
 const TOOLBAR_PICKER_GAP = 4;
 
 /** What the controls ask of the database tool. */
@@ -785,7 +785,7 @@ export class DatabaseViewControls {
       i18n: this.host.i18n,
       onPick,
       ...options,
-      ...(anchor === this.filterButton || anchor === this.sortButton ? { gap: TOOLBAR_PICKER_GAP } : {}),
+      gap: TOOLBAR_PICKER_GAP,
       onClose: (escape) => this.panelClosed(anchor, escape),
     });
 
@@ -807,6 +807,10 @@ export class DatabaseViewControls {
       this.openPropertyPicker(this.sortButton, 'database-sort-picker', SORTABLE_TYPES, (property) => {
         this.barOpen = true;
         this.updatePersonal({ sorts: [{ id: nanoid(), propertyId: property.id, direction: 'asc' }] });
+        // notion-motion.md Round 47 §D: the new sort's panel opens under its chip.
+        const chip = this.filterBar.querySelector<HTMLElement>('[data-blok-testid="database-sort-pill"]');
+
+        if (chip !== null && !this.filterBar.hidden) this.openSortPanel(chip, this.sortButton);
       }, { placeholder: this.t('sortByPlaceholder'), kind: 'sort' });
 
       return;

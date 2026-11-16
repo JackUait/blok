@@ -15,6 +15,19 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// Saved documents own their icon; metadata is only a fallback before initialization.
+// Keep the projection in SQL so page lists never transfer entire documents.
+const pageListMetadataSQL = `(CASE WHEN jsonb_typeof(content) = 'object' THEN
+	(metadata - 'icon') || CASE
+		WHEN content->'icon'->>'type' = 'emoji' AND jsonb_typeof(content->'icon'->'value') = 'string'
+			THEN jsonb_build_object('icon', content->'icon'->'value')
+		WHEN content->'icon'->>'type' = 'image' AND jsonb_typeof(content->'icon'->'url') = 'string'
+			THEN jsonb_build_object('icon', content->'icon'->'url')
+		ELSE '{}'::jsonb
+	END
+	ELSE metadata
+END - 'createdAt' - 'updatedAt') || jsonb_strip_nulls(jsonb_build_object('createdAt',created_at,'updatedAt',updated_at))`
+
 func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws Workspace) {
 	if r.Method == "GET" {
 		tx, e := s.DB.Begin(r.Context())
@@ -33,7 +46,7 @@ func (s *Service) index(w http.ResponseWriter, r *http.Request, u identity, ws W
 			problem(w, 500, "Read failed")
 			return
 		}
-		rows, e := tx.Query(r.Context(), "SELECT id,(metadata - 'createdAt' - 'updatedAt') || jsonb_strip_nulls(jsonb_build_object('createdAt',created_at,'updatedAt',updated_at)),trashed,public_id::text FROM pages WHERE workspace_id=$1 AND NOT deleted ORDER BY (metadata->>'position')::numeric NULLS LAST,id", ws.ID)
+		rows, e := tx.Query(r.Context(), "SELECT id,"+pageListMetadataSQL+",trashed,public_id::text FROM pages WHERE workspace_id=$1 AND NOT deleted ORDER BY (metadata->>'position')::numeric NULLS LAST,id", ws.ID)
 		if e != nil {
 			problem(w, 500, "Read failed")
 			return

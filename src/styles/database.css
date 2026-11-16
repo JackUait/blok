@@ -15576,7 +15576,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   z-index: 1;
   margin-block-start: calc(-1 * var(--blok-database-timeline-panel-reach));
   padding-block-start: var(--blok-database-timeline-panel-reach);
-  overflow: hidden;
+  /* Clip, not hidden: rows run past the panel, and focus in a cut-off cell would scroll it. */
+  overflow: clip;
   border-inline-end: 1px solid var(--blok-database-timeline-grid-line);
   background-color: var(--blok-database-timeline-panel-bg);
   box-shadow: var(--blok-database-timeline-panel-shadow);
@@ -15597,14 +15598,23 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   border-block-end: 1px solid var(--blok-database-timeline-grid-line);
 }
 
-/* r10-timeline-calc-edge.raw: the outer cells reach the panel edges, the button 4px in.
-   The row keeps its padding so inner cells stay on the header's columns. */
-[data-blok-database-timeline-table-footer] > :first-child {
-  margin-inline-start: calc(-1 * var(--blok-space-2));
+/*
+ * notion-motion.md Round 51 §3: Name keeps the 279 of a Name-only row and the row grows past the panel
+ * (679 with two more columns; 200 each is a fit to that total). The cells hold the side padding, so the
+ * footer cells reach the column edges (r10-timeline-calc-edge.raw).
+ */
+[data-blok-database-timeline-table-header],
+[data-blok-database-timeline-table-row],
+[data-blok-database-timeline-table-footer] {
+  grid-template-columns: 279px;
+  grid-auto-columns: 200px;
+  inline-size: max-content;
+  padding-inline: 0;
 }
 
-[data-blok-database-timeline-table-footer] > :last-child {
-  margin-inline-end: calc(-1 * var(--blok-space-2));
+[data-blok-database-timeline-table-header] > *,
+[data-blok-database-timeline-table-row] > * {
+  padding-inline: var(--blok-space-2);
 }
 
 [data-blok-database-timeline-table-header] {
@@ -15627,6 +15637,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   display: flex;
   align-items: center;
   gap: var(--blok-space-1-5);
+  /* Round 51 §3: the Name editor is 280 at 359; it covers this box 1px out on each side. */
+  margin-inline-end: -1px;
   font-weight: 500;
   cursor: pointer;
 }
@@ -18967,7 +18979,7 @@ button[data-blok-database-feed-reaction]:hover,
 }
 
 [data-blok-database-list-row][data-subitem-depth],
-[data-blok-database-timeline-table-row][data-subitem-depth] {
+[data-blok-database-timeline-table-row][data-subitem-depth] > [data-blok-database-timeline-table-title] {
   padding-inline-start: calc(var(--blok-database-subitem-depth) * var(--blok-database-subitem-indent));
 }
 

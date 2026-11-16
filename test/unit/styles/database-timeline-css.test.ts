@@ -188,6 +188,24 @@ describe('database timeline styles', () => {
     expect(ruleBody(`${shown} svg`)).toContain('transform: scaleX(-1)');
   });
 
+  // notion-motion.md Round 51 §3: with Name, Date and Status shown Notion's panel row is 679 wide, the Name
+  // editor 280 at 359. Name keeps the 279 of a Name-only row; 2 × 200 is a fit to the total, not a per-cell read.
+  it('keeps the Name column 279 wide and gives each other column 200, so the row grows past the panel', () => {
+    for (const part of ['header', 'row', 'footer']) {
+      const body = ruleBody(`[data-blok-database-timeline-table-${part}]`);
+
+      expect(body).toContain('grid-template-columns: 279px');
+      expect(body).toContain('grid-auto-columns: 200px');
+      expect(body).toContain('inline-size: max-content');
+      expect(body).toMatch(/padding-inline: 0[;\s]/);
+    }
+    expect(ruleBody('[data-blok-database-timeline-table-row] > *')).toContain('padding-inline: var(--blok-space-2)');
+    expect(ruleBody('[data-blok-database-timeline-table-header] > *')).toContain('padding-inline: var(--blok-space-2)');
+    expect(ruleBody('[data-blok-database-timeline-table-title]')).toContain('margin-inline-end: -1px');
+    expect(ruleBody('[data-blok-database-timeline-table-footer] > :first-child')).toBe('');
+    expect(ruleBody('[data-blok-database-timeline-table]')).toContain('overflow: clip');
+  });
+
   // notion-motion.md Timeline: the chevrons crossfade with a scale, 0.3 to 1, over 160ms ease-in-out.
   it('crossfades the table chevrons with a 0.3 scale over 160ms ease-in-out', () => {
     const toggle = '[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle]';

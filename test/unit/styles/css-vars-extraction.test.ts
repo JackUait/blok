@@ -233,6 +233,8 @@ describe('R2 — repeated length literals in themeable properties must be tokeni
     '[data-blok-database-filter-conjunction]|margin-inline-start',
     // r20-cc-list-style.raw: the card's trash sits 6 down, 1 border plus 5, so the card is 100 tall.
     '[data-blok-database-color-rule]|padding',
+    // notion-motion.md Round 51 §3: the Name cell reaches 1px into the next column, so its editor is 280.
+    '[data-blok-database-timeline-table-title]|margin-inline-end',
   ]);
 
   it('no non-zero length repeats across themeable-property declarations', () => {

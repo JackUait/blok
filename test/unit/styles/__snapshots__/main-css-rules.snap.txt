@@ -18310,7 +18310,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   z-index: 1;
   margin-block-start: calc(-1 * var(--blok-database-timeline-panel-reach));
   padding-block-start: var(--blok-database-timeline-panel-reach);
-  overflow: hidden;
+  overflow: clip;
   border-inline-end: 1px solid var(--blok-database-timeline-grid-line);
   background-color: var(--blok-database-timeline-panel-bg);
   box-shadow: var(--blok-database-timeline-panel-shadow);
@@ -18328,12 +18328,15 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   border-block-end: 1px solid var(--blok-database-timeline-grid-line);
 }
 
-[data-blok-database-timeline-table-footer] > :first-child {
-  margin-inline-start: calc(-1 * var(--blok-space-2));
+[data-blok-database-timeline-table-header], [data-blok-database-timeline-table-row], [data-blok-database-timeline-table-footer] {
+  grid-template-columns: 279px;
+  grid-auto-columns: 200px;
+  inline-size: max-content;
+  padding-inline: 0;
 }
 
-[data-blok-database-timeline-table-footer] > :last-child {
-  margin-inline-end: calc(-1 * var(--blok-space-2));
+[data-blok-database-timeline-table-header] > *, [data-blok-database-timeline-table-row] > * {
+  padding-inline: var(--blok-space-2);
 }
 
 [data-blok-database-timeline-table-header] {
@@ -18356,6 +18359,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   display: flex;
   align-items: center;
   gap: var(--blok-space-1-5);
+  margin-inline-end: -1px;
   font-weight: 500;
   cursor: pointer;
 }
@@ -21390,7 +21394,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   padding-inline-start: calc(var(--blok-space-2) + var(--blok-database-subitem-depth) * var(--blok-database-subitem-indent));
 }
 
-[data-blok-database-list-row][data-subitem-depth], [data-blok-database-timeline-table-row][data-subitem-depth] {
+[data-blok-database-list-row][data-subitem-depth], [data-blok-database-timeline-table-row][data-subitem-depth] > [data-blok-database-timeline-table-title] {
   padding-inline-start: calc(var(--blok-database-subitem-depth) * var(--blok-database-subitem-indent));
 }
 

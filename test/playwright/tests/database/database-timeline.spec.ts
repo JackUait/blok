@@ -407,6 +407,34 @@ test.describe('timeline', () => {
     }
   });
 
+  // notion-motion.md Round 51 §3: with Name and two more columns Notion's panel row is 679 wide and the Name
+  // editor from "+ New" is 280 at x 359 (1 left of the row). 200 per extra column is a fit to the 679 total.
+  test('the table panel keeps Name 279 wide and grows its row with more columns, the Name editor 280', async ({ page }) => {
+    await mount(page, blocks({
+      type: 'timeline',
+      showTimelineTable: true,
+      tableProperties: [{ id: 'p-due', visible: true }, { id: 'p-notes', visible: true }],
+    }));
+
+    const panel = page.locator('[data-blok-database-timeline-table]');
+    const row = panel.locator('[data-blok-database-timeline-table-row]').first();
+    const widths = await row.evaluate((el) => [...el.children].map((cell) => cell.getBoundingClientRect().width));
+    const rowBox = await row.boundingBox();
+    const panelBox = await panel.boundingBox();
+
+    if (rowBox === null || panelBox === null) throw new Error('no layout');
+    expect(rowBox.width).toBeCloseTo(679, 0);
+    expect(widths.slice(1)).toEqual([200, 200]);
+    expect(panelBox.width).toBeCloseTo(370, 0);
+
+    await panel.locator('[data-blok-database-timeline-table-new]').click();
+    const editor = await page.locator('[data-blok-database-cell-input="title"]').boundingBox();
+
+    if (editor === null) throw new Error('no editor');
+    expect(editor.width).toBeCloseTo(280, 0);
+    expect(editor.x - rowBox.x).toBeCloseTo(-1, 0);
+  });
+
   // Notion: the card starts 4 under the view top (motion-r6-timelinepanel.json panel 309 in a 305 view; Round 47 A4
   // content at 309.2 under a 305.2 scroller). « ink is 16 at 323.7 (Round 46 B, r46-n-tltool-svg.raw), 14.5 into the card.
   test('the table panel is a white card from above « to the chart\'s bottom', async ({ page }) => {

@@ -1793,6 +1793,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R113_BYTES = 381;
     // Lane r115: Round 50 timeline edge readout box, open « 28x24, panel header icon box. Net database.css growth against origin/main.
     const DATABASE_R115_BYTES = 221;
+    // Lane r118: Round 51 timeline panel columns (Name 279, others 200, the row grows; clipped panel). Net database.css growth against origin/main.
+    const DATABASE_R118_BYTES = 220;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2361,6 +2363,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R111_BYTES
       + DATABASE_R113_BYTES
       + DATABASE_R115_BYTES
+      + DATABASE_R118_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

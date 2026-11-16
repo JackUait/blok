@@ -553,9 +553,25 @@ describe('database table frozen edge', () => {
       .toMatch(/box-shadow:\s*inset 0 0 0 2px var\(--blok-database-table-cell-ring\),\s*var\(--blok-database-frozen-shadow\)/);
   });
 
+  // notion-motion.md Round 46 §A: Notion's frozen block sticks 30px in from the scroller (x 300), and nothing
+  // scrolled past it shows in those 30px. 30 matches FROZEN_STICK_INSET in database-table-view.ts.
+  it('hides scrolled cells in the 30px strip left of the stuck frozen block', () => {
+    expect(ruleBody('[data-blok-database-table-scroller][data-scrolled]')).toMatch(/clip-path:\s*inset\(0 0 0 30px\)/);
+    expect(ruleBody('[dir="rtl"] [data-blok-database-table-scroller][data-scrolled]')).toMatch(/clip-path:\s*inset\(0 30px 0 0\)/);
+  });
+
   it('turns the shadow to face the other way in right-to-left text', () => {
     expect(ruleBody('[dir="rtl"] [data-blok-database-table-scroller] [data-frozen-edge]')).toMatch(/-1px 0 0[\s\S]*-2px 0 0[\s\S]*-3px 0 0/);
   });
+  // notion-motion.md Round 46 §A: Notion's "+ New page" row is sticky and stays at the text column on a sideways scroll.
+  // The scroller's padding edge is the text column, so 0 is Notion's 267px in Blok's frame.
+  it('keeps "+ New page" at the text column on a sideways scroll', () => {
+    const add = ruleBody('[data-blok-database-table-add-row]');
+
+    expect(add).toMatch(/position:\s*sticky/);
+    expect(add).toMatch(/inset-inline-start:\s*0(;|$)/);
+  });
+
   // notion-motion.md Round 29 §1: a full-width 37px row; the whole row fills 0.024 on hover; ↓ 16, label at +24, ⋯ 24x24 12 after.
   it('draws Load more as a full-width 37px row that fills as a whole on hover', () => {
     const line = ruleBody('[data-blok-database-table-load-more-row]');

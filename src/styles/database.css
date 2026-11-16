@@ -9941,6 +9941,16 @@ textarea[data-blok-database-cell-input] {
   --blok-database-frozen-shadow-on: 1;
 }
 
+/* notion-motion.md Round 46 §A: the frozen block sticks 30px in from this edge (FROZEN_STICK_INSET in
+   database-table-view.ts). Nothing scrolled past it shows in those 30px. */
+[data-blok-database-table-scroller][data-scrolled] {
+  clip-path: inset(0 0 0 30px);
+}
+
+[dir="rtl"] [data-blok-database-table-scroller][data-scrolled] {
+  clip-path: inset(0 30px 0 0);
+}
+
 [dir="rtl"] [data-blok-database-table-scroller] [data-frozen-edge] {
   --blok-database-frozen-shadow: -1px 0 0 color-mix(in srgb, var(--blok-database-table-border) calc(30% * var(--blok-database-frozen-shadow-on)), transparent), -2px 0 0 color-mix(in srgb, var(--blok-database-table-border) calc(50% * var(--blok-database-frozen-shadow-on)), transparent), -3px 0 0 color-mix(in srgb, var(--blok-database-table-border) calc(30% * var(--blok-database-frozen-shadow-on)), transparent);
 }
@@ -10562,8 +10572,11 @@ textarea[data-blok-database-cell-input] {
 
 /* ─── "+ New page", Load more, empty state ─── */
 
-/* research/22 §12: the hover fills only the 28px button. r11-gap-nocalc.raw: the row is 37, the button 4.5 from its top. */
+/* research/22 §12: the hover fills only the 28px button. r11-gap-nocalc.raw: the row is 37, the button 4.5 from its top.
+   notion-motion.md Round 46 §A: it stays at the text column (the scroller's padded edge) on a sideways scroll. */
 [data-blok-database-table-add-row] {
+  position: sticky;
+  inset-inline-start: 0;
   display: flex;
   align-items: center;
   width: fit-content;

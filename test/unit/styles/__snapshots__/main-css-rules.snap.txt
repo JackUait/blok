@@ -13230,6 +13230,14 @@ textarea[data-blok-database-cell-input] {
   --blok-database-frozen-shadow-on: 1;
 }
 
+[data-blok-database-table-scroller][data-scrolled] {
+  clip-path: inset(0 0 0 30px);
+}
+
+[dir="rtl"] [data-blok-database-table-scroller][data-scrolled] {
+  clip-path: inset(0 30px 0 0);
+}
+
 [dir="rtl"] [data-blok-database-table-scroller] [data-frozen-edge] {
   --blok-database-frozen-shadow: -1px 0 0 color-mix(in srgb, var(--blok-database-table-border) calc(30% * var(--blok-database-frozen-shadow-on)), transparent), -2px 0 0 color-mix(in srgb, var(--blok-database-table-border) calc(50% * var(--blok-database-frozen-shadow-on)), transparent), -3px 0 0 color-mix(in srgb, var(--blok-database-table-border) calc(30% * var(--blok-database-frozen-shadow-on)), transparent);
 }
@@ -13786,6 +13794,8 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-table-add-row] {
+  position: sticky;
+  inset-inline-start: 0;
   display: flex;
   align-items: center;
   width: fit-content;

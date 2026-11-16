@@ -486,8 +486,8 @@ describe('DatabaseTableView', () => {
       const { root } = mount({ view });
 
       expect(cell(root, 'r1', 'p-title').hasAttribute('data-frozen')).toBe(true);
-      expect(cell(root, 'r1', 'p-title').style.insetInlineStart).toBe('0px');
-      expect(cell(root, 'r1', 'p-notes').style.insetInlineStart).toBe('250px');
+      expect(cell(root, 'r1', 'p-title').style.insetInlineStart).toBe('calc(0px + var(--_blok-database-frozen-shift, 0px))');
+      expect(cell(root, 'r1', 'p-notes').style.insetInlineStart).toBe('calc(250px + var(--_blok-database-frozen-shift, 0px))');
       expect(cell(root, 'r1', 'p-amount').hasAttribute('data-frozen')).toBe(false);
     });
 
@@ -503,19 +503,64 @@ describe('DatabaseTableView', () => {
       expect(cell(root, 'r1', 'p-amount').hasAttribute('data-frozen-edge')).toBe(false);
     });
 
-    // notion-motion.md Round 28 §5: the frozen edge casts a shadow only while the table is scrolled sideways.
-    it('marks the scroller while it is scrolled sideways, and clears it back at the start', () => {
-      const view = tableView({ frozenColumnCount: 1 });
+    /** Mounts with a scroller whose measured inline-start padding is `pad`, as the stylesheet would give it. */
+    const mountPadded = (pad: number, view: DatabaseViewConfig): { root: HTMLElement; scroller: HTMLElement } => {
+      const observed: ResizeObserverCallback[] = [];
+
+      vi.stubGlobal('ResizeObserver', class {
+        constructor(callback: ResizeObserverCallback) {
+          observed.push(callback);
+        }
+
+        observe = vi.fn();
+        unobserve = vi.fn();
+        disconnect = vi.fn();
+      });
       const { root } = mount({ view });
       const scroller = root.querySelector<HTMLElement>('[data-blok-database-table-scroller]');
 
       if (scroller === null) throw new Error('no scroller');
+      scroller.style.paddingInlineStart = `${pad}px`;
+      observed.forEach((callback) => callback([], {} as ResizeObserver));
+
+      return { root, scroller };
+    };
+    const scrollTo = (scroller: HTMLElement, left: number): void => {
+      Object.assign(scroller, { scrollLeft: left }).dispatchEvent(new Event('scroll'));
+    };
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    // notion-motion.md Round 46 §A and Round 29 §5: the frozen block sticks 30px in from the scroller's edge
+    // (x 300 with the scroller at 270), so with the 269px text-column padding it sticks at scrollLeft 239.
+    it('sticks the frozen block 30px in from the scroller edge, not at the text column', () => {
+      const { scroller } = mountPadded(269, tableView({ frozenColumnCount: 1 }));
+
+      expect(scroller.style.getPropertyValue('--_blok-database-frozen-shift')).toBe('-239px');
+    });
+
+    // notion-motion.md Round 28 §5: the frozen edge casts a shadow only once content slides under the frozen block.
+    it('marks the scroller only once the frozen block has stuck, and clears it back before that', () => {
+      const { scroller } = mountPadded(269, tableView({ frozenColumnCount: 1 }));
+
       expect(scroller.hasAttribute('data-scrolled')).toBe(false);
-      scroller.scrollLeft = 400;
-      scroller.dispatchEvent(new Event('scroll'));
+      scrollTo(scroller, 200);
+      expect(scroller.hasAttribute('data-scrolled')).toBe(false);
+      scrollTo(scroller, 240);
       expect(scroller.hasAttribute('data-scrolled')).toBe(true);
-      scroller.scrollLeft = 0;
-      scroller.dispatchEvent(new Event('scroll'));
+      scrollTo(scroller, 0);
+      expect(scroller.hasAttribute('data-scrolled')).toBe(false);
+      // Right-to-left scrolls negative.
+      scrollTo(scroller, -240);
+      expect(scroller.hasAttribute('data-scrolled')).toBe(true);
+    });
+
+    it('never marks a table with no frozen column, so nothing clips its edge', () => {
+      const { scroller } = mountPadded(269, tableView());
+
+      scrollTo(scroller, 400);
       expect(scroller.hasAttribute('data-scrolled')).toBe(false);
     });
 

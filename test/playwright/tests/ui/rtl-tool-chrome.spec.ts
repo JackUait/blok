@@ -310,7 +310,7 @@ for (const direction of DIRECTIONS) {
       });
     });
 
-    test('the audio speed menu grows from the gear toward the inline end', async ({ page }) => {
+    test('the audio speed menu opens centered over its gear', async ({ page }) => {
       const title = text(direction, 'Song', 'أغنية');
 
       await createBlok(page, direction, [
@@ -327,11 +327,12 @@ for (const direction of DIRECTIONS) {
 
       await expect(menu).toBeVisible();
 
+      await settle(menu);
       const menuBox = await rect(menu);
       const gearBox = await rect(gear);
-      const startGap = direction === 'rtl' ? gearBox.right - menuBox.right : menuBox.left - gearBox.left;
+      const centre = (box: Rect): number => (box.left + box.right) / 2;
 
-      expect(Math.abs(startGap)).toBeLessThanOrEqual(TOLERANCE);
+      expect(Math.abs(centre(menuBox) - centre(gearBox))).toBeLessThanOrEqual(TOLERANCE);
     });
     test('the embed hover toolbar sits in the inline-end corner', async ({ page }) => {
       await createBlok(page, direction, [{

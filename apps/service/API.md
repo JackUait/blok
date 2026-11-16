@@ -51,6 +51,23 @@ Workspace = `{id,slug,name,role}`. A fresh instance starts with zero workspaces;
 
 ## Hosted MCP
 
+`blok_delete_page` accepts `{workspace, pageId}` and moves the page and all its
+descendants to the workspace trash. It returns `{id, trashed:true, affectedPages,
+revision}`. This is recoverable deletion: content, journal, files, shares and
+parent links are retained. Restore uses the existing trash/index workflow.
+The caller needs edit access to **every** page in the subtree; otherwise nothing
+changes. Workspace administrators cannot delete someone else's private pages.
+Repeating a call on an already trashed subtree returns `affectedPages:0` without
+incrementing the revision. Use this tool instead of replacing the workspace index.
+
+The same operation is available to authenticated web/native clients as
+`DELETE /api/workspaces/:slug/pages/:pageID` (no body). It resolves the current
+subtree inside a transaction serialized with index and permission changes,
+increments the workspace revision when pages change, and rechecks live document
+access after commit. A stale index save receives 409 and must reload first.
+Invisible/missing pages return 404; visible pages without the necessary edit
+rights return 403. MCP tokens remain confined to `/mcp`.
+
 `blok_upload_image` accepts `{workspace:slug,dataUrl}` for PNG, JPEG, GIF or WebP images up to 5 MiB. It requires workspace write access, stores the image in the existing persistent private asset volume, and returns `{url:"/files/..."}` for use in document content. Remote URLs and SVG are refused; the host never fetches the source.
 
 `POST /mcp` is a stateless Streamable HTTP MCP endpoint on the same HTTPS origin. Each caller must send `Authorization: Bearer <personal MCP token>`; browser cookies, native session tokens and cross-origin browser requests do not authorize MCP calls. A signed-in user creates and revokes dedicated tokens in **Mon compte → Accès MCP**. Tokens are displayed only at creation, hashed in PostgreSQL and expire after 90 days. Treat them as passwords. The MCP server checks the user's current workspace membership and role on each request and document operation.

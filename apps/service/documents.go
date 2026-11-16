@@ -296,6 +296,10 @@ func (s *Service) page(w http.ResponseWriter, r *http.Request, u identity, ws Wo
 		problem(w, 404, "Page not found")
 		return
 	}
+	if r.Method == http.MethodDelete && r.PathValue("action") == "" {
+		s.trashPage(w, r, u, ws)
+		return
+	}
 	if r.Method == "POST" && r.PathValue("action") == "seed" {
 		s.seed(w, r, u, ws)
 		return

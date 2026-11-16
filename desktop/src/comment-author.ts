@@ -1,12 +1,16 @@
 import { readLocalProfile } from './local-profile';
 import type { WorkspaceRef } from './workspace-registry';
+import { readAccountProfile } from './account-profile';
 
 const key = 'blok:desktop:comment-author:v1';
 const session = { id: `local:${crypto.randomUUID()}` };
 
 /** Attribution is a real account in the cloud, a persistent device identity locally. */
 export function commentAuthor(ref: WorkspaceRef): { authorId: string; authorName: string; avatarUrl?: string } {
-  if (ref.kind === 'remote') return { authorId: ref.accountId, authorName: ref.userName?.trim() || ref.accountId };
+  if (ref.kind === 'remote') {
+    const profile = readAccountProfile(ref);
+    return { authorId: ref.accountId, authorName: profile?.name?.trim() || ref.userName?.trim() || ref.accountId, ...(profile?.avatarUrl ? { avatarUrl: profile.avatarUrl } : {}) };
+  }
   try {
     const stored = localStorage.getItem(key);
     if (stored?.startsWith('local:') && stored.length > 6) session.id = stored;

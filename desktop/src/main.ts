@@ -1,3 +1,4 @@
+import { cacheAccountProfile } from './account-profile';
 import './editor.css';
 import '../../src/shell/sidebar.css';
 import './shell.css';
@@ -56,6 +57,7 @@ async function boot(root: HTMLElement): Promise<void> {
       apiOrigin: origin || undefined,
       sessionAdapter: adapter,
       allowLocal: native,
+      forceWorkspacePicker: explicitGateway,
       initialManage: manageSlug && manageSection ? {slug: manageSlug, section: manageSection} : undefined,
       onOpenWorkspace: async (workspace, source) => {
         const session = source.currentSession ?? await source.session();
@@ -64,6 +66,7 @@ async function boot(root: HTMLElement): Promise<void> {
           server: serverOrigin(source.origin || location.origin), accountId: session.user.id,
           workspaceId: workspace.slug, userName: session.user.email, role: workspace.role,
         };
+        cacheAccountProfile(ref, session.user);
         // ?manage= opens the workspace then the settings modal (admin screen removed).
         if (manageSlug && manageSection && workspace.slug === manageSlug) {
           sessionStorage.setItem('blok:desktop:pending-settings', manageSection);
@@ -95,6 +98,7 @@ async function boot(root: HTMLElement): Promise<void> {
     try{
       const resolved=await resolvePageDestination(client,location.href,session);
       const ref:RemoteWorkspace={kind:'remote',id:resolved.workspace.id,name:resolved.workspace.name,icon:resolved.workspace.icon ?? null,server:origin,workspaceId:resolved.workspace.slug,accountId:session.user.id,userName:session.user.email,role:resolved.workspace.role};
+      cacheAccountProfile(ref, session.user);
       activateWorkspace(ref);
       rememberPageLinks(location.origin,origin,[{id:resolved.pageId,title:resolved.title,publicId:resolved.publicId}]);
       const url=native ? legacyPageUrl(location.href,resolved.pageId) : publicPageUrl(origin,resolved.title,resolved.publicId);
@@ -142,6 +146,7 @@ async function refreshRemoteMembership(
       await showGateway();
       return false;
     }
+    cacheAccountProfile(selected, session.user);
     rememberWorkspace({...selected, role: membership.role, name: membership.name, icon: membership.icon ?? null});
     return true;
   } catch {

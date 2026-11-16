@@ -52,6 +52,7 @@ type Service struct {
 	settingsDone   chan struct{}
 }
 type User struct {
+	AvatarURL     string `json:"avatarUrl,omitempty"`
 	ID            string `json:"id"`
 	Email         string `json:"email"`
 	Name          string `json:"name"`
@@ -292,6 +293,7 @@ func (s *Service) routes() {
 	s.mux.HandleFunc("POST /api/auth/request-code", s.requestCode)
 	s.mux.HandleFunc("POST /api/auth/verify-code", s.verifyCode)
 	s.mux.HandleFunc("GET /api/session", s.getSession)
+	s.mux.HandleFunc("PATCH /api/profile", s.updateProfile)
 	s.mux.HandleFunc("POST /api/auth/logout", s.logout)
 	s.mux.HandleFunc("GET /api/mcp/tokens", s.mcpTokens)
 	s.mux.HandleFunc("POST /api/mcp/tokens", s.mcpTokens)

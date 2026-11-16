@@ -142,7 +142,7 @@ func (s *Service) verifyCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var u User
-	e = tx.QueryRow(r.Context(), "INSERT INTO users(id,email) VALUES($1,$2) ON CONFLICT(email) DO UPDATE SET email=excluded.email RETURNING id,email,name", opaque(), email).Scan(&u.ID, &u.Email, &u.Name)
+	e = tx.QueryRow(r.Context(), "INSERT INTO users(id,email) VALUES($1,$2) ON CONFLICT(email) DO UPDATE SET email=excluded.email RETURNING id,email,name,avatar_url", opaque(), email).Scan(&u.ID, &u.Email, &u.Name, &u.AvatarURL)
 	if e != nil {
 		problem(w, 500, "Sign in failed")
 		return
@@ -182,6 +182,10 @@ func (s *Service) verifyCode(w http.ResponseWriter, r *http.Request) {
 func (s *Service) getSession(w http.ResponseWriter, r *http.Request) {
 	u, ok := s.require(w, r)
 	if !ok {
+		return
+	}
+	if e := s.DB.QueryRow(r.Context(), "SELECT avatar_url FROM users WHERE id=$1", u.ID).Scan(&u.AvatarURL); e != nil {
+		problem(w, 503, "Profile unavailable")
 		return
 	}
 	list, e := s.workspaces(r.Context(), u.ID)

@@ -148,3 +148,14 @@ Include each section exactly once: `recents`, `favorites`, `teamspaces`, `shared
 and `private`, each with `visible`, `limit` (0, 5, 10, 20, or 50), and `sort`
 (`manual` or `updated`). Payloads are limited to 64 KiB; unknown fields are
 rejected. These settings change presentation only and grant no page access.
+
+### Account profile
+
+`PATCH /api/profile` accepts optional `name` (up to 80 Unicode characters) and
+`avatarUrl` (a PNG data URL, or `null` to remove the photo). At least one field is
+required. The PNG is decoded, limited to 256×256 pixels and re-encoded before
+storage; remote image URLs, SVG, oversized input and unknown fields are rejected.
+The authenticated session identifies the account; callers cannot supply a user ID.
+The endpoint returns the updated user. `GET /api/session` and sign-in responses
+include `user.name` and optional `user.avatarUrl`. Workspace names/icons and login
+email addresses are unaffected. Both cookie and native bearer sessions are supported.

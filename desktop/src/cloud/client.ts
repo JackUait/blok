@@ -1,6 +1,6 @@
 export type CloudRole = 'admin' | 'member' | 'viewer';
 export interface CloudWorkspace { id: string; slug: string; name: string; role: CloudRole; icon?: string | null }
-export interface CloudUser { id: string; email: string; name?: string; instanceAdmin?: boolean }
+export interface CloudUser { id: string; email: string; name?: string; avatarUrl?: string; instanceAdmin?: boolean }
 export interface CloudSession { user: CloudUser; workspaces: CloudWorkspace[]; supportEmail?: string | null }
 export type CloudSignupPolicy = 'invite' | 'domain' | 'open';
 export type CloudWorkspaceCreation = 'anyone' | 'admins_only' | 'disabled';
@@ -87,6 +87,7 @@ export class CloudClient {
     this.currentSession = session;
     return session;
   }
+  updateProfile(value: {name?: string; avatarUrl?: string | null}): Promise<CloudUser> { return this.request('/api/profile', {method:'PATCH', body:JSON.stringify(value)}); }
   async logout(): Promise<void> {
     await this.request('/api/auth/logout', {method:'POST'});
     await this.sessionAdapter?.setToken(null);

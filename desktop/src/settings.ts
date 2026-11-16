@@ -1,3 +1,4 @@
+import { mountAccountProfile, readAccountProfile } from './account-profile';
 import { mountLocalProfile, readLocalProfile } from './local-profile';
 import { mountSidebarCustomization } from './sidebar-customization';
 import { mountTeamspaceSettings } from './cloud/teamspace-settings';
@@ -290,10 +291,11 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   navList.append(el('div', 'data-desktop-settings-nav-heading', 'Compte'));
   const accountTab = actionButton('data-desktop-settings-nav-item', currentWorkspace.kind === 'remote' ? currentWorkspace.userName ?? 'Mon compte' : 'Profil local', 'profile');
   const refreshProfileTab = (): void => {
-    if (currentWorkspace.kind !== 'local') return;
-    const profile = readLocalProfile();
-    const label = el('span', 'data-profile-nav-name', profile.name || 'Profil local');
+    const remote = currentWorkspace.kind === 'remote' ? readAccountProfile(currentWorkspace) : undefined;
+    const profile = currentWorkspace.kind === 'local' ? readLocalProfile() : {name: remote?.name || currentWorkspace.userName || '', photo: remote?.avatarUrl || null};
+    const label = el('span', 'data-profile-nav-name', profile.name || (currentWorkspace.kind === 'local' ? 'Profil local' : 'Mon compte'));
     const avatar = el('span', 'data-profile-nav-avatar', Array.from(profile.name || 'Vous')[0]?.toUpperCase() ?? 'V');
+    avatar.setAttribute('aria-hidden', 'true');
     if (profile.photo) { const image = document.createElement('img'); image.src = profile.photo; image.alt = ''; avatar.replaceChildren(image); }
     accountTab.replaceChildren(avatar, label);
   };
@@ -539,7 +541,9 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
       content.setAttribute('data-desktop-account', '');
       content.append(el('h1', 'data-desktop-settings-title', 'Mon compte'), el('p', 'data-desktop-settings-intro', 'Votre identité et votre accès à cet espace.'));
       const identity = el('section', 'data-desktop-account-section');
-      identity.append(el('h2', 'data-desktop-settings-section', 'Identité'));
+      identity.append(el('h2', 'data-desktop-settings-section', 'Profil'));
+      const profile = document.createElement('div'); identity.append(profile);
+      if (client) ui.choices.push(mountAccountProfile(profile, client, currentWorkspace, refreshProfileTab));
       const row = el('div', 'data-desktop-settings-row');
       row.append(el('strong', 'data-desktop-settings-row-title', 'Adresse e-mail'), el('span', 'data-desktop-settings-row-value', currentWorkspace.userName ?? 'Compte en ligne'));
       identity.append(row);

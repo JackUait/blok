@@ -1,0 +1,33 @@
+import {afterEach,beforeEach,expect,it,vi} from 'vitest';
+import {CloudClient} from './cloud/client';
+import {cacheAccountProfile,mountAccountProfile} from './account-profile';
+import {commentAuthor} from './comment-author';
+import type {RemoteWorkspace} from './workspace-registry';
+const ref:RemoteWorkspace={kind:'remote',id:'w',workspaceId:'team',server:'https://example.test',accountId:'alice',userName:'alice@example.test',name:'Team'};
+const user={id:'alice',email:'alice@example.test',name:'Alice',avatarUrl:'data:image/png;base64,aGVsbG8='};
+beforeEach(()=>{vi.clearAllMocks();localStorage.clear();window.dispatchEvent(new StorageEvent('storage',{key:null}));});
+afterEach(()=>{vi.restoreAllMocks();document.body.replaceChildren();});
+it('shares the account identity across its workspaces, but not other servers or local spaces',()=>{
+ cacheAccountProfile(ref,user);
+ expect(commentAuthor({...ref,id:'other',workspaceId:'other'})).toEqual({authorId:'alice',authorName:'Alice',avatarUrl:user.avatarUrl});
+ expect(commentAuthor({...ref,server:'https://elsewhere.test'}).avatarUrl).toBeUndefined();
+ expect(commentAuthor({kind:'local',id:'default',name:'Notes'}).authorName).toBe('Utilisateur local');
+ expect(()=>cacheAccountProfile(ref,{...user,id:'bob'})).toThrow();
+});
+it('saves the connected profile to the server and keeps the previous avatar when saving fails',async()=>{
+ vi.spyOn(CloudClient.prototype,'session').mockResolvedValue({user,workspaces:[]});
+ const update=vi.spyOn(CloudClient.prototype,'updateProfile').mockResolvedValue({...user,name:'Camille'});
+ const host=document.createElement('div');document.body.append(host);
+ const mounted=mountAccountProfile(host,new CloudClient(),ref,vi.fn());
+ await vi.waitFor(()=>expect(host.querySelector('input[type=text]')).not.toBeNull());
+ const input=host.querySelector<HTMLInputElement>('input[type=text]');if(!input)throw new Error('Missing name');
+ input.value='Camille';input.dispatchEvent(new Event('change'));
+ await vi.waitFor(()=>expect(commentAuthor(ref).authorName).toBe('Camille'));
+ expect(update).toHaveBeenCalledWith({name:'Camille',avatarUrl:user.avatarUrl});
+ update.mockRejectedValueOnce(new Error('Service indisponible'));
+ host.querySelector<HTMLButtonElement>('[data-profile-remove]')?.click();
+ await vi.waitFor(()=>expect(host.textContent).toContain('Service indisponible'));
+ expect(commentAuthor(ref).avatarUrl).toBe(user.avatarUrl);
+ expect(host.querySelector('img')).not.toBeNull();
+ mounted.destroy();
+});

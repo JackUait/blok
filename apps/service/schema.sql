@@ -141,3 +141,6 @@ INSERT INTO schema_migrations(version) VALUES(9) ON CONFLICT DO NOTHING;
 -- Workspace presentation defaults; page permissions remain independent.
 ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS sidebar_presets jsonb NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(sidebar_presets)='array' AND jsonb_array_length(sidebar_presets)<=6);
 INSERT INTO schema_migrations(version) VALUES(10) ON CONFLICT DO NOTHING;
+
+-- Account avatar is independent of every workspace's icon. Existing accounts retain their names.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url text NOT NULL DEFAULT '';

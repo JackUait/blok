@@ -28,6 +28,8 @@ export interface CloudGatewayOptions {
   apiOrigin?: string;
   sessionAdapter?: CloudSessionAdapter;
   allowLocal?: boolean;
+  /** Explicit account/workspace navigation must never auto-open the sole workspace. */
+  forceWorkspacePicker?: boolean;
   initialManage?: {slug: string; section?: 'members' | 'invites'};
   /** Prefill the invite acceptance screen (or parse `?invite=` / `?email=`). */
   initialInvite?: InviteContext;
@@ -388,7 +390,7 @@ export async function mountCloudGateway(root: HTMLElement, options: CloudGateway
     // Un seul espace : on y entre, sans demander ou travailler. Le selecteur reste
     // joignable par le commutateur en pied de barre laterale.
     // Exclu quand un lien ?manage= est demande : son repli attendu est le selecteur.
-    if (!manage && active.workspaces.length === 1) {
+    if (!manage && !options.forceWorkspacePicker && active.workspaces.length === 1) {
       state.session = active; client.currentSession = active;
       await options.onOpenWorkspace(active.workspaces[0], client);
       return;

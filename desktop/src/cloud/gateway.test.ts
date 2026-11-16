@@ -236,3 +236,13 @@ describe('cloud native credentials', () => {
     expect(new Headers(fetch.mock.calls[1]?.[1]?.headers).get('Authorization')).toBe('Bearer secret');
   });
 });
+
+it('keeps the explicit account chooser open even with only one workspace', async () => {
+  vi.clearAllMocks();
+  const open=vi.fn();
+  stubFetch(async url=>response(url.endsWith('/api/session') ? {user,workspaces:[workspace]} : {workspaces:[workspace]}));
+  const gateway=await mountCloudGateway(document.body,{onOpenWorkspace:open,forceWorkspacePicker:true});
+  expect(document.body.textContent).toContain('Changer de compte');
+  expect(open).not.toHaveBeenCalled();
+  gateway.destroy();
+});

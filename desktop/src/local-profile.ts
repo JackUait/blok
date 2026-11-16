@@ -16,7 +16,7 @@ export function readLocalProfile(): LocalProfile {
   } catch { return { name: '', photo: null }; }
 }
 export function watchLocalProfile(listener: () => void): () => void {
-  const storage = (event: StorageEvent): void => { if (event.key === KEY || event.key === null) listener(); };
+  const storage = (event: StorageEvent): void => { if (event.key === KEY || event.key?.startsWith('blok:desktop:account-profile:v1:') || event.key === null) listener(); };
   window.addEventListener(PROFILE_CHANGED, listener);
   window.addEventListener('storage', storage);
   return () => { window.removeEventListener(PROFILE_CHANGED, listener); window.removeEventListener('storage', storage); };
@@ -51,6 +51,10 @@ export async function readProfilePhoto(file: File): Promise<string> {
 }
 
 export function mountLocalProfile(host: HTMLElement, onSaved: () => void = () => undefined): { destroy(): void } {
+  return mountProfileEditor(host, { read: readLocalProfile, save: saveLocalProfile }, onSaved);
+}
+
+export function mountProfileEditor(host: HTMLElement, backend: { read(): LocalProfile; save(value: LocalProfile): void | Promise<void> }, onSaved: () => void = () => undefined): { destroy(): void } {
   let disposed = false; let uploadVersion = 0;
   const section = document.createElement('section'); section.setAttribute('data-local-profile', '');
   const row = document.createElement('div'); row.setAttribute('data-profile-row', '');
@@ -58,7 +62,7 @@ export function mountLocalProfile(host: HTMLElement, onSaved: () => void = () =>
   const portrait = document.createElement('div'); portrait.setAttribute('data-profile-portrait', '');
   const fields = document.createElement('div'); fields.setAttribute('data-profile-fields', '');
   const label = document.createElement('label'); label.textContent = 'Nom affiché';
-  const name = document.createElement('input'); name.type = 'text'; name.maxLength = 80; name.placeholder = 'Votre nom ou pseudo'; name.value = readLocalProfile().name;
+  const name = document.createElement('input'); name.type = 'text'; name.maxLength = 80; name.placeholder = 'Votre nom ou pseudo'; name.value = backend.read().name;
   styleTextField(name);
   name.setAttribute('data-desktop-settings-name', ''); label.append(name);
   const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×'; remove.setAttribute('aria-label', 'Supprimer la photo'); onHover(remove, 'Supprimer la photo'); remove.setAttribute('data-profile-remove', '');
@@ -74,26 +78,34 @@ export function mountLocalProfile(host: HTMLElement, onSaved: () => void = () =>
     void invoke('open_notion_faces').catch(() => { if (!disposed) status.textContent = 'Impossible d’ouvrir le navigateur. Rendez-vous sur faces.notion.com.'; });
   });
   const draw = (): void => {
-    const profile = readLocalProfile(); photo.replaceChildren();
+    const profile = backend.read(); photo.replaceChildren();
     const photoLabel = profile.photo ? 'Remplacer la photo' : 'Ajouter une photo';
     photo.setAttribute('aria-label', photoLabel); offHover(photo); onHover(photo, photoLabel);
     if (profile.photo) { const img = document.createElement('img'); img.src = profile.photo; img.alt = ''; photo.append(img); }
     else photo.textContent = Array.from(profile.name || 'Vous')[0]?.toUpperCase() ?? 'V';
     remove.hidden = !profile.photo;
   };
+  let saving = false;
+  const busy = (value: boolean): void => { saving = value; name.disabled = value; photo.disabled = value; remove.disabled = value; };
   const save = (value: LocalProfile): void => {
-    try { saveLocalProfile(value); status.textContent = ''; draw(); onSaved(); }
-    catch (error) { status.textContent = error instanceof Error ? error.message : 'Enregistrement impossible.'; }
+    if (saving || disposed) return;
+    const done = (): void => { if (!disposed) { status.textContent = ''; busy(false); draw(); onSaved(); } };
+    const failed = (error: unknown): void => { if (!disposed) { busy(false); status.textContent = error instanceof Error ? error.message : 'Enregistrement impossible.'; } };
+    try {
+      const result = backend.save(value);
+      if (result instanceof Promise) { busy(true); status.textContent = 'Enregistrement…'; void result.then(done, failed); }
+      else done();
+    } catch (error) { failed(error); }
   };
-  name.addEventListener('change', () => save({ ...readLocalProfile(), name: name.value }));
+  name.addEventListener('change', () => save({ ...backend.read(), name: name.value }));
   photo.addEventListener('click', () => file.click());
-  remove.addEventListener('click', () => { ++uploadVersion; save({ ...readLocalProfile(), photo: null }); });
+  remove.addEventListener('click', () => { ++uploadVersion; save({ ...backend.read(), photo: null }); });
   file.addEventListener('change', () => {
     const selected = file.files?.[0]; file.value = ''; if (!selected) return;
-    const version = ++uploadVersion; status.textContent = 'Préparation de la photo…';
+    const version = ++uploadVersion; busy(true); status.textContent = 'Préparation de la photo…';
     void readProfilePhoto(selected).then(image => {
-      if (!disposed && version === uploadVersion) save({ ...readLocalProfile(), photo: image });
-    }).catch(error => { if (!disposed && version === uploadVersion) status.textContent = error instanceof Error ? error.message : 'Import impossible.'; });
+      if (!disposed && version === uploadVersion) { busy(false); save({ ...backend.read(), photo: image }); }
+    }).catch(error => { if (!disposed && version === uploadVersion) { busy(false); status.textContent = error instanceof Error ? error.message : 'Import impossible.'; } });
   });
   portrait.append(photo, remove); fields.append(label); row.append(portrait, fields); section.append(row, file, facesLine, status); host.append(section); draw();
   return { destroy() { disposed = true; ++uploadVersion; offHover(photo); offHover(remove); section.remove(); } };

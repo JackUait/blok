@@ -34,6 +34,19 @@ Page, passage and database-row comments resolve the current local author's name
 and photo from the host profile. Photos are not copied into annotation blocks.
 Profile changes refresh mounted discussions without discarding composer drafts;
 storage events also refresh other windows. New comments still save their author
-ID and display name for document portability. Remote accounts keep their existing
-identity: this device profile is not a server account profile, and it does not
+ID and display name for document portability. This local device profile is separate from server account profiles and does not
 synchronize to other devices. Exported comments do not carry the local photo.
+
+### Connected account profiles
+
+Connected accounts now use the same profile editor, backed by `PATCH /api/profile`.
+The server owns the name/photo and returns them from the session, including after
+sign-in on another device. The UI caches one profile per server + account ID under
+`blok:desktop:account-profile:v1:…`; it never substitutes the local profile or copies
+an account's photo to every workspace reference. Comments resolve the current
+account's cached profile while retaining their author ID. Failed profile writes
+leave the previously saved photo/name intact and show an error. Other authors'
+comments continue to use their saved author name when no profile is available.
+
+Explicit account navigation passes `forceWorkspacePicker` to the gateway: a single
+workspace no longer immediately reopens and hides the account chooser.

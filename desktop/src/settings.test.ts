@@ -113,7 +113,7 @@ describe('workspace menu hierarchy',()=>{
     const dialog=must(document.querySelector<HTMLElement>('[data-desktop-settings-dialog]'));
     expect(dialog.querySelector('[data-desktop-settings-title]')?.textContent).toBe('Mon compte');
     expect(dialog.querySelector('[data-desktop-settings-content]')?.textContent).toContain('member@example.org');
-    expect(dialog.querySelector('[data-desktop-settings-nav-item][aria-current="page"]')?.textContent).toBe('member@example.org');
+    expect(dialog.querySelector('[data-desktop-settings-nav-item][aria-current="page"] [data-profile-nav-name]')?.textContent).toBe('member@example.org');
     expect(location.href).toBe(href); expect(events).toEqual([]);
     must([...dialog.querySelectorAll<HTMLButtonElement>('button')].find(node=>node.textContent==='Comptes et espaces')).click();
     expect(events).toEqual([{section:'account'}]);
@@ -131,14 +131,42 @@ describe('workspace menu hierarchy',()=>{
     expect(childUi.destroy).toHaveBeenCalledOnce();
     expect(footer.hasAttribute('inert')).toBe(false);
   });
-  it('shows actual account identity and role without an editable workspace-name masquerading as a profile',()=>{
-    const footer=remoteFooter();
-    must([...footer.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find(node=>node.textContent==='Paramètres')).click();
-    const dialog=must(document.querySelector<HTMLElement>('[data-desktop-settings-dialog]'));
-    must([...dialog.querySelectorAll<HTMLButtonElement>('[data-desktop-settings-nav-item]')].find(node=>node.textContent==='member@example.org')).click();
-    expect(dialog.querySelector('[data-desktop-settings-content]')?.textContent).toContain('member@example.org');
-    expect(dialog.querySelector('[data-desktop-settings-content]')?.textContent).toContain(WORKSPACE_ROLES.admin);
-    expect(dialog.querySelector('[data-desktop-settings-name]')).toBeNull();
+  it('edits the connected account name and photo without renaming its workspace', async () => {
+    const user = {id: 'user', email: 'member@example.org', name: 'Member', avatarUrl: 'data:image/png;base64,aGVsbG8='};
+    const session = vi.spyOn(CloudClient.prototype, 'session').mockResolvedValue({user, workspaces: []});
+    const update = vi.spyOn(CloudClient.prototype, 'updateProfile').mockResolvedValue({...user, name: 'Camille'});
+    const rename = vi.spyOn(CloudClient.prototype, 'renameWorkspace');
+    try {
+      const footer = remoteFooter();
+      must([...footer.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find(node => node.textContent === 'Paramètres')).click();
+      const dialog = must(document.querySelector<HTMLElement>('[data-desktop-settings-dialog]'));
+      const tab = must([...dialog.querySelectorAll<HTMLButtonElement>('[data-desktop-settings-nav-item]')]
+        .find(node => node.querySelector('[data-profile-nav-name]')?.textContent === 'member@example.org'));
+      tab.click();
+      await vi.waitFor(() => expect(dialog.querySelector<HTMLInputElement>('[data-desktop-settings-name]')?.value).toBe('Member'));
+      expect(tab.querySelector('[data-profile-nav-name]')?.textContent).toBe('Member');
+      expect(tab.querySelector('[data-profile-nav-avatar]')?.getAttribute('aria-hidden')).toBe('true');
+      expect(dialog.querySelector('[data-desktop-settings-content]')?.textContent).toContain(user.email);
+      expect(dialog.querySelector('[data-desktop-settings-content]')?.textContent).toContain(WORKSPACE_ROLES.admin);
+      expect(dialog.querySelector('[data-profile-photo] img')?.getAttribute('src')).toBe(user.avatarUrl);
+      const name = must(dialog.querySelector<HTMLInputElement>('[data-desktop-settings-name]'));
+      name.value = 'Camille'; name.dispatchEvent(new Event('change'));
+      await vi.waitFor(() => expect(tab.querySelector('[data-profile-nav-name]')?.textContent).toBe('Camille'));
+      expect(update).toHaveBeenCalledWith({name: 'Camille', avatarUrl: user.avatarUrl});
+      await vi.waitFor(() => expect(name.disabled).toBe(false));
+      update.mockResolvedValue({...user, name: 'Camille', avatarUrl: ''});
+      must(dialog.querySelector<HTMLButtonElement>('[aria-label="Supprimer la photo"]')).click();
+      await vi.waitFor(() => expect(dialog.querySelector('[data-profile-photo] img')).toBeNull());
+      expect(update).toHaveBeenLastCalledWith({name: 'Camille', avatarUrl: null});
+      expect(tab.querySelector('[data-profile-nav-avatar] img')).toBeNull();
+      expect(tab.querySelector('[data-profile-nav-avatar]')?.getAttribute('aria-hidden')).toBe('true');
+      expect(activeWorkspace()).toEqual(remoteRef);
+      expect(footer.querySelector('[data-desktop-switcher-name]')?.textContent).toBe('Acme');
+      expect(rename).not.toHaveBeenCalled();
+    } finally {
+      session.mockRestore(); update.mockRestore(); rename.mockRestore();
+      localStorage.clear(); window.dispatchEvent(new StorageEvent('storage', {key: null}));
+    }
   });
   it.each(['member','viewer'] as const)('keeps invitations out of the %s menu and opens appearance preferences',role=>{
     const footer=remoteFooter(role);

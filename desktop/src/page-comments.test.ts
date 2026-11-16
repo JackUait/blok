@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Blok } from '../../types';
 import type { StoredThread } from '../../src/tools/database/database-comments-store';
-import { mountPageComments } from './page-comments';
+import { mountPageComments, placePageComments } from './page-comments';
 
 const state = vi.hoisted(() => ({ threads: [] as StoredThread[], add: vi.fn(), reply: vi.fn(), edit: vi.fn(), resolve: vi.fn(), remove: vi.fn() }));
 vi.mock('../../src/tools/database/database-comments-store', () => ({ BuiltInComments: class {
@@ -18,6 +18,7 @@ function mount(writable = { value: true }) {
   return { ...panel, events };
 }
 function send(text: string): void {
+  document.querySelector<HTMLButtonElement>('[data-page-comments-toggle][aria-expanded=false]')?.click();
   const input = document.querySelector('textarea');
   if (!input) throw new Error('Missing composer');
   input.value = text; input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -26,6 +27,22 @@ function send(text: string): void {
 beforeEach(() => { vi.clearAllMocks(); state.threads = []; });
 afterEach(() => { handles.splice(0).forEach(handle => handle.destroy()); document.body.replaceChildren(); vi.restoreAllMocks(); });
 describe('page comment controls', () => {
+  it('keeps an empty discussion collapsed until requested and focuses its composer', () => {
+    const panel = mount();
+    const toggle = panel.element.querySelector<HTMLButtonElement>('[data-page-comments-toggle]')!;
+    expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+    expect(panel.element.querySelector<HTMLElement>('[data-page-comments-content]')?.hidden).toBe(true);
+    toggle.click();
+    expect(document.activeElement).toBe(panel.element.querySelector('textarea'));
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+  });
+  it('places discussion after title properties and before the document body', () => {
+    const holder = document.createElement('div');
+    holder.innerHTML = '<header data-blok-page-header><h1 data-blok-page-title>Title</h1><div data-desktop-page-created>Date</div></header><div data-blok-redactor>Body</div>';
+    const panel = mount(); placePageComments(holder, panel.element);
+    expect(holder.querySelector('[data-blok-page-header]')?.lastElementChild).toBe(panel.element);
+    expect(holder.querySelector('[data-blok-redactor]')?.contains(panel.element)).toBe(false);
+  });
   it('adds a page thread and checks current permission again when sending', () => {
     const permission = { value: true }; mount(permission);
     send('Hello'); expect(state.add).toHaveBeenCalledWith(null, 'Hello');

@@ -4,7 +4,7 @@ import { createWorkspaceSaveStatus } from './workspace-save-status';
 import './workspace-save-status.css';
 import { navigationFavorites, navigationRecents } from './navigation-preferences';
 import { commentAuthor } from './comment-author';
-import { mountPageComments } from './page-comments';
+import { mountPageComments, placePageComments } from './page-comments';
 import { createNotesDocument, readNotesCollection, rememberNotesCollection, addNote } from './notes-collection';
 import { openPageLibrary, pageTimestamp } from './page-library';
 import { openPageSearch, openPageCreation, type CreationDestination } from './navigation-dialogs';
@@ -622,7 +622,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     void instance.isReady.then(() => {
       if (ws.generation !== turn) return;
       ws.pageComments = mountPageComments({ editor: instance, author: () => commentAuthor(ref), canComment: () => !readOnly(id) && ws.editor === instance });
-      article.append(ws.pageComments.element);
+      placePageComments(holder, ws.pageComments.element);
       instance.on('collaboration:status', (raw) => {
         if (ws.generation !== turn) return;
         // An emission with no payload must fall back to "not pending", not throw

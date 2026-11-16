@@ -99,6 +99,18 @@ describe('placeCaretBesideRow', () => {
     expect(setToInput).not.toHaveBeenCalled();
   });
 
+  it('leaves a click on the toolbar the block holds to the toolbar', () => {
+    const toolbar = document.createElement('div');
+    const plus = document.createElement('div');
+
+    toolbar.setAttribute('data-blok-toolbar', '');
+    toolbar.appendChild(plus);
+    holder.appendChild(toolbar);
+
+    expect(placeCaretBesideRow(blok(), redactor, click(plus))).toBe(false);
+    expect(setToInput).not.toHaveBeenCalled();
+  });
+
   it('places nothing in read-only mode', () => {
     readOnly = true;
     expect(placeCaretBesideRow(blok(), redactor, click(holder))).toBe(false);

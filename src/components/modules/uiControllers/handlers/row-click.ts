@@ -39,6 +39,10 @@ export const placeCaretBesideRow = (blok: BlokModules, redactor: HTMLElement, ev
     || blok.BlockSelection.anyBlockSelected
     || !redactor.contains(target)
     || target.closest(`[${DATA_ATTR.elementContent}]`) !== null
+    // The toolbar is mounted inside the hovered block's holder. A caret moved
+    // on a + click would leave the block + just made, and close a menu that
+    // closes on focus moving away (the mobile toolbox).
+    || target.closest(`[${DATA_ATTR.toolbar}]`) !== null
   ) {
     return false;
   }

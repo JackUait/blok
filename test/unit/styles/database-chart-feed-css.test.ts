@@ -157,6 +157,22 @@ describe('database chart and feed styles', () => {
     expect(ruleBody('[data-blok-database-feed-body] + [data-blok-database-feed-reactions]')).toContain('margin-block-start: var(--blok-space-1)');
   });
 
+  // notion-motion.md Round 48 §C (r48-n-feed-alpha-prop.raw): the property row ends 111.5 with a 12 margin, so the
+  // preview starts 123.5. Blok's 21 row ends 107 and the card gap gives 8, so 8.5 more.
+  it('starts the preview under a property line where Notion does', () => {
+    expect(ruleBody('[data-blok-database-feed-properties] + [data-blok-database-feed-body]')).toContain('margin-block-start: 8.5px');
+  });
+
+  // notion-motion.md Round 48 §C (r48-n-feed-alpha.raw): the image block has 8 padding, the image is the 600 preview
+  // less 16 (584), radius 2.
+  it('pads a preview image as Notion\'s image block', () => {
+    const image = ruleBody('[data-blok-database-feed-image]');
+
+    expect(image).toContain('margin-block: var(--blok-space-2)');
+    expect(image).toContain('max-inline-size: min(100%, 584px)');
+    expect(image).toContain('border-radius: var(--blok-radius-mark)');
+  });
+
   // notion-motion.md Round 47 §C: with no byline the body, chip and composer keep an 8 inset (card x + 24).
   it('keeps the footer column 8 in when there is no byline', () => {
     for (const part of ['body', 'reactions', 'comments']) {

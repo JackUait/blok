@@ -18389,6 +18389,11 @@ button[data-blok-database-feed-reaction]:hover,
   margin-block-start: -0.5px;
 }
 
+/* Round 48 §C: Notion's property row is 30 + 12 margin; Blok's is 21 and the card gap is 8. */
+[data-blok-database-feed-properties] + [data-blok-database-feed-body] {
+  margin-block-start: 8.5px;
+}
+
 /* Round 47 §C: the footer's 12 top padding, after the last line's 8 and the card gap. */
 [data-blok-database-feed-body] + [data-blok-database-feed-reactions] {
   margin-block-start: var(--blok-space-1);
@@ -18403,10 +18408,12 @@ button[data-blok-database-feed-reaction]:hover,
 [data-blok-database-feed-line][data-level="h2"] { padding-block-start: calc(var(--blok-space-6) + var(--blok-space-1)); font-size: 21px; line-height: 27.3px; font-weight: 600; }
 [data-blok-database-feed-line][data-level="h3"] { padding-block-start: var(--blok-space-6); font-size: 17.5px; line-height: 22.75px; font-weight: 600; }
 
+/* Round 48 §C: Notion's image block has 8 padding; the image is the 600 preview less 16, radius 2. */
 [data-blok-database-feed-image] {
   display: block;
-  max-inline-size: 100%;
-  border-radius: var(--blok-radius-control);
+  max-inline-size: min(100%, 584px);
+  margin-block: var(--blok-space-2);
+  border-radius: var(--blok-radius-mark);
 }
 
 [data-blok-database-feed-more] {

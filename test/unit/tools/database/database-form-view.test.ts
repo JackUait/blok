@@ -1045,6 +1045,50 @@ describe('DatabaseFormView drag to reorder questions', () => {
     expect(zones()).toHaveLength(0);
   });
 
+  // notion-motion.md Round 53 (b): a copy of the card at 0.18 follows the pointer with the grab offset.
+  it('moves a faint copy of the card with the pointer and drops it on release', () => {
+    const { root } = setup();
+    const agree = question(root, 'agree');
+    const name = agree?.querySelector<HTMLInputElement>('[data-blok-database-form-question-name]');
+
+    if (agree === null || name === null || name === undefined) throw new Error('no card');
+    name.value = 'Renamed';
+    press(agree, 600);
+    moveTo(250);
+    const ghost = document.querySelector<HTMLElement>('[data-blok-database-ghost]');
+    const copy = ghost?.querySelector<HTMLElement>('[data-blok-database-form-question]');
+
+    expect(ghost?.style.position).toBe('fixed');
+    expect(ghost?.style.opacity).toBe('0.18');
+    expect(ghost?.style.pointerEvents).toBe('none');
+    expect(ghost?.style.left).toBe('585px');
+    // Pressed 8 below the card's top (592).
+    expect(ghost?.style.top).toBe('242px');
+    expect(ghost?.style.width).toBe('600px');
+    expect(ghost?.style.height).toBe(`${CARD_HEIGHT}px`);
+    expect(ghost?.getAttribute('aria-hidden')).toBe('true');
+    expect(root.contains(ghost ?? null)).toBe(false);
+    expect(copy?.hasAttribute('data-blok-database-drag-source')).toBe(false);
+    expect(copy?.querySelector<HTMLInputElement>('[data-blok-database-form-question-name]')?.value).toBe('Renamed');
+
+    moveTo(300);
+    expect(ghost?.style.top).toBe('292px');
+    release(300);
+    expect(document.querySelector('[data-blok-database-ghost]')).toBeNull();
+  });
+
+  it('Escape removes the copy', () => {
+    const { root } = setup();
+    const agree = question(root, 'agree');
+
+    if (agree === null) throw new Error('no card');
+    press(agree, 600);
+    moveTo(250);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(document.querySelector('[data-blok-database-ghost]')).toBeNull();
+  });
+
   it('Escape cancels the drag: no move, no lines', () => {
     const { root, moveQuestion } = setup();
     const agree = question(root, 'agree');

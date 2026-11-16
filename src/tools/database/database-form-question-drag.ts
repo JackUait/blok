@@ -1,4 +1,5 @@
 import type { AutoScroll } from '../../components/modules/drag/utils/AutoScroll';
+import { mountGhost } from './copy-ghost-radius';
 import { createDatabaseAutoScroll, listAutoScrollSpeed } from './database-auto-scroll';
 
 const DRAG_THRESHOLD = 10;
@@ -13,6 +14,9 @@ const CARD = '[data-blok-database-form-question]';
 export class DatabaseFormQuestionDrag {
   private card: HTMLElement | null = null;
   private startY = 0;
+  private grabX = 0;
+  private grabY = 0;
+  private ghost: HTMLElement | null = null;
   private dragging = false;
   private zones: HTMLElement[] = [];
   private autoScroll: AutoScroll | null = null;
@@ -27,6 +31,10 @@ export class DatabaseFormQuestionDrag {
     this.cleanup();
     this.card = card;
     this.startY = event.clientY;
+    const box = card.getBoundingClientRect();
+
+    this.grabX = event.clientX - box.left;
+    this.grabY = event.clientY - box.top;
     document.addEventListener('pointermove', this.move);
     document.addEventListener('pointerup', this.up);
     document.addEventListener('pointercancel', this.cleanup);
@@ -42,6 +50,8 @@ export class DatabaseFormQuestionDrag {
     this.autoScroll = null;
     this.zones.forEach((zone) => zone.remove());
     this.zones = [];
+    this.ghost?.remove();
+    this.ghost = null;
     this.card?.removeAttribute('data-blok-database-drag-source');
     this.card = null;
     this.dragging = false;
@@ -54,12 +64,17 @@ export class DatabaseFormQuestionDrag {
   private readonly move = (event: PointerEvent): void => {
     if (!this.dragging && Math.abs(event.clientY - this.startY) > DRAG_THRESHOLD) {
       this.dragging = true;
+      this.ghost = this.card === null ? null : this.createGhost(this.card);
       // database.css hides the gap "+" while a card drags over it.
       this.card?.setAttribute('data-blok-database-drag-source', '');
       this.autoScroll = createDatabaseAutoScroll(this.card ?? this.form, 'y', listAutoScrollSpeed, () => this.paint(this.lastY));
     }
     if (!this.dragging) return;
     this.lastY = event.clientY;
+    if (this.ghost !== null) {
+      this.ghost.style.left = `${event.clientX - this.grabX}px`;
+      this.ghost.style.top = `${event.clientY - this.grabY}px`;
+    }
     this.paint(event.clientY);
     this.autoScroll?.start(event.clientY);
   };
@@ -71,6 +86,37 @@ export class DatabaseFormQuestionDrag {
     this.cleanup();
     if (id !== null && drop !== null && !drop.adjacent) this.onDrop(id, drop.beforeId);
   };
+
+  /** notion-motion.md Round 53 (b): a copy of the card at 0.18, no shadow, keeping the grab offset. */
+  private createGhost(card: HTMLElement): HTMLElement {
+    const box = card.getBoundingClientRect();
+    const ghost = document.createElement('div');
+    const copy = card.cloneNode(true) as HTMLElement;
+    const fields = card.querySelectorAll<HTMLInputElement>('input, textarea');
+
+    // cloneNode keeps the attributes, not what was typed or ticked.
+    const copies = copy.querySelectorAll<HTMLInputElement>('input, textarea');
+
+    fields.forEach((field, index) => {
+      Object.assign(copies[index], { value: field.value, checked: field.checked });
+    });
+    copy.querySelectorAll('[id]').forEach((el) => el.removeAttribute('id'));
+    ghost.appendChild(copy);
+    ghost.setAttribute('data-blok-database-ghost', '');
+    ghost.setAttribute('aria-hidden', 'true');
+    ghost.inert = true;
+    Object.assign(ghost.style, {
+      position: 'fixed',
+      pointerEvents: 'none',
+      opacity: '0.18',
+      zIndex: '50',
+      width: `${box.width}px`,
+      height: `${box.height}px`,
+    });
+    mountGhost(card, ghost);
+
+    return ghost;
+  }
 
   private cards(): HTMLElement[] {
     return [...this.form.querySelectorAll<HTMLElement>(CARD)];

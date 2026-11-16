@@ -223,6 +223,21 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(ruleBody('[data-blok-database-form]:has([data-blok-database-drag-source]) [data-blok-database-form-insert]')).toContain('visibility: hidden');
   });
 
+  // notion-motion.md Round 53 (a): the lines fade between faint and full over 0.14s.
+  it('fades the drag gap lines over 0.14s', () => {
+    expect(ruleBody('[data-blok-database-form-drop-zone]')).toContain('transition: opacity 0.14s cubic-bezier(0.2, 0, 0, 1)');
+  });
+
+  // notion-motion.md Round 53 (b): the moving copy keeps the hovered card's ring. Gray here, not Notion's blue.
+  it('draws the dragged card\'s copy with the hover ring', () => {
+    expect(ruleBody('[data-blok-database-ghost] > [data-blok-database-form-question]')).toContain('box-shadow: var(--blok-border-strong) 0 0 0 1.25px, var(--blok-border-strong) 0 0 0 1.25px inset');
+  });
+
+  // notion-motion.md Round 53 (d) / Round 54 §7: the "+" sits 12 under the last card; the cards stay 24 apart.
+  it('sets Add question 12px under the last card', () => {
+    expect(ruleBody('[data-blok-database-form-add]')).toContain('margin-block-start: calc(var(--blok-space-3) - var(--blok-space-6))');
+  });
+
   // notion-motion.md Round 52 §3: Add question is a round 32 "+" centred under the cards; hover deepens it over 100ms ease-in-out.
   // Notion tints it blue; neutral here like the gap "+" (CLAUDE.md "No blue selected states").
   it('draws Add question as a round 32px "+" centred under the cards', () => {

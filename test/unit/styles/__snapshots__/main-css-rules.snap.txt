@@ -21972,6 +21972,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 [data-blok-database-form-add] {
   display: inline-flex;
   align-self: center;
+  margin-block-start: calc(var(--blok-space-3) - var(--blok-space-6));
   align-items: center;
   justify-content: center;
   inline-size: 32px;
@@ -21999,6 +22000,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   border-radius: var(--blok-radius-pill);
   background-color: var(--blok-database-drop-line, rgba(35, 131, 226, 0.43));
   opacity: 0.28;
+  transition: opacity 0.14s cubic-bezier(0.2, 0, 0, 1);
 }
 
 [data-blok-database-form-drop-zone][data-adjacent] {
@@ -22007,6 +22009,10 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-database-form-drop-zone][data-target] {
   opacity: 1;
+}
+
+[data-blok-database-ghost] > [data-blok-database-form-question] {
+  box-shadow: var(--blok-border-strong) 0 0 0 1.25px, var(--blok-border-strong) 0 0 0 1.25px inset;
 }
 
 [data-blok-database-form]:has([data-blok-database-drag-source]) [data-blok-database-form-insert] {

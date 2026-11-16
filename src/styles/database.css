@@ -19624,6 +19624,8 @@ button[data-blok-database-feed-reaction]:hover,
 [data-blok-database-form-add] {
   display: inline-flex;
   align-self: center;
+  /* notion-motion.md Round 53 (d): 12 under the last card, though cards sit 24 apart. */
+  margin-block-start: calc(var(--blok-space-3) - var(--blok-space-6));
   align-items: center;
   justify-content: center;
   inline-size: 32px;
@@ -19646,13 +19648,13 @@ button[data-blok-database-feed-reaction]:hover,
   block-size: 20px;
 }
 
-/* notion-motion.md Round 52 §3: a dragged card's gap lines, 4 tall at 0.28; none beside the card.
-   The target at full ink is inferred: Notion's target was unread. */
+/* notion-motion.md Round 52 §3 / Round 53 (a): a dragged card's gap lines, 4 tall at 0.28, the target at 1; none beside the card. */
 [data-blok-database-form-drop-zone] {
   z-index: 88;
   border-radius: var(--blok-radius-pill);
   background-color: var(--blok-database-drop-line, rgba(35, 131, 226, 0.43));
   opacity: 0.28;
+  transition: opacity 0.14s cubic-bezier(0.2, 0, 0, 1);
 }
 
 [data-blok-database-form-drop-zone][data-adjacent] {
@@ -19661,6 +19663,11 @@ button[data-blok-database-feed-reaction]:hover,
 
 [data-blok-database-form-drop-zone][data-target] {
   opacity: 1;
+}
+
+/* notion-motion.md Round 53 (b): the moving copy keeps the hover ring, gray here. */
+[data-blok-database-ghost] > [data-blok-database-form-question] {
+  box-shadow: var(--blok-border-strong) 0 0 0 1.25px, var(--blok-border-strong) 0 0 0 1.25px inset;
 }
 
 [data-blok-database-form]:has([data-blok-database-drag-source]) [data-blok-database-form-insert] {

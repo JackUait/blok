@@ -14947,7 +14947,7 @@ button[data-blok-database-table-group-count]:hover {
 [data-blok-database-panel] {
   display: flex;
   flex-direction: column;
-  max-height: min(70vh, 560px);
+  max-height: 80vh;
   padding: var(--blok-space-1);
   overflow-y: auto;
   color: var(--blok-database-ink);
@@ -15464,6 +15464,7 @@ button[data-blok-database-table-group-count]:hover {
   margin-block-end: var(--blok-space-2);
   text-align: center;
   font-size: 12px;
+  font-weight: 500;
   color: var(--blok-database-ink-secondary);
 }
 
@@ -16325,7 +16326,7 @@ input[data-blok-database-picker-search]:focus {
   background: transparent;
   color: var(--blok-database-ink-secondary);
   font: inherit;
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
 }
 
@@ -17416,8 +17417,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 [data-blok-database-gallery-preview][data-preview="content"] {
-  padding: var(--blok-space-2) var(--blok-space-2) 0;
-  color: var(--blok-database-gallery-preview-text);
+  padding: var(--blok-space-4) var(--blok-space-4) 0;
+  color: color-mix(in srgb, var(--blok-database-gallery-title-text) 80%, transparent);
   font-size: 12px;
   line-height: 18px;
 }
@@ -17732,18 +17733,18 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-calendar-day] {
   position: relative;
-  min-block-size: max(124px, calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lanes, 0) * var(--blok-database-calendar-lane-pitch) + 8px));
+  min-block-size: max(124px, calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lanes, 0) * var(--blok-database-calendar-lane-pitch) + 1px));
   border-inline-end: 1px solid var(--blok-database-calendar-border);
   border-block-end: 1px solid var(--blok-database-calendar-border);
   outline-offset: -2px;
 }
 
 [@container blok-calendar (min-width: 960px)] [data-blok-database-calendar-day] {
-  min-block-size: max(140px, calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lanes, 0) * var(--blok-database-calendar-lane-pitch) + 8px));
+  min-block-size: max(140px, calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lanes, 0) * var(--blok-database-calendar-lane-pitch) + 1px));
 }
 
 [data-blok-database-calendar][data-range="week"] [data-blok-database-calendar-day] {
-  min-block-size: max(372px, calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lanes, 0) * var(--blok-database-calendar-lane-pitch) + 8px));
+  min-block-size: max(372px, calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lanes, 0) * var(--blok-database-calendar-lane-pitch) + 1px));
 }
 
 [data-blok-database-calendar-day][data-weekend] {
@@ -17845,7 +17846,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   z-index: 1;
   inset-block-start: calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lane, 0) * var(--blok-database-calendar-lane-pitch));
   inset-inline-start: 6px;
-  inline-size: calc(var(--blok-database-calendar-span, 1) * 100% - 12px);
+  inline-size: calc(var(--blok-database-calendar-span, 1) * (100% + 1px) - 12px);
   min-block-size: 28px;
   box-sizing: border-box;
   display: flex;

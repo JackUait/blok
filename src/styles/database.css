@@ -11923,10 +11923,11 @@ button[data-blok-database-table-group-count]:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
+/* notion-motion.md Round 45 §1: Notion's settings panels stop at 80% of the window (573.6 at 717). */
 [data-blok-database-panel] {
   display: flex;
   flex-direction: column;
-  max-height: min(70vh, 560px);
+  max-height: 80vh;
   padding: var(--blok-space-1);
   overflow-y: auto;
   color: var(--blok-database-ink);
@@ -12468,6 +12469,7 @@ button[data-blok-database-table-group-count]:hover {
   margin-block-end: var(--blok-space-2);
   text-align: center;
   font-size: 12px;
+  font-weight: 500;
   color: var(--blok-database-ink-secondary);
 }
 
@@ -13418,7 +13420,7 @@ input[data-blok-database-picker-search]:focus {
   background: transparent;
   color: var(--blok-database-ink-secondary);
   font: inherit;
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
 }
 
@@ -14515,9 +14517,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   border-block-end: 1px solid var(--blok-database-gallery-preview-border);
 }
 
+/* notion-motion.md Round 45 §1: the text starts 16 in and 16 down, dark ink at 0.8. */
 [data-blok-database-gallery-preview][data-preview="content"] {
-  padding: var(--blok-space-2) var(--blok-space-2) 0;
-  color: var(--blok-database-gallery-preview-text);
+  padding: var(--blok-space-4) var(--blok-space-4) 0;
+  color: color-mix(in srgb, var(--blok-database-gallery-title-text) 80%, transparent);
   font-size: 12px;
   line-height: 18px;
 }
@@ -14878,7 +14881,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 [data-blok-database-calendar-day] {
   position: relative;
   /* findings C09: 124px in the text column, 140px at full width (below). */
-  min-block-size: max(124px, calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lanes, 0) * var(--blok-database-calendar-lane-pitch) + 8px));
+  /* notion-motion.md Round 45 §1: a grown day ends 7 under its last card; the lane pitch holds 6 of it. */
+  min-block-size: max(124px, calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lanes, 0) * var(--blok-database-calendar-lane-pitch) + 1px));
   border-inline-end: 1px solid var(--blok-database-calendar-border);
   border-block-end: 1px solid var(--blok-database-calendar-border);
   outline-offset: -2px;
@@ -14887,13 +14891,13 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 /* Unverified: Notion's switch point. Measured only at 691px (124px) and 1231px (140px) grids. */
 @container blok-calendar (min-width: 960px) {
   [data-blok-database-calendar-day] {
-    min-block-size: max(140px, calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lanes, 0) * var(--blok-database-calendar-lane-pitch) + 8px));
+    min-block-size: max(140px, calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lanes, 0) * var(--blok-database-calendar-lane-pitch) + 1px));
   }
 }
 
 /* findings C08: a week row is 372px tall. */
 [data-blok-database-calendar][data-range="week"] [data-blok-database-calendar-day] {
-  min-block-size: max(372px, calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lanes, 0) * var(--blok-database-calendar-lane-pitch) + 8px));
+  min-block-size: max(372px, calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lanes, 0) * var(--blok-database-calendar-lane-pitch) + 1px));
 }
 
 [data-blok-database-calendar-day][data-weekend] {
@@ -15006,9 +15010,9 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   position: absolute;
   z-index: 1;
   inset-block-start: calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lane, 0) * var(--blok-database-calendar-lane-pitch));
-  /* findings C13: 6px from each side of the cell. */
+  /* findings C13: 6px from each side of the cell. Round 45: the cell's 1px end border counts (86.7 in 98.7). */
   inset-inline-start: 6px;
-  inline-size: calc(var(--blok-database-calendar-span, 1) * 100% - 12px);
+  inline-size: calc(var(--blok-database-calendar-span, 1) * (100% + 1px) - 12px);
   min-block-size: 28px;
   box-sizing: border-box;
   display: flex;

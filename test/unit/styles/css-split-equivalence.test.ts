@@ -1759,6 +1759,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R89_BYTES = 96;
     // Lane r90: Round 44 center peek header (steps on header hover, ⤢ at Notion's size). Net database.css growth against origin/main.
     const DATABASE_R90_BYTES = 341;
+    // Lane r91: Round 44 type pickers (labels, search, Change type ink, Select icon, the open "+" slot). Net database.css growth against origin/main.
+    const DATABASE_R91_BYTES = 2205;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2310,6 +2312,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R86_BYTES
       + DATABASE_R89_BYTES
       + DATABASE_R90_BYTES
+      + DATABASE_R91_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

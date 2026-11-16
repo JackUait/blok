@@ -488,6 +488,44 @@ describe('DatabaseTimelineView', () => {
         expect(kept.map((day) => tickOn(root, day).hidden)).toEqual(kept.map(() => false));
       });
 
+      // notion-motion.md Round 48 A4: Week and Bi-week write "T 17"; on today "M" stays and the circle sits on the number.
+      describe('weekday letters', () => {
+        const near = (zoom: 'week' | 'bi_week'): HTMLElement =>
+          mount({ view: timelineView({ timelineZoom: zoom }), center: MONDAY, today: MONDAY }).root;
+        const DOT = '[data-blok-database-timeline-today-dot]';
+
+        it.each(['week', 'bi_week'] as const)('%s zoom writes the weekday letter before each day number', (zoom) => {
+          const tick = tickOn(near(zoom), '2026-11-17');
+
+          expect(tick.querySelector('[data-blok-database-timeline-weekday]')?.textContent).toBe('T');
+          expect(tick.querySelector('[data-blok-database-timeline-day-number]')?.textContent).toBe('17');
+          expect(tick.firstElementChild?.textContent).toBe('T17');
+        });
+
+        it.each(['week', 'bi_week'] as const)('%s zoom puts the today circle on today\'s number, after its letter', (zoom) => {
+          const dot = near(zoom).querySelector<HTMLElement>(DOT);
+
+          expect(dot?.parentElement?.hasAttribute('data-blok-database-timeline-day-number')).toBe(true);
+          expect(dot?.closest('[data-day]')?.getAttribute('data-day')).toBe(MONDAY);
+          expect(dot?.style.insetInlineStart).toBe('');
+        });
+
+        it('keeps today\'s tick, letter and circle, though the circle covers its number', () => {
+          vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+            const tick = this.closest<HTMLElement>('[data-day]');
+            const center = tick === null ? 0 : xOf(tick) + parseFloat(tick.style.width) / 2;
+            const width = this.matches(DOT) ? 22 : 7 * (this.textContent ?? '').length;
+
+            return { left: center - width / 2, right: center + width / 2, top: 0, bottom: 14, width, height: 14, x: center - width / 2, y: 0, toJSON: () => ({}) };
+          });
+          const root = near('week');
+
+          vi.runAllTicks();
+          expect(tickOn(root, MONDAY).hidden).toBe(false);
+          expect(tickOn(root, '2026-11-17').hidden).toBe(false);
+        });
+      });
+
       it.each(['quarter', 'year', '5_years'] as const)('%s zoom draws a body line on the 1st of every month', (zoom) => {
         const root = far(zoom);
         const window = timelineWindow(MONDAY, zoom);

@@ -329,6 +329,8 @@ export interface HeaderUnit {
   day: string;
   /** Hours zoom: the "AM"/"PM" inside `label`, drawn in its own ink. */
   period?: string;
+  /** Week and Bi-week zooms: the day's narrow weekday letter, written before `label`. */
+  weekday?: string;
 }
 
 /** `monday-month`: a month counted from its first Monday. */
@@ -342,6 +344,8 @@ const GROUP_OF: Record<TimelineZoom, Unit> = {
 const UNIT_OF: Record<TimelineZoom, Unit> = {
   hours: 'hour', day: 'hour', week: 'day', bi_week: 'day', month: 'day', quarter: 'week', year: 'week', '5_years': 'month',
 };
+
+const WEEKDAY_LETTERS: ReadonlySet<TimelineZoom> = new Set(['week', 'bi_week']);
 
 /** Hour ticks a day: Hours zoom every 15 minutes, Day zoom every hour (notion-motion.md Round 34 §5, Round 47 A1b). */
 const TICKS_PER_DAY: Partial<Record<TimelineZoom, number>> = { hours: 96, day: 24 };
@@ -428,8 +432,12 @@ export const headerUnits = (window: TimelineWindow, zoom: TimelineZoom, locale: 
   const group = GROUP_OF[zoom];
   const unit = UNIT_OF[zoom];
 
+  const units = unitsOf(window, unit, width, new Intl.DateTimeFormat(locale, FORMAT[unit]), TICKS_PER_DAY[zoom]);
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: 'narrow' });
+
   return {
     groups: unitsOf(window, group, width, new Intl.DateTimeFormat(locale, GROUP_FORMAT[group])),
-    units: unitsOf(window, unit, width, new Intl.DateTimeFormat(locale, FORMAT[unit]), TICKS_PER_DAY[zoom]),
+    // notion-motion.md Round 48 A4: "M 16".
+    units: WEEKDAY_LETTERS.has(zoom) ? units.map((item) => ({ ...item, weekday: weekday.format(toLocalDate(item.day)) })) : units,
   };
 };

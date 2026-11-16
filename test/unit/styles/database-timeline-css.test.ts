@@ -632,3 +632,21 @@ describe('timeline far-zoom bars can be 11px wide (Round 48 A5)', () => {
     expect(ruleBody(`[data-blok-database-timeline][data-zoom="${zoom}"] [data-blok-database-timeline-bar]`)).toContain('padding-inline-end: 0');
   });
 });
+
+// notion-motion.md Round 48 A4 (r48-n-week-hdr.raw): "M 16". Spans are the glyphs plus 3 after the letter
+// (M 13.5, S 10.6) and 7 each side of the number (16 27.2, 20 28.8); the circle is centred on the number.
+describe('timeline Week and Bi-week weekday letters (Round 48 A4)', () => {
+  it('spaces the letter and the number like Notion', () => {
+    expect(ruleBody('[data-blok-database-timeline-weekday]')).toContain('padding-inline-end: var(--blok-space-0-75)');
+    const number = ruleBody('[data-blok-database-timeline-day-number]');
+
+    expect(number).toContain('padding-inline: var(--blok-space-1-75)');
+    expect(number).toContain('display: inline-block');
+    expect(number).toContain('position: relative');
+  });
+
+  it('centres today\'s circle on its number and sets today\'s letter in 500', () => {
+    expect(ruleBody('[data-blok-database-timeline-day-number] > [data-blok-database-timeline-today-dot]')).toContain('inset-inline-start: 50%');
+    expect(ruleBody('[data-blok-database-timeline-units] > [data-day]:has([data-blok-database-timeline-today-dot])')).toContain('font-weight: 500');
+  });
+});

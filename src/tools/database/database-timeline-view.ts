@@ -837,6 +837,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         label.style.width = `${item.width}px`;
         if (centred) {
           label.appendChild(this.tickText(item.label, item.period));
+        } else if (item.weekday !== undefined) {
+          label.appendChild(this.weekdayText(item.weekday, item.label));
         } else {
           label.textContent = item.label;
         }
@@ -870,16 +872,37 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       this.nowLabel = label;
     } else if (todayIndex >= 0 && todayIndex < this.window.days) {
       const dot = document.createElement('div');
+      // notion-motion.md Round 48 A4: in Week and Bi-week the circle sits on today's number, after its letter.
+      const number = unitsRow.querySelector(`:scope > [data-day="${this.options.today}"] [data-blok-database-timeline-day-number]`);
 
       dot.setAttribute('data-blok-database-timeline-today-dot', '');
-      // notion-motion.md Round 48 A4: on today's start line in Quarter, Year and 5 Years; mid-day in Month.
-      dot.style.insetInlineStart = `${todayIndex * this.dayWidth + (ON_START_LINE.has(this.zoom) ? 0 : this.dayWidth / 2)}px`;
       dot.textContent = new Intl.DateTimeFormat(this.options.locale ?? 'en-US', { day: 'numeric' }).format(toLocalDate(this.options.today));
-      header.appendChild(dot);
+      if (number !== null) {
+        number.appendChild(dot);
+      } else {
+        // Round 48 A4: on today's start line in Quarter, Year and 5 Years; mid-day in Month.
+        dot.style.insetInlineStart = `${todayIndex * this.dayWidth + (ON_START_LINE.has(this.zoom) ? 0 : this.dayWidth / 2)}px`;
+        header.appendChild(dot);
+      }
       this.todayDot = dot;
     }
 
     return header;
+  }
+
+  /** Week and Bi-week: "M 16", the letter then the number, in one span `hideCoveredTicks` measures. */
+  private weekdayText(weekday: string, label: string): HTMLElement {
+    const text = document.createElement('span');
+    const letter = document.createElement('span');
+    const number = document.createElement('span');
+
+    letter.setAttribute('data-blok-database-timeline-weekday', '');
+    letter.textContent = weekday;
+    number.setAttribute('data-blok-database-timeline-day-number', '');
+    number.textContent = label;
+    text.append(letter, number);
+
+    return text;
   }
 
   /** A tick's text. Its "AM"/"PM" gets its own span; `hideCoveredTicks` measures the outer one. */
@@ -1897,6 +1920,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     ticks.forEach((tick) => tick.toggleAttribute('hidden', false));
     const label = cover.getBoundingClientRect();
     const covered = ticks.map((tick) => {
+      // Week and Bi-week hold the circle in today's own tick.
+      if (tick.contains(cover)) return false;
       const box = tick.firstElementChild?.getBoundingClientRect();
 
       return box !== undefined && box.right > label.left && box.left < label.right;

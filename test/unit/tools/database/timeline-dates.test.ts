@@ -316,6 +316,19 @@ describe('timeline-dates', () => {
       expect(units[0].label).toBe(new Intl.DateTimeFormat('en-US', { day: 'numeric' }).format(new Date(2026, 9, 1)));
     });
 
+    // notion-motion.md Round 48 A4: Week and Bi-week write the weekday letter before the number ("S 15", "M 16").
+    it.each(['week', 'bi_week'] as const)('gives each %s day its narrow weekday letter', (zoom) => {
+      const { units } = headerUnits({ start: '2026-11-14', days: 4 }, zoom, 'en-US');
+
+      expect(units.map((unit) => [unit.weekday, unit.label])).toEqual([['S', '14'], ['S', '15'], ['M', '16'], ['T', '17']]);
+    });
+
+    it('gives Month zoom days no weekday letter', () => {
+      const { units } = headerUnits({ start: '2026-11-14', days: 2 }, 'month', 'en-US');
+
+      expect(units.map((unit) => unit.weekday)).toEqual([undefined, undefined]);
+    });
+
     // notion-motion.md Round 47 A1b (r47-n-tl-year-today.raw): Year ticks are weeks from Monday, 35 wide, read "3", "10".
     it('labels Monday weeks under months at year zoom', () => {
       const { units } = headerUnits({ start: '2026-08-01', days: 40 }, 'year', 'en-US');

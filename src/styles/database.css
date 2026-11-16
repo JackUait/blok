@@ -15820,6 +15820,27 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-timeline-period-text);
 }
 
+/* notion-motion.md Round 48 A4 (r48-n-week-hdr.raw): "M 16", 3 after the letter and 7 each side of the number.
+   The letter keeps the AA tick ink (Notion's is lighter). */
+[data-blok-database-timeline-weekday] {
+  padding-inline-end: var(--blok-space-0-75);
+}
+
+[data-blok-database-timeline-day-number] {
+  position: relative;
+  display: inline-block;
+  padding-inline: var(--blok-space-1-75);
+}
+
+/* The circle sits on today's number, after its letter (833 in Week, 6.8 past the day's middle). */
+[data-blok-database-timeline-day-number] > [data-blok-database-timeline-today-dot] {
+  inset-inline-start: 50%;
+}
+
+[data-blok-database-timeline-units] > [data-day]:has([data-blok-database-timeline-today-dot]) {
+  font-weight: 500;
+}
+
 [data-blok-database-timeline-tick-line],
 [data-blok-database-timeline-month-line] {
   position: absolute;

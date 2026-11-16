@@ -37,6 +37,7 @@ Toutes les routes vérifient que l'id appartient au workspace de l'URL. 401 sans
 ## MCP
 
 `blok_list_teamspaces {workspace,includeArchived?}` liste métadonnées (mêmes droits).
+Le MCP expose également `blok_get_teamspace`, `blok_create_teamspace`, `blok_update_teamspace`, `blok_archive_teamspace`, `blok_restore_teamspace`, `blok_list_teamspace_members`, `blok_set_teamspace_member`, `blok_remove_teamspace_member` et `blok_set_page_teamspace`. Les mêmes handlers que l'interface appliquent les droits et transactions. Le token MCP suffit sur `/mcp`, mais ne devient pas une session REST. `blok_capabilities` indique les rôles et outils disponibles ; voir `apps/service/API.md` pour les arguments et les outils d'administration du workspace/de l'instance.
 `blok_create_page` ajoute `teamspaceId?:string`. Sans teamspace conserve racine privée par défaut. Avec TS actif, membership requise, racine par défaut commune AU TS ; private explicite reste privée ; enfant doit appartenir au TS donné si fourni. Les listes de pages ajoutent teamspaceId et filtrent via le même résolveur. Tous les outils document héritent des droits utilisateur déjà centralisés.
 
 ## Frontend

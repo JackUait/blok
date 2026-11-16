@@ -44,7 +44,8 @@ func (s *Service) initMCP() error {
 	}
 	s.MCP = attached
 	sdk := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server {
-		server := mcp.NewServer(&mcp.Implementation{Name: "blok-cloud", Version: "1.0.0"}, &mcp.ServerOptions{Instructions: "Workspace pages are listed and created with workspace tools. Document content is edited with blok_open, blok_read and blok_execute.\n\n" + attached.Instructions()})
+		server := mcp.NewServer(&mcp.Implementation{Name: "blok-cloud", Version: "1.1.0"}, &mcp.ServerOptions{Instructions: "Start with blok_capabilities to discover your identity, roles and management tools. Use native MCP tools for teamspaces, members, workspace and instance administration; no session cookie or REST fallback is needed. Workspace admin and instance admin are distinct. Never assume admin grants private-page access. Invitations send email and account deletion is permanent: use only for the user's explicit request. Workspace pages are listed and created with workspace tools. Document content is edited with blok_open, blok_read and blok_execute.\n\n" + attached.Instructions()})
+		s.registerMCPManagement(server)
 		server.AddTool(&mcp.Tool{Name: "blok_list_workspaces", Description: "List workspaces available to the signed-in user.", InputSchema: json.RawMessage(`{"type":"object","properties":{}}`)}, s.mcpListWorkspaces)
 		server.AddTool(&mcp.Tool{Name: "blok_list_teamspaces", Description: "List real closed teamspaces nested in a workspace; metadata does not grant content access.", InputSchema: json.RawMessage(`{"type":"object","properties":{"workspace":{"type":"string"},"includeArchived":{"type":"boolean"}},"required":["workspace"]}`)}, s.mcpListTeamspaces)
 		server.AddTool(&mcp.Tool{Name: "blok_list_pages", Description: "List pages in a workspace by slug.", InputSchema: json.RawMessage(`{"type":"object","properties":{"workspace":{"type":"string"}},"required":["workspace"]}`)}, s.mcpListPages)
@@ -98,7 +99,10 @@ func (s *Service) mcpIdentity(r *http.Request) (identity, error) {
 	var u identity
 	token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 	u.Session = hash(token)
-	err := s.DB.QueryRow(r.Context(), `SELECT u.id,u.email FROM mcp_tokens t JOIN users u ON u.id=t.user_id WHERE t.id=$1 AND t.expires_at>now()`, u.Session).Scan(&u.ID, &u.Email)
+	err := s.DB.QueryRow(r.Context(), `SELECT u.id,u.email,u.name,ia.user_id IS NOT NULL
+		FROM mcp_tokens t JOIN users u ON u.id=t.user_id
+		LEFT JOIN instance_admins ia ON ia.user_id=u.id
+		WHERE t.id=$1 AND t.expires_at>now()`, u.Session).Scan(&u.ID, &u.Email, &u.Name, &u.InstanceAdmin)
 	if err == nil {
 		_, _ = s.DB.Exec(r.Context(), `UPDATE mcp_tokens SET last_used_at=now() WHERE id=$1`, u.Session)
 	}

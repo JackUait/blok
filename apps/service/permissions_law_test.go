@@ -36,6 +36,7 @@ var permissionExemptions = map[string]string{
 	// Authentification propre, hors du modèle de permissions par page.
 	"document":            "point interne, authentifié par INTERNAL_SECRET et bloqué au proxy public",
 	"storeWorkspaceImage": "ressource d'espace sans page de rattachement",
+	"customEmojiImageURL": "vérifie uniquement la propriété d'un asset commun au workspace déjà autorisé ; refuse tout asset lié à une page (document_id IS NULL), sans lire de contenu",
 }
 
 var permissionGuards = []string{

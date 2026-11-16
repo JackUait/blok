@@ -2,7 +2,7 @@
 
 Go product host embedding Blok's existing server. PostgreSQL stores identities, sessions, access control, workspace indexes and document projections. Blok's local collaboration journal remains the durable operation source. Run exactly one application instance against a journal directory.
 
-The hosted MCP endpoint is `https://<PUBLIC_URL host>/mcp`. Every signed-in user creates a dedicated 90-day Bearer token in **Mon compte → Accès MCP**, and can rotate or revoke it there. Rotation invalidates the old token immediately. The new secret appears once, is stored only as a hash on the server and carries the caller's current workspace rights. MCP tools list workspaces/pages, create pages, and edit page documents live. See [API.md](API.md#hosted-mcp) for the contract.
+The hosted MCP endpoint is `https://<PUBLIC_URL host>/mcp`. Every signed-in user creates a dedicated 90-day Bearer token in **Mon compte → Accès MCP**, and can rotate or revoke it there. Rotation invalidates the old token immediately. The new secret appears once, is stored only as a hash on the server and carries the caller's current rights. MCP tools edit documents, manage teamspaces and custom emojis, and administer workspace members or server accounts/settings according to the caller's roles. Start with `blok_capabilities`; no session cookie is required. See [API.md](API.md#hosted-mcp) for the contract.
 
 ## Configuration
 

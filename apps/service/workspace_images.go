@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -138,6 +139,37 @@ func (s *Service) emojis(w http.ResponseWriter, r *http.Request, u identity, ws 
 		problem(w, 403, "Workspace editing permission required")
 		return
 	}
+	if r.Method == "PATCH" && id != "" {
+		var in struct {
+			Name string `json:"name"`
+		}
+		if !body(w, r, &in) {
+			return
+		}
+		in.Name = strings.ToLower(strings.TrimSpace(strings.Trim(in.Name, ":")))
+		if !emojiNamePattern.MatchString(in.Name) {
+			problem(w, 400, "Emoji name must use 1–64 lowercase letters, digits, underscores or hyphens")
+			return
+		}
+		var emoji workspaceEmoji
+		err := s.DB.QueryRow(r.Context(), `UPDATE workspace_emojis e SET name=$3
+			WHERE e.workspace_id=$1 AND e.id=$2 AND EXISTS (
+			SELECT 1 FROM memberships m WHERE m.workspace_id=e.workspace_id AND m.user_id=$4
+			AND (m.role='admin' OR (m.role='member' AND e.created_by=$4)))
+			RETURNING e.id,e.name,e.url,e.created_by,e.created_at`, ws.ID, id, in.Name, u.ID).Scan(&emoji.ID, &emoji.Name, &emoji.URL, &emoji.CreatedBy, &emoji.CreatedAt)
+		if err != nil {
+			if isUniqueViolation(err) {
+				problem(w, 409, "An emoji with this name already exists")
+			} else if errors.Is(err, pgx.ErrNoRows) {
+				problem(w, 404, "Emoji not found or rename refused")
+			} else {
+				problem(w, 500, "Could not rename emoji")
+			}
+			return
+		}
+		jsonOut(w, 200, emoji)
+		return
+	}
 	if r.Method == "DELETE" && id != "" {
 		tag, err := s.DB.Exec(r.Context(), "DELETE FROM workspace_emojis WHERE workspace_id=$1 AND id=$2 AND (created_by=$3 OR $4='admin')", ws.ID, id, u.ID, ws.Role)
 		if err != nil {
@@ -173,9 +205,13 @@ func (s *Service) emojis(w http.ResponseWriter, r *http.Request, u identity, ws 
 		problem(w, 400, "Provide one image upload or HTTPS URL")
 		return
 	}
-	if in.URL != "" && !validRemoteImage(in.URL) {
-		problem(w, 400, "Image URL must use HTTPS")
-		return
+	if in.URL != "" {
+		resolved, err := s.customEmojiImageURL(r.Context(), ws.ID, in.URL)
+		if err != nil {
+			problem(w, 400, err.Error())
+			return
+		}
+		in.URL = resolved
 	}
 	if in.DataURL != "" {
 		if _, _, err := decodeWorkspaceImage(in.DataURL, maxEmojiImage); err != nil {
@@ -201,4 +237,31 @@ func (s *Service) emojis(w http.ResponseWriter, r *http.Request, u identity, ws 
 		return
 	}
 	jsonOut(w, 201, emoji)
+}
+
+// Registry images are visible to the workspace. Never promote a page-bound or
+// foreign workspace asset into that shared registry. Preserve a stable path,
+// not a short-lived session grant, when reusing an upload.
+func (s *Service) customEmojiImageURL(ctx context.Context, workspace, raw string) (string, error) {
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.User != nil {
+		return "", errors.New("Invalid emoji image URL")
+	}
+	pub, _ := url.Parse(s.Config.PublicURL)
+	if parsed.Host == "" || (pub != nil && parsed.Host == pub.Host) {
+		name := strings.TrimPrefix(parsed.Path, "/files/")
+		if !strings.HasPrefix(parsed.Path, "/files/") || name == "" || name == "." || name == ".." || strings.ContainsAny(name, "/\\") || (parsed.Scheme != "" && parsed.Scheme != "https" && (pub == nil || parsed.Scheme != pub.Scheme)) {
+			return "", errors.New("Use a workspace /files/ image or an external HTTPS URL")
+		}
+		var owned bool
+		err = s.DB.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM assets WHERE name=$1 AND workspace_id=$2 AND document_id IS NULL)`, name, workspace).Scan(&owned)
+		if err != nil || !owned {
+			return "", errors.New("Image must be a shared upload owned by this workspace")
+		}
+		return "/files/" + url.PathEscape(name), nil
+	}
+	if !validRemoteImage(raw) {
+		return "", errors.New("Image URL must use HTTPS")
+	}
+	return raw, nil
 }

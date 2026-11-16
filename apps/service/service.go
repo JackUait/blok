@@ -201,6 +201,9 @@ func body(w http.ResponseWriter, r *http.Request, v any) bool {
 	return true
 }
 func (s *Service) session(r *http.Request) (identity, error) {
+	if u, ok := r.Context().Value(mcpManagementIdentityKey{}).(identity); ok && u.ID != "" {
+		return u, nil
+	}
 	token := ""
 	if strings.HasPrefix(r.Header.Get("Authorization"), "Bearer ") {
 		token = strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")

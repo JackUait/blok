@@ -62,6 +62,33 @@ Workspace = `{id,slug,name,role}`. A fresh instance starts with zero workspaces;
 
 Alongside Blok's document editing tools, the host serves `blok_list_workspaces`, `blok_list_pages` (`{workspace:slug}`), and `blok_create_page` (`{workspace:slug,title,parentId?:pageID}`). Creating a page updates its workspace index and creates an empty document atomically. Viewers may list/read but cannot create or edit; nonmembers cannot list pages. `blok_list_pages` and the document editing tools apply page permissions: a token carries its owner's access and nothing more. The MCP endpoint is served by the existing Go app and reverse proxy, with no additional published port.
 
+### MCP administration and custom emoji
+
+`blok_capabilities {}` returns the caller's identity, current instance-admin flag, workspace roles, management catalogue and document workflow. Tool discovery exposes the argument schemas and read/write/destructive hints. Discover the available document commands with `blok_describe` after `blok_open`; databases, rows, views and document edits remain on that surface.
+
+Administration uses the personal MCP token directly on `/mcp`. It does **not** require a browser cookie, and the token still cannot authenticate arbitrary `/api` requests. The host invokes the same validated handlers as its UI, including transactions, owner protection, rate limits and live access revocation. Instance-admin status is loaded from the database on each MCP request; it is not embedded in the token. Workspace admins are not instance admins and cannot read private pages implicitly.
+
+| Area | Tools | Main arguments / permissions |
+| --- | --- | --- |
+| Teams | `blok_get_teamspace`, `blok_create_teamspace`, `blok_update_teamspace`, `blok_archive_teamspace`, `blok_restore_teamspace` | `workspace`, `teamspaceId` except creation; name/icon/description. Creation requires workspace admin; updates require teamspace owner or workspace admin. Closed teams only. |
+| Team members | `blok_list_teamspace_members`, `blok_set_teamspace_member`, `blok_remove_teamspace_member` | `workspace`, `teamspaceId`, `userId`; set requires role `owner` or `member`. Target must already belong to workspace; last owner protected. |
+| Workspace | `blok_create_workspace`, `blok_update_workspace` | Create: `name`, `slug`; server creation policy applies, instance admins can bypass disabled creation. Update: `workspace`, name/icon; workspace admin required. |
+| Workspace members | `blok_list_workspace_members`, `blok_set_workspace_member_role`, `blok_remove_workspace_member` | `workspace`, `userId`; set role `admin`, `member`, `viewer`. Changes require workspace admin; last admin/teamspace owner protected. |
+| Invitations | `blok_list_workspace_invites`, `blok_invite_workspace_member`, `blok_revoke_workspace_invite` | Workspace admin. Invite: `workspace`, `email`, optional role `member`/`viewer`, message; **sends email**. Revoke uses `inviteId`. |
+| Join requests | `blok_list_join_requests`, `blok_approve_join_request`, `blok_reject_join_request` | Workspace admin; `workspace`, `requestId`, optional approval role `member`/`viewer`. |
+| Page access | `blok_get_page_access`, `blok_set_page_visibility`, `blok_set_page_share`, `blok_remove_page_share` | `workspace`, `pageId`; visibility `private`/`workspace`/`inherit`; shares use `userId`, level `view`/`edit`/`full`. Changes require page full access. There is no comment-only permission level yet. |
+| Page organization | `blok_set_page_teamspace` | `workspace`, `pageId`, `teamspaceId` (string or null). Root only; full access on subtree; source team management and target membership required. Preserves private visibility. |
+| Server settings | `blok_get_instance_settings`, `blok_update_instance_settings` | Instance admin. Optional name, signupPolicy (`invite`/`domain`/`open`), signupDomains, workspaceCreation (`anyone`/`admins_only`/`disabled`), defaultWorkspaceId (null clears). |
+| Server accounts | `blok_list_instance_users`, `blok_create_instance_user`, `blok_update_instance_user`, `blok_delete_instance_user` | Instance admin. Create email/name; update userId/name/instanceAdmin; delete is **permanent**. Last-admin/owner protections apply. Lists accept limit 1–100 and offset. |
+| Server workspaces | `blok_list_instance_workspaces` | Instance admin. Paginated metadata only; no blanket content access. |
+| Custom emojis | `blok_list_custom_emojis`, `blok_create_custom_emoji`, `blok_rename_custom_emoji`, `blok_delete_custom_emoji` | `workspace`; creation name plus dataUrl **or** url; rename/delete use emojiId. Members may create, viewers may list; creator with edit rights or workspace admin may rename/delete. |
+
+Management failures return MCP `isError: true` and a JSON text payload `{status,error:{code,message}}`. Codes include `INVALID_ARGUMENT`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT` and `RATE_LIMITED`. Do not bypass a permission failure by using another workspace. After a lost response, read the current state before retrying a creation or invitation.
+
+For a custom emoji, store the returned persistent `url` in a page icon `{type:"image",url}` using the document/metadata editing surface. A private `/files/` URL needs a real session or a short-lived signed grant to load. Never persist the signed URL. A bare unauthenticated request returning 401 establishes only that authentication is required, not that the image renders in the app. Removing the registry entry retains the uploaded image for existing icons and history.
+
+Deploy/restart the service and refresh or reconnect the MCP client to discover the new tool catalogue. No new token or desktop build is needed; existing tokens carry their owners' current permissions.
+
 - POST `/api/workspaces/:slug/pages/:pageID/seed` `{document:OutputData}` → `{ok:true}`. For new pages after adding metadata to index, before opening collaboration. Requires writer; 409 if content exists or any ticket has been issued. Await seed before opening the page; never fall back to overwriting projected JSON.
 - POST `/api/workspaces/:slug/pages/:pageID/duplicate` `{id:newPageID,title,parentId:null|string}` → `{id,revision}`. Copies the live Blok `/state` snapshot and metadata into a new page atomically; caller reloads index. Does not clone child pages.
 - GET `/api/assets/url?url=<stored asset URL>` → `{url}` private 60-second session-bound asset grant for native image rendering. Web asset URL uses HttpOnly cookie. Every file fetch rechecks session and workspace ACL.
@@ -88,7 +115,8 @@ Workspace members can read custom emoji; members and administrators can upload i
 
 - POST `/api/workspaces/:slug/images` `{dataUrl}` → 201 `{url}`. Upload a PNG, JPEG, GIF or WebP image up to 5 MiB for a page cover. The returned `/files/...` URL is persistent; resolve it through `/api/assets/url` for native clients, and never persist the temporary signed grant in page metadata.
 - GET `/api/workspaces/:slug/emojis` → `{emojis:[{id,name,url,createdBy,createdAt}]}` ordered by name.
-- POST `/api/workspaces/:slug/emojis` `{name,dataUrl}` or `{name,url}` → 201 `{id,name,url,createdBy,createdAt}`. Upload limit is 2 MiB; external image URLs must use HTTPS. The host does not fetch external URLs. Names are normalized to lowercase and use 1–64 ASCII letters, digits, underscores or hyphens; the first character must be a letter or digit. Names are unique per workspace; duplicates return 409.
+- POST `/api/workspaces/:slug/emojis` `{name,dataUrl}` or `{name,url}` → 201 `{id,name,url,createdBy,createdAt}`. Upload limit is 2 MiB; external image URLs must use HTTPS. An existing `/files/` upload may be reused only if it belongs to this workspace and is not bound to a page. Same-server asset URLs are normalized to a permanent path, discarding temporary grants. The host does not fetch external URLs. Names are normalized to lowercase and use 1–64 ASCII letters, digits, underscores or hyphens; the first character must be a letter or digit. Names are unique per workspace; duplicates return 409.
+- PATCH `/api/workspaces/:slug/emojis/:id` `{name}` → updated emoji. Creator with workspace edit rights or workspace administrator only; ID and image URL are preserved, duplicate names return 409.
 - DELETE `/api/workspaces/:slug/emojis/:id` → `{ok:true}`. Only the creator or a workspace administrator can remove an emoji. Its uploaded file remains available to existing page icons and document history.
 
 Uploads accept base64 data URLs whose declared type matches the detected PNG/JPEG/GIF/WebP bytes. SVG and other active content are rejected. Both image and emoji routes accept a workspace ID in place of its slug. Page cover metadata can retain a gallery key, an uploaded asset URL, or an HTTPS image URL.

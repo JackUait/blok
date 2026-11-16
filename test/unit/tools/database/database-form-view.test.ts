@@ -1017,6 +1017,21 @@ describe('DatabaseFormView drag to reorder questions', () => {
     expect(zones().filter((zone) => zone.hasAttribute('data-target'))).toHaveLength(1);
   });
 
+  // The lines mount on <body>, outside the editor's tokens: they carry the form's resolved ones.
+  it('the lines take the form\'s resolved line colour and pill radius', () => {
+    const { root } = setup();
+    const agree = question(root, 'agree');
+
+    if (agree === null) throw new Error('no card');
+    root.style.setProperty('--blok-database-drop-line', 'rgb(1, 2, 3)');
+    root.style.setProperty('--blok-radius-pill', '9999px');
+    press(agree, 600);
+    moveTo(250);
+
+    expect(zones()[0]?.style.backgroundColor).toBe('rgb(1, 2, 3)');
+    expect(zones()[0]?.style.borderRadius).toBe('9999px');
+  });
+
   it('a drop beside the card itself moves nothing', () => {
     const { root, moveQuestion } = setup();
     const agree = question(root, 'agree');

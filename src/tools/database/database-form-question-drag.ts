@@ -128,13 +128,16 @@ export class DatabaseFormQuestionDrag {
   private zone(): HTMLElement {
     const zone = document.createElement('div');
     // The line mounts on <body>, outside the editor's token scope.
-    const color = getComputedStyle(this.form).getPropertyValue('--blok-database-drop-line').trim();
+    const style = getComputedStyle(this.form);
+    const color = style.getPropertyValue('--blok-database-drop-line').trim();
+    const radius = style.getPropertyValue('--blok-radius-pill').trim();
 
     zone.setAttribute('data-blok-database-form-drop-zone', '');
     zone.setAttribute('aria-hidden', 'true');
     zone.style.position = 'fixed';
     zone.style.pointerEvents = 'none';
     if (color !== '') zone.style.backgroundColor = color;
+    if (radius !== '') zone.style.borderRadius = radius;
     document.body.appendChild(zone);
 
     return zone;

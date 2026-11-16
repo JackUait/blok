@@ -245,13 +245,26 @@ describe('database timeline styles', () => {
     const picked = '[data-blok-database-timeline-row][data-blok-database-row-selected]';
 
     expect(ruleBody(picked)).toContain('background-image: none');
-    const halo = ruleBody(`${picked} [data-blok-database-timeline-bar]::after`);
+    const halo = ruleBody('[data-blok-database-timeline-bar]::after');
 
+    expect(ruleBody(`${picked} [data-blok-database-timeline-bar]::after`)).toContain('opacity: 1');
     expect(halo).toContain('inset: 2px');
     expect(halo).toContain('border-start-start-radius: inherit');
     expect(halo).toContain('border-end-end-radius: inherit');
     expect(halo).toContain('pointer-events: none');
     expect(halo).toContain('background-color: var(--blok-icon-active-bg)');
+  });
+
+  // notion-motion.md Round 50 §2, Round 51 §5: a cleared pick fades its halo out over 200ms ease (Escape or a click outside).
+  it('fades a picked bar halo out over 200ms ease and shows it at once', () => {
+    const halo = ruleBody('[data-blok-database-timeline-bar]::after');
+    const picked = ruleBody('[data-blok-database-timeline-row][data-blok-database-row-selected] [data-blok-database-timeline-bar]::after');
+
+    expect(halo).toContain('opacity: 0');
+    expect(halo).toMatch(/transition:\s*opacity 200ms ease/);
+    expect(picked).toContain('opacity: 1');
+    expect(picked).toMatch(/transition:\s*none/);
+    expect(timelineCss.slice(timelineCss.lastIndexOf('@media (prefers-reduced-motion: reduce)'))).toContain('[data-blok-database-timeline-bar]::after');
   });
 
   // research/35 §1.5: hover ≈ rgba(33, 27, 23, 0.051) light, rgba(255, 255, 255, 0.055) dark, over the bar fill.

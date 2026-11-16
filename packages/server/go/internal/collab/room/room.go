@@ -13,6 +13,7 @@ import (
 	"github.com/JackUait/blok/packages/server/go/v2/internal/collab"
 	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/wire"
 	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/workingset"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/mcptiming"
 	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs"
 )
 
@@ -204,9 +205,12 @@ func (r *Room) requestPurge() { r.purgeRequested.Store(true) }
 
 // run is RunAsync: the operation holds the lane.
 func (r *Room) run(ctx context.Context, operation func() error) error {
+	stopWait := mcptiming.Span(ctx, "lane_wait")
 	if err := r.lane.enter(ctx); err != nil {
+		stopWait()
 		return err
 	}
+	stopWait()
 	defer r.lane.leave()
 	return operation()
 }

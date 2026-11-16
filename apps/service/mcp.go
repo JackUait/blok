@@ -29,9 +29,14 @@ func (s *Service) initMCP() error {
 	if err != nil {
 		return err
 	}
+	s.mcpTimingEnabled = mcpTimingFlag()
+	if s.mcpTimingEnabled {
+		s.mcpTraceWriter = newMCPTraceWriter(s.saveMCPTiming)
+	}
 	attached, err := blokmcp.Embed(blokmcp.Options{
 		Rooms:     rooms,
 		Authorize: s.authorizeMCPDocument,
+		OnTiming:  s.recordMCPTiming,
 	}, blokmcp.EmbedOptions{Caller: func(ctx context.Context, _ *mcp.CallToolRequest) (*blokmcp.CallerIdentity, error) {
 		u, ok := ctx.Value(mcpUserKey{}).(identity)
 		if !ok {
@@ -46,6 +51,7 @@ func (s *Service) initMCP() error {
 	sdk := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server {
 		server := mcp.NewServer(&mcp.Implementation{Name: "blok-cloud", Version: "1.1.0"}, &mcp.ServerOptions{Instructions: "Start with blok_capabilities to discover your identity, roles and management tools. Use native MCP tools for teamspaces, members, workspace and instance administration; no session cookie or REST fallback is needed. Workspace admin and instance admin are distinct. Never assume admin grants private-page access. Invitations send email and account deletion is permanent: use only for the user's explicit request. Workspace pages are listed and created with workspace tools. Use blok_move_page to reparent an existing page and its subtree without recreating it. Use blok_delete_page to move a page and its descendants to trash without replacing the workspace index. Document content is edited with blok_open, blok_read and blok_execute.\n\n" + attached.Instructions()})
 		s.registerMCPManagement(server)
+		s.registerMCPDebugTraces(server)
 		server.AddTool(&mcp.Tool{Name: "blok_list_workspaces", Description: "List workspaces available to the signed-in user.", InputSchema: json.RawMessage(`{"type":"object","properties":{}}`)}, s.mcpListWorkspaces)
 		server.AddTool(&mcp.Tool{Name: "blok_list_teamspaces", Description: "List real closed teamspaces nested in a workspace; metadata does not grant content access.", InputSchema: json.RawMessage(`{"type":"object","properties":{"workspace":{"type":"string"},"includeArchived":{"type":"boolean"}},"required":["workspace"]}`)}, s.mcpListTeamspaces)
 		server.AddTool(&mcp.Tool{Name: "blok_list_pages", Description: "List pages in a workspace by slug.", InputSchema: json.RawMessage(`{"type":"object","properties":{"workspace":{"type":"string"}},"required":["workspace"]}`)}, s.mcpListPages)

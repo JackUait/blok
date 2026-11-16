@@ -144,3 +144,16 @@ INSERT INTO schema_migrations(version) VALUES(10) ON CONFLICT DO NOTHING;
 
 -- Account avatar is independent of every workspace's icon. Existing accounts retain their names.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url text NOT NULL DEFAULT '';
+
+-- Temporary opt-in MCP timings contain internal metadata, never document content.
+CREATE TABLE IF NOT EXISTS mcp_debug_traces(
+ trace_id text PRIMARY KEY,
+ user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+ tool text NOT NULL,
+ started_at timestamptz NOT NULL,
+ duration_ms double precision NOT NULL CHECK(duration_ms>=0),
+ document_ref text NOT NULL DEFAULT '',
+ data jsonb NOT NULL CHECK(octet_length(data::text)<=131072)
+);
+CREATE INDEX IF NOT EXISTS mcp_debug_traces_user_date ON mcp_debug_traces(user_id,started_at DESC);
+INSERT INTO schema_migrations(version) VALUES(11) ON CONFLICT DO NOTHING;

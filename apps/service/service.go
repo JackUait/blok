@@ -32,24 +32,26 @@ import (
 var schema string
 
 type Service struct {
-	DB             *pgxpool.Pool
-	aiCipher       cipher.AEAD
-	aiClient       *http.Client
-	aiInFlight     map[string]int
-	aiMu           sync.Mutex
-	Config         Config
-	Blok           *blokserver.Server
-	MCP            *blokmcp.Attached
-	mcpHandler     http.Handler
-	mux            *http.ServeMux
-	observed       map[string]int
-	observedMu     sync.Mutex
-	draining       atomic.Bool
-	accessCancel   context.CancelFunc
-	accessDone     chan struct{}
-	settingsValue  atomic.Pointer[InstanceSettings]
-	settingsCancel context.CancelFunc
-	settingsDone   chan struct{}
+	DB               *pgxpool.Pool
+	aiCipher         cipher.AEAD
+	aiClient         *http.Client
+	aiInFlight       map[string]int
+	aiMu             sync.Mutex
+	Config           Config
+	Blok             *blokserver.Server
+	MCP              *blokmcp.Attached
+	mcpHandler       http.Handler
+	mcpTimingEnabled bool
+	mcpTraceWriter   *mcpTraceWriter
+	mux              *http.ServeMux
+	observed         map[string]int
+	observedMu       sync.Mutex
+	draining         atomic.Bool
+	accessCancel     context.CancelFunc
+	accessDone       chan struct{}
+	settingsValue    atomic.Pointer[InstanceSettings]
+	settingsCancel   context.CancelFunc
+	settingsDone     chan struct{}
 }
 type User struct {
 	AvatarURL     string `json:"avatarUrl,omitempty"`
@@ -92,6 +94,7 @@ func New(ctx context.Context, c Config) (*Service, error) {
 		if tx != nil {
 			_ = tx.Rollback(ctx)
 		}
+		s.mcpTraceWriter.close()
 		db.Close()
 		return nil, e
 	}
@@ -171,6 +174,7 @@ func (s *Service) Close() {
 	if s.MCP != nil {
 		s.MCP.Close()
 	}
+	s.mcpTraceWriter.close()
 	s.DB.Close()
 }
 func (s *Service) Drain(ctx context.Context) error {

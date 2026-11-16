@@ -280,6 +280,9 @@ func (s *Service) mcpCapabilities(ctx context.Context, _ *mcp.CallToolRequest) (
 	for _, op := range s.managementOperations() {
 		ops = append(ops, map[string]any{"tool": op.name, "description": op.description, "readOnly": op.method == "GET"})
 	}
+	if s.mcpTimingEnabled {
+		ops = append(ops, map[string]any{"tool": "blok_debug_traces", "description": "Read your own temporary MCP timing summaries or trace detail.", "readOnly": true})
+	}
 	return mcpText(map[string]any{
 		"user": map[string]any{"id": u.ID, "name": u.Name, "email": u.Email, "instanceAdmin": u.InstanceAdmin}, "workspaces": workspaces, "management": ops,
 		"workspaceCreation":  s.settings().WorkspaceCreation,

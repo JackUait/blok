@@ -7,6 +7,7 @@ import (
 
 	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 	"github.com/JackUait/blok/packages/server/go/v2/internal/jsruntime"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/mcptiming"
 )
 
 // invoker is the runtime seam; tests put a scripted runtime behind it.
@@ -58,7 +59,10 @@ func New(options FactoryOptions) (*Executor, error) {
 func newExecutor(runtime invoker) *Executor { return &Executor{runtime: runtime} }
 
 func (e *Executor) invoke(ctx context.Context, op string, input *jsjson.Node) (string, error) {
+	stopJSON := mcptiming.Span(ctx, "runtime_input_json")
 	written, err := write(input)
+	stopJSON()
+	mcptiming.Count(ctx, "runtime_input_bytes", len(written))
 	if err != nil {
 		return "", err
 	}
@@ -195,7 +199,10 @@ func (e *Executor) agentExecute(ctx context.Context, input *jsjson.Node) (*jsjso
 	if err != nil {
 		return nil, err
 	}
+	mcptiming.Count(ctx, "runtime_output_bytes", len(answer))
+	stopJSON := mcptiming.Span(ctx, "runtime_output_json")
 	output, err := parse(answer)
+	stopJSON()
 	if err != nil {
 		return nil, err
 	}

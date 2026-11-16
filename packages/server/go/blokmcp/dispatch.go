@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"sync"
+
+	"github.com/JackUait/blok/packages/server/go/v2/internal/mcptiming"
 )
 
 // caller is who makes a call: the principal, the cleaned client name and
@@ -90,6 +92,11 @@ func (s *Server) actorFor(ctx context.Context, principal string, rawClientName *
 // answer; any other error is a JSON-RPC internal error.
 func (s *Server) dispatch(ctx context.Context, call *toolCall) (*outcome, error) {
 	defer s.track()()
+	if s.options.OnTiming != nil {
+		ctx = mcptiming.WithSink(ctx, func(report json.RawMessage) { s.options.OnTiming(ctx, report) })
+	}
+	ctx, finishTiming := mcptiming.Start(ctx, call.name)
+	defer finishTiming()
 	// Node checks the client's cancel only before an open hands out its
 	// handle; a batch that runs is saved even if the client hung up.
 	signal := ctx
@@ -210,12 +217,18 @@ func (s *Server) plainAnswer(content json.RawMessage) *outcome {
 }
 
 func (s *Server) onHandle(ctx context.Context, who *caller, handle string, write bool, operation func(session) error) error {
+	waited := mcptiming.Span(ctx, "handle_wait")
+	defer waited()
 	use := s.handles.use
 	if s.shared != nil {
 		use = s.shared.use
 	}
 	return use(ctx, handle, who.principal, func(sess session, documentID string) error {
+		waited()
+		mcptiming.Document(ctx, documentID)
+		authorized := mcptiming.Span(ctx, "authorize")
 		allowed, err := s.allowed(ctx, who.principal, documentID, write)
+		authorized()
 		if err != nil {
 			return err
 		}
@@ -403,7 +416,10 @@ func (s *Server) openFound(ctx context.Context, step *callStep, documentID strin
 // open is the opener: authorize, resolve the mode, then a stored or live
 // session.
 func (s *Server) open(ctx context.Context, documentID, requested string, write bool, who *caller) (session, error) {
+	mcptiming.Document(ctx, documentID)
+	authorized := mcptiming.Span(ctx, "authorize")
 	allowed, err := s.allowed(ctx, who.principal, documentID, write)
+	authorized()
 	if err != nil {
 		return nil, err
 	}

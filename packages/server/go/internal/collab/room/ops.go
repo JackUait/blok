@@ -14,6 +14,7 @@ import (
 	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/operation"
 	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/wire"
 	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/workingset"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/mcptiming"
 	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs"
 )
 
@@ -74,7 +75,7 @@ func (r *Room) edit(ctx context.Context, plan PlanOps, gateFrameSize bool, opera
 	actorID string, expect *Precondition, applied Applied, note *RecordNote) (*EditResult, error) {
 	var result *EditResult
 	err := r.run(ctx, func() (err error) {
-		result, err = r.editLocked(plan, gateFrameSize, operationID, digest, actorID, expect, applied, false, note)
+		result, err = r.editLocked(ctx, plan, gateFrameSize, operationID, digest, actorID, expect, applied, false, note)
 		return err
 	})
 	return result, err
@@ -85,14 +86,15 @@ func (r *Room) edit(ctx context.Context, plan PlanOps, gateFrameSize bool, opera
 func (r *Room) preview(ctx context.Context, plan PlanOps, expect *Precondition) (*EditResult, error) {
 	var result *EditResult
 	err := r.run(ctx, func() (err error) {
-		result, err = r.editLocked(plan, false, "", nil, "", expect, nil, true, nil)
+		result, err = r.editLocked(ctx, plan, false, "", nil, "", expect, nil, true, nil)
 		return err
 	})
 	return result, err
 }
 
-func (r *Room) editLocked(plan PlanOps, gateFrameSize bool, operationID string, digest []byte,
+func (r *Room) editLocked(callerCtx context.Context, plan PlanOps, gateFrameSize bool, operationID string, digest []byte,
 	actorID string, expect *Precondition, applied Applied, dryRun bool, note *RecordNote) (*EditResult, error) {
+	ctx := mcptiming.Carry(r.lifetime, callerCtx)
 	if r.purgeRequested.Load() {
 		return &EditResult{Status: EditPurged}, nil
 	}
@@ -100,7 +102,10 @@ func (r *Room) editLocked(plan PlanOps, gateFrameSize bool, operationID string, 
 		return nil, nil
 	}
 	if r.state == stateNew {
-		if failure := r.tryLoadLocked(); failure != nil {
+		stopLoad := mcptiming.Span(ctx, "room_load")
+		failure := r.tryLoadLocked()
+		stopLoad()
+		if failure != nil {
 			r.closeRoomLocked(nil)
 			status := EditSeedFailed
 			switch failure.open {
@@ -119,7 +124,9 @@ func (r *Room) editLocked(plan PlanOps, gateFrameSize bool, operationID string, 
 	if r.session != nil {
 		if !dryRun {
 			ctx, cancel := r.boundedLocked()
-			committed, err := r.session.FindCommitted(ctx, operationID, digest)
+			stopLookup := mcptiming.Span(callerCtx, "journal_lookup")
+			committed, err := r.session.FindCommitted(mcptiming.Carry(ctx, callerCtx), operationID, digest)
+			stopLookup()
 			cancel()
 			if err != nil {
 				r.failCommitLocked("look up an operation id", err)
@@ -141,10 +148,12 @@ func (r *Room) editLocked(plan PlanOps, gateFrameSize bool, operationID string, 
 		}
 	}
 
-	ops, err := plan(r.lifetime, r.doc)
+	ops, err := plan(ctx, r.doc)
 	if err == nil && gateFrameSize && len(ops) > 0 {
 		var fits bool
+		stopFrame := mcptiming.Span(ctx, "frame_check")
 		fits, err = r.fitsOneFrameLocked(ops)
+		stopFrame()
 		if err == nil && !fits {
 			r.updateEvictionLocked(-1)
 			return &EditResult{Status: EditTooLarge, Err: &convert.EditError{Message: "collab: the restore is larger than one update may be."}}, nil
@@ -169,7 +178,9 @@ func (r *Room) editLocked(plan PlanOps, gateFrameSize bool, operationID string, 
 
 	r.localUpdates = nil
 	if r.session == nil {
-		err := r.converter.ApplyOps(r.lifetime, r.doc, ops)
+		stopApply := mcptiming.Span(ctx, "apply_ops")
+		err := r.converter.ApplyOps(ctx, r.doc, ops)
+		stopApply()
 		r.publishLocalUpdatesLocked()
 		r.updateEvictionLocked(-1)
 		if err != nil {
@@ -192,7 +203,7 @@ func (r *Room) editLocked(plan PlanOps, gateFrameSize bool, operationID string, 
 		}
 		r.markDirtyLocked()
 		if applied != nil {
-			if err := applied(r.lifetime, r.doc, nil); err != nil {
+			if err := applied(ctx, r.doc, nil); err != nil {
 				return nil, err
 			}
 		}
@@ -200,7 +211,10 @@ func (r *Room) editLocked(plan PlanOps, gateFrameSize bool, operationID string, 
 	}
 
 	stateBefore := r.doc.EncodeStateVector()
-	if err := r.converter.ApplyOps(r.lifetime, r.doc, ops); err != nil {
+	stopApply := mcptiming.Span(ctx, "apply_ops")
+	applyErr := r.converter.ApplyOps(ctx, r.doc, ops)
+	stopApply()
+	if err := applyErr; err != nil {
 		r.localUpdates = nil
 		if refusal, ok := isEditRefusal(err); ok {
 			r.updateEvictionLocked(-1)
@@ -221,7 +235,7 @@ func (r *Room) editLocked(plan PlanOps, gateFrameSize bool, operationID string, 
 		r.updateEvictionLocked(-1)
 		receipt := &Receipt{r.tag, r.committedThrough}
 		if applied != nil {
-			if err := applied(r.lifetime, r.doc, receipt); err != nil {
+			if err := applied(ctx, r.doc, receipt); err != nil {
 				return nil, err
 			}
 		}
@@ -236,7 +250,9 @@ func (r *Room) editLocked(plan PlanOps, gateFrameSize bool, operationID string, 
 		return &EditResult{Status: EditUnavailable}, nil
 	}
 	update := r.localUpdates[0]
+	stopAppend := mcptiming.Span(ctx, "journal_append")
 	sequence, ok := r.appendCommittedLocked(operationID, actorID, collab.SourceHTTPEdit, update, digest, note)
+	stopAppend()
 	if !ok {
 		return &EditResult{Status: EditUnavailable}, nil
 	}
@@ -247,7 +263,7 @@ func (r *Room) editLocked(plan PlanOps, gateFrameSize bool, operationID string, 
 	r.updateEvictionLocked(-1)
 	receipt := &Receipt{r.tag, sequence}
 	if applied != nil {
-		if err := applied(r.lifetime, r.doc, receipt); err != nil {
+		if err := applied(ctx, r.doc, receipt); err != nil {
 			return nil, err
 		}
 	}

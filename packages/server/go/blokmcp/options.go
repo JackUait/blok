@@ -38,6 +38,11 @@ type Options struct {
 	// logged and the client gets fixed words.
 	Authorize AuthorizeFunc `json:"-"`
 
+	// OnTiming receives a bounded diagnostic report after a tool call when
+	// BLOK_MCP_TIMING=1. It contains timings and sizes, never input or output
+	// content. The host must enqueue it without blocking the caller.
+	OnTiming func(context.Context, json.RawMessage) `json:"-"`
+
 	// AgentActor, when set, builds the session's actor from the principal
 	// and the cleaned client name. The ticket "user" must equal its ID.
 	// Blocks the agent writes name OnBehalfOf in createdBy/lastEditedBy and

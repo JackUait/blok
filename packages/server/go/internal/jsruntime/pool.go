@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/JackUait/blok/packages/server/go/v2/internal/mcptiming"
 	"github.com/dop251/goja"
 )
 
@@ -285,20 +286,29 @@ func (p *Pool) Invoke(ctx context.Context, op, input string, timeout *time.Durat
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
+	mcptiming.Count(ctx, "runtime_input_bytes", len(input))
+	stopWait := mcptiming.Span(ctx, "pool_wait")
 	var engine *Runtime
 	select {
 	case engine = <-p.engines:
 	case <-ctx.Done():
+		stopWait()
 		return "", ctx.Err()
 	}
+	stopWait()
+	stopExecute := mcptiming.Span(ctx, "runtime_execute")
 
 	result, reusable, err := engine.guardedInvoke(ctx, op, input, limit, p.budget)
+	stopExecute()
+	mcptiming.Count(ctx, "runtime_output_bytes", len(result))
 	if !reusable {
 		// A slot that is not refilled is lost for good, so a failed rebuild
 		// puts the spent engine back.
+		stopRebuild := mcptiming.Span(ctx, "runtime_rebuild")
 		if fresh, loadErr := p.load(); loadErr == nil {
 			engine = fresh
 		}
+		stopRebuild()
 	}
 	// Never blocks: the channel holds exactly the engines taken from it.
 	p.engines <- engine

@@ -8,6 +8,7 @@ import (
 
 	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 	"github.com/JackUait/blok/packages/server/go/v2/internal/jsruntime"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/mcptiming"
 	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs"
 )
 
@@ -123,13 +124,20 @@ func (c *DocConverter) MigrateRichText(ctx context.Context, doc *yjs.Doc) (int, 
 // Export is {time, blocks, title?, icon?, cover?}, the legacy HTML slots read to segments.
 func (c *DocConverter) Export(ctx context.Context, doc *yjs.Doc) (*jsjson.Object, error) {
 	now := c.Now().UnixMilli()
+	stopWalk := mcptiming.Span(ctx, "export_walk")
 	blocks, slots, err := Export(doc, c.fields(), c.Log)
+	stopWalk()
+	mcptiming.Count(ctx, "legacy_html_slots", len(slots))
+	mcptiming.Count(ctx, "document_blocks", len(blocks))
 	if err != nil {
 		return nil, err
 	}
 	// Read with the blocks, before any wait, so both come from one state.
 	page := ExportPage(doc)
-	if err := c.Resolve(ctx, slots); err != nil {
+	stopResolve := mcptiming.Span(ctx, "export_resolve_html")
+	resolveErr := c.Resolve(ctx, slots)
+	stopResolve()
+	if err := resolveErr; err != nil {
 		return nil, err
 	}
 	output := &jsjson.Object{}

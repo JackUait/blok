@@ -13,6 +13,7 @@ import (
 	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/docendpoint"
 	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/room"
 	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/mcptiming"
 	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs"
 )
 
@@ -88,6 +89,8 @@ func (e *Executor) roomCommon(options *Options) (*jsjson.Node, error) {
 // head "lineage:sequence", never the bundle's content hash. Without Rooms
 // it answers COMMAND_UNAVAILABLE and never runs the bundle.
 func (e *Executor) ExecuteInRoom(ctx context.Context, docID, batchJSON string, actor Actor, options *Options) (Execution, error) {
+	mcptiming.Document(ctx, docID)
+	defer mcptiming.Span(ctx, "room_execute")()
 	if docID == "" {
 		return Execution{}, &ArgumentError{Param: "docId", Message: "The value cannot be an empty string."}
 	}
@@ -251,20 +254,29 @@ func (e *Executor) ExecuteInRoom(ctx context.Context, docID, batchJSON string, a
 	operationID := newGUID()
 	digest := sha256.Sum256([]byte("agent\n" + actor.ID + "\n" + batchJSON))
 	edit, err := e.rooms.manager.AgentEdit(ctx, docID, func(ctx context.Context, doc *yjs.Doc) ([]convert.EditOp, error) {
+		stopExport := mcptiming.Span(ctx, "document_export")
 		exported, err := e.rooms.manager.Converter().Export(ctx, doc)
+		stopExport()
 		if err != nil {
 			return nil, err
 		}
 		before = exported
 		beforeMaps = convert.ReadPageMaps(doc)
+		stopJSON := mcptiming.Span(ctx, "export_json")
 		document, err := toNodeJSON(exported)
+		stopJSON()
 		if err != nil {
 			return nil, err
+		}
+		if blocks, lookupErr := document.Lookup("blocks"); lookupErr == nil && blocks != nil {
+			mcptiming.Count(ctx, "document_blocks", len(blocks.Items))
 		}
 		if err := input.Set("document", document); err != nil {
 			return nil, fromJSON(err)
 		}
+		stopAgent := mcptiming.Span(ctx, "agent_execute")
 		output, err := e.agentExecute(ctx, input)
+		stopAgent()
 		if err != nil {
 			return nil, err
 		}

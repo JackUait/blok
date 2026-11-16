@@ -54,6 +54,58 @@ Integration tests create and drop a unique PostgreSQL schema. They use an in-mem
 
 The API contract is in [API.md](API.md). Administrators can attach an optional plain-text invitation note of up to 2,000 Unicode characters; the note is delivered in the email and is not stored with the invitation. Tickets contain a session digest rather than a reusable bearer token. This permits immediate rechecking of logout, session expiry and membership/role changes, including established WebSockets. Logout, role changes, member removal and workspace index changes trigger Blok `RecheckAccess` immediately; an observed-document sweep rechecks expiry every five seconds and closes denied live sockets. Journal actor identifiers therefore represent sessions; they are not stable user profile identifiers.
 
+## Diagnosing slow MCP calls on the Go host
+
+Set `BLOK_MCP_TIMING=1` in the deployment environment and recreate the `app`
+container after deploying this version. Both deployment Compose files forward
+this variable; it is off by default. Reproduce a `blok_open` / `blok_read` on
+the slow page and on a small page, then collect the application logs:
+
+```sh
+cd deploy
+./stack.sh logs --since 10m --no-color app | grep -E 'blok_mcp_timing|MCP timing'
+```
+
+For a prebuilt-image deployment use the same `logs` arguments with
+`docker compose --env-file .env -f compose.images.yaml` instead of `./stack.sh`.
+Trace event lines contain JSON after `blok_mcp_timing`. Group lines by
+`trace`; `document_ref` is a hash of the document identifier. The logs contain
+timings and counts, never document contents, command arguments, tokens, user
+identities or exception messages. They are written to server stderr. Completed
+reports are also queued asynchronously into PostgreSQL's `mcp_debug_traces`,
+with the caller's user ID used only to restrict access. The queue holds at most
+32 reports and each report is capped; a slow or failed database cannot block
+the MCP call. Saturated queues may drop diagnostic reports, with a bounded
+warning in the server logs.
+
+While enabled, `blok_capabilities` advertises the temporary read-only tool
+`blok_debug_traces`. Each signed-in caller sees only their own traces:
+
+```json
+{"minDurationMs":1000,"limit":10}
+```
+
+The list contains summaries. Pass `{"traceId":"<traceId from the list>"}` to
+read one report's stages. Persistence is asynchronous, so a just-finished call
+may take a moment to appear. The tool excludes traces older than 24 hours;
+each insert purges old rows and retains at most 1,000 reports globally. Reports
+contain at most 256 events (60 KiB); `truncated` marks longer calls.
+
+The `start` / `finish` pair measures tool dispatch (after transport authentication).
+`begin` / `end` pairs identify stages, including `handle_wait`, `authorize`,
+`lane_wait`, `journal_lookup`, `document_export`, `export_json`, `agent_execute`,
+`pool_wait` and `runtime_execute`. Counts include serialized input size, block
+count and legacy HTML slots. Stages nest: do not add parent and child durations.
+An unfinished stage helps locate an interrupted or still-running call. Room
+operations retain their existing lifetime and cancellation behavior.
+
+Compare repeated calls and note whether an import or another editor was active.
+Disable `BLOK_MCP_TIMING` and recreate the container after collecting the sample;
+logging every stage adds overhead. This stops recording and removes the debug
+tool. Existing diagnostic rows remain until the next enabled cleanup or an
+explicit removal of this temporary table. These diagnostics target this Go
+deployment and do not change existing document commands or their responses.
+
 ## Data safety
 
 Back up PostgreSQL, the **entire** journal directory, uploads, configuration and deployed version together after draining/stopping the application. A PostgreSQL-only backup may omit the newest acknowledged collaboration changes. Restore all components before restarting one instance. Soft deletion/trash only blocks access; journal and assets remain retained for history and restores. Uploaded assets are private to workspace membership, including retained/duplicated documents.

@@ -67,7 +67,7 @@ describe('markdown.insert with blocks inside a list item', () => {
 
       const segments = serializer.toRichSegments(block.data.text) ?? [];
 
-      return segments.map((segment) => String(segment.text)).join('');
+      return segments.map((segment) => ('text' in segment ? segment.text : '')).join('');
     };
 
     expect(blocks.filter((b) => b.id !== 'p').map((b) => ({ text: label(b.id), parent: label(b.parent), content: b.content?.map(label) })))

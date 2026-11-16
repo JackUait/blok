@@ -43,7 +43,7 @@ const pasteIntoParagraph = async (
   html: string,
   plain: string,
   tools: Record<string, ToolConstructable | ToolSettings>
-): Promise<string> => {
+): Promise<unknown> => {
   const instance = new Blok({
     holder,
     tools: { paragraph: Paragraph, ...tools },

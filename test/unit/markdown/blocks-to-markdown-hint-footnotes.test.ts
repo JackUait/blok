@@ -1,10 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { blocksToMarkdown as domBlocksToMarkdown, blocksToMarkdownWithReport } from '../../../src/markdown/blocks-to-markdown';
+import type { SerializableBlock } from '../../../src/markdown/blocks-to-markdown-core';
 import { blocksToMarkdown as viewBlocksToMarkdown } from '../../../src/view/blocks-to-markdown';
 
 const paragraph = (id: string, text: string): { id: string; type: string; data: { text: string } } =>
   ({ id, type: 'paragraph', data: { text } });
+
+// The DOM serializer names a block's tool `tool`; saved data names it `type`.
+const asSerializable = (blocks: ReturnType<typeof paragraph>[]): SerializableBlock[] =>
+  blocks.map(({ id, type, data }) => ({ id, tool: type, data }));
 
 const hint = (phrase: string, text: string, subtitle?: string): string => {
   const quote = (value: string): string => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
@@ -14,7 +19,7 @@ const hint = (phrase: string, text: string, subtitle?: string): string => {
 };
 
 const BACKENDS: Array<[string, (blocks: ReturnType<typeof paragraph>[]) => string]> = [
-  ['dom', blocks => domBlocksToMarkdown(blocks)],
+  ['dom', blocks => domBlocksToMarkdown(asSerializable(blocks))],
   ['view', blocks => viewBlocksToMarkdown({ blocks })],
 ];
 
@@ -94,7 +99,7 @@ describe.each(BACKENDS)('hint footnotes in Markdown (%s)', (_name, toMarkdown) =
 
 describe('hint footnotes report', () => {
   it('reports no loss for a hint', () => {
-    const { warnings } = blocksToMarkdownWithReport([ paragraph('a', hint('phrase', 'A quote')) ]);
+    const { warnings } = blocksToMarkdownWithReport(asSerializable([ paragraph('a', hint('phrase', 'A quote')) ]));
 
     expect(warnings).toEqual([]);
   });

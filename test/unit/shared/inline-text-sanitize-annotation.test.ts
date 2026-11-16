@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { clean } from '../../../src/components/utils/sanitizer';
 import { ANNOTATION_ATTR, ANNOTATION_SUBTITLE_ATTR } from '../../../src/shared/annotation-mark';
-import { INLINE_TEXT_SANITIZE } from '../../../src/shared/inline-text-sanitize';
+import { INLINE_TEXT_SANITIZE, protectAnnotationSpan } from '../../../src/shared/inline-text-sanitize';
 import { sanitizeHtmlFragment } from '../../../src/view/sanitize';
 
 const SANITIZERS: Array<[string, (html: string) => string]> = [
@@ -77,5 +77,19 @@ describe.each(SANITIZERS)('annotation span in the %s sanitizer', (_name, run) =>
     const result = run('<span data-latex="a^2" class="katex">a²</span>');
 
     expect(result).toBe('<span data-latex="a^2">a^2</span>');
+  });
+});
+
+describe('protectAnnotationSpan', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('unwraps a plain span when the tools gave span a plaintext rule', () => {
+    expect(clean('a <span class="x">b</span> c', { span: protectAnnotationSpan('plaintext') })).toBe('a b c');
   });
 });

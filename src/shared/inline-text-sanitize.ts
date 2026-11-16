@@ -9,6 +9,7 @@
  * tool spreads {@link INLINE_TEXT_SANITIZE} into its `text` sanitize config.
  */
 import type { SanitizerConfig } from '../../types';
+import type { TagConfig } from '../../types/configs/sanitizer-config';
 import { ANNOTATION_ATTR, ANNOTATION_SUBTITLE_ATTR } from './annotation-mark';
 import { EQUATION_SOURCE_ATTR } from './equation-mark';
 import { preservePageReferenceAnchor } from './page-reference';
@@ -110,7 +111,7 @@ export const preserveInlineSpan = (node: Element): { [attr: string]: boolean | s
  */
 export const protectAnnotationSpan = (
   ordinaryRule: SanitizerConfig[string] | undefined
-): ((node: Element) => { [attr: string]: boolean | string } | boolean | string) => (node) => {
+): ((node: Element) => TagConfig) => (node) => {
   const text = node.getAttribute(ANNOTATION_ATTR);
 
   if (text !== null && text !== '') {
@@ -121,7 +122,8 @@ export const protectAnnotationSpan = (
     return ordinaryRule(node);
   }
 
-  return ordinaryRule ?? false;
+  // 'plaintext' marks a data field, not a tag; as a tag rule it unwraps the span.
+  return ordinaryRule === 'plaintext' ? false : ordinaryRule ?? false;
 };
 
 /**

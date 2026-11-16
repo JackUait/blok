@@ -288,6 +288,16 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
   tree.setAttribute('data-blok-sidebar-tree', '');
   tree.setAttribute('aria-label', 'Pages');
 
+  const scrollViewport = document.createElement('div');
+  scrollViewport.setAttribute('data-blok-sidebar-scroll-viewport', '');
+  const scroll = document.createElement('div');
+  scroll.setAttribute('data-blok-sidebar-scroll', '');
+  scroll.addEventListener('scroll', () => {
+    scrollViewport.toggleAttribute('data-scrolled', scroll.scrollTop > 0);
+  }, { passive: true });
+  scroll.append(shortcuts, tree);
+  scrollViewport.append(scroll);
+
   const edge = document.createElement('div');
   edge.setAttribute('data-blok-sidebar-edge', '');
   const resize = document.createElement('div');
@@ -398,7 +408,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     setCollapsed(!sidebar.hasAttribute('data-collapsed'));
   });
 
-  sidebar.append(header, searchLabel, tabs, shortcuts, tree, edge);
+  sidebar.append(header, searchLabel, tabs, scrollViewport, edge);
   if (layout) { sidebar.style.width = `${layout.width}px`; setCollapsed(layout.collapsed, false); }
 
   const canvas = document.createElement('main');

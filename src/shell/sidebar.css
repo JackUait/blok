@@ -121,12 +121,43 @@
   color: var(--blok-search-input-placeholder);
 }
 
-[data-blok-sidebar-tree] {
+[data-blok-sidebar-header],
+[data-blok-sidebar-search] {
+  flex-shrink: 0;
+}
+
+/* Actions and pages share one native scroll area below the fixed tabs. */
+[data-blok-sidebar-scroll-viewport] {
+  position: relative;
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  background: inherit;
+}
+
+[data-blok-sidebar-scroll] {
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scroll-padding-top: 12px;
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
+}
+
+/* Fade the content, not the scrollbar or the floating page menus. */
+[data-blok-sidebar-scroll-viewport][data-scrolled]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  inset-inline-start: 0;
+  inset-inline-end: 8px;
+  height: 12px;
+  background: inherit;
+  mask-image: linear-gradient(black, transparent);
+  pointer-events: none;
+}
+
+[data-blok-sidebar-tree] {
   padding: 8px var(--blok-space-2) var(--blok-space-4);
 }
 
@@ -595,7 +626,7 @@
 [data-blok-sidebar-shortcut] svg { flex: none; width: 16px; height: 16px; }
 
 [data-blok-sidebar] button[hidden] { display: none; }
-[data-blok-sidebar-tree]:hover { scrollbar-color: var(--blok-text-secondary) transparent; }
+[data-blok-sidebar-scroll]:hover { scrollbar-color: var(--blok-text-secondary) transparent; }
 [data-blok-sidebar-teamspace] > button > span:not([data-blok-sidebar-teamspace-mark]) {
   flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 600;
 }

@@ -56,7 +56,11 @@ export const planViewBarFold = (parts: ViewBarParts): ViewBarFold => {
   if (all <= room) {
     return { tabs: 'all', icons, newButton };
   }
-  const fit = tabsThatFit(parts.tabs, parts.current, room - parts.more, 0);
+  const budget = room - parts.more;
+  // notion-motion.md Round 32 §3: a current view past the fit takes the last slot, it never adds one.
+  const slots = tabsThatFit(parts.tabs, -1, budget, 0).length;
+  const fitted = tabsThatFit(parts.tabs, parts.current, budget, 0);
+  const fit = fitted.length > slots ? [...fitted.slice(0, Math.max(0, slots - 1)), parts.current] : fitted;
   // Only "+" was short: one tab still folds, so "N more…" can offer New view.
   const dropped = fit.length < parts.tabs.length ? undefined : fit.filter((index) => index !== parts.current).at(-1);
   const shown = fit.filter((index) => index !== dropped);

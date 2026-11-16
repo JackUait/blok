@@ -37,7 +37,6 @@ import { COVER_GALLERY, readCoverFile, createAddCoverButton, createPageCover, is
 import { mountAgentAssistant, type AgentAssistantHandle } from '@blok/agent-assistant';
 import { bindAssistantButton, createAssistantButton, createWorkspaceAssistant } from './assistant';
 import { readAiPageSource } from './ai-page-source';
-import { openAiSummary, appendSummaryBlocks } from './ai-summary';
 import { CloudClient } from './cloud/client';
 import { nativeSessionAdapter } from './native-session';
 import { teamspaceClient } from './cloud/teamspaces';
@@ -853,21 +852,6 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   });
   ws.frame.canvas.append(assistantButton);
   if (panel) bindAssistantButton(assistantButton, panel);
-  const summaryButton = document.createElement('button');
-  summaryButton.type = 'button';
-  summaryButton.textContent = 'Résumer et structurer';
-  summaryButton.setAttribute('data-ai-summary-trigger', '');
-  summaryButton.addEventListener('click', () => openAiSummary({
-    ...createWorkspaceAssistant(ref),
-    remote: ref.kind === 'remote',
-    openSettings: () => ws.footer.dispatchEvent(new Event('blok:desktop-open-ai-settings')),
-    getSource: getAiSource,
-    targetId: ws.currentId,
-    append: async (sourceId, blocks) => {
-      appendSummaryBlocks({editor:ws.editor?.blocks ?? null,currentId:ws.currentId,sourceId,editable:!readOnly(sourceId)},blocks);
-    },
-  }));
-  ws.frame.canvas.append(summaryButton);
   ws.footer = createDesktopFooter((mode) => ws.editor?.theme.set(mode));
   ws.footer.addEventListener('blok:desktop-open-page', (event) => {
     const detail = (event as CustomEvent<{ pageId: string; seedWelcome?: boolean }>).detail;

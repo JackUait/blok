@@ -65,7 +65,6 @@
 [data-library-density=compact] [data-blok-database-table-cell] { min-height: 30px; padding-top: 4px; padding-bottom: 4px; }
 [data-page-library] > [role=status] { font-size: 12px; color: var(--desktop-muted); margin: 24px 0 0; }
 [data-desktop-page-created] { display: flex; gap: 32px; padding: 8px 0 20px; color: var(--desktop-muted); font-size: 13px; }
-[data-desktop-library] [data-ai-summary-trigger] { display: none; }
 @media (max-width: 600px) {
   [data-page-library] { padding: 48px 20px 20px; }
   [data-page-library] h1 { font-size: 26px; }

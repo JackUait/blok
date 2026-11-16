@@ -2,6 +2,8 @@
 
 ## Démonstration du 16 novembre 2026, après intégration / build commun
 
+Le bouton flottant « Résumer et structurer » a été retiré du workspace. Les étapes 3 à 6 ci-dessous décrivent le prototype de synthèse conservé dans le code, désormais sans point d'entrée dans l'interface. L'assistant reste accessible par son bouton dédié.
+
 1. Ouvrir une page locale ou une page distante accessible, avec contenu de test non sensible. Vérifier l'état de sauvegarde. L'édition distante n'a pas de cache hors ligne durable.
 2. Paramètres > Fonctionnalités > Assistant IA : utiliser uniquement une clé OpenAI déjà configurée et choisir un modèle réellement retourné par le catalogue. Alternative sur Mac : Codex ou Claude Code effectivement connecté via CLI. Aucune clé, connexion ou disponibilité de modèle n'est présumée. La clé personnelle OpenAI reste prioritaire sur celle du workspace selon le backend existant.
 3. Cliquer « Résumer et structurer ». Le fournisseur n'est jamais présélectionné. Coller le contenu IA ou « Charger la page ouverte », puis contrôler le texte affiché. Limite 24 000 caractères, sans troncature silencieuse. Aucune autre page ni historique de chat n'est envoyé dans ce flux.

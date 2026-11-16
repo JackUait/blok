@@ -9,7 +9,6 @@
 [data-ai-summary] [role=status] { min-height:21px; }
 [data-ai-summary-preview] { padding:16px; border:1px solid var(--desktop-border); border-radius:8px; margin:16px 0; white-space:pre-wrap; }
 [data-ai-summary-actions] { display:flex; flex-wrap:wrap; gap:4px; }
-[data-ai-summary-trigger] { position:fixed; right:66px; bottom:18px; z-index:29; padding:8px 12px; border:1px solid var(--desktop-border); border-radius:8px; color:var(--desktop-ink); background:var(--desktop-strip); cursor:pointer; font:inherit; font-size:12px; }
-[data-ai-summary] :focus-visible, [data-ai-summary-trigger]:focus-visible { outline:2px solid var(--blok-focus-ring); outline-offset:2px; }
+[data-ai-summary] :focus-visible { outline:2px solid var(--blok-focus-ring); outline-offset:2px; }
 
 body[data-blok-theme="light"] [data-ai-summary-overlay] { --desktop-strip:#f7f7f5; --desktop-ink:#242424; --desktop-muted:#717171; --desktop-border:#e8e8e6; }

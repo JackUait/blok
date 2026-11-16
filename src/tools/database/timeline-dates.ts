@@ -85,7 +85,7 @@ export const barGeometry = (span: EventSpan, windowStart: string, zoom: Timeline
  * end time, or one hour later when there is none. Null for a value with no
  * time, which keeps the day geometry.
  */
-export const hourBarGeometry = (values: BarValues, windowStart: string): { offset: number; width: number } | null => {
+export const hourBarGeometry = (values: BarValues, windowStart: string, dayWidth = TIMELINE_DAY_WIDTH.hours): { offset: number; width: number } | null => {
   const start = parseDateValue(values.start);
   const from = start === null ? null : minutesFrom(windowStart, start.start);
 
@@ -95,7 +95,7 @@ export const hourBarGeometry = (values: BarValues, windowStart: string): { offse
 
   const endPart = values.end === undefined ? start.end : parseDateValue(values.end)?.start;
   const to = endPart === undefined ? null : minutesFrom(windowStart, endPart);
-  const pxPerMinute = TIMELINE_DAY_WIDTH.hours / DAY_MINUTES;
+  const pxPerMinute = dayWidth / DAY_MINUTES;
   const length = to !== null && to > from ? to - from : HOUR_MINUTES;
 
   return { offset: from * pxPerMinute, width: Math.max(length * pxPerMinute, MIN_BAR_PX) };
@@ -202,6 +202,40 @@ export const moveBar = (values: BarValues, deltaDays: number, deltaMinutes?: num
   const end = values.end === undefined ? null : shift(values.end);
 
   return { ...(start !== null ? { start } : {}), ...(end !== null ? { end } : {}) };
+};
+
+/**
+ * Day zoom: moves a bar by minutes. An all-day bar becomes timed, from
+ * midnight of its first day to midnight after its last (notion-motion.md
+ * Round 48 A9: all-day Nov 18 moved 75 minutes read "Nov 18 1:15 AM → Nov 19 1:15 AM").
+ */
+export const moveBarByMinutes = (values: BarValues, deltaMinutes: number): BarWrite => {
+  const span = timelineSpan(values.start, values.end);
+  const startValue = parseDateValue(values.start);
+
+  if (deltaMinutes === 0 || span === null || startValue === null) {
+    return {};
+  }
+
+  const shift = (part: string): string => shiftPartByMinutes(part, deltaMinutes);
+  const startOf = (part: string): string => shift(TIMED_PART.test(part) ? part : `${part.slice(0, 10)}T00:00`);
+  const endOf = (part: string): string => shift(TIMED_PART.test(part) ? part : `${addDays(part.slice(0, 10), 1)}T00:00`);
+
+  if (values.end === undefined) {
+    if (startValue.hasTime && startValue.end === undefined) {
+      return { start: shift(startValue.start) };
+    }
+
+    return { start: `${startOf(startValue.start)}/${endOf(startValue.end ?? startValue.start)}` };
+  }
+
+  const endValue = parseDateValue(values.end);
+
+  if (startValue.hasTime && endValue === null) {
+    return { start: shift(startValue.start) };
+  }
+
+  return { start: startOf(startValue.start), end: endOf(endValue?.start ?? span.end) };
 };
 
 /** Both timed edges of a bar. A value with no end ends an hour later, as drawn. Null when an edge has no time. */

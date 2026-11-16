@@ -1208,6 +1208,27 @@ describe('DatabaseTimelineView', () => {
       expect(handlers.writeDates).toHaveBeenCalledWith('r1', { start: '2026-10-09T12:00' });
     });
 
+    // notion-motion.md Round 48 A9: a 60px Day-zoom drag moved an all-day bar 1h15m, and it stayed 24 hours wide.
+    it('moves a bar at Day zoom by 15-minute steps, an all-day bar becoming timed', () => {
+      const dayStart = timelineWindow(CENTER, 'day').start;
+      const midnight = daysBetween(dayStart, CENTER) * TIMELINE_DAY_WIDTH.day;
+      const { root, handlers } = mount({
+        view: timelineView({ timelineZoom: 'day' }),
+        groups: single([row('r1', 'Gamma', CENTER)]),
+      });
+
+      rect(canvas(root), 0, 0, timelineWindow(CENTER, 'day').days * TIMELINE_DAY_WIDTH.day, 400);
+      pointer('pointerdown', bar(root, 'r1'), midnight + 300, 50);
+      pointer('pointermove', document, midnight + 360, 50);
+
+      expect(parseFloat(bar(root, 'r1').style.insetInlineStart)).toBeCloseTo(midnight + 75 * (TIMELINE_DAY_WIDTH.day / 1440) + 1.5, 5);
+      expect(parseFloat(bar(root, 'r1').style.width)).toBeCloseTo(TIMELINE_DAY_WIDTH.day - 3, 5);
+
+      pointer('pointerup', document, midnight + 360, 50);
+
+      expect(handlers.writeDates).toHaveBeenCalledWith('r1', { start: '2026-10-09T01:15/2026-10-10T01:15' });
+    });
+
     // notion-motion.md Round 46 B: after a move the bar is left selected. Round 47 A3: a resized bar is selected mid-drag.
     it('leaves a moved bar selected, and not an unmoved one', () => {
       const landRow = vi.fn();

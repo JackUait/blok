@@ -6,6 +6,7 @@ import {
   headerUnits,
   hourBarGeometry,
   moveBar,
+  moveBarByMinutes,
   offscreenSide,
   resizeBar,
   resizeBarByMinutes,
@@ -180,6 +181,35 @@ describe('timeline-dates', () => {
 
     it('leaves a value with no time to the day geometry', () => {
       expect(hourBarGeometry({ start: '2026-10-02', end: undefined }, '2026-10-01')).toBeNull();
+    });
+  });
+
+  // notion-motion.md Round 48 A9: Day zoom moves snap to 15 minutes, and an all-day bar becomes timed.
+  describe('day zoom: moves by minutes', () => {
+    it('draws a timed bar by its time at the Day width', () => {
+      const perMinute = TIMELINE_DAY_WIDTH.day / 1440;
+
+      expect(hourBarGeometry({ start: '2026-10-01T18:30/2026-10-01T21:30', end: undefined }, '2026-10-01', TIMELINE_DAY_WIDTH.day))
+        .toEqual({ offset: 1110 * perMinute, width: 180 * perMinute });
+    });
+
+    it('turns an all-day bar into a timed range from its first midnight to the midnight after its last day', () => {
+      expect(moveBarByMinutes({ start: '2026-11-18', end: undefined }, 75)).toEqual({ start: '2026-11-18T01:15/2026-11-19T01:15' });
+      expect(moveBarByMinutes({ start: '2026-11-18/2026-11-20', end: undefined }, -30)).toEqual({ start: '2026-11-17T23:30/2026-11-20T23:30' });
+    });
+
+    it('writes timed start and end values when the view has an end property', () => {
+      expect(moveBarByMinutes({ start: '2026-11-18', end: '2026-11-20' }, 75)).toEqual({ start: '2026-11-18T01:15', end: '2026-11-21T01:15' });
+      expect(moveBarByMinutes({ start: '2026-11-18', end: null }, 75)).toEqual({ start: '2026-11-18T01:15', end: '2026-11-19T01:15' });
+    });
+
+    it('shifts a timed bar by the minutes, its length kept', () => {
+      expect(moveBarByMinutes({ start: '2026-11-18T09:00/2026-11-18T10:00', end: undefined }, 75)).toEqual({ start: '2026-11-18T10:15/2026-11-18T11:15' });
+      expect(moveBarByMinutes({ start: '2026-11-18T09:00', end: undefined }, 15)).toEqual({ start: '2026-11-18T09:15' });
+    });
+
+    it('writes nothing for a zero move', () => {
+      expect(moveBarByMinutes({ start: '2026-11-18', end: undefined }, 0)).toEqual({});
     });
   });
 

@@ -19,6 +19,7 @@ import {
   hourBarGeometry,
   headerUnits,
   moveBar,
+  moveBarByMinutes,
   newBarWrite,
   offscreenSide,
   resizeBar,
@@ -135,6 +136,8 @@ const DAY_LEVEL: ReadonlySet<TimelineZoom> = new Set(['hours', 'day', 'week', 'b
 const MONTH_IN_TOOLBAR: ReadonlySet<TimelineZoom> = new Set(['day', 'week', 'bi_week', 'month']);
 /** notion-motion.md Round 35 Part B: Hours zoom has only its tick row; the toolbar names the day. */
 const ONE_HEADER_ROW: ReadonlySet<TimelineZoom> = new Set([...MONTH_IN_TOOLBAR, 'hours']);
+/** Zooms that draw a timed bar at its time. */
+const BY_TIME: ReadonlySet<TimelineZoom> = new Set(['hours', 'day']);
 /** Body grid lines a day. Zooms not listed draw none. */
 const GRID_LINES_PER_DAY: Partial<Record<TimelineZoom, number>> = { hours: 96, day: 24, week: 1 };
 
@@ -1358,9 +1361,9 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   }
 
 
-  /** Hours zoom places a timed value by its time; every other case by whole days. */
+  /** Hours and Day zooms place a timed value by its time; every other case by whole days. */
   private geometryOf(span: EventSpan, values: BarValues): { offset: number; width: number } {
-    const geometry = (this.zoom === 'hours' ? hourBarGeometry(values, this.window.start) : null) ?? barGeometry(span, this.window.start, this.zoom);
+    const geometry = (BY_TIME.has(this.zoom) ? hourBarGeometry(values, this.window.start, this.dayWidth) : null) ?? barGeometry(span, this.window.start, this.zoom);
 
     // findings C23: at day-level zooms a bar sits 1.5px in from each day edge (37px of a 40px day).
     return MONTH_IN_TOOLBAR.has(this.zoom) ? { offset: geometry.offset + BAR_INSET, width: geometry.width - 2 * BAR_INSET } : geometry;
@@ -1604,12 +1607,15 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
 
     const deltaDays = daysBetween(drag.grabDay, drag.overDay);
+    const deltaMinutes = snapMinutes((drag.overPx - drag.grabPx) / (this.dayWidth / DAY_MINUTES));
 
+    // notion-motion.md Round 48 A9: Day zoom moves snap to 15 minutes. Its resize was not measured, so it stays by days.
+    if (this.zoom === 'day' && drag.mode === 'move') {
+      return moveBarByMinutes(values, deltaMinutes);
+    }
     if (this.zoom !== 'hours') {
       return drag.mode === 'move' ? moveBar(values, deltaDays) : resizeBar(values, drag.mode, drag.overDay);
     }
-
-    const deltaMinutes = snapMinutes((drag.overPx - drag.grabPx) / (this.dayWidth / DAY_MINUTES));
 
     return drag.mode === 'move'
       ? moveBar(values, deltaDays, deltaMinutes)

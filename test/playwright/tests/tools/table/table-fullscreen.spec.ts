@@ -118,6 +118,10 @@ const createLargeTable = async (page: Page): Promise<number> => {
     }],
   });
 
+  // Boot adds lazy sheets late (block-preview at idle), and each one restyles
+  // the whole page. On a busy runner that lands inside a measured open or close.
+  await page.waitForFunction(() => !/\[data-blok-sheet=(fonts|block-preview)\]/.test(document.getElementById('blok-styles')?.textContent ?? ''));
+
   return page.locator(TABLE_SELECTOR).evaluate(el => el.closest('[data-blok-element-content]')?.querySelectorAll('*').length ?? 0);
 };
 

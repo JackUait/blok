@@ -25,8 +25,8 @@ export interface CellPopoverOptions {
   gap?: number;
   /** Opens beside the anchor instead: this far right of it, top level with it. */
   beside?: number;
-  /** Opens on this side of the anchor, `gap` from it, vertically centred on it. */
-  aside?: { side: 'left' | 'right'; gap: number };
+  /** Opens on this side of the anchor, `gap` from it, vertically centred on it. `flip`: the other side when this one has no room. */
+  aside?: { side: 'left' | 'right'; gap: number; flip?: boolean };
   /** Opens above the anchor, `gap` over it, when it fits there and not below. */
   flip?: boolean;
   /** The gap to the window's top and bottom, when it is not the usual 12. */
@@ -111,11 +111,12 @@ const besidePlacement = (anchor: HTMLElement, gap: number): Pick<PopoverParams, 
 };
 
 /** Beside the anchor and centred on it, as a menu's submenu flyout (notion-motion.md Round 32 §1). */
-const asidePlacement = (aside: { side: 'left' | 'right'; gap: number }): Pick<PopoverDesktopParams, 'placeLeftOfAnchor' | 'asideSide' | 'offset' | 'viewportMargin'> => ({
+const asidePlacement = (aside: { side: 'left' | 'right'; gap: number; flip?: boolean }): Pick<PopoverDesktopParams, 'placeLeftOfAnchor' | 'asideSide' | 'offset' | 'viewportMargin' | 'asideFlip'> => ({
   placeLeftOfAnchor: true,
   asideSide: aside.side,
   offset: aside.gap,
   viewportMargin: COVER_VIEWPORT_MARGIN,
+  ...(aside.flip === true ? { asideFlip: true } : {}),
 });
 
 /**

@@ -4,6 +4,7 @@ import { DatabaseFormView } from '../../../../src/tools/database/database-form-v
 import type { DatabaseFormViewOptions } from '../../../../src/tools/database/database-form-view';
 import { IconChevronUpDown } from '../../../../src/components/icons';
 import type { DatabaseViewConfig, FormSettings, PropertyDefinition } from '../../../../src/tools/database/types';
+import { PopoverDesktop } from '../../../../src/components/utils/popover/popover-desktop';
 
 /** An icon string as the DOM serializes it once it is set as innerHTML. */
 const markup = (svg: string): string => Object.assign(document.createElement('span'), { innerHTML: svg }).innerHTML;
@@ -602,6 +603,24 @@ describe('DatabaseFormView question options rows', () => {
     open('pick', { moveQuestion: vi.fn() });
     row('database-form-question-move')?.click();
     expect(flyoutRows()).toEqual(['database-form-question-move-up', 'database-form-question-move-top']);
+  });
+
+  // notion-motion.md Round 33 §1 (r33-form-move-w1000.raw): with no room left of the panel, the flyout
+  // opens on its right, its left edge on the row's right (panel right − 4), centred on the row.
+  it('Move question opens on the panel\'s right when its left has no room', () => {
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1000);
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+    vi.spyOn(PopoverDesktop.prototype, 'size', 'get').mockReturnValue({ width: 280, height: 123 });
+    open('size', { moveQuestion: vi.fn() });
+    const move = row('database-form-question-move');
+
+    if (move === null) throw new Error('no Move question row');
+    move.getBoundingClientRect = () => new DOMRect(96, 459.8, 282, 28);
+    move.click();
+    const box = flyout()?.closest<HTMLElement>('[data-blok-popover]');
+
+    expect(parseFloat(box?.style.left ?? '')).toBeCloseTo(378);
+    expect(parseFloat(box?.style.top ?? '')).toBeCloseTo(412.3);
   });
 
   it('each move puts the question where its row says and closes both menus', () => {

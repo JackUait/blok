@@ -1227,7 +1227,8 @@ export class DatabaseFormView implements DatabaseViewRenderer {
 
   /**
    * "Move question ›": a 280-wide flyout on the panel's left, centred on the row, listing only
-   * the moves the question can make (notion-motion.md Round 32 §1). A form has one group: the whole form.
+   * the moves the question can make (notion-motion.md Round 32 §1). With no room there it opens
+   * on the panel's right (Round 33 §1). A form has one group: the whole form.
    */
   private moveRow(propertyId: string, panel: DatabasePanel): HTMLElement {
     const { i18n } = this.options;
@@ -1252,7 +1253,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
             panel.close();
             this.options.moveQuestion?.(propertyId, move.beforeId());
           }),
-        })), { aside: { side: 'left', gap: 0 } }),
+        })), { aside: { side: 'left', gap: 0, flip: true } }),
     });
 
     return row;

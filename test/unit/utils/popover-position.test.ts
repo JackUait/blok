@@ -486,6 +486,46 @@ describe('resolvePosition', () => {
       });
     });
 
+    // notion-motion.md Round 33 §1 (r33-form-move-w1000.raw): the form's Move flyout opens left of
+    // the Question options row, and flips to its right when the left has no room.
+    describe('asideFlip', () => {
+      const input = (windowWidth: number, rowLeft: number, flip: boolean): Parameters<typeof resolvePosition>[0] => ({
+        anchor: rect({ top: 459.8, bottom: 487.8, left: rowLeft, right: rowLeft + 282 }),
+        popoverSize: { width: 280, height: 123 },
+        scopeBounds: rect({ top: 0, bottom: 717, left: 0, right: windowWidth }),
+        viewportSize: { width: windowWidth, height: 717 },
+        scrollOffset: { x: 0, y: 0 },
+        offset: 0,
+        placeLeftOfAnchor: true,
+        asideSide: 'left',
+        viewportMargin: 12,
+        ...(flip ? { asideFlip: true } : {}),
+      });
+
+      it('opens on the right of the row, centred on it, when the left has no room', () => {
+        const result = resolvePosition(input(1000, 96, true));
+
+        expect(result.left).toBeCloseTo(378);
+        expect(result.top).toBeCloseTo(412.3);
+        expect(result.openLeft).toBe(false);
+      });
+
+      it('stays on the left when it fits there', () => {
+        const result = resolvePosition(input(1512, 1213, true));
+
+        expect(result.left).toBeCloseTo(933);
+        expect(result.openLeft).toBe(true);
+      });
+
+      it('falls back below or above when neither side has room', () => {
+        expect(resolvePosition(input(520, 96, true))).toEqual(resolvePosition(input(520, 96, false)));
+      });
+
+      it('does not flip without the option', () => {
+        expect(resolvePosition(input(1000, 96, false)).left).not.toBeCloseTo(378);
+      });
+    });
+
     describe("asideSide: 'right' (toolbarPosition: 'right')", () => {
       it('places the popover to the right of the anchor, vertically centered', () => {
         const result = resolvePosition({

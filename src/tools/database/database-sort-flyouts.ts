@@ -31,7 +31,7 @@ export const openFlyout = (
   testId: string,
   width: number,
   rows: (pick: (write: () => HTMLElement | null | undefined | void) => void) => HTMLElement[],
-  place: { beside?: number; aside?: { side: 'left' | 'right'; gap: number }; fit?: boolean; gap?: number; flip?: boolean; alignEnd?: boolean; escapeFocus?: () => HTMLElement | null | undefined } = {}
+  place: { beside?: number; aside?: { side: 'left' | 'right'; gap: number; flip?: boolean }; fit?: boolean; gap?: number; flip?: boolean; alignEnd?: boolean; escapeFocus?: () => HTMLElement | null | undefined } = {}
 ): DatabasePanel => {
   const release = host.hold();
   const focusKey = anchor.getAttribute('data-blok-testid') ?? '';

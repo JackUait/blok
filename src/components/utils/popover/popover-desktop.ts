@@ -141,6 +141,8 @@ export type PopoverDesktopParams = PopoverParams & {
   coverVerticalMargin?: number;
   /** With `placeLeftOfAnchor`: with no room on `asideSide`, stay there, slid in over the anchor to this gap from the window. */
   asideStayMargin?: number;
+  /** With `placeLeftOfAnchor`: with no room on `asideSide` but room on the other, open there. */
+  asideFlip?: boolean;
 };
 
 export class PopoverDesktop extends PopoverAbstract {
@@ -357,6 +359,8 @@ export class PopoverDesktop extends PopoverAbstract {
 
   private asideStayMargin: number | undefined;
 
+  private asideFlip: boolean | undefined;
+
   /**
    * Updates the element whose left edge is used for horizontal positioning.
    * @param element - new element to align against, or undefined to fall back to trigger
@@ -417,6 +421,7 @@ export class PopoverDesktop extends PopoverAbstract {
     this.coverFlipOffset = params.coverFlipOffset;
     this.coverVerticalMargin = params.coverVerticalMargin;
     this.asideStayMargin = params.asideStayMargin;
+    this.asideFlip = params.asideFlip;
 
     if (params.trigger) {
       this.trigger = params.trigger;
@@ -927,6 +932,7 @@ export class PopoverDesktop extends PopoverAbstract {
       asideSide: this.asideSide,
       viewportMargin: this.viewportMargin,
       asideStayMargin: this.asideStayMargin,
+      asideFlip: this.asideFlip,
       cover: this.cover,
       coverFlipOffset: this.coverFlipOffset,
       coverStayAbove: this.coverAbove,

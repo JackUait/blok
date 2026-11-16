@@ -386,8 +386,9 @@
   /* Feed card, measured on Notion's feed view (research/08). */
   --blok-database-feed-card-bg: #ffffff;
   --blok-database-feed-card-shadow: rgba(0, 0, 0, 0.02) 0 12px 32px, rgba(0, 0, 0, 0.05) 0 0 0 1px;
-  /* Round 48 §C, light only; Notion's dark chip is unmeasured. */
-  --blok-database-feed-see-more-shadow: rgba(0, 0, 0, 0.08) 0 4px 12px -2px;
+  /* Round 48 §C, ring Round 49 §A2. Light only; Notion's dark chip and fade are unmeasured. */
+  --blok-database-feed-see-more-shadow: rgba(0, 0, 0, 0.08) 0 4px 12px -2px, rgba(255, 255, 255, 0.05) 0 0 0 1px inset;
+  --blok-database-feed-fade: linear-gradient(rgba(255, 255, 255, 0) 0, rgb(255, 255, 255) 30px);
   /* Add reaction and other people's reactions (research/19 §2c). */
   --blok-database-feed-reaction-bg: rgb(249, 248, 247);
   /* Feed card hover ring and hover action pill (research/21 §1j). */
@@ -764,6 +765,9 @@
     --blok-database-chart-gray: #9b9b9b;
     /* Feed card and reactions: research/21 §1j. */
     --blok-database-feed-card-bg: rgb(32, 32, 32);
+    /* Unmeasured: the light chip without the ring, the fade to the card. */
+    --blok-database-feed-see-more-shadow: rgba(0, 0, 0, 0.08) 0 4px 12px -2px;
+    --blok-database-feed-fade: linear-gradient(rgba(32, 32, 32, 0) 0, rgb(32, 32, 32) 30px);
     --blok-database-feed-card-shadow: rgba(255, 255, 255, 0.05) 0 0 0 1px inset;
         --blok-database-feed-reaction-bg: rgb(32, 32, 32);
     --blok-database-feed-card-hover-shadow: rgba(255, 255, 255, 0.1) 0 0 0 1px inset;
@@ -1124,6 +1128,9 @@
   --blok-database-chart-gray: #9b9b9b;
   /* Feed card and reactions: research/21 §1j. */
   --blok-database-feed-card-bg: rgb(32, 32, 32);
+  /* Unmeasured: the light chip without the ring, the fade to the card. */
+  --blok-database-feed-see-more-shadow: rgba(0, 0, 0, 0.08) 0 4px 12px -2px;
+  --blok-database-feed-fade: linear-gradient(rgba(32, 32, 32, 0) 0, rgb(32, 32, 32) 30px);
   --blok-database-feed-card-shadow: rgba(255, 255, 255, 0.05) 0 0 0 1px inset;
     --blok-database-feed-reaction-bg: rgb(32, 32, 32);
   --blok-database-feed-card-hover-shadow: rgba(255, 255, 255, 0.1) 0 0 0 1px inset;
@@ -18273,7 +18280,12 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-2));
 }
 
-[data-blok-database-feed-byline] ~ [data-blok-database-feed-body],
+/* Round 49 §A4: Notion's preview is 600 with 30 each side, its text 8 in. */
+[data-blok-database-feed-byline] ~ [data-blok-database-feed-body] {
+  margin-inline: 30px;
+  padding-inline: var(--blok-space-2);
+}
+
 [data-blok-database-feed-byline] ~ [data-blok-database-feed-reactions],
 [data-blok-database-feed-byline] ~ [data-blok-database-feed-comments] {
   margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-3-5));
@@ -18453,12 +18465,27 @@ button[data-blok-database-feed-reaction]:hover,
   flex-shrink: 0;
 }
 
-/* Round 48 §C: the chip's top is 32 above the preview's end, centred on it. */
-[data-blok-database-feed-see-more] {
+[data-blok-database-feed-body][data-expanded] {
+  max-block-size: none;
+}
+
+/* Round 49 §A2: Notion's fade is 30 tall at bottom -2. A box hanging out of the body would count as overflow
+   and keep the chip, so the box stops at the edge and only its 30px gradient runs past. */
+[data-blok-database-feed-fade] {
   position: absolute;
-  inset-block-start: calc(100% - 32px);
-  inset-inline-start: 50%;
-  translate: -50% 0;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  block-size: 28px;
+  background: var(--blok-database-feed-fade) top / 100% 30px no-repeat;
+}
+
+/* Round 49 §A2: the chip's top is 4 above the fade's, 468 under the preview's. */
+[data-blok-database-feed-see-more] {
+  margin-block-start: calc(-1 * var(--blok-space-1));
   display: inline-flex;
   align-items: center;
   gap: var(--blok-space-1-25);

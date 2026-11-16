@@ -4908,7 +4908,8 @@ span[data-blok-slash-search] {
   --blok-database-chart-gray: #8e8b86;
   --blok-database-feed-card-bg: #ffffff;
   --blok-database-feed-card-shadow: rgba(0, 0, 0, 0.02) 0 12px 32px, rgba(0, 0, 0, 0.05) 0 0 0 1px;
-  --blok-database-feed-see-more-shadow: rgba(0, 0, 0, 0.08) 0 4px 12px -2px;
+  --blok-database-feed-see-more-shadow: rgba(0, 0, 0, 0.08) 0 4px 12px -2px, rgba(255, 255, 255, 0.05) 0 0 0 1px inset;
+  --blok-database-feed-fade: linear-gradient(rgba(255, 255, 255, 0) 0, rgb(255, 255, 255) 30px);
   --blok-database-feed-reaction-bg: rgb(249, 248, 247);
   --blok-database-feed-card-hover-shadow: rgba(0, 0, 0, 0.03) 0 12px 32px, rgba(0, 0, 0, 0.086) 0 0 0 1px;
   --blok-database-feed-actions-bg: #ffffff;
@@ -5219,6 +5220,8 @@ span[data-blok-slash-search] {
   --blok-database-chart-red: #e66767;
   --blok-database-chart-gray: #9b9b9b;
   --blok-database-feed-card-bg: rgb(32, 32, 32);
+  --blok-database-feed-see-more-shadow: rgba(0, 0, 0, 0.08) 0 4px 12px -2px;
+  --blok-database-feed-fade: linear-gradient(rgba(32, 32, 32, 0) 0, rgb(32, 32, 32) 30px);
   --blok-database-feed-card-shadow: rgba(255, 255, 255, 0.05) 0 0 0 1px inset;
   --blok-database-feed-reaction-bg: rgb(32, 32, 32);
   --blok-database-feed-card-hover-shadow: rgba(255, 255, 255, 0.1) 0 0 0 1px inset;
@@ -5530,6 +5533,8 @@ span[data-blok-slash-search] {
   --blok-database-chart-red: #e66767;
   --blok-database-chart-gray: #9b9b9b;
   --blok-database-feed-card-bg: rgb(32, 32, 32);
+  --blok-database-feed-see-more-shadow: rgba(0, 0, 0, 0.08) 0 4px 12px -2px;
+  --blok-database-feed-fade: linear-gradient(rgba(32, 32, 32, 0) 0, rgb(32, 32, 32) 30px);
   --blok-database-feed-card-shadow: rgba(255, 255, 255, 0.05) 0 0 0 1px inset;
   --blok-database-feed-reaction-bg: rgb(32, 32, 32);
   --blok-database-feed-card-hover-shadow: rgba(255, 255, 255, 0.1) 0 0 0 1px inset;
@@ -20752,7 +20757,12 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-2));
 }
 
-[data-blok-database-feed-byline] ~ [data-blok-database-feed-body], [data-blok-database-feed-byline] ~ [data-blok-database-feed-reactions], [data-blok-database-feed-byline] ~ [data-blok-database-feed-comments] {
+[data-blok-database-feed-byline] ~ [data-blok-database-feed-body] {
+  margin-inline: 30px;
+  padding-inline: var(--blok-space-2);
+}
+
+[data-blok-database-feed-byline] ~ [data-blok-database-feed-reactions], [data-blok-database-feed-byline] ~ [data-blok-database-feed-comments] {
   margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-3-5));
 }
 
@@ -20914,11 +20924,24 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   flex-shrink: 0;
 }
 
-[data-blok-database-feed-see-more] {
+[data-blok-database-feed-body][data-expanded] {
+  max-block-size: none;
+}
+
+[data-blok-database-feed-fade] {
   position: absolute;
-  inset-block-start: calc(100% - 32px);
-  inset-inline-start: 50%;
-  translate: -50% 0;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  block-size: 28px;
+  background: var(--blok-database-feed-fade) top / 100% 30px no-repeat;
+}
+
+[data-blok-database-feed-see-more] {
+  margin-block-start: calc(-1 * var(--blok-space-1));
   display: inline-flex;
   align-items: center;
   gap: var(--blok-space-1-25);

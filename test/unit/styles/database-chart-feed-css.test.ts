@@ -23,6 +23,8 @@ const TOKENS = [
   ...HUES.map((hue) => `--blok-database-chart-${hue}`),
   '--blok-database-feed-card-bg',
   '--blok-database-feed-card-shadow',
+  '--blok-database-feed-fade',
+  '--blok-database-feed-see-more-shadow',
 ];
 
 describe('database chart and feed styles', () => {
@@ -126,10 +128,13 @@ describe('database chart and feed styles', () => {
     expect(ruleBody('[data-blok-database-feed-property]')).toContain('align-items: center');
   });
 
-  // notion-motion.md Round 46 §C.4: under a byline the body preview starts at card x + 54, as the footer, in 14/21.
-  it('indents the body preview to the footer column and sets it in 14/21', () => {
-    expect(ruleBody('[data-blok-database-feed-byline] ~ [data-blok-database-feed-body]'))
-      .toContain('margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-3-5))');
+  // notion-motion.md Round 49 §A4 (r49-n-feed-cols.raw): under a byline the preview is 600 wide with 30 each side
+  // (card content 555..1215 → 585..1185), and its text sits 8 in (593..1177).
+  it('sets the body preview in Notion\'s 600 column with its text 8 in, in 14/21', () => {
+    const body = ruleBody('[data-blok-database-feed-byline] ~ [data-blok-database-feed-body]');
+
+    expect(body).toContain('margin-inline: 30px');
+    expect(body).toContain('padding-inline: var(--blok-space-2)');
     expect(ruleBody('[data-blok-database-feed-body]')).toMatch(/font-size:\s*14px/);
     expect(ruleBody('[data-blok-database-feed-body]')).toMatch(/line-height:\s*21px/);
   });
@@ -174,20 +179,31 @@ describe('database chart and feed styles', () => {
   });
 
   // notion-motion.md Round 48 §C (r48-n-feed-alpha.raw): the preview is max-height 500, overflow hidden. The chip is
-  // 24.8 tall, its top 32 above the preview's end, centred; padding 4 10 4 8, gap 5, 12/16.8, radius 6, dark fill.
+  // 24.8 tall, centred; padding 4 10 4 8, gap 5, 12/16.8, radius 6, dark fill. Round 49 §A2 (r49-n-feed-cols.raw):
+  // the chip sits in a 30 fade strip at bottom -2, with margin-top -4, so its top is 468 under the preview's.
   it('caps the preview at 500 with Notion\'s See more chip over its end', () => {
     const body = ruleBody('[data-blok-database-feed-body]');
 
     expect(body).toContain('position: relative');
     expect(body).toContain('max-block-size: 500px');
     expect(body).toContain('overflow: hidden');
+    expect(ruleBody('[data-blok-database-feed-body][data-expanded]')).toContain('max-block-size: none');
     expect(ruleBody('[data-blok-database-feed-body] > *')).toContain('flex-shrink: 0');
+    const fade = ruleBody('[data-blok-database-feed-fade]');
+
+    expect(fade).toContain('position: absolute');
+    expect(fade).toContain('inset-inline: 0');
+    expect(fade).toContain('inset-block-end: 0');
+    expect(fade).toContain('block-size: 28px');
+    expect(fade).toContain('z-index: 1');
+    expect(fade).toContain('justify-content: center');
+    expect(fade).toContain('align-items: flex-start');
+    expect(fade).toContain('background: var(--blok-database-feed-fade) top / 100% 30px no-repeat');
+    expect(css).toMatch(/--blok-database-feed-fade:\s*linear-gradient\(rgba\(255, 255, 255, 0\) 0, rgb\(255, 255, 255\) 30px\)/);
     const chip = ruleBody('[data-blok-database-feed-see-more]');
 
-    expect(chip).toContain('position: absolute');
-    expect(chip).toContain('inset-block-start: calc(100% - 32px)');
-    expect(chip).toContain('inset-inline-start: 50%');
-    expect(chip).toContain('translate: -50% 0');
+    expect(chip).not.toContain('position: absolute');
+    expect(chip).toContain('margin-block-start: calc(-1 * var(--blok-space-1))');
     expect(chip).toContain('padding: var(--blok-space-1) 10px var(--blok-space-1) var(--blok-space-2)');
     expect(chip).toContain('gap: var(--blok-space-1-25)');
     expect(chip).toContain('font-size: 12px');
@@ -196,7 +212,7 @@ describe('database chart and feed styles', () => {
     expect(chip).toContain('background-color: var(--blok-tooltip-bg)');
     expect(chip).toContain('color: var(--blok-tooltip-font)');
     expect(chip).toContain('box-shadow: var(--blok-database-feed-see-more-shadow)');
-    expect(css).toMatch(/--blok-database-feed-see-more-shadow:\s*rgba\(0, 0, 0, 0\.08\) 0 4px 12px -2px/);
+    expect(css).toMatch(/--blok-database-feed-see-more-shadow:\s*rgba\(0, 0, 0, 0\.08\) 0 4px 12px -2px, rgba\(255, 255, 255, 0\.05\) 0 0 0 1px inset;/);
     expect(ruleBody('[data-blok-database-feed-see-more] svg')).toContain('inline-size: 12px');
   });
 

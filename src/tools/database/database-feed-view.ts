@@ -289,7 +289,7 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
 
     if (body.childElementCount > 0) {
       card.appendChild(body);
-      this.watchOverflow(card, body, row.id);
+      this.watchOverflow(card, body);
     }
     const reactions = this.createReactions(row);
 
@@ -512,25 +512,34 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
   }
 
   /**
-   * notion-motion.md Round 48 §C: the preview stops at 500 and a "See more" chip shows while it runs
-   * over. Images load late, so this follows the body's size. Notion's click was not tried; it opens the row.
+   * notion-motion.md Round 48 §C: the preview stops at 500 and a "See more" chip shows over a fade while it
+   * runs over. Images load late, so this follows the body's size. Round 49 §A1: the click lifts the cap in
+   * place. That state lives in the DOM only, so a new view (a tab switch) is capped again, as in Notion.
    */
-  private watchOverflow(card: HTMLElement, body: HTMLElement, rowId: string): void {
+  private watchOverflow(card: HTMLElement, body: HTMLElement): void {
     if (typeof ResizeObserver === 'undefined') return;
+    const fade = document.createElement('div');
     const chip = document.createElement('button');
     const icon = document.createElement('span');
 
+    fade.setAttribute('data-blok-database-feed-fade', '');
     chip.type = 'button';
     chip.setAttribute('data-blok-database-feed-see-more', '');
     icon.setAttribute('aria-hidden', 'true');
     icon.innerHTML = IconMoveDown;
     chip.append(icon, this.options.i18n.t('tools.database.feedSeeMore'));
-    chip.addEventListener('click', () => this.options.handlers.openRow(rowId));
+    fade.appendChild(chip);
+    chip.addEventListener('click', () => {
+      this.bodyObservers.get(card)?.disconnect();
+      this.bodyObservers.delete(card);
+      body.setAttribute('data-expanded', '');
+      fade.remove();
+    });
     const observer = new ResizeObserver(() => {
       if (body.scrollHeight > body.clientHeight) {
-        if (!chip.isConnected) body.appendChild(chip);
+        if (!fade.isConnected) body.appendChild(fade);
       } else {
-        chip.remove();
+        fade.remove();
       }
     });
 

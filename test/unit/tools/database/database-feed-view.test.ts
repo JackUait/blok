@@ -328,16 +328,20 @@ describe('DatabaseFeedView', () => {
       vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(client);
     };
     const chipOf = (el: HTMLElement): HTMLButtonElement | null =>
-      card(el, 'r1')?.querySelector<HTMLButtonElement>('[data-blok-database-feed-body] > [data-blok-database-feed-see-more]') ?? null;
+      card(el, 'r1')?.querySelector<HTMLButtonElement>('[data-blok-database-feed-body] > [data-blok-database-feed-fade] > [data-blok-database-feed-see-more]') ?? null;
+    const bodyOf = (el: HTMLElement): HTMLElement | null => card(el, 'r1')?.querySelector<HTMLElement>('[data-blok-database-feed-body]') ?? null;
 
     beforeEach(() => {
       observers.length = 0;
       vi.stubGlobal('ResizeObserver', class {
         private readonly callback: () => void;
-        readonly disconnect = vi.fn();
+        private live = true;
+        readonly disconnect = vi.fn(() => {
+          this.live = false;
+        });
         constructor(callback: () => void) {
           this.callback = callback;
-          observers.push({ disconnect: this.disconnect, fire: () => this.callback() });
+          observers.push({ disconnect: this.disconnect, fire: () => this.live && this.callback() });
         }
         observe(): void {}
         unobserve(): void {}
@@ -348,20 +352,47 @@ describe('DatabaseFeedView', () => {
       vi.unstubAllGlobals();
     });
 
-    it('shows when the preview runs past its cap, opens the row, and goes when it fits', () => {
+    it('shows over a fade when the preview runs past its cap, and goes when it fits', () => {
       const el = render();
 
       heights(668, 500);
       observers.forEach((observer) => observer.fire());
-      const chip = chipOf(el);
 
-      expect(chip?.textContent?.trim()).toBe('tools.database.feedSeeMore');
-      chip?.click();
-      expect(openRow).toHaveBeenCalledWith('r1');
+      expect(chipOf(el)?.textContent?.trim()).toBe('tools.database.feedSeeMore');
 
       heights(300, 300);
       observers.forEach((observer) => observer.fire());
       expect(chipOf(el)).toBeNull();
+      expect(bodyOf(el)?.querySelector('[data-blok-database-feed-fade]')).toBeNull();
+    });
+
+    // notion-motion.md Round 49 §A1: the click lifts the cap in place, with no peek, and drops the chip and the fade.
+    it('expands the preview in place on click, without opening the row', () => {
+      const el = render();
+
+      heights(668, 500);
+      observers.forEach((observer) => observer.fire());
+      chipOf(el)?.click();
+
+      expect(openRow).not.toHaveBeenCalled();
+      expect(bodyOf(el)?.hasAttribute('data-expanded')).toBe(true);
+      expect(bodyOf(el)?.querySelector('[data-blok-database-feed-fade]')).toBeNull();
+      observers.forEach((observer) => observer.fire());
+      expect(chipOf(el)).toBeNull();
+    });
+
+    // notion-motion.md Round 49 §A1: after a tab switch the preview is capped again; the open state is not saved.
+    it('caps the preview again when the view is built anew', () => {
+      const first = render();
+
+      heights(668, 500);
+      observers.forEach((observer) => observer.fire());
+      chipOf(first)?.click();
+      const again = render();
+
+      observers.forEach((observer) => observer.fire());
+      expect(bodyOf(again)?.hasAttribute('data-expanded')).toBe(false);
+      expect(chipOf(again)).not.toBeNull();
     });
 
     it('stays away from a preview that fits', () => {

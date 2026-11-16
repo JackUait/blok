@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { historyKeys } from '../helpers/history-keys';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const HOLDER_ID = 'blok';
@@ -495,7 +496,7 @@ test.describe('annotation (Hint) inline tool', () => {
     await expect(text).toBeHidden();
     await expect(hint).toHaveAttribute('data-blok-annotation', 'Changed');
 
-    await page.keyboard.press('ControlOrMeta+z');
+    await page.keyboard.press((await historyKeys(page)).undo);
     await expect(hint).toHaveAttribute('data-blok-annotation', 'The step that limits the whole chain.');
   });
 

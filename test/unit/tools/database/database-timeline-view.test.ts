@@ -1463,6 +1463,23 @@ describe('DatabaseTimelineView', () => {
       expect(landRow).toHaveBeenCalledTimes(1);
     });
 
+    // notion-motion.md Round 49 B9: an edge pressed and let go with no move leaves the bar selected and opens no peek.
+    it('does not open the bar when its edge is pressed and let go without a move', () => {
+      const handlers = { ...makeHandlers(), landRow: vi.fn() };
+      const { root } = mount({ handlers });
+      const end = bar(root, 'r1').querySelector<HTMLElement>('[data-blok-database-timeline-resize="end"]');
+
+      layOut(root);
+      if (end === null) throw new Error('no handle');
+      pointer('pointerdown', end, xOf('2026-10-09'), 50);
+      pointer('pointerup', document, xOf('2026-10-09'), 50);
+      end.click();
+
+      expect(handlers.openRow).not.toHaveBeenCalled();
+      expect(handlers.writeDates).not.toHaveBeenCalled();
+      expect(handlers.landRow).toHaveBeenCalledWith('r1');
+    });
+
     it('drags the end edge to a later day', () => {
       const { root, handlers } = mount();
       const handle = bar(root, 'r1').querySelector('[data-blok-database-timeline-resize="end"]');
@@ -1573,6 +1590,33 @@ describe('DatabaseTimelineView', () => {
       expect(range(root)).toBeNull();
       expect(edges(root)).toEqual([]);
       expect(root.querySelector('[data-blok-database-timeline-edge-readout]')).toBeNull();
+    });
+
+    // notion-motion.md Round 49 B9: the edge readout shows from the press, before any move, and stays after a release with no move.
+    it('reads the pressed edge at once and keeps it after a release with no move', () => {
+      const { root } = mount();
+      const handle = bar(root, 'r1').querySelector('[data-blok-database-timeline-resize="end"]');
+
+      layOut(root);
+      if (handle === null) throw new Error('no handle');
+      pointer('pointerdown', handle, xOf('2026-10-09'), 50);
+      expect(bar(root, 'r1').querySelector('[data-blok-database-timeline-edge-readout="end"]')?.textContent).toBe('Oct 9');
+
+      pointer('pointerup', document, xOf('2026-10-09'), 50);
+      expect(bar(root, 'r1').querySelector('[data-blok-database-timeline-edge-readout="end"]')?.textContent).toBe('Oct 9');
+    });
+
+    // notion-motion.md Round 49 B9: at Day zoom the readout of a timed bar carries the time ("Nov 19, 7:30 AM").
+    it('reads a timed edge with its time at Day zoom', () => {
+      const { root } = mount({
+        view: timelineView({ timelineZoom: 'day' }),
+        groups: single([row('r1', 'Tb', '2026-10-09T04:30/2026-10-09T07:30')]),
+      });
+      const handle = bar(root, 'r1').querySelector('[data-blok-database-timeline-resize="end"]');
+
+      if (handle === null) throw new Error('no handle');
+      pointer('pointerdown', handle, 100, 50);
+      expect(bar(root, 'r1').querySelector('[data-blok-database-timeline-edge-readout="end"]')?.textContent).toBe('Oct 9, 7:30 AM');
     });
 
     it('marks the moved range too, with no readout', () => {

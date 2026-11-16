@@ -18824,11 +18824,11 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 [data-blok-database-timeline-edge-readout="end"] {
-  inset-inline-start: calc(100% + 8px);
+  inset-inline-start: calc(100% + 10px);
 }
 
 [data-blok-database-timeline-edge-readout="start"] {
-  inset-inline-end: calc(100% + 8px);
+  inset-inline-end: calc(100% + 10px);
 }
 
 [data-blok-database-timeline-range] {

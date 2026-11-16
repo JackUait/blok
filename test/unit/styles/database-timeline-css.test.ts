@@ -345,6 +345,14 @@ describe('page-wide editor: the timeline keeps to the text column', () => {
   });
 });
 
+// notion-motion.md Round 49 B9 (and R48 A3): the edge readout sits 10 outside the bar.
+describe('edge readout offset (Round 49 B9)', () => {
+  it('sits 10px outside either edge', () => {
+    expect(ruleBody('[data-blok-database-timeline-edge-readout="end"]')).toContain('inset-inline-start: calc(100% + 10px)');
+    expect(ruleBody('[data-blok-database-timeline-edge-readout="start"]')).toContain('inset-inline-end: calc(100% + 10px)');
+  });
+});
+
 // notion-motion.md Round 24 §4 Timeline: a plain "+ New" label at rest; a ghost bar on lane hover.
 describe('"+ New" lane (Round 24)', () => {
   const label = '[data-blok-database-timeline-new-lane] [data-blok-database-timeline-new]';

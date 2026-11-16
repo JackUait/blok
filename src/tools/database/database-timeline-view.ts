@@ -1526,6 +1526,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     // notion-motion.md Round 48 A8: an edge press selects the bar at once; a moved bar only after the drop.
     if (this.drag.mode !== 'move') {
       this.options.handlers?.landRow?.(rowId);
+      this.readEdge(rowId, this.drag.mode);
     }
     this.listen();
   };
@@ -1601,13 +1602,12 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     if (this.zoom !== 'day') {
       this.showRange(span, this.zoom === 'hours' ? { offset, width } : barGeometry(span, this.window.start, this.zoom));
     }
-    const timedResize = BY_TIME.has(this.zoom) && (this.zoom === 'hours' || timedEdges(values) !== null);
-
-    if (timedResize && drag.mode !== 'move') {
+    // notion-motion.md Round 49 B9: Day zoom reads a timed edge as text beside the bar, from the press on.
+    if (this.zoom === 'hours' && drag.mode !== 'move') {
       this.showEdgeReadout(barEl, drag.mode, values, span);
     }
-    if (!timedResize && drag.mode !== 'move') {
-      this.showDayReadout(barEl, drag.mode, span);
+    if (this.zoom !== 'hours' && drag.mode !== 'move') {
+      this.showDayReadout(barEl, drag.mode, span, values);
     }
   }
 
@@ -1656,13 +1656,25 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     });
   }
 
-  /** findings C15: the moving edge's day in 12px ink just outside the bar. */
-  private showDayReadout(barEl: HTMLElement, edge: 'start' | 'end', span: EventSpan): void {
+  /** notion-motion.md Round 49 B9: a pressed edge is read before any move. Hours zoom reads it in a tooltip, only once dragging. */
+  private readEdge(rowId: string, edge: 'start' | 'end'): void {
+    const values = this.barValues(rowId);
+    const span = values === null ? null : timelineSpan(values.start, values.end);
+    const barEl = this.rowsOf('[data-blok-database-timeline-bar]').find((el) => el.getAttribute('data-row-id') === rowId);
+
+    if (this.zoom !== 'hours' && span !== null && values !== null && barEl !== undefined) {
+      this.showDayReadout(barEl, edge, span, values);
+    }
+  }
+
+  /** findings C15: the moving edge's day in 12px ink just outside the bar. Round 49 B9: at Day zoom with its time. */
+  private showDayReadout(barEl: HTMLElement, edge: 'start' | 'end', span: EventSpan, values: BarValues): void {
     const readout = barEl.querySelector<HTMLElement>('[data-blok-database-timeline-edge-readout]') ?? document.createElement('span');
+    const part = (this.zoom === 'day' ? timedEdges(values)?.[edge] : undefined) ?? span[edge];
 
     readout.setAttribute('data-blok-database-timeline-edge-readout', edge);
     readout.setAttribute('aria-hidden', 'true');
-    readout.textContent = formatShortDatePart(span[edge], resolveLocale(this.options.locale));
+    readout.textContent = formatShortDatePart(part, resolveLocale(this.options.locale));
     if (!readout.isConnected) {
       barEl.appendChild(readout);
     }
@@ -1772,6 +1784,13 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
     this.endDrag();
 
+    // notion-motion.md Round 49 B9: an edge let go with no move opens no peek, and its readout stays.
+    if (drag?.kind === 'bar' && !drag.active && drag.mode !== 'move') {
+      this.guardNextClick(true);
+      this.readEdge(drag.rowId, drag.mode);
+
+      return;
+    }
     if (drag === null || !drag.active) {
       return;
     }

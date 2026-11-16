@@ -1,5 +1,5 @@
 import {
-  House, MessageCircle, CalendarDays, BookOpen, Users, Library, Files,
+  House, MessageCircle, CalendarDays, BookOpen, Users, LibraryBig, Files,
   Folder, Star, Heart, BriefcaseBusiness, CodeXml, Terminal, Globe,
   Lightbulb, Rocket, Sparkles, SquareCheck, Bookmark, Layers, LayoutGrid,
   Music, Coffee, Palette, SquarePen, MessageCirclePlus, FilePlus2, createElement,
@@ -9,7 +9,7 @@ import type {SidebarIcon} from './sidebar-layout';
 // Explicit imports keep the rest of the Lucide catalogue out of the bundle.
 const icons = {
   home:House, message:MessageCircle, calendar:CalendarDays, book:BookOpen, people:Users,
-  library:Library, files:Files, folder:Folder, star:Star, heart:Heart, briefcase:BriefcaseBusiness,
+  library:LibraryBig, files:Files, folder:Folder, star:Star, heart:Heart, briefcase:BriefcaseBusiness,
   code:CodeXml, terminal:Terminal, globe:Globe, lightbulb:Lightbulb, rocket:Rocket,
   sparkles:Sparkles, 'check-square':SquareCheck, bookmark:Bookmark, layers:Layers,
   'layout-grid':LayoutGrid, music:Music, coffee:Coffee, palette:Palette,

@@ -410,6 +410,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     if (ws.selection !== request) return;
     ws.index.activeId = id;
     if (ref.kind === 'local') saveManifest();
+    ws.frame.setActiveShortcut(null);
     ws.frame.setPages(withSections(ws.index.pages), id);
     onPageIcon(id, page.icon ?? '');
     if (ws.currentId === id) {
@@ -1020,13 +1021,14 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     saveStatus.resetPage();
     ws.frame.element.append(status);
     ws.frame.element.setAttribute('data-desktop-library', '');
+    ws.frame.setActiveShortcut('library');
     ws.frame.element.toggleAttribute('data-desktop-read-only', ws.access.readOnlyWorkspace);
     ws.frame.setPages(withSections(ws.index.pages), '');
     ws.pageCanvas.removeAttribute('data-full-width');
     library.dispose?.(); ws.pageCanvas.replaceChildren();
     library.category = category;
     library.dispose = openPageLibrary({
-      container: ws.pageCanvas, category,
+      container: ws.pageCanvas, category, local: ref.kind === 'local',
       onCategoryChange: value => {
         library.category = value;
         const url = libraryUrl(location.href, value);
@@ -1070,6 +1072,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       }
       library.dispose?.(); library.dispose = null; library.category = null;
       ws.frame.element.removeAttribute('data-desktop-library');
+      ws.frame.setActiveShortcut(null);
       ws.generation++;ws.selection++;ws.pageComments?.destroy(); ws.pageComments = null;
       ws.editor?.destroy();ws.editor=null;ws.currentId='';
       const section=document.createElement('section');section.setAttribute('data-page-unavailable','');section.style.padding='48px';

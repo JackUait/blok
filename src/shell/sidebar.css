@@ -591,6 +591,7 @@
   cursor: pointer;
 }
 [data-blok-sidebar-shortcut]:hover { background: var(--blok-item-hover-bg); color: var(--blok-text-primary); }
+[data-blok-sidebar-shortcut][aria-current="page"] { background: var(--blok-icon-active-bg); color: var(--blok-icon-active-text); font-weight: 500; }
 [data-blok-sidebar-shortcut] svg { flex: none; width: 16px; height: 16px; }
 
 [data-blok-sidebar] button[hidden] { display: none; }

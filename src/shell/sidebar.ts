@@ -34,6 +34,7 @@ export interface PageFrame {
   setPages: (pages: ShellPage[], activeId: string) => void;
   toggleSidebar: () => void;
   setSidebarLayout: (layout: SidebarLayout) => void;
+  setActiveShortcut: (shortcut: 'library' | null) => void;
 }
 
 export type SidebarAction =
@@ -190,6 +191,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     query: '',
   };
   let layout = options.sidebarLayout ? normalizeSidebarLayout(options.sidebarLayout) : undefined;
+  let activeShortcut: 'library' | null = null;
   const publishLayout = (): void => { if (layout) options.onSidebarLayoutChange?.(structuredClone(layout)); };
   const closed = new Set<string>();
   const offline = new Set<string>();
@@ -242,6 +244,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     const library = document.createElement('button');
     library.type = 'button';
     library.setAttribute('data-blok-sidebar-shortcut', '');
+    library.setAttribute('data-blok-sidebar-shortcut-kind', 'library');
     library.append(svg(ICONS.wiki));
     const label = document.createElement('span'); label.textContent = 'Bibliothèque'; library.append(label);
     library.addEventListener('click', options.onLibrary);
@@ -468,7 +471,8 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
       if (!run) return;
       const button = document.createElement('button'); button.type = 'button';
       button.setAttribute('data-blok-sidebar-shortcut', item.id);
-      if (page?.id === view.activeId) button.setAttribute('aria-current', 'page');
+      button.setAttribute('data-blok-sidebar-shortcut-kind', item.kind);
+      if (page?.id === view.activeId || item.kind === activeShortcut) button.setAttribute('aria-current', 'page');
       const icon = document.createElement('span'); icon.setAttribute('aria-hidden', 'true');
       if (page?.icon) renderPageIcon(icon, page.icon);
       else if(item.kind !== 'page') icon.append(sidebarIcon(item.kind));
@@ -999,6 +1003,13 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     element: shell,
     canvas,
     toggleSidebar: () => setCollapsed(!sidebar.hasAttribute('data-collapsed')),
+    setActiveShortcut(shortcut) {
+      activeShortcut = shortcut;
+      for (const button of shortcuts.querySelectorAll('[data-blok-sidebar-shortcut-kind="library"]')) {
+        if (shortcut === 'library') button.setAttribute('aria-current', 'page');
+        else button.removeAttribute('aria-current');
+      }
+    },
     setSidebarLayout(next) {
       layout = normalizeSidebarLayout(next);
       widthState.open = layout.width;

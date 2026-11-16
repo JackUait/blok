@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { destroy, HINT_DELAY } from '../../../src/components/utils/tooltip';
 import { createPageFrame } from '../../../src/shell/sidebar';
+import { defaultSidebarLayout } from '../../../src/shell/sidebar-layout';
 import type { ShellPage, SidebarAction } from '../../../src/shell/sidebar';
 
 /**
@@ -398,6 +399,16 @@ describe('personal sidebar layout', () => {
 });
 
 describe('sidebar layout host integration', () => {
+  it('keeps the library shortcut current across index refreshes and clears it on page navigation', () => {
+    const frame = createPageFrame({ pages: tree(), activeId: '', onOpen: vi.fn(), onCreate: vi.fn(), onLibrary: vi.fn(), sidebarLayout: defaultSidebarLayout() });
+    const library = (): HTMLElement | undefined => [...frame.element.querySelectorAll<HTMLElement>('[data-blok-sidebar-shortcut]')].find(item => item.textContent === 'Bibliothèque');
+    frame.setActiveShortcut('library');
+    frame.setPages(tree(), '');
+    expect(library()?.getAttribute('aria-current')).toBe('page');
+    frame.setActiveShortcut(null);
+    frame.setPages(tree(), 'home');
+    expect(library()?.hasAttribute('aria-current')).toBe(false);
+  });
   it('opens the assistant and customizes the background without intercepting page rows', async () => {
     const { defaultSidebarLayout } = await import('../../../src/shell/sidebar-layout');
     const onAssistant = vi.fn(); const onCustomizeSidebar = vi.fn();

@@ -21,6 +21,7 @@ export interface PageFrame {
   setPages(pages: ShellPage[], activeId: string): void;
   toggleSidebar(): void;
   setSidebarLayout(layout: SidebarLayout): void;
+  setActiveShortcut(shortcut: 'library' | null): void;
 }
 export function createPageFrame(options: {
   sidebarLayout?: SidebarLayout;

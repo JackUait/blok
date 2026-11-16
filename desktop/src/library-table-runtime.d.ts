@@ -12,6 +12,6 @@ export function createLibraryTable(container: HTMLElement, options: {
   onOpen(id: string): void;
   onToggle(id: string): void;
 }): {
-  update(rows: LibraryTableRow[]): void;
+  update(rows: LibraryTableRow[], display?: {showUpdated?: boolean}): void;
   destroy(): void;
 };

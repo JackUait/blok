@@ -1,6 +1,13 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import {createPagePresence} from './page-presence';
 import type {CollaborationParticipant} from '../../types/events/editor-events';
+it('opens the verified member profile from presence without treating anonymous visitors as accounts',()=>{
+ const open=vi.fn();const indicator=createPagePresence({self:()=>({id:'me',name:'Jocelin',photo:null}),onLocate:vi.fn(),onProfile:open});
+ indicator.update({status:'connected',participants:[person('camille',2,'Camille'),person(null,3,'Visitor')]});
+ const profile=indicator.element.querySelector<HTMLButtonElement>('[data-page-presence-profile="camille"]');
+ expect(profile).not.toBeNull();profile?.click();expect(open).toHaveBeenCalledWith('camille');
+ expect(indicator.element.querySelector('[data-page-presence-profile="client:3"]')).toBeNull();indicator.destroy();
+});
 const person = (userId: string | null, clientId: number, name: string, self = false): CollaborationParticipant => ({userId,self,present:true,clientIds:[clientId],lastActiveAt:Date.now(),blockId:'block',user:{name,color:'#0b6e99',glyph:null,label:null}});
 afterEach(()=>document.body.replaceChildren());
 it('counts people, marks self and groups verified sessions without grouping unverified visitors',()=>{

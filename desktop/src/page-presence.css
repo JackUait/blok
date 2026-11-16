@@ -14,3 +14,6 @@
 [data-page-presence-panel] button { border: 1px solid var(--desktop-border); border-radius: 6px; background: var(--desktop-hover); color: var(--desktop-ink); cursor: pointer; }
 [data-page-presence-panel] button:hover { background: var(--desktop-border); }
 [data-page-presence-panel] button:focus-visible { outline: 2px solid #2e8cff; outline-offset: 2px; }
+
+[data-page-presence-panel] [data-page-presence-profile] { margin: 0; padding: 2px 0; text-align: start; background: transparent; border: 0; }
+[data-page-presence-panel] [data-page-presence-profile]:hover { background: transparent; text-decoration: underline; }

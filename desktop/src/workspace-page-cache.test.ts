@@ -4,15 +4,17 @@ import type { WorkspaceIndex } from './storage';
 import type { createPageFrame } from '@blok/sidebar';
 import type * as SidebarModule from '@blok/sidebar';
 type PageFrameOptions = Parameters<typeof createPageFrame>[0];
-const state = vi.hoisted(() => ({ editors: [] as Array<{ holder: HTMLElement; data: unknown; configuredReadOnly(): boolean; rename(title: string): void; destroyed: boolean; flush: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> }>, sidebarAction: null as PageFrameOptions['onAction'] | null }));
+const state = vi.hoisted(() => ({ editors: [] as Array<{ holder: HTMLElement; data: unknown; collaboration?: {offline?: boolean; offlineScope?: string}; configuredReadOnly(): boolean; rename(title: string): void; destroyed: boolean; flush: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> }>, sidebarAction: null as PageFrameOptions['onAction'] | null }));
 vi.mock('@bloklabs/core/full', () => ({ allTools: {}, Blok: class {
   isReady: Promise<void>;
   data: unknown;
   destroyed = false;
+  collaboration?: {offline?: boolean; offlineScope?: string};
   holder: HTMLElement;
   titleText = '';
-  constructor(private config: { holder: HTMLElement; readOnly?: boolean; pageTitle?: { onChange(title: string, change: {source: 'user' | 'remote'}): void }; persistence?: { load(): Promise<unknown>; save(data: unknown): Promise<void> } }) {
+  constructor(private config: { collaboration?: {offline?: boolean; offlineScope?: string}; holder: HTMLElement; readOnly?: boolean; pageTitle?: { onChange(title: string, change: {source: 'user' | 'remote'}): void }; persistence?: { load(): Promise<unknown>; save(data: unknown): Promise<void> } }) {
     this.holder = config.holder;
+    this.collaboration = config.collaboration;
     const redactor = document.createElement('div'); redactor.dataset.blokRedactor = ''; this.holder.append(redactor);
     state.editors.push(this);
     this.isReady = Promise.resolve(config.persistence?.load()).then(data => { this.data = data; });
@@ -236,4 +238,15 @@ it('does not reset scrolling when routing to the page already open', async () =>
 
   expect(canvas.scrollTop).toBe(870);
   expect(window.scrollTo).not.toHaveBeenCalled();
+});
+
+
+it('keeps remote page data across reloads in a stable account and workspace partition', async () => {
+  await startRemote();
+  const first = editorAt(0);
+
+  expect(first.collaboration?.offline).toBe(true);
+  expect(JSON.parse(first.collaboration?.offlineScope ?? 'null')).toEqual(['remote', location.origin, 'user', 'cache-test']);
+  await go('b');
+  expect(editorAt(1).collaboration?.offlineScope).toBe(first.collaboration?.offlineScope);
 });

@@ -275,7 +275,7 @@ func (s *Service) workspaceResource(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func (s *Service) members(w http.ResponseWriter, r *http.Request, ws Workspace) {
-	rows, e := s.DB.Query(r.Context(), "SELECT u.id,u.email,m.role FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.workspace_id=$1 ORDER BY u.email", ws.ID)
+	rows, e := s.DB.Query(r.Context(), "SELECT u.id,u.email,m.role,u.name,u.avatar_url FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.workspace_id=$1 ORDER BY u.email", ws.ID)
 	if e != nil {
 		problem(w, 503, "Database unavailable")
 		return
@@ -283,12 +283,12 @@ func (s *Service) members(w http.ResponseWriter, r *http.Request, ws Workspace) 
 	defer rows.Close()
 	out := []map[string]any{}
 	for rows.Next() {
-		var id, email, role string
-		if e = rows.Scan(&id, &email, &role); e != nil {
+		var id, email, role, name, avatarURL string
+		if e = rows.Scan(&id, &email, &role, &name, &avatarURL); e != nil {
 			problem(w, 500, "Read failed")
 			return
 		}
-		out = append(out, map[string]any{"id": id, "email": email, "role": role})
+		out = append(out, map[string]any{"id": id, "email": email, "role": role, "name": name, "avatarUrl": avatarURL})
 	}
 	if rows.Err() != nil {
 		problem(w, 500, "Read failed")

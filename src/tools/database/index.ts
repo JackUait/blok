@@ -9391,6 +9391,7 @@ export class DatabaseTool implements BlockTool {
     const wanted = link?.full === true && this.model.getRow(link.rowId) !== undefined ? link.rowId : null;
 
     if (shownFull === wanted) return;
+    if (link?.full === true && drawer?.hasFullPageChild(link.rowId)) return;
     if (wanted === null) {
       drawer?.close();
 
@@ -12410,6 +12411,7 @@ export class DatabaseTool implements BlockTool {
 
     return {
       openEditors: this.openCellEditors,
+      ...(this.config.people?.openProfile === undefined ? {} : { openProfile: (userId: string) => this.config.people?.openProfile?.(userId) }),
       valueProperty: (property) => this.computedValues.valueProperty(property),
       formulaProblem: (property, rowId) => this.computedValues.problem(rowId, property),
       relationTitle: (property, rowId) => this.relatedTitle(property, rowId),

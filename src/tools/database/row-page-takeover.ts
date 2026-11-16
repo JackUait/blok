@@ -56,23 +56,41 @@ class PageTakeover {
   private header: HTMLElement | null = null;
   private hash: string | null = null;
   private pushed = false;
+  private viewRoot: HTMLElement;
 
-  constructor(private readonly wrapper: HTMLElement, private readonly marks: TakeoverMarks) {}
+  constructor(wrapper: HTMLElement, private readonly marks: TakeoverMarks) { this.viewRoot = wrapper; }
 
   public get isOpen(): boolean {
     return this.marked.length > 0;
   }
 
-  public enter(id: string): void {
+  public enter(id: string, viewRoot?: HTMLElement): void {
+    if (viewRoot !== undefined) this.viewRoot = viewRoot;
+    this.resume();
+    if (!this.isOpen) return;
+    if (this.hash === null) this.viewRoot.scrollIntoView?.({ block: 'start' });
+    const hash = pageHash(id);
+
+    if (this.hash === hash) return;
+    this.hash = hash;
+    this.pushed = window.location.hash !== hash;
+    if (this.pushed) history.pushState(history.state, '', `${urlWithout()}${hash}`);
+  }
+
+  /** A child full page owns the visible path, but the parent keeps its URL entry. */
+  public suspend(): void { this.unmark(); }
+
+  /** Restore the parent's DOM without navigating or changing its scroll position. */
+  public resume(): void {
     this.unmark();
-    const editor = this.wrapper.closest<HTMLElement>('[data-blok-editor]');
+    const editor = this.viewRoot.closest<HTMLElement>('[data-blok-editor]');
 
     if (editor === null) return;
     editor.setAttribute(this.marks.editor, '');
     this.marked.push(editor);
     // Holders only: a write inside another block's tool would read as its edit.
     editor.querySelectorAll<HTMLElement>(`[${DATA_ATTR.element}]`).forEach((el) => {
-      if (!el.contains(this.wrapper)) return;
+      if (!el.contains(this.viewRoot)) return;
       el.setAttribute(this.marks.path, '');
       // The page's own blocks keep theirs; the blocks around it are not on the page.
       if (!el.hasAttribute(DATA_ATTR.noControls)) {
@@ -83,7 +101,7 @@ class PageTakeover {
     });
     const target = this.marks.target;
 
-    if (target !== undefined) this.wrapper.closest<HTMLElement>(`[${DATA_ATTR.element}]`)?.setAttribute(target, '');
+    if (target !== undefined) this.viewRoot.closest<HTMLElement>(`[${DATA_ATTR.element}]`)?.setAttribute(target, '');
     const instance = editor.getAttribute('data-blok-instance');
     // A host may mount the page title outside the editor; the instance pairs them.
     const header = instance === null ? null : document.querySelector<HTMLElement>(`[data-blok-page-header][data-blok-instance="${CSS.escape(instance)}"]`);
@@ -92,15 +110,6 @@ class PageTakeover {
       header.hidden = true;
       this.header = header;
     }
-    // The page starts at its top bar, like any page just opened.
-    if (this.hash === null) this.wrapper.scrollIntoView?.({ block: 'start' });
-
-    const hash = pageHash(id);
-
-    if (this.hash === hash) return;
-    this.hash = hash;
-    this.pushed = window.location.hash !== hash;
-    if (this.pushed) history.pushState(history.state, '', `${urlWithout()}${hash}`);
   }
 
   public leave(): void {

@@ -3,24 +3,24 @@ import {profileInitial} from './profile-identity';
 import './page-presence.css';
 
 type Identity = {id: string; name: string; photo: string | null};
-type Person = {key: string; name: string; self: boolean; agent: boolean; blockId: string | null; sessions: Set<number>};
+type Person = {key: string; userId: string | null; name: string; self: boolean; agent: boolean; blockId: string | null; sessions: Set<number>};
 
 /** Count verified people, not their open tabs. Unknown identities stay separate. */
 function people(participants: CollaborationParticipant[], self: Identity): Person[] {
   const rows = new Map<string, Person>();
-  rows.set('self', {key:'self', name:self.name, self:true, agent:false, blockId:null, sessions:new Set()});
+  rows.set('self', {key:'self', userId:self.id, name:self.name, self:true, agent:false, blockId:null, sessions:new Set()});
   for (const peer of participants.filter(item => item.present)) {
     const own = !peer.agent && (peer.self || peer.userId === self.id);
     const id = peer.userId ? `user:${peer.userId}` : `client:${peer.clientIds.join(',')}`;
     const key = own ? 'self' : `${peer.agent ? 'agent:' : ''}${id}`;
     const existing = rows.get(key);
     if (existing) { peer.clientIds.forEach(clientId => existing.sessions.add(clientId)); continue; }
-    rows.set(key, {key, name:peer.user.name || peer.user.label || 'Visiteur', self:false, agent:!!peer.agent, blockId:peer.blockId, sessions:new Set(peer.clientIds)});
+    rows.set(key, {key, userId:peer.userId, name:peer.user.name || peer.user.label || 'Visiteur', self:false, agent:!!peer.agent, blockId:peer.blockId, sessions:new Set(peer.clientIds)});
   }
   return [...rows.values()];
 }
 
-export function createPagePresence(options: {self(): Identity; onLocate(blockId: string): void}) {
+export function createPagePresence(options: {self(): Identity; onLocate(blockId: string): void; onProfile?(userId: string): void}) {
   const element = document.createElement('details'); element.setAttribute('data-page-presence', '');
   const summary = document.createElement('summary'); summary.setAttribute('aria-label', 'Personnes sur cette page');
   const avatar = document.createElement('span'); avatar.setAttribute('data-page-presence-avatar', ''); avatar.setAttribute('aria-hidden', 'true');
@@ -35,7 +35,13 @@ export function createPagePresence(options: {self(): Identity; onLocate(blockId:
   element.addEventListener('keydown', event => { if (event.key === 'Escape') { close(); summary.focus(); event.stopPropagation(); } });
   const renderPerson = (person: Person): HTMLLIElement => {
     const row = document.createElement('li'); row.setAttribute('data-page-presence-person', '');
-    const text = document.createElement('span'); text.textContent = person.name;
+    const profileId = !person.agent ? person.userId : null;
+    const text = document.createElement(profileId && options.onProfile ? 'button' : 'span'); text.textContent = person.name;
+    if (text instanceof HTMLButtonElement && profileId) {
+      text.type = 'button'; text.setAttribute('data-page-presence-profile', profileId);
+      text.setAttribute('aria-label', `Voir le profil de ${person.name}`);
+      text.addEventListener('click', () => { close(); options.onProfile?.(profileId); });
+    }
     if (person.self) text.textContent += ' (vous)';
     else if (person.agent) text.textContent += ' · Agent';
     row.append(text);

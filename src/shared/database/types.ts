@@ -644,6 +644,8 @@ export interface DatabasePerson {
 /** Host directory for the person property. Without it, Person is not offered. */
 export interface DatabasePeople {
   list(): Promise<DatabasePerson[]>;
+  /** Opens a member profile from the person hover card. */
+  openProfile?(userId: string): void;
   /** The current user's id. */
   me?(): string;
 }

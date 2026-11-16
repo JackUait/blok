@@ -235,7 +235,7 @@ describe('DatabaseCardDrawer shell', () => {
       drawer.open(ROW, 'side');
       expect(page.hasAttribute('inert')).toBe(true);
       drawer.close();
-      expect(document.activeElement).toBe(page);
+      expect(page).toHaveFocus();
       drawer.destroy();
       expect(page.hasAttribute('inert')).toBe(false);
       expect(disabled.hasAttribute('inert')).toBe(true);
@@ -265,7 +265,7 @@ describe('DatabaseCardDrawer shell', () => {
     });
   });
 
-  // notion-motion.md "Peek: click outside, and Open in full page": ⤡ first runs the peek's close slide, then the full page shows.
+  // Expanding keeps the existing content visible and changes layout in the same interaction.
   describe('open in full page from a side peek', () => {
     const openSide = (): { drawer: DatabaseCardDrawer; panel: () => HTMLElement | null } => {
       vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
@@ -280,13 +280,13 @@ describe('DatabaseCardDrawer shell', () => {
       return { drawer, panel: () => document.querySelector<HTMLElement>('[data-blok-database-drawer]') };
     };
 
-    it('slides the peek out first, then shows the full page', () => {
+    it('shows the full page immediately without hiding the existing panel', () => {
       const { drawer, panel } = openSide();
 
       q('[data-blok-database-peek-expand]')?.click();
 
-      expect(panel()?.getAttribute('data-peek-mode')).toBe('side');
-      expect(panel()?.hasAttribute('data-open')).toBe(false);
+      expect(panel()?.getAttribute('data-peek-mode')).toBe('full');
+      expect(panel()?.hasAttribute('data-open')).toBe(true);
 
       panel()?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
 
@@ -295,13 +295,13 @@ describe('DatabaseCardDrawer shell', () => {
       drawer.destroy();
     });
 
-    it('waits for the panel\'s own slide, not a fade inside it', () => {
+    it('does not depend on a transition event inside the panel', () => {
       const { drawer, panel } = openSide();
 
       q('[data-blok-database-peek-expand]')?.click();
       q('[data-blok-database-peek-next]')?.dispatchEvent(new Event('transitionend', { bubbles: true }));
 
-      expect(panel()?.getAttribute('data-peek-mode')).toBe('side');
+      expect(panel()?.getAttribute('data-peek-mode')).toBe('full');
       drawer.destroy();
     });
 
@@ -316,7 +316,7 @@ describe('DatabaseCardDrawer shell', () => {
       vi.unstubAllGlobals();
     });
 
-    it('stays closed when Escape closes it during the slide', () => {
+    it('stays closed after expansion even if an old transition ends later', () => {
       const { drawer, panel } = openSide();
 
       q('[data-blok-database-peek-expand]')?.click();
@@ -328,14 +328,14 @@ describe('DatabaseCardDrawer shell', () => {
       drawer.destroy();
     });
 
-    it('slides back in as a side peek when another row opens during the slide', () => {
+    it('keeps full-page mode when the next row opens after expansion', () => {
       const { drawer, panel } = openSide();
 
       q('[data-blok-database-peek-expand]')?.click();
       drawer.open({ ...ROW, id: 'other' });
       panel()?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
 
-      expect(panel()?.getAttribute('data-peek-mode')).toBe('side');
+      expect(panel()?.getAttribute('data-peek-mode')).toBe('full');
       expect(panel()?.hasAttribute('data-open')).toBe(true);
       drawer.destroy();
     });
@@ -740,8 +740,8 @@ describe('DatabaseCardDrawer shell', () => {
     const body = (selector: string): string => css.match(new RegExp(`${selector.replace(/[[\]().*+?^$|\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`))?.[1] ?? '';
 
     // Half of 960, less half of 708, less one 8px scrollbar gutter: 118 each side.
-    expect(body('[data-blok-database-drawer][data-peek-mode="center"] [data-blok-database-drawer-content]')).toContain('padding-inline: max(var(--blok-space-4), calc(50% - 354px - var(--blok-space-2)))');
-    expect(body('[data-blok-database-drawer][data-peek-mode="center"] [data-blok-database-drawer-title]')).toContain('padding-inline: var(--blok-space-2)');
+    expect(body('[data-blok-database-drawer][data-peek-mode="center"] > [data-blok-database-drawer-content]')).toContain('padding-inline: max(var(--blok-space-4), calc(50% - 354px - var(--blok-space-2)))');
+    expect(body('[data-blok-database-drawer][data-peek-mode="center"] > [data-blok-database-drawer-content] > [data-blok-database-drawer-title]')).toContain('padding-inline: var(--blok-space-2)');
   });
 
   // feel/findings-rowpage R27: Notion's "•••" menu has 28px rows and ends with who edited the page last.
@@ -807,7 +807,7 @@ describe('DatabaseCardDrawer shell', () => {
   // feel/findings-rowpage R11: Notion's side peek starts the header hover row 4px under the 44px bar (y 48).
   it('starts the side peek page 4px under its top bar', () => {
     const css = readFileSync(resolve(__dirname, '../../../../src/styles/database.css'), 'utf8');
-    const body = css.match(/\[data-blok-database-drawer\]\[data-peek-mode="side"\] \[data-blok-database-drawer-content\]\s*\{([^}]*)\}/)?.[1] ?? '';
+    const body = css.match(/\[data-blok-database-drawer\]\[data-peek-mode="side"\] > \[data-blok-database-drawer-content\]\s*\{([^}]*)\}/)?.[1] ?? '';
 
     expect(body).toContain('padding-block-start: var(--blok-space-1)');
   });

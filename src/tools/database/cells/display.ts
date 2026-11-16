@@ -1,6 +1,7 @@
 import { IconAlarm, IconCheck, IconPageEmpty, IconWarning } from '../../../components/icons';
 import { DATA_ATTR } from '../../../components/constants/data-attributes';
-import { hide as hideHint, onHover, show as showHint } from '../../../components/utils/tooltip';
+import { HINT_DELAY, hide as hideHint, onHover, show as showHint } from '../../../components/utils/tooltip';
+import { promoteToTopLayer, removeFromTopLayer } from '../../../components/utils/top-layer';
 import { safeHref, safeImageSrc, urlScheme } from '../../../components/utils/sanitize-url';
 import type { DatabasePerson, PlaceValue, PropertyDefinition, PropertyValue, SelectOption } from '../types';
 import { filesOf, personIdsOf, statusGroupOf } from '../property-values';
@@ -252,6 +253,72 @@ const renderStatus = (cell: HTMLElement, property: PropertyDefinition, value: Pr
   cell.appendChild(pill);
 };
 
+const activePersonCard = { close: null as (() => void) | null };
+
+/** A profile action needs a real hover card: ordinary hints are click-transparent. */
+const interactivePersonCard = (chip: HTMLElement, card: HTMLElement, open: () => void): void => {
+  const state = { show: 0, hide: 0, lifetime: null as AbortController | null, observer: null as MutationObserver | null };
+  const close = (): void => {
+    window.clearTimeout(state.show);
+    window.clearTimeout(state.hide);
+    state.lifetime?.abort();
+    state.lifetime = null;
+    state.observer?.disconnect();
+    state.observer = null;
+    removeFromTopLayer(card);
+    card.remove();
+    if (activePersonCard.close === close) activePersonCard.close = null;
+  };
+  const show = (): void => {
+    if (!chip.isConnected) return;
+    activePersonCard.close?.();
+    activePersonCard.close = close;
+    hideHint();
+    const bounds = chip.getBoundingClientRect();
+
+    Object.assign(card.style, { position: 'fixed', zIndex: '10000' });
+    document.body.append(card);
+    promoteToTopLayer(card);
+    const size = card.getBoundingClientRect();
+
+    Object.assign(card.style, {
+      left: `${Math.max(8, Math.min(bounds.left, window.innerWidth - size.width - 8))}px`,
+      top: `${Math.max(8, bounds.top >= size.height + 14 ? bounds.top - size.height - 6 : Math.min(bounds.bottom + 6, window.innerHeight - size.height - 8))}px`,
+    });
+    const lifetime = new AbortController();
+
+    state.lifetime = lifetime;
+    document.addEventListener('pointerdown', (event) => {
+      if (event.target instanceof Node && !chip.contains(event.target) && !card.contains(event.target)) close();
+    }, { capture: true, signal: lifetime.signal });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        close();
+      }
+    }, { capture: true, signal: lifetime.signal });
+    window.addEventListener('scroll', close, { capture: true, signal: lifetime.signal });
+    window.addEventListener('resize', close, { signal: lifetime.signal });
+    state.observer = new MutationObserver(() => { if (!chip.isConnected) close(); });
+    state.observer.observe(document.body, { childList: true, subtree: true });
+  };
+
+  chip.addEventListener('mouseenter', () => { window.clearTimeout(state.hide); state.show = window.setTimeout(show, HINT_DELAY); });
+  chip.addEventListener('mouseleave', () => { window.clearTimeout(state.show); state.hide = window.setTimeout(close, 150); });
+  card.addEventListener('mouseenter', () => window.clearTimeout(state.hide));
+  card.addEventListener('mouseleave', () => { state.hide = window.setTimeout(close, 150); });
+  chip.setAttribute('tabindex', '0');
+  chip.setAttribute('role', 'button');
+  chip.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+      open();
+    }
+  });
+};
+
 /**
  * notion-spec-2 §18.2, §19.16 (created-by-editor.png): a profile card above the name. Notion adds a role
  * and the local time; a Blok person has neither. The delay stays Blok's hint delay. A click on the name keeps
@@ -259,7 +326,18 @@ const renderStatus = (cell: HTMLElement, property: PropertyDefinition, value: Pr
  */
 const attachPersonCard = (chip: HTMLElement, person: DatabasePerson, ctx: CellContext): void => {
   const card = document.createElement('div');
-  const name = document.createElement('div');
+  const name = document.createElement(ctx.openProfile === undefined ? 'div' : 'button');
+
+  if (name instanceof HTMLButtonElement) {
+    name.type = 'button';
+    name.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      activePersonCard.close?.();
+      chip.focus({ preventScroll: true });
+      ctx.openProfile?.(person.id);
+    });
+  }
   const src = person.avatarUrl === undefined ? null : safeImageSrc(person.avatarUrl);
   const avatar = document.createElement(src === null ? 'span' : 'img');
 
@@ -275,7 +353,8 @@ const attachPersonCard = (chip: HTMLElement, person: DatabasePerson, ctx: CellCo
   name.setAttribute('data-blok-database-person-card-name', '');
   name.textContent = person.id === ctx.me ? ctx.i18n.t('tools.database.personYou').replace('{name}', person.name) : person.name;
   card.append(avatar, name);
-  onHover(chip, card, { placement: 'top', gap: 6, surface: true, keepOnPress: true });
+  if (ctx.openProfile !== undefined) interactivePersonCard(chip, card, () => ctx.openProfile?.(person.id));
+  else onHover(chip, card, { placement: 'top', gap: 6, surface: true, keepOnPress: true });
 };
 
 const renderPeople = (cell: HTMLElement, value: PropertyValue | undefined, ctx: CellContext): void => {

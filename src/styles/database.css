@@ -1936,14 +1936,14 @@
   display: none;
 }
 
-[data-blok-database-drawer][data-peek-mode="full"] [data-blok-database-drawer-content] {
+[data-blok-database-drawer][data-peek-mode="full"] > [data-blok-database-drawer-content] {
   padding-inline: 0;
   overflow: visible;
 }
 
 /* research/09 §9: a full page keeps the content column unless the layout is Full width. Peeks never change.
    The title's 6px inset lies outside the column, so its ink and the labels sit on the page's text (Notion fullpage.png). */
-[data-blok-database-drawer][data-peek-mode="full"]:not([data-full-width]) [data-blok-database-drawer-content] {
+[data-blok-database-drawer][data-peek-mode="full"]:not([data-full-width]) > [data-blok-database-drawer-content] {
   box-sizing: border-box;
   inline-size: 100%;
   max-inline-size: calc(var(--blok-content-max-width, var(--max-width-content)) + 2 * var(--blok-space-1-5));
@@ -2262,37 +2262,37 @@
 }
 
 /* research/26 §1e: 40px/48px in both themes, on a full page too (feel/findings-rowpage R17); the side peek keeps 32px. */
-[data-blok-database-drawer][data-peek-mode="center"] [data-blok-database-drawer-title],
-[data-blok-database-drawer][data-peek-mode="full"] [data-blok-database-drawer-title] {
+[data-blok-database-drawer][data-peek-mode="center"] > [data-blok-database-drawer-content] > [data-blok-database-drawer-title],
+[data-blok-database-drawer][data-peek-mode="full"] > [data-blok-database-drawer-content] > [data-blok-database-drawer-title] {
   font-size: 40px;
   line-height: 48px;
 }
 
 /* feel/findings-rowpage R11: the side peek's header row starts 4px under the 44px bar (Notion: y 48). */
 /* Notion's 756px peek: label cells 78px in, values end 76px from the edge. The 8px gutters count toward both. */
-[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-content] {
+[data-blok-database-drawer][data-peek-mode="side"] > [data-blok-database-drawer-content] {
   padding-block-start: var(--blok-space-1);
   padding-inline-start: 70px;
   padding-inline-end: 68px;
 }
 
 /* feel/findings-rowpage R20: the center peek's column is 708px, centred past the 8px scrollbar gutter; its title text sits 8px in. */
-[data-blok-database-drawer][data-peek-mode="center"] [data-blok-database-drawer-content] {
+[data-blok-database-drawer][data-peek-mode="center"] > [data-blok-database-drawer-content] {
   padding-inline: max(var(--blok-space-4), calc(50% - 354px - var(--blok-space-2)));
 }
 
-[data-blok-database-drawer][data-peek-mode="center"] [data-blok-database-drawer-title] {
+[data-blok-database-drawer][data-peek-mode="center"] > [data-blok-database-drawer-content] > [data-blok-database-drawer-title] {
   padding-inline: var(--blok-space-2);
 }
 
 /* notion-spec-2 §5: title text starts over the label icons, inset as the label head is. */
-[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-title],
-[data-blok-database-drawer][data-peek-mode="full"] [data-blok-database-drawer-title] {
+[data-blok-database-drawer][data-peek-mode="side"] > [data-blok-database-drawer-content] > [data-blok-database-drawer-title],
+[data-blok-database-drawer][data-peek-mode="full"] > [data-blok-database-drawer-content] > [data-blok-database-drawer-title] {
   padding-inline-start: var(--blok-space-1-5);
 }
 
 /* Round 33 §3: Notion's first label is 133.4 with up to 4 properties, 141.4 with 5 or more (title at 80). */
-[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-title] {
+[data-blok-database-drawer][data-peek-mode="side"] > [data-blok-database-drawer-content] > [data-blok-database-drawer-title] {
   margin-bottom: 9px;
 }
 
@@ -5665,7 +5665,7 @@ button[data-blok-database-layout-pin-name]:focus-visible {
 }
 
 /* research/09 §9, full page: a 385px column at the window's inline end, full height. 385 is DETAILS_DOCK_WIDTH in database-card-drawer.ts. */
-[data-blok-database-drawer][data-peek-mode="full"] [data-blok-database-drawer-details] {
+[data-blok-database-drawer][data-peek-mode="full"] > [data-blok-database-drawer-details] {
   position: fixed;
   inset-block: 0;
   inset-inline-end: 0;
@@ -5679,7 +5679,7 @@ button[data-blok-database-layout-pin-name]:focus-visible {
 }
 
 /* research/09 §9, center peek: a 280px column inside the modal, below its toolbar; the page narrows beside it. */
-[data-blok-database-drawer][data-peek-mode="center"] [data-blok-database-drawer-details] {
+[data-blok-database-drawer][data-peek-mode="center"] > [data-blok-database-drawer-details] {
   position: absolute;
   inset-block-start: var(--_blok-peek-toolbar-size, 0px);
   inset-block-end: 0;
@@ -5697,7 +5697,7 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   --_blok-peek-details-inset: calc(280px + 60px);
 }
 
-[data-blok-database-drawer][data-peek-mode="center"][data-details-open] [data-blok-database-drawer-content] {
+[data-blok-database-drawer][data-peek-mode="center"][data-details-open] > [data-blok-database-drawer-content] {
   padding-inline-end: var(--_blok-peek-details-inset);
 }
 
@@ -5708,7 +5708,7 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   below it Blok keeps the panel beside or under the group.
 */
 @media (min-width: 844px) {
-  [data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-details] {
+  [data-blok-database-drawer][data-peek-mode="side"] > [data-blok-database-drawer-details] {
     position: absolute;
     inset-block-start: var(--_blok-peek-toolbar-size, 0px);
     inset-block-end: 0;
@@ -5721,7 +5721,7 @@ button[data-blok-database-layout-pin-name]:focus-visible {
     background-color: var(--blok-database-peek-bg);
   }
 
-  [data-blok-database-drawer][data-peek-mode="side"][data-details-open] [data-blok-database-drawer-content] { padding-inline-end: var(--_blok-peek-details-inset); }
+  [data-blok-database-drawer][data-peek-mode="side"][data-details-open] > [data-blok-database-drawer-content] { padding-inline-end: var(--_blok-peek-details-inset); }
 }
 
 /* research/10 §10: Close panel at the top, then "Properties" 13px/500 grey. */
@@ -7594,6 +7594,21 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   line-height: 24px;
   font-weight: 600;
 }
+
+[data-blok-database-person-card] button[data-blok-database-person-card-name] {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+[data-blok-database-person-card] button[data-blok-database-person-card-name]:hover {
+  text-decoration: underline;
+}
+
 
 /* notion-spec-2 §20.1: a long "by" name ends in "…". text-overflow needs a block box: an inline-flex chip ignores it. */
 :is([data-blok-database-cell="createdBy"], [data-blok-database-cell="lastEditedBy"]) {
@@ -20286,4 +20301,12 @@ button[data-blok-database-feed-reaction]:hover,
 /* Conditional color on items whose own fill is declared after the color rules above. */
 :is([data-blok-database-calendar-event], [data-blok-database-timeline-bar], [data-blok-database-feed-card])[data-blok-database-color] {
   background-color: var(--_blok-database-rule-bg);
+}
+
+/* The row shell paints before its deferred block body is composed. */
+[data-blok-database-body-loading] {
+  height: 48px;
+  margin-block: 12px;
+  border-radius: 4px;
+  background: var(--blok-item-hover-bg);
 }

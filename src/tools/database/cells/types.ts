@@ -43,6 +43,8 @@ export interface CellContext {
   initialText?: string;
   /** The host's people, for names and avatars. Without it a person shows a placeholder and cannot be edited. */
   people?: DatabasePerson[];
+  /** Opens a known person from the profile hover card without editing the cell. */
+  openProfile?: (userId: string) => void;
   /** The current user's id, listed first in the person editor. */
   me?: string;
   /** A form question's selection cap, independent of the property schema. */

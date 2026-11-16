@@ -1,3 +1,4 @@
+import type {WorkspacePerson} from '../member-profile';
 import { TEAMSPACE_ROLES } from '../access-vocabulary';
 import type { CloudClient } from './client';
 export type TeamspaceRole = 'owner' | 'member';
@@ -16,7 +17,7 @@ export function teamspaceClient(client: Pick<CloudClient,'request'>, workspace: 
     create: (value:TeamspaceIdentity) => client.request<Teamspace>(`${base}/teamspaces`,{method:'POST',body:JSON.stringify({...value,mode:'closed'})}),
     update: (id:string,value:TeamspaceIdentity) => client.request<Teamspace>(path(id),{method:'PATCH',body:JSON.stringify(value)}),
     members: (id:string,signal?:AbortSignal) => client.request<{members:TeamspaceMember[]}>(`${path(id)}/members`,{signal}),
-    workspaceMembers: (signal?:AbortSignal) => client.request<{members:{id:string;email:string;role:'admin'|'member'|'viewer'}[]}>(`${base}/members`,{signal}),
+    workspaceMembers: (signal?:AbortSignal) => client.request<{members:WorkspacePerson[]}>(`${base}/members`,{signal}),
     setMember: (id:string,userId:string,role:TeamspaceRole) => client.request(`${path(id)}/members/${encodeURIComponent(userId)}`,{method:'PUT',body:JSON.stringify({role})}),
     removeMember: (id:string,userId:string) => client.request(`${path(id)}/members/${encodeURIComponent(userId)}`,{method:'DELETE'}),
     archive: (id:string,archived:boolean) => client.request<Teamspace>(`${path(id)}/${archived ? 'archive' : 'restore'}`,{method:'POST'}),

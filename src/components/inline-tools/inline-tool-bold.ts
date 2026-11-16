@@ -340,7 +340,14 @@ export class BoldInlineTool implements InlineTool {
     const preserveNode = window.getSelection()?.anchorNode ?? null;
     const pass = new BoldNormalizationPass({ mergeAdjacent: false, removeEmpty: false, normalizeWhitespace: false, preserveNode });
 
-    roots.forEach((root) => {
+    // A renderer batch often adds a container, then its rows and cells. Pick
+    // disjoint outer roots before converting any <b>: conversion reparents its
+    // children, so deciding coverage during the pass can visit them twice.
+    const hasRootAncestor = (element: Element | null): boolean =>
+      element !== null && (roots.has(element) || hasRootAncestor(element.parentElement));
+    const outerRoots = [...roots].filter(root => root.isConnected && !hasRootAncestor(root.parentElement));
+
+    outerRoots.forEach((root) => {
       if (root.isConnected) {
         pass.run(root);
       }

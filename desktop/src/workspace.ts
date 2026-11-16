@@ -1,6 +1,8 @@
 import {createPageHistoryApi} from './page-history-api';
 import type {createPageHistory} from './page-history';
 import { createPagePresence } from './page-presence';
+import {createMemberProfiles} from './member-profile';
+import {profileDisplayName} from './profile-identity';
 import { readAccountIdentity } from './account-profile';
 import { watchLocalProfile } from './local-profile';
 import { readSidebarLayout, saveSidebarLayout, subscribeSidebarLayout, initializeSidebarPresets } from './sidebar-preferences';
@@ -101,6 +103,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   const sidebarTeamspaces:SidebarTeamspace[]=[];
   const teamspacesState={refreshing:false,pending:0,error:'Chargement…' as string|null};
   const teamspacesApi=ref.kind==='remote' ? teamspaceClient(new CloudClient({origin:ref.server,...('__TAURI_INTERNALS__' in window ? {sessionAdapter:nativeSessionAdapter(ref.server)} : {})}),ref.workspaceId) : null;
+  const memberProfiles=teamspacesApi ? createMemberProfiles({workspaceName:identity.name,members:signal=>teamspacesApi.workspaceMembers(signal)}) : null;
   const repository = workspaceRepository(ref);
   const favorites = navigationFavorites(ref);
   const recentPages = navigationRecents(ref);
@@ -574,6 +577,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     const pagePresence = ref.kind === 'remote' ? createPagePresence({
       self: () => ({ id: ref.accountId, ...readAccountIdentity(ref) }),
       onLocate: blockId => instance.blocks.getById(blockId)?.holder.scrollIntoView({ block: 'center', behavior: 'smooth' }),
+      onProfile: userId => { void memberProfiles?.open(userId); },
     }) : null;
     if (pagePresence) toolbar.element.querySelector('[data-desktop-page-actions]')?.prepend(pagePresence.element);
     const unwatchProfile = pagePresence ? watchLocalProfile(() => pagePresence.refresh()) : () => undefined;
@@ -663,7 +667,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     const instance = new Blok({
       holder,
       readOnly: readOnly(id),
-      tools: { ...desktopTools, database: {class: Database, config: {people: { me: () => commentAuthor(ref).authorId, list: async () => { const author = commentAuthor(ref); return [{ id: author.authorId, get name() { return commentAuthor(ref).authorName; }, get avatarUrl() { return commentAuthor(ref).avatarUrl; } }]; } }, customEmojis: () => emojis.list(), coverGallery: COVER_GALLERY, uploadCover: (file: globalThis.File) => readCoverFile(file).then(repository.uploadImage)}}, page: { class: Page, config: { ...pageConfig } } },
+      tools: { ...desktopTools, database: {class: Database, config: {people: { me: () => commentAuthor(ref).authorId, ...(memberProfiles ? { openProfile: (userId: string) => { void memberProfiles.open(userId); } } : {}), list: async () => { if(memberProfiles)return (await memberProfiles.list()).map(member=>({id:member.id,name:profileDisplayName(member.name,member.email),...(member.avatarUrl ? {avatarUrl:member.avatarUrl} : {})})); const author = commentAuthor(ref); return [{ id: author.authorId, get name() { return commentAuthor(ref).authorName; }, get avatarUrl() { return commentAuthor(ref).avatarUrl; } }]; } }, customEmojis: () => emojis.list(), coverGallery: COVER_GALLERY, uploadCover: (file: globalThis.File) => readCoverFile(file).then(repository.uploadImage)}}, page: { class: Page, config: { ...pageConfig } } },
+      ...(memberProfiles ? {resolveUser: async (userId: string) => { const member=await memberProfiles.list().then(members=>members.find(person=>person.id===userId)).catch(()=>undefined); return member ? {name:profileDisplayName(member.name,member.email)} : null; }} : {}),
       theme: readAppearance(),
       pageTitle: {
         customEmojis: () => emojis.list(),
@@ -700,7 +705,12 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         server: `${ref.server}/api/blok`,
         ticket: ({ doc }: { doc?: string; forceRefresh?: boolean }) => repository.ticket(doc ?? id),
         user: { id: ref.accountId },
-        collaboration: { doc: id, user: { get name() { return readAccountIdentity(ref).name; } }, offline: false },
+        collaboration: {
+          doc: id,
+          user: { get name() { return readAccountIdentity(ref).name; } },
+          offline: true,
+          offlineScope: workspaceKey(ref),
+        },
       } : { persistence: {
         async load() {
           const raw = await repository.readPage(id);
@@ -1427,7 +1437,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     },
     destroy() {
       if (sessions.disposed) return;
-      lifetime.abort(); unsubscribeSidebar();
+      lifetime.abort(); unsubscribeSidebar(); memberProfiles?.destroy();
       if (sessions.reconnectTimer !== undefined) window.clearInterval(sessions.reconnectTimer);
       ws.closeSearch?.(); ws.assistant.destroy();
       sessions.disposed = true; ws.selection++; ws.generation++;

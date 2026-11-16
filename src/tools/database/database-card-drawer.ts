@@ -94,7 +94,7 @@ const PEEK_WIDTH_KEY = 'blok:database-peek-width';
 /** Notion's pin arrows scroll 400px per click (research/09 §4). */
 const PIN_SCROLL_STEP = 400;
 const PEEK_MODE_ICONS: Record<OpenPagesIn, string> = { side: IconPeekSide, center: IconPeekCenter, full: IconPeekFull };
-/** One peek per page: opening one closes the other database's. */
+/** One foreground peek; a full row page may remain behind a nested peek. */
 const openPeek: { drawer: DatabaseCardDrawer | null } = { drawer: null };
 /** The drawer whose inset a page shows; a peek still sliding out must not undo a newer one's. */
 const peekHostOwners = new WeakMap<HTMLElement, DatabaseCardDrawer>();
@@ -519,8 +519,11 @@ export class DatabaseCardDrawer {
   private readonly viewRows: CardDrawerOptions['viewRows'];
   /** The builder's "New page" preview when the database has no rows (research/09 §1). No drawer is open then. */
   private placeholder: DatabaseRow | null = null;
-  /** The side peek sliding out before it turns into a full page. Close drops it with the drawer; a new row cancels it. */
-  private expanding: HTMLElement | null = null;
+  /** A full row page stays mounted while a linked database opens a task over it. */
+  private parentPage: DatabaseCardDrawer | null = null;
+  private childPeek: DatabaseCardDrawer | null = null;
+  private parentScroll: Array<{ element: HTMLElement; top: number; left: number }> = [];
+  private pendingBodyMount: { frame: number | null; timer: number | null; holder: HTMLElement; placeholder: HTMLElement } | null = null;
   private readonly onEditViewDefault: CardDrawerOptions['onEditViewDefault'];
   private readonly rowLink: CardDrawerOptions['rowLink'];
   private readonly onExpand: CardDrawerOptions['onExpand'];
@@ -760,17 +763,19 @@ export class DatabaseCardDrawer {
     return this.mode;
   }
 
+  /** A retained parent must not close when history names its full-page child. */
+  hasFullPageChild(rowId: string): boolean {
+    const child = this.childPeek;
+
+    return child !== null && ((child.mode === 'full' && child.currentRowId === rowId) || child.hasFullPageChild(rowId));
+  }
+
   open(row: DatabaseRow, mode: OpenPagesIn = this.drawer === null ? 'side' : this.mode): void {
     this.show(row, mode);
     this.onShown?.();
   }
 
   private show(row: DatabaseRow, mode: OpenPagesIn): void {
-    if (this.drawer !== null && this.expanding === this.drawer) {
-      this.expanding = null;
-      this.drawer.setAttribute('data-open', '');
-      if (this.mode === 'side') this.narrowPeekHost();
-    }
     if (this.drawer) {
       if (mode !== this.mode) {
         this.applyMode(mode);
@@ -785,8 +790,19 @@ export class DatabaseCardDrawer {
       return;
     }
 
-    if (openPeek.drawer !== null && openPeek.drawer !== this) {
-      openPeek.drawer.close();
+    const previous = openPeek.drawer;
+
+    if (previous !== null && previous !== this) {
+      if (previous.mode !== 'full') previous.close();
+      const page = openPeek.drawer;
+      const editor = this.wrapper.closest('[data-blok-editor]');
+
+      if (page !== null && page !== this && page.mode === 'full' && editor !== null && page.wrapper.closest('[data-blok-editor]') === editor) {
+        this.parentPage = page;
+        page.childPeek = this;
+      } else {
+        page?.close();
+      }
     }
     openPeek.drawer = this;
     this.peekOpener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -911,13 +927,16 @@ export class DatabaseCardDrawer {
 
     drawer.appendChild(content);
     drawer.appendChild(this.buildPeekResizeHandle(drawer));
-    this.wrapper.appendChild(drawer);
+    // A source database may be hidden by the parent row takeover. Keep its
+    // peek in the visible parent DOM, while the source still owns the row body.
+    (this.parentPage?.drawer ?? this.wrapper).appendChild(drawer);
     this.drawer = drawer;
     this.setPeekWidth(this.peekWidth);
     this.renderRegions(row);
     this.applyMode(mode);
 
     requestAnimationFrame(() => {
+      if (this.drawer !== drawer) return;
       drawer.setAttribute('data-open', '');
       if (this.drawer === drawer && this.mode === 'side') {
         this.narrowPeekHost();
@@ -931,9 +950,10 @@ export class DatabaseCardDrawer {
       });
     });
 
-    this.initNestedEditor(editorHolder, row);
+    this.mountRowBodyAfterPaint(editorHolder, row);
 
     this.escapeHandler = (e: KeyboardEvent): void => {
+      if (openPeek.drawer !== this) return;
       const step = stepOf(e);
 
       if (step !== null) {
@@ -975,6 +995,7 @@ export class DatabaseCardDrawer {
     window.addEventListener('resize', this.resizeHandler);
 
     this.outsideClickHandler = (e: MouseEvent): void => {
+      if (openPeek.drawer !== this) return;
       const target = e.target as Node | null;
 
       if (
@@ -1014,7 +1035,7 @@ export class DatabaseCardDrawer {
     };
     document.addEventListener('mousedown', this.outsideClickHandler);
 
-    titleInput.focus();
+    titleInput.focus({ preventScroll: true });
   }
 
   /**
@@ -1062,13 +1083,13 @@ export class DatabaseCardDrawer {
       const nextHolder = editorHolder.cloneNode(false) as HTMLElement;
 
       editorHolder.replaceWith(nextHolder);
-      this.initNestedEditor(nextHolder, row);
+      this.mountRowBodyAfterPaint(nextHolder, row);
     }
     this.renderRegions(row);
   }
 
   close(): void {
-    this.expanding = null;
+    this.childPeek?.close();
     const wasOpen = this.drawer !== null;
     // The side peek slides out with its body still in it; the body goes back
     // to the pool once the slide ends.
@@ -1126,9 +1147,7 @@ export class DatabaseCardDrawer {
 
     this.currentRowId = null;
     this.currentRow = null;
-    if (openPeek.drawer === this) {
-      openPeek.drawer = null;
-    }
+    this.releaseParentPage();
 
     if (wasOpen) {
       if (this.peekOpener?.isConnected && !this.peekOpener.closest('[inert]')) this.peekOpener.focus({ preventScroll: true });
@@ -1138,6 +1157,7 @@ export class DatabaseCardDrawer {
   }
 
   destroy(): void {
+    this.childPeek?.destroy();
     this.events?.off('i18n:changed', this.followOuterDirection);
     this.pageScroll.unlock();
     this.stopWatchingPins();
@@ -1177,9 +1197,7 @@ export class DatabaseCardDrawer {
 
     this.currentRowId = null;
     this.currentRow = null;
-    if (openPeek.drawer === this) {
-      openPeek.drawer = null;
-    }
+    this.releaseParentPage();
   }
 
   /** The 12px col-resize handle on the side peek's inner edge (research/22 §10). */
@@ -1899,24 +1917,36 @@ export class DatabaseCardDrawer {
     if (rowId !== null && this.onExpand?.(rowId) === true) {
       return;
     }
-    const drawer = this.drawer;
+    // The editor already exists. Reposition it in this interaction instead of
+    // hiding it for a close animation and exposing the old table in between.
+    this.switchMode('full');
+  }
 
-    // Notion runs the peek's close slide while the page widens, then shows the full page.
-    if (drawer === null || this.mode !== 'side' || !drawer.hasAttribute('data-open') || prefersReducedMotion()) {
-      this.switchMode('full');
+  private releaseParentPage(): void {
+    const parent = this.parentPage;
 
-      return;
+    if (parent?.childPeek === this) {
+      parent.childPeek = null;
+      parent.drawer?.removeAttribute('data-blok-database-full-page');
+      if (parent.isOpen) parent.takeover.resume();
     }
-    this.expanding = drawer;
-    drawer.removeAttribute('data-open');
-    afterSlide(drawer, () => {
-      if (this.expanding !== drawer || this.drawer !== drawer) {
-        return;
-      }
-      this.expanding = null;
-      this.switchMode('full');
-      drawer.setAttribute('data-open', '');
-    });
+    this.restoreParentScroll();
+    this.parentPage = null;
+    if (openPeek.drawer === this) openPeek.drawer = parent?.isOpen === true ? parent : null;
+  }
+
+  private captureParentScroll(element: HTMLElement | null): void {
+    if (element === null) return;
+    this.parentScroll.push({ element, top: element.scrollTop, left: element.scrollLeft });
+    this.captureParentScroll(element.parentElement);
+  }
+
+  private restoreParentScroll(): void {
+    for (const { element, top, left } of this.parentScroll) {
+      element.scrollTop = top;
+      element.scrollLeft = left;
+    }
+    this.parentScroll = [];
   }
 
   private switchMode(mode: OpenPagesIn): void {
@@ -2167,6 +2197,13 @@ export class DatabaseCardDrawer {
     if (drawer === null) {
       return;
     }
+    if (this.parentPage !== null) {
+      const parent = this.parentPage;
+
+      if (mode === 'full' && this.parentScroll.length === 0) this.captureParentScroll(parent.drawer?.parentElement ?? null);
+      parent.drawer?.toggleAttribute('data-blok-database-full-page', mode === 'full');
+      if (mode === 'full') parent.takeover.suspend();
+    }
     drawer.setAttribute('data-peek-mode', mode);
     drawer.setAttribute('role', mode === 'full' ? 'region' : 'dialog');
     drawer.toggleAttribute('aria-modal', false);
@@ -2239,9 +2276,11 @@ export class DatabaseCardDrawer {
   /** A full page takes over its editor and the URL (row-page-takeover.ts); a peek gives both back. */
   private syncTakeover(): void {
     if (this.mode === 'full' && this.drawer !== null && this.currentRowId !== null) {
-      this.takeover.enter(this.currentRowId);
+      this.takeover.enter(this.currentRowId, this.parentPage?.drawer ?? this.wrapper);
     } else {
       this.takeover.leave();
+      this.parentPage?.takeover.resume();
+      this.restoreParentScroll();
     }
   }
 
@@ -4094,6 +4133,7 @@ export class DatabaseCardDrawer {
   }
 
   private cleanupEditor(): void {
+    this.cancelPendingBodyMount();
     this.closeCellEditor();
     this.detachBody();
     this.pageMount?.destroy();
@@ -4153,7 +4193,51 @@ export class DatabaseCardDrawer {
     }
   }
 
+  /** Give the title and properties a paint before composing a lazy block body. */
+  private mountRowBodyAfterPaint(holder: HTMLElement, row: DatabaseRow): void {
+    this.cancelPendingBodyMount();
+    if (this.rowBody === undefined || this.rowPages !== undefined) {
+      this.initNestedEditor(holder, row);
+
+      return;
+    }
+    const placeholder = document.createElement('div');
+
+    placeholder.setAttribute('data-blok-database-body-loading', '');
+    placeholder.setAttribute('aria-hidden', 'true');
+    holder.setAttribute('aria-busy', 'true');
+    holder.append(placeholder);
+    const pending: NonNullable<DatabaseCardDrawer['pendingBodyMount']> = { frame: null, timer: null, holder, placeholder };
+
+    this.pendingBodyMount = pending;
+    pending.frame = requestAnimationFrame(() => {
+      pending.frame = null;
+      if (this.pendingBodyMount !== pending) return;
+      // A timer after rAF lets the browser paint the shell first. Composing the
+      // body inside rAF would still hold that first frame hostage.
+      pending.timer = window.setTimeout(() => {
+        pending.timer = null;
+        if (this.pendingBodyMount !== pending) return;
+        this.cancelPendingBodyMount();
+        if (this.currentRowId !== row.id || !holder.isConnected || !this.drawer?.contains(holder)) return;
+        this.initNestedEditor(holder, this.currentRow ?? row);
+      }, 0);
+    });
+  }
+
+  private cancelPendingBodyMount(): void {
+    const pending = this.pendingBodyMount;
+
+    this.pendingBodyMount = null;
+    if (pending === null) return;
+    if (pending.frame !== null) cancelAnimationFrame(pending.frame);
+    if (pending.timer !== null) window.clearTimeout(pending.timer);
+    pending.holder.removeAttribute('aria-busy');
+    pending.placeholder.remove();
+  }
+
   private initNestedEditor(editorHolder: HTMLElement, row: DatabaseRow): void {
+    this.cancelPendingBodyMount();
     const initVersion = ++this.editorInitVersion;
 
     editorHolder.toggleAttribute('inert', this.pendingBodyRows.has(row.id));

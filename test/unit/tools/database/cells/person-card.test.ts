@@ -29,6 +29,9 @@ describe('person profile card', () => {
   });
 
   afterEach(() => {
+    window.dispatchEvent(new Event('resize'));
+    document.body.replaceChildren();
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -57,5 +60,27 @@ describe('person profile card', () => {
     const cell = renderCellValue(makeProperty('person'), ['u-gone'], makeEditorContext({ people: PEOPLE }));
 
     expect(hoverOf(cell.querySelector('[data-blok-database-person-chip]')).card).toBeUndefined();
+  });
+
+  it('offers the host profile from an interactive hover card while leaving the cell available for assignment', () => {
+    vi.useFakeTimers();
+    const openProfile = vi.fn();
+    const cell = renderCellValue(makeProperty('person'), ['u-ada'], makeEditorContext({ people: PEOPLE, openProfile }));
+
+    document.body.append(cell);
+    const chip = cell.querySelector<HTMLElement>('[data-blok-database-person-chip]');
+
+    chip?.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(document.querySelector('[data-blok-database-person-card]')).toBeNull();
+    vi.advanceTimersByTime(500);
+    const name = document.querySelector<HTMLButtonElement>('button[data-blok-database-person-card-name]');
+
+    expect(name).not.toBeNull();
+    name?.click();
+    expect(openProfile).toHaveBeenCalledWith('u-ada');
+    expect(cell.querySelector('button')).toBeNull();
+    expect(document.querySelector('[data-blok-database-person-card]')).toBeNull();
+    cell.remove();
+    vi.useRealTimers();
   });
 });

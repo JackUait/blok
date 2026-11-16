@@ -129,7 +129,8 @@ describe('row page peek modes', () => {
     await openRow('r1');
 
     expect(drawer()?.getAttribute('data-peek-mode')).toBe('side');
-    expect(drawer()?.getAttribute('role')).toBe('complementary');
+    expect(drawer()?.getAttribute('role')).toBe('dialog');
+    expect(drawer()?.getAttribute('aria-modal')).toBe('true');
   });
 
   // notion-spec-2 §25.3 (60-peek-open.png, 62-close-hover.png, 63-after-close.png).

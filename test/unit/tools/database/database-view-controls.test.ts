@@ -2148,6 +2148,21 @@ describe('DatabaseViewControls', () => {
       expect(q('database-sort-add')).toBeNull();
     });
 
+    // notion-motion.md Round 46 §C.5: the toolbar's filter and sort pickers open 4 under the button (303.2 under 299.2).
+    it.each([
+      ['database-toolbar-filter', 'database-filter-picker'],
+      ['database-toolbar-sort', 'database-sort-picker'],
+    ])('%s opens its picker 4px under the button', (button, picker) => {
+      setup();
+      const anchor = q(button);
+
+      if (anchor === null) throw new Error('no button');
+      anchor.getBoundingClientRect = () => new DOMRect(1100, 275, 28, 24);
+      click(button);
+
+      expect(q(picker)?.closest<HTMLElement>('[data-blok-popover]')?.style.top).toBe('303px');
+    });
+
     it('opens 4px under the chip', () => {
       withSort();
       const chip = q('database-sort-pill');

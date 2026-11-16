@@ -86,6 +86,8 @@ export const openNoDatePanel = (options: NoDatePanelOptions): DatabasePanel => {
     anchor: options.anchor,
     testId: 'database-no-date',
     width: 320,
+    // notion-motion.md Round 46 §B: 4 under the toolbar button.
+    gap: 4,
     backLabel: t('tools.database.peekBack'),
     root: {
       build: (current) => {

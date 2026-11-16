@@ -33,6 +33,8 @@ import type {
 } from './types';
 
 const SORT_PANEL_GAP = 4;
+/** notion-motion.md Round 46 §C.5: the filter and sort pickers open 4 under their toolbar button. */
+const TOOLBAR_PICKER_GAP = 4;
 
 /** What the controls ask of the database tool. */
 export interface ViewControlsHost {
@@ -783,6 +785,7 @@ export class DatabaseViewControls {
       i18n: this.host.i18n,
       onPick,
       ...options,
+      ...(anchor === this.filterButton || anchor === this.sortButton ? { gap: TOOLBAR_PICKER_GAP } : {}),
       onClose: (escape) => this.panelClosed(anchor, escape),
     });
 

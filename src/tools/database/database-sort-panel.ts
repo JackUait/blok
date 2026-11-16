@@ -32,6 +32,8 @@ export interface PropertyPickerOptions {
   used?: string[];
   /** Opens over an open panel, which stays: this width and height cap, flush under the anchor. */
   over?: { width: number; maxHeight: number };
+  /** Space under the anchor when not `over`; the panel's usual gap when unset. */
+  gap?: number;
   onClose: (escape: boolean) => void;
 }
 
@@ -125,6 +127,7 @@ export const propertyPicker = (options: PropertyPickerOptions): DatabasePanel =>
     testId: options.testId,
     width: options.over?.width ?? 290,
     backLabel: options.i18n.t('tools.database.settingsBack'),
+    ...(options.gap !== undefined ? { gap: options.gap } : {}),
     ...(options.over !== undefined ? { gap: 0 } : {}),
     onClose: options.onClose,
   });

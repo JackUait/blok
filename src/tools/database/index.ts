@@ -6885,6 +6885,10 @@ export class DatabaseTool implements BlockTool {
     if (this.cardDrawer?.openRowId === rowId) {
       this.cardDrawer.syncOpenRow(this.rowOrTemplate(rowId));
     }
+    // notion-motion.md Round 49 B5: the chart keeps its scroll across the redraw.
+    if (this.view instanceof DatabaseTimelineView) {
+      this.timelineOrigins.set(this.view.viewId, this.view.origin);
+    }
     this.rerenderView({ keepDrawer: true });
   }
 

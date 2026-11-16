@@ -98,4 +98,39 @@ describe('timeline bar drop selection', () => {
     expect(holder?.querySelector('[data-blok-database-timeline-table-row][data-row-id="r2"]')?.hasAttribute('data-blok-database-row-selected')).toBe(true);
     expect(holder?.querySelector('[data-blok-database-timeline-row][data-row-id="r1"]')?.hasAttribute('data-blok-database-row-selected')).toBe(false);
   });
+
+  // notion-motion.md Round 49 B5: Notion keeps the scroll across a drop. Blok went back to its open place (Day 2393 → 3396, Month 2953 → 2721).
+  it('keeps the chart where it was scrolled after a moved bar is dropped', async () => {
+    editor = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: { class: DatabaseTool, config: {} }, 'database-row': DatabaseRowTool },
+      data: { blocks: doc() },
+    } as never);
+    await editor.isReady;
+    await quiet();
+
+    const canvas = holder?.querySelector<HTMLElement>('[data-blok-database-timeline-canvas]');
+    const scroller = holder?.querySelector<HTMLElement>('[data-blok-database-timeline-scroller]');
+    const bar = holder?.querySelector<HTMLElement>('[data-blok-database-timeline-bar][data-row-id="r2"]');
+
+    if (canvas === null || canvas === undefined || scroller === null || scroller === undefined || bar === null || bar === undefined) throw new Error('no timeline');
+    const days = timelineWindow(today(), 'month').days;
+
+    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: 0, width: days * TIMELINE_DAY_WIDTH.month, height: 400, right: days * TIMELINE_DAY_WIDTH.month, bottom: 400, x: 0, y: 0, toJSON: () => ({}),
+    });
+    const xOf = (day: string): number => daysBetween(timelineWindow(today(), 'month').start, day) * TIMELINE_DAY_WIDTH.month + 20;
+
+    scroller.scrollLeft = 1234;
+    pointer('pointerdown', bar, xOf(today()));
+    pointer('pointermove', document, xOf(addDays(today(), 2)));
+    pointer('pointerup', document, xOf(addDays(today(), 2)));
+    await quiet();
+
+    const redrawn = holder?.querySelector<HTMLElement>('[data-blok-database-timeline-scroller]');
+
+    expect(redrawn).not.toBe(scroller);
+    expect(redrawn?.scrollLeft).toBe(1234);
+  });
 });

@@ -230,6 +230,15 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     return this.drag?.active === true;
   }
 
+  get viewId(): string {
+    return this.options.view.id;
+  }
+
+  /** Where the days sit now, for the next draw to keep. */
+  get origin(): TimelineOrigin {
+    return { start: this.window.start, at: this.chartStart() - this.scrollStart };
+  }
+
   private t(key: string): string {
     return this.options.i18n.t(key);
   }
@@ -1319,7 +1328,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
 
     const actions: Array<[string, (el: Element) => void]> = [
-      ['[data-blok-database-timeline-table-toggle]', () => handlers.toggleTable({ start: this.window.start, at: this.chartStart() - this.scrollStart })],
+      ['[data-blok-database-timeline-table-toggle]', () => handlers.toggleTable(this.origin)],
       ['[data-blok-database-timeline-zoom]', (el) => {
         if (el instanceof HTMLElement) {
           handlers.openZoomMenu(el);

@@ -767,7 +767,8 @@ describe('DatabaseTimelineView', () => {
       expect(root.querySelector('[data-blok-database-timeline-new-lane] [data-blok-database-timeline-new]')).toBeNull();
       expect(root.querySelector('[data-blok-database-timeline-new-lane]')).not.toBeNull();
       add?.click();
-      expect(handlers.addRow).toHaveBeenCalledWith(null, { start: '2026-10-09/2026-10-13' });
+      // notion-motion.md Round 50 §5: the panel's row gets no date at Month zoom too.
+      expect(handlers.addRow).toHaveBeenCalledWith(null, {});
     });
 
     it('is hidden by default and its toggle asks to show it', () => {
@@ -1113,6 +1114,25 @@ describe('DatabaseTimelineView', () => {
       key(second, 'Escape');
       expect(renameRow).toHaveBeenCalledWith('r2', 'Lambda');
       expect(pickRow).toHaveBeenCalledTimes(1);
+    });
+
+    // notion-motion.md Round 50 §5: a row with no bar is named in a box over its panel title.
+    it('names a new undated row over its panel title', () => {
+      const renameRow = vi.fn();
+      const { root, view } = mount({ view: timelineView({ showTimelineTable: true }), handlers: { ...makeHandlers(), renameRow } });
+
+      view.editTitle('r3');
+      const input = document.querySelector<HTMLInputElement>('[data-blok-database-cell-input="title"]');
+
+      expect(input).toHaveFocus();
+      expect(input?.placeholder).toBe('');
+      expect(view.interacting).toBe(true);
+      expect(root.querySelector('[data-blok-database-timeline-table-row][data-row-id="r3"]')?.hasAttribute('data-blok-database-editor-open')).toBe(true);
+      if (input === null) throw new Error('no input');
+      input.value = 'Zeta';
+      key(input, 'Enter');
+      expect(renameRow).toHaveBeenCalledWith('r3', 'Zeta');
+      expect(view.interacting).toBe(false);
     });
 
     it('has no "+ New", resize handles or drag handles when read-only', () => {

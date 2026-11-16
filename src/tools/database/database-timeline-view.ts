@@ -4,10 +4,10 @@ import { fileChipIcon, pageIconElement, rowPageGlyph, showsPageIcon } from './pa
 import { propertyTypeMeta } from './database-property-types';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption, TimelineZoom } from './types';
 import type { GalleryDropResult } from './database-gallery-view';
-import { createOptionPill, renderCellValue } from './cells';
+import { createOptionPill, openCellEditor, renderCellValue } from './cells';
 import { showAvatarsOnly } from './avatar-only';
 import { rowCellContext } from './reminders';
-import type { CellContext } from './cells';
+import type { CellContext, CellEditorHandle } from './cells';
 import { readPropertyValue } from './property-values';
 import { addDays, daysBetween, isWeekend, startOfWeek } from './calendar-dates';
 import { formatClock, formatShortDatePart, resolveLocale, toLocalDate } from './cells/date-format';
@@ -221,6 +221,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   private selectionAnchor: HTMLElement | null = null;
   private recentring = false;
   private noDatePanel: DatabasePanel | null = null;
+  private titleEditor: CellEditorHandle | null = null;
 
   constructor(options: DatabaseTimelineViewOptions) {
     this.options = options;
@@ -228,7 +229,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   }
 
   get interacting(): boolean {
-    return this.drag?.active === true;
+    return this.drag?.active === true || this.titleEditor?.isOpen === true;
   }
 
   get viewId(): string {
@@ -731,7 +732,12 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     const barEl = this.rowsOf('[data-blok-database-timeline-bar]').find((el) => el.getAttribute('data-row-id') === rowId);
     const titleEl = barEl?.querySelector<HTMLElement>('[data-blok-database-timeline-bar-title]');
 
-    if (!this.canEdit || barEl === undefined || titleEl === null || titleEl === undefined) {
+    if (!this.canEdit) {
+      return;
+    }
+    if (barEl === undefined || titleEl === null || titleEl === undefined) {
+      this.editTableTitle(rowId);
+
       return;
     }
     const original = titleEl.textContent ?? '';
@@ -759,6 +765,31 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
           this.options.handlers?.pickRow?.(rowId, false);
         }
       },
+    });
+  }
+
+  /** notion-motion.md Round 50 §5: a row with no bar is named in the table's title editor, over its panel title. */
+  private editTableTitle(rowId: string): void {
+    const line = this.rowsOf('[data-blok-database-timeline-table-row]').find((el) => el.getAttribute('data-row-id') === rowId);
+    const cell = line?.querySelector<HTMLElement>('[data-blok-database-timeline-table-title]');
+    const property = this.options.schema.find((p) => p.id === this.options.titlePropertyId);
+    const row = this.findRow(rowId);
+
+    if (line === undefined || cell === null || cell === undefined || property === undefined || row === undefined) {
+      return;
+    }
+    // The measured box covers the whole 279px row, 281×38. The row's side padding is outside the cell, so a
+    // title-only row is the anchor. With more columns Notion is unmeasured: the title cell is.
+    const anchor = line.childElementCount === 1 ? line : cell;
+
+    this.titleEditor?.close();
+    this.titleEditor = openCellEditor(property, readPropertyValue(row, property), anchor, {
+      ...this.options.cellContext,
+      i18n: this.options.i18n,
+      readOnly: false,
+      locale: this.options.locale,
+      coverCell: true,
+      onCommit: (title) => this.options.handlers?.renameRow?.(rowId, typeof title === 'string' ? title : ''),
     });
   }
 
@@ -1341,8 +1372,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       ['[data-blok-database-timeline-next]', () => this.stepScreen(1)],
       // notion-motion.md Round 25 §4: the ghost's bar starts on the hovered day.
       ['[data-blok-database-timeline-new], [data-blok-database-timeline-new-ghost], [data-blok-database-timeline-table-new]', (el) => {
-        // notion-motion.md Round 49 B8: at Day zoom the panel's "+ New" row gets no date.
-        const undated = this.zoom === 'day' && el.hasAttribute('data-blok-database-timeline-table-new');
+        // notion-motion.md Round 49 B8, Round 50 §5: the panel's "+ New" row gets no date, at Day and Month zoom.
+        const undated = el.hasAttribute('data-blok-database-timeline-table-new');
 
         if (this.canEdit) {
           handlers.addRow(this.options.grouped ? this.options.groups[0]?.key ?? null : null, undated ? {} : this.newBar(el.getAttribute('data-day') ?? undefined, el.getAttribute('data-time') ?? undefined));
@@ -2002,6 +2033,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     this.endDrag();
     this.dropHeldReadout();
     this.noDatePanel?.close();
+    this.titleEditor?.close();
     this.scroller?.removeEventListener('scroll', this.onScroll);
   }
 

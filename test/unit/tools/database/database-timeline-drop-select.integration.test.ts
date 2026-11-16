@@ -6,7 +6,7 @@ import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import { addDays, daysBetween } from '../../../../src/tools/database/calendar-dates';
 import { TIMELINE_DAY_WIDTH, timelineWindow } from '../../../../src/tools/database/timeline-dates';
-import type { OutputBlockData } from '../../../../types';
+import type { OutputBlockData, OutputData } from '../../../../types';
 
 /**
  * notion-motion.md Round 46 B: a bar dragged to new dates is left selected,
@@ -158,6 +158,38 @@ describe('timeline bar drop selection', () => {
 
     expect(holder?.querySelectorAll('[data-blok-database-timeline-row]').length).toBe(3);
     expect(redrawn?.scrollLeft).toBe(1234);
+  });
+
+  // notion-motion.md Round 50 §5: the panel's "+ New" row has no date and is named in a box over its panel title.
+  it('names a row made from the table panel "+ New" in place, with no date', async () => {
+    const blok = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: { class: DatabaseTool, config: {} }, 'database-row': DatabaseRowTool },
+      data: { blocks: doc() },
+    } as never) as unknown as { isReady: Promise<unknown>; destroy: () => void; save: () => Promise<OutputData> };
+
+    editor = blok;
+    await blok.isReady;
+    await quiet();
+    holder?.querySelector<HTMLElement>('[data-blok-database-timeline-table-new]')?.click();
+    await quiet();
+
+    const input = document.querySelector<HTMLInputElement>('[data-blok-database-cell-input="title"]');
+    const rows = holder?.querySelectorAll('[data-blok-database-timeline-table-row]');
+    const fresh = rows?.[rows.length - 1];
+
+    expect(input).toHaveFocus();
+    expect(fresh?.hasAttribute('data-blok-database-editor-open')).toBe(true);
+    if (input === null) throw new Error('no editor');
+    input.value = 'Three';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await quiet();
+
+    const saved = (await blok.save()).blocks.find((block) => block.id === fresh?.getAttribute('data-row-id'));
+
+    expect(saved?.data).toMatchObject({ properties: { t: 'Three' } });
+    expect((saved?.data as { properties: Record<string, unknown> }).properties.due ?? null).toBeNull();
   });
 
   // A date edit in the open peek sent the chart to the narrowed chart's open place (browser: 2922 → 2833). Notion's side is unmeasured.

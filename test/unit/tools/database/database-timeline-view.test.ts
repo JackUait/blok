@@ -1647,6 +1647,19 @@ describe('DatabaseTimelineView', () => {
       expect(bar(root, 'r1').querySelector('[data-blok-database-timeline-edge-readout="end"]')?.textContent).toBe('Oct 9, 7:30 AM');
     });
 
+    // notion-motion.md Round 51 §2, Round 50 §3: at Day zoom a pressed all-day edge reads its midnight ("Nov 18, 12:00 AM").
+    it.each(['start', 'end'] as const)('reads a pressed all-day %s edge at Day zoom with 12:00 AM', (edge) => {
+      const { root } = mount({
+        view: timelineView({ timelineZoom: 'day' }),
+        groups: single([row('r1', 'Ad', '2026-10-09')]),
+      });
+      const handle = bar(root, 'r1').querySelector(`[data-blok-database-timeline-resize="${edge}"]`);
+
+      if (handle === null) throw new Error('no handle');
+      pointer('pointerdown', handle, 100, 50);
+      expect(bar(root, 'r1').querySelector(`[data-blok-database-timeline-edge-readout="${edge}"]`)?.textContent).toBe('Oct 9, 12:00 AM');
+    });
+
     it('marks the moved range too, with no readout', () => {
       const { root } = mount();
 

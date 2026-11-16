@@ -1720,10 +1720,14 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
   private dropHeldReadout = (): void => undefined;
 
-  /** findings C15: the moving edge's day in 12px ink just outside the bar. Round 49 B9, Round 51 §4: at Day and Hours zoom with its time. */
+  /**
+   * findings C15: the moving edge's day in 12px ink just outside the bar. Round 49 B9, Round 51 §4: at Day and Hours zoom with its time.
+   * Round 51 §2: an all-day edge at Day zoom reads its midnight. At Hours zoom that is unmeasured.
+   */
   private showDayReadout(barEl: HTMLElement, edge: 'start' | 'end', span: EventSpan, values: BarValues): void {
     const readout = barEl.querySelector<HTMLElement>('[data-blok-database-timeline-edge-readout]') ?? document.createElement('span');
-    const part = (BY_TIME.has(this.zoom) ? timedEdges(values)?.[edge] : undefined) ?? span[edge];
+    const timed = BY_TIME.has(this.zoom) ? timedEdges(values)?.[edge] : undefined;
+    const part = timed ?? (this.zoom === 'day' ? `${span[edge]}T00:00` : span[edge]);
 
     readout.setAttribute('data-blok-database-timeline-edge-readout', edge);
     readout.setAttribute('aria-hidden', 'true');

@@ -34403,7 +34403,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   left: 50%;
   width: 400px;
   margin: 0;
-  transform: translate(-50%, -50%) scale(0.52);
+  transform: translate(-50%, -50%) scale(0.5);
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='file'] {

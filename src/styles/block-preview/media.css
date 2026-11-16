@@ -915,7 +915,8 @@
 
 /* ─── Audio ─────────────────────────────────────────── */
 /* The real audio block (audio.css) at real size, shrunk into the paper.
-   Under 400px its controls row overflows the card. 400px * 0.52 leaves 12px of room each side. */
+   Under 400px its controls row overflows the card. The ridgeline makes it about
+   262px tall, so 0.5 is the largest scale that leaves 12px of room above and below. */
 [data-blok-interface='block-preview'] [data-blok-preview='audio'] {
   position: relative;
 }
@@ -926,7 +927,7 @@
   left: 50%;
   width: 400px;
   margin: 0;
-  transform: translate(-50%, -50%) scale(0.52);
+  transform: translate(-50%, -50%) scale(0.5);
 }
 
 /* ─── File ──────────────────────────────────────────── */

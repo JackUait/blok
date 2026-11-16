@@ -51,6 +51,25 @@ Workspace = `{id,slug,name,role}`. A fresh instance starts with zero workspaces;
 
 ## Hosted MCP
 
+`blok_move_page` accepts `{workspace, pageId, parentId}` to reparent an existing
+page with its subtree. `parentId:null` moves it to the root of its current
+teamspace (or workspace). An optional `teamspaceId`, only with a null parent,
+explicitly chooses another teamspace or the workspace root (`null`). The REST
+equivalent is `POST /api/workspaces/:slug/pages/:pageID/move` with the same body
+minus workspace/pageId. Both return `{id, parentId, teamspaceId, revision}`.
+
+Moving requires full access to every page in the subtree and edit access to the
+new parent. Crossing teamspace boundaries also requires source teamspace
+management and destination teamspace write access. IDs, content, history, files,
+explicit visibility and direct shares are preserved. Inherited permissions follow
+the new parent; the mover retains full access through a direct share. Detaching
+an inherited page freezes its former effective visibility rather than publishing
+private content. The page is appended after existing siblings. Cycles, missing
+or trashed destinations, and trees deeper than 64 pages are refused atomically.
+The workspace lock serializes moves with index and permission writes; a changed
+move increments the revision and rechecks live sessions. Identical retries do
+not change the revision. No page is recreated and no full index is submitted.
+
 `blok_delete_page` accepts `{workspace, pageId}` and moves the page and all its
 descendants to the workspace trash. It returns `{id, trashed:true, affectedPages,
 revision}`. This is recoverable deletion: content, journal, files, shares and

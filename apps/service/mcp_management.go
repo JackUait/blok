@@ -83,6 +83,9 @@ func (s *Service) managementOperations() []managementOperation {
 	wsRequired, tsRequired := []string{"workspace"}, []string{"workspace", "teamspaceId"}
 	pageParams := map[string]string{"workspace": "slug", "pageId": "id"}
 	pageRequired := []string{"workspace", "pageId"}
+	move := managementFields("workspace", "pageId")
+	move["parentId"] = map[string]any{"type": []string{"string", "null"}, "minLength": 1, "description": "Destination parent page ID, or null to move to the root of the current teamspace/workspace."}
+	move["teamspaceId"] = map[string]any{"type": []string{"string", "null"}, "minLength": 1, "description": "Optional, only with parentId:null: destination teamspace ID, or null for the workspace root. Omit to keep the current teamspace."}
 	visibility := managementFields("workspace", "pageId")
 	visibility["visibility"] = enumField("private", "workspace", "inherit")
 	share := managementFields("workspace", "pageId", "userId")
@@ -91,6 +94,7 @@ func (s *Service) managementOperations() []managementOperation {
 	emoji["dataUrl"] = map[string]any{"type": "string", "description": "PNG/JPEG/GIF/WebP base64 data URL, up to 2 MiB. Provide this OR url."}
 	emoji["url"] = map[string]any{"type": "string", "description": "An existing /files/ image owned by this workspace (not a private page asset), or an external HTTPS image URL. Never store an expiring signed URL."}
 	return []managementOperation{
+		{"blok_move_page", "Move an existing page and its subtree without recreating content or changing IDs. Requires full access to every page in the subtree and edit access to the destination parent. Preserves explicit visibility and direct shares; inherited access follows the destination, with full access retained for the mover. Cross-teamspace moves also require source teamspace management and destination membership/write access. Rejects cycles, trashed destinations and excessive depth. Returns id, parentId, teamspaceId and revision; repeating the same move is a no-op.", "POST", s.workspaceResource, map[string]string{"resource": "pages", "action": "move"}, pageParams, move, []string{"workspace", "pageId", "parentId"}, false},
 		{"blok_list_custom_emojis", "List this workspace's custom emoji registry: IDs, names and persistent image URLs. Members including viewers may read it. Uploaded images remain private.", "GET", s.workspaceResource, map[string]string{"resource": "emojis"}, wsParams, managementFields("workspace"), wsRequired, false},
 		{"blok_create_custom_emoji", "Register a named custom emoji from dataUrl OR url. Requires workspace member/admin. Names normalize to lowercase; duplicates conflict. Uploads up to 2 MiB; no SVG. Returns a permanent URL for page.icon={type:'image',url}; 401 on an unauthenticated fetch is not proof of rendering.", "POST", s.workspaceResource, map[string]string{"resource": "emojis"}, wsParams, emoji, []string{"workspace", "name"}, false},
 		{"blok_rename_custom_emoji", "Rename an emoji registry entry while preserving its ID, image and existing page icons. Requires its creator with workspace edit rights or a workspace admin.", "PATCH", s.workspaceResource, map[string]string{"resource": "emojis"}, map[string]string{"workspace": "slug", "emojiId": "id"}, managementFields("workspace", "emojiId", "name"), []string{"workspace", "emojiId", "name"}, false},

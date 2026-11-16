@@ -84,6 +84,19 @@ export function workspaceRepository(workspace: WorkspaceRef) {
       if (ref.kind !== 'remote') throw new Error('Remote operation only');
       await request(`${base}/pages/${encodeURIComponent(source)}/duplicate`, {method: 'POST', body: JSON.stringify(page)});
     },
+    async movePage(id: string, parentId: string | null): Promise<void> {
+      if (ref.kind !== 'remote') throw new Error('Remote operation only');
+      try {
+        await request(`${base}/pages/${encodeURIComponent(id)}/move`, {method: 'POST', body: JSON.stringify({parentId})});
+      } catch (error) {
+        if (error instanceof RepositoryHttpError) {
+          if (error.status === 403 || error.status === 404) throw new Error('Vous n’avez plus les droits nécessaires pour déplacer cette page ou l’une de ses sous-pages.');
+          if (error.status === 409) throw new Error('La page ou sa destination a changé. Actualisez puis réessayez.');
+          if (error.status === 400) throw new Error('Cette destination ne peut pas contenir la page.');
+        }
+        throw error;
+      }
+    },
     async uploadImage(dataUrl: string): Promise<string> {
       if (ref.kind === 'local') return dataUrl;
       const image = await request<{url: string}>(`${base}/images`, {method: 'POST', body: JSON.stringify({dataUrl})});

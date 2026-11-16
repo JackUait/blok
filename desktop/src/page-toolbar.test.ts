@@ -162,3 +162,19 @@ describe('breadcrumb navigation', () => {
     toolbar.destroy();
   });
 });
+
+it('opens the move destination flow from page actions and hides it in read-only mode', () => {
+  const onMove = vi.fn();
+  const toolbar = createPageToolbar([{ id: 'p', title: 'Page' }], false, vi.fn(), undefined, undefined, { onMove });
+  document.body.append(toolbar.element);
+  toolbar.element.querySelector<HTMLButtonElement>('[data-desktop-page-more]')?.click();
+  const move = [...toolbar.element.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent === 'Déplacer vers…');
+  expect(move).toBeDefined();
+  move?.click();
+  expect(onMove).toHaveBeenCalledOnce();
+  expect(toolbar.element.querySelector<HTMLElement>('[data-desktop-page-menu]')?.hidden).toBe(true);
+  toolbar.destroy();
+  const readonly = createPageToolbar([{ id: 'p', title: 'Page' }], false, vi.fn(), undefined, undefined, { onMove, readOnly: true });
+  expect([...readonly.element.querySelectorAll('button')].some(button => button.textContent === 'Déplacer vers…')).toBe(false);
+  readonly.destroy();
+});

@@ -29,3 +29,7 @@
 [data-navigation-destination] [data-navigation-caption] { flex: none; padding: 0; }
 [data-navigation-destination] [data-desktop-choice] { min-width: 0; max-width: 100%; }
 [data-navigation-dialog] button:focus-visible { outline: 2px solid var(--blok-focus-ring); outline-offset: -2px; }
+[data-navigation-move] { width: min(540px, 100%); }
+[data-navigation-move] [data-navigation-search-header] { padding-right: 16px; }
+[data-navigation-move-error] { margin: 8px 18px; color: var(--desktop-danger, #b42318); }
+[data-navigation-move] [aria-busy="true"], [data-navigation-move][aria-busy="true"] [data-navigation-result] { cursor: progress; }

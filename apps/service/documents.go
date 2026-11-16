@@ -300,6 +300,10 @@ func (s *Service) page(w http.ResponseWriter, r *http.Request, u identity, ws Wo
 		s.trashPage(w, r, u, ws)
 		return
 	}
+	if r.Method == http.MethodPost && r.PathValue("action") == "move" {
+		s.movePage(w, r, u, ws)
+		return
+	}
 	if r.Method == "POST" && r.PathValue("action") == "seed" {
 		s.seed(w, r, u, ws)
 		return

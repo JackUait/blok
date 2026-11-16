@@ -40,7 +40,8 @@ var permissionExemptions = map[string]string{
 }
 
 var permissionGuards = []string{
-	"effectiveLevel", "effectiveLevelForSession", "workspaceLevels",
+	// workspaceChains applique resolve à chaque chaîne ; workspaceLevels en est la façade sans les nœuds.
+	"effectiveLevel", "effectiveLevelForSession", "workspaceLevels", "workspaceChains",
 	"authorizeDoc", "authorizeMCPDocument", "assetAllowed", "chainOf", "workspaceStandings",
 }
 

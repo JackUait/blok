@@ -63,6 +63,7 @@ export function createPageToolbar(
     readOnly?: boolean;
     onRename?: () => void;
     onDuplicate?: () => void;
+    onMove?: () => void;
     onDelete?: () => void;
   } = {},
 ): PageToolbar {
@@ -222,7 +223,7 @@ export function createPageToolbar(
   fullWidthButton.disabled = options.readOnly === true;
   menu.append(heading, fullWidthButton);
   const commands = [
-    ['Renommer', options.onRename], ['Dupliquer', options.onDuplicate], ['Mettre à la corbeille', options.onDelete],
+    ['Renommer', options.onRename], ['Dupliquer', options.onDuplicate], ['Déplacer vers…', options.onMove], ['Mettre à la corbeille', options.onDelete],
   ] as const;
   for (const [title, run] of commands) {
     if (!run || options.readOnly) continue;

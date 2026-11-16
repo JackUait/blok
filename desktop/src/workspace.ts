@@ -8,7 +8,7 @@ import { mountPageComments } from './page-comments';
 import { CommentInlineTool } from './inline-comments';
 import { createNotesDocument, readNotesCollection, rememberNotesCollection, addNote } from './notes-collection';
 import { openPageLibrary, pageTimestamp } from './page-library';
-import { openPageSearch, openPageCreation, type CreationDestination } from './navigation-dialogs';
+import { openPageSearch, openPageCreation, openPageMove, type CreationDestination } from './navigation-dialogs';
 import { customEmojiStore } from './custom-emojis';
 import { createEmptyWorkspaceState } from './workspace-empty';
 import { mountRemoteAssets } from './remote-assets';
@@ -18,6 +18,7 @@ import { createPageFrame, type PageFrame, type ShellPage, type SidebarAction, ty
 import { type DesktopPage, type WorkspaceIndex } from './storage';
 import { workspaceRepository } from './workspace-repository';
 import { pageAccess } from './page-access';
+import { moveDestinations } from './page-move';
 import { openPageSharing } from './cloud/page-sharing';
 import { sidebarSectionOf } from './page-section';
 import { nextPageIcon } from './page-icon-sync';
@@ -475,6 +476,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         title?.focus();
         if (title) { const range = document.createRange(); range.selectNodeContents(title); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range); }
       },
+      onMove: ref.kind === 'local' || ws.access.canShare(id) ? () => { void action({ id, type: 'move' }).catch(showError); } : undefined,
       onDuplicate: () => { void action({ id, type: 'duplicate' }).catch(showError); },
       onDelete: () => { void action({ id, type: 'delete' }).catch(showError); },
     });
@@ -757,7 +759,65 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     await ws.saveOrder;
   };
 
+  const destinationsFor = (id: string) => {
+    const teamspaceId = ws.index?.access?.[id]?.teamspaceId ?? null;
+    const rootLabel = sidebarTeamspaces.find(team => team.id === teamspaceId)?.name ?? workspaceName;
+    return moveDestinations({ pages: ws.index?.pages ?? [], sourceId: id, rootLabel,
+      canEdit: pageId => ws.access.canEdit(pageId),
+      canMove: pageId => ref.kind === 'local' || ws.access.canShare(pageId),
+      isSharedRoot: pageId => ws.access.isSharedRoot(pageId),
+      teamspaceOf: pageId => ws.index?.access?.[pageId]?.teamspaceId ?? null,
+    });
+  };
+  const movePage = async (id: string, parentId: string | null): Promise<void> => {
+    if (!ws.index || ws.metadataAction || !destinationsFor(id).some(item => item.parentId === parentId)) throw new Error('Cette destination n’est plus autorisée.');
+    const wasInert = ws.frame.element.inert;
+    ws.frame.element.inert = true;
+    ws.metadataAction = true;
+    try {
+      await flushRemoteBeforeAction({ id, type: 'move' });
+      if (ref.kind === 'remote') {
+        await repository.movePage(id, parentId);
+        const refreshed = await repository.loadIndex();
+        refreshed.activeId = refreshed.pages.some(page => page.id === ws.currentId) ? ws.currentId : refreshed.activeId;
+        const live = ws.index.pages.find(page => page.id === ws.currentId);
+        const remotePage = refreshed.pages.find(page => page.id === ws.currentId);
+        if (live && remotePage) {
+          adoptRemoteFields(live, remotePage);
+          refreshed.pages = refreshed.pages.map(page => page.id === ws.currentId ? live : page);
+        }
+        adoptIndex(refreshed);
+      } else {
+        const page = ws.index.pages.find(item => item.id === id);
+        if (!page) throw new Error('Cette page n’est plus disponible.');
+        const previousParent = page.parentId;
+        const previousUpdatedAt = page.updatedAt;
+        page.parentId = parentId;
+        saveManifest();
+        try { await ws.saveOrder; }
+        catch (error) {
+          page.parentId = previousParent;
+          page.updatedAt = previousUpdatedAt;
+          localMetadata.set(page.id, metadataOf(page));
+          throw error;
+        }
+      }
+      if (!ws.index) return;
+      ws.frame.setPages(withSections(ws.index.pages), library.dispose ? '' : ws.currentId);
+      ws.pageToolbar?.setBreadcrumbs(breadcrumbs(ws.currentId));
+      ws.refreshPagePresentation?.();
+      refreshLibrary();
+      if (!ws.index.pages.some(page => page.id === ws.currentId)) onRoute();
+    } finally { ws.frame.element.inert = wasInert; ws.metadataAction = false; }
+  };
   const action = async (command: SidebarAction): Promise<void> => {
+    if (command.type === 'move') {
+      if (!ws.index || readOnly(command.id)) return;
+      const page = ws.index.pages.find(item => item.id === command.id);
+      if (!page) return;
+      openPageMove({ title: page.title, destinations: () => destinationsFor(page.id), onMove: parentId => movePage(page.id, parentId) });
+      return;
+    }
     if (command.type !== 'open-tab' && readOnly(command.id)) return;
     const wasInert = ws.frame.element.inert;
     if (ref.kind === 'remote') { ws.frame.element.inert = true; ws.metadataAction = true; }
@@ -813,7 +873,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     onTeamspaceMenu: (_anchor,id)=>{if(id)ws.footer.dispatchEvent(new CustomEvent('blok:desktop-open-teamspace',{detail:{id}}));},
     onAction: (command) => { void action(command).catch(showError); },
     pageUrl,
-    availableActions: ['rename', 'duplicate', 'delete', 'open-tab'],
+    availableActions: ['rename', 'duplicate', 'move', 'delete', 'open-tab'],
     canEdit: (id) => !readOnly(id),
     canCreate: canCreateUnder,
     onFavorite: (id, value) => {

@@ -1,5 +1,6 @@
 import { openModalDialog, type ModalDialogHandle } from '@blok/modal-dialog';
 import type { ShellPage } from '@blok/sidebar';
+import type { MoveDestination } from './page-move';
 import { IconCross, IconFile, IconTable } from '../../src/components/icons';
 import { renderPageIcon } from '../../src/shell/page-icon';
 import { createChoice, wrapSearchField } from './ui/controls';
@@ -132,4 +133,79 @@ export function openPageCreation(options: {
     modal.surface.append(button);
   }
   modal.open(destination.element, () => destination.destroy());
+}
+
+/** Move one existing page and its children without duplicating their documents. */
+export function openPageMove(options: {
+  title: string;
+  destinations: () => MoveDestination[];
+  onMove: (parentId: string | null) => Promise<void>;
+}): () => void {
+  const modal = dialog('Déplacer vers');
+  modal.surface.setAttribute('data-navigation-move', '');
+  modal.surface.append(node('h2', 'data-navigation-heading', 'Déplacer vers…'));
+  const caption = node('p', 'data-navigation-caption', `« ${options.title} » et ses sous-pages`);
+  const input = document.createElement('input');
+  input.type = 'search'; input.placeholder = 'Rechercher une destination…'; input.setAttribute('aria-label', 'Rechercher une destination');
+  const header = node('div', 'data-navigation-search-header'); header.append(wrapSearchField(input));
+  const results = node('div', 'data-navigation-results');
+  const empty = node('p', 'data-navigation-empty'); empty.setAttribute('role', 'status');
+  const error = node('p', 'data-navigation-move-error'); error.setAttribute('role', 'alert'); error.hidden = true;
+  const footer = node('div', 'data-navigation-help', 'Les accès hérités suivent la destination. Les partages explicites sont conservés. · Entrée déplacer · Échap fermer');
+  modal.surface.append(caption, header, results, empty, error, footer);
+  let selected = 0;
+  let matches: MoveDestination[] = [];
+  let pending = false;
+  let disposed = false;
+  const choose = async (parentId: string | null): Promise<void> => {
+    if (pending) return;
+    if (!options.destinations().some(item => item.parentId === parentId)) { render(); return; }
+    pending = true; error.hidden = true; input.disabled = true;
+    modal.surface.setAttribute('aria-busy', 'true');
+    results.querySelectorAll<HTMLButtonElement>('button').forEach(button => { button.disabled = true; });
+    try { await options.onMove(parentId); modal.close(); }
+    catch (cause) {
+      if (disposed) return;
+      error.textContent = cause instanceof Error ? cause.message : 'Le déplacement a échoué. Réessayez.';
+      error.hidden = false;
+    } finally {
+      pending = false;
+      if (!disposed) { input.disabled = false; modal.surface.removeAttribute('aria-busy'); render(); input.focus(); }
+    }
+  };
+  function highlight(): void {
+    results.querySelectorAll<HTMLButtonElement>('button').forEach((button, index) => {
+      button.toggleAttribute('data-selected', index === selected);
+      button.tabIndex = index === selected ? 0 : -1;
+    });
+    results.querySelector('[data-selected]')?.scrollIntoView?.({ block: 'nearest' });
+  }
+  function render(): void {
+    const query = input.value.trim().toLocaleLowerCase();
+    matches = options.destinations().filter(item => `${item.title} ${item.path}`.toLocaleLowerCase().includes(query));
+    selected = 0; results.replaceChildren();
+    for (const destination of matches) {
+      const button = node('button', 'data-navigation-result'); button.type = 'button';
+      const labels = node('span', 'data-navigation-result-labels');
+      labels.append(node('span', 'data-navigation-result-title', destination.title), node('small', 'data-navigation-result-path', destination.path));
+      button.append(icon(destination.icon), labels);
+      button.addEventListener('click', () => { void choose(destination.parentId); });
+      results.append(button);
+    }
+    empty.hidden = matches.length > 0;
+    empty.textContent = query ? 'Aucune destination correspondante.' : 'Aucune destination autorisée dans cet espace. Le déplacement nécessite le contrôle total de cette page et de ses sous-pages.';
+    highlight();
+  }
+  input.addEventListener('input', render);
+  modal.surface.addEventListener('keydown', event => {
+    if (pending) return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault(); selected = Math.max(0, Math.min(matches.length - 1, selected + (event.key === 'ArrowDown' ? 1 : -1))); highlight();
+      if (document.activeElement !== input) results.querySelector<HTMLButtonElement>('[data-selected]')?.focus();
+    } else if (event.key === 'Enter' && document.activeElement === input && matches[selected]) {
+      event.preventDefault(); void choose(matches[selected].parentId);
+    }
+  });
+  render(); modal.open(input, () => { disposed = true; });
+  return modal.close;
 }

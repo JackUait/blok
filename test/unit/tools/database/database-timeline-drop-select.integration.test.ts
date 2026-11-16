@@ -132,6 +132,28 @@ describe('timeline bar drop selection', () => {
     outside.remove();
   });
 
+  // notion-motion.md Round 52 §5, Round 53 §6: a picked bar shows no "1 selected" bar.
+  it('shows no selection bar for a bar picked by an edge press', async () => {
+    editor = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: { class: DatabaseTool, config: {} }, 'database-row': DatabaseRowTool },
+      data: { blocks: doc() },
+    } as never);
+    await editor.isReady;
+    await quiet();
+
+    const handle = holder?.querySelector<HTMLElement>('[data-blok-database-timeline-bar][data-row-id="r2"] [data-blok-database-timeline-resize="end"]');
+
+    if (handle === null || handle === undefined) throw new Error('no timeline');
+    pointer('pointerdown', handle, 100);
+    pointer('pointerup', document, 100);
+    await quiet();
+
+    expect(holder?.querySelector('[data-blok-database-table-selection-bar]')).toBeNull();
+    expect(holder?.querySelector('[data-blok-database-timeline-row][data-row-id="r2"]')?.hasAttribute('data-blok-database-row-selected')).toBe(true);
+  });
+
   // notion-motion.md Round 49 B5: Notion keeps the scroll across a drop. Blok went back to its open place (Day 2393 → 3396, Month 2953 → 2721).
   it('keeps the chart where it was scrolled after a moved bar is dropped', async () => {
     editor = new Blok({

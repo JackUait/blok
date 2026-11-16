@@ -844,7 +844,7 @@ export class DatabaseTool implements BlockTool {
   private bulkEditor: CellEditorHandle | null = null;
   /** The board/list selection bar, when shown. */
   private rowSelectionBar: HTMLElement | null = null;
-  /** The pick count last announced for barless board and gallery picks; paint also runs on redraws. */
+  /** The pick count last announced for barless picks; paint also runs on redraws. */
   private announcedPickCount = 0;
   /** A new board card left unnamed by Escape: selected alone, it shows no bar. Any other selection drops it. */
   private barlessRowId: string | null = null;
@@ -11618,9 +11618,10 @@ export class DatabaseTool implements BlockTool {
     document.removeEventListener('copy', this.handleSelectionCopy, true);
     document.removeEventListener('pointerdown', this.handleSelectionOutside, true);
     const view = this.shownView();
-    const barless = view?.type === 'board' || view?.type === 'gallery';
+    // notion-motion.md Round 52 §5: one picked timeline bar shows no bar either. Notion's timeline multi-pick is unread.
+    const barless = view?.type === 'board' || view?.type === 'gallery' || (view?.type === 'timeline' && this.rowSelection.size === 1);
 
-    // The bar's count was a polite live region; board and gallery picks have no bar, so say the count.
+    // The bar's count was a polite live region; barless picks have no bar, so say the count.
     if (barless && this.rowSelection.size > 0 && this.rowSelection.size !== this.announcedPickCount) {
       announce(this.api.i18n.t('tools.database.tableSelectedCount', { count: this.rowSelection.size }));
     }

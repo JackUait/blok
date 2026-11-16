@@ -804,7 +804,8 @@ export class DatabaseTool implements BlockTool {
   private redrawWhenIdleRetry: (() => void) | null = null;
   /** Whether each row the views drew had a body when they read it. Cleared on every redraw. */
   private readonly bodyRows = new Map<string, boolean>();
-  private bodyCheckQueued = false;
+  /** Rows to recheck in the next microtask; `all` after a block was added, removed or moved. */
+  private bodyCheck: { all: boolean; rows: Set<string> } | null = null;
   private viewControls: DatabaseViewControls | null = null;
   private tabDisplayPref: TabDisplayPreference | null = null;
   private unregisterGroupToggle: (() => void) | null = null;
@@ -957,21 +958,33 @@ export class DatabaseTool implements BlockTool {
    */
   private readonly handleBodyShape = (payload: unknown): void => {
     const type = (payload as { event?: { type?: unknown } } | undefined)?.event?.type;
-
     const block = changedBlock(payload);
-    // A lone line's text decides its row's glyph, so a typed change counts, but only under a drawn row.
-    const typed = type === 'block-changed' && typeof block?.parentId === 'string' && this.bodyRows.has(block.parentId);
+    const parentId = typeof block?.parentId === 'string' ? block.parentId : undefined;
+    // A lone line's text decides its row's glyph, so a typed change rechecks that one drawn row.
+    const typed = type === 'block-changed' && parentId !== undefined && this.bodyRows.has(parentId);
+    const shape = type === 'block-added' || type === 'block-removed' || type === 'block-moved';
 
-    if (this.bodyRows.size === 0 || this.bodyCheckQueued || block?.name === 'database-row'
-      || (!typed && type !== 'block-added' && type !== 'block-removed' && type !== 'block-moved')) return;
-    this.bodyCheckQueued = true;
-    queueMicrotask(() => {
-      this.bodyCheckQueued = false;
-      if (this.destroyed) return;
-      const flipped = [...this.bodyRows].some(([rowId, had]) => this.readRowHasBody(rowId) !== had);
+    if (this.bodyRows.size === 0 || block?.name === 'database-row' || (!typed && !shape)) return;
+    if (this.bodyCheck === null) {
+      this.bodyCheck = { all: false, rows: new Set() };
+      queueMicrotask(this.runBodyCheck);
+    }
+    if (shape) {
+      this.bodyCheck.all = true;
+    } else if (parentId !== undefined) {
+      this.bodyCheck.rows.add(parentId);
+    }
+  };
 
-      if (flipped) this.redrawWhenIdle();
-    });
+  private readonly runBodyCheck = (): void => {
+    const check = this.bodyCheck;
+
+    this.bodyCheck = null;
+    if (this.destroyed || check === null) return;
+    const rowIds = check.all ? [...this.bodyRows.keys()] : [...check.rows];
+    const flipped = rowIds.some((rowId) => this.bodyRows.has(rowId) && this.readRowHasBody(rowId) !== this.bodyRows.get(rowId));
+
+    if (flipped) this.redrawWhenIdle();
   };
 
   /** notion-motion.md Round 46 §C.1: one empty line is no body in Notion; two empty lines are. */

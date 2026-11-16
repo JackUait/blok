@@ -1,5 +1,5 @@
-import { IconFile, IconTable, IconClock, IconEmojiStar, IconPeople, IconGlobe, IconLock, IconSidebarRight } from '../../src/components/icons';
-import { renderPageIcon } from '../../src/shell/page-icon';
+import { IconTable, IconClock, IconEmojiStar, IconPeople, IconGlobe, IconLock, IconSidebarRight } from '../../src/components/icons';
+import { createLibraryTable, type LibraryTableRow } from './library-table-runtime.js';
 import { sectionOf } from './page-section';
 import type { PageAccessMap } from './page-access';
 import type { DesktopPage } from './storage';
@@ -32,7 +32,8 @@ export function openPageLibrary(options: {
   const surface = document.createElement('section'); surface.setAttribute('data-page-library', ''); surface.tabIndex = -1;
   surface.setAttribute('aria-label', 'Bibliothèque');
   const heading = document.createElement('h1'); heading.textContent = 'Bibliothèque';
-  const close = (): void => surface.remove();
+  let disposed = false;
+  const close = (): void => { disposed = true; table.destroy(); surface.remove(); };
   const create = document.createElement('button'); create.type = 'button'; create.textContent = 'Nouvelle page'; create.disabled = options.canCreate === false; create.addEventListener('click', options.onCreate);
   const header = document.createElement('header'); header.append(heading, create);
   if (options.onToggleSidebar) {
@@ -57,16 +58,33 @@ export function openPageLibrary(options: {
   }
   const controls = document.createElement('div'); controls.setAttribute('data-library-controls', ''); controls.append(input, sort);
   const results = document.createElement('div'); results.setAttribute('data-library-results', ''); results.setAttribute('role', 'tabpanel'); results.id = 'page-library-results'; results.setAttribute('aria-labelledby', `page-library-tab-${view.category}`);
-  const table = document.createElement('table'); table.setAttribute('aria-label', 'Pages de la bibliothèque');
-  const columns = document.createElement('thead'); const columnRow = document.createElement('tr');
-  for (const label of ['Nom de la page', 'Dernière modification']) {
-    const column = document.createElement('th'); column.scope = 'col'; column.textContent = label; columnRow.append(column);
-  }
-  columns.append(columnRow);
-  const rows = document.createElement('tbody'); table.append(columns, rows); results.append(table);
+  // Native database tokens and keyboard ownership apply without mounting an editor.
+  results.setAttribute('data-blok-interface', '');
+  const targets = new Map<string, { pageId: string; blockId?: string }>();
+  const table = createLibraryTable(results, {
+    onOpen: id => {
+      const target = targets.get(id);
+      if (!target || !options.pages().some(page => page.id === target.pageId)) { render(); return; }
+      if (target.blockId) options.onOpenBlock?.(target.pageId, target.blockId);
+      else options.onOpen(target.pageId);
+    },
+    onToggle: id => {
+      if (expanded.has(id)) { expanded.delete(id); render(); return; }
+      expanded.add(id);
+      if (options.loadChildren && !outlines.has(id) && !loading.has(id)) {
+        loading.add(id); errors.delete(id);
+        void options.loadChildren(id).then(items => {
+          if (!disposed && options.pages().some(page => page.id === id)) outlines.set(id, items.filter(item => item.pageId === id));
+        }).catch(() => { if (!disposed) errors.add(id); }).finally(() => { loading.delete(id); if (!disposed) render(); });
+      }
+      render();
+    },
+  });
   const empty = document.createElement('p'); empty.setAttribute('role', 'status');
   function render(): void {
-    const focusedDisclosure = document.activeElement?.getAttribute('data-library-disclosure');
+    if (disposed) return;
+    const focusedDisclosure = document.activeElement?.matches('[data-blok-database-subitem-toggle]')
+      ? document.activeElement.closest('[data-row-id]')?.getAttribute('data-row-id') : null;
     const pages = options.pages(); const access = options.access();
     const recent = new Map(options.recentIds().map((id, position) => [id, position]));
     const matches = pages.filter(page => {
@@ -81,7 +99,8 @@ export function openPageLibrary(options: {
       const key = sort.value === 'updated' ? 'updatedAt' : 'createdAt';
       matches.sort((a, b) => (Date.parse(b[key] ?? '') || 0) - (Date.parse(a[key] ?? '') || 0));
     } else if (view.category === 'recent') matches.sort((a, b) => (recent.get(a.id) ?? 0) - (recent.get(b.id) ?? 0));
-    rows.replaceChildren();
+    targets.clear();
+    const rows: LibraryTableRow[] = [];
     const byId = new Map(pages.map(page => [page.id, page]));
     const matchIds = new Set(matches.map(page => page.id));
     const searching = input.value.trim() !== '';
@@ -99,56 +118,25 @@ export function openPageLibrary(options: {
     const appendPage = (page: DesktopPage, depth: number): void => {
       if (rendered.has(page.id)) return;
       rendered.add(page.id);
-      const wrapper = document.createElement('tr'); wrapper.setAttribute('data-library-row', '');
-      const nameCell = document.createElement('td'); const nameContent = document.createElement('div'); nameContent.setAttribute('data-library-name-cell', ''); nameContent.style.paddingLeft = `${depth * 20}px`; nameCell.append(nameContent);
       const children = pages.filter(child => child.parentId === page.id && child.id !== page.id);
-      const disclosure = document.createElement('button'); disclosure.type = 'button'; disclosure.setAttribute('data-library-disclosure', page.id);
-      disclosure.textContent = expanded.has(page.id) ? '⌄' : '›';
-      disclosure.setAttribute('aria-label', `${expanded.has(page.id) ? 'Réduire' : 'Développer'} ${page.title}`);
-      disclosure.setAttribute('aria-expanded', String(expanded.has(page.id))); disclosure.hidden = (children.length === 0 && !options.loadChildren) || searching;
-      disclosure.addEventListener('click', () => {
-        if (expanded.has(page.id)) { expanded.delete(page.id); render(); return; }
-        expanded.add(page.id);
-        if (options.loadChildren && !outlines.has(page.id) && !loading.has(page.id)) {
-          loading.add(page.id); errors.delete(page.id);
-          void options.loadChildren(page.id).then(items => {
-            if (options.pages().some(item => item.id === page.id)) outlines.set(page.id, items.filter(item => item.pageId === page.id));
-          }).catch(() => { errors.add(page.id); }).finally(() => { loading.delete(page.id); render(); });
-        }
-        render();
-      });
-
-      const row = document.createElement('button'); row.type = 'button'; row.setAttribute('data-library-page', '');
-      const icon = document.createElement('span'); icon.setAttribute('data-library-icon', ''); icon.setAttribute('aria-hidden', 'true');
-      if (page.icon) renderPageIcon(icon, page.icon); else icon.innerHTML = IconFile;
-      const name = document.createElement('span'); name.setAttribute('data-library-page-title', ''); name.textContent = page.title || 'Nouvelle page';
-      const edited = document.createElement('td'); edited.setAttribute('data-library-date', '');
-      const timestamp = pageTimestamp(page.updatedAt); edited.textContent = timestamp ?? '—'; edited.setAttribute('aria-label', timestamp ? `Dernière modification : ${timestamp}` : 'Date de modification inconnue');
-      row.append(icon, name); row.addEventListener('click', () => {
-        if (!options.pages().some(item => item.id === page.id)) { render(); return; }
-        options.onOpen(page.id);
-      }); nameContent.append(disclosure, row); wrapper.append(nameCell, edited); rows.append(wrapper);
+      targets.set(page.id, { pageId: page.id });
+      rows.push({ id: page.id, title: page.title || 'Nouvelle page', icon: page.icon, updatedAt: page.updatedAt,
+        depth, hasChildren: !searching && (children.length > 0 || (outlines.get(page.id)?.length ?? 0) > 0), expanded: expanded.has(page.id) });
       if (!expanded.has(page.id) || searching) return;
       children.forEach(child => appendPage(child, depth + 1));
       for (const database of outlines.get(page.id) ?? []) {
-        const databaseRow = document.createElement('button'); databaseRow.type = 'button'; databaseRow.setAttribute('data-library-database', ''); databaseRow.style.paddingLeft = `${(depth + 1) * 20 + 32}px`;
-        const databaseIcon = document.createElement('span'); databaseIcon.setAttribute('data-library-icon', ''); databaseIcon.innerHTML = IconTable;
-        const databaseTitle = document.createElement('span'); databaseTitle.textContent = database.title;
-        databaseRow.append(databaseIcon, databaseTitle);
-        databaseRow.addEventListener('click', () => {
-          if (!options.pages().some(item => item.id === page.id)) { render(); return; }
-          options.onOpenBlock?.(page.id, database.blockId);
-        }); const databaseTr = document.createElement('tr'); const databaseCell = document.createElement('td'); databaseCell.colSpan = 2; databaseCell.append(databaseRow); databaseTr.append(databaseCell); rows.append(databaseTr);
-      }
-      if (loading.has(page.id) || errors.has(page.id)) {
-        const message = document.createElement('p'); message.setAttribute('data-library-outline-status', ''); message.setAttribute('role', 'status');
-        message.textContent = loading.has(page.id) ? 'Chargement…' : 'Contenu indisponible. Réduisez puis développez pour réessayer.';
-        const statusRow = document.createElement('tr'); const statusCell = document.createElement('td'); statusCell.colSpan = 2; statusCell.append(message); statusRow.append(statusCell); rows.append(statusRow);
+        const id = `database:${page.id}:${database.blockId}`;
+        targets.set(id, { pageId: page.id, blockId: database.blockId });
+        rows.push({ id, title: database.title, depth: depth + 1, hasChildren: false, expanded: false });
       }
     };
     matches.filter(page => searching || !hasListedAncestor(page)).forEach(page => appendPage(page, 0));
-    if (focusedDisclosure) [...results.querySelectorAll<HTMLButtonElement>('[data-library-disclosure]')].find(button => button.getAttribute('data-library-disclosure') === focusedDisclosure)?.focus();
+    table.update(rows);
+    if (focusedDisclosure) [...results.querySelectorAll<HTMLButtonElement>('[data-blok-database-subitem-toggle]')]
+      .find(button => button.closest('[data-row-id]')?.getAttribute('data-row-id') === focusedDisclosure)?.focus();
     empty.textContent = matches.length === 0 ? 'Aucune page à afficher.' : `${matches.length} page${matches.length === 1 ? '' : 's'}`;
+    if (loading.size) empty.textContent += ' · Chargement des bases de données…';
+    else if (errors.size) empty.textContent += ' · Contenu indisponible. Réduisez puis développez pour réessayer.';
   }
   for (const [value, label, icon] of categories) {
     const tab = document.createElement('button'); tab.type = 'button'; tab.setAttribute('role', 'tab'); const tabIcon = document.createElement('span'); tabIcon.innerHTML = icon; tabIcon.setAttribute('aria-hidden', 'true'); const tabLabel = document.createElement('span'); tabLabel.textContent = label; tab.append(tabIcon, tabLabel); tab.setAttribute('aria-selected', String(view.category === value)); tab.id = `page-library-tab-${value}`; tab.setAttribute('aria-controls', results.id); tab.tabIndex = view.category === value ? 0 : -1;

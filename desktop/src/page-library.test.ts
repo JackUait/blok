@@ -1,11 +1,15 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { openPageLibrary } from './page-library';
+import { openPageLibrary as mountPageLibrary } from './page-library';
 import type { DesktopPage } from './storage';
+const disposers: Array<() => void> = [];
+function openPageLibrary(options: Parameters<typeof mountPageLibrary>[0]): ReturnType<typeof mountPageLibrary> {
+  const handle = mountPageLibrary(options); disposers.push(handle); return handle;
+}
 beforeEach(() => vi.clearAllMocks());
-afterEach(() => { document.body.replaceChildren(); vi.restoreAllMocks(); });
+afterEach(() => { disposers.splice(0).forEach(dispose => dispose()); document.body.replaceChildren(); vi.restoreAllMocks(); });
 const pages: DesktopPage[] = [{ id: 'a', title: 'Alpha', parentId: null }, { id: 'b', title: 'Bravo', parentId: 'a' }, { id: 'c', title: 'Charlie', parentId: null }];
 function button(label: string): HTMLButtonElement { const result = [...document.querySelectorAll('button')].find(item => item.textContent?.trim() === label); if (!result) throw new Error(`Missing ${label}`); return result; }
-const titles = () => [...document.querySelectorAll('[data-library-page-title]')].map(item => item.textContent);
+const titles = () => [...document.querySelectorAll('[data-blok-database-table-cell][data-property-id="title"] > [data-blok-database-cell]')].map(item => item.textContent);
 it('filters accessible pages by effective audience, favorites and viewed recency', () => {
   openPageLibrary({ container: document.body, pages: () => pages, access: () => ({ a: { visibility: 'private', level: 'full', shared: false }, b: { visibility: 'private', level: 'full', shared: false }, c: { visibility: 'workspace', level: 'edit', teamspaceId: 'team' } }), recentIds: () => ['gone', 'b', 'a'], isFavorite: id => id === 'a', onOpen: vi.fn(), onCreate: vi.fn() });
   button('Récents').click(); expect(titles()).toEqual(['Bravo', 'Alpha']);
@@ -19,7 +23,7 @@ it('searches within a category and refuses to open a revoked page', () => {
   openPageLibrary({ container: document.body, pages: () => available, access: () => undefined, recentIds: () => [], isFavorite: () => true, onOpen, onCreate: vi.fn() });
   const input = document.querySelector<HTMLInputElement>('input[type="search"]'); if (!input) throw new Error('Missing search');
   input.value = 'brav'; input.dispatchEvent(new Event('input')); expect(titles()).toEqual(['Bravo']);
-  available = []; document.querySelector<HTMLButtonElement>('[data-library-page]')?.click(); expect(onOpen).not.toHaveBeenCalled(); expect(titles()).toEqual([]);
+  available = []; document.querySelector<HTMLButtonElement>('[data-blok-database-table-open]')?.click(); expect(onOpen).not.toHaveBeenCalled(); expect(titles()).toEqual([]);
 });
 it('keeps the library available while the page creation dialog is opened', () => {
   const onCreate = vi.fn(); openPageLibrary({ container: document.body, pages: () => [], access: () => undefined, recentIds: () => [], isFavorite: () => false, onOpen: vi.fn(), onCreate });
@@ -38,32 +42,32 @@ it('sorts known metadata dates without assigning dates to legacy pages', () => {
   openPageLibrary({ container: document.body, pages: () => [{ ...pages[0], updatedAt: '2026-01-01T10:00:00Z' }, { ...pages[1], parentId: null }, { ...pages[2], updatedAt: '2026-02-01T10:00:00Z' }], access: () => undefined, recentIds: () => [], isFavorite: () => false, onOpen: vi.fn(), onCreate: vi.fn() });
   const sort = document.querySelector('select'); if (!sort) throw new Error('Missing sort'); sort.value = 'updated'; sort.dispatchEvent(new Event('change'));
   expect(titles()).toEqual(['Charlie', 'Alpha', 'Bravo']);
-  expect(document.querySelectorAll('[data-library-date]')[2].textContent).toBe('—');
+  expect(document.querySelectorAll('[data-property-id=updated] [data-blok-database-cell]')[2].hasAttribute('data-empty')).toBe(true);
 });
 it('expands real child pages without duplicate rows and searches collapsed descendants', () => {
   openPageLibrary({ container: document.body, pages: () => pages, access: () => undefined, recentIds: () => [], isFavorite: () => false, onOpen: vi.fn(), onCreate: vi.fn() });
   expect(titles()).toEqual(['Alpha', 'Charlie']);
-  const expand = document.querySelector<HTMLButtonElement>('[aria-label="Développer Alpha"]'); if (!expand) throw new Error('Missing disclosure');
+  const expand = document.querySelector<HTMLButtonElement>('[data-row-id="a"] [data-blok-database-subitem-toggle]'); if (!expand) throw new Error('Missing disclosure');
   expand.click(); expect(titles()).toEqual(['Alpha', 'Bravo', 'Charlie']);
-  document.querySelector<HTMLButtonElement>('[aria-label="Réduire Alpha"]')?.click(); expect(titles()).toEqual(['Alpha', 'Charlie']);
+  document.querySelector<HTMLButtonElement>('[data-row-id="a"] [data-blok-database-subitem-toggle]')?.click(); expect(titles()).toEqual(['Alpha', 'Charlie']);
   const input = document.querySelector<HTMLInputElement>('input[type="search"]'); if (!input) throw new Error('Missing search');
   input.value = 'bravo'; input.dispatchEvent(new Event('input')); expect(titles()).toEqual(['Bravo']);
 });
 it('loads actual inline databases only on expansion and opens their owning page/block', async () => {
   const loadChildren = vi.fn(async () => [{ pageId: 'a', blockId: 'db', title: 'Todo List', type: 'database' as const }]); const onOpenBlock = vi.fn();
-  openPageLibrary({ container: document.body, pages: () => [pages[0]], access: () => undefined, recentIds: () => [], isFavorite: () => false, onOpen: vi.fn(), onCreate: vi.fn(), loadChildren, onOpenBlock });
+  openPageLibrary({ container: document.body, pages: () => pages.slice(0, 2), access: () => undefined, recentIds: () => [], isFavorite: () => false, onOpen: vi.fn(), onCreate: vi.fn(), loadChildren, onOpenBlock });
   expect(loadChildren).not.toHaveBeenCalled();
-  document.querySelector<HTMLButtonElement>('[aria-label="Développer Alpha"]')?.click();
-  await vi.waitFor(() => expect(document.querySelector('[data-library-database]')?.textContent).toContain('Todo List'));
-  document.querySelector<HTMLButtonElement>('[data-library-database]')?.click(); expect(onOpenBlock).toHaveBeenCalledWith('a', 'db');
+  document.querySelector<HTMLButtonElement>('[data-row-id="a"] [data-blok-database-subitem-toggle]')?.click();
+  await vi.waitFor(() => expect(document.querySelector('[data-row-id=\'database:a:db\']')?.textContent).toContain('Todo List'));
+  document.querySelector<HTMLButtonElement>('[data-row-id=\'database:a:db\'] [data-blok-database-table-open]')?.click(); expect(onOpenBlock).toHaveBeenCalledWith('a', 'db');
 });
 it('discards an outline response when its page access is revoked', async () => {
-  let available = [pages[0]]; const onOpenBlock = vi.fn();
+  let available = pages.slice(0, 2); const onOpenBlock = vi.fn();
   const loadChildren = vi.fn(async () => { available = []; return [{ pageId: 'a', blockId: 'db', title: 'Secret', type: 'database' as const }]; });
   openPageLibrary({ container: document.body, pages: () => available, access: () => undefined, recentIds: () => [], isFavorite: () => false, onOpen: vi.fn(), onCreate: vi.fn(), loadChildren, onOpenBlock });
-  document.querySelector<HTMLButtonElement>('[aria-label="Développer Alpha"]')?.click();
+  document.querySelector<HTMLButtonElement>('[data-row-id="a"] [data-blok-database-subitem-toggle]')?.click();
   await vi.waitFor(() => expect(loadChildren).toHaveBeenCalledOnce());
-  expect(document.querySelector('[data-library-database]')).toBeNull();
+  expect(document.querySelector('[data-row-id=\'database:a:db\']')).toBeNull();
 });
 it('offers the Notes collection action separately from ordinary page creation', () => {
   const onCreateNote = vi.fn(); const onCreate = vi.fn();
@@ -98,12 +102,28 @@ it('refreshes the authorized index without losing the current search', () => {
   expect(titles()).toEqual([]); expect(input.value).toBe('bravo'); expect(input.isConnected).toBe(true);
 });
 
-it('presents aligned table columns and icon category tabs', () => {
+it('uses the native read-only database grid and its property headers and SVG disclosures', () => {
   openPageLibrary({ container: document.body, pages: () => pages, access: () => undefined, recentIds: () => [], isFavorite: () => false, onOpen: vi.fn(), onCreate: vi.fn() });
-  const table = document.querySelector('table');
-  expect(table).not.toBeNull();
-  expect([...document.querySelectorAll('th')].map(cell => cell.textContent)).toEqual(['Nom de la page', 'Dernière modification']);
-  expect(table?.querySelector('tbody tr')?.children).toHaveLength(2);
+  const grid = document.querySelector('[data-blok-database-table-grid]');
+  expect(grid?.getAttribute('aria-readonly')).toBe('true');
+  expect(grid?.querySelectorAll('[role=columnheader]')).toHaveLength(2);
+  expect(grid?.textContent).toContain('Nom de la page');
+  expect(grid?.textContent).toContain('Dernière modification');
+  expect(grid?.querySelector('[data-row-id="a"] [data-blok-database-subitem-toggle] svg')).not.toBeNull();
+  expect(grid?.querySelector('[data-row-id="c"] [data-blok-database-subitem-toggle]')).toBeNull();
+  expect(document.querySelector('[data-blok-database-table-add-row], [contenteditable=true]')).toBeNull();
   expect(button('Récents').querySelector('svg')).not.toBeNull();
-  expect(button('Favoris').querySelector('svg')).not.toBeNull();
+});
+it('opens the original page through the native grid without changing its metadata', () => {
+  const onOpen = vi.fn(); const before = JSON.stringify(pages);
+  const library = openPageLibrary({ container: document.body, pages: () => pages, access: () => undefined, recentIds: () => [], isFavorite: () => false, onOpen, onCreate: vi.fn() });
+  document.querySelector<HTMLButtonElement>('[data-row-id="a"] [data-blok-database-table-open]')?.click();
+  expect(onOpen).toHaveBeenCalledWith('a'); expect(JSON.stringify(pages)).toBe(before);
+  library(); expect(document.querySelector('[data-blok-database-table-grid]')).toBeNull();
+});
+it('does not read leaf documents or show speculative child arrows', () => {
+  const loadChildren = vi.fn(async () => []);
+  openPageLibrary({ container: document.body, pages: () => [pages[2]], access: () => undefined, recentIds: () => [], isFavorite: () => false, onOpen: vi.fn(), onCreate: vi.fn(), loadChildren });
+  expect(document.querySelector('[data-blok-database-subitem-toggle]')).toBeNull();
+  expect(loadChildren).not.toHaveBeenCalled();
 });

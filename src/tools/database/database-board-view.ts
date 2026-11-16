@@ -1,4 +1,4 @@
-import { fileChipIcon, pageIconElement, showsPageIcon } from './page-icon';
+import { fileChipIcon, rowPageGlyph, showsPageIcon } from './page-icon';
 import type { I18n } from '../../../types';
 import type { SelectOption, DatabaseRow, DatabaseViewConfig, PropertyDefinition, CardSize } from './types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
@@ -707,9 +707,15 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     el.style.setProperty('flex', `0 0 ${columnWidth}`);
 
     const c = this.columnColor(option);
+    const colorColumns = this.settings.view?.groupSettings?.colorColumns !== false;
+
+    // notion-motion.md Round 42 §1: ⋯ and + take the option's dot ink; a group with no colour takes the plain accent.
+    if (colorColumns) {
+      el.style.setProperty('--_blok-group-glyph', c === undefined ? 'var(--blok-database-column-accent)' : `var(--blok-database-column-${c}-glyph, var(--blok-database-status-dot-${c}))`);
+    }
 
     // "Color columns" off: columns and cards drop the hue, pills keep it.
-    if (c !== undefined && this.settings.view?.groupSettings?.colorColumns !== false) {
+    if (c !== undefined && colorColumns) {
 
       // Only some hues were measured (colors.css); the rest derive from the option pill.
       el.style.setProperty('--_blok-group-tint', `var(--blok-database-column-${c}-bg, color-mix(in srgb, var(--blok-database-option-${c}-bg) 22%, transparent))`);
@@ -857,7 +863,6 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     const actions = document.createElement('div');
 
     actions.setAttribute('data-blok-database-column-actions', '');
-    actions.toggleAttribute('data-status', this.isStatusBoard);
 
     const newPage = document.createElement('button');
 
@@ -917,7 +922,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       cardEl.setAttribute('data-empty', '');
     }
 
-    const icon = showsPageIcon(this.settings.view) ? pageIconElement(row) : null;
+    const icon = showsPageIcon(this.settings.view) ? rowPageGlyph(row, this.settings.cellContext?.rowHasBody?.(row.id) === true, false) : null;
 
     if (icon !== null) {
       cardEl.appendChild(icon);
@@ -1163,8 +1168,8 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     }
     input.setSelectionRange(input.value.length, input.value.length);
     cardEl.setAttribute('data-editing', '');
-    // A page with its own icon keeps it; the blank page glyph stands in for none.
-    if (cardEl.querySelector(':scope > [data-blok-database-page-icon]') === null) {
+    // A page with its own icon or a body keeps its glyph; the blank page glyph stands in for none.
+    if (cardEl.querySelector(':scope > :is([data-blok-database-page-icon], [data-blok-database-page-icon-placeholder])') === null) {
       const glyph = document.createElement('span');
 
       glyph.setAttribute('data-blok-database-card-edit-glyph', '');

@@ -153,7 +153,8 @@ describe('header menu values in dark (§23.4)', () => {
 });
 
 describe('"Add a property" type list in dark (§23.4)', () => {
-  it('draws the type icons in the glyph ink, rgb(230, 229, 227) in dark; light follows the row ink', () => {
-    expect(ruleBody('[data-blok-database-property-type-option-icon]')).toContain('color: var(--blok-database-glyph)');
+  it('draws the type icons in the glyph ink, rgb(230, 229, 227) in dark; light is the header icon gray (Round 41)', () => {
+    expect(ruleBody('[data-blok-database-property-type-option-icon]')).toContain('color: var(--blok-database-type-icon)');
+    expect(tokenValues('--blok-database-type-icon').slice(1)).toEqual(['var(--blok-database-glyph)', 'var(--blok-database-glyph)']);
   });
 });

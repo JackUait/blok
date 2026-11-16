@@ -1,5 +1,5 @@
 import { renderPageIcon } from '../../shell/page-icon';
-import { IconPageEmpty } from '../../components/icons';
+import { IconPage, IconPageEmpty } from '../../components/icons';
 
 import type { DatabaseRow, DatabaseViewConfig } from './types';
 
@@ -28,6 +28,25 @@ export const pagePlaceholderIcon = (): HTMLElement => {
   icon.setAttribute('data-blok-database-page-icon-placeholder', '');
   icon.setAttribute('aria-hidden', 'true');
   icon.innerHTML = IconPageEmpty;
+
+  return icon;
+};
+
+/**
+ * The glyph a row with no icon of its own shows (notion-motion.md, Round 45
+ * gap 2): the page with lines when its page has a body, else the blank page
+ * where the view shows one (table, list) and nothing where it does not.
+ */
+export const rowPageGlyph = (row: Pick<DatabaseRow, 'icon'>, hasBody: boolean, blank: boolean): HTMLElement | null => {
+  const own = pageIconElement(row);
+
+  if (own !== null || !hasBody) {
+    return own ?? (blank ? pagePlaceholderIcon() : null);
+  }
+  const icon = pagePlaceholderIcon();
+
+  icon.setAttribute('data-blok-database-page-icon-placeholder', 'content');
+  icon.innerHTML = IconPage;
 
   return icon;
 };

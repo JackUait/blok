@@ -89,7 +89,8 @@ const capital = (word: string): string => `${word.charAt(0).toUpperCase()}${word
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
-const optionPill = (option: SelectOption, type: PropertyDefinition['type']): HTMLElement => {
+/** An option token; a status option takes its shown colour and no dot. */
+export const optionPill = (option: SelectOption, type: PropertyDefinition['type']): HTMLElement => {
   const pill = document.createElement('span');
 
   pill.setAttribute('data-blok-database-option-pill', '');

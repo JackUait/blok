@@ -1,4 +1,6 @@
-import { IconGlobe, IconHelp, IconSearch } from '../../components/icons';
+import { IconEmojiSmile, IconGlobe, IconHelp, IconSearch } from '../../components/icons';
+import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
+import { EmojiPicker } from '../callout/emoji-picker';
 import { onHover } from '../../components/utils/tooltip';
 import { syncPortalDirection } from '../../components/utils/portal-direction';
 import { overlayMountFor } from '../../components/utils/top-layer';
@@ -50,6 +52,10 @@ const VIEWPORT_BOTTOM_MARGIN = 11;
 /** notion-motion.md Round 34 §6: the header "+" menu, fitting neither side, ends 12.3 above the window. */
 const NAME_OVER_ANCHOR_BOTTOM_MARGIN = 12.3;
 const ABOVE_GAP = 1;
+/** Set on the header "+" while its menu is open (notion-motion.md Round 44 §3). */
+const SLOT = 'data-blok-database-property-type-slot';
+/** notion-motion.md Round 44 §3, Round 34 §6: the header "+" menu starts 11 left of its name row. */
+const NAME_INSET = 11;
 /** Notion's gap below the button is unmeasured. */
 const BELOW_GAP = 4;
 /**
@@ -84,8 +90,8 @@ const TYPE_HELP: Partial<Record<PropertyType, string>> = {
 const CLOSE_FALLBACK_MS = 300;
 
 export interface PropertyTypePopoverOptions {
-  /** `name` is the name field's text, '' without the field. */
-  onSelect: (type: PropertyType, name: string) => void;
+  /** `name` is the name field's text, '' without the field. `icon` is the emoji from Select icon, if one was picked. */
+  onSelect: (type: PropertyType, name: string, icon?: string) => void;
   i18n?: I18n;
   /** Offer Person: the host gave a people directory. */
   hasPeople?: boolean;
@@ -103,7 +109,7 @@ export interface PropertyTypePopoverOptions {
 }
 
 export class DatabasePropertyTypePopover {
-  private readonly onSelect: (type: PropertyType, name: string) => void;
+  private readonly onSelect: (type: PropertyType, name: string, icon?: string) => void;
   private readonly i18n: I18n | undefined;
   private readonly hasPeople: boolean;
   private readonly withNameField: boolean;
@@ -115,6 +121,13 @@ export class DatabasePropertyTypePopover {
   private positionTracker: PositionTracker | null = null;
   /** Removes a menu still playing its close motion. */
   private fading: (() => void) | null = null;
+  /** The header "+" Select icon pick, given to the new property. */
+  private icon: string | undefined;
+  private emojiPicker: EmojiPicker | null = null;
+  /** The picker's own top-layer host, shown after the menu so it paints above it. */
+  private pickerLayer: HTMLElement | null = null;
+  /** The header "+" while its name box sits over it: database.css widens it into the new column's slot. */
+  private slot: HTMLElement | null = null;
 
   constructor(options: PropertyTypePopoverOptions) {
     this.onSelect = options.onSelect;
@@ -155,14 +168,11 @@ export class DatabasePropertyTypePopover {
     // Inside the menu's root, so outside clicks, keys and cleanup cover it too.
     const header = document.createElement('div');
 
+    this.icon = undefined;
     if (nameField !== null) {
       header.setAttribute('data-blok-database-property-type-header', '');
-      const glyph = document.createElement('div');
-
-      // A new property starts as Text.
-      glyph.setAttribute('data-blok-database-property-type-glyph', '');
-      glyph.innerHTML = propertyTypeMeta('text').icon;
-      header.appendChild(glyph);
+      // notion-motion.md Round 44 §3: the header "+" name box starts with "Select icon"; the row page's keeps the Text glyph.
+      header.appendChild(this.nameOverAnchor ? this.iconButton(nameField) : this.typeGlyph());
       nameField.type = 'text';
       nameField.setAttribute('data-blok-database-property-name-input', '');
       nameField.setAttribute('data-blok-field', 'text');
@@ -237,7 +247,7 @@ export class DatabasePropertyTypePopover {
       }
 
       item.addEventListener('click', () => {
-        this.onSelect(type, nameField?.value.trim() ?? '');
+        this.select(type, nameField?.value.trim() ?? '');
         this.close();
       });
 
@@ -248,6 +258,10 @@ export class DatabasePropertyTypePopover {
 
     // Inside a top-layer panel (a peek, the layout builder): on body the panel covers the menu, and a modal's focus trap takes the name field.
     overlayMountFor(anchor).appendChild(popover);
+    if (this.nameOverAnchor) {
+      this.slot = anchor;
+      anchor.setAttribute(SLOT, '');
+    }
     // The side is picked once: a search shrinks the menu and it keeps its bottom (notion-spec-2 §18.5).
     const picked: { side?: 'below' | 'above' | 'cover' } = {};
     const reposition = (): void => {
@@ -271,16 +285,16 @@ export class DatabasePropertyTypePopover {
       popover.setAttribute('data-side', above ? 'top' : 'bottom');
       if (this.nameOverAnchor) {
         const box = anchor.getBoundingClientRect();
-        // r32-b-typemenu.raw: with no room on the right, Notion's menu ends 12 from the window and its name row starts at the menu's left.
+        // notion-motion.md Round 44 §3: the name row stays at the "+" and the menu starts 11 left of it.
+        // Pushed in from the window's right it ends 12 from the window; Notion was never read that far right.
         const edge = window.innerWidth - VIEWPORT_MARGIN - popover.offsetWidth;
-        const pushed = box.left > edge;
 
-        if (pushed) popover.style.left = `${Math.max(VIEWPORT_MARGIN, edge)}px`;
+        popover.style.left = `${Math.max(VIEWPORT_MARGIN, Math.min(box.left - NAME_INSET, edge))}px`;
         // notion-motion.md Round 34 §6: fitting neither side, the name row rides up with the menu, on its top.
         header.style.top = picked.side === 'cover' ? `${-header.offsetHeight}px` : `${box.top - parseFloat(popover.style.top)}px`;
         const room = Math.max(0, popover.offsetWidth - header.offsetWidth);
 
-        header.style.left = pushed ? '0px' : `${Math.min(Math.max(0, box.left - parseFloat(popover.style.left)), room)}px`;
+        header.style.left = `${Math.min(Math.max(0, box.left - parseFloat(popover.style.left)), room)}px`;
       }
     };
 
@@ -295,7 +309,9 @@ export class DatabasePropertyTypePopover {
 
     this.boundOutsideClick = (e: MouseEvent): void => {
       const target = e.target as HTMLElement;
-      if (!popover.contains(target) && !anchor.contains(target)) {
+      const inPicker = this.pickerLayer?.contains(target) === true;
+
+      if (!popover.contains(target) && !anchor.contains(target) && !inPicker) {
         // Notion's fade is measured on Escape only (notion-spec-2 §19.22).
         this.close(true);
       }
@@ -341,7 +357,7 @@ export class DatabasePropertyTypePopover {
 
     if (type === undefined && (e.target !== nameField || name === '')) return;
     e.preventDefault();
-    this.onSelect(type ?? 'text', name);
+    this.select(type ?? 'text', name);
     this.close();
   }
 
@@ -392,7 +408,7 @@ export class DatabasePropertyTypePopover {
   }
 
   private typeListHeading(grid: HTMLElement): HTMLElement {
-    // notion-spec-2 §17.9: the grid's magnifier turns "Select type" into the field; the list adds it under "Type".
+    // notion-motion.md Round 44 §3: in both layouts the label stays and the field opens under it.
     const t = (key: string): string => {
       const shown = this.grid && key === 'tools.database.propertyTypeListHeading' ? 'tools.database.formSelectType' : key;
 
@@ -406,7 +422,7 @@ export class DatabasePropertyTypePopover {
       }
       // A search shows one flat list of matches.
       for (const rule of grid.querySelectorAll<HTMLElement>('[data-blok-database-property-type-rule]')) rule.hidden = query !== '';
-    }, !this.grid);
+    }, true);
 
     // notion-spec-2 §19.8: opening "Search types" drops the highlight, so the next ArrowDown starts at the menu's top.
     heading.querySelector('[data-blok-database-property-type-search]')?.addEventListener('click', () => {
@@ -447,6 +463,11 @@ export class DatabasePropertyTypePopover {
       item.addEventListener('click', () => pick(preset.mode));
       section.appendChild(item);
     }
+    const rule = document.createElement('div');
+
+    // notion-motion.md Round 41 Part A: a line closes the AI rows.
+    rule.setAttribute('data-blok-database-property-autofill-rule', '');
+    section.appendChild(rule);
 
     return section;
   }
@@ -459,6 +480,9 @@ export class DatabasePropertyTypePopover {
     const popover = this.popoverEl;
 
     this.popoverEl = null;
+    this.closePicker();
+    this.slot?.removeAttribute(SLOT);
+    this.slot = null;
     this.positionTracker?.detach();
     this.positionTracker = null;
     if (this.boundOutsideClick !== null) {
@@ -499,6 +523,66 @@ export class DatabasePropertyTypePopover {
   destroy(): void {
     this.close();
     this.fading?.();
+    this.emojiPicker?.getElement().remove();
+    this.emojiPicker = null;
+    this.pickerLayer?.remove();
+    this.pickerLayer = null;
+  }
+
+  /** The icon goes along only when one was picked. */
+  private select(type: PropertyType, name: string): void {
+    if (this.icon === undefined) this.onSelect(type, name);
+    else this.onSelect(type, name, this.icon);
+  }
+
+  private closePicker(): void {
+    this.emojiPicker?.close();
+    if (this.pickerLayer !== null) removeFromTopLayer(this.pickerLayer);
+  }
+
+  /** A new property starts as Text. */
+  private typeGlyph(): HTMLElement {
+    const glyph = document.createElement('div');
+
+    glyph.setAttribute('data-blok-database-property-type-glyph', '');
+    glyph.innerHTML = propertyTypeMeta('text').icon;
+
+    return glyph;
+  }
+
+  /** Notion's "Select icon": an emoji picker whose pick goes to the new property. */
+  private iconButton(nameField: HTMLInputElement): HTMLElement {
+    const button = document.createElement('button');
+    const label = this.i18n?.t('tools.database.propertyIcon') ?? 'tools.database.propertyIcon';
+    const paint = (icon: string | undefined): void => {
+      this.icon = icon;
+      if (icon === undefined) button.innerHTML = IconEmojiSmile;
+      else button.textContent = icon;
+    };
+    const handlers = { onSelect: (native: string): void => paint(native), onRemove: (): void => paint(undefined) };
+
+    button.type = 'button';
+    button.setAttribute('data-blok-database-property-type-icon-button', '');
+    button.setAttribute('aria-label', label);
+    paint(undefined);
+    button.addEventListener('click', () => {
+      if (this.i18n === undefined) return;
+      this.emojiPicker ??= new EmojiPicker({ ...handlers, i18n: this.i18n, locale: this.i18n.getLocale() });
+      const layer = this.pickerLayer ?? document.createElement('div');
+      const element = this.emojiPicker.getElement();
+
+      this.pickerLayer = layer;
+      if (!layer.isConnected) document.body.appendChild(layer);
+      if (!layer.contains(element)) layer.appendChild(element);
+      // The top layer paints in show order: shown again, it lands above the menu.
+      removeFromTopLayer(layer);
+      promoteToTopLayer(layer);
+      // The picker gives focus back to what held it when it opened. Notion's focus after a pick is unmeasured.
+      nameField.focus({ preventScroll: true });
+      void this.emojiPicker.open(button, undefined, { ...handlers, current: this.icon ?? '' });
+    });
+
+    return button;
   }
 }
 

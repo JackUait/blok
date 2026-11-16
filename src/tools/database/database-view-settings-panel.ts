@@ -15,7 +15,7 @@ import {
 import type { PanelPage } from './database-panel';
 import { editorLocale } from './cells/date-format';
 import { newViewPage } from './database-linked-picker';
-import { propertyTypeMeta } from './database-property-types';
+import { propertyGlyph } from './database-property-types';
 import {
   FILTERABLE_TYPES,
   WITHIN_OPERATORS,
@@ -96,7 +96,7 @@ import { CARD_LAYOUTS, resolveSubItemsDisplay, resolveSubItemsFilter } from './s
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { automationListPage } from './database-automations-panel';
 import { PROPERTY_FLYOUT_WIDTH, openFlyout, openSortDirectionFlyout, openSortPropertyFlyout, sortChevron } from './database-sort-flyouts';
-import { OPERATOR_FLYOUT_WIDTH, dateRuleControls, filterChip, openFilterChip, openRuleValueFlyout, operatorPick } from './database-filter-chip';
+import { OPERATOR_FLYOUT_WIDTH, dateRuleControls, filterChip, openFilterChip, openRuleValueFlyout, operatorPick, optionPill } from './database-filter-chip';
 import { VIEW_ICONS } from './database-tab-bar';
 import type { AutomationSettings } from './database-automations-panel';
 import { offersAutofill } from './property-values';
@@ -1598,7 +1598,7 @@ export class ViewSettingsPages {
         .map((property) => panelRow({
           label: property.name,
           testId: `database-edit-property-${property.id}`,
-          icon: propertyTypeMeta(property.type).icon,
+          icon: propertyGlyph(property, this.ctx.storedType),
           opensPage: true,
           onClick: () => {
             panel.close();
@@ -1738,7 +1738,7 @@ export class ViewSettingsPages {
 
     row.setAttribute('data-blok-database-property-visibility-row', '');
     icon.setAttribute('data-blok-database-panel-icon', '');
-    icon.innerHTML = propertyTypeMeta(property.type).icon;
+    icon.innerHTML = propertyGlyph(property, this.ctx.storedType);
     name.setAttribute('data-blok-database-panel-label', '');
     name.textContent = property.name;
     eye.type = 'button';
@@ -1831,12 +1831,22 @@ export class ViewSettingsPages {
     toggle.setAttribute('data-blok-testid', show ? 'database-property-show-all' : 'database-property-hide-all');
     toggle.textContent = this.t(show ? 'groupShowAll' : 'groupHideAll');
     toggle.disabled = !this.shared;
+    const search = (root: Element | null): HTMLElement | null =>
+      root?.querySelector<HTMLElement>('[data-blok-testid="database-property-search"]') ?? null;
+
+    // notion-motion.md Round 39 §5: a press from the search leaves focus there.
+    toggle.addEventListener('mousedown', (event) => {
+      if (document.activeElement !== null && document.activeElement === search(toggle.closest('[data-blok-database-panel]'))) event.preventDefault();
+    });
     toggle.addEventListener('click', () => {
       if (targets.length === 0) return;
+      // Read before refresh: it replaces this button.
+      const root = toggle.closest('[data-blok-database-panel]');
+
       this.ctx.updateView({ properties: withPropertyVisibility(this.ctx.view(), this.ctx.schema(), targets.map((entry) => entry.id), show) });
       panel.refresh();
       // notion-motion.md Round 36 §1: focus goes to the search.
-      document.querySelector<HTMLElement>('[data-blok-testid="database-property-search"]')?.focus();
+      search(root)?.focus();
     });
     header.append(toggle);
 
@@ -1887,7 +1897,7 @@ export class ViewSettingsPages {
       const rows = choices.map((property) => panelRow({
         label: property.name,
         testId: `database-pick-property-${property.id}`,
-        icon: propertyTypeMeta(property.type).icon,
+        icon: propertyGlyph(property, this.ctx.storedType),
         disabled: options.disabled === true,
         onClick: () => onPick(property),
       }));
@@ -1964,7 +1974,7 @@ export class ViewSettingsPages {
           const parts = filterPillParts(filter, property, translate, (id) => this.personName(id), rowTitle, locale);
           // notion-motion.md Round 18 §2: each filter is its chip; a click opens its rule popover under it, the page stays.
           const chip = filterChip(`database-filter-row-${filter.id}`, filterPillLabel(filter, property, translate, (id) => this.personName(id), rowTitle, locale), {
-            glyph: propertyTypeMeta(property.type).icon,
+            glyph: propertyGlyph(property, this.ctx.storedType),
             ...parts,
           });
 
@@ -2544,7 +2554,7 @@ export class ViewSettingsPages {
     const propertyButton = button(`database-filter-rule-property-${id}`, property.name, (self) => {
       openFlyout(self, panel, 'database-filter-rule-property-picker', PROPERTY_FLYOUT_WIDTH, (pick) => ordered.map((p) => panelRow({
         label: p.name,
-        icon: propertyTypeMeta(p.type).icon,
+        icon: propertyGlyph(p, this.ctx.storedType),
         testId: `database-pick-property-${p.id}`,
         onClick: () => pick(() => {
           const { id: _fresh, ...condition } = defaultFilterFor(p);
@@ -2552,7 +2562,7 @@ export class ViewSettingsPages {
           save(condition);
         }),
       })));
-    }, propertyTypeMeta(property.type).icon);
+    }, propertyGlyph(property, this.ctx.storedType));
     const operatorButton = button(`database-filter-rule-operator-${id}`, opKey === undefined ? node.operator : this.ctx.i18n.t(opKey), (self) => {
       openFlyout(self, panel, 'database-filter-operator-picker', OPERATOR_FLYOUT_WIDTH, (pick) => operatorChoicesFor(property, node.operator).map((choice) => panelRow({
         label: this.ctx.i18n.t(choice.labelKey),
@@ -2605,22 +2615,31 @@ export class ViewSettingsPages {
       // Not a relative span or a range: the flyout holds the day field and calendar (openRuleValueFlyout).
       const dayEditor = DATE_LIKE_TYPES.includes(property.type) && dateRuleControls(this.ctx, node, () => undefined) === undefined;
       const preset = RELATIVE_DATE_VALUES.find((relative) => relative === node.value);
+      // notion-motion.md Round 20 §2 (r20-adv-st-val.raw), Round 39 §1 (r39-pm-nrules.png): picked options show as tokens.
+      const paint = (self: HTMLElement, rule: Pick<FilterConfig, 'value'>, text: string): void => {
+        const options = OPTION_TYPES.has(property.type) ? property.config?.options ?? [] : [];
+        const tokens = idList(rule.value).flatMap((value) => options.filter((o) => o.id === value)).map((o) => optionPill(o, property.type));
+        const label = self.querySelector('[data-blok-database-panel-label]');
+
+        if (tokens.length > 0) label?.replaceChildren(...tokens);
+        else if (label !== null) label.textContent = text || placeholder;
+        if (tokens.length > 0) self.setAttribute('aria-label', text);
+        else self.removeAttribute('aria-label');
+        self.toggleAttribute('data-blok-database-filter-placeholder', text === '');
+      };
       const valueButton = button(`database-filter-rule-value-${id}`, shown || placeholder, (self) => {
         openRuleValueFlyout(self, panel, this.ctx, () => findRule(tree(), id), (patch) => {
           write(updateFilterRule(tree(), id, patch.operator === undefined ? patch : { ...patch, operator: keepLead(findRule(tree(), id)?.operator ?? node.operator, patch.operator) }));
           // r23-adv-tab-btns.raw: the fixed-width day button reads a typed day at once, under the open flyout.
+          // An option pick shows its token at once too: the flyout stays open (r20-adv-st-two.png).
           const rule = findRule(tree(), id);
 
-          if (!dayEditor || rule === undefined || RELATIVE_DATE_VALUES.some((relative) => relative === rule.value)) return;
-          const text = valueText(rule);
-          const label = self.querySelector('[data-blok-database-panel-label]');
-
-          if (label !== null) label.textContent = text || placeholder;
-          self.toggleAttribute('data-blok-database-filter-placeholder', text === '');
+          if (rule === undefined || !(dayEditor || OPTION_TYPES.has(property.type)) || RELATIVE_DATE_VALUES.some((relative) => relative === rule.value)) return;
+          paint(self, rule, valueText(rule));
         });
       });
 
-      if (shown === '') valueButton.setAttribute('data-blok-database-filter-placeholder', '');
+      paint(valueButton, node, shown);
       if (dayEditor) line.append(this.datePresetButton(panel, id, preset, save));
       // r22-adv-wk.raw: a preset leaves only the first button.
       if (!dayEditor || preset === undefined) line.append(valueButton);
@@ -2817,12 +2836,13 @@ export class ViewSettingsPages {
           const propertyButton: HTMLElement = sortChevron(panelRow({
             label: property.name,
             testId: `database-sort-property-${sort.id}`,
-            icon: propertyTypeMeta(property.type).icon,
+            icon: propertyGlyph(property, this.ctx.storedType),
             onClick: () => openSortPropertyFlyout(
               propertyButton,
               panel,
               schema.filter((p) => GROUPABLE_TYPES.includes(p.type)),
-              (picked) => write(withEntryIds(this.ctx.view().sorts).map((s) => (s.id === sort.id ? { ...s, propertyId: picked.id } : s)))
+              (picked) => write(withEntryIds(this.ctx.view().sorts).map((s) => (s.id === sort.id ? { ...s, propertyId: picked.id } : s))),
+              this.ctx.storedType
             ),
           }));
           const directionButton: HTMLElement = sortChevron(panelRow({
@@ -3548,6 +3568,9 @@ const VALUE_PLACEHOLDER_KEYS: Partial<Record<PropertyType, string>> = {
   createdTime: 'tools.database.filterSelectDate',
   lastEditedTime: 'tools.database.filterSelectDate',
 };
+
+/** Types whose rule value button draws its picks as option tokens. */
+const OPTION_TYPES: ReadonlySet<PropertyType> = new Set(['select', 'multiSelect', 'status']);
 
 const ISO_DAY_VALUE = /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2})?$/;
 

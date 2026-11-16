@@ -736,9 +736,25 @@ describe('DatabaseCalendarView', () => {
       expect(day(root, '2026-10-14').getAttribute('data-drop')).toBe('');
       pointer('pointerup', document, 350, 210);
 
-      expect(handlers.setDate).toHaveBeenCalledWith('r1', '2026-10-14');
+      expect(handlers.setDate).toHaveBeenCalledWith('r1', '2026-10-14', '2026-10-14');
       expect(handlers.openRow).not.toHaveBeenCalled();
       expect(day(root, '2026-10-14').hasAttribute('data-drop')).toBe(false);
+    });
+
+    // notion-motion.md Round 40 §3: the drop day's tint fades out on the redrawn month.
+    it('marks the day a move landed on so its tint fades out once', () => {
+      const { root } = mount({ dropDay: '2026-10-09' });
+
+      expect(day(root, '2026-10-09').hasAttribute('data-drop-leaving')).toBe(true);
+      expect(root.querySelectorAll('[data-drop-leaving]')).toHaveLength(1);
+
+      // The landed event's own animation ends inside the cell; it must not cut the tint short.
+      events(root, 'r1')[0]?.dispatchEvent(new Event('animationend', { bubbles: true }));
+      expect(day(root, '2026-10-09').hasAttribute('data-drop-leaving')).toBe(true);
+
+      day(root, '2026-10-09').dispatchEvent(new Event('animationend'));
+
+      expect(day(root, '2026-10-09').hasAttribute('data-drop-leaving')).toBe(false);
     });
 
     it('keeps Cmd+Z from the editor while an event is dragged', () => {
@@ -764,7 +780,7 @@ describe('DatabaseCalendarView', () => {
       pointer('pointermove', document, 550, 310);
       pointer('pointerup', document, 550, 310);
 
-      expect(handlers.setDate).toHaveBeenCalledWith('r2', '2026-10-22/2026-10-24');
+      expect(handlers.setDate).toHaveBeenCalledWith('r2', '2026-10-22/2026-10-24', '2026-10-23');
     });
 
     it('drags the end edge to span more days', () => {
@@ -779,6 +795,7 @@ describe('DatabaseCalendarView', () => {
       pointer('pointerup', document, 150, 210);
 
       expect(handlers.setDate).toHaveBeenCalledWith('r1', '2026-10-09/2026-10-12');
+      expect(vi.mocked(handlers.setDate).mock.calls[0]).toHaveLength(2);
     });
 
     it('stretches the event live while its edge is dragged, with no day tint, and snaps back on Escape', () => {
@@ -916,6 +933,18 @@ describe('DatabaseCalendarView', () => {
 
       return anchor;
     };
+
+    // notion-motion.md Round 46 §B "No date (1)": Notion's popover opens 4 under the toolbar button.
+    it('opens the panel 4px under the button', () => {
+      const { view } = mount();
+      const anchor = document.createElement('button');
+
+      document.body.appendChild(anchor);
+      anchor.getBoundingClientRect = () => new DOMRect(1100, 275, 80, 24);
+      view.noDateControl()?.open(anchor);
+
+      expect(panel()?.closest<HTMLElement>('[data-blok-popover]')?.style.top).toBe('303px');
+    });
 
     it('leaves the month bar to the arrows: the count is a control for the database toolbar', () => {
       const { root, view } = mount();

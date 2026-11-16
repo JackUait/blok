@@ -408,11 +408,24 @@ describe('DatabasePropertyMenu', () => {
     expect(cb.onRename).not.toHaveBeenCalled();
   });
 
-  it('changes type from the Change type list, which leaves out the current type and the title', () => {
+  // notion-motion.md Round 44 §3 (r44-tp-change.raw): a plain 200-wide list, the current type kept with a ✓.
+  it('keeps the current type in the 200-wide Change type list, checked, and picking it changes nothing', () => {
+    const cb = open(prop('text'));
+    const change = byName(lastItems(), 'changeType');
+    const types = change.children?.items ?? [];
+    const current = byName(types, 'type-text');
+
+    expect(current.trailingIcon).toBe(IconCheck);
+    expect(types.filter((t) => t.trailingIcon !== undefined).map((t) => t.name)).toEqual(['type-text']);
+    expect(change.children?.width).toBe('200px');
+    current.onActivate?.(current);
+    expect(cb.onChangeType).not.toHaveBeenCalled();
+  });
+
+  it('changes type from the Change type list, which leaves out the title', () => {
     const cb = open(prop('text'));
     const types = byName(lastItems(), 'changeType').children?.items ?? [];
 
-    expect(types.map((t) => t.name)).not.toContain('type-text');
     expect(types.map((t) => t.name)).not.toContain('type-title');
     expect(types.map((t) => t.name)).not.toContain('type-person');
     byName(types, 'type-number').onActivate?.(byName(types, 'type-number'));

@@ -4,6 +4,7 @@ import { DatabaseFormView } from '../../../../src/tools/database/database-form-v
 import type { DatabaseFormViewOptions } from '../../../../src/tools/database/database-form-view';
 import { IconChevronUpDown } from '../../../../src/components/icons';
 import type { DatabaseViewConfig, FormSettings, PropertyDefinition } from '../../../../src/tools/database/types';
+import { PopoverDesktop } from '../../../../src/components/utils/popover/popover-desktop';
 
 /** An icon string as the DOM serializes it once it is set as innerHTML. */
 const markup = (svg: string): string => Object.assign(document.createElement('span'), { innerHTML: svg }).innerHTML;
@@ -602,6 +603,83 @@ describe('DatabaseFormView question options rows', () => {
     open('pick', { moveQuestion: vi.fn() });
     row('database-form-question-move')?.click();
     expect(flyoutRows()).toEqual(['database-form-question-move-up', 'database-form-question-move-top']);
+  });
+
+  // notion-motion.md Round 33 §1 (r33-form-move-w1000.raw): with no room left of the panel, the flyout
+  // opens on its right, its left edge on the row's right (panel right − 4), centred on the row.
+  const openBesideCard = (viewport: number, card: DOMRect): HTMLElement | null => {
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(viewport);
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+    vi.spyOn(PopoverDesktop.prototype, 'size', 'get').mockReturnValue({ width: 290, height: 355 });
+    const { root } = mount({ setQuestionSetting: vi.fn() });
+    const wrapper = question(root, 'size');
+
+    if (wrapper === null) throw new Error('no question');
+    wrapper.getBoundingClientRect = () => card;
+    wrapper.querySelector<HTMLButtonElement>('[data-blok-testid="database-form-question-menu"]')?.click();
+
+    return panel()?.closest<HTMLElement>('[data-blok-popover]') ?? null;
+  };
+
+  // notion-motion.md Round 31 §1 and r33-form-move-mid.raw: at 1512 the panel sits 24 right of the card, top level with it.
+  it('Question options opens 24 right of the card when the window has room there', () => {
+    const box = openBesideCard(1512, new DOMRect(585, 225, 600, 140));
+
+    expect(parseFloat(box?.style.left ?? '')).toBeCloseTo(1209);
+    expect(parseFloat(box?.style.top ?? '')).toBeCloseTo(225);
+  });
+
+  // r33-form-move-w1000.raw: at 1000 the panel opens 24 left of the card (92–382 against a card at 406).
+  it('Question options opens 24 left of the card when its right has no room', () => {
+    const box = openBesideCard(1000, new DOMRect(406, 224.8, 458, 140));
+
+    expect(parseFloat(box?.style.left ?? '')).toBeCloseTo(92);
+    expect(parseFloat(box?.style.top ?? '')).toBeCloseTo(224.8);
+  });
+
+  const openSelectTypeBeside = (viewport: number, add: DOMRect): HTMLElement | null => {
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(viewport);
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+    vi.spyOn(PopoverDesktop.prototype, 'size', 'get').mockReturnValue({ width: 290, height: 502 });
+    const { root } = mount({ setQuestionSetting: vi.fn(), addQuestion: vi.fn() });
+    const button = root.querySelector<HTMLElement>('[data-blok-testid="database-form-add-question"]');
+
+    if (button === null) throw new Error('no Add question');
+    button.getBoundingClientRect = () => add;
+    button.click();
+
+    return document.querySelector('[data-blok-testid="database-form-select-type"]')?.closest<HTMLElement>('[data-blok-popover]') ?? null;
+  };
+
+  // notion-motion.md Round 31 §1: at 1512 Select type is a side panel at x 1209, 24 right of the 600 column at 585.
+  it('Select type opens 24 right of the column when the window has room there', () => {
+    const box = openSelectTypeBeside(1512, new DOMRect(585, 160, 600, 28));
+
+    expect(parseFloat(box?.style.left ?? '')).toBeCloseTo(1209);
+    expect(parseFloat(box?.style.top ?? '')).toBeCloseTo(160);
+  });
+
+  // notion-motion.md Round 44 §1 (r44-q1.raw): at 1000 it sits at x 92, 24 left of the 458 column at 406.
+  it('Select type opens 24 left of the column when its right has no room', () => {
+    const box = openSelectTypeBeside(1000, new DOMRect(406, 160, 458, 28));
+
+    expect(parseFloat(box?.style.left ?? '')).toBeCloseTo(92);
+  });
+
+  it('Move question opens on the panel\'s right when its left has no room', () => {
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1000);
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+    vi.spyOn(PopoverDesktop.prototype, 'size', 'get').mockReturnValue({ width: 280, height: 123 });
+    open('size', { moveQuestion: vi.fn() });
+    const move = row('database-form-question-move');
+
+    if (move === null) throw new Error('no Move question row');
+    move.getBoundingClientRect = () => new DOMRect(96, 459.8, 282, 28);
+    move.click();
+    const box = flyout()?.closest<HTMLElement>('[data-blok-popover]');
+
+    expect(parseFloat(box?.style.left ?? '')).toBeCloseTo(378);
+    expect(parseFloat(box?.style.top ?? '')).toBeCloseTo(412.3);
   });
 
   it('each move puts the question where its row says and closes both menus', () => {

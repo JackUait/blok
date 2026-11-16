@@ -63,4 +63,31 @@ describe('database drop line css', () => {
     expect([ ...database.matchAll(/--blok-database-card-drag-source-bg: ([^;]+);/g) ].map((m) => m[1].trim()))
       .toEqual(['rgba(55, 53, 47, 0.06)', 'initial', 'initial']);
   });
+
+  // notion-motion.md Round 12 "Board selection" and Round 40 §2: the halo sits 2px inside the card. Notion's is blue; Blok's is the gray token.
+  it('draws a selected card as the gray halo 2px in, not a whole-card fill', () => {
+    expect(ruleBody(database, '[data-blok-database-card][data-blok-database-row-selected]')).toContain('background-image: none');
+    expect(ruleBody(database, '[data-blok-database-card][data-blok-database-row-selected]::after')).toContain('opacity: 1');
+    // A redraw re-creates a selected card; only a drop may fade its halo in.
+    expect(ruleBody(database, '[data-blok-database-card][data-blok-database-row-selected]::after')).toContain('transition: none');
+    expect(ruleBody(database, '[data-blok-database-card]::after')).toContain('inset: var(--blok-space-0-5)');
+    expect(ruleBody(database, '[data-blok-database-card]::after')).toContain('background-color: var(--blok-icon-active-bg)');
+  });
+
+  // notion-motion.md Round 40 §2–3: the dropped card or event's halo fades 0→1 over 200ms ease.
+  it('fades a just-landed halo in over 200ms ease, and not under reduced motion', () => {
+    expect(ruleBody(database, '[data-blok-database-row-landed]::after')).toContain('animation: blok-database-landed 200ms ease');
+    expect(database).toMatch(/@keyframes blok-database-landed \{ from \{ opacity: 0; \} \}/);
+    const off = /@media \(prefers-reduced-motion: reduce\) \{[^@]*\[data-blok-database-row-landed\]::after[^{]*\{ animation: none;/.exec(database);
+
+    // Same specificity: the off switch must come later in the file to win.
+    expect(off?.index ?? -1).toBeGreaterThan(database.indexOf('[data-blok-database-row-landed]::after { animation: blok-database-landed'));
+    // A card's halo also has its own 200ms transition, which a redraw can start.
+    expect(database).toMatch(/@media \(prefers-reduced-motion: reduce\) \{[^@]*\[data-blok-database-card\]::after[^{]*\{ transition: none;/);
+  });
+
+  // notion-motion.md Round 40 §2: the cursor while a card is held reads `grabbing`.
+  it('shows the grabbing cursor over the board while a card is dragged', () => {
+    expect(database).toMatch(/\[data-blok-database-dragging\], \[data-blok-database-dragging\] \* \{ cursor: grabbing; \}/);
+  });
 });

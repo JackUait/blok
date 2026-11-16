@@ -247,9 +247,9 @@ describe('side peek', () => {
   });
 
   it('darkens the OPEN button while it is pressed, then drops back to the hover fill (notion-motion.md "Side peek")', () => {
-    const pressed = body(outsideReducedMotion, '[data-blok-database-table-open]:not([data-compact]):active');
+    const pressed = body(outsideReducedMotion, '[data-blok-database-table-open]:not([data-compact]):active::before');
 
-    expect(pressed).toContain('linear-gradient(var(--blok-database-pressed-bg), var(--blok-database-pressed-bg))');
+    expect(pressed).toContain('background-color: var(--blok-database-pressed-bg)');
   });
 
   // notion-motion.md Round 6: Notion's "~70ms" lag was a busy main thread, not a delay.

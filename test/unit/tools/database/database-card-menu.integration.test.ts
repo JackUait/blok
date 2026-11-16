@@ -397,6 +397,26 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     expect(document.querySelector('[data-blok-database-cell-editor] textarea, [data-blok-database-cell-editor] input')).not.toBeNull();
   });
 
+  // notion-motion.md Round 42 §2: a card that shows only Name still has Edit property ›, and it lists every
+  // property, not the shown ones. Created time and ID were not in Notion's list.
+  it('Edit property › lists every property on a card that shows only Name', () => {
+    const schema = [
+      ...BOARD_SCHEMA,
+      { id: 'made', name: 'Created time', type: 'createdTime' as const, position: 'a4' },
+      { id: 'uid', name: 'ID', type: 'uniqueId' as const, position: 'a5' },
+    ];
+    const { el } = buildTool(oneRow(), {}, tableData(schema, { type: 'board', groupBy: 'status', visibleProperties: [] }));
+
+    openMenu(el, 'board');
+    itemByTitle('tools.database.tableEditProperty').click();
+
+    // Notion's list read A→Z (Checkbox, Date, Email, …, URL), not in column order.
+    expect([...document.querySelectorAll('[data-blok-item-name^="database-row-edit-property-"]')].map((item) => item.getAttribute('data-blok-item-name')))
+      .toEqual(['notes', 'status', 'where'].map((id) => `database-row-edit-property-${id}`));
+    expect(menuItem('database-row-edit-property-made')).toBeNull();
+    expect(menuItem('database-row-edit-property-uid')).toBeNull();
+  });
+
   it.each([
     ['tools.database.settingsLayout'],
     ['tools.database.settingsPropertyVisibility'],

@@ -2,6 +2,7 @@ import { DATA_ATTR } from '../../constants/data-attributes';
 import { loadSheet } from '../lazy-styles';
 import { PopoverRegistry } from './popover-registry';
 import { Flipper } from '../../flipper';
+import type { ArrowTarget } from '../../flipper';
 import { keyCodes } from '../../utils';
 import { generateId } from '../id-generator';
 import { isKeyboardModality, recordPointerGesture } from '../input-modality';
@@ -140,6 +141,8 @@ export type PopoverDesktopParams = PopoverParams & {
   coverVerticalMargin?: number;
   /** With `placeLeftOfAnchor`: with no room on `asideSide`, stay there, slid in over the anchor to this gap from the window. */
   asideStayMargin?: number;
+  /** With `placeLeftOfAnchor`: with no room on `asideSide` but room on the other, open there. */
+  asideFlip?: boolean;
 };
 
 export class PopoverDesktop extends PopoverAbstract {
@@ -356,6 +359,8 @@ export class PopoverDesktop extends PopoverAbstract {
 
   private asideStayMargin: number | undefined;
 
+  private asideFlip: boolean | undefined;
+
   /**
    * Updates the element whose left edge is used for horizontal positioning.
    * @param element - new element to align against, or undefined to fall back to trigger
@@ -416,6 +421,7 @@ export class PopoverDesktop extends PopoverAbstract {
     this.coverFlipOffset = params.coverFlipOffset;
     this.coverVerticalMargin = params.coverVerticalMargin;
     this.asideStayMargin = params.asideStayMargin;
+    this.asideFlip = params.asideFlip;
 
     if (params.trigger) {
       this.trigger = params.trigger;
@@ -926,6 +932,7 @@ export class PopoverDesktop extends PopoverAbstract {
       asideSide: this.asideSide,
       viewportMargin: this.viewportMargin,
       asideStayMargin: this.asideStayMargin,
+      asideFlip: this.asideFlip,
       cover: this.cover,
       coverFlipOffset: this.coverFlipOffset,
       coverStayAbove: this.coverAbove,
@@ -1128,9 +1135,19 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
+   * Lets a grid menu pick where each arrow moves the cursor.
+   * @param pick - see Flipper.setArrowTarget
+   */
+  public setArrowTarget(pick: ArrowTarget | null): void {
+    // The published Flipper type has no arrow target; only Blok's own flipper takes one.
+    if (this.flipper instanceof Flipper) this.flipper.setArrowTarget(pick);
+  }
+
+  /**
    * Puts the cursor on the row named `name`: in the open submenu if it has
    * that row, else in this menu. A menu drawn again after a pick uses it to
-   * keep the row the pick came from highlighted.
+   * keep the row the pick came from highlighted. An HTML row carries its name
+   * on its wrapper, so the cursor goes to its first control.
    * @param name - the row's `name`
    * @returns false when no shown row has that name
    */
@@ -1138,7 +1155,7 @@ export class PopoverDesktop extends PopoverAbstract {
     if (this.nestedPopover?.focusItemByName(name) === true) {
       return true;
     }
-    const index = this.flippableElements.findIndex((item) => item.getAttribute(DATA_ATTR.itemName) === name);
+    const index = this.flippableElements.findIndex((item) => item.closest(`[${DATA_ATTR.itemName}]`)?.getAttribute(DATA_ATTR.itemName) === name);
 
     if (index < 0 || this.flipper === undefined) {
       return false;

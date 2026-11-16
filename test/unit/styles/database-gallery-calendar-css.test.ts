@@ -291,7 +291,6 @@ describe('database gallery and calendar styles', () => {
     const event = ruleBody('[data-blok-database-calendar-event]');
 
     expect(event).toMatch(/inset-inline-start:\s*6px/);
-    expect(event).toMatch(/inline-size:\s*calc\(var\(--blok-database-calendar-span, 1\) \* 100% - 12px\)/);
     expect(ruleBody('[data-blok-database-calendar-event][data-continues-before]')).toMatch(/- 6px\)/);
   });
 
@@ -300,6 +299,21 @@ describe('database gallery and calendar styles', () => {
 
     expect(drop).toContain('var(--blok-icon-active-bg)');
     expect(drop).not.toMatch(/focus-ring|rgb\(39,\s*131,\s*222\)/);
+  });
+
+  // notion-motion.md Round 40 §3: the drop day's tint fades out over 200ms ease; reduced motion drops it at once.
+  it('fades a drop day\'s gray tint out over 200ms ease', () => {
+    expect(ruleBody('[data-blok-database-calendar-day][data-drop-leaving]')).toContain('animation: blok-database-calendar-drop-out 200ms ease');
+    expect(css).toMatch(/@keyframes blok-database-calendar-drop-out\s*\{\s*from\s*\{\s*background-color: var\(--blok-icon-active-bg\);\s*\}\s*\}/);
+    const off = /@media \(prefers-reduced-motion: reduce\) \{[^@]*\[data-blok-database-calendar-day\]\[data-drop-leaving\][^{]*\{\s*animation: none;/.exec(css);
+
+    // Same specificity: the off switch must come later in the file to win.
+    expect(off?.index ?? -1).toBeGreaterThan(css.search(/\[data-blok-database-calendar-day\]\[data-drop-leaving\] \{\s*animation: blok/));
+  });
+
+  // notion-motion.md Round 40 §3: the cursor over the day while an event is held reads `default`.
+  it('keeps the default cursor while an event is moved', () => {
+    expect(ruleBody('[data-blok-database-calendar][data-dragging="move"]')).toContain('cursor: default');
   });
 
   // research/22 §1: the picked event's overlay is the card's own 6px shape, in the gray selected token (no blue).
@@ -454,19 +468,56 @@ describe('calendar day digits and weekday row (Round 32)', () => {
 });
 
 describe('content inset (side-by-side-4 #2)', () => {
-  const inset = 'padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))';
+  const inset = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))';
 
-  it('starts gallery cards at the text column, like the table, and runs them to the view toolbar\'s end', () => {
+  // notion-motion.md Round 41 Part B Gallery: in a page-wide editor Notion's grid is the 692 text column (2 cards of 338).
+  it('keeps gallery cards in the text column, like the toolbar', () => {
     const body = ruleBody('[data-blok-database-gallery]');
 
-    expect(body).toContain(inset);
-    expect(body).not.toMatch(/padding-inline-end|padding-right|padding-inline:/);
+    expect(body).toContain(`padding-inline-start: ${inset}`);
+    expect(body).toContain(`padding-inline-end: ${inset}`);
   });
 
-  it('starts the calendar grid at the text column, like the table, and runs it to the view toolbar\'s end', () => {
+  // notion-motion.md Round 41 Part B Calendar (r41-n-empty-cal.png): the grid spans x 539-1230.5 and ‹ Today › ends at the column.
+  it('keeps the calendar grid and its nav in the text column, like the toolbar', () => {
     const body = ruleBody('[data-blok-database-calendar]');
 
-    expect(body).toContain(inset);
-    expect(body).not.toMatch(/padding-inline-end|padding-right|padding-inline:/);
+    expect(body).toContain(`padding-inline-start: ${inset}`);
+    expect(body).toContain(`padding-inline-end: ${inset}`);
+  });
+});
+
+// notion-motion.md "Round 45 other views sweep", gaps 3, 7 and 8.
+describe('Round 45 gallery, calendar and settings panel', () => {
+  // r45-n-gallery.raw: card 893,522; the body text box 907,536 (+14) holds 2px padding, so the text starts +16 in and its 18px line +16 down.
+  it('insets a gallery page-content preview 16px and inks it dark at 80%', () => {
+    const body = ruleBody('[data-blok-database-gallery-preview][data-preview="content"]');
+
+    expect(body).toMatch(/padding:\s*var\(--blok-space-4\) var\(--blok-space-4\) 0/);
+    expect(body).toMatch(/color:\s*color-mix\(in srgb, var\(--blok-database-gallery-title-text\) 80%, transparent\)/);
+  });
+
+  // r45-n-cal.raw: a week with 5 events on one day is 204 tall (322.2 → 526.2), the last pill ends at 519.2: 7 under it, border included.
+  it('ends a grown calendar day 7px under its last card', () => {
+    const tail = /var\(--blok-database-calendar-lane-pitch\) \+ 1px\)\)/;
+
+    expect(ruleBody('[data-blok-database-calendar-day]')).toMatch(tail);
+    expect(css).toMatch(/@container blok-calendar \(min-width: 960px\)\s*\{\s*\[data-blok-database-calendar-day\]\s*\{[^}]*\+ 1px\)\)/);
+    expect(ruleBody('[data-blok-database-calendar][data-range="week"] [data-blok-database-calendar-day]')).toMatch(tail);
+  });
+
+  // r45-n-cal.raw: a one-day card is 86.7 wide in a 98.7 cell (its 1px end border included), 6 from each side.
+  it('sizes a one-day card to the cell\'s border box less 12px', () => {
+    expect(ruleBody('[data-blok-database-calendar-event]')).toMatch(/inline-size:\s*calc\(var\(--blok-database-calendar-span, 1\) \* \(100% \+ 1px\) - 12px\)/);
+  });
+
+  // r45-n-gallery-layout.raw: the Layout panel is 573.6 tall in a 717 window; layout tile labels 11px; "Card layout" 12px 500.
+  it('caps a database panel at 80% of the window', () => {
+    expect(ruleBody('[data-blok-database-panel]')).toMatch(/max-height:\s*80vh/);
+  });
+
+  it('sets layout tile labels at 11px and the "Card layout" label at 500', () => {
+    expect(ruleBody('[data-blok-database-layout-tile]')).toMatch(/font-size:\s*11px/);
+    expect(ruleBody('[data-blok-database-card-layout-label]')).toMatch(/font-weight:\s*500/);
   });
 });

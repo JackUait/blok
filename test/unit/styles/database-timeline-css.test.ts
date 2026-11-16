@@ -135,7 +135,7 @@ describe('database timeline styles', () => {
   // findings C19/C20 (r26 §4d, r33 §4.6): no line under the toolbar; a near-white canvas with a bottom line.
   it('draws no line under the toolbar, and fills the canvas with a line under it', () => {
     expect(ruleBody('[data-blok-database-timeline-body]')).not.toContain('border-block-start');
-    expect(ruleBody('[data-blok-database-timeline-scroller]')).toContain('background-color: var(--blok-database-timeline-canvas-bg)');
+    expect(ruleBody('[data-blok-database-timeline-scroller]')).toContain('var(--blok-database-timeline-canvas-bg) 0)');
     expect(ruleBody('[data-blok-database-timeline-scroller]')).toContain('border-block-end: 1px solid var(--blok-database-calendar-border)');
     expect(css).toContain('--blok-database-timeline-canvas-bg: rgb(253, 253, 253);');
     expect(darkValues('--blok-database-timeline-canvas-bg')).toEqual(['rgb(25, 25, 25)', 'rgb(25, 25, 25)']);
@@ -176,8 +176,8 @@ describe('database timeline styles', () => {
     expect(ruleBody('[data-blok-database-timeline-table]')).toContain('padding-inline-start: 96px');
     const shown = '[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"]';
 
-    expect(ruleBody(shown)).toContain('margin-inline-start: calc(var(--blok-database-timeline-table-width) - 38px)');
-    expect(ruleBody(shown)).toContain('margin-inline-end: 22px');
+    expect(ruleBody(shown)).toContain('margin-inline-start: calc(var(--blok-database-timeline-table-width) - var(--blok-space-6) - var(--blok-space-3))');
+    expect(ruleBody(shown)).toContain('margin-inline-end: var(--blok-space-6)');
     expect(ruleBody('[data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"])')).toContain('padding-inline-start: 0');
     expect(ruleBody(`${shown} svg`)).toContain('transform: scaleX(-1)');
   });
@@ -312,13 +312,35 @@ describe('timeline in dark (research/21 §1i)', () => {
 
 describe('content inset (side-by-side-4 #2)', () => {
   it('starts the toolbar at the text column, like the table, while the grid stays as wide as the view', () => {
-    expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain('padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))');
+    // Round 46 B: less the 6 the « sits before the column.
+    expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain('padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2 - var(--blok-space-1-5)))');
     expect(ruleBody('[data-blok-database-timeline-scroller]')).not.toMatch(/padding-inline|padding-left/);
   });
 
   it('keeps "+ New" at the text column while the canvas scrolls, measured against the view\'s width', () => {
     expect(ruleBody('[data-blok-database-timeline]')).toMatch(/container(-type)?: [^;]*inline-size/);
     expect(ruleBody('[data-blok-database-timeline-new-lane] [data-blok-database-timeline-new]')).toContain('inset-inline-start: max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2))');
+  });
+});
+
+// notion-motion.md Round 41 Part B Timeline (r41-n-empty-tl.png): in a page-wide editor the grid spans x 531-1238.5,
+// the text column plus 8 each side, and › ends with the column. Round 6: with the table panel open the view is full-bleed.
+describe('page-wide editor: the timeline keeps to the text column', () => {
+  const inset = 'max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))';
+  const closed = '[data-blok-database-timeline]:not(:has(> [data-blok-database-timeline-toolbar] > [data-blok-database-timeline-table-toggle][aria-pressed="true"]))';
+  const open = '[data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"])';
+
+  it('narrows the closed-panel view to the column plus 8px each side', () => {
+    expect(ruleBody(closed)).toContain(`margin-inline: max(0px, calc(${inset} - var(--blok-space-2)))`);
+  });
+
+  it('ends the toolbar at the column', () => {
+    expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain(`padding-inline-end: ${inset}`);
+  });
+
+  it('keeps the open-panel toolbar full-bleed on both sides', () => {
+    expect(ruleBody(open)).toContain('padding-inline-start: 0');
+    expect(ruleBody(open)).toContain('padding-inline-end: 0');
   });
 });
 
@@ -353,15 +375,20 @@ describe('"+ New" lane (Round 24)', () => {
   });
 });
 
-// notion-motion.md Round 32 §3 Timeline (r32-b-timeline-geom.raw): Today at y 319.7 and the month at 320.7 sit 5.7px lower
-// than Blok's (314, 315.5). The grid below stays where it is, so the 42px toolbar keeps its height and pads its top.
-describe('timeline toolbar row (Round 32)', () => {
-  it('centres its controls 11px lower in the same 42px', () => {
+// notion-motion.md Round 32 §3 Timeline: Today at y 319.7 and the month at 320.7. Round 47 A4: the toolbar block is 40
+// (Notion 4 + 36), so the tick row starts at 345.2. The controls keep their place: 2 off the height, 2 onto the top.
+describe('timeline toolbar row (Round 32, Round 47 A4)', () => {
+  it('is 40 tall with the controls where they were', () => {
     const body = ruleBody('[data-blok-database-timeline-toolbar]');
 
-    expect(body).toContain('min-block-size: 42px');
+    expect(body).toContain('min-block-size: 40px');
     expect(body).toContain('box-sizing: border-box');
-    expect(body).toContain('padding-block-start: var(--blok-space-2-75)');
+    expect(body).toContain('padding-block-start: var(--blok-space-3-25)');
+  });
+
+  // notion-motion.md Round 47 A4: Notion's content starts 4 under the view top; r46-n-tltable.png: the card's border starts there.
+  it('starts the table card 4px under the toolbar top', () => {
+    expect(ruleBody('[data-blok-database-timeline-table]')).toContain('--blok-database-timeline-panel-reach: 36px');
   });
 });
 
@@ -416,5 +443,143 @@ describe('Hours zoom 15-minute lines and day period (Round 35)', () => {
     expect(ruleBody('[data-blok-database-timeline-day-period]')).toContain('color: var(--blok-database-timeline-period-text)');
     expect(css).toContain('--blok-database-timeline-period-text: var(--blok-database-timeline-muted-text);');
     expect(colors).not.toContain('--blok-database-timeline-period-text:');
+  });
+
+  describe('notion-motion.md Round 46 B', () => {
+    it('draws the table panel row glyph 18 in an 18 box, so the title starts 32 in', () => {
+      const at = css.indexOf('[data-blok-database-timeline-table-title] > :is([data-blok-database-page-icon], [data-blok-database-page-icon-placeholder]) {');
+      const box = css.slice(at, css.indexOf('}', at));
+
+      expect(box).toMatch(/inline-size:\s*18px/);
+      expect(box).toMatch(/block-size:\s*18px/);
+      expect(ruleBody('[data-blok-database-timeline-table-title] > [data-blok-database-page-icon-placeholder] svg')).toMatch(/inline-size:\s*18px;\s*block-size:\s*18px/);
+    });
+
+    it('draws the No date row glyph 18', () => {
+      expect(ruleBody('[data-blok-database-no-date-row] > [data-blok-database-page-icon-placeholder] svg')).toMatch(/inline-size:\s*18px;\s*block-size:\s*18px/);
+    });
+
+    // Round 47 A2: the day row is 32 in every zoom.
+    it('makes the day row 32 tall in every zoom, the day line staying 28', () => {
+      expect(ruleBody('[data-blok-database-timeline]')).toContain('--blok-database-timeline-header-under: 4px');
+      expect(ruleBody('[data-blok-database-timeline][data-zoom="month"]')).toBe('');
+      expect(ruleBody('[data-blok-database-timeline-header]')).toContain('var(--blok-database-timeline-header-block)');
+      expect(ruleBody('[data-blok-database-timeline-units]')).toContain('block-size: var(--blok-database-timeline-line)');
+    });
+
+    it('keeps the range pill on the day line when the row grows', () => {
+      const pill = ruleBody('[data-blok-database-timeline-range]');
+
+      expect(pill).toContain('inset-block-start: calc(var(--blok-database-timeline-header-band) + var(--blok-space-0-75))');
+      expect(pill).not.toContain('inset-block-end');
+    });
+
+    it('sizes the « toggle 24x22 with 4px sides', () => {
+      const toggle = ruleBody('[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle]');
+
+      expect(toggle).toContain('inline-size: var(--blok-space-6)');
+      expect(toggle).toMatch(/block-size:\s*22px/);
+      expect(toggle).toMatch(/padding:\s*0 var\(--blok-space-1\)/);
+      expect(toggle).not.toContain('margin-inline-start');
+      // 6 before the text column, never outside a narrow view.
+      expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain('padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2 - var(--blok-space-1-5)))');
+    });
+
+    it('packs ‹, Today and › with no gap', () => {
+      const at = css.indexOf('[data-blok-database-timeline-toolbar] > :is([data-blok-database-timeline-today], [data-blok-database-timeline-next]) {');
+
+      expect(at).toBeGreaterThan(-1);
+      expect(css.slice(at, css.indexOf('}', at))).toContain('margin-inline-start: calc(-1 * var(--blok-space-1))');
+    });
+
+    it('gives the zoom chevron a 10 wide box 6 after the label', () => {
+      expect(ruleBody('[data-blok-database-timeline-toolbar] [data-blok-database-timeline-zoom]')).toContain('gap: var(--blok-space-1-5)');
+      expect(ruleBody('[data-blok-database-timeline-zoom] svg')).toContain('margin-inline: calc(-1 * var(--blok-space-0-75))');
+    });
+
+    it('sets the zoom menu items 14px regular', () => {
+      const title = ruleBody('[data-blok-item-name^="database-timeline-zoom-"] [data-blok-popover-item-title]');
+
+      expect(title).toContain('font-size: 14px');
+      expect(title).toContain('font-weight: 400');
+    });
+
+    it('hides the link handle while a bar moves', () => {
+      const at = css.indexOf('[data-blok-database-timeline]:is([data-dragging="move"], [data-dragging="start"], [data-dragging="end"]) [data-blok-database-timeline-link-handle] {');
+
+      expect(at).toBeGreaterThan(-1);
+      expect(css.slice(at, css.indexOf('}', at))).toContain('opacity: 0');
+    });
+  });
+});
+
+// notion-motion.md Round 47 A2: Quarter, Year and 5 Years put their month or year labels in the 36 toolbar row
+// (box at its top, 13 padding, 14/21), so the first bar is at 378.2 in every zoom, not under a second header row.
+describe('timeline group labels share the toolbar row (Round 47 A2)', () => {
+  it('makes the band 36 for each header row past the first', () => {
+    expect(ruleBody('[data-blok-database-timeline]')).toContain('--blok-database-timeline-header-block: calc(var(--blok-database-timeline-line) + var(--blok-database-timeline-header-under))');
+    expect(ruleBody('[data-blok-database-timeline]')).toContain('--blok-database-timeline-header-band: calc((var(--blok-database-timeline-header-rows) - 1) * 36px)');
+  });
+
+  // notion-motion.md Round 48 A4: the tick row is white (255), not the canvas tint.
+  it('pulls the chart up under the toolbar by the band, painting no fill there or in the tick row', () => {
+    const scroller = ruleBody('[data-blok-database-timeline-scroller]');
+
+    expect(scroller).toContain('margin-block-start: calc(-1 * var(--blok-database-timeline-header-band))');
+    expect(scroller).toContain('background: linear-gradient(transparent calc(var(--blok-database-timeline-header-band) + var(--blok-database-timeline-header-block)), var(--blok-database-timeline-canvas-bg) 0)');
+  });
+
+  it('puts the group row in the band, over the day row', () => {
+    expect(ruleBody('[data-blok-database-timeline-header]')).toContain('block-size: calc(var(--blok-database-timeline-header-band) + var(--blok-database-timeline-header-block))');
+    expect(ruleBody('[data-blok-database-timeline-groups]')).toContain('block-size: var(--blok-database-timeline-header-band)');
+    expect(ruleBody('[data-blok-database-timeline-groups] > *')).toContain('padding-block-start: var(--blok-space-3-25)');
+    expect(ruleBody('[data-blok-database-timeline-background]')).toContain('inset-block: calc(var(--blok-database-timeline-header-band) + var(--blok-database-timeline-header-block)) 0');
+  });
+
+  it('keeps the table panel header to the day row alone', () => {
+    expect(ruleBody('[data-blok-database-timeline-table-header]')).toContain('block-size: var(--blok-database-timeline-header-block)');
+  });
+
+  // notion-motion.md Round 48 A1, A2: a group label starts on its line with no inset, and the header draws no divider.
+  it('starts each group label on its line, with no divider in the band', () => {
+    const group = ruleBody('[data-blok-database-timeline-groups] > *');
+
+    expect(group).not.toMatch(/padding-inline-start/);
+    expect(group).not.toMatch(/border-inline-end/);
+  });
+
+  // notion-motion.md Round 48 A2, A3: month lines in the body only, 1px rgba(42, 28, 0, 0.07).
+  it('draws each month line 1px wide, full body height, in the grid-line token', () => {
+    const body = ruleBody('[data-blok-database-timeline-month-line]');
+
+    expect(body).toContain('position: absolute');
+    expect(body).toContain('inset-block: 0');
+    expect(body).toContain('inline-size: 1px');
+    expect(body).toContain('background-color: var(--blok-database-timeline-grid-line)');
+  });
+
+  it('puts the today dot on the day line under the band', () => {
+    expect(ruleBody('[data-blok-database-timeline-today-dot]')).toContain('inset-block-start: calc(var(--blok-database-timeline-header-band) + 3px)');
+  });
+});
+
+// Blok choice, pending a Notion measurement: a group label in the toolbar band slides under the controls, not over them.
+describe('timeline toolbar controls hide the group labels under them', () => {
+  const control = '[data-blok-database-timeline-toolbar] > :not([data-blok-database-timeline-toolbar-spacer])';
+
+  it('stacks the toolbar over the chart', () => {
+    expect(ruleBody('[data-blok-database-timeline-toolbar]')).toMatch(/position:\s*relative;[\s\S]*z-index:\s*2/);
+    expect(ruleBody('[data-blok-database-timeline-scroller]')).not.toContain('z-index');
+  });
+
+  it('puts a page-coloured backing under each control, past its 2px edge to fill the gaps', () => {
+    expect(ruleBody(control)).toContain('position: relative');
+    expect(ruleBody(control)).toContain('isolation: isolate');
+    const backing = ruleBody(`${control}::before`);
+
+    expect(backing).toContain('position: absolute');
+    expect(backing).toContain('inset: calc(-1 * var(--blok-space-0-5))');
+    expect(backing).toContain('z-index: -1');
+    expect(backing).toContain('background-color: var(--blok-bg-primary)');
   });
 });

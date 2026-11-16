@@ -1,8 +1,8 @@
 import { IconChevronDown } from '../../components/icons';
 import { DatabasePanel, panelRow } from './database-panel';
-import { propertyTypeMeta } from './database-property-types';
+import { propertyGlyph } from './database-property-types';
 import { sortDirectionLabelKey } from './database-filter-labels';
-import type { PropertyDefinition, SortConfig } from './types';
+import type { PropertyDefinition, PropertyType, SortConfig } from './types';
 
 /** A sort rule button's ⌄: it opens a flyout, not a page. */
 export const sortChevron = (row: HTMLElement): HTMLElement => {
@@ -31,7 +31,7 @@ export const openFlyout = (
   testId: string,
   width: number,
   rows: (pick: (write: () => HTMLElement | null | undefined | void) => void) => HTMLElement[],
-  place: { beside?: number; aside?: { side: 'left' | 'right'; gap: number }; fit?: boolean; gap?: number; flip?: boolean; alignEnd?: boolean; escapeFocus?: () => HTMLElement | null | undefined } = {}
+  place: { beside?: number; aside?: { side: 'left' | 'right'; gap: number; flip?: boolean }; fit?: boolean; gap?: number; flip?: boolean; alignEnd?: boolean; escapeFocus?: () => HTMLElement | null | undefined } = {}
 ): DatabasePanel => {
   const release = host.hold();
   const focusKey = anchor.getAttribute('data-blok-testid') ?? '';
@@ -71,12 +71,18 @@ export const openFlyout = (
 };
 
 /** Name first, then A→Z, as every property list. */
-export const openSortPropertyFlyout = (anchor: HTMLElement, host: DatabasePanel, properties: PropertyDefinition[], onPick: (property: PropertyDefinition) => void): DatabasePanel => {
+export const openSortPropertyFlyout = (
+  anchor: HTMLElement,
+  host: DatabasePanel,
+  properties: PropertyDefinition[],
+  onPick: (property: PropertyDefinition) => void,
+  storedType?: (propertyId: string) => PropertyType | undefined
+): DatabasePanel => {
   const ordered = [...properties.filter((p) => p.type === 'title'), ...properties.filter((p) => p.type !== 'title').sort((a, b) => a.name.localeCompare(b.name))];
 
   return openFlyout(anchor, host, 'database-sort-property-picker', PROPERTY_FLYOUT_WIDTH, (pick) => ordered.map((property) => panelRow({
     label: property.name,
-    icon: propertyTypeMeta(property.type).icon,
+    icon: propertyGlyph(property, storedType),
     testId: `database-pick-property-${property.id}`,
     onClick: () => pick(() => onPick(property)),
   })));

@@ -11,15 +11,15 @@ import { TIMELINE_ZOOMS } from './view-settings';
  * shift a bar.
  */
 
-/** Pixels per day. Month (40) and Hours (7000) are measured in Notion (research/08, notion-motion.md Round 34 §5); the rest are unmeasured. */
+/** Pixels per day, measured in Notion (notion-motion.md Round 47 A1b). Day is 24 hour cells of 52.1. */
 export const TIMELINE_DAY_WIDTH: Readonly<Record<TimelineZoom, number>> = {
   hours: 7000,
-  day: 280,
-  week: 140,
+  day: 1250,
+  week: 180,
   bi_week: 80,
   month: 40,
   quarter: 12,
-  year: 4,
+  year: 5,
   '5_years': 1,
 };
 
@@ -85,7 +85,7 @@ export const barGeometry = (span: EventSpan, windowStart: string, zoom: Timeline
  * end time, or one hour later when there is none. Null for a value with no
  * time, which keeps the day geometry.
  */
-export const hourBarGeometry = (values: BarValues, windowStart: string): { offset: number; width: number } | null => {
+export const hourBarGeometry = (values: BarValues, windowStart: string, dayWidth = TIMELINE_DAY_WIDTH.hours): { offset: number; width: number } | null => {
   const start = parseDateValue(values.start);
   const from = start === null ? null : minutesFrom(windowStart, start.start);
 
@@ -95,7 +95,7 @@ export const hourBarGeometry = (values: BarValues, windowStart: string): { offse
 
   const endPart = values.end === undefined ? start.end : parseDateValue(values.end)?.start;
   const to = endPart === undefined ? null : minutesFrom(windowStart, endPart);
-  const pxPerMinute = TIMELINE_DAY_WIDTH.hours / DAY_MINUTES;
+  const pxPerMinute = dayWidth / DAY_MINUTES;
   const length = to !== null && to > from ? to - from : HOUR_MINUTES;
 
   return { offset: from * pxPerMinute, width: Math.max(length * pxPerMinute, MIN_BAR_PX) };
@@ -204,6 +204,47 @@ export const moveBar = (values: BarValues, deltaDays: number, deltaMinutes?: num
   return { ...(start !== null ? { start } : {}), ...(end !== null ? { end } : {}) };
 };
 
+/**
+ * Day zoom: moves a bar by minutes. An all-day bar becomes timed, from
+ * midnight of its first day to midnight after its last (notion-motion.md
+ * Round 48 A9: all-day Nov 18 moved 75 minutes read "Nov 18 1:15 AM → Nov 19 1:15 AM").
+ */
+export const moveBarByMinutes = (values: BarValues, deltaMinutes: number): BarWrite => {
+  const span = timelineSpan(values.start, values.end);
+  const startValue = parseDateValue(values.start);
+
+  if (deltaMinutes === 0 || span === null || startValue === null) {
+    return {};
+  }
+
+  const shift = (part: string): string => shiftPartByMinutes(part, deltaMinutes);
+  const startOf = (part: string): string => shift(TIMED_PART.test(part) ? part : `${part.slice(0, 10)}T00:00`);
+  const endOf = (part: string): string => shift(TIMED_PART.test(part) ? part : `${addDays(part.slice(0, 10), 1)}T00:00`);
+
+  if (values.end === undefined) {
+    if (startValue.hasTime && startValue.end === undefined) {
+      return { start: shift(startValue.start) };
+    }
+
+    return { start: `${startOf(startValue.start)}/${endOf(startValue.end ?? startValue.start)}` };
+  }
+
+  const endValue = parseDateValue(values.end);
+
+  if (startValue.hasTime && endValue === null) {
+    return { start: shift(startValue.start) };
+  }
+
+  return { start: startOf(startValue.start), end: endOf(endValue?.start ?? span.end) };
+};
+
+/** A new timed bar `minutes` long from a `YYYY-MM-DDTHH:mm` start: one range value, or a start and an end. */
+export const newTimedBarWrite = (start: string, minutes: number, separateEnd: boolean): BarWrite => {
+  const end = shiftPartByMinutes(start, minutes);
+
+  return separateEnd ? { start, end } : { start: `${start}/${end}` };
+};
+
 /** Both timed edges of a bar. A value with no end ends an hour later, as drawn. Null when an edge has no time. */
 export const timedEdges = (values: BarValues): { start: string; end: string } | null => {
   const start = parseDateValue(values.start);
@@ -290,30 +331,35 @@ export interface HeaderUnit {
   period?: string;
 }
 
-type Unit = 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
+/** `monday-month`: a month counted from its first Monday. */
+type Unit = 'hour' | 'day' | 'week' | 'month' | 'monday-month' | 'year';
 
+/** notion-motion.md Round 48 A1: Quarter and Year name each month from its first Monday line. */
 const GROUP_OF: Record<TimelineZoom, Unit> = {
-  hours: 'day', day: 'month', week: 'month', bi_week: 'month', month: 'month', quarter: 'month', year: 'year', '5_years': 'year',
+  hours: 'day', day: 'month', week: 'month', bi_week: 'month', month: 'month', quarter: 'monday-month', year: 'monday-month', '5_years': 'year',
 };
 
 const UNIT_OF: Record<TimelineZoom, Unit> = {
-  hours: 'hour', day: 'day', week: 'day', bi_week: 'day', month: 'day', quarter: 'week', year: 'month', '5_years': 'quarter',
+  hours: 'hour', day: 'hour', week: 'day', bi_week: 'day', month: 'day', quarter: 'week', year: 'week', '5_years': 'month',
 };
 
-const TICKS_PER_DAY = 96;
+/** Hour ticks a day: Hours zoom every 15 minutes, Day zoom every hour (notion-motion.md Round 34 §5, Round 47 A1b). */
+const TICKS_PER_DAY: Partial<Record<TimelineZoom, number>> = { hours: 96, day: 24 };
 
 const FORMAT: Record<Unit, Intl.DateTimeFormatOptions> = {
   hour: { hour: 'numeric' },
   day: { day: 'numeric' },
   week: { day: 'numeric' },
-  month: { month: 'short' },
-  quarter: { month: 'short' },
+  month: { month: 'numeric' },
+  'monday-month': { month: 'numeric' },
   year: { year: 'numeric' },
 };
 
 const GROUP_FORMAT: Partial<Record<Unit, Intl.DateTimeFormatOptions>> = {
   day: { weekday: 'short', month: 'short', day: 'numeric' },
   month: { month: 'long', year: 'numeric' },
+  // notion-motion.md Round 48 A1: "November", no year.
+  'monday-month': { month: 'long' },
   year: { year: 'numeric' },
 };
 
@@ -324,32 +370,45 @@ const startsUnit = (unit: Unit, day: string): boolean => {
   switch (unit) {
     case 'week': return weekdayOf(day) === 1;
     case 'month': return firstOfMonth;
-    case 'quarter': return firstOfMonth && month % 3 === 1;
+    case 'monday-month': return weekdayOf(day) === 1 && Number(day.slice(8)) <= 7;
     case 'year': return firstOfMonth && month === 1;
     case 'day':
     case 'hour': return true;
   }
 };
 
-const unitsOf = (window: TimelineWindow, unit: Unit, dayWidth: number, format: Intl.DateTimeFormat): HeaderUnit[] => {
-  // notion-motion.md Round 34 §5: Hours zoom ticks every 15 minutes, in the locale's clock.
+/** The hour tick's text without its minutes: "5 PM", or "17" on a 24 hour clock. */
+const hourOnly = (parts: Intl.DateTimeFormatPart[]): string => {
+  const minute = parts.findIndex((part) => part.type === 'minute');
+
+  // formatToParts puts U+202F before AM/PM; format(), which the Hours ticks use, gives a plain space.
+  return parts.filter((_, i) => i !== minute && i !== minute - 1).map((part) => part.value.replace(/\u202F/g, ' ')).join('');
+};
+
+const unitsOf = (window: TimelineWindow, unit: Unit, dayWidth: number, format: Intl.DateTimeFormat, ticksPerDay = 1): HeaderUnit[] => {
+  // notion-motion.md Round 34 §5: Hours zoom ticks every 15 minutes, in the locale's clock. Round 47 A1b: Day zoom every hour, "5 AM".
   if (unit === 'hour') {
-    const tickWidth = dayWidth / TICKS_PER_DAY;
+    const tickWidth = dayWidth / ticksPerDay;
+    const minutesPerTick = DAY_MINUTES / ticksPerDay;
     const { locale } = format.resolvedOptions();
     const periodFormat = new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' });
 
-    return Array.from({ length: window.days * TICKS_PER_DAY }, (_, i) => {
-      const day = addDays(window.start, Math.floor(i / TICKS_PER_DAY));
+    return Array.from({ length: window.days * ticksPerDay }, (_, i) => {
+      const day = addDays(window.start, Math.floor(i / ticksPerDay));
       const date = toLocalDate(day);
 
-      date.setMinutes((i % TICKS_PER_DAY) * 15);
-      const period = periodFormat.formatToParts(date).find((part) => part.type === 'dayPeriod')?.value;
+      date.setMinutes((i % ticksPerDay) * minutesPerTick);
+      const parts = periodFormat.formatToParts(date);
+      const period = parts.find((part) => part.type === 'dayPeriod')?.value;
+      const label = minutesPerTick === HOUR_MINUTES ? hourOnly(parts) : formatClock(date, locale, undefined);
 
-      return { label: formatClock(date, locale, undefined), offset: i * tickWidth, width: tickWidth, day, ...(period !== undefined ? { period } : {}) };
+      return { label, offset: i * tickWidth, width: tickWidth, day, ...(period !== undefined ? { period } : {}) };
     });
   }
 
-  const starts = Array.from({ length: window.days }, (_, i) => i).filter((i) => i === 0 || startsUnit(unit, addDays(window.start, i)));
+  // A month before its first Monday belongs to the month before, which this window does not name.
+  const starts = Array.from({ length: window.days }, (_, i) => i)
+    .filter((i) => (i === 0 && unit !== 'monday-month') || startsUnit(unit, addDays(window.start, i)));
 
   return starts.map((i, n) => {
     const day = addDays(window.start, i);
@@ -371,6 +430,6 @@ export const headerUnits = (window: TimelineWindow, zoom: TimelineZoom, locale: 
 
   return {
     groups: unitsOf(window, group, width, new Intl.DateTimeFormat(locale, GROUP_FORMAT[group])),
-    units: unitsOf(window, unit, width, new Intl.DateTimeFormat(locale, FORMAT[unit])),
+    units: unitsOf(window, unit, width, new Intl.DateTimeFormat(locale, FORMAT[unit]), TICKS_PER_DAY[zoom]),
   };
 };

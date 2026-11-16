@@ -238,6 +238,18 @@ describe('DatabaseMapView', () => {
     expect(open).toHaveBeenCalledWith('r3');
   });
 
+  // notion-motion.md Round 47 §D: Notion's "No place" popover opens 4 under its toolbar button.
+  it('opens the "No place" list 4px under its button', async () => {
+    const { mapView } = mount({ render: vi.fn(), writable: true });
+    const button = anchor();
+
+    await flush();
+    button.getBoundingClientRect = () => new DOMRect(1100, 275, 80, 24);
+    mapView.noPlaceControl()?.open(button);
+
+    expect(document.querySelector('[data-blok-database-map-no-place-search]')?.closest<HTMLElement>('[data-blok-popover]')?.style.top).toBe('303px');
+  });
+
   // research/23 §5c: the list stays open under the row page; Escape closes the page, then the list.
   it('keeps the "No place" list under an opened row page and shows it again, query kept, when the page closes', async () => {
     const extra: DatabaseRow[] = [...rows, { id: 'r3', position: 'a2', properties: { title: 'Cid' } }];

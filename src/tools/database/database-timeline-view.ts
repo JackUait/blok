@@ -1,6 +1,6 @@
 import type { I18n } from '../../../types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
-import { fileChipIcon, pageIconElement, pagePlaceholderIcon, showsPageIcon } from './page-icon';
+import { fileChipIcon, pageIconElement, rowPageGlyph, showsPageIcon } from './page-icon';
 import { propertyTypeMeta } from './database-property-types';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption, TimelineZoom } from './types';
 import type { GalleryDropResult } from './database-gallery-view';
@@ -9,7 +9,7 @@ import { showAvatarsOnly } from './avatar-only';
 import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
 import { readPropertyValue } from './property-values';
-import { addDays, daysBetween, isWeekend } from './calendar-dates';
+import { addDays, daysBetween, isWeekend, startOfWeek } from './calendar-dates';
 import { formatClock, formatShortDatePart, resolveLocale, toLocalDate } from './cells/date-format';
 import { hide as hideReadout, showReadout } from '../../components/utils/tooltip';
 import type { EventSpan } from './calendar-dates';
@@ -19,10 +19,13 @@ import {
   hourBarGeometry,
   headerUnits,
   moveBar,
+  moveBarByMinutes,
   newBarWrite,
+  newTimedBarWrite,
   offscreenSide,
   resizeBar,
   resizeBarByMinutes,
+  SNAP_MINUTES,
   snapMinutes,
   timedEdges,
   timelineSpan,
@@ -60,6 +63,8 @@ export interface TimelineHandlers {
   pickRow?: (rowId: string, range: boolean) => void;
   /** Arrow keys on the bars: the selection becomes exactly these rows, as in the list and gallery. */
   lassoRows?: (rowIds: string[]) => void;
+  /** A bar moved to new dates, or one being resized, is selected (notion-motion.md Round 46 B, Round 47 A3). */
+  landRow?: (rowId: string) => void;
   /** Group key, or null when the timeline is not grouped; the new bar's dates. */
   addRow: (groupKey: string | null, write: BarWrite) => void;
   /** A title typed into a new bar. */
@@ -80,7 +85,7 @@ export interface TimelineHandlers {
   openCalculationMenu?: (anchor: HTMLElement, propertyId: string) => void;
 }
 
-/** Where the drawn window's first day sits: px from the view's inline start. */
+/** Where the drawn window's first day sits: px on the window's inline axis. */
 export interface TimelineOrigin {
   start: string;
   at: number;
@@ -125,14 +130,26 @@ const DAY_MINUTES = 24 * 60;
 const BAR_INSET = 1.5;
 /** findings C07: Notion's "+ New" made a 5-day bar. */
 const NEW_BAR_DAYS = 5;
+/** notion-motion.md Round 48 A9: at Day zoom Notion's "+ New" made a 3-hour bar (6:30 PM → 9:30 PM). */
+const NEW_BAR_DAY_ZOOM_MINUTES = 3 * 60;
 /** Within this share of either canvas end, a scroll redraws around a new centre. */
 const EDGE_SHARE = 0.1;
+/** notion-motion.md Round 48 A2-A4: zooms whose labels and today circle sit on start lines, with month lines in the body. */
+const ON_START_LINE: ReadonlySet<TimelineZoom> = new Set(['quarter', 'year', '5_years']);
+const TOOLBAR_LABEL_PARTS: Partial<Record<TimelineZoom, Intl.DateTimeFormatOptions>> = {
+  hours: { month: 'long', day: 'numeric', year: 'numeric' },
+  '5_years': { year: 'numeric' },
+};
 /** Zooms whose days are wide enough to shade weekends one by one. */
 const DAY_LEVEL: ReadonlySet<TimelineZoom> = new Set(['hours', 'day', 'week', 'bi_week', 'month']);
 /** Zooms whose header shows day numbers only: the month is named in the toolbar. */
 const MONTH_IN_TOOLBAR: ReadonlySet<TimelineZoom> = new Set(['day', 'week', 'bi_week', 'month']);
 /** notion-motion.md Round 35 Part B: Hours zoom has only its tick row; the toolbar names the day. */
 const ONE_HEADER_ROW: ReadonlySet<TimelineZoom> = new Set([...MONTH_IN_TOOLBAR, 'hours']);
+/** Zooms that draw a timed bar at its time. */
+const BY_TIME: ReadonlySet<TimelineZoom> = new Set(['hours', 'day']);
+/** Body grid lines a day. Zooms not listed draw none. */
+const GRID_LINES_PER_DAY: Partial<Record<TimelineZoom, number>> = { hours: 96, day: 24, week: 1 };
 
 const ZOOM_KEYS: Record<TimelineZoom, string> = {
   hours: 'tools.database.timelineZoomHours',
@@ -195,6 +212,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   private nowLine: HTMLElement | null = null;
   /** Hours zoom: the time on the now-line, in the tick row. */
   private nowLabel: HTMLElement | null = null;
+  private todayDot: HTMLElement | null = null;
   private selectionAnchor: HTMLElement | null = null;
   private recentring = false;
   private noDatePanel: DatabasePanel | null = null;
@@ -277,11 +295,11 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
       if (origin?.start === this.window.start) {
         this.recentring = true;
-        this.scrollStart = Math.max(0, this.chartInset() - origin.at);
+        this.scrollStart = Math.max(0, this.chartStart() - origin.at);
         this.recentring = false;
         this.refreshOffscreen();
-      } else if (this.zoom === 'hours' && this.options.center === this.options.today) {
-        // notion-motion.md Round 35 Part B: Hours zoom opens with the now-line in the middle.
+      } else if (this.options.center === this.options.today) {
+        // notion-motion.md Round 47 A1: every zoom opens with the now-line in the middle. 5 Years was unreadable there; it follows the rest.
         this.recentring = true;
         this.scrollStart = Math.max(0, this.nowOffset() - (this.scroller?.clientWidth ?? 0) / 2);
         this.recentring = false;
@@ -395,6 +413,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
           rows,
           titlePropertyId: this.options.titlePropertyId,
           hint: this.t('tools.database.timelineNoDateHint'),
+          rowHasBody: (rowId) => this.rowHasBody(rowId),
           pick: (rowId) => handlers.writeDates(rowId, this.newBar()),
           open: (rowId) => handlers.openRow(rowId),
         });
@@ -406,7 +425,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
    * A new bar: NEW_BAR_DAYS long from `day`, else from the second day on screen
    * (findings C07: screen from Oct 14, bar Oct 15–19).
    */
-  private newBar(day?: string): BarWrite {
+  private newBar(day?: string, time?: string): BarWrite {
+    if (day !== undefined && time !== undefined) {
+      return newTimedBarWrite(`${day}T${time}`, NEW_BAR_DAY_ZOOM_MINUTES, this.options.endPropertyId !== undefined);
+    }
     const viewport = this.scroller?.clientWidth ?? 0;
     const start = day ?? (viewport > 0
       ? addDays(visibleRange({ scrollStart: this.scrollStart, viewport, windowStart: this.window.start, zoom: this.zoom }).first, 1)
@@ -417,11 +439,11 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
   private monthLabel(day: string): string {
     // notion-motion.md Round 35 Part B: Hours zoom names the whole date ("November 15, 2026").
-    const parts: Intl.DateTimeFormatOptions = this.zoom === 'hours'
-      ? { month: 'long', day: 'numeric', year: 'numeric' }
-      : { month: 'long', year: 'numeric' };
+    // Round 48 A1 (fitted to four reads): Quarter and Year name the week under the left edge by its Monday; 5 Years names the year alone.
+    const parts = TOOLBAR_LABEL_PARTS[this.zoom] ?? { month: 'long', year: 'numeric' };
+    const unitStart = this.zoom === 'quarter' || this.zoom === 'year' ? startOfWeek(day, 1) : day;
 
-    return new Intl.DateTimeFormat(resolveLocale(this.options.locale), parts).format(toLocalDate(day));
+    return new Intl.DateTimeFormat(resolveLocale(this.options.locale), parts).format(toLocalDate(unitStart));
   }
 
   /** Every group with its rows, in drawing order, so the table panel and the canvas line up. */
@@ -544,7 +566,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     cell.setAttribute('data-blok-database-timeline-table-title', '');
     title.setAttribute('data-blok-database-timeline-table-title-text', '');
     title.textContent = this.titleOf(row);
-    cell.append(pageIconElement(row) ?? pagePlaceholderIcon(), title);
+    cell.append(rowPageGlyph(row, this.rowHasBody(row.id), true) ?? '', title);
     if (this.options.commentBadges !== undefined) {
       syncCommentBadge(title, row.id, this.options.commentBadges, this.options.i18n);
     }
@@ -573,7 +595,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     canvas.style.width = `${this.window.days * this.dayWidth}px`;
     canvas.style.setProperty('--blok-database-timeline-day', `${this.dayWidth}px`);
     canvas.appendChild(this.createHeader());
-    canvas.appendChild(this.createBackground());
+    const background = this.createBackground();
+
+    canvas.appendChild(background);
+    this.drawMonthLines(background);
 
     const firstDated = this.sections.flatMap((group) => group.rows).find((row) => this.spanOf(row) !== null)?.id;
     const tableShown = resolveShowTimelineTable(this.options.view);
@@ -631,6 +656,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     lane.addEventListener('pointermove', (event) => this.placeGhost(ghost, event.clientX));
     lane.addEventListener('pointerleave', () => {
       ghost.removeAttribute('data-day');
+      ghost.removeAttribute('data-time');
       if (this.drag?.active !== true) {
         this.clearDragMarks();
       }
@@ -641,18 +667,41 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
   private placeGhost(ghost: HTMLElement, x: number): void {
     const day = this.dayAt(x);
+    const time = this.zoom === 'day' ? this.slotAt(x, day) : undefined;
 
-    if (this.drag?.active === true || ghost.getAttribute('data-day') === day) {
+    if (this.drag?.active === true || (ghost.getAttribute('data-day') === day && ghost.getAttribute('data-time') === (time ?? null))) {
       return;
     }
-    const span = { start: day, end: addDays(day, NEW_BAR_DAYS - 1) };
-    const days = barGeometry(span, this.window.start, this.zoom);
-    const inset = MONTH_IN_TOOLBAR.has(this.zoom) ? BAR_INSET : 0;
+    const write = this.newBar(day, time);
+    const values = { start: write.start, end: write.end };
+    const span = timelineSpan(values.start, values.end);
+
+    if (span === null) {
+      return;
+    }
+    const geometry = this.geometryOf(span, values);
 
     ghost.setAttribute('data-day', day);
-    ghost.style.setProperty('inset-inline-start', `${days.offset + inset}px`);
-    ghost.style.setProperty('width', `${days.width - 2 * inset}px`);
-    this.showRange(span, days, true);
+    if (time === undefined) {
+      ghost.removeAttribute('data-time');
+    } else {
+      ghost.setAttribute('data-time', time);
+    }
+    ghost.style.setProperty('inset-inline-start', `${geometry.offset}px`);
+    ghost.style.setProperty('width', `${geometry.width}px`);
+    this.showRange(span, barGeometry(span, this.window.start, this.zoom), true);
+  }
+
+  /**
+   * The 15-minute slot under a pointer, as `HH:mm`. Unmeasured: Notion started
+   * its bar at 6:30 with the pointer near 6:45 (Round 48 A9); the rule is unread.
+   */
+  private slotAt(x: number, day: string): string {
+    const minutes = (this.canvasOffset(x) - daysBetween(this.window.start, day) * this.dayWidth) / (this.dayWidth / DAY_MINUTES);
+    const slot = Math.min(Math.max(Math.floor(minutes / SNAP_MINUTES) * SNAP_MINUTES, 0), DAY_MINUTES - SNAP_MINUTES);
+    const pad = (n: number): string => String(n).padStart(2, '0');
+
+    return `${pad(Math.floor(slot / 60))}:${pad(slot % 60)}`;
   }
 
   /**
@@ -768,8 +817,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   private createHeader(): HTMLElement {
     const header = document.createElement('div');
     const { groups, units } = headerUnits(this.window, this.zoom, this.options.locale ?? 'en-US');
-    // notion-motion.md Round 34 §5: Hours zoom centres each tick on its time; the text sits in a span the now label measures against.
-    const ticks = this.zoom === 'hours';
+    // notion-motion.md Round 34 §5 and Round 47 A1b: Hours and Day zooms centre each tick on its time; the text sits in a span the now label measures against.
+    const ticks = this.zoom === 'hours' || this.zoom === 'day';
+    // Round 48 A4: Quarter, Year and 5 Years centre each label on its unit's start line too.
+    const centred = ticks || ON_START_LINE.has(this.zoom);
     const line = (attr: string, items: typeof groups, centred = false): HTMLElement => {
       const el = document.createElement('div');
 
@@ -797,13 +848,14 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     if (!ONE_HEADER_ROW.has(this.zoom)) {
       header.append(line('data-blok-database-timeline-groups', groups));
     }
-    const unitsRow = line('data-blok-database-timeline-units', units, ticks);
+    const unitsRow = line('data-blok-database-timeline-units', units, centred);
 
     header.append(unitsRow);
 
     const todayIndex = daysBetween(this.window.start, this.options.today);
 
     this.nowLabel = null;
+    this.todayDot = null;
     // r33-timeline-nowline-hours-1.raw: Notion's Hours header has the now label and no day pill.
     if (ticks && todayIndex >= 0 && todayIndex < this.window.days) {
       const label = document.createElement('div');
@@ -816,9 +868,11 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       const dot = document.createElement('div');
 
       dot.setAttribute('data-blok-database-timeline-today-dot', '');
-      dot.style.insetInlineStart = `${todayIndex * this.dayWidth + this.dayWidth / 2}px`;
+      // notion-motion.md Round 48 A4: on today's start line in Quarter, Year and 5 Years; mid-day in Month.
+      dot.style.insetInlineStart = `${todayIndex * this.dayWidth + (ON_START_LINE.has(this.zoom) ? 0 : this.dayWidth / 2)}px`;
       dot.textContent = new Intl.DateTimeFormat(this.options.locale ?? 'en-US', { day: 'numeric' }).format(toLocalDate(this.options.today));
       header.appendChild(dot);
+      this.todayDot = dot;
     }
 
     return header;
@@ -863,10 +917,13 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
 
     // notion-motion.md Round 35 Part B (r35-timeline-hours-grid.raw): a line on every 15-minute tick, body only.
-    if (this.zoom === 'hours') {
-      const tick = this.dayWidth / 96;
+    // Round 48 A3: Day every hour, Week every day.
+    const linesPerDay = GRID_LINES_PER_DAY[this.zoom];
 
-      layer.append(...Array.from({ length: this.window.days * 96 }, (_, i) => {
+    if (linesPerDay !== undefined) {
+      const tick = this.dayWidth / linesPerDay;
+
+      layer.append(...Array.from({ length: this.window.days * linesPerDay }, (_, i) => {
         const line = document.createElement('div');
 
         line.setAttribute('data-blok-database-timeline-tick-line', '');
@@ -914,6 +971,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     header.appendChild(label);
 
     return header;
+  }
+
+  private rowHasBody(rowId: string): boolean {
+    return this.options.cellContext?.rowHasBody?.(rowId) === true;
   }
 
   private titleOf(row: DatabaseRow): string {
@@ -1100,25 +1161,29 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
   }
 
-  /** The scroller's distance from the view's inline start. */
-  private chartInset(): number {
-    const view = this.root?.getBoundingClientRect();
+  /**
+   * The scroller's inline start in window px, negated in RTL.
+   * Not measured from the view: its box widens to the left when the table panel opens.
+   */
+  private chartStart(): number {
     const chart = this.scroller?.getBoundingClientRect();
 
-    if (view === undefined || chart === undefined) {
+    if (chart === undefined) {
       return 0;
     }
 
-    return this.rtl ? view.right - chart.right : chart.left - view.left;
+    return this.rtl ? -chart.right : chart.left;
   }
 
   private scrollToDay(day: string, align: 'center' | 'start' | 'end'): void {
     const offset = daysBetween(this.window.start, day) * this.dayWidth;
     const viewport = this.scroller?.clientWidth ?? 0;
+    // A day of room beside the day, unless the two would not fit on screen (Day and Hours zooms). Blok's own choice: Notion's Day jump is unmeasured.
+    const room = 2 * this.dayWidth <= viewport ? this.dayWidth : 0;
     const target = {
       center: offset - viewport / 2,
-      start: offset - this.dayWidth,
-      end: offset + 2 * this.dayWidth - viewport,
+      start: offset - room,
+      end: offset + this.dayWidth + room - viewport,
     }[align];
 
     this.recentring = true;
@@ -1222,7 +1287,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
 
     const actions: Array<[string, (el: Element) => void]> = [
-      ['[data-blok-database-timeline-table-toggle]', () => handlers.toggleTable({ start: this.window.start, at: this.chartInset() - this.scrollStart })],
+      ['[data-blok-database-timeline-table-toggle]', () => handlers.toggleTable({ start: this.window.start, at: this.chartStart() - this.scrollStart })],
       ['[data-blok-database-timeline-zoom]', (el) => {
         if (el instanceof HTMLElement) {
           handlers.openZoomMenu(el);
@@ -1235,7 +1300,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       // notion-motion.md Round 25 §4: the ghost's bar starts on the hovered day.
       ['[data-blok-database-timeline-new], [data-blok-database-timeline-new-ghost], [data-blok-database-timeline-table-new]', (el) => {
         if (this.canEdit) {
-          handlers.addRow(this.options.grouped ? this.options.groups[0]?.key ?? null : null, this.newBar(el.getAttribute('data-day') ?? undefined));
+          handlers.addRow(this.options.grouped ? this.options.groups[0]?.key ?? null : null, this.newBar(el.getAttribute('data-day') ?? undefined, el.getAttribute('data-time') ?? undefined));
         }
       }],
       ['[data-blok-database-timeline-load-more]', (el) => handlers.loadMore(el.getAttribute('data-group-key') ?? '')],
@@ -1342,9 +1407,9 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   }
 
 
-  /** Hours zoom places a timed value by its time; every other case by whole days. */
+  /** Hours and Day zooms place a timed value by its time; every other case by whole days. */
   private geometryOf(span: EventSpan, values: BarValues): { offset: number; width: number } {
-    const geometry = (this.zoom === 'hours' ? hourBarGeometry(values, this.window.start) : null) ?? barGeometry(span, this.window.start, this.zoom);
+    const geometry = (BY_TIME.has(this.zoom) ? hourBarGeometry(values, this.window.start, this.dayWidth) : null) ?? barGeometry(span, this.window.start, this.zoom);
 
     // findings C23: at day-level zooms a bar sits 1.5px in from each day edge (37px of a 40px day).
     return MONTH_IN_TOOLBAR.has(this.zoom) ? { offset: geometry.offset + BAR_INSET, width: geometry.width - 2 * BAR_INSET } : geometry;
@@ -1410,6 +1475,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       overDay: grabDay,
       overPx: grabPx,
     };
+    // notion-motion.md Round 48 A8: an edge press selects the bar at once; a moved bar only after the drop.
+    if (this.drag.mode !== 'move') {
+      this.options.handlers?.landRow?.(rowId);
+    }
     this.listen();
   };
 
@@ -1584,12 +1653,15 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
 
     const deltaDays = daysBetween(drag.grabDay, drag.overDay);
+    const deltaMinutes = snapMinutes((drag.overPx - drag.grabPx) / (this.dayWidth / DAY_MINUTES));
 
+    // notion-motion.md Round 48 A9: Day zoom moves snap to 15 minutes. Its resize was not measured, so it stays by days.
+    if (this.zoom === 'day' && drag.mode === 'move') {
+      return moveBarByMinutes(values, deltaMinutes);
+    }
     if (this.zoom !== 'hours') {
       return drag.mode === 'move' ? moveBar(values, deltaDays) : resizeBar(values, drag.mode, drag.overDay);
     }
-
-    const deltaMinutes = snapMinutes((drag.overPx - drag.grabPx) / (this.dayWidth / DAY_MINUTES));
 
     return drag.mode === 'move'
       ? moveBar(values, deltaDays, deltaMinutes)
@@ -1672,6 +1744,9 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
       if (changed) {
         this.options.handlers?.writeDates(drag.rowId, write);
+      }
+      if (changed && drag.mode === 'move') {
+        this.options.handlers?.landRow?.(drag.rowId);
       }
 
       return;
@@ -1783,20 +1858,36 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     this.nowTimer = setTimeout(() => this.placeNowLine(todayIndex), 60_000 - (now % 60_000));
   }
 
+  /** notion-motion.md Round 48 A2, A3: a body line on the 1st of every month in Quarter, Year and 5 Years. */
+  private drawMonthLines(layer: HTMLElement): void {
+    if (!ON_START_LINE.has(this.zoom)) return;
+    const firsts = Array.from({ length: this.window.days }, (_, i) => i).filter((i) => addDays(this.window.start, i).endsWith('-01'));
+
+    layer.append(...firsts.map((i) => {
+      const line = document.createElement('div');
+
+      line.setAttribute('data-blok-database-timeline-month-line', '');
+      line.style.insetInlineStart = `${i * this.dayWidth}px`;
+
+      return line;
+    }));
+  }
+
   /**
-   * notion-motion.md Round 34 §5: a tick the now label would overlap is not drawn. Notion's exact
+   * notion-motion.md Round 34 §5, Round 48 A4: a tick the now label or the today circle would overlap is not drawn. Notion's exact
    * rule is unread; a box overlap drops the ticks it dropped (34, 39 px off) and keeps the ones it kept (68+).
    * Needs layout, so it waits until the view is in the page.
    */
   private hideCoveredTicks(): void {
-    const text = this.nowLabel?.firstElementChild;
+    const cover = this.nowLabel?.firstElementChild ?? this.todayDot;
+    const row = this.root?.querySelector('[data-blok-database-timeline-units]');
 
-    if (this.nowLabel?.isConnected !== true || !(text instanceof HTMLElement)) return;
-    const ticks = [...this.nowLabel.parentElement?.querySelectorAll<HTMLElement>(':scope > [data-day]') ?? []];
+    if (cover?.isConnected !== true || row === null || row === undefined) return;
+    const ticks = [...row.querySelectorAll<HTMLElement>(':scope > [data-day]')];
 
     // A hidden tick has no box: show them all, then read every box in one layout.
     ticks.forEach((tick) => tick.toggleAttribute('hidden', false));
-    const label = text.getBoundingClientRect();
+    const label = cover.getBoundingClientRect();
     const covered = ticks.map((tick) => {
       const box = tick.firstElementChild?.getBoundingClientRect();
 

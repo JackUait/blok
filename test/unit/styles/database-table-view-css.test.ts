@@ -105,6 +105,22 @@ describe('database table view styles', () => {
     expect(exactRule('[data-blok-database-table-row][data-dragging]::after')).toContain('opacity: 0');
   });
 
+  // notion-motion.md Round 40 §1: on a drop the bar stays still and the dropped row's tint fades in, 200ms ease.
+  it('runs no bar entrance on a drop\'s redraw and fades the dropped row\'s tint in, both off for reduced motion', () => {
+    const landed = '[data-blok-database-table-row][data-landed][aria-selected="true"]::after';
+    const reduce = Array.from(tableCss.matchAll(/@media \(prefers-reduced-motion: reduce\) \{((?:[^{}]*\{[^{}]*\})*)\s*\}/g))
+      .flatMap((block) => Array.from((block[1] ?? '').matchAll(/([^{}]+)\{([^{}]*)\}/g)))
+      .filter((rule) => /animation:\s*none/.test(rule[2] ?? ''))
+      .flatMap((rule) => (rule[1] ?? '').split(',').map((part) => part.trim()));
+
+    // Comes after the entrance rule, so it wins at the same specificity; the leaving bar loses the attribute it matches on.
+    expect(exactRule('[data-blok-database-table-selection-bar][data-still]')).toContain('animation: none');
+    expect(css.indexOf('[data-blok-database-table-selection-bar][data-still]')).toBeGreaterThan(css.indexOf('[data-blok-database-table] > [data-blok-database-table-selection-bar] {'));
+    expect(exactRule(landed)).toContain('animation: blok-database-confirm-fade 200ms ease');
+    expect(exactRule(landed)).not.toMatch(/forwards|both/);
+    expect(reduce).toContain(landed);
+  });
+
   // notion-motion.md "Column header drag": coldrag-mid.png samples rgb(232,232,231), the pressed fill on white,
   // and the next header's icon and "S" show through the ghost.
   it('draws the column ghost as the header in its see-through pressed fill, unshadowed, and slides the other headers over 200ms ease', () => {
@@ -217,6 +233,20 @@ describe('database table view styles', () => {
   });
 
   // `notion-live-7/33-open-hover.png` and `notion-live-8/62-close-hover.png` (pixels): the glyph's ink is about 15x12.
+  // notion-motion.md Round 46 §A: the 68.6x24 pill sits 4 in from the title cell's end (x 745.4); hover fills only the
+  // inner 64.6x20, radius 4, `background 0.02s ease-in`, and the 2px frame stays white.
+  it('sets the OPEN pill 4 in from the cell end and fills only its inner box on hover', () => {
+    const inner = exactRule('[data-blok-database-table-open]:not([data-compact])::before');
+
+    expect(ruleBody('[data-blok-database-table-open]')).toContain('inset-inline-end: var(--blok-space-1)');
+    expect(inner).toContain('inset: var(--blok-space-0-5)');
+    expect(inner).toContain('z-index: -1');
+    expect(inner).toContain('border-radius: var(--blok-radius-control-sm)');
+    expect(inner).toContain('transition: background-color 20ms ease-in');
+    expect(exactRule('[data-blok-database-table-open]:not([data-compact]):hover::before')).toContain('background-color: var(--blok-database-table-header-hover-bg)');
+    expect(exactRule('[data-blok-database-table-open]:not([data-compact]):hover')).toBe('');
+  });
+
   it('draws the OPEN and CLOSE glyph at 18px, over its 15.25px slot', () => {
     const svg = ruleBody('[data-blok-database-table-open] svg');
 
@@ -241,10 +271,29 @@ describe('database table view styles', () => {
     expect(box).toMatch(/float:\s*inline-start/);
     expect(box).toMatch(/width:\s*22px/);
     expect(box).toMatch(/height:\s*22px/);
-    expect(box).toContain('margin-block-start: calc(-1 * var(--blok-space-0-5))');
     expect(box).toContain('margin-inline: calc(-1 * var(--blok-space-0-5)) var(--blok-space-0-75)');
     expect(ruleBody('[data-blok-database-table-cell] > [data-blok-database-page-icon-placeholder]')).toContain('var(--blok-database-table-title-icon)');
     expect(ruleBody('[data-blok-database-page-icon-placeholder] svg')).toMatch(/width:\s*18px/);
+  });
+
+  // notion-motion.md Round 46 §A: Notion's name glyph sits 9.5 under the row top, 2 lower than the -2 box puts it.
+  // Round 47 §B8: an own emoji icon's 22 box sits at row + 7.5 too. The 2px comes off the bottom, so the row stays 37 tall.
+  it.each([
+    '[data-blok-database-table-cell] > [data-blok-database-page-icon-placeholder]',
+    '[data-blok-database-table-cell] > [data-blok-database-page-icon]',
+  ])('sets %s 2px lower without growing the row', (selector) => {
+    const box = ruleBody(selector);
+
+    expect(box).toContain('margin-block: 0 calc(-1 * var(--blok-space-0-5))');
+    expect(box).not.toContain('margin-block-start');
+  });
+
+  // notion-motion.md Round 47 §B8: Notion's emoji is `font-size: 18px; line-height: 1`.
+  it('draws an emoji page icon at 18px', () => {
+    const icon = exactRule('[data-blok-database-table-cell] > [data-blok-database-page-icon]');
+
+    expect(icon).toMatch(/font-size:\s*18px/);
+    expect(icon).toMatch(/line-height:\s*1;/);
   });
 
   it('draws the header bottom line on the header cells and no dividers between them (Notion: border-right none)', () => {
@@ -308,9 +357,9 @@ describe('database table view styles', () => {
 });
 
 describe('database table number figures', () => {
-  // research/35 §17: Notion's table Number and Formula cells use lining, tabular figures.
-  it.each(['number', 'formula'])('a %s table cell draws lining, tabular figures', (type) => {
-    expect(ruleBody(`[data-blok-database-table-cell][data-type="${type}"]`)).toContain('font-variant-numeric: lining-nums tabular-nums');
+  // notion-motion.md Round 46 §A: Notion sets lining, tabular figures on every table cell, dates included.
+  it('every table cell draws lining, tabular figures', () => {
+    expect(ruleBody('[data-blok-database-table-cell]')).toContain('font-variant-numeric: lining-nums tabular-nums');
   });
 });
 
@@ -524,7 +573,8 @@ describe('database table frozen edge', () => {
     expect(shadow).toMatch(steps);
     expect(shadow).toMatch(/box-shadow:\s*var\(--blok-database-frozen-shadow\)/);
     expect(shadow).toMatch(/transition:\s*--blok-database-frozen-shadow-on 200ms ease(;|$)/);
-    expect(ruleBody('[data-blok-database-table-scroller][data-scrolled] [data-frozen-edge]')).toMatch(/--blok-database-frozen-shadow-on:\s*1(;|$)/);
+    expect(ruleBody('[data-blok-database-table-scroller][data-frozen-shadow] [data-frozen-edge]')).toMatch(/--blok-database-frozen-shadow-on:\s*1(;|$)/);
+    expect(ruleBody('[data-blok-database-table-scroller][data-scrolled] [data-frozen-edge]')).toBe('');
     expect(ruleBody('[data-blok-database-table-grid] [data-frozen][data-frozen-edge]')).not.toMatch(/box-shadow|transition|animation/);
   });
 
@@ -537,9 +587,25 @@ describe('database table frozen edge', () => {
       .toMatch(/box-shadow:\s*inset 0 0 0 2px var\(--blok-database-table-cell-ring\),\s*var\(--blok-database-frozen-shadow\)/);
   });
 
+  // notion-motion.md Round 46 §A: Notion's frozen block sticks 30px in from the scroller (x 300), and nothing
+  // scrolled past it shows in those 30px. 30 matches FROZEN_STICK_INSET in database-table-view.ts.
+  it('hides scrolled cells in the 30px strip left of the stuck frozen block', () => {
+    expect(ruleBody('[data-blok-database-table-scroller][data-scrolled]')).toMatch(/clip-path:\s*inset\(0 0 0 30px\)/);
+    expect(ruleBody('[dir="rtl"] [data-blok-database-table-scroller][data-scrolled]')).toMatch(/clip-path:\s*inset\(0 30px 0 0\)/);
+  });
+
   it('turns the shadow to face the other way in right-to-left text', () => {
     expect(ruleBody('[dir="rtl"] [data-blok-database-table-scroller] [data-frozen-edge]')).toMatch(/-1px 0 0[\s\S]*-2px 0 0[\s\S]*-3px 0 0/);
   });
+  // notion-motion.md Round 46 §A: Notion's "+ New page" row is sticky and stays at the text column on a sideways scroll.
+  // The scroller's padding edge is the text column, so 0 is Notion's 267px in Blok's frame.
+  it('keeps "+ New page" at the text column on a sideways scroll', () => {
+    const add = ruleBody('[data-blok-database-table-add-row]');
+
+    expect(add).toMatch(/position:\s*sticky/);
+    expect(add).toMatch(/inset-inline-start:\s*0(;|$)/);
+  });
+
   // notion-motion.md Round 29 §1: a full-width 37px row; the whole row fills 0.024 on hover; ↓ 16, label at +24, ⋯ 24x24 12 after.
   it('draws Load more as a full-width 37px row that fills as a whole on hover', () => {
     const line = ruleBody('[data-blok-database-table-load-more-row]');

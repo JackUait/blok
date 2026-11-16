@@ -25,8 +25,12 @@ export interface CellPopoverOptions {
   gap?: number;
   /** Opens beside the anchor instead: this far right of it, top level with it. */
   beside?: number;
-  /** Opens on this side of the anchor, `gap` from it, vertically centred on it. */
-  aside?: { side: 'left' | 'right'; gap: number };
+  /** With `beside`: the element it sits beside, when not the anchor. */
+  besideOf?: HTMLElement;
+  /** With `beside`: the popover's width. It opens on the left, `beside` from it, when only the left has room. */
+  besideFlipWidth?: number;
+  /** Opens on this side of the anchor, `gap` from it, vertically centred on it. `flip`: the other side when this one has no room. */
+  aside?: { side: 'left' | 'right'; gap: number; flip?: boolean };
   /** Opens above the anchor, `gap` over it, when it fits there and not below. */
   flip?: boolean;
   /** The gap to the window's top and bottom, when it is not the usual 12. */
@@ -99,23 +103,28 @@ const fitPlacement = (anchor: HTMLElement, gap = PANEL_GAP, flip = false, vertic
 };
 
 /** Beside the anchor, top level with it, through the same clamp (notion-motion.md Round 18 §2, the rule ⋯ menu). */
-const besidePlacement = (anchor: HTMLElement, gap: number): Pick<PopoverParams, 'cover' | 'viewportMargin'> & { position: DOMRect; positionContext: HTMLElement } => {
+const besidePlacement = (anchor: HTMLElement, gap: number, flipWidth?: number): Pick<PopoverParams, 'cover' | 'viewportMargin'> & { position: DOMRect; positionContext: HTMLElement } => {
   const rect = anchor.getBoundingClientRect();
+  const right = rect.right + gap;
+  const left = rect.left - gap - (flipWidth ?? 0);
+  // notion-motion.md Round 33 §1 (r33-form-move-w1000.raw): a form's Question options panel.
+  const flip = flipWidth !== undefined && right + flipWidth > window.innerWidth - COVER_VIEWPORT_MARGIN && left >= COVER_VIEWPORT_MARGIN;
 
   return {
     cover: true,
     viewportMargin: COVER_VIEWPORT_MARGIN,
-    position: new DOMRect(rect.right + gap, rect.top, 0, 0),
+    position: new DOMRect(flip ? left : right, rect.top, 0, 0),
     positionContext: anchor,
   };
 };
 
 /** Beside the anchor and centred on it, as a menu's submenu flyout (notion-motion.md Round 32 §1). */
-const asidePlacement = (aside: { side: 'left' | 'right'; gap: number }): Pick<PopoverDesktopParams, 'placeLeftOfAnchor' | 'asideSide' | 'offset' | 'viewportMargin'> => ({
+const asidePlacement = (aside: { side: 'left' | 'right'; gap: number; flip?: boolean }): Pick<PopoverDesktopParams, 'placeLeftOfAnchor' | 'asideSide' | 'offset' | 'viewportMargin' | 'asideFlip'> => ({
   placeLeftOfAnchor: true,
   asideSide: aside.side,
   offset: aside.gap,
   viewportMargin: COVER_VIEWPORT_MARGIN,
+  ...(aside.flip === true ? { asideFlip: true } : {}),
 });
 
 /**
@@ -188,9 +197,9 @@ export class CellPopover {
       class: [CELL_EDITOR_CLASS, ...(panel === true ? [PANEL_CLASS] : []), ...(docked !== undefined && docked !== false ? [DOCKED_CLASS] : []), ...(docked === 'page' ? [DOCKED_PAGE_CLASS] : []), ...(cover === 'value' ? [VALUE_EDITOR_CLASS] : []), ...(cover === true ? [TABLE_EDITOR_CLASS] : [])].join(' '),
       ...(this.options.minWidth !== undefined ? { minWidth: this.options.minWidth } : {}),
     };
-    const { aside, beside } = this.options;
+    const { aside, beside, besideOf, besideFlipWidth } = this.options;
     const below = (): ReturnType<typeof fitPlacement> | ReturnType<typeof besidePlacement> => (beside !== undefined
-      ? besidePlacement(anchor, beside)
+      ? besidePlacement(besideOf ?? anchor, beside, besideFlipWidth)
       : fitPlacement(anchor, this.options.gap, this.options.flip, this.options.verticalMargin));
     const fit = aside !== undefined ? asidePlacement(aside) : below();
     const coverOrFit = cover === true || cover === 'value' ? coverPlacement(anchor, cover === 'value', cover === true && this.options.below === true) : fit;

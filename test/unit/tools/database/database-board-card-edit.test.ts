@@ -102,6 +102,21 @@ describe('board card title, edited in place', () => {
     expect(button?.getAttribute('aria-label')).toBe('tools.database.editCardTitle');
   });
 
+  it('a card whose page has a body keeps its one lines glyph through the edit (notion-motion.md R45 gap 2)', () => {
+    const { view: boardView, board } = make({ cellContext: { rowHasBody: (rowId) => rowId === 'r1' } });
+
+    boardView.editTitle('r1');
+
+    const cardEl = card(board, 'r1');
+
+    expect(cardEl.querySelector('[data-blok-database-card-edit-glyph]')).toBeNull();
+    expect(cardEl.querySelector('[data-blok-database-page-icon-placeholder="content"]')?.nextElementSibling).toBe(input(board));
+
+    press(input(board), 'Enter');
+
+    expect(cardEl.querySelector('[data-blok-database-page-icon-placeholder="content"]')).not.toBeNull();
+  });
+
   it('Enter saves the name, then asks for the next new card (feel findings B09)', () => {
     const onTitleEdit = vi.fn();
     const onEnter = vi.fn();

@@ -428,7 +428,8 @@ export class DatabaseViewControls {
     this.noDateButton.hidden = noDate === undefined;
     this.noDateButton.textContent = noDate?.label ?? '';
     this.syncNoDateAttributes(noDate?.attributes ?? {});
-    this.sortButton.hidden = titleOnly;
+    // notion-motion.md Round 52 §2: Notion's Map toolbar has no Sort.
+    this.sortButton.hidden = titleOnly || saved.type === 'map';
     this.automationsButton.hidden = titleOnly || this.host.automations === undefined;
     this.automationsButton.disabled = this.host.automations?.writable() !== true;
     this.autofillButton.hidden = titleOnly || this.host.autofill === undefined;

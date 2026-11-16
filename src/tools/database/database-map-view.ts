@@ -6,6 +6,7 @@ import type { NoDateControl } from './database-no-date';
 import { drawMapLibreMap } from './database-maplibre';
 import type { MapFailure } from './database-maplibre';
 import type { DatabaseViewRenderer } from './database-view-renderer';
+import { rowPageGlyph } from './page-icon';
 import { isPlaceValue, placeText } from './tier3-values';
 import { resolveLoadLimit } from './view-settings';
 import type { DatabaseMap, DatabaseMapContext, DatabaseMapItem, DatabaseMapLngLat, DatabaseRow, DatabaseViewConfig, MapHeight, PropertyDefinition } from './types';
@@ -30,6 +31,8 @@ export interface DatabaseMapViewOptions {
   writable?: boolean;
   /** Adds a row at a point. Called once per add-pin click. */
   addPin?: (lngLat: DatabaseMapLngLat) => void;
+  /** Whether a row's page has a body: it picks the row's page glyph in the "No place" list. */
+  rowHasBody?: (rowId: string) => boolean;
 }
 
 export const MAP_HEIGHTS: readonly MapHeight[] = ['small', 'medium', 'large', 'extraLarge'];
@@ -270,8 +273,12 @@ export class DatabaseMapView implements DatabaseViewRenderer {
         const item = document.createElement('button');
 
         item.type = 'button';
+        const title = document.createElement('span');
+
         item.setAttribute('data-blok-database-map-no-place-row', '');
-        item.textContent = titleOf(row);
+        title.setAttribute('data-blok-database-map-no-place-title', '');
+        title.textContent = titleOf(row);
+        item.append(rowPageGlyph(row, this.options.rowHasBody?.(row.id) === true, true) ?? '', title);
         item.addEventListener('click', () => {
           // A top-layer popover would draw over the page, so it waits under it closed.
           popover.close();
@@ -285,6 +292,7 @@ export class DatabaseMapView implements DatabaseViewRenderer {
     };
 
     content.setAttribute('data-blok-database-map-no-place-list', '');
+    list.setAttribute('data-blok-database-map-no-place-rows', '');
     search.type = 'text';
     search.placeholder = placeholder;
     search.setAttribute('aria-label', placeholder);

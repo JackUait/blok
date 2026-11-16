@@ -607,6 +607,37 @@ describe('map view chrome', () => {
     expect(colors).not.toContain('--blok-radius-map');
   });
 
+  // Round 52 §2: Notion's map is 684x400 at the column start (539), 8 short of the 692 column, 14 under the toolbar.
+  it('keeps the map in the text column, 8 short of its end, 8 under the view top', () => {
+    const map = ruleBody('[data-blok-database-map]');
+
+    expect(map).toContain('padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))');
+    expect(map).toContain('padding-inline-end: calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)) + var(--blok-space-2))');
+    expect(map).toContain('padding-block-start: var(--blok-space-2)');
+  });
+
+  // Round 52 §2: a column of 312x28 rows, pitch 29; a 20 icon box at +8, text at +36; hover 20ms ease-in.
+  it('stacks the "No place" rows: 28 tall, 1 apart, icon box 20 at 8, text at 36', () => {
+    // 320 wide with rows of 312: 4 in on each side.
+    expect(ruleBody('[data-blok-database-map-no-place-list]')).toContain('padding: var(--blok-space-1-5) var(--blok-space-1)');
+    const list = ruleBody('[data-blok-database-map-no-place-rows]');
+
+    expect(list).toContain('display: flex');
+    expect(list).toContain('flex-direction: column');
+    expect(list).toContain('gap: var(--blok-space-0-25)');
+    const row = ruleBody('[data-blok-database-map-no-place-row]');
+
+    expect(row).toContain('display: flex');
+    expect(row).toContain('block-size: 28px');
+    expect(row).toContain('padding: 0 var(--blok-space-2)');
+    expect(row).toContain('gap: var(--blok-space-2)');
+    expect(row).toContain('transition: background-color 20ms ease-in');
+    const icon = ruleBody('[data-blok-database-map-no-place-row] > :is([data-blok-database-page-icon], [data-blok-database-page-icon-placeholder])');
+
+    expect(icon).toContain('inline-size: 20px');
+    expect(icon).toContain('block-size: 20px');
+  });
+
   it('holds Add pin in a 28px white pill, radius 6, padding 2, 8 in from the corner', () => {
     const pill = ruleBody('[data-blok-database-map-add-pin-pill]');
 
@@ -616,13 +647,17 @@ describe('map view chrome', () => {
     expect(pill).toContain('padding: var(--blok-space-0-5)');
     expect(pill).toContain('border-radius: var(--blok-radius-control)');
     expect(pill).toContain('background-color: var(--blok-bg-primary)');
-    expect(pill).toContain('box-shadow: var(--blok-database-popover-shadow)');
+    // Round 52 §2: 0.027 8/12 + 0.027 2/6 + a 0.07 ring, as the place cell's map link.
+    expect(pill).toContain('box-shadow: var(--blok-database-place-map-link-shadow)');
     const button = ruleBody('[data-blok-database-map-add-pin]');
 
     expect(button).toContain('inline-size: 24px');
     expect(button).toContain('block-size: 24px');
     expect(button).toContain('border-radius: var(--blok-radius-control-sm)');
     expect(button).not.toContain('box-shadow');
+    // Round 52 §2: the button is clear on the white pill; its hover fill eases in 100ms.
+    expect(button).toContain('background-color: transparent');
+    expect(button).toContain('transition: background-color 0.1s ease-in-out');
     expect(button).not.toContain('position: absolute');
   });
 

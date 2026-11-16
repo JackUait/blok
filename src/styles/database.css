@@ -19328,6 +19328,13 @@ button[data-blok-database-feed-reaction]:hover,
   padding-block: var(--blok-space-3);
 }
 
+/* notion-motion.md Round 52 §2: Notion's map is 684x400 at the column start, 8 short of the 692 column, 14 under the toolbar. */
+[data-blok-database-map] {
+  padding-block-start: var(--blok-space-2);
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-end: calc(max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)) + var(--blok-space-2));
+}
+
 [data-blok-database-form] form {
   display: flex;
   flex-direction: column;
@@ -20013,10 +20020,11 @@ button[data-blok-database-feed-reaction]:hover,
   padding: var(--blok-space-0-5);
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-bg-primary);
-  box-shadow: var(--blok-database-popover-shadow);
+  /* notion-motion.md Round 52 §2: the same shadow as the place cell's map link. */
+  box-shadow: var(--blok-database-place-map-link-shadow);
 }
 
-/* Measured (research/20 §1b): 24x24, 4px radius, muted glyph. */
+/* Measured (research/20 §1b): 24x24, 4px radius, muted glyph. Round 52 §2: clear, hover 0.1s ease-in-out. */
 [data-blok-database-map-add-pin] {
   display: inline-flex;
   align-items: center;
@@ -20026,9 +20034,10 @@ button[data-blok-database-feed-reaction]:hover,
   padding: 0;
   border: 0;
   border-radius: var(--blok-radius-control-sm);
-  background-color: var(--blok-bg-primary);
+  background-color: transparent;
   color: var(--blok-database-ink-secondary);
   cursor: pointer;
+  transition: background-color 0.1s ease-in-out;
 }
 
 [data-blok-database-map-add-pin]:hover,
@@ -20045,18 +20054,48 @@ button[data-blok-database-feed-reaction]:hover,
   display: flex;
   flex-direction: column;
   gap: var(--blok-space-1);
-  padding: var(--blok-space-1-5);
+  padding: var(--blok-space-1-5) var(--blok-space-1);
+}
+
+/* notion-motion.md Round 52 §2: rows 28 tall, pitch 29; a 20 icon box at +8, text at +36; hover 20ms ease-in. */
+[data-blok-database-map-no-place-rows] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-0-25);
 }
 
 [data-blok-database-map-no-place-row] {
-  padding: var(--blok-space-1-5);
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  block-size: 28px;
+  padding: 0 var(--blok-space-2);
   border: 0;
   border-radius: var(--blok-radius-control);
   background: none;
   color: inherit;
   font: inherit;
+  font-size: 14px;
   text-align: start;
   cursor: pointer;
+  transition: background-color 20ms ease-in;
+}
+
+[data-blok-database-map-no-place-row] > :is([data-blok-database-page-icon], [data-blok-database-page-icon-placeholder]) {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 20px;
+  block-size: 20px;
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-map-no-place-title] {
+  min-inline-size: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 [data-blok-database-map-no-place-row]:hover {

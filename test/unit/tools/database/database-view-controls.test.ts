@@ -223,6 +223,20 @@ describe('DatabaseViewControls', () => {
     ]);
   });
 
+  // notion-motion.md Round 52 §2: Notion's Map toolbar has no Sort.
+  it('hides Sort on a map view only', () => {
+    const { controls, saved } = setup();
+
+    saved.view = { ...saved.view, type: 'map' };
+    controls.refresh();
+    expect(q('database-toolbar-sort')?.hidden).toBe(true);
+    expect(q('database-toolbar-filter')?.hidden).toBe(false);
+
+    saved.view = { ...saved.view, type: 'list' };
+    controls.refresh();
+    expect(q('database-toolbar-sort')?.hidden).toBe(false);
+  });
+
   // research/23 §2e: the column header's Group follows the same rule as the settings picker.
   it('turns Hide empty groups on when a column header groups by a number', () => {
     const { controls, host } = setup();

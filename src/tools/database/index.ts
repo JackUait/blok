@@ -5692,6 +5692,7 @@ export class DatabaseTool implements BlockTool {
         open: (rowId) => this.handleRowClick(rowId),
         writable: !this.readOnly,
         addPin: (lngLat) => this.addMapPin(viewConfig.id, lngLat),
+        rowHasBody: (rowId) => this.rowHasBody(rowId),
       });
     } else if (viewConfig.type === 'dashboard') {
       this.dashboardSources.clear();

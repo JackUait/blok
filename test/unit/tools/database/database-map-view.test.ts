@@ -226,7 +226,7 @@ describe('DatabaseMapView', () => {
     const search = document.querySelector<HTMLInputElement>('[data-blok-database-map-no-place-search]');
 
     expect(search?.placeholder).toBe('tools.database.relationSearchPlaceholder');
-    const listed = (): string[] => [...document.querySelectorAll('[data-blok-database-map-no-place-row]')].map((row) => row.textContent ?? '');
+    const listed = (): string[] => [...document.querySelectorAll('[data-blok-database-map-no-place-row]')].map((row) => row.textContent?.trim() ?? '');
 
     expect(listed()).toEqual(['Bob', 'Cid']);
     if (search === null) throw new Error('no search');
@@ -248,6 +248,21 @@ describe('DatabaseMapView', () => {
     mapView.noPlaceControl()?.open(button);
 
     expect(document.querySelector('[data-blok-database-map-no-place-search]')?.closest<HTMLElement>('[data-blok-popover]')?.style.top).toBe('303px');
+  });
+
+  // notion-motion.md Round 52 §2: each "No place" row is a page icon, then the title.
+  it('leads each "No place" row with its page glyph, then the title', async () => {
+    const extra: DatabaseRow[] = [...rows, { id: 'r3', position: 'a2', properties: { title: 'Cid' } }];
+    const { mapView } = mount({ render: vi.fn(), rows: extra, writable: true, rowHasBody: (rowId) => rowId === 'r3' });
+
+    await flush();
+    mapView.noPlaceControl()?.open(anchor());
+    const parts = [...document.querySelectorAll('[data-blok-database-map-no-place-row]')].map((row) => [
+      row.firstElementChild?.getAttribute('data-blok-database-page-icon-placeholder'),
+      row.querySelector('[data-blok-database-map-no-place-title]')?.textContent,
+    ]);
+
+    expect(parts).toEqual([['', 'Bob'], ['content', 'Cid']]);
   });
 
   // research/23 §5c: the list stays open under the row page; Escape closes the page, then the list.
@@ -274,7 +289,7 @@ describe('DatabaseMapView', () => {
 
     expect(search()?.value).toBe('ci');
     expect(search()).toHaveFocus();
-    expect([...document.querySelectorAll('[data-blok-database-map-no-place-row]')].map((row) => row.textContent)).toEqual(['Cid']);
+    expect([...document.querySelectorAll('[data-blok-database-map-no-place-row]')].map((row) => row.textContent?.trim())).toEqual(['Cid']);
 
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     expect(search()).toBeNull();
@@ -319,7 +334,7 @@ describe('DatabaseMapView', () => {
     await flush();
     mapView.noPlaceControl()?.open(anchor());
 
-    expect([...document.querySelectorAll('[data-blok-database-map-no-place-row]')].map((row) => row.textContent)).toEqual(['New', 'Mid', 'Old']);
+    expect([...document.querySelectorAll('[data-blok-database-map-no-place-row]')].map((row) => row.textContent?.trim())).toEqual(['New', 'Mid', 'Old']);
   });
 
   it('every row placed: no chip', async () => {

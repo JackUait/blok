@@ -379,6 +379,7 @@ describe('DatabaseTimelineView', () => {
       });
     });
 
+
     // notion-motion.md Round 35 Part B (r35-timeline-hours-open.raw, r35-timeline-hours-grid.raw).
     describe('hours zoom opens at now (Round 35)', () => {
       const VIEWPORT = 708;
@@ -436,11 +437,14 @@ describe('DatabaseTimelineView', () => {
         expect(scroller(root).scrollLeft).toBe(daysBetween(start, CENTER) * TIMELINE_DAY_WIDTH.month - VIEWPORT / 2);
       });
 
-      it('keeps the day\'s start in the middle at other zooms', () => {
-        const root = open({ view: timelineView({ timelineZoom: 'week' }) });
-        const start = timelineWindow(CENTER, 'week').start;
+      // notion-motion.md Round 47 A1: Notion centres the now moment in every zoom, on open and on Today.
+      // 5 Years was too coarse to tell apart in Notion; it takes the same rule.
+      it.each(['day', 'week', 'bi_week', 'quarter', 'year', '5_years'] as const)('%s zoom centres the now-line too', (zoom) => {
+        vi.setSystemTime(new Date(2026, 9, 9, 12, 50));
+        const root = open({ view: timelineView({ timelineZoom: zoom }) });
+        const start = timelineWindow(CENTER, zoom).start;
 
-        expect(scroller(root).scrollLeft).toBe(daysBetween(start, CENTER) * TIMELINE_DAY_WIDTH.week - VIEWPORT / 2);
+        expect(scroller(root).scrollLeft).toBeCloseTo((daysBetween(start, CENTER) + 770 / 1440) * TIMELINE_DAY_WIDTH[zoom] - VIEWPORT / 2, 5);
       });
 
       it('draws a line every 15 minutes in the body, on the ticks, and none at other zooms', () => {

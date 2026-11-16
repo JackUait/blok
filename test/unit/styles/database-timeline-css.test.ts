@@ -572,14 +572,39 @@ describe('timeline toolbar controls hide the group labels under them', () => {
     expect(ruleBody('[data-blok-database-timeline-scroller]')).not.toContain('z-index');
   });
 
-  it('puts a page-coloured backing under each control, past its 2px edge to fill the gaps', () => {
+  // notion-motion.md Round 48 A2 (r48-n-quarter-hdr.raw): two white boxes, « and the month (531..653.6) and the controls (876.1..1239).
+  // Flush with the controls inside; out to the chart's edge outside; one box per group.
+  it('puts a page-coloured backing under each control, flush with its edges', () => {
     expect(ruleBody(control)).toContain('position: relative');
     expect(ruleBody(control)).toContain('isolation: isolate');
     const backing = ruleBody(`${control}::before`);
 
     expect(backing).toContain('position: absolute');
-    expect(backing).toContain('inset: calc(-1 * var(--blok-space-0-5))');
+    expect(backing).toContain('inset: 0');
+    expect(backing).not.toContain('--blok-space-0-5');
     expect(backing).toContain('z-index: -1');
     expect(backing).toContain('background-color: var(--blok-bg-primary)');
+  });
+
+  it('covers the 4px gap after a control, so each group is one box', () => {
+    const gap = ruleBody('[data-blok-database-timeline-toolbar] > :not([data-blok-database-timeline-toolbar-spacer]):where(:not(:last-child):not(:has(+ [data-blok-database-timeline-toolbar-spacer])))::before');
+
+    expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain('gap: var(--blok-space-1)');
+    expect(gap).toContain('inset-inline-end: calc(-1 * var(--blok-space-1))');
+  });
+
+  // r48-n-quarter-phdr.raw: with the panel open the label box runs on from « to the month's end (264..748.6).
+  it('joins « to the month across its margin while the panel is open', () => {
+    const open = '[data-blok-database-timeline-toolbar] > [data-blok-database-timeline-table-toggle][aria-pressed="true"]::before';
+
+    expect(ruleBody('[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"]')).toContain('margin-inline-end: var(--blok-space-6)');
+    expect(ruleBody(open)).toContain('inset-inline-end: calc(-1 * (var(--blok-space-6) + var(--blok-space-1)))');
+  });
+
+  it('runs the outer boxes to the chart edges while the panel is shut', () => {
+    const shut = '[data-blok-database-timeline-toolbar]:not(:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"]))';
+
+    expect(ruleBody(`${shut} > :first-child::before`)).toContain('inset-inline-start: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2 - var(--blok-space-1-5))))');
+    expect(ruleBody(`${shut} > :last-child::before`)).toContain('inset-inline-end: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2)))');
   });
 });

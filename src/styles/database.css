@@ -15363,7 +15363,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 /* Quarter, Year and 5 Years labels scroll in the band under the toolbar. They slide under a control, not over it.
-   Blok's choice; Notion unmeasured. The backing reaches 2px out to fill the 4px gaps. */
+   notion-motion.md Round 48 A2: two white boxes, « and the month, then the controls. Each is flush with the controls
+   inside and reaches the chart's edge outside. */
 [data-blok-database-timeline-toolbar] > :not([data-blok-database-timeline-toolbar-spacer]) {
   position: relative;
   isolation: isolate;
@@ -15372,9 +15373,28 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 [data-blok-database-timeline-toolbar] > :not([data-blok-database-timeline-toolbar-spacer])::before {
   content: '';
   position: absolute;
-  inset: calc(-1 * var(--blok-space-0-5));
+  inset: 0;
   z-index: -1;
   background-color: var(--blok-bg-primary);
+}
+
+/* Covers the toolbar gap. The next control paints over the overlap where controls touch. :where keeps it under the open « rule below. */
+[data-blok-database-timeline-toolbar] > :not([data-blok-database-timeline-toolbar-spacer]):where(:not(:last-child):not(:has(+ [data-blok-database-timeline-toolbar-spacer])))::before {
+  inset-inline-end: calc(-1 * var(--blok-space-1));
+}
+
+/* With the panel open, « keeps a margin before the month. The box runs across it. */
+[data-blok-database-timeline-toolbar] > [data-blok-database-timeline-table-toggle][aria-pressed="true"]::before {
+  inset-inline-end: calc(-1 * (var(--blok-space-6) + var(--blok-space-1)));
+}
+
+/* The toolbar's padding, in cqi so it resolves here (the view is the container). Keep in step with its padding. */
+[data-blok-database-timeline-toolbar]:not(:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"])) > :first-child::before {
+  inset-inline-start: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2 - var(--blok-space-1-5))));
+}
+
+[data-blok-database-timeline-toolbar]:not(:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"])) > :last-child::before {
+  inset-inline-end: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2)));
 }
 
 /* findings C05: the shown month, right after the table toggle. */

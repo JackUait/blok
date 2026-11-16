@@ -1785,6 +1785,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R108_BYTES = 1647;
     // Lane r106: Round 48 timeline header (labels on start lines, month lines in the body only, white tick row). Net database.css growth against origin/main.
     const DATABASE_R106_BYTES = 57;
+    // Lane r109: Round 48 timeline smalls (flush toolbar boxes, chips, panel edge, far-zoom bars, weekday letters). Net database.css growth against origin/main.
+    const DATABASE_R109_BYTES = 1372;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2349,6 +2351,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R102_BYTES
       + DATABASE_R108_BYTES
       + DATABASE_R106_BYTES
+      + DATABASE_R109_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

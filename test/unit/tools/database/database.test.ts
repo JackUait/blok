@@ -73,7 +73,10 @@ const addGroup = (element: HTMLElement, name = 'New'): void => {
 // mock appends a container with clickable action items so tests can trigger
 // onActivate callbacks.
 // ---------------------------------------------------------------------------
-vi.mock('../../../../src/components/utils/popover', () => {
+vi.mock('../../../../src/components/utils/popover', async (importOriginal) => {
+  const real = await importOriginal<{ PopoverDesktop: abstract new (...args: never[]) => unknown }>();
+  const { stubMissingMethods } = await import('../../helpers/stub-missing-methods');
+
   const PopoverItemType = { Default: 'default', Separator: 'separator', Html: 'html' };
 
   class MockPopoverDesktop {
@@ -147,6 +150,8 @@ vi.mock('../../../../src/components/utils/popover', () => {
       return this.container !== null;
     }
   }
+
+  stubMissingMethods(MockPopoverDesktop, real.PopoverDesktop);
 
   return { PopoverDesktop: MockPopoverDesktop, PopoverMobile: MockPopoverDesktop, PopoverItemType };
 });

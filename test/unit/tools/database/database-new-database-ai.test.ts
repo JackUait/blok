@@ -21,7 +21,10 @@ vi.mock('../../../../src/blok', () => ({
 
 const popovers = vi.hoisted(() => ({ items: [] as unknown[][], destroyed: 0 }));
 
-vi.mock('../../../../src/components/utils/popover', () => {
+vi.mock('../../../../src/components/utils/popover', async (importOriginal) => {
+  const real = await importOriginal<{ PopoverDesktop: abstract new (...args: never[]) => unknown }>();
+  const { stubMissingMethods } = await import('../../helpers/stub-missing-methods');
+
   class MockPopoverDesktop {
     constructor(params: { items?: unknown[] } = {}) {
       popovers.items.push(params.items ?? []);
@@ -43,6 +46,8 @@ vi.mock('../../../../src/components/utils/popover', () => {
       return document.createElement('div');
     }
   }
+
+  stubMissingMethods(MockPopoverDesktop, real.PopoverDesktop);
 
   return { PopoverDesktop: MockPopoverDesktop, PopoverMobile: MockPopoverDesktop, PopoverItemType: { Default: 'default', Separator: 'separator', Html: 'html' } };
 });

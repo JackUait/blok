@@ -18,7 +18,10 @@ interface MockItem { name?: string; element?: HTMLElement; onActivate?: () => vo
 
 const popovers = vi.hoisted(() => ({ items: [] as MockItem[][], offsets: [] as Array<number | undefined>, made: [] as Array<{ escapeClosesSubmenuFirst: boolean; arrowLeftClosesSubmenu: boolean; nestedOpenDelay: number; getElement: () => HTMLElement }> }));
 
-vi.mock('../../../../src/components/utils/popover', () => {
+vi.mock('../../../../src/components/utils/popover', async (importOriginal) => {
+  const real = await importOriginal<{ PopoverDesktop: abstract new (...args: never[]) => unknown }>();
+  const { stubMissingMethods } = await import('../../helpers/stub-missing-methods');
+
   class MockPopoverDesktop {
     escapeClosesSubmenuFirst = false;
 
@@ -48,6 +51,8 @@ vi.mock('../../../../src/components/utils/popover', () => {
       return this.element;
     }
   }
+
+  stubMissingMethods(MockPopoverDesktop, real.PopoverDesktop);
 
   return { PopoverDesktop: MockPopoverDesktop, PopoverMobile: MockPopoverDesktop, PopoverItemType: { Default: 'default', Separator: 'separator', Html: 'html' } };
 });

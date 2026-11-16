@@ -13,7 +13,10 @@ interface MockItem {
   children?: { items?: MockItem[] };
 }
 
-vi.mock('../../../../src/components/utils/popover', () => {
+vi.mock('../../../../src/components/utils/popover', async (importOriginal) => {
+  const real = await importOriginal<{ PopoverDesktop: abstract new (...args: never[]) => unknown }>();
+  const { stubMissingMethods } = await import('../../helpers/stub-missing-methods');
+
   const PopoverItemType = { Default: 'default', Separator: 'separator', Html: 'html' };
 
   class MockPopoverDesktop {
@@ -56,6 +59,8 @@ vi.mock('../../../../src/components/utils/popover', () => {
       /* no-op */
     }
   }
+
+  stubMissingMethods(MockPopoverDesktop, real.PopoverDesktop);
 
   return { PopoverDesktop: MockPopoverDesktop, PopoverItemType };
 });

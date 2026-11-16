@@ -48,7 +48,10 @@ const probes = vi.hoisted(() => ({
   views: [] as ViewPopoverProbe[],
 }));
 
-vi.mock('../../../../src/components/utils/popover', () => {
+vi.mock('../../../../src/components/utils/popover', async (importOriginal) => {
+  const real = await importOriginal<{ PopoverDesktop: abstract new (...args: never[]) => unknown }>();
+  const { stubMissingMethods } = await import('../../helpers/stub-missing-methods');
+
   class MockPopoverDesktop {
     private readonly closedHandlers: Array<() => void> = [];
     private readonly probe: ContextPopoverProbe;
@@ -96,6 +99,8 @@ vi.mock('../../../../src/components/utils/popover', () => {
       return () => undefined;
     }
   }
+
+  stubMissingMethods(MockPopoverDesktop, real.PopoverDesktop);
 
   return { PopoverDesktop: MockPopoverDesktop, PopoverMobile: MockPopoverDesktop };
 });

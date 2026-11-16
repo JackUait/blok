@@ -7,7 +7,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // query `[data-blok-database-tab-context]` and
 // `[data-blok-database-tab-action="…"]` as expected.
 // ---------------------------------------------------------------------------
-vi.mock('../../../../src/components/utils/popover', () => {
+vi.mock('../../../../src/components/utils/popover', async (importOriginal) => {
+  const real = await importOriginal<{ PopoverDesktop: abstract new (...args: never[]) => unknown }>();
+  const { stubMissingMethods } = await import('../../helpers/stub-missing-methods');
+
   const PopoverItemType = { Default: 'default', Separator: 'separator', Html: 'html' };
 
   class MockPopoverDesktop {
@@ -85,6 +88,8 @@ vi.mock('../../../../src/components/utils/popover', () => {
       return this.container?.contains(node) ?? false;
     }
   }
+
+  stubMissingMethods(MockPopoverDesktop, real.PopoverDesktop);
 
   return { PopoverDesktop: MockPopoverDesktop, PopoverMobile: MockPopoverDesktop, PopoverItemType };
 });

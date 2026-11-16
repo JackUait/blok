@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const { constructed } = vi.hoisted(() => ({ constructed: [] as Array<Record<string, unknown>> }));
 
-vi.mock('../../../../src/components/utils/popover', () => {
+vi.mock('../../../../src/components/utils/popover', async (importOriginal) => {
+  const real = await importOriginal<{ PopoverDesktop: abstract new (...args: never[]) => unknown }>();
+  const { stubMissingMethods } = await import('../../helpers/stub-missing-methods');
+
   class MockPopoverDesktop {
     constructor(params: Record<string, unknown>) {
       constructed.push(params);
@@ -14,6 +17,8 @@ vi.mock('../../../../src/components/utils/popover', () => {
 
     destroy(): void { /* no-op */ }
   }
+
+  stubMissingMethods(MockPopoverDesktop, real.PopoverDesktop);
 
   return { PopoverDesktop: MockPopoverDesktop };
 });

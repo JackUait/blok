@@ -94,7 +94,7 @@ test('the board card ••• menu lists the measured items in order, with the 
     'Duplicate',
     'Move to Trash',
   ]);
-  await expect(menu.getByText('Words: 2, characters: 11')).toBeVisible();
+  await expect(menu.getByText('2 words, 11 characters')).toBeVisible();
 });
 
 test('Edit property › Status opens the status editor on the row page', async ({ page }) => {

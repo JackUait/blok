@@ -238,6 +238,13 @@ export const moveBarByMinutes = (values: BarValues, deltaMinutes: number): BarWr
   return { start: startOf(startValue.start), end: endOf(endValue?.start ?? span.end) };
 };
 
+/** A new timed bar `minutes` long from a `YYYY-MM-DDTHH:mm` start: one range value, or a start and an end. */
+export const newTimedBarWrite = (start: string, minutes: number, separateEnd: boolean): BarWrite => {
+  const end = shiftPartByMinutes(start, minutes);
+
+  return separateEnd ? { start, end } : { start: `${start}/${end}` };
+};
+
 /** Both timed edges of a bar. A value with no end ends an hour later, as drawn. Null when an edge has no time. */
 export const timedEdges = (values: BarValues): { start: string; end: string } | null => {
   const start = parseDateValue(values.start);

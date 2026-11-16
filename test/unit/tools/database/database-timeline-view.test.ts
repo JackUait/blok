@@ -883,6 +883,39 @@ describe('DatabaseTimelineView', () => {
         expect(handlers.addRow).toHaveBeenCalledWith(null, { start: '2026-10-20/2026-10-24' });
       });
 
+      // notion-motion.md Round 48 A9: at Day zoom the ghost is 3 hours (153.3 = 3h - 3) and the click writes a timed range.
+      // Notion started it at 6:30 with the pointer near 6:45; why is unread, so Blok takes the hovered 15-minute slot.
+      it('puts a 3-hour ghost on the hovered 15-minute slot at Day zoom, and adds that timed bar', () => {
+        const dayStart = timelineWindow(CENTER, 'day').start;
+        const perMinute = TIMELINE_DAY_WIDTH.day / 1440;
+        const slot = daysBetween(dayStart, CENTER) * TIMELINE_DAY_WIDTH.day + (18 * 60 + 30) * perMinute;
+        const { root, handlers } = mount({ view: timelineView({ timelineZoom: 'day' }) });
+
+        rect(canvas(root), 0, 0, timelineWindow(CENTER, 'day').days * TIMELINE_DAY_WIDTH.day, 400);
+        pointer('pointermove', lane(root), slot + 10 * perMinute, 390);
+
+        expect(parseFloat(ghost(root)?.style.insetInlineStart ?? '')).toBeCloseTo(slot + 1.5, 5);
+        expect(parseFloat(ghost(root)?.style.width ?? '')).toBeCloseTo(180 * perMinute - 3, 5);
+
+        pointer('pointermove', lane(root), slot + 20 * perMinute, 390);
+        expect(parseFloat(ghost(root)?.style.insetInlineStart ?? '')).toBeCloseTo(slot + 15 * perMinute + 1.5, 5);
+
+        pointer('pointermove', lane(root), slot + 10 * perMinute, 390);
+        ghost(root)?.click();
+        expect(handlers.addRow).toHaveBeenCalledWith(null, { start: '2026-10-09T18:30/2026-10-09T21:30' });
+      });
+
+      it('writes a timed start and end for a Day-zoom ghost when the view has an end property', () => {
+        const dayStart = timelineWindow(CENTER, 'day').start;
+        const perMinute = TIMELINE_DAY_WIDTH.day / 1440;
+        const { root, handlers } = mount({ view: timelineView({ timelineZoom: 'day' }), endPropertyId: 'p-end' });
+
+        rect(canvas(root), 0, 0, timelineWindow(CENTER, 'day').days * TIMELINE_DAY_WIDTH.day, 400);
+        pointer('pointermove', lane(root), daysBetween(dayStart, CENTER) * TIMELINE_DAY_WIDTH.day + (22 * 60 + 50) * perMinute, 390);
+        ghost(root)?.click();
+        expect(handlers.addRow).toHaveBeenCalledWith(null, { start: '2026-10-09T22:45', end: '2026-10-10T01:45' });
+      });
+
       it('has no ghost when read-only', () => {
         expect(ghost(mount({ readOnly: true }).root)).toBeNull();
       });

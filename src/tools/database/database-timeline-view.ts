@@ -21,9 +21,11 @@ import {
   moveBar,
   moveBarByMinutes,
   newBarWrite,
+  newTimedBarWrite,
   offscreenSide,
   resizeBar,
   resizeBarByMinutes,
+  SNAP_MINUTES,
   snapMinutes,
   timedEdges,
   timelineSpan,
@@ -128,6 +130,8 @@ const DAY_MINUTES = 24 * 60;
 const BAR_INSET = 1.5;
 /** findings C07: Notion's "+ New" made a 5-day bar. */
 const NEW_BAR_DAYS = 5;
+/** notion-motion.md Round 48 A9: at Day zoom Notion's "+ New" made a 3-hour bar (6:30 PM → 9:30 PM). */
+const NEW_BAR_DAY_ZOOM_MINUTES = 3 * 60;
 /** Within this share of either canvas end, a scroll redraws around a new centre. */
 const EDGE_SHARE = 0.1;
 /** Zooms whose days are wide enough to shade weekends one by one. */
@@ -414,7 +418,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
    * A new bar: NEW_BAR_DAYS long from `day`, else from the second day on screen
    * (findings C07: screen from Oct 14, bar Oct 15–19).
    */
-  private newBar(day?: string): BarWrite {
+  private newBar(day?: string, time?: string): BarWrite {
+    if (day !== undefined && time !== undefined) {
+      return newTimedBarWrite(`${day}T${time}`, NEW_BAR_DAY_ZOOM_MINUTES, this.options.endPropertyId !== undefined);
+    }
     const viewport = this.scroller?.clientWidth ?? 0;
     const start = day ?? (viewport > 0
       ? addDays(visibleRange({ scrollStart: this.scrollStart, viewport, windowStart: this.window.start, zoom: this.zoom }).first, 1)
@@ -639,6 +646,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     lane.addEventListener('pointermove', (event) => this.placeGhost(ghost, event.clientX));
     lane.addEventListener('pointerleave', () => {
       ghost.removeAttribute('data-day');
+      ghost.removeAttribute('data-time');
       if (this.drag?.active !== true) {
         this.clearDragMarks();
       }
@@ -649,18 +657,41 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
   private placeGhost(ghost: HTMLElement, x: number): void {
     const day = this.dayAt(x);
+    const time = this.zoom === 'day' ? this.slotAt(x, day) : undefined;
 
-    if (this.drag?.active === true || ghost.getAttribute('data-day') === day) {
+    if (this.drag?.active === true || (ghost.getAttribute('data-day') === day && ghost.getAttribute('data-time') === (time ?? null))) {
       return;
     }
-    const span = { start: day, end: addDays(day, NEW_BAR_DAYS - 1) };
-    const days = barGeometry(span, this.window.start, this.zoom);
-    const inset = MONTH_IN_TOOLBAR.has(this.zoom) ? BAR_INSET : 0;
+    const write = this.newBar(day, time);
+    const values = { start: write.start, end: write.end };
+    const span = timelineSpan(values.start, values.end);
+
+    if (span === null) {
+      return;
+    }
+    const geometry = this.geometryOf(span, values);
 
     ghost.setAttribute('data-day', day);
-    ghost.style.setProperty('inset-inline-start', `${days.offset + inset}px`);
-    ghost.style.setProperty('width', `${days.width - 2 * inset}px`);
-    this.showRange(span, days, true);
+    if (time === undefined) {
+      ghost.removeAttribute('data-time');
+    } else {
+      ghost.setAttribute('data-time', time);
+    }
+    ghost.style.setProperty('inset-inline-start', `${geometry.offset}px`);
+    ghost.style.setProperty('width', `${geometry.width}px`);
+    this.showRange(span, barGeometry(span, this.window.start, this.zoom), true);
+  }
+
+  /**
+   * The 15-minute slot under a pointer, as `HH:mm`. Unmeasured: Notion started
+   * its bar at 6:30 with the pointer near 6:45 (Round 48 A9); the rule is unread.
+   */
+  private slotAt(x: number, day: string): string {
+    const minutes = (this.canvasOffset(x) - daysBetween(this.window.start, day) * this.dayWidth) / (this.dayWidth / DAY_MINUTES);
+    const slot = Math.min(Math.max(Math.floor(minutes / SNAP_MINUTES) * SNAP_MINUTES, 0), DAY_MINUTES - SNAP_MINUTES);
+    const pad = (n: number): string => String(n).padStart(2, '0');
+
+    return `${pad(Math.floor(slot / 60))}:${pad(slot % 60)}`;
   }
 
   /**
@@ -1254,7 +1285,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       // notion-motion.md Round 25 §4: the ghost's bar starts on the hovered day.
       ['[data-blok-database-timeline-new], [data-blok-database-timeline-new-ghost], [data-blok-database-timeline-table-new]', (el) => {
         if (this.canEdit) {
-          handlers.addRow(this.options.grouped ? this.options.groups[0]?.key ?? null : null, this.newBar(el.getAttribute('data-day') ?? undefined));
+          handlers.addRow(this.options.grouped ? this.options.groups[0]?.key ?? null : null, this.newBar(el.getAttribute('data-day') ?? undefined, el.getAttribute('data-time') ?? undefined));
         }
       }],
       ['[data-blok-database-timeline-load-more]', (el) => handlers.loadMore(el.getAttribute('data-group-key') ?? '')],

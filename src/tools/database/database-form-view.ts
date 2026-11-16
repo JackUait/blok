@@ -6,6 +6,7 @@ import { isPageCover } from '../../shared/page-cover';
 import { readIcon } from '../page/page-values';
 import { IconChevronUpDown, IconDotsHorizontal, IconLock, IconPlus } from '../../components/icons';
 import { formatBytes } from '../../components/utils/format-bytes';
+import { prefersReducedMotion } from '../../components/utils/reduced-motion';
 import type { I18n } from '../../../types';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
 import { DEFAULT_MAX_SIZE } from '../file/constants';
@@ -1016,6 +1017,12 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     const menu = wrapper.querySelector<HTMLButtonElement>('[data-blok-testid="database-form-question-menu"]');
 
     if (menu !== null) this.openQuestionMenu(property, menu);
+    // notion-motion.md Round 52 §3: after the panel's own first focus, so the name keeps it.
+    const name = wrapper.querySelector<HTMLInputElement>('[data-blok-database-form-question-name]');
+
+    name?.focus();
+    name?.select();
+    wrapper.scrollIntoView?.({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
     this.building = false;
   }
 
@@ -1035,8 +1042,9 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     };
     const card = anchor.closest<HTMLElement>('[data-blok-database-form-question]');
     // notion-motion.md Round 31 §1 / Round 33 §1: 24 right of the card, top level with it; 24 left of it when only the left has room.
+    // The card is the trigger: focus in its name (a new question's, Round 52 §3) must not dismiss the panel.
     const panel = new DatabasePanel({
-      anchor,
+      anchor: card ?? anchor,
       ...(card !== null ? { beside: QUESTION_PANEL_GAP, besideOf: card, besideFlip: true } : {}),
       testId: 'database-form-question-settings',
       width: 290,

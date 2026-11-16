@@ -629,6 +629,8 @@ describe('local form question builder', () => {
     const newId = [...document.querySelectorAll<HTMLElement>('[data-blok-database-form] [data-blok-database-form-question]')].at(-1)
       ?.getAttribute('data-blok-database-form-question') ?? '';
 
+    // The new name has focus; a click on a panel row takes it in a browser, not in jsdom.
+    requireElement(byTestId('database-form-question-type')).focus();
     requireElement(byTestId('database-form-question-type')).click();
     requireElement(byTestId('database-form-question-type-number')).click();
     await closeOptions(newId);

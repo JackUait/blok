@@ -135,6 +135,8 @@ describe('form "+" between cards (notion-motion.md Round 31 §1)', () => {
     // Adding opens the new question's options; close them so the view can redraw.
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     await vi.waitFor(() => expect(q(byTestId('database-form-question-settings'))).toBeNull());
+    // The new name keeps focus (Round 52 §3), and a focused name holds the redraw; leave it first.
+    q<HTMLInputElement>(`[data-blok-database-form-question="${added}"] [data-blok-database-form-question-name]`)?.blur();
     (editor as unknown as { history: { undo: () => void } }).history.undo();
     await vi.waitFor(async () => {
       const undone = (await editor?.save())?.blocks.find((block) => block.id === 'db')?.data as DatabaseData | undefined;

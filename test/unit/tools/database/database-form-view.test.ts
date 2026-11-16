@@ -766,6 +766,21 @@ describe('DatabaseFormView add question between cards', () => {
     expect(root.querySelector('[data-blok-database-form-slot]')).toBeNull();
   });
 
+  // notion-motion.md Round 52 §3: the new card's name takes focus, whole name selected; Question options stays open.
+  it('a new question takes focus in its name with the whole name selected', () => {
+    const addQuestion = vi.fn((): PropertyDefinition => notes);
+    const { root } = mount({ setQuestionSetting: vi.fn(), addQuestion });
+
+    root.querySelector<HTMLElement>('[data-blok-testid="database-form-add-question"]')?.click();
+    document.querySelector<HTMLElement>('[data-blok-testid="database-form-new-text"]')?.click();
+    const name = question(root, 'notes')?.querySelector<HTMLInputElement>('[data-blok-database-form-question-name]');
+
+    expect(name).toHaveFocus();
+    expect([name?.selectionStart, name?.selectionEnd]).toEqual([0, 'Notes'.length]);
+    // Still open: its ⋯ goes back to false only when the panel closes.
+    expect(question(root, 'notes')?.querySelector('[data-blok-testid="database-form-question-menu"]')?.getAttribute('aria-expanded')).toBe('true');
+  });
+
   it('the end row still adds a question last', () => {
     const addQuestion = vi.fn((): PropertyDefinition => notes);
     const { root } = mount({ setQuestionSetting: vi.fn(), addQuestion });

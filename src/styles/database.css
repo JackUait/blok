@@ -20106,8 +20106,16 @@ button[data-blok-database-feed-reaction]:hover,
 [data-blok-database-map-no-place-list] {
   display: flex;
   flex-direction: column;
-  gap: var(--blok-space-1);
-  padding: var(--blok-space-1-5) var(--blok-space-1);
+  padding: var(--blok-space-1);
+}
+
+/* notion-motion.md Round 53 §8a: a 296x28 field 12 in and 12 down, rows 12 under it; text 6 in, 14px.
+   Fill, ring, 1px border and radius stay the shared field look. Outranks input[data-blok-field]'s 100% width. */
+[data-blok-database-map-no-place-list] > [data-blok-database-map-no-place-search] {
+  margin: var(--blok-space-2) var(--blok-space-2) var(--blok-space-3);
+  width: auto;
+  padding-inline: var(--blok-space-1-5);
+  font-size: 14px;
 }
 
 /* notion-motion.md Round 52 §2: rows 28 tall, pitch 29; a 20 icon box at +8, text at +36; hover 20ms ease-in. */

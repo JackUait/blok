@@ -22450,8 +22450,14 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 [data-blok-database-map-no-place-list] {
   display: flex;
   flex-direction: column;
-  gap: var(--blok-space-1);
-  padding: var(--blok-space-1-5) var(--blok-space-1);
+  padding: var(--blok-space-1);
+}
+
+[data-blok-database-map-no-place-list] > [data-blok-database-map-no-place-search] {
+  margin: var(--blok-space-2) var(--blok-space-2) var(--blok-space-3);
+  width: auto;
+  padding-inline: var(--blok-space-1-5);
+  font-size: 14px;
 }
 
 [data-blok-database-map-no-place-rows] {

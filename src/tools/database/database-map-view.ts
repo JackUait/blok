@@ -297,6 +297,7 @@ export class DatabaseMapView implements DatabaseViewRenderer {
     search.placeholder = placeholder;
     search.setAttribute('aria-label', placeholder);
     search.setAttribute('data-blok-database-map-no-place-search', '');
+    search.setAttribute('data-blok-field', 'text');
     search.value = query;
     search.addEventListener('input', fill);
     content.append(search, list);

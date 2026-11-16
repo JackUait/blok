@@ -619,7 +619,10 @@ describe('map view chrome', () => {
   // Round 52 §2: a column of 312x28 rows, pitch 29; a 20 icon box at +8, text at +36; hover 20ms ease-in.
   it('stacks the "No place" rows: 28 tall, 1 apart, icon box 20 at 8, text at 36', () => {
     // 320 wide with rows of 312: 4 in on each side.
-    expect(ruleBody('[data-blok-database-map-no-place-list]')).toContain('padding: var(--blok-space-1-5) var(--blok-space-1)');
+    const box = ruleBody('[data-blok-database-map-no-place-list]');
+
+    expect(box).toContain('padding: var(--blok-space-1)');
+    expect(box).not.toContain('gap:');
     const list = ruleBody('[data-blok-database-map-no-place-rows]');
 
     expect(list).toContain('display: flex');
@@ -636,6 +639,17 @@ describe('map view chrome', () => {
 
     expect(icon).toContain('inline-size: 20px');
     expect(icon).toContain('block-size: 20px');
+  });
+
+  // Round 53 §8a: the field is 296x28, 12 in and 12 down; the rows start 52 down, so 55 + 29 per row (229 for 6).
+  it('boxes the "No place" search as a 296x28 field, 12 in, with the rows 12 under it', () => {
+    const field = ruleBody('[data-blok-database-map-no-place-list] > [data-blok-database-map-no-place-search]');
+
+    expect(field).toContain('margin: var(--blok-space-2) var(--blok-space-2) var(--blok-space-3)');
+    expect(field).toContain('width: auto');
+    // Notion's 6 sides; the shared field's 1px border adds one.
+    expect(field).toContain('padding-inline: var(--blok-space-1-5)');
+    expect(field).toContain('font-size: 14px');
   });
 
   it('holds Add pin in a 28px white pill, radius 6, padding 2, 8 in from the corner', () => {

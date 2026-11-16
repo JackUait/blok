@@ -226,6 +226,8 @@ describe('DatabaseMapView', () => {
     const search = document.querySelector<HTMLInputElement>('[data-blok-database-map-no-place-search]');
 
     expect(search?.placeholder).toBe('tools.database.relationSearchPlaceholder');
+    // notion-motion.md Round 53 §8a: a field box, not a bare input; it takes Blok's shared field look.
+    expect(search?.getAttribute('data-blok-field')).toBe('text');
     const listed = (): string[] => [...document.querySelectorAll('[data-blok-database-map-no-place-row]')].map((row) => row.textContent?.trim() ?? '');
 
     expect(listed()).toEqual(['Bob', 'Cid']);

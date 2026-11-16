@@ -212,13 +212,7 @@ describe('presence stylesheet', () => {
       expect(getComputedStyle(face).pointerEvents).toBe('auto');
     });
 
-    /**
-     * `:hover` is true for every ancestor of the hovered element, and the
-     * +/⠿ controls attach to the INNERMOST hovered block — so a container's
-     * face must not step aside when one of its children is the block hovered.
-     * jsdom cannot simulate `:hover`; the selector is pinned as parsed.
-     */
-    it('steps aside only for the innermost hovered block', () => {
+    it('keeps the gutter in a stable position while blocks are hovered', () => {
       const sheet = style.sheet;
 
       if (sheet === null) {
@@ -228,11 +222,10 @@ describe('presence stylesheet', () => {
       const slides = styleRules(sheet).filter((rule) =>
         rule.selectorText.includes(':hover') && rule.selectorText.includes('[data-blok-presence-gutter]'));
 
-      expect(slides.length).toBeGreaterThan(0);
-      slides.forEach((rule) => {
-        expect(rule.selectorText).toContain('[data-blok-element]:hover:not(:has([data-blok-element]:hover))');
-        expect(rule.style.transform).not.toBe('');
-      });
+      expect(slides).toHaveLength(0);
+      const gutter = styleRules(sheet).find((rule) => rule.selectorText === '[data-blok-presence-gutter]');
+
+      expect(gutter?.style.getPropertyValue('margin-inline-end')).toBe('calc(var(--blok-presence-gap) + var(--blok-editor-gutter-start, 0px))');
     });
 
     it('does not ride along in the drag ghost', () => {

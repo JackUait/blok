@@ -136,20 +136,9 @@
   gap: var(--blok-presence-face-gap);
   align-items: center;
   min-height: var(--blok-presence-face-line);
-  margin-inline-end: var(--blok-presence-gap);
+  margin-inline-end: calc(var(--blok-presence-gap) + var(--blok-editor-gutter-start, 0px));
   pointer-events: none;
   user-select: none;
-}
-
-/* Only the innermost hovered block owns the controls.
-   The toolbar gutter collapses to zero in read-only mode. */
-[data-blok-element]:hover:not(:has([data-blok-element]:hover)) > [data-blok-element-content] > [data-blok-presence-gutter] {
-  transform: translateX(calc(-1 * var(--blok-editor-gutter-start, 0px)));
-}
-
-/* Transforms are physical, so the RTL gutter needs the opposite sign. */
-[data-blok-rtl="true"] [data-blok-element]:hover:not(:has([data-blok-element]:hover)) > [data-blok-element-content] > [data-blok-presence-gutter] {
-  transform: translateX(var(--blok-editor-gutter-start, 0px));
 }
 
 /* Shared disc geometry for the gutter face and its overflow badge. */

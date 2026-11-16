@@ -2,6 +2,7 @@ import './local-profile.css';
 import { invoke } from '@tauri-apps/api/core';
 import { styleTextField } from './ui/controls';
 import { onHover, offHover } from './tooltip-runtime';
+import { profileDisplayName, profileInitial } from './profile-identity';
 
 export interface LocalProfile { name: string; photo: string | null }
 const KEY = 'blok:desktop:local-profile:v1';
@@ -54,8 +55,8 @@ export function mountLocalProfile(host: HTMLElement, onSaved: () => void = () =>
   return mountProfileEditor(host, { read: readLocalProfile, save: saveLocalProfile }, onSaved);
 }
 
-export function mountProfileEditor(host: HTMLElement, backend: { read(): LocalProfile; save(value: LocalProfile): void | Promise<void> }, onSaved: () => void = () => undefined): { destroy(): void } {
-  let disposed = false; let uploadVersion = 0;
+export function mountProfileEditor(host: HTMLElement, backend: { read(): LocalProfile; save(value: LocalProfile): void | Promise<void>; fallbackName?: string; nameHelp?: string }, onSaved: () => void = () => undefined): { destroy(): void } {
+  const state = { disposed: false, uploadVersion: 0, saving: false };
   const section = document.createElement('section'); section.setAttribute('data-local-profile', '');
   const row = document.createElement('div'); row.setAttribute('data-profile-row', '');
   const photo = document.createElement('button'); photo.type = 'button'; photo.setAttribute('data-profile-photo', '');
@@ -75,22 +76,21 @@ export function mountProfileEditor(host: HTMLElement, backend: { read(): LocalPr
     status.textContent = 'Téléchargez le portrait, puis cliquez sur votre photo pour l’importer.';
     if (!('__TAURI_INTERNALS__' in window)) return;
     event.preventDefault();
-    void invoke('open_notion_faces').catch(() => { if (!disposed) status.textContent = 'Impossible d’ouvrir le navigateur. Rendez-vous sur faces.notion.com.'; });
+    void invoke('open_notion_faces').catch(() => { if (!state.disposed) status.textContent = 'Impossible d’ouvrir le navigateur. Rendez-vous sur faces.notion.com.'; });
   });
   const draw = (): void => {
     const profile = backend.read(); photo.replaceChildren();
     const photoLabel = profile.photo ? 'Remplacer la photo' : 'Ajouter une photo';
     photo.setAttribute('aria-label', photoLabel); offHover(photo); onHover(photo, photoLabel);
     if (profile.photo) { const img = document.createElement('img'); img.src = profile.photo; img.alt = ''; photo.append(img); }
-    else photo.textContent = Array.from(profile.name || 'Vous')[0]?.toUpperCase() ?? 'V';
+    else photo.textContent = profileInitial(profileDisplayName(profile.name, backend.fallbackName));
     remove.hidden = !profile.photo;
   };
-  let saving = false;
-  const busy = (value: boolean): void => { saving = value; name.disabled = value; photo.disabled = value; remove.disabled = value; };
+  const busy = (value: boolean): void => { state.saving = value; name.disabled = value; photo.disabled = value; remove.disabled = value; };
   const save = (value: LocalProfile): void => {
-    if (saving || disposed) return;
-    const done = (): void => { if (!disposed) { status.textContent = ''; busy(false); draw(); onSaved(); } };
-    const failed = (error: unknown): void => { if (!disposed) { busy(false); status.textContent = error instanceof Error ? error.message : 'Enregistrement impossible.'; } };
+    if (state.saving || state.disposed) return;
+    const done = (): void => { if (!state.disposed) { status.textContent = ''; busy(false); draw(); onSaved(); } };
+    const failed = (error: unknown): void => { if (!state.disposed) { busy(false); status.textContent = error instanceof Error ? error.message : 'Enregistrement impossible.'; } };
     try {
       const result = backend.save(value);
       if (result instanceof Promise) { busy(true); status.textContent = 'Enregistrement…'; void result.then(done, failed); }
@@ -99,14 +99,16 @@ export function mountProfileEditor(host: HTMLElement, backend: { read(): LocalPr
   };
   name.addEventListener('change', () => save({ ...backend.read(), name: name.value }));
   photo.addEventListener('click', () => file.click());
-  remove.addEventListener('click', () => { ++uploadVersion; save({ ...backend.read(), photo: null }); });
+  remove.addEventListener('click', () => { ++state.uploadVersion; save({ ...backend.read(), photo: null }); });
   file.addEventListener('change', () => {
     const selected = file.files?.[0]; file.value = ''; if (!selected) return;
-    const version = ++uploadVersion; busy(true); status.textContent = 'Préparation de la photo…';
+    const version = ++state.uploadVersion; busy(true); status.textContent = 'Préparation de la photo…';
     void readProfilePhoto(selected).then(image => {
-      if (!disposed && version === uploadVersion) { busy(false); save({ ...backend.read(), photo: image }); }
-    }).catch(error => { if (!disposed && version === uploadVersion) { busy(false); status.textContent = error instanceof Error ? error.message : 'Import impossible.'; } });
+      if (!state.disposed && version === state.uploadVersion) { busy(false); save({ ...backend.read(), photo: image }); }
+    }).catch(error => { if (!state.disposed && version === state.uploadVersion) { busy(false); status.textContent = error instanceof Error ? error.message : 'Import impossible.'; } });
   });
-  portrait.append(photo, remove); fields.append(label); row.append(portrait, fields); section.append(row, file, facesLine, status); host.append(section); draw();
-  return { destroy() { disposed = true; ++uploadVersion; offHover(photo); offHover(remove); section.remove(); } };
+  portrait.append(photo, remove); fields.append(label);
+  if (backend.nameHelp) { const help = document.createElement('p'); help.textContent = backend.nameHelp; fields.append(help); }
+  row.append(portrait, fields); section.append(row, file, facesLine, status); host.append(section); draw();
+  return { destroy() { state.disposed = true; ++state.uploadVersion; offHover(photo); offHover(remove); section.remove(); } };
 }

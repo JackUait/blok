@@ -1,3 +1,6 @@
+import { createPagePresence } from './page-presence';
+import { readAccountIdentity } from './account-profile';
+import { watchLocalProfile } from './local-profile';
 import { readSidebarLayout, saveSidebarLayout, subscribeSidebarLayout, initializeSidebarPresets } from './sidebar-preferences';
 import { libraryUrl, libraryCategoryForHref, type LibraryCategory, pageDestination, pageIdForHref, publicPageUrl, legacyPageUrl, rememberPageLinks } from './page-urls';
 import { createWorkspaceSaveStatus } from './workspace-save-status';
@@ -542,6 +545,12 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       onDuplicate: () => { void action({ id, type: 'duplicate' }).catch(showError); },
       onDelete: () => { void action({ id, type: 'delete' }).catch(showError); },
     });
+    const pagePresence = ref.kind === 'remote' ? createPagePresence({
+      self: () => ({ id: ref.accountId, ...readAccountIdentity(ref) }),
+      onLocate: blockId => instance.blocks.getById(blockId)?.holder.scrollIntoView({ block: 'center', behavior: 'smooth' }),
+    }) : null;
+    if (pagePresence) toolbar.element.querySelector('[data-desktop-page-actions]')?.prepend(pagePresence.element);
+    const unwatchProfile = pagePresence ? watchLocalProfile(() => pagePresence.refresh()) : () => undefined;
     ws.pageToolbar = toolbar;
     toolbar.element.insertBefore(status, toolbar.element.querySelector('[data-desktop-page-actions]'));
     applyFullWidth();
@@ -665,7 +674,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         server: `${ref.server}/api/blok`,
         ticket: ({ doc }: { doc?: string; forceRefresh?: boolean }) => repository.ticket(doc ?? id),
         user: { id: ref.accountId },
-        collaboration: { doc: id, user: { name: ref.userName ?? ref.accountId }, offline: false },
+        collaboration: { doc: id, user: { get name() { return readAccountIdentity(ref).name; } }, offline: false },
       } : { persistence: {
         async load() {
           const raw = await repository.readPage(id);
@@ -733,6 +742,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       document.title = page.title;
       saveStatus.ready();
       if (connectionState.value && ref.kind === 'remote') saveStatus.connection(connectionState.value);
+      if (connectionState.value) pagePresence?.update(connectionState.value);
+      pagePresence?.refresh();
       // Run after the outgoing save and the incoming mount, including cached pages.
       ws.pageCanvas.scrollTop = 0;
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -750,6 +761,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       get destroyed() { return life.destroyed; }, set destroyed(value) { life.destroyed = value; },
       nodes: [],
       suspend() {
+        pagePresence?.close();
         if (article.contains(document.activeElement)) (document.activeElement as HTMLElement).blur();
         const selection = window.getSelection();
         if (selection?.anchorNode && article.contains(selection.anchorNode)) selection.removeAllRanges();
@@ -778,6 +790,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       destroy() {
         if (life.destroyed) return;
         life.destroyed = true; life.active = false;
+        unwatchProfile(); pagePresence?.destroy();
         toolbar.destroy(); instance.destroy();
         session.nodes = [];
       },
@@ -799,8 +812,9 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         if (life.destroyed) return;
         // An emission with no payload must fall back to "not pending", not throw
         // inside the listener and kill the rest of the handler.
-        const event = (raw ?? {}) as Parameters<typeof saveStatus.connection>[0];
+        const event = (raw ?? {}) as NonNullable<Parameters<typeof saveStatus.connection>[0]>;
         connectionState.value = event;
+        pagePresence?.update(event);
         if (!life.active) return;
         const pendingOps = event?.save?.pendingOperations ?? 0;
         const pendingBytes = event?.save?.pendingBytes ?? 0;

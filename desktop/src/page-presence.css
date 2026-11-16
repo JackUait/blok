@@ -1,0 +1,16 @@
+[data-page-presence] { position: relative; flex: none; font-size: 12px; color: var(--desktop-muted); }
+[data-page-presence] summary { display: flex; align-items: center; gap: 6px; min-height: 28px; padding: 2px 6px; border-radius: 6px; cursor: pointer; list-style: none; white-space: nowrap; }
+[data-page-presence] summary::-webkit-details-marker { display: none; }
+[data-page-presence] summary:hover, [data-page-presence][open] summary { background: var(--desktop-hover); color: var(--desktop-ink); }
+[data-page-presence] summary:focus-visible { outline: 2px solid #2e8cff; outline-offset: 2px; }
+[data-page-presence-avatar] { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--desktop-hover); color: var(--desktop-ink); font-size: 11px; font-weight: 600; overflow: hidden; }
+[data-page-presence-avatar] img { width: 100%; height: 100%; object-fit: cover; }
+[data-page-presence-panel] { position: absolute; top: calc(100% + 6px); inset-inline-end: 0; z-index: 30; width: min(320px, 85vw); padding: 12px; border: 1px solid var(--desktop-border); border-radius: 10px; background: var(--desktop-strip); color: var(--desktop-ink); box-shadow: 0 8px 28px rgb(0 0 0 / 18%); }
+[data-page-presence-panel] ul { display: flex; flex-direction: column; gap: 8px; padding: 0; margin: 12px 0 0; list-style: none; max-height: 300px; overflow: auto; }
+[data-page-presence-panel] li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; overflow-wrap: anywhere; }
+[data-page-presence-panel] small { color: var(--desktop-muted); }
+[data-page-presence-panel] button { width: auto; padding: 4px 7px; margin-inline-start: auto; font: inherit; }
+@media (max-width: 720px) { [data-page-presence-label] { max-width: 100px; overflow: hidden; text-overflow: ellipsis; } }
+[data-page-presence-panel] button { border: 1px solid var(--desktop-border); border-radius: 6px; background: var(--desktop-hover); color: var(--desktop-ink); cursor: pointer; }
+[data-page-presence-panel] button:hover { background: var(--desktop-border); }
+[data-page-presence-panel] button:focus-visible { outline: 2px solid #2e8cff; outline-offset: 2px; }

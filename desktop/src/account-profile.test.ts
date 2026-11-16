@@ -14,6 +14,19 @@ it('shares the account identity across its workspaces, but not other servers or 
  expect(commentAuthor({kind:'local',id:'default',name:'Notes'}).authorName).toBe('Utilisateur local');
  expect(()=>cacheAccountProfile(ref,{...user,id:'bob'})).toThrow();
 });
+it('uses the account email consistently without filling or saving an absent display name',async()=>{
+ const unnamed={...user,email:'jocelin@example.test',name:'   ',avatarUrl:''};
+ vi.spyOn(CloudClient.prototype,'session').mockResolvedValue({user:unnamed,workspaces:[]});
+ const update=vi.spyOn(CloudClient.prototype,'updateProfile');
+ const host=document.createElement('div');document.body.append(host);
+ const mounted=mountAccountProfile(host,new CloudClient(),ref,vi.fn());
+ await vi.waitFor(()=>expect(host.querySelector('[data-profile-photo]')?.textContent).toBe('J'));
+ expect(host.querySelector<HTMLInputElement>('input[type=text]')?.value).toBe('');
+ expect(host.textContent).toContain('À défaut, votre adresse e-mail est affichée.');
+ expect(commentAuthor(ref).authorName).toBe('jocelin@example.test');
+ expect(update).not.toHaveBeenCalled();
+ mounted.destroy();
+});
 it('saves the connected profile to the server and keeps the previous avatar when saving fails',async()=>{
  vi.spyOn(CloudClient.prototype,'session').mockResolvedValue({user,workspaces:[]});
  const update=vi.spyOn(CloudClient.prototype,'updateProfile').mockResolvedValue({...user,name:'Camille'});

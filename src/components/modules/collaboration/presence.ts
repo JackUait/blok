@@ -40,6 +40,8 @@ export interface DrawableState extends PresenceState {
 
 export interface PresenceOptions {
   yjs: PresenceSeam;
+  /** The editor wrapper; inert cached pages keep syncing without appearing present. */
+  host?: HTMLElement;
   /** Display identity from `config.collaboration.user`, if the host set one. */
   user?: { name?: string; color?: string };
   /**
@@ -311,6 +313,9 @@ export const createPresence = (options: PresenceOptions): Presence => {
 
   const state = {
     running: false,
+    suspended: false,
+    hostObserver: null as MutationObserver | null,
+    publishedUser: undefined as string | undefined,
     localClientId: null as number | null,
     /** `undefined` means "never published", which is distinct from a null block. */
     publishedBlockId: undefined as string | null | undefined,
@@ -323,9 +328,10 @@ export const createPresence = (options: PresenceOptions): Presence => {
     onCaretMove: null as (() => void) | null,
     redrawQueued: false,
   };
+  const isAvailable = (): boolean => state.running && !state.suspended && !options.host?.closest('[inert]');
 
   const publishBlockId = (): void => {
-    if (!state.running) {
+    if (!isAvailable()) {
       return;
     }
 
@@ -354,7 +360,7 @@ export const createPresence = (options: PresenceOptions): Presence => {
    * and an unchanged position reaching the wire would be a frame per keypress.
    */
   const publishCaret = (): void => {
-    if (!state.running) {
+    if (!isAvailable()) {
       return;
     }
 
@@ -379,6 +385,9 @@ export const createPresence = (options: PresenceOptions): Presence => {
    * colour alone, and peers draw an anonymous avatar.
    */
   const publishUser = (): void => {
+    if (!isAvailable()) {
+      return;
+    }
     const name = options.user?.name;
     const configured = options.user?.color;
     const color = isPresenceColor(configured) ? configured : presenceColorFor(state.localClientId ?? 0);
@@ -390,14 +399,17 @@ export const createPresence = (options: PresenceOptions): Presence => {
      * name to the `lastEditedBy` in the document; published on its own it would
      * identify somebody who deliberately chose to appear anonymous.
      */
-    yjs.setAwarenessField(
-      'user',
-      {
-        ...named ? { name } : {},
-        color,
-        ...named && id !== undefined && id !== '' ? { id } : {},
-      }
-    );
+    const user = {
+      ...named ? { name } : {},
+      color,
+      ...named && id !== undefined && id !== '' ? { id } : {},
+    };
+    const key = JSON.stringify(user);
+
+    if (state.publishedUser !== key) {
+      state.publishedUser = key;
+      yjs.setAwarenessField('user', user);
+    }
   };
 
   /**
@@ -406,7 +418,7 @@ export const createPresence = (options: PresenceOptions): Presence => {
    * first keystroke.
    */
   const publishActivity = (): void => {
-    if (!state.running) {
+    if (!isAvailable()) {
       return;
     }
 
@@ -429,7 +441,7 @@ export const createPresence = (options: PresenceOptions): Presence => {
    * often the server hears from this client.
    */
   const signalActivity = (): void => {
-    if (!state.running) {
+    if (!isAvailable()) {
       return;
     }
 
@@ -455,11 +467,49 @@ export const createPresence = (options: PresenceOptions): Presence => {
       return;
     }
 
+    if (!isAvailable()) {
+      renderer.clear();
+
+      return;
+    }
+
     // Lazily, through the generator: `selectDrawableStates` stops at the first
     // cap it hits, and a fabricated map must not be materialised before it does.
     const peers = selectDrawableStates(asPresenceStates(yjs.getAwarenessStates()), state.localClientId);
 
     renderer.render(peers, state.localClientId);
+  };
+
+  const withdraw = (): void => {
+    yjs.setAwarenessField('user', null);
+    yjs.setAwarenessField('blockId', null);
+    yjs.setAwarenessField('caret', null);
+    renderer?.clear();
+  };
+
+  const reconcileHost = (): void => {
+    const suspended = Boolean(options.host?.closest('[inert]'));
+
+    if (suspended === state.suspended || !state.running) {
+      return;
+    }
+
+    state.suspended = suspended;
+    state.publishedUser = undefined;
+    state.publishedBlockId = undefined;
+    state.publishedCaret = undefined;
+    state.publishedActiveAt = undefined;
+
+    if (suspended) {
+      withdraw();
+    } else {
+      publishBlockId();
+      publishCaret();
+      publishUser();
+      publishActivity();
+      signalActivity();
+      notify();
+    }
   };
 
   /**
@@ -493,8 +543,14 @@ export const createPresence = (options: PresenceOptions): Presence => {
    * are cleared first, or the unchanged block and caret would be skipped.
    */
   const restoreLocalState = (): void => {
+    if (!isAvailable()) {
+      withdraw();
+
+      return;
+    }
     state.publishedBlockId = undefined;
     state.publishedCaret = undefined;
+    state.publishedUser = undefined;
     publishBlockId();
     publishCaret();
     publishUser();
@@ -554,12 +610,25 @@ export const createPresence = (options: PresenceOptions): Presence => {
       }
 
       state.running = true;
+      state.suspended = false;
+      state.publishedUser = undefined;
       state.publishedBlockId = undefined;
       state.publishedCaret = undefined;
       state.publishedActiveAt = undefined;
       state.lastActivitySignalAt = undefined;
       state.unhookAwareness = yjs.onAwarenessChange(onAwarenessChange);
       state.unhookAwarenessUpdate = yjs.onAwarenessUpdate(onAwarenessUpdate);
+
+      if (options.host !== undefined) {
+        state.hostObserver = new MutationObserver(reconcileHost);
+        const ancestors = { current: options.host as HTMLElement | null };
+
+        while (ancestors.current !== null) {
+          state.hostObserver.observe(ancestors.current, { attributes: true, attributeFilter: ['inert'] });
+          ancestors.current = ancestors.current.parentElement;
+        }
+        reconcileHost();
+      }
 
       // Order matters. The block write fires a local-origin update
       // SYNCHRONOUSLY, which is how the client id gets latched — and the id is
@@ -574,8 +643,13 @@ export const createPresence = (options: PresenceOptions): Presence => {
       // A fresh throttle per start: the previous one's clock would suppress the
       // first caret move of a restarted session.
       const publish = throttle(() => {
+        reconcileHost();
+        if (!isAvailable()) {
+          return;
+        }
         publishBlockId();
         publishCaret();
+        publishUser();
         publishActivity();
         signalActivity();
 
@@ -587,6 +661,8 @@ export const createPresence = (options: PresenceOptions): Presence => {
       }, waitMs);
 
       state.onCaretMove = () => {
+        reconcileHost();
+        publishUser();
         publish();
       };
 
@@ -604,6 +680,8 @@ export const createPresence = (options: PresenceOptions): Presence => {
       // Before the listeners go: `throttle` has no `cancel`, so a trailing call
       // can still land after teardown. `running` is what makes it a no-op.
       state.running = false;
+      state.hostObserver?.disconnect();
+      state.hostObserver = null;
 
       if (state.onCaretMove !== null) {
         target.removeEventListener('selectionchange', state.onCaretMove);

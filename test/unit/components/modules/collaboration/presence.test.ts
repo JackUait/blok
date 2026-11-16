@@ -319,6 +319,35 @@ const forgedAwarenessFrame = (clientId: number, clock: number, state: Record<str
 };
 
 describe('presence — local awareness upkeep', () => {
+  it('withdraws cached pages, ignores their document events, and restores the current identity', async () => {
+    const article = document.createElement('article');
+    const host = document.createElement('div'); article.append(host); document.body.append(article);
+    const yjs = new FakeAwareness();
+    const identity = { name: 'Before' };
+    const presence = createPresence({ yjs, host, user: identity, currentBlockId: () => 'block-1', throttleMs: 0 });
+    started.push(presence); presence.start();
+    article.setAttribute('inert', '');
+    await Promise.resolve();
+    expect(yjs.localState().user).toBeNull();
+    expect(yjs.localState().blockId).toBeNull();
+    expect(yjs.localState().caret).toBeNull();
+    const writes = yjs.writes.length;
+    document.dispatchEvent(new Event('selectionchange'));
+    document.dispatchEvent(new Event('focusin'));
+    expect(yjs.writes).toHaveLength(writes);
+    identity.name = 'After'; article.removeAttribute('inert');
+    await Promise.resolve();
+    expect(yjs.localState().user).toMatchObject({ name: 'After' });
+    expect(yjs.localState().blockId).toBe('block-1');
+    const resumedWrites = yjs.writes.length;
+    document.dispatchEvent(new Event('selectionchange'));
+    expect(yjs.writes).toHaveLength(resumedWrites);
+    identity.name = 'Updated'; document.dispatchEvent(new Event('focusin'));
+    expect(yjs.localState().user).toMatchObject({ name: 'Updated' });
+    presence.stop(); article.setAttribute('inert', ''); await Promise.resolve();
+    expect(yjs.localState().user).toMatchObject({ name: 'Updated' });
+    article.remove();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();

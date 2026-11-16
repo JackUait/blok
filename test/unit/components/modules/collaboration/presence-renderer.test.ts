@@ -73,6 +73,7 @@ const setup = (
     isLocalAnonymous?: () => boolean;
     resolvePersonName?: (userId: string) => string | null;
     resolveAgentInput?: (blockId: string, field: string) => number | null;
+    isLocalPerson?: (clientId: number) => boolean;
   } = {}
 ): Harness => {
   const host = document.createElement('div');
@@ -103,6 +104,7 @@ const setup = (
     isLocalAnonymous: options.isLocalAnonymous,
     resolvePersonName: options.resolvePersonName,
     resolveAgentInput: options.resolveAgentInput,
+    isLocalPerson: options.isLocalPerson,
   });
 
   harnesses.push({ host, renderer });
@@ -156,6 +158,19 @@ const face = (holder: HTMLElement): HTMLElement | null =>
   holder.querySelector<HTMLElement>('[data-blok-presence-face]');
 
 describe('presence renderer', () => {
+  it('hides verified sessions of the reader while retaining other people and agents', () => {
+    const verified = new Map([[2, 'me'], [3, 'other'], [5, 'me']]);
+    const h = setup({ isLocalPerson: id => verified.get(id) === 'me' });
+    h.renderer.render([
+      named(2, 'Me elsewhere', 'block-1'),
+      named(3, 'Other', 'block-2'),
+      peer(4, { user: { name: 'Unverified', id: 'me' }, blockId: 'block-2' }),
+      peer(5, { user: { name: 'Agent' }, blockId: 'block-3', agent: { via: 'MCP', onBehalfOf: 'me' } }),
+    ], 1);
+    expect(face(h.holderOf('block-1'))).toBeNull();
+    expect(h.holderOf('block-2').querySelectorAll('[data-blok-presence-face]')).toHaveLength(2);
+    expect(face(h.holderOf('block-3'))).not.toBeNull();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
   });

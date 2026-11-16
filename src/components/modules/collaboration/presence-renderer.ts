@@ -52,6 +52,8 @@ export interface PresenceRendererOptions {
    * tabs, which is the one thing the scheme promises not to do.
    */
   isLocalAnonymous?: () => boolean;
+  /** Uses server-verified membership, never an awareness user's claimed id. */
+  isLocalPerson?: (clientId: number) => boolean;
   /** The display name of the participant with this verified user id, or null. */
   resolvePersonName?: (userId: string) => string | null;
   /** Which input of a block edits a data field, for drawing peers' agents. Omit: block level only. */
@@ -378,8 +380,10 @@ export const createPresenceRenderer = (options: PresenceRendererOptions): Presen
       const selected = selectDrawableStates(states, localClientId);
       const peers = labelAgents(nameTheNameless(selected.map(readPeer), localClientId, options), options);
 
-      avatars.render(peers);
-      carets.render(peers);
+      const otherPeople = peers.filter((entry) => entry.isAgent || options.isLocalPerson?.(entry.clientId) !== true);
+
+      avatars.render(otherPeople);
+      carets.render(otherPeople);
       drawAgents(selected, peers);
       watchReflow();
     },

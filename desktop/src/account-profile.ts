@@ -1,6 +1,7 @@
 import type { CloudClient, CloudUser } from './cloud/client';
 import { serverOrigin, type RemoteWorkspace } from './workspace-registry';
 import { PROFILE_CHANGED, mountProfileEditor, type LocalProfile } from './local-profile';
+import { profileDisplayName } from './profile-identity';
 
 const PREFIX = 'blok:desktop:account-profile:v1:';
 const profiles = new Map<string, CloudUser>();
@@ -25,8 +26,13 @@ export function cacheAccountProfile(ref: RemoteWorkspace, user: CloudUser): void
   window.dispatchEvent(new Event(PROFILE_CHANGED));
 }
 
+export function readAccountIdentity(ref: RemoteWorkspace): LocalProfile {
+  const profile = readAccountProfile(ref);
+  return { name: profileDisplayName(profile?.name, profile?.email?.trim() || ref.userName), photo: profile?.avatarUrl || null };
+}
+
 export function mountAccountProfile(host: HTMLElement, client: CloudClient, ref: RemoteWorkspace, onSaved: (user: CloudUser) => void): { destroy(): void } {
-  let disposed = false; let editor: { destroy(): void } | undefined;
+  const state = { disposed: false, editor: undefined as { destroy(): void } | undefined };
   const status = document.createElement('p'); status.setAttribute('role', 'status'); status.textContent = 'Chargement du profil…';
   const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Réessayer'; retry.hidden = true;
   host.append(status, retry);
@@ -34,24 +40,26 @@ export function mountAccountProfile(host: HTMLElement, client: CloudClient, ref:
     retry.hidden = true; status.textContent = 'Chargement du profil…';
     try {
       const { user } = await client.session();
-      if (disposed) return;
+      if (state.disposed) return;
       cacheAccountProfile(ref, user); onSaved(user);
-      let profile: LocalProfile = { name: user.name ?? '', photo: user.avatarUrl || null };
+      const account: { profile: LocalProfile } = { profile: { name: user.name?.trim() ?? '', photo: user.avatarUrl || null } };
       status.textContent = '';
-      editor = mountProfileEditor(host, {
-        read: () => profile,
+      state.editor = mountProfileEditor(host, {
+        read: () => account.profile,
+        fallbackName: user.email.trim() || ref.userName,
+        nameHelp: 'À défaut, votre adresse e-mail est affichée.',
         async save(value) {
           const updated = await client.updateProfile({ name: value.name.trim(), avatarUrl: value.photo });
           cacheAccountProfile(ref, updated);
-          profile = { name: updated.name ?? '', photo: updated.avatarUrl || null };
-          if (!disposed) onSaved(updated);
+          account.profile = { name: updated.name ?? '', photo: updated.avatarUrl || null };
+          if (!state.disposed) onSaved(updated);
         },
       });
     } catch (error) {
-      if (disposed) return;
+      if (state.disposed) return;
       status.textContent = error instanceof Error ? error.message : 'Profil indisponible.'; retry.hidden = false;
     }
   };
   retry.addEventListener('click', () => { void load(); }); void load();
-  return { destroy() { disposed = true; editor?.destroy(); status.remove(); retry.remove(); } };
+  return { destroy() { state.disposed = true; state.editor?.destroy(); status.remove(); retry.remove(); } };
 }

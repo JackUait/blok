@@ -1,4 +1,5 @@
-import { mountAccountProfile, readAccountProfile } from './account-profile';
+import { mountAccountProfile, readAccountIdentity } from './account-profile';
+import { profileDisplayName, profileInitial } from './profile-identity';
 import { mountLocalProfile, readLocalProfile } from './local-profile';
 import { mountSidebarCustomization } from './sidebar-customization';
 import { mountTeamspaceSettings } from './cloud/teamspace-settings';
@@ -291,10 +292,10 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   navList.append(el('div', 'data-desktop-settings-nav-heading', 'Compte'));
   const accountTab = actionButton('data-desktop-settings-nav-item', currentWorkspace.kind === 'remote' ? currentWorkspace.userName ?? 'Mon compte' : 'Profil local', 'profile');
   const refreshProfileTab = (): void => {
-    const remote = currentWorkspace.kind === 'remote' ? readAccountProfile(currentWorkspace) : undefined;
-    const profile = currentWorkspace.kind === 'local' ? readLocalProfile() : {name: remote?.name || currentWorkspace.userName || '', photo: remote?.avatarUrl || null};
-    const label = el('span', 'data-profile-nav-name', profile.name || (currentWorkspace.kind === 'local' ? 'Profil local' : 'Mon compte'));
-    const avatar = el('span', 'data-profile-nav-avatar', Array.from(profile.name || 'Vous')[0]?.toUpperCase() ?? 'V');
+    const profile = currentWorkspace.kind === 'local' ? readLocalProfile() : readAccountIdentity(currentWorkspace);
+    const displayName = profileDisplayName(profile.name);
+    const label = el('span', 'data-profile-nav-name', displayName);
+    const avatar = el('span', 'data-profile-nav-avatar', profileInitial(displayName));
     avatar.setAttribute('aria-hidden', 'true');
     if (profile.photo) { const image = document.createElement('img'); image.src = profile.photo; image.alt = ''; avatar.replaceChildren(image); }
     accountTab.replaceChildren(avatar, label);

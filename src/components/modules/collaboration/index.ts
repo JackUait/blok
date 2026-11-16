@@ -833,6 +833,7 @@ export class Collaboration extends Module {
       // the reader occupies a silhouette here exactly when their peers give
       // them one.
       isLocalAnonymous: () => (settings.user?.name ?? '').trim() === '',
+      isLocalPerson: (clientId) => settings.userId !== undefined && this.identities.get(clientId) === settings.userId,
       resolvePersonName: (userId) => this.personNameFor(userId),
       // Null until the agent code loads; then one redraw places the cursor for real.
       resolveAgentInput: (blockId, field) => this.Blok.AgentAPI.inputIndexFor(blockId, field, redrawPresence),
@@ -867,6 +868,7 @@ export class Collaboration extends Module {
 
     this.presence = createPresence({
       yjs: this.Blok.YjsManager,
+      host: this.Blok.UI.nodes.wrapper,
       user: settings.user,
       userId: settings.userId,
       currentBlockId: () => this.Blok.BlockManager.currentBlock?.id ?? null,
@@ -918,11 +920,11 @@ export class Collaboration extends Module {
       // revoked it — e.g. `CollabRoom.RecordAwarenessOwnersLocked` sends a
       // SHRUNK map when a client id's ownership moves to a differently
       // verified (or unverified) membership. Merging would keep drawing that
-      // connection as the person it used to belong to. `buildParticipants`
-      // only reads the field at emit time, so reassigning it here is enough
-      // — nothing else has to be told.
+      // connection as the person it used to belong to. Both participant rows
+      // and the renderer's same-person filter read this verified mapping.
       onVerifiedIdentities: (identities) => {
         this.identities = new Map(identities.map(({ clientId, actorId }) => [clientId, actorId]));
+        this.presence?.redraw();
         this.emitStatus();
       },
       // The provider issues two store writes of its own — the post-drain

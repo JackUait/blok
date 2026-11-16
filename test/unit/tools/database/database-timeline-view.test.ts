@@ -1886,6 +1886,19 @@ describe('DatabaseTimelineView', () => {
       expect(handlers.addRow).toHaveBeenCalledWith(null, {});
     });
 
+    // notion-motion.md Round 50 §3: an all-day bar's edge drag at Day zoom turns it timed, by 15 minutes.
+    it('turns an all-day bar timed when its edge is dragged', () => {
+      const { root, handlers } = mountDay({ groups: single([row('r1', 'Gamma', '2026-10-09')]) });
+      const handle = bar(root, 'r1').querySelector<HTMLElement>('[data-blok-database-timeline-resize="end"]');
+
+      if (handle === null) throw new Error('no handle');
+      pointer('pointerdown', handle, at(24 * 60), 50);
+      pointer('pointermove', document, at(24 * 60) + 30, 50);
+      pointer('pointerup', document, at(24 * 60) + 30, 50);
+
+      expect(handlers.writeDates).toHaveBeenCalledWith('r1', { start: '2026-10-09T00:00/2026-10-10T00:30' });
+    });
+
     // B6: from 8:30, +18px → 8:45, +10px → 9:00, +25px → 9:30.
     it.each([
       [18, '2026-10-09T05:30/2026-10-09T08:45'],

@@ -24,6 +24,7 @@ import {
   newTimedBarWrite,
   offscreenSide,
   resizeBar,
+  resizeAllDayByMinutes,
   resizeBarByMinutes,
   SNAP_MINUTES,
   snapMinutes,
@@ -1742,7 +1743,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     const deltaDays = daysBetween(drag.grabDay, drag.overDay);
     const deltaMinutes = snapMinutes((drag.overPx - drag.grabPx) / (this.dayWidth / DAY_MINUTES));
 
-    // notion-motion.md Round 48 A9: Day zoom moves snap to 15 minutes. Round 49 B6: so does a timed bar's resize; all-day resize is unread.
+    // notion-motion.md Round 48 A9: Day zoom moves snap to 15 minutes. Round 49 B6: so does a timed bar's resize. Round 50 §3: an all-day one turns timed.
     if (this.zoom === 'day' && drag.mode === 'move') {
       return moveBarByMinutes(values, deltaMinutes);
     }
@@ -1752,7 +1753,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
     return drag.mode === 'move'
       ? moveBar(values, deltaDays, deltaMinutes)
-      : resizeBarByMinutes(values, drag.mode, deltaMinutes) ?? resizeBar(values, drag.mode, drag.overDay);
+      : resizeBarByMinutes(values, drag.mode, deltaMinutes)
+        ?? (this.zoom === 'day' ? resizeAllDayByMinutes(values, drag.mode, deltaMinutes) : resizeBar(values, drag.mode, drag.overDay));
   }
 
   private valuesAfter(drag: BarDrag): BarValues | null {

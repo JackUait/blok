@@ -9,6 +9,7 @@ import {
   moveBarByMinutes,
   offscreenSide,
   resizeBar,
+  resizeAllDayByMinutes,
   resizeBarByMinutes,
   snapMinutes,
   timedEdges,
@@ -210,6 +211,24 @@ describe('timeline-dates', () => {
 
     it('writes nothing for a zero move', () => {
       expect(moveBarByMinutes({ start: '2026-11-18', end: undefined }, 0)).toEqual({});
+    });
+  });
+
+  // notion-motion.md Round 50 §3: all day Nov 18, right edge +30px at Day zoom read "Nov 18, 12:00 AM → Nov 19, 12:30 AM".
+  describe('resizeAllDayByMinutes', () => {
+    it('turns an all-day range timed, midnight to midnight, then moves the dragged edge', () => {
+      expect(resizeAllDayByMinutes({ start: '2026-11-18', end: undefined }, 'end', 30)).toEqual({ start: '2026-11-18T00:00/2026-11-19T00:30' });
+      expect(resizeAllDayByMinutes({ start: '2026-11-18/2026-11-20', end: undefined }, 'start', -15)).toEqual({ start: '2026-11-17T23:45/2026-11-21T00:00' });
+    });
+
+    it('writes both timed edges when the view has an end property', () => {
+      expect(resizeAllDayByMinutes({ start: '2026-11-18', end: '2026-11-20' }, 'end', 30)).toEqual({ start: '2026-11-18T00:00', end: '2026-11-21T00:30' });
+      expect(resizeAllDayByMinutes({ start: '2026-11-18', end: null }, 'end', 30)).toEqual({ start: '2026-11-18T00:00', end: '2026-11-19T00:30' });
+    });
+
+    it('writes nothing for a zero drag, so a press alone keeps the bar all day', () => {
+      expect(resizeAllDayByMinutes({ start: '2026-11-18', end: undefined }, 'end', 0)).toEqual({});
+      expect(resizeAllDayByMinutes({ start: null, end: undefined }, 'end', 30)).toEqual({});
     });
   });
 

@@ -204,6 +204,12 @@ export const moveBar = (values: BarValues, deltaDays: number, deltaMinutes?: num
   return { ...(start !== null ? { start } : {}), ...(end !== null ? { end } : {}) };
 };
 
+/** An all-day part as its first midnight; a timed part as it is. */
+const midnightOf = (part: string): string => (TIMED_PART.test(part) ? part : `${part.slice(0, 10)}T00:00`);
+
+/** An all-day part as the midnight after it; a timed part as it is. */
+const midnightAfter = (part: string): string => (TIMED_PART.test(part) ? part : `${addDays(part.slice(0, 10), 1)}T00:00`);
+
 /**
  * Day zoom: moves a bar by minutes. An all-day bar becomes timed, from
  * midnight of its first day to midnight after its last (notion-motion.md
@@ -218,8 +224,8 @@ export const moveBarByMinutes = (values: BarValues, deltaMinutes: number): BarWr
   }
 
   const shift = (part: string): string => shiftPartByMinutes(part, deltaMinutes);
-  const startOf = (part: string): string => shift(TIMED_PART.test(part) ? part : `${part.slice(0, 10)}T00:00`);
-  const endOf = (part: string): string => shift(TIMED_PART.test(part) ? part : `${addDays(part.slice(0, 10), 1)}T00:00`);
+  const startOf = (part: string): string => shift(midnightOf(part));
+  const endOf = (part: string): string => shift(midnightAfter(part));
 
   if (values.end === undefined) {
     if (startValue.hasTime && startValue.end === undefined) {
@@ -287,6 +293,30 @@ export const resizeBarByMinutes = (values: BarValues, edge: 'start' | 'end', del
   }
 
   return edge === 'start' ? { start } : { end };
+};
+
+/**
+ * Day zoom: drags one edge of an all-day bar by minutes. The bar turns timed,
+ * midnight to midnight, and both edges are written (notion-motion.md Round 50 §3).
+ */
+export const resizeAllDayByMinutes = (values: BarValues, edge: 'start' | 'end', deltaMinutes: number): BarWrite => {
+  const span = timelineSpan(values.start, values.end);
+  const startValue = parseDateValue(values.start);
+
+  if (deltaMinutes === 0 || span === null || startValue === null) {
+    return {};
+  }
+
+  const start = midnightOf(startValue.start);
+  const end = midnightAfter(values.end === undefined ? startValue.end ?? startValue.start : parseDateValue(values.end)?.start ?? span.end);
+  const timed: BarValues = values.end === undefined ? { start: `${start}/${end}`, end: undefined } : { start, end };
+  const write = resizeBarByMinutes(timed, edge, deltaMinutes);
+
+  if (write === null || Object.keys(write).length === 0) {
+    return {};
+  }
+
+  return values.end === undefined ? write : { start, end, ...write };
 };
 
 /** Drags one edge to `toDay`. The edge stops at the other edge. */

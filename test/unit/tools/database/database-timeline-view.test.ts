@@ -559,7 +559,7 @@ describe('DatabaseTimelineView', () => {
     });
 
     // timeline.png / tlcollapse.png: the days keep their x when the table toggles.
-    it('hands the toggle where the first day sits, measured from the view\'s start', () => {
+    it('hands the toggle where the first day sits on the window', () => {
       const { root, handlers } = mount({ view: timelineView({ showTimelineTable: true }) });
       const el = scroller(root);
 
@@ -567,17 +567,38 @@ describe('DatabaseTimelineView', () => {
       rect(el, 380, 0, 720, 400);
       el.scrollLeft = 600;
       root.querySelector<HTMLElement>('[data-blok-database-timeline-table-toggle]')?.click();
-      expect(handlers.toggleTable).toHaveBeenCalledWith({ start: '2026-07-01', at: -320 });
+      expect(handlers.toggleTable).toHaveBeenCalledWith({ start: '2026-07-01', at: -220 });
     });
 
     it('a draw handed that place scrolls so the first day sits there again', async () => {
-      const { root } = mount({ origin: { start: '2026-07-01', at: -320 } });
+      const { root } = mount({ origin: { start: '2026-07-01', at: -220 } });
       const el = scroller(root);
 
       rect(root, 100, 0, 1000, 400);
       rect(el, 100, 0, 1000, 400);
       await Promise.resolve();
       expect(el.scrollLeft).toBe(320);
+    });
+
+    // notion-motion.md Round 46 B "Opening the panel": dates keep their window x. The view's own box moves when the panel opens.
+    it.each([
+      { name: 'opening', before: { root: 531, chart: 531 }, after: { root: 270, chart: 646 }, expected: 2686 + 115 },
+      { name: 'closing', before: { root: 270, chart: 646 }, after: { root: 531, chart: 531 }, expected: 2686 - 115 },
+    ])('$name the table keeps every day at the same window x, though the view\'s box moves', async ({ before, after, expected }) => {
+      const first = mount();
+
+      rect(first.root, before.root, 0, 1230, 400);
+      rect(scroller(first.root), before.chart, 0, 708, 400);
+      await Promise.resolve();
+      scroller(first.root).scrollLeft = 2686;
+      first.root.querySelector<HTMLElement>('[data-blok-database-timeline-table-toggle]')?.click();
+      const handed = vi.mocked(first.handlers.toggleTable).mock.calls[0]?.[0];
+      const second = mount({ origin: handed });
+
+      rect(second.root, after.root, 0, 1230, 400);
+      rect(scroller(second.root), after.chart, 0, 708, 400);
+      await Promise.resolve();
+      expect(scroller(second.root).scrollLeft).toBe(expected);
     });
 
     it('a place from another window is ignored: the draw centres as usual', async () => {

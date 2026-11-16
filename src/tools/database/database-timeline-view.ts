@@ -80,7 +80,7 @@ export interface TimelineHandlers {
   openCalculationMenu?: (anchor: HTMLElement, propertyId: string) => void;
 }
 
-/** Where the drawn window's first day sits: px from the view's inline start. */
+/** Where the drawn window's first day sits: px on the window's inline axis. */
 export interface TimelineOrigin {
   start: string;
   at: number;
@@ -277,7 +277,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
       if (origin?.start === this.window.start) {
         this.recentring = true;
-        this.scrollStart = Math.max(0, this.chartInset() - origin.at);
+        this.scrollStart = Math.max(0, this.chartStart() - origin.at);
         this.recentring = false;
         this.refreshOffscreen();
       } else if (this.zoom === 'hours' && this.options.center === this.options.today) {
@@ -1100,16 +1100,18 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
   }
 
-  /** The scroller's distance from the view's inline start. */
-  private chartInset(): number {
-    const view = this.root?.getBoundingClientRect();
+  /**
+   * The scroller's inline start in window px, negated in RTL.
+   * Not measured from the view: its box widens to the left when the table panel opens.
+   */
+  private chartStart(): number {
     const chart = this.scroller?.getBoundingClientRect();
 
-    if (view === undefined || chart === undefined) {
+    if (chart === undefined) {
       return 0;
     }
 
-    return this.rtl ? view.right - chart.right : chart.left - view.left;
+    return this.rtl ? -chart.right : chart.left;
   }
 
   private scrollToDay(day: string, align: 'center' | 'start' | 'end'): void {
@@ -1222,7 +1224,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
 
     const actions: Array<[string, (el: Element) => void]> = [
-      ['[data-blok-database-timeline-table-toggle]', () => handlers.toggleTable({ start: this.window.start, at: this.chartInset() - this.scrollStart })],
+      ['[data-blok-database-timeline-table-toggle]', () => handlers.toggleTable({ start: this.window.start, at: this.chartStart() - this.scrollStart })],
       ['[data-blok-database-timeline-zoom]', (el) => {
         if (el instanceof HTMLElement) {
           handlers.openZoomMenu(el);

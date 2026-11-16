@@ -77,6 +77,8 @@ const OPEN_LABEL_MIN_WIDTH = 102;
 const OPEN_INSET = 4;
 /** notion-motion.md Round 46 §A: the frozen block sticks this far in from the scroller's edge (x 300, scroller at 270). The scroller's clip-path in database.css uses the same 30px. */
 const FROZEN_STICK_INSET = 30;
+/** notion-motion.md Round 47 §B6: Notion's shadow comes on at 268, 29 after the stick (239). A fit to the measured numbers. */
+const FROZEN_SHADOW_AFTER_STICK = 29;
 
 /**
  * A narrow title column shows an icon-only OPEN (notion-motion.md Round 27 §2, Round 28 §1): below Notion's 102,
@@ -484,13 +486,13 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     const scroller = document.createElement('div');
 
     scroller.setAttribute('data-blok-database-table-scroller', '');
-    // notion-motion.md Round 29 §5: the frozen shadow shows once content slides under the frozen block, so once it sticks.
-    // The attribute also clips the strip before the block (database.css). RTL scrolls negative.
+    // `data-scrolled` clips the strip before the stuck block; `data-frozen-shadow` shows its shadow (database.css). RTL scrolls negative.
     const frozen = this.columns.some((column) => column.frozenAt !== undefined);
     const markStuck = (): void => {
       const offset = Math.abs(scroller.scrollLeft);
 
       scroller.toggleAttribute('data-scrolled', frozen && offset !== 0 && offset >= this.stickAt);
+      scroller.toggleAttribute('data-frozen-shadow', frozen && offset !== 0 && offset >= this.stickAt + FROZEN_SHADOW_AFTER_STICK);
     };
 
     scroller.addEventListener('scroll', markStuck, { passive: true });

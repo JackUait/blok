@@ -557,6 +557,23 @@ describe('DatabaseTableView', () => {
       expect(scroller.hasAttribute('data-scrolled')).toBe(true);
     });
 
+    // notion-motion.md Round 47 §B6: the stick (239) clips the strip, but Notion's shadow comes on at 268, 29 later.
+    it('casts the frozen shadow from 29px after the stick, both ways and in right-to-left', () => {
+      const { scroller } = mountPadded(269, tableView({ frozenColumnCount: 1 }));
+
+      scrollTo(scroller, 239);
+      expect(scroller.hasAttribute('data-scrolled')).toBe(true);
+      expect(scroller.hasAttribute('data-frozen-shadow')).toBe(false);
+      scrollTo(scroller, 267);
+      expect(scroller.hasAttribute('data-frozen-shadow')).toBe(false);
+      scrollTo(scroller, 268);
+      expect(scroller.hasAttribute('data-frozen-shadow')).toBe(true);
+      scrollTo(scroller, 0);
+      expect(scroller.hasAttribute('data-frozen-shadow')).toBe(false);
+      scrollTo(scroller, -268);
+      expect(scroller.hasAttribute('data-frozen-shadow')).toBe(true);
+    });
+
     it('never marks a table with no frozen column, so nothing clips its edge', () => {
       const { scroller } = mountPadded(269, tableView());
 

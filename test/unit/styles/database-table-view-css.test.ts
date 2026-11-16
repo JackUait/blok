@@ -271,17 +271,29 @@ describe('database table view styles', () => {
     expect(box).toMatch(/float:\s*inline-start/);
     expect(box).toMatch(/width:\s*22px/);
     expect(box).toMatch(/height:\s*22px/);
-    expect(box).toContain('margin-block-start: calc(-1 * var(--blok-space-0-5))');
     expect(box).toContain('margin-inline: calc(-1 * var(--blok-space-0-5)) var(--blok-space-0-75)');
     expect(ruleBody('[data-blok-database-table-cell] > [data-blok-database-page-icon-placeholder]')).toContain('var(--blok-database-table-title-icon)');
     expect(ruleBody('[data-blok-database-page-icon-placeholder] svg')).toMatch(/width:\s*18px/);
   });
 
   // notion-motion.md Round 46 §A: Notion's name glyph sits 9.5 under the row top, 2 lower than the -2 box puts it.
-  // The 2px comes off the bottom instead, so the row stays 37 tall.
-  it('sets the blank name glyph 2px lower without growing the row', () => {
-    expect(exactRule('[data-blok-database-table-cell] > [data-blok-database-page-icon-placeholder]'))
-      .toContain('margin-block: 0 calc(-1 * var(--blok-space-0-5))');
+  // Round 47 §B8: an own emoji icon's 22 box sits at row + 7.5 too. The 2px comes off the bottom, so the row stays 37 tall.
+  it.each([
+    '[data-blok-database-table-cell] > [data-blok-database-page-icon-placeholder]',
+    '[data-blok-database-table-cell] > [data-blok-database-page-icon]',
+  ])('sets %s 2px lower without growing the row', (selector) => {
+    const box = ruleBody(selector);
+
+    expect(box).toContain('margin-block: 0 calc(-1 * var(--blok-space-0-5))');
+    expect(box).not.toContain('margin-block-start');
+  });
+
+  // notion-motion.md Round 47 §B8: Notion's emoji is `font-size: 18px; line-height: 1`.
+  it('draws an emoji page icon at 18px', () => {
+    const icon = exactRule('[data-blok-database-table-cell] > [data-blok-database-page-icon]');
+
+    expect(icon).toMatch(/font-size:\s*18px/);
+    expect(icon).toMatch(/line-height:\s*1;/);
   });
 
   it('draws the header bottom line on the header cells and no dividers between them (Notion: border-right none)', () => {
@@ -561,7 +573,8 @@ describe('database table frozen edge', () => {
     expect(shadow).toMatch(steps);
     expect(shadow).toMatch(/box-shadow:\s*var\(--blok-database-frozen-shadow\)/);
     expect(shadow).toMatch(/transition:\s*--blok-database-frozen-shadow-on 200ms ease(;|$)/);
-    expect(ruleBody('[data-blok-database-table-scroller][data-scrolled] [data-frozen-edge]')).toMatch(/--blok-database-frozen-shadow-on:\s*1(;|$)/);
+    expect(ruleBody('[data-blok-database-table-scroller][data-frozen-shadow] [data-frozen-edge]')).toMatch(/--blok-database-frozen-shadow-on:\s*1(;|$)/);
+    expect(ruleBody('[data-blok-database-table-scroller][data-scrolled] [data-frozen-edge]')).toBe('');
     expect(ruleBody('[data-blok-database-table-grid] [data-frozen][data-frozen-edge]')).not.toMatch(/box-shadow|transition|animation/);
   });
 

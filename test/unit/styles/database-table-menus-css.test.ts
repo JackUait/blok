@@ -687,6 +687,8 @@ describe('icon-only OPEN', () => {
 
     expect(declared(open, 'width')).toEqual(['30px']);
     expect(declared(open, 'padding')).toEqual(['var(--blok-space-0-5)']);
+    // notion-motion.md Round 47 §B8: the frame sits 4 in from the cell end, as the wide pill does (Notion x 604).
+    expect(declared(open, 'inset-inline-end')).toEqual(['var(--blok-space-1)']);
     expect(declared(`${open} > span[aria-hidden="true"]`, 'width')).toEqual(['26px']);
     expect(declared(`${open} > span[aria-hidden="true"]`, 'height')).toEqual(['20px']);
     expect(declared(`${open} > span:last-child`, 'clip-path')).toEqual(['inset(50%)']);
@@ -768,5 +770,14 @@ describe('header "+" Select icon (Round 44)', () => {
     expect(declared(ICON, 'border')).toEqual(['none']);
     expect(declared(ICON, 'color')).toEqual(['var(--blok-database-type-icon)']);
     expect(declared(`${ICON} svg`, 'width')).toEqual(['19.2px']);
+  });
+});
+
+// notion-motion.md Round 47 §D: the divider after the sort chip sits 12 from each chip (621.3 | 633.3 | 646.3):
+// the bar's 6 gap plus a 6 margin on each side.
+describe('toolbar chip divider', () => {
+  it('sits 12px clear of the chips on each side', () => {
+    expect(declared('[data-blok-database-filter-pills]', 'gap')).toEqual(['var(--blok-space-1-5)']);
+    expect(declared('[data-blok-database-filter-pills] > [data-blok-database-chip-divider]', 'margin-inline')).toEqual(['var(--blok-space-1-5)']);
   });
 });

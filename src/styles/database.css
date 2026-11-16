@@ -9801,14 +9801,16 @@ textarea[data-blok-database-cell-input] {
   justify-content: center;
   width: 22px;
   height: 22px;
-  margin-block-start: calc(-1 * var(--blok-space-0-5));
+  /* notion-motion.md Round 46 §A, Round 47 §B8: the box sits at row + 7.5. The 2px comes off the bottom so the row stays 37. */
+  margin-block: 0 calc(-1 * var(--blok-space-0-5));
   margin-inline: calc(-1 * var(--blok-space-0-5)) var(--blok-space-0-75);
   color: var(--blok-database-table-title-icon);
 }
 
-/* notion-motion.md Round 46 §A: Notion's glyph sits 2 lower. The 2px comes off the bottom so the row stays 37. */
-[data-blok-database-table-cell] > [data-blok-database-page-icon-placeholder] {
-  margin-block: 0 calc(-1 * var(--blok-space-0-5));
+/* notion-motion.md Round 47 §B8: Notion's emoji. */
+[data-blok-database-table-cell] > [data-blok-database-page-icon] {
+  font-size: 18px;
+  line-height: 1;
 }
 
 [data-blok-database-page-icon-placeholder] svg {
@@ -9955,7 +9957,7 @@ textarea[data-blok-database-cell-input] {
   transition: --blok-database-frozen-shadow-on 200ms ease;
 }
 
-[data-blok-database-table-scroller][data-scrolled] [data-frozen-edge] {
+[data-blok-database-table-scroller][data-frozen-shadow] [data-frozen-edge] {
   --blok-database-frozen-shadow-on: 1;
 }
 
@@ -10045,7 +10047,7 @@ textarea[data-blok-database-cell-input] {
    frame around a 26x20 button. The label stays, hidden, as the button's name. Only the inner button takes the
    pointer, so the fill stays inside it and a press on the 2px frame reaches the title cell, as in Notion. */
 [data-blok-database-table-open][data-compact] {
-  inset-inline-end: 6px;
+  inset-inline-end: var(--blok-space-1);
   justify-content: center;
   width: 30px;
   padding: var(--blok-space-0-5);
@@ -11680,6 +11682,11 @@ button[data-blok-database-table-group-count]:hover {
   width: 1px;
   height: 24px;
   background-color: var(--blok-database-table-border);
+}
+
+/* notion-motion.md Round 47 §D: 12 from each chip, with the bar's 6 gap. */
+[data-blok-database-filter-pills] > [data-blok-database-chip-divider] {
+  margin-inline: var(--blok-space-1-5);
 }
 
 /* Notion paints a pill with a value blue; Blok's selected tokens keep it gray (D3). */

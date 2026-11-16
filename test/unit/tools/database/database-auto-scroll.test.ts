@@ -67,6 +67,16 @@ describe('database drag auto-scroll speeds (notion-motion.md Round 17 §1)', () 
     expect(cardAutoScrollSpeed(51)).toBe(0);
     expect(cardAutoScrollSpeed(53)).toBe(0);
   });
+
+  // notion-motion.md Round 54 §2: the zone is about 8 % of the scroller's width.
+  it.each([
+    [337, 26, 27],
+    [630, 49, 51],
+    [1242, 98, 102],
+  ])('board cards: a %ipx board scrolls at %ipx from its edge and not at %ipx', (width, inside, outside) => {
+    expect(cardAutoScrollSpeed(inside, width)).toBeGreaterThan(0);
+    expect(cardAutoScrollSpeed(outside, width)).toBe(0);
+  });
 });
 
 /** notion-motion.md Round 17 §1: the move that enters the zone does not start the scroll; the next one inside it does. */
@@ -198,12 +208,12 @@ describe('database drags scroll near an edge', () => {
     expect(scroller.scrollTop).toBe(at);
   });
 
-  const boardFixture = (): { board: HTMLElement; card: HTMLElement; drag: DatabaseCardDrag } => {
+  const boardFixture = (width = 630): { board: HTMLElement; card: HTMLElement; drag: DatabaseCardDrag } => {
     const board = document.createElement('div');
 
     board.setAttribute('data-blok-database-board', '');
     makeScroller(board, 'x', 146);
-    stubRect(board, () => rect(270, 100, 630, 400));
+    stubRect(board, () => rect(270, 100, width, 400));
     const column = document.createElement('div');
 
     column.setAttribute('data-blok-database-column', '');
@@ -261,6 +271,28 @@ describe('database drags scroll near an edge', () => {
     runFrames(0, 240);
 
     expect(board.scrollLeft).toBe(0);
+  });
+
+  // notion-motion.md Round 54 §2: 337 wide scrolls from 26px in, 1242 wide from 98px.
+  it('a narrow board does not scroll 30px from its right edge', () => {
+    const { board, card, drag } = boardFixture(337);
+
+    drag.beginTracking('c1', 300, 170, card);
+    enter(270 + 337 - 30, 170, 'x');
+    runFrames(0, 240);
+
+    expect(board.scrollLeft).toBe(0);
+  });
+
+  it('a wide board scrolls 90px from its right edge', () => {
+    vi.stubGlobal('innerWidth', 1600);
+    const { board, card, drag } = boardFixture(1242);
+
+    drag.beginTracking('c1', 300, 170, card);
+    enter(270 + 1242 - 90, 170, 'x');
+    runFrames(0, 240);
+
+    expect(board.scrollLeft).toBeGreaterThan(0);
   });
 
   it('Escape stops the board scroll', () => {

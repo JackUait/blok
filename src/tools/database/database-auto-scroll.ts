@@ -29,11 +29,18 @@ const VERTICAL = ramp([[1, 1.39], [5, 1.11], [10, 0.74], [20, 0.33], [32, 0.081]
 export const listAutoScrollSpeed = VERTICAL;
 export const rowAutoScrollSpeed = VERTICAL;
 
+/** notion-motion.md Round 18 §1: a 630px board's right edge, nothing at 51px. */
+const CARD_RAMP = ramp([[1, 1.83], [4, 1.64], [9, 1.3], [19, 0.82], [34, 0.37], [49, 0.076], [51, 0]]);
+const CARD_RAMP_WIDTH = 630;
+
 /**
- * Board cards near the board's side. notion-motion.md Round 18 §1, the right
- * edge: nothing at 51px. The left edge has the same 50px zone (Round 17 §1).
+ * Board cards near the board's side. notion-motion.md Round 54 §2: the zone is
+ * 8 % of the board's width (26px at 337, 49..51 at 630, 98..102 at 1242).
+ * Hypothesis: the 630 curve stretches with the zone; Notion's speeds at
+ * other widths are only partly read.
  */
-export const cardAutoScrollSpeed = ramp([[1, 1.83], [4, 1.64], [9, 1.3], [19, 0.82], [34, 0.37], [49, 0.076], [51, 0]]);
+export const cardAutoScrollSpeed = (distance: number, width = CARD_RAMP_WIDTH): number =>
+  distance > width * 0.08 ? 0 : CARD_RAMP(distance * CARD_RAMP_WIDTH / width);
 
 /**
  * Board cards near the page's top or bottom. notion-motion.md Round 30 §5: about
@@ -96,10 +103,15 @@ class SecondMoveAutoScroll extends AutoScroll {
 export const createDatabaseAutoScroll = (
   from: HTMLElement,
   axis: 'x' | 'y',
-  speed: (distance: number) => number,
+  speedAt: (distance: number, size: number) => number,
   onStep: () => void
 ): AutoScroll => {
   const scroller = findScrollableAncestor(from, axis);
+  const speed = (distance: number): number => {
+    const rect = scroller?.getBoundingClientRect() ?? { width: window.innerWidth, height: window.innerHeight };
+
+    return speedAt(distance, axis === 'y' ? rect.height : rect.width);
+  };
   const bounds = (): { start: number; end: number } => {
     const size = axis === 'y' ? window.innerHeight : window.innerWidth;
 

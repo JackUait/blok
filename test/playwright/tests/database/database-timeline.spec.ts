@@ -406,7 +406,8 @@ test.describe('timeline', () => {
     }
   });
 
-  // motion-r6-timelinepanel.json: panel y 309 h 460, « y 317, view box ends at 769 too; white with a soft shadow.
+  // Notion: the card starts 4 under the view top (motion-r6-timelinepanel.json panel 309 in a 305 view; Round 47 A4
+  // content at 309.2 under a 305.2 scroller). « ink is 16 at 323.7 (Round 46 B, r46-n-tltool-svg.raw), 14.5 into the card.
   test('the table panel is a white card from above « to the chart\'s bottom', async ({ page }) => {
     await mount(page, blocks({ type: 'timeline', showTimelineTable: true }));
 
@@ -414,12 +415,15 @@ test.describe('timeline', () => {
       await page.setViewportSize({ width, height: 717 });
       const panelLocator = page.locator('[data-blok-database-timeline-table]');
       const panel = await panelLocator.boundingBox();
+      const view = await page.locator('[data-blok-database-timeline]').boundingBox();
       const toggle = await page.locator('[data-blok-database-timeline-table-toggle]').boundingBox();
+      const ink = await page.locator('[data-blok-database-timeline-table-toggle] svg').boundingBox();
       const scroller = await page.locator('[data-blok-database-timeline-scroller]').boundingBox();
       const canvas = await page.locator('[data-blok-database-timeline-canvas]').boundingBox();
 
-      if (panel === null || toggle === null || scroller === null || canvas === null) throw new Error('no layout');
-      expect(toggle.y - panel.y).toBeCloseTo(8, 0);
+      if (panel === null || view === null || toggle === null || ink === null || scroller === null || canvas === null) throw new Error('no layout');
+      expect(panel.y - view.y).toBeCloseTo(4, 0);
+      expect(ink.y - panel.y).toBeCloseTo(14.5, 0);
       expect(panel.y + panel.height).toBeCloseTo(scroller.y + scroller.height, 0);
       // The weekend stripes and today line run to the bottom too.
       expect(canvas.y + canvas.height).toBeCloseTo(scroller.y + scroller.height - 1, 0);
@@ -493,18 +497,21 @@ test.describe('timeline', () => {
   });
 
   // notion-motion.md Round 25 §4: the ghost click makes a 5-day bar on the hovered day, named in place, no peek.
+  // Round 46 B "Initial scroll" and Round 47 A1: Month opens with now in the middle, so only a few days either side show.
   test('a click on the "+ New" lane ghost adds a 5-day bar on the hovered day and names it in place', async ({ page }) => {
     await mount(page, blocks({ type: 'timeline' }));
 
     const first = await bar(page, 'r1').boundingBox();
     const lane = await page.locator('[data-blok-database-timeline-new-lane]').boundingBox();
+    const scroller = await page.locator('[data-blok-database-timeline-scroller]').boundingBox();
 
-    if (first === null || lane === null) throw new Error('no layout');
-    // r1 is on Oct 9; a month-zoom day is 40px wide. Oct 20 is 11 days later.
-    const x = first.x - 1.5 + 11 * 40 + 20;
+    if (first === null || lane === null || scroller === null) throw new Error('no layout');
+    // r1 is on Oct 9; a month-zoom day is 40px wide. Oct 14 is 5 days later.
+    const x = first.x - 1.5 + 5 * 40 + 20;
 
+    expect(x).toBeLessThan(scroller.x + scroller.width);
     await page.mouse.move(x, lane.y + lane.height / 2);
-    await expect(page.locator('[data-blok-database-timeline-new-ghost]')).toHaveAttribute('data-day', '2026-10-20');
+    await expect(page.locator('[data-blok-database-timeline-new-ghost]')).toHaveAttribute('data-day', '2026-10-14');
     await page.mouse.click(x, lane.y + lane.height / 2);
 
     const input = page.getByPlaceholder('Type a name…');
@@ -522,7 +529,7 @@ test.describe('timeline', () => {
       return (row?.data as { properties: Record<string, unknown> } | undefined)?.properties['p-due'];
     });
 
-    expect(due).toBe('2026-10-20/2026-10-24');
+    expect(due).toBe('2026-10-14/2026-10-18');
     await expect(drawer(page)).not.toBeVisible();
   });
 

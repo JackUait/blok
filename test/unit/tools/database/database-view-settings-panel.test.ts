@@ -1065,6 +1065,28 @@ describe('view settings panel', () => {
         expect(hiddenIds()).toEqual(expect.arrayContaining(['due', 'num']));
       });
 
+      // notion-motion.md Round 39 §5: pressing Hide all keeps focus in the search when it is there;
+      // from anywhere else the press focuses the button, as any button. The press's default action moves focus.
+      it('keeps focus in the search when Hide all is pressed from it', () => {
+        harness({ properties: [{ id: 'title', visible: true }, { id: 'due', visible: false }] }).open('properties');
+        q('database-property-search')?.focus();
+        const press = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+
+        q('database-property-hide-all')?.dispatchEvent(press);
+        expect(press.defaultPrevented).toBe(true);
+        click('database-property-hide-all');
+        expect(q('database-property-search')).toHaveFocus();
+      });
+
+      it('lets Hide all take focus when the search does not have it', () => {
+        harness({ properties: [{ id: 'title', visible: true }, { id: 'due', visible: false }] }).open('properties');
+        eye('due')?.focus();
+        const press = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+
+        q('database-property-hide-all')?.dispatchEvent(press);
+        expect(press.defaultPrevented).toBe(false);
+      });
+
       // notion-motion.md Round 36 §1: focus goes to the search after Show all and after Hide all.
       it('focuses the search after Show all', () => {
         harness({ properties: [{ id: 'due', visible: false }, { id: 'num', visible: true }] }).open('properties');

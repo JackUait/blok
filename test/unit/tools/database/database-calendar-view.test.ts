@@ -934,6 +934,18 @@ describe('DatabaseCalendarView', () => {
       return anchor;
     };
 
+    // notion-motion.md Round 46 §B "No date (1)": Notion's popover opens 4 under the toolbar button.
+    it('opens the panel 4px under the button', () => {
+      const { view } = mount();
+      const anchor = document.createElement('button');
+
+      document.body.appendChild(anchor);
+      anchor.getBoundingClientRect = () => new DOMRect(1100, 275, 80, 24);
+      view.noDateControl()?.open(anchor);
+
+      expect(panel()?.closest<HTMLElement>('[data-blok-popover]')?.style.top).toBe('303px');
+    });
+
     it('leaves the month bar to the arrows: the count is a control for the database toolbar', () => {
       const { root, view } = mount();
 

@@ -446,6 +446,60 @@ test.describe('side peek width', () => {
     await expect(peek(page)).toHaveAttribute('data-peek-mode', 'center');
     await expect(peek(page).getByRole('separator', { name: 'Side peek' })).toBeHidden();
   });
+
+  // notion-motion.md Round 44 §5: a center peek shows the mode switch and the row steps only while the pointer is on its header.
+  test('a center peek shows its mode switch and row steps only while the pointer is on the header', async ({ page }) => {
+    await mount(page, blocks({ openPagesIn: 'center' }));
+    await openRow(page, 'r1');
+    await expect(peek(page)).toHaveAttribute('data-peek-mode', 'center');
+
+    const toolbar = peek(page).locator('[data-blok-database-drawer-toolbar]');
+    const revealed = toolbar.locator('[data-blok-database-peek-mode], [data-blok-database-peek-next]');
+    const box = await toolbar.boundingBox();
+
+    if (box === null) throw new Error('no toolbar');
+
+    await page.mouse.move(box.x + box.width / 2, box.y + 300);
+    for (const el of await revealed.all()) await expect(el).toHaveCSS('opacity', '0');
+    await expect(toolbar.locator('[data-blok-database-peek-expand]')).toHaveCSS('opacity', '1');
+    await expect(toolbar.locator('[data-blok-database-drawer-close]')).toBeHidden();
+
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    for (const el of await revealed.all()) await expect(el).toHaveCSS('opacity', '1');
+  });
+
+  test('a keyboard user still reaches the center peek\'s hidden header controls', async ({ page }) => {
+    await mount(page, blocks({ openPagesIn: 'center' }));
+    await openRow(page, 'r1');
+
+    const toolbar = peek(page).locator('[data-blok-database-drawer-toolbar]');
+    const box = await peek(page).boundingBox();
+
+    if (box === null) throw new Error('no peek');
+    // The peek focuses its title on open; wait so that does not take focus back later.
+    await expect(peekTitle(page)).toBeFocused();
+    await page.mouse.move(box.x + box.width / 2, box.y + 300);
+    await toolbar.locator('[data-blok-database-peek-expand]').focus();
+    await page.keyboard.press('Tab');
+    // The Tab must stay with the header: Blok's block Tab would nest the database under the paragraph above.
+    expect((await saved(page)).find((b) => b.id === 'db-1')?.parent).toBeUndefined();
+    await expect(toolbar.locator('[data-blok-database-peek-mode]')).toBeFocused();
+    await expect(toolbar.locator('[data-blok-database-peek-mode]')).toHaveCSS('opacity', '1');
+  });
+
+  // The side peek keeps Notion's earlier rule: the controls show while the pointer is anywhere on the peek.
+  test('a side peek keeps its mode switch while the pointer is on its body', async ({ page }) => {
+    await mount(page, blocks());
+    await openRow(page, 'r1');
+    // Hover is read where the pointer lands, so the slide-in must be over first.
+    await expect.poll(() => peek(page).evaluate((el) => el.getAnimations().length)).toBe(0);
+
+    const box = await peek(page).boundingBox();
+
+    if (box === null) throw new Error('no peek');
+    await page.mouse.move(box.x + box.width / 2, box.y + 300);
+    await expect(peek(page).locator('[data-blok-database-peek-mode]')).toHaveCSS('opacity', '1');
+  });
 });
 
 test.describe('page icon', () => {

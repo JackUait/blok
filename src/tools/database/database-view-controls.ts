@@ -3,7 +3,7 @@ import { nanoid } from 'nanoid';
 import { IconSearch, IconSliders, IconLock, IconPlus, IconChevronDown, IconFilter, IconSort, IconPreview, IconBolt, IconWand, IconArrowUp, IconCross, IconChevronDoubleRight, IconPageLayout, IconExpandDiagonal } from '../../components/icons';
 import { openDatabaseConfirm } from './database-confirm-dialog';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { propertyTypeMeta } from './database-property-types';
+import { propertyGlyph } from './database-property-types';
 import type { I18n } from '../../../types';
 import { DatabasePanel, panelRow } from './database-panel';
 import { PersonalViewEdits } from './database-view-state';
@@ -33,6 +33,8 @@ import type {
 } from './types';
 
 const SORT_PANEL_GAP = 4;
+/** notion-motion.md Round 46 §C.5 and Round 47 §D: the filter and sort pickers open 4 under their toolbar button or the "+ Filter" chip. */
+const TOOLBAR_PICKER_GAP = 4;
 
 /** What the controls ask of the database tool. */
 export interface ViewControlsHost {
@@ -480,6 +482,9 @@ export class DatabaseViewControls {
     }
     this.filterBar.hidden = true;
     this.filterBar.replaceChildren();
+    // notion-motion.md Round 41 Part B: a form has no filter bar, so » has nothing to fold.
+    this.barMinimizable = false;
+    this.syncMinimize();
   }
 
   destroy(): void {
@@ -711,6 +716,7 @@ export class DatabaseViewControls {
   private openFilterPicker(anchor: HTMLElement): void {
     this.openPropertyPicker(anchor, 'database-filter-picker', FILTERABLE_TYPES, (property) => this.filterBy(property.id, anchor), {
       placeholder: this.t('filterByPlaceholder'),
+      kind: 'filter',
       // notion-motion.md Round 10 "Add filter picker": a property already filtered is left out.
       used: this.view()?.filters.map((filter) => filter.propertyId) ?? [],
       footer: (close) => panelRow({
@@ -767,6 +773,7 @@ export class DatabaseViewControls {
       placeholder: string;
       footer?: (close: () => void) => HTMLElement;
       used?: string[];
+      kind?: 'filter' | 'sort';
     }
   ): DatabasePanel {
     const panel = propertyPicker({
@@ -774,9 +781,11 @@ export class DatabaseViewControls {
       testId,
       types,
       schema: () => this.host.schema(),
+      storedType: this.host.storedType,
       i18n: this.host.i18n,
       onPick,
       ...options,
+      gap: TOOLBAR_PICKER_GAP,
       onClose: (escape) => this.panelClosed(anchor, escape),
     });
 
@@ -798,7 +807,11 @@ export class DatabaseViewControls {
       this.openPropertyPicker(this.sortButton, 'database-sort-picker', SORTABLE_TYPES, (property) => {
         this.barOpen = true;
         this.updatePersonal({ sorts: [{ id: nanoid(), propertyId: property.id, direction: 'asc' }] });
-      }, { placeholder: this.t('sortByPlaceholder') });
+        // notion-motion.md Round 47 §D: the new sort's panel opens under its chip.
+        const chip = this.filterBar.querySelector<HTMLElement>('[data-blok-testid="database-sort-pill"]');
+
+        if (chip !== null && !this.filterBar.hidden) this.openSortPanel(chip, this.sortButton);
+      }, { placeholder: this.t('sortByPlaceholder'), kind: 'sort' });
 
       return;
     }
@@ -820,6 +833,7 @@ export class DatabaseViewControls {
       anchor,
       i18n: this.host.i18n,
       schema: () => this.host.schema(),
+      storedType: this.host.storedType,
       sorts: () => this.view()?.sorts ?? [],
       write: (next) => this.updatePersonal({ sorts: next }),
       // notion-motion.md Round 17 §5: chip bottom 301, panel top 305.
@@ -956,7 +970,7 @@ export class DatabaseViewControls {
       const rowTitle = (id: string): string | undefined => this.host.relatedRows?.(property).find((row) => row.id === id)?.title;
       const label = filterPillLabel(filter, property, t, personName, rowTitle, locale);
       const { name, colon, value } = filterPillParts(filter, property, t, personName, rowTitle, locale);
-      const pill = filterChip(`database-filter-pill-${filter.id}`, label, { glyph: propertyTypeMeta(property.type).icon, name, colon, value });
+      const pill = filterChip(`database-filter-pill-${filter.id}`, label, { glyph: propertyGlyph(property, this.host.storedType), name, colon, value });
 
       pill.setAttribute('data-filter-id', filter.id);
       pill.toggleAttribute('data-active', value !== '');

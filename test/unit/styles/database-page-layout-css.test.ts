@@ -574,6 +574,14 @@ describe('database row page layout css', () => {
     expect(ruleBody('[data-blok-database-peek-actions] svg')).toContain('width: 22px');
   });
 
+  // notion-motion.md Round 44 §5: the center peek's ⤢ is 11 x 11 of ink; Keyline's at 22px is 11.3.
+  it('draws the center peek\'s expand glyph at Notion\'s ink size', () => {
+    const body = ruleBody('[data-peek-mode="center"] [data-blok-database-peek-expand] svg');
+
+    expect(body).toContain('width: 22px');
+    expect(body).toContain('height: 22px');
+  });
+
   // research/22 §14: favorited is a yellow star, not a selected state, so it gets ink but no button fill.
   it('paints the favorited star Notion\'s yellow, with no button fill', () => {
     const body = ruleBody('[data-blok-database-peek-favorite][aria-pressed="true"]');

@@ -189,8 +189,6 @@ describe('add property menu (T12)', () => {
     expect(declared(`${OVER} > [data-blok-database-property-type-header]`, 'height')).toEqual(['28px']);
     expect(declared(`${OVER} > [data-blok-database-property-type-header]`, 'border-radius')).toEqual(['var(--blok-radius-control)']);
     expect(declared(`${OVER} > [data-blok-database-property-type-header]`, 'box-shadow')).toEqual(['none']);
-    expect(declared(`${OVER} [data-blok-database-property-type-glyph]`, 'width')).toEqual(['24px']);
-    expect(declared(`${OVER} [data-blok-database-property-type-glyph]`, 'height')).toEqual(['24px']);
     expect(declared(OVER, 'max-height')).toEqual(['50dvh']);
     expect(declared(`${OVER} [data-blok-database-property-type-body]`, 'mask-image')).toEqual(['linear-gradient(black 0%, black calc(100% - 34px), transparent 100%)']);
   });
@@ -689,6 +687,8 @@ describe('icon-only OPEN', () => {
 
     expect(declared(open, 'width')).toEqual(['30px']);
     expect(declared(open, 'padding')).toEqual(['var(--blok-space-0-5)']);
+    // notion-motion.md Round 47 §B8: the frame sits 4 in from the cell end, as the wide pill does (Notion x 604).
+    expect(declared(open, 'inset-inline-end')).toEqual(['var(--blok-space-1)']);
     expect(declared(`${open} > span[aria-hidden="true"]`, 'width')).toEqual(['26px']);
     expect(declared(`${open} > span[aria-hidden="true"]`, 'height')).toEqual(['20px']);
     expect(declared(`${open} > span:last-child`, 'clip-path')).toEqual(['inset(50%)']);
@@ -702,5 +702,82 @@ describe('row ⋮⋮ and card ⋯ menu motion (Round 36)', () => {
   // database menus' 0.96 scale, which also carries :not([data-blok-popover-opened]).
   it('fades the card ⋯ menu in with no scale', () => {
     expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-fade-menu']:not([data-blok-popover-opened='true']) > [data-blok-popover-container]", 'transform')).toEqual(['none']);
+  });
+});
+
+// notion-motion.md Round 44 §3 (r44-tp-add-head.raw, r44-tp-search.raw): the header "+" picker's labels and search.
+describe('header "+" type picker (Round 44)', () => {
+  const GRID = "[data-blok-database-property-type-layout='grid']";
+
+  // "AI Autofill" and "Select type" text at popover x + 19: the box pads 4, the body 4, the label 11.
+  it('starts its section labels 19 in from the box', () => {
+    expect(declared(`${GRID} [data-blok-database-property-type-heading]`, 'padding-inline')).toEqual(['var(--blok-space-2-75)']);
+  });
+
+  // The 20px search button ends at 130.9 and the first cell starts at 138.9.
+  it('leaves 8 under the "Select type" line before the first type', () => {
+    expect(declared(`${GRID} [data-blok-database-property-type-list-heading]`, 'padding-bottom')).toEqual(['var(--blok-space-2)']);
+  });
+
+  // magnifyingGlassSmall fill rgb(142, 139, 134), not the label's ink.
+  it('draws the search glyph in the type icon gray', () => {
+    expect(declared('[data-blok-database-property-type-search]', 'color')).toEqual(['var(--blok-database-type-icon)']);
+  });
+
+  // The field goes 2 under where the first cell was (138.9 → 140.9), and the cells 4 under it: a 34px shift.
+  it('puts the search field 2 under the label line', () => {
+    expect(declared(`${GRID} [data-blok-database-property-type-body] > [data-blok-database-property-type-search-input]`, 'margin-top')).toEqual(['var(--blok-space-0-5)']);
+  });
+});
+
+// notion-motion.md Round 44 §3 (r44-tp-change.raw, r44-tp-propmenu-head.raw).
+describe('Change type list and the property menu glyph (Round 44)', () => {
+  // The list's type masks are rgb(56, 56, 54).
+  it('draws the Change type glyphs in the strong glyph ink', () => {
+    expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-change-type'] [data-blok-popover-item-icon]", 'color'))
+      .toEqual(['var(--blok-database-peek-glyph-strong)']);
+  });
+
+  // "Change icon" 28×28 holds a 16.8 type glyph.
+  it('draws the type glyph in the name row\'s icon box at 16.8', () => {
+    expect(declared('[data-blok-database-property-menu-icon] svg', 'width')).toEqual(['16.8px']);
+    expect(declared('[data-blok-database-property-menu-icon] svg', 'height')).toEqual(['16.8px']);
+  });
+});
+
+// notion-motion.md Round 44 §3 (r44-tp-add-head.raw): the header "+" name box is 378×28, padding 2/4; "Select icon" is a
+// 24 box at +4 holding a 19.2 gray emoji glyph, and the field starts at +32.
+describe('header "+" Select icon (Round 44)', () => {
+  const HEAD = '[data-blok-database-property-type-name-over-anchor] > [data-blok-database-property-type-header]';
+  const ICON = '[data-blok-database-property-type-icon-button]';
+
+  it('pads the name box 2/4 with 4 between the icon and the field', () => {
+    expect(declared(HEAD, 'padding')).toEqual(['var(--blok-space-0-5) var(--blok-space-1)']);
+    expect(declared(HEAD, 'gap')).toEqual(['var(--blok-space-1)']);
+  });
+
+  // The "+" is 378×28 with the hover fill while open, so the header ⋯ moves to the name box's right (x 1486).
+  it('widens the "+" into the new column\'s slot while its menu is open', () => {
+    const SLOT = '[data-blok-database-table-add-property][data-blok-database-property-type-slot]';
+
+    expect(declared(SLOT, 'width')).toEqual(['378px']);
+    expect(declared(SLOT, 'background-color')).toEqual(['var(--blok-database-table-header-hover-bg)']);
+  });
+
+  it('draws Select icon as a 24 borderless box with a 19.2 glyph in the type icon gray', () => {
+    expect(declared(ICON, 'width')).toEqual(['24px']);
+    expect(declared(ICON, 'height')).toEqual(['24px']);
+    expect(declared(ICON, 'border')).toEqual(['none']);
+    expect(declared(ICON, 'color')).toEqual(['var(--blok-database-type-icon)']);
+    expect(declared(`${ICON} svg`, 'width')).toEqual(['19.2px']);
+  });
+});
+
+// notion-motion.md Round 47 §D: the divider after the sort chip sits 12 from each chip (621.3 | 633.3 | 646.3):
+// the bar's 6 gap plus a 6 margin on each side.
+describe('toolbar chip divider', () => {
+  it('sits 12px clear of the chips on each side', () => {
+    expect(declared('[data-blok-database-filter-pills]', 'gap')).toEqual(['var(--blok-space-1-5)']);
+    expect(declared('[data-blok-database-filter-pills] > [data-blok-database-chip-divider]', 'margin-inline')).toEqual(['var(--blok-space-1-5)']);
   });
 });

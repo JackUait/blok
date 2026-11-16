@@ -252,6 +252,8 @@ export class DatabaseMapView implements DatabaseViewRenderer {
       anchor,
       content,
       minWidth: '320px',
+      // notion-motion.md Round 47 §D: 4 under the toolbar button, as the No date popover.
+      gap: 4,
       onEscape: () => {
         popover.close();
         this.noPlacePopover = null;

@@ -542,10 +542,11 @@ describe('DatabaseCardDrawer shell', () => {
     });
 
     // notion-motion.md "Side peek top bar": Notion shows these while the pointer is anywhere over the peek.
-    it('reveals the mode switcher, the separators and the row steps only while the peek is hovered or the bar holds keyboard focus', () => {
+    // notion-motion.md Round 44 §5: a center peek reveals them only while the pointer is on its header.
+    it('reveals the mode switcher, the separators and the row steps only while the peek (center: its header) is hovered or the bar holds keyboard focus', () => {
       const css = readFileSync(resolve(__dirname, '../../../../src/styles/database.css'), 'utf8');
       // An open mode menu keeps them shown, as in Notion, while the pointer is in the menu.
-      const rule = /\[data-blok-database-drawer\]:not\(:hover\) \[data-blok-database-drawer-toolbar\]:not\(:has\(:focus-visible\)\):not\(:has\(\[data-blok-database-peek-mode\]\[aria-expanded="true"\]\)\) :is\(([^)]*)\)\s*\{\s*opacity:\s*0;/.exec(css);
+      const rule = /:is\(\[data-blok-database-drawer\]:not\(:hover\), \[data-peek-mode="center"\]\) \[data-blok-database-drawer-toolbar\]:not\(:hover\):not\(:has\(:focus-visible\)\):not\(:has\(\[data-blok-database-peek-mode\]\[aria-expanded="true"\]\)\) :is\(([^)]*)\)\s*\{\s*opacity:\s*0;/.exec(css);
 
       expect(rule?.[1].split(',').map((x) => x.trim()).sort()).toStrictEqual([
         '[data-blok-database-peek-mode]',

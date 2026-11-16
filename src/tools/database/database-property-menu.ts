@@ -216,6 +216,8 @@ interface RowPageExtras { onComment?: () => void; edit?: boolean }
 const VALUE_LIST = { clickOnly: true, placement: 'under', width: '250px', class: PANEL_LIST_CLASS } as const;
 /** notion-spec-2 §17: a ✓ on the current choice. isActive keeps aria-checked; the panel list class drops its fill. */
 const checkedIf = (current: boolean): { isActive: boolean; trailingIcon?: string } => ({ isActive: current, ...(current ? { trailingIcon: IconCheck } : {}) });
+/** The column menu's Change type list; database.css gives its glyphs Notion's ink. */
+const CHANGE_TYPE_LIST_CLASS = 'blok-database-change-type';
 /** notion-spec-2 §17.2: a rollup's Relation and Target property lists are 280 wide and check nothing. */
 const TARGET_LIST = { clickOnly: true, placement: 'under', width: '280px', class: PANEL_LIST_CLASS } as const;
 /** notion-spec-2 §17.2: Target property's own search field size, in database.css. */
@@ -607,15 +609,18 @@ export class DatabasePropertyMenu {
     };
   }
 
+  /** notion-motion.md Round 44 §3: the current type stays, with a check; picking it changes nothing. */
   private typeChoices(property: PropertyDefinition): PopoverItemParams[] {
     return addablePropertyTypes(this.options.hasPeople)
-      .filter((type) => type !== property.type)
       .map((type) => ({
         name: `type-${type}`,
         title: this.t(propertyTypeMeta(type).labelKey),
         icon: propertyTypeMeta(type).icon,
         closeOnActivate: true,
-        onActivate: () => this.options.onChangeType(property.id, type),
+        ...(type === property.type ? { trailingIcon: IconCheck } : {}),
+        onActivate: (): void => {
+          if (type !== property.type) this.options.onChangeType(property.id, type);
+        },
       }));
   }
 
@@ -936,7 +941,8 @@ export class DatabasePropertyMenu {
           name: entry,
           title: this.t('tools.database.changeType'),
           icon: IconChangeType,
-          children: { items: this.typeChoices(property) },
+          // notion-motion.md Round 44 §3 (r44-tp-change.raw): a plain 200-wide list.
+          children: { items: this.typeChoices(property), width: '200px', class: CHANGE_TYPE_LIST_CLASS },
         };
       case 'duplicate':
         return { name: entry, title: this.t('tools.database.duplicateProperty'), icon: IconCopy, closeOnActivate: true, onActivate: () => this.options.onDuplicate(id) };

@@ -293,6 +293,21 @@ const isFormSubmission = (value: unknown): value is DatabaseFormSubmission =>
   typeof value === 'object' && value !== null && 'databaseId' in value && typeof value.databaseId === 'string'
   && 'viewId' in value && typeof value.viewId === 'string' && 'values' in value && typeof value.values === 'object';
 
+/**
+ * A paragraph, heading, to-do, list item or toggle with no text: Notion drops one on its own
+ * (notion-motion.md Round 46 §C.1, Round 47 §E, Round 48 §B). `<br>` is what an emptied
+ * contenteditable can leave; saved text can also be an empty segment array.
+ */
+const isEmptyLine = (block: { type: string; data: unknown } | undefined): boolean => {
+  const data = block?.data as { text?: unknown } | undefined;
+  const line = block?.type === 'paragraph' || block?.type === 'header' || block?.type === 'list' || block?.type === 'toggle';
+
+  if (!line) return false;
+  const text = data?.text;
+
+  return text === undefined || (Array.isArray(text) && text.length === 0) || (typeof text === 'string' && text.replace(/<br\s*\/?>/gi, '') === '');
+};
+
 /** The block a 'block changed' payload is about, if the payload carries one. */
 const changedBlock = (payload: unknown): ChangedBlock | undefined =>
   (payload as { event?: { detail?: { target?: ChangedBlock } } } | undefined)?.event?.detail?.target;
@@ -794,6 +809,10 @@ export class DatabaseTool implements BlockTool {
   private movingOut = false;
   /** Set while a full redraw waits for an inline edit or drag to end. */
   private redrawWhenIdleRetry: (() => void) | null = null;
+  /** Whether each row the views drew had a body when they read it. Cleared on every redraw. */
+  private readonly bodyRows = new Map<string, boolean>();
+  /** Rows to recheck in the next microtask; `all` after a block was added, removed or moved. */
+  private bodyCheck: { all: boolean; rows: Set<string> } | null = null;
   private viewControls: DatabaseViewControls | null = null;
   private tabDisplayPref: TabDisplayPreference | null = null;
   private unregisterGroupToggle: (() => void) | null = null;
@@ -911,6 +930,7 @@ export class DatabaseTool implements BlockTool {
     this.api.events.on(DATABASE_RENDERED_EVENT, this.handleDatabaseRendered);
     this.api.events.on(DATABASE_GONE_EVENT, this.handleDatabaseGone);
     this.api.events.on('block changed', this.handleBodyEdit);
+    this.api.events.on('block changed', this.handleBodyShape);
     this.api.events.on('block changed', this.handleAgentRowWrite);
     this.api.events.on('block changed', this.scheduleBacklinks);
     this.builtInComments.listen();
@@ -938,6 +958,61 @@ export class DatabaseTool implements BlockTool {
     // Another database's row or a template reads no values, so it fills nothing.
     if (row !== undefined) this.hostLevers.bodyEdited(row);
   };
+
+  /**
+   * A body block added, removed or moved can give a row its first body or
+   * take its last: the views' page glyph follows. Read after the event, as an
+   * insert sets its parent after it. Redraws only when a row flipped.
+   */
+  private readonly handleBodyShape = (payload: unknown): void => {
+    const type = (payload as { event?: { type?: unknown } } | undefined)?.event?.type;
+    const block = changedBlock(payload);
+    const parentId = typeof block?.parentId === 'string' ? block.parentId : undefined;
+    // A lone line's text decides its row's glyph, so a typed change rechecks that one drawn row.
+    const typed = type === 'block-changed' && parentId !== undefined && this.bodyRows.has(parentId);
+    const shape = type === 'block-added' || type === 'block-removed' || type === 'block-moved';
+
+    if (this.bodyRows.size === 0 || block?.name === 'database-row' || (!typed && !shape)) return;
+    if (this.bodyCheck === null) {
+      this.bodyCheck = { all: false, rows: new Set() };
+      queueMicrotask(this.runBodyCheck);
+    }
+    if (shape) {
+      this.bodyCheck.all = true;
+    } else if (parentId !== undefined) {
+      this.bodyCheck.rows.add(parentId);
+    }
+  };
+
+  private readonly runBodyCheck = (): void => {
+    const check = this.bodyCheck;
+
+    this.bodyCheck = null;
+    if (this.destroyed || check === null) return;
+    const rowIds = check.all ? [...this.bodyRows.keys()] : [...check.rows];
+    const flipped = rowIds.some((rowId) => this.bodyRows.has(rowId) && this.readRowHasBody(rowId) !== this.bodyRows.get(rowId));
+
+    if (flipped) this.redrawWhenIdle();
+  };
+
+  /** notion-motion.md Round 46 §C.1, Round 47 §E: one empty line is no body in Notion; two empty lines are. */
+  private readRowHasBody(rowId: string): boolean {
+    const body = this.rowBodyBlocks(rowId, this.model.getSchema().find((p) => p.type === 'richText')?.id);
+
+    return body.length > 1 || (body.length === 1 && !isEmptyLine(body[0]));
+  }
+
+  /** Cached per redraw: a view asks for every row it draws. */
+  private rowHasBody(rowId: string): boolean {
+    const known = this.bodyRows.get(rowId);
+
+    if (known !== undefined) return known;
+    const has = this.readRowHasBody(rowId);
+
+    this.bodyRows.set(rowId, has);
+
+    return has;
+  }
 
   /**
    * An agent's row write fires what the person's own write fires (the sync:
@@ -2870,6 +2945,7 @@ export class DatabaseTool implements BlockTool {
     this.api.events.off('block replayed', this.handleBlockReplayed);
     this.api.events.off(HistoryDraftsCommit, this.commitDraftsBeforeHistory);
     this.api.events.off('block changed', this.handleBodyEdit);
+    this.api.events.off('block changed', this.handleBodyShape);
     this.api.events.off('block changed', this.handleAgentRowWrite);
     this.api.events.off('block changed', this.scheduleBacklinks);
     this.api.events.off('block replayed', this.scheduleBacklinks);
@@ -6716,6 +6792,7 @@ export class DatabaseTool implements BlockTool {
         ...(this.readOnly ? {} : {
           pickRow: (rowId: string, range: boolean) => this.pickRow(rowId, range),
           lassoRows: (rowIds: string[]) => this.selectRows(rowIds),
+          landRow: (rowId: string) => this.landRow(rowId),
         }),
         addRow: (groupKey, write) => {
           const rowId = this.addTimelineRow(groupKey, write, startId, endId);
@@ -8289,6 +8366,8 @@ export class DatabaseTool implements BlockTool {
       editFormula: (propertyId, cell) => { if (writable() && !this.structureLocked()) this.openFormulaEditor(propertyId, cell); },
       openPropertyMenu: (propertyId, anchor) => { if (writable()) this.openPropertyMenu(propertyId, anchor, table?.(), context); },
       addProperty: (anchor, placement) => { if (writable()) this.openAddProperty(anchor, placement, undefined, context); },
+      // notion-motion.md Round 41: the header row's ⋯. Where Notion opens it is unmeasured; it opens under the ⋯.
+      propertyVisibility: (anchor) => { if (writable()) (context?.controls ?? this.controls).openSettings(anchor, 'properties'); },
       viewAction: (action, propertyId, anchor) => { if (writable()) this.onTableViewAction(action, propertyId, anchor, context); },
       moveRow: (result) => this.handleTableRowDrop(result, context),
       sortedRowDrop: (result) => this.onSortedRowDrop(result, context),
@@ -9900,9 +9979,10 @@ export class DatabaseTool implements BlockTool {
     const comment = options.comment === false ? undefined : this.commentLever().comment;
     const writable = (): boolean => !this.readOnly && !this.destroyed;
     const listTargets = (): Array<{ id: string; title: string }> => this.moveTargets();
-    const view = this.shownView();
-    const visible = view === undefined ? [] : visibleRowPropertyIds(view, this.model.getSchema());
-    const properties = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).filter((p) => p.type !== 'title' && visible.includes(p.id));
+    // notion-motion.md Round 42 §2: Edit property › lists every property A→Z, shown or not; Created time and ID were not in it.
+    const properties = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n)
+      .filter((p) => !['title', 'createdTime', 'uniqueId'].includes(p.type))
+      .sort((a, b) => a.name.localeCompare(b.name));
     const edits = !writable() ? {} : {
       onEditIcon: () => this.editRowIcon(rowId),
       onEditProperty: (propertyId: string) => this.editRowProperty(rowId, propertyId),
@@ -12336,6 +12416,7 @@ export class DatabaseTool implements BlockTool {
       relationScope: (property) => this.relatedDatabaseName(property),
       openRelated: (property, rowId, peek) => this.openRelated(property, rowId, peek),
       relationCreator: (property) => this.relationCreator(property),
+      rowHasBody: (rowId) => this.rowHasBody(rowId),
       ...this.mapCellContext(),
       ...(this.config.helpLinks !== undefined ? { helpLinks: this.config.helpLinks } : {}),
       ...(this.people !== undefined ? { people: this.people } : {}),
@@ -12390,7 +12471,7 @@ export class DatabaseTool implements BlockTool {
    * when the type cannot be added (person without a people directory) or
    * the block is read-only.
    */
-  addProperty(params: { name: string; type: PropertyType; afterId?: string; beforeId?: string }, context?: NativeWidgetContext): PropertyDefinition | null {
+  addProperty(params: { name: string; type: PropertyType; afterId?: string; beforeId?: string; icon?: string }, context?: NativeWidgetContext): PropertyDefinition | null {
     if (this.readOnly || this.destroyed || params.type === 'title' || (params.type === 'person' && !this.hasPeople)) {
       return null;
     }
@@ -12413,6 +12494,7 @@ export class DatabaseTool implements BlockTool {
       : {};
 
     if (params.type === 'relation') settings.relation = { targetDatabaseId: this.dataId };
+    if (params.icon !== undefined) settings.icon = params.icon;
     const prop = this.model.addProperty(name, params.type, config, { afterId: params.afterId, beforeId: params.beforeId }, settings);
     this.showInActiveView(prop, context, params.afterId, params.beforeId);
     this.writeEmptyLists(prop.id);
@@ -12424,6 +12506,7 @@ export class DatabaseTool implements BlockTool {
       ...(prop.config !== undefined ? { config: prop.config } : {}),
       ...(prop.status !== undefined ? { status: prop.status } : {}),
       ...(prop.relation !== undefined ? { relation: prop.relation } : {}),
+      ...(prop.icon !== undefined ? { icon: prop.icon } : {}),
     });
     this.commitSchema();
 
@@ -13394,10 +13477,10 @@ export class DatabaseTool implements BlockTool {
       ...(onAdded === undefined ? { layout: 'grid' as const } : {}),
       // notion-spec-2 §19.11: the "+" puts the name box in the header cell. Insert left/right's is unmeasured.
       ...(onAdded === undefined && placement === undefined ? { nameOverAnchor: true } : {}),
-      onSelect: (type, name) => {
+      onSelect: (type, name, icon) => {
         if (!writable()) return;
         const side = placement?.side === 'left' ? 'beforeId' : 'afterId';
-        const created = this.addProperty({ name, type, ...(placement === undefined ? {} : { [side]: placement.propertyId }) }, context);
+        const created = this.addProperty({ name, type, icon, ...(placement === undefined ? {} : { [side]: placement.propertyId }) }, context);
 
         if (created === null) return;
         // A host that redraws `anchor` away hands back where the follow-up setup goes.
@@ -13445,6 +13528,7 @@ export class DatabaseTool implements BlockTool {
     }
 
     this.stopWaitingForIdle();
+    this.bodyRows.clear();
 
     // The old board wrapper is the first/only direct child of boardContainer
     const oldBoardWrapper = this.boardContainer.querySelector<HTMLElement>(':scope > [data-blok-database-dashboard]')

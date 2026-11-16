@@ -137,6 +137,32 @@ describe('Flipper', () => {
     flipper.deactivate();
   });
 
+  it('moves an arrow to the item a grid picks, and falls back to the list move when it picks none', () => {
+    const items = createItems(6);
+    const flipper = new Flipper({
+      focusedItemClass: focusedClass,
+      items,
+    });
+    const onFlipSpy = vi.fn();
+    const pick = vi.fn((key: string, index: number) => (key === 'down' && index >= 0 ? index + 3 : undefined));
+
+    flipper.onFlip(onFlipSpy);
+    flipper.setArrowTarget(pick);
+    flipper.activate(items, 1);
+
+    flipper.handleExternalKeydown(createKeyboardEvent('ArrowDown'));
+
+    expect(pick).toHaveBeenCalledWith('down', 1, 6);
+    expect(items[4]).toHaveAttribute('data-blok-focused', 'true');
+    expect(onFlipSpy).toHaveBeenCalledTimes(1);
+
+    flipper.handleExternalKeydown(createKeyboardEvent('ArrowUp'));
+
+    expect(items[3]).toHaveAttribute('data-blok-focused', 'true');
+
+    flipper.deactivate();
+  });
+
   it('reports a skipped first Tab as navigation, keeping the cursor in place', () => {
     const items = createItems();
     const flipper = new Flipper({

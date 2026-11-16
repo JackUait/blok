@@ -15,7 +15,7 @@ import {
 import type { PanelPage } from './database-panel';
 import { editorLocale } from './cells/date-format';
 import { newViewPage } from './database-linked-picker';
-import { propertyTypeMeta } from './database-property-types';
+import { propertyGlyph } from './database-property-types';
 import {
   FILTERABLE_TYPES,
   WITHIN_OPERATORS,
@@ -1598,7 +1598,7 @@ export class ViewSettingsPages {
         .map((property) => panelRow({
           label: property.name,
           testId: `database-edit-property-${property.id}`,
-          icon: propertyTypeMeta(property.type).icon,
+          icon: propertyGlyph(property, this.ctx.storedType),
           opensPage: true,
           onClick: () => {
             panel.close();
@@ -1738,7 +1738,7 @@ export class ViewSettingsPages {
 
     row.setAttribute('data-blok-database-property-visibility-row', '');
     icon.setAttribute('data-blok-database-panel-icon', '');
-    icon.innerHTML = propertyTypeMeta(property.type).icon;
+    icon.innerHTML = propertyGlyph(property, this.ctx.storedType);
     name.setAttribute('data-blok-database-panel-label', '');
     name.textContent = property.name;
     eye.type = 'button';
@@ -1831,12 +1831,22 @@ export class ViewSettingsPages {
     toggle.setAttribute('data-blok-testid', show ? 'database-property-show-all' : 'database-property-hide-all');
     toggle.textContent = this.t(show ? 'groupShowAll' : 'groupHideAll');
     toggle.disabled = !this.shared;
+    const search = (root: Element | null): HTMLElement | null =>
+      root?.querySelector<HTMLElement>('[data-blok-testid="database-property-search"]') ?? null;
+
+    // notion-motion.md Round 39 §5: a press from the search leaves focus there.
+    toggle.addEventListener('mousedown', (event) => {
+      if (document.activeElement !== null && document.activeElement === search(toggle.closest('[data-blok-database-panel]'))) event.preventDefault();
+    });
     toggle.addEventListener('click', () => {
       if (targets.length === 0) return;
+      // Read before refresh: it replaces this button.
+      const root = toggle.closest('[data-blok-database-panel]');
+
       this.ctx.updateView({ properties: withPropertyVisibility(this.ctx.view(), this.ctx.schema(), targets.map((entry) => entry.id), show) });
       panel.refresh();
       // notion-motion.md Round 36 §1: focus goes to the search.
-      document.querySelector<HTMLElement>('[data-blok-testid="database-property-search"]')?.focus();
+      search(root)?.focus();
     });
     header.append(toggle);
 
@@ -1887,7 +1897,7 @@ export class ViewSettingsPages {
       const rows = choices.map((property) => panelRow({
         label: property.name,
         testId: `database-pick-property-${property.id}`,
-        icon: propertyTypeMeta(property.type).icon,
+        icon: propertyGlyph(property, this.ctx.storedType),
         disabled: options.disabled === true,
         onClick: () => onPick(property),
       }));
@@ -1964,7 +1974,7 @@ export class ViewSettingsPages {
           const parts = filterPillParts(filter, property, translate, (id) => this.personName(id), rowTitle, locale);
           // notion-motion.md Round 18 §2: each filter is its chip; a click opens its rule popover under it, the page stays.
           const chip = filterChip(`database-filter-row-${filter.id}`, filterPillLabel(filter, property, translate, (id) => this.personName(id), rowTitle, locale), {
-            glyph: propertyTypeMeta(property.type).icon,
+            glyph: propertyGlyph(property, this.ctx.storedType),
             ...parts,
           });
 
@@ -2544,7 +2554,7 @@ export class ViewSettingsPages {
     const propertyButton = button(`database-filter-rule-property-${id}`, property.name, (self) => {
       openFlyout(self, panel, 'database-filter-rule-property-picker', PROPERTY_FLYOUT_WIDTH, (pick) => ordered.map((p) => panelRow({
         label: p.name,
-        icon: propertyTypeMeta(p.type).icon,
+        icon: propertyGlyph(p, this.ctx.storedType),
         testId: `database-pick-property-${p.id}`,
         onClick: () => pick(() => {
           const { id: _fresh, ...condition } = defaultFilterFor(p);
@@ -2552,7 +2562,7 @@ export class ViewSettingsPages {
           save(condition);
         }),
       })));
-    }, propertyTypeMeta(property.type).icon);
+    }, propertyGlyph(property, this.ctx.storedType));
     const operatorButton = button(`database-filter-rule-operator-${id}`, opKey === undefined ? node.operator : this.ctx.i18n.t(opKey), (self) => {
       openFlyout(self, panel, 'database-filter-operator-picker', OPERATOR_FLYOUT_WIDTH, (pick) => operatorChoicesFor(property, node.operator).map((choice) => panelRow({
         label: this.ctx.i18n.t(choice.labelKey),
@@ -2826,12 +2836,13 @@ export class ViewSettingsPages {
           const propertyButton: HTMLElement = sortChevron(panelRow({
             label: property.name,
             testId: `database-sort-property-${sort.id}`,
-            icon: propertyTypeMeta(property.type).icon,
+            icon: propertyGlyph(property, this.ctx.storedType),
             onClick: () => openSortPropertyFlyout(
               propertyButton,
               panel,
               schema.filter((p) => GROUPABLE_TYPES.includes(p.type)),
-              (picked) => write(withEntryIds(this.ctx.view().sorts).map((s) => (s.id === sort.id ? { ...s, propertyId: picked.id } : s)))
+              (picked) => write(withEntryIds(this.ctx.view().sorts).map((s) => (s.id === sort.id ? { ...s, propertyId: picked.id } : s))),
+              this.ctx.storedType
             ),
           }));
           const directionButton: HTMLElement = sortChevron(panelRow({

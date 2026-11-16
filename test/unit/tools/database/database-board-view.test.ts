@@ -204,17 +204,27 @@ describe('DatabaseBoardView', () => {
       expect(board.querySelector('[data-blok-database-column][data-option-id="ns"]')?.hasAttribute('data-color')).toBe(false);
     });
 
-    // notion-motion.md Round 28 (r28-empty-Board.raw): every status group draws its ⋯ and + gray, whatever the group's colour.
-    it('marks the header ⋯ and + of every status column, including No status, and of no select column', () => {
-      const board = statusView([makeOption({ id: 'ip', label: 'In progress', color: 'blue' }), makeOption({ id: NO_VALUE_GROUP_KEY, label: 'No Status' })]);
+    // notion-motion.md Round 42 §1: with Color columns on, ⋯ and + take the group's colour on Status and Select boards;
+    // a group with no colour gives 95,94,89. With it off, nothing is set and the CSS gives 161,158,153.
+    it('paints the header ⋯ and + in the group colour while Color columns is on, on status and select boards', () => {
+      const glyph = (board: HTMLElement, id: string): string | undefined =>
+        board.querySelector<HTMLElement>(`[data-blok-database-column][data-option-id="${id}"]`)?.style.getPropertyValue('--_blok-group-glyph');
+      const status = statusView([
+        makeOption({ id: 'ip', label: 'In progress', color: 'blue' }),
+        makeOption({ id: 'ns', label: 'Not started' }),
+        makeOption({ id: NO_VALUE_GROUP_KEY, label: 'No Status' }),
+      ]);
       const select = new DatabaseBoardView({
-        readOnly: false, i18n, options: [makeOption({ id: 'r', color: 'red' })], getRows: () => [], titlePropertyId: 'title',
+        readOnly: false, i18n, options: [makeOption({ id: 'y', color: 'yellow' })], getRows: () => [], titlePropertyId: 'title',
       }).createView();
-      const actions = [...board.querySelectorAll('[data-blok-database-column-actions]')];
+      const off = statusView([makeOption({ id: 'ip', color: 'blue' })], { groupSettings: { colorColumns: false } });
 
-      expect(actions).toHaveLength(2);
-      expect(actions.every((el) => el.hasAttribute('data-status'))).toBe(true);
-      expect(select.querySelector('[data-blok-database-column-actions]')?.hasAttribute('data-status')).toBe(false);
+      expect(glyph(status, 'ip')).toBe('var(--blok-database-column-blue-glyph, var(--blok-database-status-dot-blue))');
+      expect(glyph(status, 'ns')).toBe('var(--blok-database-column-accent)');
+      expect(glyph(status, NO_VALUE_GROUP_KEY)).toBe('var(--blok-database-column-accent)');
+      expect(glyph(select, 'y')).toBe('var(--blok-database-column-yellow-glyph, var(--blok-database-status-dot-yellow))');
+      expect(glyph(off, 'ip')).toBe('');
+      expect(status.querySelector('[data-blok-database-column-actions]')?.hasAttribute('data-status')).toBe(false);
     });
 
     // findings-board B04: nothing after the last column of a Status board.

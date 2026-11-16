@@ -2,7 +2,7 @@ import { nanoid } from 'nanoid';
 import { IconCross, IconPlus, IconTrash } from '../../components/icons';
 import type { I18n } from '../../../types';
 import { DatabasePanel, panelInput, panelReorderList, panelRow, panelSeparator, panelText } from './database-panel';
-import { propertyTypeMeta } from './database-property-types';
+import { propertyGlyph } from './database-property-types';
 import { sortDirectionLabelKey } from './database-filter-labels';
 import { openSortDirectionFlyout, openSortPropertyFlyout, sortChevron } from './database-sort-flyouts';
 import { withEntryIds } from './filter-tree';
@@ -21,6 +21,10 @@ export interface PropertyPickerOptions {
   testId: string;
   types: readonly PropertyType[];
   schema: () => PropertyDefinition[];
+  /** Names the list for its ink: Notion's filter and sort picker icons are darker. */
+  kind?: 'filter' | 'sort';
+  /** The type a property was made as; `schema` reads a formula as its result. */
+  storedType?: (propertyId: string) => PropertyType | undefined;
   i18n: Pick<I18n, 't'>;
   onPick: (property: PropertyDefinition) => void;
   placeholder: string;
@@ -28,6 +32,8 @@ export interface PropertyPickerOptions {
   used?: string[];
   /** Opens over an open panel, which stays: this width and height cap, flush under the anchor. */
   over?: { width: number; maxHeight: number };
+  /** Space under the anchor when not `over`; the panel's usual gap when unset. */
+  gap?: number;
   onClose: (escape: boolean) => void;
 }
 
@@ -39,7 +45,7 @@ export const propertyPicker = (options: PropertyPickerOptions): DatabasePanel =>
   const state = { query: '', active: 0 };
   const list = document.createElement('div');
 
-  list.setAttribute('data-blok-database-picker-list', '');
+  list.setAttribute('data-blok-database-picker-list', options.kind ?? '');
   const matches = (): PropertyDefinition[] => {
     const needle = state.query.trim().toLowerCase();
     const shown = options.schema()
@@ -59,12 +65,18 @@ export const propertyPicker = (options: PropertyPickerOptions): DatabasePanel =>
     const rows = matches().map((property, index) => {
       const row = panelRow({
         label: property.name,
-        icon: propertyTypeMeta(property.type).icon,
+        icon: propertyGlyph(property, options.storedType),
         testId: `database-pick-property-${property.id}`,
         onClick: () => pick(property),
       });
 
       row.toggleAttribute('data-active', index === state.active);
+      // notion-motion.md Round 42 §3: the fill follows the pointer, so one row is filled at a time.
+      row.addEventListener('mousemove', () => {
+        if (state.active === index) return;
+        state.active = index;
+        Array.from(list.children).forEach((child, at) => child.toggleAttribute('data-active', at === index));
+      });
 
       return row;
     });
@@ -115,6 +127,7 @@ export const propertyPicker = (options: PropertyPickerOptions): DatabasePanel =>
     testId: options.testId,
     width: options.over?.width ?? 290,
     backLabel: options.i18n.t('tools.database.settingsBack'),
+    ...(options.gap !== undefined ? { gap: options.gap } : {}),
     ...(options.over !== undefined ? { gap: 0 } : {}),
     onClose: options.onClose,
   });
@@ -128,6 +141,7 @@ export interface SortEditorOptions {
   anchor: HTMLElement;
   i18n: Pick<I18n, 't'>;
   schema: () => PropertyDefinition[];
+  storedType?: (propertyId: string) => PropertyType | undefined;
   sorts: () => SortConfig[];
   /** The caller redraws the editor after a write. */
   write: (next: SortConfig[]) => void;
@@ -219,12 +233,13 @@ export const sortEditor = (options: SortEditorOptions): DatabasePanel => {
           const propertyButton: HTMLElement = sortChevron(panelRow({
             label: property.name,
             testId: `database-sort-property-${sort.id}`,
-            icon: propertyTypeMeta(property.type).icon,
+            icon: propertyGlyph(property, options.storedType),
             onClick: () => openSortPropertyFlyout(
               propertyButton,
               current,
               schema.filter((p) => SORTABLE_TYPES.includes(p.type)),
-              (picked) => write(sorts().map((s) => (s.id === sort.id ? { ...s, propertyId: picked.id } : s)))
+              (picked) => write(sorts().map((s) => (s.id === sort.id ? { ...s, propertyId: picked.id } : s))),
+              options.storedType
             ),
           }));
           const directionButton: HTMLElement = sortChevron(panelRow({

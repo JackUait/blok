@@ -401,6 +401,31 @@ test.describe('columns', () => {
     expect(after?.x).toBeGreaterThanOrEqual((before?.x ?? 0) - 300 + 1);
   });
 
+  // notion-motion.md Round 46 §A: Notion's frozen block sticks 30px in from the scroller's edge, nothing scrolled
+  // past it shows in that strip, and "+ New page" stays at the text column.
+  test('a frozen column sticks 30px in from the table edge and "+ New page" stays put on a sideways scroll', async ({ page }) => {
+    await mount(page, blocks({ frozenColumnCount: 1 }));
+    const scroller = page.locator('[data-blok-database-table-scroller]');
+    const addRow = page.locator('[data-blok-database-table-add-row]');
+    const addBefore = await addRow.boundingBox();
+    const { left, pad, max } = await scroller.evaluate((el) => ({
+      left: el.getBoundingClientRect().left,
+      pad: parseFloat(getComputedStyle(el).paddingInlineStart),
+      max: el.scrollWidth - el.clientWidth,
+    }));
+    const scrollLeft = Math.min(max, pad + 200);
+
+    expect(scrollLeft).toBeGreaterThan(pad - 30 + 40);
+    await scroller.evaluate((el, x) => el.scrollTo({ left: x, behavior: 'instant' }), scrollLeft);
+
+    await expect.poll(async () => (await cell(page, 'r1', 'p-title').boundingBox())?.x).toBeCloseTo(left + 30, 0);
+    expect((await addRow.boundingBox())?.x).toBeCloseTo(addBefore?.x ?? Number.NaN, 0);
+    const box = await row(page, 'r1').boundingBox();
+    const inStrip = await page.evaluate(({ x, y }) => (document.elementFromPoint(x, y)?.closest('[data-blok-database-table-grid]') ?? null) !== null, { x: left + 15, y: (box?.y ?? 0) + 10 });
+
+    expect(inStrip).toBe(false);
+  });
+
   // research/33 §1: Notion showed nothing on 4 undescribed headers within 3s.
   test('a header without a description shows no hint, and keeps its name', async ({ page }) => {
     await mount(page, blocks());

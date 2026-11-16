@@ -115,6 +115,8 @@ export interface CellContext {
   helpLinks?: DatabaseHelpLinks;
   /** Every editor `openCellEditor` opens joins this set while open, so the host can close them all at once. */
   openEditors?: Set<CellEditorHandle>;
+  /** Whether a row's page has a body. The views pick the row's page glyph by it. */
+  rowHasBody?: (rowId: string) => boolean;
 }
 
 /**

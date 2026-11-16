@@ -1749,6 +1749,42 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R80_BYTES = 915;
     // Lane r81: Round 41 form toolbar (blue Share form, bordered Preview) and the bordered no-results buttons. Net database.css growth against origin/main.
     const DATABASE_R81_BYTES = 1996;
+    // Lane r82: Round 41 header ⋯, picker inks, the Formula glyph, bigger small chevrons, the AI line and the first Add view tile. Net database.css growth against origin/main.
+    const DATABASE_R82_BYTES = 2200;
+    // Lane r84: Round 42 board ⋯ and + in the group colour (gray with Color columns off) and the sort picker ink. Net database.css growth against origin/main.
+    const DATABASE_R84_BYTES = 423;
+    // Lane r86: Round 41 side peek » at Notion's size. Net database.css growth against origin/main.
+    const DATABASE_R86_BYTES = 232;
+    // Lane r89: Round 44 form column min(600, database − 80). Net database.css growth against origin/main.
+    const DATABASE_R89_BYTES = 96;
+    // Lane r90: Round 44 center peek header (steps on header hover, ⤢ at Notion's size). Net database.css growth against origin/main.
+    const DATABASE_R90_BYTES = 341;
+    // Lane r91: Round 44 type pickers (labels, search, Change type ink, Select icon, the open "+" slot). Net database.css growth against origin/main.
+    const DATABASE_R91_BYTES = 2205;
+    // Lane r96: Round 45 gallery content preview inset and ink, calendar grown-day tail and card width, 80% panel cap, layout labels. Net database.css growth against origin/main.
+    const DATABASE_R96_BYTES = 412;
+    // Lane r95: Round 45 grouped list (first group offset, 31 step, filled caret, add-row plus), list Edit frame, board card property gap. Net database.css growth against origin/main.
+    const DATABASE_R95_BYTES = 625;
+    // Lane r93: Round 45 feed card footer (title-column indent, Notion's rhythm, 13px chips, send shown on focus). Net database.css growth against origin/main.
+    const DATABASE_R93_BYTES = 2093;
+    // Lane r94: Round 45 content page glyph on board, gallery and calendar. Net database.css growth against origin/main.
+    const DATABASE_R94_BYTES = 1862;
+    // Lane r98: Round 46 table frozen column 30px in from the edge with the strip clipped, sticky "+ New page". Net database.css growth against origin/main.
+    const DATABASE_R98_BYTES = 527;
+    // Lane r100: Round 46 table smalls (feed body inset and size, tabular figures, OPEN and list Edit inner hover, OPEN inset, name glyph). Net database.css growth against origin/main.
+    const DATABASE_R100_BYTES = 1261;
+    // Lane r99: Round 46 timeline smalls (panel and No date glyph 18, Month day row 32, « and Month widths, zoom items 14/400, handle hidden on move). Net database.css growth against origin/main.
+    const DATABASE_R99_BYTES = 2095;
+    // Lane r103: Round 47 feed card (preview headings at page sizes with top padding, preview spacing, 8 inset with no byline). Net database.css growth against origin/main.
+    const DATABASE_R103_BYTES = 1330;
+    // Lane r104: Round 47 table and toolbar smalls (emoji icon 18, compact OPEN inset 4, frozen shadow after the stick, chip divider 12). Net database.css growth against origin/main.
+    const DATABASE_R104_BYTES = 252;
+    // Lane r102: Round 47 timeline header (day row 32 in every zoom, group labels in the toolbar row under page-coloured controls, toolbar 40). Net database.css growth against origin/main.
+    const DATABASE_R102_BYTES = 1166;
+    // Lane r108: Round 48 feed preview (500 cap with a See more chip, padded image, body under a property line). Net database.css growth against origin/main.
+    const DATABASE_R108_BYTES = 1647;
+    // Lane r106: Round 48 timeline header (labels on start lines, month lines in the body only, white tick row). Net database.css growth against origin/main.
+    const DATABASE_R106_BYTES = 57;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2298,6 +2334,24 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R79_BYTES
       + DATABASE_R80_BYTES
       + DATABASE_R81_BYTES
+      + DATABASE_R82_BYTES
+      + DATABASE_R84_BYTES
+      + DATABASE_R86_BYTES
+      + DATABASE_R89_BYTES
+      + DATABASE_R90_BYTES
+      + DATABASE_R91_BYTES
+      + DATABASE_R96_BYTES
+      + DATABASE_R95_BYTES
+      + DATABASE_R93_BYTES
+      + DATABASE_R94_BYTES
+      + DATABASE_R98_BYTES
+      + DATABASE_R100_BYTES
+      + DATABASE_R99_BYTES
+      + DATABASE_R103_BYTES
+      + DATABASE_R104_BYTES
+      + DATABASE_R102_BYTES
+      + DATABASE_R108_BYTES
+      + DATABASE_R106_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

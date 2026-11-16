@@ -1,4 +1,4 @@
-import { fileChipIcon, pageIconElement, showsPageIcon } from './page-icon';
+import { fileChipIcon, rowPageGlyph, showsPageIcon } from './page-icon';
 import type { I18n } from '../../../types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption } from './types';
@@ -251,7 +251,7 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
     }
 
     if (titleShown) {
-      const icon = showsPageIcon(this.options.view) ? pageIconElement(row) : null;
+      const icon = showsPageIcon(this.options.view) ? rowPageGlyph(row, this.options.cellContext?.rowHasBody?.(row.id) === true, false) : null;
 
       if (icon !== null) {
         card.appendChild(icon);

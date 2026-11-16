@@ -55,6 +55,11 @@ export interface PositionInput {
    */
   asideStayMargin?: number;
   /**
+   * With `placeLeftOfAnchor`: when the popover does not fit on `asideSide` but
+   * fits on the other side, it opens there instead.
+   */
+  asideFlip?: boolean;
+  /**
    * When true, the popover's start corner sits on the anchor's start corner
    * and slides only as far as needed to stay inside the viewport/scope.
    */
@@ -118,6 +123,7 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
     asideSide = 'left',
     viewportMargin = 0,
     asideStayMargin,
+    asideFlip = false,
     direction = 'ltr',
     cover = false,
     coverFlipOffset,
@@ -140,10 +146,13 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
   // block content. When it does not fit, fall through to the standard
   // below/above placement — the handle stays clear and the menu covers only
   // content below, matching the context-menu behavior.
-  const asideOnRight = asideSide === 'right';
-  const asideSpace = asideOnRight
-    ? boundaryRight - anchor.right - offset
-    : anchor.left - offset - boundaryLeft;
+  const spaceOnRight = boundaryRight - anchor.right - offset;
+  const spaceOnLeft = anchor.left - offset - boundaryLeft;
+  const flipAside = asideFlip && (asideSide === 'right'
+    ? shouldFlip(popoverSize.width, spaceOnRight, spaceOnLeft)
+    : shouldFlip(popoverSize.width, spaceOnLeft, spaceOnRight));
+  const asideOnRight = (asideSide === 'right') !== flipAside;
+  const asideSpace = asideOnRight ? spaceOnRight : spaceOnLeft;
 
   if (placeLeftOfAnchor && (popoverSize.width <= asideSpace || asideStayMargin !== undefined)) {
     const anchorCenterInDocCoords = (anchor.top + anchor.bottom) / 2 + scrollOffset.y;
@@ -171,7 +180,7 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
     // it does not fully fit. Never flip to the opposite side: the block content
     // always lies there, so flipping would cover the very content the menu
     // belongs to, while clamping merely compresses the gap between menu and
-    // anchor.
+    // anchor. Only `asideFlip` opts in, for a submenu whose other side is free.
     const rawLeft = asideOnRight
       ? anchor.right + offset + scrollOffset.x
       : anchor.left - offset - popoverSize.width + scrollOffset.x;

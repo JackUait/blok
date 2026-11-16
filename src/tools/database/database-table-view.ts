@@ -28,7 +28,7 @@ import { DatabaseTableGrid, createTableState } from './database-table-grid';
 import { SELECTION_BAR_SEGMENTS, bulkCloseClearsSelection, bulkStartValue, selectionPropertyButton, watchBulkCloseKey } from './database-selection-bar';
 import { cellText } from './database-table-clipboard';
 import type { CellChange, TableState } from './database-table-grid';
-import { fileChipIcon, pageIconElement, pagePlaceholderIcon, showsPageIcon } from './page-icon';
+import { fileChipIcon, rowPageGlyph, showsPageIcon } from './page-icon';
 
 import { CALCULATION_LABEL_KEYS, calcMenuAt, calculationItems, headerViewItems, loadLimitItems, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
 import type { CountCap, OpenMenuOptions, RowFavorite } from './database-table-menus';
@@ -74,7 +74,11 @@ export { MIN_COLUMN_WIDTH };
 /** notion-motion.md Round 28 §1: Notion's title column shows OPEN from 102 and the icon pill at 100. 101 is unread. */
 const OPEN_LABEL_MIN_WIDTH = 102;
 /** The OPEN button's inset from the title cell's end (database.css). */
-const OPEN_INSET = 6;
+const OPEN_INSET = 4;
+/** notion-motion.md Round 46 §A: the frozen block sticks this far in from the scroller's edge (x 300, scroller at 270). The scroller's clip-path in database.css uses the same 30px. */
+const FROZEN_STICK_INSET = 30;
+/** notion-motion.md Round 47 §B6: Notion's shadow comes on at 268, 29 after the stick (239). A fit to the measured numbers. */
+const FROZEN_SHADOW_AFTER_STICK = 29;
 
 /**
  * A narrow title column shows an icon-only OPEN (notion-motion.md Round 27 §2, Round 28 §1): below Notion's 102,
@@ -143,6 +147,8 @@ export interface TableHandlers {
   setLoadLimit?: (limit: LoadLimit) => void;
   openPropertyMenu: (propertyId: string, anchor: HTMLElement) => void;
   addProperty: (anchor: HTMLElement, placement?: { propertyId: string; side: 'left' | 'right' }) => void;
+  /** The header row's ⋯ after "+": Notion's "Show or hide properties". Left out when unset. */
+  propertyVisibility?: (anchor: HTMLElement) => void;
   viewAction: (action: 'filter' | 'sort' | 'group', propertyId: string, anchor: HTMLElement) => void;
   moveRow: (result: TableRowDropResult) => void;
   /** A drop in a sorted view. Notion asks to remove the sort (D7); the tool decides. */
@@ -398,6 +404,10 @@ export class DatabaseTableView implements DatabaseViewRenderer {
   private rowDrag: DatabaseTableRowDrag | null = null;
   private root: HTMLDivElement | null = null;
   private gridEl: HTMLDivElement | null = null;
+  /** Reads the scroller's text-column padding, which sets where the frozen block sticks. */
+  private scrollerObserver: ResizeObserver | null = null;
+  /** The scrollLeft at which the frozen block sticks. */
+  private stickAt = 0;
   /** A pointer is down in the grid. */
   private pressing = false;
   private bar: HTMLElement | null = null;
@@ -476,9 +486,28 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     const scroller = document.createElement('div');
 
     scroller.setAttribute('data-blok-database-table-scroller', '');
-    // notion-motion.md Round 29 §5: the frozen shadow shows once content slides under the frozen block.
-    // Here that is any offset: sticky insets count from the padded edge, so the block sticks at once. RTL scrolls negative.
-    scroller.addEventListener('scroll', () => scroller.toggleAttribute('data-scrolled', scroller.scrollLeft !== 0), { passive: true });
+    // `data-scrolled` clips the strip before the stuck block; `data-frozen-shadow` shows its shadow (database.css). RTL scrolls negative.
+    const frozen = this.columns.some((column) => column.frozenAt !== undefined);
+    const markStuck = (): void => {
+      const offset = Math.abs(scroller.scrollLeft);
+
+      scroller.toggleAttribute('data-scrolled', frozen && offset !== 0 && offset >= this.stickAt);
+      scroller.toggleAttribute('data-frozen-shadow', frozen && offset !== 0 && offset >= this.stickAt + FROZEN_SHADOW_AFTER_STICK);
+    };
+
+    scroller.addEventListener('scroll', markStuck, { passive: true });
+    // Sticky insets count from the padded edge (the text column), so the frozen cells subtract the padding.
+    this.scrollerObserver?.disconnect();
+    this.scrollerObserver = frozen && typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(() => {
+        const pad = parseFloat(getComputedStyle(scroller).paddingInlineStart) || 0;
+
+        this.stickAt = Math.max(0, pad - FROZEN_STICK_INSET);
+        scroller.style.setProperty('--_blok-database-frozen-shift', `${-this.stickAt}px`);
+        markStuck();
+      })
+      : null;
+    this.scrollerObserver?.observe(scroller);
 
     const gridEl = document.createElement('div');
 
@@ -734,6 +763,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     this.menu?.destroy();
     this.menu = null;
     this.grid?.destroy();
+    this.scrollerObserver?.disconnect();
+    this.scrollerObserver = null;
     this.resize?.destroy();
     this.columnDrag?.destroy();
     this.rowDrag?.destroy();
@@ -805,10 +836,27 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         add.setAttribute('aria-label', this.t('tools.database.tableAddProperty'));
       }
       header.appendChild(add);
+      if (!add.hasAttribute('data-labelled') && this.handlers?.propertyVisibility !== undefined) {
+        header.appendChild(this.createPropertyVisibilityButton());
+      }
     }
     header.appendChild(this.createFiller());
 
     return header;
+  }
+
+  /** notion-motion.md Round 41 Part A: a 28px ⋯ right after "+", in the "+"'s ink. */
+  private createPropertyVisibilityButton(): HTMLButtonElement {
+    const more = document.createElement('button');
+    const label = this.t('tools.database.tableShowHideProperties');
+
+    more.type = 'button';
+    more.setAttribute('data-blok-database-table-property-visibility', '');
+    more.setAttribute('aria-label', label);
+    more.innerHTML = IconDotsHorizontal;
+    onHover(more, label);
+
+    return more;
   }
 
   private createHeaderCell(column: Column, index: number): HTMLElement {
@@ -902,7 +950,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     style.width = `${column.width}px`;
     if (column.frozenAt !== undefined) {
       cell.setAttribute('data-frozen', '');
-      style.insetInlineStart = `${column.frozenAt}px`;
+      style.insetInlineStart = `calc(${column.frozenAt}px + var(--_blok-database-frozen-shift, 0px))`;
     }
     // A blank cell is not sticky: its line and shadow would scroll away.
     if (column.frozenEdge === true && !cell.hasAttribute('data-blok-database-table-blank-cell')) cell.setAttribute('data-frozen-edge', '');
@@ -1234,7 +1282,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       });
     }
 
-    const icon = column.property.type === 'title' && showsPageIcon(this.options.view) ? pageIconElement(row) ?? pagePlaceholderIcon() : null;
+    const icon = column.property.type === 'title' && showsPageIcon(this.options.view)
+      ? rowPageGlyph(row, this.options.cellContext?.rowHasBody?.(row.id) === true, true)
+      : null;
 
     if (icon !== null) {
       cell.insertBefore(icon, value);
@@ -2017,6 +2067,13 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     }
     if (closest('[data-blok-database-table-group-add]') !== null) {
       handlers.addGroupPage?.(groupKey);
+
+      return;
+    }
+    const visibility = closest('[data-blok-database-table-property-visibility]');
+
+    if (visibility !== null) {
+      handlers.propertyVisibility?.(visibility);
 
       return;
     }

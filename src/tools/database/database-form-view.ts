@@ -90,6 +90,7 @@ const MAX_SELECTION_PRESETS = [1, 2, 3, 4, 5, 10] as const;
 
 /** notion-motion.md Round 32 §1 (r32-a-movequestion-*): the Move question flyout is 280 wide. */
 const MOVE_FLYOUT_WIDTH = 280;
+const QUESTION_PANEL_GAP = 24;
 
 /**
  * Multi-select and select default to a list (measured; select: notion-motion.md Round 32 §4).
@@ -931,8 +932,11 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     this.panel?.close();
     const { i18n, view, schema } = this.options;
     const asked = new Set(resolveViewProperties(view, schema).filter((entry) => entry.visible).map((entry) => entry.id));
+    // notion-motion.md Round 31 §1 / Round 44 §1: beside the column like Question options.
     const panel = new DatabasePanel({
       anchor,
+      beside: QUESTION_PANEL_GAP,
+      besideFlip: true,
       testId: 'database-form-select-type',
       width: 290,
       backLabel: i18n.t('tools.database.peekBack'),
@@ -1025,8 +1029,11 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       state.setting = { ...state.setting, ...patch };
       this.options.setQuestionSetting?.(state.property.id, patch);
     };
+    const card = anchor.closest<HTMLElement>('[data-blok-database-form-question]');
+    // notion-motion.md Round 31 §1 / Round 33 §1: 24 right of the card, top level with it; 24 left of it when only the left has room.
     const panel = new DatabasePanel({
       anchor,
+      ...(card !== null ? { beside: QUESTION_PANEL_GAP, besideOf: card, besideFlip: true } : {}),
       testId: 'database-form-question-settings',
       width: 290,
       backLabel: i18n.t('tools.database.peekBack'),
@@ -1227,7 +1234,8 @@ export class DatabaseFormView implements DatabaseViewRenderer {
 
   /**
    * "Move question ›": a 280-wide flyout on the panel's left, centred on the row, listing only
-   * the moves the question can make (notion-motion.md Round 32 §1). A form has one group: the whole form.
+   * the moves the question can make (notion-motion.md Round 32 §1). With no room there it opens
+   * on the panel's right (Round 33 §1). A form has one group: the whole form.
    */
   private moveRow(propertyId: string, panel: DatabasePanel): HTMLElement {
     const { i18n } = this.options;
@@ -1252,7 +1260,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
             panel.close();
             this.options.moveQuestion?.(propertyId, move.beforeId());
           }),
-        })), { aside: { side: 'left', gap: 0 } }),
+        })), { aside: { side: 'left', gap: 0, flip: true } }),
     });
 
     return row;

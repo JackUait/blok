@@ -1,4 +1,4 @@
-import { fileChipIcon, pageIconElement, pagePlaceholderIcon } from './page-icon';
+import { fileChipIcon, pagePlaceholderIcon, rowPageGlyph } from './page-icon';
 import { showAvatarsOnly } from './avatar-only';
 import type { I18n } from '../../../types';
 import type { DatabaseRow, OpenPagesIn, PropertyDefinition, PropertyValue, SelectOption } from './types';
@@ -8,7 +8,7 @@ import { safeImageSrc } from '../../components/utils/sanitize-url';
 import { createGroupPill, renderCellValue } from './cells';
 import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
-import { IconChevronDown, IconDotsHorizontal, IconExpandDiagonal, IconPeekCenter, IconPeekSide, IconPencilLine, IconPlus, IconRowGrip } from '../../components/icons';
+import { IconDotsHorizontal, IconExpandDiagonal, IconPeekCenter, IconPeekSide, IconPencilLine, IconPlayerPlay, IconPlus, IconRowGrip } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
 import { onHover } from '../../components/utils/tooltip';
 import { propertyHint } from './property-hint';
@@ -583,7 +583,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
     toggle.setAttribute('data-blok-database-list-group-toggle', '');
     toggle.setAttribute('aria-expanded', 'true');
     toggle.setAttribute('aria-label', this.i18n.t('tools.database.tableCollapseGroup'));
-    toggle.innerHTML = IconChevronDown;
+    toggle.innerHTML = IconPlayerPlay;
     label.setAttribute('data-blok-database-list-group-label', '');
     label.appendChild(this.groupValue(option));
     header.append(toggle, label);
@@ -688,8 +688,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
       rowEl.appendChild(this.createGutter(row.id));
     }
 
-    // notion-spec-2 §21.8: a row with no emoji shows the empty-page glyph.
-    const icon = this.showPageIcon ? pageIconElement(row) ?? pagePlaceholderIcon() : null;
+    const icon = this.showPageIcon ? rowPageGlyph(row, this.settings.cellContext?.rowHasBody?.(row.id) === true, true) : null;
 
     if (icon !== null) {
       rowEl.appendChild(icon);

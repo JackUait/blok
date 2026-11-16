@@ -80,6 +80,134 @@ describe('database chart and feed styles', () => {
     }
   });
 
+  // notion-motion.md Round 45 §1 Feed card (r45-n-feed.raw, r45-n-feedprops.raw): under a byline the property line
+  // starts at the title column (x 587), the reaction chip and composer 6 further in (x 593), the input at 622.5.
+  it('lines the card footer up with the title column', () => {
+    expect(ruleBody('[data-blok-database-feed-byline] ~ [data-blok-database-feed-properties]'))
+      .toContain('margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-2))');
+    for (const part of ['reactions', 'comments']) {
+      expect(ruleBody(`[data-blok-database-feed-byline] ~ [data-blok-database-feed-${part}]`))
+        .toContain('margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-3-5))');
+    }
+    expect(ruleBody('[data-blok-database-feed-comments] [data-blok-database-comment-composer]')).toContain('gap: 5.5px');
+  });
+
+  // Same raws: the chip at card + 93.5 (+ 123.5 under a property line with its pills at + 87.5), the composer
+  // 14 under the chip, its input 27 tall, the card 175.5 tall.
+  it('spaces the footer as Notion\'s feed card', () => {
+    expect(ruleBody('[data-blok-database-feed-reactions]')).toContain('margin-block-start: 11.5px');
+    expect(ruleBody('[data-blok-database-feed-properties] + [data-blok-database-feed-reactions]')).toContain('margin-block-start: 8.5px');
+    expect(ruleBody('[data-blok-database-feed-properties]')).toContain('margin-block-start: var(--blok-space-1)');
+    expect(ruleBody('[data-blok-database-feed-comments]')).toContain('margin-block-start: var(--blok-space-1-5)');
+    expect(ruleBody('[data-blok-database-feed-comments] [data-blok-database-comment-input]')).toContain('min-height: 27px');
+    expect(ruleBody('[data-blok-database-feed-comments] [data-blok-database-comment-composer] > [data-blok-database-comment-avatar]'))
+      .toContain('align-self: flex-start');
+  });
+
+  // Same raws: Notion's composer tools are at opacity 0 until the box has focus. A focused textarea always matches
+  // :focus-visible, and so does a send button reached by Tab.
+  it('hides the composer send button until the composer has focus', () => {
+    expect(ruleBody('[data-blok-database-feed-comments] [data-blok-database-comment-composer]:not(:has(:focus-visible)) > [data-blok-database-comment-send]'))
+      .toContain('opacity: 0');
+  });
+
+  // r45-n-feedprops.raw: a 21 line, chips 13/18, 18 tall with 8 padding, 14 apart, the checkbox 14.
+  it('sets the property line chips at 13px, 14 apart', () => {
+    const pill = ruleBody('[data-blok-database-feed-properties] [data-blok-database-option-pill]');
+
+    expect(pill).toMatch(/font-size:\s*13px/);
+    expect(pill).toMatch(/line-height:\s*18px/);
+    expect(pill).toMatch(/height:\s*18px/);
+    expect(pill).toContain('padding: 0 var(--blok-space-2)');
+    expect(ruleBody('[data-blok-database-feed-properties]')).toContain('line-height: 21px');
+    expect(ruleBody('[data-blok-database-feed-properties]')).toContain('gap: var(--blok-space-1) var(--blok-space-3-5)');
+    expect(ruleBody('[data-blok-database-feed-properties] [data-blok-database-checkbox]')).toContain('width: 14px');
+    // Each value sits centred on the line: pills 1.5 under its top, the checkbox 3.5.
+    expect(ruleBody('[data-blok-database-feed-property]')).toContain('align-items: center');
+  });
+
+  // notion-motion.md Round 46 §C.4: under a byline the body preview starts at card x + 54, as the footer, in 14/21.
+  it('indents the body preview to the footer column and sets it in 14/21', () => {
+    expect(ruleBody('[data-blok-database-feed-byline] ~ [data-blok-database-feed-body]'))
+      .toContain('margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-3-5))');
+    expect(ruleBody('[data-blok-database-feed-body]')).toMatch(/font-size:\s*14px/);
+    expect(ruleBody('[data-blok-database-feed-body]')).toMatch(/line-height:\s*21px/);
+  });
+
+  // notion-motion.md Round 47 §C (r47-n-feed-delta.raw): each preview block has 6 above and below, its text 2 more;
+  // headings take the page sizes x 0.875 with the page's top padding.
+  it('sets preview headings at Notion\'s page sizes with their top padding', () => {
+    expect(ruleBody('[data-blok-database-feed-body]')).toMatch(/gap:\s*0/);
+    expect(ruleBody('[data-blok-database-feed-line]')).toContain('padding-block: var(--blok-space-2)');
+    for (const [level, size, line, top] of [['h1', '26.25px', '34.125px', '32px'], ['h2', '21px', '27.3px', 'calc(var(--blok-space-6) + var(--blok-space-1))'], ['h3', '17.5px', '22.75px', 'var(--blok-space-6)']]) {
+      const rule = ruleBody(`[data-blok-database-feed-line][data-level="${level}"]`);
+
+      expect(rule).toContain(`font-size: ${size}`);
+      expect(rule).toContain(`line-height: ${line}`);
+      expect(rule).toContain(`padding-block-start: ${top}`);
+    }
+  });
+
+  // notion-motion.md Round 47 §C: the title block is 28.5 + a 5 margin, so the preview starts 7.5 under Blok's 26 title
+  // (the card gap gives 8); the footer's 12 top padding puts the chip 12 under the preview.
+  it('spaces the preview under the title and the chip under the preview as Notion', () => {
+    for (const before of ['title', 'head']) {
+      expect(ruleBody(`[data-blok-database-feed-${before}] + [data-blok-database-feed-body]`)).toContain('margin-block-start: -0.5px');
+    }
+    expect(ruleBody('[data-blok-database-feed-body] + [data-blok-database-feed-reactions]')).toContain('margin-block-start: var(--blok-space-1)');
+  });
+
+  // notion-motion.md Round 48 §C (r48-n-feed-alpha-prop.raw): the property row ends 111.5 with a 12 margin, so the
+  // preview starts 123.5. Blok's 21 row ends 107 and the card gap gives 8, so 8.5 more.
+  it('starts the preview under a property line where Notion does', () => {
+    expect(ruleBody('[data-blok-database-feed-properties] + [data-blok-database-feed-body]')).toContain('margin-block-start: 8.5px');
+  });
+
+  // notion-motion.md Round 48 §C (r48-n-feed-alpha.raw): the image block has 8 padding, the image is the 600 preview
+  // less 16 (584), radius 2.
+  it('pads a preview image as Notion\'s image block', () => {
+    const image = ruleBody('[data-blok-database-feed-image]');
+
+    expect(image).toContain('margin-block: var(--blok-space-2)');
+    expect(image).toContain('max-inline-size: min(100%, 584px)');
+    expect(image).toContain('border-radius: var(--blok-radius-mark)');
+  });
+
+  // notion-motion.md Round 48 §C (r48-n-feed-alpha.raw): the preview is max-height 500, overflow hidden. The chip is
+  // 24.8 tall, its top 32 above the preview's end, centred; padding 4 10 4 8, gap 5, 12/16.8, radius 6, dark fill.
+  it('caps the preview at 500 with Notion\'s See more chip over its end', () => {
+    const body = ruleBody('[data-blok-database-feed-body]');
+
+    expect(body).toContain('position: relative');
+    expect(body).toContain('max-block-size: 500px');
+    expect(body).toContain('overflow: hidden');
+    expect(ruleBody('[data-blok-database-feed-body] > *')).toContain('flex-shrink: 0');
+    const chip = ruleBody('[data-blok-database-feed-see-more]');
+
+    expect(chip).toContain('position: absolute');
+    expect(chip).toContain('inset-block-start: calc(100% - 32px)');
+    expect(chip).toContain('inset-inline-start: 50%');
+    expect(chip).toContain('translate: -50% 0');
+    expect(chip).toContain('padding: var(--blok-space-1) 10px var(--blok-space-1) var(--blok-space-2)');
+    expect(chip).toContain('gap: var(--blok-space-1-25)');
+    expect(chip).toContain('font-size: 12px');
+    expect(chip).toContain('line-height: 16.8px');
+    expect(chip).toContain('border-radius: var(--blok-radius-control)');
+    expect(chip).toContain('background-color: var(--blok-tooltip-bg)');
+    expect(chip).toContain('color: var(--blok-tooltip-font)');
+    expect(chip).toContain('box-shadow: var(--blok-database-feed-see-more-shadow)');
+    expect(css).toMatch(/--blok-database-feed-see-more-shadow:\s*rgba\(0, 0, 0, 0\.08\) 0 4px 12px -2px/);
+    expect(ruleBody('[data-blok-database-feed-see-more] svg')).toContain('inline-size: 12px');
+  });
+
+  // notion-motion.md Round 47 §C: with no byline the body, chip and composer keep an 8 inset (card x + 24).
+  it('keeps the footer column 8 in when there is no byline', () => {
+    for (const part of ['body', 'reactions', 'comments']) {
+      expect(ruleBody(`[data-blok-database-feed-card]:not(:has(> [data-blok-database-feed-byline])) > [data-blok-database-feed-${part}]`))
+        .toContain('margin-inline-start: var(--blok-space-2)');
+    }
+  });
+
   it('marks a turned-off legend entry with muted ink, never a fill', () => {
     const off = ruleBody('[data-blok-database-chart-legend-entry][aria-pressed="false"]');
 

@@ -296,8 +296,8 @@ export const resizeBarByMinutes = (values: BarValues, edge: 'start' | 'end', del
 };
 
 /**
- * Day zoom: drags one edge of an all-day bar by minutes. The bar turns timed,
- * midnight to midnight, and both edges are written (notion-motion.md Round 50 §3).
+ * Day zoom: drags one edge of an all-day bar by minutes. The bar turns timed
+ * and both edges are written (notion-motion.md Round 50 §3, Round 51 §2).
  */
 export const resizeAllDayByMinutes = (values: BarValues, edge: 'start' | 'end', deltaMinutes: number): BarWrite => {
   const span = timelineSpan(values.start, values.end);
@@ -308,7 +308,9 @@ export const resizeAllDayByMinutes = (values: BarValues, edge: 'start' | 'end', 
   }
 
   const start = midnightOf(startValue.start);
-  const end = midnightAfter(values.end === undefined ? startValue.end ?? startValue.start : parseDateValue(values.end)?.start ?? span.end);
+  const last = values.end === undefined ? startValue.end ?? startValue.start : parseDateValue(values.end)?.start ?? span.end;
+  // notion-motion.md Round 51 §2: a start-edge drag leaves the end at 11:59 PM of the last day; an end drag runs from midnight after it.
+  const end = edge === 'start' && !TIMED_PART.test(last) ? `${last.slice(0, 10)}T23:59` : midnightAfter(last);
   const timed: BarValues = values.end === undefined ? { start: `${start}/${end}`, end: undefined } : { start, end };
   const write = resizeBarByMinutes(timed, edge, deltaMinutes);
 

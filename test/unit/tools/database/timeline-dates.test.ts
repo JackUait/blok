@@ -218,7 +218,13 @@ describe('timeline-dates', () => {
   describe('resizeAllDayByMinutes', () => {
     it('turns an all-day range timed, midnight to midnight, then moves the dragged edge', () => {
       expect(resizeAllDayByMinutes({ start: '2026-11-18', end: undefined }, 'end', 30)).toEqual({ start: '2026-11-18T00:00/2026-11-19T00:30' });
-      expect(resizeAllDayByMinutes({ start: '2026-11-18/2026-11-20', end: undefined }, 'start', -15)).toEqual({ start: '2026-11-17T23:45/2026-11-21T00:00' });
+    });
+
+    // notion-motion.md Round 51 §2: all day Nov 18, start edge -30px read "Nov 17 11:30 PM → Nov 18 11:59 PM".
+    it('ends a start-edge resize at 11:59 PM of the last day', () => {
+      expect(resizeAllDayByMinutes({ start: '2026-11-18', end: undefined }, 'start', -30)).toEqual({ start: '2026-11-17T23:30/2026-11-18T23:59' });
+      expect(resizeAllDayByMinutes({ start: '2026-11-18/2026-11-20', end: undefined }, 'start', -15)).toEqual({ start: '2026-11-17T23:45/2026-11-20T23:59' });
+      expect(resizeAllDayByMinutes({ start: '2026-11-18', end: '2026-11-20' }, 'start', 15)).toEqual({ start: '2026-11-18T00:15', end: '2026-11-20T23:59' });
     });
 
     it('writes both timed edges when the view has an end property', () => {

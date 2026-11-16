@@ -768,16 +768,27 @@ const serverSetup = (input: Record<string, unknown>): ServerSetup => {
  * An MCP handle's call: the contract blok-mcp serves for its start options (`mcp`, as mcpSurface
  * takes them) and the handle's mode, so the contract revision and the commands match Node's.
  */
-const mcpSetups = new WeakMap<Record<string, unknown>, ServerSetup>();
+const MCP_SETUP_CACHE_SIZE = 16;
+const mcpSetups = new Map<string, ServerSetup>();
 
-// Memoized per input object: one call asks for it several times, and a contract costs a manifest build.
+/** Object key order does not change configuration; array order remains meaningful. */
+const setupKey = (value: unknown): string => JSON.stringify(value, (_key, entry: unknown) =>
+  isRecord(entry) ? Object.fromEntries(Object.keys(entry).sort().map(key => [key, entry[key]])) : entry);
+
+// Keep only configuration-derived setups: JSON calls never retain their actor, document or permissions.
 const mcpSetup = (options: Record<string, unknown>): ServerSetup => {
-  const known = mcpSetups.get(options);
+  const flags = contractFlagsOf(options);
+  const mode = options.mode === 'live' ? 'live' : 'stored';
+  const key = setupKey({ ...flags, pageTitles: flags.pageTitles ?? 'off', mode });
+  const known = mcpSetups.get(key);
 
   if (known !== undefined) {
+    mcpSetups.delete(key);
+    mcpSetups.set(key, known);
+
     return known;
   }
-  const built = mcpContractFor(contractFlagsOf(options), options.mode === 'live' ? 'live' : 'stored');
+  const built = mcpContractFor(flags, mode);
   const setup: ServerSetup = {
     contract: built.contract,
     tools: built.runtimes,
@@ -787,10 +798,17 @@ const mcpSetup = (options: Record<string, unknown>): ServerSetup => {
     }),
     richTextFieldsFor: built.richTextFieldsFor,
     // buildMcpContracts lets a sync URL's history restore.
-    restores: options.sync === true,
+    restores: flags.sync,
   };
 
-  mcpSetups.set(options, setup);
+  mcpSetups.set(key, setup);
+  if (mcpSetups.size > MCP_SETUP_CACHE_SIZE) {
+    const oldest = mcpSetups.keys().next().value;
+
+    if (oldest !== undefined) {
+      mcpSetups.delete(oldest);
+    }
+  }
 
   return setup;
 };
@@ -927,9 +945,16 @@ const agentExecuteResult = async (inputJson: string): Promise<string> => {
       return JSON.stringify({ upload: hostUpload });
     }
     const unused = withUnusedPages(ran, pages?.unused ?? []);
+    // The final snapshot is stable after execute. Export it lazily once for all wire forms.
+    const output: { document?: OutputData } = {};
+    const documentOutput = (): OutputData => {
+      output.document ??= session.output();
+
+      return output.document;
+    };
     // MCP only, as src/mcp/stored-session.ts: a file this deep is one no port could open again.
     const tooDeep = mcp !== undefined && writes === true && unused.ok && session.contentRevision() !== before
-      ? tooDeepToSave(session.output())
+      ? tooDeepToSave(documentOutput())
       : null;
     const result: AgentResult = tooDeep === null ? unused : { ok: false, error: tooDeep.agentError, warnings: unused.warnings };
 
@@ -944,10 +969,10 @@ const agentExecuteResult = async (inputJson: string): Promise<string> => {
     const history = 'history' in input ? { history: { ...session.history(), revision: session.contentRevision() } } : {};
     // As src/mcp/stored-session.ts: a failed, reading or unchanged batch saves nothing.
     const save = writes === true && result.ok && session.contentRevision() !== before;
-    const text = save ? documentTextOf(input.documentText, session.output()) : undefined;
+    const text = save ? documentTextOf(input.documentText, documentOutput()) : undefined;
 
     return JSON.stringify({
-      result, document: session.output(), edits: session.lastEdits(), ...history,
+      result, document: documentOutput(), edits: session.lastEdits(), ...history,
       ...(result.ok && restoring.version !== undefined && { restore: restoring.version }),
       ...(writes !== undefined && { writes, save }),
       ...(text !== undefined && { documentText: text }),

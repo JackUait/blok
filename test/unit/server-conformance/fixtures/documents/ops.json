@@ -9,13 +9,13 @@
     "name": "schema",
     "op": "schema",
     "input": "{}",
-    "outputSha256": "b35b74dcd7a5cefaeeb1d131c8e0d0b26565e3cf984d5349823f69a1a95a1818"
+    "outputSha256": "a6e0171a33f2ac3a16f48d89924d5536dbf3d34c337e5cd96b8bf92112678b36"
   },
   {
     "name": "manifest",
     "op": "manifest",
     "input": "{}",
-    "outputSha256": "c420eed3fd49625ed7a137018a7d91e1cb7adb0f33582b616821c879946a06fd"
+    "outputSha256": "9589e974a47022e35d4b5347b8fe669ec9b932d1e57121dcd9959e900e99ec64"
   },
   {
     "name": "article.markdown",
@@ -2295,19 +2295,19 @@
     "name": "mcp.surface.default",
     "op": "mcpSurface",
     "input": "{\"source\":true}",
-    "outputSha256": "9ff9c81100e121db75e2dfd914c1f270a0b27ad1411701f0bc2ad1f8eea9da92"
+    "outputSha256": "dd9a52c0f3eb4a7253fc49aec850c9a7426b86c5c0f5f29275e7bf42710f9772"
   },
   {
     "name": "mcp.surface.pageMap.live",
     "op": "mcpSurface",
     "input": "{\"pageTitles\":\"page-map\",\"sync\":true,\"source\":true,\"uploads\":true,\"comments\":false,\"schema\":\"full\",\"handleIdleMs\":90500}",
-    "outputSha256": "34caf3872f71a1498b015980c2a1eba40de2ed991d28d61cce1343fd48c83fcc"
+    "outputSha256": "17b8cc73966ab22afed6b61ef53dd56252f745a5ae09f3eb6b9598f2beb13105"
   },
   {
     "name": "mcp.prompt",
     "op": "mcpPrompt",
     "input": "{\"name\":\"improve\",\"arguments\":{\"selection\":\"Teh \\\"cat\\\"\",\"blockId\":\"b1\",\"documentId\":\"doc é\"}}",
-    "output": "{\"result\":{\"description\":\"Improve writing\",\"messages\":[{\"role\":\"user\",\"content\":{\"type\":\"text\",\"text\":\"Improve the writing of the selected text: clearer and smoother, with the same meaning. Replace the selected text with the result. Write in the language of the document, and reply in it too.\\n\\n(Context: the user selected this text in block b1: \\\"Teh \\\\\\\"cat\\\\\\\"\\\". \\\"This\\\" in the request means that text.)\\n\\nWork in the Blok document with documentId \\\"doc é\\\".\\n\\nUse the Blok tools: open the document with blok_open (pass write: true if you will edit it), read it with blok_read, find the text the request is about with the doc.find command in blok_execute, and make every edit with blok_execute.\"}}]}}"
+    "output": "{\"result\":{\"description\":\"Improve writing\",\"messages\":[{\"role\":\"user\",\"content\":{\"type\":\"text\",\"text\":\"Improve the writing of the selected text: clearer and smoother, with the same meaning. Replace the selected text with the result. Write in the language of the document, and reply in it too.\\n\\n(Context: the user selected this text in block b1: \\\"Teh \\\\\\\"cat\\\\\\\"\\\". \\\"This\\\" in the request means that text.)\\n\\nWork in the Blok document with documentId \\\"doc é\\\".\\n\\nUse the Blok tools: open the document with blok_open (pass write: true if you will edit it), read it with blok_read, find the text the request is about with the doc.find command in blok_execute, and make every edit with blok_execute. After editing, read the affected structure with blok_read to verify it. After a timeout or lost response, read first and reconcile existing blocks before retrying; do not duplicate inserts.\"}}]}}"
   },
   {
     "name": "mcp.prompt.unknown",

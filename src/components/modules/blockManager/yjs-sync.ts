@@ -2252,6 +2252,10 @@ export class BlockYjsSync {
         created.push({ block, targetIndex, parentId: entry.parentId, placement });
       }
 
+      // Read each parent's authoritative sibling order once after all of this
+      // synchronous batch has landed, rather than rescanning it per child.
+      const affectedParents = new Set<string>();
+
       // Pass 2 — activate blocks (DOM insert + RENDERED), then emit events
       for (const { block, targetIndex, parentId, placement } of created) {
         this.blocksStore.activateBlock(block, targetIndex);
@@ -2261,10 +2265,11 @@ export class BlockYjsSync {
         // DOM child container, updates parent's contentIds, and applies indentation.
         if (parentId !== undefined) {
           this.placeOrReparent(block, placement, parentId);
-          this.reconcileParentChildOrderFromDoc(parentId);
+          affectedParents.add(parentId);
           this.warnIfChildToolDenied(block, parentId);
         }
       }
+      affectedParents.forEach(parentId => this.reconcileParentChildOrderFromDoc(parentId));
     }, { extendThroughRAF: true });
   }
 

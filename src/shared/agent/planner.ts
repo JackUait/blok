@@ -127,7 +127,13 @@ export const planBatch = (input: {
   stamp: EditStamp;
   warnings: AgentWarning[];
 }): { plan: Plan; draft: DocSnapshot } => {
-  const state = new PlanState(input.snapshot.clone(), input.ctx, input.warnings, input.stamp);
+  // Only these built-in handlers are known to leave their draft untouched.
+  // Registry overrides and host actions still get an atomic mutable copy.
+  const onlyCoreReads = input.batch.commands.every(command =>
+    (command.name === 'doc.read' && HANDLERS[command.name] === planRead) ||
+    (command.name === 'doc.find' && HANDLERS[command.name] === planFind));
+  const draft = onlyCoreReads ? input.snapshot : input.snapshot.clone();
+  const state = new PlanState(draft, input.ctx, input.warnings, input.stamp);
   const onlyComments = commentsOnly(input.batch, input.ctx);
 
   input.batch.commands.forEach(command => {

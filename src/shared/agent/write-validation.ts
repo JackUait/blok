@@ -1,5 +1,4 @@
 import { AgentFailure, failure, problemOf } from './errors';
-import { applyEdits } from './json-applier';
 import { mediaProblems } from './media-gate';
 import { PREPARE_PENDING } from './plan-state';
 import { fieldRules } from './variant-hint';
@@ -91,7 +90,14 @@ export const validateWrites = (state: PlanState, snapshot: DocSnapshot): void =>
       return;
     }
   }
-  const replay = snapshot.clone();
+  // Planning already checked placement and existence. Validation only needs the
+  // type in effect at each write, never a second mutable copy of its payloads.
+  const types = new Map<string, string | undefined>();
+  const typeOf = (id: string): string | undefined => types.has(id) ? types.get(id) : snapshot.get(id)?.type;
+  const inserted = (block: PlannedBlock): void => {
+    types.set(block.id, block.type);
+    block.children.forEach(inserted);
+  };
   // Every rejected write, so one failed batch names them all.
   const rejected: AgentError[] = [];
   const add = (problem: AgentError | undefined): void => {
@@ -115,9 +121,8 @@ export const validateWrites = (state: PlanState, snapshot: DocSnapshot): void =>
         break;
       case 'setData':
       case 'setRichText': {
-        const block = replay.get(edit.id);
         const patch = edit.op === 'setData' ? edit.patch : { [edit.field]: edit.value };
-        add(checkKeys(state, commandIndex, edit.id, block?.type, patch));
+        add(checkKeys(state, commandIndex, edit.id, typeOf(edit.id), patch));
         break;
       }
       case 'move':
@@ -126,8 +131,10 @@ export const validateWrites = (state: PlanState, snapshot: DocSnapshot): void =>
       case 'setTunes':
         break;
     }
-    mediaProblems(state.ctx.ports.media, edit, commandIndex, id => replay.get(id)?.type).forEach(add);
-    applyEdits(replay, [edit], null);
+    mediaProblems(state.ctx.ports.media, edit, commandIndex, typeOf).forEach(add);
+    if (edit.op === 'insert') inserted(edit.block);
+    if (edit.op === 'replaceType') types.set(edit.id, edit.type);
+    if (edit.op === 'remove') types.set(edit.id, undefined);
   }
 
   const [first, ...rest] = rejected;

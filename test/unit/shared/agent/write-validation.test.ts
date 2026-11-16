@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentFailure } from '../../../../src/shared/agent/errors';
 import { planBatch } from '../../../../src/shared/agent/planner';
-import { PREPARE_PENDING } from '../../../../src/shared/agent/plan-state';
+import { PlanState, PREPARE_PENDING } from '../../../../src/shared/agent/plan-state';
+import { validateWrites } from '../../../../src/shared/agent/write-validation';
 import { DocSnapshot } from '../../../../src/shared/agent/snapshot';
 import { plannerContext, planOn, stubPorts, TOOLS, tool } from './fixtures';
 
@@ -837,4 +838,21 @@ describe('scoped projection and pending preparation', () => {
       rejects(() => planOn(doc, batch, context), 0, 'h', '/level');
     }
   });
+});
+
+it('validates a write without traversing unrelated stored payloads', () => {
+  const snapshot = DocSnapshot.fromOutput(doc);
+  const unrelated = snapshot.get('p');
+
+  if (unrelated === undefined) throw new Error('Missing fixture block');
+  const readPayload = vi.fn(() => ({large: 'untouched'}));
+
+  Object.defineProperty(unrelated.data, 'payload', {enumerable: true, get: readPayload});
+  const state = new PlanState(snapshot, plannerContext(), [], {actorId: 'agent', at: 1});
+
+  state.edits.push({op: 'setData', id: 'h', patch: {level: 3}});
+  state.editCommand.push(0);
+  validateWrites(state, snapshot);
+  expect(readPayload).not.toHaveBeenCalled();
+  expect(snapshot.get('h')?.data.level).toBe(2);
 });

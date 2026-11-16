@@ -3,6 +3,7 @@ import { isRichText } from '../rich-text/guards';
 import { findTextMatches } from '../text-match';
 import { LOAD_DEFAULT_FILLS } from '../tool-actions/load-defaults';
 import { plainLine } from './approval';
+import { copyValue } from './snapshot';
 import { failure } from './errors';
 import { inAnonymousAnswer } from './json-applier';
 
@@ -302,8 +303,8 @@ export const buildDocumentView = (
   /** Who the reader acts for: their comments read as own. */
   viewer?: string
 ): DocumentView => {
-  // Later commands mutate the live draft in place.
-  const snap = source.clone();
+  // Read the source without cloning unselected payloads; detach only the answer below.
+  const snap = source;
   const rootId = args.rootId ?? null;
 
   if (rootId !== null) {
@@ -337,7 +338,7 @@ export const buildDocumentView = (
     ? viewThreads(snap, null, viewer, args.textLimit ?? 120, budget)
     : undefined;
 
-  return {
+  const view: DocumentView = {
     revision,
     rootId,
     ...((snap.title !== undefined || snap.icon !== undefined || snap.cover !== undefined) && {
@@ -351,6 +352,9 @@ export const buildDocumentView = (
     ...(comments !== undefined && { comments }),
     ...(next !== undefined && { next: `c:${next.id}` }),
   };
+
+  // Later commands and callers may both mutate nested JSON values.
+  return copyValue(view) as DocumentView;
 };
 
 /** Rows for the given ids with their data, as a read of those ids gives them; at most `limit` of them. */
@@ -369,7 +373,7 @@ export const viewRows = (
     return block === undefined ? [] : [viewBlock(snap, block, depth, { detail: 'full' }, ctx, computedFor, undefined, budget)];
   });
 
-  return { rows, more: Math.max(0, order.length - limit) };
+  return { rows: copyValue(rows) as ViewBlock[], more: Math.max(0, order.length - limit) };
 };
 
 /** One doc.find hit. No id: the document title. `edit` names the command for a field text.replace cannot change. */

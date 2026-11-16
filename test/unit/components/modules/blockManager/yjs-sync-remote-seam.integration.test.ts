@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { Array as YArray } from 'yjs';
 
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import * as utils from '../../../../../src/components/utils';
@@ -261,6 +262,28 @@ describe('BlockYjsSync — remote reconciliation through the binary seam (integr
     manager.destroy();
     document.body.innerHTML = '';
     vi.restoreAllMocks();
+  });
+
+  it('reconciles one parent order once for a remote batch of siblings, preserving every child in order', async () => {
+    createHarness([toggle('parent', [])]);
+    syncPeerUp();
+    const parentOrder = manager.getBlockById('parent')?.get('contentIds');
+
+    if (!(parentOrder instanceof YArray)) throw new Error('missing parent order');
+    const reads = vi.spyOn(parentOrder, 'toArray');
+    const ids = Array.from({ length: 48 }, (_, index) => `child-${index}`);
+
+    peer.transactWithoutCapture(() => {
+      for (const id of ids) peer.addBlock(paragraph(id, { parent: 'parent' }));
+    });
+    applyPeerToLocal();
+    await flush();
+
+    // Reading one authoritative sibling list per child makes large row sets
+    // quadratic even though the whole update is one synchronous batch.
+    expect(reads.mock.calls.length).toBeLessThanOrEqual(10);
+    expect(repository.getBlockById('parent')?.contentIds).toEqual(ids);
+    expectOrderInvariant('large sibling batch', ['parent', ...ids]);
   });
 
   describe('remote single add', () => {

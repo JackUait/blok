@@ -135,6 +135,8 @@ const DAY_LEVEL: ReadonlySet<TimelineZoom> = new Set(['hours', 'day', 'week', 'b
 const MONTH_IN_TOOLBAR: ReadonlySet<TimelineZoom> = new Set(['day', 'week', 'bi_week', 'month']);
 /** notion-motion.md Round 35 Part B: Hours zoom has only its tick row; the toolbar names the day. */
 const ONE_HEADER_ROW: ReadonlySet<TimelineZoom> = new Set([...MONTH_IN_TOOLBAR, 'hours']);
+/** Body grid lines a day. Zooms not listed draw none. */
+const GRID_LINES_PER_DAY: Partial<Record<TimelineZoom, number>> = { hours: 96, day: 24, week: 1 };
 
 const ZOOM_KEYS: Record<TimelineZoom, string> = {
   hours: 'tools.database.timelineZoomHours',
@@ -866,10 +868,13 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
 
     // notion-motion.md Round 35 Part B (r35-timeline-hours-grid.raw): a line on every 15-minute tick, body only.
-    if (this.zoom === 'hours') {
-      const tick = this.dayWidth / 96;
+    // Round 48 A3: Day every hour, Week every day.
+    const linesPerDay = GRID_LINES_PER_DAY[this.zoom];
 
-      layer.append(...Array.from({ length: this.window.days * 96 }, (_, i) => {
+    if (linesPerDay !== undefined) {
+      const tick = this.dayWidth / linesPerDay;
+
+      layer.append(...Array.from({ length: this.window.days * linesPerDay }, (_, i) => {
         const line = document.createElement('div');
 
         line.setAttribute('data-blok-database-timeline-tick-line', '');

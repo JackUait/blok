@@ -474,6 +474,26 @@ describe('DatabaseTimelineView', () => {
         expect(open().querySelector('[data-blok-database-timeline-tick-line]')).toBeNull();
       });
 
+      // notion-motion.md Round 48 A3: Day has a line every hour, Week every day; Bi-week and Month none.
+      it('draws a line every hour in Day and every day in Week, on the ticks', () => {
+        const linesOf = (root: HTMLElement): number[] =>
+          [...root.querySelectorAll<HTMLElement>('[data-blok-database-timeline-background] > [data-blok-database-timeline-tick-line]')]
+            .map((el) => parseFloat(el.style.insetInlineStart));
+        const day = open({ view: timelineView({ timelineZoom: 'day' }) });
+        const ticks = [...day.querySelectorAll<HTMLElement>('[data-blok-database-timeline-units] > [data-day]')];
+
+        expect(linesOf(day)).toHaveLength(timelineWindow(CENTER, 'day').days * 24);
+        expect(linesOf(day)).toEqual(ticks.map((el) => parseFloat(el.style.insetInlineStart) + parseFloat(el.style.width) / 2));
+
+        document.body.innerHTML = '';
+        const week = open({ view: timelineView({ timelineZoom: 'week' }) });
+
+        expect(linesOf(week)).toEqual(Array.from({ length: timelineWindow(CENTER, 'week').days }, (_, i) => i * TIMELINE_DAY_WIDTH.week));
+
+        document.body.innerHTML = '';
+        expect(linesOf(open({ view: timelineView({ timelineZoom: 'bi_week' }) }))).toEqual([]);
+      });
+
       it('has one tick row under a toolbar that reads the full date', () => {
         const root = open({ view: timelineView({ timelineZoom: 'hours' }) });
 

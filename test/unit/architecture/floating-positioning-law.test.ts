@@ -166,6 +166,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'tools/database/database-calendar-view.ts': 'The calendar drag box sits in the grid and is re-placed from the grid rect on every pointer move.',
   'tools/database/database-card-drag.ts': 'Fixed pointer-following card ghost refreshes coordinates on every drag pointer move.',
   'tools/database/database-column-drag.ts': 'Fixed pointer-following column ghost refreshes coordinates on every drag pointer move.',
+  'tools/database/database-gallery-view.ts': 'Fixed pointer-following gallery card ghost refreshes coordinates on every drag pointer move.',
   'tools/database/database-list-row-drag.ts': 'Fixed pointer-following row ghost refreshes coordinates on every drag pointer move.',
   'tools/database/database-form-question-drag.ts': 'Fixed form drop lines in each card gap, re-placed on every drag pointer move.',
   'tools/database/database-list-view.ts': 'The right-click menu point is placed once at the pointer inside the row, corrected for a transformed ancestor, and removed when the menu closes.',

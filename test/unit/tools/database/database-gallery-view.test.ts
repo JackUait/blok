@@ -539,6 +539,100 @@ describe('DatabaseGalleryView', () => {
       expect(first.hasAttribute('data-dragging')).toBe(false);
     });
 
+    /** Three cards in one row with a 20px gap: r1 0..100, r2 120..220, r3 240..340. */
+    const layOutWithGap = (root: HTMLElement): HTMLElement[] => {
+      root.querySelector<HTMLElement>('[data-blok-database-gallery-grid]')?.style.setProperty('column-gap', '20px');
+
+      return layOut(root);
+    };
+
+    // notion-motion.md Round 53 §9E: a 0.4 copy of the card follows the pointer with the grab offset; the source stays.
+    it('moves a see-through copy of the card with the pointer, keeping the grab offset', () => {
+      const { root } = mount({ groups: three() });
+      const [first] = layOutWithGap(root);
+
+      pointer('pointerdown', first, 30, 40);
+      pointer('pointermove', document, 230, 60);
+
+      const ghost = document.querySelector<HTMLElement>('[data-blok-database-ghost]');
+
+      expect(ghost?.style.position).toBe('fixed');
+      expect(ghost?.style.opacity).toBe('0.4');
+      expect(ghost?.style.left).toBe('200px');
+      expect(ghost?.style.top).toBe('20px');
+      expect(ghost?.style.width).toBe('100px');
+      expect(ghost?.style.height).toBe('100px');
+      expect(ghost?.style.boxShadow).toBe('');
+      expect(ghost?.style.transform).toBe('');
+      expect(ghost?.querySelector('[data-blok-database-gallery-card]')?.getAttribute('data-row-id')).toBe('r1');
+      expect(ghost?.querySelector('[data-dragging], [data-drop]')).toBeNull();
+      expect(root.contains(ghost ?? null)).toBe(false);
+
+      pointer('pointermove', document, 260, 70);
+      expect(ghost?.style.left).toBe('230px');
+      expect(ghost?.style.top).toBe('30px');
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(document.querySelector('[data-blok-database-ghost]')).toBeNull();
+    });
+
+    it('reads grabbing while a card is held', () => {
+      const { root } = mount({ groups: three() });
+      const [first] = layOutWithGap(root);
+
+      pointer('pointerdown', first, 10, 10);
+      pointer('pointermove', document, 250, 10);
+      expect(root.hasAttribute('data-blok-database-dragging')).toBe(true);
+      pointer('pointerup', document, 250, 10);
+      expect(root.hasAttribute('data-blok-database-dragging')).toBe(false);
+    });
+
+    // notion-motion.md Round 53 §9E: a 4px line centred in the gap between the cards, as tall as the card.
+    it('draws the drop line in the middle of the gap between two cards', () => {
+      const { root } = mount({ groups: three() });
+      const [first] = layOutWithGap(root);
+
+      pointer('pointerdown', first, 10, 10);
+      pointer('pointermove', document, 200, 10);
+
+      const line = document.querySelector<HTMLElement>('[data-blok-database-drop-line]');
+
+      expect(line?.style.left).toBe('228px');
+      expect(line?.style.width).toBe('4px');
+      expect(line?.style.top).toBe('0px');
+      expect(line?.style.height).toBe('100px');
+
+      pointer('pointermove', document, 250, 10);
+      expect(line?.style.left).toBe('228px');
+    });
+
+    it('draws the line before the first card of a row half a gap out from its edge', () => {
+      const { root } = mount({ groups: three() });
+      const [, , last] = layOutWithGap(root);
+
+      pointer('pointerdown', last, 250, 10);
+      pointer('pointermove', document, 10, 10);
+
+      expect(document.querySelector<HTMLElement>('[data-blok-database-drop-line]')?.style.left).toBe('-12px');
+    });
+
+    // Notion: the half of the next card that means "where it already is" shows no line and moves nothing.
+    it('shows no line over the dragged card\'s own slot and moves nothing there', () => {
+      const { root, handlers } = mount({ groups: three() });
+      const [first] = layOutWithGap(root);
+
+      pointer('pointerdown', first, 10, 10);
+      pointer('pointermove', document, 200, 10);
+      expect(document.querySelector<HTMLElement>('[data-blok-database-drop-line]')?.style.opacity).toBe('');
+      pointer('pointermove', document, 130, 10);
+
+      const line = document.querySelector<HTMLElement>('[data-blok-database-drop-line]');
+
+      expect(line === null || line.style.opacity === '0').toBe(true);
+      pointer('pointerup', document, 130, 10);
+      expect(handlers.moveRow).not.toHaveBeenCalled();
+    });
+
     it('drops a card into an empty group', () => {
       const groups: GalleryGroup[] = [
         { key: 'g1', label: 'One', rows: [row('r1', 'Alpha'), row('r2', 'Bravo')], total: 2 },
@@ -569,6 +663,26 @@ describe('DatabaseGalleryView', () => {
       pointer('pointerup', document, 250, 10);
 
       expect(handlers.moveRow).not.toHaveBeenCalled();
+    });
+
+    // notion-motion.md Round 53 §9E: Escape, then a release on the card itself, opens nothing.
+    it('does not open the card when a drag cancelled with Escape is released on it', async () => {
+      const { root, handlers } = mount({ groups: three() });
+      const [first] = layOut(root);
+
+      pointer('pointerdown', first, 10, 10);
+      pointer('pointermove', document, 250, 10);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      pointer('pointermove', document, 10, 10);
+      pointer('pointerup', document, 10, 10);
+      first.click();
+
+      expect(handlers.openRow).not.toHaveBeenCalled();
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      first.click();
+      expect(handlers.openRow).toHaveBeenCalledWith('r1');
     });
 
     it('still opens the next clicked card after a drag that ended outside the gallery', async () => {

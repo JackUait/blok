@@ -17450,25 +17450,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 [data-blok-database-gallery-card][data-dragging] {
-  opacity: 0.4;
-}
-
-[data-blok-database-gallery-card][data-drop]::before {
-  content: '';
-  position: absolute;
-  inset-block: 0;
-  inline-size: 4px;
-  background-color: var(--blok-database-table-drop-line);
-  border-radius: var(--blok-radius-mark);
-  pointer-events: none;
-}
-
-[data-blok-database-gallery-card][data-drop="before"]::before {
-  inset-inline-start: 0;
-}
-
-[data-blok-database-gallery-card][data-drop="after"]::before {
-  inset-inline-end: 0;
+  background-color: var(--blok-database-gallery-card-hover-bg);
 }
 
 [data-blok-database-gallery-grid][data-drop="inside"] {
@@ -17522,7 +17504,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   object-position: 50% 50%;
 }
 
-[data-blok-database-gallery][data-fit-image] [data-blok-database-gallery-image] {
+[data-blok-database-gallery][data-fit-image] [data-blok-database-gallery-image], [data-blok-database-ghost][data-fit-image] [data-blok-database-gallery-image] {
   object-fit: contain;
 }
 
@@ -17562,7 +17544,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-gallery-title-text);
 }
 
-[data-blok-database-gallery][data-card-layout="compact"] [data-blok-database-gallery-properties] {
+[data-blok-database-gallery][data-card-layout="compact"] [data-blok-database-gallery-properties], [data-blok-database-ghost][data-card-layout="compact"] [data-blok-database-gallery-properties] {
   flex-direction: row;
   flex-wrap: wrap;
   column-gap: var(--blok-space-1-5);

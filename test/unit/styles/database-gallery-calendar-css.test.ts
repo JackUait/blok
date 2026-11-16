@@ -292,6 +292,20 @@ describe('database gallery and calendar styles', () => {
     expect(ruleBody('[data-blok-database-calendar-event][data-continues-before]')).toMatch(/- 6px\)/);
   });
 
+  // notion-motion.md Round 53 §9E: the held card stays solid with its hover fill; the line is a body element in the gap, not the card's edge.
+  it('keeps a held gallery card solid and draws no drop line on the card itself', () => {
+    const held = ruleBody('[data-blok-database-gallery-card][data-dragging]');
+
+    expect(held).toContain('background-color: var(--blok-database-gallery-card-hover-bg)');
+    expect(held).not.toContain('opacity');
+    expect(css).not.toContain('[data-blok-database-gallery-card][data-drop]');
+  });
+
+  it('repeats the fit-image and compact rules on the gallery ghost, which mounts outside the view', () => {
+    expect(ruleBody('[data-blok-database-ghost][data-fit-image] [data-blok-database-gallery-image]')).toContain('object-fit: contain');
+    expect(ruleBody('[data-blok-database-ghost][data-card-layout="compact"] [data-blok-database-gallery-properties]')).toContain('flex-direction: row');
+  });
+
   it('paints a drop target gray, never blue (D3)', () => {
     const drop = ruleBody('[data-blok-database-calendar-day][data-drop]');
 

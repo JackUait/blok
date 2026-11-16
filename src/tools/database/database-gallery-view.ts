@@ -16,6 +16,9 @@ import { IconDotsHorizontal, IconPencil, IconPlus } from '../../components/icons
 import { onHover } from '../../components/utils/tooltip';
 import { onPropertyHover } from './property-hint';
 import { startInlineRename } from '../../components/utils/inline-rename';
+import { swallowClickAfterCancel } from './drag-click-guard';
+import { copyGhostContext, mountGhost } from './copy-ghost-radius';
+import { DatabaseDropLine } from './database-drop-line';
 
 export interface GalleryGroup {
   /** '' when the gallery is not grouped. */
@@ -90,6 +93,10 @@ interface DragState {
   active: boolean;
   /** A card and a side, or an empty group's grid (`inside`). */
   target: { card: HTMLElement; side: 'before' | 'after' | 'inside' } | null;
+  /** The card's copy that follows the pointer, and where the press sat inside the card. */
+  ghost: HTMLElement | null;
+  grabX: number;
+  grabY: number;
 }
 
 /**
@@ -100,6 +107,7 @@ interface DragState {
 export class DatabaseGalleryView implements DatabaseViewRenderer {
   private readonly options: DatabaseGalleryViewOptions;
   private drag: DragState | null = null;
+  private dropLine: DatabaseDropLine | null = null;
   /** Set after a drag so the click that ends it does not open the card. */
   private suppressClick = false;
   private root: HTMLElement | null = null;
@@ -623,6 +631,9 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
       startY: event.clientY,
       active: false,
       target: null,
+      ghost: null,
+      grabX: 0,
+      grabY: 0,
     };
     document.addEventListener('pointermove', this.onPointerMove);
     document.addEventListener('pointerup', this.onPointerUp);
@@ -643,10 +654,49 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
       }
       drag.active = true;
       drag.card.setAttribute('data-dragging', '');
+      drag.card.closest('[data-blok-database-gallery]')?.setAttribute('data-blok-database-dragging', '');
+      Object.assign(drag, this.createGhost(drag));
     }
 
+    if (drag.ghost !== null) {
+      drag.ghost.style.left = `${event.clientX - drag.grabX}px`;
+      drag.ghost.style.top = `${event.clientY - drag.grabY}px`;
+    }
     this.setTarget(this.findTarget(event.clientX, event.clientY));
   };
+
+  /**
+   * notion-motion.md Round 53 §9E: a copy of the card at 0.4, the card's own
+   * size, no shadow or transform on the wrapper. It mounts outside the view,
+   * so the attribute rules it needs are repeated on the ghost in database.css.
+   */
+  private createGhost(drag: DragState): Pick<DragState, 'ghost' | 'grabX' | 'grabY'> {
+    const box = drag.card.getBoundingClientRect();
+    const ghost = document.createElement('div');
+    const clone = drag.card.cloneNode(true) as HTMLElement;
+
+    clone.removeAttribute('data-dragging');
+    clone.removeAttribute('data-drop');
+    clone.style.blockSize = '100%';
+    ghost.appendChild(clone);
+    ghost.setAttribute('data-blok-database-ghost', '');
+    ghost.setAttribute('contenteditable', 'false');
+    Object.assign(ghost.style, {
+      position: 'fixed',
+      pointerEvents: 'none',
+      opacity: '0.4',
+      zIndex: '50',
+      width: `${box.width}px`,
+      height: `${box.height}px`,
+    });
+    copyGhostContext(drag.card, drag.card.closest('[data-blok-database-gallery]'), ghost, {
+      properties: ['--blok-database-gallery-preview-ratio', '--blok-database-gallery-preview-height'],
+      attributes: ['data-fit-image', 'data-card-layout'],
+    });
+    mountGhost(drag.card, ghost);
+
+    return { ghost, grabX: drag.startX - box.left, grabY: drag.startY - box.top };
+  }
 
   private findTarget(x: number, y: number): DragState['target'] {
     const root = this.drag?.card.closest('[data-blok-database-gallery]');
@@ -689,9 +739,37 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
       return;
     }
 
+    // The slot the card already holds is no move: Notion shows no line there.
+    const own = target !== null && target.card.parentElement === drag.card.parentElement
+      && (target.side === 'before' ? drag.card.nextElementSibling : drag.card.previousElementSibling) === target.card;
+    const next = own ? null : target;
+
     drag.target?.card.removeAttribute('data-drop');
-    drag.target = target;
-    target?.card.setAttribute('data-drop', target.side);
+    drag.target = next;
+    next?.card.setAttribute('data-drop', next.side);
+    this.showDropLine(next);
+  }
+
+  /** notion-motion.md Round 53 §9E: a 4px line as tall as the card, centred in the gap beside it. */
+  private showDropLine(target: DragState['target']): void {
+    if (target === null || target.side === 'inside') {
+      this.dropLine?.hide();
+
+      return;
+    }
+
+    const grid = target.card.parentElement;
+    const box = target.card.getBoundingClientRect();
+    const gap = grid === null ? 0 : parseFloat(getComputedStyle(grid).columnGap) || 0;
+    const rtl = getElementDirection(target.card) === 'rtl';
+    const leftSide = (target.side === 'before') !== rtl;
+
+    this.dropLine ??= new DatabaseDropLine(target.card);
+    this.dropLine.showVertical({
+      centerX: leftSide ? box.left - gap / 2 : box.right + gap / 2,
+      top: box.top,
+      height: box.height,
+    });
   }
 
   private readonly onPointerUp = (): void => {
@@ -725,9 +803,13 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
   };
 
   private readonly onDragKeyDown = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape') {
-      this.cancelDrag();
+    if (event.key !== 'Escape') {
+      return;
     }
+    if (this.drag?.active === true) {
+      swallowClickAfterCancel();
+    }
+    this.endDrag();
   };
 
   private readonly cancelDrag = (): void => {
@@ -740,6 +822,9 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
   private endDrag(): void {
     this.drag?.target?.card.removeAttribute('data-drop');
     this.drag?.card.removeAttribute('data-dragging');
+    this.drag?.card.closest('[data-blok-database-gallery]')?.removeAttribute('data-blok-database-dragging');
+    this.drag?.ghost?.remove();
+    this.dropLine?.hide();
     this.drag = null;
     document.removeEventListener('pointermove', this.onPointerMove);
     document.removeEventListener('pointerup', this.onPointerUp);

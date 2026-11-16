@@ -932,8 +932,11 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     this.panel?.close();
     const { i18n, view, schema } = this.options;
     const asked = new Set(resolveViewProperties(view, schema).filter((entry) => entry.visible).map((entry) => entry.id));
+    // notion-motion.md Round 31 §1 / Round 44 §1: beside the column like Question options.
     const panel = new DatabasePanel({
       anchor,
+      beside: QUESTION_PANEL_GAP,
+      besideFlip: true,
       testId: 'database-form-select-type',
       width: 290,
       backLabel: i18n.t('tools.database.peekBack'),

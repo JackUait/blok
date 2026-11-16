@@ -637,6 +637,35 @@ describe('DatabaseFormView question options rows', () => {
     expect(parseFloat(box?.style.top ?? '')).toBeCloseTo(224.8);
   });
 
+  const openSelectTypeBeside = (viewport: number, add: DOMRect): HTMLElement | null => {
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(viewport);
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+    vi.spyOn(PopoverDesktop.prototype, 'size', 'get').mockReturnValue({ width: 290, height: 502 });
+    const { root } = mount({ setQuestionSetting: vi.fn(), addQuestion: vi.fn() });
+    const button = root.querySelector<HTMLElement>('[data-blok-testid="database-form-add-question"]');
+
+    if (button === null) throw new Error('no Add question');
+    button.getBoundingClientRect = () => add;
+    button.click();
+
+    return document.querySelector('[data-blok-testid="database-form-select-type"]')?.closest<HTMLElement>('[data-blok-popover]') ?? null;
+  };
+
+  // notion-motion.md Round 31 §1: at 1512 Select type is a side panel at x 1209, 24 right of the 600 column at 585.
+  it('Select type opens 24 right of the column when the window has room there', () => {
+    const box = openSelectTypeBeside(1512, new DOMRect(585, 160, 600, 28));
+
+    expect(parseFloat(box?.style.left ?? '')).toBeCloseTo(1209);
+    expect(parseFloat(box?.style.top ?? '')).toBeCloseTo(160);
+  });
+
+  // notion-motion.md Round 44 §1 (r44-q1.raw): at 1000 it sits at x 92, 24 left of the 458 column at 406.
+  it('Select type opens 24 left of the column when its right has no room', () => {
+    const box = openSelectTypeBeside(1000, new DOMRect(406, 160, 458, 28));
+
+    expect(parseFloat(box?.style.left ?? '')).toBeCloseTo(92);
+  });
+
   it('Move question opens on the panel\'s right when its left has no room', () => {
     vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1000);
     vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);

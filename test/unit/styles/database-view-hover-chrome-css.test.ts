@@ -321,10 +321,17 @@ describe('form builder question card (research/21 §1k)', () => {
       expect(ruleBody(`${builder} [data-blok-database-form-header-description]`)).toContain('margin-block-start: var(--blok-space-4)');
     });
 
-    it('draws the access bar 600 wide, 48 tall, 34 above the first card', () => {
+    // notion-motion.md Round 44 §1 (r44-q1.raw): the column is min(600, database − 80), so 458 in a 538 database.
+    it('narrows the column to 80 under the database, header, access bar and cards alike', () => {
+      const column = `${builder} > :is([data-blok-database-form-header], [data-blok-database-form-access], form)`;
+
+      expect(ruleBody(column)).toContain('max-inline-size: min(600px, 100% - 80px)');
+      expect(ruleBody(`${builder} > [data-blok-database-form-access]`)).not.toContain('max-inline-size');
+    });
+
+    it('draws the access bar 48 tall, 34 above the first card', () => {
       const access = ruleBody(`${builder} > [data-blok-database-form-access]`);
 
-      expect(access).toContain('max-inline-size: 600px');
       expect(access).toContain('min-block-size: 48px');
       expect(access).toContain('padding: var(--blok-space-2-5) var(--_blok-form-access-inset)');
       expect(access).toContain('--_blok-form-access-inset: 22px');

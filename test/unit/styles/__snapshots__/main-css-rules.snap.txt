@@ -21422,6 +21422,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-form]:has(> [data-blok-database-form-access]) > :is([data-blok-database-form-header], [data-blok-database-form-access], form) {
+  max-inline-size: min(600px, 100% - 80px);
   margin-inline: auto;
 }
 
@@ -21727,7 +21728,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-database-form]:has(> [data-blok-database-form-access]) > [data-blok-database-form-access] {
   box-sizing: border-box;
-  max-inline-size: 600px;
   --_blok-form-access-inset: 22px;
   min-block-size: 48px;
   padding: var(--blok-space-2-5) var(--_blok-form-access-inset);

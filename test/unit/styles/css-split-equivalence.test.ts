@@ -1755,6 +1755,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R84_BYTES = 423;
     // Lane r86: Round 41 side peek » at Notion's size. Net database.css growth against origin/main.
     const DATABASE_R86_BYTES = 232;
+    // Lane r89: Round 44 form column min(600, database − 80). Net database.css growth against origin/main.
+    const DATABASE_R89_BYTES = 96;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2304,6 +2306,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R82_BYTES
       + DATABASE_R84_BYTES
       + DATABASE_R86_BYTES
+      + DATABASE_R89_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

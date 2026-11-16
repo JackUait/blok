@@ -18936,7 +18936,9 @@ button[data-blok-database-feed-reaction]:hover,
 /* notion-motion.md Round 32 §4 (r32-b-form-geom.raw): the builder's 600 column is centred in the database.
    The icon row sits 50 under the toolbar, the title 4 under the row and 19 in, the description 16 under the
    title, the access bar 24 under that and the first card 34 under the bar. */
+/* notion-motion.md Round 44 §1: the column is min(600, database − 80). */
 [data-blok-database-form]:has(> [data-blok-database-form-access]) > :is([data-blok-database-form-header], [data-blok-database-form-access], form) {
+  max-inline-size: min(600px, 100% - 80px);
   margin-inline: auto;
 }
 
@@ -19276,7 +19278,6 @@ button[data-blok-database-feed-reaction]:hover,
 
 [data-blok-database-form]:has(> [data-blok-database-form-access]) > [data-blok-database-form-access] {
   box-sizing: border-box;
-  max-inline-size: 600px;
   --_blok-form-access-inset: 22px;
 
   min-block-size: 48px;

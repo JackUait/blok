@@ -1775,6 +1775,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R100_BYTES = 1261;
     // Lane r99: Round 46 timeline smalls (panel and No date glyph 18, Month day row 32, « and Month widths, zoom items 14/400, handle hidden on move). Net database.css growth against origin/main.
     const DATABASE_R99_BYTES = 2095;
+    // Lane r103: Round 47 feed card (preview headings at page sizes with top padding, preview spacing, 8 inset with no byline). Net database.css growth against origin/main.
+    const DATABASE_R103_BYTES = 1330;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2334,6 +2336,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R98_BYTES
       + DATABASE_R100_BYTES
       + DATABASE_R99_BYTES
+      + DATABASE_R103_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

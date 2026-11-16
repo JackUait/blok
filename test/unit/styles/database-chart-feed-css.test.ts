@@ -134,6 +134,37 @@ describe('database chart and feed styles', () => {
     expect(ruleBody('[data-blok-database-feed-body]')).toMatch(/line-height:\s*21px/);
   });
 
+  // notion-motion.md Round 47 §C (r47-n-feed-delta.raw): each preview block has 6 above and below, its text 2 more;
+  // headings take the page sizes x 0.875 with the page's top padding.
+  it('sets preview headings at Notion\'s page sizes with their top padding', () => {
+    expect(ruleBody('[data-blok-database-feed-body]')).toMatch(/gap:\s*0/);
+    expect(ruleBody('[data-blok-database-feed-line]')).toContain('padding-block: var(--blok-space-2)');
+    for (const [level, size, line, top] of [['h1', '26.25px', '34.125px', '32px'], ['h2', '21px', '27.3px', 'calc(var(--blok-space-6) + var(--blok-space-1))'], ['h3', '17.5px', '22.75px', 'var(--blok-space-6)']]) {
+      const rule = ruleBody(`[data-blok-database-feed-line][data-level="${level}"]`);
+
+      expect(rule).toContain(`font-size: ${size}`);
+      expect(rule).toContain(`line-height: ${line}`);
+      expect(rule).toContain(`padding-block-start: ${top}`);
+    }
+  });
+
+  // notion-motion.md Round 47 §C: the title block is 28.5 + a 5 margin, so the preview starts 7.5 under Blok's 26 title
+  // (the card gap gives 8); the footer's 12 top padding puts the chip 12 under the preview.
+  it('spaces the preview under the title and the chip under the preview as Notion', () => {
+    for (const before of ['title', 'head']) {
+      expect(ruleBody(`[data-blok-database-feed-${before}] + [data-blok-database-feed-body]`)).toContain('margin-block-start: -0.5px');
+    }
+    expect(ruleBody('[data-blok-database-feed-body] + [data-blok-database-feed-reactions]')).toContain('margin-block-start: var(--blok-space-1)');
+  });
+
+  // notion-motion.md Round 47 §C: with no byline the body, chip and composer keep an 8 inset (card x + 24).
+  it('keeps the footer column 8 in when there is no byline', () => {
+    for (const part of ['body', 'reactions', 'comments']) {
+      expect(ruleBody(`[data-blok-database-feed-card]:not(:has(> [data-blok-database-feed-byline])) > [data-blok-database-feed-${part}]`))
+        .toContain('margin-inline-start: var(--blok-space-2)');
+    }
+  });
+
   it('marks a turned-off legend entry with muted ink, never a fill', () => {
     const off = ruleBody('[data-blok-database-chart-legend-entry][aria-pressed="false"]');
 

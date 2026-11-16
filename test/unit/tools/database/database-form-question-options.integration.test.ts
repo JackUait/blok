@@ -37,6 +37,20 @@ const blocks: OutputBlockData[] = [{
   } satisfies DatabaseData,
 }];
 
+const settle = (): Promise<void> => new Promise((resolve) => {
+  setTimeout(resolve, 0);
+});
+
+const quiet = async (): Promise<void> => {
+  await settle();
+  for (let i = 0; i < 3; i++) {
+    await new Promise((resolve) => {
+      requestAnimationFrame(() => resolve(undefined));
+    });
+  }
+  await settle();
+};
+
 const mount = async (): Promise<void> => {
   editor = new Blok({
     holder, dataModel: 'hierarchical',
@@ -45,6 +59,9 @@ const mount = async (): Promise<void> => {
   }) as unknown as PublicBlok;
   await editor.isReady;
   await vi.waitFor(() => expect(q('[data-blok-database-form]')).not.toBeNull());
+  // The first render's sync window stays open until the next frame. An edit
+  // inside it is written back untracked, so it never becomes an undo step.
+  await quiet();
 };
 
 const openOptions = (id: string): void => click(`[data-blok-database-form-question="${id}"] ${byTestId('database-form-question-menu')}`);

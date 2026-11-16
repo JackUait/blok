@@ -418,7 +418,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
           titlePropertyId: this.options.titlePropertyId,
           hint: this.t('tools.database.timelineNoDateHint'),
           rowHasBody: (rowId) => this.rowHasBody(rowId),
-          pick: (rowId) => handlers.writeDates(rowId, this.newBar()),
+          pick: (rowId) => handlers.writeDates(rowId, this.zoom === 'day' ? this.newBarAtCentre() : this.newBar()),
           open: (rowId) => handlers.openRow(rowId),
         });
       },
@@ -439,6 +439,14 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       : this.options.today);
 
     return newBarWrite(start, NEW_BAR_DAYS, this.options.endPropertyId !== undefined);
+  }
+
+  /** notion-motion.md Round 49 B8: a Day-zoom "No date" pick is 3 hours from the chart's centre, floored to 15 minutes. */
+  private newBarAtCentre(): BarWrite {
+    const centre = this.scrollStart + (this.scroller?.clientWidth ?? 0) / 2;
+    const day = addDays(this.window.start, Math.floor(centre / this.dayWidth));
+
+    return this.newBar(day, this.slotAt(centre, day));
   }
 
   private monthLabel(day: string): string {
@@ -671,7 +679,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
   private placeGhost(ghost: HTMLElement, x: number): void {
     const day = this.dayAt(x);
-    const time = this.zoom === 'day' ? this.slotAt(x, day) : undefined;
+    const time = this.zoom === 'day' ? this.slotAt(this.canvasOffset(x), day) : undefined;
 
     if (this.drag?.active === true || (ghost.getAttribute('data-day') === day && ghost.getAttribute('data-time') === (time ?? null))) {
       return;
@@ -696,12 +704,9 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     this.showRange(span, barGeometry(span, this.window.start, this.zoom), true);
   }
 
-  /**
-   * The 15-minute slot under a pointer, as `HH:mm`. Unmeasured: Notion started
-   * its bar at 6:30 with the pointer near 6:45 (Round 48 A9); the rule is unread.
-   */
-  private slotAt(x: number, day: string): string {
-    const minutes = (this.canvasOffset(x) - daysBetween(this.window.start, day) * this.dayWidth) / (this.dayWidth / DAY_MINUTES);
+  /** The 15-minute slot at a canvas offset, floored, as `HH:mm` (notion-motion.md Round 49 B7, B8). */
+  private slotAt(offset: number, day: string): string {
+    const minutes = (offset - daysBetween(this.window.start, day) * this.dayWidth) / (this.dayWidth / DAY_MINUTES);
     const slot = Math.min(Math.max(Math.floor(minutes / SNAP_MINUTES) * SNAP_MINUTES, 0), DAY_MINUTES - SNAP_MINUTES);
     const pad = (n: number): string => String(n).padStart(2, '0');
 
@@ -1326,8 +1331,11 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       ['[data-blok-database-timeline-next]', () => this.stepScreen(1)],
       // notion-motion.md Round 25 §4: the ghost's bar starts on the hovered day.
       ['[data-blok-database-timeline-new], [data-blok-database-timeline-new-ghost], [data-blok-database-timeline-table-new]', (el) => {
+        // notion-motion.md Round 49 B8: at Day zoom the panel's "+ New" row gets no date.
+        const undated = this.zoom === 'day' && el.hasAttribute('data-blok-database-timeline-table-new');
+
         if (this.canEdit) {
-          handlers.addRow(this.options.grouped ? this.options.groups[0]?.key ?? null : null, this.newBar(el.getAttribute('data-day') ?? undefined, el.getAttribute('data-time') ?? undefined));
+          handlers.addRow(this.options.grouped ? this.options.groups[0]?.key ?? null : null, undated ? {} : this.newBar(el.getAttribute('data-day') ?? undefined, el.getAttribute('data-time') ?? undefined));
         }
       }],
       ['[data-blok-database-timeline-load-more]', (el) => handlers.loadMore(el.getAttribute('data-group-key') ?? '')],
@@ -1581,11 +1589,15 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       return;
     }
     // The pill spans whole days, whatever inset the bar has.
-    this.showRange(span, this.zoom === 'hours' ? { offset, width } : barGeometry(span, this.window.start, this.zoom));
-    if (this.zoom === 'hours' && drag.mode !== 'move') {
+    if (this.zoom !== 'day') {
+      this.showRange(span, this.zoom === 'hours' ? { offset, width } : barGeometry(span, this.window.start, this.zoom));
+    }
+    const timedResize = BY_TIME.has(this.zoom) && (this.zoom === 'hours' || timedEdges(values) !== null);
+
+    if (timedResize && drag.mode !== 'move') {
       this.showEdgeReadout(barEl, drag.mode, values, span);
     }
-    if (this.zoom !== 'hours' && drag.mode !== 'move') {
+    if (!timedResize && drag.mode !== 'move') {
       this.showDayReadout(barEl, drag.mode, span);
     }
   }
@@ -1596,7 +1608,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     const row = this.findRow(barEl?.getAttribute('data-row-id') ?? '');
     const span = row === undefined ? null : this.spanOf(row);
 
-    if (this.drag?.active === true || row === undefined || span === null) {
+    // notion-motion.md Round 49 B10: Day zoom draws no header pill.
+    if (this.drag?.active === true || row === undefined || span === null || this.zoom === 'day') {
       return;
     }
     this.showRange(span, this.zoom === 'hours' ? this.geometryOf(span, this.valuesOf(row)) : barGeometry(span, this.window.start, this.zoom), true);
@@ -1686,11 +1699,11 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     const deltaDays = daysBetween(drag.grabDay, drag.overDay);
     const deltaMinutes = snapMinutes((drag.overPx - drag.grabPx) / (this.dayWidth / DAY_MINUTES));
 
-    // notion-motion.md Round 48 A9: Day zoom moves snap to 15 minutes. Its resize was not measured, so it stays by days.
+    // notion-motion.md Round 48 A9: Day zoom moves snap to 15 minutes. Round 49 B6: so does a timed bar's resize; all-day resize is unread.
     if (this.zoom === 'day' && drag.mode === 'move') {
       return moveBarByMinutes(values, deltaMinutes);
     }
-    if (this.zoom !== 'hours') {
+    if (!BY_TIME.has(this.zoom)) {
       return drag.mode === 'move' ? moveBar(values, deltaDays) : resizeBar(values, drag.mode, drag.overDay);
     }
 

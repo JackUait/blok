@@ -1786,6 +1786,95 @@ describe('DatabaseTimelineView', () => {
     });
   });
 
+  describe('Day zoom (notion-motion.md Round 49 B6, B8, B10)', () => {
+    const dayStart = timelineWindow(CENTER, 'day').start;
+    const midnight = daysBetween(dayStart, CENTER) * TIMELINE_DAY_WIDTH.day;
+    const perMinute = TIMELINE_DAY_WIDTH.day / 1440;
+    const at = (minutes: number): number => midnight + minutes * perMinute;
+    const mountDay = (overrides: Partial<DatabaseTimelineViewOptions> = {}): Mounted => {
+      const mounted = mount({ view: timelineView({ timelineZoom: 'day' }), ...overrides });
+
+      rect(canvas(mounted.root), 0, 0, timelineWindow(CENTER, 'day').days * TIMELINE_DAY_WIDTH.day, 400);
+
+      return mounted;
+    };
+    const range = (root: HTMLElement): HTMLElement | null => root.querySelector<HTMLElement>('[data-blok-database-timeline-range]');
+
+    // B8: Tb "4:30 AM → 7:30 AM" with the centre at 4:33; Zeta "7:00 AM → 10:00 AM" with the centre at 7:07.
+    it.each([
+      [4 * 60 + 33, '2026-10-09T04:30/2026-10-09T07:30'],
+      [7 * 60 + 7, '2026-10-09T07:00/2026-10-09T10:00'],
+    ])('a "No date" pick with the chart centre at minute %i writes 3 hours floored to 15 minutes', (centre, written) => {
+      const { root, view, handlers } = mountDay();
+      const el = scroller(root);
+
+      Object.defineProperty(el, 'clientWidth', { value: 720, configurable: true });
+      el.scrollLeft = at(centre) - 360;
+      view.noDateControl()?.open(document.body.appendChild(document.createElement('button')));
+      document.querySelector<HTMLElement>('[data-blok-database-no-date-row]')?.click();
+
+      expect(handlers.writeDates).toHaveBeenCalledWith('r3', { start: written });
+    });
+
+    it('the table panel "+ New" adds a row with no date', () => {
+      const { root, handlers } = mountDay({ view: timelineView({ timelineZoom: 'day', showTimelineTable: true }) });
+
+      root.querySelector<HTMLElement>('[data-blok-database-timeline-table-new]')?.click();
+
+      expect(handlers.addRow).toHaveBeenCalledWith(null, {});
+    });
+
+    // B6: from 8:30, +18px → 8:45, +10px → 9:00, +25px → 9:30.
+    it.each([
+      [18, '2026-10-09T05:30/2026-10-09T08:45'],
+      [10, '2026-10-09T05:30/2026-10-09T08:45'],
+      [25, '2026-10-09T05:30/2026-10-09T09:00'],
+    ])('snaps a right-edge resize of %ipx to the nearest 15 minutes', (dx, written) => {
+      const { root, handlers } = mountDay({ groups: single([row('r1', 'Tb', '2026-10-09T05:30/2026-10-09T08:30')]) });
+      const handle = bar(root, 'r1').querySelector<HTMLElement>('[data-blok-database-timeline-resize="end"]');
+
+      if (handle === null) throw new Error('no handle');
+      pointer('pointerdown', handle, at(510), 50);
+      pointer('pointermove', document, at(510) + dx, 50);
+      pointer('pointerup', document, at(510) + dx, 50);
+
+      expect(handlers.writeDates).toHaveBeenCalledWith('r1', { start: written });
+    });
+
+    it('reads the dragged edge with its time', () => {
+      const { root } = mountDay({ groups: single([row('r1', 'Tb', '2026-10-09T05:30/2026-10-09T08:30')]) });
+      const handle = bar(root, 'r1').querySelector<HTMLElement>('[data-blok-database-timeline-resize="end"]');
+
+      if (handle === null) throw new Error('no handle');
+      pointer('pointerdown', handle, at(510), 50);
+      pointer('pointermove', document, at(510) + 18, 50);
+
+      expect(showReadout).toHaveBeenLastCalledWith(handle, 'Oct 9, 8:45 AM', expect.objectContaining({ placement: 'right' }));
+      pointer('pointerup', document, at(510) + 18, 50);
+    });
+
+    // B10: Notion drew no pill under a pressed, moved or selected timed bar at Day zoom.
+    it('draws no header pill for a hovered or dragged bar', () => {
+      const { root } = mountDay({ groups: single([row('r1', 'Tb', '2026-10-09T05:30/2026-10-09T08:30')]) });
+
+      bar(root, 'r1').dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
+      expect(range(root)).toBeNull();
+
+      pointer('pointerdown', bar(root, 'r1'), at(400), 50);
+      pointer('pointermove', document, at(400) + 60, 50);
+      expect(range(root)).toBeNull();
+      pointer('pointerup', document, at(400) + 60, 50);
+    });
+
+    // B10: Week zoom keeps a 188 pill (180 + 8) under a timed bar.
+    it('keeps the whole-day pill for a timed bar at Week zoom', () => {
+      const { root } = mount({ view: timelineView({ timelineZoom: 'week' }), groups: single([row('r1', 'Tb', '2026-10-09T05:30/2026-10-09T08:30')]) });
+
+      bar(root, 'r1').dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
+      expect(range(root)).not.toBeNull();
+    });
+  });
+
   describe('reordering rows', () => {
     const layOutRows = (root: HTMLElement): void => {
       [...root.querySelectorAll<HTMLElement>('[data-blok-database-timeline-row]')].forEach((el, i) => rect(el, 0, 100 + i * 36, 2000, 36));

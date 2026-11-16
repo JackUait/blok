@@ -5,18 +5,10 @@ import type { DatabaseTimelineViewOptions, TimelineGroup, TimelineHandlers } fro
 import { TIMELINE_DAY_WIDTH, timelineWindow } from '../../../../src/tools/database/timeline-dates';
 import { daysBetween } from '../../../../src/tools/database/calendar-dates';
 import { IconArrowLeftSmall, IconArrowRightSmall, IconChevronDoubleRight } from '../../../../src/components/icons';
-import { hide, showReadout } from '../../../../src/components/utils/tooltip';
-import type * as Tooltip from '../../../../src/components/utils/tooltip';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
 
 /** An icon string as the DOM serializes it once it is set as innerHTML. */
 const markup = (svg: string): string => Object.assign(document.createElement('span'), { innerHTML: svg }).innerHTML;
-
-vi.mock('../../../../src/components/utils/tooltip', async (importOriginal) => ({
-  ...await importOriginal<typeof Tooltip>(),
-  showReadout: vi.fn(),
-  hide: vi.fn(),
-}));
 
 const schema: PropertyDefinition[] = [
   { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
@@ -1752,6 +1744,8 @@ describe('DatabaseTimelineView', () => {
 
       return mounted;
     };
+    const readout = (root: HTMLElement, edge: 'start' | 'end'): string | null | undefined =>
+      bar(root, 'r1').querySelector(`[data-blok-database-timeline-edge-readout="${edge}"]`)?.textContent;
     const handleOf = (root: HTMLElement, edge: 'start' | 'end'): HTMLElement => {
       const handle = bar(root, 'r1').querySelector<HTMLElement>(`[data-blok-database-timeline-resize="${edge}"]`);
 
@@ -1793,24 +1787,26 @@ describe('DatabaseTimelineView', () => {
       expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(188), 5);
       expect(widthOf(bar(root, 'r1'))).toBeCloseTo(60 * perMinute, 5);
       expect(bar(root, 'r1').hasAttribute('data-dragging')).toBe(true);
-      expect(showReadout).not.toHaveBeenCalled();
+      expect(root.querySelector('[data-blok-database-timeline-edge-readout]')).toBeNull();
     });
 
+    // notion-motion.md Round 51 §4: Hours reads the edge in the same light box as Day and Month, from the press on.
     it('snaps a left-edge resize live and shows the new start beside the edge', () => {
       const { root, handlers } = mountHours();
       const handle = handleOf(root, 'start');
 
       pointer('pointerdown', handle, at(181), 50);
+      expect(readout(root, 'start')).toBe('Oct 9, 3:00 AM');
       pointer('pointermove', document, at(173), 50);
 
       expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(165), 5);
       expect(widthOf(bar(root, 'r1'))).toBeCloseTo(75 * perMinute, 5);
-      expect(showReadout).toHaveBeenLastCalledWith(handle, 'Oct 9, 2:45 AM', expect.objectContaining({ placement: 'left' }));
+      expect(readout(root, 'start')).toBe('Oct 9, 2:45 AM');
 
       pointer('pointerup', document, at(173), 50);
 
       expect(handlers.writeDates).toHaveBeenCalledWith('r1', { start: '2026-10-09T02:45/2026-10-09T04:00' });
-      expect(hide).toHaveBeenCalled();
+      expect(root.querySelector('[data-blok-database-timeline-edge-readout]')).toBeNull();
     });
 
     it('reads the unchanged start while a left-edge resize is under half a step', () => {
@@ -1820,7 +1816,7 @@ describe('DatabaseTimelineView', () => {
       pointer('pointerdown', handle, at(181), 50);
       pointer('pointermove', document, at(176), 50);
 
-      expect(showReadout).toHaveBeenLastCalledWith(handle, 'Oct 9, 3:00 AM', expect.anything());
+      expect(readout(root, 'start')).toBe('Oct 9, 3:00 AM');
       pointer('pointerup', document, at(176), 50);
       expect(handlers.writeDates).not.toHaveBeenCalled();
     });
@@ -1833,7 +1829,7 @@ describe('DatabaseTimelineView', () => {
       pointer('pointermove', document, at(247), 50);
 
       expect(widthOf(bar(root, 'r1'))).toBeCloseTo(75 * perMinute, 5);
-      expect(showReadout).toHaveBeenLastCalledWith(handle, 'Oct 9, 4:15 AM', expect.objectContaining({ placement: 'right' }));
+      expect(readout(root, 'end')).toBe('Oct 9, 4:15 AM');
       pointer('pointerup', document, at(247), 50);
 
       expect(handlers.writeDates).toHaveBeenCalledWith('r1', { start: '2026-10-09T03:00/2026-10-09T04:15' });
@@ -1848,21 +1844,8 @@ describe('DatabaseTimelineView', () => {
 
       expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(180), 5);
       expect(widthOf(bar(root, 'r1'))).toBeCloseTo(60 * perMinute, 5);
-      expect(hide).toHaveBeenCalled();
+      expect(root.querySelector('[data-blok-database-timeline-edge-readout]')).toBeNull();
       expect(handlers.writeDates).not.toHaveBeenCalled();
-    });
-
-    it('shows no readout for a resize at other zooms', () => {
-      const { root } = mount();
-      const handle = bar(root, 'r1').querySelector<HTMLElement>('[data-blok-database-timeline-resize="end"]');
-
-      rect(canvas(root), 0, 0, timelineWindow(CENTER, 'month').days * 40, 400);
-      if (handle === null) throw new Error('no handle');
-      pointer('pointerdown', handle, px('2026-10-09') + 20, 50);
-      pointer('pointermove', document, px('2026-10-11') + 20, 50);
-      pointer('pointerup', document, px('2026-10-11') + 20, 50);
-
-      expect(showReadout).not.toHaveBeenCalled();
     });
   });
 

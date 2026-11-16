@@ -11,7 +11,6 @@ import type { CellContext, CellEditorHandle } from './cells';
 import { readPropertyValue } from './property-values';
 import { addDays, daysBetween, isWeekend, startOfWeek } from './calendar-dates';
 import { formatClock, formatShortDatePart, resolveLocale, toLocalDate } from './cells/date-format';
-import { hide as hideReadout, showReadout } from '../../components/utils/tooltip';
 import type { EventSpan } from './calendar-dates';
 import {
   TIMELINE_DAY_WIDTH,
@@ -1634,11 +1633,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     if (this.zoom !== 'day') {
       this.showRange(span, this.zoom === 'hours' ? { offset, width } : barGeometry(span, this.window.start, this.zoom));
     }
-    // notion-motion.md Round 49 B9: Day zoom reads a timed edge as text beside the bar, from the press on.
-    if (this.zoom === 'hours' && drag.mode !== 'move') {
-      this.showEdgeReadout(barEl, drag.mode, values, span);
-    }
-    if (this.zoom !== 'hours' && drag.mode !== 'move') {
+    if (drag.mode !== 'move') {
       this.showDayReadout(barEl, drag.mode, span, values);
     }
   }
@@ -1688,13 +1683,13 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     });
   }
 
-  /** notion-motion.md Round 49 B9: a pressed edge is read before any move. Hours zoom reads it in a tooltip, only once dragging. */
+  /** notion-motion.md Round 49 B9, Round 51 §4: a pressed edge is read before any move, at every zoom. */
   private readEdge(rowId: string, edge: 'start' | 'end'): void {
     const values = this.barValues(rowId);
     const span = values === null ? null : timelineSpan(values.start, values.end);
     const barEl = this.rowsOf('[data-blok-database-timeline-bar]').find((el) => el.getAttribute('data-row-id') === rowId);
 
-    if (this.zoom !== 'hours' && span !== null && values !== null && barEl !== undefined) {
+    if (span !== null && values !== null && barEl !== undefined) {
       this.showDayReadout(barEl, edge, span, values);
     }
   }
@@ -1719,10 +1714,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
   private dropHeldReadout = (): void => undefined;
 
-  /** findings C15: the moving edge's day in 12px ink just outside the bar. Round 49 B9: at Day zoom with its time. */
+  /** findings C15: the moving edge's day in 12px ink just outside the bar. Round 49 B9, Round 51 §4: at Day and Hours zoom with its time. */
   private showDayReadout(barEl: HTMLElement, edge: 'start' | 'end', span: EventSpan, values: BarValues): void {
     const readout = barEl.querySelector<HTMLElement>('[data-blok-database-timeline-edge-readout]') ?? document.createElement('span');
-    const part = (this.zoom === 'day' ? timedEdges(values)?.[edge] : undefined) ?? span[edge];
+    const part = (BY_TIME.has(this.zoom) ? timedEdges(values)?.[edge] : undefined) ?? span[edge];
 
     readout.setAttribute('data-blok-database-timeline-edge-readout', edge);
     readout.setAttribute('aria-hidden', 'true');
@@ -1735,19 +1730,6 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   private clearDragMarks(): void {
     this.root?.querySelectorAll('[data-blok-database-timeline-range], [data-blok-database-timeline-edge-readout]').forEach((el) => el.remove());
     this.root?.querySelectorAll('[data-range-edge]').forEach((el) => el.removeAttribute('data-range-edge'));
-  }
-
-  private showEdgeReadout(barEl: HTMLElement, edge: 'start' | 'end', values: BarValues, span: EventSpan): void {
-    const handle = barEl.querySelector<HTMLElement>(`[data-blok-database-timeline-resize="${edge}"]`);
-
-    if (handle === null) {
-      return;
-    }
-    // The physical side of the dragged edge, so the text sits outside the bar.
-    const before = (edge === 'start') !== this.rtl;
-    const part = timedEdges(values)?.[edge] ?? span[edge];
-
-    showReadout(handle, formatShortDatePart(part, resolveLocale(this.options.locale)), { placement: before ? 'left' : 'right' });
   }
 
   private barValues(rowId: string): { start: DatabaseRow['properties'][string] | undefined; end: DatabaseRow['properties'][string] | undefined } | null {
@@ -1932,9 +1914,6 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       }
       if (drag.kind === 'row') {
         drag.target?.row.removeAttribute('data-drop');
-      }
-      if (drag.kind === 'bar' && drag.active && drag.mode !== 'move') {
-        hideReadout();
       }
       this.clearDragMarks();
     }

@@ -65,9 +65,19 @@ export function createPageToolbar(
     onDuplicate?: () => void;
     onMove?: () => void;
     onDelete?: () => void;
+    onHistory?: () => void;
   } = {},
 ): PageToolbar {
-  let closeSharing: (() => void) | void;
+  const state: {
+    closeSharing: (() => void) | void;
+    feedbackTimer: ReturnType<typeof setTimeout> | undefined;
+    disposed: boolean;
+    fullWidth: boolean;
+    activeCrumb: HTMLButtonElement | null;
+    items: PageBreadcrumbItem[];
+    workspaceName: string | undefined;
+  } = {closeSharing: undefined, feedbackTimer: undefined, disposed: false, fullWidth,
+    activeCrumb: null, items: breadcrumbs.map(item => ({...item})), workspaceName: options.workspaceName};
   const toolbar = document.createElement('div');
   toolbar.setAttribute('data-desktop-page-toolbar', '');
   if (onToggleSidebar) {
@@ -89,21 +99,21 @@ export function createPageToolbar(
   local.setAttribute('data-desktop-page-local', '');
   local.title = 'Cette page est enregistrée sur cet appareil';
   local.append(glyph(['M2.5 3.5h11v8h-11z', 'M5.5 13.5h5']), document.createTextNode('Sur cet appareil'));
-  if (options.workspaceName) {
+  if (state.workspaceName) {
     const workspace = document.createElement('button');
     workspace.type = 'button';
     workspace.setAttribute('data-desktop-page-workspace', '');
-    workspace.title = options.workspaceName;
+    workspace.title = state.workspaceName;
     workspace.append(glyph(['M2 7 8 2l6 5', 'M4 6v7h3V9h2v4h3V6']));
     const name = document.createElement('span');
-    name.textContent = options.workspaceName;
+    name.textContent = state.workspaceName;
     workspace.append(name);
     if (options.workspacePages) {
       workspace.setAttribute('aria-haspopup', 'menu');
       workspace.setAttribute('aria-expanded', 'false');
       workspace.addEventListener('click', () => openBreadcrumbMenu({
-        id: 'workspace', title: options.workspaceName!, menuHeading: options.workspaceName,
-        menu: options.workspacePages!(),
+        id: 'workspace', title: state.workspaceName ?? '', menuHeading: state.workspaceName,
+        menu: options.workspacePages?.() ?? [],
       }, workspace));
     }
     const separator = document.createElement('span');
@@ -130,7 +140,7 @@ export function createPageToolbar(
     share.textContent = 'Partager';
     share.setAttribute('aria-haspopup', 'dialog');
     share.setAttribute('aria-expanded', 'false');
-    share.addEventListener('click', () => { close(); closeBreadcrumbMenu(); closeSharing = onShare(share); });
+    share.addEventListener('click', () => { close(); closeBreadcrumbMenu(); state.closeSharing = onShare(share); });
     actions.append(share);
   }
   const copy = document.createElement('button');
@@ -144,10 +154,8 @@ export function createPageToolbar(
   feedback.setAttribute('data-desktop-page-feedback', '');
   feedback.setAttribute('role', 'status');
   feedback.hidden = true;
-  let feedbackTimer: ReturnType<typeof setTimeout> | undefined;
-  let disposed = false;
   const resetFeedback = (): void => {
-    clearTimeout(feedbackTimer);
+    clearTimeout(state.feedbackTimer);
     feedback.hidden = true;
     feedback.textContent = '';
     copy.replaceChildren(linkIcon());
@@ -159,22 +167,22 @@ export function createPageToolbar(
     copy.disabled = true;
     const url = new URL(location.href);
     url.pathname = '/'; url.search = ''; url.hash = '';
-    const id = items.at(-1)?.id;
+    const id = state.items.at(-1)?.id;
     if (id) url.searchParams.set('page', id);
     void (async () => {
       try {
         await navigator.clipboard.writeText(id ? options.pageUrl?.(id) ?? url.href : url.href);
-        if (disposed) return;
+        if (state.disposed) return;
         feedback.textContent = 'Lien copié';
         copy.replaceChildren(glyph(['M3 8l3 3 7-7']));
         copy.title = 'Lien copié';
       } catch {
-        if (disposed) return;
+        if (state.disposed) return;
         feedback.textContent = 'Copie impossible : vérifiez l’autorisation du presse-papiers.';
         copy.title = 'La copie a échoué';
       } finally { copy.disabled = false; }
       feedback.hidden = false;
-      feedbackTimer = setTimeout(resetFeedback, 4000);
+      state.feedbackTimer = setTimeout(resetFeedback, 4000);
     })();
   });
   actions.append(copy, feedback);
@@ -185,7 +193,7 @@ export function createPageToolbar(
   const setFavorite = (value: boolean): void => {
     favorite.setAttribute('aria-pressed', String(value));
     favorite.setAttribute('aria-label', value ? 'Retirer des favoris' : 'Ajouter aux favoris');
-    favorite.title = favorite.getAttribute('aria-label')!;
+    favorite.title = value ? 'Retirer des favoris' : 'Ajouter aux favoris';
   };
   setFavorite(options.favorite === true);
   favorite.addEventListener('click', () => {
@@ -204,17 +212,17 @@ export function createPageToolbar(
   const menu = document.createElement('div');
   menu.setAttribute('data-desktop-page-menu', '');
   menu.setAttribute('role', 'dialog');
-  menu.setAttribute('aria-label', 'Apparence et mise en page');
+  menu.setAttribute('aria-label', 'Actions de la page');
   menu.hidden = true;
   const heading = document.createElement('div');
   heading.setAttribute('data-desktop-page-menu-heading', '');
-  heading.textContent = 'Apparence et mise en page';
+  heading.textContent = 'Actions de la page';
   const fullWidthButton = document.createElement('button');
   fullWidthButton.type = 'button';
   fullWidthButton.setAttribute('data-desktop-page-full-width', '');
   fullWidthButton.setAttribute('role', 'switch');
   fullWidthButton.setAttribute('aria-label', 'Pleine largeur');
-  fullWidthButton.setAttribute('aria-checked', String(fullWidth));
+  fullWidthButton.setAttribute('aria-checked', String(state.fullWidth));
   const label = document.createElement('span');
   label.textContent = 'Pleine largeur';
   const track = document.createElement('span');
@@ -223,14 +231,14 @@ export function createPageToolbar(
   fullWidthButton.disabled = options.readOnly === true;
   menu.append(heading, fullWidthButton);
   const commands = [
-    ['Renommer', options.onRename], ['Dupliquer', options.onDuplicate], ['Déplacer vers…', options.onMove], ['Mettre à la corbeille', options.onDelete],
+    ['Renommer', options.onRename], ['Dupliquer', options.onDuplicate], ['Déplacer vers…', options.onMove], ['Historique des versions', options.onHistory], ['Mettre à la corbeille', options.onDelete],
   ] as const;
   for (const [title, run] of commands) {
     if (!run || options.readOnly) continue;
     const button = document.createElement('button');
     button.type = 'button';
     button.setAttribute('data-desktop-page-command', '');
-    if (title === 'Mettre à la corbeille') button.setAttribute('data-danger', '');
+    if (title === 'Mettre à la corbeille') { button.setAttribute('data-danger', ''); button.style.borderTop = '1px solid var(--blok-border-primary, #8883)'; }
     button.textContent = title;
     button.addEventListener('click', () => { close(); run(); });
     menu.append(button);
@@ -275,9 +283,9 @@ export function createPageToolbar(
     fullWidthButton.focus();
   });
   fullWidthButton.addEventListener('click', () => {
-    fullWidth = !fullWidth;
-    fullWidthButton.setAttribute('aria-checked', String(fullWidth));
-    onFullWidthChange(fullWidth);
+    state.fullWidth = !state.fullWidth;
+    fullWidthButton.setAttribute('aria-checked', String(state.fullWidth));
+    onFullWidthChange(state.fullWidth);
   });
   const breadcrumbMenu = document.createElement('div');
   breadcrumbMenu.setAttribute('data-desktop-breadcrumb-menu', '');
@@ -285,21 +293,20 @@ export function createPageToolbar(
   breadcrumbMenu.setAttribute('aria-label', 'Naviguer entre les pages');
   breadcrumbMenu.hidden = true;
   toolbar.append(breadcrumbMenu);
-  let activeCrumb: HTMLButtonElement | null = null;
   const closeBreadcrumbMenu = (restoreFocus = false): void => {
     if (breadcrumbMenu.hidden) return;
     breadcrumbMenu.hidden = true;
     removeFromTopLayer(breadcrumbMenu);
-    activeCrumb?.setAttribute('aria-expanded', 'false');
-    if (restoreFocus) activeCrumb?.focus();
-    activeCrumb = null;
+    state.activeCrumb?.setAttribute('aria-expanded', 'false');
+    if (restoreFocus) state.activeCrumb?.focus();
+    state.activeCrumb = null;
     document.removeEventListener('pointerdown', outsideBreadcrumbMenu, true);
     document.removeEventListener('keydown', onBreadcrumbKey, true);
     window.removeEventListener('resize', onBreadcrumbResize);
   };
   const outsideBreadcrumbMenu = (event: PointerEvent): void => {
     if (event.target instanceof Node &&
-      (breadcrumbMenu.contains(event.target) || activeCrumb?.contains(event.target))) return;
+      (breadcrumbMenu.contains(event.target) || state.activeCrumb?.contains(event.target))) return;
     closeBreadcrumbMenu();
   };
   const onBreadcrumbKey = (event: KeyboardEvent): void => {
@@ -317,7 +324,7 @@ export function createPageToolbar(
   };
   const onBreadcrumbResize = (): void => closeBreadcrumbMenu();
   const openBreadcrumbMenu = (item: PageBreadcrumbItem, anchor: HTMLButtonElement): void => {
-    if (activeCrumb === anchor && !breadcrumbMenu.hidden) {
+    if (state.activeCrumb === anchor && !breadcrumbMenu.hidden) {
       closeBreadcrumbMenu();
       return;
     }
@@ -398,18 +405,17 @@ export function createPageToolbar(
     breadcrumbMenu.style.top = `${bounds.bottom + 6}px`;
     breadcrumbMenu.hidden = false;
     promoteToTopLayer(breadcrumbMenu);
-    activeCrumb = anchor;
+    state.activeCrumb = anchor;
     anchor.setAttribute('aria-expanded', 'true');
     document.addEventListener('pointerdown', outsideBreadcrumbMenu, true);
     document.addEventListener('keydown', onBreadcrumbKey, true);
     window.addEventListener('resize', onBreadcrumbResize);
   };
-  let items = breadcrumbs.map((item) => ({ ...item }));
   const paint = (): void => {
     closeBreadcrumbMenu();
     const list = document.createElement('ol');
 
-    items.forEach((item, index) => {
+    state.items.forEach((item, index) => {
       if (index > 0) {
         const separator = document.createElement('li');
 
@@ -419,7 +425,7 @@ export function createPageToolbar(
         list.append(separator);
       }
       const entry = document.createElement('li');
-      const current = index === items.length - 1;
+      const current = index === state.items.length - 1;
       const content = document.createElement(item.menu || item.onOpen ? 'button' : 'span');
       const iconNode = document.createElement('span');
       const titleNode = document.createElement('span');
@@ -458,18 +464,18 @@ export function createPageToolbar(
   paint();
 
   const updateCurrent = (change: Partial<Pick<PageBreadcrumbItem, 'title' | 'icon'>>): void => {
-    const current = items.at(-1);
+    const current = state.items.at(-1);
 
     if (!current) return;
-    items = [...items.slice(0, -1), { ...current, ...change }];
+    state.items = [...state.items.slice(0, -1), { ...current, ...change }];
     paint();
   };
 
   return {
     element: toolbar,
-    setBreadcrumbs(value) { resetFeedback(); items = value.map((item) => ({ ...item })); paint(); },
+    setBreadcrumbs(value) { resetFeedback(); state.items = value.map((item) => ({ ...item })); paint(); },
     setWorkspaceName(value) {
-      options.workspaceName = value;
+      state.workspaceName = value;
       const workspace = identity.querySelector<HTMLButtonElement>('[data-desktop-page-workspace]');
       if (!workspace) return;
       workspace.title = value;
@@ -480,6 +486,6 @@ export function createPageToolbar(
     setTitle(value) { updateCurrent({ title: value }); },
     setIcon(value) { updateCurrent({ icon: value }); },
     setFavorite,
-    destroy() { disposed = true; clearTimeout(feedbackTimer); closeSharing?.(); close(); closeBreadcrumbMenu(); },
+    destroy() { state.disposed = true; clearTimeout(state.feedbackTimer); state.closeSharing?.(); close(); closeBreadcrumbMenu(); },
   };
 }

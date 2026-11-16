@@ -1,3 +1,5 @@
+import {createPageHistoryApi} from './page-history-api';
+import type {createPageHistory} from './page-history';
 import { createPagePresence } from './page-presence';
 import { readAccountIdentity } from './account-profile';
 import { watchLocalProfile } from './local-profile';
@@ -499,6 +501,29 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       return;
     }
     const life = { active: true, ready: false, destroyed: false };
+    const historyView = {value:null as ReturnType<typeof createPageHistory> | null, opening:false, actors:new Map<string,string>()};
+    const openHistory = async (): Promise<void> => {
+      if (ref.kind !== 'remote' || historyView.opening) return;
+      historyView.opening = true;
+      try {
+        await instance.isReady;
+        await instance.saver.flush();
+        const {createPageHistory} = await import('./page-history');
+        if (life.destroyed || !life.active) return;
+        historyView.value ??= createPageHistory({
+          returnFocus:()=>toolbar.element.querySelector<HTMLButtonElement>('[data-desktop-page-more]'),
+          api:createPageHistoryApi({server:`${ref.server}/api/blok`,doc:id,ticket:()=>repository.ticket(id)}),
+          title:()=>page.title, actorName:actor=>actor===ref.accountId?readAccountIdentity(ref).name:historyView.actors.get(actor) ?? 'Autre contributeur',
+          canRestore:()=>life.active && !readOnly(id) && sync.remoteConnection === 'connected' && !ws.remotePending, onRestored:()=>refreshRemoteManifest(),
+        });
+        void teamspacesApi?.workspaceMembers().then(({members})=>{
+          if(life.destroyed)return;
+          for(const member of members)historyView.actors.set(member.id,member.email);
+          historyView.value?.refreshActors();
+        }).catch(()=>undefined);
+        await historyView.value.open();
+      } finally { historyView.opening = false; }
+    };
     sync.remoteConnection = 'connecting';
     saveStatus.resetPage();
     const article = document.createElement('article');
@@ -542,6 +567,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         if (title) { const range = document.createRange(); range.selectNodeContents(title); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range); }
       },
       onMove: ref.kind === 'local' || ws.access.canShare(id) ? () => { void action({ id, type: 'move' }).catch(showError); } : undefined,
+      onHistory: ref.kind === 'remote' ? () => { void openHistory().catch(showError); } : undefined,
       onDuplicate: () => { void action({ id, type: 'duplicate' }).catch(showError); },
       onDelete: () => { void action({ id, type: 'delete' }).catch(showError); },
     });
@@ -761,6 +787,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       get destroyed() { return life.destroyed; }, set destroyed(value) { life.destroyed = value; },
       nodes: [],
       suspend() {
+        historyView.value?.destroy(); historyView.value = null;
         pagePresence?.close();
         if (article.contains(document.activeElement)) (document.activeElement as HTMLElement).blur();
         const selection = window.getSelection();
@@ -790,6 +817,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       destroy() {
         if (life.destroyed) return;
         life.destroyed = true; life.active = false;
+        historyView.value?.destroy();
         unwatchProfile(); pagePresence?.destroy();
         toolbar.destroy(); instance.destroy();
         session.nodes = [];
@@ -824,6 +852,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
           if (event?.status) sync.remoteConnection = event.status;
           if (reconnected && navigator.onLine && ws.manifestFailed && ws.pendingManifests === 0) saveManifest();
           saveStatus.connection(event);
+          historyView.value?.refreshAccess();
         }
       });
       mountPresentation();

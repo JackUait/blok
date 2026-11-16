@@ -223,7 +223,6 @@ export class Tokenizer implements TokenizerControl {
   private pos = 0;
   /** The state machine's own state; `state` is what the tree builder sees and sets. */
   private current = DATA;
-  private returnState = DATA;
   private pendingType: CharacterToken['type'] | null = null;
   private pendingChars = '';
   private tag: TagToken = Tokenizer.createTag(TokenType.START_TAG);

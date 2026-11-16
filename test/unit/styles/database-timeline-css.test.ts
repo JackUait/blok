@@ -542,3 +542,24 @@ describe('timeline group labels share the toolbar row (Round 47 A2)', () => {
     expect(ruleBody('[data-blok-database-timeline-today-dot]')).toContain('inset-block-start: calc(var(--blok-database-timeline-header-band) + 3px)');
   });
 });
+
+// Blok choice, pending a Notion measurement: a group label in the toolbar band slides under the controls, not over them.
+describe('timeline toolbar controls hide the group labels under them', () => {
+  const control = '[data-blok-database-timeline-toolbar] > :not([data-blok-database-timeline-toolbar-spacer])';
+
+  it('stacks the toolbar over the chart', () => {
+    expect(ruleBody('[data-blok-database-timeline-toolbar]')).toMatch(/position:\s*relative;[\s\S]*z-index:\s*2/);
+    expect(ruleBody('[data-blok-database-timeline-scroller]')).not.toContain('z-index');
+  });
+
+  it('puts a page-coloured backing under each control, past its 2px edge to fill the gaps', () => {
+    expect(ruleBody(control)).toContain('position: relative');
+    expect(ruleBody(control)).toContain('isolation: isolate');
+    const backing = ruleBody(`${control}::before`);
+
+    expect(backing).toContain('position: absolute');
+    expect(backing).toContain('inset: calc(-1 * var(--blok-space-0-5))');
+    expect(backing).toContain('z-index: -1');
+    expect(backing).toContain('background-color: var(--blok-bg-primary)');
+  });
+});

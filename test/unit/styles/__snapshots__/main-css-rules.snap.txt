@@ -18130,6 +18130,19 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   flex: 1;
 }
 
+[data-blok-database-timeline-toolbar] > :not([data-blok-database-timeline-toolbar-spacer]) {
+  position: relative;
+  isolation: isolate;
+}
+
+[data-blok-database-timeline-toolbar] > :not([data-blok-database-timeline-toolbar-spacer])::before {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--blok-space-0-5));
+  z-index: -1;
+  background-color: var(--blok-bg-primary);
+}
+
 [data-blok-database-timeline-month] {
   font-size: 14px;
   line-height: 21px;

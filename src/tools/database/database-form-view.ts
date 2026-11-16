@@ -90,6 +90,7 @@ const MAX_SELECTION_PRESETS = [1, 2, 3, 4, 5, 10] as const;
 
 /** notion-motion.md Round 32 §1 (r32-a-movequestion-*): the Move question flyout is 280 wide. */
 const MOVE_FLYOUT_WIDTH = 280;
+const QUESTION_PANEL_GAP = 24;
 
 /**
  * Multi-select and select default to a list (measured; select: notion-motion.md Round 32 §4).
@@ -1025,8 +1026,11 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       state.setting = { ...state.setting, ...patch };
       this.options.setQuestionSetting?.(state.property.id, patch);
     };
+    const card = anchor.closest<HTMLElement>('[data-blok-database-form-question]');
+    // notion-motion.md Round 31 §1 / Round 33 §1: 24 right of the card, top level with it; 24 left of it when only the left has room.
     const panel = new DatabasePanel({
       anchor,
+      ...(card !== null ? { beside: QUESTION_PANEL_GAP, besideOf: card, besideFlip: true } : {}),
       testId: 'database-form-question-settings',
       width: 290,
       backLabel: i18n.t('tools.database.peekBack'),

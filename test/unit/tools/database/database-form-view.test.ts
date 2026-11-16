@@ -607,6 +607,36 @@ describe('DatabaseFormView question options rows', () => {
 
   // notion-motion.md Round 33 §1 (r33-form-move-w1000.raw): with no room left of the panel, the flyout
   // opens on its right, its left edge on the row's right (panel right − 4), centred on the row.
+  const openBesideCard = (viewport: number, card: DOMRect): HTMLElement | null => {
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(viewport);
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+    vi.spyOn(PopoverDesktop.prototype, 'size', 'get').mockReturnValue({ width: 290, height: 355 });
+    const { root } = mount({ setQuestionSetting: vi.fn() });
+    const wrapper = question(root, 'size');
+
+    if (wrapper === null) throw new Error('no question');
+    wrapper.getBoundingClientRect = () => card;
+    wrapper.querySelector<HTMLButtonElement>('[data-blok-testid="database-form-question-menu"]')?.click();
+
+    return panel()?.closest<HTMLElement>('[data-blok-popover]') ?? null;
+  };
+
+  // notion-motion.md Round 31 §1 and r33-form-move-mid.raw: at 1512 the panel sits 24 right of the card, top level with it.
+  it('Question options opens 24 right of the card when the window has room there', () => {
+    const box = openBesideCard(1512, new DOMRect(585, 225, 600, 140));
+
+    expect(parseFloat(box?.style.left ?? '')).toBeCloseTo(1209);
+    expect(parseFloat(box?.style.top ?? '')).toBeCloseTo(225);
+  });
+
+  // r33-form-move-w1000.raw: at 1000 the panel opens 24 left of the card (92–382 against a card at 406).
+  it('Question options opens 24 left of the card when its right has no room', () => {
+    const box = openBesideCard(1000, new DOMRect(406, 224.8, 458, 140));
+
+    expect(parseFloat(box?.style.left ?? '')).toBeCloseTo(92);
+    expect(parseFloat(box?.style.top ?? '')).toBeCloseTo(224.8);
+  });
+
   it('Move question opens on the panel\'s right when its left has no room', () => {
     vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1000);
     vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);

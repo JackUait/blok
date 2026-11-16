@@ -128,6 +128,8 @@ export interface DatabaseTimelineViewOptions {
 const DRAG_THRESHOLD = 4;
 const DAY_MINUTES = 24 * 60;
 const BAR_INSET = 1.5;
+/** notion-motion.md Round 53 §1: an Hours bar starts 1.03 after its hour line's pixel; here that pixel is the one after the hour. */
+const HOURS_BAR_START = 2;
 /** notion-motion.md Round 48 A5: Quarter, Year and 5 Years bars start 2px into their span, max(span - 3, 11) wide. */
 const FAR_BAR_INSET = 2;
 const FAR_BAR_TRIM = 3;
@@ -480,6 +482,14 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       .flatMap((p) => this.options.schema.filter((s) => s.id === p.id));
 
     panel.setAttribute('data-blok-database-timeline-table', '');
+    // notion-motion.md Round 53 §3: the panel never scrolls sideways; a sideways wheel over it scrolls the chart.
+    panel.addEventListener('wheel', (event) => {
+      if (this.scroller === null || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) {
+        return;
+      }
+      event.preventDefault();
+      this.scroller.scrollLeft += event.deltaX;
+    }, { passive: false });
 
     const header = document.createElement('div');
 
@@ -1490,8 +1500,12 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       return { offset: geometry.offset + FAR_BAR_INSET, width: Math.max(geometry.width - FAR_BAR_TRIM, FAR_BAR_MIN) };
     }
 
-    // findings C23: at day-level zooms a bar sits 1.5px in from each day edge (37px of a 40px day). Round 51 §4: Hours too (288.7 of an hour).
-    return MONTH_IN_TOOLBAR.has(this.zoom) || this.zoom === 'hours' ? { offset: geometry.offset + BAR_INSET, width: geometry.width - 2 * BAR_INSET } : geometry;
+    // findings C23: at day-level zooms a bar sits 1.5px in from each day edge (37px of a 40px day). Round 51 §4: Hours is as wide (288.7 of an hour).
+    if (this.zoom === 'hours') {
+      return { offset: geometry.offset + HOURS_BAR_START, width: geometry.width - 2 * BAR_INSET };
+    }
+
+    return MONTH_IN_TOOLBAR.has(this.zoom) ? { offset: geometry.offset + BAR_INSET, width: geometry.width - 2 * BAR_INSET } : geometry;
   }
 
   private valuesOf(row: DatabaseRow): BarValues {
@@ -1722,12 +1736,12 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
   /**
    * findings C15: the moving edge's day in 12px ink just outside the bar. Round 49 B9, Round 51 §4: at Day and Hours zoom with its time.
-   * Round 51 §2: an all-day edge at Day zoom reads its midnight. At Hours zoom that is unmeasured.
+   * Round 51 §2, Round 53 §4: an all-day edge at Day and Hours zoom reads its midnight.
    */
   private showDayReadout(barEl: HTMLElement, edge: 'start' | 'end', span: EventSpan, values: BarValues): void {
     const readout = barEl.querySelector<HTMLElement>('[data-blok-database-timeline-edge-readout]') ?? document.createElement('span');
     const timed = BY_TIME.has(this.zoom) ? timedEdges(values)?.[edge] : undefined;
-    const part = timed ?? (this.zoom === 'day' ? `${span[edge]}T00:00` : span[edge]);
+    const part = timed ?? (BY_TIME.has(this.zoom) ? `${span[edge]}T00:00` : span[edge]);
 
     readout.setAttribute('data-blok-database-timeline-edge-readout', edge);
     readout.setAttribute('aria-hidden', 'true');
@@ -1870,6 +1884,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       }
       if (changed && drag.mode === 'move') {
         this.options.handlers?.landRow?.(drag.rowId);
+      }
+      // notion-motion.md Round 53 §2: nothing redraws an unchanged bar, so put it back by hand.
+      if (!changed) {
+        this.previewBar({ ...drag, mode: 'move', active: false, overDay: drag.grabDay, overPx: drag.grabPx });
       }
 
       return;

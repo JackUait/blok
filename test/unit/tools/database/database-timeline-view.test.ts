@@ -751,6 +751,27 @@ describe('DatabaseTimelineView', () => {
       expect(title?.firstElementChild?.hasAttribute('data-blok-database-page-icon-placeholder')).toBe(true);
     });
 
+    // notion-motion.md Round 53 §3: the panel never scrolls sideways; a sideways wheel over it scrolls the chart.
+    it('turns a sideways wheel over the panel into a chart scroll, and leaves an upright one alone', () => {
+      const { root } = mount({ view: timelineView({ showTimelineTable: true }) });
+      const panel = root.querySelector<HTMLElement>('[data-blok-database-timeline-table]');
+      const chart = scroller(root);
+
+      if (panel === null) throw new Error('no panel');
+      chart.scrollLeft = 1000;
+      const sideways = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaX: 300, deltaY: 10 });
+
+      panel.dispatchEvent(sideways);
+      expect(chart.scrollLeft).toBe(1300);
+      expect(sideways.defaultPrevented).toBe(true);
+
+      const upright = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaX: 5, deltaY: 100 });
+
+      panel.dispatchEvent(upright);
+      expect(chart.scrollLeft).toBe(1300);
+      expect(upright.defaultPrevented).toBe(false);
+    });
+
     it('ends the panel with "+ New", and the canvas lane beside it stays empty', () => {
       const { root, handlers } = mount({ view: timelineView({ showTimelineTable: true }) });
       const add = root.querySelector<HTMLElement>('[data-blok-database-timeline-table] [data-blok-database-timeline-table-new]');
@@ -1412,7 +1433,7 @@ describe('DatabaseTimelineView', () => {
 
       rect(canvas(root), 0, 0, timelineWindow(CENTER, 'hours').days * TIMELINE_DAY_WIDTH.hours, 400);
 
-      expect(bar(root, 'r1').style.insetInlineStart).toBe(`${daysBetween(hoursStart, CENTER) * TIMELINE_DAY_WIDTH.hours + 9 * hourPx + 1.5}px`);
+      expect(bar(root, 'r1').style.insetInlineStart).toBe(`${daysBetween(hoursStart, CENTER) * TIMELINE_DAY_WIDTH.hours + 9 * hourPx + 2}px`);
 
       pointer('pointerdown', bar(root, 'r1'), xAt(9), 50);
       pointer('pointermove', document, xAt(12), 50);
@@ -1744,6 +1765,8 @@ describe('DatabaseTimelineView', () => {
     const midnight = daysBetween(hoursStart, CENTER) * TIMELINE_DAY_WIDTH.hours;
     const perMinute = TIMELINE_DAY_WIDTH.hours / 1440;
     const at = (minutes: number): number => midnight + minutes * perMinute;
+    /** The bar's start past its hour: the 1px line, then 1px clear. */
+    const START = 2;
     const startOf = (el: HTMLElement): number => parseFloat(el.style.insetInlineStart);
     const widthOf = (el: HTMLElement): number => parseFloat(el.style.width);
     const mountHours = (overrides: Partial<DatabaseTimelineViewOptions> = {}): Mounted => {
@@ -1768,11 +1791,12 @@ describe('DatabaseTimelineView', () => {
     };
 
     // notion-motion.md Round 51 §4: Notion's 1-hour bar and its ghost are 288.7 wide, 3 under the hour.
-    it('draws a 1-hour bar 3px under the hour, 1.5px in from its start', () => {
+    // Round 53 §1: it starts 1.03 after its hour line's pixel; Blok's line pixel is the one after the hour.
+    it('draws a 1-hour bar 3px under the hour, 1px clear of its hour line', () => {
       const { root } = mountHours();
 
       expect(widthOf(bar(root, 'r1'))).toBeCloseTo(60 * perMinute - 3, 5);
-      expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(180) + 1.5, 5);
+      expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(180) + START, 5);
     });
 
     // notion-motion.md Round 51 §4: Notion's header band showed no pill on an Hours edge press.
@@ -1815,13 +1839,36 @@ describe('DatabaseTimelineView', () => {
       expect(handlers.writeDates).toHaveBeenCalledWith('r1', { start: '2026-10-09T02:45/2026-10-09T03:45' });
     });
 
+    // notion-motion.md Round 53 §2: a move that rounds to no change leaves the bar where it was, not where it was dropped.
+    it('puts the bar back where it was after a move that rounds to no change', () => {
+      const { root, handlers } = mountHours();
+
+      pointer('pointerdown', bar(root, 'r1'), at(200), 50);
+      pointer('pointermove', document, at(206), 50);
+      pointer('pointerup', document, at(206), 50);
+
+      expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(180) + START, 5);
+      expect(widthOf(bar(root, 'r1'))).toBeCloseTo(60 * perMinute - 3, 5);
+      expect(handlers.writeDates).not.toHaveBeenCalled();
+    });
+
+    // notion-motion.md Round 53 §4: an all-day bar's pressed edge reads "Nov 17, 12:00 AM" at Hours.
+    it('reads an all-day bar\'s pressed edge with its midnight', () => {
+      const { root } = mountHours({ groups: single([row('r1', 'Day', CENTER)]) });
+
+      pointer('pointerdown', handleOf(root, 'start'), at(1), 50);
+
+      expect(readout(root, 'start')).toBe('Oct 9, 12:00 AM');
+      pointer('pointerup', document, at(1), 50);
+    });
+
     it('drags a move as a ghost that follows the pointer unsnapped, with no readout', () => {
       const { root } = mountHours();
 
       pointer('pointerdown', bar(root, 'r1'), at(200), 50);
       pointer('pointermove', document, at(208), 50);
 
-      expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(188) + 1.5, 5);
+      expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(188) + START, 5);
       expect(widthOf(bar(root, 'r1'))).toBeCloseTo(60 * perMinute - 3, 5);
       expect(bar(root, 'r1').hasAttribute('data-dragging')).toBe(true);
       expect(root.querySelector('[data-blok-database-timeline-edge-readout]')).toBeNull();
@@ -1836,7 +1883,7 @@ describe('DatabaseTimelineView', () => {
       expect(readout(root, 'start')).toBe('Oct 9, 3:00 AM');
       pointer('pointermove', document, at(173), 50);
 
-      expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(165) + 1.5, 5);
+      expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(165) + START, 5);
       expect(widthOf(bar(root, 'r1'))).toBeCloseTo(75 * perMinute - 3, 5);
       expect(readout(root, 'start')).toBe('Oct 9, 2:45 AM');
 
@@ -1879,7 +1926,7 @@ describe('DatabaseTimelineView', () => {
       pointer('pointermove', document, at(150), 50);
       key(document, 'Escape');
 
-      expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(180) + 1.5, 5);
+      expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(180) + START, 5);
       expect(widthOf(bar(root, 'r1'))).toBeCloseTo(60 * perMinute - 3, 5);
       expect(root.querySelector('[data-blok-database-timeline-edge-readout]')).toBeNull();
       expect(handlers.writeDates).not.toHaveBeenCalled();

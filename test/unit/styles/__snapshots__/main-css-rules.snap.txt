@@ -18285,7 +18285,9 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-timeline-table] {
   flex: none;
-  inline-size: var(--blok-database-timeline-table-width);
+  inline-size: max-content;
+  min-inline-size: var(--blok-database-timeline-table-width);
+  max-inline-size: 100%;
   padding-inline-start: 90px;
   --blok-database-timeline-panel-reach: 36px;
   position: relative;

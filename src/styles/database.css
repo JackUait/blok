@@ -15550,7 +15550,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-timeline-table] {
   flex: none;
-  inline-size: var(--blok-database-timeline-table-width);
+  /* notion-motion.md Round 53 §3: 200 wider per shown column, no cap; past the view's edge the columns are cut. */
+  inline-size: max-content;
+  min-inline-size: var(--blok-database-timeline-table-width);
+  max-inline-size: 100%;
   /* Notion keeps 96 before the Name column at every width (90 of it visible); it does not follow the text column. */
   padding-inline-start: 90px;
   /*

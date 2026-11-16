@@ -173,7 +173,10 @@ describe('database timeline styles', () => {
   // Its « sits at the panel's end, beside the month.
   it('draws the table panel 370px wide, 90 of it padding, and turns the toggle into « at its end while it shows', () => {
     expect(ruleBody('[data-blok-database-timeline]')).toContain('--blok-database-timeline-table-width: 370px');
-    expect(ruleBody('[data-blok-database-timeline-table]')).toContain('inline-size: var(--blok-database-timeline-table-width)');
+    // Round 53 §3: the panel grows 200 per shown column (Notion 480 with Date, 1880 with 8 more), cut at the view's edge.
+    expect(ruleBody('[data-blok-database-timeline-table]')).toMatch(/[;\s]inline-size: max-content/);
+    expect(ruleBody('[data-blok-database-timeline-table]')).toContain('min-inline-size: var(--blok-database-timeline-table-width)');
+    expect(ruleBody('[data-blok-database-timeline-table]')).toContain('max-inline-size: 100%');
     expect(ruleBody('[data-blok-database-timeline-table]')).toContain('padding-inline-start: 90px');
     const shown = '[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"]';
 

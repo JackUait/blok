@@ -1801,6 +1801,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R121_BYTES = 937;
     // Lane r124: Round 53 "No place" search as a 296x28 field. Net database.css growth against origin/main.
     const DATABASE_R124_BYTES = 184;
+    // Lane r123: Round 53 timeline panel widens 200 per shown column. Net database.css growth against origin/main.
+    const DATABASE_R123_BYTES = 174;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2375,6 +2377,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R120_BYTES
       + DATABASE_R121_BYTES
       + DATABASE_R124_BYTES
+      + DATABASE_R123_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

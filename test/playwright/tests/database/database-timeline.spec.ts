@@ -414,7 +414,7 @@ test.describe('timeline', () => {
 
   // notion-motion.md Round 51 §3: with Name and two more columns Notion's panel row is 679 wide and the Name
   // editor from "+ New" is 280 at x 359 (1 left of the row). 200 per extra column is a fit to the 679 total.
-  test('the table panel keeps Name 279 wide and grows its row with more columns, the Name editor 280', async ({ page }) => {
+  test('the table panel keeps Name 279 wide and grows with more columns, the Name editor 280', async ({ page }) => {
     await mount(page, blocks({
       type: 'timeline',
       showTimelineTable: true,
@@ -430,7 +430,12 @@ test.describe('timeline', () => {
     if (rowBox === null || panelBox === null) throw new Error('no layout');
     expect(rowBox.width).toBeCloseTo(679, 0);
     expect(widths.slice(1)).toEqual([200, 200]);
-    expect(panelBox.width).toBeCloseTo(370, 0);
+    // Round 53 §3: the panel grows with the row (Notion 280 + 200 per column), and the chart starts past it.
+    expect(panelBox.width).toBeCloseTo(370 + 2 * 200, 0);
+    const chart = await page.locator('[data-blok-database-timeline-scroller]').boundingBox();
+
+    if (chart === null) throw new Error('no chart');
+    expect(chart.x).toBeCloseTo(panelBox.x + panelBox.width, 0);
 
     await panel.locator('[data-blok-database-timeline-table-new]').click();
     const editor = await page.locator('[data-blok-database-cell-input="title"]').boundingBox();

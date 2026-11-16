@@ -189,8 +189,6 @@ describe('add property menu (T12)', () => {
     expect(declared(`${OVER} > [data-blok-database-property-type-header]`, 'height')).toEqual(['28px']);
     expect(declared(`${OVER} > [data-blok-database-property-type-header]`, 'border-radius')).toEqual(['var(--blok-radius-control)']);
     expect(declared(`${OVER} > [data-blok-database-property-type-header]`, 'box-shadow')).toEqual(['none']);
-    expect(declared(`${OVER} [data-blok-database-property-type-glyph]`, 'width')).toEqual(['24px']);
-    expect(declared(`${OVER} [data-blok-database-property-type-glyph]`, 'height')).toEqual(['24px']);
     expect(declared(OVER, 'max-height')).toEqual(['50dvh']);
     expect(declared(`${OVER} [data-blok-database-property-type-body]`, 'mask-image')).toEqual(['linear-gradient(black 0%, black calc(100% - 34px), transparent 100%)']);
   });
@@ -742,5 +740,25 @@ describe('Change type list and the property menu glyph (Round 44)', () => {
   it('draws the type glyph in the name row\'s icon box at 16.8', () => {
     expect(declared('[data-blok-database-property-menu-icon] svg', 'width')).toEqual(['16.8px']);
     expect(declared('[data-blok-database-property-menu-icon] svg', 'height')).toEqual(['16.8px']);
+  });
+});
+
+// notion-motion.md Round 44 §3 (r44-tp-add-head.raw): the header "+" name box is 378×28, padding 2/4; "Select icon" is a
+// 24 box at +4 holding a 19.2 gray emoji glyph, and the field starts at +32.
+describe('header "+" Select icon (Round 44)', () => {
+  const HEAD = '[data-blok-database-property-type-name-over-anchor] > [data-blok-database-property-type-header]';
+  const ICON = '[data-blok-database-property-type-icon-button]';
+
+  it('pads the name box 2/4 with 4 between the icon and the field', () => {
+    expect(declared(HEAD, 'padding')).toEqual(['var(--blok-space-0-5) var(--blok-space-1)']);
+    expect(declared(HEAD, 'gap')).toEqual(['var(--blok-space-1)']);
+  });
+
+  it('draws Select icon as a 24 borderless box with a 19.2 glyph in the type icon gray', () => {
+    expect(declared(ICON, 'width')).toEqual(['24px']);
+    expect(declared(ICON, 'height')).toEqual(['24px']);
+    expect(declared(ICON, 'border')).toEqual(['none']);
+    expect(declared(ICON, 'color')).toEqual(['var(--blok-database-type-icon)']);
+    expect(declared(`${ICON} svg`, 'width')).toEqual(['19.2px']);
   });
 });

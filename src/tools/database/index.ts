@@ -12387,7 +12387,7 @@ export class DatabaseTool implements BlockTool {
    * when the type cannot be added (person without a people directory) or
    * the block is read-only.
    */
-  addProperty(params: { name: string; type: PropertyType; afterId?: string; beforeId?: string }, context?: NativeWidgetContext): PropertyDefinition | null {
+  addProperty(params: { name: string; type: PropertyType; afterId?: string; beforeId?: string; icon?: string }, context?: NativeWidgetContext): PropertyDefinition | null {
     if (this.readOnly || this.destroyed || params.type === 'title' || (params.type === 'person' && !this.hasPeople)) {
       return null;
     }
@@ -12410,6 +12410,7 @@ export class DatabaseTool implements BlockTool {
       : {};
 
     if (params.type === 'relation') settings.relation = { targetDatabaseId: this.dataId };
+    if (params.icon !== undefined) settings.icon = params.icon;
     const prop = this.model.addProperty(name, params.type, config, { afterId: params.afterId, beforeId: params.beforeId }, settings);
     this.showInActiveView(prop, context, params.afterId, params.beforeId);
     this.writeEmptyLists(prop.id);
@@ -12421,6 +12422,7 @@ export class DatabaseTool implements BlockTool {
       ...(prop.config !== undefined ? { config: prop.config } : {}),
       ...(prop.status !== undefined ? { status: prop.status } : {}),
       ...(prop.relation !== undefined ? { relation: prop.relation } : {}),
+      ...(prop.icon !== undefined ? { icon: prop.icon } : {}),
     });
     this.commitSchema();
 
@@ -13391,10 +13393,10 @@ export class DatabaseTool implements BlockTool {
       ...(onAdded === undefined ? { layout: 'grid' as const } : {}),
       // notion-spec-2 §19.11: the "+" puts the name box in the header cell. Insert left/right's is unmeasured.
       ...(onAdded === undefined && placement === undefined ? { nameOverAnchor: true } : {}),
-      onSelect: (type, name) => {
+      onSelect: (type, name, icon) => {
         if (!writable()) return;
         const side = placement?.side === 'left' ? 'beforeId' : 'afterId';
-        const created = this.addProperty({ name, type, ...(placement === undefined ? {} : { [side]: placement.propertyId }) }, context);
+        const created = this.addProperty({ name, type, icon, ...(placement === undefined ? {} : { [side]: placement.propertyId }) }, context);
 
         if (created === null) return;
         // A host that redraws `anchor` away hands back where the follow-up setup goes.

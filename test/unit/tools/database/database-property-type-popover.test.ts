@@ -995,4 +995,130 @@ describe('DatabasePropertyTypePopover', () => {
       expect(stillOpen).not.toBeNull();
     });
   });
+
+  // notion-motion.md Round 44 §3 (r44-tp-add-head.raw): the header "+" name box opens with a 24 "Select icon" button at +4,
+  // a gray emoji glyph, then the field at +32. Property icons are saved data (PropertySettingsV2.icon).
+  describe('header "+" Select icon', () => {
+    const shown: Element[] = [];
+
+    beforeEach(() => {
+      shown.length = 0;
+      vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
+      // jsdom has no Popover API.
+      Object.defineProperty(HTMLElement.prototype, 'popover', { configurable: true, get(this: HTMLElement) { return this.getAttribute('popover'); } });
+      Object.defineProperty(HTMLElement.prototype, 'showPopover', { configurable: true, writable: true, value(this: HTMLElement) { shown.push(this); } });
+      Object.defineProperty(HTMLElement.prototype, 'hidePopover', { configurable: true, writable: true, value(this: HTMLElement) { shown.splice(shown.indexOf(this), 1); } });
+    });
+
+    afterEach(() => {
+      for (const key of ['popover', 'showPopover', 'hidePopover']) Reflect.deleteProperty(HTMLElement.prototype, key);
+      vi.unstubAllGlobals();
+      document.body.innerHTML = '';
+    });
+
+    const i18n = { t: (key: string) => key, has: () => true, getLocale: () => 'en' } as unknown as I18n;
+    const openFlow = (pick: (type: PropertyType, name: string, icon?: string) => void): { flow: DatabasePropertyTypePopover; button: HTMLElement } => {
+      const flow = new DatabasePropertyTypePopover({ onSelect: pick, withNameField: true, i18n, layout: 'grid', nameOverAnchor: true });
+
+      flow.open(anchor);
+      const header = document.querySelector('[data-blok-database-property-type-header]');
+      const button = header?.querySelector<HTMLElement>(':scope > button[data-blok-database-property-type-icon-button]');
+
+      if (button === null || button === undefined) throw new Error('no Select icon button');
+
+      return { flow, button };
+    };
+    const pickEmoji = async (): Promise<string> => {
+      const emoji = await vi.waitFor(() => {
+        const button = document.querySelector<HTMLElement>('[data-blok-emoji-picker] [data-emoji-grid] button[data-emoji-native]');
+        const native = button?.querySelector('[data-emoji-glyph]')?.textContent ?? '';
+
+        if (button === null || native === '') throw new Error('grid not ready');
+
+        return { button, native };
+      }, { timeout: 5000 });
+
+      // The menu's outside-press check runs first, as for a real click.
+      emoji.button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      emoji.button.click();
+
+      return emoji.native;
+    };
+
+    it('heads the name box with a Select icon button in place of the type glyph', () => {
+      const { flow, button } = openFlow(vi.fn());
+      const header = button.parentElement;
+
+      expect(button.getAttribute('aria-label')).toBe('tools.database.propertyIcon');
+      expect(button.querySelector('svg')).not.toBeNull();
+      expect(button.nextElementSibling?.hasAttribute('data-blok-database-property-name-input')).toBe(true);
+      expect(header?.querySelector('[data-blok-database-property-type-glyph]')).toBeNull();
+      flow.destroy();
+    });
+
+    it('keeps the bordered type glyph in the row page list', () => {
+      const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true, i18n });
+
+      flow.open(anchor);
+      expect(document.querySelector('[data-blok-database-property-type-glyph]')).not.toBeNull();
+      expect(document.querySelector('[data-blok-database-property-type-icon-button]')).toBeNull();
+      flow.destroy();
+    });
+
+    it('opens the emoji picker above the menu, shows the pick, and gives it to the new property', async () => {
+      const pick = vi.fn<(type: PropertyType, name: string, icon?: string) => void>();
+      const { flow, button } = openFlow(pick);
+
+      button.click();
+      const picker = document.querySelector('[data-blok-emoji-picker]');
+
+      expect(shown.at(-1)?.contains(picker)).toBe(true);
+      const native = await pickEmoji();
+
+      expect(button.textContent).toBe(native);
+      expect(document.querySelector('[data-blok-database-property-type-popover]')).not.toBeNull();
+      document.querySelector<HTMLElement>('[data-blok-database-property-type-option="number"]')?.click();
+      expect(pick).toHaveBeenCalledWith('number', '', native);
+      expect(shown.some((el) => el.contains(picker))).toBe(false);
+      flow.destroy();
+    });
+
+    it('gives the picked icon to the Text property Enter makes from a typed name', async () => {
+      const pick = vi.fn<(type: PropertyType, name: string, icon?: string) => void>();
+      const { flow, button } = openFlow(pick);
+
+      button.click();
+      const native = await pickEmoji();
+      const field = document.querySelector<HTMLInputElement>('[data-blok-database-property-name-input]');
+
+      if (field === null) throw new Error('no name field');
+      field.value = 'Mood';
+      field.dispatchEvent(new Event('input'));
+      field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+      expect(pick).toHaveBeenCalledWith('text', 'Mood', native);
+      flow.destroy();
+    });
+
+    // Notion's focus after a pick is unmeasured; Blok goes back to the name field, so the name can be typed next.
+    it('puts focus back in the name field after a pick', async () => {
+      const { flow, button } = openFlow(vi.fn());
+
+      // A real click focuses the button first.
+      button.focus();
+      button.click();
+      await pickEmoji();
+      expect(document.querySelector('[data-blok-database-property-name-input]')).toHaveFocus();
+      flow.destroy();
+    });
+
+    it('takes the picker down with the menu', () => {
+      const { flow, button } = openFlow(vi.fn());
+
+      button.click();
+      const picker = document.querySelector('[data-blok-emoji-picker]');
+
+      flow.destroy();
+      expect(shown.some((el) => el.contains(picker))).toBe(false);
+    });
+  });
 });

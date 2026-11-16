@@ -9710,7 +9710,8 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   box-sizing: border-box;
   width: 378px;
   height: 28px;
-  padding: 0 var(--blok-space-0-5);
+  padding: var(--blok-space-0-5) var(--blok-space-1);
+  gap: var(--blok-space-1);
   background: var(--blok-database-popover-bg);
   border-radius: var(--blok-radius-control);
   box-shadow: none;
@@ -9728,9 +9729,28 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   margin-top: var(--blok-space-0-5);
 }
 
-[data-blok-database-property-type-name-over-anchor] [data-blok-database-property-type-glyph] {
+[data-blok-database-property-type-icon-button] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
   width: 24px;
   height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-type-icon);
+  cursor: pointer;
+}
+
+[data-blok-database-property-type-icon-button]:hover {
+  background-color: var(--blok-database-popover-hover);
+}
+
+[data-blok-database-property-type-icon-button] svg {
+  width: 19.2px;
+  height: 19.2px;
 }
 
 [data-blok-database-property-type-heading] {

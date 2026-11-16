@@ -6020,7 +6020,9 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   box-sizing: border-box;
   width: 378px;
   height: 28px;
-  padding: 0 var(--blok-space-0-5);
+  /* notion-motion.md Round 44 §3: Select icon at +4, the field at +32. */
+  padding: var(--blok-space-0-5) var(--blok-space-1);
+  gap: var(--blok-space-1);
   background: var(--blok-database-popover-bg);
   border-radius: var(--blok-radius-control);
   box-shadow: none;
@@ -6041,9 +6043,29 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   margin-top: var(--blok-space-0-5);
 }
 
-[data-blok-database-property-type-name-over-anchor] [data-blok-database-property-type-glyph] {
+/* notion-motion.md Round 44 §3: "Select icon", a 24 box with a 19.2 gray emoji glyph. */
+[data-blok-database-property-type-icon-button] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
   width: 24px;
   height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-type-icon);
+  cursor: pointer;
+}
+
+[data-blok-database-property-type-icon-button]:hover {
+  background-color: var(--blok-database-popover-hover);
+}
+
+[data-blok-database-property-type-icon-button] svg {
+  width: 19.2px;
+  height: 19.2px;
 }
 
 /**

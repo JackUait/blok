@@ -1667,6 +1667,28 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
   }
 
+  /** Notion's dismissal is unmeasured: the kept readout goes on the next press anywhere, or on Escape. */
+  private holdReadout(): void {
+    this.dropHeldReadout();
+    const drop = (event: Event): void => {
+      if (event instanceof KeyboardEvent && event.key !== 'Escape') {
+        return;
+      }
+      this.dropHeldReadout();
+      this.root?.querySelectorAll('[data-blok-database-timeline-edge-readout]').forEach((el) => el.remove());
+    };
+
+    document.addEventListener('pointerdown', drop, true);
+    document.addEventListener('keydown', drop, true);
+    this.dropHeldReadout = (): void => {
+      document.removeEventListener('pointerdown', drop, true);
+      document.removeEventListener('keydown', drop, true);
+      this.dropHeldReadout = (): void => undefined;
+    };
+  }
+
+  private dropHeldReadout = (): void => undefined;
+
   /** findings C15: the moving edge's day in 12px ink just outside the bar. Round 49 B9: at Day zoom with its time. */
   private showDayReadout(barEl: HTMLElement, edge: 'start' | 'end', span: EventSpan, values: BarValues): void {
     const readout = barEl.querySelector<HTMLElement>('[data-blok-database-timeline-edge-readout]') ?? document.createElement('span');
@@ -1788,6 +1810,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     if (drag?.kind === 'bar' && !drag.active && drag.mode !== 'move') {
       this.guardNextClick(true);
       this.readEdge(drag.rowId, drag.mode);
+      this.holdReadout();
 
       return;
     }
@@ -1975,6 +1998,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     clearTimeout(this.nowTimer);
     this.nowTimer = undefined;
     this.endDrag();
+    this.dropHeldReadout();
     this.noDatePanel?.close();
     this.scroller?.removeEventListener('scroll', this.onScroll);
   }

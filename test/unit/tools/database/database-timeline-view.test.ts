@@ -1606,6 +1606,24 @@ describe('DatabaseTimelineView', () => {
       expect(bar(root, 'r1').querySelector('[data-blok-database-timeline-edge-readout="end"]')?.textContent).toBe('Oct 9');
     });
 
+    // Notion's dismissal is unmeasured: Blok drops the kept readout on the next press anywhere, or on Escape.
+    it.each([
+      { name: 'a press on empty canvas', act: (root: HTMLElement): void => pointer('pointerdown', canvas(root), 5, 300) },
+      { name: 'a press outside the view', act: (): void => pointer('pointerdown', document.body, 5, 5) },
+      { name: 'Escape', act: (): void => void key(document, 'Escape') },
+    ])('drops the kept readout on $name', ({ act }) => {
+      const { root } = mount();
+      const handle = bar(root, 'r1').querySelector('[data-blok-database-timeline-resize="end"]');
+
+      layOut(root);
+      if (handle === null) throw new Error('no handle');
+      pointer('pointerdown', handle, xOf('2026-10-09'), 50);
+      pointer('pointerup', document, xOf('2026-10-09'), 50);
+      act(root);
+
+      expect(root.querySelector('[data-blok-database-timeline-edge-readout]')).toBeNull();
+    });
+
     // notion-motion.md Round 49 B9: at Day zoom the readout of a timed bar carries the time ("Nov 19, 7:30 AM").
     it('reads a timed edge with its time at Day zoom', () => {
       const { root } = mount({

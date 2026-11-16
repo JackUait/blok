@@ -261,6 +261,8 @@ test.describe('button property: Edit pages in a data source', () => {
 
     // An empty filter list is the property picker (feel/findings-toolbar V15).
     await panel.getByTestId('database-pick-property-q-open').click();
+    // A new Checkbox rule has no value (notion-motion.md Round 19 §2), so pick Checked.
+    await panel.getByTestId('database-filter-checkbox-true').click();
 
     await expect.poll(async () => {
       const schema = ((await saved(page)).find((block) => block.id === 'db-1')?.data as { schema: Array<{ id: string; button?: { buttonActions: Array<{ target?: { filters?: unknown[] } }> } }> }).schema;

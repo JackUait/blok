@@ -2190,6 +2190,14 @@
   height: 20px;
 }
 
+/* notion-motion.md Round 41: Notion's » is 12 x 12 of ink; Keyline's at 28px is 12.25 x 11.55. */
+[data-peek-mode="side"] [data-blok-database-drawer-close] svg {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  max-height: none;
+}
+
 /* The » points toward the inline end, where the drawer closes to. */
 [dir="rtl"] [data-blok-database-drawer-close] svg {
   transform: scaleX(var(--_blok-inline-sign, 1));

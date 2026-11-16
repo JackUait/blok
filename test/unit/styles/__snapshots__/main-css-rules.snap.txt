@@ -6395,6 +6395,13 @@ span[data-blok-slash-search] {
   height: 20px;
 }
 
+[data-peek-mode="side"] [data-blok-database-drawer-close] svg {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  max-height: none;
+}
+
 [dir="rtl"] [data-blok-database-drawer-close] svg {
   transform: scaleX(var(--_blok-inline-sign, 1));
 }

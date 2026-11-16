@@ -585,7 +585,9 @@ test.describe('annotation (Hint) inline tool', () => {
     expect(await savedText(page, 0)).toEqual([ { text: 'We found the bottleneck near the oven.' } ]);
   });
 
-  test('a hint copied inside one paragraph survives a paste into another', async ({ page, context }) => {
+  test('a hint copied inside one paragraph survives a paste into another', async ({ page, context, browserName }) => {
+    // eslint-disable-next-line playwright/no-skipped-test -- needs real clipboard permissions
+    test.skip(browserName !== 'chromium', 'Firefox and WebKit reject the clipboard-read/clipboard-write permissions a real paste needs');
     await context.grantPermissions([ 'clipboard-read', 'clipboard-write' ]);
     await createBlok(page, [ PLAIN, WITH_HINT ]);
 

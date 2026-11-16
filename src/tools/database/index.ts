@@ -878,6 +878,7 @@ export class DatabaseTool implements BlockTool {
       locale: () => editorLocale(this.api.i18n),
       me: () => this.config.people?.me?.() ?? null,
       personName: (id) => this.people?.find((person) => person.id === id)?.name,
+      personAvatar: (id) => this.people?.find((person) => person.id === id)?.avatarUrl,
       permitted: () => this.config.comments === undefined && this.permits('comment'),
       // A source in another document has no row blocks here to write to.
       readOnly: () => this.editorReadOnly || this.source?.documentId !== undefined,

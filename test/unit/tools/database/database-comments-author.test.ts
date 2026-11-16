@@ -76,4 +76,17 @@ describe('built-in comment author', () => {
     expect(inserted[0]).not.toHaveProperty('authorName');
     expect(inserted[0]).not.toHaveProperty('authorId');
   });
+
+it('uses the host avatar for the row comment composer without persisting image data in comments', () => {
+  const {api, inserted} = apiWith(undefined);
+  const ui = new BuiltInCommentsUi({api,locale:()=> 'en',me:()=> 'u1',personName:()=> 'Joce',personAvatar:()=> 'data:image/png;base64,aGVsbG8=',permitted:()=>true,readOnly:()=>false,onChange:vi.fn()});
+  const section = ui.section('r1');
+  expect(section.querySelector('img')?.getAttribute('src')).toBe('data:image/png;base64,aGVsbG8=');
+  const input=section.querySelector('textarea');if(!input)throw new Error('Missing composer');
+  input.value='Hello';input.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));
+  expect(inserted[0]).toMatchObject({authorId:'u1',authorName:'Joce'});
+  expect(JSON.stringify(inserted)).not.toContain('data:image');
+  ui.destroy();
+});
+
 });

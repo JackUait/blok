@@ -14,6 +14,7 @@ export interface BuiltInCommentsUiOptions {
   /** The host's current user (`people.me`), if it has one. */
   me: () => string | null;
   personName: (id: string) => string | undefined;
+  personAvatar?: (id: string) => string | undefined;
   /** `permissions.can('comment')`. */
   permitted: () => boolean;
   /** The editor is read-only: threads are read, never written. */
@@ -47,6 +48,7 @@ export class BuiltInCommentsUi {
   /** Starts hearing comment changes. The database calls it after its own listeners. */
   public listen(): void {
     this.options.api.events.on('block changed', this.handleChange);
+    this.options.api.events.on('people changed', this.handleChange);
   }
 
   /** The comment tool is registered and permissions allow comments. */
@@ -151,6 +153,7 @@ export class BuiltInCommentsUi {
 
   public destroy(): void {
     this.options.api.events.off('block changed', this.handleChange);
+    this.options.api.events.off('people changed', this.handleChange);
     if (this.redraw !== null) clearTimeout(this.redraw);
     this.close();
     this.panels.forEach((panel) => panel.destroy());
@@ -229,6 +232,8 @@ export class BuiltInCommentsUi {
       canComment,
       threads,
       nameOf: (comment) => this.nameOf(comment),
+      avatarOf: (comment) => comment.data.authorId ? this.options.personAvatar?.(comment.data.authorId) : undefined,
+      viewerAvatar: () => { const id = this.options.me(); return id ? this.options.personAvatar?.(id) : undefined; },
       isOwn: (comment) => this.isOwn(comment),
       viewerName: () => this.author().authorName ?? api.i18n.t('tools.database.commentAnonymous'),
       onAdd: (text) => { this.store.add(rowId, text, propertyId); },

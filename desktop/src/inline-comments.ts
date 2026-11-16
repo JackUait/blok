@@ -1,3 +1,4 @@
+import { watchLocalProfile } from './local-profile';
 import type { API, Blok, InlineTool } from '../../types';
 import type { MenuConfig } from '../../types/tools';
 import type { CommentAnchor } from '../../types/tools/database-comment';
@@ -31,7 +32,7 @@ export class CommentInlineTool implements InlineTool {
 export function mountInlineComments(options: {
   holder: HTMLElement;
   editor: Pick<Blok, 'blocks' | 'tools' | 'events' | 'i18n'>;
-  author(): CommentAuthor;
+  author(): CommentAuthor & { avatarUrl?: string };
   canComment(): boolean;
 }): { element: HTMLButtonElement; destroy(): void } {
   const { holder, editor } = options;
@@ -112,7 +113,7 @@ export function mountInlineComments(options: {
         const row = document.createElement('button'); row.type = 'button'; row.setAttribute('data-inline-comment-list-item', item.id);
         const quote = document.createElement('small'); quote.textContent = item.data.anchor ? quoteText(item.data.anchor) : 'Page entière';
         const text = document.createElement('span'); text.textContent = item.data.text;
-        const meta = document.createElement('small'); meta.textContent = `${item.data.authorName ?? 'Anonyme'} · ${item.replies.length} réponse${item.replies.length === 1 ? '' : 's'}`;
+        const meta = document.createElement('small'); meta.textContent = `${(own(item) ? options.author().authorName : item.data.authorName) ?? 'Anonyme'} · ${item.replies.length} réponse${item.replies.length === 1 ? '' : 's'}`;
         row.append(quote, text, meta);
         if (item.data.anchor && !resolveCommentAnchor(holder, item.data.anchor)) { const detached = document.createElement('small'); detached.textContent = 'Passage introuvable'; row.append(detached); }
         row.addEventListener('click', () => openThread(item.id)); panel.append(row);
@@ -129,7 +130,8 @@ export function mountInlineComments(options: {
       }
       discussion = createCommentsPanel({ i18n: editor.i18n, locale: 'fr-FR', canComment: writable() && !thread?.data.resolved,
         threads: () => threads().filter(item => item.id === selected),
-        nameOf: item => item.data.authorName ?? 'Anonyme', isOwn: own, viewerName: () => options.author().authorName ?? 'Anonyme',
+        nameOf: item => (own(item) ? options.author().authorName : item.data.authorName) ?? 'Anonyme',
+        avatarOf: item => own(item) ? options.author().avatarUrl : undefined, viewerAvatar: () => options.author().avatarUrl, isOwn: own, viewerName: () => options.author().authorName ?? 'Anonyme',
         onAdd: text => mutate(() => {
           if (!pending) return;
           const id = store.add(null, text, undefined, pending);
@@ -251,6 +253,8 @@ export function mountInlineComments(options: {
   holder.addEventListener('click', clickPassage);
   document.addEventListener('keydown', keydown);
   document.addEventListener('scroll', schedule, true); window.addEventListener('resize', schedule);
+  const profileChanged = (): void => { if (panel) { saveDraft(); renderPanel(); } };
+  const stopProfile = watchLocalProfile(profileChanged);
   editor.events.on('block changed', refresh);
   const observer = new MutationObserver(records => {
     if (records.some(record => !layer.contains(record.target) && !element.contains(record.target) && !(record.target instanceof Element && record.target.closest('[data-desktop-page-comments]')))) schedule();
@@ -262,6 +266,7 @@ export function mountInlineComments(options: {
     cancelAnimationFrame(frame); observer.disconnect(); discussion?.destroy(); layer.remove(); element.remove();
     holder.removeEventListener(REQUEST, request); holder.removeEventListener('click', clickPassage);
     document.removeEventListener('keydown', keydown); document.removeEventListener('scroll', schedule, true); window.removeEventListener('resize', schedule);
+    stopProfile();
     editor.events.off('block changed', refresh); drafts.clear();
   } };
 }

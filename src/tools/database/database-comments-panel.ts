@@ -41,6 +41,8 @@ export interface CommentsPanelOptions {
   now?: () => number;
   /** The viewer's name: the composer starts with their avatar (feel/findings-rowpage R14). */
   viewerName?: () => string;
+  viewerAvatar?: () => string | undefined;
+  avatarOf?: (comment: StoredComment) => string | undefined;
 }
 
 export interface CommentsPanel {
@@ -83,12 +85,19 @@ const iconButton = (attr: string, label: string, icon: string): HTMLButtonElemen
 };
 
 /** The first letter of the name, on a neutral disc. */
-const avatar = (name: string): HTMLElement => {
+const avatar = (name: string, url?: string): HTMLElement => {
   const el = document.createElement('span');
 
   el.setAttribute(ATTR.avatar, '');
   el.setAttribute('aria-hidden', 'true');
-  el.textContent = Array.from(name.trim())[0]?.toUpperCase() ?? '';
+  const initial = Array.from(name.trim())[0]?.toUpperCase() ?? '';
+  el.textContent = initial;
+  if (url && /^(https?:\/\/|\/(?!\/)|data:image\/(png|jpeg|webp);base64,)/i.test(url)) {
+    const image = document.createElement('img'); image.src = url; image.alt = ''; image.referrerPolicy = 'no-referrer';
+    image.style.cssText = 'width:100%;height:100%;object-fit:contain;border-radius:inherit;display:block';
+    image.addEventListener('error', () => { el.textContent = initial; }, { once: true });
+    el.replaceChildren(image);
+  }
 
   return el;
 };
@@ -129,7 +138,7 @@ const composer = (options: CommentsPanelOptions, onSend: (text: string) => void,
     submit();
   });
   send.addEventListener('click', submit);
-  if (options.viewerName !== undefined) row.append(avatar(options.viewerName()));
+  if (options.viewerName !== undefined) row.append(avatar(options.viewerName(), options.viewerAvatar?.()));
   row.append(input, send);
 
   return { element: row, input };
@@ -195,7 +204,7 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
     time.setAttribute(ATTR.time, '');
     time.textContent = commentTime(comment.data.createdAt, now(), options.locale, t('tools.database.commentJustNow'))
       + (comment.data.editedAt === undefined ? '' : ` ${t('tools.database.commentEdited')}`);
-    head.append(avatar(name), author, time);
+    head.append(avatar(name, options.avatarOf?.(comment)), author, time);
     row.appendChild(head);
 
     if (editing.id === comment.id) {
@@ -305,6 +314,8 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
   const draw = (): void => {
     stopKeys();
     const threads = options.threads();
+    const previousAvatar = box.element.querySelector(`[${ATTR.avatar}]`);
+    if (previousAvatar && options.viewerName) previousAvatar.replaceWith(avatar(options.viewerName(), options.viewerAvatar?.()));
 
     list.replaceChildren(...threads.map((thread) => {
       const el = document.createElement('div');

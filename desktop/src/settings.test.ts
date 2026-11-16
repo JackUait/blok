@@ -70,7 +70,7 @@ describe('desktop sidebar footer', () => {
     const name = must(dialog.querySelector<HTMLInputElement>('[data-desktop-settings-name]'));
     name.value = 'Mes notes';
     name.dispatchEvent(new Event('change'));
-    expect(footer.querySelector('[data-desktop-switcher-name]')?.textContent).toBe('Mes notes');
+    expect(footer.querySelector('[data-desktop-switcher-name]')?.textContent).toBe('Espace local');
     must([...dialog.querySelectorAll<HTMLButtonElement>('[data-desktop-settings-nav-item]')]
       .find((item) => item.textContent?.includes('Assistant IA'))).click();
     expect(dialog.querySelectorAll('[data-desktop-settings-provider-status]')).toHaveLength(0);

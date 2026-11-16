@@ -21,6 +21,8 @@ export interface CommentsPanelOptions {
   onDelete(id: string): Promise<void>;
   now?(): number;
   viewerName?(): string;
+  viewerAvatar?(): string | undefined;
+  avatarOf?(comment: StoredComment): string | undefined;
 }
 export function createCommentsPanel(options: CommentsPanelOptions): CommentsPanel;
 export function openDatabaseConfirm(options: {

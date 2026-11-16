@@ -550,7 +550,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     const instance = new Blok({
       holder,
       readOnly: readOnly(id),
-      tools: { ...desktopTools, database: {class: Database, config: {people: { me: () => commentAuthor(ref).authorId, list: async () => { const author = commentAuthor(ref); return [{ id: author.authorId, name: author.authorName }]; } }, customEmojis: () => emojis.list(), coverGallery: COVER_GALLERY, uploadCover: (file: globalThis.File) => readCoverFile(file).then(repository.uploadImage)}}, page: { class: Page, config: { ...pageConfig } } },
+      tools: { ...desktopTools, database: {class: Database, config: {people: { me: () => commentAuthor(ref).authorId, list: async () => { const author = commentAuthor(ref); return [{ id: author.authorId, get name() { return commentAuthor(ref).authorName; }, get avatarUrl() { return commentAuthor(ref).avatarUrl; } }]; } }, customEmojis: () => emojis.list(), coverGallery: COVER_GALLERY, uploadCover: (file: globalThis.File) => readCoverFile(file).then(repository.uploadImage)}}, page: { class: Page, config: { ...pageConfig } } },
       theme: readAppearance(),
       pageTitle: {
         customEmojis: () => emojis.list(),

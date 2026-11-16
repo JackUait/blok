@@ -1,3 +1,4 @@
+import { mountLocalProfile, readLocalProfile } from './local-profile';
 import { mountSidebarCustomization } from './sidebar-customization';
 import { mountTeamspaceSettings } from './cloud/teamspace-settings';
 import { teamspaceClient } from './cloud/teamspaces';
@@ -288,6 +289,15 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   nav.append(searchBox, navList, noResults);
   navList.append(el('div', 'data-desktop-settings-nav-heading', 'Compte'));
   const accountTab = actionButton('data-desktop-settings-nav-item', currentWorkspace.kind === 'remote' ? currentWorkspace.userName ?? 'Mon compte' : 'Profil local', 'profile');
+  const refreshProfileTab = (): void => {
+    if (currentWorkspace.kind !== 'local') return;
+    const profile = readLocalProfile();
+    const label = el('span', 'data-profile-nav-name', profile.name || 'Profil local');
+    const avatar = el('span', 'data-profile-nav-avatar', Array.from(profile.name || 'Vous')[0]?.toUpperCase() ?? 'V');
+    if (profile.photo) { const image = document.createElement('img'); image.src = profile.photo; image.alt = ''; avatar.replaceChildren(image); }
+    accountTab.replaceChildren(avatar, label);
+  };
+  refreshProfileTab();
   const connectionsTab = actionButton('data-desktop-settings-nav-item', 'Connexions', 'connections');
   navList.append(accountTab);
   navList.append(connectionsTab);
@@ -547,24 +557,9 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
       content.append(identity, workspace, accountActions);
     } else if (panel === 'account') {
       content.append(el('h1', 'data-desktop-settings-title', 'Profil local'));
-      content.append(el('p', 'data-desktop-settings-intro', 'Cet espace appartient à cet appareil.'));
-      content.append(el('h2', 'data-desktop-settings-section', 'Identité affichée'));
-      const row = el('div', 'data-desktop-settings-row');
-      const labels = el('div', 'data-desktop-settings-row-labels');
-      labels.append(el('strong', 'data-desktop-settings-row-title', 'Nom'), el('span', 'data-desktop-settings-row-help', 'Nom local, sans connexion ni partage.'));
-      const name = el('input', 'data-desktop-settings-name');
-      name.type = 'text';
-      styleTextField(name);
-      name.maxLength = 48;
-      name.value = currentWorkspace.kind === 'local' && currentWorkspace.id === 'default' ? localStorage.getItem('blok:desktop:profile-name') || 'Espace local' : currentWorkspace.name;
-
-      name.setAttribute('aria-label', 'Nom du profil local');
-      name.addEventListener('change', () => {
-        const next = name.value.trim() || 'Espace local';
-        updateWorkspaceName(next);
-      });
-      row.append(labels, name);
-      content.append(row, el('p', 'data-desktop-settings-explanation', 'Pour partager et modifier des pages à plusieurs via Internet, il faudra connecter l’app à un service avec comptes et droits d’accès. Utilisez « Connecter un espace en ligne » dans le menu des espaces.'));
+      content.append(el('p', 'data-desktop-settings-intro', 'Votre nom et votre photo dans les commentaires de vos espaces locaux.'));
+      content.append(el('h2', 'data-desktop-settings-section', 'Profil'));
+      ui.choices.push(mountLocalProfile(content, refreshProfileTab));
     } else if (panel === 'preferences') {
       content.append(el('h1', 'data-desktop-settings-title', 'Préférences'));
       content.append(el('p', 'data-desktop-settings-intro', 'Personnalisez l’apparence de Blok sur cet appareil.'));

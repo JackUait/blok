@@ -1,3 +1,4 @@
+import { watchLocalProfile } from './local-profile';
 import './page-comments.css';
 import { mountInlineComments } from './inline-comments';
 import type { Blok } from '../../types';
@@ -17,7 +18,7 @@ export function placePageComments(holder: HTMLElement, element: HTMLElement, act
 export function mountPageComments(options: {
   holder?: HTMLElement;
   editor: Pick<Blok, 'blocks' | 'tools' | 'events' | 'i18n'>;
-  author: () => CommentAuthor;
+  author: () => CommentAuthor & { avatarUrl?: string };
   canComment: () => boolean;
 }): { element: HTMLElement; action: HTMLButtonElement; destroy(): void } {
   const { editor } = options;
@@ -70,7 +71,9 @@ export function mountPageComments(options: {
     const threads = (): ReturnType<BuiltInComments['threads']> => pageThreads().filter(thread => (thread.data.resolved === true) === state.resolved);
     state.panel = createCommentsPanel({
       i18n: editor.i18n, locale: 'fr-FR', canComment: state.writable && !state.resolved, threads,
-      nameOf: comment => comment.data.authorName ?? editor.i18n.t('tools.database.commentAnonymous'),
+      nameOf: comment => (own(comment) ? options.author().authorName : comment.data.authorName) ?? editor.i18n.t('tools.database.commentAnonymous'),
+      avatarOf: comment => own(comment) ? options.author().avatarUrl : undefined,
+      viewerAvatar: () => options.author().avatarUrl,
       isOwn: own, viewerName: () => options.author().authorName ?? editor.i18n.t('tools.database.commentAnonymous'),
       onAdd: text => update(() => { store.add(null, text); }),
       onReply: (id, text) => update(() => { if (pageThreads().some(thread => thread.id === id && !thread.data.resolved)) store.reply(id, text); }),
@@ -127,10 +130,12 @@ export function mountPageComments(options: {
     const header = options.holder.querySelector('[data-blok-page-header]');
     if (header) observer?.observe(header, { childList: true, subtree: true });
   }
+  const stopProfile = watchLocalProfile(() => { render(); editor.events.emit?.('people changed'); });
   editor.events.on('block changed', onChange);
   render();
   return { element, action: toggle, destroy() {
     state.destroyed = true;
+    stopProfile();
     observer?.disconnect();
     toggle.remove();
     inline?.destroy();

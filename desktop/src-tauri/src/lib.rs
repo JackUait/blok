@@ -9,6 +9,22 @@ use std::process::{Command, Stdio};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
 
+/// Open only the avatar creator; no arbitrary URL or shell input is accepted.
+#[tauri::command]
+fn open_notion_faces() -> Result<(), String> {
+    let url = "https://faces.notion.com/?face=s4e27y10b8n15m4h132a0";
+    #[cfg(target_os = "macos")]
+    let status = Command::new("open").arg(url).status();
+    #[cfg(target_os = "windows")]
+    let status = Command::new("rundll32").args(["url.dll,FileProtocolHandler", url]).status();
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    let status = Command::new("xdg-open").arg(url).status();
+    match status {
+        Ok(result) if result.success() => Ok(()),
+        _ => Err("Impossible d’ouvrir le navigateur".into()),
+    }
+}
+
 #[derive(Default)]
 struct AgentRun {
     cancelled: AtomicBool,
@@ -392,7 +408,7 @@ pub fn run() {
                 let _ = window.eval(script);
             }
         })
-        .invoke_handler(tauri::generate_handler![ai::ai_local_status, ai::ai_local_save, ai::ai_local_delete, ai::ai_local_models, ai::ai_local_respond, ai::ai_local_cancel, close_editor_window, load_cloud_session, save_cloud_session, load_workspace_file, save_workspace_file, workspace_data_directory, agent_provider_status, agent_ask, agent_cancel])
+        .invoke_handler(tauri::generate_handler![open_notion_faces, ai::ai_local_status, ai::ai_local_save, ai::ai_local_delete, ai::ai_local_models, ai::ai_local_respond, ai::ai_local_cancel, close_editor_window, load_cloud_session, save_cloud_session, load_workspace_file, save_workspace_file, workspace_data_directory, agent_provider_status, agent_ask, agent_cancel])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

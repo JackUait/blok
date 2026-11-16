@@ -111,3 +111,19 @@ describe('page comment controls', () => {
     expect(panel.events.off).toHaveBeenCalledWith('block changed', expect.any(Function));
   });
 });
+
+it('updates the current author photo and name without losing a comment draft', () => {
+  const author = { authorId: 'me', authorName: 'Joce', avatarUrl: 'data:image/png;base64,aGVsbG8=' };
+  state.threads = [{id:'t', data:{text:'Bonjour',createdAt:1,authorId:'me',authorName:'Utilisateur local'},replies:[]}];
+  const editor = {blocks:{},tools:{},events:{on:vi.fn(),off:vi.fn()},i18n:{t:(key:string)=>key}} as unknown as Pick<Blok,'blocks'|'tools'|'events'|'i18n'>;
+  const panel=mountPageComments({editor,author:()=>author,canComment:()=>true});handles.push(panel);document.body.append(panel.element);
+  expect(panel.element.querySelector('[data-blok-database-comment-author]')?.textContent).toBe('Joce');
+  expect(panel.element.querySelector('img')?.src).toBe(author.avatarUrl);
+  const textarea=panel.element.querySelector('textarea');if(!textarea)throw new Error('Missing composer');
+  textarea.value='Mon brouillon';
+  author.authorName='Camille';author.avatarUrl='';
+  window.dispatchEvent(new Event('blok:profile-changed'));
+  expect(panel.element.querySelector('[data-blok-database-comment-author]')?.textContent).toBe('Camille');
+  expect(panel.element.querySelector('textarea')?.value).toBe('Mon brouillon');
+  expect(panel.element.querySelector('img')).toBeNull();
+});

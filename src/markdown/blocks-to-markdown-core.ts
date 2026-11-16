@@ -1799,9 +1799,9 @@ const collectOwnedIds = (blocks: SerializableBlock[], context: SerializationCont
     .filter((id): id is string => typeof id === 'string')
     .forEach(claimId);
 
-  while (queue.length > 0) {
-    const parentId = queue.shift() ?? '';
-
+  // for...of also visits ids claimed during the walk. Not shift(): it copies
+  // the queue, so a long child list took quadratic time.
+  for (const parentId of queue) {
     (context.childrenOf.get(parentId) ?? []).forEach(claim);
   }
 

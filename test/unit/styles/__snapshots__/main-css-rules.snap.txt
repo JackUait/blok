@@ -12968,6 +12968,11 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
+[data-blok-database-table-add-property][data-blok-database-property-type-slot] {
+  width: 378px;
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
 [data-blok-database-table-property-visibility] {
   margin-inline-start: 0;
 }

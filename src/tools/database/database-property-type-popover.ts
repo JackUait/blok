@@ -52,6 +52,8 @@ const VIEWPORT_BOTTOM_MARGIN = 11;
 /** notion-motion.md Round 34 §6: the header "+" menu, fitting neither side, ends 12.3 above the window. */
 const NAME_OVER_ANCHOR_BOTTOM_MARGIN = 12.3;
 const ABOVE_GAP = 1;
+/** Set on the header "+" while its menu is open (notion-motion.md Round 44 §3). */
+const SLOT = 'data-blok-database-property-type-slot';
 /** notion-motion.md Round 44 §3, Round 34 §6: the header "+" menu starts 11 left of its name row. */
 const NAME_INSET = 11;
 /** Notion's gap below the button is unmeasured. */
@@ -124,6 +126,8 @@ export class DatabasePropertyTypePopover {
   private emojiPicker: EmojiPicker | null = null;
   /** The picker's own top-layer host, shown after the menu so it paints above it. */
   private pickerLayer: HTMLElement | null = null;
+  /** The header "+" while its name box sits over it: database.css widens it into the new column's slot. */
+  private slot: HTMLElement | null = null;
 
   constructor(options: PropertyTypePopoverOptions) {
     this.onSelect = options.onSelect;
@@ -254,6 +258,10 @@ export class DatabasePropertyTypePopover {
 
     // Inside a top-layer panel (a peek, the layout builder): on body the panel covers the menu, and a modal's focus trap takes the name field.
     overlayMountFor(anchor).appendChild(popover);
+    if (this.nameOverAnchor) {
+      this.slot = anchor;
+      anchor.setAttribute(SLOT, '');
+    }
     // The side is picked once: a search shrinks the menu and it keeps its bottom (notion-spec-2 §18.5).
     const picked: { side?: 'below' | 'above' | 'cover' } = {};
     const reposition = (): void => {
@@ -473,6 +481,8 @@ export class DatabasePropertyTypePopover {
 
     this.popoverEl = null;
     this.closePicker();
+    this.slot?.removeAttribute(SLOT);
+    this.slot = null;
     this.positionTracker?.detach();
     this.positionTracker = null;
     if (this.boundOutsideClick !== null) {

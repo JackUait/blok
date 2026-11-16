@@ -754,6 +754,14 @@ describe('header "+" Select icon (Round 44)', () => {
     expect(declared(HEAD, 'gap')).toEqual(['var(--blok-space-1)']);
   });
 
+  // The "+" is 378×28 with the hover fill while open, so the header ⋯ moves to the name box's right (x 1486).
+  it('widens the "+" into the new column\'s slot while its menu is open', () => {
+    const SLOT = '[data-blok-database-table-add-property][data-blok-database-property-type-slot]';
+
+    expect(declared(SLOT, 'width')).toEqual(['378px']);
+    expect(declared(SLOT, 'background-color')).toEqual(['var(--blok-database-table-header-hover-bg)']);
+  });
+
   it('draws Select icon as a 24 borderless box with a 19.2 glyph in the type icon gray', () => {
     expect(declared(ICON, 'width')).toEqual(['24px']);
     expect(declared(ICON, 'height')).toEqual(['24px']);

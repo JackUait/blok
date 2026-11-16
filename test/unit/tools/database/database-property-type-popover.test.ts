@@ -1111,6 +1111,16 @@ describe('DatabasePropertyTypePopover', () => {
       flow.destroy();
     });
 
+    // r44-tp-add-head.raw: while the menu is open Notion's "+" is the new column's 378-wide slot, so the header ⋯ sits past the name box.
+    it('marks the "+" as the open slot while the menu is open', () => {
+      const { flow } = openFlow(vi.fn());
+
+      expect(anchor.hasAttribute('data-blok-database-property-type-slot')).toBe(true);
+      flow.close(true);
+      expect(anchor.hasAttribute('data-blok-database-property-type-slot')).toBe(false);
+      flow.destroy();
+    });
+
     it('takes the picker down with the menu', () => {
       const { flow, button } = openFlow(vi.fn());
 

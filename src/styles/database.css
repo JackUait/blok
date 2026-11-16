@@ -9619,6 +9619,12 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
+/* notion-motion.md Round 44 §3: while its menu is open the "+" is the new column's slot under the name box, so ⋯ sits past it. */
+[data-blok-database-table-add-property][data-blok-database-property-type-slot] {
+  width: 378px;
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
 /* notion-motion.md Round 41 Part A: Notion's "Show or hide properties" sits flush after "+". */
 [data-blok-database-table-property-visibility] {
   margin-inline-start: 0;

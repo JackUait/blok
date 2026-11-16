@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Blok } from '../../../../src/blok';
 import { Paragraph } from '../../../../src/tools/paragraph';
+import { Header } from '../../../../src/tools/header';
+import { ListItem } from '../../../../src/tools/list';
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import type { API, OutputBlockData } from '../../../../types';
@@ -74,6 +76,18 @@ const EMPTY_LINES: OutputBlockData[] = [
   { id: 'e3', type: 'paragraph', parent: 'two', data: { text: '' } },
 ];
 
+/** notion-motion.md Round 47 §E: a lone empty heading or to-do is dropped (blank glyph); a lone " " paragraph is kept. */
+const LONE_BLOCKS: OutputBlockData[] = [
+  { id: 'h', type: 'database-row', parent: 'db', content: ['h1'], data: { properties: { t: 'Empty heading', due: today(), s: 'o1' }, position: 'a3' } },
+  { id: 'h1', type: 'header', parent: 'h', data: { text: '', level: 1 } },
+  { id: 'td', type: 'database-row', parent: 'db', content: ['td1'], data: { properties: { t: 'Empty to-do', due: today(), s: 'o1' }, position: 'a4' } },
+  { id: 'td1', type: 'list', parent: 'td', data: { text: '', style: 'checklist', checked: false } },
+  { id: 'ws', type: 'database-row', parent: 'db', content: ['ws1'], data: { properties: { t: 'Space', due: today(), s: 'o1' }, position: 'a5' } },
+  { id: 'ws1', type: 'paragraph', parent: 'ws', data: { text: ' ' } },
+  { id: 'hx', type: 'database-row', parent: 'db', content: ['hx1'], data: { properties: { t: 'Heading', due: today(), s: 'o1' }, position: 'a6' } },
+  { id: 'hx1', type: 'header', parent: 'hx', data: { text: 'Title', level: 2 } },
+];
+
 const ROW_SELECTOR: Record<Layout, string> = {
   table: '[data-blok-database-table-row]',
   list: '[data-blok-database-list-row]',
@@ -90,7 +104,7 @@ const make = async (layout: Layout, extra: OutputBlockData[] = []): Promise<Test
   editor = new Blok({
     holder,
     dataModel: 'hierarchical',
-    tools: { paragraph: Paragraph, database: { class: DatabaseTool, config: {} }, 'database-row': DatabaseRowTool },
+    tools: { paragraph: Paragraph, header: Header, list: ListItem, database: { class: DatabaseTool, config: {} }, 'database-row': DatabaseRowTool },
     data: { blocks: doc(layout, extra) },
   } as never) as unknown as TestEditor;
   await editor.isReady;
@@ -174,6 +188,15 @@ describe('content page glyph', () => {
 
     expect(glyphOf(layout, 'one')).toBe('blank');
     expect(glyphOf(layout, 'two')).toBe('content');
+  });
+
+  it.each(['table', 'list'] as const)('%s: a lone empty heading or to-do is no body; a space or a titled heading is', async (layout) => {
+    await make(layout, LONE_BLOCKS);
+
+    expect(glyphOf(layout, 'h')).toBe('blank');
+    expect(glyphOf(layout, 'td')).toBe('blank');
+    expect(glyphOf(layout, 'ws')).toBe('content');
+    expect(glyphOf(layout, 'hx')).toBe('content');
   });
 
   it('typing into the one empty line shows the lines glyph', async () => {

@@ -293,10 +293,16 @@ const isFormSubmission = (value: unknown): value is DatabaseFormSubmission =>
   typeof value === 'object' && value !== null && 'databaseId' in value && typeof value.databaseId === 'string'
   && 'viewId' in value && typeof value.viewId === 'string' && 'values' in value && typeof value.values === 'object';
 
-/** A paragraph with no text. `<br>` is what an emptied contenteditable can leave. */
-const isEmptyParagraph = (block: { type: string; data: unknown } | undefined): boolean => {
-  if (block?.type !== 'paragraph') return false;
-  const text = (block.data as { text?: unknown } | undefined)?.text;
+/**
+ * A paragraph, heading or to-do with no text: Notion drops one on its own (notion-motion.md Round 46 §C.1, Round 47 §E).
+ * `<br>` is what an emptied contenteditable can leave.
+ */
+const isEmptyLine = (block: { type: string; data: unknown } | undefined): boolean => {
+  const data = block?.data as { text?: unknown; style?: unknown } | undefined;
+  const line = block?.type === 'paragraph' || block?.type === 'header' || (block?.type === 'list' && data?.style === 'checklist');
+
+  if (!line) return false;
+  const text = data?.text;
 
   return text === undefined || (typeof text === 'string' && text.replace(/<br\s*\/?>/gi, '') === '');
 };
@@ -987,11 +993,11 @@ export class DatabaseTool implements BlockTool {
     if (flipped) this.redrawWhenIdle();
   };
 
-  /** notion-motion.md Round 46 §C.1: one empty line is no body in Notion; two empty lines are. */
+  /** notion-motion.md Round 46 §C.1, Round 47 §E: one empty line is no body in Notion; two empty lines are. */
   private readRowHasBody(rowId: string): boolean {
     const body = this.rowBodyBlocks(rowId, this.model.getSchema().find((p) => p.type === 'richText')?.id);
 
-    return body.length > 1 || (body.length === 1 && !isEmptyParagraph(body[0]));
+    return body.length > 1 || (body.length === 1 && !isEmptyLine(body[0]));
   }
 
   /** Cached per redraw: a view asks for every row it draws. */

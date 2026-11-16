@@ -1626,12 +1626,8 @@ describe('DatabaseTimelineView', () => {
       expect(bar(root, 'r1').querySelector('[data-blok-database-timeline-edge-readout="end"]')?.textContent).toBe('Oct 9');
     });
 
-    // Notion's dismissal is unmeasured: Blok drops the kept readout on the next press anywhere, or on Escape.
-    it.each([
-      { name: 'a press on empty canvas', act: (root: HTMLElement): void => pointer('pointerdown', canvas(root), 5, 300) },
-      { name: 'a press outside the view', act: (): void => pointer('pointerdown', document.body, 5, 5) },
-      { name: 'Escape', act: (): void => void key(document, 'Escape') },
-    ])('drops the kept readout on $name', ({ act }) => {
+    // notion-motion.md Round 50 §2: the kept readout lives while the pointer is on the edge. Escape and a press do not drop it there.
+    it('drops the kept readout when the pointer leaves the edge, and keeps it on Escape while there', () => {
       const { root } = mount();
       const handle = bar(root, 'r1').querySelector('[data-blok-database-timeline-resize="end"]');
 
@@ -1639,8 +1635,10 @@ describe('DatabaseTimelineView', () => {
       if (handle === null) throw new Error('no handle');
       pointer('pointerdown', handle, xOf('2026-10-09'), 50);
       pointer('pointerup', document, xOf('2026-10-09'), 50);
-      act(root);
+      key(document, 'Escape');
+      expect(bar(root, 'r1').querySelector('[data-blok-database-timeline-edge-readout="end"]')?.textContent).toBe('Oct 9');
 
+      handle.dispatchEvent(new PointerEvent('pointerleave', { clientX: xOf('2026-10-12'), clientY: 50 }));
       expect(root.querySelector('[data-blok-database-timeline-edge-readout]')).toBeNull();
     });
 

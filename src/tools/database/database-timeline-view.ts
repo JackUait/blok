@@ -1699,22 +1699,20 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
   }
 
-  /** Notion's dismissal is unmeasured: the kept readout goes on the next press anywhere, or on Escape. */
-  private holdReadout(): void {
+  /** notion-motion.md Round 50 §2: the kept readout lives while the pointer stays on the edge; Escape and a press keep it. */
+  private holdReadout(rowId: string, edge: 'start' | 'end'): void {
     this.dropHeldReadout();
-    const drop = (event: Event): void => {
-      if (event instanceof KeyboardEvent && event.key !== 'Escape') {
-        return;
-      }
+    const handle = this.rowsOf('[data-blok-database-timeline-bar]')
+      .find((el) => el.getAttribute('data-row-id') === rowId)
+      ?.querySelector<HTMLElement>(`[data-blok-database-timeline-resize="${edge}"]`);
+    const drop = (): void => {
       this.dropHeldReadout();
       this.root?.querySelectorAll('[data-blok-database-timeline-edge-readout]').forEach((el) => el.remove());
     };
 
-    document.addEventListener('pointerdown', drop, true);
-    document.addEventListener('keydown', drop, true);
+    handle?.addEventListener('pointerleave', drop);
     this.dropHeldReadout = (): void => {
-      document.removeEventListener('pointerdown', drop, true);
-      document.removeEventListener('keydown', drop, true);
+      handle?.removeEventListener('pointerleave', drop);
       this.dropHeldReadout = (): void => undefined;
     };
   }
@@ -1843,7 +1841,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     if (drag?.kind === 'bar' && !drag.active && drag.mode !== 'move') {
       this.guardNextClick(true);
       this.readEdge(drag.rowId, drag.mode);
-      this.holdReadout();
+      this.holdReadout(drag.rowId, drag.mode);
 
       return;
     }

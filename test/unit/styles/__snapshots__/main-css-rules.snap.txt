@@ -5790,7 +5790,7 @@ span[data-blok-slash-search] {
   color: var(--blok-database-ink-secondary);
 }
 
-[data-blok-database-card-edit-glyph] {
+[data-blok-database-card-edit-glyph], [data-blok-database-card] > [data-blok-database-page-icon-placeholder], [data-blok-database-gallery-card] > [data-blok-database-page-icon-placeholder] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -5801,7 +5801,7 @@ span[data-blok-slash-search] {
   color: var(--blok-database-card-actions-icon);
 }
 
-[data-blok-database-card-edit-glyph] svg {
+[data-blok-database-card-edit-glyph] svg, [data-blok-database-card] > [data-blok-database-page-icon-placeholder] svg, [data-blok-database-gallery-card] > [data-blok-database-page-icon-placeholder] svg {
   inline-size: 18px;
   block-size: 18px;
 }
@@ -5810,7 +5810,7 @@ span[data-blok-slash-search] {
   width: calc(100% - 22px);
 }
 
-[data-blok-database-card-edit-glyph] + [data-blok-database-card-title-input] {
+[data-blok-database-card-edit-glyph] + [data-blok-database-card-title-input], [data-blok-database-page-icon-placeholder] + [data-blok-database-card-title-input] {
   width: calc(100% - 26px);
 }
 
@@ -6496,23 +6496,34 @@ span[data-blok-slash-search] {
   margin-inline-end: var(--blok-space-1);
 }
 
-[data-blok-database-page-icon] + [data-blok-database-card-title], [data-blok-database-page-icon] + [data-blok-database-gallery-title] {
+[data-blok-database-page-icon] + [data-blok-database-card-title], [data-blok-database-page-icon] + [data-blok-database-gallery-title], [data-blok-database-page-icon-placeholder] + [data-blok-database-card-title] {
   display: inline;
 }
 
-[data-blok-database-calendar-event] > [data-blok-database-page-icon], [data-blok-database-timeline-bar] > [data-blok-database-page-icon], [data-blok-database-feed-head] > [data-blok-database-page-icon] {
+[data-blok-database-calendar-event] > [data-blok-database-page-icon], [data-blok-database-calendar-event] > [data-blok-database-page-icon-placeholder], [data-blok-database-timeline-bar] > [data-blok-database-page-icon], [data-blok-database-feed-head] > [data-blok-database-page-icon] {
   display: inline-flex;
   flex: none;
   align-items: center;
   justify-content: center;
 }
 
-[data-blok-database-calendar-event] > [data-blok-database-page-icon] {
+[data-blok-database-calendar-event] > [data-blok-database-page-icon], [data-blok-database-calendar-event] > [data-blok-database-page-icon-placeholder] {
   inline-size: 14px;
   block-size: 14px;
   margin-inline-end: calc(var(--blok-space-0-75) - var(--blok-space-1-5));
   font-size: 12.6px;
   line-height: 12.6px;
+}
+
+[data-blok-database-calendar-event] > [data-blok-database-page-icon-placeholder] {
+  color: var(--blok-database-card-actions-icon);
+}
+
+[data-blok-database-calendar-event] > [data-blok-database-page-icon-placeholder] svg {
+  flex: none;
+  inline-size: 16px;
+  block-size: 16px;
+  max-block-size: none;
 }
 
 [data-blok-database-timeline-bar] > [data-blok-database-page-icon] {
@@ -17473,6 +17484,16 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-gallery-title-text);
   white-space: normal;
   overflow-wrap: anywhere;
+}
+
+[data-blok-database-gallery-card] > [data-blok-database-page-icon-placeholder] {
+  align-self: flex-start;
+  margin-block: var(--blok-space-2) calc(-22.5px - var(--blok-space-2));
+  margin-inline-start: calc(var(--blok-space-2-5) + var(--blok-space-0-25));
+}
+
+[data-blok-database-page-icon-placeholder] + [data-blok-database-gallery-title] {
+  padding-inline-start: calc(var(--blok-space-2-75) + var(--blok-space-4-5) + var(--blok-space-1-75));
 }
 
 [data-blok-database-gallery-title]:empty::before {

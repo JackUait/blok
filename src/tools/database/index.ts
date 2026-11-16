@@ -794,8 +794,8 @@ export class DatabaseTool implements BlockTool {
   private movingOut = false;
   /** Set while a full redraw waits for an inline edit or drag to end. */
   private redrawWhenIdleRetry: (() => void) | null = null;
-  /** Rows whose page had a body when the views last read it. Null: not read since the last redraw. */
-  private bodyRows: Set<string> | null = null;
+  /** Whether each row the views drew had a body when they read it. Cleared on every redraw. */
+  private readonly bodyRows = new Map<string, boolean>();
   private bodyCheckQueued = false;
   private viewControls: DatabaseViewControls | null = null;
   private tabDisplayPref: TabDisplayPreference | null = null;
@@ -950,48 +950,32 @@ export class DatabaseTool implements BlockTool {
   private readonly handleBodyShape = (payload: unknown): void => {
     const type = (payload as { event?: { type?: unknown } } | undefined)?.event?.type;
 
-    if (this.bodyRows === null || this.bodyCheckQueued || changedBlock(payload)?.name === 'database-row'
+    if (this.bodyRows.size === 0 || this.bodyCheckQueued || changedBlock(payload)?.name === 'database-row'
       || (type !== 'block-added' && type !== 'block-removed' && type !== 'block-moved')) return;
     this.bodyCheckQueued = true;
     queueMicrotask(() => {
       this.bodyCheckQueued = false;
-      const before = this.bodyRows;
+      if (this.destroyed) return;
+      const flipped = [...this.bodyRows].some(([rowId, had]) => this.readRowHasBody(rowId) !== had);
 
-      if (this.destroyed || before === null) return;
-      const after = this.readBodyRows();
-
-      this.bodyRows = after;
-      if (after.size !== before.size || [...after].some((rowId) => !before.has(rowId))) this.redrawWhenIdle();
+      if (flipped) this.redrawWhenIdle();
     });
   };
 
-  /** Rows whose page has a body: what `rowBodyBlocks` would find. One pass, as getChildren scans every block. */
-  private readBodyRows(): Set<string> {
-    const rows = this.model.getOrderedRows();
-    const ids = new Set(rows.map((row) => row.id));
-    const found = new Set<string>();
-
-    for (let index = 0; index < this.api.blocks.getBlocksCount(); index++) {
-      const block = this.api.blocks.getBlockByIndex(index);
-      const parentId = block?.parentId;
-
-      if (block !== undefined && typeof parentId === 'string' && ids.has(parentId) && block.name !== 'database-row' && !isAnnotationBlock(block)) {
-        found.add(parentId);
-      }
-    }
-    const schema = this.model.getSchema();
-    const descriptionId = schema.find((p) => p.type === 'richText')?.id;
-
-    rows.filter((row) => !found.has(row.id) && pageContentSourceBlocks(row, schema, descriptionId).length > 0)
-      .forEach((row) => found.add(row.id));
-
-    return found;
+  private readRowHasBody(rowId: string): boolean {
+    return this.rowBodyBlocks(rowId, this.model.getSchema().find((p) => p.type === 'richText')?.id).length > 0;
   }
 
+  /** Cached per redraw: a view asks for every row it draws. */
   private rowHasBody(rowId: string): boolean {
-    this.bodyRows ??= this.readBodyRows();
+    const known = this.bodyRows.get(rowId);
 
-    return this.bodyRows.has(rowId);
+    if (known !== undefined) return known;
+    const has = this.readRowHasBody(rowId);
+
+    this.bodyRows.set(rowId, has);
+
+    return has;
   }
 
   /**
@@ -13502,7 +13486,7 @@ export class DatabaseTool implements BlockTool {
     }
 
     this.stopWaitingForIdle();
-    this.bodyRows = null;
+    this.bodyRows.clear();
 
     // The old board wrapper is the first/only direct child of boardContainer
     const oldBoardWrapper = this.boardContainer.querySelector<HTMLElement>(':scope > [data-blok-database-dashboard]')

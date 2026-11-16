@@ -2323,7 +2323,8 @@
 }
 
 /* Calendar, timeline and feed icon boxes, measured in Notion (research/16 §2). */
-[data-blok-database-calendar-event] > :is([data-blok-database-page-icon], [data-blok-database-page-icon-placeholder]),
+[data-blok-database-calendar-event] > [data-blok-database-page-icon],
+[data-blok-database-calendar-event] > [data-blok-database-page-icon-placeholder],
 [data-blok-database-timeline-bar] > [data-blok-database-page-icon],
 [data-blok-database-feed-head] > [data-blok-database-page-icon] {
   display: inline-flex;
@@ -2333,7 +2334,8 @@
 }
 
 /* Measured gap is 3px; the event's 6px flex gap already applies. */
-[data-blok-database-calendar-event] > :is([data-blok-database-page-icon], [data-blok-database-page-icon-placeholder]) {
+[data-blok-database-calendar-event] > [data-blok-database-page-icon],
+[data-blok-database-calendar-event] > [data-blok-database-page-icon-placeholder] {
   inline-size: 14px;
   block-size: 14px;
   margin-inline-end: calc(var(--blok-space-0-75) - var(--blok-space-1-5));
@@ -14612,7 +14614,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 [data-blok-database-page-icon-placeholder] + [data-blok-database-gallery-title] {
-  padding-inline-start: calc(var(--blok-space-2-5) + var(--blok-space-0-25) + 18px + var(--blok-space-1-75));
+  /* 11 to the glyph, its 18 box, then 7. */
+  padding-inline-start: calc(var(--blok-space-2-75) + var(--blok-space-4-5) + var(--blok-space-1-75));
 }
 
 [data-blok-database-gallery-title]:empty::before {

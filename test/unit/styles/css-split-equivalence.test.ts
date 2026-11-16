@@ -1768,7 +1768,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r93: Round 45 feed card footer (title-column indent, Notion's rhythm, 13px chips, send shown on focus). Net database.css growth against origin/main.
     const DATABASE_R93_BYTES = 2093;
     // Lane r94: Round 45 content page glyph on board, gallery and calendar. Net database.css growth against origin/main.
-    const DATABASE_R94_BYTES = 1758;
+    const DATABASE_R94_BYTES = 1862;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

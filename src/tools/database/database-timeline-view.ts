@@ -1426,6 +1426,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       overDay: grabDay,
       overPx: grabPx,
     };
+    // notion-motion.md Round 48 A8: an edge press selects the bar at once; a moved bar only after the drop.
+    if (this.drag.mode !== 'move') {
+      this.options.handlers?.landRow?.(rowId);
+    }
     this.listen();
   };
 
@@ -1450,10 +1454,6 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       drag.active = true;
       this.root?.setAttribute('data-dragging', drag.kind === 'bar' ? drag.mode : drag.kind);
       this.partsOf(drag.rowId).forEach((el) => el.setAttribute('data-dragging', ''));
-      // notion-motion.md Round 47 A3: a bar being resized is selected; a moved one only after the drop.
-      if (drag.kind === 'bar' && drag.mode !== 'move') {
-        this.options.handlers?.landRow?.(drag.rowId);
-      }
     }
 
     if (drag.kind === 'bar') {

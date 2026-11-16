@@ -1225,8 +1225,8 @@ describe('DatabaseTimelineView', () => {
       expect(landRow).toHaveBeenCalledTimes(1);
     });
 
-    // notion-motion.md Round 47 A3: a resized bar is selected while its edge is dragged, and stays selected.
-    it('selects a bar while its edge is dragged', () => {
+    // notion-motion.md Round 48 A8: an edge press selects the bar at once, before any move, and it stays selected.
+    it('selects a bar when its edge is pressed', () => {
       const landRow = vi.fn();
       const { root } = mount({ handlers: { ...makeHandlers(), landRow } });
       const end = bar(root, 'r1').querySelector('[data-blok-database-timeline-resize="end"]');
@@ -1234,8 +1234,8 @@ describe('DatabaseTimelineView', () => {
       layOut(root);
       if (end === null) throw new Error('no handle');
       pointer('pointerdown', end, xOf('2026-10-09'), 50);
-      pointer('pointermove', document, xOf('2026-10-11'), 50);
       expect(landRow).toHaveBeenCalledWith('r1');
+      pointer('pointermove', document, xOf('2026-10-11'), 50);
       pointer('pointermove', document, xOf('2026-10-12'), 50);
       pointer('pointerup', document, xOf('2026-10-12'), 50);
       expect(landRow).toHaveBeenCalledTimes(1);

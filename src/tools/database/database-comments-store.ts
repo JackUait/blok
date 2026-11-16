@@ -1,4 +1,5 @@
 import type { API } from '../../../types';
+import type { CommentAnchor } from '../../../types/tools/database-comment';
 import type { DatabaseCommentData } from '../database-comment/types';
 
 const COMMENT_TOOL = 'database-comment';
@@ -79,8 +80,8 @@ export class BuiltInComments {
   }
 
   /** Starts a thread on the row, or on one of its cells. Returns its id. */
-  public add(rowId: string | null, text: string, propertyId?: string): string | undefined {
-    return this.insert(rowId, text, propertyId);
+  public add(rowId: string | null, text: string, propertyId?: string, anchor?: CommentAnchor): string | undefined {
+    return this.insert(rowId, text, propertyId, anchor);
   }
 
   public reply(threadId: string, text: string): string | undefined {
@@ -112,7 +113,7 @@ export class BuiltInComments {
     });
   }
 
-  private insert(parentId: string | null, text: string, propertyId: string | undefined): string | undefined {
+  private insert(parentId: string | null, text: string, propertyId: string | undefined, anchor?: CommentAnchor): string | undefined {
     const trimmed = text.trim();
 
     if (trimmed === '' || (parentId !== null && this.api.blocks.getById(parentId) === null)) return undefined;
@@ -120,6 +121,7 @@ export class BuiltInComments {
       text: trimmed,
       createdAt: this.now(),
       ...this.author(),
+      ...(anchor ? { anchor: structuredClone(anchor) } : {}),
       ...(propertyId === undefined ? {} : { propertyId }),
     };
     const box: { id?: string } = {};

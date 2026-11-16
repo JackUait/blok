@@ -2,19 +2,35 @@ import { describeDatabaseComment } from '../../shared/tool-descriptions/database
 import { databaseCommentSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { BlockTool, BlockToolConstructorOptions, SanitizerConfig } from '../../../types';
 import type { DatabaseCommentData } from './types';
+import type { CommentAnchor } from '../../../types/tools/database-comment';
 import { overrideStatic } from '../../components/utils/override-static';
 
 const text = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
 const time = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
+
+/** Validate external saved data; never render anchor strings as HTML. */
+const readAnchor = (value: unknown): CommentAnchor | undefined => {
+  if (!value || typeof value !== 'object' || !('segments' in value) || !Array.isArray(value.segments) || !value.segments.length) return undefined;
+  if (!value.segments.every(segment => segment && typeof segment === 'object'
+    && typeof segment.blockId === 'string' && segment.blockId.length > 0
+    && Number.isSafeInteger(segment.field) && segment.field >= 0
+    && Number.isSafeInteger(segment.start) && segment.start >= 0
+    && typeof segment.quote === 'string' && segment.quote.length > 0
+    && typeof segment.prefix === 'string' && typeof segment.suffix === 'string')) return undefined;
+
+  return { segments: value.segments.map(({ blockId, field, start, quote, prefix, suffix }) => ({ blockId, field, start, quote, prefix, suffix })) };
+};
 
 const normalize = (data: Partial<DatabaseCommentData> | undefined): DatabaseCommentData => {
   const authorId = text(data?.authorId);
   const authorName = text(data?.authorName);
   const propertyId = text(data?.propertyId);
   const editedAt = time(data?.editedAt);
+  const anchor = readAnchor(data?.anchor);
 
   return {
     text: text(data?.text) ?? '',
+    ...(anchor ? { anchor } : {}),
     createdAt: time(data?.createdAt) ?? 0,
     ...(authorId === undefined || authorId === '' ? {} : { authorId }),
     ...(authorName === undefined || authorName === '' ? {} : { authorName }),

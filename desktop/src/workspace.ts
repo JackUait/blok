@@ -5,13 +5,14 @@ import './workspace-save-status.css';
 import { navigationFavorites, navigationRecents } from './navigation-preferences';
 import { commentAuthor } from './comment-author';
 import { mountPageComments, placePageComments } from './page-comments';
+import { CommentInlineTool } from './inline-comments';
 import { createNotesDocument, readNotesCollection, rememberNotesCollection, addNote } from './notes-collection';
 import { openPageLibrary, pageTimestamp } from './page-library';
 import { openPageSearch, openPageCreation, type CreationDestination } from './navigation-dialogs';
 import { customEmojiStore } from './custom-emojis';
 import { createEmptyWorkspaceState } from './workspace-empty';
 import { mountRemoteAssets } from './remote-assets';
-import { Blok, defaultTools, type OutputData } from '@bloklabs/core/full';
+import { Blok, allTools, type OutputData } from '@bloklabs/core/full';
 import { Audio, Bookmark, File, Video, Callout, Code, Database, DatabaseComment, DatabaseRow, Divider, Image, Page, Quote, Table, TableOfContents, Toggle, type PageConfig } from '@bloklabs/core/tools';
 import { createPageFrame, type PageFrame, type ShellPage, type SidebarAction, type SidebarTeamspace } from '@blok/sidebar';
 import { type DesktopPage, type WorkspaceIndex } from './storage';
@@ -46,7 +47,8 @@ import { createFloatingToc, type FloatingToc } from './floating-toc';
 import type { DateDisplayChange } from '@blok/date-editor';
 
 const desktopTools = {
-  ...defaultTools,
+  ...allTools,
+  comment: { class: CommentInlineTool },
   table: { class: Table },
   database: { class: Database },
   'database-row': { class: DatabaseRow },
@@ -55,9 +57,9 @@ const desktopTools = {
   // numbers, language detection and mermaid; the rest are what an explanation is
   // built from — callouts for the "why", toggles for detail a reader can fold away.
   code: { class: Code },
-  callout: { class: Callout },
-  toggle: { class: Toggle },
-  quote: { class: Quote },
+  callout: { class: Callout, inlineToolbar: true },
+  toggle: { class: Toggle, inlineToolbar: true },
+  quote: { class: Quote, inlineToolbar: true },
   divider: { class: Divider },
   // A page about a UI needs to show it; an explanation long enough to scroll needs
   // its own map. Both ship in the core and were simply never named here.
@@ -621,8 +623,10 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     instance.width.set(page.fullWidth === true ? 'full' : 'narrow');
     void instance.isReady.then(() => {
       if (ws.generation !== turn) return;
-      ws.pageComments = mountPageComments({ editor: instance, author: () => commentAuthor(ref), canComment: () => !readOnly(id) && ws.editor === instance });
+      ws.pageComments = mountPageComments({ holder, editor: instance, author: () => commentAuthor(ref), canComment: () => !readOnly(id) && ws.editor === instance });
       placePageComments(holder, ws.pageComments.element);
+      const discussions = ws.pageComments.element.querySelector('[data-inline-comments-open]');
+      if (discussions) toolbar.element.querySelector('[data-desktop-page-actions]')?.prepend(discussions);
       instance.on('collaboration:status', (raw) => {
         if (ws.generation !== turn) return;
         // An emission with no payload must fall back to "not pending", not throw

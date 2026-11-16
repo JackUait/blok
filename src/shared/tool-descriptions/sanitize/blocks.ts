@@ -192,6 +192,9 @@ export const databaseRowSanitize = (): SanitizerConfig => {
 
 export const databaseCommentSanitize = (): SanitizerConfig => {
   return {
+    // All nested anchor strings are literal text, rendered with textContent.
+    // Skip both HTML cleaning and URL hardening to preserve exact quote offsets.
+    anchor: PLAINTEXT,
     text: PLAINTEXT,
     authorId: PLAINTEXT,
     authorName: PLAINTEXT,

@@ -5458,6 +5458,55 @@
           "type": "string",
           "description": "Plain text, not HTML."
         },
+        "anchor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "segments"
+          ],
+          "properties": {
+            "segments": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "blockId",
+                  "field",
+                  "start",
+                  "quote",
+                  "prefix",
+                  "suffix"
+                ],
+                "properties": {
+                  "blockId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "field": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "start": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "quote": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "prefix": {
+                    "type": "string"
+                  },
+                  "suffix": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
         "createdAt": {
           "type": "number",
           "description": "Epoch ms when it was written."
@@ -5815,6 +5864,12 @@
           "description": "Language identifier, e.g. \"javascript\", \"plain text\"."
         },
         "lineNumbers": {
+          "type": "boolean"
+        },
+        "wrapLines": {
+          "type": "boolean"
+        },
+        "showFilename": {
           "type": "boolean"
         },
         "filename": {

@@ -7,6 +7,55 @@ export const DATABASE_COMMENT_DATA = {
   additionalProperties: false,
   properties: {
     text: { type: 'string', description: 'Plain text, not HTML.' },
+    anchor: {
+      type: 'object',
+      additionalProperties: false,
+      required: [
+        'segments'
+      ],
+      properties: {
+        segments: {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: [
+              'blockId',
+              'field',
+              'start',
+              'quote',
+              'prefix',
+              'suffix'
+            ],
+            properties: {
+              blockId: {
+                type: 'string',
+                minLength: 1
+              },
+              field: {
+                type: 'integer',
+                minimum: 0
+              },
+              start: {
+                type: 'integer',
+                minimum: 0
+              },
+              quote: {
+                type: 'string',
+                minLength: 1
+              },
+              prefix: {
+                type: 'string'
+              },
+              suffix: {
+                type: 'string'
+              }
+            }
+          }
+        }
+      }
+    },
     createdAt: { type: 'number', description: 'Epoch ms when it was written.' },
     authorId: { type: 'string', description: 'The writer, as the host knows people. Absent without a host directory.' },
     authorName: { type: 'string', description: 'The writer\'s display name when it was written. Absent for an anonymous writer.' },

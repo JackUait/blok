@@ -36,6 +36,16 @@ describe('page comment controls', () => {
     expect(document.activeElement).toBe(panel.element.querySelector('textarea'));
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
   });
+  it('marks only the empty collapsed entry as a contextual header action', () => {
+    const panel = mount();
+    const toggle = panel.element.querySelector<HTMLButtonElement>('[data-page-comments-toggle]')!;
+    expect(toggle.hasAttribute('data-page-comments-empty')).toBe(true);
+    toggle.click();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    state.threads = [{ id: 'thread', data: { text: 'Already discussed', createdAt: 1 }, replies: [] }];
+    const populated = mount();
+    expect(populated.element.querySelector('[data-page-comments-toggle]')?.hasAttribute('data-page-comments-empty')).toBe(false);
+  });
   it('places discussion after title properties and before the document body', () => {
     const holder = document.createElement('div');
     holder.innerHTML = '<header data-blok-page-header><h1 data-blok-page-title>Title</h1><div data-desktop-page-created>Date</div></header><div data-blok-redactor>Body</div>';

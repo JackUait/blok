@@ -2,6 +2,18 @@ import { SanitizerConfig } from '../configs';
 import { BlockTool, BlockToolConstructorOptions } from './block-tool';
 import { BlockToolData } from './block-tool-data';
 
+/** A quoted passage, split by editable field so it can span several blocks. */
+export interface CommentAnchor {
+  segments: Array<{
+    blockId: string;
+    field: number;
+    start: number;
+    quote: string;
+    prefix: string;
+    suffix: string;
+  }>;
+}
+
 /**
  * One comment on a database row. A thread is a `database-comment` child of
  * the row; its replies are `database-comment` children of the thread.
@@ -9,6 +21,8 @@ import { BlockToolData } from './block-tool-data';
 export interface DatabaseCommentData extends BlockToolData {
   /** Plain text, not HTML. */
   text: string;
+  /** Optional passage target; absent for page/row discussions and replies. */
+  anchor?: CommentAnchor;
   /** Epoch ms when it was written. */
   createdAt: number;
   /** The writer, as the host's `people` directory knows them. */

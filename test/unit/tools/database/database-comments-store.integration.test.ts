@@ -151,6 +151,22 @@ describe('built-in comment storage', () => {
     expect(store.count(null)).toBe(2);
   });
 
+  it('persists a selected-passage anchor through save, render, replies and resolution', async () => {
+    const blok = await make();
+    const store = storeOf(blok);
+    const anchor = { segments: [{ blockId: 'paragraph', field: 0, start: 3, quote: 'a < b', prefix: 'If ', suffix: ' then' }] };
+    const thread = store.add(null, 'Explain this', undefined, anchor)!;
+    store.reply(thread, 'A reply');
+    store.resolve(thread, true);
+    await quiet();
+    const saved = await blok.save();
+    expect(saved.blocks.find(block => block.id === thread)?.data.anchor).toEqual(anchor);
+    await blok.blocks.render(saved);
+    await quiet();
+    expect(store.threads(null)[0].data.anchor).toEqual(anchor);
+    expect(store.threads(null)[0].replies[0].data.anchor).toBeUndefined();
+  });
+
   it('never writes an empty comment', async () => {
     const store = storeOf(await make());
 

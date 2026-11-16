@@ -13,3 +13,9 @@
 [data-page-comments-filters] button:focus-visible, [data-page-comment-reopen]:focus-visible { outline: 2px solid var(--blok-focus-ring); outline-offset: 2px; }
 /* A database/row takeover has its own discussion; keep the parent page's thread out of that view. */
 [data-desktop-document]:has([data-blok-database-row-page], [data-blok-database-full-open]) [data-desktop-page-comments] { display: none; }
+/* Like icon/cover actions: empty discussions appear on header hover or keyboard focus. */
+@media (hover: hover) {
+  [data-page-comments-toggle][data-page-comments-empty][aria-expanded=false] { opacity: 0; pointer-events: none; transition: opacity 120ms ease; }
+  [data-blok-page-header][data-desktop-header-hover] [data-page-comments-toggle][data-page-comments-empty][aria-expanded=false],
+  [data-page-comments-toggle][data-page-comments-empty][aria-expanded=false]:focus-visible { opacity: 1; pointer-events: auto; }
+}

@@ -1,4 +1,5 @@
 import './page-comments.css';
+import { mountInlineComments } from './inline-comments';
 import type { Blok } from '../../types';
 import { BuiltInComments, type CommentAuthor, type StoredComment } from '../../src/tools/database/database-comments-store';
 import { createCommentsPanel, openDatabaseConfirm, type CommentsPanel } from './comments-runtime.js';
@@ -11,12 +12,15 @@ export function placePageComments(holder: HTMLElement, element: HTMLElement): vo
 
 /** Page discussion uses the same annotation blocks and collaboration as row comments. */
 export function mountPageComments(options: {
+  holder?: HTMLElement;
   editor: Pick<Blok, 'blocks' | 'tools' | 'events' | 'i18n'>;
   author: () => CommentAuthor;
   canComment: () => boolean;
 }): { element: HTMLElement; destroy(): void } {
   const { editor } = options;
   const store = new BuiltInComments(editor, options.author);
+  const pageThreads = () => store.threads(null).filter(thread => !thread.data.anchor);
+  const inline = options.holder ? mountInlineComments({ ...options, holder: options.holder }) : null;
   const element = document.createElement('section');
   element.setAttribute('data-blok-database-comments-section', '');
   element.setAttribute('data-desktop-page-comments', '');
@@ -32,22 +36,23 @@ export function mountPageComments(options: {
   toggle.append(createElement(MessageSquare, {'aria-hidden':'true', width:'16', height:'16'}), label);
   const content = document.createElement('div'); content.setAttribute('data-page-comments-content', '');
   content.id = `page-discussion-${crypto.randomUUID()}`; toggle.setAttribute('aria-controls', content.id);
-  content.append(controls, body); element.append(toggle, content);
-  let expanded = store.threads(null).some(thread => !thread.data.resolved);
+  content.append(controls, body); element.append(toggle); if (inline) element.append(inline.element); element.append(content);
+  let expanded = pageThreads().some(thread => !thread.data.resolved);
   const refreshSummary = (): void => {
-    const threads = store.threads(null);
+    const threads = pageThreads();
     const count = threads.filter(thread => !thread.data.resolved).length;
     label.textContent = threads.length ? `Commentaires${count ? ` (${count})` : ''}` : 'Ajouter un commentaire…';
+    toggle.toggleAttribute('data-page-comments-empty', threads.length === 0);
     toggle.setAttribute('aria-expanded', String(expanded)); content.hidden = !expanded;
     controls.hidden = !threads.some(thread => thread.data.resolved) && !state.resolved;
-    element.hidden = !threads.length && !options.canComment();
+    element.hidden = !store.threads(null).length && !options.canComment();
   };
   const state: { resolved: boolean; writable: boolean; panel: CommentsPanel | null; timer: ReturnType<typeof setTimeout> | null; destroyed: boolean; draft: string } = {
     resolved: false, writable: false, panel: null, timer: null, destroyed: false, draft: '',
   };
   const writable = (): boolean => !state.destroyed && store.available() && options.canComment();
   const own = (comment: StoredComment): boolean => !!comment.data.authorId && comment.data.authorId === options.author().authorId;
-  const find = (id: string): StoredComment | undefined => store.threads(null).flatMap(thread => [thread, ...thread.replies]).find(comment => comment.id === id);
+  const find = (id: string): StoredComment | undefined => pageThreads().flatMap(thread => [thread, ...thread.replies]).find(comment => comment.id === id);
   const owned = (id: string): boolean => { const comment = find(id); return !!comment && own(comment); };
   const update = (write: () => void): void => { if (writable()) { write(); render(); } };
   function render(): void {
@@ -58,15 +63,15 @@ export function mountPageComments(options: {
     state.writable = writable();
     refreshSummary();
     open.setAttribute('aria-pressed', String(!state.resolved)); resolved.setAttribute('aria-pressed', String(state.resolved));
-    const threads = (): ReturnType<BuiltInComments['threads']> => store.threads(null).filter(thread => (thread.data.resolved === true) === state.resolved);
+    const threads = (): ReturnType<BuiltInComments['threads']> => pageThreads().filter(thread => (thread.data.resolved === true) === state.resolved);
     state.panel = createCommentsPanel({
       i18n: editor.i18n, locale: 'fr-FR', canComment: state.writable && !state.resolved, threads,
       nameOf: comment => comment.data.authorName ?? editor.i18n.t('tools.database.commentAnonymous'),
       isOwn: own, viewerName: () => options.author().authorName ?? editor.i18n.t('tools.database.commentAnonymous'),
       onAdd: text => update(() => { store.add(null, text); }),
-      onReply: (id, text) => update(() => { if (store.threads(null).some(thread => thread.id === id && !thread.data.resolved)) store.reply(id, text); }),
+      onReply: (id, text) => update(() => { if (pageThreads().some(thread => thread.id === id && !thread.data.resolved)) store.reply(id, text); }),
       onEdit: (id, text) => update(() => { if (owned(id)) store.edit(id, text); }),
-      onResolve: id => update(() => { if (store.threads(null).some(thread => thread.id === id)) store.resolve(id, true); }),
+      onResolve: id => update(() => { if (pageThreads().some(thread => thread.id === id)) store.resolve(id, true); }),
       onDelete: async id => {
         if (!writable() || !owned(id)) return;
         const confirmed = await openDatabaseConfirm({ title: 'Supprimer ce commentaire ?', confirmLabel: 'Supprimer', cancelLabel: 'Annuler', destructive: true, directionSource: element });
@@ -80,7 +85,7 @@ export function mountPageComments(options: {
       for (const thread of threads()) {
         const reopen = document.createElement('button'); reopen.type = 'button'; reopen.textContent = 'Rouvrir'; reopen.setAttribute('data-page-comment-reopen', '');
         reopen.setAttribute('aria-label', `Rouvrir : ${thread.data.text.slice(0, 80)}`);
-        reopen.addEventListener('click', () => update(() => { if (store.threads(null).some(item => item.id === thread.id)) store.resolve(thread.id, false); }));
+        reopen.addEventListener('click', () => update(() => { if (pageThreads().some(item => item.id === thread.id)) store.resolve(thread.id, false); }));
         const row = [...body.querySelectorAll<HTMLElement>('[data-blok-database-comment-thread]')].find(item => item.getAttribute('data-blok-database-comment-thread') === thread.id);
         row?.append(reopen);
       }
@@ -105,6 +110,7 @@ export function mountPageComments(options: {
   render();
   return { element, destroy() {
     state.destroyed = true;
+    inline?.destroy();
     editor.events.off('block changed', onChange);
     if (state.timer !== null) clearTimeout(state.timer);
     state.panel?.destroy(); state.panel = null;

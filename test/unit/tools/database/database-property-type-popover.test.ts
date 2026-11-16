@@ -495,7 +495,28 @@ describe('DatabasePropertyTypePopover', () => {
         flow.destroy();
       });
 
-      // notion-motion.md Round 32 §3 Type menu: at the window's right the menu clamps, and the name box stays inside its top row.
+      // notion-motion.md Round 44 §3 (r44-tp-add-head.raw; r34-typemenu-*.raw agree): the name box stays in the new
+      // column's slot and the 400 menu starts 11 left of it (field 1111.5, menu 1100.5; field 819, menu 808).
+      it('starts the menu 11 left of the name box, which stays at the "+"', () => {
+        const widths = new Map([['data-blok-database-property-type-popover', 400], ['data-blok-database-property-type-header', 378]]);
+
+        vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+          return [...widths].find(([attr]) => this.hasAttribute(attr))?.[1] ?? 0;
+        });
+        vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(rect({ x: 500, left: 500, y: 170.4, top: 170.4, width: 28, height: 28, right: 528, bottom: 198.4 }));
+        const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true, layout: 'grid', nameOverAnchor: true });
+
+        flow.open(anchor);
+        const root = document.querySelector<HTMLElement>('[data-blok-database-property-type-popover]');
+        const header = root?.querySelector<HTMLElement>(':scope > [data-blok-database-property-type-header]');
+
+        expect(root?.style.left).toBe('489px');
+        expect(header?.style.left).toBe('11px');
+        flow.destroy();
+      });
+
+      // Pushed in from the window's right, the menu ends 12 from it. Notion was never read pushed this far; the name box
+      // keeps as close to the "+" as the menu allows.
       it('keeps the name box inside the menu when the menu is pushed in from the window edge', () => {
         const widths = new Map([['data-blok-database-property-type-popover', 400], ['data-blok-database-property-type-header', 378]]);
 
@@ -511,9 +532,8 @@ describe('DatabasePropertyTypePopover', () => {
         const menuLeft = parseFloat(root?.style.left ?? '');
         const headerLeft = parseFloat(header?.style.left ?? '');
 
-        // r32-b-typemenu.raw: the menu ends 12 from the window (1111 + 389 = 1500 of 1512), and the name field sits 32 inside its left edge.
         expect(menuLeft + 400).toBe(window.innerWidth - 12);
-        expect(headerLeft).toBe(0);
+        expect(headerLeft).toBe(400 - 378);
         expect(header?.style.top).toBe('-32px');
         flow.destroy();
       });

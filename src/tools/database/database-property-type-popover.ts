@@ -50,6 +50,8 @@ const VIEWPORT_BOTTOM_MARGIN = 11;
 /** notion-motion.md Round 34 §6: the header "+" menu, fitting neither side, ends 12.3 above the window. */
 const NAME_OVER_ANCHOR_BOTTOM_MARGIN = 12.3;
 const ABOVE_GAP = 1;
+/** notion-motion.md Round 44 §3, Round 34 §6: the header "+" menu starts 11 left of its name row. */
+const NAME_INSET = 11;
 /** Notion's gap below the button is unmeasured. */
 const BELOW_GAP = 4;
 /**
@@ -271,16 +273,16 @@ export class DatabasePropertyTypePopover {
       popover.setAttribute('data-side', above ? 'top' : 'bottom');
       if (this.nameOverAnchor) {
         const box = anchor.getBoundingClientRect();
-        // r32-b-typemenu.raw: with no room on the right, Notion's menu ends 12 from the window and its name row starts at the menu's left.
+        // notion-motion.md Round 44 §3: the name row stays at the "+" and the menu starts 11 left of it.
+        // Pushed in from the window's right it ends 12 from the window; Notion was never read that far right.
         const edge = window.innerWidth - VIEWPORT_MARGIN - popover.offsetWidth;
-        const pushed = box.left > edge;
 
-        if (pushed) popover.style.left = `${Math.max(VIEWPORT_MARGIN, edge)}px`;
+        popover.style.left = `${Math.max(VIEWPORT_MARGIN, Math.min(box.left - NAME_INSET, edge))}px`;
         // notion-motion.md Round 34 §6: fitting neither side, the name row rides up with the menu, on its top.
         header.style.top = picked.side === 'cover' ? `${-header.offsetHeight}px` : `${box.top - parseFloat(popover.style.top)}px`;
         const room = Math.max(0, popover.offsetWidth - header.offsetWidth);
 
-        header.style.left = pushed ? '0px' : `${Math.min(Math.max(0, box.left - parseFloat(popover.style.left)), room)}px`;
+        header.style.left = `${Math.min(Math.max(0, box.left - parseFloat(popover.style.left)), room)}px`;
       }
     };
 

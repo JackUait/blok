@@ -420,11 +420,27 @@ describe('DatabaseTimelineView', () => {
         expect(scroller(root).scrollLeft).toBeCloseTo(nowX(0, 0) - VIEWPORT / 2, 5);
       });
 
-      it('keeps the day\'s start in the middle at other zooms', () => {
+      // notion-motion.md Round 46 B "Initial scroll": at 12:50 the now-line sits at the scroller centre, today's column 21.4 left of it.
+      it('month zoom also centres the now-line, not the start of today', () => {
+        vi.setSystemTime(new Date(2026, 9, 9, 12, 50));
         const root = open();
         const start = timelineWindow(CENTER, 'month').start;
 
+        expect(scroller(root).scrollLeft).toBeCloseTo((daysBetween(start, CENTER) + 770 / 1440) * TIMELINE_DAY_WIDTH.month - VIEWPORT / 2, 5);
+      });
+
+      it('month zoom centres the stored day\'s start when that day is not today', () => {
+        const root = open({ today: '2026-10-08' });
+        const start = timelineWindow(CENTER, 'month').start;
+
         expect(scroller(root).scrollLeft).toBe(daysBetween(start, CENTER) * TIMELINE_DAY_WIDTH.month - VIEWPORT / 2);
+      });
+
+      it('keeps the day\'s start in the middle at other zooms', () => {
+        const root = open({ view: timelineView({ timelineZoom: 'week' }) });
+        const start = timelineWindow(CENTER, 'week').start;
+
+        expect(scroller(root).scrollLeft).toBe(daysBetween(start, CENTER) * TIMELINE_DAY_WIDTH.week - VIEWPORT / 2);
       });
 
       it('draws a line every 15 minutes in the body, on the ticks, and none at other zooms', () => {

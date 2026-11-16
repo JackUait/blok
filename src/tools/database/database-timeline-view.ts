@@ -280,8 +280,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         this.scrollStart = Math.max(0, this.chartStart() - origin.at);
         this.recentring = false;
         this.refreshOffscreen();
-      } else if (this.zoom === 'hours' && this.options.center === this.options.today) {
-        // notion-motion.md Round 35 Part B: Hours zoom opens with the now-line in the middle.
+      } else if ((this.zoom === 'hours' || this.zoom === 'month') && this.options.center === this.options.today) {
+        // notion-motion.md Round 35 Part B (Hours) and Round 46 B (Month): the now-line opens in the middle. Other zooms are unmeasured.
         this.recentring = true;
         this.scrollStart = Math.max(0, this.nowOffset() - (this.scroller?.clientWidth ?? 0) / 2);
         this.recentring = false;

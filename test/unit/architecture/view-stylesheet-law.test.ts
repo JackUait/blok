@@ -189,6 +189,15 @@ describe('view baseline stylesheet law', () => {
       expect(readFileSync(join(repoRoot, 'view.css'), 'utf-8')).not.toContain('data-blok-assistant');
     });
 
+    it('ships no video player tokens — a view draws the browser\'s own <video controls>', () => {
+      /**
+       * The theme root carries the player's tokens (menu, wire, error bars),
+       * so the pruner keeps them like any theme token. No view rule reads
+       * them: blocksToHtml emits a native <video>, never the player.
+       */
+      expect(readFileSync(join(repoRoot, 'view.css'), 'utf-8')).not.toContain('--blok-video-');
+    });
+
     it('ships no webfonts — a view inherits the host typography', () => {
       /**
        * fonts.css alone is ~226 KB of base64. Bundling it would quintuple the

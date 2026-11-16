@@ -341,6 +341,28 @@ const dropPageTitleRules = (root) => {
 };
 
 /**
+ * The theme root carries the video player's tokens, so the pruner keeps them
+ * as carriers. A view emits a native `<video controls>`, never the player, so
+ * nothing in the sheet reads them.
+ * @param root - the pruned postcss root
+ */
+const dropVideoPlayerTokens = (root) => {
+  root.walkDecls(/^--blok-video-/, (decl) => {
+    let parent = decl.parent;
+
+    decl.remove();
+
+    /** A nested `@supports` left holding nothing goes too. */
+    while (parent && parent.type !== 'root' && (parent.nodes?.length ?? 0) === 0) {
+      const next = parent.parent;
+
+      parent.remove();
+      parent = next;
+    }
+  });
+};
+
+/**
  * Relocate the Tailwind-v4 border-colour compat rules into `@layer base`.
  *
  * main.css authors these UNLAYERED (`:where([data-blok-interface]) * {
@@ -590,6 +612,7 @@ const main = async () => {
   prune(parsed, root);
   dropUnusedKeyframes(parsed);
   dropPageTitleRules(parsed);
+  dropVideoPlayerTokens(parsed);
   layerizeBorderCompat(parsed);
 
   writeFileSync(OUTPUT, `${HEADER}${LAYER_ORDER}${parsed.toString().trim()}\n${LEGACY_BASELINE}${LIST_MARKERS}`);

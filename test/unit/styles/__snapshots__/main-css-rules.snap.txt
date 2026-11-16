@@ -17894,7 +17894,6 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-calendar-nav-icon);
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.2s ease-out;
 }
 
 [data-blok-database-calendar-add]::before {
@@ -18091,7 +18090,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   cursor: col-resize;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-database-calendar-nav] button, [data-blok-database-calendar-add], [data-blok-database-calendar-day-number], [data-blok-database-calendar-event] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-calendar-nav] button, [data-blok-database-calendar-day-number], [data-blok-database-calendar-event] {
   transition: none;
 }
 

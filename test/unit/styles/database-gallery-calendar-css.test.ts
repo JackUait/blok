@@ -248,11 +248,10 @@ describe('database gallery and calendar styles', () => {
     expect(css.indexOf(fromIn)).toBeGreaterThan(css.indexOf(outside));
   });
 
-  it('draws the day "+" as a 24px white radius-8 chip with a 20px button inside, fading in (notion-motion.md, Round 24 §4 Calendar)', () => {
+  it('draws the day "+" as a 24px white radius-8 chip with a 20px button inside (notion-motion.md, Round 24 §4 Calendar)', () => {
     const add = ruleBody('[data-blok-database-calendar-add]');
 
     expect(add).toMatch(/border-radius:\s*var\(--blok-radius-control-lg\)/);
-    expect(add).toMatch(/transition:\s*opacity 0\.2s ease-out/);
     expect(add).toMatch(/inset-block-start:\s*6px/);
     expect(add).toMatch(/inset-inline-start:\s*6px/);
     expect(add).toMatch(/inline-size:\s*24px/);
@@ -274,10 +273,9 @@ describe('database gallery and calendar styles', () => {
     expect(hover).toMatch(/background-color:\s*var\(--blok-database-table-header-hover-bg\)/);
   });
 
-  it('drops the day "+" fade under reduced motion', () => {
-    const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce) {\n  [data-blok-database-calendar-nav] button'));
-
-    expect(reduced.slice(0, reduced.indexOf('}'))).toContain('[data-blok-database-calendar-add]');
+  it('shows and hides the day "+" at once, with no fade (notion-motion.md, Round 51 D)', () => {
+    expect(ruleBody('[data-blok-database-calendar-add]')).not.toMatch(/transition/);
+    expect(css).not.toMatch(/\[data-blok-database-calendar-add\][^{]*\{[^}]*transition/);
   });
 
   it('draws ‹ and › as 24px squares (findings C12)', () => {

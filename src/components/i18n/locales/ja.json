@@ -1246,6 +1246,7 @@
   "tools.database.commentSend": "コメントを送信",
   "tools.database.commentJustNow": "たった今",
   "tools.database.feedJustNow": "たった今",
+  "tools.database.feedSeeMore": "さらに表示",
   "tools.database.commentEdited": "（編集済み）",
   "tools.database.commentResolve": "解決",
   "tools.database.commentMoreActions": "その他のアクション",

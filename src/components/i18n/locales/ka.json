@@ -1246,6 +1246,7 @@
   "tools.database.commentSend": "კომენტარის გაგზავნა",
   "tools.database.commentJustNow": "ახლახან",
   "tools.database.feedJustNow": "ახლახან",
+  "tools.database.feedSeeMore": "მეტის ჩვენება",
   "tools.database.commentEdited": "(რედაქტირებული)",
   "tools.database.commentResolve": "გადაწყვეტა",
   "tools.database.commentMoreActions": "მეტი მოქმედება",

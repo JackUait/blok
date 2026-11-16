@@ -1246,6 +1246,7 @@
   "tools.database.commentSend": "မှတ်ချက် ပို့ရန်",
   "tools.database.commentJustNow": "ယခုလေးတင်",
   "tools.database.feedJustNow": "ယခုလေးတင်",
+  "tools.database.feedSeeMore": "နောက်ထပ်ပြရန်",
   "tools.database.commentEdited": "(ပြင်ဆင်ထားသည်)",
   "tools.database.commentResolve": "ဖြေရှင်းရန်",
   "tools.database.commentMoreActions": "နောက်ထပ် လုပ်ဆောင်ချက်များ",

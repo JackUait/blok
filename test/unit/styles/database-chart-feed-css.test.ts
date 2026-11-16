@@ -173,6 +173,33 @@ describe('database chart and feed styles', () => {
     expect(image).toContain('border-radius: var(--blok-radius-mark)');
   });
 
+  // notion-motion.md Round 48 §C (r48-n-feed-alpha.raw): the preview is max-height 500, overflow hidden. The chip is
+  // 24.8 tall, its top 32 above the preview's end, centred; padding 4 10 4 8, gap 5, 12/16.8, radius 6, dark fill.
+  it('caps the preview at 500 with Notion\'s See more chip over its end', () => {
+    const body = ruleBody('[data-blok-database-feed-body]');
+
+    expect(body).toContain('position: relative');
+    expect(body).toContain('max-block-size: 500px');
+    expect(body).toContain('overflow: hidden');
+    expect(ruleBody('[data-blok-database-feed-body] > *')).toContain('flex-shrink: 0');
+    const chip = ruleBody('[data-blok-database-feed-see-more]');
+
+    expect(chip).toContain('position: absolute');
+    expect(chip).toContain('inset-block-start: calc(100% - 32px)');
+    expect(chip).toContain('inset-inline-start: 50%');
+    expect(chip).toContain('translate: -50% 0');
+    expect(chip).toContain('padding: var(--blok-space-1) 10px var(--blok-space-1) var(--blok-space-2)');
+    expect(chip).toContain('gap: var(--blok-space-1-25)');
+    expect(chip).toContain('font-size: 12px');
+    expect(chip).toContain('line-height: 16.8px');
+    expect(chip).toContain('border-radius: var(--blok-radius-control)');
+    expect(chip).toContain('background-color: var(--blok-tooltip-bg)');
+    expect(chip).toContain('color: var(--blok-tooltip-font)');
+    expect(chip).toContain('box-shadow: var(--blok-database-feed-see-more-shadow)');
+    expect(css).toMatch(/--blok-database-feed-see-more-shadow:\s*rgba\(0, 0, 0, 0\.08\) 0 4px 12px -2px/);
+    expect(ruleBody('[data-blok-database-feed-see-more] svg')).toContain('inline-size: 12px');
+  });
+
   // notion-motion.md Round 47 §C: with no byline the body, chip and composer keep an 8 inset (card x + 24).
   it('keeps the footer column 8 in when there is no byline', () => {
     for (const part of ['body', 'reactions', 'comments']) {

@@ -936,6 +936,7 @@ export type BlokMessageKey =
   | 'tools.database.feedJustNow'
   | 'tools.database.feedReact'
   | 'tools.database.feedReactedWith'
+  | 'tools.database.feedSeeMore'
   | 'tools.database.fileMoreActions'
   | 'tools.database.filesAdd'
   | 'tools.database.filesDelete'

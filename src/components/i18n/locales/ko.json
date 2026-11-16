@@ -1246,6 +1246,7 @@
   "tools.database.commentSend": "댓글 보내기",
   "tools.database.commentJustNow": "방금",
   "tools.database.feedJustNow": "방금",
+  "tools.database.feedSeeMore": "더 보기",
   "tools.database.commentEdited": "(수정됨)",
   "tools.database.commentResolve": "해결",
   "tools.database.commentMoreActions": "추가 작업",

@@ -1782,7 +1782,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r102: Round 47 timeline header (day row 32 in every zoom, group labels in the toolbar row under page-coloured controls, toolbar 40). Net database.css growth against origin/main.
     const DATABASE_R102_BYTES = 1166;
     // Lane r108: Round 48 feed preview (500 cap with a See more chip, padded image, body under a property line). Net database.css growth against origin/main.
-    const DATABASE_R108_BYTES = 351;
+    const DATABASE_R108_BYTES = 1647;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

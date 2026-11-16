@@ -1264,6 +1264,7 @@
   "tools.database.commentSend": "Надіслати коментар",
   "tools.database.commentJustNow": "Щойно",
   "tools.database.feedJustNow": "Щойно",
+  "tools.database.feedSeeMore": "Показати більше",
   "tools.database.commentEdited": "(змінено)",
   "tools.database.commentResolve": "Вирішити",
   "tools.database.commentMoreActions": "Інші дії",

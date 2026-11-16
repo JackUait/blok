@@ -1246,6 +1246,7 @@
   "tools.database.commentSend": "Send kommentar",
   "tools.database.commentJustNow": "Lige nu",
   "tools.database.feedJustNow": "Lige nu",
+  "tools.database.feedSeeMore": "Vis mere",
   "tools.database.commentEdited": "(redigeret)",
   "tools.database.commentResolve": "Løs",
   "tools.database.commentMoreActions": "Flere handlinger",

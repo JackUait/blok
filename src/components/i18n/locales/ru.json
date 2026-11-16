@@ -1264,6 +1264,7 @@
   "tools.database.commentSend": "Отправить комментарий",
   "tools.database.commentJustNow": "Только что",
   "tools.database.feedJustNow": "Только что",
+  "tools.database.feedSeeMore": "Показать ещё",
   "tools.database.commentEdited": "(изменено)",
   "tools.database.commentResolve": "Отметить как решённое",
   "tools.database.commentMoreActions": "Другие действия",

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BlokModules } from '../../../../../../src/types-internal/blok-modules';
+import type * as Utils from '../../../../../../src/components/utils';
 
 /**
  * Mock the PopoverInline so the InlineToolbar constructor doesn't blow up
@@ -53,7 +54,8 @@ vi.mock('../../../../../../src/components/utils/tw', () => ({
 /**
  * Mock isMobileScreen
  */
-vi.mock('../../../../../../src/components/utils', () => ({
+vi.mock('../../../../../../src/components/utils', async (importOriginal) => ({
+  ...await importOriginal<typeof Utils>(),
   isMobileScreen: () => false,
   debounce: (fn: () => void) => fn,
 }));

@@ -521,6 +521,13 @@ describe('resolvePosition', () => {
         expect(resolvePosition(input(520, 96, true))).toEqual(resolvePosition(input(520, 96, false)));
       });
 
+      it('flips a right-side popover to the left when only the left has room', () => {
+        const result = resolvePosition({ ...input(1000, 600, true), asideSide: 'right' });
+
+        expect(result.left).toBeCloseTo(320);
+        expect(result.openLeft).toBe(true);
+      });
+
       it('does not flip without the option', () => {
         expect(resolvePosition(input(1000, 96, false)).left).not.toBeCloseTo(378);
       });

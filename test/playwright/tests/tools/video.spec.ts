@@ -19,6 +19,11 @@ const VIDEO_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="video"
 const SAMPLE_VIDEO_FILE = 'public/samples/big-buck-bunny.mp4';
 const SAMPLE_VIDEO_URL = new URL(`/${SAMPLE_VIDEO_FILE}`, TEST_PAGE_URL).href;
 const SAMPLE_VIDEO_PATH = join(process.cwd(), SAMPLE_VIDEO_FILE);
+// The player remembers played sources for the whole page load (controls.ts
+// playedSources), and this spec shares one page. A test that needs a
+// never-played video gets a source no earlier test played.
+let unplayedCount = 0;
+const unplayedVideoUrl = (): string => `${SAMPLE_VIDEO_URL}?unplayed=${++unplayedCount}`;
 
 declare global {
   interface Window {
@@ -149,7 +154,7 @@ test('fullscreen hides editor chrome and keeps only playback controls', async ({
 
 test('hovering a never-played video shows only the play button, not the control bar', async ({ page }) => {
   await createBlok(page, {
-    blocks: [{ type: 'video', data: { url: SAMPLE_VIDEO_URL } }],
+    blocks: [{ type: 'video', data: { url: unplayedVideoUrl() } }],
   });
 
   const videoBlock = page.locator(VIDEO_BLOCK_SELECTOR);
@@ -174,7 +179,7 @@ test('hovering a never-played video shows only the play button, not the control 
 });
 
 test('a paused video always shows a play button at rest, so it never looks like a picture', async ({ page }) => {
-  await createBlok(page, { blocks: [ { type: 'video', data: { url: SAMPLE_VIDEO_URL } } ] });
+  await createBlok(page, { blocks: [ { type: 'video', data: { url: unplayedVideoUrl() } } ] });
 
   const block = page.locator(VIDEO_BLOCK_SELECTOR);
   const player = block.getByTestId('video-player');
@@ -344,7 +349,7 @@ test.describe('a narrow player (capsule)', () => {
   };
 
   test('keeps every control it shows inside the frame', async ({ page }) => {
-    await createBlok(page, { blocks: [{ type: 'video', data: { url: SAMPLE_VIDEO_URL, width: 30 } }] });
+    await createBlok(page, { blocks: [{ type: 'video', data: { url: unplayedVideoUrl(), width: 30 } }] });
     const block = page.locator(VIDEO_BLOCK_SELECTOR);
 
     await expect(block).toHaveAttribute('data-state', 'rendered');
@@ -379,7 +384,7 @@ test.describe('a narrow player (capsule)', () => {
   });
 
   test('seeks to where the capsule is pressed, and swells while held', async ({ page }) => {
-    await createBlok(page, { blocks: [{ type: 'video', data: { url: SAMPLE_VIDEO_URL, width: 30 } }] });
+    await createBlok(page, { blocks: [{ type: 'video', data: { url: unplayedVideoUrl(), width: 30 } }] });
     const block = page.locator(VIDEO_BLOCK_SELECTOR);
     const player = block.getByTestId('video-player');
 

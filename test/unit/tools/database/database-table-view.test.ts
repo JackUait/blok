@@ -1584,7 +1584,7 @@ describe('DatabaseTableView', () => {
         expect(open.lastElementChild?.textContent).toBe('tools.database.tableOpen');
       });
 
-      // A labelled button that fits with the 6px end inset keeps its label from 102.
+      // A labelled button that fits with the 4px end inset keeps its label from 102.
       it('keeps the label from 102 when the labelled button fits', () => {
         const { root } = mount();
         const open = sized(root, 102);
@@ -1602,6 +1602,16 @@ describe('DatabaseTableView', () => {
         vi.spyOn(open, 'getBoundingClientRect').mockImplementation(() => new DOMRect(0, 0, open.hasAttribute('data-compact') ? 30 : 108, 24));
         over(cell(root, 'r1', 'p-title'));
         expect(open.hasAttribute('data-compact')).toBe(true);
+      });
+
+      // notion-motion.md Round 46 §A: the labelled pill sits 4 in from the cell end, so 98 + 4 still fits in 102.
+      it('keeps the label at 102 for a 98px labelled button, with the 4px end inset', () => {
+        const { root } = mount();
+        const open = sized(root, 102);
+
+        vi.spyOn(open, 'getBoundingClientRect').mockImplementation(() => new DOMRect(0, 0, open.hasAttribute('data-compact') ? 30 : 98, 24));
+        over(cell(root, 'r1', 'p-title'));
+        expect(open.hasAttribute('data-compact')).toBe(false);
       });
 
       it('fits again when the pointer leaves the table and comes back to the same row', () => {

@@ -74,7 +74,7 @@ export { MIN_COLUMN_WIDTH };
 /** notion-motion.md Round 28 §1: Notion's title column shows OPEN from 102 and the icon pill at 100. 101 is unread. */
 const OPEN_LABEL_MIN_WIDTH = 102;
 /** The OPEN button's inset from the title cell's end (database.css). */
-const OPEN_INSET = 6;
+const OPEN_INSET = 4;
 /** notion-motion.md Round 46 §A: the frozen block sticks this far in from the scroller's edge (x 300, scroller at 270). The scroller's clip-path in database.css uses the same 30px. */
 const FROZEN_STICK_INSET = 30;
 

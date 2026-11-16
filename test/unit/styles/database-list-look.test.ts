@@ -204,6 +204,19 @@ describe('list row hover chrome (findings-listgallery L03, L04)', () => {
     expect(ruleBody(database, '[data-blok-database-list-row]:hover [data-blok-database-list-row-edit]')).toContain('display: inline-flex');
   });
 
+  // notion-motion.md Round 46 §C.3: on hover only the inner 26x20 fills, radius 6, `background 0.1s ease-in-out`;
+  // the 2px white frame stays white.
+  it('fills only the inner 26x20 of the Edit frame on hover', () => {
+    const inner = ruleBody(database, '[data-blok-database-list-row-edit]::before');
+
+    expect(ruleBody(database, '[data-blok-database-list-row-edit]')).toContain('position: relative');
+    expect(inner).toContain('inset: var(--blok-space-0-5)');
+    expect(inner).toContain('border-radius: var(--blok-radius-control)');
+    expect(inner).toContain('transition: background-color 100ms ease-in-out');
+    expect(ruleBody(database, '[data-blok-database-list-row-edit]:hover::before')).toContain('background-color: var(--blok-database-card-menu-hover-bg)');
+    expect(ruleBody(database, '[data-blok-database-list-row-edit]:hover')).not.toContain('background');
+  });
+
   // notion-live/listhover.png: "Alpha" ink ends at x 606 and the pencil box starts at 623.
   // Blok's title box ends ~1px past its ink, so 7px on top of the 8px gap lands the box 16px after the ink.
   it('sets the Edit pencil 16px after the title ink', () => {

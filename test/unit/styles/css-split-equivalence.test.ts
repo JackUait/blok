@@ -1771,6 +1771,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R94_BYTES = 1862;
     // Lane r98: Round 46 table frozen column 30px in from the edge with the strip clipped, sticky "+ New page". Net database.css growth against origin/main.
     const DATABASE_R98_BYTES = 527;
+    // Lane r100: Round 46 table smalls (feed body inset and size, tabular figures, OPEN and list Edit inner hover, OPEN inset, name glyph). Net database.css growth against origin/main.
+    const DATABASE_R100_BYTES = 1261;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2328,6 +2330,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R93_BYTES
       + DATABASE_R94_BYTES
       + DATABASE_R98_BYTES
+      + DATABASE_R100_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

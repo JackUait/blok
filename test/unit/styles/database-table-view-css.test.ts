@@ -233,6 +233,20 @@ describe('database table view styles', () => {
   });
 
   // `notion-live-7/33-open-hover.png` and `notion-live-8/62-close-hover.png` (pixels): the glyph's ink is about 15x12.
+  // notion-motion.md Round 46 §A: the 68.6x24 pill sits 4 in from the title cell's end (x 745.4); hover fills only the
+  // inner 64.6x20, radius 4, `background 0.02s ease-in`, and the 2px frame stays white.
+  it('sets the OPEN pill 4 in from the cell end and fills only its inner box on hover', () => {
+    const inner = exactRule('[data-blok-database-table-open]:not([data-compact])::before');
+
+    expect(ruleBody('[data-blok-database-table-open]')).toContain('inset-inline-end: var(--blok-space-1)');
+    expect(inner).toContain('inset: var(--blok-space-0-5)');
+    expect(inner).toContain('z-index: -1');
+    expect(inner).toContain('border-radius: var(--blok-radius-control-sm)');
+    expect(inner).toContain('transition: background-color 20ms ease-in');
+    expect(exactRule('[data-blok-database-table-open]:not([data-compact]):hover::before')).toContain('background-color: var(--blok-database-table-header-hover-bg)');
+    expect(exactRule('[data-blok-database-table-open]:not([data-compact]):hover')).toBe('');
+  });
+
   it('draws the OPEN and CLOSE glyph at 18px, over its 15.25px slot', () => {
     const svg = ruleBody('[data-blok-database-table-open] svg');
 
@@ -261,6 +275,13 @@ describe('database table view styles', () => {
     expect(box).toContain('margin-inline: calc(-1 * var(--blok-space-0-5)) var(--blok-space-0-75)');
     expect(ruleBody('[data-blok-database-table-cell] > [data-blok-database-page-icon-placeholder]')).toContain('var(--blok-database-table-title-icon)');
     expect(ruleBody('[data-blok-database-page-icon-placeholder] svg')).toMatch(/width:\s*18px/);
+  });
+
+  // notion-motion.md Round 46 §A: Notion's name glyph sits 9.5 under the row top, 2 lower than the -2 box puts it.
+  // The 2px comes off the bottom instead, so the row stays 37 tall.
+  it('sets the blank name glyph 2px lower without growing the row', () => {
+    expect(exactRule('[data-blok-database-table-cell] > [data-blok-database-page-icon-placeholder]'))
+      .toContain('margin-block: 0 calc(-1 * var(--blok-space-0-5))');
   });
 
   it('draws the header bottom line on the header cells and no dividers between them (Notion: border-right none)', () => {
@@ -324,9 +345,9 @@ describe('database table view styles', () => {
 });
 
 describe('database table number figures', () => {
-  // research/35 §17: Notion's table Number and Formula cells use lining, tabular figures.
-  it.each(['number', 'formula'])('a %s table cell draws lining, tabular figures', (type) => {
-    expect(ruleBody(`[data-blok-database-table-cell][data-type="${type}"]`)).toContain('font-variant-numeric: lining-nums tabular-nums');
+  // notion-motion.md Round 46 §A: Notion sets lining, tabular figures on every table cell, dates included.
+  it('every table cell draws lining, tabular figures', () => {
+    expect(ruleBody('[data-blok-database-table-cell]')).toContain('font-variant-numeric: lining-nums tabular-nums');
   });
 });
 

@@ -4105,6 +4105,8 @@ button[data-blok-database-board-lane-count]:hover {
   flex-shrink: 0;
   width: 30px;
   height: 24px;
+  position: relative;
+  isolation: isolate;
   margin-inline-start: var(--blok-space-1-75);
   padding: var(--blok-space-0-5);
   border: none;
@@ -4119,8 +4121,18 @@ button[data-blok-database-board-lane-count]:hover {
   display: inline-flex;
 }
 
-[data-blok-database-list-row-edit]:hover {
-  background: var(--blok-database-card-menu-hover-bg);
+/* notion-motion.md Round 46 §C.3: only the inner 26x20 fills; the 2px frame stays white. */
+[data-blok-database-list-row-edit]::before {
+  content: '';
+  position: absolute;
+  inset: var(--blok-space-0-5);
+  z-index: -1;
+  border-radius: var(--blok-radius-control);
+  transition: background-color 100ms ease-in-out;
+}
+
+[data-blok-database-list-row-edit]:hover::before {
+  background-color: var(--blok-database-card-menu-hover-bg);
 }
 
 [data-blok-database-list-row-edit] svg {
@@ -4138,6 +4150,12 @@ button[data-blok-database-board-lane-count]:hover {
   height: 20px;
   padding: 0;
   border-radius: var(--blok-radius-control-sm);
+}
+
+/* With no frame the whole 26x20 button fills. */
+[data-blok-database-list][data-direct-edit] [data-blok-database-list-row-edit]::before {
+  inset: 0;
+  border-radius: inherit;
 }
 
 [data-blok-database-list][data-direct-edit] [data-blok-database-list-row-edit] svg {
@@ -9755,6 +9773,7 @@ textarea[data-blok-database-cell-input] {
   border-block-end: 1px solid var(--blok-database-table-border);
   outline: none;
   cursor: default;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 [data-blok-database-table-grid][data-vertical-lines="true"] [data-blok-database-table-cell],
@@ -9787,6 +9806,11 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-table-title-icon);
 }
 
+/* notion-motion.md Round 46 §A: Notion's glyph sits 2 lower. The 2px comes off the bottom so the row stays 37. */
+[data-blok-database-table-cell] > [data-blok-database-page-icon-placeholder] {
+  margin-block: 0 calc(-1 * var(--blok-space-0-5));
+}
+
 [data-blok-database-page-icon-placeholder] svg {
   width: 18px;
   height: 18px;
@@ -9799,12 +9823,6 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-table-cell][data-type="number"] {
   text-align: end;
-  font-variant-numeric: lining-nums tabular-nums;
-}
-
-/* research/35 §17: tabular figures in the table only (notion-spec-2 §14.9). */
-[data-blok-database-table-cell][data-type="formula"] {
-  font-variant-numeric: lining-nums tabular-nums;
 }
 
 [data-blok-database-table-cell][data-type="select"],
@@ -9981,7 +9999,8 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-table-open] {
   position: absolute;
   inset-block-start: 6px;
-  inset-inline-end: 6px;
+  /* notion-motion.md Round 46 §A. OPEN_INSET in database-table-view.ts must match. */
+  inset-inline-end: var(--blok-space-1);
   z-index: 1;
   display: none;
   align-items: center;
@@ -10026,6 +10045,7 @@ textarea[data-blok-database-cell-input] {
    frame around a 26x20 button. The label stays, hidden, as the button's name. Only the inner button takes the
    pointer, so the fill stays inside it and a press on the 2px frame reaches the title cell, as in Notion. */
 [data-blok-database-table-open][data-compact] {
+  inset-inline-end: 6px;
   justify-content: center;
   width: 30px;
   padding: var(--blok-space-0-5);
@@ -10058,12 +10078,23 @@ textarea[data-blok-database-cell-input] {
   white-space: nowrap;
 }
 
-[data-blok-database-table-open]:not([data-compact]):hover {
-  background-image: linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg));
+/* notion-motion.md Round 46 §A: only the inner 64.6x20 fills; the 2px frame stays white. z-index -1 paints it over
+   the button's own fill and under its label, as the button is its own stacking context. */
+[data-blok-database-table-open]:not([data-compact])::before {
+  content: '';
+  position: absolute;
+  inset: var(--blok-space-0-5);
+  z-index: -1;
+  border-radius: var(--blok-radius-control-sm);
+  transition: background-color 20ms ease-in;
 }
 
-[data-blok-database-table-open]:not([data-compact]):active {
-  background-image: linear-gradient(var(--blok-database-pressed-bg), var(--blok-database-pressed-bg));
+[data-blok-database-table-open]:not([data-compact]):hover::before {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-table-open]:not([data-compact]):active::before {
+  background-color: var(--blok-database-pressed-bg);
 }
 
 /* ─── URL, email and phone cells: hover pill with Comment and Copy (research/16 §4) ─── */
@@ -18109,6 +18140,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-2));
 }
 
+[data-blok-database-feed-byline] ~ [data-blok-database-feed-body],
 [data-blok-database-feed-byline] ~ [data-blok-database-feed-reactions],
 [data-blok-database-feed-byline] ~ [data-blok-database-feed-comments] {
   margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-3-5));
@@ -18263,12 +18295,13 @@ button[data-blok-database-feed-reaction]:hover,
   height: 14px;
 }
 
+/* notion-motion.md Round 46 §C.4: 14/400/21, at the footer's column under a byline. */
 [data-blok-database-feed-body] {
   display: flex;
   flex-direction: column;
   gap: var(--blok-space-1);
-  font-size: 16px;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 21px;
   overflow-wrap: anywhere;
 }
 

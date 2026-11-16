@@ -126,6 +126,14 @@ describe('database chart and feed styles', () => {
     expect(ruleBody('[data-blok-database-feed-property]')).toContain('align-items: center');
   });
 
+  // notion-motion.md Round 46 §C.4: under a byline the body preview starts at card x + 54, as the footer, in 14/21.
+  it('indents the body preview to the footer column and sets it in 14/21', () => {
+    expect(ruleBody('[data-blok-database-feed-byline] ~ [data-blok-database-feed-body]'))
+      .toContain('margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-3-5))');
+    expect(ruleBody('[data-blok-database-feed-body]')).toMatch(/font-size:\s*14px/);
+    expect(ruleBody('[data-blok-database-feed-body]')).toMatch(/line-height:\s*21px/);
+  });
+
   it('marks a turned-off legend entry with muted ink, never a fill', () => {
     const off = ruleBody('[data-blok-database-chart-legend-entry][aria-pressed="false"]');
 

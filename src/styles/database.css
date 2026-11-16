@@ -1444,8 +1444,11 @@
   color: var(--blok-database-ink-secondary);
 }
 
-/* Notion's 18px blank page glyph before a title being edited (feel findings B09). */
-[data-blok-database-card-edit-glyph] {
+/* Notion's 18px blank page glyph before a title being edited (feel findings B09),
+   and the lines glyph of a page with a body (notion-motion.md, Round 45 gap 2). */
+[data-blok-database-card-edit-glyph],
+[data-blok-database-card] > [data-blok-database-page-icon-placeholder],
+[data-blok-database-gallery-card] > [data-blok-database-page-icon-placeholder] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1457,7 +1460,9 @@
   color: var(--blok-database-card-actions-icon);
 }
 
-[data-blok-database-card-edit-glyph] svg {
+[data-blok-database-card-edit-glyph] svg,
+[data-blok-database-card] > [data-blok-database-page-icon-placeholder] svg,
+[data-blok-database-gallery-card] > [data-blok-database-page-icon-placeholder] svg {
   inline-size: 18px;
   block-size: 18px;
 }
@@ -1466,7 +1471,8 @@
   width: calc(100% - 22px);
 }
 
-[data-blok-database-card-edit-glyph] + [data-blok-database-card-title-input] {
+[data-blok-database-card-edit-glyph] + [data-blok-database-card-title-input],
+[data-blok-database-page-icon-placeholder] + [data-blok-database-card-title-input] {
   width: calc(100% - 26px);
 }
 
@@ -2311,12 +2317,13 @@
 }
 
 [data-blok-database-page-icon] + [data-blok-database-card-title],
-[data-blok-database-page-icon] + [data-blok-database-gallery-title] {
+[data-blok-database-page-icon] + [data-blok-database-gallery-title],
+[data-blok-database-page-icon-placeholder] + [data-blok-database-card-title] {
   display: inline;
 }
 
 /* Calendar, timeline and feed icon boxes, measured in Notion (research/16 §2). */
-[data-blok-database-calendar-event] > [data-blok-database-page-icon],
+[data-blok-database-calendar-event] > :is([data-blok-database-page-icon], [data-blok-database-page-icon-placeholder]),
 [data-blok-database-timeline-bar] > [data-blok-database-page-icon],
 [data-blok-database-feed-head] > [data-blok-database-page-icon] {
   display: inline-flex;
@@ -2326,12 +2333,25 @@
 }
 
 /* Measured gap is 3px; the event's 6px flex gap already applies. */
-[data-blok-database-calendar-event] > [data-blok-database-page-icon] {
+[data-blok-database-calendar-event] > :is([data-blok-database-page-icon], [data-blok-database-page-icon-placeholder]) {
   inline-size: 14px;
   block-size: 14px;
   margin-inline-end: calc(var(--blok-space-0-75) - var(--blok-space-1-5));
   font-size: 12.6px;
   line-height: 12.6px;
+}
+
+/* notion-motion.md, Round 45: the lines glyph's ink is about 9.5x12.5 in rgb(142,139,134). */
+[data-blok-database-calendar-event] > [data-blok-database-page-icon-placeholder] {
+  color: var(--blok-database-card-actions-icon);
+}
+
+[data-blok-database-calendar-event] > [data-blok-database-page-icon-placeholder] svg {
+  flex: none;
+  inline-size: 16px;
+  block-size: 16px;
+  /* Taller than its 14px box: the cap would shrink it back. */
+  max-block-size: none;
 }
 
 /* Measured gap is 6px: the bar's flex gap alone. */
@@ -14581,6 +14601,18 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-gallery-title-text);
   white-space: normal;
   overflow-wrap: anywhere;
+}
+
+/* notion-motion.md, Round 45: the glyph at x 11 and the title at x 36, as on a board card.
+   The card is a flex column: the negative end margin lays the title over the glyph's line. */
+[data-blok-database-gallery-card] > [data-blok-database-page-icon-placeholder] {
+  align-self: flex-start;
+  margin-block: var(--blok-space-2) calc(-22.5px - var(--blok-space-2));
+  margin-inline-start: calc(var(--blok-space-2-5) + var(--blok-space-0-25));
+}
+
+[data-blok-database-page-icon-placeholder] + [data-blok-database-gallery-title] {
+  padding-inline-start: calc(var(--blok-space-2-5) + var(--blok-space-0-25) + 18px + var(--blok-space-1-75));
 }
 
 [data-blok-database-gallery-title]:empty::before {

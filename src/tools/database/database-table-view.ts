@@ -28,7 +28,7 @@ import { DatabaseTableGrid, createTableState } from './database-table-grid';
 import { SELECTION_BAR_SEGMENTS, bulkCloseClearsSelection, bulkStartValue, selectionPropertyButton, watchBulkCloseKey } from './database-selection-bar';
 import { cellText } from './database-table-clipboard';
 import type { CellChange, TableState } from './database-table-grid';
-import { fileChipIcon, pageIconElement, pagePlaceholderIcon, showsPageIcon } from './page-icon';
+import { fileChipIcon, rowPageGlyph, showsPageIcon } from './page-icon';
 
 import { CALCULATION_LABEL_KEYS, calcMenuAt, calculationItems, headerViewItems, loadLimitItems, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
 import type { CountCap, OpenMenuOptions, RowFavorite } from './database-table-menus';
@@ -1249,7 +1249,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       });
     }
 
-    const icon = column.property.type === 'title' && showsPageIcon(this.options.view) ? pageIconElement(row) ?? pagePlaceholderIcon() : null;
+    const icon = column.property.type === 'title' && showsPageIcon(this.options.view)
+      ? rowPageGlyph(row, this.options.cellContext?.rowHasBody?.(row.id) === true, true)
+      : null;
 
     if (icon !== null) {
       cell.insertBefore(icon, value);

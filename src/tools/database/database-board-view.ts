@@ -1,4 +1,4 @@
-import { fileChipIcon, pageIconElement, showsPageIcon } from './page-icon';
+import { fileChipIcon, rowPageGlyph, showsPageIcon } from './page-icon';
 import type { I18n } from '../../../types';
 import type { SelectOption, DatabaseRow, DatabaseViewConfig, PropertyDefinition, CardSize } from './types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
@@ -922,7 +922,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       cardEl.setAttribute('data-empty', '');
     }
 
-    const icon = showsPageIcon(this.settings.view) ? pageIconElement(row) : null;
+    const icon = showsPageIcon(this.settings.view) ? rowPageGlyph(row, this.settings.cellContext?.rowHasBody?.(row.id) === true, false) : null;
 
     if (icon !== null) {
       cardEl.appendChild(icon);
@@ -1168,8 +1168,8 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     }
     input.setSelectionRange(input.value.length, input.value.length);
     cardEl.setAttribute('data-editing', '');
-    // A page with its own icon keeps it; the blank page glyph stands in for none.
-    if (cardEl.querySelector(':scope > [data-blok-database-page-icon]') === null) {
+    // A page with its own icon or a body keeps its glyph; the blank page glyph stands in for none.
+    if (cardEl.querySelector(':scope > :is([data-blok-database-page-icon], [data-blok-database-page-icon-placeholder])') === null) {
       const glyph = document.createElement('span');
 
       glyph.setAttribute('data-blok-database-card-edit-glyph', '');

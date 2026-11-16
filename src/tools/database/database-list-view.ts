@@ -1,4 +1,4 @@
-import { fileChipIcon, pageIconElement, pagePlaceholderIcon } from './page-icon';
+import { fileChipIcon, pagePlaceholderIcon, rowPageGlyph } from './page-icon';
 import { showAvatarsOnly } from './avatar-only';
 import type { I18n } from '../../../types';
 import type { DatabaseRow, OpenPagesIn, PropertyDefinition, PropertyValue, SelectOption } from './types';
@@ -688,8 +688,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
       rowEl.appendChild(this.createGutter(row.id));
     }
 
-    // notion-spec-2 §21.8: a row with no emoji shows the empty-page glyph.
-    const icon = this.showPageIcon ? pageIconElement(row) ?? pagePlaceholderIcon() : null;
+    const icon = this.showPageIcon ? rowPageGlyph(row, this.settings.cellContext?.rowHasBody?.(row.id) === true, true) : null;
 
     if (icon !== null) {
       rowEl.appendChild(icon);

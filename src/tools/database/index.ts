@@ -794,6 +794,9 @@ export class DatabaseTool implements BlockTool {
   private movingOut = false;
   /** Set while a full redraw waits for an inline edit or drag to end. */
   private redrawWhenIdleRetry: (() => void) | null = null;
+  /** Rows whose page had a body when the views last read it. Null: not read since the last redraw. */
+  private bodyRows: Set<string> | null = null;
+  private bodyCheckQueued = false;
   private viewControls: DatabaseViewControls | null = null;
   private tabDisplayPref: TabDisplayPreference | null = null;
   private unregisterGroupToggle: (() => void) | null = null;
@@ -910,6 +913,7 @@ export class DatabaseTool implements BlockTool {
     this.api.events.on(DATABASE_RENDERED_EVENT, this.handleDatabaseRendered);
     this.api.events.on(DATABASE_GONE_EVENT, this.handleDatabaseGone);
     this.api.events.on('block changed', this.handleBodyEdit);
+    this.api.events.on('block changed', this.handleBodyShape);
     this.api.events.on('block changed', this.handleAgentRowWrite);
     this.api.events.on('block changed', this.scheduleBacklinks);
     this.builtInComments.listen();
@@ -937,6 +941,58 @@ export class DatabaseTool implements BlockTool {
     // Another database's row or a template reads no values, so it fills nothing.
     if (row !== undefined) this.hostLevers.bodyEdited(row);
   };
+
+  /**
+   * A body block added, removed or moved can give a row its first body or
+   * take its last: the views' page glyph follows. Read after the event, as an
+   * insert sets its parent after it. Redraws only when a row flipped.
+   */
+  private readonly handleBodyShape = (payload: unknown): void => {
+    const type = (payload as { event?: { type?: unknown } } | undefined)?.event?.type;
+
+    if (this.bodyRows === null || this.bodyCheckQueued || changedBlock(payload)?.name === 'database-row'
+      || (type !== 'block-added' && type !== 'block-removed' && type !== 'block-moved')) return;
+    this.bodyCheckQueued = true;
+    queueMicrotask(() => {
+      this.bodyCheckQueued = false;
+      const before = this.bodyRows;
+
+      if (this.destroyed || before === null) return;
+      const after = this.readBodyRows();
+
+      this.bodyRows = after;
+      if (after.size !== before.size || [...after].some((rowId) => !before.has(rowId))) this.redrawWhenIdle();
+    });
+  };
+
+  /** Rows whose page has a body: what `rowBodyBlocks` would find. One pass, as getChildren scans every block. */
+  private readBodyRows(): Set<string> {
+    const rows = this.model.getOrderedRows();
+    const ids = new Set(rows.map((row) => row.id));
+    const found = new Set<string>();
+
+    for (let index = 0; index < this.api.blocks.getBlocksCount(); index++) {
+      const block = this.api.blocks.getBlockByIndex(index);
+      const parentId = block?.parentId;
+
+      if (block !== undefined && typeof parentId === 'string' && ids.has(parentId) && block.name !== 'database-row' && !isAnnotationBlock(block)) {
+        found.add(parentId);
+      }
+    }
+    const schema = this.model.getSchema();
+    const descriptionId = schema.find((p) => p.type === 'richText')?.id;
+
+    rows.filter((row) => !found.has(row.id) && pageContentSourceBlocks(row, schema, descriptionId).length > 0)
+      .forEach((row) => found.add(row.id));
+
+    return found;
+  }
+
+  private rowHasBody(rowId: string): boolean {
+    this.bodyRows ??= this.readBodyRows();
+
+    return this.bodyRows.has(rowId);
+  }
 
   /**
    * An agent's row write fires what the person's own write fires (the sync:
@@ -2869,6 +2925,7 @@ export class DatabaseTool implements BlockTool {
     this.api.events.off('block replayed', this.handleBlockReplayed);
     this.api.events.off(HistoryDraftsCommit, this.commitDraftsBeforeHistory);
     this.api.events.off('block changed', this.handleBodyEdit);
+    this.api.events.off('block changed', this.handleBodyShape);
     this.api.events.off('block changed', this.handleAgentRowWrite);
     this.api.events.off('block changed', this.scheduleBacklinks);
     this.api.events.off('block replayed', this.scheduleBacklinks);
@@ -12333,6 +12390,7 @@ export class DatabaseTool implements BlockTool {
       relationScope: (property) => this.relatedDatabaseName(property),
       openRelated: (property, rowId, peek) => this.openRelated(property, rowId, peek),
       relationCreator: (property) => this.relationCreator(property),
+      rowHasBody: (rowId) => this.rowHasBody(rowId),
       ...this.mapCellContext(),
       ...(this.config.helpLinks !== undefined ? { helpLinks: this.config.helpLinks } : {}),
       ...(this.people !== undefined ? { people: this.people } : {}),
@@ -13444,6 +13502,7 @@ export class DatabaseTool implements BlockTool {
     }
 
     this.stopWaitingForIdle();
+    this.bodyRows = null;
 
     // The old board wrapper is the first/only direct child of boardContainer
     const oldBoardWrapper = this.boardContainer.querySelector<HTMLElement>(':scope > [data-blok-database-dashboard]')

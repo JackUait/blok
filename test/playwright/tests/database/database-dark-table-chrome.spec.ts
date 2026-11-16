@@ -206,7 +206,9 @@ for (const path of paths) {
       await expect(open).toHaveCSS('box-shadow', 'rgb(32, 32, 32) 0px 0px 0px 2px inset, rgb(56, 56, 54) 0px 0px 0px 1px, rgba(25, 25, 25, 0.08) 0px 4px 12px -2px');
       await expect(open).toHaveCSS('color', 'rgb(173, 169, 163)');
       await open.hover();
-      await expect(open).toHaveCSS('background-image', `linear-gradient(${HOVER_FILL}, ${HOVER_FILL})`);
+      // Round 46 §A: only the inner box (the ::before) fills; the 2px frame keeps its color.
+      await expect.poll(() => open.evaluate((el) => getComputedStyle(el, '::before').backgroundColor)).toBe(HOVER_FILL);
+      await expect(open).toHaveCSS('background-color', 'rgb(37, 37, 37)');
     });
 
     test('"+ New page": dark ink, and the hover fills only the button (research/22 §12)', async ({ page }) => {

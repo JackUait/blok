@@ -147,6 +147,7 @@ import { DatabaseTabBar, VIEW_ICONS } from './database-tab-bar';
 import { foldTitleRow } from './database-view-bar-fold';
 import { IconArrowDiagonal, IconCalendar, IconReplace, IconCreditCard, IconCurrency, IconDatabase, IconDatabaseInline, IconDatabaseLinked, IconFolderQuestion, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconDownload, IconImage, IconForm, IconViewForm, IconMergeCells, IconPageLayout, IconReturn, IconTable, IconTimeline, IconUpload, IconWand, IconInfo } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
+import type { PopoverDesktopParams } from '../../components/utils/popover/popover-desktop';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { nanoid } from 'nanoid';
@@ -373,6 +374,24 @@ const seedWins = <T extends DatabaseData | undefined>(data: T): T => {
 
 /** Groups a board shows before "Load more groups" (research/08). */
 const BOARD_GROUP_PAGE = 10;
+
+/**
+ * Under the button with its start edge on the button's, as before, but through the cover clamp:
+ * near a window edge it slides in to `margin` from it instead of turning to end at the button.
+ * Above, its bottom sits `offset` over the button's top. The top and bottom keep no margin.
+ */
+const groupMenuCoverPlacement = (anchor: HTMLElement, margin: number, offset: number): Pick<PopoverDesktopParams, 'cover' | 'viewportMargin' | 'coverFlipOffset' | 'coverVerticalMargin'> & { position: DOMRect; positionContext: HTMLElement } => {
+  const rect = anchor.getBoundingClientRect();
+
+  return {
+    cover: true,
+    viewportMargin: margin,
+    coverVerticalMargin: 0,
+    position: new DOMRect(rect.x, rect.bottom + offset, rect.width, 0),
+    positionContext: anchor,
+    coverFlipOffset: rect.height + 2 * offset,
+  };
+};
 
 /** Layouts Blok draws; gallery is in the type but falls back to a board. */
 const RENDERED_LAYOUTS: readonly ViewType[] = ['table', 'board', 'gallery', 'list', 'chart', 'timeline', 'feed', 'calendar', 'form', 'map'];
@@ -10089,10 +10108,10 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** `owner` keeps `data-popover-open` while the menu is up, so its hover-only buttons stay shown. */
-  private showGroupPopover(anchor: HTMLElement, items: ReturnType<typeof groupMenuItems>, owner?: HTMLElement, layout: { minWidth?: string; scopeElement?: HTMLElement; class?: string; offset?: number; highlight?: string } = {}): void {
+  private showGroupPopover(anchor: HTMLElement, items: ReturnType<typeof groupMenuItems>, owner?: HTMLElement, layout: { minWidth?: string; scopeElement?: HTMLElement; class?: string; offset?: number; highlight?: string; edgeMargin?: number } = {}): void {
     this.groupMenuPopover?.destroy();
 
-    const popover = new PopoverDesktop({
+    const params: PopoverDesktopParams = {
       class: layout.class ?? DATABASE_MENU_CLASS,
       animateClose: true,
       trigger: anchor,
@@ -10102,7 +10121,10 @@ export class DatabaseTool implements BlockTool {
       autoFocusFirstItem: false,
       items,
       ...(layout.scopeElement !== undefined ? { scopeElement: layout.scopeElement } : {}),
-    });
+    };
+    const popover = new PopoverDesktop(layout.edgeMargin === undefined
+      ? params
+      : { ...params, ...groupMenuCoverPlacement(anchor, layout.edgeMargin, layout.offset ?? 0) });
 
     // Escape closes only the open submenu, as measured on Notion's other menus (research/23:33, 26:78, 27:299, 35:418).
     popover.escapeClosesSubmenuFirst = true;
@@ -10167,6 +10189,8 @@ export class DatabaseTool implements BlockTool {
       class: DATABASE_GROUP_MENU_CLASS,
       // notion-motion.md Round 35 and Round 39 §4: the board's and the table's open with their first row filled.
       highlight: 'edit-groups',
+      // notion-motion.md Round 53 §9A: near the right edge it slides in to 12 from the window.
+      edgeMargin: 12,
     });
   }
 

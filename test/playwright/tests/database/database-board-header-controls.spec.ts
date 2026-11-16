@@ -144,3 +144,40 @@ test('the group ⋯ menu opens with its first row filled, and the fill follows t
   await expect(rows.nth(2)).toHaveAttribute('data-blok-focused', 'true');
   await expect(rows.nth(0)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
 });
+
+// notion-motion.md Round 53 §9A: near the window's right edge Notion's group menu keeps to the button's
+// left, slid in to 12 from the window (x 1320 of 1512), instead of turning to end at the button.
+test('the group ⋯ menu near the right edge slides in to 12 from the window', async ({ page }) => {
+  await mount(page);
+  const column = page.locator('[data-blok-database-column][data-option-id="o-doing"]');
+  const header = column.locator('[data-blok-database-column-header]');
+  const more = column.getByRole('button', { name: 'More group options' });
+
+  await header.hover();
+  const button = await more.boundingBox();
+
+  if (button === null) throw new Error('no ⋯ button');
+  // The holder is centred, so move it to put the button 100 from the window's end.
+  const width = 1400;
+  const shift = Math.round(width - 100 - (button.x + button.width));
+
+  await page.evaluate((dx) => {
+    const holder = document.getElementById('blok');
+
+    if (holder !== null) holder.style.transform = `translateX(${dx}px)`;
+  }, shift);
+  await header.hover();
+  await more.click();
+
+  const menu = page.locator('[data-blok-popover-custom-class~="blok-database-group-menu"][data-blok-popover-opened="true"] [data-blok-popover-container]');
+
+  await expect(menu).toBeVisible();
+  // Read it at rest: it opens from scale 0.96.
+  await menu.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)));
+  const box = await menu.boundingBox();
+  const moved = await more.boundingBox();
+
+  if (box === null || moved === null) throw new Error('no menu');
+  expect(box.x + box.width).toBeCloseTo(width - 12, 0);
+  expect(box.x).toBeGreaterThan(moved.x + moved.width - box.width);
+});

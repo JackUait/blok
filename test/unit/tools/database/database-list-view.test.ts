@@ -5,7 +5,7 @@ import type { I18n } from '../../../../types';
 import { createDefaultStatusSettings } from '../../../../src/tools/database/property-values';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { hover, shownHint } from './hint-harness';
-import { IconExpandDiagonal, IconPeekCenter, IconPeekSide, IconPencilLine } from '../../../../src/components/icons';
+import { IconExpandDiagonal, IconPeekCenter, IconPeekSide, IconPencilLine, IconPlayerPlay } from '../../../../src/components/icons';
 
 const makeRow = (overrides: Partial<DatabaseRow> = {}): DatabaseRow => ({
   id: 'row-1', position: 'a0', properties: { title: 'Fix bug' }, ...overrides,
@@ -1406,7 +1406,7 @@ describe('DatabaseListView', () => {
       expect(rowsContainer.style.display).toBe('');
     });
 
-    it('draws the toggle as a chevron and marks the group collapsed, so only the caret turns', () => {
+    it('draws the toggle as an icon and marks the group collapsed, so only the caret turns', () => {
       const { options, getRows } = makeGroupedOptions();
       const view = new DatabaseListView({
         readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
@@ -1427,6 +1427,19 @@ describe('DatabaseListView', () => {
 
       header.click();
       expect(firstGroup.hasAttribute('data-collapsed')).toBe(false);
+    });
+
+    // notion-motion.md Round 45 §1 List grouped: Notion's caret is the filled arrowCaretDownFillSmall.
+    it('draws the group toggle as the filled caret the table and board groups use', () => {
+      const { options, getRows } = makeGroupedOptions();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
+        options, getRows,
+      });
+      const toggle = view.createView().querySelector('[data-blok-database-list-group-toggle]') as HTMLElement;
+      const caret = Object.assign(document.createElement('span'), { innerHTML: IconPlayerPlay });
+
+      expect(toggle.innerHTML).toBe(caret.innerHTML);
     });
 
     it('starts a group collapsed when the view saved it collapsed', () => {

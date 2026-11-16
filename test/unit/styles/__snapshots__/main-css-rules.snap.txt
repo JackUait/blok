@@ -7987,10 +7987,10 @@ button[data-blok-database-board-lane-count]:hover {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 26px;
-  height: 20px;
+  width: 30px;
+  height: 24px;
   margin-inline-start: var(--blok-space-1-75);
-  padding: 0;
+  padding: var(--blok-space-0-5);
   border: none;
   border-radius: var(--blok-radius-control);
   background: var(--blok-database-card-actions-bg);
@@ -8019,6 +8019,7 @@ button[data-blok-database-board-lane-count]:hover {
 [data-blok-database-list][data-direct-edit] [data-blok-database-list-row-edit] {
   width: 26px;
   height: 20px;
+  padding: 0;
   border-radius: var(--blok-radius-control-sm);
 }
 
@@ -8243,7 +8244,7 @@ button[data-blok-database-board-lane-count]:hover {
   height: 16px;
 }
 
-[data-blok-database-list] > [data-blok-database-add-row] > span[aria-hidden="true"] {
+[data-blok-database-list] > [data-blok-database-add-row] > span[aria-hidden="true"], [data-blok-database-list-group] > [data-blok-database-add-row] > span[aria-hidden="true"] {
   margin-inline-start: var(--blok-space-0-25);
 }
 
@@ -8251,6 +8252,14 @@ button[data-blok-database-board-lane-count]:hover {
   display: flex;
   flex-direction: column;
   margin-bottom: calc(var(--blok-space-6) + var(--blok-space-1));
+}
+
+[data-blok-database-list-group]:first-child {
+  margin-top: var(--blok-space-2);
+}
+
+[data-blok-database-list-group] [data-blok-database-list-row] + [data-blok-database-list-row] {
+  margin-top: 0;
 }
 
 [data-blok-database-list-group-header] {
@@ -14041,7 +14050,7 @@ button[data-blok-database-table-calc] > [data-blok-database-table-calc-box]:hove
   transition: transform 200ms ease-out;
 }
 
-[data-blok-database-table-group-toggle] svg, [data-blok-database-board-lane-toggle] svg {
+[data-blok-database-table-group-toggle] svg, [data-blok-database-board-lane-toggle] svg, [data-blok-database-list-group-toggle] svg {
   width: 20px;
   height: 20px;
   rotate: 90deg;
@@ -18858,7 +18867,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 [data-blok-database-card-properties] {
   display: flex;
   flex-direction: column;
-  margin-block-start: var(--blok-space-1);
+  margin-block-start: var(--blok-space-1-5);
   margin-block-end: var(--blok-space-0-5);
   margin-inline: calc(-1 * var(--blok-space-1));
 }

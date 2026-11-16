@@ -188,12 +188,15 @@ describe('list row hover chrome (findings-listgallery L03, L04)', () => {
   });
 
   // notion-motion.md Round 26 §4 (r26-list-off-hover.raw): "Edit" is 26x20, radius 6, a 16px pencilLine.
-  it('shows the white 26x20 Edit pencil only while the row is hovered', () => {
+  // notion-motion.md Round 45 §1 List row hover: a 30x24 white frame with 2px padding holds the 26x20 button,
+  // so the pencil sits at 621.9.
+  it('shows the white 30x24 Edit frame, padded 2px around the pencil, only while the row is hovered', () => {
     const body = ruleBody(database, '[data-blok-database-list-row-edit]');
 
     expect(body).toContain('display: none');
-    expect(body).toContain('width: 26px');
-    expect(body).toContain('height: 20px');
+    expect(body).toContain('width: 30px');
+    expect(body).toContain('height: 24px');
+    expect(body).toContain('padding: var(--blok-space-0-5)');
     expect(ruleBody(database, '[data-blok-database-list-row-edit] svg')).toContain('width: 16px');
     expect(body).toContain('border-radius: var(--blok-radius-control)');
     expect(body).toContain('background: var(--blok-database-card-actions-bg)');
@@ -214,6 +217,7 @@ describe('list row hover chrome (findings-listgallery L03, L04)', () => {
 
     expect(body).toContain('width: 26px');
     expect(body).toContain('height: 20px');
+    expect(body).toContain('padding: 0');
     expect(body).toContain('border-radius: var(--blok-radius-control-sm)');
     expect(ruleBody(database, '[data-blok-database-list][data-direct-edit] [data-blok-database-list-row-edit] svg')).toContain('height: 20px');
     expect(ruleBody(database, '[data-blok-database-list][data-direct-edit] [data-blok-database-list-row-title]')).toContain('cursor: text');
@@ -306,6 +310,29 @@ describe('grouped list (findings-listgallery L08, L10)', () => {
     expect(header).toContain('margin-bottom: var(--blok-space-3)');
     expect(ruleBody(database, '[data-blok-database-list-group]')).toContain('margin-bottom: calc(var(--blok-space-6) + var(--blok-space-1))');
     expect(ruleBody(database, '[data-blok-database-list-rows]')).not.toContain('padding-inline-start');
+  });
+});
+
+// notion-motion.md Round 45 §1 List grouped (r45-n-listg-txt.raw, r45-n-listg-svg.raw).
+describe('grouped list (Round 45)', () => {
+  it('drops the first group 8px, so its header text sits at Notion\'s 320.7, not 312.5', () => {
+    expect(ruleBody(database, '[data-blok-database-list-group]:first-child')).toContain('margin-top: var(--blok-space-2)');
+  });
+
+  it('steps the rows in a group 31px, while the ungrouped list keeps 32', () => {
+    expect(ruleBody(database, '[data-blok-database-list-group] [data-blok-database-list-row] + [data-blok-database-list-row]')).toContain('margin-top: 0');
+    expect(ruleBody(database, '[data-blok-database-list-row] + [data-blok-database-list-row]')).toBe('');
+  });
+
+  it('draws the group caret as the table\'s filled caret, turned down', () => {
+    const body = ruleBody(database, '[data-blok-database-list-group-toggle] svg');
+
+    expect(body).toContain('width: 20px');
+    expect(body).toContain('rotate: 90deg');
+  });
+
+  it('puts the group\'s "+ New page" plus at x 546, in line with the row icons', () => {
+    expect(ruleBody(database, '[data-blok-database-list-group] > [data-blok-database-add-row] > span[aria-hidden="true"]')).toContain('margin-inline-start: var(--blok-space-0-25)');
   });
 });
 

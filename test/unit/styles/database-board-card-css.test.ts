@@ -165,6 +165,11 @@ describe('database board card and calendar "No date" styles', () => {
     expect(body).toContain('margin-block-end: var(--blok-space-0-5)');
   });
 
+  // notion-motion.md Round 45 §1 Board: the property list starts 36.5 below the card top, 6 under the title block.
+  it('starts the property list 6px under the title block', () => {
+    expect(ruleBody('[data-blok-database-card-properties]')).toContain('margin-block-start: var(--blok-space-1-5)');
+  });
+
   it('bleeds the preview to the card edges and crops unless Fit image is on', () => {
     expect(ruleBody('[data-blok-database-card-preview]')).toContain('margin: calc(-1 * var(--blok-space-2)) calc(-1 * var(--blok-space-2-5)) var(--blok-space-2)');
     expect(ruleBody('[data-blok-database-card-image]')).toMatch(/object-fit:\s*cover/);

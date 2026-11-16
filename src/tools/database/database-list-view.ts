@@ -8,7 +8,7 @@ import { safeImageSrc } from '../../components/utils/sanitize-url';
 import { createGroupPill, renderCellValue } from './cells';
 import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
-import { IconChevronDown, IconDotsHorizontal, IconExpandDiagonal, IconPeekCenter, IconPeekSide, IconPencilLine, IconPlus, IconRowGrip } from '../../components/icons';
+import { IconDotsHorizontal, IconExpandDiagonal, IconPeekCenter, IconPeekSide, IconPencilLine, IconPlayerPlay, IconPlus, IconRowGrip } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
 import { onHover } from '../../components/utils/tooltip';
 import { propertyHint } from './property-hint';
@@ -583,7 +583,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
     toggle.setAttribute('data-blok-database-list-group-toggle', '');
     toggle.setAttribute('aria-expanded', 'true');
     toggle.setAttribute('aria-label', this.i18n.t('tools.database.tableCollapseGroup'));
-    toggle.innerHTML = IconChevronDown;
+    toggle.innerHTML = IconPlayerPlay;
     label.setAttribute('data-blok-database-list-group-label', '');
     label.appendChild(this.groupValue(option));
     header.append(toggle, label);

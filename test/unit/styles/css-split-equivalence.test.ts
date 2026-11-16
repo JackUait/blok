@@ -1763,6 +1763,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R91_BYTES = 2205;
     // Lane r96: Round 45 gallery content preview inset and ink, calendar grown-day tail and card width, 80% panel cap, layout labels. Net database.css growth against origin/main.
     const DATABASE_R96_BYTES = 412;
+    // Lane r95: Round 45 grouped list (first group offset, 31 step, filled caret, add-row plus), list Edit frame, board card property gap. Net database.css growth against origin/main.
+    const DATABASE_R95_BYTES = 625;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2316,6 +2318,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R90_BYTES
       + DATABASE_R91_BYTES
       + DATABASE_R96_BYTES
+      + DATABASE_R95_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

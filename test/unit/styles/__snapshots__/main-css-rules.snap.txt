@@ -18772,7 +18772,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   outline: none;
 }
 
-[data-blok-database-timeline-row][data-blok-database-row-selected] [data-blok-database-timeline-bar]::after {
+[data-blok-database-timeline-bar]::after {
   content: "";
   position: absolute;
   inset: 2px;
@@ -18782,6 +18782,13 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   border-end-end-radius: inherit;
   background-color: var(--blok-icon-active-bg);
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+[data-blok-database-timeline-row][data-blok-database-row-selected] [data-blok-database-timeline-bar]::after {
+  opacity: 1;
+  transition: none;
 }
 
 [data-blok-database-timeline-bar][data-dragging] {
@@ -18793,15 +18800,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 [data-blok-database-timeline]:is([data-dragging="start"], [data-dragging="end"]) [data-blok-database-timeline-bar][data-dragging]::after {
-  content: "";
-  position: absolute;
-  inset: 2px;
-  border-start-start-radius: inherit;
-  border-start-end-radius: inherit;
-  border-end-start-radius: inherit;
-  border-end-end-radius: inherit;
-  background-color: var(--blok-icon-active-bg);
-  pointer-events: none;
+  opacity: 1;
+  transition: none;
 }
 
 [data-blok-database-timeline][data-dragging="start"] [data-blok-database-timeline-bar][data-dragging] [data-blok-database-timeline-resize="start"]::after, [data-blok-database-timeline][data-dragging="end"] [data-blok-database-timeline-bar][data-dragging] [data-blok-database-timeline-resize="end"]::after {
@@ -18970,7 +18970,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   cursor: ew-resize;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-database-timeline-toolbar] button, [data-blok-database-timeline-new], [data-blok-database-timeline-new-ghost], [data-blok-database-timeline-load-more], [data-blok-database-timeline-row-handle], [data-blok-database-timeline-bar], [data-blok-database-timeline-bar]::before, [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][data-swapped] > svg, [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle] [data-blok-database-timeline-toggle-out] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-timeline-toolbar] button, [data-blok-database-timeline-new], [data-blok-database-timeline-new-ghost], [data-blok-database-timeline-load-more], [data-blok-database-timeline-row-handle], [data-blok-database-timeline-bar], [data-blok-database-timeline-bar]::before, [data-blok-database-timeline-bar]::after, [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][data-swapped] > svg, [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle] [data-blok-database-timeline-toggle-out] {
   transition: none;
 }
 

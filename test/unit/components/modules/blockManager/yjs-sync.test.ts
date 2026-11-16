@@ -202,7 +202,7 @@ const createMockBlockFactory = (): BlockFactory => {
   // The reconciler refuses to materialise a tool this registry lacks, so the
   // tools these tests name must be registered even though every test stubs
   // composeBlock itself.
-  for (const toolName of ['paragraph', 'toggle', 'callout', 'table']) {
+  for (const toolName of ['paragraph', 'toggle', 'callout', 'table', 'database', 'database-row']) {
     mockTools.set(toolName, {} as BlockToolAdapter);
   }
 
@@ -2249,6 +2249,54 @@ describe('BlockYjsSync', () => {
     });
 
     describe('handleYjsBatchAdd', () => {
+      it('bootstraps a database and its row bodies without rescanning the growing block array for placement', () => {
+        yjsSync.destroy();
+        blocksStore = createBlocksStore([]);
+        repository.initialize(blocksStore);
+        yjsSync = new BlockYjsSync(createMockDependencies(mockYjsManager), repository, factory, mockHandlers, blocksStore);
+        yjsSync.subscribe();
+
+        const entries = [{ id: 'database', type: 'database', parent: undefined as string | undefined }];
+        for (let row = 0; row < 80; row++) {
+          entries.push({ id: `row-${row}`, type: 'database-row', parent: 'database' });
+          entries.push({ id: `body-${row}`, type: 'paragraph', parent: `row-${row}` });
+        }
+        const records = new Map(entries.map(entry => [entry.id, createMockYMap({
+          type: entry.type,
+          data: createMockYMap({ text: entry.id }),
+          parentId: entry.parent,
+        })]));
+        mockGetBlockById(mockYjsManager).mockImplementation((id: string) => records.get(id));
+        mockToJSON(mockYjsManager).mockReturnValue(entries);
+        vi.spyOn(factory, 'composeBlock').mockImplementation(options => createMockBlock({
+          id: options.id,
+          name: options.tool,
+          parentId: options.parentId,
+        }));
+        const positionScans = vi.spyOn(blocksStore.array, 'indexOf');
+        const activationOrder: string[] = [];
+        vi.mocked(mockHandlers.onBlockAdded).mockImplementation(block => {
+          activationOrder.push(block.id);
+          expect(repository.length).toBe(entries.length);
+        });
+
+        try {
+          callback({ blockIds: entries.map(entry => entry.id).reverse(), type: 'batch-add', origin: 'remote' });
+
+          // Neither placement nor activation should search the growing array
+          // for every row and body when document order already gives the index.
+          expect(positionScans.mock.calls.length).toBe(0);
+          expect(repository.blocks.map(block => block.id)).toEqual(entries.map(entry => entry.id));
+          expect(activationOrder).toEqual(entries.map(entry => entry.id));
+          expect(repository.getBlockById('body-79')?.parentId).toBe('row-79');
+          expect(mockYjsManager.fromJSON).not.toHaveBeenCalled();
+          expect(mockYjsManager.addBlock).not.toHaveBeenCalled();
+        } finally {
+          yjsSync.destroy();
+          vi.restoreAllMocks();
+        }
+      });
+
       it('creates all blocks and adds to array before activating any', () => {
         const tableBlock = createMockBlock({ id: 'table-1' });
         const childBlock = createMockBlock({ id: 'child-1' });

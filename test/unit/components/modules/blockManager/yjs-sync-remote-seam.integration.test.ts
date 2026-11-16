@@ -79,6 +79,7 @@ const createStubBlock = (seed: StubBlockSeed): Block => {
     preservedTunes: {},
     setData: vi.fn(() => Promise.resolve(true)),
     call: vi.fn(),
+    renderIfVisible: vi.fn(),
     destroy: vi.fn(),
     // Mirrors the real column / column_list declarations.
     tool: { isLayout: seed.name === 'column' || seed.name === 'column_list' },

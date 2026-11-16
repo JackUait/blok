@@ -2047,6 +2047,43 @@ describe('Blocks', () => {
   });
 
   describe('activateBlock', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('activates a known batch position without scanning every earlier block', () => {
+      const blocks = createBlocks();
+      const entries = Array.from({ length: 80 }, (_, index) => createMockBlock(`block-${index}`));
+      entries.forEach((block, index) => blocks.addToArray(index, block));
+      const scans = vi.spyOn(blocks.array, 'indexOf');
+
+      entries.forEach((block, index) => blocks.activateBlock(block, index));
+
+      expect(scans.mock.calls.length).toBe(0);
+      expect(Array.from(workingArea.children)).toEqual(entries.map(block => block.holder));
+      entries.forEach(block => expect(block.call).toHaveBeenCalledWith(BlockToolAPI.RENDERED));
+    });
+
+    it('falls back to the live position when an earlier lifecycle hook shifted the batch', () => {
+      const blocks = createBlocks();
+      const first = createMockBlock('first');
+      const last = createMockBlock('last');
+      blocks.addToArray(0, first);
+      blocks.addToArray(1, last);
+      blocks.activateBlock(first, 0);
+      const inserted = createMockBlock('inserted');
+      blocks.insert(1, inserted);
+
+      blocks.activateBlock(last, 1);
+
+      expect(Array.from(workingArea.children)).toEqual([first.holder, inserted.holder, last.holder]);
+      expect(last.call).toHaveBeenCalledWith(BlockToolAPI.RENDERED);
+    });
+
     it('inserts block into DOM and calls RENDERED when holder is not connected', () => {
       const blocks = createBlocks();
       const block1 = createMockBlock('block-1');

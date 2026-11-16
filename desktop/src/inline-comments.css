@@ -24,3 +24,7 @@
 [data-inline-comment-panel] textarea { min-width: 0; }
 [data-blok-item-name="comment"][data-blok-popover-item] { grid-column: 1 / -1; justify-content: flex-start; gap: 8px; }
 [data-inline-comment-panel] [data-blok-database-comment-time] { margin-inline-start: 6px; }
+
+[data-inline-comment-code-action] { position: fixed; z-index: 81; display: flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid var(--desktop-border); border-radius: 7px; background: var(--desktop-strip); color: var(--desktop-ink); box-shadow: 0 4px 12px rgb(0 0 0 / 12%); font: inherit; font-size: 13px; cursor: pointer; }
+[data-inline-comment-code-action]:hover { background: var(--desktop-hover); }
+[data-inline-comment-code-action]:focus-visible { outline: 2px solid var(--desktop-ink); outline-offset: 2px; }

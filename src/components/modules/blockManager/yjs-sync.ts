@@ -2170,8 +2170,9 @@ export class BlockYjsSync {
     // inserts into the memory array as it goes, so a per-block recompute would
     // shift the indices of the blocks still to come.
     const order = this.docOrderKnownToMemory(new Set(candidates.map((entry) => entry.blockId)));
+    const docRank = new Map(order.map((id, index) => [id, index]));
     const toCreate = candidates
-      .map((entry) => ({ ...entry, docIndex: order.indexOf(entry.blockId) }))
+      .map((entry) => ({ ...entry, docIndex: docRank.get(entry.blockId) ?? -1 }))
       .filter((entry) => entry.docIndex !== -1);
 
     if (toCreate.length === 0) {
@@ -2190,6 +2191,13 @@ export class BlockYjsSync {
     // restores both invariants.
     toCreate.sort((a, b) => a.docIndex - b.docIndex);
 
+    // An empty view is populated in ascending document order. Its next flat
+    // index is already known, including rows and bodies under self-placing
+    // tools; searching the growing array for each predecessor is quadratic.
+    const initialBatch = this.repository.length === 0
+      && new Set(toCreate.map(entry => entry.blockId)).size === toCreate.length;
+    const previousSibling = new Map<string | null, string>();
+
     this.withAtomicOperation(() => {
       // Pass 1 — create blocks and add to array (no DOM, no RENDERED)
       const created: Array<{ block: Block; targetIndex: number; parentId: string | undefined; placement: TreePlacement | undefined }> = [];
@@ -2197,10 +2205,27 @@ export class BlockYjsSync {
       for (const entry of toCreate) {
         // Against the live array: earlier entries of this batch are in it and
         // may be this entry's doc neighbour.
-        const placement = this.docPlacementInMemory(entry.blockId, entry.parentId ?? null, order);
-        const targetIndex = placement !== undefined
-          ? this.flatIndexFor(placement)
-          : this.memoryIndexFromDocNeighbour(entry.blockId, entry.parentId, order);
+        const parentId = entry.parentId ?? null;
+        const { placement, targetIndex } = (() => {
+          if (initialBatch && this.repository.length === created.length) {
+            const parent = parentId === null ? undefined : this.repository.getBlockById(parentId);
+            const hasPlacement = parentId === null
+              || (parent !== undefined && !isSelfPlacedParent(parent, id => this.repository.getBlockById(id)));
+
+            return {
+              placement: hasPlacement ? { parentId, afterId: previousSibling.get(parentId) ?? null } : undefined,
+              targetIndex: entry.docIndex,
+            };
+          }
+          const placement = this.docPlacementInMemory(entry.blockId, parentId, order);
+
+          return {
+            placement,
+            targetIndex: placement !== undefined
+              ? this.flatIndexFor(placement)
+              : this.memoryIndexFromDocNeighbour(entry.blockId, entry.parentId, order),
+          };
+        })();
         const block = this.factory.composeBlock({
           id: entry.blockId,
           tool: entry.toolName,
@@ -2215,6 +2240,7 @@ export class BlockYjsSync {
         });
 
         this.blocksStore.addToArray(targetIndex, block);
+        previousSibling.set(parentId, entry.blockId);
 
         // Same as the single add: the tool normalises after this window — see
         // `settlingBlocks`. Marked in pass 1 so a container's rendered() hook
@@ -2228,7 +2254,7 @@ export class BlockYjsSync {
 
       // Pass 2 — activate blocks (DOM insert + RENDERED), then emit events
       for (const { block, targetIndex, parentId, placement } of created) {
-        this.blocksStore.activateBlock(block);
+        this.blocksStore.activateBlock(block, targetIndex);
         this.handlers.onBlockAdded(block, targetIndex, replaySourceOf(origin));
 
         // Set parent relationship if needed — this moves the block into the toggle's

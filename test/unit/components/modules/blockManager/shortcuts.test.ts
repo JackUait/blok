@@ -50,6 +50,36 @@ describe('BlockShortcuts', () => {
     vi.restoreAllMocks();
   });
 
+  it('ignores a selected block retained in an inert cached page and resumes when restored', async () => {
+    const page = document.createElement('article');
+    page.setAttribute('inert', '');
+    wrapper.replaceWith(page);
+    page.append(wrapper);
+    const block = document.createElement('div');
+    block.setAttribute('data-blok-selected', 'true');
+    wrapper.append(block);
+    shortcuts.register();
+    await new Promise(resolve => setTimeout(resolve, ASYNC_TIMEOUT));
+    const duplicate = (): KeyboardEvent => new KeyboardEvent('keydown', {
+      bubbles: true, cancelable: true, code: 'KeyD', key: 'd', metaKey: true, ctrlKey: true,
+    });
+
+    try {
+      const inactivePress = duplicate();
+      document.body.dispatchEvent(inactivePress);
+
+      expect(handlers.onDuplicate).not.toHaveBeenCalled();
+      expect(inactivePress.defaultPrevented).toBe(false);
+
+      page.removeAttribute('inert');
+      document.body.dispatchEvent(duplicate());
+
+      expect(handlers.onDuplicate).toHaveBeenCalledTimes(1);
+    } finally {
+      page.remove();
+    }
+  });
+
   describe('register', () => {
     it('registers CMD+SHIFT+UP shortcut', () => {
       shortcuts.register();

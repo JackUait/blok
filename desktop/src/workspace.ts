@@ -75,6 +75,7 @@ export interface Workspace {
   element: HTMLElement;
   start(): Promise<void>;
   flush(): Promise<void>;
+  destroy(): void;
   onRoute(): void;
   toggleSidebar(): void;
   createPage(parentId?: string | null): void;
@@ -91,14 +92,14 @@ function adoptRemoteFields(live: DesktopPage, remote: DesktopPage): void {
 
 export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (id: string, icon: string) => void, options: { ref?: WorkspaceRef } = {}): Workspace {
   const ref = Object.freeze({... (options.ref ?? activeWorkspace())});
-  let workspaceName = ref.name;
+  const identity = { name: ref.name };
   const sidebarTeamspaces:SidebarTeamspace[]=[];
   const teamspacesState={refreshing:false,pending:0,error:'Chargement…' as string|null};
   const teamspacesApi=ref.kind==='remote' ? teamspaceClient(new CloudClient({origin:ref.server,...('__TAURI_INTERNALS__' in window ? {sessionAdapter:nativeSessionAdapter(ref.server)} : {})}),ref.workspaceId) : null;
   const repository = workspaceRepository(ref);
   const favorites = navigationFavorites(ref);
   const recentPages = navigationRecents(ref);
-  const library = { dispose: null as ReturnType<typeof openPageLibrary> | null, category: null as LibraryCategory | null, recents: recentPages.ids, target: null as { pageId: string; blockId: string } | null };
+  const library = { refreshQueued: false, dispose: null as ReturnType<typeof openPageLibrary> | null, category: null as LibraryCategory | null, recents: recentPages.ids, target: null as { pageId: string; blockId: string } | null };
   const initialHref=location.href;
   const routeLoad={pending:false};
   const pageUrl = (id:string):string => {
@@ -166,13 +167,43 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     metadataAction: false,
     closeSearch: undefined,
   };
+  // Keep at most two recent pages warm. Editors stay subscribed to their own
+  // collaborative document; only the current page owns host UI and shortcuts.
+  interface PageSession {
+    id: string;
+    page: DesktopPage;
+    editor: Blok;
+    permission: string;
+    active: boolean;
+    ready: boolean;
+    destroyed: boolean;
+    nodes: Node[];
+    scrollTop: number;
+    resume(): void;
+    suspend(): void;
+    destroy(): void;
+    sourceUnchanged(): Promise<boolean>;
+    flush(): Promise<void>;
+  }
+  const cachedPages = new Map<string, PageSession>();
+  const sessions = { current: null as PageSession | null, disposed: false, reconnectTimer: undefined as number | undefined };
+  const lifetime = new AbortController();
   const localMetadata = new Map<string, string>();
   const metadataOf = (page: DesktopPage): string => JSON.stringify({ ...page, createdAt: undefined, updatedAt: undefined });
   const adoptIndex = (value: WorkspaceIndex): WorkspaceIndex => {
-    if (ref.kind === 'local') for (const page of value.pages) localMetadata.set(page.id, metadataOf(page));
-    ws.index = value;
-    ws.access = pageAccess(ref, value.access);
-    return value;
+    const livePages = new Map([...cachedPages.values(), ...(sessions.current ? [sessions.current] : [])].map(session => [session.id, session.page]));
+    const pages = ref.kind === 'remote' ? value.pages.map(incoming => {
+      const live = livePages.get(incoming.id);
+      if (!live) return incoming;
+      // Editor callbacks retain these objects, including on inactive pages.
+      adoptRemoteFields(live, incoming);
+      return live;
+    }) : value.pages;
+    if (ref.kind === 'local') for (const page of pages) localMetadata.set(page.id, metadataOf(page));
+    const adopted = { ...value, pages };
+    ws.index = adopted;
+    ws.access = pageAccess(ref, adopted.access);
+    return adopted;
   };
   /**
    * Étiquette chaque page racine avec sa section. La section est dérivée de
@@ -189,15 +220,49 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   const readOnly = (pageId: string): boolean => !ws.access.canEdit(pageId);
   const canCreateUnder = (parentId: string | null): boolean =>
     parentId ? ws.access.canEdit(parentId) : !ws.access.readOnlyWorkspace;
+  const pagePermission = (id: string): string => JSON.stringify([readOnly(id), ws.access.canShare(id), ws.index?.access?.[id] ?? null]);
+  const clearPresentation = (): void => {
+    ws.coverRowObserver?.disconnect(); ws.coverRowObserver = null;
+    ws.floatingToc?.destroy(); ws.floatingToc = null;
+    ws.titleDateMention?.destroy(); ws.titleDateMention = null;
+    ws.pageComments?.destroy(); ws.pageComments = null;
+    ws.refreshPagePresentation = null;
+    ws.pageToolbar = null;
+  };
+  const dropCachedPage = (id: string): void => {
+    const session = cachedPages.get(id);
+    cachedPages.delete(id);
+    session?.destroy();
+  };
+  const invalidateCachedPages = (): void => {
+    for (const [id, session] of cachedPages) {
+      if (!ws.index?.pages.some(page => page.id === id) || session.permission !== pagePermission(id)) dropCachedPage(id);
+    }
+  };
+  const leavePage = (keep: boolean): void => {
+    const session = sessions.current;
+    const editor = ws.editor;
+    ws.editor = null;
+    if (!session) { clearPresentation(); editor?.destroy(); return; }
+    session.suspend();
+    sessions.current = null;
+    if (!keep || !session.ready || session.destroyed || !ws.index?.pages.some(page => page.id === session.id)) {
+      session.destroy(); return;
+    }
+    cachedPages.set(session.id, session);
+    while (cachedPages.size > 2) {
+      const oldest = cachedPages.keys().next().value;
+      if (oldest !== undefined) dropCachedPage(oldest);
+    }
+  };
   // The add-cover button is re-appended whenever the core rebuilds the icon row, and
   // WebKit keeps `:hover` latched on a node moved under the cursor. See trackPageHeaderHover.
   trackPageHeaderHover(document);
   const pageListeners = new Map<string, Set<() => void>>();
   const saveStatus = createWorkspaceSaveStatus(ref.kind === 'remote');
   const status = saveStatus.element;
-  let localWrites = 0;
-  let remoteConnection = 'connecting';
-  const updatePending = (): void => saveStatus.pending(ws.pendingManifests + localWrites + teamspacesState.pending);
+  const sync = { localWrites: 0, remoteConnection: 'connecting' };
+  const updatePending = (): void => saveStatus.pending(ws.pendingManifests + sync.localWrites + teamspacesState.pending);
 
   const pageFromUrl = (): string | null => pageIdForHref(location.href);
   const navigate = (id: string, replace = false): void => {
@@ -232,21 +297,18 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     void ws.saveOrder.catch(() => undefined);
   };
   const refreshRemoteManifest = async (): Promise<void> => {
-    if (ref.kind !== 'remote' || !ws.index || ws.pendingManifests > 0 || ws.manifestFailed || ws.refreshingManifest || ws.metadataAction) return;
+    if (sessions.disposed || ref.kind !== 'remote' || !ws.index || ws.pendingManifests > 0 || ws.manifestFailed || ws.refreshingManifest || ws.metadataAction) return;
     ws.refreshingManifest = true;
     const original = ws.index;
     try {
-      const updated = await repository.refreshIndex(() => ws.pendingManifests === 0 && !ws.manifestFailed && !ws.metadataAction && ws.index === original);
-      if (!updated) return;
+      const updated = await repository.refreshIndex(() => !sessions.disposed && ws.pendingManifests === 0 && !ws.manifestFailed && !ws.metadataAction && ws.index === original);
+      if (sessions.disposed || !updated) return;
       updated.activeId = updated.pages.some((page) => page.id === ws.currentId) ? ws.currentId : updated.activeId;
-      // Retain the live page object: title/cover callbacks close over it.
-      const live = original.pages.find((page) => page.id === ws.currentId);
-      const remotePage = updated.pages.find((page) => page.id === ws.currentId);
-      if (live && remotePage) {
-        adoptRemoteFields(live, remotePage);
-        updated.pages = updated.pages.map((page) => page.id === ws.currentId ? live : page);
-      }
       adoptIndex(updated);
+      invalidateCachedPages();
+      if (sessions.current && sessions.current.permission !== pagePermission(sessions.current.id)) {
+        leavePage(false); ws.currentId = ''; onRoute();
+      }
       saveStatus.saved('refresh');
       ws.frame.setPages(withSections(ws.index.pages), library.dispose ? '' : ws.index.activeId);
       ws.pageToolbar?.setBreadcrumbs(breadcrumbs(ws.currentId));
@@ -257,7 +319,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     finally { ws.refreshingManifest = false; }
   };
   const refreshDateTitles = (): void => {
-    if (!ws.index || ref.kind === 'remote') return;
+    if (sessions.disposed || !ws.index || ref.kind === 'remote') return;
     const dateState = { changed: false };
     for (const page of ws.index.pages) {
       if (!page.titleDate) continue;
@@ -289,16 +351,15 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       scheduleDateRefresh();
     }, midnight.getTime() - now.getTime() + 50);
   };
-  let libraryRefreshQueued = false;
   const refreshLibrary = (): void => {
-    if (!library.dispose || libraryRefreshQueued) return;
-    libraryRefreshQueued = true;
-    queueMicrotask(() => { libraryRefreshQueued = false; library.dispose?.refresh(); });
+    if (!library.dispose || library.refreshQueued) return;
+    library.refreshQueued = true;
+    queueMicrotask(() => { library.refreshQueued = false; library.dispose?.refresh(); });
   };
   const notifyPage = (id: string): void => { pageListeners.get(id)?.forEach((listener) => listener()); refreshLibrary(); };
   const breadcrumbMenuHeading = (parentId: string | null | undefined, byId: Map<string, ShellPage>): string => {
     if (parentId) return byId.get(parentId)?.title ?? 'Pages';
-    return ref.kind === 'remote' ? workspaceName : 'Pages locales';
+    return ref.kind === 'remote' ? identity.name : 'Pages locales';
   };
   const breadcrumbs = (pageId: string): PageBreadcrumbItem[] => {
     if (!ws.index) return [];
@@ -359,7 +420,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       if (persist) saveManifest();
       notifyPage(target.id);
     }
-    onPageIcon(target.id, next ?? '');
+    if (target.id === ws.currentId) onPageIcon(target.id, next ?? '');
   };
   const pageConfig: PageConfig = {
     createFromMention: true,
@@ -402,14 +463,19 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     },
   };
   const select = async (id: string): Promise<void> => {
-    if (!ws.index) return;
+    if (sessions.disposed || !ws.index) return;
     refreshDateTitles();
     const page = ws.index.pages.find((item) => item.id === id);
     if (!page) return;
     const selectedPage = page;
     const request = ++ws.selection;
-    if (ws.currentId !== id && ws.editor && ref.kind === 'remote') { await ws.editor.isReady; await ws.editor.saver.flush(); }
-    if (ws.selection !== request) return;
+    const previous = sessions.current;
+    if (ws.currentId !== id && previous) {
+      await previous.editor.isReady;
+      if (sessions.disposed || ws.selection !== request) return;
+      await previous.flush();
+    }
+    if (sessions.disposed || ws.selection !== request) return;
     ws.index.activeId = id;
     if (ref.kind === 'local') saveManifest();
     ws.frame.setActiveShortcut(null);
@@ -421,20 +487,22 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     }
     library.dispose?.(); library.dispose = null; library.category = null;
     ws.frame.element.removeAttribute('data-desktop-library');
+    const cached = cachedPages.get(id);
+    if (cached && (cached.permission !== pagePermission(id) || !await cached.sourceUnchanged())) dropCachedPage(id);
+    if (sessions.disposed || ws.selection !== request) return;
+    const warm = cachedPages.get(id);
+    if (warm) cachedPages.delete(id);
+    leavePage(true);
     ws.currentId = id;
     ws.frame.element.toggleAttribute('data-desktop-read-only', readOnly(id));
-    const turn = ++ws.generation;
-    ws.coverRowObserver?.disconnect();
-    ws.coverRowObserver = null;
-    ws.pageToolbar?.destroy();
-    ws.floatingToc?.destroy();
-    ws.floatingToc = null;
-    ws.titleDateMention?.destroy();
-    ws.titleDateMention = null;
-    ws.pageComments?.destroy(); ws.pageComments = null;
-    ws.editor?.destroy();
-    ws.editor = null;
-    remoteConnection = 'connecting';
+    ++ws.generation;
+    if (warm) {
+      sessions.current = warm;
+      warm.resume();
+      return;
+    }
+    const life = { active: true, ready: false, destroyed: false };
+    sync.remoteConnection = 'connecting';
     saveStatus.resetPage();
     const article = document.createElement('article');
     article.setAttribute('data-desktop-document', '');
@@ -453,7 +521,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       ws.frame.toggleSidebar();
       onLayout(sidebar.getBoundingClientRect().width);
     }, ref.kind === 'remote' ? (anchor) => openPageSharing(ref, id, page.title, anchor, refreshRemoteManifest, pageUrl(id)) : undefined, {
-      workspaceName,
+      workspaceName: identity.name,
       workspacePages: () => {
         const pages = withSections(ws.index?.pages ?? []);
         const choice = (page: DesktopPage): PageBreadcrumbChoice => ({
@@ -490,7 +558,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       if (readOnly(id)) return;
       selectedPage.cover = cover;
       if (cover === undefined) selectedPage.coverPosition = undefined;
-      if (ws.generation === turn) renderCover();
+      if (life.active && !life.destroyed) renderCover();
       saveManifest();
     }
     const attachCoverAction = (): void => {
@@ -502,7 +570,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       if (cover.button.parentElement !== row) row.append(cover.button);
       if (ws.coverRowObserver === null) {
         ws.coverRowObserver = new MutationObserver(() => {
-          if (ws.generation === turn) attachCoverAction();
+          if (life.active && !life.destroyed) attachCoverAction();
         });
         ws.coverRowObserver.observe(row, { childList: true });
       }
@@ -543,11 +611,26 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       createdProperty.append(label, time);
       holder.querySelector('[data-blok-page-title]')?.after(createdProperty);
     };
-    ws.refreshPagePresentation = () => { applyFullWidth(); renderCover(); renderCreatedProperty(); ws.titleDateMention?.refresh(); };
+    const refreshPresentation = (): void => { applyFullWidth(); renderCover(); renderCreatedProperty(); ws.titleDateMention?.refresh(); };
+    ws.refreshPagePresentation = refreshPresentation;
     ws.pageCanvas.replaceChildren(toolbar.element, article);
     renderCover();
     const persisted = { content: null as string | null };
     const contentSignature = (data: OutputData): string => JSON.stringify({ ...data, time: undefined, version: undefined });
+    const saveLocalData = async (data: OutputData): Promise<void> => {
+      sync.localWrites++;
+      updatePending();
+      try {
+        await repository.writePage(id, JSON.stringify(data));
+        const signature = contentSignature(data);
+        if (persisted.content !== signature) {
+          page.updatedAt = new Date().toISOString();
+          saveManifest();
+        }
+        persisted.content = signature;
+        if (life.active) saveStatus.saved('document');
+      } finally { sync.localWrites--; updatePending(); }
+    };
     const instance = new Blok({
       holder,
       readOnly: readOnly(id),
@@ -557,7 +640,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         customEmojis: () => emojis.list(),
         placeholder: 'Nouvelle page',
         onChange(title, change) {
-          if (ws.generation !== turn || !ws.index) return;
+          if (life.destroyed || !ws.index) return;
           const next = title.trim() || 'Nouvelle page';
           if (page.titleDate && change.source === 'user') {
             const label = titleDateLabel(page.titleDate, new Date(), page.titleDateDisplay);
@@ -574,12 +657,12 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
           holder.querySelector<HTMLElement>('[data-blok-page-title]')?.toggleAttribute('data-desktop-title-date', !!page.titleDate);
           toolbar.setBreadcrumbs(breadcrumbs(id));
           notifyPage(id);
-          document.title = next;
-          ws.frame.setPages(withSections(ws.index.pages), id);
+          if (life.active) document.title = next;
+          ws.frame.setPages(withSections(ws.index.pages), ws.currentId);
           if (ref.kind === 'local' || change.source !== 'remote') saveManifest();
         },
         onIconChange(icon, change) {
-          if (ws.generation !== turn || !ws.index) return;
+          if (life.destroyed || !ws.index) return;
           syncPageIcon(page, icon, ref.kind === 'local' || change.source !== 'remote');
         },
       },
@@ -596,20 +679,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
           persisted.content = data ? contentSignature(data) : null;
           return data;
         },
-        async save(data) {
-          localWrites++;
-          updatePending();
-          try {
-            await repository.writePage(id, JSON.stringify(data));
-            const signature = contentSignature(data);
-            if (persisted.content !== signature) {
-              page.updatedAt = new Date().toISOString();
-              saveManifest();
-            }
-            persisted.content = signature;
-            saveStatus.saved('document');
-          } finally { localWrites--; updatePending(); }
-        },
+        save: saveLocalData,
         onError: (error) => showError(error, 'document'),
       } }),
     });
@@ -622,26 +692,12 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     });
     ws.remotePending = false;
     instance.width.set(page.fullWidth === true ? 'full' : 'narrow');
-    void instance.isReady.then(() => {
-      if (ws.generation !== turn) return;
+    const mountPresentation = (): void => {
+      if (!life.active || life.destroyed) return;
       ws.pageComments = mountPageComments({ holder, editor: instance, author: () => commentAuthor(ref), canComment: () => !readOnly(id) && ws.editor === instance });
       const discussions = ws.pageComments.element.querySelector('[data-inline-comments-open]');
       if (discussions) toolbar.element.querySelector('[data-desktop-page-actions]')?.prepend(discussions);
-      instance.on('collaboration:status', (raw) => {
-        if (ws.generation !== turn) return;
-        // An emission with no payload must fall back to "not pending", not throw
-        // inside the listener and kill the rest of the handler.
-        const event = (raw ?? {}) as Parameters<typeof saveStatus.connection>[0];
-        const pendingOps = event?.save?.pendingOperations ?? 0;
-        const pendingBytes = event?.save?.pendingBytes ?? 0;
-        ws.remotePending = pendingOps > 0 || pendingBytes > 0;
-        if (ref.kind === 'remote') {
-          const reconnected = event?.status === 'connected' && remoteConnection !== 'connected';
-          if (event?.status) remoteConnection = event.status;
-          if (reconnected && navigator.onLine && ws.manifestFailed && ws.pendingManifests === 0) saveManifest();
-          saveStatus.connection(event);
-        }
-      });
+
 
       const redactor = holder.querySelector<HTMLElement>('[data-blok-redactor]');
       if (redactor) ws.floatingToc = createFloatingToc(ws.pageCanvas, redactor);
@@ -688,7 +744,87 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       toolbar.setBreadcrumbs(breadcrumbs(id));
       document.title = page.title;
       saveStatus.ready();
-    }).catch(showError);
+      if (connectionState.value && ref.kind === 'remote') saveStatus.connection(connectionState.value);
+      const target = library.target;
+      if (target?.pageId === id) {
+        instance.blocks.getById(target.blockId)?.holder.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        library.target = null;
+      }
+    };
+    const connectionState = { value: undefined as Parameters<typeof saveStatus.connection>[0] | undefined };
+    const session: PageSession = {
+      id, page, editor: instance, permission: pagePermission(id),
+      get active() { return life.active; }, set active(value) { life.active = value; },
+      get ready() { return life.ready; }, set ready(value) { life.ready = value; },
+      get destroyed() { return life.destroyed; }, set destroyed(value) { life.destroyed = value; },
+      nodes: [], scrollTop: 0,
+      suspend() {
+        session.scrollTop = ws.pageCanvas.scrollTop;
+        if (article.contains(document.activeElement)) (document.activeElement as HTMLElement).blur();
+        const selection = window.getSelection();
+        if (selection?.anchorNode && article.contains(selection.anchorNode)) selection.removeAllRanges();
+        instance.toolbar.close(); instance.inlineToolbar.close(); instance.toolbar.toggleBlockSettings(false); instance.toolbar.toggleToolbox(false);
+        article.setAttribute('inert', '');
+        life.active = false;
+        clearPresentation();
+        session.nodes = Array.from(ws.pageCanvas.childNodes);
+      },
+      resume() {
+        life.active = true;
+        ws.editor = instance; ws.pageToolbar = toolbar;
+        ws.refreshPagePresentation = refreshPresentation;
+        saveStatus.resetPage();
+        ws.remotePending = (connectionState.value?.save?.pendingOperations ?? 0) > 0 || (connectionState.value?.save?.pendingBytes ?? 0) > 0;
+        sync.remoteConnection = connectionState.value?.status ?? 'connecting';
+        ws.pageCanvas.replaceChildren(...session.nodes);
+        article.removeAttribute('inert');
+        toolbar.element.insertBefore(status, toolbar.element.querySelector('[data-desktop-page-actions]'));
+        toolbar.setWorkspaceName(identity.name);
+        instance.theme.set(readAppearance());
+        refreshPresentation();
+        if (ref.kind === 'local' && page.titleDate) instance.title.set(page.title, { record: false });
+        mountPresentation();
+        ws.pageCanvas.scrollTop = session.scrollTop;
+      },
+      destroy() {
+        if (life.destroyed) return;
+        life.destroyed = true; life.active = false;
+        toolbar.destroy(); instance.destroy();
+        session.nodes = [];
+      },
+      async flush() {
+        await instance.saver.flush();
+        if (ref.kind === 'local' && !readOnly(id)) await saveLocalData(await instance.save());
+      },
+      async sourceUnchanged() {
+        if (ref.kind === 'remote') return true;
+        const raw = await repository.readPage(id);
+        return (raw ? contentSignature(JSON.parse(raw) as OutputData) : null) === persisted.content;
+      },
+    };
+    sessions.current = session;
+    void instance.isReady.then(() => {
+      if (life.destroyed) return;
+      life.ready = true;
+      instance.on('collaboration:status', (raw) => {
+        if (life.destroyed) return;
+        // An emission with no payload must fall back to "not pending", not throw
+        // inside the listener and kill the rest of the handler.
+        const event = (raw ?? {}) as Parameters<typeof saveStatus.connection>[0];
+        connectionState.value = event;
+        if (!life.active) return;
+        const pendingOps = event?.save?.pendingOperations ?? 0;
+        const pendingBytes = event?.save?.pendingBytes ?? 0;
+        ws.remotePending = pendingOps > 0 || pendingBytes > 0;
+        if (ref.kind === 'remote') {
+          const reconnected = event?.status === 'connected' && sync.remoteConnection !== 'connected';
+          if (event?.status) sync.remoteConnection = event.status;
+          if (reconnected && navigator.onLine && ws.manifestFailed && ws.pendingManifests === 0) saveManifest();
+          saveStatus.connection(event);
+        }
+      });
+      mountPresentation();
+    }).catch(error => { const active = life.active; session.destroy(); if (active) showError(error); });
   };
 
   const duplicatePage = async (page: DesktopPage): Promise<'navigated' | 'pending'> => {
@@ -727,6 +863,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     if (removed.size === ws.index.pages.length) return;
     ws.index.trash = [...(ws.index.trash ?? []), ...ws.index.pages.filter((item) => removed.has(item.id))];
     ws.index.pages = ws.index.pages.filter((item) => !removed.has(item.id));
+    removed.forEach(dropCachedPage);
     removed.forEach(notifyPage);
     const fallback = ws.index.pages[0];
     if (removed.has(ws.currentId) && fallback) navigate(fallback.id, true);
@@ -761,13 +898,29 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
 
   const destinationsFor = (id: string) => {
     const teamspaceId = ws.index?.access?.[id]?.teamspaceId ?? null;
-    const rootLabel = sidebarTeamspaces.find(team => team.id === teamspaceId)?.name ?? workspaceName;
+    const rootLabel = sidebarTeamspaces.find(team => team.id === teamspaceId)?.name ?? identity.name;
     return moveDestinations({ pages: ws.index?.pages ?? [], sourceId: id, rootLabel,
       canEdit: pageId => ws.access.canEdit(pageId),
       canMove: pageId => ref.kind === 'local' || ws.access.canShare(pageId),
       isSharedRoot: pageId => ws.access.isSharedRoot(pageId),
       teamspaceOf: pageId => ws.index?.access?.[pageId]?.teamspaceId ?? null,
     });
+  };
+  const moveLocalPage = async (id: string, parentId: string | null): Promise<void> => {
+    if (!ws.index) return;
+    const page = ws.index.pages.find(item => item.id === id);
+    if (!page) throw new Error('Cette page n’est plus disponible.');
+    const previousParent = page.parentId;
+    const previousUpdatedAt = page.updatedAt;
+    page.parentId = parentId;
+    saveManifest();
+    try { await ws.saveOrder; }
+    catch (error) {
+      page.parentId = previousParent;
+      page.updatedAt = previousUpdatedAt;
+      localMetadata.set(page.id, metadataOf(page));
+      throw error;
+    }
   };
   const movePage = async (id: string, parentId: string | null): Promise<void> => {
     if (!ws.index || ws.metadataAction || !destinationsFor(id).some(item => item.parentId === parentId)) throw new Error('Cette destination n’est plus autorisée.');
@@ -780,28 +933,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         await repository.movePage(id, parentId);
         const refreshed = await repository.loadIndex();
         refreshed.activeId = refreshed.pages.some(page => page.id === ws.currentId) ? ws.currentId : refreshed.activeId;
-        const live = ws.index.pages.find(page => page.id === ws.currentId);
-        const remotePage = refreshed.pages.find(page => page.id === ws.currentId);
-        if (live && remotePage) {
-          adoptRemoteFields(live, remotePage);
-          refreshed.pages = refreshed.pages.map(page => page.id === ws.currentId ? live : page);
-        }
         adoptIndex(refreshed);
-      } else {
-        const page = ws.index.pages.find(item => item.id === id);
-        if (!page) throw new Error('Cette page n’est plus disponible.');
-        const previousParent = page.parentId;
-        const previousUpdatedAt = page.updatedAt;
-        page.parentId = parentId;
-        saveManifest();
-        try { await ws.saveOrder; }
-        catch (error) {
-          page.parentId = previousParent;
-          page.updatedAt = previousUpdatedAt;
-          localMetadata.set(page.id, metadataOf(page));
-          throw error;
-        }
-      }
+      } else await moveLocalPage(id, parentId);
       if (!ws.index) return;
       ws.frame.setPages(withSections(ws.index.pages), library.dispose ? '' : ws.currentId);
       ws.pageToolbar?.setBreadcrumbs(breadcrumbs(ws.currentId));
@@ -866,7 +999,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     onCreatePrivate: ref.kind === 'remote' ? () => chooseNewPage(null, true) : undefined,
     onSearch: (recentIds) => {
       ws.closeSearch?.();
-      ws.closeSearch = openPageSearch({ workspaceName, pages: () => ws.index?.pages ?? [], onOpen: navigate, recentIds });
+      ws.closeSearch = openPageSearch({ workspaceName: identity.name, pages: () => ws.index?.pages ?? [], onOpen: navigate, recentIds });
     },
     onManageTeamspaces: ref.kind==='remote' ? ()=>ws.footer.dispatchEvent(new CustomEvent('blok:desktop-open-teamspace',{detail:{}})) : undefined,
     onCreateTeamspacePage: (id)=>chooseNewPage(null,false,id),
@@ -882,7 +1015,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       if (ws.currentId === id) ws.pageToolbar?.setFavorite(value);
     },
   });
-  subscribeSidebarLayout(ref, layout => {
+  const unsubscribeSidebar = subscribeSidebarLayout(ref, layout => {
     ws.frame.setSidebarLayout(layout);
     onLayout(ws.frame.element.querySelector('[data-blok-sidebar]')?.getBoundingClientRect().width ?? layout.width);
   });
@@ -935,11 +1068,11 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   ws.frame.element.addEventListener('blok:desktop-workspace-renamed', (event) => {
     const detail = (event as CustomEvent<{key: string; name: string}>).detail;
     if (detail?.key !== workspaceKey(ref) || !detail.name) return;
-    workspaceName = detail.name;
+    identity.name = detail.name;
     if (ws.index) ws.frame.setPages(withSections(ws.index.pages), ws.currentId);
-    ws.pageToolbar?.setWorkspaceName(workspaceName);
+    ws.pageToolbar?.setWorkspaceName(identity.name);
     ws.pageToolbar?.setBreadcrumbs(breadcrumbs(ws.currentId));
-    if (!ws.currentId) document.title = brandedTitle(workspaceName);
+    if (!ws.currentId) document.title = brandedTitle(identity.name);
   });
   const observer = new ResizeObserver(() => onLayout(sidebar.getBoundingClientRect().width));
   observer.observe(sidebar);
@@ -1007,13 +1140,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     }
     ws.generation++;
     ws.selection++;
-    ws.coverRowObserver?.disconnect(); ws.coverRowObserver = null;
-    ws.pageToolbar?.destroy(); ws.pageToolbar = null;
-    ws.floatingToc?.destroy(); ws.floatingToc = null;
-    ws.titleDateMention?.destroy(); ws.titleDateMention = null;
-    ws.refreshPagePresentation = null;
-    ws.pageComments?.destroy(); ws.pageComments = null;
-    ws.editor?.destroy(); ws.editor = null;
+    leavePage(false);
+    for (const id of cachedPages.keys()) dropCachedPage(id);
     ws.currentId = '';
     ws.frame.element.append(status);
     saveStatus.resetPage();
@@ -1032,7 +1160,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     }));
     const url = new URL(location.href);
     if (url.searchParams.has('page')) { url.searchParams.delete('page'); history.replaceState(null, '', url); }
-    document.title = brandedTitle(workspaceName);
+    document.title = brandedTitle(identity.name);
   }
 
   function navigateLibrary(category: LibraryCategory): void {
@@ -1046,24 +1174,16 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     if (!ws.index) return;
     const request = ++ws.selection;
     if (library.dispose && library.category === category) { library.dispose.refresh(); return; }
-    const editor = ws.editor;
-    const pageId = ws.currentId;
-    if (editor) {
-      await editor.isReady;
-      if (ws.selection !== request) return;
-      if (ref.kind === 'remote') await editor.saver.flush();
-      else if (!readOnly(pageId)) await repository.writePage(pageId, JSON.stringify(await editor.save()));
+    const session = sessions.current;
+    if (session) {
+      await session.editor.isReady;
+      if (sessions.disposed || ws.selection !== request) return;
+      await session.flush();
     }
     if (ws.selection !== request) return;
     ws.closeSearch?.(); ws.closeSearch = undefined;
     ws.generation++;
-    ws.coverRowObserver?.disconnect(); ws.coverRowObserver = null;
-    ws.pageToolbar?.destroy(); ws.pageToolbar = null;
-    ws.floatingToc?.destroy(); ws.floatingToc = null;
-    ws.titleDateMention?.destroy(); ws.titleDateMention = null;
-    ws.pageComments?.destroy(); ws.pageComments = null;
-    ws.refreshPagePresentation = null;
-    ws.editor?.destroy(); ws.editor = null; ws.currentId = '';
+    leavePage(true); ws.currentId = '';
     ws.remotePending = false;
     saveStatus.resetPage();
     ws.frame.element.append(status);
@@ -1093,8 +1213,18 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     ws.pageCanvas.scrollTop = 0;
   }
 
+  const reloadRemoteRoute = (): void => {
+    if(routeLoad.pending)return;
+    routeLoad.pending=true;const destination=location.href;ws.pageCanvas.setAttribute('aria-busy','true');
+    void (async()=>{
+      if(ws.editor){await ws.editor.isReady;await ws.editor.saver.flush();}
+      await ws.saveOrder;
+      if(location.href===destination)location.reload();
+    })().catch(showError).finally(()=>{routeLoad.pending=false;ws.pageCanvas.removeAttribute('aria-busy');});
+  };
+
   function onRoute(): void {
-    if (!ws.index) return;
+    if (sessions.disposed || !ws.index) return;
     const category = libraryCategoryForHref(location.href);
     if (category !== null) {
       void showLibrary(category).catch(error => {
@@ -1109,19 +1239,12 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     const found=ws.index.pages.find(page=>page.id===id);
     if(explicit && !found){
       if(ref.kind==='remote' && location.href!==initialHref && !('__TAURI_INTERNALS__' in window)){
-        if(routeLoad.pending)return;
-        routeLoad.pending=true;const destination=location.href;ws.pageCanvas.setAttribute('aria-busy','true');
-        void (async()=>{
-          if(ws.editor){await ws.editor.isReady;await ws.editor.saver.flush();}
-          await ws.saveOrder;
-          if(location.href===destination)location.reload();
-        })().catch(showError).finally(()=>{routeLoad.pending=false;ws.pageCanvas.removeAttribute('aria-busy');});return;
+        reloadRemoteRoute(); return;
       }
       library.dispose?.(); library.dispose = null; library.category = null;
       ws.frame.element.removeAttribute('data-desktop-library');
       ws.frame.setActiveShortcut(null);
-      ws.generation++;ws.selection++;ws.pageComments?.destroy(); ws.pageComments = null;
-      ws.editor?.destroy();ws.editor=null;ws.currentId='';
+      ws.generation++;ws.selection++;leavePage(false);ws.currentId='';
       const section=document.createElement('section');section.setAttribute('data-page-unavailable','');section.style.padding='48px';
       const heading=document.createElement('h1');heading.textContent='Page indisponible';
       const message=document.createElement('p');message.textContent='Cette page est introuvable ou vous n’y avez plus accès.';
@@ -1147,8 +1270,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey || event.key.toLowerCase() !== 'k') return;
     event.preventDefault();
     ws.closeSearch?.();
-    ws.closeSearch = openPageSearch({ workspaceName, pages: () => ws.index?.pages ?? [], onOpen: navigate });
-  });
+    ws.closeSearch = openPageSearch({ workspaceName: identity.name, pages: () => ws.index?.pages ?? [], onOpen: navigate });
+  }, { signal: lifetime.signal });
   const notesAction = { busy: false };
   async function initializeNotesCollection(identity: { pageId: string; databaseId: string }): Promise<void> {
     if (!ws.index) throw new Error('Espace indisponible.');
@@ -1236,24 +1359,27 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
           void initializeSidebarPresets(ref, client).catch(() => undefined);
         }
         const loaded = adoptIndex(await repository.loadIndex());
+        if (sessions.disposed) return;
         await refreshTeamspaces();
+        if (sessions.disposed) return;
         refreshDateTitles();
         ws.frame.setPages(withSections(loaded.pages), loaded.activeId);
         onRoute();
         scheduleDateRefresh();
-        window.addEventListener('focus', refreshDateTitles);
+        window.addEventListener('focus', refreshDateTitles, { signal: lifetime.signal });
         if (ref.kind === 'remote') {
           const reconnect = (): void => {
+            if (sessions.disposed) return;
             saveStatus.online(navigator.onLine);
             if (!navigator.onLine) return;
             if (ws.manifestFailed && ws.pendingManifests === 0) saveManifest();
             else void refreshTeamspaces().then(()=>refreshRemoteManifest());
           };
-          window.addEventListener('offline', () => saveStatus.online(false));
-          window.addEventListener('online', reconnect);
-          window.addEventListener('focus', reconnect);
-          window.setInterval(reconnect, 15_000);
-          window.addEventListener('beforeunload', (event) => { if (ws.pendingManifests > 0 || ws.manifestFailed) event.preventDefault(); });
+          window.addEventListener('offline', () => saveStatus.online(false), { signal: lifetime.signal });
+          window.addEventListener('online', reconnect, { signal: lifetime.signal });
+          window.addEventListener('focus', reconnect, { signal: lifetime.signal });
+          sessions.reconnectTimer = window.setInterval(reconnect, 15_000);
+          window.addEventListener('beforeunload', (event) => { if (ws.pendingManifests > 0 || ws.manifestFailed) event.preventDefault(); }, { signal: lifetime.signal });
         }
       } catch (error) { showError(error); }
     },
@@ -1261,14 +1387,23 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       const wasInert = ws.frame.element.inert;
       ws.frame.element.inert = true;
       try {
-        if (ws.editor) await ws.editor.isReady;
-        if (ws.editor && ref.kind === 'local') {
-          const data = await ws.editor.save();
-          await repository.writePage(ws.currentId, JSON.stringify(data));
-        }
-        if (ws.editor && ref.kind === 'remote') await ws.editor.saver.flush();
+        const session = sessions.current;
+        if (session) { await session.editor.isReady; await session.flush(); }
+        for (const cached of ref.kind === 'remote' ? cachedPages.values() : []) await cached.flush();
         await ws.saveOrder;
       } finally { ws.frame.element.inert = wasInert; }
+    },
+    destroy() {
+      if (sessions.disposed) return;
+      lifetime.abort(); unsubscribeSidebar();
+      if (sessions.reconnectTimer !== undefined) window.clearInterval(sessions.reconnectTimer);
+      ws.closeSearch?.(); ws.assistant.destroy();
+      sessions.disposed = true; ws.selection++; ws.generation++;
+      leavePage(false);
+      for (const id of cachedPages.keys()) dropCachedPage(id);
+      library.dispose?.(); library.dispose = null;
+      observer.disconnect();
+      if (ws.dateTimer !== null) window.clearTimeout(ws.dateTimer);
     },
     onRoute,
     toggleSidebar() {

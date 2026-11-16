@@ -1,7 +1,7 @@
 import type { CommentAnchor } from '../../types/tools/database-comment';
 
 function fields(holder: HTMLElement): HTMLElement[] {
-  return [...holder.querySelectorAll<HTMLElement>('[contenteditable]')]
+  return [...holder.querySelectorAll<HTMLElement>('[contenteditable], pre > code')]
     .filter(field => !!field.closest('[data-blok-id]') && !field.parentElement?.closest('[contenteditable]'));
 }
 
@@ -9,13 +9,13 @@ function fields(holder: HTMLElement): HTMLElement[] {
 function rangeAt(field: HTMLElement, start: number, end: number): Range | null {
   const walker = document.createTreeWalker(field, NodeFilter.SHOW_TEXT);
   const range = document.createRange();
-  let offset = 0; let started = false;
+  const cursor = { offset: 0, started: false };
   while (walker.nextNode()) {
     const node = walker.currentNode;
     const length = node.textContent?.length ?? 0;
-    if (!started && start <= offset + length) { range.setStart(node, start - offset); started = true; }
-    if (started && end <= offset + length) { range.setEnd(node, end - offset); return range; }
-    offset += length;
+    if (!cursor.started && start <= cursor.offset + length) { range.setStart(node, start - cursor.offset); cursor.started = true; }
+    if (cursor.started && end <= cursor.offset + length) { range.setEnd(node, end - cursor.offset); return range; }
+    cursor.offset += length;
   }
   return null;
 }
@@ -32,10 +32,12 @@ export function captureCommentAnchor(holder: HTMLElement, selection: Range): Com
     const quote = range.toString(); if (!quote) continue;
     const before = document.createRange(); before.selectNodeContents(field); before.setEnd(range.startContainer, range.startOffset);
     const start = before.toString().length;
-    const block = field.closest<HTMLElement>('[data-blok-id]')!;
+    const block = field.closest<HTMLElement>('[data-blok-id]');
+    const blockId = block?.getAttribute('data-blok-id');
+    if (!block || !blockId) continue;
     const siblings = editable.filter(item => item.closest('[data-blok-id]') === block);
     const text = field.textContent ?? '';
-    segments.push({ blockId: block.getAttribute('data-blok-id')!, field: siblings.indexOf(field), start, quote,
+    segments.push({ blockId, field: siblings.indexOf(field), start, quote,
       prefix: text.slice(Math.max(0, start - 32), start), suffix: text.slice(start + quote.length, start + quote.length + 32) });
   }
   return segments.length ? { segments } : null;
@@ -49,8 +51,8 @@ export function resolveCommentAnchor(holder: HTMLElement, anchor: CommentAnchor)
     if (!field) return null;
     const text = field.textContent ?? '';
     const candidates: number[] = [];
-    let offset = text.indexOf(segment.quote);
-    while (offset >= 0) { candidates.push(offset); offset = text.indexOf(segment.quote, offset + 1); }
+    const cursor = { offset: text.indexOf(segment.quote) };
+    while (cursor.offset >= 0) { candidates.push(cursor.offset); cursor.offset = text.indexOf(segment.quote, cursor.offset + 1); }
     const contextual = candidates.filter(at => text.slice(0, at).endsWith(segment.prefix) && text.slice(at + segment.quote.length).startsWith(segment.suffix));
     const nearby = candidates.filter(at => (segment.prefix.length > 0 && text.slice(0, at).endsWith(segment.prefix))
       || (segment.suffix.length > 0 && text.slice(at + segment.quote.length).startsWith(segment.suffix)));

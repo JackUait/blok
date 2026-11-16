@@ -353,7 +353,7 @@ export class KeyboardController extends Controller {
      * were not properly removed. When the controller is disabled the handler
      * bails out early so it does not throw or interfere with other editors.
      */
-    if (this.isDisabled) {
+    if (this.isDisabled || this.wrapperElement?.closest('[inert]') != null) {
       return;
     }
 

@@ -1,6 +1,6 @@
 import { libraryCategoryForHref, pageIdForHref, pageDestination } from './page-urls';
 import { renderPageIcon } from '../../src/shell/page-icon';
-import { activeWorkspace, workspaceKey } from './workspace-registry';
+import { activeWorkspace, workspaceKey, type WorkspaceRef } from './workspace-registry';
 import { createWorkspace, type Workspace } from './workspace';
 import { applyAppearance, readAppearance, watchSystemAppearance } from './settings';
 
@@ -74,6 +74,7 @@ export function mountDesktop(root: HTMLElement): void {
   if (current && current.href !== location.href) nativeReplace(current.href);
   if (current && document.title !== current.title) document.title = current.title;
   applyFavicon(current?.icon);
+  box.workspace?.destroy();
   box.workspace = createWorkspace((width) => {
     root.style.setProperty('--desktop-sidebar-width', `${Math.max(isTauri() ? 156 : 84, width)}px`);
   }, syncPageIcon);
@@ -86,8 +87,14 @@ export function mountDesktop(root: HTMLElement): void {
   persist();
   paint();
   root.addEventListener('blok:desktop-select-workspace', (event) => {
-    const ref = (event as CustomEvent).detail;
-    void box.workspace?.flush().then(async () => { const { selectWorkspace } = await import('./workspace-registry'); selectWorkspace(ref); }).catch((error: unknown) => window.alert(String(error)));
+    const ref = (event as CustomEvent<WorkspaceRef>).detail;
+    void box.workspace?.flush().then(async () => { const { selectWorkspace } = await import('./workspace-registry'); selectWorkspace(ref); }).catch((error: unknown) => {
+      const message = root.querySelector('[data-desktop-shell-error]') ?? document.createElement('p');
+      message.setAttribute('data-desktop-shell-error', '');
+      message.setAttribute('role', 'alert');
+      message.textContent = error instanceof Error ? error.message : 'Impossible de changer d’espace de travail.';
+      root.append(message);
+    });
   });
   void box.workspace.start();
 }
@@ -106,14 +113,12 @@ function installHistory(): void {
   installed.history = true;
   const pushState: History['pushState'] = function pushState(this: History, data, unused, url) {
     if (!isTauri()) return natives.push.call(this, data, unused, url);
-    void unused;
     const href = resolveHref(url);
     natives.replace.call(this, data, '', url);
     slot.record('push', href);
   };
   const replaceState: History['replaceState'] = function replaceState(this: History, data, unused, url) {
     if (!isTauri()) return natives.replace.call(this, data, unused, url);
-    void unused;
     const href = resolveHref(url);
     natives.replace.call(this, data, '', url);
     slot.record('replace', href);
@@ -132,8 +137,9 @@ function installTitle(): void {
   Object.defineProperty(Document.prototype, 'title', {
     configurable: true,
     enumerable: desc.enumerable === true,
-    get() {
-      return get.call(this);
+    get(): string {
+      const title: unknown = get.call(this);
+      return typeof title === 'string' ? title : '';
     },
     set(value: string) {
       set.call(this, value);
@@ -423,13 +429,11 @@ function syncTitle(): void {
 function syncPageIcon(pageId: string, icon: string): void {
   // The web has no tab strip, so the URL — not a tab — says what is on screen.
   if (pageId === pageOf(location.href)) applyFavicon(icon);
-  let changed = false;
   const tabs = box.session.tabs.map((tab) => {
     if (pageIdForHref(tab.href) !== pageId || tab.icon === icon) return tab;
-    changed = true;
     return { ...tab, icon };
   });
-  if (!changed) return;
+  if (tabs.every((tab, index) => tab === box.session.tabs[index])) return;
   box.session = { ...box.session, tabs };
   persist();
   paint();

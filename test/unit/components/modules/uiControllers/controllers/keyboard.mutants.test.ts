@@ -1144,6 +1144,27 @@ describe('KeyboardController — mutation coverage', () => {
       vi.spyOn(Selection, 'isSelectionExists', 'get').mockReturnValue(false);
     };
 
+    it.each(['Backspace', 'Delete'])('leaves retained selection in an inert cached page untouched on %s', key => {
+      const harness = enabledHarness();
+      const cachedPage = document.createElement('article');
+      cachedPage.setAttribute('inert', '');
+      harness.wrapper.replaceWith(cachedPage);
+      cachedPage.append(harness.wrapper);
+      harness.state.anyBlockSelected = true;
+      noNativeSelection();
+
+      const inactivePress = harness.press(document.body, { key });
+
+      expect(harness.blok.BlockManager.deleteSelectedBlocksAndInsertReplacement).not.toHaveBeenCalled();
+      expect(inactivePress.event.defaultPrevented).toBe(false);
+      expect(inactivePress.reachedLaterDocumentListener).toBe(true);
+
+      cachedPage.removeAttribute('inert');
+      harness.press(document.body, { key });
+
+      expect(harness.blok.BlockManager.deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledTimes(1);
+    });
+
     it('removes the selected blocks and puts the caret in the replacement', () => {
       const harness = enabledHarness();
       const replacement = makeBlock('replacement');

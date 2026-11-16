@@ -125,6 +125,10 @@ export class BlockShortcuts {
    * @returns true if shortcut should be handled
    */
   private shouldHandleShortcut(event: KeyboardEvent): boolean {
+    if (this.wrapper.closest('[inert]') !== null) {
+      return false;
+    }
+
     const target = event.target;
 
     if (target instanceof HTMLElement && this.wrapper.contains(target)) {

@@ -682,15 +682,19 @@ export class Blocks {
    * `rendered()` moved it into a cell container), only the RENDERED
    * lifecycle hook is called. Otherwise the holder is positioned in the
    * working area relative to the adjacent block in the array.
+   * @param block - block to mount
+   * @param knownIndex - batch position, checked again in case a lifecycle hook moved blocks
    */
-  public activateBlock(block: Block): void {
+  public activateBlock(block: Block, knownIndex?: number): void {
     if (block.holder.parentElement !== null) {
       this.callRenderedHook(block);
 
       return;
     }
 
-    const index = this.blocks.indexOf(block);
+    const index = knownIndex !== undefined && this.blocks[knownIndex] === block
+      ? knownIndex
+      : this.blocks.indexOf(block);
 
     /**
      * Both anchors below can be DOM-nested (inside a callout, toggle or table

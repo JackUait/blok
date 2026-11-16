@@ -19,6 +19,7 @@ vi.mock('./workspace', () => ({
     return {
       element,
       start: async () => undefined,
+      destroy: () => undefined,
       onRoute: () => { routeCalls++; },
       toggleSidebar: () => undefined,
       createPage: () => history.pushState(null, '', `/?page=${crypto.randomUUID()}`),
@@ -549,7 +550,9 @@ describe('explicit page links at startup',()=>{
     const session=readSession();
     expect(new URL(location.href).searchParams.get('page')).toBe('requested');
     expect(session.tabs).toHaveLength(2);
-    expect(new URL(session.tabs.find(tab=>tab.id===session.activeId)!.href).searchParams.get('page')).toBe('requested');
+    const activeTab = session.tabs.find(tab => tab.id === session.activeId);
+    if (!activeTab) throw new Error('Missing active tab');
+    expect(new URL(activeTab.href).searchParams.get('page')).toBe('requested');
   });
 });
 

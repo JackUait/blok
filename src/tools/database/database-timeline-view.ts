@@ -9,7 +9,7 @@ import { showAvatarsOnly } from './avatar-only';
 import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
 import { readPropertyValue } from './property-values';
-import { addDays, daysBetween, isWeekend } from './calendar-dates';
+import { addDays, daysBetween, isWeekend, startOfWeek } from './calendar-dates';
 import { formatClock, formatShortDatePart, resolveLocale, toLocalDate } from './cells/date-format';
 import { hide as hideReadout, showReadout } from '../../components/utils/tooltip';
 import type { EventSpan } from './calendar-dates';
@@ -136,6 +136,10 @@ const NEW_BAR_DAY_ZOOM_MINUTES = 3 * 60;
 const EDGE_SHARE = 0.1;
 /** notion-motion.md Round 48 A2-A4: zooms whose labels and today circle sit on start lines, with month lines in the body. */
 const ON_START_LINE: ReadonlySet<TimelineZoom> = new Set(['quarter', 'year', '5_years']);
+const TOOLBAR_LABEL_PARTS: Partial<Record<TimelineZoom, Intl.DateTimeFormatOptions>> = {
+  hours: { month: 'long', day: 'numeric', year: 'numeric' },
+  '5_years': { year: 'numeric' },
+};
 /** Zooms whose days are wide enough to shade weekends one by one. */
 const DAY_LEVEL: ReadonlySet<TimelineZoom> = new Set(['hours', 'day', 'week', 'bi_week', 'month']);
 /** Zooms whose header shows day numbers only: the month is named in the toolbar. */
@@ -435,11 +439,11 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
   private monthLabel(day: string): string {
     // notion-motion.md Round 35 Part B: Hours zoom names the whole date ("November 15, 2026").
-    const parts: Intl.DateTimeFormatOptions = this.zoom === 'hours'
-      ? { month: 'long', day: 'numeric', year: 'numeric' }
-      : { month: 'long', year: 'numeric' };
+    // Round 48 A1 (fitted to four reads): Quarter and Year name the week under the left edge by its Monday; 5 Years names the year alone.
+    const parts = TOOLBAR_LABEL_PARTS[this.zoom] ?? { month: 'long', year: 'numeric' };
+    const unitStart = this.zoom === 'quarter' || this.zoom === 'year' ? startOfWeek(day, 1) : day;
 
-    return new Intl.DateTimeFormat(resolveLocale(this.options.locale), parts).format(toLocalDate(day));
+    return new Intl.DateTimeFormat(resolveLocale(this.options.locale), parts).format(toLocalDate(unitStart));
   }
 
   /** Every group with its rows, in drawing order, so the table panel and the canvas line up. */

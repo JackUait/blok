@@ -488,6 +488,22 @@ describe('DatabaseTimelineView', () => {
         expect(lines.map(xOf)).toEqual(firsts.map((i) => i * TIMELINE_DAY_WIDTH[zoom]));
       });
 
+      // notion-motion.md Round 48 A1 (fitted to four reads): the toolbar names the tick unit under the chart's
+      // left edge, by its start. At 18:27 in a 708 view: Year "August 2026" (the week of Aug 31), Quarter
+      // "October 2026" (the week of Oct 12), 5 Years "2025" (the year alone).
+      it.each([
+        ['year', 'August 2026'],
+        ['quarter', 'October 2026'],
+        ['5_years', '2025'],
+      ] as const)('%s zoom names the unit under the left edge in the toolbar', (zoom, label) => {
+        const root = far(zoom);
+
+        Object.defineProperty(scroller(root), 'clientWidth', { value: 708, configurable: true });
+        vi.runAllTicks();
+
+        expect(root.querySelector('[data-blok-database-timeline-month]')?.textContent).toBe(label);
+      });
+
       it('draws no month lines at month zoom', () => {
         expect(far('month').querySelector('[data-blok-database-timeline-month-line]')).toBeNull();
       });

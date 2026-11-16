@@ -177,13 +177,13 @@ describe('database timeline styles', () => {
     expect(ruleBody('[data-blok-database-timeline-table]')).toContain('padding-inline-start: 90px');
     const shown = '[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"]';
 
-    // notion-motion.md Round 50 item 6: open, « is 28x24 with 6px sides, starts 37 before the panel's end, its glyph 2 above centre.
+    // notion-motion.md Round 50 item 6: open, « is 28x24 with 6px sides, starts 37 before the panel's end, its glyph 2.5 above centre (Notion 12 into the card).
     expect(ruleBody(shown)).toContain('margin-inline-start: calc(var(--blok-database-timeline-table-width) - 37px)');
     expect(ruleBody(shown)).toContain('margin-inline-end: 21px');
     expect(ruleBody(shown)).toContain('inline-size: 28px');
     expect(ruleBody(shown)).toContain('block-size: 24px');
     expect(ruleBody(shown)).toContain('padding: 0 var(--blok-space-1-5)');
-    expect(ruleBody(shown)).toContain('inset-block-start: -2px');
+    expect(ruleBody(shown)).toContain('inset-block-start: -2.5px');
     expect(ruleBody('[data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"])')).toContain('padding-inline-start: 0');
     expect(ruleBody(`${shown} svg`)).toContain('transform: scaleX(-1)');
   });

@@ -441,7 +441,7 @@ test.describe('timeline', () => {
   });
 
   // Notion: the card starts 4 under the view top (motion-r6-timelinepanel.json panel 309 in a 305 view; Round 47 A4
-  // content at 309.2 under a 305.2 scroller). « ink is 16 at 323.7 (Round 46 B, r46-n-tltool-svg.raw), 14.5 into the card.
+  // content at 309.2 under a 305.2 scroller). The open « ink is at 321.2 (Round 50 item 6), 12 into the card.
   test('the table panel is a white card from above « to the chart\'s bottom', async ({ page }) => {
     await mount(page, blocks({ type: 'timeline', showTimelineTable: true }));
 
@@ -457,7 +457,7 @@ test.describe('timeline', () => {
 
       if (panel === null || view === null || toggle === null || ink === null || scroller === null || canvas === null) throw new Error('no layout');
       expect(panel.y - view.y).toBeCloseTo(4, 0);
-      expect(ink.y - panel.y).toBeCloseTo(14.5, 0);
+      expect(ink.y - panel.y).toBeCloseTo(12, 0);
       expect(panel.y + panel.height).toBeCloseTo(scroller.y + scroller.height, 0);
       // The weekend stripes and today line run to the bottom too.
       expect(canvas.y + canvas.height).toBeCloseTo(scroller.y + scroller.height - 1, 0);

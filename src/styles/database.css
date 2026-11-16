@@ -15703,11 +15703,11 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 /*
  * notion-motion.md Round 50 item 6: open, « is 28x24 with 6px sides and ends 9 before the panel's end;
- * the margin plus the 4px gap starts the month 16 past it. Its glyph sits 2 above the row's centre;
+ * the margin plus the 4px gap starts the month 16 past it. Its glyph sits 2.5 above the row's centre, 12 into the card;
  * a relative offset, so the toolbar keeps its height.
  */
 [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"] {
-  inset-block-start: -2px;
+  inset-block-start: -2.5px;
   inline-size: 28px;
   block-size: 24px;
   padding: 0 var(--blok-space-1-5);

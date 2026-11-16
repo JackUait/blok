@@ -386,8 +386,9 @@ describe('timeline toolbar row (Round 32, Round 47 A4)', () => {
     expect(body).toContain('padding-block-start: var(--blok-space-3-25)');
   });
 
-  it('keeps the table card 1px under the toolbar top', () => {
-    expect(ruleBody('[data-blok-database-timeline-table]')).toContain('--blok-database-timeline-panel-reach: 39px');
+  // notion-motion.md Round 47 A4: Notion's content starts 4 under the view top; r46-n-tltable.png: the card's border starts there.
+  it('starts the table card 4px under the toolbar top', () => {
+    expect(ruleBody('[data-blok-database-timeline-table]')).toContain('--blok-database-timeline-panel-reach: 36px');
   });
 });
 

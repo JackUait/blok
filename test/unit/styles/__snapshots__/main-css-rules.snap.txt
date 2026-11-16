@@ -18280,7 +18280,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   flex: none;
   inline-size: var(--blok-database-timeline-table-width);
   padding-inline-start: 96px;
-  --blok-database-timeline-panel-reach: 39px;
+  --blok-database-timeline-panel-reach: 36px;
   position: relative;
   z-index: 1;
   margin-block-start: calc(-1 * var(--blok-database-timeline-panel-reach));

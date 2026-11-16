@@ -15534,10 +15534,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   /* Notion keeps 96 before the Name column at every width; it does not follow the text column. */
   padding-inline-start: 96px;
   /*
-   * motion-r6-timelinepanel.json: the card starts 8px above «, 1px under the toolbar top.
-   * Follows the toolbar's 40px height. The padding keeps the rows where they were.
+   * The card starts 4 under the toolbar top (motion-r6-timelinepanel.json; notion-motion.md Round 47 A4).
+   * Tied to the toolbar's 40px height. The padding keeps the rows where they were.
    */
-  --blok-database-timeline-panel-reach: 39px;
+  --blok-database-timeline-panel-reach: 36px;
   position: relative;
   z-index: 1;
   margin-block-start: calc(-1 * var(--blok-database-timeline-panel-reach));

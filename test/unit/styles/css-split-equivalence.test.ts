@@ -1751,6 +1751,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R81_BYTES = 1996;
     // Lane r82: Round 41 header ⋯, picker inks, the Formula glyph, bigger small chevrons, the AI line and the first Add view tile. Net database.css growth against origin/main.
     const DATABASE_R82_BYTES = 2200;
+    // Lane r84: Round 42 board ⋯ and + in the group colour (gray with Color columns off) and the sort picker ink. Net database.css growth against origin/main.
+    const DATABASE_R84_BYTES = 423;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2298,6 +2300,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R80_BYTES
       + DATABASE_R81_BYTES
       + DATABASE_R82_BYTES
+      + DATABASE_R84_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

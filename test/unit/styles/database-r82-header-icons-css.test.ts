@@ -62,9 +62,9 @@ describe('database Round 41 menu icon inks', () => {
     ]);
   });
 
-  // Notion's filter picker icons are rgb(56, 56, 54). The sort picker's ink is unmeasured, so it keeps the gray.
-  it('draws the filter picker icons in the strong ink, and only there', () => {
-    expect(ruleBody('[data-blok-database-picker-list="filter"] [data-blok-database-panel-icon]')).toContain('color: var(--blok-database-peek-glyph-strong)');
+  // Notion's filter and sort picker icons are rgb(56, 56, 54) (Round 41; Round 42 §3).
+  it('draws the filter and sort picker icons in the strong ink', () => {
+    expect(ruleBody('[data-blok-database-picker-list="filter"] [data-blok-database-panel-icon], [data-blok-database-picker-list="sort"] [data-blok-database-panel-icon]')).toContain('color: var(--blok-database-peek-glyph-strong)');
     expect(tokenValues('--blok-database-peek-glyph-strong')[0]).toBe('rgb(56, 56, 54)');
   });
 });

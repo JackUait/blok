@@ -226,6 +226,11 @@
   --blok-database-column-gray-bg: var(--blok-database-column-bg);
   --blok-database-column-gray-ring: var(--blok-database-card-ring);
   --blok-database-column-gray-accent: rgb(110, 107, 102);
+  /* notion-motion.md Round 42 §1: board ⋯ and + inks. A colourless group gives 95,94,89; gray is unmeasured and
+     takes the same. Off is 161,158,153 in every group; dark is unmeasured and follows that popover ink. */
+  --blok-database-column-default-glyph: var(--blok-database-column-accent);
+  --blok-database-column-gray-glyph: var(--blok-database-column-accent);
+  --blok-database-column-glyph-off: var(--blok-popover-search-suffix-text);
   --blok-database-column-yellow-card-hover-bg: rgba(194, 164, 0, 0.063);
   --blok-database-card-lift: rgba(25, 25, 25, 0.027) 0 4px 12px, rgba(25, 25, 25, 0.02) 0 1px 2px;
   --blok-database-card-ring: rgba(42, 28, 0, 0.07);
@@ -1567,13 +1572,9 @@
   border: none;
   border-radius: var(--blok-radius-control);
   background: none;
-  color: var(--_blok-group-accent, var(--blok-database-column-accent));
+  /* notion-motion.md Round 42 §1: the group colour while Color columns is on (database-board-view.ts sets it), else gray. */
+  color: var(--_blok-group-glyph, var(--blok-database-column-glyph-off));
   cursor: pointer;
-}
-
-/* notion-motion.md Round 28 (r28-empty-Board.raw): a status board's ⋯ and + are gray in every group. */
-[data-blok-database-column-actions][data-status] button {
-  color: var(--blok-database-table-header-icon);
 }
 
 [data-blok-database-column-actions] button:hover {
@@ -13280,8 +13281,9 @@ input[data-blok-database-picker-search]:focus {
   height: 20px;
 }
 
-/* notion-motion.md Round 41: the filter picker's icons are rgb(56, 56, 54). The sort picker's are unmeasured. */
-[data-blok-database-picker-list="filter"] [data-blok-database-panel-icon] {
+/* notion-motion.md Round 41, Round 42 §3: the filter and sort pickers' icons are rgb(56, 56, 54). */
+[data-blok-database-picker-list="filter"] [data-blok-database-panel-icon],
+[data-blok-database-picker-list="sort"] [data-blok-database-panel-icon] {
   color: var(--blok-database-peek-glyph-strong);
 }
 

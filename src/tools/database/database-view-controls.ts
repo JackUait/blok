@@ -771,7 +771,7 @@ export class DatabaseViewControls {
       placeholder: string;
       footer?: (close: () => void) => HTMLElement;
       used?: string[];
-      kind?: 'filter';
+      kind?: 'filter' | 'sort';
     }
   ): DatabasePanel {
     const panel = propertyPicker({
@@ -804,7 +804,7 @@ export class DatabaseViewControls {
       this.openPropertyPicker(this.sortButton, 'database-sort-picker', SORTABLE_TYPES, (property) => {
         this.barOpen = true;
         this.updatePersonal({ sorts: [{ id: nanoid(), propertyId: property.id, direction: 'asc' }] });
-      }, { placeholder: this.t('sortByPlaceholder') });
+      }, { placeholder: this.t('sortByPlaceholder'), kind: 'sort' });
 
       return;
     }

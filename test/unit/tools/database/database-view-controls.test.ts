@@ -248,15 +248,28 @@ describe('DatabaseViewControls', () => {
       expect(glyph(q('database-pick-property-fo'))).toBe(sigma);
     });
 
-    // notion-motion.md Round 41: only the filter picker takes the strong ink; its list says which picker it is.
-    it('names the Filter picker list "filter" and leaves the Sort picker list unnamed', () => {
+    // notion-motion.md Round 41, Round 42 §3: both pickers take the strong ink; the list says which picker it is.
+    it('names the Filter picker list "filter" and the Sort picker list "sort"', () => {
       setup();
       click('database-toolbar-filter');
       expect(q('database-filter-picker')?.querySelector('[data-blok-database-picker-list]')?.getAttribute('data-blok-database-picker-list')).toBe('filter');
       document.body.innerHTML = '';
       setup();
       click('database-toolbar-sort');
-      expect(q('database-sort-picker')?.querySelector('[data-blok-database-picker-list]')?.getAttribute('data-blok-database-picker-list')).toBe('');
+      expect(q('database-sort-picker')?.querySelector('[data-blok-database-picker-list]')?.getAttribute('data-blok-database-picker-list')).toBe('sort');
+    });
+
+    // notion-motion.md Round 42 §3: the first row is filled on open. Like the group ⋯ menu, the fill then
+    // follows the pointer, so only one row is filled at a time.
+    it('fills the Sort picker\'s first row on open, and the fill follows the pointer', () => {
+      setup();
+      click('database-toolbar-sort');
+      const rows = (): Element[] => [...(q('database-sort-picker')?.querySelectorAll('[data-blok-database-picker-list] [data-blok-database-panel-row]') ?? [])];
+      const filled = (): number[] => rows().flatMap((row, index) => row.hasAttribute('data-active') ? [index] : []);
+
+      expect(filled()).toEqual([0]);
+      rows()[1].dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+      expect(filled()).toEqual([1]);
     });
 
     it('draws Σ in the Sort picker', () => {

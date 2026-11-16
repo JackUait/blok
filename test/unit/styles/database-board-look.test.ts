@@ -58,16 +58,18 @@ describe('board column header actions', () => {
     }
   });
 
-  // research/36 §1.1, §11: the glyph takes the column's count ink; the hover is the neutral tint in every column.
-  it('draws them in the column\'s count ink with the neutral hover', () => {
-    expect(ruleBody(database, '[data-blok-database-column-actions] button')).toContain('color: var(--_blok-group-accent, var(--blok-database-column-accent))');
+  // notion-motion.md Round 42 §1: the glyph takes the group colour while Color columns is on (set per column), and
+  // rgb(161,158,153) in every group while it is off. The hover is the neutral tint in every column.
+  it('draws them in the group colour, or gray with Color columns off, with the neutral hover', () => {
+    expect(ruleBody(database, '[data-blok-database-column-actions] button')).toContain('color: var(--_blok-group-glyph, var(--blok-database-column-glyph-off))');
+    expect(database).toMatch(/--blok-database-column-glyph-off: var\(--blok-popover-search-suffix-text\)/);
+    expect(database).toMatch(/--blok-database-column-gray-glyph: var\(--blok-database-column-accent\)/);
     expect(ruleBody(database, '[data-blok-database-column-actions] button:hover')).toContain('background-color: var(--blok-database-hover-bg)');
   });
 
-  // notion-motion.md Round 28 (r28-empty-Board.raw), Round 35 (r35-groupmenu.raw): a status board draws them gray
-  // (142,139,134) in every group, while its count keeps the group's colour.
-  it('draws a status board\'s ⋯ and + gray', () => {
-    expect(ruleBody(database, '[data-blok-database-column-actions][data-status] button')).toContain('color: var(--blok-database-table-header-icon)');
+  // notion-motion.md Round 42 §1: a Status board follows the same rule as a Select board.
+  it('has no Status-board override', () => {
+    expect(database).not.toContain('[data-blok-database-column-actions][data-status]');
   });
 
   // research/36 §1.1, §11: the column fill never changes on hover.

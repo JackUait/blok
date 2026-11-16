@@ -21,8 +21,8 @@ export interface PropertyPickerOptions {
   testId: string;
   types: readonly PropertyType[];
   schema: () => PropertyDefinition[];
-  /** Names the list for its ink: Notion's filter picker icons are darker. */
-  kind?: 'filter';
+  /** Names the list for its ink: Notion's filter and sort picker icons are darker. */
+  kind?: 'filter' | 'sort';
   /** The type a property was made as; `schema` reads a formula as its result. */
   storedType?: (propertyId: string) => PropertyType | undefined;
   i18n: Pick<I18n, 't'>;
@@ -69,6 +69,12 @@ export const propertyPicker = (options: PropertyPickerOptions): DatabasePanel =>
       });
 
       row.toggleAttribute('data-active', index === state.active);
+      // notion-motion.md Round 42 §3: the fill follows the pointer, so one row is filled at a time.
+      row.addEventListener('mousemove', () => {
+        if (state.active === index) return;
+        state.active = index;
+        Array.from(list.children).forEach((child, at) => child.toggleAttribute('data-active', at === index));
+      });
 
       return row;
     });

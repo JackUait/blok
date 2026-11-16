@@ -707,9 +707,15 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     el.style.setProperty('flex', `0 0 ${columnWidth}`);
 
     const c = this.columnColor(option);
+    const colorColumns = this.settings.view?.groupSettings?.colorColumns !== false;
+
+    // notion-motion.md Round 42 §1: ⋯ and + take the option's dot ink; a group with no colour takes the plain accent.
+    if (colorColumns) {
+      el.style.setProperty('--_blok-group-glyph', c === undefined ? 'var(--blok-database-column-accent)' : `var(--blok-database-column-${c}-glyph, var(--blok-database-status-dot-${c}))`);
+    }
 
     // "Color columns" off: columns and cards drop the hue, pills keep it.
-    if (c !== undefined && this.settings.view?.groupSettings?.colorColumns !== false) {
+    if (c !== undefined && colorColumns) {
 
       // Only some hues were measured (colors.css); the rest derive from the option pill.
       el.style.setProperty('--_blok-group-tint', `var(--blok-database-column-${c}-bg, color-mix(in srgb, var(--blok-database-option-${c}-bg) 22%, transparent))`);
@@ -857,7 +863,6 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     const actions = document.createElement('div');
 
     actions.setAttribute('data-blok-database-column-actions', '');
-    actions.toggleAttribute('data-status', this.isStatusBoard);
 
     const newPage = document.createElement('button');
 

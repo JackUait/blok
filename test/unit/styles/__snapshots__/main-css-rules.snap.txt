@@ -4785,6 +4785,9 @@ span[data-blok-slash-search] {
   --blok-database-column-gray-bg: var(--blok-database-column-bg);
   --blok-database-column-gray-ring: var(--blok-database-card-ring);
   --blok-database-column-gray-accent: rgb(110, 107, 102);
+  --blok-database-column-default-glyph: var(--blok-database-column-accent);
+  --blok-database-column-gray-glyph: var(--blok-database-column-accent);
+  --blok-database-column-glyph-off: var(--blok-popover-search-suffix-text);
   --blok-database-column-yellow-card-hover-bg: rgba(194, 164, 0, 0.063);
   --blok-database-card-lift: rgba(25, 25, 25, 0.027) 0 4px 12px, rgba(25, 25, 25, 0.02) 0 1px 2px;
   --blok-database-card-ring: rgba(42, 28, 0, 0.07);
@@ -5897,12 +5900,8 @@ span[data-blok-slash-search] {
   border: none;
   border-radius: var(--blok-radius-control);
   background: none;
-  color: var(--_blok-group-accent, var(--blok-database-column-accent));
+  color: var(--_blok-group-glyph, var(--blok-database-column-glyph-off));
   cursor: pointer;
-}
-
-[data-blok-database-column-actions][data-status] button {
-  color: var(--blok-database-table-header-icon);
 }
 
 [data-blok-database-column-actions] button:hover {
@@ -16208,7 +16207,7 @@ input[data-blok-database-picker-search]:focus {
   height: 20px;
 }
 
-[data-blok-database-picker-list="filter"] [data-blok-database-panel-icon] {
+[data-blok-database-picker-list="filter"] [data-blok-database-panel-icon], [data-blok-database-picker-list="sort"] [data-blok-database-panel-icon] {
   color: var(--blok-database-peek-glyph-strong);
 }
 

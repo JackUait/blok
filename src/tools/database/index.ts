@@ -6853,6 +6853,7 @@ export class DatabaseTool implements BlockTool {
 
     this.insertNewRow(rowData);
     void this.sync.syncCreateRow({ id: rowData.id, properties: rowData.properties, position: rowData.position });
+    this.keepTimelinePlace();
     this.rerenderView({ keepDrawer: true });
 
     return rowData.id;
@@ -6885,11 +6886,15 @@ export class DatabaseTool implements BlockTool {
     if (this.cardDrawer?.openRowId === rowId) {
       this.cardDrawer.syncOpenRow(this.rowOrTemplate(rowId));
     }
-    // notion-motion.md Round 49 B5: the chart keeps its scroll across the redraw.
+    this.keepTimelinePlace();
+    this.rerenderView({ keepDrawer: true });
+  }
+
+  /** notion-motion.md Round 49 B5: the next draw keeps the chart's scroll. Only for writes: Today and zoom must re-centre. */
+  private keepTimelinePlace(): void {
     if (this.view instanceof DatabaseTimelineView) {
       this.timelineOrigins.set(this.view.viewId, this.view.origin);
     }
-    this.rerenderView({ keepDrawer: true });
   }
 
   private openTimelineZoomMenu(anchor: HTMLElement, viewConfig: DatabaseViewConfig): void {

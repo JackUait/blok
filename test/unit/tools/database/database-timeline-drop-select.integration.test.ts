@@ -133,4 +133,29 @@ describe('timeline bar drop selection', () => {
     expect(redrawn).not.toBe(scroller);
     expect(redrawn?.scrollLeft).toBe(1234);
   });
+
+  // Round 49 B5 measured drops only; a row made from "+ New" is the same date write and keeps the scroll too.
+  it('keeps the chart where it was scrolled after a row is made from "+ New"', async () => {
+    editor = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: { class: DatabaseTool, config: {} }, 'database-row': DatabaseRowTool },
+      data: { blocks: doc() },
+    } as never);
+    await editor.isReady;
+    await quiet();
+
+    const scroller = holder?.querySelector<HTMLElement>('[data-blok-database-timeline-scroller]');
+    const add = holder?.querySelector<HTMLElement>('[data-blok-database-timeline-table-new]');
+
+    if (scroller === null || scroller === undefined || add === null || add === undefined) throw new Error('no timeline');
+    scroller.scrollLeft = 1234;
+    add.click();
+    await quiet();
+
+    const redrawn = holder?.querySelector<HTMLElement>('[data-blok-database-timeline-scroller]');
+
+    expect(holder?.querySelectorAll('[data-blok-database-timeline-row]').length).toBe(3);
+    expect(redrawn?.scrollLeft).toBe(1234);
+  });
 });

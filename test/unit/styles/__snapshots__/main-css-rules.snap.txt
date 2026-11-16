@@ -20586,6 +20586,19 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   flex-wrap: wrap;
   align-items: center;
   gap: var(--blok-space-1-5);
+  margin-block-start: 11.5px;
+}
+
+[data-blok-database-feed-properties] + [data-blok-database-feed-reactions] {
+  margin-block-start: 8.5px;
+}
+
+[data-blok-database-feed-byline] ~ [data-blok-database-feed-properties] {
+  margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-2));
+}
+
+[data-blok-database-feed-byline] ~ [data-blok-database-feed-reactions], [data-blok-database-feed-byline] ~ [data-blok-database-feed-comments] {
+  margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-3-5));
 }
 
 [data-blok-database-feed-reaction], [data-blok-database-feed-add-reaction] {
@@ -20642,6 +20655,26 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   padding: 0;
 }
 
+[data-blok-database-feed-comments] {
+  margin-block-start: var(--blok-space-1-5);
+}
+
+[data-blok-database-feed-comments] [data-blok-database-comment-composer] {
+  gap: 5.5px;
+}
+
+[data-blok-database-feed-comments] [data-blok-database-comment-composer] > [data-blok-database-comment-avatar] {
+  align-self: flex-start;
+}
+
+[data-blok-database-feed-comments] [data-blok-database-comment-input] {
+  min-height: 27px;
+}
+
+[data-blok-database-feed-comments] [data-blok-database-comment-composer]:not(:has(:focus-visible)) > [data-blok-database-comment-send] {
+  opacity: 0;
+}
+
 [data-blok-database-feed-comments-summary] {
   display: flex;
   align-items: center;
@@ -20682,8 +20715,28 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 [data-blok-database-feed-properties] {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--blok-space-1) var(--blok-space-2);
+  align-items: center;
+  gap: var(--blok-space-1) var(--blok-space-3-5);
+  margin-block-start: var(--blok-space-1);
   font-size: 14px;
+  line-height: 21px;
+}
+
+[data-blok-database-feed-property] {
+  display: flex;
+  align-items: center;
+}
+
+[data-blok-database-feed-properties] [data-blok-database-option-pill] {
+  height: 18px;
+  padding: 0 var(--blok-space-2);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+[data-blok-database-feed-properties] [data-blok-database-checkbox] {
+  width: 14px;
+  height: 14px;
 }
 
 [data-blok-database-feed-body] {

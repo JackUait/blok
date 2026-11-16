@@ -80,6 +80,52 @@ describe('database chart and feed styles', () => {
     }
   });
 
+  // notion-motion.md Round 45 §1 Feed card (r45-n-feed.raw, r45-n-feedprops.raw): under a byline the property line
+  // starts at the title column (x 587), the reaction chip and composer 6 further in (x 593), the input at 622.5.
+  it('lines the card footer up with the title column', () => {
+    expect(ruleBody('[data-blok-database-feed-byline] ~ [data-blok-database-feed-properties]'))
+      .toContain('margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-2))');
+    for (const part of ['reactions', 'comments']) {
+      expect(ruleBody(`[data-blok-database-feed-byline] ~ [data-blok-database-feed-${part}]`))
+        .toContain('margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-3-5))');
+    }
+    expect(ruleBody('[data-blok-database-feed-comments] [data-blok-database-comment-composer]')).toContain('gap: 5.5px');
+  });
+
+  // Same raws: the chip at card + 93.5 (+ 123.5 under a property line with its pills at + 87.5), the composer
+  // 14 under the chip, its input 27 tall, the card 175.5 tall.
+  it('spaces the footer as Notion\'s feed card', () => {
+    expect(ruleBody('[data-blok-database-feed-reactions]')).toContain('margin-block-start: 11.5px');
+    expect(ruleBody('[data-blok-database-feed-properties] + [data-blok-database-feed-reactions]')).toContain('margin-block-start: 8.5px');
+    expect(ruleBody('[data-blok-database-feed-properties]')).toContain('margin-block-start: var(--blok-space-1)');
+    expect(ruleBody('[data-blok-database-feed-comments]')).toContain('margin-block-start: var(--blok-space-1-5)');
+    expect(ruleBody('[data-blok-database-feed-comments] [data-blok-database-comment-input]')).toContain('min-height: 27px');
+    expect(ruleBody('[data-blok-database-feed-comments] [data-blok-database-comment-composer] > [data-blok-database-comment-avatar]'))
+      .toContain('align-self: flex-start');
+  });
+
+  // Same raws: Notion's composer tools are at opacity 0 until the box has focus. A focused textarea always matches
+  // :focus-visible, and so does a send button reached by Tab.
+  it('hides the composer send button until the composer has focus', () => {
+    expect(ruleBody('[data-blok-database-feed-comments] [data-blok-database-comment-composer]:not(:has(:focus-visible)) > [data-blok-database-comment-send]'))
+      .toContain('opacity: 0');
+  });
+
+  // r45-n-feedprops.raw: a 21 line, chips 13/18, 18 tall with 8 padding, 14 apart, the checkbox 14.
+  it('sets the property line chips at 13px, 14 apart', () => {
+    const pill = ruleBody('[data-blok-database-feed-properties] [data-blok-database-option-pill]');
+
+    expect(pill).toMatch(/font-size:\s*13px/);
+    expect(pill).toMatch(/line-height:\s*18px/);
+    expect(pill).toMatch(/height:\s*18px/);
+    expect(pill).toContain('padding: 0 var(--blok-space-2)');
+    expect(ruleBody('[data-blok-database-feed-properties]')).toContain('line-height: 21px');
+    expect(ruleBody('[data-blok-database-feed-properties]')).toContain('gap: var(--blok-space-1) var(--blok-space-3-5)');
+    expect(ruleBody('[data-blok-database-feed-properties] [data-blok-database-checkbox]')).toContain('width: 14px');
+    // Each value sits centred on the line: pills 1.5 under its top, the checkbox 3.5.
+    expect(ruleBody('[data-blok-database-feed-property]')).toContain('align-items: center');
+  });
+
   it('marks a turned-off legend entry with muted ink, never a fill', () => {
     const off = ruleBody('[data-blok-database-chart-legend-entry][aria-pressed="false"]');
 

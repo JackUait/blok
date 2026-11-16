@@ -15311,8 +15311,11 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   --blok-database-timeline-line: 28px;
   /* The view sets 1 when the toolbar names the month (findings C06). */
   --blok-database-timeline-header-rows: 2;
-  --blok-database-timeline-header-under: 0px;
-  --blok-database-timeline-header-block: calc(var(--blok-database-timeline-line) * var(--blok-database-timeline-header-rows) + var(--blok-database-timeline-header-under));
+  /* notion-motion.md Round 47 A2: a second row's labels sit in the 36 toolbar row, not under it. */
+  --blok-database-timeline-header-band: calc((var(--blok-database-timeline-header-rows) - 1) * 36px);
+  /* notion-motion.md Round 47 A2: the day row is 32 in every zoom, the digits on a 28 line at its top. */
+  --blok-database-timeline-header-under: 4px;
+  --blok-database-timeline-header-block: calc(var(--blok-database-timeline-line) + var(--blok-database-timeline-header-under));
   /* The view sets the day width inline on the canvas. */
   --blok-database-timeline-day: 40px;
   /* notion-motion.md Round 6: 376 with the border, at 1512 and 1100. The toolbar's « and month are placed from it. */
@@ -15325,11 +15328,6 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-timeline-text);
 }
 
-/* notion-motion.md Round 46 B: Month's day row is 32 with the digits on a 28 line at its top. Other zooms unmeasured. */
-[data-blok-database-timeline][data-zoom="month"] {
-  --blok-database-timeline-header-under: 4px;
-}
-
 [data-blok-database-timeline-toolbar] {
   display: flex;
   align-items: center;
@@ -15337,10 +15335,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   position: relative;
   /* Above the table panel, which runs up behind « and the month. */
   z-index: 2;
-  /* notion-motion.md Round 32 §3 Timeline: Today at y 319.7, 5.7px lower; the grid under it stays put. */
+  /* notion-motion.md Round 32 §3: Today at y 319.7. Round 47 A4: the block is 40 (Notion 4 + 36), the controls stay put. */
   box-sizing: border-box;
-  min-block-size: 42px;
-  padding-block-start: var(--blok-space-2-75);
+  min-block-size: 40px;
+  padding-block-start: var(--blok-space-3-25);
   /* The toolbar keeps to the text column; the grid below stays as wide as the view (side-by-side-4 #2).
      « starts 6 before the column (notion-motion.md Round 46 B). */
   padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2 - var(--blok-space-1-5)));
@@ -15521,10 +15519,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   /* Notion keeps 96 before the Name column at every width; it does not follow the text column. */
   padding-inline-start: 96px;
   /*
-   * motion-r6-timelinepanel.json: the card starts 8px above «. « sits 9px into the 42px toolbar,
-   * so the card reaches 41px up into it. The padding keeps the rows where they were.
+   * motion-r6-timelinepanel.json: the card starts 8px above «, 1px under the toolbar top.
+   * Follows the toolbar's 40px height. The padding keeps the rows where they were.
    */
-  --blok-database-timeline-panel-reach: 41px;
+  --blok-database-timeline-panel-reach: 39px;
   position: relative;
   z-index: 1;
   margin-block-start: calc(-1 * var(--blok-database-timeline-panel-reach));
@@ -15700,10 +15698,12 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   position: relative;
   flex: 1 1 auto;
   min-inline-size: 0;
+  /* Runs up under the toolbar so the group labels scroll in its band. The band stays unfilled. */
+  margin-block-start: calc(-1 * var(--blok-database-timeline-header-band));
   overflow-x: auto;
   overflow-y: hidden;
   outline-offset: -2px;
-  background-color: var(--blok-database-timeline-canvas-bg);
+  background: linear-gradient(transparent var(--blok-database-timeline-header-band), var(--blok-database-timeline-canvas-bg) var(--blok-database-timeline-header-band));
   border-block-end: 1px solid var(--blok-database-calendar-border);
 }
 
@@ -15719,11 +15719,15 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-timeline-header] {
   position: relative;
-  block-size: var(--blok-database-timeline-header-block);
+  block-size: calc(var(--blok-database-timeline-header-band) + var(--blok-database-timeline-header-block));
   box-shadow: var(--blok-database-timeline-header-line) 0 -1px 0 0 inset;
 }
 
-[data-blok-database-timeline-groups],
+[data-blok-database-timeline-groups] {
+  position: relative;
+  block-size: var(--blok-database-timeline-header-band);
+}
+
 [data-blok-database-timeline-units] {
   position: relative;
   block-size: var(--blok-database-timeline-line);
@@ -15739,6 +15743,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 [data-blok-database-timeline-groups] > * {
+  /* notion-motion.md Round 47 A2: the label box starts at the band top with 13 above the text. */
+  padding-block-start: var(--blok-space-3-25);
   padding-inline-start: var(--blok-space-4);
   font-size: 14px;
   line-height: 21px;
@@ -15787,7 +15793,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 [data-blok-database-timeline-today-dot] {
   position: absolute;
   z-index: 1;
-  inset-block-start: calc(var(--blok-database-timeline-line) * (var(--blok-database-timeline-header-rows) - 1) + 3px);
+  inset-block-start: calc(var(--blok-database-timeline-header-band) + 3px);
   margin-inline-start: -11px;
   inline-size: 22px;
   block-size: 22px;
@@ -15802,7 +15808,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-timeline-background] {
   position: absolute;
-  inset-block: var(--blok-database-timeline-header-block) 0;
+  inset-block: calc(var(--blok-database-timeline-header-band) + var(--blok-database-timeline-header-block)) 0;
   inset-inline: 0;
   pointer-events: none;
 }
@@ -16061,7 +16067,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 [data-blok-database-timeline-range] {
   position: absolute;
   /* On the day line, like the today dot: Month's row is taller than the line. */
-  inset-block-start: calc(var(--blok-database-timeline-line) * (var(--blok-database-timeline-header-rows) - 1) + var(--blok-space-0-75));
+  inset-block-start: calc(var(--blok-database-timeline-header-band) + var(--blok-space-0-75));
   block-size: 22px;
   border-radius: var(--blok-radius-pill);
   background-color: var(--blok-database-timeline-weekend-bg);

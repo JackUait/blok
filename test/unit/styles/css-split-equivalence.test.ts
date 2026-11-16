@@ -1779,6 +1779,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R103_BYTES = 1330;
     // Lane r104: Round 47 table and toolbar smalls (emoji icon 18, compact OPEN inset 4, frozen shadow after the stick, chip divider 12). Net database.css growth against origin/main.
     const DATABASE_R104_BYTES = 252;
+    // Lane r102: Round 47 timeline header (day row 32 in every zoom, group labels in the toolbar row, toolbar 40). Net database.css growth against origin/main.
+    const DATABASE_R102_BYTES = 578;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2340,6 +2342,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R99_BYTES
       + DATABASE_R103_BYTES
       + DATABASE_R104_BYTES
+      + DATABASE_R102_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

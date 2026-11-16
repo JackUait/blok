@@ -135,7 +135,7 @@ describe('database timeline styles', () => {
   // findings C19/C20 (r26 §4d, r33 §4.6): no line under the toolbar; a near-white canvas with a bottom line.
   it('draws no line under the toolbar, and fills the canvas with a line under it', () => {
     expect(ruleBody('[data-blok-database-timeline-body]')).not.toContain('border-block-start');
-    expect(ruleBody('[data-blok-database-timeline-scroller]')).toContain('background-color: var(--blok-database-timeline-canvas-bg)');
+    expect(ruleBody('[data-blok-database-timeline-scroller]')).toContain('var(--blok-database-timeline-canvas-bg) var(--blok-database-timeline-header-band))');
     expect(ruleBody('[data-blok-database-timeline-scroller]')).toContain('border-block-end: 1px solid var(--blok-database-calendar-border)');
     expect(css).toContain('--blok-database-timeline-canvas-bg: rgb(253, 253, 253);');
     expect(darkValues('--blok-database-timeline-canvas-bg')).toEqual(['rgb(25, 25, 25)', 'rgb(25, 25, 25)']);
@@ -375,15 +375,19 @@ describe('"+ New" lane (Round 24)', () => {
   });
 });
 
-// notion-motion.md Round 32 §3 Timeline (r32-b-timeline-geom.raw): Today at y 319.7 and the month at 320.7 sit 5.7px lower
-// than Blok's (314, 315.5). The grid below stays where it is, so the 42px toolbar keeps its height and pads its top.
-describe('timeline toolbar row (Round 32)', () => {
-  it('centres its controls 11px lower in the same 42px', () => {
+// notion-motion.md Round 32 §3 Timeline: Today at y 319.7 and the month at 320.7. Round 47 A4: the toolbar block is 40
+// (Notion 4 + 36), so the tick row starts at 345.2. The controls keep their place: 2 off the height, 2 onto the top.
+describe('timeline toolbar row (Round 32, Round 47 A4)', () => {
+  it('is 40 tall with the controls where they were', () => {
     const body = ruleBody('[data-blok-database-timeline-toolbar]');
 
-    expect(body).toContain('min-block-size: 42px');
+    expect(body).toContain('min-block-size: 40px');
     expect(body).toContain('box-sizing: border-box');
-    expect(body).toContain('padding-block-start: var(--blok-space-2-75)');
+    expect(body).toContain('padding-block-start: var(--blok-space-3-25)');
+  });
+
+  it('keeps the table card 1px under the toolbar top', () => {
+    expect(ruleBody('[data-blok-database-timeline-table]')).toContain('--blok-database-timeline-panel-reach: 39px');
   });
 });
 
@@ -454,20 +458,18 @@ describe('Hours zoom 15-minute lines and day period (Round 35)', () => {
       expect(ruleBody('[data-blok-database-no-date-row] > [data-blok-database-page-icon-placeholder] svg')).toMatch(/inline-size:\s*18px;\s*block-size:\s*18px/);
     });
 
-    it('makes the Month day row 32 tall, the day line staying 28', () => {
-      expect(ruleBody('[data-blok-database-timeline][data-zoom="month"]')).toContain('--blok-database-timeline-header-under: 4px');
-      expect(css).toContain('--blok-database-timeline-header-under: 0px;');
-      for (const selector of ['[data-blok-database-timeline-header]', '[data-blok-database-timeline-table-header]']) {
-        expect(ruleBody(selector)).toContain('block-size: var(--blok-database-timeline-header-block)');
-      }
-      expect(ruleBody('[data-blok-database-timeline-background]')).toContain('inset-block: var(--blok-database-timeline-header-block) 0');
+    // Round 47 A2: the day row is 32 in every zoom.
+    it('makes the day row 32 tall in every zoom, the day line staying 28', () => {
+      expect(ruleBody('[data-blok-database-timeline]')).toContain('--blok-database-timeline-header-under: 4px');
+      expect(ruleBody('[data-blok-database-timeline][data-zoom="month"]')).toBe('');
+      expect(ruleBody('[data-blok-database-timeline-header]')).toContain('var(--blok-database-timeline-header-block)');
       expect(ruleBody('[data-blok-database-timeline-units]')).toContain('block-size: var(--blok-database-timeline-line)');
     });
 
     it('keeps the range pill on the day line when the row grows', () => {
       const pill = ruleBody('[data-blok-database-timeline-range]');
 
-      expect(pill).toContain('inset-block-start: calc(var(--blok-database-timeline-line) * (var(--blok-database-timeline-header-rows) - 1) + var(--blok-space-0-75))');
+      expect(pill).toContain('inset-block-start: calc(var(--blok-database-timeline-header-band) + var(--blok-space-0-75))');
       expect(pill).not.toContain('inset-block-end');
     });
 
@@ -507,5 +509,36 @@ describe('Hours zoom 15-minute lines and day period (Round 35)', () => {
       expect(at).toBeGreaterThan(-1);
       expect(css.slice(at, css.indexOf('}', at))).toContain('opacity: 0');
     });
+  });
+});
+
+// notion-motion.md Round 47 A2: Quarter, Year and 5 Years put their month or year labels in the 36 toolbar row
+// (box at its top, 13 padding, 14/21), so the first bar is at 378.2 in every zoom, not under a second header row.
+describe('timeline group labels share the toolbar row (Round 47 A2)', () => {
+  it('makes the band 36 for each header row past the first', () => {
+    expect(ruleBody('[data-blok-database-timeline]')).toContain('--blok-database-timeline-header-block: calc(var(--blok-database-timeline-line) + var(--blok-database-timeline-header-under))');
+    expect(ruleBody('[data-blok-database-timeline]')).toContain('--blok-database-timeline-header-band: calc((var(--blok-database-timeline-header-rows) - 1) * 36px)');
+  });
+
+  it('pulls the chart up under the toolbar by the band, painting no fill there', () => {
+    const scroller = ruleBody('[data-blok-database-timeline-scroller]');
+
+    expect(scroller).toContain('margin-block-start: calc(-1 * var(--blok-database-timeline-header-band))');
+    expect(scroller).toContain('background: linear-gradient(transparent var(--blok-database-timeline-header-band), var(--blok-database-timeline-canvas-bg) var(--blok-database-timeline-header-band))');
+  });
+
+  it('puts the group row in the band, over the day row', () => {
+    expect(ruleBody('[data-blok-database-timeline-header]')).toContain('block-size: calc(var(--blok-database-timeline-header-band) + var(--blok-database-timeline-header-block))');
+    expect(ruleBody('[data-blok-database-timeline-groups]')).toContain('block-size: var(--blok-database-timeline-header-band)');
+    expect(ruleBody('[data-blok-database-timeline-groups] > *')).toContain('padding-block-start: var(--blok-space-3-25)');
+    expect(ruleBody('[data-blok-database-timeline-background]')).toContain('inset-block: calc(var(--blok-database-timeline-header-band) + var(--blok-database-timeline-header-block)) 0');
+  });
+
+  it('keeps the table panel header to the day row alone', () => {
+    expect(ruleBody('[data-blok-database-timeline-table-header]')).toContain('block-size: var(--blok-database-timeline-header-block)');
+  });
+
+  it('puts the today dot on the day line under the band', () => {
+    expect(ruleBody('[data-blok-database-timeline-today-dot]')).toContain('inset-block-start: calc(var(--blok-database-timeline-header-band) + 3px)');
   });
 });

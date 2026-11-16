@@ -2,7 +2,7 @@
 
 The desktop and web client share two entry points:
 
-- An empty page discussion action appears on header hover or keyboard focus (always available on touch). Existing discussions stay discoverable under the title.
+- The empty page discussion action sits beside Add icon / Add cover above the title, on header hover or keyboard focus (always available on touch). Activating it hides the action and opens the full-width composer below the title/properties. Leaving an empty composer closes it; Escape also closes it without discarding a draft. Existing discussions stay discoverable under the title.
 - Select text and choose **Commenter** in the inline toolbar, or press Cmd/Ctrl+Shift+M. The top toolbar opens the discussion list, with open/resolved filters.
 
 Threads and replies remain `database-comment` annotation blocks. Page and passage threads are document-root blocks; replies are children of the thread. The optional `data.anchor.segments` records block ID, editable-field index, text offset, exact quote, and surrounding text. It does not duplicate the document body. Saved documents without anchors retain their page/row behavior.

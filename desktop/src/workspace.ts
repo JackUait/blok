@@ -4,7 +4,7 @@ import { createWorkspaceSaveStatus } from './workspace-save-status';
 import './workspace-save-status.css';
 import { navigationFavorites, navigationRecents } from './navigation-preferences';
 import { commentAuthor } from './comment-author';
-import { mountPageComments, placePageComments } from './page-comments';
+import { mountPageComments } from './page-comments';
 import { CommentInlineTool } from './inline-comments';
 import { createNotesDocument, readNotesCollection, rememberNotesCollection, addNote } from './notes-collection';
 import { openPageLibrary, pageTimestamp } from './page-library';
@@ -624,7 +624,6 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     void instance.isReady.then(() => {
       if (ws.generation !== turn) return;
       ws.pageComments = mountPageComments({ holder, editor: instance, author: () => commentAuthor(ref), canComment: () => !readOnly(id) && ws.editor === instance });
-      placePageComments(holder, ws.pageComments.element);
       const discussions = ws.pageComments.element.querySelector('[data-inline-comments-open]');
       if (discussions) toolbar.element.querySelector('[data-desktop-page-actions]')?.prepend(discussions);
       instance.on('collaboration:status', (raw) => {

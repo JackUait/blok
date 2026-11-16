@@ -6,8 +6,11 @@ import { createCommentsPanel, openDatabaseConfirm, type CommentsPanel } from './
 import { MessageSquare, createElement } from 'lucide';
 
 /** Discussion belongs to the page header, outside the editable block tree. */
-export function placePageComments(holder: HTMLElement, element: HTMLElement): void {
-  holder.querySelector('[data-blok-page-header]')?.append(element);
+export function placePageComments(holder: HTMLElement, element: HTMLElement, action: HTMLButtonElement): void {
+  const header = holder.querySelector('[data-blok-page-header]');
+  const row = header?.querySelector('[data-blok-page-icon-row]');
+  if (header && element.parentElement !== header) header.append(element);
+  if (row && (action.parentElement !== row || action.nextElementSibling)) row.append(action);
 }
 
 /** Page discussion uses the same annotation blocks and collaboration as row comments. */
@@ -16,7 +19,7 @@ export function mountPageComments(options: {
   editor: Pick<Blok, 'blocks' | 'tools' | 'events' | 'i18n'>;
   author: () => CommentAuthor;
   canComment: () => boolean;
-}): { element: HTMLElement; destroy(): void } {
+}): { element: HTMLElement; action: HTMLButtonElement; destroy(): void } {
   const { editor } = options;
   const store = new BuiltInComments(editor, options.author);
   const pageThreads = () => store.threads(null).filter(thread => !thread.data.anchor);
@@ -36,16 +39,17 @@ export function mountPageComments(options: {
   toggle.append(createElement(MessageSquare, {'aria-hidden':'true', width:'16', height:'16'}), label);
   const content = document.createElement('div'); content.setAttribute('data-page-comments-content', '');
   content.id = `page-discussion-${crypto.randomUUID()}`; toggle.setAttribute('aria-controls', content.id);
-  content.append(controls, body); element.append(toggle); if (inline) element.append(inline.element); element.append(content);
+  content.append(controls, body); if (inline) element.append(inline.element); element.append(content);
   let expanded = pageThreads().some(thread => !thread.data.resolved);
   const refreshSummary = (): void => {
     const threads = pageThreads();
     const count = threads.filter(thread => !thread.data.resolved).length;
-    label.textContent = threads.length ? `Commentaires${count ? ` (${count})` : ''}` : 'Ajouter un commentaire…';
+    label.textContent = threads.length ? `Commentaires${count ? ` (${count})` : ''}` : 'Ajouter un commentaire';
     toggle.toggleAttribute('data-page-comments-empty', threads.length === 0);
     toggle.setAttribute('aria-expanded', String(expanded)); content.hidden = !expanded;
     controls.hidden = !threads.some(thread => thread.data.resolved) && !state.resolved;
-    element.hidden = !store.threads(null).length && !options.canComment();
+    toggle.hidden = expanded || (!threads.length && !options.canComment());
+    element.hidden = !expanded;
   };
   const state: { resolved: boolean; writable: boolean; panel: CommentsPanel | null; timer: ReturnType<typeof setTimeout> | null; destroyed: boolean; draft: string } = {
     resolved: false, writable: false, panel: null, timer: null, destroyed: false, draft: '',
@@ -106,10 +110,29 @@ export function mountPageComments(options: {
     expanded = !expanded; refreshSummary();
     if (expanded) body.querySelector<HTMLTextAreaElement>('textarea')?.focus();
   });
+  content.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault(); event.stopPropagation();
+    expanded = false; refreshSummary(); toggle.focus();
+  });
+  content.addEventListener('focusout', () => queueMicrotask(() => {
+    if (state.destroyed || content.contains(document.activeElement) || pageThreads().length) return;
+    const input = body.querySelector<HTMLTextAreaElement>('textarea');
+    if (input?.value.trim()) return;
+    expanded = false; refreshSummary();
+  }));
+  const observer = options.holder ? new MutationObserver(() => placePageComments(options.holder!, element, toggle)) : null;
+  if (options.holder) {
+    placePageComments(options.holder, element, toggle);
+    const header = options.holder.querySelector('[data-blok-page-header]');
+    if (header) observer?.observe(header, { childList: true, subtree: true });
+  }
   editor.events.on('block changed', onChange);
   render();
-  return { element, destroy() {
+  return { element, action: toggle, destroy() {
     state.destroyed = true;
+    observer?.disconnect();
+    toggle.remove();
     inline?.destroy();
     editor.events.off('block changed', onChange);
     if (state.timer !== null) clearTimeout(state.timer);

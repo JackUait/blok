@@ -1,6 +1,6 @@
-[data-desktop-page-comments] { margin: 8px auto 20px; padding: 0; max-width: var(--blok-content-column, 760px); color: var(--desktop-ink); }
-[data-page-comments-toggle] { display: inline-flex; align-items: center; gap: 7px; padding: 5px 0; border: 0; background: transparent; color: var(--desktop-muted); font: inherit; font-size: 13px; cursor: pointer; }
-[data-page-comments-toggle]:hover { color: var(--desktop-ink); }
+[data-desktop-page-comments] { margin: 16px auto 24px; padding: 0; max-width: var(--blok-content-column, 760px); color: var(--desktop-ink); }
+[data-page-comments-toggle] { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; align-self: flex-end; margin-inline-start: 6px; padding: 4px 8px; border: 0; background: transparent; color: var(--desktop-muted); font: inherit; font-size: 14px; line-height: 20px; border-radius: 5px; cursor: pointer; }
+[data-page-comments-toggle]:hover { background: var(--desktop-hover); color: var(--desktop-ink); }
 [data-page-comments-toggle]:focus-visible { outline: 2px solid var(--blok-focus-ring); outline-offset: 2px; }
 [data-page-comments-content] { padding: 8px 0 16px; border-bottom: 1px solid var(--desktop-border); }
 [data-page-comments-content][hidden], [data-page-comments-filters][hidden], [data-desktop-page-comments][hidden] { display: none; }
@@ -19,3 +19,7 @@
   [data-blok-page-header][data-desktop-header-hover] [data-page-comments-toggle][data-page-comments-empty][aria-expanded=false],
   [data-page-comments-toggle][data-page-comments-empty][aria-expanded=false]:focus-visible { opacity: 1; pointer-events: auto; }
 }
+
+[data-page-comments-toggle][hidden] { display: none; }
+[data-desktop-page-comments] [data-blok-database-comments] { width: 100%; padding: 0; }
+[data-desktop-document]:has([data-blok-database-row-page], [data-blok-database-full-open]) [data-page-comments-toggle] { display: none; }

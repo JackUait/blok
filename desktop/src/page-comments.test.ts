@@ -14,7 +14,7 @@ function mount(writable = { value: true }) {
   const events = { on: vi.fn(), off: vi.fn() };
   const editor = { blocks: {}, tools: {}, events, i18n: { t: (key: string) => key } } as unknown as Pick<Blok, 'blocks' | 'tools' | 'events' | 'i18n'>;
   const panel = mountPageComments({ editor, author: () => ({ authorId: 'me', authorName: 'Moi' }), canComment: () => writable.value });
-  document.body.append(panel.element); handles.push(panel);
+  document.body.append(panel.action, panel.element); handles.push(panel);
   return { ...panel, events };
 }
 function send(text: string): void {
@@ -29,7 +29,7 @@ afterEach(() => { handles.splice(0).forEach(handle => handle.destroy()); documen
 describe('page comment controls', () => {
   it('keeps an empty discussion collapsed until requested and focuses its composer', () => {
     const panel = mount();
-    const toggle = panel.element.querySelector<HTMLButtonElement>('[data-page-comments-toggle]')!;
+    const toggle = panel.action;
     expect(toggle?.getAttribute('aria-expanded')).toBe('false');
     expect(panel.element.querySelector<HTMLElement>('[data-page-comments-content]')?.hidden).toBe(true);
     toggle.click();
@@ -38,20 +38,39 @@ describe('page comment controls', () => {
   });
   it('marks only the empty collapsed entry as a contextual header action', () => {
     const panel = mount();
-    const toggle = panel.element.querySelector<HTMLButtonElement>('[data-page-comments-toggle]')!;
+    const toggle = panel.action;
     expect(toggle.hasAttribute('data-page-comments-empty')).toBe(true);
     toggle.click();
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
     state.threads = [{ id: 'thread', data: { text: 'Already discussed', createdAt: 1 }, replies: [] }];
     const populated = mount();
-    expect(populated.element.querySelector('[data-page-comments-toggle]')?.hasAttribute('data-page-comments-empty')).toBe(false);
+    expect(populated.action.hasAttribute('data-page-comments-empty')).toBe(false);
   });
   it('places discussion after title properties and before the document body', () => {
     const holder = document.createElement('div');
-    holder.innerHTML = '<header data-blok-page-header><h1 data-blok-page-title>Title</h1><div data-desktop-page-created>Date</div></header><div data-blok-redactor>Body</div>';
-    const panel = mount(); placePageComments(holder, panel.element);
+    holder.innerHTML = '<header data-blok-page-header><div data-blok-page-icon-row><button>Add icon</button><button>Add cover</button></div><h1 data-blok-page-title>Title</h1><div data-desktop-page-created>Date</div></header><div data-blok-redactor>Body</div>';
+    const panel = mount(); placePageComments(holder, panel.element, panel.action);
     expect(holder.querySelector('[data-blok-page-header]')?.lastElementChild).toBe(panel.element);
+    expect(holder.querySelector('[data-blok-page-icon-row]')?.lastElementChild).toBe(panel.action);
+    expect(panel.element.contains(panel.action)).toBe(false);
+    panel.action.click();
+    expect(panel.action.hidden).toBe(true);
+    expect(panel.element.hidden).toBe(false);
     expect(holder.querySelector('[data-blok-redactor]')?.contains(panel.element)).toBe(false);
+  });
+  it('restores the header action after an icon-row redraw and removes it on destruction', async () => {
+    const holder = document.createElement('div');
+    holder.innerHTML = '<header data-blok-page-header><div data-blok-page-icon-row></div><h1>Title</h1></header>';
+    document.body.append(holder);
+    const editor = { blocks: {}, tools: {}, events: { on: vi.fn(), off: vi.fn() }, i18n: { t: (key: string) => key } } as never;
+    const panel = mountPageComments({ holder, editor, author: () => ({ authorId: 'me' }), canComment: () => true });
+    handles.push(panel);
+    const row = holder.querySelector('[data-blok-page-icon-row]')!;
+    row.replaceChildren(document.createElement('button'));
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(row.lastElementChild).toBe(panel.action);
+    panel.destroy();
+    expect(holder.querySelector('[data-page-comments-toggle]')).toBeNull();
   });
   it('adds a page thread and checks current permission again when sending', () => {
     const permission = { value: true }; mount(permission);

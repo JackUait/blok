@@ -52,6 +52,8 @@ const FRAME_HEIGHT = 38;
 /** Sheet width in CSS px, and the height of it a card can ever show. */
 const SHEET_WIDTH = 180;
 const SHEET_HEIGHT = 150;
+/** Blocks of a Word page the card keeps: more than its top ever shows. */
+const DOC_TOP_BLOCKS = 60;
 const PX_PER_PT = 96 / 72;
 /** A zip's end record is 22 bytes plus a comment of at most 65,535. */
 const ZIP_TAIL_BYTES = 65_557;
@@ -317,6 +319,11 @@ async function loadDocument(source: CardSource): Promise<LoadedCard | null> {
   const page = document.createElement('div');
   page.className = 'blok-file-preview-docx';
   page.appendChild(first);
+  // Only the top of page one shows. A long section would put the whole file
+  // in the editor's DOM, and laying that out stalls the page.
+  first.querySelectorAll(':scope > article').forEach((article) => {
+    Array.from(article.children).slice(DOC_TOP_BLOCKS).forEach((block) => block.remove());
+  });
 
   return {
     content: {

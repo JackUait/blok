@@ -186,8 +186,8 @@ describe('content page glyph', () => {
     expect(glyphOf('list', 'one')).toBe('content');
   });
 
-  it('the timeline No date list picks the glyph by body too', async () => {
-    const blok = await make('timeline');
+  it.each(['timeline', 'calendar'] as const)('the %s No date list picks the glyph by body too', async (layout) => {
+    const blok = await make(layout);
 
     blok.blocks.insertAt('database-row', { properties: { t: 'Undated' }, position: 'a3' }, { parentId: 'db', position: 'end', id: 'undated' });
     blok.blocks.insertAt('paragraph', { text: 'body' }, { parentId: 'undated', position: 'end', id: 'p3' });

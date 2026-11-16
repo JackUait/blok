@@ -18111,7 +18111,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   box-sizing: border-box;
   min-block-size: 42px;
   padding-block-start: var(--blok-space-2-75);
-  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2 - var(--blok-space-1-5)));
   padding-inline-end: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
 
@@ -18139,7 +18139,6 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   inline-size: var(--blok-space-6);
   min-inline-size: 0;
   block-size: 22px;
-  margin-inline-start: calc(-1 * var(--blok-space-1-5));
   padding: 0 var(--blok-space-1);
 }
 
@@ -18766,7 +18765,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-timeline-range] {
   position: absolute;
-  inset-block-end: 3px;
+  inset-block-start: calc(var(--blok-database-timeline-line) * (var(--blok-database-timeline-header-rows) - 1) + var(--blok-space-0-75));
   block-size: 22px;
   border-radius: var(--blok-radius-pill);
   background-color: var(--blok-database-timeline-weekend-bg);

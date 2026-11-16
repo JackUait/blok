@@ -1774,7 +1774,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r100: Round 46 table smalls (feed body inset and size, tabular figures, OPEN and list Edit inner hover, OPEN inset, name glyph). Net database.css growth against origin/main.
     const DATABASE_R100_BYTES = 1261;
     // Lane r99: Round 46 timeline smalls (panel and No date glyph 18, Month day row 32, « and Month widths, zoom items 14/400, handle hidden on move). Net database.css growth against origin/main.
-    const DATABASE_R99_BYTES = 1892;
+    const DATABASE_R99_BYTES = 2095;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

@@ -312,7 +312,8 @@ describe('timeline in dark (research/21 §1i)', () => {
 
 describe('content inset (side-by-side-4 #2)', () => {
   it('starts the toolbar at the text column, like the table, while the grid stays as wide as the view', () => {
-    expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain('padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))');
+    // Round 46 B: less the 6 the « sits before the column.
+    expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain('padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2 - var(--blok-space-1-5)))');
     expect(ruleBody('[data-blok-database-timeline-scroller]')).not.toMatch(/padding-inline|padding-left/);
   });
 
@@ -463,13 +464,22 @@ describe('Hours zoom 15-minute lines and day period (Round 35)', () => {
       expect(ruleBody('[data-blok-database-timeline-units]')).toContain('block-size: var(--blok-database-timeline-line)');
     });
 
+    it('keeps the range pill on the day line when the row grows', () => {
+      const pill = ruleBody('[data-blok-database-timeline-range]');
+
+      expect(pill).toContain('inset-block-start: calc(var(--blok-database-timeline-line) * (var(--blok-database-timeline-header-rows) - 1) + var(--blok-space-0-75))');
+      expect(pill).not.toContain('inset-block-end');
+    });
+
     it('sizes the « toggle 24x22 with 4px sides', () => {
       const toggle = ruleBody('[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle]');
 
       expect(toggle).toContain('inline-size: var(--blok-space-6)');
       expect(toggle).toMatch(/block-size:\s*22px/);
       expect(toggle).toMatch(/padding:\s*0 var\(--blok-space-1\)/);
-      expect(toggle).toContain('margin-inline-start: calc(-1 * var(--blok-space-1-5))');
+      expect(toggle).not.toContain('margin-inline-start');
+      // 6 before the text column, never outside a narrow view.
+      expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain('padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2 - var(--blok-space-1-5)))');
     });
 
     it('packs ‹, Today and › with no gap', () => {

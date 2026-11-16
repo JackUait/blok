@@ -2938,6 +2938,7 @@ export class DatabaseTool implements BlockTool {
     this.hostLevers.destroy();
     document.removeEventListener('keydown', this.handleSelectionKeys, true);
     document.removeEventListener('copy', this.handleSelectionCopy, true);
+    document.removeEventListener('pointerdown', this.handleSelectionOutside, true);
     this.bulkEditor?.close();
     this.openCellEditors.clear();
     this.api.events.off('block changed', this.handleBlockChanged);
@@ -11590,6 +11591,7 @@ export class DatabaseTool implements BlockTool {
     slot.toggleAttribute('data-blok-database-selecting', slot.querySelector(':scope > [data-blok-database-table-selection-bar]') !== null);
     document.removeEventListener('keydown', this.handleSelectionKeys, true);
     document.removeEventListener('copy', this.handleSelectionCopy, true);
+    document.removeEventListener('pointerdown', this.handleSelectionOutside, true);
     const view = this.shownView();
     const barless = view?.type === 'board' || view?.type === 'gallery';
 
@@ -11603,6 +11605,8 @@ export class DatabaseTool implements BlockTool {
     }
     document.addEventListener('keydown', this.handleSelectionKeys, true);
     document.addEventListener('copy', this.handleSelectionCopy, true);
+    // notion-motion.md Round 50 §2: a click outside clears a timeline pick. Other views are unmeasured.
+    if (view?.type === 'timeline') document.addEventListener('pointerdown', this.handleSelectionOutside, true);
 
     // research/22 §1: Notion shows no bulk bar for picked calendar events.
     // notion-motion.md, Round 9: nor for a new board card left unnamed by Escape.
@@ -11857,6 +11861,17 @@ export class DatabaseTool implements BlockTool {
    * Cmd/Ctrl+C on picked cards, list rows or events copies their row blocks,
    * page bodies included, in view order. Core sees no block selection here.
    */
+  /** Inside: this block, its view, its selection bar, the menus and editors it opens, and the side peek. */
+  private readonly handleSelectionOutside = (event: PointerEvent): void => {
+    const target = event.target instanceof Element ? event.target : null;
+
+    if (target === null) return;
+    const inside = [this.viewOwner().element, this.viewRoot(), this.selectionBarSlot()].some((el) => el?.contains(target) === true)
+      || target.closest(`[${DATA_ATTR.popover}], [data-blok-database-drawer]`) !== null;
+
+    if (!inside) this.clearRowSelection();
+  };
+
   private readonly handleSelectionCopy = (event: ClipboardEvent): void => {
     const target = event.target instanceof HTMLElement ? event.target : null;
     // A Shift-click leaves the caret where it was, so only selected text, a field or selected blocks keep the copy.

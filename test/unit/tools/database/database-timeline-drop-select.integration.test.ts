@@ -100,6 +100,38 @@ describe('timeline bar drop selection', () => {
     expect(holder?.querySelector('[data-blok-database-timeline-row][data-row-id="r1"]')?.hasAttribute('data-blok-database-row-selected')).toBe(false);
   });
 
+  // notion-motion.md Round 50 §2, Round 51 §5: a click outside the database clears a selected bar; one on the timeline header keeps it.
+  it('clears a bar selected by an edge press on a click outside the database, and keeps it on one inside', async () => {
+    editor = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: { class: DatabaseTool, config: {} }, 'database-row': DatabaseRowTool },
+      data: { blocks: doc() },
+    } as never);
+    await editor.isReady;
+    await quiet();
+
+    const handle = holder?.querySelector<HTMLElement>('[data-blok-database-timeline-bar][data-row-id="r2"] [data-blok-database-timeline-resize="end"]');
+    const header = holder?.querySelector<HTMLElement>('[data-blok-database-timeline-header]');
+    const outside = document.createElement('div');
+    const selected = (): boolean | undefined =>
+      holder?.querySelector('[data-blok-database-timeline-row][data-row-id="r2"]')?.hasAttribute('data-blok-database-row-selected');
+
+    if (handle === null || handle === undefined || header === null || header === undefined) throw new Error('no timeline');
+    document.body.appendChild(outside);
+    pointer('pointerdown', handle, 100);
+    pointer('pointerup', document, 100);
+    await quiet();
+    expect(selected()).toBe(true);
+
+    pointer('pointerdown', header, 100);
+    expect(selected()).toBe(true);
+
+    pointer('pointerdown', outside, 100);
+    expect(selected()).toBe(false);
+    outside.remove();
+  });
+
   // notion-motion.md Round 49 B5: Notion keeps the scroll across a drop. Blok went back to its open place (Day 2393 → 3396, Month 2953 → 2721).
   it('keeps the chart where it was scrolled after a moved bar is dropped', async () => {
     editor = new Blok({

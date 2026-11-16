@@ -67,7 +67,7 @@ func validateSidebarPresets(in sidebarPresetsPayload) error {
 		}
 		tabIDs[tab.ID] = true
 		switch tab.Icon {
-		case "home", "message", "calendar", "book", "people":
+		case "home", "message", "calendar", "book", "people", "library", "files", "folder", "star", "heart", "briefcase", "code", "terminal", "globe", "lightbulb", "rocket", "sparkles", "check-square", "bookmark", "layers", "layout-grid", "music", "coffee", "palette":
 		default:
 			return errors.New("Invalid sidebar icon")
 		}

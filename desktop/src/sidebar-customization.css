@@ -16,3 +16,12 @@
 [data-sidebar-customization] button > span { margin-right: 6px; }
 
 [data-sidebar-customization] input[type=checkbox] { accent-color: var(--blok-text-primary); }
+
+[data-sidebar-icon-trigger] { display: inline-flex; align-items: center; gap: 8px; }
+[data-sidebar-icon-panel] { margin-top: 10px; padding: 12px; border: 1px solid var(--blok-border-primary); border-radius: 8px; }
+[data-sidebar-icon-panel] > input { width: 100%; box-sizing: border-box; margin-bottom: 12px; }
+[data-sidebar-icon-grid] { display: grid; grid-template-columns: repeat(auto-fill,minmax(76px,1fr)); gap: 6px; max-height: 260px; overflow-y: auto; }
+[data-sidebar-customization] [data-sidebar-icon-grid] button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 62px; border-color: transparent; }
+[data-sidebar-customization] [data-sidebar-icon-grid] button[aria-pressed=true] { background: var(--blok-item-hover-bg); border-color: var(--blok-border-primary); }
+[data-sidebar-customization] [data-sidebar-icon-grid] button > span { margin: 0; font-size: 11px; }
+[data-sidebar-customization] [data-sidebar-icon-grid] svg { width: 22px; height: 22px; }

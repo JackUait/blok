@@ -16,6 +16,7 @@ func TestSidebarPresetsValidation(t *testing.T) {
 		valid     bool
 	}{
 		{"valid", sidebarPresetsJSON, true},
+		{"lucide icon", strings.Replace(sidebarPresetsJSON, `"icon":"home"`, `"icon":"rocket"`, 1), true},
 		{"empty", `{"presets":[]}`, false},
 		{"no default", strings.Replace(sidebarPresetsJSON, `"default":true`, `"default":false`, 1), false},
 		{"private page pointer", strings.Replace(sidebarPresetsJSON, `"kind":"new-page"`, `"kind":"page","pageId":"private-page"`, 1), false},

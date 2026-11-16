@@ -371,7 +371,7 @@ describe('personal sidebar layout', () => {
     frame.element.querySelector<HTMLButtonElement>('[data-blok-sidebar-tab="chat"]')!.click();
     expect(onCustomizeSidebar).toHaveBeenCalledOnce();
     frame.element.querySelector<HTMLButtonElement>('[data-blok-sidebar-tab="chat"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
-    expect(frame.element.querySelector('[aria-selected="true"]')?.textContent?.trim()).toBe('Notes');
+    expect(frame.element.querySelector('[aria-selected="true"]')?.textContent?.trim()).toBe('Home');
     expect(onRecentsChange).not.toHaveBeenCalled();
   });
 

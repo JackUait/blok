@@ -105,7 +105,10 @@ an empty array, allowing clients to use built-in defaults.
 workspace administrator. The payload and response have the same shape. Supply
 1–6 presets with at least one `default: true`. Each preset has `id`, `name`,
 `default`, and `tab`; tabs have `id`, `name`, `icon`, `shortcuts`, `sections`, and
-optional `presetId`. Icons are `home`, `message`, `calendar`, `book`, or `people`.
+optional `presetId`. Icons use the curated Lucide catalogue: `home`, `message`,
+`calendar`, `book`, `people`, `library`, `files`, `folder`, `star`, `heart`,
+`briefcase`, `code`, `terminal`, `globe`, `lightbulb`, `rocket`, `sparkles`,
+`check-square`, `bookmark`, `layers`, `layout-grid`, `music`, `coffee`, `palette`.
 Names are nonblank and at most 80 characters; IDs at most 128 characters. Preset
 IDs and tab IDs must be unique within the list.
 

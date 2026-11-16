@@ -1,4 +1,4 @@
-import { IconMessage, IconCalendar, IconPeople, IconBookmark } from '../components/icons';
+import { sidebarIcon } from './sidebar-icons';
 import { normalizeSidebarLayout } from './sidebar-layout';
 import type { SidebarLayout, SidebarSection, SidebarIcon } from './sidebar-layout';
 import { renderPageIcon } from './page-icon';
@@ -420,8 +420,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
   function tabIcon(kind: SidebarIcon): HTMLElement {
     const icon = document.createElement('span');
     icon.setAttribute('aria-hidden', 'true');
-    if (kind === 'home') icon.append(svg(['M2 7 8 2l6 5', 'M4 6v7h3V9h2v4h3V6']));
-    else icon.innerHTML = { message: IconMessage, calendar: IconCalendar, people: IconPeople, book: IconBookmark }[kind];
+    icon.append(sidebarIcon(kind));
     return icon;
   }
 
@@ -471,9 +470,9 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
       button.setAttribute('data-blok-sidebar-shortcut', item.id);
       if (page?.id === view.activeId) button.setAttribute('aria-current', 'page');
       const icon = document.createElement('span'); icon.setAttribute('aria-hidden', 'true');
-      if (item.kind === 'assistant') icon.innerHTML = IconMessage;
-      else if (page?.icon) renderPageIcon(icon, page.icon);
-      else icon.append(svg(item.kind === 'library' ? ICONS.wiki : item.kind === 'new-page' ? ICONS.pencil : ICONS.page));
+      if (page?.icon) renderPageIcon(icon, page.icon);
+      else if(item.kind !== 'page') icon.append(sidebarIcon(item.kind));
+      else icon.append(svg(ICONS.page));
       const label = document.createElement('span');
       label.textContent = page?.title ?? ({ 'new-page': 'Nouvelle page', 'new-note': 'Nouvelle note', library: 'Bibliothèque', assistant: 'Discussion', page: '' }[item.kind]);
       button.append(icon, label); button.addEventListener('click', run); shortcuts.append(button);

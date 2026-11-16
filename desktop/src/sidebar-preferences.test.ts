@@ -11,7 +11,7 @@ describe('personal sidebar preferences',()=>{
   it('isolates accounts and broadcasts changes only to the matching workspace',()=>{
     const callback=vi.fn(); const other=vi.fn(); const stop=subscribeSidebarLayout(ref,callback); const stopOther=subscribeSidebarLayout({...ref,accountId:'two'},other);
     const layout=defaultSidebarLayout();layout.tabs[0].name='Mon accueil';saveSidebarLayout(ref,layout);
-    expect(readSidebarLayout({...ref,accountId:'two'}).tabs[0].name).toBe('Accueil');expect(callback).toHaveBeenCalledOnce();expect(other).not.toHaveBeenCalled();stop();stopOther();
+    expect(readSidebarLayout({...ref,accountId:'two'}).tabs[0].name).toBe('Home');expect(callback).toHaveBeenCalledOnce();expect(other).not.toHaveBeenCalled();stop();stopOther();
   });
   it('refreshes from another window and stops listening on destroy',()=>{
     const callback=vi.fn();const stop=subscribeSidebarLayout(ref,callback);

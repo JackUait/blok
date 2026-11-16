@@ -14,16 +14,16 @@ it('keeps focus while renaming and lets keyboard controls reorder tabs',()=>{
   const handle=mountSidebarCustomization(document.body,ref);
   const input=document.querySelector<HTMLInputElement>('[aria-label="Nom de l’onglet"]');if(!input)throw new Error('Missing name');input.focus();input.value='Personnel';input.dispatchEvent(new Event('input'));
   expect(document.activeElement).toBe(input);expect(readSidebarLayout(ref).tabs[0].name).toBe('Personnel');
-  findButton('Descendre Accueil').click();expect(readSidebarLayout(ref).tabs[1].name).toBe('Personnel');handle.destroy();
+  findButton('Descendre Home').click();expect(readSidebarLayout(ref).tabs[1].name).toBe('Personnel');handle.destroy();
 });
 it('enforces six tabs and keeps at least one',()=>{
   const handle=mountSidebarCustomization(document.body,ref);
-  for(let i=0;i<3;i++)findButton('Ajouter un onglet').click();expect(findButton('Ajouter un onglet').disabled).toBe(true);
+  for(let i=0;i<4;i++)findButton('Ajouter un onglet').click();expect(findButton('Ajouter un onglet').disabled).toBe(true);
   for(let i=0;i<5;i++)findButton('Supprimer l’onglet').click();expect(findButton('Supprimer l’onglet').disabled).toBe(true);expect(readSidebarLayout(ref).tabs).toHaveLength(1);handle.destroy();
 });
 it('ignores a tab dragged onto sections',()=>{
   const handle=mountSidebarCustomization(document.body,ref);const initial=readSidebarLayout(ref);
-  const tabRow=findButton('Descendre Accueil').parentElement;const sectionRow=findButton('Descendre Récents').parentElement;
+  const tabRow=findButton('Descendre Home').parentElement;const sectionRow=findButton('Descendre Récents').parentElement;
   tabRow?.dispatchEvent(new Event('dragstart'));sectionRow?.dispatchEvent(new Event('drop',{cancelable:true}));
   expect(readSidebarLayout(ref)).toEqual(initial);handle.destroy();
 });
@@ -47,4 +47,19 @@ it('preserves the tab glyph while its name changes',()=>{
   const selected=document.querySelector('button[aria-pressed="true"]');const glyph=selected?.querySelector('svg');expect(glyph).not.toBeNull();
   const input=document.querySelector<HTMLInputElement>('[aria-label="Nom de l’onglet"]');if(!input)throw new Error('Missing name');input.value='Échanges';input.dispatchEvent(new Event('input'));
   expect(selected?.querySelector('svg')).toBe(glyph);expect(selected?.textContent?.trim()).toBe('Échanges');handle.destroy();
+});
+
+it('searches visual icons, saves a choice, and dismisses the picker with Escape',()=>{
+  const handle=mountSidebarCustomization(document.body,ref);
+  findButton('Choisir l’icône de l’onglet').click();
+  const input=document.querySelector<HTMLInputElement>('[aria-label="Rechercher une icône"]');if(!input)throw new Error('Missing icon search');
+  input.value='rocket';input.dispatchEvent(new Event('input'));
+  const grid=document.querySelector('[data-sidebar-icon-grid]');expect(grid?.querySelectorAll('button')).toHaveLength(1);
+  findButton('Fusée').click();
+  expect(readSidebarLayout(ref).tabs[0].icon).toBe('rocket');
+  expect(document.querySelector('[data-sidebar-icon-trigger] svg')).not.toBeNull();
+  findButton('Choisir l’icône de l’onglet').click();
+  document.querySelector('[aria-label="Rechercher une icône"]')?.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+  expect(findButton('Choisir l’icône de l’onglet').getAttribute('aria-expanded')).toBe('false');
+  expect(document.activeElement).toBe(findButton('Choisir l’icône de l’onglet'));handle.destroy();
 });

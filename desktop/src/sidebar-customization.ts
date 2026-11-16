@@ -1,6 +1,8 @@
-import {IconChevronDown, IconCross, IconMessage, IconCalendar, IconBookmark, IconPeople} from '../../src/components/icons';
+import {IconChevronDown, IconCross} from '../../src/components/icons';
+import {sidebarIcon} from '../../src/shell/sidebar-icons';
+import {sidebarIconPicker} from './sidebar-icon-picker';
 import './sidebar-customization.css';
-import {defaultSidebarLayout, normalizeSidebarTab, type SidebarTab, type SidebarPreset, type SidebarIcon} from '../../src/shell/sidebar-layout';
+import {defaultSidebarLayout, normalizeSidebarTab, type SidebarTab, type SidebarPreset} from '../../src/shell/sidebar-layout';
 import {readSidebarLayout, saveSidebarLayout, subscribeSidebarLayout} from './sidebar-preferences';
 import type {WorkspaceRef} from './workspace-registry';
 import {workspaceRepository} from './workspace-repository';
@@ -9,7 +11,6 @@ import {styleTextField} from './ui/controls';
 
 const actions = {'new-page':'Nouvelle page','new-note':'Nouvelle note',library:'Bibliothèque',assistant:'Assistant IA'};
 const sections = {recents:'Récents',favorites:'Favoris',private:'Pages privées',shared:'Pages partagées',teamspaces:'Espaces d’équipe'};
-const icons:Record<SidebarIcon,string> = {home:'Accueil',message:'Discussion',calendar:'Calendrier',book:'Livre',people:'Équipe'};
 function node<K extends keyof HTMLElementTagNameMap>(tag:K,text?:string):HTMLElementTagNameMap[K] {const element=document.createElement(tag);if(text)element.textContent=text;return element;}
 function button(label:string,run:()=>void,disabled=false):HTMLButtonElement {const element=node('button',label);element.type='button';element.disabled=disabled;element.onclick=run;return element;}
 function select(label:string,value:string,options:Array<[string,string]>,change:(value:string)=>void):HTMLSelectElement {
@@ -81,13 +82,13 @@ export function mountSidebarCustomization(container:HTMLElement,ref:WorkspaceRef
     root.append(node('p','Vos réglages personnels pour cet espace sont enregistrés sur cet appareil et appliqués immédiatement.'));
     const list=node('div');list.setAttribute('aria-label','Onglets');
     for(const [index,tab] of layout.tabs.entries()){
-      const row=node('div');row.dataset.sidebarEditorRow='';const pick=button(tab.name,()=>{selected=tab.id;layout.activeTabId=tab.id;commit();});pick.setAttribute('aria-pressed',String(tab.id===selected));const glyph=node('span');glyph.setAttribute('aria-hidden','true');glyph.innerHTML=tab.icon==='home'?'<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7 8 2l6 5"/><path d="M4 6v7h3V9h2v4h3V6"/></svg>':{message:IconMessage,calendar:IconCalendar,book:IconBookmark,people:IconPeople}[tab.icon];const title=node('span',tab.name);title.dataset.sidebarTabName='';pick.replaceChildren(glyph,title);row.append(pick);moveControls(row,layout.tabs,index,tab.name);list.append(row);
+      const row=node('div');row.dataset.sidebarEditorRow='';const pick=button(tab.name,()=>{selected=tab.id;layout.activeTabId=tab.id;commit();});pick.setAttribute('aria-pressed',String(tab.id===selected));const glyph=node('span');glyph.setAttribute('aria-hidden','true');glyph.append(sidebarIcon(tab.icon));const title=node('span',tab.name);title.dataset.sidebarTabName='';pick.replaceChildren(glyph,title);row.append(pick);moveControls(row,layout.tabs,index,tab.name);list.append(row);
     }
     root.append(list,button('Ajouter un onglet',()=>{const tab={...structuredClone(defaultSidebarLayout().tabs[0]),id:crypto.randomUUID(),name:'Nouvel onglet'};layout.tabs.push(tab);selected=tab.id;layout.activeTabId=tab.id;commit();},layout.tabs.length>=6));
     const tab=layout.tabs.find(item=>item.id===selected)??layout.tabs[0];selected=tab.id;
     const editor=node('section');editor.append(node('h2','Personnaliser l’onglet'));
     const name=node('input');name.value=tab.name;name.maxLength=40;name.setAttribute('aria-label','Nom de l’onglet');styleTextField(name);name.oninput=()=>{if(name.value.trim()){tab.name=name.value;commit(false);const label=list.querySelector<HTMLElement>('[aria-pressed="true"] [data-sidebar-tab-name]');if(label)label.textContent=name.value;}};
-    editor.append(name,select('Icône de l’onglet',tab.icon,Object.entries(icons),value=>{tab.icon=value as SidebarIcon;commit();}));
+    editor.append(name,sidebarIconPicker(tab.icon,value=>{tab.icon=value;commit();root.querySelector<HTMLButtonElement>('[data-sidebar-icon-trigger]')?.focus();}));
     editor.append(button('Supprimer l’onglet',()=>{layout.tabs=layout.tabs.filter(item=>item.id!==tab.id);selected=layout.tabs[0].id;layout.activeTabId=selected;commit();},layout.tabs.length<=1));
     editor.append(node('h3','Raccourcis'));
     for(const [index,item] of tab.shortcuts.entries()){

@@ -15304,6 +15304,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   --blok-database-timeline-line: 28px;
   /* The view sets 1 when the toolbar names the month (findings C06). */
   --blok-database-timeline-header-rows: 2;
+  --blok-database-timeline-header-under: 0px;
+  --blok-database-timeline-header-block: calc(var(--blok-database-timeline-line) * var(--blok-database-timeline-header-rows) + var(--blok-database-timeline-header-under));
   /* The view sets the day width inline on the canvas. */
   --blok-database-timeline-day: 40px;
   /* notion-motion.md Round 6: 376 with the border, at 1512 and 1100. The toolbar's « and month are placed from it. */
@@ -15314,6 +15316,11 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   flex-direction: column;
   padding-block-end: var(--blok-space-4);
   color: var(--blok-database-timeline-text);
+}
+
+/* notion-motion.md Round 46 B: Month's day row is 32 with the digits on a 28 line at its top. Other zooms unmeasured. */
+[data-blok-database-timeline][data-zoom="month"] {
+  --blok-database-timeline-header-under: 4px;
 }
 
 [data-blok-database-timeline-toolbar] {
@@ -15353,6 +15360,28 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   line-height: 21px;
   font-weight: 500;
   white-space: nowrap;
+}
+
+/* notion-motion.md Round 46 B: « is 24x22 with 4px sides, 6 before the text column; Month's chevron ink
+   takes a 10 box, 6 after the label; ‹, Today and › touch. */
+[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle] {
+  inline-size: var(--blok-space-6);
+  min-inline-size: 0;
+  block-size: 22px;
+  margin-inline-start: calc(-1 * var(--blok-space-1-5));
+  padding: 0 var(--blok-space-1);
+}
+
+[data-blok-database-timeline-toolbar] > :is([data-blok-database-timeline-today], [data-blok-database-timeline-next]) {
+  margin-inline-start: calc(-1 * var(--blok-space-1));
+}
+
+[data-blok-database-timeline-toolbar] [data-blok-database-timeline-zoom] {
+  gap: var(--blok-space-1-5);
+}
+
+[data-blok-database-timeline-zoom] svg {
+  margin-inline: calc(-1 * var(--blok-space-0-75));
 }
 
 [data-blok-database-timeline-toolbar] :is([data-blok-database-timeline-prev], [data-blok-database-timeline-next]) {
@@ -15525,7 +15554,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 [data-blok-database-timeline-table-header] {
-  block-size: calc(var(--blok-database-timeline-line) * var(--blok-database-timeline-header-rows));
+  block-size: var(--blok-database-timeline-header-block);
   box-sizing: border-box;
   color: var(--blok-database-timeline-header-text);
 }
@@ -15548,14 +15577,21 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   cursor: pointer;
 }
 
+/* notion-motion.md Round 46 B: an 18 glyph 8 in, the title 32 in. */
 [data-blok-database-timeline-table-title] > :is([data-blok-database-page-icon], [data-blok-database-page-icon-placeholder]) {
   display: flex;
   flex: none;
   align-items: center;
   justify-content: center;
-  inline-size: 20px;
-  block-size: 20px;
+  inline-size: 18px;
+  block-size: 18px;
   color: var(--blok-database-table-header-icon);
+}
+
+/* Beats the timeline's 16px svg rule. */
+[data-blok-database-timeline-table-title] > [data-blok-database-page-icon-placeholder] svg {
+  inline-size: 18px;
+  block-size: 18px;
 }
 
 [data-blok-database-timeline-table-title-text] {
@@ -15598,12 +15634,12 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 /*
  * timeline.png: the « ink starts 27px before the panel's border and the month ink 18px after it.
- * The 28px button (6px padding, ink 4px into the 16px icon) ends 10px before the panel's end;
+ * The 24px button (4px padding, ink 4px into the 16px icon) ends 12px before the panel's end;
  * the margin plus the 4px gap starts the month 16px past it.
  */
 [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"] {
-  margin-inline-start: calc(var(--blok-database-timeline-table-width) - 38px);
-  margin-inline-end: 22px;
+  margin-inline-start: calc(var(--blok-database-timeline-table-width) - var(--blok-space-6) - var(--blok-space-3));
+  margin-inline-end: var(--blok-space-6);
 }
 
 [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"] svg {
@@ -15676,7 +15712,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-timeline-header] {
   position: relative;
-  block-size: calc(var(--blok-database-timeline-line) * var(--blok-database-timeline-header-rows));
+  block-size: var(--blok-database-timeline-header-block);
   box-shadow: var(--blok-database-timeline-header-line) 0 -1px 0 0 inset;
 }
 
@@ -15759,7 +15795,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-timeline-background] {
   position: absolute;
-  inset-block: calc(var(--blok-database-timeline-line) * var(--blok-database-timeline-header-rows)) 0;
+  inset-block: var(--blok-database-timeline-header-block) 0;
   inset-inline: 0;
   pointer-events: none;
 }
@@ -16372,6 +16408,12 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   width: 20px;
   height: 20px;
   color: var(--blok-database-table-header-icon);
+}
+
+/* notion-motion.md Round 46 B: an 18 glyph; the title already sits where Notion's does. */
+[data-blok-database-no-date-row] > [data-blok-database-page-icon-placeholder] svg {
+  inline-size: 18px;
+  block-size: 18px;
 }
 
 [data-blok-database-no-date-title] {
@@ -18869,8 +18911,14 @@ button[data-blok-database-feed-reaction]:hover,
   padding-block: var(--blok-space-1);
 }
 
-/* The resize readout takes its place. */
-[data-blok-database-timeline]:is([data-dragging="start"], [data-dragging="end"]) [data-blok-database-timeline-link-handle] {
+/* notion-motion.md Round 46 B: 14px regular. */
+[data-blok-item-name^="database-timeline-zoom-"] [data-blok-popover-item-title] {
+  font-size: 14px;
+  font-weight: 400;
+}
+
+/* A resize shows its readout there; a moving bar hides it (notion-motion.md Round 46 B). */
+[data-blok-database-timeline]:is([data-dragging="move"], [data-dragging="start"], [data-dragging="end"]) [data-blok-database-timeline-link-handle] {
   opacity: 0;
 }
 

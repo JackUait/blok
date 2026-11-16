@@ -291,6 +291,7 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
           rows,
           titlePropertyId: this.options.titlePropertyId,
           hint: this.t('tools.database.calendarNoDateHint'),
+          rowHasBody: (rowId) => this.options.cellContext?.rowHasBody?.(rowId) === true,
           // Unmeasured in Notion: a click dates the page today.
           pick: (rowId) => handlers.setDate(rowId, this.options.today),
           open: (rowId) => handlers.openRow(rowId),

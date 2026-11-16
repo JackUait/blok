@@ -6784,6 +6784,7 @@ export class DatabaseTool implements BlockTool {
         ...(this.readOnly ? {} : {
           pickRow: (rowId: string, range: boolean) => this.pickRow(rowId, range),
           lassoRows: (rowIds: string[]) => this.selectRows(rowIds),
+          landRow: (rowId: string) => this.landRow(rowId),
         }),
         addRow: (groupKey, write) => {
           const rowId = this.addTimelineRow(groupKey, write, startId, endId);

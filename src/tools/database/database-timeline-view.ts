@@ -1,6 +1,6 @@
 import type { I18n } from '../../../types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
-import { fileChipIcon, pageIconElement, pagePlaceholderIcon, showsPageIcon } from './page-icon';
+import { fileChipIcon, pageIconElement, rowPageGlyph, showsPageIcon } from './page-icon';
 import { propertyTypeMeta } from './database-property-types';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption, TimelineZoom } from './types';
 import type { GalleryDropResult } from './database-gallery-view';
@@ -60,6 +60,8 @@ export interface TimelineHandlers {
   pickRow?: (rowId: string, range: boolean) => void;
   /** Arrow keys on the bars: the selection becomes exactly these rows, as in the list and gallery. */
   lassoRows?: (rowIds: string[]) => void;
+  /** A bar moved to new dates: it is left selected (notion-motion.md Round 46 B). */
+  landRow?: (rowId: string) => void;
   /** Group key, or null when the timeline is not grouped; the new bar's dates. */
   addRow: (groupKey: string | null, write: BarWrite) => void;
   /** A title typed into a new bar. */
@@ -395,6 +397,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
           rows,
           titlePropertyId: this.options.titlePropertyId,
           hint: this.t('tools.database.timelineNoDateHint'),
+          rowHasBody: (rowId) => this.rowHasBody(rowId),
           pick: (rowId) => handlers.writeDates(rowId, this.newBar()),
           open: (rowId) => handlers.openRow(rowId),
         });
@@ -544,7 +547,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     cell.setAttribute('data-blok-database-timeline-table-title', '');
     title.setAttribute('data-blok-database-timeline-table-title-text', '');
     title.textContent = this.titleOf(row);
-    cell.append(pageIconElement(row) ?? pagePlaceholderIcon(), title);
+    cell.append(rowPageGlyph(row, this.rowHasBody(row.id), true) ?? '', title);
     if (this.options.commentBadges !== undefined) {
       syncCommentBadge(title, row.id, this.options.commentBadges, this.options.i18n);
     }
@@ -914,6 +917,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     header.appendChild(label);
 
     return header;
+  }
+
+  private rowHasBody(rowId: string): boolean {
+    return this.options.cellContext?.rowHasBody?.(rowId) === true;
   }
 
   private titleOf(row: DatabaseRow): string {
@@ -1674,6 +1681,9 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
       if (changed) {
         this.options.handlers?.writeDates(drag.rowId, write);
+      }
+      if (changed && drag.mode === 'move') {
+        this.options.handlers?.landRow?.(drag.rowId);
       }
 
       return;

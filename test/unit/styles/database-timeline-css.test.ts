@@ -176,8 +176,8 @@ describe('database timeline styles', () => {
     expect(ruleBody('[data-blok-database-timeline-table]')).toContain('padding-inline-start: 96px');
     const shown = '[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"]';
 
-    expect(ruleBody(shown)).toContain('margin-inline-start: calc(var(--blok-database-timeline-table-width) - 38px)');
-    expect(ruleBody(shown)).toContain('margin-inline-end: 22px');
+    expect(ruleBody(shown)).toContain('margin-inline-start: calc(var(--blok-database-timeline-table-width) - var(--blok-space-6) - var(--blok-space-3))');
+    expect(ruleBody(shown)).toContain('margin-inline-end: var(--blok-space-6)');
     expect(ruleBody('[data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"])')).toContain('padding-inline-start: 0');
     expect(ruleBody(`${shown} svg`)).toContain('transform: scaleX(-1)');
   });
@@ -437,5 +437,65 @@ describe('Hours zoom 15-minute lines and day period (Round 35)', () => {
     expect(ruleBody('[data-blok-database-timeline-day-period]')).toContain('color: var(--blok-database-timeline-period-text)');
     expect(css).toContain('--blok-database-timeline-period-text: var(--blok-database-timeline-muted-text);');
     expect(colors).not.toContain('--blok-database-timeline-period-text:');
+  });
+
+  describe('notion-motion.md Round 46 B', () => {
+    it('draws the table panel row glyph 18 in an 18 box, so the title starts 32 in', () => {
+      const at = css.indexOf('[data-blok-database-timeline-table-title] > :is([data-blok-database-page-icon], [data-blok-database-page-icon-placeholder]) {');
+      const box = css.slice(at, css.indexOf('}', at));
+
+      expect(box).toMatch(/inline-size:\s*18px/);
+      expect(box).toMatch(/block-size:\s*18px/);
+      expect(ruleBody('[data-blok-database-timeline-table-title] > [data-blok-database-page-icon-placeholder] svg')).toMatch(/inline-size:\s*18px;\s*block-size:\s*18px/);
+    });
+
+    it('draws the No date row glyph 18', () => {
+      expect(ruleBody('[data-blok-database-no-date-row] > [data-blok-database-page-icon-placeholder] svg')).toMatch(/inline-size:\s*18px;\s*block-size:\s*18px/);
+    });
+
+    it('makes the Month day row 32 tall, the day line staying 28', () => {
+      expect(ruleBody('[data-blok-database-timeline][data-zoom="month"]')).toContain('--blok-database-timeline-header-under: 4px');
+      expect(css).toContain('--blok-database-timeline-header-under: 0px;');
+      for (const selector of ['[data-blok-database-timeline-header]', '[data-blok-database-timeline-table-header]']) {
+        expect(ruleBody(selector)).toContain('block-size: var(--blok-database-timeline-header-block)');
+      }
+      expect(ruleBody('[data-blok-database-timeline-background]')).toContain('inset-block: var(--blok-database-timeline-header-block) 0');
+      expect(ruleBody('[data-blok-database-timeline-units]')).toContain('block-size: var(--blok-database-timeline-line)');
+    });
+
+    it('sizes the « toggle 24x22 with 4px sides', () => {
+      const toggle = ruleBody('[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle]');
+
+      expect(toggle).toContain('inline-size: var(--blok-space-6)');
+      expect(toggle).toMatch(/block-size:\s*22px/);
+      expect(toggle).toMatch(/padding:\s*0 var\(--blok-space-1\)/);
+      expect(toggle).toContain('margin-inline-start: calc(-1 * var(--blok-space-1-5))');
+    });
+
+    it('packs ‹, Today and › with no gap', () => {
+      const at = css.indexOf('[data-blok-database-timeline-toolbar] > :is([data-blok-database-timeline-today], [data-blok-database-timeline-next]) {');
+
+      expect(at).toBeGreaterThan(-1);
+      expect(css.slice(at, css.indexOf('}', at))).toContain('margin-inline-start: calc(-1 * var(--blok-space-1))');
+    });
+
+    it('gives the zoom chevron a 10 wide box 6 after the label', () => {
+      expect(ruleBody('[data-blok-database-timeline-toolbar] [data-blok-database-timeline-zoom]')).toContain('gap: var(--blok-space-1-5)');
+      expect(ruleBody('[data-blok-database-timeline-zoom] svg')).toContain('margin-inline: calc(-1 * var(--blok-space-0-75))');
+    });
+
+    it('sets the zoom menu items 14px regular', () => {
+      const title = ruleBody('[data-blok-item-name^="database-timeline-zoom-"] [data-blok-popover-item-title]');
+
+      expect(title).toContain('font-size: 14px');
+      expect(title).toContain('font-weight: 400');
+    });
+
+    it('hides the link handle while a bar moves', () => {
+      const at = css.indexOf('[data-blok-database-timeline]:is([data-dragging="move"], [data-dragging="start"], [data-dragging="end"]) [data-blok-database-timeline-link-handle] {');
+
+      expect(at).toBeGreaterThan(-1);
+      expect(css.slice(at, css.indexOf('}', at))).toContain('opacity: 0');
+    });
   });
 });

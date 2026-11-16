@@ -1150,6 +1150,26 @@ describe('DatabaseTimelineView', () => {
       expect(handlers.writeDates).toHaveBeenCalledWith('r1', { start: '2026-10-09T12:00' });
     });
 
+    // notion-motion.md Round 46 B: after a move the bar is left selected.
+    it('leaves a moved bar selected, and not a resized or unmoved one', () => {
+      const landRow = vi.fn();
+      const { root } = mount({ handlers: { ...makeHandlers(), landRow } });
+      const end = bar(root, 'r1').querySelector('[data-blok-database-timeline-resize="end"]');
+
+      layOut(root);
+      pointer('pointerdown', bar(root, 'r2'), xOf('2026-10-12'), 50);
+      pointer('pointermove', document, xOf('2026-10-14'), 50);
+      pointer('pointerup', document, xOf('2026-10-14'), 50);
+      expect(landRow).toHaveBeenCalledWith('r2');
+      expect(landRow).toHaveBeenCalledTimes(1);
+
+      if (end === null) throw new Error('no handle');
+      pointer('pointerdown', end, xOf('2026-10-09'), 50);
+      pointer('pointermove', document, xOf('2026-10-11'), 50);
+      pointer('pointerup', document, xOf('2026-10-11'), 50);
+      expect(landRow).toHaveBeenCalledTimes(1);
+    });
+
     it('drags the end edge to a later day', () => {
       const { root, handlers } = mount();
       const handle = bar(root, 'r1').querySelector('[data-blok-database-timeline-resize="end"]');

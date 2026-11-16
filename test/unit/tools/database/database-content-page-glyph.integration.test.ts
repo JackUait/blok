@@ -18,7 +18,7 @@ interface TestEditor {
   history: { undo: () => void; redo: () => void };
 }
 
-type Layout = 'table' | 'list' | 'board' | 'gallery' | 'calendar';
+type Layout = 'table' | 'list' | 'board' | 'gallery' | 'calendar' | 'timeline';
 
 const quiet = async (): Promise<void> => {
   await new Promise(resolve => {
@@ -52,7 +52,7 @@ const doc = (layout: Layout, extra: OutputBlockData[] = []): OutputBlockData[] =
     type: 'database',
     data: {
       schema: SCHEMA,
-      views: [{ id: 'v', name: 'View', type: layout, ...(layout === 'board' ? { groupBy: 's' } : {}), position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+      views: [{ id: 'v', name: 'View', type: layout, ...(layout === 'board' ? { groupBy: 's' } : {}), ...(layout === 'timeline' ? { showTimelineTable: true } : {}), position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
       activeViewId: 'v',
     },
     content: ['body', 'blank', 'emoji', ...extra.filter((block) => block.type === 'database-row').map((block) => block.id ?? '')],
@@ -80,6 +80,7 @@ const ROW_SELECTOR: Record<Layout, string> = {
   board: '[data-blok-database-card]',
   gallery: '[data-blok-database-gallery-card]',
   calendar: '[data-blok-database-calendar-event]',
+  timeline: '[data-blok-database-timeline-table-row]',
 };
 
 let editor: TestEditor | undefined;
@@ -133,6 +134,7 @@ describe('content page glyph', () => {
     ['board', 'none'],
     ['gallery', 'none'],
     ['calendar', 'none'],
+    ['timeline', 'blank'],
   ] as const)('%s: a row with a body shows the lines glyph, a blank row shows %s, an emoji stays', async (layout, blank) => {
     await make(layout);
 
@@ -182,6 +184,24 @@ describe('content page glyph', () => {
     await quiet();
 
     expect(glyphOf('list', 'one')).toBe('content');
+  });
+
+  it('the timeline No date list picks the glyph by body too', async () => {
+    const blok = await make('timeline');
+
+    blok.blocks.insertAt('database-row', { properties: { t: 'Undated' }, position: 'a3' }, { parentId: 'db', position: 'end', id: 'undated' });
+    blok.blocks.insertAt('paragraph', { text: 'body' }, { parentId: 'undated', position: 'end', id: 'p3' });
+    blok.blocks.insertAt('database-row', { properties: { t: 'Undated blank' }, position: 'a4' }, { parentId: 'db', position: 'end', id: 'undated-blank' });
+    await quiet();
+    holder?.querySelector<HTMLElement>('[data-blok-database-no-date-button]')?.click();
+    await quiet();
+
+    const glyph = (rowId: string): string | null | undefined => document
+      .querySelector(`[data-blok-database-no-date-row][data-row-id="${rowId}"] [data-blok-database-page-icon-placeholder]`)
+      ?.getAttribute('data-blok-database-page-icon-placeholder');
+
+    expect(glyph('undated')).toBe('content');
+    expect(glyph('undated-blank')).toBe('');
   });
 
   it('a second body block redraws nothing', async () => {

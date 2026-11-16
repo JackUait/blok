@@ -50,10 +50,10 @@ describe('sidebar theme', () => {
     expect(canvas).toContain('background: var(--blok-bg-primary, #fff)');
     expect(canvas).not.toContain('--blok-popover-bg');
     for (const darkCanvas of [systemCanvas, forcedCanvas]) {
-      expect(darkCanvas).toContain('background: #161616');
+      expect(darkCanvas).toContain('background: #191919');
     }
     for (const dark of [darkMedia, forcedDark]) {
-      expect(dark).toContain('background: #1b1b1b');
+      expect(dark).toContain('background: #202020');
       expect(dark).toContain('--blok-sidebar-edge-color: #222222');
       expect(dark).toContain('--blok-sidebar-edge-hover-color: #2e2e2e');
       expect(dark).not.toContain('--blok-bg-light');

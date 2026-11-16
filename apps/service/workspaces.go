@@ -229,6 +229,9 @@ func (s *Service) workspaceResource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch resource {
+	case "sidebar-presets":
+		s.sidebarPresets(w, r, u, ws, id, action)
+		return
 	case "teamspaces":
 		s.teamspacesRoute(w, r, u, ws, id)
 		return

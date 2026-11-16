@@ -137,3 +137,7 @@ END $$;
 CREATE OR REPLACE TRIGGER pages_timestamps BEFORE INSERT OR UPDATE ON pages
  FOR EACH ROW EXECUTE FUNCTION maintain_page_timestamps();
 INSERT INTO schema_migrations(version) VALUES(9) ON CONFLICT DO NOTHING;
+
+-- Workspace presentation defaults; page permissions remain independent.
+ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS sidebar_presets jsonb NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(sidebar_presets)='array' AND jsonb_array_length(sidebar_presets)<=6);
+INSERT INTO schema_migrations(version) VALUES(10) ON CONFLICT DO NOTHING;

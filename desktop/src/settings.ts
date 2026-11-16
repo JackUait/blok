@@ -1,3 +1,4 @@
+import { mountSidebarCustomization } from './sidebar-customization';
 import { mountTeamspaceSettings } from './cloud/teamspace-settings';
 import { teamspaceClient } from './cloud/teamspaces';
 import { mountWorkspaceIcon, workspaceGlyph } from './workspace-identity';
@@ -38,6 +39,7 @@ function resolved(mode: Appearance): 'dark' | 'light' {
 }
 
 function settingsPanelSource(panel: string): string {
+  if (panel === 'sidebar' || panel === 'sidebar-presets') return 'sidebar-customization.ts';
   if (panel === 'emojis') return 'custom-emoji-settings.ts';
   if (panel === 'mcp') return 'mcp-settings.ts';
   if (panel === 'ai') return 'ai-settings.ts';
@@ -291,29 +293,32 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   navList.append(connectionsTab);
   const prefsTab = actionButton('data-desktop-settings-nav-item', 'Préférences', 'settings');
   const aiTab = actionButton('data-desktop-settings-nav-item', 'Assistant IA', 'ai');
-  navList.append(prefsTab);
+  const sidebarTab = actionButton('data-desktop-settings-nav-item', 'Barre latérale', 'settings');
+  const sidebarPresetsTab = actionButton('data-desktop-settings-nav-item', 'Modèles de barre latérale', 'settings');
+  navList.append(prefsTab, sidebarTab);
   const mcpTab = actionButton('data-desktop-settings-nav-item', 'MCP', 'connections');
   const generalTab = actionButton('data-desktop-settings-nav-item', 'Général', 'storage');
   const emojiTab = actionButton('data-desktop-settings-nav-item', 'Émojis', 'emoji');
   const teamspacesTab = actionButton('data-desktop-settings-nav-item', 'Espaces d’équipe', 'storage');
   const membersTab = actionButton('data-desktop-settings-nav-item', 'Membres', 'profile');
   navList.append(el('div', 'data-desktop-settings-nav-heading', 'Workspace'), generalTab, emojiTab);
-  if (admin) navList.append(membersTab);
+  if (admin) navList.append(membersTab, sidebarPresetsTab);
   if (client) navList.append(teamspacesTab);
   navList.append(el('div', 'data-desktop-settings-nav-heading', 'Fonctionnalités'), aiTab);
   if (client) navList.append(mcpTab);
   const navEntries: Array<[HTMLButtonElement, string]> = [
     [accountTab, 'compte profil identité email'], [connectionsTab, client ? 'connexion compte serveur espace' : 'connexion mcp jeton compte serveur espace'],
     ...(client ? [[mcpTab, 'mcp jeton accès outils'] as [HTMLButtonElement, string]] : []),
+    [sidebarTab, 'barre latérale onglets raccourcis personnel'], ...(admin ? [[sidebarPresetsTab, 'modèles barre latérale équipe'] as [HTMLButtonElement,string]] : []),
     [prefsTab, 'préférences apparence thème clair sombre'], [aiTab, 'assistant ia openai modèle clé api'],
     ...(client ? [[teamspacesTab, 'équipe teamspace membres accès workspace'] as [HTMLButtonElement,string]] : []),
     [generalTab, 'général workspace espace nom stockage'], [emojiTab, 'émoji emoji image icône logo'], [membersTab, 'membres invitations accès rôles'],
   ];
   type SettingsPanel =
-    | 'teamspaces' | 'account' | 'preferences' | 'ai' | 'mcp' | 'general' | 'members' | 'emojis' | 'connections'
+    | 'sidebar' | 'sidebar-presets' | 'teamspaces' | 'account' | 'preferences' | 'ai' | 'mcp' | 'general' | 'members' | 'emojis' | 'connections'
     | 'instance-general' | 'instance-access' | 'instance-accounts' | 'instance-workspaces' | 'instance-health';
   const panelTabs = new Map<SettingsPanel, HTMLButtonElement>([
-    ['teamspaces',teamspacesTab], ['mcp', mcpTab], ['account', accountTab], ['connections', connectionsTab], ['preferences', prefsTab], ['ai', aiTab],
+    ['sidebar', sidebarTab], ['sidebar-presets', sidebarPresetsTab], ['teamspaces',teamspacesTab], ['mcp', mcpTab], ['account', accountTab], ['connections', connectionsTab], ['preferences', prefsTab], ['ai', aiTab],
     ['general', generalTab], ['emojis', emojiTab], ['members', membersTab],
   ]);
   const normalize = (value: string): string => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase();
@@ -476,6 +481,11 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
         coreVersion: CORE_VERSION,
         appVersion: APP_VERSION,
       });
+      return;
+    }
+    if (panel === 'sidebar' || (panel === 'sidebar-presets' && admin)) {
+      ui.choices.push(mountSidebarCustomization(content, currentWorkspace, {client, admin, presetsOnly: panel === 'sidebar-presets'}));
+      main.append(content);
       return;
     }
     if (panel === 'teamspaces' && client && currentWorkspace.kind === 'remote') {
@@ -649,6 +659,8 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
 
     main.append(content);
   };
+  sidebarTab.addEventListener('click', () => showPanel('sidebar'));
+  sidebarPresetsTab.addEventListener('click', () => showPanel('sidebar-presets'));
   accountTab.addEventListener('click', () => showPanel('account'));
   prefsTab.addEventListener('click', () => showPanel('preferences'));
   aiTab.addEventListener('click', () => showPanel('ai'));
@@ -680,6 +692,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
       },
     });
   };
+  footer.addEventListener('blok:desktop-customize-sidebar', () => openSettings('sidebar'));
   footer.addEventListener('blok:desktop-open-ai-settings', () => openSettings('ai'));
   footer.addEventListener('blok:desktop-open-settings', (event) => {
     const section = (event as CustomEvent<string>).detail;

@@ -1,3 +1,4 @@
+import { readSidebarLayout, saveSidebarLayout, subscribeSidebarLayout, initializeSidebarPresets } from './sidebar-preferences';
 import { libraryUrl, libraryCategoryForHref, type LibraryCategory, pageDestination, pageIdForHref, publicPageUrl, legacyPageUrl, rememberPageLinks } from './page-urls';
 import { createWorkspaceSaveStatus } from './workspace-save-status';
 import './workspace-save-status.css';
@@ -787,6 +788,10 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     finally{teamspacesState.refreshing=false;}
   };
   ws.frame = createPageFrame({
+    sidebarLayout: readSidebarLayout(ref),
+    onSidebarLayoutChange: layout => saveSidebarLayout(ref, layout),
+    onCustomizeSidebar: () => ws.footer.dispatchEvent(new Event('blok:desktop-customize-sidebar')),
+    onAssistant: () => ws.assistant.open(),
     ...(ref.kind==='remote' ? {teamspaces:sidebarTeamspaces,teamspaceStatus:()=>teamspacesState.error} : {}),
     pages: [], activeId: '',
     recentIds: recentPages.ids,
@@ -813,6 +818,10 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       refreshLibrary();
       if (ws.currentId === id) ws.pageToolbar?.setFavorite(value);
     },
+  });
+  subscribeSidebarLayout(ref, layout => {
+    ws.frame.setSidebarLayout(layout);
+    onLayout(ws.frame.element.querySelector('[data-blok-sidebar]')?.getBoundingClientRect().width ?? layout.width);
   });
   ws.frame.element.append(status);
   const getAiSource = () => {
@@ -1172,6 +1181,10 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     element: ws.frame.element,
     async start() {
       try {
+        if (ref.kind === 'remote') {
+          const client = new CloudClient({origin:ref.server, ...('__TAURI_INTERNALS__' in window ? {sessionAdapter:nativeSessionAdapter(ref.server)} : {})});
+          void initializeSidebarPresets(ref, client).catch(() => undefined);
+        }
         const loaded = adoptIndex(await repository.loadIndex());
         await refreshTeamspaces();
         refreshDateTitles();

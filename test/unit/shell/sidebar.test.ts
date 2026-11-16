@@ -357,3 +357,69 @@ describe('page sidebar row', () => {
     expect(tooltipText()).toBe('Actions de la page');
   });
 });
+
+describe('personal sidebar layout', () => {
+  it('switches tabs without recording navigation and reopens customization on the active tab', async () => {
+    const { defaultSidebarLayout } = await import('../../../src/shell/sidebar-layout');
+    const onRecentsChange = vi.fn(); const onSidebarLayoutChange = vi.fn(); const onCustomizeSidebar = vi.fn();
+    const frame = createPageFrame({ pages: tree(), activeId: 'home', onOpen: vi.fn(), onCreate: vi.fn(), sidebarLayout: defaultSidebarLayout(), onRecentsChange, onSidebarLayoutChange, onCustomizeSidebar });
+    onRecentsChange.mockClear();
+    const tab = frame.element.querySelector<HTMLButtonElement>('[data-blok-sidebar-tab="chat"]')!;
+    tab.click();
+    expect(onRecentsChange).not.toHaveBeenCalled();
+    expect(onSidebarLayoutChange).toHaveBeenCalledWith(expect.objectContaining({ activeTabId: 'chat' }));
+    frame.element.querySelector<HTMLButtonElement>('[data-blok-sidebar-tab="chat"]')!.click();
+    expect(onCustomizeSidebar).toHaveBeenCalledOnce();
+    frame.element.querySelector<HTMLButtonElement>('[data-blok-sidebar-tab="chat"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    expect(frame.element.querySelector('[aria-selected="true"]')?.textContent?.trim()).toBe('Notes');
+    expect(onRecentsChange).not.toHaveBeenCalled();
+  });
+
+  it('renders allowed page shortcuts with live titles and removes revoked pages', async () => {
+    const { defaultSidebarLayout } = await import('../../../src/shell/sidebar-layout');
+    const layout = defaultSidebarLayout(); layout.tabs[0].shortcuts = [{ id: 'page-home', kind: 'page', pageId: 'home', visible: true }];
+    const frame = createPageFrame({ pages: tree(), activeId: 'home', onOpen: vi.fn(), onCreate: vi.fn(), sidebarLayout: layout });
+    frame.setPages([{ id: 'home', title: 'Renamed', parentId: null }], 'home');
+    expect(frame.element.querySelector('[data-blok-sidebar-shortcuts]')?.textContent).toBe('Renamed');
+    frame.setPages([], '');
+    expect(frame.element.querySelector('[data-blok-sidebar-shortcuts]')?.textContent).toBe('');
+  });
+
+  it('orders local private roots by update time and applies the section limit without deleting pages', async () => {
+    const { defaultSidebarLayout } = await import('../../../src/shell/sidebar-layout');
+    const layout = defaultSidebarLayout(); layout.tabs[0].sections.forEach(section => { section.visible = section.id === 'private'; section.sort = 'updated'; section.limit = 5; });
+    const pages = Array.from({ length: 7 }, (_, i) => ({ id: String(i), title: `Page ${i}`, parentId: null, updatedAt: i }));
+    const frame = createPageFrame({ pages, activeId: '', onOpen: vi.fn(), onCreate: vi.fn(), sidebarLayout: layout });
+    expect([...frame.element.querySelectorAll('[data-blok-sidebar-link]')].map(node => node.textContent)).toEqual(['Page 6', 'Page 5', 'Page 4', 'Page 3', 'Page 2']);
+    layout.tabs[0].sections.find(section => section.id === 'private')!.limit = 0;
+    frame.setSidebarLayout(layout);
+    expect(frame.element.querySelectorAll('[data-blok-sidebar-link]')).toHaveLength(7);
+  });
+});
+
+describe('sidebar layout host integration', () => {
+  it('opens the assistant and customizes the background without intercepting page rows', async () => {
+    const { defaultSidebarLayout } = await import('../../../src/shell/sidebar-layout');
+    const onAssistant = vi.fn(); const onCustomizeSidebar = vi.fn();
+    const frame = createPageFrame({ pages: tree(), activeId: 'home', onOpen: vi.fn(), onCreate: vi.fn(), sidebarLayout: defaultSidebarLayout(), onAssistant, onCustomizeSidebar });
+    frame.element.querySelector<HTMLButtonElement>('[data-blok-sidebar-shortcut="assistant"]')!.click();
+    expect(onAssistant).toHaveBeenCalledOnce();
+    frame.element.querySelector('[data-blok-sidebar-row]')!.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+    expect(onCustomizeSidebar).not.toHaveBeenCalled();
+    frame.element.querySelector('[data-blok-sidebar]')!.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+    expect(onCustomizeSidebar).toHaveBeenCalledOnce();
+  });
+
+  it('restores width and collapse state silently, then persists user changes', async () => {
+    const { defaultSidebarLayout } = await import('../../../src/shell/sidebar-layout');
+    const layout = defaultSidebarLayout(); layout.width = 320; layout.collapsed = true;
+    const onSidebarLayoutChange = vi.fn();
+    const frame = createPageFrame({ pages: [], activeId: '', onOpen: vi.fn(), onCreate: vi.fn(), sidebarLayout: layout, onSidebarLayoutChange });
+    expect(onSidebarLayoutChange).not.toHaveBeenCalled();
+    expect(frame.element.querySelector('[data-blok-sidebar]')?.hasAttribute('data-collapsed')).toBe(true);
+    frame.toggleSidebar();
+    expect(onSidebarLayoutChange).toHaveBeenCalledWith(expect.objectContaining({ width: 320, collapsed: false }));
+    frame.element.querySelector('[data-blok-sidebar-resize]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    expect(onSidebarLayoutChange).toHaveBeenLastCalledWith(expect.objectContaining({ width: 336, collapsed: false }));
+  });
+});

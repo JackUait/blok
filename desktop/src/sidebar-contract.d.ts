@@ -1,9 +1,11 @@
+import type { SidebarLayout } from '../../src/shell/sidebar-layout';
 export interface ShellPage {
   id: string;
   title: string;
   icon?: string;
   parentId: string | null;
   favorite?: boolean;
+  updatedAt?: string;
   /** Titre de section, dérivé de l'état de partage par l'hôte. */
   section?: string;
 }
@@ -18,8 +20,13 @@ export interface PageFrame {
   canvas: HTMLElement;
   setPages(pages: ShellPage[], activeId: string): void;
   toggleSidebar(): void;
+  setSidebarLayout(layout: SidebarLayout): void;
 }
 export function createPageFrame(options: {
+  sidebarLayout?: SidebarLayout;
+  onSidebarLayoutChange?(layout: SidebarLayout): void;
+  onCustomizeSidebar?(): void;
+  onAssistant?(): void;
   pages: ShellPage[];
   activeId: string;
   /** L'espace courant, rendu comme une ligne sous « Espaces » plutôt qu'un titre. */

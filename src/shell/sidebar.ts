@@ -1,3 +1,6 @@
+import { IconMessage, IconCalendar, IconPeople, IconBookmark } from '../components/icons';
+import { normalizeSidebarLayout } from './sidebar-layout';
+import type { SidebarLayout, SidebarSection, SidebarIcon } from './sidebar-layout';
 import { renderPageIcon } from './page-icon';
 /**
  * Host page tree. The editor never owns navigation: a page row opens a
@@ -14,6 +17,7 @@ export interface ShellPage {
   parentId: string | null;
   /** Toggled from the page menu. A filled star is the on state. */
   favorite?: boolean;
+  updatedAt?: number | string;
   /**
    * Section heading this page belongs under. Derived by the host from sharing
    * state and never stored: a page moves out of its section on its own when
@@ -29,6 +33,7 @@ export interface PageFrame {
   canvas: HTMLElement;
   setPages: (pages: ShellPage[], activeId: string) => void;
   toggleSidebar: () => void;
+  setSidebarLayout: (layout: SidebarLayout) => void;
 }
 
 export type SidebarAction =
@@ -43,6 +48,10 @@ export type SidebarAction =
   | { id: string; type: 'open-peek' };
 
 export interface PageFrameOptions {
+  sidebarLayout?: SidebarLayout;
+  onSidebarLayoutChange?: (layout: SidebarLayout) => void;
+  onCustomizeSidebar?: () => void;
+  onAssistant?: () => void;
   /** L'espace courant, rendu comme une ligne sous « Espaces » plutôt qu'un titre. */
   teamspace?: { name: string };
   teamspaces?: SidebarTeamspace[];
@@ -180,6 +189,8 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     activeId: options.activeId,
     query: '',
   };
+  let layout = options.sidebarLayout ? normalizeSidebarLayout(options.sidebarLayout) : undefined;
+  const publishLayout = (): void => { if (layout) options.onSidebarLayoutChange?.(structuredClone(layout)); };
   const closed = new Set<string>();
   const offline = new Set<string>();
 
@@ -260,6 +271,16 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     searchLabel.addEventListener('click', () => options.onSearch?.());
   } else searchLabel.append(searchInput);
 
+  const tabs = document.createElement('div');
+  tabs.setAttribute('data-blok-sidebar-tabs', '');
+  tabs.setAttribute('role', 'tablist');
+  tabs.setAttribute('aria-label', 'Vues de la barre latérale');
+  sidebar.addEventListener('contextmenu', (event) => {
+    if (!layout || !options.onCustomizeSidebar || !(event.target instanceof Element) || event.target.closest('button, input, [data-blok-sidebar-row], [data-blok-sidebar-menu]')) return;
+    event.preventDefault();
+    options.onCustomizeSidebar();
+  });
+
   const tree = document.createElement('nav');
   tree.setAttribute('data-blok-sidebar-tree', '');
   tree.setAttribute('aria-label', 'Pages');
@@ -297,7 +318,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     const rect = resize.getBoundingClientRect();
     anchor.style.top = `${Math.min(rect.height, Math.max(0, clientY - rect.top))}px`;
   };
-  const widthState = { open: 260 };
+  const widthState = { open: layout?.width ?? 260 };
   const syncValue = (): void => {
     const span = maxWidth - minWidth;
     const width = sidebar.getBoundingClientRect().width || widthState.open;
@@ -306,7 +327,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
       : Math.round(((width - minWidth) / span) * 100);
     resize.setAttribute('aria-valuenow', String(Math.min(100, Math.max(0, value))));
   };
-  const setCollapsed = (collapsed: boolean): void => {
+  const setCollapsed = (collapsed: boolean, notify = true): void => {
     tree.querySelectorAll<HTMLElement>('[data-blok-sidebar-menu]').forEach(closeMenu);
     if (collapsed) {
       widthState.open = sidebar.getBoundingClientRect().width || widthState.open;
@@ -318,6 +339,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     }
     syncHint();
     syncValue();
+    if (layout && notify) { layout = { ...layout, collapsed, width: widthState.open }; publishLayout(); }
   };
   syncValue();
   resize.addEventListener('pointerdown', (event) => {
@@ -340,6 +362,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     const stop = (): void => {
       resize.removeAttribute('data-resizing');
       if (!dragState.dragged) setCollapsed(!sidebar.hasAttribute('data-collapsed'));
+      else if (layout) { layout = { ...layout, width: widthState.open, collapsed: false }; publishLayout(); }
       resize.removeEventListener('pointermove', move);
       resize.removeEventListener('pointerup', stop);
     };
@@ -357,6 +380,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     widthState.open = width;
     syncHint();
     syncValue();
+    if (layout) { layout = { ...layout, width, collapsed: false }; publishLayout(); }
   });
   shell.addEventListener('keydown', (event) => {
     if (options.onSearch && (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'k') {
@@ -371,7 +395,8 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     setCollapsed(!sidebar.hasAttribute('data-collapsed'));
   });
 
-  sidebar.append(header, searchLabel, shortcuts, tree, edge);
+  sidebar.append(header, searchLabel, tabs, shortcuts, tree, edge);
+  if (layout) { sidebar.style.width = `${layout.width}px`; setCollapsed(layout.collapsed, false); }
 
   const canvas = document.createElement('main');
   canvas.setAttribute('data-blok-sidebar-canvas', '');
@@ -392,14 +417,125 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     options.onRecentsChange?.([...recents]);
   };
 
+  function tabIcon(kind: SidebarIcon): HTMLElement {
+    const icon = document.createElement('span');
+    icon.setAttribute('aria-hidden', 'true');
+    if (kind === 'home') icon.append(svg(['M2 7 8 2l6 5', 'M4 6v7h3V9h2v4h3V6']));
+    else icon.innerHTML = { message: IconMessage, calendar: IconCalendar, people: IconPeople, book: IconBookmark }[kind];
+    return icon;
+  }
+
+  function paintNavigation(): void {
+    tabs.hidden = !layout;
+    if (!layout) return;
+    tabs.replaceChildren();
+    const active = layout.tabs.find(tab => tab.id === layout?.activeTabId)!;
+    layout.tabs.forEach(tab => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.setAttribute('data-blok-sidebar-tab', tab.id);
+      button.setAttribute('role', 'tab');
+      button.setAttribute('aria-selected', String(tab.id === active.id));
+      button.tabIndex = tab.id === active.id ? 0 : -1;
+      button.addEventListener('keydown', (event) => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        const buttons = [...tabs.querySelectorAll<HTMLButtonElement>('[data-blok-sidebar-tab]')];
+        const current = buttons.indexOf(button);
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1
+          : (current + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
+        if (next !== current) buttons[next]?.click();
+      });
+      button.append(tabIcon(tab.icon), document.createTextNode(tab.name));
+      button.addEventListener('click', () => {
+        if (!layout) return;
+        if (layout.activeTabId === tab.id) { options.onCustomizeSidebar?.(); return; }
+        layout = { ...layout, activeTabId: tab.id };
+        paint();
+        publishLayout();
+        tabs.querySelector<HTMLButtonElement>('[aria-selected="true"]')?.focus();
+      });
+      tabs.append(button);
+    });
+    shortcuts.replaceChildren();
+    active.shortcuts.filter(item => item.visible).forEach(item => {
+      const page = item.kind === 'page' ? view.pages.find(candidate => candidate.id === item.pageId) : undefined;
+      if (item.kind === 'page' && !page) return;
+      if ((item.kind === 'new-page' || item.kind === 'new-note') && options.canCreate?.(null) === false) return;
+      const run = item.kind === 'page' ? () => options.onOpen(page!.id)
+        : item.kind === 'new-page' ? () => options.onCreate(null)
+        : item.kind === 'new-note' ? options.onCreateNote
+        : item.kind === 'library' ? options.onLibrary : options.onAssistant;
+      if (!run) return;
+      const button = document.createElement('button'); button.type = 'button';
+      button.setAttribute('data-blok-sidebar-shortcut', item.id);
+      if (page?.id === view.activeId) button.setAttribute('aria-current', 'page');
+      const icon = document.createElement('span'); icon.setAttribute('aria-hidden', 'true');
+      if (item.kind === 'assistant') icon.innerHTML = IconMessage;
+      else if (page?.icon) renderPageIcon(icon, page.icon);
+      else icon.append(svg(item.kind === 'library' ? ICONS.wiki : item.kind === 'new-page' ? ICONS.pencil : ICONS.page));
+      const label = document.createElement('span');
+      label.textContent = page?.title ?? ({ 'new-page': 'Nouvelle page', 'new-note': 'Nouvelle note', library: 'Bibliothèque', assistant: 'Discussion', page: '' }[item.kind]);
+      button.append(icon, label); button.addEventListener('click', run); shortcuts.append(button);
+    });
+  }
+
+  function selectSectionPages(pages: ShellPage[], section: SidebarSection): ShellPage[] {
+    const selected = [...pages];
+    const timestamp = (page: ShellPage): number => typeof page.updatedAt === 'number' ? page.updatedAt : Date.parse(page.updatedAt ?? '') || 0;
+    if (section.sort === 'updated') selected.sort((a, b) => timestamp(b) - timestamp(a));
+    return section.limit === 0 ? selected : selected.slice(0, section.limit);
+  }
+
+  function paintLayoutSections(roots: ShellPage[], needle: string): void {
+    const active = layout?.tabs.find(tab => tab.id === layout?.activeTabId);
+    active?.sections.filter(section => section.visible).forEach(section => {
+      if (section.id === 'recents' || section.id === 'favorites') {
+        const candidates = section.id === 'recents'
+          ? recents.map(id => view.pages.find(page => page.id === id)).filter((page): page is ShellPage => !!page)
+          : view.pages.filter(page => page.favorite);
+        const pages = selectSectionPages(candidates.filter(page => !needle || matches(view.pages, page, needle)), section);
+        if (pages.length) appendShortcutSection(section.id === 'recents' ? 'Récents' : 'Favoris', section.id, pages);
+        return;
+      }
+      if (section.id === 'teamspaces') {
+        const group = appendSection('Espaces d’équipe', 'teamspaces');
+        if (collapsed.has('teamspaces')) return;
+        const teams = options.teamspaces ?? [];
+        teams.filter(team => !needle || roots.some(page => page.section === `teamspace:${team.id}`)).forEach(team => {
+          appendTeamspace(group, team, selectSectionPages(roots.filter(page => page.section === `teamspace:${team.id}`), section), needle);
+        });
+        const common = selectSectionPages(roots.filter(page => page.section === 'workspace'), section);
+        if (options.teamspaces === undefined && options.teamspace) {
+          const body = openSection('workspace'); common.forEach(page => body.append(...rows(page, 0, !!needle)));
+        } else common.forEach(page => group.append(...rows(page, 0, !!needle)));
+        const status = options.teamspaceStatus?.();
+        if (status) { const hint = document.createElement('p'); hint.setAttribute('data-blok-sidebar-teamspaces-empty', ''); hint.textContent = status; group.append(hint); }
+        return;
+      }
+      const privateSection = section.id === 'private';
+      const knownTeams = new Set((options.teamspaces ?? []).map(team => `teamspace:${team.id}`));
+      const candidates = roots.filter(page => privateSection ? !page.section || page.section === 'Privé' : !!page.section && !['workspace', 'Privé'].includes(page.section) && !knownTeams.has(page.section));
+      const pages = selectSectionPages(candidates, section);
+      if (!pages.length && !(privateSection && options.onCreatePrivate)) return;
+      const key = privateSection ? 'Privé' : 'Partagé';
+      const group = appendSection(key, key);
+      if (collapsed.has(key)) return;
+      pages.forEach(page => group.append(...rows(page, 0, !!needle)));
+      if (!pages.length && privateSection && options.onCreatePrivate) appendPrivateAdd(group);
+    });
+  }
+
   function paint(): void {
     tree.querySelectorAll('[data-blok-sidebar-menu]').forEach((node) => {
       if (node instanceof HTMLElement) closeMenu(node);
     });
     tree.replaceChildren();
     create.hidden = newPage.hidden = options.canCreate?.(null) === false;
+    paintNavigation();
     const needle = view.query;
     const roots = childrenOf(view.pages, null).filter((page) => needle === '' || matches(view.pages, page, needle));
+    if (layout) { paintLayoutSections(roots, needle); return; }
     if (roots.length === 0 && options.teamspaces === undefined) {
       const empty = document.createElement('p');
       empty.setAttribute('data-blok-sidebar-empty', '');
@@ -595,7 +731,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     group.setAttribute(`data-blok-sidebar-${key}`, '');
     if (collapsed.has(key)) return;
     // À plat : un raccourci n'a pas d'enfants à déployer.
-    (key === 'recents' ? pages.slice(0, 5) : pages).forEach((page) => group.append(...rows(page, 0, false, true)));
+    (!layout && key === 'recents' ? pages.slice(0, 5) : pages).forEach((page) => group.append(...rows(page, 0, false, true)));
     if (key === 'recents' && options.onSearch) {
       const all = document.createElement('button');
       all.type = 'button';
@@ -864,6 +1000,13 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     element: shell,
     canvas,
     toggleSidebar: () => setCollapsed(!sidebar.hasAttribute('data-collapsed')),
+    setSidebarLayout(next) {
+      layout = normalizeSidebarLayout(next);
+      widthState.open = layout.width;
+      sidebar.style.width = `${layout.width}px`;
+      setCollapsed(layout.collapsed, false);
+      paint();
+    },
     setPages(next, nextActive) {
       view.pages = next;
       view.activeId = nextActive;

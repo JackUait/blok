@@ -94,3 +94,26 @@ Workspace members can read custom emoji; members and administrators can upload i
 Uploads accept base64 data URLs whose declared type matches the detected PNG/JPEG/GIF/WebP bytes. SVG and other active content are rejected. Both image and emoji routes accept a workspace ID in place of its slug. Page cover metadata can retain a gallery key, an uploaded asset URL, or an HTTPS image URL.
 
 Private page creation: a new root page in `PUT /api/workspaces/:slug/index` may include `initialVisibility: "private"`. The server atomically creates it as private and grants its author full access. This transient field is not stored and cannot change the visibility of an existing page; use the page access endpoint for existing pages.
+
+### Workspace sidebar presets
+
+`GET /api/workspaces/{slug}/sidebar-presets` returns `{ "presets": [...] }`
+for workspace members (including viewers). An unconfigured workspace returns
+an empty array, allowing clients to use built-in defaults.
+
+`PUT /api/workspaces/{slug}/sidebar-presets` replaces that list and requires a
+workspace administrator. The payload and response have the same shape. Supply
+1–6 presets with at least one `default: true`. Each preset has `id`, `name`,
+`default`, and `tab`; tabs have `id`, `name`, `icon`, `shortcuts`, `sections`, and
+optional `presetId`. Icons are `home`, `message`, `calendar`, `book`, or `people`.
+Names are nonblank and at most 80 characters; IDs at most 128 characters. Preset
+IDs and tab IDs must be unique within the list.
+
+A tab supports up to 25 shortcuts with unique `id`, `kind`, and `visible`.
+Workspace shortcut kinds are `new-page`, `new-note`, `library`, and `assistant`.
+Page shortcuts are personal: workspace presets reject `page` and `pageId` so
+private page identifiers cannot be distributed to other workspace members.
+Include each section exactly once: `recents`, `favorites`, `teamspaces`, `shared`,
+and `private`, each with `visible`, `limit` (0, 5, 10, 20, or 50), and `sort`
+(`manual` or `updated`). Payloads are limited to 64 KiB; unknown fields are
+rejected. These settings change presentation only and grant no page access.

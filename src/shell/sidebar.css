@@ -671,3 +671,46 @@ button[data-blok-sidebar-search]:hover { background: var(--blok-item-hover-bg); 
 /* Real teamspaces: each row owns its own expansion, pages remain a compact tree. */
 [data-blok-sidebar-teamspace-mark] > span:first-child { display:grid; place-items:center; width:18px; height:18px; font-size:15px; }
 [data-blok-sidebar-teamspace] > button:first-child { min-height:30px; font-size:13px; }
+
+/* Personal views keep navigation compact without changing the page tree. */
+[data-blok-shell] [data-blok-sidebar-tabs] {
+  display: flex;
+  gap: 3px;
+  padding: 5px 8px 9px;
+  overflow-x: auto;
+  flex: none;
+}
+[data-blok-shell] [data-blok-sidebar-tabs][hidden] { display: none; }
+[data-blok-shell] [data-blok-sidebar-tab] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 1 0 auto;
+  border: 0;
+  border-radius: 6px;
+  padding: 6px;
+  background: transparent;
+  color: var(--blok-text-primary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+[data-blok-shell] [data-blok-sidebar-tab] > span,
+[data-blok-shell] [data-blok-sidebar-shortcut] > span[aria-hidden] {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
+[data-blok-shell] [data-blok-sidebar-tab] svg { width: 18px; height: 18px; }
+[data-blok-shell] [data-blok-sidebar-shortcut] > span[aria-hidden] svg { width: 16px; height: 16px; }
+[data-blok-shell] [data-blok-sidebar-tab]:hover { background: var(--blok-item-hover-bg); }
+[data-blok-shell] [data-blok-sidebar-tab][aria-selected="true"] {
+  background: var(--blok-item-hover-bg);
+  font-weight: 600;
+}
+[data-blok-shell] [data-blok-sidebar-tab]:focus-visible {
+  outline: 2px solid var(--blok-text-primary);
+  outline-offset: -2px;
+}

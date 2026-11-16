@@ -616,6 +616,27 @@ describe('DatabaseGalleryView', () => {
       expect(document.querySelector<HTMLElement>('[data-blok-database-drop-line]')?.style.left).toBe('-12px');
     });
 
+    // notion-motion.md Round 54 §6: the near half of a later row's first card shows no line; that slot is the end-of-row line above.
+    it('shows no line and moves nothing over the near half of a later row\'s first card', () => {
+      const four = single([row('r1', 'Alpha'), row('r2', 'Bravo'), row('r3', 'Charlie'), row('r4', 'Delta')]);
+      const { root, handlers } = mount({ groups: four });
+      const all = cards(root);
+
+      rect(all[0], 0, 0);
+      rect(all[1], 120, 0);
+      rect(all[2], 0, 120);
+      rect(all[3], 120, 120);
+      pointer('pointerdown', all[3], 130, 130);
+      pointer('pointermove', document, 10, 130);
+
+      const line = document.querySelector<HTMLElement>('[data-blok-database-drop-line]');
+
+      expect(line === null || line.style.opacity === '0').toBe(true);
+      expect(all[2].hasAttribute('data-drop')).toBe(false);
+      pointer('pointerup', document, 10, 130);
+      expect(handlers.moveRow).not.toHaveBeenCalled();
+    });
+
     // Notion: the half of the next card that means "where it already is" shows no line and moves nothing.
     it('shows no line over the dragged card\'s own slot and moves nothing there', () => {
       const { root, handlers } = mount({ groups: three() });

@@ -306,6 +306,13 @@ describe('database gallery and calendar styles', () => {
     expect(ruleBody('[data-blok-database-ghost][data-card-layout="compact"] [data-blok-database-gallery-properties]')).toContain('flex-direction: row');
   });
 
+  // notion-motion.md Round 54 §6: the moving copy keeps the hover state (buttons, 0.06 fill); the held card hides its buttons.
+  it('shows the hover buttons and the drag fill on the gallery ghost, and hides the held card\'s buttons', () => {
+    expect(ruleBody('[data-blok-database-ghost] > [data-blok-database-gallery-card]')).toContain('background-color: var(--blok-database-card-drag-source-bg, var(--blok-database-gallery-card-hover-bg))');
+    expect(ruleBody('[data-blok-database-ghost] > [data-blok-database-gallery-card] [data-blok-database-card-actions]')).toContain('opacity: 1');
+    expect(ruleBody('[data-blok-database-gallery-card][data-dragging] [data-blok-database-card-actions]')).toContain('opacity: 0');
+  });
+
   it('paints a drop target gray, never blue (D3)', () => {
     const drop = ruleBody('[data-blok-database-calendar-day][data-drop]');
 

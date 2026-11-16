@@ -715,9 +715,15 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
         continue;
       }
 
-      const firstHalf = x < box.left + box.width / 2;
+      const side = (x < box.left + box.width / 2) !== rtl ? 'before' : 'after';
+      const previous = card.previousElementSibling;
 
-      return { card, side: firstHalf !== rtl ? 'before' : 'after' };
+      // notion-motion.md Round 54 §6: a later row's start has no slot of its own; the end-of-row line above stands for it.
+      if (side === 'before' && previous?.matches('[data-blok-database-gallery-card]') === true && previous.getBoundingClientRect().top < box.top) {
+        return null;
+      }
+
+      return { card, side };
     }
 
     for (const grid of root.querySelectorAll<HTMLElement>('[data-blok-database-gallery-grid]')) {

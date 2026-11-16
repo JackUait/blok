@@ -17453,6 +17453,18 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   background-color: var(--blok-database-gallery-card-hover-bg);
 }
 
+[data-blok-database-ghost] > [data-blok-database-gallery-card] {
+  background-color: var(--blok-database-card-drag-source-bg, var(--blok-database-gallery-card-hover-bg));
+}
+
+[data-blok-database-ghost] > [data-blok-database-gallery-card] [data-blok-database-card-actions] {
+  opacity: 1;
+}
+
+[data-blok-database-gallery-card][data-dragging] [data-blok-database-card-actions] {
+  opacity: 0;
+}
+
 [data-blok-database-gallery-grid][data-drop="inside"] {
   outline: 2px solid var(--blok-database-table-drop-line);
   outline-offset: -2px;

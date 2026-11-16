@@ -181,6 +181,39 @@ describe('DatabaseListRowDrag', () => {
     expect(onDrop).not.toHaveBeenCalled();
   });
 
+  // notion-motion.md Round 53 §7: a drag cancelled with Escape opens nothing on release.
+  it('does not open the row when a drag cancelled with Escape is released on it', async () => {
+    const row = wrapper.querySelector<HTMLElement>('[data-row-id="row-0"]');
+    const opened = vi.fn();
+
+    row?.addEventListener('click', opened);
+    drag.beginTracking('row-0', 0, 0);
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 0, clientY: 80 }));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 0, clientY: 5 }));
+    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 0, clientY: 5 }));
+    row?.click();
+
+    expect(opened).not.toHaveBeenCalled();
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    row?.click();
+    expect(opened).toHaveBeenCalledTimes(1);
+  });
+
+  it('still opens the row on release after Escape pressed before the drag began', () => {
+    const row = wrapper.querySelector<HTMLElement>('[data-row-id="row-0"]');
+    const opened = vi.fn();
+
+    row?.addEventListener('click', opened);
+    drag.beginTracking('row-0', 0, 0);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 0, clientY: 2 }));
+    row?.click();
+
+    expect(opened).toHaveBeenCalledTimes(1);
+  });
+
   it('shows a drop line on the row-1 | row-2 seam and never displaces a row', () => {
     // Drag row-1; clientY=85 lands before row-2, whose top edge is at 80.
     drag.beginTracking('row-1', 0, 40);

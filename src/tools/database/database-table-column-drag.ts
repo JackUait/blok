@@ -1,4 +1,5 @@
 import { copyGhostContext, mountGhost } from './copy-ghost-radius';
+import { disarm, swallowClickAfterCancel, swallowReleaseClick } from './drag-click-guard';
 import type { TableState } from './database-table-grid';
 
 const THRESHOLD = 5;
@@ -136,7 +137,7 @@ export class DatabaseTableColumnDrag {
     }
     // A drag is not a click: the header must not open its menu on release.
     // On the document: the drop redraws the table, so the click lands in new DOM.
-    armSwallow();
+    swallowReleaseClick();
 
     const propertyId = press.header.getAttribute('data-property-id') ?? '';
     const headers = [...press.header.parentElement?.querySelectorAll<HTMLElement>(':scope > [data-blok-database-table-column-header]') ?? []];
@@ -159,8 +160,7 @@ export class DatabaseTableColumnDrag {
     event.preventDefault();
     event.stopPropagation();
     this.stop();
-    document.addEventListener('pointerup', armSwallow, { capture: true, once: true });
-    document.addEventListener('pointercancel', disarm, { capture: true, once: true });
+    swallowClickAfterCancel();
   };
 
   private stop(): void {
@@ -182,21 +182,3 @@ export class DatabaseTableColumnDrag {
     this.beforeId = undefined;
   }
 }
-
-const swallow = (event: Event): void => {
-  event.stopPropagation();
-  event.preventDefault();
-};
-
-/** Swallows the click the current release makes, if it makes one. */
-const armSwallow = (): void => {
-  document.removeEventListener('pointercancel', disarm, { capture: true });
-  document.addEventListener('click', swallow, { capture: true, once: true });
-  setTimeout(() => document.removeEventListener('click', swallow, { capture: true }), 0);
-};
-
-/** After Escape, a cancelled pointer makes no release: the next ordinary click must not be swallowed. */
-const disarm = (): void => {
-  document.removeEventListener('pointerup', armSwallow, { capture: true });
-  document.removeEventListener('pointercancel', disarm, { capture: true });
-};

@@ -173,6 +173,25 @@ describe('DatabaseCardDrag', () => {
     expect(opened).not.toHaveBeenCalled();
   });
 
+  // notion-motion.md Round 53 §9C: a drag cancelled with Escape opens nothing on release.
+  it('does not open the card when a drag cancelled with Escape is released on it', async () => {
+    const card = wrapper.querySelector<HTMLElement>('[data-row-id="row-0-1"]');
+    const opened = vi.fn();
+
+    card?.addEventListener('click', opened);
+    drag.beginTracking('row-0-1', 50, 90);
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 50, clientY: 140 }));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 50, clientY: 95 }));
+    card?.click();
+
+    expect(opened).not.toHaveBeenCalled();
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    card?.click();
+    expect(opened).toHaveBeenCalledTimes(1);
+  });
+
   it('cleans up previous tracking session when beginTracking is called again', () => {
     // Start tracking row-0-0
     drag.beginTracking('row-0-0', 50, 30);

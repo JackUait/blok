@@ -129,6 +129,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/database-timeline-view.ts': cmds(['database.addRow', 'database.setRowValues'], 'Add a row; drag or resize a bar writes its date values.'),
   'ui-file:src/tools/database/database-view-controls.ts': cmds(['database.addRow', 'database.updateView'], 'New row button, and "Save for everyone" of the filters and sorts. Search and unsaved personal filters are never saved.'),
   'ui-file:src/tools/database-row/index.ts': cmds(['block.insert'], 'Starts the row page body: inserts its first child block.'),
+  'ui-file:src/tools/database/drag-click-guard.ts': exempt('chrome', 'Eats the click a cancelled or finished drag makes on release; nothing is saved.'),
   'ui-file:src/tools/database/database-keyboard.ts': exempt('chrome', 'Moves keyboard focus between cards and rows; nothing is saved.'),
   'ui-file:src/tools/database/database-list-row-drag.ts': cmds(['database.moveRow'], 'Reorder rows in the list view.'),
   'ui-file:src/tools/database/database-list-view.ts': cmds(['database.addRow', 'database.setRowValues', 'block.delete'], 'List view rows.'),

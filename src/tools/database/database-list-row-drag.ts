@@ -2,6 +2,7 @@ import type { AutoScroll } from '../../components/modules/drag/utils/AutoScroll'
 import { copyGhostRadius, mountGhost } from './copy-ghost-radius';
 import { createDatabaseAutoScroll, listAutoScrollSpeed } from './database-auto-scroll';
 import { DatabaseDropLine } from './database-drop-line';
+import { swallowClickAfterCancel } from './drag-click-guard';
 
 const DRAG_THRESHOLD = 10;
 
@@ -137,9 +138,13 @@ export class DatabaseListRowDrag {
   }
 
   private handleKeyDown(e: KeyboardEvent): void {
-    if (e.key === 'Escape') {
-      this.cleanup();
+    if (e.key !== 'Escape') {
+      return;
     }
+    if (this.isDragging) {
+      swallowClickAfterCancel();
+    }
+    this.cleanup();
   }
 
   private startActiveDrag(e: PointerEvent): void {

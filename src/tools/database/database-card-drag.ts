@@ -2,16 +2,12 @@ import type { AutoScroll } from '../../components/modules/drag/utils/AutoScroll'
 import { copyGhostContext, copyGhostRadius, mountGhost } from './copy-ghost-radius';
 import { cardAutoScrollSpeed, cardVerticalAutoScrollSpeed, createDatabaseAutoScroll } from './database-auto-scroll';
 import { DatabaseDropLine } from './database-drop-line';
+import { swallowClickAfterCancel, swallowReleaseClick } from './drag-click-guard';
 
 const DRAG_THRESHOLD = 10;
 
 /** Half the 8px gap between cards, so the line sits in the gap. */
 const HALF_GAP = 4;
-
-const swallow = (event: Event): void => {
-  event.stopPropagation();
-  event.preventDefault();
-};
 
 export interface CardDragResult {
   rowId: string;
@@ -145,8 +141,7 @@ export class DatabaseCardDrag {
   private handlePointerUp(e: PointerEvent): void {
     if (this.isDragging) {
       // A drag is not a click: a card dropped back stays in the DOM and would open its page.
-      document.addEventListener('click', swallow, { capture: true, once: true });
-      setTimeout(() => document.removeEventListener('click', swallow, { capture: true }), 0);
+      swallowReleaseClick();
       this.commitDrop(e);
     }
 
@@ -158,9 +153,13 @@ export class DatabaseCardDrag {
   }
 
   private handleKeyDown(e: KeyboardEvent): void {
-    if (e.key === 'Escape') {
-      this.cleanup();
+    if (e.key !== 'Escape') {
+      return;
     }
+    if (this.isDragging) {
+      swallowClickAfterCancel();
+    }
+    this.cleanup();
   }
 
   private startActiveDrag(e: PointerEvent): void {

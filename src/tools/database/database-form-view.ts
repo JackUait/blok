@@ -1,5 +1,7 @@
 import { createCoverControl } from '../../components/modules/pageTitle/cover-control';
 import { createIconControl } from '../../components/modules/pageTitle/icon-control';
+import { EmojiPicker } from '../callout/emoji-picker';
+import { chooseLanding, playLanding } from '../callout/emoji-landing';
 import { isPageCover } from '../../shared/page-cover';
 import { readIcon } from '../page/page-values';
 import { IconChevronUpDown, IconDotsHorizontal, IconLock, IconPlus } from '../../components/icons';
@@ -443,6 +445,8 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       isReadOnly: readOnly,
       labels: () => ({ add: t('tools.database.formIcon'), change: t('title.changeIcon') }),
       picker: () => ({ i18n, locale: this.options.i18n.getLocale?.() ?? 'en' }),
+      // Static on purpose: the database already ships the picker, and core's lazy loader would leak it into ./tools bundles.
+      loadPicker: () => Promise.resolve({ Picker: EmojiPicker, landings: { chooseLanding, playLanding } }),
     }, () => [cover.addButton]);
 
     row.setAttribute('data-blok-database-form-header-row', '');

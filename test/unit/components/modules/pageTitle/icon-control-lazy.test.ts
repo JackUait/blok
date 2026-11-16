@@ -48,6 +48,7 @@ const freshControl = async (initial: PageIcon | null): Promise<{
   vi.resetModules();
   vi.doMock(PICKER, pickerModule);
   const { createIconControl } = await import('../../../../../src/components/modules/pageTitle/icon-control');
+  const { loadPicker } = await import('../../../../../src/components/modules/pageTitle/load-picker');
   const row = document.createElement('div');
   const state = { icon: initial, readOnly: false };
 
@@ -60,6 +61,7 @@ const freshControl = async (initial: PageIcon | null): Promise<{
     isReadOnly: () => state.readOnly,
     labels: () => ({ add: 'Add icon', change: 'Change icon' }),
     picker: () => ({ i18n: { t: (key: string) => key }, locale: 'en' }),
+    loadPicker,
   });
 
   return { row, state, control };

@@ -10,6 +10,7 @@ import { setCaretAtXPosition } from '../../utils/caret';
 import { buildHeader, findHolder, holderProblem, type HeaderNodes } from './header-dom';
 import { bindTitleKeyboard } from './title-keyboard';
 import { createIconControl } from './icon-control';
+import { loadPicker } from './load-picker';
 import { createCoverControl, type CoverControl } from './cover-control';
 import type { PageFieldKey } from '../yjs/page-fields';
 
@@ -101,6 +102,7 @@ export class PageTitle extends Module {
         isReadOnly: () => this.readOnly,
         labels: () => ({ add: I18n.t('title.addIcon'), change: I18n.t('title.changeIcon') }),
         picker: () => ({ i18n: this.Blok.API.methods.i18n, locale: I18n.getLocale() }),
+        loadPicker,
       }, trailing);
     } else {
       this.dom.iconRow.append(...trailing());

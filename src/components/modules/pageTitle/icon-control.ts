@@ -1,4 +1,4 @@
-// Type only: the picker and its landings load on first open, so the bare editor bundle does not carry them.
+// Type only: the host's loadPicker brings the picker and its landings.
 import type { EmojiPicker } from '../../../tools/callout/emoji-picker';
 import type { Landing, chooseLanding, playLanding } from '../../../tools/callout/emoji-landing';
 import { IconEmojiSmile } from '../../icons';
@@ -13,27 +13,18 @@ export interface IconControlHost {
   isReadOnly(): boolean;
   labels(): { add: string; change: string };
   picker(): { i18n: { t(key: string): string }; locale: string };
+  /**
+   * Core passes the lazy loader from ./load-picker. A tool passes its static
+   * imports instead: an import() of the picker in a tool's graph makes esbuild
+   * ship the picker's shared code to every ./tools consumer.
+   */
+  loadPicker(): Promise<PickerCode>;
 }
 
-interface PickerCode {
+export interface PickerCode {
   Picker: typeof EmojiPicker;
   landings: { chooseLanding: typeof chooseLanding; playLanding: typeof playLanding };
 }
-
-const pickerLoad: { pending: Promise<PickerCode> | null } = { pending: null };
-
-/** One shared load; a failed one is dropped so the next click tries again. */
-const loadPicker = (): Promise<PickerCode> => {
-  pickerLoad.pending ??= Promise.all([
-    import('../../../tools/callout/emoji-picker'),
-    import('../../../tools/callout/emoji-landing'),
-  ]).then(([{ EmojiPicker: Picker }, landings]) => ({ Picker, landings }), (error: unknown) => {
-    pickerLoad.pending = null;
-    throw error;
-  });
-
-  return pickerLoad.pending;
-};
 
 /** The ghost box that fits a glyph of this face's font size; landings size the ghost's glyph at 0.9 of its box. */
 const seatSize = (face: HTMLElement): number | undefined => {
@@ -94,7 +85,7 @@ export const createIconControl = (row: HTMLElement, host: IconControlHost, trail
 
   const openPicker = (anchor: HTMLElement): void => {
     // A failed chunk opens nothing; the next click tries again.
-    loadPicker().then((code) => {
+    host.loadPicker().then((code) => {
       // Destroy or read-only can land while the code loads.
       if (!slot.destroyed && !host.isReadOnly()) {
         showPicker(code, anchor);
@@ -278,7 +269,7 @@ export const createIconControl = (row: HTMLElement, host: IconControlHost, trail
 
   redraw();
   // Loaded now, like the emoji grid, so the first open does not wait for it.
-  loadPicker().catch(() => undefined);
+  host.loadPicker().catch(() => undefined);
 
   return {
     redraw,

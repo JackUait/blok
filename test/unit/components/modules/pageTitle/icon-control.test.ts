@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DATA_ATTR } from '../../../../../src/components/constants/data-attributes';
 import { createIconControl, type IconControlHost } from '../../../../../src/components/modules/pageTitle/icon-control';
+import { loadPicker } from '../../../../../src/components/modules/pageTitle/load-picker';
 import { loadEmojiGrid } from '../../../../../src/components/utils/emoji/emoji-data';
 import type { PageIcon } from '../../../../../types/tools/page';
 
@@ -70,6 +71,7 @@ describe('createIconControl', () => {
       isReadOnly: () => state.readOnly,
       labels: () => ({ add: 'Add icon', change: 'Change icon' }),
       picker: () => ({ i18n: { t: (key: string) => key }, locale: 'en' }),
+      loadPicker,
     };
     const control = createIconControl(row, host);
 
@@ -266,6 +268,7 @@ describe('the page icon lands a picked emoji like a callout', () => {
       isReadOnly: () => false,
       labels: () => ({ add: 'Add icon', change: 'Change icon' }),
       picker: () => ({ i18n: { t: (key: string) => key }, locale: 'en' }),
+      loadPicker,
     });
 
     slot.redraw = control.redraw;

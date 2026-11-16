@@ -218,6 +218,8 @@ test.describe('timeline', () => {
     const timed = [{ id: 'r1', properties: { 'p-title': 'Call', 'p-due': '2026-10-09T03:00/2026-10-09T04:00' } }];
     /** notion-motion.md Round 34 §5: 7000 px per day. */
     const PER_MINUTE = 7000 / 1440;
+    const readout = (page: Page, edge: 'start' | 'end'): Locator =>
+      bar(page, 'r1').locator(`[data-blok-database-timeline-edge-readout="${edge}"]`);
     const mountHours = async (page: Page): Promise<{ x: number; y: number; width: number }> => {
       await mount(page, blocks({ type: 'timeline', timelineZoom: 'hours' }, timed));
       await bar(page, 'r1').scrollIntoViewIfNeeded();
@@ -231,12 +233,13 @@ test.describe('timeline', () => {
     test('a move follows the pointer as a ghost and rounds to the nearest 15 minutes on drop', async ({ page }) => {
       const box = await mountHours(page);
 
-      expect(box.width).toBeCloseTo(60 * PER_MINUTE, 0);
+      // notion-motion.md Round 51 §4: Notion's 1-hour bar is 288.7, 3 short of 60 minutes.
+      expect(box.width).toBeCloseTo(288.7, 0);
       await page.mouse.move(box.x + 30, box.y);
       await page.mouse.down();
       await page.mouse.move(box.x + 30 + 10 * PER_MINUTE, box.y, { steps: 5 });
       expect((await bar(page, 'r1').boundingBox())?.x).toBeCloseTo(box.x + 10 * PER_MINUTE, 0);
-      await expect(page.getByRole('tooltip')).toBeHidden();
+      await expect(page.locator('[data-blok-database-timeline-edge-readout]')).toHaveCount(0);
       await page.mouse.up();
 
       await expect.poll(async () => (await savedRow(page, 'r1'))['p-due']).toBe('2026-10-09T03:15/2026-10-09T04:15');
@@ -249,12 +252,13 @@ test.describe('timeline', () => {
       await page.mouse.move(box.x - 4, box.y);
       await page.mouse.down();
       await page.mouse.move(box.x - 4 - 14 * PER_MINUTE, box.y, { steps: 5 });
-      await expect(page.getByRole('tooltip')).toHaveText('Oct 9, 2:45 AM');
+      // notion-motion.md Round 51 §4: the edge reads in the light box beside it, not a tooltip.
+      await expect(readout(page, 'start')).toHaveText('Oct 9, 2:45 AM');
       expect((await bar(page, 'r1').boundingBox())?.x).toBeCloseTo(box.x - 15 * PER_MINUTE, 0);
       await page.mouse.up();
 
       await expect.poll(async () => (await savedRow(page, 'r1'))['p-due']).toBe('2026-10-09T02:45/2026-10-09T04:00');
-      await expect(page.getByRole('tooltip')).toBeHidden();
+      await expect(page.locator('[data-blok-database-timeline-edge-readout]')).toHaveCount(0);
     });
 
     test('a right-edge resize snaps the same way and reads the new end', async ({ page }) => {
@@ -264,12 +268,13 @@ test.describe('timeline', () => {
       await page.mouse.move(box.x + box.width + 4, box.y);
       await page.mouse.down();
       await page.mouse.move(box.x + box.width + 4 + 14 * PER_MINUTE, box.y, { steps: 5 });
-      await expect(page.getByRole('tooltip')).toHaveText('Oct 9, 4:15 AM');
-      // The readout sits to the right of the dragged end edge.
+      await expect(readout(page, 'end')).toHaveText('Oct 9, 4:15 AM');
+      // notion-motion.md Round 51 §4: the box starts 10 right of the dragged end edge.
       const edge = await bar(page, 'r1').boundingBox();
-      const readout = await page.getByRole('tooltip').boundingBox();
+      const readoutBox = await readout(page, 'end').boundingBox();
 
-      expect(readout?.x ?? 0).toBeGreaterThanOrEqual((edge?.x ?? 0) + (edge?.width ?? 0));
+      if (edge === null || readoutBox === null) throw new Error('no layout');
+      expect(readoutBox.x - (edge.x + edge.width)).toBeCloseTo(10, 0);
       await page.mouse.up();
 
       await expect.poll(async () => (await savedRow(page, 'r1'))['p-due']).toBe('2026-10-09T03:00/2026-10-09T04:15');
@@ -486,7 +491,7 @@ test.describe('timeline', () => {
     });
   }
 
-  // timeline.png: the panel's border is at x 639, the « ink starts 27px before it, the month ink 18px after it.
+  // notion-motion.md Round 50 item 6: the panel ends at 640 (the month box), the open « ink is at 609, the month ink at 656.
   test('with the table shown, « sits at the panel\'s end and the month 16px into the chart, in a view wider than the text column', async ({ page }) => {
     await mount(page, blocks({ type: 'timeline', showTimelineTable: true }));
 
@@ -497,7 +502,7 @@ test.describe('timeline', () => {
     if (panel === null || chevron === null || month === null) throw new Error('no layout');
     const panelEnd = panel.x + panel.width;
 
-    expect(chevron.x - panelEnd).toBeCloseTo(-32, 0);
+    expect(chevron.x - panelEnd).toBeCloseTo(-31, 0);
     expect(month.x - panelEnd).toBeCloseTo(16, 0);
   });
 

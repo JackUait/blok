@@ -1463,6 +1463,49 @@ describe('DatabaseTimelineView', () => {
       expect(handlers.writeDates).toHaveBeenCalledWith('r1', { start: '2026-10-09T01:15/2026-10-10T01:15' });
     });
 
+    // notion-motion.md Round 54 §1: Day zoom draws an all-day range to its end date's 00:00 (Nov 16 → 20 is 4997, Nov 18 → 19 is 1247).
+    it.each([
+      ['2026-10-12/2026-10-16', 4],
+      ['2026-10-12/2026-10-13', 1],
+      ['2026-10-12', 1],
+    ] as const)('draws %s at Day zoom %i day(s) wide', (due, days) => {
+      const { root } = mount({ view: timelineView({ timelineZoom: 'day' }), groups: single([row('r1', 'Alpha', due)]) });
+
+      expect(parseFloat(bar(root, 'r1').style.width)).toBeCloseTo(days * TIMELINE_DAY_WIDTH.day - 3, 5);
+    });
+
+    it('draws a range from a separate end property to its end date\'s 00:00 at Day zoom', () => {
+      const { root } = mount({
+        view: timelineView({ timelineZoom: 'day' }),
+        endPropertyId: 'p-end',
+        groups: single([row('r1', 'Alpha', '2026-10-12', { 'p-end': '2026-10-16' })]),
+      });
+
+      expect(parseFloat(bar(root, 'r1').style.width)).toBeCloseTo(4 * TIMELINE_DAY_WIDTH.day - 3, 5);
+    });
+
+    // notion-motion.md Round 54 §1: Beta's end edge +30px read "Nov 19, 12:30 AM" mid-drag and wrote Nov 19 12:30 AM.
+    it('drags a range\'s end edge from its end date\'s midnight at Day zoom', () => {
+      const dayStart = timelineWindow(CENTER, 'day').start;
+      const endMidnight = daysBetween(dayStart, '2026-10-13') * TIMELINE_DAY_WIDTH.day;
+      const { root, handlers } = mount({
+        view: timelineView({ timelineZoom: 'day' }),
+        groups: single([row('r1', 'Beta', '2026-10-12/2026-10-13')]),
+      });
+      const handle = bar(root, 'r1').querySelector('[data-blok-database-timeline-resize="end"]');
+
+      if (handle === null) throw new Error('no handle');
+      rect(canvas(root), 0, 0, timelineWindow(CENTER, 'day').days * TIMELINE_DAY_WIDTH.day, 400);
+      pointer('pointerdown', handle, endMidnight, 50);
+      expect(bar(root, 'r1').querySelector('[data-blok-database-timeline-edge-readout="end"]')?.textContent).toBe('Oct 13, 12:00 AM');
+      pointer('pointermove', document, endMidnight + 30, 50);
+      expect(bar(root, 'r1').querySelector('[data-blok-database-timeline-edge-readout="end"]')?.textContent).toBe('Oct 13, 12:30 AM');
+      expect(parseFloat(bar(root, 'r1').style.width)).toBeCloseTo((1440 + 30) * (TIMELINE_DAY_WIDTH.day / 1440) - 3, 5);
+      pointer('pointerup', document, endMidnight + 30, 50);
+
+      expect(handlers.writeDates).toHaveBeenCalledWith('r1', { start: '2026-10-12T00:00/2026-10-13T00:30' });
+    });
+
     // notion-motion.md Round 46 B: after a move the bar is left selected. Round 47 A3: a resized bar is selected mid-drag.
     it('leaves a moved bar selected, and not an unmoved one', () => {
       const landRow = vi.fn();

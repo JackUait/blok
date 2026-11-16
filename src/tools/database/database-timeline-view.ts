@@ -1494,7 +1494,12 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
   /** Hours and Day zooms place a timed value by its time; every other case by whole days. */
   private geometryOf(span: EventSpan, values: BarValues): { offset: number; width: number } {
-    const geometry = (BY_TIME.has(this.zoom) ? hourBarGeometry(values, this.window.start, this.dayWidth) : null) ?? barGeometry(span, this.window.start, this.zoom);
+    const timed = BY_TIME.has(this.zoom) ? hourBarGeometry(values, this.window.start, this.dayWidth) : null;
+    // notion-motion.md Round 54 §1: Day zoom draws an all-day range to its end date's 00:00. Month and Week draw through it.
+    const allDay = this.zoom === 'day' && span.end > span.start
+      ? { offset: daysBetween(this.window.start, span.start) * this.dayWidth, width: daysBetween(span.start, span.end) * this.dayWidth }
+      : barGeometry(span, this.window.start, this.zoom);
+    const geometry = timed ?? allDay;
 
     if (ON_START_LINE.has(this.zoom)) {
       return { offset: geometry.offset + FAR_BAR_INSET, width: Math.max(geometry.width - FAR_BAR_TRIM, FAR_BAR_MIN) };

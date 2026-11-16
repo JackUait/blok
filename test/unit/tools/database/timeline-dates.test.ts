@@ -194,13 +194,17 @@ describe('timeline-dates', () => {
         .toEqual({ offset: 1110 * perMinute, width: 180 * perMinute });
     });
 
-    it('turns an all-day bar into a timed range from its first midnight to the midnight after its last day', () => {
+    it('turns a one-day bar into a timed range from its midnight to the next', () => {
       expect(moveBarByMinutes({ start: '2026-11-18', end: undefined }, 75)).toEqual({ start: '2026-11-18T01:15/2026-11-19T01:15' });
-      expect(moveBarByMinutes({ start: '2026-11-18/2026-11-20', end: undefined }, -30)).toEqual({ start: '2026-11-17T23:30/2026-11-20T23:30' });
+    });
+
+    // notion-motion.md Round 54 §1: Day zoom draws a range to its end date's 00:00, so a move keeps that length.
+    it('turns an all-day range into a timed range ending at its end date\'s midnight', () => {
+      expect(moveBarByMinutes({ start: '2026-11-18/2026-11-20', end: undefined }, -30)).toEqual({ start: '2026-11-17T23:30/2026-11-19T23:30' });
     });
 
     it('writes timed start and end values when the view has an end property', () => {
-      expect(moveBarByMinutes({ start: '2026-11-18', end: '2026-11-20' }, 75)).toEqual({ start: '2026-11-18T01:15', end: '2026-11-21T01:15' });
+      expect(moveBarByMinutes({ start: '2026-11-18', end: '2026-11-20' }, 75)).toEqual({ start: '2026-11-18T01:15', end: '2026-11-20T01:15' });
       expect(moveBarByMinutes({ start: '2026-11-18', end: null }, 75)).toEqual({ start: '2026-11-18T01:15', end: '2026-11-19T01:15' });
     });
 
@@ -223,12 +227,21 @@ describe('timeline-dates', () => {
     // notion-motion.md Round 51 §2: all day Nov 18, start edge -30px read "Nov 17 11:30 PM → Nov 18 11:59 PM".
     it('ends a start-edge resize at 11:59 PM of the last day', () => {
       expect(resizeAllDayByMinutes({ start: '2026-11-18', end: undefined }, 'start', -30)).toEqual({ start: '2026-11-17T23:30/2026-11-18T23:59' });
-      expect(resizeAllDayByMinutes({ start: '2026-11-18/2026-11-20', end: undefined }, 'start', -15)).toEqual({ start: '2026-11-17T23:45/2026-11-20T23:59' });
-      expect(resizeAllDayByMinutes({ start: '2026-11-18', end: '2026-11-20' }, 'start', 15)).toEqual({ start: '2026-11-18T00:15', end: '2026-11-20T23:59' });
+    });
+
+    // notion-motion.md Round 54 §1: a Day-zoom range is drawn to its end date's 00:00; a start drag keeps that end.
+    it('keeps a range\'s end at its end date\'s midnight on a start-edge resize', () => {
+      expect(resizeAllDayByMinutes({ start: '2026-11-18/2026-11-20', end: undefined }, 'start', -15)).toEqual({ start: '2026-11-17T23:45/2026-11-20T00:00' });
+      expect(resizeAllDayByMinutes({ start: '2026-11-18', end: '2026-11-20' }, 'start', 15)).toEqual({ start: '2026-11-18T00:15', end: '2026-11-20T00:00' });
+    });
+
+    // notion-motion.md Round 54 §1: Beta, Nov 18 → 19, end edge +30px read "Nov 19, 12:30 AM".
+    it('moves a range\'s end from its end date\'s midnight', () => {
+      expect(resizeAllDayByMinutes({ start: '2026-11-18/2026-11-19', end: undefined }, 'end', 30)).toEqual({ start: '2026-11-18T00:00/2026-11-19T00:30' });
+      expect(resizeAllDayByMinutes({ start: '2026-11-16', end: '2026-11-20' }, 'end', 30)).toEqual({ start: '2026-11-16T00:00', end: '2026-11-20T00:30' });
     });
 
     it('writes both timed edges when the view has an end property', () => {
-      expect(resizeAllDayByMinutes({ start: '2026-11-18', end: '2026-11-20' }, 'end', 30)).toEqual({ start: '2026-11-18T00:00', end: '2026-11-21T00:30' });
       expect(resizeAllDayByMinutes({ start: '2026-11-18', end: null }, 'end', 30)).toEqual({ start: '2026-11-18T00:00', end: '2026-11-19T00:30' });
     });
 

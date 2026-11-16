@@ -211,6 +211,13 @@ const midnightOf = (part: string): string => (TIMED_PART.test(part) ? part : `${
 const midnightAfter = (part: string): string => (TIMED_PART.test(part) ? part : `${addDays(part.slice(0, 10), 1)}T00:00`);
 
 /**
+ * Day zoom: where a bar's last part ends. notion-motion.md Round 54 §1: an all-day range
+ * ends at its end date's 00:00 (Nov 16 → 20 is 4 days); one day keeps the whole day.
+ */
+const dayZoomEnd = (first: string, last: string): string =>
+  (!TIMED_PART.test(last) && last.slice(0, 10) > first.slice(0, 10) ? `${last.slice(0, 10)}T00:00` : midnightAfter(last));
+
+/**
  * Day zoom: moves a bar by minutes. An all-day bar becomes timed, from
  * midnight of its first day to midnight after its last (notion-motion.md
  * Round 48 A9: all-day Nov 18 moved 75 minutes read "Nov 18 1:15 AM → Nov 19 1:15 AM").
@@ -225,7 +232,7 @@ export const moveBarByMinutes = (values: BarValues, deltaMinutes: number): BarWr
 
   const shift = (part: string): string => shiftPartByMinutes(part, deltaMinutes);
   const startOf = (part: string): string => shift(midnightOf(part));
-  const endOf = (part: string): string => shift(midnightAfter(part));
+  const endOf = (part: string): string => shift(dayZoomEnd(startValue.start, part));
 
   if (values.end === undefined) {
     if (startValue.hasTime && startValue.end === undefined) {
@@ -309,8 +316,9 @@ export const resizeAllDayByMinutes = (values: BarValues, edge: 'start' | 'end', 
 
   const start = midnightOf(startValue.start);
   const last = values.end === undefined ? startValue.end ?? startValue.start : parseDateValue(values.end)?.start ?? span.end;
-  // notion-motion.md Round 51 §2: a start-edge drag leaves the end at 11:59 PM of the last day; an end drag runs from midnight after it.
-  const end = edge === 'start' && !TIMED_PART.test(last) ? `${last.slice(0, 10)}T23:59` : midnightAfter(last);
+  // notion-motion.md Round 51 §2: a start-edge drag of one day leaves the end at 11:59 PM of that day.
+  const oneDay = !TIMED_PART.test(last) && last.slice(0, 10) <= start.slice(0, 10);
+  const end = edge === 'start' && oneDay ? `${last.slice(0, 10)}T23:59` : dayZoomEnd(start, last);
   const timed: BarValues = values.end === undefined ? { start: `${start}/${end}`, end: undefined } : { start, end };
   const write = resizeBarByMinutes(timed, edge, deltaMinutes);
 

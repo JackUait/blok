@@ -551,6 +551,7 @@ export class BlockManager extends Module {
         eventsDispatcher: this.eventsDispatcher,
         tools: this.Blok.Tools.blockTools,
         moduleInstances: this.Blok,
+        getBlockById: (id) => this.getBlockById(id),
         migrations: this.config.migrations,
         onComposed: (block, origin) => this.trackCreatedHere(block.id, origin),
       },
@@ -808,10 +809,12 @@ export class BlockManager extends Module {
   public insertMany(
     blocks: Block[],
     index = 0,
-    { notify = false, skipYjsSync = false, yjsSync = 'replace' }: {
+    { notify = false, skipYjsSync = false, yjsSync = 'replace', deferRendered = false }: {
       notify?: boolean;
       skipYjsSync?: boolean;
       yjsSync?: 'replace' | 'add';
+      /** Renderer registers the full document before running lifecycle hooks in slices. */
+      deferRendered?: boolean;
     } = {}
   ): void {
     const blockById = new Map<string, Block>();
@@ -882,7 +885,13 @@ export class BlockManager extends Module {
         // callout seeding its body) must not become an undo step either. Yjs
         // keeps the outer origin, so every nested write here is untracked.
         if (isDocumentRender) {
-          this.Blok.YjsManager.transactWithoutCapture(() => this.blocksStore.insertMany(blocks, index));
+          this.Blok.YjsManager.transactWithoutCapture(() => {
+            if (deferRendered) {
+              this.blocksStore.insertMany(blocks, index, false);
+            } else {
+              this.blocksStore.insertMany(blocks, index);
+            }
+          });
         } else {
           this.blocksStore.insertMany(blocks, index);
         }
@@ -2102,6 +2111,7 @@ export class BlockManager extends Module {
     needToAddDefaultBlock = false,
     { skipYjsSync = false }: { skipYjsSync?: boolean } = {}
   ): Promise<void> {
+    this.Blok.Renderer?.cancelPendingRender?.();
     // Create a copy of the blocks array to avoid issues with array modification during iteration
     const blocksToRemove = [...this.blocks];
     const blockIds = blocksToRemove.map(block => block.id);
@@ -2661,12 +2671,29 @@ export class BlockManager extends Module {
   }
 
   /**
-   * Normalise every block after a document render. Called by the Renderer
-   * AFTER its DOM rewrites (mark colours, link config), so the document takes
-   * what save() returns once those are applied.
-   * @param options - see `normalizeBlockData`
-   * @param options.onlyMissingKeys - see `normalizeBlockData`
-   * @param options.recordOnly - see `normalizeBlockData`
+   * Run one already-registered block's loading hook without creating an undo step.
+   * @param block - block registered by insertMany with deferRendered
+   */
+  public renderInsertedBlock(block: Block): void {
+    // Another render or teardown may have replaced it while the renderer yielded.
+    if (this.getBlockById(block.id) !== block || this.isDestroyed) {
+      return;
+    }
+    this.isRenderingDocument = true;
+    try {
+      this.yjsSync.withAtomicOperation(() => {
+        this.Blok.YjsManager.transactWithoutCapture(() => this.blocksStore.callRenderedHook(block));
+      }, { extendThroughRAF: true });
+    } finally {
+      this.isRenderingDocument = false;
+    }
+  }
+
+  /**
+   * Normalise every block after the renderer's DOM rewrites.
+   * @param options - see normalizeBlockData
+   * @param options.onlyMissingKeys - retain already stored values
+   * @param options.recordOnly - record keys without changing the document
    */
   public normalizeRenderedBlocks(options?: { onlyMissingKeys?: boolean; recordOnly?: boolean }): void {
     if (this.Blok.ReadOnly.isEnabled) {

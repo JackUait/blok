@@ -39,6 +39,10 @@ export interface DerivedSource {
 }
 
 export interface ComposeBlockOptions {
+  /** Internal load optimisation: retain a closed row body's data without its tool DOM. */
+  deferRender?: boolean;
+  /** Initial composition may yield; lifecycle hooks wait until the complete batch is registered. */
+  renderedBarrier?: Promise<void>;
   /** Tool name from config */
   tool: string;
   /** Unique id for this block */

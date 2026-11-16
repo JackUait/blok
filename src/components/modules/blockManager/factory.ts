@@ -38,6 +38,7 @@ export interface BlockFactoryDependencies {
   migrations?: BlockMigrations;
   /** Called with every Block built here, before it joins the document. */
   onComposed?: (block: Block, origin: BlockOrigin) => void;
+  getBlockById?: (id: string) => Block | undefined;
 }
 
 /**
@@ -53,6 +54,28 @@ export class BlockFactory {
    */
   private get readOnlyState(): boolean {
     return this.dependencies.moduleInstances.ReadOnly.isEnabled;
+  }
+
+  /** Row metadata stays live; only content below a closed row defers its tool DOM. */
+  private isClosedRowBody(parentId: string | null | undefined): boolean {
+    const modules = this.dependencies.moduleInstances;
+    const seen = new Set<string>();
+    const cursor = { id: parentId };
+
+    while (typeof cursor.id === 'string' && !seen.has(cursor.id)) {
+      const id = cursor.id;
+      seen.add(id);
+      const live = this.dependencies.getBlockById?.(id) ?? modules.BlockManager?.getBlockById?.(id);
+      const record = live === undefined ? modules.YjsManager?.getBlockById?.(id) : undefined;
+      const name = live?.name ?? record?.get('type');
+
+      if (name === 'database-row' && (live === undefined || live.holder.classList.contains('hidden'))) return true;
+      const parent: unknown = live?.parentId ?? record?.get('parentId');
+
+      cursor.id = typeof parent === 'string' ? parent : undefined;
+    }
+
+    return false;
   }
 
   /**
@@ -92,6 +115,8 @@ export class BlockFactory {
       createdWith,
       origin = 'api',
       replaySource,
+      deferRender,
+      renderedBarrier,
     } = options;
 
     const tool = this.dependencies.tools.get(name);
@@ -119,7 +144,7 @@ export class BlockFactory {
       (migratedType, error) => log(`Migration for block «${migratedType}» threw; loading the block with its stored data instead.`, 'warn', error)
     ), resolveTool);
 
-    const block = new Block({
+    const block: Block = new Block({
       id,
       // Wire DTOs (e.g. Editor.js backends) may carry `data: null`; the
       // destructuring default above only covers `undefined`.
@@ -139,7 +164,20 @@ export class BlockFactory {
       createdWith,
       origin,
       replaySource,
+      // Paste waits for ready before onPaste can import its DOM; it must not
+      // wait indefinitely behind a closed row.
+      deferRender: name !== 'database-row' && origin !== 'paste' && (deferRender ?? this.isClosedRowBody(parentId)),
+      shouldDeferRender: () => this.isClosedRowBody(block.parentId),
+      renderDeferredWithoutCapture: (render) => this.dependencies.moduleInstances.YjsManager.transactWithoutCapture(() => {
+        render();
+        this.dependencies.moduleInstances.Renderer?.normalizeRenderedDom?.(block.holder);
+      }),
+      renderedBarrier,
     }, this.dependencies.eventsDispatcher);
+
+    // Closed until its database explicitly opens it. This must already hold
+    // while a large load is between composition and the database's hooks.
+    if (name === 'database-row' && parentId !== undefined) block.holder.classList.add('hidden');
 
     this.dependencies.onComposed?.(block, origin);
 

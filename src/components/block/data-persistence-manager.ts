@@ -111,7 +111,8 @@ export class DataPersistenceManager {
     private readonly callToolUpdated: () => void,
     private readonly toggleEmptyMark: () => void,
     initialData: SafeBlockToolData,
-    initialTunesData: { [name: string]: BlockTuneData }
+    initialTunesData: { [name: string]: BlockTuneData },
+    private readonly isRenderDeferred: () => boolean = () => false
   ) {
     this.lastSavedDataInternal = initialData;
     this.lastSavedTunesInternal = initialTunesData;
@@ -173,6 +174,9 @@ export class DataPersistenceManager {
    * @returns true if the update was performed in-place, false if a full re-render is needed
    */
   public async setData(newData: SafeBlockToolData): Promise<boolean> {
+    // Recompose with the new data instead of calling a tool whose DOM does
+    // not exist yet. The factory keeps the replacement deferred too.
+    if (this.isRenderDeferred()) return false;
     // Check if tool supports setData method
     const toolSetData = (this.toolInstance as { setData?: (data: SafeBlockToolData) => unknown }).setData;
 
@@ -256,6 +260,7 @@ export class DataPersistenceManager {
    * @returns true if data is valid or no validation method exists
    */
   public async validate(data: SafeBlockToolData): Promise<boolean> {
+    if (this.isRenderDeferred()) return true;
     if (this.toolInstance.validate instanceof Function) {
       return await this.toolInstance.validate(data);
     }
@@ -269,6 +274,7 @@ export class DataPersistenceManager {
    * @returns the verdict, or NOT_SYNC when the tool returned a promise
    */
   public validateSync(data: SafeBlockToolData): boolean | typeof NOT_SYNC {
+    if (this.isRenderDeferred()) return true;
     if (!(this.toolInstance.validate instanceof Function)) {
       return true;
     }
@@ -335,6 +341,7 @@ export class DataPersistenceManager {
    * Safely executes tool.save capturing possible errors without breaking the saver pipeline
    */
   private async extractToolData(): Promise<SafeBlockToolData | undefined> {
+    if (this.isRenderDeferred()) return structuredClone(this.lastSavedDataInternal);
     try {
       const pluginsContent = this.getToolRenderedElement();
 
@@ -357,6 +364,7 @@ export class DataPersistenceManager {
    * @returns the data, or NOT_SYNC when the tool returned a promise
    */
   private extractToolDataSync(): SafeBlockToolData | undefined | typeof NOT_SYNC {
+    if (this.isRenderDeferred()) return structuredClone(this.lastSavedDataInternal);
     try {
       const pluginsContent = this.getToolRenderedElement();
 

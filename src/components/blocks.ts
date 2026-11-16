@@ -402,8 +402,9 @@ export class Blocks {
    * Inserts several blocks at once
    * @param blocks - blocks to insert
    * @param index - index to insert blocks at
+   * @param callRendered - whether to run lifecycle hooks after registering blocks
    */
-  public insertMany(blocks: Block[], index: number ): void {
+  public insertMany(blocks: Block[], index: number, callRendered = true): void {
     /**
      * Invalid-index guard (regression: wrong-block-dropped family).
      * Mirrors Blocks.move and Blocks.insert — `splice(-1, 0, ...blocks)`
@@ -426,7 +427,9 @@ export class Blocks {
       blocks.forEach((block) => this.track(block));
       this.workingArea.appendChild(fragment);
 
-      blocks.forEach((block) => this.callRenderedHook(block));
+      if (callRendered) {
+        blocks.forEach((block) => this.callRenderedHook(block));
+      }
 
       return;
     }
@@ -456,7 +459,9 @@ export class Blocks {
     /**
      * Call Rendered event for each block
      */
-    blocks.forEach((block) => this.callRenderedHook(block));
+    if (callRendered) {
+      blocks.forEach((block) => this.callRenderedHook(block));
+    }
   }
 
   /**
@@ -606,6 +611,7 @@ export class Blocks {
     } else {
       moveElementToEnd(target, block.holder);
     }
+    block.renderIfVisible();
   }
 
   /**

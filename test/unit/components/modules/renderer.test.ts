@@ -18,6 +18,7 @@ type ComposeBlockReturn = ReturnType<BlockManagerComposeBlock>;
 type RequestIdleCallbackFn = Window['requestIdleCallback'];
 
 interface MockBlockManager {
+  renderInsertedBlock: MockInstance<RendererBlockManager['renderInsertedBlock']>;
   insert: MockInstance<BlockManagerInsert>;
   insertMany: MockInstance<BlockManagerInsertMany>;
   normalizeRenderedBlocks: MockInstance<RendererBlockManager['normalizeRenderedBlocks']>;
@@ -58,6 +59,7 @@ const createRenderer = (
   }
 ): RendererTestContext => {
   const defaultBlockManager: MockBlockManager = {
+    renderInsertedBlock: vi.fn<RendererBlockManager['renderInsertedBlock']>(),
     insert: vi.fn<BlockManagerInsert>((insertOptions) => {
       const { id, tool = 'default' } = insertOptions ?? {};
 
@@ -858,6 +860,8 @@ describe('Renderer module', () => {
     // The attribute must be removed synchronously at render start.
     expect(wrapper.hasAttribute('data-blok-rendered')).toBe(false);
 
+    // Composition can yield before it schedules the final idle handoff.
+    await vi.waitFor(() => expect(deferredIdleCallback).toBeDefined());
     deferredIdleCallback?.();
     await renderPromise;
 
@@ -952,5 +956,106 @@ describe('Renderer module', () => {
       type: 'fallback',
       data: { value: 1 },
     });
+  });
+});
+
+describe('cooperative document rendering', () => {
+  it('cancels a sliced composition when an import starts without rendering another snapshot', async () => {
+    const onAfterRender = vi.fn();
+    const { renderer, blockManager, tools, emit, redactor, wrapper } = createRenderer({ config: { onAfterRender } });
+    tools.available.set('paragraph', {});
+    const release: Array<() => void> = [];
+    const destroy = vi.fn();
+    blockManager.composeBlock.mockImplementation(({ id, tool }) => {
+      const block = createMockBlock({ id, tool });
+
+      block.destroy = destroy;
+      return block;
+    });
+    vi.stubGlobal('scheduler', {
+      yield: () => new Promise<void>(resolve => {
+        release.push(resolve);
+      }),
+    });
+    try {
+      const old = renderer.render(Array.from({ length: 100 }, (_, index) => ({ id: `old${index}`, type: 'paragraph', data: {} })));
+      const composedBeforeImport = blockManager.composeBlock.mock.calls.length;
+
+      expect(composedBeforeImport).toBeGreaterThan(0);
+      expect(blockManager.insertMany).not.toHaveBeenCalled();
+      // renderFromHTML marks its operation, but never calls Renderer.render.
+      renderer.markRenderStart();
+      renderer.markRenderEnd();
+      release.forEach(resolve => resolve());
+      await old;
+
+      expect(blockManager.insertMany).not.toHaveBeenCalled();
+      expect(blockManager.renderInsertedBlock).not.toHaveBeenCalled();
+      expect(destroy).toHaveBeenCalledTimes(composedBeforeImport);
+      expect(emit).not.toHaveBeenCalled();
+      expect(onAfterRender).not.toHaveBeenCalled();
+      expect(wrapper.hasAttribute('data-blok-rendered')).toBe(false);
+      expect(redactor.hasAttribute('inert')).toBe(false);
+      expect(renderer.pendingRender).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('yields during composition and lifecycle hooks only after the whole document is registered', async () => {
+    const { renderer, blockManager, tools, redactor } = createRenderer();
+    tools.available.set('paragraph', {});
+    const checkpoints: number[] = [];
+    vi.stubGlobal('scheduler', {
+      yield: () => {
+        checkpoints.push(blockManager.composeBlock.mock.calls.length);
+        return Promise.resolve();
+      },
+    });
+    blockManager.renderInsertedBlock.mockImplementation(() => {
+      expect(blockManager.insertMany).toHaveBeenCalledOnce();
+    });
+    try {
+      const rendering = renderer.render(Array.from({ length: 100 }, (_, index) => ({ id: `b${index}`, type: 'paragraph', data: { text: 'Text' } })));
+      expect(blockManager.composeBlock.mock.calls.length).toBeLessThanOrEqual(25);
+      expect(blockManager.insertMany).not.toHaveBeenCalled();
+      expect(redactor.hasAttribute('inert')).toBe(true);
+      await rendering;
+      expect(checkpoints.length).toBeGreaterThanOrEqual(6);
+      expect(blockManager.renderInsertedBlock).toHaveBeenCalledTimes(100);
+      expect(redactor.hasAttribute('inert')).toBe(false);
+      await expect(blockManager.composeBlock.mock.calls[0][0].renderedBarrier).resolves.toBeUndefined();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('discards an interrupted composition instead of inserting stale blocks after a newer render', async () => {
+    const { renderer, blockManager, tools } = createRenderer();
+    tools.available.set('paragraph', {});
+    const release: Array<() => void> = [];
+    const destroy = vi.fn();
+    blockManager.composeBlock.mockImplementation(({ id, tool }) => {
+      const block = createMockBlock({ id, tool });
+
+      block.destroy = destroy;
+      return block;
+    });
+    vi.stubGlobal('scheduler', {
+      yield: () => new Promise<void>(resolve => {
+        release.push(resolve);
+      }),
+    });
+    try {
+      const old = renderer.render(Array.from({ length: 100 }, (_, index) => ({ id: `old${index}`, type: 'paragraph', data: {} })));
+      await renderer.render([{ id: 'new', type: 'paragraph', data: { text: 'Current' } }]);
+      release.forEach(resolve => resolve());
+      await old;
+      expect(blockManager.insertMany).toHaveBeenCalledOnce();
+      expect(blockManager.insertMany.mock.calls[0][0][0].id).toBe('new');
+      expect(destroy).toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

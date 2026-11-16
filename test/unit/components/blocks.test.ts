@@ -35,6 +35,7 @@ describe('Blocks', () => {
       parentId,
       call: vi.fn(),
       destroy: vi.fn(),
+      renderIfVisible: vi.fn(),
       tool: {
         name,
       },
@@ -2374,6 +2375,7 @@ describe('Blocks', () => {
       blocks.mount(byId('c'), 0, null);
 
       expect(domIds(workingArea)).toEqual(['c', 'a', 'b']);
+      expect(byId('c').renderIfVisible).toHaveBeenCalledOnce();
     });
 
     it('appends the holder when no later block sits in the slot', () => {
@@ -2383,6 +2385,7 @@ describe('Blocks', () => {
       blocks.mount(byId('a'), 2, null);
 
       expect(domIds(workingArea)).toEqual(['b', 'c', 'a']);
+      expect(byId('a').renderIfVisible).toHaveBeenCalledOnce();
     });
 
     it('places a subtree in order when mounted last block first', () => {
@@ -2406,6 +2409,7 @@ describe('Blocks', () => {
 
       expect(byId('b').holder.parentElement).toBe(slot);
       expect(domIds(workingArea)).toEqual(['a', 'c']);
+      expect(byId('b').renderIfVisible).toHaveBeenCalledOnce();
     });
 
     it('is a move: no rendered hook, array untouched', () => {

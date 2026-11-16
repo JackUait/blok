@@ -1,4 +1,5 @@
 import { openModalDialog } from '../../components/utils/modal-dialog';
+import { renderDeferredDescendants } from '../../components/utils/deferred-render';
 import type { ModalDialogHandle } from '../../components/utils/modal-dialog';
 import { DATABASE_EMPTY_AUTOMATIONS } from '../../shared/tool-actions/load-defaults';
 import { describeDatabase } from '../../shared/tool-descriptions/database';
@@ -4125,6 +4126,7 @@ export class DatabaseTool implements BlockTool {
     }
     this.mountRows();
     moveElementToEnd(host, block.holder);
+    renderDeferredDescendants(block.holder);
 
     return true;
   }

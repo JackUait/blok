@@ -39,6 +39,42 @@ describe('ToolRenderer', () => {
     vi.clearAllMocks();
   });
 
+  it('keeps a deferred tool dormant until activation, preserving its holder', async () => {
+    const holder = toolRenderer.compose(true);
+    expect(toolInstance.render).not.toHaveBeenCalled();
+    toolRenderer.renderDeferred(holder);
+    await toolRenderer.ready;
+    expect(toolInstance.render).toHaveBeenCalledTimes(1);
+    expect(holder.contains(mockRenderedElement)).toBe(true);
+  });
+
+  it('holds readiness at the registration barrier even without a rendered hook', async () => {
+    let release: () => void = () => undefined;
+    const barrier = new Promise<void>(resolve => { release = resolve; });
+    const renderer = new ToolRenderer(toolInstance, 'paragraph', 'barrier', tunesManager, {}, barrier);
+    let ready = false;
+    void renderer.ready.then(() => { ready = true; });
+    renderer.compose();
+    await Promise.resolve();
+    expect(ready).toBe(false);
+    release();
+    await renderer.ready;
+    expect(ready).toBe(true);
+  });
+
+  it('does not repeat the rendered hook already run by the sliced block store', async () => {
+    let release: () => void = () => undefined;
+    const barrier = new Promise<void>(resolve => { release = resolve; });
+    toolInstance.rendered = vi.fn();
+    const renderer = new ToolRenderer(toolInstance, 'paragraph', 'barrier', tunesManager, {}, barrier);
+    renderer.compose();
+    toolInstance.rendered();
+    renderer.markRenderedFromStore();
+    release();
+    await renderer.ready;
+    expect(toolInstance.rendered).toHaveBeenCalledTimes(1);
+  });
+
   describe('Constructor', () => {
     it('creates instance with required dependencies', () => {
       expect(toolRenderer).toBeInstanceOf(ToolRenderer);

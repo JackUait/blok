@@ -60,6 +60,14 @@ export class ToolRenderer {
    */
   private destroyed = false;
 
+  public deferred = false;
+
+  public pending = false;
+
+  private activatedDeferred = false;
+
+  private renderedFromStore = false;
+
   /**
    * @param toolInstance - The tool class instance
    * @param name - Block tool name
@@ -72,7 +80,9 @@ export class ToolRenderer {
     private readonly name: string,
     private readonly id: string,
     private readonly tunesManager: TunesManager,
-    private readonly config: ToolConfig<ToolConfigWithPlaceholder>
+    private readonly config: ToolConfig<ToolConfigWithPlaceholder>,
+    private readonly renderedBarrier?: Promise<void>,
+    private readonly runDeferredLifecycle: (callback: () => void) => void = (callback) => callback()
   ) {
     this.ready = new Promise((resolve) => {
       this.readyResolver = resolve;
@@ -118,7 +128,7 @@ export class ToolRenderer {
    * Create the block wrapper and content elements, render the tool, and assemble the DOM.
    * @returns The wrapper div element
    */
-  public compose(): HTMLDivElement {
+  public compose(deferRender = false): HTMLDivElement {
     const template = getScaffold();
     const wrapper = template.wrapper.cloneNode(false) as HTMLDivElement;
     const contentNode = template.content.cloneNode(false) as HTMLElement;
@@ -132,13 +142,18 @@ export class ToolRenderer {
     // Export id to the DOM tree for standalone modules development
     wrapper.setAttribute('data-blok-id', this.id);
 
-    // Render the tool (handles both sync and async)
-    const pluginsContent = this.toolInstance.render();
+    if (deferRender) {
+      this.deferred = true;
+      wrapper.setAttribute('data-blok-deferred-render', '');
+      // Keep child holders in the block tree while its tool has no DOM. The
+      // real container's rendered() hook adopts them when the row is opened.
+      const placeholder = document.createElement('div');
 
-    if (pluginsContent instanceof Promise) {
-      this.handleAsyncRender(pluginsContent, contentNode, wrapper);
+      placeholder.setAttribute(DATA_ATTR.nestedBlocks, '');
+      this.toolRenderedElementInternal = placeholder;
+      contentNode.appendChild(placeholder);
     } else {
-      this.handleSyncRender(pluginsContent, contentNode, wrapper);
+      this.renderInto(contentNode, wrapper);
     }
 
     // Wrap content with tunes
@@ -148,6 +163,42 @@ export class ToolRenderer {
     return wrapper;
   }
 
+  /** Materialise into the stable holder; the tool's children remain registered. */
+  public renderDeferred(wrapper: HTMLDivElement): void {
+    const content = this.contentElementInternal;
+
+    if (!this.deferred || this.destroyed || content === null) return;
+    const placeholder = this.toolRenderedElementInternal;
+
+    this.deferred = false;
+    this.activatedDeferred = true;
+    wrapper.removeAttribute('data-blok-deferred-render');
+    content.replaceChildren();
+    try {
+      this.renderInto(content, wrapper);
+    } catch (error) {
+      this.deferred = true;
+      this.activatedDeferred = false;
+      this.toolRenderedElementInternal = placeholder;
+      wrapper.setAttribute('data-blok-deferred-render', '');
+      content.replaceChildren(...(placeholder === null ? [] : [placeholder]));
+      throw error;
+    }
+  }
+
+  public markRenderedFromStore(): void {
+    if (!this.deferred && !this.pending && (this.renderedBarrier !== undefined || this.activatedDeferred)) this.renderedFromStore = true;
+  }
+
+  private renderInto(content: HTMLElement, wrapper: HTMLDivElement): void {
+    const pluginsContent = this.toolInstance.render();
+
+    if (pluginsContent instanceof Promise) {
+      this.pending = true;
+      this.handleAsyncRender(pluginsContent, content, wrapper);
+    } else this.handleSyncRender(pluginsContent, content, wrapper);
+  }
+
   /**
    * Stop a queued rendered() from running. A replacement keeps the block id,
    * so a dead container's rendered() would pull the new block's children
@@ -155,6 +206,7 @@ export class ToolRenderer {
    */
   public destroy(): void {
     this.destroyed = true;
+    this.readyResolver?.();
   }
 
   /**
@@ -208,6 +260,7 @@ export class ToolRenderer {
           return;
         }
 
+        this.pending = false;
         this.toolRenderedElementInternal = resolvedElement;
         this.addToolDataAttributes(resolvedElement, wrapper);
         contentNode.appendChild(resolvedElement);
@@ -215,6 +268,14 @@ export class ToolRenderer {
         this.invokeRenderedLifecycle();
       })
       .catch((error) => {
+        this.pending = false;
+        if (this.activatedDeferred) {
+          this.deferred = true;
+          wrapper.setAttribute('data-blok-deferred-render', '');
+          const placeholder = this.toolRenderedElementInternal;
+
+          if (placeholder !== null) contentNode.replaceChildren(placeholder);
+        }
         log(`Tool render promise rejected: %o`, 'error', error);
         this.readyResolver?.();
       });
@@ -233,20 +294,28 @@ export class ToolRenderer {
       const toolInstance = this.toolInstance;
       const name = this.name;
 
-      requestAnimationFrame(() => {
-        try {
-          if (this.destroyed) {
-            return;
+      const schedule = (): void => {
+        requestAnimationFrame(() => {
+          try {
+            if (this.destroyed || this.renderedFromStore) {
+              return;
+            }
+            if (this.activatedDeferred) this.runDeferredLifecycle(() => rendered.call(toolInstance));
+            else rendered.call(toolInstance);
+          } catch (e) {
+            log(`${name}: rendered() threw: ${e instanceof Error ? e.message : String(e)}`, 'warn');
+          } finally {
+            resolver?.();
           }
-          rendered.call(toolInstance);
-        } catch (e) {
-          log(`${name}: rendered() threw: ${e instanceof Error ? e.message : String(e)}`, 'warn');
-        } finally {
-          resolver?.();
-        }
-      });
-    } else {
+        });
+      };
+
+      if (this.renderedBarrier === undefined) schedule();
+      else void this.renderedBarrier.then(schedule);
+    } else if (this.renderedBarrier === undefined) {
       this.readyResolver?.();
+    } else {
+      void this.renderedBarrier.then(() => this.readyResolver?.());
     }
   }
 

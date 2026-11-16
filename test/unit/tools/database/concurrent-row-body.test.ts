@@ -11,6 +11,7 @@ import type { PropertyDefinition } from '../../../../src/tools/database/types';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import { Bookmark } from '../../../../src/tools/link/bookmark';
 import { Paragraph } from '../../../../src/tools/paragraph';
+import { Table } from '../../../../src/tools/table';
 import type { OutputBlockData, OutputData } from '../../../../types';
 import type { BlockToolConstructable } from '../../../../types/tools';
 
@@ -126,6 +127,7 @@ const bootLive = async (): Promise<LiveClient> => {
     tools: {
       bookmark: { class: Bookmark },
       paragraph: { class: Paragraph },
+      table: { class: Table },
       database: { class: DatabaseTool as unknown as BlockToolConstructable },
       'database-row': { class: DatabaseRowTool as unknown as BlockToolConstructable },
     },
@@ -272,6 +274,34 @@ describe('concurrent database row bodies', { timeout: 60000 }, () => {
     holders.splice(0).forEach((holder) => holder.remove());
     server.destroy();
     vi.restoreAllMocks();
+  });
+
+  it('keeps a peer table dormant and opens its latest remote contents', async () => {
+    const a = await bootLive();
+    const b = await bootLive();
+
+    await pump([a, b]);
+    a.core.moduleInstances.API.methods.blocks.insertAt('table', {
+      content: [['Initial peer text']],
+      withHeadings: false,
+    }, { parentId: 'row-1', id: 'peer-table' });
+    await pump([a, b]);
+    expect(b.core.moduleInstances.BlockManager.getBlockById('peer-table')?.holder.querySelectorAll('table')).toHaveLength(0);
+    const cell = childrenOf(a, 'peer-table').find(block => block.type === 'paragraph');
+
+    if (cell?.id === undefined) throw new Error('Missing peer table cell');
+    await a.core.moduleInstances.API.methods.blocks.update(cell.id, { text: 'Latest peer text' });
+    await pump([a, b]);
+    expect(b.core.moduleInstances.BlockManager.getBlockById('peer-table')?.holder.querySelectorAll('table')).toHaveLength(0);
+    expect(textOf(dataOf(b, cell.id))).toBe('Latest peer text');
+
+    openCard(b, 'row-1');
+    await settle();
+    const tableHolder = b.core.moduleInstances.BlockManager.getBlockById('peer-table')?.holder;
+
+    expect(tableHolder?.querySelectorAll('table')).toHaveLength(1);
+    expect(tableHolder?.querySelector('table')?.textContent).toContain('Latest peer text');
+    expect(childrenOf(b, 'row-1').some(block => block.id === 'peer-table')).toBe(true);
   });
 
   it('keeps both bodies when peers write into different rows', async () => {

@@ -24,6 +24,7 @@ import type { BlockTuneAdapter } from '../tools/tune';
 import { generateBlockId, isFunction, log } from '../utils';
 import { syncAnnotationFocus } from '../utils/annotation-focus';
 import { isSameBlockData } from '../utils/blocks';
+import { DEFERRED_RENDER_EVENT, renderDeferredDescendants } from '../utils/deferred-render';
 import { EventsDispatcher } from '../utils/events';
 import { hasContentMatching, isContentEmpty } from '../utils/own-element';
 
@@ -56,6 +57,11 @@ const MEDIA_SELECTOR = ['img', 'iframe', 'video', 'audio', 'source', 'input', 't
 type BlockSaveResult = SavedData & { tunes: { [name: string]: BlockTuneData } };
 
 interface BlockConstructorOptions {
+  /** Internal closed-row rendering policy, supplied by the block factory. */
+  deferRender?: boolean;
+  shouldDeferRender?: () => boolean;
+  renderDeferredWithoutCapture?: (render: () => void) => void;
+  renderedBarrier?: Promise<void>;
   /**
    * Block's id. Should be passed for existed block, and omitted for a new one.
    */
@@ -267,6 +273,10 @@ export class Block extends EventsDispatcher<BlockEvents> {
    */
   private readonly toolInstance: IBlockTool;
 
+  private readonly shouldDeferRender: () => boolean;
+
+  private readonly renderDeferredWithoutCapture: (render: () => void) => void;
+
   /**
    * Manages block tunes
    */
@@ -366,6 +376,10 @@ export class Block extends EventsDispatcher<BlockEvents> {
     createdWith,
     origin = 'api',
     replaySource,
+    deferRender = false,
+    shouldDeferRender = () => false,
+    renderDeferredWithoutCapture = (render) => render(),
+    renderedBarrier,
   }: BlockConstructorOptions, eventBus?: EventsDispatcher<BlokEventMap>) {
     super();
 
@@ -399,6 +413,8 @@ export class Block extends EventsDispatcher<BlockEvents> {
 
     this.readOnly = readOnly;
     this.tool = tool;
+    this.shouldDeferRender = shouldDeferRender;
+    this.renderDeferredWithoutCapture = renderDeferredWithoutCapture;
     this.toolInstance = tool.create(data, this.blockAPI, readOnly, origin, replaySource);
     this.tunes = tool.tunes;
 
@@ -411,11 +427,14 @@ export class Block extends EventsDispatcher<BlockEvents> {
       this.name,
       this.id,
       this.tunesManager,
-      this.config
+      this.config,
+      renderedBarrier,
+      renderDeferredWithoutCapture
     );
 
     // Compose the block and get the holder
-    this.holder = this.toolRenderer.compose();
+    this.holder = this.toolRenderer.compose(deferRender);
+    this.holder.addEventListener(DEFERRED_RENDER_EVENT, () => this.renderIfVisible());
     this.ready = this.toolRenderer.ready;
 
     // Not page content: its owner draws it elsewhere (a row's comments).
@@ -464,7 +483,8 @@ export class Block extends EventsDispatcher<BlockEvents> {
       () => this.call(BlockToolAPI.UPDATED),
       () => this.toggleInputsEmptyMark(),
       data,
-      tunesData
+      tunesData,
+      () => this.toolRenderer.deferred || this.toolRenderer.pending
     );
 
     // Read-only blocks watch nothing. The mutation watcher starts at once: a
@@ -474,6 +494,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
       this.mutationHandler.watch();
 
       const bindEvents = (): void => {
+        if (this.toolRenderer.deferred) return;
         this.inputManager.addInputEvents();
         this.toggleInputsEmptyMark();
       };
@@ -565,6 +586,11 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @param {object} params - method argument
    */
   public call(methodName: string, params?: Record<string, unknown>): void {
+    if (this.toolRenderer.deferred && methodName === 'rendered') {
+      if (!this.shouldDeferRender()) this.ensureRendered();
+
+      return;
+    }
     /**
      * call Tool's method with the instance context
      */
@@ -574,13 +600,56 @@ export class Block extends EventsDispatcher<BlockEvents> {
       return;
     }
 
+    if (this.toolRenderer.deferred) {
+      if ([BlockToolAPI.UPDATED, BlockToolAPI.MOVED, 'beforeSave'].includes(methodName)) return;
+      if (methodName !== 'removed') this.ensureRendered();
+    }
+
     try {
 
+      if (methodName === 'rendered') this.toolRenderer.markRenderedFromStore();
       method.call(this.toolInstance, params);
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : String(e);
 
       log(`Error during '${methodName}' call: ${errorMessage}`, 'error');
+    }
+  }
+
+  /** Materialise a sleeping tool without changing its block identity or document data. */
+  public ensureRendered(): void {
+    if (!this.toolRenderer.deferred) return;
+    try {
+      this.renderDeferredWithoutCapture(() => {
+        this.toolRenderer.renderDeferred(this.holder);
+        if (!this.toolRenderer.pending) this.call(BlockToolAPI.RENDERED);
+      });
+    } catch (error) {
+      log(`Unable to render deferred block «${this.id}»`, 'warn', error);
+      return;
+    }
+    const bindInputs = (): void => {
+      if (this.toolRenderer.deferred) return;
+      this.inputManager.dropCache();
+      if (!this.readOnly) {
+        this.inputManager.addInputEvents();
+        this.toggleInputsEmptyMark();
+      }
+    };
+
+    if (this.toolRenderer.pending) {
+      void this.ready.then(() => {
+        this.renderDeferredWithoutCapture(bindInputs);
+        renderDeferredDescendants(this.holder);
+      });
+    } else bindInputs();
+  }
+
+  /** A relocation or row opening can make an existing sleeping holder visible. */
+  public renderIfVisible(): void {
+    if (!this.shouldDeferRender()) {
+      this.ensureRendered();
+      renderDeferredDescendants(this.holder);
     }
   }
 
@@ -853,6 +922,9 @@ export class Block extends EventsDispatcher<BlockEvents> {
       return;
     }
 
+    // Some tools' in-place read-only setter requires their DOM. Honour the
+    // mode transition before exposing a body constructed in the old mode.
+    this.ensureRendered();
     this.readOnly = state;
 
     const root = this.toolRenderer.toolRenderedElement;
@@ -1055,6 +1127,9 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @returns {boolean}
    */
   public get isEmpty(): boolean {
+    // A sleeping tool has no text DOM; treating that as an empty block would
+    // let saver/delete/replace operations discard its stored content.
+    if (this.toolRenderer.deferred) return false;
     // Callers replace or remove an empty block, and replace strands a block's children.
     if (this.contentIds.length > 0) {
       return false;

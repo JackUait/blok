@@ -20,6 +20,7 @@ import { DATA_ATTR } from '../constants';
 import { composeStubData, resolveBlockTool } from '../utils/stub-tool';
 import { BlocksRendered } from '../events';
 import { SELF_PLACING_PARENTS } from '../../tools/nested-blocks';
+import { forEachRenderSlice } from '../utils/render-slices';
 
 /**
  * Reorders stored blocks into a depth-first walk of their tree: roots in input
@@ -104,6 +105,55 @@ export { TOOL_ALIASES } from '../utils/stub-tool';
  * Module that responsible for rendering Blocks on blok initialization
  */
 export class Renderer extends Module {
+  private renderSequence = 0;
+  private batchLocks = 0;
+  private wasInert = false;
+  private wasBusy: string | null = null;
+
+  /**
+   * Invalidate work still being composed before a clear/import replaces it.
+   */
+  public cancelPendingRender(): void {
+    this.renderSequence++;
+  }
+
+  /**
+   * Apply the same DOM migrations when a sleeping row body is first opened.
+   * @param root - newly rendered content
+   */
+  public normalizeRenderedDom(root: HTMLElement): void {
+    migrateMarkColors(root);
+    if (this.config.link !== undefined) {
+      applyLinkConfig(root, this.config.link);
+    }
+  }
+
+  /**
+   * A partial document can be painted, but cannot accept edits or saves yet.
+   * @returns release function that restores the previous interaction state
+   */
+  private lockBatch(): () => void {
+    const { redactor, wrapper } = this.Blok.UI.nodes;
+    if (this.batchLocks++ === 0) {
+      this.wasInert = redactor.hasAttribute('inert');
+      this.wasBusy = wrapper.getAttribute('aria-busy');
+      redactor.setAttribute('inert', '');
+      wrapper.setAttribute('aria-busy', 'true');
+    }
+    return () => {
+      if (--this.batchLocks !== 0) {
+        return;
+      }
+      if (!this.wasInert) {
+        redactor.removeAttribute('inert');
+      }
+      if (this.wasBusy === null) {
+        wrapper.removeAttribute('aria-busy');
+      } else {
+        wrapper.setAttribute('aria-busy', this.wasBusy);
+      }
+    };
+  }
   /**
    * Stores the detected input data format for use during save
    */
@@ -138,6 +188,7 @@ export class Renderer extends Module {
    * the first must not be left on a promise nobody resolves.
    */
   public markRenderStart(): void {
+    this.cancelPendingRender();
     this.renderDepth += 1;
     if (this.pendingRender !== null) {
       return;
@@ -180,8 +231,10 @@ export class Renderer extends Module {
    *   blocks being rendered are the ones already in the document and only
    *   their DOM has to be produced again — see `repaintBlocks`.
    */
-  public render(blocksData: OutputBlockData[], options: { skipYjsSync?: boolean } = {}): Promise<void> {
+  public async render(blocksData: OutputBlockData[], options: { skipYjsSync?: boolean } = {}): Promise<void> {
     const { wrapper } = this.Blok.UI.nodes;
+    const sequence = ++this.renderSequence;
+    const cancelled = (): boolean => this.isDestroyed || sequence !== this.renderSequence;
 
     /**
      * Flip the render-readiness gate off synchronously: while a (re-)render is
@@ -189,13 +242,21 @@ export class Renderer extends Module {
      */
     wrapper.removeAttribute(DATA_ATTR.rendered);
 
+    const renderedCount = await this.insertRenderedBlocks(blocksData, options, cancelled);
+    if (cancelled()) {
+      return;
+    }
+
     return new Promise((resolve) => {
-      const renderedCount = this.insertRenderedBlocks(blocksData, options);
 
       /**
        * Wait till browser will render inserted Blocks and resolve a promise
        */
       window.requestIdleCallback(() => {
+        if (cancelled()) {
+          resolve();
+          return;
+        }
         wrapper.setAttribute(DATA_ATTR.rendered, '');
         this.eventsDispatcher.emit(BlocksRendered, { count: renderedCount });
         this.config.onAfterRender?.(this.Blok.API.methods);
@@ -210,8 +271,13 @@ export class Renderer extends Module {
    * @param blocksData - blocks to render
    * @param options - render behaviour
    * @param options.skipYjsSync - see `render`
+   * @param cancelled - whether a newer render or teardown invalidated this batch
    */
-  private insertRenderedBlocks(blocksData: OutputBlockData[], options: { skipYjsSync?: boolean } = {}): number {
+  private async insertRenderedBlocks(
+    blocksData: OutputBlockData[],
+    options: { skipYjsSync?: boolean } = {},
+    cancelled: () => boolean = () => false
+  ): Promise<number> {
     const { Tools, BlockManager } = this.Blok;
 
     const inputBlocks = this.resolveRenderSource(blocksData, options);
@@ -304,6 +370,32 @@ export class Renderer extends Module {
     // recognizes the children as belonging to their table.
     const processedBlocks = toDepthFirstOrder(normalizeTableChildParents(reclaimedBlocks));
 
+    const byId = new Map(processedBlocks.map(block => [block.id, block]));
+    const inRowBody = (block: OutputBlockData): boolean => {
+      if (block.type === 'database-row') {
+        return false;
+      }
+      const visited = new Set<string>();
+      const ancestry = { parent: block.parent };
+      while (typeof ancestry.parent === 'string' && !visited.has(ancestry.parent)) {
+        visited.add(ancestry.parent);
+        const ancestor = byId.get(ancestry.parent);
+        if (ancestor?.type === 'database-row') {
+          return true;
+        }
+        ancestry.parent = ancestor?.parent;
+      }
+      return false;
+    };
+    // Live Yjs transactions stay synchronous. Their materialization path also
+    // defers closed row bodies, but must not interleave a snapshot with peers.
+    const sliced = processedBlocks.length > 80 && !(this.Blok.Collaboration?.isEnabled ?? false);
+    const renderState: { releaseBarrier?: () => void; registered: boolean } = { registered: false };
+    const renderedBarrier = sliced ? new Promise<void>(resolve => {
+      renderState.releaseBarrier = resolve;
+    }) : undefined;
+    const unlock = sliced ? this.lockBatch() : () => undefined;
+
     // Note: Yjs data layer is loaded via BlockManager.insertMany() with the correct block IDs
 
     /**
@@ -314,7 +406,8 @@ export class Renderer extends Module {
     /**
      * Create Blocks instances
      */
-    const blocks = processedBlocks.map((blockData: OutputBlockData) => {
+    const blocks: Block[] = [];
+    const compose = (blockData: OutputBlockData): void => {
       const { tunes, parent, content, lastEditedAt, lastEditedBy, lastEditedWith, createdAt, createdBy, createdWith } = blockData;
       // Wire DTOs may carry `id: null` — normalize to undefined so the block
       // factory generates a fresh id and null ids never collide as "duplicates".
@@ -366,6 +459,8 @@ export class Renderer extends Module {
             // Restoring a stored document: whatever children the data declares
             // are authoritative, so container tools must not seed defaults.
             origin: 'load',
+            ...(inRowBody(blockData) && { deferRender: true }),
+            ...(renderedBarrier !== undefined && { renderedBarrier }),
           });
         } catch (error) {
           log(`Block «${tool}» skipped because of plugins error`, 'error', {
@@ -392,6 +487,8 @@ export class Renderer extends Module {
             createdBy,
             createdWith,
             origin: 'load',
+            ...(inRowBody(blockData) && { deferRender: true }),
+            ...(renderedBarrier !== undefined && { renderedBarrier }),
           });
         }
       };
@@ -409,33 +506,59 @@ export class Renderer extends Module {
         ? availabilityResult.data
         : this.sanitizeToolData(availabilityResult.tool, availabilityResult.data);
 
-      return buildBlock(availabilityResult.tool, renderData);
-    });
+      blocks.push(buildBlock(availabilityResult.tool, renderData));
+    };
 
-    /**
-     * Insert batch of Blocks
-     */
-    BlockManager.insertMany(blocks, 0, { skipYjsSync: options.skipYjsSync === true });
-    migrateMarkColors(this.Blok.UI.nodes.redactor);
+    try {
+      if (sliced) {
+        await forEachRenderSlice(processedBlocks, compose, cancelled);
+      } else {
+        processedBlocks.forEach(compose);
+      }
+      if (cancelled()) {
+        return 0;
+      }
 
-    // Apply the editor's `link` config (target / rel / transformHref) to every
-    // anchor coming from stored block HTML, mirroring the interactive Link
-    // inline tool. Without this, link config only governs links the user
-    // creates by hand — anchors from saved articles keep their stored attrs.
-    if (this.config.link !== undefined) {
-      applyLinkConfig(this.Blok.UI.nodes.redactor, this.config.link);
+      /**
+       * Insert batch of Blocks
+       */
+      BlockManager.insertMany(blocks, 0, { skipYjsSync: options.skipYjsSync === true, ...(sliced && { deferRendered: true }) });
+      renderState.registered = true;
+      if (sliced) {
+        await forEachRenderSlice(blocks, block => BlockManager.renderInsertedBlock(block), cancelled);
+      }
+      if (cancelled()) {
+        return 0;
+      }
+      migrateMarkColors(this.Blok.UI.nodes.redactor);
+
+      // Apply the editor's `link` config (target / rel / transformHref) to every
+      // anchor coming from stored block HTML, mirroring the interactive Link
+      // inline tool. Without this, link config only governs links the user
+      // creates by hand — anchors from saved articles keep their stored attrs.
+      if (this.config.link !== undefined) {
+        applyLinkConfig(this.Blok.UI.nodes.redactor, this.config.link);
+      }
+
+      // After the rewrites above, so the document takes the DOM they produced.
+      // A view rebuild adds the missing keys only, never overwriting a value
+      // with our sanitised one. A rebuild from the shared document only records
+      // the keys: its blocks belong to their authors, and a receiver's default
+      // races the author's own choice of that key.
+      BlockManager.normalizeRenderedBlocks(rendersSharedDocument
+        ? { recordOnly: true }
+        : { onlyMissingKeys: options.skipYjsSync === true });
+
+      return blocks.length;
+    } finally {
+      // A superseded composition has not joined BlockManager and must release
+      // its tool resources itself. Registered blocks belong to its teardown.
+      if (!renderState.registered) {
+        blocks.forEach(block => block.destroy());
+      }
+      renderState.releaseBarrier?.();
+      unlock();
     }
-
-    // After the rewrites above, so the document takes the DOM they produced.
-    // A view rebuild adds the missing keys only, never overwriting a value
-    // with our sanitised one. A rebuild from the shared document only records
-    // the keys: its blocks belong to their authors, and a receiver's default
-    // races the author's own choice of that key.
-    BlockManager.normalizeRenderedBlocks(rendersSharedDocument
-      ? { recordOnly: true }
-      : { onlyMissingKeys: options.skipYjsSync === true });
-
-    return blocks.length;
   }
 
   /**

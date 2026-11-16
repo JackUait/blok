@@ -7219,6 +7219,10 @@ button[data-blok-database-board-lane-count]:hover {
   --max-height: calc(100dvh - 24px);
 }
 
+[data-blok-popover-custom-class~='blok-database-fade-menu'] [data-blok-popover-container] {
+  --max-height: 70vh;
+}
+
 [@media (prefers-color-scheme: dark)] :root:not([data-blok-theme="light"]) [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'], :root:not([data-blok-theme="light"]) [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover] {
   --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
 }
@@ -20766,7 +20770,11 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-3-5));
 }
 
-[data-blok-database-feed-card]:not(:has(> [data-blok-database-feed-byline])) > [data-blok-database-feed-body], [data-blok-database-feed-card]:not(:has(> [data-blok-database-feed-byline])) > [data-blok-database-feed-reactions], [data-blok-database-feed-card]:not(:has(> [data-blok-database-feed-byline])) > [data-blok-database-feed-comments] {
+[data-blok-database-feed-card]:not(:has(> [data-blok-database-feed-byline])) > [data-blok-database-feed-body] {
+  padding-inline: var(--blok-space-2);
+}
+
+[data-blok-database-feed-card]:not(:has(> [data-blok-database-feed-byline])) > [data-blok-database-feed-reactions], [data-blok-database-feed-card]:not(:has(> [data-blok-database-feed-byline])) > [data-blok-database-feed-comments] {
   margin-inline-start: var(--blok-space-2);
 }
 

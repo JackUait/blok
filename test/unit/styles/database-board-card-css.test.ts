@@ -75,6 +75,12 @@ describe('database board card and calendar "No date" styles', () => {
       .toMatch(/--max-height:\s*calc\(100dvh - 24px\)/);
   });
 
+  // notion-motion.md Round 50 row 57: Notion caps the card ⋯ menu at 70vh (501.9 in a 717 window).
+  it('caps the card ⋯ menu at 70vh', () => {
+    expect(ruleBody("[data-blok-popover-custom-class~='blok-database-fade-menu'] [data-blok-popover-container]"))
+      .toMatch(/--max-height:\s*70vh/);
+  });
+
   // research/07:95 (feel findings B17): a select pill on a board card is 18px, 0 6px, 12px/18px.
   // notion-spec-2 §21.7 and board-status.png: the status pill too has 12/18 text and spans the same 18 rows as the select.
   it('draws every pill on a card, status included, at 18px and 12px', () => {

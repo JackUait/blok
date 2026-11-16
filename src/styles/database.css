@@ -3183,6 +3183,11 @@ button[data-blok-database-board-lane-count]:hover {
   --max-height: calc(100dvh - 24px);
 }
 
+/* notion-motion.md Round 50 row 57: the card ⋯ menu (the only fade menu) caps at 70vh. Must follow the rule above. */
+[data-blok-popover-custom-class~='blok-database-fade-menu'] [data-blok-popover-container] {
+  --max-height: 70vh;
+}
+
 /* Literals, not var(--blok-database-hover-bg): the selected-state law rejects an alias of an alias. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-blok-theme="light"]) [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'],
@@ -18292,8 +18297,12 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   margin-inline-start: calc(var(--blok-space-6) + var(--blok-space-3-5));
 }
 
+/* Round 50 §7: with no byline the preview fills the card and its text sits 8 in on both sides. */
+[data-blok-database-feed-card]:not(:has(> [data-blok-database-feed-byline])) > [data-blok-database-feed-body] {
+  padding-inline: var(--blok-space-2);
+}
+
 /* Round 47 §C: with no byline the footer column keeps an 8 inset. */
-[data-blok-database-feed-card]:not(:has(> [data-blok-database-feed-byline])) > [data-blok-database-feed-body],
 [data-blok-database-feed-card]:not(:has(> [data-blok-database-feed-byline])) > [data-blok-database-feed-reactions],
 [data-blok-database-feed-card]:not(:has(> [data-blok-database-feed-byline])) > [data-blok-database-feed-comments] {
   margin-inline-start: var(--blok-space-2);

@@ -216,12 +216,20 @@ describe('database chart and feed styles', () => {
     expect(ruleBody('[data-blok-database-feed-see-more] svg')).toContain('inline-size: 12px');
   });
 
-  // notion-motion.md Round 47 §C: with no byline the body, chip and composer keep an 8 inset (card x + 24).
+  // notion-motion.md Round 47 §C: with no byline the chip and composer keep an 8 inset (card x + 24).
   it('keeps the footer column 8 in when there is no byline', () => {
-    for (const part of ['body', 'reactions', 'comments']) {
+    for (const part of ['reactions', 'comments']) {
       expect(ruleBody(`[data-blok-database-feed-card]:not(:has(> [data-blok-database-feed-byline])) > [data-blok-database-feed-${part}]`))
         .toContain('margin-inline-start: var(--blok-space-2)');
     }
+  });
+
+  // notion-motion.md Round 50 §7: with no byline Notion's preview fills the card (555..1215) and its text sits 8 in (563..1207).
+  it('fills the card with a byline-less preview and keeps its text 8 in on both sides', () => {
+    const body = ruleBody('[data-blok-database-feed-card]:not(:has(> [data-blok-database-feed-byline])) > [data-blok-database-feed-body]');
+
+    expect(body).toContain('padding-inline: var(--blok-space-2)');
+    expect(body).not.toContain('margin-inline-start');
   });
 
   it('marks a turned-off legend entry with muted ink, never a fill', () => {

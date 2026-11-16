@@ -403,17 +403,23 @@ test('the ink well picker widens so both buttons stay on one line', async ({ pag
     await fromLink.evaluate((el: HTMLElement) => el.offsetTop),
   ];
   const width = (): Promise<number> => picker.evaluate((el: HTMLElement) => el.offsetWidth);
-
-  await expect(choose).toBeVisible();
-  expect(await width()).toBe(440);
-  expect(new Set(await tops()).size).toBe(1);
-
-  // A language with long labels: the picker grows, the buttons do not wrap or clip.
-  await fromLink.evaluate((el) => {
+  const setLinkLabel = (text: string): Promise<void> => fromLink.evaluate((el, value) => {
     const label = el.querySelector('span:last-child');
 
-    if (label) label.textContent = 'From a link somewhere on the internet';
-  });
+    if (label) label.textContent = value;
+  }, text);
+
+  await expect(choose).toBeVisible();
+  // How wide the English buttons are depends on the system font, so only the floor is fixed here.
+  expect(await width()).toBeGreaterThanOrEqual(440);
+  expect(new Set(await tops()).size).toBe(1);
+
+  // Short labels: the picker keeps its 440px floor.
+  await setLinkLabel('Link');
+  expect(await width()).toBe(440);
+
+  // A language with long labels: the picker grows, the buttons do not wrap or clip.
+  await setLinkLabel('From a link somewhere on the internet');
 
   expect(await width()).toBeGreaterThan(440);
   expect(new Set(await tops()).size).toBe(1);

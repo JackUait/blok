@@ -1412,7 +1412,7 @@ describe('DatabaseTimelineView', () => {
 
       rect(canvas(root), 0, 0, timelineWindow(CENTER, 'hours').days * TIMELINE_DAY_WIDTH.hours, 400);
 
-      expect(bar(root, 'r1').style.insetInlineStart).toBe(`${daysBetween(hoursStart, CENTER) * TIMELINE_DAY_WIDTH.hours + 9 * hourPx}px`);
+      expect(bar(root, 'r1').style.insetInlineStart).toBe(`${daysBetween(hoursStart, CENTER) * TIMELINE_DAY_WIDTH.hours + 9 * hourPx + 1.5}px`);
 
       pointer('pointerdown', bar(root, 'r1'), xAt(9), 50);
       pointer('pointermove', document, xAt(12), 50);
@@ -1754,6 +1754,30 @@ describe('DatabaseTimelineView', () => {
       return handle;
     };
 
+    // notion-motion.md Round 51 §4: Notion's 1-hour bar and its ghost are 288.7 wide, 3 under the hour.
+    it('draws a 1-hour bar 3px under the hour, 1.5px in from its start', () => {
+      const { root } = mountHours();
+
+      expect(widthOf(bar(root, 'r1'))).toBeCloseTo(60 * perMinute - 3, 5);
+      expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(180) + 1.5, 5);
+    });
+
+    // notion-motion.md Round 51 §4: Notion's header band showed no pill on an Hours edge press.
+    it('draws no header pill over an edge, on its press or while it is dragged', () => {
+      const { root } = mountHours();
+      const handle = handleOf(root, 'end');
+      const pill = (): Element | null => root.querySelector('[data-blok-database-timeline-range]');
+
+      bar(root, 'r1').dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
+      expect(pill()).not.toBeNull();
+      handle.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, relatedTarget: bar(root, 'r1') }));
+      expect(pill()).toBeNull();
+      pointer('pointerdown', handle, at(239), 50);
+      expect(pill()).toBeNull();
+      pointer('pointermove', document, at(247), 50);
+      expect(pill()).toBeNull();
+    });
+
     it('rounds a move to the nearest 15 minutes on drop', () => {
       const { root, handlers } = mountHours();
 
@@ -1784,8 +1808,8 @@ describe('DatabaseTimelineView', () => {
       pointer('pointerdown', bar(root, 'r1'), at(200), 50);
       pointer('pointermove', document, at(208), 50);
 
-      expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(188), 5);
-      expect(widthOf(bar(root, 'r1'))).toBeCloseTo(60 * perMinute, 5);
+      expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(188) + 1.5, 5);
+      expect(widthOf(bar(root, 'r1'))).toBeCloseTo(60 * perMinute - 3, 5);
       expect(bar(root, 'r1').hasAttribute('data-dragging')).toBe(true);
       expect(root.querySelector('[data-blok-database-timeline-edge-readout]')).toBeNull();
     });
@@ -1799,8 +1823,8 @@ describe('DatabaseTimelineView', () => {
       expect(readout(root, 'start')).toBe('Oct 9, 3:00 AM');
       pointer('pointermove', document, at(173), 50);
 
-      expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(165), 5);
-      expect(widthOf(bar(root, 'r1'))).toBeCloseTo(75 * perMinute, 5);
+      expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(165) + 1.5, 5);
+      expect(widthOf(bar(root, 'r1'))).toBeCloseTo(75 * perMinute - 3, 5);
       expect(readout(root, 'start')).toBe('Oct 9, 2:45 AM');
 
       pointer('pointerup', document, at(173), 50);
@@ -1828,7 +1852,7 @@ describe('DatabaseTimelineView', () => {
       pointer('pointerdown', handle, at(239), 50);
       pointer('pointermove', document, at(247), 50);
 
-      expect(widthOf(bar(root, 'r1'))).toBeCloseTo(75 * perMinute, 5);
+      expect(widthOf(bar(root, 'r1'))).toBeCloseTo(75 * perMinute - 3, 5);
       expect(readout(root, 'end')).toBe('Oct 9, 4:15 AM');
       pointer('pointerup', document, at(247), 50);
 
@@ -1842,8 +1866,8 @@ describe('DatabaseTimelineView', () => {
       pointer('pointermove', document, at(150), 50);
       key(document, 'Escape');
 
-      expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(180), 5);
-      expect(widthOf(bar(root, 'r1'))).toBeCloseTo(60 * perMinute, 5);
+      expect(startOf(bar(root, 'r1'))).toBeCloseTo(at(180) + 1.5, 5);
+      expect(widthOf(bar(root, 'r1'))).toBeCloseTo(60 * perMinute - 3, 5);
       expect(root.querySelector('[data-blok-database-timeline-edge-readout]')).toBeNull();
       expect(handlers.writeDates).not.toHaveBeenCalled();
     });

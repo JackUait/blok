@@ -1490,8 +1490,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       return { offset: geometry.offset + FAR_BAR_INSET, width: Math.max(geometry.width - FAR_BAR_TRIM, FAR_BAR_MIN) };
     }
 
-    // findings C23: at day-level zooms a bar sits 1.5px in from each day edge (37px of a 40px day).
-    return MONTH_IN_TOOLBAR.has(this.zoom) ? { offset: geometry.offset + BAR_INSET, width: geometry.width - 2 * BAR_INSET } : geometry;
+    // findings C23: at day-level zooms a bar sits 1.5px in from each day edge (37px of a 40px day). Round 51 §4: Hours too (288.7 of an hour).
+    return MONTH_IN_TOOLBAR.has(this.zoom) || this.zoom === 'hours' ? { offset: geometry.offset + BAR_INSET, width: geometry.width - 2 * BAR_INSET } : geometry;
   }
 
   private valuesOf(row: DatabaseRow): BarValues {
@@ -1556,6 +1556,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     };
     // notion-motion.md Round 48 A8: an edge press selects the bar at once; a moved bar only after the drop.
     if (this.drag.mode !== 'move') {
+      if (this.zoom === 'hours') this.clearRange();
       this.options.handlers?.landRow?.(rowId);
       this.readEdge(rowId, this.drag.mode);
     }
@@ -1629,8 +1630,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     if (!drag.active) {
       return;
     }
-    // The pill spans whole days, whatever inset the bar has.
-    if (this.zoom !== 'day') {
+    // The pill spans whole days, whatever inset the bar has. Round 51 §4: an Hours edge drag has none.
+    if (this.zoom !== 'day' && !(this.zoom === 'hours' && drag.mode !== 'move')) {
       this.showRange(span, this.zoom === 'hours' ? { offset, width } : barGeometry(span, this.window.start, this.zoom));
     }
     if (drag.mode !== 'move') {
@@ -1644,7 +1645,12 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     const row = this.findRow(barEl?.getAttribute('data-row-id') ?? '');
     const span = row === undefined ? null : this.spanOf(row);
 
-    // notion-motion.md Round 49 B10: Day zoom draws no header pill.
+    // notion-motion.md Round 49 B10: Day zoom draws no header pill. Round 51 §4: nor does an Hours bar edge.
+    if (this.zoom === 'hours' && this.drag === null && event.target instanceof Element && event.target.closest('[data-blok-database-timeline-resize]') !== null) {
+      this.clearRange();
+
+      return;
+    }
     if (this.drag?.active === true || row === undefined || span === null || this.zoom === 'day') {
       return;
     }
@@ -1725,6 +1731,11 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     if (!readout.isConnected) {
       barEl.appendChild(readout);
     }
+  }
+
+  private clearRange(): void {
+    this.root?.querySelectorAll('[data-blok-database-timeline-range]').forEach((el) => el.remove());
+    this.root?.querySelectorAll('[data-range-edge]').forEach((el) => el.removeAttribute('data-range-edge'));
   }
 
   private clearDragMarks(): void {

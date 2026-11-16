@@ -3039,7 +3039,7 @@ editor.title.icon.set(null);`,
         name: "title.cover.get()",
         returnType: "PageCover | null",
         description:
-          "The current cover: `{ type: 'image', url, position? }` or `{ type: 'gallery', id, position? }`. It is `null` when there is none. `position` is the image's vertical position in whole percent, from 0 (top) to 100 (bottom). Without it the image is centered.",
+          "The current cover: `{ type: 'image', url, position? }` or `{ type: 'gallery', id, position? }`. It is `null` when there is none.\n\n`position` is the image's vertical position in whole percent, from 0 (top) to 100 (bottom). Without it the image is centered.",
         example: `const cover = editor.title.cover.get(); // { type: 'gallery', id: 'blue' }`,
       },
       {
@@ -4085,7 +4085,7 @@ interface OutputData {
         type: "PageCover (optional)",
         default: "—",
         description:
-          "The page cover: `{ type: 'image', url, position? }` or `{ type: 'gallery', id, position? }`. It is absent when there is none. Blok saves it even when `pageTitle.cover` is off. In the loose input shape, `null` means no cover. A Blok version older than the cover drops it when it saves.",
+          "The page cover: `{ type: 'image', url, position? }` or `{ type: 'gallery', id, position? }`. It is absent when there is none.\n\nBlok saves it even when `pageTitle.cover` is off. In the loose input shape, `null` means no cover. A Blok version older than the cover drops it when it saves.",
       },
       {
         option: "blocks",

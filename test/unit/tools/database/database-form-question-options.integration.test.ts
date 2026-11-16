@@ -95,6 +95,26 @@ describe('form Question options (notion-motion.md Round 31 §1)', () => {
     expect(order).toEqual(['title', 'notes', 'email']);
   });
 
+  // notion-motion.md Round 52 §3: a card dragged by its blank area lands in the gap under the pointer.
+  it('dragging a card to the top reorders the questions, saves the order and redraws', async () => {
+    await mount();
+    const cards = [...document.querySelectorAll<HTMLElement>('[data-blok-database-form] [data-blok-database-form-question]')];
+
+    cards.forEach((card, index) => {
+      vi.spyOn(card, 'getBoundingClientRect').mockReturnValue(new DOMRect(585, 100 + index * 164, 600, 140));
+    });
+    const notes = cards[2];
+
+    notes.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, clientX: 700, clientY: 450 }));
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 700, clientY: 90 }));
+    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 700, clientY: 90 }));
+
+    await vi.waitFor(() => expect(questionIds()).toEqual(['notes', 'title', 'email']));
+    const saved = (await editor?.save())?.blocks.find((block) => block.id === 'db')?.data as DatabaseData | undefined;
+
+    expect(saved?.views[0].properties?.filter((entry) => entry.visible).map((entry) => entry.id)).toEqual(['notes', 'title', 'email']);
+  });
+
   it('View linked property opens the property menu of that question\'s property', async () => {
     await mount();
     openOptions('notes');

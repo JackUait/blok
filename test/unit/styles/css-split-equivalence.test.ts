@@ -1797,6 +1797,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R118_BYTES = 220;
     // Lane r120: Round 52 map in the text column, "No place" rows stacked with a page icon. Net database.css growth against origin/main.
     const DATABASE_R120_BYTES = 873;
+    // Lane r121: Round 52 form round "+" Add question, card drag gap lines, ⋯ place. Net database.css growth against origin/main.
+    const DATABASE_R121_BYTES = 937;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2369,6 +2371,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R115_BYTES
       + DATABASE_R118_BYTES
       + DATABASE_R120_BYTES
+      + DATABASE_R121_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

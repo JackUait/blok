@@ -7,6 +7,7 @@ import { readIcon } from '../page/page-values';
 import { IconChevronUpDown, IconDotsHorizontal, IconLock, IconPlus } from '../../components/icons';
 import { formatBytes } from '../../components/utils/format-bytes';
 import { prefersReducedMotion } from '../../components/utils/reduced-motion';
+import { onHover } from '../../components/utils/tooltip';
 import type { I18n } from '../../../types';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
 import { DEFAULT_MAX_SIZE } from '../file/constants';
@@ -14,6 +15,7 @@ import { openCellEditor, renderCellValue } from './cells';
 import type { CellContext, CellEditorHandle } from './cells';
 import { accessLine, openFormShare } from './database-form-share';
 import type { FormShareHost } from './database-form-share';
+import { DatabaseFormQuestionDrag } from './database-form-question-drag';
 import { nameTakenError } from './database-name-taken-error';
 import { DatabasePanel, panelInput, panelLabel, panelRow, panelSwitch } from './database-panel';
 import { propertyTypeMeta } from './database-property-types';
@@ -128,6 +130,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
   private destroying = false;
   /** The header's icon and cover controls: their pickers live in <body> and close with them. */
   private headerControls: Array<{ destroy(): void }> = [];
+  private drag: DatabaseFormQuestionDrag | null = null;
 
   constructor(private readonly options: DatabaseFormViewOptions) {
     this.submitted = options.submitted === true;
@@ -210,6 +213,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     this.panel = null;
     this.editor?.cancel();
     this.editor = null;
+    this.drag?.cleanup();
   }
 
   createView(): HTMLDivElement {
@@ -224,9 +228,36 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       }), { once: true, capture: true });
     }, true);
     this.root = root;
+    this.listenForDrag(root);
     this.fill(root);
 
     return root;
+  }
+
+  /** notion-motion.md Round 52 §3: a builder card drags from its blank area; its controls keep the press. */
+  private listenForDrag(root: HTMLElement): void {
+    const moveQuestion = this.options.moveQuestion;
+
+    if (this.options.readOnly || this.options.setQuestionSetting === undefined || moveQuestion === undefined) return;
+    const drag = new DatabaseFormQuestionDrag(root, (id, beforeId) => {
+      // The drop lands in this pointerup: the press is over, so the move may redraw at once.
+      this.pressing = false;
+      moveQuestion(id, beforeId);
+    });
+
+    this.drag = drag;
+    root.addEventListener('pointerdown', (event) => {
+      const target = event.target;
+
+      if (event.button !== 0 || !(target instanceof Element)) return;
+      if (target.closest('input, textarea, select, button, label, a, [data-blok-database-form-gap]') !== null) return;
+      const card = target.closest<HTMLElement>('[data-blok-database-form-question]');
+
+      if (card === null || !root.contains(card) || card.querySelector(':scope > [data-blok-database-form-question-header]') === null) return;
+      // No text selection while the card drags.
+      event.preventDefault();
+      drag.begin(card, event);
+    });
   }
 
   private fill(root: HTMLDivElement): void {
@@ -280,15 +311,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       if (index > 0 && !this.options.readOnly && this.options.addQuestion !== undefined) question.appendChild(this.gapControl(question));
       form.appendChild(question);
     });
-    if (!this.options.readOnly && this.options.addQuestion !== undefined) {
-      const add = panelRow({
-        label: i18n.t('tools.database.formAddQuestion'),
-        testId: 'database-form-add-question',
-        onClick: () => this.openSelectType(add),
-      });
-
-      form.appendChild(add);
-    }
+    if (!this.options.readOnly && this.options.addQuestion !== undefined) form.appendChild(this.addButton());
 
     // notion-motion.md Round 31 §1: only the preview has Submit.
     if (!builder) {
@@ -928,6 +951,31 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     gap.appendChild(add);
 
     return gap;
+  }
+
+  /**
+   * The round "+" under the cards (notion-motion.md Round 52 §3). Select type opens beside
+   * a slot it adds above, which is column wide like the slot above a card.
+   */
+  private addButton(): HTMLButtonElement {
+    const label = this.options.i18n.t('tools.database.formAddQuestion');
+    const add = document.createElement('button');
+
+    add.type = 'button';
+    add.setAttribute('data-blok-database-form-add', '');
+    add.setAttribute('data-blok-testid', 'database-form-add-question');
+    add.setAttribute('aria-label', label);
+    add.innerHTML = IconPlus;
+    onHover(add, label);
+    add.addEventListener('click', () => {
+      const slot = document.createElement('div');
+
+      slot.setAttribute('data-blok-database-form-slot', '');
+      add.before(slot);
+      this.openSelectType(slot, add);
+    });
+
+    return add;
   }
 
   /** Notion's "Select type" (research/19 §3b): existing properties that are not questions yet, then new question types. */

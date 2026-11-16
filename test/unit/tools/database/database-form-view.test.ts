@@ -643,9 +643,13 @@ describe('DatabaseFormView question options rows', () => {
     vi.spyOn(PopoverDesktop.prototype, 'size', 'get').mockReturnValue({ width: 290, height: 502 });
     const { root } = mount({ setQuestionSetting: vi.fn(), addQuestion: vi.fn() });
     const button = root.querySelector<HTMLElement>('[data-blok-testid="database-form-add-question"]');
+    const rect = HTMLElement.prototype.getBoundingClientRect;
 
     if (button === null) throw new Error('no Add question');
-    button.getBoundingClientRect = () => add;
+    // The round "+" is 32 wide: the panel goes beside the column-wide slot it opens.
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return this.hasAttribute('data-blok-database-form-slot') ? add : rect.call(this);
+    });
     button.click();
 
     return document.querySelector('[data-blok-testid="database-form-select-type"]')?.closest<HTMLElement>('[data-blok-popover]') ?? null;
@@ -792,6 +796,22 @@ describe('DatabaseFormView add question between cards', () => {
     expect(ids(root).at(-1)).toBe('notes');
   });
 
+  // notion-motion.md Round 52 §3: a round "+" under the cards, named by its hint; Select type opens a slot above it.
+  it('the end "+" is an icon button named Add question that opens a slot above it, gone on Escape', () => {
+    const { root } = mount({ setQuestionSetting: vi.fn(), addQuestion: vi.fn() });
+    const add = root.querySelector<HTMLButtonElement>('[data-blok-testid="database-form-add-question"]');
+
+    expect(add?.getAttribute('aria-label')).toBe('tools.database.formAddQuestion');
+    expect(add?.textContent?.trim()).toBe('');
+    expect(add?.querySelector('svg')).not.toBeNull();
+    add?.click();
+
+    expect(root.querySelector('[data-blok-database-form-slot]')?.nextElementSibling).toBe(add);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(root.querySelector('[data-blok-database-form-slot]')).toBeNull();
+  });
+
   // Round 31 §1: Select type rows are 44 tall with a framed 32px icon.
   it('marks Select type\'s new question rows for their framed-icon look', () => {
     const { root } = mount({ setQuestionSetting: vi.fn(), addQuestion: vi.fn() });
@@ -905,5 +925,148 @@ describe('DatabaseFormView header', () => {
     expect(root.querySelector('p[data-blok-database-form-header-description]')?.textContent).toBe('Tell us');
     document.body.innerHTML = '';
     expect(mount().root.querySelector('[data-blok-database-form-header]')).toBeNull();
+  });
+});
+
+// notion-motion.md Round 52 §3: drag a card by its blank area; faint drop lines show in every gap
+// that would move it, none next to the card itself.
+describe('DatabaseFormView drag to reorder questions', () => {
+  const CARD_TOP = 100;
+  const CARD_HEIGHT = 140;
+  const PITCH = 164;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    document.dispatchEvent(new PointerEvent('pointercancel'));
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  const ids = (root: HTMLElement): string[] =>
+    [...root.querySelectorAll('[data-blok-database-form-question]')].map((el) => el.getAttribute('data-blok-database-form-question') ?? '');
+  const setup = (): { root: HTMLElement; moveQuestion: ReturnType<typeof vi.fn> } => {
+    const moveQuestion = vi.fn();
+    const { root } = mount({ setQuestionSetting: vi.fn(), moveQuestion });
+
+    ids(root).forEach((id, index) => {
+      const card = question(root, id);
+
+      if (card !== null) card.getBoundingClientRect = () => new DOMRect(585, CARD_TOP + index * PITCH, 600, CARD_HEIGHT);
+    });
+
+    return { root, moveQuestion };
+  };
+  const press = (target: Element, y: number): void => {
+    target.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, clientX: 700, clientY: y }));
+  };
+  const moveTo = (y: number): void => {
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 700, clientY: y }));
+  };
+  const release = (y: number): void => {
+    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 700, clientY: y }));
+  };
+  const zones = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('[data-blok-database-form-drop-zone]')];
+
+  it('drops a card in the gap under the pointer and moves the question there', () => {
+    const { root, moveQuestion } = setup();
+    const agree = question(root, 'agree');
+
+    expect(ids(root)).toEqual(['email', 'title', 'size', 'agree', 'pick']);
+    if (agree === null) throw new Error('no card');
+    press(agree, 600);
+    moveTo(250);
+    release(250);
+
+    expect(moveQuestion).toHaveBeenCalledWith('agree', 'title');
+  });
+
+  it('a drop past the last card makes the question last', () => {
+    const { root, moveQuestion } = setup();
+    const title = question(root, 'title');
+
+    if (title === null) throw new Error('no card');
+    press(title, 300);
+    moveTo(900);
+    release(900);
+
+    expect(moveQuestion).toHaveBeenCalledWith('title', null);
+  });
+
+  it('shows a faint line centred in every gap, none beside the dragged card, and marks the target', () => {
+    const { root } = setup();
+    const agree = question(root, 'agree');
+
+    if (agree === null) throw new Error('no card');
+    press(agree, 600);
+    moveTo(250);
+    const shown = zones().filter((zone) => !zone.hasAttribute('data-adjacent'));
+
+    expect(zones()).toHaveLength(6);
+    expect(zones().filter((zone) => zone.hasAttribute('data-adjacent'))).toHaveLength(2);
+    expect(shown).toHaveLength(4);
+    // The gap between email (bottom 240) and title (top 264) centres at 252.
+    const target = zones().find((zone) => zone.hasAttribute('data-target'));
+
+    expect(target?.style.top).toBe('250px');
+    expect(target?.style.left).toBe('585px');
+    expect(target?.style.width).toBe('600px');
+    expect(target?.style.height).toBe('4px');
+    expect(zones().filter((zone) => zone.hasAttribute('data-target'))).toHaveLength(1);
+  });
+
+  it('a drop beside the card itself moves nothing', () => {
+    const { root, moveQuestion } = setup();
+    const agree = question(root, 'agree');
+
+    if (agree === null) throw new Error('no card');
+    press(agree, 600);
+    moveTo(560);
+    release(560);
+
+    expect(moveQuestion).not.toHaveBeenCalled();
+    expect(zones()).toHaveLength(0);
+  });
+
+  it('Escape cancels the drag: no move, no lines', () => {
+    const { root, moveQuestion } = setup();
+    const agree = question(root, 'agree');
+
+    if (agree === null) throw new Error('no card');
+    press(agree, 600);
+    moveTo(250);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    release(250);
+
+    expect(moveQuestion).not.toHaveBeenCalled();
+    expect(zones()).toHaveLength(0);
+  });
+
+  it('a press in the name or the answer box does not drag', () => {
+    const { root, moveQuestion } = setup();
+    const name = question(root, 'agree')?.querySelector('[data-blok-database-form-question-name]');
+
+    if (name === null || name === undefined) throw new Error('no name');
+    press(name, 600);
+    moveTo(250);
+    release(250);
+
+    expect(moveQuestion).not.toHaveBeenCalled();
+    expect(zones()).toHaveLength(0);
+  });
+
+  it('a respondent cannot drag', () => {
+    const moveQuestion = vi.fn();
+    const { root } = mount({ moveQuestion });
+    const card = question(root, 'title');
+
+    if (card === null) throw new Error('no card');
+    press(card, 300);
+    moveTo(900);
+    release(900);
+
+    expect(moveQuestion).not.toHaveBeenCalled();
   });
 });

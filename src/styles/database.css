@@ -19618,6 +19618,54 @@ button[data-blok-database-feed-reaction]:hover,
   background: var(--blok-database-hover-bg);
 }
 
+/* notion-motion.md Round 52 §3: Add question is a round 32 "+" centred under the cards; hover 100ms ease-in-out.
+   Notion tints it blue: neutral here, like the gap "+". The 20px glyph is unmeasured. */
+[data-blok-database-form-add] {
+  display: inline-flex;
+  align-self: center;
+  align-items: center;
+  justify-content: center;
+  inline-size: 32px;
+  block-size: 32px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-database-hover-bg);
+  color: var(--blok-block-control);
+  cursor: pointer;
+  transition: background-color 100ms ease-in-out;
+}
+
+[data-blok-database-form-add]:hover {
+  background: var(--blok-database-pressed-bg);
+}
+
+[data-blok-database-form-add] svg {
+  inline-size: 20px;
+  block-size: 20px;
+}
+
+/* notion-motion.md Round 52 §3: a dragged card's gap lines, 4 tall at 0.28; none beside the card.
+   The target at full ink is inferred: Notion's target was unread. */
+[data-blok-database-form-drop-zone] {
+  z-index: 88;
+  border-radius: var(--blok-radius-pill);
+  background-color: var(--blok-database-drop-line, rgba(35, 131, 226, 0.43));
+  opacity: 0.28;
+}
+
+[data-blok-database-form-drop-zone][data-adjacent] {
+  opacity: 0;
+}
+
+[data-blok-database-form-drop-zone][data-target] {
+  opacity: 1;
+}
+
+[data-blok-database-form]:has([data-blok-database-drag-source]) [data-blok-database-form-insert] {
+  visibility: hidden;
+}
+
 [data-blok-database-form-type-row] {
   min-height: 44px;
 }
@@ -19656,6 +19704,10 @@ button[data-blok-database-feed-reaction]:hover,
   background: transparent;
   color: var(--blok-database-ink-secondary);
   cursor: pointer;
+  /* notion-motion.md Round 52 §3: card right − 34, top + 10, out of the card's 12 padding. */
+  align-self: flex-start;
+  margin-block-start: calc(var(--blok-space-0-5) * -1);
+  margin-inline-end: calc(var(--blok-space-0-5) * -1);
   /* notion-motion.md Round 34 §6: fades both ways. */
   transition: opacity 0.2s ease;
 }

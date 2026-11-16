@@ -833,9 +833,9 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       const fromSpan = source === undefined ? null : this.spanOf(source);
       const toSpan = target === undefined ? null : this.spanOf(target);
 
-      if (fromSpan === null || toSpan === null) continue;
-      const out = barGeometry(fromSpan, this.window.start, this.zoom);
-      const into = barGeometry(toSpan, this.window.start, this.zoom);
+      if (source === undefined || target === undefined || fromSpan === null || toSpan === null) continue;
+      const out = barGeometry(this.drawnSpan(fromSpan, this.valuesOf(source)), this.window.start, this.zoom);
+      const into = barGeometry(this.drawnSpan(toSpan, this.valuesOf(target)), this.window.start, this.zoom);
       const arrow = document.createElement('div');
 
       arrow.setAttribute('data-blok-database-timeline-arrow', '');
@@ -1298,7 +1298,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     for (const line of this.rowsOf('[data-blok-database-timeline-row]')) {
       const row = this.findRow(line.getAttribute('data-row-id') ?? '');
       const span = row === undefined ? null : this.spanOf(row);
-      const side = span === null || this.scroller.clientWidth === 0 ? null : offscreenSide(span, range);
+      const side = span === null || row === undefined || this.scroller.clientWidth === 0 ? null : offscreenSide(this.drawnSpan(span, this.valuesOf(row)), range);
 
       line.querySelectorAll('[data-blok-database-timeline-offscreen]').forEach((arrow) => {
         arrow.toggleAttribute('hidden', arrow.getAttribute('data-blok-database-timeline-offscreen') !== side);
@@ -1341,11 +1341,11 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     const row = this.findRow(rowId);
     const span = row === undefined ? null : this.spanOf(row);
 
-    if (span === null) {
+    if (row === undefined || span === null) {
       return;
     }
 
-    const day = span[side];
+    const day = this.drawnSpan(span, this.valuesOf(row))[side];
     const index = daysBetween(this.window.start, day);
 
     if (index < 0 || index >= this.window.days) {
@@ -1498,14 +1498,22 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   }
 
 
+  /**
+   * The days a bar covers on screen. notion-motion.md Round 54 §1: Day zoom draws an all-day range
+   * to its end date's 00:00, so its last drawn day is the one before. Month and Week draw through it.
+   */
+  private drawnSpan(span: EventSpan, values: BarValues): EventSpan {
+    if (this.zoom !== 'day' || span.end <= span.start || hourBarGeometry(values, this.window.start) !== null) {
+      return span;
+    }
+
+    return { start: span.start, end: addDays(span.end, -1) };
+  }
+
   /** Hours and Day zooms place a timed value by its time; every other case by whole days. */
   private geometryOf(span: EventSpan, values: BarValues): { offset: number; width: number } {
-    const timed = BY_TIME.has(this.zoom) ? hourBarGeometry(values, this.window.start, this.dayWidth) : null;
-    // notion-motion.md Round 54 §1: Day zoom draws an all-day range to its end date's 00:00. Month and Week draw through it.
-    const allDay = this.zoom === 'day' && span.end > span.start
-      ? { offset: daysBetween(this.window.start, span.start) * this.dayWidth, width: daysBetween(span.start, span.end) * this.dayWidth }
-      : barGeometry(span, this.window.start, this.zoom);
-    const geometry = timed ?? allDay;
+    const geometry = (BY_TIME.has(this.zoom) ? hourBarGeometry(values, this.window.start, this.dayWidth) : null)
+      ?? barGeometry(this.drawnSpan(span, values), this.window.start, this.zoom);
 
     if (ON_START_LINE.has(this.zoom)) {
       return { offset: geometry.offset + FAR_BAR_INSET, width: Math.max(geometry.width - FAR_BAR_TRIM, FAR_BAR_MIN) };

@@ -1331,6 +1331,18 @@ describe('DatabaseTimelineView', () => {
       expect(handlers.navigate).toHaveBeenCalledWith('2027-03-01');
     });
 
+    // notion-motion.md Round 54 §1: a Day-zoom range ends at its end date's 00:00, so a screen starting there has it off to the left.
+    it('shows the "before" chip for a Day-zoom range that ends where the screen starts', () => {
+      const { root, view } = mount({ view: timelineView({ timelineZoom: 'day' }), groups: single([row('r1', 'Alpha', '2026-10-12/2026-10-16')]) });
+      const el = scroller(root);
+
+      Object.defineProperty(el, 'clientWidth', { value: 400, configurable: true });
+      el.scrollLeft = daysBetween(timelineWindow(CENTER, 'day').start, '2026-10-16') * TIMELINE_DAY_WIDTH.day + 10;
+      view.refreshOffscreen();
+
+      expect(root.querySelector<HTMLElement>('[data-blok-database-timeline-row][data-row-id="r1"] [data-blok-database-timeline-offscreen="before"]')?.hidden).toBe(false);
+    });
+
     // findings C17: a bar cut by the screen's start keeps a "←" chip before its title.
     it('marks a bar that starts before the screen and still shows, and its chip jumps to its start', () => {
       const { root, view } = mount();
@@ -1400,7 +1412,8 @@ describe('DatabaseTimelineView', () => {
       el.scrollLeft = at('2026-10-09');
       timeline.refreshOffscreen();
       bar(root, 'r2').querySelector<HTMLElement>('[data-blok-database-timeline-bar-chip="end"]')?.click();
-      expect(el.scrollLeft).toBe(at('2026-10-12') - 708);
+      // notion-motion.md Round 54 §1: the range is drawn to its end date's 00:00, so that is the edge brought on screen.
+      expect(el.scrollLeft).toBe(at('2026-10-11') - 708);
     });
 
     // research/26 §4d: Notion draws a straight arrow in the chip, not a chevron.
@@ -2129,6 +2142,18 @@ describe('DatabaseTimelineView', () => {
       });
 
       expect(arrows(root)).toEqual(['r1>r2', 'r2>r1!']);
+    });
+
+    // notion-motion.md Round 54 §1: at Day zoom a range ends at its end date's 00:00, so its arrow leaves from there.
+    it('starts an arrow out of a Day-zoom range at the range\'s drawn end', () => {
+      const { root } = mount({
+        view: timelineView({ timelineZoom: 'day', arrowsBy: 'p-notes' }),
+        groups: single([row('r1', 'Alpha', '2026-10-12/2026-10-16'), row('r2', 'Next', '2026-10-17')]),
+        arrows: [{ from: 'r1', to: 'r2' }],
+      });
+      const from = daysBetween(timelineWindow(CENTER, 'day').start, '2026-10-16') * TIMELINE_DAY_WIDTH.day;
+
+      expect(root.querySelector<HTMLElement>('[data-blok-database-timeline-arrow]')?.style.getPropertyValue('--blok-database-arrow-from')).toBe(`${from}px`);
     });
 
     it('skips an arrow whose end has no dates', () => {

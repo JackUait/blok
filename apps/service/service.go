@@ -345,10 +345,10 @@ func (s *Service) workspaces(ctx context.Context, uid string) ([]Workspace, erro
 	return out, rows.Err()
 }
 func (s *Service) CanReadDocument(ctx context.Context, u blokserver.User, doc string) (bool, error) {
-	return s.authorizeDoc(ctx, u.ID, doc, false)
+	return s.authorizeDoc(ctx, documentSession(ctx, u.ID, doc), doc, false)
 }
 func (s *Service) CanWriteDocument(ctx context.Context, u blokserver.User, doc string) (bool, error) {
-	return s.authorizeDoc(ctx, u.ID, doc, true)
+	return s.authorizeDoc(ctx, documentSession(ctx, u.ID, doc), doc, true)
 }
 func (s *Service) authorizeDoc(ctx context.Context, session, doc string, write bool) (bool, error) {
 	// La corbeille ferme le temps réel sans être une permission : une page mise à

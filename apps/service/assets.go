@@ -1,6 +1,7 @@
 package cloud
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -14,59 +15,17 @@ import (
 	"time"
 )
 
-// Tickets never contain the long-lived token. User is a database session digest;
-// rechecking it makes logout and membership removal effective immediately.
-func (s *Service) ticketIdentity(r *http.Request) (session, doc string, write bool, ok bool) {
-	raw := r.URL.Query().Get("ticket")
-	if raw == "" {
-		raw = r.Header.Get("X-Blok-Ticket")
-	}
-	if raw == "" {
-		raw = strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-	}
-	if raw == "" {
-		for _, p := range strings.Split(r.Header.Get("Sec-WebSocket-Protocol"), ",") {
-			p = strings.TrimSpace(p)
-			if len(strings.Split(p, ".")) == 3 {
-				raw = p
-				break
-			}
-		}
-	}
-	parts := strings.Split(raw, ".")
-	if len(parts) != 3 {
-		return
-	}
-	mac := hmac.New(sha256.New, []byte(s.Config.TicketSecret))
-	mac.Write([]byte(parts[0] + "." + parts[1]))
-	sig, e := base64.RawURLEncoding.DecodeString(parts[2])
-	if e != nil || !hmac.Equal(sig, mac.Sum(nil)) {
-		return
-	}
-	payload, e := base64.RawURLEncoding.DecodeString(parts[1])
-	if e != nil {
-		return
-	}
-	var claims struct {
-		User  string `json:"user"`
-		Doc   string `json:"doc"`
-		Write bool   `json:"write"`
-		Exp   int64  `json:"exp"`
-	}
-	if json.Unmarshal(payload, &claims) != nil || claims.Exp <= time.Now().Unix() {
-		return
-	}
-	return claims.User, claims.Doc, claims.Write, true
-}
 func (s *Service) blokHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Blok independently checks cryptographic ticket validity. Gate every service
 		// route too: upload/delete/unfurl do not call document Authorization hooks.
-		session, doc, write, ok := s.ticketIdentity(r)
+		claims, ok := s.documentTicket(r)
 		if !ok {
 			problem(w, 401, "Valid document ticket required")
 			return
 		}
+		session, doc, write := claims.session, claims.doc, claims.write
+		r = r.WithContext(context.WithValue(r.Context(), documentTicketKey{}, claims))
 		isWrite := r.Method != "GET" && r.Method != "HEAD"
 		can, e := s.authorizeDoc(r.Context(), session, doc, isWrite)
 		if e != nil {

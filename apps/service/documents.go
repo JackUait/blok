@@ -9,9 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strconv"
-	"time"
 
-	"github.com/JackUait/blok/packages/server/go/v2/blokserver/ticket"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -399,8 +397,7 @@ func (s *Service) mintTicket(w http.ResponseWriter, r *http.Request, u identity,
 		problem(w, 503, "Database unavailable")
 		return
 	}
-	ttl := int64(60)
-	t, e := ticket.Mint(s.Config.TicketSecret, ticket.Claims{User: u.Session, Doc: &doc, Write: write, TTLSeconds: &ttl}, time.Now())
+	t, e := s.mintSessionTicket(u, doc, write)
 	if e != nil {
 		problem(w, 500, "Ticket creation failed")
 		return
@@ -505,8 +502,7 @@ func (s *Service) duplicate(w http.ResponseWriter, r *http.Request, u identity, 
 		problem(w, 503, "Database unavailable")
 		return
 	}
-	ttl := int64(60)
-	pass, e := ticket.Mint(s.Config.TicketSecret, ticket.Claims{User: u.Session, Doc: &source, Write: true, TTLSeconds: &ttl}, time.Now())
+	pass, e := s.mintSessionTicket(u, source, true)
 	if e != nil {
 		problem(w, 500, "Ticket creation failed")
 		return
@@ -515,7 +511,7 @@ func (s *Service) duplicate(w http.ResponseWriter, r *http.Request, u identity, 
 	req.Header.Set("Origin", s.Config.PublicURL)
 	req.Header.Set("Authorization", "Bearer "+pass)
 	rec := httptest.NewRecorder()
-	s.Blok.Handler("/api/blok").ServeHTTP(rec, req)
+	s.blokHandler(s.Blok.Handler("/api/blok")).ServeHTTP(rec, req)
 	if rec.Code != 200 {
 		problem(w, 503, "Could not snapshot the live source document")
 		return

@@ -11618,8 +11618,8 @@ export class DatabaseTool implements BlockTool {
     document.removeEventListener('copy', this.handleSelectionCopy, true);
     document.removeEventListener('pointerdown', this.handleSelectionOutside, true);
     const view = this.shownView();
-    // notion-motion.md Round 52 §5: one picked timeline bar shows no bar either. Notion's timeline multi-pick is unread.
-    const barless = view?.type === 'board' || view?.type === 'gallery' || (view?.type === 'timeline' && this.rowSelection.size === 1);
+    // notion-motion.md Round 52 §5, Round 54 §3: timeline picks show no bar either, one bar or many.
+    const barless = view?.type === 'board' || view?.type === 'gallery' || view?.type === 'timeline';
 
     // The bar's count was a polite live region; barless picks have no bar, so say the count.
     if (barless && this.rowSelection.size > 0 && this.rowSelection.size !== this.announcedPickCount) {

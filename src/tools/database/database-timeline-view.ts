@@ -1399,8 +1399,12 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         if (rowId === null || rowId === undefined) {
           return;
         }
-        if ((event.metaKey || event.ctrlKey || event.shiftKey) && handlers.pickRow !== undefined) {
-          handlers.pickRow(rowId, event.shiftKey);
+        // notion-motion.md Round 54 §3: Shift+click picks a range; Cmd+click picks and opens nothing.
+        if (event.metaKey || event.ctrlKey) {
+          return;
+        }
+        if (event.shiftKey && handlers.pickRow !== undefined) {
+          handlers.pickRow(rowId, true);
         } else {
           handlers.openRow(rowId);
         }

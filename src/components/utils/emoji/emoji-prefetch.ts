@@ -21,3 +21,12 @@ export function prefetchEmojiPickerData(locale: string): void {
     void loadEmojiLocale(locale).catch(() => undefined);
   }
 }
+
+/**
+ * Public warm-up for hosts, exported from `@bloklabs/core/tools`. Signature is
+ * hand-mirrored in `types/tools-entry.d.ts`.
+ * @param locale - Blok locale code; defaults to English
+ */
+export function preloadEmojiData(locale = 'en'): void {
+  prefetchEmojiPickerData(locale);
+}

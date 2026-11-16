@@ -182,15 +182,6 @@ const ICON_DICE = IconEmojiDice;
 
 export { prefetchEmojiPickerData };
 
-/**
- * Public warm-up for hosts, exported from `@bloklabs/core/tools`. Signature is
- * hand-mirrored in `types/tools-entry.d.ts`.
- * @param locale - Blok locale code; defaults to English
- */
-export function preloadEmojiData(locale = 'en'): void {
-  prefetchEmojiPickerData(locale);
-}
-
 export class EmojiPicker {
   private onSelect: (native: string, origin?: DOMRect) => void;
   private onRemove: () => void;

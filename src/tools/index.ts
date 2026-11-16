@@ -56,7 +56,9 @@ export { matchEmbedService, buildEmbedUrl } from './link/registry';
 export type { EmbedMatch, EmbedServiceType } from './link/registry';
 
 // Lets a host warm the callout emoji picker's lazy data before any callout exists.
-export { preloadEmojiData } from './callout/emoji-picker';
+// Not from './callout/emoji-picker': core import()s the picker, and esbuild then
+// ships a statically imported lazy target in every consumer bundle.
+export { preloadEmojiData } from '../components/utils/emoji/emoji-prefetch';
 
 // Tool-authoring helpers
 export { defineTool } from './define-tool';

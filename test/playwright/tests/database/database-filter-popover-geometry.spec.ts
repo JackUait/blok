@@ -114,7 +114,8 @@ test.describe('filter popover geometry', () => {
 
     expect(second.x - popover.x).toBeCloseTo(76, 1);
     expect(first.x - popover.x).toBeCloseTo(76, 1);
-    expect(and.x - popover.x).toBeCloseTo(7, 1);
+    // "And" ends its 60 column, 8 before the property button. Its start moves with the font's text width.
+    expect(and.x + and.width - popover.x).toBeCloseTo(68, 1);
     expect(value.width).toBeCloseTo(170, 1);
     expect(more.x - (value.x + value.width)).toBeCloseTo(16, 1);
     expect(popover.x + popover.width - (more.x + more.width)).toBeCloseTo(8, 1);

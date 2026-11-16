@@ -2093,6 +2093,13 @@ export class PopoverDesktop extends PopoverAbstract {
     popoverClone.setAttribute(DATA_ATTR.popoverOpened, 'true');
     popoverClone.querySelector(`[${DATA_ATTR.nested}]`)?.remove();
 
+    // A shown thumb adds a gutter to the list (slash-search.css). Placement
+    // re-measures while it shows, but --width is set without it, so the
+    // gutter would push an end-aligned popover off its edge.
+    popoverClone.querySelectorAll(`[${DATA_ATTR.popoverScrollbar}]`).forEach((thumb) => {
+      thumb.setAttribute('hidden', '');
+    });
+
     const container = popoverClone.querySelector(`[${DATA_ATTR.popoverContainer}]`) as HTMLElement;
 
     container.className = twMerge(container.className, popoverCss.popoverContainerOpened);

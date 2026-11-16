@@ -278,8 +278,9 @@ test.describe('database view overflow list', () => {
   // notion-motion.md Round 32 §1 (r32-a-more-newview-narrow.*, 1150x717): with no room on the right the flyout
   // flips left, its right edge on the list's left + 4, and stops 11.8 above the window bottom.
   test('with no room on the right, New view opens Add view on the left of the list', async ({ page }) => {
-    // Short enough that a flyout centred on New view would run past the window bottom.
-    await page.setViewportSize({ width: 1150, height: 540 });
+    // The list is capped at 50vh (Round 38 §5), so its New view row rises with a shorter window.
+    // Below about 530 tall the card centred on that row runs past the bottom, so the 11.8 clamp applies.
+    await page.setViewportSize({ width: 1150, height: 480 });
     await mount(page);
     const list = await openList(page);
 
@@ -290,16 +291,27 @@ test.describe('database view overflow list', () => {
       await Promise.all(document.getAnimations().map((animation) => animation.finished));
       const surface = document.querySelector('[data-blok-database-view-option="board"]')?.closest('[data-blok-popover-container]');
       const dropdown = document.querySelector('[data-blok-database-tab-overflow-dropdown]');
+      const row = document.querySelector('[data-blok-database-tab-overflow-new]');
 
-      if (!(surface instanceof HTMLElement) || dropdown === null) return null;
+      if (!(surface instanceof HTMLElement) || dropdown === null || row === null) return null;
       const flyout = surface.getBoundingClientRect();
+      const rowRect = row.getBoundingClientRect();
 
-      return { right: flyout.right, bottom: flyout.bottom, listLeft: dropdown.getBoundingClientRect().left, hasSource: surface.querySelector('[data-blok-database-view-new-source]') !== null };
+      return {
+        right: flyout.right,
+        bottom: flyout.bottom,
+        centre: flyout.top + flyout.height / 2,
+        rowCentre: rowRect.top + rowRect.height / 2,
+        listLeft: dropdown.getBoundingClientRect().left,
+        hasSource: surface.querySelector('[data-blok-database-view-new-source]') !== null,
+      };
     });
 
     expect(box).not.toBeNull();
+    // The clamp pushed the card up off the row's centre; if not, the window is too tall to test it.
+    expect(box?.centre ?? 0).toBeLessThan((box?.rowCentre ?? 0) - 1);
+    expect(480 - (box?.bottom ?? 0)).toBeCloseTo(11.8, 0);
     expect(box?.right).toBeCloseTo((box?.listLeft ?? 0) + 4, 0);
-    expect(540 - (box?.bottom ?? 0)).toBeCloseTo(11.8, 0);
     // Round 31 §3: the list beside it already has its own "New data source".
     expect(box?.hasSource).toBe(false);
   });

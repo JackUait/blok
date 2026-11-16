@@ -1,6 +1,7 @@
 import './local-profile.css';
 import { invoke } from '@tauri-apps/api/core';
 import { styleTextField } from './ui/controls';
+import { onHover, offHover } from './tooltip-runtime';
 
 export interface LocalProfile { name: string; photo: string | null }
 const KEY = 'blok:desktop:local-profile:v1';
@@ -54,30 +55,34 @@ export function mountLocalProfile(host: HTMLElement, onSaved: () => void = () =>
   const section = document.createElement('section'); section.setAttribute('data-local-profile', '');
   const row = document.createElement('div'); row.setAttribute('data-profile-row', '');
   const photo = document.createElement('button'); photo.type = 'button'; photo.setAttribute('data-profile-photo', '');
-  const fields = document.createElement('div');
+  const portrait = document.createElement('div'); portrait.setAttribute('data-profile-portrait', '');
+  const fields = document.createElement('div'); fields.setAttribute('data-profile-fields', '');
   const label = document.createElement('label'); label.textContent = 'Nom affiché';
   const name = document.createElement('input'); name.type = 'text'; name.maxLength = 80; name.placeholder = 'Votre nom ou pseudo'; name.value = readLocalProfile().name;
   styleTextField(name);
   name.setAttribute('data-desktop-settings-name', ''); label.append(name);
-  const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Supprimer la photo'; remove.setAttribute('data-profile-remove', '');
+  const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×'; remove.setAttribute('aria-label', 'Supprimer la photo'); onHover(remove, 'Supprimer la photo'); remove.setAttribute('data-profile-remove', '');
   const file = document.createElement('input'); file.type = 'file'; file.accept = 'image/png,image/jpeg,image/webp'; file.hidden = true;
   const status = document.createElement('p'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
-  const faces = document.createElement('a'); faces.href = FACES_URL; faces.target = '_blank'; faces.rel = 'noopener noreferrer'; faces.textContent = 'Créer un avatar avec Notion Faces ↗';
+  const faces = document.createElement('a'); faces.href = FACES_URL; faces.target = '_blank'; faces.rel = 'noopener noreferrer'; faces.textContent = 'Créer un avatar personnalisé';
+  const facesLine = document.createElement('p'); facesLine.setAttribute('data-profile-faces', '');
+  facesLine.append(faces, document.createTextNode(' avec Notion Faces'));
   faces.addEventListener('click', event => {
+    status.textContent = 'Téléchargez le portrait, puis cliquez sur votre photo pour l’importer.';
     if (!('__TAURI_INTERNALS__' in window)) return;
     event.preventDefault();
     void invoke('open_notion_faces').catch(() => { if (!disposed) status.textContent = 'Impossible d’ouvrir le navigateur. Rendez-vous sur faces.notion.com.'; });
   });
-  const help = document.createElement('p'); help.textContent = 'Téléchargez votre portrait dans Notion Faces, puis cliquez sur la photo pour l’importer. PNG, JPEG ou WebP, 10 Mo maximum.';
   const draw = (): void => {
     const profile = readLocalProfile(); photo.replaceChildren();
-    photo.setAttribute('aria-label', profile.photo ? 'Remplacer la photo' : 'Ajouter une photo');
+    const photoLabel = profile.photo ? 'Remplacer la photo' : 'Ajouter une photo';
+    photo.setAttribute('aria-label', photoLabel); offHover(photo); onHover(photo, photoLabel);
     if (profile.photo) { const img = document.createElement('img'); img.src = profile.photo; img.alt = ''; photo.append(img); }
     else photo.textContent = Array.from(profile.name || 'Vous')[0]?.toUpperCase() ?? 'V';
     remove.hidden = !profile.photo;
   };
   const save = (value: LocalProfile): void => {
-    try { saveLocalProfile(value); status.textContent = 'Profil enregistré sur cet appareil.'; draw(); onSaved(); }
+    try { saveLocalProfile(value); status.textContent = ''; draw(); onSaved(); }
     catch (error) { status.textContent = error instanceof Error ? error.message : 'Enregistrement impossible.'; }
   };
   name.addEventListener('change', () => save({ ...readLocalProfile(), name: name.value }));
@@ -90,6 +95,6 @@ export function mountLocalProfile(host: HTMLElement, onSaved: () => void = () =>
       if (!disposed && version === uploadVersion) save({ ...readLocalProfile(), photo: image });
     }).catch(error => { if (!disposed && version === uploadVersion) status.textContent = error instanceof Error ? error.message : 'Import impossible.'; });
   });
-  fields.append(label, remove); row.append(photo, fields); section.append(row, file, faces, help, status); host.append(section); draw();
-  return { destroy() { disposed = true; ++uploadVersion; section.remove(); } };
+  portrait.append(photo, remove); fields.append(label); row.append(portrait, fields); section.append(row, file, facesLine, status); host.append(section); draw();
+  return { destroy() { disposed = true; ++uploadVersion; offHover(photo); offHover(remove); section.remove(); } };
 }

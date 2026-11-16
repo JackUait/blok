@@ -608,3 +608,19 @@ describe('timeline toolbar controls hide the group labels under them', () => {
     expect(ruleBody(`${shut} > :last-child::before`)).toContain('inset-inline-end: calc(-1 * max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2)))');
   });
 });
+
+// notion-motion.md Round 48 A5 (r48-n-hours-body.raw): chips sit 8 in from the chart's edges.
+// Off-screen right 1215 and cut start 539 in a chart 531..1239; the cut bar's title at 558.
+describe('timeline off-screen chips sit 8px in from the chart edges (Round 48 A5)', () => {
+  it('ends the off-screen "→" chip 8px before the chart end', () => {
+    expect(ruleBody('[data-blok-database-timeline-row-end] > [data-blok-database-timeline-offscreen]')).toContain('margin-inline-end: var(--blok-space-1)');
+  });
+
+  it('holds a cut bar\'s start chip 8px in, and its title 3px after the chip', () => {
+    const chip = ruleBody('[data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-chip="start"]');
+
+    expect(chip).toContain('inset-inline-start: var(--blok-space-2)');
+    expect(ruleBody('[data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-title]'))
+      .toContain('inset-inline-start: calc(var(--blok-space-2) + 16px + var(--blok-space-0-75))');
+  });
+});

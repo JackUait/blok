@@ -18668,6 +18668,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   margin-inline-start: var(--blok-space-1);
 }
 
+[data-blok-database-timeline-row-end] > [data-blok-database-timeline-offscreen] {
+  margin-inline-end: var(--blok-space-1);
+}
+
 [data-blok-database-timeline-offscreen]:hover {
   background-color: var(--blok-database-timeline-arrow-hover-bg);
 }
@@ -18824,7 +18828,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-chip="start"], [data-blok-database-timeline-bar][data-clipped-end] > [data-blok-database-timeline-bar-chip="end"] {
   position: sticky;
-  inset-inline-start: var(--blok-space-1-5);
+  inset-inline-start: var(--blok-space-2);
   display: inline-flex;
   flex: none;
   align-items: center;
@@ -18852,7 +18856,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-title] {
   position: sticky;
-  inset-inline-start: calc(var(--blok-space-1-5) * 2 + 16px);
+  inset-inline-start: calc(var(--blok-space-2) + 16px + var(--blok-space-0-75));
 }
 
 [data-blok-database-timeline-bar-title] {

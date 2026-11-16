@@ -1,9 +1,8 @@
 import { IconEmojiSmile, IconGlobe, IconHelp, IconSearch } from '../../components/icons';
-import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
+import { overlayMountFor, promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
 import { EmojiPicker } from '../callout/emoji-picker';
 import { onHover } from '../../components/utils/tooltip';
 import { syncPortalDirection } from '../../components/utils/portal-direction';
-import { overlayMountFor } from '../../components/utils/top-layer';
 import { markEscapeConsumed } from '../../components/utils/consumed-escape';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import type { I18n } from '../../../types';

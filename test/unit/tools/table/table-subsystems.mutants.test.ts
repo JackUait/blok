@@ -2754,7 +2754,9 @@ describe('cell-selection wiring', () => {
     const cells = [harness.cellOf(0, 0), harness.cellOf(0, 1)];
 
     cellSelectionOptions().onClearContent(cells, { keepRange: true });
-    cells.forEach((cell) => harness.ensureCellHasBlock(cell));
+    cells.forEach((cell) => {
+      harness.ensureCellHasBlock(cell);
+    });
     const emptied = [harness.idsOf(0, 0), harness.idsOf(0, 1)];
     const transactions = harness.transactions.length;
 
@@ -2769,7 +2771,9 @@ describe('cell-selection wiring', () => {
     const cells = [harness.cellOf(0, 0), harness.cellOf(0, 1)];
 
     cellSelectionOptions().onClearContent(cells, { keepRange: true });
-    cells.forEach((cell) => harness.ensureCellHasBlock(cell));
+    cells.forEach((cell) => {
+      harness.ensureCellHasBlock(cell);
+    });
     const [first] = harness.idsOf(0, 0);
     const block = harness.blockOf(first);
 

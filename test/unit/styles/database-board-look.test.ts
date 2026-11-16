@@ -163,7 +163,7 @@ describe('board column, card and header look (research/08)', () => {
 
     expect(body).toContain('font-size: 15px');
     expect(body).toContain('line-height: 18px');
-    expect(icon).toContain('width: 18.67px');
+    expect(icon).toContain('width: 15.85px');
     expect(icon).toContain('flex-shrink: 0');
   });
 

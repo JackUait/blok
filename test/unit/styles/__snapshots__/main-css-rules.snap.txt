@@ -6942,8 +6942,8 @@ span[data-blok-slash-search] {
 
 [data-blok-database-add-card-icon] svg {
   flex-shrink: 0;
-  width: 18.67px;
-  height: 18.67px;
+  width: 15.85px;
+  height: 15.85px;
 }
 
 [data-blok-database-column-count] {

@@ -2852,11 +2852,12 @@
   margin-inline-start: var(--blok-space-0-5);
 }
 
-/* Round 8c: Notion's plus ink is 10.5 wide. Blok's 20px plus (10 + 1.25 stroke) reaches that at 18.67px. */
+/* Round 8c: Notion's plus ink is 10.5 wide. Blok's 20px plus (12 + 1.25 stroke, IconPlus) reaches that at 15.85px.
+   Redrawing IconPlus changes this size. */
 [data-blok-database-add-card-icon] svg {
   flex-shrink: 0;
-  width: 18.67px;
-  height: 18.67px;
+  width: 15.85px;
+  height: 15.85px;
 }
 
 /**

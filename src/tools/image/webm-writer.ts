@@ -54,7 +54,7 @@ const concat = (parts: Uint8Array[]): Uint8Array<ArrayBuffer> => {
   return out;
 };
 
-// Sizes always use the 8-byte form, so a size never changes an element's length.
+// Sizes use the 8-byte form, so a size never changes an element's length. The EBML header is the exception.
 const size = (n: number): Uint8Array => Uint8Array.from([0x01, ...bytesOf(n, 7)]);
 
 const el = (id: number, ...body: Uint8Array[]): Uint8Array => {
@@ -91,6 +91,12 @@ const int32 = (n: number): Uint8Array => {
 
   return bytes;
 };
+
+/**
+ * A header element with a one-byte size. Safari sniffs the first bytes for
+ * DocType when the URL has no .webm extension, and 8-byte sizes push it out of reach.
+ */
+const head = (id: number, ...body: number[]): number[] => [...bytesOf(id), 0x80 + body.length, ...body];
 
 const ms = (us: number): number => Math.round(us / 1000);
 
@@ -166,10 +172,10 @@ export const writeWebm = (track: WebmTrack, frames: WebmFrame[]): Uint8Array<Arr
     ? [el(0xbb, uint(0xb3, cluster.time), el(0xb7, uint(0xf7, 1), uint(0xf1, clusterPositions[i])))]
     : []));
 
-  const header = el(ID.ebml,
-    uint(0x4286, 1), uint(0x42f7, 1), uint(0x42f2, 4), uint(0x42f3, 8),
-    str(0x4282, 'webm'), uint(0x4287, 2), uint(0x4285, 2),
-  );
+  const header = Uint8Array.from(head(ID.ebml,
+    ...head(0x4286, 1), ...head(0x42f7, 1), ...head(0x42f2, 4), ...head(0x42f3, 8),
+    ...head(0x4282, ...text.encode('webm')), ...head(0x4287, 2), ...head(0x4285, 2),
+  ));
 
   return concat([
     header,

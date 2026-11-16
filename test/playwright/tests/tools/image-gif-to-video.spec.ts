@@ -96,3 +96,28 @@ test('an animated GIF put into an image block becomes a looping WebM video block
   // 20 frames × 100 ms: the last frame keeps its full delay.
   expect(duration).toBeCloseTo(2, 2);
 });
+
+test('the converted WebM is one Safari and the Mac hardware decoder accept', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Only Chromium has ImageDecoder, so only it converts GIFs');
+  test.setTimeout(45_000);
+  await createBlok(page);
+  await page.locator(IMAGE_BLOCK_SELECTOR).getByTestId('file-input').setInputFiles(GIF_PATH);
+
+  await expect(page.locator(VIDEO_BLOCK_SELECTOR)).toHaveCount(1, { timeout: 30_000 });
+
+  const [block] = await savedBlocks(page);
+  const file = await page.evaluate(async (url) => {
+    const bytes = new Uint8Array(await (await fetch(url)).arrayBuffer());
+    const find = (needle: number[], from: number): number =>
+      bytes.findIndex((_byte, i) => i >= from && needle.every((b, j) => bytes[i + j] === b));
+    // The first frame is a key frame: its header holds the VP9 sync code, then the colour bits.
+    const sync = find([0x49, 0x83, 0x42], find([0x1f, 0x43, 0xb6, 0x75], 0));
+
+    return { docType: find([0x42, 0x82], 0), colourBits: bytes[sync + 3] >> 4 };
+  }, block.data.url ?? '');
+
+  // Safari sniffs a URL with no .webm extension and misses a DocType far from the start.
+  expect(file.docType).toBe(21);
+  // 0b0100 is BT.709, limited range. Chrome's VideoToolbox decoder fails on full range (0b0101).
+  expect(file.colourBits).toBe(0b0100);
+});

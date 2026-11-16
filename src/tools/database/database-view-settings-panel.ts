@@ -1831,12 +1831,22 @@ export class ViewSettingsPages {
     toggle.setAttribute('data-blok-testid', show ? 'database-property-show-all' : 'database-property-hide-all');
     toggle.textContent = this.t(show ? 'groupShowAll' : 'groupHideAll');
     toggle.disabled = !this.shared;
+    const search = (root: Element | null): HTMLElement | null =>
+      root?.querySelector<HTMLElement>('[data-blok-testid="database-property-search"]') ?? null;
+
+    // notion-motion.md Round 39 §5: a press from the search leaves focus there.
+    toggle.addEventListener('mousedown', (event) => {
+      if (document.activeElement !== null && document.activeElement === search(toggle.closest('[data-blok-database-panel]'))) event.preventDefault();
+    });
     toggle.addEventListener('click', () => {
       if (targets.length === 0) return;
+      // Read before refresh: it replaces this button.
+      const root = toggle.closest('[data-blok-database-panel]');
+
       this.ctx.updateView({ properties: withPropertyVisibility(this.ctx.view(), this.ctx.schema(), targets.map((entry) => entry.id), show) });
       panel.refresh();
       // notion-motion.md Round 36 §1: focus goes to the search.
-      document.querySelector<HTMLElement>('[data-blok-testid="database-property-search"]')?.focus();
+      search(root)?.focus();
     });
     header.append(toggle);
 

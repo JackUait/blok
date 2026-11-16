@@ -10721,6 +10721,7 @@ export class DatabaseTool implements BlockTool {
           if (!writable()) return;
           if (this.model.getProperty(propertyId)?.type === 'relation') {
             this.commitRelation(rowId, propertyId, input);
+            this.keepTimelinePlace();
             this.rerenderView({ keepDrawer: true });
 
             return;
@@ -10731,6 +10732,7 @@ export class DatabaseTool implements BlockTool {
           // A template is no model row: read it too, or clearing its value is never saved.
           if (JSON.stringify(this.rowOrTemplate(rowId)?.properties[propertyId] ?? null) === JSON.stringify(value)) return;
           this.updateRowBlock(rowId, { [propertyId]: value });
+          this.keepTimelinePlace();
           this.rerenderView({ keepDrawer: true });
           this.sync.syncUpdateRow({ rowId, properties: { [propertyId]: value } });
         },

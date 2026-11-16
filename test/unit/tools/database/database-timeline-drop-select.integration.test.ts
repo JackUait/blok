@@ -37,6 +37,7 @@ const doc = (): OutputBlockData[] => [
       schema: [
         { id: 't', name: 'Name', type: 'title', position: 'a0' },
         { id: 'due', name: 'Due', type: 'date', position: 'a1' },
+        { id: 'done', name: 'Done', type: 'checkbox', position: 'a2' },
       ],
       views: [{ id: 'v', name: 'View', type: 'timeline', timelineBy: 'due', showTimelineTable: true, position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
       activeViewId: 'v',
@@ -156,6 +157,33 @@ describe('timeline bar drop selection', () => {
     const redrawn = holder?.querySelector<HTMLElement>('[data-blok-database-timeline-scroller]');
 
     expect(holder?.querySelectorAll('[data-blok-database-timeline-row]').length).toBe(3);
+    expect(redrawn?.scrollLeft).toBe(1234);
+  });
+
+  // A date edit in the open peek sent the chart to the narrowed chart's open place (browser: 2922 → 2833). Notion's side is unmeasured.
+  it('keeps the chart where it was scrolled after a value changes in the open peek', async () => {
+    editor = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: { class: DatabaseTool, config: {} }, 'database-row': DatabaseRowTool },
+      data: { blocks: doc() },
+    } as never);
+    await editor.isReady;
+    await quiet();
+
+    holder?.querySelector<HTMLElement>('[data-blok-database-timeline-bar][data-row-id="r2"]')?.click();
+    await quiet();
+    const scroller = holder?.querySelector<HTMLElement>('[data-blok-database-timeline-scroller]');
+    const done = document.querySelector<HTMLElement>('[data-blok-database-drawer-prop-value][data-property-id="done"]');
+
+    if (scroller === null || scroller === undefined || done === null) throw new Error('no peek');
+    scroller.scrollLeft = 1234;
+    done.click();
+    await quiet();
+
+    const redrawn = holder?.querySelector<HTMLElement>('[data-blok-database-timeline-scroller]');
+
+    expect(redrawn).not.toBe(scroller);
     expect(redrawn?.scrollLeft).toBe(1234);
   });
 });

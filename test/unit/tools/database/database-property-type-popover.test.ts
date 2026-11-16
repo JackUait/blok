@@ -721,6 +721,23 @@ describe('DatabasePropertyTypePopover', () => {
       flow.destroy();
     });
 
+    // notion-motion.md Round 44 §3 (r44-tp-search.raw): in the header "+" grid too, "Select type" stays and the field opens under it.
+    it('keeps "Select type" and opens the search field under it in the header grid', () => {
+      const i18n = { t: (key: string) => `i18n:${key}`, has: () => true } as unknown as I18n;
+      const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true, i18n, layout: 'grid', nameOverAnchor: true });
+
+      flow.open(anchor);
+      const heading = document.querySelector('[data-blok-database-property-type-list-heading]');
+
+      heading?.querySelector<HTMLButtonElement>('[data-blok-database-property-type-search]')?.click();
+      const field = document.querySelector<HTMLInputElement>('[data-blok-database-property-type-search-input]');
+
+      expect(heading?.textContent?.trim()).toBe('i18n:tools.database.formSelectType');
+      expect(heading?.nextElementSibling).toBe(field);
+      expect(field).toHaveFocus();
+      flow.destroy();
+    });
+
     // notion-motion.md Round 41 Part A: a 1px line closes the AI Autofill rows, before "Select type".
     it('closes the AI Autofill rows with a line, and draws none without them', () => {
       const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true, onAutofill: vi.fn() });

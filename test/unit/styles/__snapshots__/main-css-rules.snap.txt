@@ -7297,6 +7297,10 @@ button[data-blok-database-board-lane-count]:hover {
   margin-inline-end: var(--blok-space-2);
 }
 
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-change-type'] [data-blok-popover-item-icon] {
+  color: var(--blok-database-peek-glyph-strong);
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-popover-item-title] {
   font-size: 14px;
   line-height: 16.8px;
@@ -9712,6 +9716,18 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   box-shadow: none;
 }
 
+[data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-heading] {
+  padding-inline: var(--blok-space-2-75);
+}
+
+[data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-list-heading] {
+  padding-bottom: var(--blok-space-2);
+}
+
+[data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-body] > [data-blok-database-property-type-search-input] {
+  margin-top: var(--blok-space-0-5);
+}
+
 [data-blok-database-property-type-name-over-anchor] [data-blok-database-property-type-glyph] {
   width: 24px;
   height: 24px;
@@ -9796,7 +9812,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   border: none;
   border-radius: var(--blok-radius-control-sm);
   background: transparent;
-  color: inherit;
+  color: var(--blok-database-type-icon);
   cursor: pointer;
 }
 
@@ -11362,6 +11378,11 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   background: transparent;
   color: var(--blok-database-property-icon-button-ink);
   cursor: pointer;
+}
+
+[data-blok-database-property-menu-icon] svg {
+  width: 16.8px;
+  height: 16.8px;
 }
 
 [data-blok-database-property-menu-icon]:hover {

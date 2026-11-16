@@ -704,3 +704,43 @@ describe('row ⋮⋮ and card ⋯ menu motion (Round 36)', () => {
     expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-fade-menu']:not([data-blok-popover-opened='true']) > [data-blok-popover-container]", 'transform')).toEqual(['none']);
   });
 });
+
+// notion-motion.md Round 44 §3 (r44-tp-add-head.raw, r44-tp-search.raw): the header "+" picker's labels and search.
+describe('header "+" type picker (Round 44)', () => {
+  const GRID = "[data-blok-database-property-type-layout='grid']";
+
+  // "AI Autofill" and "Select type" text at popover x + 19: the box pads 4, the body 4, the label 11.
+  it('starts its section labels 19 in from the box', () => {
+    expect(declared(`${GRID} [data-blok-database-property-type-heading]`, 'padding-inline')).toEqual(['var(--blok-space-2-75)']);
+  });
+
+  // The 20px search button ends at 130.9 and the first cell starts at 138.9.
+  it('leaves 8 under the "Select type" line before the first type', () => {
+    expect(declared(`${GRID} [data-blok-database-property-type-list-heading]`, 'padding-bottom')).toEqual(['var(--blok-space-2)']);
+  });
+
+  // magnifyingGlassSmall fill rgb(142, 139, 134), not the label's ink.
+  it('draws the search glyph in the type icon gray', () => {
+    expect(declared('[data-blok-database-property-type-search]', 'color')).toEqual(['var(--blok-database-type-icon)']);
+  });
+
+  // The field goes 2 under where the first cell was (138.9 → 140.9), and the cells 4 under it: a 34px shift.
+  it('puts the search field 2 under the label line', () => {
+    expect(declared(`${GRID} [data-blok-database-property-type-body] > [data-blok-database-property-type-search-input]`, 'margin-top')).toEqual(['var(--blok-space-0-5)']);
+  });
+});
+
+// notion-motion.md Round 44 §3 (r44-tp-change.raw, r44-tp-propmenu-head.raw).
+describe('Change type list and the property menu glyph (Round 44)', () => {
+  // The list's type masks are rgb(56, 56, 54).
+  it('draws the Change type glyphs in the strong glyph ink', () => {
+    expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-change-type'] [data-blok-popover-item-icon]", 'color'))
+      .toEqual(['var(--blok-database-peek-glyph-strong)']);
+  });
+
+  // "Change icon" 28×28 holds a 16.8 type glyph.
+  it('draws the type glyph in the name row\'s icon box at 16.8', () => {
+    expect(declared('[data-blok-database-property-menu-icon] svg', 'width')).toEqual(['16.8px']);
+    expect(declared('[data-blok-database-property-menu-icon] svg', 'height')).toEqual(['16.8px']);
+  });
+});

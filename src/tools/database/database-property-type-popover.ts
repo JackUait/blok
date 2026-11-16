@@ -392,7 +392,7 @@ export class DatabasePropertyTypePopover {
   }
 
   private typeListHeading(grid: HTMLElement): HTMLElement {
-    // notion-spec-2 §17.9: the grid's magnifier turns "Select type" into the field; the list adds it under "Type".
+    // notion-motion.md Round 44 §3: in both layouts the label stays and the field opens under it.
     const t = (key: string): string => {
       const shown = this.grid && key === 'tools.database.propertyTypeListHeading' ? 'tools.database.formSelectType' : key;
 
@@ -406,7 +406,7 @@ export class DatabasePropertyTypePopover {
       }
       // A search shows one flat list of matches.
       for (const rule of grid.querySelectorAll<HTMLElement>('[data-blok-database-property-type-rule]')) rule.hidden = query !== '';
-    }, !this.grid);
+    }, true);
 
     // notion-spec-2 §19.8: opening "Search types" drops the highlight, so the next ArrowDown starts at the menu's top.
     heading.querySelector('[data-blok-database-property-type-search]')?.addEventListener('click', () => {

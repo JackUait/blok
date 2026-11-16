@@ -3277,6 +3277,11 @@ button[data-blok-database-board-lane-count]:hover {
   margin-inline-end: var(--blok-space-2);
 }
 
+/* notion-motion.md Round 44 §3 (r44-tp-change.raw): the Change type list's glyphs are rgb(56, 56, 54). */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-change-type'] [data-blok-popover-item-icon] {
+  color: var(--blok-database-peek-glyph-strong);
+}
+
 /* notion-motion.md, Round 8c "Card ⋯ menu": 14px/16.8 text. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-popover-item-title] {
   font-size: 14px;
@@ -6021,6 +6026,21 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   box-shadow: none;
 }
 
+/* notion-motion.md Round 44 §3: section labels at the box's x + 19 (box 4, body 4, label 11). */
+[data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-heading] {
+  padding-inline: var(--blok-space-2-75);
+}
+
+/* notion-motion.md Round 44 §3: 8 from the search button to the first type. */
+[data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-list-heading] {
+  padding-bottom: var(--blok-space-2);
+}
+
+/* notion-motion.md Round 44 §3: the field sits 2 under where the first type was; the types move down 34. */
+[data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-body] > [data-blok-database-property-type-search-input] {
+  margin-top: var(--blok-space-0-5);
+}
+
 [data-blok-database-property-type-name-over-anchor] [data-blok-database-property-type-glyph] {
   width: 24px;
   height: 24px;
@@ -6117,7 +6137,8 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   border: none;
   border-radius: var(--blok-radius-control-sm);
   background: transparent;
-  color: inherit;
+  /* notion-motion.md Round 44 §3: the glyph is icon gray, not the label's ink. */
+  color: var(--blok-database-type-icon);
   cursor: pointer;
 }
 
@@ -7755,6 +7776,12 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   background: transparent;
   color: var(--blok-database-property-icon-button-ink);
   cursor: pointer;
+}
+
+/* notion-motion.md Round 44 §3: a 16.8 type glyph in the 28 box. */
+[data-blok-database-property-menu-icon] svg {
+  width: 16.8px;
+  height: 16.8px;
 }
 
 [data-blok-database-property-menu-icon]:hover {

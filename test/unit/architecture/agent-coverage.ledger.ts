@@ -106,6 +106,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/database-confirm-dialog.ts': exempt('chrome', 'Confirm or cancel of a destructive action; the confirmed action has its own id.'),
   'ui-file:src/tools/database/database-feed-view.ts': exempt('view-only', 'Loads more rows or opens a row in the feed; the document does not change.'),
   'ui-file:src/tools/database/database-form-view.ts': cmds(['database.submitForm', 'database.updateView'], 'Submit is database.submitForm: the form\'s checks, the row and forms.onSubmit. Question settings are the view\'s properties entries.'),
+  'ui-file:src/tools/database/database-form-question-drag.ts': cmds(['database.updateView'], 'Drags a form question to another place: writes the order of the view\'s properties entries, as Move question does.'),
   'ui-file:src/tools/database/database-form-share.ts': cmds(['database.updateView'], 'Writes the form view\'s Share settings (form: closed, public, anonymous, submissionAccess), each only after a person approves it. Copying the host\'s link changes nothing.'),
   'ui-file:src/tools/database/database-formula-editor.ts': cmds(['database.updateProperty'], 'Edits a formula property: writes its formula settings.'),
   'ui-file:src/tools/database/database-formula-field.ts': cmds(['database.updateProperty'], 'The text field of Edit formula; its text becomes the formula settings.'),

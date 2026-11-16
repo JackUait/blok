@@ -132,6 +132,8 @@ export class DatabaseFormQuestionDrag {
     const color = style.getPropertyValue('--blok-database-drop-line').trim();
     const radius = style.getPropertyValue('--blok-radius-pill').trim();
 
+    // Scopes Blok's base styles to a line that lives outside the editor.
+    zone.setAttribute('data-blok-interface', 'form-drop-zone');
     zone.setAttribute('data-blok-database-form-drop-zone', '');
     zone.setAttribute('aria-hidden', 'true');
     zone.style.position = 'fixed';

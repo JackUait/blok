@@ -1150,11 +1150,10 @@ describe('DatabaseTimelineView', () => {
       expect(handlers.writeDates).toHaveBeenCalledWith('r1', { start: '2026-10-09T12:00' });
     });
 
-    // notion-motion.md Round 46 B: after a move the bar is left selected.
-    it('leaves a moved bar selected, and not a resized or unmoved one', () => {
+    // notion-motion.md Round 46 B: after a move the bar is left selected. Round 47 A3: a resized bar is selected mid-drag.
+    it('leaves a moved bar selected, and not an unmoved one', () => {
       const landRow = vi.fn();
       const { root } = mount({ handlers: { ...makeHandlers(), landRow } });
-      const end = bar(root, 'r1').querySelector('[data-blok-database-timeline-resize="end"]');
 
       layOut(root);
       pointer('pointerdown', bar(root, 'r2'), xOf('2026-10-12'), 50);
@@ -1163,10 +1162,24 @@ describe('DatabaseTimelineView', () => {
       expect(landRow).toHaveBeenCalledWith('r2');
       expect(landRow).toHaveBeenCalledTimes(1);
 
+      pointer('pointerdown', bar(root, 'r1'), xOf('2026-10-09'), 50);
+      pointer('pointerup', document, xOf('2026-10-09'), 50);
+      expect(landRow).toHaveBeenCalledTimes(1);
+    });
+
+    // notion-motion.md Round 47 A3: a resized bar is selected while its edge is dragged, and stays selected.
+    it('selects a bar while its edge is dragged', () => {
+      const landRow = vi.fn();
+      const { root } = mount({ handlers: { ...makeHandlers(), landRow } });
+      const end = bar(root, 'r1').querySelector('[data-blok-database-timeline-resize="end"]');
+
+      layOut(root);
       if (end === null) throw new Error('no handle');
       pointer('pointerdown', end, xOf('2026-10-09'), 50);
       pointer('pointermove', document, xOf('2026-10-11'), 50);
-      pointer('pointerup', document, xOf('2026-10-11'), 50);
+      expect(landRow).toHaveBeenCalledWith('r1');
+      pointer('pointermove', document, xOf('2026-10-12'), 50);
+      pointer('pointerup', document, xOf('2026-10-12'), 50);
       expect(landRow).toHaveBeenCalledTimes(1);
     });
 

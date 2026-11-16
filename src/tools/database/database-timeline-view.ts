@@ -60,7 +60,7 @@ export interface TimelineHandlers {
   pickRow?: (rowId: string, range: boolean) => void;
   /** Arrow keys on the bars: the selection becomes exactly these rows, as in the list and gallery. */
   lassoRows?: (rowIds: string[]) => void;
-  /** A bar moved to new dates: it is left selected (notion-motion.md Round 46 B). */
+  /** A bar moved to new dates, or one being resized, is selected (notion-motion.md Round 46 B, Round 47 A3). */
   landRow?: (rowId: string) => void;
   /** Group key, or null when the timeline is not grouped; the new bar's dates. */
   addRow: (groupKey: string | null, write: BarWrite) => void;
@@ -1443,6 +1443,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       drag.active = true;
       this.root?.setAttribute('data-dragging', drag.kind === 'bar' ? drag.mode : drag.kind);
       this.partsOf(drag.rowId).forEach((el) => el.setAttribute('data-dragging', ''));
+      // notion-motion.md Round 47 A3: a bar being resized is selected; a moved one only after the drop.
+      if (drag.kind === 'bar' && drag.mode !== 'move') {
+        this.options.handlers?.landRow?.(drag.rowId);
+      }
     }
 
     if (drag.kind === 'bar') {

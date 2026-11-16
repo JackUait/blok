@@ -16007,6 +16007,13 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   outline: 2px solid var(--blok-focus-ring);
 }
 
+/* notion-motion.md Round 48 A5: a far-zoom bar can be 11 wide; both 6px sides would hold it at 12. The title runs past the end anyway. */
+[data-blok-database-timeline][data-zoom="quarter"] [data-blok-database-timeline-bar],
+[data-blok-database-timeline][data-zoom="year"] [data-blok-database-timeline-bar],
+[data-blok-database-timeline][data-zoom="5_years"] [data-blok-database-timeline-bar] {
+  padding-inline-end: 0;
+}
+
 /* A layer under the content, so it tints a conditional colour fill too (research/21 §1i). notion-motion.md Timeline: 20ms ease-in. */
 [data-blok-database-timeline-bar]::before {
   content: "";

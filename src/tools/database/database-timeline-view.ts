@@ -128,6 +128,10 @@ export interface DatabaseTimelineViewOptions {
 const DRAG_THRESHOLD = 4;
 const DAY_MINUTES = 24 * 60;
 const BAR_INSET = 1.5;
+/** notion-motion.md Round 48 A5: Quarter, Year and 5 Years bars start 2px into their span, max(span - 3, 11) wide. */
+const FAR_BAR_INSET = 2;
+const FAR_BAR_TRIM = 3;
+const FAR_BAR_MIN = 11;
 /** findings C07: Notion's "+ New" made a 5-day bar. */
 const NEW_BAR_DAYS = 5;
 /** notion-motion.md Round 48 A9: at Day zoom Notion's "+ New" made a 3-hour bar (6:30 PM → 9:30 PM). */
@@ -1410,6 +1414,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   /** Hours and Day zooms place a timed value by its time; every other case by whole days. */
   private geometryOf(span: EventSpan, values: BarValues): { offset: number; width: number } {
     const geometry = (BY_TIME.has(this.zoom) ? hourBarGeometry(values, this.window.start, this.dayWidth) : null) ?? barGeometry(span, this.window.start, this.zoom);
+
+    if (ON_START_LINE.has(this.zoom)) {
+      return { offset: geometry.offset + FAR_BAR_INSET, width: Math.max(geometry.width - FAR_BAR_TRIM, FAR_BAR_MIN) };
+    }
 
     // findings C23: at day-level zooms a bar sits 1.5px in from each day edge (37px of a 40px day).
     return MONTH_IN_TOOLBAR.has(this.zoom) ? { offset: geometry.offset + BAR_INSET, width: geometry.width - 2 * BAR_INSET } : geometry;

@@ -625,3 +625,10 @@ describe('timeline off-screen chips sit 8px in from the chart edges (Round 48 A5
       .toContain('inset-inline-start: calc(var(--blok-space-2) + 16px + var(--blok-space-0-75))');
   });
 });
+
+// notion-motion.md Round 48 A5: a far-zoom bar can be 11 wide. The bar's 6px sides would hold it at 12.
+describe('timeline far-zoom bars can be 11px wide (Round 48 A5)', () => {
+  it.each(['quarter', 'year', '5_years'])('drops the end padding of a %s bar', (zoom) => {
+    expect(ruleBody(`[data-blok-database-timeline][data-zoom="${zoom}"] [data-blok-database-timeline-bar]`)).toContain('padding-inline-end: 0');
+  });
+});

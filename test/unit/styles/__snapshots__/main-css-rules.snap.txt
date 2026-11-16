@@ -18711,6 +18711,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   outline: 2px solid var(--blok-focus-ring);
 }
 
+[data-blok-database-timeline][data-zoom="quarter"] [data-blok-database-timeline-bar], [data-blok-database-timeline][data-zoom="year"] [data-blok-database-timeline-bar], [data-blok-database-timeline][data-zoom="5_years"] [data-blok-database-timeline-bar] {
+  padding-inline-end: 0;
+}
+
 [data-blok-database-timeline-bar]::before {
   content: "";
   position: absolute;

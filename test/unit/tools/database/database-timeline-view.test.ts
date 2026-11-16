@@ -166,6 +166,21 @@ describe('DatabaseTimelineView', () => {
       expect(bar(root, 'r2').style.insetInlineStart).toBe(`${px('2026-10-12') + 1.5}px`);
     });
 
+    // notion-motion.md Round 48 A5: in Quarter, Year and 5 Years a bar starts 2px into its span and is max(span - 3, 11) wide.
+    it.each([
+      ['quarter', 3, 33],
+      ['quarter', 1, 11],
+      ['year', 3, 12],
+      ['5_years', 3, 11],
+    ] as const)('%s zoom insets a %i-day bar to Notion\'s %ipx, 2px in', (zoom, days, width) => {
+      const end = days === 1 ? '2026-10-12' : `2026-10-12/2026-10-${String(11 + days)}`;
+      const { root } = mount({ view: timelineView({ timelineZoom: zoom }), groups: single([row('r1', 'Trip', end)]) });
+      const start = daysBetween(timelineWindow(CENTER, zoom).start, '2026-10-12') * TIMELINE_DAY_WIDTH[zoom];
+
+      expect(bar(root, 'r1').style.width).toBe(`${width}px`);
+      expect(bar(root, 'r1').style.insetInlineStart).toBe(`${start + 2}px`);
+    });
+
     it('marks the zoom level and draws the canvas as wide as the window', () => {
       const { root } = mount({ view: timelineView({ timelineZoom: 'year' }) });
       const window = timelineWindow(CENTER, 'year');

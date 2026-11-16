@@ -294,17 +294,18 @@ const isFormSubmission = (value: unknown): value is DatabaseFormSubmission =>
   && 'viewId' in value && typeof value.viewId === 'string' && 'values' in value && typeof value.values === 'object';
 
 /**
- * A paragraph, heading or to-do with no text: Notion drops one on its own (notion-motion.md Round 46 §C.1, Round 47 §E).
- * `<br>` is what an emptied contenteditable can leave.
+ * A paragraph, heading, to-do, list item or toggle with no text: Notion drops one on its own
+ * (notion-motion.md Round 46 §C.1, Round 47 §E, Round 48 §B). `<br>` is what an emptied
+ * contenteditable can leave; saved text can also be an empty segment array.
  */
 const isEmptyLine = (block: { type: string; data: unknown } | undefined): boolean => {
-  const data = block?.data as { text?: unknown; style?: unknown } | undefined;
-  const line = block?.type === 'paragraph' || block?.type === 'header' || (block?.type === 'list' && data?.style === 'checklist');
+  const data = block?.data as { text?: unknown } | undefined;
+  const line = block?.type === 'paragraph' || block?.type === 'header' || block?.type === 'list' || block?.type === 'toggle';
 
   if (!line) return false;
   const text = data?.text;
 
-  return text === undefined || (typeof text === 'string' && text.replace(/<br\s*\/?>/gi, '') === '');
+  return text === undefined || (Array.isArray(text) && text.length === 0) || (typeof text === 'string' && text.replace(/<br\s*\/?>/gi, '') === '');
 };
 
 /** The block a 'block changed' payload is about, if the payload carries one. */

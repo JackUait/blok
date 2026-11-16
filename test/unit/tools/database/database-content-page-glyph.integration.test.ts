@@ -4,6 +4,7 @@ import { Blok } from '../../../../src/blok';
 import { Paragraph } from '../../../../src/tools/paragraph';
 import { Header } from '../../../../src/tools/header';
 import { ListItem } from '../../../../src/tools/list';
+import { ToggleItem } from '../../../../src/tools/toggle';
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import type { API, OutputBlockData } from '../../../../types';
@@ -88,6 +89,18 @@ const LONE_BLOCKS: OutputBlockData[] = [
   { id: 'hx1', type: 'header', parent: 'hx', data: { text: 'Title', level: 2 } },
 ];
 
+/** notion-motion.md Round 48 §B: a lone empty bulleted, numbered or toggle block is dropped too. Saved text can be "" or []. */
+const LONE_LISTS: OutputBlockData[] = [
+  { id: 'ul', type: 'database-row', parent: 'db', content: ['ul1'], data: { properties: { t: 'Empty bullet', due: today(), s: 'o1' }, position: 'a3' } },
+  { id: 'ul1', type: 'list', parent: 'ul', data: { text: '', style: 'unordered' } },
+  { id: 'ol', type: 'database-row', parent: 'db', content: ['ol1'], data: { properties: { t: 'Empty number', due: today(), s: 'o1' }, position: 'a4' } },
+  { id: 'ol1', type: 'list', parent: 'ol', data: { text: [], style: 'ordered' } },
+  { id: 'tg', type: 'database-row', parent: 'db', content: ['tg1'], data: { properties: { t: 'Empty toggle', due: today(), s: 'o1' }, position: 'a5' } },
+  { id: 'tg1', type: 'toggle', parent: 'tg', data: { text: '' } },
+  { id: 'ulx', type: 'database-row', parent: 'db', content: ['ulx1'], data: { properties: { t: 'Bullet', due: today(), s: 'o1' }, position: 'a6' } },
+  { id: 'ulx1', type: 'list', parent: 'ulx', data: { text: 'Item', style: 'unordered' } },
+];
+
 const ROW_SELECTOR: Record<Layout, string> = {
   table: '[data-blok-database-table-row]',
   list: '[data-blok-database-list-row]',
@@ -104,7 +117,7 @@ const make = async (layout: Layout, extra: OutputBlockData[] = []): Promise<Test
   editor = new Blok({
     holder,
     dataModel: 'hierarchical',
-    tools: { paragraph: Paragraph, header: Header, list: ListItem, database: { class: DatabaseTool, config: {} }, 'database-row': DatabaseRowTool },
+    tools: { paragraph: Paragraph, header: Header, list: ListItem, toggle: ToggleItem, database: { class: DatabaseTool, config: {} }, 'database-row': DatabaseRowTool },
     data: { blocks: doc(layout, extra) },
   } as never) as unknown as TestEditor;
   await editor.isReady;
@@ -197,6 +210,15 @@ describe('content page glyph', () => {
     expect(glyphOf(layout, 'td')).toBe('blank');
     expect(glyphOf(layout, 'ws')).toBe('content');
     expect(glyphOf(layout, 'hx')).toBe('content');
+  });
+
+  it.each(['table', 'list'] as const)('%s: a lone empty bulleted, numbered or toggle block is no body; a filled bullet is', async (layout) => {
+    await make(layout, LONE_LISTS);
+
+    expect(glyphOf(layout, 'ul')).toBe('blank');
+    expect(glyphOf(layout, 'ol')).toBe('blank');
+    expect(glyphOf(layout, 'tg')).toBe('blank');
+    expect(glyphOf(layout, 'ulx')).toBe('content');
   });
 
   it('typing into the one empty line shows the lines glyph', async () => {

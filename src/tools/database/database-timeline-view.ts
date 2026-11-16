@@ -777,8 +777,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     if (line === undefined || cell === null || cell === undefined || property === undefined || row === undefined) {
       return;
     }
-    // The measured box covers the whole 279px row, 281×38. The row's side padding is outside the cell, so a
-    // title-only row is the anchor. With more columns Notion is unmeasured: the title cell is.
+    // Round 50 §5: a Name-only row is the anchor (Notion 281 over the 279 row). Round 51 §3: with more columns the
+    // Name cell is, 280 at 359; that width comes from the cell's -1px end margin in database.css.
     const anchor = line.childElementCount === 1 ? line : cell;
 
     this.titleEditor?.close();

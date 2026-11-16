@@ -173,6 +173,7 @@ describe('database timeline styles', () => {
   // Its « sits at the panel's end, beside the month.
   it('draws the table panel 370px wide, 90 of it padding, and turns the toggle into « at its end while it shows', () => {
     expect(ruleBody('[data-blok-database-timeline]')).toContain('--blok-database-timeline-table-width: 370px');
+    expect(ruleBody('[data-blok-database-timeline]')).toContain('--blok-database-timeline-table-more: 0');
     // Round 53 §3: the panel grows 200 per shown column (Notion 480 with Date, 1880 with 8 more), cut at the view's edge.
     expect(ruleBody('[data-blok-database-timeline-table]')).toMatch(/[;\s]inline-size: max-content/);
     expect(ruleBody('[data-blok-database-timeline-table]')).toContain('min-inline-size: var(--blok-database-timeline-table-width)');
@@ -181,7 +182,14 @@ describe('database timeline styles', () => {
     const shown = '[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"]';
 
     // notion-motion.md Round 50 item 6: open, « is 28x24 with 6px sides, starts 37 before the panel's end, its glyph 2.5 above centre (Notion 12 into the card).
-    expect(ruleBody(shown)).toContain('margin-inline-start: calc(var(--blok-database-timeline-table-width) - 37px)');
+    // Round 54 §4: it follows the panel's end, 200 per column past Name (603 → 1003). The gap before it is a
+    // shrinkable box, so a panel wider than the view does not push Today and the zoom off the toolbar.
+    const before = ruleBody('[data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"])::before');
+
+    expect(before).toContain('flex: 0 1 calc(var(--blok-database-timeline-table-width) + var(--blok-database-timeline-table-more) * 200px - 41px)');
+    expect(before).toContain('min-inline-size: 0');
+    expect(ruleBody('[data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"]) > *')).toContain('flex-shrink: 0');
+    expect(ruleBody(shown)).not.toContain('margin-inline-start');
     expect(ruleBody(shown)).toContain('margin-inline-end: 21px');
     expect(ruleBody(shown)).toContain('inline-size: 28px');
     expect(ruleBody(shown)).toContain('block-size: 24px');

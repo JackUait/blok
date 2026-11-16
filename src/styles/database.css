@@ -15332,6 +15332,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   /* notion-motion.md Round 6: 376 with the border, at 1512 and 1100. Round 48 A7: its first 6px sit under Notion's sidebar,
      so 370 show (the page edge to 640). The toolbar's « and month are placed from it. */
   --blok-database-timeline-table-width: 370px;
+  /* The view sets the count of panel columns past Name. */
+  --blok-database-timeline-table-more: 0;
   /* "+ New" reads the view's width (cqi) from inside the wide canvas. */
   container-type: inline-size;
   display: flex;
@@ -15361,6 +15363,21 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 [data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"]) {
   padding-inline-start: 0;
   padding-inline-end: 0;
+}
+
+/*
+ * The room before « (37 before the panel's end, less the 4px gap). notion-motion.md Round 54 §4: each column past
+ * Name moves it 200 (603 → 1003), like the panel's 200px auto columns. It shrinks first, so a panel wider than
+ * the view keeps Today and the zoom on screen (Notion's capped case is unread).
+ */
+[data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"])::before {
+  content: '';
+  flex: 0 1 calc(var(--blok-database-timeline-table-width) + var(--blok-database-timeline-table-more) * 200px - 41px);
+  min-inline-size: 0;
+}
+
+[data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"]) > * {
+  flex-shrink: 0;
 }
 
 /* notion-motion.md Round 41 Part B: with the panel shut, a page-wide editor's timeline spans the column plus 8px each side. Round 6: open, it is full-bleed. */
@@ -15713,7 +15730,6 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   inline-size: 28px;
   block-size: 24px;
   padding: 0 var(--blok-space-1-5);
-  margin-inline-start: calc(var(--blok-database-timeline-table-width) - 37px);
   margin-inline-end: 21px;
 }
 

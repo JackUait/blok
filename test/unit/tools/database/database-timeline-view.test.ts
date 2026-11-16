@@ -734,6 +734,15 @@ describe('DatabaseTimelineView', () => {
   });
 
   describe('table panel', () => {
+    // notion-motion.md Round 54 §4: « and the month text follow the panel's end (603 → 1003 with Date and Status shown).
+    it('tells the toolbar how many columns past Name the panel shows', () => {
+      const { root } = mount({
+        view: timelineView({ showTimelineTable: true, tableProperties: [{ id: 'p-due', visible: true }, { id: 'p-notes', visible: true }] }),
+      });
+
+      expect(root.style.getPropertyValue('--blok-database-timeline-table-more')).toBe('2');
+    });
+
     it('keeps an undated item\'s empty lane while the table shows, so panel rows and lanes line up (findings C03)', () => {
       const { root } = mount({ view: timelineView({ showTimelineTable: true }) });
 

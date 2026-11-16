@@ -18100,6 +18100,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   --blok-database-timeline-header-block: calc(var(--blok-database-timeline-line) + var(--blok-database-timeline-header-under));
   --blok-database-timeline-day: 40px;
   --blok-database-timeline-table-width: 370px;
+  --blok-database-timeline-table-more: 0;
   container-type: inline-size;
   display: flex;
   flex-direction: column;
@@ -18123,6 +18124,16 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 [data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"]) {
   padding-inline-start: 0;
   padding-inline-end: 0;
+}
+
+[data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"])::before {
+  content: '';
+  flex: 0 1 calc(var(--blok-database-timeline-table-width) + var(--blok-database-timeline-table-more) * 200px - 41px);
+  min-inline-size: 0;
+}
+
+[data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"]) > * {
+  flex-shrink: 0;
 }
 
 [data-blok-database-timeline]:not(:has(> [data-blok-database-timeline-toolbar] > [data-blok-database-timeline-table-toggle][aria-pressed="true"])) {
@@ -18418,7 +18429,6 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   inline-size: 28px;
   block-size: 24px;
   padding: 0 var(--blok-space-1-5);
-  margin-inline-start: calc(var(--blok-database-timeline-table-width) - 37px);
   margin-inline-end: 21px;
 }
 

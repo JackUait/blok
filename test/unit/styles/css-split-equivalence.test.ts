@@ -1805,6 +1805,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R123_BYTES = 174;
     // Lane r126: Round 54 gallery ghost hover state, form drag copy ring, line fade and "+" gap. Net database.css growth against origin/main.
     const DATABASE_R126_BYTES = 948;
+    // Lane r125: Round 54 timeline « and month follow the panel's end. Net database.css growth against origin/main.
+    const DATABASE_R125_BYTES = 381;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2381,6 +2383,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R124_BYTES
       + DATABASE_R123_BYTES
       + DATABASE_R126_BYTES
+      + DATABASE_R125_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

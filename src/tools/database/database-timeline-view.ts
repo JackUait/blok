@@ -482,6 +482,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       .flatMap((p) => this.options.schema.filter((s) => s.id === p.id));
 
     panel.setAttribute('data-blok-database-timeline-table', '');
+    // notion-motion.md Round 54 §4: « and the month text follow the panel's end. The toolbar cannot read the panel's width.
+    this.root?.style.setProperty('--blok-database-timeline-table-more', String(Math.max(properties.length - 1, 0)));
     // notion-motion.md Round 53 §3: the panel never scrolls sideways; a sideways wheel over it scrolls the chart.
     panel.addEventListener('wheel', (event) => {
       if (this.scroller === null || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) {

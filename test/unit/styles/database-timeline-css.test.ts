@@ -177,8 +177,13 @@ describe('database timeline styles', () => {
     expect(ruleBody('[data-blok-database-timeline-table]')).toContain('padding-inline-start: 90px');
     const shown = '[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"]';
 
-    expect(ruleBody(shown)).toContain('margin-inline-start: calc(var(--blok-database-timeline-table-width) - var(--blok-space-6) - var(--blok-space-3))');
-    expect(ruleBody(shown)).toContain('margin-inline-end: var(--blok-space-6)');
+    // notion-motion.md Round 50 item 6: open, « is 28x24 with 6px sides, starts 37 before the panel's end, its glyph 2 above centre.
+    expect(ruleBody(shown)).toContain('margin-inline-start: calc(var(--blok-database-timeline-table-width) - 37px)');
+    expect(ruleBody(shown)).toContain('margin-inline-end: 21px');
+    expect(ruleBody(shown)).toContain('inline-size: 28px');
+    expect(ruleBody(shown)).toContain('block-size: 24px');
+    expect(ruleBody(shown)).toContain('padding: 0 var(--blok-space-1-5)');
+    expect(ruleBody(shown)).toContain('inset-block-start: -2px');
     expect(ruleBody('[data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"])')).toContain('padding-inline-start: 0');
     expect(ruleBody(`${shown} svg`)).toContain('transform: scaleX(-1)');
   });
@@ -350,6 +355,30 @@ describe('edge readout offset (Round 49 B9)', () => {
   it('sits 10px outside either edge', () => {
     expect(ruleBody('[data-blok-database-timeline-edge-readout="end"]')).toContain('inset-inline-start: calc(100% + 10px)');
     expect(ruleBody('[data-blok-database-timeline-edge-readout="start"]')).toContain('inset-inline-end: calc(100% + 10px)');
+  });
+
+  // notion-motion.md Round 50 item 1: a 22-tall box on the canvas fill, 4 padding, radius 6, no border or shadow, top at bar top + 7.
+  it('draws the readout as a light 22-tall box, 7 below the bar top', () => {
+    const body = ruleBody('[data-blok-database-timeline-edge-readout]');
+
+    expect(body).toContain('background-color: var(--blok-database-timeline-canvas-bg)');
+    expect(body).toContain('padding: var(--blok-space-1)');
+    expect(body).toContain('line-height: 14px');
+    expect(body).toContain('border-radius: var(--blok-radius-control)');
+    expect(body).toContain('inset-block-start: 7px');
+    expect(body).not.toContain('translate');
+    expect(body).not.toContain('box-shadow');
+  });
+});
+
+// notion-motion.md Round 50 item 6: the header glyph is 16 centred in an 18 box at the row icon's x; "Name" 6 after it, at the titles' x.
+describe('panel header icon (Round 50)', () => {
+  it('centres the 16 glyph in an 18 box, the label 6 after', () => {
+    const icon = ruleBody('[data-blok-database-timeline-table-header-icon]');
+
+    expect(icon).toContain('inline-size: 18px');
+    expect(icon).toContain('justify-content: center');
+    expect(ruleBody('[data-blok-database-timeline-table-header] > *')).toContain('gap: var(--blok-space-1-5)');
   });
 });
 

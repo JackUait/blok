@@ -15660,11 +15660,14 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 [data-blok-database-timeline-table-header] > * {
   display: flex;
   align-items: center;
-  gap: var(--blok-space-1);
+  gap: var(--blok-space-1-5);
 }
 
+/* notion-motion.md Round 50 item 6: 16 centred in 18, like the row icons below. */
 [data-blok-database-timeline-table-header-icon] {
   display: inline-flex;
+  justify-content: center;
+  inline-size: 18px;
   color: var(--blok-database-table-header-icon);
 }
 
@@ -15689,13 +15692,17 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 /*
- * timeline.png: the « ink starts 27px before the panel's border and the month ink 18px after it.
- * The 24px button (4px padding, ink 4px into the 16px icon) ends 12px before the panel's end;
- * the margin plus the 4px gap starts the month 16px past it.
+ * notion-motion.md Round 50 item 6: open, « is 28x24 with 6px sides and ends 9 before the panel's end;
+ * the margin plus the 4px gap starts the month 16 past it. Its glyph sits 2 above the row's centre;
+ * a relative offset, so the toolbar keeps its height.
  */
 [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"] {
-  margin-inline-start: calc(var(--blok-database-timeline-table-width) - var(--blok-space-6) - var(--blok-space-3));
-  margin-inline-end: var(--blok-space-6);
+  inset-block-start: -2px;
+  inline-size: 28px;
+  block-size: 24px;
+  padding: 0 var(--blok-space-1-5);
+  margin-inline-start: calc(var(--blok-database-timeline-table-width) - 37px);
+  margin-inline-end: 21px;
 }
 
 [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"] svg {
@@ -16128,18 +16135,21 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   inset-inline-start: 0;
 }
 
+/* notion-motion.md Round 50 item 1: a 22-tall box at bar top + 7, on the canvas fill so grid lines stop at it. */
 [data-blok-database-timeline-edge-readout] {
   position: absolute;
-  inset-block-start: 50%;
-  translate: 0 -50%;
+  inset-block-start: 7px;
+  padding: var(--blok-space-1);
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-timeline-canvas-bg);
   font-size: 12px;
-  line-height: 16px;
+  line-height: 14px;
   font-weight: 400;
   color: var(--blok-database-timeline-text);
   pointer-events: none;
 }
 
-/* notion-motion.md Round 49 B9: 10 outside the edge. */
+/* notion-motion.md Round 49 B9: the box 10 outside the edge. */
 [data-blok-database-timeline-edge-readout="end"] {
   inset-inline-start: calc(100% + 10px);
 }

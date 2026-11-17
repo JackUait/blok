@@ -391,8 +391,10 @@ export class DatabaseTableGrid {
     const step = key === null ? undefined : tabStep[key];
     const down = key === 'Enter' && !fresh ? this.offset(ref, 1, 0) : ref;
     const target = step === undefined ? down : this.offset(ref, 0, step);
+    // notion-motion.md Round 55 §4: Tab in a Text editor leaves no cell selected. Other types are unmeasured.
+    const deselect = key === 'Tab' && this.columns.find((p) => p.id === ref.propertyId)?.type === 'text';
 
-    this.state.selection = { kind: 'cell', anchor: target, focus: target };
+    this.state.selection = deselect ? null : { kind: 'cell', anchor: target, focus: target };
     this.paint();
     if (key === 'Enter' || key === 'Escape' || step !== undefined || this.root.contains(document.activeElement) || document.activeElement === document.body) {
       this.root.focus({ preventScroll: true });

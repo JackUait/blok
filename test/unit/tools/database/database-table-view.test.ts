@@ -863,8 +863,8 @@ describe('DatabaseTableView', () => {
       expect(root.querySelector('[data-blok-database-table-selection-bar]')).toBeNull();
     });
 
-    // notion-spec-2 §19.4: Tab saves, closes and selects the cell to the right, no editor open.
-    it('Tab in a cell editor saves, closes and selects the cell to the right', () => {
+    // notion-motion.md Round 55 §4 "Keyboard in editors": Tab in a Text editor saves and closes, and no cell is selected.
+    it('Tab in a Text cell editor saves and closes, and leaves no cell selected', () => {
       const { root, handlers } = mount();
 
       cell(root, 'r1', 'p-notes').click();
@@ -872,7 +872,8 @@ describe('DatabaseTableView', () => {
       editorField().dispatchEvent(new Event('input', { bubbles: true }));
       const event = press(editorField(), 'Tab');
 
-      expect(selectedCells(root)).toEqual(['r1/p-amount']);
+      expect(selectedCells(root)).toEqual([]);
+      expect(anchorCell(root)).toBeNull();
       expect(event.defaultPrevented).toBe(true);
       expect(editor()).toBeNull();
       expect(handlers.commitCell).toHaveBeenCalledWith('r1', 'p-notes', 'typed');

@@ -20998,7 +20998,7 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   flex-direction: column;
   align-items: center;
   gap: var(--blok-space-6);
-  padding-block: var(--blok-space-4);
+  padding-block: var(--blok-space-3-5) var(--blok-space-4);
 }
 
 [data-blok-database-feed-card] {
@@ -21536,7 +21536,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-database-view-toolbar] > [data-blok-database-toolbar-share-form] {
   height: 28px;
-  margin-inline-start: var(--blok-space-1-5);
+  margin-inline: var(--blok-space-1-5) 0;
   padding-inline: var(--blok-space-2);
   border: none;
   border-radius: var(--blok-radius-control);
@@ -21557,6 +21557,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-database-view-toolbar] > [data-blok-database-toolbar-preview-form] {
   gap: var(--blok-space-1-5);
+  margin-inline: var(--blok-space-1-5) 0;
   padding-inline: var(--blok-space-1-5) var(--blok-space-2);
   border: 1px solid var(--blok-database-table-control-border);
   color: var(--blok-database-ink);
@@ -22260,6 +22261,19 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   margin-inline-start: 0;
 }
 
+[data-blok-database-form-header] :is([data-blok-page-add-icon], [data-blok-page-add-cover]) {
+  padding-inline-start: var(--blok-space-2);
+}
+
+[data-blok-database-form-header] :is([data-blok-page-add-icon], [data-blok-page-add-cover]):not(:hover) {
+  color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-form-header] :is([data-blok-page-add-icon], [data-blok-page-add-cover]) svg {
+  width: 14px;
+  height: 14px;
+}
+
 [data-blok-database-form-header-row] [data-blok-page-add-icon] {
   transition: opacity 100ms ease, background-color 120ms ease, color 120ms ease;
 }
@@ -22558,6 +22572,12 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   font: inherit;
   font-weight: 500;
   cursor: pointer;
+}
+
+[data-blok-database-form]:has(> [data-blok-database-form-access]) > [data-blok-database-form-access] > button {
+  block-size: 28px;
+  margin-inline-end: calc(var(--blok-space-1) * -1);
+  padding-block: 0;
 }
 
 [data-blok-database-form-access] > button:hover {

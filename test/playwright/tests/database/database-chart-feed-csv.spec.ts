@@ -379,6 +379,21 @@ test.describe('feed view', () => {
     await cards.first().getByRole('button', { name: 'Write, edit' }).click();
     await expect(page.locator('[data-blok-database-drawer], [data-blok-database-peek]').first()).toBeVisible();
   });
+
+  // notion-motion.md Round 61 §6 Feed (r61-n-glance-feed.raw): the first card's top is 50 under the tab row's top.
+  test('starts the first card 50 under the tab row', async ({ page }) => {
+    const data = blocks({ type: 'feed', properties: [{ id: 'p-title', visible: true }] });
+    // A second view, so the tab row shows.
+    (data[0].data.views as unknown[]).push({ id: 'v2', name: 'Table', type: 'table', position: 'a1', sorts: [], filters: [], visibleProperties: [] });
+
+    await mount(page, data);
+    await expect(page.locator('[data-blok-database-feed-card]').first()).toBeVisible();
+    const tab = await page.locator('[data-blok-database-tab][aria-selected="true"]').boundingBox();
+    const card = await page.locator('[data-blok-database-feed-card]').first().boundingBox();
+
+    if (tab === null || card === null) throw new Error('no feed');
+    expect(card.y - tab.y).toBeCloseTo(50, 1);
+  });
 });
 
 test.describe('CSV', () => {

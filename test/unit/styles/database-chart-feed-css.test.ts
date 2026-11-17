@@ -106,6 +106,11 @@ describe('database chart and feed styles', () => {
       .toContain('align-self: flex-start');
   });
 
+  // notion-motion.md Round 61 §6 Feed: the first card sits 50 under the tab row, 2 higher than a 16 top pad put it.
+  it('pads the feed 14 above the first card and 16 below the last', () => {
+    expect(ruleBody('[data-blok-database-feed]')).toContain('padding-block: var(--blok-space-3-5) var(--blok-space-4)');
+  });
+
   // Same raws: Notion's composer tools are at opacity 0 until the box has focus. A focused textarea always matches
   // :focus-visible, and so does a send button reached by Tab.
   it('hides the composer send button until the composer has focus', () => {

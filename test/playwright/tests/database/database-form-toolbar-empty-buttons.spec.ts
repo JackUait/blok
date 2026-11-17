@@ -149,6 +149,57 @@ test.describe('form toolbar and no-results buttons (notion-motion.md Round 41)',
     expect(box?.width).toBeLessThan(100);
   });
 
+  // notion-motion.md Round 61 §6 Form (r61-n-glance-form-builder.raw): the toolbar's last icon ends 6 before
+  // Preview, Preview ends 6 before "Share form", and Share form ends at the toolbar's end.
+  test('Preview sits 6 from the icons and from Share form, which ends the toolbar', async ({ page }) => {
+    await mount(page, 'v-form');
+    const toolbar = await page.locator('[data-blok-database-view-toolbar]').boundingBox();
+    const settings = await byTestId(page, 'database-toolbar-settings').boundingBox();
+    const preview = await byTestId(page, 'database-toolbar-preview-form').boundingBox();
+    const share = await byTestId(page, 'database-toolbar-share-form').boundingBox();
+
+    if (toolbar === null || settings === null || preview === null || share === null) throw new Error('no toolbar');
+    expect(share.x + share.width).toBeCloseTo(toolbar.x + toolbar.width, 1);
+    expect(share.x - (preview.x + preview.width)).toBeCloseTo(6, 1);
+    expect(preview.x - (settings.x + settings.width)).toBeCloseTo(6, 1);
+  });
+
+  // Same raw: "Change" is 28 tall with no vertical padding and ends 18 inside the 600 access bar.
+  test('the access bar\'s "Change" is 28 tall and ends 18 inside the bar', async ({ page }) => {
+    await mount(page, 'v-form');
+    const bar = await page.locator('[data-blok-database-form-access]').boundingBox();
+    const change = byTestId(page, 'database-form-access-change');
+    const box = await change.boundingBox();
+
+    if (bar === null || box === null) throw new Error('no access bar');
+    expect(box.height).toBeCloseTo(28, 1);
+    expect(bar.x + bar.width - (box.x + box.width)).toBeCloseTo(18, 1);
+    expect(box.y - bar.y).toBeCloseTo(10, 1);
+    await expect(change).toHaveCSS('padding-top', '0px');
+  });
+
+  // Same raw: "Form icon" and "Form cover" draw a 14 glyph 8 into the button, in the database's secondary ink.
+  test('"Form icon" and "Form cover" carry a 14 glyph 8 in, in the database ink', async ({ page }) => {
+    await mount(page, 'v-form');
+    const ink = await token(page, '--blok-database-ink-secondary');
+
+    for (const name of ['add-icon', 'add-cover']) {
+      const button = page.locator(`[data-blok-database-form-header] [data-blok-page-${name}]`);
+      const box = await button.boundingBox();
+      const glyph = await button.evaluate((el) => {
+        const rect = el.querySelector('svg')?.getBoundingClientRect();
+
+        return rect === undefined ? null : { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+      });
+
+      if (box === null || glyph === null) throw new Error(`no ${name}`);
+      expect(glyph.width).toBeCloseTo(14, 1);
+      expect(glyph.x - box.x).toBeCloseTo(8, 1);
+      expect(glyph.y + glyph.height / 2).toBeCloseTo(box.y + box.height / 2, 1);
+      await expect(button).toHaveCSS('color', ink);
+    }
+  });
+
   test('Preview and Share form stay hidden on a table view', async ({ page }) => {
     await mount(page, 'v-table');
 

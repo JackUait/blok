@@ -18592,7 +18592,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   align-items: center;
   /* notion-motion.md Round 32 §3 Feed: cards at a 200 pitch, 175.5 tall. */
   gap: var(--blok-space-6);
-  padding-block: var(--blok-space-4);
+  /* Round 61 §6: the first card is 50 under the tab row. */
+  padding-block: var(--blok-space-3-5) var(--blok-space-4);
 }
 
 [data-blok-database-feed-card] {
@@ -19181,10 +19182,10 @@ button[data-blok-database-feed-reaction]:hover,
 
 /* A form view's "Share form" (research/19 §3d): Notion's blue toolbar button.
    The toolbar prefix outranks `[data-blok-database-view-toolbar] > button`, which would paint it gray.
-   6px + Preview's 1px hairline margin = Notion's 7px gap (r41-n-empty-form.png). */
+   Round 61 §6: 6 after Preview and none after it; the shared 1px button margins are dropped. */
 [data-blok-database-view-toolbar] > [data-blok-database-toolbar-share-form] {
   height: 28px;
-  margin-inline-start: var(--blok-space-1-5);
+  margin-inline: var(--blok-space-1-5) 0;
   padding-inline: var(--blok-space-2);
   border: none;
   border-radius: var(--blok-radius-control);
@@ -19209,6 +19210,7 @@ button[data-blok-database-feed-reaction]:hover,
    area matches Notion's at 500 (158 px² both) and not at 400 (136). */
 [data-blok-database-view-toolbar] > [data-blok-database-toolbar-preview-form] {
   gap: var(--blok-space-1-5);
+  margin-inline: var(--blok-space-1-5) 0;
   padding-inline: var(--blok-space-1-5) var(--blok-space-2);
   border: 1px solid var(--blok-database-table-control-border);
   color: var(--blok-database-ink);
@@ -19976,6 +19978,20 @@ button[data-blok-database-feed-reaction]:hover,
   margin-inline-start: 0;
 }
 
+/* Round 61 §6: a 14 glyph 8 in (Round 31's padding 0 8); the button keeps its width. Warm AA ink, not the page's. */
+[data-blok-database-form-header] :is([data-blok-page-add-icon], [data-blok-page-add-cover]) {
+  padding-inline-start: var(--blok-space-2);
+}
+
+[data-blok-database-form-header] :is([data-blok-page-add-icon], [data-blok-page-add-cover]):not(:hover) {
+  color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-form-header] :is([data-blok-page-add-icon], [data-blok-page-add-cover]) svg {
+  width: 14px;
+  height: 14px;
+}
+
 /* Round 31 §1: both buttons fade out over 100ms; page-title.css gives Add icon 100ms only in its own row. */
 [data-blok-database-form-header-row] [data-blok-page-add-icon] {
   transition: opacity 100ms ease, background-color 120ms ease, color 120ms ease;
@@ -20310,6 +20326,13 @@ button[data-blok-database-feed-reaction]:hover,
   font: inherit;
   font-weight: 500;
   cursor: pointer;
+}
+
+/* Round 61 §6: 28 tall, no vertical padding, 4 into the bar's 22 end padding. */
+[data-blok-database-form]:has(> [data-blok-database-form-access]) > [data-blok-database-form-access] > button {
+  block-size: 28px;
+  margin-inline-end: calc(var(--blok-space-1) * -1);
+  padding-block: 0;
 }
 
 [data-blok-database-form-access] > button:hover {

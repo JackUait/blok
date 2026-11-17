@@ -362,3 +362,63 @@ test('a table row\'s Comment box near the window bottom sits 4px above the row a
   expect(anchor.top - card.bottom).toBeCloseTo(4, 0);
   expect(origin).toBe(`${card.width / 2}px ${card.height}px`);
 });
+
+// notion-motion.md Round 62 §2: Mention puts "@" in the text and opens the menu above the box, its left 22 before the "@".
+test('Mention opens the "@" menu above the comment box; Escape closes only the menu; Enter picks Today', async ({ page }) => {
+  await titleCell(page).click({ button: 'right' });
+  await page.getByRole('menuitem', { name: /Comment/ }).click();
+  await expect(composer(page)).toBeFocused();
+  await composer(page).evaluate(async (input) => {
+    await Promise.all(input.closest('[data-blok-popover-container]')?.getAnimations().map((animation) => animation.finished) ?? []);
+  });
+  await composer(page).pressSequentially('see ');
+  await page.getByRole('button', { name: 'Mention a person, page, or date' }).click();
+
+  const menu = page.getByRole('listbox', { name: 'Mention a person, page, or date' });
+
+  await expect(menu).toBeVisible();
+  await expect(composer(page)).toHaveValue('see @');
+  await expect(composer(page)).toBeFocused();
+  await menu.evaluate(async (el) => {
+    await Promise.all(el.getAnimations().map((animation) => animation.finished));
+  });
+  const place = await menu.evaluate((el) => {
+    const box = document.querySelector('[data-blok-database-comment-input]')?.closest('[data-blok-popover-container]')?.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+
+    return { width: r.width, bottom: r.bottom, left: r.left, boxTop: box?.top ?? 0 };
+  });
+
+  const at = await composer(page).evaluate((input) => {
+    const style = getComputedStyle(input);
+    const context = document.createElement('canvas').getContext('2d');
+
+    if (context === null) return 0;
+    context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+
+    return input.getBoundingClientRect().left + parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft) + context.measureText('see ').width;
+  });
+
+  expect(place.width).toBe(330);
+  expect(place.bottom).toBeCloseTo(place.boxTop - 3.5, 0);
+  expect(place.left).toBeCloseTo(at - 22, 0);
+  await expect(menu.getByRole('option').first()).toHaveAttribute('aria-selected', 'true');
+
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+  await expect(composer(page)).toBeVisible();
+  await expect(composer(page)).toHaveValue('see @');
+
+  await composer(page).pressSequentially('t');
+  await expect(menu).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(menu).toBeHidden();
+  await page.keyboard.press('Enter');
+
+  const chip = page.getByRole('listitem').locator('[data-blok-database-comment-mention-chip="date"]');
+
+  await expect(chip).toBeVisible();
+  const [saved] = await savedComments(page);
+
+  expect(saved.data.mentions).toEqual([expect.objectContaining({ type: 'date', start: 4 })]);
+});

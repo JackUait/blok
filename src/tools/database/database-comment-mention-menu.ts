@@ -72,11 +72,12 @@ const caretLeft = (input: HTMLTextAreaElement, index: number): number => {
   copy.style.whiteSpace = 'pre-wrap';
   copy.style.overflowWrap = 'anywhere';
   copy.style.visibility = 'hidden';
+  copy.style.position = 'absolute';
   copy.textContent = input.value.slice(0, index);
   mark.textContent = '@';
   copy.appendChild(mark);
   input.after(copy);
-  const left = input.getBoundingClientRect().left + mark.offsetLeft - input.scrollLeft;
+  const left = input.getBoundingClientRect().left + mark.getBoundingClientRect().left - copy.getBoundingClientRect().left - input.scrollLeft;
 
   copy.remove();
 
@@ -173,11 +174,13 @@ export const createMentionMenu = (options: MentionMenuOptions): MentionMenu => {
     if (menu === null) return;
     const box = (input.closest('[data-blok-popover-container]') ?? options.host).getBoundingClientRect();
     const left = Math.min(Math.max(caretLeft(input, state.start) - AT_OFFSET, EDGE), window.innerWidth - MENU_WIDTH - EDGE);
-    const height = menu.getBoundingClientRect().height;
-    const above = box.top - GAP - height;
+    // Layout height: the open scale would shrink a measured rect.
+    const fits = box.top - GAP - menu.offsetHeight >= EDGE;
 
     menu.style.left = `${left}px`;
-    menu.style.top = `${above >= EDGE ? above : box.bottom + GAP}px`;
+    // Pinned by its bottom, so it grows upward as sections arrive.
+    menu.style.bottom = fits ? `${document.documentElement.clientHeight - box.top + GAP}px` : 'auto';
+    menu.style.top = fits ? 'auto' : `${box.bottom + GAP}px`;
   };
 
   const draw = (): void => {

@@ -1363,6 +1363,8 @@ export class DatabaseCardDrawer {
     const head = document.createElement('div');
 
     head.setAttribute('data-blok-database-drawer-page-head', '');
+    // Its buttons keep native Tab: the block's Tab handler would otherwise hold focus on the database block.
+    head.setAttribute('data-blok-keyboard-owner', '');
     const src = row.cover === undefined ? null : safeImageSrc(row.cover);
     const backlinks = this.buildBacklinks(row.id);
 
@@ -1429,8 +1431,30 @@ export class DatabaseCardDrawer {
       customize.insertAdjacentHTML('afterbegin', IconPageLayout);
       head.appendChild(customize);
     }
+    this.orderPageHead(head);
 
     return head;
+  }
+
+  /**
+   * Puts the icon where the mode draws it, so Tab follows what is seen (notion-motion.md Round 58 §1):
+   * under the Add icon / Add cover / Customize row in a side peek, right after the cover elsewhere.
+   */
+  private orderPageHead(head: Element | null | undefined = this.drawer?.querySelector('[data-blok-database-drawer-page-head]')): void {
+    const icon = head?.querySelector(':scope > [data-blok-database-drawer-icon]');
+
+    if (head === null || head === undefined || icon === null || icon === undefined) {
+      return;
+    }
+    const cover = head.querySelector(':scope > [data-blok-database-drawer-cover]');
+
+    if (this.mode === 'side') {
+      head.appendChild(icon);
+    } else if (cover === null) {
+      head.prepend(icon);
+    } else {
+      cover.after(icon);
+    }
   }
 
   /** "N backlinks", or null when no page mentions the row: Notion draws nothing then (research/17 §2a). */
@@ -2170,6 +2194,7 @@ export class DatabaseCardDrawer {
       return;
     }
     drawer.setAttribute('data-peek-mode', mode);
+    this.orderPageHead();
     drawer.setAttribute('role', ({ side: 'complementary', center: 'dialog', full: 'region' } as const)[mode]);
     drawer.toggleAttribute('aria-modal', false);
     if (mode === 'center') {

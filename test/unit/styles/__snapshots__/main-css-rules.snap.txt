@@ -6606,17 +6606,12 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-icon] {
-  order: 1;
   inline-size: 36px;
   block-size: 36px;
   margin-block: 0 calc(-1 * var(--blok-space-1));
   margin-inline: var(--blok-space-2-25) calc(100% - 36px - var(--blok-space-2-25));
   font-size: 36px;
   line-height: 36px;
-}
-
-[data-blok-database-drawer]:is([data-peek-mode="center"], [data-peek-mode="full"]) [data-blok-database-drawer-page-head] > :is([data-blok-database-drawer-backlinks], [data-blok-database-drawer-add-icon], [data-blok-database-drawer-add-cover], [data-blok-database-drawer-customize]) {
-  order: 1;
 }
 
 [data-blok-database-drawer]:is([data-peek-mode="center"], [data-peek-mode="full"]) [data-blok-database-drawer-icon] {

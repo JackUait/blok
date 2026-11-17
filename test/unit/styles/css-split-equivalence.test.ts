@@ -1818,7 +1818,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r134: Round 57 side peek cover spans the peek, 143.4 tall, square; 36 icon. Net database.css growth against origin/main.
     const DATABASE_R134_BYTES = 1193;
     // Lane r135: Round 58 row page covers 20vh / 30vh across the page, square; 78 icon over the cover in centre and full page. Net database.css growth against origin/main.
-    const DATABASE_R135_BYTES = 2786;
+    const DATABASE_R135_BYTES = 2370;
     // Lane r133: Round 57 OPEN pill on a timeline panel row. Net database.css growth against origin/main.
     const DATABASE_R133_BYTES = 804;
     // Lane r132: Round 57 "Colors" weight 500, Group › menu padding; the option row menu class is shared by select and status. Net database.css growth against origin/main.

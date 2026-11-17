@@ -2454,9 +2454,8 @@
   padding-block-start: calc(30vh - var(--blok-space-6));
 }
 
-/* Side: a 36px icon on its own line under the row, the title right under it. */
+/* Side: a 36px icon on its own line under the row, the title right under it. The DOM order is set per mode in database-card-drawer.ts. */
 [data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-icon] {
-  order: 1;
   inline-size: 36px;
   block-size: 36px;
   margin-block: 0 calc(-1 * var(--blok-space-1));
@@ -2465,15 +2464,7 @@
   line-height: 36px;
 }
 
-/*
-  Centre and full page: a 78px icon on its own line, 96 under the bar or 42 over the cover; the row 8 under it.
-  "N backlinks" comes before the icon in the DOM, so the row moves after it: a negative order on the icon
-  would paint it under the full page's absolute cover.
-*/
-[data-blok-database-drawer]:is([data-peek-mode="center"], [data-peek-mode="full"]) [data-blok-database-drawer-page-head] > :is([data-blok-database-drawer-backlinks], [data-blok-database-drawer-add-icon], [data-blok-database-drawer-add-cover], [data-blok-database-drawer-customize]) {
-  order: 1;
-}
-
+/* Centre and full page: a 78px icon on its own line, 96 under the bar or 42 over the cover; the row 8 under it. */
 [data-blok-database-drawer]:is([data-peek-mode="center"], [data-peek-mode="full"]) [data-blok-database-drawer-icon] {
   position: relative;
   inline-size: 78px;

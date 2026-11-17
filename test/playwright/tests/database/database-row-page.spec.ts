@@ -700,6 +700,37 @@ test.describe('row page cover', () => {
     });
   }
 
+  // Keyboard focus follows the drawn order: top to bottom, then start to end. The cover's own button comes first.
+  const tabOrderAndDrawn = async (page: Page): Promise<{ tabbed: string[]; drawn: string[] }> => {
+    const head = peek(page).locator('[data-blok-database-drawer-page-head]');
+    const drawn = await head.evaluate((el) => [...el.querySelectorAll('button')]
+      .filter((b) => b.closest('[data-blok-database-drawer-cover]') === null)
+      .map((b) => ({ name: b.getAttributeNames().find((n) => n.startsWith('data-blok-database-drawer-')) ?? '', rect: b.getBoundingClientRect() }))
+      .sort((a, b) => (Math.round(a.rect.top) - Math.round(b.rect.top)) || (a.rect.left - b.rect.left))
+      .map((b) => b.name));
+    const tabbed: string[] = [];
+
+    await head.evaluate((el) => {
+      [...el.querySelectorAll('button')].find((b) => b.closest('[data-blok-database-drawer-cover]') === null)?.focus();
+    });
+    for (const _ of drawn) {
+      tabbed.push(await page.evaluate(() => document.activeElement?.getAttributeNames().find((n) => n.startsWith('data-blok-database-drawer-')) ?? ''));
+      await page.keyboard.press('Tab');
+    }
+
+    return { tabbed, drawn };
+  };
+
+  for (const [mode, rowId] of [['side', 'r1'], ['side', 'r2'], ['center', 'r1'], ['center', 'r2'], ['full', 'r1']] as const) {
+    test(`${mode}: Tab walks the head (${rowId}) in the order it is drawn`, async ({ page }) => {
+      await open(page, rowId, mode);
+      const { tabbed, drawn } = await tabOrderAndDrawn(page);
+
+      expect(tabbed).toEqual(drawn);
+      expect(drawn.length).toBeGreaterThan(1);
+    });
+  }
+
   test('shows the top controls over the whole cover and down to the title', async ({ page }) => {
     await open(page, 'r1', 'side');
 

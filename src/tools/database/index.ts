@@ -9916,8 +9916,8 @@ export class DatabaseTool implements BlockTool {
       event.stopPropagation();
       // notion-motion.md Round 13: a board card's right-click drops every pick and opens that card's own menu.
       if (rowEl.matches('[data-blok-database-board] [data-blok-database-card]')) this.clearRowSelection();
-      // findings-listgallery L16: a list row's menu opens at the pointer.
-      const anchor = rowEl.matches('[data-blok-database-list-row]') ? pointerAnchor(rowEl, event) : rowEl;
+      // findings-listgallery L16, notion-motion.md Round 56 §9: a list row's and a timeline bar's menu open at the pointer.
+      const anchor = rowEl.matches('[data-blok-database-list-row], [data-blok-database-timeline-bar]') ? pointerAnchor(rowEl, event) : rowEl;
 
       this.openCardMenu(anchor, rowEl, rowId);
       if (anchor !== rowEl) this.cardMenuPopover?.on(PopoverEvent.Closed, () => anchor.remove());

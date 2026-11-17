@@ -363,6 +363,29 @@ describe('DatabaseTool — comments on the timeline', () => {
     expect(menuItem('database-row-delete')).not.toBeNull();
   });
 
+  // notion-motion.md Round 56 §9: a bar's row menu opens at the pointer (x 895 on a bar that starts at 870).
+  it('anchors a bar\'s right-click menu at the pointer and keeps the bar picked', () => {
+    const { el } = buildTool(timelineDoc(), { comments: { open: vi.fn() } }, timelineData());
+    const bar = barOf(el, 'a');
+
+    bar.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
+    const point = document.querySelector<HTMLElement>('[data-blok-database-menu-point]');
+
+    expect(point?.style.left).toBe('300px');
+    expect(point?.style.top).toBe('120px');
+    expect(point?.hasAttribute('data-popover-open')).toBe(true);
+    expect(bar.hasAttribute('data-blok-database-card-picked')).toBe(true);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(document.querySelector('[data-blok-database-menu-point]')).toBeNull();
+  });
+
+  it('keeps a table panel row\'s right-click menu on the row', () => {
+    const { el } = buildTool(timelineDoc(), { comments: { open: vi.fn() } }, timelineData());
+
+    tableRowOf(el, 'a').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
+    expect(document.querySelector('[data-blok-database-menu-point]')).toBeNull();
+  });
+
   it('a right-click on a table panel row opens the row menu with Comment, which opens that row\'s comments', () => {
     const open = vi.fn();
     const { el } = buildTool(timelineDoc(), { comments: { open } }, timelineData());

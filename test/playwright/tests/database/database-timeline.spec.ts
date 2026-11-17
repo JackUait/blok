@@ -294,6 +294,45 @@ test.describe('timeline', () => {
     await expect(page.getByRole('menuitem', { name: /Comment/ })).toBeVisible();
   });
 
+  // notion-motion.md Round 56 §9: the bar menu opens at the pointer (x 895 on a bar from 870).
+  test('a bar\'s right-click menu opens at the pointer', async ({ page }) => {
+    await mount(page, blocks({ type: 'timeline' }));
+
+    const box = await bar(page, 'r2').boundingBox();
+
+    if (box === null) throw new Error('no bar');
+    const x = Math.round(box.x + box.width - 10);
+
+    await page.mouse.click(x, box.y + box.height / 2, { button: 'right' });
+    await expect(page.getByRole('menuitem', { name: /Copy link/ })).toBeVisible();
+    const menu = await page.locator('[data-blok-popover][data-blok-popover-opened="true"] [data-blok-popover-container]').boundingBox();
+
+    if (menu === null) throw new Error('no menu');
+    expect(menu.x).toBeCloseTo(x, 0);
+  });
+
+  // notion-motion.md Round 56 §9: a panel title click, or Cmd+click, edits the title in place; no peek.
+  test('a click on a panel title edits it in place and opens no peek', async ({ page }) => {
+    await mount(page, blocks({ type: 'timeline', showTimelineTable: true }));
+
+    const row = page.locator('[data-blok-database-timeline-table-row][data-row-id="r1"]');
+    const rowBox = await row.boundingBox();
+
+    if (rowBox === null) throw new Error('no row');
+    await row.locator('[data-blok-database-timeline-table-title-text]').click({ modifiers: ['ControlOrMeta'] });
+    const input = page.locator('[data-blok-database-cell-input="title"]');
+
+    await expect(input).toBeFocused();
+    await expect(drawer(page)).not.toBeVisible();
+    const editor = await input.boundingBox();
+
+    if (editor === null) throw new Error('no editor');
+    expect(editor.x - rowBox.x).toBeCloseTo(-1, 0);
+    await input.fill('Lift-off');
+    await page.keyboard.press('Enter');
+    await expect.poll(async () => (await savedRow(page, 'r1'))['p-title']).toBe('Lift-off');
+  });
+
   test('the zoom menu, + and - keys change the zoom', async ({ page }) => {
     await mount(page, blocks({ type: 'timeline' }));
 

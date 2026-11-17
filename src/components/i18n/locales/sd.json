@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "تبصرا کوليو",
   "tools.database.commentPlaceholder": "تبصرو شامل ڪريو…",
   "tools.database.commentSend": "تبصرو موڪليو",
+  "tools.database.commentMention": "ڪنهن ماڻهو، صفحي يا تاريخ جو ذڪر ڪريو",
+  "tools.database.commentMentionPeople": "ماڻهو",
   "tools.database.commentJustNow": "هاڻي ئي",
   "tools.database.feedJustNow": "هاڻي ئي",
   "tools.database.feedSeeMore": "وڌيڪ ڏيکاريو",

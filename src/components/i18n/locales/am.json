@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "አስተያየቶችን ክፈት",
   "tools.database.commentPlaceholder": "አስተያየት ያክሉ…",
   "tools.database.commentSend": "አስተያየት ላክ",
+  "tools.database.commentMention": "ሰው፣ ገጽ ወይም ቀን ይጥቀሱ",
+  "tools.database.commentMentionPeople": "ሰዎች",
   "tools.database.commentJustNow": "አሁን",
   "tools.database.feedJustNow": "አሁን",
   "tools.database.feedSeeMore": "ተጨማሪ አሳይ",

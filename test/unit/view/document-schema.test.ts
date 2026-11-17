@@ -194,7 +194,7 @@ const savedData: Record<string, Record<string, unknown>> = {
   'database-row': new DatabaseRow(options({ properties: { p1: 'Ship it' }, position: 'a0', title: 'Ship it', pageId: 'row-page', convertedValues: { p2: { type: 'text', value: '007' } }, bodyBlocks: true, icon: '🚀', cover: 'https://example.com/c.png', coverPosition: 30.01, fullWidth: false, template: true, anonymous: true, repeat: { frequency: 'weekly', start: '2026-10-12T09:00:00.000Z' }, reminders: { p3: { remind: '1_day_before' } }, 'reactions:u1': { '😀': 1000 } }))
     .save(contentElement('')),
 
-  'database-comment': new DatabaseComment(options({ text: 'Looks good', createdAt: 1000, authorId: 'u1', authorName: 'Ann', propertyId: 'p1', editedAt: 2000, resolved: true })).save(),
+  'database-comment': new DatabaseComment(options({ text: 'Looks good @Bo', createdAt: 1000, authorId: 'u1', authorName: 'Ann', propertyId: 'p1', editedAt: 2000, resolved: true, mentions: [{ type: 'person', id: 'u2', start: 11, label: '@Bo' }] })).save(),
 
   page: new Page(options({ pageId: 'p1', textColor: 'red', backgroundColor: 'blue', cache: { title: 'Roadmap', icon: { type: 'emoji', value: '🗺' } } })).save(),
   'page-link': new PageLink(options({ pageId: 'p1' })).save(),

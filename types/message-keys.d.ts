@@ -805,6 +805,8 @@ export type BlokMessageKey =
   | 'tools.database.commentEdit'
   | 'tools.database.commentEdited'
   | 'tools.database.commentJustNow'
+  | 'tools.database.commentMention'
+  | 'tools.database.commentMentionPeople'
   | 'tools.database.commentMoreActions'
   | 'tools.database.commentPlaceholder'
   | 'tools.database.commentResolve'

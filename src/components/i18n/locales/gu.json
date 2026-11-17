@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "ટિપ્પણીઓ ખોલો",
   "tools.database.commentPlaceholder": "ટિપ્પણી ઉમેરો…",
   "tools.database.commentSend": "ટિપ્પણી મોકલો",
+  "tools.database.commentMention": "કોઈ વ્યક્તિ, પૃષ્ઠ અથવા તારીખનો ઉલ્લેખ કરો",
+  "tools.database.commentMentionPeople": "લોકો",
   "tools.database.commentJustNow": "હમણાં જ",
   "tools.database.feedJustNow": "હમણાં જ",
   "tools.database.feedSeeMore": "વધુ બતાવો",

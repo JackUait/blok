@@ -1264,6 +1264,8 @@
   "tools.database.openComments": "Відкрити коментарі",
   "tools.database.commentPlaceholder": "Додайте коментар…",
   "tools.database.commentSend": "Надіслати коментар",
+  "tools.database.commentMention": "Згадати людину, сторінку або дату",
+  "tools.database.commentMentionPeople": "Люди",
   "tools.database.commentJustNow": "Щойно",
   "tools.database.feedJustNow": "Щойно",
   "tools.database.feedSeeMore": "Показати більше",

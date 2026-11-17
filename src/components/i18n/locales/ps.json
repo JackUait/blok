@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "تبصرې خلاص کړئ",
   "tools.database.commentPlaceholder": "تبصره ورزیاته کړئ…",
   "tools.database.commentSend": "تبصره ولېږئ",
+  "tools.database.commentMention": "یو کس، پاڼه یا نېټه یاده کړئ",
+  "tools.database.commentMentionPeople": "خلک",
   "tools.database.commentJustNow": "همدا اوس",
   "tools.database.feedJustNow": "همدا اوس",
   "tools.database.feedSeeMore": "نور وښایاست",

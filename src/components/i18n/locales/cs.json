@@ -1264,6 +1264,8 @@
   "tools.database.openComments": "Otevřít komentáře",
   "tools.database.commentPlaceholder": "Přidat komentář…",
   "tools.database.commentSend": "Odeslat komentář",
+  "tools.database.commentMention": "Zmínit osobu, stránku nebo datum",
+  "tools.database.commentMentionPeople": "Lidé",
   "tools.database.commentJustNow": "Právě teď",
   "tools.database.feedJustNow": "Právě teď",
   "tools.database.feedSeeMore": "Zobrazit více",

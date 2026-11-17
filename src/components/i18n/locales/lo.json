@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "ເປີດຄຳເຫັນ",
   "tools.database.commentPlaceholder": "ເພີ່ມຄຳເຫັນ…",
   "tools.database.commentSend": "ສົ່ງຄຳເຫັນ",
+  "tools.database.commentMention": "ກ່າວເຖິງບຸກຄົນ, ໜ້າ ຫຼື ວັນທີ",
+  "tools.database.commentMentionPeople": "ຜູ້ຄົນ",
   "tools.database.commentJustNow": "ຫາກໍ່ນີ້",
   "tools.database.feedJustNow": "ຫາກໍ່ນີ້",
   "tools.database.feedSeeMore": "ສະແດງເພີ່ມເຕີມ",

@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "Kommentare öffnen",
   "tools.database.commentPlaceholder": "Kommentar hinzufügen…",
   "tools.database.commentSend": "Kommentar senden",
+  "tools.database.commentMention": "Person, Seite oder Datum erwähnen",
+  "tools.database.commentMentionPeople": "Personen",
   "tools.database.commentJustNow": "Gerade eben",
   "tools.database.feedJustNow": "Gerade eben",
   "tools.database.feedSeeMore": "Mehr anzeigen",

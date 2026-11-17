@@ -1264,6 +1264,8 @@
   "tools.database.openComments": "Otvoriť komentáre",
   "tools.database.commentPlaceholder": "Pridajte komentár…",
   "tools.database.commentSend": "Odoslať komentár",
+  "tools.database.commentMention": "Zmieniť osobu, stránku alebo dátum",
+  "tools.database.commentMentionPeople": "Ľudia",
   "tools.database.commentJustNow": "Práve teraz",
   "tools.database.feedJustNow": "Práve teraz",
   "tools.database.feedSeeMore": "Zobraziť viac",

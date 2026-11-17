@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "เปิดความคิดเห็น",
   "tools.database.commentPlaceholder": "เพิ่มความคิดเห็น…",
   "tools.database.commentSend": "ส่งความคิดเห็น",
+  "tools.database.commentMention": "กล่าวถึงบุคคล หน้า หรือวันที่",
+  "tools.database.commentMentionPeople": "บุคคล",
   "tools.database.commentJustNow": "เมื่อสักครู่",
   "tools.database.feedJustNow": "เมื่อสักครู่",
   "tools.database.feedSeeMore": "แสดงเพิ่มเติม",

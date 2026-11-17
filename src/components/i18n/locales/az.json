@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "Şərhləri aç",
   "tools.database.commentPlaceholder": "Şərh əlavə edin…",
   "tools.database.commentSend": "Şərhi göndər",
+  "tools.database.commentMention": "Şəxs, səhifə və ya tarix qeyd edin",
+  "tools.database.commentMentionPeople": "İnsanlar",
   "tools.database.commentJustNow": "İndicə",
   "tools.database.feedJustNow": "İndicə",
   "tools.database.feedSeeMore": "Daha çox göstər",

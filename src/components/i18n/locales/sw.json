@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "Fungua maoni",
   "tools.database.commentPlaceholder": "Ongeza maoni…",
   "tools.database.commentSend": "Tuma maoni",
+  "tools.database.commentMention": "Taja mtu, ukurasa au tarehe",
+  "tools.database.commentMentionPeople": "Watu",
   "tools.database.commentJustNow": "Sasa hivi",
   "tools.database.feedJustNow": "Sasa hivi",
   "tools.database.feedSeeMore": "Onyesha zaidi",

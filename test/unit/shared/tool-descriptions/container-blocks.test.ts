@@ -725,7 +725,7 @@ describe('container self-description schema and metadata', () => {
     const snapshot = readFileSync(resolve(__dirname, '../../view/__snapshots__/document-schema.json'), 'utf8');
 
     expect(createHash('sha256').update(snapshot).digest('hex'))
-      .toBe('ecaacb131e8953abc29e9c61a30edb2f122a17993d4cc9d3d97b2b4c0385ca02');
+      .toBe('f54796b3c53b6c9cae5c459d75f96d252f328d0129271d0fe1c25509726394ea');
 
     const published: unknown = JSON.parse(snapshot);
 

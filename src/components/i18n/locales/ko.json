@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "댓글 열기",
   "tools.database.commentPlaceholder": "댓글 추가…",
   "tools.database.commentSend": "댓글 보내기",
+  "tools.database.commentMention": "사람, 페이지 또는 날짜 멘션",
+  "tools.database.commentMentionPeople": "사람",
   "tools.database.commentJustNow": "방금",
   "tools.database.feedJustNow": "방금",
   "tools.database.feedSeeMore": "더 보기",

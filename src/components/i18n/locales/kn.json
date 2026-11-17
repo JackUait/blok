@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "ಕಾಮೆಂಟ್‌ಗಳನ್ನು ತೆರೆಯಿರಿ",
   "tools.database.commentPlaceholder": "ಕಾಮೆಂಟ್ ಸೇರಿಸಿ…",
   "tools.database.commentSend": "ಕಾಮೆಂಟ್ ಕಳುಹಿಸಿ",
+  "tools.database.commentMention": "ವ್ಯಕ್ತಿ, ಪುಟ ಅಥವಾ ದಿನಾಂಕವನ್ನು ಉಲ್ಲೇಖಿಸಿ",
+  "tools.database.commentMentionPeople": "ಜನರು",
   "tools.database.commentJustNow": "ಈಗಷ್ಟೇ",
   "tools.database.feedJustNow": "ಈಗಷ್ಟೇ",
   "tools.database.feedSeeMore": "ಇನ್ನಷ್ಟು ತೋರಿಸಿ",

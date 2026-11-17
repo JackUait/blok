@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "Բացել մեկնաբանությունները",
   "tools.database.commentPlaceholder": "Ավելացնել մեկնաբանություն…",
   "tools.database.commentSend": "Ուղարկել մեկնաբանությունը",
+  "tools.database.commentMention": "Նշել անձի, էջի կամ ամսաթվի մասին",
+  "tools.database.commentMentionPeople": "Մարդիկ",
   "tools.database.commentJustNow": "Հենց նոր",
   "tools.database.feedJustNow": "Հենց նոր",
   "tools.database.feedSeeMore": "Ցույց տալ ավելին",

@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "Mở bình luận",
   "tools.database.commentPlaceholder": "Thêm bình luận…",
   "tools.database.commentSend": "Gửi bình luận",
+  "tools.database.commentMention": "Nhắc đến người, trang hoặc ngày",
+  "tools.database.commentMentionPeople": "Mọi người",
   "tools.database.commentJustNow": "Vừa xong",
   "tools.database.feedJustNow": "Vừa xong",
   "tools.database.feedSeeMore": "Hiển thị thêm",

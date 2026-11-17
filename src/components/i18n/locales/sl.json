@@ -1264,6 +1264,8 @@
   "tools.database.openComments": "Odpri komentarje",
   "tools.database.commentPlaceholder": "Dodaj komentar…",
   "tools.database.commentSend": "Pošlji komentar",
+  "tools.database.commentMention": "Omenite osebo, stran ali datum",
+  "tools.database.commentMentionPeople": "Osebe",
   "tools.database.commentJustNow": "Pravkar",
   "tools.database.feedJustNow": "Pravkar",
   "tools.database.feedSeeMore": "Pokaži več",

@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "टिप्पण्या उघडा",
   "tools.database.commentPlaceholder": "टिप्पणी जोडा…",
   "tools.database.commentSend": "टिप्पणी पाठवा",
+  "tools.database.commentMention": "व्यक्ती, पृष्ठ किंवा तारखेचा उल्लेख करा",
+  "tools.database.commentMentionPeople": "लोक",
   "tools.database.commentJustNow": "आत्ताच",
   "tools.database.feedJustNow": "आत्ताच",
   "tools.database.feedSeeMore": "अधिक दाखवा",

@@ -70,6 +70,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/database-board-view.ts': cmds(['database.addRow', 'database.setRowValues', 'database.addOption', 'block.delete'], 'Board cards and columns.'),
   'ui-file:src/tools/database/database-card-drag.ts': cmds(['database.moveRow'], 'Drag a card between groups or within one.'),
   'ui-file:src/tools/database/database-filter-chip.ts': cmds(['database.updateView'], 'A filter pill edits the personal filters; "Save for everyone" writes them, as database.updateView does.'),
+  'ui-file:src/tools/database/database-comment-mention-menu.ts': cmds(['database.addComment', 'database.replyToComment'], 'The "@" menu puts a person, page or date into the comment text. Agents write the same text; the mention stays plain text, and reads show mentions in the comment data.'),
   'ui-file:src/tools/database/database-comments.ts': cmds(['database.addComment', 'database.replyToComment'], 'The feed card box and the row page section write the same built-in comments as the panel.'),
   'ui-file:src/tools/database/database-template-menu.ts': cmd('database.setTemplateRepeat'),
   'ui-file:src/tools/database/database-card-drawer.ts': cmds(['database.setRowValues', 'database.addProperty'], 'Row title, description and property edits.'),

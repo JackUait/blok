@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "Отвори коментари",
   "tools.database.commentPlaceholder": "Додај коментар…",
   "tools.database.commentSend": "Испрати коментар",
+  "tools.database.commentMention": "Спомнете лице, страница или датум",
+  "tools.database.commentMentionPeople": "Луѓе",
   "tools.database.commentJustNow": "Токму сега",
   "tools.database.feedJustNow": "Токму сега",
   "tools.database.feedSeeMore": "Прикажи повеќе",

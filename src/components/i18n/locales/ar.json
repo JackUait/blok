@@ -1282,6 +1282,8 @@
   "tools.database.openComments": "فتح التعليقات",
   "tools.database.commentPlaceholder": "أضف تعليقًا…",
   "tools.database.commentSend": "إرسال التعليق",
+  "tools.database.commentMention": "اذكر شخصًا أو صفحة أو تاريخًا",
+  "tools.database.commentMentionPeople": "الأشخاص",
   "tools.database.commentJustNow": "الآن",
   "tools.database.feedJustNow": "الآن",
   "tools.database.feedSeeMore": "عرض المزيد",

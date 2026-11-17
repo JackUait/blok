@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "Opmerkingen openen",
   "tools.database.commentPlaceholder": "Opmerking toevoegen…",
   "tools.database.commentSend": "Opmerking verzenden",
+  "tools.database.commentMention": "Vermeld een persoon, pagina of datum",
+  "tools.database.commentMentionPeople": "Personen",
   "tools.database.commentJustNow": "Zojuist",
   "tools.database.feedJustNow": "Zojuist",
   "tools.database.feedSeeMore": "Meer weergeven",

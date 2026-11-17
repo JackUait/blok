@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "Сэтгэгдэл нээх",
   "tools.database.commentPlaceholder": "Сэтгэгдэл нэмэх…",
   "tools.database.commentSend": "Сэтгэгдэл илгээх",
+  "tools.database.commentMention": "Хүн, хуудас эсвэл огноог дурдах",
+  "tools.database.commentMentionPeople": "Хүмүүс",
   "tools.database.commentJustNow": "Дөнгөж сая",
   "tools.database.feedJustNow": "Дөнгөж сая",
   "tools.database.feedSeeMore": "Илүү ихийг харуулах",

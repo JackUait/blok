@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "Buka ulasan",
   "tools.database.commentPlaceholder": "Tambah ulasan…",
   "tools.database.commentSend": "Hantar ulasan",
+  "tools.database.commentMention": "Sebut orang, halaman atau tarikh",
+  "tools.database.commentMentionPeople": "Orang",
   "tools.database.commentJustNow": "Sebentar tadi",
   "tools.database.feedJustNow": "Sebentar tadi",
   "tools.database.feedSeeMore": "Tunjukkan lagi",

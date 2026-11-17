@@ -1255,6 +1255,8 @@
   "tools.database.openComments": "פתח תגובות",
   "tools.database.commentPlaceholder": "הוסף תגובה…",
   "tools.database.commentSend": "שלח תגובה",
+  "tools.database.commentMention": "אזכור של אדם, דף או תאריך",
+  "tools.database.commentMentionPeople": "אנשים",
   "tools.database.commentJustNow": "זה עתה",
   "tools.database.feedJustNow": "זה עתה",
   "tools.database.feedSeeMore": "הצג עוד",

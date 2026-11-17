@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "Buksan ang mga komento",
   "tools.database.commentPlaceholder": "Magdagdag ng komento…",
   "tools.database.commentSend": "Ipadala ang komento",
+  "tools.database.commentMention": "Banggitin ang isang tao, page, o petsa",
+  "tools.database.commentMentionPeople": "Mga tao",
   "tools.database.commentJustNow": "Ngayon lang",
   "tools.database.feedJustNow": "Ngayon lang",
   "tools.database.feedSeeMore": "Ipakita ang higit pa",

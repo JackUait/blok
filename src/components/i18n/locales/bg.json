@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "Отвори коментарите",
   "tools.database.commentPlaceholder": "Добавете коментар…",
   "tools.database.commentSend": "Изпрати коментара",
+  "tools.database.commentMention": "Споменете човек, страница или дата",
+  "tools.database.commentMentionPeople": "Хора",
   "tools.database.commentJustNow": "Току-що",
   "tools.database.feedJustNow": "Току-що",
   "tools.database.feedSeeMore": "Покажи още",

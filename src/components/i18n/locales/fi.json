@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "Avaa kommentit",
   "tools.database.commentPlaceholder": "Lisää kommentti…",
   "tools.database.commentSend": "Lähetä kommentti",
+  "tools.database.commentMention": "Mainitse henkilö, sivu tai päivämäärä",
+  "tools.database.commentMentionPeople": "Henkilöt",
   "tools.database.commentJustNow": "Juuri nyt",
   "tools.database.feedJustNow": "Juuri nyt",
   "tools.database.feedSeeMore": "Näytä lisää",

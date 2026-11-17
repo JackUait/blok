@@ -1264,6 +1264,8 @@
   "tools.database.openComments": "Atidaryti komentarus",
   "tools.database.commentPlaceholder": "Pridėti komentarą…",
   "tools.database.commentSend": "Siųsti komentarą",
+  "tools.database.commentMention": "Paminėkite asmenį, puslapį ar datą",
+  "tools.database.commentMentionPeople": "Žmonės",
   "tools.database.commentJustNow": "Ką tik",
   "tools.database.feedJustNow": "Ką tik",
   "tools.database.feedSeeMore": "Rodyti daugiau",

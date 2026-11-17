@@ -1255,6 +1255,8 @@
   "tools.database.openComments": "Otvori komentare",
   "tools.database.commentPlaceholder": "Dodaj komentar…",
   "tools.database.commentSend": "Pošalji komentar",
+  "tools.database.commentMention": "Spomenite osobu, stranicu ili datum",
+  "tools.database.commentMentionPeople": "Osobe",
   "tools.database.commentJustNow": "Upravo sada",
   "tools.database.feedJustNow": "Upravo sada",
   "tools.database.feedSeeMore": "Prikaži više",

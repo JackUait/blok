@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "Hap komentet",
   "tools.database.commentPlaceholder": "Shto një koment…",
   "tools.database.commentSend": "Dërgo komentin",
+  "tools.database.commentMention": "Përmend një person, faqe ose datë",
+  "tools.database.commentMentionPeople": "Personat",
   "tools.database.commentJustNow": "Tani",
   "tools.database.feedJustNow": "Tani",
   "tools.database.feedSeeMore": "Shfaq më shumë",

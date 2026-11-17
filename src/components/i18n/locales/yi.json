@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "עפֿענען קאָמענטאַרן",
   "tools.database.commentPlaceholder": "צולייגן אַ קאָמענטאַר…",
   "tools.database.commentSend": "שיקן קאָמענטאַר",
+  "tools.database.commentMention": "דערמאָנען אַ מענטש, בלאַט אָדער דאַטע",
+  "tools.database.commentMentionPeople": "מענטשן",
   "tools.database.commentJustNow": "ערשט איצט",
   "tools.database.feedJustNow": "ערשט איצט",
   "tools.database.feedSeeMore": "ווײַזן מער",

@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "टिप्पणीहरू खोल्नुहोस्",
   "tools.database.commentPlaceholder": "टिप्पणी थप्नुहोस्…",
   "tools.database.commentSend": "टिप्पणी पठाउनुहोस्",
+  "tools.database.commentMention": "व्यक्ति, पृष्ठ वा मिति उल्लेख गर्नुहोस्",
+  "tools.database.commentMentionPeople": "मानिसहरू",
   "tools.database.commentJustNow": "भर्खरै",
   "tools.database.feedJustNow": "भर्खरै",
   "tools.database.feedSeeMore": "थप देखाउनुहोस्",

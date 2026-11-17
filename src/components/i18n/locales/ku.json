@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "کردنەوەی لێدوانەکان",
   "tools.database.commentPlaceholder": "لێدوانێک زیاد بکە…",
   "tools.database.commentSend": "ناردنی لێدوان",
+  "tools.database.commentMention": "Behsa kesek, rûpelek an dîrokekê bike",
+  "tools.database.commentMentionPeople": "Kes",
   "tools.database.commentJustNow": "ئێستا",
   "tools.database.feedJustNow": "ئێستا",
   "tools.database.feedSeeMore": "زیاتر پیشان بدە",

@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "Yorumları aç",
   "tools.database.commentPlaceholder": "Yorum ekle…",
   "tools.database.commentSend": "Yorumu gönder",
+  "tools.database.commentMention": "Bir kişiden, sayfadan veya tarihten bahset",
+  "tools.database.commentMentionPeople": "Kişiler",
   "tools.database.commentJustNow": "Az önce",
   "tools.database.feedJustNow": "Az önce",
   "tools.database.feedSeeMore": "Daha fazla göster",

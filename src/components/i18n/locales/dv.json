@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "ކޮމެންޓްތައް ހުޅުވާ",
   "tools.database.commentPlaceholder": "ކޮމެންޓެއް ލިޔޭ…",
   "tools.database.commentSend": "ކޮމެންޓް ފޮނުވާ",
+  "tools.database.commentMention": "މީހަކު، ޞަފްޙާއެއް ނުވަތަ ތާރީޚެއް ފާހަގަކުރައްވާ",
+  "tools.database.commentMentionPeople": "މީހުން",
   "tools.database.commentJustNow": "މިހާރު",
   "tools.database.feedJustNow": "މިހާރު",
   "tools.database.feedSeeMore": "އިތުރަށް ދައްކާ",

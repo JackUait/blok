@@ -1,9 +1,14 @@
 import type { I18n } from '../../../types';
-import { IconArrowUp, IconCheck, IconDotsHorizontal } from '../../components/icons';
+import type { DatabaseCommentMention } from '../../../types/tools/database-comment';
+import { IconArrowUp, IconAt, IconCheck, IconDotsHorizontal } from '../../components/icons';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { markEscapeConsumed } from '../../components/utils/consumed-escape';
 import { onHover } from '../../components/utils/tooltip';
-import type { StoredComment, StoredThread } from './database-comments-store';
+import { safeHref } from '../../shared/sanitize-url';
+import { keptMentions, relocateMentions } from '../../shared/database-comment-mentions';
+import type { PageSearchResult } from '../page/types';
+import { createMentionMenu, type MentionMenu, type MentionPerson } from './database-comment-mention-menu';
+import type { CommentDraft, StoredComment, StoredThread } from './database-comments-store';
 
 const ATTR = {
   panel: 'data-blok-database-comments',
@@ -17,6 +22,8 @@ const ATTR = {
   composer: 'data-blok-database-comment-composer',
   input: 'data-blok-database-comment-input',
   send: 'data-blok-database-comment-send',
+  mention: 'data-blok-database-comment-mention',
+  chip: 'data-blok-database-comment-mention-chip',
   actions: 'data-blok-database-comment-actions',
 } as const;
 
@@ -32,15 +39,23 @@ export interface CommentsPanelOptions {
   /** Only the writer edits or deletes a comment. */
   isOwn: (comment: StoredComment) => boolean;
   /** No thread yet: the composer starts one. With one: it replies to the first. */
-  onAdd: (text: string) => void;
-  onReply: (threadId: string, text: string) => void;
-  onEdit: (id: string, text: string) => void;
+  onAdd: (draft: CommentDraft) => void;
+  onReply: (threadId: string, draft: CommentDraft) => void;
+  onEdit: (id: string, draft: CommentDraft) => void;
   onResolve: (threadId: string) => void;
   /** Asks first ("Delete this comment?"); resolves once answered. */
   onDelete: (id: string) => Promise<void>;
   now?: () => number;
   /** The viewer's name: the composer starts with their avatar (feel/findings-rowpage R14). */
   viewerName?: () => string;
+  /** The "@" menu's People. */
+  people?: () => readonly MentionPerson[];
+  /** The "@" menu's Link to page. Absent: no such section. */
+  searchPages?: (query: string) => Promise<readonly PageSearchResult[]>;
+  /** A page chip's link. */
+  pageHref?: (pageId: string) => string | undefined;
+  /** Opens a page on a plain click on its chip. Absent: the link navigates. */
+  openPage?: (pageId: string, event: MouseEvent) => void;
 }
 
 export interface CommentsPanel {
@@ -95,44 +110,128 @@ const avatar = (name: string): HTMLElement => {
 
 /**
  * One textarea that grows with its text. Enter sends, Shift+Enter breaks the
- * line. Send stays disabled while the text is empty (research/12 §3).
+ * line. Send stays disabled while the text is empty (research/12 §3). "@" and
+ * the Mention button open the mention menu (notion-motion.md Round 62 §2).
  */
-const composer = (options: CommentsPanelOptions, onSend: (text: string) => void, initial = ''): { element: HTMLElement; input: HTMLTextAreaElement } => {
+const composer = (
+  options: CommentsPanelOptions,
+  onSend: (draft: CommentDraft) => void,
+  initial: { text: string; mentions?: DatabaseCommentMention[] } = { text: '' }
+): { element: HTMLElement; input: HTMLTextAreaElement; menu: MentionMenu } => {
   const { t } = options.i18n;
   const row = document.createElement('div');
   const input = document.createElement('textarea');
+  const mention = iconButton(ATTR.mention, t('tools.database.commentMention'), IconAt);
   const send = iconButton(ATTR.send, t('tools.database.commentSend'), IconArrowUp);
+  const picked: Array<Omit<DatabaseCommentMention, 'start'>> = keptMentions(initial.text, initial.mentions)
+    .map(({ type, id, label }) => ({ type, id, label }));
 
   row.setAttribute(ATTR.composer, '');
   input.setAttribute(ATTR.input, '');
   input.rows = 1;
-  input.value = initial;
+  input.value = initial.text;
   input.placeholder = t('tools.database.commentPlaceholder');
   input.setAttribute('aria-label', t('tools.database.commentPlaceholder'));
   const sync = (): void => {
     send.disabled = input.value.trim() === '';
   };
-  const submit = (): void => {
-    const text = input.value.trim();
+  const menu = createMentionMenu({
+    input,
+    host: row,
+    i18n: options.i18n,
+    locale: options.locale,
+    ...(options.people === undefined ? {} : { people: options.people }),
+    ...(options.searchPages === undefined ? {} : { searchPages: options.searchPages }),
+    onPick: (picks, start, end) => {
+      const text = `${picks.label} `;
 
-    if (text === '') return;
+      input.setRangeText(text, start, end, 'end');
+      picked.push(picks);
+      sync();
+    },
+  });
+  const submit = (): void => {
+    const text = input.value;
+
+    if (text.trim() === '') return;
+    const mentions = relocateMentions(text, picked);
+
     input.value = '';
+    picked.length = 0;
+    menu.close();
     sync();
-    onSend(text);
+    onSend({ text, ...(mentions.length === 0 ? {} : { mentions }) });
   };
 
   sync();
-  input.addEventListener('input', sync);
+  input.addEventListener('input', () => {
+    sync();
+    menu.sync();
+  });
+  input.addEventListener('click', () => menu.sync());
   input.addEventListener('keydown', (event) => {
     if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
     event.preventDefault();
     submit();
   });
+  // A mousedown would take the focus, and the caret, out of the text.
+  mention.addEventListener('mousedown', (event) => event.preventDefault());
+  mention.addEventListener('click', () => {
+    const at = input.selectionStart;
+    const lead = at > 0 && !/\s/.test(input.value[at - 1]) ? ' ' : '';
+
+    input.focus();
+    input.setRangeText(`${lead}@`, at, input.selectionEnd, 'end');
+    sync();
+    menu.sync();
+  });
   send.addEventListener('click', submit);
   if (options.viewerName !== undefined) row.append(avatar(options.viewerName()));
-  row.append(input, send);
+  row.append(input, mention, send);
 
-  return { element: row, input };
+  return { element: row, input, menu };
+};
+
+/** The comment's text, each kept mention drawn as a chip. */
+const paintText = (el: HTMLElement, text: string, raw: unknown, options: CommentsPanelOptions): void => {
+  const parts: Array<Node | string> = [];
+  const at = { index: 0 };
+
+  keptMentions(text, raw).forEach((mention) => {
+    parts.push(text.slice(at.index, mention.start));
+    parts.push(chip(mention, options));
+    at.index = mention.start + mention.label.length;
+  });
+  parts.push(text.slice(at.index));
+  el.replaceChildren(...parts.filter((part) => part !== ''));
+};
+
+const chip = (mention: DatabaseCommentMention, options: CommentsPanelOptions): HTMLElement => {
+  if (mention.type !== 'page') {
+    const el = document.createElement('span');
+
+    el.setAttribute(ATTR.chip, mention.type);
+    el.textContent = mention.label;
+
+    return el;
+  }
+  const link = document.createElement('a');
+  const url = options.pageHref?.(mention.id);
+  const href = url === undefined ? null : safeHref(url);
+
+  link.setAttribute(ATTR.chip, 'page');
+  link.textContent = mention.label;
+  if (href !== null) link.href = href;
+  else link.tabIndex = 0;
+  link.addEventListener('click', (event) => {
+    const plain = event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+
+    if (options.openPage === undefined || (!plain && href !== null)) return;
+    event.preventDefault();
+    if (plain) options.openPage(mention.id, event);
+  });
+
+  return link;
 };
 
 /**
@@ -157,16 +256,17 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
   list.setAttribute('role', 'list');
 
   const editor = (comment: StoredComment): HTMLElement => {
-    const box = composer(options, (text) => {
+    const box = composer(options, (draft) => {
       editing.id = null;
-      options.onEdit(comment.id, text);
+      options.onEdit(comment.id, draft);
       draw();
-    }, comment.data.text);
+    }, comment.data);
 
     // One Escape leaves the edit, not the whole popover. The popover hears
     // Escape in the document's capture phase, so this listens on window.
     const onEscape = (event: KeyboardEvent): void => {
-      if (event.key !== 'Escape' || event.target !== box.input) return;
+      // An open "@" menu takes this Escape itself.
+      if (event.key !== 'Escape' || event.target !== box.input || box.menu.opened) return;
       event.preventDefault();
       event.stopPropagation();
       markEscapeConsumed(event);
@@ -175,7 +275,10 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
     };
 
     window.addEventListener('keydown', onEscape, true);
-    stopEditKeys.current = (): void => window.removeEventListener('keydown', onEscape, true);
+    stopEditKeys.current = (): void => {
+      window.removeEventListener('keydown', onEscape, true);
+      box.menu.close();
+    };
     queueMicrotask(() => box.input.focus());
 
     return box.element;
@@ -206,7 +309,7 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
     const text = document.createElement('div');
 
     text.setAttribute(ATTR.text, '');
-    text.textContent = comment.data.text;
+    paintText(text, comment.data.text, comment.data.mentions, options);
     row.appendChild(text);
 
     if (!options.canComment) return row;
@@ -288,11 +391,11 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
     return row;
   };
 
-  const box = composer(options, (text) => {
+  const box = composer(options, (draft) => {
     const first = options.threads()[0];
 
-    if (first === undefined) options.onAdd(text);
-    else options.onReply(first.id, text);
+    if (first === undefined) options.onAdd(draft);
+    else options.onReply(first.id, draft);
     draw();
   });
 
@@ -325,6 +428,9 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
     element: panel,
     refresh: draw,
     focusComposer: () => box.input.focus(),
-    destroy: stopKeys,
+    destroy: () => {
+      stopKeys();
+      box.menu.close();
+    },
   };
 };

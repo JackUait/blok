@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "අදහස් විවෘත කරන්න",
   "tools.database.commentPlaceholder": "අදහසක් එක් කරන්න…",
   "tools.database.commentSend": "අදහස යවන්න",
+  "tools.database.commentMention": "පුද්ගලයෙකු, පිටුවක් හෝ දිනයක් සඳහන් කරන්න",
+  "tools.database.commentMentionPeople": "පුද්ගලයින්",
   "tools.database.commentJustNow": "මේ දැන්",
   "tools.database.feedJustNow": "මේ දැන්",
   "tools.database.feedSeeMore": "තවත් පෙන්වන්න",

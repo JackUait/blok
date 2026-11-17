@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "ئىنكاسلارنى ئېچىش",
   "tools.database.commentPlaceholder": "ئىنكاس قوشۇش…",
   "tools.database.commentSend": "ئىنكاس يوللاش",
+  "tools.database.commentMention": "بىرەر كىشى، بەت ياكى چېسلانى تىلغا ئېلىڭ",
+  "tools.database.commentMentionPeople": "كىشىلەر",
   "tools.database.commentJustNow": "ھازىرلا",
   "tools.database.feedJustNow": "ھازىرلا",
   "tools.database.feedSeeMore": "تېخىمۇ كۆپ كۆرسىتىش",

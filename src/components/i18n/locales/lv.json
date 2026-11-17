@@ -1255,6 +1255,8 @@
   "tools.database.openComments": "Atvērt komentārus",
   "tools.database.commentPlaceholder": "Pievienot komentāru…",
   "tools.database.commentSend": "Nosūtīt komentāru",
+  "tools.database.commentMention": "Pieminiet personu, lapu vai datumu",
+  "tools.database.commentMentionPeople": "Personas",
   "tools.database.commentJustNow": "Tikko",
   "tools.database.feedJustNow": "Tikko",
   "tools.database.feedSeeMore": "Rādīt vairāk",

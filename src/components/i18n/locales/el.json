@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "Άνοιγμα σχολίων",
   "tools.database.commentPlaceholder": "Προσθήκη σχολίου…",
   "tools.database.commentSend": "Αποστολή σχολίου",
+  "tools.database.commentMention": "Αναφέρετε ένα άτομο, μια σελίδα ή μια ημερομηνία",
+  "tools.database.commentMentionPeople": "Άτομα",
   "tools.database.commentJustNow": "Μόλις τώρα",
   "tools.database.feedJustNow": "Μόλις τώρα",
   "tools.database.feedSeeMore": "Εμφάνιση περισσότερων",

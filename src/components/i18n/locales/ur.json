@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "تبصرے کھولیں",
   "tools.database.commentPlaceholder": "تبصرہ شامل کریں…",
   "tools.database.commentSend": "تبصرہ بھیجیں",
+  "tools.database.commentMention": "کسی شخص، صفحے یا تاریخ کا ذکر کریں",
+  "tools.database.commentMentionPeople": "لوگ",
   "tools.database.commentJustNow": "ابھی ابھی",
   "tools.database.feedJustNow": "ابھی ابھی",
   "tools.database.feedSeeMore": "مزید دکھائیں",

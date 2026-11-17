@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "コメントを開く",
   "tools.database.commentPlaceholder": "コメントを追加…",
   "tools.database.commentSend": "コメントを送信",
+  "tools.database.commentMention": "ユーザー、ページ、日付をメンション",
+  "tools.database.commentMentionPeople": "ユーザー",
   "tools.database.commentJustNow": "たった今",
   "tools.database.feedJustNow": "たった今",
   "tools.database.feedSeeMore": "さらに表示",

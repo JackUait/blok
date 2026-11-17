@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "মন্তব্যগুলি খুলুন",
   "tools.database.commentPlaceholder": "একটি মন্তব্য যোগ করুন…",
   "tools.database.commentSend": "মন্তব্য পাঠান",
+  "tools.database.commentMention": "কোনো ব্যক্তি, পৃষ্ঠা বা তারিখ উল্লেখ করুন",
+  "tools.database.commentMentionPeople": "লোকজন",
   "tools.database.commentJustNow": "এইমাত্র",
   "tools.database.feedJustNow": "এইমাত্র",
   "tools.database.feedSeeMore": "আরও দেখান",

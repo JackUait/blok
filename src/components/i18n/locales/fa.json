@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "باز کردن نظرها",
   "tools.database.commentPlaceholder": "افزودن نظر…",
   "tools.database.commentSend": "ارسال نظر",
+  "tools.database.commentMention": "یک شخص، صفحه یا تاریخ را نام ببرید",
+  "tools.database.commentMentionPeople": "افراد",
   "tools.database.commentJustNow": "همین حالا",
   "tools.database.feedJustNow": "همین حالا",
   "tools.database.feedSeeMore": "نمایش بیشتر",

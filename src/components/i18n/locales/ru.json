@@ -1264,6 +1264,8 @@
   "tools.database.openComments": "Открыть комментарии",
   "tools.database.commentPlaceholder": "Добавить комментарий…",
   "tools.database.commentSend": "Отправить комментарий",
+  "tools.database.commentMention": "Упомянуть человека, страницу или дату",
+  "tools.database.commentMentionPeople": "Люди",
   "tools.database.commentJustNow": "Только что",
   "tools.database.feedJustNow": "Только что",
   "tools.database.feedSeeMore": "Показать ещё",

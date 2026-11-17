@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "Åbn kommentarer",
   "tools.database.commentPlaceholder": "Tilføj en kommentar…",
   "tools.database.commentSend": "Send kommentar",
+  "tools.database.commentMention": "Nævn en person, side eller dato",
+  "tools.database.commentMentionPeople": "Personer",
   "tools.database.commentJustNow": "Lige nu",
   "tools.database.feedJustNow": "Lige nu",
   "tools.database.feedSeeMore": "Vis mere",

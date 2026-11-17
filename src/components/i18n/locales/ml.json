@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "കമന്റുകൾ തുറക്കുക",
   "tools.database.commentPlaceholder": "ഒരു കമന്റ് ചേർക്കുക…",
   "tools.database.commentSend": "കമന്റ് അയയ്ക്കുക",
+  "tools.database.commentMention": "ഒരു വ്യക്തിയെയോ പേജിനെയോ തീയതിയെയോ പരാമർശിക്കുക",
+  "tools.database.commentMentionPeople": "ആളുകൾ",
   "tools.database.commentJustNow": "ഇപ്പോൾ",
   "tools.database.feedJustNow": "ഇപ്പോൾ",
   "tools.database.feedSeeMore": "കൂടുതൽ കാണിക്കുക",

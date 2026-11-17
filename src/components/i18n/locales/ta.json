@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "கருத்துகளைத் திற",
   "tools.database.commentPlaceholder": "கருத்தைச் சேர்…",
   "tools.database.commentSend": "கருத்தை அனுப்பு",
+  "tools.database.commentMention": "ஒருவரை, பக்கத்தை அல்லது தேதியைக் குறிப்பிடவும்",
+  "tools.database.commentMentionPeople": "நபர்கள்",
   "tools.database.commentJustNow": "இப்போது",
   "tools.database.feedJustNow": "இப்போது",
   "tools.database.feedSeeMore": "மேலும் காட்டு",

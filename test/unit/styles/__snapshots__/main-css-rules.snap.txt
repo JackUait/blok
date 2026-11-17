@@ -13853,7 +13853,7 @@ textarea[data-blok-database-cell-input] {
   opacity: 1;
 }
 
-[data-blok-database-comment-tools] button, [data-blok-database-comment-send] {
+[data-blok-database-comment-tools] button, [data-blok-database-comment-mention], [data-blok-database-comment-send] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -13867,11 +13867,11 @@ textarea[data-blok-database-cell-input] {
   cursor: pointer;
 }
 
-[data-blok-database-comment-tools] button:hover, [data-blok-database-comment-send]:hover:not(:disabled) {
+[data-blok-database-comment-tools] button:hover, [data-blok-database-comment-mention]:hover, [data-blok-database-comment-send]:hover:not(:disabled) {
   background-color: var(--blok-database-hover-bg);
 }
 
-[data-blok-database-comment-tools] svg, [data-blok-database-comment-send] svg {
+[data-blok-database-comment-tools] svg, [data-blok-database-comment-mention] svg, [data-blok-database-comment-send] svg {
   width: 16px;
   height: 16px;
 }
@@ -13935,6 +13935,104 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-comment-menu] button:hover {
   background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-comment-mention-chip] {
+  font-weight: 500;
+}
+
+a[data-blok-database-comment-mention-chip] {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--blok-database-ink-tertiary);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+[data-blok-database-comment-mention-menu], [data-blok-database-comment-mention-menu][data-blok-top-layer][popover] {
+  position: fixed;
+  z-index: var(--blok-z-popover);
+  box-sizing: border-box;
+  width: 330px;
+  max-height: 286.8px;
+  overflow-y: auto;
+  padding: var(--blok-space-1);
+  border-radius: var(--blok-radius-surface);
+  background: var(--blok-database-popover-bg);
+  box-shadow: var(--blok-database-popover-shadow);
+  color: var(--blok-database-ink);
+  font-size: 14px;
+  transform-origin: 0 100%;
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+}
+
+[data-blok-database-comment-mention-menu][hidden] {
+  display: none;
+}
+
+[@starting-style] [data-blok-database-comment-mention-menu] {
+  opacity: 0;
+  transform: scale(0.96);
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-comment-mention-menu], [data-blok-database-comment-mention-menu][data-blok-top-layer][popover] {
+  transition: none;
+}
+
+[data-blok-database-comment-mention-section] {
+  padding: var(--blok-space-2) var(--blok-space-2) var(--blok-space-1);
+  color: var(--blok-database-peek-label);
+  font-size: 12px;
+  line-height: 14.4px;
+  font-weight: 500;
+}
+
+[data-blok-database-comment-mention-option] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  min-height: 28px;
+  padding: var(--blok-space-1) var(--blok-space-2);
+  border-radius: var(--blok-radius-control);
+  line-height: 16.8px;
+  cursor: pointer;
+}
+
+[data-blok-database-comment-mention-option][aria-selected="true"] {
+  background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-comment-mention-option] > [data-blok-database-comment-avatar] {
+  position: static;
+  flex-shrink: 0;
+}
+
+[data-blok-database-comment-mention-icon] {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-comment-mention-icon] svg {
+  width: 20px;
+  height: 20px;
+}
+
+[data-blok-database-comment-mention-text] {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+[data-blok-database-comment-mention-title], [data-blok-database-comment-mention-hint] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-blok-database-comment-mention-hint] {
+  color: var(--blok-database-ink-tertiary);
+  font-size: 12px;
 }
 
 [data-blok-database-comments-section] {

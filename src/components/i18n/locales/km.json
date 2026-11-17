@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "បើកមតិយោបល់",
   "tools.database.commentPlaceholder": "បន្ថែមមតិយោបល់…",
   "tools.database.commentSend": "ផ្ញើមតិយោបល់",
+  "tools.database.commentMention": "លើកឡើងពីមនុស្ស ទំព័រ ឬកាលបរិច្ឆេទ",
+  "tools.database.commentMentionPeople": "មនុស្ស",
   "tools.database.commentJustNow": "អម្បាញ់មិញ",
   "tools.database.feedJustNow": "អម្បាញ់មិញ",
   "tools.database.feedSeeMore": "បង្ហាញបន្ថែម",

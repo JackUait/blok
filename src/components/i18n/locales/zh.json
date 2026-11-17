@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "打开评论",
   "tools.database.commentPlaceholder": "添加评论…",
   "tools.database.commentSend": "发送评论",
+  "tools.database.commentMention": "提及人员、页面或日期",
+  "tools.database.commentMentionPeople": "人员",
   "tools.database.commentJustNow": "刚刚",
   "tools.database.feedJustNow": "刚刚",
   "tools.database.feedSeeMore": "显示更多",

@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "開啟留言",
   "tools.database.commentPlaceholder": "新增留言…",
   "tools.database.commentSend": "傳送留言",
+  "tools.database.commentMention": "提及人員、頁面或日期",
+  "tools.database.commentMentionPeople": "人員",
   "tools.database.commentJustNow": "剛剛",
   "tools.database.feedJustNow": "剛剛",
   "tools.database.feedSeeMore": "顯示更多",

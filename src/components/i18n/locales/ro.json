@@ -1255,6 +1255,8 @@
   "tools.database.openComments": "Deschide comentariile",
   "tools.database.commentPlaceholder": "Adaugă un comentariu…",
   "tools.database.commentSend": "Trimite comentariul",
+  "tools.database.commentMention": "Menționează o persoană, o pagină sau o dată",
+  "tools.database.commentMentionPeople": "Persoane",
   "tools.database.commentJustNow": "Chiar acum",
   "tools.database.feedJustNow": "Chiar acum",
   "tools.database.feedSeeMore": "Afișează mai mult",

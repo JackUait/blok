@@ -299,7 +299,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2241 + 146 + 599 + 11 closure for all 2997 keys', () => {
+  it('rebuilds a disjoint 2243 + 146 + 599 + 11 closure for all 2999 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -313,7 +313,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2997);
+    expect(lifecycle.size).toBe(2999);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -417,6 +417,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +3: the feed card's Add reaction, React and "reacted with" hint call their keys by literal.
       // +12: the built-in comments thread, composer and row page section call their tools.database.comment* keys by literal.
       // +2: the feed card's comment summary row calls tools.database.feedCommentReplyOne/feedCommentReplies by literal.
+      // +2: the comment composer's Mention button and its menu's People label call tools.database.commentMention* by literal.
       // +2: the page block's creating title and Draft badge call tools.page.creating/draft by literal.
       // +1: the row menu's "Page" heading calls tools.database.rowMenuPage by literal.
       // +2: the row menu's Layout and Property visibility call tools.database.settingsLayout and
@@ -579,7 +580,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: Edit property's add field calls addOptionPlaceholder by literal.
       // +1 / -1: the row page cover calls tools.database.downloadCover by literal; its Change
       // button now reads title.changeCover, so tools.database.changeCover left (see below).
-      'executable-literal': 2241,
+      'executable-literal': 2243,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

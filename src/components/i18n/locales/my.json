@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "မှတ်ချက်များ ဖွင့်ရန်",
   "tools.database.commentPlaceholder": "မှတ်ချက် ထည့်ရန်…",
   "tools.database.commentSend": "မှတ်ချက် ပို့ရန်",
+  "tools.database.commentMention": "လူ၊ စာမျက်နှာ သို့မဟုတ် ရက်စွဲကို ဖော်ပြပါ",
+  "tools.database.commentMentionPeople": "လူများ",
   "tools.database.commentJustNow": "ယခုလေးတင်",
   "tools.database.feedJustNow": "ယခုလေးတင်",
   "tools.database.feedSeeMore": "နောက်ထပ်ပြရန်",

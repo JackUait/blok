@@ -1264,6 +1264,8 @@
   "tools.database.openComments": "Otwórz komentarze",
   "tools.database.commentPlaceholder": "Dodaj komentarz…",
   "tools.database.commentSend": "Wyślij komentarz",
+  "tools.database.commentMention": "Wspomnij osobę, stronę lub datę",
+  "tools.database.commentMentionPeople": "Osoby",
   "tools.database.commentJustNow": "Przed chwilą",
   "tools.database.feedJustNow": "Przed chwilą",
   "tools.database.feedSeeMore": "Pokaż więcej",

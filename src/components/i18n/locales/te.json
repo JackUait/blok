@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "వ్యాఖ్యలను తెరవండి",
   "tools.database.commentPlaceholder": "వ్యాఖ్యను జోడించండి…",
   "tools.database.commentSend": "వ్యాఖ్యను పంపండి",
+  "tools.database.commentMention": "వ్యక్తిని, పేజీని లేదా తేదీని పేర్కొనండి",
+  "tools.database.commentMentionPeople": "వ్యక్తులు",
   "tools.database.commentJustNow": "ఇప్పుడే",
   "tools.database.feedJustNow": "ఇప్పుడే",
   "tools.database.feedSeeMore": "మరిన్ని చూపించు",

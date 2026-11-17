@@ -172,6 +172,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'tools/database/database-list-view.ts': 'The right-click menu point is placed once at the pointer inside the row, corrected for a transformed ancestor, and removed when the menu closes.',
   'tools/database/database-table-column-drag.ts': 'Fixed pointer-following table header ghost refreshes coordinates on every drag pointer move.',
   'tools/database/database-filter-chip.ts': 'The "Invalid date" message is placed once, left of the day field\'s rect, in viewport coordinates; any scroll, an edit, a redraw or the popover closing removes it.',
+  'tools/database/database-comment-mention-menu.ts': 'The "@" menu is placed from the comment box rect and the "@" x on open and on each redraw, in viewport coordinates; any scroll outside it, a blur, Escape or the box closing removes it.',
   'tools/database/database-panel.ts': 'A dragged panel list row follows the pointer in flow, offset from its own box read at drag start.',
   'tools/database/database-table-row-drag.ts': 'Fixed pointer-following table row ghost refreshes coordinates on every drag pointer move.',
   'tools/database/database-dashboard-editor.ts': 'Dashboard drop line, absolute inside the dashboard root, placed from row and widget rects on every drag pointer move and removed on drop or Escape.',
@@ -189,6 +190,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
 
 /** Dynamic property setters remain exact review points, never silent escapes. */
 const DYNAMIC_STYLE_ACCESS_CLASSIFICATIONS: Record<string, string> = {
+  'tools/database/database-comment-mention-menu.ts': 'A hidden copy of the comment textarea takes its text styles by name, to find where the "@" sits; it is removed at once.',
   'tools/file/pptx/renderer/TableRenderer.ts': 'Writes a pptx table cell border side picked by name (borderTop…borderLeft); never a coordinate.',
   'components/modules/collaboration/agent-marker-layer.ts': 'Writes --blok-presence-color on the holder-local agent outline and name flag; presence.css supplies their placement without root mounts or JS coordinates.',
   'components/marks/mark-engine.ts': 'Writes/strips the style properties a MarkSpec declares while applying, splitting and sanitizing marks.',
@@ -230,6 +232,7 @@ const CAPTURE_SCROLL_CLASSIFICATIONS: Record<string, string> = {
   'tools/file/preview-scroll-haze.ts': 'Capture-phase listener refreshes local file-preview scroll haze state.',
   'tools/table-of-contents/index.ts': 'Capture-phase listener marks which heading is being read as any scroller moves; the thumb sits at the row offset inside the nav, never at viewport coordinates.',
   'tools/database/database-filter-chip.ts': 'Capture-phase scroll listener dismisses the once-placed "Invalid date" message.',
+  'tools/database/database-comment-mention-menu.ts': 'Capture-phase scroll listener closes the "@" menu unless the scroll is its own list.',
   'tools/table/table-row-col-controls.ts': 'Capture-phase listener catches the full-screen table modal\'s own scroll (scroll does not bubble) and re-places the grips in its overlay, including a column grip held fixed at the header line.',
 };
 
@@ -246,6 +249,7 @@ const ROOT_SURFACE_CONTRACTS: Record<string, SurfaceContract> = {
   'tools/callout/emoji-picker/index.ts': 'tracked-manual',
   'tools/database/database-property-type-popover.ts': 'shared',
   'tools/database/database-filter-chip.ts': 'dismiss-on-scroll',
+  'tools/database/database-comment-mention-menu.ts': 'dismiss-on-scroll',
   'tools/image/alt-popover.ts': 'shared',
   'tools/page/hover-preview.ts': 'shared',
 };

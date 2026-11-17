@@ -1246,6 +1246,8 @@
   "tools.database.openComments": "კომენტარების გახსნა",
   "tools.database.commentPlaceholder": "კომენტარის დამატება…",
   "tools.database.commentSend": "კომენტარის გაგზავნა",
+  "tools.database.commentMention": "მოიხსენიეთ პირი, გვერდი ან თარიღი",
+  "tools.database.commentMentionPeople": "ადამიანები",
   "tools.database.commentJustNow": "ახლახან",
   "tools.database.feedJustNow": "ახლახან",
   "tools.database.feedSeeMore": "მეტის ჩვენება",

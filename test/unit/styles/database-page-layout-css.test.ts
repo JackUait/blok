@@ -43,7 +43,7 @@ describe('database row page layout css', () => {
   // feel/findings-rowpage R10: the header row shows on hover of the page head or title, not the whole page.
   it('shows Customize layout on page head hover, like Add icon', () => {
     expect(database).toMatch(/\[data-blok-database-drawer-customize\] \{[^}]*opacity: 0;/);
-    expect(database).toMatch(/\[data-blok-database-drawer-page-head\]:is\(:hover, [^{]*\[data-blok-database-drawer-customize\][^{]*\{ opacity: 1; \}/);
+    expect(database).toMatch(/\[data-blok-database-drawer-page-head\]:hover [^{]*\[data-blok-database-drawer-customize\][^{]*\{\s*opacity: 1;\s*\}/);
   });
 
   it('turns the section caret and the details panel motion off for reduced motion', () => {

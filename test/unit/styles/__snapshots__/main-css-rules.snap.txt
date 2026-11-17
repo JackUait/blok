@@ -6254,10 +6254,10 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-database-peek-mode], [data-blok-database-peek-separator], [data-blok-database-peek-prev], [data-blok-database-peek-next] {
-  transition: opacity 150ms linear;
+  transition: opacity 100ms ease;
 }
 
-[@media (hover: hover)] :is([data-blok-database-drawer]:not(:hover), [data-peek-mode="center"]) [data-blok-database-drawer-toolbar]:not(:hover):not(:has(:focus-visible)):not(:has([data-blok-database-peek-mode][aria-expanded="true"])) :is([data-blok-database-peek-mode], [data-blok-database-peek-separator], [data-blok-database-peek-prev], [data-blok-database-peek-next]) {
+[@media (hover: hover)] [data-blok-database-drawer]:not(:has(> [data-blok-database-drawer-toolbar]:hover, > [data-blok-database-drawer-content] > [data-blok-database-drawer-page-head]:hover)) > [data-blok-database-drawer-toolbar]:not(:has(:focus-visible)):not(:has([data-blok-database-peek-mode][aria-expanded="true"])) :is([data-blok-database-peek-mode], [data-blok-database-peek-separator], [data-blok-database-peek-prev], [data-blok-database-peek-next]) {
   opacity: 0;
 }
 
@@ -6600,6 +6600,20 @@ span[data-blok-slash-search] {
   margin-bottom: var(--blok-space-1);
 }
 
+[data-blok-database-drawer][data-peek-mode="side"] {
+  --_blok-peek-head-reach: var(--blok-space-1);
+}
+
+[data-blok-database-drawer][data-peek-mode="center"] {
+  --_blok-peek-head-reach: var(--blok-space-10);
+}
+
+[data-blok-database-drawer]:is([data-peek-mode="side"], [data-peek-mode="center"]) [data-blok-database-drawer-page-head] {
+  min-height: calc(var(--blok-space-6) + var(--_blok-peek-head-reach) + var(--blok-space-1));
+  margin-block: calc(-1 * var(--_blok-peek-head-reach)) 0;
+  padding-block: var(--_blok-peek-head-reach) var(--blok-space-1);
+}
+
 [data-blok-database-drawer-icon] {
   padding: 0;
   border: none;
@@ -6649,7 +6663,7 @@ span[data-blok-slash-search] {
   flex-shrink: 0;
 }
 
-[data-blok-database-drawer-page-head]:is(:hover, :has(+ [data-blok-database-drawer-title]:hover)) [data-blok-database-drawer-add-icon], [data-blok-database-drawer-page-head]:is(:hover, :has(+ [data-blok-database-drawer-title]:hover)) [data-blok-database-drawer-add-cover], [data-blok-database-drawer-page-head]:is(:hover, :has(+ [data-blok-database-drawer-title]:hover)) [data-blok-database-drawer-customize], [data-blok-database-drawer]:not([data-peek-mode="full"]):hover [data-blok-database-drawer-add-icon], [data-blok-database-drawer]:not([data-peek-mode="full"]):hover [data-blok-database-drawer-add-cover], [data-blok-database-drawer]:not([data-peek-mode="full"]):hover [data-blok-database-drawer-customize], [data-blok-database-drawer-add-icon]:focus-visible, [data-blok-database-drawer-add-cover]:focus-visible, [data-blok-database-drawer-customize]:focus-visible {
+[data-blok-database-drawer-page-head]:hover [data-blok-database-drawer-add-icon], [data-blok-database-drawer-page-head]:hover [data-blok-database-drawer-add-cover], [data-blok-database-drawer-page-head]:hover [data-blok-database-drawer-customize], [data-peek-mode="full"] [data-blok-database-drawer-page-head]:has(+ [data-blok-database-drawer-title]:hover) [data-blok-database-drawer-add-icon], [data-peek-mode="full"] [data-blok-database-drawer-page-head]:has(+ [data-blok-database-drawer-title]:hover) [data-blok-database-drawer-add-cover], [data-peek-mode="full"] [data-blok-database-drawer-page-head]:has(+ [data-blok-database-drawer-title]:hover) [data-blok-database-drawer-customize], [data-blok-database-drawer]:not([data-peek-mode="full"]):has(> [data-blok-database-drawer-toolbar]:hover) [data-blok-database-drawer-add-icon], [data-blok-database-drawer]:not([data-peek-mode="full"]):has(> [data-blok-database-drawer-toolbar]:hover) [data-blok-database-drawer-add-cover], [data-blok-database-drawer]:not([data-peek-mode="full"]):has(> [data-blok-database-drawer-toolbar]:hover) [data-blok-database-drawer-customize], [data-blok-database-drawer-add-icon]:focus-visible, [data-blok-database-drawer-add-cover]:focus-visible, [data-blok-database-drawer-customize]:focus-visible {
   opacity: 1;
 }
 
@@ -8429,7 +8443,7 @@ button[data-blok-database-board-lane-count]:hover {
   transition: opacity 100ms ease;
 }
 
-[data-blok-database-drawer-content]:hover [data-blok-database-drawer-backlinks], [data-blok-database-drawer-backlinks][aria-expanded="true"], [data-blok-database-drawer-backlinks]:focus-visible {
+[data-peek-mode="full"] [data-blok-database-drawer-content]:hover [data-blok-database-drawer-backlinks], [data-blok-database-drawer-page-head]:hover [data-blok-database-drawer-backlinks], [data-blok-database-drawer]:has(> [data-blok-database-drawer-toolbar]:hover) [data-blok-database-drawer-backlinks], [data-blok-database-drawer-backlinks][aria-expanded="true"], [data-blok-database-drawer-backlinks]:focus-visible {
   opacity: 1;
 }
 

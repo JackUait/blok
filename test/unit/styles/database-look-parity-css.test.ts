@@ -520,19 +520,29 @@ describe('row page header hover row', () => {
     expect(ruleBody(`${selector} svg`)).toContain('inline-size: 14px');
   });
 
-  it('shows on hover of the page head or the title, not the whole content', () => {
+  it('shows on hover of the page head, or on a full page its title, not the whole content', () => {
     expect(database.includes('[data-blok-database-drawer-content]:hover [data-blok-database-drawer-add-icon]')).toBe(false);
     expect(database.includes('[data-blok-database-drawer-content]:hover [data-blok-database-drawer-customize]')).toBe(false);
-    const shown = '[data-blok-database-drawer-page-head]:is(:hover, :has(+ [data-blok-database-drawer-title]:hover)) [data-blok-database-drawer-customize],';
-
-    expect(database.includes(shown)).toBe(true);
+    expect(database.includes('[data-blok-database-drawer-page-head]:hover [data-blok-database-drawer-customize],')).toBe(true);
+    expect(database.includes('[data-peek-mode="full"] [data-blok-database-drawer-page-head]:has(+ [data-blok-database-drawer-title]:hover) [data-blok-database-drawer-customize],')).toBe(true);
   });
 
-  // notion-motion.md "Side peek top bar": in a peek the row shows while the pointer is anywhere over the peek.
-  it('shows in a side or center peek while the peek is hovered', () => {
+  // notion-motion.md Round 56 §1, §6: in a peek the row shows only near its top: the bar or the page head.
+  it('shows in a side or center peek while the top bar is hovered, not the whole peek', () => {
     for (const button of buttons) {
-      expect(database.includes(`[data-blok-database-drawer]:not([data-peek-mode="full"]):hover ${button}`)).toBe(true);
+      expect(database.includes(`[data-blok-database-drawer]:not([data-peek-mode="full"]):hover ${button}`)).toBe(false);
+      expect(database.includes(`[data-blok-database-drawer]:not([data-peek-mode="full"]):has(> [data-blok-database-drawer-toolbar]:hover) ${button}`)).toBe(true);
     }
+  });
+
+  // Round 56 §1: Notion's zone is the bar plus 44..80 under it; the head reaches up over the content's top padding to fill it.
+  it('lets a peek page head reach up to the bar without moving anything', () => {
+    const head = ruleBody('[data-blok-database-drawer]:is([data-peek-mode="side"], [data-peek-mode="center"]) [data-blok-database-drawer-page-head]');
+
+    expect(head).toContain('margin-block: calc(-1 * var(--_blok-peek-head-reach)) 0');
+    expect(head).toContain('padding-block: var(--_blok-peek-head-reach) var(--blok-space-1)');
+    expect(ruleBody('[data-blok-database-drawer][data-peek-mode="side"]')).toContain('--_blok-peek-head-reach: var(--blok-space-1)');
+    expect(ruleBody('[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-content]')).toContain('padding-block-start: var(--blok-space-1)');
   });
 });
 

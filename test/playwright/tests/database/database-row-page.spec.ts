@@ -487,18 +487,48 @@ test.describe('side peek width', () => {
     await expect(toolbar.locator('[data-blok-database-peek-mode]')).toHaveCSS('opacity', '1');
   });
 
-  // The side peek keeps Notion's earlier rule: the controls show while the pointer is anywhere on the peek.
-  test('a side peek keeps its mode switch while the pointer is on its body', async ({ page }) => {
+  // notion-motion.md Round 56 §1: the controls show only near the top: the bar, and the page head down to 4px under its icon row.
+  test('a side peek shows its top controls only while the pointer is near its top', async ({ page }) => {
     await mount(page, blocks());
     await openRow(page, 'r1');
     // Hover is read where the pointer lands, so the slide-in must be over first.
     await expect.poll(() => peek(page).evaluate((el) => el.getAnimations().length)).toBe(0);
 
     const box = await peek(page).boundingBox();
+    const head = await peek(page).locator('[data-blok-database-drawer-page-head]').boundingBox();
+    const title = await peekTitle(page).boundingBox();
+
+    if (box === null || head === null || title === null) throw new Error('no peek');
+    const controls = [peek(page).locator('[data-blok-database-peek-mode]'), peek(page).getByRole('button', { name: 'Add icon' })];
+    const expectOpacity = async (opacity: string): Promise<void> => {
+      for (const el of controls) await expect(el).toHaveCSS('opacity', opacity);
+    };
+
+    await page.mouse.move(box.x + box.width / 2, box.y + 300);
+    await expectOpacity('0');
+    // Just under the bar, over the head's top: Notion's 44..80 strip.
+    await page.mouse.move(head.x + head.width / 2, box.y + 46);
+    await expectOpacity('1');
+    await page.mouse.move(title.x + title.width / 2, title.y + title.height / 2);
+    await expectOpacity('0');
+    await page.mouse.move(box.x + box.width / 2, box.y + 20);
+    await expectOpacity('1');
+    await expect(controls[0]).toHaveCSS('transition', 'opacity 0.1s');
+  });
+
+  // notion-motion.md Round 56 §6: a center peek hides its icon row too while the pointer is lower down.
+  test('a center peek shows its icon row only while the pointer is near its top', async ({ page }) => {
+    await mount(page, blocks({ openPagesIn: 'center' }));
+    await openRow(page, 'r1');
+
+    const box = await peek(page).boundingBox();
+    const addIcon = peek(page).getByRole('button', { name: 'Add icon' });
 
     if (box === null) throw new Error('no peek');
     await page.mouse.move(box.x + box.width / 2, box.y + 300);
-    await expect(peek(page).locator('[data-blok-database-peek-mode]')).toHaveCSS('opacity', '1');
+    await expect(addIcon).toHaveCSS('opacity', '0');
+    await page.mouse.move(box.x + box.width / 2, box.y + 20);
+    await expect(addIcon).toHaveCSS('opacity', '1');
   });
 });
 

@@ -80,6 +80,14 @@ const titleCell = (): HTMLElement => {
   return cell;
 };
 
+/** A right-click opens the row menu (research/23 §157); its Comment opens the row's comments. */
+const openComments = async (): Promise<void> => {
+  titleCell().dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+  await quiet();
+  document.querySelector<HTMLElement>('[data-blok-popover-item][data-blok-item-name="database-row-comment"]')?.click();
+  await quiet();
+};
+
 const composerInput = (): HTMLTextAreaElement | null =>
   document.querySelector<HTMLTextAreaElement>('[data-blok-database-comments] [data-blok-database-comment-input]');
 
@@ -111,21 +119,18 @@ describe('built-in database comments', () => {
     vi.restoreAllMocks();
   });
 
-  it('a cell right-click opens a composer that writes a thread on that cell, then a badge shows its count', async () => {
+  it('the row menu\'s Comment opens a composer that writes a thread on that row, then a badge shows its count', async () => {
     await make();
-    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    await openComments();
 
-    titleCell().dispatchEvent(event);
-    await quiet();
-
-    expect(event.defaultPrevented).toBe(true);
     expect(composerInput()?.placeholder).toBe('Add a comment…');
     await send('Looks good');
 
     const saved = await savedComments();
 
     expect(saved).toHaveLength(1);
-    expect(saved[0]).toMatchObject({ parent: 'r1', data: { text: 'Looks good', propertyId: 't' } });
+    expect(saved[0]).toMatchObject({ parent: 'r1', data: { text: 'Looks good' } });
+    expect(saved[0]?.data).not.toHaveProperty('propertyId');
     expect(document.querySelector('[data-blok-database-comment-text]')?.textContent).toBe('Looks good');
     expect(document.querySelector('[data-blok-database-comment-author]')?.textContent).toBe('Anonymous');
     expect(document.querySelector('[data-blok-database-comment-time]')?.textContent).toBe('Just now');
@@ -138,8 +143,7 @@ describe('built-in database comments', () => {
 
   it('a second message in the same popover replies to the thread', async () => {
     await make();
-    titleCell().dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    await quiet();
+    await openComments();
     await send('First');
     await send('Second');
 
@@ -151,8 +155,7 @@ describe('built-in database comments', () => {
 
   it('Resolve hides the thread and drops the badge', async () => {
     await make();
-    titleCell().dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    await quiet();
+    await openComments();
     await send('Done?');
     document.querySelector<HTMLElement>('[data-blok-database-comment-resolve]')?.click();
     await quiet();
@@ -166,8 +169,7 @@ describe('built-in database comments', () => {
     const open = vi.fn();
 
     await make({ comments: { open } });
-    titleCell().dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    await quiet();
+    await openComments();
 
     expect(open).toHaveBeenCalledTimes(1);
     expect(composerInput()).toBeNull();
@@ -175,8 +177,7 @@ describe('built-in database comments', () => {
 
   it('works with only `database` registered: it brings its rows and comments', async () => {
     await make({}, false);
-    titleCell().dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    await quiet();
+    await openComments();
     await send('No extra entry');
 
     expect((await savedComments())[0]).toMatchObject({ parent: 'r1', data: { text: 'No extra entry' } });
@@ -184,8 +185,7 @@ describe('built-in database comments', () => {
 
   it('offers nothing where the host denies comments', async () => {
     await make({ permissions: { can: (action: string) => action !== 'comment' } });
-    titleCell().dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    await quiet();
+    await openComments();
 
     expect(composerInput()).toBeNull();
   });
@@ -225,8 +225,7 @@ describe('built-in database comments', () => {
 
   it('Delete asks "Delete this comment?" first and deletes only on confirm', async () => {
     await make();
-    titleCell().dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    await quiet();
+    await openComments();
     await send('Oops');
     const more = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-database-comment-actions]');
     const pickDelete = async (): Promise<void> => {
@@ -250,8 +249,7 @@ describe('built-in database comments', () => {
 
   it('Edit from More actions changes the text and marks it edited; Escape leaves only the edit', async () => {
     await make();
-    titleCell().dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    await quiet();
+    await openComments();
     await send('Typo');
     const startEdit = async (): Promise<HTMLTextAreaElement | null> => {
       document.querySelector<HTMLElement>('[data-blok-database-comment-actions]')?.click();
@@ -281,8 +279,7 @@ describe('built-in database comments', () => {
 
   it('opening one comment\'s actions menu closes another\'s, so one Escape closes the open one', async () => {
     await make();
-    titleCell().dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    await quiet();
+    await openComments();
     await send('First');
     await send('Second');
     const [moreA, moreB] = Array.from(document.querySelectorAll<HTMLElement>('[data-blok-database-comment-actions]'));
@@ -298,8 +295,7 @@ describe('built-in database comments', () => {
 
   it('closing the popover mid-edit removes the edit\'s window Escape listener', async () => {
     await make();
-    titleCell().dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    await quiet();
+    await openComments();
     await send('Draft');
     document.querySelector<HTMLElement>('[data-blok-database-comment-actions]')?.click();
     // Spy after the menu opens: the menu adds an Escape listener of its own.

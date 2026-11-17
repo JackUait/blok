@@ -75,7 +75,7 @@ import { groupCalculationHint, groupCalculationItems, groupCalculationText } fro
 import { optionColorOf, type OptionColor } from './cells/option-colors';
 import { DatabaseBoardView } from './database-board-view';
 import type { BoardLane } from './database-board-view';
-import { DatabaseListView, pointerAnchor } from './database-list-view';
+import { DatabaseListView, pointerAnchor, pointerMenuPlacement } from './database-list-view';
 import { DatabaseTableView, createTableState } from './database-table-view';
 import { DatabaseGalleryView } from './database-gallery-view';
 import type { GalleryGroup } from './database-gallery-view';
@@ -380,19 +380,6 @@ const BOARD_GROUP_PAGE = 10;
  * near a window edge it slides in to `margin` from it instead of turning to end at the button.
  * Above, its bottom sits `offset` over the button's top. The top and bottom keep no margin.
  */
-/**
- * A right-click menu at the pointer: below it when it fits, else above with its bottom on the pointer
- * when its top keeps the card menu's 12px margin, else clamped. Rows not listed keep the menu on the row.
- * findings-listgallery L16, notion-motion.md Round 56 §9, Round 57 §5, Round 58 §6 (threshold 12: top 11.1 no, 12.1 yes).
- */
-const pointerMenuPlacement = (rowEl: HTMLElement, event: MouseEvent): { anchor: HTMLElement; coverFlipOffset: number } | undefined => {
-  if (!rowEl.matches('[data-blok-database-list-row], [data-blok-database-board] [data-blok-database-card], [data-blok-database-timeline-bar]')) return undefined;
-  // Round 58 §6: below, a list row's or board card's menu top is y + 1. A bar's below-placement is unmeasured.
-  const nudge = rowEl.matches('[data-blok-database-timeline-bar]') ? 0 : 1;
-
-  return { anchor: pointerAnchor(rowEl, { clientX: event.clientX, clientY: event.clientY + nudge }), coverFlipOffset: nudge };
-};
-
 const groupMenuCoverPlacement = (anchor: HTMLElement, margin: number, offset: number): Pick<PopoverDesktopParams, 'cover' | 'viewportMargin' | 'coverFlipOffset' | 'coverVerticalMargin'> & { position: DOMRect; positionContext: HTMLElement } => {
   const rect = anchor.getBoundingClientRect();
 
@@ -9920,11 +9907,11 @@ export class DatabaseTool implements BlockTool {
   }
 
   private attachReadListeners(boardEl: HTMLDivElement): void {
-    // Notion: a right-click on a card or list row opens its row menu.
+    // Notion: a right-click on a card or row opens its row menu. A writable table opens its own ⋮⋮ menu first.
     boardEl.addEventListener('contextmenu', (event) => {
       const target = event.target instanceof Element ? event.target : null;
       const rowEl = target?.closest<HTMLElement>('[data-blok-database-card], [data-blok-database-gallery-card], [data-blok-database-list-row], '
-        + '[data-blok-database-timeline-bar], [data-blok-database-timeline-table-row], [data-blok-database-calendar-event]');
+        + '[data-blok-database-timeline-bar], [data-blok-database-timeline-table-row], [data-blok-database-calendar-event], [data-blok-database-table-row]');
       const rowId = rowEl?.getAttribute('data-row-id');
 
       // A field being edited keeps the native menu, for copy and paste.

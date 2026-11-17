@@ -58,24 +58,31 @@ describe('DatabaseTool — config.comments', () => {
     document.body.innerHTML = '';
   });
 
-  it('a right-click on a cell opens the host\'s comments for that cell, inside a declared context-menu owner', () => {
+  // A cell's own comments are reached from its hover Comment button: a right-click opens the row menu (research/23 §157).
+  it('a filled cell\'s Comment button opens the host\'s comments for that cell', () => {
+    const doc = makeDoc([fakeRow('a', 'db', { title: 'Alpha', notes: 'Draft' }, 'a0')]);
+    const open = vi.fn();
+    const { el } = buildTool(doc, { comments: { open } });
+    const cell = cellOf(el, 'a', 'notes');
+
+    cell.querySelector<HTMLElement>('[data-blok-database-table-cell-action="comment"]')?.click();
+
+    expect(open).toHaveBeenCalledWith({ databaseId: 'db', rowId: 'a', propertyId: 'notes' }, cell);
+  });
+
+  it('a right-click on a cell opens the row menu, whose Comment opens the row\'s comments, inside a declared context-menu owner', () => {
     const doc = makeDoc([fakeRow('a', 'db', { title: 'Alpha' }, 'a0')]);
     const open = vi.fn();
     const { el } = buildTool(doc, { comments: { open } });
     const cell = cellOf(el, 'a', 'notes');
     const event = rightClick(cell);
 
-    expect(open).toHaveBeenCalledWith({ databaseId: 'db', rowId: 'a', propertyId: 'notes' }, cell);
+    expect(open).not.toHaveBeenCalled();
     expect(event.defaultPrevented).toBe(true);
-    // Core's block menu stands down inside the owner (ui.ts), so no stopPropagation is needed.
+    // Core's block menu stands down inside the owner (ui.ts).
     expect(cell.closest('[data-blok-context-menu-owner]')).not.toBeNull();
-  });
-
-  it('declares no context-menu owner without the comments lever, so core keeps the block menu', () => {
-    const doc = makeDoc([fakeRow('a', 'db', { title: 'Alpha' }, 'a0')]);
-    const { el } = buildTool(doc);
-
-    expect(cellOf(el, 'a', 'notes').closest('[data-blok-context-menu-owner]')).toBeNull();
+    menuItem('database-row-comment')?.click();
+    expect(open).toHaveBeenCalledWith({ databaseId: 'db', rowId: 'a' }, cell.closest('[data-blok-database-table-row]'));
   });
 
   it('works in read-only, where commenters live', () => {
@@ -84,18 +91,24 @@ describe('DatabaseTool — config.comments', () => {
     const { el } = buildTool(doc, { comments: { open } }, undefined, true);
 
     rightClick(cellOf(el, 'a', 'title'));
+    menuItem('database-row-comment')?.click();
 
-    expect(open).toHaveBeenCalledWith({ databaseId: 'db', rowId: 'a', propertyId: 'title' }, expect.any(HTMLElement));
+    expect(open).toHaveBeenCalledWith({ databaseId: 'db', rowId: 'a' }, expect.any(HTMLElement));
   });
 
-  it('leaves the right-click alone without the lever, or when permissions deny comment', () => {
+  it('the right-click menu has no Comment without the lever, or when permissions deny comment', () => {
     const doc = makeDoc([fakeRow('a', 'db', { title: 'Alpha' }, 'a0')]);
     const open = vi.fn();
     const plain = buildTool(doc).el;
+
+    expect(rightClick(cellOf(plain, 'a', 'notes')).defaultPrevented).toBe(true);
+    expect(menuItem('database-row-copy-link')).not.toBeNull();
+    expect(menuItem('database-row-comment')).toBeNull();
+    document.body.innerHTML = '';
     const denied = buildTool(doc, { comments: { open }, permissions: { can: (action) => action !== 'comment' } }).el;
 
-    expect(rightClick(cellOf(plain, 'a', 'notes')).defaultPrevented).toBe(false);
-    expect(rightClick(cellOf(denied, 'a', 'notes')).defaultPrevented).toBe(false);
+    expect(rightClick(cellOf(denied, 'a', 'notes')).defaultPrevented).toBe(true);
+    expect(menuItem('database-row-comment')).toBeNull();
     expect(open).not.toHaveBeenCalled();
   });
 
@@ -372,7 +385,8 @@ describe('DatabaseTool — comments on the timeline', () => {
     const point = document.querySelector<HTMLElement>('[data-blok-database-menu-point]');
 
     expect(point?.style.left).toBe('300px');
-    expect(point?.style.top).toBe('120px');
+    // notion-motion.md Round 59 §4: below the pointer, a bar's menu top is y + 1, as a list row's.
+    expect(point?.style.top).toBe('121px');
     expect(point?.hasAttribute('data-popover-open')).toBe(true);
     expect(bar.hasAttribute('data-blok-database-card-picked')).toBe(true);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
@@ -392,7 +406,7 @@ describe('DatabaseTool — comments on the timeline', () => {
     vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
     vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(371);
     vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
-      return this.hasAttribute('data-blok-database-menu-point') ? new DOMRect(900, y, 0, 0) : real.call(this);
+      return this instanceof HTMLElement && this.hasAttribute('data-blok-database-menu-point') ? new DOMRect(900, Number.parseFloat(this.style.top), 0, 0) : real.call(this);
     });
     bar.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 900, clientY: y }));
     const menu = document.querySelector<HTMLElement>('.blok-database-card-menu');
@@ -400,11 +414,15 @@ describe('DatabaseTool — comments on the timeline', () => {
     expect(menu?.style.top).toBe(`${top}px`);
   });
 
-  it('keeps a table panel row\'s right-click menu on the row', () => {
+  // notion-motion.md Round 59 §4: a timeline panel row's menu opens at the pointer, as a list row's.
+  it('anchors a table panel row\'s right-click menu at the pointer', () => {
     const { el } = buildTool(timelineDoc(), { comments: { open: vi.fn() } }, timelineData());
 
     tableRowOf(el, 'a').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
-    expect(document.querySelector('[data-blok-database-menu-point]')).toBeNull();
+    const point = document.querySelector<HTMLElement>('[data-blok-database-menu-point]');
+
+    expect(point?.style.left).toBe('300px');
+    expect(point?.style.top).toBe('121px');
   });
 
   it('a right-click on a table panel row opens the row menu with Comment, which opens that row\'s comments', () => {

@@ -324,6 +324,19 @@ describe('DatabaseTool — calendar event comments (research/22 §11)', () => {
     expect(open).toHaveBeenCalledWith({ databaseId: 'db', rowId: 'delta' }, eventOf(el, 'delta'));
   });
 
+  // notion-motion.md Round 59 §4: an event's menu opens at the pointer x, 1px under it.
+  it('anchors an event\'s right-click menu at the pointer', () => {
+    const { el } = buildTool(doc(), {}, calendarData());
+
+    eventOf(el, 'delta').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 880, clientY: 200 }));
+    const point = document.querySelector<HTMLElement>('[data-blok-database-menu-point]');
+
+    expect(point?.style.left).toBe('880px');
+    expect(point?.style.top).toBe('201px');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(document.querySelector('[data-blok-database-menu-point]')).toBeNull();
+  });
+
   it('one picked event opens its comments on ⌘⇧M', () => {
     const open = vi.fn();
     const { el } = buildTool(doc(), { comments: { open } }, calendarData());

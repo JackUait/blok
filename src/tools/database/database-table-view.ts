@@ -45,6 +45,8 @@ import type { CommentBadges } from './database-comment-badge';
 import { propertyTypeMeta } from './database-property-types';
 import type { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
+import { PopoverEvent } from '@/types/utils/popover/popover-event';
+import { pointerMenuPlacement } from './database-list-view';
 import {
   IconPlayerPlay,
   IconChevronRight,
@@ -622,10 +624,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     });
     gridEl.addEventListener('click', this.handleNestingClick, true);
     gridEl.addEventListener('click', this.handleClick);
-    if (this.options.comment !== undefined) {
-      gridEl.setAttribute(DATA_ATTR.contextMenuOwner, '');
-      gridEl.addEventListener('contextmenu', this.handleContextMenu);
-    }
+    gridEl.setAttribute(DATA_ATTR.contextMenuOwner, '');
+    gridEl.addEventListener('contextmenu', this.handleContextMenu);
     // Bubble on the grid runs before the popover registry's document listener,
     // whose outside press closes the open editor and asks for a redraw.
     gridEl.addEventListener('pointerdown', this.handlePress);
@@ -1964,15 +1964,20 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
   // ─── Clicks ───
 
-  /** A right-click on a cell opens its comments. It stops here so core's block menu does not replace it. */
+  /**
+   * research/23 §157: a right-click on a row opens its ⋮⋮ menu, at the pointer (notion-motion.md Round 59 §4).
+   * Read-only has no handlers: the event goes on to the tool's own row menu.
+   */
   private readonly handleContextMenu = (event: MouseEvent): void => {
     const target = event.target instanceof Element ? event.target : null;
-    const cell = target?.closest<HTMLElement>('[data-blok-database-table-cell]');
-    const rowId = cell?.closest('[data-row-id]')?.getAttribute('data-row-id');
+    const rowId = target?.closest('[data-blok-database-table-row]')?.getAttribute('data-row-id');
 
-    if (cell === null || cell === undefined || rowId === null || rowId === undefined || this.options.comment === undefined) return;
+    // A field being edited keeps the native menu, for copy and paste.
+    if (target === null || target.closest('input, textarea, [contenteditable="true"]') !== null) return;
+    if (rowId === null || rowId === undefined || this.handlers === undefined) return;
     event.preventDefault();
-    this.options.comment(rowId, cell.getAttribute('data-property-id') ?? undefined, cell);
+    event.stopPropagation();
+    this.openRowMenu(null, rowId, { clientX: event.clientX, clientY: event.clientY });
   };
 
   private readonly handleClick = (event: MouseEvent): void => {
@@ -2147,7 +2152,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       return;
     }
     if (closest('[data-blok-database-table-row-handle]') !== null) {
-      this.openRowMenu(closest('[data-blok-database-table-row-handle]') as HTMLElement, rowId);
+      this.openRowMenu(closest('[data-blok-database-table-row-handle]'), rowId);
 
       return;
     }
@@ -2256,13 +2261,22 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     return true;
   }
 
-  private openRowMenu(anchor: HTMLElement, rowId: string): void {
+  /** From the ⋮⋮ `handle`, or at the `pointer` of a right-click. */
+  private openRowMenu(handle: HTMLElement | null, rowId: string, pointer?: Pick<MouseEvent, 'clientX' | 'clientY'>): void {
     const handlers = this.handlers;
 
     if (handlers === undefined) {
       return;
     }
     this.grid?.selectRows([rowId]);
+    // After the pick: the point lives in the row, so it must be the row as painted now.
+    const rowEl = pointer === undefined ? null : this.root?.querySelector<HTMLElement>(`[data-blok-database-table-row][data-row-id="${CSS.escape(rowId)}"]`) ?? null;
+    const placement = rowEl === null || pointer === undefined ? undefined : pointerMenuPlacement(rowEl, pointer);
+    const anchor = placement?.anchor ?? handle ?? rowEl;
+    // The point is gone once the menu closes; the composer sits on the row, as a card's does.
+    const commentAnchor = rowEl ?? anchor;
+
+    if (anchor === null || commentAnchor === null) return;
     const favorite = this.options.favorite?.(rowId);
 
     this.showMenu(anchor, rowMenuItems({
@@ -2291,13 +2305,18 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         ...(this.options.cellContext?.hourCycle !== undefined ? { hourCycle: this.options.cellContext.hourCycle } : {}),
         i18n: this.options.i18n,
       }),
-      ...(this.options.comment !== undefined ? { onComment: () => this.options.comment?.(rowId, undefined, anchor) } : {}),
+      ...(this.options.comment !== undefined ? { onComment: () => this.options.comment?.(rowId, undefined, commentAnchor) } : {}),
       // research/36 §6: Notion's row handle › Move to Trash shows the toast.
       onDelete: () => {
         this.state.selection = null;
         handlers.deleteRows([rowId], true);
       },
-    }), { searchable: true, searchPlaceholder: this.t('tools.database.searchActions'), kind: 'row' });
+    }), {
+      searchable: true,
+      searchPlaceholder: this.t('tools.database.searchActions'),
+      ...(placement === undefined ? { kind: 'row' } : { kind: 'card', coverFlipOffset: placement.coverFlipOffset }),
+    });
+    if (placement !== undefined) this.menu?.on(PopoverEvent.Closed, () => placement.anchor.remove());
   }
 
   // ─── Columns ───

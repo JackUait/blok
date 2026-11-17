@@ -904,6 +904,30 @@ export const pointerAnchor = (rowEl: HTMLElement, event: Pick<MouseEvent, 'clien
   return point;
 };
 
+// A feed card is not listed: its right-click is unmeasured.
+const POINTER_MENU_ROWS = [
+  '[data-blok-database-list-row]',
+  '[data-blok-database-board] [data-blok-database-card]',
+  '[data-blok-database-gallery-card]',
+  '[data-blok-database-table-row]',
+  '[data-blok-database-timeline-bar]',
+  '[data-blok-database-timeline-table-row]',
+  '[data-blok-database-calendar-event]',
+].join(', ');
+
+/**
+ * A right-click menu at the pointer: below it with its top 1px under the pointer when it fits, else above
+ * with its bottom on the pointer when its top keeps the card menu's 12px margin, else clamped.
+ * Rows not listed keep the menu on the row.
+ * notion-motion.md Round 58 §6 (threshold 12: top 11.1 no, 12.1 yes), Round 59 §4 (table rows, gallery cards,
+ * timeline bars and panel rows, calendar events).
+ */
+export const pointerMenuPlacement = (rowEl: HTMLElement, event: Pick<MouseEvent, 'clientX' | 'clientY'>): { anchor: HTMLElement; coverFlipOffset: number } | undefined => {
+  if (!rowEl.matches(POINTER_MENU_ROWS)) return undefined;
+
+  return { anchor: pointerAnchor(rowEl, { clientX: event.clientX, clientY: event.clientY + 1 }), coverFlipOffset: 1 };
+};
+
 /** Image file names and data URLs; any other file keeps its chip. */
 const IMAGE_FILE = /(\.(png|jpe?g|gif|webp|avif|svg|bmp)([?#].*)?$)|^data:image\//i;
 

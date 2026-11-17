@@ -383,6 +383,55 @@ test.describe('a narrow player (capsule)', () => {
     await expect.poll(() => block.locator('[data-role="center-play"]').evaluate((el) => getComputedStyle(el).opacity)).toBe('0');
   });
 
+  test('never lays a resize handle over a control, at any width', async ({ page }) => {
+    await createBlok(page, { blocks: [{ type: 'video', data: { url: unplayedVideoUrl(), width: 100, caption: 'A caption', captionVisible: true } }] });
+    const block = page.locator(VIDEO_BLOCK_SELECTOR);
+
+    await expect(block).toHaveAttribute('data-state', 'rendered');
+    await playThenPause(page);
+
+    const overlaps = await block.evaluate(async (root) => {
+      const figure = root.querySelector<HTMLElement>('[data-role="video-figure"]');
+      const bar = root.querySelector<HTMLElement>('[data-role="seek-wrap"]')?.parentElement;
+
+      if (!figure || !bar) return ['no player'];
+      // Every control up, as on hover, and each handle as large as its own hover makes it.
+      const shown = document.createElement('style');
+
+      bar.style.setProperty('opacity', '1', 'important');
+      bar.style.setProperty('--blok-video-bar-on', '1', 'important');
+      bar.style.setProperty('transform', 'none', 'important');
+      shown.textContent = '[data-role="video-controls"] *{transition:none !important;animation:none !important}'
+        + '[data-role="resize-handle"]{transition:none !important;opacity:1 !important;transform:translateY(-50%) scale(1.15) !important}';
+      document.head.append(shown);
+      const found: string[] = [];
+      const frame = (): Promise<void> => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+
+      for (const width of [640, 520, 420, 400, 399, 340, 300, 261, 259, 222, 200, 181, 179, 150]) {
+        figure.style.width = `${width}px`;
+        await frame();
+        const handles = [...root.querySelectorAll<HTMLElement>('[data-role="resize-handle"]')].map((el) => el.getBoundingClientRect());
+        const parts = [bar, ...bar.querySelectorAll<HTMLElement>('button, [data-role="seek-wrap"]')]
+          .filter((el) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden');
+
+        const hit = parts.filter((part) => {
+          const box = part.getBoundingClientRect();
+
+          return box.width > 0 && box.height > 0 && handles.some((handle) => (
+            handle.right > box.left && handle.left < box.right && handle.bottom > box.top && handle.top < box.bottom
+          ));
+        });
+
+        found.push(...hit.map((part) => `${width}px: ${part.getAttribute('data-action') ?? part.getAttribute('data-role') ?? 'bar'}`));
+      }
+      shown.remove();
+
+      return found;
+    });
+
+    expect(overlaps).toEqual([]);
+  });
+
   test('seeks to where the capsule is pressed, and swells while held', async ({ page }) => {
     await createBlok(page, { blocks: [{ type: 'video', data: { url: unplayedVideoUrl(), width: 30 } }] });
     const block = page.locator(VIDEO_BLOCK_SELECTOR);

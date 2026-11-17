@@ -294,6 +294,23 @@ describe('video controls — the flash on a small player', () => {
     h.destroy();
   });
 
+  it('tells the stylesheet how tall the frame is, so the resize handles can keep clear of the controls', () => {
+    const h = mount(320, 180);
+
+    expect(h.figure.style.getPropertyValue('--blok-video-frame-h')).toBe('180px');
+    h.resize(320, 124);
+    expect(h.figure.style.getPropertyValue('--blok-video-frame-h')).toBe('124px');
+    h.destroy();
+  });
+
+  it('says nothing about a frame it has not measured', () => {
+    const h = mount(320, 180);
+
+    h.resize(320, 0);
+    expect(h.figure.style.getPropertyValue('--blok-video-frame-h')).toBe('');
+    h.destroy();
+  });
+
   it('follows the height when only the height changes', () => {
     const h = mount(320, 240);
 

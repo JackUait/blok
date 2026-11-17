@@ -1414,6 +1414,9 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     const height = root.clientHeight;
     const tier = playerTier(width);
     const capsule = tier !== 'full';
+    // video.css places the resize handles by this; they sit on the figure, which is taller by the caption.
+    if (height > 0) figure.style.setProperty('--blok-video-frame-h', `${height}px`);
+    else figure.style.removeProperty('--blok-video-frame-h');
     const under = (limit: number): boolean => height > 0 && height < limit;
     const content = capsule && (tier === 'tiny' || under(SHEET_TILES_BELOW)) ? 'tiles' : 'rows';
     // The card under an open sheet would change shape, or lose its button.

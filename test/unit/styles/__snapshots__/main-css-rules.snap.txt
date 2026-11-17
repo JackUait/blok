@@ -25735,6 +25735,8 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   position: relative;
   max-width: 100%;
   vertical-align: top;
+  --blok-video-keep-top: 0px;
+  --blok-video-keep-bottom: 66px;
 }
 
 [data-blok-tool="video"] .blok-video-media {
@@ -25854,9 +25856,11 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-tool="video"] [data-role="resize-handle"] {
   position: absolute;
-  top: 50%;
+  --blok-video-handle-frame: var(--blok-video-frame-h, 100%);
+  --blok-video-handle-h: min( clamp(24px, calc(var(--blok-video-handle-frame) * 0.25), 50px), calc((var(--blok-video-handle-frame) - var(--blok-video-keep-top) - var(--blok-video-keep-bottom)) / 1.15) );
+  top: clamp( calc(var(--blok-video-keep-top) + var(--blok-video-handle-h) * 0.575), calc(var(--blok-video-handle-frame) / 2), calc(var(--blok-video-handle-frame) - var(--blok-video-keep-bottom) - var(--blok-video-handle-h) * 0.575) );
   width: 6px;
-  height: clamp(24px, 25%, 50px);
+  height: var(--blok-video-handle-h);
   background: var(--blok-handle-bg-default);
   border: 1px solid var(--blok-handle-fg-default);
   border-radius: var(--blok-radius-pill);
@@ -27292,6 +27296,15 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__menu-row[data-action="menu-theater"], [data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__menu-row[data-action="menu-pip"] {
   display: flex;
+}
+
+[data-blok-tool="video"] .blok-video-inner[data-capsule] {
+  --blok-video-keep-top: 42px;
+  --blok-video-keep-bottom: 54px;
+}
+
+[data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] {
+  --blok-video-keep-bottom: 47px;
 }
 
 [data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar {

@@ -385,6 +385,9 @@ const DANGLING_VAR_ALLOWLIST = new Set([
   '--blok-speed-puck',
   '--blok-speed-step-px',
   '--blok-speed-tick',
+  // Set at runtime on the video figure by syncSize (tools/video/controls.ts): the frame's own
+  // height, so the resize handles skip the caption row. The read falls back to 100% before it is measured.
+  '--blok-video-frame-h',
 ]);
 
 describe('R3 — every var() reference resolves to a declared token', () => {

@@ -181,6 +181,40 @@ describe('video capsule — narrow player', () => {
   });
 });
 
+describe('video — resize handles keep clear of the controls', () => {
+  const HANDLE = `${T} [data-role="resize-handle"]`;
+
+  it('measures the handle against the frame, not the figure with its caption', () => {
+    const handle = block(HANDLE);
+
+    expect(handle).toContain('var(--blok-video-frame-h, 100%)');
+    expect(handle).not.toMatch(/top: 50%/);
+  });
+
+  it('holds the handle between the space kept at the top and at the bottom', () => {
+    const handle = block(HANDLE);
+
+    expect(handle).toMatch(/top: clamp\(/);
+    expect(handle).toContain('var(--blok-video-keep-top)');
+    expect(handle).toContain('var(--blok-video-keep-bottom)');
+    expect(handle).toMatch(/--blok-video-handle-h: min\(/);
+    expect(handle).toContain('height: var(--blok-video-handle-h)');
+  });
+
+  it('keeps the bar clear on a wide player', () => {
+    const inner = block(`${T} .blok-video-inner`);
+
+    expect(inner).toContain('--blok-video-keep-top: 0px');
+    expect(inner).toMatch(/--blok-video-keep-bottom: \d+px/);
+  });
+
+  it('keeps the corner buttons and the held capsule clear on a narrow player', () => {
+    expect(block(C)).toMatch(/--blok-video-keep-top: \d+px/);
+    expect(block(C)).toMatch(/--blok-video-keep-bottom: \d+px/);
+    expect(block(tier('tiny'))).toMatch(/--blok-video-keep-bottom: \d+px/);
+  });
+});
+
 const SHEET = '.blok-video-controls__sheet';
 const MENU = `${SHEET} .blok-video-controls__menu`;
 const at = (attr: string): string => `${T} .blok-video-inner[${attr}]`;

@@ -22,6 +22,9 @@
   position: relative;
   max-width: 100%;
   vertical-align: top;
+  /* Frame space the resize handles stay out of: the bar's 14px inset and 48px height, plus 4px. */
+  --blok-video-keep-top: 0px;
+  --blok-video-keep-bottom: 66px;
 }
 
 /* media box — hugs the player, rounds + clips the overlaid chrome, casts the
@@ -154,9 +157,21 @@
 /* ----- resize handle — Notion-style pill straddling the edge ----- */
 [data-blok-tool="video"] [data-role="resize-handle"] {
   position: absolute;
-  top: 50%;
+  /* The frame's height, from controls.ts. The figure's own includes the caption. */
+  --blok-video-handle-frame: var(--blok-video-frame-h, 100%);
+  /* 1.15 is the hover scale: the grown handle must still fit the free strip. */
+  --blok-video-handle-h: min(
+    clamp(24px, calc(var(--blok-video-handle-frame) * 0.25), 50px),
+    calc((var(--blok-video-handle-frame) - var(--blok-video-keep-top) - var(--blok-video-keep-bottom)) / 1.15)
+  );
+  /* Centred on the frame, unless a control is in the way: then as near as the free strip allows. */
+  top: clamp(
+    calc(var(--blok-video-keep-top) + var(--blok-video-handle-h) * 0.575),
+    calc(var(--blok-video-handle-frame) / 2),
+    calc(var(--blok-video-handle-frame) - var(--blok-video-keep-bottom) - var(--blok-video-handle-h) * 0.575)
+  );
   width: 6px;
-  height: clamp(24px, 25%, 50px);
+  height: var(--blok-video-handle-h);
   background: var(--blok-handle-bg-default);
   border: 1px solid var(--blok-handle-fg-default);
   border-radius: var(--blok-radius-pill);
@@ -1587,6 +1602,14 @@
 [data-blok-tool="video"] .blok-video-controls__menu-row[data-action="menu-pip"] { display: none; }
 [data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__menu-row[data-action="menu-theater"],
 [data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__menu-row[data-action="menu-pip"] { display: flex; }
+
+/* What the resize handles stay out of, plus 4px: the corner buttons (8px inset, 30px tall)
+   and the capsule as large as a press makes it (6px inset, 44px tall; 5px and 38px when tiny). */
+[data-blok-tool="video"] .blok-video-inner[data-capsule] {
+  --blok-video-keep-top: 42px;
+  --blok-video-keep-bottom: 54px;
+}
+[data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] { --blok-video-keep-bottom: 47px; }
 
 /* the bar keeps its states but gives up its box; each part is placed on the frame */
 [data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar { display: contents; }

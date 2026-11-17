@@ -127,9 +127,14 @@ describe('video capsule — narrow player', () => {
     expect(block(`${tier('tiny')} .blok-video-controls__bar > .blok-video-controls__menu-wrap`)).toContain('inset-inline-end: calc(var(--blok-space-2) + 34px)');
   });
 
-  it('drops the time and mute below 180px', () => {
-    expect(block(`${tier('tiny')} .blok-video-controls__time`)).toContain('display: none');
-    expect(block(`${tier('tiny')} .blok-video-controls__volume-wrap`)).toContain('display: none');
+  it('fades the time and mute out below 180px, and takes them out of reach', () => {
+    for (const part of ['.blok-video-controls__time', '.blok-video-controls__volume-wrap']) {
+      const gone = block(`${tier('tiny')} ${part}`);
+
+      expect(gone, part).toContain('opacity: 0');
+      expect(gone, part).toContain('visibility: hidden');
+      expect(gone, part).not.toContain('display: none');
+    }
     expect(block(`${tier('tiny')} ${WRAP}`)).toContain('height: 32px');
   });
 
@@ -137,6 +142,35 @@ describe('video capsule — narrow player', () => {
     expect(block(`${C} .blok-video-controls__center`)).toContain('width: 48px');
     expect(block(`${tier('small')} .blok-video-controls__center`)).toContain('width: 40px');
     expect(block(`${tier('tiny')} .blok-video-controls__center`)).toContain('width: 32px');
+  });
+
+  it('glides the centre play from one size to the next', () => {
+    const disc = block(`${T} .blok-video-controls__center`);
+    const glyph = block(`${T} .blok-video-controls__center svg`);
+
+    expect(disc).toMatch(/transition:[^;]*\bwidth \d+ms[^;]*\bheight \d+ms/);
+    expect(glyph).toMatch(/transition:[^;]*\bwidth \d+ms[^;]*\bheight \d+ms/);
+  });
+
+  it('glides the capsule parts between tiers: size and place', () => {
+    const part = block(`${C} .blok-video-controls__bar > *`);
+
+    expect(part).toMatch(/transition:[^;]*\binset \d+ms/);
+    expect(part).toMatch(/transition:[^;]*\bwidth \d+ms[^;]*\bheight \d+ms/);
+  });
+
+  it('fades the new controls in when the player crosses 400px, so the old ones never flash', () => {
+    expect(css).toMatch(/@keyframes blok-video-tier-in\s*\{\s*from\s*\{\s*opacity: 0;\s*\}\s*\}/);
+    expect(block(`${C} .blok-video-controls__bar > *`)).toMatch(/animation: blok-video-tier-in \d+ms/);
+    expect(block(`${tier('full')} .blok-video-controls__bar`)).toMatch(/animation: blok-video-tier-in \d+ms/);
+  });
+
+  it('does not fade the tier swap under reduced motion', () => {
+    const reduced = css.slice(css.lastIndexOf('@media (prefers-reduced-motion: reduce)'));
+
+    expect(reduced).toMatch(/__bar > \*[^{]*\{[^}]*animation: none/);
+    expect(reduced).toMatch(/data-tier="full"\] \.blok-video-controls__bar[^{]*\{[^}]*animation: none/);
+    expect(reduced).toMatch(/__center[^{]*\{[^}]*transition: none/);
   });
 
   it('moves the centre play aside whenever the capsule is up', () => {

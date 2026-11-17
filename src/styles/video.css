@@ -1434,7 +1434,11 @@
   backdrop-filter: blur(18px) saturate(1.8);
   cursor: pointer;
   pointer-events: auto;
-  transition: transform 320ms var(--blok-ease-spring-island), opacity 160ms ease;
+  transition:
+    transform 320ms var(--blok-ease-spring-island),
+    opacity 160ms ease,
+    width 200ms ease,
+    height 200ms ease;
 }
 [data-blok-tool="video"] .blok-video-controls__center:hover { transform: translate(-50%, -50%) scale(1.06); }
 /* It shows whenever the video is paused. Over a played video the bar comes up on
@@ -1444,7 +1448,10 @@
   pointer-events: none;
 }
 [data-blok-tool="video"] .blok-video-controls__center[hidden] { display: none; }
-[data-blok-tool="video"] .blok-video-controls__center svg { width: 30px; height: 30px; }
+[data-blok-tool="video"] .blok-video-controls__center svg {
+  width: 30px; height: 30px;
+  transition: width 200ms ease, height 200ms ease;
+}
 
 /* buffering spinner */
 [data-blok-tool="video"] .blok-video-controls__spinner {
@@ -1588,8 +1595,22 @@
   margin: 0;
   opacity: var(--blok-video-bar-on, 0);
   translate: 0 calc((1 - var(--blok-video-bar-on, 0)) * 18px);
-  transition: opacity 180ms ease, translate 420ms var(--blok-ease-spring-island), background 120ms ease, transform 120ms ease;
+  transition:
+    opacity 180ms ease,
+    translate 420ms var(--blok-ease-spring-island),
+    background 120ms ease,
+    transform 120ms ease,
+    inset 260ms var(--blok-ease-spring-island),
+    width 260ms var(--blok-ease-spring-island),
+    height 260ms var(--blok-ease-spring-island);
+  /* Crossing 400px, the parts were at full opacity inside the hidden bar. Without
+     this they would show for a moment while they fade to their own state. It must
+     outlast the opacity transition above. */
+  animation: blok-video-tier-in 200ms ease;
 }
+@keyframes blok-video-tier-in { from { opacity: 0; } }
+/* the bar comes back the same way */
+[data-blok-tool="video"] .blok-video-inner[data-tier="full"] .blok-video-controls__bar { animation: blok-video-tier-in 200ms ease; }
 
 /* the capsule is the scrubber: a fill grows across it and a drag anywhere on it seeks */
 [data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar .blok-video-controls__seek-wrap {
@@ -1720,8 +1741,13 @@
 
 /* below 180px: play, the capsule, the three dots and full screen. Mute moves into the sheet. */
 [data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__bar > .blok-video-controls__menu-wrap { inset-inline-end: calc(var(--blok-space-2) + 34px); }
+/* faded, not removed, so they leave and come back without a jump */
 [data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__time,
-[data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__volume-wrap { display: none; }
+[data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__volume-wrap {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 180ms ease, visibility 0s 180ms;
+}
 [data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__center { width: 32px; height: 32px; }
 [data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__center svg { width: 18px; height: 18px; }
 [data-blok-tool="video"] .blok-video-inner[data-tier="tiny"] .blok-video-controls__bar .blok-video-controls__seek-wrap {
@@ -1924,6 +1950,10 @@
 @media (prefers-reduced-motion: reduce) {
   [data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar > *,
   [data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar .blok-video-controls__seek-wrap { transition: none; }
+  [data-blok-tool="video"] .blok-video-inner[data-capsule] .blok-video-controls__bar > * { animation: none; }
+  [data-blok-tool="video"] .blok-video-inner[data-tier="full"] .blok-video-controls__bar { animation: none; }
+  [data-blok-tool="video"] .blok-video-controls__center,
+  [data-blok-tool="video"] .blok-video-controls__center svg { transition: none; }
   [data-blok-tool="video"] .blok-video-inner[data-flash="pop"] .blok-video-controls__btn[data-action="play-toggle"].is-pop,
   [data-blok-tool="video"] .blok-video-inner[data-flash="pop"] .blok-video-controls__btn[data-action="play-toggle"].is-pop svg { animation: none; }
 }

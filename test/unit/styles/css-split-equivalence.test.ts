@@ -1881,6 +1881,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const VIDEO_CAPSULE_BYTES = 10_820;
     // video.css: the settings sheet inside a capsule (bottom card, frame card, tiles) and the play button pop (measured video.css growth).
     const VIDEO_CAPSULE_SHEET_BYTES = 9_321;
+    // video.css: the fade and size glides that hide the seams between player size tiers (measured video.css growth).
+    const VIDEO_TIER_GLIDE_BYTES = 1_253;
     // file.css: the object on a file card — pages, editor tab, filmstrip, record, folder, punch card (measured file.css growth).
     const FILE_CARD_OBJECT_BYTES = 27_626;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
@@ -2452,7 +2454,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + EMBED_BRAND_APP_ICON_BYTES
       + EMBED_IDLE_DECK_BYTES
       + VIDEO_CAPSULE_BYTES
-      + VIDEO_CAPSULE_SHEET_BYTES;
+      + VIDEO_CAPSULE_SHEET_BYTES
+      + VIDEO_TIER_GLIDE_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

@@ -396,7 +396,12 @@ export class DatabaseTableGrid {
 
     this.state.selection = deselect ? null : { kind: 'cell', anchor: target, focus: target };
     this.paint();
-    if (key === 'Enter' || key === 'Escape' || step !== undefined || this.root.contains(document.activeElement) || document.activeElement === document.body) {
+    if (deselect) {
+      // Notion's focus after this Tab is unmeasured; with no cell selected the grid lets it go, like Enter in Notion.
+      if (document.activeElement instanceof HTMLElement && this.root.contains(document.activeElement)) {
+        document.activeElement.blur();
+      }
+    } else if (key === 'Enter' || key === 'Escape' || step !== undefined || this.root.contains(document.activeElement) || document.activeElement === document.body) {
       this.root.focus({ preventScroll: true });
     }
     this.callbacks.editEnded();

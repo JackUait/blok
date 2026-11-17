@@ -877,7 +877,7 @@ describe('DatabaseTableView', () => {
       expect(event.defaultPrevented).toBe(true);
       expect(editor()).toBeNull();
       expect(handlers.commitCell).toHaveBeenCalledWith('r1', 'p-notes', 'typed');
-      expect(grid(root)).toHaveFocus();
+      expect(document.activeElement).toBe(document.body);
     });
 
     it('Tab in a Number cell editor saves and selects the cell to the right', () => {

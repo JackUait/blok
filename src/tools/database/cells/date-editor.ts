@@ -167,9 +167,9 @@ const ZONE_MENU_PLACE = { gap: -4, bottom: 12 };
 /**
  * notion-motion.md Round 55 §4: the Remind menu overlaps the picker's edge by 4px.
  * Which side it takes was read only once (left, with no room on the right), so
- * the side is still chosen as if it sat 4px clear.
+ * the side is still chosen as if it sat 4px clear. Round 57 §8: it stays 12px above the window bottom.
  */
-const REMIND_MENU_PLACE = { gap: -4, bottom: MENU_GAP, fitGap: MENU_GAP };
+const REMIND_MENU_PLACE = { gap: -4, bottom: 12, fitGap: MENU_GAP };
 
 type MenuKind = 'remind' | 'dateFormat' | 'timeFormat' | 'timeZone';
 

@@ -229,10 +229,10 @@ describe('timeline-dates', () => {
       expect(resizeAllDayByMinutes({ start: '2026-11-18', end: undefined }, 'start', -30)).toEqual({ start: '2026-11-17T23:30/2026-11-18T23:59' });
     });
 
-    // notion-motion.md Round 54 §1: a Day-zoom range is drawn to its end date's 00:00; a start drag keeps that end.
-    it('keeps a range\'s end at its end date\'s midnight on a start-edge resize', () => {
-      expect(resizeAllDayByMinutes({ start: '2026-11-18/2026-11-20', end: undefined }, 'start', -15)).toEqual({ start: '2026-11-17T23:45/2026-11-20T00:00' });
-      expect(resizeAllDayByMinutes({ start: '2026-11-18', end: '2026-11-20' }, 'start', 15)).toEqual({ start: '2026-11-18T00:15', end: '2026-11-20T00:00' });
+    // notion-motion.md Round 56 §9: Delta, Nov 17 → 24, start edge +104px (2 h) read "Nov 17 2:00 AM → Nov 24 11:59 PM".
+    it('ends a range\'s start-edge resize at 11:59 PM of its end date', () => {
+      expect(resizeAllDayByMinutes({ start: '2026-11-17/2026-11-24', end: undefined }, 'start', 120)).toEqual({ start: '2026-11-17T02:00/2026-11-24T23:59' });
+      expect(resizeAllDayByMinutes({ start: '2026-11-18', end: '2026-11-20' }, 'start', 15)).toEqual({ start: '2026-11-18T00:15', end: '2026-11-20T23:59' });
     });
 
     // notion-motion.md Round 54 §1: Beta, Nov 18 → 19, end edge +30px read "Nov 19, 12:30 AM".

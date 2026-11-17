@@ -293,6 +293,64 @@ describe('DatabaseCardDrawer', () => {
       expect(gap(host)).toBe('');
     });
 
+    // notion-motion.md Round 56 §6: the page widens over 200ms when the side peek turns into a center peek.
+    describe('switching to a center peek', () => {
+      const pickCenter = (options: CardDrawerOptions): void => {
+        options.wrapper.querySelector<HTMLElement>('[data-blok-database-peek-mode]')?.click();
+        document.querySelector<HTMLElement>('[data-blok-popover-custom-class~="blok-database-peek-mode-menu"] [data-blok-popover-item]:nth-child(2)')?.click();
+      };
+
+      beforeEach(() => {
+        vi.useFakeTimers();
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it('keeps the page marked while it widens, then drops the marks', () => {
+        const { host, drawer, options } = openWithHost({ left: 100, right: 1412 });
+
+        host.setAttribute('data-blok-database-peek-resizing', '');
+        pickCenter(options);
+
+        expect(options.wrapper.querySelector('[data-blok-database-drawer]')?.getAttribute('data-peek-mode')).toBe('center');
+        expect(host.hasAttribute('data-blok-database-peek')).toBe(true);
+        expect(host.hasAttribute('data-blok-database-peek-resizing')).toBe(false);
+        expect(inset(host)).toBe('0px');
+        expect(gap(host)).toBe('0px');
+
+        host.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'padding-right' }));
+
+        expect(host.hasAttribute('data-blok-database-peek')).toBe(false);
+        expect(inset(host)).toBe('');
+        drawer.destroy();
+      });
+
+      it('drops the marks after the fallback when no transitionend comes', () => {
+        const { host, drawer, options } = openWithHost({ left: 100, right: 1412 });
+
+        pickCenter(options);
+        vi.advanceTimersByTime(300);
+
+        expect(host.hasAttribute('data-blok-database-peek')).toBe(false);
+        drawer.destroy();
+      });
+
+      it('keeps a side peek picked again mid-widen narrowed', () => {
+        const { host, drawer, options } = openWithHost({ left: 100, right: 1412 });
+
+        pickCenter(options);
+        options.wrapper.querySelector<HTMLElement>('[data-blok-database-peek-mode]')?.click();
+        document.querySelector<HTMLElement>('[data-blok-popover-custom-class~="blok-database-peek-mode-menu"] [data-blok-popover-item]:nth-child(1)')?.click();
+        vi.advanceTimersByTime(300);
+
+        expect(host.hasAttribute('data-blok-database-peek')).toBe(true);
+        expect(inset(host)).toBe('656px');
+        drawer.destroy();
+      });
+    });
+
     it('drops its marks at once on destroy', () => {
       const { host, drawer } = openWithHost({ left: 100, right: 900 });
 

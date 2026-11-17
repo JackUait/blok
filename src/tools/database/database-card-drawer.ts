@@ -561,6 +561,8 @@ export class DatabaseCardDrawer {
   /** The side peek's width, with the panel's 280px while it widens the peek. */
   private peekWidth = PEEK_WIDTH;
   private peekWidened = false;
+  /** Ends a page widening after the switch to a center peek (widenPeekHost). */
+  private hostWiden: (() => void) | null = null;
   /** Folds of this session. Local storage holds them across reloads when it can (plan Q3). */
   private readonly collapsedSections = new Set<string>();
   private readonly databaseId: string | undefined;
@@ -1270,6 +1272,7 @@ export class DatabaseCardDrawer {
 
   /** Ends the page beside the side peek at the drawer's inner edge; database.css turns the inset into padding. */
   private narrowPeekHost(): void {
+    this.cancelHostWiden();
     const host = this.findPeekHost?.() ?? null;
 
     if (host === null) {
@@ -1288,7 +1291,45 @@ export class DatabaseCardDrawer {
     host.style.setProperty('--_blok-peek-gap', `${inset > 0 ? PEEK_TOOLBAR_GAP : 0}px`);
   }
 
+  /**
+   * notion-motion.md Round 56 §6: switched to a center peek, the page widens over the
+   * host's 200ms padding transition (database.css), so its marks stay until that ends.
+   */
+  private widenPeekHost(): void {
+    const host = this.peekHost;
+
+    if (host === null || peekHostOwners.get(host) !== this) {
+      this.releasePeekHost();
+
+      return;
+    }
+    this.cancelHostWiden();
+    // It turns the transition off.
+    host.removeAttribute('data-blok-database-peek-resizing');
+    host.style.setProperty('--_blok-peek-inset', '0px');
+    host.style.setProperty('--_blok-peek-gap', '0px');
+    const done = (): void => this.releasePeekHost();
+    const onEnd = (event: TransitionEvent): void => {
+      // Chromium reports the logical padding by its physical side.
+      if (event.target === host && /^padding-(inline-end|right|left)$/.test(event.propertyName)) done();
+    };
+    // No transitionend comes when the inset was already 0 or motion is reduced.
+    const timer = window.setTimeout(done, DRAWER_TRANSITION_FALLBACK_MS);
+
+    host.addEventListener('transitionend', onEnd);
+    this.hostWiden = () => {
+      host.removeEventListener('transitionend', onEnd);
+      window.clearTimeout(timer);
+    };
+  }
+
+  private cancelHostWiden(): void {
+    this.hostWiden?.();
+    this.hostWiden = null;
+  }
+
   private releasePeekHost(): void {
+    this.cancelHostWiden();
     if (this.peekHost !== null && peekHostOwners.get(this.peekHost) !== this) {
       this.peekHost = null;
 
@@ -2139,7 +2180,9 @@ export class DatabaseCardDrawer {
     if (mode === 'side' && drawer.hasAttribute('data-open')) {
       this.narrowPeekHost();
     }
-    if (mode !== 'side') {
+    if (mode === 'center') {
+      this.widenPeekHost();
+    } else if (mode !== 'side') {
       this.releasePeekHost();
     }
 

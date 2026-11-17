@@ -530,6 +530,28 @@ test.describe('side peek width', () => {
     await page.mouse.move(box.x + box.width / 2, box.y + 20);
     await expect(addIcon).toHaveCSS('opacity', '1');
   });
+
+  // notion-motion.md Round 56 §6: switching to a center peek widens the page over 200ms ease.
+  test('switching a side peek to a center peek widens the page over 200ms', async ({ page }) => {
+    await mount(page, blocks());
+    await openRow(page, 'r1');
+    const host = page.locator('[data-blok-database-peek]');
+
+    await expect(host).toHaveCount(1);
+    const handle = await host.elementHandle();
+
+    if (handle === null) throw new Error('no host');
+    await page.getByRole('button', { name: 'Open pages in' }).click();
+    await page.getByText('Center peek').click();
+    await expect(peek(page)).toHaveAttribute('data-peek-mode', 'center');
+
+    const widening = await handle.evaluate((el) => el.getAnimations().map((a) => (a as CSSTransition).transitionProperty));
+
+    // Chromium names the running transition by its physical side.
+    expect(widening).toContain('padding-right');
+    await expect.poll(() => handle.evaluate((el) => getComputedStyle(el).paddingInlineEnd)).toBe('0px');
+    await expect(host).toHaveCount(0);
+  });
 });
 
 test.describe('page icon', () => {

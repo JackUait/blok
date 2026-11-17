@@ -21433,7 +21433,17 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-feed-comments] [data-blok-database-comment-composer] {
+  --_blok-feed-tool-nudge: 0.5px;
   gap: 5.5px;
+  margin-inline-end: calc(var(--blok-space-6) + var(--blok-space-1-5));
+}
+
+[data-blok-database-feed-comments] [data-blok-database-comment-composer] > [data-blok-database-comment-input] {
+  margin-inline-end: 2.5px;
+}
+
+[data-blok-database-feed-comments] [data-blok-database-comment-composer] > [data-blok-database-comment-attach], [data-blok-database-feed-comments] [data-blok-database-comment-composer] > [data-blok-database-comment-mention], [data-blok-database-feed-comments] [data-blok-database-comment-composer] > [data-blok-database-comment-send] {
+  margin-inline-start: var(--_blok-feed-tool-nudge);
 }
 
 [data-blok-database-feed-comments] [data-blok-database-comment-composer] > [data-blok-database-comment-avatar] {

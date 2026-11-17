@@ -55,4 +55,18 @@ describe('comment composer buttons', () => {
         .toContain('display: none');
     }
   });
+
+  // Round 62 §2 (Notion feed composer, card at 539 as Round 61 §6): input 560 at rest and 470 focused,
+  // Attach at card + 562, Mention + 592, Send + 622, so Send ends 46 from the card's right.
+  it('the feed composer places its buttons as Notion does: 30 apart, Send 46 from the card edge', () => {
+    const feed = '[data-blok-database-feed-comments] [data-blok-database-comment-composer]';
+
+    expect(ruleBody(feed)).toContain('gap: 5.5px');
+    expect(ruleBody(feed)).toContain('margin-inline-end: calc(var(--blok-space-6) + var(--blok-space-1-5))');
+    expect(ruleBody(`${feed} > [data-blok-database-comment-input]`)).toContain('margin-inline-end: 2.5px');
+    expect(ruleBody(feed)).toContain('--_blok-feed-tool-nudge: 0.5px');
+    for (const name of BUTTONS) {
+      expect(ruleBody(`${feed} > [data-blok-database-comment-${name}]`)).toContain('margin-inline-start: var(--_blok-feed-tool-nudge)');
+    }
+  });
 });

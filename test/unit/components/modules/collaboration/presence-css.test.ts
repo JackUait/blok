@@ -161,7 +161,7 @@ describe('presence stylesheet', () => {
       });
     });
 
-    it('paints the mask on the same pseudo-element the monogram uses', () => {
+    it('paints the drawing on the same pseudo-element the monogram uses', () => {
       const sheet = style.sheet;
 
       if (sheet === null) {
@@ -171,8 +171,9 @@ describe('presence stylesheet', () => {
       const painter = styleRules(sheet).find((rule) =>
         rule.selectorText.includes(`[${GLYPH_ATTR}]::after`));
 
-      expect(painter?.style.getPropertyValue('mask-image')).not.toBe('');
-      expect(painter?.style.getPropertyValue('background-color')).not.toBe('');
+      expect(painter?.style.getPropertyValue('content')).toBe('""');
+      expect(painter?.style.getPropertyValue('mask-image')).toBe('');
+      expect(painter?.cssText).toContain('var(--blok-presence-glyph)');
     });
   });
 

@@ -2356,6 +2356,8 @@
   "tools.database.templateEdit": "సవరించు",
   "tools.database.templateMore": "ఈ టెంప్లేట్‌ను సవరించు",
   "tools.database.templateSetDefault": "అప్రమేయంగా సెట్ చేయి",
+  "tools.database.statusDefaultConfirm": "అప్రమేయాన్ని “{name}” కు మార్చాలా?",
+  "tools.database.statusDefaultConfirmDescription": "కొత్త పేజీలు {name} ను అప్రమేయ స్థితిగా తీసుకొని ప్రారంభమవుతాయి. స్థితి స్పష్టంగా సెట్ చేయని ప్రస్తుత పేజీలు {name} కు మారతాయి.",
   "tools.database.templateDefault": "అప్రమేయం",
   "tools.database.templateRepeatSummaryNone": "ప్రతి… నకలు చేయండి",
   "tools.database.templateRepeatSummaryDay": "ప్రతిరోజూ నకలు చేయండి",

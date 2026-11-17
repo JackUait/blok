@@ -2371,6 +2371,8 @@
   "tools.database.templateEdit": "Editează",
   "tools.database.templateMore": "Editează acest șablon",
   "tools.database.templateSetDefault": "Setează ca implicit",
+  "tools.database.statusDefaultConfirm": "Schimbi valoarea implicită în „{name}”?",
+  "tools.database.statusDefaultConfirmDescription": "Paginile noi vor începe cu {name} ca stare implicită. Paginile existente fără o stare setată explicit vor trece la {name}.",
   "tools.database.templateDefault": "Implicit",
   "tools.database.templateRepeatSummaryNone": "Duplică la fiecare…",
   "tools.database.templateRepeatSummaryDay": "Duplică în fiecare zi",

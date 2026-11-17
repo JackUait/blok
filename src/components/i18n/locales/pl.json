@@ -2386,6 +2386,8 @@
   "tools.database.templateEdit": "Edytuj",
   "tools.database.templateMore": "Edytuj ten szablon",
   "tools.database.templateSetDefault": "Ustaw jako domyślny",
+  "tools.database.statusDefaultConfirm": "Zmienić domyślny na „{name}”?",
+  "tools.database.statusDefaultConfirmDescription": "Nowe strony będą zaczynać się ze statusem domyślnym {name}. Istniejące strony bez jawnie ustawionego statusu przełączą się na {name}.",
   "tools.database.templateDefault": "Domyślny",
   "tools.database.templateRepeatSummaryNone": "Duplikuj co…",
   "tools.database.templateRepeatSummaryDay": "Duplikuj codziennie",

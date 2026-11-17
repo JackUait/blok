@@ -2356,6 +2356,8 @@
   "tools.database.templateEdit": "دەستکاری",
   "tools.database.templateMore": "دەستکاریی ئەم قاڵبە",
   "tools.database.templateSetDefault": "کردن بە بنەڕەت",
+  "tools.database.statusDefaultConfirm": "بنەڕەت بگۆڕدرێت بۆ «{name}»؟",
+  "tools.database.statusDefaultConfirmDescription": "پەڕە نوێیەکان بە {name} وەک دۆخی بنەڕەت دەست پێدەکەن. ئەو پەڕە هەبووانەی دۆخیان بە ڕوونی دانەنراوە دەگۆڕدرێن بۆ {name}.",
   "tools.database.templateDefault": "بنەڕەت",
   "tools.database.templateRepeatSummaryNone": "دووبارەکردنەوە هەموو…",
   "tools.database.templateRepeatSummaryDay": "دووبارەکردنەوە هەموو ڕۆژێک",

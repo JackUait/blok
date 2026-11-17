@@ -2356,6 +2356,8 @@
   "tools.database.templateEdit": "සංස්කරණය",
   "tools.database.templateMore": "මෙම සැකිල්ල සංස්කරණය කරන්න",
   "tools.database.templateSetDefault": "පෙරනිමිය ලෙස සකසන්න",
+  "tools.database.statusDefaultConfirm": "පෙරනිමිය “{name}” ලෙස වෙනස් කරන්නද?",
+  "tools.database.statusDefaultConfirmDescription": "නව පිටු {name} පෙරනිමි තත්ත්වය ලෙස ආරම්භ වේ. තත්ත්වය පැහැදිලිව සකසා නොමැති පවතින පිටු {name} වෙත මාරු වේ.",
   "tools.database.templateDefault": "පෙරනිමි",
   "tools.database.templateRepeatSummaryNone": "සෑම… අනුපිටපත් කරන්න",
   "tools.database.templateRepeatSummaryDay": "සෑම දිනකම අනුපිටපත් කරන්න",

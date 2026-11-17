@@ -2356,6 +2356,8 @@
   "tools.database.templateEdit": "Chỉnh sửa",
   "tools.database.templateMore": "Chỉnh sửa mẫu này",
   "tools.database.templateSetDefault": "Đặt làm mặc định",
+  "tools.database.statusDefaultConfirm": "Đổi mặc định thành “{name}”?",
+  "tools.database.statusDefaultConfirmDescription": "Trang mới sẽ bắt đầu với {name} làm trạng thái mặc định. Các trang hiện có chưa được đặt trạng thái rõ ràng sẽ chuyển sang {name}.",
   "tools.database.templateDefault": "Mặc định",
   "tools.database.templateRepeatSummaryNone": "Nhân bản mỗi…",
   "tools.database.templateRepeatSummaryDay": "Nhân bản mỗi ngày",

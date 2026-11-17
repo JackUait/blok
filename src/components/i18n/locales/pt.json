@@ -2371,6 +2371,8 @@
   "tools.database.templateEdit": "Editar",
   "tools.database.templateMore": "Editar este modelo",
   "tools.database.templateSetDefault": "Definir como padrão",
+  "tools.database.statusDefaultConfirm": "Alterar o padrão para “{name}”?",
+  "tools.database.statusDefaultConfirmDescription": "As novas páginas começarão com {name} como status padrão. As páginas existentes sem um status definido explicitamente mudarão para {name}.",
   "tools.database.templateDefault": "Padrão",
   "tools.database.templateRepeatSummaryNone": "Duplicar a cada…",
   "tools.database.templateRepeatSummaryDay": "Duplicar todos os dias",

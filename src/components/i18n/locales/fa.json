@@ -2356,6 +2356,8 @@
   "tools.database.templateEdit": "ویرایش",
   "tools.database.templateMore": "ویرایش این الگو",
   "tools.database.templateSetDefault": "تنظیم به‌عنوان پیش‌فرض",
+  "tools.database.statusDefaultConfirm": "پیش‌فرض به «{name}» تغییر کند؟",
+  "tools.database.statusDefaultConfirmDescription": "صفحه‌های جدید با وضعیت پیش‌فرض {name} شروع می‌شوند. صفحه‌های موجودی که وضعیتشان به‌صراحت تنظیم نشده است به {name} تغییر می‌کنند.",
   "tools.database.templateDefault": "پیش‌فرض",
   "tools.database.templateRepeatSummaryNone": "تکثیر هر…",
   "tools.database.templateRepeatSummaryDay": "تکثیر هر روز",

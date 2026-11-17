@@ -2356,6 +2356,8 @@
   "tools.database.templateEdit": "Redaktə et",
   "tools.database.templateMore": "Bu şablonu redaktə et",
   "tools.database.templateSetDefault": "Standart olaraq təyin et",
+  "tools.database.statusDefaultConfirm": "Standart «{name}» olaraq dəyişdirilsin?",
+  "tools.database.statusDefaultConfirmDescription": "Yeni səhifələr {name} standart statusu ilə başlayacaq. Statusu açıq şəkildə təyin edilməmiş mövcud səhifələr {name} statusuna keçəcək.",
   "tools.database.templateDefault": "Standart",
   "tools.database.templateRepeatSummaryNone": "Hər… dublikatını çıxar",
   "tools.database.templateRepeatSummaryDay": "Hər gün dublikatını çıxar",

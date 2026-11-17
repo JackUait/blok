@@ -2356,6 +2356,8 @@
   "tools.database.templateEdit": "संपादित करा",
   "tools.database.templateMore": "हे टेम्पलेट संपादित करा",
   "tools.database.templateSetDefault": "डीफॉल्ट म्हणून सेट करा",
+  "tools.database.statusDefaultConfirm": "डीफॉल्ट “{name}” मध्ये बदलायचे?",
+  "tools.database.statusDefaultConfirmDescription": "नवीन पेज {name} हे डीफॉल्ट स्टेटस घेऊन सुरू होतील. ज्या विद्यमान पेजवर स्टेटस स्पष्टपणे सेट केलेले नाही ती {name} वर बदलतील.",
   "tools.database.templateDefault": "डीफॉल्ट",
   "tools.database.templateRepeatSummaryNone": "दर… प्रत बनवा",
   "tools.database.templateRepeatSummaryDay": "दररोज प्रत बनवा",

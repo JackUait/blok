@@ -2356,6 +2356,8 @@
   "tools.database.templateEdit": "רעדאַקטירן",
   "tools.database.templateMore": "רעדאַקטירן דעם מוסטער",
   "tools.database.templateSetDefault": "באַשטימען ווי שטאַנדאַרד",
+  "tools.database.statusDefaultConfirm": "ענדערן דעם שטאַנדאַרד אויף „{name}“?",
+  "tools.database.statusDefaultConfirmDescription": "נײַע זײַטן וועלן אָנהייבן מיט {name} ווי דער שטאַנדאַרד־סטאַטוס. עקזיסטירנדיקע זײַטן אָן אַן אויסדריקלעך באַשטימטן סטאַטוס וועלן איבערגיין אויף {name}.",
   "tools.database.templateDefault": "שטאַנדאַרד",
   "tools.database.templateRepeatSummaryNone": "דופּליקירן יעדע…",
   "tools.database.templateRepeatSummaryDay": "דופּליקירן יעדן טאָג",

@@ -2356,6 +2356,8 @@
   "tools.database.templateEdit": "સંપાદિત કરો",
   "tools.database.templateMore": "આ નમૂનો સંપાદિત કરો",
   "tools.database.templateSetDefault": "ડિફૉલ્ટ તરીકે સેટ કરો",
+  "tools.database.statusDefaultConfirm": "ડિફૉલ્ટ “{name}” માં બદલવું છે?",
+  "tools.database.statusDefaultConfirmDescription": "નવા પેજ {name} ને ડિફૉલ્ટ સ્ટેટસ તરીકે રાખીને શરૂ થશે. જે હાલના પેજમાં સ્ટેટસ સ્પષ્ટ રીતે સેટ નથી તે {name} પર બદલાઈ જશે.",
   "tools.database.templateDefault": "ડિફૉલ્ટ",
   "tools.database.templateRepeatSummaryNone": "નકલ બનાવો: દર…",
   "tools.database.templateRepeatSummaryDay": "દરરોજ નકલ બનાવો",

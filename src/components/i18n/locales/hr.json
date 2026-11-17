@@ -2371,6 +2371,8 @@
   "tools.database.templateEdit": "Uredi",
   "tools.database.templateMore": "Uredi ovaj predložak",
   "tools.database.templateSetDefault": "Postavi kao zadano",
+  "tools.database.statusDefaultConfirm": "Promijeniti zadano u „{name}”?",
+  "tools.database.statusDefaultConfirmDescription": "Nove stranice počinjat će sa statusom {name} kao zadanim. Postojeće stranice bez izričito postavljenog statusa prebacit će se na {name}.",
   "tools.database.templateDefault": "Zadano",
   "tools.database.templateRepeatSummaryNone": "Dupliciraj svaki…",
   "tools.database.templateRepeatSummaryDay": "Dupliciraj svaki dan",

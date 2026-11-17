@@ -2356,6 +2356,8 @@
   "tools.database.templateEdit": "አርትዕ",
   "tools.database.templateMore": "ይህን አብነት አርትዕ",
   "tools.database.templateSetDefault": "እንደ ነባሪ አዘጋጅ",
+  "tools.database.statusDefaultConfirm": "ነባሪውን ወደ «{name}» ይቀይሩ?",
+  "tools.database.statusDefaultConfirmDescription": "አዲስ ገጾች {name}ን እንደ ነባሪ ሁኔታ ይዘው ይጀምራሉ። ሁኔታ በግልጽ ያልተቀመጠላቸው ነባር ገጾች ወደ {name} ይቀየራሉ።",
   "tools.database.templateDefault": "ነባሪ",
   "tools.database.templateRepeatSummaryNone": "በየ… አባዛ",
   "tools.database.templateRepeatSummaryDay": "በየቀኑ አባዛ",

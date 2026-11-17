@@ -2356,6 +2356,8 @@
   "tools.database.templateEdit": "编辑",
   "tools.database.templateMore": "编辑此模板",
   "tools.database.templateSetDefault": "设为默认",
+  "tools.database.statusDefaultConfirm": "要将默认值更改为“{name}”吗？",
+  "tools.database.statusDefaultConfirmDescription": "新页面将以 {name} 作为默认状态。未明确设置状态的现有页面将切换为 {name}。",
   "tools.database.templateDefault": "默认",
   "tools.database.templateRepeatSummaryNone": "每…创建副本",
   "tools.database.templateRepeatSummaryDay": "每天创建副本",

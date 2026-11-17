@@ -2356,6 +2356,8 @@
   "tools.database.templateEdit": "Bearbeiten",
   "tools.database.templateMore": "Diese Vorlage bearbeiten",
   "tools.database.templateSetDefault": "Als Standard festlegen",
+  "tools.database.statusDefaultConfirm": "Standard zu „{name}“ ändern?",
+  "tools.database.statusDefaultConfirmDescription": "Neue Seiten beginnen mit {name} als Standardstatus. Bestehende Seiten ohne ausdrücklich gesetzten Status wechseln zu {name}.",
   "tools.database.templateDefault": "Standard",
   "tools.database.templateRepeatSummaryNone": "Alle … duplizieren",
   "tools.database.templateRepeatSummaryDay": "Jeden Tag duplizieren",

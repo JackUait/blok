@@ -2356,6 +2356,8 @@
   "tools.database.templateEdit": "Уреди",
   "tools.database.templateMore": "Уреди го овој шаблон",
   "tools.database.templateSetDefault": "Постави како стандарден",
+  "tools.database.statusDefaultConfirm": "Да се смени стандардниот во „{name}“?",
+  "tools.database.statusDefaultConfirmDescription": "Новите страници ќе почнуваат со {name} како стандарден статус. Постојните страници без изрично поставен статус ќе се префрлат на {name}.",
   "tools.database.templateDefault": "Стандарден",
   "tools.database.templateRepeatSummaryNone": "Дуплирај секој…",
   "tools.database.templateRepeatSummaryDay": "Дуплирај секој ден",

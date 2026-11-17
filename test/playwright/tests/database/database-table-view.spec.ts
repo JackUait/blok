@@ -647,7 +647,8 @@ test.describe('property and row menus', () => {
     await expect(page.getByText('Changes apply to all views showing this property.')).toHaveCount(0);
     await list.locator('[data-blok-database-select-option="o-build"]').hover();
     await list.locator('[data-blok-database-select-option="o-build"] [data-blok-database-select-option-menu]').click();
-    await list.locator('[data-blok-database-option-color="red"]').click();
+    // notion-motion.md Round 57 §2: the option's menu is its own popover beside the list.
+    await page.locator('[data-blok-database-option-panel="o-build"] [data-blok-database-option-color="red"]').click();
 
     await expect.poll(async () => (await savedSchema(page)).find((p) => p.id === 'p-stage')?.config?.options.find((o) => o.id === 'o-build')?.color).toBe('red');
     await expect(list).toBeVisible();
@@ -669,12 +670,14 @@ test.describe('property and row menus', () => {
 
     await list.locator('[data-blok-database-select-option="o-idea"]').hover();
     await list.locator('[data-blok-database-select-option="o-idea"] [data-blok-database-select-option-menu]').click();
-    await list.getByRole('textbox', { name: 'Option name' }).fill('Spark');
+    await page.locator('[data-blok-database-option-panel="o-idea"]').getByRole('textbox', { name: 'Option name' }).fill('Spark');
     await page.keyboard.press('Enter');
     await expect.poll(async () => (await options()).find((o) => o.id === 'o-idea')?.label).toBe('Spark');
+    // The rename redraws the list under the menu; the menu stays.
+    await expect(page.locator('[data-blok-database-option-panel="o-idea"]')).toBeVisible();
 
     await page.keyboard.press('Escape');
-    await expect(list.locator('[data-blok-database-option-panel]')).toHaveCount(0);
+    await expect(page.locator('[data-blok-database-option-panel]')).toHaveCount(0);
     await expect(list.locator('[data-blok-database-select-option]')).toHaveCount(3);
     await expect(list).toBeVisible();
 

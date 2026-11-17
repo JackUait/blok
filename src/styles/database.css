@@ -9073,7 +9073,7 @@ textarea[data-blok-database-cell-input] {
 
 /* notion-motion.md Round 26 "Option ⋯ menu", Round 55 §4: the select editor's option menu is its own 220 popover.
    Field 196x28 at +12/+12, Delete at +52, Default at +125.9, colour rows 212x28 at +4, pitch 29, 4 under the last.
-   Edit property opens it for a status option (Round 56 §5); a select option keeps the in-place panel above (unmeasured). */
+   Edit property opens it from an option row (Round 56 §5, Round 57 §2). */
 [data-blok-popover-custom-class~='blok-database-option-menu'] [data-blok-popover-container] {
   inline-size: 220px;
 }
@@ -9097,12 +9097,12 @@ textarea[data-blok-database-cell-input] {
   padding-block: 0;
 }
 
-/* Round 56 §5: Edit property's status option menu grows from its top-right corner. Group › reads its group at the end. */
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-status-option-menu'] [data-blok-popover-container] {
+/* Round 56 §5: Edit property's option menu grows from its top-right corner. Group › reads its group at the end. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-option-menu'] [data-blok-popover-container] {
   transform-origin: top right;
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-status-option-menu'][data-blok-popover-open-left='true'] [data-blok-popover-container] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-option-menu'][data-blok-popover-open-left='true'] [data-blok-popover-container] {
   transform-origin: top left;
 }
 
@@ -9115,6 +9115,14 @@ textarea[data-blok-database-cell-input] {
   margin-inline-start: auto;
 }
 
+/* Round 57 §4: 250x94, rows 242x28 at +4, pitch 29. */
+[data-blok-popover-custom-class~='blok-database-option-group-menu'] [role='menu'] {
+  display: flex;
+  flex-direction: column;
+  padding: var(--blok-space-1);
+  gap: var(--blok-space-0-25);
+}
+
 /* The rule sits on top of the band, "Colors" in the rest. Where the label sits inside it is unmeasured. */
 [data-blok-popover-custom-class~='blok-database-option-menu'] [data-blok-database-option-colors-heading] {
   position: relative;
@@ -9123,6 +9131,7 @@ textarea[data-blok-database-cell-input] {
   box-sizing: border-box;
   block-size: 43.9px;
   padding: var(--blok-space-3-25) var(--blok-space-2) 0;
+  font-weight: 500;
 }
 
 [data-blok-popover-custom-class~='blok-database-option-menu'] [data-blok-database-option-colors-heading]::before {

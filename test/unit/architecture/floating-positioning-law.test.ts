@@ -279,6 +279,7 @@ const TRACKED_VIRTUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'components/modules/toolbar/blockSettings.ts': 'Context-menu and keyboard rectangles track the active block holder.',
   'components/ui/toolbox.ts': 'Caret and slash-search rectangles track the current block holder.',
   'tools/database/cells/cell-popover.ts': 'A table cell editor covers its cell: the 1px-grown cell rect tracks the cell element.',
+  'tools/database/cells/options-editor.ts': 'An option row\'s menu tracks the options list, which outlives the row it opened from when an edit redraws the list.',
   'tools/database/database-card-drawer.ts': 'The page ⋯ menu takes its button\'s rect, moved in to stay 12px from the window: the rect tracks the button.',
   'tools/database/database-pinned-group-modal.ts': 'The pinned group modal\'s ⋯ menu is centred under its button: the centred rect tracks the button.',
   'tools/database/database-property-menu.ts': 'The type list takes the closed panel\'s corner rect, which then moves with the property anchor that opened the panel.',

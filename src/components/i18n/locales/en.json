@@ -2356,6 +2356,8 @@
   "tools.database.templateEdit": "Edit",
   "tools.database.templateMore": "Edit this template",
   "tools.database.templateSetDefault": "Set as default",
+  "tools.database.statusDefaultConfirm": "Change default to “{name}”?",
+  "tools.database.statusDefaultConfirmDescription": "New pages will start with {name} as the default status. Existing pages without a status explicitly set will switch to {name}.",
   "tools.database.templateDefault": "Default",
   "tools.database.templateRepeatSummaryNone": "Duplicate every…",
   "tools.database.templateRepeatSummaryDay": "Duplicate every day",

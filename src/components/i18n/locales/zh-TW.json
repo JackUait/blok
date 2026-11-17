@@ -2356,6 +2356,8 @@
   "tools.database.templateEdit": "編輯",
   "tools.database.templateMore": "編輯此範本",
   "tools.database.templateSetDefault": "設為預設",
+  "tools.database.statusDefaultConfirm": "要將預設變更為「{name}」嗎？",
+  "tools.database.statusDefaultConfirmDescription": "新頁面將以 {name} 作為預設狀態。未明確設定狀態的現有頁面將切換為 {name}。",
   "tools.database.templateDefault": "預設",
   "tools.database.templateRepeatSummaryNone": "每…建立副本",
   "tools.database.templateRepeatSummaryDay": "每天建立副本",

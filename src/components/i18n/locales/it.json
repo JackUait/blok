@@ -2371,6 +2371,8 @@
   "tools.database.templateEdit": "Modifica",
   "tools.database.templateMore": "Modifica questo modello",
   "tools.database.templateSetDefault": "Imposta come predefinito",
+  "tools.database.statusDefaultConfirm": "Cambiare il predefinito in «{name}»?",
+  "tools.database.statusDefaultConfirmDescription": "Le nuove pagine inizieranno con {name} come stato predefinito. Le pagine esistenti senza uno stato impostato esplicitamente passeranno a {name}.",
   "tools.database.templateDefault": "Predefinito",
   "tools.database.templateRepeatSummaryNone": "Duplica ogni…",
   "tools.database.templateRepeatSummaryDay": "Duplica ogni giorno",

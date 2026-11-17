@@ -112,6 +112,9 @@ const setDefault = async (optionId: string): Promise<void> => {
   await quiet();
   must(document.querySelector<HTMLElement>('[data-blok-database-option-set-default]'), 'Set as default').click();
   await quiet();
+  // notion-motion.md Round 57 §4: it asks first.
+  must(document.querySelector<HTMLElement>('[data-blok-database-confirm-action="confirm"]'), 'Continue').click();
+  await quiet();
 };
 
 const rename = async (menu: HTMLElement, name: string): Promise<void> => {

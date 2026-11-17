@@ -325,9 +325,10 @@ describe('cell editor CSS', () => {
       .forEach((selector) => expect(reduced(selector), selector).toBe(true));
   });
 
-  // notion-motion.md Round 56 §5 "Status option menu": Group › is a menu row like Delete; the menu grows from its top-right.
-  describe('status option menu', () => {
-    const MENU = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-status-option-menu']";
+  // notion-motion.md Round 56 §5 "Status option menu", Round 57 §2 (select too): Group › is a menu row like Delete;
+  // the menu opened from an Edit property row grows from its top-right.
+  describe('Edit property option row menu', () => {
+    const MENU = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-option-menu']";
 
     it('grows from its top-right corner, top-left in right-to-left', () => {
       expect(declared(`${MENU} [data-blok-popover-container]`, 'transform-origin')).toEqual(['top right']);
@@ -341,6 +342,14 @@ describe('cell editor CSS', () => {
         expect(rule?.[2], row).toContain('min-height: 28px');
       });
       expect(declared('[data-blok-database-option-group-value]', 'margin-inline-start')).toEqual(['auto']);
+    });
+
+    // notion-motion.md Round 57 §4: the Group › menu is 250x94, rows 242x28 at +4 with pitch 29.
+    it('sets the Group › rows 4 in, 1 apart', () => {
+      const LIST = "[data-blok-popover-custom-class~='blok-database-option-group-menu'] [role='menu']";
+
+      expect(declared(LIST, 'padding')).toEqual(['var(--blok-space-1)']);
+      expect(declared(LIST, 'gap')).toEqual(['var(--blok-space-0-25)']);
     });
   });
 
@@ -1075,6 +1084,11 @@ describe('cell editor CSS', () => {
 
     it('puts the colours 45.9 under Delete: 1 + 43.9 + 1', () => {
       expect(declared(`${MENU} [data-blok-database-option-colors-heading]`, 'block-size')).toEqual(['43.9px']);
+    });
+
+    // notion-motion.md Round 57 §3: "Colors" is 12px weight 500.
+    it('draws "Colors" at weight 500', () => {
+      expect(declared(`${MENU} [data-blok-database-option-colors-heading]`, 'font-weight')).toEqual(['500']);
     });
   });
 });

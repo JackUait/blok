@@ -10,6 +10,7 @@ import { createOptionPill } from './display';
 import { pickOptionColor, shownStatusOption } from './option-colors';
 import { OptionDrag, buildDeletePrompt, buildOptionPanel, placeDroppedOption } from './option-editing';
 import { CellPopover } from './cell-popover';
+import { openDatabaseConfirm } from '../database-confirm-dialog';
 
 export interface OptionsEditorOptions {
   /** Shown labels: pass the localized property. */
@@ -25,11 +26,13 @@ export interface OptionsEditorOptions {
   onHostClose?: (close: () => void) => void;
 }
 
-/** notion-motion.md Round 56 §5: the status option menu is 220 wide, like the select editor's. */
+/** notion-motion.md Round 56 §5, Round 57 §2: an option row's menu is 220 wide, like the select editor's. */
 const OPTION_MENU_CLASS = 'blok-database-option-menu';
-const STATUS_OPTION_MENU_CLASS = 'blok-database-status-option-menu';
+const ROW_OPTION_MENU_CLASS = 'blok-database-row-option-menu';
 const GROUP_MENU_CLASS = 'blok-database-option-group-menu';
 const OPTION_MENU_WIDTH = 220;
+/** notion-motion.md Round 57 §4: the Group › menu is 250x94. */
+const GROUP_MENU_WIDTH = 250;
 
 interface Flyout {
   popover: CellPopover;
@@ -63,7 +66,6 @@ const button = (attribute: string, icon: string, label: string): HTMLButtonEleme
 class OptionsEditor {
   readonly root = document.createElement('div');
   private options: SelectOption[];
-  private panelOptionId: string | null = null;
   /** The group whose add field is open; '' for a select. */
   private adding: string | null = null;
   private readonly drag: OptionDrag;
@@ -110,7 +112,7 @@ class OptionsEditor {
   }
 
   /**
-   * Escape steps back from a panel or the add field. Window capture runs
+   * Escape steps back from the add field. Window capture runs
    * before the popover registry's document-capture Escape, which would close
    * the whole menu. On only while there is something to step back from.
    */
@@ -125,25 +127,19 @@ class OptionsEditor {
     }
     event.preventDefault();
     event.stopPropagation();
-    this.panelOptionId = null;
     this.adding = null;
     this.render();
   };
 
   private syncEscape(): void {
     window.removeEventListener('keydown', this.handleKey, true);
-    if (this.panelOptionId !== null || this.adding !== null) {
+    if (this.adding !== null) {
       window.addEventListener('keydown', this.handleKey, true);
     }
   }
 
   private render(): void {
     this.syncEscape();
-    if (this.panelOptionId !== null) {
-      this.renderPanel(this.panelOptionId);
-
-      return;
-    }
     const sections = this.isStatus
       ? statusGroupsOf(this.opts.property).map((group) => ({ id: group.id, label: group.name }))
       : [{ id: '', label: this.t('tools.database.editOptions') }];
@@ -247,59 +243,13 @@ class OptionsEditor {
     }
     menu.addEventListener('click', (event) => {
       event.stopPropagation();
-      if (this.isStatus) {
-        this.openFlyout(option.id, row);
-
-        return;
-      }
-      this.panelOptionId = option.id;
-      this.render();
+      this.openFlyout(option.id, row);
     });
-    // notion-motion.md Round 56 §5: a click on a status option row opens its menu.
-    if (this.isStatus) row.addEventListener('click', () => this.openFlyout(option.id, row));
+    // notion-motion.md Round 56 §5 (status), Round 57 §2 (select): a click on the row opens its menu.
+    row.addEventListener('click', () => this.openFlyout(option.id, row));
     row.append(handle, label, menu);
 
     return row;
-  }
-
-  private renderPanel(optionId: string): void {
-    const option = this.options.find((o) => o.id === optionId);
-
-    if (option === undefined) {
-      this.panelOptionId = null;
-      this.render();
-
-      return;
-    }
-    const update = (changes: Partial<Pick<SelectOption, 'label' | 'color'>>): void =>
-      this.set(this.options.map((o) => (o.id === optionId ? { ...o, ...changes } : o)));
-    const { panel, name } = buildOptionPanel(option, {
-      t: (key) => this.t(key),
-      onRename: (label) => update({ label }),
-      onRecolor: (color) => {
-        update({ color });
-        this.render();
-      },
-      status: this.isStatus,
-      ...(this.isStatus && this.opts.onSetDefault !== undefined ? { onSetDefault: () => this.setDefault(optionId) } : {}),
-      onDelete: () => {
-        const { prompt, confirm } = buildDeletePrompt({
-          t: (key) => this.t(key),
-          onConfirm: () => {
-            this.panelOptionId = null;
-            this.set(this.options.filter((o) => o.id !== optionId));
-            this.render();
-          },
-          onCancel: () => this.render(),
-        });
-
-        this.root.replaceChildren(prompt);
-        confirm.focus();
-      },
-    });
-
-    this.root.replaceChildren(panel);
-    name.focus();
   }
 
   /** The current default keeps the row (shot 23); picking it again changes nothing. */
@@ -307,12 +257,45 @@ class OptionsEditor {
     if (optionId === this.defaultId) return;
     this.defaultId = optionId;
     this.opts.onSetDefault?.(optionId);
-    this.panelOptionId = null;
     this.closeFlyout();
     this.render();
   }
 
-  // ─── Status option menu (notion-motion.md Round 56 §5) ───
+  /**
+   * notion-motion.md Round 57 §4: Notion asks first. Escape closes only the dialog;
+   * Continue closes the option menu. The hold keeps the menu's own Escape and outside
+   * presses off it while the dialog is up.
+   */
+  private confirmDefault(optionId: string): void {
+    const flyout = this.flyout;
+    const option = this.options.find((o) => o.id === optionId);
+
+    if (flyout === null || option === undefined || optionId === this.defaultId) return;
+    const release = flyout.popover.hold();
+    const params = { name: option.label };
+    const host = flyout.root.closest<HTMLElement>('[data-blok-popover]');
+
+    void openDatabaseConfirm({
+      title: this.opts.i18n.t('tools.database.statusDefaultConfirm', params),
+      description: this.opts.i18n.t('tools.database.statusDefaultConfirmDescription', params),
+      confirmLabel: this.t('tools.database.buttonConfirmContinue'),
+      cancelLabel: this.t('tools.database.layoutCancel'),
+      focusConfirm: true,
+      roomy: true,
+      directionSource: flyout.root,
+      // Inside the menu: focus on a dialog outside it would close the menus. The top layer keeps it above them.
+      ...(host === null ? {} : { container: host, topLayer: true }),
+    }).then((confirmed) => {
+      release();
+      if (confirmed) {
+        this.setDefault(optionId);
+      } else if (this.flyout === flyout) {
+        flyout.root.querySelector<HTMLElement>('[data-blok-database-option-name]')?.focus();
+      }
+    });
+  }
+
+  // ─── Option menu (notion-motion.md Round 56 §5, Round 57 §2) ───
 
   /** Its right edge on the row's right. The hold must start before the menu takes focus. */
   private openFlyout(optionId: string, row: HTMLElement): void {
@@ -329,10 +312,12 @@ class OptionsEditor {
       anchor,
       content: root,
       panel: true,
-      surfaceClass: `${OPTION_MENU_CLASS} ${STATUS_OPTION_MENU_CLASS}`,
+      surfaceClass: `${OPTION_MENU_CLASS} ${ROW_OPTION_MENU_CLASS}`,
       minWidth: `${OPTION_MENU_WIDTH}px`,
       gap: 0,
       alignEnd: true,
+      // An edit redraws the list and drops this row; the list itself stays.
+      positionContext: this.root,
       onEscape: () => (this.flyout?.deletePrompt === true ? this.renderFlyout() : this.closeFlyout()),
       onDismiss: () => this.closeFlyout(),
     });
@@ -376,12 +361,14 @@ class OptionsEditor {
         update({ color });
         this.renderFlyout();
       },
-      status: true,
-      ...(this.opts.onSetDefault !== undefined ? { onSetDefault: () => this.setDefault(optionId) } : {}),
-      group: {
-        label: statusGroupOf(this.withOptions(this.options), optionId)?.name ?? '',
-        onOpen: (groupRow) => this.openGroupMenu(groupRow),
-      },
+      status: this.isStatus,
+      ...(this.isStatus && this.opts.onSetDefault !== undefined ? { onSetDefault: () => this.confirmDefault(optionId) } : {}),
+      ...(this.isStatus ? {
+        group: {
+          label: statusGroupOf(this.withOptions(this.options), optionId)?.name ?? '',
+          onOpen: (groupRow: HTMLElement) => this.openGroupMenu(groupRow),
+        },
+      } : {}),
       onDelete: () => {
         const { prompt, confirm } = buildDeletePrompt({
           t: (key) => this.t(key),
@@ -403,7 +390,7 @@ class OptionsEditor {
     name.focus();
   }
 
-  /** Group ›: the status groups, the option's own checked. Its look and place are unmeasured. */
+  /** Group ›: the status groups, the option's own checked (notion-motion.md Round 57 §4). */
   private openGroupMenu(groupRow: HTMLElement): void {
     const flyout = this.flyout;
 
@@ -439,14 +426,16 @@ class OptionsEditor {
       content: list,
       panel: true,
       surfaceClass: GROUP_MENU_CLASS,
-      aside: { side: 'right', gap: 0, flip: true },
+      minWidth: `${GROUP_MENU_WIDTH}px`,
+      gap: 0,
+      alignEnd: true,
       onEscape: () => this.closeGroupMenu(),
       onDismiss: () => this.closeGroupMenu(),
     });
 
     flyout.groupMenu = { popover, release };
     popover.show();
-    list.querySelector<HTMLElement>('[aria-checked="true"]')?.focus();
+    list.querySelector<HTMLElement>('[data-blok-database-option-group-pick]')?.focus();
   }
 
   private closeGroupMenu(): void {
@@ -459,15 +448,15 @@ class OptionsEditor {
     menu.release();
   }
 
-  /** The option goes to the end of its new group, as a new one would (where Notion puts it is unmeasured). */
+  /** The option goes to the top of its new group (notion-motion.md Round 57 §4). */
   private moveToGroup(optionId: string, groupId: string): void {
     this.closeGroupMenu();
     const property = this.withOptions(this.options);
 
     if (statusGroupOf(property, optionId)?.id !== groupId) {
       const peers = this.options.filter((o) => o.id !== optionId && statusGroupOf(property, o.id)?.id === groupId);
-      const last = byPosition(peers).at(-1);
-      const position = DatabaseModel.positionBetween(last?.position ?? null, null);
+      const first = byPosition(peers).at(0);
+      const position = DatabaseModel.positionBetween(null, first?.position ?? null);
 
       this.set(this.options.map((o) => (o.id === optionId ? { ...o, groupId, position } : o)));
       this.render();

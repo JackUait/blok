@@ -2416,6 +2416,8 @@
   "tools.database.templateEdit": "تحرير",
   "tools.database.templateMore": "تحرير هذا القالب",
   "tools.database.templateSetDefault": "تعيين كافتراضي",
+  "tools.database.statusDefaultConfirm": "تغيير الافتراضي إلى «{name}»؟",
+  "tools.database.statusDefaultConfirmDescription": "ستبدأ الصفحات الجديدة بـ {name} كحالة افتراضية. الصفحات الموجودة التي لم تُحدَّد حالتها صراحةً ستتحول إلى {name}.",
   "tools.database.templateDefault": "افتراضي",
   "tools.database.templateRepeatSummaryNone": "تكرار كل…",
   "tools.database.templateRepeatSummaryDay": "تكرار كل يوم",

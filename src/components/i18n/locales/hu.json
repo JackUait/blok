@@ -2356,6 +2356,8 @@
   "tools.database.templateEdit": "Szerkesztés",
   "tools.database.templateMore": "Sablon szerkesztése",
   "tools.database.templateSetDefault": "Beállítás alapértelmezettként",
+  "tools.database.statusDefaultConfirm": "Az alapértelmezett módosítása erre: „{name}”?",
+  "tools.database.statusDefaultConfirmDescription": "Az új oldalak alapértelmezett állapota {name} lesz. A meglévő oldalak, amelyeken nincs kifejezetten beállítva állapot, átváltanak erre: {name}.",
   "tools.database.templateDefault": "Alapértelmezett",
   "tools.database.templateRepeatSummaryNone": "Megkettőzés minden…",
   "tools.database.templateRepeatSummaryDay": "Megkettőzés minden nap",

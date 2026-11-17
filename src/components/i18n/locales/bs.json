@@ -2371,6 +2371,8 @@
   "tools.database.templateEdit": "Uredi",
   "tools.database.templateMore": "Uredi ovaj šablon",
   "tools.database.templateSetDefault": "Postavi kao podrazumijevano",
+  "tools.database.statusDefaultConfirm": "Promijeniti podrazumijevano u „{name}“?",
+  "tools.database.statusDefaultConfirmDescription": "Nove stranice će počinjati sa statusom {name} kao podrazumijevanim. Postojeće stranice bez izričito postavljenog statusa prebacit će se na {name}.",
   "tools.database.templateDefault": "Podrazumijevano",
   "tools.database.templateRepeatSummaryNone": "Dupliciraj svakih…",
   "tools.database.templateRepeatSummaryDay": "Dupliciraj svaki dan",

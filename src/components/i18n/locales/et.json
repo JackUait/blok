@@ -2356,6 +2356,8 @@
   "tools.database.templateEdit": "Muuda",
   "tools.database.templateMore": "Muuda seda malli",
   "tools.database.templateSetDefault": "Määra vaikimisi",
+  "tools.database.statusDefaultConfirm": "Kas muuta vaikeväärtuseks „{name}“?",
+  "tools.database.statusDefaultConfirmDescription": "Uued lehed alustavad vaikeolekuga {name}. Olemasolevad lehed, millel pole olekut otseselt määratud, lähevad üle olekule {name}.",
   "tools.database.templateDefault": "Vaikimisi",
   "tools.database.templateRepeatSummaryNone": "Dubleeri iga…",
   "tools.database.templateRepeatSummaryDay": "Dubleeri iga päev",

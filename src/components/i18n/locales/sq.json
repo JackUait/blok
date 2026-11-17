@@ -2356,6 +2356,8 @@
   "tools.database.templateEdit": "Redakto",
   "tools.database.templateMore": "Redakto këtë shabllon",
   "tools.database.templateSetDefault": "Cakto si të parazgjedhur",
+  "tools.database.statusDefaultConfirm": "Të ndryshohet parazgjedhja në “{name}”?",
+  "tools.database.statusDefaultConfirmDescription": "Faqet e reja do të fillojnë me {name} si gjendje të parazgjedhur. Faqet ekzistuese pa një gjendje të caktuar shprehimisht do të kalojnë në {name}.",
   "tools.database.templateDefault": "I parazgjedhur",
   "tools.database.templateRepeatSummaryNone": "Dyfisho çdo…",
   "tools.database.templateRepeatSummaryDay": "Dyfisho çdo ditë",

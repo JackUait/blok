@@ -2342,6 +2342,8 @@ export type BlokMessageKey =
   | 'tools.database.starterWeekdayMon'
   | 'tools.database.starterWeekdaySun'
   | 'tools.database.starterWeekdayTue'
+  | 'tools.database.statusDefaultConfirm'
+  | 'tools.database.statusDefaultConfirmDescription'
   | 'tools.database.statusDisplayAs'
   | 'tools.database.statusDisplayAs.checkbox'
   | 'tools.database.statusDisplayAs.select'

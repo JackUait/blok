@@ -2356,6 +2356,8 @@
   "tools.database.templateEdit": "Bewerken",
   "tools.database.templateMore": "Dit sjabloon bewerken",
   "tools.database.templateSetDefault": "Als standaard instellen",
+  "tools.database.statusDefaultConfirm": "Standaard wijzigen in ‘{name}’?",
+  "tools.database.statusDefaultConfirmDescription": "Nieuwe pagina's beginnen met {name} als standaardstatus. Bestaande pagina's zonder expliciet ingestelde status schakelen over naar {name}.",
   "tools.database.templateDefault": "Standaard",
   "tools.database.templateRepeatSummaryNone": "Elke… dupliceren",
   "tools.database.templateRepeatSummaryDay": "Elke dag dupliceren",

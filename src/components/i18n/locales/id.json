@@ -2356,6 +2356,8 @@
   "tools.database.templateEdit": "Ubah",
   "tools.database.templateMore": "Ubah templat ini",
   "tools.database.templateSetDefault": "Jadikan bawaan",
+  "tools.database.statusDefaultConfirm": "Ubah bawaan menjadi “{name}”?",
+  "tools.database.statusDefaultConfirmDescription": "Halaman baru akan dimulai dengan {name} sebagai status bawaan. Halaman yang ada tanpa status yang ditetapkan secara eksplisit akan beralih ke {name}.",
   "tools.database.templateDefault": "Bawaan",
   "tools.database.templateRepeatSummaryNone": "Gandakan setiap…",
   "tools.database.templateRepeatSummaryDay": "Gandakan setiap hari",

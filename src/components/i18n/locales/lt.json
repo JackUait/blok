@@ -2386,6 +2386,8 @@
   "tools.database.templateEdit": "Redaguoti",
   "tools.database.templateMore": "Redaguoti šį šabloną",
   "tools.database.templateSetDefault": "Nustatyti kaip numatytąjį",
+  "tools.database.statusDefaultConfirm": "Pakeisti numatytąją reikšmę į „{name}“?",
+  "tools.database.statusDefaultConfirmDescription": "Nauji puslapiai prasidės su numatytąja būsena {name}. Esami puslapiai, kuriems būsena nenustatyta aiškiai, persijungs į {name}.",
   "tools.database.templateDefault": "Numatytasis",
   "tools.database.templateRepeatSummaryNone": "Dubliuoti kas…",
   "tools.database.templateRepeatSummaryDay": "Dubliuoti kasdien",

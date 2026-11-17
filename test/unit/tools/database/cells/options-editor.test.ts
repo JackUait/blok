@@ -39,6 +39,23 @@ const mount = (property: PropertyDefinition): { root: HTMLElement; onChange: Ret
 const rowIds = (root: HTMLElement): string[] =>
   [...root.querySelectorAll('[data-blok-database-select-option]')].map((row) => row.getAttribute('data-blok-database-select-option') ?? '');
 
+const optionMenu = (): HTMLElement | null =>
+  document.querySelector<HTMLElement>("[data-blok-popover][data-blok-popover-opened='true'][data-blok-popover-custom-class~='blok-database-option-menu']");
+
+const confirmAction = (name: 'confirm' | 'cancel'): HTMLElement => {
+  const el = document.querySelector<HTMLElement>(`[data-blok-database-confirm-action="${name}"]`);
+
+  if (el === null) throw new Error(`no ${name} button in the confirm dialog`);
+
+  return el;
+};
+
+/** The confirm resolves a promise; its answer lands a microtask later. */
+const settle = async (): Promise<void> => {
+  await Promise.resolve();
+  await Promise.resolve();
+};
+
 const last = (onChange: { mock: { calls: Array<[SelectOption[]]> } }): SelectOption[] => onChange.mock.calls[onChange.mock.calls.length - 1]?.[0] ?? [];
 
 const press = (target: Element, key: string): KeyboardEvent => {
@@ -109,38 +126,79 @@ describe('options editor (Edit property for select, multi-select and status)', (
     expect(menus.every((menu) => menu.innerHTML === chevron.innerHTML)).toBe(true);
   });
 
-  it('renames, recolours and deletes an option from its ⋯ panel', () => {
+  it('renames, recolours and deletes an option from its menu', () => {
     const { root, onChange } = mount(selectProp());
 
     root.querySelector<HTMLElement>('[data-blok-database-select-option="o2"] [data-blok-database-select-option-menu]')?.click();
-    const name = root.querySelector<HTMLInputElement>('[data-blok-database-option-name]');
+    const name = optionMenu()?.querySelector<HTMLInputElement>('[data-blok-database-option-name]');
 
-    if (name === null) throw new Error('no name field');
+    if (name === null || name === undefined) throw new Error('no name field in the option menu');
     name.value = 'Make';
     press(name, 'Enter');
     expect(last(onChange).find((o) => o.id === 'o2')?.label).toBe('Make');
 
-    root.querySelector<HTMLElement>('[data-blok-database-option-color="pink"]')?.click();
+    optionMenu()?.querySelector<HTMLElement>('[data-blok-database-option-color="pink"]')?.click();
     expect(last(onChange).find((o) => o.id === 'o2')).toMatchObject({ label: 'Make', color: 'pink' });
 
-    root.querySelector<HTMLElement>('[data-blok-database-option-delete]')?.click();
-    root.querySelector<HTMLElement>('[data-blok-database-option-delete-confirm]')?.click();
+    optionMenu()?.querySelector<HTMLElement>('[data-blok-database-option-delete]')?.click();
+    optionMenu()?.querySelector<HTMLElement>('[data-blok-database-option-delete-confirm]')?.click();
     expect(last(onChange).map((o) => o.id)).toEqual(['o1', 'o3']);
     expect(rowIds(root)).toEqual(['o1', 'o3']);
+    expect(optionMenu()).toBeNull();
   });
 
-  it('Escape in the ⋯ panel goes back to the list and stops there', () => {
+  it('Escape in the option menu closes only the menu; the list stays', () => {
     const { root } = mount(selectProp());
 
     root.querySelector<HTMLElement>('[data-blok-database-select-option="o2"] [data-blok-database-select-option-menu]')?.click();
-    const name = root.querySelector<HTMLInputElement>('[data-blok-database-option-name]');
+    const name = optionMenu()?.querySelector<HTMLInputElement>('[data-blok-database-option-name]');
 
-    if (name === null) throw new Error('no name field');
+    if (name === null || name === undefined) throw new Error('no name field in the option menu');
     const event = press(name, 'Escape');
 
     expect(event.defaultPrevented).toBe(true);
+    expect(optionMenu()).toBeNull();
     expect(rowIds(root)).toEqual(['o1', 'o2', 'o3']);
-    expect(root.querySelector('[data-blok-database-option-panel]')).toBeNull();
+  });
+
+  // A rename redraws the list, so the row the menu opened from is gone; a scroll in the menu around must not close it.
+  it('the option menu stays open through a rename and a scroll of the list around it', () => {
+    const { root } = mount(selectProp());
+
+    vi.spyOn(root, 'getBoundingClientRect').mockReturnValue(new DOMRect(700, 250, 292, 120));
+    root.querySelector<HTMLElement>('[data-blok-database-select-option="o2"]')?.click();
+    const name = optionMenu()?.querySelector<HTMLInputElement>('[data-blok-database-option-name]');
+
+    if (name === null || name === undefined) throw new Error('no name field in the option menu');
+    name.value = 'Make';
+    press(name, 'Enter');
+    root.dispatchEvent(new Event('scroll'));
+
+    expect(optionMenu()).not.toBeNull();
+  });
+
+  // notion-motion.md Round 57 §2: a select option row click opens the same separate 220 menu as status,
+  // right edge on the row's right (993 + 220 = 1213), name field focused. No Set as default, no Group.
+  it('a click on a select option row opens a separate 220 menu, right edge on the row', () => {
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1512);
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+    vi.spyOn(PopoverDesktop.prototype, 'size', 'get').mockReturnValue({ width: 220, height: 418.9 });
+    const { root } = mount(selectProp());
+    const row = root.querySelector<HTMLElement>('[data-blok-database-select-option="o2"]');
+
+    if (row === null) throw new Error('no row o2');
+    vi.spyOn(row, 'getBoundingClientRect').mockReturnValue(new DOMRect(921, 286, 292, 28));
+    row.click();
+
+    const menu = optionMenu();
+
+    expect(menu).not.toBeNull();
+    expect(root.contains(menu)).toBe(false);
+    expect(parseFloat(menu?.style.left ?? '')).toBeCloseTo(1213 - 220, 1);
+    expect(menu?.querySelector('[data-blok-database-option-name]')).toHaveFocus();
+    expect(menu?.querySelector('[data-blok-database-option-set-default]')).toBeNull();
+    expect(menu?.querySelector('[data-blok-database-option-group]')).toBeNull();
+    expect(rowIds(root)).toEqual(['o1', 'o2', 'o3']);
   });
 
   it('drags an option to a new place', () => {
@@ -355,9 +413,31 @@ describe('options editor (Edit property for select, multi-select and status)', (
         const order = [...root.querySelectorAll('[data-blok-database-status-group-heading], [data-blok-database-select-option]')]
           .map((el) => el.getAttribute('data-blok-database-status-group-heading') ?? el.getAttribute('data-blok-database-select-option'));
 
-        expect(order).toEqual(['todo', 'inProgress', 'i', 'complete', 'd', 'n']);
+        // notion-motion.md Round 57 §4: the moved option lands at the top of its new group.
+        expect(order).toEqual(['todo', 'inProgress', 'i', 'complete', 'n', 'd']);
         expect(groupMenu()).toBeNull();
         expect(inFlyout('[data-blok-database-option-group-value]').textContent).toBe('Complete');
+      });
+
+      // notion-motion.md Round 57 §4: Group › opens a 250x94 menu right-aligned on the Group row (right 1109),
+      // its top on the row's bottom; the first row is filled on open.
+      it('Group › opens a 250 menu under the Group row, right edges lined up, first row focused', () => {
+        vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1512);
+        vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+        const { root } = mountStatus();
+
+        optionRow(root, 'i').click();
+        const groupRow = inFlyout('[data-blok-database-option-group]');
+
+        vi.spyOn(groupRow, 'getBoundingClientRect').mockReturnValue(new DOMRect(897, 338, 212, 28));
+        vi.spyOn(PopoverDesktop.prototype, 'size', 'get').mockReturnValue({ width: 250, height: 94 });
+        groupRow.click();
+        const menu = groupMenu();
+
+        expect(menu?.style.getPropertyValue('--width')).toBe('250px');
+        expect(parseFloat(menu?.style.left ?? '')).toBeCloseTo(1109 - 250, 1);
+        expect(parseFloat(menu?.style.top ?? '')).toBeCloseTo(366, 1);
+        expect(menu?.querySelector('[data-blok-database-option-group-pick="todo"]')).toHaveFocus();
       });
 
       it('the › button opens the same menu', () => {
@@ -453,19 +533,96 @@ describe('options editor (Edit property for select, multi-select and status)', (
         expect(last(onChange).find((o) => o.id === 'n')).toEqual({ id: 'n', label: 'Backlog', position: 'a0', groupId: 'todo' });
       });
 
-      it('"Set as default" sits right after Delete and makes that option the default', () => {
+      it('"Set as default" sits right after Delete and, once confirmed, makes that option the default', async () => {
         const onSetDefault = vi.fn();
         const root = createOptionsEditor({ property: colourless(), i18n, onChange: vi.fn(), onSetDefault });
 
+        document.body.appendChild(root);
         openPanel(root, 'i');
         const row = document.querySelector<HTMLElement>('[data-blok-database-option-set-default]');
 
         expect(row?.previousElementSibling?.hasAttribute('data-blok-database-option-delete')).toBe(true);
         expect(row?.textContent?.trim()).toBe('tools.database.templateSetDefault');
         row?.click();
+        confirmAction('confirm').click();
+        await settle();
         expect(onSetDefault).toHaveBeenCalledWith('i');
         expect(root.querySelector('[data-blok-database-select-option="i"] [data-blok-database-option-default]')).not.toBeNull();
         expect(root.querySelector('[data-blok-database-select-option="n"] [data-blok-database-option-default]')).toBeNull();
+      });
+
+      // notion-motion.md Round 57 §4: Set as default asks first: "Change default to “In progress”?", a body line,
+      // Continue (focused) then Cancel, 406 wide. Escape closes only the dialog; Continue closes the option menu.
+      describe('the Set as default confirm', () => {
+        const interpolating = { t: (key: string, params?: Record<string, string | number>) => `${key}${params === undefined ? '' : JSON.stringify(params)}` };
+        const openConfirm = (onSetDefault: (id: string) => void): HTMLElement => {
+          const root = createOptionsEditor({ property: colourless(), i18n: interpolating, onChange: vi.fn(), onSetDefault });
+
+          document.body.appendChild(root);
+          openPanel(root, 'i');
+          document.querySelector<HTMLElement>('[data-blok-database-option-set-default]')?.click();
+
+          return root;
+        };
+
+        // A menu left open keeps its window Escape listener, which would take the next test's Escape.
+        afterEach(async () => {
+          await settle();
+          [1, 2, 3].forEach(() => press(document.body, 'Escape'));
+        });
+
+        it('asks with the option\'s name, Continue focused, before anything changes', () => {
+          const onSetDefault = vi.fn();
+
+          openConfirm(onSetDefault);
+          const dialog = document.querySelector<HTMLElement>('[data-blok-database-confirm-dialog]');
+
+          expect(onSetDefault).not.toHaveBeenCalled();
+          expect(dialog?.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('tools.database.statusDefaultConfirm{"name":"In progress"}');
+          expect(dialog?.querySelector('[data-blok-database-confirm-description]')?.textContent).toBe('tools.database.statusDefaultConfirmDescription{"name":"In progress"}');
+          expect(dialog?.hasAttribute('data-roomy')).toBe(true);
+          expect(confirmAction('confirm').textContent).toBe('tools.database.buttonConfirmContinue');
+          expect(confirmAction('cancel').textContent).toBe('tools.database.layoutCancel');
+          expect(confirmAction('confirm')).toHaveFocus();
+          expect(optionMenu()).not.toBeNull();
+          confirmAction('cancel').click();
+        });
+
+        it('Escape closes only the dialog: the option menu stays and nothing changes', async () => {
+          const onSetDefault = vi.fn();
+
+          openConfirm(onSetDefault);
+          press(confirmAction('confirm'), 'Escape');
+          await settle();
+
+          expect(document.querySelector('[data-blok-database-confirm-dialog]')).toBeNull();
+          expect(optionMenu()).not.toBeNull();
+          expect(onSetDefault).not.toHaveBeenCalled();
+        });
+
+        it('Cancel keeps the option menu open and changes nothing', async () => {
+          const onSetDefault = vi.fn();
+
+          openConfirm(onSetDefault);
+          confirmAction('cancel').click();
+          await settle();
+
+          expect(optionMenu()).not.toBeNull();
+          expect(onSetDefault).not.toHaveBeenCalled();
+        });
+
+        it('Continue sets the default and closes the option menu; the list stays', async () => {
+          const onSetDefault = vi.fn();
+          const root = openConfirm(onSetDefault);
+
+          confirmAction('confirm').click();
+          await settle();
+
+          expect(onSetDefault).toHaveBeenCalledWith('i');
+          expect(optionMenu()).toBeNull();
+          expect(root.isConnected).toBe(true);
+          expect(root.querySelector('[data-blok-database-select-option="i"] [data-blok-database-option-default]')).not.toBeNull();
+        });
       });
 
       it('the current default keeps the row, as measured; a click there changes nothing', () => {
@@ -481,7 +638,8 @@ describe('options editor (Edit property for select, multi-select and status)', (
         const root = createOptionsEditor({ property: selectProp(), i18n, onChange: vi.fn(), onSetDefault: vi.fn() });
 
         openPanel(root, 'o1');
-        expect(root.querySelector('[data-blok-database-option-set-default]')).toBeNull();
+        expect(optionMenu()?.querySelector('[data-blok-database-option-name]')).toBeTruthy();
+        expect(optionMenu()?.querySelector('[data-blok-database-option-set-default]')).toBeNull();
       });
     });
   });

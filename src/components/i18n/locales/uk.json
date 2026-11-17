@@ -2386,6 +2386,8 @@
   "tools.database.templateEdit": "Редагувати",
   "tools.database.templateMore": "Редагувати цей шаблон",
   "tools.database.templateSetDefault": "Використовувати за замовчуванням",
+  "tools.database.statusDefaultConfirm": "Зробити «{name}» значенням за замовчуванням?",
+  "tools.database.statusDefaultConfirmDescription": "Нові сторінки починатимуться зі статусом {name} за замовчуванням. Наявні сторінки, у яких статус не задано явно, перейдуть на {name}.",
   "tools.database.templateDefault": "За замовчуванням",
   "tools.database.templateRepeatSummaryNone": "Дублювати кожні…",
   "tools.database.templateRepeatSummaryDay": "Дублювати кожен день",

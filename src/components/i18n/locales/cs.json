@@ -2386,6 +2386,8 @@
   "tools.database.templateEdit": "Upravit",
   "tools.database.templateMore": "Upravit tuto šablonu",
   "tools.database.templateSetDefault": "Nastavit jako výchozí",
+  "tools.database.statusDefaultConfirm": "Změnit výchozí na „{name}“?",
+  "tools.database.statusDefaultConfirmDescription": "Nové stránky budou začínat s výchozím stavem {name}. Existující stránky bez výslovně nastaveného stavu se přepnou na {name}.",
   "tools.database.templateDefault": "Výchozí",
   "tools.database.templateRepeatSummaryNone": "Duplikovat každých…",
   "tools.database.templateRepeatSummaryDay": "Duplikovat každý den",

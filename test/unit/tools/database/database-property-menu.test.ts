@@ -1337,7 +1337,8 @@ describe('DatabasePropertyMenu', () => {
 
       expect([...(list?.querySelectorAll('[data-blok-database-select-option]') ?? [])].map((row) => row.textContent?.trim())).toEqual(['Idea', 'Build']);
       list?.querySelector<HTMLElement>('[data-blok-database-select-option="o2"] [data-blok-database-select-option-menu]')?.click();
-      list?.querySelector<HTMLElement>('[data-blok-database-option-color="red"]')?.click();
+      // notion-motion.md Round 57 §2: the option's menu is its own popover.
+      document.querySelector<HTMLElement>('[data-blok-database-option-panel="o2"] [data-blok-database-option-color="red"]')?.click();
 
       expect(cb.onOptionsChange).toHaveBeenCalledWith('p', [options[0], { ...options[1], color: 'red' }]);
     });
@@ -1360,16 +1361,19 @@ describe('DatabasePropertyMenu', () => {
       const list = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'options').element;
 
       list?.querySelector<HTMLElement>('[data-blok-database-select-option="o2"] [data-blok-database-select-option-menu]')?.click();
-      list?.querySelector<HTMLElement>('[data-blok-database-option-color="red"]')?.click();
+      // notion-motion.md Round 57 §2: the option's menu is its own popover.
+      document.querySelector<HTMLElement>('[data-blok-database-option-panel="o2"] [data-blok-database-option-color="red"]')?.click();
 
       expect(onOptionsChange).toHaveBeenCalled();
       expect(popover?.moves.map((move) => [move.positionContext, move.position.x, move.position.y, move.position.width])).toEqual([[live, 34, 133, 200]]);
-      expect(captured.popovers[captured.popovers.length - 1]).toBe(popover);
+      // The menu is moved, not drawn again: the only new popover is the option's own menu.
+      expect(captured.popovers.slice(captured.popovers.indexOf(popover) + 1).map((p) => String(p.params.class).includes('blok-database-option-menu'))).toEqual([true]);
+      expect(popover?.destroyed).toBe(false);
       menu.destroy();
       live.remove();
     });
 
-    it('a status option\'s "Set as default" saves the default with the status settings (research/30 §10f)', () => {
+    it('a status option\'s "Set as default" saves the default with the status settings (research/30 §10f)', async () => {
       const status = { ...createDefaultStatusSettings(), showAs: 'checkbox' as const };
       const statusOptions = [
         { id: 'n', label: 'Not started', position: 'a0', groupId: 'todo' },
@@ -1380,6 +1384,11 @@ describe('DatabasePropertyMenu', () => {
 
       list?.querySelector<HTMLElement>('[data-blok-database-select-option="i"] [data-blok-database-select-option-menu]')?.click();
       document.querySelector<HTMLElement>('[data-blok-database-option-set-default]')?.click();
+      // notion-motion.md Round 57 §4: it asks first.
+      expect(cb.onUpdate).not.toHaveBeenCalled();
+      document.querySelector<HTMLElement>('[data-blok-database-confirm-action="confirm"]')?.click();
+      await Promise.resolve();
+      await Promise.resolve();
 
       expect(cb.onUpdate).toHaveBeenCalledWith('p', { status: { ...status, defaultOptionId: 'i' } });
     });

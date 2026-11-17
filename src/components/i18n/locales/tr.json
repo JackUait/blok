@@ -2356,6 +2356,8 @@
   "tools.database.templateEdit": "Düzenle",
   "tools.database.templateMore": "Bu şablonu düzenle",
   "tools.database.templateSetDefault": "Varsayılan olarak ayarla",
+  "tools.database.statusDefaultConfirm": "Varsayılan “{name}” olarak değiştirilsin mi?",
+  "tools.database.statusDefaultConfirmDescription": "Yeni sayfalar varsayılan durum olarak {name} ile başlayacak. Durumu açıkça ayarlanmamış mevcut sayfalar {name} durumuna geçecek.",
   "tools.database.templateDefault": "Varsayılan",
   "tools.database.templateRepeatSummaryNone": "Her… çoğalt",
   "tools.database.templateRepeatSummaryDay": "Her gün çoğalt",

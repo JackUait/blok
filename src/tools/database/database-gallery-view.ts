@@ -719,10 +719,7 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
       const previous = card.previousElementSibling;
 
       // notion-motion.md Round 54 §6: a later row's start has no slot of its own; the end-of-row line above stands for it.
-      // Round 55 §2: nor does the very first card's near side.
-      const previousCard = previous?.matches('[data-blok-database-gallery-card]') === true ? previous : null;
-
-      if (side === 'before' && (previousCard === null || previousCard.getBoundingClientRect().top < box.top)) {
+      if (side === 'before' && previous?.matches('[data-blok-database-gallery-card]') === true && previous.getBoundingClientRect().top < box.top) {
         return null;
       }
 

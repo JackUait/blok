@@ -606,20 +606,14 @@ describe('DatabaseGalleryView', () => {
       expect(line?.style.left).toBe('228px');
     });
 
-    // notion-motion.md Round 55 §2: the near half of the very first card shows no line and is no drop.
-    it('shows no line and moves nothing over the near half of the first card', () => {
-      const { root, handlers } = mount({ groups: three() });
-      const [first, , last] = layOutWithGap(root);
+    it('draws the line before the first card of a row half a gap out from its edge', () => {
+      const { root } = mount({ groups: three() });
+      const [, , last] = layOutWithGap(root);
 
       pointer('pointerdown', last, 250, 10);
       pointer('pointermove', document, 10, 10);
 
-      const line = document.querySelector<HTMLElement>('[data-blok-database-drop-line]');
-
-      expect(line === null || line.style.opacity === '0').toBe(true);
-      expect(first.hasAttribute('data-drop')).toBe(false);
-      pointer('pointerup', document, 10, 10);
-      expect(handlers.moveRow).not.toHaveBeenCalled();
+      expect(document.querySelector<HTMLElement>('[data-blok-database-drop-line]')?.style.left).toBe('-12px');
     });
 
     // notion-motion.md Round 54 §6: the near half of a later row's first card shows no line; that slot is the end-of-row line above.

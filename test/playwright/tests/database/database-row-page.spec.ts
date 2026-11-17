@@ -803,26 +803,37 @@ test.describe('row page cover', () => {
     });
   }
 
-  test('side peek with the details panel open: the cover stops at the panel and the group sits 12 in from it', async ({ page }) => {
-    const data = withCover().map((block) => (block.id !== 'db-1' ? block : {
-      ...block,
-      data: { ...block.data, schema: SCHEMA.map((p) => (p.type === 'title' ? { ...p, pageLayoutPlacements: [{ id: 'p-notes', place: 'panel' }] } : p)) },
-    }));
+  for (const mode of ['side', 'center', 'full'] as const) {
+    test(`${mode} with the details panel open: the cover stops at the panel and the group sits 12 in from it`, async ({ page }) => {
+      const data = withCover(mode === 'side' ? {} : { openPagesIn: mode }).map((block) => (block.id !== 'db-1' ? block : {
+        ...block,
+        data: { ...block.data, schema: SCHEMA.map((p) => (p.type === 'title' ? { ...p, pageLayoutPlacements: [{ id: 'p-notes', place: 'panel' }] } : p)) },
+      }));
 
-    await mount(page, data);
-    await openRow(page, 'r3');
-    await expect(peek(page)).toHaveAttribute('data-open', '');
-    await peek(page).locator('[data-blok-database-peek-page-info]').click();
-    const panel = peek(page).locator('[data-blok-database-drawer-details]');
+      await mount(page, data);
+      await openRow(page, 'r3');
+      await expect(peek(page)).toHaveAttribute('data-peek-mode', mode);
+      await expect(peek(page)).toHaveAttribute('data-open', '');
+      await peek(page).locator('[data-blok-database-peek-page-info]').click();
+      const panel = peek(page).locator('[data-blok-database-drawer-details]');
 
-    await expect(panel).toBeVisible();
-    await expect.poll(() => peek(page).evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
-    const coverBox = await boxOf(cover(page));
+      await expect(panel).toBeVisible();
+      await expect.poll(() => peek(page).evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
+      const coverBox = await boxOf(cover(page));
+      const panelBox = await boxOf(panel);
 
-    // Round 59 §3: the cover stops at the panel.
-    expect(coverBox.x + coverBox.width).toBeCloseTo((await boxOf(panel)).x, 1);
-    await expectGroupAt(page, (await boxOf(panel)).x);
-  });
+      // Round 59 §3 (side peek): the cover stops at the panel. Centre and full are inferred from it.
+      expect(coverBox.x + coverBox.width).toBeCloseTo(panelBox.x, 1);
+      await expectGroupAt(page, panelBox.x);
+      // Nothing paints over the buttons.
+      for (const name of ['Change the page cover', 'Download the cover image']) {
+        const button = coverGroup(page).getByRole('button', { name });
+        const b = await boxOf(button);
+
+        expect(await page.evaluate(({ x, y, label }) => document.elementFromPoint(x, y)?.closest('button')?.getAttribute('aria-label') === label, { x: b.x + b.width / 2, y: b.y + b.height / 2, label: name })).toBe(true);
+      }
+    });
+  }
 
   test('the cover group fades in over 0.2s and holds 0.11s before it fades out', async ({ page }) => {
     await open(page, 'r3', 'side');

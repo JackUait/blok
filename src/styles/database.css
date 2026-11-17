@@ -2444,7 +2444,7 @@
 [data-blok-database-drawer][data-peek-mode="full"] [data-blok-database-drawer-cover] {
   position: absolute;
   inset-block-start: var(--_blok-peek-toolbar-size, 0px);
-  inset-inline: 0;
+  inset-inline: 0 var(--_blok-peek-details-covered, 0px);
   height: 30vh;
   margin: 0;
   border-radius: 0;
@@ -5922,6 +5922,11 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   [data-blok-database-drawer][data-peek-mode="side"][data-details-open] [data-blok-database-drawer-cover] {
     --_blok-cover-bleed-end: calc(var(--_blok-peek-details-inset) - 280px + var(--blok-space-2));
   }
+}
+
+/* The centre panel too (inferred from the side peek's Round 59 §3). */
+[data-blok-database-drawer][data-peek-mode="center"][data-details-open] [data-blok-database-drawer-cover] {
+  --_blok-cover-bleed-end: calc(var(--_blok-peek-details-inset) - 280px + var(--blok-space-2));
 }
 
 /* research/10 §10: Close panel at the top, then "Properties" 13px/500 grey. */

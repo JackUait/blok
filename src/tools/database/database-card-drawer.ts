@@ -2962,6 +2962,7 @@ export class DatabaseCardDrawer {
     }
     this.syncPeekWidening(drawer);
     drawer.style.removeProperty('padding-inline-end');
+    drawer.style.removeProperty('--_blok-peek-details-covered');
     const toolbar = drawer.querySelector<HTMLElement>('[data-blok-database-drawer-toolbar]');
 
     drawer.style.setProperty('--_blok-peek-toolbar-size', `${toolbar?.offsetHeight ?? 0}px`);
@@ -2976,6 +2977,8 @@ export class DatabaseCardDrawer {
 
     if (covered > 0) {
       drawer.style.paddingInlineEnd = `${covered + DETAILS_DOCK_GAP}px`;
+      // The full page cover stops at the panel (database.css).
+      drawer.style.setProperty('--_blok-peek-details-covered', `${covered}px`);
     }
   }
 

@@ -1828,7 +1828,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r141: Round 59 peek head with no icon or cover, Edit property's add field, the table row page glyph. Net database.css growth against origin/main.
     const DATABASE_R141_BYTES = 1598;
     // Lane r140: Round 59 row page cover group (Change, Download, fade) and the cover stopping at the details panel. Net database.css growth against origin/main.
-    const DATABASE_R140_BYTES = 1840;
+    const DATABASE_R140_BYTES = 2159;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

@@ -145,7 +145,7 @@ import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar, VIEW_ICONS } from './database-tab-bar';
 import { foldTitleRow } from './database-view-bar-fold';
-import { IconArrowDiagonal, IconCalendar, IconReplace, IconCreditCard, IconCurrency, IconDatabase, IconDatabaseInline, IconDatabaseLinked, IconFolderQuestion, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconDownload, IconImage, IconForm, IconViewForm, IconMergeCells, IconPageLayout, IconReturn, IconTable, IconTimeline, IconUpload, IconWand, IconInfo } from '../../components/icons';
+import { IconArrowDiagonal, IconCalendar, IconReplace, IconCreditCard, IconCurrency, IconDatabase, IconDatabaseInline, IconDatabaseLinked, IconFolderQuestion, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconDownload, IconImage, IconForm, IconViewForm, IconMergeCells, IconLock, IconPencil, IconExpandDiagonal, IconPageLayout, IconReturn, IconTable, IconTimeline, IconUpload, IconWand, IconInfo } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import type { PopoverDesktopParams } from '../../components/utils/popover/popover-desktop';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
@@ -2669,19 +2669,58 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
-   * The ⋮⋮ menu. "Turn into page" leads Notion's inline database menu
-   * (research-live-notion.md §4); it needs a host that stores the new page's document.
+   * The ⋮⋮ menu: Notion's database rows that Blok backs, in Notion's groups
+   * (notion-motion.md Round 64 §4). Core adds Copy link, Duplicate, Move to and Delete.
+   * "Turn into page" needs a host that stores the new page's document.
    */
   public renderSettings(): MenuConfigItem[] {
-    if (this.readOnly || this.linked || this.fullPage || this.insideDatabase() || databasePageHost(this.api) === null) return [];
-
-    return [{
+    if (this.readOnly || this.fullPage || this.insideDatabase()) return [];
+    const t = (key: string): string => this.api.i18n.t(`tools.database.${key}`);
+    const turnIntoPage: MenuConfigItem[] = this.linked || databasePageHost(this.api) === null ? [] : [{
       icon: IconReplace,
-      title: this.api.i18n.t('tools.database.turnIntoPage'),
+      title: t('turnIntoPage'),
       name: 'database-turn-into-page',
       closeOnActivate: true,
       onActivate: (): void => void this.turnIntoPage(),
     }];
+    // No closeOnActivate: core keeps the menu open and the block selected, as for a switch.
+    const lock: MenuConfigItem[] = this.structureDenied ? [] : [{
+      icon: IconLock,
+      title: t(this.linked ? 'settingsLockViews' : 'settingsLockDatabase'),
+      name: 'database-lock',
+      isActive: (): boolean => this.structureLocked(),
+      onActivate: (): void => this.setDatabaseLocked(!this.structureLocked()),
+    }];
+    const rename: MenuConfigItem[] = !this.titleEditable() || this.dataSourceTitlesHidden ? [] : [{
+      icon: IconPencil,
+      title: t('renameView'),
+      name: 'database-rename',
+      closeOnActivate: true,
+      onActivate: (): void => this.focusTitle(),
+    }];
+    // Hidden, not disabled: Notion's menu has no disabled row (Round 64 §4). A lock set
+    // from this open menu leaves the row, so the click checks again.
+    const merge: MenuConfigItem[] = this.structureLocked() ? [] : [{
+      icon: IconMergeCells,
+      title: t('csvMerge'),
+      name: 'database-merge-csv',
+      closeOnActivate: true,
+      onActivate: (): void => {
+        if (!this.structureLocked()) this.activeSource().openCsvMerge();
+      },
+    }];
+    const open = this.fullPageOpener();
+    const openAsPage: MenuConfigItem[] = open === undefined ? [] : [{
+      icon: IconExpandDiagonal,
+      title: t('openAsPage'),
+      name: 'database-open-as-page',
+      closeOnActivate: true,
+      onActivate: open,
+    }];
+
+    return [[...turnIntoPage, ...lock, ...rename, ...merge], openAsPage]
+      .filter((group) => group.length > 0)
+      .flatMap((group, index) => index === 0 ? group : [{ type: PopoverItemType.Separator }, ...group]);
   }
 
   /** A database's children are rows, sources and tabs: a page link put there would be turned into a row. */

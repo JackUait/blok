@@ -72,6 +72,13 @@ export interface PagePickerOptions {
   onClose?: () => void;
   /** Gets the active row's page title, or null when the active row is not a page. */
   onActiveTitle?: (title: string | null) => void;
+  /** Gets the active row's element, or null when no row is active. */
+  onActiveRow?: (row: HTMLElement | null) => void;
+  /**
+   * Runs between a pick and its `onPick`, with the list frozen. False drops the
+   * pick; so does closing the picker before it settles.
+   */
+  beforePick?: (pageId: string, row: HTMLElement) => Promise<boolean>;
   /** The popover's class and width, and `at`: its top-left corner, moving with `positionContext`. */
   popover?: { class?: string; width?: string; at?: { position: DOMRect; positionContext: HTMLElement } };
   /** With `searchField`: a label over the pages, `idle` while nothing is typed and `query` after. */
@@ -132,6 +139,10 @@ export class PagePicker {
   private search: SearchInput | null = null;
   private onClose: (() => void) | null = null;
   private onActiveTitle: ((title: string | null) => void) | null = null;
+  private onActiveRow: ((row: HTMLElement | null) => void) | null = null;
+  private beforePick: ((pageId: string, row: HTMLElement) => Promise<boolean>) | null = null;
+  /** True while `beforePick` is pending. */
+  private holding = false;
   private listbox: HTMLElement | null = null;
   private content: HTMLElement | null = null;
   private onPick: ((pageId: string) => void) | null = null;
@@ -186,6 +197,8 @@ export class PagePicker {
     this.onPick = onPick;
     this.onClose = options.onClose ?? null;
     this.onActiveTitle = options.onActiveTitle ?? null;
+    this.onActiveRow = options.onActiveRow ?? null;
+    this.beforePick = options.beforePick ?? null;
     this.sectioned = options.searchField === undefined;
     this.sections = options.searchField === undefined ? null : options.sections ?? null;
     this.highlightIdle = options.highlightIdle ?? true;
@@ -236,7 +249,7 @@ export class PagePicker {
 
   /** A search for `query` started: shows the loading state and names the query in the New page items. */
   public startSearch(query: string): void {
-    if (this.content === null) {
+    if (this.content === null || this.holding) {
       return;
     }
     this.query = query;
@@ -245,7 +258,7 @@ export class PagePicker {
   }
 
   public setResults(results: readonly unknown[]): void {
-    if (this.content === null) {
+    if (this.content === null || this.holding) {
       return;
     }
 
@@ -302,6 +315,12 @@ export class PagePicker {
     }
 
     const count = this.entries.length;
+
+    if (this.holding) {
+      event.preventDefault();
+
+      return true;
+    }
 
     if (count === 0) {
       if (event.key === 'Enter' || event.key === 'ArrowDown' || event.key === 'ArrowUp' ||
@@ -362,6 +381,9 @@ export class PagePicker {
     this.onChoose = null;
     this.onClose = null;
     this.onActiveTitle = null;
+    this.onActiveRow = null;
+    this.beforePick = null;
+    this.holding = false;
     this.newPage = null;
     this.sections = null;
     this.highlightIdle = true;
@@ -409,23 +431,46 @@ export class PagePicker {
     this.previousAttributes = null;
   }
 
-  private pick(pageId: string): void {
+  private pick(pageId: string, row: HTMLElement): void {
     const onPick = this.onPick;
+    const popover = this.popover;
 
     if (onPick === null) {
       return;
     }
 
-    // A pick is not a close: onClose stays silent.
-    this.onClose = null;
-    this.close();
-    onPick(pageId);
+    const finish = (): void => {
+      // A pick is not a close: onClose stays silent.
+      this.onClose = null;
+      this.close();
+      onPick(pageId);
+    };
+
+    if (this.beforePick === null) {
+      finish();
+
+      return;
+    }
+
+    const release = (go: boolean): void => {
+      // Closed or reopened meanwhile: the pick is gone with that opening.
+      if (this.popover !== popover) {
+        return;
+      }
+      this.holding = false;
+      if (go) {
+        finish();
+      }
+    };
+
+    this.holding = true;
+    this.beforePick(pageId, row).then(release, () => release(false));
   }
 
   private activate(index: number): void {
     const entry = this.entries[index];
 
-    if (entry === undefined || this.busyKey !== null) {
+    if (entry === undefined || this.busyKey !== null || this.holding) {
       return;
     }
 
@@ -498,12 +543,16 @@ export class PagePicker {
     if (this.sections !== null && this.sections !== undefined && (visible.length > 0 || this.loading)) {
       rows.push(this.buildHeader('link', this.query === '' ? this.sections.idle : this.sections.query));
     }
-    visible.forEach((result) => add({
-      key: `page:${result.pageId}`,
-      element: this.buildPageOption(result),
-      run: () => this.onChoose !== null ? this.onChoose(result.pageId) : this.pick(result.pageId),
-      title: result.title || this.fallback,
-    }));
+    visible.forEach((result) => {
+      const element = this.buildPageOption(result);
+
+      add({
+        key: `page:${result.pageId}`,
+        element,
+        run: () => this.onChoose !== null ? this.onChoose(result.pageId) : this.pick(result.pageId, element),
+        title: result.title || this.fallback,
+      });
+    });
     if (hidden > 0) {
       add({ key: 'more', element: this.buildMoreOption(hidden), run: () => this.expand() });
     }
@@ -662,7 +711,7 @@ export class PagePicker {
     option.addEventListener('pointermove', () => {
       const at = index();
 
-      if (at === -1 || (at === this.activeIndex && !this.keyboardNavigated)) {
+      if (at === -1 || this.holding || (at === this.activeIndex && !this.keyboardNavigated)) {
         return;
       }
       this.activeIndex = at;
@@ -715,6 +764,7 @@ export class PagePicker {
     const active = activeEntry?.element;
 
     this.onActiveTitle?.(activeEntry?.title ?? null);
+    this.onActiveRow?.(active ?? null);
     if (active === undefined) {
       this.combobox?.removeAttribute('aria-activedescendant');
     } else {

@@ -7548,7 +7548,7 @@ button[data-blok-database-board-lane-count]:hover {
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [data-blok-testid='page-picker-tree-chevron'] svg {
   width: 12px;
   height: 12px;
-  transition: transform 0.2s ease-out;
+  transition: transform 0.2s ease-in-out;
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [data-blok-page-picker-expanded='true'] [data-blok-testid='page-picker-tree-chevron'] svg {
@@ -15012,15 +15012,17 @@ button[data-blok-database-table-group-count]:hover {
   animation: blok-database-landed 200ms ease;
 }
 
-[data-blok-component="database"][data-blok-selected="true"] > [data-blok-element-content]::after {
-  animation: blok-database-landed 200ms ease;
+:is([data-blok-database-list-row], [data-blok-database-gallery-card])[data-blok-database-row-landed] {
+  --blok-database-landed-tint: var(--blok-icon-active-bg);
+  background-image: linear-gradient(var(--blok-database-landed-tint), var(--blok-database-landed-tint));
+  animation: blok-database-landed-tint 200ms ease;
 }
 
 [@media (prefers-reduced-motion: reduce)] [data-blok-database-row-landed]::after {
   animation: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-component="database"][data-blok-selected="true"] > [data-blok-element-content]::after {
+[@media (prefers-reduced-motion: reduce)] :is([data-blok-database-list-row], [data-blok-database-gallery-card])[data-blok-database-row-landed] {
   animation: none;
 }
 

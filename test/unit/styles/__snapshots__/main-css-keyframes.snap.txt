@@ -225,6 +225,10 @@
   from { opacity: 0 }
 }
 
+@keyframes blok-database-landed-tint {
+  from { --blok-database-landed-tint: transparent }
+}
+
 @keyframes blok-dice-impact {
   0%, 76% { transform: scale(0); opacity: 1 }
   84% { transform: scale(1.1); opacity: 1 }

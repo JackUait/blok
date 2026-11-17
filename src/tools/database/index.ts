@@ -859,7 +859,7 @@ export class DatabaseTool implements BlockTool {
   /** A new board card left unnamed by Escape: selected alone, it shows no bar. Any other selection drops it. */
   private barlessRowId: string | null = null;
   /** The row a drop just landed: the next paint marks it so its halo fades in once. */
-  private landedRowId: string | null = null;
+  private landedRowIds: readonly string[] = [];
   /** What an undo does to the table's selection, applied once its redraw is done. */
   private undoPick: { restored: string[]; edited: boolean } | null = null;
   private undoPickTimer: ReturnType<typeof setTimeout> | null = null;
@@ -3435,9 +3435,17 @@ export class DatabaseTool implements BlockTool {
 
     this.undoPick = null;
     this.undoPickTimer = null;
-    if (pick === null || this.destroyed || !(this.view instanceof DatabaseTableView)) return;
+    if (pick === null || this.destroyed) return;
     const restored = pick.restored.filter((id) => this.model.getRow(id) !== undefined);
 
+    if (!(this.view instanceof DatabaseTableView)) {
+      const type = this.shownView()?.type;
+
+      // notion-motion.md Round 64 §1: a List row or Gallery card comes back selected; a Board card does not.
+      if (restored.length > 0 && (type === 'list' || type === 'gallery')) this.landRows(restored);
+
+      return;
+    }
     if (restored.length > 0) this.view.pickAfterUndo(restored);
     else if (pick.edited) this.view.pickAfterUndo(null);
   }
@@ -11699,9 +11707,13 @@ export class DatabaseTool implements BlockTool {
 
   /** notion-motion.md Round 40 §2–3: a dropped card or event is left selected, its halo fading in. */
   private landRow(rowId: string): void {
-    this.landedRowId = rowId;
-    this.selectRows([rowId]);
-    this.landedRowId = null;
+    this.landRows([rowId]);
+  }
+
+  private landRows(rowIds: string[]): void {
+    this.landedRowIds = rowIds;
+    this.selectRows(rowIds);
+    this.landedRowIds = [];
   }
 
   private clearRowSelection(): void {
@@ -11739,7 +11751,7 @@ export class DatabaseTool implements BlockTool {
       const selected = this.rowSelection.has(el.getAttribute('data-row-id') ?? '');
 
       el.toggleAttribute('data-blok-database-row-selected', selected);
-      el.toggleAttribute('data-blok-database-row-landed', selected && el.getAttribute('data-row-id') === this.landedRowId);
+      el.toggleAttribute('data-blok-database-row-landed', selected && this.landedRowIds.includes(el.getAttribute('data-row-id') ?? ''));
       if (selected) {
         el.setAttribute('aria-selected', 'true');
       } else {

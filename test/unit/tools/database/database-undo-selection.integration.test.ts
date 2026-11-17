@@ -58,12 +58,16 @@ if (typeof document.elementFromPoint !== 'function') {
 let editor: TestEditor | undefined;
 let holder: HTMLDivElement | undefined;
 
-const make = async (): Promise<TestEditor> => {
+const make = async (type = 'table'): Promise<TestEditor> => {
+  const blocks = doc();
+  const data = blocks[0].data as { views: Array<Record<string, unknown>> };
+
+  data.views[0] = { ...data.views[0], type, ...(type === 'board' ? { groupBy: 'x' } : {}) };
   editor = new Blok({
     holder,
     dataModel: 'hierarchical',
     tools: { paragraph: Paragraph, database: DatabaseTool, 'database-row': DatabaseRowTool },
-    data: { blocks: doc() },
+    data: { blocks },
   } as never) as unknown as TestEditor;
   await editor.isReady;
   await quiet();
@@ -177,5 +181,40 @@ describe('row selection after undo', () => {
 
     expect(row('r2')).toBeNull();
     expect(document.querySelector('[data-blok-database-table-selection-bar]')).toBeNull();
+  });
+
+  /** notion-motion.md Round 64 §1: a List row or Gallery card comes back selected, fading in; a Board card does not. */
+  const ITEM = {
+    list: '[data-blok-database-list-row]',
+    gallery: '[data-blok-database-gallery-card]',
+    board: '[data-blok-database-card]',
+  };
+  const picked = (type: keyof typeof ITEM): string[] =>
+    [...document.querySelectorAll(`${ITEM[type]}[data-blok-database-row-selected]`)].map((el) => el.getAttribute('data-row-id') ?? '');
+
+  it.each(['list', 'gallery'] as const)('selects the %s item an undone delete brings back, fading it in', async (type) => {
+    const blok = await make(type);
+
+    expect(document.querySelector(`${ITEM[type]}[data-row-id="r2"]`)).not.toBeNull();
+    await deleteRow(blok, 'r2');
+    expect(document.querySelector(`${ITEM[type]}[data-row-id="r2"]`)).toBeNull();
+
+    blok.history.undo();
+    await quiet();
+
+    expect(picked(type)).toEqual(['r2']);
+    expect(document.querySelector(`${ITEM[type]}[data-row-id="r2"]`)?.hasAttribute('data-blok-database-row-landed')).toBe(true);
+  });
+
+  it('selects nothing when undo brings a board card back', async () => {
+    const blok = await make('board');
+
+    expect(document.querySelector(`${ITEM.board}[data-row-id="r2"]`)).not.toBeNull();
+    await deleteRow(blok, 'r2');
+    blok.history.undo();
+    await quiet();
+
+    expect(document.querySelector(`${ITEM.board}[data-row-id="r2"]`)).not.toBeNull();
+    expect(picked('board')).toEqual([]);
   });
 });

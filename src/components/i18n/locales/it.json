@@ -162,7 +162,6 @@
   "blockSettings.copyPageLink": "Copia link",
   "blockSettings.moveToTrash": "Sposta nel cestino",
   "blockSettings.moveTo": "Sposta in",
-  "blockSettings.movedTo": "Spostato in {title}",
   "blockSettings.lastEdited": "Ultima modifica",
   "blockSettings.lastEditedBy": "Ultima modifica di {name}",
   "a11y.insertBlock": "Inserisci blocco",

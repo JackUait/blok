@@ -162,7 +162,6 @@
   "blockSettings.copyPageLink": "Kopírovat odkaz",
   "blockSettings.moveToTrash": "Přesunout do koše",
   "blockSettings.moveTo": "Přesunout do",
-  "blockSettings.movedTo": "Přesunuto do {title}",
   "blockSettings.lastEdited": "Naposledy upraveno",
   "blockSettings.lastEditedBy": "Naposledy upraveno uživatelem {name}",
   "a11y.insertBlock": "Vložit blok",

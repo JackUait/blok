@@ -162,7 +162,6 @@
   "blockSettings.copyPageLink": "Kopeeri link",
   "blockSettings.moveToTrash": "Teisalda prügikasti",
   "blockSettings.moveTo": "Teisalda",
-  "blockSettings.movedTo": "Teisaldatud lehele {title}",
   "blockSettings.lastEdited": "Viimati muudetud",
   "blockSettings.lastEditedBy": "Viimati muutis {name}",
   "a11y.insertBlock": "Lisa plokk",

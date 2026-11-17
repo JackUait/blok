@@ -108,7 +108,6 @@
   "blockSettings.copyPageLink": "සබැඳිය පිටපත් කරන්න",
   "blockSettings.moveToTrash": "කුණු බඳුනට ගෙන යන්න",
   "blockSettings.moveTo": "වෙත ගෙන යන්න",
-  "blockSettings.movedTo": "{title} වෙත ගෙන ගියා",
   "blockSettings.lastEdited": "අවසන් සංස්කරණය",
   "blockSettings.lastEditedBy": "{name} විසින් අවසන් සංස්කරණය",
   "a11y.insertBlock": "කොටසක් ඇතුළු කරන්න",

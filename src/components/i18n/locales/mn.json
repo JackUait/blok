@@ -162,7 +162,6 @@
   "blockSettings.copyPageLink": "Холбоос хуулах",
   "blockSettings.moveToTrash": "Хогийн сав руу зөөх",
   "blockSettings.moveTo": "Зөөх",
-  "blockSettings.movedTo": "{title} руу зөөгдлөө",
   "blockSettings.lastEdited": "Сүүлд засварласан",
   "blockSettings.lastEditedBy": "{name} сүүлд засварласан",
   "a11y.insertBlock": "Блок оруулах",

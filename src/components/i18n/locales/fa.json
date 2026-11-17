@@ -126,7 +126,6 @@
   "blockSettings.copyPageLink": "کپی پیوند",
   "blockSettings.moveToTrash": "انتقال به سطل زباله",
   "blockSettings.moveTo": "انتقال به",
-  "blockSettings.movedTo": "به {title} منتقل شد",
   "blockSettings.lastEdited": "آخرین ویرایش",
   "blockSettings.lastEditedBy": "آخرین ویرایش توسط {name}",
   "a11y.insertBlock": "درج بلوک",

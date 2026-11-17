@@ -162,7 +162,6 @@
   "blockSettings.copyPageLink": "Kopier lenke",
   "blockSettings.moveToTrash": "Flytt til papirkurven",
   "blockSettings.moveTo": "Flytt til",
-  "blockSettings.movedTo": "Flyttet til {title}",
   "blockSettings.lastEdited": "Sist redigert",
   "blockSettings.lastEditedBy": "Sist redigert av {name}",
   "a11y.insertBlock": "Sett inn blokk",

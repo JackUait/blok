@@ -162,7 +162,6 @@
   "blockSettings.copyPageLink": "Kopiera länk",
   "blockSettings.moveToTrash": "Flytta till papperskorgen",
   "blockSettings.moveTo": "Flytta till",
-  "blockSettings.movedTo": "Flyttad till {title}",
   "blockSettings.lastEdited": "Senast redigerad",
   "blockSettings.lastEditedBy": "Senast redigerad av {name}",
   "a11y.insertBlock": "Infoga block",

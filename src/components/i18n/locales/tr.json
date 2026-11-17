@@ -120,7 +120,6 @@
   "blockSettings.copyPageLink": "Bağlantıyı kopyala",
   "blockSettings.moveToTrash": "Çöp kutusuna taşı",
   "blockSettings.moveTo": "Şuraya taşı",
-  "blockSettings.movedTo": "{title} sayfasına taşındı",
   "blockSettings.lastEdited": "Son düzenleme",
   "blockSettings.lastEditedBy": "Son düzenleyen: {name}",
   "a11y.insertBlock": "Blok ekle",

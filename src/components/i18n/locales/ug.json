@@ -162,7 +162,6 @@
   "blockSettings.copyPageLink": "ئۇلانمىنى كۆچۈر",
   "blockSettings.moveToTrash": "ئەخلەت چېلىكىگە يۆتكەش",
   "blockSettings.moveTo": "يۆتكەش",
-  "blockSettings.movedTo": "{title} غا يۆتكەلدى",
   "blockSettings.lastEdited": "ئاخىرقى تەھرىرلەش",
   "blockSettings.lastEditedBy": "{name} ئاخىرقى تەھرىرلىگەن",
   "a11y.insertBlock": "بۆلەك قىستۇرۇش",

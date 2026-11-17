@@ -162,7 +162,6 @@
   "blockSettings.copyPageLink": "Salin tautan",
   "blockSettings.moveToTrash": "Pindahkan ke sampah",
   "blockSettings.moveTo": "Pindahkan ke",
-  "blockSettings.movedTo": "Dipindahkan ke {title}",
   "blockSettings.lastEdited": "Terakhir diedit",
   "blockSettings.lastEditedBy": "Terakhir diedit oleh {name}",
   "a11y.insertBlock": "Sisipkan blok",

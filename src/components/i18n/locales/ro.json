@@ -120,7 +120,6 @@
   "blockSettings.copyPageLink": "Copiază linkul",
   "blockSettings.moveToTrash": "Mută în coșul de gunoi",
   "blockSettings.moveTo": "Mută în",
-  "blockSettings.movedTo": "Mutat în {title}",
   "blockSettings.lastEdited": "Ultima editare",
   "blockSettings.lastEditedBy": "Ultima editare de {name}",
   "a11y.insertBlock": "Inserează bloc",

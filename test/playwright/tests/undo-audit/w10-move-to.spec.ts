@@ -247,7 +247,7 @@ test.describe('W10 Move to', () => {
     expect(await save(page)).toEqual(after);
   });
 
-  test('W10-7: a wire runs from the block to the active row, carries the block on a pick, and the toast undoes the move', async ({ page }) => {
+  test('W10-7: a wire runs from the block to the active row and carries the block on a pick; undo needs no click first', async ({ page }) => {
     await createBlok(page, DOC);
     await gap(page);
     const before = await save(page);
@@ -297,10 +297,11 @@ test.describe('W10 Move to', () => {
     await landed(page);
     await expect(wire(page)).toHaveCount(0);
     expect((await save(page)).find(block => block.id === 'p-a')?.parent).toBe('row-2');
-    await expect(page.getByTestId('notification-message-text')).toHaveText('Moved to Card two');
-
-    await page.getByRole('button', { name: 'Undo' }).click();
+    // No toast: the undo shortcut is the way back, straight after the move.
     await gap(page, 500);
+    await expect(page.getByTestId('notification-message-text')).toHaveCount(0);
+
+    await undo(page);
     expect(await save(page)).toEqual(before);
     await expect(page.locator('[data-blok-id="p-a"]')).toBeVisible();
     await expect(page.locator('[data-blok-id="p-a"] [data-blok-element-content]')).toHaveCSS('opacity', '1');

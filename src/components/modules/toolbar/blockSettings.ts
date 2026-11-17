@@ -27,7 +27,7 @@ import { css as popoverItemCls } from '../../utils/popover/components/popover-it
 import { isToolConvertable, translateToolTitle } from '../../utils/tools';
 import { prepareImportString } from '../blockManager/block-mutation';
 import { isBlockReadOnly } from '../../utils/read-only-blocks';
-import { deleteWithTrashToast, showMovedToast, showTrashToast } from '../../utils/trash-toast';
+import { deleteWithTrashToast, showTrashToast } from '../../utils/trash-toast';
 import { assertCanMoveAll, type BlockTree } from '../api/block-placement';
 import { PagePicker } from '../../../tools/page/page-picker';
 import { createMoveFlight, type MoveFlight } from './move-flight';
@@ -1014,7 +1014,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     picker.open('', anchor, (rowId) => {
       // Before the move: it writes its own styles on the holders it reparents.
       stop();
-      this.moveInto(rootIds, rowId, rules, targets.find((target) => target.pageId === rowId)?.title || untitled);
+      this.moveInto(rootIds, rowId, rules);
     }, {
       searchField: {
         placeholder: t('tools.page.search'),
@@ -1066,13 +1066,11 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
    * @param rootIds - the blocks to move, in document order
    * @param rowId - the page's block
    * @param rules - core's checks
-   * @param title - the page's title, for the toast
    */
   private moveInto(
     rootIds: string[],
     rowId: string,
-    rules: { canMoveInto: (roots: readonly Block[], rowId: string) => boolean; isReadOnly: (block: Block) => boolean },
-    title: string
+    rules: { canMoveInto: (roots: readonly Block[], rowId: string) => boolean; isReadOnly: (block: Block) => boolean }
   ): void {
     const { BlockManager, BlockSelection } = this.Blok;
     const blocks = this.Blok.API.methods.blocks;
@@ -1083,13 +1081,10 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       return;
     }
 
-    const stepBefore = this.Blok.HistoryAPI.latestStep();
-
     BlockSelection.clearSelection();
     (blocks.transact ?? ((fn: () => void): void => fn()))(() => {
       roots.forEach((root) => blocks.moveTo(root.id, { parentId: rowId, position: 'end' }));
     });
-    showMovedToast(this.Blok, stepBefore, title);
   }
 
   /**

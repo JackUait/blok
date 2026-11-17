@@ -5,7 +5,7 @@ const announceMock = vi.hoisted(() => vi.fn());
 vi.mock('../../../../src/components/utils/announcer', () => ({ announce: announceMock }));
 
 import type { Block } from '../../../../src/components/block';
-import { deleteWithTrashToast, showMovedToast, showTrashToast, trashesBlock } from '../../../../src/components/utils/trash-toast';
+import { deleteWithTrashToast, showTrashToast, trashesBlock } from '../../../../src/components/utils/trash-toast';
 import type { HistoryStep } from '../../../../types/api/history';
 import type { NotifierOptions } from '../../../../types/configs/notifier';
 
@@ -41,15 +41,9 @@ const makeModules = (steps: Array<HistoryStep | Record<string, unknown> | undefi
     },
     // A method that reads `this`, like the real I18n: an unbound call throws.
     I18n: {
-      words: {
-        'tools.database.movedToTrash': 'Moved to Trash',
-        'tools.database.restore': 'Restore',
-        'a11y.undone': 'Undone',
-        'blockSettings.movedTo': 'Moved to {title}',
-        'tools.database.undo': 'Undo',
-      } as Record<string, string>,
-      t(this: { words: Record<string, string> }, key: string, vars?: Record<string, string | number>): string {
-        return Object.entries(vars ?? {}).reduce((text, [name, value]) => text.replace(`{${name}}`, String(value)), this.words[key] ?? key);
+      words: { 'tools.database.movedToTrash': 'Moved to Trash', 'tools.database.restore': 'Restore', 'a11y.undone': 'Undone' } as Record<string, string>,
+      t(this: { words: Record<string, string> }, key: string): string {
+        return this.words[key] ?? key;
       },
     },
   } as unknown as Modules;
@@ -88,33 +82,6 @@ describe('trash toast', () => {
 
     expect(undoStep).toHaveBeenCalledWith(after, true);
     expect(dismiss).toHaveBeenCalledWith(shown[0]);
-  });
-
-  it('shows "Moved to" with the page\'s title as text, and an Undo that undoes the move', () => {
-    const before = {} as HistoryStep;
-    const after = {};
-    const { modules, shown, undoStep, dismiss } = makeModules([after]);
-
-    showMovedToast(modules, before, 'Q&A <img src=x>');
-
-    expect(shown).toHaveLength(1);
-    expect(shown[0].message).toBe('Moved to <strong>Q&amp;A &lt;img src=x&gt;</strong>');
-    expect(shown[0].compact).toBe(true);
-    expect(shown[0].actions?.map((action) => action.label)).toEqual(['Undo']);
-
-    shown[0].actions?.[0].onClick();
-
-    expect(undoStep).toHaveBeenCalledWith(after, true);
-    expect(dismiss).toHaveBeenCalledWith(shown[0]);
-  });
-
-  it('shows no "Moved to" toast when the move made no undo step', () => {
-    const before = {} as HistoryStep;
-    const { modules, shown } = makeModules([before]);
-
-    showMovedToast(modules, before, 'Roadmap');
-
-    expect(shown).toHaveLength(0);
   });
 
   it('says "Undone" when Restore undoes the step, like an undo press (Notion U109)', () => {

@@ -51,7 +51,6 @@ export const CORE_DATABASE_KEYS = [
   'tools.database.restore',
   'tools.database.settingsOff',
   'tools.database.settingsOn',
-  'tools.database.undo',
   'tools.database.viewTypeTable',
 ];
 

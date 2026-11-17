@@ -108,7 +108,6 @@
   "blockSettings.copyPageLink": "लिङ्क प्रतिलिपि गर्नुहोस्",
   "blockSettings.moveToTrash": "रद्दीटोकरीमा सार्नुहोस्",
   "blockSettings.moveTo": "यसमा सार्नुहोस्",
-  "blockSettings.movedTo": "{title} मा सारियो",
   "blockSettings.lastEdited": "अन्तिम सम्पादन",
   "blockSettings.lastEditedBy": "{name} द्वारा अन्तिम सम्पादन",
   "a11y.insertBlock": "ब्लक थप्नुहोस्",

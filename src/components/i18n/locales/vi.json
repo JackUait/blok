@@ -162,7 +162,6 @@
   "blockSettings.copyPageLink": "Sao chép liên kết",
   "blockSettings.moveToTrash": "Chuyển vào thùng rác",
   "blockSettings.moveTo": "Chuyển đến",
-  "blockSettings.movedTo": "Đã chuyển đến {title}",
   "blockSettings.lastEdited": "Chỉnh sửa lần cuối",
   "blockSettings.lastEditedBy": "Chỉnh sửa lần cuối bởi {name}",
   "a11y.insertBlock": "Chèn khối",

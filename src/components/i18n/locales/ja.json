@@ -162,6 +162,7 @@
   "blockSettings.copyPageLink": "リンクをコピー",
   "blockSettings.moveToTrash": "ゴミ箱に移動",
   "blockSettings.moveTo": "移動先",
+  "blockSettings.movedTo": "{title} に移動しました",
   "blockSettings.lastEdited": "最終編集",
   "blockSettings.lastEditedBy": "最終編集者：{name}",
   "a11y.insertBlock": "ブロックを挿入",

@@ -162,6 +162,7 @@
   "blockSettings.copyPageLink": "Копирај врска",
   "blockSettings.moveToTrash": "Премести во корпа",
   "blockSettings.moveTo": "Премести во",
+  "blockSettings.movedTo": "Преместено во {title}",
   "blockSettings.lastEdited": "Последно уредено",
   "blockSettings.lastEditedBy": "Последно уредено од {name}",
   "a11y.insertBlock": "Вметни блок",

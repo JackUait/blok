@@ -162,6 +162,7 @@
   "blockSettings.copyPageLink": "Hivatkozás másolása",
   "blockSettings.moveToTrash": "Áthelyezés a kukába",
   "blockSettings.moveTo": "Áthelyezés ide",
+  "blockSettings.movedTo": "Áthelyezve ide: {title}",
   "blockSettings.lastEdited": "Utoljára szerkesztve",
   "blockSettings.lastEditedBy": "Utoljára szerkesztette: {name}",
   "a11y.insertBlock": "Blokk beszúrása",

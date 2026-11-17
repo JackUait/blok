@@ -162,6 +162,7 @@
   "blockSettings.copyPageLink": "لەبەرگرتنەوەی بەستەر",
   "blockSettings.moveToTrash": "گواستنەوە بۆ زبڵدان",
   "blockSettings.moveTo": "گواستنەوە بۆ",
+  "blockSettings.movedTo": "گوازرایەوە بۆ {title}",
   "blockSettings.lastEdited": "دوایین دەستکاری",
   "blockSettings.lastEditedBy": "دوایین دەستکاری لەلایەن {name}",
   "a11y.insertBlock": "بلۆک زیاد بکە",

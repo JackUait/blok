@@ -162,6 +162,7 @@
   "blockSettings.copyPageLink": "Nakili kiungo",
   "blockSettings.moveToTrash": "Hamishia kwenye tupio",
   "blockSettings.moveTo": "Hamishia",
+  "blockSettings.movedTo": "Imehamishiwa kwenye {title}",
   "blockSettings.lastEdited": "Kimehaririwa mara ya mwisho",
   "blockSettings.lastEditedBy": "Kimehaririwa mara ya mwisho na {name}",
   "a11y.insertBlock": "Ingiza kizuizi",

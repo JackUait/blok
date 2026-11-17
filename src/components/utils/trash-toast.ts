@@ -17,26 +17,31 @@ const TRASH_TOAST_MS = 8000;
  */
 export const trashesBlock = (block: Block): boolean => block.tool?.blockMenu?.trash;
 
+const HTML_ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' };
+
+const escapeHtml = (text: string): string => text.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
+
 /**
- * Shows Notion's "Moved to Trash" toast after a delete that trashed a block.
- * Restore undoes that delete's own step, so redo trashes it again.
+ * Shows a one-line toast whose button undoes the step an action just made.
  * @param Blok - the modules the toast needs
- * @param before - the newest undo step before the delete
+ * @param before - the newest undo step before the action
+ * @param message - the toast's text, as HTML
+ * @param label - the button's text
  */
-export const showTrashToast = (Blok: Modules, before: HistoryStep | undefined): void => {
+const showUndoToast = (Blok: Modules, before: HistoryStep | undefined, message: string, label: string): void => {
   const step = Blok.HistoryAPI.latestStep();
 
-  // No step of its own: Restore would undo something else.
+  // No step of its own: the button would undo something else.
   if (step === undefined || step === before) {
     return;
   }
 
   const options: NotifierOptions = {
-    message: Blok.I18n.t('tools.database.movedToTrash'),
+    message,
     compact: true,
     time: TRASH_TOAST_MS,
     actions: [{
-      label: Blok.I18n.t('tools.database.restore'),
+      label,
       onClick: () => {
         stopWatching();
         const applied = Blok.HistoryAPI.undoStep(step, true);
@@ -65,6 +70,29 @@ export const showTrashToast = (Blok: Modules, before: HistoryStep | undefined): 
   });
 
   Blok.NotifierAPI.show(options);
+};
+
+/**
+ * Shows Notion's "Moved to Trash" toast after a delete that trashed a block.
+ * Restore undoes that delete's own step, so redo trashes it again.
+ * @param Blok - the modules the toast needs
+ * @param before - the newest undo step before the delete
+ */
+export const showTrashToast = (Blok: Modules, before: HistoryStep | undefined): void => {
+  showUndoToast(Blok, before, Blok.I18n.t('tools.database.movedToTrash'), Blok.I18n.t('tools.database.restore'));
+};
+
+/**
+ * Shows "Moved to <page>" after the block menu's Move to, with an Undo.
+ * @param Blok - the modules the toast needs
+ * @param before - the newest undo step before the move
+ * @param title - the page's title, as plain text
+ */
+export const showMovedToast = (Blok: Modules, before: HistoryStep | undefined, title: string): void => {
+  // The toast draws its message as HTML, and a title is whatever the user typed.
+  const message = Blok.I18n.t('blockSettings.movedTo', { title: `<strong>${escapeHtml(title)}</strong>` });
+
+  showUndoToast(Blok, before, message, Blok.I18n.t('tools.database.undo'));
 };
 
 /**

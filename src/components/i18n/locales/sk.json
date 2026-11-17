@@ -120,6 +120,7 @@
   "blockSettings.copyPageLink": "Kopírovať odkaz",
   "blockSettings.moveToTrash": "Presunúť do koša",
   "blockSettings.moveTo": "Presunúť do",
+  "blockSettings.movedTo": "Presunuté do {title}",
   "blockSettings.lastEdited": "Naposledy upravené",
   "blockSettings.lastEditedBy": "Autor poslednej úpravy: {name}",
   "a11y.insertBlock": "Vložiť blok",

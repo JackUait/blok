@@ -157,6 +157,7 @@ export type BlokMessageKey =
   | 'blockSettings.menuShortcutWin'
   | 'blockSettings.moveTo'
   | 'blockSettings.moveToTrash'
+  | 'blockSettings.movedTo'
   | 'blockSettings.openMenuAction'
   | 'blockSettings.orConjunction'
   | 'emoji.nothingFound'

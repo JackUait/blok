@@ -120,6 +120,7 @@
   "blockSettings.copyPageLink": "คัดลอกลิงก์",
   "blockSettings.moveToTrash": "ย้ายไปถังขยะ",
   "blockSettings.moveTo": "ย้ายไปที่",
+  "blockSettings.movedTo": "ย้ายไปที่ {title} แล้ว",
   "blockSettings.lastEdited": "แก้ไขล่าสุด",
   "blockSettings.lastEditedBy": "แก้ไขล่าสุดโดย {name}",
   "a11y.insertBlock": "แทรกบล็อก",

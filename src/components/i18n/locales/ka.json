@@ -120,6 +120,7 @@
   "blockSettings.copyPageLink": "ბმულის კოპირება",
   "blockSettings.moveToTrash": "ნაგავში გადატანა",
   "blockSettings.moveTo": "გადატანა",
+  "blockSettings.movedTo": "გადატანილია {title}-ში",
   "blockSettings.lastEdited": "ბოლოს რედაქტირდა",
   "blockSettings.lastEditedBy": "ბოლო რედაქტორი: {name}",
   "a11y.insertBlock": "ბლოკის ჩასმა",

@@ -150,6 +150,7 @@
   "blockSettings.copyPageLink": "ចម្លងតំណ",
   "blockSettings.moveToTrash": "ផ្លាស់ទីទៅធុងសំរាម",
   "blockSettings.moveTo": "ផ្លាស់ទីទៅ",
+  "blockSettings.movedTo": "បានផ្លាស់ទីទៅ {title}",
   "blockSettings.lastEdited": "កែសម្រួលចុងក្រោយ",
   "blockSettings.lastEditedBy": "កែសម្រួលចុងក្រោយដោយ {name}",
   "a11y.insertBlock": "បញ្ចូលប្លុក",

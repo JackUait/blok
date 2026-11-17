@@ -162,6 +162,7 @@
   "blockSettings.copyPageLink": "لینک کاپي کړئ",
   "blockSettings.moveToTrash": "کثافاتو ته ولېږدوئ",
   "blockSettings.moveTo": "ولېږدوئ",
+  "blockSettings.movedTo": "{title} ته ولېږدول شو",
   "blockSettings.lastEdited": "وروستی سمون",
   "blockSettings.lastEditedBy": "د {name} لخوا وروستی سمون",
   "a11y.insertBlock": "بلاک دننه کړئ",

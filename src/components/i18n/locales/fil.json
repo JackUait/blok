@@ -150,6 +150,7 @@
   "blockSettings.copyPageLink": "Kopyahin ang link",
   "blockSettings.moveToTrash": "Ilipat sa basurahan",
   "blockSettings.moveTo": "Ilipat sa",
+  "blockSettings.movedTo": "Inilipat sa {title}",
   "blockSettings.lastEdited": "Huling na-edit",
   "blockSettings.lastEditedBy": "Huling na-edit ni {name}",
   "a11y.insertBlock": "Magdagdag ng block",

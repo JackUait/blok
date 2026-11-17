@@ -123,7 +123,7 @@ export class PlusButtonHandler {
         'text-block-control cursor-pointer w-6 h-6 rounded-(--blok-radius-control) inline-flex justify-center items-center select-none',
         'shrink-0',
         // SVG sizing
-        '[&_svg]:h-6 [&_svg]:w-6',
+        '[&_svg]:h-[22px] [&_svg]:w-[22px]',
         // Hover (can-hover)
         'can-hover:hover:bg-bg-light',
         // Hide when the toolbox popover is open

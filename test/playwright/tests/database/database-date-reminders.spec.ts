@@ -94,10 +94,10 @@ test('Remind sits above Clear, lists the date-only reminders, and a pick shows a
 
   await expect(menu.getByRole('menuitemradio')).toHaveText(['None', 'On day of event (9:00 AM)', '1 day before (9:00 AM)', '2 days before (9:00 AM)', '1 week before (9:00 AM)']);
   await expect(menu.getByRole('menuitemradio', { name: 'None' })).toHaveAttribute('aria-checked', 'true');
-  // Beside the picker, as Notion opens it.
+  // notion-motion.md Round 56 §4: on the picker's right, overlapping its edge by 4px.
   const picker = await page.getByRole('button', { name: 'Clear' }).evaluate((el) => el.closest('[data-blok-database-cell-editor]')?.getBoundingClientRect().right ?? 0);
 
-  expect((await menu.boundingBox())?.x ?? 0).toBeGreaterThanOrEqual(picker);
+  expect((await menu.boundingBox())?.x ?? 0).toBeCloseTo(picker - 4, 0);
 
   await menu.getByRole('menuitemradio', { name: '1 day before (9:00 AM)' }).click();
   await expect(menu).toBeHidden();

@@ -13931,6 +13931,11 @@ textarea[data-blok-database-cell-input] {
   padding: 0;
 }
 
+[data-blok-popover-item-html] > [data-blok-database-comments] {
+  width: min(462px, calc(100vw - 40px));
+  padding: var(--blok-space-1-5) var(--blok-space-1) var(--blok-space-1-5) var(--blok-space-2);
+}
+
 [data-blok-database-gallery-title] + [data-blok-database-comment-badge] {
   margin: 0 var(--blok-space-2) var(--blok-space-1);
 }

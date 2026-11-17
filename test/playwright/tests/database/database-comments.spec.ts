@@ -34,7 +34,7 @@ const blocks = (): OutputBlockData[] => [
   { id: 'r1', type: 'database-row', parent: 'db-1', data: { position: 'a0', properties: { 'p-title': 'Launch' } } },
 ];
 
-const mount = async (page: Page): Promise<void> => {
+const mount = async (page: Page, input: OutputBlockData[] = blocks()): Promise<void> => {
   await page.evaluate(async (input) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
@@ -53,7 +53,7 @@ const mount = async (page: Page): Promise<void> => {
       tools: { paragraph: globals.BlokParagraph, database: globals.BlokDatabase },
     });
     await window.blokInstance.isReady;
-  }, blocks());
+  }, input);
 };
 
 const save = async (page: Page): Promise<OutputData> => page.evaluate(async () => {
@@ -235,4 +235,51 @@ test('the HTML and Markdown exports carry the row but no comment text', async ({
   expect(markdown).toContain('Launch');
   expect(html).not.toContain('Secret remark');
   expect(markdown).not.toContain('Secret remark');
+});
+
+test('the row menu\'s Comment box is 470x44, 4px under the row, centred on the title cell', async ({ page }) => {
+  // notion-motion.md Round 60 §3: a right-click on a Text cell, then Comment, opens the page box there.
+  const [intro, database, row] = blocks();
+
+  await mount(page, [
+    intro,
+    {
+      ...database,
+      data: {
+        ...database.data,
+        schema: [
+          { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
+          { id: 'p-note', name: 'Note', type: 'text', position: 'a1' },
+        ],
+      },
+    },
+    { ...row, data: { ...row.data, properties: { 'p-title': 'Launch', 'p-note': 'Soon' } } },
+  ]);
+  await page.getByRole('gridcell').filter({ hasText: 'Soon' }).click({ button: 'right' });
+  await page.getByRole('menuitem', { name: /Comment/ }).click();
+  await expect(composer(page)).toBeFocused();
+  // Measured after the open scale ends.
+  await composer(page).evaluate(async (input) => {
+    await Promise.all(input.closest('[data-blok-popover-container]')?.getAnimations().map((animation) => animation.finished) ?? []);
+  });
+
+  const boxes = await composer(page).evaluate((input) => {
+    const card = input.closest('[data-blok-popover-container]');
+    const rowEl = document.querySelector('[data-blok-database-table-row][data-row-id="r1"]');
+    const title = rowEl?.querySelector('[data-blok-database-table-cell][data-type="title"]');
+    const box = (el: Element | null | undefined): { left: number; top: number; width: number; height: number; bottom: number } | null => {
+      if (el === null || el === undefined) return null;
+      const r = el.getBoundingClientRect();
+
+      return { left: r.left, top: r.top, width: r.width, height: r.height, bottom: r.bottom };
+    };
+
+    return { card: box(card), row: box(rowEl), title: box(title) };
+  });
+
+  if (boxes.card === null || boxes.row === null || boxes.title === null) throw new Error('missing box');
+  expect(boxes.card.top - boxes.row.bottom).toBeCloseTo(4, 0);
+  expect(boxes.card.left + boxes.card.width / 2).toBeCloseTo(boxes.title.left + boxes.title.width / 2, 0);
+  expect(boxes.card.width).toBeCloseTo(470, 0);
+  expect(boxes.card.height).toBeCloseTo(44, 0);
 });

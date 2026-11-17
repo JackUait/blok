@@ -904,7 +904,7 @@ export const pointerAnchor = (rowEl: HTMLElement, event: Pick<MouseEvent, 'clien
   return point;
 };
 
-// A feed card is not listed: its right-click is unmeasured.
+// A feed card is not listed: Notion opens the database block's menu there, not the row menu (notion-motion.md Round 60 §4).
 const POINTER_MENU_ROWS = [
   '[data-blok-database-list-row]',
   '[data-blok-database-board] [data-blok-database-card]',

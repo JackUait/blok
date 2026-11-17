@@ -67,16 +67,22 @@ export class BuiltInCommentsUi {
   public open(rowId: string, propertyId: string | undefined, anchor: HTMLElement): void {
     this.close();
     const panel = this.panel(rowId, propertyId);
+    // notion-motion.md Round 60 §3: a table row's comment box sits 4px under the row, centred on its title cell.
+    const title = propertyId === undefined && anchor.matches('[data-blok-database-table-row]')
+      ? anchor.querySelector<HTMLElement>('[data-blok-database-table-cell][data-type="title"]')
+      : null;
     const popover = new PopoverDesktop({
       class: DATABASE_MENU_CLASS,
       animateClose: true,
-      trigger: anchor,
+      trigger: title ?? anchor,
       items: [{ type: PopoverItemType.Html, element: panel.element, name: 'database-comments' }],
       width: 'auto',
       flippable: true,
       autoFocusFirstItem: false,
+      ...(title !== null ? { offset: 4 } : {}),
     });
 
+    popover.alignCenter = title !== null;
     this.popover = popover;
     popover.on(PopoverEvent.Closed, () => {
       if (this.popover !== popover) return;

@@ -10753,6 +10753,12 @@ textarea[data-blok-database-cell-input] {
   padding: 0;
 }
 
+/* Round 60 §3: the popover box is 470x44, avatar 12 from its left. Its items area pads 4. */
+[data-blok-popover-item-html] > [data-blok-database-comments] {
+  width: min(462px, calc(100vw - 40px));
+  padding: var(--blok-space-1-5) var(--blok-space-1) var(--blok-space-1-5) var(--blok-space-2);
+}
+
 /* The gallery card has no padding of its own; the title pads itself. */
 [data-blok-database-gallery-title] + [data-blok-database-comment-badge] {
   margin: 0 var(--blok-space-2) var(--blok-space-1);

@@ -207,7 +207,8 @@
     "authorId": "plaintext",
     "authorName": "plaintext",
     "propertyId": "plaintext",
-    "mentions": "plaintext"
+    "mentions": "plaintext",
+    "attachments": "plaintext"
   },
   "tab": {
     "title": false,

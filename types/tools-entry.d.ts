@@ -87,7 +87,7 @@ export { TabTool, TabConstructorOptions } from './tools/tab';
 export { Database, DatabaseConstructorOptions } from './tools/database';
 // DatabaseRow is the block tool class, distinct from the DatabaseRow row-shape interface in types/tools/database.d.ts
 export { DatabaseRow, DatabaseRowConstructorOptions } from './tools/database-row';
-export { DatabaseComment, DatabaseCommentConstructorOptions, DatabaseCommentData, DatabaseCommentMention } from './tools/database-comment';
+export { DatabaseComment, DatabaseCommentConstructorOptions, DatabaseCommentData, DatabaseCommentMention, DatabaseCommentAttachment } from './tools/database-comment';
 export { Image, ImageConstructorOptions } from './tools/image';
 export { File, FileConstructorOptions } from './tools/file';
 export { Audio, AudioConstructorOptions } from './tools/audio';

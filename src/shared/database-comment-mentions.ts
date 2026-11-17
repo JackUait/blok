@@ -1,4 +1,4 @@
-import type { DatabaseCommentMention } from '../../types/tools/database-comment';
+import type { DatabaseCommentAttachment, DatabaseCommentMention } from '../../types/tools/database-comment';
 
 const TYPES = new Set<unknown>(['person', 'page', 'date']);
 
@@ -24,6 +24,13 @@ export const keptMentions = (text: string, raw: unknown): DatabaseCommentMention
 
   return valid.filter((mention, index) => index === 0 || mention.start >= valid[index - 1].start + valid[index - 1].label.length);
 };
+
+/** The files with a url and a name; anything else is dropped. */
+export const keptAttachments = (raw: unknown): DatabaseCommentAttachment[] => (Array.isArray(raw)
+  ? raw.flatMap((item): DatabaseCommentAttachment[] => (isRecord(item) && typeof item.url === 'string' && item.url !== '' && typeof item.name === 'string'
+    ? [{ url: item.url, name: item.name }]
+    : []))
+  : []);
 
 /**
  * Finds each picked mention's label again in `text`, in order, after the user

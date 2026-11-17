@@ -1,7 +1,7 @@
 import type { API } from '../../../types';
 import type { DatabaseCommentData } from '../database-comment/types';
-import type { DatabaseCommentMention } from '../../../types/tools/database-comment';
-import { keptMentions } from '../../shared/database-comment-mentions';
+import type { DatabaseCommentAttachment, DatabaseCommentMention } from '../../../types/tools/database-comment';
+import { keptAttachments, keptMentions } from '../../shared/database-comment-mentions';
 
 const COMMENT_TOOL = 'database-comment';
 
@@ -20,6 +20,7 @@ export interface StoredThread extends StoredComment {
 export interface CommentDraft {
   text: string;
   mentions?: DatabaseCommentMention[];
+  attachments?: DatabaseCommentAttachment[];
 }
 
 /** Who writes a new comment: the host's current user, else the collaboration name, else nobody (shown as Anonymous). */
@@ -126,6 +127,7 @@ export class BuiltInComments {
 
   private insert(parentId: string, draft: CommentDraft, propertyId: string | undefined): string | undefined {
     const { text, mentions } = settled(draft);
+    const attachments = keptAttachments(draft.attachments);
 
     if (text === '' || this.api.blocks.getById(parentId) === null) return undefined;
     const data: DatabaseCommentData = {
@@ -134,6 +136,7 @@ export class BuiltInComments {
       ...this.author(),
       ...(propertyId === undefined ? {} : { propertyId }),
       ...(mentions.length === 0 ? {} : { mentions }),
+      ...(attachments.length === 0 ? {} : { attachments }),
     };
     const box: { id?: string } = {};
 

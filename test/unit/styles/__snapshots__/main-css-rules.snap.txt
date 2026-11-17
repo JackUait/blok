@@ -13853,7 +13853,7 @@ textarea[data-blok-database-cell-input] {
   opacity: 1;
 }
 
-[data-blok-database-comment-tools] button, [data-blok-database-comment-mention], [data-blok-database-comment-send] {
+[data-blok-database-comment-tools] button, [data-blok-database-comment-attach], [data-blok-database-comment-mention], [data-blok-database-comment-send] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -13867,17 +13867,18 @@ textarea[data-blok-database-cell-input] {
   cursor: pointer;
 }
 
-[data-blok-database-comment-tools] button:hover, [data-blok-database-comment-mention]:hover, [data-blok-database-comment-send]:hover:not(:disabled) {
+[data-blok-database-comment-tools] button:hover, [data-blok-database-comment-attach]:hover, [data-blok-database-comment-mention]:hover, [data-blok-database-comment-send]:hover:not(:disabled) {
   background-color: var(--blok-database-hover-bg);
 }
 
-[data-blok-database-comment-tools] svg, [data-blok-database-comment-mention] svg, [data-blok-database-comment-send] svg {
+[data-blok-database-comment-tools] svg, [data-blok-database-comment-attach] svg, [data-blok-database-comment-mention] svg, [data-blok-database-comment-send] svg {
   width: 16px;
   height: 16px;
 }
 
 [data-blok-database-comment-composer] {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   gap: var(--blok-space-1);
 }
@@ -13935,6 +13936,90 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-comment-menu] button:hover {
   background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-comment-drafts] {
+  display: flex;
+  flex-wrap: wrap;
+  flex-basis: 100%;
+  gap: var(--blok-space-1);
+}
+
+[data-blok-database-comment-drafts][hidden] {
+  display: none;
+}
+
+[data-blok-database-comment-draft-file] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-0-5);
+  max-width: 100%;
+  padding-inline: var(--blok-space-2) var(--blok-space-0-5);
+  border-radius: var(--blok-radius-control);
+  background: var(--blok-database-hover-bg);
+  font-size: 12px;
+  line-height: 24px;
+}
+
+[data-blok-database-comment-draft-file][aria-busy="true"] {
+  color: var(--blok-database-ink-tertiary);
+}
+
+[data-blok-database-comment-draft-file] > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-blok-database-comment-draft-remove] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-ink-secondary);
+  cursor: pointer;
+}
+
+[data-blok-database-comment-draft-remove] svg {
+  width: 12px;
+  height: 12px;
+}
+
+[data-blok-database-comment-files] {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-top: var(--blok-space-1);
+}
+
+[data-blok-database-comment-file] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  max-width: 100%;
+  padding: var(--blok-space-0-5) var(--blok-space-1);
+  border-radius: var(--blok-radius-control);
+  color: inherit;
+  text-decoration: none;
+}
+
+[data-blok-database-comment-file][href]:hover {
+  background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-comment-file] > span {
+  display: inline-flex;
+  color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-comment-file] svg {
+  width: 16px;
+  height: 16px;
 }
 
 [data-blok-database-comment-mention-chip] {

@@ -28,6 +28,19 @@ export const DATABASE_COMMENT_DATA = {
         },
       },
     },
+    attachments: {
+      type: 'array',
+      description: 'Files attached to the comment, as the host\'s uploader stored them.',
+      items: {
+        type: 'object',
+        required: ['url', 'name'],
+        additionalProperties: false,
+        properties: {
+          url: { type: 'string', description: 'Where the file is stored.' },
+          name: { type: 'string', description: 'The file name shown.' },
+        },
+      },
+    },
   },
 };
 

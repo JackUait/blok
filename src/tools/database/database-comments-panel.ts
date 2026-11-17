@@ -1,11 +1,11 @@
 import type { I18n } from '../../../types';
-import type { DatabaseCommentMention } from '../../../types/tools/database-comment';
-import { IconArrowUp, IconAt, IconCheck, IconDotsHorizontal } from '../../components/icons';
+import type { DatabaseCommentAttachment, DatabaseCommentMention } from '../../../types/tools/database-comment';
+import { IconArrowUp, IconAt, IconCheck, IconCross, IconDotsHorizontal, IconPaperclip } from '../../components/icons';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { markEscapeConsumed } from '../../components/utils/consumed-escape';
 import { onHover } from '../../components/utils/tooltip';
-import { safeHref } from '../../shared/sanitize-url';
-import { keptMentions, relocateMentions } from '../../shared/database-comment-mentions';
+import { safeDownloadHref, safeHref } from '../../shared/sanitize-url';
+import { keptAttachments, keptMentions, relocateMentions } from '../../shared/database-comment-mentions';
 import type { PageSearchResult } from '../page/types';
 import { createMentionMenu, type MentionMenu, type MentionPerson } from './database-comment-mention-menu';
 import type { CommentDraft, StoredComment, StoredThread } from './database-comments-store';
@@ -23,6 +23,10 @@ const ATTR = {
   input: 'data-blok-database-comment-input',
   send: 'data-blok-database-comment-send',
   mention: 'data-blok-database-comment-mention',
+  attach: 'data-blok-database-comment-attach',
+  draftFile: 'data-blok-database-comment-draft-file',
+  files: 'data-blok-database-comment-files',
+  file: 'data-blok-database-comment-file',
   chip: 'data-blok-database-comment-mention-chip',
   actions: 'data-blok-database-comment-actions',
 } as const;
@@ -56,6 +60,8 @@ export interface CommentsPanelOptions {
   pageHref?: (pageId: string) => string | undefined;
   /** Opens a page on a plain click on its chip. Absent: the link navigates. */
   openPage?: (pageId: string, event: MouseEvent) => void;
+  /** Stores a picked file. Absent: no Attach file. */
+  uploadFile?: (file: File) => Promise<DatabaseCommentAttachment>;
 }
 
 export interface CommentsPanel {
@@ -116,8 +122,9 @@ const avatar = (name: string): HTMLElement => {
 const composer = (
   options: CommentsPanelOptions,
   onSend: (draft: CommentDraft) => void,
-  initial: { text: string; mentions?: DatabaseCommentMention[] } = { text: '' }
-): { element: HTMLElement; input: HTMLTextAreaElement; menu: MentionMenu } => {
+  initial: { text: string; mentions?: DatabaseCommentMention[] } = { text: '' },
+  uploadFile?: (file: File) => Promise<DatabaseCommentAttachment>
+): { element: HTMLElement; input: HTMLTextAreaElement; menu: MentionMenu; dispose: () => void } => {
   const { t } = options.i18n;
   const row = document.createElement('div');
   const input = document.createElement('textarea');
@@ -132,8 +139,9 @@ const composer = (
   input.value = initial.text;
   input.placeholder = t('tools.database.commentPlaceholder');
   input.setAttribute('aria-label', t('tools.database.commentPlaceholder'));
+  const files = draftFiles(options, row, uploadFile, () => sync());
   const sync = (): void => {
-    send.disabled = input.value.trim() === '';
+    send.disabled = input.value.trim() === '' || files.uploading();
   };
   const menu = createMentionMenu({
     input,
@@ -153,14 +161,15 @@ const composer = (
   const submit = (): void => {
     const text = input.value;
 
-    if (text.trim() === '') return;
+    if (text.trim() === '' || files.uploading()) return;
     const mentions = relocateMentions(text, picked);
+    const attachments = files.take();
 
     input.value = '';
     picked.length = 0;
     menu.close();
     sync();
-    onSend({ text, ...(mentions.length === 0 ? {} : { mentions }) });
+    onSend({ text, ...(mentions.length === 0 ? {} : { mentions }), ...(attachments.length === 0 ? {} : { attachments }) });
   };
 
   sync();
@@ -187,9 +196,133 @@ const composer = (
   });
   send.addEventListener('click', submit);
   if (options.viewerName !== undefined) row.append(avatar(options.viewerName()));
-  row.append(input, mention, send);
+  row.append(input, ...files.controls, mention, send, files.list);
 
-  return { element: row, input, menu };
+  return {
+    element: row,
+    input,
+    menu,
+    dispose: () => {
+      menu.close();
+      files.dispose();
+    },
+  };
+};
+
+/**
+ * Attach file (notion-motion.md Round 62 §2): the OS file picker, then one
+ * chip per file under the text while it uploads and until the comment goes.
+ * An upload that lands after the box went away writes nothing.
+ */
+const draftFiles = (
+  options: CommentsPanelOptions,
+  row: HTMLElement,
+  uploadFile: ((file: File) => Promise<DatabaseCommentAttachment>) | undefined,
+  changed: () => void
+): { controls: HTMLElement[]; list: HTMLElement; uploading: () => boolean; take: () => DatabaseCommentAttachment[]; dispose: () => void } => {
+  const { t } = options.i18n;
+  const list = document.createElement('div');
+  const drafts: Array<{ chip: HTMLElement; file: DatabaseCommentAttachment | null }> = [];
+  const state = { alive: true };
+
+  list.setAttribute('data-blok-database-comment-drafts', '');
+  list.hidden = true;
+  const redraw = (): void => {
+    list.replaceChildren(...drafts.map((draft) => draft.chip));
+    list.hidden = drafts.length === 0;
+    changed();
+  };
+  const drop = (chip: HTMLElement): void => {
+    const at = drafts.findIndex((draft) => draft.chip === chip);
+
+    if (at !== -1) drafts.splice(at, 1);
+    redraw();
+  };
+  const result = {
+    list,
+    uploading: () => drafts.some((draft) => draft.file === null),
+    take: (): DatabaseCommentAttachment[] => {
+      const taken = drafts.flatMap((draft) => (draft.file === null ? [] : [draft.file]));
+
+      drafts.length = 0;
+      redraw();
+
+      return taken;
+    },
+    dispose: () => {
+      state.alive = false;
+      drafts.length = 0;
+      list.replaceChildren();
+      list.hidden = true;
+    },
+  };
+
+  if (uploadFile === undefined) return { ...result, controls: [] };
+  const picker = document.createElement('input');
+  const attach = iconButton(ATTR.attach, t('tools.database.starterAttachFile'), IconPaperclip);
+
+  picker.type = 'file';
+  picker.multiple = true;
+  picker.hidden = true;
+  picker.tabIndex = -1;
+  attach.addEventListener('click', () => picker.click());
+  picker.addEventListener('change', () => {
+    [...(picker.files ?? [])].forEach((file) => {
+      const chip = document.createElement('span');
+      const name = document.createElement('span');
+      const remove = iconButton('data-blok-database-comment-draft-remove', t('tools.database.filterRemove'), IconCross);
+      const draft: { chip: HTMLElement; file: DatabaseCommentAttachment | null } = { chip, file: null };
+
+      chip.setAttribute(ATTR.draftFile, '');
+      chip.setAttribute('aria-busy', 'true');
+      name.textContent = file.name;
+      remove.addEventListener('click', () => drop(chip));
+      chip.append(name, remove);
+      drafts.push(draft);
+      void uploadFile(file).then((stored) => {
+        if (!state.alive || !drafts.includes(draft)) return;
+        draft.file = { url: stored.url, name: stored.name === '' ? file.name : stored.name };
+        chip.removeAttribute('aria-busy');
+        changed();
+      }, () => {
+        if (state.alive) drop(chip);
+      });
+    });
+    picker.value = '';
+    redraw();
+  });
+  row.append(picker);
+
+  return { ...result, controls: [attach] };
+};
+
+/** The comment's files, as links that open each one. */
+const fileList = (raw: unknown): HTMLElement | null => {
+  const files = keptAttachments(raw);
+
+  if (files.length === 0) return null;
+  const list = document.createElement('div');
+
+  list.setAttribute(ATTR.files, '');
+  list.append(...files.map((file) => {
+    const link = document.createElement('a');
+    const icon = document.createElement('span');
+    const href = safeDownloadHref(file.url);
+
+    link.setAttribute(ATTR.file, '');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = IconPaperclip;
+    link.append(icon, file.name);
+    if (href !== null) {
+      link.href = href;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+    }
+
+    return link;
+  }));
+
+  return list;
 };
 
 /** The comment's text, each kept mention drawn as a chip. */
@@ -277,7 +410,7 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
     window.addEventListener('keydown', onEscape, true);
     stopEditKeys.current = (): void => {
       window.removeEventListener('keydown', onEscape, true);
-      box.menu.close();
+      box.dispose();
     };
     queueMicrotask(() => box.input.focus());
 
@@ -311,6 +444,9 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
     text.setAttribute(ATTR.text, '');
     paintText(text, comment.data.text, comment.data.mentions, options);
     row.appendChild(text);
+    const files = fileList(comment.data.attachments);
+
+    if (files !== null) row.appendChild(files);
 
     if (!options.canComment) return row;
     const tools = document.createElement('div');
@@ -397,7 +533,7 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
     if (first === undefined) options.onAdd(draft);
     else options.onReply(first.id, draft);
     draw();
-  });
+  }, undefined, options.uploadFile);
 
   const stopKeys = (): void => {
     stopEditKeys.current?.();
@@ -430,7 +566,7 @@ export const createCommentsPanel = (options: CommentsPanelOptions): CommentsPane
     focusComposer: () => box.input.focus(),
     destroy: () => {
       stopKeys();
-      box.menu.close();
+      box.dispose();
     },
   };
 };

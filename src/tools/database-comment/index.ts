@@ -3,7 +3,7 @@ import { databaseCommentSanitize } from '../../shared/tool-descriptions/sanitize
 import type { BlockTool, BlockToolConstructorOptions, SanitizerConfig } from '../../../types';
 import type { DatabaseCommentData } from './types';
 import { overrideStatic } from '../../components/utils/override-static';
-import { keptMentions } from '../../shared/database-comment-mentions';
+import { keptAttachments, keptMentions } from '../../shared/database-comment-mentions';
 
 const text = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
 const time = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
@@ -15,6 +15,7 @@ const normalize = (data: Partial<DatabaseCommentData> | undefined): DatabaseComm
   const editedAt = time(data?.editedAt);
   const body = text(data?.text) ?? '';
   const mentions = keptMentions(body, data?.mentions);
+  const attachments = keptAttachments(data?.attachments);
 
   return {
     text: body,
@@ -25,6 +26,7 @@ const normalize = (data: Partial<DatabaseCommentData> | undefined): DatabaseComm
     ...(editedAt === undefined ? {} : { editedAt }),
     ...(data?.resolved === true ? { resolved: true } : {}),
     ...(mentions.length === 0 ? {} : { mentions }),
+    ...(attachments.length === 0 ? {} : { attachments }),
   };
 };
 

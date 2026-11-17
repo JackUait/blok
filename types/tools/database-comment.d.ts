@@ -23,6 +23,16 @@ export interface DatabaseCommentData extends BlockToolData {
   resolved?: boolean;
   /** People, pages and dates picked from the "@" menu, in text order. */
   mentions?: DatabaseCommentMention[];
+  /** Files attached with Attach file, as the host's uploader stored them. */
+  attachments?: DatabaseCommentAttachment[];
+}
+
+/** A file on a comment. */
+export interface DatabaseCommentAttachment {
+  /** Where the host's uploader stored it. */
+  url: string;
+  /** The file name shown. */
+  name: string;
 }
 
 /**

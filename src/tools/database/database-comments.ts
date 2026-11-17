@@ -254,6 +254,7 @@ export class BuiltInCommentsUi {
       onEdit: (id, draft) => this.store.edit(id, draft),
       people: () => this.options.people?.() ?? [],
       ...this.pageLevers(),
+      ...(canComment ? this.fileUploader() : {}),
       onResolve: (threadId) => this.store.resolve(threadId, true),
       onDelete: async (id) => {
         const confirmed = await openDatabaseConfirm({
@@ -273,6 +274,18 @@ export class BuiltInCommentsUi {
     this.panels.add(panel);
 
     return panel;
+  }
+
+  /** Attach file uploads through the host's file uploader; without one there is no Attach file. */
+  private fileUploader(): Pick<CommentsPanelOptions, 'uploadFile'> {
+    const uploader = this.options.api.uploader;
+
+    if (uploader === undefined || !uploader.isConfigured('file', 'uploadByFile')) return {};
+
+    return {
+      uploadFile: (file) => uploader.uploadByFile(file, { kind: 'file', tool: 'database' })
+        .then((asset) => ({ url: asset.url, name: asset.fileName ?? file.name })),
+    };
   }
 
   /** The page tool's search, link and open, for the "@" menu and page chips. */

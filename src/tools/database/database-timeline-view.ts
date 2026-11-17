@@ -593,7 +593,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     return line;
   }
 
-  /** The whole cell opens the row; the text span anchors the comment badge. */
+  /** A click anywhere in the cell edits the title; the text span anchors the comment badge. */
   private fillTitleCell(cell: HTMLElement, row: DatabaseRow): void {
     const title = document.createElement('span');
 
@@ -1399,6 +1399,13 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         const rowId = el.closest('[data-row-id]')?.getAttribute('data-row-id');
 
         if (rowId === null || rowId === undefined) {
+          return;
+        }
+        // notion-motion.md Round 56 §9: a panel title click or Cmd+click edits the title in place; no peek.
+        // Read-only and Shift+click on a panel title are unmeasured, so they keep the peek and the pick.
+        if (this.canEdit && !event.shiftKey && el.hasAttribute('data-blok-database-timeline-table-title')) {
+          this.editTableTitle(rowId);
+
           return;
         }
         // notion-motion.md Round 54 §3: Shift+click picks a range; Cmd+click picks and opens nothing.

@@ -895,20 +895,41 @@ describe('DatabaseTimelineView', () => {
       expect(readOnly.root.querySelector('[data-blok-database-timeline-table-footer] [data-blok-database-table-calc-placeholder]')).toBeNull();
     });
 
-    it('opens a row from its title in the table panel', () => {
-      const { root, handlers } = mount({ view: timelineView({ showTimelineTable: true }) });
+    // notion-motion.md Round 56 §9: a panel title click, or Cmd+click, opens the title editor in place; no peek, no pick.
+    it.each([{ metaKey: false }, { metaKey: true }])('edits a row\'s title in place on a panel title click (metaKey $metaKey)', ({ metaKey }) => {
+      const renameRow = vi.fn();
+      const pickRow = vi.fn();
+      const { root, handlers } = mount({ view: timelineView({ showTimelineTable: true }), handlers: { ...makeHandlers(), renameRow, pickRow } });
+      const title = root.querySelector<HTMLElement>('[data-blok-database-timeline-table-row][data-row-id="r2"] [data-blok-database-timeline-table-title]');
+
+      title?.dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey }));
+      const input = document.querySelector<HTMLInputElement>('[data-blok-database-cell-input="title"]');
+
+      expect(input).toHaveFocus();
+      expect(handlers.openRow).not.toHaveBeenCalled();
+      expect(pickRow).not.toHaveBeenCalled();
+      if (input === null) throw new Error('no input');
+      input.value = 'Holiday';
+      key(input, 'Enter');
+      expect(renameRow).toHaveBeenCalledWith('r2', 'Holiday');
+    });
+
+    it('still opens a row from its panel title when read-only', () => {
+      const { root, handlers } = mount({ readOnly: true, view: timelineView({ showTimelineTable: true }) });
 
       root.querySelector<HTMLElement>('[data-blok-database-timeline-table-row][data-row-id="r2"] [data-blok-database-timeline-table-title]')?.click();
       expect(handlers.openRow).toHaveBeenCalledWith('r2');
+      expect(document.querySelector('[data-blok-database-cell-input="title"]')).toBeNull();
     });
 
-    it('opens a row from anywhere in its title cell, and renames it without dropping its comment badge', () => {
+    it('edits from anywhere in the title cell, and renames it without dropping its comment badge', () => {
       const commentBadges = { databaseId: 'db', count: (rowId: string) => (rowId === 'r2' ? 1 : 0), open: vi.fn() };
       const { root, handlers, view } = mount({ view: timelineView({ showTimelineTable: true }), commentBadges });
       const cell = root.querySelector<HTMLElement>('[data-blok-database-timeline-table-row][data-row-id="r2"] [data-property-id="p-title"]');
 
       cell?.click();
-      expect(handlers.openRow).toHaveBeenCalledWith('r2');
+      expect(document.querySelector('[data-blok-database-cell-input="title"]')).not.toBeNull();
+      expect(handlers.openRow).not.toHaveBeenCalled();
 
       view.updateRowTitle(root, 'r2', 'Holiday');
       expect(cell?.textContent).toContain('Holiday');

@@ -240,6 +240,26 @@ describe('options editor (Edit property for select, multi-select and status)', (
       expect(last(onChange).find((o) => o.id === 'n')?.groupId).toBe('inProgress');
     });
 
+    // A passed row slides to the slot it takes, so it jumps the group heading instead of sliding over it.
+    it('a passed row slides into the dragged row\'s slot, past the heading between them', () => {
+      const { root } = mount(statusProp());
+      const row = (id: string): HTMLElement | null => root.querySelector<HTMLElement>(`[data-blok-database-select-option="${id}"]`);
+
+      ['n', 'i', 'd'].forEach((id, index) => {
+        const el = row(id);
+
+        if (el !== null) vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, index * 60, 200, 28));
+      });
+      row('n')?.querySelector('[data-blok-database-select-option-handle]')
+        ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientY: 10, button: 0 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientY: 100 }));
+
+      expect(row('i')?.style.transform).toBe('translateY(-60px)');
+      expect(row('d')?.style.transform).toBe('');
+      expect(row('n')?.style.transform).toBe('translateY(90px)');
+      document.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true }));
+    });
+
     // research/30 §10f, shot 23: the option menu reads Delete, Set as default, then the colours.
     describe('the default option', () => {
       const colourless = (): PropertyDefinition => {

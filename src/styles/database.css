@@ -8947,6 +8947,8 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-option-delete],
 [data-blok-database-option-set-default],
+[data-blok-database-option-group],
+[data-blok-database-option-group-pick],
 [data-blok-database-option-delete-confirm],
 [data-blok-database-option-delete-cancel],
 [data-blok-database-option-color],
@@ -8968,6 +8970,8 @@ textarea[data-blok-database-cell-input] {
 @media (hover: hover) {
   [data-blok-database-option-delete]:hover,
   [data-blok-database-option-set-default]:hover,
+  [data-blok-database-option-group]:hover,
+  [data-blok-database-option-group-pick]:hover,
   [data-blok-database-option-delete-confirm]:hover,
   [data-blok-database-option-delete-cancel]:hover,
   [data-blok-database-option-color]:hover,
@@ -9002,7 +9006,8 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-option-delete] svg,
-[data-blok-database-option-set-default] svg {
+[data-blok-database-option-set-default] svg,
+[data-blok-database-option-group] svg {
   width: 16px;
   height: 16px;
 }
@@ -9044,7 +9049,7 @@ textarea[data-blok-database-cell-input] {
 
 /* notion-motion.md Round 26 "Option ⋯ menu", Round 55 §4: the select editor's option menu is its own 220 popover.
    Field 196x28 at +12/+12, Delete at +52, Default at +125.9, colour rows 212x28 at +4, pitch 29, 4 under the last.
-   Edit property's options list keeps the in-place panel above (unmeasured). */
+   Edit property opens it for a status option (Round 56 §5); a select option keeps the in-place panel above (unmeasured). */
 [data-blok-popover-custom-class~='blok-database-option-menu'] [data-blok-popover-container] {
   inline-size: 220px;
 }
@@ -9066,6 +9071,24 @@ textarea[data-blok-database-cell-input] {
   block-size: 28px;
   margin: 0 var(--blok-space-2) var(--blok-space-2-75);
   padding-block: 0;
+}
+
+/* Round 56 §5: Edit property's status option menu grows from its top-right corner. Group › reads its group at the end. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-status-option-menu'] [data-blok-popover-container] {
+  transform-origin: top right;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-status-option-menu'][data-blok-popover-open-left='true'] [data-blok-popover-container] {
+  transform-origin: top left;
+}
+
+[data-blok-database-option-group-value] {
+  margin-inline-start: auto;
+  color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-option-group-pick] [data-blok-database-select-option-check] {
+  margin-inline-start: auto;
 }
 
 /* The rule sits on top of the band, "Colors" in the rest. Where the label sits inside it is unmeasured. */

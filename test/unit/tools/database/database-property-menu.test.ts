@@ -23,7 +23,7 @@ interface CapturedItem {
   children?: { items: CapturedItem[]; align?: string; searchable?: boolean; width?: string; minWidth?: string; placement?: string; clickOnly?: boolean; class?: string };
 }
 
-interface CapturedPopover { items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown>; activated: string[]; focused: string[]; hidden: Record<string, boolean>; closed?: () => void; hide: () => void; transitionAtShow?: string; moves: Array<{ position: DOMRect; positionContext?: HTMLElement }> }
+interface CapturedPopover { items: CapturedItem[]; destroyed: boolean; holds?: number; released?: number; params: Record<string, unknown>; activated: string[]; focused: string[]; hidden: Record<string, boolean>; closed?: () => void; hide: () => void; transitionAtShow?: string; moves: Array<{ position: DOMRect; positionContext?: HTMLElement }> }
 
 const captured = vi.hoisted((): { popovers: CapturedPopover[]; instances: Array<{ closeSubmenuOnEscape: () => boolean }> } => ({ popovers: [], instances: [] }));
 
@@ -45,6 +45,14 @@ vi.mock('../../../../src/components/utils/popover', () => ({
 
     closeSubmenuOnEscape(): boolean {
       return false;
+    }
+
+    holdOpen(): () => void {
+      this.record.holds = (this.record.holds ?? 0) + 1;
+
+      return () => {
+        this.record.released = (this.record.released ?? 0) + 1;
+      };
     }
 
     activateItemByName(name: string): void {
@@ -1371,9 +1379,29 @@ describe('DatabasePropertyMenu', () => {
       const list = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'options').element;
 
       list?.querySelector<HTMLElement>('[data-blok-database-select-option="i"] [data-blok-database-select-option-menu]')?.click();
-      list?.querySelector<HTMLElement>('[data-blok-database-option-set-default]')?.click();
+      document.querySelector<HTMLElement>('[data-blok-database-option-set-default]')?.click();
 
       expect(cb.onUpdate).toHaveBeenCalledWith('p', { status: { ...status, defaultOptionId: 'i' } });
+    });
+
+    // notion-motion.md Round 56 §5: a status option's own menu opens over Edit property, which stays open under it.
+    it('a status option\'s menu holds Edit property open and closes with it', () => {
+      const statusOptions = [{ id: 'n', label: 'Not started', position: 'a0', groupId: 'todo' }];
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+      const anchor = document.body.appendChild(document.createElement('div'));
+
+      menu.open(prop('status', { status: createDefaultStatusSettings(), config: { options: statusOptions } }), anchor);
+      const host = captured.popovers[captured.popovers.length - 1];
+      const list = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'options').element;
+
+      list?.querySelector<HTMLElement>('[data-blok-database-select-option="n"]')?.click();
+      const flyout = captured.popovers[captured.popovers.length - 1];
+
+      expect(flyout).not.toBe(host);
+      expect(host?.holds).toBe(1);
+      menu.close();
+      expect(flyout?.destroyed).toBe(true);
+      expect(host?.released).toBe(1);
     });
 
     // notion-spec-2 §17.3: "Sort Manual" heads a select's Edit property, a click-only 250 wide list under it.

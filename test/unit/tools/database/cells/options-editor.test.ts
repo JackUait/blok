@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IconChevronRight } from '../../../../../src/components/icons';
 import { createOptionsEditor } from '../../../../../src/tools/database/cells/options-editor';
 import { createDefaultStatusSettings } from '../../../../../src/tools/database/property-values';
+import { PopoverRegistry } from '../../../../../src/components/utils/popover/popover-registry';
+import { PopoverDesktop } from '../../../../../src/components/utils/popover';
 import type { PropertyDefinition, SelectOption } from '../../../../../src/tools/database/types';
 
 const i18n = { t: (key: string) => key };
@@ -50,6 +52,7 @@ const press = (target: Element, key: string): KeyboardEvent => {
 describe('options editor (Edit property for select, multi-select and status)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    PopoverRegistry.resetForTests();
   });
 
   afterEach(() => {
@@ -260,6 +263,152 @@ describe('options editor (Edit property for select, multi-select and status)', (
       document.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true }));
     });
 
+    // notion-motion.md Round 56 §5 "Status option menu": a click on the option row opens a separate 220 menu,
+    // its right edge on the row's right; rows Delete, Set as default, Group › "In progress", then Colors.
+    describe('the status option menu', () => {
+      const flyout = (): HTMLElement | null =>
+        document.querySelector<HTMLElement>("[data-blok-popover][data-blok-popover-opened='true'][data-blok-popover-custom-class~='blok-database-option-menu']");
+      const inFlyout = <T extends Element = HTMLElement>(selector: string): T => {
+        const el = flyout()?.querySelector<T>(selector);
+
+        if (el === null || el === undefined) throw new Error(`missing ${selector} in the option menu`);
+
+        return el;
+      };
+      const groupMenu = (): HTMLElement | null =>
+        document.querySelector<HTMLElement>("[data-blok-popover][data-blok-popover-opened='true'][data-blok-popover-custom-class~='blok-database-option-group-menu']");
+      const optionRow = (root: HTMLElement, id: string): HTMLElement => {
+        const row = root.querySelector<HTMLElement>(`[data-blok-database-select-option="${id}"]`);
+
+        if (row === null) throw new Error(`no row ${id}`);
+
+        return row;
+      };
+      const mountStatus = (extra: { hold?: () => () => void; onHostClose?: (close: () => void) => void } = {}): { root: HTMLElement; onChange: ReturnType<typeof vi.fn<(options: SelectOption[]) => void>> } => {
+        const onChange = vi.fn<(options: SelectOption[]) => void>();
+        const root = createOptionsEditor({ property: statusProp(), i18n, onChange, onSetDefault: vi.fn(), ...extra });
+
+        document.body.appendChild(root);
+
+        return { root, onChange };
+      };
+
+      afterEach(() => {
+        [1, 2, 3].forEach(() => press(document.body, 'Escape'));
+      });
+
+      it('a click on the option row opens a separate 220 menu and keeps the list in place', () => {
+        const { root } = mountStatus();
+
+        optionRow(root, 'i').click();
+
+        expect(flyout()).not.toBeNull();
+        expect(flyout()?.style.getPropertyValue('--width')).toBe('220px');
+        expect(root.contains(flyout())).toBe(false);
+        expect(rowIds(root)).toEqual(['n', 'i', 'd']);
+        expect(inFlyout('[data-blok-database-option-name]')).toHaveFocus();
+      });
+
+      it('lines its right edge up with the row\'s right', () => {
+        vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1512);
+        vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+        vi.spyOn(PopoverDesktop.prototype, 'size', 'get').mockReturnValue({ width: 220, height: 476.9 });
+        const { root } = mountStatus();
+
+        vi.spyOn(optionRow(root, 'i'), 'getBoundingClientRect').mockReturnValue(new DOMRect(1200, 200, 292, 28));
+        optionRow(root, 'i').click();
+
+        expect(parseFloat(flyout()?.style.left ?? '')).toBeCloseTo(1492 - 220, 1);
+      });
+
+      it('reads name, Delete, Set as default, Group with the current group, then the colours', () => {
+        const { root } = mountStatus();
+
+        optionRow(root, 'i').click();
+        const panel = inFlyout('[data-blok-database-option-panel]');
+        const order = [...panel.children].map((el) => [...el.attributes].map((a) => a.name).find((n) => n.startsWith('data-blok-database-option-')) ?? el.getAttribute('role'));
+
+        expect(order).toEqual([
+          'data-blok-database-option-name',
+          'data-blok-database-option-delete',
+          'data-blok-database-option-set-default',
+          'data-blok-database-option-group',
+          'data-blok-database-option-colors-heading',
+          'menu',
+        ]);
+        expect(inFlyout('[data-blok-database-option-group]').textContent).toContain('tools.database.groupStatusGroup');
+        expect(inFlyout('[data-blok-database-option-group-value]').textContent).toBe('In progress');
+      });
+
+      it('Group › moves the option to the group picked there', () => {
+        const { root, onChange } = mountStatus();
+
+        optionRow(root, 'n').click();
+        inFlyout('[data-blok-database-option-group]').click();
+        const menu = groupMenu();
+
+        expect(menu).not.toBeNull();
+        expect(menu?.querySelector('[data-blok-database-option-group-pick="todo"]')?.getAttribute('aria-checked')).toBe('true');
+        menu?.querySelector<HTMLElement>('[data-blok-database-option-group-pick="complete"]')?.click();
+
+        expect(last(onChange).find((o) => o.id === 'n')?.groupId).toBe('complete');
+        const order = [...root.querySelectorAll('[data-blok-database-status-group-heading], [data-blok-database-select-option]')]
+          .map((el) => el.getAttribute('data-blok-database-status-group-heading') ?? el.getAttribute('data-blok-database-select-option'));
+
+        expect(order).toEqual(['todo', 'inProgress', 'i', 'complete', 'd', 'n']);
+        expect(groupMenu()).toBeNull();
+        expect(inFlyout('[data-blok-database-option-group-value]').textContent).toBe('Complete');
+      });
+
+      it('the › button opens the same menu', () => {
+        const { root } = mountStatus();
+
+        optionRow(root, 'i').querySelector<HTMLElement>('[data-blok-database-select-option-menu]')?.click();
+
+        expect(flyout()).not.toBeNull();
+      });
+
+      it('Escape closes only the menu, and the list stays', () => {
+        const { root } = mountStatus();
+
+        optionRow(root, 'i').click();
+        press(inFlyout('[data-blok-database-option-name]'), 'Escape');
+
+        expect(flyout()).toBeNull();
+        expect(rowIds(root)).toEqual(['n', 'i', 'd']);
+      });
+
+      it('holds the menu around the list while open and lets it go on close', () => {
+        const release = vi.fn();
+        const hold = vi.fn(() => release);
+        const { root } = mountStatus({ hold });
+
+        optionRow(root, 'i').click();
+        expect(hold).toHaveBeenCalledTimes(1);
+        expect(release).not.toHaveBeenCalled();
+        press(inFlyout('[data-blok-database-option-name]'), 'Escape');
+        expect(release).toHaveBeenCalledTimes(1);
+      });
+
+      it('closes when the menu around the list closes', () => {
+        const closers: Array<() => void> = [];
+        const { root } = mountStatus({ onHostClose: (close) => closers.push(close) });
+
+        optionRow(root, 'i').click();
+        closers.forEach((close) => close());
+
+        expect(flyout()).toBeNull();
+      });
+
+      it('dragging by the handle opens no menu', () => {
+        const { root } = mountStatus();
+
+        optionRow(root, 'i').querySelector<HTMLElement>('[data-blok-database-select-option-handle]')?.click();
+
+        expect(flyout()).toBeNull();
+      });
+    });
+
     // research/30 §10f, shot 23: the option menu reads Delete, Set as default, then the colours.
     describe('the default option', () => {
       const colourless = (): PropertyDefinition => {
@@ -286,8 +435,9 @@ describe('options editor (Edit property for select, multi-select and status)', (
 
         expect(root.querySelector('[data-blok-database-select-option="n"] [data-blok-database-option-pill]')?.getAttribute('data-color')).toBe('gray');
         openPanel(root, 'n');
-        expect(root.querySelectorAll('[data-blok-database-option-color][aria-checked="true"]')).toHaveLength(0);
-        expect(root.querySelector('[data-blok-database-option-color] [data-blok-database-select-option-check]')).toBeNull();
+        expect(document.querySelectorAll('[data-blok-database-option-color]')).toHaveLength(10);
+        expect(document.querySelectorAll('[data-blok-database-option-color][aria-checked="true"]')).toHaveLength(0);
+        expect(document.querySelector('[data-blok-database-option-color] [data-blok-database-select-option-check]')).toBeNull();
       });
 
       it('renaming a colourless option keeps it colourless: the gray it draws is never saved', () => {
@@ -295,7 +445,7 @@ describe('options editor (Edit property for select, multi-select and status)', (
         const root = createOptionsEditor({ property: colourless(), i18n, onChange, onSetDefault: vi.fn() });
 
         openPanel(root, 'n');
-        const name = root.querySelector<HTMLInputElement>('[data-blok-database-option-name]');
+        const name = document.querySelector<HTMLInputElement>('[data-blok-database-option-name]');
 
         if (name === null) throw new Error('no name field');
         name.value = 'Backlog';
@@ -308,7 +458,7 @@ describe('options editor (Edit property for select, multi-select and status)', (
         const root = createOptionsEditor({ property: colourless(), i18n, onChange: vi.fn(), onSetDefault });
 
         openPanel(root, 'i');
-        const row = root.querySelector<HTMLElement>('[data-blok-database-option-set-default]');
+        const row = document.querySelector<HTMLElement>('[data-blok-database-option-set-default]');
 
         expect(row?.previousElementSibling?.hasAttribute('data-blok-database-option-delete')).toBe(true);
         expect(row?.textContent?.trim()).toBe('tools.database.templateSetDefault');
@@ -323,7 +473,7 @@ describe('options editor (Edit property for select, multi-select and status)', (
         const root = createOptionsEditor({ property: colourless(), i18n, onChange: vi.fn(), onSetDefault });
 
         openPanel(root, 'n');
-        root.querySelector<HTMLElement>('[data-blok-database-option-set-default]')?.click();
+        document.querySelector<HTMLElement>('[data-blok-database-option-set-default]')?.click();
         expect(onSetDefault).not.toHaveBeenCalled();
       });
 

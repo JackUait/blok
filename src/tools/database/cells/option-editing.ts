@@ -1,4 +1,4 @@
-import { IconCheck, IconEmojiFlag, IconTrash } from '../../../components/icons';
+import { IconCheck, IconChevronRight, IconEmojiFlag, IconGroup, IconTrash } from '../../../components/icons';
 import { getTabbables } from '../../../components/utils/modal-dialog';
 import { DatabaseModel } from '../database-model';
 import { statusGroupOf } from '../property-values';
@@ -21,6 +21,8 @@ export const buildOptionPanel = (option: SelectOption, handlers: {
   status?: boolean;
   /** Status in Edit property: "Set as default" after Delete (research/30 §10f, shot 23). */
   onSetDefault?: () => void;
+  /** Status in Edit property: "Group ›" with the option's group, after Set as default (notion-motion.md Round 56 §5). */
+  group?: { label: string; onOpen: (row: HTMLElement) => void };
 }): { panel: HTMLElement; name: HTMLInputElement } => {
   const { t } = handlers;
   const panel = document.createElement('div');
@@ -62,6 +64,27 @@ export const buildOptionPanel = (option: SelectOption, handlers: {
   setDefault.append(t('tools.database.templateSetDefault'));
   setDefault.addEventListener('click', () => handlers.onSetDefault?.());
 
+  const groupRows: HTMLElement[] = [];
+
+  if (handlers.group !== undefined) {
+    const { label, onOpen } = handlers.group;
+    const group = document.createElement('button');
+    const value = document.createElement('span');
+    const chevron = document.createElement('span');
+
+    group.type = 'button';
+    group.setAttribute('data-blok-database-option-group', '');
+    group.setAttribute('aria-haspopup', 'menu');
+    group.innerHTML = IconGroup;
+    value.setAttribute('data-blok-database-option-group-value', '');
+    value.textContent = label;
+    chevron.setAttribute('aria-hidden', 'true');
+    chevron.innerHTML = IconChevronRight;
+    group.append(t('tools.database.groupStatusGroup'), value, chevron);
+    group.addEventListener('click', () => onOpen(group));
+    groupRows.push(group);
+  }
+
   const heading = document.createElement('div');
 
   heading.setAttribute('data-blok-database-option-colors-heading', '');
@@ -98,7 +121,7 @@ export const buildOptionPanel = (option: SelectOption, handlers: {
     colors.appendChild(item);
   }
 
-  panel.append(name, del, ...(handlers.onSetDefault === undefined ? [] : [setDefault]), heading, colors);
+  panel.append(name, del, ...(handlers.onSetDefault === undefined ? [] : [setDefault]), ...groupRows, heading, colors);
 
   return { panel, name };
 };

@@ -272,6 +272,8 @@ export class DatabasePropertyMenu {
   private popover: PopoverDesktop | null = null;
   /** The open property with localized option and group names, for display only. Patches come from the saved one. */
   private shown: PropertyDefinition | null = null;
+  /** Menus opened over this one, such as a status option's; they close with it. */
+  private readonly overClosers = new Set<() => void>();
   private emojiPicker: EmojiPicker | null = null;
   /** Holds the picker in the top layer. Outside the menu popover, so a pick still lands after the menu closes. */
   private pickerLayer: HTMLElement | null = null;
@@ -404,6 +406,7 @@ export class DatabasePropertyMenu {
   private swap(): void {
     const previous = this.popover;
 
+    this.closeOver();
     this.popover = null;
     this.flushDescription();
     previous?.destroy();
@@ -712,12 +715,20 @@ export class DatabasePropertyMenu {
   close(): void {
     const popover = this.popover;
 
+    this.closeOver();
     this.popover = null;
     if (popover !== null) this.flushDescription();
     this.saveMirrorName?.();
     this.saveMirrorName = null;
     popover?.destroy();
     if (popover !== null) this.options.onClose?.();
+  }
+
+  private closeOver(): void {
+    const closers = [...this.overClosers];
+
+    this.overClosers.clear();
+    closers.forEach((close) => close());
   }
 
   private flushDescription(): void {
@@ -1413,6 +1424,8 @@ export class DatabasePropertyMenu {
       ...(property.type === 'status'
         ? { onSetDefault: (defaultOptionId: string) => update({ status: { groups: status?.groups ?? [], ...status, defaultOptionId } }) }
         : {}),
+      hold: () => this.popover?.holdOpen() ?? ((): void => undefined),
+      onHostClose: (close) => this.overClosers.add(close),
     });
 
     return { type: PopoverItemType.Html, element, name: 'options' };

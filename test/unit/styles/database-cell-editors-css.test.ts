@@ -325,6 +325,25 @@ describe('cell editor CSS', () => {
       .forEach((selector) => expect(reduced(selector), selector).toBe(true));
   });
 
+  // notion-motion.md Round 56 §5 "Status option menu": Group › is a menu row like Delete; the menu grows from its top-right.
+  describe('status option menu', () => {
+    const MENU = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-status-option-menu']";
+
+    it('grows from its top-right corner, top-left in right-to-left', () => {
+      expect(declared(`${MENU} [data-blok-popover-container]`, 'transform-origin')).toEqual(['top right']);
+      expect(declared(`${MENU}[data-blok-popover-open-left='true'] [data-blok-popover-container]`, 'transform-origin')).toEqual(['top left']);
+    });
+
+    it('draws Group and the group picks as menu rows, 28 tall', () => {
+      ['[data-blok-database-option-group]', '[data-blok-database-option-group-pick]'].forEach((row) => {
+        const rule = [...database.matchAll(/([^{}]+)\{([^{}]*)\}/g)].find((m) => m[1].split(',').map((p) => p.trim()).includes(row) && /min-height/.test(m[2]));
+
+        expect(rule?.[2], row).toContain('min-height: 28px');
+      });
+      expect(declared('[data-blok-database-option-group-value]', 'margin-inline-start')).toEqual(['auto']);
+    });
+  });
+
   // notion-motion.md Round 56 §7: the rows slide ~190ms; the dragged row stays opaque, over them, with no drop line.
   describe('option reorder', () => {
     it('slides the passed rows 200ms ease and moves the dragged one with the pointer at full opacity', () => {

@@ -111,13 +111,6 @@ describe('database chart and feed styles', () => {
     expect(ruleBody('[data-blok-database-feed]')).toContain('padding-block: var(--blok-space-3-5) var(--blok-space-4)');
   });
 
-  // Same raws: Notion's composer tools are at opacity 0 until the box has focus. A focused textarea always matches
-  // :focus-visible, and so does a send button reached by Tab.
-  it('hides the composer send button until the composer has focus', () => {
-    expect(ruleBody('[data-blok-database-feed-comments] [data-blok-database-comment-composer]:not(:has(:focus-visible)) > [data-blok-database-comment-send]'))
-      .toContain('opacity: 0');
-  });
-
   // r45-n-feedprops.raw: a 21 line, chips 13/18, 18 tall with 8 padding, 14 apart, the checkbox 14.
   it('sets the property line chips at 13px, 14 apart', () => {
     const pill = ruleBody('[data-blok-database-feed-properties] [data-blok-database-option-pill]');

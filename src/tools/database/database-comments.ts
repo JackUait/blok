@@ -147,7 +147,7 @@ export class BuiltInCommentsUi {
         return;
       }
       // Shows no thread, so the composer always starts a new one.
-      const panel = this.panel(rowId, undefined, () => []);
+      const panel = this.panel(rowId, undefined, () => [], true);
 
       box.replaceChildren(panel.element);
       state.release = () => {
@@ -236,7 +236,7 @@ export class BuiltInCommentsUi {
     return button;
   }
 
-  private panel(rowId: string, propertyId: string | undefined, shown?: () => StoredThread[]): CommentsPanel {
+  private panel(rowId: string, propertyId: string | undefined, shown?: () => StoredThread[], blurOnEscape = false): CommentsPanel {
     const { api } = this.options;
     const canComment = !this.options.readOnly();
     const threads = shown ?? ((): StoredThread[] => this.store.threads(rowId)
@@ -255,6 +255,7 @@ export class BuiltInCommentsUi {
       people: () => this.options.people?.() ?? [],
       ...this.pageLevers(),
       ...(canComment ? this.fileUploader() : {}),
+      blurOnEscape,
       onResolve: (threadId) => this.store.resolve(threadId, true),
       onDelete: async (id) => {
         const confirmed = await openDatabaseConfirm({

@@ -3,7 +3,7 @@ import type { DatabaseCommentAttachment, DatabaseCommentMention } from '../../..
 import { IconArrowUp, IconAt, IconCheck, IconCross, IconDotsHorizontal, IconPaperclip } from '../../components/icons';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { markEscapeConsumed } from '../../components/utils/consumed-escape';
-import { onHover } from '../../components/utils/tooltip';
+import { onHover, type HintOptions } from '../../components/utils/tooltip';
 import { safeDownloadHref, safeHref } from '../../shared/sanitize-url';
 import { keptAttachments, keptMentions, relocateMentions } from '../../shared/database-comment-mentions';
 import type { PageSearchResult } from '../page/types';
@@ -60,6 +60,8 @@ export interface CommentsPanelOptions {
   pageHref?: (pageId: string) => string | undefined;
   /** Opens a page on a plain click on its chip. Absent: the link navigates. */
   openPage?: (pageId: string, event: MouseEvent) => void;
+  /** Escape leaves the composer: a feed card's, which has no popover to close. */
+  blurOnEscape?: boolean;
   /** Stores a picked file. Absent: no Attach file. */
   uploadFile?: (file: File) => Promise<DatabaseCommentAttachment>;
 }
@@ -91,14 +93,27 @@ export const commentTime = (at: number, now: number, locale: string, justNow: st
   return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(new Date(at));
 };
 
-const iconButton = (attr: string, label: string, icon: string): HTMLButtonElement => {
+const iconButton = (attr: string, label: string, icon: string, hint?: HintOptions): HTMLButtonElement => {
   const button = document.createElement('button');
 
   button.type = 'button';
   button.setAttribute(attr, '');
   button.setAttribute('aria-label', label);
   button.innerHTML = icon;
-  onHover(button, label);
+  if (hint === undefined) onHover(button, label);
+  else onHover(button, label, hint);
+
+  return button;
+};
+
+/** notion-motion.md Round 62 §2: a composer button's hint sits 6 above it, centred. */
+const COMPOSER_HINT: HintOptions = { placement: 'top', gap: 6 };
+
+/** A composer button; pressing it leaves the focus, and the caret, in the text. */
+const composerButton = (attr: string, label: string, icon: string): HTMLButtonElement => {
+  const button = iconButton(attr, label, icon, COMPOSER_HINT);
+
+  button.addEventListener('mousedown', (event) => event.preventDefault());
 
   return button;
 };
@@ -128,8 +143,8 @@ const composer = (
   const { t } = options.i18n;
   const row = document.createElement('div');
   const input = document.createElement('textarea');
-  const mention = iconButton(ATTR.mention, t('tools.database.commentMention'), IconAt);
-  const send = iconButton(ATTR.send, t('tools.database.commentSend'), IconArrowUp);
+  const mention = composerButton(ATTR.mention, t('tools.database.commentMention'), IconAt);
+  const send = composerButton(ATTR.send, t('tools.database.commentSend'), IconArrowUp);
   const picked: Array<Omit<DatabaseCommentMention, 'start'>> = keptMentions(initial.text, initial.mentions)
     .map(({ type, id, label }) => ({ type, id, label }));
 
@@ -179,12 +194,16 @@ const composer = (
   });
   input.addEventListener('click', () => menu.sync());
   input.addEventListener('keydown', (event) => {
+    // An open "@" menu hears Escape first, in the window's capture phase.
+    if (event.key === 'Escape' && options.blurOnEscape === true) {
+      input.blur();
+
+      return;
+    }
     if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
     event.preventDefault();
     submit();
   });
-  // A mousedown would take the focus, and the caret, out of the text.
-  mention.addEventListener('mousedown', (event) => event.preventDefault());
   mention.addEventListener('click', () => {
     const at = input.selectionStart;
     const lead = at > 0 && !/\s/.test(input.value[at - 1]) ? ' ' : '';
@@ -259,7 +278,7 @@ const draftFiles = (
 
   if (uploadFile === undefined) return { ...result, controls: [] };
   const picker = document.createElement('input');
-  const attach = iconButton(ATTR.attach, t('tools.database.starterAttachFile'), IconPaperclip);
+  const attach = composerButton(ATTR.attach, t('tools.database.starterAttachFile'), IconPaperclip);
 
   picker.type = 'file';
   picker.multiple = true;

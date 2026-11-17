@@ -4941,6 +4941,7 @@ span[data-blok-slash-search] {
   --blok-database-favorite-star: rgb(246, 192, 80);
   --blok-database-comment-badge-text: rgb(44, 44, 43);
   --blok-database-comment-badge-icon: rgb(142, 139, 134);
+  --blok-database-comment-send-on: rgb(39, 131, 222);
   --blok-database-select-head-bg: rgba(242, 241, 238, 0.6);
   --blok-database-gauge-box-bg: rgba(84, 72, 49, 0.04);
   --blok-database-cell-editor-shadow: var(--blok-inline-toolbar-shadow);
@@ -13855,6 +13856,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-comment-tools] button, [data-blok-database-comment-attach], [data-blok-database-comment-mention], [data-blok-database-comment-send] {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 24px;
@@ -13865,15 +13867,25 @@ textarea[data-blok-database-cell-input] {
   background: transparent;
   color: var(--blok-database-ink-secondary);
   cursor: pointer;
+  transition: background-color 0.1s ease-in-out;
+}
+
+[data-blok-database-comment-attach] + [data-blok-database-comment-mention], [data-blok-database-comment-mention] + [data-blok-database-comment-send] {
+  margin-inline-start: var(--blok-space-0-5);
 }
 
 [data-blok-database-comment-tools] button:hover, [data-blok-database-comment-attach]:hover, [data-blok-database-comment-mention]:hover, [data-blok-database-comment-send]:hover:not(:disabled) {
   background-color: var(--blok-database-hover-bg);
 }
 
-[data-blok-database-comment-tools] svg, [data-blok-database-comment-attach] svg, [data-blok-database-comment-mention] svg, [data-blok-database-comment-send] svg {
+[data-blok-database-comment-tools] svg {
   width: 16px;
   height: 16px;
+}
+
+[data-blok-database-comment-attach] svg, [data-blok-database-comment-mention] svg, [data-blok-database-comment-send] svg {
+  width: 20px;
+  height: 20px;
 }
 
 [data-blok-database-comment-composer] {
@@ -13911,6 +13923,10 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-comment-send]:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+[data-blok-database-comment-send]:not(:disabled) {
+  color: var(--blok-database-comment-send-on);
 }
 
 [data-blok-database-comment-menu] {
@@ -21404,8 +21420,8 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   min-height: 27px;
 }
 
-[data-blok-database-feed-comments] [data-blok-database-comment-composer]:not(:has(:focus-visible)) > [data-blok-database-comment-send] {
-  opacity: 0;
+[data-blok-database-feed-comments] [data-blok-database-comment-composer]:not(:has(:focus-visible)) > [data-blok-database-comment-attach], [data-blok-database-feed-comments] [data-blok-database-comment-composer]:not(:has(:focus-visible)) > [data-blok-database-comment-mention], [data-blok-database-feed-comments] [data-blok-database-comment-composer]:not(:has(:focus-visible)) > [data-blok-database-comment-send] {
+  display: none;
 }
 
 [data-blok-database-feed-comments-summary] {

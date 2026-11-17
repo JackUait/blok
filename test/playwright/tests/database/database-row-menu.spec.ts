@@ -20,7 +20,7 @@ declare global {
 
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 
-const blocks = (layout: 'board' | 'list' = 'board'): OutputBlockData[] => [
+const blocks = (layout: 'board' | 'list' | 'table' = 'board'): OutputBlockData[] => [
   {
     id: 'db-1',
     type: 'database',
@@ -37,7 +37,7 @@ const blocks = (layout: 'board' | 'list' = 'board'): OutputBlockData[] => [
   { id: 'r1', type: 'database-row', parent: 'db-1', data: { position: 'a0', properties: { 'p-title': 'Launch plan', 'p-status': 'o-todo' } } },
 ];
 
-const mount = async (page: Page, layout: 'board' | 'list' = 'board'): Promise<void> => {
+const mount = async (page: Page, layout: 'board' | 'list' | 'table' = 'board'): Promise<void> => {
   await page.evaluate(async (input) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
@@ -119,6 +119,63 @@ test('a right-click on the card opens the same menu', async ({ page }) => {
   await card(page).click({ button: 'right' });
 
   await expect(page.locator('[data-blok-popover-opened]').getByRole('menuitem', { name: 'Edit icon' })).toBeVisible();
+});
+
+// notion-motion.md Round 59 §4: a table row's right-click opens the 265-wide row menu at the pointer,
+// 1px under it when it fits, else above with its bottom on the pointer when its top keeps 12.
+test.describe('a table row\'s right-click', () => {
+  const menuBox = async (page: Page): Promise<{ x: number; y: number; width: number; height: number }> => {
+    await expect(page.getByPlaceholder('Search actions…')).toBeVisible();
+    const box = await page.locator('[data-blok-popover-opened] [data-blok-popover-container]').boundingBox();
+
+    if (box === null) throw new Error('no menu');
+
+    return box;
+  };
+
+  test('opens the row menu 1px under the pointer when it fits', async ({ page }) => {
+    await page.setViewportSize({ width: 1512, height: 900 });
+    await mount(page, 'table');
+    const cell = page.getByRole('gridcell').filter({ hasText: 'Launch plan' });
+    const box = await cell.boundingBox();
+
+    if (box === null) throw new Error('no cell');
+    const [x, y] = [Math.round(box.x + 40), Math.round(box.y + box.height / 2)];
+
+    await page.mouse.click(x, y, { button: 'right' });
+    const menu = await menuBox(page);
+
+    await expect(page.locator('[data-blok-popover-opened]').getByTestId('popover-item-title')).toHaveText([
+      'Edit icon', 'Edit property', 'Open in', 'Comment', 'Copy link', 'Duplicate', 'Move to Trash',
+    ]);
+    expect(menu.x).toBeCloseTo(x, 0);
+    expect(menu.y).toBeCloseTo(y + 1, 0);
+    expect(menu.width).toBeCloseTo(265, 0);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-blok-database-menu-point]')).toHaveCount(0);
+  });
+
+  test('opens it above the pointer when it does not fit below', async ({ page }) => {
+    await page.setViewportSize({ width: 1512, height: 717 });
+    await mount(page, 'table');
+    await page.evaluate(() => {
+      const holder = document.getElementById('blok');
+
+      if (holder !== null) holder.style.paddingTop = '520px';
+    });
+    const cell = page.getByRole('gridcell').filter({ hasText: 'Launch plan' });
+    const box = await cell.boundingBox();
+
+    if (box === null) throw new Error('no cell');
+    const [x, y] = [Math.round(box.x + 40), Math.round(box.y + box.height / 2)];
+
+    await page.mouse.click(x, y, { button: 'right' });
+    const menu = await menuBox(page);
+
+    expect(y + 1 + menu.height).toBeGreaterThan(717 - 12);
+    expect(menu.x).toBeCloseTo(x, 0);
+    expect(menu.y + menu.height).toBeCloseTo(y, 0);
+  });
 });
 
 test('⌘⇧M on a picked card opens its comment composer', async ({ page }) => {

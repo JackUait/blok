@@ -72,7 +72,9 @@ const composer = (scope: Locator | Page): Locator => scope.getByRole('textbox', 
 const badge = (page: Page): Locator => page.getByRole('button', { name: 'Open comments' });
 
 const comment = async (page: Page, text: string): Promise<void> => {
+  // A right-click opens the row menu (research/23 §157); its Comment opens the row's comments.
   await titleCell(page).click({ button: 'right' });
+  await page.getByRole('menuitem', { name: /Comment/ }).click();
   await expect(composer(page)).toBeFocused();
   await composer(page).fill(text);
   await page.keyboard.press('Enter');
@@ -95,12 +97,12 @@ test.beforeEach(async ({ page }) => {
   await mount(page);
 });
 
-test('a cell right-click adds a comment on that cell and the row shows a badge with its count', async ({ page }) => {
+test('the row menu\'s Comment adds a comment on the row and the row shows a badge with its count', async ({ page }) => {
   await comment(page, 'Looks good');
 
   await expect(badge(page)).toHaveText('1');
   expect((await savedComments(page)).map((block) => [block.parent, block.data.text, block.data.propertyId]))
-    .toEqual([['r1', 'Looks good', 'p-title']]);
+    .toEqual([['r1', 'Looks good', undefined]]);
 });
 
 test('a second message replies to the thread, and the badge counts both', async ({ page }) => {

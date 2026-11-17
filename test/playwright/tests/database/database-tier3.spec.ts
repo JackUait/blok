@@ -561,11 +561,22 @@ test.describe('permissions', () => {
 });
 
 test.describe('comments', () => {
-  test('a right-click on a cell opens the host\'s comments for it', async ({ page }) => {
+  test('a cell\'s hover Comment button opens the host\'s comments for it', async ({ page }) => {
+    await mount(page, blocks({ type: 'table' }), 'comments');
+
+    await cell(page, 'r1', 'p-email').hover();
+    await cell(page, 'r1', 'p-email').getByRole('button', { name: 'Comment' }).click();
+
+    expect(await page.evaluate(() => window.tier3Log)).toEqual([{ databaseId: 'db-1', rowId: 'r1', propertyId: 'p-email' }]);
+  });
+
+  // research/23 §157: a right-click opens the row menu; its Comment is the row's.
+  test('a right-click on a cell opens the row menu, whose Comment opens the row\'s comments', async ({ page }) => {
     await mount(page, blocks({ type: 'table' }), 'comments');
 
     await cell(page, 'r1', 'p-email').click({ button: 'right' });
+    await page.getByRole('menuitem', { name: /Comment/ }).click();
 
-    expect(await page.evaluate(() => window.tier3Log)).toEqual([{ databaseId: 'db-1', rowId: 'r1', propertyId: 'p-email' }]);
+    expect(await page.evaluate(() => window.tier3Log)).toEqual([{ databaseId: 'db-1', rowId: 'r1' }]);
   });
 });

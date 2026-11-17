@@ -518,6 +518,8 @@ class SelectEditor {
     this.menu = { popover, root, optionId, release };
     popover.show();
     this.renderPanel();
+    // notion-motion.md Round 59 §5: the whole name is selected on open only, not on a later redraw.
+    root.querySelector<HTMLInputElement>('input[data-blok-database-option-name]')?.select();
   }
 
   /** Focus goes back to the search before the release, so the editor never sees focus leave. */

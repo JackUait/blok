@@ -436,6 +436,22 @@ describe('select cell editor', () => {
       expect(popover?.getAttribute('data-blok-popover-open-top')).not.toBe('true');
     });
 
+    // notion-motion.md Round 59 §5: the ⋯ menu opens with the whole name selected (0/3 of "Red"), only on open.
+    it('selects the whole option name on open, and not again after a recolor', () => {
+      openSelect(null);
+
+      openMenu('o1');
+      const name = m<HTMLInputElement>('[data-blok-database-option-name]');
+
+      expect([name.selectionStart, name.selectionEnd]).toEqual([0, name.value.length]);
+      expect(name.value.length).toBeGreaterThan(0);
+
+      m('[data-blok-database-option-color="red"]').click();
+      const redrawn = m<HTMLInputElement>('[data-blok-database-option-name]');
+
+      expect([redrawn.selectionStart, redrawn.selectionEnd]).toEqual([redrawn.value.length, redrawn.value.length]);
+    });
+
     it('renames an option', () => {
       const ctx = openSelect(null);
 

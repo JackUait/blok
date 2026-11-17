@@ -1397,7 +1397,7 @@ export class DatabaseCardDrawer {
         download.type = 'button';
         download.setAttribute('data-blok-database-drawer-download-cover', '');
         download.setAttribute('aria-label', this.label('tools.database.downloadCover'));
-        onHover(download, this.label('tools.image.download'), { placement: 'top' });
+        onHover(download, this.label('tools.image.download'), { placement: 'top', gap: 6 });
         // A trusted constant from the icon module.
         download.innerHTML = IconDownload;
         download.addEventListener('click', () => void downloadImage(src));

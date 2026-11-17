@@ -104,7 +104,7 @@ describe('row page cover controls', () => {
   });
 
   // notion-motion.md Round 60 §1: hovering Download shows a "Download" hint above it. The delay is the 500ms hint law.
-  it('shows a "Download" hint above Download on hover, after the hint delay', () => {
+  it('shows a "Download" hint 6px above Download on hover, after the hint delay', () => {
     destroyTooltip();
     vi.useFakeTimers();
     const drawer = new DatabaseCardDrawer(createOptions());
@@ -123,6 +123,8 @@ describe('row page cover controls', () => {
     expect(hint()?.getAttribute('data-blok-shown')).toBe('true');
     expect(q('[data-blok-testid="tooltip-content"]')?.textContent).toBe('Download');
     expect(hint()?.getAttribute('data-blok-placement')).toBe('top');
+    // jsdom gives the hint no height: its top is the button's top (56) less Notion's 6px gap.
+    expect(hint()?.style.top).toBe('50px');
     drawer.destroy();
     destroyTooltip();
     vi.useRealTimers();

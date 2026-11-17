@@ -19,8 +19,9 @@ const seed = (): OutputData => seedOf([{
   rows: [
     row('r1', { tt: '', st: 'o-a', pp: [], tx: 'keep' }),
     row('r2', { tt: 'Busy', st: 'o-a', pp: [] }),
+    row('r3', { tt: 'Own', pp: [] }, { cover: 'https://example.com/own.png' }),
     row('tpl', { tt: 'Bug', tx: 'from template', dd: '@today', pp: [] }, {
-      template: true, title: 'Bug', icon: '🐞', cover: 'https://example.com/c.png', reminders: { dd: { remind: 'on_day_of_event', sentFor: '2020-01-01T09:00:00.000Z' } },
+      template: true, title: 'Bug', icon: '🐞', cover: 'https://example.com/c.png', coverPosition: 30.01, reminders: { dd: { remind: 'on_day_of_event', sentFor: '2020-01-01T09:00:00.000Z' } },
     }),
     row('tpl2', { tt: 'Task', st: 'o-a', pp: [] }, { template: true, title: 'Task' }),
   ],
@@ -58,7 +59,7 @@ describe.each(SESSIONS)('database row templates (%s session)', (_label, open) =>
     const rowId = rowIdOf(result);
     const data = await dataOf(session, rowId);
 
-    expect(data).toMatchObject({ title: 'Bug', icon: '🐞', cover: 'https://example.com/c.png', reminders: { dd: { remind: 'on_day_of_event' } } });
+    expect(data).toMatchObject({ title: 'Bug', icon: '🐞', cover: 'https://example.com/c.png', coverPosition: 30.01, reminders: { dd: { remind: 'on_day_of_event' } } });
     expect(data?.reminders).toEqual({ dd: { remind: 'on_day_of_event' } });
     expect(await valuesOf(session, rowId)).toMatchObject({ tt: 'Bug', tx: 'from template', st: 'o-b', pp: [{ id: 'human-1' }] });
     expect((await valuesOf(session, rowId)).dd).toMatch(DAY);
@@ -102,6 +103,18 @@ describe.each(SESSIONS)('database row templates (%s session)', (_label, open) =>
     expect(errorOf(await run(session, 'database.applyTemplate', { id: 'T', rowId: 'r1', templateId: 'tpl' }))).toBeUndefined();
     expect(await dataOf(session, 'r1')).toMatchObject({ title: 'Bug', icon: '🐞', properties: { tt: 'Bug', tx: 'keep', st: 'o-a' } });
     expect(await childrenOf(session, 'r1')).toEqual([{ type: 'paragraph', text: 'Template body' }]);
+    await session.close();
+  });
+
+  it('applyTemplate brings the cover position only with the cover', async () => {
+    const session = open(seed());
+
+    await run(session, 'database.applyTemplate', { id: 'T', rowId: 'r1', templateId: 'tpl' });
+    await run(session, 'database.applyTemplate', { id: 'T', rowId: 'r3', templateId: 'tpl' });
+
+    expect(await dataOf(session, 'r1')).toMatchObject({ cover: 'https://example.com/c.png', coverPosition: 30.01 });
+    expect(await dataOf(session, 'r3')).toMatchObject({ cover: 'https://example.com/own.png' });
+    expect(await dataOf(session, 'r3')).not.toHaveProperty('coverPosition');
     await session.close();
   });
 

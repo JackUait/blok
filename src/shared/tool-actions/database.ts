@@ -977,7 +977,7 @@ const templateOf = (ctx: ToolActionContext, databaseId: string, templateId: stri
     ?? ctx.fail('PRECONDITION_FAILED', `Block ${templateId} is not a template of this database.`);
 
 /** Page fields a row copies from a template (writeNewRow, applyTemplate). */
-const PAGE_FIELDS = ['icon', 'cover', 'fullWidth'] as const;
+const PAGE_FIELDS = ['icon', 'cover', 'coverPosition', 'fullWidth'] as const;
 
 const rawData = (ctx: ToolActionContext, id: string): Record<string, unknown> => {
   const data = ctx.read(id)?.data;
@@ -1431,7 +1431,8 @@ const applyTemplate: ToolActionImpl<{ rowId: string; templateId: string }> = {
     ctx.update(target.id, {
       properties,
       ...(title === undefined ? {} : { title }),
-      ...Object.fromEntries(PAGE_FIELDS.filter(field => own[field] === undefined && page[field] !== undefined).map(field => [field, page[field]])),
+      // A cover position belongs to its cover: it comes only when the cover does.
+      ...Object.fromEntries(PAGE_FIELDS.filter(field => own[field === 'coverPosition' ? 'cover' : field] === undefined && page[field] !== undefined).map(field => [field, page[field]])),
       ...(added.length === 0 ? {} : { reminders: { ...ownReminders, ...Object.fromEntries(added) } }),
     });
     copyBody(ctx, template.id, target.id);

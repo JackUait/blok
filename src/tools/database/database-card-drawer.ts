@@ -28,6 +28,7 @@ import { fileChipIcon } from './page-icon';
 import { openCoverPicker, validateCoverFile } from '../audio/cover-picker';
 import { downloadImage } from '../image/download';
 import { loadSheet } from '../../components/utils/lazy-styles';
+import { trackCoverDrag } from '../../components/utils/cover-drag';
 import type { CoverPickerHandle } from '../audio/cover-picker';
 import { safeHref, safeImageSrc } from '../../components/utils/sanitize-url';
 import { isEscapeConsumed, markEscapeConsumed } from '../../components/utils/consumed-escape';
@@ -125,6 +126,17 @@ const afterSlide = (drawer: HTMLElement, done: () => void): void => {
     drawer.removeEventListener('transitionend', onEnd);
     finish();
   }, DRAWER_TRANSITION_FALLBACK_MS);
+};
+
+/** The height `object-fit: cover` draws the image at; the cover's own height until the image loads. */
+const shownImageHeight = (img: HTMLImageElement, cover: HTMLElement): number => {
+  const box = cover.getBoundingClientRect();
+
+  if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+    return box.height;
+  }
+
+  return img.naturalHeight * Math.max(box.width / img.naturalWidth, box.height / img.naturalHeight);
 };
 
 /** The mode button joined with the margin box of the rule before it (after it in RTL: the union covers both). */
@@ -324,6 +336,8 @@ export interface CardDrawerOptions {
   };
   /** A page cover set (an image URL) or removed (null). */
   onCoverChange?: (rowId: string, cover: string | null) => void;
+  /** Save position after a cover Reposition: the image's vertical position, 0–100 %. Without it, there is no Reposition. */
+  onCoverPositionChange?: (rowId: string, position: number) => void;
   /** Uploads a picked cover file and gives its URL. Without it, a cover comes from a link only. */
   uploadCover?: (file: File) => Promise<string>;
   /** Escape closed the page of this row. */
@@ -552,6 +566,7 @@ export class DatabaseCardDrawer {
   private readonly onFullWidthChange: CardDrawerOptions['onFullWidthChange'];
   private readonly onEscapeClose: CardDrawerOptions['onEscapeClose'];
   private readonly onCoverChange: CardDrawerOptions['onCoverChange'];
+  private readonly onCoverPositionChange: CardDrawerOptions['onCoverPositionChange'];
   private readonly uploadCover: CardDrawerOptions['uploadCover'];
   private readonly onPageLayoutChange: CardDrawerOptions['onPageLayoutChange'];
   private readonly onPageLayoutBirth: CardDrawerOptions['onPageLayoutBirth'];
@@ -588,6 +603,8 @@ export class DatabaseCardDrawer {
   /** The tab drawn: `activeTab` while it exists, else Content. */
   private shownTab = 'content';
   private coverPicker: CoverPickerHandle | null = null;
+  /** The cover's Reposition mode while it is on. */
+  private coverReposition: { cancel(): void } | null = null;
   private emojiPicker: EmojiPicker | null = null;
   /** The properties section is folded away. Session only. */
   private propsCollapsed = false;
@@ -672,6 +689,7 @@ export class DatabaseCardDrawer {
     this.onFullWidthChange = options.onFullWidthChange;
     this.onEscapeClose = options.onEscapeClose;
     this.onCoverChange = options.onCoverChange;
+    this.onCoverPositionChange = options.onCoverPositionChange;
     this.uploadCover = options.uploadCover;
     this.onPageLayoutChange = options.onPageLayoutChange;
     this.onPageLayoutBirth = options.onPageLayoutBirth;
@@ -897,6 +915,14 @@ export class DatabaseCardDrawer {
       if (step !== null) {
         e.preventDefault();
         this.step(step);
+
+        return;
+      }
+      // Escape leaves Reposition as Cancel does, before it could close the page (Notion's Escape here is unread).
+      if (e.key === 'Escape' && this.coverReposition !== null && !isEscapeConsumed(e)) {
+        markEscapeConsumed(e);
+        e.preventDefault();
+        this.coverReposition.cancel();
 
         return;
       }
@@ -1369,6 +1395,9 @@ export class DatabaseCardDrawer {
     const src = row.cover === undefined ? null : safeImageSrc(row.cover);
     const backlinks = this.buildBacklinks(row.id);
 
+    // A redrawn head drops the old cover, so an unsaved Reposition goes with it.
+    this.coverReposition = null;
+
     if (!this.readOnly && this.onCoverChange !== undefined) {
       // The cover picker is styled by the media sheet; it waits for it, so fetch it now.
       void loadSheet('media');
@@ -1380,9 +1409,13 @@ export class DatabaseCardDrawer {
       cover.setAttribute('data-blok-database-drawer-cover', '');
       img.alt = '';
       img.src = src;
+      img.draggable = false;
+      // No saved position keeps the stylesheet's centre.
+      if (row.coverPosition !== undefined) {
+        img.style.objectPosition = `50% ${row.coverPosition}%`;
+      }
       cover.appendChild(img);
       if (!this.readOnly && this.onCoverChange !== undefined) {
-        // R59 §1: Notion's group also holds Reposition, unmeasured beyond its mode UI, so left out.
         const controls = document.createElement('div');
         const change = document.createElement('button');
         const download = document.createElement('button');
@@ -1401,7 +1434,7 @@ export class DatabaseCardDrawer {
         // A trusted constant from the icon module.
         download.innerHTML = IconDownload;
         download.addEventListener('click', () => void downloadImage(src));
-        controls.append(change, download);
+        controls.append(change, ...(this.onCoverPositionChange === undefined ? [] : [this.repositionButton(row, cover, img, controls)]), download);
         cover.appendChild(controls);
       }
       head.appendChild(cover);
@@ -1626,6 +1659,90 @@ export class DatabaseCardDrawer {
     icon.append(arrow, page);
 
     return icon;
+  }
+
+  /**
+   * Cover Reposition (notion-motion.md Round 60 §1): the group becomes Save position · Cancel, a pill
+   * asks for a drag, and the drag moves the image vertically by Δy ÷ its shown height. Only Save writes.
+   */
+  private repositionButton(row: DatabaseRow, cover: HTMLElement, img: HTMLImageElement, controls: HTMLElement): HTMLButtonElement {
+    const reposition = document.createElement('button');
+
+    reposition.type = 'button';
+    reposition.setAttribute('data-blok-database-drawer-reposition-cover', '');
+    reposition.textContent = this.label('title.repositionCover');
+    reposition.setAttribute('aria-label', this.label('title.repositionCoverAria'));
+    reposition.addEventListener('click', () => this.startCoverReposition(row, cover, img, controls));
+
+    return reposition;
+  }
+
+  private startCoverReposition(row: DatabaseRow, cover: HTMLElement, img: HTMLImageElement, controls: HTMLElement): void {
+    const write = this.onCoverPositionChange;
+
+    if (write === undefined || this.coverReposition !== null) {
+      return;
+    }
+    this.coverPicker?.close();
+    const initial = row.coverPosition ?? 50;
+    const painted = img.style.objectPosition;
+    const idle = Array.from(controls.children);
+    const hadFocus = controls.contains(document.activeElement);
+    const state = { position: initial };
+    const save = document.createElement('button');
+    const cancel = document.createElement('button');
+    const hint = document.createElement('span');
+
+    const stopDragging = trackCoverDrag(cover, {
+      start: (event) => event.target instanceof Node && controls.contains(event.target)
+        ? null
+        : { position: state.position, height: shownImageHeight(img, cover) },
+      move: (position) => {
+        // Two decimals, as Notion's reads (30.01 %).
+        state.position = Math.round(position * 100) / 100;
+        img.style.setProperty('object-position', `50% ${state.position}%`);
+      },
+    });
+    const end = (): void => {
+      const refocus = controls.contains(document.activeElement);
+
+      stopDragging();
+      this.coverReposition = null;
+      cover.removeAttribute('data-blok-database-drawer-cover-repositioning');
+      hint.remove();
+      controls.replaceChildren(...idle);
+      if (refocus) {
+        controls.querySelector<HTMLElement>('[data-blok-database-drawer-reposition-cover]')?.focus({ preventScroll: true });
+      }
+    };
+    const leave = (): void => {
+      end();
+      img.style.setProperty('object-position', painted);
+    };
+
+    save.type = 'button';
+    save.setAttribute('data-blok-database-drawer-save-cover-position', '');
+    save.textContent = this.label('title.saveCoverPosition');
+    save.addEventListener('click', () => {
+      end();
+      if (state.position !== initial) {
+        write(row.id, state.position);
+      }
+    });
+    cancel.type = 'button';
+    cancel.setAttribute('data-blok-database-drawer-cancel-cover-position', '');
+    cancel.textContent = this.label('title.cancelCoverPosition');
+    cancel.addEventListener('click', leave);
+    hint.setAttribute('data-blok-database-drawer-cover-hint', '');
+    hint.textContent = this.label('title.coverDragHint');
+
+    this.coverReposition = { cancel: leave };
+    cover.setAttribute('data-blok-database-drawer-cover-repositioning', '');
+    controls.replaceChildren(save, cancel);
+    cover.appendChild(hint);
+    if (hadFocus) {
+      save.focus({ preventScroll: true });
+    }
   }
 
   /** The shared cover picker (upload or link), anchored on the cover button. */

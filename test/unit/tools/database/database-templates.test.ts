@@ -133,6 +133,25 @@ describe('DatabaseTool — templates', () => {
     expect(doc.childrenOf('tpl')).toEqual(['tpl-body']);
   });
 
+  it('carries a repositioned cover with its position to a new row, a duplicate and an applied page', () => {
+    const doc = makeDoc([
+      { id: 'db', name: 'database', parentId: null, data: {} },
+      rowSeed('r1', 'db', { properties: { title: 'Bare' }, position: 'a1' }),
+      rowSeed('r2', 'db', { properties: { title: 'Own cover' }, position: 'a2', cover: 'https://x.io/own.png' }),
+      rowSeed('tpl', 'db', { properties: { title: 'Tpl' }, position: 'a0', template: true, cover: 'https://x.io/c.png', coverPosition: 30.01 }),
+    ]);
+    const { tool } = buildDatabase(doc, 'db', data());
+
+    tool.applyTemplate({ rowId: 'r1', templateId: 'tpl' });
+    tool.applyTemplate({ rowId: 'r2', templateId: 'tpl' });
+    expect(doc.row(tool.newFromTemplate('tpl') ?? '').coverPosition).toBe(30.01);
+    expect(doc.row(tool.duplicateTemplate('tpl') ?? '').coverPosition).toBe(30.01);
+
+    expect(doc.row('r1')).toMatchObject({ cover: 'https://x.io/c.png', coverPosition: 30.01 });
+    expect(doc.row('r2').cover).toBe('https://x.io/own.png');
+    expect(doc.row('r2').coverPosition).toBeUndefined();
+  });
+
   it('starts every new row from the default template', () => {
     const doc = seed();
     const { tool } = buildDatabase(doc, 'db', data(), { people });

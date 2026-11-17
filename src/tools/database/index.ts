@@ -3197,6 +3197,7 @@ export class DatabaseTool implements BlockTool {
           ...(typeof rowData?.pageId === 'string' && rowData.pageId.length > 0 ? { pageId: rowData.pageId } : {}),
           ...(typeof rowData?.icon === 'string' && rowData.icon !== '' ? { icon: rowData.icon } : {}),
           ...(typeof rowData?.cover === 'string' && rowData.cover !== '' ? { cover: rowData.cover } : {}),
+          ...(typeof rowData?.coverPosition === 'number' ? { coverPosition: rowData.coverPosition } : {}),
           ...(typeof rowData?.fullWidth === 'boolean' ? { fullWidth: rowData.fullWidth } : {}),
           ...(rowData?.reminders !== undefined ? { reminders: rowData.reminders } : {}),
           ...(Object.keys(reactions).length > 0 ? { reactions } : {}),
@@ -8707,6 +8708,7 @@ export class DatabaseTool implements BlockTool {
           title: typeof title === 'string' ? title : '',
           ...(source.icon !== undefined ? { icon: source.icon } : {}),
           ...(source.cover !== undefined ? { cover: source.cover } : {}),
+          ...(source.coverPosition !== undefined ? { coverPosition: source.coverPosition } : {}),
           ...(source.fullWidth !== undefined ? { fullWidth: source.fullWidth } : {}),
           ...(reminders !== undefined ? { reminders } : {}),
         },
@@ -9053,6 +9055,7 @@ export class DatabaseTool implements BlockTool {
         title: typeof title === 'string' ? title : '',
         ...(template?.icon !== undefined ? { icon: template.icon } : {}),
         ...(template?.cover !== undefined ? { cover: template.cover } : {}),
+        ...(template?.coverPosition !== undefined ? { coverPosition: template.coverPosition } : {}),
         ...(template?.fullWidth !== undefined ? { fullWidth: template.fullWidth } : {}),
         ...(reminders !== undefined ? { reminders } : {}),
       },
@@ -9163,7 +9166,11 @@ export class DatabaseTool implements BlockTool {
       if (typeof title === 'string') this.updateRowTitleBlock(param.rowId, titlePropId, title);
       this.updateRowBlock(param.rowId, values);
       if (row.icon === undefined && template.icon !== undefined) block.call('updateIcon', { icon: template.icon });
-      if (row.cover === undefined && template.cover !== undefined) block.call('updateCover', { cover: template.cover });
+      if (row.cover === undefined && template.cover !== undefined) {
+        block.call('updateCover', { cover: template.cover });
+        // After updateCover, which drops a position.
+        if (template.coverPosition !== undefined) block.call('updateCoverPosition', { position: template.coverPosition });
+      }
       if (row.fullWidth === undefined && template.fullWidth !== undefined) block.call('updateFullWidth', { fullWidth: template.fullWidth });
       if (Object.keys(reminders).length > 0) block.call('updateReminders', reminders);
       block.dispatchChange();
@@ -9261,6 +9268,7 @@ export class DatabaseTool implements BlockTool {
         template: true,
         ...(template.icon !== undefined ? { icon: template.icon } : {}),
         ...(template.cover !== undefined ? { cover: template.cover } : {}),
+        ...(template.coverPosition !== undefined ? { coverPosition: template.coverPosition } : {}),
         ...(template.fullWidth !== undefined ? { fullWidth: template.fullWidth } : {}),
         ...(reminders !== undefined ? { reminders } : {}),
       }, { parentId: this.dataId, position: 'end', id });
@@ -10806,6 +10814,16 @@ export class DatabaseTool implements BlockTool {
           const row = this.api.blocks.getChildren(this.dataId).find((child) => child.id === rowId);
 
           row?.call('updateCover', { cover });
+          row?.dispatchChange();
+          this.syncRowsFromBlocks();
+          this.cardDrawer?.syncOpenRow(this.rowOrTemplate(rowId));
+          this.rerenderView({ keepDrawer: true });
+        },
+        onCoverPositionChange: (rowId, position) => {
+          if (!writable()) return;
+          const row = this.api.blocks.getChildren(this.dataId).find((child) => child.id === rowId);
+
+          row?.call('updateCoverPosition', { position });
           row?.dispatchChange();
           this.syncRowsFromBlocks();
           this.cardDrawer?.syncOpenRow(this.rowOrTemplate(rowId));

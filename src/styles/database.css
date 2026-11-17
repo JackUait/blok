@@ -2490,9 +2490,8 @@
 }
 
 /*
-  notion-motion.md Round 59 §1: a white group 12 in from the cover's top-right, 14px buttons.
-  Fades in at once and holds 110ms before it fades out. The divider margin (0 4) gives
-  Notion's 173 once Reposition joins.
+  notion-motion.md Round 59 §1: a white group 12 in from the cover's top-right, 173 wide with
+  Change · Reposition · Download (Round 60 §1: text 12/16). Fades in at once and holds 110ms before it fades out.
 */
 [data-blok-database-drawer-cover-controls] {
   position: absolute;
@@ -2525,8 +2524,8 @@
   border-radius: var(--blok-radius-control-sm);
   background: transparent;
   color: var(--blok-database-ink-secondary);
-  font-size: 14px;
-  line-height: 1.2;
+  font-size: 12px;
+  line-height: 16px;
   white-space: nowrap;
   cursor: pointer;
   transition: background 0.1s ease-in-out;
@@ -2553,6 +2552,48 @@
 [data-blok-database-drawer-download-cover] {
   inline-size: 24px;
   padding: 0;
+}
+
+/* notion-motion.md Round 60 §1: Reposition. Save position · Cancel with no divider stay shown off the cover. */
+[data-blok-database-drawer-cover-repositioning] {
+  cursor: ns-resize;
+}
+
+[data-blok-database-drawer-cover-repositioning] > [data-blok-database-drawer-cover-controls] {
+  opacity: 1;
+  transition-delay: 0s;
+}
+
+[data-blok-database-drawer-cover-repositioning] > [data-blok-database-drawer-cover-controls] > button + button {
+  margin-inline-start: 0;
+}
+
+[data-blok-database-drawer-cover-repositioning] > [data-blok-database-drawer-cover-controls] > button + button::before {
+  content: none;
+}
+
+/* "Drag image to reposition": 180×25.2 at the cover's centre. Centred by auto margins, so RTL needs nothing. */
+[data-blok-database-drawer-cover-hint] {
+  position: absolute;
+  inset: 0;
+  inline-size: fit-content;
+  block-size: fit-content;
+  margin: auto;
+  padding: 3.6px var(--blok-space-4-5);
+  border-radius: var(--blok-radius-control-sm);
+  background: var(--blok-page-cover-hint-bg, rgba(0, 0, 0, 0.4));
+  color: var(--blok-page-cover-hint-fg, #fff);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+@starting-style {
+  [data-blok-database-drawer-cover-hint] {
+    opacity: 0;
+  }
 }
 
 [data-blok-database-drawer-download-cover] svg {

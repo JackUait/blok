@@ -174,6 +174,17 @@ describe('row page Actions menu', () => {
     expect(copy?.[1].fullWidth).toBe(true);
   });
 
+  it('duplicates the page with its repositioned cover', async () => {
+    await make(doc({ r1: { cover: 'https://example.com/c.png', coverPosition: 30.01 } }));
+    await openRow('r1');
+    await openActions();
+    await click(menuItem('database-row-duplicate'));
+
+    const copy = [...(await rowData()).entries()].find(([id]) => id !== 'r1' && id !== 'r2');
+
+    expect(copy?.[1]).toMatchObject({ cover: 'https://example.com/c.png', coverPosition: 30.01 });
+  });
+
   it('duplicates the page with its date reminder, ready to remind again', async () => {
     const blocks = doc({ r1: { properties: { t: 'One', due: '2027-06-15' }, reminders: { due: { remind: '1_day_before', timeZone: 'Europe/Berlin', sentFor: '2027-06-14T07:00:00.000Z' } } } });
     const database = blocks[0].data as { schema: unknown[] };

@@ -68,6 +68,13 @@ const makeBlock = (doc: () => Doc, id: string, name: string, parentId: string | 
 
         entry.data = { ...entry.data, reminders: Object.keys(next).length > 0 ? next : undefined };
       }
+      if (method === 'updateCover' || method === 'updateCoverPosition') {
+        const rowTool = new DatabaseRowTool({ data: row, config: {}, api: {} as API, readOnly: false, block: { id } as BlockAPI });
+
+        if (method === 'updateCover') rowTool.updateCover(param as { cover: string | null });
+        else rowTool.updateCoverPosition(param as { position: number });
+        entry.data = { ...rowTool.save(document.createElement('div')) };
+      }
       if (method === 'updateReaction') {
         const rowTool = new DatabaseRowTool({ data: row, config: {}, api: {} as API, readOnly: false, block: { id } as BlockAPI });
 

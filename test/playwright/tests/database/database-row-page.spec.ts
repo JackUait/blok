@@ -587,6 +587,11 @@ test.describe('row page cover', () => {
   };
 
   const cover = (page: Page): Locator => peek(page).locator('[data-blok-database-drawer-cover]');
+  const coverImagePosition = (page: Page): Promise<string> => cover(page).evaluate((el) => {
+    const image = el.querySelector('img');
+
+    return image === null ? '' : getComputedStyle(image).objectPosition;
+  });
   const icon = (page: Page): Locator => peek(page).locator('[data-blok-database-drawer-icon]');
   const control = (page: Page, name: 'add-icon' | 'add-cover' | 'customize'): Locator => peek(page).locator(`[data-blok-database-drawer-${name}]`);
 
@@ -764,7 +769,7 @@ test.describe('row page cover', () => {
     });
   }
 
-  // notion-motion.md Round 59 §1: a 28-tall white group 12 in from the cover's top-right, 14px buttons.
+  // notion-motion.md Round 59 §1: a 28-tall white group 12 in from the cover's top-right. Round 60 §1: its text is 12/16.
   const coverGroup = (page: Page): Locator => cover(page).locator('[data-blok-database-drawer-cover-controls]');
 
   const expectGroupAt = async (page: Page, right: number): Promise<void> => {
@@ -774,6 +779,7 @@ test.describe('row page cover', () => {
     await expect(coverGroup(page)).toHaveCSS('opacity', '1');
     const group = await boxOf(coverGroup(page));
     const change = await boxOf(coverGroup(page).getByRole('button', { name: 'Change the page cover' }));
+    const reposition = await boxOf(coverGroup(page).getByRole('button', { name: 'Reposition the cover image' }));
     const download = await boxOf(coverGroup(page).getByRole('button', { name: 'Download the cover image' }));
 
     expect(group.y).toBeCloseTo(coverBox.y + 12, 1);
@@ -783,8 +789,9 @@ test.describe('row page cover', () => {
     expect(change.y).toBeCloseTo(group.y + 2, 1);
     expect(download.width).toBeCloseTo(24, 1);
     expect(download.height).toBeCloseTo(24, 1);
-    // One 1px divider with 4px on each side between the two buttons.
-    expect(download.x).toBeCloseTo(change.x + change.width + 9, 1);
+    // A 1px divider with 4px on each side between each two buttons.
+    expect(reposition.x).toBeCloseTo(change.x + change.width + 9, 1);
+    expect(download.x).toBeCloseTo(reposition.x + reposition.width + 9, 1);
     expect(download.x + download.width).toBeCloseTo(group.x + group.width - 2, 1);
   };
 
@@ -795,7 +802,8 @@ test.describe('row page cover', () => {
       const change = coverGroup(page).getByRole('button', { name: 'Change the page cover' });
 
       await expect(change).toHaveText('Change');
-      await expect(change).toHaveCSS('font-size', '14px');
+      await expect(change).toHaveCSS('font-size', '12px');
+      await expect(change).toHaveCSS('line-height', '16px');
       await expect(change).toHaveCSS('padding', '0px 6px');
       await expect(change).toHaveCSS('border-radius', '4px');
       await expect(coverGroup(page)).toHaveCSS('padding', '2px');
@@ -852,6 +860,92 @@ test.describe('row page cover', () => {
     await page.mouse.move(coverBox.x + 40, coverBox.y + 40);
     await expect(group).toHaveCSS('opacity', '1');
     expect(await timing()).toEqual(['opacity', '0.2s', 'ease', '0s']);
+  });
+
+  // notion-motion.md Round 60 §1: Reposition.
+  test('Reposition swaps the group, shows the pill, and a drag moves the image vertically until Save', async ({ page }) => {
+    await open(page, 'r3', 'side');
+    const coverBox = await boxOf(cover(page));
+
+    await page.mouse.move(coverBox.x + 40, coverBox.y + coverBox.height / 2);
+    await coverGroup(page).getByRole('button', { name: 'Reposition the cover image' }).click();
+
+    const save = coverGroup(page).getByRole('button', { name: 'Save position' });
+    const cancel = coverGroup(page).getByRole('button', { name: 'Cancel' });
+    const hint = cover(page).getByText('Drag image to reposition');
+
+    await expect(save).toBeVisible();
+    await expect(cover(page)).toHaveCSS('cursor', 'ns-resize');
+    // No divider: Save sits right against Cancel, and both against the group's 2px padding.
+    const group = await boxOf(coverGroup(page));
+    const saveBox = await boxOf(save);
+    const cancelBox = await boxOf(cancel);
+
+    expect(group.height).toBeCloseTo(28, 1);
+    expect(cancelBox.x).toBeCloseTo(saveBox.x + saveBox.width, 1);
+    expect(group.width).toBeCloseTo(saveBox.width + cancelBox.width + 4, 1);
+    expect(group.x + group.width).toBeCloseTo(coverBox.x + coverBox.width - 12, 1);
+
+    const pill = await boxOf(hint);
+
+    expect(pill.height).toBeCloseTo(25.2, 0);
+    expect(pill.x + pill.width / 2).toBeCloseTo(coverBox.x + coverBox.width / 2, 0);
+    expect(pill.y + pill.height / 2).toBeCloseTo(coverBox.y + coverBox.height / 2, 0);
+    await expect(hint).toHaveCSS('background-color', 'rgba(0, 0, 0, 0.4)');
+    await expect(hint).toHaveCSS('font-size', '12px');
+
+    // The group stays with the pointer off the cover.
+    await page.mouse.move(coverBox.x + 40, coverBox.y + coverBox.height + 200);
+    await expect(coverGroup(page)).toHaveCSS('opacity', '1');
+
+    // The 10×10 image shows as wide as the cover is, so a 70px drag down is 70 ÷ width.
+    await page.mouse.move(coverBox.x + 200, coverBox.y + 60);
+    await page.mouse.down();
+    await page.mouse.move(coverBox.x + 280, coverBox.y + 100, { steps: 4 });
+    await page.mouse.move(coverBox.x + 280, coverBox.y + 130, { steps: 2 });
+    await page.mouse.up();
+    const expected = Math.round((50 - (70 / coverBox.width) * 100) * 100) / 100;
+    const position = (await coverImagePosition(page)).split(' ');
+
+    expect(position[0]).toBe('50%');
+    expect(parseFloat(position[1])).toBeCloseTo(expected, 1);
+    await expect(page.locator('[data-blok-selected="true"]')).toHaveCount(0);
+    await expect(peek(page)).toHaveAttribute('data-open', '');
+
+    await save.click();
+    await expect(hint).toHaveCount(0);
+    await expect(coverGroup(page).getByRole('button', { name: 'Reposition the cover image' })).toHaveCount(1);
+    const saved = await page.evaluate(async () => (await window.blokInstance?.save())?.blocks.find((block) => block.id === 'r3')?.data as { coverPosition?: number } | undefined);
+
+    expect(saved?.coverPosition).toBeCloseTo(expected, 1);
+    await expect.poll(() => coverImagePosition(page)).toBe(`50% ${saved?.coverPosition}%`);
+  });
+
+  test('Cancel and Escape leave Reposition without moving the image, and the page stays open', async ({ page }) => {
+    await open(page, 'r3', 'side');
+    const coverBox = await boxOf(cover(page));
+    const reposition = async (): Promise<void> => {
+      await page.mouse.move(coverBox.x + 40, coverBox.y + coverBox.height / 2);
+      await coverGroup(page).getByRole('button', { name: 'Reposition the cover image' }).click();
+      await page.mouse.move(coverBox.x + 200, coverBox.y + 60);
+      await page.mouse.down();
+      await page.mouse.move(coverBox.x + 200, coverBox.y + 120, { steps: 3 });
+      await page.mouse.up();
+      await expect.poll(() => coverImagePosition(page)).not.toBe('50% 50%');
+    };
+
+    await reposition();
+    await coverGroup(page).getByRole('button', { name: 'Cancel' }).click();
+    await expect.poll(() => coverImagePosition(page)).toBe('50% 50%');
+
+    await reposition();
+    await page.keyboard.press('Escape');
+    await expect.poll(() => coverImagePosition(page)).toBe('50% 50%');
+    await expect(cover(page).getByText('Drag image to reposition')).toHaveCount(0);
+    await expect(peek(page)).toHaveAttribute('data-open', '');
+    const saved = await page.evaluate(async () => (await window.blokInstance?.save())?.blocks.find((block) => block.id === 'r3')?.data);
+
+    expect(saved).not.toHaveProperty('coverPosition');
   });
 
   test('Download saves the cover image and Change opens the picker', async ({ page }) => {

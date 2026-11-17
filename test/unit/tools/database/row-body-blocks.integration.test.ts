@@ -475,6 +475,39 @@ describe('row bodies are child blocks of the row', () => {
     expect(holder?.querySelector('[data-blok-database-drawer-add-cover]')).toBeNull();
   });
 
+  it('saves a repositioned cover on the row as one undo step', async () => {
+    const blocks = docWithBodies();
+
+    blocks[2] = { ...blocks[2], data: { ...blocks[2].data, cover: 'https://example.com/c.png' } };
+    await make(blocks);
+    await openRow('r1');
+    const cover = holder?.querySelector<HTMLElement>('[data-blok-database-drawer-cover]');
+
+    vi.spyOn(cover as HTMLElement, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 0, y: 0, width: 100, height: 100 }));
+    holder?.querySelector<HTMLElement>('[data-blok-database-drawer-reposition-cover]')?.click();
+    cover?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, clientY: 100, pointerId: 1 }));
+    cover?.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientY: 130, pointerId: 1 }));
+    cover?.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientY: 130, pointerId: 1 }));
+    await quiet();
+
+    const rowData = async (): Promise<Record<string, unknown> | undefined> =>
+      (await editor?.save())?.blocks.find((block) => block.id === 'r1')?.data;
+
+    expect((await rowData())?.coverPosition).toBeUndefined();
+    holder?.querySelector<HTMLElement>('[data-blok-database-drawer-save-cover-position]')?.click();
+    await quiet();
+
+    expect((await rowData())?.coverPosition).toBe(20);
+    expect(holder?.querySelector<HTMLImageElement>('[data-blok-database-drawer-cover] img')?.style.objectPosition).toBe('50% 20%');
+
+    editor?.history.undo();
+    await quiet();
+
+    expect(await rowData()).not.toHaveProperty('coverPosition');
+    expect((await rowData())?.cover).toBe('https://example.com/c.png');
+    expect(holder?.querySelector<HTMLImageElement>('[data-blok-database-drawer-cover] img')?.style.objectPosition).toBe('');
+  });
+
   it('never paints an unsafe cover URL', async () => {
     const blocks = docWithBodies();
 

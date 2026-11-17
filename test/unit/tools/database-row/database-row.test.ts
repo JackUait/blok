@@ -241,6 +241,36 @@ describe('DatabaseRowTool', () => {
     });
   });
 
+  describe('cover position', () => {
+    const saved = (tool: DatabaseRowTool): DatabaseRowData => tool.save(document.createElement('div'));
+
+    it('keeps a saved cover position once, not as an unknown key too', () => {
+      const tool = new DatabaseRowTool(createRowOptions({ cover: 'https://example.com/c.png', coverPosition: 30.01 }));
+
+      expect(saved(tool).coverPosition).toBe(30.01);
+      expect(Object.keys(saved(tool)).filter((key) => key === 'coverPosition')).toHaveLength(1);
+    });
+
+    it('drops a stored position that is not a number in 0–100', () => {
+      expect('coverPosition' in saved(new DatabaseRowTool(createRowOptions({ cover: 'https://example.com/c.png', coverPosition: 'top' } as unknown as Partial<DatabaseRowData>)))).toBe(false);
+      expect(saved(new DatabaseRowTool(createRowOptions({ cover: 'https://example.com/c.png', coverPosition: 140 }))).coverPosition).toBe(100);
+    });
+
+    it('sets the position, and a new or removed cover drops it', () => {
+      const tool = new DatabaseRowTool(createRowOptions({ cover: 'https://example.com/c.png' }));
+
+      tool.updateCoverPosition({ position: 42.5 });
+      expect(saved(tool).coverPosition).toBe(42.5);
+      tool.updateCover({ cover: 'https://example.com/c.png' });
+      expect(saved(tool).coverPosition).toBe(42.5);
+      tool.updateCover({ cover: 'https://example.com/d.png' });
+      expect('coverPosition' in saved(tool)).toBe(false);
+      tool.updateCoverPosition({ position: 10 });
+      tool.updateCover({ cover: null });
+      expect('coverPosition' in saved(tool)).toBe(false);
+    });
+  });
+
   describe('updateTitle()', () => {
     it('writes the top-level title AND the properties mirror', () => {
       const tool = new DatabaseRowTool(createRowOptions({ properties: { 'p-title': '', 'p-status': 'o1' }, title: '' }));

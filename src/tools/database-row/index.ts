@@ -18,7 +18,7 @@ interface RowPagePrompt {
   list: Array<{ id: string; title: string }>;
 }
 
-const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId', 'bodyBlocks', 'icon', 'cover', 'fullWidth', 'template', 'repeat', 'reminders', 'anonymous']);
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId', 'bodyBlocks', 'icon', 'cover', 'coverPosition', 'fullWidth', 'template', 'repeat', 'reminders', 'anonymous']);
 
 /**
  * Top-level keys this version does not know, kept as they came. A full save
@@ -51,6 +51,9 @@ const toRowData = (data: DatabaseRowData): DatabaseRowData => {
   }
   if (typeof data.cover === 'string' && data.cover !== '') {
     row.cover = data.cover;
+  }
+  if (typeof data.coverPosition === 'number' && Number.isFinite(data.coverPosition)) {
+    row.coverPosition = Math.min(100, Math.max(0, data.coverPosition));
   }
   if (typeof data.fullWidth === 'boolean') {
     row.fullWidth = data.fullWidth;
@@ -400,6 +403,9 @@ export class DatabaseRowTool implements BlockTool {
     if (this._data.cover !== undefined) {
       saved.cover = this._data.cover;
     }
+    if (this._data.coverPosition !== undefined) {
+      saved.coverPosition = this._data.coverPosition;
+    }
     if (this._data.fullWidth !== undefined) {
       saved.fullWidth = this._data.fullWidth;
     }
@@ -506,11 +512,20 @@ export class DatabaseRowTool implements BlockTool {
 
   /** Sets the page cover (an image URL); null removes it. */
   public updateCover(param: { cover: string | null }): void {
+    // A position belongs to the image it was dragged on.
+    if (param.cover !== this._data.cover) {
+      delete this._data.coverPosition;
+    }
     if (param.cover === null || param.cover === '') {
       delete this._data.cover;
     } else {
       this._data.cover = param.cover;
     }
+  }
+
+  /** Save position after a cover Reposition: the image's vertical position, 0–100 %. */
+  public updateCoverPosition(param: { position: number }): void {
+    this._data.coverPosition = Math.min(100, Math.max(0, param.position));
   }
 
   /** The page's own Full width; null hands the width back to the layout. */

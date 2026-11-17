@@ -684,6 +684,8 @@ export interface DatabaseRow {
   icon?: string;
   /** The page cover, an image URL. */
   cover?: string;
+  /** The cover image's vertical position, 0–100 %. Absent: centred. */
+  coverPosition?: number;
   /** The page's own Full width. Absent: the database's page layout decides. Only a full page widens. */
   fullWidth?: boolean;
   /** Date reminders by date property id. */
@@ -726,6 +728,8 @@ export interface DatabaseRowData extends BlockToolData {
   icon?: string;
   /** The page cover, an image URL. A plain leaf, like the icon. */
   cover?: string;
+  /** The cover image's vertical position, 0–100 % (Reposition). Absent: centred. Goes when the cover changes. */
+  coverPosition?: number;
   /** The page's own Full width, overriding the layout's. Absent: the layout decides. */
   fullWidth?: boolean;
   /**

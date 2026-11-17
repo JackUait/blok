@@ -9918,8 +9918,11 @@ export class DatabaseTool implements BlockTool {
       if (rowEl.matches('[data-blok-database-board] [data-blok-database-card]')) this.clearRowSelection();
       // findings-listgallery L16, notion-motion.md Round 56 §9: a list row's and a timeline bar's menu open at the pointer.
       const anchor = rowEl.matches('[data-blok-database-list-row], [data-blok-database-timeline-bar]') ? pointerAnchor(rowEl, event) : rowEl;
+      // notion-motion.md Round 57 §5: a bar's menu that does not fit below opens above, its bottom on the pointer.
+      // Its top must stay 12px (the card menu's margin) clear of the window; Notion's threshold lies in 8.1..13.1.
+      const flip = rowEl.matches('[data-blok-database-timeline-bar]') ? 0 : undefined;
 
-      this.openCardMenu(anchor, rowEl, rowId);
+      this.openCardMenu(anchor, rowEl, rowId, undefined, 'card', flip);
       if (anchor !== rowEl) this.cardMenuPopover?.on(PopoverEvent.Closed, () => anchor.remove());
     });
     boardEl.addEventListener('click', (event) => {
@@ -9978,7 +9981,7 @@ export class DatabaseTool implements BlockTool {
    * Board and gallery carry Layout and Property visibility; a list row does not (research/12 §3).
    * A timeline bar has no Comment; its table panel row does (research/22 §11).
    */
-  private openCardMenu(anchor: HTMLElement, cardEl: HTMLElement, rowId: string, at?: OpenMenuOptions['at'], kind: 'card' | 'handle' = 'card'): void {
+  private openCardMenu(anchor: HTMLElement, cardEl: HTMLElement, rowId: string, at?: OpenMenuOptions['at'], kind: 'card' | 'handle' = 'card', coverFlipOffset?: number): void {
     const type = this.shownView()?.type;
 
     this.openRowMenu(rowId, anchor, cardEl, {
@@ -9986,6 +9989,7 @@ export class DatabaseTool implements BlockTool {
       comment: !cardEl.hasAttribute('data-blok-database-timeline-bar'),
       kind,
       ...(at !== undefined ? { at } : {}),
+      ...(coverFlipOffset !== undefined ? { coverFlipOffset } : {}),
     });
   }
 
@@ -10004,7 +10008,7 @@ export class DatabaseTool implements BlockTool {
    * `rowMenuItems` as the table's ⋮⋮ so they cannot drift. `card` keeps its
    * hover buttons while the menu is up.
    */
-  private openRowMenu(rowId: string, anchor: HTMLElement, card: HTMLElement, options: { viewSettings: boolean; comment?: boolean; at?: OpenMenuOptions['at']; kind?: 'card' | 'handle'; viewportMargin?: number }): void {
+  private openRowMenu(rowId: string, anchor: HTMLElement, card: HTMLElement, options: { viewSettings: boolean; comment?: boolean; at?: OpenMenuOptions['at']; kind?: 'card' | 'handle'; viewportMargin?: number; coverFlipOffset?: number }): void {
     const comment = options.comment === false ? undefined : this.commentLever().comment;
     const writable = (): boolean => !this.readOnly && !this.destroyed;
     const listTargets = (): Array<{ id: string; title: string }> => this.moveTargets();
@@ -10053,6 +10057,7 @@ export class DatabaseTool implements BlockTool {
       kind: options.kind ?? 'card',
       ...(options.at !== undefined ? { at: options.at } : {}),
       ...(options.viewportMargin !== undefined ? { viewportMargin: options.viewportMargin } : {}),
+      ...(options.coverFlipOffset !== undefined ? { coverFlipOffset: options.coverFlipOffset } : {}),
       searchPlaceholder: this.api.i18n.t('tools.database.searchActions'),
       onClose: () => {
         card.removeAttribute('data-popover-open');

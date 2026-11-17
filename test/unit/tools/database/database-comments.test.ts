@@ -379,6 +379,27 @@ describe('DatabaseTool — comments on the timeline', () => {
     expect(document.querySelector('[data-blok-database-menu-point]')).toBeNull();
   });
 
+  // notion-motion.md Round 57 §5: a menu that does not fit below opens above, its bottom on the pointer,
+  // when its top stays 12px clear of the window (y 472 → top 13.1); else it is clamped 12px over the bottom (y 467 → 246).
+  it.each([
+    [472, 101],
+    [380, 334],
+  ])('opens a bar\'s right-click menu above a pointer at y %i when it fits there (top %i)', (y, top) => {
+    const { el } = buildTool(timelineDoc(), { comments: { open: vi.fn() } }, timelineData());
+    const bar = barOf(el, 'a');
+    const real = Element.prototype.getBoundingClientRect;
+
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(371);
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      return this.hasAttribute('data-blok-database-menu-point') ? new DOMRect(900, y, 0, 0) : real.call(this);
+    });
+    bar.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 900, clientY: y }));
+    const menu = document.querySelector<HTMLElement>('.blok-database-card-menu');
+
+    expect(menu?.style.top).toBe(`${top}px`);
+  });
+
   it('keeps a table panel row\'s right-click menu on the row', () => {
     const { el } = buildTool(timelineDoc(), { comments: { open: vi.fn() } }, timelineData());
 

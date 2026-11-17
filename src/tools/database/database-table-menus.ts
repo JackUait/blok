@@ -223,6 +223,8 @@ export interface OpenMenuOptions {
   offset?: number;
   /** The menu's end edge on the anchor's end edge. */
   alignEnd?: boolean;
+  /** A card menu that does not fit below opens above, its bottom this far over the anchor's top, when it fits there. */
+  coverFlipOffset?: number;
 }
 
 const MENU_CLASS = {
@@ -278,6 +280,7 @@ export const openMenu = (
     ...(options.searchPlaceholder !== undefined ? { messages: { search: options.searchPlaceholder } } : {}),
     ...(options.viewportMargin !== undefined ? { viewportMargin: options.viewportMargin } : {}),
     ...(options.offset !== undefined ? { offset: options.offset } : {}),
+    ...(options.coverFlipOffset !== undefined ? { coverFlipOffset: options.coverFlipOffset } : {}),
   };
   const at = options.at;
   const popover = new PopoverDesktop(at === undefined ? params : { ...params, position: at.position, positionContext: at.positionContext });

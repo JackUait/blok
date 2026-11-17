@@ -603,6 +603,71 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     });
   });
 
+  // notion-motion.md Round 60 §4, Round 61 §4: a right-click on a feed card's blank area opens the database
+  // block's own menu at the pointer (1px under it, or flipped above), not core's menu 8px under it.
+  // Round 60 §4: on the title text Notion shows no menu of its own, so that stays the browser's.
+  describe('feed card right-click', () => {
+    const feed = (readOnly = false): { el: HTMLElement; toggle: ReturnType<typeof vi.fn> } => {
+      const doc = oneRow();
+      const toggle = vi.fn();
+
+      Object.assign(doc.api, { toolbar: { toggleBlockSettings: toggle, close: vi.fn() } });
+      const { el } = buildTool(doc, {}, viewData('feed'), readOnly);
+
+      return { el, toggle };
+    };
+    const card = (el: HTMLElement): HTMLElement => {
+      const found = el.querySelector<HTMLElement>('[data-blok-database-feed-card][data-row-id="a"]');
+
+      if (found === null) throw new Error('no feed card');
+
+      return found;
+    };
+    const rightClickAt = (target: Element, clientX: number, clientY: number): { event: MouseEvent; reachedCore: boolean } => {
+      const state = { reachedCore: false };
+      const core = (): void => {
+        state.reachedCore = true;
+      };
+
+      document.body.addEventListener('contextmenu', core);
+      const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX, clientY });
+
+      target.dispatchEvent(event);
+      document.body.removeEventListener('contextmenu', core);
+
+      return { event, reachedCore: state.reachedCore };
+    };
+
+    it('opens the database block\'s menu at the pointer, in place of core\'s', () => {
+      const { el, toggle } = feed();
+      const target = card(el);
+      const { event, reachedCore } = rightClickAt(target, 700, 350);
+
+      expect(toggle).toHaveBeenCalledWith(true, target, { at: { x: 700, y: 350 } });
+      expect(event.defaultPrevented).toBe(true);
+      expect(reachedCore).toBe(false);
+    });
+
+    it('leaves a right-click on the title text to the browser', () => {
+      const { el, toggle } = feed();
+      const title = card(el).querySelector('[data-blok-database-feed-title]');
+
+      if (title === null) throw new Error('no title');
+      const { event } = rightClickAt(title, 600, 380);
+
+      expect(toggle).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('opens nothing of its own for a reader', () => {
+      const { el, toggle } = feed(true);
+
+      rightClickAt(card(el), 700, 350);
+
+      expect(toggle).not.toHaveBeenCalled();
+    });
+  });
+
   // notion-motion.md Round 16 §6 and Round 17 §2: the feed ⋯ menu's top-left is the click point, 1px down,
   // and it stays 12px above the window bottom.
   describe('feed card ⋯ menu placement', () => {

@@ -561,6 +561,46 @@ describe('BlockSettings', () => {
     getTunesItemsSpy.mockRestore();
   });
 
+  // notion-motion.md Round 60 §4: a database's menu opened by a right-click sits 1px under the pointer,
+  // or above with its bottom on it, 12px from the window edges, like the database's other pointer menus.
+  it('opens at a pointer point: 1px under it, flipped above onto it, 12px from the window', async () => {
+    blockSettings.make();
+
+    const block = createBlock();
+
+    blokMock.BlockManager.currentBlock = block;
+
+    const selectionStub = { save: vi.fn(), restore: vi.fn(), clearSaved: vi.fn() };
+
+    (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
+
+    const getTunesItemsSpy = vi.spyOn(blockSettings as unknown as {
+      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+    }, 'getTunesItems').mockResolvedValue([]);
+
+    const card = document.createElement('div');
+
+    await blockSettings.open(block, card, { at: { x: 120, y: 240 } });
+
+    const params = getLastPopover()?.params as {
+      position?: DOMRect;
+      trigger?: HTMLElement;
+      placeLeftOfAnchor?: boolean;
+      cover?: boolean;
+      coverFlipOffset?: number;
+      viewportMargin?: number;
+    };
+
+    expect(params?.position).toMatchObject({ x: 120, y: 241, width: 0, height: 0 });
+    expect(params?.cover).toBe(true);
+    expect(params?.coverFlipOffset).toBe(1);
+    expect(params?.viewportMargin).toBe(12);
+    expect(params?.placeLeftOfAnchor).toBe(false);
+    expect(params?.trigger).toBe(card);
+
+    getTunesItemsSpy.mockRestore();
+  });
+
   // Regression: the keyboard (⌘+/) and API paths open block settings without
   // an anchor. The old fallback anchored the popover to the settings wrapper —
   // an empty 0x0 div whose rect is all zeros whenever the toolbar is hidden —

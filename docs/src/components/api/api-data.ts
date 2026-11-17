@@ -2513,7 +2513,7 @@ editor.toolbar.toggleBlockSettings(true, triggerEl, { placeLeftOfAnchor: false }
             required: false,
             default: "undefined",
             description:
-              "Placement overrides. `placeLeftOfAnchor` is already `true` when you pass a trigger element. Set it to `false` to open the popover to the right of the trigger instead.",
+              "Placement overrides. `placeLeftOfAnchor` is already `true` when you pass a trigger element. Set it to `false` to open the popover to the right of the trigger instead. Pass `at: { x, y }`, such as a right-click's point, to open the menu 1px under that point, or above it when there is no room below.",
           },
         ],
       },

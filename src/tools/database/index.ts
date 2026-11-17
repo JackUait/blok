@@ -382,6 +382,10 @@ const BOARD_GROUP_PAGE = 10;
  * near a window edge it slides in to `margin` from it instead of turning to end at the button.
  * Above, its bottom sits `offset` over the button's top. The top and bottom keep no margin.
  */
+/** Core's rule for a right-click that keeps the browser menu: the element holds text itself. */
+const ownsText = (target: Element | null | undefined): boolean =>
+  Array.from(target?.childNodes ?? []).some((node) => node.nodeType === Node.TEXT_NODE && (node.textContent ?? '').trim() !== '');
+
 const groupMenuCoverPlacement = (anchor: HTMLElement, margin: number, offset: number): Pick<PopoverDesktopParams, 'cover' | 'viewportMargin' | 'coverFlipOffset' | 'coverVerticalMargin'> & { position: DOMRect; positionContext: HTMLElement } => {
   const rect = anchor.getBoundingClientRect();
 
@@ -9933,6 +9937,16 @@ export class DatabaseTool implements BlockTool {
 
       // A field being edited keeps the native menu, for copy and paste.
       if ((target?.closest('input, textarea, [contenteditable="true"]') ?? null) !== null) return;
+      const feedCard = target?.closest<HTMLElement>('[data-blok-database-feed-card]');
+
+      // notion-motion.md Round 60 §4: a feed card opens the database block's menu at the pointer; text keeps the browser's, as in core.
+      if (feedCard !== null && feedCard !== undefined && !this.readOnly && !ownsText(target)) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.api.toolbar.toggleBlockSettings(true, feedCard, { at: { x: event.clientX, y: event.clientY } });
+
+        return;
+      }
       if (rowEl === null || rowEl === undefined || rowId === null || rowId === undefined) return;
       event.preventDefault();
       // Core opens its block menu on a right-click; this menu replaces it.

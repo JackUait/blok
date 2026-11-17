@@ -1,4 +1,5 @@
 import type { MenuConfigItem } from '../../../../types/tools';
+import type { ToolbarBlockSettingsOptions } from '../../../../types/api';
 import type { BlockTuneRenderContext } from '../../../../types/block-tunes/block-tune';
 import type { UserInfo } from '../../../../types/configs/user-info';
 import { Module } from '../../__module';
@@ -221,7 +222,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   public async open(
     targetBlock?: Block,
     anchor?: HTMLElement | DOMRect,
-    options?: { placeLeftOfAnchor?: boolean }
+    options?: ToolbarBlockSettingsOptions
   ): Promise<void> {
     /**
      * readOnly: { hideControls: true } — no block settings popover at all
@@ -241,7 +242,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
      * wrapper for mounting.
      */
     const trigger = anchor instanceof HTMLElement ? anchor : undefined;
-    const providedAnchorRect = anchor instanceof HTMLElement ? undefined : anchor;
+    const at = options?.at;
+    const pointRect = at === undefined ? undefined : new DOMRect(at.x, at.y + 1, 0, 0);
+    const providedAnchorRect = pointRect ?? (anchor instanceof HTMLElement ? undefined : anchor);
 
     const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
     const hasMultipleBlocksSelected = selectedBlocks.length > 1;
@@ -373,6 +376,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
          * motion deltas through nested scrolling.
          */
         positionContext: block.holder,
+        // A pointer point: the top 1px under it, else the bottom on it (coverFlipOffset 1 from the rect's y + 1).
+        ...(at === undefined ? {} : { cover: true, coverFlipOffset: 1, viewportMargin: 12 }),
       };
       const popoverParams: PopoverParams & { flipper?: Flipper } = anchorRect === undefined
         ? popoverBaseParams

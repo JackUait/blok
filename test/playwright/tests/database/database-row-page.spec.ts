@@ -548,7 +548,7 @@ test.describe('side peek width', () => {
     const widening = await handle.evaluate((el) => el.getAnimations().map((a) => (a as CSSTransition).transitionProperty));
 
     // Chromium names the running transition by its physical side.
-    expect(widening).toContain('padding-right');
+    expect(widening).toEqual(expect.arrayContaining(['padding-right']));
     await expect.poll(() => handle.evaluate((el) => getComputedStyle(el).paddingInlineEnd)).toBe('0px');
     await expect(host).toHaveCount(0);
   });

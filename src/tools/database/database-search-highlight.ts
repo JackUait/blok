@@ -22,7 +22,7 @@ const ROW_TEXT = [
   '[data-blok-database-timeline-bar-title]',
 ].join(', ');
 
-const CHROME = '[data-blok-database-title-row], [data-blok-database-view-bar], [data-blok-database-filter-bar]';
+const CHROME = '[data-blok-database-title-row], [data-blok-database-view-bar], [data-blok-database-filter-bar], [data-blok-database-table-open]';
 
 /** `CSS.highlights` is document-global; each database keeps its own ranges. */
 const paints = new Map<unknown, Range[]>();

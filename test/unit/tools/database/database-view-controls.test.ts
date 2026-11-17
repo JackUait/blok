@@ -2676,6 +2676,26 @@ describe('DatabaseViewControls', () => {
 
       expect(registry.has('blok-database-search-match')).toBe(false);
     });
+
+    it('never tints the OPEN pill inside a timeline panel title', () => {
+      const { controls } = setup();
+      const root = document.createElement('div');
+      const body = document.createElement('div');
+
+      body.innerHTML = '<div data-blok-database-timeline-table-title><span>Open day</span>'
+        + '<button data-blok-database-table-open><span></span><span>Open</span></button></div>';
+      root.append(controls.toolbar, controls.filterBar, body);
+      document.body.append(root);
+
+      click('database-toolbar-search');
+      const input = q('database-search-input') as HTMLInputElement;
+
+      input.value = 'open';
+      input.dispatchEvent(new Event('input'));
+
+      expect(registry.get('blok-database-search-match')?.ranges.map((range) => range.toString())).toEqual(['Open']);
+      expect(registry.get('blok-database-search-match')?.ranges[0]?.startContainer.parentElement?.closest('[data-blok-database-table-open]')).toBeNull();
+    });
   });
   describe('Filter toggles the chip bar; » minimizes it (Notion)', () => {
     const withFilter = (): ReturnType<typeof setup> => {

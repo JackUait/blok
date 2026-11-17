@@ -65,10 +65,11 @@ export const cardAutoScrollSpeed = (distance: number, width = 630): number => {
 
 /**
  * Board cards near the page's top or bottom. notion-motion.md Round 30 §5: about
- * 1.46 px/ms at 17px and 1.5 px/ms at 16px. Notion's zone width is unread, so
- * it takes the rows' 35px zone (Round 17 §1).
+ * 1.46 px/ms at 17px and 1.5 px/ms at 16px. Round 63 §3, a 2px-step sweep: the scroll
+ * starts 65 above the bottom and 64 under the top at 0.083-0.092 px/ms. A move arms
+ * it and the next one starts it, so the zone reaches 67. Between 17 and 65 it is fitted.
  */
-export const cardVerticalAutoScrollSpeed = (distance: number): number => (distance <= 35 ? 1.5 : 0);
+export const cardVerticalAutoScrollSpeed = ramp([[16, 1.5], [17, 1.46], [65, 0.09], [67, 0.09]]);
 
 type Where = 'zone' | 'out' | 'past';
 

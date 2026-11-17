@@ -362,12 +362,36 @@ describe('database drags scroll near an edge', () => {
     expect(900 - page.scrollTop).toBeLessThan(1.6 * 104);
   });
 
-  // The zone width is unread in Notion; the cards take the rows' 35px zone (Round 17 §1).
-  it('a board card held 40px above the window bottom does not scroll the page', () => {
+  // notion-motion.md Round 63 §3: held 65px above the bottom, Notion scrolls about 0.083-0.092 px/ms.
+  it('a board card held 65px above the window bottom scrolls the page down slowly', () => {
     const { page, card, drag } = pagedBoard();
 
     drag.beginTracking('c1', 300, 170, card);
-    enter(400, 410);
+    enter(400, 385);
+    runFrames(0, 600);
+
+    expect(page.scrollTop).toBeGreaterThan(0.07 * 576);
+    expect(page.scrollTop).toBeLessThan(0.11 * 600);
+  });
+
+  // Round 63 §3: 64px under the frame top it scrolls back up.
+  it('a board card held 64px under the page frame\'s top scrolls the page up', () => {
+    const { page, card, drag } = pagedBoard();
+
+    page.scrollTop = 900;
+    drag.beginTracking('c1', 300, 170, card);
+    enter(400, 108);
+    runFrames(0, 600);
+
+    expect(900 - page.scrollTop).toBeGreaterThan(0.07 * 576);
+  });
+
+  // Round 63 §3, 2px steps: a move at 69 from the bottom (or 68 from the top) does not arm the scroll.
+  it('a board card held 69px above the window bottom does not scroll the page', () => {
+    const { page, card, drag } = pagedBoard();
+
+    drag.beginTracking('c1', 300, 170, card);
+    enter(400, 381);
     runFrames(0, 240);
 
     expect(page.scrollTop).toBe(0);

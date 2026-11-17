@@ -302,23 +302,27 @@ describe('options editor (Edit property for select, multi-select and status)', (
     });
 
     // A passed row slides to the slot it takes, so it jumps the group heading instead of sliding over it.
-    it('a passed row slides into the dragged row\'s slot, past the heading between them', () => {
+    // notion-motion.md Round 57 §4 (r57-n-epdrag.raw): Done dragged up from Complete to the list top. The passed
+    // "Not started" slides one row, 290 -> 318 (28 px), not into Done's slot past the group headings.
+    it('a passed row slides one row (28 px), not past the headings between it and the dragged row\'s slot', () => {
       const { root } = mount(statusProp());
       const row = (id: string): HTMLElement | null => root.querySelector<HTMLElement>(`[data-blok-database-select-option="${id}"]`);
 
-      ['n', 'i', 'd'].forEach((id, index) => {
-        const el = row(id);
+      [['n', 290], ['i', 351], ['d', 412]].forEach(([id, top]) => {
+        const el = row(String(id));
 
-        if (el !== null) vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, index * 60, 200, 28));
+        if (el !== null) vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, Number(top), 292, 28));
       });
-      row('n')?.querySelector('[data-blok-database-select-option-handle]')
-        ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientY: 10, button: 0 }));
-      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientY: 100 }));
+      row('d')?.querySelector('[data-blok-database-select-option-handle]')
+        ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientY: 426, button: 0 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientY: 280 }));
 
-      expect(row('i')?.style.transform).toBe('translateY(-60px)');
-      expect(row('d')?.style.transform).toBe('');
-      expect(row('n')?.style.transform).toBe('translateY(90px)');
-      document.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true }));
+      expect(row('n')?.style.transform).toBe('translateY(28px)');
+      expect(row('i')?.style.transform).toBe('translateY(28px)');
+      expect(row('d')?.style.transform).toBe('translateY(-122px)');
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientY: 280 }));
+      // Where it lands is unchanged: the top of the list, in the first group.
+      expect(rowIds(root)).toEqual(['d', 'n', 'i']);
     });
 
     // notion-motion.md Round 56 §5 "Status option menu": a click on the option row opens a separate 220 menu,

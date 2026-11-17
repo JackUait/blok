@@ -199,8 +199,8 @@ interface DragState {
   startY: number;
   /** Pickup centres of `others`, so the slides never move the drop slots. */
   centers: number[];
-  /** Pickup tops of the shown rows, the dragged one too: a passed row slides to its new slot's top, past any heading. */
-  slots: number[];
+  /** How far a passed row slides: one row, the dragged row's height plus the list gap, even across a group heading (notion-motion.md Round 57 §4). */
+  step: number;
   /** How far the dragged row may move before it leaves the list. */
   minDy: number;
   maxDy: number;
@@ -236,6 +236,7 @@ export class OptionDrag {
     const row = this.row(id);
     const rect = row?.getBoundingClientRect();
     const rects = options.map((option) => this.row(option.id)?.getBoundingClientRect()).filter((r): r is DOMRect => r !== undefined);
+    const gap = row?.parentElement === null || row?.parentElement === undefined ? 0 : Number.parseFloat(getComputedStyle(row.parentElement).rowGap) || 0;
 
     this.drag = {
       id,
@@ -249,7 +250,7 @@ export class OptionDrag {
 
         return r === undefined ? 0 : r.top + r.height / 2;
       }),
-      slots: rects.map((r) => r.top),
+      step: (rect?.height ?? 0) + gap,
       minDy: rect === undefined ? 0 : Math.min(0, ...rects.map((r) => r.top - rect.top)),
       maxDy: rect === undefined ? 0 : Math.max(0, ...rects.map((r) => r.bottom - rect.bottom)),
     };
@@ -297,11 +298,10 @@ export class OptionDrag {
     if (dragged !== null) dragged.style.transform = `translateY(${dy}px)`;
     drag.others.forEach((option, index) => {
       const row = this.row(option.id);
-      const from = drag.slots[index < drag.home ? index : index + 1];
-      const to = drag.slots[index < drag.index ? index : index + 1];
-      const shift = from === undefined || to === undefined ? 0 : to - from;
+      const down = index < drag.home && index >= drag.index;
+      const up = index >= drag.home && index < drag.index;
 
-      if (row !== null) row.style.transform = shift === 0 ? '' : `translateY(${shift}px)`;
+      if (row !== null) row.style.transform = down || up ? `translateY(${down ? drag.step : -drag.step}px)` : '';
     });
   };
 

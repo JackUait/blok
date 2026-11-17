@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "ಇಲ್ಲಿಗೆ ಸರಿಸಿ",
   "tools.database.moveToPlaceholder": "ಪುಟವನ್ನು ಇಲ್ಲಿಗೆ ಸರಿಸಿ…",
   "tools.database.moveToPages": "ಪುಟಗಳು",
+  "tools.database.moveToWorkspace": "ಕಾರ್ಯಕ್ಷೇತ್ರ",
   "tools.database.movedRowTo": "{title} ಅನ್ನು {target} ಗೆ ಸರಿಸಲಾಗಿದೆ",
   "tools.database.searchActions": "ಕ್ರಿಯೆಗಳನ್ನು ಹುಡುಕಿ…",
   "tools.database.rowLastEditedBy": "{name} ಕೊನೆಯದಾಗಿ ಸಂಪಾದಿಸಿದ್ದಾರೆ",

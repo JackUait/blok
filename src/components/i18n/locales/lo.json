@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "ຍ້າຍໄປ",
   "tools.database.moveToPlaceholder": "ຍ້າຍໜ້າໄປ…",
   "tools.database.moveToPages": "ໜ້າ",
+  "tools.database.moveToWorkspace": "ພື້ນທີ່ເຮັດວຽກ",
   "tools.database.movedRowTo": "ຍ້າຍ {title} ໄປ {target} ແລ້ວ",
   "tools.database.searchActions": "ຄົ້ນຫາການດຳເນີນການ…",
   "tools.database.rowLastEditedBy": "ແກ້ໄຂລ່າສຸດໂດຍ {name}",

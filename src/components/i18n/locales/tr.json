@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "Şuraya taşı",
   "tools.database.moveToPlaceholder": "Sayfayı taşı…",
   "tools.database.moveToPages": "Sayfalar",
+  "tools.database.moveToWorkspace": "Çalışma alanı",
   "tools.database.movedRowTo": "{title}, {target} sayfasına taşındı",
   "tools.database.searchActions": "Eylem arayın…",
   "tools.database.rowLastEditedBy": "Son düzenleyen: {name}",

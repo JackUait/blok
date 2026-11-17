@@ -824,6 +824,40 @@ describe('cell editor CSS', () => {
       expect(declared(`${REST} [role='option']`, 'padding-inline')).toEqual(['var(--blok-space-3-25) var(--blok-space-3)']);
     });
 
+    // Round 62 §1: a Workspace row's chevron 20 at +14, icon 16 at +37, title 14/21 at +60; a level is +14 more.
+    describe('Workspace tree', () => {
+      const TREE_ROW = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu']:not([data-blok-database-move-searched]) [role='option'][data-blok-page-picker-tree-row]";
+      const CHEVRON = `${MOVE} [data-blok-testid='page-picker-tree-chevron']`;
+
+      it('starts each level 14px further in', () => {
+        expect(declared(TREE_ROW, 'padding-inline')).toEqual(['calc(var(--blok-space-3-5) * (1 + var(--blok-page-picker-depth, 0))) var(--blok-space-3)']);
+        expect(declared(TREE_ROW, 'padding-block')).toEqual(['0']);
+        expect(declared(TREE_ROW, 'gap')).toEqual(['0']);
+        expect(declared(TREE_ROW, 'align-items')).toEqual(['center']);
+        expect(declared(`${TREE_ROW} > div > *`, 'line-height')).toEqual(['21px']);
+      });
+
+      it('puts the 20 chevron, then the 16 icon 3px after it, then the title 7px after that', () => {
+        expect(declared(CHEVRON, 'width')).toEqual(['20px']);
+        expect(declared(CHEVRON, 'height')).toEqual(['20px']);
+        expect(declared(CHEVRON, 'margin-inline-end')).toEqual(['var(--blok-space-0-75)']);
+        expect(declared(CHEVRON, 'border-radius')).toEqual(['var(--blok-radius-control-sm)']);
+        expect(declared(CHEVRON, 'color')).toEqual(['var(--blok-database-table-header-icon)']);
+        expect(declared(`${CHEVRON} svg`, 'width')).toEqual(['12px']);
+        expect(declared(`${TREE_ROW} [data-blok-testid='page-picker-option-icon']`, 'width')).toEqual(['16px']);
+        expect(declared(`${TREE_ROW} [data-blok-testid='page-picker-option-icon']`, 'height')).toEqual(['16px']);
+        expect(declared(`${TREE_ROW} [data-blok-testid='page-picker-option-icon']`, 'margin-inline-end')).toEqual(['var(--blok-space-1-75)']);
+      });
+
+      it('turns the chevron 90° while the row is open', () => {
+        // The second is the reduced-motion rule.
+        expect(declared(`${CHEVRON} svg`, 'transition')).toEqual(['transform 0.2s ease-in-out', 'none']);
+        expect(declared(`${MOVE} [data-blok-page-picker-expanded='true'] [data-blok-testid='page-picker-tree-chevron'] svg`, 'transform')).toEqual(['rotate(90deg)']);
+        expect(declared(`[dir="rtl"] ${CHEVRON} svg`, 'transform')).toEqual(['scaleX(-1)']);
+        expect(declared(`[dir="rtl"] ${MOVE} [data-blok-page-picker-expanded='true'] [data-blok-testid='page-picker-tree-chevron'] svg`, 'transform')).toEqual(['scaleX(-1) rotate(90deg)']);
+      });
+    });
+
     it('types the query at 14/20', () => {
       expect(declared(`${MOVE} [data-blok-field] input`, 'font-size')).toEqual(['14px']);
       expect(declared(`${MOVE} [data-blok-field] input`, 'line-height')).toEqual(['20px']);

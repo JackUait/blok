@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "ބަދަލުކުރޭ",
   "tools.database.moveToPlaceholder": "ސަފްހާ ބަދަލުކުރާނީ…",
   "tools.database.moveToPages": "ސަފްހާތައް",
+  "tools.database.moveToWorkspace": "ވޯކްސްޕޭސް",
   "tools.database.movedRowTo": "{title} {target} އަށް ބަދަލުކުރެވިއްޖެ",
   "tools.database.searchActions": "އަމަލުތައް ހޯދާ…",
   "tools.database.rowLastEditedBy": "{name} އެންމެ ފަހުން އެޑިޓްކުރީ",

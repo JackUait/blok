@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "移至",
   "tools.database.moveToPlaceholder": "将页面移至…",
   "tools.database.moveToPages": "页面",
+  "tools.database.moveToWorkspace": "工作区",
   "tools.database.movedRowTo": "已将 {title} 移至 {target}",
   "tools.database.searchActions": "搜索操作…",
   "tools.database.rowLastEditedBy": "最后由 {name} 编辑",

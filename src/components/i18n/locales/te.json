@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "ఇక్కడికి తరలించు",
   "tools.database.moveToPlaceholder": "పేజీని ఇక్కడికి తరలించు…",
   "tools.database.moveToPages": "పేజీలు",
+  "tools.database.moveToWorkspace": "కార్యస్థలం",
   "tools.database.movedRowTo": "{title}ని {target}కి తరలించారు",
   "tools.database.searchActions": "చర్యలను వెతకండి…",
   "tools.database.rowLastEditedBy": "{name} చివరిగా సవరించారు",

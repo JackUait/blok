@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "Verschieben nach",
   "tools.database.moveToPlaceholder": "Seite verschieben nach…",
   "tools.database.moveToPages": "Seiten",
+  "tools.database.moveToWorkspace": "Arbeitsbereich",
   "tools.database.movedRowTo": "{title} nach {target} verschoben",
   "tools.database.searchActions": "Aktionen suchen…",
   "tools.database.rowLastEditedBy": "Zuletzt bearbeitet von {name}",

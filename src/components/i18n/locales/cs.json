@@ -1286,6 +1286,7 @@
   "tools.database.tableMoveTo": "Přesunout do",
   "tools.database.moveToPlaceholder": "Přesunout stránku do…",
   "tools.database.moveToPages": "Stránky",
+  "tools.database.moveToWorkspace": "Pracovní prostor",
   "tools.database.movedRowTo": "{title} přesunuto do {target}",
   "tools.database.searchActions": "Hledat akce…",
   "tools.database.rowLastEditedBy": "Naposledy upraveno uživatelem {name}",

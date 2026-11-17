@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "यसमा सार्नुहोस्",
   "tools.database.moveToPlaceholder": "पृष्ठ सार्नुहोस्…",
   "tools.database.moveToPages": "पृष्ठहरू",
+  "tools.database.moveToWorkspace": "कार्यक्षेत्र",
   "tools.database.movedRowTo": "{title} लाई {target} मा सारियो",
   "tools.database.searchActions": "कार्यहरू खोज्नुहोस्…",
   "tools.database.rowLastEditedBy": "{name} द्वारा अन्तिम सम्पादन",

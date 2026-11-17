@@ -1276,6 +1276,7 @@
   "tools.database.tableMoveTo": "Premjesti u",
   "tools.database.moveToPlaceholder": "Premjesti stranicu u…",
   "tools.database.moveToPages": "Stranice",
+  "tools.database.moveToWorkspace": "Radni prostor",
   "tools.database.movedRowTo": "{title} premješteno u {target}",
   "tools.database.searchActions": "Pretraži radnje…",
   "tools.database.rowLastEditedBy": "Posljednja izmjena: {name}",

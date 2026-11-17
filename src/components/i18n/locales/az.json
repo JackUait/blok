@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "Bura köçür",
   "tools.database.moveToPlaceholder": "Səhifəni köçür…",
   "tools.database.moveToPages": "Səhifələr",
+  "tools.database.moveToWorkspace": "İş sahəsi",
   "tools.database.movedRowTo": "{title} {target} səhifəsinə köçürüldü",
   "tools.database.searchActions": "Əməliyyatları axtar…",
   "tools.database.rowLastEditedBy": "{name} tərəfindən son redaktə",

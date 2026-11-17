@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "သို့ ရွှေ့ရန်",
   "tools.database.moveToPlaceholder": "စာမျက်နှာကို ရွှေ့ရန်…",
   "tools.database.moveToPages": "စာမျက်နှာများ",
+  "tools.database.moveToWorkspace": "အလုပ်ခွင်",
   "tools.database.movedRowTo": "{title} ကို {target} သို့ ရွှေ့ပြီးပါပြီ",
   "tools.database.searchActions": "လုပ်ဆောင်ချက်များ ရှာပါ…",
   "tools.database.rowLastEditedBy": "{name} မှ နောက်ဆုံးတည်းဖြတ်သည်",

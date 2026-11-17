@@ -1286,6 +1286,7 @@
   "tools.database.tableMoveTo": "Perkelti į",
   "tools.database.moveToPlaceholder": "Perkelti puslapį į…",
   "tools.database.moveToPages": "Puslapiai",
+  "tools.database.moveToWorkspace": "Darbo sritis",
   "tools.database.movedRowTo": "{title} perkeltas į {target}",
   "tools.database.searchActions": "Ieškoti veiksmų…",
   "tools.database.rowLastEditedBy": "Paskutinį kartą redagavo {name}",

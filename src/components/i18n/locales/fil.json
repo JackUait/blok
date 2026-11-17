@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "Ilipat sa",
   "tools.database.moveToPlaceholder": "Ilipat ang pahina sa…",
   "tools.database.moveToPages": "Mga pahina",
+  "tools.database.moveToWorkspace": "Lugar ng trabaho",
   "tools.database.movedRowTo": "Inilipat ang {title} sa {target}",
   "tools.database.searchActions": "Maghanap ng aksyon…",
   "tools.database.rowLastEditedBy": "Huling na-edit ni {name}",

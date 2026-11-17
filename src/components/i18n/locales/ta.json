@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "இதற்கு நகர்த்து",
   "tools.database.moveToPlaceholder": "பக்கத்தை இங்கு நகர்த்து…",
   "tools.database.moveToPages": "பக்கங்கள்",
+  "tools.database.moveToWorkspace": "பணியிடம்",
   "tools.database.movedRowTo": "{title} {target}-க்கு நகர்த்தப்பட்டது",
   "tools.database.searchActions": "செயல்களைத் தேடு…",
   "tools.database.rowLastEditedBy": "கடைசியாகத் திருத்தியவர்: {name}",

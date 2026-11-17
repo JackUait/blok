@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "වෙත ගෙන යන්න",
   "tools.database.moveToPlaceholder": "පිටුව ගෙන යන්න…",
   "tools.database.moveToPages": "පිටු",
+  "tools.database.moveToWorkspace": "වැඩබිම",
   "tools.database.movedRowTo": "{title} {target} වෙත ගෙන යන ලදී",
   "tools.database.searchActions": "ක්‍රියා සොයන්න…",
   "tools.database.rowLastEditedBy": "{name} විසින් අවසන් සංස්කරණය",

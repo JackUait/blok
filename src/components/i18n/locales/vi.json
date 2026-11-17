@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "Chuyển đến",
   "tools.database.moveToPlaceholder": "Chuyển trang đến…",
   "tools.database.moveToPages": "Trang",
+  "tools.database.moveToWorkspace": "Không gian làm việc",
   "tools.database.movedRowTo": "Đã chuyển {title} đến {target}",
   "tools.database.searchActions": "Tìm thao tác…",
   "tools.database.rowLastEditedBy": "Chỉnh sửa lần cuối bởi {name}",

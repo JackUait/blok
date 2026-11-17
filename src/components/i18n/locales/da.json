@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "Flyt til",
   "tools.database.moveToPlaceholder": "Flyt side til…",
   "tools.database.moveToPages": "Sider",
+  "tools.database.moveToWorkspace": "Arbejdsområde",
   "tools.database.movedRowTo": "{title} flyttet til {target}",
   "tools.database.searchActions": "Søg efter handlinger…",
   "tools.database.rowLastEditedBy": "Sidst redigeret af {name}",

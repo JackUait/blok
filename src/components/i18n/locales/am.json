@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "አንቀሳቅስ ወደ",
   "tools.database.moveToPlaceholder": "ገጹን አንቀሳቅስ ወደ…",
   "tools.database.moveToPages": "ገጾች",
+  "tools.database.moveToWorkspace": "የሥራ ቦታ",
   "tools.database.movedRowTo": "{title} ወደ {target} ተንቀሳቅሷል",
   "tools.database.searchActions": "እርምጃዎችን ፈልግ…",
   "tools.database.rowLastEditedBy": "የመጨረሻው አርትዖት በ{name}",

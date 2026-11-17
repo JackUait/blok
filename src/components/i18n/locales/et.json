@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "Teisalda",
   "tools.database.moveToPlaceholder": "Teisalda leht…",
   "tools.database.moveToPages": "Lehed",
+  "tools.database.moveToWorkspace": "Tööruum",
   "tools.database.movedRowTo": "{title} teisaldati lehele {target}",
   "tools.database.searchActions": "Otsi toiminguid…",
   "tools.database.rowLastEditedBy": "Viimati muutis {name}",

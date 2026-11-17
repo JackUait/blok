@@ -462,3 +462,238 @@ describe('row menu › Move to a page', () => {
     expect(page.create).toHaveBeenCalledTimes(1);
   });
 });
+
+/**
+ * notion-motion.md Round 62 §1 and Round 63 §2: after Suggested, a "Workspace"
+ * section lists the top pages as a tree. A row's chevron opens its children
+ * under it, one level deeper; the row itself still picks the page.
+ */
+describe('row menu › Move to › Workspace tree', () => {
+  const TREE: Record<string, Array<{ pageId: string; title: string; access?: 'none' }>> = {
+    '': [{ pageId: 'w-home', title: 'Home' }, { pageId: 'w-notes', title: 'Notes' }],
+    'w-home': [{ pageId: 'w-plans', title: 'Plans' }, { pageId: 'w-secret', title: 'Secret', access: 'none' }],
+    'w-plans': [{ pageId: 'w-q1', title: 'Q1' }],
+  };
+  const children = (): PageConfig['children'] => vi.fn(async (pageId: string | null) => TREE[pageId ?? ''] ?? []);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+  });
+
+  afterEach(() => {
+    editor?.destroy();
+    editor = undefined;
+    holder?.remove();
+    document.querySelectorAll('[data-blok-popover]').forEach((popover) => popover.remove());
+    vi.restoreAllMocks();
+  });
+
+  const sections = (): Array<string | null> => [...document.querySelectorAll('[data-blok-database-move-picker] [data-blok-page-picker-section]')]
+    .map((section) => section.textContent);
+  const treeRows = (): HTMLElement[] => options().filter((option) => option.hasAttribute('data-blok-page-picker-tree-row'));
+  const treeTitles = (): Array<string | null | undefined> => treeRows().map((row) => row.querySelector('.truncate')?.textContent);
+  const chevronOf = (title: string): HTMLElement => {
+    const chevron = treeRows().find((row) => row.querySelector('.truncate')?.textContent === title)
+      ?.querySelector<HTMLElement>('[data-blok-testid="page-picker-tree-chevron"]');
+
+    if (chevron === null || chevron === undefined) throw new Error(`no chevron on ${title}`);
+
+    return chevron;
+  };
+  const key = (name: string): void => {
+    searchInput()?.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true }));
+  };
+
+  it('has no Workspace section when the host has no children hook', async () => {
+    await boot(host());
+    await openPicker();
+
+    expect(sections()).toEqual(['Suggested']);
+    expect(treeRows()).toEqual([]);
+  });
+
+  it('lists the top pages under "Workspace" after Suggested, each with a chevron', async () => {
+    const page = host({ children: children() });
+
+    await boot(page, [...BLOCKS, database('db2', 'Projects', [])]);
+    await openPicker();
+
+    expect(page.children).toHaveBeenCalledWith(null);
+    expect(sections()).toEqual(['Suggested', 'Workspace']);
+    expect(treeTitles()).toEqual(['Home', 'Notes']);
+    expect(treeRows().every((row) => row.querySelector('[data-blok-testid="page-picker-tree-chevron"]') !== null)).toBe(true);
+    // Suggested rows and the database row keep their look.
+    expect(options().filter((option) => !option.hasAttribute('data-blok-page-picker-tree-row'))
+      .some((option) => option.querySelector('[data-blok-testid="page-picker-tree-chevron"]') !== null)).toBe(false);
+  });
+
+  it('opens a row\'s children under it, one level deeper, and closes them again, without picking', async () => {
+    const page = host({ children: children() });
+
+    await boot(page);
+    await openPicker();
+    chevronOf('Home').click();
+    await quiet();
+
+    expect(page.children).toHaveBeenCalledWith('w-home');
+    // The denied page is left out.
+    expect(treeTitles()).toEqual(['Home', 'Plans', 'Notes']);
+    expect(treeRows().map((row) => row.getAttribute('data-blok-page-picker-depth'))).toEqual(['0', '1', '0']);
+    expect(treeRows()[0]?.getAttribute('data-blok-page-picker-expanded')).toBe('true');
+    expect(document.querySelector('[data-blok-database-move-picker]')).not.toBeNull();
+    expect(page.create).not.toHaveBeenCalled();
+
+    chevronOf('Plans').click();
+    await quiet();
+    expect(treeTitles()).toEqual(['Home', 'Plans', 'Q1', 'Notes']);
+    expect(treeRows().map((row) => row.getAttribute('data-blok-page-picker-depth'))).toEqual(['0', '1', '2', '0']);
+
+    chevronOf('Home').click();
+    await quiet();
+    expect(treeTitles()).toEqual(['Home', 'Notes']);
+    expect(treeRows()[0]?.getAttribute('data-blok-page-picker-expanded')).toBe('false');
+  });
+
+  it('moves the row to a page picked in the tree', async () => {
+    const page = host({ children: children() });
+
+    await boot(page);
+    await openPicker();
+    chevronOf('Home').click();
+    await quiet();
+    await pick('Plans');
+
+    const init = page.create.mock.calls[0][0] as PageCreateInit;
+
+    expect(init.parentId).toBe('w-plans');
+    expect(announce).toHaveBeenCalledWith('Moved Alpha to Plans');
+  });
+
+  it('opens and closes the highlighted row with ArrowRight and ArrowLeft', async () => {
+    const page = host({ children: children(), search: vi.fn(async () => []) });
+
+    await boot(page);
+    await openPicker();
+    key('ArrowDown');
+    expect(treeRows()[0]?.getAttribute('aria-selected')).toBe('true');
+
+    key('ArrowRight');
+    await quiet();
+    expect(treeTitles()).toEqual(['Home', 'Plans', 'Notes']);
+    expect(treeRows()[0]?.getAttribute('aria-selected')).toBe('true');
+
+    key('ArrowDown');
+    key('ArrowLeft');
+    await quiet();
+    // Plans has no open children: nothing changes.
+    expect(treeTitles()).toEqual(['Home', 'Plans', 'Notes']);
+
+    key('ArrowUp');
+    key('ArrowLeft');
+    await quiet();
+    expect(treeTitles()).toEqual(['Home', 'Notes']);
+    expect(treeRows()[0]?.getAttribute('aria-selected')).toBe('true');
+    expect(searchInput()).toHaveFocus();
+  });
+
+  it('keeps the highlight on the parent when its open children close', async () => {
+    const page = host({ children: children(), search: vi.fn(async () => []) });
+
+    await boot(page);
+    await openPicker();
+    chevronOf('Home').click();
+    await quiet();
+    key('ArrowDown');
+    key('ArrowDown');
+    expect(treeRows()[1]?.getAttribute('aria-selected')).toBe('true');
+
+    chevronOf('Home').click();
+    await quiet();
+    expect(treeRows()[0]?.getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('drops an answer that arrives after the row was closed, and shows it once when reopened', async () => {
+    const answers: Array<() => void> = [];
+    const page = host({
+      children: vi.fn((pageId: string | null) => (pageId === null
+        ? Promise.resolve(TREE[''])
+        : new Promise((resolve) => { answers.push(() => resolve(TREE[pageId] ?? [])); }))),
+    });
+
+    await boot(page);
+    await openPicker();
+    chevronOf('Home').click();
+    await quiet();
+    chevronOf('Home').click();
+    await quiet();
+    answers.shift()?.();
+    await quiet();
+    expect(treeTitles()).toEqual(['Home', 'Notes']);
+
+    chevronOf('Home').click();
+    await quiet();
+    answers.shift()?.();
+    await quiet();
+    expect(treeTitles()).toEqual(['Home', 'Plans', 'Notes']);
+  });
+
+  it('drops an answer that arrives after the picker closed', async () => {
+    const answers: Array<() => void> = [];
+    const page = host({
+      children: vi.fn((pageId: string | null) => new Promise((resolve) => { answers.push(() => resolve(TREE[pageId ?? ''] ?? [])); })),
+    });
+
+    await boot(page);
+    await openPicker();
+    searchInput()?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await quiet();
+    await openPicker();
+    answers.shift()?.();
+    await quiet();
+
+    // The first picker's answer does not fill the second one.
+    expect(sections()).toEqual(['Suggested']);
+    answers.shift()?.();
+    await quiet();
+    expect(treeTitles()).toEqual(['Home', 'Notes']);
+  });
+
+  it('shows nothing for a row whose children fail to load, and no section when the top fails', async () => {
+    const failing = host({
+      children: vi.fn(async (pageId: string | null) => {
+        if (pageId === 'w-home') throw new Error('offline');
+
+        return TREE[pageId ?? ''] ?? [];
+      }),
+    });
+
+    await boot(failing);
+    await openPicker();
+    chevronOf('Home').click();
+    await quiet();
+    expect(treeTitles()).toEqual(['Home', 'Notes']);
+    expect(document.querySelector('[data-blok-database-move-picker]')).not.toBeNull();
+
+    editor?.destroy();
+    document.querySelectorAll('[data-blok-popover]').forEach((popover) => popover.remove());
+    await boot(host({ children: vi.fn(async () => { throw new Error('offline'); }) }));
+    await openPicker();
+    expect(sections()).toEqual(['Suggested']);
+  });
+
+  it('hides the Workspace section while a query is typed', async () => {
+    await boot(host({ children: children() }));
+    await openPicker();
+    const input = searchInput();
+
+    if (input === null) throw new Error('no field');
+    input.value = 'target';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await quiet();
+
+    expect(sections()).toEqual(['Pages']);
+    expect(treeRows()).toEqual([]);
+  });
+});

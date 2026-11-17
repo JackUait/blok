@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "ផ្លាស់ទីទៅ",
   "tools.database.moveToPlaceholder": "ផ្លាស់ទីទំព័រទៅ…",
   "tools.database.moveToPages": "ទំព័រ",
+  "tools.database.moveToWorkspace": "កន្លែងធ្វើការ",
   "tools.database.movedRowTo": "បានផ្លាស់ទី {title} ទៅ {target}",
   "tools.database.searchActions": "ស្វែងរកសកម្មភាព…",
   "tools.database.rowLastEditedBy": "កែសម្រួលចុងក្រោយដោយ {name}",

@@ -903,6 +903,90 @@ test.describe('property and row menus', () => {
     await expect.poll(async () => Math.round((await rect(option)).width)).toBe(322);
     await clearInside();
   });
+
+  // notion-motion.md Round 62 §1 and Round 63 §2: Workspace rows 330x28, chevron 20 at +14, icon 16 at +37, title at +60; a level is +14.
+  test('the Move to picker\'s Workspace tree opens a page\'s children 14px further in', async ({ page }) => {
+    await page.setViewportSize({ width: 1512, height: 717 });
+    await page.evaluate(async (input) => {
+      if (window.blokInstance) {
+        await window.blokInstance.destroy?.();
+        window.blokInstance = undefined;
+      }
+      document.getElementById('blok')?.remove();
+      const holder = document.createElement('div');
+      const tree: Record<string, Array<{ pageId: string; title: string }>> = {
+        '': [{ pageId: 'w-home', title: 'Home' }, { pageId: 'w-notes', title: 'Notes' }],
+        'w-home': [{ pageId: 'w-plans', title: 'Plans' }],
+      };
+
+      holder.id = 'blok';
+      holder.style.cssText = 'max-width:900px;margin:40px auto 0';
+      document.body.appendChild(holder);
+      window.blokInstance = new window.Blok({
+        holder,
+        data: { blocks: input },
+        tools: {
+          page: {
+            class: (window as unknown as { defaultBlockTools: Record<string, { class: unknown }> }).defaultBlockTools.page.class,
+            config: {
+              databasePages: true,
+              createFromMention: true,
+              search: async () => [],
+              children: async (pageId: string | null) => tree[pageId ?? ''] ?? [],
+              create: () => undefined,
+            },
+          },
+        },
+      });
+      await window.blokInstance.isReady;
+    }, blocks());
+    await expect(page.getByRole('grid').first()).toBeVisible();
+
+    const box = page.locator('[data-blok-database-move-picker] [data-blok-popover-container]');
+    const treeRow = (title: string): Locator => page.locator('[data-blok-database-move-picker] [data-blok-page-picker-tree-row]').filter({ hasText: title });
+    const rect = async (locator: Locator): Promise<{ x: number; y: number; width: number; height: number }> => {
+      const found = await locator.boundingBox();
+
+      if (found === null) throw new Error('no box');
+
+      return found;
+    };
+    const offsets = async (title: string): Promise<number[]> => {
+      const left = (await rect(box)).x;
+      const row = treeRow(title);
+
+      return [
+        (await rect(row.getByTestId('page-picker-tree-chevron'))).x - left,
+        (await rect(row.getByTestId('page-picker-option-icon'))).x - left,
+        (await rect(row.getByText(title, { exact: true }))).x - left,
+      ].map((value) => Math.round(value));
+    };
+
+    await page.locator('[data-row-id="r1"]').hover();
+    await page.locator('[data-row-id="r1"] [data-blok-database-table-row-handle]').click();
+    await clickSettled(openMenu(page).getByRole('menuitem', { name: 'Move to', exact: true }));
+    await expect(page.getByPlaceholder('Move page to…')).toBeFocused();
+    await expect(page.locator('[data-blok-database-move-picker] [data-blok-page-picker-section="workspace"]')).toHaveText('Workspace');
+    await box.evaluate((element) => Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished.catch(() => undefined))));
+
+    expect(await offsets('Home')).toEqual([14, 37, 60]);
+    expect(Math.round((await rect(treeRow('Home'))).height)).toBe(28);
+    expect(Math.round((await rect(treeRow('Home'))).width)).toBe(330);
+    expect(Math.round((await rect(treeRow('Home').getByTestId('page-picker-tree-chevron'))).width)).toBe(20);
+    expect(Math.round((await rect(treeRow('Home').getByTestId('page-picker-option-icon'))).width)).toBe(16);
+
+    await treeRow('Home').getByTestId('page-picker-tree-chevron').click();
+    await expect(treeRow('Plans')).toBeVisible();
+    expect(await offsets('Plans')).toEqual([28, 51, 74]);
+    // The chevron turns down while the row is open.
+    await expect.poll(() => treeRow('Home').locator('[data-blok-testid="page-picker-tree-chevron"] svg')
+      .evaluate((element) => {
+        const turn = new DOMMatrix(getComputedStyle(element).transform);
+
+        return Math.round(Math.atan2(turn.b, turn.a) * 180 / Math.PI);
+      })).toBe(90);
+    await expect(page.getByPlaceholder('Move page to…')).toBeFocused();
+  });
 });
 
 test.describe('read-only', () => {

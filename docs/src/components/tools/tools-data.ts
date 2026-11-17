@@ -1188,6 +1188,13 @@ const editor = new Blok({
           'Offers accessible pages for inline `@` and `[[` references. Filter results by the current user before returning them; Blok does not own global search.\n\nThe `@` menu opens as soon as "@" is typed and asks with an empty query. Answer it with recent pages. While a search runs, the menu shows a spinner and placeholder rows.\n\nThe Link to page section lists the results. Each row shows the icon, the title and `path`, the titles of the pages above it. `status: \'draft\'` shows a Draft mark. Six rows show first, then a "more results" row expands the list.\n\nWith `resolve`, Blok checks each result and uses its title, icon, path and status. Nothing found shows only when no section has items.',
       },
       {
+        option: 'children',
+        type: '(pageId: string | null) => Promise<readonly PageSearchResult[]>',
+        default: 'undefined',
+        description:
+          'Lists the pages directly under a page, for the "Move to" picker in a database row\'s menu. `null` asks for the top-level pages. Filter results by the current user, as for `search`.\n\nWith it, the picker shows a Workspace section under Suggested. It lists the top-level pages as a tree. A row\'s arrow, or the Right and Left arrow keys, opens and closes the pages under it, asked for only when opened. Picking a row moves the database row there.\n\nThe section hides while something is typed. With `resolve`, Blok checks each result as it does for `search`.',
+      },
+      {
         option: 'subscribe',
         type: '(pageId: string, onChange: () => void) => (() => void) | void',
         default: 'undefined',

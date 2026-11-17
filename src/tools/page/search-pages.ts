@@ -1,16 +1,6 @@
 import type { PageConfig, PageSearchResult } from './types';
 
-/**
- * The host's search hits the user may see. With `resolve`, a hit stays only
- * when resolve finds it and grants access, and resolve's title, icon, path and
- * status win. "@" and "/" Link to page both list pages through this.
- */
-export const searchVisiblePages = async (page: PageConfig, query: string): Promise<PageSearchResult[]> => {
-  if (page.search === undefined) {
-    return [];
-  }
-
-  const results = await page.search(query);
+const visiblePages = async (page: PageConfig, results: readonly PageSearchResult[]): Promise<PageSearchResult[]> => {
   const candidates = results.filter((hit) => typeof hit.pageId === 'string' &&
     hit.pageId.trim() !== '' && hit.access !== 'none');
 
@@ -31,4 +21,26 @@ export const searchVisiblePages = async (page: PageConfig, query: string): Promi
   }));
 
   return resolved.filter((hit): hit is NonNullable<typeof hit> => hit !== null);
+};
+
+/**
+ * The host's search hits the user may see. With `resolve`, a hit stays only
+ * when resolve finds it and grants access, and resolve's title, icon, path and
+ * status win. "@" and "/" Link to page both list pages through this.
+ */
+export const searchVisiblePages = async (page: PageConfig, query: string): Promise<PageSearchResult[]> => {
+  if (page.search === undefined) {
+    return [];
+  }
+
+  return visiblePages(page, await page.search(query));
+};
+
+/** The host's `children` hits the user may see, checked as search hits are. */
+export const visibleChildPages = async (page: PageConfig, pageId: string | null): Promise<PageSearchResult[]> => {
+  if (page.children === undefined) {
+    return [];
+  }
+
+  return visiblePages(page, await page.children(pageId));
 };

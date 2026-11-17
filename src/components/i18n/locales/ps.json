@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "ولېږدوئ",
   "tools.database.moveToPlaceholder": "پاڼه ته ولېږدوئ…",
   "tools.database.moveToPages": "پاڼې",
+  "tools.database.moveToWorkspace": "کاري ځای",
   "tools.database.movedRowTo": "{title} {target} ته ولېږدول شو",
   "tools.database.searchActions": "کړنې ولټوئ…",
   "tools.database.rowLastEditedBy": "د {name} لخوا وروستی سمون",

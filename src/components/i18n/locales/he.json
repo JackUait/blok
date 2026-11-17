@@ -1276,6 +1276,7 @@
   "tools.database.tableMoveTo": "העבר אל",
   "tools.database.moveToPlaceholder": "העברת הדף אל…",
   "tools.database.moveToPages": "דפים",
+  "tools.database.moveToWorkspace": "סביבת עבודה",
   "tools.database.movedRowTo": "{title} הועבר אל {target}",
   "tools.database.searchActions": "חיפוש פעולות…",
   "tools.database.rowLastEditedBy": "נערך לאחרונה על ידי {name}",

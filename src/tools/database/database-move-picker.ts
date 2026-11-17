@@ -1,6 +1,6 @@
 import type { API } from '../../../types';
 import { PagePicker } from '../page/page-picker';
-import { searchVisiblePages } from '../page/search-pages';
+import { searchVisiblePages, visibleChildPages } from '../page/search-pages';
 import type { PageConfig } from '../page/types';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 
@@ -44,6 +44,9 @@ export const openMovePicker = (options: MovePickerOptions): PagePicker => {
   const picker = new PagePicker(t('tools.database.tableMoveTo'), t('tools.page.unresolved'), t('tools.page.draft'), t('tools.database.relationNoResults'), t);
   const search = { token: 0, moved: false };
   const titles = new Map<string, string>();
+  // Apart from `titles`, which each query clears.
+  const treeTitles = new Map<string, string>();
+  const host = options.pages;
   const untitled = t('tools.database.relationUntitledDatabase');
   const show = async (query: string): Promise<void> => {
     const token = ++search.token;
@@ -74,13 +77,25 @@ export const openMovePicker = (options: MovePickerOptions): PagePicker => {
 
       return;
     }
-    options.onPage(pageId, titles.get(pageId) || t('tools.page.unresolved'));
+    options.onPage(pageId, titles.get(pageId) || treeTitles.get(pageId) || t('tools.page.unresolved'));
   }, {
     searchField: { placeholder: t('tools.database.moveToPlaceholder'), onQuery: (query) => void show(query) },
     popover: { class: `${DATABASE_MENU_CLASS} blok-database-move-menu`, width: PICKER_WIDTH, at: options.at },
     sections: { idle: t('tools.database.linkedSuggested'), query: t('tools.database.moveToPages') },
     highlightIdle: false,
     showAll: true,
+    ...(host?.children === undefined ? {} : {
+      tree: {
+        label: t('tools.database.moveToWorkspace'),
+        children: async (pageId: string | null) => {
+          const pages = (await visibleChildPages(host, pageId)).filter((page) => !page.pageId.startsWith(DATABASE_KEY));
+
+          pages.forEach((page) => treeTitles.set(page.pageId, page.title ?? ''));
+
+          return pages;
+        },
+      },
+    }),
   });
   picker.getElement()?.setAttribute('data-blok-database-move-picker', '');
   picker.startSearch('');

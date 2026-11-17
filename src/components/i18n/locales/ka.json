@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "გადატანა",
   "tools.database.moveToPlaceholder": "გვერდის გადატანა…",
   "tools.database.moveToPages": "გვერდები",
+  "tools.database.moveToWorkspace": "სამუშაო სივრცე",
   "tools.database.movedRowTo": "{title} გადატანილია {target}-ში",
   "tools.database.searchActions": "ქმედებების ძიება…",
   "tools.database.rowLastEditedBy": "ბოლო რედაქტორი: {name}",

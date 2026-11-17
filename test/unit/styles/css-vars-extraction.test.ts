@@ -388,6 +388,8 @@ const DANGLING_VAR_ALLOWLIST = new Set([
   // Set at runtime on the video figure by syncSize (tools/video/controls.ts): the frame's own
   // height, so the resize handles skip the caption row. The read falls back to 100% before it is measured.
   '--blok-video-frame-h',
+  // Set at runtime on a Move to tree row by buildTreeOption (tools/page/page-picker.ts): its depth.
+  '--blok-page-picker-depth',
 ]);
 
 describe('R3 — every var() reference resolves to a declared token', () => {

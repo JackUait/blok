@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "આમાં ખસેડો",
   "tools.database.moveToPlaceholder": "પેજ અહીં ખસેડો…",
   "tools.database.moveToPages": "પેજ",
+  "tools.database.moveToWorkspace": "વર્કસ્પેસ",
   "tools.database.movedRowTo": "{title} ને {target} માં ખસેડ્યું",
   "tools.database.searchActions": "ક્રિયાઓ શોધો…",
   "tools.database.rowLastEditedBy": "{name} દ્વારા છેલ્લે સંપાદિત",

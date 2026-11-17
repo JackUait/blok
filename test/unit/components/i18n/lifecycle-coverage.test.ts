@@ -299,7 +299,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2248 + 146 + 598 + 11 closure for all 3003 keys', () => {
+  it('rebuilds a disjoint 2249 + 146 + 598 + 11 closure for all 3004 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -313,7 +313,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(3003);
+    expect(lifecycle.size).toBe(3004);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -581,7 +581,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: Edit property's add field calls addOptionPlaceholder by literal.
       // +1 / -1: the row page cover calls tools.database.downloadCover by literal; its Change
       // button now reads title.changeCover, so tools.database.changeCover left (see below).
-      'executable-literal': 2248,
+      // +1: Move to's Workspace section calls tools.database.moveToWorkspace by literal.
+      'executable-literal': 2249,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

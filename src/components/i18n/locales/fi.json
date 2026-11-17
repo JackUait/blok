@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "Siirrä kohteeseen",
   "tools.database.moveToPlaceholder": "Siirrä sivu kohteeseen…",
   "tools.database.moveToPages": "Sivut",
+  "tools.database.moveToWorkspace": "Työtila",
   "tools.database.movedRowTo": "{title} siirrettiin kohteeseen {target}",
   "tools.database.searchActions": "Etsi toimintoja…",
   "tools.database.rowLastEditedBy": "Viimeksi muokannut {name}",

@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "Տեղափոխել",
   "tools.database.moveToPlaceholder": "Տեղափոխել էջը…",
   "tools.database.moveToPages": "Էջեր",
+  "tools.database.moveToWorkspace": "Աշխատանքային տարածք",
   "tools.database.movedRowTo": "{title}-ը տեղափոխվեց {target}",
   "tools.database.searchActions": "Որոնել գործողություններ…",
   "tools.database.rowLastEditedBy": "Վերջին անգամ խմբագրել է {name}",

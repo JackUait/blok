@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "Verplaatsen naar",
   "tools.database.moveToPlaceholder": "Pagina verplaatsen naar…",
   "tools.database.moveToPages": "Pagina's",
+  "tools.database.moveToWorkspace": "Werkruimte",
   "tools.database.movedRowTo": "{title} verplaatst naar {target}",
   "tools.database.searchActions": "Acties zoeken…",
   "tools.database.rowLastEditedBy": "Laatst bewerkt door {name}",

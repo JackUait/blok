@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "يۆتكەش",
   "tools.database.moveToPlaceholder": "بەتنى يۆتكەش…",
   "tools.database.moveToPages": "بەتلەر",
+  "tools.database.moveToWorkspace": "خىزمەت بوشلۇقى",
   "tools.database.movedRowTo": "{title} {target} غا يۆتكەلدى",
   "tools.database.searchActions": "مەشغۇلات ئىزدەش…",
   "tools.database.rowLastEditedBy": "{name} ئاخىرقى تەھرىرلىگەن",

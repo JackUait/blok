@@ -154,6 +154,13 @@ export interface PageConfig {
    */
   search?(query: string): Promise<readonly PageSearchResult[]>;
   /**
+   * The pages directly under a page, for the database row menu's "Move to"
+   * picker. `null` asks for the top-level pages. With it, the picker shows a
+   * "Workspace" section: the top-level pages as a tree, each row opening its
+   * children under it. Filter results by the current user, as for `search`.
+   */
+  children?(pageId: string | null): Promise<readonly PageSearchResult[]>;
+  /**
    * The page's URL. Used for the link, middle click and Cmd/Ctrl click.
    * Without it the link has no href. Unsafe schemes (`javascript:` and the like) are dropped.
    */

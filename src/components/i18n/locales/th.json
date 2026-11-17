@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "ย้ายไปที่",
   "tools.database.moveToPlaceholder": "ย้ายหน้าไปที่…",
   "tools.database.moveToPages": "หน้า",
+  "tools.database.moveToWorkspace": "พื้นที่ทำงาน",
   "tools.database.movedRowTo": "ย้าย {title} ไปที่ {target} แล้ว",
   "tools.database.searchActions": "ค้นหาการดำเนินการ…",
   "tools.database.rowLastEditedBy": "แก้ไขล่าสุดโดย {name}",

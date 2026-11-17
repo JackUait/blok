@@ -1276,6 +1276,7 @@
   "tools.database.tableMoveTo": "Pārvietot uz",
   "tools.database.moveToPlaceholder": "Pārvietot lapu uz…",
   "tools.database.moveToPages": "Lapas",
+  "tools.database.moveToWorkspace": "Darbvieta",
   "tools.database.movedRowTo": "{title} pārvietots uz {target}",
   "tools.database.searchActions": "Meklēt darbības…",
   "tools.database.rowLastEditedBy": "Pēdējo reizi rediģēja {name}",

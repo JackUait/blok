@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "Hamishia",
   "tools.database.moveToPlaceholder": "Hamisha ukurasa kwenda…",
   "tools.database.moveToPages": "Kurasa",
+  "tools.database.moveToWorkspace": "Eneo la kazi",
   "tools.database.movedRowTo": "{title} imehamishiwa {target}",
   "tools.database.searchActions": "Tafuta vitendo…",
   "tools.database.rowLastEditedBy": "Kimehaririwa mara ya mwisho na {name}",

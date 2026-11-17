@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "Zhvendos te",
   "tools.database.moveToPlaceholder": "Zhvendos faqen te…",
   "tools.database.moveToPages": "Faqet",
+  "tools.database.moveToWorkspace": "Hapësira e punës",
   "tools.database.movedRowTo": "{title} u zhvendos te {target}",
   "tools.database.searchActions": "Kërko veprime…",
   "tools.database.rowLastEditedBy": "Ndryshuar për herë të fundit nga {name}",

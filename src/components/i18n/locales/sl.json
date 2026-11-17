@@ -1286,6 +1286,7 @@
   "tools.database.tableMoveTo": "Premakni v",
   "tools.database.moveToPlaceholder": "Premakni stran v…",
   "tools.database.moveToPages": "Strani",
+  "tools.database.moveToWorkspace": "Delovni prostor",
   "tools.database.movedRowTo": "{title} premaknjeno v {target}",
   "tools.database.searchActions": "Poiščite dejanja…",
   "tools.database.rowLastEditedBy": "Nazadnje urejeno: {name}",

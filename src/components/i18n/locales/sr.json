@@ -1276,6 +1276,7 @@
   "tools.database.tableMoveTo": "Премести у",
   "tools.database.moveToPlaceholder": "Премести страницу у…",
   "tools.database.moveToPages": "Странице",
+  "tools.database.moveToWorkspace": "Радни простор",
   "tools.database.movedRowTo": "{title} премештено у {target}",
   "tools.database.searchActions": "Претражите радње…",
   "tools.database.rowLastEditedBy": "Последња измена: {name}",

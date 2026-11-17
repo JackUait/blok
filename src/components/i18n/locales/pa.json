@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "ਇਸ ਵਿੱਚ ਲਿਜਾਓ",
   "tools.database.moveToPlaceholder": "ਪੰਨਾ ਇੱਥੇ ਭੇਜੋ…",
   "tools.database.moveToPages": "ਪੰਨੇ",
+  "tools.database.moveToWorkspace": "ਕਾਰਜ-ਖੇਤਰ",
   "tools.database.movedRowTo": "{title} ਨੂੰ {target} ਵਿੱਚ ਭੇਜਿਆ",
   "tools.database.searchActions": "ਕਾਰਵਾਈਆਂ ਲੱਭੋ…",
   "tools.database.rowLastEditedBy": "{name} ਦੁਆਰਾ ਆਖਰੀ ਸੋਧ",

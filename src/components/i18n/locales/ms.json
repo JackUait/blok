@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "Alihkan ke",
   "tools.database.moveToPlaceholder": "Alihkan halaman ke…",
   "tools.database.moveToPages": "Halaman",
+  "tools.database.moveToWorkspace": "Ruang kerja",
   "tools.database.movedRowTo": "{title} dialihkan ke {target}",
   "tools.database.searchActions": "Cari tindakan…",
   "tools.database.rowLastEditedBy": "Kali terakhir disunting oleh {name}",

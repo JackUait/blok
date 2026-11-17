@@ -1306,6 +1306,7 @@
   "tools.database.tableMoveTo": "نقل إلى",
   "tools.database.moveToPlaceholder": "نقل الصفحة إلى…",
   "tools.database.moveToPages": "الصفحات",
+  "tools.database.moveToWorkspace": "مساحة العمل",
   "tools.database.movedRowTo": "تم نقل {title} إلى {target}",
   "tools.database.searchActions": "البحث في الإجراءات…",
   "tools.database.rowLastEditedBy": "آخر تعديل بواسطة {name}",

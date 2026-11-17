@@ -1286,6 +1286,7 @@
   "tools.database.tableMoveTo": "Presunúť do",
   "tools.database.moveToPlaceholder": "Presunúť stránku do…",
   "tools.database.moveToPages": "Stránky",
+  "tools.database.moveToWorkspace": "Pracovný priestor",
   "tools.database.movedRowTo": "{title} presunuté do {target}",
   "tools.database.searchActions": "Hľadať akcie…",
   "tools.database.rowLastEditedBy": "Autor poslednej úpravy: {name}",

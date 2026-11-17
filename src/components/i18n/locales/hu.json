@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "Áthelyezés ide",
   "tools.database.moveToPlaceholder": "Oldal áthelyezése ide…",
   "tools.database.moveToPages": "Oldalak",
+  "tools.database.moveToWorkspace": "Munkaterület",
   "tools.database.movedRowTo": "{title} áthelyezve ide: {target}",
   "tools.database.searchActions": "Műveletek keresése…",
   "tools.database.rowLastEditedBy": "Utoljára szerkesztette: {name}",

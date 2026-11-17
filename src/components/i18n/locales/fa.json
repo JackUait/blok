@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "انتقال به",
   "tools.database.moveToPlaceholder": "انتقال صفحه به…",
   "tools.database.moveToPages": "صفحه‌ها",
+  "tools.database.moveToWorkspace": "فضای کاری",
   "tools.database.movedRowTo": "{title} به {target} منتقل شد",
   "tools.database.searchActions": "جستجوی اقدامات…",
   "tools.database.rowLastEditedBy": "آخرین ویرایش توسط {name}",

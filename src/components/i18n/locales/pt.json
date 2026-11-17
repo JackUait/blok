@@ -1276,6 +1276,7 @@
   "tools.database.tableMoveTo": "Mover para",
   "tools.database.moveToPlaceholder": "Mover página para…",
   "tools.database.moveToPages": "Páginas",
+  "tools.database.moveToWorkspace": "Espaço de trabalho",
   "tools.database.movedRowTo": "{title} movido para {target}",
   "tools.database.searchActions": "Pesquisar ações…",
   "tools.database.rowLastEditedBy": "Última edição por {name}",

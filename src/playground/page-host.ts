@@ -206,6 +206,19 @@ export class PageRegistry {
     return Promise.resolve(hits);
   }
 
+  /** What the page tool's `children` gets: the pages directly under `parentId` (null: the top), Trash left out. */
+  public children(parentId: string | null): Promise<PageSearchResult[]> {
+    const hits = Object.keys(this.pages)
+      .filter((pageId) => this.get(pageId)?.parentId === parentId && this.get(pageId)?.trashed !== true)
+      .flatMap((pageId) => {
+        const info = this.info(pageId);
+
+        return info === null ? [] : [{ pageId, ...info }];
+      });
+
+    return Promise.resolve(hits);
+  }
+
   /** `document`: the starting content the page tool sent, e.g. a full-page database. */
   public create(pageId: string, parentId: string | null, document?: OutputData): void {
     const before = this.captureInfo();

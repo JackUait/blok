@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "येथे हलवा",
   "tools.database.moveToPlaceholder": "पेज येथे हलवा…",
   "tools.database.moveToPages": "पेजेस",
+  "tools.database.moveToWorkspace": "कार्यक्षेत्र",
   "tools.database.movedRowTo": "{title} {target} मध्ये हलवले",
   "tools.database.searchActions": "क्रिया शोधा…",
   "tools.database.rowLastEditedBy": "{name} ने शेवटचे संपादन केले",

@@ -2027,6 +2027,8 @@
         config: {
           // "@" in text and "/" Link to page list pages from here.
           search: (query) => pages.search(query),
+          // Move to's Workspace tree.
+          children: (id) => pages.children(id),
           href: (id) => pagePath(id, window.location.search),
           pageIdFromHref: (href) => {
             const url = new URL(href);

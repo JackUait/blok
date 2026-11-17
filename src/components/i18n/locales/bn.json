@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "এতে সরান",
   "tools.database.moveToPlaceholder": "পৃষ্ঠা সরান…",
   "tools.database.moveToPages": "পৃষ্ঠাগুলি",
+  "tools.database.moveToWorkspace": "ওয়ার্কস্পেস",
   "tools.database.movedRowTo": "{title} {target}-এ সরানো হয়েছে",
   "tools.database.searchActions": "অ্যাকশন খুঁজুন…",
   "tools.database.rowLastEditedBy": "{name} দ্বারা সর্বশেষ সম্পাদনা",

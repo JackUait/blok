@@ -3536,6 +3536,64 @@ button[data-blok-database-board-lane-count]:hover {
   line-height: 20px;
 }
 
+/* Round 62 §1: a Workspace row's 20 chevron at +14, its 16 icon at +37 and its 14/21 title at +60.
+   Each level starts 14px further in (Round 62 §1, Round 63 §2). */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu']:not([data-blok-database-move-searched]) [role='option'][data-blok-page-picker-tree-row] {
+  align-items: center;
+  gap: 0;
+  padding-block: 0;
+  padding-inline: calc(var(--blok-space-3-5) * (1 + var(--blok-page-picker-depth, 0))) var(--blok-space-3);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu']:not([data-blok-database-move-searched]) [role='option'][data-blok-page-picker-tree-row] > div > * {
+  line-height: 21px;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu']:not([data-blok-database-move-searched]) [role='option'][data-blok-page-picker-tree-row] [data-blok-testid='page-picker-option-icon'] {
+  width: 16px;
+  height: 16px;
+  margin-inline-end: var(--blok-space-1-75);
+}
+
+/* Round 62 §1: a 12 glyph in a 20 box, in the icon grey, with a tint on hover. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [data-blok-testid='page-picker-tree-chevron'] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-inline-end: var(--blok-space-0-75);
+  border-radius: var(--blok-radius-control-sm);
+  color: var(--blok-database-table-header-icon);
+}
+
+@media (hover: hover) {
+  [data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [data-blok-testid='page-picker-tree-chevron']:hover {
+    background-color: var(--blok-database-hover-bg);
+  }
+}
+
+/* The turn copies the option › (Round 58 §4); Notion's timing for this one is unread. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [data-blok-testid='page-picker-tree-chevron'] svg {
+  width: 12px;
+  height: 12px;
+  transition: transform 0.2s ease-in-out;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [data-blok-page-picker-expanded='true'] [data-blok-testid='page-picker-tree-chevron'] svg {
+  transform: rotate(90deg);
+}
+
+/* The flip stays first, so the turn interpolates as a rotation. */
+[dir="rtl"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [data-blok-testid='page-picker-tree-chevron'] svg {
+  transform: scaleX(-1);
+}
+
+[dir="rtl"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [data-blok-page-picker-expanded='true'] [data-blok-testid='page-picker-tree-chevron'] svg {
+  transform: scaleX(-1) rotate(90deg);
+}
+
 /* Panels and pickers in a CellPopover (Filter, Sort…) move like the menus (notion-motion.md "Popovers").
    Editors that open at once opt out further down, after these rules. */
 [data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-menu'],
@@ -9718,6 +9776,7 @@ textarea[data-blok-database-cell-input] {
   [data-blok-database-options-editor] [data-blok-database-select-option-menu] svg,
   [data-blok-database-option-group-chevron] svg,
   [data-blok-database-options-add-row],
+  [data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [data-blok-testid='page-picker-tree-chevron'] svg,
   [data-blok-database-option-reordering] [data-blok-database-select-option],
   [data-blok-database-switch-track],
   [data-blok-database-switch-track] > span {

@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "گواستنەوە بۆ",
   "tools.database.moveToPlaceholder": "Rûpelê bibe…",
   "tools.database.moveToPages": "Rûpel",
+  "tools.database.moveToWorkspace": "شوێنی کار",
   "tools.database.movedRowTo": "{title} hate birin bo {target}",
   "tools.database.searchActions": "گەڕان لە کردارەکان…",
   "tools.database.rowLastEditedBy": "دوایین دەستکاری لەلایەن {name}",

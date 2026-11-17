@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "다음으로 이동",
   "tools.database.moveToPlaceholder": "페이지 이동 위치…",
   "tools.database.moveToPages": "페이지",
+  "tools.database.moveToWorkspace": "워크스페이스",
   "tools.database.movedRowTo": "{title}을(를) {target}(으)로 옮겼습니다",
   "tools.database.searchActions": "작업 검색…",
   "tools.database.rowLastEditedBy": "{name} 님이 마지막으로 수정",

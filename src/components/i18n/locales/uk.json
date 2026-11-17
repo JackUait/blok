@@ -1286,6 +1286,7 @@
   "tools.database.tableMoveTo": "Перемістити в",
   "tools.database.moveToPlaceholder": "Перемістити сторінку до…",
   "tools.database.moveToPages": "Сторінки",
+  "tools.database.moveToWorkspace": "Робочий простір",
   "tools.database.movedRowTo": "{title} переміщено до {target}",
   "tools.database.searchActions": "Шукати дії…",
   "tools.database.rowLastEditedBy": "Останнє редагування: {name}",

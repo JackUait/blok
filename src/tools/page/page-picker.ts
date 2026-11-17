@@ -1,5 +1,5 @@
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { IconArrowDiagonal, IconPage, IconPlus, IconTable } from '../../components/icons';
+import { IconArrowDiagonal, IconPage, IconPlayerPlay, IconPlus, IconTable } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { SearchInput, SearchInputEvent } from '../../components/utils/popover/components/search-input';
@@ -87,6 +87,12 @@ export interface PagePickerOptions {
   highlightIdle?: boolean;
   /** True lists every page; otherwise the list folds after a few under a "N more results" row. */
   showAll?: boolean;
+  /**
+   * With `searchField`: a section after the pages while nothing is typed,
+   * listing `children(null)` as a tree. A row's chevron, or ArrowRight and
+   * ArrowLeft on the active row, shows and hides its `children(pageId)`.
+   */
+  tree?: { label: string; children: (pageId: string | null) => Promise<readonly unknown[]> };
 }
 
 /** Options for {@link PagePicker.chooseParent}. */
@@ -103,7 +109,12 @@ interface Entry {
   run: () => Promise<void> | void;
   /** Set on page rows only. */
   title?: string;
+  /** Set on tree rows that can open. */
+  treePageId?: string;
 }
+
+/** Joins a tree row's key parts; a page id may hold any other character. */
+const TREE_KEY_JOIN = '\u0000';
 
 const skeletonRow = (): HTMLElement => {
   const row = document.createElement('div');
@@ -163,6 +174,14 @@ export class PagePicker {
   private activeIndex = -1;
   private keyboardNavigated = false;
   private previousAttributes: Map<string, string | null> | null = null;
+  private tree: PagePickerOptions['tree'] | null = null;
+  /** Loaded children by parent page id, null for the top. Kept across queries. */
+  private treeChildren = new Map<string | null, PickerPage[]>();
+  private treeOpen = new Set<string>();
+  /** One request per page at a time: a reopen waits for the first answer. */
+  private treeLoading = new Set<string | null>();
+  /** Bumped on close, so an answer for an earlier opening is dropped. */
+  private treeGeneration = 0;
 
   /**
    * @param label - the list's name
@@ -204,6 +223,7 @@ export class PagePicker {
     this.highlightIdle = options.highlightIdle ?? true;
     this.showAll = options.showAll ?? false;
     this.newPage = options.searchField === undefined ? options.newPage ?? null : null;
+    this.tree = options.searchField === undefined ? null : options.tree ?? null;
     this.content = document.createElement('div');
     const look = options.popover;
     const params = {
@@ -239,6 +259,7 @@ export class PagePicker {
     this.claimCombobox(this.search?.getInput() ?? anchor);
     this.search?.focus();
     this.render();
+    this.loadTree(null);
   }
 
   /** Moves the open picker (opened with `popover.at`) to `position`, or above it by `aboveBy`. */
@@ -353,6 +374,17 @@ export class PagePicker {
       return true;
     }
 
+    const treePageId = this.query === '' ? this.entries[this.activeIndex]?.treePageId : undefined;
+
+    if ((event.key === 'ArrowRight' || event.key === 'ArrowLeft') && treePageId !== undefined) {
+      event.preventDefault();
+      if (this.treeOpen.has(treePageId) !== (event.key === 'ArrowRight')) {
+        this.toggleTree(treePageId);
+      }
+
+      return true;
+    }
+
     if (event.key === 'Enter') {
       event.preventDefault();
       this.activate(this.activeIndex);
@@ -397,6 +429,11 @@ export class PagePicker {
     this.busyKey = null;
     this.activeIndex = -1;
     this.keyboardNavigated = false;
+    this.tree = null;
+    this.treeChildren = new Map();
+    this.treeOpen = new Set();
+    this.treeLoading = new Set();
+    this.treeGeneration++;
     document.removeEventListener('pointerdown', this.handleOutsidePointer, true);
     content?.replaceChildren();
     listbox?.removeAttribute('role');
@@ -559,6 +596,7 @@ export class PagePicker {
     if (this.loading && this.results.length === 0) {
       rows.push(skeletonRow(), skeletonRow());
     }
+    this.appendTree(rows, add);
     if (this.newPage !== null) {
       this.appendNewPageSection(this.newPage, rows, add);
     }
@@ -604,12 +642,96 @@ export class PagePicker {
     });
   }
 
+  private appendTree(rows: HTMLElement[], add: (entry: Entry) => void): void {
+    const top = this.treeChildren.get(null) ?? [];
+
+    if (this.tree === null || this.tree === undefined || this.query !== '' || top.length === 0) {
+      return;
+    }
+    rows.push(this.buildHeader('workspace', this.tree.label));
+    const walk = (pages: PickerPage[], trail: string[]): void => pages.forEach((page) => {
+      // A host loop would otherwise open forever.
+      if (trail.includes(page.pageId)) {
+        return;
+      }
+      const opens = page.kind !== 'database';
+      const open = opens && this.treeOpen.has(page.pageId);
+
+      add({
+        key: ['tree', ...trail, page.pageId].join(TREE_KEY_JOIN),
+        element: this.buildTreeOption(page, trail.length, opens ? open : null),
+        run: () => this.onChoose !== null ? this.onChoose(page.pageId) : this.pick(page.pageId),
+        title: page.title || this.fallback,
+        ...(opens ? { treePageId: page.pageId } : {}),
+      });
+      if (open) {
+        walk(this.treeChildren.get(page.pageId) ?? [], [...trail, page.pageId]);
+      }
+    });
+
+    walk(top, []);
+  }
+
+  /** Asks for a page's children once; the answer shows only if the picker and the row are still open. */
+  private loadTree(pageId: string | null): void {
+    const tree = this.tree;
+
+    if (tree === null || tree === undefined || this.treeChildren.has(pageId) || this.treeLoading.has(pageId)) {
+      return;
+    }
+    const generation = this.treeGeneration;
+    const settle = (pages: PickerPage[] | null): void => {
+      if (generation !== this.treeGeneration) {
+        return;
+      }
+      this.treeLoading.delete(pageId);
+      // A failed load shows nothing and is asked again on the next open.
+      if (pages !== null) {
+        this.treeChildren.set(pageId, pages);
+      }
+      if (pages !== null && (pageId === null || this.treeOpen.has(pageId))) {
+        this.renderKeepingActive();
+      }
+    };
+
+    this.treeLoading.add(pageId);
+    Promise.resolve()
+      .then(() => tree.children(pageId))
+      .then((pages) => settle(pages.map(toVisiblePage).filter((page): page is PickerPage => page !== null)), () => settle(null));
+  }
+
+  private toggleTree(pageId: string): void {
+    const active = this.entries[this.activeIndex];
+    const row = this.entries.find((entry) => entry.treePageId === pageId && active?.key.startsWith(`${entry.key}${TREE_KEY_JOIN}`));
+
+    if (this.treeOpen.delete(pageId)) {
+      // The highlight on a row that goes away moves to the row that closed.
+      this.renderKeepingActive(row?.key);
+
+      return;
+    }
+    this.treeOpen.add(pageId);
+    this.loadTree(pageId);
+    this.renderKeepingActive();
+  }
+
+  /** Renders, keeping the highlight on the same row (or on `key`) while rows above it come and go. */
+  private renderKeepingActive(key = this.entries[this.activeIndex]?.key): void {
+    this.render();
+    const at = key === undefined ? -1 : this.entries.findIndex((entry) => entry.key === key);
+
+    if (at !== -1 && at !== this.activeIndex) {
+      this.activeIndex = at;
+      this.syncSelection(false);
+    }
+  }
+
   private expand(): void {
     this.expanded = true;
     this.render();
   }
 
-  private buildHeader(name: 'link' | 'new', text: string): HTMLElement {
+  private buildHeader(name: 'link' | 'new' | 'workspace', text: string): HTMLElement {
     const header = document.createElement('div');
 
     header.setAttribute('role', 'presentation');
@@ -682,6 +804,35 @@ export class PagePicker {
       path.textContent = result.path.join(PAGE_PATH_SEPARATOR);
       body.append(path);
     }
+
+    return option;
+  }
+
+  /** `open` is null for a row that cannot open: it gets no chevron. Tree rows show no path. */
+  private buildTreeOption(page: PickerPage, depth: number, open: boolean | null): HTMLElement {
+    const option = this.buildPageOption({ ...page, path: undefined });
+
+    option.setAttribute('data-blok-page-picker-tree-row', '');
+    option.setAttribute('data-blok-page-picker-depth', String(depth));
+    option.style.setProperty('--blok-page-picker-depth', String(depth));
+    if (open === null) {
+      return option;
+    }
+    const chevron = document.createElement('span');
+    const glyph = document.createElement('template');
+
+    option.setAttribute('data-blok-page-picker-expanded', String(open));
+    // A trusted constant from the icon module, not user input.
+    glyph.innerHTML = IconPlayerPlay.trim();
+    chevron.setAttribute('aria-hidden', 'true');
+    chevron.setAttribute(DATA_ATTR.testid, 'page-picker-tree-chevron');
+    chevron.append(glyph.content);
+    chevron.addEventListener('click', (event) => {
+      // The row's own click picks the page.
+      event.stopPropagation();
+      this.toggleTree(page.pageId);
+    });
+    option.prepend(chevron);
 
     return option;
   }

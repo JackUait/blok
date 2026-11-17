@@ -1286,6 +1286,7 @@
   "tools.database.tableMoveTo": "Przenieś do",
   "tools.database.moveToPlaceholder": "Przenieś stronę do…",
   "tools.database.moveToPages": "Strony",
+  "tools.database.moveToWorkspace": "Obszar roboczy",
   "tools.database.movedRowTo": "Przeniesiono {title} do {target}",
   "tools.database.searchActions": "Wyszukaj działania…",
   "tools.database.rowLastEditedBy": "Ostatnia edycja: {name}",

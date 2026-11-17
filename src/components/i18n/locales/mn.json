@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "Зөөх",
   "tools.database.moveToPlaceholder": "Хуудсыг шилжүүлэх…",
   "tools.database.moveToPages": "Хуудсууд",
+  "tools.database.moveToWorkspace": "Ажлын талбар",
   "tools.database.movedRowTo": "{title}-г {target} руу шилжүүллээ",
   "tools.database.searchActions": "Үйлдэл хайх…",
   "tools.database.rowLastEditedBy": "{name} сүүлд засварласан",

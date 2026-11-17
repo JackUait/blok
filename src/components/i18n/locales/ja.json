@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "移動先",
   "tools.database.moveToPlaceholder": "ページの移動先…",
   "tools.database.moveToPages": "ページ",
+  "tools.database.moveToWorkspace": "ワークスペース",
   "tools.database.movedRowTo": "{title} を {target} に移動しました",
   "tools.database.searchActions": "アクションを検索…",
   "tools.database.rowLastEditedBy": "最終編集者：{name}",

@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "منتقل ڪريو",
   "tools.database.moveToPlaceholder": "صفحو منتقل ڪريو…",
   "tools.database.moveToPages": "صفحا",
+  "tools.database.moveToWorkspace": "ڪم جي جاءِ",
   "tools.database.movedRowTo": "{title} کي {target} ڏانهن منتقل ڪيو ويو",
   "tools.database.searchActions": "عمل ڳوليو…",
   "tools.database.rowLastEditedBy": "آخري ترميم ڪندڙ: {name}",

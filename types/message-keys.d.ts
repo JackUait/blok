@@ -1509,6 +1509,7 @@ export type BlokMessageKey =
   | 'tools.database.moreViews'
   | 'tools.database.moveToPages'
   | 'tools.database.moveToPlaceholder'
+  | 'tools.database.moveToWorkspace'
   | 'tools.database.movedRowTo'
   | 'tools.database.movedToTrash'
   | 'tools.database.newDataSource'

@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "Flytta till",
   "tools.database.moveToPlaceholder": "Flytta sidan till…",
   "tools.database.moveToPages": "Sidor",
+  "tools.database.moveToWorkspace": "Arbetsyta",
   "tools.database.movedRowTo": "{title} flyttades till {target}",
   "tools.database.searchActions": "Sök efter åtgärder…",
   "tools.database.rowLastEditedBy": "Senast redigerad av {name}",

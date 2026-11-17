@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "ഇതിലേക്ക് നീക്കുക",
   "tools.database.moveToPlaceholder": "പേജ് ഇവിടേക്ക് നീക്കുക…",
   "tools.database.moveToPages": "പേജുകൾ",
+  "tools.database.moveToWorkspace": "വർക്ക്‌സ്‌പെയ്‌സ്",
   "tools.database.movedRowTo": "{title} {target}-ലേക്ക് നീക്കി",
   "tools.database.searchActions": "പ്രവർത്തനങ്ങൾ തിരയുക…",
   "tools.database.rowLastEditedBy": "അവസാനം തിരുത്തിയത്: {name}",

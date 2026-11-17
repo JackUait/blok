@@ -1266,6 +1266,7 @@
   "tools.database.tableMoveTo": "منتقل کریں",
   "tools.database.moveToPlaceholder": "صفحہ منتقل کریں…",
   "tools.database.moveToPages": "صفحات",
+  "tools.database.moveToWorkspace": "ورک اسپیس",
   "tools.database.movedRowTo": "{title} کو {target} میں منتقل کر دیا گیا",
   "tools.database.searchActions": "کارروائیاں تلاش کریں…",
   "tools.database.rowLastEditedBy": "{name} نے آخری ترمیم کی",

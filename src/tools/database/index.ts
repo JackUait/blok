@@ -13037,8 +13037,14 @@ export class DatabaseTool implements BlockTool {
       this.inOneStep(() => {
         // The bodies live in the new page now: removing this copy must not delete their databases' rows.
         body.forEach((block) => { if (block.id !== undefined) movedDatabases.add(block.id); });
-        this.deleteTableRows([rowId]);
+        // Only the row: a delete would take its sub-items, which the new page does not hold.
+        if (this.cardDrawer?.openRowId === rowId) this.cardDrawer.close();
+        this.pendingDescriptions.delete(rowId);
+        this.removeRowBlock(rowId);
+        void this.sync.syncDeleteRow({ rowId });
       });
+      this.syncRowsFromBlocks();
+      this.rerenderView({ keepDrawer: true });
       announce(this.api.i18n.t('tools.database.movedRowTo', { title: name === '' ? this.api.i18n.t('tools.database.relationUntitled') : name, target: title }));
     } finally {
       this.pageMoves.delete(rowId);

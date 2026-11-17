@@ -357,6 +357,49 @@ describe('row menu › Move to a page', () => {
     expect(JSON.stringify(adapter.deleteRow.mock.calls)).not.toContain('nr1');
   });
 
+  // Notion's handling of sub-items on a move to a page is unread, so nothing but the row leaves.
+  it('keeps the row\'s sub-items in the database, no longer under it', async () => {
+    const pair = [
+      { id: 'parent', name: 'Parent item', type: 'relation', position: 'a2', relation: { targetDatabaseId: 'db', twoWay: true, syncedPropertyId: 'children', limit: 1, role: 'parentItem' } },
+      { id: 'children', name: 'Sub-items', type: 'relation', position: 'a3', relation: { targetDatabaseId: 'db', twoWay: true, syncedPropertyId: 'parent', role: 'subItems' } },
+    ];
+    const blocks = BLOCKS.map((block) => {
+      if (block.id === 'db') return { ...block, data: { ...(block.data as Record<string, unknown>), schema: [...((block.data as { schema: unknown[] }).schema), ...pair] } };
+      if (block.id === 'r1') return { ...block, data: { ...(block.data as Record<string, unknown>), properties: { t: 'Alpha', parent: [], children: [{ id: 'r2' }] } } };
+      if (block.id === 'r2') return { ...block, data: { ...(block.data as Record<string, unknown>), properties: { t: 'Beta', parent: [{ id: 'r1' }], children: [] } } };
+
+      return block;
+    });
+
+    await boot(host(), blocks);
+    await openPicker();
+    await pick('Target A');
+
+    const saved = (await editor?.save())?.blocks ?? [];
+
+    expect(saved.filter((block) => block.type === 'database-row').map((block) => block.id)).toEqual(['r2']);
+    expect((saved.find((block) => block.id === 'r2')?.data as { properties: Record<string, unknown> }).properties.parent).toEqual([]);
+
+    editor?.history.undo();
+    await quiet();
+    const back = (await editor?.save())?.blocks ?? [];
+
+    expect(back.filter((block) => block.type === 'database-row').map((block) => block.id)).toEqual(['r1', 'r2']);
+    expect((back.find((block) => block.id === 'r2')?.data as { properties: Record<string, unknown> }).properties.parent).toEqual([{ id: 'r1' }]);
+  });
+
+  it('closes the picker when its row is deleted', async () => {
+    await boot(host());
+    await openPicker();
+    const index = editor?.blocks.getBlockIndex('r1');
+
+    if (index === undefined) throw new Error('no r1');
+    await editor?.blocks.delete(index);
+    await quiet();
+
+    expect(document.querySelector('[data-blok-database-move-picker]')).toBeNull();
+  });
+
   it('asks the host once when the same row is picked twice before it answers', async () => {
     const answer: { resolve?: () => void } = {};
     const page = host({ create: vi.fn(() => new Promise<void>((resolve) => { answer.resolve = resolve; })) });

@@ -491,7 +491,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/preview-*': exempt('view-only', 'Picks which row page the layout builder previews; nothing is saved.'),
   'menu:database/database-row-copy-link': exempt('clipboard', 'Writes a link to the row to the OS clipboard; the agent reads row ids with doc.read.'),
   'menu:database/database-row-duplicate': cmds(['database.duplicateRow', 'block.duplicate'], ROW_COPY),
-  'menu:database/database-row-move-to': cmds(['database.moveRowTo', 'database.deleteRow'], 'Opens the Move to picker. To another database: database.moveRowTo moves the row, its sub-items and their pages; values follow the target\'s properties by name. To a host page: the host\'s create makes the page from the row body (page field: needs loadDocument and saveDocument to write it), then database.deleteRow.'),
+  'menu:database/database-row-move-to': cmds(['database.moveRowTo', 'database.deleteRow'], 'Opens the Move to picker. To another database: database.moveRowTo moves the row, its sub-items and their pages; values follow the target\'s properties by name. To a host page: a gap. No agent command calls the host\'s create, so the agent cannot make the new page; it can only remove the row with database.deleteRow (which also takes its sub-items, unlike the menu).'),
   'menu:database/database-row-delete': cmds(['database.deleteRow', 'block.delete'], ROW_DELETE),
   'menu:database/database-row-full-width': fld('database-row.fullWidth'),
   'menu:database/database-table-selection-duplicate': cmds(['database.duplicateRow', 'block.duplicate'], ROW_COPY),

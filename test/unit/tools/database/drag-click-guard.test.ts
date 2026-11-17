@@ -5,13 +5,13 @@ const nextTask = (): Promise<void> => new Promise((resolve) => setTimeout(resolv
 
 describe('swallowClickAfterCancel', () => {
   let target: HTMLElement;
-  let opened: ReturnType<typeof vi.fn>;
+  let opened: ReturnType<typeof vi.fn<(event: Event) => void>>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     target = document.createElement('div');
     document.body.appendChild(target);
-    opened = vi.fn();
+    opened = vi.fn<(event: Event) => void>();
     target.addEventListener('click', opened);
   });
 

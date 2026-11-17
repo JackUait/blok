@@ -147,6 +147,38 @@ describe('row selection after undo', () => {
     expect(selectedRows()).toEqual([]);
   });
 
+  // notion-motion.md Round 64 §1: redo of the cell edit fades the row selection back in.
+  it('gives the row selection back when it redoes the cell edit', async () => {
+    const blok = await make();
+
+    await editNote(blok, 'r1', 'edited');
+    await pickRow('r3');
+    blok.history.undo();
+    await quiet();
+    expect(selectedRows()).toEqual([]);
+
+    blok.history.redo();
+    await quiet();
+
+    expect(row('r1')?.textContent).toContain('edited');
+    expect(selectedRows()).toEqual(['r3']);
+  });
+
+  it('keeps a selection made after the undo when it redoes the cell edit', async () => {
+    const blok = await make();
+
+    await editNote(blok, 'r1', 'edited');
+    await pickRow('r3');
+    blok.history.undo();
+    await quiet();
+    await pickRow('r2');
+
+    blok.history.redo();
+    await quiet();
+
+    expect(selectedRows()).toEqual(['r2']);
+  });
+
   it('keeps a row selection when it undoes a reorder', async () => {
     const blok = await make();
     const block = blok.blocks.getById('r1');

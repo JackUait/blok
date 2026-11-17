@@ -364,9 +364,9 @@ describe('row menu › Move to a page', () => {
       { id: 'children', name: 'Sub-items', type: 'relation', position: 'a3', relation: { targetDatabaseId: 'db', twoWay: true, syncedPropertyId: 'parent', role: 'subItems' } },
     ];
     const blocks = BLOCKS.map((block) => {
-      if (block.id === 'db') return { ...block, data: { ...(block.data as Record<string, unknown>), schema: [...((block.data as { schema: unknown[] }).schema), ...pair] } };
-      if (block.id === 'r1') return { ...block, data: { ...(block.data as Record<string, unknown>), properties: { t: 'Alpha', parent: [], children: [{ id: 'r2' }] } } };
-      if (block.id === 'r2') return { ...block, data: { ...(block.data as Record<string, unknown>), properties: { t: 'Beta', parent: [{ id: 'r1' }], children: [] } } };
+      if (block.id === 'db') return { ...block, data: { ...block.data, schema: [...((block.data as { schema: unknown[] }).schema), ...pair] } };
+      if (block.id === 'r1') return { ...block, data: { ...block.data, properties: { t: 'Alpha', parent: [], children: [{ id: 'r2' }] } } };
+      if (block.id === 'r2') return { ...block, data: { ...block.data, properties: { t: 'Beta', parent: [{ id: 'r1' }], children: [] } } };
 
       return block;
     });

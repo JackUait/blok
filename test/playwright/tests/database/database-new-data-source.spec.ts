@@ -95,8 +95,13 @@ const mount = async (page: Page, blocks: OutputBlockData[]): Promise<void> => {
 const save = (page: Page): Promise<OutputBlockData[]> =>
   page.evaluate(async () => (await window.blokInstance?.save())?.blocks ?? []);
 
+// Below two tabs of room the bar shows "Table ⌄" instead of "N more…" (notion-spec-2
+// §26.1); both open the same list. The 2-property toolbar leaves 221px, on that edge.
+// A second database on the page has its own bar, so look in db-1's only.
 const openList = async (page: Page): Promise<void> => {
-  await page.getByRole('button', { name: /more…$/ }).click();
+  const bar = page.locator('[data-blok-id="db-1"] [data-blok-database-tab-bar]').first();
+
+  await bar.getByRole('button', { name: /more…$/ }).or(bar.locator('[data-blok-database-tab-compact]')).click();
   await expect(page.locator('[data-blok-database-tab-overflow-dropdown]')).toBeVisible();
 };
 
@@ -139,7 +144,7 @@ test.describe('database New data source', () => {
     await expect(grid(page)).toContainText('Beta');
 
     // Back on the first source: its own row, its one property. At this width its tab
-    // may be folded into "N more…", so pick it from the list.
+    // is folded away, so pick it from the list.
     await openList(page);
     await page.locator('[data-blok-database-tab-overflow-item]').first().click();
     await expect(grid(page)).toContainText('Alpha');

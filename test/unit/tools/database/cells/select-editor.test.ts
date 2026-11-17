@@ -417,6 +417,25 @@ describe('select cell editor', () => {
       expect(popover?.getAttribute('data-blok-popover-open-top')).toBe('true');
     });
 
+    // notion-motion.md Round 57 §3: with room below, a ⋯ at 1188,197.4 opens the 220x418.9 menu at 1188, 221.4:
+    // left on the ⋯'s left, top on the ⋯'s bottom. A ⋯ at 1470 clamps the menu to x 1280 (right edge 1500).
+    it.each([[1188, 1188], [1470, 1280]])('opens below a ⋯ at x %d with room below, left at %d', (dotsX, left) => {
+      vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1512);
+      vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+      vi.spyOn(PopoverDesktop.prototype, 'size', 'get').mockReturnValue({ width: 220, height: 418.9 });
+      openSelect(null);
+      const dots = q('[data-blok-database-select-option="o1"] [data-blok-database-select-option-menu]');
+
+      vi.spyOn(dots, 'getBoundingClientRect').mockReturnValue(new DOMRect(dotsX, 197.4, 24, 24));
+      openMenu('o1');
+
+      const popover = menuPopover();
+
+      expect(parseFloat(popover?.style.top ?? '')).toBeCloseTo(221.4, 1);
+      expect(parseFloat(popover?.style.left ?? '')).toBeCloseTo(left, 1);
+      expect(popover?.getAttribute('data-blok-popover-open-top')).not.toBe('true');
+    });
+
     it('renames an option', () => {
       const ctx = openSelect(null);
 

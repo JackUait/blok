@@ -4,6 +4,7 @@ import { safeImageSrc } from '../../../shared/sanitize-url';
 import { COVER_GALLERY } from '../../../shared/page-cover';
 import { registerLayer } from '../../utils/dismissable-layer';
 import { promoteToTopLayer, removeFromTopLayer } from '../../utils/top-layer';
+import { trackCoverDrag } from '../../utils/cover-drag';
 import { positionAnchored, createPositionTracker } from '../../utils/popover/anchored-position';
 import type { PageCover } from '../../../../types/tools/page';
 
@@ -93,8 +94,7 @@ export const createCoverControl = (header: HTMLElement, host: CoverControlHost):
     picker: { close(): void } | null;
     // The position being dragged; null when not repositioning.
     draft: number | null;
-    drag: { startY: number; startPosition: number; height: number } | null;
-  } = { picker: null, draft: null, drag: null };
+  } = { picker: null, draft: null };
 
   const art = (): HTMLElement | null => strip.querySelector<HTMLElement>(`img, [${DATA_ATTR.pageCoverFill}]`);
 
@@ -108,7 +108,6 @@ export const createCoverControl = (header: HTMLElement, host: CoverControlHost):
 
   const stopRepositioning = (): void => {
     state.draft = null;
-    state.drag = null;
     strip.removeAttribute(DATA_ATTR.pageCoverRepositioning);
   };
 
@@ -412,29 +411,18 @@ export const createCoverControl = (header: HTMLElement, host: CoverControlHost):
     redraw();
   };
 
-  // Dragging down shows more of the image's top, as Notion's does.
-  const onPointerDown = (event: PointerEvent): void => {
-    if (state.draft === null || event.button !== 0 || controls.contains(event.target as Node)) {
-      return;
-    }
-    event.preventDefault();
-    strip.setPointerCapture?.(event.pointerId);
-    state.drag = { startY: event.clientY, startPosition: state.draft, height: strip.getBoundingClientRect().height || 1 };
-  };
-
-  const onPointerMove = (event: PointerEvent): void => {
-    if (state.drag === null) {
-      return;
-    }
-    const moved = ((event.clientY - state.drag.startY) / state.drag.height) * 100;
-
-    state.draft = Math.round(Math.min(100, Math.max(0, state.drag.startPosition - moved)));
-    paintPosition(state.draft);
-  };
-
-  const onPointerUp = (): void => {
-    state.drag = null;
-  };
+  const stopDragging = trackCoverDrag(strip, {
+    start: (event) => state.draft === null || controls.contains(event.target as Node)
+      ? null
+      : { position: state.draft, height: strip.getBoundingClientRect().height },
+    move: (position) => {
+      if (state.draft === null) {
+        return;
+      }
+      state.draft = Math.round(position);
+      paintPosition(state.draft);
+    },
+  });
 
   addButton.addEventListener('click', () => {
     if (!host.isReadOnly()) {
@@ -445,10 +433,6 @@ export const createCoverControl = (header: HTMLElement, host: CoverControlHost):
   repositionButton.addEventListener('click', startRepositioning);
   saveButton.addEventListener('click', savePosition);
   cancelButton.addEventListener('click', cancelRepositioning);
-  strip.addEventListener('pointerdown', onPointerDown);
-  strip.addEventListener('pointermove', onPointerMove);
-  strip.addEventListener('pointerup', onPointerUp);
-  strip.addEventListener('pointercancel', onPointerUp);
 
   redraw();
 
@@ -458,6 +442,7 @@ export const createCoverControl = (header: HTMLElement, host: CoverControlHost):
     destroy: (): void => {
       closePicker();
       stopRepositioning();
+      stopDragging();
       strip.remove();
       addButton.remove();
     },

@@ -5,6 +5,7 @@ import { openDatabaseConfirm } from './database-confirm-dialog';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { propertyGlyph } from './database-property-types';
 import type { I18n } from '../../../types';
+import type { History, HistoryValue, HistoryValueChange } from '../../../types/api/history';
 import { DatabasePanel, panelRow } from './database-panel';
 import { PersonalViewEdits } from './database-view-state';
 import type { ViewStateFallback } from './database-view-state';
@@ -63,6 +64,8 @@ export interface ViewControlsHost {
   rowPageDatabaseName?: () => string | null;
   /** A shared write to the active view. The tool refuses it while locked. */
   updateView: (changes: ViewChanges) => void;
+  /** The editor's undo history; undefined while read-only. */
+  history?: () => Pick<History, 'track'> | undefined;
   setLayout: (type: ViewType) => void;
   setLocked: (locked: boolean) => void;
   /** A linked view: its lock reads "Lock views". */
@@ -109,6 +112,15 @@ export interface ViewControlsHost {
   /** ⤢ "Open as full page": undefined hides it. */
   openFullPage?: () => (() => void) | undefined;
 }
+
+/**
+ * Sorts each undo token stands for. Module-wide, so a token still replays
+ * after the controls that wrote it were rebuilt.
+ */
+const sortSteps = new Map<string, { viewId: string; sorts: SortConfig[] | undefined }>();
+
+/** Names this block's sort tokens in the document. Per browser: a peer must not share the key. */
+const SORT_UNDO_ID_KEY = 'sort-undo-id';
 
 const button = (testId: string, label: string, content: { icon?: string; text?: string }): HTMLButtonElement => {
   const el = document.createElement('button');
@@ -186,6 +198,11 @@ export class DatabaseViewControls {
   private query = '';
   /** Repaints the match tint when the rows redraw after a search (lazy rows, remote edits). */
   private matchObserver: MutationObserver | null = null;
+  private readonly sortValues = new Map<string, HistoryValue<string>>();
+  /** An undo or redo is writing the sorts: that write is not a new step. */
+  private replayingSorts = false;
+  private undoId: string | null = null;
+  private destroyed = false;
 
   constructor(host: ViewControlsHost) {
     this.host = host;
@@ -390,7 +407,7 @@ export class DatabaseViewControls {
     const patch = { ...this.personal.get(view.id) };
 
     delete patch.sorts;
-    this.personal.replace(view.id, view.sorts.length === 0 ? patch : { ...patch, sorts: [] });
+    this.writePersonal(view.id, view.sorts.length === 0 ? patch : { ...patch, sorts: [] });
     this.refresh();
   }
 
@@ -489,6 +506,7 @@ export class DatabaseViewControls {
   }
 
   destroy(): void {
+    this.destroyed = true;
     this.endSearchClose();
     if (this.expandTimer !== null) clearTimeout(this.expandTimer);
     this.expandTimer = null;
@@ -569,11 +587,109 @@ export class DatabaseViewControls {
     const view = this.host.savedView();
 
     if (view === undefined) return;
-    this.personal.set(view.id, {
+    this.writePersonal(view.id, {
+      ...this.personal.get(view.id),
       ...patch,
       ...(patch.filters !== undefined ? { filters: withEntryIds(patch.filters) } : {}),
       ...(patch.sorts !== undefined ? { sorts: withEntryIds(patch.sorts) } : {}),
     });
+    this.host.rerender();
+    this.refresh();
+  }
+
+  /** Every personal write goes here, so a sort change is always an undo step. */
+  private writePersonal(viewId: string, next: PersonalViewPatch): void {
+    const before = this.personal.get(viewId).sorts;
+
+    this.personal.replace(viewId, next);
+    if (!this.replayingSorts && JSON.stringify(before) !== JSON.stringify(next.sorts)) this.recordSorts(viewId, before, next.sorts);
+  }
+
+  /**
+   * notion-motion.md Round 63 §1: a sort change is one undo step. Sorts are
+   * personal (D4), so the document holds only a token and this browser keeps
+   * what it stands for.
+   */
+  private recordSorts(viewId: string, before: SortConfig[] | undefined, after: SortConfig[] | undefined): void {
+    const value = this.sortValue(viewId);
+
+    if (value === undefined) return;
+    const current = value.get();
+    const known = current === undefined ? undefined : sortSteps.get(current);
+
+    // Undo needs a token for the sorts before this step. A host store load changes them without one.
+    if (known === undefined || JSON.stringify(known.sorts) !== JSON.stringify(before)) {
+      const base = nanoid();
+
+      sortSteps.set(base, { viewId, sorts: before });
+      value.set(base, { record: false });
+    }
+    const token = nanoid();
+
+    sortSteps.set(token, { viewId, sorts: after });
+    value.set(token);
+  }
+
+  private sortValue(viewId: string): HistoryValue<string> | undefined {
+    const history = this.host.history?.();
+
+    if (history === undefined) return undefined;
+    const id = this.sortUndoId();
+    const key = `database-sorts:${id}:${viewId}`;
+    const existing = this.sortValues.get(key);
+
+    if (existing !== undefined) return existing;
+    const value = history.track<string>(key, (token, change) => this.replaySorts(token, change));
+
+    this.sortValues.set(key, value);
+
+    return value;
+  }
+
+  private sortUndoId(): string {
+    if (this.undoId !== null) return this.undoId;
+    const stored = this.readFallback(SORT_UNDO_ID_KEY);
+
+    if (typeof stored === 'string') {
+      this.undoId = stored;
+
+      return stored;
+    }
+    const id = nanoid();
+
+    this.undoId = id;
+
+    try {
+      this.host.fallback.set(SORT_UNDO_ID_KEY, id);
+    } catch {
+      // Blocked storage: this session still has one id.
+    }
+
+    return id;
+  }
+
+  private readFallback(key: string): unknown {
+    try {
+      return this.host.fallback.get(key);
+    } catch {
+      return undefined;
+    }
+  }
+
+  private replaySorts(token: string | undefined, change: HistoryValueChange): void {
+    const step = token === undefined ? undefined : sortSteps.get(token);
+
+    if (this.destroyed || change.source === 'remote' || step === undefined) return;
+    const patch = { ...this.personal.get(step.viewId) };
+
+    if (step.sorts === undefined) delete patch.sorts;
+    else patch.sorts = step.sorts;
+    this.replayingSorts = true;
+    try {
+      this.personal.replace(step.viewId, patch);
+    } finally {
+      this.replayingSorts = false;
+    }
     this.host.rerender();
     this.refresh();
   }
@@ -611,7 +727,7 @@ export class DatabaseViewControls {
   private writeDraft(viewId: string): void {
     const patch = this.personal.get(viewId);
 
-    this.personal.clear(viewId);
+    this.writePersonal(viewId, {});
     this.host.updateView(patch);
     this.refresh();
   }
@@ -620,7 +736,7 @@ export class DatabaseViewControls {
     const view = this.host.savedView();
 
     if (view === undefined) return;
-    this.personal.clear(view.id);
+    this.writePersonal(view.id, {});
     this.host.rerender();
     this.refresh();
   }

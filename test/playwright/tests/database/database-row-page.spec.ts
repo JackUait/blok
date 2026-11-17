@@ -554,45 +554,154 @@ test.describe('side peek width', () => {
   });
 });
 
-// notion-motion.md Round 57 §6, read at 1512×717.
-test.describe('side peek cover', () => {
+// notion-motion.md Round 57 §6 and Round 58 §1, read at 1512×717 (and 530 / 900 tall for the cover height).
+test.describe('row page cover', () => {
   const COVER = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%2210%22%3E%3Crect width=%2210%22 height=%2210%22 fill=%22%23e07a3f%22/%3E%3C/svg%3E';
-  const withCover = (): OutputBlockData[] => blocks().map((block) => (block.id !== 'r1' ? block : {
-    ...block,
-    data: { ...block.data, icon: '🍎', cover: COVER },
-  }));
+  // r1 has an icon and a cover, r2 only an icon, r3 only a cover.
+  const HEADS: Record<string, Record<string, string> | undefined> = { r1: { icon: '🍎', cover: COVER }, r2: { icon: '🍎' }, r3: { cover: COVER } };
+  const withCover = (view: Record<string, unknown> = {}): OutputBlockData[] => blocks(view).map((block) => {
+    const extra = HEADS[block.id ?? ''];
+
+    return extra === undefined ? block : { ...block, data: { ...block.data, ...extra } };
+  });
+
+  interface Box { x: number; y: number; width: number; height: number }
+
+  const boxOf = async (locator: Locator): Promise<Box> => {
+    const box = await locator.boundingBox();
+
+    if (box === null) throw new Error('no box');
+
+    return box;
+  };
+
+  const open = async (page: Page, rowId: string, mode: 'side' | 'center' | 'full'): Promise<void> => {
+    await mount(page, withCover(mode === 'side' ? {} : { openPagesIn: mode }));
+    await openRow(page, rowId);
+    await expect(peek(page)).toHaveAttribute('data-peek-mode', mode);
+    await expect.poll(() => peek(page).evaluate((el) => el.getAnimations().length)).toBe(0);
+  };
+
+  const cover = (page: Page): Locator => peek(page).locator('[data-blok-database-drawer-cover]');
+  const icon = (page: Page): Locator => peek(page).locator('[data-blok-database-drawer-icon]');
+  const control = (page: Page, name: 'add-icon' | 'add-cover' | 'customize'): Locator => peek(page).locator(`[data-blok-database-drawer-${name}]`);
 
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1512, height: 717 });
   });
 
-  test('spans the whole peek under the bar, square, with a 36px icon and the title under it', async ({ page }) => {
-    await mount(page, withCover());
-    await openRow(page, 'r1');
-    await expect.poll(() => peek(page).evaluate((el) => el.getAnimations().length)).toBe(0);
+  test('side peek: spans the whole peek under the bar, square, the row under it and a 36px icon under the row', async ({ page }) => {
+    await open(page, 'r1', 'side');
 
-    const box = await peek(page).boundingBox();
-    const cover = peek(page).locator('[data-blok-database-drawer-cover]');
-    const coverBox = await cover.boundingBox();
-    const icon = await peek(page).locator('[data-blok-database-drawer-icon]').boundingBox();
-    const title = await peekTitle(page).boundingBox();
+    const box = await boxOf(peek(page));
+    const coverBox = await boxOf(cover(page));
+    const iconBox = await boxOf(icon(page));
+    const customize = await boxOf(control(page, 'customize'));
+    const title = await boxOf(peekTitle(page));
 
-    if (box === null || coverBox === null || icon === null || title === null) throw new Error('no peek');
     expect(coverBox.x).toBe(box.x);
     expect(coverBox.width).toBe(box.width);
     expect(coverBox.y).toBe(box.y + 44);
     expect(coverBox.height).toBeCloseTo(143.4, 1);
-    await expect(cover).toHaveCSS('border-radius', '0px');
-    expect(icon.width).toBe(36);
-    expect(icon.height).toBe(36);
-    expect(icon.y).toBeCloseTo(coverBox.y + coverBox.height + 48, 1);
-    expect(title.y).toBeCloseTo(icon.y + icon.height, 1);
+    await expect(cover(page)).toHaveCSS('border-radius', '0px');
+    expect(customize.y).toBeCloseTo(coverBox.y + coverBox.height + 16, 1);
+    expect(customize.x).toBeCloseTo(title.x - 1, 1);
+    expect(iconBox.width).toBe(36);
+    expect(iconBox.height).toBe(36);
+    expect(iconBox.x).toBeCloseTo(title.x + 8, 1);
+    expect(iconBox.y).toBeCloseTo(customize.y + 32, 1);
+    expect(title.y).toBeCloseTo(iconBox.y + iconBox.height, 1);
   });
 
+  test('side peek: an icon with no cover sits under the row, 36px', async ({ page }) => {
+    await open(page, 'r2', 'side');
+
+    const box = await boxOf(peek(page));
+    const iconBox = await boxOf(icon(page));
+    const addCover = await boxOf(control(page, 'add-cover'));
+    const customize = await boxOf(control(page, 'customize'));
+    const title = await boxOf(peekTitle(page));
+
+    expect(addCover.y).toBe(box.y + 48);
+    expect(addCover.x).toBeCloseTo(title.x - 1, 1);
+    expect(customize.x).toBeCloseTo(addCover.x + addCover.width, 1);
+    expect(iconBox.width).toBe(36);
+    expect(iconBox.x).toBeCloseTo(title.x + 8, 1);
+    expect(iconBox.y).toBe(box.y + 80);
+    expect(title.y).toBe(box.y + 116);
+  });
+
+  for (const [height, side, full] of [[530, 106, 159], [900, 180, 270]] as const) {
+    test(`the cover is 20vh in a peek and 30vh on a full page (${height} tall)`, async ({ page }) => {
+      await page.setViewportSize({ width: 1512, height });
+      await open(page, 'r3', 'side');
+      expect((await boxOf(cover(page))).height).toBeCloseTo(side, 1);
+      await open(page, 'r3', 'center');
+      expect((await boxOf(cover(page))).height).toBeCloseTo(side, 1);
+      await open(page, 'r3', 'full');
+      expect((await boxOf(cover(page))).height).toBeCloseTo(full, 1);
+    });
+  }
+
+  for (const [mode, coverHeight] of [['center', 143.4], ['full', 215.1]] as const) {
+    test(`${mode}: the cover spans the whole page under the bar and a 78px icon overlaps it by 42`, async ({ page }) => {
+      await open(page, 'r1', mode);
+
+      const box = await boxOf(peek(page));
+      const coverBox = await boxOf(cover(page));
+      const iconBox = await boxOf(icon(page));
+      const customize = await boxOf(control(page, 'customize'));
+      const title = await boxOf(peekTitle(page));
+
+      expect(coverBox.x).toBe(box.x);
+      expect(coverBox.width).toBe(box.width);
+      expect(coverBox.y).toBe(box.y + 44);
+      expect(coverBox.height).toBeCloseTo(coverHeight, 1);
+      await expect(cover(page)).toHaveCSS('border-radius', '0px');
+      expect(iconBox.width).toBe(78);
+      expect(iconBox.height).toBe(78);
+      expect(iconBox.x).toBeCloseTo(title.x + 8, 1);
+      expect(iconBox.y).toBeCloseTo(coverBox.y + coverBox.height - 42, 1);
+      // The icon paints over the cover.
+      expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('[data-blok-database-drawer-icon]') !== null, { x: iconBox.x + 39, y: iconBox.y + 10 })).toBe(true);
+      expect(customize.x).toBeCloseTo(title.x - 1, 1);
+      expect(customize.y).toBeCloseTo(iconBox.y + iconBox.height + 8, 1);
+      expect(title.y).toBeCloseTo(customize.y + 32, 1);
+    });
+
+    test(`${mode}: with a cover and no icon the row sits 16 under the cover`, async ({ page }) => {
+      await open(page, 'r3', mode);
+
+      const coverBox = await boxOf(cover(page));
+      const addIcon = await boxOf(control(page, 'add-icon'));
+      const customize = await boxOf(control(page, 'customize'));
+      const title = await boxOf(peekTitle(page));
+
+      expect(addIcon.y).toBeCloseTo(coverBox.y + coverBox.height + 16, 1);
+      expect(addIcon.x).toBeCloseTo(title.x - 1, 1);
+      expect(customize.x).toBeCloseTo(addIcon.x + addIcon.width, 1);
+      expect(title.y).toBeCloseTo(addIcon.y + 32, 1);
+    });
+
+    test(`${mode}: an icon with no cover sits 96 under the bar, the row under it`, async ({ page }) => {
+      await open(page, 'r2', mode);
+
+      const box = await boxOf(peek(page));
+      const iconBox = await boxOf(icon(page));
+      const addCover = await boxOf(control(page, 'add-cover'));
+      const title = await boxOf(peekTitle(page));
+
+      expect(iconBox.width).toBe(78);
+      expect(iconBox.x).toBeCloseTo(title.x + 8, 1);
+      expect(iconBox.y).toBe(box.y + 44 + 96);
+      expect(addCover.x).toBeCloseTo(title.x - 1, 1);
+      expect(addCover.y).toBe(iconBox.y + iconBox.height + 8);
+      expect(title.y).toBe(addCover.y + 32);
+    });
+  }
+
   test('shows the top controls over the whole cover and down to the title', async ({ page }) => {
-    await mount(page, withCover());
-    await openRow(page, 'r1');
-    await expect.poll(() => peek(page).evaluate((el) => el.getAnimations().length)).toBe(0);
+    await open(page, 'r1', 'side');
 
     const box = await peek(page).boundingBox();
 

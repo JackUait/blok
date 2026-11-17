@@ -164,6 +164,12 @@ const MENU_GAP = 4;
  * line was not measured: it stays level with the row.
  */
 const ZONE_MENU_PLACE = { gap: -4, bottom: 12 };
+/**
+ * notion-motion.md Round 55 §4: the Remind menu overlaps the picker's edge by 4px.
+ * Which side it takes was read only once (left, with no room on the right), so
+ * the side is still chosen as if it sat 4px clear.
+ */
+const REMIND_MENU_PLACE = { gap: -4, bottom: MENU_GAP, fitGap: MENU_GAP };
 
 type MenuKind = 'remind' | 'dateFormat' | 'timeFormat' | 'timeZone';
 
@@ -748,7 +754,7 @@ class DateEditor {
     this.menu = { element: menu, kind };
     row.setAttribute('aria-expanded', 'true');
     promoteToTopLayer(menu);
-    this.placeMenu(row, menu);
+    this.placeMenu(row, menu, remind ? REMIND_MENU_PLACE : undefined);
     const current = menu.querySelector<HTMLElement>('[aria-checked="true"]') ?? menu.querySelector<HTMLElement>('[role="menuitemradio"]');
 
     current?.setAttribute('tabindex', '0');
@@ -906,17 +912,21 @@ class DateEditor {
   }
 
   /** Beside the picker on its end side, else its start side, else kept inside the window; level with the row, kept `place.bottom` above the window bottom. */
-  private placeMenu(row: HTMLElement, menu: HTMLElement, place: { gap: number; bottom: number } = { gap: MENU_GAP, bottom: MENU_GAP }): void {
+  private placeMenu(row: HTMLElement, menu: HTMLElement, place: { gap: number; bottom: number; fitGap?: number } = { gap: MENU_GAP, bottom: MENU_GAP }): void {
     const box = this.root.getBoundingClientRect();
     const rowBox = row.getBoundingClientRect();
     const width = menu.offsetWidth;
     const height = menu.offsetHeight;
     const rtl = getElementDirection(this.anchor) === 'rtl';
-    const right = box.right + place.gap;
-    const left = box.left - place.gap - width;
-    const sides = rtl ? [left, right] : [right, left];
-    const fits = sides.find((side) => side >= 0 && side + width <= window.innerWidth);
-    const x = fits ?? Math.max(0, Math.min(sides[1], window.innerWidth - width));
+    const sidesAt = (gap: number): number[] => {
+      const right = box.right + gap;
+      const left = box.left - gap - width;
+
+      return rtl ? [left, right] : [right, left];
+    };
+    const sides = sidesAt(place.gap);
+    const fit = sidesAt(place.fitGap ?? place.gap).findIndex((side) => side >= 0 && side + width <= window.innerWidth);
+    const x = fit >= 0 ? sides[fit] : Math.max(0, Math.min(sides[1], window.innerWidth - width));
     const top = Math.max(0, Math.min(rowBox.top, window.innerHeight - height - place.bottom));
 
     Object.assign(menu.style, { position: 'fixed', left: `${x}px`, top: `${top}px` });

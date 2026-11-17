@@ -691,6 +691,11 @@ describe('cell editor CSS', () => {
     expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-handle-menu'] > [data-blok-popover-container]", 'transform-origin')).toEqual(['center']);
   });
 
+  // notion-motion.md Round 55 §4: the date picker's Remind menu rows are 28 tall, 29 apart.
+  it('spaces the Remind menu rows 1px apart', () => {
+    expect(declared('[data-blok-database-date-remind-menu]', 'row-gap')).toEqual(['var(--blok-space-0-25)']);
+  });
+
   // notion-motion.md Round 55 §5: the peek mode menu grows from the top centre (origin 110px 0 on 220 wide).
   it('scales the peek mode menu from its top centre', () => {
     expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-peek-mode-menu'] > [data-blok-popover-container]", 'transform-origin')).toEqual(['top center']);

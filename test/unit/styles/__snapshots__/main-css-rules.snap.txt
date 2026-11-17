@@ -12804,6 +12804,10 @@ textarea[data-blok-database-cell-input] {
   --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-1)));
 }
 
+[data-blok-database-date-remind-menu] {
+  row-gap: var(--blok-space-0-25);
+}
+
 [data-blok-database-date-setting-menu="dateFormat"][data-blok-top-layer][popover], [data-blok-database-date-setting-menu="timeFormat"][data-blok-top-layer][popover] {
   width: 180px;
 }

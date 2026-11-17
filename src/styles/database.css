@@ -9442,6 +9442,11 @@ textarea[data-blok-database-cell-input] {
   --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-1)));
 }
 
+/* notion-motion.md Round 55 §4: Remind rows are 29 apart. */
+[data-blok-database-date-remind-menu] {
+  row-gap: var(--blok-space-0-25);
+}
+
 /* research/26 §1f: the picker's Date format and Time format are 180 wide; Remind and the property menu stay 250. */
 [data-blok-database-date-setting-menu="dateFormat"][data-blok-top-layer][popover],
 [data-blok-database-date-setting-menu="timeFormat"][data-blok-top-layer][popover] {

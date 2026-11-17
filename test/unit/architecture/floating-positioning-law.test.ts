@@ -291,6 +291,7 @@ const TRACKED_VIRTUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'tools/database/database-table-menus.ts': 'openMenu passes the caller\'s point and its live element through to the popover.',
   'tools/database/index.ts': 'A board or gallery card\'s ⋯ menu opens at the click point: the point tracks the card.',
   'tools/link/paste-menu/controller.ts': 'Link-end rectangles track the inserted link block holder while open.',
+  'tools/page/page-picker.ts': 'The `at` option passes the caller\'s corner and its live element through: the database Move to picker sits on the closed row menu\'s corner and tracks the row.',
 };
 
 const DISMISSIBLE_VIRTUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {

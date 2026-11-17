@@ -30,7 +30,7 @@ import { cellText } from './database-table-clipboard';
 import type { CellChange, TableState } from './database-table-grid';
 import { fileChipIcon, rowPageGlyph, showsPageIcon } from './page-icon';
 
-import { CALCULATION_LABEL_KEYS, calcMenuAt, calculationItems, headerViewItems, loadLimitItems, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
+import { CALCULATION_LABEL_KEYS, calcMenuAt, calculationItems, headerViewItems, loadLimitItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
 import type { CountCap, OpenMenuOptions, RowFavorite } from './database-table-menus';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { DatabaseTableColumnResize, MIN_COLUMN_WIDTH } from './database-table-resize';
@@ -183,10 +183,10 @@ export interface TableHandlers {
   /** Opens a row page, in `mode` when the row menu's "Open in" names one. */
   openRow: (rowId: string, mode?: OpenPagesIn) => void;
   copyRowLink: (rowId: string) => void;
-  /** Other databases of this document a row can move to. */
-  moveTargets?: () => Array<{ id: string; title: string }>;
-  /** "Move to": the row leaves for another database. */
-  moveRowTo?: (rowId: string, databaseId: string) => void;
+  /** Whether "Move to" has anywhere to send a row. */
+  canMoveRow?: () => boolean;
+  /** "Move to": opens the picker over `menu` (the row menu's box), or by `anchor` without one. */
+  openMoveTo?: (rowId: string, anchor: HTMLElement, menu: DOMRect | undefined) => void;
   editRowIcon: (rowId: string) => void;
   updateView: (changes: ViewChanges) => void;
   /** The Load more row's ⋯. The tool leaves it out when the view cannot change. */
@@ -2254,10 +2254,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
       return true;
     }
-    const targets = handlers.moveRowTo === undefined || this.options.readOnly ? [] : handlers.moveTargets?.() ?? [];
-
-    if (targets.length === 0) return false;
-    this.showMenu(anchor, moveTargetItems(this.options.i18n, targets, (databaseId) => handlers.moveRowTo?.(rowId, databaseId)), { searchable: true });
+    if (handlers.openMoveTo === undefined || this.options.readOnly || handlers.canMoveRow?.() !== true) return false;
+    handlers.openMoveTo(rowId, anchor, undefined);
 
     return true;
   }
@@ -2295,7 +2293,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       onOpenIn: (mode) => handlers.openRow(rowId, mode),
       onCopyLink: () => handlers.copyRowLink(rowId),
       onDuplicate: () => handlers.duplicateRow(rowId),
-      ...(handlers.moveRowTo !== undefined ? { moveTargets: handlers.moveTargets?.() ?? [], onMoveTo: (databaseId: string) => handlers.moveRowTo?.(rowId, databaseId) } : {}),
+      ...(handlers.openMoveTo !== undefined && handlers.canMoveRow?.() === true ? { onMoveTo: (menu: DOMRect | undefined) => handlers.openMoveTo?.(rowId, commentAnchor, menu) } : {}),
       ...rowMenuFooter({
         row: this.allRows().find((row) => row.id === rowId),
         titlePropertyId: this.options.titlePropertyId,

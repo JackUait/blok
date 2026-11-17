@@ -555,16 +555,27 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       expect(event.defaultPrevented).toBe(true);
     });
 
-    it('a picked board card lists the other databases on ⌘⇧P', () => {
+    /** The Move to picker's rows, once its first search has answered. */
+    const moveOptions = async (): Promise<string[]> => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      return [...document.querySelectorAll('[data-blok-database-move-picker] [role="option"]')].map((option) => option.textContent ?? '');
+    };
+
+    afterEach(() => {
+      document.querySelectorAll('[data-blok-database-move-picker]').forEach((picker) => picker.remove());
+    });
+
+    it('a picked board card lists the other databases on ⌘⇧P', async () => {
       const { el } = buildTool(withOtherDatabase(oneRow()), {}, viewData('board'));
 
       rowEl(el, 'board').dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true }));
       press(document.body, 'p');
 
-      expect(menuItem('database-row-move-to-db2')).not.toBeNull();
+      expect(await moveOptions()).toEqual(['Projects']);
     });
 
-    it('a selected table row opens its comments on ⌘⇧M and lists the other databases on ⌘⇧P', () => {
+    it('a selected table row opens its comments on ⌘⇧M and lists the other databases on ⌘⇧P', async () => {
       const open = vi.fn();
       const { el } = buildTool(withOtherDatabase(oneRow()), { comments: { open } }, viewData('table'));
 
@@ -576,7 +587,7 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       press(grid, 'm');
       expect(open).toHaveBeenCalledWith({ databaseId: 'db', rowId: 'a' }, expect.any(HTMLElement));
       press(grid, 'p');
-      expect(menuItem('database-row-move-to-db2')).not.toBeNull();
+      expect(await moveOptions()).toEqual(['Projects']);
     });
 
     it('two picked rows take no ⌘⇧M: the comment is for one page', () => {

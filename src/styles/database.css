@@ -3480,6 +3480,34 @@ button[data-blok-database-board-lane-count]:hover {
   transform-origin: bottom center;
 }
 
+/* notion-motion.md Round 62 §1: the Move to picker scales in from its centre. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] > [data-blok-popover-container] {
+  transform-origin: center;
+}
+
+/* Round 62 §1: its search box sits 12px in; the container already pads 4px on each side. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [data-blok-popover-container] > [data-blok-field] {
+  margin: var(--blok-space-3) var(--blok-space-2) 0;
+}
+
+/* Round 62 §1: result rows 322x28 at +4, the 18px icon at +13 and the 14/16.8 title at +40. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [role='option'] {
+  margin-inline: 0;
+  min-height: 28px;
+  padding: var(--blok-space-1-25) var(--blok-space-2) var(--blok-space-1-25) var(--blok-space-2-25);
+  gap: var(--blok-space-2-25);
+}
+
+/* The title and path lines; the picker's own rows use 20px lines. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [role='option'] > div > * {
+  line-height: 16.8px;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [data-blok-testid='page-picker-option-icon'] {
+  width: 18px;
+  height: 18px;
+}
+
 /* Panels and pickers in a CellPopover (Filter, Sort…) move like the menus (notion-motion.md "Popovers").
    Editors that open at once opt out further down, after these rules. */
 [data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-menu'],

@@ -784,7 +784,9 @@ test.describe('property and row menus', () => {
     await first.locator('[data-row-id="r1"] [data-blok-database-table-row-handle]').click();
     await expect(openMenu(page).getByPlaceholder('Search actions…')).toBeVisible();
     await clickSettled(openMenu(page).getByRole('menuitem', { name: 'Move to', exact: true }));
-    await clickSettled(page.getByRole('menuitem', { name: 'Archive' }));
+    // notion-motion.md Round 62 §1: the "Move page to…" picker takes the menu's place, its field focused.
+    await expect(page.getByPlaceholder('Move page to…')).toBeFocused();
+    await clickSettled(page.getByRole('option', { name: 'Archive' }));
 
     const moved = page.locator('[data-blok-id="db-2"] [data-blok-database-table-row][data-row-id="r1"]');
 

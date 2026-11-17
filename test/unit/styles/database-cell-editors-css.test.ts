@@ -788,6 +788,30 @@ describe('cell editor CSS', () => {
     expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-peek-mode-menu'] > [data-blok-popover-container]", 'transform-origin')).toEqual(['top center']);
   });
 
+  // notion-motion.md Round 62 §1: the Move to picker scales 0.96 → 1 from its centre.
+  it('scales the Move to picker from its centre', () => {
+    expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] > [data-blok-popover-container]", 'transform-origin')).toEqual(['center']);
+  });
+
+  // notion-motion.md Round 62 §1: search box 306x28 at +12,+12; result rows 322x28 at +4, radius 6, icon 18 at +13, title 14/16.8 at +40.
+  describe('Move to picker', () => {
+    const MOVE = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu']";
+
+    it('insets the search box 12px from the top and sides', () => {
+      expect(declared(`${MOVE} [data-blok-popover-container] > [data-blok-field]`, 'margin')).toEqual(['var(--blok-space-3) var(--blok-space-2) 0']);
+    });
+
+    it('draws the rows 322x28 at +4 with the icon at +13 and the title at +40', () => {
+      expect(declared(`${MOVE} [role='option']`, 'margin-inline')).toEqual(['0']);
+      expect(declared(`${MOVE} [role='option']`, 'min-height')).toEqual(['28px']);
+      expect(declared(`${MOVE} [role='option']`, 'padding')).toEqual(['var(--blok-space-1-25) var(--blok-space-2) var(--blok-space-1-25) var(--blok-space-2-25)']);
+      expect(declared(`${MOVE} [role='option']`, 'gap')).toEqual(['var(--blok-space-2-25)']);
+      expect(declared(`${MOVE} [role='option'] > div > *`, 'line-height')).toEqual(['16.8px']);
+      expect(declared(`${MOVE} [data-blok-testid='page-picker-option-icon']`, 'width')).toEqual(['18px']);
+      expect(declared(`${MOVE} [data-blok-testid='page-picker-option-icon']`, 'height')).toEqual(['18px']);
+    });
+  });
+
   // notion-spec-2 §18.3 (b4-rel-dlg.txt): head 33 tall, "Select a page" 16px in, rows 544x32 one pixel apart.
   describe('relation picker in a table cell', () => {
     const REL = '[data-blok-database-relation-editor]';

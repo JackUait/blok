@@ -47,7 +47,7 @@ import { resolveDynamicProperties } from './dynamic-values';
 import { safeHref } from '../../components/utils/sanitize-url';
 import { announce } from '../../components/utils/announcer';
 import { bulkCloseClearsSelection, bulkEditableProperties, bulkStartValue, createSelectionBar, watchBulkCloseKey } from './database-selection-bar';
-import { CALC_MENU_MIN_WIDTH, CALCULATION_LABEL_KEYS, calcMenuAt, calculationItems, DATABASE_CALC_MENU_CLASS, DATABASE_HEADER_MENU_CLASS, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems, selectionActionItems, selectionMenuItems } from './database-table-menus';
+import { CALC_MENU_MIN_WIDTH, CALCULATION_LABEL_KEYS, calcMenuAt, calculationItems, DATABASE_CALC_MENU_CLASS, DATABASE_HEADER_MENU_CLASS, openMenu, rowMenuFooter, rowMenuItems, selectionActionItems, selectionMenuItems } from './database-table-menus';
 import type { OpenMenuOptions, RowFavorite } from './database-table-menus';
 import { EmojiPicker, prefetchEmojiPickerData } from '../callout/emoji-picker';
 import { refreshCommentBadges } from './database-comment-badge';
@@ -152,7 +152,9 @@ import { PopoverItemType } from '../../components/utils/popover/components/popov
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { nanoid } from 'nanoid';
 import type { MenuConfigItem } from '../../../types/tools/menu-config';
-import { databasePageHost, movedDatabases, subtreeOf } from '../page/database-page-move';
+import { databasePageHost, movedDatabases, rowMoveHost, subtreeOf } from '../page/database-page-move';
+import type { PagePicker } from '../page/page-picker';
+import { MOVE_PICKER_DROP, openMovePicker } from './database-move-picker';
 import { createdId } from '../page/page-values';
 import { generateBlockId } from '../../components/utils/id-generator';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -687,6 +689,10 @@ export class DatabaseTool implements BlockTool {
   private linkPicker: boolean;
   /** The open "New database" / "New view" panel of a linked view. */
   private sourcePicker: DatabasePanel | null = null;
+  /** The open Move to picker and its row. */
+  private movePicker: { picker: PagePicker; rowId: string } | null = null;
+  /** Rows waiting on the host's `create` for a move to a page: a second pick must not make a second page. */
+  private readonly pageMoves = new Set<string>();
   /** "Hide data source titles": one setting for the whole block (per view is unmeasured). */
   private dataSourceTitlesHidden: boolean;
   /** The database is the whole page: the page title is its title. */
@@ -2950,6 +2956,7 @@ export class DatabaseTool implements BlockTool {
   destroy(): void {
     this.destroyed = true;
     this.sourcePicker?.close();
+    this.movePicker?.picker.close();
     this.formPreview?.close();
     this.pinnedGroupModal?.close();
     this.formPromptAbort?.abort();
@@ -3235,6 +3242,7 @@ export class DatabaseTool implements BlockTool {
     if (openId !== undefined && openId !== null && templateIds.has(openId)) this.showTemplateBanner(openId);
     this.recreateDeletedRows();
     this.createCopiedRows();
+    if (this.movePicker !== null && this.model.getRow(this.movePicker.rowId) === undefined) this.movePicker.picker.close();
   }
 
   /**
@@ -8377,7 +8385,7 @@ export class DatabaseTool implements BlockTool {
       openRow: (rowId, mode) => context === undefined ? this.handleRowClick(rowId, mode) : context.openRow(rowId, mode),
       rowsEscaped: () => { if (context === undefined) this.closeRowPage(); },
       copyRowLink: (rowId) => this.copyRowLink(rowId),
-      moveTargets: () => this.moveTargets(),
+      canMoveRow: () => this.canMoveRow(),
       // After the click that closed the editor, which would count as outside the
       // new menu; the table may have redrawn by then, so find the header late.
       editProperty: (propertyId) => setTimeout(() => {
@@ -8385,7 +8393,7 @@ export class DatabaseTool implements BlockTool {
 
         if (header !== null && writable()) this.openPropertyMenu(propertyId, header, table?.(), context);
       }, 0),
-      moveRowTo: (rowId, databaseId) => { if (writable()) this.moveRowTo({ rowId, databaseId }); },
+      openMoveTo: (rowId, anchor, menu) => { if (writable()) this.openMoveTo(rowId, anchor, menu); },
       editRowIcon: (rowId) => { if (writable()) this.editRowIcon(rowId, context); },
       updateView: (changes) => { if (writable()) this.updateActiveView(changes, context); },
       // notion-motion.md Round 29 §1: the Load more row's ⋯. Round 30 §3: a locked database keeps it working.
@@ -10023,7 +10031,6 @@ export class DatabaseTool implements BlockTool {
   private openRowMenu(rowId: string, anchor: HTMLElement, card: HTMLElement, options: { viewSettings: boolean; comment?: boolean; at?: OpenMenuOptions['at']; kind?: 'card' | 'handle'; viewportMargin?: number; coverFlipOffset?: number }): void {
     const comment = options.comment === false ? undefined : this.commentLever().comment;
     const writable = (): boolean => !this.readOnly && !this.destroyed;
-    const listTargets = (): Array<{ id: string; title: string }> => this.moveTargets();
     // notion-motion.md Round 42 §2: Edit property › lists every property A→Z, shown or not; Created time and ID were not in it.
     const properties = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n)
       .filter((p) => !['title', 'createdTime', 'uniqueId'].includes(p.type))
@@ -10039,9 +10046,7 @@ export class DatabaseTool implements BlockTool {
         : {}),
       onDuplicate: () => { if (writable()) this.duplicateTableRow(rowId); },
       onDelete: () => { if (writable()) this.deleteTableRows([rowId]); },
-      // A getter: the targets walk every block, so they are read only when the menu opens.
-      get moveTargets() { return listTargets(); },
-      onMoveTo: (databaseId: string) => { if (writable()) this.moveRowTo({ rowId, databaseId }); },
+      ...(this.canMoveRow() ? { onMoveTo: (menu: DOMRect | undefined) => { if (writable()) this.openMoveTo(rowId, card, menu); } } : {}),
     };
 
     this.cardMenuPopover?.destroy();
@@ -10845,15 +10850,17 @@ export class DatabaseTool implements BlockTool {
           // A template's page: the row actions would miss it, as they read the rows only.
           if (this.model.getRow(rowId) === undefined) return undefined;
           const copyLink = { onCopyLink: () => this.copyRowLink(rowId) };
-          const listTargets = (): Array<{ id: string; title: string }> => this.moveTargets();
+          const canMove = this.canMoveRow();
 
           return !writable() ? copyLink : {
             ...copyLink,
             onDuplicate: () => { if (writable()) this.duplicateTableRow(rowId); },
             onDelete: () => { if (writable()) this.deleteTableRows([rowId]); },
-            // A getter: the targets walk every block, so they are read only when the menu opens.
-            get moveTargets() { return listTargets(); },
-            onMoveTo: (databaseId: string) => { if (writable()) this.moveRowTo({ rowId, databaseId }); },
+            ...(canMove ? {
+              onMoveTo: (menu: DOMRect | undefined) => {
+                if (writable()) this.openMoveTo(rowId, document.querySelector<HTMLElement>('[data-blok-database-peek-actions]:not([hidden])') ?? this.block.holder, menu);
+              },
+            } : {}),
           };
         },
         // A template's page is not a row, so it has no star.
@@ -11749,11 +11756,7 @@ export class DatabaseTool implements BlockTool {
 
       return;
     }
-    const targets = this.moveTargets();
-
-    if (targets.length > 0) {
-      act(() => openMenu(rowEl, moveTargetItems(this.api.i18n, targets, (databaseId) => this.moveRowTo({ rowId, databaseId })), { searchable: true }));
-    }
+    if (this.canMoveRow()) act(() => this.openMoveTo(rowId, rowEl, undefined));
   }
 
   /**
@@ -12938,6 +12941,108 @@ export class DatabaseTool implements BlockTool {
   /** "Move to" targets: every other database of the document. A linked view shows another's rows, so it is none. */
   private moveTargets(): Array<{ id: string; title: string }> {
     return this.documentDatabases().filter((database) => database.id !== this.dataId && !this.isLinkedBlock(database.id));
+  }
+
+  /** Move to has somewhere to send a row: another database, or a host that takes pages. */
+  private canMoveRow(): boolean {
+    if (this.readOnly) return false;
+    if (this.source !== undefined) return this.api.blocks.getById(this.source.databaseId) !== null && (this.moveTargets().length > 0 || rowMoveHost(this.api) !== null);
+
+    return this.moveTargets().length > 0 || rowMoveHost(this.api) !== null;
+  }
+
+  /**
+   * The "Move page to…" picker (notion-motion.md Round 62 §1): it takes the row
+   * menu's place, at its left edge and 6px below its top. Without a menu
+   * (⌘⇧P) it opens under `anchor`; that spot is unmeasured.
+   */
+  private openMoveTo(rowId: string, anchor: HTMLElement, menu: DOMRect | undefined): void {
+    if (this.readOnly || this.destroyed) return;
+    const box = menu ?? anchor.getBoundingClientRect();
+    const position = new DOMRect(box.left, menu === undefined ? box.bottom : box.top + MOVE_PICKER_DROP, 0, 0);
+
+    this.movePicker?.picker.close();
+    // After the row menu's close, which hands focus back to its trigger.
+    queueMicrotask(() => {
+      if (this.destroyed || this.readOnly || this.model.getRow(rowId) === undefined) return;
+      const host = rowMoveHost(this.api);
+      const picker = openMovePicker({
+        i18n: this.api.i18n,
+        anchor,
+        at: { position, positionContext: anchor.isConnected ? anchor : this.block.holder },
+        databases: () => this.moveTargets(),
+        pages: host?.config ?? null,
+        onDatabase: (databaseId) => { if (!this.readOnly && !this.destroyed) this.moveRowTo({ rowId, databaseId }); },
+        onPage: (pageId, title) => { if (!this.readOnly && !this.destroyed) void this.moveRowToPage({ rowId, pageId, title }); },
+      });
+
+      this.movePicker = { picker, rowId };
+    });
+  }
+
+  /**
+   * Move to a page (notion-motion.md Round 62 §1): the row becomes a plain page
+   * under `pageId`, made by the host's `create` with the row's body, and leaves
+   * the database in one undo step. Its properties are dropped, as in Notion.
+   * Its comment threads stay with the removed row: a plain page has no thread UI.
+   * Undo brings the row back here; the new page is left as it is.
+   */
+  async moveRowToPage(param: { rowId: string; pageId: string; title: string }): Promise<void> {
+    const { rowId, pageId, title } = param;
+
+    if (this.readOnly || this.destroyed) return;
+    if (this.source !== undefined) {
+      this.api.blocks.getById(this.source.databaseId)?.call('moveRowToPage', param);
+
+      return;
+    }
+    const host = rowMoveHost(this.api);
+    const row = this.model.getRow(rowId);
+
+    if (host === null || row === undefined || this.pageMoves.has(rowId)) return;
+    this.pageMoves.add(rowId);
+    try {
+      const [root, ...rest] = subtreeOf((await this.api.saver.save()).blocks, rowId);
+
+      if (root === undefined) return;
+      const comments = new Set<string>();
+
+      rest.forEach((block) => {
+        if (block.id !== undefined && (block.type === 'database-comment' || (block.parent !== undefined && comments.has(block.parent)))) comments.add(block.id);
+      });
+      const body = rest
+        .filter((block) => block.id === undefined || !comments.has(block.id))
+        .map((block) => {
+          if (block.parent !== rowId) return block;
+          const { parent: _parent, ...top } = block;
+
+          return top;
+        });
+      const rowData = root.data as DatabaseRowData;
+      const rowTitle = row.properties[this.titlePropertyId()];
+      const name = typeof rowTitle === 'string' ? rowTitle : '';
+      const document: OutputData = {
+        ...(name !== '' ? { title: name } : {}),
+        ...(typeof rowData.icon === 'string' && rowData.icon !== '' ? { icon: { type: 'emoji' as const, value: rowData.icon } } : {}),
+        ...(typeof rowData.cover === 'string' && rowData.cover !== ''
+          ? { cover: { type: 'image' as const, url: rowData.cover, ...(rowData.coverPosition !== undefined ? { position: rowData.coverPosition } : {}) } }
+          : {}),
+        blocks: body,
+      };
+      const made = await Promise.resolve(host.config.create?.({ pageId: generateBlockId(), title: name, document, parentId: pageId }))
+        .then(() => true, () => false);
+
+      // The save and the host were async: the row may be gone, or the database locked or closed.
+      if (!made || this.destroyed || this.readOnly || this.model.getRow(rowId) === undefined) return;
+      this.inOneStep(() => {
+        // The bodies live in the new page now: removing this copy must not delete their databases' rows.
+        body.forEach((block) => { if (block.id !== undefined) movedDatabases.add(block.id); });
+        this.deleteTableRows([rowId]);
+      });
+      announce(this.api.i18n.t('tools.database.movedRowTo', { title: name === '' ? this.api.i18n.t('tools.database.relationUntitled') : name, target: title }));
+    } finally {
+      this.pageMoves.delete(rowId);
+    }
   }
 
   /** Move row blocks whole so their page children stay attached. */

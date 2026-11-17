@@ -7464,6 +7464,30 @@ button[data-blok-database-board-lane-count]:hover {
   transform-origin: bottom center;
 }
 
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] > [data-blok-popover-container] {
+  transform-origin: center;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [data-blok-popover-container] > [data-blok-field] {
+  margin: var(--blok-space-3) var(--blok-space-2) 0;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [role='option'] {
+  margin-inline: 0;
+  min-height: 28px;
+  padding: var(--blok-space-1-25) var(--blok-space-2) var(--blok-space-1-25) var(--blok-space-2-25);
+  gap: var(--blok-space-2-25);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [role='option'] > div > * {
+  line-height: 16.8px;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [data-blok-testid='page-picker-option-icon'] {
+  width: 18px;
+  height: 18px;
+}
+
 [data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-menu'], [data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-cell-editor'] {
   transition: display 200ms allow-discrete, overlay 200ms allow-discrete;
 }

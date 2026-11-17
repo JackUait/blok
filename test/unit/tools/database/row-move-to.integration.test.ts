@@ -7824,7 +7824,8 @@ describe('row ⋮⋮ menu with a real editor', () => {
 
     moveTo?.click();
     await quiet();
-    const titles = [...document.querySelectorAll<HTMLElement>('[data-blok-nested] [data-blok-popover-item], [data-blok-popover-nested] [data-blok-popover-item]')]
+    // notion-motion.md Round 62 §1: Move to opens the "Move page to…" picker in the menu's place.
+    const titles = [...document.querySelectorAll<HTMLElement>('[data-blok-database-move-picker] [role="option"]')]
       .map((item) => item.textContent?.trim());
 
     expect(moveTo).toBeDefined();

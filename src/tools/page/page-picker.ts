@@ -1,5 +1,5 @@
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { IconArrowDiagonal, IconPlus } from '../../components/icons';
+import { IconArrowDiagonal, IconPage, IconPlus, IconTable } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { SearchInput, SearchInputEvent } from '../../components/utils/popover/components/search-input';
@@ -14,13 +14,16 @@ const COMBOBOX_ATTRIBUTES = [
   'role', 'aria-expanded', 'aria-autocomplete', 'aria-haspopup', 'aria-controls', 'aria-activedescendant',
 ] as const;
 
+/** A row of the picker. `kind: 'database'` draws the table glyph when it has no icon. */
+type PickerPage = PageSearchResult & { kind?: 'database' };
+
 /** The page to show, or null to drop it. A malformed path or status is ignored, not fatal. */
-const toVisiblePage = (value: unknown): PageSearchResult | null => {
+const toVisiblePage = (value: unknown): PickerPage | null => {
   if (typeof value !== 'object' || value === null) {
     return null;
   }
 
-  const { pageId, access, title, icon, path, status } = value as Record<string, unknown>;
+  const { pageId, access, title, icon, path, status, kind } = value as Record<string, unknown>;
 
   if (typeof pageId !== 'string' || pageId.trim() === '' || access !== undefined ||
     (title !== undefined && typeof title !== 'string')) {
@@ -33,6 +36,7 @@ const toVisiblePage = (value: unknown): PageSearchResult | null => {
     icon: readIcon(icon),
     path: Array.isArray(path) ? path.filter((part): part is string => typeof part === 'string') : undefined,
     status: status === 'draft' || status === 'published' ? status : undefined,
+    ...(kind === 'database' ? { kind } : {}),
   };
 };
 
@@ -68,6 +72,12 @@ export interface PagePickerOptions {
   onClose?: () => void;
   /** Gets the active row's page title, or null when the active row is not a page. */
   onActiveTitle?: (title: string | null) => void;
+  /** The popover's class and width, and `at`: its top-left corner, moving with `positionContext`. */
+  popover?: { class?: string; width?: string; at?: { position: DOMRect; positionContext: HTMLElement } };
+  /** With `searchField`: a label over the pages, `idle` while nothing is typed and `query` after. */
+  sections?: { idle: string; query: string };
+  /** With `searchField`: false leaves the pages unhighlighted while nothing is typed, until a key or the pointer picks one. */
+  highlightIdle?: boolean;
 }
 
 /** Options for {@link PagePicker.chooseParent}. */
@@ -127,7 +137,9 @@ export class PagePicker {
   private newPage: PagePickerNewPage | null = null;
   /** Section headers show only in the inline menu, not under a search field. */
   private sectioned = false;
-  private results: PageSearchResult[] = [];
+  private sections: PagePickerOptions['sections'] | null = null;
+  private highlightIdle = true;
+  private results: PickerPage[] = [];
   private entries: Entry[] = [];
   private query = '';
   private loading = false;
@@ -157,6 +169,11 @@ export class PagePicker {
     return this.popover !== null;
   }
 
+  /** The open popover's root, or null when closed. */
+  public getElement(): HTMLElement | null {
+    return this.popover?.getElement() ?? null;
+  }
+
   public open(_query: string, anchor: HTMLElement, onPick: (pageId: string) => void, options: PagePickerOptions = {}): void {
     this.close();
     this.anchor = anchor;
@@ -167,10 +184,13 @@ export class PagePicker {
     this.onClose = options.onClose ?? null;
     this.onActiveTitle = options.onActiveTitle ?? null;
     this.sectioned = options.searchField === undefined;
+    this.sections = options.searchField === undefined ? null : options.sections ?? null;
+    this.highlightIdle = options.highlightIdle ?? true;
     this.newPage = options.searchField === undefined ? options.newPage ?? null : null;
     this.content = document.createElement('div');
-    this.popover = new PopoverDesktop({
-      items: [{ type: PopoverItemType.Html, element: this.content }],
+    const look = options.popover;
+    const params = {
+      items: [{ type: PopoverItemType.Html as const, element: this.content }],
       trigger: anchor,
       listbox: true,
       // With a field, the content is the listbox, so the field stays outside it.
@@ -179,7 +199,13 @@ export class PagePicker {
       minWidth: '240px',
       flippable: false,
       messages: { actions: this.label, nothingFound: this.nothingFound },
-    });
+      ...(look?.class !== undefined ? { class: look.class } : {}),
+      ...(look?.width !== undefined ? { width: look.width } : {}),
+    };
+
+    this.popover = new PopoverDesktop(look?.at === undefined
+      ? params
+      : { ...params, cover: true, position: look.at.position, positionContext: look.at.positionContext });
     this.popover.on(PopoverEvent.Closed, () => this.close());
     if (options.searchField !== undefined) {
       this.mountSearchField(this.popover, options.searchField);
@@ -213,11 +239,11 @@ export class PagePicker {
       return;
     }
 
-    this.results = results.map(toVisiblePage).filter((page): page is PageSearchResult => page !== null);
+    this.results = results.map(toVisiblePage).filter((page): page is PickerPage => page !== null);
     this.loading = false;
     this.answered = true;
     this.expanded = false;
-    this.activeIndex = 0;
+    this.activeIndex = this.highlightIdle || this.query !== '' ? 0 : -1;
     this.keyboardNavigated = false;
     this.render();
   }
@@ -234,6 +260,7 @@ export class PagePicker {
     }
     this.restoreAnchor();
     this.sectioned = false;
+    this.sections = null;
     this.newPage = null;
     this.onChoose = step.onChoose;
     this.results = [];
@@ -326,6 +353,8 @@ export class PagePicker {
     this.onClose = null;
     this.onActiveTitle = null;
     this.newPage = null;
+    this.sections = null;
+    this.highlightIdle = true;
     this.results = [];
     this.entries = [];
     this.query = '';
@@ -455,6 +484,9 @@ export class PagePicker {
     if (this.sectioned && (visible.length > 0 || this.loading)) {
       rows.push(this.buildHeader('link', this.t('toolNames.pageLink')));
     }
+    if (this.sections !== null && this.sections !== undefined && (visible.length > 0 || this.loading)) {
+      rows.push(this.buildHeader('link', this.query === '' ? this.sections.idle : this.sections.query));
+    }
     visible.forEach((result) => add({
       key: `page:${result.pageId}`,
       element: this.buildPageOption(result),
@@ -472,7 +504,7 @@ export class PagePicker {
     }
 
     this.entries = entries;
-    this.activeIndex = entries.length === 0 ? -1 : Math.min(Math.max(this.activeIndex, 0), entries.length - 1);
+    this.activeIndex = entries.length === 0 ? -1 : Math.min(Math.max(this.activeIndex, this.highlightIdle || this.query !== '' ? 0 : -1), entries.length - 1);
     content.replaceChildren(...rows);
     if (this.loading) {
       this.listbox?.setAttribute('aria-busy', 'true');
@@ -563,8 +595,8 @@ export class PagePicker {
     return { option, body };
   }
 
-  private buildPageOption(result: PageSearchResult): HTMLElement {
-    const { option, body } = this.buildRow('page-picker-option', pageIconNode(result.icon));
+  private buildPageOption(result: PickerPage): HTMLElement {
+    const { option, body } = this.buildRow('page-picker-option', pageIconNode(result.icon, result.kind === 'database' ? IconTable : IconPage));
     const line = document.createElement('div');
     const title = document.createElement('span');
 

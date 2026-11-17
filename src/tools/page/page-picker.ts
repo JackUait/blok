@@ -78,6 +78,8 @@ export interface PagePickerOptions {
   sections?: { idle: string; query: string };
   /** With `searchField`: false leaves the pages unhighlighted while nothing is typed, until a key or the pointer picks one. */
   highlightIdle?: boolean;
+  /** True lists every page; otherwise the list folds after a few under a "N more results" row. */
+  showAll?: boolean;
 }
 
 /** Options for {@link PagePicker.chooseParent}. */
@@ -139,6 +141,7 @@ export class PagePicker {
   private sectioned = false;
   private sections: PagePickerOptions['sections'] | null = null;
   private highlightIdle = true;
+  private showAll = false;
   private results: PickerPage[] = [];
   private entries: Entry[] = [];
   private query = '';
@@ -186,6 +189,7 @@ export class PagePicker {
     this.sectioned = options.searchField === undefined;
     this.sections = options.searchField === undefined ? null : options.sections ?? null;
     this.highlightIdle = options.highlightIdle ?? true;
+    this.showAll = options.showAll ?? false;
     this.newPage = options.searchField === undefined ? options.newPage ?? null : null;
     this.content = document.createElement('div');
     const look = options.popover;
@@ -355,6 +359,7 @@ export class PagePicker {
     this.newPage = null;
     this.sections = null;
     this.highlightIdle = true;
+    this.showAll = false;
     this.results = [];
     this.entries = [];
     this.query = '';
@@ -471,7 +476,7 @@ export class PagePicker {
       return;
     }
 
-    const visible = this.expanded ? this.results : this.results.slice(0, COLLAPSED_ROWS);
+    const visible = this.expanded || this.showAll ? this.results : this.results.slice(0, COLLAPSED_ROWS);
     const hidden = this.results.length - visible.length;
     const rows: HTMLElement[] = [];
     const entries: Entry[] = [];

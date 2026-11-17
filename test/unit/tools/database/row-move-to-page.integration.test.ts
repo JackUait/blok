@@ -232,6 +232,17 @@ describe('row menu › Move to a page', () => {
     expect(page.create).toHaveBeenCalledTimes(1);
   });
 
+  // R62: Suggested listed 9 rows in one scroller, with no "more results" row.
+  it('lists every suggested page, without folding the list', async () => {
+    const many = Array.from({ length: 10 }, (_, index) => ({ pageId: `p-${index}`, title: `Page ${index}` }));
+
+    await boot(host({ search: vi.fn(async () => many) }));
+    await openPicker();
+
+    expect(options()).toHaveLength(10);
+    expect(document.querySelector('[data-blok-database-move-picker] [data-blok-testid="page-picker-more"]')).toBeNull();
+  });
+
   it('lists the document\'s other databases and moves the row into one as before', async () => {
     await boot(host(), [...BLOCKS, database('db2', 'Projects', [])]);
     await openPicker();

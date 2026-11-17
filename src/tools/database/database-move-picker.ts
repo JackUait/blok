@@ -67,6 +67,7 @@ export const openMovePicker = (options: MovePickerOptions): PagePicker => {
     popover: { class: `${DATABASE_MENU_CLASS} blok-database-move-menu`, width: PICKER_WIDTH, at: options.at },
     sections: { idle: t('tools.database.linkedSuggested'), query: t('tools.database.moveToPages') },
     highlightIdle: false,
+    showAll: true,
   });
   picker.getElement()?.setAttribute('data-blok-database-move-picker', '');
   picker.startSearch('');

@@ -103,8 +103,7 @@ export const createMentionMenu = (options: MentionMenuOptions): MentionMenu => {
     active: number;
   } = { menu: null, start: -1, query: '', pages: [], search: 0, options: [], active: 0 };
 
-  input.setAttribute('aria-haspopup', 'listbox');
-  input.setAttribute('aria-expanded', 'false');
+  // A textarea is a textbox: aria-expanded and aria-haspopup are not allowed on it, so it names the open list by aria-controls.
 
   const label = (text: string): HTMLElement => {
     const el = document.createElement('div');
@@ -272,7 +271,6 @@ export const createMentionMenu = (options: MentionMenuOptions): MentionMenu => {
     state.pages = [];
     options.host.appendChild(menu);
     promoteToTopLayer(menu);
-    input.setAttribute('aria-expanded', 'true');
     input.setAttribute('aria-controls', listId);
     window.addEventListener('keydown', onKey, true);
     window.addEventListener('scroll', onScroll, { capture: true, passive: true });
@@ -289,7 +287,6 @@ export const createMentionMenu = (options: MentionMenuOptions): MentionMenu => {
     window.removeEventListener('keydown', onKey, true);
     window.removeEventListener('scroll', onScroll, { capture: true });
     input.removeEventListener('blur', close);
-    input.setAttribute('aria-expanded', 'false');
     input.removeAttribute('aria-controls');
     input.removeAttribute('aria-activedescendant');
     removeFromTopLayer(menu);

@@ -138,7 +138,7 @@ describe('comment composer — Mention (notion-motion.md Round 62 §2)', () => {
     expect(optionTexts().some((text) => text.includes('Roadmap') && text.includes('Team'))).toBe(true);
     expect(search).toHaveBeenCalledWith('');
     expect(menu()?.querySelector('[aria-selected="true"]')?.textContent).toContain('tools.database.dateToday');
-    expect(input.getAttribute('aria-expanded')).toBe('true');
+    expect(input.getAttribute('aria-controls')).toBe(menu()?.id);
   });
 
   it('typing after "@" filters: People by name, Date drops out', async () => {
@@ -224,7 +224,7 @@ describe('comment composer — Mention (notion-motion.md Round 62 §2)', () => {
     expect(menu()).toBeNull();
     expect(input.value).toBe('@bo');
     expect(event.defaultPrevented).toBe(true);
-    expect(input.getAttribute('aria-expanded')).toBe('false');
+    expect(input.hasAttribute('aria-controls')).toBe(false);
   });
 
   it('Enter with the menu open picks, it does not send', async () => {

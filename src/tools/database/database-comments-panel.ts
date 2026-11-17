@@ -289,7 +289,7 @@ const draftFiles = (
     [...(picker.files ?? [])].forEach((file) => {
       const chip = document.createElement('span');
       const name = document.createElement('span');
-      const remove = iconButton('data-blok-database-comment-draft-remove', t('tools.database.filterRemove'), IconCross);
+      const remove = composerButton('data-blok-database-comment-draft-remove', t('tools.database.filterRemove'), IconCross);
       const draft: { chip: HTMLElement; file: DatabaseCommentAttachment | null } = { chip, file: null };
 
       chip.setAttribute(ATTR.draftFile, '');

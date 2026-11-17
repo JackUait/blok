@@ -171,9 +171,26 @@ interface DragState {
   others: SelectOption[];
   index: number;
   moved: boolean;
+  /** The dragged row's place among `others` at pickup. */
+  home: number;
+  startY: number;
+  /** Pickup centres of `others`, so the slides never move the drop slots. */
+  centers: number[];
+  /** How far a passed row slides: the dragged row's height plus the list gap. */
+  step: number;
+  /** How far the dragged row may move before it leaves the list. */
+  minDy: number;
+  maxDy: number;
 }
 
-/** Drag ⋮⋮ to reorder option rows (`[data-blok-database-select-option]`) inside `body`. */
+/** Marks the list while a row is dragged: database.css slides the rows only then. */
+const REORDERING_ATTR = 'data-blok-database-option-reordering';
+
+/**
+ * Drag ⋮⋮ to reorder option rows (`[data-blok-database-select-option]`) inside `body`.
+ * notion-motion.md Round 56 §7: the row follows the pointer, kept inside the list,
+ * and the rows it passes slide one row over. No drop line.
+ */
 export class OptionDrag {
   private drag: DragState | null = null;
 
@@ -191,23 +208,57 @@ export class OptionDrag {
     event.preventDefault();
     event.stopPropagation();
     const options = this.shown();
+    const others = options.filter((option) => option.id !== id);
+    const home = options.findIndex((option) => option.id === id);
+    const row = this.row(id);
+    const rect = row?.getBoundingClientRect();
+    const rects = options.map((option) => this.row(option.id)?.getBoundingClientRect()).filter((r): r is DOMRect => r !== undefined);
+    const gap = row?.parentElement === null || row?.parentElement === undefined ? 0 : Number.parseFloat(getComputedStyle(row.parentElement).rowGap) || 0;
 
-    this.drag = { id, others: options.filter((option) => option.id !== id), index: options.findIndex((option) => option.id === id), moved: false };
-    this.row(id)?.setAttribute('data-dragging', '');
+    this.drag = {
+      id,
+      others,
+      index: home,
+      moved: false,
+      home,
+      startY: event.clientY,
+      centers: others.map((option) => {
+        const r = this.row(option.id)?.getBoundingClientRect();
+
+        return r === undefined ? 0 : r.top + r.height / 2;
+      }),
+      step: (rect?.height ?? 0) + gap,
+      minDy: rect === undefined ? 0 : Math.min(0, ...rects.map((r) => r.top - rect.top)),
+      maxDy: rect === undefined ? 0 : Math.max(0, ...rects.map((r) => r.bottom - rect.bottom)),
+    };
+    row?.setAttribute('data-dragging', '');
+    this.body.setAttribute(REORDERING_ATTR, '');
     document.addEventListener('pointermove', this.handleMove);
     document.addEventListener('pointerup', this.handleEnd);
     document.addEventListener('pointercancel', this.handleCancel);
   }
 
   stop(): void {
+    const drag = this.drag;
+
     this.drag = null;
+    // The flag goes first, so the rows jump back instead of sliding.
+    this.body.removeAttribute(REORDERING_ATTR);
+    if (drag !== null) {
+      [drag.id, ...drag.others.map((option) => option.id)].forEach((id) => {
+        const row = this.row(id);
+
+        row?.removeAttribute('data-dragging');
+        if (row instanceof HTMLElement) row.style.transform = '';
+      });
+    }
     document.removeEventListener('pointermove', this.handleMove);
     document.removeEventListener('pointerup', this.handleEnd);
     document.removeEventListener('pointercancel', this.handleCancel);
   }
 
-  private row(id: string): Element | null {
-    return this.body.querySelector(`[data-blok-database-select-option="${CSS.escape(id)}"]`);
+  private row(id: string): HTMLElement | null {
+    return this.body.querySelector<HTMLElement>(`[data-blok-database-select-option="${CSS.escape(id)}"]`);
   }
 
   private readonly handleMove = (event: PointerEvent): void => {
@@ -217,30 +268,25 @@ export class OptionDrag {
       return;
     }
     drag.moved = true;
-    drag.index = drag.others.filter((option) => {
-      const rect = this.row(option.id)?.getBoundingClientRect();
+    drag.index = drag.centers.filter((center) => center < event.clientY).length;
+    const dy = Math.min(drag.maxDy, Math.max(drag.minDy, event.clientY - drag.startY));
+    const dragged = this.row(drag.id);
 
-      return rect !== undefined && rect.top + rect.height / 2 < event.clientY;
-    }).length;
-    this.body.querySelectorAll('[data-drop-before], [data-drop-after]').forEach((row) => {
-      row.removeAttribute('data-drop-before');
-      row.removeAttribute('data-drop-after');
+    if (dragged !== null) dragged.style.transform = `translateY(${dy}px)`;
+    drag.others.forEach((option, index) => {
+      const row = this.row(option.id);
+      const down = index < drag.home && index >= drag.index;
+      const up = index >= drag.home && index < drag.index;
+
+      if (row !== null) row.style.transform = down || up ? `translateY(${down ? drag.step : -drag.step}px)` : '';
     });
-    const before = drag.others[drag.index];
-    const after = drag.others[drag.index - 1];
-
-    if (before !== undefined) {
-      this.row(before.id)?.setAttribute('data-drop-before', '');
-    } else if (after !== undefined) {
-      this.row(after.id)?.setAttribute('data-drop-after', '');
-    }
   };
 
   private readonly handleEnd = (): void => {
     const drag = this.drag;
 
     this.stop();
-    const unmoved = drag === null || !drag.moved || this.shown().findIndex((option) => option.id === drag.id) === drag.index;
+    const unmoved = drag === null || !drag.moved || drag.home === drag.index;
 
     if (drag !== null && !unmoved) {
       this.onDrop(drag.id, drag.others, drag.index);

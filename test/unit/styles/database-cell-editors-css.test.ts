@@ -320,8 +320,25 @@ describe('cell editor CSS', () => {
       .some((rule) => rule[1].split(',').map((s) => s.trim()).includes(selector) && /transition: none/.test(rule[2])));
 
     ['[data-blok-database-checkbox]', '[data-blok-database-switch-track]', '[data-blok-database-switch-track] > span',
-      '[data-blok-database-select-option-handle]', '[data-blok-database-select-option-menu]']
+      '[data-blok-database-select-option-handle]', '[data-blok-database-select-option-menu]',
+      '[data-blok-database-option-reordering] [data-blok-database-select-option]']
       .forEach((selector) => expect(reduced(selector), selector).toBe(true));
+  });
+
+  // notion-motion.md Round 56 §7: the rows slide ~190ms; the dragged row stays opaque, over them, with no drop line.
+  describe('option reorder', () => {
+    it('slides the passed rows 200ms ease and moves the dragged one with the pointer at full opacity', () => {
+      // The second is the reduced-motion none.
+      expect(declared('[data-blok-database-option-reordering] [data-blok-database-select-option]', 'transition')).toEqual(['transform 200ms ease', 'none']);
+      expect(declared('[data-blok-database-option-reordering] [data-blok-database-select-option][data-dragging]', 'transition')).toEqual(['none']);
+      expect(declared('[data-blok-database-option-reordering] [data-blok-database-select-option][data-dragging]', 'z-index')).toEqual(['1']);
+      expect(declared('[data-blok-database-select-option][data-dragging]', 'opacity')).toEqual([]);
+    });
+
+    it('draws no drop line', () => {
+      expect(database).not.toContain('[data-drop-before]');
+      expect(database).not.toContain('[data-drop-after]');
+    });
   });
   describe('editor box (research/22 §4)', () => {
     // research/08 Motion: Notion's table cell editors mount at their final size and opacity.

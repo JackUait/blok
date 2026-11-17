@@ -1813,6 +1813,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R128_BYTES = 565;
     // Lane r131: Round 56 peek controls show only near the top (bar or page head). Net database.css growth against origin/main.
     const DATABASE_R131_BYTES = 1640;
+    // Lane r129: Round 56 option rows slide aside while one is dragged. Net database.css growth against origin/main.
+    const DATABASE_R129_BYTES = 172;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2393,6 +2395,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R127_BYTES
       + DATABASE_R128_BYTES
       + DATABASE_R131_BYTES
+      + DATABASE_R129_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

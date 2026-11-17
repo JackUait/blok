@@ -614,6 +614,47 @@ describe('select cell editor', () => {
       expect(rowIds()).toEqual(['o1', 'o3', 'o2']);
     });
 
+    // notion-motion.md Round 56 §7: the dragged row follows the pointer and stops at the list top; the rows it
+    // passes slide one row over; no drop line.
+    it('the dragged row follows the pointer and the rows it passes slide aside, with no drop line', () => {
+      openSelect(null);
+
+      stubRows();
+      const handle = q('[data-blok-database-select-option="o3"] [data-blok-database-select-option-handle]');
+
+      pointer(handle, 'pointerdown', 66);
+      pointer(document, 'pointermove', 40);
+
+      expect(row('o3').style.transform).toBe('translateY(-26px)');
+      expect(row('o1').style.transform).toBe('');
+      expect(row('o2').style.transform).toBe('translateY(28px)');
+
+      pointer(document, 'pointermove', -40);
+
+      expect(row('o3').style.transform).toBe('translateY(-56px)');
+      expect(row('o1').style.transform).toBe('translateY(28px)');
+      expect(row('o2').style.transform).toBe('translateY(28px)');
+      expect(editorRoot()?.querySelector('[data-drop-before], [data-drop-after]')).toBeNull();
+
+      pointer(document, 'pointerup', -40);
+
+      expect(rowIds()).toEqual(['o3', 'o1', 'o2']);
+      expect(['o1', 'o2', 'o3'].map((id) => row(id).style.transform)).toEqual(['', '', '']);
+    });
+
+    it('a cancelled drag puts every row back', () => {
+      openSelect(null);
+
+      stubRows();
+      pointer(q('[data-blok-database-select-option="o1"] [data-blok-database-select-option-handle]'), 'pointerdown', 10);
+      pointer(document, 'pointermove', 80);
+      pointer(document, 'pointercancel', 80);
+
+      expect(rowIds()).toEqual(['o1', 'o2', 'o3']);
+      expect(['o1', 'o2', 'o3'].map((id) => row(id).style.transform)).toEqual(['', '', '']);
+      expect(editorRoot()?.querySelector('[data-dragging]')).toBeNull();
+    });
+
     it('a drop where it started changes nothing', () => {
       const ctx = openSelect(null);
 

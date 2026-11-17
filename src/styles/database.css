@@ -8921,16 +8921,15 @@ textarea[data-blok-database-cell-input] {
   gap: var(--blok-space-2);
 }
 
-[data-blok-database-select-option][data-dragging] {
-  opacity: 0.5;
+/* notion-motion.md Round 56 §7: the dragged row follows the pointer over the others, which slide aside. No drop line. */
+[data-blok-database-option-reordering] [data-blok-database-select-option] {
+  transition: transform 200ms ease;
 }
 
-[data-blok-database-select-option][data-drop-before] {
-  box-shadow: inset 0 2px 0 var(--blok-active-icon);
-}
-
-[data-blok-database-select-option][data-drop-after] {
-  box-shadow: inset 0 -2px 0 var(--blok-active-icon);
+[data-blok-database-option-reordering] [data-blok-database-select-option][data-dragging] {
+  position: relative;
+  z-index: 1;
+  transition: none;
 }
 
 [data-blok-database-option-panel] {
@@ -9349,6 +9348,7 @@ textarea[data-blok-database-cell-input] {
   [data-blok-database-checkbox],
   [data-blok-database-select-option-handle],
   [data-blok-database-select-option-menu],
+  [data-blok-database-option-reordering] [data-blok-database-select-option],
   [data-blok-database-switch-track],
   [data-blok-database-switch-track] > span {
     transition: none;

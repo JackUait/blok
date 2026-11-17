@@ -624,7 +624,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     });
     gridEl.addEventListener('click', this.handleNestingClick, true);
     gridEl.addEventListener('click', this.handleClick);
-    gridEl.setAttribute(DATA_ATTR.contextMenuOwner, '');
+    // Rows stop their own right-click; the owner only turns core's block menu off elsewhere in the grid.
+    if (this.options.comment !== undefined) gridEl.setAttribute(DATA_ATTR.contextMenuOwner, '');
     gridEl.addEventListener('contextmenu', this.handleContextMenu);
     // Bubble on the grid runs before the popover registry's document listener,
     // whose outside press closes the open editor and asks for a redraw.

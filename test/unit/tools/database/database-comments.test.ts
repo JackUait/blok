@@ -85,6 +85,13 @@ describe('DatabaseTool — config.comments', () => {
     expect(open).toHaveBeenCalledWith({ databaseId: 'db', rowId: 'a' }, cell.closest('[data-blok-database-table-row]'));
   });
 
+  it('declares no context-menu owner without the comments lever, so core keeps its block menu outside the rows', () => {
+    const doc = makeDoc([fakeRow('a', 'db', { title: 'Alpha' }, 'a0')]);
+    const { el } = buildTool(doc);
+
+    expect(cellOf(el, 'a', 'notes').closest('[data-blok-context-menu-owner]')).toBeNull();
+  });
+
   it('works in read-only, where commenters live', () => {
     const doc = makeDoc([fakeRow('a', 'db', { title: 'Alpha' }, 'a0')]);
     const open = vi.fn();

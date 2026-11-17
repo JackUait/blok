@@ -279,17 +279,97 @@ describe('row page cover reposition', () => {
     drawer.destroy();
   });
 
-  it('cancels on Escape and keeps the page open', () => {
+  // notion-motion.md Round 61 §3: Escape cancels and closes the side peek, in one press.
+  it('cancels on Escape and closes the side peek', () => {
     const onCoverPositionChange = vi.fn();
     const { drawer, opts } = startRepositioning({ onCoverPositionChange });
 
     drag(0, 130);
+    const image = img();
+
     q('[data-blok-database-drawer-cover]')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 
+    expect(onCoverPositionChange).not.toHaveBeenCalled();
+    expect(opts.onClose).toHaveBeenCalledTimes(1);
+    expect(image?.style.objectPosition).toBe('');
+    drawer.destroy();
+  });
+
+  it('cancels on Escape and keeps a full page open, claiming the key', () => {
+    const onCoverPositionChange = vi.fn();
+    const opts = createOptions({ onCoverPositionChange });
+    const drawer = new DatabaseCardDrawer(opts);
+
+    drawer.open(ROW, 'full');
+    sizeCover();
+    q<HTMLButtonElement>('[data-blok-database-drawer-reposition-cover]')?.click();
+    drag(0, 130);
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+
+    q('[data-blok-database-drawer-cover]')?.dispatchEvent(escape);
+
+    expect(escape.defaultPrevented).toBe(true);
     expect(img()?.style.objectPosition).toBe('');
     expect(onCoverPositionChange).not.toHaveBeenCalled();
     expect(opts.onClose).not.toHaveBeenCalled();
-    expect(q('[data-blok-database-drawer-cover-hint]')?.style.opacity).toBe('0');
+    expect(q('[data-blok-database-drawer-reposition-cover]')).not.toBeNull();
+    drawer.destroy();
+  });
+
+  // notion-motion.md Round 61 §3: a click on the peek's title saves; a click outside the peek keeps the value too.
+  it('saves on a press elsewhere in the page, once', () => {
+    const onCoverPositionChange = vi.fn();
+    const { drawer } = startRepositioning({ onCoverPositionChange });
+
+    drag(0, 130);
+    q('[data-blok-database-drawer-title]')?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+    q('[data-blok-database-drawer-title]')?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+    expect(onCoverPositionChange).toHaveBeenCalledTimes(1);
+    expect(onCoverPositionChange).toHaveBeenCalledWith('row-1', 28.31);
+    expect(q('[data-blok-database-drawer-cover]')?.hasAttribute('data-blok-database-drawer-cover-repositioning')).toBe(false);
+    drawer.destroy();
+  });
+
+  it('saves on a press outside the peek', () => {
+    const onCoverPositionChange = vi.fn();
+    const { drawer } = startRepositioning({ onCoverPositionChange });
+
+    drag(0, 130);
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+    expect(onCoverPositionChange).toHaveBeenCalledWith('row-1', 28.31);
+    drawer.destroy();
+  });
+
+  it('writes once when Save is pressed and clicked', () => {
+    const onCoverPositionChange = vi.fn();
+    const { drawer } = startRepositioning({ onCoverPositionChange });
+
+    drag(0, 130);
+    const save = q<HTMLButtonElement>('[data-blok-database-drawer-save-cover-position]');
+
+    save?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+    save?.click();
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+    expect(onCoverPositionChange).toHaveBeenCalledTimes(1);
+    drawer.destroy();
+  });
+
+  it.each([
+    ['a redrawn page', (drawer: DatabaseCardDrawer): void => drawer.syncOpenRow({ ...ROW, properties: { 'p-title': 'Renamed' } })],
+    ['a closed page', (drawer: DatabaseCardDrawer): void => drawer.close()],
+    ['a destroyed drawer', (drawer: DatabaseCardDrawer): void => drawer.destroy()],
+  ])('leaves no press listener behind %s', (_, end) => {
+    const onCoverPositionChange = vi.fn();
+    const { drawer } = startRepositioning({ onCoverPositionChange });
+
+    drag(0, 130);
+    end(drawer);
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+    expect(onCoverPositionChange).not.toHaveBeenCalled();
     drawer.destroy();
   });
 

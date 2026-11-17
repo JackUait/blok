@@ -920,13 +920,16 @@ export class DatabaseCardDrawer {
 
         return;
       }
-      // Escape leaves Reposition as Cancel does, before it could close the page (Notion's Escape here is unread).
+      // Escape cancels Reposition and then closes the page as usual: one press (notion-motion.md Round 61 §3).
+      // A page this press does not close still claims it; the database holder would make it a block selection.
       if (e.key === 'Escape' && this.coverReposition !== null && !isEscapeConsumed(e)) {
-        markEscapeConsumed(e);
         e.preventDefault();
         this.coverReposition.cancel();
+        if (this.mode === 'full' || this.draft !== null) {
+          markEscapeConsumed(e);
 
-        return;
+          return;
+        }
       }
       // A full page is left with its back button, not Escape. Customize layout is left with Cancel or Apply (research/10 §2).
       if (e.key !== 'Escape' || this.mode === 'full' || this.draft !== null) {
@@ -1085,6 +1088,8 @@ export class DatabaseCardDrawer {
     this.emojiPicker = null;
     this.coverPicker?.close();
     this.coverPicker = null;
+    // An unsaved Reposition is dropped; its press listener lives on the document.
+    this.coverReposition?.cancel();
     this.removeBackdrop();
     this.wrapper.removeAttribute('data-blok-database-full-page');
     this.takeover.leave();
@@ -1141,6 +1146,8 @@ export class DatabaseCardDrawer {
     this.emojiPicker = null;
     this.coverPicker?.close();
     this.coverPicker = null;
+    // An unsaved Reposition is dropped; its press listener lives on the document.
+    this.coverReposition?.cancel();
     this.removeBackdrop();
     this.wrapper.removeAttribute('data-blok-database-full-page');
     this.takeover.release();
@@ -1398,7 +1405,7 @@ export class DatabaseCardDrawer {
     const backlinks = this.buildBacklinks(row.id);
 
     // A redrawn head drops the old cover, so an unsaved Reposition goes with it.
-    this.coverReposition = null;
+    this.coverReposition?.cancel();
 
     if (!this.readOnly && this.onCoverChange !== undefined) {
       // The cover picker is styled by the media sheet; it waits for it, so fetch it now.
@@ -1711,6 +1718,7 @@ export class DatabaseCardDrawer {
       const refocus = controls.contains(document.activeElement);
 
       stopDragging();
+      document.removeEventListener('pointerdown', saveOnPressAway, true);
       this.coverReposition = null;
       cover.removeAttribute('data-blok-database-drawer-cover-repositioning');
       // The pill fades out over its 0.2s; the timer covers no transitionend (reduced motion, hidden page).
@@ -1727,15 +1735,24 @@ export class DatabaseCardDrawer {
       img.style.setProperty('object-position', painted);
     };
 
-    save.type = 'button';
-    save.setAttribute('data-blok-database-drawer-save-cover-position', '');
-    save.textContent = this.label('title.saveCoverPosition');
-    save.addEventListener('click', () => {
+    const commit = (): void => {
       end();
       if (state.position !== initial) {
         write(row.id, state.position);
       }
-    });
+    };
+
+    // A press anywhere but the cover saves (notion-motion.md Round 61 §3); Save, Cancel and a drag are on the cover.
+    const saveOnPressAway = (event: PointerEvent): void => {
+      if (!(event.target instanceof Node && cover.contains(event.target))) {
+        commit();
+      }
+    };
+
+    save.type = 'button';
+    save.setAttribute('data-blok-database-drawer-save-cover-position', '');
+    save.textContent = this.label('title.saveCoverPosition');
+    save.addEventListener('click', commit);
     cancel.type = 'button';
     cancel.setAttribute('data-blok-database-drawer-cancel-cover-position', '');
     cancel.textContent = this.label('title.cancelCoverPosition');
@@ -1744,6 +1761,8 @@ export class DatabaseCardDrawer {
     hint.textContent = this.label('title.coverDragHint');
 
     this.coverReposition = { cancel: leave };
+    // Capture runs before the peek's outside-press close, so a press outside saves and then closes.
+    document.addEventListener('pointerdown', saveOnPressAway, true);
     cover.setAttribute('data-blok-database-drawer-cover-repositioning', '');
     controls.replaceChildren(save, cancel);
     cover.appendChild(hint);

@@ -925,7 +925,8 @@ test.describe('row page cover', () => {
     await expect.poll(() => coverImagePosition(page)).toBe(`50% ${saved?.coverPosition}%`);
   });
 
-  test('Cancel and Escape leave Reposition without moving the image, and the page stays open', async ({ page }) => {
+  // notion-motion.md Round 61 §3: Escape cancels and closes the side peek; a click elsewhere saves.
+  test('Cancel and Escape leave Reposition without moving the image, and Escape closes the side peek', async ({ page }) => {
     await open(page, 'r3', 'side');
     const coverBox = await boxOf(cover(page));
     const reposition = async (): Promise<void> => {
@@ -947,12 +948,43 @@ test.describe('row page cover', () => {
 
     await reposition();
     await page.keyboard.press('Escape');
-    await expect.poll(() => coverImagePosition(page)).toBe('50% 50%');
-    await expect(cover(page).getByText('Drag image to reposition')).toHaveCount(0);
-    await expect(peek(page)).toHaveAttribute('data-open', '');
+    await expect(peek(page)).not.toHaveAttribute('data-open', '');
+    await expect(page.locator('[data-blok-selected="true"]')).toHaveCount(0);
     const saved = await page.evaluate(async () => (await window.blokInstance?.save())?.blocks.find((block) => block.id === 'r3')?.data);
 
     expect(saved).not.toHaveProperty('coverPosition');
+    await openRow(page, 'r3');
+    await expect(peek(page)).toHaveAttribute('data-open', '');
+    await expect.poll(() => coverImagePosition(page)).toBe('50% 50%');
+  });
+
+  test('a click on the title or outside the peek saves the dragged position', async ({ page }) => {
+    await open(page, 'r3', 'side');
+    const coverBox = await boxOf(cover(page));
+    const repositionBy = async (dy: number): Promise<string> => {
+      await page.mouse.move(coverBox.x + 40, coverBox.y + coverBox.height / 2);
+      await coverGroup(page).getByRole('button', { name: 'Reposition the cover image' }).click();
+      await page.mouse.move(coverBox.x + 200, coverBox.y + 40);
+      await page.mouse.down();
+      await page.mouse.move(coverBox.x + 200, coverBox.y + 40 + dy, { steps: 3 });
+      await page.mouse.up();
+      await expect.poll(() => coverImagePosition(page)).not.toBe('50% 50%');
+
+      return coverImagePosition(page);
+    };
+    const savedPosition = (): Promise<number | undefined> => page.evaluate(async () => ((await window.blokInstance?.save())?.blocks.find((block) => block.id === 'r3')?.data as { coverPosition?: number } | undefined)?.coverPosition);
+
+    const shown = await repositionBy(40);
+
+    await peek(page).locator('[data-blok-database-drawer-title]').click();
+    await expect(cover(page).getByText('Drag image to reposition')).toHaveCount(0);
+    await expect(peek(page)).toHaveAttribute('data-open', '');
+    await expect.poll(savedPosition).toBe(parseFloat(shown.split(' ')[1]));
+
+    const moved = await repositionBy(20);
+
+    await page.mouse.click(20, 700);
+    await expect.poll(savedPosition).toBe(parseFloat(moved.split(' ')[1]));
   });
 
   test('Download saves the cover image and Change opens the picker', async ({ page }) => {

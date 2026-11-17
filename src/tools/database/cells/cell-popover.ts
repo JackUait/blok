@@ -21,6 +21,8 @@ export interface CellPopoverOptions {
   dockRow?: HTMLElement;
   /** A menu-like panel (DatabasePanel), not a cell editor: Notion's menu corner (database.css). */
   panel?: boolean;
+  /** One more popover class, for CSS that sizes one surface. */
+  surfaceClass?: string;
   /** Space under the anchor, PANEL_GAP when unset. */
   gap?: number;
   /** Opens beside the anchor instead: this far right of it, top level with it. */
@@ -194,7 +196,7 @@ export class CellPopover {
       autoFocusFirstItem: false,
       // Fades out like the database menus; an editor with no motion (database.css) still goes at once.
       animateClose: true,
-      class: [CELL_EDITOR_CLASS, ...(panel === true ? [PANEL_CLASS] : []), ...(docked !== undefined && docked !== false ? [DOCKED_CLASS] : []), ...(docked === 'page' ? [DOCKED_PAGE_CLASS] : []), ...(cover === 'value' ? [VALUE_EDITOR_CLASS] : []), ...(cover === true ? [TABLE_EDITOR_CLASS] : [])].join(' '),
+      class: [CELL_EDITOR_CLASS, ...(panel === true ? [PANEL_CLASS] : []), ...(docked !== undefined && docked !== false ? [DOCKED_CLASS] : []), ...(docked === 'page' ? [DOCKED_PAGE_CLASS] : []), ...(cover === 'value' ? [VALUE_EDITOR_CLASS] : []), ...(cover === true ? [TABLE_EDITOR_CLASS] : []), ...(this.options.surfaceClass !== undefined ? [this.options.surfaceClass] : [])].join(' '),
       ...(this.options.minWidth !== undefined ? { minWidth: this.options.minWidth } : {}),
     };
     const { aside, beside, besideOf, besideFlipWidth } = this.options;

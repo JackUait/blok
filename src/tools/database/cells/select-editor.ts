@@ -14,6 +14,10 @@ import type { CellEditorContext, CellEditorHandle } from './types';
 
 const listIds = { next: 0 };
 
+/** notion-motion.md Round 55 §4: the option ⋯ menu is its own 220-wide popover (database.css). */
+const OPTION_MENU_CLASS = 'blok-database-option-menu';
+const OPTION_MENU_WIDTH = 220;
+
 const selectedIdsOf = (value: PropertyValue | undefined): string[] => personIdsOf(value);
 
 const iconButton = (attribute: string, icon: string, label: string): HTMLButtonElement => {
@@ -47,7 +51,8 @@ class SelectEditor {
   private readonly search = document.createElement('input');
   private readonly body = document.createElement('div');
   private readonly popover: CellPopover;
-  private panelOptionId: string | null = null;
+  /** The open option ⋯ menu. The editor is held open under it. */
+  private menu: { popover: CellPopover; root: HTMLElement; optionId: string; release: () => void } | null = null;
   private readonly drag = new OptionDrag(
     this.body,
     () => this.options,
@@ -107,19 +112,7 @@ class SelectEditor {
       content: this.root,
       // Notion: 300 wide beside a 200px cell (research/08:306); status is 240 (feel/findings-table T17).
       minWidth: coverMinWidth(anchor, ctx.coverCell, property.type === 'status' ? 240 : 300),
-      onEscape: () => {
-        if (this.deletePromptOpen) {
-          this.renderPanel();
-
-          return;
-        }
-        if (this.panelOptionId !== null) {
-          this.closePanel();
-
-          return;
-        }
-        this.finish(true);
-      },
+      onEscape: () => this.finish(true),
       onDismiss: () => this.finish(false),
     });
 
@@ -143,7 +136,7 @@ class SelectEditor {
       return;
     }
     this.open = false;
-    this.setDeletePromptOpen(false);
+    this.closeMenu();
     this.drag.stop();
     if (closePopover) {
       this.popover.close();
@@ -354,9 +347,6 @@ class SelectEditor {
   }
 
   private renderList(): void {
-    if (this.panelOptionId !== null) {
-      return;
-    }
     const hint = document.createElement('div');
 
     hint.setAttribute('data-blok-database-select-hint', '');
@@ -488,7 +478,7 @@ class SelectEditor {
 
       menu.addEventListener('click', (event) => {
         event.stopPropagation();
-        this.openPanel(option.id);
+        this.openMenu(option.id, menu);
       });
       row.appendChild(menu);
     }
@@ -502,37 +492,72 @@ class SelectEditor {
     return row;
   }
 
-  // ─── Option panel: rename, recolor, delete ───
+  // ─── Option menu: rename, recolor, delete ───
 
-  private openPanel(optionId: string): void {
-    this.panelOptionId = optionId;
+  /**
+   * notion-motion.md Round 55 §4: a separate menu beside the ⋯, kept inside the
+   * window, while the editor stays open under it. The hold must start before
+   * the menu takes focus.
+   */
+  private openMenu(optionId: string, anchor: HTMLElement): void {
+    this.closeMenu();
+    const release = this.popover.hold();
+    const root = document.createElement('div');
+    const popover = new CellPopover({
+      anchor,
+      content: root,
+      panel: true,
+      surfaceClass: OPTION_MENU_CLASS,
+      minWidth: `${OPTION_MENU_WIDTH}px`,
+      beside: 0,
+      onEscape: () => (this.deletePromptOpen ? this.renderPanel() : this.closeMenu()),
+      onDismiss: () => this.closeMenu(),
+    });
+
+    this.menu = { popover, root, optionId, release };
+    popover.show();
     this.renderPanel();
   }
 
-  private closePanel(): void {
-    this.panelOptionId = null;
+  /** Focus goes back to the search before the release, so the editor never sees focus leave. */
+  private closeMenu(): void {
+    const menu = this.menu;
+
+    if (menu === null) {
+      return;
+    }
+    this.menu = null;
     this.setDeletePromptOpen(false);
-    this.renderChips();
-    this.renderList();
-    this.search.focus();
+    if (this.open) {
+      this.search.focus();
+    }
+    menu.popover.close();
+    menu.release();
   }
 
   private updateOption(optionId: string, changes: Partial<Pick<SelectOption, 'label' | 'color'>>): void {
     this.setOptions(this.options.map((option) => (option.id === optionId ? { ...option, ...changes } : option)));
+    this.renderChips();
+    this.renderList();
   }
 
-  /** The search row stays in the popover under the prompt; inert keeps the prompt modal. */
+  /** The editor goes inert under the prompt, so the prompt stays modal. */
   private setDeletePromptOpen(open: boolean): void {
     this.deletePromptOpen = open;
     this.chips.toggleAttribute('inert', open);
   }
 
   private renderPanel(): void {
+    const menu = this.menu;
+
+    if (menu === null) {
+      return;
+    }
     this.setDeletePromptOpen(false);
-    const option = this.options.find((o) => o.id === this.panelOptionId);
+    const option = this.options.find((o) => o.id === menu.optionId);
 
     if (option === undefined) {
-      this.closePanel();
+      this.closeMenu();
 
       return;
     }
@@ -547,25 +572,32 @@ class SelectEditor {
       status: this.property.type === 'status',
     });
 
-    this.body.replaceChildren(panel);
+    menu.root.replaceChildren(panel);
     name.focus();
   }
 
   private confirmDelete(optionId: string): void {
+    const menu = this.menu;
+
+    if (menu === null) {
+      return;
+    }
     const { prompt, confirm } = buildDeletePrompt({
       t: (key) => this.t(key),
       onConfirm: () => {
+        this.closeMenu();
         this.setOptions(this.options.filter((o) => o.id !== optionId));
         if (this.selected.includes(optionId)) {
           this.selected = this.selected.filter((id) => id !== optionId);
           this.commit();
         }
-        this.closePanel();
+        this.renderChips();
+        this.renderList();
       },
       onCancel: () => this.renderPanel(),
     });
 
-    this.body.replaceChildren(prompt);
+    menu.root.replaceChildren(prompt);
     this.setDeletePromptOpen(true);
     confirm.focus();
   }

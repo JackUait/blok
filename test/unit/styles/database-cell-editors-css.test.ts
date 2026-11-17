@@ -1010,4 +1010,25 @@ describe('cell editor CSS', () => {
       expect(declared(BOX, 'border-radius')).toEqual(['0']);
     });
   });
+  // notion-motion.md Round 26 "Option ⋯ menu", Round 55 §4: 220×418.9. Name field 196×28 at +12/+12, Delete at +52,
+  // a rule and "Colors", Default at +125.9, colour rows 212×28 at +4 with pitch 29, and 4 under the last row.
+  describe('option ⋯ menu', () => {
+    const MENU = "[data-blok-popover-custom-class~='blok-database-option-menu']";
+
+    it('is 220 wide', () => {
+      expect(declared(`${MENU} [data-blok-popover-container]`, 'inline-size')).toEqual(['220px']);
+    });
+
+    it('pads the rows 4 in and the field 12 in, with 1px between rows', () => {
+      expect(declared(`${MENU} [data-blok-database-option-panel]`, 'padding')).toEqual(['var(--blok-space-3) var(--blok-space-1) var(--blok-space-1)']);
+      expect(declared(`${MENU} [data-blok-database-option-panel]`, 'gap')).toEqual(['var(--blok-space-0-25)']);
+      expect(declared(`${MENU} [data-blok-database-option-panel] > [role='menu']`, 'gap')).toEqual(['var(--blok-space-0-25)']);
+      expect(declared(`${MENU} [data-blok-database-option-name]`, 'margin')).toEqual(['0 var(--blok-space-2) var(--blok-space-2-75)']);
+      expect(declared(`${MENU} [data-blok-database-option-name]`, 'block-size')).toEqual(['28px']);
+    });
+
+    it('puts the colours 45.9 under Delete: 1 + 43.9 + 1', () => {
+      expect(declared(`${MENU} [data-blok-database-option-colors-heading]`, 'block-size')).toEqual(['43.9px']);
+    });
+  });
 });

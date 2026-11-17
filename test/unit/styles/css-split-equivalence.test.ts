@@ -1807,6 +1807,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R126_BYTES = 948;
     // Lane r125: Round 54 timeline « and month follow the panel's end. Net database.css growth against origin/main.
     const DATABASE_R125_BYTES = 381;
+    // Lane r127: Round 55 select option ⋯ menu as its own 220 popover. Net database.css growth against origin/main.
+    const DATABASE_R127_BYTES = 909;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2384,6 +2386,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R123_BYTES
       + DATABASE_R126_BYTES
       + DATABASE_R125_BYTES
+      + DATABASE_R127_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

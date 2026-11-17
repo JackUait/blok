@@ -149,6 +149,11 @@ vi.mock('../../../../src/components/utils/popover', async (importOriginal) => {
 
       return this.container !== null;
     }
+
+    /** A surface opened over this one (the option ⋯ menu) holds it open until the release. */
+    holdOpen(): () => void {
+      return () => undefined;
+    }
   }
 
   stubMissingMethods(MockPopoverDesktop, real.PopoverDesktop);

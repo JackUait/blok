@@ -5,6 +5,7 @@ import type { CardDrawerOptions } from '../../../../src/tools/database/database-
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
 import type { DatabaseRow, PropertyDefinition } from '../../../../src/tools/database/types';
 import { downloadImage } from '../../../../src/tools/image/download';
+import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 
 vi.mock('../../../../src/blok', () => ({
   Blok: vi.fn(function stubBlok() {
@@ -100,6 +101,31 @@ describe('row page cover controls', () => {
 
     expect(q('[data-role="audio-cover-picker"]')).not.toBeNull();
     drawer.destroy();
+  });
+
+  // notion-motion.md Round 60 §1: hovering Download shows a "Download" hint above it. The delay is the 500ms hint law.
+  it('shows a "Download" hint above Download on hover, after the hint delay', () => {
+    destroyTooltip();
+    vi.useFakeTimers();
+    const drawer = new DatabaseCardDrawer(createOptions());
+
+    drawer.open(ROW);
+    const download = q<HTMLButtonElement>('[data-blok-database-drawer-download-cover]');
+
+    if (download === null) throw new Error('no Download button');
+    vi.spyOn(download, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 1436, y: 56, width: 24, height: 24 }));
+    download.dispatchEvent(new MouseEvent('mouseenter'));
+    const hint = (): HTMLElement | null => q('[data-blok-testid="tooltip"]');
+
+    vi.advanceTimersByTime(HINT_DELAY - 1);
+    expect(hint()?.getAttribute('data-blok-shown')).not.toBe('true');
+    vi.advanceTimersByTime(1);
+    expect(hint()?.getAttribute('data-blok-shown')).toBe('true');
+    expect(q('[data-blok-testid="tooltip-content"]')?.textContent).toBe('Download');
+    expect(hint()?.getAttribute('data-blok-placement')).toBe('top');
+    drawer.destroy();
+    destroyTooltip();
+    vi.useRealTimers();
   });
 
   it('gives a read-only viewer no group', () => {

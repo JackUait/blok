@@ -810,6 +810,24 @@ describe('cell editor CSS', () => {
       expect(declared(`${MOVE} [data-blok-testid='page-picker-option-icon']`, 'width')).toEqual(['18px']);
       expect(declared(`${MOVE} [data-blok-testid='page-picker-option-icon']`, 'height')).toEqual(['18px']);
     });
+
+    // Round 62 §1: at rest the box keeps 453 tall and its rows run 330 wide edge to edge, square.
+    it('keeps the box 453 tall with full-bleed square rows until a query', () => {
+      const REST = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu']:not([data-blok-database-move-searched])";
+
+      expect(declared(`${REST} > [data-blok-popover-container]`, 'height')).toEqual(['453px']);
+      expect(declared(`${MOVE} > [data-blok-popover-container]`, '--max-height')).toEqual(['453px']);
+      expect(declared(`${REST} > [data-blok-popover-container]`, 'padding-inline')).toEqual(['0']);
+      expect(declared(`${REST} [data-blok-popover-container] > [data-blok-field]`, 'margin-inline')).toEqual(['var(--blok-space-3)']);
+      expect(declared(`${REST} [role='option']`, 'outline-offset')).toEqual(['-2px']);
+      expect(declared(`${REST} [role='option']`, 'border-radius')).toEqual(['0']);
+      expect(declared(`${REST} [role='option']`, 'padding-inline')).toEqual(['var(--blok-space-3-25) var(--blok-space-3)']);
+    });
+
+    it('types the query at 14/20', () => {
+      expect(declared(`${MOVE} [data-blok-field] input`, 'font-size')).toEqual(['14px']);
+      expect(declared(`${MOVE} [data-blok-field] input`, 'line-height')).toEqual(['20px']);
+    });
   });
 
   // notion-spec-2 §18.3 (b4-rel-dlg.txt): head 33 tall, "Select a page" 16px in, rows 544x32 one pixel apart.

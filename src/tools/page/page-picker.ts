@@ -228,6 +228,12 @@ export class PagePicker {
     this.render();
   }
 
+  /** Moves the open picker (opened with `popover.at`) to `position`, or above it by `aboveBy`. */
+  public place(position: DOMRect, positionContext: HTMLElement, aboveBy?: number): void {
+    this.popover?.setCoverSide(aboveBy);
+    this.popover?.updatePosition(position, { positionContext });
+  }
+
   /** A search for `query` started: shows the loading state and names the query in the New page items. */
   public startSearch(query: string): void {
     if (this.content === null) {

@@ -1845,6 +1845,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R148_BYTES = 1240;
     // Lane r152: Round 62 feed composer buttons at card + 562 / 592 / 622. Net database.css growth against origin/main.
     const DATABASE_R152_BYTES = 790;
+    // Lane r150: Round 62 Move to picker at rest (453 tall, full-bleed rows), its 453 cap and 14px field. Net database.css growth against origin/main.
+    const DATABASE_R150_BYTES = 1307;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2447,6 +2449,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R149_BYTES
       + DATABASE_R148_BYTES
       + DATABASE_R152_BYTES
+      + DATABASE_R150_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

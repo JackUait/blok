@@ -800,6 +800,83 @@ test.describe('property and row menus', () => {
     await expect(moved).toHaveCount(0);
     expect(await savedRow(page, 'r1')).toMatchObject({ 'p-title': 'Alpha', 'p-notes': 'short', 'p-amount': 1200, 'p-stage': 'o-idea' });
   });
+
+  // notion-motion.md Round 62 §1 and Round 63 §2.
+  test('the Move to picker keeps 453 tall with full-bleed rows, and a query moves it to the right-click point', async ({ page }) => {
+    const archive: OutputBlockData = {
+      id: 'db-2',
+      type: 'database',
+      data: {
+        title: 'Archive',
+        schema: [{ id: 'q-title', name: 'Name', type: 'title', position: 'a0' }],
+        views: [{ id: 'w1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+        activeViewId: 'w1',
+      },
+      content: [],
+    };
+    const box = page.locator('[data-blok-database-move-picker] [data-blok-popover-container]');
+    const option = page.locator('[data-blok-database-move-picker] [role="option"]').first();
+    const rect = async (locator: Locator): Promise<{ x: number; y: number; width: number; height: number }> => {
+      const found = await locator.boundingBox();
+
+      if (found === null) throw new Error('no box');
+
+      return found;
+    };
+    const openAt = async (): Promise<{ x: number; y: number }> => {
+      const target = await rect(cell(page, 'r1', 'p-notes'));
+      const point = { x: Math.round(target.x + 20), y: Math.round(target.y + target.height / 2) };
+
+      await page.mouse.click(point.x, point.y, { button: 'right' });
+      await clickSettled(openMenu(page).getByRole('menuitem', { name: 'Move to', exact: true }));
+      await expect(page.getByPlaceholder('Move page to…')).toBeFocused();
+      await box.evaluate((element) => Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished.catch(() => undefined))));
+
+      return point;
+    };
+
+    await page.setViewportSize({ width: 1512, height: 717 });
+    await mount(page, [...blocks(), archive]);
+    const point = await openAt();
+
+    // At rest: 453 tall whatever it holds, rows 330 wide edge to edge with no rounding, a 14px field.
+    expect((await rect(box)).height).toBeCloseTo(453, 0);
+    expect((await rect(option)).width).toBeCloseTo(330, 0);
+    expect((await rect(option)).x).toBeCloseTo((await rect(box)).x, 0);
+    // The scrolling list clips its rows, so it must span the box too.
+    expect((await rect(page.locator('[data-blok-database-move-picker] [data-blok-popover-items]'))).width).toBeCloseTo(330, 0);
+    expect(await option.evaluate((element) => getComputedStyle(element).borderRadius)).toBe('0px');
+    expect(await page.getByPlaceholder('Move page to…').evaluate((element) => getComputedStyle(element).fontSize)).toBe('14px');
+
+    // A keyboard ring on a full-bleed row is drawn inside it, or the list clips its sides.
+    await page.keyboard.press('ArrowDown');
+    expect(await option.evaluate((element) => getComputedStyle(element).outlineOffset)).toBe('-2px');
+    await page.keyboard.press('ArrowUp');
+
+    // A query: rows inset 322 at +4, radius 6; the box fits its content, its top 1px under the point.
+    await page.keyboard.type('Arch');
+    await expect.poll(async () => Math.round((await rect(option)).width)).toBe(322);
+    expect((await rect(option)).x).toBeCloseTo((await rect(box)).x + 4, 0);
+    expect(await option.evaluate((element) => getComputedStyle(element).borderRadius)).toBe('6px');
+    await expect.poll(async () => Math.round((await rect(box)).y)).toBe(point.y + 1);
+    expect((await rect(box)).height).toBeLessThan(453);
+
+    // When the row menu opened above the point, the searched box sits above it, its bottom on the point.
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => {
+      const holder = document.getElementById('blok');
+
+      if (holder !== null) holder.style.marginTop = '520px';
+    });
+    const low = await openAt();
+
+    await page.keyboard.type('Arch');
+    await expect.poll(async () => {
+      const found = await rect(box);
+
+      return Math.round(found.y + found.height);
+    }).toBe(low.y);
+  });
 });
 
 test.describe('read-only', () => {

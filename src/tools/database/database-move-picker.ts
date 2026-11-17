@@ -19,6 +19,12 @@ export interface MovePickerOptions {
   anchor: HTMLElement;
   /** The top-left corner, moving with `positionContext`. */
   at: { position: DOMRect; positionContext: HTMLElement };
+  /**
+   * Where a query moves the box (notion-motion.md Round 63 §2): `position()` is
+   * 1px under the right-click point, or with `above` the box's bottom sits on
+   * the point. Without it the box stays put.
+   */
+  searchAt?: { position: () => DOMRect; above: boolean };
   /** The document's other databases, read on each query. */
   databases: () => ReadonlyArray<{ id: string; title: string }>;
   /** The page tool whose host takes moved pages, or null. */
@@ -52,7 +58,12 @@ export const openMovePicker = (options: MovePickerOptions): PagePicker => {
 
     titles.clear();
     results.forEach((result) => titles.set(result.pageId, result.title ?? ''));
+    // Set with the results, not on the keystroke, so the rows change look when they change.
+    picker.getElement()?.toggleAttribute('data-blok-database-move-searched', query !== '');
     picker.setResults(results);
+    if (query !== '' && options.searchAt !== undefined) {
+      picker.place(options.searchAt.position(), options.at.positionContext, options.searchAt.above ? 1 : undefined);
+    }
   };
 
   picker.open('', options.anchor, (pageId) => {

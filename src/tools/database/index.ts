@@ -8397,7 +8397,7 @@ export class DatabaseTool implements BlockTool {
 
         if (header !== null && writable()) this.openPropertyMenu(propertyId, header, table?.(), context);
       }, 0),
-      openMoveTo: (rowId, anchor, menu) => { if (writable()) this.openMoveTo(rowId, anchor, menu); },
+      openMoveTo: (rowId, anchor, menu, pointY) => { if (writable()) this.openMoveTo(rowId, anchor, menu, pointY); },
       editRowIcon: (rowId) => { if (writable()) this.editRowIcon(rowId, context); },
       updateView: (changes) => { if (writable()) this.updateActiveView(changes, context); },
       // notion-motion.md Round 29 §1: the Load more row's ⋯. Round 30 §3: a locked database keeps it working.
@@ -12968,12 +12968,24 @@ export class DatabaseTool implements BlockTool {
   /**
    * The "Move page to…" picker (notion-motion.md Round 62 §1): it takes the row
    * menu's place, at its left edge and 6px below its top. Without a menu
-   * (⌘⇧P) it opens under `anchor`; that spot is unmeasured.
+   * (⌘⇧P) it opens under `anchor`; that spot is unmeasured. `pointY`, the
+   * right-click's clientY, is where a query moves it (Round 63 §2): on the
+   * side the row menu took, read from where the menu ended up.
    */
-  private openMoveTo(rowId: string, anchor: HTMLElement, menu: DOMRect | undefined): void {
+  private openMoveTo(rowId: string, anchor: HTMLElement, menu: DOMRect | undefined, pointY?: number): void {
     if (this.readOnly || this.destroyed) return;
-    const box = menu ?? anchor.getBoundingClientRect();
+    const start = anchor.getBoundingClientRect();
+    const box = menu ?? start;
     const position = new DOMRect(box.left, menu === undefined ? box.bottom : box.top + MOVE_PICKER_DROP, 0, 0);
+    // Read relative to the anchor, so a scroll since the right-click does not leave it behind.
+    const searchAt = menu === undefined || pointY === undefined ? undefined : {
+      above: menu.bottom <= pointY + 0.5,
+      position: (): DOMRect => {
+        const now = anchor.getBoundingClientRect();
+
+        return new DOMRect(box.left + now.left - start.left, pointY + 1 + now.top - start.top, 0, 0);
+      },
+    };
 
     this.movePicker?.picker.close();
     // After the row menu's close, which hands focus back to its trigger.
@@ -12984,6 +12996,7 @@ export class DatabaseTool implements BlockTool {
         i18n: this.api.i18n,
         anchor,
         at: { position, positionContext: anchor.isConnected ? anchor : this.block.holder },
+        ...(searchAt !== undefined ? { searchAt } : {}),
         databases: () => this.moveTargets(),
         pages: host?.config ?? null,
         onDatabase: (databaseId) => { if (!this.readOnly && !this.destroyed) this.moveRowTo({ rowId, databaseId }); },

@@ -3508,6 +3508,34 @@ button[data-blok-database-board-lane-count]:hover {
   height: 18px;
 }
 
+/* Round 62 §1: the box is at most 453 tall (core caps menus at 400). */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] > [data-blok-popover-container] {
+  --max-height: 453px;
+}
+
+/* Round 62 §1: until a query the box keeps 453 tall and its rows run edge to edge, square.
+   The list scrolls and clips, so the container drops its side padding instead of the rows
+   reaching past it; the field keeps +12 and the icon +13. The ring is drawn inside, or the list clips it. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu']:not([data-blok-database-move-searched]) > [data-blok-popover-container] {
+  height: 453px;
+  padding-inline: 0;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu']:not([data-blok-database-move-searched]) [data-blok-popover-container] > [data-blok-field] {
+  margin-inline: var(--blok-space-3);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu']:not([data-blok-database-move-searched]) [role='option'] {
+  border-radius: 0;
+  padding-inline: var(--blok-space-3-25) var(--blok-space-3);
+  outline-offset: -2px;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [data-blok-field] input {
+  font-size: 14px;
+  line-height: 20px;
+}
+
 /* Panels and pickers in a CellPopover (Filter, Sort…) move like the menus (notion-motion.md "Popovers").
    Editors that open at once opt out further down, after these rules. */
 [data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-menu'],

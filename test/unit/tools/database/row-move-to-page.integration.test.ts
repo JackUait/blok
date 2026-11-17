@@ -277,6 +277,42 @@ describe('row menu › Move to a page', () => {
     expect(options()[0]?.getAttribute('aria-selected')).toBe('true');
   });
 
+  // Round 62 §1: the rest look (453 tall, full-bleed rows) gives way to the search look with the results.
+  it('takes the search look when a query\'s results arrive, and drops it when the query is cleared', async () => {
+    const answers: Array<() => void> = [];
+    const page = host({
+      search: vi.fn((query: string) => new Promise<typeof PAGES>((resolve) => {
+        answers.push(() => resolve(PAGES.filter((item) => item.title.toLowerCase().includes(query.toLowerCase()))));
+      })),
+    });
+    const picker = (): Element | null => document.querySelector('[data-blok-database-move-picker]');
+    const type = async (value: string): Promise<void> => {
+      const input = searchInput();
+
+      if (input === null) throw new Error('no field');
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      await quiet();
+    };
+
+    await boot(page);
+    await openPicker();
+    answers.shift()?.();
+    await quiet();
+    expect(picker()?.hasAttribute('data-blok-database-move-searched')).toBe(false);
+
+    await type('b');
+    expect(picker()?.hasAttribute('data-blok-database-move-searched')).toBe(false);
+    answers.shift()?.();
+    await quiet();
+    expect(picker()?.hasAttribute('data-blok-database-move-searched')).toBe(true);
+
+    await type('');
+    answers.shift()?.();
+    await quiet();
+    expect(picker()?.hasAttribute('data-blok-database-move-searched')).toBe(false);
+  });
+
   it('closes on Escape and on a press outside, and moves nothing', async () => {
     const page = host();
 

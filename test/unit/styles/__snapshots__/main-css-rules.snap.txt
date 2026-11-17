@@ -7488,6 +7488,30 @@ button[data-blok-database-board-lane-count]:hover {
   height: 18px;
 }
 
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] > [data-blok-popover-container] {
+  --max-height: 453px;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu']:not([data-blok-database-move-searched]) > [data-blok-popover-container] {
+  height: 453px;
+  padding-inline: 0;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu']:not([data-blok-database-move-searched]) [data-blok-popover-container] > [data-blok-field] {
+  margin-inline: var(--blok-space-3);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu']:not([data-blok-database-move-searched]) [role='option'] {
+  border-radius: 0;
+  padding-inline: var(--blok-space-3-25) var(--blok-space-3);
+  outline-offset: -2px;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [data-blok-field] input {
+  font-size: 14px;
+  line-height: 20px;
+}
+
 [data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-menu'], [data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-cell-editor'] {
   transition: display 200ms allow-discrete, overlay 200ms allow-discrete;
 }

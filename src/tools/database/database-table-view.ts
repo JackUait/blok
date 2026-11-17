@@ -186,7 +186,8 @@ export interface TableHandlers {
   /** Whether "Move to" has anywhere to send a row. */
   canMoveRow?: () => boolean;
   /** "Move to": opens the picker over `menu` (the row menu's box), or by `anchor` without one. */
-  openMoveTo?: (rowId: string, anchor: HTMLElement, menu: DOMRect | undefined) => void;
+  /** `pointY`: the right-click's clientY, when a right-click opened the row menu. */
+  openMoveTo?: (rowId: string, anchor: HTMLElement, menu: DOMRect | undefined, pointY?: number) => void;
   editRowIcon: (rowId: string) => void;
   updateView: (changes: ViewChanges) => void;
   /** The Load more row's ⋯. The tool leaves it out when the view cannot change. */
@@ -2293,7 +2294,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       onOpenIn: (mode) => handlers.openRow(rowId, mode),
       onCopyLink: () => handlers.copyRowLink(rowId),
       onDuplicate: () => handlers.duplicateRow(rowId),
-      ...(handlers.openMoveTo !== undefined && handlers.canMoveRow?.() === true ? { onMoveTo: (menu: DOMRect | undefined) => handlers.openMoveTo?.(rowId, commentAnchor, menu) } : {}),
+      ...(handlers.openMoveTo !== undefined && handlers.canMoveRow?.() === true ? { onMoveTo: (menu: DOMRect | undefined) => handlers.openMoveTo?.(rowId, commentAnchor, menu, pointer?.clientY) } : {}),
       ...rowMenuFooter({
         row: this.allRows().find((row) => row.id === rowId),
         titlePropertyId: this.options.titlePropertyId,

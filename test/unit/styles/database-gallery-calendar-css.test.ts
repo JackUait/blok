@@ -540,3 +540,24 @@ describe('Round 45 gallery, calendar and settings panel', () => {
     expect(ruleBody('[data-blok-database-card-layout-label]')).toMatch(/font-weight:\s*500/);
   });
 });
+
+// notion-motion.md "Round 60 re-reads" §1 and §5.
+describe('Round 60 small look gaps', () => {
+  it('sizes the gallery card tool glyphs 16px, like Notion (818 / 847, y 333.2)', () => {
+    const body = ruleBody('[data-blok-database-gallery-card] [data-blok-database-card-actions] svg');
+
+    expect(body).toMatch(/inline-size:\s*16px/);
+    expect(body).toMatch(/block-size:\s*16px/);
+  });
+
+  it('puts no gap between ‹, Today and ›, and keeps Manage in Calendar 8px off ‹', () => {
+    expect(ruleBody('[data-blok-database-calendar-nav]')).not.toMatch(/gap/);
+    expect(ruleBody('[data-blok-database-calendar-nav] [data-blok-database-calendar-manage-calendar]')).toMatch(/margin-inline-end:\s*var\(--blok-space-2\)/);
+    expect(ruleBody('[data-blok-database-timeline-toolbar] [data-blok-database-timeline-manage-calendar]')).not.toMatch(/margin-inline-end/);
+  });
+
+  it('fills the cover group divider rgb(240, 239, 237)', () => {
+    expect(ruleBody('[data-blok-database-drawer-cover-controls] > button + button::before')).toContain('background: var(--blok-database-feed-actions-border)');
+    expect(css).toContain('--blok-database-feed-actions-border: rgb(240, 239, 237);');
+  });
+});

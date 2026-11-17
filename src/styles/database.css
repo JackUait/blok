@@ -1422,8 +1422,9 @@
   background: var(--blok-database-card-menu-hover-bg);
 }
 
-/* Notion's board card glyphs are 16px (feel findings B08). */
-[data-blok-database-card] [data-blok-database-card-actions] svg {
+/* Notion's board and gallery card glyphs are 16px (feel findings B08, notion-motion.md Round 60 §5). */
+[data-blok-database-card] [data-blok-database-card-actions] svg,
+[data-blok-database-gallery-card] [data-blok-database-card-actions] svg {
   inline-size: 16px;
   block-size: 16px;
 }
@@ -2538,7 +2539,7 @@
   inset-inline-start: calc(-1 * var(--blok-space-1) - var(--blok-border-width-hairline));
   inline-size: var(--blok-border-width-hairline);
   block-size: var(--blok-space-4);
-  background: var(--blok-border-subtle);
+  background: var(--blok-database-feed-actions-border);
 }
 
 [data-blok-database-drawer-cover-controls] > button + button {
@@ -15237,10 +15238,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-calendar-day-text);
 }
 
+/* notion-motion.md Round 60 §5: ‹, Today and › touch. */
 [data-blok-database-calendar-nav] {
   display: flex;
   align-items: center;
-  gap: var(--blok-space-0-5);
 }
 
 [data-blok-database-calendar-nav] button {
@@ -15272,6 +15273,11 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 [data-blok-database-calendar-nav] svg {
   inline-size: 20px;
   block-size: 20px;
+}
+
+/* Round 60 §5: Manage ends at 1124.3; ‹'s 24px box starts at 1132.3 (its 20px glyph at 1134.3). */
+[data-blok-database-calendar-nav] [data-blok-database-calendar-manage-calendar] {
+  margin-inline-end: var(--blok-space-2);
 }
 
 [data-blok-database-calendar-nav] [data-blok-database-calendar-manage-calendar] svg {

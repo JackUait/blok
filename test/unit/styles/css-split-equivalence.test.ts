@@ -1829,6 +1829,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R141_BYTES = 1598;
     // Lane r140: Round 59 row page cover group (Change, Download, fade) and the cover stopping at the details panel. Net database.css growth against origin/main.
     const DATABASE_R140_BYTES = 2159;
+    // Lane r144: Round 60 gallery card glyphs, calendar nav spacing, the cover divider ink. Net database.css growth against origin/main.
+    const DATABASE_R144_BYTES = 394;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2417,6 +2419,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R136_BYTES
       + DATABASE_R141_BYTES
       + DATABASE_R140_BYTES
+      + DATABASE_R144_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

@@ -155,6 +155,22 @@ describe('PagePicker', () => {
       expect(onActiveRow).toHaveBeenLastCalledWith(null);
     });
 
+    it('hands beforePick the tree row that was picked', async () => {
+      const beforePick = vi.fn<(pageId: string, row: HTMLElement) => Promise<boolean>>(async () => false);
+
+      picker.open('', anchor, onPick, {
+        searchField: { placeholder: 'Search', onQuery: vi.fn() },
+        tree: { label: 'Workspace', children: async (pageId) => (pageId === null ? [{ pageId: 'w1', title: 'Home' }] : []) },
+        beforePick,
+      });
+      picker.setResults([]);
+      await vi.waitFor(() => expect(document.querySelector('[data-blok-page-picker-tree-row]')).not.toBeNull());
+      const row = document.querySelector<HTMLElement>('[data-blok-page-picker-tree-row]');
+
+      row?.click();
+      expect(beforePick).toHaveBeenCalledExactlyOnceWith('w1', row);
+    });
+
     it('holds the pick until beforePick settles, with the list frozen', async () => {
       const release = { go: (_go: boolean): void => undefined };
       const beforePick = vi.fn<(pageId: string, row: HTMLElement) => Promise<boolean>>(() => new Promise((resolve) => {

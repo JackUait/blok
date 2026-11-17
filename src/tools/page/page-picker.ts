@@ -652,10 +652,12 @@ export class PagePicker {
       const opens = page.kind !== 'database';
       const open = opens && this.treeOpen.has(page.pageId);
 
+      const element = this.buildTreeOption(page, trail.length, opens ? open : null);
+
       add({
         key: ['tree', ...trail, page.pageId].join(TREE_KEY_JOIN),
-        element: this.buildTreeOption(page, trail.length, opens ? open : null),
-        run: () => this.onChoose !== null ? this.onChoose(page.pageId) : this.pick(page.pageId),
+        element,
+        run: () => this.onChoose !== null ? this.onChoose(page.pageId) : this.pick(page.pageId, element),
         title: page.title || this.fallback,
         ...(opens ? { treePageId: page.pageId } : {}),
       });

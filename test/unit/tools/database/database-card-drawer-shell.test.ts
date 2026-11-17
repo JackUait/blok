@@ -454,23 +454,25 @@ describe('DatabaseCardDrawer shell', () => {
       expect(mode?.getAttribute('aria-expanded')).toBe('false');
     });
 
-    // notion-motion.md Round 55 §5: the mode menu is centred under its button, at the button's bottom.
-    it('opens the mode menu centred under the mode button, touching its bottom', () => {
+    // notion-motion.md Round 56 §2: the mode menu is centred on the rule before the button plus the button, at the button's bottom.
+    it('opens the mode menu centred on the mode button and the rule before it, touching its bottom', () => {
       const drawer = new DatabaseCardDrawer(createOptions());
 
       drawer.open(ROW, 'side');
       const mode = q('[data-blok-database-peek-mode]');
+      const rule = mode?.previousElementSibling;
 
-      if (mode === null) throw new Error('no mode button');
-      Object.defineProperty(mode, 'getBoundingClientRect', {
-        configurable: true,
-        value: () => ({ top: 10, bottom: 34, left: 827.5, right: 851.5, width: 24, height: 24, x: 827.5, y: 10, toJSON: () => ({}) }),
-      });
+      if (mode === null || !(rule instanceof HTMLElement)) throw new Error('no mode button');
+      const rect = (left: number, width: number, top: number, height: number): DOMRect => DOMRect.fromRect({ x: left, y: top, width, height });
+
+      Object.defineProperty(mode, 'getBoundingClientRect', { configurable: true, value: () => rect(837, 24, 10, 24) });
+      Object.defineProperty(rule, 'getBoundingClientRect', { configurable: true, value: () => rect(827, 1, 15, 14) });
+      rule.style.margin = '0 7px';
       mode.click();
       const menu = document.querySelector<HTMLElement>('[data-blok-popover-custom-class~="blok-database-peek-mode-menu"]');
 
-      // jsdom measures the menu as 0 wide, so centred means its left edge is the button's centre.
-      expect(menu?.style.left).toBe('839.5px');
+      // jsdom measures the menu as 0 wide, so centred means its left edge is the group's centre: (820 + 861) / 2.
+      expect(menu?.style.left).toBe('840.5px');
       expect(menu?.style.top).toBe('34px');
       drawer.destroy();
     });

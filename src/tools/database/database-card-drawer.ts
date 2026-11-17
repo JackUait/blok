@@ -126,6 +126,22 @@ const afterSlide = (drawer: HTMLElement, done: () => void): void => {
   }, DRAWER_TRANSITION_FALLBACK_MS);
 };
 
+/** The mode button joined with the margin box of the rule before it (after it in RTL: the union covers both). */
+const modeGroupRect = (button: HTMLElement): DOMRect => {
+  const box = button.getBoundingClientRect();
+  const rule = button.previousElementSibling;
+
+  if (!(rule instanceof HTMLElement) || !rule.hasAttribute('data-blok-database-peek-separator')) {
+    return DOMRect.fromRect(box);
+  }
+  const ruleBox = rule.getBoundingClientRect();
+  const style = getComputedStyle(rule);
+  const left = Math.min(box.left, ruleBox.left - (parseFloat(style.marginLeft) || 0));
+  const right = Math.max(box.right, ruleBox.right + (parseFloat(style.marginRight) || 0));
+
+  return DOMRect.fromRect({ x: left, y: box.top, width: right - left, height: box.height });
+};
+
 /**
  * Previous (-1) or next (1) row from a key press: Ctrl+Shift+K/J on a Mac,
  * Ctrl+K/J elsewhere (research/03 §1.4). Off a Mac, Ctrl+K in a text field is
@@ -1942,7 +1958,9 @@ export class DatabaseCardDrawer {
       class: `${DATABASE_HEADER_MENU_CLASS} blok-database-peek-mode-menu`,
       animateClose: true,
       trigger: anchor,
-      // notion-motion.md Round 55 §5: centred under the button, touching its bottom.
+      // notion-motion.md Round 56 §2: centred on the rule before the button plus the button, touching its bottom.
+      position: modeGroupRect(anchor),
+      positionContext: anchor,
       offset: 0,
       width: '220px',
       autoFocusFirstItem: false,

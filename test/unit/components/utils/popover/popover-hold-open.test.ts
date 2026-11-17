@@ -79,4 +79,33 @@ describe('PopoverDesktop.holdOpen', () => {
     expect(isOpen(popover)).toBe(false);
     expect(PopoverRegistry.instance.hasOpenPopovers()).toBe(false);
   });
+
+  // A surface opened from a submenu row (Edit property's status option menu) sits outside both menus,
+  // so the pointer leaving the submenu for it must not close the submenu while the hold lasts.
+  it('a held menu keeps its open submenu when the pointer leaves it', () => {
+    vi.useFakeTimers();
+    const trigger = document.createElement('button');
+
+    document.body.append(trigger);
+    const popover = new PopoverDesktop({
+      trigger,
+      items: [{ title: 'Edit', name: 'edit', children: { items: [{ title: 'Inner', name: 'inner', onActivate: vi.fn() }] } }],
+    });
+
+    popovers.push(popover);
+    document.body.appendChild(popover.getElement());
+    popover.show();
+    itemEl('edit')?.click();
+    const nested = itemEl('inner')?.closest<HTMLElement>('[data-blok-popover]');
+
+    expect(nested).not.toBeNull();
+    const release = popover.holdOpen();
+
+    nested?.dispatchEvent(new PointerEvent('pointerleave', { relatedTarget: document.body }));
+    vi.advanceTimersByTime(1000);
+
+    expect(itemEl('inner')?.isConnected).toBe(true);
+    release();
+    vi.useRealTimers();
+  });
 });

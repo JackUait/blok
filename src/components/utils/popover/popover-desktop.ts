@@ -357,6 +357,8 @@ export class PopoverDesktop extends PopoverAbstract {
 
   /** It opened above: it stays there while open, so a shrinking list keeps its bottom. */
   private coverAbove = false;
+  /** Open holds (holdOpen): while any is on, pointer moves never close the submenu. */
+  private holds = 0;
 
   private coverVerticalMargin: number | undefined;
 
@@ -1117,11 +1119,19 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   public holdOpen(): (focusItemName?: string) => void {
     const trigger = this.params.trigger;
+    const hold = { on: true };
 
     PopoverRegistry.instance.unregister(this);
     this.flipper?.deactivate();
+    // The held surface sits outside the submenu too: the pointer leaving for it must not close the submenu.
+    this.holds += 1;
+    this.cancelNestedCloseIntent();
 
     return (focusItemName) => {
+      if (hold.on) {
+        hold.on = false;
+        this.holds -= 1;
+      }
       if (!this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpened)) {
         return;
       }
@@ -1489,7 +1499,7 @@ export class PopoverDesktop extends PopoverAbstract {
    * submenu's own area, not from the last row it wandered onto.
    */
   private scheduleNestedClose(): void {
-    if (this.nestedPopover === undefined || this.nestedPopover === null) {
+    if (this.nestedPopover === undefined || this.nestedPopover === null || this.holds > 0) {
       return;
     }
 

@@ -534,3 +534,65 @@ test.describe('a narrow player (capsule)', () => {
     await expect(block.locator('[data-role="menu-tiles"]')).toBeHidden();
   });
 });
+
+test.describe('resizing a video down', () => {
+  const dragToSmallest = async (page: Page): Promise<{ width: number; height: number }> => {
+    const block = page.locator(VIDEO_BLOCK_SELECTOR);
+    const frame = block.locator('[data-role="video-media"]');
+
+    await expect(block).toHaveAttribute('data-state', 'rendered');
+    await block.getByTestId('video-player').hover({ position: { x: 20, y: 20 } });
+
+    const handle = block.locator('[data-role="resize-handle"][data-edge="right"]');
+    const box = await handle.boundingBox();
+
+    if (!box) throw new Error('handle has no box');
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(0, box.y + box.height / 2, { steps: 8 });
+    await page.mouse.up();
+
+    const size = await frame.boundingBox();
+
+    if (!size) throw new Error('frame has no box');
+
+    return { width: size.width, height: size.height };
+  };
+
+  test('a 16:9 video stops where it is still about 124px tall', async ({ page }) => {
+    await createBlok(page, { blocks: [{ type: 'video', data: { url: SAMPLE_VIDEO_URL } }] });
+
+    const { width, height } = await dragToSmallest(page);
+
+    // The width is saved as a whole percent, so it lands within a few px of the limit.
+    expect(height).toBeGreaterThan(121);
+    expect(height).toBeLessThan(128);
+    expect(width).toBeGreaterThan(180);
+    expect(width).toBeLessThan(440);
+  });
+
+  test('a portrait video stops at about 180px wide', async ({ page }) => {
+    // 90x160. The block takes its shape from the file itself, so the sample will not do.
+    const portraitUrl = new URL('/portrait-fixture.webm', TEST_PAGE_URL).href;
+
+    await page.route(portraitUrl, (route) => route.fulfill({
+      path: join(process.cwd(), 'test/playwright/fixtures/video/portrait.webm'),
+      contentType: 'video/webm',
+    }));
+    await createBlok(page, { blocks: [{ type: 'video', data: { url: portraitUrl, aspectRatio: '9 / 16' } }] });
+    await page.locator(VIDEO_BLOCK_SELECTOR).getByTestId('video-player').evaluate((el) => new Promise<void>((resolve) => {
+      const video = el as HTMLVideoElement;
+
+      video.preload = 'metadata';
+      if (video.readyState >= 1) resolve();
+      else video.addEventListener('loadedmetadata', () => resolve(), { once: true });
+      video.load();
+    }));
+
+    const { width, height } = await dragToSmallest(page);
+
+    expect(width).toBeGreaterThan(176);
+    expect(width).toBeLessThan(185);
+    expect(height).toBeGreaterThan(300);
+  });
+});

@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "Սահմանել որպես կանխադրված",
   "tools.database.statusDefaultConfirm": "Փոխե՞լ կանխադրվածը «{name}»-ի",
   "tools.database.statusDefaultConfirmDescription": "Նոր էջերը կսկսվեն {name} կանխադրված կարգավիճակով։ Առկա էջերը, որոնց կարգավիճակը հստակ սահմանված չէ, կանցնեն {name}-ի։",
+  "tools.database.statusDefaultConfirmEmphasis": "որոնց կարգավիճակը հստակ սահմանված չէ",
   "tools.database.templateDefault": "Կանխադրված",
   "tools.database.templateRepeatSummaryNone": "Կրկնօրինակել ամեն…",
   "tools.database.templateRepeatSummaryDay": "Կրկնօրինակել ամեն օր",

@@ -2373,6 +2373,7 @@
   "tools.database.templateSetDefault": "Постави као подразумевано",
   "tools.database.statusDefaultConfirm": "Променити подразумевано у „{name}“?",
   "tools.database.statusDefaultConfirmDescription": "Нове странице ће почињати са статусом {name} као подразумеваним. Постојеће странице без изричито постављеног статуса прећи ће на {name}.",
+  "tools.database.statusDefaultConfirmEmphasis": "без изричито постављеног статуса",
   "tools.database.templateDefault": "Подразумевано",
   "tools.database.templateRepeatSummaryNone": "Дуплирај сваки…",
   "tools.database.templateRepeatSummaryDay": "Дуплирај сваког дана",

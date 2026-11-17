@@ -2388,6 +2388,7 @@
   "tools.database.templateSetDefault": "Nastavi kot privzeto",
   "tools.database.statusDefaultConfirm": "Spremenim privzeto v „{name}“?",
   "tools.database.statusDefaultConfirmDescription": "Nove strani se bodo začele s privzetim stanjem {name}. Obstoječe strani brez izrecno nastavljenega stanja bodo preklopile na {name}.",
+  "tools.database.statusDefaultConfirmEmphasis": "brez izrecno nastavljenega stanja",
   "tools.database.templateDefault": "Privzeta",
   "tools.database.templateRepeatSummaryNone": "Podvoji vsak…",
   "tools.database.templateRepeatSummaryDay": "Podvoji vsak dan",

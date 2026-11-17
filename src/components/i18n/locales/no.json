@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "Angi som standard",
   "tools.database.statusDefaultConfirm": "Endre standard til «{name}»?",
   "tools.database.statusDefaultConfirmDescription": "Nye sider starter med {name} som standardstatus. Eksisterende sider uten en uttrykkelig angitt status bytter til {name}.",
+  "tools.database.statusDefaultConfirmEmphasis": "uten en uttrykkelig angitt status",
   "tools.database.templateDefault": "Standard",
   "tools.database.templateRepeatSummaryNone": "Dupliser hver…",
   "tools.database.templateRepeatSummaryDay": "Dupliser hver dag",

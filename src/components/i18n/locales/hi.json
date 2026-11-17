@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "डिफ़ॉल्ट के रूप में सेट करें",
   "tools.database.statusDefaultConfirm": "डिफ़ॉल्ट को “{name}” में बदलें?",
   "tools.database.statusDefaultConfirmDescription": "नए पेज {name} को डिफ़ॉल्ट स्टेटस के रूप में लेकर शुरू होंगे। जिन मौजूदा पेजों में स्टेटस स्पष्ट रूप से सेट नहीं है, वे {name} पर बदल जाएंगे।",
+  "tools.database.statusDefaultConfirmEmphasis": "जिन मौजूदा पेजों में स्टेटस स्पष्ट रूप से सेट नहीं है",
   "tools.database.templateDefault": "डिफ़ॉल्ट",
   "tools.database.templateRepeatSummaryNone": "प्रतिलिपि बनाएँ: हर…",
   "tools.database.templateRepeatSummaryDay": "हर दिन प्रतिलिपि बनाएँ",

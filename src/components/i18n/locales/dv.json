@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "ޑީފޯލްޓަކަށް ހަދާ",
   "tools.database.statusDefaultConfirm": "ޑީފޯލްޓް \"{name}\" އަށް ބަދަލުކުރަންތޯ؟",
   "tools.database.statusDefaultConfirmDescription": "އާ ޞަފްޙާތައް ފެށޭނީ {name} ޑީފޯލްޓް ސްޓޭޓަސްއަކަށް ހަދައިގެން. ސްޓޭޓަސް ސާފުކޮށް ކަނޑައަޅާފައިނުވާ ކުރީގެ ޞަފްޙާތައް {name} އަށް ބަދަލުވާނެ.",
+  "tools.database.statusDefaultConfirmEmphasis": "ސްޓޭޓަސް ސާފުކޮށް ކަނޑައަޅާފައިނުވާ",
   "tools.database.templateDefault": "ޑީފޯލްޓް",
   "tools.database.templateRepeatSummaryNone": "ކޮންމެ… ކޮޕީ ހަދާ",
   "tools.database.templateRepeatSummaryDay": "ކޮންމެ ދުވަހަކު ކޮޕީ ހަދާ",

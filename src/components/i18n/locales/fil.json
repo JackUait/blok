@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "Itakda bilang karaniwan",
   "tools.database.statusDefaultConfirm": "Palitan ang karaniwan sa “{name}”?",
   "tools.database.statusDefaultConfirmDescription": "Magsisimula ang mga bagong page sa {name} bilang karaniwang status. Ang mga kasalukuyang page na walang tahasang itinakdang status ay lilipat sa {name}.",
+  "tools.database.statusDefaultConfirmEmphasis": "na walang tahasang itinakdang status",
   "tools.database.templateDefault": "Karaniwan",
   "tools.database.templateRepeatSummaryNone": "Gumawa ng kopya bawat…",
   "tools.database.templateRepeatSummaryDay": "Gumawa ng kopya bawat araw",

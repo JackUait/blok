@@ -299,7 +299,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2239 + 146 + 598 + 11 closure for all 2994 keys', () => {
+  it('rebuilds a disjoint 2240 + 146 + 598 + 11 closure for all 2995 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -313,7 +313,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2994);
+    expect(lifecycle.size).toBe(2995);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -575,7 +575,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the table header row's ⋯ calls tools.database.tableShowHideProperties by literal.
       // +1: the status option menu's Group row calls tools.database.groupStatusGroup by literal.
       // +2: Edit property's Set as default confirm calls statusDefaultConfirm and its description by literal.
-      'executable-literal': 2239,
+      // +1: the same confirm calls statusDefaultConfirmEmphasis by literal for its bold phrase.
+      'executable-literal': 2240,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

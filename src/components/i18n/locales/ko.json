@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "기본값으로 설정",
   "tools.database.statusDefaultConfirm": "기본값을 “{name}”(으)로 변경할까요?",
   "tools.database.statusDefaultConfirmDescription": "새 페이지는 {name}을(를) 기본 상태로 시작합니다. 상태를 명시적으로 설정하지 않은 기존 페이지는 {name}(으)로 바뀝니다.",
+  "tools.database.statusDefaultConfirmEmphasis": "상태를 명시적으로 설정하지 않은",
   "tools.database.templateDefault": "기본",
   "tools.database.templateRepeatSummaryNone": "복제 주기…",
   "tools.database.templateRepeatSummaryDay": "매일 복제",

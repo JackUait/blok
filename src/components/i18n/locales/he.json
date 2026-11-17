@@ -2373,6 +2373,7 @@
   "tools.database.templateSetDefault": "הגדר כברירת מחדל",
   "tools.database.statusDefaultConfirm": "לשנות את ברירת המחדל ל-\"{name}\"?",
   "tools.database.statusDefaultConfirmDescription": "דפים חדשים יתחילו עם {name} כסטטוס ברירת המחדל. דפים קיימים שלא הוגדר להם סטטוס במפורש יעברו ל-{name}.",
+  "tools.database.statusDefaultConfirmEmphasis": "שלא הוגדר להם סטטוס במפורש",
   "tools.database.templateDefault": "ברירת מחדל",
   "tools.database.templateRepeatSummaryNone": "שכפל כל…",
   "tools.database.templateRepeatSummaryDay": "שכפל כל יום",

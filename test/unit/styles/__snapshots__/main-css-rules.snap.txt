@@ -10231,6 +10231,19 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   width: 406px;
 }
 
+[data-blok-database-confirm-dialog][data-roomy] [data-blok-database-confirm-title]:has(+ [data-blok-database-confirm-description]) {
+  font-weight: 600;
+}
+
+[data-blok-database-confirm-dialog][data-roomy] [data-blok-database-confirm-description] {
+  font-size: 16px;
+  line-height: 24px;
+}
+
+[data-blok-database-confirm-dialog][data-roomy] [data-blok-database-confirm-description] strong {
+  font-weight: 600;
+}
+
 [data-blok-database-confirm-dialog][data-small] {
   width: 300px;
 }

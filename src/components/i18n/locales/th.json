@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "ตั้งเป็นค่าเริ่มต้น",
   "tools.database.statusDefaultConfirm": "เปลี่ยนค่าเริ่มต้นเป็น “{name}” หรือไม่",
   "tools.database.statusDefaultConfirmDescription": "หน้าใหม่จะเริ่มด้วย {name} เป็นสถานะเริ่มต้น หน้าที่มีอยู่ซึ่งไม่ได้ตั้งสถานะไว้อย่างชัดเจนจะเปลี่ยนเป็น {name}",
+  "tools.database.statusDefaultConfirmEmphasis": "ซึ่งไม่ได้ตั้งสถานะไว้อย่างชัดเจน",
   "tools.database.templateDefault": "ค่าเริ่มต้น",
   "tools.database.templateRepeatSummaryNone": "ทำซ้ำทุก…",
   "tools.database.templateRepeatSummaryDay": "ทำซ้ำทุกวัน",

@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "Tetapkan sebagai lalai",
   "tools.database.statusDefaultConfirm": "Tukar lalai kepada “{name}”?",
   "tools.database.statusDefaultConfirmDescription": "Halaman baharu akan bermula dengan {name} sebagai status lalai. Halaman sedia ada tanpa status yang ditetapkan secara jelas akan bertukar kepada {name}.",
+  "tools.database.statusDefaultConfirmEmphasis": "tanpa status yang ditetapkan secara jelas",
   "tools.database.templateDefault": "Lalai",
   "tools.database.templateRepeatSummaryNone": "Gandakan setiap…",
   "tools.database.templateRepeatSummaryDay": "Gandakan setiap hari",

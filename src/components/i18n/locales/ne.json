@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "पूर्वनिर्धारित बनाउनुहोस्",
   "tools.database.statusDefaultConfirm": "पूर्वनिर्धारित “{name}” मा बदल्ने?",
   "tools.database.statusDefaultConfirmDescription": "नयाँ पृष्ठहरू {name} लाई पूर्वनिर्धारित स्थितिका रूपमा लिएर सुरु हुनेछन्। स्थिति स्पष्ट रूपमा सेट नगरिएका विद्यमान पृष्ठहरू {name} मा बदलिनेछन्।",
+  "tools.database.statusDefaultConfirmEmphasis": "स्थिति स्पष्ट रूपमा सेट नगरिएका",
   "tools.database.templateDefault": "पूर्वनिर्धारित",
   "tools.database.templateRepeatSummaryNone": "हरेक… नक्कल बनाउनुहोस्",
   "tools.database.templateRepeatSummaryDay": "हरेक दिन नक्कल बनाउनुहोस्",

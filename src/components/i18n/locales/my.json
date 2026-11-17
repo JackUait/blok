@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "မူလအဖြစ် သတ်မှတ်ရန်",
   "tools.database.statusDefaultConfirm": "မူလကို “{name}” သို့ ပြောင်းမလား။",
   "tools.database.statusDefaultConfirmDescription": "စာမျက်နှာအသစ်များသည် {name} ကို မူလအခြေအနေအဖြစ်ဖြင့် စတင်မည်။ အခြေအနေကို ရှင်းလင်းစွာ မသတ်မှတ်ထားသော ရှိပြီးသား စာမျက်နှာများသည် {name} သို့ ပြောင်းသွားမည်။",
+  "tools.database.statusDefaultConfirmEmphasis": "အခြေအနေကို ရှင်းလင်းစွာ မသတ်မှတ်ထားသော",
   "tools.database.templateDefault": "မူလ",
   "tools.database.templateRepeatSummaryNone": "…တိုင်း မိတ္တူပွားရန်",
   "tools.database.templateRepeatSummaryDay": "နေ့တိုင်း မိတ္တူပွားရန်",

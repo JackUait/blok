@@ -300,8 +300,12 @@ class OptionsEditor {
     void openDatabaseConfirm({
       title: this.opts.i18n.t('tools.database.statusDefaultConfirm', params),
       description: this.opts.i18n.t('tools.database.statusDefaultConfirmDescription', params),
+      // notion-motion.md Round 58 §2: the phrase is bold and Continue a red fill.
+      emphasis: this.t('tools.database.statusDefaultConfirmEmphasis'),
       confirmLabel: this.t('tools.database.buttonConfirmContinue'),
       cancelLabel: this.t('tools.database.layoutCancel'),
+      destructive: true,
+      filled: true,
       focusConfirm: true,
       roomy: true,
       directionSource: flyout.root,

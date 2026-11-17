@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "Ange som standard",
   "tools.database.statusDefaultConfirm": "Ändra standard till ”{name}”?",
   "tools.database.statusDefaultConfirmDescription": "Nya sidor börjar med {name} som standardstatus. Befintliga sidor utan uttryckligen angiven status byter till {name}.",
+  "tools.database.statusDefaultConfirmEmphasis": "utan uttryckligen angiven status",
   "tools.database.templateDefault": "Standard",
   "tools.database.templateRepeatSummaryNone": "Duplicera varje…",
   "tools.database.templateRepeatSummaryDay": "Duplicera varje dag",

@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "ਮੂਲ ਵਜੋਂ ਸੈੱਟ ਕਰੋ",
   "tools.database.statusDefaultConfirm": "ਮੂਲ ਨੂੰ “{name}” ਵਿੱਚ ਬਦਲਣਾ ਹੈ?",
   "tools.database.statusDefaultConfirmDescription": "ਨਵੇਂ ਪੰਨੇ {name} ਨੂੰ ਮੂਲ ਸਥਿਤੀ ਵਜੋਂ ਲੈ ਕੇ ਸ਼ੁਰੂ ਹੋਣਗੇ। ਜਿਨ੍ਹਾਂ ਮੌਜੂਦਾ ਪੰਨਿਆਂ ਦੀ ਸਥਿਤੀ ਸਪਸ਼ਟ ਤੌਰ 'ਤੇ ਸੈੱਟ ਨਹੀਂ ਹੈ, ਉਹ {name} 'ਤੇ ਬਦਲ ਜਾਣਗੇ।",
+  "tools.database.statusDefaultConfirmEmphasis": "ਜਿਨ੍ਹਾਂ ਮੌਜੂਦਾ ਪੰਨਿਆਂ ਦੀ ਸਥਿਤੀ ਸਪਸ਼ਟ ਤੌਰ 'ਤੇ ਸੈੱਟ ਨਹੀਂ ਹੈ",
   "tools.database.templateDefault": "ਮੂਲ",
   "tools.database.templateRepeatSummaryNone": "ਹਰ… ਨਕਲ ਬਣਾਓ",
   "tools.database.templateRepeatSummaryDay": "ਹਰ ਦਿਨ ਨਕਲ ਬਣਾਓ",

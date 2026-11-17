@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "ಡೀಫಾಲ್ಟ್ ಆಗಿ ಹೊಂದಿಸಿ",
   "tools.database.statusDefaultConfirm": "ಡೀಫಾಲ್ಟ್ ಅನ್ನು “{name}” ಗೆ ಬದಲಾಯಿಸಬೇಕೆ?",
   "tools.database.statusDefaultConfirmDescription": "ಹೊಸ ಪುಟಗಳು {name} ಅನ್ನು ಡೀಫಾಲ್ಟ್ ಸ್ಥಿತಿಯಾಗಿ ಹೊಂದಿ ಪ್ರಾರಂಭವಾಗುತ್ತವೆ. ಸ್ಥಿತಿಯನ್ನು ಸ್ಪಷ್ಟವಾಗಿ ಹೊಂದಿಸದ ಈಗಿನ ಪುಟಗಳು {name} ಗೆ ಬದಲಾಗುತ್ತವೆ.",
+  "tools.database.statusDefaultConfirmEmphasis": "ಸ್ಥಿತಿಯನ್ನು ಸ್ಪಷ್ಟವಾಗಿ ಹೊಂದಿಸದ",
   "tools.database.templateDefault": "ಡೀಫಾಲ್ಟ್",
   "tools.database.templateRepeatSummaryNone": "ನಕಲು ಮಾಡಿ: ಪ್ರತಿ…",
   "tools.database.templateRepeatSummaryDay": "ಪ್ರತಿದಿನ ನಕಲು ಮಾಡಿ",

@@ -102,6 +102,18 @@ describe('database confirm dialog css', () => {
     expect(body).toContain('color: var(--blok-database-ink-secondary)');
   });
 
+  // notion-motion.md Round 58 §2, "Change default to …?": title 16/24 600, body 16/24 400 with a 600 phrase.
+  // The Delete property dialog shares data-roomy but has no body; its title weight is unmeasured, so it stays.
+  it('draws a roomy dialog with a body at 16/24 and a 600 title over it', () => {
+    const ROOMY = '[data-blok-database-confirm-dialog][data-roomy]';
+    const body = ruleBody(database, `${ROOMY} [data-blok-database-confirm-description]`);
+
+    expect(body).toContain('font-size: 16px');
+    expect(body).toContain('line-height: 24px');
+    expect(ruleBody(database, `${ROOMY} [data-blok-database-confirm-title]:has(+ [data-blok-database-confirm-description])`)).toContain('font-weight: 600');
+    expect(ruleBody(database, `${ROOMY} [data-blok-database-confirm-description] strong`)).toContain('font-weight: 600');
+  });
+
   it('stacks full-width 32px buttons with the control radius', () => {
     const body = ruleBody(database, '[data-blok-database-confirm-action]');
 

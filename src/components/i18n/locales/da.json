@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "Angiv som standard",
   "tools.database.statusDefaultConfirm": "Skift standard til »{name}«?",
   "tools.database.statusDefaultConfirmDescription": "Nye sider starter med {name} som standardstatus. Eksisterende sider uden en udtrykkeligt angivet status skifter til {name}.",
+  "tools.database.statusDefaultConfirmEmphasis": "uden en udtrykkeligt angivet status",
   "tools.database.templateDefault": "Standard",
   "tools.database.templateRepeatSummaryNone": "Dupliker hver…",
   "tools.database.templateRepeatSummaryDay": "Dupliker hver dag",

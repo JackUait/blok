@@ -1,4 +1,9 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import en from '../../../../../src/components/i18n/locales/en.json';
 
 import { IconChevronRight } from '../../../../../src/components/icons';
 import { createOptionsEditor } from '../../../../../src/tools/database/cells/options-editor';
@@ -659,6 +664,35 @@ describe('options editor (Edit property for select, multi-select and status)', (
           expect(confirmAction('confirm')).toHaveFocus();
           expect(optionMenu()).not.toBeNull();
           confirmAction('cancel').click();
+        });
+
+        // notion-motion.md Round 58 §2: Continue is a red fill; "without a status explicitly set" is bold.
+        it('fills Continue red and draws the phrase about unset pages bold', () => {
+          const english = { t: (key: string, params?: Record<string, string | number>) =>
+            String(en[key as keyof typeof en] ?? key).replace(/\{(\w+)\}/g, (_, name: string) => String(params?.[name] ?? '')) };
+          const root = createOptionsEditor({ property: colourless(), i18n: english, onChange: vi.fn(), onSetDefault: vi.fn() });
+
+          document.body.appendChild(root);
+          openPanel(root, 'i');
+          document.querySelector<HTMLElement>('[data-blok-database-option-set-default]')?.click();
+
+          expect(document.querySelector('[data-blok-database-confirm-description] strong')?.textContent).toBe('without a status explicitly set');
+          expect(confirmAction('confirm').hasAttribute('data-destructive')).toBe(true);
+          expect(confirmAction('confirm').hasAttribute('data-filled')).toBe(true);
+          confirmAction('cancel').click();
+        });
+
+        // A phrase that is not in its locale's sentence silently loses the bold.
+        it('finds the bold phrase inside the sentence in every locale', () => {
+          const dir = resolve(__dirname, '../../../../../src/components/i18n/locales');
+          const misses = readdirSync(dir).filter((file) => file.endsWith('.json')).filter((file) => {
+            const dictionary = JSON.parse(readFileSync(resolve(dir, file), 'utf8')) as Record<string, string>;
+            const phrase = dictionary['tools.database.statusDefaultConfirmEmphasis'];
+
+            return phrase === undefined || phrase === '' || !dictionary['tools.database.statusDefaultConfirmDescription'].includes(phrase);
+          });
+
+          expect(misses).toEqual([]);
         });
 
         it('Escape closes only the dialog: the option menu stays and nothing changes', async () => {

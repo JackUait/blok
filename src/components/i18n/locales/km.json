@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "កំណត់ជាលំនាំដើម",
   "tools.database.statusDefaultConfirm": "ប្ដូរលំនាំដើមទៅ “{name}” ឬ?",
   "tools.database.statusDefaultConfirmDescription": "ទំព័រថ្មីនឹងចាប់ផ្ដើមដោយមាន {name} ជាស្ថានភាពលំនាំដើម។ ទំព័រដែលមានស្រាប់ដែលមិនបានកំណត់ស្ថានភាពច្បាស់លាស់ នឹងប្ដូរទៅ {name}។",
+  "tools.database.statusDefaultConfirmEmphasis": "ដែលមិនបានកំណត់ស្ថានភាពច្បាស់លាស់",
   "tools.database.templateDefault": "លំនាំដើម",
   "tools.database.templateRepeatSummaryNone": "ស្ទួនរៀងរាល់…",
   "tools.database.templateRepeatSummaryDay": "ស្ទួនរៀងរាល់ថ្ងៃ",

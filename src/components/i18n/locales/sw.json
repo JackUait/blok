@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "Weka kama chaguo-msingi",
   "tools.database.statusDefaultConfirm": "Badilisha chaguo-msingi kuwa “{name}”?",
   "tools.database.statusDefaultConfirmDescription": "Kurasa mpya zitaanza na {name} kama hali chaguo-msingi. Kurasa zilizopo ambazo hali yake haijawekwa wazi zitabadilika kuwa {name}.",
+  "tools.database.statusDefaultConfirmEmphasis": "ambazo hali yake haijawekwa wazi",
   "tools.database.templateDefault": "Chaguo-msingi",
   "tools.database.templateRepeatSummaryNone": "Rudufu kila…",
   "tools.database.templateRepeatSummaryDay": "Rudufu kila siku",

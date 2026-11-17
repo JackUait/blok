@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "Standart olaraq təyin et",
   "tools.database.statusDefaultConfirm": "Standart «{name}» olaraq dəyişdirilsin?",
   "tools.database.statusDefaultConfirmDescription": "Yeni səhifələr {name} standart statusu ilə başlayacaq. Statusu açıq şəkildə təyin edilməmiş mövcud səhifələr {name} statusuna keçəcək.",
+  "tools.database.statusDefaultConfirmEmphasis": "Statusu açıq şəkildə təyin edilməmiş",
   "tools.database.templateDefault": "Standart",
   "tools.database.templateRepeatSummaryNone": "Hər… dublikatını çıxar",
   "tools.database.templateRepeatSummaryDay": "Hər gün dublikatını çıxar",

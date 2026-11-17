@@ -2388,6 +2388,7 @@
   "tools.database.templateSetDefault": "Nastaviť ako predvolenú",
   "tools.database.statusDefaultConfirm": "Zmeniť predvolenú na „{name}“?",
   "tools.database.statusDefaultConfirmDescription": "Nové stránky začnú s predvoleným stavom {name}. Existujúce stránky bez výslovne nastaveného stavu sa prepnú na {name}.",
+  "tools.database.statusDefaultConfirmEmphasis": "bez výslovne nastaveného stavu",
   "tools.database.templateDefault": "Predvolená",
   "tools.database.templateRepeatSummaryNone": "Duplikovať každý…",
   "tools.database.templateRepeatSummaryDay": "Duplikovať každý deň",

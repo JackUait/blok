@@ -2388,6 +2388,7 @@
   "tools.database.templateSetDefault": "Nastavit jako výchozí",
   "tools.database.statusDefaultConfirm": "Změnit výchozí na „{name}“?",
   "tools.database.statusDefaultConfirmDescription": "Nové stránky budou začínat s výchozím stavem {name}. Existující stránky bez výslovně nastaveného stavu se přepnou na {name}.",
+  "tools.database.statusDefaultConfirmEmphasis": "bez výslovně nastaveného stavu",
   "tools.database.templateDefault": "Výchozí",
   "tools.database.templateRepeatSummaryNone": "Duplikovat každých…",
   "tools.database.templateRepeatSummaryDay": "Duplikovat každý den",

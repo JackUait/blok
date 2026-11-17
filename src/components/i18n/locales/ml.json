@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "സ്ഥിരസ്ഥിതിയായി സജ്ജമാക്കുക",
   "tools.database.statusDefaultConfirm": "സ്ഥിരസ്ഥിതി “{name}” ആയി മാറ്റണോ?",
   "tools.database.statusDefaultConfirmDescription": "പുതിയ പേജുകൾ {name} സ്ഥിരസ്ഥിതി സ്റ്റാറ്റസായി ആരംഭിക്കും. സ്റ്റാറ്റസ് വ്യക്തമായി സജ്ജമാക്കാത്ത നിലവിലുള്ള പേജുകൾ {name} ആയി മാറും.",
+  "tools.database.statusDefaultConfirmEmphasis": "സ്റ്റാറ്റസ് വ്യക്തമായി സജ്ജമാക്കാത്ത",
   "tools.database.templateDefault": "സ്ഥിരസ്ഥിതി",
   "tools.database.templateRepeatSummaryNone": "ഓരോ… പകർപ്പുണ്ടാക്കുക",
   "tools.database.templateRepeatSummaryDay": "എല്ലാ ദിവസവും പകർപ്പുണ്ടാക്കുക",

@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "இயல்பாக அமை",
   "tools.database.statusDefaultConfirm": "இயல்பை “{name}” என மாற்றவா?",
   "tools.database.statusDefaultConfirmDescription": "புதிய பக்கங்கள் {name} என்பதை இயல்பு நிலையாகக் கொண்டு தொடங்கும். நிலை வெளிப்படையாக அமைக்கப்படாத உள்ள பக்கங்கள் {name} க்கு மாறும்.",
+  "tools.database.statusDefaultConfirmEmphasis": "நிலை வெளிப்படையாக அமைக்கப்படாத",
   "tools.database.templateDefault": "இயல்பு",
   "tools.database.templateRepeatSummaryNone": "ஒவ்வொரு… நகலெடு",
   "tools.database.templateRepeatSummaryDay": "ஒவ்வொரு நாளும் நகலெடு",

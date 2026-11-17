@@ -2373,6 +2373,7 @@
   "tools.database.templateSetDefault": "Iestatīt kā noklusējuma",
   "tools.database.statusDefaultConfirm": "Mainīt noklusējumu uz „{name}”?",
   "tools.database.statusDefaultConfirmDescription": "Jaunās lapas sāksies ar {name} kā noklusējuma statusu. Esošās lapas bez skaidri iestatīta statusa pārslēgsies uz {name}.",
+  "tools.database.statusDefaultConfirmEmphasis": "bez skaidri iestatīta statusa",
   "tools.database.templateDefault": "Noklusējuma",
   "tools.database.templateRepeatSummaryNone": "Dublēt katru…",
   "tools.database.templateRepeatSummaryDay": "Dublēt katru dienu",

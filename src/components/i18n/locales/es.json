@@ -2373,6 +2373,7 @@
   "tools.database.templateSetDefault": "Establecer como predeterminada",
   "tools.database.statusDefaultConfirm": "¿Cambiar el predeterminado a “{name}”?",
   "tools.database.statusDefaultConfirmDescription": "Las páginas nuevas empezarán con {name} como estado predeterminado. Las páginas existentes sin un estado definido explícitamente cambiarán a {name}.",
+  "tools.database.statusDefaultConfirmEmphasis": "sin un estado definido explícitamente",
   "tools.database.templateDefault": "Predeterminada",
   "tools.database.templateRepeatSummaryNone": "Duplicar cada…",
   "tools.database.templateRepeatSummaryDay": "Duplicar cada día",

@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "د تلوالې په توګه یې وټاکئ",
   "tools.database.statusDefaultConfirm": "تلواله «{name}» ته بدله شي؟",
   "tools.database.statusDefaultConfirmDescription": "نوې پاڼې به د {name} سره د تلوالې حالت په توګه پیل شي. هغه موجودې پاڼې چې حالت یې په ښکاره نه دی ټاکل شوی {name} ته به واوړي.",
+  "tools.database.statusDefaultConfirmEmphasis": "چې حالت یې په ښکاره نه دی ټاکل شوی",
   "tools.database.templateDefault": "تلواله",
   "tools.database.templateRepeatSummaryNone": "هر… کاپي جوړه کړئ",
   "tools.database.templateRepeatSummaryDay": "هره ورځ کاپي جوړه کړئ",

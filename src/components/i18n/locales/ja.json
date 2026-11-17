@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "デフォルトに設定",
   "tools.database.statusDefaultConfirm": "デフォルトを「{name}」に変更しますか？",
   "tools.database.statusDefaultConfirmDescription": "新しいページはデフォルトのステータス {name} で始まります。ステータスが明示的に設定されていない既存のページは {name} に切り替わります。",
+  "tools.database.statusDefaultConfirmEmphasis": "ステータスが明示的に設定されていない",
   "tools.database.templateDefault": "デフォルト",
   "tools.database.templateRepeatSummaryNone": "複製の頻度…",
   "tools.database.templateRepeatSummaryDay": "毎日複製",

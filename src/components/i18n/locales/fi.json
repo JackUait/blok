@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "Aseta oletukseksi",
   "tools.database.statusDefaultConfirm": "Vaihdetaanko oletukseksi ”{name}”?",
   "tools.database.statusDefaultConfirmDescription": "Uudet sivut alkavat oletustilalla {name}. Olemassa olevat sivut, joille ei ole erikseen asetettu tilaa, vaihtuvat tilaan {name}.",
+  "tools.database.statusDefaultConfirmEmphasis": "joille ei ole erikseen asetettu tilaa",
   "tools.database.templateDefault": "Oletus",
   "tools.database.templateRepeatSummaryNone": "Monista joka…",
   "tools.database.templateRepeatSummaryDay": "Monista joka päivä",

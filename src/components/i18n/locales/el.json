@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "Ορισμός ως προεπιλογή",
   "tools.database.statusDefaultConfirm": "Αλλαγή προεπιλογής σε «{name}»;",
   "tools.database.statusDefaultConfirmDescription": "Οι νέες σελίδες θα ξεκινούν με {name} ως προεπιλεγμένη κατάσταση. Οι υπάρχουσες σελίδες χωρίς ρητά ορισμένη κατάσταση θα αλλάξουν σε {name}.",
+  "tools.database.statusDefaultConfirmEmphasis": "χωρίς ρητά ορισμένη κατάσταση",
   "tools.database.templateDefault": "Προεπιλογή",
   "tools.database.templateRepeatSummaryNone": "Διπλότυπο κάθε…",
   "tools.database.templateRepeatSummaryDay": "Διπλότυπο κάθε ημέρα",

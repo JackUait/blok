@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "ნაგულისხმევად დაყენება",
   "tools.database.statusDefaultConfirm": "შეიცვალოს ნაგულისხმევი „{name}“-ით?",
   "tools.database.statusDefaultConfirmDescription": "ახალი გვერდები დაიწყება ნაგულისხმევი სტატუსით {name}. არსებული გვერდები, რომლებსაც სტატუსი ცალსახად არ აქვთ მითითებული, გადავა {name}-ზე.",
+  "tools.database.statusDefaultConfirmEmphasis": "რომლებსაც სტატუსი ცალსახად არ აქვთ მითითებული",
   "tools.database.templateDefault": "ნაგულისხმევი",
   "tools.database.templateRepeatSummaryNone": "დუბლირება ყოველ…",
   "tools.database.templateRepeatSummaryDay": "დუბლირება ყოველდღე",

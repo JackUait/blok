@@ -6622,6 +6622,21 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   width: 406px;
 }
 
+/* notion-motion.md Round 58 §2, "Change default to …?": 406x229, a 16/24 body with a 600 phrase under a 600 title.
+   Delete property is roomy with no body; its title weight is unmeasured. */
+[data-blok-database-confirm-dialog][data-roomy] [data-blok-database-confirm-title]:has(+ [data-blok-database-confirm-description]) {
+  font-weight: 600;
+}
+
+[data-blok-database-confirm-dialog][data-roomy] [data-blok-database-confirm-description] {
+  font-size: 16px;
+  line-height: 24px;
+}
+
+[data-blok-database-confirm-dialog][data-roomy] [data-blok-database-confirm-description] strong {
+  font-weight: 600;
+}
+
 /* research/36 §8.2: Reset, 300x226. */
 [data-blok-database-confirm-dialog][data-small] {
   width: 300px;

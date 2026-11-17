@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "سۈكۈتتىكى قىلىپ بەلگىلەش",
   "tools.database.statusDefaultConfirm": "سۈكۈتتىكىنى «{name}» غا ئۆزگەرتەمسىز؟",
   "tools.database.statusDefaultConfirmDescription": "يېڭى بەتلەر {name} نى سۈكۈتتىكى ھالەت قىلىپ باشلىنىدۇ. ھالىتى ئېنىق بەلگىلەنمىگەن مەۋجۇت بەتلەر {name} غا ئالمىشىدۇ.",
+  "tools.database.statusDefaultConfirmEmphasis": "ھالىتى ئېنىق بەلگىلەنمىگەن",
   "tools.database.templateDefault": "سۈكۈتتىكى",
   "tools.database.templateRepeatSummaryNone": "ھەر… كۆپەيتىش",
   "tools.database.templateRepeatSummaryDay": "ھەر كۈنى كۆپەيتىش",

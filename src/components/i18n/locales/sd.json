@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "ڊفالٽ طور مقرر ڪريو",
   "tools.database.statusDefaultConfirm": "ڊفالٽ کي “{name}” ۾ بدلايو؟",
   "tools.database.statusDefaultConfirmDescription": "نوان صفحا {name} کي ڊفالٽ حالت طور شروع ٿيندا. جن موجود صفحن جي حالت واضح طور مقرر ناهي، اهي {name} تي بدلجي ويندا.",
+  "tools.database.statusDefaultConfirmEmphasis": "جن موجود صفحن جي حالت واضح طور مقرر ناهي",
   "tools.database.templateDefault": "ڊفالٽ",
   "tools.database.templateRepeatSummaryNone": "هر… نقل ٺاهيو",
   "tools.database.templateRepeatSummaryDay": "هر ڏينهن نقل ٺاهيو",

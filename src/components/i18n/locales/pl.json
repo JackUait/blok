@@ -2388,6 +2388,7 @@
   "tools.database.templateSetDefault": "Ustaw jako domyślny",
   "tools.database.statusDefaultConfirm": "Zmienić domyślny na „{name}”?",
   "tools.database.statusDefaultConfirmDescription": "Nowe strony będą zaczynać się ze statusem domyślnym {name}. Istniejące strony bez jawnie ustawionego statusu przełączą się na {name}.",
+  "tools.database.statusDefaultConfirmEmphasis": "bez jawnie ustawionego statusu",
   "tools.database.templateDefault": "Domyślny",
   "tools.database.templateRepeatSummaryNone": "Duplikuj co…",
   "tools.database.templateRepeatSummaryDay": "Duplikuj codziennie",

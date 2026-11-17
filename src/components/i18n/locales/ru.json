@@ -2388,6 +2388,7 @@
   "tools.database.templateSetDefault": "Использовать по умолчанию",
   "tools.database.statusDefaultConfirm": "Сделать «{name}» значением по умолчанию?",
   "tools.database.statusDefaultConfirmDescription": "Новые страницы будут начинаться со статусом {name} по умолчанию. Существующие страницы, у которых статус не задан явно, перейдут на {name}.",
+  "tools.database.statusDefaultConfirmEmphasis": "у которых статус не задан явно",
   "tools.database.templateDefault": "По умолчанию",
   "tools.database.templateRepeatSummaryNone": "Дублировать каждый…",
   "tools.database.templateRepeatSummaryDay": "Дублировать каждый день",

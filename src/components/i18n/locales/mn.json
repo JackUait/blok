@@ -2358,6 +2358,7 @@
   "tools.database.templateSetDefault": "Өгөгдмөлөөр тохируулах",
   "tools.database.statusDefaultConfirm": "Өгөгдмөлийг «{name}» болгож өөрчлөх үү?",
   "tools.database.statusDefaultConfirmDescription": "Шинэ хуудсууд {name}-г өгөгдмөл төлөв болгон эхэлнэ. Төлөв нь тодорхой тохируулагдаагүй одоо байгаа хуудсууд {name} руу шилжинэ.",
+  "tools.database.statusDefaultConfirmEmphasis": "Төлөв нь тодорхой тохируулагдаагүй",
   "tools.database.templateDefault": "Өгөгдмөл",
   "tools.database.templateRepeatSummaryNone": "Хувилах давтамж…",
   "tools.database.templateRepeatSummaryDay": "Өдөр бүр хувилах",

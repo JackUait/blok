@@ -15012,7 +15012,15 @@ button[data-blok-database-table-group-count]:hover {
   animation: blok-database-landed 200ms ease;
 }
 
+[data-blok-component="database"][data-blok-selected="true"] > [data-blok-element-content]::after {
+  animation: blok-database-landed 200ms ease;
+}
+
 [@media (prefers-reduced-motion: reduce)] [data-blok-database-row-landed]::after {
+  animation: none;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-component="database"][data-blok-selected="true"] > [data-blok-element-content]::after {
   animation: none;
 }
 

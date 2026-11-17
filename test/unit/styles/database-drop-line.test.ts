@@ -86,6 +86,18 @@ describe('database drop line css', () => {
     expect(database).toMatch(/@media \(prefers-reduced-motion: reduce\) \{[^@]*\[data-blok-database-card\]::after[^{]*\{ transition: none;/);
   });
 
+  // notion-motion.md Round 64 §4: a selected database block's halo fades in over 0.2s. Only the
+  // database: no plain block's halo has been measured. The tint stays core's one ::after.
+  it('fades a selected database block\'s tint in over 200ms ease, and not under reduced motion', () => {
+    const selector = '[data-blok-component="database"][data-blok-selected="true"] > [data-blok-element-content]::after';
+
+    expect(ruleBody(database, selector)).toBe(' animation: blok-database-landed 200ms ease; ');
+    const off = database.lastIndexOf(`${selector} { animation: none; }`);
+
+    expect(off).toBeGreaterThan(database.indexOf(`${selector} { animation: blok-database-landed`));
+    expect(database.lastIndexOf('@media (prefers-reduced-motion: reduce)', off)).toBeGreaterThan(database.indexOf(`${selector} { animation: blok-database-landed`));
+  });
+
   // notion-motion.md Round 40 §2: the cursor while a card is held reads `grabbing`.
   it('shows the grabbing cursor over the board while a card is dragged', () => {
     expect(database).toMatch(/\[data-blok-database-dragging\], \[data-blok-database-dragging\] \* \{ cursor: grabbing; \}/);

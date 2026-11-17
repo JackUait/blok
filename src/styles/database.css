@@ -12011,8 +12011,17 @@ button[data-blok-database-table-group-count]:hover {
   }
 }
 
+/* Round 64 §4: a selected database block's tint (core's one ::after) fades in like Notion's halo. */
+[data-blok-component="database"][data-blok-selected="true"] > [data-blok-element-content]::after {
+  animation: blok-database-landed 200ms ease;
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-blok-database-row-landed]::after {
+    animation: none;
+  }
+
+  [data-blok-component="database"][data-blok-selected="true"] > [data-blok-element-content]::after {
     animation: none;
   }
 

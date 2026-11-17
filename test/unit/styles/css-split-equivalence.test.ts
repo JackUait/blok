@@ -1849,6 +1849,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R150_BYTES = 1307;
     // Lane r153: Round 62 Move to Workspace tree rows (chevron 20 at +14, icon 16 at +37, +14 a level) and the chevron turn. Net database.css growth against origin/main.
     const DATABASE_R153_BYTES = 2792;
+    // Lane r156: Round 64 §4 selected database block tint fades in over 200ms. Net database.css growth against origin/main.
+    const DATABASE_R156_BYTES = 378;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2453,6 +2455,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R152_BYTES
       + DATABASE_R150_BYTES
       + DATABASE_R153_BYTES
+      + DATABASE_R156_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

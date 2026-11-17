@@ -153,7 +153,7 @@ describe('view sort undo', () => {
     expect(q('database-sort-pill')).toBeNull();
   });
 
-  it('undoes only the sort: a filter added after it stays', async () => {
+  it('undoes a filter added after the sort first, then the sort', async () => {
     const blok = await make();
 
     await sortByName();
@@ -169,8 +169,13 @@ describe('view sort undo', () => {
 
     blok.history.undo();
     await quiet();
+    expect(q('database-sort-pill')).not.toBeNull();
+    expect(filters()).toBe(0);
+
+    blok.history.undo();
+    await quiet();
     expect(q('database-sort-pill')).toBeNull();
-    expect(filters()).toBe(1);
+    expect(filters()).toBe(0);
   });
 
   it('keeps a shared view setting one undo step too', async () => {

@@ -113,6 +113,11 @@ export interface ViewGroupEntry {
 }
 
 /** What the panels ask of the database tool. */
+/** `typing`: a keystroke in a filter's value field, joining the open typing run in undo. */
+export interface PersonalWriteOptions {
+  typing?: boolean;
+}
+
 export interface ViewSettingsContext {
   /** `getLocale` dates the filter chips in the editor's language. */
   i18n: Pick<I18n, 't'> & Partial<Pick<I18n, 'getLocale'>>;
@@ -129,7 +134,7 @@ export interface ViewSettingsContext {
   /** A shared, undoable write to the saved view. Ignored while locked. */
   updateView: (changes: ViewChanges) => void;
   /** A personal, unsaved filter or sort edit (D4). */
-  updatePersonal: (patch: PersonalViewPatch) => void;
+  updatePersonal: (patch: PersonalViewPatch, options?: PersonalWriteOptions) => void;
   setLayout: (type: ViewType) => void;
   setLocked: (locked: boolean) => void;
   /** A linked view: its lock reads "Lock views" (research 20 §2b). */

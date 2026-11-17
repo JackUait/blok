@@ -17,7 +17,7 @@ import { chipPart, filterChip, openFilterChip } from './database-filter-chip';
 import { SORTABLE_TYPES, propertyPicker, sortEditor } from './database-sort-panel';
 import { clearSearchMatches, paintSearchMatches } from './database-search-highlight';
 import { onHover } from '../../components/utils/tooltip';
-import type { AutofillPanelSettings, DataSourceSettings, EditPropertiesSettings, StarterRow, StructureSettings, ViewGroupEntry, ViewSettingsAction, ViewSettingsContext, ViewSettingsStart } from './database-view-settings-panel';
+import type { AutofillPanelSettings, DataSourceSettings, EditPropertiesSettings, PersonalWriteOptions, StarterRow, StructureSettings, ViewGroupEntry, ViewSettingsAction, ViewSettingsContext, ViewSettingsStart } from './database-view-settings-panel';
 import { sortFromHeader } from './view-data';
 import type { ViewChanges } from './database-model';
 import { groupByChange } from './group-keys';
@@ -114,16 +114,20 @@ export interface ViewControlsHost {
 }
 
 /**
- * Sorts each undo token stands for. Module-wide, so a token still replays
- * after the controls that wrote it were rebuilt.
+ * The sorts and filters each undo token stands for. Module-wide, so a token
+ * still replays after the controls that wrote it were rebuilt.
  */
-const sortSteps = new Map<string, { viewId: string; sorts: SortConfig[] | undefined }>();
+const sortSteps = new Map<string, { viewId: string; personal: PersonalViewPatch }>();
 
 /** Names this block's sort tokens in the document. Per browser: a peer must not share the key. */
 const SORT_UNDO_ID_KEY = 'sort-undo-id';
 
 /** The controls now drawn for each key: a rebuilt tool replays steps the old one wrote. A block's widgets share its key. */
 const liveSortControls = new Map<string, Set<DatabaseViewControls>>();
+
+/** Personal state compared as the store keeps it: an absent key and an undefined one are the same. */
+const samePersonal = (a: PersonalViewPatch, b: PersonalViewPatch): boolean =>
+  JSON.stringify([a.sorts, a.filters, a.filterTree]) === JSON.stringify([b.sorts, b.filters, b.filterTree]);
 
 const button = (testId: string, label: string, content: { icon?: string; text?: string }): HTMLButtonElement => {
   const el = document.createElement('button');
@@ -588,7 +592,7 @@ export class DatabaseViewControls {
     return saved === undefined ? undefined : this.effective(saved);
   }
 
-  private updatePersonal(patch: PersonalViewPatch): void {
+  private updatePersonal(patch: PersonalViewPatch, options: PersonalWriteOptions = {}): void {
     const view = this.host.savedView();
 
     if (view === undefined) return;
@@ -597,42 +601,43 @@ export class DatabaseViewControls {
       ...patch,
       ...(patch.filters !== undefined ? { filters: withEntryIds(patch.filters) } : {}),
       ...(patch.sorts !== undefined ? { sorts: withEntryIds(patch.sorts) } : {}),
-    });
+    }, options);
     this.host.rerender();
     this.refresh();
   }
 
-  /** Every personal write goes here, so a sort change is always an undo step. */
-  private writePersonal(viewId: string, next: PersonalViewPatch): void {
-    const before = this.personal.get(viewId).sorts;
+  /** Every personal write goes here, so a sort or filter change is always an undo step. */
+  private writePersonal(viewId: string, next: PersonalViewPatch, options: PersonalWriteOptions = {}): void {
+    const before = this.personal.get(viewId);
 
     this.personal.replace(viewId, next);
-    if (!this.replayingSorts && JSON.stringify(before) !== JSON.stringify(next.sorts)) this.recordSorts(viewId, before, next.sorts);
+    if (!this.replayingSorts && !samePersonal(before, next)) this.recordSorts(viewId, before, next, options.typing === true);
   }
 
   /**
-   * notion-motion.md Round 63 §1: a sort change is one undo step. Sorts are
-   * personal (D4), so the document holds only a token and this browser keeps
-   * what it stands for.
+   * notion-motion.md Round 63 §1: a sort change is one undo step; Round 64 §2: a filter's
+   * add and its value are one step each. Both are personal (D4), so the document holds
+   * only a token and this browser keeps what it stands for.
    */
-  private recordSorts(viewId: string, before: SortConfig[] | undefined, after: SortConfig[] | undefined): void {
+  private recordSorts(viewId: string, before: PersonalViewPatch, after: PersonalViewPatch, typing: boolean): void {
     const value = this.sortValue();
 
     if (value === undefined) return;
     const current = value.get();
     const known = current === undefined ? undefined : sortSteps.get(current);
 
-    // Undo needs a token for the sorts before this step. A host store load changes them without one.
-    if (known === undefined || known.viewId !== viewId || JSON.stringify(known.sorts) !== JSON.stringify(before)) {
+    // Undo needs a token for the state before this step. A host store load changes it without one.
+    if (known === undefined || known.viewId !== viewId || !samePersonal(known.personal, before)) {
       const base = nanoid();
 
-      sortSteps.set(base, { viewId, sorts: before });
+      sortSteps.set(base, { viewId, personal: before });
       value.set(base, { record: false });
     }
     const token = nanoid();
 
-    sortSteps.set(token, { viewId, sorts: after });
-    value.set(token);
+    sortSteps.set(token, { viewId, personal: after });
+    // Typed filter text joins one run, as typing in a block does. Notion's own split is unmeasured.
+    value.set(token, typing ? { typing: true } : undefined);
   }
 
   /** One key per block: each token names its view. */
@@ -686,13 +691,9 @@ export class DatabaseViewControls {
     const step = token === undefined ? undefined : sortSteps.get(token);
 
     if (this.destroyed || change.source === 'remote' || step === undefined) return;
-    const patch = { ...this.personal.get(step.viewId) };
-
-    if (step.sorts === undefined) delete patch.sorts;
-    else patch.sorts = step.sorts;
     this.replayingSorts = true;
     try {
-      this.personal.replace(step.viewId, patch);
+      this.personal.replace(step.viewId, step.personal);
     } finally {
       this.replayingSorts = false;
     }
@@ -760,7 +761,7 @@ export class DatabaseViewControls {
       layouts: this.host.layouts,
       canDeleteView: () => this.host.viewCount() > 1,
       updateView: (changes) => this.host.updateView(changes),
-      updatePersonal: (patch) => this.updatePersonal(patch),
+      updatePersonal: (patch, options) => this.updatePersonal(patch, options),
       setLayout: (type) => this.host.setLayout(type),
       setLocked: (locked) => {
         this.host.setLocked(locked);
@@ -876,9 +877,9 @@ export class DatabaseViewControls {
     this.panel?.close();
     const ctx: ViewSettingsContext = {
       ...this.settingsContext(),
-      updatePersonal: (patch) => {
+      updatePersonal: (patch, options) => {
         this.barOpen = true;
-        this.updatePersonal(patch);
+        this.updatePersonal(patch, options);
       },
     };
 

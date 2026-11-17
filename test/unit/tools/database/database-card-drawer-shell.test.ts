@@ -454,6 +454,27 @@ describe('DatabaseCardDrawer shell', () => {
       expect(mode?.getAttribute('aria-expanded')).toBe('false');
     });
 
+    // notion-motion.md Round 55 §5: the mode menu is centred under its button, at the button's bottom.
+    it('opens the mode menu centred under the mode button, touching its bottom', () => {
+      const drawer = new DatabaseCardDrawer(createOptions());
+
+      drawer.open(ROW, 'side');
+      const mode = q('[data-blok-database-peek-mode]');
+
+      if (mode === null) throw new Error('no mode button');
+      Object.defineProperty(mode, 'getBoundingClientRect', {
+        configurable: true,
+        value: () => ({ top: 10, bottom: 34, left: 827.5, right: 851.5, width: 24, height: 24, x: 827.5, y: 10, toJSON: () => ({}) }),
+      });
+      mode.click();
+      const menu = document.querySelector<HTMLElement>('[data-blok-popover-custom-class~="blok-database-peek-mode-menu"]');
+
+      // jsdom measures the menu as 0 wide, so centred means its left edge is the button's centre.
+      expect(menu?.style.left).toBe('839.5px');
+      expect(menu?.style.top).toBe('34px');
+      drawer.destroy();
+    });
+
     // notion-spec-2 §12 (S2:160): Switch peek mode lists Side peek, Center peek, Full page, New tab.
     it('opens the row\'s link in a new tab from the mode menu, and has no such row for a row with no link', () => {
       const open = vi.spyOn(window, 'open').mockReturnValue(null);

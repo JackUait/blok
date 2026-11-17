@@ -1076,5 +1076,26 @@ describe('resolvePosition', () => {
       expect(resolvePosition({ ...input, anchor: rect({ top: 300, bottom: 324, left: 20, right: 44 }), alignEnd: true }).left).toBe(0);
     });
   });
+
+  // notion-motion.md Round 55 §5: the peek mode menu sits centred under its button.
+  describe('alignCenter', () => {
+    const input = {
+      anchor: rect({ top: 10, bottom: 34, left: 827.5, right: 851.5 }),
+      popoverSize: { width: 220, height: 160 },
+      scopeBounds: rect({ top: 0, bottom: 717, left: 0, right: 1512 }),
+      viewportSize: { width: 1512, height: 717 },
+      scrollOffset: { x: 0, y: 0 },
+      offset: 0,
+    };
+
+    it('centres the popover under the anchor', () => {
+      expect(resolvePosition({ ...input, alignCenter: true })).toMatchObject({ left: 729.5, top: 34 });
+    });
+
+    it('still keeps the popover inside the window', () => {
+      expect(resolvePosition({ ...input, anchor: rect({ top: 10, bottom: 34, left: 1480, right: 1504 }), alignCenter: true }).left).toBe(1292);
+      expect(resolvePosition({ ...input, anchor: rect({ top: 10, bottom: 34, left: 8, right: 32 }), alignCenter: true }).left).toBe(0);
+    });
+  });
 });
 

@@ -1898,9 +1898,11 @@ export class DatabaseCardDrawer {
     }];
     const menu = new PopoverDesktop({
       // Notion's 28px rows.
-      class: DATABASE_HEADER_MENU_CLASS,
+      class: `${DATABASE_HEADER_MENU_CLASS} blok-database-peek-mode-menu`,
       animateClose: true,
       trigger: anchor,
+      // notion-motion.md Round 55 §5: centred under the button, touching its bottom.
+      offset: 0,
       width: '220px',
       autoFocusFirstItem: false,
       items: editDefault === undefined || this.readOnly ? items : [
@@ -1926,6 +1928,7 @@ export class DatabaseCardDrawer {
       }
     });
     this.modeMenu = menu;
+    menu.alignCenter = true;
     menu.show();
     // The bar keeps its revealed controls while this is true (database.css).
     anchor.setAttribute('aria-expanded', 'true');

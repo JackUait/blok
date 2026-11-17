@@ -21,6 +21,8 @@ export interface PositionInput {
   leftAlignRect?: DOMRect;
   /** Below or above the anchor, with the popover's end edge on the anchor's end edge, kept inside the boundary. */
   alignEnd?: boolean;
+  /** Below or above the anchor, centred on it, kept inside the boundary. Wins over `alignEnd`. */
+  alignCenter?: boolean;
   /**
    * Reading direction of the popover. In RTL the below/above placement aligns
    * to the anchor's right edge and flips rightward. Defaults to `ltr`.
@@ -119,6 +121,7 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
     offset = 8,
     leftAlignRect,
     alignEnd = false,
+    alignCenter = false,
     placeLeftOfAnchor = false,
     asideSide = 'left',
     viewportMargin = 0,
@@ -233,6 +236,12 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
   // --- Horizontal ---
   const minLeft = boundaryLeft + scrollOffset.x;
   const maxRight = boundaryRight + scrollOffset.x;
+
+  if (alignCenter) {
+    const centred = (anchor.left + anchor.right) / 2 - popoverSize.width / 2 + scrollOffset.x;
+
+    return { top, left: Math.max(minLeft, Math.min(centred, maxRight - popoverSize.width)), openTop, openLeft: false };
+  }
 
   if (alignEnd) {
     const end = direction === 'rtl' ? anchor.left : anchor.right - popoverSize.width;

@@ -691,6 +691,11 @@ describe('cell editor CSS', () => {
     expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-handle-menu'] > [data-blok-popover-container]", 'transform-origin')).toEqual(['center']);
   });
 
+  // notion-motion.md Round 55 §5: the peek mode menu grows from the top centre (origin 110px 0 on 220 wide).
+  it('scales the peek mode menu from its top centre', () => {
+    expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-peek-mode-menu'] > [data-blok-popover-container]", 'transform-origin')).toEqual(['top center']);
+  });
+
   // notion-spec-2 §18.3 (b4-rel-dlg.txt): head 33 tall, "Select a page" 16px in, rows 544x32 one pixel apart.
   describe('relation picker in a table cell', () => {
     const REL = '[data-blok-database-relation-editor]';

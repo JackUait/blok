@@ -741,6 +741,7 @@
   "tools.database.changeCover": "ކަވަރު ބަދަލުކުރޭ",
   "tools.database.coverInvalid": "މި ލިންކަކީ Blok އަށް ދައްކާނެ ފޮޓޯއެއް ނޫން",
   "tools.database.coverNoUpload": "މިތަނުގައި އަޕްލޯޑް ކުރުން ސެޓްއަޕް ކޮށްފައެއް ނުވޭ. އޭގެ ބަދަލުގައި ފޮޓޯގެ ލިންކް ޕޭސްޓް ކުރޭ",
+  "tools.database.downloadCover": "ކަވަރު ފޮޓޯ ޑައުންލޯޑްކުރޭ",
   "tools.database.addDescription": "ތަފްސީލު އިތުރުކުރޭ",
   "tools.database.hideDescription": "ތަފްސީލު ފޮރުވާ",
   "tools.database.descriptionPlaceholder": "ތަފްސީލެއް އިތުރުކުރޭ…",

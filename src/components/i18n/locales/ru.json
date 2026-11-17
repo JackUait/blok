@@ -743,6 +743,7 @@
   "tools.database.changeCover": "Сменить обложку",
   "tools.database.coverInvalid": "По этой ссылке нет изображения, которое Blok может показать",
   "tools.database.coverNoUpload": "Загрузка здесь не настроена. Вставьте ссылку на изображение",
+  "tools.database.downloadCover": "Скачать изображение обложки",
   "tools.database.addDescription": "Добавить описание",
   "tools.database.hideDescription": "Скрыть описание",
   "tools.database.descriptionPlaceholder": "Добавьте описание…",

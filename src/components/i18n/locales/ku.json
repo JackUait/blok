@@ -761,6 +761,7 @@
   "tools.database.changeCover": "گۆڕینی بەرگ",
   "tools.database.coverInvalid": "ئەم بەستەرە وێنەیەک نییە کە Blok بتوانێت پیشانی بدات",
   "tools.database.coverNoUpload": "بارکردن لێرە ڕێکنەخراوە. لە جیاتی ئەوە بەستەری وێنە بلکێنە",
+  "tools.database.downloadCover": "داگرتنی وێنەی بەرگ",
   "tools.database.addDescription": "وەسف زیاد بکە",
   "tools.database.hideDescription": "شاردنەوەی وەسف",
   "tools.database.descriptionPlaceholder": "وەسفێک زیاد بکە…",

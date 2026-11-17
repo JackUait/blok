@@ -9,7 +9,7 @@ import type { DateDisplayChange } from './cells/date-format';
 import { isReadOnlyType, readPropertyValue } from './property-values';
 import { cellText } from './database-table-clipboard';
 import { rowCellContext } from './reminders';
-import { IconArrowDiagonal, IconCheck, IconCopy, IconEmojiSmile, IconImage, IconMenu, IconMessage, IconPlus, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconEmojiStar, IconStarFilled, IconLink, IconPageEmpty, IconPageLayout, IconPlayerTheater, IconSidebarRight, IconSplitView, IconChevronDoubleRight, IconExpandDiagonal, IconPeekCenter, IconPeekFull, IconPeekSide, IconSliders } from '../../components/icons';
+import { IconArrowDiagonal, IconCheck, IconCopy, IconDownload, IconEmojiSmile, IconImage, IconMenu, IconMessage, IconPlus, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconEmojiStar, IconStarFilled, IconLink, IconPageEmpty, IconPageLayout, IconPlayerTheater, IconSidebarRight, IconSplitView, IconChevronDoubleRight, IconExpandDiagonal, IconPeekCenter, IconPeekFull, IconPeekSide, IconSliders } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -26,6 +26,7 @@ import { EmojiPicker } from '../callout/emoji-picker';
 import { loadEmojiGrid } from '../../components/utils/emoji/emoji-data';
 import { fileChipIcon } from './page-icon';
 import { openCoverPicker, validateCoverFile } from '../audio/cover-picker';
+import { downloadImage } from '../image/download';
 import { loadSheet } from '../../components/utils/lazy-styles';
 import type { CoverPickerHandle } from '../audio/cover-picker';
 import { safeHref, safeImageSrc } from '../../components/utils/sanitize-url';
@@ -1381,13 +1382,26 @@ export class DatabaseCardDrawer {
       img.src = src;
       cover.appendChild(img);
       if (!this.readOnly && this.onCoverChange !== undefined) {
+        // R59 §1: Notion's group also holds Reposition, unmeasured beyond its mode UI, so left out.
+        const controls = document.createElement('div');
         const change = document.createElement('button');
+        const download = document.createElement('button');
 
+        controls.setAttribute('data-blok-database-drawer-cover-controls', '');
+        controls.setAttribute('role', 'group');
         change.type = 'button';
         change.setAttribute('data-blok-database-drawer-change-cover', '');
-        change.textContent = this.label('tools.database.changeCover');
-        change.addEventListener('click', () => this.openCover(row.id, change));
-        cover.appendChild(change);
+        change.textContent = this.label('title.changeCover');
+        change.setAttribute('aria-label', this.label('title.changeCoverAria'));
+        change.addEventListener('click', () => this.openCover(row.id, controls, change));
+        download.type = 'button';
+        download.setAttribute('data-blok-database-drawer-download-cover', '');
+        download.setAttribute('aria-label', this.label('tools.database.downloadCover'));
+        // A trusted constant from the icon module.
+        download.innerHTML = IconDownload;
+        download.addEventListener('click', () => void downloadImage(src));
+        controls.append(change, download);
+        cover.appendChild(controls);
       }
       head.appendChild(cover);
     }
@@ -1614,7 +1628,7 @@ export class DatabaseCardDrawer {
   }
 
   /** The shared cover picker (upload or link), anchored on the cover button. */
-  private openCover(rowId: string, anchor: HTMLElement): void {
+  private openCover(rowId: string, anchor: HTMLElement, trigger: HTMLElement = anchor): void {
     const onCoverChange = this.onCoverChange;
 
     if (this.readOnly || onCoverChange === undefined) {
@@ -1623,6 +1637,7 @@ export class DatabaseCardDrawer {
     this.coverPicker?.close();
     const picker = openCoverPicker({
       anchor,
+      trigger,
       ...(this.i18n !== undefined ? { i18n: this.i18n } : {}),
       onUrl: (url) => {
         if (safeImageSrc(url) === null) {

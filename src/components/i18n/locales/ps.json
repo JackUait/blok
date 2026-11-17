@@ -741,6 +741,7 @@
   "tools.database.changeCover": "پوښ بدل کړئ",
   "tools.database.coverInvalid": "دا لینک داسې انځور نه دی چې Blok یې ښودلی شي",
   "tools.database.coverNoUpload": "دلته اپلوډ نه دی تنظیم شوی. پر ځای یې د انځور لینک پیسټ کړئ",
+  "tools.database.downloadCover": "د پوښ انځور ډاونلوډ کړئ",
   "tools.database.addDescription": "تشریح اضافه کړئ",
   "tools.database.hideDescription": "تشریح پټه کړئ",
   "tools.database.descriptionPlaceholder": "یوه تشریح اضافه کړئ…",

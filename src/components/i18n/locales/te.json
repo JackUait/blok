@@ -739,6 +739,7 @@
   "tools.database.changeCover": "కవర్ మార్చండి",
   "tools.database.coverInvalid": "ఈ లింక్ Blok చూపించగల చిత్రం కాదు",
   "tools.database.coverNoUpload": "అప్‌లోడ్ ఇక్కడ సెటప్ చేయలేదు. బదులుగా చిత్రం లింక్ అతికించండి",
+  "tools.database.downloadCover": "కవర్ చిత్రాన్ని డౌన్‌లోడ్ చేయండి",
   "tools.database.addDescription": "వివరణ జోడించండి",
   "tools.database.hideDescription": "వివరణ దాచండి",
   "tools.database.descriptionPlaceholder": "వివరణ జోడించండి…",

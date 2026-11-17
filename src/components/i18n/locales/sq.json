@@ -741,6 +741,7 @@
   "tools.database.changeCover": "Ndërro kopertinën",
   "tools.database.coverInvalid": "Kjo lidhje nuk është imazh që Blok mund ta shfaqë",
   "tools.database.coverNoUpload": "Ngarkimi nuk është konfiguruar këtu. Ngjit një lidhje imazhi në vend të kësaj",
+  "tools.database.downloadCover": "Shkarko imazhin e kopertinës",
   "tools.database.addDescription": "Shto përshkrim",
   "tools.database.hideDescription": "Fshih përshkrimin",
   "tools.database.descriptionPlaceholder": "Shto një përshkrim…",

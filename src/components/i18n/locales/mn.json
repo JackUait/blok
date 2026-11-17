@@ -759,6 +759,7 @@
   "tools.database.changeCover": "Хавтас солих",
   "tools.database.coverInvalid": "Энэ холбоос Blok-ийн харуулж чадах зураг биш байна",
   "tools.database.coverNoUpload": "Энд байршуулалт тохируулаагүй байна. Оронд нь зургийн холбоос буулгана уу",
+  "tools.database.downloadCover": "Хавтасны зургийг татах",
   "tools.database.addDescription": "Тайлбар нэмэх",
   "tools.database.hideDescription": "Тайлбар нуух",
   "tools.database.descriptionPlaceholder": "Тайлбар нэмэх…",

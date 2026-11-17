@@ -759,6 +759,7 @@
   "tools.database.changeCover": "कभर बदल्नुहोस्",
   "tools.database.coverInvalid": "यो लिङ्क Blok ले देखाउन सक्ने तस्बिर होइन",
   "tools.database.coverNoUpload": "यहाँ अपलोड सेटअप गरिएको छैन। बरु तस्बिरको लिङ्क टाँस्नुहोस्",
+  "tools.database.downloadCover": "कभर छवि डाउनलोड गर्नुहोस्",
   "tools.database.addDescription": "विवरण थप्नुहोस्",
   "tools.database.hideDescription": "विवरण लुकाउनुहोस्",
   "tools.database.descriptionPlaceholder": "विवरण थप्नुहोस्…",

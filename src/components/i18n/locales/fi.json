@@ -739,6 +739,7 @@
   "tools.database.changeCover": "Vaihda kansikuva",
   "tools.database.coverInvalid": "Linkki ei ole kuva, jota Blok voi näyttää",
   "tools.database.coverNoUpload": "Lataamista ei ole määritetty tässä. Liitä sen sijaan kuvan linkki",
+  "tools.database.downloadCover": "Lataa kansikuva",
   "tools.database.addDescription": "Lisää kuvaus",
   "tools.database.hideDescription": "Piilota kuvaus",
   "tools.database.descriptionPlaceholder": "Lisää kuvaus…",

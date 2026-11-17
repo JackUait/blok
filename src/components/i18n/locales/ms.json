@@ -759,6 +759,7 @@
   "tools.database.changeCover": "Tukar muka depan",
   "tools.database.coverInvalid": "Pautan itu bukan imej yang boleh dipaparkan oleh Blok",
   "tools.database.coverNoUpload": "Muat naik tidak disediakan di sini. Tampal pautan imej sebagai gantinya",
+  "tools.database.downloadCover": "Muat turun imej muka depan",
   "tools.database.addDescription": "Tambah penerangan",
   "tools.database.hideDescription": "Sembunyikan penerangan",
   "tools.database.descriptionPlaceholder": "Tambah penerangan…",

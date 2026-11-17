@@ -741,6 +741,7 @@
   "tools.database.changeCover": "Üz qabığını dəyiş",
   "tools.database.coverInvalid": "Bu keçid göstərilə bilən şəkil deyil",
   "tools.database.coverNoUpload": "Burada yükləmə qurulmayıb. Əvəzinə şəkil keçidini yapışdırın",
+  "tools.database.downloadCover": "Üz qabığı şəklini endir",
   "tools.database.addDescription": "Təsvir əlavə et",
   "tools.database.hideDescription": "Təsviri gizlət",
   "tools.database.descriptionPlaceholder": "Təsvir əlavə edin…",

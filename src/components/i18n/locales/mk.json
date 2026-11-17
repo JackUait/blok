@@ -759,6 +759,7 @@
   "tools.database.changeCover": "Промени насловна слика",
   "tools.database.coverInvalid": "Таа врска не е слика што Blok може да ја прикаже",
   "tools.database.coverNoUpload": "Прикачувањето не е поставено тука. Наместо тоа, залепете врска до слика",
+  "tools.database.downloadCover": "Преземи ја насловната слика",
   "tools.database.addDescription": "Додај опис",
   "tools.database.hideDescription": "Скриј опис",
   "tools.database.descriptionPlaceholder": "Додај опис…",

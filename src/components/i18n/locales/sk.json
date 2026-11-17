@@ -743,6 +743,7 @@
   "tools.database.changeCover": "Zmeniť obálku",
   "tools.database.coverInvalid": "Tento odkaz nie je obrázok, ktorý Blok dokáže zobraziť",
   "tools.database.coverNoUpload": "Nahrávanie tu nie je nastavené. Namiesto toho vložte odkaz na obrázok",
+  "tools.database.downloadCover": "Stiahnuť obrázok obálky",
   "tools.database.addDescription": "Pridať popis",
   "tools.database.hideDescription": "Skryť popis",
   "tools.database.descriptionPlaceholder": "Pridajte popis…",

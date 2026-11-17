@@ -739,6 +739,7 @@
   "tools.database.changeCover": "Đổi ảnh bìa",
   "tools.database.coverInvalid": "Liên kết này không phải là ảnh mà Blok có thể hiển thị",
   "tools.database.coverNoUpload": "Chưa thiết lập tải lên ở đây. Hãy dán liên kết ảnh thay thế",
+  "tools.database.downloadCover": "Tải xuống ảnh bìa",
   "tools.database.addDescription": "Thêm mô tả",
   "tools.database.hideDescription": "Ẩn mô tả",
   "tools.database.descriptionPlaceholder": "Thêm mô tả…",

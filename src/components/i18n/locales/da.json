@@ -741,6 +741,7 @@
   "tools.database.changeCover": "Skift coverbillede",
   "tools.database.coverInvalid": "Linket er ikke et billede, som Blok kan vise",
   "tools.database.coverNoUpload": "Upload er ikke konfigureret her. Indsæt et billedlink i stedet",
+  "tools.database.downloadCover": "Hent coverbilledet",
   "tools.database.addDescription": "Tilføj beskrivelse",
   "tools.database.hideDescription": "Skjul beskrivelse",
   "tools.database.descriptionPlaceholder": "Tilføj en beskrivelse…",

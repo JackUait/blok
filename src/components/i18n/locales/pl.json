@@ -743,6 +743,7 @@
   "tools.database.changeCover": "Zmień okładkę",
   "tools.database.coverInvalid": "Ten link nie prowadzi do obrazu, który Blok może wyświetlić",
   "tools.database.coverNoUpload": "Przesyłanie nie jest tu skonfigurowane. Zamiast tego wklej link do obrazu",
+  "tools.database.downloadCover": "Pobierz obraz okładki",
   "tools.database.addDescription": "Dodaj opis",
   "tools.database.hideDescription": "Ukryj opis",
   "tools.database.descriptionPlaceholder": "Dodaj opis…",

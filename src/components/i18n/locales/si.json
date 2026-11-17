@@ -741,6 +741,7 @@
   "tools.database.changeCover": "කවරය වෙනස් කරන්න",
   "tools.database.coverInvalid": "එම සබැඳිය Blok හට පෙන්විය හැකි රූපයක් නොවේ",
   "tools.database.coverNoUpload": "මෙහි උඩුගත කිරීම සකසා නැත. ඒ වෙනුවට රූප සබැඳිය අලවන්න",
+  "tools.database.downloadCover": "කවර රූපය බාගන්න",
   "tools.database.addDescription": "විස්තරයක් එක් කරන්න",
   "tools.database.hideDescription": "විස්තරය සඟවන්න",
   "tools.database.descriptionPlaceholder": "විස්තරයක් එක් කරන්න…",

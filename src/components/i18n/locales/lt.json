@@ -767,6 +767,7 @@
   "tools.database.changeCover": "Keisti viršelį",
   "tools.database.coverInvalid": "Ši nuoroda nėra paveikslas, kurį Blok gali parodyti",
   "tools.database.coverNoUpload": "Įkėlimas čia nenustatytas. Verčiau įklijuokite paveikslo nuorodą",
+  "tools.database.downloadCover": "Atsisiųsti viršelio paveikslėlį",
   "tools.database.addDescription": "Pridėti aprašą",
   "tools.database.hideDescription": "Slėpti aprašą",
   "tools.database.descriptionPlaceholder": "Pridėkite aprašą…",

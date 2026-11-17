@@ -742,6 +742,7 @@
   "tools.database.changeCover": "Alterar capa",
   "tools.database.coverInvalid": "Esse link não é uma imagem que o Blok consegue mostrar",
   "tools.database.coverNoUpload": "O envio não está configurado aqui. Cole o link de uma imagem",
+  "tools.database.downloadCover": "Baixar a imagem de capa",
   "tools.database.addDescription": "Adicionar descrição",
   "tools.database.hideDescription": "Ocultar descrição",
   "tools.database.descriptionPlaceholder": "Adicione uma descrição…",

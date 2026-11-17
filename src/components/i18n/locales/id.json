@@ -741,6 +741,7 @@
   "tools.database.changeCover": "Ganti sampul",
   "tools.database.coverInvalid": "Tautan itu bukan gambar yang dapat ditampilkan Blok",
   "tools.database.coverNoUpload": "Unggahan belum disiapkan di sini. Sebagai gantinya, tempel tautan gambar",
+  "tools.database.downloadCover": "Unduh gambar sampul",
   "tools.database.addDescription": "Tambah deskripsi",
   "tools.database.hideDescription": "Sembunyikan deskripsi",
   "tools.database.descriptionPlaceholder": "Tambahkan deskripsi…",

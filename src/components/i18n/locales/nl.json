@@ -739,6 +739,7 @@
   "tools.database.changeCover": "Omslagafbeelding wijzigen",
   "tools.database.coverInvalid": "Die link is geen afbeelding die Blok kan weergeven",
   "tools.database.coverNoUpload": "Uploaden is hier niet ingesteld. Plak in plaats daarvan een afbeeldingslink",
+  "tools.database.downloadCover": "Omslagafbeelding downloaden",
   "tools.database.addDescription": "Beschrijving toevoegen",
   "tools.database.hideDescription": "Beschrijving verbergen",
   "tools.database.descriptionPlaceholder": "Voeg een beschrijving toe…",

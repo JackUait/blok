@@ -739,6 +739,7 @@
   "tools.database.changeCover": "ਕਵਰ ਬਦਲੋ",
   "tools.database.coverInvalid": "ਇਹ ਲਿੰਕ ਅਜਿਹੀ ਤਸਵੀਰ ਨਹੀਂ ਜੋ Blok ਦਿਖਾ ਸਕੇ",
   "tools.database.coverNoUpload": "ਇੱਥੇ ਅਪਲੋਡ ਸੈੱਟ ਨਹੀਂ ਕੀਤਾ ਗਿਆ। ਇਸ ਦੀ ਬਜਾਏ ਤਸਵੀਰ ਦਾ ਲਿੰਕ ਪੇਸਟ ਕਰੋ",
+  "tools.database.downloadCover": "ਕਵਰ ਤਸਵੀਰ ਡਾਊਨਲੋਡ ਕਰੋ",
   "tools.database.addDescription": "ਵੇਰਵਾ ਜੋੜੋ",
   "tools.database.hideDescription": "ਵੇਰਵਾ ਲੁਕਾਓ",
   "tools.database.descriptionPlaceholder": "ਵੇਰਵਾ ਜੋੜੋ…",

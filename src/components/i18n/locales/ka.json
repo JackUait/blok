@@ -741,6 +741,7 @@
   "tools.database.changeCover": "გარეკნის შეცვლა",
   "tools.database.coverInvalid": "ეს ბმული არ არის სურათი, რომლის ჩვენებაც Blok-ს შეუძლია",
   "tools.database.coverNoUpload": "ატვირთვა აქ არ არის გამართული. სანაცვლოდ ჩასვით სურათის ბმული",
+  "tools.database.downloadCover": "გარეკნის სურათის ჩამოტვირთვა",
   "tools.database.addDescription": "აღწერის დამატება",
   "tools.database.hideDescription": "აღწერის დამალვა",
   "tools.database.descriptionPlaceholder": "დაამატეთ აღწერა…",

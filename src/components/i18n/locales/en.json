@@ -936,6 +936,7 @@
   "tools.database.changeCover": "Change cover",
   "tools.database.coverInvalid": "That link is not an image Blok can show",
   "tools.database.coverNoUpload": "Uploading is not set up here. Paste an image link instead",
+  "tools.database.downloadCover": "Download the cover image",
   "tools.database.addDescription": "Add description",
   "tools.database.hideDescription": "Hide description",
   "tools.database.descriptionPlaceholder": "Add a description…",

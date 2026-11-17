@@ -745,6 +745,7 @@
   "tools.database.changeCover": "تغيير الغلاف",
   "tools.database.coverInvalid": "هذا الرابط ليس صورة يمكن لـ Blok عرضها",
   "tools.database.coverNoUpload": "الرفع غير مُعدّ هنا. الصق رابط صورة بدلًا من ذلك",
+  "tools.database.downloadCover": "تنزيل صورة الغلاف",
   "tools.database.addDescription": "إضافة وصف",
   "tools.database.hideDescription": "إخفاء الوصف",
   "tools.database.descriptionPlaceholder": "إضافة وصف…",

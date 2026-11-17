@@ -739,6 +739,7 @@
   "tools.database.changeCover": "Byt omslagsbild",
   "tools.database.coverInvalid": "Länken är inte en bild som Blok kan visa",
   "tools.database.coverNoUpload": "Uppladdning är inte konfigurerad här. Klistra in en bildlänk i stället",
+  "tools.database.downloadCover": "Ladda ner omslagsbilden",
   "tools.database.addDescription": "Lägg till beskrivning",
   "tools.database.hideDescription": "Dölj beskrivning",
   "tools.database.descriptionPlaceholder": "Lägg till en beskrivning…",

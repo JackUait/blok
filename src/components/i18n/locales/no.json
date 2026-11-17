@@ -739,6 +739,7 @@
   "tools.database.changeCover": "Endre omslagsbilde",
   "tools.database.coverInvalid": "Den lenken er ikke et bilde Blok kan vise",
   "tools.database.coverNoUpload": "Opplasting er ikke satt opp her. Lim inn en bildelenke i stedet",
+  "tools.database.downloadCover": "Last ned omslagsbildet",
   "tools.database.addDescription": "Legg til beskrivelse",
   "tools.database.hideDescription": "Skjul beskrivelse",
   "tools.database.descriptionPlaceholder": "Legg til en beskrivelse…",

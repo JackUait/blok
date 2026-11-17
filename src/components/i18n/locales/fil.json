@@ -739,6 +739,7 @@
   "tools.database.changeCover": "Palitan ang cover",
   "tools.database.coverInvalid": "Hindi larawang maipapakita ng Blok ang link na iyan",
   "tools.database.coverNoUpload": "Hindi naka-set up ang pag-upload dito. I-paste na lang ang link ng larawan",
+  "tools.database.downloadCover": "I-download ang larawan ng cover",
   "tools.database.addDescription": "Magdagdag ng paglalarawan",
   "tools.database.hideDescription": "Itago ang paglalarawan",
   "tools.database.descriptionPlaceholder": "Magdagdag ng paglalarawan…",

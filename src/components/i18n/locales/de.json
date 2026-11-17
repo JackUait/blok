@@ -741,6 +741,7 @@
   "tools.database.changeCover": "Titelbild ändern",
   "tools.database.coverInvalid": "Dieser Link ist kein Bild, das Blok anzeigen kann",
   "tools.database.coverNoUpload": "Hochladen ist hier nicht eingerichtet. Stattdessen Bild-Link einfügen",
+  "tools.database.downloadCover": "Titelbild herunterladen",
   "tools.database.addDescription": "Beschreibung hinzufügen",
   "tools.database.hideDescription": "Beschreibung ausblenden",
   "tools.database.descriptionPlaceholder": "Beschreibung hinzufügen…",

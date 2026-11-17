@@ -761,6 +761,7 @@
   "tools.database.changeCover": "ಕವರ್ ಬದಲಿಸಿ",
   "tools.database.coverInvalid": "ಈ ಲಿಂಕ್ Blok ತೋರಿಸಬಹುದಾದ ಚಿತ್ರವಲ್ಲ",
   "tools.database.coverNoUpload": "ಇಲ್ಲಿ ಅಪ್‌ಲೋಡ್ ಹೊಂದಿಸಲಾಗಿಲ್ಲ. ಬದಲಿಗೆ ಚಿತ್ರದ ಲಿಂಕ್ ಅಂಟಿಸಿ",
+  "tools.database.downloadCover": "ಕವರ್ ಚಿತ್ರವನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ",
   "tools.database.addDescription": "ವಿವರಣೆ ಸೇರಿಸಿ",
   "tools.database.hideDescription": "ವಿವರಣೆ ಮರೆಮಾಡಿ",
   "tools.database.descriptionPlaceholder": "ವಿವರಣೆ ಸೇರಿಸಿ…",

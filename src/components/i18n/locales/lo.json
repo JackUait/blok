@@ -761,6 +761,7 @@
   "tools.database.changeCover": "ປ່ຽນຮູບປົກ",
   "tools.database.coverInvalid": "ລິ້ງນີ້ບໍ່ແມ່ນຮູບທີ່ Blok ສາມາດສະແດງໄດ້",
   "tools.database.coverNoUpload": "ບໍ່ໄດ້ຕັ້ງຄ່າການອັບໂຫຼດໄວ້ທີ່ນີ້. ວາງລິ້ງຮູບແທນ",
+  "tools.database.downloadCover": "ດາວໂຫຼດຮູບປົກ",
   "tools.database.addDescription": "ເພີ່ມຄຳອະທິບາຍ",
   "tools.database.hideDescription": "ເຊື່ອງຄຳອະທິບາຍ",
   "tools.database.descriptionPlaceholder": "ເພີ່ມຄຳອະທິບາຍ…",

@@ -2488,24 +2488,75 @@
   object-fit: cover;
 }
 
-[data-blok-database-drawer-change-cover] {
+/*
+  notion-motion.md Round 59 §1: a white group 12 in from the cover's top-right, 14px buttons.
+  Fades in at once and holds 110ms before it fades out. The divider margin (0 4) gives
+  Notion's 173 once Reposition joins.
+*/
+[data-blok-database-drawer-cover-controls] {
   position: absolute;
-  inset-block-end: var(--blok-space-2);
-  inset-inline-end: var(--blok-space-2);
-  padding: var(--blok-space-0-5) var(--blok-space-1-5);
-  border: none;
-  border-radius: var(--blok-radius-control-sm);
+  inset-block-start: var(--blok-space-3);
+  inset-inline-end: var(--blok-space-3);
+  display: flex;
+  align-items: center;
+  padding: var(--blok-space-0-5);
+  border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-table-open-bg);
   box-shadow: var(--blok-database-table-open-shadow);
-  color: var(--blok-database-ink-secondary);
-  font-size: 12px;
-  cursor: pointer;
   opacity: 0;
+  transition: opacity 0.2s ease 0.11s;
 }
 
-[data-blok-database-drawer-cover]:hover [data-blok-database-drawer-change-cover],
-[data-blok-database-drawer-change-cover]:focus-visible {
+[data-blok-database-drawer-cover]:hover [data-blok-database-drawer-cover-controls],
+[data-blok-database-drawer-cover-controls]:has(:focus-visible) {
   opacity: 1;
+  transition-delay: 0s;
+}
+
+[data-blok-database-drawer-cover-controls] > button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  block-size: 24px;
+  padding: 0 var(--blok-space-1-5);
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background: transparent;
+  color: var(--blok-database-ink-secondary);
+  font-size: 14px;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.1s ease-in-out;
+}
+
+[data-blok-database-drawer-cover-controls] > button + button::before {
+  content: '';
+  position: absolute;
+  inset-block-start: var(--blok-space-1);
+  inset-inline-start: calc(-1 * var(--blok-space-1) - var(--blok-border-width-hairline));
+  inline-size: var(--blok-border-width-hairline);
+  block-size: var(--blok-space-4);
+  background: var(--blok-border-subtle);
+}
+
+[data-blok-database-drawer-cover-controls] > button + button {
+  margin-inline-start: calc(var(--blok-space-1) * 2 + var(--blok-border-width-hairline));
+}
+
+[data-blok-database-drawer-cover-controls] > button:hover {
+  background: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-drawer-download-cover] {
+  inline-size: 24px;
+  padding: 0;
+}
+
+[data-blok-database-drawer-download-cover] svg {
+  inline-size: 16px;
+  block-size: 16px;
 }
 
 /* Page icon above the title (icon size unmeasured: Blok's page title icon scale). */
@@ -5866,6 +5917,11 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   }
 
   [data-blok-database-drawer][data-peek-mode="side"][data-details-open] [data-blok-database-drawer-content] { padding-inline-end: var(--_blok-peek-details-inset); }
+
+  /* notion-motion.md Round 59 §3: the cover stops at the panel. The content's end padding past the panel, plus its 8px gutter. */
+  [data-blok-database-drawer][data-peek-mode="side"][data-details-open] [data-blok-database-drawer-cover] {
+    --_blok-cover-bleed-end: calc(var(--_blok-peek-details-inset) - 280px + var(--blok-space-2));
+  }
 }
 
 /* research/10 §10: Close panel at the top, then "Properties" 13px/500 grey. */

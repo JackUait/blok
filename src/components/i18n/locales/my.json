@@ -759,6 +759,7 @@
   "tools.database.changeCover": "အဖုံးပုံ ပြောင်းရန်",
   "tools.database.coverInvalid": "ဤလင့်ခ်သည် Blok ပြသနိုင်သော ပုံ မဟုတ်ပါ",
   "tools.database.coverNoUpload": "ဤနေရာတွင် အပ်လုဒ်လုပ်ခြင်းကို စီစဉ်မထားပါ။ ယင်းအစား ပုံလင့်ခ်ကို ကူးထည့်ပါ",
+  "tools.database.downloadCover": "အဖုံးပုံကို ဒေါင်းလုဒ်လုပ်ရန်",
   "tools.database.addDescription": "ဖော်ပြချက် ထည့်ရန်",
   "tools.database.hideDescription": "ဖော်ပြချက် ဖျောက်ရန်",
   "tools.database.descriptionPlaceholder": "ဖော်ပြချက် ထည့်ပါ…",

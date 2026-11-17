@@ -740,6 +740,7 @@
   "tools.database.changeCover": "Changer la couverture",
   "tools.database.coverInvalid": "Ce lien n’est pas une image que Blok peut afficher",
   "tools.database.coverNoUpload": "L’importation n’est pas configurée ici. Collez plutôt le lien d’une image",
+  "tools.database.downloadCover": "Télécharger l’image de couverture",
   "tools.database.addDescription": "Ajouter une description",
   "tools.database.hideDescription": "Masquer la description",
   "tools.database.descriptionPlaceholder": "Ajouter une description…",

@@ -741,6 +741,7 @@
   "tools.database.changeCover": "カバーを変更",
   "tools.database.coverInvalid": "このリンクはBlokで表示できる画像ではありません",
   "tools.database.coverNoUpload": "ここではアップロードが設定されていません。代わりに画像のリンクを貼り付けてください",
+  "tools.database.downloadCover": "カバー画像をダウンロード",
   "tools.database.addDescription": "説明を追加",
   "tools.database.hideDescription": "説明を非表示",
   "tools.database.descriptionPlaceholder": "説明を追加…",

@@ -739,6 +739,7 @@
   "tools.database.changeCover": "Vaheta kaanepilti",
   "tools.database.coverInvalid": "See link ei ole pilt, mida Blok saab kuvada",
   "tools.database.coverNoUpload": "Üleslaadimine pole siin seadistatud. Kleebi selle asemel pildi link",
+  "tools.database.downloadCover": "Laadi kaanepilt alla",
   "tools.database.addDescription": "Lisa kirjeldus",
   "tools.database.hideDescription": "Peida kirjeldus",
   "tools.database.descriptionPlaceholder": "Lisa kirjeldus…",

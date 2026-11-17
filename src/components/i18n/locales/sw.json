@@ -739,6 +739,7 @@
   "tools.database.changeCover": "Badilisha jalada",
   "tools.database.coverInvalid": "Kiungo hiki si picha ambayo Blok inaweza kuonyesha",
   "tools.database.coverNoUpload": "Kupakia hakujawekwa hapa. Bandika kiungo cha picha badala yake",
+  "tools.database.downloadCover": "Pakua picha ya jalada",
   "tools.database.addDescription": "Ongeza maelezo",
   "tools.database.hideDescription": "Ficha maelezo",
   "tools.database.descriptionPlaceholder": "Ongeza maelezo…",

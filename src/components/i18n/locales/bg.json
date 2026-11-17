@@ -741,6 +741,7 @@
   "tools.database.changeCover": "Промени корицата",
   "tools.database.coverInvalid": "Тази връзка не е изображение, което Blok може да покаже",
   "tools.database.coverNoUpload": "Качването не е настроено тук. Вместо това поставете връзка към изображение",
+  "tools.database.downloadCover": "Изтегли изображението на корицата",
   "tools.database.addDescription": "Добави описание",
   "tools.database.hideDescription": "Скрий описанието",
   "tools.database.descriptionPlaceholder": "Добавете описание…",

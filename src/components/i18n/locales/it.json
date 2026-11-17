@@ -742,6 +742,7 @@
   "tools.database.changeCover": "Cambia copertina",
   "tools.database.coverInvalid": "Questo link non è un’immagine che Blok può mostrare",
   "tools.database.coverNoUpload": "Il caricamento non è configurato qui. Incolla invece il link di un’immagine",
+  "tools.database.downloadCover": "Scarica l’immagine di copertina",
   "tools.database.addDescription": "Aggiungi descrizione",
   "tools.database.hideDescription": "Nascondi descrizione",
   "tools.database.descriptionPlaceholder": "Aggiungi una descrizione…",

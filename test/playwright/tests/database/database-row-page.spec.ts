@@ -764,6 +764,98 @@ test.describe('row page cover', () => {
     });
   }
 
+  // notion-motion.md Round 59 §1: a 28-tall white group 12 in from the cover's top-right, 14px buttons.
+  const coverGroup = (page: Page): Locator => cover(page).locator('[data-blok-database-drawer-cover-controls]');
+
+  const expectGroupAt = async (page: Page, right: number): Promise<void> => {
+    const coverBox = await boxOf(cover(page));
+
+    await page.mouse.move(coverBox.x + 40, coverBox.y + coverBox.height / 2);
+    await expect(coverGroup(page)).toHaveCSS('opacity', '1');
+    const group = await boxOf(coverGroup(page));
+    const change = await boxOf(coverGroup(page).getByRole('button', { name: 'Change the page cover' }));
+    const download = await boxOf(coverGroup(page).getByRole('button', { name: 'Download the cover image' }));
+
+    expect(group.y).toBeCloseTo(coverBox.y + 12, 1);
+    expect(group.x + group.width).toBeCloseTo(right - 12, 1);
+    expect(group.height).toBeCloseTo(28, 1);
+    expect(change.height).toBeCloseTo(24, 1);
+    expect(change.y).toBeCloseTo(group.y + 2, 1);
+    expect(download.width).toBeCloseTo(24, 1);
+    expect(download.height).toBeCloseTo(24, 1);
+    // One 1px divider with 4px on each side between the two buttons.
+    expect(download.x).toBeCloseTo(change.x + change.width + 9, 1);
+    expect(download.x + download.width).toBeCloseTo(group.x + group.width - 2, 1);
+  };
+
+  for (const mode of ['side', 'center', 'full'] as const) {
+    test(`${mode}: the cover group sits 12 in from the cover's top-right`, async ({ page }) => {
+      await open(page, 'r3', mode);
+      await expectGroupAt(page, (await boxOf(cover(page))).x + (await boxOf(cover(page))).width);
+      const change = coverGroup(page).getByRole('button', { name: 'Change the page cover' });
+
+      await expect(change).toHaveText('Change');
+      await expect(change).toHaveCSS('font-size', '14px');
+      await expect(change).toHaveCSS('padding', '0px 6px');
+      await expect(change).toHaveCSS('border-radius', '4px');
+      await expect(coverGroup(page)).toHaveCSS('padding', '2px');
+      await expect(coverGroup(page)).toHaveCSS('border-radius', '6px');
+    });
+  }
+
+  test('side peek with the details panel open: the cover stops at the panel and the group sits 12 in from it', async ({ page }) => {
+    const data = withCover().map((block) => (block.id !== 'db-1' ? block : {
+      ...block,
+      data: { ...block.data, schema: SCHEMA.map((p) => (p.type === 'title' ? { ...p, pageLayoutPlacements: [{ id: 'p-notes', place: 'panel' }] } : p)) },
+    }));
+
+    await mount(page, data);
+    await openRow(page, 'r3');
+    await expect(peek(page)).toHaveAttribute('data-open', '');
+    await peek(page).locator('[data-blok-database-peek-page-info]').click();
+    const panel = peek(page).locator('[data-blok-database-drawer-details]');
+
+    await expect(panel).toBeVisible();
+    await expect.poll(() => peek(page).evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
+    const coverBox = await boxOf(cover(page));
+
+    // Round 59 §3: the cover stops at the panel.
+    expect(coverBox.x + coverBox.width).toBeCloseTo((await boxOf(panel)).x, 1);
+    await expectGroupAt(page, (await boxOf(panel)).x);
+  });
+
+  test('the cover group fades in over 0.2s and holds 0.11s before it fades out', async ({ page }) => {
+    await open(page, 'r3', 'side');
+    const group = coverGroup(page);
+    const timing = (): Promise<string[]> => group.evaluate((el) => {
+      const style = getComputedStyle(el);
+
+      return [style.transitionProperty, style.transitionDuration, style.transitionTimingFunction, style.transitionDelay];
+    });
+
+    await page.mouse.move(10, 700);
+    await expect(group).toHaveCSS('opacity', '0');
+    expect(await timing()).toEqual(['opacity', '0.2s', 'ease', '0.11s']);
+    const coverBox = await boxOf(cover(page));
+
+    await page.mouse.move(coverBox.x + 40, coverBox.y + 40);
+    await expect(group).toHaveCSS('opacity', '1');
+    expect(await timing()).toEqual(['opacity', '0.2s', 'ease', '0s']);
+  });
+
+  test('Download saves the cover image and Change opens the picker', async ({ page }) => {
+    await open(page, 'r3', 'side');
+    const coverBox = await boxOf(cover(page));
+
+    await page.mouse.move(coverBox.x + 40, coverBox.y + 40);
+    const download = page.waitForEvent('download');
+
+    await coverGroup(page).getByRole('button', { name: 'Download the cover image' }).click();
+    expect(await download).toBeTruthy();
+    await coverGroup(page).getByRole('button', { name: 'Change the page cover' }).click();
+    await expect(page.locator('[data-role="audio-cover-picker"]')).toBeVisible();
+  });
+
   test('shows the top controls over the whole cover and down to the title', async ({ page }) => {
     await open(page, 'r1', 'side');
 

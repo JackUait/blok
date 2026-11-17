@@ -761,6 +761,7 @@
   "tools.database.changeCover": "커버 변경",
   "tools.database.coverInvalid": "이 링크는 Blok에서 표시할 수 있는 이미지가 아닙니다",
   "tools.database.coverNoUpload": "여기에는 업로드가 설정되어 있지 않습니다. 대신 이미지 링크를 붙여넣으세요",
+  "tools.database.downloadCover": "커버 이미지 다운로드",
   "tools.database.addDescription": "설명 추가",
   "tools.database.hideDescription": "설명 숨기기",
   "tools.database.descriptionPlaceholder": "설명 추가…",

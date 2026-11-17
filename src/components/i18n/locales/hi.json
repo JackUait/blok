@@ -739,6 +739,7 @@
   "tools.database.changeCover": "कवर बदलें",
   "tools.database.coverInvalid": "यह लिंक ऐसी छवि नहीं है जिसे Blok दिखा सके",
   "tools.database.coverNoUpload": "यहाँ अपलोड सेट नहीं है। इसके बजाय छवि का लिंक चिपकाएं",
+  "tools.database.downloadCover": "कवर इमेज डाउनलोड करें",
   "tools.database.addDescription": "विवरण जोड़ें",
   "tools.database.hideDescription": "विवरण छिपाएं",
   "tools.database.descriptionPlaceholder": "विवरण जोड़ें…",

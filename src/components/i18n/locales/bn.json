@@ -741,6 +741,7 @@
   "tools.database.changeCover": "প্রচ্ছদ বদলান",
   "tools.database.coverInvalid": "এই লিঙ্কটি এমন কোনো ছবি নয় যা Blok দেখাতে পারে",
   "tools.database.coverNoUpload": "এখানে আপলোড সেট আপ করা নেই। এর বদলে ছবির লিঙ্ক পেস্ট করুন",
+  "tools.database.downloadCover": "প্রচ্ছদের ছবি ডাউনলোড করুন",
   "tools.database.addDescription": "বিবরণ যোগ করুন",
   "tools.database.hideDescription": "বিবরণ লুকান",
   "tools.database.descriptionPlaceholder": "একটি বিবরণ যোগ করুন…",

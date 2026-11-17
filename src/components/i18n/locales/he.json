@@ -740,6 +740,7 @@
   "tools.database.changeCover": "החלף תמונת כיסוי",
   "tools.database.coverInvalid": "הקישור הזה אינו תמונה ש-Blok יכול להציג",
   "tools.database.coverNoUpload": "העלאה לא הוגדרה כאן. הדבק קישור לתמונה במקום זאת",
+  "tools.database.downloadCover": "הורד את תמונת הכיסוי",
   "tools.database.addDescription": "הוסף תיאור",
   "tools.database.hideDescription": "הסתר תיאור",
   "tools.database.descriptionPlaceholder": "הוסף תיאור…",

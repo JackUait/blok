@@ -741,6 +741,7 @@
   "tools.database.changeCover": "Змінити обкладинку",
   "tools.database.coverInvalid": "Це посилання не є зображенням, яке Blok може показати",
   "tools.database.coverNoUpload": "Завантаження тут не налаштовано. Натомість вставте посилання на зображення",
+  "tools.database.downloadCover": "Завантажити зображення обкладинки",
   "tools.database.addDescription": "Додати опис",
   "tools.database.hideDescription": "Сховати опис",
   "tools.database.descriptionPlaceholder": "Додайте опис…",

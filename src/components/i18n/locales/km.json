@@ -741,6 +741,7 @@
   "tools.database.changeCover": "ប្ដូររូបគម្រប",
   "tools.database.coverInvalid": "តំណនេះមិនមែនជារូបភាពដែល Blok អាចបង្ហាញបានទេ",
   "tools.database.coverNoUpload": "ការផ្ទុកឡើងមិនទាន់បានកំណត់នៅទីនេះទេ។ បិទភ្ជាប់តំណរូបភាពជំនួសវិញ",
+  "tools.database.downloadCover": "ទាញយករូបគម្រប",
   "tools.database.addDescription": "បន្ថែមការពិពណ៌នា",
   "tools.database.hideDescription": "លាក់ការពិពណ៌នា",
   "tools.database.descriptionPlaceholder": "បន្ថែមការពិពណ៌នា…",

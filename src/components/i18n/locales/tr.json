@@ -739,6 +739,7 @@
   "tools.database.changeCover": "Kapağı değiştir",
   "tools.database.coverInvalid": "Bu bağlantı Blok'un gösterebileceği bir görsel değil",
   "tools.database.coverNoUpload": "Yükleme burada ayarlanmamış. Bunun yerine bir görsel bağlantısı yapıştırın",
+  "tools.database.downloadCover": "Kapak görselini indir",
   "tools.database.addDescription": "Açıklama ekle",
   "tools.database.hideDescription": "Açıklamayı gizle",
   "tools.database.descriptionPlaceholder": "Bir açıklama ekleyin…",

@@ -936,6 +936,7 @@
   "tools.database.changeCover": "變更封面",
   "tools.database.coverInvalid": "此連結不是 Blok 可顯示的圖片",
   "tools.database.coverNoUpload": "此處尚未設定上傳。請改為貼上圖片連結",
+  "tools.database.downloadCover": "下載封面圖片",
   "tools.database.addDescription": "新增描述",
   "tools.database.hideDescription": "隱藏描述",
   "tools.database.descriptionPlaceholder": "新增描述…",

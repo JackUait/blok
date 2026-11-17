@@ -739,6 +739,7 @@
   "tools.database.changeCover": "کور تبدیل کریں",
   "tools.database.coverInvalid": "یہ لنک ایسی تصویر نہیں جو Blok دکھا سکے",
   "tools.database.coverNoUpload": "یہاں اپ لوڈ سیٹ اپ نہیں ہے۔ اس کے بجائے تصویر کا لنک پیسٹ کریں",
+  "tools.database.downloadCover": "کور تصویر ڈاؤن لوڈ کریں",
   "tools.database.addDescription": "تفصیل شامل کریں",
   "tools.database.hideDescription": "تفصیل چھپائیں",
   "tools.database.descriptionPlaceholder": "تفصیل شامل کریں…",

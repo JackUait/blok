@@ -915,6 +915,7 @@ export type BlokMessageKey =
   | 'tools.database.dependenciesBlockingName'
   | 'tools.database.descriptionPlaceholder'
   | 'tools.database.divideBy'
+  | 'tools.database.downloadCover'
   | 'tools.database.dragOption'
   | 'tools.database.duplicateProperty'
   | 'tools.database.duplicatePropertyName'

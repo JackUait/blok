@@ -741,6 +741,7 @@
   "tools.database.changeCover": "Αλλαγή εξωφύλλου",
   "tools.database.coverInvalid": "Αυτός ο σύνδεσμος δεν είναι εικόνα που μπορεί να εμφανίσει το Blok",
   "tools.database.coverNoUpload": "Η μεταφόρτωση δεν έχει ρυθμιστεί εδώ. Επικολλήστε σύνδεσμο εικόνας",
+  "tools.database.downloadCover": "Λήψη εικόνας εξωφύλλου",
   "tools.database.addDescription": "Προσθήκη περιγραφής",
   "tools.database.hideDescription": "Απόκρυψη περιγραφής",
   "tools.database.descriptionPlaceholder": "Προσθήκη περιγραφής…",

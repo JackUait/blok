@@ -759,6 +759,7 @@
   "tools.database.changeCover": "कव्हर बदला",
   "tools.database.coverInvalid": "हा दुवा Blok दाखवू शकेल अशी प्रतिमा नाही",
   "tools.database.coverNoUpload": "येथे अपलोड सेट केलेले नाही. त्याऐवजी प्रतिमेचा दुवा पेस्ट करा",
+  "tools.database.downloadCover": "कव्हर प्रतिमा डाउनलोड करा",
   "tools.database.addDescription": "वर्णन जोडा",
   "tools.database.hideDescription": "वर्णन लपवा",
   "tools.database.descriptionPlaceholder": "वर्णन जोडा…",

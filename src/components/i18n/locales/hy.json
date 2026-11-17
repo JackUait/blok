@@ -741,6 +741,7 @@
   "tools.database.changeCover": "Փոխել շապիկը",
   "tools.database.coverInvalid": "Այս հղումը պատկեր չէ, որը Blok-ը կարող է ցուցադրել",
   "tools.database.coverNoUpload": "Վերբեռնումն այստեղ կարգավորված չէ։ Փոխարենը տեղադրեք պատկերի հղումը",
+  "tools.database.downloadCover": "Ներբեռնել շապիկի պատկերը",
   "tools.database.addDescription": "Ավելացնել նկարագրություն",
   "tools.database.hideDescription": "Թաքցնել նկարագրությունը",
   "tools.database.descriptionPlaceholder": "Ավելացրեք նկարագրություն…",

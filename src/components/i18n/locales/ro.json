@@ -742,6 +742,7 @@
   "tools.database.changeCover": "Schimbă coperta",
   "tools.database.coverInvalid": "Acest link nu este o imagine pe care Blok o poate afișa",
   "tools.database.coverNoUpload": "Încărcarea nu este configurată aici. Lipiți în schimb linkul unei imagini",
+  "tools.database.downloadCover": "Descarcă imaginea de copertă",
   "tools.database.addDescription": "Adaugă o descriere",
   "tools.database.hideDescription": "Ascunde descrierea",
   "tools.database.descriptionPlaceholder": "Adăugați o descriere…",

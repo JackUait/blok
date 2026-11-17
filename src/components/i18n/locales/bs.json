@@ -742,6 +742,7 @@
   "tools.database.changeCover": "Promijeni naslovnu sliku",
   "tools.database.coverInvalid": "Ova veza nije slika koju Blok može prikazati",
   "tools.database.coverNoUpload": "Otpremanje ovdje nije postavljeno. Umjesto toga zalijepite vezu slike",
+  "tools.database.downloadCover": "Preuzmi naslovnu sliku",
   "tools.database.addDescription": "Dodaj opis",
   "tools.database.hideDescription": "Sakrij opis",
   "tools.database.descriptionPlaceholder": "Dodajte opis…",

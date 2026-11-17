@@ -741,6 +741,7 @@
   "tools.database.changeCover": "ڪور مٽايو",
   "tools.database.coverInvalid": "اھا لنڪ اھڙي تصوير ناھي جيڪا Blok ڏيکاري سگھي",
   "tools.database.coverNoUpload": "ھتي اپلوڊ سيٽ ٿيل ناھي. ان جي بدران تصوير جو لنڪ پيسٽ ڪريو",
+  "tools.database.downloadCover": "ڪور جي تصوير ڊائون لوڊ ڪريو",
   "tools.database.addDescription": "وضاحت شامل ڪريو",
   "tools.database.hideDescription": "وضاحت لڪايو",
   "tools.database.descriptionPlaceholder": "وضاحت شامل ڪريو…",

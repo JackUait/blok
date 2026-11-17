@@ -759,6 +759,7 @@
   "tools.database.changeCover": "കവർ മാറ്റുക",
   "tools.database.coverInvalid": "ആ ലിങ്ക് Blok-ന് കാണിക്കാനാകുന്ന ഒരു ചിത്രമല്ല",
   "tools.database.coverNoUpload": "ഇവിടെ അപ്‌ലോഡ് സജ്ജീകരിച്ചിട്ടില്ല. പകരം ചിത്രത്തിന്റെ ലിങ്ക് ഒട്ടിക്കുക",
+  "tools.database.downloadCover": "കവർ ചിത്രം ഡൗൺലോഡ് ചെയ്യുക",
   "tools.database.addDescription": "വിവരണം ചേർക്കുക",
   "tools.database.hideDescription": "വിവരണം മറയ്ക്കുക",
   "tools.database.descriptionPlaceholder": "ഒരു വിവരണം ചേർക്കുക…",

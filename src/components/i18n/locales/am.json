@@ -741,6 +741,7 @@
   "tools.database.changeCover": "ሽፋን ቀይር",
   "tools.database.coverInvalid": "ይህ አገናኝ Blok ሊያሳየው የሚችል ምስል አይደለም",
   "tools.database.coverNoUpload": "እዚህ መስቀል አልተዘጋጀም። በምትኩ የምስል አገናኝ ለጥፍ",
+  "tools.database.downloadCover": "የሽፋን ምስሉን አውርድ",
   "tools.database.addDescription": "መግለጫ ጨምር",
   "tools.database.hideDescription": "መግለጫ ደብቅ",
   "tools.database.descriptionPlaceholder": "መግለጫ ጨምር…",

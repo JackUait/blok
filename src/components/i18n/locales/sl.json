@@ -743,6 +743,7 @@
   "tools.database.changeCover": "Zamenjaj naslovnico",
   "tools.database.coverInvalid": "Ta povezava ni slika, ki jo Blok lahko prikaže",
   "tools.database.coverNoUpload": "Nalaganje tukaj ni nastavljeno. Namesto tega prilepite povezavo do slike",
+  "tools.database.downloadCover": "Prenesi sliko naslovnice",
   "tools.database.addDescription": "Dodaj opis",
   "tools.database.hideDescription": "Skrij opis",
   "tools.database.descriptionPlaceholder": "Dodajte opis…",

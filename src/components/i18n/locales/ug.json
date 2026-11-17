@@ -739,6 +739,7 @@
   "tools.database.changeCover": "مۇقاۋا ئالماشتۇرۇش",
   "tools.database.coverInvalid": "بۇ ئۇلانما Blok كۆرسىتەلەيدىغان رەسىم ئەمەس",
   "tools.database.coverNoUpload": "بۇ يەردە يۈكلەش تەڭشەلمىگەن. ئۇنىڭ ئورنىغا رەسىم ئۇلانمىسىنى چاپلاڭ",
+  "tools.database.downloadCover": "مۇقاۋا رەسىمىنى چۈشۈرۈش",
   "tools.database.addDescription": "چۈشەندۈرۈش قوشۇش",
   "tools.database.hideDescription": "چۈشەندۈرۈشنى يوشۇرۇش",
   "tools.database.descriptionPlaceholder": "چۈشەندۈرۈش قوشۇڭ…",

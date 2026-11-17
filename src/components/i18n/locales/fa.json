@@ -739,6 +739,7 @@
   "tools.database.changeCover": "تغییر جلدنگاره",
   "tools.database.coverInvalid": "این پیوند تصویری نیست که Blok بتواند نمایش دهد",
   "tools.database.coverNoUpload": "بارگذاری در اینجا راه‌اندازی نشده است. به‌جای آن پیوند تصویر را بچسبانید",
+  "tools.database.downloadCover": "دانلود تصویر جلدنگاره",
   "tools.database.addDescription": "افزودن توضیحات",
   "tools.database.hideDescription": "پنهان کردن توضیحات",
   "tools.database.descriptionPlaceholder": "افزودن توضیحات…",

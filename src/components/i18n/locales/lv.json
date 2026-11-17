@@ -762,6 +762,7 @@
   "tools.database.changeCover": "Mainīt vāka attēlu",
   "tools.database.coverInvalid": "Šī saite nav attēls, ko Blok var parādīt",
   "tools.database.coverNoUpload": "Augšupielāde šeit nav iestatīta. Tā vietā ielīmējiet attēla saiti",
+  "tools.database.downloadCover": "Lejupielādēt vāka attēlu",
   "tools.database.addDescription": "Pievienot aprakstu",
   "tools.database.hideDescription": "Paslēpt aprakstu",
   "tools.database.descriptionPlaceholder": "Pievienojiet aprakstu…",

@@ -739,6 +739,7 @@
   "tools.database.changeCover": "Borítókép módosítása",
   "tools.database.coverInvalid": "Ez a hivatkozás nem olyan kép, amelyet a Blok meg tud jeleníteni",
   "tools.database.coverNoUpload": "A feltöltés itt nincs beállítva. Illesszen be inkább egy képhivatkozást",
+  "tools.database.downloadCover": "Borítókép letöltése",
   "tools.database.addDescription": "Leírás hozzáadása",
   "tools.database.hideDescription": "Leírás elrejtése",
   "tools.database.descriptionPlaceholder": "Leírás hozzáadása…",

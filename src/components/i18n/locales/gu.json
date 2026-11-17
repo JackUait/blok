@@ -739,6 +739,7 @@
   "tools.database.changeCover": "કવર બદલો",
   "tools.database.coverInvalid": "આ લિંક એવી છબી નથી જે Blok બતાવી શકે",
   "tools.database.coverNoUpload": "અહીં અપલોડ સેટ કરેલું નથી. તેના બદલે છબીની લિંક પેસ્ટ કરો",
+  "tools.database.downloadCover": "કવર છબી ડાઉનલોડ કરો",
   "tools.database.addDescription": "વર્ણન ઉમેરો",
   "tools.database.hideDescription": "વર્ણન છુપાવો",
   "tools.database.descriptionPlaceholder": "વર્ણન ઉમેરો…",

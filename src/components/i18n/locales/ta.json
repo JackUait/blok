@@ -739,6 +739,7 @@
   "tools.database.changeCover": "அட்டைப்படத்தை மாற்று",
   "tools.database.coverInvalid": "இந்த இணைப்பு Blok காட்டக்கூடிய படம் அல்ல",
   "tools.database.coverNoUpload": "பதிவேற்றம் இங்கு அமைக்கப்படவில்லை. அதற்குப் பதிலாக பட இணைப்பை ஒட்டவும்",
+  "tools.database.downloadCover": "அட்டைப்படத்தைப் பதிவிறக்கு",
   "tools.database.addDescription": "விளக்கத்தைச் சேர்",
   "tools.database.hideDescription": "விளக்கத்தை மறை",
   "tools.database.descriptionPlaceholder": "விளக்கத்தைச் சேர்க்கவும்…",

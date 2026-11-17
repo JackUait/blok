@@ -492,6 +492,8 @@ test.describe('side peek width', () => {
     await mount(page, blocks());
     await openRow(page, 'r1');
     // Hover is read where the pointer lands, so the slide-in must be over first.
+    // data-open comes a frame after mount. Before it no slide runs yet and the peek sits off screen.
+    await expect(peek(page)).toHaveAttribute('data-open', '');
     await expect.poll(() => peek(page).evaluate((el) => el.getAnimations().length)).toBe(0);
 
     const box = await peek(page).boundingBox();
@@ -579,6 +581,8 @@ test.describe('row page cover', () => {
     await mount(page, withCover(mode === 'side' ? {} : { openPagesIn: mode }));
     await openRow(page, rowId);
     await expect(peek(page)).toHaveAttribute('data-peek-mode', mode);
+    // data-open comes a frame after mount. Before it no slide runs yet and a side peek sits off screen.
+    await expect(peek(page)).toHaveAttribute('data-open', '');
     await expect.poll(() => peek(page).evaluate((el) => el.getAnimations().length)).toBe(0);
   };
 

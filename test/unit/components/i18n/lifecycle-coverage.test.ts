@@ -299,7 +299,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2243 + 146 + 599 + 11 closure for all 2999 keys', () => {
+  it('rebuilds a disjoint 2244 + 146 + 598 + 11 closure for all 2999 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -418,6 +418,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +12: the built-in comments thread, composer and row page section call their tools.database.comment* keys by literal.
       // +2: the feed card's comment summary row calls tools.database.feedCommentReplyOne/feedCommentReplies by literal.
       // +2: the comment composer's Mention button and its menu's People label call tools.database.commentMention* by literal.
+      // +1: Attach file's chip remove button calls tools.database.filterRemove by literal (it left registered-namespace).
       // +2: the page block's creating title and Draft badge call tools.page.creating/draft by literal.
       // +1: the row menu's "Page" heading calls tools.database.rowMenuPage by literal.
       // +2: the row menu's Layout and Property visibility call tools.database.settingsLayout and
@@ -580,7 +581,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: Edit property's add field calls addOptionPlaceholder by literal.
       // +1 / -1: the row page cover calls tools.database.downloadCover by literal; its Change
       // button now reads title.changeCover, so tools.database.changeCover left (see below).
-      'executable-literal': 2243,
+      'executable-literal': 2244,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -698,7 +699,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +8: View settings "Manage data sources" (settingsManageSources, manageSources*, manageSourcesViews_one/_other), through the panel's t().
       // -1: tools.database.groupStatusGroup is now called by literal (see executable-literal).
       // +1: tools.database.changeCover lost its literal caller; it shipped in 2.1.0, so it stays.
-      'registered-namespace-compatible': 599,
+      'registered-namespace-compatible': 598,
       // +1: Settings › Group's pin button names itself with groupPin through the panel's tools.database. prefix.
       // +1: tools.database.galleryFitImage, above. +1: tools.database.timelineEndBy, above.
       // +2: tools.database.rowLastEditedBy and rowWordCount, above.

@@ -29,18 +29,39 @@ const VERTICAL = ramp([[1, 1.39], [5, 1.11], [10, 0.74], [20, 0.33], [32, 0.081]
 export const listAutoScrollSpeed = VERTICAL;
 export const rowAutoScrollSpeed = VERTICAL;
 
-/** notion-motion.md Round 18 §1: a 630px board's right edge, nothing at 51px. */
-const CARD_RAMP = ramp([[1, 1.83], [4, 1.64], [9, 1.3], [19, 0.82], [34, 0.37], [49, 0.076], [51, 0]]);
-const CARD_RAMP_WIDTH = 630;
+/** The board's side zone: notion-motion.md Round 54 §2, 8 % of the board's width. */
+const CARD_ZONE_SHARE = 0.08;
+
+/** notion-motion.md Round 55 §1: [board width, distance px, px/ms]. */
+const CARD_MEASURED: ReadonlyArray<readonly [number, number, number]> = [
+  [337, 5, 0.81], [337, 10, 0.52], [337, 15, 0.30], [337, 20, 0.12], [337, 25, 0.04],
+  [1242, 30, 2.31], [1242, 45, 1.42], [1242, 60, 0.82], [1242, 75, 0.40], [1242, 90, 0.19],
+];
 
 /**
- * Board cards near the board's side. notion-motion.md Round 54 §2: the zone is
- * 8 % of the board's width (26px at 337, 49..51 at 630, 98..102 at 1242).
- * Hypothesis: the 630 curve stretches with the zone; Notion's speeds at
- * other widths are only partly read.
+ * Speed ÷ zone width by share of the zone. Both boards fall on one curve: the
+ * 1242 points predict the 337 ones within about 9 %. The first knot is
+ * Round 55's floor (≥ 3.47 px/ms at d 10 on 1242, the scroll hit the end).
+ * Nearer the edge is unmeasured, so it holds flat. Share 1 is the zone's end.
  */
-export const cardAutoScrollSpeed = (distance: number, width = CARD_RAMP_WIDTH): number =>
-  distance > width * 0.08 ? 0 : CARD_RAMP(distance * CARD_RAMP_WIDTH / width);
+const CARD_CURVE = ramp([
+  [10 / (1242 * CARD_ZONE_SHARE), 3.47 / (1242 * CARD_ZONE_SHARE)],
+  ...CARD_MEASURED
+    .map(([width, distance, speed]) => [distance / (width * CARD_ZONE_SHARE), speed / (width * CARD_ZONE_SHARE)] as const)
+    .sort((a, b) => a[0] - b[0]),
+  [1, 0],
+]);
+
+/**
+ * Board cards near the board's side. Speed = zone width × CARD_CURVE(share of
+ * the zone), so a wider board scrolls faster. Values between the knots, and at
+ * widths other than 337 and 1242, are fitted, not measured.
+ */
+export const cardAutoScrollSpeed = (distance: number, width = 630): number => {
+  const zone = width * CARD_ZONE_SHARE;
+
+  return distance > zone ? 0 : zone * CARD_CURVE(distance / zone);
+};
 
 /**
  * Board cards near the page's top or bottom. notion-motion.md Round 30 §5: about

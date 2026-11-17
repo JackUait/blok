@@ -58,9 +58,25 @@ describe('database drag auto-scroll speeds (notion-motion.md Round 17 §1)', () 
     expect(rowAutoScrollSpeed(36)).toBe(0);
   });
 
-  // notion-motion.md Round 18 §1: the board's right edge, px/ms by the pointer's distance.
-  it.each([[1, 1.83], [4, 1.64], [9, 1.3], [19, 0.82], [34, 0.37], [49, 0.076]])('board cards: %ipx from the edge scrolls at about %f px/ms', (distance, speed) => {
-    expect(cardAutoScrollSpeed(distance)).toBeCloseTo(speed, 3);
+  // notion-motion.md Round 55 §1: speed grows with the board. px/ms by the pointer's distance.
+  it.each([
+    [1242, 30, 2.31], [1242, 45, 1.42], [1242, 60, 0.82], [1242, 75, 0.40], [1242, 90, 0.19],
+    [337, 5, 0.81], [337, 10, 0.52], [337, 15, 0.30], [337, 20, 0.12], [337, 25, 0.04],
+  ])('board cards: a %ipx board scrolls at %ipx from its edge at about %f px/ms', (width, distance, speed) => {
+    expect(cardAutoScrollSpeed(distance, width)).toBeCloseTo(speed, 2);
+  });
+
+  // Round 55 §1: at 1242 the scroll hit the end at d 10 (≥ 3.47) and d 20 (≥ 2.91), so these are floors.
+  // The fitted curve lands 0.6 % under the d 20 floor.
+  it('board cards: a 1242px board near its edge scrolls at least as fast as measured', () => {
+    expect(cardAutoScrollSpeed(10, 1242)).toBeGreaterThanOrEqual(3.47);
+    expect(cardAutoScrollSpeed(20, 1242)).toBeGreaterThan(2.91 * 0.99);
+  });
+
+  // Round 18 §1 read a 630 board in another round. R55's own rate at one depth varied about ±17 %,
+  // so the 630 points only have to land within 20 % (the zone's last 2px aside).
+  it.each([[1, 1.83], [4, 1.64], [9, 1.3], [19, 0.82], [34, 0.37]])('board cards: a 630px board at %ipx is within 20 %% of %f px/ms', (distance, speed) => {
+    expect(Math.abs(cardAutoScrollSpeed(distance, 630) / speed - 1)).toBeLessThan(0.2);
   });
 
   it('board cards: nothing at 51px', () => {

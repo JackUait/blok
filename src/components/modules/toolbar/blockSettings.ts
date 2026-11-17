@@ -27,9 +27,11 @@ import { css as popoverItemCls } from '../../utils/popover/components/popover-it
 import { isToolConvertable, translateToolTitle } from '../../utils/tools';
 import { prepareImportString } from '../blockManager/block-mutation';
 import { isBlockReadOnly } from '../../utils/read-only-blocks';
-import { deleteWithTrashToast, showTrashToast } from '../../utils/trash-toast';
+import { deleteWithTrashToast, showMovedToast, showTrashToast } from '../../utils/trash-toast';
 import { assertCanMoveAll, type BlockTree } from '../api/block-placement';
 import { PagePicker } from '../../../tools/page/page-picker';
+import { createMoveFlight, type MoveFlight } from './move-flight';
+import { MoveWire } from './move-wire';
 import { filterMoveTargets, listMoveTargets } from './move-to';
 
 import type { PopoverParams } from '@/types/utils/popover/popover';
@@ -176,6 +178,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   /** True during an Escape press, so its close keeps the block selected (Notion U109). */
   private escapePressed = false;
 
+  /** Closes the open "Move to" picker and its wire. */
+  private closeMovePicker: () => void = () => undefined;
+
   /** True while a click inside the open menu is being handled. */
   private clickInMenu = false;
 
@@ -198,6 +203,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
    * Destroys module
    */
   public destroy(): void {
+    this.closeMovePicker();
     // An open popover holds the page scroll lock until it is destroyed.
     this.popover?.destroy();
     this.popover = null;
@@ -994,14 +1000,57 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     const t = (key: string, vars?: Record<string, string | number>): string => this.Blok.I18n.t(key, vars);
     const untitled = t('tools.database.relationUntitled');
     const picker = new PagePicker(t('blockSettings.moveTo'), untitled, t('tools.page.draft'), t('popover.nothingFound'), t);
+    // Set once the picker is open; the wire is drawn inside it.
+    const motion: { wire: MoveWire | null; flight: MoveFlight | null } = { wire: null, flight: null };
+    const stop = (): void => {
+      motion.flight?.restore();
+      motion.wire?.destroy();
+      this.closeMovePicker = () => undefined;
+    };
 
-    picker.open('', anchor, (rowId) => this.moveInto(rootIds, rowId, rules), {
+    picker.open('', anchor, (rowId) => {
+      // Before the move: it writes its own styles on the holders it reparents.
+      stop();
+      this.moveInto(rootIds, rowId, rules, targets.find((target) => target.pageId === rowId)?.title || untitled);
+    }, {
       searchField: {
         placeholder: t('tools.page.search'),
         onQuery: (query) => picker.setResults(filterMoveTargets(targets, query, untitled)),
       },
+      onActiveRow: (row) => motion.wire?.aim(row),
+      beforePick: (_rowId, row) => motion.flight?.fly(row.querySelector(`[${DATA_ATTR.testid}="page-picker-option-icon"]`)) ?? Promise.resolve(true),
+      onClose: stop,
     });
+
+    const root = picker.getElement();
+
+    if (root !== null) {
+      motion.wire = new MoveWire({ picker: root, block: anchor });
+      motion.flight = createMoveFlight({ wire: motion.wire, holders: this.outermostHolders(rootIds), picker: () => picker.getElement() });
+      this.closeMovePicker = () => picker.close();
+    }
     picker.setResults(targets);
+  }
+
+  /**
+   * The holders that draw `rootIds` and everything under them: a holder nested
+   * in another one of them is left out.
+   * @param rootIds - the blocks to move
+   */
+  private outermostHolders(rootIds: string[]): HTMLElement[] {
+    const { BlockManager } = this.Blok;
+    const moving = new Set(rootIds);
+    const isMoving = (block: Block | undefined, seen = new Set<string>()): boolean => {
+      if (block === undefined || seen.has(block.id)) {
+        return false;
+      }
+      seen.add(block.id);
+
+      return moving.has(block.id) || (block.parentId !== null && isMoving(BlockManager.getBlockById(block.parentId), seen));
+    };
+    const holders = BlockManager.blocks.filter((block) => isMoving(block)).map((block) => block.holder);
+
+    return holders.filter((holder) => !holders.some((other) => other !== holder && other.contains(holder)));
   }
 
   /**
@@ -1011,11 +1060,13 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
    * @param rootIds - the blocks to move, in document order
    * @param rowId - the page's block
    * @param rules - core's checks
+   * @param title - the page's title, for the toast
    */
   private moveInto(
     rootIds: string[],
     rowId: string,
-    rules: { canMoveInto: (roots: readonly Block[], rowId: string) => boolean; isReadOnly: (block: Block) => boolean }
+    rules: { canMoveInto: (roots: readonly Block[], rowId: string) => boolean; isReadOnly: (block: Block) => boolean },
+    title: string
   ): void {
     const { BlockManager, BlockSelection } = this.Blok;
     const blocks = this.Blok.API.methods.blocks;
@@ -1026,10 +1077,13 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       return;
     }
 
+    const stepBefore = this.Blok.HistoryAPI.latestStep();
+
     BlockSelection.clearSelection();
     (blocks.transact ?? ((fn: () => void): void => fn()))(() => {
       roots.forEach((root) => blocks.moveTo(root.id, { parentId: rowId, position: 'end' }));
     });
+    showMovedToast(this.Blok, stepBefore, title);
   }
 
   /**

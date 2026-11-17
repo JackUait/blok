@@ -151,6 +151,8 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'components/modules/rectangleSelection.ts': 'Selection rectangle converts pointer coordinates into its measured local overlay container.',
   'components/modules/toolbar/inline/toolbar-ghost.ts': 'Fading copy of the inline toolbar, placed once at the toolbar\'s measured spot beside its wrapper and removed within 400ms; it never tracks movement.',
   'components/modules/toolbar/index.ts': 'Editor-owned toolbar wrapper uses locally resolved offsets supplied by the toolbar positioner.',
+  'components/modules/toolbar/move-wire.ts': 'The Move to wire is an svg inside the picker popover, so it scrolls with it. It turns the block, panel and row rects into svg-local path points on each row change, spring frame and window resize, and is removed when the picker closes.',
+  'components/modules/toolbar/move-flight.ts': 'Not a floating surface: it reads a moved block\'s height once to fold the holder to zero in place, then puts the inline styles back.',
   'components/modules/toolbar/positioning.ts': 'Toolbar geometry is converted into offsets local to the editor-owned wrapper.',
   'components/utils/link-hover-card.ts': 'Fixed top-layer hover card continuously tracks its live anchor and viewport bounds.',
   'components/utils/notifier/draw.ts': 'Toast exit ghosts subtract the card rect from each part rect and write offsets inside the card; they fade out and are removed.',

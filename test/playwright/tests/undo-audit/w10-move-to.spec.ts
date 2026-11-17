@@ -136,6 +136,13 @@ const pickerRows = (page: Page): Locator => page.getByRole('listbox', { name: 'M
 
 const DRAWER_EDITOR = '[data-blok-database-drawer-editor]';
 
+const wire = (page: Page): Locator => page.getByTestId('move-wire');
+
+/** A pick lands after the bead's trip down the wire, about a second later. */
+const landed = async (page: Page): Promise<void> => {
+  await expect(page.getByTestId('page-picker-search-input')).toHaveCount(0);
+};
+
 /** Opens a row's page in the side drawer. */
 const openCard = async (page: Page, rowId: string): Promise<void> => {
   await page.locator(`[data-blok-database-card][data-row-id="${rowId}"] [data-blok-database-card-title]`).click();
@@ -178,6 +185,7 @@ test.describe('W10 Move to', () => {
     await page.keyboard.type('two');
     await expect(pickerRows(page)).toHaveText([/Card two/]);
     await page.keyboard.press('Enter');
+    await landed(page);
     await gap(page);
 
     const after = await save(page);
@@ -222,6 +230,7 @@ test.describe('W10 Move to', () => {
     await expect(page.locator(TUNES_POPOVER)).toBeVisible();
     await moveToItem(page).click();
     await pickerRows(page).filter({ hasText: 'Card one' }).click();
+    await landed(page);
     await gap(page);
 
     const after = await save(page);
@@ -236,6 +245,84 @@ test.describe('W10 Move to', () => {
 
     await redo(page);
     expect(await save(page)).toEqual(after);
+  });
+
+  test('W10-7: a wire runs from the block to the active row, carries the block on a pick, and the toast undoes the move', async ({ page }) => {
+    await createBlok(page, DOC);
+    await gap(page);
+    const before = await save(page);
+
+    await openTunes(page, 'p-a');
+    await moveToItem(page).click();
+    await expect(pickerRows(page)).toHaveCount(2);
+
+    const ends = async (): Promise<Array<{ x: number; y: number }>> => wire(page).locator('circle').evaluateAll(pegs => pegs.map((peg) => {
+      const rect = peg.getBoundingClientRect();
+
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    }));
+    const box = async (target: Locator): Promise<{ x: number; y: number; width: number; height: number }> => {
+      const found = await target.boundingBox();
+
+      if (found === null) {
+        throw new Error('no box');
+      }
+
+      return found;
+    };
+    const panel = page.getByRole('listbox', { name: 'Move to' }).locator('xpath=ancestor::*[@data-blok-popover-container]');
+
+    await pickerRows(page).nth(1).hover();
+    // The peg's spring settles on the row. Boxes are read after the hover, which may scroll.
+    await expect.poll(async () => {
+      const row = await box(pickerRows(page).nth(1));
+
+      return Math.round((await ends())[1].y) - Math.round(row.y + row.height / 2);
+    }).toBe(0);
+    const [start, end] = await ends();
+    const blockBox = await box(page.locator('[data-blok-id="p-a"]'));
+    const panelBox = await box(panel);
+
+    expect(Math.round(start.y)).toBe(Math.round(blockBox.y + blockBox.height + 1));
+    expect(Math.round(start.x)).toBe(Math.round(panelBox.x + panelBox.width + 44));
+    expect(Math.round(end.x)).toBe(Math.round(panelBox.x + panelBox.width - 14));
+    await expect(wire(page).locator('path')).toBeVisible();
+
+    await pickerRows(page).nth(1).click();
+    // The move waits for the bead: the block is still here, its text gone.
+    await expect(wire(page).locator('circle')).toHaveCount(3);
+    await expect(page.locator('[data-blok-id="p-a"] [data-blok-element-content]')).toHaveCSS('opacity', '0');
+    expect((await save(page)).find(block => block.id === 'p-a')?.parent).toBeUndefined();
+
+    await landed(page);
+    await expect(wire(page)).toHaveCount(0);
+    expect((await save(page)).find(block => block.id === 'p-a')?.parent).toBe('row-2');
+    await expect(page.getByTestId('notification-message-text')).toHaveText('Moved to Card two');
+
+    await page.getByRole('button', { name: 'Undo' }).click();
+    await gap(page, 500);
+    expect(await save(page)).toEqual(before);
+    await expect(page.locator('[data-blok-id="p-a"]')).toBeVisible();
+    await expect(page.locator('[data-blok-id="p-a"] [data-blok-element-content]')).toHaveCSS('opacity', '1');
+    await expect(page.locator('[data-blok-id="p-a"]')).not.toHaveAttribute('style', /height|overflow/);
+  });
+
+  test('W10-8: Escape while the bead travels calls the move off and puts the block back', async ({ page }) => {
+    await createBlok(page, DOC);
+    await gap(page);
+    const before = await save(page);
+
+    await openTunes(page, 'p-a');
+    await moveToItem(page).click();
+    await pickerRows(page).nth(0).click();
+    await expect(wire(page).locator('circle')).toHaveCount(3);
+    await page.keyboard.press('Escape');
+
+    await expect(wire(page)).toHaveCount(0);
+    await gap(page, 1500);
+    expect(await save(page)).toEqual(before);
+    await expect(page.locator('[data-blok-id="p-a"] [data-blok-element-content]')).toHaveCSS('opacity', '1');
+    await expect(page.getByTestId('notification-message-text')).toHaveCount(0);
   });
 
   test('W10-3: Escape closes the picker and changes nothing', async ({ page }) => {
@@ -268,6 +355,7 @@ test.describe('W10 Move to', () => {
     await moveToItem(page).click();
     await expect(pickerRows(page)).toHaveText([/Card two/]);
     await page.keyboard.press('Enter');
+    await landed(page);
     await gap(page);
 
     expect(errors).toEqual([]);
@@ -314,6 +402,7 @@ test.describe('W10 Move to', () => {
     await moveToItem(page).click();
     await expect(pickerRows(page)).toHaveText([/Card one/]);
     await page.keyboard.press('Enter');
+    await landed(page);
     await gap(page);
 
     expect(errors).toEqual([]);

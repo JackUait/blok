@@ -380,6 +380,19 @@ const BOARD_GROUP_PAGE = 10;
  * near a window edge it slides in to `margin` from it instead of turning to end at the button.
  * Above, its bottom sits `offset` over the button's top. The top and bottom keep no margin.
  */
+/**
+ * A right-click menu at the pointer: below it when it fits, else above with its bottom on the pointer
+ * when its top keeps the card menu's 12px margin, else clamped. Rows not listed keep the menu on the row.
+ * findings-listgallery L16, notion-motion.md Round 56 §9, Round 57 §5, Round 58 §6 (threshold 12: top 11.1 no, 12.1 yes).
+ */
+const pointerMenuPlacement = (rowEl: HTMLElement, event: MouseEvent): { anchor: HTMLElement; coverFlipOffset: number } | undefined => {
+  if (!rowEl.matches('[data-blok-database-list-row], [data-blok-database-board] [data-blok-database-card], [data-blok-database-timeline-bar]')) return undefined;
+  // Round 58 §6: below, a list row's or board card's menu top is y + 1. A bar's below-placement is unmeasured.
+  const nudge = rowEl.matches('[data-blok-database-timeline-bar]') ? 0 : 1;
+
+  return { anchor: pointerAnchor(rowEl, { clientX: event.clientX, clientY: event.clientY + nudge }), coverFlipOffset: nudge };
+};
+
 const groupMenuCoverPlacement = (anchor: HTMLElement, margin: number, offset: number): Pick<PopoverDesktopParams, 'cover' | 'viewportMargin' | 'coverFlipOffset' | 'coverVerticalMargin'> & { position: DOMRect; positionContext: HTMLElement } => {
   const rect = anchor.getBoundingClientRect();
 
@@ -9916,13 +9929,10 @@ export class DatabaseTool implements BlockTool {
       event.stopPropagation();
       // notion-motion.md Round 13: a board card's right-click drops every pick and opens that card's own menu.
       if (rowEl.matches('[data-blok-database-board] [data-blok-database-card]')) this.clearRowSelection();
-      // findings-listgallery L16, notion-motion.md Round 56 §9: a list row's and a timeline bar's menu open at the pointer.
-      const anchor = rowEl.matches('[data-blok-database-list-row], [data-blok-database-timeline-bar]') ? pointerAnchor(rowEl, event) : rowEl;
-      // notion-motion.md Round 57 §5: a bar's menu that does not fit below opens above, its bottom on the pointer.
-      // Its top must stay 12px (the card menu's margin) clear of the window; Notion's threshold lies in 8.1..13.1.
-      const flip = rowEl.matches('[data-blok-database-timeline-bar]') ? 0 : undefined;
+      const placement = pointerMenuPlacement(rowEl, event);
+      const anchor = placement?.anchor ?? rowEl;
 
-      this.openCardMenu(anchor, rowEl, rowId, undefined, 'card', flip);
+      this.openCardMenu(anchor, rowEl, rowId, undefined, 'card', placement?.coverFlipOffset);
       if (anchor !== rowEl) this.cardMenuPopover?.on(PopoverEvent.Closed, () => anchor.remove());
     });
     boardEl.addEventListener('click', (event) => {

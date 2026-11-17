@@ -181,7 +181,8 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
 
     expect(point?.hasAttribute('data-popover-open')).toBe(true);
     expect(point?.style.left).toBe('300px');
-    expect(point?.style.top).toBe('120px');
+    // notion-motion.md Round 58 §6: below the pointer, the menu's top is y + 1.
+    expect(point?.style.top).toBe('121px');
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     menuItem('database-row-copy-link')?.click();
 
@@ -213,12 +214,42 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     expect(card.hasAttribute('data-blok-database-card-picked')).toBe(false);
   });
 
-  it('keeps a board card\'s right-click menu on the card', () => {
+  // notion-motion.md Round 58 §6: a board card's menu opens at the pointer x, not the card's left.
+  it('anchors a board card\'s right-click menu at the pointer', () => {
     const { el } = buildTool(oneRow(), {}, viewData('board'));
 
     rowEl(el, 'board').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
+    const point = document.querySelector<HTMLElement>('[data-blok-database-menu-point]');
 
+    expect(point?.style.left).toBe('300px');
+    expect(point?.style.top).toBe('121px');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    menuItem('database-row-copy-link')?.click();
     expect(document.querySelector('[data-blok-database-menu-point]')).toBeNull();
+  });
+
+  // notion-motion.md Round 58 §6 (list menu 458.9 tall, window 717): below at y + 1 when it fits,
+  // above with its bottom on y when its top keeps 12 (y 471 → 12.1, y 470 → 11.1 no), else clamped 12 over the bottom.
+  it.each([
+    ['list', 185, 186],
+    ['list', 471, 12],
+    ['list', 470, 246],
+    ['board', 185, 186],
+    ['board', 551, 92],
+    ['board', 349, 246],
+  ] as const)('opens a %s right-click menu for a pointer at y %i with its top at %i', (type, y, top) => {
+    const { el } = buildTool(oneRow(), {}, viewData(type));
+    const real = Element.prototype.getBoundingClientRect;
+
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(459);
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      return this instanceof HTMLElement && this.hasAttribute('data-blok-database-menu-point') ? new DOMRect(700, Number.parseFloat(this.style.top), 0, 0) : real.call(this);
+    });
+    rowEl(el, type).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 700, clientY: y }));
+    const menu = document.querySelector<HTMLElement>('.blok-database-card-menu');
+
+    expect(menu?.style.top).toBe(`${top}px`);
   });
 
   // notion-motion.md Round 13: a right-click opens the one-card menu and drops every pick.

@@ -1834,7 +1834,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Lane r143: Round 60 row comment box (470x44, avatar 12 from the left). Net database.css growth against origin/main.
     const DATABASE_R143_BYTES = 299;
     // Lane r142: Round 60 cover Reposition (Save position · Cancel, the drag pill, ns-resize). Net database.css growth against origin/main.
-    const DATABASE_R142_BYTES = 1264;
+    const DATABASE_R142_BYTES = 1180;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.

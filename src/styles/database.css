@@ -2590,12 +2590,6 @@
   transition: opacity 0.2s;
 }
 
-@starting-style {
-  [data-blok-database-drawer-cover-hint] {
-    opacity: 0;
-  }
-}
-
 [data-blok-database-drawer-download-cover] svg {
   inline-size: 16px;
   block-size: 16px;

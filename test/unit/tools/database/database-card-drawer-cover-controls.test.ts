@@ -251,7 +251,7 @@ describe('row page cover reposition', () => {
     expect(onCoverPositionChange).toHaveBeenCalledTimes(1);
     expect(onCoverPositionChange).toHaveBeenCalledWith('row-1', 28.31);
     expect(q('[data-blok-database-drawer-cover]')?.hasAttribute('data-blok-database-drawer-cover-repositioning')).toBe(false);
-    expect(q('[data-blok-database-drawer-cover-hint]')).toBeNull();
+    expect(q('[data-blok-database-drawer-cover-hint]')?.style.opacity).toBe('0');
     expect(q('[data-blok-database-drawer-reposition-cover]')).not.toBeNull();
     drawer.destroy();
   });
@@ -289,7 +289,33 @@ describe('row page cover reposition', () => {
     expect(img()?.style.objectPosition).toBe('');
     expect(onCoverPositionChange).not.toHaveBeenCalled();
     expect(opts.onClose).not.toHaveBeenCalled();
+    expect(q('[data-blok-database-drawer-cover-hint]')?.style.opacity).toBe('0');
+    drawer.destroy();
+  });
+
+  it('fades the pill out before it goes on Cancel', () => {
+    vi.useFakeTimers();
+    const { drawer } = startRepositioning();
+
+    q<HTMLButtonElement>('[data-blok-database-drawer-cancel-cover-position]')?.click();
+    const pill = q('[data-blok-database-drawer-cover-hint]');
+
+    expect(pill?.style.opacity).toBe('0');
+    vi.advanceTimersByTime(300);
     expect(q('[data-blok-database-drawer-cover-hint]')).toBeNull();
+    vi.useRealTimers();
+    drawer.destroy();
+  });
+
+  it('leaves no Reposition behind a closed page to swallow the next Escape', () => {
+    const { drawer } = startRepositioning();
+
+    drawer.close();
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+
+    document.dispatchEvent(escape);
+
+    expect(escape.defaultPrevented).toBe(false);
     drawer.destroy();
   });
 

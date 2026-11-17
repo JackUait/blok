@@ -128,6 +128,8 @@ const afterSlide = (drawer: HTMLElement, done: () => void): void => {
   }, DRAWER_TRANSITION_FALLBACK_MS);
 };
 
+const PILL_FADE_FALLBACK_MS = 250;
+
 /** The height `object-fit: cover` draws the image at; the cover's own height until the image loads. */
 const shownImageHeight = (img: HTMLImageElement, cover: HTMLElement): number => {
   const box = cover.getBoundingClientRect();
@@ -1684,6 +1686,8 @@ export class DatabaseCardDrawer {
       return;
     }
     this.coverPicker?.close();
+    // A pill still fading from the last Reposition.
+    cover.querySelector('[data-blok-database-drawer-cover-hint]')?.remove();
     const initial = row.coverPosition ?? 50;
     const painted = img.style.objectPosition;
     const idle = Array.from(controls.children);
@@ -1709,7 +1713,10 @@ export class DatabaseCardDrawer {
       stopDragging();
       this.coverReposition = null;
       cover.removeAttribute('data-blok-database-drawer-cover-repositioning');
-      hint.remove();
+      // The pill fades out over its 0.2s; the timer covers no transitionend (reduced motion, hidden page).
+      hint.style.setProperty('opacity', '0');
+      hint.addEventListener('transitionend', () => hint.remove(), { once: true });
+      window.setTimeout(() => hint.remove(), PILL_FADE_FALLBACK_MS);
       controls.replaceChildren(...idle);
       if (refocus) {
         controls.querySelector<HTMLElement>('[data-blok-database-drawer-reposition-cover]')?.focus({ preventScroll: true });

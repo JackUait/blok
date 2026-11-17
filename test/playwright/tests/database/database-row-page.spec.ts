@@ -893,6 +893,10 @@ test.describe('row page cover', () => {
     expect(pill.y + pill.height / 2).toBeCloseTo(coverBox.y + coverBox.height / 2, 0);
     await expect(hint).toHaveCSS('background-color', 'rgba(0, 0, 0, 0.4)');
     await expect(hint).toHaveCSS('font-size', '12px');
+    await expect(hint).toHaveCSS('transition-property', 'opacity');
+    await expect(hint).toHaveCSS('transition-duration', '0.2s');
+    // A mouse click hands focus to Save with no ring.
+    expect(await save.evaluate((el) => el.matches(':focus-visible'))).toBe(false);
 
     // The group stays with the pointer off the cover.
     await page.mouse.move(coverBox.x + 40, coverBox.y + coverBox.height + 200);
@@ -936,6 +940,9 @@ test.describe('row page cover', () => {
 
     await reposition();
     await coverGroup(page).getByRole('button', { name: 'Cancel' }).click();
+    // The pill is still there, fading to 0, then goes.
+    expect(await cover(page).evaluate((el) => el.querySelector<HTMLElement>('[data-blok-database-drawer-cover-hint]')?.style.opacity ?? 'gone')).toBe('0');
+    await expect(cover(page).getByText('Drag image to reposition')).toHaveCount(0);
     await expect.poll(() => coverImagePosition(page)).toBe('50% 50%');
 
     await reposition();

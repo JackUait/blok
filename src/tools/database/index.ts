@@ -860,6 +860,9 @@ export class DatabaseTool implements BlockTool {
   private barlessRowId: string | null = null;
   /** The row a drop just landed: the next paint marks it so its halo fades in once. */
   private landedRowId: string | null = null;
+  /** What an undo does to the table's selection, applied once its redraw is done. */
+  private undoPick: { restored: string[]; edited: boolean } | null = null;
+  private undoPickTimer: ReturnType<typeof setTimeout> | null = null;
   /** A row "+ New" just made, with the values it was born with. Escape deletes it while it stays so. */
   private freshRow: { id: string; properties: string } | null = null;
 
@@ -2959,6 +2962,9 @@ export class DatabaseTool implements BlockTool {
 
   destroy(): void {
     this.destroyed = true;
+    if (this.undoPickTimer !== null) clearTimeout(this.undoPickTimer);
+    this.undoPickTimer = null;
+    this.undoPick = null;
     this.sourcePicker?.close();
     this.movePicker?.picker.close();
     this.formPreview?.close();
@@ -3361,10 +3367,47 @@ export class DatabaseTool implements BlockTool {
     open.forEach((editor) => editor.cancel());
   }
 
+  /**
+   * notion-motion.md Round 63 §1 (table): an undone row delete selects the
+   * row; an undone cell edit drops a row selection. A reorder writes only the
+   * position, and its undo keeps the selection.
+   */
+  private noteUndoPick(capture: BlockReplayCapture): void {
+    const native = capture.native;
+
+    if (
+      this.destroyed || capture.origin !== 'undo' || capture.relocation !== undefined ||
+      native?.type !== 'database-row' || !native.parent.present || native.parent.value !== this.dataId
+    ) return;
+    const restored = capture.type === 'add';
+
+    if (!restored && (capture.type !== 'update' || !capture.changes.some((change) => change.path[0] === 'properties'))) return;
+    const pick = this.undoPick ?? { restored: [], edited: false };
+
+    if (restored) pick.restored.push(capture.blockId);
+    else pick.edited = true;
+    this.undoPick = pick;
+    // A timeout: the redraw runs in the microtasks the same change queued.
+    this.undoPickTimer ??= setTimeout(() => this.applyUndoPick(), 0);
+  }
+
+  private applyUndoPick(): void {
+    const pick = this.undoPick;
+
+    this.undoPick = null;
+    this.undoPickTimer = null;
+    if (pick === null || this.destroyed || !(this.view instanceof DatabaseTableView)) return;
+    const restored = pick.restored.filter((id) => this.model.getRow(id) !== undefined);
+
+    if (restored.length > 0) this.view.pickAfterUndo(restored);
+    else if (pick.edited) this.view.pickAfterUndo(null);
+  }
+
   private readonly handleBlockReplayed = (capture: BlockReplayCapture): void => {
     const native = capture.native;
 
     this.closeEditorsOnHistory(capture);
+    this.noteUndoPick(capture);
 
     if (
       this.destroyed || this.readOnly || this.source !== undefined ||

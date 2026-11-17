@@ -706,6 +706,24 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     rowEl.addEventListener('animationend', landed);
   }
 
+  /**
+   * notion-motion.md Round 63 §1: undo selects the rows it brought back, or
+   * drops a row selection; a cell selection stays. The halo's 200ms transition
+   * is the fade, so the rows a redraw just made get their style first.
+   */
+  pickAfterUndo(rowIds: string[] | null): void {
+    const current = this.state.selection;
+
+    if (this.grid === null || (rowIds === null && current?.kind !== 'rows')) return;
+    const next = rowIds ?? [];
+    const changing = new Set([...next, ...(current?.kind === 'rows' ? current.rowIds : [])]);
+
+    this.root?.querySelectorAll<HTMLElement>('[data-blok-database-table-row]').forEach((rowEl) => {
+      if (changing.has(rowEl.getAttribute('data-row-id') ?? '')) getComputedStyle(rowEl, '::after').getPropertyValue('opacity');
+    });
+    this.grid.selectRows(next);
+  }
+
   appendRow(container: HTMLElement, row: DatabaseRow): void {
     const body = container.querySelector<HTMLElement>('[data-blok-database-table-body]') ?? container;
 

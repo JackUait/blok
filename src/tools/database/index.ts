@@ -10850,17 +10850,17 @@ export class DatabaseTool implements BlockTool {
           // A template's page: the row actions would miss it, as they read the rows only.
           if (this.model.getRow(rowId) === undefined) return undefined;
           const copyLink = { onCopyLink: () => this.copyRowLink(rowId) };
-          const canMove = this.canMoveRow();
+          const canMove = (): boolean => this.canMoveRow();
+          const moveTo = (menu: DOMRect | undefined): void => {
+            if (writable()) this.openMoveTo(rowId, document.querySelector<HTMLElement>('[data-blok-database-peek-actions]:not([hidden])') ?? this.block.holder, menu);
+          };
 
           return !writable() ? copyLink : {
             ...copyLink,
             onDuplicate: () => { if (writable()) this.duplicateTableRow(rowId); },
             onDelete: () => { if (writable()) this.deleteTableRows([rowId]); },
-            ...(canMove ? {
-              onMoveTo: (menu: DOMRect | undefined) => {
-                if (writable()) this.openMoveTo(rowId, document.querySelector<HTMLElement>('[data-blok-database-peek-actions]:not([hidden])') ?? this.block.holder, menu);
-              },
-            } : {}),
+            // A getter: the targets walk every block, so they are read only when the menu opens.
+            get onMoveTo() { return canMove() ? moveTo : undefined; },
           };
         },
         // A template's page is not a row, so it has no star.

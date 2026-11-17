@@ -13364,6 +13364,13 @@ textarea[data-blok-database-cell-input] {
   height: 18px;
 }
 
+[data-blok-database-table-cell] > [data-blok-database-page-icon-placeholder] svg {
+  flex: none;
+  width: 23px;
+  height: 23px;
+  max-height: none;
+}
+
 [data-blok-database-table-cell] > [data-blok-database-subitem-toggle] {
   float: inline-start;
 }

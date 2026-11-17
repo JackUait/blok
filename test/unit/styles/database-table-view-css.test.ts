@@ -276,6 +276,16 @@ describe('database table view styles', () => {
     expect(ruleBody('[data-blok-database-page-icon-placeholder] svg')).toMatch(/width:\s*18px/);
   });
 
+  // notion-motion.md Round 59 §8: Notion's row page glyph inks 14x18; the 12.25x15.25 sheet (stroke in) of a 20 grid inks that at 23px.
+  // The 22 box stays, so the name text does not move.
+  it('draws the table name cell page glyph at 23px in its 22px box', () => {
+    const svg = ruleBody('[data-blok-database-table-cell] > [data-blok-database-page-icon-placeholder] svg');
+
+    expect(svg).toMatch(/width:\s*23px/);
+    expect(svg).toMatch(/height:\s*23px/);
+    expect(svg).toMatch(/flex:\s*none/);
+  });
+
   // notion-motion.md Round 46 §A: Notion's name glyph sits 9.5 under the row top, 2 lower than the -2 box puts it.
   // Round 47 §B8: an own emoji icon's 22 box sits at row + 7.5 too. The 2px comes off the bottom, so the row stays 37 tall.
   it.each([

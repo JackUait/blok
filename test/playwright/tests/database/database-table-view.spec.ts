@@ -134,6 +134,25 @@ test.describe('layout', () => {
     expect((await row(page, 'r3').boundingBox())?.height).toBe(37);
     await expect(page.locator('[data-blok-database-table-grid]')).toHaveAttribute('data-blok-keyboard-owner', 'select-all');
   });
+  // notion-motion.md Round 59 §8: Notion's row page glyph inks 14x18. The glyph grows to 23 inside the same 22 box, so the name stays put.
+  test('draws the row page glyph at 23px in a 22px box, the name 3px after the box', async ({ page }) => {
+    await mount(page, blocks());
+    const glyph = cell(page, 'r3', 'p-title').locator('[data-blok-database-page-icon-placeholder]');
+    const glyphBox = await glyph.boundingBox();
+    const svgBox = await glyph.evaluate((el) => el.firstElementChild?.getBoundingClientRect().toJSON() as { width: number; height: number } | undefined);
+    const textX = await cell(page, 'r3', 'p-title').getByText('Charlie').evaluate((el) => {
+      const range = document.createRange();
+
+      range.selectNodeContents(el);
+
+      return range.getBoundingClientRect().x;
+    });
+
+    expect(glyphBox?.width).toBe(22);
+    expect(svgBox?.width).toBe(23);
+    expect(svgBox?.height).toBe(23);
+    expect(textX).toBeCloseTo((glyphBox?.x ?? 0) + 22 + 3, 0);
+  });
 });
 
 test.describe('cell keyboard model', () => {
@@ -635,6 +654,23 @@ test.describe('property and row menus', () => {
       .map((animation) => animation.finished.catch(() => undefined)) ?? []));
     await item.click();
   };
+
+  // notion-motion.md Round 59 §5: the cell editor's ⋯ menu has the whole name selected from 30ms on.
+  test('an option menu from the cell editor opens with the whole name selected', async ({ page }) => {
+    await mount(page, blocks());
+    await cell(page, 'r1', 'p-stage').click();
+    await expect(editor(page)).toBeVisible();
+    await editor(page).locator('[data-blok-database-select-option="o-idea"]').hover();
+    await editor(page).locator('[data-blok-database-select-option="o-idea"] [data-blok-database-select-option-menu]').click();
+    const name = page.locator('[data-blok-database-option-panel="o-idea"]').getByRole('textbox', { name: 'Option name' });
+    const selection = (): Promise<[number | null, number | null, number]> => name.evaluate((el: HTMLInputElement) => [el.selectionStart, el.selectionEnd, el.value.length]);
+
+    await expect(name).toBeFocused();
+    await expect.poll(selection).toEqual([0, 4, 4]);
+    // Still selected once the menu's entrance is over.
+    await name.evaluate((el) => Promise.all(el.closest('[data-blok-popover]')?.getAnimations({ subtree: true }).map((a) => a.finished.catch(() => undefined)) ?? []));
+    expect(await selection()).toEqual([0, 4, 4]);
+  });
 
   test('Edit property on a select recolours an option and the menu stays open', async ({ page }) => {
     await mount(page, blocks());

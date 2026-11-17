@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "אָפּזאָגן",
   "tools.database.editOptions": "אָפּציעס",
   "tools.database.addOption": "צולייגן אַן אָפּציע",
+  "tools.database.addOptionPlaceholder": "טיפּ אַ נײַע אָפּציע…",
   "tools.database.changesApplyToAllViews": "ענדערונגען גילטן פֿאַר אַלע מראות וואָס ווײַזן די דאָזיקע אייגנשאַפֿט.",
   "tools.database.optionColors": "קאָלירן",
   "tools.database.dateStart": "אָנהייב־דאטום",

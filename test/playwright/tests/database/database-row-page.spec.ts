@@ -704,6 +704,35 @@ test.describe('row page cover', () => {
     });
   }
 
+  // notion-motion.md Round 59 §2: no icon and no cover. Centre: row at bar + 32, shown at bar + 46, hidden at bar + 66.
+  // Full page: row at bar + 80, shown at bar + 66. The title 32 under the row in both.
+  for (const [mode, gap, shownAt, hiddenAt] of [['center', 32, 46, 66], ['full', 80, 66, null]] as const) {
+    test(`${mode}: with no icon and no cover the row sits ${gap} under the bar, the title 32 under it`, async ({ page }) => {
+      await mount(page, blocks({ openPagesIn: mode }));
+      await openRow(page, 'r2');
+      await expect(peek(page)).toHaveAttribute('data-peek-mode', mode);
+      await expect(peek(page)).toHaveAttribute('data-open', '');
+      await expect.poll(() => peek(page).evaluate((el) => el.getAnimations().length)).toBe(0);
+
+      const box = await boxOf(peek(page));
+      const addIcon = await boxOf(control(page, 'add-icon'));
+      const title = await boxOf(peekTitle(page));
+
+      expect(addIcon.y).toBeCloseTo(box.y + 44 + gap, 1);
+      expect(title.y).toBeCloseTo(addIcon.y + 32, 1);
+
+      const at = async (y: number, opacity: string): Promise<void> => {
+        await page.mouse.move(box.x + box.width / 2, box.y + 500);
+        await expect(control(page, 'add-icon')).toHaveCSS('opacity', '0');
+        await page.mouse.move(addIcon.x + 200, box.y + 44 + y);
+        await expect(control(page, 'add-icon')).toHaveCSS('opacity', opacity);
+      };
+
+      await at(shownAt, '1');
+      if (hiddenAt !== null) await at(hiddenAt, '0');
+    });
+  }
+
   // Keyboard focus follows the drawn order: top to bottom, then start to end. The cover's own button comes first.
   const tabOrderAndDrawn = async (page: Page): Promise<{ tabbed: string[]; drawn: string[] }> => {
     const head = peek(page).locator('[data-blok-database-drawer-page-head]');

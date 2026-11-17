@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "ይቅር",
   "tools.database.editOptions": "አማራጮች",
   "tools.database.addOption": "አማራጭ አክል",
+  "tools.database.addOptionPlaceholder": "አዲስ አማራጭ ይተይቡ…",
   "tools.database.changesApplyToAllViews": "ለውጦቹ ይህን ንብረት በሚያሳዩ ሁሉም እይታዎች ላይ ይተገበራሉ።",
   "tools.database.optionColors": "ቀለሞች",
   "tools.database.dateStart": "የመጀመሪያ ቀን",

@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "Отказ",
   "tools.database.editOptions": "Опции",
   "tools.database.addOption": "Добави опция",
+  "tools.database.addOptionPlaceholder": "Въведете нова опция…",
   "tools.database.changesApplyToAllViews": "Промените важат за всички изгледи, които показват това свойство.",
   "tools.database.optionColors": "Цветове",
   "tools.database.dateStart": "Начална дата",

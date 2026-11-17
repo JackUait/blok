@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "ຍົກເລີກ",
   "tools.database.editOptions": "ຕົວເລືອກ",
   "tools.database.addOption": "ເພີ່ມຕົວເລືອກ",
+  "tools.database.addOptionPlaceholder": "ພິມຕົວເລືອກໃໝ່…",
   "tools.database.changesApplyToAllViews": "ການປ່ຽນແປງມີຜົນກັບທຸກມຸມມອງທີ່ສະແດງຄຸນສົມບັດນີ້.",
   "tools.database.optionColors": "ສີ",
   "tools.database.dateStart": "ວັນທີເລີ່ມຕົ້ນ",

@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "Anulo",
   "tools.database.editOptions": "Opsionet",
   "tools.database.addOption": "Shto një opsion",
+  "tools.database.addOptionPlaceholder": "Shkruaj një opsion të ri…",
   "tools.database.changesApplyToAllViews": "Ndryshimet zbatohen në të gjitha pamjet që shfaqin këtë veti.",
   "tools.database.optionColors": "Ngjyrat",
   "tools.database.dateStart": "Data e fillimit",

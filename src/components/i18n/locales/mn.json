@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "Цуцлах",
   "tools.database.editOptions": "Сонголтууд",
   "tools.database.addOption": "Сонголт нэмэх",
+  "tools.database.addOptionPlaceholder": "Шинэ сонголт оруулна уу…",
   "tools.database.changesApplyToAllViews": "Өөрчлөлт энэ шинжийг харуулж буй бүх харагдацад хамаарна.",
   "tools.database.optionColors": "Өнгөнүүд",
   "tools.database.dateStart": "Эхлэх огноо",

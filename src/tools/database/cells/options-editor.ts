@@ -205,7 +205,7 @@ class OptionsEditor {
     input.setAttribute('data-blok-database-options-add-input', '');
     input.setAttribute('data-blok-database-option-name', '');
     input.setAttribute('aria-label', this.t('tools.database.addOption'));
-    input.placeholder = this.t('tools.database.addOption');
+    input.placeholder = this.t('tools.database.addOptionPlaceholder');
     input.addEventListener('keydown', (event) => {
       if (event.key !== 'Enter' || event.isComposing) {
         return;

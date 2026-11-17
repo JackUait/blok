@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "रद्द करा",
   "tools.database.editOptions": "पर्याय",
   "tools.database.addOption": "पर्याय जोडा",
+  "tools.database.addOptionPlaceholder": "नवीन पर्याय टाइप करा…",
   "tools.database.changesApplyToAllViews": "हा गुणधर्म दाखवणाऱ्या सर्व दृश्यांवर बदल लागू होतात.",
   "tools.database.optionColors": "रंग",
   "tools.database.dateStart": "सुरुवातीची तारीख",

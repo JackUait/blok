@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "રદ કરો",
   "tools.database.editOptions": "વિકલ્પો",
   "tools.database.addOption": "વિકલ્પ ઉમેરો",
+  "tools.database.addOptionPlaceholder": "નવો વિકલ્પ લખો…",
   "tools.database.changesApplyToAllViews": "ફેરફારો આ ગુણધર્મ બતાવતા બધા દૃશ્યો પર લાગુ થાય છે.",
   "tools.database.optionColors": "રંગો",
   "tools.database.dateStart": "શરૂઆતની તારીખ",

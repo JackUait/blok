@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "رد ڪريو",
   "tools.database.editOptions": "اختيار",
   "tools.database.addOption": "ڪو اختيار شامل ڪريو",
+  "tools.database.addOptionPlaceholder": "ڪو نئون اختيار لکو…",
   "tools.database.changesApplyToAllViews": "تبديليون انهن سڀني ڏيکن تي لاڳو ٿين ٿيون جيڪي هيءَ پراپرٽي ڏيکارين ٿا.",
   "tools.database.optionColors": "رنگ",
   "tools.database.dateStart": "شروعاتي تاريخ",

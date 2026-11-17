@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "Batal",
   "tools.database.editOptions": "Opsi",
   "tools.database.addOption": "Tambahkan opsi",
+  "tools.database.addOptionPlaceholder": "Ketik opsi baru…",
   "tools.database.changesApplyToAllViews": "Perubahan berlaku untuk semua tampilan yang menampilkan properti ini.",
   "tools.database.optionColors": "Warna",
   "tools.database.dateStart": "Tanggal mulai",

@@ -663,7 +663,18 @@ test.describe('property and row menus', () => {
     const options = async (): Promise<SavedOption[]> => (await savedSchema(page)).find((p) => p.id === 'p-stage')?.config?.options ?? [];
 
     await list.getByRole('button', { name: 'Add an option' }).click();
-    await list.getByPlaceholder('Add an option').fill('Review');
+    const field = list.getByPlaceholder('Type a new option…');
+
+    // notion-motion.md Round 59 §5: a 276x28 field 12 in from the 300 flyout, typed in rgb(44,44,43).
+    const flyout = await list.evaluate((el) => el.closest('[data-blok-popover-container]')?.getBoundingClientRect().toJSON() as { x: number; width: number });
+    const fieldBox = await field.boundingBox();
+
+    expect(flyout.width).toBe(300);
+    expect(fieldBox?.width).toBe(276);
+    expect(fieldBox?.height).toBe(28);
+    expect(fieldBox?.x).toBe(flyout.x + 12);
+    await expect(field).toHaveCSS('color', 'rgb(44, 44, 43)');
+    await field.fill('Review');
     await page.keyboard.press('Enter');
     await expect.poll(async () => (await options()).map((o) => o.label)).toContain('Review');
     await expect(list).toBeVisible();

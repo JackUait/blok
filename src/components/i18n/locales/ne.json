@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "रद्द गर्नुहोस्",
   "tools.database.editOptions": "विकल्पहरू",
   "tools.database.addOption": "विकल्प थप्नुहोस्",
+  "tools.database.addOptionPlaceholder": "नयाँ विकल्प टाइप गर्नुहोस्…",
   "tools.database.changesApplyToAllViews": "यो गुण देखाउने सबै दृश्यहरूमा परिवर्तनहरू लागू हुन्छन्।",
   "tools.database.optionColors": "रङहरू",
   "tools.database.dateStart": "सुरु मिति",

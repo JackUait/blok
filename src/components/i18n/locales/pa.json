@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "ਰੱਦ ਕਰੋ",
   "tools.database.editOptions": "ਵਿਕਲਪ",
   "tools.database.addOption": "ਕੋਈ ਵਿਕਲਪ ਜੋੜੋ",
+  "tools.database.addOptionPlaceholder": "ਕੋਈ ਨਵਾਂ ਵਿਕਲਪ ਲਿਖੋ…",
   "tools.database.changesApplyToAllViews": "ਬਦਲਾਅ ਇਸ ਵਿਸ਼ੇਸ਼ਤਾ ਨੂੰ ਦਿਖਾਉਣ ਵਾਲੇ ਸਾਰੇ ਦ੍ਰਿਸ਼ਾਂ 'ਤੇ ਲਾਗੂ ਹੁੰਦੇ ਹਨ।",
   "tools.database.optionColors": "ਰੰਗ",
   "tools.database.dateStart": "ਸ਼ੁਰੂਆਤੀ ਮਿਤੀ",

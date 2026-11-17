@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "İptal",
   "tools.database.editOptions": "Seçenekler",
   "tools.database.addOption": "Seçenek ekle",
+  "tools.database.addOptionPlaceholder": "Yeni bir seçenek yazın…",
   "tools.database.changesApplyToAllViews": "Değişiklikler bu özelliği gösteren tüm görünümlere uygulanır.",
   "tools.database.optionColors": "Renkler",
   "tools.database.dateStart": "Başlangıç tarihi",

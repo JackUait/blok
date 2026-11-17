@@ -1190,6 +1190,7 @@
   "tools.database.optionDeleteCancel": "Скасувати",
   "tools.database.editOptions": "Варіанти",
   "tools.database.addOption": "Додати варіант",
+  "tools.database.addOptionPlaceholder": "Введіть новий варіант…",
   "tools.database.changesApplyToAllViews": "Зміни застосовуються до всіх подань, що показують цю властивість.",
   "tools.database.optionColors": "Кольори",
   "tools.database.dateStart": "Дата початку",

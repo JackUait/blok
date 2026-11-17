@@ -1181,6 +1181,7 @@
   "tools.database.optionDeleteCancel": "Atcelt",
   "tools.database.editOptions": "Opcijas",
   "tools.database.addOption": "Pievienot opciju",
+  "tools.database.addOptionPlaceholder": "Ierakstiet jaunu opciju…",
   "tools.database.changesApplyToAllViews": "Izmaiņas attiecas uz visiem skatiem, kuros redzams šis rekvizīts.",
   "tools.database.optionColors": "Krāsas",
   "tools.database.dateStart": "Sākuma datums",

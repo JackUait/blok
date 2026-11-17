@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "বাতিল",
   "tools.database.editOptions": "বিকল্পসমূহ",
   "tools.database.addOption": "একটি বিকল্প যোগ করুন",
+  "tools.database.addOptionPlaceholder": "একটি নতুন বিকল্প টাইপ করুন…",
   "tools.database.changesApplyToAllViews": "এই বৈশিষ্ট্যটি দেখায় এমন সব ভিউতে পরিবর্তনগুলো প্রযোজ্য হবে।",
   "tools.database.optionColors": "রঙ",
   "tools.database.dateStart": "শুরুর তারিখ",

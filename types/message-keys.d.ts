@@ -543,6 +543,7 @@ export type BlokMessageKey =
   | 'tools.database.addIcon'
   | 'tools.database.addNewView'
   | 'tools.database.addOption'
+  | 'tools.database.addOptionPlaceholder'
   | 'tools.database.addProperty'
   | 'tools.database.addPropertyDescription'
   | 'tools.database.addRow'

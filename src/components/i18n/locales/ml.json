@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "റദ്ദാക്കുക",
   "tools.database.editOptions": "ഓപ്ഷനുകൾ",
   "tools.database.addOption": "ഒരു ഓപ്ഷൻ ചേർക്കുക",
+  "tools.database.addOptionPlaceholder": "ഒരു പുതിയ ഓപ്ഷൻ ടൈപ്പ് ചെയ്യുക…",
   "tools.database.changesApplyToAllViews": "ഈ പ്രോപ്പർട്ടി കാണിക്കുന്ന എല്ലാ വ്യൂകളിലും മാറ്റങ്ങൾ ബാധകമാകും.",
   "tools.database.optionColors": "നിറങ്ങൾ",
   "tools.database.dateStart": "ആരംഭ തീയതി",

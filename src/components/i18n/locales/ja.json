@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "キャンセル",
   "tools.database.editOptions": "オプション",
   "tools.database.addOption": "オプションを追加",
+  "tools.database.addOptionPlaceholder": "新しいオプションを入力…",
   "tools.database.changesApplyToAllViews": "変更はこのプロパティを表示するすべてのビューに適用されます。",
   "tools.database.optionColors": "カラー",
   "tools.database.dateStart": "開始日",

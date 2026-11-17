@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "ပယ်ဖျက်",
   "tools.database.editOptions": "ရွေးချယ်စရာများ",
   "tools.database.addOption": "ရွေးချယ်စရာ ထည့်ရန်",
+  "tools.database.addOptionPlaceholder": "ရွေးချယ်စရာအသစ် ရိုက်ပါ…",
   "tools.database.changesApplyToAllViews": "ဤဂုဏ်သတ္တိကို ပြသသော မြင်ကွင်းအားလုံးတွင် ပြောင်းလဲမှုများ သက်ရောက်ပါသည်။",
   "tools.database.optionColors": "အရောင်များ",
   "tools.database.dateStart": "စတင်ရက်စွဲ",

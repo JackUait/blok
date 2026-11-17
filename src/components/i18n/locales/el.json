@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "Ακύρωση",
   "tools.database.editOptions": "Επιλογές",
   "tools.database.addOption": "Προσθήκη επιλογής",
+  "tools.database.addOptionPlaceholder": "Πληκτρολογήστε μια νέα επιλογή…",
   "tools.database.changesApplyToAllViews": "Οι αλλαγές ισχύουν σε όλες τις προβολές που εμφανίζουν αυτή την ιδιότητα.",
   "tools.database.optionColors": "Χρώματα",
   "tools.database.dateStart": "Ημερομηνία έναρξης",

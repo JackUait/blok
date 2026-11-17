@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "Ghairi",
   "tools.database.editOptions": "Chaguo",
   "tools.database.addOption": "Ongeza chaguo",
+  "tools.database.addOptionPlaceholder": "Andika chaguo jipya…",
   "tools.database.changesApplyToAllViews": "Mabadiliko yanatumika kwa mionekano yote inayoonyesha sifa hii.",
   "tools.database.optionColors": "Rangi",
   "tools.database.dateStart": "Tarehe ya kuanza",

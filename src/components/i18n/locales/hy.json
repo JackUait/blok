@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "Չեղարկել",
   "tools.database.editOptions": "Տարբերակներ",
   "tools.database.addOption": "Ավելացնել տարբերակ",
+  "tools.database.addOptionPlaceholder": "Մուտքագրեք նոր տարբերակ…",
   "tools.database.changesApplyToAllViews": "Փոփոխությունները կիրառվում են այս հատկությունը ցուցադրող բոլոր դիտումների վրա։",
   "tools.database.optionColors": "Գույներ",
   "tools.database.dateStart": "Սկզբի ամսաթիվ",

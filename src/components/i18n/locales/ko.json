@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "취소",
   "tools.database.editOptions": "옵션",
   "tools.database.addOption": "옵션 추가",
+  "tools.database.addOptionPlaceholder": "새 옵션 입력…",
   "tools.database.changesApplyToAllViews": "변경 사항은 이 속성을 표시하는 모든 보기에 적용됩니다.",
   "tools.database.optionColors": "색상",
   "tools.database.dateStart": "시작일",

@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "අවලංගු කරන්න",
   "tools.database.editOptions": "විකල්ප",
   "tools.database.addOption": "විකල්පයක් එක් කරන්න",
+  "tools.database.addOptionPlaceholder": "නව විකල්පයක් ටයිප් කරන්න…",
   "tools.database.changesApplyToAllViews": "මෙම ගුණාංගය පෙන්වන සියලු දසුන්වලට වෙනස්කම් අදාළ වේ.",
   "tools.database.optionColors": "වර්ණ",
   "tools.database.dateStart": "ආරම්භක දිනය",

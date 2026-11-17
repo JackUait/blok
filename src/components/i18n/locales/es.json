@@ -1181,6 +1181,7 @@
   "tools.database.optionDeleteCancel": "Cancelar",
   "tools.database.editOptions": "Opciones",
   "tools.database.addOption": "Añadir una opción",
+  "tools.database.addOptionPlaceholder": "Escribe una opción nueva…",
   "tools.database.changesApplyToAllViews": "Los cambios se aplican a todas las vistas que muestran esta propiedad.",
   "tools.database.optionColors": "Colores",
   "tools.database.dateStart": "Fecha de inicio",

@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "Avbryt",
   "tools.database.editOptions": "Alternativ",
   "tools.database.addOption": "Lägg till ett alternativ",
+  "tools.database.addOptionPlaceholder": "Skriv ett nytt alternativ…",
   "tools.database.changesApplyToAllViews": "Ändringarna gäller alla vyer som visar den här egenskapen.",
   "tools.database.optionColors": "Färger",
   "tools.database.dateStart": "Startdatum",

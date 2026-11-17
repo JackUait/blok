@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "Annuleren",
   "tools.database.editOptions": "Opties",
   "tools.database.addOption": "Een optie toevoegen",
+  "tools.database.addOptionPlaceholder": "Typ een nieuwe optie…",
   "tools.database.changesApplyToAllViews": "Wijzigingen gelden voor alle weergaven waarin deze eigenschap staat.",
   "tools.database.optionColors": "Kleuren",
   "tools.database.dateStart": "Startdatum",

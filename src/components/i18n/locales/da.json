@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "Annuller",
   "tools.database.editOptions": "Muligheder",
   "tools.database.addOption": "Tilføj en mulighed",
+  "tools.database.addOptionPlaceholder": "Skriv en ny mulighed…",
   "tools.database.changesApplyToAllViews": "Ændringerne gælder for alle visninger, der viser denne egenskab.",
   "tools.database.optionColors": "Farver",
   "tools.database.dateStart": "Startdato",

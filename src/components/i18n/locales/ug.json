@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "بىكار قىلىش",
   "tools.database.editOptions": "تاللانمىلار",
   "tools.database.addOption": "تاللانما قوشۇش",
+  "tools.database.addOptionPlaceholder": "يېڭى تاللانما كىرگۈزۈڭ…",
   "tools.database.changesApplyToAllViews": "ئۆزگەرتىشلەر بۇ خاسلىقنى كۆرسىتىدىغان بارلىق كۆرۈنۈشلەرگە ئىناۋەتلىك.",
   "tools.database.optionColors": "رەڭلەر",
   "tools.database.dateStart": "باشلىنىش چېسلاسى",

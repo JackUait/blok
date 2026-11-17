@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "Batal",
   "tools.database.editOptions": "Pilihan",
   "tools.database.addOption": "Tambah pilihan",
+  "tools.database.addOptionPlaceholder": "Taip pilihan baharu…",
   "tools.database.changesApplyToAllViews": "Perubahan digunakan pada semua paparan yang menunjukkan sifat ini.",
   "tools.database.optionColors": "Warna",
   "tools.database.dateStart": "Tarikh mula",

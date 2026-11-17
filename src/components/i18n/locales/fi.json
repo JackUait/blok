@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "Peruuta",
   "tools.database.editOptions": "Vaihtoehdot",
   "tools.database.addOption": "Lisää vaihtoehto",
+  "tools.database.addOptionPlaceholder": "Kirjoita uusi vaihtoehto…",
   "tools.database.changesApplyToAllViews": "Muutokset koskevat kaikkia näkymiä, joissa tämä ominaisuus näkyy.",
   "tools.database.optionColors": "Värit",
   "tools.database.dateStart": "Alkamispäivä",

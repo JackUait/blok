@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "Kanselahin",
   "tools.database.editOptions": "Mga opsyon",
   "tools.database.addOption": "Magdagdag ng opsyon",
+  "tools.database.addOptionPlaceholder": "Mag-type ng bagong opsyon…",
   "tools.database.changesApplyToAllViews": "Malalapat ang mga pagbabago sa lahat ng view na nagpapakita ng property na ito.",
   "tools.database.optionColors": "Mga kulay",
   "tools.database.dateStart": "Petsa ng simula",

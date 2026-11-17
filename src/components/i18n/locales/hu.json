@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "Mégse",
   "tools.database.editOptions": "Lehetőségek",
   "tools.database.addOption": "Lehetőség hozzáadása",
+  "tools.database.addOptionPlaceholder": "Adjon meg egy új lehetőséget…",
   "tools.database.changesApplyToAllViews": "A módosítások minden olyan nézetre érvényesek, amely ezt a tulajdonságot mutatja.",
   "tools.database.optionColors": "Színek",
   "tools.database.dateStart": "Kezdő dátum",

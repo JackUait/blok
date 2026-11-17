@@ -6669,6 +6669,18 @@ span[data-blok-slash-search] {
   --_blok-peek-head-reach: var(--blok-space-10);
 }
 
+[data-blok-database-drawer][data-peek-mode="center"]:not(:has(> [data-blok-database-drawer-content] > [data-blok-database-drawer-page-head] > :is([data-blok-database-drawer-cover], [data-blok-database-drawer-icon]))) {
+  --_blok-peek-head-reach: 32px;
+}
+
+[data-blok-database-drawer][data-peek-mode="center"] [data-blok-database-drawer-content] {
+  padding-block-start: var(--_blok-peek-head-reach);
+}
+
+[data-blok-database-drawer][data-peek-mode="full"] [data-blok-database-drawer-page-head]:not(:has(> :is([data-blok-database-drawer-cover], [data-blok-database-drawer-icon]))) {
+  padding-block-start: var(--blok-space-10);
+}
+
 [data-blok-database-drawer]:is([data-peek-mode="side"], [data-peek-mode="center"]) [data-blok-database-drawer-page-head] {
   min-height: calc(var(--blok-space-6) + var(--_blok-peek-head-reach) + var(--blok-space-1));
   margin-block: calc(-1 * var(--_blok-peek-head-reach)) 0;
@@ -12451,6 +12463,19 @@ textarea[data-blok-database-cell-input] {
   padding: var(--blok-space-1) var(--blok-space-2);
   border: 1px solid var(--blok-database-drawer-border);
   border-radius: var(--blok-radius-control);
+}
+
+[data-blok-database-options-add-input] {
+  flex: none;
+  box-sizing: border-box;
+  block-size: 28px;
+  margin-inline: var(--blok-space-2);
+  padding-block: 0;
+  color: var(--blok-database-ink);
+}
+
+[data-blok-database-options-add-input]::placeholder {
+  color: var(--blok-database-ink-tertiary);
 }
 
 [data-blok-database-option-delete], [data-blok-database-option-set-default], [data-blok-database-option-group], [data-blok-database-option-group-pick], [data-blok-database-option-delete-confirm], [data-blok-database-option-delete-cancel], [data-blok-database-option-color], [data-blok-database-date-clear] {

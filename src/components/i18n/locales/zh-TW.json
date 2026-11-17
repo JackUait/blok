@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "取消",
   "tools.database.editOptions": "選項",
   "tools.database.addOption": "新增選項",
+  "tools.database.addOptionPlaceholder": "輸入新選項…",
   "tools.database.changesApplyToAllViews": "變更會套用至所有顯示此屬性的檢視。",
   "tools.database.optionColors": "顏色",
   "tools.database.dateStart": "開始日期",

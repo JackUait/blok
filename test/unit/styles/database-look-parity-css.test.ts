@@ -696,3 +696,16 @@ describe('map view chrome', () => {
     expect(title).toContain('line-height: 14.95px');
   });
 });
+
+// notion-motion.md Round 59 §5: Edit property's add field is 276x28, 12 in from the 300 flyout, typed in the database ink.
+describe('options add field (Round 59 §5)', () => {
+  it('is 28 tall, 8 in from the list (12 from the flyout), typed in the database ink, with an AA placeholder', () => {
+    const body = ruleBody('[data-blok-database-options-add-input]');
+
+    expect(body).toContain('box-sizing: border-box');
+    expect(body).toContain('block-size: 28px');
+    expect(body).toContain('margin-inline: var(--blok-space-2)');
+    expect(body).toContain('color: var(--blok-database-ink)');
+    expect(ruleBody('[data-blok-database-options-add-input]::placeholder')).toContain('color: var(--blok-database-ink-tertiary)');
+  });
+});

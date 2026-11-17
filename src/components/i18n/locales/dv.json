@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "ކެންސަލް",
   "tools.database.editOptions": "އިޚްތިޔާރުތައް",
   "tools.database.addOption": "އިޚްތިޔާރެއް އިތުރުކުރޭ",
+  "tools.database.addOptionPlaceholder": "އާ އިޚްތިޔާރެއް ލިޔޭ…",
   "tools.database.changesApplyToAllViews": "މި ޕްރޮޕަރޓީ ދައްކާ ހުރިހާ ވިއުތަކަށް ބަދަލުތައް ހިނގާނެ.",
   "tools.database.optionColors": "ކުލަތައް",
   "tools.database.dateStart": "ފެށޭ ތާރީޚް",

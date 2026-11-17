@@ -1190,6 +1190,7 @@
   "tools.database.optionDeleteCancel": "Atšaukti",
   "tools.database.editOptions": "Parinktys",
   "tools.database.addOption": "Pridėti parinktį",
+  "tools.database.addOptionPlaceholder": "Įveskite naują parinktį…",
   "tools.database.changesApplyToAllViews": "Pakeitimai taikomi visiems rodiniams, kuriuose rodoma ši savybė.",
   "tools.database.optionColors": "Spalvos",
   "tools.database.dateStart": "Pradžios data",

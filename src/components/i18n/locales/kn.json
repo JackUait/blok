@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "ರದ್ದುಮಾಡಿ",
   "tools.database.editOptions": "ಆಯ್ಕೆಗಳು",
   "tools.database.addOption": "ಆಯ್ಕೆಯನ್ನು ಸೇರಿಸಿ",
+  "tools.database.addOptionPlaceholder": "ಹೊಸ ಆಯ್ಕೆಯನ್ನು ಟೈಪ್ ಮಾಡಿ…",
   "tools.database.changesApplyToAllViews": "ಬದಲಾವಣೆಗಳು ಈ ಗುಣಲಕ್ಷಣವನ್ನು ತೋರಿಸುವ ಎಲ್ಲಾ ವೀಕ್ಷಣೆಗಳಿಗೆ ಅನ್ವಯಿಸುತ್ತವೆ.",
   "tools.database.optionColors": "ಬಣ್ಣಗಳು",
   "tools.database.dateStart": "ಪ್ರಾರಂಭ ದಿನಾಂಕ",

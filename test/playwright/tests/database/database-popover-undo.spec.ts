@@ -140,7 +140,7 @@ test.describe('undo with a database popover open', () => {
     const list = page.locator('[data-blok-database-options-editor]');
 
     await list.getByRole('button', { name: 'Add an option' }).click();
-    await list.getByPlaceholder('Add an option').fill('Review');
+    await list.getByPlaceholder('Type a new option…').fill('Review');
     await page.keyboard.press('Enter');
     await expect.poll(() => optionLabels(page, 'p-stage')).toContain('Review');
 

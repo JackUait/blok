@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "منسوخ کریں",
   "tools.database.editOptions": "اختیارات",
   "tools.database.addOption": "اختیار شامل کریں",
+  "tools.database.addOptionPlaceholder": "کوئی نیا اختیار ٹائپ کریں…",
   "tools.database.changesApplyToAllViews": "تبدیلیاں ان تمام منظروں پر لاگو ہوتی ہیں جو یہ پراپرٹی دکھاتے ہیں۔",
   "tools.database.optionColors": "رنگ",
   "tools.database.dateStart": "آغاز کی تاریخ",

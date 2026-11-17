@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "لغوه کړئ",
   "tools.database.editOptions": "اختیارونه",
   "tools.database.addOption": "یو اختیار ورزیات کړئ",
+  "tools.database.addOptionPlaceholder": "یو نوی اختیار ولیکئ…",
   "tools.database.changesApplyToAllViews": "بدلونونه په ټولو هغو لیدونو پلي کېږي چې دا ځانګړتیا ښيي.",
   "tools.database.optionColors": "رنګونه",
   "tools.database.dateStart": "د پیل نېټه",

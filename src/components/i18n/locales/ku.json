@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "پاشگەزبوونەوە",
   "tools.database.editOptions": "هەڵبژاردنەکان",
   "tools.database.addOption": "زیادکردنی هەڵبژاردن",
+  "tools.database.addOptionPlaceholder": "هەڵبژاردنێکی نوێ بنووسە…",
   "tools.database.changesApplyToAllViews": "گۆڕانکارییەکان لەسەر هەموو ئەو دیمەنانە جێبەجێ دەبن کە ئەم تایبەتمەندییە پیشان دەدەن.",
   "tools.database.optionColors": "ڕەنگەکان",
   "tools.database.dateStart": "بەرواری دەستپێک",

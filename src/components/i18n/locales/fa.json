@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "لغو",
   "tools.database.editOptions": "گزینه‌ها",
   "tools.database.addOption": "افزودن گزینه",
+  "tools.database.addOptionPlaceholder": "یک گزینهٔ جدید تایپ کنید…",
   "tools.database.changesApplyToAllViews": "تغییرات در همه نماهایی که این ویژگی را نشان می‌دهند اعمال می‌شود.",
   "tools.database.optionColors": "رنگ‌ها",
   "tools.database.dateStart": "تاریخ شروع",

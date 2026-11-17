@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "Ləğv et",
   "tools.database.editOptions": "Seçimlər",
   "tools.database.addOption": "Seçim əlavə et",
+  "tools.database.addOptionPlaceholder": "Yeni seçim yazın…",
   "tools.database.changesApplyToAllViews": "Dəyişikliklər bu xüsusiyyəti göstərən bütün görünüşlərə tətbiq olunur.",
   "tools.database.optionColors": "Rənglər",
   "tools.database.dateStart": "Başlanğıc tarixi",

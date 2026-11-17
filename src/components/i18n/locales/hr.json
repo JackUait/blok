@@ -1181,6 +1181,7 @@
   "tools.database.optionDeleteCancel": "Odustani",
   "tools.database.editOptions": "Opcije",
   "tools.database.addOption": "Dodaj opciju",
+  "tools.database.addOptionPlaceholder": "Upiši novu opciju…",
   "tools.database.changesApplyToAllViews": "Promjene vrijede za sve prikaze koji prikazuju ovo svojstvo.",
   "tools.database.optionColors": "Boje",
   "tools.database.dateStart": "Datum početka",

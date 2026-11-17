@@ -1181,6 +1181,7 @@
   "tools.database.optionDeleteCancel": "Anulează",
   "tools.database.editOptions": "Opțiuni",
   "tools.database.addOption": "Adaugă o opțiune",
+  "tools.database.addOptionPlaceholder": "Tastați o opțiune nouă…",
   "tools.database.changesApplyToAllViews": "Modificările se aplică tuturor vizualizărilor care afișează această proprietate.",
   "tools.database.optionColors": "Culori",
   "tools.database.dateStart": "Data de început",

@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "రద్దు",
   "tools.database.editOptions": "ఎంపికలు",
   "tools.database.addOption": "ఎంపికను జోడించు",
+  "tools.database.addOptionPlaceholder": "కొత్త ఎంపికను టైప్ చేయండి…",
   "tools.database.changesApplyToAllViews": "ఈ ప్రాపర్టీని చూపే అన్ని వీక్షణలకు మార్పులు వర్తిస్తాయి.",
   "tools.database.optionColors": "రంగులు",
   "tools.database.dateStart": "ప్రారంభ తేదీ",

@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "ยกเลิก",
   "tools.database.editOptions": "ตัวเลือก",
   "tools.database.addOption": "เพิ่มตัวเลือก",
+  "tools.database.addOptionPlaceholder": "พิมพ์ตัวเลือกใหม่…",
   "tools.database.changesApplyToAllViews": "การเปลี่ยนแปลงจะมีผลกับทุกมุมมองที่แสดงคุณสมบัตินี้",
   "tools.database.optionColors": "สี",
   "tools.database.dateStart": "วันที่เริ่มต้น",

@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "Avbryt",
   "tools.database.editOptions": "Alternativer",
   "tools.database.addOption": "Legg til et alternativ",
+  "tools.database.addOptionPlaceholder": "Skriv inn et nytt alternativ…",
   "tools.database.changesApplyToAllViews": "Endringene gjelder alle visninger som viser denne egenskapen.",
   "tools.database.optionColors": "Farger",
   "tools.database.dateStart": "Startdato",

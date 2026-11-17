@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "Hủy",
   "tools.database.editOptions": "Tùy chọn",
   "tools.database.addOption": "Thêm tùy chọn",
+  "tools.database.addOptionPlaceholder": "Nhập tùy chọn mới…",
   "tools.database.changesApplyToAllViews": "Thay đổi áp dụng cho mọi chế độ xem hiển thị thuộc tính này.",
   "tools.database.optionColors": "Màu",
   "tools.database.dateStart": "Ngày bắt đầu",

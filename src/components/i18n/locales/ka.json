@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "გაუქმება",
   "tools.database.editOptions": "ვარიანტები",
   "tools.database.addOption": "ვარიანტის დამატება",
+  "tools.database.addOptionPlaceholder": "აკრიფეთ ახალი ვარიანტი…",
   "tools.database.changesApplyToAllViews": "ცვლილებები ვრცელდება ყველა ხედზე, რომელიც ამ თვისებას აჩვენებს.",
   "tools.database.optionColors": "ფერები",
   "tools.database.dateStart": "დაწყების თარიღი",

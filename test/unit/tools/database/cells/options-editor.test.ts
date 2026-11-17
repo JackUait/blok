@@ -107,6 +107,17 @@ describe('options editor (Edit property for select, multi-select and status)', (
     expect(rowIds(root)).toHaveLength(4);
   });
 
+  // notion-motion.md Round 59 §5: the add field reads "Type a new option…"; its name stays "Add an option".
+  it('the add field asks to type a new option', () => {
+    const { root } = mount(selectProp());
+
+    root.querySelector<HTMLElement>('[data-blok-database-options-add]')?.click();
+    const input = root.querySelector<HTMLInputElement>('[data-blok-database-options-add-input]');
+
+    expect(input?.placeholder).toBe('tools.database.addOptionPlaceholder');
+    expect(input?.getAttribute('aria-label')).toBe('tools.database.addOption');
+  });
+
   it('does not add a name that already exists (any case)', () => {
     const { root, onChange } = mount(selectProp());
 

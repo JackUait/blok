@@ -1190,6 +1190,7 @@
   "tools.database.optionDeleteCancel": "Prekliči",
   "tools.database.editOptions": "Možnosti",
   "tools.database.addOption": "Dodaj možnost",
+  "tools.database.addOptionPlaceholder": "Vnesite novo možnost…",
   "tools.database.changesApplyToAllViews": "Spremembe veljajo za vse poglede, ki prikazujejo to lastnost.",
   "tools.database.optionColors": "Barve",
   "tools.database.dateStart": "Datum začetka",

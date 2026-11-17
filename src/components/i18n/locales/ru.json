@@ -1190,6 +1190,7 @@
   "tools.database.optionDeleteCancel": "Отмена",
   "tools.database.editOptions": "Варианты",
   "tools.database.addOption": "Добавить вариант",
+  "tools.database.addOptionPlaceholder": "Введите новый вариант…",
   "tools.database.changesApplyToAllViews": "Изменения применяются ко всем представлениям, где показано это свойство.",
   "tools.database.optionColors": "Цвета",
   "tools.database.dateStart": "Дата начала",

@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "ரத்துசெய்",
   "tools.database.editOptions": "விருப்பங்கள்",
   "tools.database.addOption": "ஒரு விருப்பத்தைச் சேர்",
+  "tools.database.addOptionPlaceholder": "ஒரு புதிய விருப்பத்தைத் தட்டச்சு செய்…",
   "tools.database.changesApplyToAllViews": "இந்தப் பண்பைக் காட்டும் எல்லாக் காட்சிகளுக்கும் மாற்றங்கள் பொருந்தும்.",
   "tools.database.optionColors": "நிறங்கள்",
   "tools.database.dateStart": "தொடக்கத் தேதி",

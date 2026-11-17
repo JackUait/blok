@@ -1208,6 +1208,7 @@
   "tools.database.optionDeleteCancel": "إلغاء",
   "tools.database.editOptions": "الخيارات",
   "tools.database.addOption": "إضافة خيار",
+  "tools.database.addOptionPlaceholder": "اكتب خيارًا جديدًا…",
   "tools.database.changesApplyToAllViews": "تنطبق التغييرات على جميع طرق العرض التي تُظهر هذه الخاصية.",
   "tools.database.optionColors": "الألوان",
   "tools.database.dateStart": "تاريخ البدء",

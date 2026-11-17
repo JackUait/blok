@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "Tühista",
   "tools.database.editOptions": "Valikud",
   "tools.database.addOption": "Lisa valik",
+  "tools.database.addOptionPlaceholder": "Sisesta uus valik…",
   "tools.database.changesApplyToAllViews": "Muudatused kehtivad kõigis vaadetes, kus see omadus on nähtav.",
   "tools.database.optionColors": "Värvid",
   "tools.database.dateStart": "Alguskuupäev",

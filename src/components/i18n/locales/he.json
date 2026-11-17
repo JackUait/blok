@@ -1181,6 +1181,7 @@
   "tools.database.optionDeleteCancel": "ביטול",
   "tools.database.editOptions": "אפשרויות",
   "tools.database.addOption": "הוסף אפשרות",
+  "tools.database.addOptionPlaceholder": "הקלד אפשרות חדשה…",
   "tools.database.changesApplyToAllViews": "השינויים חלים על כל התצוגות שמציגות מאפיין זה.",
   "tools.database.optionColors": "צבעים",
   "tools.database.dateStart": "תאריך התחלה",

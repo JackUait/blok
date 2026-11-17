@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "रद्द करें",
   "tools.database.editOptions": "विकल्प",
   "tools.database.addOption": "कोई विकल्प जोड़ें",
+  "tools.database.addOptionPlaceholder": "कोई नया विकल्प लिखें…",
   "tools.database.changesApplyToAllViews": "बदलाव इस प्रॉपर्टी को दिखाने वाले सभी व्यू पर लागू होते हैं।",
   "tools.database.optionColors": "रंग",
   "tools.database.dateStart": "आरंभ तिथि",

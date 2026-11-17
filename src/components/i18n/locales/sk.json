@@ -1190,6 +1190,7 @@
   "tools.database.optionDeleteCancel": "Zrušiť",
   "tools.database.editOptions": "Možnosti",
   "tools.database.addOption": "Pridať možnosť",
+  "tools.database.addOptionPlaceholder": "Zadajte novú možnosť…",
   "tools.database.changesApplyToAllViews": "Zmeny sa prejavia vo všetkých zobrazeniach s touto vlastnosťou.",
   "tools.database.optionColors": "Farby",
   "tools.database.dateStart": "Dátum začiatku",

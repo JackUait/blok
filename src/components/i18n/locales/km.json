@@ -1172,6 +1172,7 @@
   "tools.database.optionDeleteCancel": "បោះបង់",
   "tools.database.editOptions": "ជម្រើស",
   "tools.database.addOption": "បន្ថែមជម្រើស",
+  "tools.database.addOptionPlaceholder": "វាយជម្រើសថ្មី…",
   "tools.database.changesApplyToAllViews": "ការផ្លាស់ប្ដូរអនុវត្តចំពោះទិដ្ឋភាពទាំងអស់ដែលបង្ហាញលក្ខណៈនេះ។",
   "tools.database.optionColors": "ពណ៌",
   "tools.database.dateStart": "កាលបរិច្ឆេទចាប់ផ្ដើម",

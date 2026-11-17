@@ -15774,13 +15774,36 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 [data-blok-database-timeline-table-title] {
+  position: relative;
   display: flex;
+  align-self: stretch;
   align-items: center;
   gap: var(--blok-space-1-5);
   /* Round 51 §3: the Name editor is 280 at 359; it covers this box 1px out on each side. */
   margin-inline-end: -1px;
   font-weight: 500;
   cursor: pointer;
+}
+
+/* The title text ellipsises on its own; the cell must not clip the OPEN pill's shadow. */
+[data-blok-database-timeline-table-row] > [data-blok-database-timeline-table-title] {
+  overflow: visible;
+}
+
+/* notion-motion.md Round 57 §5: the OPEN frame sits 6px under the row top and 5px in from the row end. */
+[data-blok-database-timeline-table-title] > [data-blok-database-table-open] {
+  inset-block-start: 6px;
+  inset-inline-end: 5px;
+}
+
+[data-blok-database-timeline-table-row]:hover [data-blok-database-table-open] {
+  display: inline-flex;
+}
+
+/* Beats the timeline's 16px svg rule: the table's 18px glyph draws Notion's ink. */
+[data-blok-database-timeline-table-title] > [data-blok-database-table-open] svg {
+  inline-size: 18px;
+  block-size: 18px;
 }
 
 /* notion-motion.md Round 46 B: an 18 glyph 8 in, the title 32 in. */

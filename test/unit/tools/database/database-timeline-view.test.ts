@@ -914,6 +914,18 @@ describe('DatabaseTimelineView', () => {
       expect(renameRow).toHaveBeenCalledWith('r2', 'Holiday');
     });
 
+    // notion-motion.md Round 57 §5: a panel row's title has the table's OPEN pill, which opens the row in the peek.
+    it('opens a row from the OPEN pill in its panel title, without editing the title', () => {
+      const { root, handlers } = mount({ view: timelineView({ showTimelineTable: true }) });
+      const open = root.querySelector<HTMLElement>('[data-blok-database-timeline-table-row][data-row-id="r2"] [data-blok-database-timeline-table-title] [data-blok-database-table-open]');
+
+      expect(open?.lastElementChild?.textContent).toBe('tools.database.tableOpen');
+      expect(open?.querySelector('[data-blok-database-table-open-icon] svg')).not.toBeNull();
+      open?.click();
+      expect(handlers.openRow).toHaveBeenCalledWith('r2');
+      expect(document.querySelector('[data-blok-database-cell-input="title"]')).toBeNull();
+    });
+
     it('still opens a row from its panel title when read-only', () => {
       const { root, handlers } = mount({ readOnly: true, view: timelineView({ showTimelineTable: true }) });
 

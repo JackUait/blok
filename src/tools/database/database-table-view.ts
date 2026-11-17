@@ -106,6 +106,22 @@ const fitOpen = (open: HTMLElement): void => {
   open.toggleAttribute('data-compact', width + OPEN_INSET > room);
 };
 
+/** The OPEN pill on a row's title: a peek glyph and an empty label, which the caller fills. */
+export const createOpenButton = (): HTMLButtonElement => {
+  const open = document.createElement('button');
+  const icon = document.createElement('span');
+
+  open.type = 'button';
+  open.setAttribute('data-blok-database-table-open', '');
+  open.tabIndex = -1;
+  icon.setAttribute('aria-hidden', 'true');
+  icon.setAttribute('data-blok-database-table-open-icon', '');
+  icon.innerHTML = IconPeekSide;
+  open.append(icon, document.createElement('span'));
+
+  return open;
+};
+
 export interface TableGroup {
   /** Group key; the model's no-value key for "No ⟨property⟩". */
   key: string;
@@ -1295,19 +1311,10 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     }
 
     if (column.property.type === 'title' && (this.handlers !== undefined || this.options.openRow !== undefined)) {
-      const open = document.createElement('button');
+      const open = createOpenButton();
 
-      open.type = 'button';
-      open.setAttribute('data-blok-database-table-open', '');
-      open.tabIndex = -1;
       // The grid points the selected cell's aria-describedby here; a repaint must keep the id.
       open.id = `${cell.id}-open`;
-      const icon = document.createElement('span');
-
-      icon.setAttribute('aria-hidden', 'true');
-      icon.setAttribute('data-blok-database-table-open-icon', '');
-      icon.innerHTML = IconPeekSide;
-      open.append(icon, document.createElement('span'));
       this.paintOpen(open, rowId);
       cell.appendChild(open);
     }

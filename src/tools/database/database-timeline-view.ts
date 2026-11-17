@@ -35,7 +35,7 @@ import {
 } from './timeline-dates';
 import type { BarValues, BarWrite, TimelineWindow } from './timeline-dates';
 import { resolveCalculations, resolveCountCaps, resolveShowTimelineTable, resolveTimelineTableProperties, resolveTimelineZoom, resolveViewProperties } from './view-settings';
-import { fillCalculationCell } from './database-table-view';
+import { createOpenButton, fillCalculationCell } from './database-table-view';
 import { isHistoryKey } from './database-keyboard';
 import { getElementDirection } from '../../components/utils/direction';
 import { startInlineRename } from '../../components/utils/inline-rename';
@@ -603,6 +603,13 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     cell.append(rowPageGlyph(row, this.rowHasBody(row.id), true) ?? '', title);
     if (this.options.commentBadges !== undefined) {
       syncCommentBadge(title, row.id, this.options.commentBadges, this.options.i18n);
+    }
+    // notion-motion.md Round 57 §5: the table's OPEN pill shows on row hover and opens the row.
+    if (this.options.handlers !== undefined) {
+      const open = createOpenButton();
+
+      open.lastElementChild?.append(this.t('tools.database.tableOpen'));
+      cell.appendChild(open);
     }
   }
 
@@ -1395,6 +1402,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         '[data-blok-database-timeline-offscreen], [data-blok-database-timeline-bar-chip]',
         (el) => this.jumpTo(el.closest('[data-row-id]')?.getAttribute('data-row-id') ?? '', el.getAttribute('data-blok-database-timeline-bar-chip') === 'end' ? 'end' : 'start'),
       ],
+      ['[data-blok-database-table-open]', (el) => handlers.openRow(el.closest('[data-row-id]')?.getAttribute('data-row-id') ?? '')],
       ['[data-blok-database-timeline-table-title], [data-blok-database-timeline-bar]', (el) => {
         const rowId = el.closest('[data-row-id]')?.getAttribute('data-row-id');
 

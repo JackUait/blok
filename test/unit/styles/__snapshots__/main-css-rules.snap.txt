@@ -18458,12 +18458,32 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 }
 
 [data-blok-database-timeline-table-title] {
+  position: relative;
   display: flex;
+  align-self: stretch;
   align-items: center;
   gap: var(--blok-space-1-5);
   margin-inline-end: -1px;
   font-weight: 500;
   cursor: pointer;
+}
+
+[data-blok-database-timeline-table-row] > [data-blok-database-timeline-table-title] {
+  overflow: visible;
+}
+
+[data-blok-database-timeline-table-title] > [data-blok-database-table-open] {
+  inset-block-start: 6px;
+  inset-inline-end: 5px;
+}
+
+[data-blok-database-timeline-table-row]:hover [data-blok-database-table-open] {
+  display: inline-flex;
+}
+
+[data-blok-database-timeline-table-title] > [data-blok-database-table-open] svg {
+  inline-size: 18px;
+  block-size: 18px;
 }
 
 [data-blok-database-timeline-table-title] > :is([data-blok-database-page-icon], [data-blok-database-page-icon-placeholder]) {

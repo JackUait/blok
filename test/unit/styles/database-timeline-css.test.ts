@@ -729,4 +729,17 @@ describe('timeline Week and Bi-week weekday letters (Round 48 A4)', () => {
     expect(ruleBody('[data-blok-database-timeline-day-number] > [data-blok-database-timeline-today-dot]')).toContain('inset-inline-start: 50%');
     expect(ruleBody('[data-blok-database-timeline-units] > [data-day]:has([data-blok-database-timeline-today-dot])')).toContain('font-weight: 500');
   });
+
+  // notion-motion.md Round 57 §5: the panel row's OPEN frame (69x24) sits 6px under the row top and 5px in from
+  // its end, shows on row hover, and keeps its shadow unclipped.
+  it('shows the OPEN pill on a panel row hover, 6px down and 5px in from the row end', () => {
+    expect(ruleBody('[data-blok-database-timeline-table-row]:hover [data-blok-database-table-open]')).toContain('display: inline-flex');
+    expect(ruleBody('[data-blok-database-timeline-table-title]')).toMatch(/position:\s*relative/);
+    expect(ruleBody('[data-blok-database-timeline-table-title]')).toMatch(/align-self:\s*stretch/);
+    expect(ruleBody('[data-blok-database-timeline-table-row] > [data-blok-database-timeline-table-title]')).toMatch(/overflow:\s*visible/);
+    expect(ruleBody('[data-blok-database-timeline-table-title] > [data-blok-database-table-open]')).toMatch(/inset-block-start:\s*6px/);
+    expect(ruleBody('[data-blok-database-timeline-table-title] > [data-blok-database-table-open]')).toMatch(/inset-inline-end:\s*5px/);
+    // The table's 18px glyph, not the timeline's 16px svg rule.
+    expect(ruleBody('[data-blok-database-timeline-table-title] > [data-blok-database-table-open] svg')).toMatch(/inline-size:\s*18px;\s*block-size:\s*18px/);
+  });
 });

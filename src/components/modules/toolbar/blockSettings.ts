@@ -1002,9 +1002,12 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     const picker = new PagePicker(t('blockSettings.moveTo'), untitled, t('tools.page.draft'), t('popover.nothingFound'), t);
     // Set once the picker is open; the wire is drawn inside it.
     const motion: { wire: MoveWire | null; flight: MoveFlight | null } = { wire: null, flight: null };
+    const { BlockManager, BlockSelection } = this.Blok;
+    const movingBlocks = (): Block[] => rootIds.map((id) => BlockManager.getBlockById(id)).filter((block): block is Block => block !== undefined);
     const stop = (): void => {
       motion.flight?.restore();
       motion.wire?.destroy();
+      movingBlocks().filter((block) => block.selected).forEach((block) => BlockSelection.unselectBlock(block));
       this.closeMovePicker = () => undefined;
     };
 
@@ -1024,6 +1027,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     const root = picker.getElement();
 
+    // After open(): the click that opened the picker cleared the selection.
+    // It shows which blocks are about to move.
+    movingBlocks().forEach((block) => BlockSelection.selectBlock(block));
     if (root !== null) {
       motion.wire = new MoveWire({ picker: root, block: anchor });
       motion.flight = createMoveFlight({ wire: motion.wire, holders: this.outermostHolders(rootIds), picker: () => picker.getElement() });

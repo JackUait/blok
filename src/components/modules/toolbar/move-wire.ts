@@ -160,11 +160,13 @@ export class MoveWire {
     // 1px, not 0: a browser does not paint a zero-sized svg, even an unclipped one.
     // One above the panel's --blok-z-popover, or the peg in the row is hidden behind the panel.
     this.svg.setAttribute('style', 'position:absolute;left:0;top:0;width:1px;height:1px;overflow:visible;pointer-events:none;z-index:calc(var(--blok-z-popover) + 1)');
+    this.path.setAttribute(DATA_ATTR.testid, 'move-wire-path');
     this.path.setAttribute('fill', 'none');
     this.path.setAttribute('stroke', 'var(--blok-text-primary)');
     this.path.setAttribute('stroke-width', '1.25');
     this.path.setAttribute('stroke-linecap', 'round');
     [this.startPeg, this.endPeg].forEach((peg) => {
+      peg.setAttribute(DATA_ATTR.testid, 'move-wire-peg');
       peg.setAttribute('r', String(PEG_RADIUS));
       peg.setAttribute('fill', 'var(--blok-text-primary)');
     });
@@ -220,6 +222,7 @@ export class MoveWire {
     const bead = document.createElementNS(SVG_NS, 'circle');
     const started = this.clock.now();
 
+    bead.setAttribute(DATA_ATTR.testid, 'move-wire-bead');
     bead.setAttribute('r', String(BEAD_RADIUS));
     bead.setAttribute('fill', 'var(--blok-text-primary)');
     bead.setAttribute('cx', String(curve[0].x));

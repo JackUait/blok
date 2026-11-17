@@ -256,7 +256,7 @@ test.describe('W10 Move to', () => {
     await moveToItem(page).click();
     await expect(pickerRows(page)).toHaveCount(2);
 
-    const ends = async (): Promise<Array<{ x: number; y: number }>> => wire(page).locator('circle').evaluateAll(pegs => pegs.map((peg) => {
+    const ends = async (): Promise<Array<{ x: number; y: number }>> => page.getByTestId('move-wire-peg').evaluateAll(pegs => pegs.map((peg) => {
       const rect = peg.getBoundingClientRect();
 
       return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
@@ -286,11 +286,11 @@ test.describe('W10 Move to', () => {
     expect(Math.round(start.y)).toBe(Math.round(blockBox.y + blockBox.height + 1));
     expect(Math.round(start.x)).toBe(Math.round(panelBox.x + panelBox.width + 44));
     expect(Math.round(end.x)).toBe(Math.round(panelBox.x + panelBox.width - 14));
-    await expect(wire(page).locator('path')).toBeVisible();
+    await expect(page.getByTestId('move-wire-path')).toBeVisible();
 
     await pickerRows(page).nth(1).click();
     // The move waits for the bead: the block is still here, its text gone.
-    await expect(wire(page).locator('circle')).toHaveCount(3);
+    await expect(page.getByTestId('move-wire-bead')).toHaveCount(1);
     await expect(page.locator('[data-blok-id="p-a"] [data-blok-element-content]')).toHaveCSS('opacity', '0');
     expect((await save(page)).find(block => block.id === 'p-a')?.parent).toBeUndefined();
 
@@ -315,7 +315,7 @@ test.describe('W10 Move to', () => {
     await openTunes(page, 'p-a');
     await moveToItem(page).click();
     await pickerRows(page).nth(0).click();
-    await expect(wire(page).locator('circle')).toHaveCount(3);
+    await expect(page.getByTestId('move-wire-bead')).toHaveCount(1);
     await page.keyboard.press('Escape');
 
     await expect(wire(page)).toHaveCount(0);
@@ -323,6 +323,39 @@ test.describe('W10 Move to', () => {
     expect(await save(page)).toEqual(before);
     await expect(page.locator('[data-blok-id="p-a"] [data-blok-element-content]')).toHaveCSS('opacity', '1');
     await expect(page.getByTestId('notification-message-text')).toHaveCount(0);
+  });
+
+  test('W10-9: the blocks about to move stay selected while the picker is open, and only then', async ({ page }) => {
+    await createBlok(page, DOC);
+    await gap(page);
+    const before = await save(page);
+    const selected = (id: string): Locator => page.locator(`[data-blok-id="${id}"][data-blok-selected="true"]`);
+
+    await editable(page, 'p-a').click();
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Shift+ArrowDown');
+    await page.keyboard.press(MENU);
+    await expect(page.locator(TUNES_POPOVER)).toBeVisible();
+    await moveToItem(page).click();
+    await expect(page.getByTestId('page-picker-search-input')).toBeFocused();
+
+    await expect(selected('p-a')).toHaveCount(1);
+    await expect(selected('p-b')).toHaveCount(1);
+    await expect(selected('p-after')).toHaveCount(0);
+
+    // The search field's keys are its own: they never reach the selected blocks.
+    await page.keyboard.type('zz');
+    await page.keyboard.press('Backspace');
+    await page.keyboard.press('Backspace');
+    await page.keyboard.press('Backspace');
+    await expect(selected('p-a')).toHaveCount(1);
+    await expect(page.getByTestId('page-picker-search-input')).toBeFocused();
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('page-picker-search-input')).toHaveCount(0);
+    await expect(selected('p-a')).toHaveCount(0);
+    await expect(selected('p-b')).toHaveCount(0);
+    expect(await save(page)).toEqual(before);
   });
 
   test('W10-3: Escape closes the picker and changes nothing', async ({ page }) => {

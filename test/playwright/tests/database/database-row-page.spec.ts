@@ -554,6 +554,69 @@ test.describe('side peek width', () => {
   });
 });
 
+// notion-motion.md Round 57 §6, read at 1512×717.
+test.describe('side peek cover', () => {
+  const COVER = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%2210%22%3E%3Crect width=%2210%22 height=%2210%22 fill=%22%23e07a3f%22/%3E%3C/svg%3E';
+  const withCover = (): OutputBlockData[] => blocks().map((block) => (block.id !== 'r1' ? block : {
+    ...block,
+    data: { ...block.data, icon: '🍎', cover: COVER },
+  }));
+
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1512, height: 717 });
+  });
+
+  test('spans the whole peek under the bar, square, with a 36px icon and the title under it', async ({ page }) => {
+    await mount(page, withCover());
+    await openRow(page, 'r1');
+    await expect.poll(() => peek(page).evaluate((el) => el.getAnimations().length)).toBe(0);
+
+    const box = await peek(page).boundingBox();
+    const cover = peek(page).locator('[data-blok-database-drawer-cover]');
+    const coverBox = await cover.boundingBox();
+    const icon = await peek(page).locator('[data-blok-database-drawer-icon]').boundingBox();
+    const title = await peekTitle(page).boundingBox();
+
+    if (box === null || coverBox === null || icon === null || title === null) throw new Error('no peek');
+    expect(coverBox.x).toBe(box.x);
+    expect(coverBox.width).toBe(box.width);
+    expect(coverBox.y).toBe(box.y + 44);
+    expect(coverBox.height).toBeCloseTo(143.4, 1);
+    await expect(cover).toHaveCSS('border-radius', '0px');
+    expect(icon.width).toBe(36);
+    expect(icon.height).toBe(36);
+    expect(icon.y).toBeCloseTo(coverBox.y + coverBox.height + 48, 1);
+    expect(title.y).toBeCloseTo(icon.y + icon.height, 1);
+  });
+
+  test('shows the top controls over the whole cover and down to the title', async ({ page }) => {
+    await mount(page, withCover());
+    await openRow(page, 'r1');
+    await expect.poll(() => peek(page).evaluate((el) => el.getAnimations().length)).toBe(0);
+
+    const box = await peek(page).boundingBox();
+
+    if (box === null) throw new Error('no peek');
+    const mode = peek(page).locator('[data-blok-database-peek-mode]');
+    // Notion's points, relative to the peek's left edge (756).
+    const at = async (x: number, y: number, opacity: string): Promise<void> => {
+      await page.mouse.move(box.x + 744, 700);
+      await expect(mode).toHaveCSS('opacity', '0');
+      await page.mouse.move(box.x + x - 756, y);
+      await expect(mode).toHaveCSS('opacity', opacity);
+    };
+
+    await at(780, 62, '1');
+    await at(1440, 62, '1');
+    await at(1000, 190, '1');
+    await at(1000, 268, '1');
+    await at(1000, 274, '0');
+    await at(800, 200, '0');
+    await at(1450, 200, '0');
+    await at(800, 250, '0');
+  });
+});
+
 test.describe('page icon', () => {
   test('Add icon picks an emoji that shows on the page and in the title cell', async ({ page }) => {
     await mount(page, blocks());

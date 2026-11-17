@@ -1815,6 +1815,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R131_BYTES = 1640;
     // Lane r129: Round 56 option rows slide aside while one is dragged; status option menu with Group ›. Net database.css growth against origin/main.
     const DATABASE_R129_BYTES = 1125;
+    // Lane r134: Round 57 side peek cover spans the peek, 143.4 tall, square; 36 icon. Net database.css growth against origin/main.
+    const DATABASE_R134_BYTES = 1193;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2396,6 +2398,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R128_BYTES
       + DATABASE_R131_BYTES
       + DATABASE_R129_BYTES
+      + DATABASE_R134_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

@@ -93,7 +93,7 @@ import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { legacyBodyInserts, pageContentSourceBlocks, rowDescription } from './row-body';
 import { applyDateDisplayChange, editorLocale, resolveWeekStart, toIsoDay } from './cells/date-format';
 import type { DateDisplayChange } from './cells/date-format';
-import type { TableAutofill, TableGroup, TableHandlers, TableNesting, TableState } from './database-table-view';
+import type { RowPeek, TableAutofill, TableGroup, TableHandlers, TableNesting, TableState } from './database-table-view';
 import type { CellChange } from './database-table-grid';
 import type { TableRowDropResult } from './database-table-row-drag';
 import { DatabasePropertyTypePopover } from './database-property-type-popover';
@@ -6820,6 +6820,7 @@ export class DatabaseTool implements BlockTool {
       cellContext: this.cellContext(),
       ...this.commentBadgeLever(),
       ...this.calendarLever(this.dataId, viewConfig.id),
+      peek: this.sidePeek(),
       handlers: {
         openRow: (rowId) => this.handleRowClick(rowId),
         ...(this.readOnly ? {} : {
@@ -8159,10 +8160,7 @@ export class DatabaseTool implements BlockTool {
       state,
       cellContext: this.cellContext(),
       selectionBarSlot: () => context === undefined ? this.selectionBarSlot() : null,
-      ...(context === undefined ? { peek: {
-        rowId: () => (this.cardDrawer?.isOpen === true && this.cardDrawer.openMode === 'side' ? this.cardDrawer.openRowId : null),
-        close: () => this.cardDrawer?.close(),
-      } } : {}),
+      ...(context === undefined ? { peek: this.sidePeek() } : {}),
       ...(readOnly ? { openRow: (rowId: string) => (context === undefined ? this.handleRowClick(rowId) : context.openRow(rowId)) } : {
         handlers: this.tableHandlers(context, () => renderer),
       }),
@@ -9911,6 +9909,14 @@ export class DatabaseTool implements BlockTool {
       this.attachViewListeners(boardEl);
       this.initSubsystems(boardEl);
     }
+  }
+
+  /** The row in the side peek, for a pill that reads CLOSE on it. */
+  private sidePeek(): RowPeek {
+    return {
+      rowId: () => (this.cardDrawer?.isOpen === true && this.cardDrawer.openMode === 'side' ? this.cardDrawer.openRowId : null),
+      close: () => this.cardDrawer?.close(),
+    };
   }
 
   private attachReadListeners(boardEl: HTMLDivElement): void {

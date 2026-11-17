@@ -35,7 +35,8 @@ import {
 } from './timeline-dates';
 import type { BarValues, BarWrite, TimelineWindow } from './timeline-dates';
 import { resolveCalculations, resolveCountCaps, resolveShowTimelineTable, resolveTimelineTableProperties, resolveTimelineZoom, resolveViewProperties } from './view-settings';
-import { createOpenButton, fillCalculationCell } from './database-table-view';
+import { createOpenButton, fillCalculationCell, paintOpenButton, pressOpenButton } from './database-table-view';
+import type { RowPeek } from './database-table-view';
 import { isHistoryKey } from './database-keyboard';
 import { getElementDirection } from '../../components/utils/direction';
 import { startInlineRename } from '../../components/utils/inline-rename';
@@ -108,6 +109,8 @@ export interface DatabaseTimelineViewOptions {
   center: string;
   today: string;
   handlers?: TimelineHandlers;
+  /** notion-motion.md Round 58 §5: the panel row's OPEN reads CLOSE while its row is in the side peek. */
+  peek?: RowPeek;
   locale?: string;
   /** What cells need from the host: relation titles, computed result types. */
   cellContext?: Partial<CellContext>;
@@ -608,7 +611,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     if (this.options.handlers !== undefined) {
       const open = createOpenButton();
 
-      open.lastElementChild?.append(this.t('tools.database.tableOpen'));
+      paintOpenButton(open, this.options.peek?.rowId() === row.id, this.options.i18n);
       cell.appendChild(open);
     }
   }
@@ -1402,7 +1405,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         '[data-blok-database-timeline-offscreen], [data-blok-database-timeline-bar-chip]',
         (el) => this.jumpTo(el.closest('[data-row-id]')?.getAttribute('data-row-id') ?? '', el.getAttribute('data-blok-database-timeline-bar-chip') === 'end' ? 'end' : 'start'),
       ],
-      ['[data-blok-database-table-open]', (el) => handlers.openRow(el.closest('[data-row-id]')?.getAttribute('data-row-id') ?? '')],
+      ['[data-blok-database-table-open]', (el) => pressOpenButton(el, el.closest('[data-row-id]')?.getAttribute('data-row-id') ?? '', this.options.peek, handlers.openRow)],
       ['[data-blok-database-timeline-table-title], [data-blok-database-timeline-bar]', (el) => {
         const rowId = el.closest('[data-row-id]')?.getAttribute('data-row-id');
 
@@ -2069,6 +2072,24 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     });
 
     ticks.forEach((tick, i) => tick.toggleAttribute('hidden', covered[i]));
+  }
+
+  /** The tool calls it when a row page opens in a peek. */
+  rowPageOpened(): void {
+    this.repaintOpen();
+  }
+
+  /** The tool calls it when the row's peek closes. */
+  rowPageClosed(): void {
+    this.repaintOpen();
+  }
+
+  private repaintOpen(): void {
+    this.root?.querySelectorAll<HTMLElement>('[data-blok-database-timeline-table-row] [data-blok-database-table-open]').forEach((button) => {
+      const rowId = button.closest('[data-row-id]')?.getAttribute('data-row-id');
+
+      paintOpenButton(button, rowId !== null && rowId !== undefined && this.options.peek?.rowId() === rowId, this.options.i18n);
+    });
   }
 
   destroy(): void {

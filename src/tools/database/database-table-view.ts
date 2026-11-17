@@ -122,6 +122,34 @@ export const createOpenButton = (): HTMLButtonElement => {
   return open;
 };
 
+/** The row shown in the side peek, if any, and how to close it. */
+export interface RowPeek {
+  rowId: () => string | null;
+  close: () => void;
+}
+
+/** OPEN reads CLOSE while its row is in the side peek (notion-spec-2 §25.3, notion-motion.md Round 58 §5). */
+export const paintOpenButton = (button: HTMLElement, peeked: boolean, i18n: Pick<I18n, 't'>): void => {
+  const label = button.lastElementChild;
+
+  button.toggleAttribute('data-peeked', peeked);
+  if (label !== null) label.textContent = i18n.t(peeked ? 'tools.database.close' : 'tools.database.tableOpen');
+  if (peeked) {
+    onHover(button, i18n.t('tools.database.closeSidePeek'), { placement: 'top' });
+  } else {
+    offHover(button);
+  }
+};
+
+/** CLOSE closes the peek; OPEN opens the row. */
+export const pressOpenButton = (button: Element, rowId: string, peek: RowPeek | undefined, open: (rowId: string) => void): void => {
+  if (button.hasAttribute('data-peeked') && peek !== undefined) {
+    peek.close();
+  } else {
+    open(rowId);
+  }
+};
+
 export interface TableGroup {
   /** Group key; the model's no-value key for "No ⟨property⟩". */
   key: string;
@@ -211,7 +239,7 @@ export interface DatabaseTableViewOptions {
   /** Opens a row page without any write handler: what a read-only viewer gets. */
   openRow?: (rowId: string) => void;
   /** The row shown in the side peek, if any, and how to close it: its OPEN reads CLOSE (notion-spec-2 §25.3). */
-  peek?: { rowId: () => string | null; close: () => void };
+  peek?: RowPeek;
   readOnly: boolean;
   i18n: I18n;
   view: DatabaseViewConfig;
@@ -703,16 +731,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
   /** notion-spec-2 §25.3: OPEN reads CLOSE, with the hint "Close side peek" above it (62-close-hover.png), while its row is in the side peek. */
   private paintOpen(button: HTMLElement, rowId: string): void {
-    const peeked = this.options.peek?.rowId() === rowId;
-    const label = button.lastElementChild;
-
-    button.toggleAttribute('data-peeked', peeked);
-    if (label !== null) label.textContent = this.t(peeked ? 'tools.database.close' : 'tools.database.tableOpen');
-    if (peeked) {
-      onHover(button, this.t('tools.database.closeSidePeek'), { placement: 'top' });
-    } else {
-      offHover(button);
-    }
+    paintOpenButton(button, this.options.peek?.rowId() === rowId, this.options.i18n);
   }
 
   /** The tool calls it when a row page opens in a peek. */
@@ -758,11 +777,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
   /** CLOSE on the peeked row closes the peek; OPEN opens the row. */
   private pressOpen(button: Element, rowId: string, open: (rowId: string) => void): void {
-    if (button.hasAttribute('data-peeked') && this.options.peek !== undefined) {
-      this.options.peek.close();
-    } else {
-      open(rowId);
-    }
+    pressOpenButton(button, rowId, this.options.peek, open);
   }
 
   destroy(): void {

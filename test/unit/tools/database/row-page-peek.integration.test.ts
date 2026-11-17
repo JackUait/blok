@@ -194,6 +194,36 @@ describe('row page peek modes', () => {
     });
   });
 
+  // notion-motion.md Round 58 §5: the timeline panel's pill reads CLOSE while its row is peeked, and a click closes the peek.
+  describe('the timeline panel\'s OPEN while the row is in the side peek', () => {
+    const timelineDoc = (): OutputBlockData[] => {
+      const blocks = doc({ type: 'timeline', timelineBy: 'due', showTimelineTable: true });
+      const data = blocks[0].data as { schema: Array<Record<string, unknown>> };
+
+      data.schema.push({ id: 'due', name: 'Due', type: 'date', position: 'a1' });
+
+      return blocks;
+    };
+    const button = (rowId: string): HTMLElement | null => q(`[data-blok-database-timeline-table-row][data-row-id="${rowId}"] [data-blok-database-table-open]`);
+    const label = (rowId: string): string | undefined => button(rowId)?.lastElementChild?.textContent ?? undefined;
+    const isOpen = (): boolean => q('[data-blok-database-drawer][data-open]') !== null;
+
+    it('reads CLOSE on that row only, closes the peek on a click, and reads OPEN again', async () => {
+      await make(timelineDoc());
+      await click(button('r1'));
+
+      expect(isOpen()).toBe(true);
+      expect(label('r1')).toBe('Close');
+      expect(button('r1')?.hasAttribute('data-peeked')).toBe(true);
+      expect(label('r2')).toBe('Open');
+
+      await click(button('r1'));
+      expect(isOpen()).toBe(false);
+      expect(label('r1')).toBe('Open');
+      expect(button('r1')?.hasAttribute('data-peeked')).toBe(false);
+    });
+  });
+
   it('opens a center peek as a modal over a backdrop, and Escape closes it', async () => {
     await make(doc({ openPagesIn: 'center' }));
     await openRow('r1');

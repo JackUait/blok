@@ -495,9 +495,9 @@ class SelectEditor {
   // ─── Option menu: rename, recolor, delete ───
 
   /**
-   * notion-motion.md Round 55 §4: a separate menu beside the ⋯, kept inside the
-   * window, while the editor stays open under it. The hold must start before
-   * the menu takes focus.
+   * notion-motion.md Round 55 §4: a separate menu over the editor, which stays
+   * open under it. Round 56 §5: its left on the ⋯'s left, above the ⋯ when
+   * there is no room below. The hold must start before the menu takes focus.
    */
   private openMenu(optionId: string, anchor: HTMLElement): void {
     this.closeMenu();
@@ -509,7 +509,8 @@ class SelectEditor {
       panel: true,
       surfaceClass: OPTION_MENU_CLASS,
       minWidth: `${OPTION_MENU_WIDTH}px`,
-      beside: 0,
+      gap: 0,
+      flip: true,
       onEscape: () => (this.deletePromptOpen ? this.renderPanel() : this.closeMenu()),
       onDismiss: () => this.closeMenu(),
     });

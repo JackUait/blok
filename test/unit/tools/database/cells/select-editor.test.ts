@@ -8,6 +8,7 @@ import { editorRoot, makeAnchor, makeEditorContext, makeProperty, press, pressOu
 import { IconSliders } from '../../../../../src/components/icons';
 import { DATA_ATTR, TOOLTIP_INTERFACE_VALUE } from '../../../../../src/components/constants';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../../src/components/utils/tooltip';
+import { PopoverDesktop } from '../../../../../src/components/utils/popover';
 
 const OPTIONS: SelectOption[] = [
   { id: 'o2', label: 'Doing', color: 'blue', position: 'a1' },
@@ -395,6 +396,25 @@ describe('select cell editor', () => {
       expect(editorRoot()?.querySelector('[data-blok-database-option-panel]')).toBeNull();
       expect(rowIds()).toEqual(['o1', 'o2', 'o3']);
       expect(m('[data-blok-database-option-name]')).toHaveFocus();
+    });
+
+    // notion-motion.md Round 56 §5: a 220x418.9 menu from a 24x24 ⋯ at 1088,487.4 in a 717 window sits at 1088, 92.5:
+    // its left on the ⋯'s left, its bottom on the ⋯'s top, growing from its bottom-left corner.
+    it('lines its left up with the ⋯ and opens above it when there is no room below', () => {
+      vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1512);
+      vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+      vi.spyOn(PopoverDesktop.prototype, 'size', 'get').mockReturnValue({ width: 220, height: 418.9 });
+      openSelect(null);
+      const dots = q('[data-blok-database-select-option="o1"] [data-blok-database-select-option-menu]');
+
+      vi.spyOn(dots, 'getBoundingClientRect').mockReturnValue(new DOMRect(1088, 487.4, 24, 24));
+      openMenu('o1');
+
+      const popover = menuPopover();
+
+      expect(parseFloat(popover?.style.left ?? '')).toBeCloseTo(1088, 1);
+      expect(parseFloat(popover?.style.top ?? '')).toBeCloseTo(487.4 - 418.9, 1);
+      expect(popover?.getAttribute('data-blok-popover-open-top')).toBe('true');
     });
 
     it('renames an option', () => {

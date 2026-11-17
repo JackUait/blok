@@ -42,7 +42,7 @@ export interface MovePickerOptions {
 export const openMovePicker = (options: MovePickerOptions): PagePicker => {
   const t = (key: string, vars?: Record<string, string | number>): string => options.i18n.t(key, vars);
   const picker = new PagePicker(t('tools.database.tableMoveTo'), t('tools.page.unresolved'), t('tools.page.draft'), t('tools.database.relationNoResults'), t);
-  const search = { token: 0 };
+  const search = { token: 0, moved: false };
   const titles = new Map<string, string>();
   const untitled = t('tools.database.relationUntitledDatabase');
   const show = async (query: string): Promise<void> => {
@@ -61,7 +61,9 @@ export const openMovePicker = (options: MovePickerOptions): PagePicker => {
     // Set with the results, not on the keystroke, so the rows change look when they change.
     picker.getElement()?.toggleAttribute('data-blok-database-move-searched', query !== '');
     picker.setResults(results);
-    if (query !== '' && options.searchAt !== undefined) {
+    // Once moved, it stays at the point; cleared, it re-places so the 453 box still fits the window.
+    search.moved ||= query !== '';
+    if (search.moved && options.searchAt !== undefined) {
       picker.place(options.searchAt.position(), options.at.positionContext, options.searchAt.above ? 1 : undefined);
     }
   };

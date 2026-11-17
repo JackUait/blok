@@ -835,6 +835,17 @@ test.describe('property and row menus', () => {
       return point;
     };
 
+    // Cleared back to empty, the box is 453 again and must stay inside the window.
+    const clearInside = async (): Promise<void> => {
+      await page.keyboard.press('ControlOrMeta+a');
+      await page.keyboard.press('Backspace');
+      await expect.poll(async () => Math.round((await rect(box)).height)).toBe(453);
+      const found = await rect(box);
+
+      expect(found.y).toBeGreaterThanOrEqual(0);
+      expect(found.y + found.height).toBeLessThanOrEqual(717);
+    };
+
     await page.setViewportSize({ width: 1512, height: 717 });
     await mount(page, [...blocks(), archive]);
     const point = await openAt();
@@ -876,6 +887,21 @@ test.describe('property and row menus', () => {
 
       return Math.round(found.y + found.height);
     }).toBe(low.y);
+    await clearInside();
+
+    // Lower in the window, cleared, the 453 box still fits it.
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => {
+      const holder = document.getElementById('blok');
+
+      if (holder !== null) holder.style.marginTop = '240px';
+    });
+    const mid = await openAt();
+
+    expect(mid.y + 454).toBeGreaterThan(717);
+    await page.keyboard.type('Arch');
+    await expect.poll(async () => Math.round((await rect(option)).width)).toBe(322);
+    await clearInside();
   });
 });
 

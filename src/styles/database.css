@@ -8294,6 +8294,38 @@ textarea[data-blok-database-cell-input] {
   }
 }
 
+/* notion-motion.md Round 58 §7: "+ Add an option" in an emptied status group, 284x28 at +8 in the 300 list. */
+[data-blok-database-options-add-row] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  min-height: 28px;
+  margin-inline: var(--blok-space-1);
+  padding: 0 var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  font-size: 14px;
+  line-height: 16.8px;
+  font-weight: 400;
+  color: var(--blok-database-ink);
+  text-align: start;
+  cursor: pointer;
+  transition: background-color 0.02s ease-in;
+}
+
+[data-blok-database-options-add-row] svg {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+@media (hover: hover) {
+  [data-blok-database-options-add-row]:hover {
+    background-color: var(--blok-database-hover-bg);
+  }
+}
+
 [data-blok-database-options-editor] [data-blok-database-select-option] {
   cursor: default;
 }
@@ -8763,6 +8795,22 @@ textarea[data-blok-database-cell-input] {
 
 [dir="rtl"] [data-blok-database-options-editor] [data-blok-database-select-option-menu] svg {
   transform: scaleX(-1);
+}
+
+/* notion-motion.md Round 58 §4: the row › and Group › turn 90° while their menu is open. */
+[data-blok-database-options-editor] [data-blok-database-select-option-menu] svg,
+[data-blok-database-option-group-chevron] svg {
+  transition: transform 0.2s ease-in-out;
+}
+
+[data-blok-database-options-editor] [data-blok-database-select-option-menu][aria-expanded='true'] svg,
+[data-blok-database-option-group][aria-expanded='true'] [data-blok-database-option-group-chevron] svg {
+  transform: rotate(90deg);
+}
+
+/* The flip stays first, so the turn interpolates as a rotation. */
+[dir="rtl"] [data-blok-database-options-editor] [data-blok-database-select-option-menu][aria-expanded='true'] svg {
+  transform: scaleX(-1) rotate(90deg);
 }
 
 [data-blok-database-options-editor] [data-blok-database-options-heading] {
@@ -9404,6 +9452,9 @@ textarea[data-blok-database-cell-input] {
   [data-blok-database-checkbox],
   [data-blok-database-select-option-handle],
   [data-blok-database-select-option-menu],
+  [data-blok-database-options-editor] [data-blok-database-select-option-menu] svg,
+  [data-blok-database-option-group-chevron] svg,
+  [data-blok-database-options-add-row],
   [data-blok-database-option-reordering] [data-blok-database-select-option],
   [data-blok-database-switch-track],
   [data-blok-database-switch-track] > span {

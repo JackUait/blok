@@ -321,6 +321,8 @@ describe('cell editor CSS', () => {
 
     ['[data-blok-database-checkbox]', '[data-blok-database-switch-track]', '[data-blok-database-switch-track] > span',
       '[data-blok-database-select-option-handle]', '[data-blok-database-select-option-menu]',
+      '[data-blok-database-options-editor] [data-blok-database-select-option-menu] svg', '[data-blok-database-option-group-chevron] svg',
+      '[data-blok-database-options-add-row]',
       '[data-blok-database-option-reordering] [data-blok-database-select-option]']
       .forEach((selector) => expect(reduced(selector), selector).toBe(true));
   });
@@ -350,6 +352,46 @@ describe('cell editor CSS', () => {
 
       expect(declared(LIST, 'padding')).toEqual(['var(--blok-space-1)']);
       expect(declared(LIST, 'gap')).toEqual(['var(--blok-space-0-25)']);
+    });
+
+    // notion-motion.md Round 58 §4: the row › and Group › turn 90° over 200ms ease-in-out while their menu is open.
+    it('turns the row › and Group › 90° while their menu is open', () => {
+      const ROW = '[data-blok-database-options-editor] [data-blok-database-select-option-menu]';
+      const GROUP = '[data-blok-database-option-group-chevron] svg';
+
+      // The second is the reduced-motion none.
+      expect(declared(`${ROW} svg`, 'transition')).toEqual(['transform 0.2s ease-in-out', 'none']);
+      expect(declared(`${ROW}[aria-expanded='true'] svg`, 'transform')).toEqual(['rotate(90deg)']);
+      // The flip stays first, so the turn interpolates as a rotation in right-to-left too.
+      expect(declared(`[dir="rtl"] ${ROW}[aria-expanded='true'] svg`, 'transform')).toEqual(['scaleX(-1) rotate(90deg)']);
+      expect(declared(GROUP, 'transition')).toEqual(['transform 0.2s ease-in-out', 'none']);
+      expect(declared(`[data-blok-database-option-group][aria-expanded='true'] ${GROUP}`, 'transform')).toEqual(['rotate(90deg)']);
+    });
+  });
+
+  // notion-motion.md Round 58 §7: "+ Add an option" in an emptied status group, 284x28 at +8,
+  // a 20 plus at +8, the text at +36, 14/16.8 400 primary ink, hover fill 0.02s ease-in, radius 6.
+  describe('"Add an option" row', () => {
+    const ROW = '[data-blok-database-options-add-row]';
+
+    // The list is already 4 in from the 300 menu's edge.
+    it('sits 8 in, 28 tall, with a 20 plus 8 in and the text 8 after it', () => {
+      expect(declared(ROW, 'margin-inline')).toEqual(['var(--blok-space-1)']);
+      expect(declared(ROW, 'min-height')).toEqual(['28px']);
+      expect(declared(ROW, 'padding')).toEqual(['0 var(--blok-space-2)']);
+      expect(declared(ROW, 'gap')).toEqual(['var(--blok-space-2)']);
+      expect(declared(`${ROW} svg`, 'width')).toEqual(['20px']);
+      expect(declared(`${ROW} svg`, 'height')).toEqual(['20px']);
+    });
+
+    it('reads 14/16.8 weight 400 in primary ink, with a rounded hover fill', () => {
+      expect(declared(ROW, 'font-size')).toEqual(['14px']);
+      expect(declared(ROW, 'line-height')).toEqual(['16.8px']);
+      expect(declared(ROW, 'font-weight')).toEqual(['400']);
+      expect(declared(ROW, 'color')).toEqual(['var(--blok-database-ink)']);
+      expect(declared(ROW, 'border-radius')).toEqual(['var(--blok-radius-control)']);
+      expect(declared(ROW, 'transition')).toEqual(['background-color 0.02s ease-in', 'none']);
+      expect(database).toMatch(/@media \(hover: hover\) \{ \[data-blok-database-options-add-row\]:hover \{ background-color: var\(--blok-database-hover-bg\); \}/);
     });
   });
 

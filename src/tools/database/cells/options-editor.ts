@@ -39,7 +39,7 @@ interface Flyout {
   root: HTMLElement;
   optionId: string;
   release: () => void;
-  groupMenu: { popover: CellPopover; release: () => void } | null;
+  groupMenu: { popover: CellPopover; release: () => void; row: HTMLElement } | null;
   deletePrompt: boolean;
 }
 
@@ -150,9 +150,12 @@ class OptionsEditor {
       if (this.adding === section.id) {
         rows.push(this.addField(section.id));
       }
-      this.options
-        .filter((option) => !this.isStatus || statusGroupOf(this.withOptions(this.options), option.id)?.id === section.id)
-        .forEach((option) => rows.push(this.row(option)));
+      const members = this.options.filter((option) => !this.isStatus || statusGroupOf(this.withOptions(this.options), option.id)?.id === section.id);
+
+      members.forEach((option) => rows.push(this.row(option)));
+      if (this.isStatus && members.length === 0 && this.adding !== section.id) {
+        rows.push(this.addRow(section.id));
+      }
     }
     this.root.replaceChildren(...rows);
     this.root.querySelector<HTMLInputElement>('[data-blok-database-options-add-input]')?.focus();
@@ -176,6 +179,23 @@ class OptionsEditor {
     heading.append(text, add);
 
     return heading;
+  }
+
+  /** notion-motion.md Round 58 §7: an empty status group offers "+ Add an option"; a click opens its add field. */
+  private addRow(groupId: string): HTMLElement {
+    const row = document.createElement('button');
+
+    row.type = 'button';
+    row.setAttribute('data-blok-database-options-add-row', '');
+    row.setAttribute('data-group-id', groupId);
+    row.innerHTML = IconPlus;
+    row.append(this.t('tools.database.addOption'));
+    row.addEventListener('click', () => {
+      this.adding = groupId;
+      this.render();
+    });
+
+    return row;
   }
 
   private addField(groupId: string): HTMLElement {
@@ -241,6 +261,8 @@ class OptionsEditor {
       badge.textContent = this.t('tools.database.templateDefault');
       label.append(' ', badge);
     }
+    // Rows are rebuilt on every edit, so the open state is set here too.
+    menu.setAttribute('aria-expanded', String(this.flyout?.optionId === option.id));
     menu.addEventListener('click', (event) => {
       event.stopPropagation();
       this.openFlyout(option.id, row);
@@ -323,8 +345,18 @@ class OptionsEditor {
     });
 
     this.flyout = { popover, root, optionId, release, groupMenu: null, deletePrompt: false };
+    this.markOpen(optionId, true);
     popover.show();
     this.renderFlyout();
+    // notion-motion.md Round 58 §4: the whole name is selected on open only, not on a later redraw.
+    root.querySelector<HTMLInputElement>('input[data-blok-database-option-name]')?.select();
+  }
+
+  /** notion-motion.md Round 58 §4: the row › turns while its menu is open. */
+  private markOpen(optionId: string, open: boolean): void {
+    this.root
+      .querySelector(`[data-blok-database-select-option="${CSS.escape(optionId)}"] [data-blok-database-select-option-menu]`)
+      ?.setAttribute('aria-expanded', String(open));
   }
 
   private closeFlyout(): void {
@@ -333,6 +365,7 @@ class OptionsEditor {
     if (flyout === null) return;
     this.closeGroupMenu();
     this.flyout = null;
+    this.markOpen(flyout.optionId, false);
     flyout.popover.close();
     flyout.release();
   }
@@ -433,7 +466,8 @@ class OptionsEditor {
       onDismiss: () => this.closeGroupMenu(),
     });
 
-    flyout.groupMenu = { popover, release };
+    flyout.groupMenu = { popover, release, row: groupRow };
+    groupRow.setAttribute('aria-expanded', 'true');
     popover.show();
     list.querySelector<HTMLElement>('[data-blok-database-option-group-pick]')?.focus();
   }
@@ -444,6 +478,7 @@ class OptionsEditor {
 
     if (flyout === null || menu === null) return;
     flyout.groupMenu = null;
+    menu.row.setAttribute('aria-expanded', 'false');
     menu.popover.close();
     menu.release();
   }

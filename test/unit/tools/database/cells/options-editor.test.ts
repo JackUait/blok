@@ -285,6 +285,27 @@ describe('options editor (Edit property for select, multi-select and status)', (
       expect(last(onChange).find((o) => o.label === 'Shipped')?.groupId).toBe('complete');
     });
 
+    // notion-motion.md Round 58 §7: an emptied group shows "+ Add an option"; a click turns it into the add field.
+    it('an empty group shows an "Add an option" row that opens the add field for that group', () => {
+      const property = statusProp();
+      const { root, onChange } = mount({ ...property, config: { options: (property.config?.options ?? []).filter((o) => o.id !== 'i') } });
+      const rows = (): HTMLElement[] => [...root.querySelectorAll<HTMLElement>('[data-blok-database-options-add-row]')];
+
+      expect(rows().map((row) => row.getAttribute('data-group-id'))).toEqual(['inProgress']);
+      expect(rows()[0].textContent?.trim()).toBe('tools.database.addOption');
+      expect(rows()[0].hasAttribute('data-blok-database-select-option')).toBe(false);
+      rows()[0].click();
+      const input = root.querySelector<HTMLInputElement>('[data-blok-database-options-add-input]');
+
+      if (input === null) throw new Error('no add field');
+      expect(input).toHaveFocus();
+      expect(rows()).toEqual([]);
+      input.value = 'Doing';
+      press(input, 'Enter');
+
+      expect(last(onChange).find((o) => o.label === 'Doing')?.groupId).toBe('inProgress');
+    });
+
     it('a drag into another group moves the option to that group', () => {
       const { root, onChange } = mount(statusProp());
 
@@ -482,6 +503,54 @@ describe('options editor (Edit property for select, multi-select and status)', (
         closers.forEach((close) => close());
 
         expect(flyout()).toBeNull();
+      });
+
+      // notion-motion.md Round 58 §4: the name is selected on open (Status 11/0/11), from a row click or ›.
+      it('selects the whole option name on open, from a row click or the › button', () => {
+        const { root } = mountStatus();
+
+        optionRow(root, 'i').click();
+        const name = inFlyout<HTMLInputElement>('[data-blok-database-option-name]');
+
+        expect([name.selectionStart, name.selectionEnd]).toEqual([0, 'In progress'.length]);
+        press(name, 'Escape');
+        optionRow(root, 'd').querySelector<HTMLElement>('[data-blok-database-select-option-menu]')?.click();
+        const other = inFlyout<HTMLInputElement>('[data-blok-database-option-name]');
+
+        expect([other.selectionStart, other.selectionEnd]).toEqual([0, 'Done'.length]);
+      });
+
+      // notion-motion.md Round 58 §4: the row › turns while its menu is open and back when it closes.
+      it('marks the row › expanded while its menu is open, through a rename, and not after Escape', () => {
+        const { root } = mountStatus();
+        const chevron = (): HTMLElement | null => optionRow(root, 'i').querySelector<HTMLElement>('[data-blok-database-select-option-menu]');
+
+        expect(chevron()?.getAttribute('aria-expanded')).toBe('false');
+        optionRow(root, 'i').click();
+        expect(chevron()?.getAttribute('aria-expanded')).toBe('true');
+        expect(optionRow(root, 'd').querySelector('[data-blok-database-select-option-menu]')?.getAttribute('aria-expanded')).toBe('false');
+        const name = inFlyout<HTMLInputElement>('[data-blok-database-option-name]');
+
+        name.value = 'Doing';
+        press(name, 'Enter');
+        expect(chevron()?.getAttribute('aria-expanded')).toBe('true');
+        press(inFlyout('[data-blok-database-option-name]'), 'Escape');
+        expect(chevron()?.getAttribute('aria-expanded')).toBe('false');
+      });
+
+      // notion-motion.md Round 58 §4: Group › turns on click, and back when its menu closes.
+      it('marks Group › expanded while its menu is open', () => {
+        const { root } = mountStatus();
+
+        optionRow(root, 'i').click();
+        const group = inFlyout('[data-blok-database-option-group]');
+
+        expect(group.getAttribute('aria-expanded')).toBe('false');
+        group.click();
+        expect(group.getAttribute('aria-expanded')).toBe('true');
+        press(groupMenu()?.querySelector('[data-blok-database-option-group-pick]') ?? document.body, 'Escape');
+        expect(groupMenu()).toBeNull();
+        expect(group.getAttribute('aria-expanded')).toBe('false');
       });
 
       it('dragging by the handle opens no menu', () => {

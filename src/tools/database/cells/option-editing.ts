@@ -75,6 +75,8 @@ export const buildOptionPanel = (option: SelectOption, handlers: {
     group.type = 'button';
     group.setAttribute('data-blok-database-option-group', '');
     group.setAttribute('aria-haspopup', 'menu');
+    group.setAttribute('aria-expanded', 'false');
+    chevron.setAttribute('data-blok-database-option-group-chevron', '');
     group.innerHTML = IconGroup;
     value.setAttribute('data-blok-database-option-group-value', '');
     value.textContent = label;

@@ -1821,6 +1821,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R133_BYTES = 804;
     // Lane r132: Round 57 "Colors" weight 500, Group › menu padding; the option row menu class is shared by select and status. Net database.css growth against origin/main.
     const DATABASE_R132_BYTES = 209;
+    // Lane r136: Round 58 option › turns, "+ Add an option" row in an empty status group. Net database.css growth against origin/main.
+    const DATABASE_R136_BYTES = 1721;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2405,6 +2407,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R134_BYTES
       + DATABASE_R133_BYTES
       + DATABASE_R132_BYTES
+      + DATABASE_R136_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

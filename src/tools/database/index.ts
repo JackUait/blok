@@ -7142,7 +7142,8 @@ export class DatabaseTool implements BlockTool {
       ...(context === undefined && this.config.viewState !== undefined ? { store: this.config.viewState } : {}),
       ...(context !== undefined && context.store !== undefined ? { store: context.store } : {}),
       fallback: context?.fallback ?? this.viewStateFallback(),
-      history: () => (this.readOnly ? undefined : this.api.history),
+      // A host api without track (an older or partial one) keeps sorts out of undo.
+      history: () => (this.readOnly || typeof this.api.history?.track !== 'function' ? undefined : this.api.history),
       savedView: () => owner.model.getView(context?.viewId ?? this.activeViewId),
       // Filters and sorts read a formula or rollup as its result type.
       schema: () => localizeDatabaseSchema(data().model.getValueSchema(), this.api.i18n),

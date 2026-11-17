@@ -162,4 +162,20 @@ describe('row selection after undo', () => {
     expect(selectedRows()).toEqual(['r3']);
     expect(order()).toEqual(['r1', 'r2', 'r3']);
   });
+
+  it('drops the restored row from the selection when redo deletes it again', async () => {
+    const blok = await make();
+
+    await deleteRow(blok, 'r2');
+    blok.history.undo();
+    await quiet();
+    expect(selectedRows()).toEqual(['r2']);
+    expect(document.querySelector('[data-blok-database-table-selection-bar]')).not.toBeNull();
+
+    blok.history.redo();
+    await quiet();
+
+    expect(row('r2')).toBeNull();
+    expect(document.querySelector('[data-blok-database-table-selection-bar]')).toBeNull();
+  });
 });

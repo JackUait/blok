@@ -122,6 +122,9 @@ const sortSteps = new Map<string, { viewId: string; sorts: SortConfig[] | undefi
 /** Names this block's sort tokens in the document. Per browser: a peer must not share the key. */
 const SORT_UNDO_ID_KEY = 'sort-undo-id';
 
+/** The controls now drawn for each key: a rebuilt tool replays steps the old one wrote. A block's widgets share its key. */
+const liveSortControls = new Map<string, Set<DatabaseViewControls>>();
+
 const button = (testId: string, label: string, content: { icon?: string; text?: string }): HTMLButtonElement => {
   const el = document.createElement('button');
 
@@ -198,7 +201,7 @@ export class DatabaseViewControls {
   private query = '';
   /** Repaints the match tint when the rows redraw after a search (lazy rows, remote edits). */
   private matchObserver: MutationObserver | null = null;
-  private readonly sortValues = new Map<string, HistoryValue<string>>();
+  private sortHistory: { key: string; value: HistoryValue<string> } | null = null;
   /** An undo or redo is writing the sorts: that write is not a new step. */
   private replayingSorts = false;
   private undoId: string | null = null;
@@ -376,6 +379,7 @@ export class DatabaseViewControls {
   /** Fetches personal edits from the host store; without one they are read on demand. */
   load(viewIds: string[]): void {
     void this.personal.load(viewIds);
+    this.sortValue();
   }
 
   get search(): string {
@@ -507,6 +511,7 @@ export class DatabaseViewControls {
 
   destroy(): void {
     this.destroyed = true;
+    if (this.sortHistory !== null) liveSortControls.get(this.sortHistory.key)?.delete(this);
     this.endSearchClose();
     if (this.expandTimer !== null) clearTimeout(this.expandTimer);
     this.expandTimer = null;
@@ -611,14 +616,14 @@ export class DatabaseViewControls {
    * what it stands for.
    */
   private recordSorts(viewId: string, before: SortConfig[] | undefined, after: SortConfig[] | undefined): void {
-    const value = this.sortValue(viewId);
+    const value = this.sortValue();
 
     if (value === undefined) return;
     const current = value.get();
     const known = current === undefined ? undefined : sortSteps.get(current);
 
     // Undo needs a token for the sorts before this step. A host store load changes them without one.
-    if (known === undefined || JSON.stringify(known.sorts) !== JSON.stringify(before)) {
+    if (known === undefined || known.viewId !== viewId || JSON.stringify(known.sorts) !== JSON.stringify(before)) {
       const base = nanoid();
 
       sortSteps.set(base, { viewId, sorts: before });
@@ -630,18 +635,19 @@ export class DatabaseViewControls {
     value.set(token);
   }
 
-  private sortValue(viewId: string): HistoryValue<string> | undefined {
+  /** One key per block: each token names its view. */
+  private sortValue(): HistoryValue<string> | undefined {
+    if (this.sortHistory !== null) return this.sortHistory.value;
     const history = this.host.history?.();
 
     if (history === undefined) return undefined;
-    const id = this.sortUndoId();
-    const key = `database-sorts:${id}:${viewId}`;
-    const existing = this.sortValues.get(key);
+    const key = `database-sorts:${this.sortUndoId()}`;
+    const value = history.track<string>(key, (token, change) => liveSortControls.get(key)?.forEach((controls) => controls.replaySorts(token, change)));
+    const live = liveSortControls.get(key) ?? new Set<DatabaseViewControls>();
 
-    if (existing !== undefined) return existing;
-    const value = history.track<string>(key, (token, change) => this.replaySorts(token, change));
-
-    this.sortValues.set(key, value);
+    live.add(this);
+    liveSortControls.set(key, live);
+    this.sortHistory = { key, value };
 
     return value;
   }

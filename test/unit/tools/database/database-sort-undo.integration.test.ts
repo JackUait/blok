@@ -15,6 +15,7 @@ interface TestEditor {
   destroy: () => void;
   save: () => Promise<OutputData>;
   blocks: API['blocks'];
+  readOnly: { toggle: (state?: boolean) => Promise<boolean> };
   history: { undo: () => void; redo: () => void; canUndo: () => boolean; canRedo: () => boolean };
 }
 
@@ -193,5 +194,37 @@ describe('view sort undo', () => {
     blok.history.undo();
     await quiet();
     expect(await lines()).toEqual(before);
+  });
+
+  it('closes the open sort panel when undo takes its sort away', async () => {
+    const blok = await make();
+
+    click('database-toolbar-sort');
+    click('database-pick-property-t');
+    await quiet();
+    expect(q('database-sort-panel')).not.toBeNull();
+
+    blok.history.undo();
+    await quiet();
+
+    expect(q('database-sort-pill')).toBeNull();
+    expect(document.querySelector('[data-blok-testid^="database-sort-direction-"]')).toBeNull();
+  });
+
+  it('undoes a sort made before the block was drawn again', async () => {
+    const blok = await make();
+
+    await sortByName();
+    await blok.readOnly.toggle(true);
+    await quiet();
+    await blok.readOnly.toggle(false);
+    await quiet();
+    expect(q('database-sort-pill')).not.toBeNull();
+
+    blok.history.undo();
+    await quiet();
+
+    expect(q('database-sort-pill')).toBeNull();
+    expect(order()).toEqual(['r1', 'r2']);
   });
 });

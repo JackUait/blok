@@ -849,9 +849,10 @@ describe('cell editor CSS', () => {
         expect(declared(`${TREE_ROW} [data-blok-testid='page-picker-option-icon']`, 'margin-inline-end')).toEqual(['var(--blok-space-1-75)']);
       });
 
+      // notion-motion.md Round 64 §3: transform 0.2s ease-out, both ways.
       it('turns the chevron 90° while the row is open', () => {
         // The second is the reduced-motion rule.
-        expect(declared(`${CHEVRON} svg`, 'transition')).toEqual(['transform 0.2s ease-in-out', 'none']);
+        expect(declared(`${CHEVRON} svg`, 'transition')).toEqual(['transform 0.2s ease-out', 'none']);
         expect(declared(`${MOVE} [data-blok-page-picker-expanded='true'] [data-blok-testid='page-picker-tree-chevron'] svg`, 'transform')).toEqual(['rotate(90deg)']);
         expect(declared(`[dir="rtl"] ${CHEVRON} svg`, 'transform')).toEqual(['scaleX(-1)']);
         expect(declared(`[dir="rtl"] ${MOVE} [data-blok-page-picker-expanded='true'] [data-blok-testid='page-picker-tree-chevron'] svg`, 'transform')).toEqual(['scaleX(-1) rotate(90deg)']);

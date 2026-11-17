@@ -10,21 +10,56 @@ const DATABASE_KEY = 'database\u0000';
 /** notion-motion.md Round 62 §1: 330 wide. */
 const PICKER_WIDTH = '330px';
 
-/** Its top sits 6px below the row menu's top (Round 62 §1). */
-export const MOVE_PICKER_DROP = 6;
+/** Without a pointer, its top sits 6px below the row menu's top (Round 62 §1). */
+const MENU_DROP = 6;
+
+/** notion-motion.md Round 64 §3: the box keeps 12 from the window's edges. */
+const WINDOW_MARGIN = 12;
+
+/** Where the picker opens. Read when it opens, so a scroll since then does not leave it behind. */
+export type MovePickerFrom =
+  /** A right-click on `on`: the point and `on`'s box at that moment. */
+  | { pointer: { x: number; y: number; on: HTMLElement; was: DOMRect } }
+  /** The row menu's box: its left, 6px below its top. Unmeasured for a ⋮⋮ or ⋯ menu. */
+  | { menu: DOMRect }
+  /** Under this element's bottom-left corner. */
+  | { under: HTMLElement };
+
+/** A right-click on `on`, for {@link MovePickerFrom}. */
+export const pointerFrom = (on: HTMLElement, event: Pick<MouseEvent, 'clientX' | 'clientY'>): MovePickerFrom => ({
+  pointer: { x: event.clientX, y: event.clientY, on, was: on.getBoundingClientRect() },
+});
+
+/** The row menu's box, or under `element` when no menu is open. */
+export const menuFrom = (menu: DOMRect | undefined, element: HTMLElement): MovePickerFrom => (menu !== undefined ? { menu } : { under: element });
+
+/** The box's top-left corner when it fits under it. */
+const cornerOf = (from: MovePickerFrom): DOMRect => {
+  if ('pointer' in from) {
+    const { x, y, on, was } = from.pointer;
+    const now = on.isConnected ? on.getBoundingClientRect() : was;
+
+    return new DOMRect(x + now.left - was.left, y + 1 + now.top - was.top, 0, 0);
+  }
+  if ('menu' in from) return new DOMRect(from.menu.left, from.menu.top + MENU_DROP, 0, 0);
+  const box = from.under.getBoundingClientRect();
+
+  return new DOMRect(box.left, box.bottom, 0, 0);
+};
 
 export interface MovePickerOptions {
   i18n: API['i18n'];
   /** Escape gives focus back here. */
   anchor: HTMLElement;
-  /** The top-left corner, moving with `positionContext`. */
-  at: { position: DOMRect; positionContext: HTMLElement };
+  /** The box moves with it. */
+  context: HTMLElement;
   /**
-   * Where a query moves the box (notion-motion.md Round 63 §2): `position()` is
-   * 1px under the right-click point, or with `above` the box's bottom sits on
-   * the point. Without it the box stays put.
+   * Where the box goes (notion-motion.md Round 64 §3): its top-left 1px under a
+   * right-click when it fits, else above with its bottom on the point when its
+   * top keeps 12, else clamped 12 over the window bottom. A query's box, which
+   * fits its content, follows the same rule as it resizes.
    */
-  searchAt?: { position: () => DOMRect; above: boolean };
+  from: MovePickerFrom;
   /** The document's other databases, read on each query. */
   databases: () => ReadonlyArray<{ id: string; title: string }>;
   /** The page tool whose host takes moved pages, or null. */
@@ -42,7 +77,7 @@ export interface MovePickerOptions {
 export const openMovePicker = (options: MovePickerOptions): PagePicker => {
   const t = (key: string, vars?: Record<string, string | number>): string => options.i18n.t(key, vars);
   const picker = new PagePicker(t('tools.database.tableMoveTo'), t('tools.page.unresolved'), t('tools.page.draft'), t('tools.database.relationNoResults'), t);
-  const search = { token: 0, moved: false };
+  const search = { token: 0 };
   const titles = new Map<string, string>();
   // Apart from `titles`, which each query clears.
   const treeTitles = new Map<string, string>();
@@ -64,11 +99,6 @@ export const openMovePicker = (options: MovePickerOptions): PagePicker => {
     // Set with the results, not on the keystroke, so the rows change look when they change.
     picker.getElement()?.toggleAttribute('data-blok-database-move-searched', query !== '');
     picker.setResults(results);
-    // Once moved, it stays at the point; cleared, it re-places so the 453 box still fits the window.
-    search.moved ||= query !== '';
-    if (search.moved && options.searchAt !== undefined) {
-      picker.place(options.searchAt.position(), options.at.positionContext, options.searchAt.above ? 1 : undefined);
-    }
   };
 
   picker.open('', options.anchor, (pageId) => {
@@ -80,7 +110,11 @@ export const openMovePicker = (options: MovePickerOptions): PagePicker => {
     options.onPage(pageId, titles.get(pageId) || treeTitles.get(pageId) || t('tools.page.unresolved'));
   }, {
     searchField: { placeholder: t('tools.database.moveToPlaceholder'), onQuery: (query) => void show(query) },
-    popover: { class: `${DATABASE_MENU_CLASS} blok-database-move-menu`, width: PICKER_WIDTH, at: options.at },
+    popover: {
+      class: `${DATABASE_MENU_CLASS} blok-database-move-menu`,
+      width: PICKER_WIDTH,
+      at: { position: cornerOf(options.from), positionContext: options.context, flipBy: 1, margin: WINDOW_MARGIN },
+    },
     sections: { idle: t('tools.database.linkedSuggested'), query: t('tools.database.moveToPages') },
     highlightIdle: false,
     showAll: true,

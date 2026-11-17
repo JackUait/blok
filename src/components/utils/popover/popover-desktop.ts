@@ -815,18 +815,6 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
-   * With `cover`: sets the side for the next placement and drops the cached size.
-   * With `aboveBy` it sits above, its bottom that far above the position's top;
-   * without it, below.
-   * @param aboveBy - set to open above
-   */
-  public setCoverSide(aboveBy?: number): void {
-    this.coverFlipOffset = aboveBy;
-    this.coverAbove = aboveBy !== undefined;
-    this.invalidateSizeCache();
-  }
-
-  /**
    * Applies the resolved vertical/horizontal placement flags: keeps the legacy
    * `data-blok-popover-open-top`/`-open-left` attributes (which
    * `popover-animation.css` keys off for transform-origin) in sync AND stamps

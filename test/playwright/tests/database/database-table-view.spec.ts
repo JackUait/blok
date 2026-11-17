@@ -835,20 +835,29 @@ test.describe('property and row menus', () => {
       return point;
     };
 
-    // Cleared back to empty, the box is 453 again and must stay inside the window.
+    // Cleared back to empty, the box is 453 again and keeps 12 from the window's edges.
     const clearInside = async (): Promise<void> => {
       await page.keyboard.press('ControlOrMeta+a');
       await page.keyboard.press('Backspace');
       await expect.poll(async () => Math.round((await rect(box)).height)).toBe(453);
       const found = await rect(box);
 
-      expect(found.y).toBeGreaterThanOrEqual(0);
-      expect(found.y + found.height).toBeLessThanOrEqual(717);
+      expect(found.y).toBeGreaterThanOrEqual(12);
+      expect(found.y + found.height).toBeLessThanOrEqual(705);
+    };
+    const bottom = async (): Promise<number> => {
+      const found = await rect(box);
+
+      return Math.round(found.y + found.height);
     };
 
     await page.setViewportSize({ width: 1512, height: 717 });
     await mount(page, [...blocks(), archive]);
     const point = await openAt();
+
+    // notion-motion.md Round 64 §3: the box opens at the click point, not on the row menu: 1px under it when it fits.
+    await expect.poll(async () => Math.round((await rect(box)).y)).toBe(point.y + 1);
+    expect(Math.round((await rect(box)).x)).toBe(point.x);
 
     // At rest: 453 tall whatever it holds, rows 330 wide edge to edge with no rounding, a 14px field.
     expect((await rect(box)).height).toBeCloseTo(453, 0);
@@ -881,6 +890,8 @@ test.describe('property and row menus', () => {
     });
     const low = await openAt();
 
+    // Round 64 §3: no room under the point, so the box sits above it, its bottom on the point.
+    await expect.poll(bottom).toBe(low.y);
     await page.keyboard.type('Arch');
     await expect.poll(async () => {
       const found = await rect(box);
@@ -899,9 +910,102 @@ test.describe('property and row menus', () => {
     const mid = await openAt();
 
     expect(mid.y + 454).toBeGreaterThan(717);
+    // Round 64 §3: no room under or above the point, so it is clamped 12 over the window bottom.
+    await expect.poll(bottom).toBe(705);
     await page.keyboard.type('Arch');
     await expect.poll(async () => Math.round((await rect(option)).width)).toBe(322);
     await clearInside();
+  });
+
+  // notion-motion.md Round 64 §3: every entry places the box by one rule, 12 from the window's edges.
+  test.describe('Move to picker placement', () => {
+    const archiveBlock: OutputBlockData = {
+      id: 'db-2',
+      type: 'database',
+      data: {
+        title: 'Archive',
+        schema: [{ id: 'q-title', name: 'Name', type: 'title', position: 'a0' }],
+        views: [{ id: 'w1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+        activeViewId: 'w1',
+      },
+      content: [],
+    };
+    const pickerBox = async (page: Page): Promise<{ x: number; y: number; width: number; height: number }> => {
+      const box = page.locator('[data-blok-database-move-picker] [data-blok-popover-container]');
+
+      await expect(page.getByPlaceholder('Move page to…')).toBeFocused();
+      await box.evaluate((element) => Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished.catch(() => undefined))));
+      const found = await box.boundingBox();
+
+      if (found === null) throw new Error('no box');
+
+      return found;
+    };
+    const lower = async (page: Page, by: number): Promise<void> => {
+      await page.evaluate((margin) => {
+        const holder = document.getElementById('blok');
+
+        if (holder !== null) holder.style.marginTop = `${margin}px`;
+      }, by);
+    };
+
+    test.beforeEach(async ({ page }) => {
+      await page.setViewportSize({ width: 1512, height: 717 });
+    });
+
+    test('a list row\'s right-click opens it at the point, and a query moves it there too', async ({ page }) => {
+      await mount(page, [...blocks(), archiveBlock]);
+      await page.evaluate(async (input) => {
+        await window.blokInstance?.render({ blocks: input });
+      }, [...blocks({ type: 'list', name: 'List' }), archiveBlock]);
+      await lower(page, 240);
+      const listRow = page.locator('[data-blok-id="db-1"] [data-blok-database-list-row][data-row-id="r1"]');
+      const target = await listRow.boundingBox();
+
+      if (target === null) throw new Error('no row');
+      const point = { x: Math.round(target.x + 40), y: Math.round(target.y + target.height / 2) };
+
+      await page.mouse.click(point.x, point.y, { button: 'right' });
+      await clickSettled(openMenu(page).getByRole('menuitem', { name: 'Move to', exact: true }));
+      const rest = await pickerBox(page);
+
+      // No room under or above the point: clamped 12 over the window bottom, at the click x.
+      expect(Math.round(rest.y + rest.height)).toBe(705);
+      expect(Math.round(rest.x)).toBe(point.x);
+
+      await page.keyboard.type('Arch');
+      await expect.poll(async () => Math.round((await pickerBox(page)).y)).toBe(point.y + 1);
+    });
+
+    test('⌘⇧P on a selected row keeps the box 12 over the window bottom', async ({ page }) => {
+      await mount(page, [...blocks(), archiveBlock]);
+      await lower(page, 240);
+      await row(page, 'r1').hover();
+      await row(page, 'r1').locator('[data-blok-database-table-row-handle]').click();
+      await expect(openMenu(page).getByPlaceholder('Search actions…')).toBeVisible();
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('ControlOrMeta+Shift+P');
+      const found = await pickerBox(page);
+      const rowBox = await row(page, 'r1').boundingBox();
+
+      expect(Math.round(found.y + found.height)).toBe(705);
+      expect(Math.round(found.x)).toBe(Math.round(rowBox?.x ?? -1));
+    });
+
+    test('the side peek\'s ••• opens it under the button, 12 in from the window\'s right edge', async ({ page }) => {
+      await mount(page, [...blocks(), archiveBlock]);
+      await row(page, 'r1').hover();
+      await row(page, 'r1').locator('[data-blok-database-table-open]').click();
+      const actions = page.locator('[data-blok-database-peek-actions]:not([hidden])');
+
+      await actions.click();
+      await clickSettled(openMenu(page).getByRole('menuitem', { name: 'Move to', exact: true }));
+      const found = await pickerBox(page);
+      const button = await actions.boundingBox();
+
+      expect(Math.round(found.x + found.width)).toBe(1512 - 12);
+      expect(Math.round(found.y)).toBe(Math.round((button?.y ?? 0) + (button?.height ?? 0)));
+    });
   });
 
   // notion-motion.md Round 62 §1 and Round 63 §2: Workspace rows 330x28, chevron 20 at +14, icon 16 at +37, title at +60; a level is +14.

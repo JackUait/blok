@@ -79,8 +79,12 @@ export interface PagePickerOptions {
    * pick; so does closing the picker before it settles.
    */
   beforePick?: (pageId: string, row: HTMLElement) => Promise<boolean>;
-  /** The popover's class and width, and `at`: its top-left corner, moving with `positionContext`. */
-  popover?: { class?: string; width?: string; at?: { position: DOMRect; positionContext: HTMLElement } };
+  /**
+   * The popover's class and width, and `at`: its top-left corner, moving with `positionContext`.
+   * With `flipBy` it opens above when it does not fit below, its bottom that far over the corner;
+   * `margin` is its gap to the window's edges.
+   */
+  popover?: { class?: string; width?: string; at?: { position: DOMRect; positionContext: HTMLElement; flipBy?: number; margin?: number } };
   /** With `searchField`: a label over the pages, `idle` while nothing is typed and `query` after. */
   sections?: { idle: string; query: string };
   /** With `searchField`: false leaves the pages unhighlighted while nothing is typed, until a key or the pointer picks one. */
@@ -89,8 +93,9 @@ export interface PagePickerOptions {
   showAll?: boolean;
   /**
    * With `searchField`: a section after the pages while nothing is typed,
-   * listing `children(null)` as a tree. A row's chevron, or ArrowRight and
-   * ArrowLeft on the active row, shows and hides its `children(pageId)`.
+   * listing `children(null)` as a tree. A row's chevron shows and hides its
+   * `children(pageId)`. ArrowRight and ArrowLeft do not, as in Notion
+   * (notion-motion.md Round 64 §3).
    */
   tree?: { label: string; children: (pageId: string | null) => Promise<readonly unknown[]> };
 }
@@ -242,7 +247,14 @@ export class PagePicker {
 
     this.popover = new PopoverDesktop(look?.at === undefined
       ? params
-      : { ...params, cover: true, position: look.at.position, positionContext: look.at.positionContext });
+      : {
+        ...params,
+        cover: true,
+        position: look.at.position,
+        positionContext: look.at.positionContext,
+        ...(look.at.flipBy !== undefined ? { coverFlipOffset: look.at.flipBy } : {}),
+        ...(look.at.margin !== undefined ? { viewportMargin: look.at.margin } : {}),
+      });
     this.popover.on(PopoverEvent.Closed, () => this.close());
     if (options.searchField !== undefined) {
       this.mountSearchField(this.popover, options.searchField);
@@ -260,12 +272,6 @@ export class PagePicker {
     this.search?.focus();
     this.render();
     this.loadTree(null);
-  }
-
-  /** Moves the open picker (opened with `popover.at`) to `position`, or above it by `aboveBy`. */
-  public place(position: DOMRect, positionContext: HTMLElement, aboveBy?: number): void {
-    this.popover?.setCoverSide(aboveBy);
-    this.popover?.updatePosition(position, { positionContext });
   }
 
   /** A search for `query` started: shows the loading state and names the query in the New page items. */
@@ -370,17 +376,6 @@ export class PagePicker {
       this.activeIndex = event.key === 'Home' ? 0 : count - 1;
       this.keyboardNavigated = true;
       this.syncSelection();
-
-      return true;
-    }
-
-    const treePageId = this.query === '' ? this.entries[this.activeIndex]?.treePageId : undefined;
-
-    if ((event.key === 'ArrowRight' || event.key === 'ArrowLeft') && treePageId !== undefined) {
-      event.preventDefault();
-      if (this.treeOpen.has(treePageId) !== (event.key === 'ArrowRight')) {
-        this.toggleTree(treePageId);
-      }
 
       return true;
     }

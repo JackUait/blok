@@ -7548,7 +7548,7 @@ button[data-blok-database-board-lane-count]:hover {
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [data-blok-testid='page-picker-tree-chevron'] svg {
   width: 12px;
   height: 12px;
-  transition: transform 0.2s ease-in-out;
+  transition: transform 0.2s ease-out;
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] [data-blok-page-picker-expanded='true'] [data-blok-testid='page-picker-tree-chevron'] svg {

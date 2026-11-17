@@ -154,7 +154,7 @@ import { nanoid } from 'nanoid';
 import type { MenuConfigItem } from '../../../types/tools/menu-config';
 import { databasePageHost, movedDatabases, rowMoveHost, subtreeOf } from '../page/database-page-move';
 import type { PagePicker } from '../page/page-picker';
-import { MOVE_PICKER_DROP, openMovePicker } from './database-move-picker';
+import { menuFrom, openMovePicker, pointerFrom, type MovePickerFrom } from './database-move-picker';
 import { createdId } from '../page/page-values';
 import { generateBlockId } from '../../components/utils/id-generator';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -8481,7 +8481,7 @@ export class DatabaseTool implements BlockTool {
 
         if (header !== null && writable()) this.openPropertyMenu(propertyId, header, table?.(), context);
       }, 0),
-      openMoveTo: (rowId, anchor, menu, pointY) => { if (writable()) this.openMoveTo(rowId, anchor, menu, pointY); },
+      openMoveTo: (rowId, anchor, from) => { if (writable()) this.openMoveTo(rowId, anchor, from); },
       editRowIcon: (rowId) => { if (writable()) this.editRowIcon(rowId, context); },
       updateView: (changes) => { if (writable()) this.updateActiveView(changes, context); },
       // notion-motion.md Round 29 §1: the Load more row's ⋯. Round 30 §3: a locked database keeps it working.
@@ -10040,7 +10040,7 @@ export class DatabaseTool implements BlockTool {
       const placement = pointerMenuPlacement(rowEl, event);
       const anchor = placement?.anchor ?? rowEl;
 
-      this.openCardMenu(anchor, rowEl, rowId, undefined, 'card', placement?.coverFlipOffset);
+      this.openCardMenu(anchor, rowEl, rowId, undefined, 'card', placement?.coverFlipOffset, event);
       if (anchor !== rowEl) this.cardMenuPopover?.on(PopoverEvent.Closed, () => anchor.remove());
     });
     boardEl.addEventListener('click', (event) => {
@@ -10099,7 +10099,7 @@ export class DatabaseTool implements BlockTool {
    * Board and gallery carry Layout and Property visibility; a list row does not (research/12 §3).
    * A timeline bar has no Comment; its table panel row does (research/22 §11).
    */
-  private openCardMenu(anchor: HTMLElement, cardEl: HTMLElement, rowId: string, at?: OpenMenuOptions['at'], kind: 'card' | 'handle' = 'card', coverFlipOffset?: number): void {
+  private openCardMenu(anchor: HTMLElement, cardEl: HTMLElement, rowId: string, at?: OpenMenuOptions['at'], kind: 'card' | 'handle' = 'card', coverFlipOffset?: number, pointer?: Pick<MouseEvent, 'clientX' | 'clientY'>): void {
     const type = this.shownView()?.type;
 
     this.openRowMenu(rowId, anchor, cardEl, {
@@ -10108,6 +10108,7 @@ export class DatabaseTool implements BlockTool {
       kind,
       ...(at !== undefined ? { at } : {}),
       ...(coverFlipOffset !== undefined ? { coverFlipOffset } : {}),
+      ...(pointer !== undefined ? { pointer } : {}),
     });
   }
 
@@ -10126,7 +10127,9 @@ export class DatabaseTool implements BlockTool {
    * `rowMenuItems` as the table's ⋮⋮ so they cannot drift. `card` keeps its
    * hover buttons while the menu is up.
    */
-  private openRowMenu(rowId: string, anchor: HTMLElement, card: HTMLElement, options: { viewSettings: boolean; comment?: boolean; at?: OpenMenuOptions['at']; kind?: 'card' | 'handle'; viewportMargin?: number; coverFlipOffset?: number }): void {
+  private openRowMenu(rowId: string, anchor: HTMLElement, card: HTMLElement, options: { viewSettings: boolean; comment?: boolean; at?: OpenMenuOptions['at']; kind?: 'card' | 'handle'; viewportMargin?: number; coverFlipOffset?: number; pointer?: Pick<MouseEvent, 'clientX' | 'clientY'> }): void {
+    // notion-motion.md Round 64 §3: Move to opens at a right-click's point, read now while the card is where it was clicked.
+    const spot = options.pointer === undefined ? undefined : pointerFrom(card, options.pointer);
     const comment = options.comment === false ? undefined : this.commentLever().comment;
     const writable = (): boolean => !this.readOnly && !this.destroyed;
     // notion-motion.md Round 42 §2: Edit property › lists every property A→Z, shown or not; Created time and ID were not in it.
@@ -10144,7 +10147,7 @@ export class DatabaseTool implements BlockTool {
         : {}),
       onDuplicate: () => { if (writable()) this.duplicateTableRow(rowId); },
       onDelete: () => { if (writable()) this.deleteTableRows([rowId]); },
-      ...(this.canMoveRow() ? { onMoveTo: (menu: DOMRect | undefined) => { if (writable()) this.openMoveTo(rowId, card, menu); } } : {}),
+      ...(this.canMoveRow() ? { onMoveTo: (menu: DOMRect | undefined) => { if (writable()) this.openMoveTo(rowId, card, spot ?? menuFrom(menu, card)); } } : {}),
     };
 
     this.cardMenuPopover?.destroy();
@@ -10949,8 +10952,11 @@ export class DatabaseTool implements BlockTool {
           if (this.model.getRow(rowId) === undefined) return undefined;
           const copyLink = { onCopyLink: () => this.copyRowLink(rowId) };
           const canMove = (): boolean => this.canMoveRow();
+          // notion-motion.md Round 64 §3: under the ••• button, 12 in from the window's edge.
           const moveTo = (menu: DOMRect | undefined): void => {
-            if (writable()) this.openMoveTo(rowId, document.querySelector<HTMLElement>('[data-blok-database-peek-actions]:not([hidden])') ?? this.block.holder, menu);
+            const button = document.querySelector<HTMLElement>('[data-blok-database-peek-actions]:not([hidden])');
+
+            if (writable()) this.openMoveTo(rowId, button ?? this.block.holder, button === null ? menuFrom(menu, this.block.holder) : { under: button });
           };
 
           return !writable() ? copyLink : {
@@ -11854,7 +11860,7 @@ export class DatabaseTool implements BlockTool {
 
       return;
     }
-    if (this.canMoveRow()) act(() => this.openMoveTo(rowId, rowEl, undefined));
+    if (this.canMoveRow()) act(() => this.openMoveTo(rowId, rowEl, { under: rowEl }));
   }
 
   /**
@@ -13050,26 +13056,12 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
-   * The "Move page to…" picker (notion-motion.md Round 62 §1): it takes the row
-   * menu's place, at its left edge and 6px below its top. Without a menu
-   * (⌘⇧P) it opens under `anchor`; that spot is unmeasured. `pointY`, the
-   * right-click's clientY, is where a query moves it (Round 63 §2): on the
-   * side the row menu took, read from where the menu ended up.
+   * The "Move page to…" picker, placed from `from` by `openMovePicker`'s one
+   * rule (notion-motion.md Round 64 §3). It moves with `anchor`, or with the
+   * holder once `anchor` is gone.
    */
-  private openMoveTo(rowId: string, anchor: HTMLElement, menu: DOMRect | undefined, pointY?: number): void {
+  private openMoveTo(rowId: string, anchor: HTMLElement, from: MovePickerFrom): void {
     if (this.readOnly || this.destroyed) return;
-    const start = anchor.getBoundingClientRect();
-    const box = menu ?? start;
-    const position = new DOMRect(box.left, menu === undefined ? box.bottom : box.top + MOVE_PICKER_DROP, 0, 0);
-    // Read relative to the anchor, so a scroll since the right-click does not leave it behind.
-    const searchAt = menu === undefined || pointY === undefined ? undefined : {
-      above: menu.bottom <= pointY + 0.5,
-      position: (): DOMRect => {
-        const now = anchor.getBoundingClientRect();
-
-        return new DOMRect(box.left + now.left - start.left, pointY + 1 + now.top - start.top, 0, 0);
-      },
-    };
 
     this.movePicker?.picker.close();
     // After the row menu's close, which hands focus back to its trigger.
@@ -13079,8 +13071,8 @@ export class DatabaseTool implements BlockTool {
       const picker = openMovePicker({
         i18n: this.api.i18n,
         anchor,
-        at: { position, positionContext: anchor.isConnected ? anchor : this.block.holder },
-        ...(searchAt !== undefined ? { searchAt } : {}),
+        context: anchor.isConnected ? anchor : this.block.holder,
+        from,
         databases: () => this.moveTargets(),
         pages: host?.config ?? null,
         onDatabase: (databaseId) => { if (!this.readOnly && !this.destroyed) this.moveRowTo({ rowId, databaseId }); },

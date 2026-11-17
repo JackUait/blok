@@ -572,7 +572,8 @@ describe('row menu › Move to › Workspace tree', () => {
     expect(announce).toHaveBeenCalledWith('Moved Alpha to Plans');
   });
 
-  it('opens and closes the highlighted row with ArrowRight and ArrowLeft', async () => {
+  // notion-motion.md Round 64 §3: ArrowRight and ArrowLeft do not open or close a row; focus stays in the field.
+  it('leaves the highlighted row shut on ArrowRight, and open on ArrowLeft', async () => {
     const page = host({ children: children(), search: vi.fn(async () => []) });
 
     await boot(page);
@@ -582,20 +583,14 @@ describe('row menu › Move to › Workspace tree', () => {
 
     key('ArrowRight');
     await quiet();
-    expect(treeTitles()).toEqual(['Home', 'Plans', 'Notes']);
-    expect(treeRows()[0]?.getAttribute('aria-selected')).toBe('true');
-
-    key('ArrowDown');
-    key('ArrowLeft');
-    await quiet();
-    // Plans has no open children: nothing changes.
-    expect(treeTitles()).toEqual(['Home', 'Plans', 'Notes']);
-
-    key('ArrowUp');
-    key('ArrowLeft');
-    await quiet();
     expect(treeTitles()).toEqual(['Home', 'Notes']);
-    expect(treeRows()[0]?.getAttribute('aria-selected')).toBe('true');
+    expect(treeRows()[0]?.getAttribute('data-blok-page-picker-expanded')).toBe('false');
+
+    chevronOf('Home').click();
+    await quiet();
+    key('ArrowLeft');
+    await quiet();
+    expect(treeTitles()).toEqual(['Home', 'Plans', 'Notes']);
     expect(searchInput()).toHaveFocus();
   });
 

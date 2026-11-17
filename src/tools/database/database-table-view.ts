@@ -47,6 +47,7 @@ import type { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { pointerMenuPlacement } from './database-list-view';
+import { menuFrom, pointerFrom, type MovePickerFrom } from './database-move-picker';
 import {
   IconPlayerPlay,
   IconChevronRight,
@@ -185,9 +186,8 @@ export interface TableHandlers {
   copyRowLink: (rowId: string) => void;
   /** Whether "Move to" has anywhere to send a row. */
   canMoveRow?: () => boolean;
-  /** "Move to": opens the picker over `menu` (the row menu's box), or by `anchor` without one. */
-  /** `pointY`: the right-click's clientY, when a right-click opened the row menu. */
-  openMoveTo?: (rowId: string, anchor: HTMLElement, menu: DOMRect | undefined, pointY?: number) => void;
+  /** "Move to": opens the picker, placed from `from`, moving with `anchor`. */
+  openMoveTo?: (rowId: string, anchor: HTMLElement, from: MovePickerFrom) => void;
   editRowIcon: (rowId: string) => void;
   updateView: (changes: ViewChanges) => void;
   /** The Load more row's ⋯. The tool leaves it out when the view cannot change. */
@@ -2274,7 +2274,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       return true;
     }
     if (handlers.openMoveTo === undefined || this.options.readOnly || handlers.canMoveRow?.() !== true) return false;
-    handlers.openMoveTo(rowId, anchor, undefined);
+    handlers.openMoveTo(rowId, anchor, { under: anchor });
 
     return true;
   }
@@ -2296,6 +2296,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
     if (anchor === null || commentAnchor === null) return;
     const favorite = this.options.favorite?.(rowId);
+    // notion-motion.md Round 64 §3: Move to opens at a right-click's point, read now while the row is where it was clicked.
+    const spot = rowEl === null || pointer === undefined ? undefined : pointerFrom(rowEl, pointer);
 
     this.showMenu(anchor, rowMenuItems({
       i18n: this.options.i18n,
@@ -2312,7 +2314,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       onOpenIn: (mode) => handlers.openRow(rowId, mode),
       onCopyLink: () => handlers.copyRowLink(rowId),
       onDuplicate: () => handlers.duplicateRow(rowId),
-      ...(handlers.openMoveTo !== undefined && handlers.canMoveRow?.() === true ? { onMoveTo: (menu: DOMRect | undefined) => handlers.openMoveTo?.(rowId, commentAnchor, menu, pointer?.clientY) } : {}),
+      ...(handlers.openMoveTo !== undefined && handlers.canMoveRow?.() === true ? { onMoveTo: (menu: DOMRect | undefined) => handlers.openMoveTo?.(rowId, commentAnchor, spot ?? menuFrom(menu, commentAnchor)) } : {}),
       ...rowMenuFooter({
         row: this.allRows().find((row) => row.id === rowId),
         titlePropertyId: this.options.titlePropertyId,

@@ -287,13 +287,14 @@ const TRACKED_VIRTUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'tools/database/cells/cell-popover.ts': 'A table cell editor covers its cell: the 1px-grown cell rect tracks the cell element.',
   'tools/database/cells/options-editor.ts': 'An option row\'s menu tracks the options list, which outlives the row it opened from when an edit redraws the list.',
   'tools/database/database-card-drawer.ts': 'The page ⋯ menu takes its button\'s rect, moved in to stay 12px from the window: the rect tracks the button.',
+  'tools/database/database-move-picker.ts': 'The Move to picker\'s corner (a right-click point, the row menu\'s corner or under an element) is read relative to the row it opened from and tracks it.',
   'tools/database/database-pinned-group-modal.ts': 'The pinned group modal\'s ⋯ menu is centred under its button: the centred rect tracks the button.',
   'tools/database/database-property-menu.ts': 'The type list takes the closed panel\'s corner rect, which then moves with the property anchor that opened the panel.',
   'tools/database/database-rollup-setup.ts': 'The rollup setup menu covers its cell 2px above the row: the corner rect tracks the cell element.',
   'tools/database/database-table-menus.ts': 'openMenu passes the caller\'s point and its live element through to the popover.',
   'tools/database/index.ts': 'A board or gallery card\'s ⋯ menu opens at the click point: the point tracks the card.',
   'tools/link/paste-menu/controller.ts': 'Link-end rectangles track the inserted link block holder while open.',
-  'tools/page/page-picker.ts': 'The `at` option passes the caller\'s corner and its live element through: the database Move to picker sits on the closed row menu\'s corner and tracks the row. `place` moves it to a point the caller computes from the same row on each query.',
+  'tools/page/page-picker.ts': 'The `at` option passes the caller\'s corner and its live element through: the database Move to picker tracks the row it opened from.',
 };
 
 const DISMISSIBLE_VIRTUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {

@@ -22,6 +22,10 @@ export interface BuiltInCommentsUiOptions {
   onChange: () => void;
 }
 
+/** What a row menu's Comment anchors its box to. */
+const ROW_MENU_ANCHORS = '[data-blok-database-table-row], [data-blok-database-board] [data-blok-database-card], [data-blok-database-list-row], [data-blok-database-calendar-event]';
+const CENTRED_ANCHORS = '[data-blok-database-board] [data-blok-database-card], [data-blok-database-list-row]';
+
 const parentOf = (payload: unknown): { name?: unknown; parentId?: unknown } | undefined =>
   (payload as { event?: { detail?: { target?: { name?: unknown; parentId?: unknown } } } } | undefined)?.event?.detail?.target;
 
@@ -67,22 +71,25 @@ export class BuiltInCommentsUi {
   public open(rowId: string, propertyId: string | undefined, anchor: HTMLElement): void {
     this.close();
     const panel = this.panel(rowId, propertyId);
-    // notion-motion.md Round 60 §3: a table row's comment box sits 4px under the row, centred on its title cell.
-    const title = propertyId === undefined && anchor.matches('[data-blok-database-table-row]')
+    const rowMenu = propertyId === undefined && anchor.matches(ROW_MENU_ANCHORS);
+    // notion-motion.md Round 60 §3: a table row's box centres on its title cell.
+    const title = rowMenu && anchor.matches('[data-blok-database-table-row]')
       ? anchor.querySelector<HTMLElement>('[data-blok-database-table-cell][data-type="title"]')
       : null;
+    // Round 61 §2: 4px from a board card or list row, centred on it. A calendar event's anchor is unread.
+    const centred = title !== null || (rowMenu && anchor.matches(CENTRED_ANCHORS));
     const popover = new PopoverDesktop({
-      class: DATABASE_MENU_CLASS,
+      class: rowMenu ? `${DATABASE_MENU_CLASS} blok-database-comment-box` : DATABASE_MENU_CLASS,
       animateClose: true,
       trigger: title ?? anchor,
       items: [{ type: PopoverItemType.Html, element: panel.element, name: 'database-comments' }],
       width: 'auto',
       flippable: true,
       autoFocusFirstItem: false,
-      ...(title !== null ? { offset: 4 } : {}),
+      ...(centred ? { offset: 4 } : {}),
     });
 
-    popover.alignCenter = title !== null;
+    popover.alignCenter = centred;
     this.popover = popover;
     popover.on(PopoverEvent.Closed, () => {
       if (this.popover !== popover) return;

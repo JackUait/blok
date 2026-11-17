@@ -3469,6 +3469,16 @@ button[data-blok-database-board-lane-count]:hover {
   transform-origin: top center;
 }
 
+/* notion-motion.md Round 61 §2: the row menu's comment box grows from its top centre, or its bottom centre
+   when flipped. The extra [popover] outranks core's open-left and open-top rules. */
+[data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-comment-box'] > [data-blok-popover-container] {
+  transform-origin: top center;
+}
+
+[data-blok-popover][popover][data-blok-popover-open-top='true'][data-blok-popover-custom-class~='blok-database-comment-box'] > [data-blok-popover-container] {
+  transform-origin: bottom center;
+}
+
 /* Panels and pickers in a CellPopover (Filter, Sort…) move like the menus (notion-motion.md "Popovers").
    Editors that open at once opt out further down, after these rules. */
 [data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-menu'],

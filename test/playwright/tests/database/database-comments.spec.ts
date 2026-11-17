@@ -283,3 +283,82 @@ test('the row menu\'s Comment box is 470x44, 4px under the row, centred on the t
   expect(boxes.card.width).toBeCloseTo(470, 0);
   expect(boxes.card.height).toBeCloseTo(44, 0);
 });
+
+interface Box { left: number; top: number; width: number; height: number; bottom: number }
+
+/** The comment card after its open scale ends, the anchor's box and the card's transform-origin. */
+const commentBoxAgainst = async (page: Page, anchorSelector: string): Promise<{ card: Box; anchor: Box; origin: string }> => {
+  await expect(composer(page)).toBeFocused();
+
+  return composer(page).evaluate(async (input, selector) => {
+    const card = input.closest('[data-blok-popover-container]');
+
+    await Promise.all(card?.getAnimations().map((animation) => animation.finished) ?? []);
+    const anchor = document.querySelector(selector);
+
+    if (card === null || anchor === null) throw new Error('missing box');
+    const box = (el: Element): Box => {
+      const r = el.getBoundingClientRect();
+
+      return { left: r.left, top: r.top, width: r.width, height: r.height, bottom: r.bottom };
+    };
+
+    return { card: box(card), anchor: box(anchor), origin: getComputedStyle(card).transformOrigin };
+  }, anchorSelector);
+};
+
+const withView = (view: Record<string, unknown>, schema?: Array<Record<string, unknown>>): OutputBlockData[] => {
+  const [intro, database, row] = blocks();
+
+  return [
+    intro,
+    { ...database, data: { ...database.data, ...(schema !== undefined ? { schema } : {}), views: [{ id: 'v1', name: 'View', position: 'a0', sorts: [], filters: [], visibleProperties: [], ...view }] } },
+    row,
+  ];
+};
+
+test('a board card\'s Comment box sits 4px under the card, centred on it, and grows from its top centre', async ({ page }) => {
+  // notion-motion.md Round 61 §2: Notion 442,484.2 under a 547..807 × 440..480 card.
+  const schema = [
+    { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
+    { id: 'p-stage', name: 'Stage', type: 'select', position: 'a1', config: { options: [{ id: 'o-todo', label: 'Not started', color: 'gray', position: 'a0' }] } },
+  ];
+  const [intro, database, row] = withView({ type: 'board', groupBy: 'p-stage' }, schema);
+
+  await mount(page, [intro, database, { ...row, data: { ...row.data, properties: { 'p-title': 'Launch', 'p-stage': 'o-todo' } } }]);
+  await page.locator('[data-blok-database-card][data-row-id="r1"]').click({ button: 'right' });
+  await page.getByRole('menuitem', { name: /Comment/ }).click();
+
+  const { card, anchor, origin } = await commentBoxAgainst(page, '[data-blok-database-card][data-row-id="r1"]');
+
+  expect(card.top - anchor.bottom).toBeCloseTo(4, 0);
+  expect(card.left + card.width / 2).toBeCloseTo(anchor.left + anchor.width / 2, 0);
+  expect(origin).toBe(`${card.width / 2}px 0px`);
+});
+
+test('a list row\'s Comment box sits 4px under the row, centred on it', async ({ page }) => {
+  // notion-motion.md Round 61 §2: + 4.2 under the row. Its centre x is 887 on a row centred at 885 (anchor unread).
+  await mount(page, withView({ type: 'list' }));
+  await page.locator('[data-blok-database-list-row][data-row-id="r1"]').click({ button: 'right' });
+  await page.getByRole('menuitem', { name: /Comment/ }).click();
+
+  const { card, anchor, origin } = await commentBoxAgainst(page, '[data-blok-database-list-row][data-row-id="r1"]');
+
+  expect(card.top - anchor.bottom).toBeCloseTo(4, 0);
+  expect(card.left + card.width / 2).toBeCloseTo(anchor.left + anchor.width / 2, 0);
+  expect(origin).toBe(`${card.width / 2}px 0px`);
+});
+
+test('a table row\'s Comment box near the window bottom sits 4px above the row and grows from its bottom centre', async ({ page }) => {
+  // notion-motion.md Round 61 §2: flipped, bottom = row top − 4; it scales from its bottom centre.
+  const rowBottom = await page.locator('[data-blok-database-table-row][data-row-id="r1"]').evaluate((el) => el.getBoundingClientRect().bottom);
+
+  await page.setViewportSize({ width: 1400, height: Math.ceil(rowBottom) + 20 });
+  await titleCell(page).click({ button: 'right' });
+  await page.getByRole('menuitem', { name: /Comment/ }).click();
+
+  const { card, anchor, origin } = await commentBoxAgainst(page, '[data-blok-database-table-row][data-row-id="r1"]');
+
+  expect(anchor.top - card.bottom).toBeCloseTo(4, 0);
+  expect(origin).toBe(`${card.width / 2}px ${card.height}px`);
+});

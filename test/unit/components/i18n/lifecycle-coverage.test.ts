@@ -299,7 +299,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2248 + 146 + 598 + 11 closure for all 3003 keys', () => {
+  it('rebuilds a disjoint 2247 + 146 + 599 + 11 closure for all 3003 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -582,7 +582,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1 / -1: the row page cover calls tools.database.downloadCover by literal; its Change
       // button now reads title.changeCover, so tools.database.changeCover left (see below).
       // +1: Move to's Workspace section calls tools.database.moveToWorkspace by literal.
-      'executable-literal': 2248,
+      // -1: the database block menu now reads tools.database.turnIntoPage through its tools.database. prefix (see registered-namespace-compatible).
+      'executable-literal': 2247,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -700,7 +701,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +8: View settings "Manage data sources" (settingsManageSources, manageSources*, manageSourcesViews_one/_other), through the panel's t().
       // -1: tools.database.groupStatusGroup is now called by literal (see executable-literal).
       // +1: tools.database.changeCover lost its literal caller; it shipped in 2.1.0, so it stays.
-      'registered-namespace-compatible': 598,
+      // +1: tools.database.turnIntoPage, via the database block menu's prefix.
+      'registered-namespace-compatible': 599,
       // +1: Settings › Group's pin button names itself with groupPin through the panel's tools.database. prefix.
       // +1: tools.database.galleryFitImage, above. +1: tools.database.timelineEndBy, above.
       // +2: tools.database.rowLastEditedBy and rowWordCount, above.

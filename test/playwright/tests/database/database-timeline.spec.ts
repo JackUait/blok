@@ -11,6 +11,7 @@ import { generateKeyBetween } from '../../../../src/shared/database/fractional-i
 import type { Blok, OutputBlockData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { POINTER_MENU_WINDOW, expectPointerMenu, placeAt } from '../helpers/pointer-menu';
 
 /** Valid fractional keys. `a000`-style keys are ones the library rejects. */
 const rowKey = (i: number): string => Array.from({ length: i }).reduce<string>((key) => generateKeyBetween(key, null), 'a0');
@@ -687,4 +688,25 @@ test.describe('calendar "No date"', () => {
 
     await expect.poll(async () => (await savedRow(page, 'r3'))['p-due']).toBe('2026-10-20');
   });
+});
+
+// notion-motion.md Round 59 §4: bars and panel rows open their row menu at the pointer, with the flip.
+test.describe('right-click menu at the pointer', () => {
+  for (const [name, target] of [
+    ['a bar', (page: Page) => bar(page, 'r1')],
+    ['a panel row', (page: Page) => page.locator('[data-blok-database-timeline-table-row][data-row-id="r1"]')],
+  ] as const) {
+    test(`${name}'s menu opens under the pointer near the top and above it near the bottom`, async ({ page }) => {
+      await page.setViewportSize(POINTER_MENU_WINDOW);
+      await mount(page, blocks({ type: 'timeline', showTimelineTable: true }));
+      await placeAt(page, target(page), 192);
+      const near = await expectPointerMenu(page, target(page));
+
+      await placeAt(page, target(page), 592);
+      const far = await expectPointerMenu(page, target(page));
+
+      expect(near.top).toBeCloseTo(near.y + 1, 0);
+      expect(far.top + far.height).toBeCloseTo(far.y, 0);
+    });
+  }
 });

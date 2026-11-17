@@ -12,6 +12,7 @@ import { generateKeyBetween } from '../../../../src/shared/database/fractional-i
 import type { Blok, OutputBlockData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { POINTER_MENU_WINDOW, expectPointerMenu, placeAt } from '../helpers/pointer-menu';
 
 /** Valid fractional keys. `a000`-style keys are ones the library rejects. */
 const rowKey = (i: number): string => Array.from({ length: i }).reduce<string>((key) => generateKeyBetween(key, null), 'a0');
@@ -964,4 +965,25 @@ test.describe('calendar', () => {
     await expect(day(page, '2026-10-09').locator('[data-blok-database-calendar-event][data-row-id="r1"]')).toHaveCount(1);
     await expect(day(page, '2026-10-15').locator('[data-blok-database-calendar-event]')).toHaveCount(0);
   });
+});
+
+// notion-motion.md Round 59 §4: gallery cards and calendar events open their row menu at the pointer, with the flip.
+test.describe('right-click menu at the pointer', () => {
+  for (const [name, view, target] of [
+    ['a gallery card', { type: 'gallery' }, (page: Page) => card(page, 'r1')],
+    ['a calendar event', { type: 'calendar' }, (page: Page) => event(page, 'r1')],
+  ] as const) {
+    test(`${name}'s menu opens under the pointer near the top and above it near the bottom`, async ({ page }) => {
+      await page.setViewportSize(POINTER_MENU_WINDOW);
+      await mount(page, blocks(view));
+      await placeAt(page, target(page), 192);
+      const near = await expectPointerMenu(page, target(page));
+
+      await placeAt(page, target(page), 592);
+      const far = await expectPointerMenu(page, target(page));
+
+      expect(near.top).toBeCloseTo(near.y + 1, 0);
+      expect(far.top + far.height).toBeCloseTo(far.y, 0);
+    });
+  }
 });

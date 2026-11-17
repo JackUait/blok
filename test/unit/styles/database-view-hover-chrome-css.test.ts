@@ -228,6 +228,14 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(ruleBody('[data-blok-database-form-drop-zone]')).toContain('transition: opacity 0.14s cubic-bezier(0.2, 0, 0, 1)');
   });
 
+  // notion-motion.md Round 55 §3: each line fades in from 0 when the drag starts, not at 0.28 at once.
+  it('fades the drag gap lines in from 0 as they appear', () => {
+    const starting = [...database.matchAll(/@starting-style\s*\{\s*([^{}]+)\{([^{}]*)\}\s*\}/g)]
+      .filter((match) => match[1].trim() === '[data-blok-database-form-drop-zone]');
+
+    expect(starting.map((match) => match[2].trim())).toEqual(['opacity: 0;']);
+  });
+
   // notion-motion.md Round 53 (b): the moving copy keeps the hovered card's ring. Gray here, not Notion's blue.
   it('draws the dragged card\'s copy with the hover ring', () => {
     expect(ruleBody('[data-blok-database-ghost] > [data-blok-database-form-question]')).toContain('box-shadow: var(--blok-border-strong) 0 0 0 1.25px, var(--blok-border-strong) 0 0 0 1.25px inset');

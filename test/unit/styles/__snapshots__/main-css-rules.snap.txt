@@ -22057,6 +22057,10 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   transition: opacity 0.14s cubic-bezier(0.2, 0, 0, 1);
 }
 
+[@starting-style] [data-blok-database-form-drop-zone] {
+  opacity: 0;
+}
+
 [data-blok-database-form-drop-zone][data-adjacent] {
   opacity: 0;
 }

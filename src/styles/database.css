@@ -19722,6 +19722,13 @@ button[data-blok-database-feed-reaction]:hover,
   transition: opacity 0.14s cubic-bezier(0.2, 0, 0, 1);
 }
 
+/* notion-motion.md Round 55 §3: the lines fade in from 0 as the drag starts. */
+@starting-style {
+  [data-blok-database-form-drop-zone] {
+    opacity: 0;
+  }
+}
+
 [data-blok-database-form-drop-zone][data-adjacent] {
   opacity: 0;
 }

@@ -469,7 +469,8 @@ describe('row menu › Move to a page', () => {
  * under it, one level deeper; the row itself still picks the page.
  */
 describe('row menu › Move to › Workspace tree', () => {
-  const TREE: Record<string, Array<{ pageId: string; title: string; access?: 'none' }>> = {
+  type PageResult = { pageId: string; title: string; access?: 'none' };
+  const TREE: Record<string, PageResult[]> = {
     '': [{ pageId: 'w-home', title: 'Home' }, { pageId: 'w-notes', title: 'Notes' }],
     'w-home': [{ pageId: 'w-plans', title: 'Plans' }, { pageId: 'w-secret', title: 'Secret', access: 'none' }],
     'w-plans': [{ pageId: 'w-q1', title: 'Q1' }],
@@ -619,7 +620,7 @@ describe('row menu › Move to › Workspace tree', () => {
     const page = host({
       children: vi.fn((pageId: string | null) => (pageId === null
         ? Promise.resolve(TREE[''])
-        : new Promise((resolve) => { answers.push(() => resolve(TREE[pageId] ?? [])); }))),
+        : new Promise<readonly PageResult[]>((resolve) => { answers.push(() => resolve(TREE[pageId] ?? [])); }))),
     });
 
     await boot(page);
@@ -642,7 +643,7 @@ describe('row menu › Move to › Workspace tree', () => {
   it('drops an answer that arrives after the picker closed', async () => {
     const answers: Array<() => void> = [];
     const page = host({
-      children: vi.fn((pageId: string | null) => new Promise((resolve) => { answers.push(() => resolve(TREE[pageId ?? ''] ?? [])); })),
+      children: vi.fn((pageId: string | null) => new Promise<readonly PageResult[]>((resolve) => { answers.push(() => resolve(TREE[pageId ?? ''] ?? [])); })),
     });
 
     await boot(page);

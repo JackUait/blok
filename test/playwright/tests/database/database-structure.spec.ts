@@ -302,8 +302,9 @@ test.describe('dependencies', () => {
     if (from === null || to === null) throw new Error('no layout');
     await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
     await page.mouse.down();
-    // The bar's start: its far end can sit past the scroller's edge.
-    await page.mouse.move(to.x + 16, to.y + to.height / 2, { steps: 8 });
+    // The bar's start, past its 2px of start resize zone: the bar runs on past the scroller's
+    // edge, and its 16th pixel sits right on that edge.
+    await page.mouse.move(to.x + 8, to.y + to.height / 2, { steps: 8 });
     await page.mouse.up();
 
     await expect.poll(async () => (await savedRow(page, 'c')).properties).toMatchObject({ 'p-blocked': [{ id: 'b' }] });

@@ -3549,6 +3549,7 @@ export class DatabaseTool implements BlockTool {
    * Make these rows the pick, fading the change. A table and, Round 64 §1 and
    * Round 65 §2, a List or Gallery; a Board card comes back unpicked, and the
    * other views are unmeasured. An undone delete only adds its rows.
+   * Round 66 §3: a Calendar edit's pick too; its undone delete is unmeasured.
    */
   private landPick(rowIds: string[], restoring: boolean): void {
     if (this.view instanceof DatabaseTableView) {
@@ -3558,7 +3559,7 @@ export class DatabaseTool implements BlockTool {
     }
     const type = this.shownView()?.type;
 
-    if (type !== 'list' && type !== 'gallery') return;
+    if (type !== 'list' && type !== 'gallery' && (type !== 'calendar' || restoring)) return;
     const before = restoring ? [] : [...this.rowSelection];
 
     this.landedRowIds = rowIds.filter((id) => !before.includes(id));
@@ -10163,6 +10164,8 @@ export class DatabaseTool implements BlockTool {
       event.stopPropagation();
       // notion-motion.md Round 13: a board card's right-click drops every pick and opens that card's own menu.
       if (rowEl.matches('[data-blok-database-board] [data-blok-database-card]')) this.clearRowSelection();
+      // Round 66 §3: a calendar card's right-click selects it, and the pick stays through the menu's edits.
+      if (rowEl.matches('[data-blok-database-calendar-event]')) this.selectRows([rowId]);
       const placement = pointerMenuPlacement(rowEl, event);
       const anchor = placement?.anchor ?? rowEl;
 

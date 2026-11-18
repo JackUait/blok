@@ -229,6 +229,10 @@
   from { --blok-database-landed-tint: transparent }
 }
 
+@keyframes blok-database-leaving {
+  to { opacity: 0 }
+}
+
 @keyframes blok-database-leaving-tint {
   from { --blok-database-landed-tint: var(--blok-icon-active-bg) }
 }

@@ -316,6 +316,55 @@ describe('row selection after undo', () => {
     expect(document.querySelector(`${ITEM.list}[data-row-id="r2"]`)?.hasAttribute('data-blok-database-row-landed')).toBe(false);
   });
 
+  // notion-motion.md Round 66 §3: a calendar card selected when its edit was made fades back in on undo, and out on redo.
+  it('brings back the calendar event picked when the edit was made, fading it in', async () => {
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const blocks = doc();
+    const data = blocks[0].data as { schema: Array<Record<string, unknown>>; views: Array<Record<string, unknown>> };
+
+    data.schema.push({ id: 'd', name: 'Date', type: 'date', position: 'a2' });
+    data.views[0] = { ...data.views[0], type: 'calendar' };
+    blocks.slice(1).forEach((block) => {
+      const rowData = block.data as { properties: Record<string, unknown> };
+
+      rowData.properties.d = today;
+    });
+    editor = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: DatabaseTool, 'database-row': DatabaseRowTool },
+      data: { blocks },
+    } as never) as unknown as TestEditor;
+    const blok = editor;
+
+    await blok.isReady;
+    await quiet();
+    const event = (id: string): HTMLElement | null => document.querySelector<HTMLElement>(`[data-blok-database-calendar-event][data-row-id="${id}"]`);
+    const calendarPicked = (): string[] => [...document.querySelectorAll('[data-blok-database-calendar-event][data-blok-database-row-selected]')]
+      .map((el) => el.getAttribute('data-row-id') ?? '');
+
+    event('r1')?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: true }));
+    await quiet();
+    expect(calendarPicked()).toEqual(['r1']);
+    await editNote(blok, 'r1', 'edited');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await quiet();
+    expect(calendarPicked()).toEqual([]);
+
+    blok.history.undo();
+    await quiet();
+
+    expect(calendarPicked()).toEqual(['r1']);
+    expect(event('r1')?.hasAttribute('data-blok-database-row-landed')).toBe(true);
+
+    blok.history.redo();
+    await quiet();
+
+    expect(calendarPicked()).toEqual([]);
+    expect(event('r1')?.hasAttribute('data-blok-database-row-leaving')).toBe(true);
+  });
+
   it('selects nothing when undo brings a board card back', async () => {
     const blok = await make('board');
 

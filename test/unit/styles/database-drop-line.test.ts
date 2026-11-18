@@ -128,6 +128,20 @@ describe('database drop line css', () => {
     expect(database.lastIndexOf('@media (prefers-reduced-motion: reduce)', off)).toBeGreaterThan(database.indexOf(`${leaving} {`));
   });
 
+  // notion-motion.md Round 66 §3: a calendar card's halo fades out over ~200ms when redo unpicks it.
+  it('fades a leaving calendar event halo out over 200ms ease, and not under reduced motion', () => {
+    const leaving = '[data-blok-database-calendar-event][data-blok-database-row-leaving]::after';
+    const body = ruleBody(database, leaving);
+
+    expect(body).toContain('animation: blok-database-leaving 200ms ease forwards');
+    expect(ruleBody(database, '[data-blok-database-calendar-event][data-blok-database-row-selected]::after, [data-blok-database-calendar-event][data-blok-database-row-leaving]::after')).toContain('background-color: var(--blok-icon-active-bg)');
+    expect(database).toMatch(/@keyframes blok-database-leaving \{ to \{ opacity: 0; \} \}/);
+    const off = database.lastIndexOf(`${leaving} { animation: none; opacity: 0; }`);
+
+    expect(off).toBeGreaterThan(database.indexOf(`${leaving} {`));
+    expect(database.lastIndexOf('@media (prefers-reduced-motion: reduce)', off)).toBeGreaterThan(database.indexOf(`${leaving} {`));
+  });
+
   // notion-motion.md Round 40 §2: the cursor while a card is held reads `grabbing`.
   it('shows the grabbing cursor over the board while a card is dragged', () => {
     expect(database).toMatch(/\[data-blok-database-dragging\], \[data-blok-database-dragging\] \* \{ cursor: grabbing; \}/);

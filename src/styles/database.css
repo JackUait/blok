@@ -12110,9 +12110,25 @@ button[data-blok-database-table-group-count]:hover {
   }
 }
 
+/* Round 66 §3: redo unpicks a calendar card, its halo fading out. */
+[data-blok-database-calendar-event][data-blok-database-row-leaving]::after {
+  animation: blok-database-leaving 200ms ease forwards;
+}
+
+@keyframes blok-database-leaving {
+  to {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-blok-database-row-landed]::after {
     animation: none;
+  }
+
+  [data-blok-database-calendar-event][data-blok-database-row-leaving]::after {
+    animation: none;
+    opacity: 0;
   }
 
   [data-blok-component="database"][data-blok-selected="true"] > [data-blok-element-content]::after {
@@ -16003,7 +16019,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   background-image: none;
 }
 
-[data-blok-database-calendar-event][data-blok-database-row-selected]::after {
+[data-blok-database-calendar-event][data-blok-database-row-selected]::after,
+[data-blok-database-calendar-event][data-blok-database-row-leaving]::after {
   content: "";
   position: absolute;
   inset: 1px;

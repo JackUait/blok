@@ -133,6 +133,17 @@ describe('DatabaseTool — calendar event selection (research/22 §1)', () => {
     expect(open).not.toHaveBeenCalled();
   });
 
+  // notion-motion.md Round 66 §3: a right-click selects the card, and it stays selected through Edit property.
+  it('a right-click selects the event, and Edit property keeps it selected', () => {
+    const { el, tool } = buildTool(doc(), {}, calendarData());
+
+    eventOf(el, 'delta').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
+
+    expect(selected(el)).toEqual(['delta']);
+    (tool as unknown as { editRowProperty: (rowId: string, propertyId: string) => void }).editRowProperty('delta', 'due');
+    expect(selected(el)).toEqual(['delta']);
+  });
+
   it('Shift-click adds an event on the same day and replaces the selection on another day', () => {
     const { el } = buildTool(doc(), {}, calendarData());
 

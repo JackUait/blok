@@ -2695,7 +2695,7 @@ describe('view settings panel', () => {
 
       const rule = add(h, id);
 
-      expect(document.activeElement).toBe(document.body);
+      expect(document.body).toHaveFocus();
       expect(q('database-color-add')).not.toHaveFocus();
       expect(q(`database-color-rule-${rule.id}`)).not.toBeNull();
     });

@@ -192,15 +192,15 @@ describe('database table view styles', () => {
       expect(ruleBody(`${BOX}:hover`)).toContain('background-color: var(--blok-database-checkbox-hover-bg)');
     });
 
-    // notion-motion.md Round 69 §4: Notion's row checkbox is r3. The header box is unmeasured and keeps r4.
-    it('rounds the row checkbox 3px, the checkbox radius role', () => {
+    // notion-motion.md Round 69 §4: Notion's row checkbox is r3. Round 70 §2: the header box too.
+    it('rounds the row and header checkboxes 3px, the checkbox radius role', () => {
       const radii = (selector: string): Array<string | undefined> => Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g))
         .filter((match) => (match[1] ?? '').split(',').map((part) => part.trim()).includes(selector))
         .flatMap((match) => Array.from((match[2] ?? '').matchAll(/border-radius:\s*([^;]+);/g), (decl) => decl[1]));
 
       expect(radii(BOX)).toEqual(['var(--blok-radius-checkbox)']);
       expect(colors).toMatch(/--blok-radius-checkbox:\s*0\.1875rem;/);
-      expect(radii('[data-blok-database-table-select-all]')).toEqual(['var(--blok-radius-control-sm)']);
+      expect(radii('[data-blok-database-table-select-all]')).toEqual(['var(--blok-radius-checkbox)']);
     });
 
     it('keeps a checked box, and the header box while some rows are picked, fully shown', () => {

@@ -3721,6 +3721,21 @@ button[data-blok-database-board-lane-count]:hover {
   margin-block-end: 0;
 }
 
+/* Round 70 §2: its keyboard row is Notion's lighter tint. Literals: the selected-state law rejects an alias of an alias. Dark is unmeasured and keeps the default. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-lock-menu'] {
+  --blok-item-focus-bg: rgba(33, 27, 23, 0.051);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-blok-theme="light"]) [data-blok-popover][data-blok-popover-custom-class~='blok-database-lock-menu'] {
+    --blok-item-focus-bg: rgba(255, 255, 255, 0.055);
+  }
+}
+
+[data-blok-theme="dark"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-lock-menu'] {
+  --blok-item-focus-bg: rgba(255, 255, 255, 0.055);
+}
+
 /* notion-motion.md Round 44 §3 (r44-tp-change.raw): the Change type list's glyphs are rgb(56, 56, 54). */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-change-type'] [data-blok-popover-item-icon] {
   color: var(--blok-database-peek-glyph-strong);
@@ -11407,13 +11422,10 @@ a[data-blok-database-comment-mention-chip] {
   transition: background-color 200ms ease-out, opacity 200ms ease;
 }
 
-/* notion-motion.md Round 69 §4: Notion's row checkbox is r3. The header box is unmeasured. */
-[data-blok-database-table-row-checkbox] {
-  border-radius: var(--blok-radius-checkbox);
-}
-
+/* notion-motion.md Round 69 §4: Notion's row checkbox is r3. Round 70 §2: the header box too. */
+[data-blok-database-table-row-checkbox],
 [data-blok-database-table-select-all] {
-  border-radius: var(--blok-radius-control-sm);
+  border-radius: var(--blok-radius-checkbox);
 }
 
 /* notion-spec-2 §24.3: 0.7 on row hover, 1 under the pointer or once picked. Header hover is unmeasured and keeps 1. */

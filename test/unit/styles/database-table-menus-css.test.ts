@@ -857,4 +857,10 @@ describe('the Unlock menu (Round 69)', () => {
     expect(declared(`${LOCK} [data-blok-popover-item]`, 'padding-inline')).toEqual(['var(--blok-space-2)']);
     expect(declared(`${LOCK} [data-blok-popover-item]:last-child`, 'margin-block-end')).toEqual(['0']);
   });
+
+  // Round 70 §2 (r70-n-lockpop.raw): its first row is filled color(srgb .129 .106 .090 / .051). Dark is unmeasured.
+  it('fills the keyboard row with Notion\'s lighter tint, and keeps the dark default', () => {
+    expect(declared(LOCK, '--blok-item-focus-bg')).toEqual(['rgba(33, 27, 23, 0.051)']);
+    expect(declared(`[data-blok-theme="dark"] ${LOCK}`, '--blok-item-focus-bg')).toEqual(['rgba(255, 255, 255, 0.055)']);
+  });
 });

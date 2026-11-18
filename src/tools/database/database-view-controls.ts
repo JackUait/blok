@@ -544,6 +544,8 @@ export class DatabaseViewControls {
 
     this.lockMenu = menu;
     menu.focusItemByName('database-unlock-for-me');
+    // notion-motion.md Round 70 §2: Notion moves focus into the menu.
+    menu.getElement().querySelector<HTMLElement>('[role="menu"]')?.focus({ preventScroll: true });
   }
 
   /** Shows ⤢ only where it can open. Touches the toolbar alone: a filter bar redraw is a block change. */

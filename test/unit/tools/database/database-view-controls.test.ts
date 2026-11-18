@@ -1037,6 +1037,19 @@ describe('DatabaseViewControls', () => {
       expect(item('database-unlock-for-me')?.closest('[data-blok-popover]')?.getAttribute('data-blok-popover-custom-class')).toContain('blok-database-lock-menu');
     });
 
+    // notion-motion.md Round 70 §2: Notion moves focus into the menu (role=menu), the first row filled.
+    it('puts focus in the menu on open, and the arrows still move the fill', () => {
+      setup({ locked: true, levers: lockLevers({ forMe: false }) });
+      click('database-toolbar-locked');
+
+      const menu = item('database-unlock-for-me')?.closest('[role="menu"]');
+
+      expect(menu).toHaveFocus();
+      expect(item('database-unlock-for-me')?.getAttribute('data-blok-focused')).toBe('true');
+      document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      expect(item('database-unlock-for-everyone')?.getAttribute('data-blok-focused')).toBe('true');
+    });
+
     it('closes its menu on a second click', () => {
       setup({ locked: true, levers: lockLevers({ forMe: false }) });
       click('database-toolbar-locked');

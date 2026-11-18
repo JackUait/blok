@@ -180,6 +180,13 @@ export interface BlockTool extends BaseTool {
   pageHeaderActions?(): PageHeaderAction[];
 
   /**
+   * Asked when the block menu's Delete is chosen, after the menu closes.
+   * Answer `false` to keep the block. A throw or a rejection deletes it.
+   * Other deletes (keys on a selected block, the API, redo) do not ask.
+   */
+  confirmDelete?(): boolean | Promise<boolean>;
+
+  /**
    * True when this block and every block under it must act read-only while
    * the editor stays editable, for example a database whose host denies
    * editing. The block menu then shows its read-only items. A selection
@@ -452,8 +459,10 @@ export interface BlockToolConstructable extends BaseToolConstructable {
    * something the host keeps, like a page.
    * `lead` names the Tool's own items (by `name`) that come before Turn into
    * in a titled menu.
+   * `class` is added to the menu's popover, for the Tool's stylesheet.
+   * `minWidth` replaces the menu's 280px width floor.
    */
-  blockMenu?: { titled?: boolean; trash?: boolean; lead?: string[] };
+  blockMenu?: { titled?: boolean; trash?: boolean; lead?: string[]; class?: string; minWidth?: string };
 
   /**
    * Set to true when Enter on this container's empty LAST child must create the

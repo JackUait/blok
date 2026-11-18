@@ -354,7 +354,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         autoFocusFirstItem: false,
         // A floor, not a fixed width: a long translation plus its shortcut
         // would otherwise be pushed past the menu edge.
-        minWidth: '280px',
+        minWidth: block.tool?.blockMenu?.minWidth ?? '280px',
+        ...(block.tool?.blockMenu?.class === undefined ? {} : { class: block.tool.blockMenu.class }),
         /**
          * A cursor/holder-anchored menu (context menu, Shift+F10) opens AT the
          * anchor going down/right; the dots-button menu opens to the LEFT of
@@ -570,6 +571,36 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
           if (this.Blok.BlockManager.getBlockById(block.id) === undefined) {
             showTrashToast(this.Blok, stepBefore);
           }
+        });
+      },
+    };
+  }
+
+  /**
+   * For a block that asks before it goes: the menu closes, the block asks,
+   * and only a yes runs the delete, on this block.
+   * @param tune - the delete tune
+   * @param block - the block it deletes
+   */
+  private withDeleteConfirm(tune: MenuConfigItem, block: Block): MenuConfigItem {
+    if (!block.asksBeforeDelete || !('onActivate' in tune) || typeof tune.onActivate !== 'function') {
+      return tune;
+    }
+    const run = tune.onActivate;
+
+    return {
+      ...tune,
+      // Returns the delete's promise, like the tune, so the Trash toast can wait for it.
+      onActivate: (item: PopoverItemParams, event?: PointerEvent): Promise<void> => {
+        this.Blok.Toolbar.close();
+
+        return block.confirmDelete().then(async (confirmed) => {
+          if (!confirmed || this.Blok.BlockManager.getBlockById(block.id) === undefined) {
+            return;
+          }
+          // The delete tune removes the current block, and the dialog may have moved it.
+          this.Blok.BlockManager.currentBlock = block;
+          await run(item, event);
         });
       },
     };
@@ -874,7 +905,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
           ...actionTunes.filter((_tune, index) => index !== deleteIndex),
           duplicateItem,
           ...moveTo,
-          this.withTrashToast({ ...actionTunes[deleteIndex], title: this.Blok.I18n.t('blockSettings.moveToTrash') } as MenuConfigItem, currentBlock)
+          this.withTrashToast(this.withDeleteConfirm({ ...actionTunes[deleteIndex], title: this.Blok.I18n.t('blockSettings.moveToTrash') } as MenuConfigItem, currentBlock), currentBlock)
         );
       } else {
         items.push(
@@ -882,7 +913,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
           duplicateItem,
           ...moveTo,
           { type: PopoverItemType.Separator },
-          actionTunes[deleteIndex]
+          this.withDeleteConfirm(actionTunes[deleteIndex], currentBlock)
         );
       }
     } else {

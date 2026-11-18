@@ -584,6 +584,29 @@ export class Block extends EventsDispatcher<BlockEvents> {
     }
   }
 
+  /** True when the tool asks before its block menu Delete removes it. */
+  public get asksBeforeDelete(): boolean {
+    return isFunction((this.toolInstance as unknown as Record<string, unknown>).confirmDelete);
+  }
+
+  /** The tool's answer to its delete question; yes when it asks nothing or the question fails. */
+  public async confirmDelete(): Promise<boolean> {
+    const method = (this.toolInstance as unknown as Record<string, unknown>).confirmDelete;
+
+    if (!isFunction(method)) {
+      return true;
+    }
+    try {
+      const answer: unknown = await method.call(this.toolInstance);
+
+      return answer !== false;
+    } catch (e) {
+      log(`Error during 'confirmDelete' call: ${e instanceof Error ? e.message : String(e)}`, 'error');
+
+      return true;
+    }
+  }
+
   /** The tool's buttons for the page header row; [] when it has none or the call throws. */
   public pageHeaderActions(): PageHeaderAction[] {
     const method = (this.toolInstance as unknown as Record<string, unknown>).pageHeaderActions;

@@ -193,6 +193,34 @@ describe('Block', () => {
     });
   });
 
+  describe('confirmDelete', () => {
+    it('asks the tool and passes its answer on', async () => {
+      const { block, toolInstance } = createBlock();
+
+      (toolInstance as unknown as { confirmDelete: () => Promise<boolean> }).confirmDelete = vi.fn(async () => false);
+
+      expect(block.asksBeforeDelete).toBe(true);
+      await expect(block.confirmDelete()).resolves.toBe(false);
+    });
+
+    it('answers yes when the tool does not ask', async () => {
+      const { block } = createBlock();
+
+      expect(block.asksBeforeDelete).toBe(false);
+      await expect(block.confirmDelete()).resolves.toBe(true);
+    });
+
+    it('answers yes when the question fails, so the menu Delete still works', async () => {
+      const { block, toolInstance } = createBlock();
+
+      (toolInstance as unknown as { confirmDelete: () => Promise<boolean> }).confirmDelete = vi.fn(async () => {
+        throw new Error('no dialog');
+      });
+
+      await expect(block.confirmDelete()).resolves.toBe(true);
+    });
+  });
+
   describe('mergeWith', () => {
     it('throws when tool does not support merging', async () => {
       const { block } = createBlock();

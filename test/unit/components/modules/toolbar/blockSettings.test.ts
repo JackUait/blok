@@ -956,6 +956,33 @@ describe('BlockSettings', () => {
     getTunesItemsSpy.mockRestore();
   });
 
+  it('gives the popover the class and width floor the block tool declares for its menu', async () => {
+    blockSettings.make();
+
+    const block = Object.assign(createBlock(), {
+      tool: { blockMenu: { titled: false, trash: false, lead: [], class: 'blok-x-menu', minWidth: '265px' } },
+    });
+
+    blokMock.BlockManager.currentBlock = block;
+    (blockSettings as unknown as { selection: { save: () => void; restore: () => void; clearSaved: () => void } }).selection = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      clearSaved: vi.fn(),
+    };
+    const getTunesItemsSpy = vi.spyOn(blockSettings as unknown as {
+      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+    }, 'getTunesItems').mockResolvedValue([]);
+
+    await blockSettings.open(block);
+
+    const params = getLastPopover()?.params as { minWidth?: string; class?: string } | undefined;
+
+    expect(params?.minWidth).toBe('265px');
+    expect(params?.class).toBe('blok-x-menu');
+
+    getTunesItemsSpy.mockRestore();
+  });
+
   it('excludes tool tunes and shows only convert-to menu and common tunes', async () => {
     const block = createBlock();
 

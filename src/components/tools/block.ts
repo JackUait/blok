@@ -160,17 +160,22 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
 
   /**
    * How the block menu is laid out: `titled` heads it with the tool's name
-   * and puts Turn into first; `trash` reads Delete as "Move to Trash".
+   * and puts Turn into first; `trash` reads Delete as "Move to Trash";
+   * `class` and `minWidth` go to the menu's popover.
    */
-  public get blockMenu(): { titled: boolean; trash: boolean; lead: string[] } {
+  public get blockMenu(): { titled: boolean; trash: boolean; lead: string[]; class?: string; minWidth?: string } {
     const menu: unknown = (this.constructable as unknown as Record<string, unknown>)[InternalBlockToolSettings.BlockMenu];
     const field = (key: string): unknown => (typeof menu === 'object' && menu !== null ? (menu as Record<string, unknown>)[key] : undefined);
     const lead = field('lead');
+    const menuClass = field('class');
+    const minWidth = field('minWidth');
 
     return {
       titled: field('titled') === true,
       trash: field('trash') === true,
       lead: Array.isArray(lead) ? lead.filter((name): name is string => typeof name === 'string') : [],
+      ...(typeof menuClass === 'string' ? { class: menuClass } : {}),
+      ...(typeof minWidth === 'string' ? { minWidth } : {}),
     };
   }
 

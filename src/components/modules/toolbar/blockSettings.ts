@@ -237,6 +237,11 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     anchor?: HTMLElement | DOMRect,
     options?: ToolbarBlockSettingsOptions
   ): Promise<void> {
+    // Read first: an early return below must not leave it set for a later open.
+    const cursorOnFirstRow = this.cursorOnFirstRow;
+
+    this.cursorOnFirstRow = false;
+
     /**
      * readOnly: { hideControls: true } — no block settings popover at all
      * (covers keyboard shortcut paths; the settings toggler is already gone)
@@ -275,9 +280,6 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     }
 
     this.reopenMenu = () => void this.open(block, anchor, options);
-    const cursorOnFirstRow = this.cursorOnFirstRow;
-
-    this.cursorOnFirstRow = false;
 
     /**
      * Set isOpening flag BEFORE async operations to prevent toolbar from moving

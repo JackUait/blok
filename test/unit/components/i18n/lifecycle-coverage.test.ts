@@ -26,6 +26,9 @@ const CATALOG_ONLY_KEYS = new Set([
   // in the catalog rather than deleted from all locales — same rationale as
   // tools.bookmark.error above.
   'emoji.nothingFound',
+  // The heading block menu lost its "Heading" label with the level buttons.
+  // Kept for public BlokMessageKey compatibility: it shipped in 2.1.0.
+  'toolNames.heading',
   // The code language picker lost its Suggested section to family groups.
   // Kept for public BlokMessageKey compatibility: it shipped in 2.1.0.
   'tools.code.suggested',
@@ -299,7 +302,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2251 + 146 + 601 + 11 closure for all 3009 keys', () => {
+  it('rebuilds a disjoint 2250 + 146 + 601 + 12 closure for all 3009 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -585,7 +588,7 @@ describe('current English catalog lifecycle coverage', () => {
       // -1: the database block menu now reads tools.database.turnIntoPage through its tools.database. prefix (see registered-namespace-compatible).
       // +2: the database block's Delete prompt calls trashDatabaseConfirm and its description by literal.
       // +2: Duplicate's submenu calls blockSettings.duplicateWithContent and duplicateWithoutContent by literal.
-      'executable-literal': 2251,
+      'executable-literal': 2250,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -709,7 +712,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: Settings › Group's pin button names itself with groupPin through the panel's tools.database. prefix.
       // +1: tools.database.galleryFitImage, above. +1: tools.database.timelineEndBy, above.
       // +2: tools.database.rowLastEditedBy and rowWordCount, above.
-      'catalog-only': 11,
+      'catalog-only': 12,
     });
     expect(
       [...lifecycle.entries()]

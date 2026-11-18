@@ -28,7 +28,7 @@ const settingsItems = (header: Header): MenuConfigItem[] => {
 };
 
 const activateLevel = (header: Header, level: number): void => {
-  header.data = { ...header.data, level };
+  Reflect.set(header, 'data', { ...header.data, level });
 };
 
 describe('Header settings controls', () => {

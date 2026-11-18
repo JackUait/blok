@@ -1194,7 +1194,7 @@ test.describe('blok i18n', () => {
   });
 
   test.describe('header tool translations', () => {
-    test('should translate heading level names in header settings', async ({ page }) => {
+    test('should translate heading level names in Turn into', async ({ page }) => {
       const translations = {
         'tools.header.heading1': 'Заголовок 1',
         'tools.header.heading2': 'Заголовок 2',
@@ -1231,14 +1231,15 @@ test.describe('blok i18n', () => {
       // Open block settings
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();
 
-      // Heading 1-6 are flat radio tiles in the block menu itself.
-      const menu = page.getByTestId('block-tunes-popover');
+      await page.locator('[data-blok-testid="block-tunes-popover"] [data-blok-item-name="convert-to"]').click();
+      const menu = page.locator('[data-blok-nested="true"]');
 
-      const heading1Option = menu.getByRole('menuitemradio', { name: translations['tools.header.heading1'],
+      const heading1Option = menu.getByRole('menuitem', { name: translations['tools.header.heading1'],
         exact: true });
-      const heading2Option = menu.getByRole('menuitemradio', { name: translations['tools.header.heading2'],
+      // The block's own level is the checked row.
+      const heading2Option = menu.getByRole('menuitemcheckbox', { name: translations['tools.header.heading2'],
         exact: true });
-      const heading3Option = menu.getByRole('menuitemradio', { name: translations['tools.header.heading3'],
+      const heading3Option = menu.getByRole('menuitem', { name: translations['tools.header.heading3'],
         exact: true });
 
       await expect(heading1Option).toBeVisible();

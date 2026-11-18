@@ -435,7 +435,6 @@
     "ui/lazy-stylesheets.spec.ts": 12.953,
     "ui/loading-skeleton.spec.ts": 9.353,
     "ui/menu-polish.spec.ts": 38.8,
-    "ui/menu-theme-tokens.spec.ts": 24.3,
     "ui/modality-switch-restyle.spec.ts": 120,
     "ui/nested-menu-top-layer.spec.ts": 8.4,
     "ui/placeholder-hidden-behind-plus-menu.spec.ts": 3.1,

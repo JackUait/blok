@@ -29,16 +29,10 @@ for (const width of [1280, 390]) {
         await page.getByTestId('settings-toggler').click();
       });
 
-      test('selected heading stays neutral while actions retain full hit areas', async ({ page }) => {
+      test('actions retain full hit areas', async ({ page }) => {
         const menu = page.getByTestId('block-tunes-popover');
-        const selected = menu.getByRole('menuitemradio', { name: 'Heading 2', exact: true });
-        const colorAction = menu.getByRole('menuitem', { name: 'Color', exact: true });
 
         await expect(menu.locator('[data-blok-item-name="block-identity"]')).toHaveCount(0);
-        await expect(selected).toHaveAttribute('aria-checked', 'true');
-        const actionColor = await colorAction.evaluate(element => getComputedStyle(element).color);
-
-        await expect(selected).toHaveCSS('color', actionColor);
         await expect(menu.getByTestId('popover-container').first()).toHaveCSS('transform', 'none');
         const actions = menu.getByRole('menuitem');
         const sizes = await actions.evaluateAll(elements => elements.map(element => {
@@ -53,16 +47,15 @@ for (const width of [1280, 390]) {
           expect(size.height).toBeGreaterThanOrEqual(width < 650 ? 40 : 32);
           expect(size.height).toBeGreaterThanOrEqual(size.titleHeight + 12);
         }
-        await selected.click();
-        await expect(page.getByRole('heading', { name: 'A better way to work', level: 2 })).toHaveAttribute('id', 'keep-anchor');
       });
 
       test('keeps the conversion list plain: no dividers, no tabs, one left edge', async ({ page }) => {
         const settings = page.getByTestId('block-tunes-popover');
-        const color = settings.getByRole('menuitem', { name: 'Color', exact: true });
 
-        await expect.poll(() => color.evaluate(element => element.previousElementSibling?.getAttribute('role'))).toBe('separator');
-        await expect(settings.getByRole('separator')).toHaveCount(4);
+        await expect.poll(() => settings.getByTestId('popover-items').first().evaluate(items =>
+          items.firstElementChild?.getAttribute('data-blok-item-name')
+        )).toBe('block-color');
+        await expect(settings.getByRole('separator')).toHaveCount(3);
         await settings.getByRole('menuitem', { name: 'Turn into', exact: true }).click();
         const conversion = page.getByTestId('popover-container').filter({
           has: page.locator('[data-blok-convert-item]'),
@@ -86,16 +79,10 @@ for (const width of [1280, 390]) {
       });
 
       if (width === 390) {
-        test('keeps heading and conversion touch targets at least 44px high', async ({ page }) => {
+        test('keeps conversion touch targets at least 44px high', async ({ page }) => {
           const settings = page.getByTestId('block-tunes-popover');
 
           await expect(settings.getByTestId('popover-container').first()).toHaveCSS('transform', 'none');
-          const headings = await settings.getByRole('menuitemradio').evaluateAll(elements =>
-            elements.map(element => element.getBoundingClientRect().height)
-          );
-
-          expect(headings).toHaveLength(6);
-          expect(Math.min(...headings)).toBeGreaterThanOrEqual(44);
           await settings.getByRole('menuitem', { name: 'Turn into', exact: true }).click();
           const conversion = page.getByTestId('popover-container').filter({
             has: page.locator('[data-blok-convert-item]'),

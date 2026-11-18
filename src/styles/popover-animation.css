@@ -94,47 +94,6 @@
   outline-offset: -2px;
 }
 
-/* Search keeps full labels; the unfiltered menu groups heading levels into tiles. */
-[data-blok-popover-container]:not(:has(> [data-blok-testid='popover-search-field'] > input:not(:placeholder-shown))) {
-  > [data-blok-popover-items]:has(> [data-blok-header-level]) {
-    display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: var(--blok-space-1);
-
-    > * {
-      grid-column: span 6;
-    }
-
-    > [data-blok-header-level] {
-      grid-column: span 1;
-      min-width: 0;
-      height: 40px;
-      max-height: none;
-      margin: 0;
-      padding: 0;
-      justify-content: center;
-
-      > [data-blok-popover-item-title] {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
-        clip-path: inset(50%);
-        white-space: nowrap;
-      }
-
-      > [data-blok-popover-item-icon] {
-        margin: 0;
-      }
-
-      svg {
-        width: 20px;
-        height: 20px;
-      }
-    }
-  }
-}
-
 /* Scope the denser chrome to block settings, conversion and opted-in menus, not tool pickers. */
 :is([data-blok-testid='block-tunes-popover'] > [data-blok-popover-container], [data-blok-popover-dense] > [data-blok-popover-container], [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]:not([data-blok-promoted-item]))) {
   /* Every corner gap is 4px, like the default card, so rows stay at 6. */
@@ -158,12 +117,10 @@
       max-height: none;
       margin-block: 0;
 
-      &:not([data-blok-header-level]) {
-        padding-block: var(--blok-space-1);
+      padding-block: var(--blok-space-1);
 
-        > [data-blok-popover-item-icon] {
-          margin-inline-end: var(--blok-space-2);
-        }
+      > [data-blok-popover-item-icon] {
+        margin-inline-end: var(--blok-space-2);
       }
 
       > [data-blok-popover-item-secondary-title] {
@@ -174,11 +131,6 @@
 
     > [role='separator'] {
       padding-block: var(--blok-space-1);
-    }
-
-    > [data-blok-item-name='header-levels'] > div {
-      padding: var(--blok-space-0-5) var(--blok-space-2);
-      line-height: 16px;
     }
 
     > [data-blok-item-name='edit-metadata'] > div {
@@ -215,13 +167,6 @@
     font-size: 13px;
     font-weight: 400;
   }
-}
-
-/* Built utilities are unlayered; beat their active, hover, and focus selectors. */
-[data-blok-popover-items] > [data-blok-popover-item][data-blok-header-level][data-blok-popover-item-active] {
-  color: var(--blok-popover-item-label-text, var(--blok-text-primary));
-  background-color: var(--blok-item-hover-bg);
-  box-shadow: inset 0 0 0 1px var(--blok-popover-border);
 }
 
 /* Labelled choices may wrap in narrow menus or longer translations. */

@@ -205,14 +205,8 @@ test.describe('saver module', () => {
     await expect(settingsButton).toBeVisible();
     await settingsButton.click();
 
-    // Heading 1-6 are flat radio tiles in the block menu itself.
-    const headerLevelOption = page
-      .getByTestId('block-tunes-popover')
-      .getByRole('menuitemradio', { name: 'Heading 3',
-        exact: true });
-
-    await headerLevelOption.waitFor({ state: 'visible' });
-    await headerLevelOption.dispatchEvent('click');
+    await page.getByTestId('block-tunes-popover').getByRole('menuitem', { name: 'Turn into', exact: true }).click();
+    await page.locator('[data-blok-nested="true"]').getByRole('menuitem', { name: 'Heading 3', exact: true }).click();
 
     await page.waitForFunction(
       ({ blokSelector }) => {

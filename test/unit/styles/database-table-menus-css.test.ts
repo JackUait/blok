@@ -785,7 +785,7 @@ describe('toolbar chip divider', () => {
 // notion-motion.md Round 65 §1: the database block's ⋮⋮ menu has 28px rows, on a desktop only.
 describe('database block menu', () => {
   const ITEMS = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-block-menu'][data-blok-testid='block-tunes-popover'] > [data-blok-popover-container] > [data-blok-popover-items]:not([data-blok-hidden])";
-  const ROW = `${ITEMS} > [data-blok-popover-item]:not([data-blok-hidden]):not([data-blok-header-level])`;
+  const ROW = `${ITEMS} > [data-blok-popover-item]:not([data-blok-hidden])`;
   const desktop = database.match(/@media \(min-width: 651px\) \{((?:[^{}]*\{[^{}]*\})*?[^{}]*?\[data-blok-popover-custom-class~='blok-database-block-menu'\](?:[^{}]*\{[^{}]*\})*?)\s*\}/)?.[1] ?? '';
   const rule = (selector: string): string => {
     const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

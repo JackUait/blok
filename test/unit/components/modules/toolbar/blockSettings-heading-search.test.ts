@@ -115,50 +115,27 @@ describe('Heading search in real block settings', () => {
   });
 
   it.each([
-    { locale: 'en', isToggleable: false, title: 'Heading 3' },
-    { locale: 'en', isToggleable: true, title: 'Heading 3' },
-    { locale: 'ru', isToggleable: false, title: 'Заголовок 3' },
-    { locale: 'ru', isToggleable: true, title: 'Заголовок 3' },
-  ] as const)('prefers the native level action for English search and preserves heading data ($locale, toggle: $isToggleable)', async ({ locale, isToggleable, title }) => {
-    const { settings, block, header, holder, convert } = createSettings({
-      ...(isToggleable ? { isToggleable: true } : {}),
-      textColor: 'red', backgroundColor: 'blue',
-    }, locale);
-    const child = document.createElement('p');
+    { locale: 'en', title: 'Heading 3' },
+    { locale: 'ru', title: 'Заголовок 3' },
+  ] as const)('finds Turn into\'s heading level for an English search and converts through it ($locale)', async ({ locale, title }) => {
+    const { settings, block, convert } = createSettings({}, locale);
 
-    child.textContent = 'Nested content';
-    holder.querySelector('[data-blok-nested-blocks]')?.append(child);
     await settings.open(block);
     const menu = getMenu();
-    const heading = holder.querySelector('h2');
 
-    if (heading === null) {
-      throw new Error('Missing rendered heading');
-    }
-    heading.innerHTML = '<b>Edited after opening</b>';
     search(menu, 'Heading 3');
-    const level = menu.querySelector<HTMLElement>('[data-blok-item-name="header-level-3"]');
-
-    expect(level?.getAttribute('data-blok-hidden')).not.toBe('true');
-    expect(level?.textContent).toContain(title);
     const firstResult = menu.querySelector<HTMLElement>('[data-blok-popover-item]:not([data-blok-hidden])');
 
-    expect(firstResult).toBe(level);
+    expect(firstResult?.getAttribute('data-blok-item-name')).toBe('header-3');
+    expect(firstResult?.textContent).toContain(title);
+    expect(menu.querySelector('[data-blok-header-level]')).toBeNull();
     if (firstResult === null) {
       throw new Error('Missing heading search result');
     }
     firstResult.click();
 
-    expect(header.save(holder)).toEqual({
-      text: '<b>Edited after opening</b>', level: 3, anchor: 'original-anchor',
-      textColor: 'red', backgroundColor: 'blue',
-      ...(isToggleable ? { isToggleable: true } : {}),
-    });
-    expect(holder.querySelector('h3')?.id).toBe('original-anchor');
-    expect(convert).not.toHaveBeenCalled();
-    if (isToggleable) {
-      expect(holder.querySelector('[data-blok-nested-blocks]')?.firstChild).toBe(child);
-    }
+    await vi.waitFor(() => expect(convert).toHaveBeenCalledTimes(1));
+    expect(convert).toHaveBeenCalledWith(block, 'header', { level: 3 });
   });
 
   it.each([false, true])('keeps the current heading unchanged and closes the toolbar with toggle state %s', async (isToggleable) => {
@@ -201,7 +178,7 @@ describe('Heading search in real block settings', () => {
     }
   });
 
-  it('keeps explicit conversion available when a native level action retains toggle state', async () => {
+  it('offers the other heading levels under Turn into for a toggle heading', async () => {
     const { settings, block } = createSettings({ isToggleable: true });
 
     await settings.open(block);
@@ -216,7 +193,7 @@ describe('Heading search in real block settings', () => {
     expect(document.querySelector('[data-blok-item-name="header-3"]')?.textContent).toContain('Heading 3');
   });
 
-  it('gives the built-in menu a 280px width for six heading targets', async () => {
+  it('gives the built-in menu a 280px width', async () => {
     const { settings, block } = createSettings();
 
     await settings.open(block);

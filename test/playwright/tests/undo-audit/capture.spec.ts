@@ -149,7 +149,9 @@ test.describe('undo audit: capture', () => {
     await createBlok(page, [{ type: 'paragraph', data: { text: 'Before' } }, { type: 'header', data: { text: 'Heading', level: 2 } }]);
     await wait(page, CAPTURE_WINDOW);
     await openTunes(page, 'Heading');
-    await page.locator('[data-blok-testid="popover-item"][data-blok-item-name="header-level-3"]').first().click();
+    await tuneItem(page, 'convert-to').dispatchEvent('mouseover');
+    await page.locator(NESTED_POPOVER).getByRole('menuitem', { name: 'Heading 3', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Heading', exact: true, level: 3 })).toBeVisible();
     await settle(page);
     await pressUndo(page, 'Before');
 

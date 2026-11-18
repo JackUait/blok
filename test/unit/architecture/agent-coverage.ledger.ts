@@ -342,7 +342,6 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:file/file-open-new-tab': exempt('view-only', 'Opens the file in a new browser tab; the document does not change.'),
   'menu:file/file-download': exempt('view-only', VIEW_ONLY_DOWNLOAD),
   'menu:file/file-copy-url': exempt('clipboard', COPY_URL),
-  'menu:header/header-level-*': fld('header.level'),
   'menu:image/image-alignment-*': fld('image.alignment'),
   'menu:image/image-caption': fld('image.captionVisible'),
   'menu:image/image-replace': fld('image.url'),

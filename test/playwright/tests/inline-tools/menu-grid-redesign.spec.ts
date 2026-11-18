@@ -26,29 +26,13 @@ for (const width of [1280, 390]) {
       });
     });
 
-    test('heading levels form one direct row and preserve the anchor', async ({ page }) => {
+    test('Turn into another heading level preserves the anchor', async ({ page }) => {
       await page.getByRole('heading', { name: 'Keep this anchor' }).click();
       await page.getByTestId('settings-toggler').click();
-      const settings = page.getByTestId('block-tunes-popover');
-      const levels = settings.getByRole('menuitemradio');
-
-      await expect(levels).toHaveCount(6);
-      await expect(settings.getByTestId('popover-container').first()).toHaveCSS('transform', 'none');
-      const rects = await levels.evaluateAll(elements => elements.map(element => {
-        const rect = element.getBoundingClientRect();
-
-        return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
-      }));
-
-      for (const rect of rects) {
-        expect(rect.y).toBeCloseTo(rects[0].y, 0);
-        expect(rect.width).toBeGreaterThanOrEqual(40);
-        expect(rect.height).toBeGreaterThanOrEqual(40);
-        expect(rect.x).toBeGreaterThanOrEqual(0);
-        expect(rect.x + rect.width).toBeLessThanOrEqual(width);
-      }
-      await expect(levels.nth(1)).toHaveAttribute('aria-checked', 'true');
-      await settings.getByRole('menuitemradio', { name: 'Heading 4', exact: true }).click();
+      await page.getByTestId('block-tunes-popover').getByRole('menuitem', { name: 'Turn into', exact: true }).click();
+      // On a phone the list replaces the menu in place, so find it by its rows.
+      await page.getByTestId('popover-container').filter({ has: page.locator('[data-blok-convert-item]') }).last()
+        .getByRole('menuitem', { name: 'Heading 4', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Keep this anchor', level: 4 })).toHaveAttribute('id', 'keep-anchor');
     });
 

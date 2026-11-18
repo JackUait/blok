@@ -6139,6 +6139,10 @@ span[data-blok-slash-search] {
   transform: none;
 }
 
+[data-blok-database-drawer][data-expanding] > * {
+  visibility: hidden;
+}
+
 [data-blok-database-peek-resize] {
   position: absolute;
   inset-block: 0;

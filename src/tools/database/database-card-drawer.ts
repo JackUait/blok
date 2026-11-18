@@ -750,6 +750,7 @@ export class DatabaseCardDrawer {
   private show(row: DatabaseRow, mode: OpenPagesIn): void {
     if (this.drawer !== null && this.expanding === this.drawer) {
       this.expanding = null;
+      this.drawer.removeAttribute('data-expanding');
       this.drawer.setAttribute('data-open', '');
       if (this.mode === 'side') this.narrowPeekHost();
     }
@@ -2080,13 +2081,17 @@ export class DatabaseCardDrawer {
     }
     const drawer = this.drawer;
 
-    // Notion runs the peek's close slide while the page widens, then shows the full page.
-    if (drawer === null || this.mode !== 'side' || !drawer.hasAttribute('data-open') || prefersReducedMotion()) {
+    const fromSide = this.mode === 'side';
+
+    // Notion empties the peek, runs its close slide while the page widens, then shows the full page.
+    if (drawer === null || !fromSide || !drawer.hasAttribute('data-open') || prefersReducedMotion()) {
       this.switchMode('full');
+      if (fromSide) this.focusTitleEnd();
 
       return;
     }
     this.expanding = drawer;
+    drawer.setAttribute('data-expanding', '');
     drawer.removeAttribute('data-open');
     this.peekHost?.style.setProperty('--_blok-peek-inset', '0px');
     this.peekHost?.style.setProperty('--_blok-peek-gap', '0px');
@@ -2095,9 +2100,21 @@ export class DatabaseCardDrawer {
         return;
       }
       this.expanding = null;
+      // Before the focus: a hidden title cannot take it.
+      drawer.removeAttribute('data-expanding');
       this.switchMode('full');
       drawer.setAttribute('data-open', '');
+      this.focusTitleEnd();
     });
+  }
+
+  /** notion-motion.md Round 71 §5: the full page opens with the caret at the end of the title. */
+  private focusTitleEnd(): void {
+    const title = this.drawer?.querySelector<HTMLTextAreaElement>('[data-blok-database-drawer-title]');
+
+    if (title === null || title === undefined) return;
+    title.focus({ preventScroll: true });
+    title.setSelectionRange(title.value.length, title.value.length);
   }
 
   private switchMode(mode: OpenPagesIn): void {

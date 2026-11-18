@@ -282,6 +282,63 @@ describe('DatabaseCardDrawer shell', () => {
       drawer.destroy();
     });
 
+    const slideEnd = (panel: HTMLElement | null): void => {
+      panel?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
+    };
+
+    // notion-motion.md Round 71 §5: the peek's content is gone before the empty panel slides out.
+    it('empties the panel while it slides out, and shows the full page with its content', () => {
+      const { drawer, panel } = openSide();
+
+      q('[data-blok-database-peek-expand]')?.click();
+
+      expect(panel()?.hasAttribute('data-expanding')).toBe(true);
+
+      slideEnd(panel());
+
+      expect(panel()?.hasAttribute('data-expanding')).toBe(false);
+      drawer.destroy();
+    });
+
+    it('hides the panel\'s content with CSS while it slides out', () => {
+      const css = readFileSync(resolve(__dirname, '../../../../src/styles/database.css'), 'utf8');
+
+      expect(css).toMatch(/\[data-blok-database-drawer\]\[data-expanding\] > \*\s*\{\s*visibility: hidden;/);
+    });
+
+    // notion-motion.md Round 71 §5: Notion's full page has the caret at the end of the H1 (5 of 5).
+    it('puts the caret at the end of the title once the full page shows', () => {
+      const { drawer, panel } = openSide();
+      const title = q<HTMLTextAreaElement>('[data-blok-database-drawer-title]');
+      const expand = q('[data-blok-database-peek-expand]');
+
+      title?.setSelectionRange(1, 1);
+      expand?.focus();
+      expand?.click();
+      slideEnd(panel());
+
+      expect(title).toHaveFocus();
+      expect(title?.selectionStart).toBe('Card'.length);
+      expect(title?.selectionEnd).toBe('Card'.length);
+      drawer.destroy();
+    });
+
+    it('puts the caret at the end of the title under reduced motion too', () => {
+      vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce'), media: query }));
+      const { drawer } = openSide();
+      const title = q<HTMLTextAreaElement>('[data-blok-database-drawer-title]');
+      const expand = q('[data-blok-database-peek-expand]');
+
+      title?.setSelectionRange(1, 1);
+      expand?.focus();
+      expand?.click();
+
+      expect(title).toHaveFocus();
+      expect(title?.selectionStart).toBe('Card'.length);
+      drawer.destroy();
+      vi.unstubAllGlobals();
+    });
+
     it('waits for the panel\'s own slide, not a fade inside it', () => {
       const { drawer, panel } = openSide();
 
@@ -324,6 +381,7 @@ describe('DatabaseCardDrawer shell', () => {
 
       expect(panel()?.getAttribute('data-peek-mode')).toBe('side');
       expect(panel()?.hasAttribute('data-open')).toBe(true);
+      expect(panel()?.hasAttribute('data-expanding')).toBe(false);
       drawer.destroy();
     });
   });

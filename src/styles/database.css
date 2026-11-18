@@ -1826,6 +1826,11 @@
   transform: none;
 }
 
+/* notion-motion.md Round 71 §5: on the way to a full page the empty panel slides out. */
+[data-blok-database-drawer][data-expanding] > * {
+  visibility: hidden;
+}
+
 /* research/22 §10: a 12px col-resize handle on the inner edge. Hover changes nothing (r30 B24). */
 [data-blok-database-peek-resize] {
   position: absolute;

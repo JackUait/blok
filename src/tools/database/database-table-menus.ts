@@ -213,8 +213,9 @@ export interface OpenMenuOptions {
    * a card menu is the same row menu, opened over its "•••"; a handle menu is the card menu, opened beside its handle.
    * A calc menu is the footer value's: header rows, 200 wide, no gap under its button.
    * A selection menu is the card menu of picked cards, opened under its anchor with no gap.
+   * A lock menu is the Locked button's: header rows, Notion's tighter padding and 20px icons.
    */
-  kind?: 'header' | 'row' | 'card' | 'handle' | 'calc' | 'selection';
+  kind?: 'header' | 'row' | 'card' | 'handle' | 'calc' | 'selection' | 'lock';
   /** Where the menu opens instead of the anchor's box; `positionContext` moves it with the page. */
   at?: { position: DOMRect; positionContext: HTMLElement };
   /** The least gap to the window's edges, instead of the kind's own. */
@@ -238,6 +239,7 @@ const MENU_CLASS = {
   handle: DATABASE_HANDLE_MENU_CLASS,
   calc: `${DATABASE_HEADER_MENU_CLASS} ${DATABASE_CALC_MENU_CLASS}`,
   selection: DATABASE_CARD_MENU_CLASS,
+  lock: `${DATABASE_HEADER_MENU_CLASS} blok-database-lock-menu`,
 } as const;
 
 /** Notion's handle menu is 265 wide; the side is picked before the menu is measured. */

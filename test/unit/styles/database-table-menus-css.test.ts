@@ -842,3 +842,19 @@ describe('database block menu', () => {
     expect(rule(TRASH)).toContain('--blok-item-destructive-hover-bg: var(--blok-database-popover-hover)');
   });
 });
+
+// notion-motion.md Round 69 §1 (r69-n-lockpop.raw): the Unlock menu is 181.5x65. Rows pad 0 8, a 20px icon
+// at +8 and the text 8 after it at +36; the box pads 4, rows 1 apart, no gap under the last one.
+describe('the Unlock menu (Round 69)', () => {
+  const LOCK = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-lock-menu']";
+
+  it('has a 20px icon and 8 to the text, as the card menu', () => {
+    expect(declared(`${LOCK} [data-blok-popover-item-icon]`, 'width')).toEqual(['20px']);
+    expect(declared(`${LOCK} [data-blok-popover-item-icon]`, 'margin-inline-end')).toEqual(['var(--blok-space-2)']);
+  });
+
+  it('pads its rows 0 8, with no gap under the last row', () => {
+    expect(declared(`${LOCK} [data-blok-popover-item]`, 'padding-inline')).toEqual(['var(--blok-space-2)']);
+    expect(declared(`${LOCK} [data-blok-popover-item]:last-child`, 'margin-block-end')).toEqual(['0']);
+  });
+});

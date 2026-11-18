@@ -6,7 +6,7 @@ import type { DatabaseViewConfig, FilterRule, PropertyDefinition } from '../../.
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { hover, shownHint } from './hint-harness';
 import { PAGE_LIST_ROLLUP } from '../../../../src/shared/database/value-helpers';
-import { IconSigma } from '../../../../src/components/icons';
+import { IconLockOpen, IconPencilLine, IconSigma } from '../../../../src/components/icons';
 
 const schema: PropertyDefinition[] = [
   { id: 'title', name: 'Name', type: 'title', position: 'a0' },
@@ -1022,6 +1022,19 @@ describe('DatabaseViewControls', () => {
       expect(text(item('database-unlock-for-everyone'))).toBe('tools.database.unlockForEveryone');
       expect(item('database-unlock-for-me')?.getAttribute('data-blok-focused')).toBe('true');
       expect(lock?.hasAttribute('data-popover-open')).toBe(true);
+    });
+
+    // notion-motion.md Round 69 §1: Notion's "Unlock for me" has a pencil, "Unlock for everyone" the open lock.
+    it('draws a pencil on Unlock for me and the open lock on Unlock for everyone, in a menu of its own look', () => {
+      setup({ locked: true, levers: lockLevers({ forMe: false }) });
+      click('database-toolbar-locked');
+
+      const drawing = (svg: string | undefined): string | undefined => svg === undefined ? undefined : new DOMParser().parseFromString(svg, 'image/svg+xml').querySelector('svg')?.innerHTML.replace(/\s+/g, ' ');
+      const iconOf = (name: string): string | undefined => drawing(item(name)?.querySelector('svg')?.outerHTML);
+
+      expect(iconOf('database-unlock-for-me')).toBe(drawing(IconPencilLine));
+      expect(iconOf('database-unlock-for-everyone')).toBe(drawing(IconLockOpen));
+      expect(item('database-unlock-for-me')?.closest('[data-blok-popover]')?.getAttribute('data-blok-popover-custom-class')).toContain('blok-database-lock-menu');
     });
 
     it('closes its menu on a second click', () => {

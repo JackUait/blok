@@ -1869,6 +1869,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_R167_BYTES = 934;
     // Lane r172: Round 69 §4 the row checkbox's r3 and the gutter "+" at 20. Net database.css growth against origin/main.
     const DATABASE_R172_BYTES = 258;
+    // Lane r171: Round 69 §1 the Unlock menu (rows padded 0 8, 20px icons, no gap under the last row). Net database.css growth against origin/main.
+    const DATABASE_R171_BYTES = 512;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2493,6 +2495,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_R165_BYTES
       + DATABASE_R167_BYTES
       + DATABASE_R172_BYTES
+      + DATABASE_R171_BYTES
       + CODE_PREVIEW_TAB_BYTES
       + POPOVER_THUMB_GUTTER_BYTES
       + ANNOTATION_UNDERLINE_BYTES

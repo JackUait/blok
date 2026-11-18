@@ -1,6 +1,6 @@
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { nanoid } from 'nanoid';
-import { IconSearch, IconSliders, IconLock, IconLockOpen, IconPlus, IconChevronDown, IconFilter, IconSort, IconPreview, IconBolt, IconWand, IconArrowUp, IconCross, IconChevronDoubleRight, IconPageLayout, IconExpandDiagonal } from '../../components/icons';
+import { IconSearch, IconSliders, IconLock, IconLockOpen, IconPencilLine, IconPlus, IconChevronDown, IconFilter, IconSort, IconPreview, IconBolt, IconWand, IconArrowUp, IconCross, IconChevronDoubleRight, IconPageLayout, IconExpandDiagonal } from '../../components/icons';
 import { openDatabaseConfirm } from './database-confirm-dialog';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { propertyGlyph } from './database-property-types';
@@ -504,7 +504,7 @@ export class DatabaseViewControls {
     return [{
       name: 'database-unlock-for-me',
       title: this.t('unlockForMe'),
-      icon: IconLockOpen,
+      icon: IconPencilLine,
       closeOnActivate: true,
       onActivate: () => {
         lock.setUnlockedForMe(true);
@@ -538,7 +538,7 @@ export class DatabaseViewControls {
       return;
     }
     // notion-motion.md Round 68 §1: 181.5 wide under the button, no gap; the first row is filled on open.
-    const menu = openMenu(this.lockBadge, items, { kind: 'header', offset: 0, minWidth: '0px', onClose: () => {
+    const menu = openMenu(this.lockBadge, items, { kind: 'lock', offset: 0, minWidth: '0px', onClose: () => {
       this.lockMenu = null;
     } });
 

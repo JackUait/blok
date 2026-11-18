@@ -794,6 +794,14 @@ describe('cell editor CSS', () => {
     expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-peek-mode-menu'] > [data-blok-popover-container]", 'transform-origin')).toEqual(['top center']);
   });
 
+  // notion-motion.md Round 73 §2 (r66-n-headers.raw): New tab at y 125, Edit view default at 162, the menu ends 4 under it: 160 tall.
+  it('gives the peek mode menu an 8px separator and no gap under its last row', () => {
+    const MODE = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-peek-mode-menu']";
+
+    expect(declared(`${MODE} [data-blok-popover-item-separator]`, 'padding-block')).toEqual(['var(--blok-space-0-75) var(--blok-space-1)']);
+    expect(declared(`${MODE} [data-blok-popover-item]:last-child`, 'margin-block-end')).toEqual(['0']);
+  });
+
   // notion-motion.md Round 62 §1: the Move to picker scales 0.96 → 1 from its centre.
   it('scales the Move to picker from its centre', () => {
     expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-move-menu'] > [data-blok-popover-container]", 'transform-origin')).toEqual(['center']);

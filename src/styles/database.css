@@ -3931,11 +3931,14 @@ button[data-blok-database-board-lane-count]:hover {
   padding: var(--blok-space-2) var(--blok-space-2) var(--blok-space-1-5);
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-separator] {
+/* The peek mode menu: notion-motion.md Round 73 §2, 160 tall (rows at 38..125, Edit view default at 162). */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-separator],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-peek-mode-menu'] [data-blok-popover-item-separator] {
   padding-block: var(--blok-space-0-75) var(--blok-space-1);
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item]:last-child {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item]:last-child,
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-peek-mode-menu'] [data-blok-popover-item]:last-child {
   margin-block-end: 0;
 }
 

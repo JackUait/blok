@@ -16304,7 +16304,6 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   container-type: inline-size;
   display: flex;
   flex-direction: column;
-  padding-block-end: var(--blok-space-4);
   color: var(--blok-database-timeline-text);
 }
 
@@ -17244,6 +17243,12 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   margin-inline-start: auto;
 }
 
+/* notion-motion.md Round 71 §3: no chip while the name is typed, so the field starts at +6.
+   The field lives only while focused: blur commits it back to a title. */
+[data-blok-database-timeline-bar][data-clipped-start]:has(> [data-blok-database-timeline-title-input]) > [data-blok-database-timeline-bar-chip="start"] {
+  display: none;
+}
+
 [data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-title] {
   position: sticky;
   /* notion-motion.md Round 48 A5: the title 3px after the chip (558). */
@@ -17276,9 +17281,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
   color: var(--blok-database-timeline-muted-text);
 }
 
+/* notion-motion.md Round 71 §3: Notion's untitled bar reads "New page" in primary ink. */
 [data-blok-database-timeline-bar-title]:empty::before {
   content: attr(data-placeholder);
-  color: var(--blok-database-timeline-muted-text);
+  color: var(--blok-database-timeline-text);
 }
 
 /* notion-spec-2 §21.9: values after the bar are 12/18. */
@@ -20149,7 +20155,9 @@ button[data-blok-database-feed-reaction]:hover,
   translate: 0 -50%;
   border-radius: 50%;
   opacity: 0;
-  cursor: crosshair;
+  /* notion-motion.md Round 71 §3: fades in over 200ms ease-out, pointer cursor. */
+  cursor: pointer;
+  transition: opacity 0.2s ease-out;
 }
 
 [data-blok-database-timeline-bar]:hover [data-blok-database-timeline-link-handle],
@@ -20171,6 +20179,7 @@ button[data-blok-database-feed-reaction]:hover,
 /* A resize shows its readout there; a moving bar hides it (notion-motion.md Round 46 B). */
 [data-blok-database-timeline]:is([data-dragging="move"], [data-dragging="start"], [data-dragging="end"]) [data-blok-database-timeline-link-handle] {
   opacity: 0;
+  transition: none;
 }
 
 /*

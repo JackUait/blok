@@ -249,9 +249,18 @@ describe('database timeline styles', () => {
     expect(ruleBody('[dir="rtl"] [data-blok-database-timeline-link-handle] svg')).toContain('transform: scaleX(-1)');
   });
 
-  // notion-motion.md Timeline (tlhover.png): the connector shows at once, and the hover pill is 128px over a 120px, 3-day span.
-  it('shows the connector at once on bar hover', () => {
-    expect(ruleBody('[data-blok-database-timeline-link-handle]')).not.toContain('transition');
+  // notion-motion.md Round 71 §3 "Dependency dot": a frame log shows it fading in over 200ms ease-out, with a pointer cursor.
+  // A drag still hides it at once.
+  it('fades the connector in over 200ms on bar hover, with a pointer cursor', () => {
+    const handle = ruleBody('[data-blok-database-timeline-link-handle]');
+
+    expect(handle).toContain('transition: opacity 0.2s ease-out');
+    expect(handle).toContain('cursor: pointer');
+    expect(handle).not.toContain('crosshair');
+    const dragging = css.indexOf('[data-blok-database-timeline]:is([data-dragging="move"], [data-dragging="start"], [data-dragging="end"]) [data-blok-database-timeline-link-handle] {');
+
+    expect(dragging).toBeGreaterThan(-1);
+    expect(css.slice(dragging, css.indexOf('}', dragging))).toContain('transition: none');
   });
 
   it('runs the hover pill 4px past each end of the bar\'s days', () => {
@@ -759,5 +768,20 @@ describe('timeline Week and Bi-week weekday letters (Round 48 A4)', () => {
     expect(canvas).toContain('padding-block-end: var(--blok-space-1)');
     expect(canvas).toContain('min-block-size: 100%');
     expect(canvas).not.toContain('120px');
+  });
+
+  // notion-motion.md Round 71 §3 "Draft card while typing": no "←" chip while the name field is focused, so the text sits at +6.
+  it('hides the start chip while a bar\'s name field is focused', () => {
+    expect(ruleBody('[data-blok-database-timeline-bar][data-clipped-start]:has(> [data-blok-database-timeline-title-input]) > [data-blok-database-timeline-bar-chip="start"]')).toContain('display: none');
+  });
+
+  // notion-motion.md Round 71 §1 "Bottom with one lane": the block ends 4 under "+ New"; the view's 16px bottom padding put the next block 22 under.
+  it('adds no bottom padding under the view', () => {
+    expect(ruleBody('[data-blok-database-timeline]')).not.toMatch(/padding-block-end|padding-bottom|padding:/);
+  });
+
+  // notion-motion.md Round 71 §3 "Escape on an empty draft": the untitled bar reads "New page" in primary ink.
+  it('draws an untitled bar\'s "New page" in primary ink', () => {
+    expect(ruleBody('[data-blok-database-timeline-bar-title]:empty::before')).toContain('color: var(--blok-database-timeline-text)');
   });
 });

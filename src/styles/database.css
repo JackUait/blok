@@ -1798,8 +1798,8 @@
 
 /**
  * Side peek: 756px at the inline end (research/22 §10), sliding in with translateX
- * over 200ms ease (research/08). It starts a window width away, as Notion's does. database-card-drawer.ts sets the width and data-open
- * a frame after mount, and waits for this transition before removing it.
+ * over 200ms ease (research/08). It starts its own width away, as Notion's does (notion-motion.md Round 71 §2).
+ * database-card-drawer.ts sets the width and data-open a frame after mount, and waits for this transition before removing it.
  */
 [data-blok-database-drawer] {
   position: fixed;
@@ -1814,12 +1814,12 @@
   /* The shadow carries the 1px ring (research/08:329, research/21 §1m), so no border. */
   background-color: var(--blok-database-peek-bg);
   box-shadow: var(--blok-database-peek-shadow);
-  transform: translateX(100vw);
+  transform: translateX(100%);
   transition: transform 200ms ease;
 }
 
 [dir="rtl"] [data-blok-database-drawer] {
-  transform: translateX(-100vw);
+  transform: translateX(-100%);
 }
 
 [data-blok-database-drawer][data-open] {

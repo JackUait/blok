@@ -186,20 +186,20 @@ describe('view tab drag', () => {
 });
 
 describe('side peek', () => {
-  it('takes the width the drawer sets, 756px by default, and slides in from a window width away over 200ms ease', () => {
+  it('takes the width the drawer sets, 756px by default, and slides in from its own width away over 200ms ease', () => {
     const drawer = body(outsideReducedMotion, '[data-blok-database-drawer]');
 
     // Round 14: 600 wide in a 900px window, two thirds of it.
     expect(drawer).toContain('width: min(var(--_blok-peek-width, 756px), calc(100vw * 2 / 3))');
-    // Notion starts at translateX(1512px) in a 1512px window (notion-motion.md "Side peek").
-    expect(drawer).toContain('transform: translateX(100vw)');
+    // notion-motion.md Round 71 §2: Notion rests at translateX(756px), the peek's own width, 3 of 3 fresh reloads.
+    expect(drawer).toContain('transform: translateX(100%)');
     expect(drawer).toContain('transition: transform 200ms ease');
     expect(drawer).not.toMatch(/transition: width/);
     expect(body(outsideReducedMotion, '[data-blok-database-drawer][data-open]')).toContain('transform: none');
   });
 
   it('slides in from the left in RTL', () => {
-    expect(body(outsideReducedMotion, '[dir="rtl"] [data-blok-database-drawer]')).toContain('transform: translateX(-100vw)');
+    expect(body(outsideReducedMotion, '[dir="rtl"] [data-blok-database-drawer]')).toContain('transform: translateX(-100%)');
   });
 
   it('narrows the page beside it over the same 200ms', () => {

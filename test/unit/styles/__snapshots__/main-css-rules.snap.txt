@@ -6127,12 +6127,12 @@ span[data-blok-slash-search] {
   flex-direction: column;
   background-color: var(--blok-database-peek-bg);
   box-shadow: var(--blok-database-peek-shadow);
-  transform: translateX(100vw);
+  transform: translateX(100%);
   transition: transform 200ms ease;
 }
 
 [dir="rtl"] [data-blok-database-drawer] {
-  transform: translateX(-100vw);
+  transform: translateX(-100%);
 }
 
 [data-blok-database-drawer][data-open] {

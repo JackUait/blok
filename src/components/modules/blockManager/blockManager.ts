@@ -2294,7 +2294,7 @@ export class BlockManager extends Module {
     const roots = selectionRoots(this.Blok.BlockSelection.selectedBlocks);
     const content = roots.length === 1 ? roots[0].contentBlockIds() : [];
 
-    if (this.Blok.DragManager?.isDragging === true || content.length === 0) {
+    if (this.Blok.DragManager?.isDragging || content.length === 0) {
       return false;
     }
     void this.Blok.DragManager?.duplicateBlocksInPlace(roots[0], { leaveOut: content });

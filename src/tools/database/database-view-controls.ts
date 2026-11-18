@@ -268,6 +268,8 @@ export class DatabaseViewControls {
     this.toolbar.setAttribute('aria-label', this.t('toolbarLabel'));
     // The fold probes write here on every resize (database-view-bar-fold.ts); they are not edits.
     this.toolbar.setAttribute(DATA_ATTR.mutationFree, 'true');
+    // A focused button's Enter is its click; Blok's Enter would insert a block instead.
+    this.toolbar.setAttribute(DATA_ATTR.keyboardOwner, '');
 
     this.lockBadge = document.createElement('button');
     this.lockBadge.type = 'button';
@@ -378,6 +380,7 @@ export class DatabaseViewControls {
 
     this.filterBar = document.createElement('div');
     this.filterBar.setAttribute('data-blok-database-filter-bar', '');
+    this.filterBar.setAttribute(DATA_ATTR.keyboardOwner, '');
     this.refresh();
   }
 

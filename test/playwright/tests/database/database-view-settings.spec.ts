@@ -471,6 +471,21 @@ test.describe('database view settings', () => {
     expect(locked).toBe(true);
   });
 
+  test('Enter on the focused Locked button opens its menu and inserts no block', async ({ page }) => {
+    await mount(page, blocks());
+    await byTestId(page, 'database-toolbar-settings').click();
+    await byTestId(page, 'database-settings-lock').click();
+    await page.keyboard.press('Escape');
+    const count = (): Promise<number | undefined> => page.evaluate(() => window.blokInstance?.blocks.getBlocksCount());
+    const before = await count();
+
+    await byTestId(page, 'database-toolbar-locked').focus();
+    await page.keyboard.press('Enter');
+
+    await expect(page.locator('[data-blok-popover-opened] [data-blok-item-name^="database-unlock"]').first()).toBeVisible();
+    expect(await count()).toBe(before);
+  });
+
   test('A1a Active switch reads differently on and off without painting its row', async ({ page }) => {
     await page.evaluate(() => document.documentElement.setAttribute('data-blok-theme', 'light'));
     const data = blocks().map((block) => block.id === 'db-1' ? {

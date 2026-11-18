@@ -464,7 +464,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
        */
       // Same task as show(): no frame paints without a menu.
       this.dropRetainedPopover();
-      this.showPopover(this.popover, inPlace);
+      this.presentMenu(this.popover, inPlace);
       if (cursorOnFirstRow) {
         // Queued after show()'s own microtask, which focuses the search.
         const popover = this.popover;
@@ -487,7 +487,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
    * @param popover - the menu to show
    * @param inPlace - true when it replaces a menu that was already up
    */
-  private showPopover(popover: PopoverDesktop | PopoverMobile, inPlace: boolean): void {
+  private presentMenu(popover: PopoverDesktop | PopoverMobile, inPlace: boolean): void {
     const container = inPlace ? popover.getElement().querySelector<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`) : null;
 
     container?.style.setProperty('transition', 'none');

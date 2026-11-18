@@ -2005,7 +2005,10 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     if (rowId === null || rowId === undefined || this.handlers === undefined) return;
     event.preventDefault();
     event.stopPropagation();
-    this.openRowMenu(null, rowId, { clientX: event.clientX, clientY: event.clientY });
+    const cell = target.closest<HTMLElement>('[role="gridcell"][data-property-id]');
+    const propertyId = cell?.getAttribute('data-property-id');
+
+    this.openRowMenu(null, rowId, { clientX: event.clientX, clientY: event.clientY }, propertyId === null || propertyId === undefined ? undefined : { rowId, propertyId });
   };
 
   private readonly handleClick = (event: MouseEvent): void => {
@@ -2293,8 +2296,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     this.grid?.paint();
   }
 
-  /** From the ⋮⋮ `handle`, or at the `pointer` of a right-click. */
-  private openRowMenu(handle: HTMLElement | null, rowId: string, pointer?: Pick<MouseEvent, 'clientX' | 'clientY'>): void {
+  /** From the ⋮⋮ `handle`, or at the `pointer` of a right-click on `clicked`. */
+  private openRowMenu(handle: HTMLElement | null, rowId: string, pointer?: Pick<MouseEvent, 'clientX' | 'clientY'>, clicked?: CellRef): void {
     const handlers = this.handlers;
 
     if (handlers === undefined) {
@@ -2322,6 +2325,14 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         const ref = { rowId, propertyId };
         const type = this.columns.find((c) => c.property.id === propertyId)?.property.type;
 
+        // notion-motion.md Round 70 §2: a right-click's Checkbox flips with the row still selected and the clicked cell focused.
+        if (type === 'checkbox' && clicked !== undefined) {
+          this.grid?.openEditor(ref);
+          this.grid?.selectRows([rowId]);
+          this.grid?.focusCell(clicked);
+
+          return;
+        }
         this.selectCell(ref);
         // notion-motion.md Round 68 §4: from a right-click, a measured type opens at the click point, not over the cell.
         this.grid?.openEditor(ref, undefined, rowEl !== null && pointer !== undefined && editsAtPoint('table', type) ? editPointAnchor(rowEl, pointer) : undefined);
@@ -2362,6 +2373,13 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       ...(placement === undefined ? { kind: 'row' } : { kind: 'card', coverFlipOffset: placement.coverFlipOffset }),
     });
     if (placement !== undefined) this.menu?.on(PopoverEvent.Closed, () => placement.anchor.remove());
+    // Round 70 §2: Notion focuses the right-clicked cell once the menu closes, Escape too. A row that opened
+    // a peek, an editor or a picker keeps that focus. After the close, when its focus has settled.
+    if (clicked !== undefined) {
+      this.menu?.on(PopoverEvent.Closed, () => setTimeout(() => {
+        if (document.activeElement === null || document.activeElement === document.body) this.grid?.focusCell(clicked);
+      }, 0));
+    }
   }
 
   // ─── Columns ───

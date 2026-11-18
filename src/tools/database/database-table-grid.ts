@@ -44,6 +44,8 @@ export interface TableState {
   freshRowId?: string;
   /** The grid had focus, so the redraw gives it back. */
   focused: boolean;
+  /** The cell that had focus itself, not the grid: the redraw focuses it again. */
+  focusedCell?: CellRef;
   /** Row a drag just dropped. The redraw it asks for reads and clears it. */
   droppedRowId?: string;
 }
@@ -239,8 +241,17 @@ export class DatabaseTableGrid {
       return;
     }
     if (this.state.focused && this.state.selection !== null) {
-      this.root.focus({ preventScroll: true });
+      const cell = this.state.focusedCell === undefined ? null : this.cellEl(this.state.focusedCell);
+
+      (cell ?? this.root).focus({ preventScroll: true });
     }
+  }
+
+  /** Focuses a cell and keeps the selection; a redraw that already replaced this grid focuses it in the new one. */
+  focusCell(ref: CellRef): void {
+    this.state.focused = true;
+    this.state.focusedCell = ref;
+    this.cellEl(ref)?.focus({ preventScroll: true });
   }
 
   get isEditing(): boolean {
@@ -447,7 +458,13 @@ export class DatabaseTableGrid {
   };
 
   private readonly handleFocus = (): void => {
-    this.state.focused = this.root.contains(document.activeElement);
+    const active = document.activeElement;
+    const cell = active instanceof HTMLElement && active.getAttribute('role') === 'gridcell' ? active : null;
+    const rowId = cell?.closest('[data-blok-database-table-row]')?.getAttribute('data-row-id');
+    const propertyId = cell?.getAttribute('data-property-id');
+
+    this.state.focused = this.root.contains(active);
+    this.state.focusedCell = rowId === null || rowId === undefined || propertyId === null || propertyId === undefined ? undefined : { rowId, propertyId };
     if (!this.state.focused) this.escapeHold = null;
   };
 

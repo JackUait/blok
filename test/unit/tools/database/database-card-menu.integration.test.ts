@@ -560,6 +560,49 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     });
   });
 
+  // notion-motion.md Round 70 §2: after a right-click on a cell, Notion keeps the row selected and focuses that cell.
+  describe('table: focus after a right-click row menu', () => {
+    const FOCUS_SCHEMA = [...BOARD_SCHEMA, { id: 'done', name: 'Done', type: 'checkbox' as const, position: 'a4' }];
+    const focusRow = (): Doc => makeDoc([fakeRow('a', 'db', { title: 'Alpha beta', status: 'o1', notes: 'Short note', done: true }, 'a0')]);
+    const notesCell = (el: HTMLElement): HTMLElement | null => el.querySelector<HTMLElement>('[data-row-id="a"] [role="gridcell"][data-property-id="notes"]');
+    const rowSelected = (el: HTMLElement): string | null | undefined => el.querySelector('[data-blok-database-table-row][data-row-id="a"]')?.getAttribute('aria-selected');
+    const rightClickNotes = (el: HTMLElement): void => {
+      const cell = notesCell(el);
+
+      if (cell === null) throw new Error('no Notes cell');
+      cell.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 700, clientY: 424 }));
+    };
+
+    it('Edit property › Checkbox flips the value, keeps the row selected and focuses the right-clicked cell', async () => {
+      const doc = focusRow();
+      const { el } = buildTool(doc, {}, tableData(FOCUS_SCHEMA, { type: 'table' }));
+
+      rightClickNotes(el);
+      itemByTitle('tools.database.tableEditProperty').click();
+      menuItem('database-row-edit-property-done')?.click();
+      // The flip redraws the table; the new one takes the selection and focus a task later.
+      await new Promise<void>((resolve) => { setTimeout(resolve, 0); });
+
+      expect(rowSelected(el)).toBe('true');
+      expect(notesCell(el)).toHaveFocus();
+      expect(doc.rows.get('a')?.data.properties.done).toBe(false);
+      expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    });
+
+    it('Escape on the row menu keeps the row selected and focuses the right-clicked cell', async () => {
+      const { el } = buildTool(focusRow(), {}, tableData(FOCUS_SCHEMA, { type: 'table' }));
+
+      rightClickNotes(el);
+      expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+      (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      await new Promise<void>((resolve) => { setTimeout(resolve, 0); });
+
+      expect(notesCell(el)).toHaveFocus();
+      expect(rowSelected(el)).toBe('true');
+      expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    });
+  });
+
   // notion-motion.md Round 42 §2: a card that shows only Name still has Edit property ›, and it lists every
   // property, not the shown ones. Created time and ID were not in Notion's list.
   it('Edit property › lists every property on a card that shows only Name', () => {

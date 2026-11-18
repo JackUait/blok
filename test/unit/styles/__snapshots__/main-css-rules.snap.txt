@@ -6240,7 +6240,7 @@ span[data-blok-slash-search] {
   cursor: pointer;
 }
 
-[data-peek-mode="side"] [data-blok-database-drawer-close], [data-peek-mode="side"] [data-blok-database-peek-mode], [data-peek-mode="side"] [data-blok-database-peek-prev], [data-peek-mode="side"] [data-blok-database-peek-next], [data-peek-mode="side"] [data-blok-database-peek-actions] {
+[data-peek-mode="side"] [data-blok-database-drawer-close], [data-peek-mode="side"] [data-blok-database-peek-expand], [data-peek-mode="side"] [data-blok-database-peek-mode], [data-peek-mode="side"] [data-blok-database-peek-prev], [data-peek-mode="side"] [data-blok-database-peek-next], [data-peek-mode="side"] [data-blok-database-peek-copy-link], [data-peek-mode="side"] [data-blok-database-peek-actions], [data-peek-mode="center"] [data-blok-database-peek-expand], [data-peek-mode="center"] [data-blok-database-peek-mode], [data-peek-mode="center"] [data-blok-database-peek-prev], [data-peek-mode="center"] [data-blok-database-peek-next], [data-peek-mode="center"] [data-blok-database-peek-copy-link], [data-peek-mode="center"] [data-blok-database-peek-actions] {
   border-radius: var(--blok-radius-control);
 }
 

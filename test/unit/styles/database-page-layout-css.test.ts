@@ -574,12 +574,14 @@ describe('database row page layout css', () => {
     expect(ruleBody('[data-blok-database-peek-actions] svg')).toContain('width: 22px');
   });
 
-  // notion-motion.md Round 65 §3: the side peek's Close, Switch peek mode, Previous, Next and ••• are radius 6.
-  it('rounds the side peek\'s measured header buttons to 6', () => {
-    const side = ['drawer-close', 'peek-mode', 'peek-prev', 'peek-next', 'peek-actions']
-      .map((name) => `[data-peek-mode="side"] [data-blok-database-${name}]`).join(', ');
+  // notion-motion.md Round 65 §3 and Round 66 §4: every header button of the side and center peeks is radius 6.
+  it('rounds the side and center peeks\' header buttons to 6', () => {
+    const side = ['drawer-close', 'peek-expand', 'peek-mode', 'peek-prev', 'peek-next', 'peek-copy-link', 'peek-actions']
+      .map((name) => `[data-peek-mode="side"] [data-blok-database-${name}]`);
+    const center = ['peek-expand', 'peek-mode', 'peek-prev', 'peek-next', 'peek-copy-link', 'peek-actions']
+      .map((name) => `[data-peek-mode="center"] [data-blok-database-${name}]`);
 
-    expect(ruleBody(side)).toContain('border-radius: var(--blok-radius-control)');
+    expect(ruleBody([...side, ...center].join(', '))).toContain('border-radius: var(--blok-radius-control)');
   });
 
   // notion-motion.md Round 44 §5: the center peek's ⤢ is 11 x 11 of ink; Keyline's at 22px is 11.3.

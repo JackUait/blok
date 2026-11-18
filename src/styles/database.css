@@ -1981,13 +1981,21 @@
   cursor: pointer;
 }
 
-/* notion-motion.md Round 65 §3: in the side peek, Close, Switch peek mode, Previous, Next and ••• are radius 6.
-   The other peeks and buttons are unmeasured. */
+/* notion-motion.md Round 65 §3 and Round 66 §4: every side and center peek header button is radius 6.
+   The full page's header is unmeasured. */
 [data-peek-mode="side"] [data-blok-database-drawer-close],
+[data-peek-mode="side"] [data-blok-database-peek-expand],
 [data-peek-mode="side"] [data-blok-database-peek-mode],
 [data-peek-mode="side"] [data-blok-database-peek-prev],
 [data-peek-mode="side"] [data-blok-database-peek-next],
-[data-peek-mode="side"] [data-blok-database-peek-actions] {
+[data-peek-mode="side"] [data-blok-database-peek-copy-link],
+[data-peek-mode="side"] [data-blok-database-peek-actions],
+[data-peek-mode="center"] [data-blok-database-peek-expand],
+[data-peek-mode="center"] [data-blok-database-peek-mode],
+[data-peek-mode="center"] [data-blok-database-peek-prev],
+[data-peek-mode="center"] [data-blok-database-peek-next],
+[data-peek-mode="center"] [data-blok-database-peek-copy-link],
+[data-peek-mode="center"] [data-blok-database-peek-actions] {
   border-radius: var(--blok-radius-control);
 }
 

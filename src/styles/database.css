@@ -16772,7 +16772,9 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 [data-blok-database-timeline-canvas] {
   position: relative;
   /* Fills a scroller stretched to the panel, so the stripes and today line reach the bottom. */
-  min-block-size: max(120px, 100%);
+  min-block-size: 100%;
+  /* notion-motion.md Round 70 §3: the view ends 4px under its last row. */
+  padding-block-end: var(--blok-space-1);
 }
 
 [data-blok-database-timeline-header] {
@@ -16980,6 +16982,13 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-timeline-row]:hover [data-blok-database-timeline-row-handle] {
   opacity: 1;
+}
+
+/* notion-motion.md Round 70 §3: no handle or dependency dot while a bar's name is typed.
+   Not opacity: hover sets it to 1, and the edge (z-index 2) would still catch clicks on the field's start. */
+[data-blok-database-timeline-row]:has([data-blok-database-timeline-title-input]) > [data-blok-database-timeline-row-edge],
+[data-blok-database-timeline-bar]:has([data-blok-database-timeline-title-input]) [data-blok-database-timeline-link-handle] {
+  visibility: hidden;
 }
 
 [data-blok-database-timeline-offscreen] {

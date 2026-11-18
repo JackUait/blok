@@ -19317,7 +19317,8 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-timeline-canvas] {
   position: relative;
-  min-block-size: max(120px, 100%);
+  min-block-size: 100%;
+  padding-block-end: var(--blok-space-1);
 }
 
 [data-blok-database-timeline-header] {
@@ -19513,6 +19514,10 @@ label[data-blok-database-color-rule-box]:has([data-blok-database-color-rule-pref
 
 [data-blok-database-timeline-row]:hover [data-blok-database-timeline-row-handle] {
   opacity: 1;
+}
+
+[data-blok-database-timeline-row]:has([data-blok-database-timeline-title-input]) > [data-blok-database-timeline-row-edge], [data-blok-database-timeline-bar]:has([data-blok-database-timeline-title-input]) [data-blok-database-timeline-link-handle] {
+  visibility: hidden;
 }
 
 [data-blok-database-timeline-offscreen] {

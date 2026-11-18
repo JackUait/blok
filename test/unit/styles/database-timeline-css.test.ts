@@ -744,4 +744,20 @@ describe('timeline Week and Bi-week weekday letters (Round 48 A4)', () => {
     // The table's 18px glyph, not the timeline's 16px svg rule.
     expect(ruleBody('[data-blok-database-timeline-table-title] > [data-blok-database-table-open] svg')).toMatch(/inline-size:\s*18px;\s*block-size:\s*18px/);
   });
+
+  // notion-motion.md Round 70 §3 "Timeline + New": no ⋮⋮ handle and no dependency dot while the name is typed.
+  // visibility, not opacity: the hover rules set opacity 1, and the see-through edge would still catch clicks on the field.
+  it('hides the row handle and the dependency dot while a bar\'s name is typed', () => {
+    expect(ruleBody('[data-blok-database-timeline-row]:has([data-blok-database-timeline-title-input]) > [data-blok-database-timeline-row-edge]')).toContain('visibility: hidden');
+    expect(ruleBody('[data-blok-database-timeline-bar]:has([data-blok-database-timeline-title-input]) [data-blok-database-timeline-link-handle]')).toContain('visibility: hidden');
+  });
+
+  // notion-motion.md Round 70 §3 "Timeline at rest": the view ends 4px under its last row.
+  it('ends the canvas 4px under its last row, with no fixed floor', () => {
+    const canvas = ruleBody('[data-blok-database-timeline-canvas]');
+
+    expect(canvas).toContain('padding-block-end: var(--blok-space-1)');
+    expect(canvas).toContain('min-block-size: 100%');
+    expect(canvas).not.toContain('120px');
+  });
 });

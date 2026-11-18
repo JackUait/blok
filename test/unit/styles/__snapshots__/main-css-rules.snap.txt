@@ -23003,13 +23003,18 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 [data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name]), textarea, select, [data-blok-database-form-provider-answer]) {
   box-sizing: border-box;
   min-block-size: 38px;
-  padding-block: calc(var(--blok-space-2-25) - var(--blok-border-width-hairline));
-  padding-inline: calc(var(--blok-space-2-5) - var(--blok-border-width-hairline));
+  padding-block: var(--blok-space-1);
+  padding-inline: var(--blok-space-2);
   border: 1px solid var(--blok-database-form-answer-border);
   border-radius: var(--blok-radius-control);
   background-color: transparent;
   color: var(--blok-database-ink);
   font: inherit;
+}
+
+[data-blok-database-form-question] input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name]) {
+  padding-block: calc(var(--blok-space-2-25) - var(--blok-border-width-hairline));
+  padding-inline: calc(var(--blok-space-2-5) - var(--blok-border-width-hairline));
 }
 
 [data-blok-database-form-file-error] {

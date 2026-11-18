@@ -317,12 +317,13 @@ describe('form builder question card (research/21 §1k)', () => {
   });
 
   // notion-motion.md Round 74 §5 (r74-n-form-card.raw): the text sits 9px 10px in from the box's edge; Blok's 1px border is part of that.
-  it('sets the answer text 9px 10px in from the box edge', () => {
-    const answer = ruleBody('[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name]), textarea, select, [data-blok-database-form-provider-answer])');
+  it('sets a text answer\'s text 9px 10px in from the box edge', () => {
+    const text = ruleBody('[data-blok-database-form-question] input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name])');
 
-    expect(answer).toContain('padding-block: calc(var(--blok-space-2-25) - var(--blok-border-width-hairline))');
-    expect(answer).toContain('padding-inline: calc(var(--blok-space-2-5) - var(--blok-border-width-hairline))');
-    expect(answer).toContain('border-radius: var(--blok-radius-control)');
+    expect(text).toContain('padding-block: calc(var(--blok-space-2-25) - var(--blok-border-width-hairline))');
+    expect(text).toContain('padding-inline: calc(var(--blok-space-2-5) - var(--blok-border-width-hairline))');
+    expect(ruleBody('[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"], [data-blok-database-form-question-name]), textarea, select, [data-blok-database-form-provider-answer])'))
+      .toContain('border-radius: var(--blok-radius-control)');
   });
 
   it('has no rule for the in-card Required checkbox, which is gone', () => {

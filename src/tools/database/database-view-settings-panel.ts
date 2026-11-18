@@ -3327,8 +3327,11 @@ export class ViewSettingsPages {
         lead.append(headerButton(`database-color-side-${rule.id}`, this.t(part === 'end' ? 'dateEnd' : 'dateStart'), 'database-filter-side-picker', (pick) => (['start', 'end'] as const).map((side) =>
           choice(`database-filter-side-${side}`, this.t(side === 'end' ? 'dateEnd' : 'dateStart'), (part === 'end') === (side === 'end'), { operator: joinOperator(side === 'end' ? 'end' : undefined, inner) }, pick))));
       } else if (isQuantifiedText(property, rule.operator) || isQuantifiedNumber(property, rule.operator)) {
-        lead.append(marked(headerButton(`database-color-quantifier-${rule.id}`, this.ctx.i18n.t(`tools.database.filterOperator.${part ?? 'any'}`).toLocaleLowerCase(), 'database-filter-quantifier-picker', (pick) => quantifierChoices().map((q) =>
-          choice(`database-filter-quantifier-${q.operator}`, this.ctx.i18n.t(q.labelKey), (part ?? 'any') === q.operator, { operator: joinOperator(q.operator, inner) }, pick))), 'data-blok-database-color-rule-quantifier'));
+        const quantifier = headerButton(`database-color-quantifier-${rule.id}`, this.ctx.i18n.t(`tools.database.filterOperator.${part ?? 'any'}`).toLocaleLowerCase(), 'database-filter-quantifier-picker', (pick) => quantifierChoices().map((q) =>
+          choice(`database-filter-quantifier-${q.operator}`, this.ctx.i18n.t(q.labelKey), (part ?? 'any') === q.operator, { operator: joinOperator(q.operator, inner) }, pick)));
+
+        // notion-motion.md Round 74 §4: a Number rollup's "any" is 400. A Text rollup's weight is unmeasured.
+        lead.append(isQuantifiedNumber(property, rule.operator) ? marked(quantifier, 'data-blok-database-color-rule-quantifier') : quantifier);
       }
       lead.append(headerButton(`database-color-operator-${rule.id}`, (opKey === undefined ? rule.operator : this.ctx.i18n.t(opKey)).toLocaleLowerCase(), 'database-filter-operator-picker', (pick) => colorRuleOperatorChoices(property, rule.operator).map((c) =>
         choice(`database-filter-op-${c.operator}`, this.ctx.i18n.t(c.labelKey), menuOperatorOf(rule.operator) === c.operator, quantified(property, operatorPick(property, c.operator, rule)), pick))));
